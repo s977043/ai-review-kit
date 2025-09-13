@@ -16,4 +16,14 @@ AIエージェントがレビューを行う際に参照できることを想定
 - 更新は不定期です  
 
 ## ライセンス
-MIT License
+MIT Li
+
+## ファイル構成
+
+ai-review-kit/
+├── .github/ai-review/checklists/     # レビュー観点チェックリスト用ディレクトリ
+│   └── coding-review-checklist.md     # ルートのチェックリストへの案内
+├── AGENTS.md                          # AIエージェント向けガイド】テンプレート
+├── coding-review-checklist.md         # コードレビュー観点チェックリスト—概念ベース、AI/Human共用
+├── README.md                          # このファイル
+└── LICENSE                            # ライセンス情報
