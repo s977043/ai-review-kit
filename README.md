@@ -1,7 +1,7 @@
 # AI Review Kit
 
 概要
-ai-review-kitは、既製のAIコードレビューツールではありません。これは、あなたのチーム独自の開発ワークフロー、コーディング標準、アーキテクチャに最適化された、カスタムAIコードレビュアーを構築するための、柔軟で拡張可能なフレームワークです。
+aI-review-kitは、既製のAIコードレビューツールではありません。これは、あなたのチーム独自の開発ワークフロー、コーディング標準、アーキテクチャに最適化された、カスタムAIコードレビュアーを構築するための、柔軟で拡張可能なフレームワークです。
 
 なぜ ai-review-kit なのか？
 GitHub Copilot, CodeRabbit, Kodus AI といった優れたAIレビューツールは数多く存在します。しかし、これらのツールは多くの場合、汎用的なベストプラクティスを提供することに重点を置いており、「ワンサイズ・フィット・オール」なアプローチになりがちです。
@@ -39,7 +39,17 @@ GitHub Copilot, CodeRabbit, Kodus AI といった優れたAIレビューツー�
 ライセンス
 このプロジェクトは LICENSE に記載されたライセンスの下で公開されています。
 
-
 ---
 
-既存の内容（概要やファイル構成、AGENTS.md への参照など）は必要に応じて統合しています。
+## ファイル構成
+ai-review-kit/
+    ├── .github/ai-review/checklists/     # レビュー観点チェックリスト用ディレクトリ (stub)
+    │   └── coding-review-checklist.md     # ルートのチェックリストへの案内
+    ├── AGENTS.md                          # AIエージェント用ガイド（テンプレート）
+    ├── coding-review-checklist.md         # コードレビュー観点チェックリスト—概念ベース、AI/Human共用
+    ├── README.md                          # このファイル
+    └── LICENSE                            # ライセンス情報
+
+## 関連ドキュメント
+- [AGENTS.md](./AGENTS.md)
+- [coding-review-checklist.md](./coding-review-checklist.md)
