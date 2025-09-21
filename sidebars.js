@@ -15,5 +15,19 @@ module.exports = {
         'governance/PDR/pdr-0001-site-stack',
       ],
     },
+    {
+      type: 'category',
+      label: 'Framework',
+      collapsed: false,
+      items: [
+        'framework/overview',
+        'framework/principles',
+        'framework/checklist',
+        'framework/security-gauntlet',
+        'framework/formal-methods',
+        'framework/agents-hitl',
+        'framework/conclusion',
+      ],
+    },
   ],
 };
