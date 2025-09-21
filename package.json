@@ -1,0 +1,27 @@
+{
+  "name": "ai-review-kit",
+  "private": true,
+  "scripts": {
+    "dev": "docusaurus start",
+    "build": "docusaurus build && node scripts/postbuild.js",
+    "serve": "docusaurus serve",
+    "lint:md": "markdownlint '**/*.md' --ignore node_modules",
+    "lint:text": "textlint 'docs/**/*.md'",
+    "lint": "npm run lint:md && npm run lint:text"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.5.0",
+    "@docusaurus/preset-classic": "^3.5.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "markdownlint-cli": "^0.41.0",
+    "prettier": "^3.3.3",
+    "textlint": "^13.4.1",
+    "textlint-rule-preset-ja-technical-writing": "^10.0.1",
+    "textlint-rule-prh": "^5.5.0",
+    "prh": "^5.4.4",
+    "linkinator": "^6.0.3"
+  }
+}
