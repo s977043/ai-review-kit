@@ -2,50 +2,61 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-AIによる自律的なコードレビューシステムを構築するための、オープンソースのフレームワークと知識ベースです。
+AIによるコードレビューを導入・運用するためのフレームワークとナレッジベースをまとめたオープンソースプロジェクトです。Docusaurus 上で公開するドキュメントに、AI支援型TDDや自律エージェント運用のベストプラクティスを体系化しています。
 
-## 🎖️ プロジェクトの目的と背景
-AIコード生成ツールにより開発速度は向上しましたが、訓練データに含まれる安全でないコードパターンの複製やプロジェクト固有の文脈を理解しないままコードを生成するなど、新たな課題も生まれています。本リポジトリは、AIが生成したコードをAI自身がレビューするための体系的かつ実践的なナレッジベースの構築を目指します。
+## 📘 このリポジトリが扱うテーマ
+- AIレビュー導入の背景と設計指針（`docs/overview`, `docs/framework`）
+- 失敗を減らすチェックリストとセキュリティガントレット（`docs/framework/checklist.md`, `docs/framework/security-gauntlet.md`, `coding-review-checklist.md`）
+- GitHub Actions を中心としたセットアップ手順（`docs/setup`）
+- コントリビューションポリシーと運営ルール（`docs/governance`, `CONTRIBUTING.md`）
 
-## 👥 対象読者
-- 開発チームリーダー: AIを活用してコードレビュープロセスを効率化・標準化したい方
-- シニアソフトウェアエンジニア: AIレビューエージェントの設計やレビュー基準の策定に関心がある方
-- DevOps/MLOpsエンジニア: CI/CDに自律的な品質ゲートを組み込みたい方
-- AppSec抽象者: AI生成コードのセキュリティリスクを系統的に管理したい方
-
-## 🚀 クイックスタート: 基本的なリンターエージェントを実装する
-コード保守性をチェックする基本的なエージェントをGitHub Actionsで実装する例を示します。ここでは Python 用に `pylint` を利用します。
-
-### ワークフローファイルの作成
-リポジトリのルートに `.github/workflows/lint.yml` を作成して以下を記述してください。
+## 🚀 クイックスタート: GitHub Actions で導入する
+1. リポジトリの Secrets もしくは GitHub App で `OPENAI_API_KEY` など必要な認証情報を設定します。
+2. `.github/workflows/ai-review.yml` を新規作成し、以下の最小構成を追加します。
 
 ```yaml
-name: Python Linting
-on: [push, pull_request]
+name: AI Review Kit
+on:
+  pull_request:
+  push:
+    branches: [main]
 jobs:
-  lint:
+  ai-review:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pylint
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: Run pylint
-        run: |
-          pylint $(git ls-files '*.py') --fail-under=8.0
+          node-version: 20
+      - name: Run AI Review Kit
+        uses: s977043/ai-review-kit-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-必要に従って `.pylintrc` を作成してルールをカスタマイズしてください。
+3. PR を作成してレビューコメントやサマリーログを確認します。詳細は `docs/setup/quickstart.md` と `docs/setup/github-actions.md` を参照してください。
 
-## 🧡 貢献の方法
-このプロジェクトはコミュニティの力で成長します。新しいチェック項目やエージェントの実装例、ドキュメントの改善など、あらゆる貢献を歓迎します。詳しくは [`CONTRIBUTING.md`](CONTRIBUTING.md) を参照してください。
+## 🛠️ ドキュメントの編集・検証
+- Node.js 20.x 以上を推奨します（`node --version` で確認できます）。
+- 依存導入: `npm install`
+- 開発サーバー: `npm run dev`（http://localhost:3000）
+- 本番ビルド: `npm run build`
+- 文章Lint: `npm run lint`（Markdownlint + textlint）
+
+ビルド成果物は `build/` に出力されます。CI やリンクチェックなどの追加フローはプロジェクト要件に合わせて拡張してください。
+
+## 📁 主なディレクトリ
+- `docs/` — Docusaurus 用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
+- `coding-review-checklist.md` — レビュー観点のクイックリファレンス。
+- `AGENTS.md` — AIエージェント向けの作業ガイドライン。
+- `docusaurus.config.js`, `sidebars.js` — ドキュメントサイトの設定ファイル。
+
+## 🤝 コントリビューション
+- 変更提案の前に [`CONTRIBUTING.md`](CONTRIBUTING.md) と `docs/governance/CONTRIBUTING.md` を確認してください。
+- 作業範囲や禁止事項は `AGENTS.md` に記載されています。編集前に必ず確認します。
+- 文章や設定の改善、チェックリストの拡充など小さな変更も歓迎です。PR では実行したコマンドや検証ログを共有してください。
 
 ## 📜 ライセンス
 このプロジェクトは MIT ライセンスの下で公開されています。詳細は [`LICENSE`](LICENSE) を参照してください。
