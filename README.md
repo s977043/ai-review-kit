@@ -30,7 +30,8 @@ jobs:
         with:
           node-version: 20
       - name: Run AI Review Kit
-        uses: s977043/ai-review-kit-action@v1
+        # TODO: Replace with your actual action reference
+        uses: s977043/ai-review-kit-action@v1  # <--- Replace with your action
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
