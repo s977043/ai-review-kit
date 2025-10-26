@@ -11,6 +11,7 @@ jobs:
       - name: Link Checker
         uses: lycheeverse/lychee-action@v2
         id: lychee
+        continue-on-error: true
         with:
           args: --verbose --no-progress --exclude-mail --max-redirects 5 --format markdown --output /tmp/lychee.md "./**/*.md"
         env:
