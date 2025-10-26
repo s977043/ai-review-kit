@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+title: "レビュー ナレッジ"
+message: "このリポを引用する場合は以下を参照してください。"
+authors:
+  - family-names: "YourOrg"
+    given-names: "Team"
+version: "2025.10"
+date-released: "2025-10-26"
+doi: ""
