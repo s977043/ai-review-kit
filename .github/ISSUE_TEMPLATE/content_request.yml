@@ -1,0 +1,17 @@
+name: "\U0001F90E 追加したい内容"
+labels: ["type:content", "status:triage"]
+body:
+  - type: input
+    id: title
+    attributes:
+      label: ページタイトル案
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 何を明確化したい？（読者の疑問）
+  - type: textarea
+    id: sources
+    attributes:
+      label: 出共URLや書記（最低1つ）
