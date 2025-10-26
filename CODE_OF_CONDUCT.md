@@ -42,6 +42,6 @@
 
 この行動規範は、[Contributor Covenant](https://www.contributor-covenant.org) version 2.1 から改変されたものです。
 
-詳細については、https://www.contributor-covenant.org/version/2/1/code_of_conduct.html を参照してください。
+詳細については、<https://www.contributor-covenant.org/version/2/1/code_of_conduct.html> を参照してください。
 
-コミュニティへの影響に関するガイドラインについては、https://www.contributor-covenant.org/faq を参照してください。翻訳は https://www.contributor-covenant.org/translations で入手できます。
+コミュニティへの影響に関するガイドラインについては、<https://www.contributor-covenant.org/faq> を参照してください。翻訳は <https://www.contributor-covenant.org/translations> で入手できます。
