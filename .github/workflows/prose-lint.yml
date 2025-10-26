@@ -8,9 +8,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: errata-ai/vale-action@v2
         with:
-          styles: |
-            Microsoft
-          files: |
-            docs/**/*.md
+          files: 'docs/**/*.md'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
