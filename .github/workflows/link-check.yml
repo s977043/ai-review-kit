@@ -13,7 +13,7 @@ jobs:
         id: lychee
         continue-on-error: true
         with:
-          args: --verbose --no-progress --exclude-mail --max-redirects 5 "./**/*.md"
+          args: --verbose --no-progress --exclude '^mailto:' --max-redirects 5 "./**/*.md"
           output: /tmp/lychee.md
           format: markdown
         env:
