@@ -8,8 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: lycheeverse/lychee-action@v2
+      - name: Link Checker
+        uses: lycheeverse/lychee-action@v2
+        id: lychee
         with:
-          args: --verbose --no-progress --exclude-mail --max-redirects 5 "./**/*.md"
+          args: --verbose --no-progress --exclude-mail --max-redirects 5 --format markdown --output /tmp/lychee.md "./**/*.md"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lychee-report
+          path: /tmp/lychee.md
