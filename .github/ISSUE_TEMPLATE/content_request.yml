@@ -14,4 +14,4 @@ body:
   - type: textarea
     id: sources
     attributes:
-      label: 出共URLや書記（最低1つ）
+      label: 出典URLや書籍（最低1つ）

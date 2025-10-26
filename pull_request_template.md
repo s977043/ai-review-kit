@@ -2,7 +2,7 @@
 
 - [ ] 説明の正確性（出典あり）
 
-- [ ] 用語/表記が taxonomy と整合
+- [ ] 用語/表記が 用語集 と整合
 
 - [ ] Front matter 記入済み（tags/audience/owners/last_reviewed_at）
 
@@ -16,4 +16,4 @@
 
 - [ ] 画像の出典とライセンス表記
 
-- [ ] 図の元データ（.drawio など）を `assets/` に同包
+- [ ] 図の元データ（.drawio など）を `assets/` に同梱
