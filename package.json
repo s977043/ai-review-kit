@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "docusaurus start",
-    "build": "docusaurus build && node scripts/postbuild.js",
+    "build": "docusaurus build",
     "serve": "docusaurus serve",
     "lint:md": "markdownlint '**/*.md' --ignore node_modules",
     "lint:text": "textlint 'docs/**/*.md'",
