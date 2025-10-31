@@ -14,6 +14,8 @@ AIによるコードレビューを導入・運用するためのフレームワ
 1. リポジトリの Secrets もしくは GitHub App で `OPENAI_API_KEY` など必要な認証情報を設定します。
 2. `.github/workflows/ai-review.yml` を新規作成し、以下の最小構成を追加します。
 
+> **⚠️ 重要**: フォークされたリポジトリからのPRでは、GitHub がセキュリティ上の理由でリポジトリのsecretsを公開しません。外部コントリビューターからのPRでレビューを実行する場合は、`pull_request_target` イベントの使用を検討するか、適切な権限スコープを設定してください。詳細は [GitHub Docs](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions) を参照してください。
+
 ```yaml
 name: AI Review Kit
 on:
@@ -30,8 +32,9 @@ jobs:
         with:
           node-version: 20
       - name: Run AI Review Kit
-        # TODO: Replace with your actual action reference
-        uses: s977043/ai-review-kit-action@v1  # <--- Replace with your action
+        # ⚠️ Note: Replace with your actual action reference
+        # Example: your-org/your-action@v1
+        uses: s977043/ai-review-kit-action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -56,7 +59,7 @@ jobs:
 
 ## 🤝 コントリビューション
 - 変更提案の前に [`CONTRIBUTING.md`](CONTRIBUTING.md) と `docs/governance/CONTRIBUTING.md` を確認してください。
-- 作業範囲や禁止事項は `AGENTS.md` に記載されています。編集前に必ず確認します。
+- 作業範囲や禁止事項は `AGENTS.md` に記載されています。編集前に必ず確認してください。
 - 文章や設定の改善、チェックリストの拡充など小さな変更も歓迎です。PR では実行したコマンドや検証ログを共有してください。
 
 ## 📜 ライセンス
