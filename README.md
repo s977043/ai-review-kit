@@ -49,7 +49,7 @@ jobs:
           pylint $(git ls-files '*.py') --fail-under=8.0
 ```
 
-必要に従って `.pylintrc` を作成してルールをカスタマイズしてください。
+必要に応じて `.pylintrc` を作成してルールをカスタマイズしてください。
 
 ## 🧡 貢献の方法
 
