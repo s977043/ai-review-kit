@@ -12,7 +12,6 @@ module.exports = {
       items: [
         'governance/CONTRIBUTING',
         'governance/WRITING_GUIDE',
-        'governance/PDR/pdr-0001-site-stack',
       ],
     },
     {
