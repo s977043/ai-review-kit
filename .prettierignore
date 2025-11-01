@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+build/
+.docusaurus/
+
+# Cache
+.cache/
+
+# Logs
+*.log
+
+# Config files that should not be formatted
+.vale/
