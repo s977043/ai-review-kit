@@ -1,0 +1,13 @@
+name: "\U0001F6E0\uFE0F 誤り修正の指摘"
+labels: ["type:bug", "doc:correction", "status:triage"]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: 対象ページURL or パス
+  - type: textarea
+    id: details
+    attributes:
+      label: どこがどう誤っているか・正しい根拠
+    validations:
+      required: true
