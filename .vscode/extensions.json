@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "davidanson.vscode-markdownlint",
+    "taichi.vscode-textlint",
+    "yzhang.markdown-all-in-one"
+  ]
+}
