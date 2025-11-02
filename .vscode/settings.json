@@ -6,14 +6,7 @@
     "source.fixAll.markdownlint": "explicit"
   },
   "[markdown]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.wordWrap": "on"
-  },
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "files.associations": {
     "*.md": "markdown"
