@@ -6,10 +6,10 @@ AIによるコードレビューを導入・運用するためのフレームワ
 
 ## 📘 このリポジトリが扱うテーマ
 
-- AIレビュー導入の背景と設計指針（`docs/overview`, `docs/framework`）
+- AIレビュー導入の背景と設計指針（`docs/overview/`, `docs/framework/`）
 - 失敗を減らすチェックリストとセキュリティガントレット（`docs/framework/checklist.md`, `docs/framework/security-gauntlet.md`, `coding-review-checklist.md`）
-- GitHub Actionsを中心としたセットアップ手順（`docs/setup`）
-- コントリビューションポリシーと運営ルール（`docs/governance`, `CONTRIBUTING.md`）
+- GitHub Actionsを中心としたセットアップ手順（`docs/setup/`）
+- コントリビューションポリシーと運営ルール（`docs/governance/`, `CONTRIBUTING.md`）
 
 ## 🚀 クイックスタート: GitHub Actionsで導入する
 
