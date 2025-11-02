@@ -7,7 +7,7 @@
     "serve": "docusaurus serve",
     "lint:md": "markdownlint '**/*.md' --ignore node_modules",
     "lint:text": "textlint 'docs/**/*.md'",
-    "lint": "npm run lint:md && npm run lint:text",
+    "lint": "npm run format:check && npm run lint:md && npm run lint:text",
     "format": "prettier --write '**/*.{js,json,md,yml,yaml}'",
     "format:check": "prettier --check '**/*.{js,json,md,yml,yaml}'"
   },

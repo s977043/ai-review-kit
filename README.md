@@ -1,8 +1,6 @@
 # AI Review Kit
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml)
-[![Markdown Lint](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Build Status](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml) [![Markdown Lint](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml)
 
 AIによるコードレビューを導入・運用するためのフレームワークとナレッジベースをまとめたオープンソースプロジェクトです。Docusaurus上で公開するドキュメントに、AI支援型TDDや自律エージェント運用のベストプラクティスを体系化しています。
 

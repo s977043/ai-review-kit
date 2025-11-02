@@ -1,11 +1,11 @@
 # Dependencies
-node_modules
+node_modules/
 
 # Docusaurus build output
-build
-.docusaurus
-.cache
-.cache-loader
+build/
+.docusaurus/
+.cache/
+.cache-loader/
 
 # Logs
 *.log
@@ -16,3 +16,6 @@ yarn-error.log*
 # Misc
 .DS_Store
 .env.local
+
+# Editor specific
+.vscode/.history/
