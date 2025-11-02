@@ -9,10 +9,7 @@ module.exports = {
     {
       type: 'category',
       label: 'Governance',
-      items: [
-        'governance/CONTRIBUTING',
-        'governance/WRITING_GUIDE',
-      ],
+      items: ['governance/CONTRIBUTING', 'governance/WRITING_GUIDE'],
     },
     {
       type: 'category',
