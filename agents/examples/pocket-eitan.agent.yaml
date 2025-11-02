@@ -39,7 +39,7 @@ guidelines:
         - "重複排除と命名整理を行い、Clean Architecture の責務分離を確認する"
     - title: エビデンス提示
       steps:
-        - "PRでは目的・影響・テスト結果を `.github/PULL_REQUEST_TEMPLATE/ai_generated_pr.md` に沿って記録する"
+        - "PRでは目的・影響・テスト結果を `.github/pull_request_template.md` に沿って記録する"
   documentation:
     - "設定・仕様の改訂時は README / docs / Swagger を同時更新する"
     - "Storybook やAPI契約など周辺ドキュメントの同期を忘れない"

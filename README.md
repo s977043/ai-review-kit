@@ -51,7 +51,10 @@ jobs:
 - 開発サーバー: `npm run dev`（http://localhost:3000）
 - 本番ビルド: `npm run build`
 - 文章Lint: `npm run lint`（Markdownlint + textlint）
+- 自動フォーマット: `npm run format`
 - エージェント検証: `npm run agents:validate`（YAML → JSON Schema 検証）
+
+**Note:** `npm run lint`はチェックのみを行います。フォーマットを修正するには`npm run format`を実行してください。エディターの自動保存機能やファイル監視ツールで`npm run format`を実行すると、無限ループが発生することがあるため、設定には注意してください。
 
 ビルド成果物は`build/`に出力されます。CIやリンクチェックなどの追加フローはプロジェクト要件に合わせて拡張してください。
 
@@ -65,19 +68,19 @@ TypeScript/JavaScript プロジェクトで AI Review Kit のチェックを最�
 ```jsonc
 {
   "scripts": {
-    "lint": "pnpm lint -- --max-warnings=0",
-    "agents:validate": "node scripts/validate-agents.mjs"
-  }
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0",
+    "agents:validate": "node scripts/validate-agents.mjs",
+  },
 }
 ```
 
-3. PR では以下を必須チェックとして実行します。
+3. PRでは以下を必須チェックとして実行します。
 
 ```bash
 pnpm lint && pnpm agents:validate
 ```
 
-4. GitHub Actions では `validate-agents.yml` を利用して CI へ組み込みます。
+4. GitHub Actionsでは`validate-agents.yml`を利用してCIへ組み込みます。
 
 ## 📁 主なディレクトリ
 

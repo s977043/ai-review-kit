@@ -33,7 +33,7 @@ async function listAgentFiles() {
 
 async function validateAgents() {
   const schema = await loadSchema();
-  const ajv = new Ajv({ allErrors: true, strict: false });
+  const ajv = new Ajv({ allErrors: true, strict: true });
   addFormats(ajv);
   const validate = ajv.compile(schema);
   const files = await listAgentFiles();
