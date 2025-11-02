@@ -1,15 +1,16 @@
 # AI Review Kit
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Build Status](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml) [![Markdown Lint](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml)
 
 AIによるコードレビューを導入・運用するためのフレームワークとナレッジベースをまとめたオープンソースプロジェクトです。Docusaurus上で公開するドキュメントに、AI支援型TDDや自律エージェント運用のベストプラクティスを体系化しています。
 
 ## 📘 このリポジトリが扱うテーマ
 
-- AIレビュー導入の背景と設計指針（`docs/overview`, `docs/framework`）
+- AIレビュー導入の背景と設計指針（`docs/overview/`, `docs/framework/`）
 - 失敗を減らすチェックリストとセキュリティガントレット（`docs/framework/checklist.md`, `docs/framework/security-gauntlet.md`, `coding-review-checklist.md`）
-- GitHub Actionsを中心としたセットアップ手順（`docs/setup`）
-- コントリビューションポリシーと運営ルール（`docs/governance`, `CONTRIBUTING.md`）
+- GitHub Actionsを中心としたセットアップ手順（`docs/setup/`）
+- コントリビューションポリシーと運営ルール（`docs/governance/`, `CONTRIBUTING.md`）
 
 ## 🚀 クイックスタート: GitHub Actionsで導入する
 
@@ -42,13 +43,13 @@ jobs:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-3. PRを作成してレビューコメントやサマリーログを確認します。詳細は`docs/setup/quickstart.md`と`docs/setup/github-actions.md`を参照してください。
+1. PRを作成してレビューコメントやサマリーログを確認します。詳細は`docs/setup/quickstart.md`と`docs/setup/github-actions.md`を参照してください。
 
 ## 🛠️ ドキュメントの編集・検証
 
 - Node.js 20.x 以上を推奨します（`node --version`で確認できます）。
 - 依存導入: `npm install`
-- 開発サーバー: `npm run dev`（http://localhost:3000）
+- 開発サーバー: `npm run dev`（<http://localhost:3000）>
 - 本番ビルド: `npm run build`
 - 文章Lint: `npm run lint`（Markdownlint + textlint）
 - 自動フォーマット: `npm run format`
@@ -69,8 +70,8 @@ TypeScript/JavaScript プロジェクトで AI Review Kit のチェックを最�
 {
   "scripts": {
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0",
-    "agents:validate": "node scripts/validate-agents.mjs",
-  },
+    "agents:validate": "node scripts/validate-agents.mjs"
+  }
 }
 ```
 

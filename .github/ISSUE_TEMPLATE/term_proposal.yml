@@ -1,5 +1,5 @@
 name: "\U0001F4DA 用語提案/表記整合"
-labels: ["doc:terminology"]
+labels: ['doc:terminology']
 body:
   - type: input
     id: term

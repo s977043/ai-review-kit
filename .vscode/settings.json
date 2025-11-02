@@ -1,0 +1,12 @@
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.markdownlint": true
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on"
+  },
+  "files.associations": {
+    "*.md": "markdown"
+  }
+}

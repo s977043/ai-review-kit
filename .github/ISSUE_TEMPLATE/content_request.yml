@@ -1,5 +1,5 @@
 name: "\U0001F90E 追加したい内容"
-labels: ["type:content", "status:triage"]
+labels: ['type:content', 'status:triage']
 body:
   - type: input
     id: title
