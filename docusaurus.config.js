@@ -1,10 +1,12 @@
 /** @type {import('@docusaurus/types').Config} */
-const SITE_URL = process.env.SITE_URL || 'https://s977043.github.io/ai-review-kit';
+// Vercelの環境変数をチェックし、デプロイ先に応じたURLとbaseUrlを動的に設定
+const siteUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://s977043.github.io';
+const baseUrl = process.env.VERCEL_URL ? '/' : '/ai-review-kit/';
 
 module.exports = {
   title: 'AI Review Kit',
-  url: SITE_URL,
-  baseUrl: '/',
+  url: siteUrl,
+  baseUrl: baseUrl,
   organizationName: 's977043',
   projectName: 'ai-review-kit',
   trailingSlash: false,
