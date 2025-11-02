@@ -1,0 +1,24 @@
+version: 1
+rules:
+  - expected: GitHub
+    pattern:
+      - /[Gg]ithub/
+      - /GITHUB/
+  - expected: AI
+    pattern: /[Aa][Ii]/
+  - expected: JavaScript
+    pattern:
+      - /[Jj]ava[Ss]cript/
+      - /JS/
+  - expected: VS Code
+    pattern:
+      - /VSCode/
+      - /vscode/
+      - /Visual Studio Code/
+  - expected: Docusaurus
+    pattern: /[Dd]ocusaurus/
+  - expected: Node.js
+    pattern:
+      - /[Nn]ode\.js/
+      - /NodeJS/
+      - /nodejs/

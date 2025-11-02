@@ -11,7 +11,7 @@ title: Part V — マルチエージェントとHITL
 
 - **PerformanceAgent**: Big-O、プロファイル、負荷試験の集計。
 
-- **MaintainabilityAgent**: 複雑度/スタイル/命名/スメル。
+- **MAIntAInabilityAgent**: 複雑度/スタイル/命名/スメル。
 
 - **CorrectnessAgent**: 論理正しさ・敵対的テスト生成。
 
