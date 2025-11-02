@@ -1,5 +1,5 @@
 /** @type {import('@docusaurus/types').Config} */
-const SITE_URL = process.env.SITE_URL || 'https://ai-review-kit.vercel.app';
+const SITE_URL = process.env.SITE_URL || 'https://s977043.github.io/ai-review-kit';
 
 module.exports = {
   title: 'AI Review Kit',
