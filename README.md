@@ -48,7 +48,7 @@ jobs:
 
 - Node.js 20.x 以上を推奨します（`node --version`で確認できます）。
 - 依存導入: `npm install`
-- 開発サーバー: `npm run dev`（http://localhost:3000）
+- 開発サーバー: `npm run dev`（<http://localhost:3000）>
 - 本番ビルド: `npm run build`
 - 文章Lint: `npm run lint`（Markdownlint + textlint）
 
