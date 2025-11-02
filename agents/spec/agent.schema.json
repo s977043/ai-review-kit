@@ -5,15 +5,7 @@
   "description": "Normalized description of project-specific AI agent instructions, tooling, and automation.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "version",
-    "metadata",
-    "guidelines",
-    "tooling",
-    "agents",
-    "resources",
-    "automation"
-  ],
+  "required": ["version", "metadata", "guidelines", "tooling", "agents", "resources", "automation"],
   "properties": {
     "version": {
       "type": "string",
@@ -23,15 +15,7 @@
     "metadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "name",
-        "owner",
-        "description",
-        "repository",
-        "license",
-        "updatedAt"
-      ],
+      "required": ["id", "name", "owner", "description", "repository", "license", "updatedAt"],
       "properties": {
         "id": {
           "type": "string",
@@ -104,11 +88,7 @@
     "guidelines": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "principles",
-        "developmentProcess",
-        "security"
-      ],
+      "required": ["principles", "developmentProcess", "security"],
       "properties": {
         "principles": {
           "$ref": "#/$defs/checklist"
@@ -133,12 +113,7 @@
     "tooling": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "packageManager",
-        "languages",
-        "commands",
-        "qualityGates"
-      ],
+      "required": ["packageManager", "languages", "commands", "qualityGates"],
       "properties": {
         "packageManager": {
           "type": "string",
@@ -165,10 +140,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "name",
-              "run"
-            ],
+            "required": ["name", "run"],
             "properties": {
               "name": {
                 "type": "string",
@@ -205,14 +177,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "name",
-          "type",
-          "description",
-          "instructionFiles",
-          "focus"
-        ],
+        "required": ["id", "name", "type", "description", "instructionFiles", "focus"],
         "properties": {
           "id": {
             "type": "string",
@@ -224,13 +189,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "cli",
-              "ide",
-              "review",
-              "planner",
-              "automation"
-            ]
+            "enum": ["cli", "ide", "review", "planner", "automation"]
           },
           "description": {
             "type": "string",
@@ -291,9 +250,7 @@
     "resources": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "documents"
-      ],
+      "required": ["documents"],
       "properties": {
         "documents": {
           "type": "array",
@@ -325,10 +282,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "name",
-              "path"
-            ],
+            "required": ["name", "path"],
             "properties": {
               "name": {
                 "type": "string",
@@ -366,9 +320,7 @@
           {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "title"
-            ],
+            "required": ["title"],
             "properties": {
               "title": {
                 "type": "string",
@@ -393,9 +345,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "title"
-        ],
+        "required": ["title"],
         "properties": {
           "title": {
             "type": "string",
@@ -415,9 +365,7 @@
     "reference": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "properties": {
         "path": {
           "type": "string",

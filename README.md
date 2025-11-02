@@ -52,13 +52,13 @@ jobs:
 - 本番ビルド: `npm run build`
 - 文章Lint: `npm run lint`（Markdownlint + textlint）
 - 自動フォーマット: `npm run format`
-- エージェント検証: `npm run agents:validate`（YAML → JSON Schema 検証）
+- エージェント検証: `npm run agents:validate`（YAML → JavaScriptON Schema 検証）
 
 **Note:** `npm run lint`はチェックのみを行います。フォーマットを修正するには`npm run format`を実行してください。エディターの自動保存機能やファイル監視ツールで`npm run format`を実行すると、無限ループが発生することがあるため、設定には注意してください。
 
 ビルド成果物は`build/`に出力されます。CIやリンクチェックなどの追加フローはプロジェクト要件に合わせて拡張してください。
 
-## 🧪 JS/TS クイックスタート（ESLint + Agent Validation）
+## 🧪 JavaScript/TS クイックスタート（ESLint + Agent Validation）
 
 TypeScript/JavaScript プロジェクトで AI Review Kit のチェックを最小構成で導入する手順です。
 
@@ -74,18 +74,18 @@ TypeScript/JavaScript プロジェクトで AI Review Kit のチェックを最�
 }
 ```
 
-3. PRでは以下を必須チェックとして実行します。
+1. PRでは以下を必須チェックとして実行します。
 
 ```bash
 pnpm lint && pnpm agents:validate
 ```
 
-4. GitHub Actionsでは`validate-agents.yml`を利用してCIへ組み込みます。
+1. GitHub Actionsでは`validate-agents.yml`を利用してCIへ組み込みます。
 
 ## 📁 主なディレクトリ
 
 - `docs/` — Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
-- `agents/` — AIエージェント定義（JSON Schema とサンプルYAML）。
+- `agents/` — AIエージェント定義（JavaScriptON Schema とサンプルYAML）。
 - `coding-review-checklist.md` — レビュー観点のクイックリファレンス。
 - `AGENTS.md` — AIエージェント向けの作業ガイドライン。
 - `docusaurus.config.js`, `sidebars.js` — ドキュメントサイトの設定ファイル。

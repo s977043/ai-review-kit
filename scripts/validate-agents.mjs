@@ -35,6 +35,13 @@ async function validateAgents() {
   const schema = await loadSchema();
   const ajv = new Ajv({ allErrors: true, strict: true });
   addFormats(ajv);
+
+  // AJV includes draft-07 meta-schema with http URL by default
+  // Our schema uses https for security best practice, so we normalize it
+  if (schema.$schema === 'https://json-schema.org/draft-07/schema#') {
+    schema.$schema = 'http://json-schema.org/draft-07/schema#';
+  }
+
   const validate = ajv.compile(schema);
   const files = await listAgentFiles();
 

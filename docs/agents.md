@@ -4,7 +4,7 @@ PocketEitan の AI エージェント資産を外部リポジトリで再利用�
 
 ## ディレクトリ構成
 
-```
+```text
 agents/
 ├── spec/agent.schema.json      # JSON Schema（AJVで検証可能）
 └── examples/
