@@ -1,0 +1,283 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/s977043/ai-review-kit/blob/main/agents/spec/agent.schema.json",
+  "title": "AI Agent Knowledge Pack",
+  "description": "Normalized description of project-specific AI agent instructions, tooling, and automation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "metadata",
+    "guidelines",
+    "tooling",
+    "agents",
+    "resources",
+    "automation"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Semantic version for the knowledge pack schema instance.",
+      "pattern": "^v?\\d+\\.\\d+\\.\\d+$"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "owner",
+        "description",
+        "repository",
+        "license",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9\\-]+$",
+          "description": "Short identifier used in filenames and routing."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$",
+          "description": "GitHub slug (owner/repo)."
+        },
+        "homepage": {
+          "type": "string",
+          "format": "uri"
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tags": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "role": { "type": "string" },
+              "email": { "type": "string", "format": "email" },
+              "url": { "type": "string", "format": "uri" }
+            }
+          }
+        }
+      }
+    },
+    "guidelines": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principles", "developmentProcess", "security"],
+      "properties": {
+        "principles": { "$ref": "#/$defs/checklist" },
+        "communication": { "$ref": "#/$defs/checklist" },
+        "prohibited": { "$ref": "#/$defs/checklist" },
+        "developmentProcess": { "$ref": "#/$defs/stageList" },
+        "documentation": { "$ref": "#/$defs/checklist" },
+        "security": { "$ref": "#/$defs/checklist" }
+      }
+    },
+    "tooling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packageManager", "languages", "commands", "qualityGates"],
+      "properties": {
+        "packageManager": { "type": "string", "minLength": 1 },
+        "languages": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "frameworks": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "run"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "category": { "type": "string", "minLength": 1 },
+              "run": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "expectation": { "type": "string" }
+            }
+          }
+        },
+        "qualityGates": { "$ref": "#/$defs/checklist" },
+        "definitionOfDone": { "$ref": "#/$defs/checklist" }
+      }
+    },
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "type", "description", "instructionFiles", "focus"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "name": { "type": "string", "minLength": 1 },
+          "type": {
+            "type": "string",
+            "enum": ["cli", "ide", "review", "planner", "automation"]
+          },
+          "description": { "type": "string", "minLength": 1 },
+          "model": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "provider": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 },
+              "mode": { "type": "string" },
+              "temperature": { "type": "number" }
+            }
+          },
+          "focus": { "$ref": "#/$defs/checklist" },
+          "entryPoints": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/reference" }
+          },
+          "instructionFiles": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/reference" }
+          },
+          "reviewChecklists": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/reference" }
+          },
+          "workflows": { "$ref": "#/$defs/stageList" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documents"],
+      "properties": {
+        "documents": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/reference" }
+        },
+        "checklists": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reference" }
+        },
+        "knowledgeBases": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reference" }
+        }
+      }
+    },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ciWorkflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "path"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "path": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "triggers": { "$ref": "#/$defs/checklist" },
+              "enforces": { "$ref": "#/$defs/checklist" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "checklist": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "type": "string", "minLength": 1 },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["title"],
+            "properties": {
+              "title": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "stageList": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "steps": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
