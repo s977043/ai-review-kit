@@ -1,6 +1,6 @@
 # AI Review Kit
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 AIによるコードレビューを導入・運用するためのフレームワークとナレッジベースをまとめたオープンソースプロジェクトです。Docusaurus上で公開するドキュメントに、AI支援型TDDや自律エージェント運用のベストプラクティスを体系化しています。
 
@@ -51,12 +51,38 @@ jobs:
 - 開発サーバー: `npm run dev`（http://localhost:3000）
 - 本番ビルド: `npm run build`
 - 文章Lint: `npm run lint`（Markdownlint + textlint）
+- エージェント検証: `npm run agents:validate`（YAML → JSON Schema 検証）
 
 ビルド成果物は`build/`に出力されます。CIやリンクチェックなどの追加フローはプロジェクト要件に合わせて拡張してください。
+
+## 🧪 JS/TS クイックスタート（ESLint + Agent Validation）
+
+TypeScript/JavaScript プロジェクトで AI Review Kit のチェックを最小構成で導入する手順です。
+
+1. `pnpm` または `npm` で依存を導入します（本リポジトリでは `pnpm` を推奨しています）。
+2. 必要なスクリプトを `package.json` に追加します。
+
+```jsonc
+{
+  "scripts": {
+    "lint": "pnpm lint -- --max-warnings=0",
+    "agents:validate": "node scripts/validate-agents.mjs"
+  }
+}
+```
+
+3. PR では以下を必須チェックとして実行します。
+
+```bash
+pnpm lint && pnpm agents:validate
+```
+
+4. GitHub Actions では `validate-agents.yml` を利用して CI へ組み込みます。
 
 ## 📁 主なディレクトリ
 
 - `docs/` — Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
+- `agents/` — AIエージェント定義（JSON Schema とサンプルYAML）。
 - `coding-review-checklist.md` — レビュー観点のクイックリファレンス。
 - `AGENTS.md` — AIエージェント向けの作業ガイドライン。
 - `docusaurus.config.js`, `sidebars.js` — ドキュメントサイトの設定ファイル。
@@ -69,4 +95,4 @@ jobs:
 
 ## 📜 ライセンス
 
-このプロジェクトはMITライセンスの下で公開されています。詳細は[`LICENSE`](LICENSE)を参照してください。
+このプロジェクトは Apache License 2.0 の下で公開されています。詳細は [`LICENSE`](LICENSE) を参照してください。
