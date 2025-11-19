@@ -1,4 +1,4 @@
-# Quality Checklist — Readability & Documentation (PocketEitan)
+# Quality Checklist—Readability & Documentation (PocketEitan)
 
 PocketEitanのPRは日本語で説明され、学習アプリとしてのUXを重視します。以下の観点でレビューを実施してください。
 

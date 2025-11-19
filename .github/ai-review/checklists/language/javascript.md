@@ -1,11 +1,11 @@
-# Language Checklist — TypeScript / JavaScript (PocketEitan)
+# Language Checklist—TypeScript / JavaScript (PocketEitan)
 
 PocketEitanは Next.js + TypeScript (strict) を採用しています。以下の観点で、差分が規約に準拠しているかを確認してください。
 
 ## 1. 型安全性
 
 - [ ] `any` の導入や型穴埋め (`as unknown as`) が増えていない
-- [ ] DTOとDomainモデルの型が混在せず、責務ごとに分離されている
+- [ ] DTOとDomAInモデルの型が混在せず、責務ごとに分離されている
 - [ ] `Result<T, E>` や Value Object など既存パターンを再利用している
 - [ ] APIレスポンスは Zod / OpenAPI と同期している
 

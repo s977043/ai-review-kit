@@ -1,4 +1,4 @@
-# Security Checklist — PocketEitan
+# Security Checklist—PocketEitan
 
 PocketEitanの学習データとSupabase基盤を安全に保つためのレビュー観点です。`agents/examples/pocket-eitan.agent.yaml` と `.github/security-gauntlet.md` を参照し、以下を確認してください。
 
