@@ -52,7 +52,7 @@ jobs:
 - 本番ビルド: `pnpm build`
 - 文章Lint: `pnpm lint`（Markdownlint + textlint）
 - 自動フォーマット: `pnpm format`
-- エージェント検証: `pnpm agents:validate`（YAML → JavaScriptON Schema 検証）
+- エージェント検証: `pnpm agents:validate`（YAML → JSON Schema 検証）
 
 **Note:** `pnpm lint`はチェックのみを行います。フォーマットを修正するには`pnpm format`を実行してください。エディターの自動保存機能やファイル監視ツールで`pnpm format`を実行すると、無限ループが発生することがあるため、設定には注意してください。
 
@@ -85,7 +85,7 @@ pnpm lint && pnpm agents:validate
 ## 📁 主なディレクトリ
 
 - `docs/`—Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
-- `agents/`—AIエージェント定義（JavaScriptON Schema とサンプルYAML）。
+- `agents/`—AIエージェント定義（JSON Schema とサンプルYAML）。
 - `coding-review-checklist.md`—レビュー観点のクイックリファレンス。
 - `AGENTS.md`—AIエージェント向けの作業ガイドライン。
 - `docusaurus.config.js`, `sidebars.js`—ドキュメントサイトの設定ファイル。
