@@ -6,13 +6,13 @@ AI Review Kit では、独自のチェックを追加することができます
 
 - 出力は「短い見出し」「説明」「修正案」の3つで構成します。
 
-- YAML または JavaScriptON 形式の設定ファイルで登録します。
+- YAML または JSON 形式の設定ファイルで登録します。
 
 以下に簡単な example を示します:
 
 ```yaml
 id: no-hardcoded-secret
-title: ハードコードされた証言情報の検出
+title: ハードコードされた資格情報の検出
 description: コードにハードコードされたトークンやパスワードがないか検査します。
 severity: critical
 ```
