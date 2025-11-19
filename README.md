@@ -47,14 +47,14 @@ jobs:
 ## 🛠️ ドキュメントの編集・検証
 
 - Node.js 20.x 以上を推奨します（`node --version`で確認できます）。
-- 依存導入: `npm install`
-- 開発サーバー: `npm run dev`（<http://localhost:3000）>
-- 本番ビルド: `npm run build`
-- 文章Lint: `npm run lint`（Markdownlint + textlint）
-- 自動フォーマット: `npm run format`
-- エージェント検証: `npm run agents:validate`（YAML → JavaScriptON Schema 検証）
+- 依存導入: `pnpm install`
+- 開発サーバー: `pnpm dev`（<http://localhost:3000）>
+- 本番ビルド: `pnpm build`
+- 文章Lint: `pnpm lint`（Markdownlint + textlint）
+- 自動フォーマット: `pnpm format`
+- エージェント検証: `pnpm agents:validate`（YAML → JavaScriptON Schema 検証）
 
-**Note:** `npm run lint`はチェックのみを行います。フォーマットを修正するには`npm run format`を実行してください。エディターの自動保存機能やファイル監視ツールで`npm run format`を実行すると、無限ループが発生することがあるため、設定には注意してください。
+**Note:** `pnpm lint`はチェックのみを行います。フォーマットを修正するには`pnpm format`を実行してください。エディターの自動保存機能やファイル監視ツールで`pnpm format`を実行すると、無限ループが発生することがあるため、設定には注意してください。
 
 ビルド成果物は`build/`に出力されます。CIやリンクチェックなどの追加フローはプロジェクト要件に合わせて拡張してください。
 
@@ -62,7 +62,7 @@ jobs:
 
 TypeScript/JavaScript プロジェクトで AI Review Kit のチェックを最小構成で導入する手順です。
 
-1. `pnpm` または `npm` で依存を導入します（本リポジトリでは `pnpm` を推奨しています）。
+1. `pnpm`で依存を導入します。
 2. 必要なスクリプトを `package.json` に追加します。
 
 ```jsonc
