@@ -9,5 +9,4 @@ build/
 
 # Generated schema/examples backups
 *.schema_*.json
-*_2025*.md
-*_202511*.json
+*.bak
