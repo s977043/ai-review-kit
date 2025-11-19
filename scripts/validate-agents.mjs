@@ -14,7 +14,12 @@ const examplesDir = path.join(repoRoot, 'agents/examples');
 
 async function loadSchema() {
   const raw = await fs.readFile(schemaPath, 'utf8');
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error(`❌ Failed to parse JSON schema at ${schemaPath}: ${err.message}`);
+    throw err;
+  }
 }
 
 async function listAgentFiles() {
@@ -36,10 +41,24 @@ async function validateAgents() {
   const ajv = new Ajv({ allErrors: true, strict: true });
   addFormats(ajv);
 
-  // AJV includes draft-07 meta-schema with http URL by default
-  // Our schema uses https for security best practice, so we normalize it
-  if (schema.$schema === 'https://json-schema.org/draft-07/schema#') {
-    schema.$schema = 'http://json-schema.org/draft-07/schema#';
+  // Make sure Ajv recognizes the https draft-07 meta-schema without
+  // mutating the user's schema document. This avoids switching the
+  // schema $schema property while allowing Ajv to validate properly.
+  // Attempt to register the draft-07 https meta-schema with Ajv without
+  // mutating the schema object. This avoids rewriting the schema's $schema
+  // property to the http variant while still allowing validation to proceed.
+  const draft7Path = path.join(repoRoot, 'node_modules', 'ajv', 'dist', 'refs', 'json-schema-draft-07.json');
+  try {
+    const json = await fs.readFile(draft7Path, 'utf8');
+    const draft7 = JSON.parse(json);
+    // The draft7 meta-schema file typically uses 'http://' in `$id`.
+    // Ajv already registers the http variant. To support https in
+    // schema $schema fields, register a clone of the meta-schema with
+    // the https id to avoid conflicts.
+    const draft7Https = { ...draft7, $id: 'https://json-schema.org/draft-07/schema#' };
+    ajv.addMetaSchema(draft7Https, 'https://json-schema.org/draft-07/schema#');
+  } catch (err) {
+    console.warn('⚠️  Could not register draft-07 meta-schema for https; attempting without addMetaSchema:', err.message);
   }
 
   const validate = ajv.compile(schema);
@@ -55,7 +74,15 @@ async function validateAgents() {
   for (const filePath of files) {
     const relativePath = path.relative(repoRoot, filePath);
     const raw = await fs.readFile(filePath, 'utf8');
-    const data = yaml.load(raw) ?? {};
+    let data = {};
+    try {
+      data = yaml.load(raw) ?? {};
+    } catch (err) {
+      success = false;
+      console.error(`❌ ${relativePath}`);
+      console.error(`  - YAML parsing error: ${err.message}`);
+      continue;
+    }
     const valid = validate(data);
 
     if (valid) {

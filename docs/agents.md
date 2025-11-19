@@ -24,7 +24,7 @@ agents/
 
 2. PocketEitan以外のプロジェクトでも同じスキーマに従って記述する
    - 既存の例をコピーしてフィールドを置き換える
-   - 余分なフィールドは削除せず、適切な値を入力する
+   - 余分なフィールドは含めないでください（スキーマ `additionalProperties: false` のため）
 
 3. チェックリストを `.github/ai-review/checklists/` 配下に追加・更新する
    - `security.md`, `language/*.md`, `quality/*.md` など必要なカテゴリを追加

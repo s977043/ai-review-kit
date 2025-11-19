@@ -345,7 +345,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["title"],
+        "required": ["title", "steps"],
         "properties": {
           "title": {
             "type": "string",
