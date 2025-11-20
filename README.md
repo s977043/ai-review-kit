@@ -1,6 +1,6 @@
 # AI Review Kit
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Build Status](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml) [![Markdown Lint](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Build Status](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml) [![Markdown Lint](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml)
 
 AIによるコードレビューを導入・運用するためのフレームワークとナレッジベースをまとめたオープンソースプロジェクトです。Docusaurus上で公開するドキュメントに、AI支援型TDDや自律エージェント運用のベストプラクティスを体系化しています。
 
@@ -47,48 +47,19 @@ jobs:
 ## 🛠️ ドキュメントの編集・検証
 
 - Node.js 20.x 以上を推奨します（`node --version`で確認できます）。
-- 依存導入: `pnpm install`
-- 開発サーバー: `pnpm dev`（<http://localhost:3000）>
-- 本番ビルド: `pnpm build`
-- 文章Lint: `pnpm lint`（Markdownlint + textlint）
-- 自動フォーマット: `pnpm format`
-- エージェント検証: `pnpm agents:validate`（YAML → JSON Schema 検証）
-
-**Note:** `pnpm lint`はチェックのみを行います。フォーマットを修正するには`pnpm format`を実行してください。エディターの自動保存機能やファイル監視ツールで`pnpm format`を実行すると、無限ループが発生することがあるため、設定には注意してください。
+- 依存導入: `npm install`
+- 開発サーバー: `npm run dev`（<http://localhost:3000）>
+- 本番ビルド: `npm run build`
+- 文章Lint: `npm run lint`（Markdownlint + textlint）
 
 ビルド成果物は`build/`に出力されます。CIやリンクチェックなどの追加フローはプロジェクト要件に合わせて拡張してください。
 
-## 🧪 JavaScript/TS クイックスタート（ESLint + Agent Validation）
-
-TypeScript/JavaScript プロジェクトで AI Review Kit のチェックを最小構成で導入する手順です。
-
-1. `pnpm`で依存を導入します。
-2. 必要なスクリプトを `package.json` に追加します。
-
-```jsonc
-{
-  "scripts": {
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0",
-    "agents:validate": "node scripts/validate-agents.mjs",
-  },
-}
-```
-
-1. PRでは以下を必須チェックとして実行します。
-
-```bash
-pnpm lint && pnpm agents:validate
-```
-
-1. GitHub Actionsでは`validate-agents.yml`を利用してCIへ組み込みます。
-
 ## 📁 主なディレクトリ
 
-- `docs/`—Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
-- `agents/`—AIエージェント定義（JSON Schema とサンプルYAML）。
-- `coding-review-checklist.md`—レビュー観点のクイックリファレンス。
-- `AGENTS.md`—AIエージェント向けの作業ガイドライン。
-- `docusaurus.config.js`, `sidebars.js`—ドキュメントサイトの設定ファイル。
+- `docs/` — Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
+- `coding-review-checklist.md` — レビュー観点のクイックリファレンス。
+- `AGENTS.md` — AIエージェント向けの作業ガイドライン。
+- `docusaurus.config.js`, `sidebars.js` — ドキュメントサイトの設定ファイル。
 
 ## 🤝 コントリビューション
 
@@ -98,4 +69,4 @@ pnpm lint && pnpm agents:validate
 
 ## 📜 ライセンス
 
-このプロジェクトは Apache License 2.0 の下で公開されています。詳細は [`LICENSE`](LICENSE) を参照してください。
+このプロジェクトはMITライセンスの下で公開されています。詳細は[`LICENSE`](LICENSE)を参照してください。
