@@ -1,7 +1,7 @@
-# AGENTS.md — AI Agent Guide (Template)
+# AGENTS.md—AI Agent Guide (Template)
 
-> **テンプレートです。** 各プロジェクトの技術選定/運用に合わせて  
-> 不要な節は **削除**、コマンドは **読み替え**、ルールは **上書き** してください。  
+> **テンプレートです。** 各プロジェクトの技術選定/運用に合わせて
+> 不要な節は **削除**、コマンドは **読み替え**、ルールは **上書き** してください。
 > （AIエージェントが迷わないこと／人間にも読めることを最優先に）
 
 本ドキュメントは **AI支援型TDD（AI-TDD）** を前提に、複数エージェント（Codex CLI / Gemini CLI など）が迷わず作業できる標準手順の**たたき台**です。
@@ -23,9 +23,6 @@
 - 触らない：`/docs/generated`, `**/*.lock`, `.env*`, `secrets/*` など
 
 ## 2. セットアップ & 共通コマンド（例: pnpm）
-
-> npm: `npm ci` / `npm run lint` / `npm test`  
-> yarn: `yarn install` / `yarn lint` / `yarn test`
 
 - 依存導入: `pnpm i`
 

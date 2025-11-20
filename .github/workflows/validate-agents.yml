@@ -1,0 +1,45 @@
+name: Validate Agent Specs
+
+on:
+  pull_request:
+    paths:
+      - 'agents/**'
+      - '.github/ai-review/**'
+      - '.github/workflows/validate-agents.yml'
+      - 'docs/agents.md'
+      - 'package.json'
+      - 'scripts/validate-agents.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'agents/**'
+      - '.github/ai-review/**'
+      - '.github/workflows/validate-agents.yml'
+      - 'docs/agents.md'
+      - 'package.json'
+      - 'scripts/validate-agents.mjs'
+
+jobs:
+  schema:
+    name: Validate agent schema
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run agent schema validation
+        run: pnpm agents:validate

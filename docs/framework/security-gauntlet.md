@@ -1,6 +1,6 @@
 ---
 id: security-gauntlet
-title: Part III – セキュリティガントレット
+title: Part III—セキュリティガントレット
 ---
 
 AI生成コード特有のリスクを振り返り、**必ず通過する多段防弾**を定義します。

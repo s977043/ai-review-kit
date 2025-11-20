@@ -1,0 +1,268 @@
+version: v1.0.0
+metadata:
+  id: pocket-eitan
+  name: PocketEitan
+  owner: s977043
+  description: '中学英単語を毎日コツコツ覚えるPWA。Next.js + TypeScript + Supabase + TDD/SDD。'
+  repository: s977043/PocketEitan
+  license: Apache-2.0
+  tags:
+    - 'education'
+    - 'pwa'
+    - 'ai-agents'
+    - 'tdd'
+  updatedAt: '2025-11-02T09:27:56.084678Z'
+  contacts: []
+guidelines:
+  principles:
+    - '小さな差分で変更し、必ずテストとCIで裏付ける'
+    - '曖昧な指示を排除し、再現手順と期待出力を明示する'
+    - '秘密情報や個人情報をプロンプト・履歴に持ち込まない'
+  communication:
+    - '主要な説明・コメントは日本語で記述し、コードや識別子は英語で保つ'
+    - '仕様・計画・成果物は `.github` テンプレートに沿って構造化する'
+  prohibited:
+    - '`.env*` や `secrets/` など秘匿ファイルの編集・コミットは禁止'
+    - '`/docs/generated` と `**/*.lock` は生成物として変更しない'
+    - 'Clean Architecture の層を跨ぐ依存を追加しない'
+  developmentProcess:
+    - title: AI-SDD
+      steps:
+        - '`steering/` と `specs/` から要件・設計・タスクを同期する'
+        - '受け入れ条件をGherkinや文章で明示し差分を共有する'
+    - title: AI-TDD
+      steps:
+        - 'Red→Green→Refactor を徹底し、失敗するテストから実装を開始する'
+        - '`pnpm test` を常時監視し最小実装でGreenに到達させる'
+    - title: リファクタリング
+      steps:
+        - '重複排除と命名整理を行い、Clean Architecture の責務分離を確認する'
+    - title: エビデンス提示
+      steps:
+        - 'PRでは目的・影響・テスト結果を `.github/pull_request_template.md` に沿って記録する'
+  documentation:
+    - '設定・仕様の改訂時は README / docs / Swagger を同時更新する'
+    - 'Storybook やAPI契約など周辺ドキュメントの同期を忘れない'
+  security:
+    - '`.github/security-gauntlet.md` の多層防御（監査・認証・入力検証・通信・運用）を順守する'
+    - 'Zod を用いた入力バリデーションと `handleApiError` による例外処理を徹底する'
+    - 'Supabase RLS とアクセストークンを安全に管理し、ログへ機密情報を出力しない'
+tooling:
+  packageManager: pnpm
+  languages:
+    - 'TypeScript (strict)'
+    - 'JavaScript'
+  frameworks:
+    - 'Next.js 14 App Router'
+    - 'Supabase'
+    - 'Tailwind CSS'
+  commands:
+    - name: Install dependencies
+      category: setup
+      run: pnpm i
+      description: 'プロジェクト全体の依存を導入する'
+    - name: Lint
+      category: quality
+      run: pnpm lint
+      description: 'ESLint による静的解析'
+      expectation: '失敗を残したままPRを作成しない'
+    - name: Type check
+      category: quality
+      run: pnpm tsc -b
+      description: 'TypeScript プロジェクトリファレンスを用いた型検査'
+    - name: Unit tests
+      category: quality
+      run: pnpm test
+      description: 'Vitest によるユニット・コンポーネントテスト'
+    - name: Filtered tests
+      category: quality
+      run: 'pnpm turbo run test --filter <pkg>'
+      description: 'パッケージ単位でのテスト実行'
+  qualityGates:
+    - title: 'PR必須チェック'
+      items:
+        - 'pnpm lint'
+        - 'pnpm test'
+  definitionOfDone:
+    - title: 実装完了条件
+      items:
+        - 'Swagger・Storybookなど関連ドキュメントが最新'
+        - 'TypeScript strict / ESLint / テストがGreen'
+        - 'Clean Architectureの層責務を維持'
+agents:
+  - id: codex-cli
+    name: Codex CLI
+    type: cli
+    description: 'OpenAI CodexベースのCLIで実装を支援し、AI-SDD/AI-TDDのサイクルを守る'
+    focus:
+      - '`steering/` と `specs/` を読み、要件→設計→タスクの順で整合性を確認する'
+      - 'Clean Architectureの層分離と `handleApiError` パターンを遵守する'
+      - '生成コードは理解し、テストで裏付けてから採用する'
+    entryPoints:
+      - path: CODEX.md
+        kind: guide
+        summary: 'Codex CLIの役割とワークフロー'
+      - path: scripts/build-codex-system-md.sh
+        kind: script
+        summary: 'Codex CLI用system.mdを生成するユーティリティ'
+    instructionFiles:
+      - path: .codex/Codex.core.md
+        kind: prompt
+        summary: 'Codex CLI共通プロンプト'
+      - path: .codex/Codex.project.md
+        kind: prompt
+        summary: 'PocketEitan固有の設定'
+    reviewChecklists:
+      - path: .codex/code-review-guidelines.md
+        kind: checklist
+        summary: 'Codex CLI向けレビュー観点'
+      - path: .github/ai-agent-code-review-guidelines.md
+        kind: checklist
+        summary: 'AIエージェント共通のレビュー手順'
+    workflows:
+      - title: 'Red-Green-Refactor'
+        steps:
+          - '類似機能を調査しベースラインを把握する'
+          - '失敗するテストを追加する'
+          - '最小実装でテストをGreenにし、リファクタリングで品質を整える'
+  - id: gemini-cli
+    name: Gemini CLI
+    type: cli
+    description: 'Geminiを用いた対話型レビュー・設計検討を担い、探索的な分析を提供する'
+    focus:
+      - '仕様理解と設計ディスカッションを日本語で行い根拠を併記する'
+      - '多角的なレビュー（品質・リスク・パフォーマンス）を実施する'
+      - '生成結果を `.gemini/code-review-guidelines.md` に沿って構造化する'
+    entryPoints:
+      - path: GEMINI.md
+        kind: guide
+        summary: 'Gemini CLIの運用方針とSOP'
+      - path: scripts/build-gemini-system-md.sh
+        kind: script
+        summary: 'Gemini用system.md生成スクリプト'
+    instructionFiles:
+      - path: .gemini/Gemini.core.md
+        kind: prompt
+        summary: 'Gemini共通プロンプト'
+      - path: .gemini/Gemini.project.md
+        kind: prompt
+        summary: 'プロジェクト固有の指示'
+      - path: .gemini/system.md
+        kind: prompt
+        summary: '自動生成された統合システムプロンプト'
+    reviewChecklists:
+      - path: .gemini/code-review-guidelines.md
+        kind: checklist
+        summary: 'Gemini CLI専用のレビュー基準'
+    workflows:
+      - title: '探索的コードレビュー'
+        steps:
+          - '変更概要と目的を把握し、代替案・リスクを洗い出す'
+          - 'セキュリティ・品質・性能の観点で評価する'
+          - '改善提案と次アクションを具体的に提示する'
+  - id: copilot
+    name: GitHub Copilot
+    type: ide
+    description: 'IDE内のコード補完を担当し、仕様とテスト駆動プロセスを補助する'
+    focus:
+      - '`specs/` と `steering/` の要件を理解した上で最小実装を提案する'
+      - 'コメントで目的を明確にし、可読性とテスト容易性を重視する'
+      - 'Clean Architectureパターンとリポジトリ規約に従う'
+    entryPoints:
+      - path: COPILOT.md
+        kind: guide
+        summary: 'Copilot利用時の仕様駆動テンプレート'
+    instructionFiles:
+      - path: .github/copilot-instructions.md
+        kind: prompt
+        summary: 'リポジトリ全体に適用されるCopilot指示'
+    reviewChecklists:
+      - path: .github/code-review-checklist.md
+        kind: checklist
+        summary: 'PocketEitan固有のレビュー観点'
+  - id: kiro-cli
+    name: Kiro CLI
+    type: planner
+    description: '`.kiro/specs/` の要件・設計・タスクを読み解き、作業方針を整理する'
+    focus:
+      - 'docs/overview.md と AGENTS.md を優先的に要約し、仕様メモを生成する'
+      - '`.kiro/specs/<scope>/` の requirements/design/tasks を順序立てて参照する'
+      - '参照ファイルと要点を箇条書きで共有し、追加の調査候補を提案する'
+    entryPoints:
+      - path: KIRO.md
+        kind: guide
+        summary: 'Kiro CLI向けリポジトリ概要と指示テンプレート'
+      - path: .kiro/specs
+        kind: knowledge-base
+        summary: 'Kiroが優先的に参照する仕様群'
+    instructionFiles:
+      - path: KIRO.md
+        kind: prompt
+        summary: 'Kiro CLIプロジェクトコンテキスト'
+resources:
+  documents:
+    - path: AGENTS.md
+      kind: guide
+      summary: 'PocketEitan AIエージェント共通ガイド'
+      tags:
+        - 'ai'
+        - 'process'
+    - path: .aiconfig.json
+      kind: config
+      summary: 'プロジェクトメタデータと技術スタック'
+      tags:
+        - 'metadata'
+    - path: steering/product-steering.md
+      kind: strategy
+      summary: 'プロダクトビジョンと原則'
+    - path: specs
+      kind: knowledge-base
+      summary: 'SDD向け仕様書群'
+    - path: docs/overview.md
+      kind: guide
+      summary: 'プロジェクト概要と学習フロー'
+  checklists:
+    - path: .github/code-review-checklist.md
+      kind: checklist
+      summary: 'PocketEitanコードレビュー基準'
+    - path: .github/security-gauntlet.md
+      kind: checklist
+      summary: 'セキュリティ多層防御の実行手順'
+    - path: .github/ai-agent-code-review-guidelines.md
+      kind: checklist
+      summary: 'AIエージェントのレビュー運用ルール'
+automation:
+  ciWorkflows:
+    - name: Validate Agent Specs
+      path: .github/workflows/validate-agents.yml
+      description: 'AJVでagents/examples/*.agent.yamlを検証する'
+      triggers:
+        - 'pull_request (agents/配下の変更)'
+        - 'push (main)'
+      enforces:
+        - 'pnpm agents:validate'
+    - name: AI Code Review
+      path: .github/workflows/ai-code-review.yml
+      description: 'Codex/Gemini連携による自動レビューと品質ゲート'
+      triggers:
+        - 'pull_request (opened, synchronize, reopened)'
+        - 'push (develop, main)'
+      enforces:
+        - 'pnpm lint'
+        - 'pnpm tsc -b'
+        - 'pnpm test'
+        - 'pnpm audit --audit-level moderate'
+    - name: AI Review Setup Validation
+      path: .github/workflows/ai-review.yml
+      description: 'ガイドラインとセットアップの健全性を検証'
+      triggers:
+        - 'pull_request (main, dev)'
+      enforces:
+        - 'scripts/validate-code-review-setup.sh'
+        - 'AIガイドラインファイルの存在チェック'
+    - name: Verify Copilot Instructions
+      path: .github/workflows/verify-copilot-instructions.yml
+      description: 'Copilot指示の整合性とリンクの健全性を継続チェック'
+      triggers:
+        - 'push'
+        - 'pull_request'
