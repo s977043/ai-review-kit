@@ -85,7 +85,7 @@ pnpm lint && pnpm agents:validate
 ## 📁 主なディレクトリ
 
 - `docs/`—Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
-- `agents/`—AIエージェント定義（JavaScriptON Schema とサンプルYAML）。
+- `agents/`—AIエージェント定義（JSON Schema とサンプルYAML）。
 - `coding-review-checklist.md`—レビュー観点のクイックリファレンス。
 - `AGENTS.md`—AIエージェント向けの作業ガイドライン。
 - `docusaurus.config.js`, `sidebars.js`—ドキュメントサイトの設定ファイル。

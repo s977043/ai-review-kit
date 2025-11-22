@@ -1,6 +1,6 @@
 # コンフィグスキーマ
 
-AI Review Kitの設定ファイルはYAMLもしくはJavaScriptON形式で記述する。
+AI Review Kitの設定ファイルはYAMLもしくはJSON形式で記述する。
 
 - `model`: 使用する言語モデルの名前。例: `gpt-4`, `claude-3`。
 

@@ -1,4 +1,4 @@
-# Agents — Adding Project Knowledge Packs
+# Agents—Adding Project Knowledge Packs
 
 PocketEitan の AI エージェント資産を外部リポジトリで再利用するための手順をまとめます。`agents/spec/agent.schema.json` と `agents/examples/*.agent.yaml` を基準に、新しいプロジェクト向けのナレッジパックを作成してください。
 
@@ -40,7 +40,7 @@ agents/
 
 ```bash
 # 例: 全サンプルファイルがスキーマと一致するか検証
-pnpm agents:validate
+npm run agents:validate
 ```
 
 CI でも `.github/workflows/validate-agents.yml` により同じ検証が実行されます。
