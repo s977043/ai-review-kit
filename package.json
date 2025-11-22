@@ -7,12 +7,12 @@
     "serve": "docusaurus serve",
     "lint:md": "markdownlint '**/*.md' --ignore node_modules",
     "lint:text": "textlint 'docs/**/*.md'",
-    "check:dashes": "node scripts/fix-dashes.mjs --check",
     "lint": "npm run format:check && npm run check:dashes && npm run lint:md && npm run lint:text",
     "format": "prettier --write \"**/*.{js,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,yml,yaml}\"",
     "agents:validate": "node scripts/validate-agents.mjs",
-    "fix:dashes": "node scripts/fix-dashes.mjs"
+    "fix:dashes": "node scripts/fix-dashes.mjs",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@docusaurus/core": "^3.5.0",
@@ -30,6 +30,17 @@
     "prh": "^5.4.4",
     "textlint": "^15.4.0",
     "textlint-rule-preset-ja-technical-writing": "^12.0.2",
-    "textlint-rule-prh": "^6.1.0"
+    "textlint-rule-prh": "^6.1.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^14.1.0"
+  }
+  ,
+  "lint-staged": {
+    "*.{md,markdown}": [
+      "npm run check:dashes"
+    ],
+    "*.{js,json,yml,yaml,md,markdown}": [
+      "prettier --write"
+    ]
   }
 }
