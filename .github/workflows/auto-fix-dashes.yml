@@ -28,9 +28,9 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(docs): auto-fix dash spacing"
-          title: "chore(docs): auto-fix dash spacing"
+          commit-message: 'chore(docs): auto-fix dash spacing'
+          title: 'chore(docs): auto-fix dash spacing'
           body: |
             Automated PR created by scheduled workflow to normalize dash spacing (`scripts/fix-dashes.mjs`).
             Please review the changes and merge if acceptable.
-          branch: "auto/fix-dashes-automation"
+          branch: 'auto/fix-dashes-automation'
