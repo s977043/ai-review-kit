@@ -157,4 +157,110 @@ function main() {
     for (const f of modifiedFiles) console.log(' -', f);
 }
 
-main();
+// CLI: support --check (dry-run w/ exit code 1 if would change) and --root to target path
+function parseArgs() {
+    const args = process.argv.slice(2);
+    const options = { check: false, root: process.cwd() };
+    for (let i = 0; i < args.length; i++) {
+        const a = args[i];
+        if (a === '--check' || a === '-c') options.check = true;
+        else if (a === '--root' && i + 1 < args.length) options.root = args[++i];
+    }
+    return options;
+}
+
+function run() {
+    const opts = parseArgs();
+    const files = collectTargetFiles();
+    const modifiedFiles = [];
+    for (const file of files) {
+        try {
+            const content = fs.readFileSync(file, 'utf8');
+            const res = processMarkdownFileWithOutput(file, content, opts);
+            if (res.changed) modifiedFiles.push(file);
+        } catch (err) {
+            console.error(`Error processing ${file}:`, err.message);
+        }
+    }
+    if (modifiedFiles.length === 0) {
+        console.log('No heading/title dash normalizations needed.');
+        process.exit(0);
+    }
+    console.log('Modified files:');
+    for (const f of modifiedFiles) console.log(' -', f);
+    if (opts.check) {
+        console.log('Files would be changed (check mode).');
+        process.exit(1);
+    }
+    process.exit(0);
+}
+
+// Expose a variant that takes content and returns the new content and whether changed
+function processMarkdownFileWithOutput(filePath, content, opts = {}) {
+    const lines = content.split(/\r?\n/);
+    let inCodeFence = false;
+    let changed = false;
+    let inFrontMatter = false;
+    const newLines = [];
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (/^```/.test(line)) {
+            inCodeFence = !inCodeFence;
+            newLines.push(line);
+            continue;
+        }
+        if (inCodeFence) {
+            newLines.push(line);
+            continue;
+        }
+        if (i === 0 && /^---\s*$/.test(line)) {
+            inFrontMatter = true;
+            newLines.push(line);
+            continue;
+        }
+        if (inFrontMatter) {
+            if (/^---\s*$/.test(line)) {
+                inFrontMatter = false;
+                newLines.push(line);
+                continue;
+            }
+            const titleMatch = /^title:\s*(.*)$/u.exec(line);
+            if (titleMatch) {
+                const originalValue = titleMatch[1];
+                const { newLine, modified } = normalizeTextSegment(originalValue);
+                if (modified) {
+                    newLines.push(`title: ${newLine}`);
+                    changed = true;
+                    continue;
+                }
+            }
+            newLines.push(line);
+            continue;
+        }
+        if (/^#+\s+/.test(line)) {
+            const prefix = line.match(/^#+\s+/)[0];
+            const rest = line.slice(prefix.length);
+            const { newLine, modified } = normalizeTextSegment(rest);
+            if (modified) {
+                newLines.push(prefix + newLine);
+                changed = true;
+                continue;
+            }
+        }
+        if (!inFrontMatter && !inCodeFence && /\s[\u2013\u2014]\s/.test(line)) {
+            const { newLine, modified } = normalizeTextSegment(line);
+            if (modified) {
+                newLines.push(newLine);
+                changed = true;
+                continue;
+            }
+        }
+        newLines.push(line);
+    }
+    if (!opts.check && changed) {
+        fs.writeFileSync(filePath, newLines.join('\n'), 'utf8');
+    }
+    return { changed, content: newLines.join('\n') };
+}
+
+run();
