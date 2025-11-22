@@ -1,6 +1,6 @@
 ---
 id: agents-hitl
-title: Part V — マルチエージェントとHITL
+title: Part V—マルチエージェントとHITL
 ---
 
 ### モジュラーなエージェント群

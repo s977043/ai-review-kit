@@ -9,7 +9,7 @@ rules:
   - expected: JavaScript
     pattern:
       - /[Jj]ava[Ss]cript/
-      - /JS/
+      - /\bJS\b/
   - expected: VS Code
     pattern:
       - /VSCode/

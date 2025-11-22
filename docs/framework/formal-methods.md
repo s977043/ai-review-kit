@@ -1,6 +1,6 @@
 ---
 id: formal-methods
-title: Part IV — 形式的検証と定量分析
+title: Part IV—形式的検証と定量分析
 ---
 
 ### 形式的手段の適用
