@@ -12,6 +12,7 @@
     "format:check": "prettier --check \"**/*.{js,json,md,yml,yaml}\"",
     "agents:validate": "node scripts/validate-agents.mjs",
     "fix:dashes": "node scripts/fix-dashes.mjs",
+    "check:dashes": "node scripts/fix-dashes.mjs --check",
     "prepare": "husky install"
   },
   "dependencies": {
