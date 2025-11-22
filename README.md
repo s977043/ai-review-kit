@@ -56,10 +56,10 @@ jobs:
 
 ## 📁 主なディレクトリ
 
-- `docs/` — Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
-- `coding-review-checklist.md` — レビュー観点のクイックリファレンス。
-- `AGENTS.md` — AIエージェント向けの作業ガイドライン。
-- `docusaurus.config.js`, `sidebars.js` — ドキュメントサイトの設定ファイル。
+- `docs/`—Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
+- `coding-review-checklist.md`—レビュー観点のクイックリファレンス。
+- `AGENTS.md`—AIエージェント向けの作業ガイドライン。
+- `docusaurus.config.js`, `sidebars.js`—ドキュメントサイトの設定ファイル。
 
 ## 🤝 コントリビューション
 

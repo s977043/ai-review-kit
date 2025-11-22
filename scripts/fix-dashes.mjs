@@ -28,7 +28,7 @@ function walkDir(dir) {
 
 function isDigit(c) { return /[0-9]/.test(c); }
 
-function normalizeTitleOrHeading(line) {
+function normalizeTextSegment(line) {
     // Replace pattern: space + (en-dash|em-dash) + space -> em-dash (no spaces)
     // But skip numeric ranges where digit (or punct) is on either side
     let modified = false;
@@ -81,7 +81,7 @@ function processMarkdownFile(filePath) {
             const titleMatch = /^title:\s*(.*)$/u.exec(line);
             if (titleMatch) {
                 const originalValue = titleMatch[1];
-                const { newLine, modified } = normalizeTitleOrHeading(originalValue);
+                const { newLine, modified } = normalizeTextSegment(originalValue);
                 if (modified) {
                     newLines.push(`title: ${newLine}`);
                     changed = true;
@@ -96,9 +96,19 @@ function processMarkdownFile(filePath) {
         if (/^#+\s+/.test(line)) {
             const prefix = line.match(/^#+\s+/)[0];
             const rest = line.slice(prefix.length);
-            const { newLine, modified } = normalizeTitleOrHeading(rest);
+            const { newLine, modified } = normalizeTextSegment(rest);
             if (modified) {
                 newLines.push(prefix + newLine);
+                changed = true;
+                continue;
+            }
+        }
+
+        // For general inline text and list items, normalize mid-sentence dashes that have spaces around
+        if (!inFrontMatter && !inCodeFence && /\s[\u2013\u2014]\s/.test(line)) {
+            const { newLine, modified } = normalizeTextSegment(line);
+            if (modified) {
+                newLines.push(newLine);
                 changed = true;
                 continue;
             }
