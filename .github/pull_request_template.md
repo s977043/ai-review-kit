@@ -16,14 +16,14 @@
 ## 実行結果 / Logs
 
 ```bash
-pnpm run agents:validate
-# 追加で実行したコマンド（例: pnpm run lint, pnpm test など）
+npm run agents:validate
+# 追加で実行したコマンド（例: npm run lint, npm test など）
 ```
 
 ## チェックリスト / Checklist
 
-- [ ] `pnpm run agents:validate`
-- [ ] 必要なLintやテスト (`pnpm run lint`, `pnpm test` など) がGreen
+- [ ] `npm run agents:validate`
+- [ ] 必要なLintやテスト (`npm run lint`, `npm test` など) がGreen
 - [ ] `docs/agents.md` と `README.md` を更新済み
 - [ ] `.github/ai-review/checklists/` の更新内容を自己レビュー済み
 - [ ] 影響範囲のドキュメント・利用者通知を準備

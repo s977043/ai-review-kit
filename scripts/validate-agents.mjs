@@ -44,7 +44,9 @@ async function validateAgents() {
   // Make sure Ajv recognizes the https draft-07 meta-schema without
   // mutating the user's schema document. This avoids switching the
   // schema $schema property while allowing Ajv to validate properly.
-
+  // Attempt to register the draft-07 https meta-schema with Ajv without
+  // mutating the schema object. This avoids rewriting the schema's $schema
+  // property to the http variant while still allowing validation to proceed.
   const draft7Path = path.join(repoRoot, 'node_modules', 'ajv', 'dist', 'refs', 'json-schema-draft-07.json');
   try {
     const json = await fs.readFile(draft7Path, 'utf8');
@@ -78,7 +80,7 @@ async function validateAgents() {
     } catch (err) {
       success = false;
       console.error(`❌ ${relativePath}`);
-      console.error(`  - ${relativePath} YAML parsing error: ${err.message}`);
+      console.error(`  - YAML parsing error: ${err.message}`);
       continue;
     }
     const valid = validate(data);

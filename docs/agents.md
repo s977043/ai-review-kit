@@ -40,7 +40,7 @@ agents/
 
 ```bash
 # 例: 全サンプルファイルがスキーマと一致するか検証
-pnpm agents:validate
+npm run agents:validate
 ```
 
 CI でも `.github/workflows/validate-agents.yml` により同じ検証が実行されます。

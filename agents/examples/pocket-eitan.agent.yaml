@@ -240,7 +240,7 @@ automation:
         - 'pull_request (agents/配下の変更)'
         - 'push (main)'
       enforces:
-        - 'pnpm agents:validate'
+        - 'npm run agents:validate'
     - name: AI Code Review
       path: .github/workflows/ai-code-review.yml
       description: 'Codex/Gemini連携による自動レビューと品質ゲート'
