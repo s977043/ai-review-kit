@@ -1,0 +1,36 @@
+name: Auto Fix Dashes
+
+on:
+  schedule:
+    - cron: '0 3 * * 6' # Every Saturday 03:00 UTC (6:00 JST)
+
+jobs:
+  auto-fix-dashes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run fix-dashes
+        run: npm run fix:dashes
+
+      - name: Create PR if changes
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(docs): auto-fix dash spacing"
+          title: "chore(docs): auto-fix dash spacing"
+          body: |
+            Automated PR created by scheduled workflow to normalize dash spacing (`scripts/fix-dashes.mjs`).
+            Please review the changes and merge if acceptable.
+          branch: "auto/fix-dashes-automation"
