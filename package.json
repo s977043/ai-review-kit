@@ -10,7 +10,8 @@
     "lint": "pnpm format:check && pnpm lint:md && pnpm lint:text",
     "format": "prettier --write \"**/*.{js,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,yml,yaml}\"",
-    "agents:validate": "node scripts/validate-agents.mjs"
+    "agents:validate": "node scripts/validate-agents.mjs",
+    "fix:dashes": "node scripts/fix-dashes.mjs"
   },
   "dependencies": {
     "@docusaurus/core": "^3.5.0",
