@@ -33,8 +33,7 @@
     "textlint-rule-prh": "^6.1.0",
     "husky": "^8.0.3",
     "lint-staged": "^14.0.0"
-  }
-  ,
+  },
   "lint-staged": {
     "*.{md,markdown}": [
       "npm run check:dashes"
