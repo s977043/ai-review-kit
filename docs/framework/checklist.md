@@ -1,6 +1,6 @@
 ---
 id: checklist
-title: Part II — 包括的チェックリスト
+title: Part II—包括的チェックリスト
 ---
 
 AIレビュアーの中核は、再現可能な**多次元チェックリスト**です。
