@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { tracer, enabled as otelEnabled } from '../src/tracing.mjs';
+import { SpanStatusCode } from '@opentelemetry/api';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -97,42 +98,56 @@ async function validateAgents() {
   let success = true;
 
   for (const filePath of files) {
-    let fileSpan;
     if (otelEnabled) {
-      fileSpan = tracer.startSpan('validate-file', { attributes: { 'file.path': filePath } });
-    }
-    const relativePath = path.relative(repoRoot, filePath);
-    const raw = await fs.readFile(filePath, 'utf8');
-    let data = {};
-    try {
-      data = yaml.load(raw) ?? {};
-    } catch (err) {
-      if (fileSpan) {
-        fileSpan.recordException(err);
-      }
-      success = false;
-      console.error(`❌ ${relativePath}`);
-      console.error(`  - YAML parsing error: ${err.message}`);
-      continue;
-    }
-    const valid = validate(data);
-
-    if (valid) {
-      console.log(`✅ ${relativePath}`);
+      await tracer.startActiveSpan('validate-file', { attributes: { 'file.path': filePath } }, async (fileSpan) => {
+        try {
+          const result = await validateSingleFile(filePath, validate, repoRoot);
+          if (!result) {
+            success = false;
+          }
+        } catch (err) {
+          fileSpan.recordException(err);
+          fileSpan.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          success = false;
+        } finally {
+          fileSpan.end();
+        }
+      });
     } else {
-      success = false;
-      console.error(`❌ ${relativePath}`);
-      for (const err of validate.errors ?? []) {
-        const instance = err.instancePath || '/';
-        console.error(`  - ${instance}: ${err.message}`);
+      const result = await validateSingleFile(filePath, validate, repoRoot);
+      if (!result) {
+        success = false;
       }
-    }
-    if (fileSpan) {
-      fileSpan.end();
     }
   }
 
   return success;
+}
+
+async function validateSingleFile(filePath, validate, repoRoot) {
+  const relativePath = path.relative(repoRoot, filePath);
+  const raw = await fs.readFile(filePath, 'utf8');
+  let data = {};
+  try {
+    data = yaml.load(raw) ?? {};
+  } catch (err) {
+    console.error(`❌ ${relativePath}`);
+    console.error(`  - YAML parsing error: ${err.message}`);
+    throw err;
+  }
+  const valid = validate(data);
+
+  if (valid) {
+    console.log(`✅ ${relativePath}`);
+    return true;
+  } else {
+    console.error(`❌ ${relativePath}`);
+    for (const err of validate.errors ?? []) {
+      const instance = err.instancePath || '/';
+      console.error(`  - ${instance}: ${err.message}`);
+    }
+    return false;
+  }
 }
 
 const ok = await validateAgents();
