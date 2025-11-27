@@ -1,29 +1,30 @@
-## 背景 / Goal
+# 🌊 River Reviewer Pull Request
 
-- [ ] 問題の概要と目的を1-2行で記載
-- [ ] 仕様・要件・外部リンクがあれば添付
+Flow your changes from Upstream to Midstream to Downstream with clear validation.
 
-## 変更点 / Summary
+## Overview
+- What is changing and why? (1-2 lines)
+- Primary phase focus: Upstream / Midstream / Downstream
 
-- [ ] 主な変更内容を箇条書き（スキーマ・チェックリスト・ドキュメントなど）
-- [ ] 追加/更新したCIやスクリプトがあれば記載
+## Flow Consistency
+- [ ] Upstream: design/requirements updated and linked
+- [ ] Midstream: implementation matches the intended flow
+- [ ] Downstream: tests/QA steps cover the change
+- [ ] Schema Validation passed? (`schemas/skill.schema.json`)
+- [ ] Skill file structure validated? (`skills/*` follows schema and naming)
 
-## 影響範囲 / Impact
-
-- [ ] 対象: ドキュメント / スキーマ / チェックリスト / ワークフロー / その他
-- [ ] エージェント利用者が追従すべき手順を明記
-
-## 実行結果 / Logs
+## Validation & Evidence
+List commands and logs that prove the change is river-safe.
 
 ```bash
+# e.g.
 npm run agents:validate
-# 追加で実行したコマンド（例: npm run lint, npm test など）
+npm test
 ```
 
-## チェックリスト / Checklist
+## Related Issues
+- Closes #
+- Related #
 
-- [ ] `npm run agents:validate`
-- [ ] 必要なLintやテスト (`npm run lint`, `npm test` など) がGreen
-- [ ] `docs/agents.md` と `README.md` を更新済み
-- [ ] `.github/ai-review/checklists/` の更新内容を自己レビュー済み
-- [ ] 影響範囲のドキュメント・利用者通知を準備
+## Reviewer Notes
+Context, roll-out risks, or follow-up tasks for reviewers.

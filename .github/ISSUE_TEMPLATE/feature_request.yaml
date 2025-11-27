@@ -1,0 +1,78 @@
+name: "\U0001F680 Feature Request"
+description: "Propose a new River Reviewer capability."
+title: "[Feature] "
+labels: ["type:feature", "status:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: "Help us plan the flow from idea to delivery. Acceptance criteria are required."
+  - type: dropdown
+    id: phase
+    attributes:
+      label: "What phase is affected?"
+      options:
+        - Upstream
+        - Midstream
+        - Downstream
+    validations:
+      required: true
+  - type: dropdown
+    id: schema_impacted
+    attributes:
+      label: "Schema impacted? (skill.schema.json)"
+      options:
+        - Yes
+        - No
+        - Unsure
+    validations:
+      required: true
+  - type: dropdown
+    id: runner_logic_impacted
+    attributes:
+      label: "Runner logic impacted?"
+      options:
+        - Yes
+        - No
+        - Unsure
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Impact level"
+      options:
+        - info
+        - minor
+        - major
+        - critical
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem to solve"
+      description: "What need or gap does this feature address?"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "Proposed solution"
+      description: "Describe the feature and how it flows through Upstream → Midstream → Downstream."
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Acceptance criteria"
+      description: "Clear, testable outcomes for this feature."
+      placeholder: |
+        - A skill author can...
+        - When..., the runner...
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: "Related issues / links"
+      description: "Designs, RFCs, or previous discussions."

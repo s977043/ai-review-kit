@@ -1,0 +1,68 @@
+name: "\U0001F4D6 Documentation"
+description: "Request or propose documentation updates for River Reviewer."
+title: "[Docs] "
+labels: ["type:docs", "status:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: "Help keep River Reviewer docs aligned with the Upstream → Midstream → Downstream flow."
+  - type: dropdown
+    id: phase
+    attributes:
+      label: "What phase is affected?"
+      options:
+        - Upstream
+        - Midstream
+        - Downstream
+    validations:
+      required: true
+  - type: dropdown
+    id: schema_impacted
+    attributes:
+      label: "Schema impacted? (skill.schema.json)"
+      options:
+        - Yes
+        - No
+        - Unsure
+    validations:
+      required: true
+  - type: dropdown
+    id: runner_logic_impacted
+    attributes:
+      label: "Runner logic impacted?"
+      options:
+        - Yes
+        - No
+        - Unsure
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Impact level"
+      options:
+        - info
+        - minor
+        - major
+        - critical
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: "Page(s) to update"
+      description: "Paths, section headings, or links to the docs needing changes."
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: "Requested change"
+      description: "Describe the new or corrected information needed."
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: "How can we verify accuracy?"
+      description: "Examples: commands to run, outputs to capture, or SMEs to confirm with."

@@ -1,43 +1,40 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "River Reviewer Skill Metadata Schema",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "River Reviewer Skill Schema",
   "type": "object",
-  "required": ["id", "name", "phase", "applyTo", "description"],
-  "additionalProperties": false,
+  "required": ["id", "name", "description", "phase", "applyTo"],
   "properties": {
     "id": {
       "type": "string",
-      "minLength": 3
+      "description": "Unique identifier for the skill (recommended: rr-xxxx)"
     },
     "name": {
       "type": "string",
-      "minLength": 1
-    },
-    "phase": {
-      "type": "string",
-      "enum": ["upstream", "midstream", "downstream"]
-    },
-    "tags": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
-    },
-    "severity": {
-      "type": "string",
-      "enum": ["info", "minor", "major", "critical"]
-    },
-    "applyTo": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "string"
-      }
+      "description": "Human-readable skill name"
     },
     "description": {
       "type": "string",
-      "minLength": 1
+      "description": "Brief description of what the skill checks"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["upstream", "midstream", "downstream"],
+      "description": "Which SDLC phase this skill applies to"
+    },
+    "applyTo": {
+      "type": "array",
+      "description": "Glob patterns defining which files to check",
+      "items": { "type": "string" }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional metadata for classification",
+      "items": { "type": "string" }
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "minor", "major", "critical"],
+      "description": "Optional severity rating"
     }
   }
 }
