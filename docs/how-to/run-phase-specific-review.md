@@ -12,7 +12,6 @@ Target a single phase when you only want Upstream, Midstream, or Downstream feed
      pull_request:
        paths:
          - 'docs/**' # Upstream-focused example
-         - '!src/**' # skip Midstream code if desired
    ```
 
 3. For local runs, execute only the relevant skills by filtering files or temporarily narrowing `applyTo` globs.

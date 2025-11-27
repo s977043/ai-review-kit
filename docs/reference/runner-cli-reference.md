@@ -1,20 +1,11 @@
 # Runner CLI Reference
 
-Use the Runner CLI to execute River Reviewer skills locally or in CI.
+Use the Runner CLI to validate River Reviewer agents locally or in CI.
 
 ## Commands
 
-- `npm run agents:validate`: runs schema checks with `/schemas/skill.schema.json`.
-- `node scripts/validate-agents.mjs [options]`: run the validator directly with custom flags.
-
-## Options
-
-| Flag                                        | Description                                                 |
-| ------------------------------------------- | ----------------------------------------------------------- |
-| `--phase <upstream\|midstream\|downstream>` | Limit validation or execution to a single phase.            |
-| `--files <glob>`                            | Validate only skills that match files in the provided glob. |
-| `--schema <path>`                           | Use a custom schema file instead of the default.            |
-| `--format <text\|json>`                     | Control output format for CI logs.                          |
+- `npm run agents:validate`: runs schema checks for bundled agents.
+- `node scripts/validate-agents.mjs`: run the validator directly (no CLI options).
 
 ## Exit codes
 
@@ -27,6 +18,6 @@ Use the Runner CLI to execute River Reviewer skills locally or in CI.
 # Validate all skills
 npm run agents:validate
 
-# Validate only upstream skills that touch docs
-node scripts/validate-agents.mjs --phase upstream --files \"docs/**/*\"
+# Validate all skills directly
+node scripts/validate-agents.mjs
 ```

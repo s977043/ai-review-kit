@@ -22,6 +22,7 @@ All skills in River Reviewer must conform to JSON schema located at:
 ---
 id: rr-python-sqlinj-v1
 name: Python SQL Injection Check
+description: Detects SQL injection patterns in Python code
 phase: midstream
 applyTo:
   - '**/*.py'

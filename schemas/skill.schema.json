@@ -3,18 +3,22 @@
   "title": "River Reviewer Skill Schema",
   "type": "object",
   "required": ["id", "name", "description", "phase", "applyTo"],
+  "additionalProperties": false,
   "properties": {
     "id": {
       "type": "string",
-      "description": "Unique identifier for the skill (recommended: rr-xxxx)"
+      "description": "Unique identifier for the skill (recommended: rr-xxxx)",
+      "minLength": 1
     },
     "name": {
       "type": "string",
-      "description": "Human-readable skill name"
+      "description": "Human-readable skill name",
+      "minLength": 1
     },
     "description": {
       "type": "string",
-      "description": "Brief description of what the skill checks"
+      "description": "Brief description of what the skill checks",
+      "minLength": 1
     },
     "phase": {
       "type": "string",
@@ -24,12 +28,14 @@
     "applyTo": {
       "type": "array",
       "description": "Glob patterns defining which files to check",
-      "items": { "type": "string" }
+      "items": { "type": "string" },
+      "minItems": 1
     },
     "tags": {
       "type": "array",
       "description": "Optional metadata for classification",
-      "items": { "type": "string" }
+      "items": { "type": "string" },
+      "uniqueItems": true
     },
     "severity": {
       "type": "string",

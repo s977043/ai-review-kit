@@ -20,7 +20,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: s977043/river-reviewer@v0
+      - uses: s977043/river-reviewer@v1
 ```
 
 ## 2. Keep credentials out of the flow
