@@ -1,10 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$comment": "DEPRECATED – replaced by schemas/*.json",
-  "title": "AI Review Kit Review Output Schema (review_v1)",
+  "title": "River Reviewer Output Schema (review_v1)",
   "type": "object",
-  "description": "Standard structure for the output of a review skill.",
-  "required": ["issue", "rationale", "suggestion", "priority", "skill_id"],
+  "description": "Standard structure for the output of a River Reviewer skill.",
+  "required": ["issue", "rationale", "impact", "suggestion", "priority", "skill_id"],
   "properties": {
     "issue": {
       "type": "string",
