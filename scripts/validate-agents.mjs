@@ -49,8 +49,6 @@ async function validateAgents() {
       } catch (e) {
         span.recordException(e);
         throw e;
-      } finally {
-        span.end();
       }
     });
   } else {
@@ -83,12 +81,9 @@ async function validateAgents() {
   const files = otelEnabled
     ? await tracer.startActiveSpan('list-files', async (span) => {
       try {
-        const f = await listAgentFiles();
-        span.end();
-        return f;
+        return await listAgentFiles();
       } catch (e) {
         span.recordException(e);
-        span.end();
         throw e;
       }
     })
