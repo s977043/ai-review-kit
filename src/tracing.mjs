@@ -5,8 +5,7 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import resources from '@opentelemetry/resources';
 const { resourceFromAttributes } = resources;
-import semanticConventions from '@opentelemetry/semantic-conventions';
-const { SemanticResourceAttributes } = semanticConventions;
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { trace } from '@opentelemetry/api';
 
 // Enable diagnostic logging for development when OTEL_DEBUG env is set.
@@ -22,7 +21,7 @@ let tracer;
 
 if (enabled) {
     const exporterEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces';
-    const resource = resourceFromAttributes({ [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'ai-review-kit' });
+    const resource = resourceFromAttributes({ [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'ai-review-kit' });
     const exporter = new OTLPTraceExporter({ url: exporterEndpoint });
 
     sdk = new NodeSDK({
