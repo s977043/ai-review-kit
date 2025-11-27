@@ -3,7 +3,7 @@
   "title": "River Reviewer Output Schema (review_v1)",
   "type": "object",
   "description": "Standard structure for the output of a River Reviewer skill.",
-  "required": ["issue", "rationale", "suggestion", "priority", "skill_id"],
+  "required": ["issue", "rationale", "impact", "suggestion", "priority", "skill_id"],
   "properties": {
     "issue": {
       "type": "string",
