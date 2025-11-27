@@ -3,22 +3,22 @@ severity:
     description: >-
       Issues that could lead to security vulnerabilities, data loss or system
       failure. These must be fixed prior to merge or release.
-    action: "Fail CI and block merge."
+    action: 'Fail CI and block merge.'
   major:
     description: >-
       Significant problems that degrade maintainability, reliability or
       performance. Should be addressed before the next release or deployment.
-    action: "Warn developers and require fixing within the current development cycle."
+    action: 'Warn developers and require fixing within the current development cycle.'
   minor:
     description: >-
       Minor issues or code smells that do not immediately impact functionality
       but should be resolved to maintain code quality.
-    action: "Comment only; do not block CI but encourage cleanup."
+    action: 'Comment only; do not block CI but encourage cleanup.'
   notice:
     description: >-
       Informational messages or suggestions for improvement. Useful for learning
       and future refactoring, but not actionable at this time.
-    action: "Provide as guidance; no action required."
+    action: 'Provide as guidance; no action required.'
 
 phase:
   design:

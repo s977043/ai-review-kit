@@ -3,17 +3,17 @@
 id: <phase>.<short_name>
 title: <Human readable title>
 version: 0.1.0
-severity: minor                # critical | major | minor | notice
+severity: minor # critical | major | minor | notice
 phase:
-  - design                    # design | implementation | test | improve
-category: architecture        # e.g. architecture | security | performance | reliability
+  - design # design | implementation | test | improve
+category: architecture # e.g. architecture | security | performance | reliability
 tags:
   - example
   - refactoring
 applyTo:
-  - "**/*"
+  - '**/*'
 exclude:
-  - "**/test/**"
+  - '**/test/**'
 events:
   - pull_request
 expected_output:
