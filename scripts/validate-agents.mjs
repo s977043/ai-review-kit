@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { tracer, enabled as otelEnabled } from '../src/tracing.mjs';
+import { SpanStatusCode } from '@opentelemetry/api';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -37,7 +39,22 @@ async function listAgentFiles() {
 }
 
 async function validateAgents() {
-  const schema = await loadSchema();
+  let schema;
+  if (otelEnabled) {
+    schema = await tracer.startActiveSpan('load-schema', async (span) => {
+      try {
+        const s = await loadSchema();
+        // mark as ok
+        // No explicit status API used here to keep SDK compatibility
+        return s;
+      } catch (e) {
+        span.recordException(e);
+        throw e;
+      }
+    });
+  } else {
+    schema = await loadSchema();
+  }
   const ajv = new Ajv({ allErrors: true, strict: true });
   addFormats(ajv);
 
@@ -62,7 +79,16 @@ async function validateAgents() {
   }
 
   const validate = ajv.compile(schema);
-  const files = await listAgentFiles();
+  const files = otelEnabled
+    ? await tracer.startActiveSpan('list-files', async (span) => {
+      try {
+        return await listAgentFiles();
+      } catch (e) {
+        span.recordException(e);
+        throw e;
+      }
+    })
+    : await listAgentFiles();
 
   if (files.length === 0) {
     console.warn('⚠️  No agent files found in agents/examples.');
@@ -72,32 +98,56 @@ async function validateAgents() {
   let success = true;
 
   for (const filePath of files) {
-    const relativePath = path.relative(repoRoot, filePath);
-    const raw = await fs.readFile(filePath, 'utf8');
-    let data = {};
-    try {
-      data = yaml.load(raw) ?? {};
-    } catch (err) {
-      success = false;
-      console.error(`❌ ${relativePath}`);
-      console.error(`  - YAML parsing error: ${err.message}`);
-      continue;
-    }
-    const valid = validate(data);
-
-    if (valid) {
-      console.log(`✅ ${relativePath}`);
+    if (otelEnabled) {
+      await tracer.startActiveSpan('validate-file', { attributes: { 'file.path': filePath } }, async (fileSpan) => {
+        try {
+          const result = await validateSingleFile(filePath, validate, repoRoot);
+          if (!result) {
+            success = false;
+          }
+        } catch (err) {
+          fileSpan.recordException(err);
+          fileSpan.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          success = false;
+        } finally {
+          fileSpan.end();
+        }
+      });
     } else {
-      success = false;
-      console.error(`❌ ${relativePath}`);
-      for (const err of validate.errors ?? []) {
-        const instance = err.instancePath || '/';
-        console.error(`  - ${instance}: ${err.message}`);
+      const result = await validateSingleFile(filePath, validate, repoRoot);
+      if (!result) {
+        success = false;
       }
     }
   }
 
   return success;
+}
+
+async function validateSingleFile(filePath, validate, repoRoot) {
+  const relativePath = path.relative(repoRoot, filePath);
+  const raw = await fs.readFile(filePath, 'utf8');
+  let data = {};
+  try {
+    data = yaml.load(raw) ?? {};
+  } catch (err) {
+    console.error(`❌ ${relativePath}`);
+    console.error(`  - YAML parsing error: ${err.message}`);
+    throw err;
+  }
+  const valid = validate(data);
+
+  if (valid) {
+    console.log(`✅ ${relativePath}`);
+    return true;
+  } else {
+    console.error(`❌ ${relativePath}`);
+    for (const err of validate.errors ?? []) {
+      const instance = err.instancePath || '/';
+      console.error(`  - ${instance}: ${err.message}`);
+    }
+    return false;
+  }
 }
 
 const ok = await validateAgents();
