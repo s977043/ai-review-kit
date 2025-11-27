@@ -1,109 +1,99 @@
-# AI Review Kit
+# River Reviewer
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Build Status](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/build.yml) [![Markdown Lint](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml/badge.svg)](https://github.com/s977043/ai-review-kit/actions/workflows/markdownlint.yml)
+**Review that Flows With You.**  
+流れに寄り添う AI レビューエージェント。
 
-AIによるコードレビューを導入・運用するためのフレームワークとナレッジベースをまとめたオープンソースプロジェクトです。Docusaurus上で公開するドキュメントに、AI支援型TDDや自律エージェント運用のベストプラクティスを体系化しています。
+## What is River Reviewer?
 
-## 📘 このリポジトリが扱うテーマ
+River Reviewer is an AI review agent that follows the flow of delivery: **upstream** (design), **midstream** (implementation), and **downstream** (test/QA and improvement). It is upstream-first, flow-based, and metadata-driven so reviews stay aligned with your development cadence instead of blocking it.
 
-- AIレビュー導入の背景と設計指針（`docs/overview/`, `docs/framework/`）
-- 失敗を減らすチェックリストとセキュリティガントレット（`docs/framework/checklist.md`, `docs/framework/security-gauntlet.md`, `coding-review-checklist.md`）
-- GitHub Actionsを中心としたセットアップ手順（`docs/setup/`）
-- コントリビューションポリシーと運営ルール（`docs/governance/`, `CONTRIBUTING.md`）
+- **Upstream-first**: start reviews at the design/ADR stage to prevent costly rework.
+- **Flow-based**: non-blocking guidance that moves with PRs and releases.
+- **Metadata-driven**: skills are defined as YAML frontmatter + Markdown playbooks.
 
-## 🚀 クイックスタート: GitHub Actionsで導入する
+## Core Concepts
 
-1. リポジトリのSecretsもしくはGitHub Appで`OPENAI_API_KEY`など必要な認証情報を設定する。
-2. `.github/workflows/ai-review.yml`を新規作成し、以下の最小構成を追加する。
+- **Upstream**: requirements, architecture, ADRs—catch design drift early.
+- **Midstream**: code implementation and PR review—keep changes consistent and safe.
+- **Downstream**: test, QA, release prep—verify quality, coverage, and remediation.
 
-> **⚠️ 重要**: フォークされたリポジトリからのPRでは、GitHubがセキュリティ上の理由でリポジトリのsecretsを公開しません。外部コントリビューターからのPRでレビューを実行する場合は、`pull_request_target`イベントの使用を検討するか、適切な権限スコープを設定してください。詳細は[GitHub Docs](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)を参照する。
+## Architecture Overview (conceptual)
+
+- **Upstream/Midstream/Downstream Skills**: YAML + Markdown skills organized by phase.
+- **Stream Router**: routes relevant skills based on the requested phase or change set.
+- **(Future) Riverbed Memory**: persistent memory for previous findings, ADR links, and WontFix decisions.
+
+## Quick Start (GitHub Actions example)
+
+Minimal workflow to run River Reviewer in the midstream phase:
 
 ```yaml
-name: AI Review Kit
+name: River Reviewer
 on:
   pull_request:
-  push:
-    branches: [main]
+    branches: [ main ]
 jobs:
-  ai-review:
+  review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - name: Run River Reviewer (midstream)
+        uses: river-reviewer/action@v0 # placeholder action
         with:
-          node-version: 20
-      - name: Run AI Review Kit
-        # 注: 実際のアクション参照に置き換えてください
-        # 例: your-org/your-action@v1
-        uses: s977043/ai-review-kit-action@v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          phase: midstream
 ```
 
-1. PRを作成してレビューコメントやサマリーログを確認する。詳細は`docs/setup/quickstart.md`と`docs/setup/github-actions.md`を参照する。
+## Skill Definition example
 
-## 🛠️ ドキュメントの編集・検証
+Skills use YAML frontmatter for metadata and Markdown for guidance:
 
-- Node.js 20.x以上を推奨する（`node --version`で確認できる）。
-- 依存導入: `npm install`
-- 開発サーバー: `npm run dev` (<http://localhost:3000>)
-- 本番ビルド: `npm run build`
-- 文章Lint: `npm run lint`（Markdownlint + textlint）
-- 自動フォーマット: `npm run format`
-- エージェント検証: `npm run agents:validate`（YAML→JSON Schema検証）
+```markdown
+---
+id: rr-midstream-performance-001
+name: Midstream Performance Guardrails
+phase: midstream
+tags: [performance, efficiency]
+severity: major
+applyTo:
+  - "src/**/*.ts"
+description: Ensure midstream changes avoid common performance pitfalls.
+---
 
-## 🔎 トレーシング（任意）
-
-- 少し詳しいデバッグやパフォーマンスの可視化が必要な場合、OpenTelemetryでトレースを取得可能である。`trace:validate`スクリプトを使うと、`scripts/validate-agents.mjs`の実行中のトレースをローカルのOTLPエンドポイントに送信できる。
-
-```bash
-OTEL_ENABLED=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 npm run trace:validate
+- Check for accidental O(n^2) loops over large collections.
+- Prefer streaming/iterators when handling large payloads.
+- Flag synchronous I/O in request paths.
+- Suggest benchmarks when risky changes are detected.
 ```
 
-**Note:** `npm run lint`はチェックのみを行います。フォーマットを修正するには`npm run format`を実行してください。エディターの自動保存機能やファイル監視ツールで`npm run format`を実行すると、無限ループに陥ることがあり、設定には注意してください。
+## Planned Directory Structure
 
-ビルド成果物は`build/`に出力されます。CIやリンクチェックなどの追加フローはプロジェクト要件に合わせて拡張できます。
-
-## 🧪 JavaScript/TS クイックスタート（ESLint + Agent Validation）
-
-TypeScript/JavaScriptプロジェクトでAI Review Kitのチェックを最小構成で導入する手順です。
-
-1. `pnpm` または `npm` で依存を導入する（本リポジトリでは `pnpm` を推奨する）。
-2. 必要なスクリプトを `package.json` に追加する。
-
-```jsonc
-{
-  "scripts": {
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0",
-    "agents:validate": "node scripts/validate-agents.mjs",
-  },
-}
+```
+skills/
+  upstream/
+  midstream/
+  downstream/
+schemas/
+  skill.schema.json
+docs/
+  glossary.md
 ```
 
-1. PRでは以下を必須チェックとして実行する。
+## High-level Roadmap
 
-```bash
-pnpm lint && pnpm agents:validate
-```
+- Branding & README refresh
+- Skill metadata schema
+- Loader recursion & phase filter
+- skills/ three-layer migration
+- (Future) Riverbed Memory
 
-1. GitHub Actionsでは`validate-agents.yml`を利用してCIへ組み込む。
+## Contributing
 
-## 📁 主なディレクトリ
+See `CONTRIBUTING.md` for guidance. Issues and PRs are welcome as we migrate to River Reviewer.
 
-- `docs/`—Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置する。
-- `agents/`—AIエージェント定義（JSON SchemaとサンプルYAML）。
-- `coding-review-checklist.md`—レビュー観点のクイックリファレンス。
-- `AGENTS.md`—AIエージェント向けの作業ガイドライン。
-- `docusaurus.config.js`, `sidebars.js`—ドキュメントサイトの設定ファイル。
+## License
 
-## 🤝 コントリビューション
+Apache-2.0 (see `LICENSE`).
 
-- 変更提案の前に[`CONTRIBUTING.md`](CONTRIBUTING.md)と`docs/governance/CONTRIBUTING.md`を確認してください。
-- 作業範囲や禁止事項は`AGENTS.md`に記載されている。編集前に必ず確認する。
-- 文章や設定の改善、チェックリストの拡充など小さな変更も歓迎する。PRでは実行したコマンドや検証ログを共有する。
+## Status
 
-## 📜 ライセンス
-
-このプロジェクトはApache License 2.0の下で公開されています。詳細は[`LICENSE`](LICENSE)を参照する。
+AI Review Kit → River Reviewer への移行中。

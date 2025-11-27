@@ -1,117 +1,62 @@
-# Roadmap: AI Review Kit (Review OS)
+# Roadmap: River Reviewer
 
 ## Vision
 
-単なる自動レビューツールではなく、開発組織の品質基準をコード化・運用・監査する「Review OS」へ進化させる。
+単なる自動レビューツールではなく、開発組織の品質基準をコード化・運用・監査する「Review OS」へ進化させる。
 
 ## Strategy
 
-"Metadata First" —— すべてのレビューロジック、設定、そして戦略自体を構造化データ（Markdown + Frontmatter）として管理し、決定論的な制御と自律的な改善を実現する。
+"Metadata First" —— すべてのレビューロジック、設定、そして戦略自体を構造化データ（Markdown + Frontmatter）として管理し、決定論的な制御と自律的な改善を実現する。
 
-## Phase 0: Foundation (The Schema)
+- **Flow-based**: フェーズ別（upstream/midstream/downstream）のスキルで、開発フローに寄り添う非ブロッキングなレビューを行う。
+- **Metadata-first**: YAML frontmatter + Markdown を「スキル」とし、`schemas/skill.schema.json` で厳格に定義・検証する。
+- **Automation-ready**: GitHub Actions など CI/CD から容易に呼び出せるランナーとルーティング層を用意する。
 
-### Phase 0 Goal
+## Phase 0: Branding & Foundation (進行中)
 
-スキル定義の規格化と、最小実行環境の整備。テキストベースのプロンプト管理から脱却し、システムが解釈可能なスキーマ基盤を確立する。
+- [x] River Reviewer へのリブランディング（README/用語集/スキーマ説明）
+- [x] ディレクトリ整備：`skills/{upstream,midstream,downstream}`、`schemas/`、`docs/`、`assets/`
+- [x] スキルメタデータ JSON Schema (`schemas/skill.schema.json`)
+- [x] ブートストラップスクリプト（`scripts/setup_river_reviewer.sh`）とリファクタスクリプト（`scripts/rr_refactor_skills.py`）
+- [x] 最小 GitHub Actions ワークフロー雛形 (`.github/workflows/river-reviewer.yml`)
+- Exit Criteria: 基本ドキュメントとスキーマ/スクリプトが揃い、新規スキル追加の足場がある状態。
 
-### Phase 0 Key Objectives
+## Phase 1: Skill Migration & Coverage
 
-- [ ] **Define Metadata Schema** (`metadata.schema.json`): スキル定義の厳格な仕様策定（ID、Version、Severity、Phase）を行う。
-- [ ] **Define Output Contract** (`output.schema.json`): LLM出力のJSON構造定義（Issue、Rationale、Impact）を決める。
-- [ ] **Establish Rubric** (`rubric.yaml`): 重大度（Severity）とフェーズの定義を行う。
-- [ ] **MVS (Minimum Viable Skill) Structure**: `skills/core` ディレクトリを整備し、最小のスキルを実装する。
+- [ ] 既存プロンプトを `skills/**/*.md` へ移行（YAML frontmatter をスキーマ準拠で付与）
+- [ ] ID プレフィックスを `rr-` に正規化（`scripts/rr_refactor_skills.py` を活用）
+- [ ] Upstream/Midstream/Downstream それぞれに種スキルを追加（設計ガードレール、実装レビュー、QA/回帰確認など）
+- [ ] Quality/Domain タグ付け（例: `performance`, `security`, `reliability`）
+- Exit Criteria: 各フェーズに少なくとも1つ以上のスキルが配置され、スキーマ検証を通過する。
 
-### Phase 0 Exit Criteria
+## Phase 2: Loader & Runner (Phase-aware Routing)
 
-- `metadata.schema.json` が定義され、CIでバリデーションが通る状態になること。
-- 既存のプロンプトが1つ以上、新しいMVS形式に移行されていること。
+- [ ] `skills/**/*.md` を再帰的に読み込み、`phase` でフィルタ可能なローダーを実装（`RR_PHASE` 環境変数/引数対応）
+- [ ] スキルメタデータの JSON Schema バリデーションを組み込み（例: `ajv` or Python の `jsonschema`）
+- [ ] GitHub Actions/CLI ラッパーを整備し、midstream をデフォルトにフェーズ切替を可能にする
+- [ ] Stream Router の下地として、変更ファイルのグロブと `applyTo` の突合を追加（安全な範囲で）
+- Exit Criteria: フェーズ指定でスキルを実行でき、メタデータのバリデーションを通過したものだけが走る。
 
-## Phase 1: Migration & Coverage (The Content)
+## Phase 3: Reliability & Evals
 
-### Phase 1 Goal
+- [ ] Prompt/Evals 環境の整備（例: Promptfoo）とゴールデンケースの準備
+- [ ] スキルごとの「検出すべき/避けるべき」テストケースを追加し、回帰を検知
+- [ ] CI にスキル回帰テストを組み込み、失敗時はブロック
+- Exit Criteria: スキル変更で自動評価が走り、デグレを防止できる。
 
-既存スキルの移行と、品質特性（ISO 25010）に基づくカバレッジ拡大。「動く」状態から「使える」状態へ移行し、開発者がメリットを感じられるラインを目指す。
+## Phase 4: Riverbed Memory & Intelligence
 
-### Phase 1 Key Objectives
+- [ ] Riverbed Memory の設計（ADR/WontFix/過去指摘の永続化と再利用）
+- [ ] セマンティック/コンテキストルーティング（PR タイトル/差分/依存関係を考慮）
+- [ ] 抑止・再提示の仕組み（抑制した指摘の再浮上条件を定義）
+- Exit Criteria: コンテキストに応じたスキル選択が行われ、不要実行が削減される。
 
-- [ ] **Skill Migration**: 既存のテキストプロンプトを Markdown + Frontmatter 形式へ完全移行する。
-- [ ] **Domain Separation**: `skills/{language}/{domain}` （例: `python/security`）へのディレクトリ再編を行う。
-- [ ] **Quality Tagging**: 全スキルに ISO 25010 品質特性タグ（Security、Maintainability 等）を付与する。
-- [ ] **Basic Runner Implementation**: メタデータを解釈し、単純なフィルタリング（Phase/Severity）を行うランナーを実装する。
+## GitHub Projects 推奨フィールド
 
-### Phase 1 Exit Criteria
+- **Phase (Single Select)**: Phase 0〜4（上記に対応）
+- **Component (Single Select)**: Schema / Loader / Runner / Skills / Evals / Memory
+- **View 例**:
+  - Roadmap View: Target Date × Phase のタイムライン
+  - Kanban View: Status 別の進行管理
 
-- 全ての既存スキルが新フォーマットに移行完了している。
-- `phase: [design]` や `severity: critical` などの条件でレビューを実行できる状態になっている。
-
-## Phase 2: Reliability & Testing (The Guardrails)
-
-### Phase 2 Goal
-
-プロンプトの「ソフトウェア化」を完了し、CI/CD パイプラインへ統合する。プロンプトの変更がデグレを起こさないことを保証する仕組みを作る。
-
-### Phase 2 Key Objectives
-
-- [ ] **Evals Framework Setup**: Promptfoo 等を用いたプロンプト評価環境を構築する。
-- [ ] **Golden Datasets**: 各スキルの「検出すべきバグ」と「誤検知すべきでないコード」のテストケースを作成する。
-- [ ] **Prompt CI**: スキル変更時に自動テストが走る GitHub Actions ワークフローを整備する。
-- [ ] **Version Control Policy**: スキルのセマンティックバージョニング運用を開始する。
-
-### Phase 2 Exit Criteria
-
-- スキル変更のPRにおいて、回帰テストが自動実行され、品質低下をブロックできる。
-
-## Phase 3: Intelligence (The Brain)
-
-### Phase 3 Goal
-
-静的なルール適用から、コンテキストに応じた動的なルーティングへ移行し、無駄なトークン消費を抑えつつレビュー精度を最大化する。
-
-### Phase 3 Key Objectives
-
-- [ ] **Semantic Routing**: PRの内容（Title/Description/Diff）に基づき、適用すべきスキルを動的に選択するルーターを実装する。
-- [ ] **Context Awareness**: 変更ファイルだけでなく、依存関係にあるファイルを RAG 的に参照する仕組みを用意する。
-- [ ] **Suppression System**: ユーザーの「Wontfix」フィードバックを学習またはIDベースで抑制する機能を追加する。
-
-### Phase 3 Exit Criteria
-
-- PRの内容に応じて、無関係なスキルの実行がスキップされ、コストが最適化されている状態。
-
-## Phase 4: Autonomy (The Agent)
-
-### Phase 4 Goal
-
-「指摘する」存在から「協働する」存在へ。複数の専門エージェントが連携し、複雑な問題を解決する。
-
-### Phase 4 Key Objectives
-
-- [ ] **Orchestrator Pattern**: 複数のスキル（Security、Performance など）を並列実行し、結果を統合・要約するオーケストレーターを実装する。
-- [ ] **Review Session State**: レビューの対話履歴を保持し、修正後の再レビューで「以前の指摘が直ったか」を確認する機能を構築する。
-- [ ] **Self-Improvement Loop**: 運用データに基づき、ロードマップ自体やスキル改善案をAIが提案するフローを整備する。
-
-### Phase 4 Exit Criteria
-
-- 複数の専門スキルが協調して1つの統合されたレビューレポートを作成できる。
-
-## GitHub Projects セットアップ推奨事項
-
-このロードマップを運用に乗せるため、GitHub Projects (V2) で以下の「Custom Fields」を設定することをオススメする。
-
-- **Phase (Single Select)**:
-  - Phase 0: Foundation
-  - Phase 1: Migration
-  - Phase 2: Reliability
-  - Phase 3: Intelligence
-  - Phase 4: Autonomy
-    これにより、各タスクがロードマップのどこに位置するかを可視化できる。
-- **Component (Single Select)**:
-  - Schema
-  - Runner
-  - Skill Definition
-  - Evals
-    アーキテクチャのどの部分への変更かを分類する。
-- **ビューの作成**:
-  - **Roadmap View**: Target Date と Phase を軸にしたガントチャート表示。
-  - **Kanban View**: 日々のタスク消化用（Status 別）。
-
-この構成により、戦略（ROADMAP.md）と戦術（GitHub Issues）が綺麗に接続され、AIによる進捗監査も容易になる。
+この構成で、フェーズ別の進捗とコンポーネント別の責務を可視化し、River Reviewer の流れに沿った開発管理を行う。
