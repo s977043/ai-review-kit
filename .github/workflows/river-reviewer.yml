@@ -1,0 +1,17 @@
+name: River Reviewer (placeholder)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+jobs:
+  river-reviewer:
+    runs-on: ubuntu-latest
+    env:
+      RR_PHASE: midstream
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run River Reviewer
+        run: echo "River Reviewer placeholder run for phase=${RR_PHASE:-midstream}"
