@@ -1,5 +1,5 @@
 {
-  "name": "ai-review-kit",
+  "name": "river-reviewer",
   "private": true,
   "scripts": {
     "dev": "docusaurus start",

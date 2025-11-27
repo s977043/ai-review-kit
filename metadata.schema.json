@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$comment": "DEPRECATED – replaced by schemas/*.json",
-  "title": "AI Review Kit Skill Metadata Schema",
+  "$comment": "DEPRECATED – use schemas/*.json",
+  "title": "River Reviewer Skill Metadata Schema (deprecated)",
   "type": "object",
   "description": "Schema for the YAML frontmatter metadata of a review skill.",
   "required": ["id", "title", "version", "severity", "phase"],
