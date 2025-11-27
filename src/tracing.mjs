@@ -10,7 +10,7 @@ import { trace } from '@opentelemetry/api';
 
 // Enable diagnostic logging for development when OTEL_DEBUG env is set.
 if (process.env.OTEL_DEBUG) {
-    diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
+  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 }
 
 // Guard so tracing can be enabled optionally.
@@ -20,36 +20,39 @@ let sdk;
 let tracer;
 
 if (enabled) {
-    const exporterEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces';
-    const resource = resourceFromAttributes({ [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'ai-review-kit' });
-    const exporter = new OTLPTraceExporter({ url: exporterEndpoint });
+  const exporterEndpoint =
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces';
+  const resource = resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'ai-review-kit',
+  });
+  const exporter = new OTLPTraceExporter({ url: exporterEndpoint });
 
-    sdk = new NodeSDK({
-        resource,
-        traceExporter: exporter,
-        instrumentations: [getNodeAutoInstrumentations()],
-    });
+  sdk = new NodeSDK({
+    resource,
+    traceExporter: exporter,
+    instrumentations: [getNodeAutoInstrumentations()],
+  });
 
-    // Start the SDK
-    sdk.start();
-    tracer = trace.getTracer('ai-review-kit');
+  // Start the SDK
+  sdk.start();
+  tracer = trace.getTracer('ai-review-kit');
 
-    // Graceful shutdown
-    const shutdown = async () => {
-        try {
-            await sdk.shutdown();
-            // eslint-disable-next-line no-console
-            console.log('Tracing shutdown completed.');
-        } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error('Error during tracing shutdown:', e);
-        }
-    };
-    process.on('beforeExit', shutdown);
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+  // Graceful shutdown
+  const shutdown = async () => {
+    try {
+      await sdk.shutdown();
+      // eslint-disable-next-line no-console
+      console.log('Tracing shutdown completed.');
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Error during tracing shutdown:', e);
+    }
+  };
+  process.on('beforeExit', shutdown);
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 } else {
-    tracer = trace.getTracer('ai-review-kit-disabled');
+  tracer = trace.getTracer('ai-review-kit-disabled');
 }
 
 export { tracer, enabled };
