@@ -31,7 +31,7 @@ Minimal workflow to run River Reviewer in the midstream phase:
 name: River Reviewer
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -55,7 +55,7 @@ phase: midstream
 tags: [performance, efficiency]
 severity: major
 applyTo:
-  - "src/**/*.ts"
+  - 'src/**/*.ts'
 description: Ensure midstream changes avoid common performance pitfalls.
 ---
 
@@ -67,7 +67,7 @@ description: Ensure midstream changes avoid common performance pitfalls.
 
 ## Planned Directory Structure
 
-```
+```text
 skills/
   upstream/
   midstream/
