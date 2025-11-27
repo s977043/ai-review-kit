@@ -8,7 +8,7 @@ Use the schema and validator to keep skills consistent across Upstream, Midstrea
 2. Run the validator:
 
    ```bash
-   npm run agents:validate
+   npm run skills:validate
    ```
 
 3. If the schema check errors, confirm these required fields exist:

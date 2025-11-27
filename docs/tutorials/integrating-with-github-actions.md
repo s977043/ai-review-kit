@@ -4,7 +4,7 @@ Wire River Reviewer into your repository so every PR gets phase-aware feedback.
 
 ## 1. Add the workflow
 
-Create `.github/workflows/river-review.yml`:
+Create `.github/workflows/river-review.yml` (replace `{org}` with your organization or user):
 
 ```yaml
 name: River Reviewer
@@ -20,13 +20,15 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: s977043/river-reviewer@v1
+      - uses: {org}/river-reviewer@v1
 ```
+
+> Note: `{org}/river-reviewer@v1` is a placeholder. Point this to the published River Reviewer action in your org or the official repository.
 
 ## 2. Keep credentials out of the flow
 
-- Do not commit secrets or `.env` files.
-- If the reviewer needs extra context, pass it through repository or organization secrets.
+- By default, River Reviewer does not require credentials or API keys.
+- If the reviewer needs extra context or external API access, pass tokens via repository or organization secrets and document which secrets are needed.
 
 ## 3. Tune for phases
 
@@ -35,4 +37,4 @@ jobs:
 
 ## 4. Validate on every push
 
-Ensure the workflow runs `npm run agents:validate` so schema changes are caught early. For larger repos, consider a pre-commit hook or a dedicated CI job for validation.
+Ensure the workflow runs `npm run skills:validate` so schema changes are caught early. For larger repos, consider a pre-commit hook or a dedicated CI job for validation.

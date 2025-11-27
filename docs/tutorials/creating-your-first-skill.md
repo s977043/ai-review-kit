@@ -38,7 +38,7 @@ severity: minor
 Run the validators to make sure the schema and structure are correct:
 
 ```bash
-npm run agents:validate
+npm run skills:validate
 ```
 
 If your skill is phase-specific, add a short test PR to confirm the reviewer loads it only for matching files.

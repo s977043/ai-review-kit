@@ -6,7 +6,7 @@ This tutorial helps you run your first review using the GitHub Action.
 
 ## 1. Install / Enable
 
-Add the following workflow:
+Add the following workflow (replace `{org}` with your organization or user):
 
 ```yaml
 name: River Review
@@ -16,10 +16,15 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: s977043/river-reviewer@v1
+      - uses: {org}/river-reviewer@v1
 ```
+
+> Note: `{org}/river-reviewer@v1` is a placeholder. Point this to the published River Reviewer action in your org or the official repository.
 
 ## 2. Run the review
 
