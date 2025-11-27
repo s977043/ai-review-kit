@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Review Kit Skill Metadata Schema",
+  "type": "object",
+  "description": "Schema for the YAML frontmatter metadata of a review skill.",
+  "required": [
+    "id",
+    "title",
+    "version",
+    "severity",
+    "phase"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the skill. Should remain stable across file moves or renames."
+    },
+    "title": {
+      "type": "string",
+      "description": "Human‑readable name for the skill."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the skill definition (major.minor.patch)."
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description of the skill’s purpose and scope."
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "major", "minor", "notice"],
+      "description": "Severity level of issues flagged by this skill."
+    },
+    "phase": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["design", "implementation", "test", "improve"]
+      },
+      "minItems": 1,
+      "description": "Development phases in which this skill should run."
+    },
+    "category": {
+      "type": "string",
+      "description": "High‑level category or ISO 25010 quality characteristic this skill relates to."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Additional tags for filtering and semantic routing."
+    },
+    "applyTo": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Glob patterns indicating which files this skill applies to."
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Glob patterns indicating which files to exclude from this skill."
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["pull_request", "push", "workflow_dispatch", "schedule"]
+      },
+      "description": "Events that should trigger execution of this skill."
+    },
+    "model": {
+      "type": "string",
+      "description": "Recommended model identifier to use when invoking this skill (optional)."
+    },
+    "temperature": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Sampling temperature for the model (optional)."
+    },
+    "expected_output": {
+      "type": "object",
+      "description": "Structure of the expected output from this skill.",
+      "required": ["format", "fields"],
+      "properties": {
+        "format": {
+          "type": "string",
+          "description": "Name of the output schema contract that this skill adheres to."
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered list of fields expected in the output."
+        }
+      }
+    },
+    "author": {
+      "type": "string",
+      "description": "Person or team responsible for maintaining this skill (optional)."
+    }
+  },
+  "additionalProperties": true
+}
