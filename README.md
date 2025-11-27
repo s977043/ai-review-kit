@@ -13,10 +13,10 @@ AIによるコードレビューを導入・運用するためのフレームワ
 
 ## 🚀 クイックスタート: GitHub Actionsで導入する
 
-1. リポジトリのSecretsもしくはGitHub Appで`OPENAI_API_KEY`など必要な認証情報を設定します。
-2. `.github/workflows/ai-review.yml`を新規作成し、以下の最小構成を追加します。
+1. リポジトリのSecretsもしくはGitHub Appで`OPENAI_API_KEY`など必要な認証情報を設定する。
+2. `.github/workflows/ai-review.yml`を新規作成し、以下の最小構成を追加する。
 
-> **⚠️ 重要**: フォークされたリポジトリからのPRでは、GitHubがセキュリティ上の理由でリポジトリのsecretsを公開しません。外部コントリビューターからのPRでレビューを実行する場合は、`pull_request_target`イベントの使用を検討するか、適切な権限スコープを設定してください。詳細は[GitHub Docs](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)を参照してください。
+> **⚠️ 重要**: フォークされたリポジトリからのPRでは、GitHubがセキュリティ上の理由でリポジトリのsecretsを公開しません。外部コントリビューターからのPRでレビューを実行する場合は、`pull_request_target`イベントの使用を検討するか、適切な権限スコープを設定してください。詳細は[GitHub Docs](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)を参照する。
 
 ```yaml
 name: AI Review Kit
@@ -42,28 +42,36 @@ jobs:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-1. PRを作成してレビューコメントやサマリーログを確認します。詳細は`docs/setup/quickstart.md`と`docs/setup/github-actions.md`を参照してください。
+1. PRを作成してレビューコメントやサマリーログを確認する。詳細は`docs/setup/quickstart.md`と`docs/setup/github-actions.md`を参照する。
 
 ## 🛠️ ドキュメントの編集・検証
 
-- Node.js 20.x 以上を推奨します（`node --version`で確認できます）。
+- Node.js 20.x以上を推奨する（`node --version`で確認できる）。
 - 依存導入: `npm install`
-- 開発サーバー: `npm run dev`（<http://localhost:3000）>
+- 開発サーバー: `npm run dev` (<http://localhost:3000>)
 - 本番ビルド: `npm run build`
 - 文章Lint: `npm run lint`（Markdownlint + textlint）
 - 自動フォーマット: `npm run format`
-- エージェント検証: `npm run agents:validate`（YAML → JavaScriptON Schema 検証）
+- エージェント検証: `npm run agents:validate`（YAML→JSON Schema検証）
 
-**Note:** `npm run lint`はチェックのみを行います。フォーマットを修正するには`npm run format`を実行してください。エディターの自動保存機能やファイル監視ツールで`npm run format`を実行すると、無限ループが発生することがあるため、設定には注意してください。
+## 🔎 トレーシング（任意）
 
-ビルド成果物は`build/`に出力されます。CIやリンクチェックなどの追加フローはプロジェクト要件に合わせて拡張してください。
+- 少し詳しいデバッグやパフォーマンスの可視化が必要な場合、OpenTelemetryでトレースを取得可能である。`trace:validate`スクリプトを使うと、`scripts/validate-agents.mjs`の実行中のトレースをローカルのOTLPエンドポイントに送信できる。
+
+```bash
+OTEL_ENABLED=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 npm run trace:validate
+```
+
+**Note:** `npm run lint`はチェックのみを行います。フォーマットを修正するには`npm run format`を実行してください。エディターの自動保存機能やファイル監視ツールで`npm run format`を実行すると、無限ループに陥ることがあり、設定には注意してください。
+
+ビルド成果物は`build/`に出力されます。CIやリンクチェックなどの追加フローはプロジェクト要件に合わせて拡張できます。
 
 ## 🧪 JavaScript/TS クイックスタート（ESLint + Agent Validation）
 
-TypeScript/JavaScript プロジェクトで AI Review Kit のチェックを最小構成で導入する手順です。
+TypeScript/JavaScriptプロジェクトでAI Review Kitのチェックを最小構成で導入する手順です。
 
-1. `pnpm` または `npm` で依存を導入します（本リポジトリでは `pnpm` を推奨しています）。
-2. 必要なスクリプトを `package.json` に追加します。
+1. `pnpm` または `npm` で依存を導入する（本リポジトリでは `pnpm` を推奨する）。
+2. 必要なスクリプトを `package.json` に追加する。
 
 ```jsonc
 {
@@ -74,18 +82,18 @@ TypeScript/JavaScript プロジェクトで AI Review Kit のチェックを最�
 }
 ```
 
-1. PRでは以下を必須チェックとして実行します。
+1. PRでは以下を必須チェックとして実行する。
 
 ```bash
 pnpm lint && pnpm agents:validate
 ```
 
-1. GitHub Actionsでは`validate-agents.yml`を利用してCIへ組み込みます。
+1. GitHub Actionsでは`validate-agents.yml`を利用してCIへ組み込む。
 
 ## 📁 主なディレクトリ
 
-- `docs/`—Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置しています。
-- `agents/`—AIエージェント定義（JSON Schema とサンプルYAML）。
+- `docs/`—Docusaurus用ドキュメント。各章にガイド・リファレンス・ガバナンスを配置する。
+- `agents/`—AIエージェント定義（JSON SchemaとサンプルYAML）。
 - `coding-review-checklist.md`—レビュー観点のクイックリファレンス。
 - `AGENTS.md`—AIエージェント向けの作業ガイドライン。
 - `docusaurus.config.js`, `sidebars.js`—ドキュメントサイトの設定ファイル。
@@ -93,9 +101,9 @@ pnpm lint && pnpm agents:validate
 ## 🤝 コントリビューション
 
 - 変更提案の前に[`CONTRIBUTING.md`](CONTRIBUTING.md)と`docs/governance/CONTRIBUTING.md`を確認してください。
-- 作業範囲や禁止事項は`AGENTS.md`に記載されています。編集前に必ず確認してください。
-- 文章や設定の改善、チェックリストの拡充など小さな変更も歓迎です。PRでは実行したコマンドや検証ログを共有してください。
+- 作業範囲や禁止事項は`AGENTS.md`に記載されている。編集前に必ず確認する。
+- 文章や設定の改善、チェックリストの拡充など小さな変更も歓迎する。PRでは実行したコマンドや検証ログを共有する。
 
 ## 📜 ライセンス
 
-このプロジェクトは Apache License 2.0 の下で公開されています。詳細は [`LICENSE`](LICENSE) を参照してください。
+このプロジェクトはApache License 2.0の下で公開されています。詳細は[`LICENSE`](LICENSE)を参照する。

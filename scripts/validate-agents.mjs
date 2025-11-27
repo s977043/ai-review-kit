@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { tracer, enabled as otelEnabled } from '../src/tracing.mjs';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -37,7 +38,24 @@ async function listAgentFiles() {
 }
 
 async function validateAgents() {
-  const schema = await loadSchema();
+  let schema;
+  if (otelEnabled) {
+    schema = await tracer.startActiveSpan('load-schema', async (span) => {
+      try {
+        const s = await loadSchema();
+        // mark as ok
+        // No explicit status API used here to keep SDK compatibility
+        return s;
+      } catch (e) {
+        span.recordException(e);
+        throw e;
+      } finally {
+        span.end();
+      }
+    });
+  } else {
+    schema = await loadSchema();
+  }
   const ajv = new Ajv({ allErrors: true, strict: true });
   addFormats(ajv);
 
@@ -62,7 +80,19 @@ async function validateAgents() {
   }
 
   const validate = ajv.compile(schema);
-  const files = await listAgentFiles();
+  const files = otelEnabled
+    ? await tracer.startActiveSpan('list-files', async (span) => {
+      try {
+        const f = await listAgentFiles();
+        span.end();
+        return f;
+      } catch (e) {
+        span.recordException(e);
+        span.end();
+        throw e;
+      }
+    })
+    : await listAgentFiles();
 
   if (files.length === 0) {
     console.warn('⚠️  No agent files found in agents/examples.');
@@ -72,12 +102,19 @@ async function validateAgents() {
   let success = true;
 
   for (const filePath of files) {
+    let fileSpan;
+    if (otelEnabled) {
+      fileSpan = tracer.startSpan('validate-file', { attributes: { 'file.path': filePath } });
+    }
     const relativePath = path.relative(repoRoot, filePath);
     const raw = await fs.readFile(filePath, 'utf8');
     let data = {};
     try {
       data = yaml.load(raw) ?? {};
     } catch (err) {
+      if (fileSpan) {
+        fileSpan.recordException(err);
+      }
       success = false;
       console.error(`❌ ${relativePath}`);
       console.error(`  - YAML parsing error: ${err.message}`);
@@ -94,6 +131,9 @@ async function validateAgents() {
         const instance = err.instancePath || '/';
         console.error(`  - ${instance}: ${err.message}`);
       }
+    }
+    if (fileSpan) {
+      fileSpan.end();
     }
   }
 
