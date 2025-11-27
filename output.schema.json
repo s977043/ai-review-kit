@@ -3,13 +3,7 @@
   "title": "AI Review Kit Review Output Schema (review_v1)",
   "type": "object",
   "description": "Standard structure for the output of a review skill.",
-  "required": [
-    "issue",
-    "rationale",
-    "suggestion",
-    "priority",
-    "skill_id"
-  ],
+  "required": ["issue", "rationale", "suggestion", "priority", "skill_id"],
   "properties": {
     "issue": {
       "type": "string",
