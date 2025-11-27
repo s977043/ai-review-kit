@@ -11,9 +11,9 @@ body:
     attributes:
       label: 'What phase is affected?'
       options:
-        - Upstream
-        - Midstream
-        - Downstream
+        - upstream
+        - midstream
+        - downstream
     validations:
       required: true
   - type: dropdown
@@ -66,3 +66,5 @@ body:
     attributes:
       label: 'Success signals'
       description: 'Metrics, usability wins, or quality checks that confirm the enhancement worked.'
+    validations:
+      required: true

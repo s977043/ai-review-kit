@@ -12,9 +12,9 @@ body:
       label: 'What phase is affected?'
       description: 'Select the primary phase impacted by this bug.'
       options:
-        - Upstream
-        - Midstream
-        - Downstream
+        - upstream
+        - midstream
+        - downstream
     validations:
       required: true
   - type: dropdown
@@ -87,3 +87,5 @@ body:
     attributes:
       label: 'Environment'
       description: 'CLI/runner version, OS, workflow context, etc.'
+    validations:
+      required: true

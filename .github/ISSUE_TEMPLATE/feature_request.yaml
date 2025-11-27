@@ -11,9 +11,9 @@ body:
     attributes:
       label: 'What phase is affected?'
       options:
-        - Upstream
-        - Midstream
-        - Downstream
+        - upstream
+        - midstream
+        - downstream
     validations:
       required: true
   - type: dropdown
@@ -76,3 +76,5 @@ body:
     attributes:
       label: 'Related issues / links'
       description: 'Designs, RFCs, or previous discussions.'
+    validations:
+      required: false

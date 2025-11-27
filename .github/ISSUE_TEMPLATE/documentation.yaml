@@ -11,9 +11,9 @@ body:
     attributes:
       label: 'What phase is affected?'
       options:
-        - Upstream
-        - Midstream
-        - Downstream
+        - upstream
+        - midstream
+        - downstream
     validations:
       required: true
   - type: dropdown
@@ -66,3 +66,5 @@ body:
     attributes:
       label: 'How can we verify accuracy?'
       description: 'Examples: commands to run, outputs to capture, or SMEs to confirm with.'
+    validations:
+      required: true
