@@ -2,19 +2,19 @@
 
 All skills in River Reviewer must conform to JSON schema located at:
 
-```
+```text
 /schemas/skill.schema.json
 ```
 
 ## Required fields
 
-| Field | Description |
-| --- | --- |
-| id | Unique skill identifier (rr-xxxx format recommended) |
-| name | Human-readable skill name |
-| description | What the skill checks |
-| phase | upstream / midstream / downstream |
-| applyTo | File glob patterns |
+| Field       | Description                                          |
+| ----------- | ---------------------------------------------------- |
+| id          | Unique skill identifier (rr-xxxx format recommended) |
+| name        | Human-readable skill name                            |
+| description | What the skill checks                                |
+| phase       | upstream / midstream / downstream                    |
+| applyTo     | File glob patterns                                   |
 
 ## Example
 
@@ -24,8 +24,8 @@ id: rr-python-sqlinj-v1
 name: Python SQL Injection Check
 phase: midstream
 applyTo:
-  - "**/*.py"
-tags: ["security", "owasp"]
+  - '**/*.py'
+tags: ['security', 'owasp']
 ---
 # instructions...
 ```

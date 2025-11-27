@@ -3,6 +3,7 @@
 Build a simple River Reviewer skill that follows the Upstream → Midstream → Downstream flow.
 
 ## Prerequisites
+
 - Node.js installed
 - Repository cloned and dependencies installed (`npm install`)
 
@@ -17,7 +18,7 @@ name: Hello World Skill
 description: Flags TODO comments in Markdown
 phase: upstream
 applyTo:
-  - "**/*.md"
+  - '**/*.md'
 tags:
   - content
   - hygiene

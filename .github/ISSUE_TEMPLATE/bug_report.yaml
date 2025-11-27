@@ -1,16 +1,16 @@
 name: "\U0001F41E Bug Report"
-description: "Report a defect in the River Reviewer flow (Upstream → Midstream → Downstream)."
-title: "[Bug] "
-labels: ["type:bug", "status:triage"]
+description: 'Report a defect in the River Reviewer flow (Upstream → Midstream → Downstream).'
+title: '[Bug] '
+labels: ['type:bug', 'status:triage']
 body:
   - type: markdown
     attributes:
-      value: "Thank you for helping keep River Reviewer flowing smoothly. Please include clear repro steps."
+      value: 'Thank you for helping keep River Reviewer flowing smoothly. Please include clear repro steps.'
   - type: dropdown
     id: phase
     attributes:
-      label: "What phase is affected?"
-      description: "Select the primary phase impacted by this bug."
+      label: 'What phase is affected?'
+      description: 'Select the primary phase impacted by this bug.'
       options:
         - Upstream
         - Midstream
@@ -20,7 +20,7 @@ body:
   - type: dropdown
     id: schema_impacted
     attributes:
-      label: "Schema impacted? (skill.schema.json)"
+      label: 'Schema impacted? (skill.schema.json)'
       options:
         - Yes
         - No
@@ -30,7 +30,7 @@ body:
   - type: dropdown
     id: runner_logic_impacted
     attributes:
-      label: "Runner logic impacted?"
+      label: 'Runner logic impacted?'
       options:
         - Yes
         - No
@@ -40,8 +40,8 @@ body:
   - type: dropdown
     id: severity
     attributes:
-      label: "Severity"
-      description: "How disruptive is the issue?"
+      label: 'Severity'
+      description: 'How disruptive is the issue?'
       options:
         - info
         - minor
@@ -52,16 +52,16 @@ body:
   - type: textarea
     id: summary
     attributes:
-      label: "Summary"
-      description: "Briefly describe the defect and its impact."
-      placeholder: "Upstream skill validation fails when..."
+      label: 'Summary'
+      description: 'Briefly describe the defect and its impact.'
+      placeholder: 'Upstream skill validation fails when...'
     validations:
       required: true
   - type: textarea
     id: repro
     attributes:
-      label: "Reproduction steps"
-      description: "Clear, ordered steps to reproduce."
+      label: 'Reproduction steps'
+      description: 'Clear, ordered steps to reproduce.'
       placeholder: |
         1. ...
         2. ...
@@ -71,19 +71,19 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: "Expected behavior"
-      description: "What you expected to happen instead."
+      label: 'Expected behavior'
+      description: 'What you expected to happen instead.'
     validations:
       required: true
   - type: textarea
     id: actual
     attributes:
-      label: "Actual behavior / logs"
-      description: "Include screenshots, stack traces, or runner output."
+      label: 'Actual behavior / logs'
+      description: 'Include screenshots, stack traces, or runner output.'
     validations:
       required: true
   - type: input
     id: environment
     attributes:
-      label: "Environment"
-      description: "CLI/runner version, OS, workflow context, etc."
+      label: 'Environment'
+      description: 'CLI/runner version, OS, workflow context, etc.'

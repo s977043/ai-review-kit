@@ -1,6 +1,6 @@
 # Getting Started with River Reviewer
 
-River Reviewer is a flow-based AI review agent that travels with your software development lifecycle, from Upstream design to Midstream implementation and Downstream QA.
+River Reviewer is a flow-based AI review agent for your software development lifecycle. It travels from Upstream design to Midstream implementation and Downstream QA.
 
 This tutorial helps you run your first review using the GitHub Action.
 
@@ -25,9 +25,9 @@ jobs:
 
 Create a PR. River Review will automatically:
 
-* detect changed files
-* load relevant skills
-* validate schema
-* output structured review comments
+- detect changed files
+- load relevant skills
+- validate schema
+- output structured review comments
 
 You're ready to flow.

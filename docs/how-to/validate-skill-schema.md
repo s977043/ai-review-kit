@@ -7,11 +7,16 @@ Use the schema and validator to keep skills consistent across Upstream, Midstrea
 1. Edit or add a skill under `skills/`.
 2. Run the validator:
 
-```bash
-npm run agents:validate
-```
+   ```bash
+   npm run agents:validate
+   ```
 
-3. If validation fails, check that required fields from `/schemas/skill.schema.json` are present: `id`, `name`, `description`, `phase`, and `applyTo`.
+3. If the schema check errors, confirm these required fields exist:
+   - `id`
+   - `name`
+   - `description`
+   - `phase`
+   - `applyTo`
 4. Confirm `phase` matches the intended flow segment and adjust `applyTo` globs to avoid noisy matches.
 5. Re-run the validator until you get a clean pass, then include the command output in your PR.
 

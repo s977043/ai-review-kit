@@ -7,13 +7,13 @@ Target a single phase when you only want Upstream, Midstream, or Downstream feed
 1. Tag each skill with the correct `phase` in its front matter.
 2. Limit the review scope in CI when needed:
 
-```yaml
-on:
-  pull_request:
-    paths:
-      - "docs/**"        # Upstream-focused example
-      - "!src/**"        # skip Midstream code if desired
-```
+   ```yaml
+   on:
+     pull_request:
+       paths:
+         - 'docs/**' # Upstream-focused example
+         - '!src/**' # skip Midstream code if desired
+   ```
 
 3. For local runs, execute only the relevant skills by filtering files or temporarily narrowing `applyTo` globs.
 4. Share the chosen phase in your PR template so reviewers know which checks to expect.

@@ -1,15 +1,15 @@
 name: "\u26A1 Enhancement"
-description: "Polish or extend an existing River Reviewer capability."
-title: "[Enhancement] "
-labels: ["type:enhancement", "status:triage"]
+description: 'Polish or extend an existing River Reviewer capability.'
+title: '[Enhancement] '
+labels: ['type:enhancement', 'status:triage']
 body:
   - type: markdown
     attributes:
-      value: "Tell us how to make the current flow smoother."
+      value: 'Tell us how to make the current flow smoother.'
   - type: dropdown
     id: phase
     attributes:
-      label: "What phase is affected?"
+      label: 'What phase is affected?'
       options:
         - Upstream
         - Midstream
@@ -19,7 +19,7 @@ body:
   - type: dropdown
     id: schema_impacted
     attributes:
-      label: "Schema impacted? (skill.schema.json)"
+      label: 'Schema impacted? (skill.schema.json)'
       options:
         - Yes
         - No
@@ -29,7 +29,7 @@ body:
   - type: dropdown
     id: runner_logic_impacted
     attributes:
-      label: "Runner logic impacted?"
+      label: 'Runner logic impacted?'
       options:
         - Yes
         - No
@@ -39,7 +39,7 @@ body:
   - type: dropdown
     id: severity
     attributes:
-      label: "Impact level"
+      label: 'Impact level'
       options:
         - info
         - minor
@@ -50,19 +50,19 @@ body:
   - type: textarea
     id: current
     attributes:
-      label: "Current behavior"
-      description: "Summarize what exists today and any friction."
+      label: 'Current behavior'
+      description: 'Summarize what exists today and any friction.'
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: "Requested enhancement"
-      description: "How should the flow improve across Upstream → Midstream → Downstream?"
+      label: 'Requested enhancement'
+      description: 'How should the flow improve across Upstream → Midstream → Downstream?'
     validations:
       required: true
   - type: textarea
     id: success
     attributes:
-      label: "Success signals"
-      description: "Metrics, usability wins, or quality checks that confirm the enhancement worked."
+      label: 'Success signals'
+      description: 'Metrics, usability wins, or quality checks that confirm the enhancement worked.'

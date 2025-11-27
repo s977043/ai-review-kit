@@ -1,10 +1,12 @@
 # 🌊 River Reviewer Docs Update
 
 ## Summary
+
 - What documentation changed, and who is it for?
 - Primary phase focus: Upstream / Midstream / Downstream
 
 ## Flow Consistency
+
 - [ ] Upstream: concepts/architecture remain accurate
 - [ ] Midstream: examples and commands match current runner/skills
 - [ ] Downstream: validation steps and QA guidance are current
@@ -12,10 +14,12 @@
 - [ ] Skill file structure validated? (if docs reference skills)
 
 ## Changes
+
 - Pages updated/added
 - Key callouts ( diagrams, tutorials, references )
 
 ## Validation & Evidence
+
 - Screenshots or rendered previews if applicable
 - Commands run (lint/docs build/etc.)
 
@@ -26,8 +30,10 @@ npm test
 ```
 
 ## Related Issues
+
 - Closes #
 - Related #
 
 ## Follow-ups
+
 - Future doc improvements or links to supporting materials
