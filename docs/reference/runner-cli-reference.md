@@ -11,10 +11,10 @@ Use the Runner CLI to execute River Reviewer skills locally or in CI.
 
 | Flag | Description |
 | --- | --- |
-| `--phase <upstream|midstream|downstream>` | Limit validation or execution to a single phase. |
+| `--phase <upstream\|midstream\|downstream>` | Limit validation or execution to a single phase. |
 | `--files <glob>` | Validate only skills that match files in the provided glob. |
 | `--schema <path>` | Use a custom schema file instead of the default. |
-| `--format <text|json>` | Control output format for CI logs. |
+| `--format <text\|json>` | Control output format for CI logs. |
 
 ## Exit codes
 
