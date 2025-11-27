@@ -1,17 +1,14 @@
-# コンフィグスキーマ
+# コンフィグ / スキーマ概要
 
-AI Review Kitの設定ファイルはYAMLもしくはJSON形式で記述する。
+River Reviewer では、スキルや出力を JSON Schema で定義します。スキルは YAML frontmatter、出力は JSON を想定しています。
 
-- `model`: 使用する言語モデルの名前。例: `gpt-4`, `claude-3`。
+- `schemas/skill.schema.json`
+  - 必須: `id`, `name`, `phase`, `applyTo`, `description`
+  - 任意: `tags`, `severity`
+  - `phase` は `upstream` / `midstream` / `downstream`
 
-- `max_tokens`: レビューに使用する最大トークン数。
+- `schemas/output.schema.json`
+  - 必須: `issue`, `rationale`, `impact`, `suggestion`, `priority`, `skill_id`
+  - `priority` は `P0`〜`P3` のいずれか
 
-- `temperature`: 出力のランダム性を制御するパラメータ。0.0–1.0の範囲で指定する。
-
-- `paths`: レビュー対象とするファイルパターンやディレクトリの指定。
-
-- `ignore`: レビュー対象から除外するパターン。
-
-- `failOn`: レビューで検出された問題により CI を失敗させるかどうかのフラグ。
-
-必要に応じて新しいフィールドを追加し、AIレビューの挙動をカスタマイズする。
+スキルは Markdown ファイルとして `skills/{phase}/` に配置し、`scripts/rr_refactor_skills.py` でスキーマ検証ができます。

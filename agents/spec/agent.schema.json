@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/s977043/ai-review-kit/blob/main/agents/spec/agent.schema.json",
+  "$id": "https://github.com/s977043/river-reviewer/blob/main/agents/spec/agent.schema.json",
   "title": "AI Agent Knowledge Pack",
   "description": "Normalized description of project-specific AI agent instructions, tooling, and automation.",
   "type": "object",

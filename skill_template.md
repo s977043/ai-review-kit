@@ -1,29 +1,14 @@
 ---
-# Required Metadata
-id: <phase>.<short_name>
-title: <Human readable title>
-version: 0.1.0
-severity: minor # critical | major | minor | notice
-phase:
-  - design # design | implementation | test | improve
-category: architecture # e.g. architecture | security | performance | reliability
-tags:
-  - example
-  - refactoring
+# Required metadata (validate with schemas/skill.schema.json)
+id: rr-<phase>-<short-name>
+name: <Human readable title>
+description: <What this skill checks>
+phase: upstream # upstream | midstream | downstream
 applyTo:
   - '**/*'
-exclude:
-  - '**/test/**'
-events:
-  - pull_request
-expected_output:
-  format: review_v1
-  fields:
-    - issue
-    - rationale
-    - impact
-    - suggestion
-    - priority
+tags:
+  - example
+severity: minor # info | minor | major | critical
 ---
 
 ## Rule

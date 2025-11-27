@@ -1,29 +1,29 @@
 # River Reviewer
 
-**Review that Flows With You.**  
-流れに寄り添う AI レビューエージェント。
+![River Reviewer logo](assets/logo/river-reviewer-logo.svg)
 
-## What is River Reviewer?
+RR (River Reviewer) is a flow-aware review assistant that moves with your delivery stream.
 
-River Reviewer is an AI review agent that follows the flow of delivery: **upstream** (design), **midstream** (implementation), and **downstream** (test/QA and improvement). It is upstream-first, flow-based, and metadata-driven so reviews stay aligned with your development cadence instead of blocking it.
+## Flow at a glance
 
-- **Upstream-first**: start reviews at the design/ADR stage to prevent costly rework.
-- **Flow-based**: non-blocking guidance that moves with PRs and releases.
-- **Metadata-driven**: skills are defined as YAML frontmatter + Markdown playbooks.
+- **Upstream → Midstream → Downstream**: design, implementation, and test/QA phases stay connected.
+- **Upstream-first**: catch design drift early with ADR-aware skills.
+- **Stream router**: picks skills per requested phase or change set.
+- **(Future) Riverbed Memory**: retains past findings, ADR links, and WontFix decisions for consistent follow-up.
 
-## Core Concepts
+## Repository layout
 
-- **Upstream**: requirements, architecture, ADRs—catch design drift early.
-- **Midstream**: code implementation and PR review—keep changes consistent and safe.
-- **Downstream**: test, QA, release prep—verify quality, coverage, and remediation.
+```
+README.md
+README.old        # DEPRECATED reference only
+assets/           # official RR logos/icons
+schemas/          # JSON Schema for skills and outputs
+skills/           # upstream/midstream/downstream skills (Markdown + frontmatter)
+scripts/          # setup and skill refactor utilities
+docs/             # tutorials, how-to, reference, explanation
+```
 
-## Architecture Overview (conceptual)
-
-- **Upstream/Midstream/Downstream Skills**: YAML + Markdown skills organized by phase.
-- **Stream Router**: routes relevant skills based on the requested phase or change set.
-- **(Future) Riverbed Memory**: persistent memory for previous findings, ADR links, and WontFix decisions.
-
-## Quick Start (GitHub Actions example)
+## Quick start (GitHub Actions)
 
 Minimal workflow to run River Reviewer in the midstream phase:
 
@@ -38,25 +38,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run River Reviewer (midstream)
-        uses: river-reviewer/action@v0 # placeholder action
+        uses: s977043/river-reviewer@v0
         with:
           phase: midstream
 ```
 
-## Skill Definition example
+## Skill definition
 
-Skills use YAML frontmatter for metadata and Markdown for guidance:
+Skills use YAML frontmatter for metadata and Markdown for guidance. Required fields: `id`, `name`, `description`, `phase`, `applyTo`.
 
 ```markdown
 ---
 id: rr-midstream-performance-001
 name: Midstream Performance Guardrails
+description: Ensure midstream changes avoid common performance pitfalls.
 phase: midstream
+applyTo:
+  - "src/**/*.ts"
 tags: [performance, efficiency]
 severity: major
-applyTo:
-  - 'src/**/*.ts'
-description: Ensure midstream changes avoid common performance pitfalls.
 ---
 
 - Check for accidental O(n^2) loops over large collections.
@@ -65,35 +65,16 @@ description: Ensure midstream changes avoid common performance pitfalls.
 - Suggest benchmarks when risky changes are detected.
 ```
 
-## Planned Directory Structure
+## Schemas & loader
 
-```text
-skills/
-  upstream/
-  midstream/
-  downstream/
-schemas/
-  skill.schema.json
-docs/
-  glossary.md
-```
-
-## High-level Roadmap
-
-- Branding & README refresh
-- Skill metadata schema
-- Loader recursion & phase filter
-- skills/ three-layer migration
-- (Future) Riverbed Memory
+- JSON Schema lives in `schemas/skill.schema.json` and `schemas/output.schema.json`.
+- `scripts/rr_refactor_skills.py` loads and validates skills recursively with `--phase upstream|midstream|downstream|all`.
+- `scripts/setup_river_reviewer.sh` bootstraps the directory layout and placeholder files.
 
 ## Contributing
 
-See `CONTRIBUTING.md` for guidance. Issues and PRs are welcome as we migrate to River Reviewer.
+See `CONTRIBUTING.md` for guidance. Issues and PRs are welcome as we expand River Reviewer.
 
 ## License
 
 Apache-2.0 (see `LICENSE`).
-
-## Status
-
-AI Review Kit → River Reviewer への移行中。

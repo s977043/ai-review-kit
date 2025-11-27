@@ -3,14 +3,14 @@
 const siteUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : 'https://s977043.github.io';
-const baseUrl = process.env.VERCEL_URL ? '/' : '/ai-review-kit/';
+const baseUrl = process.env.VERCEL_URL ? '/' : '/river-reviewer/';
 
 module.exports = {
-  title: 'AI Review Kit',
+  title: 'River Reviewer',
   url: siteUrl,
   baseUrl: baseUrl,
   organizationName: 's977043',
-  projectName: 'ai-review-kit',
+  projectName: 'river-reviewer',
   trailingSlash: false,
   i18n: { defaultLocale: 'ja', locales: ['ja'] },
   presets: [
@@ -25,12 +25,12 @@ module.exports = {
   ],
   themeConfig: {
     navbar: {
-      title: 'AI Review Kit',
-      items: [{ to: '/docs/intro', label: 'Docs', position: 'left' }],
+      title: 'River Reviewer',
+      items: [{ to: '/docs/explanation/intro', label: 'Docs', position: 'left' }],
     },
     footer: {
       style: 'dark',
-      copyright: `© ${new Date().getFullYear()} AI Review Kit`,
+      copyright: `© ${new Date().getFullYear()} River Reviewer`,
     },
   },
   onBrokenLinks: 'throw',

@@ -3,11 +3,11 @@ id: tracing
 title: Tracing / Observability
 ---
 
-このドキュメントでは、AI Review Kitに簡易なトレースを導入し、ローカル環境やCIで実行する手順を説明する。
+このドキュメントでは、River Reviewer に簡易なトレースを導入し、ローカル環境や CI で実行する手順を説明する。
 
 ## 概要
 
-- このリポジトリではOpenTelemetryを使用し、トレースは`src/tracing.mjs`で初期化される。
+- このリポジトリでは OpenTelemetry を使用し、トレースは `src/tracing.mjs` で初期化される。
 - トレースは任意で有効化でき、デフォルトでは無効になっている（`OTEL_ENABLED` 環境変数で制御）。
 
 ## 有効化手順（ローカル）
@@ -20,7 +20,7 @@ title: Tracing / Observability
 OTEL_ENABLED=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 node scripts/validate-agents.mjs
 ```
 
-- 既定のサービス名は `ai-review-kit`。`OTEL_SERVICE_NAME` 環境変数で上書きできる。
+- 既定のサービス名は `river-reviewer`。`OTEL_SERVICE_NAME` 環境変数で上書きできる。
 
 ## 実装のポイント
 
