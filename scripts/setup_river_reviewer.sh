@@ -185,7 +185,7 @@ cat <<'EOJ' > "$ROOT/schemas/skill.schema.json"
   "title": "River Reviewer Skill Metadata Schema",
   "type": "object",
   "required": ["id", "name", "phase", "applyTo", "description"],
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
     "id": {
       "type": "string",

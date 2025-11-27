@@ -6,7 +6,7 @@
 
 ## Strategy
 
-"Metadata First" —— すべてのレビューロジック、設定、そして戦略自体を構造化データ（Markdown + Frontmatter）として管理し、決定論的な制御と自律的な改善を実現する。
+"Metadata First"—すべてのレビューロジック、設定、そして戦略自体を構造化データ（Markdown + Frontmatter）として管理し、決定論的な制御と自律的な改善を実現する。
 
 - **Flow-based**: フェーズ別（upstream/midstream/downstream）のスキルで、開発フローに寄り添う非ブロッキングなレビューを行う。
 - **Metadata-first**: YAML frontmatter + Markdown を「スキル」とし、`schemas/skill.schema.json` で厳格に定義・検証する。
