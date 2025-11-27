@@ -17,14 +17,14 @@
 - [x] River Reviewer へのリブランディング（README/用語集/スキーマ説明）
 - [x] ディレクトリ整備：`skills/{upstream,midstream,downstream}`、`schemas/`、`docs/`、`assets/`
 - [x] スキルメタデータ JSON Schema (`schemas/skill.schema.json`)
-- [x] ブートストラップスクリプト（`scripts/setup_river_reviewer.sh`）とリファクタスクリプト（`scripts/rr_refactor_skills.py`）
+- [x] ブートストラップスクリプト（`scripts/setup_river_reviewer.sh`）とリファクタスクリプト（`scripts/rr_validate_skills.py`）
 - [x] 最小 GitHub Actions ワークフロー雛形 (`.github/workflows/river-reviewer.yml`)
 - Exit Criteria: 基本ドキュメントとスキーマ/スクリプトが揃い、新規スキル追加の足場がある状態。
 
 ## Phase 1: Skill Migration & Coverage
 
 - [ ] 既存プロンプトを `skills/**/*.md` へ移行（YAML frontmatter をスキーマ準拠で付与）
-- [ ] ID プレフィックスを `rr-` に正規化（`scripts/rr_refactor_skills.py` を活用）
+- [ ] ID プレフィックスを `rr-` に正規化（`scripts/rr_validate_skills.py` を活用）
 - [ ] Upstream/Midstream/Downstream それぞれに種スキルを追加（設計ガードレール、実装レビュー、QA/回帰確認など）
 - [ ] Quality/Domain タグ付け（例: `performance`, `security`, `reliability`）
 - Exit Criteria: 各フェーズに少なくとも1つ以上のスキルが配置され、スキーマ検証を通過する。

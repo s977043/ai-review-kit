@@ -84,7 +84,7 @@ severity: major
 ## Schemas & loader
 
 - JSON Schema lives in `schemas/skill.schema.json` and `schemas/output.schema.json`.
-- `scripts/rr_refactor_skills.py` loads and validates skills recursively with `--phase upstream|midstream|downstream|all`.
+- `scripts/rr_validate_skills.py` loads and validates skills recursively with `--phase upstream|midstream|downstream|all`.
 - `scripts/setup_river_reviewer.sh` bootstraps the directory layout and placeholder files.
 
 ## Contributing

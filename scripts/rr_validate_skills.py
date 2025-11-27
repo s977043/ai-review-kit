@@ -6,13 +6,13 @@ from pathlib import Path
 
 try:
   import yaml
-except ImportError as exc:  # pragma: no cover - dependency hint
+except ImportError:  # pragma: no cover - dependency hint
   print("PyYAML is required to parse skill frontmatter. Install via `pip install pyyaml`.", file=sys.stderr)
   sys.exit(1)
 
 try:
   from jsonschema import Draft7Validator
-except ImportError as exc:  # pragma: no cover - dependency hint
+except ImportError:  # pragma: no cover - dependency hint
   print("jsonschema is required to validate skills. Install via `pip install jsonschema`.", file=sys.stderr)
   sys.exit(1)
 
@@ -45,6 +45,8 @@ def load_schema(path: Path) -> Draft7Validator:
 
 
 def build_memory_seed(skill_id: str, phase: str) -> dict:
+  if not skill_id:
+    raise ValueError("skill_id is required to build memory seed")
   return {
     "skill_id": skill_id,
     "phase": phase,
@@ -111,7 +113,11 @@ def main() -> int:
         f"{path.relative_to(ROOT)}: phase '{meta['phase']}' does not match directory '{path_phase}'"
       )
 
-    memory_seed = build_memory_seed(skill_id, meta["phase"])
+    try:
+      memory_seed = build_memory_seed(skill_id, meta["phase"])
+    except ValueError as exc:
+      errors.append(f"{path.relative_to(ROOT)}: {exc}")
+      continue
     loaded.append(
       {
         "path": str(path.relative_to(ROOT)),

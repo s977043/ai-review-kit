@@ -13,7 +13,7 @@ RR (River Reviewer) is a flow-aware review assistant that moves with your delive
 
 ## Repository layout
 
-```
+```text
 README.md
 README.old        # DEPRECATED reference only
 assets/           # official RR logos/icons
@@ -36,7 +36,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run River Reviewer (midstream)
         uses: s977043/river-reviewer@v0
         with:
@@ -54,7 +54,7 @@ name: Midstream Performance Guardrails
 description: Ensure midstream changes avoid common performance pitfalls.
 phase: midstream
 applyTo:
-  - "src/**/*.ts"
+  - 'src/**/*.ts'
 tags: [performance, efficiency]
 severity: major
 ---
@@ -68,7 +68,7 @@ severity: major
 ## Schemas & loader
 
 - JSON Schema lives in `schemas/skill.schema.json` and `schemas/output.schema.json`.
-- `scripts/rr_refactor_skills.py` loads and validates skills recursively with `--phase upstream|midstream|downstream|all`.
+- `scripts/rr_validate_skills.py` loads and validates skills recursively with `--phase upstream|midstream|downstream|all`.
 - `scripts/setup_river_reviewer.sh` bootstraps the directory layout and placeholder files.
 
 ## Contributing
