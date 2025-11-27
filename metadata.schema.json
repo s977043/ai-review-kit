@@ -1,3 +1,4 @@
+// DEPRECATED – replaced by schemas/*.json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "AI Review Kit Skill Metadata Schema",
