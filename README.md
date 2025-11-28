@@ -2,30 +2,20 @@
 
 ![River Reviewer logo](assets/logo/river-reviewer-logo.svg)
 
-RR (River Reviewer) is a flow-aware review assistant that moves with your delivery stream.
+Review that Flows With You. 流れに寄り添う AI レビューエージェント。
 
-## Flow at a glance
+River Reviewer is a flow-based, metadata-driven AI review agent. It travels the SDLC so design intent, implementation choices, and test coverage stay connected.
 
-- **Upstream → Midstream → Downstream**: design, implementation, and test/QA phases stay connected.
-- **Upstream-first**: catch design drift early with ADR-aware skills.
-- **Stream router**: picks skills per requested phase or change set.
-- **(Future) Riverbed Memory**: retains past findings, ADR links, and WontFix decisions for consistent follow-up.
+## Flow story
 
-## Repository layout
-
-```text
-README.md
-assets/           # official RR logos/icons
-schemas/          # JSON Schema for skills and outputs
-skills/           # upstream/midstream/downstream skills (Markdown + frontmatter)
-scripts/          # setup and skill refactor utilities
-docs/             # tutorials, how-to, reference, explanation
-.github/river-reviewer/ # River Reviewer checklists shared with CI/agents
-```
+- **Upstream (design)**: ADR-aware checks keep architecture decisions aligned before code drifts.
+- **Midstream (implementation)**: style and maintainability guardrails guide everyday coding.
+- **Downstream (tests/QA)**: test-focused skills highlight coverage gaps and failure paths.
+- **Phase-aware routing**: skills are selected by `phase` and file metadata, so feedback matches where you are in the stream.
 
 ## Quick start (GitHub Actions)
 
-Minimal workflow to run River Reviewer in the midstream phase:
+Minimal workflow using the v1 action tag. `phase` is a future/optional input that will route skills per SDLC phase.
 
 ```yaml
 name: River Reviewer
@@ -38,38 +28,40 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Run River Reviewer (midstream)
-        uses: s977043/river-reviewer@v0
+        uses: s977043/river-reviewer@v1
         with:
-          phase: midstream
+          phase: midstream # upstream|midstream|downstream|all (future-ready)
 ```
 
-## Skill definition
+Note: Replace `@v1` with the latest released tag when a newer version is available.
 
-Skills use YAML frontmatter for metadata and Markdown for guidance. Required fields: `id`, `name`, `description`, `phase`, `applyTo`.
+## Skills
+
+Skills are Markdown files with YAML frontmatter; River Reviewer uses the metadata to load and route them.
 
 ```markdown
 ---
-id: rr-midstream-performance-001
-name: Midstream Performance Guardrails
-description: Ensure midstream changes avoid common performance pitfalls.
+id: rr-midstream-code-quality-sample-001
+name: Sample Code Quality Pass
+description: Checks common code quality and maintainability risks.
 phase: midstream
 applyTo:
   - 'src/**/*.ts'
-tags: [performance, efficiency]
-severity: major
+tags: [style, maintainability, midstream]
+severity: minor
 ---
 
-- Check for accidental O(n^2) loops over large collections.
-- Prefer streaming/iterators when handling large payloads.
-- Flag synchronous I/O in request paths.
-- Suggest benchmarks when risky changes are detected.
+- Instruction text for the reviewer goes here.
 ```
 
-## Schemas & loader
+- Sample skills: `skills/upstream/sample-architecture-review.md`, `skills/midstream/sample-code-quality.md`, `skills/downstream/sample-test-review.md`
+- Schemas: `schemas/skill.schema.json` (skill metadata) and `schemas/output.schema.json` (structured review output)
 
-- JSON Schema lives in `schemas/skill.schema.json` and `schemas/output.schema.json`.
-- `scripts/rr_validate_skills.py` loads and validates skills recursively with `--phase upstream|midstream|downstream|all`.
-- `scripts/setup_river_reviewer.sh` bootstraps the directory layout and placeholder files.
+## Roadmap
+
+- Phase-aware review expansion across upstream → midstream → downstream
+- Riverbed Memory to retain ADR links, WontFix decisions, and past findings
+- Evals/CI integration to keep the agent trustworthy over time
 
 ## Contributing
 

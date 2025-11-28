@@ -1,35 +1,106 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "River Reviewer Output Schema (review_v1)",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "River Reviewer Output Schema",
+  "description": "Structured output for River Reviewer findings, aggregated per run.",
   "type": "object",
-  "description": "Standard structure for the output of a River Reviewer skill.",
-  "required": ["issue", "rationale", "impact", "suggestion", "priority", "skill_id"],
+  "required": ["issues", "summary"],
+  "additionalProperties": false,
   "properties": {
-    "issue": {
-      "type": "string",
-      "description": "Description of the problem or issue identified by the skill."
+    "issues": {
+      "type": "array",
+      "description": "List of individual review issues raised by River Reviewer.",
+      "items": { "$ref": "#/$defs/issue" }
     },
-    "rationale": {
-      "type": "string",
-      "description": "Explanation of why this issue matters and the reasoning behind its identification."
-    },
-    "impact": {
-      "type": "string",
-      "description": "Potential impact or consequences if the issue is left unresolved."
-    },
-    "suggestion": {
-      "type": "string",
-      "description": "Recommended action or refactoring to address the identified issue."
-    },
-    "priority": {
-      "type": "string",
-      "enum": ["P0", "P1", "P2", "P3"],
-      "description": "Priority level indicating the urgency with which the issue should be addressed (P0 is highest)."
-    },
-    "skill_id": {
-      "type": "string",
-      "description": "Identifier of the skill that produced this review output."
+    "summary": {
+      "description": "Aggregated counts and optional notes for this review run.",
+      "$ref": "#/$defs/summary"
     }
   },
-  "additionalProperties": false
+  "$defs": {
+    "issue": {
+      "type": "object",
+      "required": ["id", "ruleId", "title", "message", "severity", "phase", "file"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the issue within this run.",
+          "minLength": 1
+        },
+        "ruleId": {
+          "type": "string",
+          "description": "Identifier of the rule or skill that produced the issue.",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "description": "Short human-readable title for the issue.",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "description": "Detailed explanation of the issue and context.",
+          "minLength": 1
+        },
+        "severity": {
+          "type": "string",
+          "description": "Severity level assigned to the issue.",
+          "enum": ["info", "minor", "major", "critical"]
+        },
+        "phase": {
+          "type": "string",
+          "description": "SDLC phase where this issue was found.",
+          "enum": ["upstream", "midstream", "downstream"]
+        },
+        "file": {
+          "type": "string",
+          "description": "File path or logical name relevant to the issue.",
+          "minLength": 1
+        },
+        "line": {
+          "type": "integer",
+          "description": "Line number related to the issue when applicable.",
+          "minimum": 1
+        },
+        "suggestion": {
+          "type": "string",
+          "description": "Optional fix or follow-up hint."
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["issueCountBySeverity", "issueCountByPhase"],
+      "additionalProperties": false,
+      "properties": {
+        "issueCountBySeverity": {
+          "type": "object",
+          "description": "Aggregated counts keyed by severity.",
+          "required": ["info", "minor", "major", "critical"],
+          "additionalProperties": false,
+          "properties": {
+            "info": { "type": "integer", "minimum": 0 },
+            "minor": { "type": "integer", "minimum": 0 },
+            "major": { "type": "integer", "minimum": 0 },
+            "critical": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "issueCountByPhase": {
+          "type": "object",
+          "description": "Aggregated counts keyed by SDLC phase.",
+          "required": ["upstream", "midstream", "downstream"],
+          "additionalProperties": false,
+          "properties": {
+            "upstream": { "type": "integer", "minimum": 0 },
+            "midstream": { "type": "integer", "minimum": 0 },
+            "downstream": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional run-level notes or caveats."
+        }
+      }
+    }
+  }
 }
