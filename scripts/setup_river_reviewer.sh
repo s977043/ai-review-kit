@@ -99,13 +99,12 @@ See `CONTRIBUTING.md` for guidance. Issues and PRs are welcome as we expand Rive
 EORD
 }
 
-if [[ "$FORCE" -eq 1 || ! -f "$ROOT/README.md" ]]; then
+if [[ ! -f "$ROOT/README.md" ]]; then
   write_readme
-  if [[ "$FORCE" -eq 1 ]]; then
-    echo "README.md refreshed with River Reviewer content (force mode)."
-  else
-    echo "README.md created with River Reviewer content."
-  fi
+  echo "README.md created with River Reviewer content."
+elif [[ "$FORCE" -eq 1 ]]; then
+  write_readme
+  echo "README.md refreshed with River Reviewer content (force mode)."
 else
   echo "README.md exists; use --force to overwrite. Skipping README update."
 fi
