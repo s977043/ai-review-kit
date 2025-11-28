@@ -4,11 +4,13 @@ node_modules
 build/
 .docusaurus/
 
-# Editor history
-.vscode/
-
 # Generated schema/examples backups
 *.schema_*.json
 *_2025*.md
 *_202511*.json
 *.bak
+
+# VS Code (ignore user-specific files, keep shared configs)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
