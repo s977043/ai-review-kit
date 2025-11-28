@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Run River Reviewer
-        uses: s977043/river-reviewer@v0
+        uses: s977043/river-reviewer@v1
         with:
           phase: midstream # upstream|midstream|downstream|all
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -24,3 +24,5 @@ jobs:
 ```
 
 GitHub App または Personal Access Token を使い、必要な認証情報を secrets へ設定してください。
+
+> 最新タグが出ている場合は `@v1` を置き換えてください。
