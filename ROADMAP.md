@@ -12,30 +12,38 @@
 - **Metadata-first**: YAML frontmatter + Markdown を「スキル」とし、`schemas/skill.schema.json` で厳格に定義・検証する。
 - **Automation-ready**: GitHub Actions など CI/CD から容易に呼び出せるランナーとルーティング層を用意する。
 
-## Phase 0: Branding & Foundation (進行中)
+## Phase 0: Branding & Foundation (完了)
 
 - [x] River Reviewer へのリブランディング（README/用語集/スキーマ説明）
 - [x] ディレクトリ整備：`skills/{upstream,midstream,downstream}`、`schemas/`、`docs/`、`assets/`
 - [x] スキルメタデータ JSON Schema (`schemas/skill.schema.json`)
 - [x] ブートストラップスクリプト（`scripts/setup_river_reviewer.sh`）とリファクタスクリプト（`scripts/rr_validate_skills.py`）
 - [x] 最小 GitHub Actions ワークフロー雛形 (`.github/workflows/river-reviewer.yml`)
-- Exit Criteria: 基本ドキュメントとスキーマ/スクリプトが揃い、新規スキル追加の足場がある状態。
+- Exit Criteria: 達成（基本ドキュメントとスキーマ/スクリプトが揃い、新規スキル追加の足場がある）。
 
 ## Phase 1: Skill Migration & Coverage
 
 - [ ] 既存プロンプトを `skills/**/*.md` へ移行（YAML frontmatter をスキーマ準拠で付与）
 - [ ] ID プレフィックスを `rr-` に正規化（`scripts/rr_validate_skills.py` を活用）
-- [ ] Upstream/Midstream/Downstream それぞれに種スキルを追加（設計ガードレール、実装レビュー、QA/回帰確認など）
+- [ ] Upstream/Midstream/Downstream それぞれに種スキルを追加（設計ガードレール、実装レビュー、QA/回帰確認など） → 現在サンプルのみで最小本数は未達
 - [ ] Quality/Domain タグ付け（例: `performance`, `security`, `reliability`）
-- Exit Criteria: 各フェーズに少なくとも1つ以上のスキルが配置され、スキーマ検証を通過する。
+- Exit Criteria: 各フェーズに少なくとも1つ以上の本番想定スキルが配置され、スキーマ検証を通過する。
 
 ## Phase 2: Loader & Runner (Phase-aware Routing)
 
 - [ ] `skills/**/*.md` を再帰的に読み込み、`phase` でフィルタ可能なローダーを実装（`RR_PHASE` 環境変数/引数対応）
-- [ ] スキルメタデータの JSON Schema バリデーションを組み込み（例: `ajv` or Python の `jsonschema`）
+- [ ] スキルメタデータの JSON Schema バリデーションを組み込み（例: `ajv` or Python の `jsonschema`）→ スクリプトはあるが Runner への組み込み未着手
 - [ ] GitHub Actions/CLI ラッパーを整備し、midstream をデフォルトにフェーズ切替を可能にする
 - [ ] Stream Router の下地として、変更ファイルのグロブと `applyTo` の突合を追加（安全な範囲で）
 - Exit Criteria: フェーズ指定でスキルを実行でき、メタデータのバリデーションを通過したものだけが走る。
+
+### 次の具体タスク案（Phase 1〜2 着手用）
+
+- [ ] 既存プロンプトの移行計画を Issue 化（対象リスト、優先度、担当）
+- [ ] 既存サンプル以外の本番想定スキルを各フェーズ1本以上追加（ID 正規化含む）
+- [ ] Node 版ローダー最小実装：`skills/**/*.md` を読み込み、`phase` フィルタと `applyTo` 突合で対象スキル集合を返す
+- [ ] Runner プロトタイプ：`RR_PHASE` または引数でフェーズを選択し、バリデーション通過スキルのみ出力する CLI
+- [ ] GitHub Actions ラッパー更新：midstream デフォルトで Runner を呼び出す Job を作成（既存 placeholder を置き換え）
 
 ## Phase 3: Reliability & Evals
 
