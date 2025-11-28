@@ -31,12 +31,12 @@ RR (River Reviewer) is a flow-aware review assistant that moves with your delive
 
 ```
 README.md
-README.old        # DEPRECATED reference only
 assets/           # official RR logos/icons
 schemas/          # JSON Schema for skills and outputs
 skills/           # upstream/midstream/downstream skills (Markdown + frontmatter)
 scripts/          # setup and skill refactor utilities
 docs/             # tutorials, how-to, reference, explanation
+.github/river-reviewer/ # River Reviewer checklists shared with CI/agents
 ```
 
 ## Quick start (GitHub Actions)
@@ -52,7 +52,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run River Reviewer (midstream)
         uses: s977043/river-reviewer@v0
         with:
@@ -93,24 +93,21 @@ See `CONTRIBUTING.md` for guidance. Issues and PRs are welcome as we expand Rive
 
 ## License
 
-Apache-2.0 (see `LICENSE`).
+- `LICENSE`: Apache-2.0 for repository scaffolding/config
+- `LICENSE-CODE`: MIT for code and scripts
+- `LICENSE-CONTENT`: CC BY 4.0 for docs and media
 EORD
 }
 
-if [[ -f "$ROOT/README.md" ]]; then
-  if [[ ! -f "$ROOT/README.old" ]]; then
-    cp "$ROOT/README.md" "$ROOT/README.old"
-    echo "Backed up existing README.md to README.old"
-  fi
+if [[ "$FORCE" -eq 1 || ! -f "$ROOT/README.md" ]]; then
+  write_readme
   if [[ "$FORCE" -eq 1 ]]; then
-    write_readme
-    echo "README.md replaced with River Reviewer content (force mode)."
+    echo "README.md refreshed with River Reviewer content (force mode)."
   else
-    echo "README.md exists; use --force to overwrite. Skipping README update."
+    echo "README.md created with River Reviewer content."
   fi
 else
-  write_readme
-  echo "README.md created with River Reviewer content."
+  echo "README.md exists; use --force to overwrite. Skipping README update."
 fi
 
 cat <<'EOG' > "$ROOT/docs/glossary.md"

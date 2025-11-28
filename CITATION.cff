@@ -1,9 +1,10 @@
 cff-version: 1.2.0
-title: "レビュー ナレッジ"
-message: "このリポを引用する場合は以下を参照してください。"
+title: "River Reviewer"
+message: "Cite River Reviewer when referencing this repository."
 authors:
-  - family-names: "YourOrg"
-    given-names: "Team"
+  - family-names: "River Reviewer"
+    given-names: "Maintainers"
 version: "2025.10"
 date-released: "2025-10-26"
+repository-code: "https://github.com/s977043/river-reviewer"
 doi: ""

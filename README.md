@@ -15,12 +15,12 @@ RR (River Reviewer) is a flow-aware review assistant that moves with your delive
 
 ```text
 README.md
-README.old        # DEPRECATED reference only
 assets/           # official RR logos/icons
 schemas/          # JSON Schema for skills and outputs
 skills/           # upstream/midstream/downstream skills (Markdown + frontmatter)
 scripts/          # setup and skill refactor utilities
 docs/             # tutorials, how-to, reference, explanation
+.github/river-reviewer/ # River Reviewer checklists shared with CI/agents
 ```
 
 ## Quick start (GitHub Actions)
@@ -77,4 +77,6 @@ See `CONTRIBUTING.md` for guidance. Issues and PRs are welcome as we expand Rive
 
 ## License
 
-Apache-2.0 (see `LICENSE`).
+- `LICENSE`: Apache-2.0 for repository scaffolding/config
+- `LICENSE-CODE`: MIT for code and scripts
+- `LICENSE-CONTENT`: CC BY 4.0 for docs and media

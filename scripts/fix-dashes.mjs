@@ -5,8 +5,8 @@ import path from 'path';
 // Scan all .md files (except node_modules, build, .docusaurus, and build output)
 const root = process.cwd();
 const excludeDirs = ['node_modules', 'build', '.docusaurus', 'dist', 'public', '.vscode', '.git'];
-// Targeted directories/files: only docs folder, .github AI-review checklists, and root README/AGENTS
-const targetDirs = ['docs', path.join('.github', 'ai-review', 'checklists')].map(p => path.join(root, p));
+// Targeted directories/files: only docs folder, .github River Reviewer checklists, and root README/AGENTS
+const targetDirs = ['docs', path.join('.github', 'river-reviewer', 'checklists')].map(p => path.join(root, p));
 const targetFiles = [path.join(root, 'README.md'), path.join(root, 'AGENTS.md')];
 
 function walkDir(dir) {
