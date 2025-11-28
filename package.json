@@ -1,6 +1,13 @@
 {
   "name": "river-reviewer",
   "private": true,
+  "description": "River Reviewer docs, schemas, and validation utilities.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/s977043/river-reviewer.git"
+  },
+  "homepage": "https://s977043.github.io/river-reviewer/",
+  "bugs": "https://github.com/s977043/river-reviewer/issues",
   "scripts": {
     "dev": "docusaurus start",
     "build": "docusaurus build",

@@ -26,7 +26,7 @@ agents/
    - 既存の例をコピーしてフィールドを置き換える
    - 余分なフィールドは含めないでください（スキーマ `additionalProperties: false` のため）
 
-3. チェックリストを `.github/ai-review/checklists/` 配下に追加・更新する
+3. チェックリストを `.github/river-reviewer/checklists/` 配下に追加・更新する
    - `security.md`, `language/*.md`, `quality/*.md` など必要なカテゴリを追加
    - PocketEitanの例を参考に、AIエージェントがレビューできる形式で箇条書きにする
 

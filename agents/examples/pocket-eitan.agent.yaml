@@ -252,9 +252,9 @@ automation:
         - 'pnpm tsc -b'
         - 'pnpm test'
         - 'pnpm audit --audit-level moderate'
-    - name: AI Review Setup Validation
-      path: .github/workflows/ai-review.yml
-      description: 'ガイドラインとセットアップの健全性を検証'
+    - name: River Reviewer Setup Validation
+      path: .github/workflows/river-reviewer.yml
+      description: 'River Reviewer ガイドラインとセットアップの健全性を検証'
       triggers:
         - 'pull_request (main, dev)'
       enforces:
