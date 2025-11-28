@@ -12,6 +12,7 @@
     "format": "prettier --write \"**/*.{js,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,yml,yaml}\"",
     "agents:validate": "node scripts/validate-agents.mjs",
+    "skills:validate": "node scripts/validate-skills.mjs",
     "trace:validate": "OTEL_ENABLED=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 node scripts/validate-agents.mjs",
     "fix:dashes": "node scripts/fix-dashes.mjs",
     "prepare": "husky install"
