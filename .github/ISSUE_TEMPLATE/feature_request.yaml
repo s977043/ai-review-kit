@@ -71,6 +71,25 @@ body:
         - When..., the runner...
     validations:
       required: true
+  - type: checkboxes
+    id: docs_impact
+    attributes:
+      label: 'Documentation impact / ドキュメントへの影響'
+      description: 'Does this feature require documentation updates?'
+      options:
+        - label: 'No（不要）'
+        - label: 'Yes（必要）'
+    validations:
+      required: true
+  - type: checkboxes
+    id: diataxis_type
+    attributes:
+      label: 'If yes, which Diátaxis type(s) do you expect?（複数選択可）'
+      options:
+        - label: 'Tutorial（チュートリアル / 新しいユーザー向け）'
+        - label: 'How-to guide（ハウツー / 特定タスク向け）'
+        - label: 'Reference（リファレンス / API・設定・スキーマ）'
+        - label: 'Explanation（解説 / 背景や設計）'
   - type: textarea
     id: references
     attributes:
