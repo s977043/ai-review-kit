@@ -47,9 +47,9 @@ npm test
 
 ## Checklist / チェックリスト
 
-- [ ] 変更内容に関連するテストを追加・修正しました。
-- [ ] テストが通過することを確認しました。
-- [ ] 追加のドキュメントやノートが必要な場合は更新しました。
+- [ ] Added or updated tests related to the changes.（変更内容に関連するテストを追加・修正しました。）
+- [ ] Verified that tests pass.（テストが通過することを確認しました。）
+- [ ] Updated documentation or notes if necessary.（追加のドキュメントやノートが必要な場合は更新しました。）
 
 ## Related Issues
 
