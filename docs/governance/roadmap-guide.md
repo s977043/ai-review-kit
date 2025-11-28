@@ -46,7 +46,7 @@ title: Roadmap & Project Board 運用ガイド
 
 ## 定義済みタスクの雛形例
 
-具体的なタスク案は [ROADMAP.md](../../ROADMAP.md) の「次の具体タスク案」を参照してください（重複管理を避けるため本ドキュメントでは一覧を持たない）。
+具体的なタスク案は [ROADMAP.md](https://github.com/s977043/river-reviewer/blob/main/ROADMAP.md) の「次の具体タスク案」を参照してください（重複管理を避けるため本ドキュメントでは一覧を持たない）。
 
 ## 運用 Tips
 
