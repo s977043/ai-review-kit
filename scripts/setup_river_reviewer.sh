@@ -54,7 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Run River Reviewer (midstream)
-        uses: s977043/river-reviewer@v0
+        uses: s977043/river-reviewer@v1
         with:
           phase: midstream
 ```

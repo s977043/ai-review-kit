@@ -4,9 +4,6 @@ node_modules
 build/
 .docusaurus/
 
-# Editor history
-.vscode/
-
 # Generated schema/examples backups
 *.schema_*.json
 *_2025*.md

@@ -1,3 +1,7 @@
+This repository uses multiple licenses by asset type.
+This file: Apache-2.0 for scaffolding/configuration and non-code resources not covered elsewhere.
+Code/scripts: see LICENSE-CODE (MIT). Docs/media: see LICENSE-CONTENT (CC BY 4.0).
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
