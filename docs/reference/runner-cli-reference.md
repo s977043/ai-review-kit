@@ -1,7 +1,8 @@
 # Runner CLI Reference
 
-Use the Runner CLI to validate River Reviewer agents and skills locally or in CI. A lightweight Python runner is also available
-to emit structured review output that follows `schemas/output.schema.json` (install dependency with `pip install jsonschema`).
+Use the Runner CLI to validate River Reviewer agents and skills locally or in CI.
+A lightweight Python runner outputs structured review results that follow `schemas/output.schema.json`.
+Install the required dependency with `pip install jsonschema` before running the Python example.
 
 ## Commands
 
