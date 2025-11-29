@@ -4,6 +4,9 @@ node_modules
 build/
 .docusaurus/
 
+# Runner outputs
+artifacts/
+
 # Generated schema/examples backups
 *.schema_*.json
 *_2025*.md

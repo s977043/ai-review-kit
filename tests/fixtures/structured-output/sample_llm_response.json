@@ -1,0 +1,29 @@
+[
+  {
+    "ruleId": "rr-upstream-architecture-sample-001",
+    "title": "ADR と設計記述がずれている",
+    "message": "更新された非機能要件が ADR に反映されていません。最新の合意を確認してください。",
+    "severity": "major",
+    "phase": "upstream",
+    "file": "docs/adr/001-architecture.md",
+    "line": 42,
+    "suggestion": "ADR を更新して、現行の非機能要件を明記します。"
+  },
+  {
+    "ruleId": "rr-midstream-code-quality-sample-001",
+    "title": "例外ハンドリングが不足",
+    "message": "ファイル読み込み時の例外が握り潰される可能性があります。",
+    "severity": "minor",
+    "phase": "midstream",
+    "file": "src/app/main.py",
+    "line": 88
+  },
+  {
+    "ruleId": "rr-downstream-test-sample-001",
+    "title": "境界値のテストケース不足",
+    "message": "入力値 0 と 1 の境界に対するテストがありません。",
+    "severity": "major",
+    "phase": "downstream",
+    "file": "tests/test_calculator.py"
+  }
+]
