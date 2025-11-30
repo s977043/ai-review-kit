@@ -26,7 +26,7 @@ module.exports = {
   themeConfig: {
     navbar: {
       title: 'River Reviewer',
-      items: [{ to: '/docs/explanation/intro', label: 'Docs', position: 'left' }],
+      items: [{ to: '/explanation/intro', label: 'Docs', position: 'left' }],
     },
     footer: {
       style: 'dark',

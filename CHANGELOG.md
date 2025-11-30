@@ -5,7 +5,7 @@
 - Added JSON Schema 2020-12 output format with `issues` array and `summary` aggregation (breaking for consumers of the old flat schema).
 - Added upstream/midstream/downstream sample skills with YAML frontmatter.
 - Refreshed README/docs to the River Reviewer worldview and updated GitHub Action examples to `@v1` (replace with the latest tag when published).
-- Added the Riverbed Memory design draft under `docs/explanation/`.
+- Added the Riverbed Memory design draft under `pages/explanation/`.
 
 ### Breaking changes
 
