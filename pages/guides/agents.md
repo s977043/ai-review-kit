@@ -31,7 +31,7 @@ agents/
    - PocketEitanの例を参考に、AIエージェントがレビューできる形式で箇条書きにする
 
 4. ドキュメントとREADMEを更新する
-   - `docs/agents.md`（本ファイル）とREADMEに手順・コマンドを追記
+    - `pages/guides/agents.md`（本ファイル）とREADMEに手順・コマンドを追記
    - PRテンプレートに背景・変更点・テスト結果・影響範囲・チェックリストを含める
 
 ## 検証コマンド
