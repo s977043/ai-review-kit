@@ -9,9 +9,9 @@ Target a single phase when you only want Upstream, Midstream, or Downstream feed
 
    ```yaml
    on:
-      pull_request:
-        paths:
-          - 'pages/**' # Upstream-focused example
+     pull_request:
+       paths:
+         - 'pages/**' # Upstream-focused example
    ```
 
 3. For local runs, execute only the relevant skills by filtering files or temporarily narrowing `applyTo` globs.
