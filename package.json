@@ -40,7 +40,7 @@
   "devDependencies": {
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "husky": "^8.0.3",
+    "husky": "^9.1.7",
     "js-yaml": "^4.1.1",
     "linkinator": "^7.5.0",
     "lint-staged": "^16.2.7",
