@@ -12,6 +12,6 @@ jobs:
       RR_PHASE: midstream
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Run River Reviewer
         run: echo "River Reviewer placeholder run for phase=${RR_PHASE:-midstream}"
