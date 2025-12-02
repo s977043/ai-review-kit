@@ -50,24 +50,24 @@ River Reviewer のドキュメントは [Diátaxis documentation framework](http
 
 - How-to guide（ガイド）  
   具体的なゴール達成のためのレシピ。読者は基本を理解済みです。  
-  例: "Add a custom review skill", "Run River Reviewer locally"
+  例: "Add a custom review skill" / "Run River Reviewer locally"
 
 - Reference（リファレンス）  
   API、設定、スキーマなどを正確かつ可能な限り網羅的に説明するもの。  
-  例: "GitHub Action inputs", "skill YAML schema"
+  例: "GitHub Action inputs" / "skill YAML schema"
 
 - Explanation（背景解説）  
   背景、設計判断、概念を説明するもの。  
-  例: "Upstream/midstream/downstream model", "Design principles of River Reviewer"
+  例: "Upstream/midstream/downstream model" / "Design principles of River Reviewer"
 
 レビューを円滑にするため、以下もお願いします。
 
 - ファイルは該当するセクションに配置してください（例: `pages/tutorials/`, `pages/guides/`, `pages/reference/`, `pages/explanation/`）。
 - 選んだタイプを PR のタイトルまたは説明に明記してください（例:
-  - Docs: Tutorial – Getting started with River Reviewer
-  - Docs: How-to – Add a custom skill
-  - Docs: Reference – GitHub Action inputs
-  - Docs: Explanation – River flow model）
+  - Docs: Tutorial—Getting started with River Reviewer
+  - Docs: How-to—Add a custom skill
+  - Docs: Reference—GitHub Action inputs
+  - Docs: Explanation—River flow model）
 
 ## ✍️ ドキュメントスタイル（ダッシュ）
 
@@ -80,7 +80,7 @@ River Reviewer のドキュメントは [Diátaxis documentation framework](http
 自動化:
 
 - レポジトリには`scripts/fix-dashes.mjs`（node）という自動修正スクリプトを用意している。ローカルで実行する際は`npm run fix:dashes`を利用すること。
-- CIとPRではVale（Prose Lint）を用い、Microsoft.Dashesルールに従わせている。PR作成前にローカルでlinterを実行することを推奨する。
+- CIとPRではVale（Prose Lint）を用い、Microsoft Dashesルールに従わせている。PR作成前にローカルでlinterを実行することを推奨する。
 
 ## 📜 帰属
 

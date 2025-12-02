@@ -27,7 +27,7 @@ jobs:
 
 ## 2. Keep credentials out of the flow
 
-- By default, River Reviewer does not require credentials or API keys.
+- By default, River Reviewer doesn't require credentials or API keys.
 - If the reviewer needs extra context or external API access, pass tokens via repository or organization secrets and document which secrets are needed.
 
 ## 3. Tune for phases

@@ -4,7 +4,7 @@ Flow your changes from Upstream to Midstream to Downstream with clear validation
 
 ## Overview / 説明
 
-- [ ] Briefly describe what is changing and why (1-2 lines)（このPRの変更内容を簡潔に説明してください）
+- [ ] Briefly describe what's changing and why (1-2 lines)（このPRの変更内容を簡潔に説明してください）
 - Primary phase focus: Upstream / Midstream / Downstream
 
 ## Flow Consistency
@@ -33,7 +33,7 @@ Diátaxis compliance / Diátaxis 準拠チェック:
 
 - [ ] This document clearly focuses on a single Diátaxis type.
 - [ ] The file is placed under the corresponding `docs/` section.
-- [ ] The content matches the chosen type (e.g. no long conceptual explanation in a how-to guide).
+- [ ] The content matches the chosen type (for example, no long conceptual explanation in a how-to guide).
 
 ## Validation & Evidence
 

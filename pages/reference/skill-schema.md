@@ -4,7 +4,7 @@ River Reviewer skills use YAML frontmatter for metadata and Markdown for guidanc
 
 ## Fields
 
-- `id` (string, required): unique identifier (e.g., `rr-upstream-design-architecture-001`); stable across moves/renames.
+- `id` (string, required): unique identifier (for example, `rr-upstream-design-architecture-001`); stable across moves/renames.
 - `name` (string, required): human-readable skill name.
 - `phase` (string, required): one of `upstream`, `midstream`, or `downstream`.
 - `tags` (string[], optional): keywords that group related skills.

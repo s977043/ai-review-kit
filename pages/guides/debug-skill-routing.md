@@ -1,6 +1,6 @@
 # Debug Skill Routing
 
-When a skill does not trigger (or triggers too often), walk through these checks.
+When a skill doesn't trigger (or triggers too often), walk through these checks.
 
 ## Checklist
 

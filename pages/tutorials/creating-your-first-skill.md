@@ -31,7 +31,7 @@ severity: minor
 
 - **Upstream:** describe the intent of the check and link to any design references.
 - **Midstream:** define the detection logic in the instruction body.
-- **Downstream:** note how to verify or auto-fix the finding.
+- **Downstream:** note how to verify or autofix the finding.
 
 ## 3. Validate the skill
 

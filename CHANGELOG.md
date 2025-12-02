@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0 (Draft) — 2025-11-28
+## v0.1.0 (Draft)—2025-11-28
 
 - Added JSON Schema 2020-12 output format with `issues` array and `summary` aggregation (breaking for consumers of the old flat schema).
 - Added upstream/midstream/downstream sample skills with YAML frontmatter.

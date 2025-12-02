@@ -20,4 +20,4 @@ Target a single phase when you only want Upstream, Midstream, or Downstream feed
 ## Verification
 
 - Confirm the reviewer only loads skills whose `phase` matches the targeted segment.
-- Add a small change in a different phase to verify it is ignored.
+- Add a small change in a different phase to verify it's ignored.
