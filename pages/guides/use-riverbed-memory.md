@@ -24,7 +24,7 @@ Riverbed Memory stores past review context so future flows stay consistent.
    ```
 
 3. Reuse context: when writing new skills, reference prior decisions to avoid duplicate warnings or conflicting guidance.
-4. Expire stale memory: set a cadence (e.g., monthly) to prune outdated decisions and refresh assumptions.
+4. Expire stale memory: set a cadence (for example, monthly) to prune outdated decisions and refresh assumptions.
 
 ## Good Practices
 

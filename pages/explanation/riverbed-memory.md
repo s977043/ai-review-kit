@@ -26,6 +26,6 @@ Riverbed Memory is the place where context settles—like how a riverbed holds t
 
 ## Next actions (toward v1)
 
-1. Define a minimal memory record schema (e.g., issue IDs, ADR links, WontFix rationale) that can be serialized to JSON.
+1. Define a minimal memory record schema (for example, issue IDs, ADR links, or WontFix rationale) that can be serialized to JSON.
 2. Add an optional GitHub Action step to emit the record as an artifact and, when permitted, a compact PR comment with hidden markers.
 3. Teach the agent to ingest the last avAIlable artifact/comment on each run and merge it into the prompt context without blocking the review.

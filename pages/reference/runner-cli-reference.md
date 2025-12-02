@@ -13,7 +13,7 @@ Install the required dependency with `pip install jsonschema` before running the
 ## Exit codes
 
 - `0`: validation completed successfully.
-- `1`: schema checks did not pass or a schema error occurred.
+- `1`: schema checks didn't pass or a schema error occurred.
 
 ## Examples
 

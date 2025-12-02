@@ -31,7 +31,7 @@ Does this feature require documentation updates?（この機能にはドキュ�
 - [ ] No（不要）
 - [ ] Yes（必要）
 
-If yes, which Diátaxis type(s) do you expect?（複数選択可）
+If yes, which Diátaxis types do you expect?（複数選択可）
 
 - [ ] Tutorial（チュートリアル / 新しいユーザー向け）
 - [ ] How-to guide（ハウツー / 特定タスク向け）

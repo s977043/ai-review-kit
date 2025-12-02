@@ -1,6 +1,7 @@
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 module.exports = {
   docs: [
+    'index',
     {
       type: 'category',
       label: 'Tutorials',

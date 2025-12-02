@@ -16,7 +16,7 @@
 ## Root Cause & Fix
 
 - Root cause in one or two sentences
-- Fix approach and why it is safe
+- Fix approach and why it's safe
 
 ## Repro & Validation
 

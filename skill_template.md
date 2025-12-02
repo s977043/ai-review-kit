@@ -13,7 +13,7 @@ severity: minor # info | minor | major | critical
 
 ## Rule
 
-Describe the rule clearly. For example, "Ensure that each module has a single responsibility".
+Describe the rule clearly. For example, "Ensure that each module has a single responsibility."
 
 ## Rationale
 
