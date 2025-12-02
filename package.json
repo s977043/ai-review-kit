@@ -29,7 +29,7 @@
     "@docusaurus/core": "^3.5.0",
     "@docusaurus/preset-classic": "^3.5.0",
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.67.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.67.2",
     "@opentelemetry/exporter-trace-otlp-http": "^0.208.0",
     "@opentelemetry/resources": "^2.2.0",
     "@opentelemetry/sdk-node": "^0.208.0",
@@ -40,7 +40,7 @@
   "devDependencies": {
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "husky": "^8.0.3",
+    "husky": "^9.1.7",
     "js-yaml": "^4.1.1",
     "linkinator": "^7.5.0",
     "lint-staged": "^16.2.7",
