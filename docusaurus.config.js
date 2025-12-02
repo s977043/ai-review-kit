@@ -17,7 +17,11 @@ module.exports = {
     [
       '@docusaurus/preset-classic',
       {
-        docs: { sidebarPath: require.resolve('./sidebars.js') },
+        docs: {
+          path: 'pages',
+          routeBasePath: 'docs',
+          sidebarPath: require.resolve('./sidebars.js'),
+        },
         theme: { customCss: require.resolve('./src/css/custom.css') },
         sitemap: { changefreq: 'weekly', priority: 0.5 },
       },
@@ -33,6 +37,8 @@ module.exports = {
       copyright: `© ${new Date().getFullYear()} River Reviewer`,
     },
   },
+  markdown: {
+    hooks: { onBrokenMarkdownLinks: 'warn' },
+  },
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
 };
