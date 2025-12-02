@@ -5,7 +5,7 @@
     "message": "更新された非機能要件が ADR に反映されていません。最新の合意を確認してください。",
     "severity": "major",
     "phase": "upstream",
-    "file": "docs/adr/001-architecture.md",
+    "file": "pages/adr/001-architecture.md",
     "line": 42,
     "suggestion": "ADR を更新して、現行の非機能要件を明記します。"
   },
