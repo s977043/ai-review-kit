@@ -18,6 +18,11 @@
 - Pages updated/added
 - Key callouts ( diagrams, tutorials, references )
 
+Language / 言語:
+
+- [ ] Japanese（日本語・標準）
+- [ ] English（英語 / `.en.md` ファイル）
+
 ## Validation & Evidence
 
 - Screenshots or rendered previews if applicable

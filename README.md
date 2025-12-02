@@ -2,20 +2,20 @@
 
 ![River Reviewer logo](assets/logo/river-reviewer-logo.svg)
 
-Review that Flows With You. 流れに寄り添う AI レビューエージェント。
+日本語版 README です。[English README is available here.](./README.en.md)
 
-River Reviewer is a flow-based, metadata-driven AI review agent. It travels the SDLC so design intent, implementation choices, and test coverage stay connected.
+流れに寄り添う AI レビューエージェント。River Reviewer はフロー型・メタデータ駆動の AI レビューエージェントで、設計意図・実装判断・テストカバレッジを SDLC 全体でつなぎます。
 
-## Flow story
+## フローのストーリー
 
-- **Upstream (design)**: ADR-aware checks keep architecture decisions aligned before code drifts.
-- **Midstream (implementation)**: style and maintainability guardrails guide everyday coding.
-- **Downstream (tests/QA)**: test-focused skills highlight coverage gaps and failure paths.
-- **Phase-aware routing**: skills are selected by `phase` and file metadata, so feedback matches where you are in the stream.
+- **上流（設計）**: ADR を踏まえたチェックでコードのドリフトを防ぎ、アーキテクチャ判断との整合を保ちます。
+- **中流（実装）**: スタイルと保守性のガードレールで日々のコーディングを支援します。
+- **下流（テスト/QA）**: テスト指向のスキルがカバレッジ不足や失敗パスを浮かび上がらせます。
+- **フェーズ指向ルーティング**: `phase` とファイルメタデータを見て、開発段階に合ったスキルを選択します。
 
-## Quick start (GitHub Actions)
+## クイックスタート（GitHub Actions）
 
-Minimal workflow using the v1 action tag. `phase` is a future/optional input that will route skills per SDLC phase.
+`v1` タグを使った最小構成のワークフロー例です。`phase` は将来拡張を見据えた任意入力で、SDLC のフェーズごとにスキルを振り分けます。
 
 ```yaml
 name: River Reviewer
@@ -33,11 +33,11 @@ jobs:
           phase: midstream # upstream|midstream|downstream|all (future-ready)
 ```
 
-Note: Replace `@v1` with the latest released tag when a newer version is available.
+新しいタグが出たら、`@v1` を最新のリリースタグに置き換えてください。
 
-## Skills
+## スキル
 
-Skills are Markdown files with YAML frontmatter; River Reviewer uses the metadata to load and route them.
+スキルは YAML フロントマター付き Markdown で記述し、メタデータを使ってロードとルーティングを行います。
 
 ```markdown
 ---
@@ -54,36 +54,40 @@ severity: minor
 - Instruction text for the reviewer goes here.
 ```
 
-- Sample skills: `skills/upstream/sample-architecture-review.md`, `skills/midstream/sample-code-quality.md`, `skills/downstream/sample-test-review.md`
-- Schemas: `schemas/skill.schema.json` (skill metadata) and `schemas/output.schema.json` (structured review output)
-- References: Skill schema details live in `pages/reference/skill-schema-reference.md`; Riverbed Memory design draft lives in `pages/explanation/riverbed-memory.md`.
+- サンプル: `skills/upstream/sample-architecture-review.md`, `skills/midstream/sample-code-quality.md`, `skills/downstream/sample-test-review.md`
+- スキーマ: スキルメタデータは `schemas/skill.schema.json`, レビュー出力は `schemas/output.schema.json`
+- 参考: スキルスキーマの詳細は `pages/reference/skill-schema-reference.md`、Riverbed Memory の設計ドラフトは `pages/explanation/riverbed-memory.md`
 
-## Documentation design
+## ドキュメント設計
 
-River Reviewer’s technical documentation follows the
-[Diátaxis documentation framework](https://diataxis.fr/).
+River Reviewer の技術ドキュメントは、[Diátaxis ドキュメントフレームワーク](https://diataxis.fr/) に基づいて構成しています。日本語がデフォルト言語で、英語版は `.en.md` 拡張子の別ファイルとして管理します（差分がある場合は日本語版を優先）。
 
-We organize content into four documentation types:
+ドキュメントは次の 4 種類に分類されます。
 
-- Tutorials—learning-oriented guides
-- How-to guides—goal-oriented recipes
-- Reference—accurate, comprehensive technical facts
-- Explanation—background, design and reasoning
+- Tutorials（チュートリアル）: 学習志向。最初の成功体験のためのレッスン。
+- Guides（ハウツーガイド）: タスク志向。特定のゴールを達成するための手順。
+- Reference（リファレンス）: 仕様・API・スキーマなどの事実の一覧。
+- Explanation（解説）: 背景・設計思想・なぜそうなっているかの説明。
 
-Docs served from `/docs` (source in `pages/`) map to these four types so you can quickly find the right help for each task.
+`/docs` 配信（ソースは `pages/`）で上記 4 種をマッピングし、ファイル名で言語を表します。
 
-## Roadmap
+- `pages/tutorials/*.md`（日本語）と `pages/tutorials/*.en.md`（英語）
+- `pages/guides/*.md` と `pages/guides/*.en.md`
+- `pages/reference/*.md` と `pages/reference/*.en.md`
+- `pages/explanation/*.md` と `pages/explanation/*.en.md`
 
-- Phase-aware review expansion across upstream → midstream → downstream
-- Riverbed Memory to retain ADR links, WontFix decisions, and past findings
-- Evals/CI integration to keep the agent trustworthy over time
+## ロードマップ
 
-## Contributing
+- 上流 → 中流 → 下流にわたるフェーズ別レビュー拡張
+- ADR などの履歴を保持する Riverbed Memory（WontFix や過去指摘も含む）
+- Evals / CI 連携による継続的な信頼性検証
 
-See `CONTRIBUTING.md` for guidance. Issues and PRs are welcome as we expand River Reviewer.
+## コントリビューション
 
-## License
+ガイドラインは `CONTRIBUTING.md` を参照してください。Issue や PR を歓迎します。
 
-- `LICENSE`: Apache-2.0 for repository scaffolding/config
-- `LICENSE-CODE`: MIT for code and scripts
-- `LICENSE-CONTENT`: CC BY 4.0 for docs and media
+## ライセンス
+
+- `LICENSE`: リポジトリ構成と設定は Apache-2.0
+- `LICENSE-CODE`: コードとスクリプトは MIT
+- `LICENSE-CONTENT`: ドキュメントとメディアは CC BY 4.0
