@@ -58,6 +58,20 @@ severity: minor
 - Schemas: `schemas/skill.schema.json` (skill metadata) and `schemas/output.schema.json` (structured review output)
 - References: Skill schema details live in `pages/reference/skill-schema-reference.md`; Riverbed Memory design draft lives in `pages/explanation/riverbed-memory.md`.
 
+## Documentation design
+
+River Reviewer’s technical documentation follows the
+[Diátaxis documentation framework](https://diataxis.fr/).
+
+We organize content into four documentation types:
+
+- Tutorials—learning-oriented guides
+- How-to guides—goal-oriented recipes
+- Reference—accurate, comprehensive technical facts
+- Explanation—background, design and reasoning
+
+Docs served from `/docs` (source in `pages/`) map to these four types so you can quickly find the right help for each task.
+
 ## Roadmap
 
 - Phase-aware review expansion across upstream → midstream → downstream

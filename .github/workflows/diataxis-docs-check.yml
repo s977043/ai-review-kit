@@ -1,0 +1,76 @@
+name: Diátaxis Docs Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remind Diátaxis type for docs changes
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const keywords = ['tutorial', 'how-to', 'reference', 'explanation'];
+            const normalize = (text) => (text || '').toLowerCase();
+            const titleText = normalize(pr.title);
+            const bodyText = normalize(pr.body);
+            const mentionsKeyword = keywords.some(
+              (kw) => titleText.includes(kw) || bodyText.includes(kw)
+            );
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+
+            const touchesDocs = files.some(({ filename }) => filename.startsWith('pages/'));
+            if (!touchesDocs) {
+              core.info('No documentation files changed; skipping reminder.');
+              return;
+            }
+
+            if (mentionsKeyword) {
+              core.info('Diátaxis keyword already present; skipping reminder.');
+              return;
+            }
+
+            const reminder = [
+              "It looks like this PR changes files under docs (pages/), but I couldn't find",
+              'a Diátaxis type (Tutorial / How-to / Reference / Explanation) in the',
+              'PR title or description.',
+              '',
+              'Please make sure the documentation in this PR follows the Diátaxis',
+              'framework and mention the main type in the PR description.',
+            ].join('\n');
+
+            const existingComments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+            });
+
+            const alreadyReminded = existingComments.some((comment) =>
+              comment.body?.includes('Diátaxis type (Tutorial / How-to / Reference / Explanation)')
+            );
+
+            if (alreadyReminded) {
+              core.info('Reminder already posted; skipping duplicate comment.');
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: reminder,
+            });
+            core.info('Posted Diátaxis reminder comment.');
