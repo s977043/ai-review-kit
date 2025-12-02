@@ -1,0 +1,9 @@
+{
+  "overview": "自彰型コードレビューフレームワーク—序文",
+  "principles": "Part I—基礎原則：人間中心レビューのAI適応",
+  "checklist": "Part II—包括的チェックリスト",
+  "security-gauntlet": "Part III—セキュリティガントレット",
+  "formal-methods": "Part IV—形式的検証と定量分析",
+  "agents-hitl": "Part V—マルチエージェントとHITL",
+  "conclusion": "結論—共生の設計図"
+}
