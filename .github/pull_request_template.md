@@ -35,6 +35,11 @@ Diátaxis compliance / Diátaxis 準拠チェック:
 - [ ] The file is placed under the corresponding `docs/` section.
 - [ ] The content matches the chosen type (for example, no long conceptual explanation in a how-to guide).
 
+Language / 言語:
+
+- [ ] Japanese（日本語・標準）
+- [ ] English（英語 / `.en.md` ファイル）
+
 ## Validation & Evidence
 
 List commands and logs that prove the change is river-safe.

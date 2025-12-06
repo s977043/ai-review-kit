@@ -47,6 +47,16 @@ body:
         - critical
     validations:
       required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: 'Language / 言語'
+      description: 'Japanese is the default/source; English uses `.en.md` and may lag.'
+      options:
+        - Japanese (default / source of truth)
+        - English (`.en.md`)
+    validations:
+      required: true
   - type: textarea
     id: location
     attributes:

@@ -4,21 +4,22 @@ slug: /
 
 # River Reviewer docs
 
-River Reviewer’s documentation is organized using the
-[Diátaxis documentation framework](https://diataxis.fr/).
+英語版は [/docs/index-en](/docs/index-en) を参照してください（日本語がソース・オブ・トゥルースです）。
 
-We group docs into four types:
+River Reviewer のドキュメントは、日本語を基本言語として提供し、
+[Diátaxis ドキュメントフレームワーク](https://diataxis.fr/) に基づいて構成しています。
+同じ内容の英語版がある場合は `.en.md` を付けたファイル名で管理し、差分がある場合は日本語版を真実として扱います。
 
-- Tutorials—step-by-step lessons for new users
-- How-to guides—recipes for achieving specific tasks
-- Reference—technical specifications, APIs, schemas
-- Explanation—background, design decisions, and concepts
+ドキュメントは次の 4 種類に分類されます。
 
-A typical reading order could be:
+- Tutorials（チュートリアル）: 学習志向。最初の成功体験を届けるステップバイステップ。
+- Guides（ハウツーガイド）: タスク志向。特定のゴールを達成するための手順。
+- Reference（リファレンス）: 仕様・API・スキーマなどの事実の一覧。
+- Explanation（解説）: 背景・設計判断・概念の説明。
 
-1. Tutorials—if you are new to River Reviewer
-2. How-to guides—if you want to solve a specific problem
-3. Reference—when you need precise specs or API facts
-4. Explanation—when you want to understand the "why"
+`pages/` 配下を Diátaxis で分け、言語はファイル名で表します（`/docs` に配信）。
 
-Docs live under `pages/` and are served at `/docs`, mirroring these four types so you can quickly find what you need.
+- `tutorials/getting-started.md`（日本語） / `tutorials/getting-started.en.md`（英語）
+- `guides/quickstart.md` / `guides/quickstart.en.md`
+- `reference/skill-schema-reference.md` / `reference/skill-schema-reference.en.md`
+- `explanation/riverbed-memory.md` / `explanation/riverbed-memory.en.md`
