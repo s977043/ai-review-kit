@@ -1,0 +1,37 @@
+---
+name: Task
+description: 新しいタスク（Issue）を作成するためのテンプレート
+title: "[Task] "
+labels: []
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: 概要
+      placeholder: このタスクが何をするものなのか
+    validations:
+      required: true
+
+  - type: input
+    id: prev
+    attributes:
+      label: 前のタスク Issue 番号
+      placeholder: e.g. #12
+    validations:
+      required: false
+
+  - type: input
+    id: next
+    attributes:
+      label: 次のタスク Issue 番号
+      placeholder: e.g. #14
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件
+      placeholder: 完了条件を書いてください
+    validations:
+      required: true
