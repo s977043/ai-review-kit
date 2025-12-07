@@ -11,10 +11,10 @@ River Reviewer skills use YAML frontmatter for metadata and Markdown for guidanc
 - `description` (string, required): concise explanation of what the skill checks.
 - `tags` (string[], optional): keywords that group related skills.
 - `severity` (string, optional): impact level; one of `info`/`minor`/`major`/`critical`.
-- `inputContext` (string[], optional): required inputs the skill expects (for example `diff`, `fullFile`, `tests`, `adr`, `commitMessage`, `repoConfig`).
-- `outputKind` (string[], optional, default `['findings']`): output categories (for example `findings`, `summary`, `actions`, `tests`, `metrics`, `questions`).
+- `inputContext` (string[], optional): required inputs the skill expects. Allowed values include `diff` | `fullFile` | `tests` | `adr` | `commitMessage` | `repoConfig`.
+- `outputKind` (string[], optional, default `['findings']`): output categories produced by the skill. Typical values: `findings` | `summary` | `actions` | `tests` | `metrics` | `questions`.
 - `modelHint` (string, optional): model selection hint; one of `cheap`/`balanced`/`high-accuracy`.
-- `dependencies` (string[], optional): downstream tools/resources required (for example `code_search`, `test_runner`, `adr_lookup`, `repo_metadata`, `coverage_report`, `tracing`, or `custom:*` for extensions).
+- `dependencies` (string[], optional): downstream tools/resources required. Examples: `code_search` | `test_runner` | `adr_lookup` | `repo_metadata` | `coverage_report` | `tracing` | `custom:*` for extensions.
 
 ## YAML Example (midstream performance)
 
