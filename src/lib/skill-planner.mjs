@@ -43,7 +43,7 @@ export async function planSkills({ skills, context, llmPlan }) {
   try {
     const plan = await llmPlan({ skills: summaries, context });
     const order = Array.isArray(plan) ? plan : [];
-    const byId = new Map(skills.map(skill => [summarizeSkill(skill).id, skill]));
+    const byId = new Map(summaries.map((summary, idx) => [summary.id, skills[idx]]));
     const planned = [];
     const reasons = [];
 
