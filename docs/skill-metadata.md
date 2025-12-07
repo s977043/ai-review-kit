@@ -8,7 +8,7 @@ River Reviewer のスキルは YAML フロントマターでメタデータを�
 - JSON Schema / TypeScript 型を実装する際の「真実の源泉」として参照できるようにする。
 - ランナー・ローダーが将来拡張（モデル選択、依存ツール呼び出しなど）しやすい粒度で設計する。
 
-## 2. 現状の基本項目（skills/\* を棚卸し）
+## 2. 現状の基本項目（skills/* を棚卸し）
 
 現在のスキルで使われているキーと役割は以下のとおり。
 
@@ -32,6 +32,15 @@ River Reviewer のスキルは YAML フロントマターでメタデータを�
 | `outputKind` | enum string[] | optional (default: `["findings"]`) | スキルが返す主な出力カテゴリ。UI での整列・集約や後段処理の分岐に利用。複数指定で兼用も可能。 | `findings`, `summary`, `actions`, `tests`, `metrics`, `questions` |
 | `modelHint` | enum string | optional | モデル選択のコスト/精度指針。ランナーが上限トークンやコスト制約に合わせてモデルを選ぶ際のヒントにする。 | `cheap`, `balanced`, `high-accuracy` |
 | `dependencies` | enum string[] | optional | スキルが依存するツール/リソース。実行前に満たせない場合はスキップやデグレードを判断する。 | `code_search`, `test_runner`, `adr_lookup`, `repo_metadata`, `coverage_report`, `tracing` |
+
+`outputKind` の各値（解釈の揺れを防ぐための目安）:
+
+- `findings`: コードの指摘・改善点（デフォルト）
+- `summary`: レビュー全体の要約
+- `actions`: 実装者が取るべき具体的な行動やコマンド
+- `questions`: 実装者への確認事項や未解決の問い
+- `metrics`: 複雑度・カバレッジなどの計測値
+- `tests`: 生成したテストやテストケース提案
 
 補足:
 
@@ -91,7 +100,7 @@ export interface SkillMetadata {
 
 - `phase` と `severity` は既存どおり enum 固定。
 - `inputContext` は `type: array`, `items.enum` を上記リストで固定、`minItems: 1`, `uniqueItems: true` を推奨。
-- `outputKind` も同様に array + enum + `minItems: 1`。指定なしの場合はランナー側で `['findings']` をデフォルトとする。
+- `outputKind` も同様に array + enum + `minItems: 1`。フィールド自体を省略した場合のみランナー側で `['findings']` をデフォルトとし、フィールドが存在する場合は空配列を許可しない。
 - `modelHint` は単一 enum。必須にはしない。
 - `dependencies` は array + enum + `uniqueItems: true`。未実装ツールを防ぐため列挙外は許可しない運用を基本とし、例外は `custom:*` を許容する場合のみ `pattern` を追加する。
 - `additionalProperties: false` を維持してスキーマドリフトを防止。
