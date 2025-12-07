@@ -3,8 +3,6 @@ id: index-en
 title: River Reviewer docs (English)
 ---
 
-# River Reviewer docs
-
 [日本語版はこちら](/docs/) — Japanese is the default and source of truth.
 
 River Reviewer documentation follows the [Diátaxis documentation framework](https://diataxis.fr/). English editions use the same filename with a `.en.md` suffix and may lag behind the Japanese originals.
