@@ -1,5 +1,6 @@
 import { minimatch } from 'minimatch';
 import { loadSkills } from './skill-loader.mjs';
+import { planSkills, summarizeSkill } from './skill-planner.mjs';
 
 const MODEL_PRIORITY = {
   cheap: 1,
@@ -92,10 +93,35 @@ export async function buildExecutionPlan(options) {
     availableContexts = [],
     preferredModelHint = 'balanced',
     skills: providedSkills,
+    planner,
   } = options;
 
   const skills = providedSkills ?? (await loadSkills());
   const selection = selectSkills(skills, { phase, changedFiles, availableContexts });
+  if (selection.selected.length === 0) {
+    return { selected: [], skipped: selection.skipped };
+  }
+
+  // If planner is provided, try LLM-based planning, fallback to deterministic rank
+  if (planner) {
+    const context = {
+      phase,
+      changedFiles,
+      availableContexts,
+    };
+    const { planned, reasons, fallback } = await planSkills({
+      skills: selection.selected,
+      context,
+      llmPlan: planner.plan ?? planner,
+    });
+    return {
+      selected: planned,
+      skipped: selection.skipped,
+      plannerReasons: reasons,
+      plannerFallback: fallback,
+    };
+  }
+
   const ordered = rankByModelHint(selection.selected, preferredModelHint);
 
   return {
@@ -103,3 +129,6 @@ export async function buildExecutionPlan(options) {
     skipped: selection.skipped,
   };
 }
+
+// Re-export summarizeSkill for consumers that want the same view used by planner
+export { summarizeSkill };
