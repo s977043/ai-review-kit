@@ -13,6 +13,7 @@
     "dev": "docusaurus start",
     "build": "docusaurus build",
     "serve": "docusaurus serve",
+    "test": "node --test",
     "lint:md": "markdownlint '**/*.md' --ignore node_modules",
     "lint:text": "textlint 'pages/**/*.md'",
     "check:dashes": "node scripts/fix-dashes.mjs --check",
