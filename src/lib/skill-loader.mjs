@@ -137,9 +137,6 @@ function validateMetadata(metadata, validate) {
     const details = (validate.errors ?? []).map(err => `${err.instancePath || '/'} ${err.message}`).join('; ');
     throw new SkillLoaderError(`Validation failed: ${details}`, validate.errors);
   }
-  if (metaCopy.outputKind === undefined) {
-    metaCopy.outputKind = ['findings'];
-  }
   return metaCopy;
 }
 
@@ -164,9 +161,5 @@ export async function loadSkills(options = {}) {
   const schema = providedValidator ? null : await loadSchema(schemaPath);
   const validator = providedValidator ?? createSkillValidator(schema);
   const files = await listSkillFiles(skillsDir);
-  const loaded = [];
-  for (const filePath of files) {
-    loaded.push(await loadSkillFile(filePath, { validator }));
-  }
-  return loaded;
+  return Promise.all(files.map(filePath => loadSkillFile(filePath, { validator })));
 }

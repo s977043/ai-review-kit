@@ -20,7 +20,7 @@ async function validateSkills() {
 
   let success = true;
   for (const filePath of files) {
-    const relativePath = filePath.replace(`${defaultPaths.repoRoot}${path.sep}`, '');
+    const relativePath = path.relative(defaultPaths.repoRoot, filePath);
     try {
       await loadSkillFile(filePath, { validator });
       console.log(`✅ ${relativePath}`);
