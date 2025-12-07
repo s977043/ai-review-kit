@@ -53,6 +53,32 @@ Body content
   assert.deepEqual(loaded.metadata.dependencies, ['code_search', 'custom:embedding']);
 });
 
+test('fails when dependencies contain unsupported values', async () => {
+  const validator = await buildValidator();
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'skill-loader-'));
+  const skillPath = path.join(tmpDir, 'invalid-deps.md');
+  const content = `---
+id: rr-upstream-invalid-deps-001
+name: 'Invalid deps'
+description: 'Contains unsupported dependency'
+phase: upstream
+applyTo:
+  - 'src/**/*.ts'
+dependencies:
+  - unknown_tool
+---
+`;
+  await writeFile(skillPath, content, 'utf8');
+
+  await assert.rejects(
+    loadSkillFile(skillPath, { validator }),
+    err => {
+      assert.match(err.message, /validation failed/i);
+      return true;
+    }
+  );
+});
+
 test('fails validation when required fields are missing', async () => {
   const validator = await buildValidator();
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'skill-loader-'));

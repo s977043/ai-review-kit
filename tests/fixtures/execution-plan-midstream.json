@@ -1,0 +1,27 @@
+{
+  "selected": [
+    {
+      "id": "rr-midstream-code-quality-sample-001",
+      "phase": "midstream",
+      "modelHint": "balanced",
+      "outputKind": ["findings", "actions"],
+      "dependencies": ["code_search"]
+    }
+  ],
+  "skipped": [
+    {
+      "id": "rr-downstream-test-review-sample-001",
+      "reasons": [
+        "phase mismatch: downstream !== midstream",
+        "applyTo did not match any changed file"
+      ]
+    },
+    {
+      "id": "rr-upstream-architecture-sample-001",
+      "reasons": [
+        "phase mismatch: upstream !== midstream",
+        "applyTo did not match any changed file"
+      ]
+    }
+  ]
+}
