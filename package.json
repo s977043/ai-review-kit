@@ -24,6 +24,7 @@
     "skills:validate": "node scripts/validate-skills.mjs",
     "trace:validate": "OTEL_ENABLED=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 node scripts/validate-agents.mjs",
     "fix:dashes": "node scripts/fix-dashes.mjs",
+    "planner:eval": "node scripts/evaluate-planner.mjs",
     "prepare": "husky install"
   },
   "dependencies": {

@@ -1,0 +1,73 @@
+[
+  {
+    "name": "midstream diff heavy",
+    "context": {
+      "phase": "midstream",
+      "changedFiles": ["src/foo.js"],
+      "availableContexts": ["diff", "fullFile"]
+    },
+    "skills": [
+      {
+        "id": "code-quality",
+        "name": "Code quality",
+        "phase": "midstream",
+        "applyTo": ["src/**/*.js"],
+        "inputContext": ["diff"],
+        "modelHint": "balanced"
+      },
+      {
+        "id": "tests",
+        "name": "Test suggestions",
+        "phase": "midstream",
+        "applyTo": ["src/**/*.js"],
+        "inputContext": ["diff", "tests"],
+        "modelHint": "high-accuracy"
+      },
+      {
+        "id": "summary",
+        "name": "Summary",
+        "phase": "midstream",
+        "applyTo": ["src/**/*.js"],
+        "inputContext": ["diff"],
+        "modelHint": "cheap"
+      }
+    ],
+    "plan": [
+      { "id": "code-quality", "reason": "diff size moderate" },
+      { "id": "tests", "reason": "touching logic needs tests" },
+      { "id": "summary", "reason": "summarize for PR body" }
+    ],
+    "expectedOrder": ["code-quality", "tests", "summary"]
+  },
+  {
+    "name": "missing tests context fallback",
+    "context": {
+      "phase": "midstream",
+      "changedFiles": ["src/bar.js"],
+      "availableContexts": ["diff"]
+    },
+    "skills": [
+      {
+        "id": "code-quality",
+        "name": "Code quality",
+        "phase": "midstream",
+        "applyTo": ["src/**/*.js"],
+        "inputContext": ["diff"],
+        "modelHint": "balanced"
+      },
+      {
+        "id": "tests",
+        "name": "Test suggestions",
+        "phase": "midstream",
+        "applyTo": ["src/**/*.js"],
+        "inputContext": ["diff", "tests"],
+        "modelHint": "high-accuracy"
+      }
+    ],
+    "plan": [
+      { "id": "tests", "reason": "prefer tests when available" },
+      { "id": "code-quality", "reason": "always run quality" }
+    ],
+    "expectedOrder": ["code-quality", "tests"]
+  }
+]
