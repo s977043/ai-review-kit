@@ -86,6 +86,11 @@ export function rankByModelHint(skills, preferredModelHint = 'balanced') {
   });
 }
 
+/**
+ * Build an execution plan from skills and review context.
+ * - planner 未指定: メタデと modelHint に基づく決定論的な並び替え
+ * - planner 指定: LLM 等で優先度決定し、エラー時は決定論的順序にフォールバック
+ */
 export async function buildExecutionPlan(options) {
   const {
     phase,
@@ -122,6 +127,7 @@ export async function buildExecutionPlan(options) {
     };
   }
 
+  // planner が無い場合（LLM未設定）は決定論的順位付けで実行
   const ordered = rankByModelHint(selection.selected, preferredModelHint);
 
   return {
