@@ -1,7 +1,7 @@
 ---
 name: Task
 description: 新しいタスク（Issue）を作成するためのテンプレート
-title: "[Task] "
+title: '[Task] '
 labels: []
 body:
   - type: input

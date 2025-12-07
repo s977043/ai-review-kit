@@ -10,7 +10,7 @@ River Reviewer プロジェクトでは、機能開発・スキル設計・エ�
 
 ### 1-1. Issue テンプレートを必ず利用する
 
-新規 Issue は `.github/ISSUE_TEMPLATE/task.md` を使用します。テンプレートには以下の項目が含まれます：
+新規 Issue は `.github/ISSUE_TEMPLATE/task.yaml` を使用します。テンプレートには以下の項目が含まれます：
 
 - **概要** — このタスクが何をするものなのか（必須）
 - **前タスク** — 直前の Issue 番号（任意）
@@ -21,25 +21,25 @@ River Reviewer プロジェクトでは、機能開発・スキル設計・エ�
 
 エージェント化ロードマップに正则って、Issue 作成時に下記のいずれかを付けます。フェーズなし Issue は原則受け付けません。
 
-| ラベル | 説明 |
-|---------------------|----------------------------------------|
-| `phase:0-planning`  | 設計・要件整理フェーズ |
-| `phase:1-schema`    | schema・型・ローダ周りの実装フェーズ |
-| `phase:2-runtime`   | ランナーや選択ロジックなど実行系フェーズ |
-| `phase:3-skills`    | 個別スキルの実装フェーズ |
-| `phase:4-integration` | GitHub Actions 等への統合フェーズ |
+| ラベル                | 説明                                     |
+| --------------------- | ---------------------------------------- |
+| `phase:0-planning`    | 設計・要件整理フェーズ                   |
+| `phase:1-schema`      | schema・型・ローダ周りの実装フェーズ     |
+| `phase:2-runtime`     | ランナーや選択ロジックなど実行系フェーズ |
+| `phase:3-skills`      | 個別スキルの実装フェーズ                 |
+| `phase:4-integration` | GitHub Actions 等への統合フェーズ        |
 
 ### 1-3. 作業分類ラベル（kind）を付ける
 
 Issue には必ず下記のような **kind ラベル** を付け、作業の種類を明示します。
 
-| ラベル              | 説明 |
-|---------------------|----------------------|
-| `kind:design`       | 設計タスク |
-| `kind:implementation` | 実装タスク |
-| `kind:documentation` | ドキュメント作成 |
-| `kind:test`         | テスト追加 |
-| `kind:refactor`     | 改善・リファクタ |
+| ラベル                | 説明             |
+| --------------------- | ---------------- |
+| `kind:design`         | 設計タスク       |
+| `kind:implementation` | 実装タスク       |
+| `kind:documentation`  | ドキュメント作成 |
+| `kind:test`           | テスト追加       |
+| `kind:refactor`       | 改善・リファクタ |
 
 ## 📍 2. 依存関係ルール（連続性の可視化）
 
@@ -67,14 +67,14 @@ Automation rules により、`phase:` ラベルの付いた Issue は Roadmap Pr
 
 Roadmap Project には下記のカスタムフィールドを追加し、Issue ラベルや依存関係と同期します。
 
-| フィールド名   | 種類         | 説明                   |
-|----------------|--------------|------------------------|
-| Phase          | Single select | `phase:` ラベルに対当 |
-| Kind           | Single select | `kind:` ラベルに対当 |
-| Prev Task      | Text         | 前タスク番号           |
-| Next Task      | Text         | 次タスク番号           |
-| Depends On     | Text         | 依存 Issue 番号        |
-| Blocks         | Text         | ブロックしている Issue 番号 |
+| フィールド名 | 種類          | 説明                        |
+| ------------ | ------------- | --------------------------- |
+| Phase        | Single select | `phase:` ラベルに対当       |
+| Kind         | Single select | `kind:` ラベルに対当        |
+| Prev Task    | Text          | 前タスク番号                |
+| Next Task    | Text          | 次タスク番号                |
+| Depends On   | Text          | 依存 Issue 番号             |
+| Blocks       | Text          | ブロックしている Issue 番号 |
 
 ### 3-3. Project 内での並び順
 
@@ -88,12 +88,12 @@ Roadmap Project には下記のカスタムフィールドを追加し、Issue �
 
 Roadmap Project 上での進行ステータスを定義します。
 
-| カラム   | 説明                               |
-|--------|------------------------------------|
+| カラム | 説明                                           |
+| ------ | ---------------------------------------------- |
 | Idea   | 作成直後。フェーズと概要が記述されている状態。 |
-| Build  | 担当者が作業を開始した状態。        |
-| Review | プルリクエストが作成された状態。      |
-| Done   | Issue がクローズされた状態。        |
+| Build  | 担当者が作業を開始した状態。                   |
+| Review | プルリクエストが作成された状態。               |
+| Done   | Issue がクローズされた状態。                   |
 
 ## 📍 5. Epic（親Issue）運用ルール
 
@@ -103,13 +103,13 @@ Epic Issue には関連タスク Issue をチェックリストとして列挙�
 
 ## 📍 6. 例: 正しい Issue のサンプル
 
-```
+```text
 タイトル: メタデータ仕様ドラフトの作成
 
 概要:
 スキルメタデータの拡張（inputContext, outputKind, modelHint, tools など）を定義する。
 
-前タスク: なし  
+前タスク: なし
 次タスク: #12【skill.schema.json 更新】
 
 受け入れ条件:
