@@ -81,6 +81,8 @@ test('loadSkills loads all skill files under default directory', async () => {
   const loaded = await loadSkills({ validator });
   assert.ok(loaded.length >= 3);
   for (const skill of loaded) {
-    assert.deepEqual(skill.metadata.outputKind, ['findings']);
+    assert.ok(Array.isArray(skill.metadata.outputKind));
+    assert.ok(skill.metadata.outputKind.length >= 1);
+    assert.ok(skill.metadata.outputKind.includes('findings'));
   }
 });

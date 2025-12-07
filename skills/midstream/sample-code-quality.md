@@ -7,6 +7,14 @@ applyTo:
   - 'src/**/*.ts'
   - 'src/**/*.js'
   - 'src/**/*.py'
+inputContext:
+  - diff
+outputKind:
+  - findings
+  - actions
+modelHint: balanced
+dependencies:
+  - code_search
 tags:
   - style
   - maintainability
