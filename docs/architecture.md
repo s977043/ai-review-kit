@@ -17,12 +17,12 @@
 
 ```mermaid
 flowchart LR
-  A[skills/*.md\n(frontmatter)] --> B[Skill Loader\nschema validate]
+  A[skills/**/*.md\n(frontmatter)] --> B[Skill Loader\nschema validate]
   B --> C{Filter\nphase/applyTo\ninputContext}
   C -->|ok| D[候補スキル]
   C -->|skip理由| S[Skipped list]
   D -->|plannerあり| P[Skill Planner\nLLM / function]
-  D -->|plannerなし/エラー時| R[rankByModelHint\n決定論的順位付け]
+  D -->|plannerなし| R[rankByModelHint\n決定論的順位付け]
   P -->|順序と理由| O[Ordered skills]
   P -->|例外| R
   R --> O
@@ -55,7 +55,7 @@ flowchart LR
   - `applyTo: ["src/**/*.ts", "src/**/*.js", "src/**/*.py"]`
   - `inputContext: ["diff"]`
   - `modelHint: balanced`
-- Planner は `summarizeSkill` で整形されたメタデを受け取り、LLM が選択順序や理由を返す。`applyTo`/`inputContext` で事前に絞り込み済みなので、LLM は「どれを優先するか」に集中できる。
+- Planner は `summarizeSkill` で整形されたメタデータを受け取り、LLM が選択順序や理由を返す。`applyTo`/`inputContext` で事前に絞り込み済みなので、LLM は「どれを優先するか」に集中できる。
 
 ## 参考ドキュメント
 
