@@ -8,9 +8,9 @@ River Reviewer skills use YAML frontmatter for metadata and Markdown for guidanc
 - `name` (string, required): human-readable skill name.
 - `phase` (string, required): one of `upstream`, `midstream`, or `downstream`.
 - `applyTo` (string[], required): glob patterns for files the skill should evaluate.
+- `description` (string, required): concise explanation of what the skill checks.
 - `tags` (string[], optional): keywords that group related skills.
 - `severity` (string, optional): impact level; one of `info`/`minor`/`major`/`critical`.
-- `description` (string, required): concise explanation of what the skill checks.
 - `inputContext` (string[], optional): required inputs the skill expects (for example `diff`, `fullFile`, `tests`, `adr`, `commitMessage`, `repoConfig`).
 - `outputKind` (string[], optional, default `['findings']`): output categories (for example `findings`, `summary`, `actions`, `tests`, `metrics`, `questions`).
 - `modelHint` (string, optional): model selection hint; one of `cheap`/`balanced`/`high-accuracy`.
