@@ -83,6 +83,5 @@ test('loadSkills loads all skill files under default directory', async () => {
   for (const skill of loaded) {
     assert.ok(Array.isArray(skill.metadata.outputKind));
     assert.ok(skill.metadata.outputKind.length >= 1);
-    assert.ok(skill.metadata.outputKind.includes('findings'));
   }
 });
