@@ -45,6 +45,8 @@ LLM を使ったスキル選択はプランナー関数を差し込むだけで�
 
 Planner 統合後の全体アーキテクチャ（metadata → loader → planner → runner）は `docs/architecture.md` にまとめています。
 
+Planner の出力品質を簡易評価する手順とメトリクスは `docs/planner-evaluation.md` を参照してください（`npm run planner:eval` で実行）。
+
 ```markdown
 ---
 id: rr-midstream-code-quality-sample-001
