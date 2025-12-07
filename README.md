@@ -39,6 +39,10 @@ jobs:
 
 スキルは YAML フロントマター付き Markdown で記述し、メタデータを使ってロードとルーティングを行います。
 
+### LLM ベースのスキル選択（Skill Planner）
+
+LLM を使ったスキル選択はプランナー関数を差し込むだけで利用できます。具体例は `docs/skill-planner.md` のミニマム実装例を参照してください。LLM 未指定の場合は従来通り決定論的に並び替えて実行します。
+
 ```markdown
 ---
 id: rr-midstream-code-quality-sample-001
