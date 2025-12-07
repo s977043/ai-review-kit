@@ -21,7 +21,7 @@ async function llmPlan({ skills, context }) {
     `Phase: ${context.phase}`,
     `Changed files: ${context.changedFiles.join(', ') || 'none'}`,
     'Skills:',
-    ...skills.map(s => `- ${s.id}: ${s.name} (${s.inputContext.join('/') || 'any'})`),
+    ...skills.map((s) => `- ${s.id}: ${s.name} (${s.inputContext.join('/') || 'any'})`),
     'Return JSON array of {id, reason} in execution order.',
   ].join('\n');
 
@@ -44,7 +44,7 @@ const plan = await buildExecutionPlan({
   availableContexts: ['diff', 'fullFile'],
   planner: llmPlan,
 });
-console.log(plan.selected.map(s => s.metadata.id));
+console.log(plan.selected.map((s) => s.metadata.id));
 ```
 
 ## 運用メモ
