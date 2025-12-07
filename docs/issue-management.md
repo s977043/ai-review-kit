@@ -1,4 +1,4 @@
-# River Reviewer – Issue / Project 運用ルール
+# River Reviewer—Issue / Project 運用ルール
 
 ## 🌟 目的
 
@@ -12,10 +12,10 @@ River Reviewer プロジェクトでは、機能開発・スキル設計・エ�
 
 新規 Issue は `.github/ISSUE_TEMPLATE/task.yaml` を使用します。テンプレートには以下の項目が含まれます：
 
-- **概要** — このタスクが何をするものなのか（必須）
-- **前タスク** — 直前の Issue 番号（任意）
-- **次タスク** — 次に着手する Issue 番号（任意）
-- **受け入れ条件** — 完了条件を明記する（必須）
+- **概要**—このタスクが何をするものなのか（必須）
+- **前タスク**—直前の Issue 番号（任意）
+- **次タスク**—次に着手する Issue 番号（任意）
+- **受け入れ条件**—完了条件を明記する（必須）
 
 ### 1-2. 必ず「フェーズラベル」を付与する
 
@@ -54,8 +54,8 @@ Issue には必ず下記のような **kind ラベル** を付け、作業の種
 
 Issue 間の依存関係を明示するため、以下のラベルを利用します。
 
-- `depends-on:#<番号>` — この Issue が依存している Issue。
-- `blocks:#<番号>` — この Issue が完了しないと進めない Issue。
+- `depends-on:#<番号>`—この Issue が依存している Issue。
+- `blocks:#<番号>`—この Issue が完了しないと進めない Issue。
 
 ## 📍 3. GitHub Projects への自動追加と同期ルール
 
@@ -97,7 +97,7 @@ Roadmap Project 上での進行ステータスを定義します。
 
 ## 📍 5. Epic（親Issue）運用ルール
 
-大規模な取り組みやフェーズ全体をまとめる Issue には `epic` ラベルを付けます。例えば、`River Reviewer – Agent Roadmap` が Epic となります。
+大規模な取り組みやフェーズ全体をまとめる Issue には `epic` ラベルを付けます。例えば、`River Reviewer—Agent Roadmap` が Epic となります。
 
 Epic Issue には関連タスク Issue をチェックリストとして列挙し、全体の進捗を把握できるようにします。
 
