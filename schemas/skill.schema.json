@@ -4,6 +4,47 @@
   "type": "object",
   "required": ["id", "name", "description", "phase", "applyTo"],
   "additionalProperties": false,
+  "$defs": {
+    "phase": {
+      "type": "string",
+      "enum": ["upstream", "midstream", "downstream"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "minor", "major", "critical"]
+    },
+    "inputContext": {
+      "type": "string",
+      "enum": ["diff", "fullFile", "tests", "adr", "commitMessage", "repoConfig"]
+    },
+    "outputKind": {
+      "type": "string",
+      "enum": ["findings", "summary", "actions", "tests", "metrics", "questions"]
+    },
+    "modelHint": {
+      "type": "string",
+      "enum": ["cheap", "balanced", "high-accuracy"]
+    },
+    "dependency": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "code_search",
+            "test_runner",
+            "adr_lookup",
+            "repo_metadata",
+            "coverage_report",
+            "tracing"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^custom:.+"
+        }
+      ]
+    }
+  },
   "properties": {
     "id": {
       "type": "string",
@@ -21,8 +62,7 @@
       "minLength": 1
     },
     "phase": {
-      "type": "string",
-      "enum": ["upstream", "midstream", "downstream"],
+      "$ref": "#/$defs/phase",
       "description": "Which SDLC phase this skill applies to"
     },
     "applyTo": {
@@ -38,9 +78,34 @@
       "uniqueItems": true
     },
     "severity": {
-      "type": "string",
-      "enum": ["info", "minor", "major", "critical"],
+      "$ref": "#/$defs/severity",
       "description": "Optional severity rating"
+    },
+    "inputContext": {
+      "type": "array",
+      "description": "Input sources required for the skill to run",
+      "items": { "$ref": "#/$defs/inputContext" },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "outputKind": {
+      "type": "array",
+      "description": "Output categories produced by this skill",
+      "items": { "$ref": "#/$defs/outputKind" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "default": ["findings"]
+    },
+    "modelHint": {
+      "$ref": "#/$defs/modelHint",
+      "description": "Hint for model selection (cost/accuracy balance)"
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "Tools or resources this skill depends on",
+      "items": { "$ref": "#/$defs/dependency" },
+      "minItems": 1,
+      "uniqueItems": true
     }
   }
 }
