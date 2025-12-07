@@ -43,6 +43,8 @@ jobs:
 
 LLM を使ったスキル選択はプランナー関数を差し込むだけで利用できます。具体例は `docs/skill-planner.md` のミニマム実装例を参照してください。LLM 未指定の場合は従来通り決定論的に並び替えて実行します。
 
+Planner 統合後の全体アーキテクチャ（metadata → loader → planner → runner）は `docs/architecture.md` にまとめています。
+
 ```markdown
 ---
 id: rr-midstream-code-quality-sample-001
