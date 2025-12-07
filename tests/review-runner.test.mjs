@@ -57,3 +57,26 @@ test('buildExecutionPlan returns ordered selection and skipped list', async () =
   assert.ok(plan.selected.length >= 1);
   assert.ok(Array.isArray(plan.skipped));
 });
+
+test('buildExecutionPlan can use planner when provided', async () => {
+  const providedSkills = [
+    { metadata: { id: 'a', phase: 'midstream', applyTo: ['src/**'], modelHint: 'cheap' } },
+    { metadata: { id: 'b', phase: 'midstream', applyTo: ['src/**'], modelHint: 'high-accuracy' } },
+  ];
+  const planner = {
+    plan: async ({ skills }) => [
+      { id: skills[1].id, reason: 'prefer b' },
+      { id: skills[0].id, reason: 'then a' },
+    ],
+  };
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/app.ts'],
+    availableContexts: ['diff'],
+    planner,
+    skills: providedSkills,
+  });
+  const ids = plan.selected.map(s => s.metadata.id);
+  assert.deepEqual(ids, ['b', 'a']);
+  assert.equal(plan.plannerFallback, false);
+});

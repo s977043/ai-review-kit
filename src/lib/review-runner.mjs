@@ -1,5 +1,6 @@
 import { minimatch } from 'minimatch';
 import { loadSkills } from './skill-loader.mjs';
+import { planSkills, summarizeSkill } from './skill-planner.mjs';
 
 const MODEL_PRIORITY = {
   cheap: 1,
@@ -85,6 +86,11 @@ export function rankByModelHint(skills, preferredModelHint = 'balanced') {
   });
 }
 
+/**
+ * Build an execution plan from skills and review context.
+ * - planner 未指定: メタデと modelHint に基づく決定論的な並び替え
+ * - planner 指定: LLM 等で優先度決定し、エラー時は決定論的順序にフォールバック
+ */
 export async function buildExecutionPlan(options) {
   const {
     phase,
@@ -92,10 +98,36 @@ export async function buildExecutionPlan(options) {
     availableContexts = [],
     preferredModelHint = 'balanced',
     skills: providedSkills,
+    planner,
   } = options;
 
   const skills = providedSkills ?? (await loadSkills());
   const selection = selectSkills(skills, { phase, changedFiles, availableContexts });
+  if (selection.selected.length === 0) {
+    return { selected: [], skipped: selection.skipped };
+  }
+
+  // If planner is provided, try LLM-based planning, fallback to deterministic rank
+  if (planner) {
+    const context = {
+      phase,
+      changedFiles,
+      availableContexts,
+    };
+    const { planned, reasons, fallback } = await planSkills({
+      skills: selection.selected,
+      context,
+      llmPlan: planner.plan ?? planner,
+    });
+    return {
+      selected: planned,
+      skipped: selection.skipped,
+      plannerReasons: reasons,
+      plannerFallback: fallback,
+    };
+  }
+
+  // planner が無い場合（LLM未設定）は決定論的順位付けで実行
   const ordered = rankByModelHint(selection.selected, preferredModelHint);
 
   return {
@@ -103,3 +135,6 @@ export async function buildExecutionPlan(options) {
     skipped: selection.skipped,
   };
 }
+
+// Re-export summarizeSkill for consumers that want the same view used by planner
+export { summarizeSkill };
