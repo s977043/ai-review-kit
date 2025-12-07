@@ -35,6 +35,15 @@ jobs:
 
 新しいタグが出たら、`@v1` を最新のリリースタグに置き換えてください。
 
+## クイックスタート（ローカル）
+
+1. 環境: Node 18+ 推奨（CI も Node 18 系で運用）
+2. 依存導入: `npm install`
+3. スキル検証: `npm run skills:validate`
+4. テスト: `npm test`
+5. Planner 評価（任意）: `npm run planner:eval`
+6. ドキュメント開発（任意）: `npm run dev`（Docusaurus）
+
 ## スキル
 
 スキルは YAML フロントマター付き Markdown で記述し、メタデータを使ってロードとルーティングを行います。
