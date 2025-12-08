@@ -75,6 +75,16 @@ severity: minor
 - スキーマ: スキルメタデータは `schemas/skill.schema.json`, レビュー出力は `schemas/output.schema.json`
 - 参考: スキルスキーマの詳細は `pages/reference/skill-schema-reference.md`、Riverbed Memory の設計ドラフトは `pages/explanation/riverbed-memory.md`
 
+## AI レビュー標準ポリシー
+
+River Reviewer は、品質と再現性を保つための標準レビューポリシーに従って動作します。このポリシーは、評価方針・出力形式・禁止事項を定義し、建設的で具体的なフィードバックを提供します。
+
+- **評価方針**: 差分からの意図理解、危険性の特定、影響範囲の評価
+- **出力形式**: Summary（要約）、Comments（具体的指摘）、Suggestions（改善提案）
+- **禁止事項**: 過度な推測、抽象的なレビュー、不適切なトーン、範囲外の指摘
+
+詳細は [AI レビュー標準ポリシー](pages/reference/review-policy.md) を参照してください。
+
 ## ドキュメント設計
 
 River Reviewer の技術ドキュメントは、[Diátaxis ドキュメントフレームワーク](https://diataxis.fr/) に基づいて構成しています。日本語がデフォルト言語で、英語版は `.en.md` 拡張子の別ファイルとして管理します（差分がある場合は日本語版を優先）。

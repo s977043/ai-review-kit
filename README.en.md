@@ -61,6 +61,16 @@ severity: minor
 - Schemas: `schemas/skill.schema.json` (skill metadata) and `schemas/output.schema.json` (structured review output)
 - References: Skill schema details live in `pages/reference/skill-schema-reference.md`; Riverbed Memory design draft lives in `pages/explanation/riverbed-memory.md`.
 
+## AI Review Standard Policy
+
+River Reviewer follows a standard review policy to maintain consistent quality and reproducibility. The policy defines evaluation principles, output format, and prohibited actions to ensure constructive and specific feedback.
+
+- **Evaluation Principles**: Intent understanding, risk identification, impact assessment
+- **Output Format**: Summary, Comments (specific findings), Suggestions (improvement proposals)
+- **Prohibited Actions**: Excessive speculation, abstract reviews, inappropriate tone, out-of-scope findings
+
+For details, see [AI Review Standard Policy](pages/reference/review-policy.en.md).
+
 ## Documentation design
 
 River Reviewer’s technical documentation follows the
