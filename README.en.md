@@ -3,7 +3,7 @@
 ![River Reviewer logo](assets/logo/river-reviewer-logo.svg)
 
 English edition. The primary Japanese README lives in `README.md`.  
-[日本語の README はここ](./README.md) — the Japanese copy is the source of truth; English may lag.
+[日本語の README はここ](./README.md)—the Japanese copy is the source of truth; English may lag.
 
 Review that Flows With You. 流れに寄り添う AI レビューエージェント。
 

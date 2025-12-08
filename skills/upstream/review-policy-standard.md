@@ -77,11 +77,11 @@ For each finding, include:
 
 ## What to Avoid
 
-- DO NOT speculate about code not present in the diff
-- DO NOT provide only generic "best practices" advice
-- DO NOT use critical or aggressive tone
-- DO NOT review unchanged content excessively
-- DO NOT suggest changes that contradict project conventions
+- Don't speculate about code not present in the diff
+- Don't provide only generic "best practices" advice
+- Don't use critical or aggressive tone
+- Don't review unchanged content excessively
+- Don't suggest changes that contradict project conventions
 
 ## Priority Levels
 

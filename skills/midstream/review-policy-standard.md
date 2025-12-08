@@ -85,11 +85,11 @@ For each finding, include:
 
 ## What to Avoid
 
-- DO NOT make assumptions about code not in the diff
-- DO NOT provide only abstract "should follow best practices" comments
-- DO NOT use critical or dismissive tone
-- DO NOT focus on unchanged code unless directly related
-- DO NOT suggest changes that violate project conventions
+- Don't make assumptions about code not in the diff
+- Don't provide only abstract "should follow best practices" comments
+- Don't use critical or dismissive tone
+- Don't focus on unchanged code unless directly related
+- Don't suggest changes that violate project conventions
 
 ## Priority Levels
 
