@@ -1,4 +1,5 @@
 import { diffWithContext, listChangedFiles } from './git.mjs';
+import { optimizeDiff } from './diff-optimizer.mjs';
 
 function stripPrefix(path) {
   if (!path) return path;
@@ -17,10 +18,15 @@ export function parseUnifiedDiff(diffText) {
   let currentFile = null;
   let currentHunk = null;
   let newLineNumber = 0;
+  let pendingOldPath = null;
 
   for (const line of diffText.split('\n')) {
     if (line.startsWith('diff --git')) {
       currentHunk = null;
+      continue;
+    }
+    if (line.startsWith('--- ')) {
+      pendingOldPath = stripPrefix(line.slice(4).trim());
       continue;
     }
     if (line.startsWith('+++ ')) {
@@ -30,10 +36,12 @@ export function parseUnifiedDiff(diffText) {
         currentHunk = null;
         continue;
       }
-      currentFile = { path, hunks: [], addedLines: [] };
+      const oldPath = pendingOldPath === '/dev/null' ? path : pendingOldPath || path;
+      currentFile = { path, newPath: path, oldPath, hunks: [], addedLines: [] };
       files.push(currentFile);
       currentHunk = null;
       newLineNumber = 0;
+      pendingOldPath = null;
       continue;
     }
     if (!currentFile) continue;
@@ -77,14 +85,17 @@ export async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = 
   if (!changedFiles.length) {
     return {
       changedFiles: [],
+      rawDiffText: '',
+      rawTokenEstimate: 0,
       files: [],
       diffText: '',
       tokenEstimate: 0,
+      reduction: 0,
     };
   }
 
-  const diffText = await diffWithContext(repoRoot, baseRef, { unified: contextLines });
-  const parsed = parseUnifiedDiff(diffText);
+  const rawDiffText = await diffWithContext(repoRoot, baseRef, { unified: contextLines });
+  const parsed = parseUnifiedDiff(rawDiffText);
   const files = parsed.files.length
     ? parsed.files
     : changedFiles.map(file => ({
@@ -92,12 +103,17 @@ export async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = 
         hunks: [],
         addedLines: [],
       }));
-  const tokenEstimate = Math.ceil(diffText.length / 4);
+  const rawTokenEstimate = Math.ceil(rawDiffText.length / 4);
+  const optimized = optimizeDiff({ files, diffText: rawDiffText });
 
   return {
     changedFiles,
     files,
-    diffText,
-    tokenEstimate,
+    rawDiffText,
+    rawTokenEstimate,
+    diffText: optimized.diffText,
+    filesForReview: optimized.files,
+    tokenEstimate: optimized.tokenEstimate,
+    reduction: optimized.reduction,
   };
 }

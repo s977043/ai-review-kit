@@ -105,9 +105,11 @@ function printComments(comments) {
 
 function printDebugInfo(result) {
   const debug = result.reviewDebug ?? {};
+  const rawTokens = result.rawTokenEstimate ?? result.tokenEstimate;
+  const reduction = result.reduction ?? 0;
   console.log(`\nDebug info:
 - LLM: ${debug.llmUsed ? `used (${debug.llmModel})` : debug.llmSkipped || debug.llmError || 'not used'}
-- Token estimate: ${result.tokenEstimate}
+- Token estimate (raw -> optimized): ${rawTokens} -> ${result.tokenEstimate} (${reduction}% reduction)
 - Prompt truncated: ${debug.promptTruncated ? 'yes' : 'no'}
 - Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}
 - Project rules: ${result.projectRules ? 'present' : 'none'}
