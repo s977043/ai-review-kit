@@ -7,6 +7,10 @@
     "type": "git",
     "url": "https://github.com/s977043/river-reviewer.git"
   },
+  "bin": {
+    "river": "./src/cli.mjs",
+    "river-reviewer": "./src/cli.mjs"
+  },
   "homepage": "https://s977043.github.io/river-reviewer/",
   "bugs": "https://github.com/s977043/river-reviewer/issues",
   "scripts": {
@@ -25,6 +29,7 @@
     "trace:validate": "OTEL_ENABLED=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 node scripts/validate-agents.mjs",
     "fix:dashes": "node scripts/fix-dashes.mjs",
     "planner:eval": "node scripts/evaluate-planner.mjs",
+    "river": "node ./src/cli.mjs",
     "prepare": "husky install"
   },
   "dependencies": {

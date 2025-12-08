@@ -38,6 +38,21 @@ jobs:
 
 Note: Replace `@v1` with the latest released tag when a newer version is available.
 
+## Quick start (local)
+
+1. Environment: Node 20+ recommended (CI also runs on Node 20 series)
+2. Install dependencies: `npm install`
+3. Validate skills: `npm run skills:validate`
+4. Tests: `npm test`
+5. Planner evaluation (optional): `npm run planner:eval`
+6. Docs development (optional): `npm run dev`
+
+### Local review run (river run .)
+
+- After installation, run `npx river run . --dry-run` to print skill selection and placeholder review comments for the current diff without sending anything externally (local mode is currently planning/preview only)
+- Add `--debug` to show merge base, changed files, token estimate, and a diff preview
+- Specify phase via `--phase upstream|midstream|downstream`; defaults to `RIVER_PHASE` env or `midstream`
+
 ## Skills
 
 Skills are Markdown files with YAML frontmatter; River Reviewer uses the metadata to load and route them.
