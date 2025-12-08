@@ -44,6 +44,12 @@ jobs:
 5. Planner 評価（任意）: `npm run planner:eval`
 6. ドキュメント開発（任意）: `npm run dev`（Docusaurus）
 
+### ローカルレビュー実行（river run .）
+
+- インストール後に `npx river run . --dry-run` で現在の差分を対象にスキル選択とレビューコメントを標準出力へ表示（外部送信なし）
+- 追加情報が必要な場合は `--debug` を付与（マージベース、対象ファイル、トークン見積もり、diff プレビューを表示）
+- `--phase upstream|midstream|downstream` でフェーズ指定可能。デフォルトは `RIVER_PHASE` 環境変数または `midstream`
+
 ## スキル
 
 スキルは YAML フロントマター付き Markdown で記述し、メタデータを使ってロードとルーティングを行います。
