@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import process from 'node:process';
-import { runLocalReview } from './lib/local-runner.mjs';
 import { GitRepoNotFoundError } from './lib/git.mjs';
+import { runLocalReview } from './lib/local-runner.mjs';
+import { SkillLoaderError } from './lib/skill-loader.mjs';
+
+const MAX_PROMPT_PREVIEW_LENGTH = 800;
+const MAX_DIFF_PREVIEW_LINES = 200;
 
 function printHelp() {
   console.log(`Usage: river run <path> [options]
@@ -14,7 +18,6 @@ Options:
   --phase <phase>   Review phase (upstream|midstream|downstream). Default: env RIVER_PHASE or midstream
   --dry-run         Do not call external services; print results to stdout
   --debug           Print debug information (merge base, files, token estimate)
-  (local run currently plans skills and prints placeholder comments; no LLM calls yet)
   -h, --help        Show this help message
 `);
 }
@@ -95,8 +98,31 @@ function printComments(comments) {
   }
   console.log('Review comments:');
   comments.forEach(comment => {
-    console.log(`- ${comment.file}:${comment.line} ${comment.message}`);
+    console.log(`- ${comment.file}:${comment.line}: ${comment.message}`);
   });
+}
+
+function printDebugInfo(result) {
+  const debug = result.reviewDebug ?? {};
+  console.log(`\nDebug info:
+- LLM: ${debug.llmUsed ? `used (${debug.llmModel})` : debug.llmSkipped || debug.llmError || 'not used'}
+- Token estimate: ${result.tokenEstimate}
+- Prompt truncated: ${debug.promptTruncated ? 'yes' : 'no'}
+- Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}
+`);
+  if (debug.llmError) {
+    console.log(`LLM error: ${debug.llmError}`);
+  }
+  if (debug.promptPreview) {
+    const trimmed =
+      debug.promptPreview.length > MAX_PROMPT_PREVIEW_LENGTH
+        ? `${debug.promptPreview.slice(0, MAX_PROMPT_PREVIEW_LENGTH)}...`
+        : debug.promptPreview;
+    console.log('Prompt preview:');
+    console.log(trimmed);
+  }
+  console.log('\n--- diff preview ---');
+  console.log(result.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
 }
 
 async function main() {
@@ -134,23 +160,21 @@ Debug: ${parsed.debug ? 'yes' : 'no'}`);
       return 0;
     }
 
-    if (parsed.debug) {
-      console.log(`Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}`);
-      console.log(`Approx prompt tokens (chars/4): ${result.tokenEstimate}`);
-    }
-
     printPlan(result.plan);
     printComments(result.comments);
 
     if (parsed.debug) {
-      console.log('\n--- diff preview ---');
-      console.log(result.diffText.split('\n').slice(0, 200).join('\n'));
+      printDebugInfo(result);
     }
 
     return 0;
   } catch (error) {
     if (error instanceof GitRepoNotFoundError) {
       console.error(error.message);
+      return 1;
+    }
+    if (error instanceof SkillLoaderError) {
+      console.error(`Skill configuration error: ${error.message}`);
       return 1;
     }
     if (error.name === 'GitError') {
