@@ -5,6 +5,9 @@ import { GitRepoNotFoundError } from './lib/git.mjs';
 import { runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError } from './lib/skill-loader.mjs';
 
+const MAX_PROMPT_PREVIEW_LENGTH = 800;
+const MAX_DIFF_PREVIEW_LINES = 200;
+
 function printHelp() {
   console.log(`Usage: river run <path> [options]
 
@@ -111,12 +114,15 @@ function printDebugInfo(result) {
     console.log(`LLM error: ${debug.llmError}`);
   }
   if (debug.promptPreview) {
-    const trimmed = debug.promptPreview.length > 800 ? `${debug.promptPreview.slice(0, 800)}...` : debug.promptPreview;
+    const trimmed =
+      debug.promptPreview.length > MAX_PROMPT_PREVIEW_LENGTH
+        ? `${debug.promptPreview.slice(0, MAX_PROMPT_PREVIEW_LENGTH)}...`
+        : debug.promptPreview;
     console.log('Prompt preview:');
     console.log(trimmed);
   }
   console.log('\n--- diff preview ---');
-  console.log(result.diffText.split('\n').slice(0, 200).join('\n'));
+  console.log(result.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
 }
 
 async function main() {

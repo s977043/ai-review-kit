@@ -80,7 +80,6 @@ export async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = 
       files: [],
       diffText: '',
       tokenEstimate: 0,
-      addedLineHints: new Map(),
     };
   }
 
@@ -93,7 +92,6 @@ export async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = 
         hunks: [],
         addedLines: [],
       }));
-  const addedLineHints = new Map(files.map(file => [file.path, file.addedLines[0] ?? 1]));
   const tokenEstimate = Math.ceil(diffText.length / 4);
 
   return {
@@ -101,6 +99,5 @@ export async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = 
     files,
     diffText,
     tokenEstimate,
-    addedLineHints,
   };
 }

@@ -1,6 +1,10 @@
 import { summarizeSkill } from './review-runner.mjs';
 
 const DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const MAX_PROMPT_CHARS = 12000;
+const MAX_PROMPT_PREVIEW_CHARS = 2000;
+const NO_ISSUES_REGEX = /^NO_ISSUES/i;
+const LINE_COMMENT_REGEX = /^(.+?):(\d+):\s*(.+)$/;
 
 function resolveOpenAIConfig(options = {}) {
   return {
@@ -29,7 +33,7 @@ function buildFileSummary(files = []) {
   return files.map(file => `- ${file.path} (hunks: ${file.hunks.length || 1})`).join('\n');
 }
 
-export function buildPrompt({ diffText, diffFiles, plan, phase, maxChars = 12000 }) {
+export function buildPrompt({ diffText, diffFiles, plan, phase, maxChars = MAX_PROMPT_CHARS }) {
   const truncated = diffText.length > maxChars;
   const diffBody = truncated ? `${diffText.slice(0, maxChars)}\n...[truncated]` : diffText;
   const prompt = `You are River Reviewer, an AI code review agent.
@@ -58,8 +62,8 @@ export function parseLineComments(outputText) {
   for (const rawLine of outputText.split('\n')) {
     const line = rawLine.trim();
     if (!line) continue;
-    if (/^NO_ISSUES/i.test(line)) return [];
-    const match = /^(.+?):(\d+):\s*(.+)$/.exec(line);
+    if (NO_ISSUES_REGEX.test(line)) return [];
+    const match = LINE_COMMENT_REGEX.exec(line);
     if (match) {
       comments.push({
         file: match[1].trim(),
@@ -128,7 +132,15 @@ function buildFallbackComments(diff, plan) {
 /**
  * Generate review comments using LLM when configured, otherwise fall back to deterministic hints.
  */
-export async function generateReview({ diff, plan, phase, dryRun = false, model, apiKey, maxPromptChars = 12000 }) {
+export async function generateReview({
+  diff,
+  plan,
+  phase,
+  dryRun = false,
+  model,
+  apiKey,
+  maxPromptChars = MAX_PROMPT_CHARS,
+}) {
   const promptInfo = buildPrompt({
     diffText: diff.diffText,
     diffFiles: diff.files,
@@ -141,7 +153,7 @@ export async function generateReview({ diff, plan, phase, dryRun = false, model,
   let comments = [];
   const debug = {
     promptTruncated: promptInfo.truncated,
-    promptPreview: promptInfo.prompt.slice(0, 2000),
+    promptPreview: promptInfo.prompt.slice(0, MAX_PROMPT_PREVIEW_CHARS),
     llmModel: config.model,
   };
 
