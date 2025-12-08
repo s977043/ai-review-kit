@@ -13,7 +13,7 @@ We aim for an open, welcoming community. Please follow our [Code of Conduct](COD
 
 If you find a bug, open an issue with:
 
-- **Summary**: What is wrong?
+- **Summary**: What's wrong?
 - **Reproduction steps**: Concrete steps so others can reproduce it.
 - **Expected behavior**: What you thought would happen.
 - **Actual behavior**: What actually happened.
@@ -53,8 +53,8 @@ River Reviewer docs follow the [Diátaxis documentation framework](https://diata
 
 To keep reviews smooth:
 
-- Place files under the right section (e.g., `pages/tutorials/`, `pages/guides/`, `pages/reference/`, `pages/explanation/`). Add English copies in the same location with a `.en.md` suffix.
-- State the chosen Diátaxis type in the PR title or description, e.g.:
+- Place files under the right section (for example, `pages/tutorials/`, `pages/guides/`, `pages/reference/`, `pages/explanation/`). Add English copies in the same location with a `.en.md` suffix.
+- State the chosen Diátaxis type in the PR title or description, for example:
   - Docs: Tutorial—Getting started with River Reviewer
   - Docs: How-to—Add a custom skill
   - Docs: Reference—GitHub Action inputs
@@ -66,7 +66,7 @@ We standardize dash usage like this:
 
 - Use an em dash (—) with **no spaces** for heading breaks or front-matter titles (example: `Part I—Overview`).
 - Use an en dash (–) for numeric ranges (`0.0–1.0`).
-- Do not auto-convert dashes inside code blocks or YAML structure.
+- Don't automatically convert dashes inside code blocks or YAML structure.
 
 Automation:
 
