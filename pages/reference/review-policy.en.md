@@ -1,6 +1,6 @@
 # AI Review Standard Policy
 
-This document defines the standard policy that River Reviewer's AI reviewers must follow. The policy AIms to mAIntAIn consistent review quality and reproducibility while providing valuable and constructive feedback to developers.
+This document defines the standard policy that River Reviewer's AI reviewers must follow. The policy aims to maintain consistent review quality and reproducibility while providing valuable and constructive feedback to developers.
 
 ## 1. Evaluation Principles
 
@@ -20,13 +20,13 @@ Reviews are conducted from the following perspectives:
 - **Extensibility**: Flexibility for future changes and feature additions
 - **Performance**: Execution efficiency, resource usage, scalability
 - **Security**: Vulnerabilities, data protection, authentication and authorization appropriateness
-- **MAIntAInability**: Debuggability, test coverage, documentation
+- **Maintainability**: Debuggability, test coverage, documentation
 
 ### 1.3 Review Attitude
 
 - **Emphasize Specificity**: Provide concrete comments based on the diff, not generic statements
 - **Present Improvements**: Not only point out problems but also suggest improvements or alternatives when possible
-- **Constructive Tone**: AIm to assist developers with a neutral and collaborative tone, not critical
+- **Constructive Tone**: Aim to assist developers with a neutral and collaborative tone, not critical
 
 ## 2. Output Format
 
@@ -88,7 +88,7 @@ River Reviewer adopts flow-based reviews, emphasizing the following in each phas
 ### 4.1 Upstream (Design Phase)
 
 - Consistency with architecture decisions
-- Verification agAInst ADRs (Architecture Decision Records)
+- Verification against ADRs (Architecture Decision Records)
 - Clarity of design intent
 - Appropriateness of interface design
 
@@ -103,7 +103,7 @@ River Reviewer adopts flow-based reviews, emphasizing the following in each phas
 
 - Test coverage
 - Edge case testing
-- Test readability and mAIntAInability
+- Test readability and maintainability
 - Test execution performance
 
 ## 5. Quality Standards
