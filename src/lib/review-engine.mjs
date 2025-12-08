@@ -35,9 +35,7 @@ function buildFileSummary(files = []) {
 
 function buildProjectRulesSection(rulesText) {
   if (!rulesText) return '';
-  const body = rulesText.trim();
-  if (!body) return '';
-  return `\n### Project-specific review rules\n\n以下は、このリポジトリ専用のレビューガイドラインです。必ず考慮してください。\n\n---\n${body}\n---\n`;
+  return `\n### Project-specific review rules\n\n以下は、このリポジトリ専用のレビューガイドラインです。必ず考慮してください。\n\n---\n${rulesText}\n---\n`;
 }
 
 export function buildPrompt({ diffText, diffFiles, plan, phase, projectRules, maxChars = MAX_PROMPT_CHARS }) {

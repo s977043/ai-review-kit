@@ -15,9 +15,13 @@ export class ProjectRulesError extends Error {
  * Missing or empty files are treated as "no rules" without error.
  */
 export async function loadProjectRules(repoRoot, options = {}) {
-  const rulesPath = options.rulesPath
-    ? path.resolve(repoRoot, options.rulesPath)
-    : path.resolve(repoRoot, DEFAULT_RULES_PATH);
+  const repoRootAbs = path.resolve(repoRoot);
+  const relativeRulesPath = options.rulesPath ?? DEFAULT_RULES_PATH;
+  const rulesPath = path.resolve(repoRootAbs, relativeRulesPath);
+
+  if (!rulesPath.startsWith(repoRootAbs + path.sep) && rulesPath !== repoRootAbs) {
+    throw new ProjectRulesError(`Project rules path is outside of the repository: ${relativeRulesPath}`);
+  }
 
   try {
     const raw = await fs.readFile(rulesPath, 'utf8');

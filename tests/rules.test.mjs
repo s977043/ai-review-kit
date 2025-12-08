@@ -36,3 +36,18 @@ test('loadProjectRules loads content when rules file exists', async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('loadProjectRules returns null when rules file is empty or whitespace', async () => {
+  const dir = createTempRepoDir();
+  const rulesDir = path.join(dir, '.river');
+  await mkdir(rulesDir, { recursive: true });
+  const rulesPath = path.join(rulesDir, 'rules.md');
+  writeFileSync(rulesPath, '   \n  ');
+
+  try {
+    const { rulesText } = await loadProjectRules(dir);
+    assert.equal(rulesText, null);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
