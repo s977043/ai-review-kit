@@ -1,8 +1,9 @@
 import path from 'node:path';
 import { collectRepoDiff } from './diff.mjs';
 import { generateReview } from './review-engine.mjs';
-import { buildExecutionPlan } from './review-runner.mjs';
 import { detectDefaultBranch, ensureGitRepo, findMergeBase } from './git.mjs';
+import { buildExecutionPlan } from './review-runner.mjs';
+import { loadProjectRules } from './rules.mjs';
 
 function normalizePhase(phase) {
   const normalized = (phase || '').toLowerCase();
@@ -20,6 +21,7 @@ export async function runLocalReview({
   apiKey,
 } = {}) {
   const repoRoot = await ensureGitRepo(cwd);
+  const { rulesText: projectRules } = await loadProjectRules(repoRoot);
   const defaultBranch = await detectDefaultBranch(repoRoot);
   const mergeBase = await findMergeBase(repoRoot, defaultBranch);
   const diff = await collectRepoDiff(repoRoot, mergeBase, { contextLines: debug ? 10 : 3 });
@@ -47,6 +49,7 @@ export async function runLocalReview({
     dryRun,
     model,
     apiKey,
+    projectRules,
   });
 
   return {
@@ -62,5 +65,6 @@ export async function runLocalReview({
     tokenEstimate: diff.tokenEstimate,
     prompt: review.prompt,
     reviewDebug: review.debug,
+    projectRules,
   };
 }

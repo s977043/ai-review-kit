@@ -33,7 +33,14 @@ function buildFileSummary(files = []) {
   return files.map(file => `- ${file.path} (hunks: ${file.hunks.length || 1})`).join('\n');
 }
 
-export function buildPrompt({ diffText, diffFiles, plan, phase, maxChars = MAX_PROMPT_CHARS }) {
+function buildProjectRulesSection(rulesText) {
+  if (!rulesText) return '';
+  const body = rulesText.trim();
+  if (!body) return '';
+  return `\n### Project-specific review rules\n\n以下は、このリポジトリ専用のレビューガイドラインです。必ず考慮してください。\n\n---\n${body}\n---\n`;
+}
+
+export function buildPrompt({ diffText, diffFiles, plan, phase, projectRules, maxChars = MAX_PROMPT_CHARS }) {
   const truncated = diffText.length > maxChars;
   const diffBody = truncated ? `${diffText.slice(0, maxChars)}\n...[truncated]` : diffText;
   const prompt = `You are River Reviewer, an AI code review agent.
@@ -45,7 +52,7 @@ ${buildFileSummary(diffFiles)}
 Relevant skills:
 ${buildSkillSummary(plan)}
 
-Review the unified git diff below and produce concise findings.
+${buildProjectRulesSection(projectRules)}Review the unified git diff below and produce concise findings.
 - Output each finding on its own line using the format "<file>:<line>: <message>".
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Limit to 8 findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
@@ -139,6 +146,7 @@ export async function generateReview({
   dryRun = false,
   model,
   apiKey,
+  projectRules,
   maxPromptChars = MAX_PROMPT_CHARS,
 }) {
   const promptInfo = buildPrompt({
@@ -146,6 +154,7 @@ export async function generateReview({
     diffFiles: diff.files,
     plan,
     phase,
+    projectRules,
     maxChars: maxPromptChars,
   });
   const config = resolveOpenAIConfig({ model, apiKey });
