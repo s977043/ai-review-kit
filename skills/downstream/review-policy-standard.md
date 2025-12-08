@@ -87,11 +87,11 @@ For each finding, include:
 
 ## What to Avoid
 
-- DO NOT assume test coverage for code not in the diff
-- DO NOT provide only generic "add more tests" advice
-- DO NOT use judgmental language about test quality
-- DO NOT suggest tests unrelated to the changes
-- DO NOT ignore existing test patterns in the project
+- Don't assume test coverage for code not in the diff
+- Don't provide only generic "add more tests" advice
+- Don't use judgmental language about test quality
+- Don't suggest tests unrelated to the changes
+- Don't ignore existing test patterns in the project
 
 ## Priority Levels
 
@@ -116,7 +116,7 @@ For each finding, include:
 When reviewing tests, verify:
 
 - Tests are independent and don't rely on execution order
-- Test names clearly describe what is being tested
+- Test names clearly describe what's being tested
 - Assertions are specific and meaningful
 - Test data is realistic and covers edge cases
 - Setup and teardown properly manage resources
