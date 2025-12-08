@@ -1,4 +1,4 @@
-# AGENTS.md – River Reviewer agent guide
+# AGENTS.md—River Reviewer agent guide
 
 River Reviewer は「流れに寄り添う」AI レビューエージェントです。  
 このリポジトリには、River Reviewer のドキュメント、スキーマ、検証ユーティリティがまとまっています。  
@@ -9,7 +9,7 @@ River Reviewer は「流れに寄り添う」AI レビューエージェント�
 ## 0. 原則
 
 - 小さく変更 → 検証コマンド → PR → Green 確認 → レビュー
-- 設定ファイルを真実の源泉とし、フォーマッタ/ lint を必ず通す
+- 設定ファイルを真実の源泉とし、フォーマッタ / lint を必ず通す
 - 秘密情報は持ち込まない（`.env*` は禁止、例示はダミー値で）
 
 ---
@@ -45,7 +45,7 @@ PR/CI では少なくとも `npm test` と `npm run lint` を通し、変更内�
 慎重に扱う/原則手動編集しない:
 
 - `docs/`: 公開用生成物を想定。編集は通常 `pages/` 側で行う
-- `assets/` 各種アセット
+- `assets/`: 各種アセット
 - `LICENSE*`, `CITATION.cff`: ライセンス/引用情報
 - `package-lock.json`: `npm ci` で再生成。手作業で書き換えない
 
