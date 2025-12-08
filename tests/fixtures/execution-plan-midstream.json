@@ -10,9 +10,28 @@
   ],
   "skipped": [
     {
+      "id": "rr-downstream-review-policy-standard-001",
+      "reasons": [
+        "phase mismatch: downstream !== midstream",
+        "applyTo did not match any changed file",
+        "missing required inputContext"
+      ]
+    },
+    {
       "id": "rr-downstream-test-review-sample-001",
       "reasons": [
         "phase mismatch: downstream !== midstream",
+        "applyTo did not match any changed file"
+      ]
+    },
+    {
+      "id": "rr-midstream-review-policy-standard-001",
+      "reasons": ["missing required inputContext"]
+    },
+    {
+      "id": "rr-upstream-review-policy-standard-001",
+      "reasons": [
+        "phase mismatch: upstream !== midstream",
         "applyTo did not match any changed file"
       ]
     },
