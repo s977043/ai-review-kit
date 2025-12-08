@@ -51,6 +51,15 @@ jobs:
 3. OpenAI の LLM を使う場合は `OPENAI_API_KEY`（または `RIVER_OPENAI_API_KEY`）を設定して `river run .` を実行。未設定時はスキルベースのヒューリスティックコメントでフォールバック
 4. `--dry-run` は外部 API を呼ばず標準出力のみ。`--phase upstream|midstream|downstream` でフェーズ指定も可能（デフォルトは `RIVER_PHASE` 環境変数または `midstream`）
 
+## Project-specific review rules
+
+- リポジトリルートに `.river/rules.md` を置くと、プロジェクト固有のレビューポリシーが LLM プロンプトへ自動注入されます（`river run .` と GitHub Actions の双方で有効）
+- ファイルが無い/空の場合は従来通り。読み込みエラー時のみ失敗します
+- 例（.river/rules.md）:
+  - Next.js App Router を前提とし、`pages/` ディレクトリは使用しない
+  - React サーバーコンポーネントを優先し、クライアントコンポーネントは必要な場合のみ使う
+  - ビジネスロジックは hooks ではなく service モジュールに寄せる
+
 ## スキル
 
 スキルは YAML フロントマター付き Markdown で記述し、メタデータを使ってロードとルーティングを行います。

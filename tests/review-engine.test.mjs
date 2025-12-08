@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { generateReview, parseLineComments } from '../src/lib/review-engine.mjs';
+import { buildPrompt, generateReview, parseLineComments } from '../src/lib/review-engine.mjs';
 
 const diffText = `diff --git a/src/app.ts b/src/app.ts
 index 1111111..2222222 100644
@@ -46,4 +46,16 @@ test('parseLineComments parses structured lines', () => {
 test('parseLineComments understands NO_ISSUES', () => {
   const parsed = parseLineComments('NO_ISSUES');
   assert.deepEqual(parsed, []);
+});
+
+test('buildPrompt injects project rules when provided', () => {
+  const { prompt } = buildPrompt({
+    diffText,
+    diffFiles: diff.files,
+    plan,
+    phase: 'midstream',
+    projectRules: '- Use App Router',
+  });
+  assert.match(prompt, /Project-specific review rules/i);
+  assert.match(prompt, /Use App Router/);
 });

@@ -86,6 +86,23 @@ test('river run falls back gracefully without API key', async () => {
   }
 });
 
+test('river run injects project rules into prompt when present', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const rulesDir = join(dir, '.river');
+    await mkdir(rulesDir, { recursive: true });
+    writeFileSync(join(rulesDir, 'rules.md'), '- Use App Router\n- Prefer server components');
+
+    const result = await runCli(['run', '.', '--dry-run', '--debug'], dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /Project rules: present/);
+    assert.match(result.stdout, /Project-specific review rules/i);
+    assert.match(result.stdout, /Use App Router/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('river run fails gracefully outside git repos', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'river-cli-empty-'));
   await mkdir(resolve(dir, 'nested'));

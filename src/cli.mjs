@@ -4,6 +4,7 @@ import process from 'node:process';
 import { GitRepoNotFoundError } from './lib/git.mjs';
 import { runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError } from './lib/skill-loader.mjs';
+import { ProjectRulesError } from './lib/rules.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
@@ -109,6 +110,7 @@ function printDebugInfo(result) {
 - Token estimate: ${result.tokenEstimate}
 - Prompt truncated: ${debug.promptTruncated ? 'yes' : 'no'}
 - Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}
+- Project rules: ${result.projectRules ? 'present' : 'none'}
 `);
   if (debug.llmError) {
     console.log(`LLM error: ${debug.llmError}`);
@@ -175,6 +177,10 @@ Debug: ${parsed.debug ? 'yes' : 'no'}`);
     }
     if (error instanceof SkillLoaderError) {
       console.error(`Skill configuration error: ${error.message}`);
+      return 1;
+    }
+    if (error instanceof ProjectRulesError) {
+      console.error(error.message);
       return 1;
     }
     if (error.name === 'GitError') {
