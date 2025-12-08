@@ -14,6 +14,7 @@ Options:
   --phase <phase>   Review phase (upstream|midstream|downstream). Default: env RIVER_PHASE or midstream
   --dry-run         Do not call external services; print results to stdout
   --debug           Print debug information (merge base, files, token estimate)
+  (local run currently plans skills and prints placeholder comments; no LLM calls yet)
   -h, --help        Show this help message
 `);
 }
@@ -38,7 +39,12 @@ function parseArgs(argv) {
       continue;
     }
     if (arg === '--phase') {
-      parsed.phase = args.shift() || parsed.phase;
+      if (!args[0] || args[0].startsWith('-')) {
+        console.error('Error: --phase option requires a value.');
+        parsed.command = 'help';
+        break;
+      }
+      parsed.phase = args.shift();
       continue;
     }
     if (arg === '--dry-run') {
@@ -145,6 +151,10 @@ Debug: ${parsed.debug ? 'yes' : 'no'}`);
   } catch (error) {
     if (error instanceof GitRepoNotFoundError) {
       console.error(error.message);
+      return 1;
+    }
+    if (error.name === 'GitError') {
+      console.error(`Git command failed: ${error.message}`);
       return 1;
     }
     console.error(`CLI error: ${error.message}`);

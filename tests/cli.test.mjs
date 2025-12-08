@@ -45,22 +45,30 @@ async function createRepoWithChange() {
 
 test('river run emits review comments in dry-run mode', async () => {
   const { dir } = await createRepoWithChange();
-  const result = await runCli(['run', '.', '--dry-run', '--debug'], dir);
+  try {
+    const result = await runCli(['run', '.', '--dry-run', '--debug'], dir);
 
-  assert.strictEqual(result.code, 0, result.stderr);
-  assert.match(result.stdout, /River Reviewer/);
-  assert.match(result.stdout, /Review comments/);
-  assert.match(result.stdout, /README.md:/);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /River Reviewer/);
+    assert.match(result.stdout, /Review comments/);
+    assert.match(result.stdout, /README.md:/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('river run reports when there are no changes', async () => {
   const { dir } = await createRepoWithChange();
-  await runGit(['add', '.'], dir);
-  await runGit(['commit', '-m', 'apply change'], dir);
+  try {
+    await runGit(['add', '.'], dir);
+    await runGit(['commit', '-m', 'apply change'], dir);
 
-  const result = await runCli(['run', '.'], dir);
-  assert.strictEqual(result.code, 0, result.stderr);
-  assert.match(result.stdout, /No changes to review/);
+    const result = await runCli(['run', '.'], dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /No changes to review/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('river run fails gracefully outside git repos', async () => {
@@ -69,6 +77,6 @@ test('river run fails gracefully outside git repos', async () => {
   const result = await runCli(['run', '.'], dir);
 
   assert.notStrictEqual(result.code, 0);
-  assert.match(result.stderr + result.stdout, /Not a git repository/);
+  assert.match(result.stderr, /Not a git repository/);
   await rm(dir, { recursive: true, force: true });
 });

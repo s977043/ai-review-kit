@@ -40,7 +40,7 @@ Note: Replace `@v1` with the latest released tag when a newer version is availab
 
 ## Quick start (local)
 
-1. Environment: Node 18+ recommended (CI also runs on Node 18 series)
+1. Environment: Node 20+ recommended (CI also runs on Node 20 series)
 2. Install dependencies: `npm install`
 3. Validate skills: `npm run skills:validate`
 4. Tests: `npm test`
@@ -49,7 +49,7 @@ Note: Replace `@v1` with the latest released tag when a newer version is availab
 
 ### Local review run (river run .)
 
-- After installation, run `npx river run . --dry-run` to print skill selection and review comments for the current diff without sending anything externally
+- After installation, run `npx river run . --dry-run` to print skill selection and placeholder review comments for the current diff without sending anything externally (local mode is currently planning/preview only)
 - Add `--debug` to show merge base, changed files, token estimate, and a diff preview
 - Specify phase via `--phase upstream|midstream|downstream`; defaults to `RIVER_PHASE` env or `midstream`
 

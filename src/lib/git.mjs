@@ -83,6 +83,7 @@ export function collectAddedLineHints(diffText) {
 
   for (const line of diffText.split('\n')) {
     if (line.startsWith('+++ b/')) {
+      // We record the first hunk per file; this keeps output stable for the placeholder comments.
       currentFile = line.replace('+++ b/', '').trim();
       continue;
     }

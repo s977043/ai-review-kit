@@ -37,7 +37,7 @@ jobs:
 
 ## クイックスタート（ローカル）
 
-1. 環境: Node 18+ 推奨（CI も Node 18 系で運用）
+1. 環境: Node 20+ 推奨（CI も Node 20 系で運用）
 2. 依存導入: `npm install`
 3. スキル検証: `npm run skills:validate`
 4. テスト: `npm test`
@@ -46,7 +46,7 @@ jobs:
 
 ### ローカルレビュー実行（river run .）
 
-- インストール後に `npx river run . --dry-run` で現在の差分を対象にスキル選択とレビューコメントを標準出力へ表示（外部送信なし）
+- インストール後に `npx river run . --dry-run` で現在の差分を対象にスキル選択とレビューコメント（プレースホルダー）を標準出力へ表示（外部送信なし。現状ローカル実行はプランニング/プレビュー用途）
 - 追加情報が必要な場合は `--debug` を付与（マージベース、対象ファイル、トークン見積もり、diff プレビューを表示）
 - `--phase upstream|midstream|downstream` でフェーズ指定可能。デフォルトは `RIVER_PHASE` 環境変数または `midstream`
 

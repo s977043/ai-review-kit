@@ -44,7 +44,7 @@ export async function runLocalReview({
   });
 
   const diffText = await diffWithContext(repoRoot, mergeBase, { unified: 3 });
-  const lineHints = collectAddedLineHints(await diffWithContext(repoRoot, mergeBase, { unified: 0 }));
+  const lineHints = collectAddedLineHints(diffText);
   const tokenEstimate = Math.ceil(diffText.length / 4);
   const skillIds = plan.selected.map(skill => skill.metadata?.id ?? skill.id);
 
@@ -66,7 +66,5 @@ export async function runLocalReview({
     diffText,
     comments,
     tokenEstimate,
-    dryRun,
-    debug,
   };
 }
