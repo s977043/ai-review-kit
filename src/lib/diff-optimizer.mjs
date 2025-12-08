@@ -28,19 +28,15 @@ function normalizeWhitespace(line) {
 function isWhitespaceOnlyChange(lines) {
   const added = lines
     .filter(line => line.startsWith('+') && !line.startsWith('+++'))
-    .map(line => normalizeWhitespace(line.slice(1)));
+    .map(line => line.slice(1));
   const removed = lines
     .filter(line => line.startsWith('-') && !line.startsWith('---'))
-    .map(line => normalizeWhitespace(line.slice(1)));
+    .map(line => line.slice(1));
   if (added.length === 0 && removed.length === 0) return false;
-  if (added.length !== removed.length) return false;
-  for (let i = 0; i < added.length; i += 1) {
-    if (added[i] !== removed[i]) return false;
-  }
-  return true;
+  return normalizeWhitespace(added.join('')) === normalizeWhitespace(removed.join(''));
 }
 
-const COMMENT_MARKERS = [/^\/\//, /^\/\*/, /^\*/, /^\*\/$/, /^#/, /^<!--/, /^-->/];
+const COMMENT_MARKERS = [/^\/\//, /^\/\*/, /^\*($|\s)/, /^\*\/$/, /^#/, /^<!--/, /^-->/];
 
 function isCommentOnlyChange(lines) {
   const changed = lines.filter(line => line.startsWith('+') || line.startsWith('-'));
@@ -109,11 +105,16 @@ function renderDiffText(files) {
   if (!files.length) return '';
   const chunks = [];
   for (const file of files) {
-    const oldPath = file.oldPath ?? file.path;
-    const newPath = file.newPath ?? file.path;
+    const isNewFile = !file.oldPath || file.oldPath === '/dev/null';
+    const isDeletedFile = !file.newPath || file.newPath === '/dev/null';
+    const oldPath = isNewFile ? '/dev/null' : file.oldPath ?? file.path;
+    const newPath = isDeletedFile ? '/dev/null' : file.newPath ?? file.path;
+    const oldDisplay = oldPath === '/dev/null' ? '/dev/null' : `a/${oldPath}`;
+    const newDisplay = newPath === '/dev/null' ? '/dev/null' : `b/${newPath}`;
+
     chunks.push(`diff --git a/${oldPath} b/${newPath}`);
-    chunks.push(`--- a/${oldPath}`);
-    chunks.push(`+++ b/${newPath}`);
+    chunks.push(`--- ${oldDisplay}`);
+    chunks.push(`+++ ${newDisplay}`);
     for (const hunk of file.hunks ?? []) {
       chunks.push(hunk.header);
       chunks.push(...(hunk.lines ?? []));

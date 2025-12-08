@@ -72,3 +72,16 @@ test('reduces token estimate compared to raw diff', () => {
   assert.ok(result.rawTokenEstimate >= result.tokenEstimate);
   assert.ok(result.reduction >= 0);
 });
+
+test('renders new file paths with /dev/null correctly', () => {
+  const newFileDiff = `diff --git a/new.js b/new.js
+--- /dev/null
++++ b/new.js
+@@ -0,0 +1,2 @@
++console.log('new');
++module.exports = {};
+`;
+  const result = optimizeFromText(newFileDiff);
+  assert.match(result.diffText, /--- \/dev\/null/);
+  assert.match(result.diffText, /\+\+\+ b\/new.js/);
+});

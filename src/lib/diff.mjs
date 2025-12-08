@@ -30,14 +30,13 @@ export function parseUnifiedDiff(diffText) {
       continue;
     }
     if (line.startsWith('+++ ')) {
-      const path = stripPrefix(line.slice(4).trim());
-      if (path === '/dev/null') {
-        currentFile = null;
-        currentHunk = null;
-        continue;
-      }
-      const oldPath = pendingOldPath === '/dev/null' ? path : pendingOldPath || path;
-      currentFile = { path, newPath: path, oldPath, hunks: [], addedLines: [] };
+      const newPathRaw = stripPrefix(line.slice(4).trim());
+      const isDeletion = newPathRaw === '/dev/null';
+      const oldPath = pendingOldPath ?? (isDeletion ? '/dev/null' : newPathRaw);
+      const newPath = isDeletion ? '/dev/null' : newPathRaw;
+      const path = isDeletion ? oldPath : newPath;
+
+      currentFile = { path, newPath, oldPath, hunks: [], addedLines: [] };
       files.push(currentFile);
       currentHunk = null;
       newLineNumber = 0;
