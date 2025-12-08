@@ -1,97 +1,101 @@
-# AGENTS.md—AI Agent Guide (Template)
+# AGENTS.md—River Reviewer agent guide
 
-> **テンプレートです。** 各プロジェクトの技術選定/運用に合わせて
-> 不要な節は **削除**、コマンドは **読み替え**、ルールは **上書き** してください。
-> （AIエージェントが迷わないこと／人間にも読めることを最優先に）
-
-本ドキュメントは **AI支援型TDD（AI-TDD）** を前提に、複数エージェント（Codex CLI / Gemini CLI など）が迷わず作業できる標準手順の**たたき台**です。
-
-## 0. 原則（短く、正しく、検証可能に）
-
-- 小さく変更 → テストで裏取り → PR → Green確認 → レビュー
-
-- 曖昧語を避け、**具体コマンド／期待出力**を書く
-
-- 秘密情報を持ち込まない（`.env` はコミット禁止／例は `.env.example`）
-
-## 1. スコープ（例）
-
-- 想定構成：`apps/*`, `packages/*`
-
-- 触ってよい：実装・テスト・Lint/型・ドキュメント
-
-- 触らない：`/docs/generated`, `**/*.lock`, `.env*`, `secrets/*` など
-
-## 2. セットアップ & 共通コマンド（例：pnpm）
-
-- 依存導入: `pnpm i`
-
-- Lint: `pnpm lint`
-
-- 型検査: `pnpm tsc -b`（必要な場合）
-
-- テスト: `pnpm test`
-
-- パッケージ絞り込み: `pnpm turbo run test --filter <pkg>`
-
-## 3. コーディング（例：設定ファイルを“真実の源泉”に）
-
-- TS は `strict` を維持（または言語/設定に準ずる）
-
-- ESLint/Prettier 等、**設定＝事実上の規約**
-
-- 命名：変数/関数=camelCase, 型/コンポーネント=PascalCase（プロジェクト方針で上書き可）
-
-- UI は a11y を確保
-
-- 禁止：秘密のハードコード、未使用コード放置
-
-## 4. AI-TDD 基本線
-
-1. 仕様の最小断面を文章で明示
-
-2. 失敗するテストを追加
-
-3. 最小実装で Green
-
-4. リファクタ
-
-5. PRで目的／影響／**テスト結果 or 実行ログ**を提示
-
-## 5. PR ルール（ミニマム）
-
-- タイトル: `[scope] one-line summary`
-
-- 本文: 目的 / 変更点 / 影響範囲 / テスト結果（ログ/スクショ可）
-
-- 必須: `lint && test` が **Green**（赤は Draft のまま）
-
-## 6. セキュリティ
-
-- `.env*` はコミット禁止（`.env.example` のみ更新）
-
-- 外部鍵は Secrets / Vault を使用
-
-- 外部APIは**例外処理とタイムアウト**を必須化
-
-## 7. モノレポ運用（該当プロジェクトのみ）
-
-- 近接優先：エージェントは「最も近い `AGENTS.md`」を採用
-
-- 新規パッケージ：`packages/` に作成、依存追加は `--filter <pkg>`
-
-- CI の最低条件：lint / test / typecheck（各リポで上書き可）
-
-## 8. ツール連携（例）
-
-- Gemini CLI：`AGENTS.md` を既定のコンテキストで読む
-
-- Codex CLI：リポ直下の `AGENTS.md` を最初に参照する前提で作業
-
-## 9. 付録（パッケージ用ミニ版）
-
-> `packages/foo/AGENTS.md`
+River Reviewer は「流れに寄り添う」AI レビューエージェントです。  
+このリポジトリには、River Reviewer のドキュメント、スキーマ、検証ユーティリティがまとまっています。  
+人間と AI コーディングエージェントが、安全かつ一貫した変更を行うためのルールをまとめています。
 
 ---
 
-**関連**：レビュー観点チェックリスト → [`./coding-review-checklist.md`](./coding-review-checklist.md)
+## 0. 原則
+
+- 小さく変更 → 検証コマンド → PR → Green 確認 → レビュー
+- 設定ファイルを真実の源泉とし、フォーマッタ / lint を必ず通す
+- 秘密情報は持ち込まない（`.env*` は禁止、例示はダミー値で）
+
+---
+
+## 1. セットアップと共通コマンド（npm 前提）
+
+- 依存導入（CI/再現性重視）: `npm ci`
+- ローカル開発インストール: `npm install`
+- ドキュメント開発サーバ（Docusaurus）: `npm run dev`
+- ドキュメントビルド: `npm run build`
+- テスト（Node.js test runner）: `npm test`
+- Lint 一式（Prettier / markdownlint / textlint など）: `npm run lint`
+- エージェント定義検証: `npm run agents:validate`
+- スキル定義検証: `npm run skills:validate`
+- OpenTelemetry トレース検証（必要時のみ）: `npm run trace:validate`
+- Planner 評価（任意・オフラインベンチ用）: `npm run planner:eval`
+
+PR/CI では少なくとも `npm test` と `npm run lint` を通し、変更内容に応じて `agents:validate` / `skills:validate` を実行してください。
+
+---
+
+## 2. ディレクトリ構成と編集範囲
+
+主に編集対象:
+
+- `pages/`: Docusaurus 用ソースドキュメント（Diátaxis: tutorials/guides/reference/explanation）
+- `skills/`: YAML フロントマター付き Markdown のレビュー「スキル」定義
+- `schemas/`: `skill.schema.json`, `output.schema.json` などの JSON Schema
+- `scripts/`: `validate-*.mjs`, `fix-dashes.mjs` などユーティリティ
+- `tests/`: Node.js test runner 用のテスト
+- `.github/`: GitHub Actions 等の CI 設定
+
+慎重に扱う/原則手動編集しない:
+
+- `docs/`: 公開用生成物を想定。編集は通常 `pages/` 側で行う
+- `assets/`: 各種アセット
+- `LICENSE*`, `CITATION.cff`: ライセンス/引用情報
+- `package-lock.json`: `npm ci` で再生成。手作業で書き換えない
+
+AI エージェントは「主に編集対象」を優先し、それ以外は必要最小限にとどめてください。
+
+---
+
+## 3. コーディング / ドキュメントスタイル
+
+- フォーマット: Prettier (`**/*.{js,json,md,yml,yaml}` 対象). 設定は `.prettierrc.json`
+- JavaScript/Node: ESM, `node --test` を使用
+- Markdown: `markdownlint` ルールは `.markdownlint*.json[c]`; 日本語は `textlint` + `prh` に従う
+- ドキュメント言語ポリシー: 日本語がソース・オブ・トゥルース。英語版は `*.en.md` がありうるが差分がある場合は日本語優先
+- 必ず `npm run lint` を通してから PR
+
+---
+
+## 4. スキルとエージェント定義に関するルール
+
+### スキル定義（`skills/`）
+
+- 形式: YAML フロントマター付き Markdown
+- 主なフィールド: `id`, `name`, `description`, `phase`, `applyTo`, `inputContext`, `outputKind`, `modelHint`, `dependencies`, `tags`, `severity` など（詳細は `docs/skill-metadata.md`）
+- 変更後に実行: `npm run skills:validate` および `npm test`（該当があれば）
+
+### エージェント/トレース
+
+- エージェント設定やトレース関連を触ったら `npm run agents:validate`
+- 必要に応じて `npm run trace:validate` で OpenTelemetry 経由の挙動確認
+
+---
+
+## 5. コミット / PR ルール（簡易まとめ）
+
+詳細は `CONTRIBUTING.md` と `COMMIT_SUMMARY_JA.md` を参照。最低限:
+
+- コミット前に: `npm test`, `npm run lint`, 変更に応じて `agents:validate` / `skills:validate`
+- PR本文に: 目的 / 変更内容 / 影響範囲 / 実行コマンドと結果を記載
+
+---
+
+## 6. セキュリティ
+
+- `.env*` はコミットしない（例示はダミー値で）
+- 外部 API を呼ぶ場合はタイムアウトと例外処理を必須にする
+
+---
+
+## 7. AI コーディングエージェント向けメモ
+
+- このリポは「AI レビューエージェント」そのものの定義・スキルを含む。仕様変更前に `schemas/*.json` と既存 `skills/` の整合を確認。
+- 大きな変更は小さく刻み、必ずテストと検証スクリプトで裏を取ってから PR。
+- 不明な場合は README と `docs/architecture.md`（Planner/Runner 概要）、`docs/skill-planner.md` を参照。
