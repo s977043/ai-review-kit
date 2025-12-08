@@ -46,9 +46,10 @@ jobs:
 
 ### ローカルレビュー実行（river run .）
 
-- インストール後に `npx river run . --dry-run` で現在の差分を対象にスキル選択とレビューコメント（プレースホルダー）を標準出力へ表示（外部送信なし。現状ローカル実行はプランニング/プレビュー用途）
-- 追加情報が必要な場合は `--debug` を付与（マージベース、対象ファイル、トークン見積もり、diff プレビューを表示）
-- `--phase upstream|midstream|downstream` でフェーズ指定可能。デフォルトは `RIVER_PHASE` 環境変数または `midstream`
+1. インストール後に `npx river run . --dry-run`（または `npm run river -- --dry-run`）で現在の差分を対象にローカルレビューを実行（GitHub への投稿なし）
+2. `--debug` を付けるとマージベース、対象ファイル一覧、プロンプトのプレビュー、トークン見積もり、diff 抜粋を標準出力へ表示
+3. OpenAI の LLM を使う場合は `OPENAI_API_KEY`（または `RIVER_OPENAI_API_KEY`）を設定して `river run .` を実行。未設定時はスキルベースのヒューリスティックコメントでフォールバック
+4. `--dry-run` は外部 API を呼ばず標準出力のみ。`--phase upstream|midstream|downstream` でフェーズ指定も可能（デフォルトは `RIVER_PHASE` 環境変数または `midstream`）
 
 ## スキル
 

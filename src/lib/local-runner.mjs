@@ -1,13 +1,8 @@
 import path from 'node:path';
+import { collectRepoDiff } from './diff.mjs';
+import { generateReview } from './review-engine.mjs';
 import { buildExecutionPlan } from './review-runner.mjs';
-import {
-  collectAddedLineHints,
-  detectDefaultBranch,
-  diffWithContext,
-  ensureGitRepo,
-  findMergeBase,
-  listChangedFiles,
-} from './git.mjs';
+import { detectDefaultBranch, ensureGitRepo, findMergeBase } from './git.mjs';
 
 function normalizePhase(phase) {
   const normalized = (phase || '').toLowerCase();
@@ -21,13 +16,15 @@ export async function runLocalReview({
   dryRun = false,
   debug = false,
   preferredModelHint = 'balanced',
+  model,
+  apiKey,
 } = {}) {
   const repoRoot = await ensureGitRepo(cwd);
   const defaultBranch = await detectDefaultBranch(repoRoot);
   const mergeBase = await findMergeBase(repoRoot, defaultBranch);
-  const changedFiles = await listChangedFiles(repoRoot, mergeBase);
+  const diff = await collectRepoDiff(repoRoot, mergeBase, { contextLines: debug ? 10 : 3 });
 
-  if (!changedFiles.length) {
+  if (!diff.changedFiles.length) {
     return {
       status: 'no-changes',
       repoRoot,
@@ -38,33 +35,32 @@ export async function runLocalReview({
 
   const plan = await buildExecutionPlan({
     phase: normalizePhase(phase),
-    changedFiles,
+    changedFiles: diff.changedFiles,
     availableContexts: ['diff'],
     preferredModelHint,
   });
 
-  const diffText = await diffWithContext(repoRoot, mergeBase, { unified: 3 });
-  const lineHints = collectAddedLineHints(diffText);
-  const tokenEstimate = Math.ceil(diffText.length / 4);
-  const skillIds = plan.selected.map(skill => skill.metadata?.id ?? skill.id);
-
-  const comments = changedFiles.map(file => ({
-    file,
-    line: lineHints.get(file) ?? 1,
-    message: skillIds.length
-      ? `Planned skills: ${skillIds.join(', ')}`
-      : 'No matching skills selected; review manually.',
-  }));
+  const review = await generateReview({
+    diff,
+    plan,
+    phase: normalizePhase(phase),
+    dryRun,
+    model,
+    apiKey,
+  });
 
   return {
     status: 'ok',
     repoRoot: path.resolve(repoRoot),
     defaultBranch,
     mergeBase,
-    changedFiles,
+    changedFiles: diff.changedFiles,
     plan,
-    diffText,
-    comments,
-    tokenEstimate,
+    diffText: diff.diffText,
+    files: diff.files,
+    comments: review.comments,
+    tokenEstimate: diff.tokenEstimate,
+    prompt: review.prompt,
+    reviewDebug: review.debug,
   };
 }

@@ -52,6 +52,8 @@ test('river run emits review comments in dry-run mode', async () => {
     assert.match(result.stdout, /River Reviewer/);
     assert.match(result.stdout, /Review comments/);
     assert.match(result.stdout, /README.md:/);
+    assert.match(result.stdout, /LLM:/);
+    assert.match(result.stdout, /Changed files/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -66,6 +68,19 @@ test('river run reports when there are no changes', async () => {
     const result = await runCli(['run', '.'], dir);
     assert.strictEqual(result.code, 0, result.stderr);
     assert.match(result.stdout, /No changes to review/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('river run falls back gracefully without API key', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--debug'], dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /River Reviewer/);
+    assert.match(result.stdout, /LLM: OPENAI_API_KEY/i);
+    assert.match(result.stdout, /Review comments/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
