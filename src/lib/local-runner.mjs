@@ -26,7 +26,9 @@ export async function runLocalReview({
   const mergeBase = await findMergeBase(repoRoot, defaultBranch);
   const diff = await collectRepoDiff(repoRoot, mergeBase, { contextLines: debug ? 10 : 3 });
 
-  if (!diff.changedFiles.length) {
+  const reviewFiles = diff.filesForReview?.map(file => file.path) ?? diff.changedFiles;
+
+  if (!reviewFiles.length) {
     return {
       status: 'no-changes',
       repoRoot,
@@ -37,7 +39,7 @@ export async function runLocalReview({
 
   const plan = await buildExecutionPlan({
     phase: normalizePhase(phase),
-    changedFiles: diff.changedFiles,
+    changedFiles: reviewFiles,
     availableContexts: ['diff'],
     preferredModelHint,
   });
@@ -57,12 +59,14 @@ export async function runLocalReview({
     repoRoot: path.resolve(repoRoot),
     defaultBranch,
     mergeBase,
-    changedFiles: diff.changedFiles,
+    changedFiles: reviewFiles,
     plan,
     diffText: diff.diffText,
-    files: diff.files,
+    files: diff.filesForReview ?? diff.files,
     comments: review.comments,
     tokenEstimate: diff.tokenEstimate,
+    rawTokenEstimate: diff.rawTokenEstimate,
+    reduction: diff.reduction,
     prompt: review.prompt,
     reviewDebug: review.debug,
     projectRules,
