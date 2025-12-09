@@ -1,9 +1,11 @@
 const DEFAULT_MODEL = 'gpt-4-turbo';
+const PRICING_LAST_UPDATED = '2025-12-01'; // adjust when pricing changes
 
 const MODEL_PRICES = {
   'gpt-4': { inputPer1k: 0.03, outputPer1k: 0.06 },
   'gpt-4-turbo': { inputPer1k: 0.01, outputPer1k: 0.03 },
   'gpt-3.5-turbo': { inputPer1k: 0.0005, outputPer1k: 0.0015 },
+  'gpt-4o-mini': { inputPer1k: 0.00015, outputPer1k: 0.0006 },
 };
 
 function getPricing(model) {
@@ -22,6 +24,7 @@ export class CostEstimator {
   constructor(model = DEFAULT_MODEL) {
     this.model = model;
     this.pricing = getPricing(model);
+    this.lastUpdated = PRICING_LAST_UPDATED;
   }
 
   /**
@@ -63,7 +66,8 @@ export class CostEstimator {
     const usd = cost?.usd ?? 0;
     return `Model: ${cost?.model || this.model}
 Estimated cost: $${usd.toFixed(4)} USD
-Tokens: ${cost.inputTokens} (input) + ${cost.outputTokens} (output)`;
+Tokens: ${cost.inputTokens} (input) + ${cost.outputTokens} (output)
+Pricing last updated: ${this.lastUpdated}`;
   }
 }
 

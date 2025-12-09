@@ -214,6 +214,7 @@ Debug: ${parsed.debug ? 'yes' : 'no'}`);
       phase: parsed.phase,
       dryRun: parsed.dryRun,
       debug: parsed.debug,
+      context,
     });
 
     printPlan(result.plan);

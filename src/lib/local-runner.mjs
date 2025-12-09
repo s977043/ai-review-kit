@@ -54,16 +54,19 @@ export async function planLocalReview({
   };
 }
 
-export async function runLocalReview({
-  cwd = process.cwd(),
-  phase = 'midstream',
-  dryRun = false,
-  debug = false,
-  preferredModelHint = 'balanced',
-  model,
-  apiKey,
-} = {}) {
-  const context = await planLocalReview({ cwd, phase, debug, preferredModelHint });
+export async function runLocalReview(
+  {
+    cwd = process.cwd(),
+    phase = 'midstream',
+    dryRun = false,
+    debug = false,
+    preferredModelHint = 'balanced',
+    model,
+    apiKey,
+    context: providedContext,
+  } = {},
+) {
+  const context = providedContext ?? (await planLocalReview({ cwd, phase, debug, preferredModelHint }));
   if (context.status === 'no-changes') {
     return {
       status: 'no-changes',
