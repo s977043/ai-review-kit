@@ -2,8 +2,9 @@
 import path from 'node:path';
 import process from 'node:process';
 import { GitRepoNotFoundError } from './lib/git.mjs';
-import { runLocalReview } from './lib/local-runner.mjs';
+import { planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError } from './lib/skill-loader.mjs';
+import CostEstimator from './core/cost-estimator.js';
 import { ProjectRulesError } from './lib/rules.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
@@ -19,6 +20,8 @@ Options:
   --phase <phase>   Review phase (upstream|midstream|downstream). Default: env RIVER_PHASE or midstream
   --dry-run         Do not call external services; print results to stdout
   --debug           Print debug information (merge base, files, token estimate)
+  --estimate        Print cost estimate only (no review)
+  --max-cost <usd>  Abort if estimated cost exceeds this USD amount
   -h, --help        Show this help message
 `);
 }
@@ -31,6 +34,8 @@ function parseArgs(argv) {
     phase: process.env.RIVER_PHASE || 'midstream',
     dryRun: false,
     debug: false,
+    estimate: false,
+    maxCost: null,
   };
 
   while (args.length) {
@@ -57,6 +62,20 @@ function parseArgs(argv) {
     }
     if (arg === '--debug') {
       parsed.debug = true;
+      continue;
+    }
+    if (arg === '--estimate') {
+      parsed.estimate = true;
+      continue;
+    }
+    if (arg === '--max-cost') {
+      const value = args.shift();
+      parsed.maxCost = value ? Number.parseFloat(value) : null;
+      if (!Number.isFinite(parsed.maxCost)) {
+        console.error('Error: --max-cost requires a numeric value.');
+        parsed.command = 'help';
+        break;
+      }
       continue;
     }
     if (arg === '-h' || arg === '--help') {
@@ -129,6 +148,16 @@ function printDebugInfo(result) {
   console.log(result.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
 }
 
+function countChangedLines(files) {
+  let lines = 0;
+  for (const file of files ?? []) {
+    for (const hunk of file.hunks ?? []) {
+      lines += (hunk.lines ?? []).filter(l => l.startsWith('+') || l.startsWith('-')).length;
+    }
+  }
+  return lines;
+}
+
 async function main() {
   const parsed = parseArgs(process.argv.slice(2));
   if (parsed.command === 'help' || !parsed.command) {
@@ -144,25 +173,48 @@ async function main() {
   const targetPath = path.resolve(parsed.target);
 
   try {
+    const context = await planLocalReview({
+      cwd: targetPath,
+      phase: parsed.phase,
+      debug: parsed.debug,
+    });
+
+    const estimator = new CostEstimator(process.env.OPENAI_MODEL || process.env.RIVER_OPENAI_MODEL || undefined);
+    const estimatedCost = estimator.estimateFromDiff(context.diff, context.plan?.selected ?? []);
+
+    console.log(`River Reviewer (local)
+Phase: ${parsed.phase}
+Repo: ${context.repoRoot}
+Base branch: ${context.defaultBranch}
+Merge base: ${context.mergeBase}
+Dry run: ${parsed.dryRun ? 'yes' : 'no'}
+Debug: ${parsed.debug ? 'yes' : 'no'}`);
+
+    if (context.status === 'no-changes') {
+      console.log(`No changes to review compared to ${context.defaultBranch}.`);
+      return 0;
+    }
+
+    if (parsed.maxCost !== null && estimatedCost.usd > parsed.maxCost) {
+      console.log(estimator.formatCost(estimatedCost));
+      console.error(`Estimated cost $${estimatedCost.usd.toFixed(4)} exceeds max-cost ${parsed.maxCost}. Aborting.`);
+      return 1;
+    }
+
+    if (parsed.estimate) {
+      console.log('Cost Estimate:');
+      console.log(estimator.formatCost(estimatedCost));
+      console.log(`Files to review: ${context.changedFiles.length}`);
+      console.log(`Lines changed (approx): ${countChangedLines(context.diff.filesForReview ?? context.diff.files)}`);
+      return 0;
+    }
+
     const result = await runLocalReview({
       cwd: targetPath,
       phase: parsed.phase,
       dryRun: parsed.dryRun,
       debug: parsed.debug,
     });
-
-    console.log(`River Reviewer (local)
-Phase: ${parsed.phase}
-Repo: ${result.repoRoot}
-Base branch: ${result.defaultBranch}
-Merge base: ${result.mergeBase}
-Dry run: ${parsed.dryRun ? 'yes' : 'no'}
-Debug: ${parsed.debug ? 'yes' : 'no'}`);
-
-    if (result.status === 'no-changes') {
-      console.log(`No changes to review compared to ${result.defaultBranch}.`);
-      return 0;
-    }
 
     printPlan(result.plan);
     printComments(result.comments);
