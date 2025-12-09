@@ -71,8 +71,8 @@ function parseArgs(argv) {
     if (arg === '--max-cost') {
       const value = args.shift();
       parsed.maxCost = value ? Number.parseFloat(value) : null;
-      if (!Number.isFinite(parsed.maxCost)) {
-        console.error('Error: --max-cost requires a numeric value.');
+      if (!Number.isFinite(parsed.maxCost) || parsed.maxCost < 0) {
+        console.error('Error: --max-cost requires a non-negative numeric value.');
         parsed.command = 'help';
         break;
       }
