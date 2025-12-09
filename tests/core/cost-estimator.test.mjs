@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CostEstimator } from '../../src/core/cost-estimator.js';
+import { CostEstimator } from '../../src/core/cost-estimator.mjs';
 
 test('estimateCost computes cost from tokens', () => {
   const est = new CostEstimator('gpt-3.5-turbo');

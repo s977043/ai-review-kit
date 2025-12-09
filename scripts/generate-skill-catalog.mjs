@@ -7,7 +7,7 @@ const OUTPUT_PATH = path.resolve('docs/skills-catalog.md');
 
 function formatSkill(skill) {
   const meta = skill.metadata;
-  const applyTo = Array.isArray(meta.applyTo) ? meta.applyTo.join(', ') : '';
+  const applyTo = Array.isArray(meta.applyTo) ? meta.applyTo.map(p => `\`${p}\``).join(', ') : '';
   const tags = meta.tags?.join(', ') ?? '';
   const severity = meta.severity ?? 'n/a';
   const deps = meta.dependencies?.join(', ') ?? 'none';

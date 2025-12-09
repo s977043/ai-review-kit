@@ -2,6 +2,7 @@
 module.exports = {
   docs: [
     'index',
+    'dashboard',
     {
       type: 'category',
       label: 'Tutorials',

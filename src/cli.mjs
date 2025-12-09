@@ -4,7 +4,7 @@ import process from 'node:process';
 import { GitRepoNotFoundError } from './lib/git.mjs';
 import { planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError } from './lib/skill-loader.mjs';
-import CostEstimator from './core/cost-estimator.js';
+import CostEstimator from './core/cost-estimator.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;

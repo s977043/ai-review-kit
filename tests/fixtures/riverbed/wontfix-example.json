@@ -1,0 +1,18 @@
+{
+  "id": "wontfix-logging-noise",
+  "type": "wontfix",
+  "title": "Verbose debug logging in beta branch",
+  "content": "Excessive debug logs were kept intentionally for beta observability. Do not remove until GA.",
+  "metadata": {
+    "createdAt": "2024-09-12T08:00:00.000Z",
+    "author": "QA Lead",
+    "phase": "midstream",
+    "tags": ["logging", "beta"],
+    "relatedFiles": ["apps/api/src/logger.ts"],
+    "summary": "Debug logs stay during beta; removal is wontfix."
+  },
+  "context": {
+    "relatedTickets": ["JIRA-1234"],
+    "expiresAfter": "GA launch"
+  }
+}

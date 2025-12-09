@@ -18,6 +18,14 @@
       ]
     },
     {
+      "id": "rr-downstream-test-naming-001",
+      "reasons": [
+        "phase mismatch: downstream !== midstream",
+        "applyTo did not match any changed file",
+        "missing required inputContext"
+      ]
+    },
+    {
       "id": "rr-downstream-test-review-sample-001",
       "reasons": [
         "phase mismatch: downstream !== midstream",
@@ -29,10 +37,26 @@
       "reasons": ["missing required inputContext"]
     },
     {
+      "id": "rr-midstream-security-basic-001",
+      "reasons": ["missing required inputContext"]
+    },
+    {
+      "id": "rr-midstream-typescript-strict-001",
+      "reasons": ["missing required inputContext"]
+    },
+    {
       "id": "rr-upstream-review-policy-standard-001",
       "reasons": [
         "phase mismatch: upstream !== midstream",
         "applyTo did not match any changed file"
+      ]
+    },
+    {
+      "id": "rr-upstream-api-design-001",
+      "reasons": [
+        "phase mismatch: upstream !== midstream",
+        "applyTo did not match any changed file",
+        "missing required inputContext"
       ]
     },
     {

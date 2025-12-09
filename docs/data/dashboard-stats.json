@@ -1,0 +1,111 @@
+{
+  "generatedAt": "2025-12-09T16:25:14.169Z",
+  "totals": {
+    "reviews": 29,
+    "filesReviewed": 87,
+    "comments": 116,
+    "averageCostUsd": 0.0293,
+    "tokenEstimate": 38500
+  },
+  "phases": [
+    {
+      "phase": "upstream",
+      "reviews": 4,
+      "comments": 10
+    },
+    {
+      "phase": "midstream",
+      "reviews": 8,
+      "comments": 26
+    },
+    {
+      "phase": "downstream",
+      "reviews": 6,
+      "comments": 14
+    }
+  ],
+  "skills": [
+    {
+      "id": "rr-midstream-security-basic-001",
+      "name": "Security basic",
+      "findings": 5
+    },
+    {
+      "id": "rr-midstream-typescript-strict-001",
+      "name": "TypeScript strictness",
+      "findings": 4
+    },
+    {
+      "id": "rr-downstream-test-naming-001",
+      "name": "Test naming",
+      "findings": 3
+    },
+    {
+      "id": "rr-upstream-api-design-001",
+      "name": "API design",
+      "findings": 2
+    }
+  ],
+  "costTrend": [
+    {
+      "date": "2025-12-01",
+      "costUsd": 0.04,
+      "tokens": 2500,
+      "requests": 2
+    },
+    {
+      "date": "2025-12-02",
+      "costUsd": 0.05,
+      "tokens": 2800,
+      "requests": 3
+    },
+    {
+      "date": "2025-12-03",
+      "costUsd": 0.06,
+      "tokens": 3100,
+      "requests": 4
+    },
+    {
+      "date": "2025-12-04",
+      "costUsd": 0.07,
+      "tokens": 3400,
+      "requests": 2
+    },
+    {
+      "date": "2025-12-05",
+      "costUsd": 0.08,
+      "tokens": 3700,
+      "requests": 3
+    },
+    {
+      "date": "2025-12-06",
+      "costUsd": 0.09,
+      "tokens": 4000,
+      "requests": 4
+    },
+    {
+      "date": "2025-12-07",
+      "costUsd": 0.1,
+      "tokens": 4300,
+      "requests": 2
+    },
+    {
+      "date": "2025-12-08",
+      "costUsd": 0.11,
+      "tokens": 4600,
+      "requests": 3
+    },
+    {
+      "date": "2025-12-09",
+      "costUsd": 0.12,
+      "tokens": 4900,
+      "requests": 4
+    },
+    {
+      "date": "2025-12-10",
+      "costUsd": 0.13,
+      "tokens": 5200,
+      "requests": 2
+    }
+  ]
+}
