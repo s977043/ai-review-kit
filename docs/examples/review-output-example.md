@@ -102,7 +102,7 @@ describe('Order total', () => {
   - tests/order.spec.ts:3 具体的な期待値が無く、値の誤差を検出できません。
   - tests/order.spec.ts:4 割引・送料・空配列などのケースがカバーされていません。要件の抜け漏れを見逃す恐れがあります。
 - Suggestions:
-  - 期待値を固定値で比較し、合計計算ロジックの回 regressions を検知する
+  - 期待値を固定値で比較し、合計計算ロジックの regressions を検知する
   - 空カート・割引適用・不正入力のケースを追加する
 
 ```typescript

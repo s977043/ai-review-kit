@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-12-09T16:25:14.169Z",
+  "generatedAt": "2025-12-09T21:12:37.289Z",
   "totals": {
     "reviews": 29,
     "filesReviewed": 87,
@@ -48,61 +48,61 @@
   ],
   "costTrend": [
     {
-      "date": "2025-12-01",
+      "date": "2025-11-22",
       "costUsd": 0.04,
       "tokens": 2500,
       "requests": 2
     },
     {
-      "date": "2025-12-02",
+      "date": "2025-11-23",
       "costUsd": 0.05,
       "tokens": 2800,
       "requests": 3
     },
     {
-      "date": "2025-12-03",
+      "date": "2025-11-24",
       "costUsd": 0.06,
       "tokens": 3100,
       "requests": 4
     },
     {
-      "date": "2025-12-04",
+      "date": "2025-11-25",
       "costUsd": 0.07,
       "tokens": 3400,
       "requests": 2
     },
     {
-      "date": "2025-12-05",
+      "date": "2025-11-26",
       "costUsd": 0.08,
       "tokens": 3700,
       "requests": 3
     },
     {
-      "date": "2025-12-06",
+      "date": "2025-11-27",
       "costUsd": 0.09,
       "tokens": 4000,
       "requests": 4
     },
     {
-      "date": "2025-12-07",
+      "date": "2025-11-28",
       "costUsd": 0.1,
       "tokens": 4300,
       "requests": 2
     },
     {
-      "date": "2025-12-08",
+      "date": "2025-11-29",
       "costUsd": 0.11,
       "tokens": 4600,
       "requests": 3
     },
     {
-      "date": "2025-12-09",
+      "date": "2025-11-30",
       "costUsd": 0.12,
       "tokens": 4900,
       "requests": 4
     },
     {
-      "date": "2025-12-10",
+      "date": "2025-12-01",
       "costUsd": 0.13,
       "tokens": 5200,
       "requests": 2

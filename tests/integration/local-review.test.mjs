@@ -103,6 +103,11 @@ test('fails clearly when project rules cannot be read', async () => {
     assert.notStrictEqual(result.code, 0);
     assert.match(result.stderr, /Failed to read project rules/);
   } finally {
+    try {
+      await fs.promises.chmod(join(dir, '.river', 'rules.md'), 0o644);
+    } catch {
+      // ignore cleanup errors
+    }
     await rm(dir, { recursive: true, force: true });
   }
 });

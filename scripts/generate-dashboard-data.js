@@ -4,7 +4,7 @@ const path = require('path');
 const { subDays, formatISO } = require('date-fns');
 
 function createFallbackTrend(days = 7) {
-  const today = new Date();
+  const today = new Date('2025-12-01T00:00:00Z');
   return Array.from({ length: days }).map((_, idx) => {
     const date = subDays(today, days - idx - 1);
     return {
