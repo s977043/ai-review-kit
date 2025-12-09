@@ -105,6 +105,28 @@ test('river run injects project rules into prompt when present', async () => {
   }
 });
 
+test('river run supports cost estimation only', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--estimate'], dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /Cost Estimate/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('river run aborts when max-cost is exceeded', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--max-cost', '0.0001'], dir);
+    assert.notStrictEqual(result.code, 0);
+    assert.match(result.stdout + result.stderr, /exceeds max-cost/i);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('river run skips markdown-only changes after optimization', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'river-cli-md-'));
   try {

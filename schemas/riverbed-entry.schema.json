@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Riverbed Memory Entry Schema",
+  "type": "object",
+  "required": ["id", "type", "content", "metadata"],
+  "additionalProperties": false,
+  "$defs": {
+    "entryType": {
+      "type": "string",
+      "enum": ["adr", "review", "wontfix", "pattern", "decision"]
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["upstream", "midstream", "downstream"]
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "relatedFiles": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the memory entry."
+    },
+    "type": {
+      "$ref": "#/$defs/entryType",
+      "description": "Type of memory (adr, review, wontfix, pattern, decision)."
+    },
+    "title": {
+      "type": "string",
+      "description": "Optional short title describing the entry."
+    },
+    "content": {
+      "type": "string",
+      "description": "Full text content of the memory entry."
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["createdAt", "author"],
+      "additionalProperties": false,
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when the entry was recorded."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional ISO timestamp for the latest update."
+        },
+        "author": {
+          "type": "string",
+          "description": "Author or agent who added the entry."
+        },
+        "phase": {
+          "$ref": "#/$defs/phase",
+          "description": "Review phase relevant to this entry."
+        },
+        "tags": {
+          "$ref": "#/$defs/tags",
+          "description": "Free-form tags for search and grouping."
+        },
+        "relatedFiles": {
+          "$ref": "#/$defs/relatedFiles",
+          "description": "List of file paths related to this memory."
+        },
+        "links": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "description": "External links such as PRs or tickets."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Optional confidence score for this entry."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short summary for quick previews."
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional contextual metadata (e.g., related ADR IDs, PR numbers)."
+    }
+  }
+}
