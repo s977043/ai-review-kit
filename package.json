@@ -45,7 +45,7 @@
     "@opentelemetry/semantic-conventions": "^1.38.0",
     "minimatch": "^10.1.1",
     "react": "^19.2.1",
-    "react-dom": "^19.2.0",
+    "react-dom": "^19.2.1",
     "recharts": "^2.12.7",
     "date-fns": "^3.6.0"
   },
