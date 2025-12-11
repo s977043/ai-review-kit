@@ -4,6 +4,7 @@ import { generateReview } from './review-engine.mjs';
 import { detectDefaultBranch, ensureGitRepo, findMergeBase } from './git.mjs';
 import { buildExecutionPlan } from './review-runner.mjs';
 import { loadProjectRules } from './rules.mjs';
+import { parseList } from './utils.mjs';
 
 function normalizePhase(phase) {
   const normalized = (phase || '').toLowerCase();
@@ -11,15 +12,8 @@ function normalizePhase(phase) {
   return 'midstream';
 }
 
+// NOTE: Keep this list in sync with schemas/skill.schema.json dependencies enum.
 const dependencyStubs = ['code_search', 'test_runner', 'coverage_report', 'adr_lookup', 'repo_metadata', 'tracing'];
-
-function parseList(value) {
-  if (!value) return [];
-  return String(value)
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
-}
 
 function resolveAvailableContexts(inputContexts) {
   const envContexts = parseList(process.env.RIVER_AVAILABLE_CONTEXTS);

@@ -6,6 +6,7 @@ import { planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError } from './lib/skill-loader.mjs';
 import CostEstimator from './core/cost-estimator.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
+import { parseList } from './lib/utils.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
@@ -26,14 +27,6 @@ Options:
   --dependency list Comma-separated available dependencies (e.g. code_search,test_runner). Overrides RIVER_AVAILABLE_DEPENDENCIES
   -h, --help        Show this help message
 `);
-}
-
-function parseList(value) {
-  if (!value) return [];
-  return String(value)
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
 }
 
 function parseArgs(argv) {

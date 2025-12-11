@@ -70,7 +70,7 @@ function evaluateSkill(skill, options) {
 export function selectSkills(skills, options) {
   const changedFiles = ensureArray(options.changedFiles);
   const availableContexts = ensureArray(options.availableContexts);
-  const availableDependencies = options.availableDependencies ? ensureArray(options.availableDependencies) : null;
+  const availableDependencies = options.availableDependencies ?? null;
   const selected = [];
   const skipped = [];
 

@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+      - uses: {org}/{repo}/.github/actions/river-reviewer@main
         with:
           phase: midstream
           dry_run: true
