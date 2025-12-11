@@ -4,6 +4,7 @@ import { generateReview } from './review-engine.mjs';
 import { detectDefaultBranch, ensureGitRepo, findMergeBase } from './git.mjs';
 import { buildExecutionPlan } from './review-runner.mjs';
 import { loadProjectRules } from './rules.mjs';
+import { parseList } from './utils.mjs';
 
 function normalizePhase(phase) {
   const normalized = (phase || '').toLowerCase();
@@ -11,11 +12,33 @@ function normalizePhase(phase) {
   return 'midstream';
 }
 
+// NOTE: Keep this list in sync with schemas/skill.schema.json dependencies enum.
+const dependencyStubs = ['code_search', 'test_runner', 'coverage_report', 'adr_lookup', 'repo_metadata', 'tracing'];
+
+function resolveAvailableContexts(inputContexts) {
+  const envContexts = parseList(process.env.RIVER_AVAILABLE_CONTEXTS);
+  const base = inputContexts?.length ? inputContexts : ['diff'];
+  return [...new Set([...base, ...envContexts])];
+}
+
+function resolveAvailableDependencies(inputDependencies) {
+  const envDeps = parseList(process.env.RIVER_AVAILABLE_DEPENDENCIES);
+  const stubEnabled =
+    typeof process.env.RIVER_DEPENDENCY_STUBS === 'string' &&
+    ['1', 'true', 'yes', 'stub'].includes(process.env.RIVER_DEPENDENCY_STUBS.toLowerCase());
+  if (inputDependencies?.length) return [...new Set(inputDependencies)];
+  if (envDeps.length) return [...new Set(envDeps)];
+  if (stubEnabled) return [...dependencyStubs];
+  return null; // null disables dependency-based skipping (backward-compatible)
+}
+
 export async function planLocalReview({
   cwd = process.cwd(),
   phase = 'midstream',
   debug = false,
   preferredModelHint = 'balanced',
+  availableContexts,
+  availableDependencies,
 } = {}) {
   const repoRoot = await ensureGitRepo(cwd);
   const { rulesText: projectRules } = await loadProjectRules(repoRoot);
@@ -23,6 +46,8 @@ export async function planLocalReview({
   const mergeBase = await findMergeBase(repoRoot, defaultBranch);
   const diff = await collectRepoDiff(repoRoot, mergeBase, { contextLines: debug ? 10 : 3 });
   const reviewFiles = diff.filesForReview?.map(file => file.path) ?? diff.changedFiles;
+  const contexts = resolveAvailableContexts(availableContexts);
+  const dependencies = resolveAvailableDependencies(availableDependencies);
 
   if (!reviewFiles.length) {
     return {
@@ -32,13 +57,16 @@ export async function planLocalReview({
       mergeBase,
       projectRules,
       diff,
+      availableContexts: contexts,
+      availableDependencies: dependencies,
     };
   }
 
   const plan = await buildExecutionPlan({
     phase: normalizePhase(phase),
     changedFiles: reviewFiles,
-    availableContexts: ['diff'],
+    availableContexts: contexts,
+    availableDependencies: dependencies,
     preferredModelHint,
   });
 
@@ -51,6 +79,8 @@ export async function planLocalReview({
     plan,
     diff,
     projectRules,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
   };
 }
 
@@ -64,9 +94,20 @@ export async function runLocalReview(
     model,
     apiKey,
     context: providedContext,
+    availableContexts,
+    availableDependencies,
   } = {},
 ) {
-  const context = providedContext ?? (await planLocalReview({ cwd, phase, debug, preferredModelHint }));
+  const context =
+    providedContext ??
+    (await planLocalReview({
+      cwd,
+      phase,
+      debug,
+      preferredModelHint,
+      availableContexts,
+      availableDependencies,
+    }));
   if (context.status === 'no-changes') {
     return {
       status: 'no-changes',
@@ -102,5 +143,7 @@ export async function runLocalReview(
     prompt: review.prompt,
     reviewDebug: review.debug,
     projectRules: context.projectRules,
+    availableContexts: context.availableContexts,
+    availableDependencies: context.availableDependencies,
   };
 }

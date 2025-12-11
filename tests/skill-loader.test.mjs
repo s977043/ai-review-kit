@@ -16,7 +16,7 @@ test('loads existing sample skill and applies default outputKind', async () => {
   const loaded = await loadSkillFile(skillPath, { validator });
 
   assert.equal(loaded.metadata.id, 'rr-upstream-architecture-sample-001');
-  assert.deepEqual(loaded.metadata.outputKind, ['findings']);
+  assert.deepEqual(loaded.metadata.outputKind, ['findings', 'summary', 'questions', 'actions']);
   assert.ok(loaded.body.includes('# Instruction'));
 });
 

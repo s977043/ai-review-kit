@@ -37,6 +37,53 @@ test('skips when required inputContext is missing', () => {
   assert.ok(skipped[0].reasons.some(r => r.includes('missing')));
 });
 
+test('skips when dependencies are not available', () => {
+  const skills = [
+    {
+      metadata: {
+        id: 'needs-deps',
+        name: 'Needs test runner',
+        description: 'requires test runner',
+        phase: 'midstream',
+        applyTo: ['src/**/*.ts'],
+        dependencies: ['test_runner'],
+      },
+    },
+  ];
+  const { selected, skipped } = selectSkills(skills, {
+    phase: 'midstream',
+    changedFiles: ['src/service.ts'],
+    availableContexts: ['diff'],
+    availableDependencies: [],
+  });
+  assert.equal(selected.length, 0);
+  assert.equal(skipped.length, 1);
+  assert.ok(skipped[0].reasons.some(r => r.includes('missing dependencies')));
+});
+
+test('selects when dependencies are available', () => {
+  const skills = [
+    {
+      metadata: {
+        id: 'needs-deps',
+        name: 'Needs test runner',
+        description: 'requires test runner',
+        phase: 'midstream',
+        applyTo: ['src/**/*.ts'],
+        dependencies: ['test_runner'],
+      },
+    },
+  ];
+  const { selected, skipped } = selectSkills(skills, {
+    phase: 'midstream',
+    changedFiles: ['src/service.ts'],
+    availableContexts: ['diff'],
+    availableDependencies: ['test_runner'],
+  });
+  assert.equal(selected.length, 1);
+  assert.equal(skipped.length, 0);
+});
+
 test('ranks skills using modelHint proximity', () => {
   const skills = [
     { metadata: { id: 'cheap', phase: 'midstream', applyTo: ['src/**'], modelHint: 'cheap' } },

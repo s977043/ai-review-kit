@@ -1,0 +1,63 @@
+name: 'River Reviewer'
+description: 'Run River Reviewer CLI with phase-aware planning.'
+inputs:
+  phase:
+    description: 'Review phase (upstream|midstream|downstream).'
+    required: false
+    default: 'midstream'
+  target:
+    description: 'Path to the git repository to review.'
+    required: false
+    default: '.'
+  dry_run:
+    description: 'Run in dry-run mode (no external calls, print to stdout).'
+    required: false
+    default: 'true'
+  debug:
+    description: 'Print debug information (merge base, token estimates, prompt preview).'
+    required: false
+    default: 'false'
+  estimate:
+    description: 'Estimate cost only without running the review.'
+    required: false
+    default: 'false'
+  max_cost:
+    description: 'Abort if estimated USD cost exceeds this value.'
+    required: false
+    default: ''
+  node_version:
+    description: 'Node.js version to use.'
+    required: false
+    default: '20'
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node_version }}
+        cache: npm
+    - name: Install dependencies
+      run: npm ci
+      shell: bash
+    - name: Run River Reviewer
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmd=(npm run river -- run "${{ inputs.target }}" --phase "${{ inputs.phase }}")
+        if [ "${{ inputs.dry_run }}" = "true" ]; then
+          cmd+=("--dry-run")
+        fi
+        if [ "${{ inputs.debug }}" = "true" ]; then
+          cmd+=("--debug")
+        fi
+        if [ "${{ inputs.estimate }}" = "true" ]; then
+          cmd+=("--estimate")
+        fi
+        if [ -n "${{ inputs.max_cost }}" ]; then
+          cmd+=("--max-cost" "${{ inputs.max_cost }}")
+        fi
+        echo "Running: ${cmd[*]}"
+        "${cmd[@]}"
+branding:
+  icon: 'play-circle'
+  color: 'blue'

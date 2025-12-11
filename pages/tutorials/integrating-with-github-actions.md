@@ -4,7 +4,7 @@ Wire River Reviewer into your repository so every PR gets phase-aware feedback.
 
 ## 1. Add the workflow
 
-Create `.github/workflows/river-review.yml` (replace `{org}` with your organization or user):
+Create `.github/workflows/river-review.yml`:
 
 ```yaml
 name: River Reviewer
@@ -19,11 +19,19 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: {org}/river-reviewer@v1
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: {org}/{repo}/.github/actions/river-reviewer@main
+        with:
+          phase: midstream
+          dry_run: true
+          debug: false
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-> Note: `{org}/river-reviewer@v1` is a placeholder. Point this to the published River Reviewer action in your org or the official repository.
+> Use `@main` until a release tag is available, then switch to `@v1` to pin to a stable release.
 
 ## 2. Keep credentials out of the flow
 
