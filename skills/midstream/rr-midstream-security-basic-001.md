@@ -26,7 +26,7 @@ dependencies: [code_search]
 
 - 文字列連結でクエリを構築している (`SELECT ... ${userInput}`)
 - `innerHTML` / `dangerouslySetInnerHTML` / `DOMParser` などで外部入力を未エスケープで出力
-- ORM/raw クエリでプレースホルダを使わずに外部入力を埋め込んでいる（`prisma.$queryRaw` など）
+- ORM/raw クエリでプレースホルダを使わずに外部入力を埋め込んでいる（`prisma.$queryRawUnsafe` など）
 - `.env` で管理すべき値がコードに直書きされている（キー、パスワード、トークン）
 - 外部 API/リクエストボディ/URL パラメータのバリデーションや認可チェックが無い
 - 例外時のレスポンスが漏洩（スタックトレースや詳細エラーメッセージを返している）
