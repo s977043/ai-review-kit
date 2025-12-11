@@ -36,6 +36,15 @@ function hasRequiredContext(skill, availableContexts) {
   return meta.inputContext.every(ctx => available.has(ctx));
 }
 
+function missingDependencies(skill, availableDependencies) {
+  const meta = getMeta(skill);
+  const deps = ensureArray(meta.dependencies);
+  if (!deps.length) return [];
+  if (availableDependencies == null) return [];
+  const available = new Set(ensureArray(availableDependencies));
+  return deps.filter(dep => !available.has(dep));
+}
+
 function evaluateSkill(skill, options) {
   const reasons = [];
   const meta = getMeta(skill);
@@ -48,6 +57,10 @@ function evaluateSkill(skill, options) {
   if (!hasRequiredContext(meta, options.availableContexts)) {
     reasons.push('missing required inputContext');
   }
+  const depsMissing = missingDependencies(meta, options.availableDependencies);
+  if (depsMissing.length) {
+    reasons.push(`missing dependencies: ${depsMissing.join(', ')}`);
+  }
   return {
     ok: reasons.length === 0,
     reasons,
@@ -57,6 +70,7 @@ function evaluateSkill(skill, options) {
 export function selectSkills(skills, options) {
   const changedFiles = ensureArray(options.changedFiles);
   const availableContexts = ensureArray(options.availableContexts);
+  const availableDependencies = options.availableDependencies ? ensureArray(options.availableDependencies) : null;
   const selected = [];
   const skipped = [];
 
@@ -65,6 +79,7 @@ export function selectSkills(skills, options) {
       phase: options.phase,
       changedFiles,
       availableContexts,
+      availableDependencies,
     });
     if (result.ok) {
       selected.push(skill);
@@ -96,13 +111,19 @@ export async function buildExecutionPlan(options) {
     phase,
     changedFiles = [],
     availableContexts = [],
+    availableDependencies = null,
     preferredModelHint = 'balanced',
     skills: providedSkills,
     planner,
   } = options;
 
   const skills = providedSkills ?? (await loadSkills());
-  const selection = selectSkills(skills, { phase, changedFiles, availableContexts });
+  const selection = selectSkills(skills, {
+    phase,
+    changedFiles,
+    availableContexts,
+    availableDependencies,
+  });
   if (selection.selected.length === 0) {
     return { selected: [], skipped: selection.skipped };
   }

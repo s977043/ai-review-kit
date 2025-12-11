@@ -25,6 +25,17 @@
       ]
     },
     {
+      "id": "rr-downstream-coverage-gap-001",
+      "reasons": ["phase mismatch: downstream !== midstream", "missing required inputContext"]
+    },
+    {
+      "id": "rr-downstream-flaky-test-001",
+      "reasons": [
+        "phase mismatch: downstream !== midstream",
+        "applyTo did not match any changed file"
+      ]
+    },
+    {
       "id": "rr-downstream-test-naming-001",
       "reasons": [
         "phase mismatch: downstream !== midstream",
@@ -36,7 +47,8 @@
       "id": "rr-downstream-test-review-sample-001",
       "reasons": [
         "phase mismatch: downstream !== midstream",
-        "applyTo did not match any changed file"
+        "applyTo did not match any changed file",
+        "missing required inputContext"
       ]
     },
     {

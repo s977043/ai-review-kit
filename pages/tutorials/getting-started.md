@@ -6,7 +6,7 @@ This tutorial helps you run your first review using the GitHub Action.
 
 ## 1. Install / Enable
 
-Add the following workflow (replace `{org}` with your organization or user):
+Add the following workflow:
 
 ```yaml
 name: River Review
@@ -20,11 +20,19 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: {org}/river-reviewer@v1
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+        with:
+          phase: midstream
+          dry_run: true # set false to call external APIs
+          debug: true # show merge base, token estimates, prompt preview
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-> Note: `{org}/river-reviewer@v1` is a placeholder. Point this to the published River Reviewer action in your org or the official repository.
+> Use `@main` until a release tag is published; then pin to `@v1` in your workflows.
 
 ## 2. Run the review
 

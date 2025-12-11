@@ -12,6 +12,18 @@ tags:
   - coverage
   - downstream
 severity: 'major'
+inputContext:
+  - diff
+  - tests
+outputKind:
+  - tests
+  - findings
+  - summary
+  - actions
+modelHint: balanced
+dependencies:
+  - test_runner
+  - coverage_report
 ---
 
 # Instruction

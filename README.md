@@ -29,18 +29,18 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # merge-base を安定取得
       - name: Run River Reviewer (midstream)
-        uses: s977043/river-reviewer@v1
+        uses: s977043/river-reviewer/.github/actions/river-reviewer@main
         with:
           phase: midstream # upstream|midstream|downstream|all (future-ready)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-新しいタグが出たら、`@v1` を最新のリリースタグに置き換えてください。
+リリースタグが出るまでは `@main` を使用し、公開されたら `@v1` などのタグに切り替えてください。
 
 ### 高度な設定例
 
@@ -51,45 +51,45 @@ jobs:
   review-upstream:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer@v1
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
         with: { phase: upstream }
         env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
 
   review-midstream:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer@v1
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
         with: { phase: midstream }
         env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
 
   review-downstream:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer@v1
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
         with: { phase: downstream }
         env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
 ```
 
-- 条件付き実行やコスト管理の例
+- コスト見積もりと上限の例
 
 ```yaml
 review:
   runs-on: ubuntu-latest
   if: "!contains(github.event.pull_request.title, '[skip-review]')" # タイトルでスキップ
   steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with: { fetch-depth: 0 }
-    - uses: s977043/river-reviewer@v1
+    - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
       with:
         phase: midstream
-        max-files: 100 # 大量変更時にレビュー対象を制限
-        skip-large-files: true # 大きすぎるファイルを除外
+        estimate: true # コスト見積もりのみ
+        max_cost: 1.5 # USD 上限、超過で終了
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
@@ -101,24 +101,25 @@ review:
     if: github.event.pull_request.draft == true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer@v1
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
         with:
           phase: midstream
-          max-files: 20            # Draft は軽め
+          dry_run: true            # Draft はドライランでプロンプト確認のみ
+          debug: true
         env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
 
   review-full:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer@v1
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
         with:
           phase: midstream
-          max-files: 200           # Ready ではフルレビュー
+          dry_run: false           # Ready ではフルレビュー
         env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
 ```
 
@@ -143,6 +144,9 @@ review:
 2. `--debug` を付けるとマージベース、対象ファイル一覧、プロンプトのプレビュー、トークン見積もり、diff 抜粋を標準出力へ表示
 3. OpenAI の LLM を使う場合は `OPENAI_API_KEY`（または `RIVER_OPENAI_API_KEY`）を設定して `river run .` を実行。未設定時はスキルベースのヒューリスティックコメントでフォールバック
 4. `--dry-run` は外部 API を呼ばず標準出力のみ。`--phase upstream|midstream|downstream` でフェーズ指定も可能（デフォルトは `RIVER_PHASE` 環境変数または `midstream`）
+5. コンテキスト/依存の制御: `RIVER_AVAILABLE_CONTEXTS=diff,tests` や `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` を設定すると、スキル選択時に要求を満たさないものを理由付きでスキップできます（未設定の場合は依存チェックをスキップ）。
+6. CLI で直接指定する場合: `--context diff,fullFile` や `--dependency code_search,test_runner` フラグで環境変数を上書きできます（逗号区切り）。
+7. 依存のスタブ有効化: `RIVER_DEPENDENCY_STUBS=1` を指定すると、既知の依存（`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`）を「利用可能」とみなしてスキップを防ぎます。実装準備中の環境でプランだけ確認したいときに使用してください。
 
 ## Project-specific review rules
 

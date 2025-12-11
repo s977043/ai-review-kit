@@ -29,14 +29,16 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Run River Reviewer (midstream)
-        uses: s977043/river-reviewer@v1
+        uses: s977043/river-reviewer/.github/actions/river-reviewer@main
         with:
           phase: midstream # upstream|midstream|downstream|all (future-ready)
 ```
 
-Note: Replace `@v1` with the latest released tag when a newer version is available.
+Use `@main` until a release tag is published; then pin to `@v1` (or later) for stability.
 
 ## Quick start (local)
 
@@ -52,6 +54,9 @@ Note: Replace `@v1` with the latest released tag when a newer version is availab
 - After installation, run `npx river run . --dry-run` to print skill selection and placeholder review comments for the current diff without sending anything externally (local mode is currently planning/preview only)
 - Add `--debug` to show merge base, changed files, token estimate, and a diff preview
 - Specify phase via `--phase upstream|midstream|downstream`; defaults to `RIVER_PHASE` env or `midstream`
+- Control contexts/dependencies (optional): set `RIVER_AVAILABLE_CONTEXTS=diff,tests` or `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` to skip skills that require unavailable inputs; if unset, dependency checks are bypassed for backward compatibility.
+- Override via CLI flags: `--context diff,fullFile` and `--dependency code_search,test_runner` override the env vars (comma-separated).
+- Enable stub dependencies: set `RIVER_DEPENDENCY_STUBS=1` to treat known dependencies (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`) as available so planning doesn’t skip them while provider implementations are being readied.
 
 ## Skills
 

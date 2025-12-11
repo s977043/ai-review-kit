@@ -22,8 +22,18 @@ Options:
   --debug           Print debug information (merge base, files, token estimate)
   --estimate        Print cost estimate only (no review)
   --max-cost <usd>  Abort if estimated cost exceeds this USD amount
+  --context list    Comma-separated available contexts (e.g. diff,fullFile,tests). Overrides RIVER_AVAILABLE_CONTEXTS
+  --dependency list Comma-separated available dependencies (e.g. code_search,test_runner). Overrides RIVER_AVAILABLE_DEPENDENCIES
   -h, --help        Show this help message
 `);
+}
+
+function parseList(value) {
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
 }
 
 function parseArgs(argv) {
@@ -36,6 +46,8 @@ function parseArgs(argv) {
     debug: false,
     estimate: false,
     maxCost: null,
+    availableContexts: null,
+    availableDependencies: null,
   };
 
   while (args.length) {
@@ -76,6 +88,14 @@ function parseArgs(argv) {
         parsed.command = 'help';
         break;
       }
+      continue;
+    }
+    if (arg === '--context') {
+      parsed.availableContexts = parseList(args.shift());
+      continue;
+    }
+    if (arg === '--dependency') {
+      parsed.availableDependencies = parseList(args.shift());
       continue;
     }
     if (arg === '-h' || arg === '--help') {
@@ -132,6 +152,10 @@ function printDebugInfo(result) {
 - Prompt truncated: ${debug.promptTruncated ? 'yes' : 'no'}
 - Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}
 - Project rules: ${result.projectRules ? 'present' : 'none'}
+- Available contexts: ${(result.availableContexts || []).join(', ') || 'none'}
+- Available dependencies: ${
+    result.availableDependencies ? result.availableDependencies.join(', ') : 'not specified (skip disabled)'
+  }
 `);
   if (debug.llmError) {
     console.log(`LLM error: ${debug.llmError}`);
@@ -143,6 +167,13 @@ function printDebugInfo(result) {
         : debug.promptPreview;
     console.log('Prompt preview:');
     console.log(trimmed);
+  }
+  if (result.plan?.skipped?.length) {
+    console.log('\nSkipped skills detail:');
+    result.plan.skipped.forEach(item => {
+      const id = item.skill?.metadata?.id ?? item.skill?.id ?? '(unknown)';
+      console.log(`- ${id}: ${item.reasons.join('; ')}`);
+    });
   }
   console.log('\n--- diff preview ---');
   console.log(result.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
@@ -177,6 +208,8 @@ async function main() {
       cwd: targetPath,
       phase: parsed.phase,
       debug: parsed.debug,
+      availableContexts: parsed.availableContexts,
+      availableDependencies: parsed.availableDependencies,
     });
 
     const estimator = new CostEstimator(process.env.OPENAI_MODEL || process.env.RIVER_OPENAI_MODEL || undefined);
@@ -188,7 +221,11 @@ Repo: ${context.repoRoot}
 Base branch: ${context.defaultBranch}
 Merge base: ${context.mergeBase}
 Dry run: ${parsed.dryRun ? 'yes' : 'no'}
-Debug: ${parsed.debug ? 'yes' : 'no'}`);
+Debug: ${parsed.debug ? 'yes' : 'no'}
+Contexts: ${(context.availableContexts || []).join(', ') || 'none'}
+Dependencies: ${
+      context.availableDependencies ? context.availableDependencies.join(', ') : 'not specified (skip disabled)'
+    }`);
 
     if (context.status === 'no-changes') {
       console.log(`No changes to review compared to ${context.defaultBranch}.`);
@@ -215,6 +252,8 @@ Debug: ${parsed.debug ? 'yes' : 'no'}`);
       dryRun: parsed.dryRun,
       debug: parsed.debug,
       context,
+      availableContexts: parsed.availableContexts,
+      availableDependencies: parsed.availableDependencies,
     });
 
     printPlan(result.plan);

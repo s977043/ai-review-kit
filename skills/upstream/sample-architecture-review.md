@@ -11,6 +11,16 @@ tags:
   - architecture
   - upstream
 severity: 'minor'
+inputContext:
+  - diff
+outputKind:
+  - findings
+  - summary
+  - questions
+  - actions
+modelHint: balanced
+dependencies:
+  - adr_lookup
 ---
 
 # Instruction

@@ -1,4 +1,4 @@
-name: River Reviewer (placeholder)
+name: River Reviewer
 
 on:
   workflow_dispatch:
@@ -6,12 +6,41 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
   river-reviewer:
     runs-on: ubuntu-latest
-    env:
-      RR_PHASE: midstream
+    needs: [lint, test]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Run River Reviewer
-        run: echo "River Reviewer placeholder run for phase=${RR_PHASE:-midstream}"
+        with:
+          fetch-depth: 0
+      - name: Run River Reviewer (midstream)
+        uses: ./.github/actions/river-reviewer
+        with:
+          phase: midstream
+          dry_run: true # set false after verifying secrets/models
+          debug: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
