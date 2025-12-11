@@ -127,6 +127,17 @@ test('river run aborts when max-cost is exceeded', async () => {
   }
 });
 
+test('river run rejects negative max-cost value', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--max-cost', '-1'], dir);
+    assert.strictEqual(result.code, 0);
+    assert.match(result.stderr, /requires a non-negative numeric value/i);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('river run skips markdown-only changes after optimization', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'river-cli-md-'));
   try {
