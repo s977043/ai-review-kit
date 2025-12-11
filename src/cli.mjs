@@ -106,7 +106,13 @@ function formatPlan(plan) {
     id: item.skill.metadata?.id ?? item.skill.id,
     reasons: item.reasons,
   }));
-  return { selected, skipped };
+  const reasonCounts = skipped.reduce((acc, item) => {
+    (item.reasons || []).forEach(reason => {
+      acc.set(reason, (acc.get(reason) ?? 0) + 1);
+    });
+    return acc;
+  }, new Map());
+  return { selected, skipped, reasonCounts };
 }
 
 function printPlan(plan) {
@@ -121,6 +127,12 @@ function printPlan(plan) {
     summary.skipped.forEach(item => {
       console.log(`- ${item.id}: ${item.reasons.join('; ')}`);
     });
+    if (summary.reasonCounts.size) {
+      console.log('Skip reasons summary:');
+      for (const [reason, count] of summary.reasonCounts.entries()) {
+        console.log(`- ${reason}: ${count}`);
+      }
+    }
   }
 }
 
