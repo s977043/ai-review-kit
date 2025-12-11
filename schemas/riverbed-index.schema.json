@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Riverbed Memory Index Schema",
+  "type": "object",
+  "required": ["entries"],
+  "additionalProperties": false,
+  "$defs": {
+    "entryReference": {
+      "type": "object",
+      "required": ["id", "type", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["adr", "review", "wontfix", "pattern", "decision"]
+        },
+        "path": { "type": "string", "description": "Relative path to the entry JSON file." },
+        "title": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "phase": {
+          "type": "string",
+          "enum": ["upstream", "midstream", "downstream"]
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "summary": { "type": "string" }
+      }
+    }
+  },
+  "properties": {
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this index was generated."
+    },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entryReference" }
+    }
+  }
+}

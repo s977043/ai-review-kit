@@ -41,4 +41,7 @@ module.exports = {
     hooks: { onBrokenMarkdownLinks: 'warn' },
   },
   onBrokenLinks: 'throw',
+  plugins: [
+    [require.resolve('./plugins/river-dashboard'), { dataPath: 'docs/data/dashboard-stats.json' }],
+  ],
 };

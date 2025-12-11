@@ -33,14 +33,16 @@ async function createRepoWithChange() {
   await runGit(['config', 'user.email', 'cli@example.com'], dir);
   await runGit(['config', 'user.name', 'CLI Tester'], dir);
 
-  const readme = join(dir, 'README.md');
-  writeFileSync(readme, '# sample\n');
+  const srcDir = join(dir, 'src');
+  await mkdir(srcDir, { recursive: true });
+  const app = join(srcDir, 'app.js');
+  writeFileSync(app, 'export const value = 1;\n');
   await runGit(['add', '.'], dir);
   await runGit(['commit', '-m', 'init'], dir);
 
-  writeFileSync(readme, '# sample\nupdated\n');
+  writeFileSync(app, 'export const value = 2;\n');
 
-  return { dir, readme };
+  return { dir, app };
 }
 
 test('river run emits review comments in dry-run mode', async () => {
@@ -51,7 +53,7 @@ test('river run emits review comments in dry-run mode', async () => {
     assert.strictEqual(result.code, 0, result.stderr);
     assert.match(result.stdout, /River Reviewer/);
     assert.match(result.stdout, /Review comments/);
-    assert.match(result.stdout, /README.md:/);
+    assert.match(result.stdout, /src\/app.js:/);
     assert.match(result.stdout, /LLM:/);
     assert.match(result.stdout, /Changed files/);
   } finally {
@@ -98,6 +100,59 @@ test('river run injects project rules into prompt when present', async () => {
     assert.match(result.stdout, /Project rules: present/);
     assert.match(result.stdout, /Project-specific review rules/i);
     assert.match(result.stdout, /Use App Router/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('river run supports cost estimation only', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--estimate'], dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /Cost Estimate/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('river run aborts when max-cost is exceeded', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--max-cost', '0.0001'], dir);
+    assert.notStrictEqual(result.code, 0);
+    assert.match(result.stdout + result.stderr, /exceeds max-cost/i);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('river run rejects negative max-cost value', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--max-cost', '-1'], dir);
+    assert.strictEqual(result.code, 0);
+    assert.match(result.stderr, /requires a non-negative numeric value/i);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('river run skips markdown-only changes after optimization', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'river-cli-md-'));
+  try {
+    await runGit(['init', '-b', 'main'], dir);
+    await runGit(['config', 'user.email', 'cli@example.com'], dir);
+    await runGit(['config', 'user.name', 'CLI Tester'], dir);
+    const doc = join(dir, 'README.md');
+    writeFileSync(doc, '# first\n');
+    await runGit(['add', '.'], dir);
+    await runGit(['commit', '-m', 'init'], dir);
+    writeFileSync(doc, '# second\n');
+
+    const result = await runCli(['run', '.', '--dry-run'], dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /No changes to review/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
