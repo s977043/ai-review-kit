@@ -1,0 +1,17 @@
+{
+  "id": "pattern-circuit-breaker",
+  "type": "pattern",
+  "title": "Circuit breaker for downstream APIs",
+  "content": "Use the shared circuit breaker utility to wrap third-party HTTP calls to avoid cascading failures.",
+  "metadata": {
+    "createdAt": "2024-11-05T12:00:00.000Z",
+    "author": "Platform Team",
+    "phase": "downstream",
+    "tags": ["resilience", "http"],
+    "relatedFiles": ["packages/http/src/circuitBreaker.ts"],
+    "summary": "Always wrap external HTTP calls with the circuit breaker helper."
+  },
+  "context": {
+    "example": "import { withCircuitBreaker } from '@org/http';"
+  }
+}

@@ -6,11 +6,26 @@
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": ["code_search"]
+    },
+    {
+      "id": "rr-midstream-review-comment-triage-001",
+      "phase": "midstream",
+      "modelHint": "high-accuracy",
+      "outputKind": ["findings", "summary", "questions"],
+      "dependencies": []
     }
   ],
   "skipped": [
     {
       "id": "rr-downstream-review-policy-standard-001",
+      "reasons": [
+        "phase mismatch: downstream !== midstream",
+        "applyTo did not match any changed file",
+        "missing required inputContext"
+      ]
+    },
+    {
+      "id": "rr-downstream-test-naming-001",
       "reasons": [
         "phase mismatch: downstream !== midstream",
         "applyTo did not match any changed file",
@@ -29,10 +44,26 @@
       "reasons": ["missing required inputContext"]
     },
     {
+      "id": "rr-midstream-security-basic-001",
+      "reasons": ["missing required inputContext"]
+    },
+    {
+      "id": "rr-midstream-typescript-strict-001",
+      "reasons": ["missing required inputContext"]
+    },
+    {
       "id": "rr-upstream-review-policy-standard-001",
       "reasons": [
         "phase mismatch: upstream !== midstream",
         "applyTo did not match any changed file"
+      ]
+    },
+    {
+      "id": "rr-upstream-api-design-001",
+      "reasons": [
+        "phase mismatch: upstream !== midstream",
+        "applyTo did not match any changed file",
+        "missing required inputContext"
       ]
     },
     {

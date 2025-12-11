@@ -15,7 +15,7 @@
 
 ## クイックスタート（GitHub Actions）
 
-`v1` タグを使った最小構成のワークフロー例です。`phase` は将来拡張を見据えた任意入力で、SDLC のフェーズごとにスキルを振り分けます。
+`v1` タグを使った最小構成のワークフロー例です。`phase` は将来拡張を見据えた任意入力で、SDLC のフェーズごとにスキルを振り分けます。Permissions/fetch-depth などを明示して安定動作させます。
 
 ```yaml
 name: River Reviewer
@@ -25,15 +25,108 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # merge-base を安定取得
       - name: Run River Reviewer (midstream)
         uses: s977043/river-reviewer@v1
         with:
           phase: midstream # upstream|midstream|downstream|all (future-ready)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 新しいタグが出たら、`@v1` を最新のリリースタグに置き換えてください。
+
+### 高度な設定例
+
+- フェーズ別レビューを並列実行（上流・中流・下流を個別ジョブに分割）
+
+```yaml
+jobs:
+  review-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+      - uses: s977043/river-reviewer@v1
+        with: { phase: upstream }
+        env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
+
+  review-midstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+      - uses: s977043/river-reviewer@v1
+        with: { phase: midstream }
+        env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
+
+  review-downstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+      - uses: s977043/river-reviewer@v1
+        with: { phase: downstream }
+        env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
+```
+
+- 条件付き実行やコスト管理の例
+
+```yaml
+review:
+  runs-on: ubuntu-latest
+  if: "!contains(github.event.pull_request.title, '[skip-review]')" # タイトルでスキップ
+  steps:
+    - uses: actions/checkout@v5
+      with: { fetch-depth: 0 }
+    - uses: s977043/river-reviewer@v1
+      with:
+        phase: midstream
+        max-files: 100 # 大量変更時にレビュー対象を制限
+        skip-large-files: true # 大きすぎるファイルを除外
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+- Draft/Ready でレビュー強度を変える例
+
+```yaml
+  review-light:
+    if: github.event.pull_request.draft == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+      - uses: s977043/river-reviewer@v1
+        with:
+          phase: midstream
+          max-files: 20            # Draft は軽め
+        env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
+
+  review-full:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+      - uses: s977043/river-reviewer@v1
+        with:
+          phase: midstream
+          max-files: 200           # Ready ではフルレビュー
+        env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
+```
+
+### セキュリティ考慮事項
+
+- `OPENAI_API_KEY` は必ず Repository Secrets に設定し、`env:` で参照する
+- Private リポジトリでは必要な permissions（contents, pull-requests）を明示する
+- `fetch-depth: 0` でマージベースを正しく取得し、誤差分を避ける
 
 ## クイックスタート（ローカル）
 
@@ -59,6 +152,12 @@ jobs:
   - Next.js App Router を前提とし、`pages/` ディレクトリは使用しない
   - React サーバーコンポーネントを優先し、クライアントコンポーネントは必要な場合のみ使う
   - ビジネスロジックは hooks ではなく service モジュールに寄せる
+
+## Diff Optimization（差分最適化）
+
+- River Reviewer は lockfile や Markdown、コメント・フォーマットのみの変更を自動で除外し、LLM に渡すトークン量を削減します
+- 大きな差分はハンク単位で圧縮し、必要な変更周辺のみを送信してコストとノイズを低減します
+- `river run . --debug` で最適化前後のトークン見積もりと削減率を確認できます
 
 ## スキル
 
@@ -124,6 +223,23 @@ River Reviewer の技術ドキュメントは、[Diátaxis ドキュメントフ
 - 上流 → 中流 → 下流にわたるフェーズ別レビュー拡張
 - ADR などの履歴を保持する Riverbed Memory（WontFix や過去指摘も含む）
 - Evals / CI 連携による継続的な信頼性検証
+
+## トラブルシューティング
+
+- **症状**: "Error: OpenAI API key not found"  
+  **解決方法**: `OPENAI_API_KEY` または `RIVER_OPENAI_API_KEY` を環境変数で設定し、`.env` も確認する。`river run . --debug` で認識状況を確認。
+
+- **症状**: "Skill validation failed"  
+  **解決方法**: スキル定義を見直し、`npm run skills:validate` を実行。スキーマエラーの詳細をログで確認する。
+
+- **症状**: GitHub Actions でレビューが実行されない  
+  **解決方法**: Repository Secrets に `OPENAI_API_KEY` / `GITHUB_TOKEN` が設定されているか、Workflow permissions が `Read and write` になっているか確認する。
+
+- **症状**: ローカル実行でファイルが検出されない  
+  **解決方法**: `git status` や `git diff` で差分を確認し、`river run . --debug` で対象ファイル・ハンクを確認する。
+
+- **症状**: レート制限エラー  
+  **解決方法**: OpenAI 側のレート制限に達していないか確認し、リトライ間隔を空ける。必要に応じて `RIVER_DRY_RUN=true` でプロンプトのみ確認する。
 
 ## コントリビューション
 

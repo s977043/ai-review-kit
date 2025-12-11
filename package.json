@@ -26,6 +26,8 @@
     "format:check": "prettier --check \"**/*.{js,json,md,yml,yaml}\"",
     "agents:validate": "node scripts/validate-agents.mjs",
     "skills:validate": "node scripts/validate-skills.mjs",
+    "skills:catalog": "node scripts/generate-skill-catalog.mjs",
+    "dashboard:generate": "node scripts/generate-dashboard-data.js",
     "trace:validate": "OTEL_ENABLED=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 node scripts/validate-agents.mjs",
     "fix:dashes": "node scripts/fix-dashes.mjs",
     "planner:eval": "node scripts/evaluate-planner.mjs",
@@ -43,7 +45,9 @@
     "@opentelemetry/semantic-conventions": "^1.38.0",
     "minimatch": "^10.1.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "recharts": "^2.12.7",
+    "date-fns": "^3.6.0"
   },
   "devDependencies": {
     "ajv": "^8.17.1",
@@ -55,16 +59,10 @@
     "markdownlint-cli": "^0.45.0",
     "prettier": "^3.7.3",
     "prh": "^5.4.4",
-    "textlint": "^15.4.0",
+    "textlint": "^15.5.0",
     "textlint-rule-preset-ja-technical-writing": "^12.0.2",
-    "textlint-rule-prh": "^6.1.0"
-  },
-  "lint-staged": {
-    "*.{md,markdown}": [
-      "npm run check:dashes"
-    ],
-    "*.{js,json,yml,yaml,md,markdown}": [
-      "prettier --write"
-    ]
+    "textlint-rule-prh": "^6.1.0",
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0"
   }
 }
