@@ -1,0 +1,21 @@
+name: River Reviewer (example)
+
+on:
+  pull_request:
+
+jobs:
+  river-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run River Reviewer (midstream)
+        uses: s977043/river-reviewer/.github/actions/river-reviewer@v0
+        with:
+          phase: midstream
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
