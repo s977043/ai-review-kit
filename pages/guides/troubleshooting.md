@@ -4,6 +4,13 @@
 
 ## CLI（`river run`）
 
+### OpenAI API key が見つからない
+
+- 症状: `Error: OpenAI API key not found`
+- 対応:
+  - `OPENAI_API_KEY` または `RIVER_OPENAI_API_KEY` を環境変数で設定すること
+  - 外部送信を避けたい場合は `--dry-run` を利用すること
+
 ### Git リポジトリとして認識されない
 
 - 症状: `Not a git repository: ...`
@@ -28,6 +35,19 @@
 
 - 対応:
   - `river run . --debug` を付けて、選択されたスキルとスキップ理由の出力を確認すること
+
+### ローカル実行でファイルが検出されない
+
+- 対応:
+  - `git status` や `git diff` で差分を確認すること
+  - `river run . --debug` で対象ファイル・ハンクのプレビューを確認すること
+
+### レート制限エラー
+
+- 対応:
+  - OpenAI 側のレート制限に達していないか確認すること
+  - しばらく待ってから再実行すること
+  - 必要に応じて `--dry-run` でプロンプト/スキル選択のみ確認すること
 
 ## GitHub Actions
 
