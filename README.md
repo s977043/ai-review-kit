@@ -195,6 +195,7 @@ severity: minor
 - サンプル: `skills/upstream/sample-architecture-review.md`, `skills/midstream/sample-code-quality.md`, `skills/downstream/sample-test-review.md`
 - スキーマ: スキルメタデータは `schemas/skill.schema.json`, レビュー出力は `schemas/output.schema.json`
 - 参考: スキルスキーマの詳細は `pages/reference/skill-schema-reference.md`、Riverbed Memory の設計ドラフトは `pages/explanation/riverbed-memory.md`
+- 既知の制限: `pages/reference/known-limitations.md`
 
 ## AI レビュー標準ポリシー
 
@@ -231,6 +232,8 @@ River Reviewer の技術ドキュメントは、[Diátaxis ドキュメントフ
 - Evals / CI 連携による継続的な信頼性検証
 
 ## トラブルシューティング
+
+詳細: `pages/guides/troubleshooting.md`
 
 - **症状**: "Error: OpenAI API key not found"  
   **解決方法**: `OPENAI_API_KEY` または `RIVER_OPENAI_API_KEY` を環境変数で設定し、`.env` も確認する。`river run . --debug` で認識状況を確認。

@@ -1,0 +1,41 @@
+# トラブルシューティング
+
+よくある症状と、切り分けのための確認ポイントをまとめます。
+
+## CLI（`river run`）
+
+### Git リポジトリとして認識されない
+
+- 症状: `Not a git repository: ...`
+- 対応:
+  - Git 管理下のディレクトリで実行すること
+  - 必要なら `git init` / `git clone ...`
+
+### スキル定義の読み込み/検証に失敗する
+
+- 症状: `Skill configuration error: ...`
+- 対応:
+  - `npm run skills:validate` を実行してエラー詳細を確認すること
+  - スキルスキーマの詳細は `pages/reference/skill-schema-reference.md` を参照すること
+
+### ルール（`.river/rules.md`）が読めない
+
+- 症状: rules ファイル読み込みエラー
+- 対応:
+  - `.river/rules.md` の存在と読み取り権限を確認すること（不要なら削除して無効化できる）
+
+### 何がスキップされたのか分からない
+
+- 対応:
+  - `river run . --debug` を付けて、選択されたスキルとスキップ理由の出力を確認すること
+
+## GitHub Actions
+
+### レビューが実行されない / 権限エラー
+
+- `permissions` が不足している可能性がある（例: `pull-requests: write`）
+- `OPENAI_API_KEY` などの Secrets が正しく設定されているか確認すること
+
+### 差分が検出されない
+
+- `actions/checkout` の `fetch-depth: 0` を推奨する（merge-base を安定して取得するため）
