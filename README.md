@@ -235,7 +235,7 @@ River Reviewer の技術ドキュメントは、[Diátaxis ドキュメントフ
 進捗のソース・オブ・トゥルースは Milestones と Project です（README の箇条書きは概観のみ）。
 
 - Milestones: [river-reviewer/milestones](https://github.com/s977043/river-reviewer/milestones)
-- Project: [users/s977043/projects/2](https://github.com/users/s977043/projects/2)
+- Project: [プロジェクトボード](https://github.com/users/s977043/projects/2)
 
 （任意）Issue に `m1-public` / `m2-dx` / `m3-smart` / `m4-community` のいずれかを付与すると、Milestone を自動で設定します（`.github/workflows/auto-milestone.yml`）。
 

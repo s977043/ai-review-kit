@@ -117,7 +117,7 @@ We organize content into four types, mapped by directory under `pages/` and serv
 Milestones and the GitHub Project are the source of truth for progress (this README list is only a high-level overview).
 
 - Milestones: [river-reviewer/milestones](https://github.com/s977043/river-reviewer/milestones)
-- Project: [users/s977043/projects/2](https://github.com/users/s977043/projects/2)
+- Project: [Project Board](https://github.com/users/s977043/projects/2)
 
 (Optional) Add one of `m1-public` / `m2-dx` / `m3-smart` / `m4-community` to an issue to auto-assign the corresponding milestone (`.github/workflows/auto-milestone.yml`).
 
