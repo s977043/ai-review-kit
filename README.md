@@ -253,6 +253,13 @@ River Reviewer の技術ドキュメントは、[Diátaxis ドキュメントフ
 
 ## ライセンス
 
-- `LICENSE`: リポジトリ構成と設定は Apache-2.0
-- `LICENSE-CODE`: コードとスクリプトは MIT
-- `LICENSE-CONTENT`: ドキュメントとメディアは CC BY 4.0
+本リポジトリは複数ライセンス（ファイル種別ごと）を採用しています。
+
+- `LICENSE-CODE`（MIT）: コードとスクリプト
+  - 例: `src/**`, `scripts/**`, `tests/**`
+- `LICENSE-CONTENT`（CC BY 4.0）: ドキュメント、テキスト、メディア
+  - 例: `pages/**`, `skills/**`, `assets/**`,（ルート直下の）`*.md`
+- `LICENSE`（Apache-2.0）: リポジトリ構成（scaffolding）と設定（configuration）
+  - 例: `.github/**`, `docusaurus.config.js`, `sidebars.js`, `package*.json`, `*.config.*`, `.*rc*`
+
+追加するファイルのライセンス方針に迷う場合は、PR で明示して相談してください。
