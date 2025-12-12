@@ -232,6 +232,13 @@ River Reviewer の技術ドキュメントは、[Diátaxis ドキュメントフ
 - ADR などの履歴を保持する Riverbed Memory（WontFix や過去指摘も含む）
 - Evals / CI 連携による継続的な信頼性検証
 
+進捗のソース・オブ・トゥルースは Milestones と Project です（README の箇条書きは概観のみ）。
+
+- Milestones: [river-reviewer/milestones](https://github.com/s977043/river-reviewer/milestones)
+- Project: [users/s977043/projects/2](https://github.com/users/s977043/projects/2)
+
+（任意）Issue に `m1-public` / `m2-dx` / `m3-smart` / `m4-community` のいずれかを付与すると、Milestone を自動で設定します（`.github/workflows/auto-milestone.yml`）。
+
 ## トラブルシューティング
 
 詳細は `pages/guides/troubleshooting.md` を参照してください。

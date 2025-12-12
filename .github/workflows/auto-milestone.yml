@@ -1,0 +1,75 @@
+name: Auto-assign milestone from labels
+
+on:
+  issues:
+    types: [opened, labeled, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign milestone
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.payload.issue.number;
+
+            const labelNames = (context.payload.issue.labels || [])
+              .map(l => (typeof l === 'string' ? l : l.name))
+              .filter(Boolean);
+
+            const labelToMilestoneTitle = {
+              'm1-public': 'v0.1.0 – Public Ready',
+              'm2-dx': 'v0.2.0 – Developer Experience',
+              'm3-smart': 'v0.3.0 – Smart Reviewer',
+              'm4-community': 'v1.0.0 – Community Edition',
+            };
+
+            const candidates = Object.entries(labelToMilestoneTitle)
+              .filter(([label]) => labelNames.includes(label))
+              .map(([, title]) => title);
+
+            if (candidates.length === 0) {
+              core.info('No milestone labels found; skipping.');
+              return;
+            }
+
+            if (candidates.length > 1) {
+              core.warning(`Multiple milestone labels found (${candidates.join(', ')}); skipping.`);
+              return;
+            }
+
+            const desiredTitle = candidates[0];
+
+            const milestoneList = await github.paginate(github.rest.issues.listMilestones, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            const desired = milestoneList.find(m => m.title === desiredTitle);
+            if (!desired) {
+              core.warning(`Milestone not found (open): ${desiredTitle}; skipping.`);
+              return;
+            }
+
+            const currentTitle = context.payload.issue.milestone?.title ?? null;
+            if (currentTitle === desiredTitle) {
+              core.info('Milestone already set; skipping.');
+              return;
+            }
+
+            await github.rest.issues.update({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              milestone: desired.number,
+            });
+
+            core.info(`Assigned milestone: ${desiredTitle}`);
