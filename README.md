@@ -195,6 +195,7 @@ severity: minor
 - サンプル: `skills/upstream/sample-architecture-review.md`, `skills/midstream/sample-code-quality.md`, `skills/downstream/sample-test-review.md`
 - スキーマ: スキルメタデータは `schemas/skill.schema.json`, レビュー出力は `schemas/output.schema.json`
 - 参考: スキルスキーマの詳細は `pages/reference/skill-schema-reference.md`、Riverbed Memory の設計ドラフトは `pages/explanation/riverbed-memory.md`
+- 既知の制限: `pages/reference/known-limitations.md`
 
 ## AI レビュー標準ポリシー
 
@@ -232,20 +233,7 @@ River Reviewer の技術ドキュメントは、[Diátaxis ドキュメントフ
 
 ## トラブルシューティング
 
-- **症状**: "Error: OpenAI API key not found"  
-  **解決方法**: `OPENAI_API_KEY` または `RIVER_OPENAI_API_KEY` を環境変数で設定し、`.env` も確認する。`river run . --debug` で認識状況を確認。
-
-- **症状**: "Skill validation failed"  
-  **解決方法**: スキル定義を見直し、`npm run skills:validate` を実行。スキーマエラーの詳細をログで確認する。
-
-- **症状**: GitHub Actions でレビューが実行されない  
-  **解決方法**: Repository Secrets に `OPENAI_API_KEY` / `GITHUB_TOKEN` が設定されているか、Workflow permissions が `Read and write` になっているか確認する。
-
-- **症状**: ローカル実行でファイルが検出されない  
-  **解決方法**: `git status` や `git diff` で差分を確認し、`river run . --debug` で対象ファイル・ハンクを確認する。
-
-- **症状**: レート制限エラー  
-  **解決方法**: OpenAI 側のレート制限に達していないか確認し、リトライ間隔を空ける。必要に応じて `RIVER_DRY_RUN=true` でプロンプトのみ確認する。
+詳細は `pages/guides/troubleshooting.md` を参照してください。
 
 ## コントリビューション
 

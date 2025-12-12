@@ -13,6 +13,7 @@ module.exports = {
   projectName: 'river-reviewer',
   trailingSlash: false,
   i18n: { defaultLocale: 'ja', locales: ['ja'] },
+  themes: ['@docusaurus/theme-mermaid'],
   presets: [
     [
       '@docusaurus/preset-classic',
@@ -39,6 +40,7 @@ module.exports = {
   },
   markdown: {
     hooks: { onBrokenMarkdownLinks: 'warn' },
+    mermaid: true,
   },
   onBrokenLinks: 'throw',
   plugins: [

@@ -25,4 +25,8 @@ River Reviewer への参加ありがとうございます。このプロジェ�
 
 - 再現手順や望ましい結果、実際の結果を具体的に書くこと。
 
+Issue はテンプレートから作成してください（`Issues → New issue`、または [issues/new/choose](https://github.com/s977043/river-reviewer/issues/new/choose)）。
+
+ラベルの目安やトリアージ方針は `pages/guides/governance/issue-management.md` を参照してください。
+
 みなさまのご協力に感謝します！

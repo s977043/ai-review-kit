@@ -25,6 +25,7 @@ module.exports = {
         'guides/use-riverbed-memory',
         'guides/tracing',
         'guides/agents',
+        'guides/troubleshooting',
         {
           type: 'category',
           label: 'Governance',
@@ -32,6 +33,7 @@ module.exports = {
             'guides/governance/CONTRIBUTING',
             'guides/governance/WRITING_GUIDE',
             'guides/governance/roadmap-guide',
+            'guides/governance/issue-management',
           ],
         },
       ],
@@ -45,6 +47,7 @@ module.exports = {
         'reference/config-schema',
         'reference/metadata-fields',
         'reference/runner-cli-reference',
+        'reference/known-limitations',
         'reference/glossary',
       ],
     },

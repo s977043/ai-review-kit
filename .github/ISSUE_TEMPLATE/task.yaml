@@ -2,7 +2,7 @@
 name: Task
 description: 新しいタスク（Issue）を作成するためのテンプレート
 title: '[Task] '
-labels: []
+labels: ['type:task', 'status:triage']
 body:
   - type: input
     id: summary

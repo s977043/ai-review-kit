@@ -82,6 +82,8 @@ severity: minor
 - Sample skills: `skills/upstream/sample-architecture-review.md`, `skills/midstream/sample-code-quality.md`, `skills/downstream/sample-test-review.md`
 - Schemas: `schemas/skill.schema.json` (skill metadata) and `schemas/output.schema.json` (structured review output)
 - References: Skill schema details live in `pages/reference/skill-schema-reference.md`; Riverbed Memory design draft lives in `pages/explanation/riverbed-memory.md`.
+- Known limitations: `pages/reference/known-limitations.md`
+- Troubleshooting: `pages/guides/troubleshooting.md`
 
 ## AI Review Standard Policy
 
