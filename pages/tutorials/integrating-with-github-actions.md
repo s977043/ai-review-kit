@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: {org}/{repo}/.github/actions/river-reviewer@main
+      - uses: {org}/{repo}/.github/actions/river-reviewer@v0.1.0
         with:
           phase: midstream
           dry_run: true
@@ -31,7 +31,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-> Use `@main` until a release tag is available, then switch to `@v1` to pin to a stable release.
+> Pin to a release tag such as `@v0.1.0` for stability.
 
 ## 2. Keep credentials out of the flow
 

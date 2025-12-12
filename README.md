@@ -33,14 +33,16 @@ jobs:
         with:
           fetch-depth: 0 # merge-base を安定取得
       - name: Run River Reviewer (midstream)
-        uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+        uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
         with:
           phase: midstream # upstream|midstream|downstream|all (future-ready)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-リリースタグが出るまでは `@main` を使用し、公開されたら `@v1` などのタグに切り替えてください。
+タグは `@v0.1.0` などのリリースタグにピン留めしてください。浮動タグを使う場合は `@v0` のようなエイリアスタグを用意して運用します（任意）。
+
+最新リリース: [v0.1.0](https://github.com/s977043/river-reviewer/releases/tag/v0.1.0)
 
 ### 高度な設定例
 
@@ -53,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
         with: { phase: upstream }
         env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
 
@@ -62,7 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
         with: { phase: midstream }
         env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
 
@@ -71,7 +73,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
         with: { phase: downstream }
         env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
 ```
@@ -85,7 +87,7 @@ review:
   steps:
     - uses: actions/checkout@v6
       with: { fetch-depth: 0 }
-    - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+    - uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
       with:
         phase: midstream
         estimate: true # コスト見積もりのみ
@@ -103,7 +105,7 @@ review:
     steps:
       - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
         with:
           phase: midstream
           dry_run: true            # Draft はドライランでプロンプト確認のみ
@@ -116,7 +118,7 @@ review:
     steps:
       - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+      - uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
         with:
           phase: midstream
           dry_run: false           # Ready ではフルレビュー

@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: {org}/{repo}/.github/actions/river-reviewer@main
+      - uses: {org}/{repo}/.github/actions/river-reviewer@v0.1.0
         with:
           phase: midstream
           dry_run: true # set false to call external APIs
@@ -32,7 +32,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-> Use `@main` until a release tag is published; then pin to `@v1` in your workflows.
+> Pin to a release tag such as `@v0.1.0` for stability.
 
 ## 2. Run the review
 
