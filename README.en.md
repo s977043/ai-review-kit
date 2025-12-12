@@ -40,6 +40,8 @@ jobs:
 
 Pin to a release tag such as `@v0.1.0` for stability. Optionally, you can maintain a floating alias tag like `@v0`.
 
+Latest release: [v0.1.0](https://github.com/s977043/river-reviewer/releases/tag/v0.1.0)
+
 ## Quick start (local)
 
 1. Environment: Node 20+ recommended (CI also runs on Node 20 series)
