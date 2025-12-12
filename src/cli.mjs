@@ -11,6 +11,13 @@ import { parseList } from './lib/utils.mjs';
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
 
+function printHintLines(lines = []) {
+  const hints = (lines ?? []).filter(Boolean);
+  if (!hints.length) return;
+  console.error('\nHints:');
+  hints.forEach(line => console.error(`- ${line}`));
+}
+
 function printHelp() {
   console.log(`Usage: river run <path> [options]
 
@@ -272,21 +279,32 @@ Dependencies: ${
   } catch (error) {
     if (error instanceof GitRepoNotFoundError) {
       console.error(error.message);
+      printHintLines([
+        'Run this command inside a git repository (or pass the repo path).',
+        'If needed: `git init` or `git clone ...`',
+      ]);
       return 1;
     }
     if (error instanceof SkillLoaderError) {
       console.error(`Skill configuration error: ${error.message}`);
+      printHintLines(['Run `npm run skills:validate` to see full validation errors.', 'Docs: pages/guides/validate-skill-schema.md']);
       return 1;
     }
     if (error instanceof ProjectRulesError) {
       console.error(error.message);
+      printHintLines([
+        'Check `.river/rules.md` exists and is readable (or remove it to disable rules).',
+        'Docs: README.md (Project-specific review rules)',
+      ]);
       return 1;
     }
     if (error.name === 'GitError') {
       console.error(`Git command failed: ${error.message}`);
+      printHintLines(['Ensure `git` is available and the repository has a default branch.', 'Try `river run . --debug` for more context.']);
       return 1;
     }
     console.error(`CLI error: ${error.message}`);
+    printHintLines(['Try `river run . --debug` for more context.']);
     return 1;
   }
 }
