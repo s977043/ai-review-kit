@@ -9,6 +9,22 @@ We aim for an open, welcoming community. Please follow our [Code of Conduct](COD
 
 ## 💡 Ways to contribute
 
+### ✅ Before opening an issue
+
+- Search existing issues (open/closed) to avoid duplicates
+- Check docs (`README.md` and `pages/`) for existing answers or policies
+- If this may be a security issue, do not open a public issue; follow `SECURITY.md` to report it privately
+
+Use the issue templates via `Issues → New issue` (or [issues/new/choose](https://github.com/s977043/river-reviewer/issues/new/choose)).
+
+### 🗂️ Issue types (rough guide)
+
+- Bug: unexpected behavior, exceptions, incorrect output
+- Feature/Enhancement: new capability or improvement (skills, CLI/Action/Docs, etc.)
+- Task: concrete work item (roadmap, ops, refactors)
+- Documentation: add/fix docs
+- Question: ask/discuss (consider Discussions for lightweight topics)
+
 ### 🐞 Bug reports
 
 If you find a bug, open an issue with:
@@ -30,10 +46,32 @@ For new checklist items or agent ideas, open an issue with:
 1. **Fork** this repository.
 2. Clone locally and **create a branch** (`git checkout -b feature/your-feature-name`).
 3. Make your changes and commit with a clear message.
-4. **Push** the branch to GitHub (`git push origin feature/your-feature-name`).
-5. Open a pull request and follow the PR template to describe your changes.
+4. Run local checks (at least `npm test` and `npm run lint`).
+5. **Push** the branch to GitHub (`git push origin feature/your-feature-name`).
+6. Open a pull request and follow the PR template to describe your changes.
 
 Smaller, focused PRs are ideal.
+
+### ✅ Local checks (recommended)
+
+```bash
+npm test
+npm run lint
+```
+
+Depending on what you change:
+
+- If you changed skills (`skills/`): `npm run skills:validate`
+- If you changed agent definitions: `npm run agents:validate`
+- If you changed tracing functionality: `npm run trace:validate` (when OpenTelemetry validation is needed)
+
+### 🧭 Coding/ops conventions (summary)
+
+- JS/Node uses ESM; tests use `node --test`
+- Formatting is enforced by Prettier (checked via `npm run lint`)
+- Do not commit secrets in `.env*` files; use dummy values in examples
+- Doc site sources live under `pages/` (Docusaurus). The `docs/` directory is treated as internal docs (not served)
+- Do not hand-edit `package-lock.json`; update it by running `npm install` when you change dependencies in `package.json` (`npm ci` installs from the lock file)
 
 ## 📚 Documentation contributions
 
