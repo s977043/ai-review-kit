@@ -32,7 +32,7 @@ title: Roadmap & Project Board 運用ガイド
 ## 登録フロー
 
 1. Issue を作成し、`Phase`/`Priority`/`Status=Todo` を設定。
-2. 必要ならマイルストン（Phase 1 など）に紐付ける。
+2. 必要ならマイルストン（`v0.2.0 – Developer Experience` など）に紐付ける（Milestone は SemVer 系に統一）。
 3. プロジェクトボードに追加（Board でカードが自動生成される）。
 
 ## 運用フロー（カンバン）

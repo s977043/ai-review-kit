@@ -23,27 +23,25 @@
 
 ## Phase 1: Skill Migration & Coverage
 
-- [ ] 既存プロンプトを `skills/**/*.md` へ移行（YAML frontmatter をスキーマ準拠で付与）
-- [ ] ID プレフィックスを `rr-` に正規化（`scripts/rr_validate_skills.py` を活用）
-- [ ] Upstream/Midstream/Downstream それぞれに種スキルを追加（設計ガードレール、実装レビュー、QA/回帰確認など） → 現在サンプルのみで最小本数は未達
-- [ ] Quality/Domain タグ付け（例: `performance`, `security`, `reliability`）
+- [x] スキル定義を `skills/**/*.md` に集約（YAML frontmatter をスキーマ準拠で付与）
+- [x] ID プレフィックスを `rr-` に正規化
+- [x] Upstream/Midstream/Downstream それぞれに本番想定スキルを追加（設計ガードレール、実装レビュー、QA/回帰確認など）
+- [x] Quality/Domain タグ付け（例: `performance`, `security`, `reliability`）
 - Exit Criteria: 各フェーズに少なくとも1つ以上の本番想定スキルが配置され、スキーマ検証を通過する。
 
 ## Phase 2: Loader & Runner (Phase-aware Routing)
 
-- [ ] `skills/**/*.md` を再帰的に読み込み、`phase` でフィルタ可能なローダーを実装（`RR_PHASE` 環境変数/引数対応）
-- [ ] スキルメタデータの JSON Schema バリデーションを組み込み（例: `ajv` or Python の `jsonschema`）→ スクリプトはあるが Runner への組み込み未着手
-- [ ] GitHub Actions/CLI ラッパーを整備し、midstream をデフォルトにフェーズ切替を可能にする
-- [ ] Stream Router の下地として、変更ファイルのグロブと `applyTo` の突合を追加（安全な範囲で）
+- [x] `skills/**/*.md` を再帰的に読み込み、`phase` でフィルタ可能なローダーを実装（`RIVER_PHASE` / `--phase` 対応）
+- [x] スキルメタデータの JSON Schema バリデーションを Runner に組み込み（Ajv）
+- [x] GitHub Actions/CLI ラッパーを整備し、midstream をデフォルトにフェーズ切替を可能にする
+- [x] Stream Router の下地として、変更ファイルのグロブと `applyTo` の突合を追加
 - Exit Criteria: フェーズ指定でスキルを実行でき、メタデータのバリデーションを通過したものだけが走る。
 
-### 次の具体タスク案（Phase 1〜2 着手用）
+### 次の具体タスク案（Phase 3 着手用）
 
-- [ ] 既存プロンプトの移行計画を Issue 化（対象リスト、優先度、担当）
-- [ ] 既存サンプル以外の本番想定スキルを各フェーズ1本以上追加（ID 正規化含む）
-- [ ] Node 版ローダー最小実装：`skills/**/*.md` を読み込み、`phase` フィルタと `applyTo` 突合で対象スキル集合を返す
-- [ ] Runner プロトタイプ：`RR_PHASE` または引数でフェーズを選択し、バリデーション通過スキルのみ出力する CLI
-- [ ] GitHub Actions ラッパー更新：midstream デフォルトで Runner を呼び出す Job を作成（既存 placeholder を置き換え）
+- [ ] ゴールデンケース（差分・期待出力）を fixtures として追加し、回帰を検知できるテストを追加
+- [ ] スキルごとの失敗パス（コンテキスト不足/依存不足）をテストで検知
+- [ ] Evals/回帰テストを CI へ組み込み、スキル変更時に必ず実行
 
 ## Phase 3: Reliability & Evals
 
