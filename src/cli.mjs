@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import process from 'node:process';
-import { GitRepoNotFoundError } from './lib/git.mjs';
+import { GitError, GitRepoNotFoundError } from './lib/git.mjs';
 import { planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError } from './lib/skill-loader.mjs';
 import CostEstimator from './core/cost-estimator.mjs';
@@ -12,7 +12,7 @@ const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
 
 function printHintLines(lines = []) {
-  const hints = (lines ?? []).filter(Boolean);
+  const hints = lines.filter(Boolean);
   if (!hints.length) return;
   console.error('\nHints:');
   hints.forEach(line => console.error(`- ${line}`));
@@ -283,28 +283,22 @@ Dependencies: ${
         'Run this command inside a git repository (or pass the repo path).',
         'If needed: `git init` or `git clone ...`',
       ]);
-      return 1;
-    }
-    if (error instanceof SkillLoaderError) {
+    } else if (error instanceof SkillLoaderError) {
       console.error(`Skill configuration error: ${error.message}`);
       printHintLines(['Run `npm run skills:validate` to see full validation errors.', 'Docs: pages/guides/validate-skill-schema.md']);
-      return 1;
-    }
-    if (error instanceof ProjectRulesError) {
+    } else if (error instanceof ProjectRulesError) {
       console.error(error.message);
       printHintLines([
         'Check `.river/rules.md` exists and is readable (or remove it to disable rules).',
         'Docs: README.md (Project-specific review rules)',
       ]);
-      return 1;
-    }
-    if (error.name === 'GitError') {
+    } else if (error instanceof GitError) {
       console.error(`Git command failed: ${error.message}`);
       printHintLines(['Ensure `git` is available and the repository has a default branch.', 'Try `river run . --debug` for more context.']);
-      return 1;
+    } else {
+      console.error(`CLI error: ${error.message}`);
+      printHintLines(['Try `river run . --debug` for more context.']);
     }
-    console.error(`CLI error: ${error.message}`);
-    printHintLines(['Try `river run . --debug` for more context.']);
     return 1;
   }
 }

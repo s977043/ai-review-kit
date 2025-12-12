@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 
 const exec = promisify(execFile);
 
-class GitError extends Error {
+export class GitError extends Error {
   constructor(message) {
     super(message);
     this.name = 'GitError';
