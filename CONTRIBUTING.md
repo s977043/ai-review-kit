@@ -68,15 +68,16 @@ npm run lint
 変更内容に応じて、以下も実行してください:
 
 - スキル（`skills/`）を変更した: `npm run skills:validate`
-- エージェント定義/トレース関連を変更した: `npm run agents:validate`（必要に応じて `npm run trace:validate`）
+- エージェント定義を変更した: `npm run agents:validate`
+- トレース関連の機能を変更した: `npm run trace:validate`（OpenTelemetry 検証が必要な場合）
 
 ### 🧭 コーディング/運用ルール（要約）
 
 - JS/Node は ESM を前提とし、テストは `node --test` を使用します
 - フォーマットは Prettier を使用します（`npm run lint` でチェック）
-- `.env*` などの秘密情報はコミットしません（例示はダミー値を使ってください）
-- ドキュメントのソースは `pages/`（Docusaurus）です。`docs/` は原則として生成物/内部用途を想定しています
-- `package-lock.json` は手動編集せず、必要なら `npm ci` / `npm install` で更新してください
+- `.env*` などの秘密情報はコミットしないでください（例示はダミー値を使ってください）
+- ドキュメントサイトのソースは `pages/`（Docusaurus）です。`docs/` は内部向けドキュメント（サイトに配信しない）として扱っています
+- `package-lock.json` は手動編集せず、依存関係を変更した場合は `npm install` で更新してください（`npm ci` はロックファイルに従うクリーンインストールです）
 
 ## 📚 Documentation contributions
 

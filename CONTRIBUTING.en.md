@@ -62,15 +62,16 @@ npm run lint
 Depending on what you change:
 
 - If you changed skills (`skills/`): `npm run skills:validate`
-- If you changed agents/tracing: `npm run agents:validate` (and `npm run trace:validate` if needed)
+- If you changed agent definitions: `npm run agents:validate`
+- If you changed tracing functionality: `npm run trace:validate` (when OpenTelemetry validation is needed)
 
 ### 🧭 Coding/ops conventions (summary)
 
 - JS/Node uses ESM; tests use `node --test`
 - Formatting is enforced by Prettier (checked via `npm run lint`)
-- Do not commit secrets (`.env*` is not allowed); use dummy values in examples
-- Doc sources live under `pages/` (Docusaurus). The `docs/` directory is intended for generated artifacts/internal usage
-- Do not hand-edit `package-lock.json`; update it via `npm ci` / `npm install` when needed
+- Do not commit secrets in `.env*` files; use dummy values in examples
+- Doc site sources live under `pages/` (Docusaurus). The `docs/` directory is treated as internal docs (not served)
+- Do not hand-edit `package-lock.json`; update it by running `npm install` when you change dependencies in `package.json` (`npm ci` installs from the lock file)
 
 ## 📚 Documentation contributions
 
