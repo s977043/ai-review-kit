@@ -11,6 +11,22 @@
 
 貢献にはいくつかの方法があります。
 
+### ✅ Issue 作成前の確認
+
+- 既存 Issue（open/closed）を検索し、重複がないか確認してください
+- ドキュメント（`README.md` / `pages/`）に既に答えや方針がないか確認してください
+- 脆弱性の可能性がある場合は公開 Issue を作らず、`SECURITY.md` に従って非公開で報告してください
+
+Issue テンプレートは `Issues → New issue` から利用できます（または [issues/new/choose](https://github.com/s977043/river-reviewer/issues/new/choose)）。
+
+### 🗂️ Issue の使い分け（目安）
+
+- Bug: 期待動作と異なる挙動、例外、誤った出力など
+- Feature/Enhancement: 新機能・改善提案（スキル追加、CLI/Action/Docs の改善など）
+- Task: 具体的な作業項目（ロードマップ/運用改善/リファクタ等）
+- Documentation: ドキュメントの追加・誤り修正
+- Question: 相談・質問（必要に応じて Issue、または軽い内容なら Discussions を検討）
+
 ### 🐞 バグの報告
 
 もしバグを発見した場合は、Issueを作成して報告してください。良いバグ報告には以下の情報が含まれます。
@@ -36,10 +52,31 @@
 1. このリポジトリを**Fork**してください。
 2. ローカルにクローンし、新しい変更のための**ブランチを作成**してください (`git checkout -b feature/your-feature-name`)。
 3. 変更を行い、コミットしてください。コミットメッセージは分かりやすく記述してください。
-4. 作成したブランチをGitHubに**Push**してください (`git push origin feature/your-feature-name`)。
-5. プルリクエストを作成してください。プルリクエストのテンプレートに従い、変更内容を詳細に説明してください。
+4. ローカルでチェックを通してください（最低限 `npm test` と `npm run lint`）。
+5. 作成したブランチをGitHubに**Push**してください (`git push origin feature/your-feature-name`)。
+6. プルリクエストを作成してください。プルリクエストのテンプレートに従い、変更内容を詳細に説明してください。
 
 プルリクエストは、小さく、目的にフォーカスしたものであることが理想です。
+
+### ✅ ローカルでのチェック（推奨）
+
+```bash
+npm test
+npm run lint
+```
+
+変更内容に応じて、以下も実行してください:
+
+- スキル（`skills/`）を変更した: `npm run skills:validate`
+- エージェント定義/トレース関連を変更した: `npm run agents:validate`（必要に応じて `npm run trace:validate`）
+
+### 🧭 コーディング/運用ルール（要約）
+
+- JS/Node は ESM を前提とし、テストは `node --test` を使用します
+- フォーマットは Prettier を使用します（`npm run lint` でチェック）
+- `.env*` などの秘密情報はコミットしません（例示はダミー値を使ってください）
+- ドキュメントのソースは `pages/`（Docusaurus）です。`docs/` は原則として生成物/内部用途を想定しています
+- `package-lock.json` は手動編集せず、必要なら `npm ci` / `npm install` で更新してください
 
 ## 📚 Documentation contributions
 
