@@ -115,6 +115,13 @@ See `CONTRIBUTING.md` for guidance. Issues and PRs are welcome as we expand Rive
 
 ## License
 
-- `LICENSE`: Apache-2.0 for repository scaffolding/config
-- `LICENSE-CODE`: MIT for code and scripts
-- `LICENSE-CONTENT`: CC BY 4.0 for docs and media
+This repository uses multiple licenses by asset type.
+
+- `LICENSE-CODE` (MIT): code and scripts
+  - Examples: `src/**`, `scripts/**`, `tests/**`
+- `LICENSE-CONTENT` (CC BY 4.0): documentation, text, and media
+  - Examples: `pages/**`, `skills/**`, `assets/**`, `README*.md`
+- `LICENSE` (Apache-2.0): repository scaffolding and configuration
+  - Examples: `.github/**`, `docusaurus.config.js`, `sidebars.js`, `package*.json`, `*.config.*`, `.*rc*`
+
+If you're unsure which license applies to newly added files, please call it out in the PR and discuss it.
