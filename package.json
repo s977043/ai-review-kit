@@ -1,5 +1,6 @@
 {
   "name": "river-reviewer",
+  "version": "0.1.0",
   "private": true,
   "description": "River Reviewer docs, schemas, and validation utilities.",
   "license": "Apache-2.0",

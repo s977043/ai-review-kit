@@ -33,12 +33,12 @@ jobs:
         with:
           fetch-depth: 0
       - name: Run River Reviewer (midstream)
-        uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+        uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
         with:
           phase: midstream # upstream|midstream|downstream|all (future-ready)
 ```
 
-Use `@main` until a release tag is published; then pin to `@v1` (or later) for stability.
+Pin to a release tag such as `@v0.1.0` for stability. Optionally, you can maintain a floating alias tag like `@v0`.
 
 ## Quick start (local)
 
