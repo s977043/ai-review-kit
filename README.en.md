@@ -120,7 +120,7 @@ This repository uses multiple licenses by asset type.
 - `LICENSE-CODE` (MIT): code and scripts
   - Examples: `src/**`, `scripts/**`, `tests/**`
 - `LICENSE-CONTENT` (CC BY 4.0): documentation, text, and media
-  - Examples: `pages/**`, `skills/**`, `assets/**`, `README*.md`
+  - Examples: `pages/**`, `skills/**`, `assets/**`, root `*.md`
 - `LICENSE` (Apache-2.0): repository scaffolding and configuration
   - Examples: `.github/**`, `docusaurus.config.js`, `sidebars.js`, `package*.json`, `*.config.*`, `.*rc*`
 
