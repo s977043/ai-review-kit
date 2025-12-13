@@ -28,6 +28,10 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -36,6 +40,8 @@ jobs:
         uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
         with:
           phase: midstream # upstream|midstream|downstream|all (future-ready)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 Pin to a release tag such as `@v0.1.0` for stability. Optionally, you can maintain a floating alias tag like `@v0`.

@@ -66,3 +66,16 @@
   - Kanban View: Status 別の進行管理
 
 この構成で、フェーズ別の進捗とコンポーネント別の責務を可視化し、River Reviewer の流れに沿った開発管理を行う。
+
+---
+
+## Milestones（v0.1 / v0.2 / v0.3 / v1.0）
+
+本リポジトリでは、Phase 0〜4 の方向性を維持しつつ、外部利用者に分かりやすい Milestone（SemVer）で進行を管理します。
+
+- `v0.1.0 – Public Ready`（Phase 2〜3 の“外部利用”を安定させる）
+- `v0.2.0 – Developer Experience`（導入/トラブルシュート/拡張を軽くする）
+- `v0.3.0 – Smart Reviewer`（評価基盤 + “賢さ 1 点突破”）
+- `v1.0.0 – Community Edition`（互換性/安定 I/F/運用の固定）
+
+具体的な 1〜2 週間粒度のバックログ（Issue にコピペ可能）は `docs/implementation-plan.md` にまとめます。

@@ -9,6 +9,10 @@ inputs:
     description: 'Path to the git repository to review.'
     required: false
     default: '.'
+  comment:
+    description: 'Post a PR comment with results (only on pull_request events).'
+    required: false
+    default: 'true'
   dry_run:
     description: 'Run in dry-run mode (no external calls, print to stdout).'
     required: false
@@ -36,14 +40,24 @@ runs:
       with:
         node-version: ${{ inputs.node_version }}
         cache: npm
+        cache-dependency-path: ${{ github.action_path }}/../../../package-lock.json
     - name: Install dependencies
-      run: npm ci
-      shell: bash
-    - name: Run River Reviewer
       shell: bash
       run: |
         set -euo pipefail
-        cmd=(npm run river -- run "${{ inputs.target }}" --phase "${{ inputs.phase }}")
+        action_root="$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)"
+        echo "Action repo root: ${action_root}"
+        cd "${action_root}"
+        npm ci
+    - name: Run River Reviewer
+      id: river
+      shell: bash
+      run: |
+        set -euo pipefail
+        action_root="$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)"
+        repo_path="$(cd "${{ inputs.target }}" && pwd)"
+
+        cmd=(node "${action_root}/src/cli.mjs" run "${repo_path}" --phase "${{ inputs.phase }}" --output markdown)
         if [ "${{ inputs.dry_run }}" = "true" ]; then
           cmd+=("--dry-run")
         fi
@@ -57,7 +71,61 @@ runs:
           cmd+=("--max-cost" "${{ inputs.max_cost }}")
         fi
         echo "Running: ${cmd[*]}"
-        "${cmd[@]}"
+        out="${RUNNER_TEMP}/river-reviewer-comment.md"
+        "${cmd[@]}" | tee "${out}"
+        echo "comment_path=${out}" >> "${GITHUB_OUTPUT}"
+
+    - name: Post PR comment
+      if: ${{ github.event_name == 'pull_request' && inputs.comment == 'true' && inputs.estimate != 'true' }}
+      uses: actions/github-script@v8
+      env:
+        RIVER_REVIEWER_COMMENT_PATH: ${{ steps.river.outputs.comment_path }}
+      with:
+        script: |
+          const fs = require('fs');
+          const marker = '<!-- river-reviewer -->';
+          const path = process.env.RIVER_REVIEWER_COMMENT_PATH;
+          if (!path || !fs.existsSync(path)) {
+            core.setFailed('River Reviewer output file not found; cannot post comment.');
+            return;
+          }
+          let body = fs.readFileSync(path, 'utf8').trim();
+          if (!body.startsWith(marker)) {
+            body = `${marker}\n${body}`;
+          }
+          const maxLen = 65000;
+          if (body.length > maxLen) {
+            body = `${body.slice(0, maxLen)}\n\n…(truncated)`;
+          }
+
+          const prNumber = context.payload.pull_request.number;
+          const { owner, repo } = context.repo;
+
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner,
+            repo,
+            issue_number: prNumber,
+            per_page: 100,
+          });
+
+          const existing = comments.find(c => typeof c.body === 'string' && c.body.includes(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner,
+              repo,
+              comment_id: existing.id,
+              body,
+            });
+            core.info(`Updated existing River Reviewer comment (${existing.id}).`);
+          } else {
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body,
+            });
+            core.info('Created new River Reviewer comment.');
+          }
 branding:
   icon: 'play-circle'
   color: 'blue'

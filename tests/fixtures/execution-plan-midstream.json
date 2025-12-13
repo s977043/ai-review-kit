@@ -8,6 +8,13 @@
       "dependencies": ["code_search"]
     },
     {
+      "id": "rr-midstream-hello-skill-001",
+      "phase": "midstream",
+      "modelHint": "cheap",
+      "outputKind": ["findings", "summary"],
+      "dependencies": []
+    },
+    {
       "id": "rr-midstream-review-comment-triage-001",
       "phase": "midstream",
       "modelHint": "high-accuracy",
