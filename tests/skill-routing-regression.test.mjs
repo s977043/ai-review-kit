@@ -21,7 +21,7 @@ test('upstream skill is gated by inputContext', async () => {
   });
   assert.deepEqual(findSkillInPlan(withoutAdr, skillId), {
     status: 'skipped',
-    reasons: ['missing required inputContext'],
+    reasons: ['missing inputContext: adr'],
   });
 
   const withAdr = await buildExecutionPlan({
@@ -56,4 +56,3 @@ test('downstream skills are gated by declared dependencies when enabled', async 
   });
   assert.equal(findSkillInPlan(withDeps, skillId).status, 'selected');
 });
-

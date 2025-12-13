@@ -29,11 +29,11 @@ function matchesApplyTo(skill, changedFiles) {
   return changedFiles.some(file => globs.some(pattern => minimatch(file, pattern, { dot: true })));
 }
 
-function hasRequiredContext(skill, availableContexts) {
+function missingInputContexts(skill, availableContexts) {
   const meta = getMeta(skill);
-  if (!meta.inputContext || meta.inputContext.length === 0) return true;
+  if (!meta.inputContext || meta.inputContext.length === 0) return [];
   const available = new Set(availableContexts);
-  return meta.inputContext.every(ctx => available.has(ctx));
+  return meta.inputContext.filter(ctx => !available.has(ctx));
 }
 
 function missingDependencies(skill, availableDependencies) {
@@ -54,8 +54,9 @@ function evaluateSkill(skill, options) {
   if (!matchesApplyTo(meta, options.changedFiles)) {
     reasons.push('applyTo did not match any changed file');
   }
-  if (!hasRequiredContext(meta, options.availableContexts)) {
-    reasons.push('missing required inputContext');
+  const missingContexts = missingInputContexts(meta, options.availableContexts);
+  if (missingContexts.length) {
+    reasons.push(`missing inputContext: ${missingContexts.join(', ')}`);
   }
   const depsMissing = missingDependencies(meta, options.availableDependencies);
   if (depsMissing.length) {
