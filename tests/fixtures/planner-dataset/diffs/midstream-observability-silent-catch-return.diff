@@ -1,0 +1,13 @@
+diff --git a/src/payment/charge.ts b/src/payment/charge.ts
+index 1111111..2222222 100644
+--- a/src/payment/charge.ts
++++ b/src/payment/charge.ts
+@@ -1,9 +1,9 @@
+ export async function charge(card: string, amount: number) {
+   try {
+     return await gateway.charge(card, amount);
+   } catch (err) {
+-    throw err;
++    return null;
+   }
+ }

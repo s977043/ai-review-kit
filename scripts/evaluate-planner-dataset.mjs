@@ -1,13 +1,114 @@
 #!/usr/bin/env node
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import url from 'node:url';
 import { evaluatePlannerDataset } from '../src/lib/planner-dataset-eval.mjs';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-const datasetDir = process.argv[2] ?? path.join(__dirname, '..', 'tests', 'fixtures', 'planner-dataset');
+
+function parseArgs(argv) {
+  const args = {
+    datasetDir: null,
+    out: null,
+    json: false,
+    excludedTags: null,
+    preferredModelHint: null,
+  };
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--help' || arg === '-h') {
+      args.help = true;
+      continue;
+    }
+
+    if (arg === '--json') {
+      args.json = true;
+      continue;
+    }
+
+    if (arg === '--dataset') {
+      args.datasetDir = argv[i + 1];
+      i++;
+      continue;
+    }
+
+    if (arg === '--out') {
+      args.out = argv[i + 1];
+      i++;
+      continue;
+    }
+
+    if (arg === '--excluded-tags') {
+      const raw = argv[i + 1] ?? '';
+      args.excludedTags = raw
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      i++;
+      continue;
+    }
+
+    if (arg === '--model-hint') {
+      args.preferredModelHint = argv[i + 1];
+      i++;
+      continue;
+    }
+
+    if (!arg.startsWith('-') && !args.datasetDir) {
+      args.datasetDir = arg;
+      continue;
+    }
+
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  return args;
+}
 
 async function main() {
-  const { summary, cases } = await evaluatePlannerDataset({ datasetDir });
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help) {
+    console.log(`Usage:
+  node scripts/evaluate-planner-dataset.mjs [datasetDir]
+  node scripts/evaluate-planner-dataset.mjs --dataset <dir>
+
+Options:
+  --json                  Print JSON to stdout
+  --out <file>            Write JSON output to file (implies --json)
+  --excluded-tags <csv>   Override excluded tags (default is in evaluator)
+  --model-hint <value>    Override preferred modelHint (default: balanced)
+`);
+    return;
+  }
+
+  const datasetDir =
+    args.datasetDir ?? path.join(__dirname, '..', 'tests', 'fixtures', 'planner-dataset');
+  const jsonMode = Boolean(args.json || args.out);
+
+  const { summary, cases } = await evaluatePlannerDataset({
+    datasetDir,
+    ...(args.excludedTags ? { excludedTags: args.excludedTags } : {}),
+    ...(args.preferredModelHint ? { preferredModelHint: args.preferredModelHint } : {}),
+  });
+
+  if (jsonMode) {
+    const payload = {
+      meta: {
+        datasetDir,
+      },
+      summary,
+      cases,
+    };
+    const text = JSON.stringify(payload, null, 2);
+    console.log(text);
+
+    if (args.out) {
+      await fs.mkdir(path.dirname(args.out), { recursive: true });
+      await fs.writeFile(args.out, text + '\n', 'utf8');
+    }
+    return;
+  }
 
   console.log('Planner dataset evaluation summary:');
   console.log(`- cases: ${summary.cases}`);
