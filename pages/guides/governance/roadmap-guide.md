@@ -52,5 +52,5 @@ title: Roadmap & Project Board 運用ガイド
 
 - Issue テンプレを用意し、目的/完了条件/テスト観点を書く欄を設ける。
 - 大きいタスクはチェックリストで分割し、サブタスクを Todo として管理。
-- ラベルを少数に絞る（例: `phase:1`, `priority:p1`, `kind:docs/code`）。
+- ラベルを少数に絞る（例: `type:task`, `P1`, `m2-dx`）。
 - ロードマップ更新時は、対応する Issue にリンクを張り、重複や抜けを防ぐ。

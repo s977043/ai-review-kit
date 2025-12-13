@@ -71,9 +71,9 @@ Roadmap Project には下記のカスタムフィールドを追加し、Issue �
 
 以下のソート順を推奨します。
 
-1. Phase (昇順)
-2. Depends On が解決済みかどうか
-3. Issue タイトル (昇順)
+1. Priority（P0 → P2）
+2. Milestone（任意）
+3. Issue タイトル（昇順）
 
 ## 📍 4. Issue のライフサイクル
 
