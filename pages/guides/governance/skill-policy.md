@@ -16,6 +16,10 @@
 4. 出力（指摘文）が短く、次の行動に結びつく
 5. `npm run skills:validate` が通る
 
+## 最終判断（迷ったとき）
+
+曖昧なケースや意見が割れた場合、最終的な判断はメンテナが行います。判断基準は coverage よりも precision を優先します。
+
 ## 後方互換（Breaking を避ける）
 
 原則:
@@ -44,6 +48,13 @@
 2. Actionability（次の一手）: 修正方針が分かる
 3. Evidence（根拠）: どこを見て言っているかが明確
 4. Coverage（網羅）: 後から増やす（最初から広げすぎない）
+
+## Stable Contract（変えてはいけない核）
+
+以下は安定した契約（stable contract）として扱い、破壊的変更をする場合は major version bump が必要です。
+
+- 出力フォーマット（例: `<file>:<line>: <message>` 形式や `NO_ISSUES` の意味）
+- `severity` / `confidence` の意味論（利用者が期待する解釈）
 
 ## 廃止（Deprecate）ポリシー
 
