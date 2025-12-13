@@ -37,16 +37,16 @@ jobs:
         with:
           fetch-depth: 0
       - name: Run River Reviewer (midstream)
-        uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.0
+        uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.1
         with:
           phase: midstream # upstream|midstream|downstream|all (future-ready)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-Pin to a release tag such as `@v0.1.0` for stability. Optionally, you can maintain a floating alias tag like `@v0`.
+Pin to a release tag such as `@v0.1.1` for stability. Optionally, you can maintain a floating alias tag like `@v0`.
 
-Latest release: [v0.1.0](https://github.com/s977043/river-reviewer/releases/tag/v0.1.0)
+Latest release: [v0.1.1](https://github.com/s977043/river-reviewer/releases/tag/v0.1.1)
 
 ## Quick start (local)
 
