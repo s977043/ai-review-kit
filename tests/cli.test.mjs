@@ -206,3 +206,25 @@ test('river run fails gracefully outside git repos', async () => {
   assert.match(result.stderr, /Not a git repository/);
   await rm(dir, { recursive: true, force: true });
 });
+
+test('river doctor reports basic setup status', async t => {
+  const { dir } = await createRepoWithChange();
+  t.after(async () => rm(dir, { recursive: true, force: true }));
+
+  const result = await runCli(['doctor', '.', '--debug'], dir);
+  assert.strictEqual(result.code, 0, result.stderr);
+  assert.match(result.stdout, /River Reviewer doctor/);
+  assert.match(result.stdout, /Skills loaded:/);
+  assert.match(result.stdout, /Merge base:/);
+  assert.match(result.stdout, /--- diff preview ---/);
+});
+
+test('river doctor fails gracefully outside git repos', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'river-cli-empty-'));
+  t.after(async () => rm(dir, { recursive: true, force: true }));
+  await mkdir(resolve(dir, 'nested'));
+  const result = await runCli(['doctor', '.'], dir);
+
+  assert.notStrictEqual(result.code, 0);
+  assert.match(result.stderr, /Not a git repository/);
+});

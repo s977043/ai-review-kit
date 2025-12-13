@@ -4,9 +4,15 @@
 
 ## CLI（`river run`）
 
+### まず最初に（事前診断）
+
+原因の切り分けが難しい場合は、まず `river doctor .` を実行して「設定の不足」や「差分取得の失敗」を確認してください。
+
 ### OpenAI API key が見つからない
 
-- 症状: `Error: OpenAI API key not found`
+- 症状（例）:
+  - `LLM: OPENAI_API_KEY (or RIVER_OPENAI_API_KEY) not set`
+  - `River Reviewer doctor` の `OpenAI (review): not set`
 - 対応:
   - `OPENAI_API_KEY` または `RIVER_OPENAI_API_KEY` を環境変数で設定すること
   - 外部送信を避けたい場合は `--dry-run` を利用すること
