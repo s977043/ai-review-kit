@@ -1,0 +1,23 @@
+name: 'River Reviewer (example-3: planner)'
+on:
+  pull_request:
+
+jobs:
+  river-reviewer:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Run River Reviewer (planner=order)
+        uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+        with:
+          phase: midstream
+          planner: order # off|order|prune
+          dry_run: false
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

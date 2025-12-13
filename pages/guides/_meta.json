@@ -2,6 +2,8 @@
   "quickstart": "クイックスタート (River Reviewer)",
   "github-actions": "GitHub Actions で River Reviewer をセットアップする",
   "run-phase-specific-review": "Run Phase-Specific Review",
+  "troubleshooting": "トラブルシューティング",
+  "faq": "FAQ（よくある失敗）",
   "write-a-skill": "スキル作成ガイド（How-to）",
   "validate-skill-schema": "Validate Skill Schema",
   "debug-skill-routing": "Debug Skill Routing",

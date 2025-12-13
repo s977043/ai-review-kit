@@ -1,0 +1,20 @@
+name: 'River Reviewer (example-2: upstream only)'
+on:
+  pull_request:
+
+jobs:
+  river-reviewer:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Run River Reviewer (upstream)
+        uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.1
+        with:
+          phase: upstream
+          dry_run: true
