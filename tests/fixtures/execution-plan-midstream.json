@@ -21,12 +21,12 @@
       "reasons": [
         "phase mismatch: downstream !== midstream",
         "applyTo did not match any changed file",
-        "missing required inputContext"
+        "missing inputContext: tests"
       ]
     },
     {
       "id": "rr-downstream-coverage-gap-001",
-      "reasons": ["phase mismatch: downstream !== midstream", "missing required inputContext"]
+      "reasons": ["phase mismatch: downstream !== midstream", "missing inputContext: tests"]
     },
     {
       "id": "rr-downstream-flaky-test-001",
@@ -37,14 +37,14 @@
     },
     {
       "id": "rr-downstream-test-existence-001",
-      "reasons": ["phase mismatch: downstream !== midstream", "missing required inputContext"]
+      "reasons": ["phase mismatch: downstream !== midstream", "missing inputContext: tests"]
     },
     {
       "id": "rr-downstream-test-naming-001",
       "reasons": [
         "phase mismatch: downstream !== midstream",
         "applyTo did not match any changed file",
-        "missing required inputContext"
+        "missing inputContext: tests"
       ]
     },
     {
@@ -52,28 +52,28 @@
       "reasons": [
         "phase mismatch: downstream !== midstream",
         "applyTo did not match any changed file",
-        "missing required inputContext"
+        "missing inputContext: tests"
       ]
     },
     {
       "id": "rr-midstream-review-policy-standard-001",
-      "reasons": ["missing required inputContext"]
+      "reasons": ["missing inputContext: fullFile"]
     },
     {
       "id": "rr-midstream-logging-observability-001",
-      "reasons": ["missing required inputContext"]
+      "reasons": ["missing inputContext: fullFile"]
     },
     {
       "id": "rr-midstream-security-basic-001",
-      "reasons": ["missing required inputContext"]
+      "reasons": ["missing inputContext: fullFile"]
     },
     {
       "id": "rr-midstream-typescript-nullcheck-001",
-      "reasons": ["missing required inputContext"]
+      "reasons": ["missing inputContext: fullFile"]
     },
     {
       "id": "rr-midstream-typescript-strict-001",
-      "reasons": ["missing required inputContext"]
+      "reasons": ["missing inputContext: fullFile"]
     },
     {
       "id": "rr-upstream-review-policy-standard-001",
@@ -87,7 +87,7 @@
       "reasons": [
         "phase mismatch: upstream !== midstream",
         "applyTo did not match any changed file",
-        "missing required inputContext"
+        "missing inputContext: adr"
       ]
     },
     {
@@ -95,7 +95,7 @@
       "reasons": [
         "phase mismatch: upstream !== midstream",
         "applyTo did not match any changed file",
-        "missing required inputContext"
+        "missing inputContext: adr"
       ]
     },
     {
