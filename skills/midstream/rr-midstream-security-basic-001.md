@@ -4,10 +4,7 @@ name: Baseline Security Checks
 description: Check common security risks in application code (SQLi, XSS, secrets).
 phase: midstream
 applyTo:
-  - '**/*.ts'
-  - '**/*.tsx'
-  - '**/*.js'
-  - '**/*.jsx'
+  - '**/{api,routes,db,ui,components,auth,security,config}/**/*.{ts,tsx,js,jsx}'
 tags: [security, midstream, web]
 severity: major
 inputContext: [diff, fullFile]
