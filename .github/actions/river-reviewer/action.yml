@@ -39,8 +39,9 @@ runs:
     - uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node_version }}
-        cache: npm
-        cache-dependency-path: ${{ github.action_path }}/../../../package-lock.json
+        # NOTE: caching is intentionally disabled here.
+        # - `cache-dependency-path` disallows '.'/'..' path segments on setup-node
+        # - using `github.workspace` would key off the target repo lockfile (often absent)
     - name: Install dependencies
       shell: bash
       run: |
@@ -82,50 +83,8 @@ runs:
         RIVER_REVIEWER_COMMENT_PATH: ${{ steps.river.outputs.comment_path }}
       with:
         script: |
-          const fs = require('fs');
-          const marker = '<!-- river-reviewer -->';
-          const path = process.env.RIVER_REVIEWER_COMMENT_PATH;
-          if (!path || !fs.existsSync(path)) {
-            core.setFailed('River Reviewer output file not found; cannot post comment.');
-            return;
-          }
-          let body = fs.readFileSync(path, 'utf8').trim();
-          if (!body.startsWith(marker)) {
-            body = `${marker}\n${body}`;
-          }
-          const maxLen = 65000;
-          if (body.length > maxLen) {
-            body = `${body.slice(0, maxLen)}\n\n…(truncated)`;
-          }
-
-          const prNumber = context.payload.pull_request.number;
-          const { owner, repo } = context.repo;
-
-          const comments = await github.paginate(github.rest.issues.listComments, {
-            owner,
-            repo,
-            issue_number: prNumber,
-            per_page: 100,
-          });
-
-          const existing = comments.find(c => typeof c.body === 'string' && c.body.includes(marker));
-          if (existing) {
-            await github.rest.issues.updateComment({
-              owner,
-              repo,
-              comment_id: existing.id,
-              body,
-            });
-            core.info(`Updated existing River Reviewer comment (${existing.id}).`);
-          } else {
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: prNumber,
-              body,
-            });
-            core.info('Created new River Reviewer comment.');
-          }
+          const postComment = require(`${process.env.GITHUB_ACTION_PATH}/post-comment.cjs`);
+          await postComment({ github, context, core });
 branding:
   icon: 'play-circle'
   color: 'blue'

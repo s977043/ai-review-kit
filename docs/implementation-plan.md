@@ -1,6 +1,6 @@
 # 実装計画（Milestone v0.1 / v0.2 / v0.3 / v1.0）
 
-このドキュメントは、GitHub の Milestone（`v0.1.0—Public Ready` / `v0.2.0—Developer Experience` / `v0.3.0—Smart Reviewer` / `v1.0.0—Community Edition`）に **そのまま Issue を載せられる粒度（1〜2週間）**で、実装の一本道とバックログを固定します。
+このドキュメントは、GitHub の Milestone（`v0.1.0 – Public Ready` / `v0.2.0 – Developer Experience` / `v0.3.0 – Smart Reviewer` / `v1.0.0 – Community Edition`）に **そのまま Issue を載せられる粒度（1〜2週間）**で、実装の一本道とバックログを固定します。
 
 ## 目的（勝ち筋）
 
@@ -13,17 +13,17 @@
 
 `.github/workflows/auto-milestone.yml` により、以下のラベルが付いた Issue は該当 Milestone に自動で割り当てられます。
 
-- `m1-public` → `v0.1.0—Public Ready`
-- `m2-dx` → `v0.2.0—Developer Experience`
-- `m3-smart` → `v0.3.0—Smart Reviewer`
-- `m4-community` → `v1.0.0—Community Edition`
+- `m1-public` → `v0.1.0 – Public Ready`
+- `m2-dx` → `v0.2.0 – Developer Experience`
+- `m3-smart` → `v0.3.0 – Smart Reviewer`
+- `m4-community` → `v1.0.0 – Community Edition`
 
 前提:
 
 - 上記 Milestone が GitHub 上に作成済みであること（タイトル一致が必要）。
 - 上記ラベルが作成済みであること（未作成の場合は先に作る）。
 
-## v0.1.0—Public Ready（DoD）
+## v0.1.0 – Public Ready（DoD）
 
 最小構成で「PR にレビューが返る」を確実にする。
 
@@ -32,7 +32,7 @@
 - 失敗時は「何が足りないか」と「次にやること」を返せる
 - 同じ入力なら同じ出力になる（少なくとも非 LLM 経路）
 
-## v0.2.0—Developer Experience（DoD）
+## v0.2.0 – Developer Experience（DoD）
 
 導入・トラブルシュート・拡張の摩擦を下げる。
 
@@ -40,7 +40,7 @@
 - examples が段階的に学べる（最小 → 部分適用 → planner）
 - “よくある失敗” が FAQ 化され、検索で辿れる
 
-## v0.3.0—Smart Reviewer（DoD）
+## v0.3.0 – Smart Reviewer（DoD）
 
 賢さを測って改善できるようにし、1 点突破を実用レベルまで持っていく。
 
