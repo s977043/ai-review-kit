@@ -14,8 +14,8 @@ inputContext:
 outputKind:
   - findings # findings / summary / actions / tests / metrics / questions
 modelHint: balanced # cheap / balanced / high-accuracy
-dependencies:
-  - code_search # 必要なリソースがあれば指定。不要なら省略
+# dependencies:
+#   - code_search # 必要なリソースがあれば指定。不要なら省略
 ---
 
 ## Goal / 目的
