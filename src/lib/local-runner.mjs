@@ -35,6 +35,35 @@ function resolveAvailableDependencies(inputDependencies) {
   return null; // null disables dependency-based skipping (backward-compatible)
 }
 
+async function collectLocalContext({
+  cwd,
+  debug = false,
+  contextLines = 3,
+  availableContexts,
+  availableDependencies,
+} = {}) {
+  const repoRoot = await ensureGitRepo(cwd);
+  const { rulesText: projectRules } = await loadProjectRules(repoRoot);
+  const defaultBranch = await detectDefaultBranch(repoRoot);
+  const mergeBase = await findMergeBase(repoRoot, defaultBranch);
+  const diff = await collectRepoDiff(repoRoot, mergeBase, { contextLines });
+  const reviewFiles = diff.filesForReview?.map(file => file.path) ?? diff.changedFiles;
+  const contexts = resolveAvailableContexts(availableContexts);
+  const dependencies = resolveAvailableDependencies(availableDependencies);
+
+  return {
+    repoRoot,
+    projectRules,
+    defaultBranch,
+    mergeBase,
+    diff,
+    reviewFiles,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
+    debug,
+  };
+}
+
 export async function planLocalReview({
   cwd = process.cwd(),
   phase = 'midstream',
@@ -45,14 +74,15 @@ export async function planLocalReview({
   availableDependencies,
   plannerMode,
 } = {}) {
-  const repoRoot = await ensureGitRepo(cwd);
-  const { rulesText: projectRules } = await loadProjectRules(repoRoot);
-  const defaultBranch = await detectDefaultBranch(repoRoot);
-  const mergeBase = await findMergeBase(repoRoot, defaultBranch);
-  const diff = await collectRepoDiff(repoRoot, mergeBase, { contextLines: debug ? 10 : 3 });
-  const reviewFiles = diff.filesForReview?.map(file => file.path) ?? diff.changedFiles;
-  const contexts = resolveAvailableContexts(availableContexts);
-  const dependencies = resolveAvailableDependencies(availableDependencies);
+  const base = await collectLocalContext({
+    cwd,
+    debug,
+    contextLines: debug ? 10 : 3,
+    availableContexts,
+    availableDependencies,
+  });
+  const { repoRoot, projectRules, defaultBranch, mergeBase, diff, reviewFiles, availableContexts: contexts, availableDependencies: dependencies } =
+    base;
   const requestedPlannerMode = normalizePlannerMode(plannerMode ?? process.env.RIVER_PLANNER_MODE, {
     defaultMode: 'off',
   });
@@ -192,15 +222,16 @@ export async function doctorLocalReview({
   availableContexts,
   availableDependencies,
 } = {}) {
-  const repoRoot = await ensureGitRepo(cwd);
   const skills = await loadSkills();
-  const { rulesText: projectRules } = await loadProjectRules(repoRoot);
-  const defaultBranch = await detectDefaultBranch(repoRoot);
-  const mergeBase = await findMergeBase(repoRoot, defaultBranch);
-  const diff = await collectRepoDiff(repoRoot, mergeBase, { contextLines: debug ? 10 : 0 });
-  const reviewFiles = diff.filesForReview?.map(file => file.path) ?? diff.changedFiles;
-  const contexts = resolveAvailableContexts(availableContexts);
-  const dependencies = resolveAvailableDependencies(availableDependencies);
+  const base = await collectLocalContext({
+    cwd,
+    debug,
+    contextLines: debug ? 10 : 0,
+    availableContexts,
+    availableDependencies,
+  });
+  const { repoRoot, projectRules, defaultBranch, mergeBase, diff, reviewFiles, availableContexts: contexts, availableDependencies: dependencies } =
+    base;
 
   const plan = reviewFiles.length
     ? await buildExecutionPlan({

@@ -333,8 +333,7 @@ async function main() {
         availableDependencies: parsed.availableDependencies,
       });
 
-      const reviewKey = process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-      const plannerKey = process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+      const apiKey = process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
 
       console.log(`River Reviewer doctor
 Repo: ${result.repoRoot}
@@ -342,14 +341,14 @@ Base branch: ${result.defaultBranch}
 Merge base: ${result.mergeBase}
 Skills loaded: ${result.skillsCount}
 Project rules: ${result.projectRules ? 'present' : 'none'}
-OpenAI (review): ${reviewKey ? 'configured' : 'not set'}
-OpenAI (planner): ${plannerKey ? 'configured' : 'not set'}
+OpenAI (review): ${apiKey ? 'configured' : 'not set'}
+OpenAI (planner): ${apiKey ? 'configured' : 'not set'}
 Contexts: ${(result.availableContexts || []).join(', ') || 'none'}
 Dependencies: ${
         result.availableDependencies ? result.availableDependencies.join(', ') : 'not specified (skip disabled)'
       }`);
 
-      if (!reviewKey) {
+      if (!apiKey) {
         printHintLines(['Set `OPENAI_API_KEY` (or `RIVER_OPENAI_API_KEY`) to enable LLM reviews.', 'You can still run with `--dry-run` for local validation.']);
       }
 
