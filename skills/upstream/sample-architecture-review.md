@@ -7,6 +7,7 @@ applyTo:
   - 'docs/architecture/**/*.md'
   - 'docs/adr/**/*.md'
 tags:
+  - sample
   - design
   - architecture
   - upstream

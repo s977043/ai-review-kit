@@ -8,6 +8,7 @@ applyTo:
   - 'tests/**/*.js'
   - 'tests/**/*.py'
 tags:
+  - sample
   - tests
   - coverage
   - downstream

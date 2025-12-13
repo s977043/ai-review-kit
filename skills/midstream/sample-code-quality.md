@@ -16,6 +16,7 @@ modelHint: balanced
 dependencies:
   - code_search
 tags:
+  - sample
   - style
   - maintainability
   - midstream
