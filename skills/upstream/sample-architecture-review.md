@@ -23,10 +23,24 @@ dependencies:
   - adr_lookup
 ---
 
-# Instruction
+## Goal / 目的
 
-- Read the latest ADRs and architecture diagrams for divergence.
-- Call out missing decisions, unstated assumptions, or conflicting constraints.
-- Verify boundary definitions (APIs, data contracts, failure modes) remain aligned with team standards.
-- Prefer concrete references to filenames/sections when highlighting gaps.
-- If a finding is uncertain, mark it as a question rather than a defect.
+- ADR/設計ドキュメントの差分から、矛盾・抜け・前提不足を “薄く” 拾うサンプルです。
+
+## Non-goals / 扱わないこと
+
+- 実装詳細の断定や、根拠のない推測で断言しない。
+
+## False-positive guards / 黙る条件
+
+- 判断材料が不足している場合は、欠陥ではなく質問として扱う。
+
+## Rule / ルール
+
+- ADR と本文の整合（決定事項、採用理由、却下案、影響範囲）を確認する。
+- 境界（API/データ契約/障害時ふるまい）が曖昧なら指摘する。
+- 指摘は差分に紐づけ、ファイル/セクション参照を添える。
+
+## Output / 出力
+
+- `<file>:<line>: <message>` 形式で 1 行ずつ（日本語、短く）。
