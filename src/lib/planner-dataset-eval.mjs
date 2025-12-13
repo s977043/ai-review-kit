@@ -46,6 +46,7 @@ export async function evaluatePlannerDataset({
       const plan = await buildExecutionPlan({
         phase: c.phase,
         changedFiles,
+        diffText,
         availableContexts,
         availableDependencies,
         preferredModelHint,
@@ -63,6 +64,7 @@ export async function evaluatePlannerDataset({
         name: c.name,
         phase: c.phase,
         changedFiles,
+        impactTags: plan.impactTags ?? [],
         availableContexts,
         availableDependencies,
         expectedAny,

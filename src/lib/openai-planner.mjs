@@ -31,6 +31,7 @@ function buildPlannerPrompt({ skills, context }) {
   const phase = context?.phase ?? 'midstream';
   const changedFiles = Array.isArray(context?.changedFiles) ? context.changedFiles : [];
   const availableContexts = Array.isArray(context?.availableContexts) ? context.availableContexts : [];
+  const impactTags = Array.isArray(context?.impactTags) ? context.impactTags : [];
   const skillsText = (skills || [])
     .map(s => `- ${s.id}: ${s.name} (${s.phase}) — ${s.description}`)
     .join('\n');
@@ -43,6 +44,7 @@ Context:
 - phase: ${phase}
 - changedFiles: ${changedFiles.join(', ') || '(none)'}
 - availableContexts: ${availableContexts.join(', ') || '(none)'}
+- impactTags: ${impactTags.join(', ') || '(none)'}
 
 Candidate skills:
 ${skillsText}
