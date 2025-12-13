@@ -48,12 +48,15 @@ function matchesHardcodedSecretLine(code) {
 
   // Heuristic: suspicious identifier name + long-ish string literal
   const assignMatch =
-    /\b(?:export\s+)?(?:const|let|var)\s+([A-Za-z0-9_]+)\s*=\s*(['"`])([^'"`]+)\2/.exec(code) ||
-    /['"]([A-Za-z0-9_]+)['"]\s*:\s*(['"`])([^'"`]+)\2/.exec(code);
+    /\b(?:export\s+)?(?:const|let|var)\s+(?<name>[A-Za-z0-9_]+)\s*=\s*(?<quote>['"`])(?<value>[^'"`]+)\k<quote>/.exec(
+      code,
+    ) ||
+    /['"](?<name>[A-Za-z0-9_]+)['"]\s*:\s*(?<quote>['"`])(?<value>[^'"`]+)\k<quote>/.exec(code) ||
+    /\b(?<name>[A-Za-z0-9_]+)\s*:\s*(?<quote>['"`])(?<value>[^'"`]+)\k<quote>/.exec(code);
   if (!assignMatch) return false;
 
-  const name = assignMatch[1] ?? '';
-  const value = assignMatch[3] ?? '';
+  const name = assignMatch.groups?.name ?? '';
+  const value = assignMatch.groups?.value ?? '';
   if (!/(token|secret|api[_-]?key|password|passwd|private[_-]?key)/i.test(name)) return false;
   if (value.length < 10) return false;
   if (/^https?:\/\//i.test(value)) return false;
@@ -61,6 +64,8 @@ function matchesHardcodedSecretLine(code) {
 }
 
 function findHardcodedSecrets({ diff }) {
+  // Avoid noisy output when many hardcoded values are introduced at once.
+  const MAX_HARDCODED_SECRET_COMMENTS = 3;
   const comments = [];
   const files = ensureArray(diff?.files);
 
@@ -75,7 +80,7 @@ function findHardcodedSecrets({ diff }) {
         message:
           '秘密情報（トークン/キー）の直書きの可能性があります。環境変数（GitHub Secrets等）へ移し、漏洩時はローテーションも検討してください。',
       });
-      if (comments.length >= 3) return comments;
+      if (comments.length >= MAX_HARDCODED_SECRET_COMMENTS) return comments;
     }
   }
 

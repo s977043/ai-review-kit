@@ -34,3 +34,23 @@ test('buildHeuristicComments is quiet when security skill is not selected', () =
   assert.equal(comments.length, 0);
 });
 
+test('buildHeuristicComments detects hardcoded secrets in object literals (unquoted key)', () => {
+  const diffText = `diff --git a/src/config/auth.ts b/src/config/auth.ts
+index 1111111..2222222 100644
+--- a/src/config/auth.ts
++++ b/src/config/auth.ts
+@@ -1,3 +1,4 @@
+ export const authConfig = {
+   issuer: 'https://example.com',
++  serviceToken: 'DUMMY_TOKEN_123',
+ };
+`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].file, 'src/config/auth.ts');
+  assert.equal(comments[0].line, 3);
+});
