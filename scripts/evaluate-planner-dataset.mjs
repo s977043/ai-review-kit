@@ -6,6 +6,17 @@ import { evaluatePlannerDataset } from '../src/lib/planner-dataset-eval.mjs';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
+function requireValue(argv, index, flag) {
+  const value = argv[index + 1];
+  if (value === undefined) {
+    throw new Error(`${flag} requires a value`);
+  }
+  if (value.startsWith('-')) {
+    throw new Error(`${flag} requires a value (got another flag: ${value})`);
+  }
+  return value;
+}
+
 function parseArgs(argv) {
   const args = {
     datasetDir: null,
@@ -28,19 +39,19 @@ function parseArgs(argv) {
     }
 
     if (arg === '--dataset') {
-      args.datasetDir = argv[i + 1];
+      args.datasetDir = requireValue(argv, i, '--dataset');
       i++;
       continue;
     }
 
     if (arg === '--out') {
-      args.out = argv[i + 1];
+      args.out = requireValue(argv, i, '--out');
       i++;
       continue;
     }
 
     if (arg === '--excluded-tags') {
-      const raw = argv[i + 1] ?? '';
+      const raw = requireValue(argv, i, '--excluded-tags');
       args.excludedTags = raw
         .split(',')
         .map(s => s.trim())
@@ -50,7 +61,7 @@ function parseArgs(argv) {
     }
 
     if (arg === '--model-hint') {
-      args.preferredModelHint = argv[i + 1];
+      args.preferredModelHint = requireValue(argv, i, '--model-hint');
       i++;
       continue;
     }
@@ -88,8 +99,8 @@ Options:
 
   const { summary, cases } = await evaluatePlannerDataset({
     datasetDir,
-    ...(args.excludedTags ? { excludedTags: args.excludedTags } : {}),
-    ...(args.preferredModelHint ? { preferredModelHint: args.preferredModelHint } : {}),
+    ...(args.excludedTags != null && { excludedTags: args.excludedTags }),
+    ...(args.preferredModelHint != null && { preferredModelHint: args.preferredModelHint }),
   });
 
   if (jsonMode) {
