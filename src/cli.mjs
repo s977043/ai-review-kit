@@ -7,11 +7,11 @@ import { SkillLoaderError } from './lib/skill-loader.mjs';
 import CostEstimator from './core/cost-estimator.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
 import { parseList } from './lib/utils.mjs';
+import { PLANNER_MODES } from './lib/planner-utils.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
 const COMMENT_MARKER = '<!-- river-reviewer -->';
-const PLANNER_MODES = ['off', 'order', 'prune'];
 
 function printHintLines(lines = []) {
   const hints = lines.filter(Boolean);
@@ -235,7 +235,7 @@ function formatPlannerStatus(plan, { markdown = false } = {}) {
   if (!requested || mode === 'off') return wrap('off');
   if (plan?.plannerSkipped) return `${wrap(mode)} skipped (${plan.plannerSkipped})`;
   if (plan?.plannerFallback) {
-    const reason = Array.isArray(plan?.plannerReasons) && plan.plannerReasons.length ? plan.plannerReasons[0].reason : '';
+    const reason = plan?.plannerError || '';
     return reason ? `${wrap(mode)} fallback (${reason})` : `${wrap(mode)} fallback`;
   }
   return plan?.plannerUsed ? `${wrap(mode)} used` : `${wrap(mode)} not used`;

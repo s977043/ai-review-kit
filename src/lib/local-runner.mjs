@@ -3,6 +3,7 @@ import { collectRepoDiff } from './diff.mjs';
 import { generateReview } from './review-engine.mjs';
 import { detectDefaultBranch, ensureGitRepo, findMergeBase } from './git.mjs';
 import { createOpenAIPlanner } from './openai-planner.mjs';
+import { normalizePlannerMode } from './planner-utils.mjs';
 import { buildExecutionPlan } from './review-runner.mjs';
 import { loadProjectRules } from './rules.mjs';
 import { parseList } from './utils.mjs';
@@ -11,14 +12,6 @@ function normalizePhase(phase) {
   const normalized = (phase || '').toLowerCase();
   if (['upstream', 'midstream', 'downstream'].includes(normalized)) return normalized;
   return 'midstream';
-}
-
-function normalizePlannerMode(mode) {
-  const normalized = (mode || '').toLowerCase();
-  if (normalized === 'off') return 'off';
-  if (normalized === 'order') return 'order';
-  if (normalized === 'prune') return 'prune';
-  return 'off';
 }
 
 // NOTE: Keep this list in sync with schemas/skill.schema.json dependencies enum.
@@ -59,7 +52,9 @@ export async function planLocalReview({
   const reviewFiles = diff.filesForReview?.map(file => file.path) ?? diff.changedFiles;
   const contexts = resolveAvailableContexts(availableContexts);
   const dependencies = resolveAvailableDependencies(availableDependencies);
-  const requestedPlannerMode = normalizePlannerMode(plannerMode ?? process.env.RIVER_PLANNER_MODE);
+  const requestedPlannerMode = normalizePlannerMode(plannerMode ?? process.env.RIVER_PLANNER_MODE, {
+    defaultMode: 'off',
+  });
   const plannerRequested = requestedPlannerMode !== 'off';
 
   if (!reviewFiles.length) {

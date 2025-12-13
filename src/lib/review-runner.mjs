@@ -1,6 +1,7 @@
 import { minimatch } from 'minimatch';
 import { loadSkills } from './skill-loader.mjs';
 import { planSkills, summarizeSkill } from './skill-planner.mjs';
+import { normalizePlannerMode } from './planner-utils.mjs';
 
 const MODEL_PRIORITY = {
   cheap: 1,
@@ -102,14 +103,6 @@ export function rankByModelHint(skills, preferredModelHint = 'balanced') {
   });
 }
 
-function normalizePlannerMode(mode) {
-  const normalized = (mode || '').toLowerCase();
-  if (normalized === 'off') return 'off';
-  if (normalized === 'order') return 'order';
-  if (normalized === 'prune') return 'prune';
-  return 'order';
-}
-
 /**
  * Build an execution plan from skills and review context.
  * - planner 未指定: メタデと modelHint に基づく決定論的な並び替え
@@ -141,7 +134,7 @@ export async function buildExecutionPlan(options) {
   }
 
   // If planner is provided, try LLM-based planning, fallback to deterministic rank
-  const effectivePlannerMode = planner ? normalizePlannerMode(plannerMode) : 'off';
+  const effectivePlannerMode = planner ? normalizePlannerMode(plannerMode, { defaultMode: 'order' }) : 'off';
   if (planner && effectivePlannerMode !== 'off') {
     const context = {
       phase,
@@ -160,6 +153,7 @@ export async function buildExecutionPlan(options) {
       plannerMode: effectivePlannerMode,
       plannerReasons: reasons,
       plannerFallback: fallback,
+      ...(fallback ? { plannerError: reasons?.[0]?.reason ?? 'planner fallback' } : {}),
     };
   }
 

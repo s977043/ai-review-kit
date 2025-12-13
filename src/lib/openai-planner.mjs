@@ -4,12 +4,27 @@ const DEFAULT_PLANNER_MODEL =
   process.env.OPENAI_MODEL ||
   'gpt-4o-mini';
 
+const DEFAULT_TIMEOUT_MS = 15000;
+
 function resolveOpenAIConfig(options = {}) {
   return {
     apiKey: options.apiKey || process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
     model: options.model || DEFAULT_PLANNER_MODEL,
-    endpoint: options.endpoint || process.env.RIVER_OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions',
+    endpoint:
+      options.endpoint ||
+      process.env.RIVER_OPENAI_BASE_URL ||
+      process.env.OPENAI_BASE_URL ||
+      'https://api.openai.com/v1/chat/completions',
   };
+}
+
+function resolvePlannerTimeoutMs(options = {}) {
+  if (typeof options.timeoutMs === 'number' && Number.isFinite(options.timeoutMs) && options.timeoutMs > 0) {
+    return options.timeoutMs;
+  }
+  const value = Number(process.env.RIVER_PLANNER_TIMEOUT);
+  if (Number.isFinite(value) && value > 0) return value;
+  return DEFAULT_TIMEOUT_MS;
 }
 
 function buildPlannerPrompt({ skills, context }) {
@@ -40,11 +55,11 @@ Rules:
 `;
 }
 
-async function callOpenAI({ prompt, apiKey, model, endpoint }) {
-  const controller = AbortSignal.timeout(15000);
+async function callOpenAI({ prompt, apiKey, model, endpoint, timeoutMs }) {
+  const signal = AbortSignal.timeout(timeoutMs ?? resolvePlannerTimeoutMs());
   const res = await fetch(endpoint, {
     method: 'POST',
-    signal: controller,
+    signal,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
@@ -81,7 +96,11 @@ function parsePlannerJson(text) {
     const start = trimmed.indexOf('[');
     const end = trimmed.lastIndexOf(']');
     if (start >= 0 && end > start) {
-      return JSON.parse(trimmed.slice(start, end + 1));
+      try {
+        return JSON.parse(trimmed.slice(start, end + 1));
+      } catch {
+        throw new Error('planner output is not valid JSON');
+      }
     }
     throw new Error('planner output is not valid JSON');
   }
@@ -89,6 +108,7 @@ function parsePlannerJson(text) {
 
 export function createOpenAIPlanner(options = {}) {
   const config = resolveOpenAIConfig(options);
+  const timeoutMs = resolvePlannerTimeoutMs(options);
   return {
     model: config.model,
     endpoint: config.endpoint,
@@ -102,10 +122,10 @@ export function createOpenAIPlanner(options = {}) {
         apiKey: config.apiKey,
         model: config.model,
         endpoint: config.endpoint,
+        timeoutMs,
       });
       const parsed = parsePlannerJson(output);
       return Array.isArray(parsed) ? parsed : [];
     },
   };
 }
-
