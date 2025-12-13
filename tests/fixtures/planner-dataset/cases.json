@@ -116,7 +116,7 @@
     "availableContexts": ["diff", "fullFile"],
     "availableDependencies": ["code_search"],
     "expectedAny": ["rr-midstream-typescript-strict-001"],
-    "expectedTop1": ["rr-midstream-typescript-strict-001"]
+    "expectedTop1": ["rr-midstream-typescript-strict-001", "rr-midstream-typescript-nullcheck-001"]
   },
   {
     "name": "midstream: silent failure (return null)",
