@@ -26,9 +26,25 @@ dependencies:
   - coverage_report
 ---
 
-# Instruction
+## Goal / 目的
 
-- Check that new behaviors have positive and negative test cases, including edge inputs.
-- Look for flaky-test risks (time sensitivity, randomness, external dependencies).
-- Call out missing assertions around failure paths and error messaging.
-- Suggest small, focused test additions instead of broad rewrites.
+- テスト差分から、カバレッジ不足・失敗系の抜け・フレークのリスクを “薄く” 拾うサンプルです。
+
+## Non-goals / 扱わないこと
+
+- 変更と無関係な一般論（「テストを増やすべき」だけ）を言わない。
+- 既存のテスト設計方針を断定して押し付けない。
+
+## False-positive guards / 黙る条件
+
+- 変更がテストの整形/リネームのみで意味が変わらない場合は深入りしない。
+
+## Rule / ルール
+
+- 正常系だけでなく、境界・異常系（入力不正、権限、例外、タイムアウト）を優先する。
+- フレーク要因（時刻、乱数、外部依存、並列実行）を見つけたら指摘する。
+- 指摘は差分に紐づけ、最小の追加テスト案を 1 つ添える。
+
+## Output / 出力
+
+- `<file>:<line>: <message>` 形式で 1 行ずつ（日本語、短く）。
