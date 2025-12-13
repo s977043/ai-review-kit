@@ -127,3 +127,47 @@ test('buildExecutionPlan can use planner when provided', async () => {
   assert.deepEqual(ids, ['b', 'a']);
   assert.equal(plan.plannerFallback, false);
 });
+
+test('buildExecutionPlan supports prune mode (planner-selected subset only)', async () => {
+  const providedSkills = [
+    { metadata: { id: 'a', phase: 'midstream', applyTo: ['src/**'], modelHint: 'cheap' } },
+    { metadata: { id: 'b', phase: 'midstream', applyTo: ['src/**'], modelHint: 'high-accuracy' } },
+    { metadata: { id: 'c', phase: 'midstream', applyTo: ['src/**'], modelHint: 'balanced' } },
+  ];
+  const planner = {
+    plan: async () => [{ id: 'b', reason: 'only b' }],
+  };
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/app.ts'],
+    availableContexts: ['diff'],
+    planner,
+    plannerMode: 'prune',
+    skills: providedSkills,
+  });
+  const ids = plan.selected.map(s => s.metadata.id);
+  assert.deepEqual(ids, ['b']);
+  assert.equal(plan.plannerFallback, false);
+  assert.equal(plan.plannerMode, 'prune');
+});
+
+test('buildExecutionPlan falls back when planner output is invalid in prune mode', async () => {
+  const providedSkills = [
+    { metadata: { id: 'a', phase: 'midstream', applyTo: ['src/**'], modelHint: 'cheap' } },
+    { metadata: { id: 'b', phase: 'midstream', applyTo: ['src/**'], modelHint: 'high-accuracy' } },
+  ];
+  const planner = {
+    plan: async () => [{ id: 'unknown', reason: 'bad id' }],
+  };
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/app.ts'],
+    availableContexts: ['diff'],
+    planner,
+    plannerMode: 'prune',
+    skills: providedSkills,
+  });
+  const ids = plan.selected.map(s => s.metadata.id);
+  assert.deepEqual(ids, ['a', 'b']);
+  assert.equal(plan.plannerFallback, true);
+});
