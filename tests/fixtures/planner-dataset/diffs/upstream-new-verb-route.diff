@@ -1,0 +1,14 @@
+diff --git a/routes/getUser.ts b/routes/getUser.ts
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/routes/getUser.ts
+@@ -0,0 +1,9 @@
++export async function handler(req: any, res: any) {
++  const id = req.query.id;
++
++  // GET /getUser?id=...
++  const user = await req.db.users.getById(id);
++
++  res.json(user);
++}

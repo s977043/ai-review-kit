@@ -1,0 +1,21 @@
+diff --git a/src/lib/validator.ts b/src/lib/validator.ts
+index 1111111..2222222 100644
+--- a/src/lib/validator.ts
++++ b/src/lib/validator.ts
+@@ -1,3 +1,6 @@
+ export function validateEmail(email: string) {
++  if (!email) throw new Error('missing');
+   return email.includes('@');
+ }
+diff --git a/src/lib/validator.test.ts b/src/lib/validator.test.ts
+index 1111111..2222222 100644
+--- a/src/lib/validator.test.ts
++++ b/src/lib/validator.test.ts
+@@ -1,3 +1,6 @@
+ test('valid email', () => {
+   expect(validateEmail('a@b')).toBe(true);
+ });
++
++test('invalid email', () => {
++  expect(validateEmail('ab')).toBe(false);
++});

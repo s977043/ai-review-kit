@@ -99,5 +99,74 @@
     "availableContexts": ["diff", "adr"],
     "availableDependencies": ["repo_metadata", "tracing"],
     "expectedAny": ["rr-upstream-api-design-001", "rr-upstream-failure-modes-observability-001"]
+  },
+  {
+    "name": "midstream: hardcoded token (security)",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-security-hardcoded-token.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["rr-midstream-security-basic-001"],
+    "expectedTop1": ["rr-midstream-security-basic-001"]
+  },
+  {
+    "name": "midstream: introduce any/type assertions",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-typescript-introduce-any.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["rr-midstream-typescript-strict-001"],
+    "expectedTop1": ["rr-midstream-typescript-strict-001"]
+  },
+  {
+    "name": "midstream: silent failure (return null)",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-observability-silent-catch-return.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "availableDependencies": ["code_search", "tracing"],
+    "expectedAny": ["rr-midstream-logging-observability-001"],
+    "expectedTop1": ["rr-midstream-logging-observability-001"]
+  },
+  {
+    "name": "downstream: add guard without tests",
+    "phase": "downstream",
+    "diffFile": "diffs/downstream-input-size-guard-no-tests.diff",
+    "availableContexts": ["diff", "tests"],
+    "availableDependencies": ["test_runner", "coverage_report"],
+    "expectedAny": ["rr-downstream-test-existence-001", "rr-downstream-coverage-gap-001"]
+  },
+  {
+    "name": "downstream: tests exist but error path missing",
+    "phase": "downstream",
+    "diffFile": "diffs/downstream-validator-missing-error-tests.diff",
+    "availableContexts": ["diff", "tests"],
+    "availableDependencies": ["test_runner", "coverage_report"],
+    "expectedAny": ["rr-downstream-coverage-gap-001"]
+  },
+  {
+    "name": "upstream: new verb route",
+    "phase": "upstream",
+    "diffFile": "diffs/upstream-new-verb-route.diff",
+    "availableContexts": ["diff", "adr"],
+    "availableDependencies": ["repo_metadata"],
+    "expectedAny": ["rr-upstream-api-design-001"],
+    "expectedTop1": ["rr-upstream-api-design-001"]
+  },
+  {
+    "name": "upstream: payments design missing timeouts",
+    "phase": "upstream",
+    "diffFile": "diffs/upstream-design-payments-missing-timeouts.diff",
+    "availableContexts": ["diff", "adr"],
+    "availableDependencies": ["repo_metadata", "tracing"],
+    "expectedAny": ["rr-upstream-failure-modes-observability-001"],
+    "expectedTop1": ["rr-upstream-failure-modes-observability-001"]
+  },
+  {
+    "name": "upstream: inconsistent error response",
+    "phase": "upstream",
+    "diffFile": "diffs/upstream-api-error-response-inconsistent.diff",
+    "availableContexts": ["diff", "adr"],
+    "availableDependencies": ["repo_metadata", "tracing"],
+    "expectedAny": ["rr-upstream-api-design-001", "rr-upstream-failure-modes-observability-001"]
   }
 ]

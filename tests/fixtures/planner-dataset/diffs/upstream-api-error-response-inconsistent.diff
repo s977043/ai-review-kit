@@ -1,0 +1,14 @@
+diff --git a/api/users.ts b/api/users.ts
+index 1111111..2222222 100644
+--- a/api/users.ts
++++ b/api/users.ts
+@@ -1,8 +1,8 @@
+ export async function getUser(req: any, res: any) {
+   if (!req.user) {
+-    return res.status(401).json({ error: 'unauthorized' });
++    return res.status(401).send('unauthorized');
+   }
+ 
+   const user = await req.db.users.getById(req.params.id);
+   return res.status(200).json(user);
+ }
