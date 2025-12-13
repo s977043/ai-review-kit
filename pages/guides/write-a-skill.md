@@ -86,7 +86,11 @@ River Reviewer のコメントは `<file>:<line>: <message>` 形式で投稿さ�
 ## Minimum Acceptance Bar（最低合格ライン）
 
 A skill is considered “acceptable” when it meets the following minimum bar:
+（スキルが「合格」と見なされるのは、次の最低基準を満たしている場合です。）
 
 - It produces at least one actionable finding when applicable (a concrete next step, not just a vague note).
+- （該当する場合、少なくとも1つの具体的な次の一手につながる指摘があること。）
 - It includes clear evidence that can be traced to the diff (file and line).
+- （差分（ファイルと行）に追跡できる明確な根拠が含まれること。）
 - It avoids noise (no “nit” spam) and stays focused on meaningful risks.
+- （ノイズ（“nit”の濫発）を避け、意味のあるリスクに集中していること。）
