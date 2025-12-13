@@ -60,6 +60,10 @@
       "reasons": ["missing required inputContext"]
     },
     {
+      "id": "rr-midstream-logging-observability-001",
+      "reasons": ["missing required inputContext"]
+    },
+    {
       "id": "rr-midstream-security-basic-001",
       "reasons": ["missing required inputContext"]
     },
@@ -80,6 +84,14 @@
     },
     {
       "id": "rr-upstream-api-design-001",
+      "reasons": [
+        "phase mismatch: upstream !== midstream",
+        "applyTo did not match any changed file",
+        "missing required inputContext"
+      ]
+    },
+    {
+      "id": "rr-upstream-failure-modes-observability-001",
       "reasons": [
         "phase mismatch: upstream !== midstream",
         "applyTo did not match any changed file",
