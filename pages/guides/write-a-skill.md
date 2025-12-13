@@ -40,6 +40,14 @@
 - `minor`: 将来の保守性・読みやすさに効く、余力があれば直したい
 - `info`: 判断材料の提示（“検討ポイント”）
 
+## Confidence（確信度）の表現（特に low の場合）
+
+Confidence が low（推測が混じる）場合は、読み手に「断定ではない」ことが伝わる書き方にする。
+
+- `must` / `should` / `definitely` などの断定表現を避ける
+- `may` / `might` / `consider` など “可能性/提案” を示す表現を使う
+- 事実（Evidence）と提案（推測）を分けて書く（例: “差分上は X が見える。Y の可能性があるため確認を検討する”）
+
 ## Evidence（根拠）の必須要件
 
 River Reviewer のコメントは `<file>:<line>: <message>` 形式で投稿されます。最低限、以下を満たしてください。
@@ -74,3 +82,15 @@ River Reviewer のコメントは `<file>:<line>: <message>` 形式で投稿さ�
 - `npm run skills:validate`
 - `npm test`
 - 可能なら “誤検知ガード/Non-goals” の確認観点（何を言わないか）
+
+## Minimum Acceptance Bar（最低合格ライン）
+
+A skill is considered “acceptable” when it meets the following minimum bar:
+（スキルが「合格」と見なされるのは、次の最低基準を満たしている場合です。）
+
+- It produces at least one actionable finding when applicable (a concrete next step, not just a vague note).
+- （該当する場合、少なくとも1つの具体的な次の一手につながる指摘があること。）
+- It includes clear evidence that can be traced to the diff (file and line).
+- （差分（ファイルと行）に追跡できる明確な根拠が含まれること。）
+- It avoids noise (no “nit” spam) and stays focused on meaningful risks.
+- （ノイズ（“nit”の濫発）を避け、意味のあるリスクに集中していること。）
