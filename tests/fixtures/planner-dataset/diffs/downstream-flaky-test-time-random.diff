@@ -1,0 +1,14 @@
+diff --git a/src/time.test.ts b/src/time.test.ts
+index 1111111..2222222 100644
+--- a/src/time.test.ts
++++ b/src/time.test.ts
+@@ -1,9 +1,14 @@
+ test('eventually succeeds', async () => {
+   const start = Date.now();
+   while (Date.now() - start < 1000) {
+     // busy wait
+   }
++  const value = Math.random();
++  expect(value).toBeGreaterThanOrEqual(0);
+ });
+

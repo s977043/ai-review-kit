@@ -1,0 +1,15 @@
+diff --git a/routes/getUser.ts b/routes/getUser.ts
+index 1111111..2222222 100644
+--- a/routes/getUser.ts
++++ b/routes/getUser.ts
+@@ -0,0 +1,12 @@
++// API route definition (design stage)
++export const route = {
++  method: 'GET',
++  path: '/getUser',
++  responses: {
++    200: { description: 'ok' },
++    500: { description: 'error' }
++  }
++};
+

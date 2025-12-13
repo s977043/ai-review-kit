@@ -1,0 +1,17 @@
+diff --git a/src/calc.ts b/src/calc.ts
+index 1111111..2222222 100644
+--- a/src/calc.ts
++++ b/src/calc.ts
+@@ -1,5 +1,13 @@
+ export function divide(a: number, b: number) {
+   if (b === 0) return null;
+   return a / b;
+ }
++
++export function safeDivide(a: number, b: number) {
++  if (b === 0) {
++    throw new Error('division by zero');
++  }
++  return a / b;
++}
+

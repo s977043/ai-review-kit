@@ -1,0 +1,15 @@
+diff --git a/docs/adr/0002-payment-flow.md b/docs/adr/0002-payment-flow.md
+index 1111111..2222222 100644
+--- a/docs/adr/0002-payment-flow.md
++++ b/docs/adr/0002-payment-flow.md
+@@ -1,6 +1,12 @@
+ # ADR: Payment flow
+ 
+ ## Decision
+ We will call an external payment provider.
++
++## Open questions
++- What happens on timeout?
++- Do we retry? If so, how many times and with what backoff?
++- How do we correlate logs/traces across services?
+

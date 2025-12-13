@@ -1,0 +1,14 @@
+diff --git a/src/user.ts b/src/user.ts
+index 1111111..2222222 100644
+--- a/src/user.ts
++++ b/src/user.ts
+@@ -1,6 +1,10 @@
+ export type User = {
+   name?: string;
+ };
+ 
+ export function displayName(user?: User) {
+-  return user?.name ?? 'unknown';
++  return user!.name!.trim();
+ }
+
