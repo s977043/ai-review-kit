@@ -219,10 +219,13 @@ function formatDebugSummaryMarkdown(result) {
 
   const plan = result.plan ?? {};
   const plannerStatus = formatPlannerStatus(plan, { markdown: true });
+  const impactTags = Array.isArray(plan?.impactTags) ? plan.impactTags : [];
+  const impactSummary = impactTags.length ? impactTags.map(t => `\`${t}\``).join(', ') : '`none`';
 
   return [
     `- LLM: ${llmStatus}`,
     `- Planner: ${plannerStatus}`,
+    `- Impact tags: ${impactSummary}`,
     `- 変更ファイル数: ${result.changedFiles.length}`,
     `- トークン見積もり: ${result.tokenEstimate}`,
   ].join('\n');
@@ -258,9 +261,11 @@ function printDebugInfo(result, { log = console.log } = {}) {
   const rawTokens = result.rawTokenEstimate ?? result.tokenEstimate;
   const reduction = result.reduction ?? 0;
   const plannerStatus = formatPlannerStatus(result.plan ?? {});
+  const impactTags = Array.isArray(result.plan?.impactTags) ? result.plan.impactTags : [];
   log(`\nDebug info:
 - LLM: ${debug.llmUsed ? `used (${debug.llmModel})` : debug.llmSkipped || debug.llmError || 'not used'}
 - Planner: ${plannerStatus}
+- Impact tags: ${impactTags.join(', ') || 'none'}
 - Token estimate (raw -> optimized): ${rawTokens} -> ${result.tokenEstimate} (${reduction}% reduction)
 - Prompt truncated: ${debug.promptTruncated ? 'yes' : 'no'}
 - Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}

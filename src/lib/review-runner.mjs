@@ -1,6 +1,7 @@
 import { minimatch } from 'minimatch';
 import { loadSkills } from './skill-loader.mjs';
 import { planSkills, summarizeSkill } from './skill-planner.mjs';
+import { inferImpactTags } from './impact-scope.mjs';
 import { normalizePlannerMode } from './planner-utils.mjs';
 
 const MODEL_PRIORITY = {
@@ -103,6 +104,40 @@ export function rankByModelHint(skills, preferredModelHint = 'balanced') {
   });
 }
 
+function computeTagScore(skill, impactTags) {
+  if (!impactTags?.length) return 0;
+  const tags = new Set(getMeta(skill).tags ?? []);
+  let score = 0;
+  for (const tag of impactTags) {
+    if (tags.has(tag)) score += 1;
+  }
+  return score;
+}
+
+function rankByImpactTags(skills, impactTags, preferredModelHint = 'balanced') {
+  const scores = new Map(skills.map(s => [getMeta(s).id, computeTagScore(s, impactTags)]));
+  const anyMatched = Array.from(scores.values()).some(v => v > 0);
+  if (!anyMatched) {
+    return rankByModelHint(skills, preferredModelHint);
+  }
+
+  const preferredWeight = MODEL_PRIORITY[preferredModelHint] ?? MODEL_PRIORITY.balanced;
+  const weight = hint => MODEL_PRIORITY[hint] ?? MODEL_PRIORITY.balanced;
+
+  return [...skills].sort((a, b) => {
+    const idA = getMeta(a).id;
+    const idB = getMeta(b).id;
+    const scoreA = scores.get(idA) ?? 0;
+    const scoreB = scores.get(idB) ?? 0;
+    if (scoreA !== scoreB) return scoreB - scoreA;
+
+    const wa = Math.abs(weight(getMeta(a).modelHint) - preferredWeight);
+    const wb = Math.abs(weight(getMeta(b).modelHint) - preferredWeight);
+    if (wa !== wb) return wa - wb;
+    return idA.localeCompare(idB);
+  });
+}
+
 /**
  * Build an execution plan from skills and review context.
  * - planner 未指定: メタデと modelHint に基づく決定論的な並び替え
@@ -120,6 +155,7 @@ export async function buildExecutionPlan(options) {
     skills: providedSkills,
     planner,
     plannerMode,
+    diffText,
   } = options;
 
   const skills = providedSkills ?? (await loadSkills());
@@ -133,6 +169,8 @@ export async function buildExecutionPlan(options) {
     return { selected: [], skipped: selection.skipped };
   }
 
+  const impactTags = inferImpactTags(changedFiles, { diffText });
+
   // If planner is provided, try LLM-based planning, fallback to deterministic rank
   const effectivePlannerMode = planner ? normalizePlannerMode(plannerMode, { defaultMode: 'order' }) : 'off';
   if (planner && effectivePlannerMode !== 'off') {
@@ -140,6 +178,7 @@ export async function buildExecutionPlan(options) {
       phase,
       changedFiles,
       availableContexts,
+      impactTags,
     };
     const { planned, reasons, fallback } = await planSkills({
       skills: selection.selected,
@@ -147,22 +186,25 @@ export async function buildExecutionPlan(options) {
       llmPlan: planner.plan ?? planner,
       appendRemaining: effectivePlannerMode !== 'prune',
     });
+    const ranked = fallback ? rankByImpactTags(selection.selected, impactTags, preferredModelHint) : planned;
     return {
-      selected: planned,
+      selected: ranked,
       skipped: selection.skipped,
       plannerMode: effectivePlannerMode,
       plannerReasons: reasons,
       plannerFallback: fallback,
       ...(fallback ? { plannerError: reasons?.[0]?.reason ?? 'planner fallback' } : {}),
+      impactTags,
     };
   }
 
   // planner が無い場合（LLM未設定）は決定論的順位付けで実行
-  const ordered = rankByModelHint(selection.selected, preferredModelHint);
+  const ordered = rankByImpactTags(selection.selected, impactTags, preferredModelHint);
 
   return {
     selected: ordered,
     skipped: selection.skipped,
+    impactTags,
   };
 }
 

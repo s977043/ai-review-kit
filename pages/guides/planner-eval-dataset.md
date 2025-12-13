@@ -30,6 +30,8 @@ River Reviewer の v0.3（Smart Reviewer）に向けて、Planner の「スキ�
 
 `npm run -s planner:eval:dataset -- --json`
 
+出力には、差分から推定した `impactTags`（例: `typescript`, `security`, `observability` など）も含まれます。`selectedIds` の妥当性確認や、Top1 のズレ調査に使えます。
+
 ### 3) JSONをファイルに保存
 
 `npm run -s planner:eval:dataset -- --out /tmp/planner-eval.json`

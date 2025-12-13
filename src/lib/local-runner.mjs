@@ -85,6 +85,7 @@ export async function planLocalReview({
   const plan = await buildExecutionPlan({
     phase: normalizePhase(phase),
     changedFiles: reviewFiles,
+    diffText: diff.diffText,
     availableContexts: contexts,
     availableDependencies: dependencies,
     preferredModelHint,
