@@ -196,8 +196,18 @@ main().catch(err => {
 });
 
 async function readJsonFile(filePath) {
-  const raw = await fs.readFile(filePath, 'utf8');
-  return JSON.parse(raw);
+  try {
+    const raw = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(raw);
+  } catch (err) {
+    const hint =
+      err?.code === 'ENOENT'
+        ? 'file not found'
+        : err instanceof SyntaxError
+          ? 'invalid JSON'
+          : 'unexpected error';
+    throw new Error(`Failed to read baseline JSON (${hint}): ${filePath}`, { cause: err });
+  }
 }
 
 function compareEvaluations(baseline, current) {
@@ -236,7 +246,7 @@ function compareEvaluations(baseline, current) {
     const top1Changed = (b.top1 ?? null) !== (c.top1 ?? null);
     const coverageChanged = Math.abs((b.coverage ?? 0) - (c.coverage ?? 0)) > 1e-9;
     const top1MatchChanged = (b.top1Match ?? null) !== (c.top1Match ?? null);
-    const missingChanged = (b.missingExpected ?? []).join(',') !== (c.missingExpected ?? []).join(',');
+    const missingChanged = normalizeSetLikeArray(b.missingExpected) !== normalizeSetLikeArray(c.missingExpected);
     const anyChanged = top1Changed || coverageChanged || top1MatchChanged || missingChanged;
 
     if (!anyChanged) {
@@ -281,6 +291,11 @@ function pickCaseFields(c) {
     expectedTop1: c.expectedTop1 ?? [],
     expectedAny: c.expectedAny ?? [],
   };
+}
+
+function normalizeSetLikeArray(value) {
+  if (!Array.isArray(value)) return '';
+  return [...new Set(value)].sort().join(',');
 }
 
 function printReport({ summary, cases }) {
