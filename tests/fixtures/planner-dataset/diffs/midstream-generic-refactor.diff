@@ -1,0 +1,12 @@
+diff --git a/src/utils/format.ts b/src/utils/format.ts
+index 1111111..2222222 100644
+--- a/src/utils/format.ts
++++ b/src/utils/format.ts
+@@ -1,7 +1,9 @@
+ export function formatPrice(cents: number) {
+   const dollars = cents / 100;
+-  return '$' + dollars.toFixed(2);
++  const formatted = dollars.toFixed(2);
++  return `$${formatted}`;
+ }
+

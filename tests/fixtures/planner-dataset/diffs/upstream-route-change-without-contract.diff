@@ -1,0 +1,12 @@
+diff --git a/routes/users.ts b/routes/users.ts
+index 1111111..2222222 100644
+--- a/routes/users.ts
++++ b/routes/users.ts
+@@ -1,6 +1,10 @@
+ export const routes = [
+   { method: 'GET', path: '/users/{id}' },
+ ];
++
++// TODO: add new endpoint
++export const newRoute = { method: 'POST', path: '/doLoginNow' };
+

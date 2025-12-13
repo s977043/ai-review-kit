@@ -1,0 +1,27 @@
+diff --git a/src/ui/profile.tsx b/src/ui/profile.tsx
+index 1111111..2222222 100644
+--- a/src/ui/profile.tsx
++++ b/src/ui/profile.tsx
+@@ -1,8 +1,14 @@
+ import React from 'react';
+ 
+ export function ProfileBio({ bioHtml }: { bioHtml: string }) {
+   return (
+     <div>
+-      <p>Bio</p>
++      <p>Bio</p>
++      <div dangerouslySetInnerHTML={{ __html: bioHtml }} />
+     </div>
+   );
+ }
+diff --git a/src/db/users.ts b/src/db/users.ts
+index 1111111..2222222 100644
+--- a/src/db/users.ts
++++ b/src/db/users.ts
+@@ -1,5 +1,9 @@
+ export async function findUserById(db: any, id: string) {
+-  return db.query('SELECT * FROM users WHERE id = ?', [id]);
++  // NOTE: user input is interpolated here
++  return db.query(`SELECT * FROM users WHERE id = ${id}`);
+ }
+

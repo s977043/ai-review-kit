@@ -1,0 +1,16 @@
+diff --git a/src/feature.ts b/src/feature.ts
+index 1111111..2222222 100644
+--- a/src/feature.ts
++++ b/src/feature.ts
+@@ -1,7 +1,12 @@
+ export function featureFlag(name: string) {
+   if (!name) return false;
+   return name.startsWith('on-');
+ }
++
++export function featureGate(name: string, userRole?: string) {
++  if (!name) return false;
++  if (userRole === 'admin') return true;
++  return name.startsWith('on-');
++}
+

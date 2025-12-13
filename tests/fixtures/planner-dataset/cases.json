@@ -1,0 +1,103 @@
+[
+  {
+    "name": "midstream: typescript null assertions",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-typescript-null-assertions.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["rr-midstream-typescript-nullcheck-001", "rr-midstream-typescript-strict-001"],
+    "expectedTop1": ["rr-midstream-typescript-nullcheck-001", "rr-midstream-typescript-strict-001"]
+  },
+  {
+    "name": "midstream: security risky patterns (XSS/SQLi)",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-security-xss-sqli.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["rr-midstream-security-basic-001"],
+    "expectedTop1": ["rr-midstream-security-basic-001"]
+  },
+  {
+    "name": "midstream: silent failure (observability)",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-observability-silent-catch.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "availableDependencies": ["code_search", "tracing"],
+    "expectedAny": ["rr-midstream-logging-observability-001"],
+    "expectedTop1": ["rr-midstream-logging-observability-001"]
+  },
+  {
+    "name": "midstream: generic code change (baseline)",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-generic-refactor.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["rr-midstream-typescript-strict-001"]
+  },
+  {
+    "name": "downstream: missing tests for new behavior",
+    "phase": "downstream",
+    "diffFile": "diffs/downstream-new-behavior-no-tests.diff",
+    "availableContexts": ["diff", "tests"],
+    "availableDependencies": ["test_runner", "coverage_report"],
+    "expectedAny": ["rr-downstream-test-existence-001", "rr-downstream-coverage-gap-001"]
+  },
+  {
+    "name": "downstream: test naming improvements",
+    "phase": "downstream",
+    "diffFile": "diffs/downstream-test-naming-works.diff",
+    "availableContexts": ["diff", "tests"],
+    "availableDependencies": ["test_runner"],
+    "expectedAny": ["rr-downstream-test-naming-001"]
+  },
+  {
+    "name": "downstream: flaky test patterns (time/random)",
+    "phase": "downstream",
+    "diffFile": "diffs/downstream-flaky-test-time-random.diff",
+    "availableContexts": ["diff"],
+    "availableDependencies": ["test_runner"],
+    "expectedAny": ["rr-downstream-flaky-test-001"]
+  },
+  {
+    "name": "downstream: coverage + existence (with tests context)",
+    "phase": "downstream",
+    "diffFile": "diffs/downstream-coverage-missing-branch.diff",
+    "availableContexts": ["diff", "tests"],
+    "availableDependencies": ["test_runner", "coverage_report"],
+    "expectedAny": ["rr-downstream-coverage-gap-001"]
+  },
+  {
+    "name": "upstream: API design verb endpoint",
+    "phase": "upstream",
+    "diffFile": "diffs/upstream-api-verb-endpoint.diff",
+    "availableContexts": ["diff", "adr"],
+    "availableDependencies": ["repo_metadata"],
+    "expectedAny": ["rr-upstream-api-design-001"],
+    "expectedTop1": ["rr-upstream-api-design-001"]
+  },
+  {
+    "name": "upstream: missing failure modes in design",
+    "phase": "upstream",
+    "diffFile": "diffs/upstream-design-missing-failure-modes.diff",
+    "availableContexts": ["diff", "adr"],
+    "availableDependencies": ["repo_metadata", "tracing"],
+    "expectedAny": ["rr-upstream-failure-modes-observability-001"],
+    "expectedTop1": ["rr-upstream-failure-modes-observability-001"]
+  },
+  {
+    "name": "upstream: auth flow docs update",
+    "phase": "upstream",
+    "diffFile": "diffs/upstream-auth-flow-docs.diff",
+    "availableContexts": ["diff", "adr"],
+    "availableDependencies": ["repo_metadata", "tracing"],
+    "expectedAny": ["rr-upstream-failure-modes-observability-001"]
+  },
+  {
+    "name": "upstream: route change + design note",
+    "phase": "upstream",
+    "diffFile": "diffs/upstream-route-change-without-contract.diff",
+    "availableContexts": ["diff", "adr"],
+    "availableDependencies": ["repo_metadata", "tracing"],
+    "expectedAny": ["rr-upstream-api-design-001", "rr-upstream-failure-modes-observability-001"]
+  }
+]

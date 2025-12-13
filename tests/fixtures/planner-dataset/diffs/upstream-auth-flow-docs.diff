@@ -1,0 +1,14 @@
+diff --git a/pages/architecture/auth-flow.md b/pages/architecture/auth-flow.md
+index 1111111..2222222 100644
+--- a/pages/architecture/auth-flow.md
++++ b/pages/architecture/auth-flow.md
+@@ -1,6 +1,10 @@
+ # Auth flow
+ 
+ ## Overview
+ Tokens are issued by the auth service.
++
++## Notes
++- Error codes are TBD.
++- Observability requirements are not specified yet.
+

@@ -1,0 +1,14 @@
+diff --git a/src/calc.test.ts b/src/calc.test.ts
+index 1111111..2222222 100644
+--- a/src/calc.test.ts
++++ b/src/calc.test.ts
+@@ -1,7 +1,9 @@
+ import { divide } from './calc';
+ 
+ describe('divide', () => {
+-  it('works', () => {
++  it('returns null when divisor is zero', () => {
+     expect(divide(1, 0)).toBeNull();
+   });
+ });
+
