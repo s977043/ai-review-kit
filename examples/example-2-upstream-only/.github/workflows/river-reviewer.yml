@@ -14,7 +14,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Run River Reviewer (upstream)
-        uses: s977043/river-reviewer/.github/actions/river-reviewer@main
+        uses: s977043/river-reviewer/.github/actions/river-reviewer@v0.1.1
         with:
           phase: upstream
           dry_run: true

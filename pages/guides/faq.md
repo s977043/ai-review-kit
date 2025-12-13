@@ -12,7 +12,7 @@ title: FAQ（よくある失敗）
 - 原因:
   - fork からの PR では GitHub の仕様で secrets が渡らない（安全のため）
 - 対処:
-  - 外部コントリビューターの PR で実行したい場合は、イベント（`pull_request_target` など）と権限設計を見直す
+  - 外部コントリビューターの PR で実行したい場合は、イベント（`pull_request_target` など）と権限設計を見直す（注: `pull_request_target` はセキュリティリスクを伴うため慎重に利用してください）
   - まずは `dry_run: true` で「動線だけ」確認する
 - 確認コマンド:
   - `river doctor .`
