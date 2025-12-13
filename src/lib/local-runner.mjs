@@ -2,6 +2,7 @@ import path from 'node:path';
 import { collectRepoDiff } from './diff.mjs';
 import { generateReview } from './review-engine.mjs';
 import { detectDefaultBranch, ensureGitRepo, findMergeBase } from './git.mjs';
+import { createOpenAIPlanner } from './openai-planner.mjs';
 import { buildExecutionPlan } from './review-runner.mjs';
 import { loadProjectRules } from './rules.mjs';
 import { parseList } from './utils.mjs';
@@ -10,6 +11,14 @@ function normalizePhase(phase) {
   const normalized = (phase || '').toLowerCase();
   if (['upstream', 'midstream', 'downstream'].includes(normalized)) return normalized;
   return 'midstream';
+}
+
+function normalizePlannerMode(mode) {
+  const normalized = (mode || '').toLowerCase();
+  if (normalized === 'off') return 'off';
+  if (normalized === 'order') return 'order';
+  if (normalized === 'prune') return 'prune';
+  return 'off';
 }
 
 // NOTE: Keep this list in sync with schemas/skill.schema.json dependencies enum.
@@ -35,10 +44,12 @@ function resolveAvailableDependencies(inputDependencies) {
 export async function planLocalReview({
   cwd = process.cwd(),
   phase = 'midstream',
+  dryRun = false,
   debug = false,
   preferredModelHint = 'balanced',
   availableContexts,
   availableDependencies,
+  plannerMode,
 } = {}) {
   const repoRoot = await ensureGitRepo(cwd);
   const { rulesText: projectRules } = await loadProjectRules(repoRoot);
@@ -48,6 +59,8 @@ export async function planLocalReview({
   const reviewFiles = diff.filesForReview?.map(file => file.path) ?? diff.changedFiles;
   const contexts = resolveAvailableContexts(availableContexts);
   const dependencies = resolveAvailableDependencies(availableDependencies);
+  const requestedPlannerMode = normalizePlannerMode(plannerMode ?? process.env.RIVER_PLANNER_MODE);
+  const plannerRequested = requestedPlannerMode !== 'off';
 
   if (!reviewFiles.length) {
     return {
@@ -62,13 +75,36 @@ export async function planLocalReview({
     };
   }
 
+  let planner = null;
+  let plannerSkipped = null;
+  if (plannerRequested) {
+    if (dryRun) {
+      plannerSkipped = 'dry-run enabled';
+    } else if (!process.env.RIVER_OPENAI_API_KEY && !process.env.OPENAI_API_KEY) {
+      plannerSkipped = 'OPENAI_API_KEY (or RIVER_OPENAI_API_KEY) not set';
+    } else {
+      planner = createOpenAIPlanner();
+    }
+  }
+
   const plan = await buildExecutionPlan({
     phase: normalizePhase(phase),
     changedFiles: reviewFiles,
     availableContexts: contexts,
     availableDependencies: dependencies,
     preferredModelHint,
+    planner: planner ?? undefined,
+    plannerMode: requestedPlannerMode,
   });
+
+  const plannerUsed = planner ? !plan.plannerFallback : false;
+  const augmentedPlan = {
+    ...plan,
+    plannerRequested,
+    plannerMode: plannerRequested ? requestedPlannerMode : 'off',
+    plannerUsed,
+    ...(plannerSkipped ? { plannerSkipped } : {}),
+  };
 
   return {
     status: 'ok',
@@ -76,7 +112,7 @@ export async function planLocalReview({
     defaultBranch,
     mergeBase,
     changedFiles: reviewFiles,
-    plan,
+    plan: augmentedPlan,
     diff,
     projectRules,
     availableContexts: contexts,
@@ -96,6 +132,7 @@ export async function runLocalReview(
     context: providedContext,
     availableContexts,
     availableDependencies,
+    plannerMode,
   } = {},
 ) {
   const context =
@@ -103,10 +140,12 @@ export async function runLocalReview(
     (await planLocalReview({
       cwd,
       phase,
+      dryRun,
       debug,
       preferredModelHint,
       availableContexts,
       availableDependencies,
+      plannerMode,
     }));
   if (context.status === 'no-changes') {
     return {

@@ -5,6 +5,10 @@ inputs:
     description: 'Review phase (upstream|midstream|downstream).'
     required: false
     default: 'midstream'
+  planner:
+    description: 'Planner mode (off|order|prune).'
+    required: false
+    default: 'off'
   target:
     description: 'Path to the git repository to review.'
     required: false
@@ -58,7 +62,7 @@ runs:
         action_root="$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)"
         repo_path="$(cd "${{ inputs.target }}" && pwd)"
 
-        cmd=(node "${action_root}/src/cli.mjs" run "${repo_path}" --phase "${{ inputs.phase }}" --output markdown)
+        cmd=(node "${action_root}/src/cli.mjs" run "${repo_path}" --phase "${{ inputs.phase }}" --planner "${{ inputs.planner }}" --output markdown)
         if [ "${{ inputs.dry_run }}" = "true" ]; then
           cmd+=("--dry-run")
         fi

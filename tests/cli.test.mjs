@@ -108,7 +108,20 @@ test('river run falls back gracefully without API key', async () => {
     assert.strictEqual(result.code, 0, result.stderr);
     assert.match(result.stdout, /River Reviewer/);
     assert.match(result.stdout, /LLM: OPENAI_API_KEY/i);
+    assert.match(result.stdout, /Planner: off/i);
     assert.match(result.stdout, /Review comments/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('river run reports planner skip reason when requested without API key', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--planner', 'order', '--debug'], dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /Planner: order skipped/i);
+    assert.match(result.stdout, /OPENAI_API_KEY/i);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

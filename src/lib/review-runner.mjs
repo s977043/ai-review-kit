@@ -102,10 +102,20 @@ export function rankByModelHint(skills, preferredModelHint = 'balanced') {
   });
 }
 
+function normalizePlannerMode(mode) {
+  const normalized = (mode || '').toLowerCase();
+  if (normalized === 'off') return 'off';
+  if (normalized === 'order') return 'order';
+  if (normalized === 'prune') return 'prune';
+  return 'order';
+}
+
 /**
  * Build an execution plan from skills and review context.
  * - planner 未指定: メタデと modelHint に基づく決定論的な並び替え
  * - planner 指定: LLM 等で優先度決定し、エラー時は決定論的順序にフォールバック
+ *   - plannerMode=order: 優先度づけ（未参照スキルは後ろに決定論で追加）
+ *   - plannerMode=prune: 絞り込み（LLM が選んだスキルのみを実行）
  */
 export async function buildExecutionPlan(options) {
   const {
@@ -116,6 +126,7 @@ export async function buildExecutionPlan(options) {
     preferredModelHint = 'balanced',
     skills: providedSkills,
     planner,
+    plannerMode,
   } = options;
 
   const skills = providedSkills ?? (await loadSkills());
@@ -130,7 +141,8 @@ export async function buildExecutionPlan(options) {
   }
 
   // If planner is provided, try LLM-based planning, fallback to deterministic rank
-  if (planner) {
+  const effectivePlannerMode = planner ? normalizePlannerMode(plannerMode) : 'off';
+  if (planner && effectivePlannerMode !== 'off') {
     const context = {
       phase,
       changedFiles,
@@ -140,10 +152,12 @@ export async function buildExecutionPlan(options) {
       skills: selection.selected,
       context,
       llmPlan: planner.plan ?? planner,
+      appendRemaining: effectivePlannerMode !== 'prune',
     });
     return {
       selected: planned,
       skipped: selection.skipped,
+      plannerMode: effectivePlannerMode,
       plannerReasons: reasons,
       plannerFallback: fallback,
     };

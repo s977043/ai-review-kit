@@ -45,3 +45,18 @@ test('planSkills falls back on error', async () => {
   assert.equal(planned.length, skills.length);
   assert.equal(fallback, true);
 });
+
+test('planSkills can prune when appendRemaining is false', async () => {
+  const skills = await loadSkills();
+  const target = skills[0].metadata.id;
+  const llmPlan = async () => [{ id: target, priority: 0, reason: 'only this' }];
+  const { planned, fallback } = await planSkills({
+    skills,
+    context: mockContext,
+    llmPlan,
+    appendRemaining: false,
+  });
+  assert.equal(fallback, false);
+  assert.equal(planned.length, 1);
+  assert.equal(planned[0].metadata.id, target);
+});

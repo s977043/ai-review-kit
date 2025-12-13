@@ -11,6 +11,7 @@ import { parseList } from './lib/utils.mjs';
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
 const COMMENT_MARKER = '<!-- river-reviewer -->';
+const PLANNER_MODES = ['off', 'order', 'prune'];
 
 function printHintLines(lines = []) {
   const hints = lines.filter(Boolean);
@@ -27,6 +28,7 @@ Commands:
 
 Options:
   --phase <phase>   Review phase (upstream|midstream|downstream). Default: env RIVER_PHASE or midstream
+  --planner <mode>  Planner mode (off|order|prune). Default: env RIVER_PLANNER_MODE or off
   --dry-run         Do not call external services; print results to stdout
   --debug           Print debug information (merge base, files, token estimate)
   --estimate        Print cost estimate only (no review)
@@ -44,6 +46,7 @@ function parseArgs(argv) {
     command: null,
     target: '.',
     phase: process.env.RIVER_PHASE || 'midstream',
+    plannerMode: process.env.RIVER_PLANNER_MODE || 'off',
     dryRun: false,
     debug: false,
     estimate: false,
@@ -69,6 +72,22 @@ function parseArgs(argv) {
         break;
       }
       parsed.phase = args.shift();
+      continue;
+    }
+    if (arg === '--planner') {
+      const value = args.shift();
+      if (!value || value.startsWith('-')) {
+        console.error('Error: --planner option requires a value.');
+        parsed.command = 'help';
+        break;
+      }
+      const mode = value.toLowerCase();
+      if (!PLANNER_MODES.includes(mode)) {
+        console.error(`Error: --planner must be one of: ${PLANNER_MODES.join(', ')} (got "${value}").`);
+        parsed.command = 'help';
+        break;
+      }
+      parsed.plannerMode = mode;
       continue;
     }
     if (arg === '--dry-run') {
@@ -198,11 +217,28 @@ function formatDebugSummaryMarkdown(result) {
       ? `skipped (${debug.llmSkipped || debug.llmError})`
       : 'not used';
 
+  const plan = result.plan ?? {};
+  const plannerStatus = formatPlannerStatus(plan, { markdown: true });
+
   return [
     `- LLM: ${llmStatus}`,
+    `- Planner: ${plannerStatus}`,
     `- 変更ファイル数: ${result.changedFiles.length}`,
     `- トークン見積もり: ${result.tokenEstimate}`,
   ].join('\n');
+}
+
+function formatPlannerStatus(plan, { markdown = false } = {}) {
+  const wrap = value => (markdown ? `\`${value}\`` : value);
+  const requested = Boolean(plan?.plannerRequested);
+  const mode = plan?.plannerMode || 'off';
+  if (!requested || mode === 'off') return wrap('off');
+  if (plan?.plannerSkipped) return `${wrap(mode)} skipped (${plan.plannerSkipped})`;
+  if (plan?.plannerFallback) {
+    const reason = Array.isArray(plan?.plannerReasons) && plan.plannerReasons.length ? plan.plannerReasons[0].reason : '';
+    return reason ? `${wrap(mode)} fallback (${reason})` : `${wrap(mode)} fallback`;
+  }
+  return plan?.plannerUsed ? `${wrap(mode)} used` : `${wrap(mode)} not used`;
 }
 
 function printMarkdownReport(result, phase) {
@@ -221,8 +257,10 @@ function printDebugInfo(result, { log = console.log } = {}) {
   const debug = result.reviewDebug ?? {};
   const rawTokens = result.rawTokenEstimate ?? result.tokenEstimate;
   const reduction = result.reduction ?? 0;
+  const plannerStatus = formatPlannerStatus(result.plan ?? {});
   log(`\nDebug info:
 - LLM: ${debug.llmUsed ? `used (${debug.llmModel})` : debug.llmSkipped || debug.llmError || 'not used'}
+- Planner: ${plannerStatus}
 - Token estimate (raw -> optimized): ${rawTokens} -> ${result.tokenEstimate} (${reduction}% reduction)
 - Prompt truncated: ${debug.promptTruncated ? 'yes' : 'no'}
 - Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}
@@ -282,9 +320,11 @@ async function main() {
     const context = await planLocalReview({
       cwd: targetPath,
       phase: parsed.phase,
+      dryRun: parsed.dryRun,
       debug: parsed.debug,
       availableContexts: parsed.availableContexts,
       availableDependencies: parsed.availableDependencies,
+      plannerMode: parsed.plannerMode,
     });
 
     const estimator = new CostEstimator(process.env.OPENAI_MODEL || process.env.RIVER_OPENAI_MODEL || undefined);
@@ -297,6 +337,7 @@ Base branch: ${context.defaultBranch}
 Merge base: ${context.mergeBase}
 Dry run: ${parsed.dryRun ? 'yes' : 'no'}
 Debug: ${parsed.debug ? 'yes' : 'no'}
+Planner: ${formatPlannerStatus(context.plan ?? {})}
 Contexts: ${(context.availableContexts || []).join(', ') || 'none'}
 Dependencies: ${
       context.availableDependencies ? context.availableDependencies.join(', ') : 'not specified (skip disabled)'
@@ -329,6 +370,7 @@ Dependencies: ${
       context,
       availableContexts: parsed.availableContexts,
       availableDependencies: parsed.availableDependencies,
+      plannerMode: parsed.plannerMode,
     });
 
     if (parsed.output === 'markdown') {
