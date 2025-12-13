@@ -78,7 +78,8 @@ export function inferImpactTags(changedFiles, options = {}) {
   if (typeof diffText === 'string' && diffText.length) {
     const lower = diffText.toLowerCase();
     const hasCatch = lower.includes('catch (') || lower.includes('catch(');
-    const addsSilentReturn = /\n\+.*return\s*;\s*$/.test(diffText) || /\n\+.*return\s+null\s*;/.test(diffText);
+    const addsSilentReturn =
+      /^\+.*\breturn\s*;\s*(?:\/\/.*)?$/m.test(diffText) || /^\+.*\breturn\s+null\s*;\s*(?:\/\/.*)?$/m.test(diffText);
     const mentionsIgnore = lower.includes('ignore') || lower.includes('swallow');
     if (hasCatch && (addsSilentReturn || mentionsIgnore)) {
       tags.add('observability');

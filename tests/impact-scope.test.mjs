@@ -21,3 +21,22 @@ test('inferImpactTags detects observability and reliability', () => {
   assert.ok(tags.includes('reliability'));
 });
 
+test('inferImpactTags detects observability from diff text with silent return', () => {
+  const diffText = `
+diff --git a/src/services/payments.ts b/src/services/payments.ts
+index 1111111..2222222 100644
+--- a/src/services/payments.ts
++++ b/src/services/payments.ts
+@@ -1,10 +1,16 @@
+ export async function charge(cardToken, amount) {
+   try {
+     await gateway.charge(cardToken, amount);
+   } catch (err) {
++    return; // silent return
+   }
+ }
+`;
+  const tags = inferImpactTags(['src/services/payments.ts'], { diffText });
+  assert.ok(tags.includes('observability'));
+  assert.ok(tags.includes('reliability'));
+});
