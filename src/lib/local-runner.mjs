@@ -6,6 +6,7 @@ import { createOpenAIPlanner } from './openai-planner.mjs';
 import { normalizePlannerMode } from './planner-utils.mjs';
 import { buildExecutionPlan } from './review-runner.mjs';
 import { loadProjectRules } from './rules.mjs';
+import { loadSkills } from './skill-loader.mjs';
 import { parseList } from './utils.mjs';
 
 function normalizePhase(phase) {
@@ -180,5 +181,50 @@ export async function runLocalReview(
     projectRules: context.projectRules,
     availableContexts: context.availableContexts,
     availableDependencies: context.availableDependencies,
+  };
+}
+
+export async function doctorLocalReview({
+  cwd = process.cwd(),
+  phase = 'midstream',
+  debug = false,
+  preferredModelHint = 'balanced',
+  availableContexts,
+  availableDependencies,
+} = {}) {
+  const repoRoot = await ensureGitRepo(cwd);
+  const skills = await loadSkills();
+  const { rulesText: projectRules } = await loadProjectRules(repoRoot);
+  const defaultBranch = await detectDefaultBranch(repoRoot);
+  const mergeBase = await findMergeBase(repoRoot, defaultBranch);
+  const diff = await collectRepoDiff(repoRoot, mergeBase, { contextLines: debug ? 10 : 0 });
+  const reviewFiles = diff.filesForReview?.map(file => file.path) ?? diff.changedFiles;
+  const contexts = resolveAvailableContexts(availableContexts);
+  const dependencies = resolveAvailableDependencies(availableDependencies);
+
+  const plan = reviewFiles.length
+    ? await buildExecutionPlan({
+        phase: normalizePhase(phase),
+        changedFiles: reviewFiles,
+        diffText: diff.diffText,
+        availableContexts: contexts,
+        availableDependencies: dependencies,
+        preferredModelHint,
+        skills,
+      })
+    : null;
+
+  return {
+    status: 'ok',
+    repoRoot,
+    defaultBranch,
+    mergeBase,
+    skillsCount: skills.length,
+    projectRules,
+    changedFiles: reviewFiles,
+    plan,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
+    diff,
   };
 }

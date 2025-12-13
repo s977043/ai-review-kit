@@ -2,7 +2,7 @@
 import path from 'node:path';
 import process from 'node:process';
 import { GitError, GitRepoNotFoundError } from './lib/git.mjs';
-import { planLocalReview, runLocalReview } from './lib/local-runner.mjs';
+import { doctorLocalReview, planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError } from './lib/skill-loader.mjs';
 import CostEstimator from './core/cost-estimator.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
@@ -21,10 +21,11 @@ function printHintLines(lines = []) {
 }
 
 function printHelp() {
-  console.log(`Usage: river run <path> [options]
+  console.log(`Usage: river <command> <path> [options]
 
 Commands:
-  run <path>    Run River Reviewer locally against the git repo at <path>
+  run <path>     Run River Reviewer locally against the git repo at <path>
+  doctor <path>  Check setup and print hints for common issues
 
 Options:
   --phase <phase>   Review phase (upstream|midstream|downstream). Default: env RIVER_PHASE or midstream
@@ -58,8 +59,8 @@ function parseArgs(argv) {
 
   while (args.length) {
     const arg = args.shift();
-    if (!parsed.command && arg === 'run') {
-      parsed.command = 'run';
+    if (!parsed.command && (arg === 'run' || arg === 'doctor')) {
+      parsed.command = arg;
       if (args[0] && !args[0].startsWith('-')) {
         parsed.target = args.shift();
       }
@@ -313,7 +314,7 @@ async function main() {
     printHelp();
     return 0;
   }
-  if (parsed.command !== 'run') {
+  if (!['run', 'doctor'].includes(parsed.command)) {
     console.error(`Unknown command: ${parsed.command}`);
     printHelp();
     return 1;
@@ -322,6 +323,53 @@ async function main() {
   const targetPath = path.resolve(parsed.target);
 
   try {
+    if (parsed.command === 'doctor') {
+      const result = await doctorLocalReview({
+        cwd: targetPath,
+        phase: parsed.phase,
+        debug: parsed.debug,
+        preferredModelHint: 'balanced',
+        availableContexts: parsed.availableContexts,
+        availableDependencies: parsed.availableDependencies,
+      });
+
+      const reviewKey = process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+      const plannerKey = process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+
+      console.log(`River Reviewer doctor
+Repo: ${result.repoRoot}
+Base branch: ${result.defaultBranch}
+Merge base: ${result.mergeBase}
+Skills loaded: ${result.skillsCount}
+Project rules: ${result.projectRules ? 'present' : 'none'}
+OpenAI (review): ${reviewKey ? 'configured' : 'not set'}
+OpenAI (planner): ${plannerKey ? 'configured' : 'not set'}
+Contexts: ${(result.availableContexts || []).join(', ') || 'none'}
+Dependencies: ${
+        result.availableDependencies ? result.availableDependencies.join(', ') : 'not specified (skip disabled)'
+      }`);
+
+      if (!reviewKey) {
+        printHintLines(['Set `OPENAI_API_KEY` (or `RIVER_OPENAI_API_KEY`) to enable LLM reviews.', 'You can still run with `--dry-run` for local validation.']);
+      }
+
+      if (!result.changedFiles.length) {
+        console.log(`No changes to review compared to ${result.defaultBranch}.`);
+        return 0;
+      }
+
+      if (result.plan) {
+        printPlan(result.plan);
+      }
+      if (parsed.debug) {
+        const impactTags = Array.isArray(result.plan?.impactTags) ? result.plan.impactTags : [];
+        console.log(`\nDebug info:\n- Impact tags: ${impactTags.join(', ') || 'none'}\n- Token estimate: ${result.diff.tokenEstimate}\n`);
+        console.log('--- diff preview ---');
+        console.log(result.diff.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
+      }
+      return 0;
+    }
+
     const context = await planLocalReview({
       cwd: targetPath,
       phase: parsed.phase,
