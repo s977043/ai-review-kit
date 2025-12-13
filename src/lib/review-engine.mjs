@@ -51,6 +51,7 @@ Relevant skills:
 ${buildSkillSummary(plan)}
 
 ${buildProjectRulesSection(projectRules)}Review the unified git diff below and produce concise findings.
+- Write the <message> in Japanese.
 - Output each finding on its own line using the format "<file>:<line>: <message>".
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Limit to 8 findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
@@ -97,7 +98,7 @@ async function callOpenAI({ prompt, apiKey, model, endpoint }) {
         {
           role: 'system',
           content:
-            'You are River Reviewer, an expert code review assistant. You excel at spotting risky changes and explaining them briefly.',
+            'You are River Reviewer, an expert code review assistant. Respond in Japanese. You excel at spotting risky changes and explaining them briefly.',
         },
         { role: 'user', content: prompt },
       ],

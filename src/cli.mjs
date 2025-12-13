@@ -10,6 +10,7 @@ import { parseList } from './lib/utils.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
+const COMMENT_MARKER = '<!-- river-reviewer -->';
 
 function printHintLines(lines = []) {
   const hints = lines.filter(Boolean);
@@ -30,6 +31,7 @@ Options:
   --debug           Print debug information (merge base, files, token estimate)
   --estimate        Print cost estimate only (no review)
   --max-cost <usd>  Abort if estimated cost exceeds this USD amount
+  --output <mode>   Output format: text|markdown. Default: text
   --context list    Comma-separated available contexts (e.g. diff,fullFile,tests). Overrides RIVER_AVAILABLE_CONTEXTS
   --dependency list Comma-separated available dependencies (e.g. code_search,test_runner). Overrides RIVER_AVAILABLE_DEPENDENCIES
   -h, --help        Show this help message
@@ -46,6 +48,7 @@ function parseArgs(argv) {
     debug: false,
     estimate: false,
     maxCost: null,
+    output: 'text',
     availableContexts: null,
     availableDependencies: null,
   };
@@ -88,6 +91,22 @@ function parseArgs(argv) {
         parsed.command = 'help';
         break;
       }
+      continue;
+    }
+    if (arg === '--output') {
+      const value = args.shift();
+      if (!value || value.startsWith('-')) {
+        console.error('Error: --output option requires a value.');
+        parsed.command = 'help';
+        break;
+      }
+      const mode = value.toLowerCase();
+      if (!['text', 'markdown'].includes(mode)) {
+        console.error(`Error: --output must be one of: text, markdown (got "${value}").`);
+        parsed.command = 'help';
+        break;
+      }
+      parsed.output = mode;
       continue;
     }
     if (arg === '--context') {
@@ -154,11 +173,55 @@ function printComments(comments) {
   });
 }
 
-function printDebugInfo(result) {
+function formatCommentsMarkdown(comments) {
+  if (!comments?.length) return '_No findings._';
+  return comments.map(c => `- \`${c.file}:${c.line}\` ${c.message}`).join('\n');
+}
+
+function formatPlanMarkdown(plan) {
+  const summary = formatPlan(plan);
+  const selected = summary.selected.length ? summary.selected.map(id => `- \`${id}\``).join('\n') : '- _none_';
+
+  if (!summary.skipped.length) {
+    return `### 選択されたスキル (${summary.selected.length})\n${selected}\n`;
+  }
+
+  const skippedLines = summary.skipped.map(item => `- \`${item.id}\`: ${item.reasons.join('; ')}`).join('\n');
+  return `### 選択されたスキル (${summary.selected.length})\n${selected}\n\n<details>\n<summary>スキップされたスキル (${summary.skipped.length})</summary>\n\n${skippedLines}\n\n</details>\n`;
+}
+
+function formatDebugSummaryMarkdown(result) {
+  const debug = result.reviewDebug ?? {};
+  const llmStatus = debug.llmUsed
+    ? `used (\`${debug.llmModel}\`)`
+    : debug.llmSkipped || debug.llmError
+      ? `skipped (${debug.llmSkipped || debug.llmError})`
+      : 'not used';
+
+  return [
+    `- LLM: ${llmStatus}`,
+    `- 変更ファイル数: ${result.changedFiles.length}`,
+    `- トークン見積もり: ${result.tokenEstimate}`,
+  ].join('\n');
+}
+
+function printMarkdownReport(result, phase) {
+  const header = `${COMMENT_MARKER}
+## River Reviewer
+
+- フェーズ: \`${phase}\`
+${formatDebugSummaryMarkdown(result)}
+`;
+  const planSection = formatPlanMarkdown(result.plan);
+  const findings = `### 指摘\n${formatCommentsMarkdown(result.comments)}\n`;
+  console.log([header, planSection, findings].join('\n'));
+}
+
+function printDebugInfo(result, { log = console.log } = {}) {
   const debug = result.reviewDebug ?? {};
   const rawTokens = result.rawTokenEstimate ?? result.tokenEstimate;
   const reduction = result.reduction ?? 0;
-  console.log(`\nDebug info:
+  log(`\nDebug info:
 - LLM: ${debug.llmUsed ? `used (${debug.llmModel})` : debug.llmSkipped || debug.llmError || 'not used'}
 - Token estimate (raw -> optimized): ${rawTokens} -> ${result.tokenEstimate} (${reduction}% reduction)
 - Prompt truncated: ${debug.promptTruncated ? 'yes' : 'no'}
@@ -170,25 +233,25 @@ function printDebugInfo(result) {
   }
 `);
   if (debug.llmError) {
-    console.log(`LLM error: ${debug.llmError}`);
+    log(`LLM error: ${debug.llmError}`);
   }
   if (debug.promptPreview) {
     const trimmed =
       debug.promptPreview.length > MAX_PROMPT_PREVIEW_LENGTH
         ? `${debug.promptPreview.slice(0, MAX_PROMPT_PREVIEW_LENGTH)}...`
         : debug.promptPreview;
-    console.log('Prompt preview:');
-    console.log(trimmed);
+    log('Prompt preview:');
+    log(trimmed);
   }
   if (result.plan?.skipped?.length) {
-    console.log('\nSkipped skills detail:');
+    log('\nSkipped skills detail:');
     result.plan.skipped.forEach(item => {
       const id = item.skill?.metadata?.id ?? item.skill?.id ?? '(unknown)';
-      console.log(`- ${id}: ${item.reasons.join('; ')}`);
+      log(`- ${id}: ${item.reasons.join('; ')}`);
     });
   }
-  console.log('\n--- diff preview ---');
-  console.log(result.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
+  log('\n--- diff preview ---');
+  log(result.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
 }
 
 function countChangedLines(files) {
@@ -268,11 +331,20 @@ Dependencies: ${
       availableDependencies: parsed.availableDependencies,
     });
 
-    printPlan(result.plan);
-    printComments(result.comments);
+    if (parsed.output === 'markdown') {
+      printMarkdownReport(result, parsed.phase);
+    } else {
+      printPlan(result.plan);
+      printComments(result.comments);
+    }
 
     if (parsed.debug) {
-      printDebugInfo(result);
+      if (parsed.output === 'markdown') {
+        console.error('\nDebug info (not included in markdown output):');
+        printDebugInfo(result, { log: console.error });
+      } else {
+        printDebugInfo(result);
+      }
     }
 
     return 0;

@@ -61,6 +61,32 @@ test('river run emits review comments in dry-run mode', async () => {
   }
 });
 
+test('river run supports markdown output for PR comments', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--dry-run', '--output', 'markdown'], dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /<!-- river-reviewer -->/);
+    assert.match(result.stdout, /## River Reviewer/);
+    assert.match(result.stdout, /### 指摘/);
+    assert.doesNotMatch(result.stdout, /--- diff preview ---/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('river run writes debug output to stderr when markdown output is selected', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const result = await runCli(['run', '.', '--dry-run', '--output', 'markdown', '--debug'], dir);
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.doesNotMatch(result.stdout, /--- diff preview ---/);
+    assert.match(result.stderr, /--- diff preview ---/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('river run reports when there are no changes', async () => {
   const { dir } = await createRepoWithChange();
   try {

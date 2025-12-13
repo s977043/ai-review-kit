@@ -34,8 +34,12 @@ function normalizeTextSegment(line) {
     let modified = false;
     const dashRegex = /\s([\u2013\u2014])\s/g;
     const newLine = line.replace(dashRegex, (match, dash, offset) => {
+        // Keep SemVer milestone titles as-is (e.g., "v0.2.0 – Developer Experience")
+        // These strings must match GitHub milestone titles exactly in docs and ops.
+        const before = line.slice(0, offset);
         const left = line[offset - 1] || '';
         const right = line[offset + match.length] || '';
+        if (/\bv\d+\.\d+\.\d+$/u.test(before) && /\p{L}/u.test(right)) return match;
         // skip if numeric on both sides, e.g. 0.0–1.0
         if (isDigit(left) && isDigit(right)) return match; // no change
         modified = true;

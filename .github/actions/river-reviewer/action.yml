@@ -9,6 +9,10 @@ inputs:
     description: 'Path to the git repository to review.'
     required: false
     default: '.'
+  comment:
+    description: 'Post a PR comment with results (only on pull_request events).'
+    required: false
+    default: 'true'
   dry_run:
     description: 'Run in dry-run mode (no external calls, print to stdout).'
     required: false
@@ -35,15 +39,26 @@ runs:
     - uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node_version }}
-        cache: npm
+        # NOTE: caching is intentionally disabled here.
+        # - `cache-dependency-path` disallows '.'/'..' path segments on setup-node
+        # - using `github.workspace` would key off the target repo lockfile (often absent)
     - name: Install dependencies
-      run: npm ci
-      shell: bash
-    - name: Run River Reviewer
       shell: bash
       run: |
         set -euo pipefail
-        cmd=(npm run river -- run "${{ inputs.target }}" --phase "${{ inputs.phase }}")
+        action_root="$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)"
+        echo "Action repo root: ${action_root}"
+        cd "${action_root}"
+        npm ci
+    - name: Run River Reviewer
+      id: river
+      shell: bash
+      run: |
+        set -euo pipefail
+        action_root="$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)"
+        repo_path="$(cd "${{ inputs.target }}" && pwd)"
+
+        cmd=(node "${action_root}/src/cli.mjs" run "${repo_path}" --phase "${{ inputs.phase }}" --output markdown)
         if [ "${{ inputs.dry_run }}" = "true" ]; then
           cmd+=("--dry-run")
         fi
@@ -57,7 +72,19 @@ runs:
           cmd+=("--max-cost" "${{ inputs.max_cost }}")
         fi
         echo "Running: ${cmd[*]}"
-        "${cmd[@]}"
+        out="${RUNNER_TEMP}/river-reviewer-comment.md"
+        "${cmd[@]}" | tee "${out}"
+        echo "comment_path=${out}" >> "${GITHUB_OUTPUT}"
+
+    - name: Post PR comment
+      if: ${{ github.event_name == 'pull_request' && inputs.comment == 'true' && inputs.estimate != 'true' }}
+      uses: actions/github-script@v8
+      env:
+        RIVER_REVIEWER_COMMENT_PATH: ${{ steps.river.outputs.comment_path }}
+      with:
+        script: |
+          const postComment = require(`${process.env.GITHUB_ACTION_PATH}/post-comment.cjs`);
+          await postComment({ github, context, core });
 branding:
   icon: 'play-circle'
   color: 'blue'
