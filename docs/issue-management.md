@@ -2,7 +2,7 @@
 
 ## 🌟 目的
 
-River Reviewer プロジェクトでは、機能開発・スキル設計・エージェント基盤拡張を持続的に進めるため、**Issue と GitHub Projects を一調したフォーマット・フローで運用する**ことを定めています。
+River Reviewer プロジェクトでは、機能開発・スキル設計・エージェント基盤拡張を持続的に進めるため、**Issue と GitHub Projects を一貫したフォーマット・フローで運用する**ことを定めています。
 
 この文書は、Issue 作成者・レビュアー・メンテナーが同じ前提で進められるようにするための運用ルールをまとめたものです。
 
@@ -10,36 +10,28 @@ River Reviewer プロジェクトでは、機能開発・スキル設計・エ�
 
 ### 1-1. Issue テンプレートを必ず利用する
 
-新規 Issue は `.github/ISSUE_TEMPLATE/task.yaml` を使用します。テンプレートには以下の項目が含まれます：
+新規 Issue は、目的に合った `.github/ISSUE_TEMPLATE/*` を使用します（迷ったら `.github/ISSUE_TEMPLATE/task.yaml`）。テンプレートには以下の項目が含まれます：
 
 - **概要**—このタスクが何をするものなのか（必須）
 - **前タスク**—直前の Issue 番号（任意）
 - **次タスク**—次に着手する Issue 番号（任意）
 - **受け入れ条件**—完了条件を明記する（必須）
 
-### 1-2. 必ず「フェーズラベル」を付与する
+### 1-2. 必ず「タイプ」ラベルを付与する
 
-エージェント化ロードマップに正则って、Issue 作成時に下記のいずれかを付けます。フェーズなし Issue は原則受け付けません。
+Issue の種類が一目で分かるように、Issue 作成時に `type:` ラベルを 1 つ付けます。
 
-| ラベル                | 説明                                     |
-| --------------------- | ---------------------------------------- |
-| `phase:0-planning`    | 設計・要件整理フェーズ                   |
-| `phase:1-schema`      | schema・型・ローダ周りの実装フェーズ     |
-| `phase:2-runtime`     | ランナーや選択ロジックなど実行系フェーズ |
-| `phase:3-skills`      | 個別スキルの実装フェーズ                 |
-| `phase:4-integration` | GitHub Actions 等への統合フェーズ        |
+例: `type:task`, `type:bug`, `type:feature`, `type:enhancement`, `type:docs`, `type:content`
 
-### 1-3. 作業分類ラベル（kind）を付ける
+### 1-3. 優先度ラベルを付与する
 
-Issue には必ず下記のような **kind ラベル** を付け、作業の種類を明示します。
+優先度を揃えるため、Issue 作成時に `P0` / `P1` / `P2` のいずれかを付けます。
 
-| ラベル                | 説明             |
-| --------------------- | ---------------- |
-| `kind:design`         | 設計タスク       |
-| `kind:implementation` | 実装タスク       |
-| `kind:documentation`  | ドキュメント作成 |
-| `kind:test`           | テスト追加       |
-| `kind:refactor`       | 改善・リファクタ |
+### 1-4. Milestone は SemVer 系に統一する（任意だが推奨）
+
+進捗の「見え方」を揃えるため、Milestone は SemVer 系（例: `v0.2.0—Developer Experience`）に統一します。
+
+（任意）`m1-public` / `m2-dx` / `m3-smart` / `m4-community` を付与すると、Milestone を自動設定できます（`.github/workflows/auto-milestone.yml`）。
 
 ## 📍 2. 依存関係ルール（連続性の可視化）
 
@@ -50,31 +42,30 @@ Issue には必ず下記のような **kind ラベル** を付け、作業の種
 - `前タスク`: この Issue の前に完了すべき Issue 番号。
 - `次タスク`: この Issue 完了後に着手すべき次の Issue 番号。
 
-### 2-2. 依存ラベルを付ける
+### 2-2. 依存関係は本文で明示する
 
-Issue 間の依存関係を明示するため、以下のラベルを利用します。
+Issue 間の依存関係は、テンプレートの**前タスク/次タスク**とリンクで明示します（ラベル運用は追加導入が必要なため、本リポジトリのデフォルトでは必須にしません）。
 
-- `depends-on:#<番号>`—この Issue が依存している Issue。
-- `blocks:#<番号>`—この Issue が完了しないと進めない Issue。
+- 例: `前タスク: #123`, `次タスク: #124`
 
 ## 📍 3. GitHub Projects への自動追加と同期ルール
 
-### 3-1. Issue は自動的に Roadmap Project に登録
+### 3-1. Issue は Project に登録する
 
-Automation rules により、`phase:` ラベルの付いた Issue は Roadmap Project の `Idea` 列に自動で追加されます。
+必要に応じて Issue を GitHub Projects に登録し、Status で進行を管理します（自動化は任意）。
 
-### 3-2. Project 上のカスタムフィールド
+### 3-2. Project 上のフィールド（例）
 
 Roadmap Project には下記のカスタムフィールドを追加し、Issue ラベルや依存関係と同期します。
 
-| フィールド名 | 種類          | 説明                        |
-| ------------ | ------------- | --------------------------- |
-| Phase        | Single select | `phase:` ラベルに対当       |
-| Kind         | Single select | `kind:` ラベルに対当        |
-| Prev Task    | Text          | 前タスク番号                |
-| Next Task    | Text          | 次タスク番号                |
-| Depends On   | Text          | 依存 Issue 番号             |
-| Blocks       | Text          | ブロックしている Issue 番号 |
+| フィールド名 | 種類          | 説明                          |
+| ------------ | ------------- | ----------------------------- |
+| Status       | Single select | Todo / Doing / Blocked / Done |
+| Priority     | Single select | P0 / P1 / P2                  |
+| Type         | Single select | `type:` ラベルに対応          |
+| Milestone    | Single select | SemVer milestone（任意）      |
+| Prev Task    | Text          | 前タスク番号（任意）          |
+| Next Task    | Text          | 次タスク番号（任意）          |
 
 ### 3-3. Project 内での並び順
 
@@ -97,7 +88,7 @@ Roadmap Project 上での進行ステータスを定義します。
 
 ## 📍 5. Epic（親Issue）運用ルール
 
-大規模な取り組みやフェーズ全体をまとめる Issue には `epic` ラベルを付けます。例えば、`River Reviewer—Agent Roadmap` が Epic となります。
+大規模な取り組みやフェーズ全体をまとめる親 Issue（Epic）を作成する場合は、チェックリストで関連 Issue を列挙します（ラベル運用は必要に応じて導入します）。
 
 Epic Issue には関連タスク Issue をチェックリストとして列挙し、全体の進捗を把握できるようにします。
 
@@ -118,10 +109,10 @@ Epic Issue には関連タスク Issue をチェックリストとして列挙�
 - スキーマ化しやすい形式になっている
 
 ラベル:
-- phase:0-planning
-- kind:design
+- type:task
+- P1
 ```
 
-## 📍 7. ドキュメントの改証ルール
+## 📍 7. ドキュメントの改訂ルール
 
 このドキュメントを変更する場合、必ず Pull Request を作成し、メンテナーの承認を得てください。プロジェクト運用に影響する変更は Epic Issue にリンクしておくこと。
