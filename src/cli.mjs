@@ -183,11 +183,11 @@ function formatPlanMarkdown(plan) {
   const selected = summary.selected.length ? summary.selected.map(id => `- \`${id}\``).join('\n') : '- _none_';
 
   if (!summary.skipped.length) {
-    return `### Selected skills (${summary.selected.length})\n${selected}\n`;
+    return `### 選択されたスキル (${summary.selected.length})\n${selected}\n`;
   }
 
   const skippedLines = summary.skipped.map(item => `- \`${item.id}\`: ${item.reasons.join('; ')}`).join('\n');
-  return `### Selected skills (${summary.selected.length})\n${selected}\n\n<details>\n<summary>Skipped skills (${summary.skipped.length})</summary>\n\n${skippedLines}\n\n</details>\n`;
+  return `### 選択されたスキル (${summary.selected.length})\n${selected}\n\n<details>\n<summary>スキップされたスキル (${summary.skipped.length})</summary>\n\n${skippedLines}\n\n</details>\n`;
 }
 
 function formatDebugSummaryMarkdown(result) {
@@ -200,8 +200,8 @@ function formatDebugSummaryMarkdown(result) {
 
   return [
     `- LLM: ${llmStatus}`,
-    `- Changed files: ${result.changedFiles.length}`,
-    `- Token estimate: ${result.tokenEstimate}`,
+    `- 変更ファイル数: ${result.changedFiles.length}`,
+    `- トークン見積もり: ${result.tokenEstimate}`,
   ].join('\n');
 }
 
@@ -209,11 +209,11 @@ function printMarkdownReport(result, phase) {
   const header = `${COMMENT_MARKER}
 ## River Reviewer
 
-- Phase: \`${phase}\`
+- フェーズ: \`${phase}\`
 ${formatDebugSummaryMarkdown(result)}
 `;
   const planSection = formatPlanMarkdown(result.plan);
-  const findings = `### Findings\n${formatCommentsMarkdown(result.comments)}\n`;
+  const findings = `### 指摘\n${formatCommentsMarkdown(result.comments)}\n`;
   console.log([header, planSection, findings].join('\n'));
 }
 
