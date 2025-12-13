@@ -32,7 +32,7 @@ If yes, please select the Diátaxis type for the main document in this PR (choos
 Diátaxis compliance / Diátaxis 準拠チェック:
 
 - [ ] This document clearly focuses on a single Diátaxis type.
-- [ ] The file is placed under the corresponding `docs/` section.
+- [ ] The file is placed under the corresponding `pages/` section.
 - [ ] The content matches the chosen type (for example, no long conceptual explanation in a how-to guide).
 
 Language / 言語:
@@ -55,6 +55,13 @@ npm test
 - [ ] Added or updated tests related to the changes.（変更内容に関連するテストを追加・修正しました。）
 - [ ] Verified that tests pass.（テストが通過することを確認しました。）
 - [ ] Updated documentation or notes if necessary.（追加のドキュメントやノートが必要な場合は更新しました。）
+
+### Skill Changes（スキル変更がある場合）
+
+- [ ] `applyTo` が過剰に広くない（狙いが説明できる）
+- [ ] 誤検知ガード（黙る条件）と Non-goals がある
+- [ ] 指摘文が短く、次の行動に結びつく
+- [ ] `npm run skills:validate` を実行した
 
 ## Related Issues
 
