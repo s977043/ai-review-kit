@@ -8,8 +8,10 @@ This directory contains **offline** fixtures used to evaluate skill selection an
 ## How to run
 
 - Text summary: `npm run planner:eval:dataset`
+- Aggregated report: `npm run planner:eval:dataset -- --report`
 - JSON output: `npm run planner:eval:dataset -- --json`
 - Save JSON: `npm run planner:eval:dataset -- --out /tmp/planner-eval.json`
+- Compare with baseline JSON: `npm run planner:eval:dataset -- --compare /tmp/planner-baseline.json`
 
 ## Note about GitHub diffs
 

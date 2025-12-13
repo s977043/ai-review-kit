@@ -5,6 +5,7 @@
   "write-a-skill": "スキル作成ガイド（How-to）",
   "validate-skill-schema": "Validate Skill Schema",
   "debug-skill-routing": "Debug Skill Routing",
+  "planner-eval-dataset": "Planner評価セット（オフライン評価）",
   "use-riverbed-memory": "Use Riverbed Memory",
   "tracing": "Tracing / Observability",
   "agents": "Agents—Adding Project Knowledge Packs",
