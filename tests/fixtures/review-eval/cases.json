@@ -4,7 +4,14 @@
     "phase": "midstream",
     "diffFile": "../planner-dataset/diffs/midstream-security-hardcoded-token.diff",
     "planSkills": ["rr-midstream-security-basic-001"],
-    "mustInclude": ["Finding:", "Fix:", "GitHub Secrets", "Severity: blocker", "Confidence: high"],
+    "mustInclude": [
+      "Finding:",
+      "Evidence:",
+      "Fix:",
+      "GitHub Secrets",
+      "Severity: blocker",
+      "Confidence: high"
+    ],
     "maxFindings": 3
   },
   {
@@ -12,7 +19,7 @@
     "phase": "midstream",
     "diffFile": "diffs/secrets-explicit-patterns.diff",
     "planSkills": ["rr-midstream-security-basic-001"],
-    "mustInclude": ["Severity: blocker", "Confidence: high"],
+    "mustInclude": ["Evidence:", "Severity: blocker", "Confidence: high"],
     "maxFindings": 3
   },
   {
@@ -20,7 +27,7 @@
     "phase": "midstream",
     "diffFile": "diffs/secrets-object-literal.diff",
     "planSkills": ["rr-midstream-security-basic-001"],
-    "mustInclude": ["Severity: blocker", "Confidence: high"],
+    "mustInclude": ["Evidence:", "Severity: blocker", "Confidence: high"],
     "maxFindings": 3
   },
   {
@@ -28,7 +35,7 @@
     "phase": "midstream",
     "diffFile": "../planner-dataset/diffs/midstream-observability-silent-catch.diff",
     "planSkills": ["rr-midstream-logging-observability-001"],
-    "mustInclude": ["catch", "ログ", "再throw", "Severity: warning"],
+    "mustInclude": ["Evidence:", "catch", "ログ", "再throw", "Severity: warning"],
     "maxFindings": 3
   },
   {
@@ -36,7 +43,7 @@
     "phase": "midstream",
     "diffFile": "../planner-dataset/diffs/midstream-observability-silent-catch-return.diff",
     "planSkills": ["rr-midstream-logging-observability-001"],
-    "mustInclude": ["catch", "Severity: warning"],
+    "mustInclude": ["Evidence:", "catch", "Severity: warning"],
     "maxFindings": 3
   },
   {
@@ -44,7 +51,7 @@
     "phase": "downstream",
     "diffFile": "../planner-dataset/diffs/downstream-new-behavior-no-tests.diff",
     "planSkills": ["rr-downstream-test-existence-001"],
-    "mustInclude": ["テスト", "1〜3件", "Severity: warning"],
+    "mustInclude": ["Evidence:", "テスト", "1〜3件", "Severity: warning"],
     "maxFindings": 2
   },
   {
@@ -52,7 +59,7 @@
     "phase": "downstream",
     "diffFile": "../planner-dataset/diffs/downstream-input-size-guard-no-tests.diff",
     "planSkills": ["rr-downstream-coverage-gap-001"],
-    "mustInclude": ["テスト", "Severity: warning"],
+    "mustInclude": ["Evidence:", "テスト", "Severity: warning"],
     "maxFindings": 2
   },
   {
@@ -60,7 +67,7 @@
     "phase": "downstream",
     "diffFile": "../planner-dataset/diffs/downstream-coverage-missing-branch.diff",
     "planSkills": ["rr-downstream-coverage-gap-001"],
-    "mustInclude": ["テスト", "Severity: warning"],
+    "mustInclude": ["Evidence:", "テスト", "Severity: warning"],
     "maxFindings": 2
   },
   {
@@ -68,7 +75,7 @@
     "phase": "downstream",
     "diffFile": "diffs/missing-tests-validation-throw.diff",
     "planSkills": ["rr-downstream-test-existence-001"],
-    "mustInclude": ["テスト", "Severity: warning"],
+    "mustInclude": ["Evidence:", "テスト", "Severity: warning"],
     "maxFindings": 2
   },
   {
@@ -76,7 +83,7 @@
     "phase": "downstream",
     "diffFile": "../planner-dataset/diffs/downstream-coverage-missing-branch.diff",
     "planSkills": ["rr-downstream-test-existence-001"],
-    "mustInclude": ["テスト", "Severity: warning"],
+    "mustInclude": ["Evidence:", "テスト", "Severity: warning"],
     "maxFindings": 2
   }
 ]

@@ -18,18 +18,20 @@ function clamp(text, maxChars) {
  * Evidence is already anchored by `<file>:<line>`, so we keep the message compact.
  * @param {{
  *   finding: string,
+ *   evidence: string,
  *   impact: string,
  *   fix: string,
  *   severity: typeof FINDING_SEVERITIES[number],
  *   confidence: typeof FINDING_CONFIDENCE[number],
  * }} finding
  */
-export function formatFindingMessage({ finding, impact, fix, severity, confidence }) {
+export function formatFindingMessage({ finding, evidence, impact, fix, severity, confidence }) {
   const sev = FINDING_SEVERITIES.includes(severity) ? severity : 'warning';
   const conf = FINDING_CONFIDENCE.includes(confidence) ? confidence : 'medium';
 
   return [
     `Finding: ${clamp(finding, 80)}`,
+    `Evidence: ${clamp(evidence, 60)}`,
     `Impact: ${clamp(impact, 60)}`,
     `Fix: ${clamp(fix, 80)}`,
     `Severity: ${sev}`,
@@ -44,7 +46,7 @@ export function formatFindingMessage({ finding, impact, fix, severity, confidenc
 export function validateFindingMessage(message) {
   const text = String(message ?? '');
   const missing = [];
-  for (const label of ['Finding:', 'Impact:', 'Fix:', 'Severity:', 'Confidence:']) {
+  for (const label of ['Finding:', 'Evidence:', 'Impact:', 'Fix:', 'Severity:', 'Confidence:']) {
     if (!text.includes(label)) missing.push(label);
   }
 
@@ -63,4 +65,3 @@ export function validateFindingMessage(message) {
     invalid,
   };
 }
-
