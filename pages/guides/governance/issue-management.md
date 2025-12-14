@@ -10,7 +10,7 @@ River Reviewer プロジェクトでは、機能開発・スキル設計・エ�
 
 ### 1-1. Issue テンプレートを必ず利用する
 
-新規 Issue は、目的に合った `.github/ISSUE_TEMPLATE/*` を使用します（迷ったら `.github/ISSUE_TEMPLATE/task.yaml`）。テンプレートには以下の項目が含まれます：
+新規 Issue は、目的に合った `.github/ISSUE_TEMPLATE/*` を使用します（迷ったら `.github/ISSUE_TEMPLATE/task.yaml`）。テンプレートには以下の項目が含まれます。
 
 - **概要**—このタスクが何をするものなのか（必須）
 - **前タスク**—直前の Issue 番号（任意）
@@ -21,7 +21,14 @@ River Reviewer プロジェクトでは、機能開発・スキル設計・エ�
 
 Issue の種類が一目で分かるように、Issue 作成時に `type:` ラベルを 1 つ付けます。
 
-例: `type:task`, `type:bug`, `type:feature`, `type:enhancement`, `type:docs`, `type:content`
+例:
+
+- `type:task`
+- `type:bug`
+- `type:feature`
+- `type:enhancement`
+- `type:docs`
+- `type:content`
 
 ### 1-3. 優先度ラベルを付与する
 

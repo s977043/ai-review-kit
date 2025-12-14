@@ -51,10 +51,10 @@ River Reviewer に同梱されているスキル一覧です。フェーズ別�
 ### rr-midstream-code-quality-sample-001
 
 - 名前: Sample Code Quality Pass
-- 概要: Checks common code quality and maintainability risks.
+- 概要: 一般的なコード品質と保守性のリスクを確認する。
 - 対象: `src/**/*.ts`, `src/**/*.js`, `src/**/*.py`
 - 重要度: minor
-- タグ: style, maintainability, midstream
+- タグ: `style`, `maintainability`, `midstream`
 - 依存関係: code_search
 - 適用条件: phase=midstream, inputContext=diff
 
@@ -66,7 +66,15 @@ River Reviewer に同梱されているスキル一覧です。フェーズ別�
 
 - 名前: Standard Review Policy for Midstream
 - 概要: Applies standard AI review policy guidelines for midstream (implementation) phase reviews.
-- 対象: `src/**/*.ts`, `src/**/*.js`, `src/**/*.py`, `src/**/*.go`, `src/**/*.java`, `src/**/*.rb`, `lib/**/*`, `app/**/*`
+- 対象:
+  - `src/**/*.ts`
+  - `src/**/*.js`
+  - `src/**/*.py`
+  - `src/**/*.go`
+  - `src/**/*.java`
+  - `src/**/*.rb`
+  - `lib/**/*`
+  - `app/**/*`
 - 重要度: info
 - タグ: policy, midstream, implementation, code-quality
 - 依存関係: code_search
@@ -110,7 +118,15 @@ River Reviewer に同梱されているスキル一覧です。フェーズ別�
 
 - 名前: Standard Review Policy for Downstream
 - 概要: Applies standard AI review policy guidelines for downstream (test/QA) phase reviews.
-- 対象: `test/**/*`, `tests/**/*`, `**/*.test.ts`, `**/*.test.js`, `**/*.test.py`, `**/*.spec.ts`, `**/*.spec.js`, `**/__tests__/**/*`
+- 対象:
+  - `test/**/*`
+  - `tests/**/*`
+  - `**/*.test.ts`
+  - `**/*.test.js`
+  - `**/*.test.py`
+  - `**/*.spec.ts`
+  - `**/*.spec.js`
+  - `**/__tests__/**/*`
 - 重要度: info
 - タグ: policy, downstream, testing, qa
 - 依存関係: test_runner, coverage_report

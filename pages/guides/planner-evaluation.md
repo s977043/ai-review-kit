@@ -11,14 +11,14 @@
 - メトリクス（簡易版）:
   - `exactMatch`: 期待順序と完全一致の割合
   - `top1Match`: 先頭要素が一致する割合
-  - `coverage`: 期待に含まれる ID が出力に含まれる割合
+- `coverage`: 期待リストに含まれる ID のうち、出力へ含まれる割合
   - `MRR`: 期待先頭 ID の平均逆順位（Mean Reciprocal Rank）
 
 ## 使い方
 
 1. 評価ケースを用意  
-   `tests/fixtures/planner-eval-cases.json` に、`skills` / `context` / `plan` / `expectedOrder` を記述します。  
-   ※ `plan` が未指定なら `expectedOrder` をそのまま LLM 応答として使います（オフライン評価用）。
+   `tests/fixtures/planner-eval-cases.json` に、`skills` / `context` / `plan` / `expectedOrder` を記述する。  
+   ※ `plan` が未指定なら `expectedOrder` をそのまま LLM 応答として使う（オフライン評価用）。
 
 2. 評価を実行
 
@@ -29,7 +29,7 @@
    ```
 
 3. 出力
-   - サマリ（件数、exactMatch/top1/coverage/MRR）と各ケースの詳細を標準出力します。
+   - サマリ（件数、exactMatch/top1/coverage/MRR）と各ケースの詳細を標準出力する。
 
 ## 実装メモ
 
