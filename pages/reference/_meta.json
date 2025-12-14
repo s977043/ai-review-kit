@@ -3,6 +3,7 @@
   "skill-schema-reference": "Skill Schema Reference",
   "config-schema": "コンフィグ / スキーマ概要",
   "metadata-fields": "Metadata Fields",
+  "stable-interfaces": "安定インターフェース（CLI / GitHub Actions）",
   "runner-cli-reference": "Runner CLI Reference",
   "glossary": "River Reviewer Glossary"
 }
