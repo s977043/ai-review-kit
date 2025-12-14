@@ -124,14 +124,32 @@ function buildFallbackComments(diff, plan) {
     ? `Matched skills: ${skillNames.join(', ')}`
     : 'No matching skills; manual review recommended.';
 
-  const comments = diff.files.map(file => {
-    const line =
-      file.addedLines[0] ||
-      file.hunks[0]?.newStart ||
-      1; /* default to first added line or hunk start to keep pointers stable */
-    const hunkText = file.hunks.length ? `Changed around line ${file.hunks[0].newStart}` : 'File changed';
-    return {
-      file: file.path,
+  const firstFile = diff.files?.find(f => f?.path && f.path !== '/dev/null') ?? null;
+  if (!firstFile) {
+    return [
+      {
+        file: '(no-files)',
+        line: 1,
+        message: formatFindingMessage({
+          finding: 'レビュー対象ファイルが特定できない',
+          evidence: '差分ファイルが空',
+          impact: 'レビューの自動化ができない',
+          fix: '差分がある状態で再実行する',
+          severity: 'warning',
+          confidence: 'low',
+        }),
+      },
+    ];
+  }
+
+  const line =
+    firstFile.addedLines?.[0] ||
+    firstFile.hunks?.[0]?.newStart ||
+    1; /* default to first added line or hunk start to keep pointers stable */
+  const hunkText = firstFile.hunks?.length ? `Changed around line ${firstFile.hunks[0].newStart}` : 'File changed';
+  return [
+    {
+      file: firstFile.path,
       line,
       message: formatFindingMessage({
         finding: '自動レビューの指摘を生成できなかった',
@@ -141,25 +159,8 @@ function buildFallbackComments(diff, plan) {
         severity: 'warning',
         confidence: 'low',
       }),
-    };
-  });
-
-  return comments.length
-    ? comments
-    : [
-        {
-          file: '(no-files)',
-          line: 1,
-          message: formatFindingMessage({
-            finding: 'レビュー対象ファイルが特定できない',
-            evidence: '差分ファイルが空',
-            impact: 'レビューの自動化ができない',
-            fix: '差分がある状態で再実行する',
-            severity: 'warning',
-            confidence: 'low',
-          }),
-        },
-      ];
+    },
+  ];
 }
 
 function normalizeHeuristicComments(rawComments) {
