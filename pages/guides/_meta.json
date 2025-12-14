@@ -4,6 +4,7 @@
   "run-phase-specific-review": "Run Phase-Specific Review",
   "troubleshooting": "トラブルシューティング",
   "faq": "FAQ（よくある失敗）",
+  "add-new-skill": "スキルを追加する（最短手順）",
   "write-a-skill": "スキル作成ガイド（How-to）",
   "validate-skill-schema": "Validate Skill Schema",
   "debug-skill-routing": "Debug Skill Routing",

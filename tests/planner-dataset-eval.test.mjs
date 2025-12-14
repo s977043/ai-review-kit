@@ -14,3 +14,15 @@ test('evaluatePlannerDataset loads fixture cases', async () => {
   assert.ok(cases.every(c => typeof c.name === 'string' && c.name.length > 0));
 });
 
+test('evaluatePlannerDataset keeps stable baseline metrics (coverage/top1Match)', async () => {
+  const datasetDir = path.join(__dirname, 'fixtures', 'planner-dataset');
+  const { summary } = await evaluatePlannerDataset({ datasetDir });
+
+  // Avoid regressions where expected skills stop being selected.
+  assert.strictEqual(Number(summary.coverage.toFixed(3)), 1);
+
+  // top1Match is defined only for cases that set expectedTop1.
+  if (summary.top1MatchCases > 0) {
+    assert.ok(summary.top1Match >= 0.9);
+  }
+});
