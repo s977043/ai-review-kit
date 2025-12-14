@@ -142,43 +142,56 @@ function buildFallbackComments(diff, plan) {
 
 function normalizeHeuristicComments(rawComments) {
   return rawComments.map(c => {
-    if (c.kind === 'silent-catch') {
-      return {
-        file: c.file,
-        line: c.line,
-        message: formatFindingMessage({
-          finding: 'catch で例外が握りつぶされる可能性がある',
-          impact: '障害調査や失敗検知が困難になる',
-          fix: 'ログ付与+再throw（または呼び出し元へエラー伝播）を検討する',
-          severity: 'warning',
-          confidence: 'high',
-        }),
-      };
+    switch (c.kind) {
+      case 'silent-catch':
+        return {
+          file: c.file,
+          line: c.line,
+          message: formatFindingMessage({
+            finding: 'catch で例外が握りつぶされる可能性がある',
+            impact: '障害調査や失敗検知が困難になる',
+            fix: 'ログ付与+再throw（または呼び出し元へエラー伝播）を検討する',
+            severity: 'warning',
+            confidence: 'high',
+          }),
+        };
+      case 'missing-tests':
+        return {
+          file: c.file,
+          line: c.line,
+          message: formatFindingMessage({
+            finding: '挙動変更に対するテスト差分が見当たらない',
+            impact: '回帰の検知漏れや仕様逸脱が起きやすい',
+            fix: '境界/失敗系を含む最小テストを1〜3件追加する',
+            severity: 'warning',
+            confidence: 'medium',
+          }),
+        };
+      case 'hardcoded-secret':
+        return {
+          file: c.file,
+          line: c.line,
+          message: formatFindingMessage({
+            finding: '秘密情報（トークン/キー）の直書きの可能性がある',
+            impact: '漏洩時に不正利用やインシデントにつながる',
+            fix: '環境変数（GitHub Secrets等）へ移し、漏洩時はローテーションも検討する',
+            severity: 'blocker',
+            confidence: 'high',
+          }),
+        };
+      default:
+        return {
+          file: c.file,
+          line: c.line,
+          message: formatFindingMessage({
+            finding: `想定外のヒューリスティック（kind=${String(c.kind ?? 'unknown')}）`,
+            impact: 'レビュー結果が不安定になる可能性がある',
+            fix: 'ヒューリスティック定義と出力の対応を見直す',
+            severity: 'warning',
+            confidence: 'low',
+          }),
+        };
     }
-    if (c.kind === 'missing-tests') {
-      return {
-        file: c.file,
-        line: c.line,
-        message: formatFindingMessage({
-          finding: '挙動変更に対するテスト差分が見当たらない',
-          impact: '回帰の検知漏れや仕様逸脱が起きやすい',
-          fix: '境界/失敗系を含む最小テストを1〜3件追加する',
-          severity: 'warning',
-          confidence: 'medium',
-        }),
-      };
-    }
-    return {
-      file: c.file,
-      line: c.line,
-      message: formatFindingMessage({
-        finding: '秘密情報（トークン/キー）の直書きの可能性がある',
-        impact: '漏洩時に不正利用やインシデントにつながる',
-        fix: '環境変数（GitHub Secrets等）へ移し、漏洩時はローテーションも検討する',
-        severity: 'blocker',
-        confidence: 'high',
-      }),
-    };
   });
 }
 
