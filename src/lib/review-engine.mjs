@@ -1,5 +1,6 @@
 import { summarizeSkill } from './review-runner.mjs';
 import { buildHeuristicComments } from './heuristic-review.mjs';
+import { formatFindingMessage, validateFindingMessage } from './finding-format.mjs';
 
 const DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const MAX_PROMPT_CHARS = 12000;
@@ -54,7 +55,10 @@ ${buildSkillSummary(plan)}
 ${buildProjectRulesSection(projectRules)}Review the unified git diff below and produce concise findings.
 - Write the <message> in Japanese.
 - Output each finding on its own line using the format "<file>:<line>: <message>".
+- In <message>, include short labels: "Finding:", "Impact:", "Fix:", "Severity:", "Confidence:".
+- Use Severity: blocker|warning|nit and Confidence: high|medium|low.
 - Focus on correctness, safety, and maintainability risks in the changed code.
+- Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
 - Limit to 8 findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
 - Keep messages brief (<=200 characters).
 
@@ -136,6 +140,61 @@ function buildFallbackComments(diff, plan) {
   return comments.length ? comments : [{ file: '(no-files)', line: 1, message: skillText }];
 }
 
+function normalizeHeuristicComments(rawComments) {
+  return rawComments.map(c => {
+    switch (c.kind) {
+      case 'silent-catch':
+        return {
+          file: c.file,
+          line: c.line,
+          message: formatFindingMessage({
+            finding: 'catch で例外が握りつぶされる可能性がある',
+            impact: '障害調査や失敗検知が困難になる',
+            fix: 'ログ付与+再throw（または呼び出し元へエラー伝播）を検討する',
+            severity: 'warning',
+            confidence: 'high',
+          }),
+        };
+      case 'missing-tests':
+        return {
+          file: c.file,
+          line: c.line,
+          message: formatFindingMessage({
+            finding: '挙動変更に対するテスト差分が見当たらない',
+            impact: '回帰の検知漏れや仕様逸脱が起きやすい',
+            fix: '境界/失敗系を含む最小テストを1〜3件追加する',
+            severity: 'warning',
+            confidence: 'medium',
+          }),
+        };
+      case 'hardcoded-secret':
+        return {
+          file: c.file,
+          line: c.line,
+          message: formatFindingMessage({
+            finding: '秘密情報（トークン/キー）の直書きの可能性がある',
+            impact: '漏洩時に不正利用やインシデントにつながる',
+            fix: '環境変数（GitHub Secrets等）へ移し、漏洩時はローテーションも検討する',
+            severity: 'blocker',
+            confidence: 'high',
+          }),
+        };
+      default:
+        return {
+          file: c.file,
+          line: c.line,
+          message: formatFindingMessage({
+            finding: `想定外のヒューリスティック（kind=${String(c.kind ?? 'unknown')}）`,
+            impact: 'レビュー結果が不安定になる可能性がある',
+            fix: 'ヒューリスティック定義と出力の対応を見直す',
+            severity: 'warning',
+            confidence: 'low',
+          }),
+        };
+    }
+  });
+}
+
 /**
  * Generate review comments using LLM when configured, otherwise fall back to deterministic hints.
  */
@@ -201,7 +260,7 @@ export async function generateReview({
   if (!comments.length) {
     const heuristic = buildHeuristicComments({ diff, plan });
     if (heuristic.length) {
-      comments = heuristic;
+      comments = normalizeHeuristicComments(heuristic);
       debug.heuristicsUsed = true;
       debug.heuristicsCount = heuristic.length;
     } else {
@@ -209,6 +268,16 @@ export async function generateReview({
       debug.heuristicsUsed = false;
     }
   }
+
+  const formatChecks = comments.map(c => ({
+    file: c.file,
+    line: c.line,
+    ...validateFindingMessage(c.message),
+  }));
+  const invalidCount = formatChecks.filter(c => !c.ok).length;
+  debug.findingFormat = invalidCount
+    ? { ok: false, invalidCount, samples: formatChecks.filter(c => !c.ok).slice(0, 3) }
+    : { ok: true };
 
   return {
     comments,

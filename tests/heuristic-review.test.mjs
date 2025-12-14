@@ -18,7 +18,7 @@ test('buildHeuristicComments detects hardcoded secrets for security skill', () =
   assert.equal(comments.length, 1);
   assert.equal(comments[0].file, 'src/config/auth.ts');
   assert.equal(comments[0].line, 6);
-  assert.match(comments[0].message, /秘密情報/);
+  assert.equal(comments[0].kind, 'hardcoded-secret');
 });
 
 test('buildHeuristicComments is quiet when security skill is not selected', () => {
@@ -53,6 +53,7 @@ index 1111111..2222222 100644
   assert.equal(comments.length, 1);
   assert.equal(comments[0].file, 'src/config/auth.ts');
   assert.equal(comments[0].line, 3);
+  assert.equal(comments[0].kind, 'hardcoded-secret');
 });
 
 test('buildHeuristicComments detects explicit token patterns (AKIA/ghp_/sk-)', () => {
@@ -72,6 +73,7 @@ index 1111111..2222222 100644
 
   assert.equal(comments.length, 3);
   assert.equal(comments[0].file, 'src/config/keys.ts');
+  assert.ok(comments.every(c => c.kind === 'hardcoded-secret'));
 });
 
 test('buildHeuristicComments ignores env var references (process.env / import.meta.env)', () => {
@@ -144,4 +146,37 @@ index 1111111..2222222 100644
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
   assert.equal(comments.length, 1);
+  assert.equal(comments[0].kind, 'hardcoded-secret');
+});
+
+test('buildHeuristicComments detects silent catch for observability skill', () => {
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/midstream-observability-silent-catch.diff',
+    'utf8',
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'rr-midstream-logging-observability-001' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].file, 'src/services/payments.ts');
+  assert.equal(comments[0].kind, 'silent-catch');
+  assert.ok(Number.isInteger(comments[0].line));
+});
+
+test('buildHeuristicComments detects missing tests for downstream test skills', () => {
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/downstream-new-behavior-no-tests.diff',
+    'utf8',
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'rr-downstream-test-existence-001' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].file, 'src/calc.ts');
+  assert.equal(comments[0].kind, 'missing-tests');
+  assert.ok(Number.isInteger(comments[0].line));
 });

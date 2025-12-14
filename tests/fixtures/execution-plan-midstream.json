@@ -8,6 +8,13 @@
       "dependencies": ["code_search"]
     },
     {
+      "id": "rr-midstream-logging-observability-001",
+      "phase": "midstream",
+      "modelHint": "balanced",
+      "outputKind": ["findings", "actions"],
+      "dependencies": ["tracing", "code_search"]
+    },
+    {
       "id": "rr-midstream-hello-skill-001",
       "phase": "midstream",
       "modelHint": "cheap",
@@ -33,7 +40,7 @@
     },
     {
       "id": "rr-downstream-coverage-gap-001",
-      "reasons": ["phase mismatch: downstream !== midstream", "missing inputContext: tests"]
+      "reasons": ["phase mismatch: downstream !== midstream"]
     },
     {
       "id": "rr-downstream-flaky-test-001",
@@ -44,7 +51,7 @@
     },
     {
       "id": "rr-downstream-test-existence-001",
-      "reasons": ["phase mismatch: downstream !== midstream", "missing inputContext: tests"]
+      "reasons": ["phase mismatch: downstream !== midstream"]
     },
     {
       "id": "rr-downstream-test-naming-001",
@@ -67,12 +74,8 @@
       "reasons": ["missing inputContext: fullFile"]
     },
     {
-      "id": "rr-midstream-logging-observability-001",
-      "reasons": ["missing inputContext: fullFile"]
-    },
-    {
       "id": "rr-midstream-security-basic-001",
-      "reasons": ["applyTo did not match any changed file", "missing inputContext: fullFile"]
+      "reasons": ["applyTo did not match any changed file"]
     },
     {
       "id": "rr-midstream-typescript-nullcheck-001",
