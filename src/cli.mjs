@@ -406,7 +406,8 @@ Dependencies: ${
     const estimator = new CostEstimator(process.env.OPENAI_MODEL || process.env.RIVER_OPENAI_MODEL || undefined);
     const estimatedCost = estimator.estimateFromDiff(context.diff, context.plan?.selected ?? []);
 
-    console.log(`River Reviewer (local)
+    const logRunHeader = parsed.output === 'markdown' ? console.error : console.log;
+    logRunHeader(`River Reviewer (local)
 Phase: ${parsed.phase}
 Repo: ${context.repoRoot}
 Base branch: ${context.defaultBranch}
