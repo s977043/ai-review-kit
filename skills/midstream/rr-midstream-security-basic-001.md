@@ -7,7 +7,7 @@ applyTo:
   - '**/{api,routes,db,ui,components,auth,security,config}/**/*.{ts,tsx,js,jsx}'
 tags: [security, midstream, web]
 severity: major
-inputContext: [diff, fullFile]
+inputContext: [diff]
 outputKind: [findings, actions]
 dependencies: [code_search]
 ---

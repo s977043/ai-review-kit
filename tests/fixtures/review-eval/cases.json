@@ -1,0 +1,82 @@
+[
+  {
+    "name": "secrets: hardcoded token (export const)",
+    "phase": "midstream",
+    "diffFile": "../planner-dataset/diffs/midstream-security-hardcoded-token.diff",
+    "planSkills": ["rr-midstream-security-basic-001"],
+    "mustInclude": ["Finding:", "Fix:", "GitHub Secrets", "Severity: blocker", "Confidence: high"],
+    "maxFindings": 3
+  },
+  {
+    "name": "secrets: explicit token patterns (AKIA/ghp_/sk-)",
+    "phase": "midstream",
+    "diffFile": "diffs/secrets-explicit-patterns.diff",
+    "planSkills": ["rr-midstream-security-basic-001"],
+    "mustInclude": ["Severity: blocker", "Confidence: high"],
+    "maxFindings": 3
+  },
+  {
+    "name": "secrets: object literal (unquoted key)",
+    "phase": "midstream",
+    "diffFile": "diffs/secrets-object-literal.diff",
+    "planSkills": ["rr-midstream-security-basic-001"],
+    "mustInclude": ["Severity: blocker", "Confidence: high"],
+    "maxFindings": 3
+  },
+  {
+    "name": "observability: silent catch (return;)",
+    "phase": "midstream",
+    "diffFile": "../planner-dataset/diffs/midstream-observability-silent-catch.diff",
+    "planSkills": ["rr-midstream-logging-observability-001"],
+    "mustInclude": ["catch", "ログ", "再throw", "Severity: warning"],
+    "maxFindings": 3
+  },
+  {
+    "name": "observability: silent catch (return null;)",
+    "phase": "midstream",
+    "diffFile": "../planner-dataset/diffs/midstream-observability-silent-catch-return.diff",
+    "planSkills": ["rr-midstream-logging-observability-001"],
+    "mustInclude": ["catch", "Severity: warning"],
+    "maxFindings": 3
+  },
+  {
+    "name": "tests: missing tests for new behavior (throw new Error)",
+    "phase": "downstream",
+    "diffFile": "../planner-dataset/diffs/downstream-new-behavior-no-tests.diff",
+    "planSkills": ["rr-downstream-test-existence-001"],
+    "mustInclude": ["テスト", "1〜3件", "Severity: warning"],
+    "maxFindings": 2
+  },
+  {
+    "name": "tests: missing tests for new guard (throw new Error)",
+    "phase": "downstream",
+    "diffFile": "../planner-dataset/diffs/downstream-input-size-guard-no-tests.diff",
+    "planSkills": ["rr-downstream-coverage-gap-001"],
+    "mustInclude": ["テスト", "Severity: warning"],
+    "maxFindings": 2
+  },
+  {
+    "name": "tests: missing tests for new branch (if added)",
+    "phase": "downstream",
+    "diffFile": "../planner-dataset/diffs/downstream-coverage-missing-branch.diff",
+    "planSkills": ["rr-downstream-coverage-gap-001"],
+    "mustInclude": ["テスト", "Severity: warning"],
+    "maxFindings": 2
+  },
+  {
+    "name": "tests: missing tests for error validation path",
+    "phase": "downstream",
+    "diffFile": "diffs/missing-tests-validation-throw.diff",
+    "planSkills": ["rr-downstream-test-existence-001"],
+    "mustInclude": ["テスト", "Severity: warning"],
+    "maxFindings": 2
+  },
+  {
+    "name": "tests: missing tests for branch/exception changes",
+    "phase": "downstream",
+    "diffFile": "../planner-dataset/diffs/downstream-coverage-missing-branch.diff",
+    "planSkills": ["rr-downstream-test-existence-001"],
+    "mustInclude": ["テスト", "Severity: warning"],
+    "maxFindings": 2
+  }
+]

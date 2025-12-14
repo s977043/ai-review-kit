@@ -12,7 +12,7 @@ applyTo:
   - '**/*.tsx'
 tags: [observability, logging, reliability, midstream]
 severity: minor
-inputContext: [diff, fullFile]
+inputContext: [diff]
 outputKind: [findings, actions]
 modelHint: balanced
 dependencies: [tracing, code_search]
