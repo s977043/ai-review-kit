@@ -55,7 +55,6 @@ ${buildSkillSummary(plan)}
 ${buildProjectRulesSection(projectRules)}Review the unified git diff below and produce concise findings.
 - Write the <message> in Japanese.
 - Output each finding on its own line using the format "<file>:<line>: <message>".
-- In <message>, include short labels: "Finding:", "Impact:", "Fix:", "Severity:", "Confidence:".
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
 - Focus on correctness, safety, and maintainability risks in the changed code.
