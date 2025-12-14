@@ -1,4 +1,5 @@
 import { summarizeSkill } from './review-runner.mjs';
+import { buildHeuristicComments } from './heuristic-review.mjs';
 
 const DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const MAX_PROMPT_CHARS = 12000;
@@ -198,7 +199,15 @@ export async function generateReview({
   }
 
   if (!comments.length) {
-    comments = buildFallbackComments(diff, plan);
+    const heuristic = buildHeuristicComments({ diff, plan });
+    if (heuristic.length) {
+      comments = heuristic;
+      debug.heuristicsUsed = true;
+      debug.heuristicsCount = heuristic.length;
+    } else {
+      comments = buildFallbackComments(diff, plan);
+      debug.heuristicsUsed = false;
+    }
   }
 
   return {
