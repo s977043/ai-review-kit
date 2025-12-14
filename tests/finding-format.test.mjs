@@ -9,6 +9,7 @@ import { formatFindingMessage, validateFindingMessage } from '../src/lib/finding
 test('formatFindingMessage produces a valid labeled message', () => {
   const msg = formatFindingMessage({
     finding: '問題がある',
+    evidence: '差分上の根拠',
     impact: '困る',
     fix: '直す',
     severity: 'warning',
@@ -30,6 +31,7 @@ test('generateReview uses labeled format for heuristic findings', async () => {
   const result = await generateReview({ diff, plan, phase: 'midstream', dryRun: true });
   assert.equal(result.comments.length, 1);
   assert.match(result.comments[0].message, /Finding: /);
+  assert.match(result.comments[0].message, /Evidence: /);
   assert.match(result.comments[0].message, /Severity: blocker/);
   assert.match(result.comments[0].message, /Confidence: high/);
   assert.equal(result.debug.findingFormat.ok, true);

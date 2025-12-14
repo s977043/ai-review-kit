@@ -55,7 +55,7 @@ ${buildSkillSummary(plan)}
 ${buildProjectRulesSection(projectRules)}Review the unified git diff below and produce concise findings.
 - Write the <message> in Japanese.
 - Output each finding on its own line using the format "<file>:<line>: <message>".
-- In <message>, include short labels: "Finding:", "Impact:", "Fix:", "Severity:", "Confidence:".
+- In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
@@ -149,6 +149,7 @@ function normalizeHeuristicComments(rawComments) {
           line: c.line,
           message: formatFindingMessage({
             finding: 'catch で例外が握りつぶされる可能性がある',
+            evidence: 'catch 内で return（ログ/再throwなし）',
             impact: '障害調査や失敗検知が困難になる',
             fix: 'ログ付与+再throw（または呼び出し元へエラー伝播）を検討する',
             severity: 'warning',
@@ -161,6 +162,7 @@ function normalizeHeuristicComments(rawComments) {
           line: c.line,
           message: formatFindingMessage({
             finding: '挙動変更に対するテスト差分が見当たらない',
+            evidence: 'コード差分あり・テスト差分なし',
             impact: '回帰の検知漏れや仕様逸脱が起きやすい',
             fix: '境界/失敗系を含む最小テストを1〜3件追加する',
             severity: 'warning',
@@ -173,6 +175,7 @@ function normalizeHeuristicComments(rawComments) {
           line: c.line,
           message: formatFindingMessage({
             finding: '秘密情報（トークン/キー）の直書きの可能性がある',
+            evidence: 'トークン/キーらしい文字列が追加されている',
             impact: '漏洩時に不正利用やインシデントにつながる',
             fix: '環境変数（GitHub Secrets等）へ移し、漏洩時はローテーションも検討する',
             severity: 'blocker',
@@ -185,6 +188,7 @@ function normalizeHeuristicComments(rawComments) {
           line: c.line,
           message: formatFindingMessage({
             finding: `想定外のヒューリスティック（kind=${String(c.kind ?? 'unknown')}）`,
+            evidence: 'ヒューリスティック kind が未知',
             impact: 'レビュー結果が不安定になる可能性がある',
             fix: 'ヒューリスティック定義と出力の対応を見直す',
             severity: 'warning',
