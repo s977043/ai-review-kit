@@ -3,6 +3,10 @@
   "skill-schema-reference": "Skill Schema Reference",
   "config-schema": "コンフィグ / スキーマ概要",
   "metadata-fields": "Metadata Fields",
+  "skill-metadata": "スキルメタデータ仕様",
+  "skills-catalog": "Skills Catalog",
+  "review-output-example": "Review Output Examples",
+  "riverbed-storage": "Riverbed Memory ストレージ設計",
   "stable-interfaces": "安定インターフェース（CLI / GitHub Actions）",
   "runner-cli-reference": "Runner CLI Reference",
   "glossary": "River Reviewer Glossary"

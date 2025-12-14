@@ -8,7 +8,7 @@
 
 ## コンポーネント一覧
 
-- Skill Metadata: `skills/**/*.md` の frontmatter（`docs/skill-metadata.md` が仕様源）。
+- Skill Metadata: `skills/**/*.md` の frontmatter（`pages/reference/skill-metadata.md` が仕様源）。
 - Skill Loader: frontmatter を schema で検証し、`SkillDefinition` を構築。
 - Skill Planner: LLM または関数でスキル順序を推論（`src/lib/skill-planner.mjs`）。
 - Review Runner: スキル選択と実行のオーケストレーション（`src/lib/review-runner.mjs`）。
@@ -38,7 +38,7 @@ flowchart LR
 - フォールバック:
   - planner 未指定 → `rankByModelHint` による決定論的順序
   - planner 内で例外発生 → 決定論的順序に切り替え、理由を `plannerReasons` に残す
-- サンプルコード: `docs/skill-planner.md` にミニマム実装例あり。
+- サンプルコード: `pages/guides/skill-planner.md` にミニマム実装例あり。
 
 ## Review Runner の動作概要
 
@@ -59,6 +59,6 @@ flowchart LR
 
 ## 参考ドキュメント
 
-- `docs/skill-metadata.md`（メタデ仕様の真実の源泉）
-- `docs/skill-planner.md`（LLM 接続例と I/O 契約）
+- `pages/reference/skill-metadata.md`（メタデ仕様の真実の源泉）
+- `pages/guides/skill-planner.md`（LLM 接続例と I/O 契約）
 - `src/lib/skill-loader.mjs` / `src/lib/review-runner.mjs` / `src/lib/skill-planner.mjs`
