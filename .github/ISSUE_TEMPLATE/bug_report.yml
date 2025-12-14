@@ -1,0 +1,59 @@
+name: '🐛 Bug report'
+description: バグ報告（再現手順・期待値・実際の挙動）
+title: '[Bug]: '
+labels: ['type:bug', 'status:triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ありがとうございます。再現できる情報があると修正が速くなります。
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: 何が起きたかを1〜2行で
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: 可能なら最小の再現手順
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / Commit
+      placeholder: '例: v0.1.0 / main@<sha>'
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      render: shell
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Impact
+      options:
+        - blocker (作業が止まる)
+        - warning (回避策あり)
+        - minor (軽微)
+    validations:
+      required: true
