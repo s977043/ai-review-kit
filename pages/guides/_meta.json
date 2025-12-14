@@ -10,7 +10,7 @@
   "debug-skill-routing": "Debug Skill Routing",
   "planner-eval-dataset": "Planner評価セット（オフライン評価）",
   "skill-planner": "Skill Planner（LLM ベースのスキル選択）",
-  "planner-evaluation": "Skill Planner の評価ガイド",
+  "planner-evaluation": "Skill Planner の評価と最適化のためのミニガイド",
   "use-riverbed-memory": "Use Riverbed Memory",
   "tracing": "Tracing / Observability",
   "agents": "Agents—Adding Project Knowledge Packs",
