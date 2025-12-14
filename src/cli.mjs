@@ -39,6 +39,7 @@ Options:
   --context list    Comma-separated available contexts (e.g. diff,fullFile,tests). Overrides RIVER_AVAILABLE_CONTEXTS
   --dependency list Comma-separated available dependencies (e.g. code_search,test_runner). Overrides RIVER_AVAILABLE_DEPENDENCIES
   --cases <path>    (eval) Path to fixtures cases.json (default: tests/fixtures/review-eval/cases.json)
+  --verbose         (eval) Print detailed per-case results
   -h, --help        Show this help message
 `);
 }
@@ -49,6 +50,7 @@ function parseArgs(argv) {
     command: null,
     target: '.',
     fixturesCasesPath: null,
+    verbose: false,
     phase: process.env.RIVER_PHASE || 'midstream',
     plannerMode: process.env.RIVER_PLANNER_MODE || 'off',
     dryRun: false,
@@ -84,6 +86,10 @@ function parseArgs(argv) {
     }
     if (arg === '--cases') {
       parsed.fixturesCasesPath = args.shift() ?? null;
+      continue;
+    }
+    if (arg === '--verbose') {
+      parsed.verbose = true;
       continue;
     }
     if (arg === '--planner') {
@@ -339,7 +345,7 @@ async function main() {
       const casesPath =
         parsed.fixturesCasesPath ||
         path.join(process.cwd(), 'tests', 'fixtures', 'review-eval', 'cases.json');
-      return evaluateReviewFixtures({ casesPath, phase: parsed.phase });
+      return evaluateReviewFixtures({ casesPath, phase: parsed.phase, verbose: parsed.verbose });
     }
     if (parsed.command === 'doctor') {
       const result = await doctorLocalReview({

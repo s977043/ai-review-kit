@@ -226,7 +226,7 @@ function redactSecrets(text) {
   return String(text)
     .replace(/\bAKIA[0-9A-Z]{16}\b/g, 'AKIA****************')
     .replace(/\bghp_[A-Za-z0-9]{20,}\b/g, 'ghp_***REDACTED***')
-    .replace(/\bsk-(?:live|test)?_[A-Za-z0-9]{16,}\b/g, 'sk-***REDACTED***')
+    .replace(/\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/g, 'sk_***REDACTED***')
     .replace(/\bsk-[A-Za-z0-9]{16,}\b/g, 'sk-***REDACTED***')
     .replace(/-----BEGIN [^-]* PRIVATE KEY-----/g, '-----BEGIN PRIVATE KEY-----')
     .replace(/-----END [^-]* PRIVATE KEY-----/g, '-----END PRIVATE KEY-----');
