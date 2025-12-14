@@ -33,6 +33,7 @@
     "fix:dashes": "node scripts/fix-dashes.mjs",
     "planner:eval": "node scripts/evaluate-planner.mjs",
     "planner:eval:dataset": "node scripts/evaluate-planner-dataset.mjs",
+    "eval:fixtures": "node scripts/evaluate-review-fixtures.mjs",
     "river": "node ./src/cli.mjs",
     "prepare": "husky install"
   },

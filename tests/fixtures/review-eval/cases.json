@@ -15,6 +15,15 @@
     "maxFindings": 3
   },
   {
+    "name": "secrets: guard (process.env reference)",
+    "phase": "midstream",
+    "diffFile": "diffs/secrets-env-reference.diff",
+    "planSkills": ["rr-midstream-security-basic-001"],
+    "expectNoFindings": true,
+    "mustInclude": [],
+    "maxFindings": 0
+  },
+  {
     "name": "secrets: explicit token patterns (AKIA/ghp_/sk-)",
     "phase": "midstream",
     "diffFile": "diffs/secrets-explicit-patterns.diff",
@@ -45,6 +54,15 @@
     "planSkills": ["rr-midstream-logging-observability-001"],
     "mustInclude": ["Evidence:", "catch", "Severity: warning"],
     "maxFindings": 3
+  },
+  {
+    "name": "observability: guard (catch with logging)",
+    "phase": "midstream",
+    "diffFile": "diffs/observability-catch-with-logging.diff",
+    "planSkills": ["rr-midstream-logging-observability-001"],
+    "expectNoFindings": true,
+    "mustInclude": [],
+    "maxFindings": 0
   },
   {
     "name": "tests: missing tests for new behavior (throw new Error)",
@@ -85,5 +103,14 @@
     "planSkills": ["rr-downstream-test-existence-001"],
     "mustInclude": ["Evidence:", "テスト", "Severity: warning"],
     "maxFindings": 2
+  },
+  {
+    "name": "tests: guard (test file changed too)",
+    "phase": "downstream",
+    "diffFile": "diffs/tests-changed-too.diff",
+    "planSkills": ["rr-downstream-test-existence-001"],
+    "expectNoFindings": true,
+    "mustInclude": [],
+    "maxFindings": 0
   }
 ]

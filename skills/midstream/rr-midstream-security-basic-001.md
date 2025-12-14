@@ -12,6 +12,22 @@ outputKind: [findings, actions]
 dependencies: [code_search]
 ---
 
+## Goal / 目的
+
+- 差分に含まれる高シグナルのセキュリティリスク（特に secrets の直書き）を検出し、事故を防ぐ。
+
+## Non-goals / 扱わないこと
+
+- 網羅的なセキュリティ監査（リポジトリ全体の棚卸し）。
+- 差分外のコードを前提にした断定（コンテキスト不足時は Confidence を下げる）。
+- テスト/fixtures のダミー値を secrets として断定する。
+
+## False-positive guards / 黙る条件
+
+- 環境変数参照（`process.env` / `import.meta.env`）で secrets を受け取っている場合。
+- `tests/`, `__tests__`, `fixtures` 配下の変更で、明確にテストデータである場合。
+- URL や短い文字列など、秘密情報としての確度が低い場合。
+
 ## Rule / ルール
 
 - SQL/コマンドインジェクションを防ぐためプレースホルダや ORM のクエリビルダを使用する
@@ -43,3 +59,8 @@ dependencies: [code_search]
 - 秘密情報は環境変数経由にし、`.gitignore` により管理する
 - 外部入力をスキーマバリデーションし、認可/認証の欠落を補う
 - 例外レスポンスをユーザーフレンドリーかつ漏洩のない形に統一する（スタックトレースを返さない）
+
+## Output / 出力
+
+- `Finding:` / `Evidence:` / `Impact:` / `Fix:` / `Severity:` / `Confidence:` を含む短いメッセージにする。
+- secrets 検出の場合、Evidence に値そのものを再掲しない（必要ならマスクする）。
