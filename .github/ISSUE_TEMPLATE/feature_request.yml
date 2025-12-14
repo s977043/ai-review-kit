@@ -1,7 +1,7 @@
 name: '✨ Feature request'
 description: 機能追加・改善提案
 title: '[Feature]: '
-labels: ['type:feature']
+labels: ['type:feature', 'status:triage']
 body:
   - type: textarea
     id: problem
@@ -44,3 +44,5 @@ body:
         - P0
         - P1
         - P2
+    validations:
+      required: true

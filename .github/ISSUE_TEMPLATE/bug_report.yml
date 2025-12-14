@@ -1,7 +1,7 @@
 name: '🐛 Bug report'
 description: バグ報告（再現手順・期待値・実際の挙動）
 title: '[Bug]: '
-labels: ['type:bug']
+labels: ['type:bug', 'status:triage']
 body:
   - type: markdown
     attributes:

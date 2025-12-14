@@ -1,7 +1,7 @@
 name: '🧠 Skill proposal / improvement'
 description: スキルの新規追加・強化提案（ガイド準拠）
 title: '[Skill]: '
-labels: ['type:skill', 'area:skills']
+labels: ['type:skill', 'area:skills', 'status:triage']
 body:
   - type: markdown
     attributes:
