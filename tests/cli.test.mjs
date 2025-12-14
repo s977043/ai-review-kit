@@ -66,10 +66,11 @@ test('river run supports markdown output for PR comments', async () => {
   try {
     const result = await runCli(['run', '.', '--dry-run', '--output', 'markdown'], dir);
     assert.strictEqual(result.code, 0, result.stderr);
-    assert.match(result.stdout, /<!-- river-reviewer -->/);
+    assert.match(result.stdout, /^<!-- river-reviewer -->/);
     assert.match(result.stdout, /## River Reviewer/);
     assert.match(result.stdout, /### 指摘/);
     assert.doesNotMatch(result.stdout, /--- diff preview ---/);
+    assert.match(result.stderr, /River Reviewer \(local\)/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

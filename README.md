@@ -139,7 +139,8 @@ review:
 3. スキル検証: `npm run skills:validate`
 4. テスト: `npm test`
 5. Planner 評価（任意）: `npm run planner:eval`
-6. ドキュメント開発（任意）: `npm run dev`（Docusaurus）
+6. Review fixtures 評価（任意）: `npm run eval:fixtures`（must_include 方式）
+7. ドキュメント開発（任意）: `npm run dev`（Docusaurus）
 
 ### ローカルレビュー実行（river run .）
 

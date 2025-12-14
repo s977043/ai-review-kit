@@ -98,6 +98,9 @@ function findHardcodedSecrets({ diff }) {
   for (const file of files) {
     const filePath = file?.path;
     if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    const normalized = String(filePath).replaceAll('\\', '/');
+    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
     for (const { line, text } of iterateAddedLines(file)) {
       if (!matchesHardcodedSecretLine(text)) continue;
       comments.push({

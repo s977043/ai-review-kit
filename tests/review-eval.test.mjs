@@ -28,11 +28,23 @@ test('review eval fixtures keep must-include signals (heuristic path)', async ()
       changedFiles: parsed.files.map(f => f.path).filter(Boolean),
     };
 
-    const result = await generateReview({ diff, plan, phase: c.phase ?? 'midstream', dryRun: true });
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: c.phase ?? 'midstream',
+      dryRun: true,
+      includeFallback: false,
+    });
 
-    assert.ok(result.comments.length > 0, `[${c.name}] expected at least 1 finding`);
-    if (typeof c.maxFindings === 'number') {
-      assert.ok(result.comments.length <= c.maxFindings, `[${c.name}] too many findings: ${result.comments.length}`);
+    assert.ok(result.debug.findingFormat.ok, `[${c.name}] invalid finding format`);
+
+    const expectNoFindings = Boolean(c.expectNoFindings);
+    const minFindings = Number.isFinite(c.minFindings) ? c.minFindings : expectNoFindings ? 0 : 1;
+    const maxFindings = Number.isFinite(c.maxFindings) ? c.maxFindings : null;
+
+    assert.ok(result.comments.length >= minFindings, `[${c.name}] expected at least ${minFindings} finding(s)`);
+    if (typeof maxFindings === 'number') {
+      assert.ok(result.comments.length <= maxFindings, `[${c.name}] too many findings: ${result.comments.length}`);
     }
 
     const merged = result.comments.map(x => x.message).join('\n');
@@ -41,4 +53,3 @@ test('review eval fixtures keep must-include signals (heuristic path)', async ()
     }
   }
 });
-

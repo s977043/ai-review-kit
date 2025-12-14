@@ -1,0 +1,14 @@
+diff --git a/src/services/payments.ts b/src/services/payments.ts
+index 1111111..2222222 100644
+--- a/src/services/payments.ts
++++ b/src/services/payments.ts
+@@ -1,3 +1,9 @@
+ export async function pay() {
++  try {
++    await doPay();
++  } catch (err) {
++    console.error(err);
++    return;
++  }
+ }
+

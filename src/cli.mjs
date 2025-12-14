@@ -26,6 +26,7 @@ function printHelp() {
 Commands:
   run <path>     Run River Reviewer locally against the git repo at <path>
   doctor <path>  Check setup and print hints for common issues
+  eval           Run review fixtures evaluation (must_include checks)
 
 Options:
   --phase <phase>   Review phase (upstream|midstream|downstream). Default: env RIVER_PHASE or midstream
@@ -37,6 +38,8 @@ Options:
   --output <mode>   Output format: text|markdown. Default: text
   --context list    Comma-separated available contexts (e.g. diff,fullFile,tests). Overrides RIVER_AVAILABLE_CONTEXTS
   --dependency list Comma-separated available dependencies (e.g. code_search,test_runner). Overrides RIVER_AVAILABLE_DEPENDENCIES
+  --cases <path>    (eval) Path to fixtures cases.json (default: tests/fixtures/review-eval/cases.json)
+  --verbose         (eval) Print detailed per-case results
   -h, --help        Show this help message
 `);
 }
@@ -46,6 +49,8 @@ function parseArgs(argv) {
   const parsed = {
     command: null,
     target: '.',
+    fixturesCasesPath: null,
+    verbose: false,
     phase: process.env.RIVER_PHASE || 'midstream',
     plannerMode: process.env.RIVER_PLANNER_MODE || 'off',
     dryRun: false,
@@ -66,6 +71,10 @@ function parseArgs(argv) {
       }
       continue;
     }
+    if (!parsed.command && arg === 'eval') {
+      parsed.command = 'eval';
+      continue;
+    }
     if (arg === '--phase') {
       if (!args[0] || args[0].startsWith('-')) {
         console.error('Error: --phase option requires a value.');
@@ -73,6 +82,14 @@ function parseArgs(argv) {
         break;
       }
       parsed.phase = args.shift();
+      continue;
+    }
+    if (arg === '--cases') {
+      parsed.fixturesCasesPath = args.shift() ?? null;
+      continue;
+    }
+    if (arg === '--verbose') {
+      parsed.verbose = true;
       continue;
     }
     if (arg === '--planner') {
@@ -314,7 +331,7 @@ async function main() {
     printHelp();
     return 0;
   }
-  if (!['run', 'doctor'].includes(parsed.command)) {
+  if (!['run', 'doctor', 'eval'].includes(parsed.command)) {
     console.error(`Unknown command: ${parsed.command}`);
     printHelp();
     return 1;
@@ -323,6 +340,13 @@ async function main() {
   const targetPath = path.resolve(parsed.target);
 
   try {
+    if (parsed.command === 'eval') {
+      const { evaluateReviewFixtures } = await import('./lib/review-fixtures-eval.mjs');
+      const casesPath =
+        parsed.fixturesCasesPath ||
+        path.join(process.cwd(), 'tests', 'fixtures', 'review-eval', 'cases.json');
+      return evaluateReviewFixtures({ casesPath, phase: parsed.phase, verbose: parsed.verbose });
+    }
     if (parsed.command === 'doctor') {
       const result = await doctorLocalReview({
         cwd: targetPath,
@@ -382,7 +406,8 @@ Dependencies: ${
     const estimator = new CostEstimator(process.env.OPENAI_MODEL || process.env.RIVER_OPENAI_MODEL || undefined);
     const estimatedCost = estimator.estimateFromDiff(context.diff, context.plan?.selected ?? []);
 
-    console.log(`River Reviewer (local)
+    const logRunHeader = parsed.output === 'markdown' ? console.error : console.log;
+    logRunHeader(`River Reviewer (local)
 Phase: ${parsed.phase}
 Repo: ${context.repoRoot}
 Base branch: ${context.defaultBranch}

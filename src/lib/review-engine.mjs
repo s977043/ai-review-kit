@@ -124,20 +124,43 @@ function buildFallbackComments(diff, plan) {
     ? `Matched skills: ${skillNames.join(', ')}`
     : 'No matching skills; manual review recommended.';
 
-  const comments = diff.files.map(file => {
-    const line =
-      file.addedLines[0] ||
-      file.hunks[0]?.newStart ||
-      1; /* default to first added line or hunk start to keep pointers stable */
-    const hunkText = file.hunks.length ? `Changed around line ${file.hunks[0].newStart}` : 'File changed';
-    return {
-      file: file.path,
-      line,
-      message: `${hunkText}. ${skillText}`,
-    };
-  });
+  const firstFile = diff.files?.find(f => f?.path && f.path !== '/dev/null') ?? null;
+  if (!firstFile) {
+    return [
+      {
+        file: '(no-files)',
+        line: 1,
+        message: formatFindingMessage({
+          finding: 'レビュー対象ファイルが特定できない',
+          evidence: '差分ファイルが空',
+          impact: 'レビューの自動化ができない',
+          fix: '差分がある状態で再実行する',
+          severity: 'warning',
+          confidence: 'low',
+        }),
+      },
+    ];
+  }
 
-  return comments.length ? comments : [{ file: '(no-files)', line: 1, message: skillText }];
+  const line =
+    firstFile.addedLines?.[0] ||
+    firstFile.hunks?.[0]?.newStart ||
+    1; /* default to first added line or hunk start to keep pointers stable */
+  const hunkText = firstFile.hunks?.length ? `Changed around line ${firstFile.hunks[0].newStart}` : 'File changed';
+  return [
+    {
+      file: firstFile.path,
+      line,
+      message: formatFindingMessage({
+        finding: '自動レビューの指摘を生成できなかった',
+        evidence: hunkText,
+        impact: '重要なリスクを見落とす可能性がある',
+        fix: `手動レビューを行い、必要なら applyTo を調整する（${skillText}）`,
+        severity: 'warning',
+        confidence: 'low',
+      }),
+    },
+  ];
 }
 
 function normalizeHeuristicComments(rawComments) {
@@ -151,7 +174,7 @@ function normalizeHeuristicComments(rawComments) {
             finding: 'catch で例外が握りつぶされる可能性がある',
             evidence: 'catch 内で return（ログ/再throwなし）',
             impact: '障害調査や失敗検知が困難になる',
-            fix: 'ログ付与+再throw（または呼び出し元へエラー伝播）を検討する',
+            fix: 'ログ+再throw / 上位へ返す / 無視するなら理由コメント+計測を検討する',
             severity: 'warning',
             confidence: 'high',
           }),
@@ -164,7 +187,7 @@ function normalizeHeuristicComments(rawComments) {
             finding: '挙動変更に対するテスト差分が見当たらない',
             evidence: 'コード差分あり・テスト差分なし',
             impact: '回帰の検知漏れや仕様逸脱が起きやすい',
-            fix: '境界/失敗系を含む最小テストを1〜3件追加する',
+            fix: '新分岐/例外/境界の最小テストを1〜3件追加する',
             severity: 'warning',
             confidence: 'medium',
           }),
@@ -199,6 +222,17 @@ function normalizeHeuristicComments(rawComments) {
   });
 }
 
+function redactSecrets(text) {
+  if (!text) return text;
+  return String(text)
+    .replace(/\bAKIA[0-9A-Z]{16}\b/g, 'AKIA****************')
+    .replace(/\bghp_[A-Za-z0-9]{20,}\b/g, 'ghp_***REDACTED***')
+    .replace(/\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/g, 'sk_***REDACTED***')
+    .replace(/\bsk-[A-Za-z0-9]{16,}\b/g, 'sk-***REDACTED***')
+    .replace(/-----BEGIN [^-]* PRIVATE KEY-----/g, '-----BEGIN PRIVATE KEY-----')
+    .replace(/-----END [^-]* PRIVATE KEY-----/g, '-----END PRIVATE KEY-----');
+}
+
 /**
  * Generate review comments using LLM when configured, otherwise fall back to deterministic hints.
  */
@@ -207,6 +241,7 @@ export async function generateReview({
   plan,
   phase,
   dryRun = false,
+  includeFallback = true,
   model,
   apiKey,
   projectRules,
@@ -246,8 +281,16 @@ export async function generateReview({
       debug.rawLlmOutput = output;
       const parsed = parseLineComments(output);
       if (parsed !== null) {
-        comments = parsed;
-        debug.llmUsed = true;
+        const redacted = parsed.map(c => ({ ...c, message: redactSecrets(c.message) }));
+        const checks = redacted.map(c => validateFindingMessage(c.message));
+        const invalidCount = checks.filter(c => !c.ok).length;
+        if (invalidCount === 0) {
+          comments = redacted;
+          debug.llmUsed = true;
+        } else {
+          debug.llmUsed = false;
+          debug.llmError = `LLM findings violate required format (invalidCount=${invalidCount}). Falling back.`;
+        }
       } else {
         debug.llmUsed = false;
         debug.llmError = 'LLM output could not be parsed';
@@ -268,8 +311,9 @@ export async function generateReview({
       debug.heuristicsUsed = true;
       debug.heuristicsCount = heuristic.length;
     } else {
-      comments = buildFallbackComments(diff, plan);
+      comments = includeFallback ? buildFallbackComments(diff, plan) : [];
       debug.heuristicsUsed = false;
+      debug.fallbackIncluded = includeFallback;
     }
   }
 
