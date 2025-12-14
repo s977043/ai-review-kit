@@ -1,0 +1,65 @@
+name: '🧠 Skill proposal / improvement'
+description: スキルの新規追加・強化提案（ガイド準拠）
+title: '[Skill]: '
+labels: ['type:skill', 'area:skills']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Skills are governed by the Skill Authoring Guide and Skill Policy.
+        Please include evidence/guards/non-goals to reduce noise.
+  - type: input
+    id: skill_name
+    attributes:
+      label: Skill name
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description (1 sentence)
+    validations:
+      required: true
+  - type: textarea
+    id: signals
+    attributes:
+      label: Signals / When to apply
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+    validations:
+      required: true
+  - type: textarea
+    id: guards
+    attributes:
+      label: False-positive guards
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - blocker
+        - warning
+        - nit
+    validations:
+      required: true
+  - type: dropdown
+    id: confidence
+    attributes:
+      label: Confidence
+      options:
+        - high
+        - medium
+        - low
+    validations:
+      required: true
+  - type: textarea
+    id: fixtures
+    attributes:
+      label: Fixtures / Evaluation plan
+      description: どう評価するか（must_include/fixture案）
+    validations:
+      required: true
