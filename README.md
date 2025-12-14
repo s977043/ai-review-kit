@@ -172,11 +172,11 @@ review:
 
 ### LLM ベースのスキル選択（Skill Planner）
 
-LLM を使ったスキル選択はプランナー関数を差し込むだけで利用できます。具体例は `docs/skill-planner.md` のミニマム実装例を参照してください。LLM 未指定の場合は従来通り決定論的に並び替えて実行します。
+LLM を使ったスキル選択はプランナー関数を差し込むだけで利用できます。具体例は `pages/guides/skill-planner.md` のミニマム実装例を参照してください。LLM 未指定の場合は従来通り決定論的に並び替えて実行します。
 
-Planner 統合後の全体アーキテクチャ（metadata → loader → planner → runner）は `docs/architecture.md` にまとめています。
+Planner 統合後の全体アーキテクチャ（metadata → loader → planner → runner）は `pages/explanation/river-architecture.md` にまとめています。
 
-Planner の出力品質を簡易評価する手順とメトリクスは `docs/planner-evaluation.md` を参照してください（`npm run planner:eval` で実行）。
+Planner の出力品質を簡易評価する手順とメトリクスは `pages/guides/planner-evaluation.md` を参照してください（`npm run planner:eval` で実行）。
 
 ```markdown
 ---

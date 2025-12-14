@@ -35,7 +35,7 @@ Riverbed Memory は、過去の判断やパターンを LLM レビューに活�
 - `generatedAt`: インデックス生成時刻
 - `entries[]`:
   - `id`, `type`, `path`
-  - `title`, `tags`, `phase`, `createdAt`, `summary`
+  - `title`、`tags`、`phase`、`createdAt`、`summary`
 
 ## 生成と利用の流れ
 

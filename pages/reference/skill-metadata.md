@@ -146,7 +146,7 @@ dependencies:
 
 ## 7. 実装者向けメモ
 
-- ランナーは `phase` と `applyTo` に加え、`inputContext` が満たせないスキルは事前にスキップできるようにする（例: ADR 未取得時に `adr` を要求するスキルを除外）。
+- ランナーは `phase` / `applyTo` と合わせて、`inputContext` が満たせないスキルを事前にスキップする（例: ADR 未取得時は `adr` を要求するスキルを除外）。
 - `outputKind` を使って UI/出力整形を分ける（例: `summary` は上部、`actions` は ToDo として並べる）。
 - `modelHint` はフェーズやコスト上限と組み合わせてモデル選択する。最初は 3 段階の enum だけで十分。
 - `dependencies` は runner/loader が提供できるツールのチェックリストと突き合わせ、未対応なら graceful skip か fallback を選択する。
