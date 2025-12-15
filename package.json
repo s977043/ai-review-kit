@@ -62,7 +62,7 @@
     "js-yaml": "^4.1.1",
     "linkinator": "^7.5.1",
     "lint-staged": "^16.2.7",
-    "markdownlint-cli": "^0.45.0",
+    "markdownlint-cli": "^0.47.0",
     "prettier": "^3.7.4",
     "prh": "^5.4.4",
     "textlint": "^15.5.0",
