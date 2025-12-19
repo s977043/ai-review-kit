@@ -12,15 +12,16 @@ River Reviewer のスキルは YAML フロントマターでメタデータを�
 
 現在のスキルで使われているキーと役割は以下のとおり。
 
-| Field         | Type                                              | Required | 役割                                                                        |
-| ------------- | ------------------------------------------------- | -------- | --------------------------------------------------------------------------- |
-| `id`          | string                                            | yes      | スキルの一意な ID（`rr-<phase>-<slug>-###` 推奨）。リネームや移動でも不変。 |
-| `name`        | string                                            | yes      | レビュー出力などに表示する人間向け名称。                                    |
-| `description` | string                                            | yes      | スキルが何をチェックするかの短い説明。                                      |
-| `phase`       | enum (`upstream` \| `midstream` \| `downstream`)  | yes      | SDLC のどの流れで適用するか。ルーティングの主要キー。                       |
-| `applyTo`     | string[]                                          | yes      | チェック対象ファイルの glob。ランナーが対象ファイルを絞り込むために使用。   |
-| `tags`        | string[]                                          | optional | スキルの分類タグ（例: `security`, `performance`）。                         |
-| `severity`    | enum (`info` \| `minor` \| `major` \| `critical`) | optional | 重大度。出力の強調や並び替えに利用。                                        |
+| Field         | Type                                              | Required | 役割                                                                                |
+| ------------- | ------------------------------------------------- | -------- | ----------------------------------------------------------------------------------- |
+| `id`          | string                                            | yes      | スキルの一意な ID（`rr-<phase>-<slug>-###` 推奨）。リネームや移動でも不変。         |
+| `name`        | string                                            | yes      | レビュー出力などに表示する人間向け名称。                                            |
+| `description` | string                                            | yes      | スキルが何をチェックするかの短い説明。                                              |
+| `phase`       | enum (`upstream` \| `midstream` \| `downstream`)  | yes      | SDLC のどの流れで適用するか。ルーティングの主要キー。                               |
+| `applyTo`     | string[]                                          | yes      | チェック対象ファイルの glob。ランナーが対象ファイルを絞り込むために使用。           |
+| `trigger`     | object                                            | optional | `phase`/`applyTo` をまとめるトリガーコンテナ。`trigger.files` は `applyTo` の別名。 |
+| `tags`        | string[]                                          | optional | スキルの分類タグ（例: `security`, `performance`）。                                 |
+| `severity`    | enum (`info` \| `minor` \| `major` \| `critical`) | optional | 重大度。出力の強調や並び替えに利用。                                                |
 
 ## 3. 拡張項目（今回設計）
 
@@ -127,6 +128,34 @@ applyTo:
   - 'src/**/*.ts'
   - 'src/**/*.js'
   - 'src/**/*.py'
+tags:
+  - style
+  - maintainability
+  - midstream
+severity: 'minor'
+inputContext:
+  - diff
+  - fullFile
+outputKind:
+  - findings
+  - actions
+modelHint: balanced
+dependencies:
+  - code_search
+---
+```
+
+### After（trigger コンテナを使う例）
+
+```yaml
+---
+id: rr-midstream-code-quality-sample-001
+name: 'Sample Code Quality Pass'
+description: 'Checks common code quality and maintainability risks.'
+trigger:
+  phase: midstream
+  files:
+    - 'src/**/*.ts'
 tags:
   - style
   - maintainability

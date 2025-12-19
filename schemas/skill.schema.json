@@ -2,8 +2,25 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "River Reviewer Skill Schema",
   "type": "object",
-  "required": ["id", "name", "description", "phase"],
-  "anyOf": [{ "required": ["applyTo"] }, { "required": ["files"] }],
+  "required": ["id", "name", "description"],
+  "allOf": [
+    {
+      "anyOf": [
+        { "required": ["phase"] },
+        { "required": ["trigger"], "properties": { "trigger": { "$ref": "#/properties/trigger" } } }
+      ]
+    },
+    {
+      "anyOf": [
+        { "required": ["applyTo"] },
+        { "required": ["files"] },
+        {
+          "required": ["trigger"],
+          "properties": { "trigger": { "$ref": "#/properties/trigger" } }
+        }
+      ]
+    }
+  ],
   "additionalProperties": false,
   "$defs": {
     "phase": {
@@ -120,6 +137,35 @@
       "items": { "$ref": "#/$defs/dependency" },
       "minItems": 1,
       "uniqueItems": true
+    },
+    "trigger": {
+      "type": "object",
+      "description": "Optional trigger container for activation criteria",
+      "additionalProperties": false,
+      "properties": {
+        "phase": {
+          "oneOf": [
+            { "$ref": "#/$defs/phase" },
+            {
+              "type": "array",
+              "items": { "$ref": "#/$defs/phase" },
+              "minItems": 1
+            }
+          ]
+        },
+        "applyTo": {
+          "type": "array",
+          "description": "Glob patterns defining which files to check",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "files": {
+          "type": "array",
+          "description": "Alias for applyTo",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      }
     },
     "instruction": {
       "type": "string",

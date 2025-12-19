@@ -28,6 +28,7 @@ import addFormats from 'ajv-formats';
  * @property {OutputKind[]=} outputKind
  * @property {ModelHint=} modelHint
  * @property {Dependency[]=} dependencies
+ * @property {{phase?: Phase, applyTo?: string[], files?: string[]}=} trigger
  *
  * @typedef {Object} SkillDefinition
  * @property {SkillMetadata} metadata
@@ -87,10 +88,32 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
 }
 
 function normalizeMetadata(metadata) {
-  if (metadata.files && !metadata.applyTo) {
-    metadata.applyTo = metadata.files;
+  const meta = { ...metadata };
+
+  // Top-level alias first: applyTo has precedence over files.
+  if (meta.files && !meta.applyTo) {
+    meta.applyTo = meta.files;
   }
-  return metadata;
+
+  const trigger =
+    meta.trigger && typeof meta.trigger === 'object' && !Array.isArray(meta.trigger)
+      ? meta.trigger
+      : null;
+  const triggerApplyTo = trigger?.applyTo ?? trigger?.files;
+
+  if (!meta.phase && trigger?.phase) {
+    meta.phase = trigger.phase;
+  }
+  if (!meta.applyTo && triggerApplyTo) {
+    meta.applyTo = triggerApplyTo;
+  }
+
+  // Trigger is consumed during normalization; avoid leaking nested state.
+  if (trigger) {
+    delete meta.trigger;
+  }
+
+  return meta;
 }
 
 export function parseFrontMatter(content) {

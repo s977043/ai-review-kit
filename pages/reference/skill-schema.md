@@ -8,6 +8,7 @@ River Reviewer skills use YAML frontmatter for metadata and Markdown for guidanc
 - `name` (string, required): human-readable skill name.
 - `phase` (string, required): one of `upstream`, `midstream`, or `downstream`.
 - `applyTo` (string[], required): glob patterns for files the skill should evaluate.
+- `trigger` (object, optional): optional wrapper for `phase` and `applyTo` (`trigger.files` is an alternate name). If both top-level and `trigger` values exist, top-level takes precedence.
 - `description` (string, required): concise explanation of what the skill checks.
 - `tags` (string[], optional): keywords that group related skills.
 - `severity` (string, optional): impact level; one of `info`/`minor`/`major`/`critical`.
@@ -30,6 +31,21 @@ severity: major
 applyTo:
   - 'src/**/*.ts'
   - 'packages/**/src/**/*.{ts,js}'
+description: Flag midstream changes that risk latency regressions or heavy resource use.
+---
+Ensure changed code paths avoid unnecessary synchronous I/O and unbounded concurrency. Avoid repeated heavy computations. Recommend benchmarks when touching hot paths.
+```
+
+## YAML Example with trigger
+
+```yaml
+---
+id: rr-midstream-performance-003
+name: Midstream Performance Budget Check
+trigger:
+  phase: midstream
+  files:
+    - 'src/**/*.ts'
 description: Flag midstream changes that risk latency regressions or heavy resource use.
 ---
 Ensure changed code paths avoid unnecessary synchronous I/O and unbounded concurrency. Avoid repeated heavy computations. Recommend benchmarks when touching hot paths.
