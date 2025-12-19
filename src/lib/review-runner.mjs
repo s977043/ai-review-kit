@@ -19,7 +19,7 @@ function ensureArray(value) {
   return Array.isArray(value) ? value : [value];
 }
 
-function matchesPhase(skill, phase) {
+export function matchesPhase(skill, phase) {
   const meta = getMeta(skill);
   if (Array.isArray(meta.phase)) {
     return meta.phase.includes(phase);
