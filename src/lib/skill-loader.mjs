@@ -7,7 +7,8 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
 /**
- * @typedef {'upstream' | 'midstream' | 'downstream'} Phase
+ * @typedef {'upstream' | 'midstream' | 'downstream'} PhaseEnum
+ * @typedef {PhaseEnum | PhaseEnum[]} Phase
  * @typedef {'info' | 'minor' | 'major' | 'critical'} Severity
  * @typedef {'diff' | 'fullFile' | 'tests' | 'adr' | 'commitMessage' | 'repoConfig'} InputContext
  * @typedef {'findings' | 'summary' | 'actions' | 'tests' | 'metrics' | 'questions'} OutputKind
@@ -20,6 +21,7 @@ import addFormats from 'ajv-formats';
  * @property {string} description
  * @property {Phase} phase
  * @property {string[]} applyTo
+ * @property {string[]=} files
  * @property {string[]=} tags
  * @property {Severity=} severity
  * @property {InputContext[]=} inputContext
@@ -84,6 +86,13 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
   return files.sort();
 }
 
+function normalizeMetadata(metadata) {
+  if (metadata.files && !metadata.applyTo) {
+    metadata.applyTo = metadata.files;
+  }
+  return metadata;
+}
+
 export function parseFrontMatter(content) {
   if (!content.startsWith('---')) {
     throw new SkillLoaderError('Missing front matter block (---)');
@@ -105,6 +114,7 @@ export function parseFrontMatter(content) {
   if (typeof metadata !== 'object' || Array.isArray(metadata)) {
     throw new SkillLoaderError('Front matter must be a mapping');
   }
+  metadata = normalizeMetadata(metadata);
   const body = content.slice(end + 4);
   return { metadata, body };
 }
@@ -118,16 +128,36 @@ async function parseSkillFile(filePath) {
   if (ext === '.md' || ext === '.mdx') {
     return parseFrontMatter(raw);
   }
-  let metadata = {};
+  
+  // YAML handling
+  let loaded = {};
   try {
-    metadata = yaml.load(raw) ?? {};
+    loaded = yaml.load(raw) ?? {};
   } catch (err) {
     throw new SkillLoaderError(`YAML parse error: ${err.message}`);
   }
-  if (typeof metadata !== 'object' || Array.isArray(metadata)) {
+  if (typeof loaded !== 'object' || Array.isArray(loaded)) {
     throw new SkillLoaderError('Skill YAML must be a mapping');
   }
-  return { metadata, body: '' };
+
+  let metadata = loaded;
+  let body = '';
+
+  // Support nested metadata block
+  if (loaded.metadata && typeof loaded.metadata === 'object' && !Array.isArray(loaded.metadata)) {
+    metadata = { ...loaded.metadata };
+    if (loaded.instruction && typeof loaded.instruction === 'string') {
+      body = loaded.instruction;
+    }
+  } else {
+    // Support flat structure with optional instruction field
+    if (loaded.instruction && typeof loaded.instruction === 'string') {
+      body = loaded.instruction;
+    }
+  }
+
+  metadata = normalizeMetadata(metadata);
+  return { metadata, body };
 }
 
 function validateMetadata(metadata, validate) {
