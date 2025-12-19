@@ -16,19 +16,30 @@ OSS プロジェクトに Agent Skills を統合し、Codex CLI からシーム�
 - 独自サブコマンド例: `codex skill create <name>` でスキルフォルダと `SKILL.md` をテンプレートから生成する。
 - テンプレートには YAML フロントマターの必須項目を初期値つきで用意する。
 
+```markdown
 ---
-id: <unique-skill-id>
-name: <skill-name>
-description: <スキルの概要と利用シーン>
-phase: midstream
+id: rr-midstream-<domain>-001
+name: <Skill Name>
+description: <スキルが何をチェックするか>
+phase:
+  - midstream # 単一でも配列でも可
 applyTo:
-  - 'path/to/target-files/*'
-x-allowed-tools: 'Bash, Read, Write'
-x-model: default
-x-version: 0.1.0
-x-license: 'Complete terms in LICENSE.txt'
+  - 'src/**/*.ts' # できるだけ絞り込む
+tags:
+  - example
+severity: minor # info | minor | major | critical
+inputContext:
+  - diff # diff / fullFile / tests / adr / commitMessage / repoConfig
+outputKind:
+  - findings # findings / summary / actions / tests / metrics / questions
+modelHint: balanced # cheap / balanced / high-accuracy
+# x-allowed-tools: 'Bash, Read, Write' # 拡張フィールドは x- プレフィックスで
 ---
+
 # <Skill Name>
+```
+
+- 既存スキーマ（`schemas/skill.schema.json`）準拠の項目をデフォルトとし、拡張は `x-` 接頭辞で衝突を避ける。
 
 - 生成後に `npm run skills:validate` などの検証コマンドを自動実行し、記法ミスを早期に検知する。
 - 対話モードや AI プロンプト補助を組み合わせ、入力された概要から雛形を自動補完する実装を検討する。
