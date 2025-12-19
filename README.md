@@ -167,9 +167,50 @@ review:
 - 大きな差分はハンク単位で圧縮し、必要な変更周辺のみを送信してコストとノイズを低減します
 - `river run . --debug` で最適化前後のトークン見積もりと削減率を確認できます
 
-## スキル
+## スキルと拡張性
 
-スキルは YAML フロントマター付き Markdown で記述し、メタデータを使ってロードとルーティングを行います。
+River Reviewer は「設定」ではなく「スキル」を追加することで成長します。`skills/` ディレクトリに新しいスキル定義ファイル（Markdown または YAML）を置くだけで、エージェントは自動的にそれを学習し、適切なフェーズで適用します。
+
+### スキルの定義（Manifest-driven）
+
+スキルは以下の柔軟なフォーマットで定義できます。
+
+**1. Markdown 形式（推奨）**:
+フロントマターでメタデータを、本文で具体的な指示を記述します。
+
+```markdown
+---
+id: my-custom-check
+name: Custom Check
+phase: midstream
+files: ['src/**/*.ts']
+---
+
+ここにレビューの指示を書きます。
+```
+
+`phase` は単一値/配列どちらも許容される点に注意してください。
+
+**2. YAML 形式**:
+構造化されたメタデータと指示を単一の YAML ファイルで記述します。
+
+```yaml
+metadata:
+  id: security-check
+  name: Security Review
+  phase: [midstream, downstream] # 複数フェーズに対応
+  files: ['**/*.ts', 'Dockerfile']
+instruction: |
+  セキュリティチェックの具体的な指示...
+```
+
+### ディレクトリ構成のベストプラクティス
+
+`skills/` 配下は自由に構成できますが、以下の構成を推奨します。
+
+- `skills/core/`: 標準搭載スキル
+- `skills/community/`: コミュニティ提供や特定ライブラリ向けスキル
+- `skills/private/`: プロジェクト固有の非公開スキル
 
 ### LLM ベースのスキル選択（Skill Planner）
 

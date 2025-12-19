@@ -2,7 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "River Reviewer Skill Schema",
   "type": "object",
-  "required": ["id", "name", "description", "phase", "applyTo"],
+  "required": ["id", "name", "description", "phase"],
+  "anyOf": [{ "required": ["applyTo"] }, { "required": ["files"] }],
   "additionalProperties": false,
   "$defs": {
     "phase": {
@@ -62,12 +63,25 @@
       "minLength": 1
     },
     "phase": {
-      "$ref": "#/$defs/phase",
-      "description": "Which SDLC phase this skill applies to"
+      "oneOf": [
+        { "$ref": "#/$defs/phase" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/phase" },
+          "minItems": 1
+        }
+      ],
+      "description": "Which SDLC phase(s) this skill applies to"
     },
     "applyTo": {
       "type": "array",
       "description": "Glob patterns defining which files to check",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "files": {
+      "type": "array",
+      "description": "Alias for applyTo",
       "items": { "type": "string" },
       "minItems": 1
     },
@@ -106,6 +120,15 @@
       "items": { "$ref": "#/$defs/dependency" },
       "minItems": 1,
       "uniqueItems": true
+    },
+    "instruction": {
+      "type": "string",
+      "description": "The prompt/instruction for the skill"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional nested metadata container",
+      "additionalProperties": true
     }
   }
 }
