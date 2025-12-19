@@ -16,7 +16,7 @@ OSS プロジェクトに Agent Skills を統合し、Codex CLI からシーム�
 - 独自サブコマンド例: `codex skill create <name>` でスキルフォルダと `SKILL.md` をテンプレートから生成する。
 - テンプレートには YAML フロントマターの必須項目を初期値つきで用意する。
 
-```yaml
+```markdown
 ---
 name: <skill-name>
 description: <スキルの概要と利用シーン>
@@ -25,10 +25,11 @@ model: default
 version: 0.1.0
 license: 'Complete terms in LICENSE.txt'
 ---
+
 # <Skill Name>
 ```
 
-- 生成後に `skills-ref validate <path>` などの検証コマンドを自動実行し、記法ミスを早期に検知する。
+- 生成後に `npm run skills:validate` などの検証コマンドを自動実行し、記法ミスを早期に検知する。
 - 対話モードや AI プロンプト補助を組み合わせ、入力された概要から雛形を自動補完する実装を検討する。
 
 ## 3. スキル管理用 CLI サブコマンド
