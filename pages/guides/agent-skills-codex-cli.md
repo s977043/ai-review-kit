@@ -18,7 +18,7 @@ OSS プロジェクトに Agent Skills を統合し、Codex CLI からシーム�
 
 ```markdown
 ---
-id: rr-midstream-<domain>-001
+id: rr-<phase>-<category>-<number>
 name: <Skill Name>
 description: <スキルが何をチェックするか>
 phase:
