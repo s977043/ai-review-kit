@@ -56,3 +56,25 @@ instruction: "Check docs"
   assert.deepEqual(loaded.metadata.applyTo, ['docs/*.md']);
   assert.equal(loaded.body, 'Check docs');
 });
+
+test('loads YAML skill with instruction nested inside metadata', async () => {
+  const validator = await buildValidator();
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'skill-loader-v2-'));
+  const skillPath = path.join(tmpDir, 'nested-instruction.yaml');
+  const content = `
+metadata:
+  id: rr-test-nested-002
+  name: Nested Instruction Skill
+  description: Instruction lives under metadata
+  phase: midstream
+  applyTo: ['src/**/*.js']
+  instruction: "Use the nested instruction"
+`;
+  await writeFile(skillPath, content, 'utf8');
+
+  const loaded = await loadSkillFile(skillPath, { validator });
+
+  assert.equal(loaded.metadata.id, 'rr-test-nested-002');
+  assert.equal(loaded.body, 'Use the nested instruction');
+  assert.equal(loaded.metadata.instruction, undefined);
+});

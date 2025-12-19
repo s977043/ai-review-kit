@@ -146,14 +146,16 @@ async function parseSkillFile(filePath) {
   // Support nested metadata block
   if (loaded.metadata && typeof loaded.metadata === 'object' && !Array.isArray(loaded.metadata)) {
     metadata = { ...loaded.metadata };
-    if (loaded.instruction && typeof loaded.instruction === 'string') {
+    if (typeof metadata.instruction === 'string') {
+      body = metadata.instruction;
+      delete metadata.instruction;
+    } else if (typeof loaded.instruction === 'string') {
       body = loaded.instruction;
     }
-  } else {
+  } else if (typeof loaded.instruction === 'string') {
     // Support flat structure with optional instruction field
-    if (loaded.instruction && typeof loaded.instruction === 'string') {
-      body = loaded.instruction;
-    }
+    body = loaded.instruction;
+    delete metadata.instruction;
   }
 
   metadata = normalizeMetadata(metadata);
