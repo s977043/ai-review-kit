@@ -18,16 +18,27 @@ OSS プロジェクトに Agent Skills を統合し、Codex CLI からシーム�
 
 ```markdown
 ---
-name: <skill-name>
-description: <スキルの概要と利用シーン>
-allowed-tools: 'Bash, Read, Write'
-model: default
-version: 0.1.0
-license: 'Complete terms in LICENSE.txt'
+id: rr-<phase>-<category>-<number>
+name: <Skill Name>
+description: <スキルが何をチェックするか>
+phase: midstream # フェーズは単一の文字列を指定する
+applyTo:
+  - 'src/**/*.ts' # できるだけ絞り込む
+tags:
+  - example
+severity: minor # info | minor | major | critical
+inputContext:
+  - diff # diff / fullFile / tests / adr / commitMessage / repoConfig
+outputKind:
+  - findings # findings / summary / actions / tests / metrics / questions
+modelHint: balanced # cheap / balanced / high-accuracy
+# x-allowed-tools: 'Bash, Read, Write' # 拡張フィールドは x- プレフィックスで
 ---
 
 # <Skill Name>
 ```
+
+- 既存スキーマ（`schemas/skill.schema.json`）準拠の項目をデフォルトとし、拡張は `x-` 接頭辞で衝突を避ける。
 
 - 生成後に `npm run skills:validate` などの検証コマンドを自動実行し、記法ミスを早期に検知する。
 - 対話モードや AI プロンプト補助を組み合わせ、入力された概要から雛形を自動補完する実装を検討する。
@@ -37,8 +48,9 @@ license: 'Complete terms in LICENSE.txt'
 - `codex skill install <repo-or-url> [<name>]` で Git からスキルを取得し、`~/.codex/skills/<name>` へ配置する。
 - `codex skill list` で有効スキルの一覧（名前・説明・パス）を表示し、`--json` オプションで機械可読出力も提供する。
 - `codex skill search <keyword>` で name/description を部分一致検索する。
-- `codex skill disable|enable <name>` で一時的な無効化・再有効化を行う。
-- `codex skill run <name> "<ユーザ指示>"` で特定スキルを明示呼び出しし、デバッグや検証を容易にする。
+- `codex skill enable <name>` でスキルを有効化する。
+- `codex skill disable <name>` でスキルを一時的に無効化する。
+- `codex skill run <name> "<ユーザ指示>"` で特定スキルを明示的に呼び出し、デバッグや検証を容易にする。
 
 ## 4. 活用シナリオの整理
 
@@ -54,7 +66,7 @@ license: 'Complete terms in LICENSE.txt'
 - `allowed-tools` や `model` の解釈は公式動作に合わせ、セキュリティ上の制約（ツールホワイトリスト、ユーザー確認、監査ログ）を踏襲する。
 - 標準仕様の更新を定期監視し、差分を `spec/` とスキル群に反映する運用フローを用意する。
 
-## 6. README / ドキュメント改善のチェックリスト
+## 6. Agent Skills 統合プロジェクトの README / ドキュメント更新チェックリスト
 
 - プロジェクト概要: Agent Skills 準拠で拡張可能なエージェントであることを冒頭に明記し、公式リソースへのリンクを置く。
 - 機能ハイライト: 「SKILL.md ベースの拡張」「Codex CLI 管理コマンド」「テンプレート生成ツール」などを箇条書きで示す。
