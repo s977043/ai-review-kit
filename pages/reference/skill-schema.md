@@ -40,7 +40,7 @@ Ensure changed code paths avoid unnecessary synchronous I/O and unbounded concur
 
 ```yaml
 ---
-id: rr-midstream-performance-002
+id: rr-midstream-performance-003
 name: Midstream Performance Budget Check
 trigger:
   phase: midstream

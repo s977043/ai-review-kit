@@ -37,7 +37,7 @@ tags: ['security', 'owasp']
 
 ```yaml
 ---
-id: rr-python-sqlinj-v1
+id: rr-python-sqlinj-v2
 name: Python SQL Injection Check
 description: Detects SQL injection patterns in Python code
 trigger:

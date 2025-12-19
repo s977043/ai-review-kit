@@ -75,6 +75,32 @@ Body content
   assert.deepEqual(loaded.metadata.applyTo, ['src/**/*.ts']);
 });
 
+test('trigger does not override top-level phase/applyTo', async () => {
+  const validator = await buildValidator();
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'skill-loader-'));
+  const skillPath = path.join(tmpDir, 'with-trigger-precedence.md');
+  const content = `---
+id: rr-midstream-trigger-002
+name: 'Trigger Precedence Skill'
+description: 'Top-level values win over trigger'
+phase: midstream
+applyTo:
+  - 'src/**/*.ts'
+trigger:
+  phase: upstream
+  applyTo:
+    - 'should-not-win/**'
+---
+Body content
+`;
+  await writeFile(skillPath, content, 'utf8');
+
+  const loaded = await loadSkillFile(skillPath, { validator });
+  assert.equal(loaded.metadata.phase, 'midstream');
+  assert.deepEqual(loaded.metadata.applyTo, ['src/**/*.ts']);
+  assert.strictEqual(loaded.metadata.trigger, undefined);
+});
+
 test('fails when dependencies contain unsupported values', async () => {
   const validator = await buildValidator();
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'skill-loader-'));

@@ -91,6 +91,32 @@ instruction: "Check tests"
   });
 });
 
+test('trigger does not override top-level phase/applyTo in YAML', async () => {
+  await withTempDir(async tmpDir => {
+    const validator = await buildValidator();
+    const skillPath = path.join(tmpDir, 'trigger-precedence.yaml');
+    const content = `
+id: rr-test-trigger-002
+name: Trigger Precedence YAML Skill
+description: Precedence favors top-level values
+phase: midstream
+applyTo: ['docs/*.md']
+trigger:
+  phase: downstream
+  applyTo: ['should-not-win/**']
+instruction: "Do not override top-level"
+`;
+    await writeFile(skillPath, content, 'utf8');
+
+    const loaded = await loadSkillFile(skillPath, { validator });
+
+    assert.equal(loaded.metadata.phase, 'midstream');
+    assert.deepEqual(loaded.metadata.applyTo, ['docs/*.md']);
+    assert.strictEqual(loaded.metadata.trigger, undefined);
+    assert.equal(loaded.body, 'Do not override top-level');
+  });
+});
+
 test('loads YAML skill with instruction nested inside metadata', async () => {
   await withTempDir(async tmpDir => {
     const validator = await buildValidator();

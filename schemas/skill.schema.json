@@ -7,7 +7,7 @@
     {
       "anyOf": [
         { "required": ["phase"] },
-        { "required": ["trigger"], "properties": { "trigger": { "required": ["phase"] } } }
+        { "required": ["trigger"], "properties": { "trigger": { "$ref": "#/properties/trigger" } } }
       ]
     },
     {
@@ -16,11 +16,7 @@
         { "required": ["files"] },
         {
           "required": ["trigger"],
-          "properties": { "trigger": { "required": ["applyTo"] } }
-        },
-        {
-          "required": ["trigger"],
-          "properties": { "trigger": { "required": ["files"] } }
+          "properties": { "trigger": { "$ref": "#/properties/trigger" } }
         }
       ]
     }

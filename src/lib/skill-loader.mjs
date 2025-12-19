@@ -88,22 +88,32 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
 }
 
 function normalizeMetadata(metadata) {
-  if (metadata.trigger && typeof metadata.trigger === 'object' && !Array.isArray(metadata.trigger)) {
-    const trigger = metadata.trigger;
-    if (trigger.files && !trigger.applyTo) {
-      trigger.applyTo = trigger.files;
-    }
-    if (!metadata.applyTo && trigger.applyTo) {
-      metadata.applyTo = trigger.applyTo;
-    }
-    if (!metadata.phase && trigger.phase) {
-      metadata.phase = trigger.phase;
-    }
+  const meta = { ...metadata };
+
+  // Top-level alias first: applyTo has precedence over files.
+  if (meta.files && !meta.applyTo) {
+    meta.applyTo = meta.files;
   }
-  if (metadata.files && !metadata.applyTo) {
-    metadata.applyTo = metadata.files;
+
+  const trigger =
+    meta.trigger && typeof meta.trigger === 'object' && !Array.isArray(meta.trigger)
+      ? meta.trigger
+      : null;
+  const triggerApplyTo = trigger?.applyTo ?? trigger?.files;
+
+  if (!meta.phase && trigger?.phase) {
+    meta.phase = trigger.phase;
   }
-  return metadata;
+  if (!meta.applyTo && triggerApplyTo) {
+    meta.applyTo = triggerApplyTo;
+  }
+
+  // Trigger is consumed during normalization; avoid leaking nested state.
+  if (trigger) {
+    delete meta.trigger;
+  }
+
+  return meta;
 }
 
 export function parseFrontMatter(content) {
