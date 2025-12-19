@@ -39,7 +39,7 @@ x-license: 'Complete terms in LICENSE.txt'
 - `codex skill list` で有効スキルの一覧（名前・説明・パス）を表示し、`--json` オプションで機械可読出力も提供する。
 - `codex skill search <keyword>` で name/description を部分一致検索する。
 - `codex skill disable|enable <name>` で一時的な無効化・再有効化を行う。
-- `codex skill run <name> "<ユーザ指示>"` で特定スキルを明示呼び出しし、デバッグや検証を容易にする。
+- `codex skill run <name> "<ユーザ指示>"` で特定スキルを明示的に呼び出し、デバッグや検証を容易にする。
 
 ## 4. 活用シナリオの整理
 
