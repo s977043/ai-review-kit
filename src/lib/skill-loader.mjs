@@ -28,6 +28,7 @@ import addFormats from 'ajv-formats';
  * @property {OutputKind[]=} outputKind
  * @property {ModelHint=} modelHint
  * @property {Dependency[]=} dependencies
+ * @property {{phase?: Phase, applyTo?: string[], files?: string[]}=} trigger
  *
  * @typedef {Object} SkillDefinition
  * @property {SkillMetadata} metadata
@@ -87,6 +88,18 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
 }
 
 function normalizeMetadata(metadata) {
+  if (metadata.trigger && typeof metadata.trigger === 'object' && !Array.isArray(metadata.trigger)) {
+    const trigger = metadata.trigger;
+    if (trigger.files && !trigger.applyTo) {
+      trigger.applyTo = trigger.files;
+    }
+    if (!metadata.applyTo && trigger.applyTo) {
+      metadata.applyTo = trigger.applyTo;
+    }
+    if (!metadata.phase && trigger.phase) {
+      metadata.phase = trigger.phase;
+    }
+  }
   if (metadata.files && !metadata.applyTo) {
     metadata.applyTo = metadata.files;
   }

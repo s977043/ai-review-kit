@@ -38,3 +38,15 @@ dependencies: [code_search]
 - 外部入力やオプショナル値に対して null/undefined チェックを追加し、早期 return/throw で制御を明確化する。
 - 非 null アサーションを排除し、undefined を許容する型定義やパーサーを導入する。
 - ユニオン型を網羅する switch/if を書き、`assertNever` などで漏れを検知する。
+
+## Non-goals / 扱わないこと
+
+- 全コードベースの型定義や API 契約の再設計。
+- `strict` モードの導入可否判断。
+- ライブラリ側の型定義バグの修正。
+
+## False-positive guards / 黙る条件
+
+- null/undefined が型で排除され、追加ガードが不要な箇所。
+- 変更が型注釈やコメントのみで、実行パスに影響しない。
+- `asserts`/バリデータで入力が保証されていると明示されている。

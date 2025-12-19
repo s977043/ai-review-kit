@@ -68,6 +68,29 @@ instruction: "Check docs"
   });
 });
 
+test('loads YAML skill with trigger container', async () => {
+  await withTempDir(async tmpDir => {
+    const validator = await buildValidator();
+    const skillPath = path.join(tmpDir, 'trigger.yaml');
+    const content = `
+id: rr-test-trigger-001
+name: Trigger YAML Skill
+description: Trigger container in YAML
+trigger:
+  phase: downstream
+  applyTo: ['tests/**/*.js']
+instruction: "Check tests"
+`;
+    await writeFile(skillPath, content, 'utf8');
+
+    const loaded = await loadSkillFile(skillPath, { validator });
+
+    assert.equal(loaded.metadata.phase, 'downstream');
+    assert.deepEqual(loaded.metadata.applyTo, ['tests/**/*.js']);
+    assert.equal(loaded.body, 'Check tests');
+  });
+});
+
 test('loads YAML skill with instruction nested inside metadata', async () => {
   await withTempDir(async tmpDir => {
     const validator = await buildValidator();

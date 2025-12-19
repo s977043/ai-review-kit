@@ -53,6 +53,28 @@ Body content
   assert.deepEqual(loaded.metadata.dependencies, ['code_search', 'custom:embedding']);
 });
 
+test('loads skill with trigger container and normalizes phase/applyTo', async () => {
+  const validator = await buildValidator();
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'skill-loader-'));
+  const skillPath = path.join(tmpDir, 'with-trigger.md');
+  const content = `---
+id: rr-midstream-trigger-001
+name: 'Trigger Skill'
+description: 'Uses trigger container for activation'
+trigger:
+  phase: midstream
+  files:
+    - 'src/**/*.ts'
+---
+Body content
+`;
+  await writeFile(skillPath, content, 'utf8');
+
+  const loaded = await loadSkillFile(skillPath, { validator });
+  assert.equal(loaded.metadata.phase, 'midstream');
+  assert.deepEqual(loaded.metadata.applyTo, ['src/**/*.ts']);
+});
+
 test('fails when dependencies contain unsupported values', async () => {
   const validator = await buildValidator();
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'skill-loader-'));

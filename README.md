@@ -190,6 +190,7 @@ files: ['src/**/*.ts']
 ```
 
 `phase` は単一値/配列どちらも許容される点に注意してください。
+`phase` / `files` は `trigger` コンテナ内にまとめても構いません（`trigger.phase`, `trigger.files`）。
 
 **2. YAML 形式**:
 構造化されたメタデータと指示を単一の YAML ファイルで記述します。
@@ -200,6 +201,19 @@ metadata:
   name: Security Review
   phase: [midstream, downstream] # 複数フェーズに対応
   files: ['**/*.ts', 'Dockerfile']
+instruction: |
+  セキュリティチェックの具体的な指示...
+```
+
+`trigger` を使う例:
+
+```yaml
+metadata:
+  id: security-check
+  name: Security Review
+  trigger:
+    phase: [midstream, downstream]
+    files: ['**/*.ts', 'Dockerfile']
 instruction: |
   セキュリティチェックの具体的な指示...
 ```
