@@ -40,7 +40,7 @@ metadata:
   name: Test Coverage Guard
   description: 追加機能に対するテスト不足を検知する
   phase: [downstream]
-  files: ['src/**/*.ts', 'tests/**/*.ts'] # files は applyTo のエイリアス
+  files: ['src/**/*.ts', 'tests/**/*.ts'] # files は metadata.applyTo のエイリアス（フロントマターの applyTo と同等）
   severity: major
   inputContext: [tests]
   outputKind: [findings]
