@@ -4,6 +4,9 @@
   "private": true,
   "description": "River Reviewer docs, schemas, and validation utilities.",
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/s977043/river-reviewer.git"
