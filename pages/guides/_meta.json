@@ -13,6 +13,7 @@
   "planner-evaluation": "Skill Planner の評価と最適化のためのミニガイド",
   "use-riverbed-memory": "Use Riverbed Memory",
   "tracing": "Tracing / Observability",
+  "agent-skills-codex-cli": "Agent Skills と Codex CLI 連携設計ガイド",
   "agents": "Agents—Adding Project Knowledge Packs",
   "governance": "Governance"
 }
