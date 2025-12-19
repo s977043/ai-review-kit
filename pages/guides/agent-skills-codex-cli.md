@@ -21,8 +21,7 @@ OSS プロジェクトに Agent Skills を統合し、Codex CLI からシーム�
 id: rr-<phase>-<category>-<number>
 name: <Skill Name>
 description: <スキルが何をチェックするか>
-phase:
-  - midstream # 単一でも配列でも可
+phase: midstream # フェーズは単一の文字列を指定する
 applyTo:
   - 'src/**/*.ts' # できるだけ絞り込む
 tags:
