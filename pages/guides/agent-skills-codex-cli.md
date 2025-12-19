@@ -1,53 +1,71 @@
 ---
-title: Agent Skills と Codex CLI の統合ガイド
+title: Agent Skills と Codex CLI 連携設計ガイド
 ---
 
-OSS プロジェクトへ Agent Skills を取り込み、Codex CLI から活用するための構成例と運用アイデアをまとめます。River Reviewer のスキル定義フローに加えて、CLI での自動生成や配布を視野に入れた設計です。
+OSS プロジェクトに Agent Skills を統合し、Codex CLI からシームレスに活用するための設計ガイドです。公式仕様との互換性を優先しつつ、スキル作成・配布・実行をスクリプト可能にするための実装ヒントをまとめました。
 
-## リポジトリ構成の推奨
+## 1. リポジトリ構成の標準化
 
-- `skills/` 直下にスキルごとのフォルダを置き、`<skill-name>/SKILL.md` と関連スクリプト・資料を同梱する。
-- 目的別のサブフォルダ（例: `skills/docx/`, `skills/pdf/`, `skills/pptx/` など）を切ってモジュール化すると参照性が高まる。
-- 仕様や作成手順をまとめた `spec/`（例: `spec/agent-skills-spec.md`）と、雛形を置く `template/`（例: `template/SKILL.md`）を併設し、共通指針を一箇所に集約する。
-- Codex CLI との連携を考慮し、`skills/` を `~/.codex/skills/` に同期するスクリプトやシンボリックリンクを用意する。プロジェクト内に `.codex/skills/` を持ち、CLI 起動時にそこを参照させる運用も有効。
+- `skills/` 直下にスキルごとのフォルダを置き、必ず `SKILL.md` と付属スクリプト・資料を同梱する。
+- 公式のサンプルに倣い、形式別サブフォルダ（`docx/`, `pdf/`, `pptx/`, `xlsx/` など）を切ると整理しやすい。
+- `spec/` に公式仕様（例: `agent-skills-spec.md`）を格納し、`template/` に `SKILL.md` 雛形や共通スクリプトを置く。
+- Codex CLI 連携のため、`skills/` を `~/.codex/skills/` に同期するスクリプトやシンボリックリンクを用意する。リポジトリ固有の隠しディレクトリ（例: `.codex/skills/`）を参照する運用も有効。
 
-## SKILL.md 雛形の自動生成
+## 2. SKILL.md テンプレート自動生成
 
-- `codex skill create <skill-name>` のような CLI サブコマンドで、テンプレートからスキルフォルダと SKILL.md を生成する。
-- テンプレートには YAML frontmatter を含め、少なくとも以下を初期値として埋める:
-  - `name`: スキル名
-  - `description`: 概要と利用シナリオ
-  - `allowed-tools`: 例として `"Bash, Read, Write"`
-  - `model`: 例として `default`
-  - `version`: 例として `0.1.0`
-  - `license`: 例として `Complete terms in LICENSE.txt`
-- 対話型で name/description などを入力させる、または簡単なプロンプトから雛形を生成する AI 支援フローを追加すると、スキル作成の敷居が下がる。
-- 生成後に `skills-ref validate <path>` で構成検証し、`skills-ref to-prompt <paths>` でエージェント用メタデータを抽出する処理を自動実行する。
+- 独自サブコマンド例: `codex skill create <name>` でスキルフォルダと `SKILL.md` をテンプレートから生成する。
+- テンプレートには YAML フロントマターの必須項目を初期値つきで用意する。
 
-## スキル管理コマンドの設計例
+```markdown
+---
+name: <skill-name>
+description: <スキルの概要と利用シーン>
+allowed-tools: 'Bash, Read, Write'
+model: default
+version: 0.1.0
+license: 'Complete terms in LICENSE.txt'
+---
 
-- `codex skill install <repo-or-url> [<skill-name>]`: リポジトリや URL からスキルを取得し、`~/.codex/skills/<skill-name>` に配置する。
-- `codex skill list`: インストール済みスキルを名称・概要付きで一覧表示（表形式や JSON 出力オプションを検討）。
-- `codex skill search <keyword>`: name/description を部分一致で検索し、該当スキルを絞り込む。
-- `codex skill disable <skill-name>` / `enable <skill-name>`: 一時的な無効化・再有効化を行い、プロンプト肥大を抑える。
-- `codex skill run <skill-name> "<user-prompt>"`: 指定スキルを強制ロードし、デバッグ用途で直接実行する。
+# <Skill Name>
+```
 
-## 公式仕様との互換性を保つポイント
+- 生成後に `npm run skills:validate` などの検証コマンドを自動実行し、記法ミスを早期に検知する。
+- 対話モードや AI プロンプト補助を組み合わせ、入力された概要から雛形を自動補完する実装を検討する。
 
-- YAML frontmatter の必須フィールド（例: `name`, `description`）は公式仕様に従い、第三者視点で簡潔に記述する。
-- 独自フィールドを追加する場合は、公式エージェントが無視しても問題ないように設計する（例: `x-` プレフィックス）。
-- `allowed-tools` や `model` の解釈は公式準拠で実装し、スキル間の互換性を損なわないようにする。
+## 3. スキル管理用 CLI サブコマンド
 
-## README / ドキュメントの強化ポイント
+- `codex skill install <repo-or-url> [<name>]` で Git からスキルを取得し、`~/.codex/skills/<name>` へ配置する。
+- `codex skill list` で有効スキルの一覧（名前・説明・パス）を表示し、`--json` オプションで機械可読出力も提供する。
+- `codex skill search <keyword>` で name/description を部分一致検索する。
+- `codex skill disable|enable <name>` で一時的な無効化・再有効化を行う。
+- `codex skill run <name> "<ユーザ指示>"` で特定スキルを明示呼び出しし、デバッグや検証を容易にする。
 
-- プロジェクト概要に「Agent Skills 準拠」「Codex CLI で利用可能」であることを明記し、公式リポジトリへのリンクを添える。
-- 機能ハイライトとして「スキル管理コマンド」「テンプレート自動生成」「Codex CLI 連携」を箇条書きで示す。
-- インストール手順に `CODEX_SKILLS_PATH` の設定や `--enable skills` オプションの利用を記載する。
-- Quickstart にスキル使用例、`codex skill list` などのコマンド例、標準スキル一覧と説明を入れる。
-- スキル作成手順（テンプレート生成コマンドの使い方、frontmatter ベストプラクティス）と、独自拡張がある場合の互換性方針を明示する。
-- スキルごとのライセンスと謝辞を整理し、外部由来のコンテンツを参照する場合は出典を明記する。
+## 4. 活用シナリオの整理
 
-## 運用上のヒント
+- ドメイン知識のパッケージ化（例: 法務レビュー、社内データ分析手順）をスキル化し、自然言語指示だけで起動できるようにする。
+- 新能力の付与（例: プレゼン資料自動生成、PDF フォーム抽出）では、スキル内のスクリプトを Bash などで実行できるようにする。
+- 複数ステップのワークフロー（フォーマット統一、レビュー→修正→再検証など）をスキルに落とし込み、抜け漏れ防止と再現性を担保する。
+- Codex CLI 上では `--enable skills` 付きで起動し、`skills/` が正しく読み込まれることを `codex skill list` などで確認する。
 
-- 大規模モデルに大量のスキルを読み込む場合は、不要スキルを `disable` しつつ必要に応じて `run` で検証するワークフローが有効。
-- スキル更新時は `skills-ref validate` や `npm run skills:validate` などの検証を CI に組み込み、文法や必須フィールド漏れを早期に検知する。
+## 5. 公式仕様との互換性と拡張
+
+- YAML フロントマターの必須フィールド（`name`, `description` など）は公式仕様に従う。記述は第三者視点で、発動条件を明確にする。
+- 独自フィールドは `x-` プレフィックスなどで衝突を避け、公式エージェントが無視しても破綻しない設計にする。
+- `allowed-tools` や `model` の解釈は公式動作に合わせ、セキュリティ上の制約（ツールホワイトリスト、ユーザー確認、監査ログ）を踏襲する。
+- 標準仕様の更新を定期監視し、差分を `spec/` とスキル群に反映する運用フローを用意する。
+
+## 6. README / ドキュメント改善のチェックリスト
+
+- プロジェクト概要: Agent Skills 準拠で拡張可能なエージェントであることを冒頭に明記し、公式リソースへのリンクを置く。
+- 機能ハイライト: 「SKILL.md ベースの拡張」「Codex CLI 管理コマンド」「テンプレート生成ツール」などを箇条書きで示す。
+- インストール: Codex CLI の有効化フラグ（`--enable skills`）、スキルフォルダの配置先、環境変数の設定例を具体的に記載する。
+- Quickstart: スキルが発火する対話例や `codex skill list` 出力例を載せ、セットアップ確認の導線にする。
+- スキル一覧: カテゴリごとに name/description を簡潔に列挙し、各フォルダへのリンクを付ける。
+- スキル作成方法: CLI 生成コマンドや記述時のベストプラクティス（名前付け、発動条件の書き方、ファイル分割の推奨）を短くまとめる。
+- 互換性とライセンス: 独自拡張の扱い方針とスキルごとのライセンス整理を明示する。
+
+## 7. テストと検証の運用例
+
+- スキル追加・更新後は `npm test` と `npm run lint` を実行してフォーマットと挙動を確認する。
+- スキルメタデータは `npm run skills:validate` で検証し、Codex CLI へのインポート前に破損がないか確認する。
+- Codex CLI 側でも `codex skill list` や実際の対話テストを行い、SKILL.md で定義した発動条件どおり動作するか確認する。
