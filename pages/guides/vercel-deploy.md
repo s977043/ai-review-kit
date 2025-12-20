@@ -42,7 +42,7 @@ Vercel の推奨フローに合わせ、GitHub Actions 上でビルドし、成�
 ## 注意: Vercel の Git 連携（自動デプロイ）について
 
 Git 連携が有効なままだと、PR 作成/更新でも Preview デプロイが走り、二重デプロイになります。
-本運用（main/release のみ）に揃える場合は、次のいずれかで自動デプロイを止めてください。
+本運用（`main` / `release/**` のみ）に揃える場合は、次のいずれかで自動デプロイを止めてください。
 
 - Vercel 側で Git 連携の自動デプロイを無効化する
 - GitHub 側で Vercel GitHub App をリポジトリから外す（Preview Comments も停止）
