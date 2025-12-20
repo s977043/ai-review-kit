@@ -39,6 +39,32 @@ River Reviewer に同梱されているスキル一覧です。フェーズ別�
 
 - findings / summary / actions
 
+### rr-upstream-api-versioning-compat-001
+
+- 名前: API Versioning & Backward Compatibility
+- 概要: Ensure API/contract changes specify versioning strategy; backward compatibility; deprecation plan; and
+  migration guidance.
+- 対象:
+  - `docs/**/*api*.md`
+  - `docs/**/*openapi*.{yml,yaml,json}`
+  - `docs/**/*contract*.md`
+  - `docs/**/*interface*.md`
+  - `docs/adr/**/*`
+  - `pages/**/*api*.md`
+  - `pages/**/*contract*.md`
+  - `pages/**/*interface*.md`
+  - `**/*openapi*.{yml,yaml,json}`
+  - `**/*api*.{yml,yaml,json}`
+  - `**/*.adr`
+- 重要度: major
+- タグ: api / compatibility / versioning / upstream
+- 依存関係: repo_metadata
+- 適用条件: phase=upstream, inputContext=diff / fullFile / adr
+
+チェック項目の例:
+
+- summary / findings / actions / questions
+
 ### rr-upstream-architecture-boundaries-001
 
 - 名前: Architecture Boundaries & Dependencies

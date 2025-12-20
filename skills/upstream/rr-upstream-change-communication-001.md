@@ -47,11 +47,7 @@ dependencies: [repo_metadata]
 - 通知計画
   - 変更を知らせるチャネル（release notes, mailing list, status page 等）が決まっているか。
   - スケジュール（いつ通知し、いつ施行するか）があるか。
-<<<<<<< HEAD
-- 非推奨・退避
-=======
-- 非推奨・移行
->>>>>>> 6171f01 (feat: add availability and communication skills)
+  - 非推奨・移行
   - 旧バージョン/機能の非推奨状況と移行締切があるか。
   - 互換性の切り分け（どのクライアント/サービスが動かなくなるか）が説明されているか。
 - 継続的整合
@@ -73,11 +69,7 @@ dependencies: [repo_metadata]
 
 ## 評価指標（Evaluation）
 
-<<<<<<< HEAD
-- 合格: 影響範囲・通知計画・退避方針に抜けがないかを差分に紐づく形で指摘し、アクションに結びつく遷移案がある。
-=======
 - 合格: 影響範囲・通知計画・移行方針に抜けがないかを差分に紐づく形で指摘し、アクションに結びつく遷移案がある。
->>>>>>> 6171f01 (feat: add availability and communication skills)
 - 不合格: 一般論やオペレーションの詳細、差分と無関係なステークホルダー批判。
 
 ## 人間に返す条件（Human Handoff）
