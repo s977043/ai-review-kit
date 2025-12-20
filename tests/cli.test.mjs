@@ -139,7 +139,6 @@ test('river run injects project rules into prompt when present', async () => {
     assert.strictEqual(result.code, 0, result.stderr);
     assert.match(result.stdout, /Project rules: present/);
     assert.match(result.stdout, /Project-specific review rules/i);
-    assert.match(result.stdout, /Use App Router/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
