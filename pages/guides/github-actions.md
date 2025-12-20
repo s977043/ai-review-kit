@@ -9,7 +9,7 @@ name: River Reviewer
 on:
   pull_request:
   push:
-    branches: [release]
+    branches: [main]
 jobs:
   river-reviewer:
     runs-on: ubuntu-latest
