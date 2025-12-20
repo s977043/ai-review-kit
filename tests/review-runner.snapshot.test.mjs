@@ -7,6 +7,13 @@ import { buildExecutionPlan } from '../src/lib/review-runner.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const snapshotPath = path.join(repoRoot, 'tests', 'fixtures', 'execution-plan-midstream.json');
+const watchedSkippedIds = new Set([
+  'rr-downstream-review-policy-standard-001',
+  'rr-midstream-review-policy-standard-001',
+  'rr-midstream-typescript-strict-001',
+  'rr-upstream-api-design-001',
+  'rr-upstream-review-policy-standard-001',
+]);
 
 async function loadSnapshot() {
   const raw = await fs.readFile(snapshotPath, 'utf8');
@@ -15,17 +22,20 @@ async function loadSnapshot() {
 
 function summarizePlan(plan) {
   return {
-    selected: plan.selected.map(s => ({
+    selected: plan.selected.map((s) => ({
       id: s.metadata.id,
       phase: s.metadata.phase,
       modelHint: s.metadata.modelHint ?? null,
       outputKind: s.metadata.outputKind,
       dependencies: s.metadata.dependencies ?? [],
     })),
-    skipped: plan.skipped.map(entry => ({
-      id: entry.skill.metadata.id,
-      reasons: entry.reasons,
-    })),
+    skippedWatched: plan.skipped
+      .filter((entry) => watchedSkippedIds.has(entry.skill.metadata.id))
+      .map((entry) => ({
+        id: entry.skill.metadata.id,
+        reasons: entry.reasons,
+      }))
+      .sort((a, b) => a.id.localeCompare(b.id)),
   };
 }
 

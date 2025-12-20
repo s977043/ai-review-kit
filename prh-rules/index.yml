@@ -5,7 +5,7 @@ rules:
       - /[Gg]ithub/
       - /GITHUB/
   - expected: AI
-    pattern: /[Aa][Ii]/
+    pattern: /(?<![A-Za-z])[Aa][Ii](?![A-Za-z])/
   - expected: JavaScript
     pattern:
       - /[Jj]ava[Ss]cript/
