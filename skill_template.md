@@ -7,7 +7,7 @@ phase: midstream # upstream | midstream | downstream
 applyTo:
   - 'src/**/*.ts' # glob パターンを列挙。できるだけ絞り込む
 tags:
-  - example # カテゴリやドメインタグ（security, testing, api 等）
+  - example # カテゴリやドメインタグ（security, testing, api 等）。community 共有は community を付与
 severity: minor # info | minor | major | critical
 inputContext:
   - diff # diff / fullFile / tests / adr / commitMessage / repoConfig など
@@ -21,6 +21,7 @@ modelHint: balanced # cheap / balanced / high-accuracy
 ## Goal / 目的
 
 - このスキルで “何を減らす/防ぐ/促す” のかを 1〜2 行で書く。
+- 1スキル=1テーマに絞り、目的が混ざらないようにする。
 
 ## Non-goals / 扱わないこと
 
@@ -59,3 +60,13 @@ River Reviewer のコメントは `<file>:<line>: <message>` 形式です。`<me
 ## Good / Bad Examples（任意）
 
 - 短い例で、何が良い/悪いかを示す。
+
+## 評価指標（Evaluation）
+
+- 合格基準: 指摘が差分に紐づき、根拠と次アクションが説明されている。
+- 不合格基準: 差分と無関係な指摘、根拠のない断定、抑制条件の無視。
+
+## 人間に返す条件（Human Handoff）
+
+- 仕様や意図が不明確で解釈が分かれる場合は質問として返す。
+- 影響範囲が広い設計判断やトレードオフは人間レビューへ返す。
