@@ -5,10 +5,8 @@ description: 'Ensure API/contract changes specify versioning strategy, backward 
 phase: upstream
 applyTo:
   - 'docs/**/*api*.md'
-  - 'docs/**/*openapi*.{yml,yaml,json}'
   - 'docs/**/*contract*.md'
   - 'docs/**/*interface*.md'
-  - 'docs/adr/**/*'
   - 'pages/**/*api*.md'
   - 'pages/**/*contract*.md'
   - 'pages/**/*interface*.md'
