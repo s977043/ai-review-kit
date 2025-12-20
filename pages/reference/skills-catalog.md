@@ -153,6 +153,28 @@ River Reviewer に同梱されているスキル一覧です。フェーズ別�
 
 - summary / findings / actions / questions
 
+### rr-upstream-availability-architecture-001
+
+- 名前: Availability & Resilience Architecture
+- 概要: Ensure architecture docs capture availability targets; failover strategy; capacity headroom; and resilience
+  trade-offs for critical services.
+- 対象:
+  - `docs/architecture/**/*`
+  - `docs/adr/**/*`
+  - `docs/**/*design*.md`
+  - `docs/**/*availability*.md`
+  - `pages/**/*design*.md`
+  - `pages/**/*architecture*.md`
+  - `**/*.adr`
+- 重要度: major
+- タグ: availability / resilience / sre / upstream
+- 依存関係: repo_metadata
+- 適用条件: phase=upstream, inputContext=diff / adr
+
+チェック項目の例:
+
+- summary / findings / actions / questions
+
 ### rr-upstream-bounded-context-language-001
 
 - 名前: Bounded Context & Ubiquitous Language
@@ -198,6 +220,28 @@ River Reviewer に同梱されているスキル一覧です。フェーズ別�
 チェック項目の例:
 
 - summary / findings / actions / questions
+
+### rr-upstream-change-communication-001
+
+- 名前: Architecture Change Communication
+- 概要: Ensure architecture updates document affected stakeholders; notification plan; and deprecation/retirement
+  signals to keep knowledge aligned.
+- 対象:
+  - `docs/architecture/**/*`
+  - `docs/adr/**/*`
+  - `docs/**/*design*.md`
+  - `docs/**/*architecture*.md`
+  - `pages/**/*design*.md`
+  - `pages/**/*architecture*.md`
+  - `**/*.adr`
+- 重要度: major
+- タグ: architecture / communication / governance / upstream
+- 依存関係: repo_metadata
+- 適用条件: phase=upstream, inputContext=diff / adr
+
+チェック項目の例:
+
+- summary / findings / questions
 
 ### rr-upstream-data-flow-state-ownership-001
 
