@@ -7,7 +7,7 @@ title: Vercel デプロイ運用（main / release）
 ## 方針（ブランチと環境）
 
 - `main`: Production（本番）デプロイ
-- `release/**`: Preview（ステージング相当）デプロイ
+- `Release` または `release/**`: Preview（ステージング相当）デプロイ
 - PR / feature ブランチ: Vercel デプロイしない（GitHub Actions 側でトリガーしない）
 
 ## GitHub Actions によるデプロイ
@@ -42,7 +42,13 @@ Vercel の推奨フローに合わせ、GitHub Actions 上でビルドし、成�
 ## 注意: Vercel の Git 連携（自動デプロイ）について
 
 Git 連携が有効なままだと、PR 作成/更新でも Preview デプロイが走り、二重デプロイになります。
-本運用（`main` / `release/**` のみ）に揃える場合は、次のいずれかで自動デプロイを止めてください。
+本運用（`main` / `Release` / `release/**` のみ）に揃える場合は、次のいずれかで自動デプロイを止めてください。
 
 - Vercel 側で Git 連携の自動デプロイを無効化する
-- GitHub 側で Vercel GitHub App をリポジトリから外す（Preview Comments も停止）
+- GitHub 側で Vercel GitHub App をリポジトリから外す（Preview Deployments / Preview Comments も停止）
+
+### GitHub 側で Vercel GitHub App を外す（例）
+
+- GitHub の該当リポジトリ → `Settings`
+- `Integrations` → `GitHub Apps`（または `Installed GitHub Apps`）→ `Vercel` を `Configure`
+- 対象リポジトリへのアクセスを外す（またはアプリをアンインストールする）
