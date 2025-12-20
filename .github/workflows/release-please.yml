@@ -27,6 +27,8 @@ jobs:
       - name: Checkout (for floating tags)
         if: ${{ steps.release.outputs.release_created }}
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Update major alias tag (v0, v1, ...)
         if: ${{ steps.release.outputs.release_created }}
