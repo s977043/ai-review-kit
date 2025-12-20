@@ -36,44 +36,9 @@
       "dependencies": []
     }
   ],
-  "skipped": [
-    {
-      "id": "rr-midstream-nextjs-app-router-boundary-001",
-      "reasons": ["applyTo did not match any changed file"]
-    },
+  "skippedWatched": [
     {
       "id": "rr-downstream-review-policy-standard-001",
-      "reasons": [
-        "phase mismatch: downstream !== midstream",
-        "applyTo did not match any changed file",
-        "missing inputContext: tests"
-      ]
-    },
-    {
-      "id": "rr-downstream-coverage-gap-001",
-      "reasons": ["phase mismatch: downstream !== midstream"]
-    },
-    {
-      "id": "rr-downstream-flaky-test-001",
-      "reasons": [
-        "phase mismatch: downstream !== midstream",
-        "applyTo did not match any changed file"
-      ]
-    },
-    {
-      "id": "rr-downstream-test-existence-001",
-      "reasons": ["phase mismatch: downstream !== midstream"]
-    },
-    {
-      "id": "rr-downstream-test-naming-001",
-      "reasons": [
-        "phase mismatch: downstream !== midstream",
-        "applyTo did not match any changed file",
-        "missing inputContext: tests"
-      ]
-    },
-    {
-      "id": "rr-downstream-test-review-sample-001",
       "reasons": [
         "phase mismatch: downstream !== midstream",
         "applyTo did not match any changed file",
@@ -85,23 +50,8 @@
       "reasons": ["missing inputContext: fullFile"]
     },
     {
-      "id": "rr-midstream-security-basic-001",
-      "reasons": ["applyTo did not match any changed file"]
-    },
-    {
-      "id": "rr-midstream-typescript-nullcheck-001",
-      "reasons": ["missing inputContext: fullFile"]
-    },
-    {
       "id": "rr-midstream-typescript-strict-001",
       "reasons": ["missing inputContext: fullFile"]
-    },
-    {
-      "id": "rr-upstream-review-policy-standard-001",
-      "reasons": [
-        "phase mismatch: upstream !== midstream",
-        "applyTo did not match any changed file"
-      ]
     },
     {
       "id": "rr-upstream-api-design-001",
@@ -112,15 +62,7 @@
       ]
     },
     {
-      "id": "rr-upstream-failure-modes-observability-001",
-      "reasons": [
-        "phase mismatch: upstream !== midstream",
-        "applyTo did not match any changed file",
-        "missing inputContext: adr"
-      ]
-    },
-    {
-      "id": "rr-upstream-architecture-sample-001",
+      "id": "rr-upstream-review-policy-standard-001",
       "reasons": [
         "phase mismatch: upstream !== midstream",
         "applyTo did not match any changed file"
