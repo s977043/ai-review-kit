@@ -27,7 +27,7 @@ dependencies: [tracing, code_search]
 - ログ基盤の選定や、メトリクス設計の是非などの設計批評。
 - PII を含むログの推奨（入力の要約は最小化し、秘匿情報は含めない）。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - `catch` 内でログがある、または `throw` / `return Promise.reject(...)` 等で上位へ伝播している場合。
 - 明確に意図された無視であることが差分から読み取れる場合（ただし、理由のコメントがある場合に限る）。
@@ -55,3 +55,13 @@ dependencies: [tracing, code_search]
 
 - `Finding:` / `Evidence:` / `Impact:` / `Fix:` / `Severity:` / `Confidence:` を含む短いメッセージにする。
 - `Fix` は複数案を許容する（例: ログ+再throw、上位へ伝播、無視するなら理由コメント+計測）。
+
+## 評価指標（Evaluation）
+
+- 合格基準: 指摘が差分に紐づき、根拠と次アクションが説明されている。
+- 不合格基準: 差分と無関係な指摘、根拠のない断定、抑制条件の無視。
+
+## 人間に返す条件（Human Handoff）
+
+- 仕様や意図が不明確で解釈が分かれる場合は質問として返す。
+- 影響範囲が広い設計判断やトレードオフは人間レビューへ返す。

@@ -12,7 +12,7 @@ function warnMissingGuardsAndNonGoals(skill, relativePath) {
   if (Array.isArray(tags) && tags.some(t => excludedTags.includes(t))) return;
   const body = skill.body ?? '';
   const hasNonGoals = hasSection(body, [/^##\s+Non-goals\b/m, /^##\s+非目的\b/m, /扱わないこと/m]);
-  const hasGuards = hasSection(body, [/^##\s+False-positive guards\b/m, /黙る条件/m, /誤検知ガード/m]);
+  const hasGuards = hasSection(body, [/^##\s+False-positive guards\b/m, /抑制条件/m, /誤検知ガード/m]);
   if (hasNonGoals && hasGuards) return;
   const missing = [];
   if (!hasNonGoals) missing.push('Non-goals');

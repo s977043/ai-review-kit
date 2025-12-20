@@ -22,7 +22,7 @@ dependencies: [code_search]
 - 差分外のコードを前提にした断定（コンテキスト不足時は Confidence を下げる）。
 - テスト/fixtures のダミー値を secrets として断定する。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - 環境変数参照（`process.env` / `import.meta.env`）で secrets を受け取っている場合。
 - `tests/`, `__tests__`, `fixtures` 配下の変更で、明確にテストデータである場合。
@@ -64,3 +64,13 @@ dependencies: [code_search]
 
 - `Finding:` / `Evidence:` / `Impact:` / `Fix:` / `Severity:` / `Confidence:` を含む短いメッセージにする。
 - secrets 検出の場合、Evidence に値そのものを再掲しない（必要ならマスクする）。
+
+## 評価指標（Evaluation）
+
+- 合格基準: 指摘が差分に紐づき、根拠と次アクションが説明されている。
+- 不合格基準: 差分と無関係な指摘、根拠のない断定、抑制条件の無視。
+
+## 人間に返す条件（Human Handoff）
+
+- 仕様や意図が不明確で解釈が分かれる場合は質問として返す。
+- 影響範囲が広い設計判断やトレードオフは人間レビューへ返す。

@@ -26,7 +26,7 @@ dependencies: [test_runner, coverage_report]
 - 網羅的なテストケース列挙（提案は最大3点までに絞る）。
 - テスト差分がすでにある場合の追加要求（原則として黙る）。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - 差分にテストファイル（`*.test.*` / `*.spec.*`）が含まれている場合。
 - 挙動変更のシグナル（新しい分岐、例外、バリデーション）が差分から読み取れない場合。
@@ -59,3 +59,13 @@ dependencies: [test_runner, coverage_report]
 
 - `Finding:` / `Evidence:` / `Impact:` / `Fix:` / `Severity:` / `Confidence:` を含む短いメッセージにする。
 - `Fix` は 1〜3 件のテスト観点に絞る（例: 新分岐、例外、境界）。
+
+## 評価指標（Evaluation）
+
+- 合格基準: 指摘が差分に紐づき、根拠と次アクションが説明されている。
+- 不合格基準: 差分と無関係な指摘、根拠のない断定、抑制条件の無視。
+
+## 人間に返す条件（Human Handoff）
+
+- 仕様や意図が不明確で解釈が分かれる場合は質問として返す。
+- 影響範囲が広い設計判断やトレードオフは人間レビューへ返す。
