@@ -24,26 +24,24 @@ async function hasReferencesDir(dirPath) {
 
 async function listSkillPackages(dirPath) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
-  const packages = [];
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const entryPath = path.join(dirPath, entry.name);
-    const skillPath = path.join(entryPath, 'SKILL.md');
-    try {
-      const stat = await fs.stat(skillPath);
-      if (stat.isFile()) {
-        packages.push(skillPath);
-        continue;
+  const packageGroups = await Promise.all(
+    entries.map(async entry => {
+      if (!entry.isDirectory()) return [];
+      const entryPath = path.join(dirPath, entry.name);
+      const skillPath = path.join(entryPath, 'SKILL.md');
+      try {
+        const stat = await fs.stat(skillPath);
+        if (stat.isFile()) {
+          return [skillPath];
+        }
+      } catch {
+        // Continue to nested directories.
       }
-    } catch {
-      // Continue to nested directories.
-    }
-    const nested = await listSkillPackages(entryPath);
-    packages.push(...nested);
-  }
+      return listSkillPackages(entryPath);
+    }),
+  );
 
-  return packages.sort();
+  return packageGroups.flat().sort();
 }
 
 async function validateSkill(skillPath) {
