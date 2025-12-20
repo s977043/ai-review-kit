@@ -31,7 +31,7 @@ modelHint: balanced
 
 ## Rule / ルール
 
-- `img` に意味がある場合は `alt` を必須にする。
+- `img` タグには `alt` 属性を必須にする（装飾的な画像は `alt=""` を推奨）。
 - `button` / `a` / `input` には可視テキストまたは ARIA ラベルを持たせる。
 
 ## Evidence / 根拠の取り方
