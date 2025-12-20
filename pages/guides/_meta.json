@@ -1,6 +1,7 @@
 {
   "quickstart": "クイックスタート (River Reviewer)",
   "github-actions": "GitHub Actions で River Reviewer をセットアップする",
+  "vercel-deploy": "Vercel デプロイ運用（main / release）",
   "run-phase-specific-review": "Run Phase-Specific Review",
   "troubleshooting": "トラブルシューティング",
   "faq": "FAQ（よくある失敗）",
