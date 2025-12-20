@@ -42,6 +42,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const defaultSkillsDir = path.join(repoRoot, 'skills');
 const defaultSchemaPath = path.join(repoRoot, 'schemas', 'skill.schema.json');
 const allowedExtensions = new Set(['.md', '.mdx', '.yaml', '.yml']);
+const ignoredSkillDirNames = new Set(['agent-skills']);
 
 export const defaultPaths = {
   repoRoot,
@@ -78,6 +79,9 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
   for (const entry of entries) {
     const entryPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
+      if (ignoredSkillDirNames.has(entry.name)) {
+        continue;
+      }
       const nested = await listSkillFiles(entryPath);
       files.push(...nested);
     } else if (allowedExtensions.has(path.extname(entry.name)) && entry.name !== '.gitkeep') {

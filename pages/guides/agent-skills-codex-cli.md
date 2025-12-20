@@ -74,11 +74,13 @@ instruction: |
 - `skills/core/` 既定で読み込むスキル群
 - `skills/community/` 外部/ライブラリ特化のスキル
 - `skills/private/` プロジェクト固有のスキル
+- `skills/agent-skills/` Agent Skills 仕様のパッケージ群（`SKILL.md` + `references/`、River Reviewer の検証対象外）
 - テスト用フィクスチャは `tests/fixtures/skills/` などに分離して管理
 
 ## 3. 検証フロー
 
 - スキーマ検証: `npm run skills:validate`
+- Agent Skills 検証: `npm run agent-skills:validate`
 - Lint/フォーマット: `npm run lint`（markdownlint/textlint/Prettierを含む）
 - ユニットテスト: `npm test`（skill-loader 含む）
 
