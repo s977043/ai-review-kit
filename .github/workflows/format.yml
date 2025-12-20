@@ -2,7 +2,7 @@ name: Code Format Check
 
 on:
   pull_request:
-    branches: ['Release']
+    branches: ['release']
 
 jobs:
   format:

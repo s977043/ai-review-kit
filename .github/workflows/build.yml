@@ -2,7 +2,7 @@ name: Build Docusaurus Site
 
 on:
   pull_request:
-    branches: ['Release']
+    branches: ['release']
 
 jobs:
   build:

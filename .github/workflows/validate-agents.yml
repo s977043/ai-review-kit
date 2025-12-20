@@ -10,7 +10,7 @@ on:
       - 'package.json'
       - 'scripts/validate-agents.mjs'
   push:
-    branches: [Release]
+    branches: [release]
     paths:
       - 'agents/**'
       - '.github/river-reviewer/**'
