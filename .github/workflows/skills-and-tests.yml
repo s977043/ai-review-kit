@@ -2,9 +2,9 @@ name: Skills Validation and Tests
 
 on:
   push:
-    branches: [main]
+    branches: [Release]
   pull_request:
-    branches: [main]
+    branches: [Release]
 
 jobs:
   validate-and-test:

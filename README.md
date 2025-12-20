@@ -21,7 +21,7 @@
 name: River Reviewer
 on:
   pull_request:
-    branches: [main]
+    branches: [Release]
 jobs:
   review:
     runs-on: ubuntu-latest

@@ -20,7 +20,7 @@ title: FAQ（よくある失敗）
 ## 2) 差分が検出されない（merge-base が取れない / fetch-depth 不足）
 
 - 症状:
-  - `No changes to review compared to main.` のように表示される
+- `No changes to review compared to Release.` のように表示される
   - Actions でも差分が空扱いになる
 - 原因:
   - `actions/checkout` の `fetch-depth` が浅いと merge-base が安定して取れない
@@ -28,7 +28,7 @@ title: FAQ（よくある失敗）
   - `actions/checkout` に `fetch-depth: 0` を設定する
 - 確認コマンド:
   - `git fetch --all --tags`
-  - `git merge-base HEAD origin/main`
+- `git merge-base HEAD origin/Release`
 
 ## 3) planner を指定したのにスキップされる
 
