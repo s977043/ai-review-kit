@@ -45,7 +45,7 @@ dependencies: [code_search]
 - `strict` モードの導入可否判断。
 - ライブラリ側の型定義バグの修正。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - null/undefined が型で排除され、追加ガードが不要な箇所。
 - 変更が型注釈やコメントのみで、実行パスに影響しない。

@@ -49,7 +49,7 @@ dependencies: [test_runner, coverage_report]
 - 実行環境や外部サービスの障害注入（カオス試験）の設計。
 - プロダクション監視の網羅性評価。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - 変更がコメントやドキュメントのみで、実行経路に影響しない。
 - 既存テストが同等の失敗経路を十分にカバーしている。

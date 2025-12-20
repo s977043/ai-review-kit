@@ -42,7 +42,7 @@ outputKind: [tests, findings, summary]
 - テストケース自体の追加・削除の大規模再設計。
 - 実装コードの命名改善。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - 既存の命名規約に沿った変更であり、差分で逸脱がない。
 - 変更がテストのコメントやフォーマットのみ。

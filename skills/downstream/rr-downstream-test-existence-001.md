@@ -26,7 +26,7 @@ dependencies: [test_runner, coverage_report]
 - 網羅的なテストケース列挙（提案は最大3点までに絞る）。
 - テスト差分がすでにある場合の追加要求（原則として黙る）。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - 差分にテストファイル（`*.test.*` / `*.spec.*`）が含まれている場合。
 - 挙動変更のシグナル（新しい分岐、例外、バリデーション）が差分から読み取れない場合。

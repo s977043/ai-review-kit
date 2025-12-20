@@ -27,7 +27,7 @@ modelHint: balanced # cheap / balanced / high-accuracy
 
 - このスキルが扱わない領域（例: リファクタ方針の一般論、プロジェクト固有の制約の断定）を書く。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - こういうケースでは言わない（誤検知ガード）を列挙する。
 
@@ -44,6 +44,7 @@ modelHint: balanced # cheap / balanced / high-accuracy
 ## Output / 出力（短文版の推奨）
 
 River Reviewer のコメントは `<file>:<line>: <message>` 形式です。`<message>` は短くても、次が伝わる形にします。
+コメントは日本語で返す。
 
 - Finding: 何が問題か（1文）
 - Impact: 何が困るか（短く）

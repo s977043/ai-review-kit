@@ -32,7 +32,7 @@ dependencies:
 
 - 実装詳細の断定や、根拠のない推測で断言しない。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - 判断材料が不足している場合は、欠陥ではなく質問として扱う。
 

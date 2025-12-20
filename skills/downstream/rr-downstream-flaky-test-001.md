@@ -52,7 +52,7 @@ dependencies: [test_runner]
 - テストフレームワークの全面移行。
 - 監視/アラートの設計。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - テスト対象が純粋関数で、時間・乱数・外部 I/O を一切使っていない。
 - 変更がテストのコメントや説明文のみで、実行内容に影響しない。
