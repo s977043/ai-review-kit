@@ -23,6 +23,6 @@
 
 ### Release checklist
 
-- [ ] Tag release: `git tag v0.1.0` and `git push origin v0.1.0`.
-- [ ] (Optional) Add alias tag `v0` pointing to the same commit for workflows that want a floating tag.
-- [ ] Publish a GitHub Release with these notes and links to the sample skills and schema files.
+- [ ] `main` の更新後、Release PR（release-please）が作成されていることを確認する。
+- [ ] Release PR をマージしてリリースを確定する（タグ発行と GitHub Release は CI が実施）。
+- [ ] `v0` のようなエイリアスタグは CI が最新リリースへ追従させる。

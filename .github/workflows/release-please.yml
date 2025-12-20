@@ -1,0 +1,47 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release Please
+        id: release
+        uses: google-github-actions/release-please-action@v4
+        with:
+          release-type: node
+          package-name: river-reviewer
+
+      - name: Checkout (for floating tags)
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v6
+
+      - name: Update major alias tag (v0, v1, ...)
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.release.outputs.tag_name }}"
+          VERSION="${TAG#v}"
+          MAJOR="${VERSION%%.*}"
+          MAJOR_TAG="v${MAJOR}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch --tags --force
+          COMMIT="$(git rev-list -n 1 "${TAG}")"
+
+          git tag -f "${MAJOR_TAG}" "${COMMIT}"
+          git push --force origin "refs/tags/${MAJOR_TAG}"

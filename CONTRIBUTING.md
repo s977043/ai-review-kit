@@ -58,6 +58,11 @@ Issue テンプレートは `Issues → New issue` から利用できます（�
 
 プルリクエストは、小さく、目的にフォーカスしたものであることが理想です。
 
+補足:
+
+- 本リポジトリでは `commitlint`（Conventional Commits）を前提にしています。
+- リリース自動化（release-please）はコミット種別（`feat:` / `fix:` など）を参照するため、規約に沿ったコミットを推奨します。
+
 ### ✅ ローカルでのチェック（推奨）
 
 ```bash
@@ -70,6 +75,13 @@ npm run lint
 - スキル（`skills/`）を変更した: `npm run skills:validate`
 - エージェント定義を変更した: `npm run agents:validate`
 - トレース関連の機能を変更した: `npm run trace:validate`（OpenTelemetry 検証が必要な場合）
+
+## 🏷️ リリース（タグ発行）運用
+
+このリポジトリは `release-please` により、リリース用の PR を作成し、その PR を `main` にマージしたタイミングでタグ（例: `v0.1.2`）と GitHub Release を自動作成します。
+
+- 通常の PR を `main` にマージしても、毎回タグは発行しません（タグ汚染を避けるため）。
+- リリースを行う場合は、作成された Release PR を確認してマージしてください。
 
 ### 🧭 コーディング/運用ルール（要約）
 
