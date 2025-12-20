@@ -24,6 +24,7 @@ River Reviewer は「流れに寄り添う」AI レビューエージェント�
 - Lint 一式（Prettier / markdownlint / textlint など）: `npm run lint`
 - エージェント定義検証: `npm run agents:validate`
 - スキル定義検証: `npm run skills:validate`
+- Agent Skills 検証: `npm run agent-skills:validate`
 - OpenTelemetry トレース検証（必要時のみ）: `npm run trace:validate`
 - Planner 評価（任意・オフラインベンチ用）: `npm run planner:eval`
 
@@ -70,6 +71,11 @@ AI エージェントは「主に編集対象」を優先し、それ以外は�
 - 形式: YAML フロントマター付き Markdown
 - 主なフィールド: `id`, `name`, `description`, `phase`, `applyTo`, `inputContext`, `outputKind`, `modelHint`, `dependencies`, `tags`, `severity` など（詳細は `docs/skill-metadata.md`）
 - 変更後に実行: `npm run skills:validate` および `npm test`（該当があれば）
+
+### Agent Skills パッケージ（`skills/agent-skills/`）
+
+- 形式: `SKILL.md` + `references/` を基本とするフォルダ単位
+- 変更後に実行: `npm run agent-skills:validate`（必要に応じて `npm test`）
 
 ### エージェント/トレース
 

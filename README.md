@@ -137,10 +137,11 @@ review:
 1. 環境: Node 20+ 推奨（CI も Node 20 系で運用）
 2. 依存導入: `npm install`
 3. スキル検証: `npm run skills:validate`
-4. テスト: `npm test`
-5. Planner 評価（任意）: `npm run planner:eval`
-6. Review fixtures 評価（任意）: `npm run eval:fixtures`（must_include 方式）
-7. ドキュメント開発（任意）: `npm run dev`（Docusaurus）
+4. Agent Skills 検証（任意）: `npm run agent-skills:validate`
+5. テスト: `npm test`
+6. Planner 評価（任意）: `npm run planner:eval`
+7. Review fixtures 評価（任意）: `npm run eval:fixtures`（must_include 方式）
+8. ドキュメント開発（任意）: `npm run dev`（Docusaurus）
 
 ### ローカルレビュー実行（river run .）
 
@@ -225,6 +226,8 @@ instruction: |
 - `skills/core/`: 標準搭載スキル
 - `skills/community/`: コミュニティ提供や特定ライブラリ向けスキル
 - `skills/private/`: プロジェクト固有の非公開スキル
+
+Agent Skills 仕様のパッケージは `skills/agent-skills/` に配置し、`SKILL.md` + `references/` を基本構成とします（River Reviewer のスキーマ検証対象外）。
 
 ### LLM ベースのスキル選択（Skill Planner）
 
