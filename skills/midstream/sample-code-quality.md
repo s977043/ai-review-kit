@@ -32,7 +32,7 @@ severity: 'minor'
 - 重要度の低いスタイル指摘を大量に出さない。
 - 差分外のリファクタ方針を断定して押し付けない。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - 変更がコメント/整形のみで、実質的な挙動変更がない場合は深入りしない。
 

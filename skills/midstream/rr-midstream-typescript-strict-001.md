@@ -44,7 +44,7 @@ dependencies: [code_search]
 - 既存ライブラリの型定義の不備を修正する。
 - 型以外のスタイル/命名のレビュー。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - `any` が一時的な実験コードで、明示的なコメントがある。
 - 型定義が別ファイルにあり、変更範囲では判定できない。

@@ -43,7 +43,7 @@ dependencies: [repo_metadata]
 - 既存クライアントの破壊的変更に関する移行計画。
 - 実装レベルのパフォーマンス最適化。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - ルーティングの追加がなく、コメントやドキュメントのみの変更。
 - 既存の API ガイドラインに完全準拠している差分。

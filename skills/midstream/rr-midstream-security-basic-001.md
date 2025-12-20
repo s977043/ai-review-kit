@@ -22,7 +22,7 @@ dependencies: [code_search]
 - 差分外のコードを前提にした断定（コンテキスト不足時は Confidence を下げる）。
 - テスト/fixtures のダミー値を secrets として断定する。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - 環境変数参照（`process.env` / `import.meta.env`）で secrets を受け取っている場合。
 - `tests/`, `__tests__`, `fixtures` 配下の変更で、明確にテストデータである場合。

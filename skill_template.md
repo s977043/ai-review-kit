@@ -7,7 +7,7 @@ phase: midstream # upstream | midstream | downstream
 applyTo:
   - 'src/**/*.ts' # glob パターンを列挙。できるだけ絞り込む
 tags:
-  - example # カテゴリやドメインタグ（security, testing, api 等）
+  - example # カテゴリやドメインタグ（security, testing, api 等）。community 共有は community を付与
 severity: minor # info | minor | major | critical
 inputContext:
   - diff # diff / fullFile / tests / adr / commitMessage / repoConfig など
@@ -21,12 +21,13 @@ modelHint: balanced # cheap / balanced / high-accuracy
 ## Goal / 目的
 
 - このスキルで “何を減らす/防ぐ/促す” のかを 1〜2 行で書く。
+- 1スキル=1テーマに絞り、目的が混ざらないようにする。
 
 ## Non-goals / 扱わないこと
 
 - このスキルが扱わない領域（例: リファクタ方針の一般論、プロジェクト固有の制約の断定）を書く。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - こういうケースでは言わない（誤検知ガード）を列挙する。
 
@@ -43,6 +44,7 @@ modelHint: balanced # cheap / balanced / high-accuracy
 ## Output / 出力（短文版の推奨）
 
 River Reviewer のコメントは `<file>:<line>: <message>` 形式です。`<message>` は短くても、次が伝わる形にします。
+コメントは日本語で返す。
 
 - Finding: 何が問題か（1文）
 - Impact: 何が困るか（短く）
@@ -59,3 +61,13 @@ River Reviewer のコメントは `<file>:<line>: <message>` 形式です。`<me
 ## Good / Bad Examples（任意）
 
 - 短い例で、何が良い/悪いかを示す。
+
+## 評価指標（Evaluation）
+
+- 合格基準: 指摘が差分に紐づき、根拠と次アクションが説明されている。
+- 不合格基準: 差分と無関係な指摘、根拠のない断定、抑制条件の無視。
+
+## 人間に返す条件（Human Handoff）
+
+- 仕様や意図が不明確で解釈が分かれる場合は質問として返す。
+- 影響範囲が広い設計判断やトレードオフは人間レビューへ返す。

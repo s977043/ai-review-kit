@@ -47,7 +47,7 @@ dependencies: [repo_metadata, tracing]
 - 既存プロダクション障害の原因究明。
 - 実装詳細（ログライブラリ選定など）の決定。
 
-## False-positive guards / 黙る条件
+## False-positive guards / 抑制条件
 
 - 変更がドキュメントの誤字修正のみで、設計内容に影響しない。
 - 失敗モード/観測性が別 ADR で既に合意され、差分が参照更新のみ。
