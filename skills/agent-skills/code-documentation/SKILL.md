@@ -1,6 +1,6 @@
 ---
 name: code-documentation
-description: コードや API の意図を短時間で共有できるドキュメントの書き方をガイドする。
+description: コードやAPIの意図を短時間で共有できるドキュメントの書き方をガイドする。
 license: MIT
 compatibility: Requires repository context and target audience definition.
 metadata:
