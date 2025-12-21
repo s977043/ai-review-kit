@@ -14,7 +14,8 @@ class ConfigMergeError extends Error {
 function mergeValue(base, override) {
   if (Array.isArray(override)) return [...override];
   if (override && typeof override === 'object') {
-    return mergeConfig(base ?? {}, override);
+    const baseIsPlainObject = base && typeof base === 'object' && !Array.isArray(base);
+    return mergeConfig(baseIsPlainObject ? base : {}, override);
   }
   return override ?? base;
 }
