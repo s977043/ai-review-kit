@@ -404,7 +404,8 @@ Dependencies: ${
     });
 
     const estimator = new CostEstimator(process.env.OPENAI_MODEL || process.env.RIVER_OPENAI_MODEL || undefined);
-    const estimatedCost = estimator.estimateFromDiff(context.diff, context.plan?.selected ?? []);
+    const estimatedCost =
+      context.status === 'ok' ? estimator.estimateFromDiff(context.diff, context.plan?.selected ?? []) : null;
 
     const logRunHeader = parsed.output === 'markdown' ? console.error : console.log;
     logRunHeader(`River Reviewer (local)
@@ -420,18 +421,28 @@ Dependencies: ${
       context.availableDependencies ? context.availableDependencies.join(', ') : 'not specified (skip disabled)'
     }`);
 
+    if (context.status === 'skipped-by-label') {
+      const labels = context.matchedLabels?.length ? context.matchedLabels.join(', ') : '(not specified)';
+      console.log(`Review skipped: PR labels matched exclude patterns (${labels}).`);
+      return 0;
+    }
+
     if (context.status === 'no-changes') {
       console.log(`No changes to review compared to ${context.defaultBranch}.`);
       return 0;
     }
 
-    if (parsed.maxCost !== null && estimatedCost.usd > parsed.maxCost) {
+    if (estimatedCost && parsed.maxCost !== null && estimatedCost.usd > parsed.maxCost) {
       console.log(estimator.formatCost(estimatedCost));
       console.error(`Estimated cost $${estimatedCost.usd.toFixed(4)} exceeds max-cost ${parsed.maxCost}. Aborting.`);
       return 1;
     }
 
     if (parsed.estimate) {
+      if (!estimatedCost) {
+        console.log('Cost estimation skipped (no changes or skipped by label).');
+        return 0;
+      }
       console.log('Cost Estimate:');
       console.log(estimator.formatCost(estimatedCost));
       console.log(`Files to review: ${context.changedFiles.length}`);

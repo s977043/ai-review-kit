@@ -1,5 +1,9 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
+import { minimatch } from 'minimatch';
+import { ConfigLoader } from '../config/loader.mjs';
 import { collectRepoDiff } from './diff.mjs';
+import { renderDiffText } from './diff-optimizer.mjs';
 import { generateReview } from './review-engine.mjs';
 import { detectDefaultBranch, ensureGitRepo, findMergeBase } from './git.mjs';
 import { createOpenAIPlanner } from './openai-planner.mjs';
@@ -17,6 +21,65 @@ function normalizePhase(phase) {
 
 // NOTE: Keep this list in sync with schemas/skill.schema.json dependencies enum.
 const dependencyStubs = ['code_search', 'test_runner', 'coverage_report', 'adr_lookup', 'repo_metadata', 'tracing'];
+
+const configLoader = new ConfigLoader();
+
+function shouldExclude(filePath, patterns = []) {
+  return patterns.some(pattern => minimatch(filePath, pattern, { dot: true }));
+}
+
+function applyFileExclusions(diff, patterns = []) {
+  if (!patterns.length) return diff;
+
+  const changedFiles = (diff.changedFiles ?? []).filter(filePath => !shouldExclude(filePath, patterns));
+  const rawFiles = (diff.files ?? []).filter(file => !shouldExclude(file.path, patterns));
+  const optimizedFiles = (diff.filesForReview ?? diff.files ?? []).filter(file => !shouldExclude(file.path, patterns));
+
+  const rawDiffText = renderDiffText(rawFiles);
+  const diffText = renderDiffText(optimizedFiles);
+  const rawTokenEstimate = Math.ceil(rawDiffText.length / 4);
+  const tokenEstimate = Math.ceil(diffText.length / 4);
+  const reduction = rawTokenEstimate === 0 ? 0 : Math.max(0, Math.round(((rawTokenEstimate - tokenEstimate) / rawTokenEstimate) * 100));
+
+  return {
+    ...diff,
+    changedFiles,
+    files: rawFiles,
+    filesForReview: optimizedFiles,
+    rawDiffText,
+    diffText,
+    rawTokenEstimate,
+    tokenEstimate,
+    reduction,
+  };
+}
+
+async function resolvePullRequestLabels() {
+  const envLabels = parseList(process.env.RIVER_PR_LABELS);
+  if (envLabels.length) return envLabels;
+
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath) return [];
+
+  try {
+    const raw = await fs.readFile(eventPath, 'utf8');
+    const event = JSON.parse(raw);
+    const pullRequestLabels = event?.pull_request?.labels ?? event?.labels ?? [];
+    return pullRequestLabels.map(label => label?.name).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function shouldSkipByLabel(prLabels = [], ignorePatterns = []) {
+  if (!prLabels.length || !ignorePatterns.length) return { matched: [], shouldSkip: false };
+  const normalizedLabels = prLabels.map(label => label.toLowerCase());
+  const matched = ignorePatterns.filter(pattern => {
+    const needle = pattern.toLowerCase();
+    return normalizedLabels.some(label => label.includes(needle));
+  });
+  return { matched, shouldSkip: matched.length > 0 };
+}
 
 function resolveAvailableContexts(inputContexts) {
   const envContexts = parseList(process.env.RIVER_AVAILABLE_CONTEXTS);
@@ -43,16 +106,22 @@ async function collectLocalContext({
   availableDependencies,
 } = {}) {
   const repoRoot = await ensureGitRepo(cwd);
+  const { config, path: configPath, source: configSource } = await configLoader.load(repoRoot);
+  const prLabels = await resolvePullRequestLabels();
   const { rulesText: projectRules } = await loadProjectRules(repoRoot);
   const defaultBranch = await detectDefaultBranch(repoRoot);
   const mergeBase = await findMergeBase(repoRoot, defaultBranch);
-  const diff = await collectRepoDiff(repoRoot, mergeBase, { contextLines });
+  const rawDiff = await collectRepoDiff(repoRoot, mergeBase, { contextLines });
+  const diff = applyFileExclusions(rawDiff, config.exclude?.files ?? []);
   const reviewFiles = diff.filesForReview?.map(file => file.path) ?? diff.changedFiles;
   const contexts = resolveAvailableContexts(availableContexts);
   const dependencies = resolveAvailableDependencies(availableDependencies);
 
   return {
     repoRoot,
+    config,
+    configPath,
+    configSource,
     projectRules,
     defaultBranch,
     mergeBase,
@@ -60,6 +129,7 @@ async function collectLocalContext({
     reviewFiles,
     availableContexts: contexts,
     availableDependencies: dependencies,
+    prLabels,
     debug,
   };
 }
@@ -81,12 +151,46 @@ export async function planLocalReview({
     availableContexts,
     availableDependencies,
   });
-  const { repoRoot, projectRules, defaultBranch, mergeBase, diff, reviewFiles, availableContexts: contexts, availableDependencies: dependencies } =
-    base;
+  const {
+    repoRoot,
+    projectRules,
+    defaultBranch,
+    mergeBase,
+    diff,
+    reviewFiles,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
+    config,
+    configPath,
+    configSource,
+    prLabels,
+  } = base;
   const requestedPlannerMode = normalizePlannerMode(plannerMode ?? process.env.RIVER_PLANNER_MODE, {
     defaultMode: 'off',
   });
   const plannerRequested = requestedPlannerMode !== 'off';
+
+  const { matched: ignoredLabels, shouldSkip } = shouldSkipByLabel(
+    prLabels,
+    config.exclude?.prLabelsToIgnore ?? [],
+  );
+
+  if (shouldSkip) {
+    return {
+      status: 'skipped-by-label',
+      repoRoot,
+      defaultBranch,
+      mergeBase,
+      projectRules,
+      availableContexts: contexts,
+      availableDependencies: dependencies,
+      config,
+      configPath,
+      configSource,
+      prLabels,
+      matchedLabels: ignoredLabels,
+    };
+  }
 
   if (!reviewFiles.length) {
     return {
@@ -98,6 +202,10 @@ export async function planLocalReview({
       diff,
       availableContexts: contexts,
       availableDependencies: dependencies,
+      config,
+      configPath,
+      configSource,
+      prLabels,
     };
   }
 
@@ -144,6 +252,10 @@ export async function planLocalReview({
     projectRules,
     availableContexts: contexts,
     availableDependencies: dependencies,
+    prLabels,
+    config,
+    configPath,
+    configSource,
   };
 }
 
@@ -180,6 +292,27 @@ export async function runLocalReview(
       repoRoot: context.repoRoot,
       defaultBranch: context.defaultBranch,
       mergeBase: context.mergeBase,
+      config: context.config,
+      configPath: context.configPath,
+      configSource: context.configSource,
+      prLabels: context.prLabels,
+    };
+  }
+
+  if (context.status === 'skipped-by-label') {
+    return {
+      status: 'skipped-by-label',
+      reason: 'pr-label',
+      matchedLabels: context.matchedLabels,
+      repoRoot: context.repoRoot,
+      defaultBranch: context.defaultBranch,
+      mergeBase: context.mergeBase,
+      availableContexts: context.availableContexts,
+      availableDependencies: context.availableDependencies,
+      config: context.config,
+      configPath: context.configPath,
+      configSource: context.configSource,
+      prLabels: context.prLabels,
     };
   }
 
@@ -191,6 +324,7 @@ export async function runLocalReview(
     model,
     apiKey,
     projectRules: context.projectRules,
+    config: context.config,
   });
 
   return {
@@ -211,6 +345,10 @@ export async function runLocalReview(
     projectRules: context.projectRules,
     availableContexts: context.availableContexts,
     availableDependencies: context.availableDependencies,
+    prLabels: context.prLabels,
+    config: context.config,
+    configPath: context.configPath,
+    configSource: context.configSource,
   };
 }
 
@@ -257,5 +395,8 @@ export async function doctorLocalReview({
     availableContexts: contexts,
     availableDependencies: dependencies,
     diff,
+    config: base.config,
+    configPath: base.configPath,
+    configSource: base.configSource,
   };
 }

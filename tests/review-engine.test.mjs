@@ -59,3 +59,16 @@ test('buildPrompt injects project rules when provided', () => {
   assert.match(prompt, /Project-specific review rules/i);
   assert.match(prompt, /Use App Router/);
 });
+
+test('buildPrompt switches language based on config', () => {
+  const { prompt, language } = buildPrompt({
+    diffText,
+    diffFiles: diff.files,
+    plan,
+    phase: 'midstream',
+    projectRules: null,
+    config: { review: { language: 'en' } },
+  });
+  assert.equal(language, 'en');
+  assert.match(prompt, /Write the <message> in English/);
+});

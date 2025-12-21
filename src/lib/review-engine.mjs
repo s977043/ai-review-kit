@@ -1,18 +1,58 @@
+import { mergeConfig } from '../config/loader.mjs';
+import { defaultConfig } from '../config/default.mjs';
 import { summarizeSkill } from './review-runner.mjs';
 import { buildHeuristicComments } from './heuristic-review.mjs';
 import { formatFindingMessage, validateFindingMessage } from './finding-format.mjs';
 
-const DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
 const MAX_PROMPT_CHARS = 12000;
 const MAX_PROMPT_PREVIEW_CHARS = 2000;
 const NO_ISSUES_REGEX = /^NO_ISSUES/i;
 const LINE_COMMENT_REGEX = /^(.+?):(\d+):\s*(.+)$/;
 
-function resolveOpenAIConfig(options = {}) {
+function buildSystemMessage(language) {
+  return language === 'en'
+    ? 'You are River Reviewer, an expert code review assistant. Respond in English. You excel at spotting risky changes and explaining them briefly.'
+    : 'You are River Reviewer, an expert code review assistant. Respond in Japanese. You excel at spotting risky changes and explaining them briefly.';
+}
+
+function buildLanguageInstruction(language) {
+  return language === 'en' ? '- Write the <message> in English.' : '- <message>は日本語で記述すること。';
+}
+
+function buildSeverityInstruction(severity, language) {
+  const japanese = {
+    strict: '軽微な懸念も含めて網羅的に指摘する',
+    normal: '重要度と再現性のバランスを取り、主要なリスクを指摘する',
+    relaxed: '重大・致命的な問題に限定し、軽微な指摘は省く',
+  };
+  const english = {
+    strict: 'Capture even minor risks and style regressions',
+    normal: 'Balance breadth with impact; focus on notable risks',
+    relaxed: 'Limit findings to critical or high-impact issues; skip nits',
+  };
+  const map = language === 'en' ? english : japanese;
+  const label = language === 'en' ? 'Severity focus' : '厳格度';
+  return `- ${label} (${severity}): ${map[severity] ?? map.normal}`;
+}
+
+function buildAdditionalSection(instructions, language) {
+  if (!instructions?.length) return '';
+  const header = language === 'en' ? 'Additional instructions:' : '追加指示:';
+  const body = instructions.map(item => `- ${item}`).join('\n');
+  return `\n${header}\n${body}\n`;
+}
+
+function resolveOpenAIConfig(options = {}, config = defaultConfig) {
+  const provider = config.model?.provider ?? 'openai';
+  const modelName = options.model || ENV_DEFAULT_MODEL || config.model?.modelName;
   return {
+    provider,
     apiKey: options.apiKey || process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-    model: options.model || DEFAULT_MODEL,
+    model: modelName,
     endpoint: options.endpoint || process.env.RIVER_OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions',
+    temperature: config.model?.temperature ?? 0,
+    maxTokens: config.model?.maxTokens ?? 600,
   };
 }
 
@@ -40,7 +80,11 @@ function buildProjectRulesSection(rulesText) {
   return `\n### Project-specific review rules\n\n以下は、このリポジトリ専用のレビューガイドラインです。必ず考慮してください。\n\n---\n${rulesText}\n---\n`;
 }
 
-export function buildPrompt({ diffText, diffFiles, plan, phase, projectRules, maxChars = MAX_PROMPT_CHARS }) {
+export function buildPrompt({ diffText, diffFiles, plan, phase, projectRules, maxChars = MAX_PROMPT_CHARS, config = defaultConfig }) {
+  const effectiveConfig = mergeConfig(defaultConfig, config ?? {});
+  const reviewConfig = effectiveConfig.review ?? defaultConfig.review;
+  const language = reviewConfig.language ?? defaultConfig.review.language;
+  const severity = reviewConfig.severity ?? defaultConfig.review.severity;
   const truncated = diffText.length > maxChars;
   const diffBody = truncated ? `${diffText.slice(0, maxChars)}\n...[truncated]` : diffText;
   const prompt = `You are River Reviewer, an AI code review agent.
@@ -53,7 +97,7 @@ Relevant skills:
 ${buildSkillSummary(plan)}
 
 ${buildProjectRulesSection(projectRules)}Review the unified git diff below and produce concise findings.
-- Write the <message> in Japanese.
+${buildLanguageInstruction(language)}
 - Output each finding on its own line using the format "<file>:<line>: <message>".
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
@@ -61,10 +105,11 @@ ${buildProjectRulesSection(projectRules)}Review the unified git diff below and p
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
 - Limit to 8 findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
 - Keep messages brief (<=200 characters).
-
+${buildSeverityInstruction(severity, language)}
+${buildAdditionalSection(reviewConfig.additionalInstructions, language)}
 Diff:
 ${diffBody}`;
-  return { prompt, truncated };
+  return { prompt, truncated, language, severity };
 }
 
 export function parseLineComments(outputText) {
@@ -86,7 +131,7 @@ export function parseLineComments(outputText) {
   return comments.length ? comments : null;
 }
 
-async function callOpenAI({ prompt, apiKey, model, endpoint }) {
+async function callOpenAI({ prompt, apiKey, model, endpoint, temperature, maxTokens, systemMessage }) {
   const controller = AbortSignal.timeout(15000);
   const res = await fetch(endpoint, {
     method: 'POST',
@@ -97,13 +142,12 @@ async function callOpenAI({ prompt, apiKey, model, endpoint }) {
     },
     body: JSON.stringify({
       model,
-      temperature: 0,
-      max_tokens: 600,
+      temperature,
+      max_tokens: maxTokens,
       messages: [
         {
           role: 'system',
-          content:
-            'You are River Reviewer, an expert code review assistant. Respond in Japanese. You excel at spotting risky changes and explaining them briefly.',
+          content: systemMessage ?? buildSystemMessage('ja'),
         },
         { role: 'user', content: prompt },
       ],
@@ -246,7 +290,9 @@ export async function generateReview({
   apiKey,
   projectRules,
   maxPromptChars = MAX_PROMPT_CHARS,
+  config,
 }) {
+  const effectiveConfig = mergeConfig(defaultConfig, config ?? {});
   const promptInfo = buildPrompt({
     diffText: diff.diffText,
     diffFiles: diff.files,
@@ -254,29 +300,39 @@ export async function generateReview({
     phase,
     projectRules,
     maxChars: maxPromptChars,
+    config: effectiveConfig,
   });
-  const config = resolveOpenAIConfig({ model, apiKey });
+  const openAIConfig = resolveOpenAIConfig({ model, apiKey }, effectiveConfig);
+  const language = promptInfo.language ?? effectiveConfig.review.language;
 
   let comments = [];
   const debug = {
     promptTruncated: promptInfo.truncated,
     promptPreview: promptInfo.prompt.slice(0, MAX_PROMPT_PREVIEW_CHARS),
-    llmModel: config.model,
+    llmModel: openAIConfig.model,
+    llmProvider: openAIConfig.provider,
+    reviewLanguage: language,
+    reviewSeverity: promptInfo.severity,
   };
 
   const skipReason = dryRun
     ? 'dry-run enabled'
-    : config.apiKey
-      ? null
-      : 'OPENAI_API_KEY (or RIVER_OPENAI_API_KEY) not set';
+    : openAIConfig.provider !== 'openai'
+      ? `provider ${openAIConfig.provider} is not supported yet`
+      : openAIConfig.apiKey
+        ? null
+        : 'OPENAI_API_KEY (or RIVER_OPENAI_API_KEY) not set';
 
   if (!skipReason) {
     try {
       const output = await callOpenAI({
         prompt: promptInfo.prompt,
-        apiKey: config.apiKey,
-        model: config.model,
-        endpoint: config.endpoint,
+        apiKey: openAIConfig.apiKey,
+        model: openAIConfig.model,
+        endpoint: openAIConfig.endpoint,
+        temperature: openAIConfig.temperature,
+        maxTokens: openAIConfig.maxTokens,
+        systemMessage: buildSystemMessage(language),
       });
       debug.rawLlmOutput = output;
       const parsed = parseLineComments(output);
@@ -331,7 +387,7 @@ export async function generateReview({
     comments,
     prompt: promptInfo.prompt,
     promptTruncated: promptInfo.truncated,
-    llmModel: config.model,
+    llmModel: openAIConfig.model,
     debug,
   };
 }
