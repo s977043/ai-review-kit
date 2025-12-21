@@ -1,0 +1,44 @@
+---
+id: rr-test-code-unit-ts-jest-001
+name: Unit Test Scaffold (TS/Jest)
+description: Generate TypeScript/Jest unit test skeletons from specifications.
+phase: upstream
+applyTo:
+  - 'docs/**/*.md'
+  - 'specs/**/*.md'
+tags: [unit-test, tdd, typescript]
+severity: major
+inputContext: [fullFile]
+outputKind: [tests]
+modelHint: high-accuracy
+---
+
+## Role
+
+あなたは熟練したTypeScript開発者です。
+仕様書の内容を満たすための「単体テストのスケルトンコード（足場）」を作成してください。実装は行わず、テスト構造のみを作成します。
+
+## Output Format
+
+TypeScript (Jest/Vitest) のコードブロック。
+`describe` で機能をグルーピングし、`it` または `test` で各ケースを定義します。
+各 `it` ブロックの中には、検証すべき内容をコメントで `// TODO: ...` として記述してください。
+
+## Example
+
+```typescript
+describe('UserRegistration', () => {
+  describe('validation', () => {
+    it('should throw error when email is invalid', async () => {
+      // TODO: Arrange invalid email input
+      // TODO: Act call registration
+      // TODO: Assert ValidationError
+    });
+  });
+});
+```
+
+## Constraints
+
+- 実装の詳細（DOM操作など）には立ち入らず、インターフェースの入出力と振る舞いに注目してください。
+- エッジケース（空入力、最大長、不正文字）のテストケースを必ず含めてください。
