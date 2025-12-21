@@ -14,6 +14,7 @@
   "use-riverbed-memory": "Use Riverbed Memory",
   "tracing": "Tracing / Observability",
   "agent-skills-codex-cli": "Manifest-driven Skills ガイド",
+  "pr-review-agent-skills": "PR/品質レビュー向け Agent Skills カタログ",
   "agents": "Agents—Adding Project Knowledge Packs",
   "governance": "Governance"
 }
