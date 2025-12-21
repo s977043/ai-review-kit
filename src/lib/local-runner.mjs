@@ -31,7 +31,7 @@ function shouldExclude(filePath, patterns = []) {
 function applyFileExclusions(diff, patterns = []) {
   if (!patterns.length) return diff;
 
-  const changedFiles = (diff.changedFiles ?? []).filter(path => !shouldExclude(path, patterns));
+  const changedFiles = (diff.changedFiles ?? []).filter(filePath => !shouldExclude(filePath, patterns));
   const rawFiles = (diff.files ?? []).filter(file => !shouldExclude(file.path, patterns));
   const optimizedFiles = (diff.filesForReview ?? diff.files ?? []).filter(file => !shouldExclude(file.path, patterns));
 

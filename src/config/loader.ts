@@ -1,1 +1,1 @@
-export { ConfigLoader, ConfigLoaderError, mergeConfig } from './loader.mjs';
+export { ConfigLoader, ConfigLoaderError, ConfigMergeError, mergeConfig } from './loader.mjs';

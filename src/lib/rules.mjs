@@ -24,10 +24,6 @@ export async function loadProjectRules(repoRoot, options = {}) {
   }
 
   try {
-    const stat = await fs.stat(rulesPath);
-    if ((stat.mode & 0o444) === 0) {
-      throw new ProjectRulesError(`Failed to read project rules at ${rulesPath}: permission denied`);
-    }
     const raw = await fs.readFile(rulesPath, 'utf8');
     const trimmed = raw.trim();
     return {
