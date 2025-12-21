@@ -3,7 +3,13 @@ import path from 'node:path';
 import { riverReviewerConfigSchema } from './schema.mjs';
 import { defaultConfig } from './default.mjs';
 
-class ConfigMergeError extends Error {}
+class ConfigMergeError extends Error {
+  constructor(message, options = {}) {
+    super(message, options);
+    this.name = 'ConfigMergeError';
+    if (options.cause) this.cause = options.cause;
+  }
+}
 
 function mergeValue(base, override) {
   if (Array.isArray(override)) return [...override];
@@ -66,7 +72,7 @@ export class ConfigLoader {
       const merged = mergeConfig(this.baseConfig, parsedInput);
       return { config: merged, path: configPath, source: 'file' };
     } catch (err) {
-      throw new ConfigMergeError('設定のマージに失敗しました', err);
+      throw new ConfigMergeError('設定のマージに失敗しました', { cause: err });
     }
   }
 }

@@ -142,8 +142,8 @@ async function callOpenAI({ prompt, apiKey, model, endpoint, temperature, maxTok
     },
     body: JSON.stringify({
       model,
-      temperature: typeof temperature === 'number' ? temperature : 0,
-      max_tokens: typeof maxTokens === 'number' ? maxTokens : 600,
+      temperature,
+      max_tokens: maxTokens,
       messages: [
         {
           role: 'system',
