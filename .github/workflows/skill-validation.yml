@@ -65,6 +65,13 @@ jobs:
           npm run build | tee build.log
         continue-on-error: true
 
+      - name: Upload log files
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: validation-logs
+          path: '*.log'
+
       - name: Create GitHub issue on failure
         if: |
           steps.agents-validate.outcome == 'failure' ||
@@ -127,16 +134,23 @@ jobs:
               },
             ];
 
-            const openIssues = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              state: 'open',
-              per_page: 100,
-            });
+            const labelName = 'scheduled-check';
+
+            const openIssuesData = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                owner,
+                repo,
+                state: 'open',
+                labels: labelName,
+                per_page: 100,
+              },
+            );
+            const openIssues = { data: openIssuesData };
 
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 
-            const labelName = 'scheduled-check';
+            let useLabelForIssues = true;
             try {
               await github.rest.issues.createLabel({
                 owner,
@@ -147,7 +161,8 @@ jobs:
               });
             } catch (err) {
               if (err.status !== 422) {
-                throw err;
+                console.warn(`ラベル作成に失敗しましたが、処理を継続します: ${err.message}`);
+                useLabelForIssues = false;
               }
             }
 
@@ -158,13 +173,24 @@ jobs:
                 continue;
               }
               const log = fs.existsSync(check.logPath) ? fs.readFileSync(check.logPath, 'utf8') : '';
-              const snippet = log.split('\n').slice(-120).join('\n');
-              const body = `定期実行で \`${check.key}\` が失敗しています。\n\n- 実行: ${runUrl}\n- ログ最後の 120 行:\n\`\`\`\n${snippet}\n\`\`\`\n`;
-              await github.rest.issues.create({
-                owner,
-                repo,
-                title: check.title,
-                body,
-                labels: [labelName],
-              });
+              const lines = log.trimEnd().split('\n');
+              const isTruncated = lines.length > 120;
+              const snippet = (isTruncated ? lines.slice(-120) : lines).join('\n');
+              const note = isTruncated
+                ? '\n\n_ログは末尾から 120 行のみを表示しています (途中からの抜粋の可能性があります)。_'
+                : '';
+              const body = `定期実行で \`${check.key}\` が失敗しています。\n\n- 実行: ${runUrl}\n- ログ最後の ${Math.min(120, lines.length)} 行:\n\`\`\`\n${snippet}\n\`\`\`\n${note}\n`;
+
+              try {
+                await github.rest.issues.create({
+                  owner,
+                  repo,
+                  title: check.title,
+                  body,
+                  labels: useLabelForIssues ? [labelName] : [],
+                });
+                console.log(`Issue を作成しました: ${check.title}`);
+              } catch (err) {
+                console.error(`Issue 作成に失敗しました (${check.key}): ${err.message}`);
+              }
             }
