@@ -1,140 +1,43 @@
 ---
 name: code-review
-description: Automated code review for pull requests using specialized review patterns. Analyzes code for quality, security, performance, and best practices. Use when reviewing code changes, PRs, or doing code audits.
-source: anthropics/claude-code
+description: PR 向けの自動コードレビュー。セキュリティ・性能・品質・テスト観点で差分を評価する。
 license: Apache-2.0
+compatibility: 差分とリポジトリの読み取り権限がある環境で利用する。
+metadata:
+  author: river-reviewer
+  version: '0.1.0'
+allowed-tools:
+  - Read
 ---
 
-## References
+## Goal
 
-- 詳細チェックリスト: `references/review-checklist.md`
+差分から重大リスクを早期に特定し、具体的な修正指針を返す。
 
-# Code Review
+## When to use
 
-## Review Categories
+- PR レビューやセルフレビューで網羅的に観点を洗いたいとき
+- 変更が広範囲で、セキュリティ/性能/品質/テストの抜け漏れが懸念されるとき
 
-### 1. Security Review
+## Steps
 
-Check for:
+1. 変更差分を把握し、影響範囲とリスクの高い箇所を特定する。
+2. 観点別に確認する。
+   - セキュリティ: インジェクション、認可漏れ、ハードコード秘密、危険な外部入力。
+   - 性能: N+1、不要な再描画/コピー、キャッシュ不足、同期 I/O。
+   - 品質: 責務肥大、ネーミング不明瞭、例外/エラーログ欠如、マジックナンバー。
+   - テスト: 新規コードに対するテスト有無、挙動を保証するアサーションか、フレーク要因。
+3. 重大度ごとにコメント化し、Why と Fix をセットで提示する。
+4. 良い実装があればポジティブフィードバックも残す。
 
-- SQL injection vulnerabilities
-- XSS (Cross-Site Scripting)
-- Command injection
-- Insecure deserialization
-- Hardcoded secrets/credentials
-- Improper authentication/authorization
-- Insecure direct object references
+## Output format
 
-### 2. Performance Review
+- Critical: **ファイル:行** 危険な欠陥と修正案
+- Suggestion: **ファイル:行** 品質/性能改善の提案と理由
+- Nit: 軽微な改善
+- What's Good: 評価できる実装やテスト
 
-Check for:
+## Edge cases
 
-- N+1 queries
-- Missing database indexes
-- Unnecessary re-renders (React)
-- Memory leaks
-- Blocking operations in async code
-- Missing caching opportunities
-- Large bundle sizes
-
-### 3. Code Quality Review
-
-Check for:
-
-- Code duplication (DRY violations)
-- Functions doing too much (SRP violations)
-- Deep nesting / complex conditionals
-- Magic numbers/strings
-- Poor naming
-- Missing error handling
-- Incomplete type coverage
-
-### 4. Testing Review
-
-Check for:
-
-- Missing test coverage for new code
-- Tests that don't test behavior
-- Flaky test patterns
-- Missing edge cases
-- Mocked external dependencies
-
-## Review Output Format
-
-```markdown
-## Code Review Summary
-
-### 🔴 Critical (Must Fix)
-
-- **[File:Line]** [Issue description]
-  - **Why:** [Explanation]
-  - **Fix:** [Suggested fix]
-
-### 🟡 Suggestions (Should Consider)
-
-- **[File:Line]** [Issue description]
-  - **Why:** [Explanation]
-  - **Fix:** [Suggested fix]
-
-### 🟢 Nits (Optional)
-
-- **[File:Line]** [Minor suggestion]
-
-### ✅ What's Good
-
-- [Positive feedback on good patterns]
-```
-
-## Common Patterns to Flag
-
-### Security
-
-```javascript
-// BAD: SQL injection
-const query = `SELECT * FROM users WHERE id = ${userId}`;
-
-// GOOD: Parameterized query
-const query = 'SELECT * FROM users WHERE id = $1';
-await db.query(query, [userId]);
-```
-
-### Performance
-
-```javascript
-// BAD: N+1 query
-users.forEach(async (user) => {
-  const posts = await getPosts(user.id);
-});
-
-// GOOD: Batch query
-const userIds = users.map((u) => u.id);
-const posts = await getPostsForUsers(userIds);
-```
-
-### Error Handling
-
-```javascript
-// BAD: Swallowing errors
-try {
-  await riskyOperation();
-} catch (e) {}
-
-// GOOD: Handle or propagate
-try {
-  await riskyOperation();
-} catch (e) {
-  logger.error('Operation failed', { error: e });
-  throw new AppError('Operation failed', { cause: e });
-}
-```
-
-## Review Checklist
-
-- [ ] No hardcoded secrets
-- [ ] Input validation present
-- [ ] Error handling complete
-- [ ] Types/interfaces defined
-- [ ] Tests added for new code
-- [ ] No obvious performance issues
-- [ ] Code is readable and documented
-- [ ] Breaking changes documented
+- プロジェクト固有のセキュリティ/コーディング規約がある場合、それを優先する。
+- 差分が大きい場合は、リスクの高い領域を優先して確認する。

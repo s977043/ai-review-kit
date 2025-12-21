@@ -11,7 +11,7 @@ River Reviewer の `skills/**/*.md` とは別系統として扱い、`SKILL.md` 
 - 必須: `SKILL.md`（YAML frontmatter + 本文）
 - 推奨: `references/`（詳細手順や根拠、長文を分離）
 
-## 収録スキル（2024-05 時点）
+## 収録スキル
 
 - `architecture-review/`: 変更の全体設計・境界・責務のチェック
 - `code-quality/`: 可読性・保守性の基本チェック
