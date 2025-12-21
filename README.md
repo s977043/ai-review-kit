@@ -126,6 +126,29 @@ review:
         env: { OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} }
 ```
 
+### 設定ファイルでのカスタマイズ
+
+リポジトリ直下に `.river-reviewer.json` / `.river-reviewer.yaml` / `.river-reviewer.yml` を置くと、モデル設定・レビュー言語・厳格度・除外パターンをプロジェクト単位で上書きできます。見つからない場合は下記のデフォルト値で動作します。
+
+```yaml
+# デフォルト値の例
+model:
+  provider: openai
+  modelName: gpt-4o-mini
+  temperature: 0
+  maxTokens: 600
+review:
+  language: ja
+  severity: normal
+  additionalInstructions: []
+exclude:
+  files: []
+  prLabelsToIgnore: []
+```
+
+設定は `ConfigLoader` が Zod で検証したうえでデフォルトとマージされます。値を部分的に指定するだけで残りは自動補完されるため、JSON/YAML どちらでも最小限の記述でカスタムできます。
+トップレベルはオブジェクトのみ受け付けるため、配列やスカラー値のみのファイルはエラーとなります。
+
 ### セキュリティ考慮事項
 
 - `OPENAI_API_KEY` は必ず Repository Secrets に設定し、`env:` で参照する
