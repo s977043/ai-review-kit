@@ -1,5 +1,5 @@
 ---
-id: rr-test-code-nextjs-001
+id: rr-upstream-test-code-nextjs-001
 name: Component Test Scaffold (Next.js)
 description: Generate React/Next.js component test skeletons (RTL) from specifications.
 phase: upstream
@@ -18,6 +18,16 @@ modelHint: high-accuracy
 あなたは熟練したNext.js/React開発者です。
 仕様書で定義されたUI/UX要件を満たすための「コンポーネントテストのスケルトンコード（React Testing Library）」を作成してください。
 
+## Non-goals / 扱わないこと
+
+- 実装コードの詳細なロジックや最適化方針を示さない。
+- E2E や統合テストの網羅は対象外とし、コンポーネント単位の足場生成に限定する。
+
+## False-positive guards / 抑制条件
+
+- 仕様に明記されていない要件を推測で追加しない。
+- テスト対象外と明記された領域（例: 外部APIモック不可など）への指摘は行わない。
+
 ## Output Format
 
 TypeScript (.tsx) のコードブロック。
@@ -27,7 +37,7 @@ TypeScript (.tsx) のコードブロック。
 ## Example
 
 ```tsx
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LoginForm from '@/components/LoginForm';
 
@@ -41,7 +51,7 @@ describe('LoginForm', () => {
     render(<LoginForm />);
     // TODO: Setup userEvent
     // TODO: Fill invalid data
-    // TODO: Click submit
+    // TODO: Click submit (use userEvent)
     // TODO: Assert error message appears
   });
 });

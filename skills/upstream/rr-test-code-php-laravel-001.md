@@ -1,5 +1,5 @@
 ---
-id: rr-test-code-php-laravel-001
+id: rr-upstream-test-code-php-laravel-001
 name: Test Scaffold (Laravel/PHPUnit)
 description: Generate PHP/Laravel (PHPUnit) test skeletons from specifications.
 phase: upstream
@@ -17,6 +17,16 @@ modelHint: high-accuracy
 
 あなたは熟練したLaravel開発者です。
 仕様書の内容を満たすための「PHPUnit形式のテストコード（足場）」を作成してください。
+
+## Non-goals / 扱わないこと
+
+- アプリケーションロジックの実装や最適化方針は示さない。
+- E2E や統合テストの網羅は対象外で、PHPUnit の単体/機能テストの足場に限定する。
+
+## False-positive guards / 抑制条件
+
+- 仕様に記載のない要件を推測で追加しない。
+- 既に対象外と明示された領域（例: 外部サービス連携の実装詳細）への指摘は行わない。
 
 ## Output Format
 

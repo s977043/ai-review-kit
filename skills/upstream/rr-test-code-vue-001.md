@@ -1,5 +1,5 @@
 ---
-id: rr-test-code-vue-001
+id: rr-upstream-test-code-vue-001
 name: Component Test Scaffold (Vue.js)
 description: Generate Vue.js component test skeletons (Vue Test Utils) from specifications.
 phase: upstream
@@ -17,6 +17,16 @@ modelHint: high-accuracy
 
 あなたは熟練したVue.js開発者です。
 仕様書で定義されたUI/UX要件を満たすための「コンポーネントテストのスケルトンコード（Vue Test Utils）」を作成してください。
+
+## Non-goals / 扱わないこと
+
+- 実装ロジックや最適化方針は指示しない。
+- E2E/統合テストの網羅は対象外で、コンポーネント単位の足場に限定する。
+
+## False-positive guards / 抑制条件
+
+- 仕様に記載のない要件を推測で追加しない。
+- 対象外と明記された領域（例: 外部API連携の実装詳細）への指摘は行わない。
 
 ## Output Format
 

@@ -1,12 +1,12 @@
 ---
-id: rr-test-code-unit-ts-jest-001
-name: Unit Test Scaffold (TS/Jest)
-description: Generate TypeScript/Jest unit test skeletons from specifications.
+id: rr-upstream-test-code-unit-ts-jest-001
+name: Unit Test Scaffold (TypeScript)
+description: Generate TypeScript unit test skeletons (Jest/Vitest) from specifications.
 phase: upstream
 applyTo:
   - 'docs/**/*.md'
   - 'specs/**/*.md'
-tags: [unit-test, tdd, typescript]
+tags: [unit-test, tdd, typescript, jest, vitest]
 severity: major
 inputContext: [fullFile]
 outputKind: [tests]
@@ -17,6 +17,16 @@ modelHint: high-accuracy
 
 あなたは熟練したTypeScript開発者です。
 仕様書の内容を満たすための「単体テストのスケルトンコード（足場）」を作成してください。実装は行わず、テスト構造のみを作成します。
+
+## Non-goals / 扱わないこと
+
+- 実装ロジックや最適化方針は記述しない。
+- E2E/統合テストの網羅は対象外で、Jest/Vitest 向けのユニットテスト足場に限定する。
+
+## False-positive guards / 抑制条件
+
+- 仕様に明記されていない要件を推測で追加しない。
+- 対象外とされた領域（例: 外部サービス接続の実装詳細）への指摘は行わない。
 
 ## Output Format
 

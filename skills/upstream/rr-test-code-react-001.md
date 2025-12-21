@@ -1,5 +1,5 @@
 ---
-id: rr-test-code-react-001
+id: rr-upstream-test-code-react-001
 name: Component Test Scaffold (React)
 description: Generate generic React component test skeletons (RTL) from specifications.
 phase: upstream
@@ -17,6 +17,16 @@ modelHint: high-accuracy
 
 あなたは熟練したReact開発者です。
 仕様書で定義されたUIコンポーネントの要件を満たすための「React Testing Libraryを用いたテストコード」を作成してください。
+
+## Non-goals / 扱わないこと
+
+- 実装コードのロジックや最適化方針を記述しない。
+- E2E/統合テストの網羅は対象外とし、コンポーネント単位の足場に限定する。
+
+## False-positive guards / 抑制条件
+
+- 仕様に明示されていない要件を推測で追加しない。
+- 対象外と明記された領域（例: 外部API連携の実装詳細）への指摘は行わない。
 
 ## Output Format
 

@@ -1,5 +1,5 @@
 ---
-id: rr-test-code-remix-001
+id: rr-upstream-test-code-remix-001
 name: Route/Function Test Scaffold (Remix)
 description: Generate Remix loader/action and route component test skeletons.
 phase: upstream
@@ -17,6 +17,16 @@ modelHint: high-accuracy
 
 あなたは熟練したRemix開発者です。
 仕様書に基づき、Remixのルートモジュール（Loader/Action/Component）のテストコードを作成してください。
+
+## Non-goals / 扱わないこと
+
+- 実装ロジックの詳細や最適化方針を指示しない。
+- E2E/統合テストやブラウザ自動化は対象外で、Loader/Action/コンポーネント単位の足場に限定する。
+
+## False-positive guards / 抑制条件
+
+- 仕様に記載のない挙動や要件を推測で追加しない。
+- 仕様上テスト対象外と明記された領域（例: 外部API接続の実装詳細）には踏み込まない。
 
 ## Output Format
 

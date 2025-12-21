@@ -31,13 +31,19 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const title = '定期チェック: リンクチェック(lychee)が失敗しました';
-            const openIssues = await github.rest.issues.listForRepo({
-              owner,
-              repo,
-              state: 'open',
-              per_page: 100,
-            });
-            if (openIssues.data.some(issue => issue.title === title)) {
+            const labelName = 'scheduled-check';
+
+            const openIssues = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                owner,
+                repo,
+                state: 'open',
+                labels: labelName,
+                per_page: 100,
+              },
+            );
+            if (openIssues.some(issue => issue.title === title)) {
               console.log('既存の Issue があるため新規作成をスキップします。');
               return;
             }
@@ -45,10 +51,16 @@ jobs:
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
             const reportPath = '/tmp/lychee.md';
             const report = fs.existsSync(reportPath) ? fs.readFileSync(reportPath, 'utf8') : '';
-            const snippet = report.split('\n').slice(0, 200).join('\n');
-            const body = `定期実行でリンクチェックが失敗しています。\n\n- 実行: ${runUrl}\n- レポート先頭 200 行:\n\`\`\`\n${snippet}\n\`\`\`\n`;
+            const maxLines = 200;
+            const reportLines = report.split('\n');
+            const hasMoreLines = reportLines.length > maxLines;
+            const snippet = reportLines.slice(0, maxLines).join('\n');
+            const truncationNote = hasMoreLines
+              ? '\n\n※ レポートは先頭 200 行のみを表示しています。残りの行は省略されています。'
+              : '';
+            const body = `定期実行でリンクチェックが失敗しています。\n\n- 実行: ${runUrl}\n- レポート先頭 ${maxLines} 行:\n\`\`\`\n${snippet}\n\`\`\`\n${truncationNote}\n`;
 
-            const labelName = 'scheduled-check';
+            let useLabelForIssue = true;
             try {
               await github.rest.issues.createLabel({
                 owner,
@@ -59,17 +71,24 @@ jobs:
               });
             } catch (err) {
               if (err.status !== 422) {
-                throw err;
+                console.warn(`ラベル作成に失敗しましたが、処理を継続します: ${err.message}`);
+                useLabelForIssue = false;
               }
             }
 
-            await github.rest.issues.create({
-              owner,
-              repo,
-              title,
-              body,
-              labels: [labelName],
-            });
+            try {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels: useLabelForIssue ? [labelName] : [],
+              });
+              console.log(`Issue を作成しました: ${title}`);
+            } catch (err) {
+              console.error(`Issue 作成に失敗しました: ${err.message}`);
+              throw err;
+            }
       - name: Upload report
         uses: actions/upload-artifact@v6
         with:
