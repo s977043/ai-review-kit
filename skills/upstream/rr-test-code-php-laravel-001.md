@@ -1,5 +1,5 @@
 ---
-id: rr-test-code-php-laravel-001
+id: rr-upstream-test-code-php-laravel-001
 name: Test Scaffold (Laravel/PHPUnit)
 description: Generate PHP/Laravel (PHPUnit) test skeletons from specifications.
 phase: upstream

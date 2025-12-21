@@ -1,12 +1,12 @@
 ---
-id: rr-test-code-unit-ts-jest-001
-name: Unit Test Scaffold (TS/Jest)
-description: Generate TypeScript/Jest unit test skeletons from specifications.
+id: rr-upstream-test-code-unit-ts-jest-001
+name: Unit Test Scaffold (TypeScript)
+description: Generate TypeScript unit test skeletons (Jest/Vitest) from specifications.
 phase: upstream
 applyTo:
   - 'docs/**/*.md'
   - 'specs/**/*.md'
-tags: [unit-test, tdd, typescript]
+tags: [unit-test, tdd, typescript, jest, vitest]
 severity: major
 inputContext: [fullFile]
 outputKind: [tests]

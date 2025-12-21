@@ -1,5 +1,5 @@
 ---
-id: rr-test-code-nextjs-001
+id: rr-upstream-test-code-nextjs-001
 name: Component Test Scaffold (Next.js)
 description: Generate React/Next.js component test skeletons (RTL) from specifications.
 phase: upstream
@@ -27,7 +27,7 @@ TypeScript (.tsx) のコードブロック。
 ## Example
 
 ```tsx
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LoginForm from '@/components/LoginForm';
 
@@ -41,7 +41,7 @@ describe('LoginForm', () => {
     render(<LoginForm />);
     // TODO: Setup userEvent
     // TODO: Fill invalid data
-    // TODO: Click submit
+    // TODO: Click submit (use userEvent)
     // TODO: Assert error message appears
   });
 });

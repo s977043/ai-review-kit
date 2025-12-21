@@ -1,5 +1,5 @@
 ---
-id: rr-test-code-vue-001
+id: rr-upstream-test-code-vue-001
 name: Component Test Scaffold (Vue.js)
 description: Generate Vue.js component test skeletons (Vue Test Utils) from specifications.
 phase: upstream

@@ -1,5 +1,5 @@
 ---
-id: rr-test-code-unit-python-pytest-001
+id: rr-upstream-test-code-unit-python-pytest-001
 name: Unit Test Scaffold (Python/pytest)
 description: Generate Python/pytest unit test skeletons from specifications.
 phase: upstream
