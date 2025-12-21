@@ -1,5 +1,5 @@
 ---
-title: Architecture Review Checklist
+title: アーキテクチャレビューチェックリスト
 ---
 
 ## 観点
