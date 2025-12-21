@@ -2,7 +2,7 @@
 title: PR/品質レビュー向け Agent Skills カタログ
 ---
 
-外部で公開されている Agent Skills（および周辺 OSS ツール）のうち、River Reviewer の PR レビューやコード品質レビューに組み込めそうなものを素早く評価できるようにまとめました。Skill 形式のものは `skills/agent-skills/` に追加し、`npm run agent-skills:validate` で検証できます。`agentcheck-code-review` と `pr-agent-review` は、このリポジトリにパッケージとして取り込み済みです。
+外部で公開されている Agent Skills（および周辺 OSS ツール）のうち、River Reviewer の PR レビューやコード品質レビューに組み込めそうなものを素早く評価できるようにまとめました。Skill 形式のものは `skills/agent-skills/` に追加し、`npm run agent-skills:validate` で検証できます。`agentcheck-code-review` は、このリポジトリにパッケージとして取り込み済みです。
 
 ## 取り込みパス（リポジトリ内に内包する手順の基本）
 
@@ -30,7 +30,6 @@ Agent Skills 形式またはそれに近い形で公開されているコミュ�
 | ------------------------------- | ------------------ | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `@bjpl/aves/github-code-review` | Claude Skill       | GitHub PR の差分を解析し、コメント提案を生成する特化 Skill。                 | 公開 PR 前提が多いため、プライベートリポジトリ利用時の権限・認可を要確認。 |
 | `devlyai/AgentCheck`            | OSS エージェント群 | ローカルリポジトリ全体を読み込み、カスタムルール付きでコードレビューを行う。 | プロジェクト固有ルールを追加しやすい。Docker/Node 依存を事前に確認。       |
-| `qodo-ai/pr-agent`              | OSS ツール         | PR の要約・修正提案・自動コメントを GitHub Actions などで実行可能。          | CI 連携時はトークン権限と実行コスト（トークン課金/実行時間）を要確認。     |
 
 ## 3. 取り込み時のチェックリスト
 
@@ -45,9 +44,8 @@ Agent Skills 形式またはそれに近い形で公開されているコミュ�
 ## 4. 短期導入プランのサンプル
 
 1. `code-review` と `code-refactoring` を `skills/agent-skills/` に追加し、`phase: [midstream, downstream]` で試験適用。
-2. PR-Agent を GitHub Actions サンドボックスリポジトリで動かし、要約品質とコメント粒度を確認。
-3. Runner との統合テストを行い、既存スキルとの競合（重複コメント、冗長提案）を洗い出して調整。
-4. 社内レビュー方針に合わせたカスタム Skill を作成し、上記 OSS から有用なチェックリストやプロンプト断片のみを再利用する。
+2. Runner との統合テストを行い、既存スキルとの競合（重複コメント、冗長提案）を洗い出して調整。
+3. 社内レビュー方針に合わせたカスタム Skill を作成し、上記 OSS から有用なチェックリストやプロンプト断片のみを再利用する。
 
 ## 5. 参考リンク
 
@@ -55,4 +53,3 @@ Agent Skills 形式またはそれに近い形で公開されているコミュ�
 - Awesome Agent Skills（コミュニティまとめ）: [https://github.com/travisvn/awesome-claude-skills](https://github.com/travisvn/awesome-claude-skills)
 - GitHub-code-review Skill: [https://claude-plugins.dev/skills/%40bjpl/aves/github-code-review](https://claude-plugins.dev/skills/%40bjpl/aves/github-code-review)
 - AgentCheck: [https://github.com/devlyai/AgentCheck](https://github.com/devlyai/AgentCheck)
-- PR-Agent: [https://github.com/qodo-ai/pr-agent](https://github.com/qodo-ai/pr-agent)

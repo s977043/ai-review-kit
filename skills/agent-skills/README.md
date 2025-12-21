@@ -22,4 +22,3 @@ River Reviewer の `skills/**/*.md` とは別系統として扱い、`SKILL.md` 
 - `code-documentation/`: 目的や使い方を短時間で伝えるドキュメント整備ガイド
 - `webapp-testing/`: Playwright を用いた Web アプリケーションの対話・テストツールキット
 - `agentcheck-code-review/`: AgentCheck ベースでローカルリポジトリを走査するコードレビュー
-- `pr-agent-review/`: qodo-ai/pr-agent を用いた GitHub PR 向け自動レビュー

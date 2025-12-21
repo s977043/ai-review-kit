@@ -2,14 +2,26 @@
 
 ## インストールと実行
 
-1. `npm install -g agentcheck` でグローバルインストールするか、npm パッケージが未公開の場合は GitHub リポジトリ `devlyai/AgentCheck` を clone してビルドする（または提供されている Docker イメージを取得する）。
-2. `agentcheck init` で設定を生成し、`.agentcheck.yml` にプロジェクト固有ルールを追加する。
-3. `agentcheck run --path . --format json` を実行し、出力を River Reviewer の出力スキーマにマッピングする。
+AgentCheck は `devlyai/AgentCheck` のテンプレートをローカルに取り込んで使う形が基本です（npm パッケージ前提ではありません）。
+
+1. 取り込み（例）
+
+   ```bash
+   git clone https://github.com/devlyai/AgentCheck.git .claude-temp
+   mkdir -p .claude
+   cp -r .claude-temp/agentcheck .claude/
+   cp -r .claude-temp/agents .claude/
+   rm -rf .claude-temp
+   echo ".claude/agentcheck/reports/" >> .gitignore
+   ```
+
+2. Claude Code でプロジェクトコンテキストを初期化する（例: `Initialize AgentCheck context for this project`）。
+3. Claude Code で分析を実行し、`.claude/agentcheck/reports/` に出力された結果を River Reviewer の `output.schema.json` にマッピングする。
 
 ## River Reviewer への組み込み方
 
 - midstream/downstream フェーズの前処理として、AgentCheck の JSON 出力を Runner に渡す。
-- 重大度タグを River Reviewer の `severity` (`critical`, `major`, `minor`, `info` など) に合わせる。
+- 重大度タグを River Reviewer の `severity`（`info`/`minor`/`major`/`critical`）に合わせる。
 - 追加ルールは `skills/community` やリポジトリ固有のチェックリストと整合させる。
 
 ## 注意点

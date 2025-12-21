@@ -2,9 +2,9 @@
 
 ## インストールと初期化
 
-1. `npm create playwright@latest` でプロジェクトを初期化し、`node_modules/.cache/ms-playwright` にブラウザをインストールする。
+1. `npm create playwright@latest` でプロジェクトを初期化し、ブラウザはデフォルトで `$HOME/.cache/ms-playwright` にインストールされる。
 2. `playwright.config.ts` に `baseURL`、タイムアウト、スクリーンショット・トレースの保存先を設定する。
-3. CI でキャッシュする場合は、`node_modules/.cache/ms-playwright` を保存して再利用する。
+3. CI でキャッシュする場合は、`$HOME/.cache/ms-playwright` を保存して再利用する。
 
 ## 環境変数とシークレット
 
@@ -44,10 +44,10 @@ jobs:
 
 - 動的要素や遅延が多い UI では、`await expect(locator).toBeVisible()` などの明示的待機を徹底し、`waitForTimeout` の固定待ちは避ける。
 - テストが長時間化する場合は、`projects` を分割して並列化し、`retries` を設定する。
-- フレーク時は `npx playwright show-trace` で取得済みトレースを確認する。
+- フレーク時は `npx playwright show-trace path/to/trace.zip` で取得済みトレースを確認する。
 
 ## River Reviewer への組み込みポイント
 
 - スキル出力に含めるスクリーンショットやトレースの保存先を Runner に渡し、レビューコメントの根拠として参照できるようにする。
 - 主要フロー（認証・主要ダッシュボード・主要 CRUD）を優先し、パフォーマンスに影響するテストは別ジョブに分離する。
-- フィードバックは日本語でまとめ、重大度（Critical/Major/Minor）を付けて返す。
+- フィードバックは日本語でまとめ、重大度（`critical`/`major`/`minor`/`info`）を付けて返す。
