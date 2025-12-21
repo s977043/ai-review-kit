@@ -1,0 +1,13 @@
+{
+  "review": {
+    "language": "ja",
+    "severity": "normal",
+    "additionalInstructions": [
+      "レビュー対象のドキュメントでは重大度の高い欠陥を優先し、typoやスタイルのみの指摘は抑制する。",
+      "出力は要約・重大な懸念・具体的な提案の3部構成を維持する。"
+    ]
+  },
+  "exclude": {
+    "prLabelsToIgnore": ["no-review", "wip"]
+  }
+}

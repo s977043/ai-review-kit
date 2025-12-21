@@ -97,17 +97,13 @@ test('fails clearly when project rules cannot be read', async () => {
   const dir = await setupRepoWithDiff();
   try {
     const rulesPath = join(dir, '.river', 'rules.md');
-    await fs.promises.chmod(rulesPath, 0o000);
+    await fs.promises.rm(rulesPath, { force: true });
+    await fs.promises.mkdir(rulesPath, { recursive: true });
     const result = await runCli(['run', '.'], dir);
 
     assert.notStrictEqual(result.code, 0);
     assert.match(result.stderr, /Failed to read project rules/);
   } finally {
-    try {
-      await fs.promises.chmod(join(dir, '.river', 'rules.md'), 0o644);
-    } catch {
-      // ignore cleanup errors
-    }
     await rm(dir, { recursive: true, force: true });
   }
 });

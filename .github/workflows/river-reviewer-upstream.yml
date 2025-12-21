@@ -1,0 +1,59 @@
+name: River Reviewer (upstream)
+
+concurrency:
+  group: river-reviewer-upstream-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/requirements/**/*.md'
+      - 'docs/requirements/**/*.mdx'
+      - 'docs/specs/**/*.md'
+      - 'docs/specs/**/*.mdx'
+      - 'pages/requirements/**/*.md'
+      - 'pages/requirements/**/*.mdx'
+      - 'pages/specs/**/*.md'
+      - 'pages/specs/**/*.mdx'
+      - 'openapi/**/*.yaml'
+      - 'openapi/**/*.yml'
+      - 'openapi/**/*.json'
+      - 'docs/api/**/*.yaml'
+      - 'docs/api/**/*.yml'
+      - 'docs/api/**/*.json'
+      - 'pages/api/**/*.yaml'
+      - 'pages/api/**/*.yml'
+      - 'pages/api/**/*.json'
+      - 'docs/adr/**/*.md'
+      - 'docs/adr/**/*.mdx'
+      - 'docs/migration/**/*.md'
+      - 'docs/migration/**/*.mdx'
+      - 'pages/adr/**/*.md'
+      - 'pages/adr/**/*.mdx'
+      - 'pages/migration/**/*.md'
+      - 'pages/migration/**/*.mdx'
+      - 'skills/upstream/**/*.md'
+      - '.github/workflows/river-reviewer-upstream.yml'
+      - '.river-reviewer.json'
+
+jobs:
+  river-reviewer:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Run River Reviewer (upstream)
+        uses: ./.github/actions/river-reviewer
+        with:
+          phase: upstream
+          dry_run: true # 秘密情報やモデル設定を確認後に false へ切り替える
+          debug: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
