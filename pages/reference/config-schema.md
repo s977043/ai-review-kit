@@ -7,7 +7,7 @@
 ### サポート項目とデフォルト
 
 - `model`
-  - `provider`: `openai`（デフォルト）/`google`/`anthropic`
+  - `provider`: `openai`（デフォルト。現在サポートされている唯一のプロバイダー。`google`/`anthropic` は将来拡張用のプレースホルダー）
   - `modelName`: `gpt-4o-mini`（デフォルト）
   - `temperature`: `0`
   - `maxTokens`: `600`
