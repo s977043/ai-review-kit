@@ -20,3 +20,4 @@ River Reviewer の `skills/**/*.md` とは別系統として扱い、`SKILL.md` 
 - `code-refactoring/`: 挙動を変えずに設計を整えるための手順ガイド
 - `qa-regression/`: Playwright を用いた主要フローの回帰テスト設計と実行
 - `code-documentation/`: 目的や使い方を短時間で伝えるドキュメント整備ガイド
+- `webapp-testing/`: Playwright を用いた Web アプリケーションの対話・テストツールキット
