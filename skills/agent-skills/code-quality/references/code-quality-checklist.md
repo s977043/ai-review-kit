@@ -1,5 +1,5 @@
 ---
-title: Code Quality Checklist
+title: コード品質チェックリスト
 ---
 
 ## 観点
