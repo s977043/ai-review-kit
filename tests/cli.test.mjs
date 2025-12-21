@@ -10,9 +10,12 @@ import test from 'node:test';
 const execFileAsync = promisify(execFile);
 const CLI_PATH = resolve('src/cli.mjs');
 
-async function runCli(args, cwd) {
+async function runCli(args, cwd, env = {}) {
   try {
-    const { stdout, stderr } = await execFileAsync('node', [CLI_PATH, ...args], { cwd });
+    const { stdout, stderr } = await execFileAsync('node', [CLI_PATH, ...args], {
+      cwd,
+      env: { ...process.env, ...env },
+    });
     return { code: 0, stdout: stdout.toString(), stderr: stderr?.toString() ?? '' };
   } catch (error) {
     return {
@@ -97,6 +100,25 @@ test('river run reports when there are no changes', async () => {
     const result = await runCli(['run', '.'], dir);
     assert.strictEqual(result.code, 0, result.stderr);
     assert.match(result.stdout, /No changes to review/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('river run skips when PR labels match exclude list', async () => {
+  const { dir } = await createRepoWithChange();
+  try {
+    const configPath = join(dir, '.river-reviewer.json');
+    writeFileSync(
+      configPath,
+      JSON.stringify({ exclude: { prLabelsToIgnore: ['skip-review'] } }, null, 2),
+      'utf8',
+    );
+
+    const result = await runCli(['run', '.'], dir, { RIVER_PR_LABELS: 'skip-review' });
+
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.match(result.stdout, /Review skipped: PR labels matched exclude patterns/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

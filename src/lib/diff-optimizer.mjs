@@ -101,7 +101,7 @@ export function optimizeDiff(diff) {
   };
 }
 
-function renderDiffText(files) {
+export function renderDiffText(files) {
   if (!files.length) return '';
   const chunks = [];
   for (const file of files) {
