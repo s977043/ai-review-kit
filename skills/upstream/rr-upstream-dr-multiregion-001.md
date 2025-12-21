@@ -9,7 +9,6 @@ applyTo:
   - 'docs/**/*business-continuity*.md'
   - 'docs/**/*multi-region*.md'
   - 'docs/**/*resilien*.md'
-  - 'docs/adr/**/*'
   - 'pages/**/*dr*.md'
   - 'pages/**/*disaster*.md'
   - 'pages/**/*business-continuity*.md'

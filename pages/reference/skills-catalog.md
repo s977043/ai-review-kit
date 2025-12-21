@@ -46,8 +46,10 @@ River Reviewer に同梱されているスキル一覧です。フェーズ別�
   migration guidance.
 - 対象:
   - `docs/**/*api*.md`
+  - `docs/**/*openapi*.{yml,yaml,json}`
   - `docs/**/*contract*.md`
   - `docs/**/*interface*.md`
+  - `docs/adr/**/*`
   - `pages/**/*api*.md`
   - `pages/**/*contract*.md`
   - `pages/**/*interface*.md`
@@ -325,7 +327,6 @@ River Reviewer に同梱されているスキル一覧です。フェーズ別�
   - `docs/**/*business-continuity*.md`
   - `docs/**/*multi-region*.md`
   - `docs/**/*resilien*.md`
-  - `docs/adr/**/*`
   - `pages/**/*dr*.md`
   - `pages/**/*disaster*.md`
   - `pages/**/*business-continuity*.md`
