@@ -9,7 +9,7 @@
 ## River Reviewer への組み込み方
 
 - midstream/downstream フェーズの前処理として、AgentCheck の JSON 出力を Runner に渡す。
-- 重大度タグを River Reviewer の `severity` (`critical`/`major`/`minor`) に合わせる。
+- 重大度タグを River Reviewer の `severity` (`critical`, `major`, `minor`, `info` など) に合わせる。
 - 追加ルールは `skills/community` やリポジトリ固有のチェックリストと整合させる。
 
 ## 注意点
