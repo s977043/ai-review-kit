@@ -317,6 +317,31 @@ River Reviewer に同梱されているスキル一覧です。フェーズ別�
 
 - summary / findings / actions / questions
 
+### rr-upstream-dr-multiregion-001
+
+- 名前: Disaster Recovery & Multi-Region Readiness
+- 概要: Ensure architecture docs define RPO/RTO; failover paths; data consistency; and DR drillability.
+- 対象:
+  - `docs/**/*dr*.md`
+  - `docs/**/*disaster*.md`
+  - `docs/**/*business-continuity*.md`
+  - `docs/**/*multi-region*.md`
+  - `docs/**/*resilien*.md`
+  - `pages/**/*dr*.md`
+  - `pages/**/*disaster*.md`
+  - `pages/**/*business-continuity*.md`
+  - `pages/**/*multi-region*.md`
+  - `pages/**/*resilien*.md`
+  - `**/*.adr`
+- 重要度: major
+- タグ: reliability / dr / resiliency / multiregion / upstream
+- 依存関係: repo_metadata
+- 適用条件: phase=upstream, inputContext=diff / adr
+
+チェック項目の例:
+
+- summary / findings / actions / questions
+
 ### rr-upstream-event-driven-semantics-001
 
 - 名前: Event-Driven Semantics & Delivery Guarantees
