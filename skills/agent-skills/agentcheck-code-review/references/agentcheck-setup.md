@@ -2,7 +2,7 @@
 
 ## インストールと実行
 
-1. リポジトリルートで `npm install -g @devly/agentcheck` または Docker イメージを取得する。
+1. `npm install -g agentcheck` でグローバルインストールするか、npm パッケージが未公開の場合は GitHub リポジトリ `devlyai/AgentCheck` を clone してビルドする（または提供されている Docker イメージを取得する）。
 2. `agentcheck init` で設定を生成し、`.agentcheck.yml` にプロジェクト固有ルールを追加する。
 3. `agentcheck run --path . --format json` を実行し、出力を River Reviewer の出力スキーマにマッピングする。
 
