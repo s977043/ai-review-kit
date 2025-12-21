@@ -1,277 +1,45 @@
 ---
 name: code-documentation
-description: Writing effective code documentation - API docs, README files, inline comments, and technical guides. Use for documenting codebases, APIs, or writing developer guides.
-source: wshobson/agents
+description: コードや API の意図を短時間で共有できるドキュメントの書き方をガイドする。
 license: MIT
+compatibility: Requires repository context and target audience definition.
+metadata:
+  author: river-reviewer
+  version: '0.1.0'
+allowed-tools:
+  - Read
 ---
 
-# Code Documentation
+## Goal
 
-## README Structure
+変更意図・使い方・前提条件を短時間で伝えられるドキュメントを整備する。
 
-### Standard README Template
+## When to use
 
-```markdown
-# Project Name
+- README や API 仕様、サンプルコードを追加・更新するとき
+- 変更点をレビューアや利用者へ確実に伝えたいとき
+- エラーハンドリングや制約を明記し、利用ミスを減らしたいとき
 
-Brief description of what this project does.
+## Steps
 
-## Quick Start
+1. 誰向けかを明確化する（開発者/オペレーター/利用者）。
+2. README 構成の最小セットを埋める。
+   - 目的・前提（バージョン/依存関係/環境変数）
+   - セットアップ手順と実行例（コマンドは検証済みのものだけ）
+   - 主要ユースケースのサンプルコードや API 呼び出し例
+3. API 仕様は機械可読フォーマットを優先する。
+   - コードには JSDoc/TSDoc を付与し、例外・副作用も記載
+   - OpenAPI などのスキーマを更新し、返却値/エラーケースを揃える
+4. 変更箇所と整合するテストやログ出力があるか確認し、リンクを貼る。
+5. レビュー観点をそろえるためにチェックリストを使う。
+   - 用語の一貫性、期待値/前提の明記、更新日・バージョンの記載
 
-\`\`\`bash
-npm install
-npm run dev
-\`\`\`
+## References
 
-## Installation
+- ドキュメント整備チェックリスト: `references/documentation-checklist.md`
 
-Detailed installation instructions...
+## Edge cases
 
-## Usage
-
-\`\`\`typescript
-import { something } from 'project';
-
-// Example usage
-const result = something.doThing();
-\`\`\`
-
-## API Reference
-
-### `functionName(param: Type): ReturnType`
-
-Description of what the function does.
-
-**Parameters:**
-
-- `param` - Description of parameter
-
-**Returns:** Description of return value
-
-**Example:**
-\`\`\`typescript
-const result = functionName('value');
-\`\`\`
-
-## Configuration
-
-| Option    | Type     | Default     | Description  |
-| --------- | -------- | ----------- | ------------ |
-| `option1` | `string` | `'default'` | What it does |
-
-## Contributing
-
-How to contribute...
-
-## License
-
-MIT
-```
-
-## API Documentation
-
-### JSDoc/TSDoc Style
-
-````typescript
-/**
- * Creates a new user account.
- *
- * @param userData - The user data for account creation
- * @param options - Optional configuration
- * @returns The created user object
- * @throws {ValidationError} If email is invalid
- * @example
- * ```ts
- * const user = await createUser({
- *   email: 'user@example.com',
- *   name: 'John'
- * });
- * ```
- */
-async function createUser(userData: UserInput, options?: CreateOptions): Promise<User> {
-  // Implementation
-}
-
-/**
- * Configuration options for the API client.
- */
-interface ClientConfig {
-  /** The API base URL */
-  baseUrl: string;
-  /** Request timeout in milliseconds @default 5000 */
-  timeout?: number;
-  /** Custom headers to include in requests */
-  headers?: Record<string, string>;
-}
-````
-
-### OpenAPI/Swagger
-
-```yaml
-openapi: 3.0.0
-info:
-  title: My API
-  version: 1.0.0
-
-paths:
-  /users:
-    post:
-      summary: Create a user
-      description: Creates a new user account
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserInput'
-      responses:
-        '201':
-          description: User created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          description: Invalid input
-
-components:
-  schemas:
-    UserInput:
-      type: object
-      required:
-        - email
-        - name
-      properties:
-        email:
-          type: string
-          format: email
-        name:
-          type: string
-    User:
-      type: object
-      properties:
-        id:
-          type: string
-        email:
-          type: string
-        name:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-```
-
-## Inline Comments
-
-### When to Comment
-
-```typescript
-// GOOD: Explain WHY, not WHAT
-
-// Use binary search because the list is always sorted and
-// can contain millions of items - O(log n) vs O(n)
-const index = binarySearch(items, target);
-
-// GOOD: Explain complex business logic
-// Users get 20% discount if they've been members for 2+ years
-// AND have made 10+ purchases (per marketing team decision Q4 2024)
-if (user.memberYears >= 2 && user.purchaseCount >= 10) {
-  applyDiscount(0.2);
-}
-
-// GOOD: Document workarounds
-// HACK: Safari doesn't support this API, fallback to polling
-// TODO: Remove when Safari adds support (tracking: webkit.org/b/12345)
-if (!window.IntersectionObserver) {
-  startPolling();
-}
-```
-
-### When NOT to Comment
-
-```typescript
-// BAD: Stating the obvious
-// Increment counter by 1
-counter++;
-
-// BAD: Explaining clear code
-// Check if user is admin
-if (user.role === 'admin') { ... }
-
-// BAD: Outdated comments (worse than no comment)
-// Returns the user's full name  <-- Actually returns email now!
-function getUserIdentifier(user) {
-  return user.email;
-}
-```
-
-## Architecture Documentation
-
-### ADR (Architecture Decision Record)
-
-```markdown
-# ADR-001: Use PostgreSQL for Primary Database
-
-## Status
-
-Accepted
-
-## Context
-
-We need a database for storing user data and transactions.
-Options considered: PostgreSQL, MySQL, MongoDB, DynamoDB.
-
-## Decision
-
-Use PostgreSQL with Supabase hosting.
-
-## Rationale
-
-- Strong ACID compliance needed for financial data
-- Team has PostgreSQL experience
-- Supabase provides auth and realtime features
-- pgvector extension for future AI features
-
-## Consequences
-
-- Need to manage schema migrations
-- May need read replicas for scale
-- Team needs to learn Supabase-specific features
-```
-
-### Component Documentation
-
-```markdown
-## Authentication Module
-
-### Overview
-
-Handles user authentication using JWT tokens with refresh rotation.
-
-### Flow
-
-1. User submits credentials to `/auth/login`
-2. Server validates and returns access + refresh tokens
-3. Access token used for API requests (15min expiry)
-4. Refresh token used to get new access token (7d expiry)
-
-### Dependencies
-
-- `jsonwebtoken` - Token generation/validation
-- `bcrypt` - Password hashing
-- `redis` - Refresh token storage
-
-### Configuration
-
-- `JWT_SECRET` - Secret for signing tokens
-- `ACCESS_TOKEN_EXPIRY` - Access token lifetime
-- `REFRESH_TOKEN_EXPIRY` - Refresh token lifetime
-```
-
-## Documentation Principles
-
-1. **Write for your audience** - New devs vs API consumers
-2. **Keep it close to code** - Docs in same repo, near relevant code
-3. **Update with code** - Stale docs are worse than none
-4. **Examples over explanations** - Show, don't just tell
-5. **Progressive disclosure** - Quick start first, details later
+- 実行できないコード例は載せない。環境依存の手順には代替（Docker/CI コマンド）を提示する。
+- 外部公開する場合は秘密情報が含まれないことをダブルチェックする。
+- サンプルのレスポンスやログはフェイクデータに置き換える。

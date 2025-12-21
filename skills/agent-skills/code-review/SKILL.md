@@ -5,6 +5,10 @@ source: anthropics/claude-code
 license: Apache-2.0
 ---
 
+## References
+
+- 詳細チェックリスト: `references/review-checklist.md`
+
 # Code Review
 
 ## Review Categories

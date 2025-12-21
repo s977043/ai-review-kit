@@ -1,5 +1,11 @@
 ---
 name: qa-regression
+
+
+## References
+
+- 設計・運用チェックリスト: `references/regression-checklist.md`
+
 description: Automate QA regression testing with reusable test skills. Create login flows, dashboard checks, user creation, and other common test scenarios that run consistently.
 license: MIT
 ---

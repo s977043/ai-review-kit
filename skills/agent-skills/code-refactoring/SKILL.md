@@ -5,6 +5,10 @@ source: wshobson/agents
 license: MIT
 ---
 
+## References
+
+- 実施前後の確認事項: `references/refactoring-checklist.md`
+
 # Code Refactoring
 
 ## Refactoring Principles

@@ -1,6 +1,4 @@
----
-title: Test Coverage Checklist
----
+title: テストカバレッジチェックリスト
 
 ## 観点
 

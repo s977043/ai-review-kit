@@ -1,6 +1,4 @@
----
-title: Architecture Review Checklist
----
+title: アーキテクチャレビュー チェックリスト
 
 ## 観点
 
