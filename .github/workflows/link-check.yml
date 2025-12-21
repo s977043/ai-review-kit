@@ -6,6 +6,9 @@ on:
 jobs:
   lychee:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v6
       - name: Link Checker
@@ -18,6 +21,55 @@ jobs:
           format: markdown
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub issue on failure (schedule only)
+        if: github.event_name == 'schedule' && steps.lychee.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = '定期チェック: リンクチェック(lychee)が失敗しました';
+            const openIssues = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+            if (openIssues.data.some(issue => issue.title === title)) {
+              console.log('既存の Issue があるため新規作成をスキップします。');
+              return;
+            }
+
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const reportPath = '/tmp/lychee.md';
+            const report = fs.existsSync(reportPath) ? fs.readFileSync(reportPath, 'utf8') : '';
+            const snippet = report.split('\n').slice(0, 200).join('\n');
+            const body = `定期実行でリンクチェックが失敗しています。\n\n- 実行: ${runUrl}\n- レポート先頭 200 行:\n\`\`\`\n${snippet}\n\`\`\`\n`;
+
+            const labelName = 'scheduled-check';
+            try {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: labelName,
+                color: 'f29513',
+                description: '定期実行の自動検証で見つかった問題',
+              });
+            } catch (err) {
+              if (err.status !== 422) {
+                throw err;
+              }
+            }
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body,
+              labels: [labelName],
+            });
       - name: Upload report
         uses: actions/upload-artifact@v6
         with:
