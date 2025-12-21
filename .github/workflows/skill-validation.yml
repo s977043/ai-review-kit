@@ -1,0 +1,196 @@
+name: Scheduled Validation
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  scheduled-validation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate agents
+        id: agents-validate
+        run: |
+          set -o pipefail
+          npm run agents:validate | tee agents-validate.log
+        continue-on-error: true
+
+      - name: Validate agent-skills
+        id: agent-skills-validate
+        run: |
+          set -o pipefail
+          npm run agent-skills:validate | tee agent-skills-validate.log
+        continue-on-error: true
+
+      - name: Validate skills
+        id: skills-validate
+        run: |
+          set -o pipefail
+          npm run skills:validate | tee skills-validate.log
+        continue-on-error: true
+
+      - name: Run tests
+        id: test
+        run: |
+          set -o pipefail
+          npm test | tee test.log
+        continue-on-error: true
+
+      - name: Run lint
+        id: lint
+        run: |
+          set -o pipefail
+          npm run lint | tee lint.log
+        continue-on-error: true
+
+      - name: Build docs
+        id: build
+        run: |
+          set -o pipefail
+          npm run build | tee build.log
+        continue-on-error: true
+
+      - name: Upload log files
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: validation-logs
+          path: '*.log'
+
+      - name: Create GitHub issue on failure
+        if: |
+          steps.agents-validate.outcome == 'failure' ||
+          steps.agent-skills-validate.outcome == 'failure' ||
+          steps.skills-validate.outcome == 'failure' ||
+          steps.test.outcome == 'failure' ||
+          steps.lint.outcome == 'failure' ||
+          steps.build.outcome == 'failure'
+        uses: actions/github-script@v7
+        env:
+          OUTCOME_AGENTS_VALIDATE: ${{ steps.agents-validate.outcome }}
+          OUTCOME_AGENT_SKILLS_VALIDATE: ${{ steps.agent-skills-validate.outcome }}
+          OUTCOME_SKILLS_VALIDATE: ${{ steps.skills-validate.outcome }}
+          OUTCOME_TEST: ${{ steps.test.outcome }}
+          OUTCOME_LINT: ${{ steps.lint.outcome }}
+          OUTCOME_BUILD: ${{ steps.build.outcome }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const checks = [
+              {
+                key: 'agents:validate',
+                title: '定期チェック: npm run agents:validate が失敗しました',
+                outcome: process.env.OUTCOME_AGENTS_VALIDATE,
+                logPath: 'agents-validate.log',
+              },
+              {
+                key: 'agent-skills:validate',
+                title: '定期チェック: npm run agent-skills:validate が失敗しました',
+                outcome: process.env.OUTCOME_AGENT_SKILLS_VALIDATE,
+                logPath: 'agent-skills-validate.log',
+              },
+              {
+                key: 'skills:validate',
+                title: '定期チェック: npm run skills:validate が失敗しました',
+                outcome: process.env.OUTCOME_SKILLS_VALIDATE,
+                logPath: 'skills-validate.log',
+              },
+              {
+                key: 'test',
+                title: '定期チェック: npm test が失敗しました',
+                outcome: process.env.OUTCOME_TEST,
+                logPath: 'test.log',
+              },
+              {
+                key: 'lint',
+                title: '定期チェック: npm run lint が失敗しました',
+                outcome: process.env.OUTCOME_LINT,
+                logPath: 'lint.log',
+              },
+              {
+                key: 'build',
+                title: '定期チェック: npm run build が失敗しました',
+                outcome: process.env.OUTCOME_BUILD,
+                logPath: 'build.log',
+              },
+            ];
+
+            const labelName = 'scheduled-check';
+
+            const openIssuesData = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                owner,
+                repo,
+                state: 'open',
+                labels: labelName,
+                per_page: 100,
+              },
+            );
+            const openIssues = { data: openIssuesData };
+
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+
+            let useLabelForIssues = true;
+            try {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: labelName,
+                color: 'f29513',
+                description: '定期実行の自動検証で見つかった問題',
+              });
+            } catch (err) {
+              if (err.status !== 422) {
+                console.warn(`ラベル作成に失敗しましたが、処理を継続します: ${err.message}`);
+                useLabelForIssues = false;
+              }
+            }
+
+            for (const check of checks) {
+              if (check.outcome !== 'failure') continue;
+              if (openIssues.data.some(issue => issue.title === check.title)) {
+                console.log(`既存の Issue があるため新規作成をスキップします: ${check.key}`);
+                continue;
+              }
+              const log = fs.existsSync(check.logPath) ? fs.readFileSync(check.logPath, 'utf8') : '';
+              const lines = log.trimEnd().split('\n');
+              const isTruncated = lines.length > 120;
+              const snippet = (isTruncated ? lines.slice(-120) : lines).join('\n');
+              const note = isTruncated
+                ? '\n\n_ログは末尾から 120 行のみを表示しています (途中からの抜粋の可能性があります)。_'
+                : '';
+              const body = `定期実行で \`${check.key}\` が失敗しています。\n\n- 実行: ${runUrl}\n- ログ最後の ${Math.min(120, lines.length)} 行:\n\`\`\`\n${snippet}\n\`\`\`\n${note}\n`;
+
+              try {
+                await github.rest.issues.create({
+                  owner,
+                  repo,
+                  title: check.title,
+                  body,
+                  labels: useLabelForIssues ? [labelName] : [],
+                });
+                console.log(`Issue を作成しました: ${check.title}`);
+              } catch (err) {
+                console.error(`Issue 作成に失敗しました (${check.key}): ${err.message}`);
+              }
+            }
