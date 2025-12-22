@@ -6,7 +6,7 @@ applyTo: 'skills/**/*.md'
 
 ## Structure & Schema
 
-- **MUST** follow the structure in `skill_template.md` exactly.
+- **MUST** follow the structure in the skill template at the repository root (`skill_template.md`) exactly.
 - **MUST** include valid YAML frontmatter (validate against `schemas/skill.schema.json`).
 - Ensure all standard sections exist: `Goal`, `Non-goals`, `False-positive guards`, `Rule`, `Evidence`, `Output`.
 

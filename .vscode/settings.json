@@ -9,8 +9,9 @@
   "files.associations": {
     "*.md": "markdown"
   },
-  // These settings enable advanced/experimental Copilot features in VS Code.
-  // They may require a specific Copilot extension version (e.g., Insiders/Nightly).
+  // These settings enable advanced/experimental GitHub Copilot Chat features in VS Code.
+  // Availability depends on your GitHub Copilot Chat extension version and may require the latest
+  // stable or Insiders/Nightly builds. If these settings have no effect, try updating the extension.
   "github.copilot.chat.codeGeneration.useInstructionFiles": true,
   "chat.useAgentsMdFile": true,
   "github.copilot.chat.alternateGptPrompt.enabled": true,
