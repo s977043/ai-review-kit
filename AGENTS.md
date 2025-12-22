@@ -1,7 +1,7 @@
 # AGENTS.md—River Reviewer agent guide
 
-River Reviewer は「流れに寄り添う」AI レビューエージェントです。  
-このリポジトリには、River Reviewer のドキュメント、スキーマ、検証ユーティリティがまとまっています。  
+River Reviewer は「流れに寄り添う」AI レビューエージェントです。
+このリポジトリには、River Reviewer のドキュメント、スキーマ、検証ユーティリティがまとまっています。
 人間と AI コーディングエージェントが、安全かつ一貫した変更を行うためのルールをまとめています。
 
 ---
@@ -100,8 +100,31 @@ AI エージェントは「主に編集対象」を優先し、それ以外は�
 
 ---
 
-## 7. AI コーディングエージェント向けメモ
+## 7. スキル検索戦略
+
+スキルは日本語で記述されていますが、英語プロンプトでも活用できるよう以下のルールに従ってください:
+
+- 英語と日本語の両方のキーワードで `skills/` を検索する
+- 英語検索で見つからない場合、主要な用語を日本語に翻訳して再検索する
+- ファイル名や `id` フィールドには英語ヒントを含むことが多い
+- 検索コマンド例: `rg -i "keyword" skills/` または `fd skill.md skills/`
+
+---
+
+## 8. AI コーディングエージェント向けメモ
 
 - このリポは「AI レビューエージェント」そのものの定義・スキルを含む。仕様変更前に `schemas/*.json` と既存 `skills/` の整合を確認。
 - 大きな変更は小さく刻み、必ずテストと検証スクリプトで裏を取ってから PR。
 - 不明な場合は README と `docs/architecture.md`（Planner/Runner 概要）、`docs/skill-planner.md` を参照。
+
+---
+
+## 9. AI プロバイダー別設定
+
+本リポジトリは複数の AI コーディングアシスタントに対応しています。各プロバイダー固有の設定は以下を参照:
+
+- **GitHub Copilot**: `.github/copilot-instructions.md`
+- **Claude Code**: `CLAUDE.md`, `.claude/`
+- **OpenAI Codex**: `.codex/` (`CODEX_HOME=$(pwd)/.codex codex ...` で起動)
+
+共通ルール（スキル利用、安全規則、ワークフロー）はこの `AGENTS.md` が Single Source of Truth です。

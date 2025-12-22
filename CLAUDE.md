@@ -1,24 +1,16 @@
 # Claude Code Project Guide
 
-## What this repo is
+> **Note**: Read [AGENTS.md](./AGENTS.md) first for core project rules.
+> This file contains Claude Code specific configuration only.
 
-- You are working in the `river-reviewer` repository.
-- Prefer incremental, testable changes.
+## Claude-specific settings
 
-## Must-use skills (local docs)
+- Permission settings: See `.claude/settings.json`
+- Custom commands: `/skill`, `/review-local` (in `.claude/commands/`)
+- Sub-agent: `river-reviewer` (in `.claude/agents/`)
 
-- This repository includes a skills library under `skills/`.
-- When a task matches a skill, read the relevant `skills/**/skill.md` and follow it.
-- If unsure, search `skills/` for keywords and choose the best match.
+## Quick reference (from AGENTS.md)
 
-## Engineering rules
-
-- Follow existing code style and conventions in the repo.
-- Avoid large refactors unless explicitly requested.
-- After changes, run the project’s standard checks (see README / package.json scripts / CI workflows).
-
-## Safety rules
-
-- Don’t access secrets: `.env`, `.env.*`, `secrets/**`, credential files.
-- Avoid destructive shell commands; ask before anything risky.
-- Don’t introduce new dependencies without explaining why.
+- Skills: Search `skills/` with both English and Japanese keywords
+- Safety: No secrets access, no destructive commands without confirmation
+- Workflow: Small changes → lint/test → PR

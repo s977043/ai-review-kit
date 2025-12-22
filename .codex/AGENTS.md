@@ -1,23 +1,23 @@
 # Project Codex Instructions (CODEX_HOME scoped)
 
-## Goals
+> **Note**: Read [AGENTS.md](../AGENTS.md) first for core project rules.
+> This file contains Codex-specific configuration only.
 
-- Help implement and review this repository safely and consistently.
-- Prefer small, verifiable changes over large rewrites.
+## Usage
 
-## Must-use project skills
+Run Codex with project-local config:
 
-- This repo keeps a skills library under `skills/`.
-- When a task matches a skill (docs/PDFs/spreadsheets/slides), read the relevant `skills/**/skill.md` first and follow it.
-- If you are unsure which skill applies, search `skills/` by keyword and pick the closest one.
+```bash
+CODEX_HOME=$(pwd)/.codex codex "your prompt"
+```
 
-## Safety and hygiene
+## Codex-specific settings
 
-- Never read or print secrets. Treat `.env`, `secrets/`, and credential files as off-limits.
-- Avoid destructive commands by default (`rm`, `reset --hard`, mass deletes). Ask first if truly needed.
+- Config: See `.codex/config.toml` for approval policy and sandbox mode
+- Environment: Limited env vars forwarded (PATH, HOME, USER, SHELL, LANG, LC_ALL)
 
-## Workflow expectations
+## Quick reference (from AGENTS.md)
 
-- Before coding: scan existing code and config; prefer existing patterns.
-- After edits: run the project’s standard checks (see `README.md`, `package.json` scripts, CI workflows) to verify changes.
-- Summarize what changed and why. Include commands you ran and their results.
+- Skills: Search `skills/` with both English and Japanese keywords
+- Safety: No secrets access, no destructive commands without confirmation
+- Workflow: Small changes → lint/test → PR
