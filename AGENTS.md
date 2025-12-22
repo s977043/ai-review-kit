@@ -121,10 +121,18 @@ AI エージェントは「主に編集対象」を優先し、それ以外は�
 
 ## 9. AI プロバイダー別設定
 
-本リポジトリは複数の AI コーディングアシスタントに対応しています。各プロバイダー固有の設定は以下を参照:
+本リポジトリは複数の AI コーディングアシスタントに対応しています。
 
-- **GitHub Copilot**: `.github/copilot-instructions.md`
-- **Claude Code**: `CLAUDE.md`, `.claude/`
-- **OpenAI Codex**: `.codex/` (`CODEX_HOME=$(pwd)/.codex codex ...` で起動)
+| プロバイダー   | 設定ファイル                      | カスタムコマンド          | エージェント      |
+| -------------- | --------------------------------- | ------------------------- | ----------------- |
+| GitHub Copilot | `.github/copilot-instructions.md` | `/skill`, `/review`       | `@river-reviewer` |
+| Claude Code    | `CLAUDE.md`, `.claude/`           | `/skill`, `/review-local` | `river-reviewer`  |
+| OpenAI Codex   | `.codex/`                         | -                         | -                 |
+
+**起動方法:**
+
+- **Copilot**: VS Code で自動読み込み
+- **Claude Code**: `claude` コマンドで起動
+- **Codex**: `CODEX_HOME=$(pwd)/.codex codex "your prompt"` で起動
 
 共通ルール（スキル利用、安全規則、ワークフロー）はこの `AGENTS.md` が Single Source of Truth です。
