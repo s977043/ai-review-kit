@@ -48,6 +48,100 @@ test('一部のみ上書きした設定をマージできる', async () => {
   });
 });
 
+test('YAML 形式の設定ファイルも読み込める', async () => {
+  await withTempDir(async dir => {
+    const configPath = path.join(dir, '.river-reviewer.yaml');
+    const custom = [
+      'model:',
+      '  provider: anthropic',
+      '  modelName: claude-3-5-sonnet',
+      'review:',
+      '  language: ja',
+      '  severity: strict',
+      'exclude:',
+      '  files:',
+      '    - "**/*.test.ts"',
+    ].join('\n');
+    await fs.writeFile(configPath, custom, 'utf8');
+
+    const loader = new ConfigLoader();
+    const result = await loader.load(dir);
+    assert.equal(result.source, 'file');
+    assert.equal(result.path, configPath);
+    assert.equal(result.config.model.provider, 'anthropic');
+    assert.equal(result.config.review.severity, 'strict');
+    assert.deepEqual(result.config.exclude.files, ['**/*.test.ts']);
+  });
+});
+
+test('.yml 拡張子の設定ファイルも検出できる', async () => {
+  await withTempDir(async dir => {
+    const configPath = path.join(dir, '.river-reviewer.yml');
+    await fs.writeFile(
+      configPath,
+      [
+        'model:',
+        '  provider: google',
+        '  modelName: gemini-1.5-flash',
+        'review:',
+        '  language: en',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const loader = new ConfigLoader();
+    const result = await loader.load(dir);
+    assert.equal(result.source, 'file');
+    assert.equal(result.path, configPath);
+    assert.equal(result.config.model.provider, 'google');
+    assert.equal(result.config.review.language, 'en');
+  });
+});
+
+test('トップレベルがオブジェクトでない設定はエラーになる', async () => {
+  await withTempDir(async dir => {
+    const configPath = path.join(dir, '.river-reviewer.json');
+    await fs.writeFile(configPath, JSON.stringify(['not', 'an', 'object']), 'utf8');
+    const loader = new ConfigLoader();
+    await assert.rejects(loader.load(dir), ConfigLoaderError);
+  });
+});
+
+test('トップレベルがオブジェクトでないYAML設定はエラーになる', async () => {
+  await withTempDir(async dir => {
+    const configPath = path.join(dir, '.river-reviewer.yml');
+    await fs.writeFile(configPath, '- not\n- an\n- object', 'utf8');
+    const loader = new ConfigLoader();
+    await assert.rejects(loader.load(dir), ConfigLoaderError);
+  });
+});
+
+test('不正なYAML構文はエラーになる', async () => {
+  await withTempDir(async dir => {
+    const configPath = path.join(dir, '.river-reviewer.yaml');
+    await fs.writeFile(configPath, 'model:\n  invalid indentation\nkey: value', 'utf8');
+    const loader = new ConfigLoader();
+    await assert.rejects(loader.load(dir), ConfigLoaderError);
+  });
+});
+
+test('複数の設定ファイルがある場合は優先順位に従う', async () => {
+  await withTempDir(async dir => {
+    const jsonPath = path.join(dir, '.river-reviewer.json');
+    const yamlPath = path.join(dir, '.river-reviewer.yaml');
+    const ymlPath = path.join(dir, '.river-reviewer.yml');
+
+    await fs.writeFile(jsonPath, JSON.stringify({ review: { language: 'en' } }), 'utf8');
+    await fs.writeFile(yamlPath, 'review:\n  language: ja', 'utf8');
+    await fs.writeFile(ymlPath, 'review:\n  language: ja', 'utf8');
+
+    const loader = new ConfigLoader();
+    const result = await loader.load(dir);
+    assert.equal(result.path, jsonPath);
+    assert.equal(result.config.review.language, 'en');
+  });
+});
+
 test('スキーマ違反の設定はエラーになる', async () => {
   await withTempDir(async dir => {
     const configPath = path.join(dir, '.river-reviewer.json');
