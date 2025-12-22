@@ -8,5 +8,36 @@
   },
   "files.associations": {
     "*.md": "markdown"
+  },
+  // These settings enable advanced/experimental GitHub Copilot Chat features in VS Code.
+  // Availability depends on your GitHub Copilot Chat extension version and may require the latest
+  // stable or Insiders/Nightly builds. If these settings have no effect, try updating the extension.
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "chat.useAgentsMdFile": true,
+  "github.copilot.chat.alternateGptPrompt.enabled": true,
+  "chat.tools.terminal.autoApprove": {
+    "rg": true,
+    "fd": true,
+    "npm run lint": true,
+    "npm run format": true,
+    "npm run test": true,
+    "npm run build": true,
+    "pnpm lint": true,
+    "pnpm format": true,
+    "pnpm test": true,
+    "pnpm build": true,
+    "yarn lint": true,
+    "yarn format": true,
+    "yarn test": true,
+    "yarn build": true,
+    "bun lint": true,
+    "bun format": true,
+    "bun test": true,
+    "bun build": true,
+    "git status": true,
+    "git diff": true,
+    "rm": false,
+    "del": false,
+    "Remove-Item": false
   }
 }

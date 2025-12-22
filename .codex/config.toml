@@ -1,0 +1,14 @@
+# Project-local Codex config
+# Load this by running: CODEX_HOME=$(pwd)/.codex codex ...
+
+# Safer defaults
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+# Optional tuning (uncomment if you want)
+# model = "gpt-5"
+# model_reasoning_effort = "high"
+
+[shell_environment_policy]
+# Forward as few env vars as possible to reduce accidental secret leakage.
+include_only = ["PATH", "HOME", "USER", "SHELL", "LANG", "LC_ALL"]

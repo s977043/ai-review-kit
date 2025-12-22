@@ -17,3 +17,7 @@ artifacts/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Claude Code local-only overrides
+.claude/settings.local.json
+CLAUDE.local.md
