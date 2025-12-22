@@ -34,7 +34,6 @@ export class ConfigLoaderError extends Error {
   constructor(message, options = {}) {
     super(message, options);
     this.name = 'ConfigLoaderError';
-    if (options.cause && !this.cause) this.cause = options.cause;
     if (options.path) this.path = options.path;
   }
 }
@@ -67,16 +66,13 @@ export class ConfigLoader {
 
   parseConfig(raw, filePath) {
     const ext = path.extname(filePath).toLowerCase();
+    let parsed;
     if (ext === '.yaml' || ext === '.yml') {
-      const parsed = yaml.load(raw);
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        throw new ConfigLoaderError('設定ファイルのトップレベルはオブジェクトである必要があります', {
-          path: filePath,
-        });
-      }
-      return parsed;
+      parsed = yaml.load(raw);
+    } else {
+      parsed = JSON.parse(raw);
     }
-    const parsed = JSON.parse(raw);
+
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       throw new ConfigLoaderError('設定ファイルのトップレベルはオブジェクトである必要があります', {
         path: filePath,
@@ -104,9 +100,6 @@ export class ConfigLoader {
       parsedInput = validated.data;
     } catch (err) {
       if (err instanceof ConfigLoaderError) throw err;
-      if (err?.code === 'ENOENT') {
-        return { config: this.baseConfig, path: null, source: 'default' };
-      }
       if (err instanceof SyntaxError || err?.name === 'YAMLException') {
         throw new ConfigLoaderError('設定ファイルのパースに失敗しました', { cause: err, path: configPath });
       }

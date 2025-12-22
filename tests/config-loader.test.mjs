@@ -107,6 +107,41 @@ test('トップレベルがオブジェクトでない設定はエラーにな�
   });
 });
 
+test('トップレベルがオブジェクトでないYAML設定はエラーになる', async () => {
+  await withTempDir(async dir => {
+    const configPath = path.join(dir, '.river-reviewer.yml');
+    await fs.writeFile(configPath, '- not\n- an\n- object', 'utf8');
+    const loader = new ConfigLoader();
+    await assert.rejects(loader.load(dir), ConfigLoaderError);
+  });
+});
+
+test('不正なYAML構文はエラーになる', async () => {
+  await withTempDir(async dir => {
+    const configPath = path.join(dir, '.river-reviewer.yaml');
+    await fs.writeFile(configPath, 'model:\n  invalid indentation\nkey: value', 'utf8');
+    const loader = new ConfigLoader();
+    await assert.rejects(loader.load(dir), ConfigLoaderError);
+  });
+});
+
+test('複数の設定ファイルがある場合は優先順位に従う', async () => {
+  await withTempDir(async dir => {
+    const jsonPath = path.join(dir, '.river-reviewer.json');
+    const yamlPath = path.join(dir, '.river-reviewer.yaml');
+    const ymlPath = path.join(dir, '.river-reviewer.yml');
+
+    await fs.writeFile(jsonPath, JSON.stringify({ review: { language: 'en' } }), 'utf8');
+    await fs.writeFile(yamlPath, 'review:\n  language: ja', 'utf8');
+    await fs.writeFile(ymlPath, 'review:\n  language: ja', 'utf8');
+
+    const loader = new ConfigLoader();
+    const result = await loader.load(dir);
+    assert.equal(result.path, jsonPath);
+    assert.equal(result.config.review.language, 'en');
+  });
+});
+
 test('スキーマ違反の設定はエラーになる', async () => {
   await withTempDir(async dir => {
     const configPath = path.join(dir, '.river-reviewer.json');
