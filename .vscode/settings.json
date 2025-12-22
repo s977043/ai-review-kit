@@ -8,5 +8,20 @@
   },
   "files.associations": {
     "*.md": "markdown"
+  },
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "chat.useAgentsMdFile": true,
+  "github.copilot.chat.alternateGptPrompt.enabled": true,
+  "chat.tools.terminal.autoApprove": {
+    "rg": true,
+    "fd": true,
+    "/^npm (run )?(lint|format|test|build)( .*)?$/": true,
+    "/^pnpm (lint|format|test|build)( .*)?$/": true,
+    "/^yarn (lint|format|test|build)( .*)?$/": true,
+    "/^bun (lint|format|test|build)( .*)?$/": true,
+    "/^git (status|diff)( .*)?$/": true,
+    "rm": false,
+    "del": false,
+    "Remove-Item": false
   }
 }

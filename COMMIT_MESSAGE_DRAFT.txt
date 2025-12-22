@@ -1,0 +1,22 @@
+feat: add Copilot instructions and agents to integrate with `skills/`
+
+This PR establishes the entry points and rules for GitHub Copilot to utilize and maintain the `skills/` directory effectively.
+
+**Changes:**
+1.  **Global Instructions (`.github/copilot-instructions.md`)**:
+    *   Adds a 'Golden Rule' to search `skills/` before starting tasks.
+    *   Sets `coding-review-checklist.md` as the review standard.
+2.  **File-Specific Instructions (`.github/instructions/`)**:
+    *   `skills.instructions.md`: Enforces `skill_template.md` structure and Japanese content for new skills.
+    *   `js-ts.instructions.md` & `docs.instructions.md`: Guidelines for code and documentation consistency.
+3.  **Custom Agent (`.github/agents/river-reviewer.agent.md`)**:
+    *   Defines `@river-reviewer`, an agent specialized in planning and executing tasks based on existing skills.
+4.  **Prompt Files (`.github/prompts/`)**:
+    *   Adds `/skill` for planning tasks using skills.
+    *   Adds `/review` for skill-based code reviews.
+5.  **VS Code Settings (`.vscode/settings.json`)**:
+    *   Enables instruction files and agent definitions.
+    *   Configures auto-approval for safe commands (lint, test, etc.).
+
+**Goal:**
+To transform Copilot into a context-aware partner that actively uses and expands the project's 'Skill' knowledge base.
