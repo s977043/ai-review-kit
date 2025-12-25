@@ -25,6 +25,7 @@ module.exports = {
         'guides/use-riverbed-memory',
         'guides/tracing',
         'guides/agents',
+        'guides/deploy-docs-vercel',
         'guides/troubleshooting',
         {
           type: 'category',

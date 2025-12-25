@@ -94,3 +94,8 @@ jobs:
         with:
           name: lychee-report
           path: /tmp/lychee.md
+      - name: Fail if link check failed
+        if: steps.lychee.outcome == 'failure'
+        run: |
+          echo "Lychee reported broken links. See /tmp/lychee.md for details."
+          exit 1

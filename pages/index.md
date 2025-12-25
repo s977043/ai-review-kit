@@ -1,5 +1,5 @@
 ---
-slug: /
+slug: /home
 ---
 
 # River Reviewer docs
