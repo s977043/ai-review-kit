@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import { riverReviewerConfigSchema } from './schema.mjs';
-import { defaultConfig } from './default.mjs';
+import { ConfigSchema, riverReviewerConfigSchema } from './schema.mjs';
+import { defaultConfig, defaultSkillConfig } from './default.mjs';
 
 export class ConfigMergeError extends Error {
   constructor(message, options = {}) {
@@ -92,12 +92,38 @@ export class ConfigLoader {
     try {
       const raw = await this.fs.readFile(configPath, 'utf8');
       const parsed = this.parseConfig(raw, configPath);
-      const validated = riverReviewerConfigSchema.safeParse(parsed);
-      if (!validated.success) {
-        const detail = validated.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
-        throw new ConfigLoaderError(`設定ファイルの形式が正しくありません: ${detail}`, { path: configPath });
+      
+      // Determine schema based on content
+      const isNewSchema = 'skills' in parsed || 'version' in parsed;
+      
+      if (isNewSchema) {
+        const validated = ConfigSchema.safeParse(parsed);
+        if (!validated.success) {
+          const detail = validated.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
+          throw new ConfigLoaderError(`設定ファイルの形式が正しくありません (Skill Schema): ${detail}`, { path: configPath });
+        }
+        parsedInput = validated.data;
+
+        const knownKeys = new Set(['version', 'model', 'review', 'exclude', 'skills']);
+        const unknownKeys = Object.keys(parsedInput).filter(key => !knownKeys.has(key));
+        if (unknownKeys.length) {
+          const message = `Unknown config keys ignored: ${unknownKeys.join(', ')}`;
+          if (process.env.RIVER_CONFIG_STRICT === '1') {
+            throw new ConfigLoaderError(message, { path: configPath });
+          }
+          // eslint-disable-next-line no-console
+          console.warn(message);
+        }
+      } else {
+        // Fallback to old schema
+        const validated = riverReviewerConfigSchema.safeParse(parsed);
+        if (!validated.success) {
+           const detail = validated.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
+           throw new ConfigLoaderError(`設定ファイルの形式が正しくありません (Legacy Schema): ${detail}`, { path: configPath });
+        }
+        parsedInput = validated.data;
       }
-      parsedInput = validated.data;
+      
     } catch (err) {
       if (err instanceof ConfigLoaderError) throw err;
       if (err instanceof SyntaxError || err?.name === 'YAMLException') {
@@ -107,11 +133,19 @@ export class ConfigLoader {
     }
 
     try {
-      const merged = mergeConfig(this.baseConfig, parsedInput);
+      // Determine which base config to use
+      const baseToUse = ('skills' in parsedInput || 'version' in parsedInput) ? defaultSkillConfig : this.baseConfig;
+      const merged = mergeConfig(baseToUse, parsedInput);
       return { config: merged, path: configPath, source: 'file' };
     } catch (err) {
-      // Defensive: keep a dedicated error type for unexpected merge-time failures.
       throw new ConfigMergeError('設定のマージに失敗しました', { cause: err });
     }
   }
+}
+
+// Export loadConfig helper for SkillDispatcher (always uses default loader for now)
+export async function loadConfig(repoRoot) {
+  const loader = new ConfigLoader(); // Uses legacy default, but load() will switch base if new schema detected
+  const { config } = await loader.load(repoRoot);
+  return config;
 }

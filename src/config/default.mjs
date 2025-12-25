@@ -1,4 +1,6 @@
+// Unified default config supporting both legacy and skill-based flows
 export const defaultConfig = Object.freeze({
+  version: '1.0',
   model: {
     provider: 'openai',
     modelName: 'gpt-4o-mini',
@@ -14,4 +16,8 @@ export const defaultConfig = Object.freeze({
     files: [],
     prLabelsToIgnore: [],
   },
+  skills: [],
 });
+
+// Alias kept for compatibility with newer skill-only imports
+export const defaultSkillConfig = defaultConfig;
