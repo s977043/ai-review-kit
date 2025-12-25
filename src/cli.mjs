@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import process from 'node:process';
-import { GitError, GitRepoNotFoundError } from './lib/git.mjs';
+import { GitError, GitRepoNotFoundError, ensureGitRepo, detectDefaultBranch, findMergeBase } from './lib/git.mjs';
 import { doctorLocalReview, planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError } from './lib/skill-loader.mjs';
+import { collectRepoDiff } from './lib/diff.mjs';
+import { renderDiffText } from './lib/diff-optimizer.mjs';
 import CostEstimator from './core/cost-estimator.mjs';
+import { SkillDispatcher } from './core/skill-dispatcher.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
 import { parseList } from './lib/utils.mjs';
 import { PLANNER_MODES } from './lib/planner-utils.mjs';
@@ -25,6 +28,7 @@ function printHelp() {
 
 Commands:
   run <path>     Run River Reviewer locally against the git repo at <path>
+  skills <path>  Run the new Skill-based Reviewer architecture
   doctor <path>  Check setup and print hints for common issues
   eval           Run review fixtures evaluation (must_include checks)
 
@@ -64,7 +68,7 @@ function parseArgs(argv) {
 
   while (args.length) {
     const arg = args.shift();
-    if (!parsed.command && (arg === 'run' || arg === 'doctor')) {
+    if (!parsed.command && (arg === 'run' || arg === 'doctor' || arg === 'skills')) {
       parsed.command = arg;
       if (args[0] && !args[0].startsWith('-')) {
         parsed.target = args.shift();
@@ -281,7 +285,7 @@ function printDebugInfo(result, { log = console.log } = {}) {
   const plannerStatus = formatPlannerStatus(result.plan ?? {});
   const impactTags = Array.isArray(result.plan?.impactTags) ? result.plan.impactTags : [];
   log(`\nDebug info:
-- LLM: ${debug.llmUsed ? `used (${debug.llmModel})` : debug.llmSkipped || debug.llmError || 'not used'}
+- LLM: ${debug.llmUsed ? `used (\`${debug.llmModel}\`)` : debug.llmSkipped || debug.llmError || 'not used'}
 - Planner: ${plannerStatus}
 - Impact tags: ${impactTags.join(', ') || 'none'}
 - Token estimate (raw -> optimized): ${rawTokens} -> ${result.tokenEstimate} (${reduction}% reduction)
@@ -331,7 +335,7 @@ async function main() {
     printHelp();
     return 0;
   }
-  if (!['run', 'doctor', 'eval'].includes(parsed.command)) {
+  if (!['run', 'doctor', 'eval', 'skills'].includes(parsed.command)) {
     console.error(`Unknown command: ${parsed.command}`);
     printHelp();
     return 1;
@@ -340,6 +344,36 @@ async function main() {
   const targetPath = path.resolve(parsed.target);
 
   try {
+    if (parsed.command === 'skills') {
+      const repoRoot = await ensureGitRepo(targetPath);
+      const defaultBranch = await detectDefaultBranch(repoRoot);
+      const mergeBase = await findMergeBase(repoRoot, defaultBranch);
+      const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
+      
+      const dispatcher = new SkillDispatcher(repoRoot);
+      
+      const getFileDiff = async (targetFile) => {
+        const fileData = repoDiff.files.find(f => f.path === targetFile);
+        if (!fileData) return '';
+        return renderDiffText([fileData]);
+      };
+
+      console.log(`River Reviewer (Skills) - Target: ${targetPath}`);
+      const results = await dispatcher.run(repoDiff.changedFiles, getFileDiff);
+      
+      if (parsed.output === 'markdown') {
+        console.log(`## Review Results\n`);
+        for (const res of results) {
+          console.log(`### ${res.file} (Skill: ${res.skill})`);
+          console.log(res.review);
+          console.log('\n---');
+        }
+      } else {
+        console.log(JSON.stringify(results, null, 2));
+      }
+      return 0;
+    }
+
     if (parsed.command === 'eval') {
       const { evaluateReviewFixtures } = await import('./lib/review-fixtures-eval.mjs');
       const casesPath =
@@ -417,7 +451,7 @@ Dry run: ${parsed.dryRun ? 'yes' : 'no'}
 Debug: ${parsed.debug ? 'yes' : 'no'}
 Planner: ${formatPlannerStatus(context.plan ?? {})}
 Contexts: ${(context.availableContexts || []).join(', ') || 'none'}
-Dependencies: ${
+Dependencies: ${ 
       context.availableDependencies ? context.availableDependencies.join(', ') : 'not specified (skip disabled)'
     }`);
 
