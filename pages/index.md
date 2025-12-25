@@ -1,10 +1,8 @@
----
-slug: /home
----
+## slug: /
 
 # River Reviewer docs
 
-英語版は [/docs/index-en](/docs/index-en) を参照してください（日本語がソース・オブ・トゥルースです）。
+英語版は [index-en](/index-en) を参照してください（日本語がソース・オブ・トゥルースです）。
 
 River Reviewer のドキュメントは、日本語を基本言語として提供し、
 [Diátaxis ドキュメントフレームワーク](https://diataxis.fr/) に基づいて構成しています。
