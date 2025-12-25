@@ -10,8 +10,10 @@ const resolveBaseUrl = () =>
 
 const siteUrl = normalizeSiteUrl(
   process.env.DOCS_SITE_URL ||
-    (isVercel && process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
+    (isVercel
+      ? process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'https://ai-review-kit.vercel.app'
       : 'https://s977043.github.io')
 );
 const baseUrl = ensureLeadingAndTrailingSlash(resolveBaseUrl());
