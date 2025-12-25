@@ -9,7 +9,11 @@ const resolveBaseUrl = () =>
   process.env.DOCS_BASE_URL || (isVercel ? '/docs/' : '/river-reviewer/');
 const resolveSiteUrl = () => {
   if (process.env.DOCS_SITE_URL) return process.env.DOCS_SITE_URL;
-  if (isVercel) return 'https://river-reviewer.vercel.app';
+  if (isVercel) {
+    if (process.env.VERCEL_ENV === 'production') return 'https://river-reviewer.vercel.app';
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+    return 'https://river-reviewer.vercel.app';
+  }
   return 'https://s977043.github.io';
 };
 
