@@ -4,7 +4,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
 const normalizeRouteBasePath = (routeBasePath) =>
-  routeBasePath === '/' ? '' : `/${String(routeBasePath).replace(/^\/+|\/+$/g, '')}`;
+  routeBasePath === '/' ? '' : `/${routeBasePath.replace(/^\/+|\/+$/g, '')}`;
 
 export default function Home() {
   const { siteConfig } = useDocusaurusContext();

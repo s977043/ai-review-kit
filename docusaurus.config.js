@@ -5,17 +5,16 @@ const ensureLeadingAndTrailingSlash = (value) => {
   const withLeading = value.startsWith('/') ? value : `/${value}`;
   return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
 };
+const resolveBaseUrl = () =>
+  process.env.DOCS_BASE_URL || (isVercel ? '/docs/' : '/river-reviewer/');
 
 const siteUrl = normalizeSiteUrl(
-  process.env.DOCS_SITE_URL
-    ? process.env.DOCS_SITE_URL
-    : isVercel && process.env.VERCEL_URL
+  process.env.DOCS_SITE_URL ||
+    (isVercel && process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
-      : 'https://s977043.github.io'
+      : 'https://s977043.github.io')
 );
-const baseUrl = ensureLeadingAndTrailingSlash(
-  process.env.DOCS_BASE_URL ? process.env.DOCS_BASE_URL : isVercel ? '/docs/' : '/river-reviewer/'
-);
+const baseUrl = ensureLeadingAndTrailingSlash(resolveBaseUrl());
 const docsRouteBasePath =
   process.env.DOCS_ROUTE_BASE_PATH ?? (baseUrl.endsWith('/docs/') ? '/' : 'docs');
 

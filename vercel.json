@@ -4,12 +4,12 @@
     {
       "source": "/",
       "destination": "/docs/",
-      "permanent": false
+      "permanent": true
     },
     {
       "source": "/docs",
       "destination": "/docs/",
-      "permanent": false
+      "permanent": true
     }
   ]
 }

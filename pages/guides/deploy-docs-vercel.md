@@ -30,7 +30,7 @@ Next.js と Docusaurus を同じ Vercel プロジェクトに置くと、`/docs/
 
 GitHub Pages 向けに `DOCS_BASE_URL` を指定しない場合は、従来どおり `/river-reviewer/docs/` 配信でビルドされます。
 
-## アプリ側（`ai-review-kit.vercel.app` など）
+## アプリ側（例: `<app-domain>`／`river-reviewer.vercel.app` など）
 
 アプリの `vercel.json` に rewrite を追加し、ドキュメントドメインへ転送します。
 
