@@ -13,7 +13,7 @@ const siteUrl = normalizeSiteUrl(
     (isVercel
       ? process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
-        : 'https://ai-review-kit.vercel.app'
+        : 'https://river-reviewer.vercel.app'
       : 'https://s977043.github.io')
 );
 const baseUrl = ensureLeadingAndTrailingSlash(resolveBaseUrl());
