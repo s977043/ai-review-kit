@@ -37,6 +37,7 @@ module.exports = {
           path: 'pages',
           routeBasePath: docsRouteBasePath,
           sidebarPath: require.resolve('./sidebars.js'),
+          editUrl: 'https://github.com/s977043/river-reviewer/tree/main/',
         },
         theme: { customCss: require.resolve('./src/css/custom.css') },
         sitemap: { changefreq: 'weekly', priority: 0.5 },
