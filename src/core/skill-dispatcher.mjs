@@ -8,12 +8,12 @@ function shouldExclude(filePath, patterns = []) {
 }
 
 export class SkillDispatcher {
-  constructor(configPath) {
-    this.configPath = configPath;
+  constructor(repoRoot) {
+    this.repoRoot = repoRoot;
   }
 
   async run(changedFiles, getFileDiff) {
-    const config = await loadConfig(this.configPath);
+    const config = await loadConfig(this.repoRoot);
     const results = [];
 
     const skills = config.skills || [];
@@ -44,25 +44,35 @@ export class SkillDispatcher {
 
       console.log(`Analyzing ${file} with skills: ${applicableSkills.map(s => s.name).join(', ')}`);
 
-      // 2. Execute each skill (Potential for parallel execution here)
-      for (const skill of applicableSkills) {
+      // 2. Execute skills in parallel
+      const diff = await getFileDiff(file); // Dependency injection for file reading (once per file)
+
+      const skillPromises = applicableSkills.map(async (skill) => {
         try {
           const client = AIClientFactory.create({ modelName: skill.model, temperature: skill.temperature });
           const systemPrompt = buildSystemPrompt(skill);
-          const diff = await getFileDiff(file); // Dependency injection for file reading
 
           console.log(`  -> Invoking ${skill.model} for skill "${skill.name}"...`);
           const review = await client.generateReview(systemPrompt, diff);
 
-          results.push({
+          return {
             file,
             skill: skill.name,
             review,
-          });
+          };
         } catch (error) {
           console.error(`  [Error] Failed to execute skill "${skill.name}" on ${file}:`, error);
+          // Return error info in the result so it can be reported if needed
+          return {
+            file,
+            skill: skill.name,
+            error: error instanceof Error ? error.message : String(error),
+          };
         }
-      }
+      });
+
+      const fileResults = await Promise.all(skillPromises);
+      results.push(...fileResults);
     }
 
     return results;

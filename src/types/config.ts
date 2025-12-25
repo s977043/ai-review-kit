@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ConfigSchema, SkillSchema, RuleSchema, AIModelSchema } from '../config/schema.mjs';
+import { ConfigSchema, SkillSchema, RuleSchema, AIModelSchema } from '../config/schema';
 
 export type RiverConfig = z.infer<typeof ConfigSchema>;
 export type Skill = z.infer<typeof SkillSchema>;

@@ -48,12 +48,16 @@ export class AIClientFactory {
     if (clientCache.has(cacheKey)) {
       return clientCache.get(cacheKey);
     }
-    const client =
-      modelName.startsWith('gemini')
-        ? new GeminiClient(modelName, temperature)
-        : modelName.match(/^(gpt|o1)/)
-          ? new OpenAIClient(modelName, temperature)
-          : null;
+
+    let client = null;
+    if (modelName.startsWith('gemini')) {
+      const apiKey = process.env.GOOGLE_API_KEY;
+      client = new GeminiClient(modelName, apiKey, temperature);
+    } else if (modelName.match(/^(gpt|o1)/)) {
+      const apiKey = process.env.OPENAI_API_KEY || process.env.RIVER_OPENAI_API_KEY;
+      client = new OpenAIClient(modelName, apiKey, temperature);
+    }
+
     if (!client) throw new Error(`Unsupported model: ${modelName}`);
     clientCache.set(cacheKey, client);
     return client;
@@ -61,10 +65,9 @@ export class AIClientFactory {
 }
 
 class GeminiClient {
-  constructor(modelName, temperature) {
+  constructor(modelName, apiKey, temperature) {
     this.modelName = modelName;
     this.temperature = temperature ?? 0.2;
-    const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) {
       throw new Error('GOOGLE_API_KEY が設定されていません');
     }
@@ -91,10 +94,9 @@ class GeminiClient {
 }
 
 class OpenAIClient {
-  constructor(modelName, temperature) {
+  constructor(modelName, apiKey, temperature) {
     this.modelName = modelName;
     this.temperature = temperature ?? 0;
-    const apiKey = process.env.OPENAI_API_KEY || process.env.RIVER_OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY (または RIVER_OPENAI_API_KEY) が設定されていません');
     }

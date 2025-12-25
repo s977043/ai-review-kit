@@ -144,8 +144,8 @@ export class ConfigLoader {
 }
 
 // Export loadConfig helper for SkillDispatcher (always uses default loader for now)
-export async function loadConfig(configPath) {
+export async function loadConfig(repoRoot) {
   const loader = new ConfigLoader(); // Uses legacy default, but load() will switch base if new schema detected
-  const { config } = await loader.load(configPath);
+  const { config } = await loader.load(repoRoot);
   return config;
 }
