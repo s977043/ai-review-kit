@@ -12,11 +12,17 @@ export class SkillDispatcher {
     const config = await loadConfig(this.configPath);
     const results = [];
 
-    console.log(`Loaded ${config.skills.length} skills from config.`);
+    const skills = config.skills || [];
+    console.log(`Loaded ${skills.length} skills from config.`);
+
+    if (skills.length === 0) {
+      console.log('No skills configured. Please add skills to your configuration file (or check if you are using the legacy config format).');
+      return results;
+    }
 
     for (const file of changedFiles) {
       // 1. Identify applicable skills for this file
-      const applicableSkills = config.skills.filter(skill => 
+      const applicableSkills = skills.filter(skill => 
         skill.files.some(pattern => minimatch(file, pattern))
       );
 
