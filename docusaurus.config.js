@@ -7,15 +7,14 @@ const ensureLeadingAndTrailingSlash = (value) => {
 };
 const resolveBaseUrl = () =>
   process.env.DOCS_BASE_URL || (isVercel ? '/docs/' : '/river-reviewer/');
+const resolveSiteUrl = () => {
+  if (process.env.DOCS_SITE_URL) return process.env.DOCS_SITE_URL;
+  if (!isVercel) return 'https://s977043.github.io';
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'https://river-reviewer.vercel.app';
+};
 
-const siteUrl = normalizeSiteUrl(
-  process.env.DOCS_SITE_URL ||
-    (isVercel
-      ? process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'https://river-reviewer.vercel.app'
-      : 'https://s977043.github.io')
-);
+const siteUrl = normalizeSiteUrl(resolveSiteUrl());
 const baseUrl = ensureLeadingAndTrailingSlash(resolveBaseUrl());
 const docsRouteBasePath =
   process.env.DOCS_ROUTE_BASE_PATH ?? (baseUrl.endsWith('/docs/') ? '/' : 'docs');
