@@ -5,7 +5,7 @@ export const buildSystemPrompt = (skill) => {
 - **Context**: ${rule.context}
 - **Patterns**: ${rule.patterns.join(', ')}
 - **Anti-Patterns**:
-${rule.anti_patterns.map(p => `  \`\`\`\n${p}\n  \`\`\``).join('\n')}
+${rule.anti_patterns.map(p => `\`\`\`\n${p}\n\`\`\``).join('\n')}
 - **Fix Guidance**: ${rule.fix_guidance}
 `).join('\n');
 
