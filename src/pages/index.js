@@ -1,24 +1,15 @@
 import React from 'react';
 import { Redirect } from '@docusaurus/router';
 import useBaseUrl from '@docusaurus/useBaseUrl';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
-const inferredBaseUrl = ((value) => {
-  const withLeading = value.startsWith('/') ? value : `/${value}`;
-  return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
-})(
-  process.env.DOCS_BASE_URL
-    ? process.env.DOCS_BASE_URL
-    : process.env.VERCEL
-      ? '/docs/'
-      : '/river-reviewer/'
-);
-
-const docsRouteBasePath =
-  process.env.DOCS_ROUTE_BASE_PATH ?? (inferredBaseUrl.endsWith('/docs/') ? '/' : 'docs');
-const normalizedRouteBasePath =
-  docsRouteBasePath === '/' ? '' : `/${docsRouteBasePath.replace(/^\/+|\/+$/g, '')}`;
+const normalizeRouteBasePath = (routeBasePath) =>
+  routeBasePath === '/' ? '' : `/${String(routeBasePath).replace(/^\/+|\/+$/g, '')}`;
 
 export default function Home() {
+  const { siteConfig } = useDocusaurusContext();
+  const docsRouteBasePath = siteConfig?.customFields?.docsRouteBasePath ?? 'docs';
+  const normalizedRouteBasePath = normalizeRouteBasePath(docsRouteBasePath);
   const target = useBaseUrl(`${normalizedRouteBasePath}/home`);
   return <Redirect to={target} />;
 }

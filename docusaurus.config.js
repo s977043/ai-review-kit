@@ -57,4 +57,5 @@ module.exports = {
   plugins: [
     [require.resolve('./plugins/river-dashboard'), { dataPath: 'docs/data/dashboard-stats.json' }],
   ],
+  customFields: { docsRouteBasePath },
 };
