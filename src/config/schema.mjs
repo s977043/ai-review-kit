@@ -26,14 +26,16 @@ export const riverReviewerConfigSchema = z.object({
 });
 
 // --- New Skill-based Schema (for river skills) ---
+
+// Skill-based schemas
 export const AIModelSchema = z.enum([
-  'gemini-2.0-flash',          // Default: Fast & Smart
+  'gemini-2.0-flash', // Default: Fast & Smart
   'gemini-2.0-flash-thinking', // Reasoning: For Security/Architecture
-  'gemini-2.0-pro',            // High Spec
-  'gemini-1.5-pro',            // Legacy Balanced
-  'gpt-4o',                    // OpenAI Option
-  'o1',                        // OpenAI Reasoning
-  'o1-mini',                   // OpenAI Fast Reasoning
+  'gemini-2.0-pro', // High Spec
+  'gemini-1.5-pro', // Legacy Balanced
+  'gpt-4o', // OpenAI Option
+  'o1', // OpenAI Reasoning
+  'o1-mini', // OpenAI Fast Reasoning
 ]);
 
 export const RuleSchema = z.object({
@@ -56,7 +58,13 @@ export const SkillSchema = z.object({
   rules: z.array(RuleSchema),
 });
 
-export const ConfigSchema = z.object({
-  version: z.string().default('1.0'),
-  skills: z.array(SkillSchema),
-});
+export const ConfigSchema = z
+  .object({
+    version: z.string().default('1.0'),
+    model: modelConfigSchema.optional(),
+    review: reviewConfigSchema.optional(),
+    exclude: excludeConfigSchema.optional(),
+    skills: z.array(SkillSchema).default([]),
+  })
+  // Allow forward-compatible / custom keys; unknown detection is handled in loader for warnings
+  .catchall(z.unknown());
