@@ -1,5 +1,6 @@
-// Legacy default config (for river run)
+// Unified default config supporting both legacy and skill-based flows
 export const defaultConfig = Object.freeze({
+  version: '1.0',
   model: {
     provider: 'openai',
     modelName: 'gpt-4o-mini',
@@ -15,10 +16,8 @@ export const defaultConfig = Object.freeze({
     files: [],
     prLabelsToIgnore: [],
   },
-});
-
-// New default config (for river skills)
-export const defaultSkillConfig = Object.freeze({
-  version: '1.0',
   skills: [],
 });
+
+// Alias kept for compatibility with newer skill-only imports
+export const defaultSkillConfig = defaultConfig;

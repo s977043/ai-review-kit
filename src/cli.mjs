@@ -216,25 +216,25 @@ function printComments(comments) {
 
 function formatCommentsMarkdown(comments) {
   if (!comments?.length) return '_No findings._';
-  return comments.map(c => `- \\\`${c.file}:${c.line}\\\` ${c.message}`).join('\n');
+  return comments.map(c => `- \`${c.file}:${c.line}\` ${c.message}`).join('\n');
 }
 
 function formatPlanMarkdown(plan) {
   const summary = formatPlan(plan);
-  const selected = summary.selected.length ? summary.selected.map(id => `- \\\`${id}\\\``).join('\n') : '- _none_';
+  const selected = summary.selected.length ? summary.selected.map(id => `- \`${id}\``).join('\n') : '- _none_';
 
   if (!summary.skipped.length) {
     return `### 選択されたスキル (${summary.selected.length})\n${selected}\n`;
   }
 
-  const skippedLines = summary.skipped.map(item => `- \\\`${item.id}\\\`: ${item.reasons.join('; ')}`).join('\n');
+  const skippedLines = summary.skipped.map(item => `- \`${item.id}\`: ${item.reasons.join('; ')}`).join('\n');
   return `### 選択されたスキル (${summary.selected.length})\n${selected}\n\n<details>\n<summary>スキップされたスキル (${summary.skipped.length})</summary>\n\n${skippedLines}\n\n</details>\n`;
 }
 
 function formatDebugSummaryMarkdown(result) {
   const debug = result.reviewDebug ?? {};
   const llmStatus = debug.llmUsed
-    ? `used ('${debug.llmModel}')`
+    ? `used (\`${debug.llmModel}\`)`
     : debug.llmSkipped || debug.llmError
       ? `skipped (${debug.llmSkipped || debug.llmError})`
       : 'not used';
@@ -242,7 +242,7 @@ function formatDebugSummaryMarkdown(result) {
   const plan = result.plan ?? {};
   const plannerStatus = formatPlannerStatus(plan, { markdown: true });
   const impactTags = Array.isArray(plan?.impactTags) ? plan.impactTags : [];
-  const impactSummary = impactTags.length ? impactTags.map(t => `'${t}'`).join(', ') : '`none`';
+  const impactSummary = impactTags.length ? impactTags.map(t => `\`${t}\``).join(', ') : '`none`';
 
   return [
     `- LLM: ${llmStatus}`,
@@ -254,7 +254,7 @@ function formatDebugSummaryMarkdown(result) {
 }
 
 function formatPlannerStatus(plan, { markdown = false } = {}) {
-  const wrap = value => (markdown ? `\\\`${value}\\\`` : value);
+  const wrap = value => (markdown ? `\`${value}\`` : value);
   const requested = Boolean(plan?.plannerRequested);
   const mode = plan?.plannerMode || 'off';
   if (!requested || mode === 'off') return wrap('off');
@@ -270,7 +270,7 @@ function printMarkdownReport(result, phase) {
   const header = `${COMMENT_MARKER}
 ## River Reviewer
 
--フェーズ: \\\`${phase}\\\`
+- フェーズ: \`${phase}\`
 ${formatDebugSummaryMarkdown(result)}
 `;
   const planSection = formatPlanMarkdown(result.plan);
@@ -285,7 +285,7 @@ function printDebugInfo(result, { log = console.log } = {}) {
   const plannerStatus = formatPlannerStatus(result.plan ?? {});
   const impactTags = Array.isArray(result.plan?.impactTags) ? result.plan.impactTags : [];
   log(`\nDebug info:
-- LLM: ${debug.llmUsed ? `used (\\\`${debug.llmModel}\\\`)` : debug.llmSkipped || debug.llmError || 'not used'}
+- LLM: ${debug.llmUsed ? `used (\`${debug.llmModel}\`)` : debug.llmSkipped || debug.llmError || 'not used'}
 - Planner: ${plannerStatus}
 - Impact tags: ${impactTags.join(', ') || 'none'}
 - Token estimate (raw -> optimized): ${rawTokens} -> ${result.tokenEstimate} (${reduction}% reduction)
@@ -293,7 +293,7 @@ function printDebugInfo(result, { log = console.log } = {}) {
 - Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}
 - Project rules: ${result.projectRules ? 'present' : 'none'}
 - Available contexts: ${(result.availableContexts || []).join(', ') || 'none'}
-- Available dependencies: ${ 
+- Available dependencies: ${
     result.availableDependencies ? result.availableDependencies.join(', ') : 'not specified (skip disabled)'
   }
 `);
@@ -402,7 +402,7 @@ Project rules: ${result.projectRules ? 'present' : 'none'}
 OpenAI (review): ${apiKey ? 'configured' : 'not set'}
 OpenAI (planner): ${apiKey ? 'configured' : 'not set'}
 Contexts: ${(result.availableContexts || []).join(', ') || 'none'}
-Dependencies: ${ 
+Dependencies: ${
         result.availableDependencies ? result.availableDependencies.join(', ') : 'not specified (skip disabled)'
       }`);
 

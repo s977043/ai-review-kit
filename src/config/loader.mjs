@@ -103,6 +103,17 @@ export class ConfigLoader {
           throw new ConfigLoaderError(`設定ファイルの形式が正しくありません (Skill Schema): ${detail}`, { path: configPath });
         }
         parsedInput = validated.data;
+
+        const knownKeys = new Set(['version', 'model', 'review', 'exclude', 'skills']);
+        const unknownKeys = Object.keys(parsedInput).filter(key => !knownKeys.has(key));
+        if (unknownKeys.length) {
+          const message = `Unknown config keys ignored: ${unknownKeys.join(', ')}`;
+          if (process.env.RIVER_CONFIG_STRICT === '1') {
+            throw new ConfigLoaderError(message, { path: configPath });
+          }
+          // eslint-disable-next-line no-console
+          console.warn(message);
+        }
       } else {
         // Fallback to old schema
         const validated = riverReviewerConfigSchema.safeParse(parsed);
