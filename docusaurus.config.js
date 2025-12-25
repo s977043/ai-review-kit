@@ -18,8 +18,7 @@ const resolveSiteUrl = () => {
 
 const siteUrl = normalizeSiteUrl(resolveSiteUrl());
 const baseUrl = ensureLeadingAndTrailingSlash(resolveBaseUrl());
-const docsRouteBasePath =
-  process.env.DOCS_ROUTE_BASE_PATH ?? (baseUrl.endsWith('/docs/') ? '/' : 'docs');
+const docsRouteBasePath = process.env.DOCS_ROUTE_BASE_PATH ?? '/';
 
 module.exports = {
   title: 'River Reviewer',
@@ -47,7 +46,7 @@ module.exports = {
   themeConfig: {
     navbar: {
       title: 'River Reviewer',
-      items: [{ type: 'doc', docId: 'index', label: 'Docs', position: 'left' }],
+      items: [],
     },
     footer: {
       style: 'dark',
