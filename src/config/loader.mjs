@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import { riverReviewerConfigSchema } from './schema.mjs';
+import { ConfigSchema } from './schema.mjs';
 import { defaultConfig } from './default.mjs';
 
 export class ConfigMergeError extends Error {
@@ -92,7 +92,8 @@ export class ConfigLoader {
     try {
       const raw = await this.fs.readFile(configPath, 'utf8');
       const parsed = this.parseConfig(raw, configPath);
-      const validated = riverReviewerConfigSchema.safeParse(parsed);
+      // Validate against the new ConfigSchema
+      const validated = ConfigSchema.safeParse(parsed);
       if (!validated.success) {
         const detail = validated.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
         throw new ConfigLoaderError(`設定ファイルの形式が正しくありません: ${detail}`, { path: configPath });
@@ -110,8 +111,14 @@ export class ConfigLoader {
       const merged = mergeConfig(this.baseConfig, parsedInput);
       return { config: merged, path: configPath, source: 'file' };
     } catch (err) {
-      // Defensive: keep a dedicated error type for unexpected merge-time failures.
       throw new ConfigMergeError('設定のマージに失敗しました', { cause: err });
     }
   }
+}
+
+// Export loadConfig helper for SkillDispatcher
+export async function loadConfig(configPath) {
+  const loader = new ConfigLoader();
+  const { config } = await loader.load(configPath);
+  return config;
 }
