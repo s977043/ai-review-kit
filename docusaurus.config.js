@@ -1,11 +1,13 @@
 /** @type {import('@docusaurus/types').Config} */
+const organizationName = 's977043';
+const projectName = 'river-reviewer';
 const isVercel = Boolean(process.env.VERCEL);
 const normalizeSiteUrl = (url) => url.replace(/\/+$/, '');
 const ensureLeadingAndTrailingSlash = (value) => {
   const withLeading = value.startsWith('/') ? value : `/${value}`;
   return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
 };
-const resolveBaseUrl = () => process.env.DOCS_BASE_URL || (isVercel ? '/' : '/river-reviewer/');
+const resolveBaseUrl = () => process.env.DOCS_BASE_URL || '/';
 const resolveSiteUrl = () => {
   if (process.env.DOCS_SITE_URL) return process.env.DOCS_SITE_URL;
   if (isVercel) {
@@ -18,15 +20,14 @@ const resolveSiteUrl = () => {
 
 const siteUrl = normalizeSiteUrl(resolveSiteUrl());
 const baseUrl = ensureLeadingAndTrailingSlash(resolveBaseUrl());
-const docsRouteBasePath =
-  process.env.DOCS_ROUTE_BASE_PATH ?? (baseUrl.endsWith('/docs/') ? '/' : 'docs');
+const docsRouteBasePath = process.env.DOCS_ROUTE_BASE_PATH ?? '/';
 
 module.exports = {
   title: 'River Reviewer',
   url: siteUrl,
   baseUrl: baseUrl,
-  organizationName: 's977043',
-  projectName: 'river-reviewer',
+  organizationName,
+  projectName,
   trailingSlash: true,
   i18n: { defaultLocale: 'ja', locales: ['ja'] },
   themes: ['@docusaurus/theme-mermaid'],
@@ -38,6 +39,7 @@ module.exports = {
           path: 'pages',
           routeBasePath: docsRouteBasePath,
           sidebarPath: require.resolve('./sidebars.js'),
+          editUrl: `https://github.com/${organizationName}/${projectName}/tree/main/`,
         },
         theme: { customCss: require.resolve('./src/css/custom.css') },
         sitemap: { changefreq: 'weekly', priority: 0.5 },
@@ -47,7 +49,7 @@ module.exports = {
   themeConfig: {
     navbar: {
       title: 'River Reviewer',
-      items: [{ type: 'doc', docId: 'index', label: 'Docs', position: 'left' }],
+      items: [],
     },
     footer: {
       style: 'dark',
