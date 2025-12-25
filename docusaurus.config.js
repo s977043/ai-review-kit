@@ -1,9 +1,22 @@
 /** @type {import('@docusaurus/types').Config} */
-// Vercelの環境変数をチェックし、デプロイ先に応じたURLとbaseUrlを動的に設定
-const siteUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'https://s977043.github.io';
-const baseUrl = process.env.VERCEL_URL ? '/' : '/river-reviewer/';
+const isVercel = Boolean(process.env.VERCEL);
+const normalizeSiteUrl = (url) => url.replace(/\/+$/, '');
+const ensureLeadingAndTrailingSlash = (value) => {
+  const withLeading = value.startsWith('/') ? value : `/${value}`;
+  return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
+};
+const resolveBaseUrl = () =>
+  process.env.DOCS_BASE_URL || (isVercel ? '/docs/' : '/river-reviewer/');
+
+const siteUrl = normalizeSiteUrl(
+  process.env.DOCS_SITE_URL ||
+    (isVercel && process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'https://s977043.github.io')
+);
+const baseUrl = ensureLeadingAndTrailingSlash(resolveBaseUrl());
+const docsRouteBasePath =
+  process.env.DOCS_ROUTE_BASE_PATH ?? (baseUrl.endsWith('/docs/') ? '/' : 'docs');
 
 module.exports = {
   title: 'River Reviewer',
@@ -11,7 +24,7 @@ module.exports = {
   baseUrl: baseUrl,
   organizationName: 's977043',
   projectName: 'river-reviewer',
-  trailingSlash: false,
+  trailingSlash: true,
   i18n: { defaultLocale: 'ja', locales: ['ja'] },
   themes: ['@docusaurus/theme-mermaid'],
   presets: [
@@ -20,7 +33,7 @@ module.exports = {
       {
         docs: {
           path: 'pages',
-          routeBasePath: 'docs',
+          routeBasePath: docsRouteBasePath,
           sidebarPath: require.resolve('./sidebars.js'),
         },
         theme: { customCss: require.resolve('./src/css/custom.css') },
@@ -31,19 +44,17 @@ module.exports = {
   themeConfig: {
     navbar: {
       title: 'River Reviewer',
-      items: [{ to: '/docs/', label: 'Docs', position: 'left' }],
+      items: [{ type: 'doc', docId: 'index', label: 'Docs', position: 'left' }],
     },
     footer: {
       style: 'dark',
       copyright: `© ${new Date().getFullYear()} River Reviewer`,
     },
   },
-  markdown: {
-    hooks: { onBrokenMarkdownLinks: 'warn' },
-    mermaid: true,
-  },
+  markdown: { mermaid: true, hooks: { onBrokenMarkdownLinks: 'throw' } },
   onBrokenLinks: 'throw',
   plugins: [
     [require.resolve('./plugins/river-dashboard'), { dataPath: 'docs/data/dashboard-stats.json' }],
   ],
+  customFields: { docsRouteBasePath },
 };
