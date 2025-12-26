@@ -1,13 +1,35 @@
 # River Reviewer
 
+**Turn Implicit Knowledge into Reproducible Agent Skills.**
+**An experimental AI code review framework that turns tacit knowledge into reusable Agent Skills.**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-available-blue)](https://ai-review-kit.vercel.app/docs/explanation/intro)
+
 ![River Reviewer logo](assets/logo/river-reviewer-logo.svg)
 
 English edition. The primary Japanese README lives in `README.md`.
 [日本語の README はここ](./README.md)—the Japanese copy is the source of truth; English may lag.
 
+Philosophy: [Why we built it](#philosophy)
+
 Review that Flows With You. 流れに寄り添う AI レビューエージェント。
 
 River Reviewer is a flow-based, metadata-driven AI review agent. It travels the SDLC so design intent, implementation choices, and test coverage stay connected.
+
+<a id="philosophy"></a>
+
+## The Philosophy (Why we built it)
+
+> **We stopped believing “polish the prompt and you win.”**
+
+The biggest barrier to production AI review is not prompt quality but repeatability of review findings and operating cost.
+River Reviewer is not just a tool that lets an AI read code.
+
+We define team-specific judgment criteria and review procedures as reusable **Agent Skills (a toolbox with manuals)**, so they can be grown as durable organizational assets.
+
+🔗 **Read the full story (Japanese):**
+[「プロンプトを磨けば勝てる」をやめた：AIレビューを運用に乗せる“Agent Skills”設計](https://note.com/mine_unilabo/n/nd21c3f1df22e)
 
 ## Flow story
 
