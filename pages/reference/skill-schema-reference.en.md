@@ -16,7 +16,7 @@ All skills in River Reviewer must conform to JSON schema located at:
 | phase       | upstream / midstream / downstream                    |
 | applyTo     | File glob patterns                                   |
 
-`phase` と `applyTo` はトップレベルまたは `trigger` 内に書けます（`trigger.phase`, `trigger.applyTo` / `trigger.files`）。両方指定した場合はトップレベルが優先されます。
+`phase` and `applyTo` can be specified at the top level or within a `trigger` object (`trigger.phase`, `trigger.applyTo` / `trigger.files`). If both are specified, the top-level properties take precedence.
 
 ## Example
 
