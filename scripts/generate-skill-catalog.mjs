@@ -61,9 +61,9 @@ function formatSkill(skill, { textlint, separators, maxDescriptionLength }) {
 
   const applyToLines = applyTo.length ? applyTo.map((p) => `  - \`${p}\``) : ['  - (none)'];
 
-  return `### ${meta.id}
-- 名前: ${meta.name}
-- 概要: ${description}
+  return `### \`${meta.id}\`
+- 名前: \`${meta.name}\`
+- 概要: \`${description}\`
 - 対象:
 ${applyToLines.join('\n')}
 - 重要度: ${severity}

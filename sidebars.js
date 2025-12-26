@@ -5,7 +5,7 @@ module.exports = {
     'dashboard',
     {
       type: 'category',
-      label: 'Tutorials',
+      label: 'チュートリアル',
       items: [
         'tutorials/getting-started',
         'tutorials/creating-your-first-skill',
@@ -15,7 +15,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Guides',
+      label: 'ガイド',
       items: [
         'guides/quickstart',
         'guides/github-actions',
@@ -29,7 +29,7 @@ module.exports = {
         'guides/troubleshooting',
         {
           type: 'category',
-          label: 'Governance',
+          label: 'ガバナンス',
           items: [
             'guides/governance/CONTRIBUTING',
             'guides/governance/WRITING_GUIDE',
@@ -41,17 +41,17 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Contributing',
-      items: ['contributing/commit-summary.ja', 'contributing/review-checklist'],
+      label: 'コントリビューション',
+      items: ['contributing/commit-summary', 'contributing/review-checklist'],
     },
     {
       type: 'category',
-      label: 'Maintainers',
+      label: 'メンテナ用',
       items: ['maintainers/continuity'],
     },
     {
       type: 'category',
-      label: 'Reference',
+      label: 'リファレンス',
       items: [
         'reference/skill-schema',
         'reference/skill-schema-reference',
@@ -65,7 +65,7 @@ module.exports = {
     },
     {
       type: 'category',
-      label: 'Explanation',
+      label: '解説',
       items: [
         'explanation/intro',
         'explanation/what-is-river-reviewer',
@@ -75,7 +75,7 @@ module.exports = {
         'explanation/riverbed-memory',
         {
           type: 'category',
-          label: 'Framework',
+          label: 'フレームワーク',
           items: [
             'explanation/framework/overview',
             'explanation/framework/principles',
