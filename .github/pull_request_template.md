@@ -39,7 +39,8 @@ Language / 言語:
 
 - [ ] Japanese（日本語・標準）
 - [ ] English（英語 / `.en.md` ファイル）
-- レビューコメントは日本語で記載してください。
+
+> レビューコメントは日本語で記載してください。
 
 ## Validation & Evidence
 
