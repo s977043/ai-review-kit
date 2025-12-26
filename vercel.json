@@ -2,7 +2,7 @@
   "trailingSlash": true,
   "redirects": [
     {
-      "source": "/docs/?",
+      "source": "/docs/",
       "destination": "/",
       "permanent": true
     }
