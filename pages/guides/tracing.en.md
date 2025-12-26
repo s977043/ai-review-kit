@@ -1,5 +1,5 @@
 ---
-id: tracing
+id: tracing-en
 title: Tracing / Observability
 ---
 

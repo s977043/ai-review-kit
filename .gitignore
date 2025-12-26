@@ -21,3 +21,5 @@ artifacts/
 # Claude Code local-only overrides
 .claude/settings.local.json
 CLAUDE.local.md
+.gemini/
+.worktrees/

@@ -13,7 +13,7 @@ Create a new file under `skills/` (for example `skills/rr-hello.yml`) and includ
 
 ```yaml
 ---
-id: rr-hello
+id: rr-hello-en
 name: Hello World Skill
 description: Flags TODO comments in Markdown
 phase: upstream

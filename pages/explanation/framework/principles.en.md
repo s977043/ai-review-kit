@@ -1,6 +1,6 @@
 ---
-id: principles
-title: Part I—Foundational Principles: Adapting Human-Centric Review for AI
+id: principles-en
+title: 'Part I—Foundational Principles: Adapting Human-Centric Review for AI'
 ---
 
 ## Decomposing the Gold Standard

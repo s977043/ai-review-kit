@@ -22,7 +22,7 @@ All skills in River Reviewer must conform to JSON schema located at:
 
 ```yaml
 ---
-id: rr-python-sqlinj-v1
+id: rr-python-sqlinj-v1-en
 name: Python SQL Injection Check
 description: Detects SQL injection patterns in Python code
 phase: midstream
@@ -37,7 +37,7 @@ tags: ['security', 'owasp']
 
 ```yaml
 ---
-id: rr-python-sqlinj-v2
+id: rr-python-sqlinj-v2-en
 name: Python SQL Injection Check
 description: Detects SQL injection patterns in Python code
 trigger:

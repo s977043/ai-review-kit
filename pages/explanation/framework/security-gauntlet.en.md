@@ -1,5 +1,5 @@
 ---
-id: security-gauntlet
+id: security-gauntlet-en
 title: Part III—Security Gauntlet
 ---
 

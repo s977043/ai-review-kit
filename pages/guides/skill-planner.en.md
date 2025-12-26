@@ -4,7 +4,7 @@ The Skill Planner works by simply injecting it as a `planner` (or `planner.plan`
 
 ## Interface
 
-- Input: `llmPlan({ skills, context })
+- Input: `llmPlan({ skills, context })`
   - `skills`: `summarizeSkill`-ed metadata array (id/name/description/phase/applyTo/inputContext/outputKind/modelHint/dependencies/tags/severity)
   - `context`: `phase` / `changedFiles` / `availableContexts` (can extend with diff summary or PR info if needed)
 - Output: `[{ id, reason? }]` (Array order is execution order. `priority` is currently unused)

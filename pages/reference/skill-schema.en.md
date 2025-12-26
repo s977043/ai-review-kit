@@ -21,7 +21,7 @@ River Reviewer skills use YAML frontmatter for metadata and Markdown for guidanc
 
 ```yaml
 ---
-id: rr-midstream-performance-002
+id: rr-midstream-performance-002-en
 name: Midstream Performance Budget Check
 phase: midstream
 tags:
@@ -40,7 +40,7 @@ Ensure changed code paths avoid unnecessary synchronous I/O and unbounded concur
 
 ```yaml
 ---
-id: rr-midstream-performance-003
+id: rr-midstream-performance-003-en
 name: Midstream Performance Budget Check
 trigger:
   phase: midstream

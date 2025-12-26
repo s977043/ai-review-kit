@@ -10,7 +10,7 @@ This is an implementation guide for describing River Reviewer skills flexibly in
 
 ```markdown
 ---
-id: rr-midstream-observability-001
+id: rr-midstream-observability-001-en
 name: Logging and Observability Guard
 description: Encourage proper logging instead of swallowing exceptions
 phase:
@@ -51,7 +51,7 @@ instruction: |
 ### YAML (Flat Structure)
 
 ```yaml
-id: rr-midstream-security-001
+id: rr-midstream-security-001-en
 name: Basic Security Review
 description: Detect basic security pitfalls
 phase: [midstream, downstream]

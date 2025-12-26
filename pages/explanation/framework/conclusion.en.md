@@ -1,5 +1,5 @@
 ---
-id: conclusion
+id: conclusion-en
 title: Conclusion—Blueprint for Symbiosis
 ---
 
