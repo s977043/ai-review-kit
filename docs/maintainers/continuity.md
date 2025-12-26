@@ -29,4 +29,4 @@ Open questions:
 
 Working set (files / ids / commands):
 
-- CONTINUITY.md; PR #204（Improve docs routing and link quality gates）
+- docs/maintainers/continuity.md; PR #204（Improve docs routing and link quality gates）

@@ -41,12 +41,23 @@ module.exports = {
     },
     {
       type: 'category',
+      label: 'Contributing',
+      items: ['contributing/commit-summary.ja', 'contributing/review-checklist'],
+    },
+    {
+      type: 'category',
+      label: 'Maintainers',
+      items: ['maintainers/continuity'],
+    },
+    {
+      type: 'category',
       label: 'Reference',
       items: [
         'reference/skill-schema',
         'reference/skill-schema-reference',
         'reference/config-schema',
         'reference/metadata-fields',
+        'reference/skill-template',
         'reference/runner-cli-reference',
         'reference/known-limitations',
         'reference/glossary',

@@ -1,0 +1,1 @@
+../../docs/reference/skill-template.md

@@ -1,0 +1,1 @@
+../../docs/contributing/commit-summary.ja.md

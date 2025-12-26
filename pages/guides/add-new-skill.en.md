@@ -13,7 +13,7 @@ For detailed writing guidelines (Anti-patterns, Evidence, Non-goals, False posit
 
 ## 1) Create Skill from Template
 
-1. Copy `skill_template.md` and place it under the target phase directory.
+1. Copy `skills/_template.md` and place it under the target phase directory.
    - Example: `skills/midstream/rr-midstream-my-skill-001.md`
 2. Fill in the minimum YAML frontmatter (Refer to `schemas/skill.schema.json` for required fields).
    - `id`: Unique ID (e.g., `rr-midstream-my-skill-001`)

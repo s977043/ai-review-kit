@@ -35,7 +35,7 @@ Minimum frontmatter (Required):
 
 ## Recommended Template (Minimal)
 
-Base on `skill_template.md` and align the following:
+Base on `skills/_template.md` and align the following:
 
 - Narrow `applyTo` (Don't start with `**/*`)
 - Write "Suppression Conditions" (False positive guards)
