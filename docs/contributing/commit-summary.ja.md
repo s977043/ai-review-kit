@@ -1,3 +1,7 @@
+---
+id: commit-summary
+---
+
 # コミット概要（日本語）
 
 このPRで実施した修正の概要を日本語でまとめます。
@@ -9,7 +13,7 @@
 **コミット**: ac1b26b
 
 - CONTRIBUTING.md: 旧ブランド表記のタイポ修正
-- coding-review-checklist.md: 11件のタイポ修正
+- docs/contributing/review-checklist.md: 11件のタイポ修正
   - 証言跡→証跡, 1関数ち→1関数に, 目定→目安
   - 分對→分岐, 短等関数→高階関数
   - 捕捗→捕捉, 追跪→追跡, 段口→仕組み

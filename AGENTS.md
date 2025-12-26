@@ -86,7 +86,7 @@ AI エージェントは「主に編集対象」を優先し、それ以外は�
 
 ## 5. コミット / PR ルール（簡易まとめ）
 
-詳細は `CONTRIBUTING.md` と `COMMIT_SUMMARY_JA.md` を参照。最低限:
+詳細は `CONTRIBUTING.md` と `docs/contributing/commit-summary.ja.md` を参照。最低限:
 
 - コミット前に: `npm test`, `npm run lint`, 変更に応じて `agents:validate` / `skills:validate`
 - PR本文に: 目的 / 変更内容 / 影響範囲 / 実行コマンドと結果を記載

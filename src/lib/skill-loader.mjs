@@ -84,7 +84,11 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
       }
       const nested = await listSkillFiles(entryPath);
       files.push(...nested);
-    } else if (allowedExtensions.has(path.extname(entry.name)) && entry.name !== '.gitkeep') {
+    } else if (
+      allowedExtensions.has(path.extname(entry.name)) &&
+      entry.name !== '.gitkeep' &&
+      !entry.name.startsWith('_')
+    ) {
       files.push(entryPath);
     }
   }

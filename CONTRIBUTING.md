@@ -76,6 +76,11 @@ npm run lint
 - エージェント定義を変更した: `npm run agents:validate`
 - トレース関連の機能を変更した: `npm run trace:validate`（OpenTelemetry 検証が必要な場合）
 
+### 📎 関連ドキュメント
+
+- コミット概要（日本語）: `docs/contributing/commit-summary.ja.md`
+- レビューチェックリスト: `docs/contributing/review-checklist.md`
+
 ## 🏷️ リリース（タグ発行）運用
 
 このリポジトリは `release-please` により、リリース用の PR を `main` 向けに自動作成し、その PR をマージしたタイミングでタグ（例: `v0.1.2`）と GitHub Release を自動作成します。
@@ -88,7 +93,7 @@ npm run lint
 - JS/Node は ESM を前提とし、テストは `node --test` を使用します
 - フォーマットは Prettier を使用します（`npm run lint` でチェック）
 - `.env*` などの秘密情報はコミットしないでください（例示はダミー値を使ってください）
-- ドキュメントサイトのソースは `pages/`（Docusaurus）です。`docs/` は内部向けドキュメント（サイトに配信しない）として扱っています
+- ドキュメントサイトのソースは `pages/`（Docusaurus）です。`docs/` は内部/運用ドキュメントの置き場で、必要に応じて `pages/` から参照します
 - `package-lock.json` は手動編集せず、依存関係を変更した場合は `npm install` で更新してください（`npm ci` はロックファイルに従うクリーンインストールです）
 
 ## 📚 Documentation contributions
