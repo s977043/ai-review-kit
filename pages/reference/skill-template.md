@@ -1,4 +1,5 @@
 ---
+id: skill-template
 ---
 
 # スキルテンプレート
