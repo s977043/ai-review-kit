@@ -1,3 +1,7 @@
+---
+id: continuity
+---
+
 Goal (success criteria included):
 
 - PR #204 のレビュー指摘（baseUrl 設定重複の解消、Diátaxis リマインド対応）を反映し、セルフレビュー後プッシュする。
@@ -29,4 +33,4 @@ Open questions:
 
 Working set (files / ids / commands):
 
-- CONTINUITY.md; PR #204（Improve docs routing and link quality gates）
+- docs/maintainers/continuity.md; PR #204（Improve docs routing and link quality gates）

@@ -1,31 +1,34 @@
-# Riverbed Memory (Draft)
+---
+id: riverbed-memory
+title: Riverbed Memory
+---
 
-## Overview
+## 概要
 
-Riverbed Memory is the place where context settles—like how a riverbed holds the traces of past flows. It remembers architectural decisions, WontFix items, and prior review outcomes so River Reviewer can stay consistent across PRs and releases. Think of it as a lightweight, auditable memory layer that keeps the stream grounded. （流れの底に記憶を残すイメージ）
+Riverbed Memory は、コンテキストを保持するためのレイヤーです。川底が過去の流れの痕跡を保持するように、アーキテクチャ上の決定、WontFix 項目、過去のレビュー結果を記憶し、River Reviewer が PR やリリース間で一貫性を保てるようにします。流れを安定させる軽量で監査可能な記憶層と捉えてください。
 
-## Scope (v0 → v1 → v2)
+## スコープ (v0 → v1 → v2)
 
-- **v0: Stateless (current)**—no persisted context; each review is independent.
-- **v1: Minimal memory**—embed structured metadata in PR comments or store a per-run JSON artifact that captures decisions/links for the next run.
-- **v2: Externalized memory (sketch)**—optional Postgres/Redis/vector store backing for teams that need cross-repo recall or long-lived history.
+- **v0: ステートレス (現在)**—永続化されたコンテキストはなく、各レビューは独立している。
+- **v1: 最小限のメモリ**—PR コメントに構造化されたメタデータを埋め込むか、次の実行のための決定/リンクをキャプチャする実行ごとの JSON アーティファクトを保存する。
+- **v2: 外部化されたメモリ (スケッチ)**—リポジトリ間の想起や長期間の履歴を必要とするチーム向けの、オプションの Postgres/Redis/ベクターストア バックエンド。
 
-## Storage options
+## ストレージオプション
 
-- **GitHub PR comments with hidden markers**: Easy to inspect; survives reruns; limited size; must avoid noisy notifications.
-- **GitHub Artifacts (.json per PR)**: Cheap and auditable; good for snapshots; expires on retention policy.
-- **Repository files under `.river/`**: Co-located with code; versioned; can create churn and merge conflicts if written often.
-- **External datastore (Postgres/Redis/vector DB)**: Scales and can power semantic recall; adds ops overhead and secret management.
+- **隠しマーカー付き GitHub PR コメント**: 検査は容易で、再実行後も残る。サイズの制限はあるものの、ノイズの多い通知を避けるようにする。
+- **GitHub Artifacts (PR ごとの .json)**: 安価で監査可能。スナップショットに適しているが、保持ポリシー次第で期限切れになる。
+- **`.river/` 配下のリポジトリファイル**: コードと一緒に配置され、バージョン管理される。頻繁に書き込まれるとチャーンやマージ競合を招き、管理コスト上昇の要因となる可能性がある。
+- **外部データストア (Postgres/Redis/vector DB)**: スケーラブルで意味的な想起を可能にする一方、運用のオーバーヘッドとシークレット管理が追加される。
 
-## Design trade-offs
+## 設計トレードオフ
 
-- **Cost**: Comments are free; artifacts inexpensive; external stores incur infra costs.
-- **Complexity**: Comments/artifacts are simple; repo files need write paths and merge strategy; external DBs require services and rotation.
-- **Security**: Comments/artifacts live in GitHub scopes; repo files inherit repo ACLs; external stores need secret handling and network policies.
-- **Auditability**: Comments and repo files are human-readable; artifacts are retrievable; external stores need explicit retention/backups.
+- **コスト**: コメントは無料、アーティファクトは安価、外部ストアはインフラコストが発生する。
+- **複雑さ**: コメント/アーティファクトは単純。リポジトリファイルは書き込みパスとマージ戦略が必要。外部 DB はサービスとローテーションが必要。
+- **セキュリティ**: コメント/アーティファクトは GitHub スコープ内に存在。リポジトリファイルはリポジトリ ACL を継承する。外部ストアはシークレット処理とネットワークポリシーが必要。
+- **監査可能性**: コメントとリポジトリファイルは人間が読める。アーティファクトは検索可能。外部ストアは明示的な保持/バックアップが必要。
 
-## Next actions (toward v1)
+## 次のアクション (v1 に向けて)
 
-1. Define a minimal memory record schema (for example, issue IDs, ADR links, or WontFix rationale) that can be serialized to JSON.
-2. Add an optional GitHub Action step to emit the record as an artifact and, when permitted, a compact PR comment with hidden markers.
-3. Teach the agent to ingest the last avAIlable artifact/comment on each run and merge it into the prompt context without blocking the review.
+1. JSON にシリアル化できる最小限のメモリレコードスキーマ（例: Issue ID、ADR リンク、または WontFix の根拠）を定義する。
+2. レコードをアーティファクトとして出力し、許可されている場合は隠しマーカー付きのコンパクトな PR コメントを出力するオプションの GitHub Action ステップを追加する。
+3. エージェントに、各実行で最後に利用可能なアーティファクト/コメントを取り込み、レビューをブロックすることなくプロンプトコンテキストにマージするように教える。

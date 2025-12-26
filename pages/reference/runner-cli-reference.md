@@ -1,29 +1,29 @@
-# Runner CLI Reference
+# Runner CLI リファレンス
 
-Use the Runner CLI to validate River Reviewer agents and skills locally or in CI.
-A lightweight Python runner outputs structured review results that follow `schemas/output.schema.json`.
-Install the required dependency with `pip install jsonschema` before running the Python example.
+Runner CLI を使用して、River Reviewer のエージェントとスキルをローカルまたは CI で検証します。
+軽量な Python ランナーが `schemas/output.schema.json` に従う構造化されたレビュー結果を出力します。
+Python の例を実行する前に、`pip install jsonschema` で必要な依存関係をインストールしてください。
 
-## Commands
+## コマンド
 
-- Agents: `npm run agents:validate` (or `node scripts/validate-agents.mjs`)
-- Skills: `npm run skills:validate` (or `node scripts/validate-skills.mjs`)
-- Structured output (Python): `python scripts/rr_runner.py --input tests/fixtures/structured-output/sample_llm_response.json`
+- Agents: `npm run agents:validate` (または `node scripts/validate-agents.mjs`)
+- Skills: `npm run skills:validate` (または `node scripts/validate-skills.mjs`)
+- 構造化出力 (Python): `python scripts/rr_runner.py --input tests/fixtures/structured-output/sample_llm_response.json`
 
-## Exit codes
+## 終了コード
 
-- `0`: validation completed successfully.
-- `1`: schema checks didn't pass or a schema error occurred.
+- `0`: 検証が正常に完了した。
+- `1`: スキーマチェックが通過しなかったか、スキーマエラーが発生した。
 
-## Examples
+## 例
 
 ```bash
-# Validate all agents
+# すべてのエージェントを検証
 npm run agents:validate
 
-# Validate all skills
+# すべてのスキルを検証
 npm run skills:validate
 
-# Build structured review output (writes to artifacts/river-review-output.json)
+# 構造化されたレビュー出力をビルド（artifacts/river-review-output.json に書き込み）
 python scripts/rr_runner.py --input tests/fixtures/structured-output/sample_llm_response.json
 ```

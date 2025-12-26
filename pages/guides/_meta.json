@@ -1,20 +1,20 @@
 {
   "quickstart": "クイックスタート (River Reviewer)",
   "github-actions": "GitHub Actions で River Reviewer をセットアップする",
-  "run-phase-specific-review": "Run Phase-Specific Review",
+  "run-phase-specific-review": "フェーズ固有のレビューを実行する",
   "troubleshooting": "トラブルシューティング",
   "faq": "FAQ（よくある失敗）",
   "add-new-skill": "スキルを追加する（最短手順）",
   "write-a-skill": "スキル作成ガイド（How-to）",
-  "validate-skill-schema": "Validate Skill Schema",
-  "debug-skill-routing": "Debug Skill Routing",
+  "validate-skill-schema": "スキルスキーマを検証する",
+  "debug-skill-routing": "スキルルーティングのデバッグ",
   "planner-eval-dataset": "Planner評価セット（オフライン評価）",
   "skill-planner": "Skill Planner（LLM ベースのスキル選択）",
   "planner-evaluation": "Skill Planner の評価と最適化のためのミニガイド",
-  "use-riverbed-memory": "Use Riverbed Memory",
+  "use-riverbed-memory": "Riverbed Memory を使用する",
   "tracing": "Tracing / Observability",
   "agent-skills-codex-cli": "Manifest-driven Skills ガイド",
   "pr-review-agent-skills": "PR/品質レビュー向け Agent Skills カタログ",
-  "agents": "Agents—Adding Project Knowledge Packs",
-  "governance": "Governance"
+  "agents": "Agents - プロジェクト知識パックの追加",
+  "governance": "ガバナンス"
 }

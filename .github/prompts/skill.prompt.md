@@ -10,7 +10,7 @@ agent: 'river-reviewer'
 
 - [AGENTS.md](../../AGENTS.md)
 - [skills/](../../skills/)
-- [coding-review-checklist.md](../../coding-review-checklist.md)
+- [docs/contributing/review-checklist.md](../../docs/contributing/review-checklist.md)
 
 やること:
 

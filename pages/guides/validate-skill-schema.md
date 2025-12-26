@@ -1,26 +1,26 @@
-# Validate Skill Schema
+# スキルスキーマを検証する
 
-Use the schema and validator to keep skills consistent across Upstream, Midstream, and Downstream checks.
+スキーマとバリデータを使用して、Upstream、Midstream、Downstream のチェック間でスキルの一貫性を保ちます。
 
-## Steps
+## 手順
 
-1. Edit or add a skill under `skills/`.
-2. Run the validator:
+1. `skills/` 配下のスキルを編集または追加する。
+2. バリデータを実行する:
 
    ```bash
    npm run skills:validate
    ```
 
-3. If the schema check errors, confirm these required fields exist:
+3. スキーマチェックでエラーが発生した場合、以下の必須フィールドが存在することを確認する:
    - `id`
    - `name`
    - `description`
    - `phase`
    - `applyTo`
-4. Confirm `phase` matches the intended flow segment and adjust `applyTo` globs to avoid noisy matches.
-5. Re-run the validator until you get a clean pass, then include the command output in your PR.
+4. `phase` が意図したフローセグメントと一致することを確認し、ノイズの多い一致を避けるために `applyTo` グロブを調整する。
+5. エラーがなくなるまでバリデータを再実行し、PR にコマンドの出力を含める。
 
-## Tips
+## ヒント
 
-- Keep tags and severity aligned with how you want findings prioritized.
-- Add small sample files and open a draft PR to see how the reviewer routes the skill.
+- タグと重要度（severity）を、発見事項の優先順位付けに合わせて調整する。
+- 小さなサンプルファイルを追加してドラフト PR を開き、レビューアがスキルをどのようにルーティングするかを確認する。

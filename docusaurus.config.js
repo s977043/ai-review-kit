@@ -7,7 +7,7 @@ const ensureLeadingAndTrailingSlash = (value) => {
   const withLeading = value.startsWith('/') ? value : `/${value}`;
   return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
 };
-const resolveBaseUrl = () => process.env.DOCS_BASE_URL || '/';
+const resolveBaseUrl = () => process.env.DOCS_BASE_URL || (isVercel ? '/' : '/river-reviewer/');
 const resolveSiteUrl = () => {
   if (process.env.DOCS_SITE_URL) return process.env.DOCS_SITE_URL;
   if (isVercel) {
