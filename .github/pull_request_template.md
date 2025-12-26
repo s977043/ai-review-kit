@@ -4,7 +4,7 @@ Flow your changes from Upstream to Midstream to Downstream with clear validation
 
 ## Overview / 説明
 
-- [ ] Briefly describe what's changing and why (1-2 lines)（このPRの変更内容を簡潔に説明してください）
+- [ ] Briefly describe what's changing and why (1-2 lines)（このPRの変更内容を簡潔に説明してください。概要・説明は日本語で記載してください）
 - Primary phase focus: Upstream / Midstream / Downstream
 
 ## Flow Consistency
@@ -39,6 +39,9 @@ Language / 言語:
 
 - [ ] Japanese（日本語・標準）
 - [ ] English（英語 / `.en.md` ファイル）
+
+> [!NOTE]
+> レビューコメントおよびPRの概要・説明は日本語で記載してください。
 
 ## Validation & Evidence
 
