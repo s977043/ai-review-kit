@@ -308,6 +308,14 @@ function printDebugInfo(result, { log = console.log } = {}) {
     log('Prompt preview:');
     log(trimmed);
   }
+  if (result.projectRules) {
+    const rulesPreview =
+      result.projectRules.length > MAX_PROMPT_PREVIEW_LENGTH
+        ? `${result.projectRules.slice(0, MAX_PROMPT_PREVIEW_LENGTH)}...`
+        : result.projectRules;
+    log('\nProject-specific review rules (preview):');
+    log(rulesPreview);
+  }
   if (result.plan?.skipped?.length) {
     log('\nSkipped skills detail:');
     result.plan.skipped.forEach(item => {
