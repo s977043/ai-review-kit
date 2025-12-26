@@ -1,10 +1,41 @@
 # River Reviewer
 
+**Turn Implicit Knowledge into Reproducible Agent Skills.**
+**暗黙知を再現可能な「Agent Skills」に変える、AIコードレビューの実験的フレームワーク**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-reviewer.vercel.app/explanation/intro/)
+
 ![River Reviewer logo](assets/logo/river-reviewer-logo.svg)
 
 日本語版 README です。[English README is available here.](./README.en.md)
 
+Philosophy: [なぜ作ったのか](#philosophy)
+
 流れに寄り添う AI レビューエージェント。River Reviewer はフロー型・メタデータ駆動の AI レビューエージェントで、設計意図・実装判断・テストカバレッジを SDLC 全体でつなぎます。
+
+<a id="philosophy"></a>
+
+## 📖 The Philosophy (なぜ作ったのか)
+
+> **We stopped believing "polish the prompt and you win."**
+> **「プロンプトを磨けば勝てる」をやめました。**
+
+AIレビューの実用化における最大の壁は、プロンプトの精度ではなく「レビュー指摘の再現性」と「運用コスト」でした。
+River Reviewer は、単にコードをAIに読ませるツールではありません。
+
+チーム固有の「判断基準」や「手順」といった暗黙知を、**再利用可能な「Agent Skills（マニュアル付きの道具箱）」** として定義し、組織の資産として育てるための実験的フレームワークです。
+
+さらに、レビューの「自由度」をリスクで設計し、**HITL（Human-in-the-Loop）** を前提にした Plan / Validate / Verify の運用で、実務に耐える再現性を確保します。
+
+要点は次の3つです。
+
+- **Agent Skills**: 暗黙知をレビュー資産として明示化し、継続的に改善できる状態にする。
+- **自由度の設計**: 崖・丘・原っぱのリスク設計で、AIの裁量と検証コストを制御する。
+- **HITLワークフロー**: 実行前に計画を人が検証し、レビュー結果は検証可能にする。
+
+🔗 **Read the full story (Japanese):**
+[「プロンプトを磨けば勝てる」をやめた：AIレビューを運用に乗せる“Agent Skills”設計](https://note.com/mine_unilabo/n/nd21c3f1df22e)
 
 ## フローのストーリー
 
