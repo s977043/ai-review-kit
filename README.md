@@ -4,7 +4,7 @@
 **暗黙知を再現可能な「Agent Skills」に変える、AIコードレビューの実験的フレームワーク**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Documentation](https://img.shields.io/badge/docs-available-blue)](https://ai-review-kit.vercel.app/docs/explanation/intro)
+[![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-reviewer.vercel.app/explanation/intro/)
 
 ![River Reviewer logo](assets/logo/river-reviewer-logo.svg)
 
@@ -18,11 +18,11 @@ Philosophy: [なぜ作ったのか](#philosophy)
 
 ## 📖 The Philosophy (なぜ作ったのか)
 
-> **"I stopped thinking 'Polishing Prompts Wins'."**
+> **We stopped believing "polish the prompt and you win."**
 > **「プロンプトを磨けば勝てる」をやめました。**
 
 AIレビューの実用化における最大の壁は、プロンプトの精度ではなく「レビュー指摘の再現性」と「運用コスト」でした。
-River Reviewerは、単にコードをAIに読ませるツールではありません。
+River Reviewer は、単にコードをAIに読ませるツールではありません。
 
 チーム固有の「判断基準」や「手順」といった暗黙知を、**再利用可能な「Agent Skills（マニュアル付きの道具箱）」** として定義し、組織の資産として育てるための実験的フレームワークです。
 

@@ -4,7 +4,7 @@
 **An experimental AI code review framework that turns tacit knowledge into reusable Agent Skills.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Documentation](https://img.shields.io/badge/docs-available-blue)](https://ai-review-kit.vercel.app/docs/explanation/intro)
+[![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-reviewer.vercel.app/explanation/intro/)
 
 ![River Reviewer logo](assets/logo/river-reviewer-logo.svg)
 
@@ -21,7 +21,7 @@ River Reviewer is a flow-based, metadata-driven AI review agent. It travels the 
 
 ## The Philosophy (Why we built it)
 
-> **We stopped believing “polish the prompt and you win.”**
+> **We stopped believing "polish the prompt and you win."**
 
 The biggest barrier to production AI review is not prompt quality but repeatability of review findings and operating cost.
 River Reviewer is not just a tool that lets an AI read code.

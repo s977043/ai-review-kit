@@ -266,6 +266,14 @@ function formatPlannerStatus(plan, { markdown = false } = {}) {
   return plan?.plannerUsed ? `${wrap(mode)} used` : `${wrap(mode)} not used`;
 }
 
+function logPreview(title, text, maxLength, log, { leadingNewline = false } = {}) {
+  if (!text) return;
+  const preview = text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+  const prefix = leadingNewline ? '\n' : '';
+  log(`${prefix}${title}:`);
+  log(preview);
+}
+
 function printMarkdownReport(result, phase) {
   const header = `${COMMENT_MARKER}
 ## River Reviewer
@@ -300,22 +308,14 @@ function printDebugInfo(result, { log = console.log } = {}) {
   if (debug.llmError) {
     log(`LLM error: ${debug.llmError}`);
   }
-  if (debug.promptPreview) {
-    const trimmed =
-      debug.promptPreview.length > MAX_PROMPT_PREVIEW_LENGTH
-        ? `${debug.promptPreview.slice(0, MAX_PROMPT_PREVIEW_LENGTH)}...`
-        : debug.promptPreview;
-    log('Prompt preview:');
-    log(trimmed);
-  }
-  if (result.projectRules) {
-    const rulesPreview =
-      result.projectRules.length > MAX_PROMPT_PREVIEW_LENGTH
-        ? `${result.projectRules.slice(0, MAX_PROMPT_PREVIEW_LENGTH)}...`
-        : result.projectRules;
-    log('\nProject-specific review rules (preview):');
-    log(rulesPreview);
-  }
+  logPreview('Prompt preview', debug.promptPreview, MAX_PROMPT_PREVIEW_LENGTH, log);
+  logPreview(
+    'Project-specific review rules (preview)',
+    result.projectRules,
+    MAX_PROMPT_PREVIEW_LENGTH,
+    log,
+    { leadingNewline: true },
+  );
   if (result.plan?.skipped?.length) {
     log('\nSkipped skills detail:');
     result.plan.skipped.forEach(item => {
