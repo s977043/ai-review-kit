@@ -696,21 +696,6 @@ across services.`
 
 ## midstream
 
-### `rr-<phase>-<category>-<number>`
-
-- 名前: `<Human readable title>`
-- 概要: `<What this skill checks>`
-- 対象:
-  - `src/**/*.ts`
-- 重要度: minor
-- タグ: example
-- 依存関係: none
-- 適用条件: phase=midstream, inputContext=diff
-
-チェック項目の例:
-
-- findings
-
 ### `rr-midstream-a11y-accessible-name-001`
 
 - 名前: `a11y Accessible Name Basics`
