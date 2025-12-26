@@ -1,6 +1,8 @@
 {
   "tutorials": "チュートリアル",
   "guides": "ガイド",
+  "contributing": "コントリビューション",
+  "maintainers": "メンテナ用",
   "reference": "リファレンス",
   "explanation": "解説"
 }
