@@ -1,10 +1,10 @@
-# Integrating with GitHub Actions
+# GitHub Actions との連携
 
-Wire River Reviewer into your repository so every PR gets phase-aware feedback.
+River Reviewer をリポジトリに組み込み、すべての PR でフェーズを意識したフィードバックが得られるようにします。
 
-## 1. Add the workflow
+## 1. ワークフローの追加
 
-Create `.github/workflows/river-review.yml`:
+`.github/workflows/river-review.yml` を作成します:
 
 ```yaml
 name: River Reviewer
@@ -31,18 +31,18 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-> Pin to a release tag such as `@v0.1.0` for stability.
+> 安定性のために `@v0.1.0` のようなリリースタグを指定してください。
 
-## 2. Keep credentials out of the flow
+## 2. クレデンシャルをフローから分離する
 
-- By default, River Reviewer doesn't require credentials or API keys.
-- If the reviewer needs extra context or external API access, pass tokens via repository or organization secrets and document which secrets are needed.
+- デフォルトでは、River Reviewer はクレデンシャルや API キーを必要としません。
+- レビューアが追加のコンテキストや外部 API アクセスを必要とする場合は、リポジトリまたは組織の Secrets 経由でトークンを渡し、必要な Secrets を文書化してください。
 
-## 3. Tune for phases
+## 3. フェーズごとの調整
 
-- Tag skills with `phase: upstream|midstream|downstream`.
-- Use path filters in your workflow to restrict when the reviewer runs, if needed.
+- スキルに `phase: upstream|midstream|downstream` タグを付けます。
+- 必要に応じて、ワークフローでパスフィルタを使用してレビューアの実行タイミングを制限します。
 
-## 4. Validate on every push
+## 4. プッシュごとの検証
 
-Ensure the workflow runs `npm run skills:validate` so schema changes are caught early. For larger repos, consider a pre-commit hook or a dedicated CI job for validation.
+`npm run skills:validate` を実行して、スキーマの変更を早期に検出できるようにします。大規模なリポジトリでは、pre-commit フックや専用の CI ジョブでの検証を検討してください。

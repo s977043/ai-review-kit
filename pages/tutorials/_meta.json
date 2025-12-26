@@ -1,6 +1,6 @@
 {
-  "getting-started": "Getting Started with River Reviewer",
-  "creating-your-first-skill": "Creating Your First Skill",
+  "getting-started": "River Reviewer をはじめる",
+  "creating-your-first-skill": "最初のスキルを作成する",
   "authoring-skills": "スキルの作り方",
-  "integrating-with-github-actions": "Integrating with GitHub Actions"
+  "integrating-with-github-actions": "GitHub Actions との連携"
 }

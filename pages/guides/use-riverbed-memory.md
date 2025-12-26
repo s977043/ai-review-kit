@@ -1,12 +1,12 @@
-# Use Riverbed Memory
+# Riverbed Memory を使用する
 
-Riverbed Memory stores past review context so future flows stay consistent.
+Riverbed Memory は過去のレビューコンテキストを保存し、将来のフローの一貫性を保ちます。
 
-## Steps
+## 手順
 
-1. Capture decisions: add short notes in PR descriptions for upstream design choices and link them from skill instructions when relevant.
-2. Persist signals: store approved review outcomes (for example, in a `logs/` or database layer) keyed by skill ID and phase.
-   For example, keep `logs/review_outcomes.json` like:
+1. 決定の記録: Upstream 設計の選択については PR の説明に短いメモを追加し、関連する場合にスキルの指示からリンクします。
+2. シグナルの永続化: 承認されたレビュー結果（例: `logs/` やデータベース層）をスキル ID とフェーズをキーとして保存します。
+   例えば、`logs/review_outcomes.json` を以下のように保持します:
 
    ```json
    {
@@ -23,10 +23,10 @@ Riverbed Memory stores past review context so future flows stay consistent.
    }
    ```
 
-3. Reuse context: when writing new skills, reference prior decisions to avoid duplicate warnings or conflicting guidance.
-4. Expire stale memory: set a cadence (for example, monthly) to prune outdated decisions and refresh assumptions.
+3. コンテキストの再利用: 新しいスキルを作成する際、重複した警告や矛盾したガイダンスを避けるために、以前の決定を参照します。
+4. 古いメモリの期限切れ: 定期的なリズム（例: 毎月）を設定して、古い決定を整理し、前提条件を更新します。
 
-## Good Practices
+## グッドプラクティス
 
-- Keep memory entries small and action-oriented (what changed, why, and the phase).
-- Prefer structured formats (JSON/YAML) so automation can hydrate the reviewer.
+- メモリエントリは小さく、アクション指向（何が変わったか、なぜか、そしてフェーズ）に保ちます。
+- 自動化ツールがレビューアに情報を注入できるように、構造化されたフォーマット（JSON/YAML）を推奨します。

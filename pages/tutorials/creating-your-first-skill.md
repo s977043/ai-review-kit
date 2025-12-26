@@ -1,21 +1,21 @@
-# Creating Your First Skill
+# 最初のスキルを作成する
 
-Build a simple River Reviewer skill that follows the Upstream → Midstream → Downstream flow.
+Upstream → Midstream → Downstream のフローに従うシンプルな River Reviewer スキルを作成します。
 
-## Prerequisites
+## 前提条件
 
-- Node.js installed
-- Repository cloned and dependencies installed (`npm install`)
+- Node.js がインストールされていること
+- リポジトリをクローンし、依存関係がインストールされていること (`npm install`)
 
-## 1. Draft the skill metadata
+## 1. スキルメタデータの作成
 
-Create a new file under `skills/` (for example `skills/rr-hello.yml`) and include metadata that matches `/schemas/skill.schema.json`:
+`skills/` 配下に新しいファイルを作成し（例: `skills/rr-hello.yml`）、`/schemas/skill.schema.json` に一致するメタデータを含めます:
 
 ```yaml
 ---
 id: rr-hello
 name: Hello World Skill
-description: Flags TODO comments in Markdown
+description: Markdown 内の TODO コメントを検出する
 phase: upstream
 applyTo:
   - '**/*.md'
@@ -24,25 +24,25 @@ tags:
   - hygiene
 severity: minor
 ---
-# instructions start here...
+# ここから指示を書きます...
 ```
 
-## 2. Keep the flow explicit
+## 2. フローを明確にする
 
-- **Upstream:** describe the intent of the check and link to any design references.
-- **Midstream:** define the detection logic in the instruction body.
-- **Downstream:** note how to verify or autofix the finding.
+- **Upstream:** チェックの意図を説明し、設計資料へのリンクを含めます。
+- **Midstream:** 指示本文で検出ロジックを定義します。
+- **Downstream:** 発見事項の検証方法や自動修正方法を記載します。
 
-## 3. Validate the skill
+## 3. スキルの検証
 
-Run the validators to make sure the schema and structure are correct:
+バリデータを実行して、スキーマと構造が正しいことを確認します:
 
 ```bash
 npm run skills:validate
 ```
 
-If your skill is phase-specific, add a short test PR to confirm the reviewer loads it only for matching files.
+スキルが特定のフェーズ向けである場合、対象ファイルに対してのみレビューアが読み込むことを確認するために、簡単なテスト PR を追加してください。
 
-## 4. Iterate with reviews
+## 4. レビューによる改善
 
-Commit the skill, open a PR, and use the River Reviewer PR templates to link related issues and prove validation passed.
+スキルをコミットし、PR を開き、River Reviewer の PR テンプレートを使用して関連する Issue をリンクし、検証が通過したことを証明してください。

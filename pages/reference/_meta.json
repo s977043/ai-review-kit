@@ -1,14 +1,14 @@
 {
-  "skill-schema": "Skill Schema",
-  "skill-schema-reference": "Skill Schema Reference",
+  "skill-schema": "スキルスキーマ概要",
+  "skill-schema-reference": "スキルスキーマ・リファレンス",
   "config-schema": "コンフィグ / スキーマ概要",
-  "metadata-fields": "Metadata Fields",
+  "metadata-fields": "メタデータ・フィールド",
   "skill-metadata": "スキルメタデータ仕様",
-  "skills-catalog": "Skills Catalog",
-  "review-output-example": "Review Output Examples",
+  "skills-catalog": "スキルカタログ",
+  "review-output-example": "レビュー出力例",
   "riverbed-storage": "Riverbed Memory ストレージ設計",
   "stable-interfaces": "安定インターフェース（CLI / GitHub Actions）",
-  "runner-cli-reference": "Runner CLI Reference",
-  "evaluation-fixture-format": "Evaluation Fixture Format",
-  "glossary": "River Reviewer Glossary"
+  "runner-cli-reference": "Runner CLI リファレンス",
+  "evaluation-fixture-format": "評価フィクスチャ形式",
+  "glossary": "用語集"
 }

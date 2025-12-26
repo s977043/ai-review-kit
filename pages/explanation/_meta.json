@@ -1,9 +1,9 @@
 {
   "intro": "River Reviewer へようこそ",
   "what-is-river-reviewer": "River Reviewer とは",
-  "river-architecture": "The River Architecture",
-  "design-philosophy": "Design Philosophy",
-  "upstream-midstream-downstream": "Upstream, Midstream, Downstream",
-  "riverbed-memory": "Riverbed Memory (Draft)",
-  "framework": "Framework"
+  "river-architecture": "River Reviewer のアーキテクチャ",
+  "design-philosophy": "設計哲学",
+  "upstream-midstream-downstream": "上流、中流、下流",
+  "riverbed-memory": "Riverbed Memory (ドラフト)",
+  "framework": "フレームワーク"
 }

@@ -1,9 +1,9 @@
-# Upstream, Midstream, Downstream
+# 上流、中流、下流
 
-River Reviewer mirrors the natural flow of software delivery:
+River Reviewer は、ソフトウェアデリバリーの自然な流れを反映しています。
 
-- **Upstream**: ideas, requirements, and design decisions. Checks focus on clarity, traceability, and feasibility.
-- **Midstream**: implementation and refactoring. Checks focus on correctness, code health, and keeping changes consistent with the upstream plan.
-- **Downstream**: testing, release readiness, and observability. Checks focus on verification, resiliency, and user impact.
+- **Upstream（上流）**: アイデア、要件、および設計上の決定。チェックは明確さ、トレーサビリティ、および実現可能性に焦点を当てます。
+- **Midstream（中流）**: 実装とリファクタリング。チェックは正しさ、コードの健全性、および変更が上流の計画と整合しているかどうかに焦点を当てます。
+- **Downstream（下流）**: テスト、リリースの準備完了状態、および可観測性。チェックは検証、回復力、およびユーザーへの影響に焦点を当てます。
 
-Each skill declares its phase so the runner can load only the relevant guidance for a change. When in doubt, prefer the earliest phase that can catch the issue to keep feedback fast.
+各スキルはそのフェーズを宣言するため、ランナーは変更に関連するガイダンスのみを読み込むことができます。迷った場合は、フィードバックを迅速に保つために、問題を検出できる最も早いフェーズを選択してください。

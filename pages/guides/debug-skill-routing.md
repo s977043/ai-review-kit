@@ -1,15 +1,15 @@
-# Debug Skill Routing
+# スキルルーティングのデバッグ
 
-When a skill doesn't trigger (or triggers too often), walk through these checks.
+スキルがトリガーされない（または頻繁にトリガーされすぎる）場合、以下のチェックを行います。
 
-## Checklist
+## チェックリスト
 
-1. **Schema**: confirm the skill passes `npm run skills:validate`.
-2. **Phase**: ensure `phase` matches the files being changed (Upstream/Midstream/Downstream).
-3. **applyTo globs**: verify the patterns match the paths in your PR. Use a minimal test file that should trigger the skill.
-4. **Severity/tags**: check whether filters in the runner use tags or severity that might exclude the skill.
-5. **Recent changes**: review git history for the skill file to see if routing logic changed.
+1. **スキーマ**: スキルが `npm run skills:validate` を通過することを確認します。
+2. **フェーズ**: `phase` が変更されたファイル（Upstream/Midstream/Downstream）と一致していることを確認します。
+3. **applyTo グロブ**: パターンが PR 内のパスと一致しているか確認します。スキルをトリガーすべき最小限のテストファイルを使用してください。
+4. **重要度/タグ**: ランナーのフィルタが、スキルを除外するタグや重要度を使用していないか確認します。
+5. **最近の変更**: スキルファイルの git履歴を確認し、ルーティングロジックが変更されていないか見直します。
 
-## Quick test
+## クイックテスト
 
-Open a draft PR that modifies a file matching the skill's `applyTo` glob. If no findings appear, add debug logging or temporarily narrow the glob to a single known path, then re-run the workflow.
+スキルの `applyTo` グロブに一致するファイルを変更するドラフト PR を開きます。発見事項が表示されない場合は、デバッグログを追加するか、一時的にグロブを既知の単一パスに絞り込んでから、ワークフローを再実行してください。
