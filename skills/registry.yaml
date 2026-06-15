@@ -946,6 +946,17 @@ skills:
     recommended: false
     description: 'pbi-input, plan, todo, test-cases 間の整合性をチェックし、実装着手前の仕様漏れを検知する'
 
+  - id: rr-upstream-plan-review-gate-001
+    version: '0.1.0'
+    name: '実装計画レビューゲート'
+    path: skills/upstream/rr-upstream-plan-review-gate-001/SKILL.md
+    category: upstream
+    phase: upstream
+    tags: [plangate, plan-review, human-approval, safety, upstream, stop-work]
+    severity: major
+    recommended: false
+    description: '実装計画（plan.md / pbi-input.md）に含まれる危険操作・Do Not Touch スコープ・人間承認必須条件を検出し、AI 自律実行前のゲートとして機能する'
+
   - id: rr-upstream-plangate-exec-conformance-001
     version: '0.1.0'
     name: 'PlanGate Exec Conformance Guard'
