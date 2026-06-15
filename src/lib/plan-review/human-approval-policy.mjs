@@ -15,19 +15,29 @@
  * @type {Array<{pattern: RegExp, name: string}>}
  */
 const TRIGGER_PATTERNS = [
-  { pattern: /destructive\s+command/i, name: 'destructive-command' },
-  { pattern: /\bcredential/i, name: 'credential' },
-  { pattern: /\bsecret/i, name: 'secret' },
+  { pattern: /destructive\s+(command|operation|action|step)s?/i, name: 'destructive-command' },
+  { pattern: /\bcredentials?\b/i, name: 'credential' },
+  { pattern: /\bsecrets?\b/i, name: 'secret' },
   { pattern: /config\s+overwrite/i, name: 'config-overwrite' },
-  { pattern: /external\s+post(ing)?/i, name: 'external-posting' },
-  { pattern: /\bdeployment\b/i, name: 'deployment' },
+  {
+    pattern: /external\s+post(ing)?|\bslack\b|\bwebhook\b|\bemail\b|\bnotification\b/i,
+    name: 'external-posting',
+  },
+  { pattern: /\bdeploy(ment|ing)?s?\b/i, name: 'deployment' },
   { pattern: /\bcron\b/i, name: 'cron' },
   { pattern: /memory\s+write/i, name: 'memory-write' },
-  { pattern: /billing/i, name: 'billing' },
-  { pattern: /provider\s+change/i, name: 'provider-change' },
-  { pattern: /\bauth\b/i, name: 'auth' },
-  { pattern: /permission\s+change/i, name: 'permission-change' },
-  { pattern: /user\s+data/i, name: 'user-data' },
+  { pattern: /\bbilling\b/i, name: 'billing' },
+  {
+    pattern: /\bproviders?\s+(change|update|switch)s?\b|\b(change|update|switch)s?\s+providers?\b/i,
+    name: 'provider-change',
+  },
+  { pattern: /\bauth(enticat(e|ion)|oriz(e|ation))?s?\b/i, name: 'auth' },
+  {
+    pattern:
+      /\bpermissions?\s+(change|update|modify|grant|revoke)s?\b|\b(change|update|modify|grant|revoke)s?\s+permissions?\b/i,
+    name: 'permission-change',
+  },
+  { pattern: /\buser\s+data\b/i, name: 'user-data' },
 ];
 
 /**

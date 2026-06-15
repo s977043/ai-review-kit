@@ -28,6 +28,21 @@ describe('detectHumanApprovalTriggers — should_trigger canary', () => {
     { label: 'deploy (partial match via deployment)', text: 'Trigger deployment pipeline' },
     { label: 'CRON (uppercase)', text: 'Schedule CRON task at midnight' },
     { label: 'BILLING (uppercase)', text: 'BILLING team will review' },
+    // Word-order variants and derivatives (regression for expanded patterns)
+    { label: 'change permissions (word-order)', text: 'change permissions on the bucket' },
+    { label: 'grant permission (singular)', text: 'grant permission to the service account' },
+    { label: 'revoke permissions (plural)', text: 'revoke permissions from the role' },
+    { label: 'deploying to production', text: 'deploying to production environment' },
+    { label: 'deployments (plural)', text: 'list of deployments scheduled today' },
+    { label: 'send to slack', text: 'send to slack channel #alerts' },
+    { label: 'send email notification', text: 'send email to the team after completion' },
+    { label: 'webhook notification', text: 'webhook notification will be sent on success' },
+    { label: 'change provider', text: 'change provider from Stripe to Paddle' },
+    { label: 'update providers', text: 'update providers list in the config' },
+    { label: 'authenticate user', text: 'authenticate user via OAuth2' },
+    { label: 'authorization required', text: 'authorization required for this endpoint' },
+    { label: 'billing update', text: 'billing update scheduled for end of month' },
+    { label: 'user data export', text: 'user data export for GDPR request' },
   ];
 
   for (const { label, text } of TRIGGER_CASES) {
