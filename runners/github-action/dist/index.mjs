@@ -44579,11 +44579,18 @@ function countBySeverity(findings) {
  * - `auto-approve`: Recommendation only; does NOT bypass HITL policy.
  * - `human-review-recommended`: Notable findings but not blocking.
  * - `human-review-required`: Critical findings or very low score.
+ * - `human-review-required` (via humanApprovalRequired): Policy-level override
+ *   (e.g. destructive commands, credentials, deployment). Returned before
+ *   score-based logic so axis scores are unaffected.
  *
- * @param {{overall: number, axes: Record<string, number>, counts: object}} args
+ * @param {{overall: number, axes: Record<string, number>, counts: object, humanApprovalRequired?: boolean}} args
  * @returns {'auto-approve' | 'human-review-recommended' | 'human-review-required'}
  */
-function deriveVerdict({ overall, axes, counts }) {
+function deriveVerdict({ overall, axes, counts, humanApprovalRequired = false }) {
+  if (humanApprovalRequired) {
+    return 'human-review-required';
+  }
+
   const t = _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .VERDICT_THRESHOLDS */ .n;
 
   if (counts.critical > t.humanReviewRecommended.maxCritical) {
@@ -44607,6 +44614,9 @@ function deriveVerdict({ overall, axes, counts }) {
  * Complete scoring entry point.
  *
  * @param {Array<object>} findings - Findings with at least `severity` and `ruleId`.
+ * @param {object} [options]
+ * @param {boolean} [options.humanApprovalRequired=false] - When true, forces verdict to
+ *   'human-review-required' regardless of score (e.g. plan-review-gate trigger).
  * @returns {{
  *   overall: number,
  *   axes: Record<typeof AXES[number], number>,
@@ -44616,11 +44626,11 @@ function deriveVerdict({ overall, axes, counts }) {
  *   derived: true,
  * }}
  */
-function scoreReview(findings) {
+function scoreReview(findings, { humanApprovalRequired = false } = {}) {
   const axes = computeAxisScores(findings);
   const overall = computeOverallScore(axes);
   const counts = countBySeverity(findings);
-  const verdict = deriveVerdict({ overall, axes, counts });
+  const verdict = deriveVerdict({ overall, axes, counts, humanApprovalRequired });
   const findingBreakdowns = (findings ?? []).map((f) => ({
     id: f.id,
     ...(0,_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(f),

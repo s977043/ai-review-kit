@@ -221,3 +221,59 @@ describe('scoreReview integration', () => {
     assert.deepEqual(result.counts, { critical: 0, major: 0, minor: 0, info: 0 });
   });
 });
+
+describe('deriveVerdict — humanApprovalRequired flag', () => {
+  const perfectAxes = Object.fromEntries(
+    ['readability', 'extensibility', 'performance', 'security', 'maintainability'].map((a) => [
+      a,
+      100,
+    ])
+  );
+
+  it('returns human-review-required immediately when humanApprovalRequired=true (even perfect scores)', () => {
+    const verdict = deriveVerdict({
+      overall: 100,
+      axes: perfectAxes,
+      counts: { critical: 0, major: 0, minor: 0, info: 0 },
+      humanApprovalRequired: true,
+    });
+    assert.equal(verdict, 'human-review-required');
+  });
+
+  it('backward compat: omitting humanApprovalRequired defaults to false (auto-approve unchanged)', () => {
+    const verdict = deriveVerdict({
+      overall: 100,
+      axes: perfectAxes,
+      counts: { critical: 0, major: 0, minor: 0, info: 0 },
+    });
+    assert.equal(verdict, 'auto-approve');
+  });
+
+  it('backward compat: humanApprovalRequired=false behaves identically to omitting it', () => {
+    const args = {
+      overall: 100,
+      axes: perfectAxes,
+      counts: { critical: 0, major: 0, minor: 0, info: 0 },
+    };
+    assert.equal(deriveVerdict({ ...args, humanApprovalRequired: false }), deriveVerdict(args));
+  });
+});
+
+describe('scoreReview — humanApprovalRequired option', () => {
+  it('passes humanApprovalRequired through to verdict', () => {
+    const result = scoreReview([], { humanApprovalRequired: true });
+    assert.equal(result.verdict, 'human-review-required');
+    assert.equal(result.overall, 100, 'axis scores unaffected');
+    assert.equal(result.derived, true);
+  });
+
+  it('backward compat: no second arg → existing verdict behaviour', () => {
+    const result = scoreReview([]);
+    assert.equal(result.verdict, 'auto-approve');
+  });
+
+  it('backward compat: empty options object → existing verdict behaviour', () => {
+    const result = scoreReview([], {});
+    assert.equal(result.verdict, 'auto-approve');
+  });
+});
