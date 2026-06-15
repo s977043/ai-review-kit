@@ -71,7 +71,7 @@ Options:
   --explain         Print which skills / gates / config tier were resolved (to stderr)
   --estimate        Print cost estimate only (no review)
   --max-cost <usd>  Abort if estimated cost exceeds this USD amount
-  --output <mode>   Output format: text|markdown|json|yaml. Default: text
+  --output <mode>   Output format: text|markdown|json|yaml|html. Default: text
   --context list    Comma-separated available contexts (e.g. diff,fullFile,tests). Overrides RIVER_AVAILABLE_CONTEXTS
   --dependency list Comma-separated available dependencies (e.g. code_search,test_runner). Overrides RIVER_AVAILABLE_DEPENDENCIES
   --reviewers list  Comma-separated reviewer roles for parallel orchestration (e.g. bug-hunter,security-scanner,test-gap).
@@ -500,9 +500,9 @@ function parseArgs(argv) {
         break;
       }
       const mode = value.toLowerCase();
-      if (!['text', 'markdown', 'json', 'yaml'].includes(mode)) {
+      if (!['text', 'markdown', 'json', 'yaml', 'html'].includes(mode)) {
         console.error(
-          `Error: --output must be one of: text, markdown, json, yaml (got "${value}").`
+          `Error: --output must be one of: text, markdown, json, yaml, html (got "${value}").`
         );
         parsed.command = 'help';
         break;
@@ -1819,13 +1819,26 @@ Dependencies: ${
         plan: result.plan,
       };
       console.log(formatYamlOutput(artifact));
+    } else if (parsed.output === 'html') {
+      const { formatHtmlOutput } = await import('./lib/output-formatters/html.mjs');
+      const htmlResult = {
+        findings: result.findings ?? [],
+        plan: result.plan,
+        timestamp: new Date().toISOString(),
+      };
+      console.log(formatHtmlOutput(htmlResult, parsed.phase));
     } else {
       printPlan(result.plan);
       printComments(result.comments);
     }
 
     if (parsed.debug) {
-      if (parsed.output === 'markdown' || parsed.output === 'json' || parsed.output === 'yaml') {
+      if (
+        parsed.output === 'markdown' ||
+        parsed.output === 'json' ||
+        parsed.output === 'yaml' ||
+        parsed.output === 'html'
+      ) {
         console.error('\nDebug info (not included in output):');
         printDebugInfo(result, { log: console.error });
       } else {
