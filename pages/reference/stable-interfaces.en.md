@@ -51,7 +51,7 @@ Current stability level for each surface.
 - `--explain`: Print the resolved skills / gates / config tier in human-readable form (to stderr)
 - `--estimate`: Cost estimation only (no review execution)
 - `--max-cost <usd>`: Abort if estimate exceeds limit
-- `--output <text|markdown>`: Output format (GitHub Actions uses `markdown`)
+- `--output <text|markdown|json|yaml|html>`: Output format (GitHub Actions uses `markdown`; `html` emits a self-contained HTML report)
 - `--context <list>`: Available contexts (e.g., `diff,fullFile`)
 - `--dependency <list>`: Available dependencies (e.g., `code_search,test_runner`)
 
