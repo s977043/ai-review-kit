@@ -45786,7 +45786,11 @@ function mergeFindings(findings) {
       const existingAgreement = Array.isArray(canonical.agreement) ? canonical.agreement : [];
       const agreementSet = new Set(existingAgreement);
       if (role) agreementSet.add(role);
-      return { ...canonical, agreement: [...agreementSet] };
+      return {
+        ...canonical,
+        severity: normalizeSeverityLocal(canonical.severity),
+        agreement: [...agreementSet],
+      };
     }
 
     // Merge cluster: max severity, union evidence, collect agreement
