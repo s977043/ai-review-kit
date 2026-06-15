@@ -1229,4 +1229,111 @@ describe('runReviewPlan — human approval triggers (S4)', () => {
     assert.equal(infoFinding.severity, 'info');
     assert.equal(artifact.decision, 'human-review-required');
   });
+
+  test('plan trigger only → finding.file is plan path, not pbi-input', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'midstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      loadRiskMapImpl: async () => null,
+      generateRunId: fixedRunId,
+      resolveAllArtifactsImpl: async () => ({
+        'pbi-input': {
+          id: 'pbi-input',
+          path: '/repo/pbi-input.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+        plan: {
+          id: 'plan',
+          path: '/repo/plan.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+      }),
+      readFileImpl: async (p) => {
+        if (p === '/repo/pbi-input.md') return 'Add a new feature to the dashboard.';
+        if (p === '/repo/plan.md') return 'Deploy to production server.';
+        return '';
+      },
+      buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    });
+    const findings = artifact.findings.filter((f) => f.ruleId === 'rr-plan-review-human-approval');
+    assert.equal(findings.length, 1, 'only one finding — triggered by plan.md');
+    assert.equal(findings[0].file, '/repo/plan.md', 'file should point to plan.md');
+    assert.equal(artifact.decision, 'human-review-required');
+  });
+
+  test('both pbi-input and plan have triggers → two separate findings with correct file paths', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'midstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      loadRiskMapImpl: async () => null,
+      generateRunId: fixedRunId,
+      resolveAllArtifactsImpl: async () => ({
+        'pbi-input': {
+          id: 'pbi-input',
+          path: '/repo/pbi-input.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+        plan: {
+          id: 'plan',
+          path: '/repo/plan.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+      }),
+      readFileImpl: async (p) => {
+        if (p === '/repo/pbi-input.md') return 'Deploy to production environment.';
+        if (p === '/repo/plan.md') return 'Run database migration on billing records.';
+        return '';
+      },
+      buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    });
+    const findings = artifact.findings.filter((f) => f.ruleId === 'rr-plan-review-human-approval');
+    assert.equal(findings.length, 2, 'two findings — one per triggering file');
+    const files = findings.map((f) => f.file);
+    assert.ok(files.includes('/repo/pbi-input.md'), 'pbi-input.md finding present');
+    assert.ok(files.includes('/repo/plan.md'), 'plan.md finding present');
+    assert.equal(artifact.decision, 'human-review-required');
+  });
+
+  test('trigger at end of file without trailing newline → still detected (no word-boundary miss)', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'upstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      loadRiskMapImpl: async () => null,
+      generateRunId: fixedRunId,
+      resolveAllArtifactsImpl: async () => ({
+        'pbi-input': {
+          id: 'pbi-input',
+          path: '/repo/pbi-input.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+      }),
+      // No trailing newline — previously concatenation could miss \b if second
+      // file started immediately after.
+      readFileImpl: async (p) => {
+        if (p === '/repo/pbi-input.md') return 'Deploy to production';
+        return '';
+      },
+      buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    });
+    const infoFinding = artifact.findings.find((f) => f.ruleId === 'rr-plan-review-human-approval');
+    assert.ok(infoFinding, 'trigger at end of file without trailing newline should be detected');
+    assert.equal(infoFinding.file, '/repo/pbi-input.md');
+    assert.equal(artifact.decision, 'human-review-required');
+  });
 });
