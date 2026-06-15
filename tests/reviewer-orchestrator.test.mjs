@@ -42,6 +42,7 @@ const {
   selectRolesAuto,
   splitDiffIntoChunks,
   deduplicateFindings,
+  mergeFindings,
 } = await (() => {
   // We can't easily mock ESM imports in node:test without a loader.
   // Instead, import the real module and test its observable behaviour.
@@ -338,5 +339,120 @@ describe('deduplicateFindings', () => {
     const f1 = makeF('a.ts', 10, 'null pointer dereference on handleRequest');
     const f2 = makeF('b.ts', 10, 'null pointer dereference on handleRequest');
     assert.equal(deduplicateFindings([f1, f2]).length, 2);
+  });
+});
+
+describe('mergeFindings', () => {
+  function makeF(file, line, message, severity = 'major', reviewerRole, evidence = []) {
+    return { file, lineStart: line, message, title: message, severity, reviewerRole, evidence };
+  }
+
+  it('merges duplicate findings with max severity (major+critical → critical)', () => {
+    const f1 = makeF(
+      'a.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'major',
+      'bug-hunter',
+      ['line 10']
+    );
+    const f2 = makeF(
+      'a.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'critical',
+      'security-scanner',
+      ['line 10 ctx']
+    );
+    const result = mergeFindings([f1, f2]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].severity, 'critical');
+  });
+
+  it('unions evidence arrays and deduplicates', () => {
+    const f1 = makeF(
+      'a.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'major',
+      'bug-hunter',
+      ['shared evidence', 'unique A']
+    );
+    const f2 = makeF(
+      'a.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'major',
+      'security-scanner',
+      ['shared evidence', 'unique B']
+    );
+    const result = mergeFindings([f1, f2]);
+    assert.equal(result.length, 1);
+    const ev = result[0].evidence;
+    assert.ok(ev.includes('shared evidence'), 'shared evidence present');
+    assert.ok(ev.includes('unique A'), 'unique A present');
+    assert.ok(ev.includes('unique B'), 'unique B present');
+    // shared evidence deduplicated: should appear once
+    assert.equal(ev.filter((e) => e === 'shared evidence').length, 1);
+  });
+
+  it('agreement array contains both reviewer roles', () => {
+    const f1 = makeF(
+      'a.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'major',
+      'bug-hunter',
+      []
+    );
+    const f2 = makeF(
+      'a.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'minor',
+      'security-scanner',
+      []
+    );
+    const result = mergeFindings([f1, f2]);
+    assert.equal(result.length, 1);
+    assert.ok(result[0].agreement.includes('bug-hunter'));
+    assert.ok(result[0].agreement.includes('security-scanner'));
+  });
+
+  it('non-duplicate findings pass through unchanged with agreement=[own role]', () => {
+    const f1 = makeF('a.ts', 1, 'bug A', 'major', 'bug-hunter', ['ev1']);
+    const f2 = makeF('b.ts', 5, 'bug B', 'minor', 'security-scanner', ['ev2']);
+    const result = mergeFindings([f1, f2]);
+    assert.equal(result.length, 2);
+    assert.equal(result[0].agreement.length, 1);
+    assert.equal(result[0].agreement[0], 'bug-hunter');
+    assert.equal(result[1].agreement[0], 'security-scanner');
+  });
+
+  it('preserves existing fields on merged finding (backward compat)', () => {
+    const f1 = {
+      ...makeF('a.ts', 10, 'null pointer dereference in handleRequest', 'major', 'bug-hunter', []),
+      id: 'rr-1',
+      ruleId: 'some-rule',
+      title: 'Null pointer',
+      phase: 'midstream',
+      confidence: 'high',
+    };
+    const f2 = makeF(
+      'a.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'major',
+      'security-scanner',
+      []
+    );
+    const result = mergeFindings([f1, f2]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].id, 'rr-1');
+    assert.equal(result[0].ruleId, 'some-rule');
+    assert.equal(result[0].phase, 'midstream');
+    assert.equal(result[0].confidence, 'high');
+    assert.equal(result[0].file, 'a.ts');
+    assert.equal(result[0].message, 'null pointer dereference in handleRequest');
   });
 });

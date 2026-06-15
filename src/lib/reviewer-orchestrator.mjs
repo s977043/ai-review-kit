@@ -127,6 +127,74 @@ export function splitDiffIntoChunks(diff) {
     }));
 }
 
+const SEVERITY_ORDER = ['info', 'minor', 'major', 'critical'];
+
+function maxSeverity(a, b) {
+  const ai = SEVERITY_ORDER.indexOf(a ?? 'info');
+  const bi = SEVERITY_ORDER.indexOf(b ?? 'info');
+  return SEVERITY_ORDER[Math.max(ai < 0 ? 0 : ai, bi < 0 ? 0 : bi)];
+}
+
+/**
+ * Merge findings across reviewers: groups duplicates (same logic as deduplicateFindings),
+ * then for each group produces ONE canonical finding with:
+ *   - severity = max of group
+ *   - evidence = deduplicated union of all evidence arrays
+ *   - agreement = array of all reviewerRole values in the group
+ * Non-duplicate findings pass through unchanged, with agreement = [their reviewerRole] if set.
+ */
+export function mergeFindings(findings) {
+  const groups = []; // Array of { canonical, members[] }
+
+  for (const f of findings) {
+    const matchIdx = groups.findIndex(({ canonical }) => {
+      if (canonical.file !== f.file) return false;
+      const lineOverlap =
+        Math.abs((canonical.lineStart ?? canonical.line ?? 0) - (f.lineStart ?? f.line ?? 0)) <= 2;
+      if (!lineOverlap) return false;
+      const msgA = (canonical.message ?? canonical.title ?? '').slice(0, 80).toLowerCase();
+      const msgB = (f.message ?? f.title ?? '').slice(0, 80).toLowerCase();
+      return editDistance(msgA, msgB) <= 10;
+    });
+
+    if (matchIdx === -1) {
+      groups.push({ canonical: { ...f }, members: [f] });
+    } else {
+      groups[matchIdx].members.push(f);
+    }
+  }
+
+  return groups.map(({ canonical, members }) => {
+    if (members.length === 1) {
+      // Passthrough: just attach agreement with own role if available
+      const role = canonical.reviewerRole;
+      return {
+        ...canonical,
+        agreement: role ? [role] : (canonical.agreement ?? []),
+      };
+    }
+
+    // Merge: max severity, union evidence, collect agreement
+    let mergedSeverity = canonical.severity;
+    const evidenceSet = new Set(canonical.evidence ?? []);
+    const agreementSet = new Set();
+    if (canonical.reviewerRole) agreementSet.add(canonical.reviewerRole);
+
+    for (const m of members.slice(1)) {
+      mergedSeverity = maxSeverity(mergedSeverity, m.severity);
+      for (const e of m.evidence ?? []) evidenceSet.add(e);
+      if (m.reviewerRole) agreementSet.add(m.reviewerRole);
+    }
+
+    return {
+      ...canonical,
+      severity: mergedSeverity,
+      evidence: [...evidenceSet],
+      agreement: [...agreementSet],
+    };
+  });
+}
+
 /**
  * Deduplicate findings across parallel runs.
  * Two findings are considered duplicates if they share the same file, overlapping
@@ -253,7 +321,7 @@ export async function runReviewerOrchestration({
       chunkLabel: r.chunkLabel ?? null,
     }))
   );
-  const deduped = deduplicateFindings(rawFindings);
+  const deduped = mergeFindings(rawFindings);
   const allFindings = deduped.map((f) => ({ ...f, id: `rr-${nextId++}` }));
 
   const allComments = succeeded.flatMap((r) => r.comments ?? []);
