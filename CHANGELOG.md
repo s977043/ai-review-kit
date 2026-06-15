@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.17.0](https://github.com/s977043/river-review/compare/v1.16.0...v1.17.0) (2026-06-15)
+
+
+### Features
+
+* **output:** add --output html self-contained review report ([#1158](https://github.com/s977043/river-review/issues/1158) Phase 1) ([#1167](https://github.com/s977043/river-review/issues/1167)) ([7847559](https://github.com/s977043/river-review/commit/78475591e32c716d9d91b01b905f0ebce4b1f407))
+* wire detectHumanApprovalTriggers into plan review (humanApprovalRequired) ([#1163](https://github.com/s977043/river-review/issues/1163)) ([#1168](https://github.com/s977043/river-review/issues/1168)) ([2eb6372](https://github.com/s977043/river-review/commit/2eb637256843f4a1e11ccc0abb0a9d7ac73072cd))
+
 ## [1.16.0](https://github.com/s977043/river-review/compare/v1.15.0...v1.16.0) (2026-06-15)
 
 
