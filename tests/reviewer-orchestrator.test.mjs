@@ -495,6 +495,17 @@ describe('mergeFindings', () => {
     assert.ok(result[0].agreement.includes('bug-hunter'));
   });
 
+  it('normalizes severity in single-finding passthrough (blocker → critical)', () => {
+    const f = makeF('a.ts', 1, 'null deref', 'blocker', 'bug-hunter', []);
+    const result = mergeFindings([f]);
+    assert.equal(result.length, 1);
+    assert.equal(
+      result[0].severity,
+      'critical',
+      'blocker must normalize to critical on passthrough'
+    );
+  });
+
   it('does not throw when evidence/agreement are null on multi-member merge', () => {
     const f1 = {
       file: 'a.ts',
