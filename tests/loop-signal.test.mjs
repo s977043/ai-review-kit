@@ -226,6 +226,139 @@ describe('deriveLoopSignalFromRunsDiff', () => {
     const diff = { new: [], resolved: [] };
     assert.equal(deriveLoopSignalFromRunsDiff(diff), 'NO_SIGNAL');
   });
+
+  // --- latestArtifact second-param tests (gemini fix: runs diff NO_SIGNAL regression) ---
+
+  test('derives REVISE_REQUIRED via latestArtifact when diff has no runs', () => {
+    // 2-run path: diff from diffReviews has no oscillated/runs; signal comes from latestArtifact
+    const diff = { new: [], resolved: [], persisting: [], scoreChanged: [], summary: {} };
+    const latestArtifact = {
+      findings: [
+        {
+          severity: 'critical',
+          id: '1',
+          ruleId: 'r',
+          title: 't',
+          message: 'm',
+          phase: 'midstream',
+          file: 'a.js',
+        },
+      ],
+    };
+    assert.equal(deriveLoopSignalFromRunsDiff(diff, latestArtifact), 'REVISE_REQUIRED');
+  });
+
+  test('derives CONVERGED via latestArtifact for approved run with no blocking findings', () => {
+    const diff = { new: [], resolved: [], persisting: [], scoreChanged: [], summary: {} };
+    const latestArtifact = { decision: 'auto-approve', findings: [] };
+    assert.equal(deriveLoopSignalFromRunsDiff(diff, latestArtifact), 'CONVERGED');
+  });
+
+  test('derives ESCALATE_HUMAN via latestArtifact', () => {
+    const diff = { new: [], resolved: [], persisting: [], scoreChanged: [], summary: {} };
+    const latestArtifact = { decision: 'human-review-required', findings: [] };
+    assert.equal(deriveLoopSignalFromRunsDiff(diff, latestArtifact), 'ESCALATE_HUMAN');
+  });
+
+  test('STOP_OSCILLATED takes priority even when latestArtifact would CONVERGE', () => {
+    const diff = {
+      oscillated: [{ fingerprint: 'xyz', finding: {}, timeline: [] }],
+      new: [],
+      resolved: [],
+      persisting: [],
+      scoreChanged: [],
+      summary: {},
+    };
+    const latestArtifact = { decision: 'auto-approve', findings: [] };
+    assert.equal(deriveLoopSignalFromRunsDiff(diff, latestArtifact), 'STOP_OSCILLATED');
+  });
+
+  test('latestArtifact is preferred over diff.runs when both present', () => {
+    // latestArtifact says CONVERGED, but embedded runs say REVISE_REQUIRED
+    const diff = {
+      oscillated: [],
+      runs: [
+        {
+          artifact: {
+            decision: 'human-review-recommended',
+            findings: [
+              {
+                severity: 'critical',
+                id: '1',
+                ruleId: 'r',
+                title: 't',
+                message: 'm',
+                phase: 'midstream',
+                file: 'a.js',
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const latestArtifact = { decision: 'auto-approve', findings: [] };
+    assert.equal(deriveLoopSignalFromRunsDiff(diff, latestArtifact), 'CONVERGED');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Defensive: deriveLoopSignalFromArtifact with malformed findings (gemini fix)
+// ---------------------------------------------------------------------------
+
+describe('deriveLoopSignalFromArtifact defensive handling', () => {
+  test('does not throw when findings is not an array', () => {
+    // findings set to a non-array value (e.g. accidentally set to string)
+    const artifact = { decision: 'auto-approve', findings: 'bad-value' };
+    assert.doesNotThrow(() => deriveLoopSignalFromArtifact(artifact));
+    assert.equal(deriveLoopSignalFromArtifact(artifact), 'CONVERGED');
+  });
+
+  test('does not throw when findings is null', () => {
+    const artifact = { decision: 'auto-approve', findings: null };
+    assert.doesNotThrow(() => deriveLoopSignalFromArtifact(artifact));
+    assert.equal(deriveLoopSignalFromArtifact(artifact), 'CONVERGED');
+  });
+
+  test('does not throw when findings contains null elements', () => {
+    const artifact = {
+      decision: 'auto-approve',
+      findings: [
+        null,
+        undefined,
+        {
+          severity: 'minor',
+          id: '1',
+          ruleId: 'r',
+          title: 't',
+          message: 'm',
+          phase: 'midstream',
+          file: 'a.js',
+        },
+      ],
+    };
+    assert.doesNotThrow(() => deriveLoopSignalFromArtifact(artifact));
+    // null/undefined elements have no severity — treated as non-blocking
+    assert.equal(deriveLoopSignalFromArtifact(artifact), 'CONVERGED');
+  });
+
+  test('still detects blocking when null elements are mixed with critical findings', () => {
+    const artifact = {
+      findings: [
+        null,
+        {
+          severity: 'critical',
+          id: '1',
+          ruleId: 'r',
+          title: 't',
+          message: 'm',
+          phase: 'midstream',
+          file: 'a.js',
+        },
+      ],
+    };
+    assert.doesNotThrow(() => deriveLoopSignalFromArtifact(artifact));
+    assert.equal(deriveLoopSignalFromArtifact(artifact), 'REVISE_REQUIRED');
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -1543,9 +1543,20 @@ async function main(argv = process.argv.slice(2)) {
           );
           const diff = diffRunHistory(runRecords);
           if (parsed.output === 'json') {
+            // Sort by timestamp to find the latest run (same order as diffRunHistory).
+            const sortedRecords = [...runRecords].sort((a, b) => {
+              const ta = a.timestamp != null ? new Date(a.timestamp).getTime() : NaN;
+              const tb = b.timestamp != null ? new Date(b.timestamp).getTime() : NaN;
+              if (Number.isNaN(ta) && Number.isNaN(tb))
+                return (a.runId ?? '').localeCompare(b.runId ?? '');
+              if (Number.isNaN(ta)) return 1;
+              if (Number.isNaN(tb)) return -1;
+              return ta !== tb ? ta - tb : (a.runId ?? '').localeCompare(b.runId ?? '');
+            });
+            const latestRunArtifact = sortedRecords[sortedRecords.length - 1];
             const diffWithSignal = {
               ...diff,
-              suggestedLoopSignal: deriveLoopSignalFromRunsDiff(diff),
+              suggestedLoopSignal: deriveLoopSignalFromRunsDiff(diff, latestRunArtifact),
             };
             console.log(JSON.stringify(diffWithSignal, null, 2));
           } else {
@@ -1576,7 +1587,7 @@ async function main(argv = process.argv.slice(2)) {
           if (parsed.output === 'json') {
             const diffWithSignal = {
               ...diff,
-              suggestedLoopSignal: deriveLoopSignalFromRunsDiff(diff),
+              suggestedLoopSignal: deriveLoopSignalFromRunsDiff(diff, run2),
             };
             console.log(JSON.stringify(diffWithSignal, null, 2));
           } else {

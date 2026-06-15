@@ -40,9 +40,10 @@ export function deriveLoopSignalFromArtifact(artifact) {
     return 'ESCALATE_HUMAN';
   }
 
-  const findings = artifact?.findings ?? [];
+  const rawFindings = artifact?.findings;
+  const findings = Array.isArray(rawFindings) ? rawFindings : [];
   const blockingCount = findings.filter(
-    (f) => f.severity === 'critical' || f.severity === 'major'
+    (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
   ).length;
 
   if (blockingCount > 0) {
@@ -64,25 +65,33 @@ export function deriveLoopSignalFromArtifact(artifact) {
  * STOP_OSCILLATED regardless of finding severity — the fix loop is spinning
  * and human triage is needed.
  *
- * Otherwise, derives from the latest run's artifact embedded in the diff.
- * Falls back to NO_SIGNAL when neither oscillation nor a latest artifact is
- * available (e.g. a 2-run diff that lacks the full artifact).
+ * Otherwise, derives from the latest run's artifact:
+ * 1. `latestArtifact` parameter (explicit, preferred for 2-run and multi-run CLI paths)
+ * 2. `diff.runs[last].artifact` or `diff.runs[last]` (embedded in diff object)
+ * Falls back to NO_SIGNAL when neither is available.
  *
  * @param {object} diff  Output of diffRunHistory / diffReviews
+ * @param {object|null} [latestArtifact]  Latest run's artifact (findings + decision).
+ *   Pass the latest run record directly when the diff object does not embed it.
  * @returns {RunsDiffSignal}
  */
-export function deriveLoopSignalFromRunsDiff(diff) {
+export function deriveLoopSignalFromRunsDiff(diff, latestArtifact) {
   if (Array.isArray(diff?.oscillated) && diff.oscillated.length > 0) {
     return 'STOP_OSCILLATED';
   }
 
-  // Use the latest run artifact when available (multi-run path sets runs[]).
+  // Prefer the explicitly passed latest artifact.
+  if (latestArtifact != null && typeof latestArtifact === 'object') {
+    return deriveLoopSignalFromArtifact(latestArtifact);
+  }
+
+  // Fall back to runs[] embedded in diff (for callers that populate it).
   const runs = diff?.runs;
   if (Array.isArray(runs) && runs.length > 0) {
     const latest = runs[runs.length - 1];
-    const latestArtifact = latest?.artifact ?? latest;
-    if (latestArtifact && typeof latestArtifact === 'object') {
-      return deriveLoopSignalFromArtifact(latestArtifact);
+    const embedded = latest?.artifact ?? latest;
+    if (embedded && typeof embedded === 'object') {
+      return deriveLoopSignalFromArtifact(embedded);
     }
   }
 
