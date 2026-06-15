@@ -1,6 +1,6 @@
 {
   "name": "river-review",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "description": "Skill-routed code review for Codex: an orchestrator plus specialist skills (code, security, performance, architecture, testing) and an adversarial pre-mortem/war-game pass. Classifies review intent, routes to the right specialist, and verifies findings.",
   "author": {
     "name": "river-review maintainers",
