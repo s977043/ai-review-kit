@@ -968,39 +968,46 @@ async function runReviewPlan({
   }
 
   // Human-approval policy check: scan pbi-input and plan text for triggers
-  // that require human approval before execution. Non-blocking — read errors
-  // fall back to empty string so the rest of the artifact is unaffected.
+  // that require human approval before execution. Each file is scanned
+  // separately so that the info finding `file` attribute accurately reflects
+  // which document contained the trigger (gemini review #1168).
+  // Non-blocking — read errors fall back to empty string so the rest of the
+  // artifact is unaffected.
   let humanApprovalRequired = false;
   {
     const pbiPath = resolved?.['pbi-input']?.path;
     const planPath = resolved?.plan?.path;
-    let planText = '';
-    if (pbiPath) {
+
+    /**
+     * Read filePath (non-blocking) and run detectHumanApprovalTriggers.
+     * If triggers are found, push an info finding attributed to that file
+     * and set humanApprovalRequired.
+     *
+     * @param {string} filePath
+     */
+    const scanFile = async (filePath) => {
+      let text = '';
       try {
-        planText += await readFileImpl(pbiPath);
+        text = await readFileImpl(filePath);
       } catch {
-        // non-blocking
+        // non-blocking — missing / unreadable file is not an error
       }
-    }
-    if (planPath) {
-      try {
-        planText += await readFileImpl(planPath);
-      } catch {
-        // non-blocking
+      const approval = detectHumanApprovalTriggers(text);
+      if (approval.required) {
+        humanApprovalRequired = true;
+        artifact.findings = artifact.findings ?? [];
+        artifact.findings.push({
+          ruleId: 'rr-plan-review-human-approval',
+          severity: 'info',
+          title: 'Human approval required',
+          message: `Plan contains triggers requiring human approval: ${approval.triggers.join(', ')}`,
+          file: filePath,
+        });
       }
-    }
-    const approval = detectHumanApprovalTriggers(planText);
-    if (approval.required) {
-      humanApprovalRequired = true;
-      artifact.findings = artifact.findings ?? [];
-      artifact.findings.push({
-        ruleId: 'rr-plan-review-human-approval',
-        severity: 'info',
-        title: 'Human approval required',
-        message: `Plan contains triggers requiring human approval: ${approval.triggers.join(', ')}`,
-        file: pbiPath ?? planPath,
-      });
-    }
+    };
+
+    if (pbiPath) await scanFile(pbiPath);
+    if (planPath) await scanFile(planPath);
   }
 
   finalizeArtifact(artifact, {
