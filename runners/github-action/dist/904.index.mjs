@@ -45,9 +45,19 @@ const SEVERITY_COLOR = {
 };
 
 const DECISION_CONFIG = {
-  'auto-approve': { bg: '#e8f5e9', border: '#2e7d32', label: 'Auto Approve' },
-  'human-review-recommended': { bg: '#fff8e1', border: '#f9a825', label: 'Human Review Recommended' },
-  'human-review-required': { bg: '#ffebee', border: '#c62828', label: 'Human Review Required' },
+  'auto-approve': { bg: '#e8f5e9', border: '#2e7d32', icon: '✓', label: 'Auto Approve' },
+  'human-review-recommended': {
+    bg: '#fff8e1',
+    border: '#f9a825',
+    icon: '!',
+    label: 'Human Review Recommended',
+  },
+  'human-review-required': {
+    bg: '#ffebee',
+    border: '#c62828',
+    icon: '×',
+    label: 'Human Review Required',
+  },
 };
 
 const INLINE_STYLE = [
@@ -63,7 +73,7 @@ const INLINE_STYLE = [
   'th { background: #f5f5f5; text-align: left; padding: 8px 10px;',
   '     border: 1px solid #e0e0e0; font-weight: 600; }',
   'td { padding: 8px 10px; border: 1px solid #e0e0e0; vertical-align: top; }',
-  "tr:nth-child(even) td { background: #fafafa; }",
+  'tr:nth-child(even) td { background: #fafafa; }',
   '.sev { display: inline-block; padding: 2px 8px; border-radius: 3px;',
   '       font-size: 12px; font-weight: 700; color: #fff; }',
   '.counts { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }',
@@ -93,12 +103,7 @@ function formatHtmlOutput(result, phase) {
     if (sev in issueCountBySeverity) issueCountBySeverity[sev]++;
   }
 
-  let decision;
-  try {
-    decision = score.verdict;
-  } catch {
-    decision = undefined;
-  }
+  const decision = score.verdict;
 
   const riskAssessment = result.plan?.riskAssessment;
   const riskSummary = riskAssessment
@@ -132,10 +137,8 @@ function formatHtmlOutput(result, phase) {
   // Decision banner
   const dc = decision ? DECISION_CONFIG[decision] : null;
   if (dc) {
-    parts.push(
-      `<div class="banner" style="background:${dc.bg};border-color:${dc.border}">`
-    );
-    parts.push(`ὌB ${escHtml(dc.label)}`);
+    parts.push(`<div class="banner" style="background:${dc.bg};border-color:${dc.border}">`);
+    parts.push(`${dc.icon} ${escHtml(dc.label)}`);
     parts.push('</div>');
   } else {
     parts.push('<div class="banner" style="background:#f5f5f5;border-color:#9e9e9e">');
@@ -156,7 +159,9 @@ function formatHtmlOutput(result, phase) {
 
   // Score
   parts.push('<h2>Score</h2>');
-  parts.push(`<div class="overall-wrap"><span class="overall">${escHtml(String(score.overall))}/100</span></div>`);
+  parts.push(
+    `<div class="overall-wrap"><span class="overall">${escHtml(String(score.overall))}/100</span></div>`
+  );
   parts.push('<table>');
   parts.push('<tr><th>Axis</th><th>Score</th><th style="width:200px">Bar</th></tr>');
   for (const axis of _scoring_rubric_mjs__WEBPACK_IMPORTED_MODULE_1__/* .AXES */ .gR) {
@@ -179,16 +184,16 @@ function formatHtmlOutput(result, phase) {
     parts.push('<p>指摘事項なし。</p>');
   } else {
     parts.push('<table>');
-    parts.push('<tr><th>Severity</th><th>File:Line</th><th>Title</th><th>Message</th><th>Suggestion</th></tr>');
+    parts.push(
+      '<tr><th>Severity</th><th>File:Line</th><th>Title</th><th>Message</th><th>Suggestion</th></tr>'
+    );
     for (const f of findings) {
       const sev = f.severity ?? 'info';
       const color = SEVERITY_COLOR[sev] ?? '#757575';
       const lineNum = f.lineStart ?? f.line;
       const fileRef = f.file ? (lineNum ? `${f.file}:${lineNum}` : f.file) : '';
       parts.push('<tr>');
-      parts.push(
-        `<td><span class="sev" style="background:${color}">${escHtml(sev)}</span></td>`
-      );
+      parts.push(`<td><span class="sev" style="background:${color}">${escHtml(sev)}</span></td>`);
       parts.push(`<td><code>${escHtml(fileRef)}</code></td>`);
       parts.push(`<td>${escHtml(f.title ?? '')}</td>`);
       parts.push(`<td><pre>${escHtml(f.message ?? '')}</pre></td>`);
@@ -202,7 +207,9 @@ function formatHtmlOutput(result, phase) {
   if (riskSummary) {
     parts.push('<h2>Risk Assessment</h2>');
     parts.push('<table>');
-    parts.push(`<tr><th>Aggregate Action</th><td>${escHtml(riskSummary.aggregateAction ?? '')}</td></tr>`);
+    parts.push(
+      `<tr><th>Aggregate Action</th><td>${escHtml(riskSummary.aggregateAction ?? '')}</td></tr>`
+    );
     if (riskSummary.escalatedFiles.length > 0) {
       parts.push(
         `<tr><th>Escalated Files</th><td>${riskSummary.escalatedFiles.map(escHtml).join('<br>')}</td></tr>`

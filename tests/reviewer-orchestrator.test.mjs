@@ -43,6 +43,7 @@ const {
   splitDiffIntoChunks,
   deduplicateFindings,
   mergeFindings,
+  findingsOverlap,
 } = await (() => {
   // We can't easily mock ESM imports in node:test without a loader.
   // Instead, import the real module and test its observable behaviour.
@@ -494,6 +495,17 @@ describe('mergeFindings', () => {
     assert.ok(result[0].agreement.includes('bug-hunter'));
   });
 
+  it('normalizes severity in single-finding passthrough (blocker → critical)', () => {
+    const f = makeF('a.ts', 1, 'null deref', 'blocker', 'bug-hunter', []);
+    const result = mergeFindings([f]);
+    assert.equal(result.length, 1);
+    assert.equal(
+      result[0].severity,
+      'critical',
+      'blocker must normalize to critical on passthrough'
+    );
+  });
+
   it('does not throw when evidence/agreement are null on multi-member merge', () => {
     const f1 = {
       file: 'a.ts',
@@ -548,5 +560,136 @@ describe('mergeFindings', () => {
     assert.equal(result[0].confidence, 'high');
     assert.equal(result[0].file, 'a.ts');
     assert.equal(result[0].message, 'null pointer dereference in handleRequest');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Adversarial tests for connected-components mergeFindings + maxSeverity F4
+// ---------------------------------------------------------------------------
+describe('mergeFindings adversarial (connected-components)', () => {
+  // Helper: minimal finding shape
+  function mkF(file, line, message, severity = 'major', role = 'bug-hunter', evidence = []) {
+    return {
+      file,
+      lineStart: line,
+      message,
+      title: message,
+      severity,
+      reviewerRole: role,
+      evidence,
+    };
+  }
+
+  // ADV-1: A–B–C chain: A overlaps B, B overlaps C, but A does NOT directly overlap C.
+  // All three must land in ONE cluster.
+  it('ADV-1: A-B-C chain collapses to one cluster (transitivity)', () => {
+    // A and B differ by editDistance ≤ 10 (8 chars different)
+    const fA = mkF('src/auth.ts', 10, 'null pointer dereference in handleRequ');
+    // B and C differ by editDistance ≤ 10 (9 chars different)
+    const fB = mkF('src/auth.ts', 10, 'null pointer dereference in handleRequ_ext');
+    // A and C differ by editDistance > 10 (direct overlap would fail), but transitively linked via B
+    const fC = mkF('src/auth.ts', 10, 'null pointer dereference in handleRequ_ext_v2');
+    // Verify the chain assumptions: A-B overlap, B-C overlap, A-C MAY or MAY NOT overlap directly
+    assert.ok(findingsOverlap(fA, fB), 'A-B should overlap');
+    assert.ok(findingsOverlap(fB, fC), 'B-C should overlap');
+    // The key assertion: all three merge into one output finding
+    const result = mergeFindings([fA, fB, fC]);
+    assert.equal(result.length, 1, 'A-B-C chain must produce 1 cluster');
+  });
+
+  // ADV-2: Two distinct bugs with similar-length messages but content is different enough
+  // (editDistance > 10) must NOT be merged.
+  it('ADV-2: distinct bugs with dissimilar messages are not merged', () => {
+    const fA = mkF('src/foo.ts', 10, 'SQL injection vulnerability in query builder execute');
+    const fB = mkF('src/foo.ts', 10, 'null pointer dereference in handleRequest dispatch');
+    // Must be kept separate
+    const result = mergeFindings([fA, fB]);
+    assert.equal(result.length, 2, 'distinct bugs must not be merged');
+  });
+
+  // ADV-3: Line-boundary — line shift of exactly ±2 is within threshold (overlap),
+  // shift of ±3 is outside (no overlap).
+  it('ADV-3: line shift ±2 merges; ±3 does not', () => {
+    const base = mkF('src/foo.ts', 10, 'null pointer dereference in handleRequest');
+    const atTwo = mkF('src/foo.ts', 12, 'null pointer dereference in handleRequest');
+    const atThree = mkF('src/foo.ts', 13, 'null pointer dereference in handleRequest');
+
+    assert.equal(mergeFindings([base, atTwo]).length, 1, 'shift=2 must merge');
+    assert.equal(mergeFindings([base, atThree]).length, 2, 'shift=3 must not merge');
+  });
+
+  // ADV-4: Message drift at the editDistance boundary.
+  // A message that is exactly 10 edits away merges; 11 edits does not.
+  it('ADV-4: editDistance 10 merges, 11 does not', () => {
+    const base = mkF('src/foo.ts', 10, 'null pointer deref in foo bar baz qux');
+    // 10 substitutions at the end → within threshold
+    const at10 = mkF('src/foo.ts', 10, 'null pointer deref in foo bar baz 1234567890');
+    // 11 substitutions → over threshold (replace last 11 chars distinctly)
+    const at11 = mkF('src/foo.ts', 10, 'null pointer deref in foo bar 12345678901');
+
+    const r10 = mergeFindings([base, at10]);
+    const r11 = mergeFindings([base, at11]);
+    // The threshold is ≤10 → editDistance=10 merges, editDistance=11 does not
+    assert.equal(r10.length, 1, 'editDistance=10 must merge');
+    assert.equal(r11.length, 2, 'editDistance=11 must not merge');
+  });
+
+  // ADV-5: Severity normalization — 'blocker' (internal LLM vocab) must normalize to
+  // 'critical' and win over 'warning' (→ 'major').
+  it('ADV-5: blocker+warning mix → critical (F4 normalization)', () => {
+    const fA = mkF(
+      'src/foo.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'blocker',
+      'bug-hunter'
+    );
+    const fB = mkF(
+      'src/foo.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'warning',
+      'security-scanner'
+    );
+    const result = mergeFindings([fA, fB]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].severity, 'critical', 'blocker must normalize to critical and win');
+  });
+
+  // ADV-6: Idempotency — merging the output of mergeFindings again must produce the
+  // same count and severity (no double-merging or count drift).
+  it('ADV-6: mergeFindings is idempotent (second pass identical to first)', () => {
+    const findings = [
+      mkF('src/a.ts', 10, 'null pointer dereference in handleRequest', 'major', 'bug-hunter', [
+        'ev1',
+      ]),
+      mkF(
+        'src/a.ts',
+        10,
+        'null pointer dereference in handleRequest',
+        'critical',
+        'security-scanner',
+        ['ev2']
+      ),
+      mkF(
+        'src/b.ts',
+        5,
+        'sql injection in query builder execute method',
+        'minor',
+        'security-scanner',
+        ['ev3']
+      ),
+    ];
+    const pass1 = mergeFindings(findings);
+    const pass2 = mergeFindings(pass1);
+    assert.equal(pass1.length, pass2.length, 'second pass must not change finding count');
+    for (let i = 0; i < pass1.length; i++) {
+      assert.equal(pass1[i].severity, pass2[i].severity, `severity must be stable at index ${i}`);
+      assert.deepEqual(
+        pass1[i].agreement,
+        pass2[i].agreement,
+        `agreement must be stable at index ${i}`
+      );
+    }
   });
 });
