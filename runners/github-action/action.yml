@@ -42,7 +42,7 @@ inputs:
     required: false
     default: '22'
   output_format:
-    description: 'Output format (text|markdown|json|yaml).'
+    description: 'Output format (text|markdown|json|yaml|html).'
     required: false
     default: 'markdown'
 outputs:
@@ -68,7 +68,7 @@ runs:
 
         # Validate output format
         output_fmt="${RIVER_OUTPUT_FORMAT}"
-        if [[ ! "${output_fmt}" =~ ^(text|markdown|json|yaml)$ ]]; then
+        if [[ ! "${output_fmt}" =~ ^(text|markdown|json|yaml|html)$ ]]; then
           echo "::error::Invalid output_format: ${output_fmt}"
           exit 1
         fi
