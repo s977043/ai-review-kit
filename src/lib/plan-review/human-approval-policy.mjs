@@ -34,7 +34,7 @@ function normalizeText(raw) {
   // eslint-disable-next-line no-control-regex
   return String(raw ?? '')
     .normalize('NFKC')
-    .replace(/[​-‍﻿­]/g, '');
+    .replace(/[\u200b\u200c\u200d\ufeff\u00ad]/g, '');
 }
 
 /**
@@ -66,12 +66,12 @@ const HIGH_CONFIDENCE_PATTERNS = [
     confidence: 'high',
   },
   {
-    pattern: /(?:prod(?:uction)?|本番)\s*(?:に|へ|の)?(?:\s+\S+\s*)*(?:デプロイ|反映|リリース)/,
+    pattern: /本番.{0,15}(?:デプロイ|反映|リリース)/,
     name: 'ja-prod-deploy',
     confidence: 'high',
   },
   {
-    pattern: /(?:デプロイ|反映|リリース)(?:\S*\s+)*(?:prod(?:uction)?|本番)/i,
+    pattern: /(?:デプロイ|反映|リリース).{0,15}本番/,
     name: 'ja-deploy-to-prod',
     confidence: 'high',
   },

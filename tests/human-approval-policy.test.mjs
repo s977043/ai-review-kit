@@ -207,6 +207,27 @@ describe('adjudicateHumanApproval', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ReDoS regression: patterns must complete quickly on long non-matching input
+// ---------------------------------------------------------------------------
+describe('detectHumanApprovalTriggers — ReDoS regression', () => {
+  it('ja-prod-deploy pattern completes quickly on long non-matching input', () => {
+    const longInput = '本番' + 'あ'.repeat(5000);
+    const start = Date.now();
+    detectHumanApprovalTriggers(longInput);
+    const elapsed = Date.now() - start;
+    assert.ok(elapsed < 100, `ReDoS: ja-prod-deploy took ${elapsed}ms (expected < 100ms)`);
+  });
+
+  it('ja-deploy-to-prod pattern completes quickly on long non-matching input', () => {
+    const longInput = 'デプロイ' + 'あ'.repeat(5000);
+    const start = Date.now();
+    detectHumanApprovalTriggers(longInput);
+    const elapsed = Date.now() - start;
+    assert.ok(elapsed < 100, `ReDoS: ja-deploy-to-prod took ${elapsed}ms (expected < 100ms)`);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Edge cases
 // ---------------------------------------------------------------------------
 describe('detectHumanApprovalTriggers — edge cases', () => {

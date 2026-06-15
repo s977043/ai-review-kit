@@ -239,7 +239,7 @@ function normalizeText(raw) {
   // eslint-disable-next-line no-control-regex
   return String(raw ?? '')
     .normalize('NFKC')
-    .replace(/[​-‍﻿­]/g, '');
+    .replace(/[\u200b\u200c\u200d\ufeff\u00ad]/g, '');
 }
 
 /**
@@ -271,12 +271,12 @@ const HIGH_CONFIDENCE_PATTERNS = [
     confidence: 'high',
   },
   {
-    pattern: /(?:prod(?:uction)?|本番)\s*(?:に|へ|の)?(?:\s+\S+\s*)*(?:デプロイ|反映|リリース)/,
+    pattern: /本番.{0,15}(?:デプロイ|反映|リリース)/,
     name: 'ja-prod-deploy',
     confidence: 'high',
   },
   {
-    pattern: /(?:デプロイ|反映|リリース)(?:\S*\s+)*(?:prod(?:uction)?|本番)/i,
+    pattern: /(?:デプロイ|反映|リリース).{0,15}本番/,
     name: 'ja-deploy-to-prod',
     confidence: 'high',
   },
@@ -1184,6 +1184,7 @@ async function runReviewPlan({
     // files are merged into the existing finding's message rather than emitting
     // a duplicate. This preserves the invariant: one finding per trigger.
     const emittedTriggers = new Map(); // trigger → finding object
+    const alsoInAppended = new Set(); // `${trigger}:${filePath}` pairs already appended
 
     const scanFile = async (filePath) => {
       let text = '';
@@ -1204,8 +1205,10 @@ async function runReviewPlan({
         // Merge duplicate triggers into the existing finding's message
         for (const t of dupTriggers) {
           const existing = emittedTriggers.get(t);
-          if (existing && !existing.file.includes(filePath)) {
+          const key = `${t}:${filePath}`;
+          if (existing && !existing.file.includes(filePath) && !alsoInAppended.has(key)) {
             existing.message += `; also in ${filePath}`;
+            alsoInAppended.add(key);
           }
         }
 

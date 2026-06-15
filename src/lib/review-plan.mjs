@@ -728,6 +728,7 @@ export async function runReviewPlan({
     // files are merged into the existing finding's message rather than emitting
     // a duplicate. This preserves the invariant: one finding per trigger.
     const emittedTriggers = new Map(); // trigger → finding object
+    const alsoInAppended = new Set(); // `${trigger}:${filePath}` pairs already appended
 
     const scanFile = async (filePath) => {
       let text = '';
@@ -748,8 +749,10 @@ export async function runReviewPlan({
         // Merge duplicate triggers into the existing finding's message
         for (const t of dupTriggers) {
           const existing = emittedTriggers.get(t);
-          if (existing && !existing.file.includes(filePath)) {
+          const key = `${t}:${filePath}`;
+          if (existing && !existing.file.includes(filePath) && !alsoInAppended.has(key)) {
             existing.message += `; also in ${filePath}`;
+            alsoInAppended.add(key);
           }
         }
 
