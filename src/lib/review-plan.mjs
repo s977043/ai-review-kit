@@ -37,6 +37,7 @@ import { loadRiskMap as defaultLoadRiskMap } from './risk-map.mjs';
 import { PHASES, PLANNER_MODES } from './planner-utils.mjs';
 import { resolveAvailableContexts, resolveAvailableDependencies } from './utils.mjs';
 import { scoreReview } from './scoring/engine.mjs';
+import { detectHumanApprovalTriggers } from './plan-review/human-approval-policy.mjs';
 
 const VALID_PHASES = new Set(PHASES);
 
@@ -65,11 +66,14 @@ function defaultGenerateRunId() {
  * @param {boolean} [opts.llmUsed] - whether an LLM actually ran this review
  * @returns {object} the same artifact
  */
-function finalizeArtifact(artifact, { generateRunId, modelConfig = null, llmUsed = false }) {
+function finalizeArtifact(
+  artifact,
+  { generateRunId, modelConfig = null, llmUsed = false, humanApprovalRequired = false }
+) {
   // decision: derive the top-level verdict from the findings present in the
   // artifact. Never let a scoring error break the artifact contract.
   try {
-    artifact.decision = scoreReview(artifact.findings ?? []).verdict;
+    artifact.decision = scoreReview(artifact.findings ?? [], { humanApprovalRequired }).verdict;
   } catch {
     // leave decision unset on scoring failure
   }
@@ -699,10 +703,47 @@ export async function runReviewPlan({
     if (executionTrace) artifact.debug.execution = executionTrace;
   }
 
+  // Human-approval policy check: scan pbi-input and plan text for triggers
+  // that require human approval before execution. Non-blocking — read errors
+  // fall back to empty string so the rest of the artifact is unaffected.
+  let humanApprovalRequired = false;
+  {
+    const pbiPath = resolved?.['pbi-input']?.path;
+    const planPath = resolved?.plan?.path;
+    let planText = '';
+    if (pbiPath) {
+      try {
+        planText += await readFileImpl(pbiPath);
+      } catch {
+        // non-blocking
+      }
+    }
+    if (planPath) {
+      try {
+        planText += await readFileImpl(planPath);
+      } catch {
+        // non-blocking
+      }
+    }
+    const approval = detectHumanApprovalTriggers(planText);
+    if (approval.required) {
+      humanApprovalRequired = true;
+      artifact.findings = artifact.findings ?? [];
+      artifact.findings.push({
+        ruleId: 'rr-plan-review-human-approval',
+        severity: 'info',
+        title: 'Human approval required',
+        message: `Plan contains triggers requiring human approval: ${approval.triggers.join(', ')}`,
+        file: pbiPath ?? planPath,
+      });
+    }
+  }
+
   finalizeArtifact(artifact, {
     generateRunId,
     modelConfig: config?.model ?? null,
     llmUsed: executionTrace?.llmUsed === true,
+    humanApprovalRequired,
   });
 
   return artifact;

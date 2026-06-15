@@ -1137,3 +1137,96 @@ index 1111111..2222222 100644
     assert.equal(received.riskAssessment, undefined);
   });
 });
+
+describe('runReviewPlan — human approval triggers (S4)', () => {
+  const fixedRunId = () => 'fixed-run-id-approval';
+
+  test('pbi-input with deployment trigger → info finding + human-review-required decision', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'upstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      loadRiskMapImpl: async () => null,
+      generateRunId: fixedRunId,
+      resolveAllArtifactsImpl: async () => ({
+        'pbi-input': {
+          id: 'pbi-input',
+          path: '/repo/pbi-input.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+      }),
+      readFileImpl: async (p) => {
+        if (p === '/repo/pbi-input.md') return 'Deploy to production using rm -rf /tmp/old';
+        return '';
+      },
+      buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    });
+    const infoFinding = artifact.findings.find((f) => f.ruleId === 'rr-plan-review-human-approval');
+    assert.ok(infoFinding, 'info finding should be present');
+    assert.equal(infoFinding.severity, 'info');
+    assert.ok(/deployment/.test(infoFinding.message), 'message should mention trigger name');
+    assert.equal(infoFinding.file, '/repo/pbi-input.md');
+    assert.equal(artifact.decision, 'human-review-required');
+  });
+
+  test('no triggers in plan text → no info finding, decision unchanged (backward compat)', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'upstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      loadRiskMapImpl: async () => null,
+      generateRunId: fixedRunId,
+      resolveAllArtifactsImpl: async () => ({
+        'pbi-input': {
+          id: 'pbi-input',
+          path: '/repo/pbi-input.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+      }),
+      readFileImpl: async (p) => {
+        if (p === '/repo/pbi-input.md') return 'Add a new feature to the dashboard component.';
+        return '';
+      },
+      buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    });
+    const infoFinding = artifact.findings.find((f) => f.ruleId === 'rr-plan-review-human-approval');
+    assert.equal(infoFinding, undefined, 'no info finding expected without triggers');
+    assert.equal(artifact.decision, 'auto-approve');
+  });
+
+  test('plan-only/executeReview=false with triggers → info finding present, decision is human-review-required', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      executeReview: false,
+      phase: 'midstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      loadRiskMapImpl: async () => null,
+      generateRunId: fixedRunId,
+      resolveAllArtifactsImpl: async () => ({
+        plan: {
+          id: 'plan',
+          path: '/repo/plan.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+      }),
+      readFileImpl: async (p) => {
+        if (p === '/repo/plan.md') return 'This plan modifies user data and billing records.';
+        return '';
+      },
+      buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    });
+    const infoFinding = artifact.findings.find((f) => f.ruleId === 'rr-plan-review-human-approval');
+    assert.ok(infoFinding, 'info finding should be present even in plan-only mode');
+    assert.equal(infoFinding.severity, 'info');
+    assert.equal(artifact.decision, 'human-review-required');
+  });
+});
