@@ -47,18 +47,16 @@ describe('formatHtmlOutput', () => {
     // With critical finding, verdict should be human-review-required
     const html = formatHtmlOutput(MOCK_RESULT_FINDINGS, 'midstream');
     assert.ok(
-      html.includes('Human Review Required') ||
-        html.includes('human-review-required') ||
-        html.includes('banner'),
-      'output should reflect decision in banner'
+      html.includes('Human Review Required'),
+      'output should render the "Human Review Required" label text in the banner'
     );
   });
 
   it('auto-approve decision appears for empty findings', () => {
     const html = formatHtmlOutput(MOCK_RESULT_EMPTY, 'upstream');
     assert.ok(
-      html.includes('Auto Approve') || html.includes('auto-approve'),
-      'empty findings should produce auto-approve decision'
+      html.includes('Auto Approve'),
+      'empty findings should render the "Auto Approve" label text in the banner'
     );
   });
 
