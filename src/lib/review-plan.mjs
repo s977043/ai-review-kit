@@ -721,6 +721,14 @@ export async function runReviewPlan({
      *
      * @param {string} filePath
      */
+    // Stable IDs already emitted across both files, keyed by trigger name, to
+    // deduplicate when the same trigger fires in both pbi-input and plan
+    // (#1170 F5). Each trigger gets one finding (attributed to the FIRST file
+    // that contained it); subsequent occurrences of the same trigger in other
+    // files are merged into the existing finding's message rather than emitting
+    // a duplicate. This preserves the invariant: one finding per trigger.
+    const emittedTriggers = new Map(); // trigger → finding object
+
     const scanFile = async (filePath) => {
       let text = '';
       try {
@@ -732,13 +740,38 @@ export async function runReviewPlan({
       if (approval.required) {
         humanApprovalRequired = true;
         artifact.findings = artifact.findings ?? [];
-        artifact.findings.push({
-          ruleId: 'rr-plan-review-human-approval',
-          severity: 'info',
-          title: 'Human approval required',
-          message: `Plan contains triggers requiring human approval: ${approval.triggers.join(', ')}`,
-          file: filePath,
-        });
+
+        // Determine new triggers not yet emitted (dedup cross-file)
+        const newTriggers = approval.triggers.filter((t) => !emittedTriggers.has(t));
+        const dupTriggers = approval.triggers.filter((t) => emittedTriggers.has(t));
+
+        // Merge duplicate triggers into the existing finding's message
+        for (const t of dupTriggers) {
+          const existing = emittedTriggers.get(t);
+          if (existing && !existing.file.includes(filePath)) {
+            existing.message += `; also in ${filePath}`;
+          }
+        }
+
+        if (newTriggers.length > 0) {
+          // Derive a stable finding ID from the trigger names and file role
+          // so the finding ID is deterministic across runs (#1170 F5).
+          const fileRole = filePath === pbiPath ? 'pbi' : 'plan';
+          const triggerId = newTriggers[0].replace(/[^a-z0-9-]/g, '-');
+          const id = `rr-human-approval-${fileRole}-${triggerId}`;
+          const finding = {
+            id,
+            ruleId: 'rr-plan-review-human-approval',
+            severity: 'info',
+            title: 'Human approval required',
+            message: `Plan contains triggers requiring human approval: ${newTriggers.join(', ')}`,
+            file: filePath,
+          };
+          artifact.findings.push(finding);
+          for (const t of newTriggers) {
+            emittedTriggers.set(t, finding);
+          }
+        }
       }
     };
 
