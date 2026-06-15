@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.16.0](https://github.com/s977043/river-review/compare/v1.15.0...v1.16.0) (2026-06-15)
+
+
+### Features
+
+* mergeFindings contract for review team (severity-max / evidence-union / agreement) ([#1150](https://github.com/s977043/river-review/issues/1150) S3) ([#1165](https://github.com/s977043/river-review/issues/1165)) ([488b63b](https://github.com/s977043/river-review/commit/488b63bba506ec1144baeac1275e3c79c4b1a097))
+* plan-review-gate foundation (humanApprovalRequired verdict + policy + skill) ([#1150](https://github.com/s977043/river-review/issues/1150) S4) ([#1164](https://github.com/s977043/river-review/issues/1164)) ([7b04e3b](https://github.com/s977043/river-review/commit/7b04e3bcc995a21fcc6da476a5b1f4d3ac077ccf))
+
 ## [1.15.0](https://github.com/s977043/river-review/compare/v1.14.0...v1.15.0) (2026-06-12)
 
 
