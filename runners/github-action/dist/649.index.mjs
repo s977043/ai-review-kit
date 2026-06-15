@@ -1,3 +1,267 @@
+export const id = 649;
+export const ids = [649];
+export const modules = {
+
+/***/ 1649:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+
+// EXPORTS
+__webpack_require__.d(__webpack_exports__, {
+  ReviewPlanError: () => (/* binding */ ReviewPlanError),
+  evaluateReviewGate: () => (/* binding */ evaluateReviewGate),
+  resolveReviewOutputFormat: () => (/* binding */ resolveReviewOutputFormat),
+  runReviewExecReplay: () => (/* binding */ runReviewExecReplay),
+  runReviewPlan: () => (/* binding */ runReviewPlan)
+});
+
+// UNUSED EXPORTS: REVIEW_GATE_SEVERITIES, computeReplayDrift
+
+// EXTERNAL MODULE: external "node:path"
+var external_node_path_ = __webpack_require__(6760);
+// EXTERNAL MODULE: external "node:fs/promises"
+var promises_ = __webpack_require__(1455);
+// EXTERNAL MODULE: ./src/config/loader.mjs + 1 modules
+var loader = __webpack_require__(3833);
+;// CONCATENATED MODULE: ./src/config/artifact-resolver.mjs
+/**
+ * Artifact Input resolver — #802 Phase 2b
+ *
+ * Resolution order (per artifact-input-contract.md):
+ *   1. CLI arg     – path passed explicitly by the caller
+ *   2. config      – artifacts.<id> in river.config.*
+ *   3. cwd default – well-known filename in the working directory
+ *
+ * Pure module: no singleton state; fs is injectable.
+ * Scope: resolve path + existence check only.
+ * Content reading / skill injection / CLI parsing → Phase 3.
+ */
+
+
+
+
+// CWD default filenames (from artifact-input-contract.md)
+
+/** @type {Readonly<Record<string, string>>} */
+const CWD_DEFAULTS = Object.freeze({
+  'pbi-input': 'pbi-input.md',
+  plan: 'plan.md',
+  todo: 'todo.md',
+  'test-cases': 'test-cases.md',
+  'review-self': 'review-self.md',
+  'review-external': 'review-external.md',
+  diff: 'diff.patch',
+  junit: 'junit.xml',
+  coverage: 'coverage.xml',
+  lint: 'lint.json',
+  typecheck: 'typecheck.txt',
+  'findings-pool': 'findings-pool.json',
+});
+
+/**
+ * @typedef {'cli'|'config'|'cwd'} ArtifactSource
+ * @typedef {object} ArtifactResolution
+ * @property {string}              id
+ * @property {string|null}         path
+ * @property {ArtifactSource|null} source
+ * @property {boolean}             exists
+ * @property {boolean}             optional
+ */
+
+/**
+ * Resolve a single artifact path using the three-tier order.
+ *
+ * Path base: CLI → cwd; config → configDir ?? cwd; cwd-default → cwd.
+ *
+ * @param {object} opts
+ * @param {string} opts.id
+ * @param {string|null} [opts.cliArg]
+ * @param {string|{path:string,optional?:boolean}|null} [opts.configValue]
+ * @param {string} [opts.configDir]
+ * @param {string} [opts.cwd]
+ * @param {Pick<import('node:fs/promises'),'access'>} [opts.fsImpl]
+ * @returns {Promise<ArtifactResolution>}
+ */
+async function resolveArtifact({
+  id,
+  cliArg = null,
+  configValue = null,
+  configDir,
+  cwd = process.cwd(),
+  fsImpl = promises_,
+}) {
+  // Tier 1: CLI arg
+  if (cliArg != null && cliArg !== '') {
+    const resolved = external_node_path_.resolve(cwd, cliArg);
+    const exists = await _fileExists(resolved, fsImpl);
+    return { id, path: resolved, source: 'cli', exists, optional: false };
+  }
+
+  // Tier 2: config value
+  if (configValue != null) {
+    const base = configDir ?? cwd;
+    const { rawPath, optional } = _normalizeConfigValue(configValue);
+    if (rawPath) {
+      const resolved = external_node_path_.resolve(base, rawPath);
+      const exists = await _fileExists(resolved, fsImpl);
+      return { id, path: resolved, source: 'config', exists, optional: optional ?? false };
+    }
+  }
+
+  // Tier 3: cwd default (only if the file exists)
+  const defaultName = CWD_DEFAULTS[id];
+  if (defaultName) {
+    const resolved = external_node_path_.resolve(cwd, defaultName);
+    const exists = await _fileExists(resolved, fsImpl);
+    if (exists) {
+      return { id, path: resolved, source: 'cwd', exists: true, optional: true };
+    }
+  }
+
+  // Not found
+  return { id, path: null, source: null, exists: false, optional: true };
+}
+
+/**
+ * Resolve all artifact IDs in parallel.
+ *
+ * The ID set is the union of the contract's known IDs (CWD_DEFAULTS) plus
+ * any IDs explicitly named via cliArgs or configArtifacts. Explicitly
+ * named IDs are never silently dropped — this keeps the resolver
+ * consistent with the Phase 2a schema, which accepts unknown artifact
+ * keys via `.catchall` so the contract can add IDs in a
+ * backward-compatible minor bump. cwd-default lookup still only applies
+ * to known IDs (CWD_DEFAULTS); an unknown ID resolves only if supplied
+ * via CLI/config, otherwise it reports path:null/source:null.
+ *
+ * @param {object} [opts]
+ * @param {Record<string,string>} [opts.cliArgs]
+ * @param {Record<string,string|{path:string,optional?:boolean}>} [opts.configArtifacts]
+ * @param {string} [opts.configDir]
+ * @param {string} [opts.cwd]
+ * @param {Pick<import('node:fs/promises'),'access'>} [opts.fsImpl]
+ * @returns {Promise<Record<string, ArtifactResolution>>}
+ */
+async function resolveAllArtifacts({
+  cliArgs = {},
+  configArtifacts = {},
+  configDir,
+  cwd,
+  fsImpl,
+} = {}) {
+  const ids = new Set([
+    ...Object.keys(CWD_DEFAULTS),
+    ...Object.keys(cliArgs),
+    ...Object.keys(configArtifacts),
+  ]);
+  const entries = await Promise.all(
+    [...ids].map((id) =>
+      resolveArtifact({
+        id,
+        cliArg: cliArgs[id] ?? null,
+        configValue: configArtifacts[id] ?? null,
+        configDir,
+        cwd,
+        fsImpl,
+      }).then((r) => [id, r])
+    )
+  );
+  return Object.fromEntries(entries);
+}
+
+// Internal helpers
+
+function _normalizeConfigValue(value) {
+  if (typeof value === 'string') return { rawPath: value || null, optional: false };
+  if (value && typeof value === 'object') {
+    return { rawPath: value.path || null, optional: value.optional ?? false };
+  }
+  return { rawPath: null, optional: false };
+}
+
+async function _fileExists(filePath, fsImpl) {
+  try {
+    await fsImpl.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// EXTERNAL MODULE: ./src/lib/diff.mjs
+var diff = __webpack_require__(4382);
+// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 5 modules
+var review_runner = __webpack_require__(4584);
+// EXTERNAL MODULE: ./src/lib/review-engine.mjs
+var review_engine = __webpack_require__(2022);
+// EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
+var risk_map = __webpack_require__(572);
+// EXTERNAL MODULE: ./src/lib/planner-utils.mjs
+var planner_utils = __webpack_require__(1013);
+// EXTERNAL MODULE: ./src/lib/utils.mjs
+var utils = __webpack_require__(9746);
+// EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
+var engine = __webpack_require__(9487);
+;// CONCATENATED MODULE: ./src/lib/plan-review/human-approval-policy.mjs
+/**
+ * Human-approval policy for plan review gate.
+ *
+ * Pure function — no I/O, no side effects. Detects keywords in plan text or
+ * finding text that require mandatory human approval before execution proceeds.
+ *
+ * Used by the rr-upstream-plan-review-gate-001 skill and scoreReview() via the
+ * humanApprovalRequired flag.
+ */
+
+/**
+ * Trigger patterns that mandate human approval.
+ * Each entry has a regex `pattern` and a stable `name` used in the triggers list.
+ *
+ * @type {Array<{pattern: RegExp, name: string}>}
+ */
+const TRIGGER_PATTERNS = [
+  { pattern: /destructive\s+(command|operation|action|step)s?/i, name: 'destructive-command' },
+  { pattern: /\bcredentials?\b/i, name: 'credential' },
+  { pattern: /\bsecrets?\b/i, name: 'secret' },
+  { pattern: /config\s+overwrite/i, name: 'config-overwrite' },
+  {
+    pattern: /external\s+post(ing)?|\bslack\b|\bwebhook\b|\bemail\b|\bnotification\b/i,
+    name: 'external-posting',
+  },
+  { pattern: /\bdeploy(ment|ing)?s?\b/i, name: 'deployment' },
+  { pattern: /\bcron\b/i, name: 'cron' },
+  { pattern: /memory\s+write/i, name: 'memory-write' },
+  { pattern: /\bbilling\b/i, name: 'billing' },
+  {
+    pattern: /\bproviders?\s+(change|update|switch)s?\b|\b(change|update|switch)s?\s+providers?\b/i,
+    name: 'provider-change',
+  },
+  { pattern: /\bauth(enticat(e|ion)|oriz(e|ation))?s?\b/i, name: 'auth' },
+  {
+    pattern:
+      /\bpermissions?\s+(change|update|modify|grant|revoke)s?\b|\b(change|update|modify|grant|revoke)s?\s+permissions?\b/i,
+    name: 'permission-change',
+  },
+  { pattern: /\buser\s+data\b/i, name: 'user-data' },
+];
+
+/**
+ * Detects human-approval triggers in the given text.
+ *
+ * @param {string} text - Plan text or finding text to scan.
+ * @returns {{ required: boolean, triggers: string[] }}
+ *   `required` is true when at least one trigger pattern matched.
+ *   `triggers` lists the stable names of all matched patterns.
+ */
+function detectHumanApprovalTriggers(text) {
+  const input = String(text ?? '');
+  const triggers = TRIGGER_PATTERNS.filter(({ pattern }) => pattern.test(input)).map(
+    ({ name }) => name
+  );
+  return { required: triggers.length > 0, triggers };
+}
+
+;// CONCATENATED MODULE: ./src/lib/review-plan.mjs
 /**
  * `river review plan` core — #802 Phase 3 (slices 1 + B-1)
  *
@@ -25,21 +289,21 @@
  * diff reader are injectable for tests.
  */
 
-import path from 'node:path';
-import { readFile } from 'node:fs/promises';
 
-import { loadConfig as defaultLoadConfig } from '../config/loader.mjs';
-import { resolveAllArtifacts as defaultResolveAllArtifacts } from '../config/artifact-resolver.mjs';
-import { parseUnifiedDiff } from './diff.mjs';
-import { buildExecutionPlan as defaultBuildExecutionPlan } from '../../runners/core/review-runner.mjs';
-import { generateReview as defaultGenerateReview } from './review-engine.mjs';
-import { loadRiskMap as defaultLoadRiskMap } from './risk-map.mjs';
-import { PHASES, PLANNER_MODES } from './planner-utils.mjs';
-import { resolveAvailableContexts, resolveAvailableDependencies } from './utils.mjs';
-import { scoreReview } from './scoring/engine.mjs';
-import { detectHumanApprovalTriggers } from './plan-review/human-approval-policy.mjs';
 
-const VALID_PHASES = new Set(PHASES);
+
+
+
+
+
+
+
+
+
+
+
+
+const VALID_PHASES = new Set(planner_utils/* PHASES */.ZG);
 
 /**
  * Default run-id generator for the Review Artifact `trace.run_id`. Mirrors the
@@ -73,7 +337,7 @@ function finalizeArtifact(
   // decision: derive the top-level verdict from the findings present in the
   // artifact. Never let a scoring error break the artifact contract.
   try {
-    artifact.decision = scoreReview(artifact.findings ?? [], { humanApprovalRequired }).verdict;
+    artifact.decision = (0,engine/* scoreReview */.lS)(artifact.findings ?? [], { humanApprovalRequired }).verdict;
   } catch {
     // leave decision unset on scoring failure
   }
@@ -91,11 +355,11 @@ function finalizeArtifact(
 
   return artifact;
 }
-const VALID_PLANNER_MODES = new Set(PLANNER_MODES);
+const VALID_PLANNER_MODES = new Set(planner_utils/* PLANNER_MODES */.Er);
 const MODEL_HINTS = new Set(['cheap', 'balanced', 'high-accuracy']);
 
 /** Raised for argument/config errors that map to CLI exit code 3. */
-export class ReviewPlanError extends Error {
+class ReviewPlanError extends Error {
   constructor(message) {
     super(message);
     this.name = 'ReviewPlanError';
@@ -114,7 +378,7 @@ export class ReviewPlanError extends Error {
  * @param {object|null} sourceSnapshot the carried-over plan snapshot
  * @returns {{ filesAdded: string[], filesRemoved: string[], summary: string }|null}
  */
-export function computeReplayDrift(currentFiles, sourceSnapshot) {
+function computeReplayDrift(currentFiles, sourceSnapshot) {
   const fileTypes = sourceSnapshot?.fileTypes;
   if (!fileTypes || typeof fileTypes !== 'object') return null;
   const notSentinel = (p) => p && p !== '/dev/null';
@@ -153,11 +417,11 @@ export function computeReplayDrift(currentFiles, sourceSnapshot) {
  * @param {(p: string) => Promise<string>} [opts.readFileImpl]
  * @returns {Promise<object>} Review Artifact (schema version "1")
  */
-export async function runReviewExecReplay({
+async function runReviewExecReplay({
   planFile,
   debug = false,
   now = () => new Date().toISOString(),
-  readFileImpl = (p) => readFile(p, 'utf8'),
+  readFileImpl = (p) => (0,promises_.readFile)(p, 'utf8'),
   // #878 A2-3-impl: execution params. When executeReview is true and a diff
   // artifact resolves, the replay path invokes generateReview with the source
   // plan's selectedSkills and the carried-over snapshot context (no re-plan).
@@ -165,9 +429,9 @@ export async function runReviewExecReplay({
   cwd = process.cwd(),
   cliArtifacts = {},
   artifactsDir,
-  loadConfigImpl = defaultLoadConfig,
-  resolveAllArtifactsImpl = defaultResolveAllArtifacts,
-  generateReviewImpl = defaultGenerateReview,
+  loadConfigImpl = loader/* loadConfig */.Z9,
+  resolveAllArtifactsImpl = resolveAllArtifacts,
+  generateReviewImpl = review_engine/* generateReview */.G1,
   generateRunId = defaultGenerateRunId,
 } = {}) {
   if (!planFile || typeof planFile !== 'string') {
@@ -294,7 +558,7 @@ export async function runReviewExecReplay({
     modelConfigForUsage = config?.model ?? null;
     const configArtifacts =
       config && typeof config.artifacts === 'object' && config.artifacts ? config.artifacts : {};
-    const detectionRoot = artifactsDir ? path.resolve(cwd, artifactsDir) : cwd;
+    const detectionRoot = artifactsDir ? external_node_path_.resolve(cwd, artifactsDir) : cwd;
     const resolved = await resolveAllArtifactsImpl({
       cliArgs: cliArtifacts,
       configArtifacts,
@@ -308,7 +572,7 @@ export async function runReviewExecReplay({
       } catch (err) {
         throw new ReviewPlanError(`Failed to read diff artifact: ${err.message}`);
       }
-      const parsedDiff = parseUnifiedDiff(diffText);
+      const parsedDiff = (0,diff/* parseUnifiedDiff */.rj)(diffText);
       // #936: report (non-blocking) membership drift between the replay-time
       // diff and the source plan's snapshot. Null when the snapshot predates A2-3.
       replayDrift = computeReplayDrift(
@@ -387,7 +651,7 @@ export async function runReviewExecReplay({
  * @returns {'json'|'markdown'}
  * @throws {ReviewPlanError} on an unsupported or conflicting combination
  */
-export function resolveReviewOutputFormat({
+function resolveReviewOutputFormat({
   output = 'text',
   outputExplicit = false,
   format = null,
@@ -415,7 +679,7 @@ export function resolveReviewOutputFormat({
   );
 }
 
-export const REVIEW_GATE_SEVERITIES = ['info', 'minor', 'major', 'critical'];
+const REVIEW_GATE_SEVERITIES = (/* unused pure expression or super */ null && (['info', 'minor', 'major', 'critical']));
 const SEVERITY_RANK = { info: 0, minor: 1, major: 2, critical: 3 };
 
 /**
@@ -429,7 +693,7 @@ const SEVERITY_RANK = { info: 0, minor: 1, major: 2, critical: 3 };
  * @param {{ failOn?: string, warnOn?: string, advisoryOnly?: boolean }} [opts]
  * @returns {{ code: 0|1|2, level: 'pass'|'warn'|'fail', maxSeverity: string|null }}
  */
-export function evaluateReviewGate(
+function evaluateReviewGate(
   artifact,
   { failOn = 'critical', warnOn = 'major', advisoryOnly = false } = {}
 ) {
@@ -515,7 +779,7 @@ function toSelectedView(skill) {
  * @param {(p: string) => Promise<string>} [opts.readFileImpl]
  * @returns {Promise<object>} Review Artifact (schema version "1")
  */
-export async function runReviewPlan({
+async function runReviewPlan({
   cwd = process.cwd(),
   phase = 'midstream',
   planOnly = false,
@@ -528,12 +792,12 @@ export async function runReviewPlan({
   availableContexts,
   availableDependencies,
   now = () => new Date().toISOString(),
-  loadConfigImpl = defaultLoadConfig,
-  resolveAllArtifactsImpl = defaultResolveAllArtifacts,
-  buildExecutionPlanImpl = defaultBuildExecutionPlan,
-  generateReviewImpl = defaultGenerateReview,
-  loadRiskMapImpl = defaultLoadRiskMap,
-  readFileImpl = (p) => readFile(p, 'utf8'),
+  loadConfigImpl = loader/* loadConfig */.Z9,
+  resolveAllArtifactsImpl = resolveAllArtifacts,
+  buildExecutionPlanImpl = review_runner.buildExecutionPlan,
+  generateReviewImpl = review_engine/* generateReview */.G1,
+  loadRiskMapImpl = risk_map/* loadRiskMap */.E$,
+  readFileImpl = (p) => (0,promises_.readFile)(p, 'utf8'),
   generateRunId = defaultGenerateRunId,
 } = {}) {
   if (executeReview && executionDeferred) {
@@ -575,7 +839,7 @@ export async function runReviewPlan({
   const configArtifacts =
     config && typeof config.artifacts === 'object' && config.artifacts ? config.artifacts : {};
 
-  const detectionRoot = artifactsDir ? path.resolve(cwd, artifactsDir) : cwd;
+  const detectionRoot = artifactsDir ? external_node_path_.resolve(cwd, artifactsDir) : cwd;
 
   const resolved = await resolveAllArtifactsImpl({
     cliArgs: cliArtifacts,
@@ -604,7 +868,7 @@ export async function runReviewPlan({
     // Parse the diff once and reuse the result. The same parser used to
     // power deriveChangedFiles (planning input) also exposes the per-file
     // structure generateReview needs (execution input).
-    const parsedDiff = parseUnifiedDiff(diffText);
+    const parsedDiff = (0,diff/* parseUnifiedDiff */.rj)(diffText);
     const changedFiles = (parsedDiff.files ?? [])
       .map((f) => f.path)
       .filter((p) => p && p !== '/dev/null');
@@ -615,14 +879,14 @@ export async function runReviewPlan({
     // guarantees that a CLI override like `--context tests` does NOT drop
     // 'diff' from the set (would re-introduce the A1 silent-skip failure).
     // env var RIVER_AVAILABLE_CONTEXTS is merged in for CI overrides.
-    const effectiveAvailableContexts = resolveAvailableContexts(availableContexts, {
+    const effectiveAvailableContexts = (0,utils/* resolveAvailableContexts */.ud)(availableContexts, {
       alwaysInclude: ['diff'],
     });
 
     // Same silent-skip pattern for dependencies. `null` is the documented
     // disabled sentinel — dependency-based skipping is opt-in via env or
     // `--dependency` so legacy invocations stay backward-compatible.
-    const effectiveAvailableDependencies = resolveAvailableDependencies(availableDependencies);
+    const effectiveAvailableDependencies = (0,utils/* resolveAvailableDependencies */.TK)(availableDependencies);
 
     // The plan layer's selection rules differ by exec mode: for
     // plan-only/dry-run/deferred we restrict to heuristic skills, while
@@ -812,3 +1076,10 @@ function normalizeFindingForArtifact(finding, index, phase) {
   }
   return out;
 }
+
+
+/***/ })
+
+};
+
+//# sourceMappingURL=649.index.mjs.map

@@ -61904,7 +61904,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     if (parsed.reviewSubcommand === 'verify') {
       try {
         const { ReviewPlanError, resolveReviewOutputFormat } =
-          await __nccwpck_require__.e(/* import() */ 794).then(__nccwpck_require__.bind(__nccwpck_require__, 2794));
+          await __nccwpck_require__.e(/* import() */ 649).then(__nccwpck_require__.bind(__nccwpck_require__, 1649));
         try {
           resolveReviewOutputFormat(parsed);
         } catch (err) {
@@ -61940,7 +61940,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     }
     try {
       const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =
-        await __nccwpck_require__.e(/* import() */ 794).then(__nccwpck_require__.bind(__nccwpck_require__, 2794));
+        await __nccwpck_require__.e(/* import() */ 649).then(__nccwpck_require__.bind(__nccwpck_require__, 1649));
       let reviewFormat;
       try {
         reviewFormat = resolveReviewOutputFormat(parsed);
@@ -62041,7 +62041,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       // is given do we translate findings into a CI exit code; otherwise exit 0
       // (non-breaking for existing callers / the plangate-review workflow).
       if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-        const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 794).then(__nccwpck_require__.bind(__nccwpck_require__, 2794));
+        const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 649).then(__nccwpck_require__.bind(__nccwpck_require__, 1649));
         const gate = evaluateReviewGate(artifact, {
           failOn: parsed.failOn ?? 'critical',
           warnOn: parsed.warnOn ?? 'major',
@@ -62587,7 +62587,7 @@ Dependencies: ${
     // the run path (only `river review` gated), so agents that relied on the
     // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
     if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-      const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 794).then(__nccwpck_require__.bind(__nccwpck_require__, 2794));
+      const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 649).then(__nccwpck_require__.bind(__nccwpck_require__, 1649));
       const issues = formatJsonOutput(result, parsed.phase).issues;
       const gate = evaluateReviewGate(
         { findings: issues },
