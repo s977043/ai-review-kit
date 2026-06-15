@@ -2,9 +2,35 @@
 title: ループ収束コントラクト（自己修正ループの停止条件）
 ---
 
-River Review は generate → review → revise ループの **review ステージ**として機能します。返すのは判定素材（`decision` / `summary.issueCountBySeverity` / `oscillated` / exit code）のみです。反復・停止・エスカレーションの実行は **caller（呼び出し側エージェントまたはワークフロー）の責務**です（[#976 境界 — docs/ai/generate-review-revise-loop.md](https://github.com/s977043/river-review/blob/main/docs/ai/generate-review-revise-loop.md) 参照）。
+River Review は generate → review → revise ループの **review ステージ**として機能します。返すのは判定素材（`decision` / `summary.issueCountBySeverity` / `oscillated` / `suggestedLoopSignal` / exit code）のみです。反復・停止・エスカレーションの実行は **caller（呼び出し側エージェントまたはワークフロー）の責務**です（[#976 境界 — docs/ai/generate-review-revise-loop.md](https://github.com/s977043/river-review/blob/main/docs/ai/generate-review-revise-loop.md) 参照）。
 
 本ドキュメントは caller がループ制御を実装するために必要な停止・収束・発散ガードの契約を 1 ページで定義します。
+
+## `suggestedLoopSignal` — 3 層設計
+
+River Review は各アーティファクトおよび `runs diff --output json` の出力に `suggestedLoopSignal` フィールドを付与します。これにより、caller が自前で導出ロジックを実装せずにループ判断を機械的に行えます。
+
+**Layer 1** — 単一 `river run` アーティファクト（`suggestedLoopSignal` トップレベルフィールド）:
+
+| 値                | 意味                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `NO_SIGNAL`       | ループ動作を特定できない（`decision` が未設定または `human-review-recommended` かつ blocking findings なし） |
+| `REVISE_REQUIRED` | blocking findings（`critical` または `major`）が存在する。エージェントは修正して再実行すべき                 |
+| `CONVERGED`       | blocking findings がなく、かつ `decision` が auto-approve 相当。エージェントはループを終了してよい           |
+| `ESCALATE_HUMAN`  | `decision === 'human-review-required'`。エージェントは人間にエスカレーションしなければならない               |
+
+導出順: ESCALATE_HUMAN → REVISE_REQUIRED → CONVERGED → NO_SIGNAL。決定論的（AI 呼び出しなし）。
+
+**Layer 2** — `river runs diff --output json`（3 件以上の run）: `oscillated` が非空の場合に `STOP_OSCILLATED` を追加。振動検知は Layer 1 の全値より優先。
+
+**Layer 3** — 呼び出し元が合成（River Review は意図的に出力**しない**）:
+
+| 値                     | 合成タイミング                                                      |
+| ---------------------- | ------------------------------------------------------------------- |
+| `STOP_MAX_ITERATIONS`  | `iteration_count >= max_iterations` になったとき                    |
+| `STOP_POLICY_REQUIRED` | 外部ポリシー（コスト上限・HITL 必須ラベルなど）がトリガーされたとき |
+
+`suggestedLoopSignal` は**追加フィールドかつ省略可能**です。`decision` / `verdict` を変更せず、GO/NO-GO ゲートとしては機能しません。旧アーティファクトでは省略されます。
 
 ## 停止（収束）条件の複合式
 

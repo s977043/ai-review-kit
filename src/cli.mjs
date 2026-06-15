@@ -25,6 +25,7 @@ import { DEPTH_TO_REVIEW_MODE, resolveDepthToReviewMode } from './lib/review-pla
 import { scoreReview } from './lib/scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
 import { severityToPriority } from './lib/finding-format.mjs';
+import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
@@ -1542,7 +1543,11 @@ async function main(argv = process.argv.slice(2)) {
           );
           const diff = diffRunHistory(runRecords);
           if (parsed.output === 'json') {
-            console.log(JSON.stringify(diff, null, 2));
+            const diffWithSignal = {
+              ...diff,
+              suggestedLoopSignal: deriveLoopSignalFromRunsDiff(diff),
+            };
+            console.log(JSON.stringify(diffWithSignal, null, 2));
           } else {
             console.log(formatRegressionSummary(diff));
             if (diff.oscillated.length) {
@@ -1569,7 +1574,11 @@ async function main(argv = process.argv.slice(2)) {
           ]);
           const diff = diffReviews(run1.findings ?? [], run2.findings ?? []);
           if (parsed.output === 'json') {
-            console.log(JSON.stringify(diff, null, 2));
+            const diffWithSignal = {
+              ...diff,
+              suggestedLoopSignal: deriveLoopSignalFromRunsDiff(diff),
+            };
+            console.log(JSON.stringify(diffWithSignal, null, 2));
           } else {
             console.log(formatRegressionSummary(diff));
           }

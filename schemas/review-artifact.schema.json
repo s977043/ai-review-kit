@@ -117,6 +117,11 @@
       "enum": ["auto-approve", "human-review-recommended", "human-review-required"],
       "description": "Top-level review verdict derived from findings (src/lib/scoring/engine.mjs deriveVerdict). Maps to the proposal's pass / warn / fail: auto-approve≈pass, human-review-recommended≈warn, human-review-required≈fail. Recommendation only; does NOT bypass HITL policy. Optional; absent on older artifacts."
     },
+    "suggestedLoopSignal": {
+      "type": "string",
+      "enum": ["NO_SIGNAL", "REVISE_REQUIRED", "CONVERGED", "ESCALATE_HUMAN"],
+      "description": "Layer-1 loop signal for agentic fix loops (Epic #1171 item3). Derived deterministically from decision + blocking finding counts. NO_SIGNAL: cannot determine loop action; REVISE_REQUIRED: blocking findings (critical/major) present — agent should revise and re-run; CONVERGED: no blocking findings and decision is auto-approve — agent may stop; ESCALATE_HUMAN: decision is human-review-required — agent must hand off. Additive/optional; absent on older artifacts. Does NOT affect decision/verdict and is NOT a GO/NO-GO gate. Layer 3 values (STOP_MAX_ITERATIONS, STOP_POLICY_REQUIRED) are caller-synthesized and are never emitted by River Review."
+    },
     "usage": {
       "type": "object",
       "additionalProperties": false,
