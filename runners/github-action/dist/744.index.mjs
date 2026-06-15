@@ -134,11 +134,17 @@ function diffReviews(previousFindings, currentFindings) {
  * }}
  */
 function diffRunHistory(runRecords) {
-  // Defensive: sort by timestamp ascending
+  // Defensive: sort by timestamp ascending, NaN-safe with runId tie-break
   const sorted = [...runRecords].sort((a, b) => {
-    const ta = new Date(a.timestamp).getTime();
-    const tb = new Date(b.timestamp).getTime();
-    return ta - tb;
+    const ta = a.timestamp != null ? new Date(a.timestamp).getTime() : NaN;
+    const tb = b.timestamp != null ? new Date(b.timestamp).getTime() : NaN;
+    const aNaN = Number.isNaN(ta);
+    const bNaN = Number.isNaN(tb);
+    if (aNaN && bNaN) return (a.runId ?? '').localeCompare(b.runId ?? '');
+    if (aNaN) return 1; // NaN goes to the end
+    if (bNaN) return -1;
+    if (ta !== tb) return ta - tb;
+    return (a.runId ?? '').localeCompare(b.runId ?? ''); // stable tie-break
   });
 
   // Last adjacent diff for the main diff fields
@@ -150,25 +156,21 @@ function diffRunHistory(runRecords) {
         )
       : diffReviews([], sorted.length === 1 ? (sorted[0].findings ?? []) : []);
 
-  // Pre-annotate each run once to avoid O(N×M) re-annotation per fingerprint
-  const annotatedRuns = sorted.map((record) => {
-    const fingerprints = new Set(
-      (0,_finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .i)(record.findings ?? []).map((f) => f.fingerprint)
-    );
-    return { runId: record.runId, fingerprints };
-  });
-
-  // Compute per-fingerprint presence timeline across all runs
+  // Annotate each run exactly once: collect fingerprint set AND fingerprint→finding map
+  // in a single pass — O(N+M) instead of two O(N×M) annotation loops.
   const fingerprintToFinding = new Map(); // fingerprint -> latest finding object
   const allFingerprints = new Set();
 
-  for (const record of sorted) {
+  const annotatedRuns = sorted.map((record) => {
     const annotated = (0,_finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .i)(record.findings ?? []);
+    const fingerprints = new Set();
     for (const f of annotated) {
+      fingerprints.add(f.fingerprint);
       allFingerprints.add(f.fingerprint);
-      fingerprintToFinding.set(f.fingerprint, f);
+      fingerprintToFinding.set(f.fingerprint, f); // last run wins (chronological)
     }
-  }
+    return { runId: record.runId, fingerprints };
+  });
 
   // Build timeline per fingerprint
   const oscillated = [];
