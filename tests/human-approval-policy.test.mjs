@@ -46,6 +46,13 @@ describe('detectHumanApprovalTriggers — should_trigger canary', () => {
     },
     { label: 'dotenv file reference', text: 'cat .env' },
     { label: 'Japanese: 本番デプロイ', text: '本番デプロイを実施する' },
+    // Prod-deploy high-confidence canary (#1171 recall fix)
+    { label: 'deploy to production (en)', text: 'deploy to production' },
+    { label: 'deploy to prod (en)', text: 'deploy to prod' },
+    { label: 'Japanese: 本番にデプロイする', text: '本番にデプロイする' },
+    { label: 'Japanese: 本番へ反映', text: '本番へ反映する' },
+    { label: 'kubectl apply prod yaml', text: 'kubectl apply -f prod.yaml' },
+    { label: 'terraform apply', text: 'terraform apply' },
     { label: 'Japanese: データベース削除', text: 'データベース削除を実行する' },
     { label: 'Japanese: 秘密鍵', text: '秘密鍵をローテーションする' },
   ];
@@ -85,7 +92,10 @@ describe('detectHumanApprovalTriggers — should_not_trigger canary (false-posit
     { label: 'follow up via email (benign)', text: 'follow up via email' },
     { label: 'slack notification style fix (benign)', text: 'fix slack notification style' },
     { label: 'authentication is documented (benign)', text: 'authentication is documented' },
-    { label: 'Non-goals: deploy to prod (context)', text: 'Non-goals: deploy to prod' },
+    // Benign deploy mentions (noun/doc context) — no prod context
+    { label: 'add a deployment note (benign)', text: 'add a deployment note' },
+    { label: 'update deployment guide (benign)', text: 'update deployment guide' },
+    { label: 'deployment is documented (benign)', text: 'deployment is documented' },
   ];
 
   for (const { label, text } of NO_TRIGGER_CASES) {
@@ -107,14 +117,13 @@ describe('detectHumanApprovalTriggers — should_not_trigger canary (false-posit
 // ---------------------------------------------------------------------------
 describe('detectHumanApprovalCandidates — low-confidence candidates detected', () => {
   const LOW_CONF_CASES = [
-    { label: 'deployment keyword (benign context)', text: 'Run deployment to production' },
+    { label: 'deployment keyword (benign, no prod)', text: 'Run deployment to staging' },
     { label: 'external posting (benign)', text: 'Send external posting to the Slack channel' },
     { label: 'external post (no ing)', text: 'Trigger an external post to the webhook' },
     { label: 'cron keyword', text: 'Register cron job for nightly cleanup' },
     { label: 'auth keyword', text: 'Modify auth flow for SSO integration' },
     { label: 'deploy (partial match via deployment)', text: 'Trigger deployment pipeline' },
     { label: 'CRON (uppercase)', text: 'Schedule CRON task at midnight' },
-    { label: 'deploying to production', text: 'deploying to production environment' },
     { label: 'deployments (plural)', text: 'list of deployments scheduled today' },
     { label: 'send to slack', text: 'send to slack channel #alerts' },
     { label: 'send email notification', text: 'send email to the team after completion' },

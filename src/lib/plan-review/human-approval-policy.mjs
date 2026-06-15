@@ -54,6 +54,47 @@ const HIGH_CONFIDENCE_PATTERNS = [
     name: 'kubectl-prod',
     confidence: 'high',
   },
+  {
+    pattern: /kubectl\s+(apply|delete)\b/i,
+    name: 'kubectl-apply-delete',
+    confidence: 'high',
+  },
+  // Production deploy — action verb + prod/production/本番 context
+  {
+    pattern: /deploy(?:ment|ing)?\s+(?:to\s+)?(?:prod(?:uction)?|本番)/i,
+    name: 'deploy-to-prod',
+    confidence: 'high',
+  },
+  {
+    pattern: /(?:prod(?:uction)?|本番)\s*(?:に|へ|の)?(?:\s+\S+\s*)*(?:デプロイ|反映|リリース)/,
+    name: 'ja-prod-deploy',
+    confidence: 'high',
+  },
+  {
+    pattern: /(?:デプロイ|反映|リリース)(?:\S*\s+)*(?:prod(?:uction)?|本番)/i,
+    name: 'ja-deploy-to-prod',
+    confidence: 'high',
+  },
+  {
+    pattern: /本番リリース/,
+    name: 'ja-prod-release',
+    confidence: 'high',
+  },
+  {
+    pattern: /release\s+to\s+production/i,
+    name: 'release-to-production',
+    confidence: 'high',
+  },
+  {
+    pattern: /helm\s+(?:install|upgrade)\b.*prod/i,
+    name: 'helm-prod',
+    confidence: 'high',
+  },
+  {
+    pattern: /terraform\s+apply\b/i,
+    name: 'terraform-apply',
+    confidence: 'high',
+  },
   // Secret material / credentials
   // AKIA + 16 uppercase alnum = AWS access key ID format
   { pattern: /AKIA[0-9A-Z]{16}/, name: 'aws-key', confidence: 'high' },
