@@ -32,13 +32,19 @@ const SEVERITY_COLOR = {
 };
 
 const DECISION_CONFIG = {
-  'auto-approve': { bg: '#e8f5e9', border: '#2e7d32', label: 'Auto Approve' },
+  'auto-approve': { bg: '#e8f5e9', border: '#2e7d32', icon: '✓', label: 'Auto Approve' },
   'human-review-recommended': {
     bg: '#fff8e1',
     border: '#f9a825',
+    icon: '!',
     label: 'Human Review Recommended',
   },
-  'human-review-required': { bg: '#ffebee', border: '#c62828', label: 'Human Review Required' },
+  'human-review-required': {
+    bg: '#ffebee',
+    border: '#c62828',
+    icon: '×',
+    label: 'Human Review Required',
+  },
 };
 
 const INLINE_STYLE = [
@@ -84,12 +90,7 @@ export function formatHtmlOutput(result, phase) {
     if (sev in issueCountBySeverity) issueCountBySeverity[sev]++;
   }
 
-  let decision;
-  try {
-    decision = score.verdict;
-  } catch {
-    decision = undefined;
-  }
+  const decision = score.verdict;
 
   const riskAssessment = result.plan?.riskAssessment;
   const riskSummary = riskAssessment
@@ -124,7 +125,7 @@ export function formatHtmlOutput(result, phase) {
   const dc = decision ? DECISION_CONFIG[decision] : null;
   if (dc) {
     parts.push(`<div class="banner" style="background:${dc.bg};border-color:${dc.border}">`);
-    parts.push(`ὌB ${escHtml(dc.label)}`);
+    parts.push(`${dc.icon} ${escHtml(dc.label)}`);
     parts.push('</div>');
   } else {
     parts.push('<div class="banner" style="background:#f5f5f5;border-color:#9e9e9e">');
