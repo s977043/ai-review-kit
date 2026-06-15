@@ -122,8 +122,8 @@ export function diffReviews(previousFindings, currentFindings) {
 export function diffRunHistory(runRecords) {
   // Defensive: sort by timestamp ascending, NaN-safe with runId tie-break
   const sorted = [...runRecords].sort((a, b) => {
-    const ta = new Date(a.timestamp).getTime();
-    const tb = new Date(b.timestamp).getTime();
+    const ta = a.timestamp != null ? new Date(a.timestamp).getTime() : NaN;
+    const tb = b.timestamp != null ? new Date(b.timestamp).getTime() : NaN;
     const aNaN = Number.isNaN(ta);
     const bNaN = Number.isNaN(tb);
     if (aNaN && bNaN) return (a.runId ?? '').localeCompare(b.runId ?? '');

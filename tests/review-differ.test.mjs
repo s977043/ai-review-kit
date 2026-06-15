@@ -198,7 +198,7 @@ describe('diffRunHistory', () => {
 
   it('all missing timestamps: tie-break by runId keeps determinism', () => {
     const f = makeFinding();
-    // undefined and 'not-a-date' both produce NaN; avoid null (parses as epoch 0)
+    // undefined and 'not-a-date' both produce NaN; null is also handled (see dedicated null test)
     const runA = makeRecord('run-a', undefined, [f]);
     const runB = makeRecord('run-b', 'bad-date', []);
     const runC = makeRecord('run-c', 'not-a-date', [f]);
@@ -211,6 +211,28 @@ describe('diffRunHistory', () => {
       'deterministic with all NaN'
     );
     assert.equal(result1.oscillated.length, 1, 'oscillation still detected via runId order');
+    assert.deepEqual(
+      result1.oscillated[0].timeline.map((t) => t.runId),
+      ['run-a', 'run-b', 'run-c']
+    );
+  });
+
+  it('null timestamp treated as NaN (not epoch 0), sorted after valid timestamps', () => {
+    const f = makeFinding();
+    // null timestamp must NOT be treated as epoch 0 (1970-01-01); it should go to the end
+    const runA = makeRecord('run-a', '2024-01-01T00:00:00Z', [f]); // earliest valid
+    const runB = makeRecord('run-b', '2024-01-02T00:00:00Z', []); // resolved
+    const runC = makeRecord('run-c', null, [f]); // null → NaN → sorted last
+    // sorted order should be: run-a, run-b, run-c
+    // timeline: [true(a), false(b), true(c)] → oscillation
+    const result1 = diffRunHistory([runA, runB, runC]);
+    const result2 = diffRunHistory([runC, runB, runA]);
+    assert.equal(result1.oscillated.length, 1, 'null timestamp goes last, oscillation detected');
+    assert.equal(
+      result1.oscillated.length,
+      result2.oscillated.length,
+      'deterministic regardless of input order'
+    );
     assert.deepEqual(
       result1.oscillated[0].timeline.map((t) => t.runId),
       ['run-a', 'run-b', 'run-c']
