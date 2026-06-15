@@ -429,6 +429,100 @@ describe('mergeFindings', () => {
     assert.equal(result[1].agreement[0], 'security-scanner');
   });
 
+  it('preserves existing agreement on passthrough (single member with pre-existing agreement)', () => {
+    const f = makeF('a.ts', 1, 'unique bug', 'major', 'bug-hunter', ['ev1']);
+    const fWithAgreement = { ...f, agreement: ['prior-reviewer'] };
+    const result = mergeFindings([fWithAgreement]);
+    assert.equal(result.length, 1);
+    assert.ok(result[0].agreement.includes('prior-reviewer'), 'prior-reviewer preserved');
+    assert.ok(result[0].agreement.includes('bug-hunter'), 'own role added');
+  });
+
+  it('preserves existing agreement on multi-member merge', () => {
+    const f1 = {
+      ...makeF('a.ts', 10, 'null pointer dereference in handleRequest', 'major', 'bug-hunter', []),
+      agreement: ['x'],
+    };
+    const f2 = makeF(
+      'a.ts',
+      10,
+      'null pointer dereference in handleRequest',
+      'minor',
+      'security-scanner',
+      []
+    );
+    const result = mergeFindings([f1, f2]);
+    assert.equal(result.length, 1);
+    assert.ok(result[0].agreement.includes('x'), 'pre-existing agreement x preserved');
+    assert.ok(result[0].agreement.includes('bug-hunter'));
+    assert.ok(result[0].agreement.includes('security-scanner'));
+  });
+
+  it('does not throw when evidence is null', () => {
+    const f = {
+      file: 'a.ts',
+      lineStart: 1,
+      message: 'bug',
+      title: 'bug',
+      severity: 'major',
+      reviewerRole: 'bug-hunter',
+      evidence: null,
+    };
+    assert.doesNotThrow(() => mergeFindings([f]));
+    const result = mergeFindings([f]);
+    assert.ok(
+      Array.isArray(result[0].evidence) ||
+        result[0].evidence === undefined ||
+        result[0].evidence === null
+    );
+  });
+
+  it('does not throw when agreement is null on passthrough', () => {
+    const f = {
+      file: 'a.ts',
+      lineStart: 1,
+      message: 'bug',
+      title: 'bug',
+      severity: 'major',
+      reviewerRole: 'bug-hunter',
+      evidence: [],
+      agreement: null,
+    };
+    assert.doesNotThrow(() => mergeFindings([f]));
+    const result = mergeFindings([f]);
+    assert.ok(Array.isArray(result[0].agreement));
+    assert.ok(result[0].agreement.includes('bug-hunter'));
+  });
+
+  it('does not throw when evidence/agreement are null on multi-member merge', () => {
+    const f1 = {
+      file: 'a.ts',
+      lineStart: 10,
+      message: 'null pointer dereference in handleRequest',
+      title: 'null pointer dereference in handleRequest',
+      severity: 'major',
+      reviewerRole: 'bug-hunter',
+      evidence: null,
+      agreement: null,
+    };
+    const f2 = {
+      file: 'a.ts',
+      lineStart: 10,
+      message: 'null pointer dereference in handleRequest',
+      title: 'null pointer dereference in handleRequest',
+      severity: 'minor',
+      reviewerRole: 'security-scanner',
+      evidence: null,
+      agreement: null,
+    };
+    assert.doesNotThrow(() => mergeFindings([f1, f2]));
+    const result = mergeFindings([f1, f2]);
+    assert.equal(result.length, 1);
+    assert.ok(Array.isArray(result[0].agreement));
+    assert.ok(result[0].agreement.includes('bug-hunter'));
+    assert.ok(result[0].agreement.includes('security-scanner'));
+  });
+
   it('preserves existing fields on merged finding (backward compat)', () => {
     const f1 = {
       ...makeF('a.ts', 10, 'null pointer dereference in handleRequest', 'major', 'bug-hunter', []),

@@ -166,23 +166,29 @@ export function mergeFindings(findings) {
 
   return groups.map(({ canonical, members }) => {
     if (members.length === 1) {
-      // Passthrough: just attach agreement with own role if available
+      // Passthrough: just attach agreement with own role if available, preserving existing agreement
       const role = canonical.reviewerRole;
+      const existingAgreement = Array.isArray(canonical.agreement) ? canonical.agreement : [];
+      const agreementSet = new Set(existingAgreement);
+      if (role) agreementSet.add(role);
       return {
         ...canonical,
-        agreement: role ? [role] : (canonical.agreement ?? []),
+        agreement: [...agreementSet],
       };
     }
 
     // Merge: max severity, union evidence, collect agreement
     let mergedSeverity = canonical.severity;
-    const evidenceSet = new Set(canonical.evidence ?? []);
-    const agreementSet = new Set();
+    const existingEvidence = Array.isArray(canonical.evidence) ? canonical.evidence : [];
+    const evidenceSet = new Set(existingEvidence);
+    const existingAgreement = Array.isArray(canonical.agreement) ? canonical.agreement : [];
+    const agreementSet = new Set(existingAgreement);
     if (canonical.reviewerRole) agreementSet.add(canonical.reviewerRole);
 
     for (const m of members.slice(1)) {
       mergedSeverity = maxSeverity(mergedSeverity, m.severity);
-      for (const e of m.evidence ?? []) evidenceSet.add(e);
+      for (const e of Array.isArray(m.evidence) ? m.evidence : []) evidenceSet.add(e);
+      for (const a of Array.isArray(m.agreement) ? m.agreement : []) agreementSet.add(a);
       if (m.reviewerRole) agreementSet.add(m.reviewerRole);
     }
 
