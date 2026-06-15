@@ -1256,7 +1256,7 @@ describe('runReviewPlan — human approval triggers (S4)', () => {
       }),
       readFileImpl: async (p) => {
         if (p === '/repo/pbi-input.md') return 'Add a new feature to the dashboard.';
-        if (p === '/repo/plan.md') return 'Deploy to production server.';
+        if (p === '/repo/plan.md') return 'Update billing records on the production server.';
         return '';
       },
       buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
@@ -1292,7 +1292,9 @@ describe('runReviewPlan — human approval triggers (S4)', () => {
         },
       }),
       readFileImpl: async (p) => {
-        if (p === '/repo/pbi-input.md') return 'Deploy to production environment.';
+        // Both files must contain HIGH-confidence triggers so the scan emits
+        // a finding for each file after the tier-split (#1171 item1).
+        if (p === '/repo/pbi-input.md') return 'Update the user data export for GDPR.';
         if (p === '/repo/plan.md') return 'Run database migration on billing records.';
         return '';
       },
@@ -1324,9 +1326,10 @@ describe('runReviewPlan — human approval triggers (S4)', () => {
         },
       }),
       // No trailing newline — previously concatenation could miss \b if second
-      // file started immediately after.
+      // file started immediately after. Use a HIGH-confidence trigger so the
+      // scan emits a finding after the tier-split (#1171 item1).
       readFileImpl: async (p) => {
-        if (p === '/repo/pbi-input.md') return 'Deploy to production';
+        if (p === '/repo/pbi-input.md') return 'Export user data for compliance';
         return '';
       },
       buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
@@ -1334,6 +1337,93 @@ describe('runReviewPlan — human approval triggers (S4)', () => {
     const infoFinding = artifact.findings.find((f) => f.ruleId === 'rr-plan-review-human-approval');
     assert.ok(infoFinding, 'trigger at end of file without trailing newline should be detected');
     assert.equal(infoFinding.file, '/repo/pbi-input.md');
+    assert.equal(artifact.decision, 'human-review-required');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F5: stable finding ID + cross-file dedup (#1170 F5)
+// ---------------------------------------------------------------------------
+describe('runReviewPlan — human approval F5: stable id + dedup', () => {
+  const fixedNow = () => '2026-01-01T00:00:00.000Z';
+  const fixedRunId = () => 'test-run-id';
+  const okConfig = async () => ({});
+
+  test('human-approval finding has stable id matching /^rr-/', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'midstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      loadRiskMapImpl: async () => null,
+      generateRunId: fixedRunId,
+      resolveAllArtifactsImpl: async () => ({
+        plan: {
+          id: 'plan',
+          path: '/repo/plan.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+      }),
+      readFileImpl: async (p) => {
+        if (p === '/repo/plan.md') return 'Run billing migration.';
+        return '';
+      },
+      buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    });
+    const findings = artifact.findings.filter((f) => f.ruleId === 'rr-plan-review-human-approval');
+    assert.ok(findings.length > 0, 'expected at least one human-approval finding');
+    for (const f of findings) {
+      assert.ok(
+        typeof f.id === 'string' && /^rr-/.test(f.id),
+        `finding.id should match /^rr-/ but got: "${f.id}"`
+      );
+    }
+  });
+
+  test('same trigger in both pbi and plan → only one finding emitted (cross-file dedup)', async () => {
+    // Both files contain the 'billing' trigger (HIGH confidence).
+    // The dedup logic should emit only one finding for this trigger.
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'midstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      loadRiskMapImpl: async () => null,
+      generateRunId: fixedRunId,
+      resolveAllArtifactsImpl: async () => ({
+        'pbi-input': {
+          id: 'pbi-input',
+          path: '/repo/pbi-input.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+        plan: {
+          id: 'plan',
+          path: '/repo/plan.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+      }),
+      readFileImpl: async (p) => {
+        if (p === '/repo/pbi-input.md') return 'Update billing subscription.';
+        if (p === '/repo/plan.md') return 'Migrate billing records to new schema.';
+        return '';
+      },
+      buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    });
+    const findings = artifact.findings.filter((f) => f.ruleId === 'rr-plan-review-human-approval');
+    // Exactly one finding because the same 'billing' trigger fires in both files
+    // and the cross-file dedup coalesces them into a single finding.
+    assert.equal(
+      findings.length,
+      1,
+      `expected 1 deduplicated finding but got ${findings.length}: ${JSON.stringify(findings.map((f) => f.id))}`
+    );
+    assert.ok(/^rr-/.test(findings[0].id), 'deduplicated finding should have stable id');
     assert.equal(artifact.decision, 'human-review-required');
   });
 });

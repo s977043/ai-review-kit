@@ -1,48 +1,60 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { detectHumanApprovalTriggers } from '../src/lib/plan-review/human-approval-policy.mjs';
+import {
+  detectHumanApprovalTriggers,
+  detectHumanApprovalCandidates,
+  adjudicateHumanApproval,
+} from '../src/lib/plan-review/human-approval-policy.mjs';
 
 // ---------------------------------------------------------------------------
 // Canary: should_trigger — texts that MUST always trigger human approval
+// (HIGH-confidence patterns only — required=true in regex-only mode)
 // ---------------------------------------------------------------------------
 describe('detectHumanApprovalTriggers — should_trigger canary', () => {
   const TRIGGER_CASES = [
-    { label: 'deployment keyword', text: 'Run deployment to production' },
+    // High-confidence: pre-existing patterns
     { label: 'credential keyword', text: 'Store the API credential in config' },
     { label: 'secret keyword', text: 'Write secret to env file' },
     { label: 'destructive command', text: 'Execute destructive command: rm -rf /data' },
     { label: 'config overwrite', text: 'This step will config overwrite the base settings' },
-    { label: 'external posting', text: 'Send external posting to the Slack channel' },
-    { label: 'external post (no ing)', text: 'Trigger an external post to the webhook' },
-    { label: 'cron keyword', text: 'Register cron job for nightly cleanup' },
     { label: 'memory write', text: 'Perform a memory write to the agent context' },
     { label: 'billing keyword', text: 'Update billing plan for the organization' },
     { label: 'provider change', text: 'Apply provider change from AWS to GCP' },
-    { label: 'auth keyword', text: 'Modify auth flow for SSO integration' },
     { label: 'permission change', text: 'Apply permission change to IAM roles' },
     { label: 'user data', text: 'Export user data for GDPR compliance' },
-    // Euphemisms / compound phrases
+    // Euphemisms / compound phrases (high-confidence)
     { label: 'credentials (plural)', text: 'Rotate credentials in vault' },
     { label: 'secrets manager', text: 'Read from secrets manager' },
-    { label: 'deploy (partial match via deployment)', text: 'Trigger deployment pipeline' },
-    { label: 'CRON (uppercase)', text: 'Schedule CRON task at midnight' },
     { label: 'BILLING (uppercase)', text: 'BILLING team will review' },
-    // Word-order variants and derivatives (regression for expanded patterns)
+    // Word-order variants for permission-change (high-confidence)
     { label: 'change permissions (word-order)', text: 'change permissions on the bucket' },
     { label: 'grant permission (singular)', text: 'grant permission to the service account' },
     { label: 'revoke permissions (plural)', text: 'revoke permissions from the role' },
-    { label: 'deploying to production', text: 'deploying to production environment' },
-    { label: 'deployments (plural)', text: 'list of deployments scheduled today' },
-    { label: 'send to slack', text: 'send to slack channel #alerts' },
-    { label: 'send email notification', text: 'send email to the team after completion' },
-    { label: 'webhook notification', text: 'webhook notification will be sent on success' },
     { label: 'change provider', text: 'change provider from Stripe to Paddle' },
     { label: 'update providers', text: 'update providers list in the config' },
-    { label: 'authenticate user', text: 'authenticate user via OAuth2' },
-    { label: 'authorization required', text: 'authorization required for this endpoint' },
     { label: 'billing update', text: 'billing update scheduled for end of month' },
     { label: 'user data export', text: 'user data export for GDPR request' },
+    // New high-confidence canary cases (#1171 item1 / #1170 F1)
+    { label: 'rm -rf command', text: 'rm -rf /data' },
+    { label: 'DROP TABLE', text: 'DROP TABLE users' },
+    { label: 'git push --force', text: 'git push --force' },
+    {
+      label: 'AWS key ID',
+      // Constructed to avoid false-positive in the test file itself
+      text: 'AKIA' + '0'.repeat(12) + 'ABCD',
+    },
+    { label: 'dotenv file reference', text: 'cat .env' },
+    { label: 'Japanese: 本番デプロイ', text: '本番デプロイを実施する' },
+    // Prod-deploy high-confidence canary (#1171 recall fix)
+    { label: 'deploy to production (en)', text: 'deploy to production' },
+    { label: 'deploy to prod (en)', text: 'deploy to prod' },
+    { label: 'Japanese: 本番にデプロイする', text: '本番にデプロイする' },
+    { label: 'Japanese: 本番へ反映', text: '本番へ反映する' },
+    { label: 'kubectl apply prod yaml', text: 'kubectl apply -f prod.yaml' },
+    { label: 'terraform apply', text: 'terraform apply' },
+    { label: 'Japanese: データベース削除', text: 'データベース削除を実行する' },
+    { label: 'Japanese: 秘密鍵', text: '秘密鍵をローテーションする' },
   ];
 
   for (const { label, text } of TRIGGER_CASES) {
@@ -59,7 +71,9 @@ describe('detectHumanApprovalTriggers — should_trigger canary', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Canary: should_not_trigger — texts that must NOT falsely trigger
+// Canary: should_not_trigger (regex-only required=false)
+// These texts must NOT falsely set required=true. Low-confidence candidates
+// may still appear in triggers[] — only required must be false.
 // ---------------------------------------------------------------------------
 describe('detectHumanApprovalTriggers — should_not_trigger canary (false-positive prevention)', () => {
   const NO_TRIGGER_CASES = [
@@ -74,6 +88,14 @@ describe('detectHumanApprovalTriggers — should_not_trigger canary (false-posit
       text: 'Add TypeScript type annotation to the function signature',
     },
     { label: 'improve logging', text: 'Improve logging output format for readability' },
+    // New: low-confidence words in benign context (#1170 F1)
+    { label: 'follow up via email (benign)', text: 'follow up via email' },
+    { label: 'slack notification style fix (benign)', text: 'fix slack notification style' },
+    { label: 'authentication is documented (benign)', text: 'authentication is documented' },
+    // Benign deploy mentions (noun/doc context) — no prod context
+    { label: 'add a deployment note (benign)', text: 'add a deployment note' },
+    { label: 'update deployment guide (benign)', text: 'update deployment guide' },
+    { label: 'deployment is documented (benign)', text: 'deployment is documented' },
   ];
 
   for (const { label, text } of NO_TRIGGER_CASES) {
@@ -84,9 +106,125 @@ describe('detectHumanApprovalTriggers — should_not_trigger canary (false-posit
         false,
         `Expected NO human approval required for: "${text}" (triggers: ${JSON.stringify(result.triggers)})`
       );
-      assert.deepEqual(result.triggers, []);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Low-confidence candidates: detected but NOT required in regex-only mode
+// (These were previously high-confidence triggers; after the tier split they
+// appear in candidates[] but do NOT set required=true without an adjudicator.)
+// ---------------------------------------------------------------------------
+describe('detectHumanApprovalCandidates — low-confidence candidates detected', () => {
+  const LOW_CONF_CASES = [
+    { label: 'deployment keyword (benign, no prod)', text: 'Run deployment to staging' },
+    { label: 'external posting (benign)', text: 'Send external posting to the Slack channel' },
+    { label: 'external post (no ing)', text: 'Trigger an external post to the webhook' },
+    { label: 'cron keyword', text: 'Register cron job for nightly cleanup' },
+    { label: 'auth keyword', text: 'Modify auth flow for SSO integration' },
+    { label: 'deploy (partial match via deployment)', text: 'Trigger deployment pipeline' },
+    { label: 'CRON (uppercase)', text: 'Schedule CRON task at midnight' },
+    { label: 'deployments (plural)', text: 'list of deployments scheduled today' },
+    { label: 'send to slack', text: 'send to slack channel #alerts' },
+    { label: 'send email notification', text: 'send email to the team after completion' },
+    { label: 'webhook notification', text: 'webhook notification will be sent on success' },
+    { label: 'authenticate user', text: 'authenticate user via OAuth2' },
+    { label: 'authorization required', text: 'authorization required for this endpoint' },
+  ];
+
+  for (const { label, text } of LOW_CONF_CASES) {
+    it(`${label} — candidates found but required=false`, () => {
+      const { candidates } = detectHumanApprovalCandidates(text);
+      assert.ok(candidates.length > 0, `Expected at least one candidate for: "${text}"`);
+      // In regex-only mode these low-confidence matches do NOT set required=true
+      const result = detectHumanApprovalTriggers(text);
+      assert.equal(
+        result.required,
+        false,
+        `regex-only should NOT require approval for: "${text}" (triggers: ${JSON.stringify(result.triggers)})`
+      );
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// adjudicateHumanApproval — interface tests
+// ---------------------------------------------------------------------------
+describe('adjudicateHumanApproval', () => {
+  it('regex-only mode: high-confidence candidate → required=true', async () => {
+    const { candidates } = detectHumanApprovalCandidates('rm -rf /data');
+    const result = await adjudicateHumanApproval({ candidates });
+    assert.equal(result.required, true);
+    assert.equal(result.mode, 'regex-only');
+    assert.ok(Array.isArray(result.triggers));
+    assert.ok(Array.isArray(result.evidence));
+  });
+
+  it('regex-only mode: only low-confidence candidates → required=false', async () => {
+    const { candidates } = detectHumanApprovalCandidates('deploy to staging');
+    const result = await adjudicateHumanApproval({ candidates });
+    assert.equal(result.required, false);
+    assert.equal(result.mode, 'regex-only');
+  });
+
+  it('llm-adjudicated mode: adjudicator returning true → required=true', async () => {
+    const { candidates } = detectHumanApprovalCandidates('deploy to staging');
+    const adjudicator = async () => true;
+    const result = await adjudicateHumanApproval({ candidates, adjudicator });
+    assert.equal(result.required, true);
+    assert.equal(result.mode, 'llm-adjudicated');
+  });
+
+  it('llm-adjudicated mode: adjudicator returning false → required=false', async () => {
+    const { candidates } = detectHumanApprovalCandidates('rm -rf /data');
+    // Simulate adjudicator deciding this is actually safe (unlikely, but tests the wiring)
+    const adjudicator = async () => false;
+    const result = await adjudicateHumanApproval({ candidates, adjudicator });
+    assert.equal(result.required, false);
+    assert.equal(result.mode, 'llm-adjudicated');
+  });
+
+  it('evidence array includes all candidates (audit trail)', async () => {
+    const text = 'rm -rf /data and also deploy to staging';
+    const { candidates } = detectHumanApprovalCandidates(text);
+    const result = await adjudicateHumanApproval({ candidates });
+    assert.deepEqual(result.evidence, candidates);
+    assert.ok(
+      result.evidence.length >= 2,
+      'should include both high and low confidence candidates'
+    );
+  });
+
+  it('candidate shape: trigger, snippet, confidence, source', () => {
+    const { candidates } = detectHumanApprovalCandidates('rm -rf /important');
+    assert.ok(candidates.length > 0, 'expected candidates');
+    const c = candidates[0];
+    assert.ok(typeof c.trigger === 'string' && c.trigger.length > 0);
+    assert.ok(typeof c.snippet === 'string');
+    assert.ok(c.confidence === 'high' || c.confidence === 'low');
+    assert.equal(c.source, 'regex');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ReDoS regression: patterns must complete quickly on long non-matching input
+// ---------------------------------------------------------------------------
+describe('detectHumanApprovalTriggers — ReDoS regression', () => {
+  it('ja-prod-deploy pattern completes quickly on long non-matching input', () => {
+    const longInput = '本番' + 'あ'.repeat(5000);
+    const start = Date.now();
+    detectHumanApprovalTriggers(longInput);
+    const elapsed = Date.now() - start;
+    assert.ok(elapsed < 100, `ReDoS: ja-prod-deploy took ${elapsed}ms (expected < 100ms)`);
+  });
+
+  it('ja-deploy-to-prod pattern completes quickly on long non-matching input', () => {
+    const longInput = 'デプロイ' + 'あ'.repeat(5000);
+    const start = Date.now();
+    detectHumanApprovalTriggers(longInput);
+    const elapsed = Date.now() - start;
+    assert.ok(elapsed < 100, `ReDoS: ja-deploy-to-prod took ${elapsed}ms (expected < 100ms)`);
+  });
 });
 
 // ---------------------------------------------------------------------------
