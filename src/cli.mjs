@@ -25,6 +25,7 @@ import { DEPTH_TO_REVIEW_MODE, resolveDepthToReviewMode } from './lib/review-pla
 import { scoreReview } from './lib/scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
 import { severityToPriority } from './lib/finding-format.mjs';
+import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
@@ -1542,7 +1543,22 @@ async function main(argv = process.argv.slice(2)) {
           );
           const diff = diffRunHistory(runRecords);
           if (parsed.output === 'json') {
-            console.log(JSON.stringify(diff, null, 2));
+            // Sort by timestamp to find the latest run (same order as diffRunHistory).
+            const sortedRecords = [...runRecords].sort((a, b) => {
+              const ta = a.timestamp != null ? new Date(a.timestamp).getTime() : NaN;
+              const tb = b.timestamp != null ? new Date(b.timestamp).getTime() : NaN;
+              if (Number.isNaN(ta) && Number.isNaN(tb))
+                return (a.runId ?? '').localeCompare(b.runId ?? '');
+              if (Number.isNaN(ta)) return 1;
+              if (Number.isNaN(tb)) return -1;
+              return ta !== tb ? ta - tb : (a.runId ?? '').localeCompare(b.runId ?? '');
+            });
+            const latestRunArtifact = sortedRecords[sortedRecords.length - 1];
+            const diffWithSignal = {
+              ...diff,
+              suggestedLoopSignal: deriveLoopSignalFromRunsDiff(diff, latestRunArtifact),
+            };
+            console.log(JSON.stringify(diffWithSignal, null, 2));
           } else {
             console.log(formatRegressionSummary(diff));
             if (diff.oscillated.length) {
@@ -1569,7 +1585,11 @@ async function main(argv = process.argv.slice(2)) {
           ]);
           const diff = diffReviews(run1.findings ?? [], run2.findings ?? []);
           if (parsed.output === 'json') {
-            console.log(JSON.stringify(diff, null, 2));
+            const diffWithSignal = {
+              ...diff,
+              suggestedLoopSignal: deriveLoopSignalFromRunsDiff(diff, run2),
+            };
+            console.log(JSON.stringify(diffWithSignal, null, 2));
           } else {
             console.log(formatRegressionSummary(diff));
           }
