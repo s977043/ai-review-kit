@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.0](https://github.com/s977043/river-review/compare/v1.19.0...v1.20.0) (2026-06-17)
+
+
+### Features
+
+* **examples:** loop reference agent + contract test ([#1171](https://github.com/s977043/river-review/issues/1171) item2) ([#1186](https://github.com/s977043/river-review/issues/1186)) ([be6d625](https://github.com/s977043/river-review/commit/be6d6254a5df1ff207d83fdf627b00f68c97fb41))
+
 ## [1.19.0](https://github.com/s977043/river-review/compare/v1.18.1...v1.19.0) (2026-06-17)
 
 
