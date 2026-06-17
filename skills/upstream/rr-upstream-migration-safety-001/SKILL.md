@@ -9,9 +9,7 @@ applyTo:
   - '**/migrations/**/*'
   - '**/migrate/**/*'
   - 'prisma/schema.prisma'
-  - 'prisma/migrations/**/*.sql'
   - 'db/**/*.sql'
-  - '**/*.{sql}'
 tags: [migration, database, schema, safety, rollback, upstream]
 severity: major
 inputContext: [diff]
