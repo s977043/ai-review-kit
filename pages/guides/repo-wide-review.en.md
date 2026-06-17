@@ -53,7 +53,7 @@ jobs:
         with:
           fetch-depth: 0 # required so the repo-wide context collector can read surrounding commit history
       - name: Run River Review (midstream)
-        uses: s977043/river-review/runners/github-action@v1.14.0
+        uses: s977043/river-review/runners/github-action@v1.22.0
         with:
           phase: midstream
           dry_run: false
@@ -61,7 +61,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-> The example pins `@v1.14.0`. Replace it with the latest release tag when one ships.
+> The example pins `@v1.22.0`. Replace it with the latest release tag when one ships.
 >
 > `fetch-depth: 0` is required so the repo-wide context collector can read commit history and related files around the changed files. A shallow clone degrades the collector.
 

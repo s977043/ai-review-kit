@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: s977043/river-review/runners/github-action@v1.14.0
+      - uses: s977043/river-review/runners/github-action@v1.22.0
         with:
           phase: midstream
           dry_run: true
@@ -31,7 +31,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-> Pin to a release tag such as `@v1.14.0` for stability.
+> Pin to a release tag such as `@v1.22.0` for stability.
 
 ## 2. Keep credentials out of the flow
 

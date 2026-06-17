@@ -8,15 +8,15 @@ All skills in River Review must conform to JSON schema located at:
 
 ## Required fields
 
-| Field       | Description                                          |
-| ----------- | ---------------------------------------------------- |
-| id          | Unique skill identifier (rr-xxxx format recommended) |
-| name        | Human-readable skill name                            |
-| description | What the skill checks                                |
-| phase       | upstream / midstream / downstream                    |
-| applyTo     | File glob patterns                                   |
+| Field       | Description                                                    |
+| ----------- | -------------------------------------------------------------- |
+| id          | Unique skill identifier (match the directory name)             |
+| name        | Human-readable skill name                                      |
+| description | What the skill checks                                          |
+| category    | core / upstream / midstream / downstream (primary routing key) |
+| applyTo     | File glob patterns                                             |
 
-`phase` and `applyTo` can be specified at the top level or within a `trigger` object (`trigger.phase`, `trigger.applyTo` / `trigger.files`). If both are specified, the top-level properties take precedence.
+`category` is the primary routing key and is required at the top level. `phase` (`upstream` / `midstream` / `downstream`) is an optional backward-compatibility alias; new skills should use `category`. `phase` / `applyTo` can be specified at the top level or within a `trigger` object (top-level takes precedence if both are present).
 
 ## Example
 

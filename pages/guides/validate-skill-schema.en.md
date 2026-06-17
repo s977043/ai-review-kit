@@ -15,9 +15,9 @@ Use the schema and validator to keep skills consistent across Upstream, Midstrea
    - `id`
    - `name`
    - `description`
-   - `phase`
-   - `applyTo`
-4. Confirm `phase` matches the intended flow segment and adjust `applyTo` globs to avoid noisy matches.
+   - `category` (the primary routing key; `phase` is an optional backward-compatibility alias)
+   - `applyTo` (or `files` / `path_patterns`)
+4. Confirm `category` matches the intended flow segment (`core` / `upstream` / `midstream` / `downstream`) and adjust `applyTo` globs to avoid noisy matches.
 5. Re-run the validator until you get a clean pass, then include the command output in your PR.
 
 ## Tips

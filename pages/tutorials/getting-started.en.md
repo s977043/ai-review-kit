@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: s977043/river-review/runners/github-action@v1.14.0
+      - uses: s977043/river-review/runners/github-action@v1.22.0
         with:
           phase: midstream
           dry_run: true # set false to call external APIs
@@ -32,7 +32,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-> Pin to a release tag such as `@v1.14.0` for stability.
+> Pin to a release tag such as `@v1.22.0` for stability.
 >
 > The LLM key (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY`) is needed only for the **AI review on this headless path**. Without one, the mechanical (no-key) checks still run — and in normal agent-driven use (Claude Code etc. applying the skills directly), no key is needed at all (see [the execution model](../explanation/what-is-river-review.en.md)).
 

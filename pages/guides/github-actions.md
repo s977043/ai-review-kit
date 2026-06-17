@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Run River Review (midstream)
-        uses: s977043/river-review/runners/github-action@v1.14.0
+        uses: s977043/river-review/runners/github-action@v1.22.0
         with:
           phase: midstream # upstream|midstream|downstream を参照
         env:
@@ -40,7 +40,7 @@ jobs:
 
 PR へのコメント投稿には `issues: write` が必要です。権限不足の場合は workflow の `permissions` を見直してください。
 
-> 例では `@v1.14.0` に固定しています。新しいリリースが出た場合はそのタグへ置き換えてください。安定動作のため、可能な限りリリースタグへピン留めしてください。
+> 例では `@v1.22.0` に固定しています。新しいリリースが出た場合はそのタグへ置き換えてください。安定動作のため、可能な限りリリースタグへピン留めしてください。
 
 ## Anthropic (Claude) を使う場合
 
@@ -48,7 +48,7 @@ PR へのコメント投稿には `issues: write` が必要です。権限不足
 
 ```yaml
 - name: Run River Review (midstream, Claude)
-  uses: s977043/river-review/runners/github-action@v1.14.0
+  uses: s977043/river-review/runners/github-action@v1.22.0
   with:
     phase: midstream
   env:

@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Run River Review (midstream)
-        uses: s977043/river-review/runners/github-action@v1.14.0
+        uses: s977043/river-review/runners/github-action@v1.22.0
         with:
           phase: midstream # upstream|midstream|downstream
         env:
@@ -40,7 +40,7 @@ Most teams should use **`midstream`**. It runs a review when the PR is opened an
 
 `issues: write` is required to post comments on PRs. Review workflow `permissions` if you encounter permission errors.
 
-> The example pins to `@v1.14.0`. Replace it with a newer tag once one is released. Pinning to a release tag is recommended for stability.
+> The example pins to `@v1.22.0`. Replace it with a newer tag once one is released. Pinning to a release tag is recommended for stability.
 
 ## Using Anthropic (Claude)
 
@@ -48,7 +48,7 @@ Specify a `claude-*` model in `.river-review.json` (placed in the repository roo
 
 ```yaml
 - name: Run River Review (midstream, Claude)
-  uses: s977043/river-review/runners/github-action@v1.14.0
+  uses: s977043/river-review/runners/github-action@v1.22.0
   with:
     phase: midstream
   env:
