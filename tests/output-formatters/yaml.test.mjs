@@ -19,6 +19,19 @@ describe('formatYamlOutput', () => {
     assert.match(output, /指摘事項なし/);
   });
 
+  it('honors a canonical decision over the recomputed verdict (#1170 F3)', () => {
+    // Empty findings recompute to auto-approve, but the artifact carries a
+    // canonical human-review-required decision (e.g. a plan-review-gate trigger).
+    const output = formatYamlOutput({
+      phase: 'upstream',
+      findings: [],
+      decision: 'human-review-required',
+    });
+    assert.match(output, /verdict: human-review-required/);
+    assert.doesNotMatch(output, /verdict: auto-approve/);
+    assert.match(output, /判定: \*\*human-review-required\*\*/);
+  });
+
   it('includes all 5 axes in scores block', () => {
     const output = formatYamlOutput({
       phase: 'midstream',
