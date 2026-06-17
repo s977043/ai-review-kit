@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.23.0](https://github.com/s977043/river-review/compare/v1.22.0...v1.23.0) (2026-06-17)
+
+
+### Features
+
+* **orchestrator:** risk-router granularity — dependency/frontend/ci-cd roles ([#1196](https://github.com/s977043/river-review/issues/1196) S3) ([#1198](https://github.com/s977043/river-review/issues/1198)) ([8a8ccff](https://github.com/s977043/river-review/commit/8a8ccfff05ccdbeeb76be2c3095ee49747269d66))
+* **skills:** framework-agnostic migration safety review ([#1196](https://github.com/s977043/river-review/issues/1196) S4) ([#1200](https://github.com/s977043/river-review/issues/1200)) ([dc77650](https://github.com/s977043/river-review/commit/dc776507565acad34d947ed23fc8d10544357da8))
+
 ## [1.22.0](https://github.com/s977043/river-review/compare/v1.21.0...v1.22.0) (2026-06-17)
 
 
