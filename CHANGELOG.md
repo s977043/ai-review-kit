@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.0](https://github.com/s977043/river-review/compare/v1.18.1...v1.19.0) (2026-06-17)
+
+
+### Features
+
+* **adversarial-review:** add 3 claim-vs-actual detection skills ([#1177](https://github.com/s977043/river-review/issues/1177)) ([#1184](https://github.com/s977043/river-review/issues/1184)) ([b4139f2](https://github.com/s977043/river-review/commit/b4139f2367678ce677821e39006030d62c07b2ec))
+
 ## [1.18.1](https://github.com/s977043/river-review/compare/v1.18.0...v1.18.1) (2026-06-17)
 
 
