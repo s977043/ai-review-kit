@@ -16,7 +16,7 @@ All skills in River Review must conform to JSON schema located at:
 | category    | core / upstream / midstream / downstream (primary routing key) |
 | applyTo     | File glob patterns                                             |
 
-`category` is the primary routing key and is required. `phase` (`upstream` / `midstream` / `downstream`) is an optional backward-compatibility alias; new skills should use `category`. `category` / `applyTo` can be specified at the top level or within a `trigger` object (top-level takes precedence if both are present).
+`category` is the primary routing key and is required at the top level. `phase` (`upstream` / `midstream` / `downstream`) is an optional backward-compatibility alias; new skills should use `category`. `phase` / `applyTo` can be specified at the top level or within a `trigger` object (top-level takes precedence if both are present).
 
 ## Example
 

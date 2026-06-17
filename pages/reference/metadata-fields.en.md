@@ -7,7 +7,8 @@ Use these fields to keep skill metadata consistent and easy to route.
 | `id`           | Unique identifier (recommended `rr-xxxx` format).                                                                                                                                |
 | `name`         | Human-readable skill name shown in reviews.                                                                                                                                      |
 | `description`  | Short summary of what the skill checks.                                                                                                                                          |
-| `phase`        | Flow segment the skill belongs to: `upstream`, `midstream`, or `downstream`.                                                                                                     |
+| `category`     | Primary routing key: `core`, `upstream`, `midstream`, or `downstream`. New skills should use this.                                                                               |
+| `phase`        | Backward-compatibility alias for `category`. New skills should use `category`. Allowed values are `upstream`, `midstream`, `downstream` (`core` is only for `category`).         |
 | `applyTo`      | Glob patterns for files the skill should inspect.                                                                                                                                |
 | `tags`         | Optional classifiers (for example, `security` or `performance`).                                                                                                                 |
 | `severity`     | Optional impact level: `info`, `minor`, `major`, `critical`.                                                                                                                     |

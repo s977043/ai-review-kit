@@ -16,7 +16,7 @@ River Review のすべてのスキルは、以下の JSON スキーマに準拠�
 | category    | core / upstream / midstream / downstream（ルーティングの第一キー） |
 | applyTo     | ファイルのグロブパターン                                           |
 
-`category` がルーティングの第一キーで必須です。`phase`（`upstream` / `midstream` / `downstream`）は後方互換のため残る任意フィールドで、新規スキルでは `category` を使います。`category` / `applyTo` はトップレベルまたは `trigger` 内に書けます（両方指定した場合はトップレベルが優先）。
+`category` がルーティングの第一キーで（トップレベルで）必須です。`phase`（`upstream` / `midstream` / `downstream`）は後方互換のため残る任意フィールドで、新規スキルでは `category` を使います。`phase` / `applyTo` はトップレベルまたは `trigger` 内に書けます（両方指定した場合はトップレベルが優先）。
 
 ## 例
 
