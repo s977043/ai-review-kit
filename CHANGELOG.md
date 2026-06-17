@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.18.0](https://github.com/s977043/river-review/compare/v1.17.0...v1.18.0) (2026-06-16)
+
+
+### Features
+
+* plan-review-gate hybrid (two-tier confidence + adjudicate I/F) ([#1170](https://github.com/s977043/river-review/issues/1170) F1, [#1171](https://github.com/s977043/river-review/issues/1171) item1) ([#1172](https://github.com/s977043/river-review/issues/1172)) ([e3c9c5a](https://github.com/s977043/river-review/commit/e3c9c5adce1532cf71eedadb716d55d712d394b4))
+* suggestedLoopSignal 3-layer loop metadata ([#1171](https://github.com/s977043/river-review/issues/1171) item3) ([#1176](https://github.com/s977043/river-review/issues/1176)) ([4ab6efc](https://github.com/s977043/river-review/commit/4ab6efc766f8293c50c923cee953eb6a62a8c714))
+
+
+### Bug Fixes
+
+* connected-components mergeFindings + severity normalize ([#1170](https://github.com/s977043/river-review/issues/1170) F2/F4) ([#1174](https://github.com/s977043/river-review/issues/1174)) ([d3e8a1d](https://github.com/s977043/river-review/commit/d3e8a1dbfccc40b6eadd9fe331e95a610870deda))
+* **differ:** NaN-safe timestamp sort + single-pass annotate ([#1170](https://github.com/s977043/river-review/issues/1170) F6/F7) ([#1175](https://github.com/s977043/river-review/issues/1175)) ([e46a0c2](https://github.com/s977043/river-review/commit/e46a0c2e8b6bd4d682659d204119c71155fa5c54))
+
 ## [1.17.0](https://github.com/s977043/river-review/compare/v1.16.0...v1.17.0) (2026-06-15)
 
 

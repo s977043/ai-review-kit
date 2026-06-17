@@ -2,9 +2,35 @@
 title: Loop Convergence Contract (stop conditions for the self-fix loop)
 ---
 
-River Review acts as the **review stage** in a generate → review → revise loop. River Review only returns judgment materials (`decision` / `summary.issueCountBySeverity` / `oscillated` / exit code); iteration, stopping, and escalation are the **caller's responsibility** (the invoking agent or workflow). See [#976 boundary — docs/ai/generate-review-revise-loop.md](https://github.com/s977043/river-review/blob/main/docs/ai/generate-review-revise-loop.md).
+River Review acts as the **review stage** in a generate → review → revise loop. River Review only returns judgment materials (`decision` / `summary.issueCountBySeverity` / `oscillated` / `suggestedLoopSignal` / exit code); iteration, stopping, and escalation are the **caller's responsibility** (the invoking agent or workflow). See [#976 boundary — docs/ai/generate-review-revise-loop.md](https://github.com/s977043/river-review/blob/main/docs/ai/generate-review-revise-loop.md).
 
 This document defines the stop / convergence / divergence-guard contract that callers need to implement loop control, in one page.
+
+## `suggestedLoopSignal` — 3-layer design
+
+River Review emits a `suggestedLoopSignal` field on each artifact and on `runs diff --output json` output to make loop decisions machine-readable without requiring callers to implement the derivation logic themselves. The design is intentionally layered:
+
+**Layer 1** — Single `river run` artifact (`suggestedLoopSignal` top-level field):
+
+| Value             | Meaning                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| `NO_SIGNAL`       | Loop action cannot be determined (decision absent or `human-review-recommended` with no blocking findings) |
+| `REVISE_REQUIRED` | Blocking findings (`critical` or `major`) are present — agent should revise and re-run                     |
+| `CONVERGED`       | No blocking findings and decision is auto-approve equivalent — agent may stop the loop                     |
+| `ESCALATE_HUMAN`  | `decision === 'human-review-required'` — agent must hand off to a human                                    |
+
+Derivation order: ESCALATE_HUMAN → REVISE_REQUIRED → CONVERGED → NO_SIGNAL. Deterministic; no AI call.
+
+**Layer 2** — `river runs diff --output json` (3+ runs): adds `STOP_OSCILLATED` when `oscillated` is non-empty. Oscillation takes priority over all Layer 1 values.
+
+**Layer 3** — Caller-synthesized (River Review deliberately does **not** emit these):
+
+| Value                  | When to synthesize                                             |
+| ---------------------- | -------------------------------------------------------------- |
+| `STOP_MAX_ITERATIONS`  | `iteration_count >= max_iterations`                            |
+| `STOP_POLICY_REQUIRED` | External policy trigger (cost cap, mandatory HITL label, etc.) |
+
+The `suggestedLoopSignal` is **additive and optional** — it does not change `decision` or `verdict`, and is not a GO/NO-GO gate. Absent on older artifacts.
 
 ## Stop (convergence) conditions — composite formula
 

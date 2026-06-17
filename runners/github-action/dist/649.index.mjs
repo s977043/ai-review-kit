@@ -453,6 +453,8 @@ function detectHumanApprovalTriggers(text) {
   return { required, triggers };
 }
 
+// EXTERNAL MODULE: ./src/lib/loop-signal.mjs
+var loop_signal = __webpack_require__(4702);
 ;// CONCATENATED MODULE: ./src/lib/review-plan.mjs
 /**
  * `river review plan` core — #802 Phase 3 (slices 1 + B-1)
@@ -480,6 +482,7 @@ function detectHumanApprovalTriggers(text) {
  * Pure-ish module: config loader, resolver, buildExecutionPlan and the
  * diff reader are injectable for tests.
  */
+
 
 
 
@@ -532,6 +535,15 @@ function finalizeArtifact(
     artifact.decision = (0,engine/* scoreReview */.lS)(artifact.findings ?? [], { humanApprovalRequired }).verdict;
   } catch {
     // leave decision unset on scoring failure
+  }
+
+  // suggestedLoopSignal: additive layer-1 signal for agentic fix loops.
+  // Derived after decision is set so the two are always consistent.
+  // Never let derivation errors break the artifact contract.
+  try {
+    artifact.suggestedLoopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)(artifact);
+  } catch {
+    // leave suggestedLoopSignal unset on derivation failure
   }
 
   artifact.trace = { run_id: generateRunId() };

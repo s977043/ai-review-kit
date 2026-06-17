@@ -38,6 +38,7 @@ import { PHASES, PLANNER_MODES } from './planner-utils.mjs';
 import { resolveAvailableContexts, resolveAvailableDependencies } from './utils.mjs';
 import { scoreReview } from './scoring/engine.mjs';
 import { detectHumanApprovalTriggers } from './plan-review/human-approval-policy.mjs';
+import { deriveLoopSignalFromArtifact } from './loop-signal.mjs';
 
 const VALID_PHASES = new Set(PHASES);
 
@@ -76,6 +77,15 @@ function finalizeArtifact(
     artifact.decision = scoreReview(artifact.findings ?? [], { humanApprovalRequired }).verdict;
   } catch {
     // leave decision unset on scoring failure
+  }
+
+  // suggestedLoopSignal: additive layer-1 signal for agentic fix loops.
+  // Derived after decision is set so the two are always consistent.
+  // Never let derivation errors break the artifact contract.
+  try {
+    artifact.suggestedLoopSignal = deriveLoopSignalFromArtifact(artifact);
+  } catch {
+    // leave suggestedLoopSignal unset on derivation failure
   }
 
   artifact.trace = { run_id: generateRunId() };
