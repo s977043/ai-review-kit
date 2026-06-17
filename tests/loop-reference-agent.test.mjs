@@ -85,6 +85,15 @@ describe('decideLoopAction', () => {
     const d = decideLoopAction({ artifact: CONVERGED, iteration: 5, maxIterations: 5 });
     assert.equal(d.action, LOOP_ACTIONS.STOP_CONVERGED);
   });
+
+  test('invalid maxIterations falls back to default (no premature/absent cap)', () => {
+    // null would coerce to 0 (iteration >= 0 → premature stop); guard must prevent it.
+    const early = decideLoopAction({ artifact: REVISE, iteration: 1, maxIterations: null });
+    assert.equal(early.action, LOOP_ACTIONS.REVISE);
+    // and the default cap (5) still trips when reached.
+    const capped = decideLoopAction({ artifact: REVISE, iteration: 5, maxIterations: null });
+    assert.equal(capped.action, LOOP_ACTIONS.STOP_MAX_ITERATIONS);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -92,10 +101,10 @@ describe('decideLoopAction', () => {
 // ---------------------------------------------------------------------------
 
 describe('runReferenceLoop', () => {
-  test('revises until convergence', () => {
+  test('revises until convergence', async () => {
     // Two revise rounds, then converge.
     const sequence = [REVISE, REVISE, CONVERGED];
-    const result = runReferenceLoop({
+    const result = await runReferenceLoop({
       review: ({ iteration }) => ({ artifact: sequence[iteration - 1] }),
       maxIterations: 5,
     });
@@ -104,8 +113,8 @@ describe('runReferenceLoop', () => {
     assert.equal(result.history.length, 3);
   });
 
-  test('stops at max iterations when never converging', () => {
-    const result = runReferenceLoop({
+  test('stops at max iterations when never converging', async () => {
+    const result = await runReferenceLoop({
       review: () => ({ artifact: REVISE }),
       maxIterations: 3,
     });
@@ -113,8 +122,8 @@ describe('runReferenceLoop', () => {
     assert.equal(result.iteration, 3);
   });
 
-  test('escalates immediately on human-review-required', () => {
-    const result = runReferenceLoop({
+  test('escalates immediately on human-review-required', async () => {
+    const result = await runReferenceLoop({
       review: () => ({ artifact: ESCALATE }),
       maxIterations: 5,
     });
@@ -122,9 +131,9 @@ describe('runReferenceLoop', () => {
     assert.equal(result.iteration, 1);
   });
 
-  test('escalates on oscillation surfaced from runs diff', () => {
+  test('escalates on oscillation surfaced from runs diff', async () => {
     // First two rounds revise; third round surfaces oscillation via runsDiff.
-    const result = runReferenceLoop({
+    const result = await runReferenceLoop({
       review: ({ iteration }) =>
         iteration >= 3 ? { artifact: REVISE, runsDiff: OSCILLATED_DIFF } : { artifact: REVISE },
       maxIterations: 10,
@@ -134,13 +143,23 @@ describe('runReferenceLoop', () => {
     assert.equal(result.iteration, 3);
   });
 
-  test('caller policy stops the loop mid-flight', () => {
-    const result = runReferenceLoop({
+  test('caller policy stops the loop mid-flight', async () => {
+    const result = await runReferenceLoop({
       review: () => ({ artifact: REVISE }),
       maxIterations: 5,
       policyFor: ({ iteration }) => (iteration === 2 ? 'STOP_POLICY_REQUIRED' : null),
     });
     assert.equal(result.action, LOOP_ACTIONS.STOP_POLICY);
+    assert.equal(result.iteration, 2);
+  });
+
+  test('awaits async review and policyFor callbacks', async () => {
+    const result = await runReferenceLoop({
+      review: async ({ iteration }) => ({ artifact: iteration >= 2 ? CONVERGED : REVISE }),
+      maxIterations: 5,
+      policyFor: async () => null,
+    });
+    assert.equal(result.action, LOOP_ACTIONS.STOP_CONVERGED);
     assert.equal(result.iteration, 2);
   });
 });

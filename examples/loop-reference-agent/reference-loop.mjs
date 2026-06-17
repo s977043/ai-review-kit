@@ -99,11 +99,14 @@ export function decideLoopAction({
   }
 
   // 4. We would revise (REVISE_REQUIRED or NO_SIGNAL) — apply the divergence guard.
-  if (iteration >= maxIterations) {
+  // Guard against null / NaN / non-numeric maxIterations: a bad value must not
+  // silently disable the cap (infinite loop) or trip it on iteration 1.
+  const limit = typeof maxIterations === 'number' && maxIterations > 0 ? maxIterations : 5;
+  if (iteration >= limit) {
     return {
       signal: 'STOP_MAX_ITERATIONS',
       action: LOOP_ACTIONS.STOP_MAX_ITERATIONS,
-      reason: `reached max iterations (${maxIterations}) without converging`,
+      reason: `reached max iterations (${limit}) without converging`,
     };
   }
 
@@ -122,19 +125,22 @@ export function decideLoopAction({
  * it returns a fixed artifact (and optional runsDiff) so the loop is fully
  * deterministic with no LLM / IO.
  *
+ * `review` and `policyFor` may be sync or async (returning a Promise): real
+ * callers await `river run` subprocesses / LLM calls, so the driver awaits both.
+ *
  * @param {object} params
- * @param {(ctx: {iteration: number, history: object[]}) => ({artifact: object, runsDiff?: object|null})} params.review
- *   Returns the review result for the given iteration.
+ * @param {(ctx: {iteration: number, history: object[]}) => (({artifact: object, runsDiff?: object|null}) | Promise<{artifact: object, runsDiff?: object|null}>)} params.review
+ *   Returns (or resolves to) the review result for the given iteration.
  * @param {number} [params.maxIterations=5] - Divergence guard.
- * @param {(ctx: {iteration: number, history: object[]}) => (string|null)} [params.policyFor]
- *   Returns 'STOP_POLICY_REQUIRED' to force a policy stop, else null.
- * @returns {{signal: string, action: string, reason: string, iteration: number, history: object[]}}
+ * @param {(ctx: {iteration: number, history: object[]}) => ((string|null) | Promise<string|null>)} [params.policyFor]
+ *   Returns (or resolves to) 'STOP_POLICY_REQUIRED' to force a policy stop, else null.
+ * @returns {Promise<{signal: string, action: string, reason: string, iteration: number, history: object[]}>}
  */
-export function runReferenceLoop({ review, maxIterations = 5, policyFor = () => null }) {
+export async function runReferenceLoop({ review, maxIterations = 5, policyFor = () => null }) {
   const history = [];
 
   for (let iteration = 1; ; iteration++) {
-    const { artifact, runsDiff = null } = review({ iteration, history });
+    const { artifact, runsDiff = null } = await review({ iteration, history });
     history.push(artifact);
 
     const decision = decideLoopAction({
@@ -142,7 +148,7 @@ export function runReferenceLoop({ review, maxIterations = 5, policyFor = () => 
       runsDiff,
       iteration,
       maxIterations,
-      policySignal: policyFor({ iteration, history }),
+      policySignal: await policyFor({ iteration, history }),
     });
 
     if (decision.action !== LOOP_ACTIONS.REVISE) {

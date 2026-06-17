@@ -43,13 +43,18 @@ River Review deliberately never emits those.
 
 ## Usage sketch
 
+`review` and `policyFor` may be sync or async — the driver awaits both, so real
+callers can run `river run` subprocesses / LLM calls inside them.
+
 ```js
 import { runReferenceLoop } from './reference-loop.mjs';
 
-const result = runReferenceLoop({
+const result = await runReferenceLoop({
   // In production, `review` shells out to `river run ... --output json --save`
   // and returns the parsed artifact (+ `runs diff` once 3+ runs exist).
-  review: ({ iteration, history }) => ({ artifact: runRiverReview(iteration, history) }),
+  review: async ({ iteration, history }) => ({
+    artifact: await runRiverReview(iteration, history),
+  }),
   maxIterations: 5,
   policyFor: ({ history }) => (costExceeded(history) ? 'STOP_POLICY_REQUIRED' : null),
 });
