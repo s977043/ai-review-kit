@@ -60,6 +60,17 @@ describe('formatHtmlOutput', () => {
     );
   });
 
+  it('honors a canonical decision over the recomputed verdict (#1170 F3)', () => {
+    // Empty findings would recompute to auto-approve, but the artifact carries a
+    // canonical human-review-required decision (e.g. a plan-review-gate trigger).
+    const html = formatHtmlOutput({ findings: [], decision: 'human-review-required' }, 'upstream');
+    assert.ok(
+      html.includes('Human Review Required'),
+      'canonical decision must win over the formatter-local recomputation'
+    );
+    assert.ok(!html.includes('Auto Approve'), 'recomputed verdict must not leak into the banner');
+  });
+
   it('XSS: finding with <script> in message gets HTML-escaped in output', () => {
     const html = formatHtmlOutput(MOCK_RESULT_XSS, 'midstream');
     assert.ok(

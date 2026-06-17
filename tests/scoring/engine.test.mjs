@@ -7,6 +7,7 @@ import {
   computeOverallScore,
   countBySeverity,
   deriveVerdict,
+  resolveVerdict,
   scoreReview,
 } from '../../src/lib/scoring/engine.mjs';
 
@@ -256,6 +257,23 @@ describe('deriveVerdict — humanApprovalRequired flag', () => {
       counts: { critical: 0, major: 0, minor: 0, info: 0 },
     };
     assert.equal(deriveVerdict({ ...args, humanApprovalRequired: false }), deriveVerdict(args));
+  });
+});
+
+describe('resolveVerdict — canonical decision precedence (#1170 F3)', () => {
+  it('prefers a non-empty canonical decision over the recomputed verdict', () => {
+    assert.equal(resolveVerdict('human-review-required', 'auto-approve'), 'human-review-required');
+  });
+
+  it('falls back to the recomputed verdict when no canonical decision is present', () => {
+    assert.equal(resolveVerdict(undefined, 'auto-approve'), 'auto-approve');
+    assert.equal(resolveVerdict(null, 'auto-approve'), 'auto-approve');
+    assert.equal(resolveVerdict('', 'auto-approve'), 'auto-approve');
+  });
+
+  it('ignores a non-string canonical decision', () => {
+    assert.equal(resolveVerdict(0, 'auto-approve'), 'auto-approve');
+    assert.equal(resolveVerdict({ verdict: 'x' }, 'auto-approve'), 'auto-approve');
   });
 });
 

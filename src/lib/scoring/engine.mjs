@@ -146,6 +146,27 @@ export function scoreReview(findings, { humanApprovalRequired = false } = {}) {
 }
 
 /**
+ * Resolve the verdict a formatter should render (#1170 F3).
+ *
+ * The canonical verdict is finalized once on the artifact (`artifact.decision`),
+ * reflecting gate signals such as `humanApprovalRequired` that formatters do not
+ * receive. Prefer that canonical value over a formatter-local recomputation,
+ * which would silently drop those signals and let the verdict drift across the
+ * JSON / YAML / HTML / Markdown outputs. Fall back to the recomputed verdict
+ * when no canonical decision is present (the run / diff path never sets one).
+ *
+ * @param {unknown} canonicalDecision - `artifact.decision`, may be absent.
+ * @param {string} recomputedVerdict - `scoreReview(findings).verdict`.
+ * @returns {string} The verdict to display.
+ */
+export function resolveVerdict(canonicalDecision, recomputedVerdict) {
+  if (typeof canonicalDecision === 'string' && canonicalDecision.length > 0) {
+    return canonicalDecision;
+  }
+  return recomputedVerdict;
+}
+
+/**
  * Normalize severity to the canonical vocabulary used by the scoring engine.
  * Accepts both the output schema values (critical/major/minor/info) and
  * internal values (blocker/warning/nit) via fall-through.

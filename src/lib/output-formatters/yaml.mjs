@@ -7,7 +7,7 @@
  * (v1) without mutating it. See docs/review/output-format-yaml.md for details.
  */
 
-import { classifyAxis, scoreReview } from '../scoring/engine.mjs';
+import { classifyAxis, resolveVerdict, scoreReview } from '../scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from '../scoring/rubric.mjs';
 
 const HIGH_RISK_IMPACT_TAGS = new Set(['security', 'migration', 'auth', 'payment']);
@@ -25,6 +25,8 @@ const HIGH_RISK_IMPACT_TAGS = new Set(['security', 'migration', 'auth', 'payment
 export function formatYamlOutput(artifact) {
   const findings = artifact.findings ?? [];
   const score = scoreReview(findings);
+  // Honor the canonical verdict if the artifact carries one (#1170 F3).
+  score.verdict = resolveVerdict(artifact.decision, score.verdict);
   const yamlBlock = buildYamlBlock(artifact, findings, score);
   const summary = buildHumanSummary(score, findings);
   return `${yamlBlock}\n\n${summary}`;

@@ -6,7 +6,7 @@
  * Data is derived from scoreReview (same engine as JSON/YAML formatters).
  */
 
-import { scoreReview } from '../scoring/engine.mjs';
+import { resolveVerdict, scoreReview } from '../scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from '../scoring/rubric.mjs';
 
 /**
@@ -90,7 +90,8 @@ export function formatHtmlOutput(result, phase) {
     if (sev in issueCountBySeverity) issueCountBySeverity[sev]++;
   }
 
-  const decision = score.verdict;
+  // Honor the canonical verdict if the result carries one (#1170 F3).
+  const decision = resolveVerdict(result.decision, score.verdict);
 
   const riskAssessment = result.plan?.riskAssessment;
   const riskSummary = riskAssessment

@@ -22,7 +22,7 @@ import { RiskMapError } from './lib/risk-map.mjs';
 import { isLlmEnabled, parseList } from './lib/utils.mjs';
 import { PLANNER_MODES } from './lib/planner-utils.mjs';
 import { DEPTH_TO_REVIEW_MODE, resolveDepthToReviewMode } from './lib/review-plan-generator.mjs';
-import { scoreReview } from './lib/scoring/engine.mjs';
+import { resolveVerdict, scoreReview } from './lib/scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
 import { severityToPriority } from './lib/finding-format.mjs';
 import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
@@ -931,6 +931,9 @@ function formatPrioritySummaryMarkdown(result) {
 function formatScoreSectionMarkdown(result, phase) {
   const artifact = formatJsonOutput(result, phase);
   const score = scoreReview(artifact.issues ?? []);
+  // formatJsonOutput already resolved the canonical verdict; reuse it so the
+  // Markdown score section cannot drift from JSON/YAML/HTML (#1170 F3).
+  score.verdict = resolveVerdict(artifact.decision, score.verdict);
   const lines = ['### スコア (参考値)'];
   lines.push('');
   lines.push(`結果(スコア): **${score.overall}/100**`);
@@ -1079,9 +1082,15 @@ function formatJsonOutput(result, phase) {
   }
   let decision;
   try {
-    decision = scoreReview(result.findings ?? []).verdict;
+    // Prefer the canonical verdict if the result already carries one (#1170 F3);
+    // otherwise derive it from the findings present.
+    decision = resolveVerdict(result.decision, scoreReview(result.findings ?? []).verdict);
   } catch {
-    // scoring failure: omit decision (same fail-safe as finalizeArtifact)
+    // scoring failure: fall back to the canonical decision if present, else omit
+    // (same fail-safe as finalizeArtifact).
+    if (typeof result.decision === 'string' && result.decision.length > 0) {
+      decision = result.decision;
+    }
   }
   return {
     issues,
@@ -1832,19 +1841,25 @@ Dependencies: ${
       printMarkdownReport(result, parsed.phase);
     } else if (parsed.output === 'yaml') {
       const { formatYamlOutput } = await import('./lib/output-formatters/yaml.mjs');
+      const jsonOutput = formatJsonOutput(result, parsed.phase);
       const artifact = {
         phase: parsed.phase,
         timestamp: new Date().toISOString(),
-        findings: formatJsonOutput(result, parsed.phase).issues,
+        findings: jsonOutput.issues,
         plan: result.plan,
+        // Propagate the canonical verdict so YAML matches JSON (#1170 F3).
+        ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
       };
       console.log(formatYamlOutput(artifact));
     } else if (parsed.output === 'html') {
       const { formatHtmlOutput } = await import('./lib/output-formatters/html.mjs');
+      const jsonOutput = formatJsonOutput(result, parsed.phase);
       const htmlResult = {
         findings: result.findings ?? [],
         plan: result.plan,
         timestamp: new Date().toISOString(),
+        // Propagate the canonical verdict so HTML matches JSON (#1170 F3).
+        ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
       };
       console.log(formatHtmlOutput(htmlResult, parsed.phase));
     } else {

@@ -103,7 +103,8 @@ function formatHtmlOutput(result, phase) {
     if (sev in issueCountBySeverity) issueCountBySeverity[sev]++;
   }
 
-  const decision = score.verdict;
+  // Honor the canonical verdict if the result carries one (#1170 F3).
+  const decision = (0,_scoring_engine_mjs__WEBPACK_IMPORTED_MODULE_0__/* .resolveVerdict */ .Cq)(result.decision, score.verdict);
 
   const riskAssessment = result.plan?.riskAssessment;
   const riskSummary = riskAssessment
