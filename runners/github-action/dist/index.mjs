@@ -61013,23 +61013,29 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
             parsed.runsIds.map((id) => loadRunRecord(storeDir, id))
           );
           const diff = diffRunHistory(runRecords);
+          // Sort by timestamp to find the latest run (same order as diffRunHistory).
+          const sortedRecords = [...runRecords].sort((a, b) => {
+            const ta = a.timestamp != null ? new Date(a.timestamp).getTime() : NaN;
+            const tb = b.timestamp != null ? new Date(b.timestamp).getTime() : NaN;
+            if (Number.isNaN(ta) && Number.isNaN(tb))
+              return (a.runId ?? '').localeCompare(b.runId ?? '');
+            if (Number.isNaN(ta)) return 1;
+            if (Number.isNaN(tb)) return -1;
+            return ta !== tb ? ta - tb : (a.runId ?? '').localeCompare(b.runId ?? '');
+          });
+          const latestRunArtifact = sortedRecords[sortedRecords.length - 1];
+          const runsSignal = (0,loop_signal/* deriveLoopSignalFromRunsDiff */.v)(diff, latestRunArtifact);
           if (parsed.output === 'json') {
-            // Sort by timestamp to find the latest run (same order as diffRunHistory).
-            const sortedRecords = [...runRecords].sort((a, b) => {
-              const ta = a.timestamp != null ? new Date(a.timestamp).getTime() : NaN;
-              const tb = b.timestamp != null ? new Date(b.timestamp).getTime() : NaN;
-              if (Number.isNaN(ta) && Number.isNaN(tb))
-                return (a.runId ?? '').localeCompare(b.runId ?? '');
-              if (Number.isNaN(ta)) return 1;
-              if (Number.isNaN(tb)) return -1;
-              return ta !== tb ? ta - tb : (a.runId ?? '').localeCompare(b.runId ?? '');
-            });
-            const latestRunArtifact = sortedRecords[sortedRecords.length - 1];
-            const diffWithSignal = {
-              ...diff,
-              suggestedLoopSignal: (0,loop_signal/* deriveLoopSignalFromRunsDiff */.v)(diff, latestRunArtifact),
-            };
+            const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
             console.log(JSON.stringify(diffWithSignal, null, 2));
+          } else if (parsed.output === 'html') {
+            const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+            console.log(
+              formatLoopDashboardHtml(diff, {
+                runIds: sortedRecords.map((r) => r.runId),
+                suggestedLoopSignal: runsSignal,
+              })
+            );
           } else {
             console.log(formatRegressionSummary(diff));
             if (diff.oscillated.length) {
@@ -61055,12 +61061,18 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
             loadRunRecord(storeDir, parsed.runsId2),
           ]);
           const diff = diffReviews(run1.findings ?? [], run2.findings ?? []);
+          const runsSignal = (0,loop_signal/* deriveLoopSignalFromRunsDiff */.v)(diff, run2);
           if (parsed.output === 'json') {
-            const diffWithSignal = {
-              ...diff,
-              suggestedLoopSignal: (0,loop_signal/* deriveLoopSignalFromRunsDiff */.v)(diff, run2),
-            };
+            const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
             console.log(JSON.stringify(diffWithSignal, null, 2));
+          } else if (parsed.output === 'html') {
+            const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+            console.log(
+              formatLoopDashboardHtml(diff, {
+                runIds: [run1.runId, run2.runId].filter(Boolean),
+                suggestedLoopSignal: runsSignal,
+              })
+            );
           } else {
             console.log(formatRegressionSummary(diff));
           }
