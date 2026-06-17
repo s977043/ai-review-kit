@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 111,
+  "skillCount": 112,
   "skills": [
     {
       "id": "adversarial-review",
@@ -535,6 +535,12 @@
       "id": "rr-upstream-migration-rollout-rollback-001",
       "path": "skills/upstream/rr-upstream-migration-rollout-rollback-001",
       "checksum": "sha256:058872d7f0c4cffd9d5392d79ccee923b9af34e070d813e133043c80b116c27e",
+      "files": 1
+    },
+    {
+      "id": "rr-upstream-migration-safety-001",
+      "path": "skills/upstream/rr-upstream-migration-safety-001",
+      "checksum": "sha256:0c808b00481bf87dbd40319b3d50b84fabbe4b0a408dcd463216a3e5b4f2156d",
       "files": 1
     },
     {
