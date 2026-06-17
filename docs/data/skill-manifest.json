@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 108,
+  "skillCount": 111,
   "skills": [
     {
       "id": "adversarial-review",
       "path": "skills/agent-skills/adversarial-review",
-      "checksum": "sha256:81270f4c6fc3e0227a6bbc2e46b995c4d6b1f349b0a4a9a4373bf4d4db61742c",
+      "checksum": "sha256:65c926203ae04d9539d36ac2b22455bd0055743ee803ced2eb435010a385c61e",
       "files": 2
     },
     {
@@ -154,6 +154,12 @@
       "files": 1
     },
     {
+      "id": "rr-midstream-cross-file-leakage-001",
+      "path": "skills/midstream/rr-midstream-cross-file-leakage-001",
+      "checksum": "sha256:000b7f18ecd0c46781777b111a5e167bc5c066a1a260fa0bb590199173cab228",
+      "files": 1
+    },
+    {
       "id": "rr-midstream-design-system-component-reuse-001",
       "path": "skills/midstream/community/rr-midstream-design-system-component-reuse-001",
       "checksum": "sha256:a760f8bc0bd722c78c9fa2b8649901f26bfa17e054cbc676a0fd1a7165f0ef2a",
@@ -292,6 +298,12 @@
       "files": 4
     },
     {
+      "id": "rr-midstream-refactor-claim-audit-001",
+      "path": "skills/midstream/rr-midstream-refactor-claim-audit-001",
+      "checksum": "sha256:7006c4b8923ac87c77315a42867b3cf68efd6ded5d1dcff1bde621758e3b514b",
+      "files": 1
+    },
+    {
       "id": "rr-midstream-review-automation-boundary-001",
       "path": "skills/midstream/rr-midstream-review-automation-boundary-001",
       "checksum": "sha256:5b420d50a3dc1e12daa874b8380fb14eef851c303f9fc5aff91c7ee879ee733f",
@@ -314,6 +326,12 @@
       "path": "skills/midstream/rr-midstream-security-basic-001",
       "checksum": "sha256:3497159259948365b97e86426c625e7abdb03a309aadd7576f5e25b94f73b936",
       "files": 9
+    },
+    {
+      "id": "rr-midstream-self-contradiction-001",
+      "path": "skills/midstream/rr-midstream-self-contradiction-001",
+      "checksum": "sha256:01c8c01b65e7b2ea243202aa4a01cdc0a7a0cadb79600e4f8d02e96200ec1675",
+      "files": 1
     },
     {
       "id": "rr-midstream-supabase-rls-policy-001",

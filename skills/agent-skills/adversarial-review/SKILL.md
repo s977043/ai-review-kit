@@ -2,10 +2,11 @@
 id: adversarial-review
 name: adversarial-review
 description: |
-  認知バイアスを排除するための3つの敵対的分析手法を統合したレビュースキル。
-  Pre-mortem（失敗シナリオ分析）、War Game（攻撃者シミュレーション）、
-  Logic Torturing（論理検証）を組み合わせ、通常のレビューでは見えない
-  設計の盲点・防御の穴・論理の弱点を可視化する。
+  敵対的分析手法を統合したレビューの entry skill。認知バイアス対策の3手法
+  （Pre-mortem / War Game / Logic Torturing）と、宣言・主張と実態の乖離を突く
+  claim-vs-actual 検出3パターン（Self-Contradiction / Refactor-Claim Audit /
+  Cross-File Leakage）へルーティングし、通常のレビューでは見えない設計の盲点・
+  防御の穴・論理の弱点・宣言と実装のズレを可視化する。
 category: midstream
 phase: [upstream, midstream]
 severity: major
@@ -16,7 +17,20 @@ applyTo:
   - 'pages/**/*design*.md'
 inputContext: [diff, fullFile]
 outputKind: [findings, questions, actions]
-tags: [adversarial, pre-mortem, war-game, logic-torturing, cognitive-bias, entry, routing]
+tags:
+  [
+    adversarial,
+    pre-mortem,
+    war-game,
+    logic-torturing,
+    self-contradiction,
+    refactor-claim,
+    cross-file-leakage,
+    claim-vs-actual,
+    cognitive-bias,
+    entry,
+    routing,
+  ]
 version: '0.1.0'
 license: MIT
 ---
@@ -29,13 +43,23 @@ license: MIT
 ## 背景 / Background
 
 AIをレビューに使う最大の価値は、情報の整理ではなく **思考の死角を映す鏡** としての活用にある。
-このスキルは、3つの認知バイアス対策手法を体系化し、レビューの質を根本的に引き上げる。
+このスキルは、2系統の敵対的手法を体系化し、レビューの質を根本的に引き上げる。
+
+### 認知バイアス対策（思考の死角）
 
 | 手法            | 対策するバイアス           | 核心の問い                           |
 | --------------- | -------------------------- | ------------------------------------ |
 | Pre-mortem      | 生存バイアス・楽観バイアス | 「失敗した**として**、なぜ？」       |
 | War Game        | 自己中心バイアス           | 「敵の立場**から**、どう攻撃する？」 |
 | Logic Torturing | 確証バイアス               | 「この論理の穴を**潰して**」         |
+
+### claim-vs-actual 検出（宣言・主張と実態の乖離）
+
+| 手法                 | 対象とするズレ           | 核心の問い                                    |
+| -------------------- | ------------------------ | --------------------------------------------- |
+| Self-Contradiction   | 宣言と同一ファイルの実装 | 「規則 X を宣言した本人が**破って**いない？」 |
+| Refactor-Claim Audit | 完了主張と残骸           | 「『全部やった』を grep で**反証**できる？」  |
+| Cross-File Leakage   | 構造変更と caller 側     | 「直したのは変更元だけ、**参照元**は？」      |
 
 ## When to Use / いつ使うか
 
@@ -48,12 +72,15 @@ AIをレビューに使う最大の価値は、情報の整理ではなく **思
 
 入力に応じて、適切な手法へルーティングする。複数手法の併用も可能。
 
-| キーワード                                   | 手法            | スキルID                           |
-| -------------------------------------------- | --------------- | ---------------------------------- |
-| 失敗, リスク, 負債, インシデント, pre-mortem | Pre-mortem      | `rr-upstream-pre-mortem-001`       |
-| 攻撃, セキュリティ, 悪用, 脆弱性, war-game   | War Game        | `rr-midstream-war-game-001`        |
-| 論理, 判断, 根拠, なぜ, 代替案, logic        | Logic Torturing | `rr-midstream-logic-torturing-001` |
-| 敵対的, adversarial, 全部, フル              | **全手法実行**  | 上記3つすべて                      |
+| キーワード                                          | 手法                 | スキルID                                |
+| --------------------------------------------------- | -------------------- | --------------------------------------- |
+| 失敗, リスク, 負債, インシデント, pre-mortem        | Pre-mortem           | `rr-upstream-pre-mortem-001`            |
+| 攻撃, セキュリティ, 悪用, 脆弱性, war-game          | War Game             | `rr-midstream-war-game-001`             |
+| 論理, 判断, 根拠, なぜ, 代替案, logic               | Logic Torturing      | `rr-midstream-logic-torturing-001`      |
+| 自己矛盾, contradiction, 宣言と実装, declared but   | Self-Contradiction   | `rr-midstream-self-contradiction-001`   |
+| 削減, 完了, 全て置換, all replaced, -N%, リファクタ | Refactor-Claim Audit | `rr-midstream-refactor-claim-audit-001` |
+| caller, 残骸, 参照漏れ, 再採番, leakage             | Cross-File Leakage   | `rr-midstream-cross-file-leakage-001`   |
+| 敵対的, adversarial, 全部, フル                     | **全手法実行**       | 上記6つすべて                           |
 
 ### デフォルト動作
 
@@ -61,6 +88,9 @@ AIをレビューに使う最大の価値は、情報の整理ではなく **思
   - 設計ドキュメント/ADR → Pre-mortem + Logic Torturing
   - セキュリティ関連コード → War Game + Logic Torturing
   - 一般的なコード変更 → Logic Torturing
+  - 宣言的フレーズ（「禁止」「必ず」「MUST」等）を含む変更 → Self-Contradiction
+  - 完了主張（「全置換」「-N%」等）を含む commit/PR → Refactor-Claim Audit
+  - 構造変更（再採番・シンボル改名・分割）を含む変更 → Cross-File Leakage
   - 大規模変更（ファイル数10以上or差分500行以上）→ 全手法実行
 
 ## Execution Flow / 実行フロー
@@ -69,12 +99,18 @@ AIをレビューに使う最大の価値は、情報の整理ではなく **思
 1. 変更内容の分類
    ├─ 設計/ADR → Pre-mortem を優先実行
    ├─ セキュリティ関連 → War Game を優先実行
-   └─ 判断を含む変更 → Logic Torturing を実行
+   ├─ 判断を含む変更 → Logic Torturing を実行
+   ├─ 宣言的フレーズ → Self-Contradiction を実行
+   ├─ 完了主張 → Refactor-Claim Audit を実行
+   └─ 構造変更 → Cross-File Leakage を実行
 
 2. 各手法の実行（並列可能）
    ├─ Pre-mortem: 失敗シナリオ × 最大5件
    ├─ War Game: 攻撃シナリオ × 最大5件
-   └─ Logic Torturing: 論理検証 × 最大5件
+   ├─ Logic Torturing: 論理検証 × 最大5件
+   ├─ Self-Contradiction: 宣言と実装の乖離 × 最大5件
+   ├─ Refactor-Claim Audit: 完了主張の反証 × 最大5件
+   └─ Cross-File Leakage: caller 側残骸 × 最大5件
 
 3. 統合サマリの生成
    ├─ 重複する指摘の統合
@@ -92,6 +128,9 @@ AIをレビューに使う最大の価値は、情報の整理ではなく **思
 - Pre-mortem: X件 (失敗シナリオ)
 - War Game: Y件 (攻撃シナリオ)
 - Logic Torturing: Z件 (論理的な穴)
+- Self-Contradiction: 件数 (宣言と実装の乖離)
+- Refactor-Claim Audit: 件数 (完了主張の反証)
+- Cross-File Leakage: 件数 (caller 側残骸)
 
 ### 最も重大な発見
 
