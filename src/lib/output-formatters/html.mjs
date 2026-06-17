@@ -320,8 +320,10 @@ export function formatLoopDashboardHtml(diff, meta = {}) {
     );
   }
 
-  // New / resolved lists
-  const findingList = (heading, list) => {
+  // New / resolved lists. diff entries are ComparedFinding wrappers: the actual
+  // finding lives under `.current` (new) or `.previous` (resolved). Fall back to
+  // the entry itself for callers that pass raw findings.
+  const findingList = (heading, list, isResolved) => {
     parts.push(`<h2>${escHtml(heading)} (${list.length})</h2>`);
     if (list.length === 0) {
       parts.push('<p>None.</p>');
@@ -329,7 +331,8 @@ export function formatLoopDashboardHtml(diff, meta = {}) {
     }
     parts.push('<table>');
     parts.push('<tr><th>Severity</th><th>File</th><th>Title</th></tr>');
-    for (const f of list) {
+    for (const item of list) {
+      const f = (isResolved ? item?.previous : item?.current) ?? item ?? {};
       const sev = f.severity ?? 'info';
       const color = SEVERITY_COLOR[sev] ?? '#1565c0';
       parts.push(
@@ -340,8 +343,8 @@ export function formatLoopDashboardHtml(diff, meta = {}) {
     }
     parts.push('</table>');
   };
-  findingList('New findings', newF);
-  findingList('Resolved findings', resolvedF);
+  findingList('New findings', newF, false);
+  findingList('Resolved findings', resolvedF, true);
 
   parts.push('</body>');
   parts.push('</html>');

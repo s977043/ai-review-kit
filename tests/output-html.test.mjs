@@ -95,9 +95,25 @@ describe('formatHtmlOutput', () => {
 });
 
 describe('formatLoopDashboardHtml (#1191)', () => {
+  // diff.new / diff.resolved hold ComparedFinding wrappers (finding under
+  // .current for new, .previous for resolved) — mirror review-differ output.
   const DIFF_OSCILLATED = {
-    new: [{ severity: 'major', file: 'src/a.mjs', title: 'New issue' }],
-    resolved: [{ severity: 'minor', file: 'src/b.mjs', title: 'Fixed issue' }],
+    new: [
+      {
+        fingerprint: 'fp-new',
+        changeStatus: 'new',
+        current: { severity: 'major', file: 'src/a.mjs', title: 'New issue' },
+        previous: null,
+      },
+    ],
+    resolved: [
+      {
+        fingerprint: 'fp-resolved',
+        changeStatus: 'resolved',
+        current: null,
+        previous: { severity: 'minor', file: 'src/b.mjs', title: 'Fixed issue' },
+      },
+    ],
     persisting: [],
     oscillated: [
       {
@@ -139,6 +155,11 @@ describe('formatLoopDashboardHtml (#1191)', () => {
     assert.ok(html.includes('oscillated 1'));
     assert.ok(html.includes('N+1 query'), 'oscillated finding title present');
     assert.ok(html.includes('●') && html.includes('○'), 'present/absent markers');
+    // ComparedFinding fields must be unwrapped (.current / .previous), not undefined.
+    assert.ok(html.includes('New issue'), 'new finding title (from .current)');
+    assert.ok(html.includes('src/a.mjs'), 'new finding file (from .current)');
+    assert.ok(html.includes('Fixed issue'), 'resolved finding title (from .previous)');
+    assert.ok(html.includes('src/b.mjs'), 'resolved finding file (from .previous)');
   });
 
   it('handles no oscillation gracefully', () => {
@@ -153,7 +174,14 @@ describe('formatLoopDashboardHtml (#1191)', () => {
   it('escapes XSS in finding fields and run ids', () => {
     const html = formatLoopDashboardHtml(
       {
-        new: [{ severity: 'info', file: '<script>x</script>', title: '<b>t</b>' }],
+        new: [
+          {
+            fingerprint: 'fp',
+            changeStatus: 'new',
+            current: { severity: 'info', file: '<script>x</script>', title: '<b>t</b>' },
+            previous: null,
+          },
+        ],
         resolved: [],
         persisting: [],
         oscillated: [],
@@ -167,7 +195,18 @@ describe('formatLoopDashboardHtml (#1191)', () => {
 
   it('tolerates a 2-run diff with no oscillated/timeline fields', () => {
     const html = formatLoopDashboardHtml(
-      { new: [{ severity: 'major', file: 'x', title: 'y' }], resolved: [], persisting: [] },
+      {
+        new: [
+          {
+            fingerprint: 'fp',
+            changeStatus: 'new',
+            current: { severity: 'major', file: 'x', title: 'y' },
+            previous: null,
+          },
+        ],
+        resolved: [],
+        persisting: [],
+      },
       { runIds: ['r1', 'r2'], suggestedLoopSignal: 'REVISE_REQUIRED' }
     );
     assert.ok(html.includes('REVISE_REQUIRED'));
