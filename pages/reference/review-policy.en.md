@@ -21,6 +21,7 @@ Reviews are conducted from the following perspectives:
 - **Performance**: Execution efficiency, resource usage, scalability
 - **Security**: Vulnerabilities, data protection, authentication and authorization appropriateness
 - **Maintainability**: Debuggability, test coverage, documentation
+- **Operations**: Observability, ease of incident investigation, safe rollout and rollback. For diffs touching infra, schema, config, public APIs, or authorization, check log/monitoring sufficiency, secret leakage, migration safety, the need for feature flags or staged rollout, and the blast radius on failure.
 
 ### 1.3 Review Attitude
 
@@ -52,6 +53,14 @@ AI review outputs follow this structure:
 - Concrete improvement proposals or alternative implementations
 - Show code examples or refactoring directions
 - Provide links to relevant documentation or best practices when necessary
+
+### 2.4 Optional Sections
+
+To strengthen the basis for judgment, add the following when useful. All are optional and do not change the severity labels or finding structure (backward-compatible).
+
+- **Good Points**: Sound design decisions or appropriate test additions worth keeping, so the review is not purely a list of problems.
+- **Missing Tests**: Test angles that should be added (absent error/boundary/regression cases). Surfaces the absence of tests, which is hard to express as a finding.
+- **Follow-up Issues**: Concerns outside this change's scope that should be tracked separately. Connects to the practice of tracking non-blocker Majors in separate issues.
 
 ## 3. Prohibited Actions
 
