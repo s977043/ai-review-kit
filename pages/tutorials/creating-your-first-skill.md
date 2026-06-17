@@ -13,10 +13,10 @@ Upstream → Midstream → Downstream のフローに従うシンプルな River
 
 ```yaml
 ---
-id: rr-hello
+id: rr-midstream-hello-skill-001
 name: Hello World Skill
 description: Markdown 内の TODO コメントを検出する
-phase: midstream
+category: midstream
 applyTo:
   - '**/*.md'
 tags:

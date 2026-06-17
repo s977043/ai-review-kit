@@ -15,8 +15,8 @@ River Review のスキルは、メタデータに YAML frontmatter を使用し�
 - `trigger` (object, optional): `phase` と `applyTo` (または `files`) のラッパー。トップレベルと `trigger` の値の両方が存在する場合、トップレベルが優先される。
 - `tags` (string[], optional): 関連するスキルをグループ化するキーワード。
 - `severity` (string, optional): 影響レベル。`info`/`minor`/`major`/`critical` のいずれか。
-- `inputContext` (string[], optional): スキルが期待する必須入力。許可される値には `diff` | `fullFile` | `tests` | `adr` | `commitMessage` | `repoConfig` がある。
-- `outputKind` (string[], optional, default `['findings']`): スキルによって生成される出力カテゴリ。典型的な値: `findings` | `summary` | `actions` | `tests` | `metrics` | `questions`。省略時は `findings` がデフォルトになる。
+- `inputContext` (string[], optional): スキルが期待する必須入力。許可される値は `diff` | `fullFile` | `tests` | `adr` | `commitMessage` | `repoConfig` | `reviewSelf` | `reviewExternal` | `findingsPool` | `prDescription`。
+- `outputKind` (string[], optional, default `['findings']`): スキルによって生成される出力カテゴリ。許可される値は `findings` | `summary` | `actions` | `tests` | `metrics` | `questions` | `review-audit`。省略時は `findings` がデフォルトになる。
 - `modelHint` (string, optional): モデル選択のヒント。`cheap`/`balanced`/`high-accuracy` のいずれか。
 - `dependencies` (string[], optional): 必要なダウンストリームツール/リソース。例: `code_search` | `test_runner` | `adr_lookup` | `repo_metadata` | `coverage_report` | `tracing` | `custom:*`（拡張機能用）。
 

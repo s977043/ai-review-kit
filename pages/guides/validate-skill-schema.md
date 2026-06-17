@@ -15,9 +15,9 @@
    - `id`
    - `name`
    - `description`
-   - `phase`
-   - `applyTo`
-4. `phase` が意図したフローセグメントと一致することを確認し、ノイズの多い一致を避けるために `applyTo` グロブを調整する。
+   - `category`（ルーティングの第一キー。`phase` は後方互換のため残る任意フィールド）
+   - `applyTo`（または `files` / `path_patterns`）
+4. `category` が意図したフローセグメント（`core` / `upstream` / `midstream` / `downstream`）と一致することを確認し、ノイズの多い一致を避けるために `applyTo` グロブを調整する。
 5. エラーがなくなるまでバリデータを再実行し、PR にコマンドの出力を含める。
 
 ## ヒント

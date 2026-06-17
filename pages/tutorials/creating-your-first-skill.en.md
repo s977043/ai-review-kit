@@ -9,14 +9,14 @@ Build a simple River Review skill that follows the Upstream → Midstream → Do
 
 ## 1. Draft the skill metadata
 
-Create a new Markdown file under `skills/` (for example `skills/midstream/rr-midstream-hello-skill-001.md`) and include metadata that matches `/schemas/skill.schema.json`:
+Create a directory named after the skill ID under `skills/` and place a `SKILL.md` inside it (for example `skills/midstream/rr-midstream-hello-skill-001/SKILL.md`), with metadata that matches `/schemas/skill.schema.json`:
 
 ```yaml
 ---
-id: rr-hello-en
+id: rr-midstream-hello-skill-001
 name: Hello World Skill
 description: Flags TODO comments in Markdown
-phase: upstream
+category: midstream
 applyTo:
   - '**/*.md'
 tags:

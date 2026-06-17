@@ -15,8 +15,8 @@ The required fields are `id` / `name` / `description` / `category`. In addition,
 - `trigger` (object, optional): wrapper for `phase` and `applyTo` (or `files`). If both top-level and `trigger` values exist, top-level takes precedence.
 - `tags` (string[], optional): keywords that group related skills.
 - `severity` (string, optional): impact level; one of `info`/`minor`/`major`/`critical`.
-- `inputContext` (string[], optional): required inputs the skill expects. Allowed values include `diff` | `fullFile` | `tests` | `adr` | `commitMessage` | `repoConfig`.
-- `outputKind` (string[], optional, default `['findings']`): output categories produced by the skill. Typical values: `findings` | `summary` | `actions` | `tests` | `metrics` | `questions`.
+- `inputContext` (string[], optional): required inputs the skill expects. Allowed values are `diff` | `fullFile` | `tests` | `adr` | `commitMessage` | `repoConfig` | `reviewSelf` | `reviewExternal` | `findingsPool` | `prDescription`.
+- `outputKind` (string[], optional, default `['findings']`): output categories produced by the skill. Allowed values are `findings` | `summary` | `actions` | `tests` | `metrics` | `questions` | `review-audit`.
 - `modelHint` (string, optional): model selection hint; one of `cheap`/`balanced`/`high-accuracy`.
 - `dependencies` (string[], optional): downstream tools/resources required. Examples: `code_search` | `test_runner` | `adr_lookup` | `repo_metadata` | `coverage_report` | `tracing` | `custom:*` for extensions.
 

@@ -8,15 +8,15 @@ River Review のすべてのスキルは、以下の JSON スキーマに準拠�
 
 ## 必須フィールド
 
-| フィールド  | 説明                                     |
-| ----------- | ---------------------------------------- |
-| id          | 一意のスキル識別子（rr-xxxx 形式を推奨） |
-| name        | 人間が読めるスキル名                     |
-| description | スキルが何をチェックするか               |
-| phase       | upstream / midstream / downstream        |
-| applyTo     | ファイルのグロブパターン                 |
+| フィールド  | 説明                                                               |
+| ----------- | ------------------------------------------------------------------ |
+| id          | 一意のスキル識別子（ディレクトリ名と一致させる）                   |
+| name        | 人間が読めるスキル名                                               |
+| description | スキルが何をチェックするか                                         |
+| category    | core / upstream / midstream / downstream（ルーティングの第一キー） |
+| applyTo     | ファイルのグロブパターン                                           |
 
-`phase` と `applyTo` はトップレベルまたは `trigger` 内に書けます（`trigger.phase`, `trigger.applyTo` / `trigger.files`）。両方指定した場合はトップレベルが優先されます。
+`category` がルーティングの第一キーで必須です。`phase`（`upstream` / `midstream` / `downstream`）は後方互換のため残る任意フィールドで、新規スキルでは `category` を使います。`category` / `applyTo` はトップレベルまたは `trigger` 内に書けます（両方指定した場合はトップレベルが優先）。
 
 ## 例
 

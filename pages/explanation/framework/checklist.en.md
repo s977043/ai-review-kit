@@ -23,4 +23,4 @@ The core of the AI reviewer is a reproducible **multi-dimensional checklist**.
 
 - Principles like SOLID, Layering, Dependency direction, Separation of concerns
 
-> Implementation Note: Connect with `guides/authoring-checks.md` in this repository, and declare check items in **machine-readable (e.g., YAML)** form -> Evaluate/Aggregate in CI.
+> Implementation Note: Connect with the [Add a new skill guide](/guides/add-new-skill) in this repository, and declare check items in **machine-readable (e.g., YAML)** form -> Evaluate/Aggregate in CI.
