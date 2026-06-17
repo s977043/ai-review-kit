@@ -44485,6 +44485,7 @@ function computeFindingBreakdown(finding) {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   Cq: () => (/* binding */ resolveVerdict),
 /* harmony export */   lS: () => (/* binding */ scoreReview),
 /* harmony export */   w8: () => (/* binding */ classifyAxis)
 /* harmony export */ });
@@ -44636,6 +44637,27 @@ function scoreReview(findings, { humanApprovalRequired = false } = {}) {
     ...(0,_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(f),
   }));
   return { overall, axes, verdict, counts, findingBreakdowns, derived: true };
+}
+
+/**
+ * Resolve the verdict a formatter should render (#1170 F3).
+ *
+ * The canonical verdict is finalized once on the artifact (`artifact.decision`),
+ * reflecting gate signals such as `humanApprovalRequired` that formatters do not
+ * receive. Prefer that canonical value over a formatter-local recomputation,
+ * which would silently drop those signals and let the verdict drift across the
+ * JSON / YAML / HTML / Markdown outputs. Fall back to the recomputed verdict
+ * when no canonical decision is present (the run / diff path never sets one).
+ *
+ * @param {unknown} canonicalDecision - `artifact.decision`, may be absent.
+ * @param {string} recomputedVerdict - `scoreReview(findings).verdict`.
+ * @returns {string} The verdict to display.
+ */
+function resolveVerdict(canonicalDecision, recomputedVerdict) {
+  if (typeof canonicalDecision === 'string' && canonicalDecision.length > 0) {
+    return canonicalDecision;
+  }
+  return recomputedVerdict;
 }
 
 /**
@@ -61733,6 +61755,9 @@ function formatPrioritySummaryMarkdown(result) {
 function formatScoreSectionMarkdown(result, phase) {
   const artifact = formatJsonOutput(result, phase);
   const score = (0,engine/* scoreReview */.lS)(artifact.issues ?? []);
+  // formatJsonOutput already resolved the canonical verdict; reuse it so the
+  // Markdown score section cannot drift from JSON/YAML/HTML (#1170 F3).
+  score.verdict = (0,engine/* resolveVerdict */.Cq)(artifact.decision, score.verdict);
   const lines = ['### スコア (参考値)'];
   lines.push('');
   lines.push(`結果(スコア): **${score.overall}/100**`);
@@ -61881,9 +61906,15 @@ function formatJsonOutput(result, phase) {
   }
   let decision;
   try {
-    decision = (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict;
+    // Prefer the canonical verdict if the result already carries one (#1170 F3);
+    // otherwise derive it from the findings present.
+    decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
   } catch {
-    // scoring failure: omit decision (same fail-safe as finalizeArtifact)
+    // scoring failure: fall back to the canonical decision if present, else omit
+    // (same fail-safe as finalizeArtifact).
+    if (typeof result.decision === 'string' && result.decision.length > 0) {
+      decision = result.decision;
+    }
   }
   return {
     issues,
@@ -62615,19 +62646,25 @@ Dependencies: ${
       printMarkdownReport(result, parsed.phase);
     } else if (parsed.output === 'yaml') {
       const { formatYamlOutput } = await __nccwpck_require__.e(/* import() */ 610).then(__nccwpck_require__.bind(__nccwpck_require__, 4610));
+      const jsonOutput = formatJsonOutput(result, parsed.phase);
       const artifact = {
         phase: parsed.phase,
         timestamp: new Date().toISOString(),
-        findings: formatJsonOutput(result, parsed.phase).issues,
+        findings: jsonOutput.issues,
         plan: result.plan,
+        // Propagate the canonical verdict so YAML matches JSON (#1170 F3).
+        ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
       };
       console.log(formatYamlOutput(artifact));
     } else if (parsed.output === 'html') {
       const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+      const jsonOutput = formatJsonOutput(result, parsed.phase);
       const htmlResult = {
         findings: result.findings ?? [],
         plan: result.plan,
         timestamp: new Date().toISOString(),
+        // Propagate the canonical verdict so HTML matches JSON (#1170 F3).
+        ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
       };
       console.log(formatHtmlOutput(htmlResult, parsed.phase));
     } else {
