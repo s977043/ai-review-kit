@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.0](https://github.com/s977043/river-review/compare/v1.20.0...v1.21.0) (2026-06-17)
+
+
+### Features
+
+* **eval:** convergence efficiency evaluator ([#1171](https://github.com/s977043/river-review/issues/1171) item4) ([#1188](https://github.com/s977043/river-review/issues/1188)) ([3552a87](https://github.com/s977043/river-review/commit/3552a876725a2ac43fe60439a4ff65ed71964ae1))
+
 ## [1.20.0](https://github.com/s977043/river-review/compare/v1.19.0...v1.20.0) (2026-06-17)
 
 
