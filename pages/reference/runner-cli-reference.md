@@ -17,10 +17,13 @@ Python の例を実行する前に、`pip install jsonschema` で必要な依存
 
 `--reviewers auto` を指定すると、diff の内容を解析してレビュアーロールを自動選択します。`bug-hunter` は常に含まれ、以下のシグナルに基づいて追加ロールが加わります。
 
-| シグナル                                                                                             | 追加されるロール   |
-| ---------------------------------------------------------------------------------------------------- | ------------------ |
-| config / schema / migration / infra ファイルが変更されている、またはリスク評価済みファイルが存在する | `security-scanner` |
-| test ファイルが変更されている、または app ファイルが 3 件以上ある                                    | `test-gap`         |
+| シグナル                                                                                                             | 追加されるロール      |
+| -------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| config / schema / migration / infra ファイルが変更されている、またはリスク評価済みファイルが存在する                 | `security-scanner`    |
+| test ファイルが変更されている、または app ファイルが 3 件以上ある                                                    | `test-gap`            |
+| package manifest / lockfile（`package.json` / `package-lock.json` / `pnpm-lock.yaml` / `yarn.lock`）が変更されている | `dependency-reviewer` |
+| UI / コンポーネント / スタイル（`.tsx` / `.jsx` / `.css` / `.scss` / `.vue` / `.svelte`）が変更されている            | `frontend-reviewer`   |
+| `.github/workflows/` 配下のワークフローが変更されている                                                              | `ci-cd-reviewer`      |
 
 シグナルが何もない場合は `bug-hunter` のみが使われます。
 

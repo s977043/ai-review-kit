@@ -29,6 +29,31 @@ Report only security issues. Do NOT report logic bugs or style concerns.`,
 - Tests that are present but do not assert meaningful outcomes
 Report only test coverage gaps. Do NOT report implementation bugs or style issues.`,
   },
+  'dependency-reviewer': {
+    label: 'Dependency Reviewer',
+    focusInstructions: `You are the Dependency Reviewer. Focus exclusively on changes to package manifests and lockfiles:
+- Supply-chain risk (new/unfamiliar packages, scope/owner changes, typosquatting)
+- Version jumps that may carry breaking changes; missing peer dependencies
+- Production vs dev dependency placement; unjustified additions
+- Lockfile drift inconsistent with the manifest change
+Report only dependency concerns. Do NOT report unrelated logic or style issues.`,
+  },
+  'frontend-reviewer': {
+    label: 'Frontend Reviewer',
+    focusInstructions: `You are the Frontend Reviewer. Focus exclusively on UI/component and styling changes:
+- Accessibility (semantic HTML, ARIA, keyboard navigation, color contrast)
+- Avoidable re-renders and client-side performance
+- Responsive/layout regressions and unhandled loading/error states
+Report only frontend/UX concerns. Do NOT report backend logic or security bugs.`,
+  },
+  'ci-cd-reviewer': {
+    label: 'CI/CD Reviewer',
+    focusInstructions: `You are the CI/CD Reviewer. Focus exclusively on workflow and pipeline changes:
+- Unpinned/over-permissioned actions, secret exposure in logs, injection via untrusted inputs
+- Missing or weakened required checks; non-deterministic or flaky steps
+- Safe rollout/rollback of the pipeline itself
+Report only CI/CD concerns. Do NOT report application logic or style issues.`,
+  },
 };
 
 export const DEFAULT_REVIEWERS = ['bug-hunter', 'security-scanner'];
@@ -74,8 +99,34 @@ export function selectRolesAuto(fileTypes, riskAssessment) {
     roles.add('test-gap');
   }
 
+  // Dependency: package manifest / lockfile changes (classified under `config`).
+  const configList = fileTypes?.config ?? [];
+  if (
+    configList.some((f) => RE_DEPENDENCY_FILE.test(f.replaceAll('\\', '/').split('/').pop() ?? ''))
+  ) {
+    roles.add('dependency-reviewer');
+  }
+
+  // Frontend: UI/component/styling files (classified under `app`).
+  const appList = fileTypes?.app ?? [];
+  if (appList.some((f) => RE_FRONTEND_FILE.test(f))) {
+    roles.add('frontend-reviewer');
+  }
+
+  // CI/CD: workflow definitions (classified under `infra`).
+  const infraList = fileTypes?.infra ?? [];
+  if (infraList.some((f) => RE_CI_WORKFLOW.test(f.replaceAll('\\', '/')))) {
+    roles.add('ci-cd-reviewer');
+  }
+
   return [...roles];
 }
+
+// Sub-classification patterns for auto role selection (#1196 S3). These refine
+// the coarse file-classifier buckets (config/app/infra) without changing them.
+const RE_DEPENDENCY_FILE = /^(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$/;
+const RE_FRONTEND_FILE = /\.(?:tsx|jsx|css|scss|sass|less|vue|svelte)$/;
+const RE_CI_WORKFLOW = /\.github\/workflows\//;
 
 /**
  * Split diff files into groups for parallel chunk execution.

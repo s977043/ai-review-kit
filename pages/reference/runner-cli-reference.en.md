@@ -12,10 +12,13 @@ The `--reviewers` flag on `river run` accepts a comma-separated list of role nam
 
 When `--reviewers auto` is specified, River Review analyzes the diff content and selects reviewer roles automatically. `bug-hunter` is always included; additional roles are added based on the following signals:
 
-| Signal                                                                           | Role added         |
-| -------------------------------------------------------------------------------- | ------------------ |
-| config / schema / migration / infra files changed, or risk-escalated files exist | `security-scanner` |
-| test files changed, or 3 or more app files changed                               | `test-gap`         |
+| Signal                                                                                                      | Role added            |
+| ----------------------------------------------------------------------------------------------------------- | --------------------- |
+| config / schema / migration / infra files changed, or risk-escalated files exist                            | `security-scanner`    |
+| test files changed, or 3 or more app files changed                                                          | `test-gap`            |
+| package manifest / lockfile changed (`package.json` / `package-lock.json` / `pnpm-lock.yaml` / `yarn.lock`) | `dependency-reviewer` |
+| UI / component / styling files changed (`.tsx` / `.jsx` / `.css` / `.scss` / `.vue` / `.svelte`)            | `frontend-reviewer`   |
+| Workflows under `.github/workflows/` changed                                                                | `ci-cd-reviewer`      |
 
 If no signals are detected, only `bug-hunter` is used.
 
