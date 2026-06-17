@@ -560,6 +560,48 @@ skills:
     recommended: true
     description: '変更に含まれる設計判断・実装選択の論理的整合性を徹底的に検証し、確証バイアスを排除して判断精度を高める'
 
+  - id: rr-midstream-self-contradiction-001
+    version: '0.1.0'
+    name: 'Self-Contradiction Detector 自己矛盾検出'
+    path: skills/midstream/rr-midstream-self-contradiction-001/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [adversarial, self-contradiction, claim-vs-actual, consistency, midstream, cognitive-bias]
+    severity: major
+    recommended: true
+    description: '同一ファイル/隣接ファイル内で「規則Xを守れ」と宣言した直後にXを破っている、宣言と実装の乖離を検出する'
+
+  - id: rr-midstream-refactor-claim-audit-001
+    version: '0.1.0'
+    name: 'Refactor-Claim Audit リファクタ完了主張の検証'
+    path: skills/midstream/rr-midstream-refactor-claim-audit-001/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [adversarial, refactor-claim, claim-vs-actual, verification, midstream, cognitive-bias]
+    severity: major
+    recommended: true
+    description: 'コミット/PR の「全部置換した」「-N%削減」等の完了主張を、grep で反証できる残骸や best/typical/worst 試算で検証する'
+
+  - id: rr-midstream-cross-file-leakage-001
+    version: '0.1.0'
+    name: 'Cross-File Leakage リファクタ後の caller 側残骸検出'
+    path: skills/midstream/rr-midstream-cross-file-leakage-001/SKILL.md
+    category: midstream
+    phase: midstream
+    tags:
+      [
+        adversarial,
+        cross-file-leakage,
+        claim-vs-actual,
+        refactor,
+        caller-drift,
+        midstream,
+        cognitive-bias,
+      ]
+    severity: major
+    recommended: true
+    description: 'モジュール/スキルの構造変更で当該ファイルは更新したが、caller 側が古い構造（旧参照・旧シグネチャ・旧採番）を参照したまま残るパターンを検出する'
+
   - id: rr-upstream-laravel-migration-safety-001
     version: '0.1.0'
     name: 'Laravel Migration Safety Review'
@@ -1192,6 +1234,9 @@ recommendations:
       - rr-upstream-pre-mortem-001
       - rr-midstream-war-game-001
       - rr-midstream-logic-torturing-001
+      - rr-midstream-self-contradiction-001
+      - rr-midstream-refactor-claim-audit-001
+      - rr-midstream-cross-file-leakage-001
 
   multitenancy:
     description: 'Recommended skills for multi-tenant SaaS applications'
