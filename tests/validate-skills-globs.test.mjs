@@ -35,7 +35,11 @@ describe('findBadGlobs', () => {
   test('tolerates missing / non-array / non-string entries', () => {
     assert.deepEqual(findBadGlobs(undefined), []);
     assert.deepEqual(findBadGlobs({}), []);
-    assert.deepEqual(findBadGlobs({ applyTo: 'not-an-array' }), []);
     assert.deepEqual(findBadGlobs({ applyTo: [null, 42, '**/*.{sql}'] }), ['**/*.{sql}']);
+  });
+
+  test('handles a scalar string applyTo (pre-normalization frontmatter)', () => {
+    assert.deepEqual(findBadGlobs({ applyTo: '**/*.{sql}' }), ['**/*.{sql}']);
+    assert.deepEqual(findBadGlobs({ applyTo: '**/*.sql' }), []);
   });
 });

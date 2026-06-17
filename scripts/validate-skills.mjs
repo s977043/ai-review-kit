@@ -33,11 +33,10 @@ const RE_SINGLE_BRACE = /\{[^,}]*\}/;
  */
 export function findBadGlobs(metadata) {
   const meta = metadata ?? {};
-  const globs = [
-    ...(Array.isArray(meta.applyTo) ? meta.applyTo : []),
-    ...(Array.isArray(meta.files) ? meta.files : []),
-    ...(Array.isArray(meta.path_patterns) ? meta.path_patterns : []),
-  ];
+  // Frontmatter may give a single string instead of an array before schema
+  // normalization — accept both so a scalar pattern is not silently skipped.
+  const toArray = (val) => (Array.isArray(val) ? val : typeof val === 'string' ? [val] : []);
+  const globs = [...toArray(meta.applyTo), ...toArray(meta.files), ...toArray(meta.path_patterns)];
   return globs.filter((g) => typeof g === 'string' && RE_SINGLE_BRACE.test(g));
 }
 
