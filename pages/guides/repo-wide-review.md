@@ -49,7 +49,7 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # repo-wide context collector が周辺コミット履歴を読むため必須
       - name: Run River Review (midstream)

@@ -10,7 +10,6 @@ River Review を最小構成で動かすための流れです。
    name: My Check
    description: サンプルのコード品質チェック
    category: midstream
-   phase: midstream
    applyTo:
      - 'src/**/*.ts'
    severity: minor

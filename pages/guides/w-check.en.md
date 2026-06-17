@@ -112,7 +112,7 @@ jobs:
   ai-reviews:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run AI reviews
         run: |
@@ -131,7 +131,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: ai-reviews
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download review artifacts
         uses: actions/download-artifact@v4
