@@ -50,6 +50,13 @@ describe('mergeFindings — adversarial set (#1171 item5)', () => {
     const merged = mergeFindings(reversed);
     assert.equal(merged.length, 1);
     assert.equal(merged[0].severity, 'critical');
+    // severity/evidence/agreement must be invariant under input order.
+    assert.deepEqual(sorted(merged[0].evidence), ['e-a', 'e-b', 'e-c']);
+    assert.deepEqual(sorted(merged[0].agreement), [
+      'bug-hunter',
+      'perf-auditor',
+      'security-scanner',
+    ]);
   });
 
   test('line-shift within ±2 merges; a 3-line gap does not', () => {
@@ -81,9 +88,11 @@ describe('mergeFindings — adversarial set (#1171 item5)', () => {
     assert.equal(merged.length, 2);
 
     const cluster = merged.find((f) => f.file === 'src/cache.mjs');
+    assert.ok(cluster, 'should find merged cluster for src/cache.mjs');
     assert.deepEqual(sorted(cluster.agreement), ['bug-hunter', 'security-scanner']);
 
     const solo = merged.find((f) => f.file === 'src/other.mjs');
+    assert.ok(solo, 'should find solo finding for src/other.mjs');
     assert.deepEqual(
       solo.agreement,
       ['perf-auditor'],
