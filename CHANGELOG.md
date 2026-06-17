@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.0](https://github.com/s977043/river-review/compare/v1.21.0...v1.22.0) (2026-06-17)
+
+
+### Features
+
+* **html:** loop dashboard for runs diff --output html ([#1191](https://github.com/s977043/river-review/issues/1191)) ([#1192](https://github.com/s977043/river-review/issues/1192)) ([cbcca8f](https://github.com/s977043/river-review/commit/cbcca8f40900e9fc517f9db36cb1167d8916a8b1))
+
 ## [1.21.0](https://github.com/s977043/river-review/compare/v1.20.0...v1.21.0) (2026-06-17)
 
 
