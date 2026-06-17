@@ -1821,19 +1821,25 @@ Dependencies: ${
       printMarkdownReport(result, parsed.phase);
     } else if (parsed.output === 'yaml') {
       const { formatYamlOutput } = await import('./lib/output-formatters/yaml.mjs');
+      const jsonOutput = formatJsonOutput(result, parsed.phase);
       const artifact = {
         phase: parsed.phase,
         timestamp: new Date().toISOString(),
-        findings: formatJsonOutput(result, parsed.phase).issues,
+        findings: jsonOutput.issues,
         plan: result.plan,
+        // Propagate the canonical verdict so YAML matches JSON (#1170 F3).
+        ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
       };
       console.log(formatYamlOutput(artifact));
     } else if (parsed.output === 'html') {
       const { formatHtmlOutput } = await import('./lib/output-formatters/html.mjs');
+      const jsonOutput = formatJsonOutput(result, parsed.phase);
       const htmlResult = {
         findings: result.findings ?? [],
         plan: result.plan,
         timestamp: new Date().toISOString(),
+        // Propagate the canonical verdict so HTML matches JSON (#1170 F3).
+        ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
       };
       console.log(formatHtmlOutput(htmlResult, parsed.phase));
     } else {
