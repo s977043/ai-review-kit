@@ -7,8 +7,8 @@ category: upstream
 phase: upstream
 applyTo:
   - '**/*schema*.{sql,prisma}'
-  - '**/*migrate*/**/*.{sql}'
-  - '**/*migration*/**/*.{sql}'
+  - '**/*migrate*/**/*.sql'
+  - '**/*migration*/**/*.sql'
   - '**/*ddl*.sql'
   - '**/*erd*.{md,png,svg}'
   - 'docs/**/*db*.md'
