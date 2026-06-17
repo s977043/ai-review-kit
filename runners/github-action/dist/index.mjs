@@ -44310,21 +44310,19 @@ function selectRolesAuto(fileTypes, riskAssessment) {
 
   // Dependency: package manifest / lockfile changes (classified under `config`).
   const configList = fileTypes?.config ?? [];
-  if (
-    configList.some((f) => RE_DEPENDENCY_FILE.test(f.replaceAll('\\', '/').split('/').pop() ?? ''))
-  ) {
+  if (configList.some((f) => RE_DEPENDENCY_FILE.test(basenameOf(f)))) {
     roles.add('dependency-reviewer');
   }
 
   // Frontend: UI/component/styling files (classified under `app`).
   const appList = fileTypes?.app ?? [];
-  if (appList.some((f) => RE_FRONTEND_FILE.test(f))) {
+  if (appList.some((f) => RE_FRONTEND_FILE.test(normalizePath(f)))) {
     roles.add('frontend-reviewer');
   }
 
   // CI/CD: workflow definitions (classified under `infra`).
   const infraList = fileTypes?.infra ?? [];
-  if (infraList.some((f) => RE_CI_WORKFLOW.test(f.replaceAll('\\', '/')))) {
+  if (infraList.some((f) => RE_CI_WORKFLOW.test(normalizePath(f)))) {
     roles.add('ci-cd-reviewer');
   }
 
@@ -44336,6 +44334,14 @@ function selectRolesAuto(fileTypes, riskAssessment) {
 const RE_DEPENDENCY_FILE = /^(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$/;
 const RE_FRONTEND_FILE = /\.(?:tsx|jsx|css|scss|sass|less|vue|svelte)$/;
 const RE_CI_WORKFLOW = /\.github\/workflows\//;
+
+// Null-safe path helpers: list elements may be non-strings in malformed input.
+function normalizePath(f) {
+  return typeof f === 'string' ? f.replaceAll('\\', '/') : '';
+}
+function basenameOf(f) {
+  return normalizePath(f).split('/').pop() ?? '';
+}
 
 /**
  * Split diff files into groups for parallel chunk execution.
