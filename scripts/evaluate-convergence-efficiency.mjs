@@ -35,6 +35,25 @@ function round4(n) {
 }
 
 /**
+ * Sort run records chronologically (oldest first), NaN-safe with a runId
+ * tie-break — mirrors diffRunHistory so the "final run" metrics stay consistent
+ * with the internally-sorted oscillation count regardless of input order.
+ */
+function sortRunsChronologically(runs) {
+  return [...runs].sort((a, b) => {
+    const ta = a?.timestamp != null ? new Date(a.timestamp).getTime() : NaN;
+    const tb = b?.timestamp != null ? new Date(b.timestamp).getTime() : NaN;
+    const aNaN = Number.isNaN(ta);
+    const bNaN = Number.isNaN(tb);
+    if (aNaN && bNaN) return (a?.runId ?? '').localeCompare(b?.runId ?? '');
+    if (aNaN) return 1;
+    if (bNaN) return -1;
+    if (ta !== tb) return ta - tb;
+    return (a?.runId ?? '').localeCompare(b?.runId ?? '');
+  });
+}
+
+/**
  * Compute convergence metrics for a single run sequence.
  *
  * A "run" is a record shaped like `{ runId, timestamp, findings: [{severity,
@@ -51,7 +70,9 @@ function round4(n) {
  * }}
  */
 export function evaluateConvergence(runs) {
-  const list = Array.isArray(runs) ? runs : [];
+  // Sort defensively so "final run" metrics match the internally-sorted
+  // oscillation count even when the caller passes runs out of order.
+  const list = sortRunsChronologically(Array.isArray(runs) ? runs : []);
   const turnCount = list.length;
 
   const finalFindings = Array.isArray(list[turnCount - 1]?.findings)
@@ -130,8 +151,15 @@ function formatReport(results) {
   return lines.join('\n');
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+const isDirectRun = (() => {
+  try {
+    // realpathSync throws if argv[1] is a non-existent / synthetic path (some
+    // test runners / bundlers): importing this module must never crash.
+    return process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+  } catch {
+    return false;
+  }
+})();
 if (isDirectRun) {
   const args = process.argv.slice(2);
   const idx = args.indexOf('--cases');

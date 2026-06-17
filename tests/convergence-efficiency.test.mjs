@@ -85,6 +85,19 @@ describe('evaluateConvergence', () => {
     assert.equal(evaluateConvergence(runs).oscillationCount, 1);
   });
 
+  test('is order-independent: unsorted input yields the same final-run metrics', () => {
+    const early = {
+      runId: 'r1',
+      timestamp: '2026-06-17T00:00:01.000Z',
+      findings: [{ severity: 'critical' }],
+    };
+    const late = { runId: 'r2', timestamp: '2026-06-17T00:00:02.000Z', findings: [] };
+    const sorted = evaluateConvergence([early, late]);
+    const shuffled = evaluateConvergence([late, early]);
+    assert.deepEqual(shuffled, sorted);
+    assert.equal(shuffled.converged, true); // final run (late) has no blocking findings
+  });
+
   test('no oscillation with fewer than 3 runs', () => {
     const f = {
       ruleId: 'rr-mid-perf-n1',
