@@ -270,6 +270,69 @@ describe('selectRolesAuto', () => {
     );
     assert.deepEqual(roles, ['bug-hunter']);
   });
+
+  // #1196 S3: richer risk-based routing
+  it('adds dependency-reviewer for package manifest / lockfile changes', () => {
+    const roles = selectRolesAuto(
+      {
+        test: [],
+        app: [],
+        config: ['package.json', 'pnpm-lock.yaml'],
+        schema: [],
+        migration: [],
+        infra: [],
+      },
+      null
+    );
+    assert.ok(roles.includes('dependency-reviewer'));
+  });
+
+  it('adds frontend-reviewer for UI/component/styling files', () => {
+    const roles = selectRolesAuto(
+      {
+        test: [],
+        app: ['src/components/Button.tsx', 'src/styles/app.css'],
+        config: [],
+        schema: [],
+        migration: [],
+        infra: [],
+      },
+      null
+    );
+    assert.ok(roles.includes('frontend-reviewer'));
+  });
+
+  it('adds ci-cd-reviewer for workflow changes', () => {
+    const roles = selectRolesAuto(
+      {
+        test: [],
+        app: [],
+        config: [],
+        schema: [],
+        migration: [],
+        infra: ['.github/workflows/test.yml'],
+      },
+      null
+    );
+    assert.ok(roles.includes('ci-cd-reviewer'));
+  });
+
+  it('does not add the new roles for unrelated changes', () => {
+    const roles = selectRolesAuto(
+      {
+        test: [],
+        app: ['src/lib/foo.ts'],
+        config: ['app.config.ts'],
+        schema: [],
+        migration: [],
+        infra: ['scripts/build.mjs'],
+      },
+      null
+    );
+    assert.ok(!roles.includes('dependency-reviewer'));
+    assert.ok(!roles.includes('frontend-reviewer'));
+    assert.ok(!roles.includes('ci-cd-reviewer'));
+  });
 });
 
 describe('splitDiffIntoChunks', () => {
