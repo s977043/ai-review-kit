@@ -17,7 +17,7 @@
    # 失敗時の出力例（未知の phase 値）
    $ npm run skills:validate
    ✖ skills/midstream/rr-midstream-foo-001/SKILL.md
-     ValidationError: "phase" must be one of [upstream, midstream, downstream, core]
+     ValidationError: "phase" must be one of [upstream, midstream, downstream]
        received: "release"
 
    # 失敗時の出力例（必須フィールド欠落）

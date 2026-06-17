@@ -124,7 +124,7 @@ jobs:
   ai-reviews:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Codex review
         run: codex review > codex-review.md
@@ -144,7 +144,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download review artifacts
         uses: actions/download-artifact@v4
