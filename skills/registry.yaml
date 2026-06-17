@@ -602,6 +602,17 @@ skills:
     recommended: true
     description: 'モジュール/スキルの構造変更で当該ファイルは更新したが、caller 側が古い構造（旧参照・旧シグネチャ・旧採番）を参照したまま残るパターンを検出する'
 
+  - id: rr-upstream-migration-safety-001
+    version: '0.1.0'
+    name: 'Migration Safety Review (framework-agnostic)'
+    path: skills/upstream/rr-upstream-migration-safety-001/SKILL.md
+    category: upstream
+    phase: upstream
+    tags: [migration, database, schema, safety, rollback, upstream]
+    severity: major
+    recommended: true
+    description: 'スキーマ/データ移行の安全性を framework 非依存で審査する（破壊的変更・ロック誘発・backfill・ロールバック可逆性・expand-contract）。prisma / typeorm / Rails / Django / Alembic / 生 SQL に横断適用。'
+
   - id: rr-upstream-laravel-migration-safety-001
     version: '0.1.0'
     name: 'Laravel Migration Safety Review'
