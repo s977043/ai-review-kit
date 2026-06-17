@@ -588,10 +588,19 @@ skills:
     path: skills/midstream/rr-midstream-cross-file-leakage-001/SKILL.md
     category: midstream
     phase: midstream
-    tags: [adversarial, cross-file-leakage, refactor, caller-drift, midstream, cognitive-bias]
+    tags:
+      [
+        adversarial,
+        cross-file-leakage,
+        claim-vs-actual,
+        refactor,
+        caller-drift,
+        midstream,
+        cognitive-bias,
+      ]
     severity: major
     recommended: true
-    description: 'モジュール/スキルの構造変更で当該ファイルは更新したが、caller 側が古い構造を参照したまま残るパターンを検出する'
+    description: 'モジュール/スキルの構造変更で当該ファイルは更新したが、caller 側が古い構造（旧参照・旧シグネチャ・旧採番）を参照したまま残るパターンを検出する'
 
   - id: rr-upstream-laravel-migration-safety-001
     version: '0.1.0'

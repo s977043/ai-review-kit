@@ -10,7 +10,16 @@ applyTo:
   - '**/*.md'
   - '**/SKILL.md'
   - '**/*.{yaml,yml,json}'
-tags: [adversarial, cross-file-leakage, refactor, caller-drift, midstream, cognitive-bias]
+tags:
+  [
+    adversarial,
+    cross-file-leakage,
+    claim-vs-actual,
+    refactor,
+    caller-drift,
+    midstream,
+    cognitive-bias,
+  ]
 severity: major
 inputContext: [diff, fullFile]
 outputKind: [findings, actions]

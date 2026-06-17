@@ -6,7 +6,7 @@
     {
       "id": "adversarial-review",
       "path": "skills/agent-skills/adversarial-review",
-      "checksum": "sha256:65c926203ae04d9539d36ac2b22455bd0055743ee803ced2eb435010a385c61e",
+      "checksum": "sha256:da20ff144735c904a4db10c60bda814239e8ffcd544642bc07b2fb01bb6a8535",
       "files": 2
     },
     {
@@ -156,7 +156,7 @@
     {
       "id": "rr-midstream-cross-file-leakage-001",
       "path": "skills/midstream/rr-midstream-cross-file-leakage-001",
-      "checksum": "sha256:000b7f18ecd0c46781777b111a5e167bc5c066a1a260fa0bb590199173cab228",
+      "checksum": "sha256:70834301dc5d9f24247c2a24aca9f9cbdb687a61235d4dc259962bbb7235884b",
       "files": 1
     },
     {

@@ -128,9 +128,9 @@ AIをレビューに使う最大の価値は、情報の整理ではなく **思
 - Pre-mortem: X件 (失敗シナリオ)
 - War Game: Y件 (攻撃シナリオ)
 - Logic Torturing: Z件 (論理的な穴)
-- Self-Contradiction: 件数 (宣言と実装の乖離)
-- Refactor-Claim Audit: 件数 (完了主張の反証)
-- Cross-File Leakage: 件数 (caller 側残骸)
+- Self-Contradiction: A件 (宣言と実装の乖離)
+- Refactor-Claim Audit: B件 (完了主張の反証)
+- Cross-File Leakage: C件 (caller 側残骸)
 
 ### 最も重大な発見
 
