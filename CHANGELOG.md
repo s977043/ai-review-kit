@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.1](https://github.com/s977043/river-review/compare/v1.18.0...v1.18.1) (2026-06-17)
+
+
+### Bug Fixes
+
+* single-source verdict in formatters via resolveVerdict ([#1170](https://github.com/s977043/river-review/issues/1170) F3) ([#1182](https://github.com/s977043/river-review/issues/1182)) ([d0df9ec](https://github.com/s977043/river-review/commit/d0df9ece11b4bc35cb2d08966e5a0bcac8fb1833))
+
 ## [1.18.0](https://github.com/s977043/river-review/compare/v1.17.0...v1.18.0) (2026-06-16)
 
 
