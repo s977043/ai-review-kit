@@ -1,6 +1,6 @@
 # Agents—Adding Project Knowledge Packs
 
-This guide outlines the steps to reuse PocketEitan AI agent assets in external repositories. Create knowledge packs for new projects based on `agents/spec/agent.schema.json` and `agents/examples/*.agent.yaml`.
+This guide outlines the steps to reuse PocketEitan AI agent assets in external repositories. The knowledge pack you build here is the part of River Review's three axes that brings a perspective-based review team definition into a project — turning tacit knowledge into versioned, repo-owned Skills (a Skill Registry) shared as a team asset. Create knowledge packs for new projects based on `agents/spec/agent.schema.json` and `agents/examples/*.agent.yaml`.
 
 ## Directory Structure
 

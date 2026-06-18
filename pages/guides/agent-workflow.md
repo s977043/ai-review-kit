@@ -5,6 +5,8 @@
 
 ## 概要
 
+River Review は、暗黙知を versioned / repo-owned な Skill（Skill Registry）として共有資産に変える 3 つの主軸で構成されます。第 1 に AI エージェントのレビュー能力を強化する **capability pack**（通常 LLM キー不要）。第 2 にレビュースキル（**Skill Registry**）。第 3 にレビュー用エージェントと観点別レビュアーの **review team**（`reviewer-orchestrator.mjs` による並列実行 + connected-components マージ、`--reviewers auto`）に verdict 付き critic を組み合わせた仕組みです。本ページは、この 3 主軸を各 AI エージェントからどう呼ぶかを扱います。
+
 River Review は **Claude Code / Codex プラグイン** として配布されます。第一のエントリポイントは、同梱の **skill ルーティングレビュー**（`river-review` オーケストレーターエージェント + `skills/agent-skills/` 配下の専門 skill）で、外部ツールを必要としません。skill を読み込める AI エージェント（Claude Code / Cursor / Codex CLI / GitHub Copilot ほか）であれば利用できます。
 
 `river` CLI は構造化された findings を得るための **任意の高速化手段** です。プラグインとは別配布で、**現時点では npm 未公開**のため、必須の手順ではありません。

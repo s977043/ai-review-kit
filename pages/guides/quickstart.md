@@ -1,6 +1,6 @@
 # クイックスタート (River Review)
 
-River Review を最小構成で動かすための流れです。
+River Review を最小構成で動かすための流れです。River Review は、暗黙知を versioned / repo-owned な Skill（Skill Registry）として共有資産に変え、capability pack（通常 LLM キー不要）・レビュースキル・観点別レビュアーの review team の 3 主軸で動きます。本ガイドが扱うヘッドレスな GitHub Action は、その 3 主軸を CI から呼ぶ経路の 1 つです。
 
 1. リポジトリに `skills/{upstream,midstream,downstream}` を用意し、スキルを Markdown + YAML frontmatter で作成する。最小構成の例を以下に示す。
 

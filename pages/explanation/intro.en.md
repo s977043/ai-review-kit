@@ -5,6 +5,12 @@ title: Welcome to River Review
 
 River Review (RR) is an OSS framework that **turns your team's review judgment into versioned, repo-owned skills and runs them across SDLC gates**. It operates over artifacts such as plan, diff, test-cases, JUnit, and prior review outputs, acting as the **team-owned audit layer** for AI-assisted development.
 
+The foundation stays the same: it turns your team's tacit knowledge into versioned, repo-owned **Skills (the Skill Registry)** that you reuse as a shared asset. River Review delivers that foundation along three core axes:
+
+- **Capability pack**: a bundle of skills / agent definitions that strengthens an AI agent's review ability. It usually needs no LLM key; only the headless GitHub Action / `river run` path requires one.
+- **Review skills (Skill Registry)**: the foundation that shares team judgment criteria as versioned, repo-owned Skills.
+- **Review team**: a dedicated review agent (`agents/river-review.md`) plus a review team that runs perspective-based reviewers in parallel. In a generate → review → revise loop it acts as the verdict-bearing critic for the review stage.
+
 ## Core Model
 
 - **Skills define judgment** — A skill describes how a review decision should be made (security, accessibility, migration safety, dependency policy, plan conformance, ...). Skills are written as YAML frontmatter + Markdown and validated against `schemas/skill.schema.json`.
