@@ -5,7 +5,13 @@ title: What is River Review
 
 River Review is a **Context Engineering-driven, Skill Registry-centric code review framework** — a flow-based agent that carries review perspectives along [three phases (Upstream, Midstream, Downstream)](./upstream-midstream-downstream.md) as reusable **Agent Skills**.
 
-By defining team-specific judgment criteria and procedures as version-controlled **Agent Skills**, it makes review findings reproducible while keeping operating costs in check.
+By defining team-specific judgment criteria and procedures as version-controlled **Agent Skills**, it makes review findings reproducible while keeping operating costs in check. River Review is built around three core ideas:
+
+- **Capability pack**: a bundle of skills / agent definitions that strengthens an AI's review ability.
+- **Skill Registry**: a way to share team judgment criteria as versioned, repo-owned Skills.
+- **Review agent and review team**: a dedicated review agent plus a review team that runs perspective-specific reviewers in parallel.
+
+Turning tacit knowledge into versioned, repo-owned Skills as a shared asset stays unchanged. The third axis defines who runs that asset and how.
 
 ## Purpose
 
@@ -26,6 +32,25 @@ River Review's skills are not configuration for River Review to call an LLM itse
 3. **Headless LLM (GitHub Action / standalone `river run`)** — with no interactive agent present, River Review **calls an LLM itself** to execute the skills. **Only this path needs an LLM key** (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_API_KEY`); the mechanical checks (2) still run without one.
 
 > In short: normal AI-driven development needs **no LLM key** because the agent applies the skills. A key is required only for **headless execution (GitHub Action / standalone CLI)** running skills beyond the mechanical checks.
+
+## Review agent and review team
+
+River Review does more than bundle skills — it ships a **dedicated review agent** that runs them. This is a concrete form of the "AI-agent-driven" execution model above.
+
+- **Dedicated review agent** — shipped as a sub-agent definition (`agents/river-review.md`) and invoked via `/review-local` and similar. The host agent loads this definition and runs the review with its own model.
+- **Parallel perspective reviewers with merge (review team)** — `src/lib/reviewer-orchestrator.mjs` runs perspective-specific reviewer roles (bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer) in parallel, then clusters and merges their findings via connected components. With `--reviewers auto`, the roles relevant to the diff are selected automatically.
+
+Here, "multi-agent" means a single orchestrator running perspective-specific reviewer roles in parallel and merging the results. It is not a set of fully autonomous, independent agents — it is specifically **parallel execution and merge of perspective reviewers**.
+
+## Iteration loop and decision material critic
+
+River Review serves as the **review stage** in a generate → review → revise iteration loop.
+
+- On each pass, it returns review results as **decision material (findings / verdict / suggestedLoopSignal)**.
+- The verdict is decision material only; it does not assert GO / NO-GO, auto-approval, or auto-merge. Whether to keep iterating or stop is the **caller's responsibility**.
+- Mechanisms such as `auto-approve` are advisory and do not bypass human-in-the-loop (HITL) review.
+
+This contract and its reference implementation are defined in the [loop convergence contract](../reference/loop-convergence-contract.md) and the in-repo reference agent (`examples/loop-reference-agent/`).
 
 ## Flow Connection
 

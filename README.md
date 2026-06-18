@@ -49,6 +49,28 @@ plan / exec ゲートが、適切なタイミングで skill を実行します�
 
 AI 支援ワークフローにおいて、River Review は **チーム所有の監査レイヤー** として機能します。実装エージェントはコードを書けますが、それがチームのルールに従っているかを River Review が検査します。
 
+## 3 つの主軸
+
+River Review が提供する価値は、次の 3 軸で整理できます。いずれも「チームのレビュー判断を versioned / repo-owned な資産にする」という基盤の考えから派生しています。
+
+### 1. AI エージェントのレビュー能力を強化する capability pack
+
+River Review のスキル／エージェント定義は、Claude Code / Cursor / Codex などの AI エージェントに「チームのレビュー判断」を持ち込む **capability pack** です。通常はエージェント自身のモデルがスキルを適用するため、**River Review 用の LLM キーは不要**です。LLM キーが要るのは GitHub Action / standalone `river run` のヘッドレス実行だけで、機械的に判定できる観点はキー無しでも動きます（詳細は [FAQ](#faq) 節を参照）。
+
+### 2. レビュースキルの用意（Skill Registry）
+
+基盤となるのは Skill Registry です。security / a11y / migration safety / dependency policy / plan conformance などチーム固有の暗黙知を versioned / repo-owned なレビュー資産として明示化します。fixture と golden output による継続的な改善も可能です。詳細は [コアモデル](#コアモデル) 節を参照してください。
+
+### 3. レビュー用エージェント + 観点別レビュアーの review team
+
+River Review には、レビューに特化した 3 つの実行形態があります。
+
+- **レビュー用エージェント定義**: プラグイン／サブエージェントとして配布される `agents/river-review.md`。スキルルーティング型のオーケストレーターとして動き、`/river-review:<skill>` で各専門スキルを呼び出せる。
+- **観点別レビュアーを並列実行する review team**: 観点別ロールを 1 つの orchestrator（`src/lib/reviewer-orchestrator.mjs`）内で並列に走らせ findings を connected-components でマージする。ロールは bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer であり、`--reviewers auto` 指定で差分タイプから自動選択される。
+- **verdict 付きの critic（Agent 層）**: generate → review → revise のループにおいて findings と verdict（判定素材）を出す。Reference Loop は `examples/loop-reference-agent/`、収束契約は [`pages/reference/loop-convergence-contract.md`](pages/reference/loop-convergence-contract.md) にある（Agent 層 Epic [#1150](https://github.com/s977043/river-review/issues/1150)）。
+
+> **役割分担と HITL 境界**: review team は findings + verdict を出力しますが、GO / NO-GO の判断・反復・停止は呼び出し側／人間の責務です。自動承認・自動マージは行いません。ここでの review team は「1 つの orchestrator 内で観点別レビュアーロールを並列実行し findings をマージするもの」であり、完全自律な独立エージェント群ではありません。「River Review = レビューする / PlanGate = 止める・通す」という役割分担を維持しています。
+
 ## はじめる
 
 インストール不要の最短手順は同梱プラグインです。マーケットプレイスを追加し、`river-review` エージェントに現在の差分のレビューを依頼してください（[river-review プラグインの導入](#river-review-プラグインの導入)）。CI では GitHub Actions を使います（[クイックスタート](#クイックスタートgithub-actions)）。

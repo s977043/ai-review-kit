@@ -23,6 +23,42 @@ flowchart LR
   Runner --> Output[Output schema\nfindings[] + summary]
 ```
 
+## Review Team（観点別レビュアーの並列実行）
+
+Review runner は単一の汎用レビューに加えて、**観点別レビュアーロールの並列オーケストレーション**を持ちます。実装は `src/lib/reviewer-orchestrator.mjs` です。
+
+- **ロール**: bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer の各観点を、独立したレビュアーとして扱う。
+- **自動選択**: `--reviewers auto` を指定すると `selectRolesAuto` が差分の内容とリスク信号からロールを選ぶ。明示指定する場合は `--reviewers bug-hunter,security-scanner` のようにカンマ区切りで渡す。
+- **並列 fan-out**: role × chunk の組を `Promise.allSettled` で並列実行し、一部のロールが失敗しても他のロールの結果を活かす。
+- **マージ**: 各ロールの findings を connected-components で束ね、`mergeFindings` が重複や近接した指摘を統合する。
+
+これは「1 つの orchestrator が観点別ロールを並列に走らせてマージする」構成であり、自律的に振る舞うエージェント群ではありません。各ロールはレビュー素材を出すだけで、判定や承認の権限は持ちません。
+
+```mermaid
+flowchart LR
+  Diff[Diff + chunks] --> Select[selectRolesAuto\n--reviewers auto]
+  Select --> R1[bug-hunter]
+  Select --> R2[security-scanner]
+  Select --> R3[test-gap / dependency /\nfrontend / ci-cd]
+  R1 --> Merge[mergeFindings\nconnected-components]
+  R2 --> Merge
+  R3 --> Merge
+  Merge --> Findings[findings[] + summary]
+```
+
+## Agent 層（generate → review → revise ループ）
+
+River Review は、生成系エージェントの **generate → review → revise** ループにおける **review ステージ**として組み込めます（Epic #1150）。
+
+- River Review は findings / verdict / `suggestedLoopSignal` を返す **critic** として振る舞う。
+- 反復・停止・エスカレーションの判断は **caller（呼び出し側エージェント）の責務**である。River Review 自身はループを回さず、判定素材を返すだけにとどめる。
+- findings と verdict はあくまで判定素材であり、自動承認はしない。人手の確認境界（HITL）を保つ設計である。
+
+契約と参照実装は次を参照してください。
+
+- 契約: [Loop Convergence Contract](../reference/loop-convergence-contract.md)
+- 参照実装: `examples/loop-reference-agent/`（contract を満たす最小のループ例）
+
 ## 代表フロー（GitHub Actions）
 
 ```mermaid

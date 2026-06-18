@@ -7,7 +7,13 @@ River Review は、**チーム固有のレビュー判断を、要件・設計�
 
 一般的な AI レビューツールは、PR diff を主な入力として扱います。River Review はそれだけではありません。AI エージェントが実装に入る前の要件・設計・計画もレビュー対象に含め、実装後の差分・テスト・完了レポートまで一貫して確認します。
 
-このアプローチは _Context Engineering_（レビュー判断に必要な文脈を構造化して LLM へ渡す設計手法）とも呼ばれます。その中核となるのが、チームの判断基準を versioned / repo-owned な Skill として管理する _Skill Registry_ です。
+このアプローチは _Context Engineering_（レビュー判断に必要な文脈を構造化して LLM へ渡す設計手法）とも呼ばれます。River Review は次の 3 つを中核に据えています。
+
+- **capability pack**: AI のレビュー能力を強化するスキル / エージェント定義のまとまり。
+- **Skill Registry**: チームの判断基準を versioned / repo-owned な Skill として共有資産化する仕組み。
+- **レビュー用エージェントとレビューチーム**: レビュー専用エージェントと、観点別レビュアーを並列実行する review team。
+
+暗黙知を versioned / repo-owned な Skill へ落とし込み、共有資産として再利用する考え方は変わりません。3 つ目の軸は、その資産を「誰がどう動かすか」を担います。
 
 ## 一言で言うと
 
@@ -47,6 +53,25 @@ River Review のスキルは、River Review 自身が LLM を呼ぶための設�
 3. **ヘッドレス LLM（GitHub Action / standalone `river run`）** — 対話エージェントがいない環境では、River Review が**自前で LLM を呼んで**スキルを実行する。**この経路だけ LLM キー**（`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_API_KEY` のいずれか）が必要になる（機械的チェック (2) はキー無しでも動く）。
 
 > まとめ: 通常の AI 駆動開発ではエージェントがスキルを適用するため **LLM キーは不要**です。LLM キーが要るのは **GitHub Action / standalone CLI のヘッドレス実行**で、かつ機械的チェック以外のスキルを動かす場合だけです。
+
+## レビュー用エージェントとレビューチーム
+
+River Review はスキルを束ねるだけでなく、それを動かす**レビュー専用エージェント**を備えています。これは上の実行モデルのうち「AI エージェント駆動」を具体化したものです。
+
+- **レビュー専用エージェント** — サブエージェント定義（`agents/river-review.md`）として配布され、`/review-local` などから呼び出せる。ホストのエージェントがこの定義を読み込み、自身のモデルでレビューを実行する。
+- **観点別レビュアーの並列実行とマージ（review team）** — `src/lib/reviewer-orchestrator.mjs` が観点別レビュアーロールを並列に走らせ、各 finding を connected-components でマージする。ロールは bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer の 6 種類。`--reviewers auto` なら差分内容に応じてロールが選ばれる。
+
+ここでいう「マルチエージェント」は、1 つの orchestrator が観点別レビュアーのロールを並列に動かして結果をマージする仕組みです。完全に自律した独立エージェント群ではなく、あくまで**観点別レビュアーの並列実行とマージ**を指します。
+
+## 反復ループと判定素材の critic
+
+River Review は、generate → review → revise の反復ループの中で **review ステージ**を担います。
+
+- ループの各周回で、レビュー結果を **判定素材（findings / verdict / suggestedLoopSignal）**として返す。
+- verdict はあくまで判定素材であり、GO / NO-GO・自動承認・自動マージを主張しない。反復を続けるか止めるかの判断は **caller の責務**である。
+- `auto-approve` のような仕組みも、人間の確認（HITL）をバイパスしない助言である。
+
+この契約と参照実装は、[反復収束の契約](../reference/loop-convergence-contract.md) と、リポジトリ内の参照エージェント（`examples/loop-reference-agent/`）で定義しています。
 
 ## フローの繋がり
 
