@@ -27,6 +27,14 @@ exclude = [
   '^https?://t\.co', # Twitter short links
   '^https?://([^/]+\.)?slack\.com',
 
+  # note.com returns 403 to bot user-agents (anti-scraping); the articles are
+  # valid in browsers. Linked from README as reference posts, not functional.
+  '^https?://([^/]+\.)?note\.com',
+
+  # docs.aws.amazon.com 403s HEAD requests from non-browser user-agents; the
+  # pages are valid (e.g. well-architected SaaS lens linked from a skill README).
+  '^https?://docs\.aws\.amazon\.com',
+
   # GitHub URLs that may not exist yet (for PRs)
   # Uncomment if needed:
   # 'github\.com/.*/tree/main/.*',
