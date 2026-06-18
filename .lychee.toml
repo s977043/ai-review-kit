@@ -20,12 +20,14 @@ exclude = [
   'example\.com',
   'your-org/',
 
-  # Sites that commonly block bots or require authentication
-  '^https?://([^/]+\.)?linkedin\.com',
-  '^https?://discord\.gg',
-  '^https?://discord\.com/invite',
-  '^https?://t\.co', # Twitter short links
-  '^https?://([^/]+\.)?slack\.com',
+  # Sites that commonly block bots or require authentication.
+  # Domain-only patterns are anchored with (/|$) so a look-alike suffix
+  # (e.g. slack.com.attacker.com) cannot bypass the link check (#1205 review).
+  '^https?://([^/]+\.)?linkedin\.com(/|$)',
+  '^https?://discord\.gg(/|$)',
+  '^https?://discord\.com/invite', # already path-bounded by /invite
+  '^https?://t\.co(/|$)', # Twitter short links
+  '^https?://([^/]+\.)?slack\.com(/|$)',
 
   # note.com returns 403 to bot user-agents (anti-scraping); the articles are
   # valid in browsers. Linked from README as reference posts, not functional.
