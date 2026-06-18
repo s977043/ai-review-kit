@@ -17,6 +17,29 @@ function hasSection(text, patterns) {
   return patterns.some((re) => re.test(text));
 }
 
+// Single-alternative brace, e.g. `*.{sql}` — no comma inside the braces.
+// Such globs are non-portable across glob parsers and have caused skill-manifest
+// freshness mismatches in CI (#1196 S4). Multi-alternative braces (`*.{js,ts}`)
+// are legitimate and allowed.
+const RE_SINGLE_BRACE = /\{[^,}]*\}/;
+
+/**
+ * Return the non-portable single-extension brace globs found in a skill's
+ * path patterns (applyTo / files / path_patterns). Empty array = OK.
+ * Pure and exported for unit testing.
+ *
+ * @param {object} metadata - skill frontmatter
+ * @returns {string[]}
+ */
+export function findBadGlobs(metadata) {
+  const meta = metadata ?? {};
+  // Frontmatter may give a single string instead of an array before schema
+  // normalization — accept both so a scalar pattern is not silently skipped.
+  const toArray = (val) => (Array.isArray(val) ? val : typeof val === 'string' ? [val] : []);
+  const globs = [...toArray(meta.applyTo), ...toArray(meta.files), ...toArray(meta.path_patterns)];
+  return globs.filter((g) => typeof g === 'string' && RE_SINGLE_BRACE.test(g));
+}
+
 function warnMissingGuardsAndNonGoals(skill, relativePath) {
   const tags = skill?.metadata?.tags ?? [];
   const excludedTags = ['sample', 'hello', 'policy', 'process'];
@@ -72,6 +95,16 @@ async function validateSkills() {
 
     try {
       const skill = await loadSkillFile(filePath, { validator });
+      const badGlobs = findBadGlobs(skill?.metadata);
+      if (badGlobs.length > 0) {
+        console.error(`❌ ${relativePath}`);
+        console.error(`  - non-portable single-extension brace glob(s): ${badGlobs.join(', ')}`);
+        console.error(
+          '  - use a plain pattern (e.g. "**/*.sql") or multi-alternative braces ("**/*.{js,ts}")'
+        );
+        success = false;
+        continue;
+      }
       console.log(`✅ ${relativePath}`);
       warnMissingGuardsAndNonGoals(skill, relativePath);
     } catch (err) {
