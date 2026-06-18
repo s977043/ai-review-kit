@@ -233,6 +233,49 @@ export function parseLineComments(outputText) {
   return comments.length ? comments : null;
 }
 
+// Transient-failure retry policy for LLM calls (#1196-adjacent adoption from the
+// Gemma concurrent demo: in-process parallel review already exists; retry was the
+// one gap). Helpers are pure and exported for unit testing.
+const LLM_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const LLM_MAX_ATTEMPTS = 3; // 1 try + 2 retries
+const LLM_RETRY_BASE_MS = 500;
+const LLM_TIMEOUT_MS = 15000;
+
+/** Retryable HTTP statuses: rate-limit and transient server/gateway errors. */
+export function isRetryableStatus(status) {
+  return LLM_RETRYABLE_STATUS.has(status);
+}
+
+/** Network-level errors worth retrying: timeouts, aborts, connection resets, DNS. */
+export function isRetryableNetworkError(err) {
+  if (!err) return false;
+  if (err.name === 'TimeoutError' || err.name === 'AbortError') return true;
+  const msg = `${err.code ?? ''} ${err.message ?? ''}`;
+  return /fetch failed|network|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(
+    msg
+  );
+}
+
+/**
+ * Backoff before the next attempt (ms). Honors a `Retry-After` header (seconds)
+ * when present, else exponential: base * 2^(attempt-1).
+ * @param {number} attempt - 1-based attempt that just failed.
+ */
+export function computeBackoffMs(
+  attempt,
+  { baseMs = LLM_RETRY_BASE_MS, retryAfterSec = null } = {}
+) {
+  // Guard before Number(): Number(null) and Number('') are 0, which would wrongly
+  // be treated as "Retry-After: 0s" when the header is simply absent.
+  if (retryAfterSec !== null && retryAfterSec !== undefined && retryAfterSec !== '') {
+    const ra = Number(retryAfterSec);
+    if (Number.isFinite(ra) && ra >= 0) return Math.round(ra * 1000);
+  }
+  return baseMs * 2 ** Math.max(0, attempt - 1);
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function callOpenAI({
   prompt,
   apiKey,
@@ -241,35 +284,52 @@ async function callOpenAI({
   temperature,
   maxTokens,
   systemMessage,
+  maxAttempts = LLM_MAX_ATTEMPTS,
 }) {
-  const controller = AbortSignal.timeout(15000);
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    signal: controller,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature,
-      max_tokens: maxTokens,
-      messages: [
-        {
-          role: 'system',
-          content: systemMessage ?? buildSystemMessage('ja'),
-        },
-        { role: 'user', content: prompt },
-      ],
-    }),
+  const body = JSON.stringify({
+    model,
+    temperature,
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: systemMessage ?? buildSystemMessage('ja') },
+      { role: 'user', content: prompt },
+    ],
   });
 
-  if (!res.ok) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let res;
+    try {
+      res = await fetch(endpoint, {
+        method: 'POST',
+        signal: AbortSignal.timeout(LLM_TIMEOUT_MS), // fresh per attempt (one-shot)
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body,
+      });
+    } catch (err) {
+      // Network error or timeout — retry transient failures with backoff.
+      lastError = err;
+      if (attempt < maxAttempts && isRetryableNetworkError(err)) {
+        await sleep(computeBackoffMs(attempt));
+        continue;
+      }
+      throw err;
+    }
+
+    if (res.ok) {
+      const json = await res.json();
+      return json.choices?.[0]?.message?.content?.trim() ?? '';
+    }
+
     const detail = await res.text();
+    if (attempt < maxAttempts && isRetryableStatus(res.status)) {
+      await sleep(computeBackoffMs(attempt, { retryAfterSec: res.headers?.get?.('retry-after') }));
+      continue;
+    }
     throw new Error(`OpenAI API error ${res.status}: ${detail}`);
   }
-  const json = await res.json();
-  return json.choices?.[0]?.message?.content?.trim() ?? '';
+  // Exhausted retries on a transient network error.
+  throw lastError ?? new Error('OpenAI API error: retries exhausted');
 }
 
 function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
