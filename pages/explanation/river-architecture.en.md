@@ -25,6 +25,42 @@ flowchart LR
   Runner --> Output[Output schema\nfindings[] + summary]
 ```
 
+## Review Team (parallel perspective-based reviewers)
+
+Beyond a single general-purpose review, the review runner provides **parallel orchestration of perspective-based reviewer roles**, implemented in `src/lib/reviewer-orchestrator.mjs`.
+
+- **Roles**: bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer, each treated as an independent reviewer.
+- **Automatic selection**: with `--reviewers auto`, `selectRolesAuto` picks roles from the diff content and risk signals. To select explicitly, pass a comma-separated list such as `--reviewers bug-hunter,security-scanner`.
+- **Parallel fan-out**: role × chunk pairs run in parallel via `Promise.allSettled`, so a failure in one role does not discard the results of the others.
+- **Merge**: findings from each role are grouped via connected components, and `mergeFindings` consolidates duplicate or adjacent findings.
+
+This is a single orchestrator running perspective-based roles in parallel and merging the results, not a swarm of autonomous agents. Each role only produces review material; it has no authority to decide or approve.
+
+```mermaid
+flowchart LR
+  Diff[Diff + chunks] --> Select[selectRolesAuto\n--reviewers auto]
+  Select --> R1[bug-hunter]
+  Select --> R2[security-scanner]
+  Select --> R3[test-gap / dependency /\nfrontend / ci-cd]
+  R1 --> Merge[mergeFindings\nconnected-components]
+  R2 --> Merge
+  R3 --> Merge
+  Merge --> Findings[findings[] + summary]
+```
+
+## Agent layer (generate → review → revise loop)
+
+River Review can be embedded as the **review stage** of a generating agent's **generate → review → revise** loop (Epic #1150).
+
+- River Review acts as a **critic** that returns findings / verdict / `suggestedLoopSignal`.
+- Deciding whether to iterate, stop, or escalate is the **caller's responsibility** (the calling agent). River Review does not run the loop itself; it only returns material for the decision.
+- Findings and verdict are decision material, not auto-approval. The design preserves a human confirmation boundary (HITL).
+
+For the contract and reference implementation, see:
+
+- Contract: [Loop Convergence Contract](../reference/loop-convergence-contract.en.md)
+- Reference implementation: `examples/loop-reference-agent/` (a minimal loop that satisfies the contract)
+
 ## Representative flow (GitHub Actions)
 
 ```mermaid

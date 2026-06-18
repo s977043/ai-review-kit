@@ -46,6 +46,28 @@ River Review is not another prompt wrapper around a PR diff. It is a way to make
 
 In AI-assisted workflows, River Review acts as the **team-owned audit layer**: implementation agents can write code, but River Review checks whether that work still follows the team's rules.
 
+## Three core axes
+
+River Review's value falls into three axes. All three derive from the same foundation: turning your team's review judgment into a versioned, repo-owned asset.
+
+### 1. A capability pack that strengthens an AI agent's review ability
+
+River Review's skill and agent definitions are a **capability pack** that brings your team's review judgment to AI agents such as Claude Code, Cursor, and Codex. In normal use the agent's own model applies the skills, so **no River Review LLM key is required**. A key is needed only for headless execution (GitHub Action / standalone `river run`); mechanically-decidable perspectives run even without one (see the [FAQ](#faq) for the execution model).
+
+### 2. Review skills (the Skill Registry)
+
+The foundation is the Skill Registry. Team-specific tacit knowledge — security, accessibility, migration safety, dependency policy, plan conformance, and more — is made explicit as a versioned, repo-owned review asset, then improved continuously with fixtures and golden outputs. See [Core Model](#core-model) for details.
+
+### 3. A review agent plus a perspective-based review team
+
+River Review offers three review-focused execution shapes.
+
+- **Review agent definition**: `agents/river-review.md`, distributed as a plugin / sub-agent. It works as a skill-routed orchestrator and lets you invoke each specialist skill via `/river-review:<skill>`.
+- **A review team that runs perspective-based reviewers in parallel**: roles such as bug-hunter, security-scanner, test-gap, dependency-reviewer, frontend-reviewer, and ci-cd-reviewer run in parallel inside a single orchestrator (`src/lib/reviewer-orchestrator.mjs`), and their findings are merged via connected-components. Pass `--reviewers auto` to select perspectives automatically from the diff type.
+- **A verdict-bearing critic (the Agent layer)**: in a generate → review → revise loop, it emits findings plus a verdict (decision material). The Reference Loop lives in `examples/loop-reference-agent/`, and the convergence contract in [`pages/reference/loop-convergence-contract.en.md`](pages/reference/loop-convergence-contract.en.md) (Agent-layer Epic [#1150](https://github.com/s977043/river-review/issues/1150)).
+
+> **Role split and HITL boundary**: the review team emits findings plus a verdict, but the GO / NO-GO decision, iteration, and stopping remain the caller's or human's responsibility. It does not auto-approve or auto-merge. The review team here means "perspective-based reviewer roles run in parallel inside one orchestrator with their findings merged," not a set of fully autonomous independent agents. River Review keeps the "River Review reviews / PlanGate stops or passes" role split.
+
 ## Getting Started
 
 The shortest no-install path is the bundled plugin: add the marketplace and ask the `river-review` agent to review the current diff — see [Installing the river-review plugin](#installing-the-river-review-plugin). For CI, use GitHub Actions ([Quick start](#quick-start-github-actions)).
@@ -85,7 +107,7 @@ River Review handles review judgment that **crosses artifacts**:
 
 These usually require context from plans, diffs, tests, prior comments, and team-specific standards. River Review handles that layer with LLM-backed, structured, testable skills.
 
-> **Usually no LLM key is needed**: River Review's skills are a **capability pack that strengthens an AI agent's** (Claude Code / Cursor / Codex …) review ability. In normal use the agent's own model applies the skills, so **no River Review LLM key is required**. A key is needed only for **headless execution (GitHub Action / standalone `river run`)** — and some mechanically-decidable viewpoints run even without one. See [What is River Review § Execution model](pages/explanation/what-is-river-review.en.md).
+> **Usually no LLM key is needed**: River Review's skills are a **capability pack that strengthens an AI agent's** (Claude Code / Cursor / Codex …) review ability. In normal use the agent's own model applies the skills, so **no River Review LLM key is required**. A key is needed only for **headless execution (GitHub Action / standalone `river run`)** — and some mechanically-decidable perspectives run even without one. See [What is River Review § Execution model](pages/explanation/what-is-river-review.en.md).
 
 ### Where does our code and review data go?
 
