@@ -25,16 +25,16 @@ flowchart LR
   Runner --> Output[Output schema\nfindings[] + summary]
 ```
 
-## Review Team (parallel viewpoint-specific reviewers)
+## Review Team (parallel perspective-based reviewers)
 
-Beyond a single general-purpose review, the review runner provides **parallel orchestration of viewpoint-specific reviewer roles**, implemented in `src/lib/reviewer-orchestrator.mjs`.
+Beyond a single general-purpose review, the review runner provides **parallel orchestration of perspective-based reviewer roles**, implemented in `src/lib/reviewer-orchestrator.mjs`.
 
 - **Roles**: bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer, each treated as an independent reviewer.
 - **Automatic selection**: with `--reviewers auto`, `selectRolesAuto` picks roles from the diff content and risk signals. To select explicitly, pass a comma-separated list such as `--reviewers bug-hunter,security-scanner`.
 - **Parallel fan-out**: role × chunk pairs run in parallel via `Promise.allSettled`, so a failure in one role does not discard the results of the others.
 - **Merge**: findings from each role are grouped via connected components, and `mergeFindings` consolidates duplicate or adjacent findings.
 
-This is a single orchestrator running viewpoint-specific roles in parallel and merging the results, not a swarm of autonomous agents. Each role only produces review material; it has no authority to decide or approve.
+This is a single orchestrator running perspective-based roles in parallel and merging the results, not a swarm of autonomous agents. Each role only produces review material; it has no authority to decide or approve.
 
 ```mermaid
 flowchart LR

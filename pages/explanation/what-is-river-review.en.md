@@ -9,7 +9,7 @@ By defining team-specific judgment criteria and procedures as version-controlled
 
 - **Capability pack**: a bundle of skills / agent definitions that strengthens an AI's review ability.
 - **Skill Registry**: a way to share team judgment criteria as versioned, repo-owned Skills.
-- **Review agent and review team**: a dedicated review agent plus a review team that runs perspective-specific reviewers in parallel.
+- **Review agent and review team**: a dedicated review agent plus a review team that runs perspective-based reviewers in parallel.
 
 Turning tacit knowledge into versioned, repo-owned Skills as a shared asset stays unchanged. The third axis defines who runs that asset and how.
 
@@ -28,7 +28,7 @@ River Review does not replace human reviewers. By handling skill-based checks to
 River Review's skills are not configuration for River Review to call an LLM itself — they are a **capability pack (skills / agent definitions) that strengthens an AI's review ability**. There are three ways they get executed, and **whether an LLM key is needed is decided by this model, not by the execution surface**.
 
 1. **AI-agent-driven (primary)** — an agent (Claude Code / Cursor / Codex …) loads the skills (`skills/agent-skills/`) or the sub-agent (`agents/river-review.md`) and **runs the review with its own model**. The agent _is_ the LLM, so **no River Review LLM key is needed**. This covers `/review-local`, sub-agent delegation, loading Agent Skills, etc.
-2. **Mechanical checks (heuristic / no model)** — viewpoints that can be decided deterministically (e.g. via regex) **run with no LLM and no key**. Today this covers security viewpoints (hardcoded secrets / `eval` & XSS / disabled TLS / weak hash / command injection / GitHub Actions risks) plus quality and test viewpoints (silent-catch / leftover `debugger` / merge-conflict markers / type-check suppression / missing tests / focused & disabled tests), handled by five skills across the security / logging / typescript / test domains. More mechanically-decidable viewpoints can be added over time.
+2. **Mechanical checks (heuristic / no model)** — perspectives that can be decided deterministically (e.g. via regex) **run with no LLM and no key**. Today this covers security perspectives (hardcoded secrets / `eval` & XSS / disabled TLS / weak hash / command injection / GitHub Actions risks) plus quality and test perspectives (silent-catch / leftover `debugger` / merge-conflict markers / type-check suppression / missing tests / focused & disabled tests), handled by five skills across the security / logging / typescript / test domains. More mechanically-decidable perspectives can be added over time.
 3. **Headless LLM (GitHub Action / standalone `river run`)** — with no interactive agent present, River Review **calls an LLM itself** to execute the skills. **Only this path needs an LLM key** (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_API_KEY`); the mechanical checks (2) still run without one.
 
 > In short: normal AI-driven development needs **no LLM key** because the agent applies the skills. A key is required only for **headless execution (GitHub Action / standalone CLI)** running skills beyond the mechanical checks.
@@ -38,9 +38,9 @@ River Review's skills are not configuration for River Review to call an LLM itse
 River Review does more than bundle skills — it ships a **dedicated review agent** that runs them. This is a concrete form of the "AI-agent-driven" execution model above.
 
 - **Dedicated review agent** — shipped as a sub-agent definition (`agents/river-review.md`) and invoked via `/review-local` and similar. The host agent loads this definition and runs the review with its own model.
-- **Parallel perspective reviewers with merge (review team)** — `src/lib/reviewer-orchestrator.mjs` runs perspective-specific reviewer roles (bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer) in parallel, then clusters and merges their findings via connected components. With `--reviewers auto`, the roles relevant to the diff are selected automatically.
+- **Parallel perspective reviewers with merge (review team)** — `src/lib/reviewer-orchestrator.mjs` runs perspective-based reviewer roles (bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer) in parallel, then clusters and merges their findings via connected components. With `--reviewers auto`, the roles relevant to the diff are selected automatically.
 
-Here, "multi-agent" means a single orchestrator running perspective-specific reviewer roles in parallel and merging the results. It is not a set of fully autonomous, independent agents — it is specifically **parallel execution and merge of perspective reviewers**.
+Here, "multi-agent" means a single orchestrator running perspective-based reviewer roles in parallel and merging the results. It is not a set of fully autonomous, independent agents — it is specifically **parallel execution and merge of perspective reviewers**.
 
 ## Iteration loop and decision material critic
 
@@ -50,7 +50,7 @@ River Review serves as the **review stage** in a generate → review → revise 
 - The verdict is decision material only; it does not assert GO / NO-GO, auto-approval, or auto-merge. Whether to keep iterating or stop is the **caller's responsibility**.
 - Mechanisms such as `auto-approve` are advisory and do not bypass human-in-the-loop (HITL) review.
 
-This contract and its reference implementation are defined in the [loop convergence contract](../reference/loop-convergence-contract.md) and the in-repo reference agent (`examples/loop-reference-agent/`).
+This contract and its reference implementation are defined in the [loop convergence contract](../reference/loop-convergence-contract.en.md) and the in-repo reference agent (`examples/loop-reference-agent/`).
 
 ## Flow Connection
 

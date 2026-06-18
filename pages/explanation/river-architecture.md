@@ -56,7 +56,7 @@ River Review は、生成系エージェントの **generate → review → revi
 
 契約と参照実装は次を参照してください。
 
-- 契約: [Loop Convergence Contract](../reference/loop-convergence-contract.md)
+- 契約: [反復収束の契約](../reference/loop-convergence-contract.md)
 - 参照実装: `examples/loop-reference-agent/`（contract を満たす最小のループ例）
 
 ## 代表フロー（GitHub Actions）
