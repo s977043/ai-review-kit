@@ -42006,7 +42006,7 @@ function isRetryableNetworkError(err) {
   if (!err) return false;
   if (err.name === 'TimeoutError' || err.name === 'AbortError') return true;
   const msg = `${err.code ?? ''} ${err.message ?? ''}`;
-  return /fetch failed|network|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(
+  return /fetch failed|network|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|terminated|aborted/i.test(
     msg
   );
 }
@@ -42053,16 +42053,33 @@ async function callOpenAI({
 
   let lastError;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    let res;
     try {
-      res = await fetch(endpoint, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         signal: AbortSignal.timeout(LLM_TIMEOUT_MS), // fresh per attempt (one-shot)
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body,
       });
+
+      // Body reads are inside the try so a mid-stream abort/disconnect is also
+      // treated as a retryable transient failure rather than escaping uncaught.
+      if (res.ok) {
+        const json = await res.json();
+        return json.choices?.[0]?.message?.content?.trim() ?? '';
+      }
+
+      const detail = await res.text();
+      if (attempt < maxAttempts && isRetryableStatus(res.status)) {
+        await sleep(
+          computeBackoffMs(attempt, { retryAfterSec: res.headers?.get?.('retry-after') })
+        );
+        continue;
+      }
+      throw new Error(`OpenAI API error ${res.status}: ${detail}`);
     } catch (err) {
-      // Network error or timeout — retry transient failures with backoff.
+      // Network error, timeout, or body-read failure — retry transient cases.
+      // A non-retryable HTTP error (thrown above) has a non-network message, so
+      // isRetryableNetworkError returns false and it propagates immediately.
       lastError = err;
       if (attempt < maxAttempts && isRetryableNetworkError(err)) {
         await sleep(computeBackoffMs(attempt));
@@ -42070,20 +42087,8 @@ async function callOpenAI({
       }
       throw err;
     }
-
-    if (res.ok) {
-      const json = await res.json();
-      return json.choices?.[0]?.message?.content?.trim() ?? '';
-    }
-
-    const detail = await res.text();
-    if (attempt < maxAttempts && isRetryableStatus(res.status)) {
-      await sleep(computeBackoffMs(attempt, { retryAfterSec: res.headers?.get?.('retry-after') }));
-      continue;
-    }
-    throw new Error(`OpenAI API error ${res.status}: ${detail}`);
   }
-  // Exhausted retries on a transient network error.
+  // Exhausted retries on a transient failure.
   throw lastError ?? new Error('OpenAI API error: retries exhausted');
 }
 

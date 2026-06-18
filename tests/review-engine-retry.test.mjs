@@ -41,6 +41,14 @@ describe('isRetryableNetworkError', () => {
     assert.equal(isRetryableNetworkError({ message: 'getaddrinfo EAI_AGAIN api' }), true);
   });
 
+  test('retries mid-stream body-read aborts (terminated/aborted)', () => {
+    assert.equal(isRetryableNetworkError({ message: 'terminated' }), true);
+    assert.equal(
+      isRetryableNetworkError({ name: 'AbortError', message: 'The operation was aborted' }),
+      true
+    );
+  });
+
   test('does not retry unrelated errors / null', () => {
     assert.equal(isRetryableNetworkError(null), false);
     assert.equal(isRetryableNetworkError({ message: 'invalid JSON' }), false);
