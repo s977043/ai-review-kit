@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.0](https://github.com/s977043/river-review/compare/v1.23.0...v1.24.0) (2026-06-18)
+
+
+### Features
+
+* **review-engine:** retry transient LLM failures with backoff ([#1203](https://github.com/s977043/river-review/issues/1203)) ([2a5275a](https://github.com/s977043/river-review/commit/2a5275a5dceb341428220fcbf3c7999fb9f812b8))
+
 ## [1.23.0](https://github.com/s977043/river-review/compare/v1.22.0...v1.23.0) (2026-06-17)
 
 
