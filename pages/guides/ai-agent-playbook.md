@@ -3,7 +3,7 @@ id: ai-agent-playbook
 title: AI 駆動開発プレイブック（エージェント向け）
 ---
 
-このページは **AI エージェント（自律 / 半自律のコーディングエージェント）** が River Review を「いつ・どう呼ぶか」をケース別にまとめた実践ガイドです。AI 駆動開発では、コードを書いて直すのはエージェントですが、**レビューは River Review にゲートさせ、出力（JSON）を読んで次の行動を機械的に決める**のが要点です。
+このページは **AI エージェント（自律 / 半自律のコーディングエージェント）** が River Review を「いつ・どう呼ぶか」をケース別にまとめた実践ガイドです。AI 駆動開発では、コードを書いて直すのはエージェントですが、**レビューは River Review にゲートさせ、出力（JSON）を読んで次の行動を機械的に決める**のが要点です。ここで使うのは、暗黙知を versioned / repo-owned な Skill（Skill Registry）として共有資産に変える 3 主軸です。すなわち capability pack（通常 LLM キー不要）とレビュースキル、そして観点別レビュアーの review team に verdict 付き critic を組み合わせた仕組みになります。River Review は findings と verdict を判定素材として出すだけで、自動承認はしません（HITL）。
 
 > ツール別（Claude Code / Cursor / Codex / Copilot）の最小呼び出しは [AI エージェントから River Review を使う](./agent-workflow.md) を参照。本ページは **AI 駆動開発のループに沿ったケース別の使い分け**を扱います。
 

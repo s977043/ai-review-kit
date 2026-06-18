@@ -1,6 +1,6 @@
 # Agents—Adding Project Knowledge Packs
 
-River Review の AI エージェント資産を外部リポジトリで再利用するための手順をまとめます。`agents/spec/agent.schema.json` と `agents/examples/*.agent.yaml` を基準に、新しいプロジェクト向けのナレッジパックを作成してください。
+River Review の AI エージェント資産を外部リポジトリで再利用するための手順をまとめます。ここで作るナレッジパックは、暗黙知を versioned / repo-owned な Skill（Skill Registry）として共有資産に変える 3 主軸のうち、観点別レビュアーで構成される review team の定義をプロジェクトへ持ち込む部分にあたります。`agents/spec/agent.schema.json` と `agents/examples/*.agent.yaml` を基準に、新しいプロジェクト向けのナレッジパックを作成してください。
 
 ## ディレクトリ構成
 

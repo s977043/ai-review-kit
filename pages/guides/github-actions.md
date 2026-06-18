@@ -1,6 +1,6 @@
 # GitHub Actions で River Review をセットアップする
 
-以下は River Review を GitHub Actions で実行する最小ワークフロー例です。`.github/workflows/river-review.yml` などのファイル名で配置してください。
+以下は River Review を GitHub Actions で実行する最小ワークフロー例です。`.github/workflows/river-review.yml` などのファイル名で配置してください。GitHub Action は、暗黙知を versioned / repo-owned な Skill（Skill Registry）として共有資産に変える 3 主軸を、ヘッドレスに CI へ組み込む経路です。3 主軸とは capability pack・レビュースキル・観点別レビュアーの review team を指します。AI エージェントがスキルを適用する通常利用と違い、ここでは LLM キーを Secrets に設定します。
 
 > **⚠️ 重要**: フォークされたリポジトリからの PR では、GitHub がセキュリティ上の理由でリポジトリの secrets を公開しません。外部コントリビューターの PR でレビューを実行する場合は、`pull_request_target` などのイベント選択と権限設定を検討してください。
 

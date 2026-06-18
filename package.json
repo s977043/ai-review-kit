@@ -7,7 +7,7 @@
     "runners/cli",
     "runners/core"
   ],
-  "description": "River Review docs, schemas, and validation utilities.",
+  "description": "River Review: a capability pack that strengthens AI review via a Skill Registry of versioned review skills and a perspective-based review agent. This package holds the docs, schemas, and validation utilities.",
   "license": "MIT",
   "engines": {
     "node": "22.x"

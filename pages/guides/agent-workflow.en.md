@@ -5,6 +5,8 @@
 
 ## Overview
 
+River Review turns tacit knowledge into versioned, repo-owned Skills (a Skill Registry) shared as a team asset, organized around three axes: (1) a **capability pack** that strengthens an AI agent's review ability (usually no LLM key needed), (2) review skills (the **Skill Registry**), and (3) a **review team** of a reviewer agent plus perspective-based reviewers (parallel execution via `reviewer-orchestrator.mjs` with connected-components merging and `--reviewers auto`), paired with a verdict-bearing critic. This page covers how to call those three axes from each AI agent.
+
 River Review ships as a **Claude Code / Codex plugin**. The primary entry point is the bundled **skill-routed review** — the `river-review` orchestrator agent plus the specialist skills under `skills/agent-skills/` — which needs no external tooling. It works with any AI agent that can read the skills (Claude Code, Cursor, Codex CLI, GitHub Copilot, and others).
 
 The `river` CLI is an **optional accelerator** for producing structured findings. It is distributed separately from the plugin and is **not yet published to npm**, so it is not a required step.

@@ -1,6 +1,6 @@
 ---
 name: river-review
-description: Code review and refactor suggestions for this repo. Use proactively after diffs. Enforce skills/ usage.
+description: Review agent for River Review's capability pack. Runs your team's versioned review skills (the Skill Registry) as perspective-based reviewer roles and verifies findings against the diff. Use proactively after diffs. Enforce skills/ usage.
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---

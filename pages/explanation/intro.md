@@ -7,6 +7,12 @@ River Review (RR) は、**チームのレビュー判断を skill として明�
 
 River Review は、PR の差分だけを見るツールではありません。AI 支援開発で発生する **要件・設計・計画・差分・レポート** をレビュー対象として扱い、作業に入る前から完了後まで、チームの判断基準を一貫して適用します。
 
+基盤となる考え方は変わりません。チームの暗黙知を versioned / repo-owned な **Skill（Skill Registry）** へ落とし込み、共有資産として再利用します。River Review はこの基盤を、次の 3 つの主軸として提供します。
+
+- **capability pack**: AI エージェントのレビュー能力を強化するスキル / エージェント定義のまとまり。通常は LLM キー不要で、ヘッドレスな GitHub Action / `river run` のときだけ LLM キーが要る。
+- **レビュースキル（Skill Registry）**: チームの判断基準を versioned / repo-owned な Skill として共有資産化する基盤。
+- **review team**: レビュー専用エージェント（`agents/river-review.md`）と、観点別レビュアーを並列実行する review team。generate → review → revise の反復では verdict 付き critic として review ステージを担う。
+
 ## River Review がレビューするもの
 
 | 対象     | 目的                                                     | 例                                     |

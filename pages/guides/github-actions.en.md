@@ -1,6 +1,6 @@
 # Setting up River Review with GitHub Actions
 
-Here is a minimal workflow example to run River Review on GitHub Actions. Place it as `.github/workflows/river-review.yml`.
+Here is a minimal workflow example to run River Review on GitHub Actions. Place it as `.github/workflows/river-review.yml`. The GitHub Action is the path that embeds River Review's three axes — the capability pack, the review skills, and a review team of perspective-based reviewers, all turning tacit knowledge into versioned, repo-owned Skills (a Skill Registry) shared as a team asset — into CI headlessly. Unlike normal use where an AI agent applies the skills, here you set an LLM key in Secrets.
 
 > **⚠️ IMPORTANT**: For PRs from forked repositories, GitHub does not expose repository secrets for security reasons. If you want to run reviews on external contributor PRs, consider event selection like `pull_request_target` and permission settings.
 

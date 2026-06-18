@@ -3,7 +3,7 @@ id: ai-agent-playbook-en
 title: AI-Driven Development Playbook (for Agents)
 ---
 
-This page is a practical, case-by-case guide for **AI agents (autonomous / semi-autonomous coding agents)** on _when_ and _how_ to call River Review. In AI-driven development the agent writes and fixes the code, but the key is to **let River Review gate the work and read its (JSON) output to decide the next action mechanically**.
+This page is a practical, case-by-case guide for **AI agents (autonomous / semi-autonomous coding agents)** on _when_ and _how_ to call River Review. In AI-driven development the agent writes and fixes the code, but the key is to **let River Review gate the work and read its (JSON) output to decide the next action mechanically**. What you use here is part of River Review's three axes — turning tacit knowledge into versioned, repo-owned Skills (a Skill Registry) shared as a team asset: the capability pack (usually no LLM key needed), the review skills, and a review team of perspective-based reviewers paired with a verdict-bearing critic. River Review only emits findings and a verdict as decision material; it never auto-approves (HITL).
 
 > For the minimal per-tool invocation (Claude Code / Cursor / Codex / Copilot), see [Use River Review from an AI agent](./agent-workflow.en.md). This page covers **case-by-case usage along the AI-driven development loop**.
 

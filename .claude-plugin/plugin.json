@@ -3,7 +3,7 @@
   "name": "river-review",
   "displayName": "River Review",
   "version": "1.24.0",
-  "description": "Skill-routed code review for Claude Code: an orchestrator agent plus specialist skills (code, security, performance, architecture, testing) and an adversarial pre-mortem/war-game pass. Classifies review intent, routes to the right specialist, and verifies findings.",
+  "description": "Capability pack that strengthens AI review for Claude Code: your team's review criteria as versioned, repo-owned skills (a Skill Registry), driven by a review agent that runs perspective-based reviewer roles (code, security, performance, architecture, testing, adversarial) and verifies findings against the diff so humans keep the high-risk judgment.",
   "author": {
     "name": "river-review maintainers",
     "url": "https://github.com/s977043/river-review"
