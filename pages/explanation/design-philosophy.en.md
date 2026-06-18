@@ -15,6 +15,6 @@ River Review is built to deliver timely, phase-aware feedback without slowing te
 
 River Review does **not** aim to be:
 
-- **A general-purpose AI agent framework**: it is a context engineering framework specialized for code review, not a generic task execution platform. The review team, too, is a single orchestrator running perspective-based reviewer roles in parallel and merging their findings via connected components — not a set of fully autonomous, independent agents.
+- **A general-purpose AI agent framework**: it is a context engineering framework specialized for code review, not a generic task execution platform. The review team, too, is a single orchestrator running perspective-based reviewer roles in parallel and merging their findings via connected-components — not a set of fully autonomous, independent agents.
 - **A replacement for human review judgment**: AI assists by surfacing review perspectives and evidence. Findings and the verdict are decision material only; GO / NO-GO, iteration, and stop decisions remain the responsibility of the caller or a human (HITL). It does not assert auto-approval or auto-merge.
 - **An automatic code fixer**: it identifies and reports issues but does not transform or auto-fix code.

@@ -38,7 +38,7 @@ River Review's skills are not configuration for River Review to call an LLM itse
 River Review does more than bundle skills — it ships a **dedicated review agent** that runs them. This is a concrete form of the "AI-agent-driven" execution model above.
 
 - **Dedicated review agent** — shipped as a sub-agent definition (`agents/river-review.md`) and invoked via `/review-local` and similar. The host agent loads this definition and runs the review with its own model.
-- **Parallel perspective reviewers with merge (review team)** — `src/lib/reviewer-orchestrator.mjs` runs perspective-based reviewer roles (bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer) in parallel, then clusters and merges their findings via connected components. With `--reviewers auto`, the roles relevant to the diff are selected automatically.
+- **Parallel perspective reviewers with merge (review team)** — `src/lib/reviewer-orchestrator.mjs` runs perspective-based reviewer roles (bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer) in parallel, then clusters and merges their findings via connected-components. With `--reviewers auto`, the roles relevant to the diff are selected automatically.
 
 Here, "multi-agent" means a single orchestrator running perspective-based reviewer roles in parallel and merging the results. It is not a set of fully autonomous, independent agents — it is specifically **parallel execution and merge of perspective reviewers**.
 
