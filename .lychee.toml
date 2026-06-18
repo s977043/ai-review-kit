@@ -21,21 +21,22 @@ exclude = [
   'your-org/',
 
   # Sites that commonly block bots or require authentication.
-  # Domain-only patterns are anchored with (/|$) so a look-alike suffix
-  # (e.g. slack.com.attacker.com) cannot bypass the link check (#1205 review).
-  '^https?://([^/]+\.)?linkedin\.com(/|$)',
-  '^https?://discord\.gg(/|$)',
+  # Domain-only patterns are anchored with ([/?#]|$) so a look-alike suffix
+  # (e.g. slack.com.attacker.com) cannot bypass the link check, while still
+  # matching path / query / fragment URLs (slack.com?x, slack.com#y) (#1206).
+  '^https?://([^/]+\.)?linkedin\.com([/?#]|$)',
+  '^https?://discord\.gg([/?#]|$)',
   '^https?://discord\.com/invite', # already path-bounded by /invite
-  '^https?://t\.co(/|$)', # Twitter short links
-  '^https?://([^/]+\.)?slack\.com(/|$)',
+  '^https?://t\.co([/?#]|$)', # Twitter short links
+  '^https?://([^/]+\.)?slack\.com([/?#]|$)',
 
   # note.com returns 403 to bot user-agents (anti-scraping); the articles are
   # valid in browsers. Linked from README as reference posts, not functional.
-  '^https?://([^/]+\.)?note\.com(/|$)',
+  '^https?://([^/]+\.)?note\.com([/?#]|$)',
 
   # docs.aws.amazon.com 403s HEAD requests from non-browser user-agents; the
   # pages are valid (e.g. well-architected SaaS lens linked from a skill README).
-  '^https?://docs\.aws\.amazon\.com(/|$)',
+  '^https?://docs\.aws\.amazon\.com([/?#]|$)',
 
   # GitHub URLs that may not exist yet (for PRs)
   # Uncomment if needed:
