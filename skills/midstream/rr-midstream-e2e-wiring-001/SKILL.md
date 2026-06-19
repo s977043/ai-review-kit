@@ -9,7 +9,7 @@ applyTo:
   - '**/*.{ts,tsx,js,jsx,mjs,cjs,py,rb,go,php,java}'
 tags: [wiring, end-to-end, correctness, integration, midstream]
 severity: major
-inputContext: [diff, fullFile]
+inputContext: [diff]
 outputKind: [findings, questions]
 modelHint: high-accuracy
 dependencies: [code_search]
@@ -37,7 +37,7 @@ Why: 宣言された処理の配線追跡はチェックリスト型だが、貫
 このスキルは以下の条件がすべて満たされない限り `NO_REVIEW` を返す。
 
 - [ ] 差分に**複数層を貫通する処理**（計測 / 通知 / 非同期 / 永続化 / 検証配線 / 例外通知 など）の追加・変更が含まれている
-- [ ] inputContext に diff または fullFile が含まれている
+- [ ] inputContext に diff が含まれている
 
 ゲート不成立時の出力: `NO_REVIEW: rr-midstream-e2e-wiring-001 — 貫通処理の変更が検出されない`
 
