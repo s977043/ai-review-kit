@@ -85,6 +85,20 @@
       "dependencies": []
     },
     {
+      "id": "rr-midstream-e2e-wiring-001",
+      "phase": "midstream",
+      "modelHint": "high-accuracy",
+      "outputKind": ["findings", "questions"],
+      "dependencies": ["code_search"]
+    },
+    {
+      "id": "rr-midstream-existing-pattern-conformance-001",
+      "phase": "midstream",
+      "modelHint": "high-accuracy",
+      "outputKind": ["findings", "questions"],
+      "dependencies": ["code_search"]
+    },
+    {
       "id": "rr-midstream-gh-address-comments-001",
       "phase": "midstream",
       "modelHint": "high-accuracy",

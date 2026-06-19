@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 112,
+  "skillCount": 114,
   "skills": [
     {
       "id": "adversarial-review",
@@ -170,6 +170,18 @@
       "path": "skills/midstream/community/rr-midstream-design-token-enforcement-001",
       "checksum": "sha256:a7b4ea0573a4478f7dc6891ebc0464e2d7fe08f7b9a65b1542e45d4ea3a9c6c2",
       "files": 9
+    },
+    {
+      "id": "rr-midstream-e2e-wiring-001",
+      "path": "skills/midstream/rr-midstream-e2e-wiring-001",
+      "checksum": "sha256:2b0d320e39002c05502cbcf10fa32865d77688296a65ca92a2ebe5b464681549",
+      "files": 1
+    },
+    {
+      "id": "rr-midstream-existing-pattern-conformance-001",
+      "path": "skills/midstream/rr-midstream-existing-pattern-conformance-001",
+      "checksum": "sha256:cceb0f4f6d47035062a7bc500d22c6cd4c74ee26c8db51e144510f5a72bedf8b",
+      "files": 1
     },
     {
       "id": "rr-midstream-firebase-security-rules-001",

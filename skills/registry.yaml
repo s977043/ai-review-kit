@@ -602,6 +602,28 @@ skills:
     recommended: true
     description: 'モジュール/スキルの構造変更で当該ファイルは更新したが、caller 側が古い構造（旧参照・旧シグネチャ・旧採番）を参照したまま残るパターンを検出する'
 
+  - id: rr-midstream-e2e-wiring-001
+    version: '0.1.0'
+    name: 'End-to-End Wiring 末端到達・貫通の検証'
+    path: skills/midstream/rr-midstream-e2e-wiring-001/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [wiring, end-to-end, correctness, integration, midstream]
+    severity: major
+    recommended: true
+    description: '宣言した処理（計測 / 通知 / 保存 / 検証 / 例外通知）が起点から末端まで途切れず配線されているかを確認し、「実装したつもり」で経路が途中で止まっている欠落を検出する'
+
+  - id: rr-midstream-existing-pattern-conformance-001
+    version: '0.1.0'
+    name: 'Existing-Pattern Conformance 既存パターン準拠の確認'
+    path: skills/midstream/rr-midstream-existing-pattern-conformance-001/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [conformance, prior-art, consistency, maintainability, midstream]
+    severity: major
+    recommended: true
+    description: '新実装が、同種の先行実装に在る防御 / バリデーション / エラー処理 / 規約 / 共通化ロジック / 概念定義を、欠落・重複・食い違いなく継承しているかを grep で先行特定して確認する'
+
   - id: rr-upstream-migration-safety-001
     version: '0.1.0'
     name: 'Migration Safety Review (framework-agnostic)'
