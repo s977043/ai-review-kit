@@ -10,7 +10,7 @@ applyTo:
   - '**/migrations/**/*'
 tags: [conformance, prior-art, consistency, maintainability, midstream]
 severity: major
-inputContext: [diff, fullFile]
+inputContext: [diff]
 outputKind: [findings, questions]
 modelHint: high-accuracy
 dependencies: [code_search]
