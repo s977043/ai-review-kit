@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.1](https://github.com/s977043/river-review/compare/v1.25.0...v1.25.1) (2026-06-19)
+
+
+### Bug Fixes
+
+* **skills:** align conformance registry description with SKILL.md frontmatter ([#1212](https://github.com/s977043/river-review/issues/1212)) ([75a046d](https://github.com/s977043/river-review/commit/75a046d76065d953f3be094fd113aa2bf397f56f))
+
 ## [1.25.0](https://github.com/s977043/river-review/compare/v1.24.0...v1.25.0) (2026-06-19)
 
 
