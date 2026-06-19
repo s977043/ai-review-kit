@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.0](https://github.com/s977043/river-review/compare/v1.24.0...v1.25.0) (2026-06-19)
+
+
+### Features
+
+* **skills:** end-to-end-wiring & existing-pattern-conformance review perspectives ([#169](https://github.com/s977043/river-review/issues/169) adoption) ([#1209](https://github.com/s977043/river-review/issues/1209)) ([dda2ed0](https://github.com/s977043/river-review/commit/dda2ed0e3e390dcc01ee71056979030e7b409ca1))
+
 ## [1.24.0](https://github.com/s977043/river-review/compare/v1.23.0...v1.24.0) (2026-06-18)
 
 
