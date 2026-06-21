@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.28.0](https://github.com/s977043/river-review/compare/v1.27.0...v1.28.0) (2026-06-21)
+
+
+### Features
+
+* **skills:** secret-scan exclude globs + promptfoo eval seed ([#1231](https://github.com/s977043/river-review/issues/1231)/[#1232](https://github.com/s977043/river-review/issues/1232)) ([#1236](https://github.com/s977043/river-review/issues/1236)) ([7285a8d](https://github.com/s977043/river-review/commit/7285a8dc95fd738967f848cf0c79d5c442a44cd3))
+* **tooling:** document skill exec paths + forward-gate recommended-skill eval coverage ([#1231](https://github.com/s977043/river-review/issues/1231)/[#1232](https://github.com/s977043/river-review/issues/1232)) ([#1235](https://github.com/s977043/river-review/issues/1235)) ([3247eef](https://github.com/s977043/river-review/commit/3247eef549ffa4b5770b4ff7070a4c611d24697f))
+
 ## [1.27.0](https://github.com/s977043/river-review/compare/v1.26.0...v1.27.0) (2026-06-21)
 
 
