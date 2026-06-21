@@ -27,9 +27,9 @@ const CFG_DIR = '/repo/cfg';
 
 // ---------------------------------------------------------------------------
 describe('CWD_DEFAULTS', () => {
-  test('exports all 12 canonical artifact IDs from the contract', () => {
+  test('exports all 13 canonical artifact IDs from the contract', () => {
     const ids = Object.keys(CWD_DEFAULTS);
-    assert.equal(ids.length, 12);
+    assert.equal(ids.length, 13);
     for (const id of [
       'pbi-input',
       'plan',
@@ -43,15 +43,17 @@ describe('CWD_DEFAULTS', () => {
       'lint',
       'typecheck',
       'findings-pool',
+      'tdd-ledger',
     ]) {
       assert.ok(id in CWD_DEFAULTS, id + ' missing from CWD_DEFAULTS');
     }
   });
 
-  test('diff default is diff.patch, junit is junit.xml, findings-pool is findings-pool.json', () => {
+  test('diff default is diff.patch, junit is junit.xml, findings-pool is findings-pool.json, tdd-ledger is tdd-ledger.json', () => {
     assert.equal(CWD_DEFAULTS.diff, 'diff.patch');
     assert.equal(CWD_DEFAULTS.junit, 'junit.xml');
     assert.equal(CWD_DEFAULTS['findings-pool'], 'findings-pool.json');
+    assert.equal(CWD_DEFAULTS['tdd-ledger'], 'tdd-ledger.json');
   });
 });
 
@@ -216,13 +218,14 @@ describe('resolveArtifact — priority order', () => {
 
 // ---------------------------------------------------------------------------
 describe('resolveAllArtifacts', () => {
-  test('returns a record with all 12 known IDs', async () => {
+  test('returns a record with all 13 known IDs', async () => {
     const fsImpl = makeFsStub([]);
     const result = await resolveAllArtifacts({ cwd: CWD, fsImpl });
-    assert.equal(Object.keys(result).length, 12);
+    assert.equal(Object.keys(result).length, 13);
     assert.ok('plan' in result);
     assert.ok('typecheck' in result);
     assert.ok('findings-pool' in result);
+    assert.ok('tdd-ledger' in result);
   });
 
   test('mixes CLI + config + cwd across IDs correctly', async () => {
