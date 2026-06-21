@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 114,
+  "skillCount": 116,
   "skills": [
     {
       "id": "adversarial-review",
@@ -172,6 +172,12 @@
       "files": 9
     },
     {
+      "id": "rr-midstream-doc-hygiene-001",
+      "path": "skills/midstream/rr-midstream-doc-hygiene-001",
+      "checksum": "sha256:3e86f57ea41d4fa073755858bb4bdfdd01dec6cdc77b64646e839a122dfcecda",
+      "files": 1
+    },
+    {
       "id": "rr-midstream-e2e-wiring-001",
       "path": "skills/midstream/rr-midstream-e2e-wiring-001",
       "checksum": "sha256:1491912a681e83ae5f8cddbb7126994b6ba7c3e557fd902dc60011b416af7d2e",
@@ -331,6 +337,12 @@
       "id": "rr-midstream-review-policy-standard-001",
       "path": "skills/midstream/review-policy-standard",
       "checksum": "sha256:85ba5a9afc56630e8c93d753dbcd8b44a5e15de328009c44163144892987964e",
+      "files": 1
+    },
+    {
+      "id": "rr-midstream-secret-credential-scan-001",
+      "path": "skills/midstream/rr-midstream-secret-credential-scan-001",
+      "checksum": "sha256:6477bc4f62d0b8f8dfd90aed0dafa944d4f73c517e8a0888fae5c95a52a0e13c",
       "files": 1
     },
     {

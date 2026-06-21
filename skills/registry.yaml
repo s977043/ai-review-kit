@@ -103,6 +103,28 @@ skills:
     recommended: true
     description: 'Detects common security vulnerabilities'
 
+  - id: rr-midstream-secret-credential-scan-001
+    version: '0.1.0'
+    name: 'Secret / Credential Scan 機密情報の混入検出'
+    path: skills/midstream/rr-midstream-secret-credential-scan-001/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [secret, credential, midstream]
+    severity: major
+    recommended: true
+    description: 'Detects API keys, tokens, credentials, private keys, .env values, and personal local paths newly added in a diff — language- and filetype-agnostic, complementing CI secret scanners'
+
+  - id: rr-midstream-doc-hygiene-001
+    version: '0.1.0'
+    name: 'Documentation Hygiene ドキュメント衛生'
+    path: skills/midstream/rr-midstream-doc-hygiene-001/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [documentation, hygiene, maintainability, midstream]
+    severity: major
+    recommended: true
+    description: 'Detects transient task logs leaking into durable docs (AGENTS.md), SOP/decision/log/learned role confusion, and internal memos / local paths / AI-conversation fragments left in published docs'
+
   - id: rr-midstream-logging-observability-001
     version: '0.1.0'
     name: 'Logging & Observability'

@@ -78,6 +78,13 @@
       "dependencies": []
     },
     {
+      "id": "rr-midstream-secret-credential-scan-001",
+      "phase": "midstream",
+      "modelHint": "balanced",
+      "outputKind": ["findings", "actions"],
+      "dependencies": ["code_search"]
+    },
+    {
       "id": "rr-midstream-ubiquitous-language-naming-001",
       "phase": "midstream",
       "modelHint": "balanced",
