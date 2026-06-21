@@ -80,16 +80,16 @@ Compare approved planning artifacts against the implementation diff.
 
 #### Finding taxonomy
 
-| Finding id | Meaning | Typical severity |
-| --- | --- | --- |
-| `planned-but-missing` | A planned task or acceptance item is not implemented. | major / critical |
-| `implemented-but-not-planned` | The diff adds behavior not present in the plan. | major |
-| `target-file-violation` | Changed files exceed planned target files without justification. | major |
-| `out-of-scope-change` | The diff touches an explicitly excluded area. | critical |
-| `design-deviation` | The implementation contradicts an approved design / ADR. | major / critical |
-| `test-contract-missing` | Planned test case is absent from tests or JUnit evidence. | major |
-| `unexpected-dependency-added` | A dependency was added without plan/design justification. | major |
-| `unjustified-abstraction` | A new abstraction appears without plan/design rationale. | minor / major |
+| Finding id                    | Meaning                                                          | Typical severity |
+| ----------------------------- | ---------------------------------------------------------------- | ---------------- |
+| `planned-but-missing`         | A planned task or acceptance item is not implemented.            | major / critical |
+| `implemented-but-not-planned` | The diff adds behavior not present in the plan.                  | major            |
+| `target-file-violation`       | Changed files exceed planned target files without justification. | major            |
+| `out-of-scope-change`         | The diff touches an explicitly excluded area.                    | critical         |
+| `design-deviation`            | The implementation contradicts an approved design / ADR.         | major / critical |
+| `test-contract-missing`       | Planned test case is absent from tests or JUnit evidence.        | major            |
+| `unexpected-dependency-added` | A dependency was added without plan/design justification.        | major            |
+| `unjustified-abstraction`     | A new abstraction appears without plan/design rationale.         | minor / major    |
 
 #### Existing mapping
 
@@ -127,12 +127,12 @@ evidence and whether that evidence maps to the promised test cases.
 
 ### Expected TDD phases
 
-| Phase | Required meaning | Validity rule |
-| --- | --- | --- |
-| `tdd_red` | Added test fails before production implementation. | `exitCode != 0` and conclusion explains the expected failure. |
-| `tdd_green` | Minimal implementation makes the target test pass. | `exitCode = 0` and command targets the relevant test. |
-| `refactor_verify` | After cleanup, tests and related checks still pass. | `exitCode = 0`; required when refactor was performed. |
-| `verification` | Non-TDD final verification. | `exitCode = 0`; does not replace RED/GREEN. |
+| Phase             | Required meaning                                    | Validity rule                                                 |
+| ----------------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| `tdd_red`         | Added test fails before production implementation.  | `exitCode != 0` and conclusion explains the expected failure. |
+| `tdd_green`       | Minimal implementation makes the target test pass.  | `exitCode = 0` and command targets the relevant test.         |
+| `refactor_verify` | After cleanup, tests and related checks still pass. | `exitCode = 0`; required when refactor was performed.         |
+| `verification`    | Non-TDD final verification.                         | `exitCode = 0`; does not replace RED/GREEN.                   |
 
 ### Checks
 
@@ -146,14 +146,14 @@ evidence and whether that evidence maps to the promised test cases.
 
 ### Finding taxonomy
 
-| Finding id | Meaning | Typical severity |
-| --- | --- | --- |
-| `missing-tdd-red` | TDD is required but no RED evidence exists. | major |
-| `invalid-tdd-red` | RED evidence passed or failed for an unrelated reason. | major |
-| `missing-tdd-green` | No GREEN evidence exists after implementation. | major |
-| `missing-refactor-verify` | Refactor occurred but no post-refactor verification exists. | minor / major |
-| `tdd-evidence-not-linked-to-test-case` | Evidence cannot be mapped to a planned test case. | major |
-| `test-does-not-cover-acceptance-criteria` | Test exists but does not verify the promised acceptance behavior. | major |
+| Finding id                                | Meaning                                                           | Typical severity |
+| ----------------------------------------- | ----------------------------------------------------------------- | ---------------- |
+| `missing-tdd-red`                         | TDD is required but no RED evidence exists.                       | major            |
+| `invalid-tdd-red`                         | RED evidence passed or failed for an unrelated reason.            | major            |
+| `missing-tdd-green`                       | No GREEN evidence exists after implementation.                    | major            |
+| `missing-refactor-verify`                 | Refactor occurred but no post-refactor verification exists.       | minor / major    |
+| `tdd-evidence-not-linked-to-test-case`    | Evidence cannot be mapped to a planned test case.                 | major            |
+| `test-does-not-cover-acceptance-criteria` | Test exists but does not verify the promised acceptance behavior. | major            |
 
 ### Existing mapping
 
@@ -266,17 +266,17 @@ It must not perform GO / NO-GO, C-3 approval, or auto-merge.
 
 ## Responsibility boundary
 
-| Area | PlanGate | River Review |
-| --- | --- | --- |
-| Plan creation | Owner | Reads as artifact |
-| Design approval | Owner | Detects design deviation |
-| Exec start/stop | Owner | Does not control |
-| TDD requirement | Owner | Reviews evidence validity |
-| Subagent execution | Owner | Reviews reports/packages |
-| Diff review | Supporting | Owner |
-| Findings generation | Supporting | Owner |
-| GO / NO-GO | Human / caller / PlanGate | Advisory only |
-| Auto-merge | No | No |
+| Area                | PlanGate                  | River Review              |
+| ------------------- | ------------------------- | ------------------------- |
+| Plan creation       | Owner                     | Reads as artifact         |
+| Design approval     | Owner                     | Detects design deviation  |
+| Exec start/stop     | Owner                     | Does not control          |
+| TDD requirement     | Owner                     | Reviews evidence validity |
+| Subagent execution  | Owner                     | Reviews reports/packages  |
+| Diff review         | Supporting                | Owner                     |
+| Findings generation | Supporting                | Owner                     |
+| GO / NO-GO          | Human / caller / PlanGate | Advisory only             |
+| Auto-merge          | No                        | No                        |
 
 ## Adoption plan
 
