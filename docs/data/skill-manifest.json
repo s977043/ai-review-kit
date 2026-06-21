@@ -354,8 +354,8 @@
     {
       "id": "rr-midstream-secret-credential-scan-001",
       "path": "skills/midstream/rr-midstream-secret-credential-scan-001",
-      "checksum": "sha256:62369d6b8f9564f26edc1418cefed634bf46d82bd06dcfabdb1e5358529ed0d2",
-      "files": 1
+      "checksum": "sha256:18c1ea3f5abc7cdc912c465ac5988dbda9d6c7f69ae2b9c6fe10d2a78867b8a1",
+      "files": 10
     },
     {
       "id": "rr-midstream-security-basic-001",

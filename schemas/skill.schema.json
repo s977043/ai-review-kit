@@ -129,6 +129,11 @@
       "items": { "type": "string" },
       "minItems": 1
     },
+    "exclude": {
+      "type": "array",
+      "description": "Glob patterns for files to exclude from this skill even when applyTo matches (honored by the midstream skill-dispatcher; snapshot/planner selection ignores it)",
+      "items": { "type": "string" }
+    },
     "tags": {
       "type": "array",
       "description": "Optional metadata for classification",

@@ -113,6 +113,15 @@ skills:
     severity: major
     recommended: true
     description: 'Detects API keys, tokens, credentials, private keys, .env values, and personal local paths newly added in a diff — language- and filetype-agnostic, complementing CI secret scanners'
+    exclude:
+      - '**/package-lock.json'
+      - '**/pnpm-lock.yaml'
+      - '**/yarn.lock'
+      - '**/*.lock'
+      - 'dist/**'
+      - '**/*.min.*'
+      - '**/*.map'
+      - '**/*.snap'
 
   - id: rr-midstream-doc-hygiene-001
     version: '0.1.0'
