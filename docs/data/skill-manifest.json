@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 118,
+  "skillCount": 119,
   "skills": [
     {
       "id": "adversarial-review",
@@ -625,6 +625,12 @@
       "id": "rr-upstream-plangate-rule-promotion-001",
       "path": "skills/upstream/rr-upstream-plangate-rule-promotion-001",
       "checksum": "sha256:ae2987dd46a6f77fa3156a853bf379296fb63bafd444a48101fb6c632043a504",
+      "files": 1
+    },
+    {
+      "id": "rr-upstream-plangate-tdd-evidence-001",
+      "path": "skills/upstream/rr-upstream-plangate-tdd-evidence-001",
+      "checksum": "sha256:0501932691d0508b0a2fd97dcd7acb9167604a59f3cf24635473c9ad64f87b6f",
       "files": 1
     },
     {

@@ -188,6 +188,7 @@ export const artifactsConfigSchema = z
     lint: artifactPathConfigSchema.optional(),
     typecheck: artifactPathConfigSchema.optional(),
     'findings-pool': artifactPathConfigSchema.optional(),
+    'tdd-ledger': artifactPathConfigSchema.optional(),
   })
   .catchall(z.unknown());
 

@@ -31,6 +31,7 @@ River Review が認識する入力アーティファクトは以下の通りで�
 | `lint`            | `lint.json` など     | JSON / plain | 任意           | ESLint JSON、stylelint JSON、または tool 固有 plain | Lint 実行結果                                     |
 | `typecheck`       | `typecheck.txt` など | plain / JSON | 任意           | tsc `--pretty=false` または tool 固有 plain         | 型検査の実行結果                                  |
 | `findings-pool`   | `findings-pool.json` | JSON         | 任意           | 本ドキュメントの `findings-pool` 節                 | 複数の Review Artifact から集約した findings 履歴 |
+| `tdd-ledger`      | `tdd-ledger.json`    | JSON         | 任意           | 本ドキュメントの `tdd-ledger` 節                    | TDD の RED/GREEN/REFACTOR VERIFY フェーズ実行証跡 |
 
 ### 凡例
 
@@ -91,6 +92,45 @@ River Review が認識する入力アーティファクトは以下の通りで�
 
 - **生成方法**: CLI 側で複数の `review-artifact.json` を読み、その `findings[]` を `entries[]` に連結して構築する想定（実装は別途追跡中）。
 - **欠損時**: `rr-upstream-plangate-rule-promotion-001` など本アーティファクトを必要とする skill は Pre-execution Gate で `NO_REVIEW` を返し、昇格判定処理をスキップする。
+
+### `tdd-ledger`
+
+- **形式**: UTF-8 JSON。TDD（テスト駆動開発）の各フェーズ実行を記録した台帳。PlanGate などの上流ワークフローが exec 中に生成する想定。
+- **役割**: RED / GREEN / REFACTOR VERIFY フェーズの実行コマンドと結果（exitCode）を記録し、TDD が宣言どおり正しい順序で行われた証跡を提供する。
+- **スキーマ（暫定）**:
+
+  ```json
+  {
+    "version": "1",
+    "task": "TASK-1234",
+    "phases": [
+      {
+        "phase": "tdd_red",
+        "command": "npm test -- discount.test.ts",
+        "exitCode": 1,
+        "conclusion": "applyDiscount 未実装のため期待どおり失敗",
+        "testCaseRefs": ["TC2"]
+      },
+      {
+        "phase": "tdd_green",
+        "command": "npm test -- discount.test.ts",
+        "exitCode": 0,
+        "conclusion": "最小実装で TC2 が pass",
+        "testCaseRefs": ["TC2"]
+      }
+    ]
+  }
+  ```
+
+  - `version`: 文字列 `"1"` 固定（将来の非互換変更時にバンプ）。
+  - `task`（任意）: 対応するタスク識別子。
+  - `phases[].phase`: `tdd_red` / `tdd_green` / `refactor_verify` / `verification` のいずれか。
+  - `phases[].command`: 実行したテスト / 検証コマンド。
+  - `phases[].exitCode`: コマンドの終了コード（`tdd_red` は `!= 0`、`tdd_green` / `refactor_verify` / `verification` は `0` が期待値）。
+  - `phases[].conclusion`（任意）: そのフェーズの結論・失敗理由の説明。
+  - `phases[].testCaseRefs`（任意）: 対応する `test-cases` の ID 配列。
+
+- **欠損時**: `rr-upstream-plangate-tdd-evidence-001` など本アーティファクトを必要とする skill は Pre-execution Gate で `NO_REVIEW` を返し、TDD 証跡レビューをスキップする。
 
 ### `diff`
 

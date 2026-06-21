@@ -31,6 +31,7 @@ The input artifacts recognized by River Review are listed below. See "Legend" at
 | `lint`            | `lint.json` etc.     | JSON / plain | Optional        | ESLint JSON, stylelint JSON, or tool-specific plain | Lint result                                                    |
 | `typecheck`       | `typecheck.txt` etc. | plain / JSON | Optional        | tsc `--pretty=false` or tool-specific plain         | Type checker result                                            |
 | `findings-pool`   | `findings-pool.json` | JSON         | Optional        | `findings-pool` section in this document            | Aggregated `findings[]` history from multiple Review Artifacts |
+| `tdd-ledger`      | `tdd-ledger.json`    | JSON         | Optional        | `tdd-ledger` section in this document               | RED/GREEN/REFACTOR VERIFY phase execution evidence for TDD     |
 
 ### Legend
 
@@ -92,6 +93,45 @@ The input artifacts recognized by River Review are listed below. See "Legend" at
 
 - **Construction**: CLI consumers are expected to build this artifact by reading multiple `review-artifact.json` files and concatenating their `findings[]` into `entries[]` (implementation tracked in follow-up issue).
 - **When absent**: Skills that require this artifact, such as `rr-upstream-plangate-rule-promotion-001`, return `NO_REVIEW` at the Pre-execution Gate and skip the promotion-judgement process.
+
+### `tdd-ledger`
+
+- **Format**: UTF-8 JSON. A ledger recording each TDD (test-driven development) phase execution. Expected to be produced during exec by upstream workflows such as PlanGate.
+- **Role**: Records the command and result (exitCode) of the RED / GREEN / REFACTOR VERIFY phases, providing evidence that TDD was performed in the declared, correct order.
+- **Schema (provisional)**:
+
+  ```json
+  {
+    "version": "1",
+    "task": "TASK-1234",
+    "phases": [
+      {
+        "phase": "tdd_red",
+        "command": "npm test -- discount.test.ts",
+        "exitCode": 1,
+        "conclusion": "Fails as expected because applyDiscount is unimplemented",
+        "testCaseRefs": ["TC2"]
+      },
+      {
+        "phase": "tdd_green",
+        "command": "npm test -- discount.test.ts",
+        "exitCode": 0,
+        "conclusion": "Minimal implementation makes TC2 pass",
+        "testCaseRefs": ["TC2"]
+      }
+    ]
+  }
+  ```
+
+  - `version`: Fixed string `"1"` (bumped on future incompatible changes).
+  - `task` (optional): Identifier of the corresponding task.
+  - `phases[].phase`: One of `tdd_red` / `tdd_green` / `refactor_verify` / `verification`.
+  - `phases[].command`: The test/verification command executed.
+  - `phases[].exitCode`: Exit code of the command (`tdd_red` expects `!= 0`; `tdd_green` / `refactor_verify` / `verification` expect `0`).
+  - `phases[].conclusion` (optional): Explanation of the phase outcome or failure reason.
+  - `phases[].testCaseRefs` (optional): Array of corresponding `test-cases` IDs.
+
+- **When absent**: Skills that require this artifact, such as `rr-upstream-plangate-tdd-evidence-001`, return `NO_REVIEW` at the Pre-execution Gate and skip the TDD evidence review.
 
 ### `diff`
 

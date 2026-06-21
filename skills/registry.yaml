@@ -1094,6 +1094,17 @@ skills:
     recommended: false
     description: '実装差分が plan / todo / test-cases アーティファクトの方針と一致しているかを検査し、逸脱・漏れ・意図外変更を検知する'
 
+  - id: rr-upstream-plangate-tdd-evidence-001
+    version: '0.1.0'
+    name: 'PlanGate TDD Evidence Review'
+    path: skills/upstream/rr-upstream-plangate-tdd-evidence-001/SKILL.md
+    category: upstream
+    phase: upstream
+    tags: [plangate, tdd, evidence, verification, upstream]
+    severity: major
+    recommended: false
+    description: 'TDD を主張する実装の RED/GREEN/REFACTOR VERIFY 証跡（tdd-ledger）の妥当性を検査し、フェーズ順序・exitCode・test-cases との対応の欠落や偽装を検知する'
+
   - id: rr-upstream-plangate-verification-audit-001
     version: '0.1.0'
     name: 'PlanGate 検証監査 (W チェック)'

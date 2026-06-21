@@ -56,6 +56,7 @@ const CWD_DEFAULTS = Object.freeze({
   lint: 'lint.json',
   typecheck: 'typecheck.txt',
   'findings-pool': 'findings-pool.json',
+  'tdd-ledger': 'tdd-ledger.json',
 });
 
 /**

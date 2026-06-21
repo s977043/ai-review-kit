@@ -39057,6 +39057,7 @@ const artifactsConfigSchema = schemas/* object */.Ik({
     lint: artifactPathConfigSchema.optional(),
     typecheck: artifactPathConfigSchema.optional(),
     'findings-pool': artifactPathConfigSchema.optional(),
+    'tdd-ledger': artifactPathConfigSchema.optional(),
   })
   .catchall(schemas/* unknown */.L5());
 
