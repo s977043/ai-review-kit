@@ -56,7 +56,7 @@ index 0000000..3333333
 +
 +export function isLockedOut(user) {
 +  if (user.failedAttempts < MAX_ATTEMPTS) return false;
-+  if (!user.lockedUntil) return true;
++  if (!user.lockedUntil) return false;
 +  return Date.now() < new Date(user.lockedUntil).getTime();
 +}
 +
