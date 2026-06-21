@@ -13,6 +13,15 @@ inputContext: [diff]
 outputKind: [findings, actions]
 modelHint: balanced
 dependencies: [code_search]
+exclude:
+  - '**/package-lock.json'
+  - '**/pnpm-lock.yaml'
+  - '**/yarn.lock'
+  - '**/*.lock'
+  - 'dist/**'
+  - '**/*.min.*'
+  - '**/*.map'
+  - '**/*.snap'
 ---
 
 ## Pattern declaration
