@@ -1,0 +1,16 @@
+diff --git a/src/components/PriceCard.tsx b/src/components/PriceCard.tsx
+index 1111111..2222222 100644
+--- a/src/components/PriceCard.tsx
++++ b/src/components/PriceCard.tsx
+@@ -1,10 +1,10 @@
+ import React from 'react';
+
+ export function PriceCard({ label, price }: { label: string; price: string }) {
+   return (
+-    <div className="card">
++    <div style={{ padding: '10px', borderRadius: '7px', color: '#3b82f6' }}>
+       <span>{label}</span>
+       <strong>{price}</strong>
+     </div>
+   );
+ }

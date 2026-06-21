@@ -1,0 +1,15 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 1111111..2222222 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -10,5 +10,11 @@ This file documents conventions for AI agents working in this repository.
+
+ ## Conventions
+
+ Follow the existing code style and run the test suite before committing.
++
++## 2026-06-21 TASK-1234 作業ログ
++
++- branch を切って実装した。
++- npm test を走らせた（全部 pass）。
++- 次は PR を出す。レビュー待ち。

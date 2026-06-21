@@ -369,5 +369,29 @@
     "availableDependencies": ["test_runner", "code_search"],
     "expectedAny": ["rr-downstream-test-plan-review-001"],
     "expectedTop1": ["rr-downstream-flaky-test-001", "rr-downstream-test-plan-review-001"]
+  },
+  {
+    "name": "coverage: midstream doc hygiene (AGENTS.md task log) — #1233",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-doc-hygiene-agents-log.diff",
+    "availableContexts": ["diff"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["rr-midstream-doc-hygiene-001"]
+  },
+  {
+    "name": "coverage: midstream design-source conformance (hardcoded scale) — #1233",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-design-source-hardcoded-scale.diff",
+    "availableContexts": ["diff"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["rr-midstream-design-source-conformance-001"]
+  },
+  {
+    "name": "coverage: midstream new UI component variants/states — #1233",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-new-ui-component.diff",
+    "availableContexts": ["diff"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["rr-midstream-component-variants-states-001"]
   }
 ]
