@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.26.0](https://github.com/s977043/river-review/compare/v1.25.2...v1.26.0) (2026-06-21)
+
+
+### Features
+
+* **skills:** design-source-conformance & component-variants-states perspectives ([#1217](https://github.com/s977043/river-review/issues/1217)) ([#1226](https://github.com/s977043/river-review/issues/1226)) ([5efc37d](https://github.com/s977043/river-review/commit/5efc37dd4a9d4c81efd1491d6451d2b3954a33ae))
+* **skills:** secret-credential-scan & doc-hygiene perspectives ([#1216](https://github.com/s977043/river-review/issues/1216)) ([#1222](https://github.com/s977043/river-review/issues/1222)) ([47e6dd7](https://github.com/s977043/river-review/commit/47e6dd7404daf0674f40baaddc08feb14c5667a0))
+
 ## [1.25.2](https://github.com/s977043/river-review/compare/v1.25.1...v1.25.2) (2026-06-21)
 
 
