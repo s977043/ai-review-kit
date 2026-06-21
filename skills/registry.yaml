@@ -10,7 +10,8 @@ description: 'Catalog of all River Review skills organized by stream category an
 # 対応する SKILL.md frontmatter の `description`（レビュー実行時に参照する詳細記述・SSoT）と
 # 文言を一致させる必要はない。両者は役割が異なる（カタログ要約 vs 実行時詳細）ため、不一致を
 # 「ドリフト」とみなして機械的に揃えないこと。ただし同一言語・同一意図のまま字句だけがずれた
-# 場合は frontmatter 側に合わせる。詳細は docs/skills-structure.md を参照。
+# 場合は、要約としての簡潔さを保ちつつ frontmatter 側の意図を反映するように整える。詳細は
+# docs/skills-structure.md を参照。
 skills:
   # Upstream Skills (Design Phase)
   - id: rr-upstream-architecture-validation-plan-001
