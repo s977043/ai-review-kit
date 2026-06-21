@@ -44,7 +44,7 @@ Why: `tdd-ledger` のフェーズ別証跡を基準として妥当性を突き�
 
 ## Pre-execution Gate / 実行前ゲート
 
-このスキルは以下の条件が**すべて**満たされない限り `NO_REVIEW` を返す。
+このスキルは、以下の条件の**いずれか 1 つでも満たされない場合**に `NO_REVIEW` を返す（すべて満たされたときのみレビューを実行する）。
 
 - [ ] artifact として `tdd-ledger` が解決できている
 - [ ] `tdd-ledger` に 1 つ以上の `phases[]` エントリが含まれている
@@ -79,10 +79,13 @@ Why: `tdd-ledger` のフェーズ別証跡を基準として妥当性を突き�
    - `tdd_green` の対象が `tdd_red` と同じ挙動（同じ `testCaseRefs` / コマンド）を指しているか確認する。RED と無関係な GREEN は指摘する。
 3. REFACTOR VERIFY
    - 差分に整理・リファクタが含まれる場合、`refactor_verify`（`exitCode == 0`）が存在するか確認する。
-4. test-cases との対応
+4. verification（TDD 以外の最終検証）
+   - `verification` フェーズが記録されている場合は `exitCode == 0` であることを確認する。`exitCode != 0` は最終検証の失敗として指摘する。
+   - `verification` は RED/GREEN を**置き換えない**。verification のみが存在し `tdd_red` / `tdd_green` を欠く場合は `missing-tdd-red` / `missing-tdd-green` の対象とする。
+5. test-cases との対応
    - `phases[].testCaseRefs` が `test-cases` artifact のケース ID に対応づくか確認する。対応づかない証跡は `tdd-evidence-not-linked-to-test-case` として指摘する。
    - `test-cases` の受入挙動に対し、テストが mock のみを検証してビジネス境界を見ていないと読み取れる場合は指摘する。
-5. 不確実性の扱い
+6. 不確実性の扱い
    - ledger の記述が曖昧でフェーズ妥当性が判断できない場合は、断定せず `[q]` として質問形式で返す。
 
 ## Finding 分類（taxonomy）
@@ -106,7 +109,7 @@ Why: `tdd-ledger` のフェーズ別証跡を基準として妥当性を突き�
 
 ## Output / 出力
 
-- すべて日本語。コメントは River Review の `<file>:<line>: <message>` 形式（ledger を指す場合は `tdd-ledger.json:<行/フェーズ>` を疑似ロケーションとして用いてよい）。
+- すべて日本語。コメントは River Review の `<file>:<line>: <message>` 形式。ledger を指す場合は `tdd-ledger.json:<1 始まりのフェーズ番号>`（例: 2 番目のフェーズなら `tdd-ledger.json:2`）を疑似ロケーションとして用いる。`<line>` は**必ず整数**にする（パーサが行番号を整数として解釈するため、フェーズ名などの文字列を入れない）。
 - severity は内部語彙 `blocker|warning|nit` を使用し、スキーマ側 `critical|major|minor|info` への変換は `review-core` ルールに委ねる。分類ガイド:
   - `blocker`: TDD が必須要件として宣言された変更で RED/GREEN 証跡が完全に欠落。
   - `warning`: 偽の RED（pass）、GREEN 欠落、test-case 未対応、受入挙動の未検証。
