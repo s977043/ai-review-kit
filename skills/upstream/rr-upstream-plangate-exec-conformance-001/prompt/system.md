@@ -36,4 +36,5 @@ Do NOT flag:
 - severity 内部語彙: `[severity=blocker|warning|nit]` をメッセージの先頭に使用（スキーマ側 critical|major|minor|info は review-core ルールが変換）
 - サマリ行: `(summary):1: 方針整合 <件数> / todo 網羅 <件数> / テスト整合 <件数> / 質問 <件数>`
 - 各 finding は `Evidence — diff: <file>:<line>, <artifact>: <見出し/行/項目>` および `Fix: <最小の是正案>` を含める
+- 任意で finding-id を `[id=...]` として付与してよい（分類の明示。出力形式は変えない）: `planned-but-missing`(blocker) / `implemented-but-not-planned`(warning) / `target-file-violation`(warning) / `out-of-scope-change`(blocker) / `design-deviation`(warning〜blocker, plan の設計判断との突合に限定) / `test-contract-missing`(warning) / `unexpected-dependency-added`(warning) / `unjustified-abstraction`(nit〜warning)
 - 質問は `(questions):1: [q] ...` 形式
