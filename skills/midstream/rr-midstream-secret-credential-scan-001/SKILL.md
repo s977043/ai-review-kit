@@ -36,7 +36,7 @@ Why: 機密情報の検出はパターン的・決定論で判定できる領域
 
 このスキルは以下の条件がすべて満たされない限り `NO_REVIEW` を返す。
 
-- [ ] 差分の**追加行**に、機密情報の候補（高エントロピー文字列・`API_KEY`/`SECRET`/`TOKEN`/`PASSWORD` 等のキー・`-----BEGIN ... PRIVATE KEY-----`・`/Users/` や `/home/` で始まる個人パス・実値入りの `.env` 行など）が含まれている
+- [ ] 差分の**追加行**に、機密情報の候補（高エントロピー文字列・`API_KEY`/`SECRET`/`TOKEN` 等のキー・`-----BEGIN ... PRIVATE KEY-----`・`/Users/` や `/home/`、`C:\Users\` で始まる個人パス・`.env` 実値行）が含まれている
 - [ ] inputContext に diff が含まれ、`code_search`（grep）が利用可能である
 
 ゲート不成立時の出力: `NO_REVIEW: rr-midstream-secret-credential-scan-001 — 機密情報の候補が差分に検出されない`
@@ -56,7 +56,7 @@ Why: 機密情報の検出はパターン的・決定論で判定できる領域
 1. **候補抽出**: 差分の追加行から次の機密候補を抽出する。
    - 鍵名（`API_KEY`/`SECRET`/`TOKEN`/`PASSWORD`/`CREDENTIAL`）への実値代入
    - 既知接頭辞（`sk-`/`ghp_`/`AKIA`/`AIza` 等）や `-----BEGIN ... PRIVATE KEY-----`
-   - 高エントロピー文字列、個人パス（`/Users/<name>/`、`/home/<name>/`）、実値入り `.env` 行
+   - 高エントロピー文字列、個人パス（`/Users/<name>/`、`/home/<name>/`、`C:\Users\<name>\`）、実値入り `.env` 行
 2. **実値判定**: プレースホルダ・例値・環境変数参照を `code_search` で確認して除外し、実在しうる値のみ残す。
 3. **報告**: 該当箇所を `<file>:<line>` で示し、機密の種別と推奨対応（環境変数 / Secrets への移動、コミット履歴からの除去、CI secret-scan の導入）を述べる。値そのものは出力に再掲しない（マスクする）。
 

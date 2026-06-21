@@ -174,7 +174,7 @@
     {
       "id": "rr-midstream-doc-hygiene-001",
       "path": "skills/midstream/rr-midstream-doc-hygiene-001",
-      "checksum": "sha256:3e86f57ea41d4fa073755858bb4bdfdd01dec6cdc77b64646e839a122dfcecda",
+      "checksum": "sha256:0428cd7f2676792b4b267cab3a77ea27bbce685107ef0dccc7ccea24d729fc3c",
       "files": 1
     },
     {
@@ -342,7 +342,7 @@
     {
       "id": "rr-midstream-secret-credential-scan-001",
       "path": "skills/midstream/rr-midstream-secret-credential-scan-001",
-      "checksum": "sha256:6477bc4f62d0b8f8dfd90aed0dafa944d4f73c517e8a0888fae5c95a52a0e13c",
+      "checksum": "sha256:62369d6b8f9564f26edc1418cefed634bf46d82bd06dcfabdb1e5358529ed0d2",
       "files": 1
     },
     {

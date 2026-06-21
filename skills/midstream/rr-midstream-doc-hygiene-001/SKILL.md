@@ -8,7 +8,6 @@ phase: midstream
 applyTo:
   - '**/*.md'
   - '**/*.mdx'
-  - '**/AGENTS.md'
 tags: [documentation, hygiene, maintainability, midstream]
 severity: major
 inputContext: [diff]
@@ -49,7 +48,7 @@ Why: ドキュメントの役割汚染・内部メモ混入はパターン的に
 
 - 一過性ログを**意図的に置く場所**（`CHANGELOG.md` / `docs/**/retrospectives/**` / `_docs/decisions/**` / 日付付きログファイル）への追記は、その役割に沿う限り指摘しない。
 - 手順書内のコマンド例・出力例として**意図的に引用されたログ**は指摘しない（地の文に紛れ込んだ作業ログのみ対象）。
-- ローカルパスでも、汎用的な例示（`/path/to/...`、`~/project`）は指摘しない。実在の個人パス（`/Users/<name>/`、`/home/<name>/`）のみ対象。
+- ローカルパスでも、汎用的な例示（`/path/to/...`、`~/project`）は指摘しない。実在の個人パス（`/Users/<name>/`、`/home/<name>/`、`C:\Users\<name>\`）のみ対象。
 - 内部向けと明記されたドキュメント（先頭に「内部資料」等の宣言がある）への内部メモは、公開物でない限り指摘しない。
 
 ## Rule / ルール
