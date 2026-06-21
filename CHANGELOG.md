@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.2](https://github.com/s977043/river-review/compare/v1.25.1...v1.25.2) (2026-06-21)
+
+
+### Bug Fixes
+
+* **skills:** harden Gate + FP guards for the two LLM-only [#169](https://github.com/s977043/river-review/issues/169) skills ([#1214](https://github.com/s977043/river-review/issues/1214) P0/P1/P2) ([#1218](https://github.com/s977043/river-review/issues/1218)) ([8622d06](https://github.com/s977043/river-review/commit/8622d0693dd92c2a2e7c526208f66fc49ec507c6))
+
 ## [1.25.1](https://github.com/s977043/river-review/compare/v1.25.0...v1.25.1) (2026-06-19)
 
 
