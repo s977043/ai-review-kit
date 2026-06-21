@@ -421,6 +421,28 @@ skills:
     recommended: true
     description: '既存デザインシステムコンポーネント（Button / Input / Modal / Card 等）を再実装していないかを検出する。'
 
+  - id: rr-midstream-design-source-conformance-001
+    version: '0.1.0'
+    name: 'Design Source-of-Truth Conformance デザイン定義準拠'
+    path: skills/midstream/rr-midstream-design-source-conformance-001/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [design-system, design-source, conformance, midstream]
+    severity: minor
+    recommended: true
+    description: 'リポジトリに DESIGN.md やデザイントークン定義が存在する場合に、新規 UI 実装の色・余白・フォントサイズ・角丸・シャドウがその定義済みスケールに準拠しているかを照合する。定義が無ければ実行しない'
+
+  - id: rr-midstream-component-variants-states-001
+    version: '0.1.0'
+    name: 'Component Variants / States Documentation コンポーネント状態の文書化'
+    path: skills/midstream/rr-midstream-component-variants-states-001/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [design-system, component, variants, states, midstream]
+    severity: minor
+    recommended: true
+    description: '新規追加された UI コンポーネントに、variants（種類）とインタラクティブ状態（hover / focus / disabled / loading / error）が定義・文書化されているかを確認し、状態設計の欠落を検出する'
+
   - id: rr-midstream-tailwind-class-hygiene-001
     version: '0.1.0'
     name: 'Tailwind CSS Class Hygiene Review'
