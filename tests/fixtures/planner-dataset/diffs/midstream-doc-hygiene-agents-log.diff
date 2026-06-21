@@ -2,7 +2,7 @@ diff --git a/AGENTS.md b/AGENTS.md
 index 1111111..2222222 100644
 --- a/AGENTS.md
 +++ b/AGENTS.md
-@@ -10,6 +10,12 @@ This file documents conventions for AI agents working in this repository.
+@@ -10,5 +10,11 @@ This file documents conventions for AI agents working in this repository.
 
  ## Conventions
 
