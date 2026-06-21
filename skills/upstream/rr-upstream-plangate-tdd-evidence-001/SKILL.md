@@ -101,6 +101,8 @@ Why: `tdd-ledger` のフェーズ別証跡を基準として妥当性を突き�
 | `tdd-evidence-not-linked-to-test-case`    | 証跡を計画した test case に対応づけられない            | warning       |
 | `test-does-not-cover-acceptance-criteria` | テストはあるが約束した受入挙動を検証しない             | warning       |
 
+各 finding の既定 severity は warning だが、**TDD が必須要件として宣言された変更で `tdd_red` と `tdd_green` の両証跡が完全に欠落する場合は blocker にエスカレーションする**（下記 Output の severity ガイド参照）。
+
 ## Evidence / 根拠の取り方
 
 - 指摘は `tdd-ledger` の該当 `phases[]` エントリ（`phase` / `exitCode` / `command`）と、対応する `test-cases` のケース ID をペアで示す。
@@ -140,3 +142,9 @@ Why: `tdd-ledger` のフェーズ別証跡を基準として妥当性を突き�
 - 姉妹 skill: `rr-upstream-plangate-exec-conformance-001`（plan/todo/test-cases と差分の整合）
 - 姉妹 skill: `rr-upstream-plangate-verification-audit-001`（既存レビュー文書の W チェック）
 - 出典: Issue #1223（Superpowers 由来の TDD Evidence Review）
+
+### `tdd-ledger` の生成元（producer）について
+
+`tdd-ledger` artifact は River Review が**読み取る** consumer 入力であり、River Review 自身は生成しない（`findings-pool` と同じ consumer-first パターン）。生成は PlanGate などの上流ワークフロー（例: PlanGate の `evidence-ledger`）が exec 中に担う想定である。
+
+したがって **PlanGate 等の producer を併用しない River Review 単体の adopter では、`tdd-ledger` が供給されないため本スキルは常に `NO_REVIEW` を返す**（Pre-execution Gate 不成立）。これは設計上の意図であり欠陥ではない。producer を実装・接続する際は、書き出す `tdd-ledger.json` の形式を本スキルの Gate（`phases[]` ≥ 1）および `pages/reference/artifact-input-contract.md` の `tdd-ledger` 節と必ず突き合わせること。
