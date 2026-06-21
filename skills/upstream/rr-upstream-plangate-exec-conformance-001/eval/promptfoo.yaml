@@ -53,6 +53,40 @@ tests:
       - type: contains
         value: 'rr-upstream-plangate-exec-conformance-001'
 
+  # Test case 4: True positive — a todo item marked done is missing from the diff
+  - description: 'Detect planned-but-missing (completed todo not in diff)'
+    vars:
+      diff: file://../fixtures/04-true-positive-planned-but-missing.md
+    assert:
+      - type: contains-any
+        value:
+          - 'planned-but-missing'
+          - 'auth.ts'
+          - 'リセット'
+          - 'todo'
+      - type: contains-any
+        value:
+          - 'blocker'
+          - 'severity=blocker'
+          - 'critical'
+
+  # Test case 5: True positive — a declared test case has no corresponding test
+  - description: 'Detect test-contract-missing (declared TC2 not tested)'
+    vars:
+      diff: file://../fixtures/05-true-positive-test-contract-missing.md
+    assert:
+      - type: contains-any
+        value:
+          - 'test-contract-missing'
+          - 'TC2'
+          - 'テスト整合'
+          - '有効期限'
+      - type: contains-any
+        value:
+          - 'warning'
+          - 'severity=warning'
+          - 'major'
+
 outputPath: ./output.json
 
 defaultTest:

@@ -84,6 +84,26 @@ Why: plan/todo/test-cases を基準として差分を突き合わせる照合型
 5. 不確実性の扱い
    - plan / todo / test-cases の記述が曖昧で整合性判断が分かれる場合は、断定せず `[q]` として質問形式で返す。
 
+## Finding 分類（taxonomy）
+
+各指摘には、追跡しやすさのため次の **finding-id** を `[id=...]` として付与してよい（任意。出力形式は従来どおり `<file>:<line>: <message>` を維持する）。id は既存ルールに対応し、新しい artifact を要求しない。
+
+| finding-id                    | 意味                                                                      | 既定 severity     | 対応ルール |
+| ----------------------------- | ------------------------------------------------------------------------- | ----------------- | ---------- |
+| `planned-but-missing`         | 計画した task / 受入項目が実装されていない（todo `[x]` だが差分に無い等） | blocker           | Rule 2     |
+| `implemented-but-not-planned` | plan / todo に無い挙動が差分に追加されている                              | warning           | Rule 1 / 2 |
+| `target-file-violation`       | 変更ファイルが plan の影響範囲を正当化なく超えている                      | warning           | Rule 4     |
+| `out-of-scope-change`         | plan で明示的に除外された領域に変更が及んでいる                           | blocker           | Rule 2 / 4 |
+| `design-deviation`            | plan に記載された設計判断・境界に実装が矛盾している                       | warning / blocker | Rule 1     |
+| `test-contract-missing`       | test-cases 宣言分のテストが差分 / `junit` に無い                          | warning           | Rule 3     |
+| `unexpected-dependency-added` | plan の根拠なく新規依存が追加されている                                   | warning           | Rule 1     |
+| `unjustified-abstraction`     | plan の根拠なく新規の抽象 / モジュールが導入されている                    | nit / warning     | Rule 1     |
+
+補足:
+
+- `design-deviation` は **plan に書かれた設計判断との突合**に限定する。独立した `design.md` / ADR を入力にした厳密な設計逸脱検出は、artifact 契約への `design` 追加を要する将来拡張（本 skill の現スコープ外）。
+- finding-id は内部分類であり、付与は任意。severity マッピング（blocker/warning/nit）と出力形式は下記 Output に従う。
+
 ## Evidence / 根拠の取り方
 
 - 指摘は差分側の `<file>:<line>` と、根拠となる artifact 側の見出し・行・チェックリスト項目をペアで示す。
@@ -100,7 +120,7 @@ Why: plan/todo/test-cases を基準として差分を突き合わせる照合型
   - severity 省略: 参考情報や補足の質問。
 - サマリ行: `(summary):1: 方針整合 <件数> / todo 網羅 <件数> / テスト整合 <件数> / 質問 <件数>`
 - 個別 finding の推奨構造:
-  - Finding: 何がどの artifact とどう食い違うか（1 文）。
+  - Finding: 何がどの artifact とどう食い違うか（1 文）。任意で先頭に `[id=<finding-id>]`（上記 taxonomy のいずれか）を付けて分類を明示してよい。
   - Evidence: `diff: <file>:<line>` と `plan|todo|test-cases: <見出しまたは行>`。
   - Fix: 最小の是正案（実装追加 / plan 追記 / スコープ分割など）。
 - 質問は `(questions):1: [q] <確認したいこと>` のように疑似ファイル名付きで 1 件 1 行で出力する（パーサが `<file>:<line>: <message>` 形式のみ抽出するため、自由文の別セクションは無視される）。
