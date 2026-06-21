@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.27.0](https://github.com/s977043/river-review/compare/v1.26.0...v1.27.0) (2026-06-21)
+
+
+### Features
+
+* **skills:** explicit Plan Alignment finding taxonomy in exec-conformance ([#1223](https://github.com/s977043/river-review/issues/1223)) ([#1227](https://github.com/s977043/river-review/issues/1227)) ([4c28e95](https://github.com/s977043/river-review/commit/4c28e954980a92ccf7115fd74e89303b114c72ed))
+* **skills:** TDD Evidence Review skill + tdd-ledger artifact ([#1223](https://github.com/s977043/river-review/issues/1223)) ([#1229](https://github.com/s977043/river-review/issues/1229)) ([d2adf4b](https://github.com/s977043/river-review/commit/d2adf4be9f8a2c0e38ec37231e53e382ce1ab118))
+
 ## [1.26.0](https://github.com/s977043/river-review/compare/v1.25.2...v1.26.0) (2026-06-21)
 
 
