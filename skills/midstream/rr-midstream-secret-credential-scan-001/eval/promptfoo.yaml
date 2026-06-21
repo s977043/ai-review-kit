@@ -34,19 +34,21 @@ tests:
           - 'warning'
           - 'gitleaks'
 
-  # Test case 2: False positive — lockfile integrity (sha512 SRI) is not a secret
+  # Test case 2: False positive — lockfile integrity (sha512 SRI) is not a secret.
+  # A correct (healthy) run returns NO_ISSUES and must NOT emit a detection marker.
+  # Asserting NO_ISSUES + absence of the finding markers makes this test actually fail
+  # when the model falsely flags the integrity line (a contains-any on 'integrity' would
+  # have passed even on a false positive, so it is intentionally not used here).
   - description: 'No false positive on lockfile integrity / SRI digest'
     vars:
       diff: file://../fixtures/02-false-positive-lockfile-integrity.md
     assert:
-      - type: contains-any
-        value:
-          - 'NO_ISSUES'
-          - 'integrity'
-          - 'SRI'
-          - 'ダイジェスト'
-          - 'exclude'
-          - '秘密ではない'
+      - type: contains
+        value: 'NO_ISSUES'
+      - type: not-contains
+        value: '[severity='
+      - type: not-contains
+        value: '[機密混入'
 
   # Test case 3: No secret candidate — should return NO_REVIEW
   - description: 'Return NO_REVIEW when no secret candidate exists'

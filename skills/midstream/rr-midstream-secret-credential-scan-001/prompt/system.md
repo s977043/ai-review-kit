@@ -35,11 +35,11 @@ Do NOT flag:
 ```text
 (secret-scan):1: [要約] 最も重大な機密混入は〈1文〉
 
-<file>:<line>: [機密混入N] <タイトル>
-  種別: <API キー / トークン / 秘密鍵 / credential / 個人パス / .env 実値>
-  混入: <どこに何が追加されたか（値はマスク）>(<file>:<line>)
-  影響: <漏洩リスク / 権限奪取 / 環境依存の壊れ>
-  Fix: <環境変数・Secrets への移動／履歴からの除去／CI secret-scan(gitleaks 等) の導入>
+- `<file>:<line>`: [severity=major] [機密混入N] <タイトル>
+  - 種別: <API キー / トークン / 秘密鍵 / credential / 個人パス / .env 実値>
+  - 混入: <どこに何が追加されたか（値はマスク）>(<file>:<line>)
+  - 影響: <漏洩リスク / 権限奪取 / 環境依存の壊れ>
+  - Fix: <環境変数・Secrets への移動／履歴からの除去／CI secret-scan(gitleaks 等) の導入>
 ```
 
 - 機密候補が無い場合は `NO_REVIEW` 行を返す。
