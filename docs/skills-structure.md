@@ -17,6 +17,14 @@ skills/
 └── _template.md   # スキルテンプレート
 ```
 
+## registry.yaml エントリの description
+
+`registry.yaml` の各エントリが持つ `description` は、adopter がカタログを見るための短い要約です。英語や短縮表現で書いてよく、対応する SKILL.md frontmatter の `description` と文言を一致させる必要はありません。
+
+frontmatter の `description` は、レビュー実行時にプランナーや LLM が参照する詳細記述であり、こちらが実行時の SSoT です。registry のカタログ要約とは役割が異なります。
+
+両者の文言差は意図的な役割分担であり、ドリフトとして機械的に揃える対象ではありません。ただし同一言語かつ同一意図のまま字句だけがずれた場合は、要約としての簡潔さを保ちつつ frontmatter 側の最新の意図を反映するように整えます。
+
 ## 現在の構造
 
 ### Agent Skills 形式（実装済み）
@@ -118,7 +126,7 @@ river-review-<domain>
 ## 移行方針
 
 1. **Phase 1**: 入口スキル `river-review` を作成（**完了**）
-2. **Phase 2**: 高優先度の専門スキルを作成（security, architecture, code, performance, testing, adversarial-review）（**完了**）
+2. **Phase 2**: 高優先度の専門スキルを作成（security / architecture / code / performance / testing / adversarial-review）（**完了**）
 3. **Phase 3**: 従来スキルの内容を専門スキルへ統合
 4. **Phase 4**: 従来スキルを deprecated 化
 
