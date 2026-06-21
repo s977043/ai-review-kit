@@ -174,13 +174,13 @@
     {
       "id": "rr-midstream-e2e-wiring-001",
       "path": "skills/midstream/rr-midstream-e2e-wiring-001",
-      "checksum": "sha256:2b0d320e39002c05502cbcf10fa32865d77688296a65ca92a2ebe5b464681549",
+      "checksum": "sha256:1491912a681e83ae5f8cddbb7126994b6ba7c3e557fd902dc60011b416af7d2e",
       "files": 1
     },
     {
       "id": "rr-midstream-existing-pattern-conformance-001",
       "path": "skills/midstream/rr-midstream-existing-pattern-conformance-001",
-      "checksum": "sha256:cceb0f4f6d47035062a7bc500d22c6cd4c74ee26c8db51e144510f5a72bedf8b",
+      "checksum": "sha256:60962f782a4eda38cbe13c2fdf685782f972f0905ff2403d0328c3d3c8e71ab9",
       "files": 1
     },
     {
