@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.1](https://github.com/s977043/river-review/compare/v1.28.0...v1.28.1) (2026-06-21)
+
+
+### Bug Fixes
+
+* **skills:** harden security-privacy-design eval assertions for JA output ([#1238](https://github.com/s977043/river-review/issues/1238)) ([#1239](https://github.com/s977043/river-review/issues/1239)) ([91eb767](https://github.com/s977043/river-review/commit/91eb76703e7977ba0c097ed0705763a06b39afbc))
+
 ## [1.28.0](https://github.com/s977043/river-review/compare/v1.27.0...v1.28.0) (2026-06-21)
 
 
