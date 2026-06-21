@@ -281,10 +281,19 @@ export async function validateRecommendedEvalCoverage({
   const recommended = skills.filter((s) => s && s.recommended === true);
   let success = true;
   let okCount = 0;
+  let grandfatheredCount = 0;
 
   for (const skill of recommended) {
     const { id, path: skillPath } = skill;
-    if (!id || typeof skillPath !== 'string') continue;
+    // Malformed entry (missing id or non-string path) must not silently bypass the
+    // gate — treat it as a failure so typos in registry.yaml are caught.
+    if (!id || typeof skillPath !== 'string') {
+      console.error(
+        `❌ recommended skill entry is malformed (missing id or non-string path): ${JSON.stringify(skill)}`
+      );
+      success = false;
+      continue;
+    }
 
     const skillDir = path.dirname(path.resolve(repoRoot, skillPath));
     const entries = await fs.readdir(skillDir).catch(() => []);
@@ -295,6 +304,7 @@ export async function validateRecommendedEvalCoverage({
     }
     if (GRANDFATHERED_WITHOUT_EVAL.has(id)) {
       okCount += 1;
+      grandfatheredCount += 1;
       continue;
     }
     console.error(
@@ -308,7 +318,7 @@ export async function validateRecommendedEvalCoverage({
   if (success) {
     console.log(
       `✅ recommended eval coverage: ${okCount}/${recommended.length} recommended skill(s) ` +
-        `satisfied (incl. ${GRANDFATHERED_WITHOUT_EVAL.size} grandfathered)`
+        `satisfied (incl. ${grandfatheredCount} grandfathered)`
     );
   }
   return success;
