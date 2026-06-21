@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { realpathSync } from 'fs';
 import { pathToFileURL } from 'url';
+import yaml from 'js-yaml';
 import {
   defaultPaths,
   createSkillValidator,
@@ -12,6 +13,47 @@ import {
   loadPacks,
   loadRecommendationSets,
 } from '../runners/core/skill-loader.mjs';
+
+// #1231: 既存の eval 未整備 recommended skill。新規追加分はこの集合に足さず
+// eval を用意すること（recommended skill は eval/ または fixtures/ を持つこと
+// を validateRecommendedEvalCoverage() で前向きに強制する）。
+const GRANDFATHERED_WITHOUT_EVAL = new Set([
+  'rr-midstream-secret-credential-scan-001',
+  'rr-midstream-doc-hygiene-001',
+  'rr-midstream-review-automation-boundary-001',
+  'rr-midstream-design-source-conformance-001',
+  'rr-midstream-component-variants-states-001',
+  'rr-downstream-test-existence-001',
+  'rr-downstream-coverage-gap-001',
+  'rr-upstream-pre-mortem-001',
+  'rr-midstream-war-game-001',
+  'rr-midstream-logic-torturing-001',
+  'rr-midstream-self-contradiction-001',
+  'rr-midstream-refactor-claim-audit-001',
+  'rr-midstream-cross-file-leakage-001',
+  'rr-midstream-e2e-wiring-001',
+  'rr-midstream-existing-pattern-conformance-001',
+  'rr-upstream-migration-safety-001',
+  'rr-upstream-adr-decision-quality-001',
+  'rr-upstream-api-design-001',
+  'rr-upstream-api-versioning-compat-001',
+  'rr-upstream-architecture-boundaries-001',
+  'rr-upstream-architecture-risk-register-001',
+  'rr-upstream-architecture-traceability-001',
+  'rr-upstream-availability-architecture-001',
+  'rr-upstream-capacity-cost-design-001',
+  'rr-upstream-data-flow-state-ownership-001',
+  'rr-upstream-data-model-db-design-001',
+  'rr-upstream-event-driven-semantics-001',
+  'rr-upstream-external-dependencies-001',
+  'rr-upstream-failure-modes-observability-001',
+  'rr-upstream-integration-contracts-001',
+  'rr-upstream-migration-rollout-rollback-001',
+  'rr-upstream-openapi-contract-001',
+  'rr-upstream-operability-slo-001',
+  'rr-upstream-requirements-acceptance-001',
+  'rr-upstream-trust-boundaries-authz-001',
+]);
 
 function hasSection(text, patterns) {
   return patterns.some((re) => re.test(text));
@@ -204,12 +246,81 @@ export async function validatePacks({
   return success;
 }
 
+/**
+ * Forward-gate: every `recommended: true` skill in skills/registry.yaml must
+ * carry quality evidence — an `eval/` or `fixtures/` directory alongside its
+ * SKILL.md (#1231). Skills already shipped without such assets are exempted via
+ * {@link GRANDFATHERED_WITHOUT_EVAL}; new recommended skills must supply assets
+ * rather than be added to that set.
+ *
+ * @param {{ skillsDir?: string, repoRoot?: string }} [options]
+ * @returns {Promise<boolean>} false (→ exitCode 1) if any non-grandfathered
+ *   recommended skill lacks eval/ and fixtures/.
+ */
+export async function validateRecommendedEvalCoverage({
+  skillsDir = defaultPaths.skillsDir,
+  repoRoot = defaultPaths.repoRoot,
+} = {}) {
+  const registryPath = path.join(skillsDir, 'registry.yaml');
+  let raw;
+  try {
+    raw = await fs.readFile(registryPath, 'utf8');
+  } catch (err) {
+    console.error(`❌ Failed to read skill registry at ${registryPath}: ${err.message}`);
+    return false;
+  }
+  let parsed;
+  try {
+    parsed = yaml.load(raw) ?? {};
+  } catch (err) {
+    console.error(`❌ Failed to parse skill registry at ${registryPath}: ${err.message}`);
+    return false;
+  }
+
+  const skills = Array.isArray(parsed?.skills) ? parsed.skills : [];
+  const recommended = skills.filter((s) => s && s.recommended === true);
+  let success = true;
+  let okCount = 0;
+
+  for (const skill of recommended) {
+    const { id, path: skillPath } = skill;
+    if (!id || typeof skillPath !== 'string') continue;
+
+    const skillDir = path.dirname(path.resolve(repoRoot, skillPath));
+    const entries = await fs.readdir(skillDir).catch(() => []);
+    const hasAssets = entries.some((e) => e === 'eval' || e === 'fixtures');
+    if (hasAssets) {
+      okCount += 1;
+      continue;
+    }
+    if (GRANDFATHERED_WITHOUT_EVAL.has(id)) {
+      okCount += 1;
+      continue;
+    }
+    console.error(
+      `❌ recommended skill "${id}" has no eval/ or fixtures/ directory; ` +
+        'add quality evidence (see #1231) or, only for already-shipped skills, ' +
+        'GRANDFATHERED_WITHOUT_EVAL in scripts/validate-skills.mjs'
+    );
+    success = false;
+  }
+
+  if (success) {
+    console.log(
+      `✅ recommended eval coverage: ${okCount}/${recommended.length} recommended skill(s) ` +
+        `satisfied (incl. ${GRANDFATHERED_WITHOUT_EVAL.size} grandfathered)`
+    );
+  }
+  return success;
+}
+
 const isDirectRun =
   process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
 if (isDirectRun) {
   const skillsOk = await validateSkills();
   const packsOk = await validatePacks();
-  const ok = skillsOk && packsOk;
+  const evalCoverageOk = await validateRecommendedEvalCoverage();
+  const ok = skillsOk && packsOk && evalCoverageOk;
   if (!ok) {
     process.exitCode = 1;
   }
