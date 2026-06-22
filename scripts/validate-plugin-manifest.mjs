@@ -18,6 +18,15 @@ async function pathExists(relPath) {
   }
 }
 
+async function fileExists(relPath) {
+  try {
+    const stat = await fs.stat(path.join(ROOT, relPath));
+    return stat.isFile();
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Normalize a plugin-manifest path reference (e.g. "./.claude/commands/pr.md")
  * to a repo-relative path.
@@ -69,7 +78,7 @@ export async function validatePluginManifest() {
   // composerIcon is resolved relative to the manifest's directory (.claude-plugin/)
   if (typeof ccManifest.composerIcon === 'string') {
     const assetPath = path.join('.claude-plugin', normalizeRef(ccManifest.composerIcon));
-    if (!(await pathExists(assetPath))) {
+    if (!(await fileExists(assetPath))) {
       errors.push(
         `.claude-plugin/plugin.json: composerIcon asset does not exist: ${ccManifest.composerIcon}`
       );
@@ -173,7 +182,7 @@ export async function validatePluginManifest() {
       // composerIcon is resolved relative to the manifest's directory (.codex-plugin/)
       if (typeof iface.composerIcon === 'string') {
         const assetPath = path.join('.codex-plugin', normalizeRef(iface.composerIcon));
-        if (!(await pathExists(assetPath))) {
+        if (!(await fileExists(assetPath))) {
           errors.push(
             `.codex-plugin/plugin.json: interface.composerIcon asset does not exist: ${iface.composerIcon}`
           );
