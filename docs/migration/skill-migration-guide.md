@@ -350,7 +350,7 @@ npm run validate:skill-yaml
 
 ## 関連ドキュメント
 
-- [specs/skill-yaml-spec.md](../../specs/skill-yaml-spec.md): skill.yaml 仕様
+- [specs/skill-yaml-spec.md](../specs/skill-yaml-spec.md): skill.yaml 仕様
 - [skills/README.md](../../skills/README.md): スキル全体の説明
 
 ## 移行ロードマップ

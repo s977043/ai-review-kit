@@ -37,5 +37,5 @@ Packs supersede the legacy `recommendations:` skill sets in the registry.
 
 ## Authoring your own pack
 
-The manifest template lives at [specs/templates/pack/pack.yaml](https://github.com/s977043/river-review/blob/main/specs/templates/pack/pack.yaml); the design policy, axes, and tier promotion rules are in [skill-pack-design.md](https://github.com/s977043/river-review/blob/main/docs/development/skill-pack-design.md). A pack references skills by id —
+The manifest template lives at [specs/templates/pack/pack.yaml](https://github.com/s977043/river-review/blob/main/scripts/templates/pack/pack.yaml); the design policy, axes, and tier promotion rules are in [skill-pack-design.md](https://github.com/s977043/river-review/blob/main/docs/development/skill-pack-design.md). A pack references skills by id —
 no skill files need to move.

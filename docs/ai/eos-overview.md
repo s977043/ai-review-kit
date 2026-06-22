@@ -33,7 +33,7 @@ River Review は単なる AI レビューツールではなく、**レビュー�
 │    - .claude/rules/review-core.md (severity / scope)          │
 │    - docs/development/skill-severity-rubric.md (severity)     │
 │    - docs/development/skill-applyto-scoping.md (applyTo)      │
-│    - governance/ 索引 doc                                     │
+│    - docs/governance/ 索引 doc                                     │
 ├──────────────────────────────────────────────────────────────┤
 │ 5. Memory          ─ レビュー知見と継続改善ループ             │
 │    - skills/agent-skills/river-review/references/           │

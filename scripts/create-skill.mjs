@@ -13,7 +13,7 @@ import { stdin as input, stdout as output } from 'node:process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..');
-const templateDir = join(repoRoot, 'specs/templates/skill');
+const templateDir = join(repoRoot, 'scripts/templates/skill');
 const skillsDir = join(repoRoot, 'skills');
 
 /**

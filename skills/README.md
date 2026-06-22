@@ -171,4 +171,4 @@ See [registry.yaml](./registry.yaml) for the complete catalog.
 - [Skill Metadata](../pages/reference/skill-metadata.md)
 - [Skill Template](./_template.md)
 - [promptfoo Documentation](https://www.promptfoo.dev/)
-- [River Review Documentation](../DOCUMENTATION.md)
+- [River Review Documentation](../docs/policy/DOCUMENTATION.md)

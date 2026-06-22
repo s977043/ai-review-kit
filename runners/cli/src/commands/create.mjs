@@ -7,7 +7,7 @@ import { Logger } from '../utils/logger.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = join(__dirname, '..', '..', '..', '..');
-const templateDir = join(repoRoot, 'specs/templates/skill');
+const templateDir = join(repoRoot, 'scripts/templates/skill');
 const skillsDir = join(repoRoot, 'skills');
 
 function validateSkillId(id) {

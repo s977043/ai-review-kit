@@ -78,7 +78,7 @@ Weight 合計は 1.0 です（`tests/eval-rubric.test.mjs` で検証）。
 
 ## 既存フィクスチャとの関係
 
-`eval/rubric.yaml` の `dimensions` セクションは既存の `severity` および `phase` セクションと共存します。フィクスチャ（`tests/fixtures/review-eval/cases.json`）の `mustInclude` や `expectNoFindings` は引き続き有効であり、多次元スコアリングは追加のレイヤーとして機能します。
+`docs/eval/rubric.yaml` の `dimensions` セクションは既存の `severity` および `phase` セクションと共存します。フィクスチャ（`tests/fixtures/review-eval/cases.json`）の `mustInclude` や `expectNoFindings` は引き続き有効であり、多次元スコアリングは追加のレイヤーとして機能します。
 
 - フィクスチャの `mustInclude` → 主に `detection_accuracy` と `evidence_quality` の検証に対応
 - フィクスチャの `expectNoFindings` → `false_positive_rate` の検証に対応
@@ -93,7 +93,7 @@ Weight 合計は 1.0 です（`tests/eval-rubric.test.mjs` で検証）。
 
 ## 関連ファイル
 
-- `eval/rubric.yaml`
+- `docs/eval/rubric.yaml`
 - `schemas/eval-rubric.schema.json`
 - `schemas/eval-ledger-entry.schema.json`
 - `pages/reference/evaluation-fixture-format.md`

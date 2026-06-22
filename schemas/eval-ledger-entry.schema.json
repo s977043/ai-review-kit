@@ -72,7 +72,7 @@
           "scoringMethod": {
             "type": "string",
             "enum": ["binary", "ratio", "manual"],
-            "description": "Scoring method used for this dimension. Must match the dimension's scoringMethod in eval/rubric.yaml."
+            "description": "Scoring method used for this dimension. Must match the dimension's scoringMethod in docs/eval/rubric.yaml."
           },
           "details": {
             "type": "string"

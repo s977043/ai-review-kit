@@ -9,7 +9,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
-const rubricPath = path.join(repoRoot, 'eval', 'rubric.yaml');
+const rubricPath = path.join(repoRoot, 'docs', 'eval', 'rubric.yaml');
 const rubricSchemaPath = path.join(repoRoot, 'schemas', 'eval-rubric.schema.json');
 const ledgerSchemaPath = path.join(repoRoot, 'schemas', 'eval-ledger-entry.schema.json');
 

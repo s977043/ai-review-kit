@@ -37,4 +37,4 @@ pack は registry の `recommendations:`（旧来の skill set）の後継です
 
 ## pack を自作する
 
-manifest の雛形は [specs/templates/pack/pack.yaml](https://github.com/s977043/river-review/blob/main/specs/templates/pack/pack.yaml) に、設計方針・軸定義・tier 昇格条件は [skill-pack-design.md](https://github.com/s977043/river-review/blob/main/docs/development/skill-pack-design.md) にあります。pack は skill を id で参照する静的リストであり、skill ファイルの移動は不要です。
+manifest の雛形は [specs/templates/pack/pack.yaml](https://github.com/s977043/river-review/blob/main/scripts/templates/pack/pack.yaml) に、設計方針・軸定義・tier 昇格条件は [skill-pack-design.md](https://github.com/s977043/river-review/blob/main/docs/development/skill-pack-design.md) にあります。pack は skill を id で参照する静的リストであり、skill ファイルの移動は不要です。
