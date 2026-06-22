@@ -1,0 +1,19 @@
+[scanner]
+# Paths that intentionally contain secret-like patterns (test fixtures, redactor
+# implementation, eval artifacts) and build/tooling outputs that are not part of
+# the distributed plugin surface.
+ignore_paths = [
+  "tests/**",
+  "scripts/**",
+  "artifacts/**",
+  "build/**",
+  "runners/github-action/dist/**",
+  ".claude/**",
+  "node_modules/**",
+  "skills/*/fixtures/**",
+  # False positives: these files contain secret-pattern regexes (redactor),
+  # eval-detection logic, and path strings — not actual secrets or dynamic eval.
+  "src/lib/review-engine.mjs",
+  "src/lib/heuristic-review.mjs",
+  "runners/cli/src/commands/create.mjs",
+]
