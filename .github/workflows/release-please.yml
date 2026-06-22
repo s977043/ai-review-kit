@@ -30,7 +30,7 @@ jobs:
 
       - name: Checkout (for floating tags)
         if: ${{ steps.release.outputs.release_created }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
