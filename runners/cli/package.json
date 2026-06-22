@@ -11,7 +11,7 @@
     ".": "./src/index.mjs"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "commander": "^15.0.0",
     "ora": "^9.0.0",
     "@inquirer/prompts": "^8.5.2"
   },

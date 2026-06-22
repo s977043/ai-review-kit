@@ -52,7 +52,7 @@ jobs:
       has_skills: ${{ steps.find-skills.outputs.has_skills }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Find skills with promptfoo.yaml
         id: find-skills
@@ -96,7 +96,7 @@ jobs:
         skill: ${{ fromJson(needs.discover-skills.outputs.skills) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-node-deps
 
