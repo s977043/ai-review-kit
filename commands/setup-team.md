@@ -23,9 +23,7 @@ ls .river-review.* 2>/dev/null || echo ".river-review.* が見つかりません
 `.river/rules.md` がなければ作成する。
 テンプレートは `${CLAUDE_PLUGIN_ROOT:-.}/.river/rules.template.md` にある。
 
-```bash
-mkdir -p .river
-```
+テンプレートの内容を `.river/rules.md` として Write ツールで保存する（親ディレクトリは自動作成される）。
 
 作成後、ユーザーにプロジェクト固有のルール（アーキテクチャ方針、禁止パターン、セキュリティ要件）を記入するよう案内する。
 

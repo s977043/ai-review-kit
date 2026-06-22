@@ -5,8 +5,9 @@
  * Source of truth: package.json
  * Targets: .claude-plugin/plugin.json, .codex-plugin/plugin.json
  *
- * Synced fields: keywords, homepage, repository, author, license
- * Not synced: description (intentionally differs per platform), version (release-please owns it)
+ * Synced fields: keywords, homepage, author, license
+ * Not synced: description (intentionally differs per platform), version (release-please owns it),
+ *             repository (package.json uses {type,url} object; plugins use plain string URL)
  *
  * Usage:
  *   node scripts/sync-plugin-fields.mjs          # sync (writes files if changed)
