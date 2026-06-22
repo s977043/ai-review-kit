@@ -28,6 +28,7 @@
     "capabilities": [
       "Read"
     ],
-    "websiteURL": "https://river-review.the3396.com/"
+    "websiteURL": "https://river-review.the3396.com/",
+    "composerIcon": "./assets/icon.svg"
   }
 }
