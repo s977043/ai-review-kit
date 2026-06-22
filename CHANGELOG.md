@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.29.0](https://github.com/s977043/river-review/compare/v1.28.1...v1.29.0) (2026-06-22)
+
+
+### Features
+
+* **ci:** add HOL Plugin Scanner + pin GitHub Actions for awesome-codex-plugins ([#1248](https://github.com/s977043/river-review/issues/1248)) ([16be8ef](https://github.com/s977043/river-review/commit/16be8ef5eb91becf0e746ccdea2f9a9f7561e9cd))
+
+
+### Bug Fixes
+
+* **plugin:** add composerIcon and assets to .codex-plugin ([#1250](https://github.com/s977043/river-review/issues/1250)) ([469ea7a](https://github.com/s977043/river-review/commit/469ea7a2dd5cca82c035534cb75c2f575e03e737))
+
 ## [1.28.1](https://github.com/s977043/river-review/compare/v1.28.0...v1.28.1) (2026-06-21)
 
 
