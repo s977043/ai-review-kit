@@ -74,7 +74,7 @@
     "feedback:rules": "node scripts/feedback-rule-candidates.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.102.0",
+    "@anthropic-ai/sdk": "^0.105.0",
     "@google/generative-ai": "^0.24.1",
     "@inquirer/prompts": "^8.5.2",
     "@opentelemetry/api": "^1.9.1",
