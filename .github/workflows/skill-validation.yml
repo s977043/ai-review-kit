@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           fetch-depth: 0
 
@@ -75,7 +75,7 @@ jobs:
 
       - name: Upload log files
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: validation-logs
           path: '*.log'
@@ -89,7 +89,7 @@ jobs:
           steps.test.outcome == 'failure' ||
           steps.lint.outcome == 'failure' ||
           steps.build.outcome == 'failure'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           OUTCOME_AGENTS_VALIDATE: ${{ steps.agents-validate.outcome }}
           OUTCOME_AGENT_SKILLS_VALIDATE: ${{ steps.agent-skills-validate.outcome }}

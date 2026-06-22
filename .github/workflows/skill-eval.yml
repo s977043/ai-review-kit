@@ -52,7 +52,7 @@ jobs:
       has_skills: ${{ steps.find-skills.outputs.has_skills }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Find skills with promptfoo.yaml
         id: find-skills
@@ -96,7 +96,7 @@ jobs:
         skill: ${{ fromJson(needs.discover-skills.outputs.skills) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - uses: ./.github/actions/setup-node-deps
 
@@ -171,7 +171,7 @@ jobs:
 
       - name: Upload evaluation results
         if: always() && github.event.inputs.dry_run != 'true' && steps.check-keys.outputs.has_keys == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: eval-results-${{ matrix.skill }}
           path: skills/${{ matrix.skill }}/eval/results.json
@@ -185,7 +185,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: results
           pattern: eval-results-*
@@ -228,7 +228,7 @@ jobs:
 
       - name: Comment on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
             const fs = require('fs');
