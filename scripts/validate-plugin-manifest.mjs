@@ -65,6 +65,17 @@ export async function validatePluginManifest() {
     }
   }
 
+  // --- Claude Code manifest: composerIcon asset exists ---
+  // composerIcon is resolved relative to the manifest's directory (.claude-plugin/)
+  if (typeof ccManifest.composerIcon === 'string') {
+    const assetPath = path.join('.claude-plugin', normalizeRef(ccManifest.composerIcon));
+    if (!(await pathExists(assetPath))) {
+      errors.push(
+        `.claude-plugin/plugin.json: composerIcon asset does not exist: ${ccManifest.composerIcon}`
+      );
+    }
+  }
+
   // --- Hooks: parse hooks.json and verify each command's script target exists ---
   if (typeof ccManifest.hooks === 'string') {
     const hooksRel = normalizeRef(ccManifest.hooks);
@@ -157,6 +168,16 @@ export async function validatePluginManifest() {
       }
       if (iface.capabilities !== undefined && !Array.isArray(iface.capabilities)) {
         errors.push('.codex-plugin/plugin.json: interface.capabilities must be an array');
+      }
+      // --- Codex manifest: composerIcon asset exists ---
+      // composerIcon is resolved relative to the manifest's directory (.codex-plugin/)
+      if (typeof iface.composerIcon === 'string') {
+        const assetPath = path.join('.codex-plugin', normalizeRef(iface.composerIcon));
+        if (!(await pathExists(assetPath))) {
+          errors.push(
+            `.codex-plugin/plugin.json: interface.composerIcon asset does not exist: ${iface.composerIcon}`
+          );
+        }
       }
     }
 
