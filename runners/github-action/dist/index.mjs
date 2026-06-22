@@ -13962,7 +13962,7 @@ class InternalServerError extends APIError {
 
 /***/ }),
 
-/***/ 1310:
+/***/ 4973:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -13971,7 +13971,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   Ay: () => (/* reexport */ Anthropic)
 });
 
-// UNUSED EXPORTS: AI_PROMPT, APIConnectionError, APIConnectionTimeoutError, APIError, APIPromise, APIUserAbortError, Anthropic, AnthropicError, AuthenticationError, BadRequestError, BaseAnthropic, ConflictError, HUMAN_PROMPT, InternalServerError, NotFoundError, PagePromise, PermissionDeniedError, RateLimitError, RetryableError, UnprocessableEntityError, toFile
+// UNUSED EXPORTS: AI_PROMPT, APIConnectionError, APIConnectionTimeoutError, APIError, APIPromise, APIUserAbortError, Anthropic, AnthropicError, AuthenticationError, BadRequestError, BaseAnthropic, BetaFallbackState, ConflictError, HUMAN_PROMPT, InternalServerError, NotFoundError, PagePromise, PermissionDeniedError, RateLimitError, RetryableError, UnprocessableEntityError, betaRefusalFallbackMiddleware, toFile
 
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/tslib.mjs
 var tslib = __nccwpck_require__(3364);
@@ -14021,7 +14021,7 @@ const sleep = (ms, signal) => new Promise((resolve) => {
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/errors.mjs
 var errors = __nccwpck_require__(2533);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/version.mjs
-const VERSION = '0.102.0'; // x-release-please-version
+const VERSION = '0.105.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -14269,6 +14269,16 @@ async function CancelReadableStream(stream) {
 //# sourceMappingURL=shims.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/request-options.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+/**
+ * Tracks which fallback a sequence of requests is pinned to.
+ *
+ * Create one (`new BetaFallbackState()`) and pass it via the `fallbackState`
+ * request option on every request that should share the pin — the turns of one
+ * conversation, or any wider scope the stickiness should apply to;
+ * `betaRefusalFallbackMiddleware` mutates it in place when a model refuses.
+ */
+class BetaFallbackState {
+}
 const FallbackEncoder = ({ headers, body }) => {
     return {
         bodyHeaders: {
@@ -15474,12 +15484,23 @@ var _Stream_client;
 
 
 
-class Stream {
+class streaming_Stream {
     constructor(iterator, controller, client) {
         this.iterator = iterator;
         _Stream_client.set(this, void 0);
         this.controller = controller;
         (0,tslib/* __classPrivateFieldSet */.G)(this, _Stream_client, client, "f");
+    }
+    /**
+     * Iterate the raw Server-Sent Events from `response` — `{event, data, raw}`
+     * objects, before any JSON parsing or event-name filtering.
+     *
+     * This reads `response.body` directly (not a clone), so the response is
+     * consumed. Use this in middleware that fully replaces the stream body; for
+     * read-only observation of parsed events, use `ctx.parse()` instead.
+     */
+    static rawEvents(response, controller = new AbortController()) {
+        return _iterSSEMessages(response, controller);
     }
     static fromSSEResponse(response, controller, client) {
         let consumed = false;
@@ -15577,7 +15598,7 @@ class Stream {
                     controller.abort();
             }
         }
-        return new Stream(iterator, controller, client);
+        return new streaming_Stream(iterator, controller, client);
     }
     /**
      * Generates a Stream from a newline-separated ReadableStream
@@ -15624,7 +15645,7 @@ class Stream {
                     controller.abort();
             }
         }
-        return new Stream(iterator, controller, client);
+        return new streaming_Stream(iterator, controller, client);
     }
     [(_Stream_client = new WeakMap(), Symbol.asyncIterator)]() {
         return this.iterator();
@@ -15650,8 +15671,8 @@ class Stream {
             };
         };
         return [
-            new Stream(() => teeIterator(left), this.controller, (0,tslib/* __classPrivateFieldGet */.g)(this, _Stream_client, "f")),
-            new Stream(() => teeIterator(right), this.controller, (0,tslib/* __classPrivateFieldGet */.g)(this, _Stream_client, "f")),
+            new streaming_Stream(() => teeIterator(left), this.controller, (0,tslib/* __classPrivateFieldGet */.g)(this, _Stream_client, "f")),
+            new streaming_Stream(() => teeIterator(right), this.controller, (0,tslib/* __classPrivateFieldGet */.g)(this, _Stream_client, "f")),
         ];
     }
     /**
@@ -15796,10 +15817,7 @@ async function defaultParseResponse(client, props) {
             (0,utils_log/* loggerFor */.WG)(client).debug('response', response.status, response.url, response.headers, response.body);
             // Note: there is an invariant here that isn't represented in the type system
             // that if you set `stream: true` the response type must also be `Stream<T>`
-            if (props.options.__streamClass) {
-                return props.options.__streamClass.fromSSEResponse(response, props.controller);
-            }
-            return Stream.fromSSEResponse(response, props.controller);
+            return streaming_Stream.fromSSEResponse(response, props.controller);
         }
         // fetch refuses to read the body when the status code is 204.
         if (response.status === 204) {
@@ -15847,6 +15865,7 @@ function addRequestID(value, response) {
 
 
 
+
 /**
  * Errors thrown by the underlying `fetch`, as opposed to by a middleware.
  *
@@ -15890,15 +15909,19 @@ function isRetryableError(err) {
  *
  * `options` — the SDK request options behind this call, when there are any —
  * is surfaced to middleware as `ctx.options` and drives `ctx.parse`.
+ *
+ * `client` supplies `ctx.logger` (the client's level-filtered logger);
+ * without it, `ctx.logger` falls back to the client defaults: `console`,
+ * filtered to `ANTHROPIC_LOG` or `'warn'`.
  */
-function wrapFetchWithMiddleware(fetchFn, middleware, options) {
+function wrapFetchWithMiddleware(fetchFn, middleware, options, client) {
     return async (url, init = {}) => {
         if (middleware.length === 0) {
             // use undefined this binding; fetch errors if bound to something else in browser/cloudflare
             return fetchFn.call(undefined, url, init);
         }
         const headers = init.headers instanceof Headers ? init.headers : new Headers(init.headers);
-        const response = await applyMiddleware(fetchFn, middleware, options)({
+        const response = await applyMiddleware(fetchFn, middleware, options, client)({
             ...init,
             headers,
             url: typeof url === 'string' ? url
@@ -15917,13 +15940,16 @@ function wrapFetchWithMiddleware(fetchFn, middleware, options) {
 /**
  * Creates the {@link MiddlewareContext} shared by every middleware in one chain.
  */
-function createMiddlewareContext(options) {
+function createMiddlewareContext(options, client) {
     // Keyed on the Response so each `next()` call's response (e.g. with custom
     // retries, or a middleware swapping in a replacement) parses independently,
     // while several middleware parsing the same response share a single read.
     const cache = new WeakMap();
     return {
         options,
+        // Resolved per chain, so changes to the client's `logLevel`/`logger`
+        // apply to subsequent requests.
+        logger: client ? (0,utils_log/* loggerFor */.WG)(client) : (0,utils_log/* defaultLogger */.Um)(),
         parse(response) {
             // Streams are single-consumer, so caching one would hand later callers
             // an already-consumed stream; every call gets a fresh clone-backed one.
@@ -15955,8 +15981,7 @@ async function parseMiddlewareResponse(response, options) {
         // A fresh controller rather than the request's own: aborting (or
         // `break`ing out of) the middleware's stream must not cancel the
         // in-flight request the client is still reading.
-        const streamClass = options.__streamClass ?? Stream;
-        return streamClass.fromSSEResponse(response.clone(), new AbortController());
+        return streaming_Stream.fromSSEResponse(response.clone(), new AbortController());
     }
     // fetch refuses to read the body when the status code is 204.
     if (response.status === 204) {
@@ -15980,7 +16005,7 @@ async function parseMiddlewareResponse(response, options) {
 /**
  * Composes `middleware` around `fetchFn` and returns the entry point of the chain.
  */
-function applyMiddleware(fetchFn, middleware, options) {
+function applyMiddleware(fetchFn, middleware, options, client) {
     // use undefined this binding; fetch errors if bound to something else in browser/cloudflare
     let next = async ({ url, ...init }) => {
         try {
@@ -15995,7 +16020,7 @@ function applyMiddleware(fetchFn, middleware, options) {
             throw error;
         }
     };
-    const ctx = createMiddlewareContext(options);
+    const ctx = createMiddlewareContext(options, client);
     for (let i = middleware.length - 1; i >= 0; i--) {
         const mw = middleware[i];
         const nextInner = next;
@@ -16564,70 +16589,6 @@ const isEmptyHeaders = (headers) => {
     return true;
 };
 //# sourceMappingURL=headers.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/stainless-helper-header.mjs
-/**
- * Shared utilities for tracking SDK helper usage.
- */
-/**
- * Symbol used to mark objects created by SDK helpers for tracking.
- * The value is the helper name (e.g., 'mcpTool', 'betaZodTool').
- */
-const SDK_HELPER_SYMBOL = Symbol('anthropic.sdk.stainlessHelper');
-function wasCreatedByStainlessHelper(value) {
-    return typeof value === 'object' && value !== null && SDK_HELPER_SYMBOL in value;
-}
-/**
- * Collects helper names from tools and messages arrays.
- * Returns a deduplicated array of helper names found.
- */
-function collectStainlessHelpers(tools, messages) {
-    const helpers = new Set();
-    // Collect from tools
-    if (tools) {
-        for (const tool of tools) {
-            if (wasCreatedByStainlessHelper(tool)) {
-                helpers.add(tool[SDK_HELPER_SYMBOL]);
-            }
-        }
-    }
-    // Collect from messages and their content blocks
-    if (messages) {
-        for (const message of messages) {
-            if (wasCreatedByStainlessHelper(message)) {
-                helpers.add(message[SDK_HELPER_SYMBOL]);
-            }
-            if (Array.isArray(message.content)) {
-                for (const block of message.content) {
-                    if (wasCreatedByStainlessHelper(block)) {
-                        helpers.add(block[SDK_HELPER_SYMBOL]);
-                    }
-                }
-            }
-        }
-    }
-    return Array.from(helpers);
-}
-/**
- * Builds x-stainless-helper header value from tools and messages.
- * Returns an empty object if no helpers are found.
- */
-function stainlessHelperHeader(tools, messages) {
-    const helpers = collectStainlessHelpers(tools, messages);
-    if (helpers.length === 0)
-        return {};
-    return { 'x-stainless-helper': helpers.join(', ') };
-}
-/**
- * Builds x-stainless-helper header value from a file object.
- * Returns an empty object if the file is not marked with a helper.
- */
-function stainlessHelperHeaderFromFile(file) {
-    if (wasCreatedByStainlessHelper(file)) {
-        return { 'x-stainless-helper': file[SDK_HELPER_SYMBOL] };
-    }
-    return {};
-}
-//# sourceMappingURL=stainless-helper-header.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/path.mjs
 
 /**
@@ -16703,6 +16664,303 @@ const createPathTagFunction = (pathEncoder = encodeURIPath) => function path(sta
  */
 const path = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
 //# sourceMappingURL=path.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/deployment-runs.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class DeploymentRuns extends APIResource {
+    /**
+     * Get Deployment Run
+     *
+     * @example
+     * ```ts
+     * const betaManagedAgentsDeploymentRun =
+     *   await client.beta.deploymentRuns.retrieve(
+     *     'deployment_run_id',
+     *   );
+     * ```
+     */
+    retrieve(deploymentRunID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path `/v1/deployment_runs/${deploymentRunID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * List Deployment Runs
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaManagedAgentsDeploymentRun of client.beta.deploymentRuns.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList('/v1/deployment_runs?beta=true', (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+}
+//# sourceMappingURL=deployment-runs.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/deployments.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class Deployments extends APIResource {
+    /**
+     * Create Deployment
+     *
+     * @example
+     * ```ts
+     * const betaManagedAgentsDeployment =
+     *   await client.beta.deployments.create({
+     *     agent: 'string',
+     *     environment_id: 'x',
+     *     initial_events: [
+     *       {
+     *         content: [
+     *           {
+     *             text: 'Where is my order #1234?',
+     *             type: 'text',
+     *           },
+     *         ],
+     *         type: 'user.message',
+     *       },
+     *     ],
+     *     name: 'x',
+     *   });
+     * ```
+     */
+    create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post('/v1/deployments?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Get Deployment
+     *
+     * @example
+     * ```ts
+     * const betaManagedAgentsDeployment =
+     *   await client.beta.deployments.retrieve('deployment_id');
+     * ```
+     */
+    retrieve(deploymentID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path `/v1/deployments/${deploymentID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Update Deployment
+     *
+     * @example
+     * ```ts
+     * const betaManagedAgentsDeployment =
+     *   await client.beta.deployments.update('deployment_id');
+     * ```
+     */
+    update(deploymentID, params, options) {
+        const { betas, ...body } = params;
+        return this._client.post(path `/v1/deployments/${deploymentID}?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * List Deployments
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaManagedAgentsDeployment of client.beta.deployments.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList('/v1/deployments?beta=true', (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Archive Deployment
+     *
+     * @example
+     * ```ts
+     * const betaManagedAgentsDeployment =
+     *   await client.beta.deployments.archive('deployment_id');
+     * ```
+     */
+    archive(deploymentID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/deployments/${deploymentID}/archive?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Pause Deployment
+     *
+     * @example
+     * ```ts
+     * const betaManagedAgentsDeployment =
+     *   await client.beta.deployments.pause('deployment_id');
+     * ```
+     */
+    pause(deploymentID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/deployments/${deploymentID}/pause?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Run Deployment Now
+     *
+     * @example
+     * ```ts
+     * const betaManagedAgentsDeploymentRun =
+     *   await client.beta.deployments.run('deployment_id');
+     * ```
+     */
+    run(deploymentID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/deployments/${deploymentID}/run?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Unpause Deployment
+     *
+     * @example
+     * ```ts
+     * const betaManagedAgentsDeployment =
+     *   await client.beta.deployments.unpause('deployment_id');
+     * ```
+     */
+    unpause(deploymentID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/deployments/${deploymentID}/unpause?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+}
+//# sourceMappingURL=deployments.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/stainless-helper-header.mjs
+/**
+ * Shared utilities for tracking SDK helper usage.
+ */
+/**
+ * Symbol used to mark objects created by SDK helpers for tracking.
+ * The value is the helper name (e.g., 'mcpTool', 'betaZodTool').
+ */
+const SDK_HELPER_SYMBOL = Symbol('anthropic.sdk.stainlessHelper');
+function wasCreatedByStainlessHelper(value) {
+    return typeof value === 'object' && value !== null && SDK_HELPER_SYMBOL in value;
+}
+/**
+ * Collects helper names from tools and messages arrays.
+ * Returns a deduplicated array of helper names found.
+ */
+function collectStainlessHelpers(tools, messages) {
+    const helpers = new Set();
+    // Collect from tools
+    if (tools) {
+        for (const tool of tools) {
+            if (wasCreatedByStainlessHelper(tool)) {
+                helpers.add(tool[SDK_HELPER_SYMBOL]);
+            }
+        }
+    }
+    // Collect from messages and their content blocks
+    if (messages) {
+        for (const message of messages) {
+            if (wasCreatedByStainlessHelper(message)) {
+                helpers.add(message[SDK_HELPER_SYMBOL]);
+            }
+            if (Array.isArray(message.content)) {
+                for (const block of message.content) {
+                    if (wasCreatedByStainlessHelper(block)) {
+                        helpers.add(block[SDK_HELPER_SYMBOL]);
+                    }
+                }
+            }
+        }
+    }
+    return Array.from(helpers);
+}
+/**
+ * Builds x-stainless-helper header value from tools and messages.
+ * Returns an empty object if no helpers are found.
+ */
+function stainlessHelperHeader(tools, messages) {
+    const helpers = collectStainlessHelpers(tools, messages);
+    if (helpers.length === 0)
+        return {};
+    return { 'x-stainless-helper': helpers.join(', ') };
+}
+/**
+ * Builds x-stainless-helper header value from a file object.
+ * Returns an empty object if the file is not marked with a helper.
+ */
+function stainlessHelperHeaderFromFile(file) {
+    if (wasCreatedByStainlessHelper(file)) {
+        return { 'x-stainless-helper': file[SDK_HELPER_SYMBOL] };
+    }
+    return {};
+}
+//# sourceMappingURL=stainless-helper-header.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/files.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -19400,6 +19658,10 @@ function parseBetaOutputFormat(params, content) {
     }
 }
 //# sourceMappingURL=beta-parser.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/streaming.mjs
+/** @deprecated Import from ./core/streaming instead */
+
+//# sourceMappingURL=streaming.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/_vendor/partial-json-parser/parser.mjs
 const tokenize = (input) => {
     let current = 0;
@@ -19636,19 +19898,45 @@ const tokenize = (input) => {
 }, partialParse = (input) => JSON.parse(generate(unstrip(strip(tokenize(input)))));
 
 //# sourceMappingURL=parser.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/streaming.mjs
-/** @deprecated Import from ./core/streaming instead */
-
-//# sourceMappingURL=streaming.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/BetaMessageStream.mjs
-var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _BetaMessageStream_params, _BetaMessageStream_connectedPromise, _BetaMessageStream_resolveConnectedPromise, _BetaMessageStream_rejectConnectedPromise, _BetaMessageStream_endPromise, _BetaMessageStream_resolveEndPromise, _BetaMessageStream_rejectEndPromise, _BetaMessageStream_listeners, _BetaMessageStream_ended, _BetaMessageStream_errored, _BetaMessageStream_aborted, _BetaMessageStream_catchingPromiseCreated, _BetaMessageStream_response, _BetaMessageStream_request_id, _BetaMessageStream_logger, _BetaMessageStream_getFinalMessage, _BetaMessageStream_getFinalText, _BetaMessageStream_handleError, _BetaMessageStream_beginRequest, _BetaMessageStream_addStreamEvent, _BetaMessageStream_endRequest, _BetaMessageStream_accumulateMessage;
-
-
-
-
-
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/message-stream-utils.mjs
 
 const JSON_BUF_PROPERTY = '__json_buf';
+/**
+ * Copies a tool-use block with an updated `__json_buf`, installing `.input` as
+ * a memoized getter so the partial-JSON parse happens on first read instead of
+ * on every delta.
+ */
+function withLazyInput(prev, jsonBuf) {
+    const next = {};
+    for (const key of Object.keys(prev)) {
+        if (key !== 'input')
+            next[key] = prev[key];
+    }
+    Object.defineProperty(next, JSON_BUF_PROPERTY, { value: jsonBuf, enumerable: false, writable: true });
+    let input;
+    let parsed = false;
+    Object.defineProperty(next, 'input', {
+        enumerable: true,
+        configurable: true,
+        get() {
+            if (!parsed) {
+                input = jsonBuf ? partialParse(jsonBuf) : {};
+                parsed = true;
+            }
+            return input;
+        },
+    });
+    return next;
+}
+//# sourceMappingURL=message-stream-utils.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/BetaMessageStream.mjs
+var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _BetaMessageStream_params, _BetaMessageStream_connectedPromise, _BetaMessageStream_resolveConnectedPromise, _BetaMessageStream_rejectConnectedPromise, _BetaMessageStream_endPromise, _BetaMessageStream_resolveEndPromise, _BetaMessageStream_rejectEndPromise, _BetaMessageStream_listeners, _BetaMessageStream_ended, _BetaMessageStream_errored, _BetaMessageStream_aborted, _BetaMessageStream_catchingPromiseCreated, _BetaMessageStream_response, _BetaMessageStream_request_id, _BetaMessageStream_logger, _BetaMessageStream_getFinalMessage, _BetaMessageStream_getFinalText, _BetaMessageStream_handleError, _BetaMessageStream_beginRequest, _BetaMessageStream_addStreamEvent, _BetaMessageStream_endRequest, _BetaMessageStream_accumulateMessage, _BetaMessageStream_toolInputParseError;
+
+
+
+
+
+
 function tracksToolInput(content) {
     return content.type === 'tool_use' || content.type === 'server_tool_use' || content.type === 'mcp_tool_use';
 }
@@ -19964,7 +20252,7 @@ class BetaMessageStream {
         try {
             (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_instances, "m", _BetaMessageStream_beginRequest).call(this);
             this._connected(null);
-            const stream = Stream.fromReadableStream(readableStream, this.controller);
+            const stream = streaming_Stream.fromReadableStream(readableStream, this.controller);
             for await (const event of stream) {
                 (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_instances, "m", _BetaMessageStream_addStreamEvent).call(this, event);
             }
@@ -20022,8 +20310,16 @@ class BetaMessageStream {
                         break;
                     }
                     case 'input_json_delta': {
-                        if (tracksToolInput(content) && content.input) {
-                            this._emit('inputJson', event.delta.partial_json, content.input);
+                        if (tracksToolInput(content) && (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_listeners, "f").inputJson?.length) {
+                            let jsonSnapshot;
+                            try {
+                                jsonSnapshot = content.input;
+                            }
+                            catch (err) {
+                                (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_handleError, "f").call(this, (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_instances, "m", _BetaMessageStream_toolInputParseError).call(this, content, err));
+                                break;
+                            }
+                            this._emit('inputJson', event.delta.partial_json, jsonSnapshot);
                         }
                         break;
                     }
@@ -20118,6 +20414,11 @@ class BetaMessageStream {
                 return snapshot;
             case 'content_block_start':
                 snapshot.content.push(event.content_block);
+                if (event.content_block.type === 'fallback') {
+                    // the final hop's fallback block names the model that served the response —
+                    // keeps the snapshot consistent with the relabeled non-streaming message
+                    snapshot.model = event.content_block.to.model;
+                }
                 return snapshot;
             case 'content_block_delta': {
                 const snapshotContent = snapshot.content.at(event.index);
@@ -20142,27 +20443,8 @@ class BetaMessageStream {
                     }
                     case 'input_json_delta': {
                         if (snapshotContent && tracksToolInput(snapshotContent)) {
-                            // we need to keep track of the raw JSON string as well so that we can
-                            // re-parse it for each delta, for now we just store it as an untyped
-                            // non-enumerable property on the snapshot
-                            let jsonBuf = snapshotContent[JSON_BUF_PROPERTY] || '';
-                            jsonBuf += event.delta.partial_json;
-                            const newContent = { ...snapshotContent };
-                            Object.defineProperty(newContent, JSON_BUF_PROPERTY, {
-                                value: jsonBuf,
-                                enumerable: false,
-                                writable: true,
-                            });
-                            if (jsonBuf) {
-                                try {
-                                    newContent.input = partialParse(jsonBuf);
-                                }
-                                catch (err) {
-                                    const error = new core_error/* AnthropicError */.pJ(`Unable to parse tool parameter JSON from model. Please retry your request or adjust your prompt. Error: ${err}. JSON: ${jsonBuf}`);
-                                    (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_handleError, "f").call(this, error);
-                                }
-                            }
-                            snapshot.content[event.index] = newContent;
+                            const jsonBuf = (snapshotContent[JSON_BUF_PROPERTY] || '') + event.delta.partial_json;
+                            snapshot.content[event.index] = withLazyInput(snapshotContent, jsonBuf);
                         }
                         break;
                     }
@@ -20199,9 +20481,30 @@ class BetaMessageStream {
                 }
                 return snapshot;
             }
-            case 'content_block_stop':
+            case 'content_block_stop': {
+                const snapshotContent = snapshot.content.at(event.index);
+                if (snapshotContent && tracksToolInput(snapshotContent) && JSON_BUF_PROPERTY in snapshotContent) {
+                    let input;
+                    try {
+                        input = snapshotContent.input;
+                    }
+                    catch (err) {
+                        input = {};
+                        (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_handleError, "f").call(this, (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_instances, "m", _BetaMessageStream_toolInputParseError).call(this, snapshotContent, err));
+                    }
+                    Object.defineProperty(snapshotContent, 'input', {
+                        value: input,
+                        enumerable: true,
+                        configurable: true,
+                        writable: true,
+                    });
+                }
                 return snapshot;
+            }
         }
+    }, _BetaMessageStream_toolInputParseError = function _BetaMessageStream_toolInputParseError(block, err) {
+        const jsonBuf = block[JSON_BUF_PROPERTY];
+        return new core_error/* AnthropicError */.pJ(`Unable to parse tool parameter JSON from model. Please retry your request or adjust your prompt. Error: ${err}. JSON: ${jsonBuf}`);
     }, Symbol.asyncIterator)]() {
         const pushQueue = [];
         const readQueue = [];
@@ -20254,7 +20557,7 @@ class BetaMessageStream {
         };
     }
     toReadableStream() {
-        const stream = new Stream(this[Symbol.asyncIterator].bind(this), this.controller);
+        const stream = new streaming_Stream(this[Symbol.asyncIterator].bind(this), this.controller);
         return stream.toReadableStream();
     }
 }
@@ -20451,8 +20754,16 @@ class BetaToolRunner {
                     const isCompacted = await (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_instances, "m", _BetaToolRunner_checkAndCompact).call(this);
                     if (!isCompacted) {
                         if (!(0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_mutated, "f")) {
-                            const { role, content } = await (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_message, "f");
-                            (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.messages.push({ role, content });
+                            const message = await (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_message, "f");
+                            (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.messages.push({ role: message.role, content: message.content });
+                            // Refusal-terminated turns are terminal: the refusal may have cut a tool_use off
+                            // with partial input, so executing this turn's tools would fire side effects the
+                            // model never confirmed — and once middleware strips the refusal turn, their
+                            // tool_results could never be replayed coherently. Surface the refusal as the
+                            // final message instead.
+                            if (message.stop_reason === 'refusal') {
+                                break;
+                            }
                         }
                         const toolMessage = await (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_instances, "m", _BetaToolRunner_generateToolResponse).call(this, (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.messages.at(-1));
                         if (toolMessage) {
@@ -20697,8 +21008,15 @@ const DEPRECATED_MODELS = {
     'claude-2.0': 'July 21st, 2025',
     'claude-3-7-sonnet-latest': 'February 19th, 2026',
     'claude-3-7-sonnet-20250219': 'February 19th, 2026',
+    'claude-3-5-haiku-latest': 'February 19th, 2026',
+    'claude-3-5-haiku-20241022': 'February 19th, 2026',
+    'claude-opus-4-0': 'June 15th, 2026',
+    'claude-opus-4-20250514': 'June 15th, 2026',
+    'claude-sonnet-4-0': 'June 15th, 2026',
+    'claude-sonnet-4-20250514': 'June 15th, 2026',
     'claude-opus-4-1': 'August 5th, 2026',
     'claude-opus-4-1-20250805': 'August 5th, 2026',
+    'claude-mythos-preview': 'June 30th, 2026',
 };
 const MODELS_TO_WARN_WITH_THINKING_ENABLED = ['claude-mythos-preview', 'claude-opus-4-6'];
 class Messages extends APIResource {
@@ -21933,6 +22251,10 @@ Vaults.Credentials = Credentials;
 
 
 
+
+
+
+
 class Beta extends APIResource {
     constructor() {
         super(...arguments);
@@ -21941,6 +22263,8 @@ class Beta extends APIResource {
         this.agents = new Agents(this._client);
         this.environments = new Environments(this._client);
         this.sessions = new Sessions(this._client);
+        this.deployments = new Deployments(this._client);
+        this.deploymentRuns = new DeploymentRuns(this._client);
         this.vaults = new Vaults(this._client);
         this.memoryStores = new MemoryStores(this._client);
         this.files = new Files(this._client);
@@ -21954,6 +22278,8 @@ Beta.Messages = Messages;
 Beta.Agents = Agents;
 Beta.Environments = Environments;
 Beta.Sessions = Sessions;
+Beta.Deployments = Deployments;
+Beta.DeploymentRuns = DeploymentRuns;
 Beta.Vaults = Vaults;
 Beta.MemoryStores = MemoryStores;
 Beta.Files = Files;
@@ -22052,7 +22378,6 @@ var _MessageStream_instances, _MessageStream_currentMessageSnapshot, _MessageStr
 
 
 
-const MessageStream_JSON_BUF_PROPERTY = '__json_buf';
 function MessageStream_tracksToolInput(content) {
     return content.type === 'tool_use' || content.type === 'server_tool_use';
 }
@@ -22368,7 +22693,7 @@ class MessageStream {
         try {
             (0,tslib/* __classPrivateFieldGet */.g)(this, _MessageStream_instances, "m", _MessageStream_beginRequest).call(this);
             this._connected(null);
-            const stream = Stream.fromReadableStream(readableStream, this.controller);
+            const stream = streaming_Stream.fromReadableStream(readableStream, this.controller);
             for await (const event of stream) {
                 (0,tslib/* __classPrivateFieldGet */.g)(this, _MessageStream_instances, "m", _MessageStream_addStreamEvent).call(this, event);
             }
@@ -22426,7 +22751,7 @@ class MessageStream {
                         break;
                     }
                     case 'input_json_delta': {
-                        if (MessageStream_tracksToolInput(content) && content.input) {
+                        if (MessageStream_tracksToolInput(content) && (0,tslib/* __classPrivateFieldGet */.g)(this, _MessageStream_listeners, "f").inputJson?.length) {
                             this._emit('inputJson', event.delta.partial_json, content.input);
                         }
                         break;
@@ -22536,21 +22861,8 @@ class MessageStream {
                     }
                     case 'input_json_delta': {
                         if (snapshotContent && MessageStream_tracksToolInput(snapshotContent)) {
-                            // we need to keep track of the raw JSON string as well so that we can
-                            // re-parse it for each delta, for now we just store it as an untyped
-                            // non-enumerable property on the snapshot
-                            let jsonBuf = snapshotContent[MessageStream_JSON_BUF_PROPERTY] || '';
-                            jsonBuf += event.delta.partial_json;
-                            const newContent = { ...snapshotContent };
-                            Object.defineProperty(newContent, MessageStream_JSON_BUF_PROPERTY, {
-                                value: jsonBuf,
-                                enumerable: false,
-                                writable: true,
-                            });
-                            if (jsonBuf) {
-                                newContent.input = partialParse(jsonBuf);
-                            }
-                            snapshot.content[event.index] = newContent;
+                            const jsonBuf = (snapshotContent[JSON_BUF_PROPERTY] || '') + event.delta.partial_json;
+                            snapshot.content[event.index] = withLazyInput(snapshotContent, jsonBuf);
                         }
                         break;
                     }
@@ -22577,8 +22889,18 @@ class MessageStream {
                 }
                 return snapshot;
             }
-            case 'content_block_stop':
+            case 'content_block_stop': {
+                const snapshotContent = snapshot.content.at(event.index);
+                if (snapshotContent && MessageStream_tracksToolInput(snapshotContent) && JSON_BUF_PROPERTY in snapshotContent) {
+                    Object.defineProperty(snapshotContent, 'input', {
+                        value: snapshotContent.input,
+                        enumerable: true,
+                        configurable: true,
+                        writable: true,
+                    });
+                }
                 return snapshot;
+            }
         }
     }, Symbol.asyncIterator)]() {
         const pushQueue = [];
@@ -22632,7 +22954,7 @@ class MessageStream {
         };
     }
     toReadableStream() {
-        const stream = new Stream(this[Symbol.asyncIterator].bind(this), this.controller);
+        const stream = new streaming_Stream(this[Symbol.asyncIterator].bind(this), this.controller);
         return stream.toReadableStream();
     }
 }
@@ -22915,6 +23237,7 @@ const messages_DEPRECATED_MODELS = {
     'claude-sonnet-4-20250514': 'June 15th, 2026',
     'claude-opus-4-1': 'August 5th, 2026',
     'claude-opus-4-1-20250805': 'August 5th, 2026',
+    'claude-mythos-preview': 'June 30th, 2026',
 };
 const messages_MODELS_TO_WARN_WITH_THINKING_ENABLED = ['claude-mythos-preview', 'claude-opus-4-6'];
 messages_Messages.Batches = batches_Batches;
@@ -23069,13 +23392,12 @@ class BaseAnthropic {
         this._baseURLIsExplicit = opts.__baseURLIsExplicit ?? !!baseURL;
         this.timeout = options.timeout ?? _a.DEFAULT_TIMEOUT /* 10 minutes */;
         this.logger = options.logger ?? console;
-        const defaultLogLevel = 'warn';
         // Set default logLevel early so that we can log a warning in parseLogLevel.
-        this.logLevel = defaultLogLevel;
+        this.logLevel = utils_log/* defaultLogLevel */.Ic;
         this.logLevel =
-            (0,utils_log/* parseLogLevel */.ML)(options.logLevel, 'ClientOptions.logLevel', this) ??
-                (0,utils_log/* parseLogLevel */.ML)((0,env/* readEnv */.s)('ANTHROPIC_LOG'), "process.env['ANTHROPIC_LOG']", this) ??
-                defaultLogLevel;
+            (0,utils_log/* parseLogLevel */.ML)(options.logLevel, 'ClientOptions.logLevel', (0,utils_log/* loggerFor */.WG)(this)) ??
+                (0,utils_log/* parseLogLevel */.ML)((0,env/* readEnv */.s)('ANTHROPIC_LOG'), "process.env['ANTHROPIC_LOG']", (0,utils_log/* loggerFor */.WG)(this)) ??
+                utils_log/* defaultLogLevel */.Ic;
         this.fetchOptions = options.fetchOptions;
         this.maxRetries = options.maxRetries ?? 2;
         this.fetch = options.fetch ?? getDefaultFetch();
@@ -23183,7 +23505,7 @@ class BaseAnthropic {
      * same reason, `ctx.options` is undefined for these requests.
      */
     _credentialsFetch() {
-        return wrapFetchWithMiddleware(this.fetch, this.middleware);
+        return wrapFetchWithMiddleware(this.fetch, this.middleware, undefined, this);
     }
     _makeTokenCache(provider) {
         return new TokenCache(provider, (err) => {
@@ -23377,12 +23699,12 @@ class BaseAnthropic {
      * This is useful for cases where you want to add certain headers based off of
      * the request properties, e.g. `method` or `url`.
      *
-     * Runs after any middleware, immediately before each underlying fetch call,
-     * so request signing (e.g. SigV4 on Bedrock) sees exactly what goes over the
-     * wire. Middleware may replay a request by calling `next()` more than once,
-     * so this hook can run multiple times per attempt: overrides must be
-     * idempotent and overwrite auth headers from a previous invocation (e.g. a
-     * stale `Authorization`) rather than append to them.
+     * Runs after all middleware (including {@link backendMiddleware}),
+     * immediately before each underlying fetch call, so it sees exactly what
+     * goes over the wire. Middleware may replay a request by calling `next()`
+     * more than once, so this hook can run multiple times per attempt:
+     * overrides must be idempotent and overwrite headers from a previous
+     * invocation rather than append to them.
      */
     async prepareRequest(request, { url, options }) {
         // Append auth-derived headers when using token auth. Done here (after all
@@ -23406,6 +23728,27 @@ class BaseAnthropic {
             }
             request.headers = headers;
         }
+    }
+    /**
+     * Internal {@link Middleware} composed innermost in the chain — inside both
+     * client-level and per-request middleware, immediately around the underlying
+     * `fetch`. Subclasses for third-party backends override this to adapt the
+     * canonical Anthropic-shaped request to the backend's wire shape (URL/body
+     * rewriting, request signing) and to normalize the wire response back to the
+     * canonical shape (e.g. AWS EventStream to SSE).
+     *
+     * Running inside the user's middleware means user middleware always observes
+     * canonical Anthropic-shaped traffic, and the adaptation re-runs (e.g.
+     * re-signs) on every `next()` invocation, covering whatever the middleware
+     * mutated.
+     *
+     * Errors thrown here follow the middleware error policy: they propagate to
+     * the caller as-is — no retries, no `APIConnectionError` wrapping — unless
+     * retryable (see {@link Middleware}); throw a `RetryableError` to opt into
+     * the retry path.
+     */
+    backendMiddleware() {
+        return [];
     }
     get(path, opts) {
         return this.methodRequest('get', path, opts);
@@ -23467,11 +23810,12 @@ class BaseAnthropic {
             // others do not provide enough information to distinguish timeouts from other connection errors
             const isTimeout = (0,errors/* isAbortError */.z)(response) ||
                 /timed? ?out/i.test(String(response) + ('cause' in response ? String(response.cause) : ''));
-            // Errors thrown by middleware propagate to the caller as-is — no retries, no
-            // APIConnectionError wrapping — except retryable errors (timeouts/aborts,
-            // APIConnectionErrors, and RetryableErrors, directly or in the `cause` chain),
-            // which stay on the retry path.
-            const hasMiddleware = this.middleware.length > 0 || !!options.middleware?.length;
+            // Errors thrown by middleware (user middleware and the backend adaptation
+            // alike) propagate to the caller as-is — no retries, no APIConnectionError
+            // wrapping — except retryable errors (timeouts/aborts, APIConnectionErrors,
+            // and RetryableErrors, directly or in the `cause` chain), which stay on the
+            // retry path.
+            const hasMiddleware = this.middleware.length > 0 || !!options.middleware?.length || this.backendMiddleware().length > 0;
             if (hasMiddleware && !isTimeout && !isRetryableError(response)) {
                 (0,utils_log/* loggerFor */.WG)(this).info(`[${requestLogID}] middleware error (not retryable)`);
                 (0,utils_log/* loggerFor */.WG)(this).debug(`[${requestLogID}] middleware error (not retryable)`, (0,utils_log/* formatRequestDetails */.xL)({
@@ -23603,11 +23947,10 @@ class BaseAnthropic {
             }
         };
         // Prepare the request (auth signing and other `prepareRequest` hooks) as
-        // the innermost step, after any middleware: providers that compute request
-        // signatures (e.g. SigV4 on Bedrock) must sign exactly what goes over the
-        // wire, including middleware modifications. Runs per inner-fetch
-        // invocation, so a request middleware rewrote — or replayed via a second
-        // `next()` call — is prepared (re-signed) fresh each time. Preparation is
+        // the innermost step, after any middleware — including the backend
+        // middleware, so it sees exactly what goes over the wire. Runs per
+        // inner-fetch invocation, so a request middleware rewrote — or replayed
+        // via a second `next()` call — is prepared fresh each time. Preparation is
         // outside the timeout timer, matching its pre-middleware behavior.
         const innerFetch = requestOptions === undefined ? timedFetch : (async (innerUrl, innerInit = {}) => {
             const innerUrlStr = typeof innerUrl === 'string' ? innerUrl
@@ -23627,9 +23970,12 @@ class BaseAnthropic {
             }
             return timedFetch(innerUrl, innerInit);
         });
-        const middleware = requestOptions?.middleware;
-        const allMiddleware = middleware?.length ? [...this.middleware, ...middleware] : this.middleware;
-        return await wrapFetchWithMiddleware(innerFetch, allMiddleware, requestOptions)(url, fetchOptions);
+        const requestMiddleware = requestOptions?.middleware;
+        const backendMiddleware = this.backendMiddleware();
+        const allMiddleware = requestMiddleware?.length || backendMiddleware.length ?
+            [...this.middleware, ...(requestMiddleware ?? []), ...backendMiddleware]
+            : this.middleware;
+        return await wrapFetchWithMiddleware(innerFetch, allMiddleware, requestOptions, this)(url, fetchOptions);
     }
     async shouldRetry(response, options) {
         // Reactive refresh: on a 401 from a request that used the token cache,
@@ -23858,8 +24204,714 @@ Anthropic.Messages = messages_Messages;
 Anthropic.Models = models_Models;
 Anthropic.Beta = Beta;
 //# sourceMappingURL=client.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/middleware.mjs
+
+
+
+
+
+const encoder = new TextEncoder();
+/** Betas sent by default; override with {@link BetaRefusalFallbackOptions.betas}. */
+const DEFAULT_BETAS = (/* unused pure expression or super */ null && (['fallback-credit-2026-06-01']));
+/**
+ * Remove `fallback` blocks replayed in history. They only parse under the
+ * server-side fallback beta, which belongs to the caller-owned server-side
+ * `fallbacks` feature — this middleware never sends it, so a request
+ * replaying them would 400. An assistant turn left empty is dropped whole.
+ */
+function stripFallbackBlocks(body) {
+    const messages = body.messages
+        .map((message) => Array.isArray(message.content) ?
+        { ...message, content: message.content.filter((block) => block.type !== 'fallback') }
+        : message)
+        .filter((message) => !Array.isArray(message.content) || message.content.length > 0);
+    return { ...body, messages };
+}
+/**
+ * Middleware that retries refused `/v1/messages` requests down a fallback chain.
+ *
+ * Non-streaming: when a response comes back with `stop_reason: 'refusal'`, the
+ * request is retried with each entry of `fallbacks` merged over the original
+ * params — passing along the refusal's `fallback_credit_token` — until a model
+ * accepts or the chain is exhausted. A message served by a fallback carries a
+ * `fallback` content block prepended at each model boundary — the same seam
+ * block shape the server-side `fallbacks` param places in `content`, though
+ * the rest of the envelope is the serving hop's as returned (see the
+ * known-divergences note below); an exhausted chain surfaces the final
+ * refusal verbatim.
+ *
+ * Streaming: when the stream ends in `stop_reason: 'refusal'`, a second
+ * request is issued to the fallback model — carrying the refused model's
+ * partial output as a trailing assistant prefill when the refusal grants one
+ * (`fallback_has_prefill_claim`), plus the refusal's `fallback_credit_token`
+ * — and the fallback's events are spliced onto the
+ * still-open stream, so the client sees one continuous message in the
+ * server-side `fallbacks` wire shape: a `fallback` content block at each model
+ * boundary, monotonic block indices, and per-hop `usage.iterations` on the
+ * final `message_delta`. Only `model` is honored from each entry on this path:
+ * the credit token is redeemable only against the refused request's body, so
+ * the other per-entry overrides (`max_tokens`, `thinking`, ...) would be
+ * rejected.
+ *
+ * The fallback-credit beta the credit tokens require is sent by default on
+ * every request the middleware handles; the `betas` option controls this.
+ *
+ * In both modes a fallback that itself refuses with a fresh credit token
+ * continues down the chain. A streaming fallback whose prefill the server
+ * rejects (HTTP 400) is retried once without it; a fallback whose request
+ * fails outright is skipped — its token was never redeemed, so it carries to
+ * the next entry.
+ *
+ * To keep later requests on the model that accepted, pass a
+ * {@link BetaFallbackState} via the `fallbackState` request option; requests
+ * sharing that state start directly at the pinned fallback. Reuse one state
+ * across whatever scope the pin should apply to — typically a conversation.
+ *
+ * @example
+ * ```ts
+ * const client = new Anthropic({
+ *   middleware: [betaRefusalFallbackMiddleware([{ model: 'claude-opus-4-8' }])],
+ * });
+ *
+ * const fallbackState = new BetaFallbackState();
+ * const message = await client.beta.messages.create(params, { fallbackState });
+ * ```
+ */
+function betaRefusalFallbackMiddleware(fallbacks, options = {}) {
+    let warnedMissingState = false;
+    return async (request, next, ctx) => {
+        // This middleware only applies to the beta messages API
+        // (`client.beta.messages`, which posts to `/v1/messages?beta=true`).
+        // An empty chain also disables this middleware.
+        const [path, query] = (ctx.options?.path ?? '').split('?');
+        if (fallbacks.length === 0 ||
+            ctx.options?.method !== 'post' ||
+            path !== '/v1/messages' ||
+            new URLSearchParams(query).get('beta') !== 'true' ||
+            typeof ctx.options.body !== 'object' ||
+            ctx.options.body == null) {
+            return next(request);
+        }
+        if (ctx.options.body.fallbacks != null) {
+            throw new AnthropicError('Sending the `fallbacks:` request param is not supported when using the `betaRefusalFallbackMiddleware`. ' +
+                'You should either remove the middleware and send `fallbacks:` with the `server-side-fallback-2026-06-01` beta header to let the API handle refusal fallbacks, ' +
+                "or omit the `fallbacks:` param if you'd like `betaRefusalFallbackMiddleware` to handle fallbacks on the client side.");
+        }
+        const onError = options.onError ??
+            ((error) => ctx.logger.error(`anthropic-sdk: betaRefusalFallbackMiddleware: ${error.message}`));
+        // Send the configured betas on this and every hop request derived from it.
+        request = appendBetas(request, options.betas ?? DEFAULT_BETAS);
+        const body = stripFallbackBlocks(ctx.options.body);
+        const state = ctx.options.fallbackState;
+        // start from the pinned fallback (-1 = the original params)
+        const startIndex = state?.index ?? -1;
+        if (!Number.isInteger(startIndex) || startIndex < -1 || startIndex >= fallbacks.length) {
+            throw new AnthropicError(`fallbackState.index ${startIndex} is out of bounds for a chain of ${fallbacks.length} fallback(s); was the state shared with a different middleware?`);
+        }
+        // pin requests sharing the state to the entry being tried
+        const pin = (index) => {
+            if (state) {
+                state.index = index;
+            }
+            else if (!warnedMissingState) {
+                warnedMissingState = true;
+                ctx.logger.warn('anthropic-sdk: betaRefusalFallbackMiddleware fell back without a `fallbackState` request option; follow-up requests will retry models that already refused. Pass a shared `{ fallbackState: new BetaFallbackState() }` to pin them to the accepted model.');
+            }
+        };
+        // a non-string body can't be respliced or redeemed against — leave the
+        // request untouched (the streaming path stands down on it below too)
+        const initialRequest = typeof request.body !== 'string' ?
+            request
+            : {
+                ...request,
+                body: JSON.stringify(startIndex === -1 ? body : { ...body, ...fallbacks[startIndex] }),
+            };
+        const response = await next(initialRequest);
+        if (!response.ok) {
+            return response;
+        }
+        if (ctx.options.stream === true) {
+            const firstHop = startIndex + 1;
+            // Splicing needs at least one entry left to hop to and the JSON request
+            // body the credit token is redeemable against (an earlier middleware
+            // may have rewritten it to another BodyInit); otherwise the stream
+            // passes through untouched.
+            if (firstHop >= fallbacks.length || typeof initialRequest.body !== 'string') {
+                return response;
+            }
+            return spliceFallbackStream({
+                request: initialRequest,
+                response,
+                next,
+                ctx,
+                fallbacks,
+                firstHop,
+                onError,
+                pin,
+            });
+        }
+        let index = startIndex;
+        let res = response;
+        // The model the current hop was requested as — the caller's spelling, not
+        // the server's `message.model` echo; the seam block's `from` carries it.
+        let requestedModel = (startIndex === -1 ? body : { ...body, ...fallbacks[startIndex] }).model;
+        const fallbackBlocks = [];
+        while (index < fallbacks.length - 1) {
+            const message = await ctx.parse(res);
+            if (message?.type !== 'message' || message.stop_reason !== 'refusal') {
+                break;
+            }
+            index += 1;
+            pin(index);
+            const entry = fallbacks[index];
+            // One `fallback` seam block per model boundary, prepended to the serving
+            // hop's content below — the same block shape the server places in
+            // `content`, not a claim of full envelope parity.
+            fallbackBlocks.push({
+                type: 'fallback',
+                // `requestedModel` is always set for a typed body; the `??` defends
+                // against an untyped body that carried no `model` field.
+                from: { model: requestedModel ?? message.model },
+                to: { model: entry.model },
+                trigger: { type: 'refusal', category: message.stop_details?.category ?? null },
+            });
+            requestedModel = entry.model;
+            res = await next({
+                ...request,
+                body: JSON.stringify({
+                    ...body,
+                    ...entry,
+                    ...(message.stop_details?.fallback_credit_token ?
+                        { fallback_credit_token: message.stop_details.fallback_credit_token }
+                        : undefined),
+                }),
+            });
+        }
+        if (fallbackBlocks.length === 0) {
+            return res;
+        }
+        const served = await ctx.parse(res);
+        // Chain exhausted on a refusal (or an error/malformed body): surface it
+        // verbatim. The array guard keeps a message-shaped body with non-array
+        // `content` from throwing at the spread below.
+        if (served?.type !== 'message' || served.stop_reason === 'refusal' || !Array.isArray(served.content)) {
+            return res;
+        }
+        // A fallback hop served (or exhausted the chain with output): prepend the
+        // seam blocks so the app-visible `content` opens with one `fallback` block
+        // per model boundary. Response init is preserved (same `_request_id`);
+        // `content-length` is dropped since the body grew.
+        const headers = new Headers(res.headers);
+        headers.delete('content-length');
+        return new Response(JSON.stringify({ ...served, content: [...fallbackBlocks, ...served.content] }), {
+            status: res.status,
+            statusText: res.statusText,
+            headers,
+        });
+    };
+}
+/**
+ * Wrap stream A in a response whose body passes events through until a
+ * retryable refusal, then splices the fallback chain's events on (see
+ * {@link splicedEvents}). Cancelling the returned body tears down whichever
+ * stream is being read and aborts any in-flight fallback request or retry
+ * backoff: hop requests run under `controller`'s signal, which fires on
+ * cancel and mirrors the original request's signal — a user abort has no
+ * other way to reach a hop, since this synthetic body isn't fetch-backed.
+ */
+function spliceFallbackStream(args) {
+    const controller = new AbortController();
+    const signal = args.request.signal;
+    if (signal?.aborted) {
+        controller.abort(signal.reason);
+    }
+    else {
+        signal?.addEventListener('abort', makeAbort(controller, signal), { once: true });
+    }
+    const iter = splicedEvents(args, controller);
+    const body = new ReadableStream({
+        async pull(ctrl) {
+            try {
+                const { value, done } = await iter.next();
+                if (done)
+                    return ctrl.close();
+                ctrl.enqueue(value);
+            }
+            catch (err) {
+                ctrl.error(err);
+            }
+        },
+        async cancel() {
+            controller.abort();
+            await iter.return?.(undefined);
+        },
+    });
+    return new Response(body, args.response);
+}
+async function* splicedEvents({ request, response, next, ctx, fallbacks, firstHop, onError, pin }, controller) {
+    // --- stream A: pass through until a chainable refusal ---
+    const a = yield* consumeHop({
+        response,
+        controller,
+        indexBase: 0,
+        hasNext: true, // the caller guarantees firstHop < fallbacks.length
+        onError,
+        splice: null,
+    });
+    if (!a.refused)
+        return; // non-refusal or not-retryable: pure pass-through.
+    // --- fallback chain: try each entry in order ---
+    // `base` is the assistant-turn content the current token's request already
+    // carried — the token is redeemable only with it resent verbatim. `partial`
+    // is the newest refused hop's output, included only when its refusal
+    // granted a prefill claim (any other change to the body is a 400).
+    let nextIndex = a.nextIndex; // monotonic block index across all spliced streams
+    let token = a.refused.token;
+    let base = [];
+    let partial = a.refused.hasPrefillClaim ? toPrefillBlocks(a.blocks) : [];
+    let fromModel = a.model ?? '';
+    let lastUsage = a.refused.usage;
+    // The refusal whose token is currently in flight — surfaced verbatim (with a
+    // recommended_model added) if every fallback request fails and we degrade.
+    let refusalDetails = a.refused.stopDetails;
+    // One `message` entry per refused hop, in order — A first. Failed hops are
+    // skipped (no usage came back); the serving hop is appended as
+    // `fallback_message` when its message_delta arrives.
+    const iterations = [
+        toIterationUsage('message', a.model ?? '', a.refused.usage),
+    ];
+    for (let hop = firstHop; hop < fallbacks.length; hop++) {
+        const model = fallbacks[hop].model;
+        const hasNext = hop + 1 < fallbacks.length;
+        pin(hop);
+        // --- boundary: a `fallback` content block at the next monotonic index ---
+        // Emitted before the request, so a hop that fails leaves its boundary in
+        // place and the next attempt emits its own (still `from: fromModel` — the
+        // last model that contributed output).
+        const fbIndex = nextIndex++;
+        yield emit('content_block_start', {
+            type: 'content_block_start',
+            index: fbIndex,
+            content_block: {
+                type: 'fallback',
+                from: { model: fromModel },
+                to: { model },
+                trigger: { type: 'refusal', category: refusalDetails?.category ?? null },
+            },
+        });
+        yield emit('content_block_stop', {
+            type: 'content_block_stop',
+            index: fbIndex,
+        });
+        // --- build the request: appended-assistant continuation ---
+        // First attempt carries the newest partial appended (when its refusal
+        // granted a prefill claim); a 400 on that form means the server rejected
+        // the prefill, so the hop is retried once without it — the same-body
+        // form the token always supports.
+        let continuation = [...base, ...partial];
+        let resB = null;
+        let failure = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const reqB = buildFallbackRequest(request, { model, creditToken: token, continuation });
+            // controller mirrors the original signal and additionally fires when the
+            // spliced body is cancelled — either must abort an in-flight hop request.
+            reqB.signal = controller.signal;
+            try {
+                resB = await next(reqB);
+            }
+            catch (err) {
+                // the consumer cancelled (or the original request was aborted): unwind
+                if (isAbortError(err))
+                    throw err;
+                failure = {
+                    kind: 'request_failed',
+                    message: `fallback request failed: ${err}`,
+                    model,
+                    status: null,
+                    detail: err,
+                };
+                break;
+            }
+            if (resB.ok)
+                break;
+            // ctx.parse reads through an internal clone, so it works even though
+            // the client will also read this body; resB.text() would conflict.
+            const errBody = await ctx.parse(resB).catch(() => null);
+            if (attempt === 0 && resB.status === 400 && partial.length) {
+                ctx.logger.warn(`anthropic-sdk: betaRefusalFallbackMiddleware: fallback request with the partial output appended was rejected (HTTP 400: ${JSON.stringify(errBody)}); retrying without it`);
+                continuation = base;
+                resB = null;
+                continue;
+            }
+            failure = {
+                kind: 'request_failed',
+                message: `fallback request failed: HTTP ${resB.status}: ${JSON.stringify(errBody)}`,
+                model,
+                status: resB.status,
+                detail: errBody,
+            };
+            break;
+        }
+        if (failure) {
+            onError(failure);
+            // The token was never redeemed — retry it against the next entry.
+            if (hasNext)
+                continue;
+            // Surface the held refusal verbatim — its category/explanation and the
+            // still-unredeemed credit token — and point recommended_model at the hop
+            // we last tried.
+            const stopDetails = {
+                ...refusalDetails,
+                recommended_model: model,
+            };
+            yield emit('message_delta', {
+                type: 'message_delta',
+                context_management: null,
+                delta: {
+                    stop_reason: 'refusal',
+                    stop_sequence: null,
+                    container: null,
+                    stop_details: stopDetails,
+                },
+                usage: (lastUsage ?? {}),
+            });
+            yield emit('message_stop', { type: 'message_stop' });
+            return;
+        }
+        // --- splice: monotonic indices, suppressed message_start, usage.iterations ---
+        const b = yield* consumeHop({
+            response: resB,
+            controller,
+            indexBase: nextIndex,
+            hasNext,
+            onError,
+            splice: { iterations, model },
+        });
+        if (!b.refused)
+            return;
+        // This hop refused too, with a fresh token: its emitted partial stays in
+        // the client's message, becomes the next partial segment, and the chain
+        // continues.
+        token = b.refused.token;
+        refusalDetails = b.refused.stopDetails;
+        base = continuation;
+        partial = b.refused.hasPrefillClaim ? toPrefillBlocks(b.blocks) : [];
+        iterations.push(toIterationUsage('message', model, b.refused.usage));
+        lastUsage = b.refused.usage;
+        fromModel = model;
+        nextIndex = b.nextIndex;
+    }
+}
+/**
+ * Consume one hop's SSE events, forwarding them to the client while
+ * accumulating its content blocks (returned in the outcome).
+ *
+ * Stream A (`splice: null`) is forwarded in its original wire bytes; a
+ * spliced hop (`splice` set) has its message_start suppressed (the client
+ * already saw A's), its block indices shifted by `indexBase`, and its
+ * terminal message_delta's usage rewritten to the `usage.iterations`
+ * chain shape.
+ *
+ * A refusal that can be chained — it carries a `fallback_credit_token` and a
+ * fallback entry remains — ends the hop early: open blocks are closed, the
+ * terminal message_delta + message_stop are suppressed, and the token+usage
+ * are returned so the caller can issue the next hop. Any other refusal is
+ * reported through `onError` and passes through to the client.
+ */
+async function* consumeHop(args) {
+    const { response, controller, indexBase, hasNext, onError, splice } = args;
+    const tracker = new BlockTracker(indexBase);
+    let model;
+    let startUsage = null;
+    for await (const sse of Stream.rawEvents(response, controller)) {
+        const p = safeJSON(sse.data);
+        switch (p?.type) {
+            case 'message_start': {
+                model = p.message.model;
+                startUsage = p.message.usage;
+                if (splice)
+                    continue;
+                break;
+            }
+            case 'content_block_start': {
+                tracker.start(p);
+                if (splice) {
+                    yield emit(p.type, p);
+                    continue;
+                }
+                break;
+            }
+            case 'content_block_delta': {
+                tracker.delta(p);
+                if (splice) {
+                    yield emit(p.type, p);
+                    continue;
+                }
+                break;
+            }
+            case 'content_block_stop': {
+                tracker.stop(p);
+                if (splice) {
+                    yield emit(p.type, p);
+                    continue;
+                }
+                break;
+            }
+            case 'message_delta': {
+                if (p.delta.stop_reason === 'refusal') {
+                    // `fallback_credit_token` is null when the refusal isn't eligible
+                    // for a fallback credit; without one we don't retry.
+                    const details = p.delta.stop_details?.type === 'refusal' ? p.delta.stop_details : null;
+                    if (details?.fallback_credit_token && hasNext) {
+                        const usage = backfill(p.usage, startUsage);
+                        yield* tracker.closeOpenBlocks();
+                        // suppress this hop's message_delta + message_stop
+                        return {
+                            refused: {
+                                token: details.fallback_credit_token,
+                                hasPrefillClaim: details.fallback_has_prefill_claim === true,
+                                usage,
+                                stopDetails: details,
+                            },
+                            model,
+                            blocks: tracker.contentBlocks(),
+                            nextIndex: tracker.nextIndex,
+                        };
+                    }
+                    if (!details?.fallback_credit_token) {
+                        onError({
+                            kind: 'no_credit_token',
+                            message: 'refusal stop_details has no fallback_credit_token',
+                            event: p,
+                        });
+                    }
+                    else {
+                        onError({
+                            kind: 'chain_exhausted',
+                            message: 'refusal but no fallback entries remain',
+                            event: p,
+                        });
+                    }
+                }
+                if (splice) {
+                    // Terminal hop. Replace iterations, don't append: this hop's own
+                    // message_delta self-reports a single `{type:"message",
+                    // model:undefined}` iteration (a fresh non-fallback request counts
+                    // itself as one message hop). Server-side `fallbacks` relabels the
+                    // whole chain instead — refused hops as `message`, the serving hop
+                    // as `fallback_message` — so spreading the self-report would
+                    // prepend a spurious `message:undefined` entry.
+                    const usage = backfill(p.usage, startUsage);
+                    usage.iterations = [
+                        ...splice.iterations,
+                        toIterationUsage('fallback_message', splice.model, usage),
+                    ];
+                    p.usage = usage;
+                    yield emit('message_delta', p);
+                    continue;
+                }
+                break;
+            }
+        }
+        // message_stop, ping, error, unrecognised — and for stream A every
+        // event — pass through in their original wire bytes.
+        yield passthroughSSE(sse);
+    }
+    return { refused: null, model, blocks: tracker.contentBlocks(), nextIndex: tracker.nextIndex };
+}
+/**
+ * Block bookkeeping for one stream of the splice: accumulates each content
+ * block from its deltas (for the continuation prefill), shifts wire indices
+ * by `indexBase` so they stay monotonic across hops, and tracks which blocks
+ * are still open so a refusal that cuts mid-block can close them.
+ */
+class BlockTracker {
+    constructor(indexBase = 0) {
+        this.indexBase = indexBase;
+        /** The stream's accumulated blocks keyed by their original wire index. */
+        this.blocks = [];
+        /** Shifted indices of blocks started but not yet stopped. */
+        this.open = [];
+        this.nextIndex = indexBase;
+    }
+    /** The accumulated content blocks, in start order. */
+    contentBlocks() {
+        return this.blocks.map((b) => b.block);
+    }
+    /** Track a content_block_start, shifting `event.index`. */
+    start(event) {
+        this.blocks.push({ index: event.index, block: { ...event.content_block } });
+        event.index += this.indexBase;
+        this.open.push(event.index);
+        this.nextIndex = Math.max(this.nextIndex, event.index + 1);
+    }
+    /** Apply a content_block_delta to its accumulating block, shifting `event.index`. */
+    delta(event) {
+        applyDelta(this.blocks, event.index, event.delta);
+        event.index += this.indexBase;
+    }
+    /** Track a content_block_stop, shifting `event.index`. */
+    stop(event) {
+        event.index += this.indexBase;
+        const i = this.open.indexOf(event.index);
+        if (i !== -1)
+            this.open.splice(i, 1);
+        this.nextIndex = Math.max(this.nextIndex, event.index + 1);
+    }
+    /** content_block_stop events for any blocks still open. */
+    *closeOpenBlocks() {
+        for (const index of this.open) {
+            yield emit('content_block_stop', {
+                type: 'content_block_stop',
+                index,
+            });
+        }
+        this.open.length = 0;
+    }
+}
+// --- fallback request construction (appended-assistant continuation) -------
+function buildFallbackRequest(orig, { model, creditToken, continuation, }) {
+    // the caller guarantees a JSON string body (checked before stream A is read)
+    const body = JSON.parse(orig.body);
+    body.model = model;
+    body.fallback_credit_token = creditToken;
+    // Append the continuation (decided by the chain loop) as a trailing
+    // assistant turn; everything else must stay identical to the refused
+    // request. When the refusal granted no prefill claim, omit the turn
+    // entirely and send the same-body form.
+    if (continuation.length) {
+        body.messages = [...body.messages, { role: 'assistant', content: continuation }];
+    }
+    // Do NOT touch max_tokens (or any other render-shaping field): the token is
+    // only redeemable against the same request body as the refused request —
+    // model, fallback_credit_token, and the one appended assistant turn are the
+    // only permitted deltas; anything else is a 400 ("request body ... does not
+    // match the original refused request"). This is also why the per-entry
+    // BetaFallbackParam overrides are ignored on the streaming path.
+    return { ...orig, headers: new Headers(orig.headers), body: JSON.stringify(body) };
+}
+// --- block accumulation & prefill conversion -------------------------------
+/** Apply a content_block_delta to the accumulating block at `index`. */
+function applyDelta(blocks, index, delta) {
+    const block = blocks.find((x) => x.index === index)?.block;
+    if (!block)
+        return;
+    switch (delta.type) {
+        case 'text_delta': {
+            block.text = (block.text ?? '') + delta.text;
+            break;
+        }
+        case 'input_json_delta': {
+            block._partial_json = (block._partial_json ?? '') + delta.partial_json;
+            break;
+        }
+        case 'citations_delta':
+            (block.citations ?? (block.citations = [])).push(delta.citation);
+            break;
+        case 'thinking_delta': {
+            block.thinking = (block.thinking ?? '') + delta.thinking;
+            break;
+        }
+        case 'signature_delta': {
+            block.signature = delta.signature;
+            break;
+        }
+        case 'compaction_delta': {
+            break;
+        }
+        default:
+            ((_) => { })(delta);
+    }
+}
+/**
+ * Convert a hop's accumulated response blocks to the appended assistant turn,
+ * as-is: a `fallback_has_prefill_claim` refusal guarantees the partial output
+ * is resendable verbatim, so no client-side filtering is applied. The only
+ * rewrite is reassembling tool inputs from their accumulated
+ * `input_json_delta` JSON (content_block_start carries `input: {}`).
+ */
+function toPrefillBlocks(responseBlocks) {
+    return responseBlocks.map((b) => {
+        if (typeof b?._partial_json !== 'string')
+            return b;
+        const { _partial_json, ...block } = b;
+        return { ...block, input: safeJSON(_partial_json) ?? block.input };
+    });
+}
+// --- helpers --------------------------------------------------------------
+/**
+ * A copy of `request` with `betas` appended to its `anthropic-beta` header,
+ * skipping values already present (set by the caller or another middleware).
+ */
+function appendBetas(request, betas) {
+    if (!betas.length)
+        return request;
+    const headers = new Headers(request.headers);
+    const existing = new Set(headers
+        .get('anthropic-beta')
+        ?.split(',')
+        .map((s) => s.trim()));
+    for (const beta of betas) {
+        if (!existing.has(beta)) {
+            headers.append('anthropic-beta', beta);
+            existing.add(beta);
+        }
+    }
+    return { ...request, headers };
+}
+function emit(event, payload) {
+    const sse = { event, data: JSON.stringify(payload), raw: [] };
+    return encoder.encode(serializeSSE(sse));
+}
+/**
+ * Forward a decoded event in its original wire bytes, preserving SSE fields
+ * the decoder doesn't model (`id:`, `retry:`, comment lines). Falls back to
+ * re-serializing for events with no raw lines.
+ */
+function passthroughSSE(sse) {
+    return encoder.encode(sse.raw.length ? sse.raw.join('\n') + '\n\n' : serializeSSE(sse));
+}
+function toIterationUsage(type, model, u) {
+    return {
+        type,
+        model,
+        input_tokens: u?.input_tokens ?? 0,
+        output_tokens: u?.output_tokens ?? 0,
+        cache_read_input_tokens: u?.cache_read_input_tokens ?? 0,
+        cache_creation_input_tokens: u?.cache_creation_input_tokens ?? 0,
+        cache_creation: u?.cache_creation ?? null,
+    };
+}
+/** Fill null/undefined fields on `primary` from `fallback`. */
+function backfill(primary, fallback) {
+    const out = { ...(fallback ?? {}), ...(primary ?? {}) };
+    for (const k of Object.keys(out)) {
+        if (out[k] == null && fallback?.[k] != null)
+            out[k] = fallback[k];
+    }
+    return out;
+}
+/**
+ * Serialize a {@link ServerSentEvent} back to its SSE wire form
+ * (`event: ...\ndata: ...\n\n`). Multi-line `data` is emitted as one
+ * `data:` line per line, matching the spec. The inverse of the decoder
+ * behind {@link Stream.rawEvents}.
+ */
+function serializeSSE(sse) {
+    let out = '';
+    if (sse.event !== null)
+        out += `event: ${sse.event}\n`;
+    for (const line of sse.data.split('\n'))
+        out += `data: ${line}\n`;
+    return out + '\n';
+}
+function makeAbort(controller, signal) {
+    return () => controller.abort(signal.reason);
+}
+//# sourceMappingURL=middleware.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
 
 
 
@@ -23953,7 +25005,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   sx: () => (/* reexport */ env/* readEnv */.s)
 });
 
-// UNUSED EXPORTS: coerceBoolean, coerceFloat, coerceInteger, ensurePresent, formatRequestDetails, fromBase64, hasOwn, isAbsoluteURL, isArray, isEmptyObj, isObj, isReadonlyArray, loggerFor, maybeCoerceBoolean, maybeCoerceFloat, maybeCoerceInteger, maybeObj, parseLogLevel, pop, safeJSON, sleep, stringifyQuery, toBase64, uuid4, validatePositiveInteger
+// UNUSED EXPORTS: coerceBoolean, coerceFloat, coerceInteger, defaultLogLevel, defaultLogger, ensurePresent, formatRequestDetails, fromBase64, hasOwn, isAbsoluteURL, isArray, isEmptyObj, isObj, isReadonlyArray, loggerFor, maybeCoerceBoolean, maybeCoerceFloat, maybeCoerceInteger, maybeObj, parseLogLevel, pop, safeJSON, sleep, stringifyQuery, toBase64, uuid4, validatePositiveInteger
 
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
 var values = __nccwpck_require__(9296);
@@ -24043,13 +25095,18 @@ const readEnv = (env) => {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   Ic: () => (/* binding */ defaultLogLevel),
 /* harmony export */   ML: () => (/* binding */ parseLogLevel),
+/* harmony export */   Um: () => (/* binding */ defaultLogger),
 /* harmony export */   WG: () => (/* binding */ loggerFor),
 /* harmony export */   xL: () => (/* binding */ formatRequestDetails)
 /* harmony export */ });
 /* harmony import */ var _values_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9296);
+/* harmony import */ var _env_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(111);
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
+
+const defaultLogLevel = 'warn';
 const levelNumbers = {
     off: 0,
     error: 200,
@@ -24057,14 +25114,14 @@ const levelNumbers = {
     info: 400,
     debug: 500,
 };
-const parseLogLevel = (maybeLevel, sourceName, client) => {
+const parseLogLevel = (maybeLevel, sourceName, logger) => {
     if (!maybeLevel) {
         return undefined;
     }
     if ((0,_values_mjs__WEBPACK_IMPORTED_MODULE_0__/* .hasOwn */ .$3)(levelNumbers, maybeLevel)) {
         return maybeLevel;
     }
-    loggerFor(client).warn(`${sourceName} was set to ${JSON.stringify(maybeLevel)}, expected one of ${JSON.stringify(Object.keys(levelNumbers))}`);
+    logger.warn(`${sourceName} was set to ${JSON.stringify(maybeLevel)}, expected one of ${JSON.stringify(Object.keys(levelNumbers))}`);
     return undefined;
 };
 function noop() { }
@@ -24084,12 +25141,7 @@ const noopLogger = {
     debug: noop,
 };
 let cachedLoggers = /* @__PURE__ */ new WeakMap();
-function loggerFor(client) {
-    const logger = client.logger;
-    const logLevel = client.logLevel ?? 'off';
-    if (!logger) {
-        return noopLogger;
-    }
+function filterLogger(logger, logLevel) {
     const cachedLogger = cachedLoggers.get(logger);
     if (cachedLogger && cachedLogger[0] === logLevel) {
         return cachedLogger[1];
@@ -24102,6 +25154,33 @@ function loggerFor(client) {
     };
     cachedLoggers.set(logger, [logLevel, levelLogger]);
     return levelLogger;
+}
+function loggerFor(client) {
+    const logger = client.logger;
+    const logLevel = client.logLevel ?? 'off';
+    if (!logger) {
+        return noopLogger;
+    }
+    return filterLogger(logger, logLevel);
+}
+let lastEnvLevel;
+let cachedDefaultLogger;
+/**
+ * A logger matching the client defaults — `console`, filtered to
+ * `ANTHROPIC_LOG` or {@link defaultLogLevel} — for contexts with no client to
+ * read the configured `logger`/`logLevel` from.
+ *
+ * Cached per `ANTHROPIC_LOG` value so an invalid value warns once, like a
+ * client construction does, rather than on every request.
+ */
+function defaultLogger() {
+    const envLevel = (0,_env_mjs__WEBPACK_IMPORTED_MODULE_1__/* .readEnv */ .s)('ANTHROPIC_LOG');
+    if (!cachedDefaultLogger || envLevel !== lastEnvLevel) {
+        lastEnvLevel = envLevel;
+        cachedDefaultLogger = filterLogger(console, parseLogLevel(envLevel, "process.env['ANTHROPIC_LOG']", filterLogger(console, defaultLogLevel)) ??
+            defaultLogLevel);
+    }
+    return cachedDefaultLogger;
 }
 const formatRequestDetails = (details) => {
     if (details.options) {
@@ -45932,8 +47011,8 @@ Pricing last updated: ${this.lastUpdated}`;
 
 /* harmony default export */ const cost_estimator = (CostEstimator);
 
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 76 modules
-var sdk = __nccwpck_require__(1310);
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 80 modules
+var sdk = __nccwpck_require__(4973);
 ;// CONCATENATED MODULE: ./node_modules/@google/generative-ai/dist/index.mjs
 /**
  * Contains the list of OpenAPI data types
@@ -47493,7 +48572,7 @@ let uuid4 = function () {
 //# sourceMappingURL=uuid.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/errors.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-function isAbortError(err) {
+function src_isAbortError(err) {
     return (typeof err === 'object' &&
         err !== null &&
         // Spec-compliant fetch implementations
@@ -47763,7 +48842,7 @@ const maybeCoerceBoolean = (value) => {
     }
     return coerceBoolean(value);
 };
-const safeJSON = (text) => {
+const src_safeJSON = (text) => {
     try {
         return JSON.parse(text);
     }
@@ -48773,7 +49852,7 @@ var _Stream_client;
 
 
 
-class Stream {
+class src_Stream {
     constructor(iterator, controller, client) {
         this.iterator = iterator;
         _Stream_client.set(this, void 0);
@@ -48833,7 +49912,7 @@ class Stream {
             }
             catch (e) {
                 // If the user calls `stream.controller.abort()`, we should exit without throwing.
-                if (isAbortError(e))
+                if (src_isAbortError(e))
                     return;
                 throw e;
             }
@@ -48843,7 +49922,7 @@ class Stream {
                     controller.abort();
             }
         }
-        return new Stream(iterator, controller, client);
+        return new src_Stream(iterator, controller, client);
     }
     /**
      * Generates a Stream from a newline-separated ReadableStream
@@ -48880,7 +49959,7 @@ class Stream {
             }
             catch (e) {
                 // If the user calls `stream.controller.abort()`, we should exit without throwing.
-                if (isAbortError(e))
+                if (src_isAbortError(e))
                     return;
                 throw e;
             }
@@ -48890,7 +49969,7 @@ class Stream {
                     controller.abort();
             }
         }
-        return new Stream(iterator, controller, client);
+        return new src_Stream(iterator, controller, client);
     }
     [(_Stream_client = new WeakMap(), Symbol.asyncIterator)]() {
         return this.iterator();
@@ -48916,8 +49995,8 @@ class Stream {
             };
         };
         return [
-            new Stream(() => teeIterator(left), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
-            new Stream(() => teeIterator(right), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
+            new src_Stream(() => teeIterator(left), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
+            new src_Stream(() => teeIterator(right), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
         ];
     }
     /**
@@ -49065,7 +50144,7 @@ async function defaultParseResponse(client, props) {
             if (props.options.__streamClass) {
                 return props.options.__streamClass.fromSSEResponse(response, props.controller, client, props.options.__synthesizeEventData);
             }
-            return Stream.fromSSEResponse(response, props.controller, client, props.options.__synthesizeEventData);
+            return src_Stream.fromSSEResponse(response, props.controller, client, props.options.__synthesizeEventData);
         }
         // fetch refuses to read the body when the status code is 204.
         if (response.status === 204) {
@@ -50792,7 +51871,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         }
         __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_beginRequest).call(this);
         this._connected();
-        const stream = Stream.fromReadableStream(readableStream, this.controller);
+        const stream = src_Stream.fromReadableStream(readableStream, this.controller);
         let chatId;
         for await (const chunk of stream) {
             if (chatId && chatId !== chunk.id) {
@@ -51118,7 +52197,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         };
     }
     toReadableStream() {
-        const stream = new Stream(this[Symbol.asyncIterator].bind(this), this.controller);
+        const stream = new src_Stream(this[Symbol.asyncIterator].bind(this), this.controller);
         return stream.toReadableStream();
     }
 }
@@ -54612,7 +55691,7 @@ class AssistantStream extends EventStream {
             signal.addEventListener('abort', () => this.controller.abort());
         }
         this._connected();
-        const stream = Stream.fromReadableStream(readableStream, this.controller);
+        const stream = src_Stream.fromReadableStream(readableStream, this.controller);
         for await (const event of stream) {
             __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_addEvent).call(this, event);
         }
@@ -54622,7 +55701,7 @@ class AssistantStream extends EventStream {
         return this._addRun(__classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_endRequest).call(this));
     }
     toReadableStream() {
-        const stream = new Stream(this[Symbol.asyncIterator].bind(this), this.controller);
+        const stream = new src_Stream(this[Symbol.asyncIterator].bind(this), this.controller);
         return stream.toReadableStream();
     }
     static createToolAssistantStream(runId, runs, params, options) {
@@ -58354,7 +59433,7 @@ class OpenAI {
             // deno throws "TypeError: error sending request for url (https://example/): client error (Connect): tcp connect error: Operation timed out (os error 60): Operation timed out (os error 60)"
             // undici throws "TypeError: fetch failed" with cause "ConnectTimeoutError: Connect Timeout Error (attempted address: example:443, timeout: 1ms)"
             // others do not provide enough information to distinguish timeouts from other connection errors
-            const isTimeout = isAbortError(response) ||
+            const isTimeout = src_isAbortError(response) ||
                 /timed? ?out/i.test(String(response) + ('cause' in response ? String(response.cause) : ''));
             if (retriesRemaining) {
                 loggerFor(this).info(`[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} - ${retryMessage}`);
@@ -58423,7 +59502,7 @@ class OpenAI {
             const retryMessage = shouldRetry ? `error; no more retries left` : `error; not retryable`;
             loggerFor(this).info(`${responseInfo} - ${retryMessage}`);
             const errText = await response.text().catch((err) => castToError(err).message);
-            const errJSON = safeJSON(errText);
+            const errJSON = src_safeJSON(errText);
             const errMessage = errJSON ? undefined : errText;
             loggerFor(this).debug(`[${requestLogID}] response error (${retryMessage})`, formatRequestDetails({
                 retryOfRequestLogID,
