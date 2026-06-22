@@ -130,7 +130,7 @@ packs:
 - `axis` は schema 上 enum の単一値として強制する
 - スキーマは `schemas/pack.schema.json` として追加し、`skills:validate` に統合する（Phase B）。required は `id` / `version` / `name` / `description` / `axis` / `tier` / `skills` とする
 
-テンプレートは `specs/templates/pack/pack.yaml` に配置します。
+テンプレートは `scripts/templates/pack/pack.yaml` に配置します。
 
 ## 6. 導入プロジェクト側の selection 宣言
 

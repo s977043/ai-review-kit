@@ -9,7 +9,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
-const rubricPath = path.join(repoRoot, 'eval', 'rubric.yaml');
+const rubricPath = path.join(repoRoot, 'docs', 'eval', 'rubric.yaml');
 const rubricSchemaPath = path.join(repoRoot, 'schemas', 'eval-rubric.schema.json');
 const ledgerSchemaPath = path.join(repoRoot, 'schemas', 'eval-ledger-entry.schema.json');
 
@@ -17,7 +17,7 @@ const rubric = yaml.load(readFileSync(rubricPath, 'utf8'));
 const rubricSchema = JSON.parse(readFileSync(rubricSchemaPath, 'utf8'));
 const ledgerSchema = JSON.parse(readFileSync(ledgerSchemaPath, 'utf8'));
 
-describe('eval/rubric.yaml integrity', () => {
+describe('docs/eval/rubric.yaml integrity', () => {
   test('has severity, phase, and dimensions top-level sections', () => {
     assert.ok(rubric.severity, 'severity section missing');
     assert.ok(rubric.phase, 'phase section missing');

@@ -72,7 +72,7 @@ flowchart TB
 
 ## References
 
-- [Skill YAML Specification](../specs/skill-yaml-spec.md)
+- [Skill YAML Specification](specs/skill-yaml-spec.md)
 - [Skill Registry README](../skills/README.md)
 - [Migration Guide](./migration/skill-migration-guide.md)
 - [promptfoo Documentation](https://www.promptfoo.dev/)

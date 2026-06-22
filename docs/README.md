@@ -28,6 +28,6 @@ This directory is for internal use only.
 
 ---
 
-📖 公開ドキュメントの構成については [DOCUMENTATION.md](../DOCUMENTATION.md) を参照してください。
+📖 公開ドキュメントの構成については [DOCUMENTATION.md](policy/DOCUMENTATION.md) を参照してください。
 
-📖 For public documentation structure, please refer to [DOCUMENTATION.md](../DOCUMENTATION.md).
+📖 For public documentation structure, please refer to [DOCUMENTATION.md](policy/DOCUMENTATION.md).

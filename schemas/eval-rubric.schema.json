@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Evaluation Rubric Schema",
-  "description": "Schema for eval/rubric.yaml. The file defines three independent sections: 'severity' (severity vocabulary), 'phase' (review phase vocabulary), and 'dimensions' (multi-dimensional scoring rubric). All three sections are optional at the root so that partial fixtures (e.g. dimensions-only) can also be validated against this schema.",
+  "description": "Schema for docs/eval/rubric.yaml. The file defines three independent sections: 'severity' (severity vocabulary), 'phase' (review phase vocabulary), and 'dimensions' (multi-dimensional scoring rubric). All three sections are optional at the root so that partial fixtures (e.g. dimensions-only) can also be validated against this schema.",
   "type": "object",
   "properties": {
     "severity": {

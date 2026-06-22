@@ -166,7 +166,7 @@ tests:
 npm run create:skill
 
 # 手動作成
-cp -r specs/templates/skill skills/my-skill
+cp -r scripts/templates/skill skills/my-skill
 ```
 
 ### 2. 実装

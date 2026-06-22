@@ -640,7 +640,7 @@ River Review は、品質と再現性を保つための標準レビューポリ�
 ## ドキュメント設計
 
 River Review の技術ドキュメントは、[Diátaxis ドキュメントフレームワーク](https://diataxis.fr/) に基づいて構成しています。日本語がデフォルト言語で、英語版は `.en.md` 拡張子の別ファイルとして管理します（差分がある場合は日本語版を優先）。
-公開ドキュメントの正（Single Source of Truth）は `pages/` で、`docs/` は内部資料のみに限定します。詳細は `DOCUMENTATION.md` を参照してください。
+公開ドキュメントの正（Single Source of Truth）は `pages/` で、`docs/` は内部資料のみに限定します。詳細は `docs/policy/DOCUMENTATION.md` を参照してください。
 
 ドキュメントは次の 4 種類に分類されます。
 

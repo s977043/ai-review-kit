@@ -166,7 +166,7 @@ See also [Skill Lifecycle](./skill-lifecycle.md) for a deeper walkthrough.
 npm run create:skill
 
 # Manual creation
-cp -r specs/templates/skill skills/my-skill
+cp -r scripts/templates/skill skills/my-skill
 ```
 
 ### 2. Implement

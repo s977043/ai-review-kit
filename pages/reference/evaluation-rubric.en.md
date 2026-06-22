@@ -78,7 +78,7 @@ A `dimensionScores` array has been added to each evaluation entry.
 
 ## Relationship to Existing Fixtures
 
-The `dimensions` section in `eval/rubric.yaml` coexists with the existing `severity` and `phase` sections. Fixtures (`tests/fixtures/review-eval/cases.json`) fields such as `mustInclude` and `expectNoFindings` remain valid; multi-dimensional scoring functions as an additional layer.
+The `dimensions` section in `docs/eval/rubric.yaml` coexists with the existing `severity` and `phase` sections. Fixtures (`tests/fixtures/review-eval/cases.json`) fields such as `mustInclude` and `expectNoFindings` remain valid; multi-dimensional scoring functions as an additional layer.
 
 - Fixture `mustInclude` maps primarily to `detection_accuracy` and `evidence_quality` validation.
 - Fixture `expectNoFindings` maps to `false_positive_rate` validation.
@@ -93,7 +93,7 @@ The `dimensions` section in `eval/rubric.yaml` coexists with the existing `sever
 
 ## Related Files
 
-- `eval/rubric.yaml`
+- `docs/eval/rubric.yaml`
 - `schemas/eval-rubric.schema.json`
 - `schemas/eval-ledger-entry.schema.json`
 - `pages/reference/evaluation-fixture-format.en.md`

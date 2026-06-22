@@ -3,7 +3,7 @@
 # ============================================================
 # This is a template for creating new skills using the Skill Registry format.
 # Replace placeholder values and remove optional fields as needed.
-# See specs/skill-yaml-spec.md for full specification.
+# See docs/specs/skill-yaml-spec.md for full specification.
 
 # ============================================================
 # Required Fields
@@ -19,7 +19,7 @@ id: 'rr-<phase>-<category>-<number>'
 version: '0.1.0'
 
 # Human-readable name
-# Keep concise and descriptive (see specs/skill-yaml-spec.md)
+# Keep concise and descriptive (see docs/specs/skill-yaml-spec.md)
 name: '<Skill Name>'
 
 # Purpose and role of this skill

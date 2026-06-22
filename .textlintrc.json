@@ -19,7 +19,7 @@
       "ja-no-redundant-expression": false
     },
     "prh": {
-      "rulePaths": ["prh-rules/index.yml"]
+      "rulePaths": ["tools/prh-rules/index.yml"]
     }
   }
 }

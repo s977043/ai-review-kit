@@ -1,6 +1,6 @@
 # skill.yaml 仕様書
 
-> **公開リファレンス:** スキルスキーマの公開版は [`pages/reference/skill-schema-reference.md`](../pages/reference/skill-schema-reference.md) を参照してください。本ファイルは内部仕様の詳細版です。
+> **公開リファレンス:** スキルスキーマの公開版は [`pages/reference/skill-schema-reference.md`](../../pages/reference/skill-schema-reference.md) を参照してください。本ファイルは内部仕様の詳細版です。
 
 このドキュメントは、River ReviewのSkill定義ファイル`skill.yaml`の仕様を定義します。
 

@@ -22,7 +22,7 @@ This directory contains the template structure for creating new skills in the Sk
 1. **Copy this template** to create a new skill:
 
    ```bash
-   cp -r specs/templates/skill skills/<phase>/<skill-name>
+   cp -r scripts/templates/skill skills/<phase>/<skill-name>
    ```
 
 2. **Edit `skill.yaml`**:
@@ -61,9 +61,9 @@ If you have an existing skill in YAML frontmatter format (`.md` file):
 3. Move the Markdown content to the `prompt/` directory (e.g., `prompt/system.md`), splitting it if necessary
 4. Update file references in the skill registry
 
-See [specs/skill-yaml-spec.md](../../skill-yaml-spec.md) for the full specification.
+See [specs/skill-yaml-spec.md](../../../docs/specs/skill-yaml-spec.md) for the full specification.
 
 ## References
 
-- [Skill YAML Specification](../../skill-yaml-spec.md)
+- [Skill YAML Specification](../../../docs/specs/skill-yaml-spec.md)
 - [promptfoo Documentation](https://www.promptfoo.dev/)
