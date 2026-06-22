@@ -10,6 +10,6 @@
   - `phase`—レビューフェーズ（design / implementation / test / improve）の説明
   - `dimensions`—多次元スコアリングの定義。各次元は `id` / `name` / `weight` / `scoringMethod` / `direction` / `automatable` を持ち、weight 合計は 1.0
 - 参照: 現時点ではコードや CLI から直接読み込まれておらず、運用/設計の参照用です（ランタイム統合は後続 Issue で追跡）。
-- 整合性検証: `tests/eval-rubric.test.mjs` が `eval/rubric.yaml` と `schemas/eval-rubric.schema.json` の整合、および weight 合計 = 1.0 を検証します。
+- 整合性検証: `tests/eval-rubric.test.mjs` が `docs/eval/rubric.yaml` と `schemas/eval-rubric.schema.json` の整合、および weight 合計 = 1.0 を検証します。
 - 実行コマンド: rubric.yaml を読む専用コマンドはありません。評価ランナーは `npm run eval:fixtures` を利用します。
 - 関連ドキュメント: `pages/reference/evaluation-rubric.md`

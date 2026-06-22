@@ -17,7 +17,7 @@ const rubric = yaml.load(readFileSync(rubricPath, 'utf8'));
 const rubricSchema = JSON.parse(readFileSync(rubricSchemaPath, 'utf8'));
 const ledgerSchema = JSON.parse(readFileSync(ledgerSchemaPath, 'utf8'));
 
-describe('eval/rubric.yaml integrity', () => {
+describe('docs/eval/rubric.yaml integrity', () => {
   test('has severity, phase, and dimensions top-level sections', () => {
     assert.ok(rubric.severity, 'severity section missing');
     assert.ok(rubric.phase, 'phase section missing');

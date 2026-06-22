@@ -15,7 +15,6 @@ const ROOT_ALLOWLIST = new Set([
   'CODE_OF_CONDUCT.md',
   'CONTRIBUTING.md',
   'CONTRIBUTING.en.md',
-  'DOCUMENTATION.md',
   'GEMINI.md',
   'README.md',
   'README.en.md',
@@ -49,7 +48,7 @@ async function checkDocPlacement() {
   if (violations > 0) {
     console.error('');
     console.error('Allowed root .md files: ' + [...ROOT_ALLOWLIST].sort().join(', '));
-    console.error('See DOCUMENTATION.md for placement policy.');
+    console.error('See docs/policy/DOCUMENTATION.md for placement policy.');
     return false;
   }
   return true;
