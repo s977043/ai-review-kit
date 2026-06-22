@@ -102,3 +102,16 @@ jobs:
             printf '%s\n\n' "${BODY}"
             printf '%s\n' "${SECTION}"
           } | gh release edit "${TAG}" --notes-file - || echo "Failed to update release notes; continuing."
+
+      - name: Verify plugin field parity
+        # Best-effort: validates that keywords/homepage/repository/author/license
+        # are in sync between package.json and both plugin manifests after the
+        # release bump. Logs a warning but never fails the release workflow.
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          set -uo pipefail
+          node --version
+          npm ci --ignore-scripts --silent 2>/dev/null || npm install --ignore-scripts --silent
+          node scripts/sync-plugin-fields.mjs --check \
+            && echo "Plugin field parity: OK" \
+            || echo "::warning::Plugin field parity drift detected — run 'npm run plugin:sync' locally and open a follow-up PR"

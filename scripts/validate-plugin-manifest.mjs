@@ -159,6 +159,26 @@ export async function validatePluginManifest() {
         errors.push('.codex-plugin/plugin.json: interface.capabilities must be an array');
       }
     }
+
+    // --- Cross-plugin field parity (synced fields must match package.json) ---
+    // repository is excluded: package.json uses {type, url} object; plugins use plain string URL.
+    const SYNCED_FIELDS = ['keywords', 'homepage', 'author', 'license'];
+    for (const field of SYNCED_FIELDS) {
+      if (pkg[field] === undefined) continue;
+      const ccVal = JSON.stringify(ccManifest[field]);
+      const codexVal = JSON.stringify(codexManifest[field]);
+      const pkgVal = JSON.stringify(pkg[field]);
+      if (ccVal !== pkgVal) {
+        errors.push(
+          `.claude-plugin/plugin.json: "${field}" drifted from package.json — run \`npm run plugin:sync\``
+        );
+      }
+      if (codexVal !== pkgVal) {
+        errors.push(
+          `.codex-plugin/plugin.json: "${field}" drifted from package.json — run \`npm run plugin:sync\``
+        );
+      }
+    }
   }
 
   return errors;

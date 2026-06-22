@@ -21,6 +21,7 @@
     "skills"
   ],
   "commands": [
+    "./commands/setup-team.md",
     "./commands/review-local.md",
     "./commands/challenge.md",
     "./commands/skill.md",
@@ -28,5 +29,6 @@
     "./commands/pr.md"
   ],
   "agents": "./agents/river-review.md",
-  "skills": "./skills/agent-skills/"
+  "skills": "./skills/agent-skills/",
+  "composerIcon": "./assets/icon.svg"
 }
