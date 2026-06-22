@@ -47777,7 +47777,7 @@ const safeJSON = (text) => {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //# sourceMappingURL=sleep.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/version.mjs
-const VERSION = '6.42.0'; // x-release-please-version
+const VERSION = '6.44.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -50414,7 +50414,12 @@ _AbstractChatCompletionRunner_instances = new WeakSet(), _AbstractChatCompletion
     for (let i = this.messages.length - 1; i >= 0; i--) {
         const message = this.messages[i];
         if (isAssistantMessage(message) && message?.tool_calls?.length) {
-            return message.tool_calls.filter((x) => x.type === 'function').at(-1)?.function;
+            for (let j = message.tool_calls.length - 1; j >= 0; j--) {
+                const toolCall = message.tool_calls[j];
+                if (toolCall?.type === 'function') {
+                    return toolCall.function;
+                }
+            }
         }
     }
     return;
@@ -51875,6 +51880,23 @@ class SpendAlerts extends APIResource {
         });
     }
     /**
+     * Retrieves an organization spend alert.
+     *
+     * @example
+     * ```ts
+     * const organizationSpendAlert =
+     *   await client.admin.organization.spendAlerts.retrieve(
+     *     'alert_id',
+     *   );
+     * ```
+     */
+    retrieve(alertID, options) {
+        return this._client.get(src_path `/organization/spend_alerts/${alertID}`, {
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+    /**
      * Updates an organization spend alert.
      *
      * @example
@@ -52952,6 +52974,25 @@ class spend_alerts_SpendAlerts extends APIResource {
     create(projectID, body, options) {
         return this._client.post(src_path `/organization/projects/${projectID}/spend_alerts`, {
             body,
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+    /**
+     * Retrieves a project spend alert.
+     *
+     * @example
+     * ```ts
+     * const projectSpendAlert =
+     *   await client.admin.organization.projects.spendAlerts.retrieve(
+     *     'alert_id',
+     *     { project_id: 'project_id' },
+     *   );
+     * ```
+     */
+    retrieve(alertID, params, options) {
+        const { project_id } = params;
+        return this._client.get(src_path `/organization/projects/${project_id}/spend_alerts/${alertID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
