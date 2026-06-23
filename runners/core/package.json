@@ -29,7 +29,5 @@
     "*.d.ts",
     "README.md"
   ],
-  "publishConfig": {
-    "access": "public"
-  }
+  "private": true
 }

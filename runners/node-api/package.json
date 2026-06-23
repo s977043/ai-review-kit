@@ -41,7 +41,5 @@
     "dist",
     "README.md"
   ],
-  "publishConfig": {
-    "access": "public"
-  }
+  "private": true
 }
