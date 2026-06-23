@@ -22,3 +22,18 @@ If you believe you have found a security vulnerability, please do not file a pub
 ## サポート範囲 (Supported Versions)
 
 - 現時点では、`main` ブランチと最新リリースを優先して対応します
+
+## 静的・動的解析 (Static and Dynamic Analysis)
+
+このプロジェクトでは、以下のオープンソースツールによるコード品質・セキュリティチェックを継続的に実施しています。
+
+### 静的解析 (Static Analysis)
+
+- `npm audit` — npm レジストリの Advisory データベースを用いた依存関係の脆弱性スキャン（nightly CI で自動実行）
+- `markdownlint` — Markdown ソースの静的解析
+- `textlint` — ドキュメントの文章品質チェック
+- `prettier` — コードフォーマット一貫性の検証
+
+### 動的解析 (Dynamic Analysis)
+
+- `node --test` — Node.js 組み込みテストランナーによる自動テスト。Node.js/V8 のメモリ管理（GC・バッファ境界チェック）に依存し、実行時のメモリ安全性を確保している。

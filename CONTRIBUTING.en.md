@@ -96,6 +96,17 @@ Depending on what you change:
 
 - Review checklist: `pages/contributing/review-checklist.md`
 
+### 🔒 Security considerations
+
+When making code changes, keep common security pitfalls in mind.
+
+- **Input validation**: Validate data received from external sources (CLI options, file paths, etc.) before use.
+- **Dependency vulnerabilities**: Run `npm audit` to check for known vulnerabilities (also checked automatically via the nightly-audit CI job).
+- **Secrets**: Never hard-code API keys or tokens in code or config files (`.env*` files must not be committed).
+- **Command injection**: Escape arguments when constructing shell commands.
+
+If you have a security concern, please report it privately following `SECURITY.md` rather than opening a public issue.
+
 ### 🧭 Coding/ops conventions (summary)
 
 - JS/Node uses ESM; tests use `node --test`
