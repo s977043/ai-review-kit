@@ -60709,7 +60709,13 @@ var rubric = __nccwpck_require__(5034);
 var finding_format = __nccwpck_require__(5942);
 // EXTERNAL MODULE: ./src/lib/loop-signal.mjs
 var loop_signal = __nccwpck_require__(4702);
+// EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
+var _2020 = __nccwpck_require__(2210);
+// EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
+var dist = __nccwpck_require__(2815);
 ;// CONCATENATED MODULE: ./src/cli.mjs
+
+
 
 
 
@@ -61737,6 +61743,47 @@ function printDebugInfo(result, { log = console.log } = {}) {
 }
 
 /**
+ * Lazily compiled validator for schemas/output.schema.json (draft 2020-12).
+ * Compiled once on first use; null if the schema cannot be loaded so a
+ * validation problem never breaks JSON output emission.
+ */
+let outputSchemaValidator;
+function getOutputSchemaValidator() {
+  if (outputSchemaValidator !== undefined) return outputSchemaValidator;
+  try {
+    const schemaPath = (0,external_node_url_.fileURLToPath)(__nccwpck_require__.ab + "output.schema.json");
+    const schema = JSON.parse((0,external_node_fs_.readFileSync)(schemaPath, 'utf8'));
+    const ajv = new _2020({ allErrors: true, strict: false });
+    dist(ajv);
+    outputSchemaValidator = ajv.compile(schema);
+  } catch (err) {
+    console.error(`Warning: could not load output.schema.json for validation: ${err.message}`);
+    outputSchemaValidator = null;
+  }
+  return outputSchemaValidator;
+}
+
+/**
+ * Validate a formatted artifact against output.schema.json at runtime and
+ * report violations to stderr (#1254). Reporting only — the artifact is still
+ * returned so a non-conforming LLM payload surfaces loudly instead of failing
+ * silently downstream.
+ */
+function validateOutputArtifact(artifact) {
+  const validate = getOutputSchemaValidator();
+  if (!validate) return;
+  if (!validate(artifact)) {
+    console.error(
+      `Warning: JSON output does not conform to schemas/output.schema.json:\n${JSON.stringify(
+        validate.errors,
+        null,
+        2
+      )}`
+    );
+  }
+}
+
+/**
  * Format review result as JSON conforming to schemas/output.schema.json.
  * Consumes the structured findings[] produced by the Finding Pipeline.
  * Additively includes a top-level `decision` field derived from scoreReview verdict.
@@ -61797,11 +61844,13 @@ function formatJsonOutput(result, phase) {
       decision = result.decision;
     }
   }
-  return {
+  const artifact = {
     issues,
     summary,
     ...(decision !== undefined ? { decision } : {}),
   };
+  validateOutputArtifact(artifact);
+  return artifact;
 }
 
 function countChangedLines(files) {
