@@ -358,6 +358,72 @@ For environments without the marketplace, you can copy the template and skills i
 
 See `templates/agent-workflow/README.md` for the full Codex (and Cursor) setup. With manual copy-in, the Codex side is versioned by git only; re-copy on upgrade.
 
+## AI agent operations
+
+- The root `AGENTS.md` is the SSOT for AI coding agents.
+- Add only confirmed, reusable learnings to `AGENT_LEARNINGS.md`.
+- Never write secrets, personal data, or scratch notes to either file.
+
+### Using Codex with a project-local config
+
+The project-local Codex config lives in [`.codex/config.toml`](./.codex/config.toml) and is **opt-in**: it does not affect normal Codex usage. Launch with one of the following only when you want to use this repository's config:
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+CODEX_HOME="$REPO_ROOT/.codex" codex -C "$REPO_ROOT"
+npm run codex:local -- "Read AGENTS.md and propose a work plan for this branch"
+```
+
+To run non-interactively:
+
+```bash
+npm run codex:exec -- "review this branch"
+```
+
+Operating assumptions:
+
+- The project-local config carries only safe defaults; override model selection and web search per-invocation via CLI arguments.
+- Run at least `npm run lint` and `npm test` before review or PR preparation.
+- `src/` and `docs/` are review-required paths. Get explicit approval before changing them.
+
+### Local review run (river run .)
+
+> **Note**: The `river` CLI is [not yet published to npm](#getting-started), so `npx river` will be available after publication. Inside the repo, run it via `npm run river -- ...`. Plugin-based review is CLI-independent ([Installing the river-review plugin](#installing-the-river-review-plugin)).
+
+1. Inside the repo, run `npm run river -- run . --dry-run` (after CLI publication, `npx river run . --dry-run`) to review the current diff locally (no posting to GitHub).
+2. Add `--debug` to print the merge base, target file list, prompt preview, token estimate, and diff excerpts to stdout.
+3. To use OpenAI's LLM, set `OPENAI_API_KEY` (or `RIVER_OPENAI_API_KEY`) and run `river run .`. When unset, it falls back to skill-based heuristic comments.
+4. `--dry-run` calls no external API and only writes to stdout. Specify a phase with `--phase upstream|midstream|downstream` (defaults to the `RIVER_PHASE` env var or `midstream`).
+5. Context/dependency control: set `RIVER_AVAILABLE_CONTEXTS=diff,tests` or `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` to skip skills whose requirements are unmet (with reasons) during selection (dependency checks are skipped when unset).
+6. To specify directly on the CLI: override the env vars with the `--context diff,fullFile` or `--dependency code_search,test_runner` flags (comma-separated).
+7. Dependency stubs: set `RIVER_DEPENDENCY_STUBS=1` to treat known dependencies (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`) as available and prevent skipping. Use this when you only want to inspect the plan in an environment where implementations are not yet ready.
+
+### CLI runner interface (runners/cli)
+
+The new CLI interface gives direct access to core runner features:
+
+- `river review [files...]` — review files (execution plan generation and skill selection)
+- `river eval <skill>` — validate and evaluate a skill definition
+- `river eval --all` — evaluate all skills
+- `river create skill` — create a new skill from a template
+
+See [runners/cli/README.md](./runners/cli/README.md) for details.
+
+## Project-specific review rules
+
+- Place `.river/rules.md` at the repository root to auto-inject project-specific review policies into the LLM prompt (effective for both `river run .` and GitHub Actions).
+- If the file is missing or empty, behavior is unchanged; it fails only on a read error.
+- Example (.river/rules.md):
+  - Assume Next.js App Router; do not use the `pages/` directory.
+  - Prefer React Server Components; use Client Components only when necessary.
+  - Keep business logic in service modules rather than hooks.
+
+## Diff Optimization
+
+- River Review automatically excludes lockfiles, Markdown, and comment/format-only changes to reduce the token volume sent to the LLM.
+- Large diffs are compressed per hunk, sending only the area around the necessary changes to lower cost and noise.
+- Run `river run . --debug` to see the token estimates before and after optimization and the reduction rate.
+
 ## AI Review Standard Policy
 
 River Review follows a standard review policy to maintain consistent quality and reproducibility. The policy defines evaluation principles, output format, and prohibited actions to ensure constructive and specific feedback.
@@ -405,6 +471,10 @@ Milestones and the repository Projects are the source of truth for progress (thi
 
 (Optional) Add one of `m1-public` / `m2-dx` / `m3-smart` / `m4-community` to an issue.
 This will auto-assign the corresponding milestone (`.github/workflows/auto-milestone.yml`).
+
+## Troubleshooting
+
+See `pages/guides/troubleshooting.md` for details.
 
 ## OSS trust and security posture
 
