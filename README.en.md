@@ -74,7 +74,7 @@ River Review offers three review-focused execution shapes.
 
 The shortest no-install path is the bundled plugin: add the marketplace and ask the `river-review` agent to review the current diff — see [Installing the river-review plugin](#installing-the-river-review-plugin). For CI, use GitHub Actions ([Quick start](#quick-start-github-actions)).
 
-> **River Review is not published to npm** (project policy). The supported paths are the bundled plugin (Claude Code / Codex), GitHub Actions, and the in-repo `npm run river -- ...`. To try it locally, run `npm run river -- run . --dry-run` inside the repo.
+> **Two distribution channels: the bundled plugin (Claude Code / Codex) and GitHub Actions.** River Review is not published to npm (project policy). Contributors can run the CLI inside the repo with `npm run river -- ...` (to try it locally: `npm run river -- run . --dry-run`). The CLI is kept because it is also the GitHub Action's execution engine.
 
 | Goal                                    | Destination                                                                             |
 | --------------------------------------- | --------------------------------------------------------------------------------------- |

@@ -77,7 +77,7 @@ River Review には、レビューに特化した 3 つの実行形態があり�
 
 インストール不要の最短手順は同梱プラグインです。マーケットプレイスを追加し、`river-review` エージェントに現在の差分のレビューを依頼してください（[river-review プラグインの導入](#river-review-プラグインの導入)）。CI では GitHub Actions を使います（[クイックスタート](#クイックスタートgithub-actions)）。
 
-> **River Review は npm パッケージを公開しません**（プロジェクト方針）。利用経路は同梱プラグイン（Claude Code / Codex）、GitHub Actions、リポジトリ内の `npm run river -- ...` の 3 つです。ローカルで試す場合はリポジトリ内で `npm run river -- run . --dry-run` を実行してください。
+> **配布は 2 チャネル: 同梱プラグイン（Claude Code / Codex）と GitHub Actions**。River Review は npm パッケージを公開しません（プロジェクト方針）。コントリビューターはリポジトリ内で `npm run river -- ...` として CLI を実行できます（ローカルで試すなら `npm run river -- run . --dry-run`）。CLI は GitHub Action の実行エンジンでもあるため維持されます。
 
 | やりたいこと                               | 行き先                                                                                            |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------- |
