@@ -26,6 +26,8 @@ import { resolveVerdict, scoreReview } from './lib/scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
 import { severityToPriority } from './lib/finding-format.mjs';
 import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
@@ -1032,6 +1034,47 @@ function printDebugInfo(result, { log = console.log } = {}) {
 }
 
 /**
+ * Lazily compiled validator for schemas/output.schema.json (draft 2020-12).
+ * Compiled once on first use; null if the schema cannot be loaded so a
+ * validation problem never breaks JSON output emission.
+ */
+let outputSchemaValidator;
+function getOutputSchemaValidator() {
+  if (outputSchemaValidator !== undefined) return outputSchemaValidator;
+  try {
+    const schemaPath = fileURLToPath(new URL('../schemas/output.schema.json', import.meta.url));
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
+    const ajv = new Ajv2020({ allErrors: true, strict: false });
+    addFormats(ajv);
+    outputSchemaValidator = ajv.compile(schema);
+  } catch (err) {
+    console.error(`Warning: could not load output.schema.json for validation: ${err.message}`);
+    outputSchemaValidator = null;
+  }
+  return outputSchemaValidator;
+}
+
+/**
+ * Validate a formatted artifact against output.schema.json at runtime and
+ * report violations to stderr (#1254). Reporting only — the artifact is still
+ * returned so a non-conforming LLM payload surfaces loudly instead of failing
+ * silently downstream.
+ */
+function validateOutputArtifact(artifact) {
+  const validate = getOutputSchemaValidator();
+  if (!validate) return;
+  if (!validate(artifact)) {
+    console.error(
+      `Warning: JSON output does not conform to schemas/output.schema.json:\n${JSON.stringify(
+        validate.errors,
+        null,
+        2
+      )}`
+    );
+  }
+}
+
+/**
  * Format review result as JSON conforming to schemas/output.schema.json.
  * Consumes the structured findings[] produced by the Finding Pipeline.
  * Additively includes a top-level `decision` field derived from scoreReview verdict.
@@ -1092,11 +1135,13 @@ function formatJsonOutput(result, phase) {
       decision = result.decision;
     }
   }
-  return {
+  const artifact = {
     issues,
     summary,
     ...(decision !== undefined ? { decision } : {}),
   };
+  validateOutputArtifact(artifact);
+  return artifact;
 }
 
 function countChangedLines(files) {
@@ -1956,7 +2001,7 @@ Dependencies: ${
   }
 }
 
-export { parseArgs, main, isLlmlessEmptyReview, printExplain };
+export { parseArgs, main, isLlmlessEmptyReview, printExplain, validateOutputArtifact };
 
 /**
  * この CLI が直接起動されたときのみ `main()` を実行する。
