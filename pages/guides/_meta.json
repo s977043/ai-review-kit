@@ -16,6 +16,7 @@
   "write-a-skill": "スキル作成ガイド（How-to）",
   "validate-skill-schema": "スキルスキーマを検証する",
   "choose-skills": "スキルの選択と組み合わせ",
+  "representative-skills": "代表スキルのショーケース",
   "debug-skill-routing": "スキルルーティングのデバッグ",
   "manage-skills-cli": "スキルを import / export / list する（CLI）",
   "agent-workflow": "AI エージェントから River Review を使う",

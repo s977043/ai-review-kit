@@ -633,6 +633,7 @@ npx promptfoo eval
 - **[スキルテンプレート](../reference/skill-template.md)**—新しいスキルの出発点
 - **[promptfooドキュメント](https://www.promptfoo.dev/)**—評価フレームワーク
 - **[スキルカタログ](../reference/skills-catalog.md)**—レジストリ概要
+- **[代表スキルのショーケース](../guides/representative-skills.md)**—代表スキルを目的・指示・出力まで通しで解説
 
 ## 次のステップ
 
