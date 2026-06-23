@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-review.the3396.com/explanation/intro/)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13339/badge)](https://www.bestpractices.dev/projects/13339)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/s977043/river-review/badge)](https://securityscorecards.dev/viewer/?uri=github.com/s977043/river-review)
 
 ![River Review logo](assets/logo/river-review-logo.svg)
 
@@ -404,6 +405,12 @@ Milestones and the repository Projects are the source of truth for progress (thi
 
 (Optional) Add one of `m1-public` / `m2-dx` / `m3-smart` / `m4-community` to an issue.
 This will auto-assign the corresponding milestone (`.github/workflows/auto-milestone.yml`).
+
+## OSS trust and security posture
+
+River Review has earned the [OpenSSF Best Practices](https://www.bestpractices.dev/projects/13339) Passing badge. This indicates that the project follows a baseline set of open source best practices for documentation, licensing, contribution process, quality, and security reporting. It is not a security guarantee from OpenSSF, nor proof that the project is free of vulnerabilities.
+
+River Review is designed as a team-owned audit layer for AI-assisted development. Alongside OpenSSF Best Practices compliance, the project maintains a private vulnerability reporting path (`SECURITY.md`), CodeQL analysis, CI validation, and documented contribution rules (`CONTRIBUTING.md`) to make its baseline quality, maintainability, and security operations explicit.
 
 ## Contributing
 

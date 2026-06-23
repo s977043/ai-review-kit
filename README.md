@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-review.the3396.com/explanation/intro/)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13339/badge)](https://www.bestpractices.dev/projects/13339)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/s977043/river-review/badge)](https://securityscorecards.dev/viewer/?uri=github.com/s977043/river-review)
 
 ![River Review logo](assets/logo/river-review-logo.svg)
 
@@ -685,6 +686,12 @@ River Review の技術ドキュメントは、[Diátaxis ドキュメントフ�
 ## トラブルシューティング
 
 詳細は `pages/guides/troubleshooting.md` を参照してください。
+
+## OSS としての信頼性とセキュリティ姿勢
+
+River Review は [OpenSSF Best Practices](https://www.bestpractices.dev/projects/13339) の Passing バッジを取得しています。これは、OSS プロジェクトとしてのドキュメント、ライセンス、貢献フロー、品質管理、脆弱性報告手順などの基本的なベストプラクティスを満たしていることを示すものであり、OpenSSF による安全性の保証や「脆弱性がないことの証明」ではありません。
+
+River Review は、AI 支援開発におけるチーム所有の監査レイヤーとして設計されています。そのため、OpenSSF Best Practices への準拠に加えて、非公開の脆弱性報告経路（`SECURITY.md`）、CodeQL 解析、CI 検証、貢献ルール（`CONTRIBUTING.md`）を整備し、OSS としての基本的な品質・保守性・セキュリティ運用を明示しています。
 
 ## コントリビューション
 
