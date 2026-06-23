@@ -60,6 +60,11 @@ exclude = [
   # it is a paper reference in a skill README, not a functional link.
   '^https?://student\.cs\.uwaterloo\.ca/',
 
+  # OpenSSF Scorecard badge API serves the badge image via GET only and
+  # returns 405 Method Not Allowed to HEAD requests; the badge renders fine
+  # in the README. Linked from the README badge row, not a functional link.
+  '^https?://api\.securityscorecards\.dev/',
+
 ]
 
 # Exclude specific files that contain Docusaurus-internal routing links.
