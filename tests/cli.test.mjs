@@ -330,6 +330,54 @@ describe('river run - JSON output schema conformance', () => {
 });
 
 // -----------------------------------------------------------------------------
+// runtime output.schema.json validation (#1254)
+// -----------------------------------------------------------------------------
+
+describe('validateOutputArtifact - runtime schema validation (#1254)', () => {
+  test('reports violations to stderr for a non-conforming artifact', async () => {
+    const { validateOutputArtifact } = await import('../src/cli.mjs');
+    const errors = [];
+    const originalError = console.error;
+    console.error = (msg) => errors.push(String(msg));
+    try {
+      // `issues` must be an array per output.schema.json; a string violates it.
+      validateOutputArtifact({ issues: 'not-an-array', summary: {} });
+    } finally {
+      console.error = originalError;
+    }
+    const combined = errors.join('\n');
+    assert.match(
+      combined,
+      /does not conform to schemas\/output\.schema\.json/,
+      `expected a schema-violation warning, got: ${combined}`
+    );
+  });
+
+  test('stays silent for a conforming artifact', async () => {
+    const { validateOutputArtifact } = await import('../src/cli.mjs');
+    const errors = [];
+    const originalError = console.error;
+    console.error = (msg) => errors.push(String(msg));
+    try {
+      validateOutputArtifact({
+        issues: [],
+        summary: {
+          issueCountBySeverity: { info: 0, minor: 0, major: 0, critical: 0 },
+          issueCountByPhase: { upstream: 0, midstream: 0, downstream: 0 },
+          prioritySummary: {
+            counts: { P1: 0, P2: 0, P3: 0, P4: 0 },
+            requiresImmediateAttention: false,
+          },
+        },
+      });
+    } finally {
+      console.error = originalError;
+    }
+    assert.strictEqual(errors.length, 0, `expected no warnings, got: ${errors.join('\n')}`);
+  });
+});
+
+// -----------------------------------------------------------------------------
 // river run - JSON output decision field (#1150 S1)
 // -----------------------------------------------------------------------------
 
