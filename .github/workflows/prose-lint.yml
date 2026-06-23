@@ -2,10 +2,7 @@ name: Prose Lint
 on:
   pull_request:
 
-permissions:
-  contents: read
-  pull-requests: write
-  checks: write
+permissions: read-all
 
 concurrency:
   group: prose-lint-${{ github.ref }}
@@ -15,6 +12,10 @@ jobs:
   vale:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - uses: errata-ai/vale-action@85f9f7f2c5f449ac0ae5b66662961bae3f77ca6a # v2.1.2
