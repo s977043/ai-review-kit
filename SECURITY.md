@@ -4,8 +4,9 @@
 
 River Review に関する脆弱性の可能性を見つけた場合は、公開 Issue や PR には投稿せず、GitHub のプライベート脆弱性報告機能から非公開で報告してください。
 
-- 報告フォーム: [security/advisories/new](https://github.com/s977043/river-review/security/advisories/new)
+- 報告フォーム: [https://github.com/s977043/river-review/security/advisories/new](https://github.com/s977043/river-review/security/advisories/new)
 - UI から辿る場合: リポジトリの `Security` タブ → `Advisories` → `Report a vulnerability`
+- 公開済みセキュリティアドバイザリ: [https://github.com/s977043/river-review/security/advisories](https://github.com/s977043/river-review/security/advisories)
 
 可能であれば、PoC、影響範囲、再現手順、想定される悪用シナリオ、暫定回避策を含めてください。
 

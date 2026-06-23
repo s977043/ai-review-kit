@@ -22,10 +22,7 @@ on:
         required: false
         default: ''
 
-permissions:
-  contents: write
-  pull-requests: read
-  checks: read
+permissions: read-all
 
 concurrency:
   group: release-please-kick
@@ -35,6 +32,10 @@ jobs:
   kick:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+      checks: read
     steps:
       - name: Advance release-please branch by an empty commit
         id: advance

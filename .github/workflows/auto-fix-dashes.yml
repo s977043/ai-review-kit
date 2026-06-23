@@ -4,9 +4,7 @@ on:
   schedule:
     - cron: '0 3 * * 6' # Every Saturday 03:00 UTC (6:00 JST)
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: read-all
 
 concurrency:
   group: auto-fix-dashes
@@ -16,6 +14,9 @@ jobs:
   auto-fix-dashes:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
