@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.31.0](https://github.com/s977043/river-review/compare/v1.30.1...v1.31.0) (2026-06-23)
+
+
+### Features
+
+* **cli:** add runtime Ajv validation for output.schema.json in formatJsonOutput ([#1271](https://github.com/s977043/river-review/issues/1271)) ([e43dfc1](https://github.com/s977043/river-review/commit/e43dfc1e3b7a1c7e3fde93dd27197cd1ece6e553))
+* **skills:** add ask-codex skill to delegate reviews to Codex CLI ([#1274](https://github.com/s977043/river-review/issues/1274)) ([ec8f6a8](https://github.com/s977043/river-review/commit/ec8f6a87b5ec7060cdcd7367a542c1616cbd01e5))
+
+
+### Bug Fixes
+
+* **ci:** update scorecard-action and codeql-action to valid SHAs ([#1264](https://github.com/s977043/river-review/issues/1264)) ([d005cb7](https://github.com/s977043/river-review/commit/d005cb7f73021c058907500f12efeb18a5ee4c28))
+* **deps:** add npm overrides for http-proxy-middleware and @babel/core ([#1267](https://github.com/s977043/river-review/issues/1267)) ([5e850b9](https://github.com/s977043/river-review/commit/5e850b96d9e0f0aeddbed7391d099d0d2c8b6a69))
+
 ## [1.30.1](https://github.com/s977043/river-review/compare/v1.30.0...v1.30.1) (2026-06-22)
 
 
