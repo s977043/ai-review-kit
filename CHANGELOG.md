@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.32.0](https://github.com/s977043/river-review/compare/v1.31.0...v1.32.0) (2026-06-24)
+
+
+### Features
+
+* **planner:** expose analyzeTestImpact() signal on the execution plan ([#1292](https://github.com/s977043/river-review/issues/1292)) ([a99ea36](https://github.com/s977043/river-review/commit/a99ea36b96af4252e7e4ba0da7087cb8ae634e21))
+* **planner:** opt-in escalation of test skills for high-risk diffs ([#1255](https://github.com/s977043/river-review/issues/1255) follow-up) ([#1295](https://github.com/s977043/river-review/issues/1295)) ([90a89c0](https://github.com/s977043/river-review/commit/90a89c0e51a374cbdffd5380103436fbdc0cd738))
+
 ## [1.31.0](https://github.com/s977043/river-review/compare/v1.30.1...v1.31.0) (2026-06-23)
 
 
