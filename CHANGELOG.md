@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.33.0](https://github.com/s977043/river-review/compare/v1.32.0...v1.33.0) (2026-06-24)
+
+
+### Features
+
+* add reproducible social asset PNG export ([#1299](https://github.com/s977043/river-review/issues/1299)) ([5b0506d](https://github.com/s977043/river-review/commit/5b0506de107fae27cd0c20ed1a71bd7abd4a2636))
+
 ## [1.32.0](https://github.com/s977043/river-review/compare/v1.31.0...v1.32.0) (2026-06-24)
 
 
