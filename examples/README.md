@@ -8,3 +8,4 @@ River Review の利用イメージを掴むための最小構成サンプルで�
 - `examples/minimal-js/`: 最小の JavaScript プロジェクト + River Review の GitHub Actions ワークフロー例（互換維持のため残置）
 - `examples/risk-map/`: `.river/risk-map.yaml` のサンプル（`require_human_review` / `escalate` / `comment_only` の 3 段階を網羅した実用テンプレ）
 - `examples/plan-conformance-demo/`: Plan に反した実装を River Review が検出する様子を 5 分で読める最小デモ（plan / diff / tests をまたぐレビュー判断、API キー不要）
+- `examples/upstream-design-review-demo/`: 設計フェーズ（upstream）の設計プラン／ADR をレビューする最小デモ（失敗モード・後方互換・可観測性の欠落を検出、API キー不要）
