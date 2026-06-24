@@ -42,6 +42,8 @@ River Review は「PR diff にプロンプトを巻いただけのツール」�
 
 ## コアモデル
 
+![River Review のコアモデル: plan / diff / tests / JUnit / 過去レビューを入力に、repo-owned skill がレビュー判断を実行し、チーム基準に対する指摘を出力する team-owned audit layer](assets/social/diagram.svg)
+
 **Skills define judgment.**
 skill は「どんなレビュー判断を行うか」を記述します。security / a11y / migration safety / dependency policy / plan conformance など、チーム固有の基準を載せます。
 

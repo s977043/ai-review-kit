@@ -43,6 +43,8 @@ River Review is not another prompt wrapper around a PR diff. It is a way to make
 
 ## Core Model
 
+![River Review core model: plan / diff / tests / JUnit / prior reviews feed repo-owned skills that execute review judgment and emit findings against team standards — a team-owned audit layer](assets/social/diagram.svg)
+
 **Skills define judgment.** A skill describes how a review decision should be made: security policy, accessibility, migration safety, dependency rules, plan conformance, and other team-specific standards.
 
 **Gates execute judgment.** Plan and exec gates run those skills at the right point in the delivery flow — not only after the PR is already complete (a verify gate is planned in [#802](https://github.com/s977043/river-review/issues/802)).
