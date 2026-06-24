@@ -40,17 +40,39 @@ repo-owned skills · PR gates · plan-diff-test review
 | Zenn / note hero      | 1200×630 PNG         | diagram.svg        | 記事 OGP / 先頭画像                                                                               |
 | Demo screenshot       | 実画面に依存         | —                  | [plan-conformance デモ](../../examples/plan-conformance-demo/README.md)の実行結果を後日キャプチャ |
 
-## PNG 書き出し手順（例）
+## PNG 書き出し手順
 
-ローカルに SVG レンダラがある場合の一例（任意のツールで可）:
+PNG は [`scripts/build-social-assets.mjs`](../../scripts/build-social-assets.mjs) で生成します。
+
+このスクリプトは `@resvg/resvg-js` で SVG をレンダリングします。フォントは SVG 側の指定を維持し、`loadSystemFonts=true` と `defaultFontFamily=Inter` を指定します。Inter が環境に無い場合は、SVG の `font-family` にある `Segoe UI` / `sans-serif` へフォールバックします。
 
 ```bash
-# 例: rsvg-convert を使う場合
-rsvg-convert -w 1280 -h 640 assets/social/social-preview.svg -o social-preview.png
-rsvg-convert -w 1200 -h 630 assets/social/diagram.svg -o hero.png
+# 依存をローカル作業用に取得する。package-lock.json は更新しない。
+npm install --no-save @resvg/resvg-js@2.6.2
+
+# 3種類の PNG を dist/social/ に生成する。
+npm run assets:social
+
+# 出力先を変えたい場合。
+npm run assets:social -- --out /tmp/river-review-social
 ```
 
-書き出した PNG はリポジトリには含めず、配信先（GitHub Settings / 記事 / SNS）へ直接アップロードします。
+生成される PNG:
+
+| ファイル                         | サイズ   | 元 SVG             | 処理                         |
+| -------------------------------- | -------- | ------------------ | ---------------------------- |
+| `dist/social/github-social-preview.png` | 1280×640 | social-preview.svg | SVG と同サイズでレンダリング |
+| `dist/social/x-post.png`         | 1200×675 | social-preview.svg | 16:9 cover で中央トリミング  |
+| `dist/social/zenn-note-hero.png` | 1200×630 | diagram.svg        | contain で中央配置           |
+
+生成ログには、使ったレンダラのバージョンが表示されます。記録例:
+
+```text
+Renderer: @resvg/resvg-js 2.6.2
+Font handling: loadSystemFonts=true; SVG font-family keeps Inter, Segoe UI, sans-serif fallback.
+```
+
+書き出した PNG はリポジトリには含めず、配信先（GitHub Settings / 記事 / SNS）へ直接アップロードします。PNG を管理対象に変える場合は、`assets/social/` 配下に配置し、`.gitattributes` で binary 扱いを検討します。
 
 ## 制約（#1279）
 
