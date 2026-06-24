@@ -18,7 +18,7 @@
   <text x="96" y="372" font-family="Inter, 'Segoe UI', sans-serif" font-size="40" font-weight="500" fill="#a9bed2">
     for AI-assisted development
   </text>
-  <text x="96" y="560" font-family="Inter, 'Segoe UI', sans-serif" font-size="28" fill="#7fa6c9" letter-spacing="0.5">
+  <text x="96" y="540" font-family="Inter, 'Segoe UI', sans-serif" font-size="28" fill="#7fa6c9" letter-spacing="0.5">
     repo-owned skills · PR gates · plan-diff-test review
   </text>
 </svg>
