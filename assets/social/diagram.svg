@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 520" role="img" aria-labelledby="title desc">
+  <title id="title">River Review core model</title>
+  <desc id="desc">River Review core model: team-owned skills define judgment, gates execute judgment across plan, diff, and tests, and Riverbed remembers judgment. A team-owned audit layer for AI-assisted development.</desc>
+  <defs>
+    <linearGradient id="river" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1a75ff" />
+      <stop offset="100%" stop-color="#1fd1a1" />
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="520" fill="#0b1f33" />
+  <text x="64" y="80" font-family="Inter, 'Segoe UI', sans-serif" font-size="34" font-weight="700" fill="#f3f7fb">
+    Review Judgment as Code
+  </text>
+  <text x="64" y="120" font-family="Inter, 'Segoe UI', sans-serif" font-size="20" fill="#a9bed2">
+    a team-owned audit layer for AI-assisted development
+  </text>
+
+  <!-- Inputs -->
+  <text x="64" y="210" font-family="Inter, 'Segoe UI', sans-serif" font-size="22" font-weight="600" fill="#7fa6c9">inputs</text>
+  <g font-family="Inter, 'Segoe UI', sans-serif" font-size="22" fill="#f3f7fb">
+    <rect x="64" y="230" width="200" height="56" rx="10" fill="#13314f" />
+    <text x="164" y="266" text-anchor="middle">plan</text>
+    <rect x="64" y="300" width="200" height="56" rx="10" fill="#13314f" />
+    <text x="164" y="336" text-anchor="middle">diff</text>
+    <rect x="64" y="370" width="200" height="56" rx="10" fill="#13314f" />
+    <text x="164" y="406" text-anchor="middle">tests / JUnit / prior reviews</text>
+  </g>
+
+  <path d="M280 328 H 430" fill="none" stroke="url(#river)" stroke-width="6" stroke-linecap="round" />
+
+  <!-- River Review skills -->
+  <rect x="440" y="250" width="360" height="160" rx="16" fill="none" stroke="url(#river)" stroke-width="4" />
+  <text x="620" y="300" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="26" font-weight="700" fill="#f3f7fb">River Review</text>
+  <text x="620" y="338" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="19" fill="#a9bed2">repo-owned skills define judgment</text>
+  <text x="620" y="368" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="19" fill="#a9bed2">gates execute it · Riverbed remembers it</text>
+
+  <path d="M800 328 H 950" fill="none" stroke="url(#river)" stroke-width="6" stroke-linecap="round" />
+
+  <!-- Output -->
+  <text x="970" y="210" font-family="Inter, 'Segoe UI', sans-serif" font-size="22" font-weight="600" fill="#7fa6c9">output</text>
+  <rect x="970" y="280" width="246" height="96" rx="12" fill="#13314f" />
+  <text x="1093" y="322" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="21" fill="#f3f7fb">findings against</text>
+  <text x="1093" y="350" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="21" fill="#f3f7fb">team standards</text>
+
+  <text x="64" y="486" font-family="Inter, 'Segoe UI', sans-serif" font-size="19" fill="#7fa6c9">Human-in-the-loop, not auto-merge.</text>
+</svg>
