@@ -1,7 +1,7 @@
 # River Review
 
-**Codify your team's judgment into automated PR gates.**
-**チームのレビュー判断を、自動化された PR ゲートとしてコード化する。**
+**Review Judgment as Code for AI-assisted development.**
+**AI支援開発のための Review Judgment as Code。レビュー判断を repo-owned skill としてコード化します。**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-review.the3396.com/explanation/intro/)
@@ -24,6 +24,8 @@ River Review は、こうした問いに答えるためのフレームワーク�
 - 実装エージェントは、過去レビューのフィードバックを無視していないか？
 
 > River Review は人間のレビューを AI で置き換えるのではなく、チームの判断基準を versioned skill として実行することで、人間が本当に見るべき高リスクな判断に集中できる状態を作ります（[Human Judgment Focus](https://river-review.the3396.com/explanation/human-judgment-focus/)）。
+
+> ⭐ AI 支援開発のレビュー運用に役立ちそうなら、[Star](https://github.com/s977043/river-review) で応援してください。更新を追えるほか、同じ課題を持つチームに River Review が届きやすくなります。
 
 ## なぜ River Review か
 

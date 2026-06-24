@@ -1,6 +1,7 @@
 # River Review
 
-**Codify your team's judgment into automated PR gates.**
+**Review Judgment as Code for AI-assisted development.**
+**Codify your team's review judgment as repo-owned skills and run them as automated PR gates.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-review.the3396.com/explanation/intro/)
@@ -24,6 +25,8 @@ River Review helps you answer questions like:
 - Did the implementation agent ignore feedback from a previous review?
 
 > River Review does not replace human review with AI. By executing your team's review criteria as versioned skills, it lets human reviewers focus on the high-risk judgment that truly needs them ([Human Judgment Focus](https://river-review.the3396.com/explanation/human-judgment-focus/)).
+
+> ⭐ If this helps your team's review workflow in AI-assisted development, please [Star the repo](https://github.com/s977043/river-review). It keeps you posted on updates and helps other teams with the same problem find River Review.
 
 ## Why River Review?
 
