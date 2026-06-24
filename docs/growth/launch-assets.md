@@ -45,17 +45,46 @@ repo-owned skills · PR gates · plan-diff-test review
 | Zenn / note hero      | 1200×630 PNG         | diagram.svg        | 記事 OGP / 先頭画像                                                                               |
 | Demo screenshot       | 実画面に依存         | —                  | [plan-conformance デモ](../../examples/plan-conformance-demo/README.md)の実行結果を後日キャプチャ |
 
-## PNG 書き出し手順（例）
+## PNG 書き出し手順
 
-ローカルに SVG レンダラがある場合の一例（任意のツールで可）:
+PNG は [`scripts/build-social-assets.mjs`](../../scripts/build-social-assets.mjs) で生成します。
+
+このスクリプトは `@resvg/resvg-js` で SVG をレンダリングします。フォントは SVG 側の指定を維持します。`loadSystemFonts=true` と `defaultFontFamily=Inter` も指定します。Inter が環境に無い場合は、SVG の `font-family` にある `Segoe UI` / `sans-serif` へフォールバックします。
 
 ```bash
-# 例: rsvg-convert を使う場合
-rsvg-convert -w 1280 -h 640 assets/social/social-preview.svg -o social-preview.png
-rsvg-convert -w 1200 -h 630 assets/social/diagram.svg -o hero.png
+# 依存をローカル作業用に取得する。package-lock.json は更新しない。
+npm install --no-save --package-lock=false @resvg/resvg-js@2.6.2
+
+# 3種類の PNG を dist/social/ に生成する。
+npm run assets:social
+
+# 出力先を変えたい場合。
+npm run assets:social -- --out /tmp/river-review-social
 ```
 
-書き出した PNG は `assets/social/` にコミットして管理し、配信先（GitHub Settings / 記事 / SNS）へはそこからアップロードします。SVG を更新したら PNG を再生成して差し替えること。
+既定では `dist/social/`（git 管理外）にプレビュー用として生成されます:
+
+| ファイル                         | サイズ   | 元 SVG             | 処理                         |
+| -------------------------------- | -------- | ------------------ | ---------------------------- |
+| `dist/social/social-preview.png` | 1280×640 | social-preview.svg | SVG と同サイズでレンダリング |
+| `dist/social/x-post.png`         | 1200×675 | social-preview.svg | 16:9 cover で中央トリミング  |
+| `dist/social/zenn-note-hero.png` | 1200×630 | diagram.svg        | contain で中央配置           |
+
+生成ログには、使ったレンダラのバージョンが表示されます。記録例:
+
+```text
+Renderer: @resvg/resvg-js 2.6.2
+Font handling: loadSystemFonts=true; SVG font-family keeps Inter, Segoe UI, sans-serif fallback.
+```
+
+配信に使う**公式 PNG は `assets/social/` にコミット**して管理し、配信先（GitHub Settings / 記事 / SNS）へはそこからアップロードします。SVG を更新したら PNG を再生成して差し替えてください。
+
+```bash
+# 公式 PNG（assets/social/）を再生成して差し替える。
+npm run assets:social -- --out assets/social
+```
+
+> 字形の忠実性は実行環境の Inter フォント有無に依存します。Inter が無い環境では `Segoe UI` / `sans-serif` にフォールバックするため、公式 PNG の差し替え時は Inter が使えること（または字形が崩れないこと）を確認してください。
 
 ## 制約（#1279）
 
