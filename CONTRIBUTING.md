@@ -27,7 +27,9 @@ Issue テンプレートは `Issues → New issue` から利用できます（�
 - Documentation: ドキュメントの追加・誤り修正
 - Question: 相談・質問（軽い内容でも`question`ラベルを使ってIssueに投稿）
 
-### 🐞 バグの報告
+### 💬 Discussions とコミュニティ導線
+
+質問・相談・アイデア出し・利用例の共有は Discussions を使ってください。まだ「やること」が固まっていない対話は Discussion から始め、対応方針が固まった段階で Issue 化します。Star のあとの次の一歩・Discussions カテゴリ・`good first issue` 候補は [docs/growth/community.md](docs/growth/community.md) に整理しています。
 
 もしバグを発見した場合は、Issueを作成して報告してください。良いバグ報告には以下の情報が含まれます。
 
