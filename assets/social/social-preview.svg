@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">River Review — Review Judgment as Code</title>
+  <desc id="desc">River Review social preview: Review Judgment as Code for AI-assisted development. A team-owned audit layer with repo-owned skills running across plans, diffs, and tests.</desc>
+  <defs>
+    <linearGradient id="river" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1a75ff" />
+      <stop offset="100%" stop-color="#1fd1a1" />
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="#0b1f33" />
+  <path d="M0 470c160-60 320 60 480 0s320-60 480 0 320 60 320 0" fill="none" stroke="url(#river)" stroke-width="20" stroke-linecap="round" opacity="0.9" />
+  <text x="96" y="190" font-family="Inter, 'Segoe UI', sans-serif" font-size="40" font-weight="600" fill="url(#river)" letter-spacing="1">
+    River Review
+  </text>
+  <text x="92" y="300" font-family="Inter, 'Segoe UI', sans-serif" font-size="84" font-weight="800" fill="#f3f7fb" letter-spacing="0.5">
+    Review Judgment as Code
+  </text>
+  <text x="96" y="372" font-family="Inter, 'Segoe UI', sans-serif" font-size="40" font-weight="500" fill="#a9bed2">
+    for AI-assisted development
+  </text>
+  <text x="96" y="560" font-family="Inter, 'Segoe UI', sans-serif" font-size="28" fill="#7fa6c9" letter-spacing="0.5">
+    repo-owned skills · PR gates · plan-diff-test review
+  </text>
+</svg>
