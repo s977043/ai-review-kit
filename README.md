@@ -25,7 +25,7 @@ River Review は、こうした問いに答えるためのフレームワーク�
 
 > River Review は人間のレビューを AI で置き換えるのではなく、チームの判断基準を versioned skill として実行することで、人間が本当に見るべき高リスクな判断に集中できる状態を作ります（[Human Judgment Focus](https://river-review.the3396.com/explanation/human-judgment-focus/)）。
 
-> ⭐ AI 支援開発のレビュー運用に役立ちそうなら、[Star](https://github.com/s977043/river-review) で応援してください。更新を追えるほか、同じ課題を持つチームに River Review が届きやすくなります。
+⭐ AI 支援開発のレビュー運用に役立ちそうなら、[Star](https://github.com/s977043/river-review) で応援してください。更新を追えるほか、同じ課題を持つチームに River Review が届きやすくなります。
 
 ## なぜ River Review か
 

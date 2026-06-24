@@ -26,7 +26,7 @@ River Review helps you answer questions like:
 
 > River Review does not replace human review with AI. By executing your team's review criteria as versioned skills, it lets human reviewers focus on the high-risk judgment that truly needs them ([Human Judgment Focus](https://river-review.the3396.com/explanation/human-judgment-focus/)).
 
-> ⭐ If this helps your team's review workflow in AI-assisted development, please [Star the repo](https://github.com/s977043/river-review). It keeps you posted on updates and helps other teams with the same problem find River Review.
+⭐ If this helps your team's review workflow in AI-assisted development, please [Star the repo](https://github.com/s977043/river-review). It keeps you posted on updates and helps other teams with the same problem find River Review.
 
 ## Why River Review?
 
