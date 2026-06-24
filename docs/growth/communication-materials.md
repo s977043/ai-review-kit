@@ -25,12 +25,12 @@ River Review は一般的な AI レビュー bot ではなく、`Review Judgment
 3. **River Review のアプローチ**: レビュー判断を repo-owned skill としてコード化し、plan / diff / tests / JUnit / 過去レビューをまたいで実行する。
 4. **動作イメージ**: [plan-conformance デモ](../../examples/plan-conformance-demo/README.md)で、plan に反した実装を検出する例を示す。
 5. **導入**: プラグイン / GitHub Actions の 2 チャネル（npm 非依存）。
-6. **思想**: Human Judgment Focus — 人間は高リスクな判断に集中する。
+6. **思想**: Human Judgment Focus—人間は高リスクな判断に集中する。
 7. **まとめ + CTA**: リポジトリへの導線・Star・Discussions。
 
 ## note 記事構成（背景・思想向け）
 
-タイトル案: `レビューは誰のものか — AI時代の「判断の所有」について`
+タイトル案: `レビューは誰のものか—AI時代の「判断の所有」について`
 
 1. レビュー判断がチームの責任であり続ける理由。
 2. 速度が上がるほど、判断の再現性・監査性・継続改善が重要になる。
