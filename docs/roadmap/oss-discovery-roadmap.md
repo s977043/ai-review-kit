@@ -30,28 +30,28 @@ River Review は、一般的な AI review bot ではなく、AI支援開発に�
 
 ## Workstreams
 
-| Workstream | Issue | Outcome |
-| --- | --- | --- |
-| Landing page | [#1277](https://github.com/s977043/river-review/issues/1277) | README 冒頭で 5 秒以内に価値が伝わる |
-| First-time demo | [#1278](https://github.com/s977043/river-review/issues/1278) | plan conformance demo で 5 分以内に価値を理解できる |
-| Launch assets | [#1279](https://github.com/s977043/river-review/issues/1279) | Social Preview / README diagram / 投稿用画像を用意する |
-| Community entry | [#1280](https://github.com/s977043/river-review/issues/1280) | Discussions / good first issue / contributor path を整える |
-| Communication materials | [#1281](https://github.com/s977043/river-review/issues/1281) | Zenn / note / SNS / English post / awesome copy を用意する |
-| Metrics loop | [#1282](https://github.com/s977043/river-review/issues/1282) | Star だけでなく traffic / clone / docs visit で効果測定する |
-| External listings | [#1283](https://github.com/s977043/river-review/issues/1283) | awesome 系掲載候補と紹介文を整理する |
+| Workstream              | Issue                                                        | Outcome                                                     |
+| ----------------------- | ------------------------------------------------------------ | ----------------------------------------------------------- |
+| Landing page            | [#1277](https://github.com/s977043/river-review/issues/1277) | README 冒頭で 5 秒以内に価値が伝わる                        |
+| First-time demo         | [#1278](https://github.com/s977043/river-review/issues/1278) | plan conformance demo で 5 分以内に価値を理解できる         |
+| Launch assets           | [#1279](https://github.com/s977043/river-review/issues/1279) | Social Preview / README diagram / 投稿用画像を用意する      |
+| Community entry         | [#1280](https://github.com/s977043/river-review/issues/1280) | Discussions / good first issue / contributor path を整える  |
+| Communication materials | [#1281](https://github.com/s977043/river-review/issues/1281) | Zenn / note / SNS / English post / awesome copy を用意する  |
+| Metrics loop            | [#1282](https://github.com/s977043/river-review/issues/1282) | Star だけでなく traffic / clone / docs visit で効果測定する |
+| External listings       | [#1283](https://github.com/s977043/river-review/issues/1283) | awesome 系掲載候補と紹介文を整理する                        |
 
 ## 30-day success metrics
 
-| Metric | Target |
-| --- | ---: |
-| GitHub Stars | +50 |
-| GitHub unique visitors | 500+ |
-| GitHub clones | 30+ |
-| Docs visits | 300+ |
-| SNS impressions | 20,000+ |
-| Zenn / note total PV | 2,000+ |
-| Issues / Discussions | 3+ |
-| External listing submissions | 2+ |
+| Metric                       |  Target |
+| ---------------------------- | ------: |
+| GitHub Stars                 |     +50 |
+| GitHub unique visitors       |    500+ |
+| GitHub clones                |     30+ |
+| Docs visits                  |    300+ |
+| SNS impressions              | 20,000+ |
+| Zenn / note total PV         |  2,000+ |
+| Issues / Discussions         |      3+ |
+| External listing submissions |      2+ |
 
 ## Phase plan
 
@@ -100,7 +100,7 @@ Tracking issue: [#1281](https://github.com/s977043/river-review/issues/1281)
 
 ### Phase 6: Metrics and feedback loop
 
-- Track GitHub traffic, clones, docs visits, posts, and external links
+- Track GitHub traffic / clones / docs visits / posts / external links
 - Review the metrics weekly
 - Adjust README and communication copy based on evidence
 
