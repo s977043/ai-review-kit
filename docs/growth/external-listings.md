@@ -48,11 +48,11 @@ Codify team review judgment as repo-owned skills; run them as GitHub Action / pl
 
 ## 申請優先順位
 
-1. **awesome-codex-plugins** — 同梱プラグインと manifest が揃っており、外部提案（#1247）もある。最短で成立する見込み
-2. **awesome-actions** — GitHub Action として直球で適合
-3. **awesome-code-review** — ドメイン一致。非宣伝的な説明文を用意
-4. **awesome-ai-devtools** — PR & Code Review Bots カテゴリ。PR テンプレートを確認のうえ申請
-5. **awesome-ai-agents** — 位置づけを慎重に検討（優先度低）
+1. **awesome-codex-plugins**—同梱プラグインと manifest が揃っており、外部提案（#1247）もある。最短で成立する見込み
+2. **awesome-actions**—GitHub Action として直球で適合
+3. **awesome-code-review**—ドメイン一致。非宣伝的な説明文を用意
+4. **awesome-ai-devtools**—PR & Code Review Bots カテゴリ。PR テンプレートを確認のうえ申請
+5. **awesome-ai-agents**—位置づけを慎重に検討（優先度低）
 
 ## 注意点
 
