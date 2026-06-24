@@ -1,0 +1,27 @@
+diff --git a/src/api/users.js b/src/api/users.js
+index 1111111..2222222 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,10 +1,18 @@
+ const { findUser } = require("../db/users");
+
+ async function getUser(req, res) {
+-  const id = req.params.id;
++  const id = Number(req.params.id);
++
++  // Validation added per plan requirement 1.
++  if (!Number.isInteger(id) || id <= 0) {
++    // NOTE: plan requirement 3 asks for HTTP 400, but this returns 500.
++    return res.status(500).json({ message: "validation failed" });
++  }
++
+   const user = await findUser(id);
+   if (!user) {
+     return res.status(404).json({ error: "not found" });
+   }
+-  return res.status(200).json({ user });
++  // NOTE: plan requirement 2 asks to keep `{ user }` shape, but this flattens it.
++  return res.status(200).json({ id: user.id, name: user.name });
+ }
+
+ module.exports = { getUser };
