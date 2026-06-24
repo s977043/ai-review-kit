@@ -1,6 +1,6 @@
 # 設計検討メモ: #1255 analyzeTestImpact() の実行計画への接続
 
-- Status: 一次実装済み（方針 B 採用） / フォローアップ未決（A or D）
+- Status: 実装済み（B = 信号公開 + D = フラグ opt-in 注入）
 - Related issue: #1255 `feat(planner): wire analyzeTestImpact() into execution plan for high-risk diffs`
 - 目的: Codex / Antigravity を含むレビューで方針を決めるための論点整理
 
@@ -105,7 +105,21 @@ C は phase 整合性は良いが Issue の中核を外すため、単独の最�
 - 強制注入（A）は行わないため、midstream dry-run への downstream スキル混入は発生しない（ブラスト半径は最小）。
 - 検証: `tests/review-runner.test.mjs` に high / low の 2 ケースを追加。`npm test`（全 1518 件）と `npm run lint` が green。
 
-フォローアップ（A: フェーズ横断強制注入 / D: フラグ opt-in）は、この plan 上の `testImpact.riskLevel` 信号を入力として別 PR で検討する。
+## 8.6 フォローアップ実装（方針 D）
+
+B の `testImpact.riskLevel` 信号を入力に、**方針 D（フラグ opt-in）** を実装した。
+
+- 環境変数 `RIVER_ESCALATE_TEST_SKILLS`（`1` / `true` / `yes` / `on` で有効、既定 off）を追加。
+- 有効かつ `testImpact.riskLevel === 'high'` のとき、`buildExecutionPlan` の選択結果に downstream テストスキル（`rr-downstream-test-existence-001` / `rr-downstream-coverage-gap-001`）を**フェーズ横断で注入**する。注入時は `skipped` から該当エントリを除去し、`selected` / `skipped` の二重計上を防ぐ。
+- 注入は `selectSkills` 後・空判定前に行うため、3 つの return 経路すべて（早期 return / planner / 決定論）と空セレクション判定に一貫して反映される。
+- **既定 off** なので baseline の選択結果・midstream dry-run の heuristic 挙動・既存スナップショットは不変。フラグ on は明示的なオプトインであり、dry-run でも downstream スキルが選択され得る点は利用者が許容する前提とする。
+- 検証: `tests/review-runner.test.mjs` に flag off / flag on(high) / flag on(low) の 3 ケースを追加。`npm test`（全 1521 件）と `npm run lint` が green。
+
+これで Issue 完了条件②（`riskLevel: high` の diff に対してテストスキルが実行計画に含まれる）を、既定挙動を変えずに opt-in で満たす。既定 on（方針 A）へ進める場合は、§5 の影響テスト群（snapshot / skill-routing-regression / cli）の更新を伴う別 PR とする。
+
+### 残課題（A への移行時）
+
+prune モードの planner は注入スキルを落とし得る。既定 on 化する際は、注入を planner 後に行うか、planner に escalation を伝える設計を検討する。
 
 ## 9. 影響を受けるテスト（事前棚卸し）
 
