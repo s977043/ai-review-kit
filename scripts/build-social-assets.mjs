@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
+import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
 
 import { Resvg } from '@resvg/resvg-js';
 
@@ -66,7 +66,9 @@ for (const asset of assets) {
 }
 
 console.log(`Renderer: @resvg/resvg-js ${resvgVersion}`);
-console.log('Font handling: loadSystemFonts=true; SVG font-family keeps Inter, Segoe UI, sans-serif fallback.');
+console.log(
+  'Font handling: loadSystemFonts=true; SVG font-family keeps Inter, Segoe UI, sans-serif fallback.',
+);
 
 function renderPng(svg) {
   const renderer = new Resvg(svg, {
@@ -83,9 +85,10 @@ function renderPng(svg) {
 function wrapSvg(svg, asset) {
   const { viewBox, inner } = extractSvg(svg, asset.source);
   const [sourceX, sourceY, sourceWidth, sourceHeight] = viewBox;
-  const scale = asset.mode === 'cover'
-    ? Math.max(asset.width / sourceWidth, asset.height / sourceHeight)
-    : Math.min(asset.width / sourceWidth, asset.height / sourceHeight);
+  const scale =
+    asset.mode === 'cover'
+      ? Math.max(asset.width / sourceWidth, asset.height / sourceHeight)
+      : Math.min(asset.width / sourceWidth, asset.height / sourceHeight);
   const renderedWidth = sourceWidth * scale;
   const renderedHeight = sourceHeight * scale;
   const x = (asset.width - renderedWidth) / 2;
@@ -113,7 +116,11 @@ function extractSvg(svg, source) {
 
   const openTagEnd = svg.indexOf('>', svg.indexOf('<svg'));
   const closeTagStart = svg.lastIndexOf('</svg>');
-  if (openTagEnd === -1 || closeTagStart === -1 || closeTagStart <= openTagEnd) {
+  if (
+    openTagEnd === -1 ||
+    closeTagStart === -1 ||
+    closeTagStart <= openTagEnd
+  ) {
     throw new Error(`${source}: invalid SVG document`);
   }
 
@@ -136,7 +143,9 @@ function readOption(argv, optionName) {
 }
 
 function formatNumber(value) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 function relativeFromRepo(path) {
