@@ -39191,6 +39191,23 @@ function rankByImpactTags(skills, impactTags, preferredModelHint = 'balanced') {
  *   - plannerMode=order: 優先度づけ（未参照スキルは後ろに決定論で追加）
  *   - plannerMode=prune: 絞り込み（LLM が選んだスキルのみを実行）
  */
+// #1255 (approach D): opt-in escalation. When RIVER_ESCALATE_TEST_SKILLS is
+// enabled and the diff is high test-impact risk (app changed, no tests), these
+// downstream test skills are force-selected regardless of phase so untested
+// high-risk changes still get a test-coverage review. Default off — see
+// docs/development/1255-test-impact-routing-design.md.
+const ESCALATION_TEST_SKILL_IDS = [
+  'rr-downstream-test-existence-001',
+  'rr-downstream-coverage-gap-001',
+];
+
+function isTestSkillEscalationEnabled() {
+  const v = String(process.env.RIVER_ESCALATE_TEST_SKILLS ?? '')
+    .trim()
+    .toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
+
 async function buildExecutionPlan(options) {
   const {
     phase,
@@ -39234,6 +39251,19 @@ async function buildExecutionPlan(options) {
   // exposes the previously dead-code analyzeTestImpact() without forcing skill
   // injection (approach B).
   const testImpact = analyzeTestImpact(changedFiles);
+  // #1255 (approach D): opt-in escalation of downstream test skills for high
+  // test-impact risk diffs. Injects regardless of phase; default off so the
+  // baseline selection (and dry-run heuristic behavior) is unchanged.
+  if (testImpact.riskLevel === 'high' && isTestSkillEscalationEnabled()) {
+    const selectedIds = new Set(selection.selected.map((s) => getMeta(s).id));
+    for (const id of ESCALATION_TEST_SKILL_IDS) {
+      if (selectedIds.has(id)) continue;
+      const skill = skills.find((s) => getMeta(s).id === id);
+      if (!skill) continue;
+      selection.selected.push(skill);
+      selection.skipped = selection.skipped.filter((entry) => getMeta(entry.skill).id !== id);
+    }
+  }
   if (selection.selected.length === 0) {
     // #878 A2-3-runners: even when no skills are selected, expose the
     // snapshot so consumers can attach it to the artifact for downstream

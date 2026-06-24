@@ -295,6 +295,66 @@ test('buildExecutionPlan reports low test-impact risk when tests accompany chang
   assert.equal(plan.testImpact.riskLevel, 'low');
 });
 
+const ESCALATION_IDS = ['rr-downstream-test-existence-001', 'rr-downstream-coverage-gap-001'];
+
+test('buildExecutionPlan does not escalate test skills by default (flag off)', async () => {
+  // #1255 approach D: default off — high-risk midstream diff must NOT pull in
+  // the downstream test skills (baseline behavior unchanged).
+  delete process.env.RIVER_ESCALATE_TEST_SKILLS;
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/lib/review-engine.mjs'],
+    availableContexts: ['diff'],
+  });
+  assert.equal(plan.testImpact.riskLevel, 'high');
+  const selectedIds = plan.selected.map((s) => (s.metadata ?? s).id);
+  for (const id of ESCALATION_IDS) {
+    assert.ok(!selectedIds.includes(id), `${id} should not be selected when flag is off`);
+  }
+});
+
+test('buildExecutionPlan escalates downstream test skills when flag on and risk high', async () => {
+  // #1255 approach D: opt-in flag injects the test skills cross-phase.
+  process.env.RIVER_ESCALATE_TEST_SKILLS = '1';
+  try {
+    const plan = await buildExecutionPlan({
+      phase: 'midstream',
+      changedFiles: ['src/lib/review-engine.mjs'],
+      availableContexts: ['diff'],
+    });
+    assert.equal(plan.testImpact.riskLevel, 'high');
+    const selectedIds = plan.selected.map((s) => (s.metadata ?? s).id);
+    for (const id of ESCALATION_IDS) {
+      assert.ok(selectedIds.includes(id), `${id} should be escalated into the plan`);
+      // escalated skills must not also remain in the skipped list.
+      const stillSkipped = plan.skipped.some(
+        (entry) => (entry.skill.metadata ?? entry.skill).id === id
+      );
+      assert.ok(!stillSkipped, `${id} should be removed from skipped when escalated`);
+    }
+  } finally {
+    delete process.env.RIVER_ESCALATE_TEST_SKILLS;
+  }
+});
+
+test('buildExecutionPlan does not escalate when flag on but risk not high', async () => {
+  process.env.RIVER_ESCALATE_TEST_SKILLS = '1';
+  try {
+    const plan = await buildExecutionPlan({
+      phase: 'midstream',
+      changedFiles: ['src/lib/review-engine.mjs', 'tests/review-engine.test.mjs'],
+      availableContexts: ['diff'],
+    });
+    assert.equal(plan.testImpact.riskLevel, 'low');
+    const selectedIds = plan.selected.map((s) => (s.metadata ?? s).id);
+    for (const id of ESCALATION_IDS) {
+      assert.ok(!selectedIds.includes(id), `${id} should not be escalated when risk is low`);
+    }
+  } finally {
+    delete process.env.RIVER_ESCALATE_TEST_SKILLS;
+  }
+});
+
 test('buildExecutionPlan propagates llmEnabled: false to selectSkills', async () => {
   const skills = [
     {
