@@ -12,7 +12,12 @@ X / Zenn / note / awesome 系で River Review が共有されたとき、画像�
 | 図解（コアモデル） | [`assets/social/diagram.svg`](../../assets/social/diagram.svg)                 | README 理解補助 / Zenn・note hero |
 | ロゴ               | [`assets/logo/river-review-logo.svg`](../../assets/logo/river-review-logo.svg) | 既存ワードマーク                  |
 
-SVG をソースとして保持し、各配信先が要求するラスタ形式（PNG）へ書き出して使います。
+SVG をソースとして保持し、各配信先が要求するラスタ形式（PNG）へ書き出して使います。書き出し済みの PNG はアップロード元を一元管理するためリポジトリにもコミットしています。
+
+| 書き出し済み PNG | ファイル                                                                     | サイズ   | 用途                                 |
+| ---------------- | ---------------------------------------------------------------------------- | -------- | ------------------------------------ |
+| Social Preview   | [`assets/social/social-preview.png`](../../assets/social/social-preview.png) | 1280×640 | GitHub Social preview にアップロード |
+| X 投稿用         | [`assets/social/x-post.png`](../../assets/social/x-post.png)                 | 1200×675 | X 投稿                               |
 
 ## コピー
 
@@ -50,7 +55,7 @@ rsvg-convert -w 1280 -h 640 assets/social/social-preview.svg -o social-preview.p
 rsvg-convert -w 1200 -h 630 assets/social/diagram.svg -o hero.png
 ```
 
-書き出した PNG はリポジトリには含めず、配信先（GitHub Settings / 記事 / SNS）へ直接アップロードします。
+書き出した PNG は `assets/social/` にコミットして管理し、配信先（GitHub Settings / 記事 / SNS）へはそこからアップロードします。SVG を更新したら PNG を再生成して差し替えること。
 
 ## 制約（#1279）
 
@@ -60,5 +65,6 @@ rsvg-convert -w 1200 -h 630 assets/social/diagram.svg -o hero.png
 
 ## 残作業（リポジトリ管理者 / デザイン）
 
-- SVG → PNG 書き出しと、GitHub Social preview へのアップロード。
+- `assets/social/social-preview.png` を GitHub Settings → Social preview へアップロード（管理者の手動操作）。
+- Zenn / note hero（1200×630、diagram.svg ベース）の書き出し。
 - デモ実行結果のスクリーンショット取得。
