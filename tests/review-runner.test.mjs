@@ -268,6 +268,33 @@ test('buildExecutionPlan includes fileTypes in result', async () => {
   assert.ok(Array.isArray(plan.fileTypes.config));
 });
 
+test('buildExecutionPlan exposes testImpact with high risk for untested app changes', async () => {
+  // #1255: app code changed with no accompanying test files => riskLevel 'high'.
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/lib/review-engine.mjs'],
+    availableContexts: ['diff'],
+    dryRun: true,
+  });
+  assert.ok(plan.testImpact, 'plan exposes testImpact');
+  assert.equal(plan.testImpact.riskLevel, 'high');
+  assert.equal(plan.testImpact.appFilesChanged, 1);
+  assert.equal(plan.testImpact.testFilesChanged, 0);
+  // carry-over snapshot mirrors the signal for --plan replay consumers.
+  assert.equal(plan.snapshot.testImpact.riskLevel, 'high');
+});
+
+test('buildExecutionPlan reports low test-impact risk when tests accompany changes', async () => {
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/lib/review-engine.mjs', 'tests/review-engine.test.mjs'],
+    availableContexts: ['diff'],
+    dryRun: true,
+  });
+  assert.ok(plan.testImpact);
+  assert.equal(plan.testImpact.riskLevel, 'low');
+});
+
 test('buildExecutionPlan propagates llmEnabled: false to selectSkills', async () => {
   const skills = [
     {

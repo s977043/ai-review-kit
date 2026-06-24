@@ -3,6 +3,7 @@ import { loadSkills } from './skill-loader.mjs';
 import { planSkills, summarizeSkill } from '../../src/lib/skill-planner.mjs';
 import { inferImpactTags } from '../../src/lib/impact-scope.mjs';
 import { classifyChangedFiles } from '../../src/lib/file-classifier.mjs';
+import { analyzeTestImpact } from '../../src/lib/test-impact.mjs';
 import { normalizePlannerMode } from '../../src/lib/planner-utils.mjs';
 import { HEURISTIC_SKILL_IDS } from '../../src/lib/heuristic-review.mjs';
 import { evaluateRisk } from '../../src/lib/risk-map.mjs';
@@ -216,6 +217,11 @@ export async function buildExecutionPlan(options) {
   const impactTags = inferImpactTags(changedFiles, { diffText });
   const fileTypes = classifyChangedFiles(changedFiles);
   const riskAssessment = riskMap ? evaluateRisk(riskMap, changedFiles) : null;
+  // #1255: surface test-impact signal (riskLevel high = app changed, no tests)
+  // on the plan so downstream planners/consumers can route test skills. This
+  // exposes the previously dead-code analyzeTestImpact() without forcing skill
+  // injection (approach B).
+  const testImpact = analyzeTestImpact(changedFiles);
   if (selection.selected.length === 0) {
     // #878 A2-3-runners: even when no skills are selected, expose the
     // snapshot so consumers can attach it to the artifact for downstream
@@ -225,7 +231,8 @@ export async function buildExecutionPlan(options) {
       skipped: selection.skipped,
       fileTypes,
       riskAssessment,
-      snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment },
+      testImpact,
+      snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
     };
   }
   const relatedADRs = findRelatedADRs(repoRoot ?? process.cwd(), {
@@ -273,10 +280,12 @@ export async function buildExecutionPlan(options) {
       // never returned, so consumers received `undefined`. Top-level for
       // back-compat; also nested in `snapshot` for the #878 A2-3 carry-over.
       riskAssessment,
+      // #1255: test-impact signal (see analyzeTestImpact call above).
+      testImpact,
       // #878 A2-3-runners: carry-over context for --plan replay execution.
       // Consumers should propagate this to `artifact.debug.execution.snapshot`
       // per docs/development/a2-3-replay-execution-design.md.
-      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment },
+      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
     };
   }
 
@@ -291,7 +300,8 @@ export async function buildExecutionPlan(options) {
     relatedADRs,
     reviewMode,
     riskAssessment,
-    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment },
+    testImpact,
+    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
   };
 }
 

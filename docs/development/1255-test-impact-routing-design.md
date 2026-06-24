@@ -1,6 +1,6 @@
 # 設計検討メモ: #1255 analyzeTestImpact() の実行計画への接続
 
-- Status: Draft / 方針未決
+- Status: 一次実装済み（方針 B 採用） / フォローアップ未決（A or D）
 - Related issue: #1255 `feat(planner): wire analyzeTestImpact() into execution plan for high-risk diffs`
 - 目的: Codex / Antigravity を含むレビューで方針を決めるための論点整理
 
@@ -95,6 +95,17 @@ C は phase 整合性は良いが Issue の中核を外すため、単独の最�
 - 強制注入スキルは `selected` の先頭・末尾どちらに置くか。既存の `rankByImpactTags` 順位との関係。
 - `medium` リスクの扱い（今回は対象外でよいか）。
 - 既定 on（A）と既定 off（D）のどちらをファーストリリースにするか。
+
+## 8.5 決定と一次実装（方針 B）
+
+レビューの結果、**方針 B（testImpact を plan に公開するのみ）** を一次実装として採用した。
+
+- `runners/core/review-runner.mjs` の `buildExecutionPlan` で `analyzeTestImpact(changedFiles)` を呼び出し、結果を `testImpact` として 3 つの return 経路すべて（早期 return / planner あり / planner なし）に top-level + `snapshot` で公開した。`riskAssessment` と同じ公開パターンに揃えた。
+- **入力シグネチャは不変**のため `pipeline-params-checklist.md` の入力パラメータ chain への追記は不要。出力フィールド追加だが、既存スナップショットテストは当該フィールドを全項目 assert していないため更新不要だった。
+- 強制注入（A）は行わないため、midstream dry-run への downstream スキル混入は発生しない（ブラスト半径は最小）。
+- 検証: `tests/review-runner.test.mjs` に high / low の 2 ケースを追加。`npm test`（全 1518 件）と `npm run lint` が green。
+
+フォローアップ（A: フェーズ横断強制注入 / D: フラグ opt-in）は、この plan 上の `testImpact.riskLevel` 信号を入力として別 PR で検討する。
 
 ## 9. 影響を受けるテスト（事前棚卸し）
 
