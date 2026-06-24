@@ -38510,7 +38510,7 @@ function preprocess(fn, schema) {
 
 /***/ }),
 
-/***/ 4584:
+/***/ 980:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -38818,6 +38818,49 @@ function isApp(file) {
   return file.startsWith('src/') || file.startsWith('runners/');
 }
 
+;// CONCATENATED MODULE: ./src/lib/test-impact.mjs
+
+
+/**
+ * Analyze test coverage gaps based on changed file classification.
+ *
+ * @param {string[]} changedFiles - Array of changed file paths
+ * @returns {{ appFilesChanged: number, testFilesChanged: number, gapFiles: string[], coverageRatio: number, riskLevel: 'low'|'medium'|'high' }}
+ */
+function analyzeTestImpact(changedFiles) {
+  const classified = classifyChangedFiles(changedFiles);
+
+  const appFiles = classified.app;
+  const testFiles = classified.test;
+
+  // Files in app that likely need corresponding tests
+  const gapFiles = appFiles.filter((appFile) => {
+    const basename =
+      appFile
+        .split('/')
+        .pop()
+        ?.replace(/\.[^.]+$/, '') ?? '';
+    // Check if any test file references this app file's basename
+    return !testFiles.some((testFile) => testFile.includes(basename));
+  });
+
+  const appCount = appFiles.length;
+  const testCount = testFiles.length;
+  const coverageRatio = appCount === 0 ? 1 : testCount / appCount;
+
+  let riskLevel = 'low';
+  if (appCount > 0 && testCount === 0) riskLevel = 'high';
+  else if (appCount > 0 && gapFiles.length >= appCount / 2) riskLevel = 'medium';
+
+  return {
+    appFilesChanged: appCount,
+    testFilesChanged: testCount,
+    gapFiles,
+    coverageRatio: Math.min(coverageRatio, 1), // cap at 1
+    riskLevel,
+  };
+}
+
 // EXTERNAL MODULE: ./src/lib/planner-utils.mjs
 var planner_utils = __nccwpck_require__(1013);
 // EXTERNAL MODULE: ./src/lib/heuristic-review.mjs
@@ -38967,6 +39010,7 @@ function extractDiffMeta(diff) {
 // EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
 var review_plan_generator = __nccwpck_require__(8069);
 ;// CONCATENATED MODULE: ./runners/core/review-runner.mjs
+
 
 
 
@@ -39185,6 +39229,11 @@ async function buildExecutionPlan(options) {
   const impactTags = inferImpactTags(changedFiles, { diffText });
   const fileTypes = classifyChangedFiles(changedFiles);
   const riskAssessment = riskMap ? (0,risk_map/* evaluateRisk */.lm)(riskMap, changedFiles) : null;
+  // #1255: surface test-impact signal (riskLevel high = app changed, no tests)
+  // on the plan so downstream planners/consumers can route test skills. This
+  // exposes the previously dead-code analyzeTestImpact() without forcing skill
+  // injection (approach B).
+  const testImpact = analyzeTestImpact(changedFiles);
   if (selection.selected.length === 0) {
     // #878 A2-3-runners: even when no skills are selected, expose the
     // snapshot so consumers can attach it to the artifact for downstream
@@ -39194,7 +39243,8 @@ async function buildExecutionPlan(options) {
       skipped: selection.skipped,
       fileTypes,
       riskAssessment,
-      snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment },
+      testImpact,
+      snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
     };
   }
   const relatedADRs = findRelatedADRs(repoRoot ?? process.cwd(), {
@@ -39242,10 +39292,12 @@ async function buildExecutionPlan(options) {
       // never returned, so consumers received `undefined`. Top-level for
       // back-compat; also nested in `snapshot` for the #878 A2-3 carry-over.
       riskAssessment,
+      // #1255: test-impact signal (see analyzeTestImpact call above).
+      testImpact,
       // #878 A2-3-runners: carry-over context for --plan replay execution.
       // Consumers should propagate this to `artifact.debug.execution.snapshot`
       // per docs/development/a2-3-replay-execution-design.md.
-      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment },
+      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
     };
   }
 
@@ -39260,7 +39312,8 @@ async function buildExecutionPlan(options) {
     relatedADRs,
     reviewMode,
     riskAssessment,
-    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment },
+    testImpact,
+    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
   };
 }
 
@@ -42831,7 +42884,7 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 /* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(9946);
 /* harmony import */ var _finding_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(7440);
 /* harmony import */ var _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(4807);
-/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(4584);
+/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(980);
 /* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(2294);
 /* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(9746);
 /* harmony import */ var _finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(5942);
@@ -45983,8 +46036,8 @@ function createOpenAIPlanner(options = {}) {
 
 // EXTERNAL MODULE: ./src/lib/planner-utils.mjs
 var planner_utils = __nccwpck_require__(1013);
-// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 5 modules
-var review_runner = __nccwpck_require__(4584);
+// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 6 modules
+var review_runner = __nccwpck_require__(980);
 ;// CONCATENATED MODULE: ./src/lib/rules.mjs
 
 
@@ -62089,7 +62142,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
         console.error('Error: `river skills resolve` requires at least one --path <file>.');
         return 1;
       }
-      const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 4584));
+      const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 980));
       const plan = await buildExecutionPlan({
         phase: parsed.phase,
         changedFiles: paths,
