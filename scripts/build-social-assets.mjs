@@ -17,7 +17,7 @@ const defaultOutputDir = join(repoRoot, 'dist', 'social');
 const args = process.argv.slice(2);
 const outputDir = resolve(
   repoRoot,
-  readOption(args, '--out') ?? readOption(args, '-o') ?? defaultOutputDir,
+  readOption(args, '--out') ?? readOption(args, '-o') ?? defaultOutputDir
 );
 
 const brandBackground = '#0b1f33';
@@ -26,7 +26,7 @@ const assets = [
   {
     name: 'GitHub Social Preview',
     source: 'assets/social/social-preview.svg',
-    output: 'github-social-preview.png',
+    output: 'social-preview.png',
     width: 1280,
     height: 640,
     mode: 'contain',
@@ -61,13 +61,13 @@ for (const asset of assets) {
   await writeFile(outputPath, png);
 
   console.log(
-    `${asset.name}: ${asset.width}x${asset.height} ${asset.source} -> ${relativeFromRepo(outputPath)}`,
+    `${asset.name}: ${asset.width}x${asset.height} ${asset.source} -> ${relativeFromRepo(outputPath)}`
   );
 }
 
 console.log(`Renderer: @resvg/resvg-js ${resvgVersion}`);
 console.log(
-  'Font handling: loadSystemFonts=true; SVG font-family keeps Inter, Segoe UI, sans-serif fallback.',
+  'Font handling: loadSystemFonts=true; SVG font-family keeps Inter, Segoe UI, sans-serif fallback.'
 );
 
 function renderPng(svg) {
@@ -109,18 +109,17 @@ function extractSvg(svg, source) {
     throw new Error(`${source}: missing SVG viewBox`);
   }
 
-  const viewBox = viewBoxMatch[1].trim().split(/[\s,]+/).map(Number);
+  const viewBox = viewBoxMatch[1]
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
   if (viewBox.length !== 4 || viewBox.some((value) => Number.isNaN(value))) {
     throw new Error(`${source}: invalid SVG viewBox: ${viewBoxMatch[1]}`);
   }
 
   const openTagEnd = svg.indexOf('>', svg.indexOf('<svg'));
   const closeTagStart = svg.lastIndexOf('</svg>');
-  if (
-    openTagEnd === -1 ||
-    closeTagStart === -1 ||
-    closeTagStart <= openTagEnd
-  ) {
+  if (openTagEnd === -1 || closeTagStart === -1 || closeTagStart <= openTagEnd) {
     throw new Error(`${source}: invalid SVG document`);
   }
 

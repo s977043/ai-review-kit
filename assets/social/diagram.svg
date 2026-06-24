@@ -23,7 +23,7 @@
     <rect x="64" y="300" width="200" height="56" rx="10" fill="#13314f" />
     <text x="164" y="336" text-anchor="middle">diff</text>
     <rect x="64" y="370" width="200" height="56" rx="10" fill="#13314f" />
-    <text x="164" y="406" text-anchor="middle">tests / JUnit / prior reviews</text>
+    <text x="164" y="404" text-anchor="middle" font-size="13">tests / JUnit / prior reviews</text>
   </g>
 
   <path d="M280 328 H 430" fill="none" stroke="url(#river)" stroke-width="6" stroke-linecap="round" />
@@ -31,8 +31,8 @@
   <!-- River Review skills -->
   <rect x="440" y="250" width="360" height="160" rx="16" fill="none" stroke="url(#river)" stroke-width="4" />
   <text x="620" y="300" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="26" font-weight="700" fill="#f3f7fb">River Review</text>
-  <text x="620" y="338" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="19" fill="#a9bed2">repo-owned skills define judgment</text>
-  <text x="620" y="368" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="19" fill="#a9bed2">gates execute it · Riverbed remembers it</text>
+  <text x="620" y="338" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="16" fill="#a9bed2">repo-owned skills define judgment</text>
+  <text x="620" y="366" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="16" fill="#a9bed2">gates execute it · Riverbed remembers it</text>
 
   <path d="M800 328 H 950" fill="none" stroke="url(#river)" stroke-width="6" stroke-linecap="round" />
 
