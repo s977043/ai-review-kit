@@ -54,6 +54,63 @@ Codify team review judgment as repo-owned skills; run them as GitHub Action / pl
 4. **awesome-ai-devtools**—PR & Code Review Bots カテゴリ。PR テンプレートを確認のうえ申請
 5. **awesome-ai-agents**—位置づけを慎重に検討（優先度低）
 
+## 提出材料ドラフト
+
+各リストの実際の README / CONTRIBUTING を確認して作成したコピペ用ドラフト。fork → 該当箇所に追記 → PR の流れで使う（外部リポジトリへの操作はリポジトリ管理者が実施）。提出直前に各リストの規約が変わっていないか再確認すること。
+
+> awesome-codex-plugins は提出済み（[hashgraph-online/awesome-codex-plugins#229](https://github.com/hashgraph-online/awesome-codex-plugins/pull/229)、マージ待ち、[#1247](https://github.com/s977043/river-review/issues/1247)）。
+
+### awesome-actions（sdras/awesome-actions）
+
+- 追記先: `### Pull Requests` セクションの**末尾**。
+- 規約: Title Case、1 行（3 行に折り返さない）、太字/斜体なし、重複確認、PR タイトルは具体的に、コミット本文にリポジトリ URL を含める。
+
+追記する 1 行:
+
+```md
+- [River Review](https://github.com/s977043/river-review) - Review pull requests against your team's versioned, repo-owned review skills across plans, diffs, and tests.
+```
+
+PR タイトル: `Add River Review to Pull Requests`
+
+PR / コミット本文:
+
+```text
+Adds River Review to the Pull Requests section.
+
+River Review is a GitHub Action that runs a team's review standards as
+versioned, repo-owned skills across plans, diffs, tests, and prior reviews.
+Human-in-the-loop, not auto-merge.
+
+Repository: https://github.com/s977043/river-review
+```
+
+### awesome-code-review（joho/awesome-code-review）
+
+- 追記先: `## Tools` セクション。**アルファベット順**で `Review Board` と `Sider` の間。
+- 規約: 1 リンク、リンクテキストはツール名、説明はリンクの後に同一行で句読点終わり、**非宣伝的**トーン。
+
+追記する 1 行:
+
+```md
+- [River Review](https://github.com/s977043/river-review) Open source framework that runs review standards as versioned, repo-owned skills across plans, diffs, tests, and prior reviews.
+```
+
+PR タイトル: `Add River Review to Tools`
+
+### awesome-ai-devtools（jamesmurdza/awesome-ai-devtools）
+
+- 追記先: `### PR & Code Review Bots` セクションの**末尾**（このリストは投稿順）。
+- 規約: `[Name](link)` の後ろにダッシュ区切りで説明文を続ける形式（下記コードブロックの実エントリを参照）。既存の crit / PR Triage と同様、human-in-the-loop / OSS を明示すると差別化が伝わる。
+
+追記する 1 行:
+
+```md
+- [River Review](https://github.com/s977043/river-review) — Open source, team-owned review layer: codify review judgment as repo-owned skills and run them across plans, diffs, tests, and prior reviews. Human-in-the-loop, not auto-merge.
+```
+
+PR タイトル: `Add River Review to PR & Code Review Bots`
+
 ## 注意点
 
 - 各リストの掲載ルールは申請時点の CONTRIBUTING / PR テンプレートで再確認する。
