@@ -335,6 +335,11 @@
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true
         },
+        "consensusLevel": {
+          "type": "string",
+          "enum": ["single", "multi", "consensus"],
+          "description": "Display-only metadata derived from agreement.length. 'consensus'=3+ reviewers, 'multi'=2, 'single'=0-1. MUST NOT be used to override severity."
+        },
         "validatedStatus": {
           "type": "string",
           "description": "Synthesis verdict for the finding. Distinct from `status` (which tracks lifecycle: open/suppressed/verified).",
