@@ -187,6 +187,19 @@ export function splitDiffIntoChunks(diff) {
 const SEVERITY_ORDER = ['info', 'minor', 'major', 'critical'];
 
 /**
+ * Compute consensusLevel from an agreement array.
+ * Used as display-only metadata; MUST NOT influence severity decisions.
+ * @param {string[]} agreement
+ * @returns {'consensus' | 'multi' | 'single'}
+ */
+function computeConsensusLevel(agreement) {
+  const count = Array.isArray(agreement) ? agreement.length : 0;
+  if (count >= 3) return 'consensus';
+  if (count >= 2) return 'multi';
+  return 'single';
+}
+
+/**
  * Normalize a severity string to one of the canonical schema values.
  * Accepts both output schema values (critical/major/minor/info) and
  * internal LLM prompt values (blocker/warning/nit).
@@ -291,10 +304,12 @@ export function mergeFindings(findings) {
       const existingAgreement = Array.isArray(canonical.agreement) ? canonical.agreement : [];
       const agreementSet = new Set(existingAgreement);
       if (role) agreementSet.add(role);
+      const passthroughAgreement = [...agreementSet];
       return {
         ...canonical,
         severity: normalizeSeverityLocal(canonical.severity),
-        agreement: [...agreementSet],
+        agreement: passthroughAgreement,
+        consensusLevel: computeConsensusLevel(passthroughAgreement),
       };
     }
 
@@ -312,11 +327,13 @@ export function mergeFindings(findings) {
       if (m.reviewerRole) agreementSet.add(m.reviewerRole);
     }
 
+    const mergedAgreement = [...agreementSet];
     return {
       ...canonical,
       severity: mergedSeverity,
       evidence: [...evidenceSet],
-      agreement: [...agreementSet],
+      agreement: mergedAgreement,
+      consensusLevel: computeConsensusLevel(mergedAgreement),
     };
   });
 }

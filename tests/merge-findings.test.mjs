@@ -103,4 +103,138 @@ describe('mergeFindings — adversarial set (#1171 item5)', () => {
   test('empty input → empty output', () => {
     assert.deepEqual(mergeFindings([]), []);
   });
+
+  describe('consensusLevel', () => {
+    test('single: passthrough finding with no agreement → consensusLevel "single"', () => {
+      const merged = mergeFindings([
+        {
+          file: 'src/a.mjs',
+          line: 10,
+          message: 'solo finding',
+          severity: 'minor',
+          reviewerRole: 'bug-hunter',
+        },
+      ]);
+      assert.equal(merged.length, 1);
+      assert.equal(merged[0].consensusLevel, 'single');
+    });
+
+    test('single: passthrough finding with 1 agreement role → consensusLevel "single"', () => {
+      const merged = mergeFindings([
+        {
+          file: 'src/b.mjs',
+          line: 20,
+          message: 'one reviewer',
+          severity: 'info',
+          reviewerRole: 'test-gap',
+          agreement: ['test-gap'],
+        },
+      ]);
+      assert.equal(merged.length, 1);
+      assert.equal(merged[0].consensusLevel, 'single');
+    });
+
+    test('multi: 2 reviewers flag same location → consensusLevel "multi"', () => {
+      const merged = mergeFindings([
+        {
+          file: 'src/c.mjs',
+          line: 30,
+          message: 'duplicate finding',
+          severity: 'major',
+          reviewerRole: 'bug-hunter',
+        },
+        {
+          file: 'src/c.mjs',
+          line: 30,
+          message: 'duplicate finding',
+          severity: 'minor',
+          reviewerRole: 'security-scanner',
+        },
+      ]);
+      assert.equal(merged.length, 1);
+      assert.equal(merged[0].consensusLevel, 'multi');
+    });
+
+    test('consensus: 3+ reviewers flag same location → consensusLevel "consensus"', () => {
+      const merged = mergeFindings([
+        {
+          file: 'src/d.mjs',
+          line: 40,
+          message: 'triple finding',
+          severity: 'major',
+          reviewerRole: 'bug-hunter',
+        },
+        {
+          file: 'src/d.mjs',
+          line: 40,
+          message: 'triple finding',
+          severity: 'major',
+          reviewerRole: 'security-scanner',
+        },
+        {
+          file: 'src/d.mjs',
+          line: 40,
+          message: 'triple finding',
+          severity: 'minor',
+          reviewerRole: 'test-gap',
+        },
+      ]);
+      assert.equal(merged.length, 1);
+      assert.equal(merged[0].consensusLevel, 'consensus');
+    });
+
+    test('passthrough (no duplication) still has consensusLevel attached', () => {
+      const merged = mergeFindings([
+        {
+          file: 'src/e.mjs',
+          line: 50,
+          message: 'unique A',
+          severity: 'info',
+          reviewerRole: 'bug-hunter',
+        },
+        {
+          file: 'src/f.mjs',
+          line: 60,
+          message: 'unique B',
+          severity: 'major',
+          reviewerRole: 'security-scanner',
+        },
+      ]);
+      assert.equal(merged.length, 2);
+      for (const f of merged) {
+        assert.ok('consensusLevel' in f, `consensusLevel missing from finding in ${f.file}`);
+        assert.equal(f.consensusLevel, 'single');
+      }
+    });
+
+    test('consensusLevel does not affect severity (no auto-escalation)', () => {
+      // 3 reviewers agree → consensus, but severity stays at the max of inputs
+      const merged = mergeFindings([
+        {
+          file: 'src/g.mjs',
+          line: 70,
+          message: 'minor issue',
+          severity: 'minor',
+          reviewerRole: 'bug-hunter',
+        },
+        {
+          file: 'src/g.mjs',
+          line: 70,
+          message: 'minor issue',
+          severity: 'minor',
+          reviewerRole: 'security-scanner',
+        },
+        {
+          file: 'src/g.mjs',
+          line: 70,
+          message: 'minor issue',
+          severity: 'info',
+          reviewerRole: 'test-gap',
+        },
+      ]);
+      assert.equal(merged.length, 1);
+      assert.equal(merged[0].consensusLevel, 'consensus');
+      assert.equal(merged[0].severity, 'minor', 'severity must NOT be escalated by consensusLevel');
+    });
+  });
 });
