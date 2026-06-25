@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.34.0](https://github.com/s977043/river-review/compare/v1.33.0...v1.34.0) (2026-06-25)
+
+
+### Features
+
+* **review-team:** add consensusLevel badge and teamLeadReport to PR comments ([#1308](https://github.com/s977043/river-review/issues/1308)) ([2eba500](https://github.com/s977043/river-review/commit/2eba50035a99fa07a7ce9e9df602e9db28154f64))
+* **review-team:** add consensusLevel metadata field to findings ([#1305](https://github.com/s977043/river-review/issues/1305)) ([e718dfe](https://github.com/s977043/river-review/commit/e718dfeb2398b9de5c3a9193821ece64a85f1b08))
+* **review-team:** add Tech Lead deterministic synthesis report ([#1306](https://github.com/s977043/river-review/issues/1306)) ([b8953d1](https://github.com/s977043/river-review/commit/b8953d1c5395527f06bb7aaaf20aa0f3726ab5b9))
+
 ## [1.33.0](https://github.com/s977043/river-review/compare/v1.32.0...v1.33.0) (2026-06-24)
 
 
