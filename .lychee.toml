@@ -65,6 +65,10 @@ exclude = [
   # in the README. Linked from the README badge row, not a functional link.
   '^https?://api\.securityscorecards\.dev/',
 
+  # GitHub classic Projects (/projects) returns 400 since the feature was
+  # deprecated in favour of Projects V2. The link is informational in README.
+  'github\.com/.*/projects$',
+
 ]
 
 # Exclude specific files that contain Docusaurus-internal routing links.

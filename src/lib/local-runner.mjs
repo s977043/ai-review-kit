@@ -490,6 +490,7 @@ export async function runLocalReview({
     suppressedFindings,
     classified: review.classified,
     reviewerResults: review.reviewerResults ?? null,
+    teamLeadReport: review.teamLeadReport ?? null,
     tokenEstimate: context.diff.tokenEstimate,
     rawTokenEstimate: context.diff.rawTokenEstimate,
     reduction: context.diff.reduction,
