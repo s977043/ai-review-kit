@@ -45434,7 +45434,69 @@ var diff_optimizer = __nccwpck_require__(1092);
 var review_engine = __nccwpck_require__(2022);
 // EXTERNAL MODULE: ./src/lib/finding-classifier.mjs
 var finding_classifier = __nccwpck_require__(7440);
+;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
+
+
+const CONSENSUS_LEVEL_ORDER = { consensus: 3, multi: 2, single: 1 };
+const SEVERITY_ORDER = { critical: 4, major: 3, minor: 2, info: 1 };
+
+/**
+ * consensusLevel → severity の順に findings をソートして返す。
+ * 同値の場合は元の順序を維持（stable sort）。
+ */
+function sortFindingsByPriority(findings) {
+  return [...findings].sort((a, b) => {
+    const cl =
+      (CONSENSUS_LEVEL_ORDER[b.consensusLevel] ?? 0) -
+      (CONSENSUS_LEVEL_ORDER[a.consensusLevel] ?? 0);
+    if (cl !== 0) return cl;
+    return (SEVERITY_ORDER[b.severity] ?? 0) - (SEVERITY_ORDER[a.severity] ?? 0);
+  });
+}
+
+/**
+ * 実行されなかったレビュアーロールを blindSpots として返す。
+ * 各 blindSpot には role キーと label (REVIEWER_ROLES[role].label) を含める。
+ */
+function detectBlindSpots(executedRoles) {
+  const executedSet = new Set(executedRoles);
+  return Object.entries(REVIEWER_ROLES)
+    .filter(([role]) => !executedSet.has(role))
+    .map(([role, def]) => ({ role, label: def.label }));
+}
+
+/**
+ * consensusLevel の件数を集計して返す。
+ * @returns {{ consensus: number, multi: number, single: number, total: number }}
+ */
+function buildConsensusSummary(findings) {
+  const summary = { consensus: 0, multi: 0, single: 0, total: findings.length };
+  for (const f of findings) {
+    const level = f.consensusLevel ?? 'single';
+    if (level in summary) summary[level]++;
+  }
+  return summary;
+}
+
+/**
+ * Tech Lead 統合レポートを生成する。
+ * LLM 呼び出しなし。全て deterministic な計算。
+ *
+ * @param {{ findings: object[], reviewerResults: object[] }} params
+ * @returns {{ top3Findings: object[], blindSpots: object[], consensusSummary: object }}
+ */
+function synthesizeTeamLeadReport({ findings = [], reviewerResults = [] }) {
+  const executedRoles = reviewerResults.map((r) => r.role);
+  const sorted = sortFindingsByPriority(findings);
+  return {
+    top3Findings: sorted.slice(0, 3),
+    blindSpots: detectBlindSpots(executedRoles),
+    consensusSummary: buildConsensusSummary(findings),
+  };
+}
+
 ;// CONCATENATED MODULE: ./src/lib/reviewer-orchestrator.mjs
+
 
 
 
@@ -45621,7 +45683,7 @@ function splitDiffIntoChunks(diff) {
     }));
 }
 
-const SEVERITY_ORDER = ['info', 'minor', 'major', 'critical'];
+const reviewer_orchestrator_SEVERITY_ORDER = ['info', 'minor', 'major', 'critical'];
 
 /**
  * Compute consensusLevel from an agreement array.
@@ -45659,9 +45721,9 @@ function normalizeSeverityLocal(severity) {
 function maxSeverity(a, b) {
   const na = normalizeSeverityLocal(a);
   const nb = normalizeSeverityLocal(b);
-  const ai = SEVERITY_ORDER.indexOf(na);
-  const bi = SEVERITY_ORDER.indexOf(nb);
-  return SEVERITY_ORDER[Math.max(ai, bi)];
+  const ai = reviewer_orchestrator_SEVERITY_ORDER.indexOf(na);
+  const bi = reviewer_orchestrator_SEVERITY_ORDER.indexOf(nb);
+  return reviewer_orchestrator_SEVERITY_ORDER[Math.max(ai, bi)];
 }
 
 /**
@@ -45915,6 +45977,11 @@ async function runReviewerOrchestration({
     };
   });
 
+  const teamLeadReport = synthesizeTeamLeadReport({
+    findings: allFindings,
+    reviewerResults,
+  });
+
   return {
     comments: allComments,
     findings: allFindings,
@@ -45922,6 +45989,7 @@ async function runReviewerOrchestration({
     reviewerResults,
     invalidRoles: invalid,
     autoSelectedRoles: reviewers?.length === 1 && reviewers[0] === 'auto' ? roles : null,
+    teamLeadReport,
     chunked,
     chunkCount: chunked ? diffsToProcess.length : null,
     prompt: succeeded[0]?.prompt ?? null,

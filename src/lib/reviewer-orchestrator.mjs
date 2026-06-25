@@ -1,6 +1,7 @@
 import { generateReview } from './review-engine.mjs';
 import { classifyFindings } from './finding-classifier.mjs';
 import { renderDiffText } from './diff-optimizer.mjs';
+import { synthesizeTeamLeadReport } from './team-lead-synthesizer.mjs';
 
 export const REVIEWER_ROLES = {
   'bug-hunter': {
@@ -478,6 +479,11 @@ export async function runReviewerOrchestration({
     };
   });
 
+  const teamLeadReport = synthesizeTeamLeadReport({
+    findings: allFindings,
+    reviewerResults,
+  });
+
   return {
     comments: allComments,
     findings: allFindings,
@@ -485,6 +491,7 @@ export async function runReviewerOrchestration({
     reviewerResults,
     invalidRoles: invalid,
     autoSelectedRoles: reviewers?.length === 1 && reviewers[0] === 'auto' ? roles : null,
+    teamLeadReport,
     chunked,
     chunkCount: chunked ? diffsToProcess.length : null,
     prompt: succeeded[0]?.prompt ?? null,
