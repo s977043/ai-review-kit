@@ -8,7 +8,7 @@ description: |
 phase: [upstream, midstream, downstream]
 severity: major
 applyTo: ['**/*']
-tags: [entry, multi-agent, parallel, consensus, team, orchestration]
+tags: [entry, routing, multi-agent, parallel, consensus, team, orchestration]
 version: '0.1.0'
 license: MIT
 ---
