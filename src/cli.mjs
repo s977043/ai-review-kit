@@ -1101,6 +1101,8 @@ function formatJsonOutput(result, phase) {
       ...(f.lineStart ? { line: f.lineStart } : {}),
       ...(f.lineEnd && f.lineEnd !== f.lineStart ? { lineEnd: f.lineEnd } : {}),
       ...(f.suggestion ? { suggestion: f.suggestion } : {}),
+      ...(f.consensusLevel ? { consensusLevel: f.consensusLevel } : {}),
+      ...(f.reviewerRole ? { reviewerRole: f.reviewerRole } : {}),
     };
   });
 
@@ -1139,6 +1141,7 @@ function formatJsonOutput(result, phase) {
     issues,
     summary,
     ...(decision !== undefined ? { decision } : {}),
+    ...(result.teamLeadReport ? { teamLeadReport: result.teamLeadReport } : {}),
   };
   validateOutputArtifact(artifact);
   return artifact;

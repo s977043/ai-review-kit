@@ -10,7 +10,9 @@ const MAX_INLINE_BODY = 65000;
  */
 function formatInlineBody(issue) {
   const emoji = SEVERITY_EMOJI[issue.severity] || '🔵';
-  const lines = [`${emoji} **[${issue.severity}]** ${issue.title}`];
+  const consensusBadge =
+    issue.consensusLevel === 'consensus' ? ' ★★★' : issue.consensusLevel === 'multi' ? ' ★★' : '';
+  const lines = [`${emoji} **[${issue.severity}]**${consensusBadge} ${issue.title}`];
 
   if (issue.message && issue.message !== issue.title) {
     lines.push('', issue.message);
@@ -73,6 +75,23 @@ function formatSummaryFromJson(data, inlinePostedCount, remainingIssues) {
 
   if (summary.riskSummary?.aggregateAction) {
     lines.push('', `**Risk:** ${summary.riskSummary.aggregateAction}`);
+  }
+
+  const tlr = data.teamLeadReport;
+  if (tlr) {
+    if (tlr.top3Findings?.length > 0) {
+      lines.push('', '### 優先確認の指摘');
+      for (const f of tlr.top3Findings) {
+        const sev = SEVERITY_EMOJI[f.severity] || '🔵';
+        const cl =
+          f.consensusLevel === 'consensus' ? ' ★★★' : f.consensusLevel === 'multi' ? ' ★★' : '';
+        lines.push(`- ${sev}${cl} **${f.title}**${f.file ? ` (${f.file})` : ''}`);
+      }
+    }
+    if (tlr.blindSpots?.length > 0) {
+      const labels = tlr.blindSpots.map((b) => b.label).join(', ');
+      lines.push('', `_未実行のレビュー観点: ${labels}_`);
+    }
   }
 
   return lines.join('\n');
