@@ -23,6 +23,7 @@
   "commands": [
     "./commands/setup-team.md",
     "./commands/review-local.md",
+    "./commands/review-team.md",
     "./commands/challenge.md",
     "./commands/skill.md",
     "./commands/check.md",
