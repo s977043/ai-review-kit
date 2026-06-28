@@ -40,6 +40,7 @@ review 実行 ──finding──▶ feedback 分類（7型） ──▶ 対応�
 | L4  | suppression パターン分析         | 同一 fingerprint が N 回（目安 3 PR）以上 suppress されたら「skill 改善が必要」と判定し、skill-optimizer 診断の起票につなげる                 | P1     |
 | L5  | per-skill FP rate の時系列追跡   | ledger に skill 別 FP rate を追記し、悪化トレンド（例: 2 snapshot 連続で +3pt）でアラートする                                                 | P1     |
 | L6  | rule 昇格の機械検出              | 同種 feedback が 2 回以上発生したクラスを検出し、ルール化候補として提示する（IMPROVEMENT_LOOP Step 9 の自動化）                               | P2     |
+| L7  | 修正PR → feedback 取り込み       | 修正PR / follow-up PR を `fix-pr` trigger として記録し、元PRレビューの `missed_issue` を fixture / routing / reference 改善へ戻す              | P2     |
 
 ### L1: feedback キャプチャのスキーマ案
 
@@ -57,7 +58,7 @@ review 実行 ──finding──▶ feedback 分類（7型） ──▶ 対応�
 
 - 置き場所は `.river/feedback/<YYYY-MM>.jsonl`（suppression / runs と同じ `.river/` 配下の規約に従う）
 - `feedbackType` は既存 taxonomy（accepted / false_positive / missed_issue / not_actionable / duplicate / accepted_risk / unclear）をそのまま使う
-- `trigger` は IMPROVEMENT_LOOP.md の起動条件 4 種（pr-comment / self-review / eval-regression / retrospective）に対応させる
+- `trigger` は IMPROVEMENT_LOOP.md の起動条件（pr-comment / self-review / eval-regression / retrospective / fix-pr）に対応させる
 
 ### L2: 自動変換の責務境界
 
@@ -81,13 +82,41 @@ skill-optimizer（手動診断ツール）は既に存在するため、新規�
 なお現行の `scripts/skills-audit.mjs` は skill メタデータの検証が責務であり、suppression スキャンは含まれません。
 L-3 では skills-audit の拡張ではなく、suppression 分析専用のスクリプト（例: `scripts/suppression-analytics.mjs`）を新設する想定です。
 
+### L7: 修正PRからの skill 改善入力
+
+修正PR / follow-up PR は、レビュー結果に対する明示コメントが無い場合でも「元PRレビューで捕まえられなかった事象」の強い信号になります。
+ただし、修正PRの diff を直接 SKILL.md に追記すると、個別事象に寄った rule が増えるため危険です。River Review では、修正PRをまず `fix-pr` trigger の feedback として記録し、既存の L1 / L2 / L6 に流します。
+
+運用手順:
+
+1. 修正PRの title / body / diff / linked issue から、元PRと失敗内容を確認する。
+2. 失敗内容を `missed_issue` / `not_actionable` / `duplicate` など既存 taxonomy に分類する。
+3. owner skill を推定する。推定できない場合は routing miss として planner / routing 側の改善候補にする。
+4. `river feedback add --trigger fix-pr` で `.river/feedback/*.jsonl` に記録する。
+5. `npm run feedback:apply` で fixture / reference / routing の scaffold を生成する。
+6. `npm run feedback:rules` で同種の見落としが 2 回以上発生していないか確認する。
+7. 反映は必ず PR レビューを通す。自動で SKILL.md / reference / fixture を更新しない。
+
+記録例:
+
+```bash
+npm run river -- feedback add \
+  --type missed_issue \
+  --skill rr-midstream-typescript-strict-001 \
+  --trigger fix-pr \
+  --pr 1234 \
+  --evidence "Fix PR #1234 showed original PR #1200 missed a nullable response edge case."
+```
+
+この設計は、Claude Code Skills のような agent skill 運用で有効な「レビュー漏れの修正PRを食べて改善する」考え方を、River Review の repo-owned / versioned / HITL 前提に合わせて落とし込むものです。
+
 ## 4. pack tier との接続（使用データによる昇格・降格）
 
 skill-pack-design.md の tier（official / community / experimental）は、初期判定が fixture / canary / eval の静的条件です。
 本ループが稼働すると **使用データ** が加わり、tier を双方向へ動かせるようになります。
 
-- **昇格材料**: FP rate の安定（L5）、suppression 密度の低さ（L4）、missed_issue feedback の少なさ（L1）
-- **降格トリガー**: FP rate 悪化トレンド、同一 fingerprint の反復 suppress、eval 回帰の放置
+- **昇格材料**: FP rate の安定（L5）、suppression 密度の低さ（L4）、missed_issue feedback の少なさ（L1 / L7）
+- **降格トリガー**: FP rate 悪化トレンド、同一 fingerprint の反復 suppress、eval 回帰の放置、同種 fix-pr trigger の反復
 
 降格も「機械検知 → Issue 起票 → maintainer 判断」の流れとし、自動降格はしません（誤検知でカタログが暴れるのを防ぐ）。
 
@@ -103,12 +132,13 @@ skill-pack-design.md の tier（official / community / experimental）は、初�
 
 skill-pack-design.md の Phase B〜D と独立して進められるよう、別トラック（Phase L1〜L3）として定義します。
 
-| Phase | 内容                                                               | 変更範囲                           |
-| ----- | ------------------------------------------------------------------ | ---------------------------------- |
-| L-1   | 本設計の合意（本 PR）                                              | docs のみ                          |
-| L-2   | L1（feedback CLI + JSONL）と L2（feedback:apply スクリプト）の実装 | src / scripts / schemas            |
-| L-3   | L3（eval 回帰の自動起票）と L4（suppression 分析）の実装           | scripts / GitHub Actions workflows |
-| L-4   | L5（FP 時系列）・L6（rule 昇格検出）+ pack tier への使用データ接続 | scripts / registry.yaml            |
+| Phase | 内容                                                                                | 変更範囲                           |
+| ----- | ----------------------------------------------------------------------------------- | ---------------------------------- |
+| L-1   | 本設計の合意（本 PR）                                                               | docs のみ                          |
+| L-2   | L1（feedback CLI + JSONL）と L2（feedback:apply スクリプト）の実装                  | src / scripts / schemas            |
+| L-3   | L3（eval 回帰の自動起票）と L4（suppression 分析）の実装                            | scripts / GitHub Actions workflows |
+| L-4   | L5（FP 時系列）・L6（rule 昇格検出）+ pack tier への使用データ接続                  | scripts / registry.yaml            |
+| L-5   | L7（fix-pr trigger）を週次候補抽出や issue 起票へ拡張し、修正PR学習ループを半自動化 | scripts / GitHub Actions workflows |
 
 L-2 以降は `src/` に触れるため、AGENTS.md の「Ask before editing」に従い個別 PR で承認を取ります。
 
@@ -117,3 +147,4 @@ L-2 以降は `src/` に触れるため、AGENTS.md の「Ask before editing」�
 - skill 本文（SKILL.md）の自動書き換え。生成するのは雛形と提案までとし、適用は必ず人間の PR レビューを通す
 - 自動 tier 降格（§4 の通り、検知と起票までを自動化し判断は maintainer が行う）
 - feedback の自動分類（taxonomy への分類は当面レビュー実行者の入力とし、分類の自動推定は L-4 以降の検討事項とする）
+- 修正PRからの元PR推定・owner skill 推定の完全自動化（初期は人間が確認し、将来は候補抽出までに留める）
