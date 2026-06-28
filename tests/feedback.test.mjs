@@ -11,6 +11,7 @@ import {
   feedbackFilePath,
   FeedbackError,
   FEEDBACK_TYPES,
+  FEEDBACK_TRIGGERS,
 } from '../src/lib/feedback.mjs';
 import { applyFeedback } from '../scripts/apply-feedback.mjs';
 import { createTempDirAsync } from './helpers/temp-dir.mjs';
@@ -40,6 +41,19 @@ test('buildFeedbackEntry produces the documented schema', () => {
     evidence: 'strict 設定済みの tsconfig を誤検出',
     pr: 1100,
   });
+});
+
+test('fix-pr is an accepted feedback trigger for post-merge learning', () => {
+  assert.ok(FEEDBACK_TRIGGERS.includes('fix-pr'));
+  const entry = buildFeedbackEntry(
+    entryInput({
+      trigger: 'fix-pr',
+      feedbackType: 'missed_issue',
+      evidence: '修正PRで元PRのレビュー漏れが判明した',
+    })
+  );
+  assert.equal(entry.trigger, 'fix-pr');
+  assert.equal(entry.feedbackType, 'missed_issue');
 });
 
 test('buildFeedbackEntry rejects unknown type, trigger, and bad fingerprint', () => {
