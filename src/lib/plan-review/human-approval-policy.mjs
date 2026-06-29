@@ -4,7 +4,7 @@
  * Pure function — no I/O, no side effects. Detects keywords in plan text or
  * finding text that require mandatory human approval before execution proceeds.
  *
- * Used by the rr-upstream-plan-review-gate-001 skill and scoreReview() via the
+ * Used by the plan-review-gate skill and scoreReview() via the
  * humanApprovalRequired flag.
  *
  * ## Two-tier confidence model (Epic #1171 item1 / #1170 F1)

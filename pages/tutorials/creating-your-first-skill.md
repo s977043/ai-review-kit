@@ -9,11 +9,11 @@ Upstream → Midstream → Downstream のフローに従うシンプルな River
 
 ## 1. スキルメタデータの作成
 
-`skills/` 配下にスキル ID と同名のディレクトリを作成し、その中に `SKILL.md` を置きます（例: `skills/midstream/rr-midstream-hello-skill-001/SKILL.md`）。各スキルを独立したディレクトリに格納することで、フィクスチャや eval 用の兄弟ディレクトリ（`fixtures/`、`eval/` など）を同じ場所に置けます。`/schemas/skill.schema.json` に一致するメタデータを先頭に含めます:
+`skills/` 配下にスキル ID と同名のディレクトリを作成し、その中に `SKILL.md` を置きます（例: `skills/midstream/hello-skill/SKILL.md`）。各スキルを独立したディレクトリに格納することで、フィクスチャや eval 用の兄弟ディレクトリ（`fixtures/`、`eval/` など）を同じ場所に置けます。`/schemas/skill.schema.json` に一致するメタデータを先頭に含めます:
 
 ```yaml
 ---
-id: rr-midstream-hello-skill-001
+id: hello-skill
 name: Hello World Skill
 description: Markdown 内の TODO コメントを検出する
 category: midstream

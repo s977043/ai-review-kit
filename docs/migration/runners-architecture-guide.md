@@ -279,7 +279,7 @@ Evaluate and validate skill definitions:
 
 ```bash
 # Evaluate a specific skill
-river eval skills/rr-midstream-security-basic-001/skill.yaml
+river eval skills/security-basic/skill.yaml
 
 # Evaluate all skills
 river eval --all
@@ -297,7 +297,7 @@ Create a new skill from template:
 river create skill --interactive
 
 # Non-interactive
-river create skill rr-midstream-security-001 \
+river create skill security \
   --phase midstream \
   --apply-to "src/**/*.ts" \
   --tags "security,authentication"

@@ -30,7 +30,7 @@ test('loads YAML skill with nested metadata and instruction', async () => {
     const skillPath = path.join(tmpDir, 'nested.yaml');
     const content = `
 metadata:
-  id: rr-test-nested-001
+  id: nested
   name: Nested Skill
   description: Testing nested structure
   category: core
@@ -42,7 +42,7 @@ instruction: "Do the thing"
 
     const loaded = await loadSkillFile(skillPath, { validator });
 
-    assert.equal(loaded.metadata.id, 'rr-test-nested-001');
+    assert.equal(loaded.metadata.id, 'nested');
     assert.equal(loaded.metadata.name, 'Nested Skill');
     assert.deepEqual(loaded.metadata.category, 'core');
     assert.deepEqual(loaded.metadata.phase, ['upstream', 'midstream', 'downstream']);
@@ -57,7 +57,7 @@ test('loads YAML skill with flat structure and instruction', async () => {
     const validator = await buildValidator();
     const skillPath = path.join(tmpDir, 'flat.yaml');
     const content = `
-id: rr-test-flat-001
+id: flat
 name: Flat Skill
 description: Testing flat structure
 category: upstream
@@ -69,7 +69,7 @@ instruction: "Check docs"
 
     const loaded = await loadSkillFile(skillPath, { validator });
 
-    assert.equal(loaded.metadata.id, 'rr-test-flat-001');
+    assert.equal(loaded.metadata.id, 'flat');
     assert.equal(loaded.metadata.category, 'upstream');
     assert.equal(loaded.metadata.phase, 'upstream');
     assert.deepEqual(loaded.metadata.applyTo, ['docs/*.md']);
@@ -82,7 +82,7 @@ test('loads YAML skill with trigger container', async () => {
     const validator = await buildValidator();
     const skillPath = path.join(tmpDir, 'trigger.yaml');
     const content = `
-id: rr-test-trigger-001
+id: trigger
 name: Trigger YAML Skill
 description: Trigger container in YAML
 category: downstream
@@ -107,7 +107,7 @@ test('trigger does not override top-level phase/applyTo in YAML', async () => {
     const validator = await buildValidator();
     const skillPath = path.join(tmpDir, 'trigger-precedence.yaml');
     const content = `
-id: rr-test-trigger-002
+id: trigger
 name: Trigger Precedence YAML Skill
 description: Precedence favors top-level values
 category: midstream
@@ -136,7 +136,7 @@ test('loads YAML skill with instruction nested inside metadata', async () => {
     const skillPath = path.join(tmpDir, 'nested-instruction.yaml');
     const content = `
 metadata:
-  id: rr-test-nested-002
+  id: nested
   name: Nested Instruction Skill
   description: Instruction lives under metadata
   category: midstream
@@ -148,7 +148,7 @@ metadata:
 
     const loaded = await loadSkillFile(skillPath, { validator });
 
-    assert.equal(loaded.metadata.id, 'rr-test-nested-002');
+    assert.equal(loaded.metadata.id, 'nested');
     assert.equal(loaded.body, 'Use the nested instruction');
   });
 });

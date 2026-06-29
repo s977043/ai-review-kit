@@ -258,17 +258,17 @@ The `prompt` and `debug.promptPreview` flowing into debug output / artifacts / t
 
 ## Adding cross-context skills
 
-Cross-context skills bundle patterns that are hard to detect from a single changed file. The following are already shipped under `skills/midstream/rr-midstream-*-001/` (completed via [Issue #654](https://github.com/s977043/river-review/issues/654)).
+Cross-context skills bundle patterns that are hard to detect from a single changed file. The following are already shipped under `skills/midstream/*/` (completed via [Issue #654](https://github.com/s977043/river-review/issues/654)).
 
-- `rr-midstream-i18n-unused-key-001` — translation key removal vs. locale entry consistency
-- `rr-midstream-normalization-consistency-001` — normalization drift in domain values (ID format, lowercasing, …)
-- `rr-midstream-loading-state-001` — missed transitions in early return / loading state
-- `rr-midstream-nullability-contract-001` — broken null/undefined contracts
-- `rr-midstream-api-compatibility-001` — API compatibility breaks and missing tests
+- `i18n-unused-key` — translation key removal vs. locale entry consistency
+- `normalization-consistency` — normalization drift in domain values (ID format, lowercasing, …)
+- `loading-state` — missed transitions in early return / loading state
+- `nullability-contract` — broken null/undefined contracts
+- `api-compatibility` — API compatibility breaks and missing tests
 
 For the full procedure, see the [skill authoring guide](./write-a-skill.en.md). Key points:
 
-1. Create `skills/midstream/rr-midstream-<your-skill>-001/SKILL.md` (YAML frontmatter + body).
+1. Create `skills/midstream/<your-skill>/SKILL.md` (YAML frontmatter + body).
 2. Include `fullFile` in `inputContext` in addition to `diff` (this passes collector output to the LLM).
 3. Place fixtures at `fixtures/01-should-detect.md` / `02-should-not-detect.md`.
 4. Validate the schema with `npm run skills:validate`.

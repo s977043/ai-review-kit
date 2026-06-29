@@ -13,7 +13,7 @@ River Review では、各フェーズ向けのチェックを「スキル」と�
 
 ```markdown
 ---
-id: rr-upstream-architecture-001
+id: architecture
 name: アーキテクチャ整合性チェック
 description: ADR と設計ガイドに沿っているかを上流で確認する。
 category: upstream

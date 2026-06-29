@@ -4,7 +4,7 @@ import { SkillYamlSchema } from '../src/lib/skillYamlSchema.mjs';
 
 test('validates a minimal valid skill.yaml', () => {
   const validSkill = {
-    id: 'rr-midstream-test-001',
+    id: 'test',
     version: '0.1.0',
     name: 'Test Skill',
     description: 'A test skill for validation',
@@ -21,7 +21,7 @@ test('validates a minimal valid skill.yaml', () => {
 
 test('validates a full-featured skill.yaml', () => {
   const fullSkill = {
-    id: 'rr-upstream-adr-quality-001',
+    id: 'adr-quality',
     version: '1.2.3',
     name: 'ADR Decision Quality',
     description: 'Ensure ADRs capture context, decision, alternatives, and tradeoffs',
@@ -51,7 +51,7 @@ test('validates a full-featured skill.yaml', () => {
 
 test('validates skill with phase array', () => {
   const skillWithPhaseArray = {
-    id: 'rr-multi-phase-001',
+    id: 'phase',
     version: '0.1.0',
     name: 'Multi-Phase Skill',
     description: 'A skill that applies to multiple phases',
@@ -66,7 +66,7 @@ test('validates skill with phase array', () => {
 
 test('validates skill with trigger object', () => {
   const skillWithTrigger = {
-    id: 'rr-trigger-test-001',
+    id: 'test',
     version: '0.1.0',
     name: 'Trigger Test Skill',
     description: 'A skill using trigger object',
@@ -83,7 +83,7 @@ test('validates skill with trigger object', () => {
 
 test('validates skill with custom dependency', () => {
   const skillWithCustomDep = {
-    id: 'rr-custom-dep-001',
+    id: 'dep',
     version: '0.1.0',
     name: 'Custom Dependency Skill',
     description: 'A skill with custom dependency',
@@ -109,7 +109,7 @@ test('rejects skill without required fields', () => {
 
 test('rejects skill with invalid version format', () => {
   const invalidSkill = {
-    id: 'rr-invalid-version-001',
+    id: 'version',
     version: '1.0', // missing patch version
     name: 'Invalid Version Skill',
     description: 'A skill with invalid version',
@@ -124,7 +124,7 @@ test('rejects skill with invalid version format', () => {
 
 test('rejects skill with neither top-level nor trigger conditions', () => {
   const invalidSkill = {
-    id: 'rr-no-trigger-001',
+    id: 'trigger',
     version: '0.1.0',
     name: 'No Trigger Skill',
     description: 'A skill without trigger conditions',
@@ -137,7 +137,7 @@ test('rejects skill with neither top-level nor trigger conditions', () => {
 
 test('rejects skill with invalid phase value', () => {
   const invalidSkill = {
-    id: 'rr-invalid-phase-001',
+    id: 'phase',
     version: '0.1.0',
     name: 'Invalid Phase Skill',
     description: 'A skill with invalid phase',
@@ -152,7 +152,7 @@ test('rejects skill with invalid phase value', () => {
 
 test('rejects skill with invalid severity value', () => {
   const invalidSkill = {
-    id: 'rr-invalid-severity-001',
+    id: 'severity',
     version: '0.1.0',
     name: 'Invalid Severity Skill',
     description: 'A skill with invalid severity',
@@ -168,7 +168,7 @@ test('rejects skill with invalid severity value', () => {
 
 test('rejects skill with invalid modelHint value', () => {
   const invalidSkill = {
-    id: 'rr-invalid-model-001',
+    id: 'model',
     version: '0.1.0',
     name: 'Invalid Model Skill',
     description: 'A skill with invalid modelHint',
@@ -184,7 +184,7 @@ test('rejects skill with invalid modelHint value', () => {
 
 test('rejects skill with invalid dependency', () => {
   const invalidSkill = {
-    id: 'rr-invalid-dep-001',
+    id: 'dep',
     version: '0.1.0',
     name: 'Invalid Dependency Skill',
     description: 'A skill with invalid dependency',
@@ -200,7 +200,7 @@ test('rejects skill with invalid dependency', () => {
 
 test('rejects skill with empty custom dependency', () => {
   const invalidSkill = {
-    id: 'rr-empty-custom-dep-001',
+    id: 'custom-dep',
     version: '0.1.0',
     name: 'Empty Custom Dependency Skill',
     description: 'A skill with empty custom dependency',

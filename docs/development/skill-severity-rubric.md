@@ -25,7 +25,7 @@ A skill's `severity` is decided by the **worst case finding it is allowed to emi
 2. **自動的な検知精度が高い** （high confidence でないと critical 出力は鬱陶しい）
 3. 検知後の修正が **mandatory**（"discuss later" の余地がない）
 
-例: `rr-upstream-trust-boundaries-authz-001`（認可境界の崩れ → 不正アクセス）
+例: `trust-boundaries-authz`（認可境界の崩れ → 不正アクセス）
 
 ### `major`—P2
 
@@ -102,10 +102,10 @@ A skill's `severity` is decided by the **worst case finding it is allowed to emi
 
 本書に基づいて完了した再分類:
 
-| skill                                                      | from  | to    | PR   | rubric criterion                                                                                                       |
-| ---------------------------------------------------------- | ----- | ----- | ---- | ---------------------------------------------------------------------------------------------------------------------- |
-| `rr-midstream-normalization-consistency-001`               | major | minor | #777 | minor の "naming, formatting, dead code, 軽微な inconsistency" に該当。normalization drift は merge blocker ではない。 |
-| `rr-upstream-create-plan-001`（PlanGate へ移管済み・削除） | major | minor | #781 | minor の "教育・案内目的のスキル" に該当。outputKind が `[summary, actions, questions]` で advisory artifacts のみ。   |
+| skill                                      | from  | to    | PR   | rubric criterion                                                                                                       |
+| ------------------------------------------ | ----- | ----- | ---- | ---------------------------------------------------------------------------------------------------------------------- |
+| `normalization-consistency`                | major | minor | #777 | minor の "naming, formatting, dead code, 軽微な inconsistency" に該当。normalization drift は merge blocker ではない。 |
+| `create-plan`（PlanGate へ移管済み・削除） | major | minor | #781 | minor の "教育・案内目的のスキル" に該当。outputKind が `[summary, actions, questions]` で advisory artifacts のみ。   |
 
 ### 共通パターン（観察）
 
@@ -117,10 +117,10 @@ A skill's `severity` is decided by the **worst case finding it is allowed to emi
 
 以下は安易な major → minor を行わない:
 
-- セキュリティ系（`rr-midstream-security-basic-001`, `rr-upstream-trust-boundaries-authz-001`）— 検知対象が直接的な脆弱性
-- API 互換性破壊系（`rr-midstream-api-compatibility-001`, `rr-upstream-api-versioning-compat-001`）— 既存クライアントを壊す可能性
-- 失敗モード / 観測性系（`rr-upstream-failure-modes-observability-001`, `rr-midstream-logging-observability-001`）— 本番運用での復旧能力に直結
-- 実装ガード系（`rr-midstream-typescript-strict-001`, `rr-midstream-nullability-contract-001`）— type-unsafety は実害につながる
+- セキュリティ系（`security-basic`, `trust-boundaries-authz`）— 検知対象が直接的な脆弱性
+- API 互換性破壊系（`api-compatibility`, `api-versioning-compat`）— 既存クライアントを壊す可能性
+- 失敗モード / 観測性系（`failure-modes-observability`, `logging-observability`）— 本番運用での復旧能力に直結
+- 実装ガード系（`typescript-strict`, `nullability-contract`）— type-unsafety は実害につながる
 
 これらは検知される問題そのものが major 級なので severity も major のままが妥当。
 

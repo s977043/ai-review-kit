@@ -48,7 +48,7 @@ function makeFixture() {
     phase: 'midstream',
     status: 'ok',
     plan: {
-      selectedSkills: [{ id: 'rr-midstream-security-basic-001', name: 'Basic Security Review' }],
+      selectedSkills: [{ id: 'security-basic', name: 'Basic Security Review' }],
       skippedSkills: [],
       plannerMode: 'off',
     },
@@ -87,7 +87,7 @@ describe('#878 A2-3 — `river review exec --plan` replay execution', () => {
 
       // Replay does NOT re-plan: the selectedSkills come verbatim from the source.
       assert.equal(artifact.plan.selectedSkills.length, 1);
-      assert.equal(artifact.plan.selectedSkills[0].id, 'rr-midstream-security-basic-001');
+      assert.equal(artifact.plan.selectedSkills[0].id, 'security-basic');
 
       // Replay EXECUTES (the A2-3 contract): generateReview ran the skill.
       assert.ok(artifact.debug?.execution, 'debug.execution must be present');

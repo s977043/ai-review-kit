@@ -23,7 +23,7 @@ These three skill types are allowed to keep `'**/*'` even though it matches ever
 
 - **Sample / hello skills**—already excluded from planner-dataset eval by tag (`'sample'`, `'hello'`).
 - **Process skills**—already excluded from planner-dataset eval by tag (`'process'`, `'policy'`, `'routing'`).
-- **Meta-review / conformance guards** that are intentionally universal (e.g. `rr-upstream-plangate-exec-conformance-001`, `rr-midstream-review-automation-boundary-001`). These must declare a Pre-execution Gate in `SKILL.md` that filters to the relevant subset at runtime, since `applyTo` cannot.
+- **Meta-review / conformance guards** that are intentionally universal (e.g. `plangate-exec-conformance`, `review-automation-boundary`). These must declare a Pre-execution Gate in `SKILL.md` that filters to the relevant subset at runtime, since `applyTo` cannot.
 
 Any skill keeping `'**/*'` must document the rationale in its `SKILL.md` body or a `Pre-execution Gate` section.
 

@@ -5,7 +5,7 @@ title: CLI Spec — `river review verify`
 `river review verify` consumes an already-produced review (`review-self` and/or `review-external`) together with the original upstream artifacts (`plan` / `diff` / `test-cases`, etc.) and runs the verify-family skills to perform a **W-check (audit of the review itself)**. It re-audits existing review findings for omissions, false positives, and hallucinations, and emits META findings (comments on the quality of the reviewed review) as a [Review Artifact](./review-artifact.en.md). This document fixes the command's arguments, inputs, outputs, and exit codes as a stable contract that CI can rely on.
 
 > Related issues: #575 (Task) / #509 (Capability) / #507 (Epic)
-> Related specs: `river review plan` (#517) / `river review exec` (#518) / `rr-upstream-plangate-verification-audit-001` (skill spec forthcoming in #577)
+> Related specs: `river review plan` (#517) / `river review exec` (#518) / `plangate-verification-audit` (skill spec forthcoming in #577)
 
 ## Responsibility split (plan / exec / verify)
 
@@ -86,7 +86,7 @@ Resolution priority (CLI > config file > directory detection) follows the contra
 
 > Note (#802 Phase 3, revised 2026-05-18): the output contract is unified across `plan`/`exec`/`verify` to `--output <format>` = format, `--output-file <path>` = destination (decision in the [PlanGate CLI Stabilization Roadmap](./plangate-cli-roadmap.en.md)). This matches the global `--output <mode>` (`river run`). `--format` is accepted as a review-namespace compatibility alias, but the canonical flag is `--output`; if `--output` and `--format` are both given and disagree, it is a configuration error (exit 3). The old spec's `--output <path>` (destination) is withdrawn.
 >
-> Implementation status (#802 Phase 3 PR-3, 2026-05-18): only the CLI argument / output-contract parser & dispatch foundation is implemented so far. `river review verify` accepts `--plan` / `--artifact <id=path>` (`review-self` / `review-external`, etc.) / `--output` / `--format` / `--output-file` and validates the output contract, but verify skill execution and artifact reading are not implemented and it returns exit 3. This parser contract depends only on the [Artifact Input Contract](./artifact-input-contract.en.md) artifact IDs and **does not depend on PlanGate**. The verify skill layer (`rr-upstream-plangate-verification-*`) is a separate layer, independent of the parser contract.
+> Implementation status (#802 Phase 3 PR-3, 2026-05-18): only the CLI argument / output-contract parser & dispatch foundation is implemented so far. `river review verify` accepts `--plan` / `--artifact <id=path>` (`review-self` / `review-external`, etc.) / `--output` / `--format` / `--output-file` and validates the output contract, but verify skill execution and artifact reading are not implemented and it returns exit 3. This parser contract depends only on the [Artifact Input Contract](./artifact-input-contract.en.md) artifact IDs and **does not depend on PlanGate**. The verify skill layer (`plangate-verification-*`) is a separate layer, independent of the parser contract.
 
 The META finding severity vocabulary follows [`schemas/output.schema.json`](../../schemas/output.schema.json) and the severity mapping in `.claude/rules/review-core.md` (`critical` / `major` / `minor` / `info`). Unknown severity values default to `major` as a fail-safe. As with `exec`, the CLI does not perform fail / warn gating based on severity; CI should read the Review Artifact `findings` and gate there (see [Stable Interfaces](./stable-interfaces.en.md)).
 
@@ -94,7 +94,7 @@ The META finding severity vocabulary follows [`schemas/output.schema.json`](../.
 
 `verify` restricts execution to **verify-family skills**. A skill is considered verify-family when either heuristic matches:
 
-- `id` starts with `rr-upstream-plangate-verification-` (e.g. `rr-upstream-plangate-verification-audit-001`; the skill spec is forthcoming in #577).
+- `id` starts with `plangate-verification-` (e.g. `plangate-verification-audit`; the skill spec is forthcoming in #577).
 - The skill metadata `outputKind` includes `review-audit`.
 
 Non-verify skills are excluded from `plan.selectedSkills` and recorded in `plan.skippedSkills` with `reason: "not-verify-skill"`. This lets CI and Riverbed Memory downstream distinguish a `verify` audit run from an `exec` review run by reading the Review Artifact alone.

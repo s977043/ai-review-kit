@@ -10,9 +10,9 @@
 # ============================================================
 
 # Unique identifier for this skill
-# Format: rr-<phase>-<category>-<number>
-# Example: rr-midstream-code-quality-001
-id: 'rr-<phase>-<category>-<number>'
+# Format: <descriptive-name> (kebab-case, no prefix)
+# Example: code-quality, security-basic, api-design
+id: '<skill-id>'
 
 # Semantic version (x.y.z)
 # Start with 0.1.0 for new skills

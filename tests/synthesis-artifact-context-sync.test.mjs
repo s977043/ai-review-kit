@@ -1,6 +1,6 @@
 // Contract test for #911 Phase 3 slice A+D (per Codex slice judgment).
 //
-// The synthesis skill (`rr-midstream-independent-review-synthesis-001`) declares
+// The synthesis skill (`independent-review-synthesis`) declares
 // `inputContext: [reviewSelf, reviewExternal, findingsPool]` (camelCase, in
 // `schemas/skill.schema.json` enum). The artifact resolver
 // (`src/config/artifact-resolver.mjs` `CWD_DEFAULTS`) keys files by kebab-case
@@ -63,10 +63,7 @@ describe('synthesis artifact ↔ inputContext sync (#911 Phase 3 A+D)', () => {
 
   test('the synthesis skill itself declares the three new inputContexts', () => {
     const skillMd = readFileSync(
-      resolve(
-        __dirname,
-        '../skills/midstream/community/rr-midstream-independent-review-synthesis-001/SKILL.md'
-      ),
+      resolve(__dirname, '../skills/midstream/independent-review-synthesis/SKILL.md'),
       'utf8'
     );
     for (const [camel] of SYNTHESIS_PAIRS) {

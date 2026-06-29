@@ -28,11 +28,11 @@ this doc records what to reuse, what is a genuine gap, and what not to adopt.**
 
 | #976 review target     | Status  | Existing implementation                                                                                                         |
 | ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Requirements Review    | covered | `rr-upstream-requirements-acceptance-001` (skill)                                                                               |
-| Design Review          | covered | `rr-upstream-architecture-validation-plan-001`, `rr-upstream-architecture-boundaries-001`                                       |
-| Plan Review            | covered | `rr-upstream-plangate-plan-integrity-001` (plan/pbi-input/todo/test-cases integrity)                                            |
-| Diff Review            | covered | `river run` / `river review exec` + midstream skills; conformance via `rr-upstream-plangate-exec-conformance-001`               |
-| Evidence/Report Review | partial | `rr-upstream-plangate-verification-audit-001` (W-check / META findings); `verify` gate runtime is a stub                        |
+| Requirements Review    | covered | `requirements-acceptance` (skill)                                                                                               |
+| Design Review          | covered | `architecture-validation-plan`, `architecture-boundaries`                                                                       |
+| Plan Review            | covered | `plangate-plan-integrity` (plan/pbi-input/todo/test-cases integrity)                                                            |
+| Diff Review            | covered | `river run` / `river review exec` + midstream skills; conformance via `plangate-exec-conformance`                               |
+| Evidence/Report Review | partial | `plangate-verification-audit` (W-check / META findings); `verify` gate runtime is a stub                                        |
 | GO / NO-GO verdict     | covered | `deriveVerdict` (`auto-approve` / `human-review-recommended` / `human-review-required`)                                         |
 | Input contract         | covered | artifact-resolver: `pbi-input` / `plan` / `todo` / `test-cases` / `adr` / `diff` / `review-self` / `review-external`            |
 | Concept docs           | covered | `pages/explanation/review-scope.md` documents pre-execution Requirements/Design/Plan review and the River Review↔PlanGate split |
@@ -60,9 +60,9 @@ Added to `skills/registry.yaml`:
 pre-exec:
   description: 'Pre-execution review gate: requirements / design / plan checks before implementation'
   skills:
-    - rr-upstream-requirements-acceptance-001
-    - rr-upstream-architecture-validation-plan-001
-    - rr-upstream-plangate-plan-integrity-001
+    - requirements-acceptance
+    - architecture-validation-plan
+    - plangate-plan-integrity
 ```
 
 Usage (PoC workflow—the one workflow #976 asks to pick first):
@@ -104,8 +104,8 @@ risk-map), per the no-new-routing-config principle.
 2. **`--output markdown` rendering**—only JSON today; needed for PR comments.
 3. **Per-gate fail/warn thresholds**—`--fail-on` / `--warn-on` are specced
    but not wired; needed to turn the advisory verdict into a CI gate.
-4. **Registry drift**—`rr-upstream-plangate-exec-conformance-001` and
-   `rr-upstream-plangate-verification-audit-001` exist on disk but are missing
+4. **Registry drift**—`plangate-exec-conformance` and
+   `plangate-verification-audit` exist on disk but are missing
    from the `skills:` catalog in `registry.yaml`. Catalog them in a follow-up.
 
 These are independent, additive, and each splittable into its own issue.

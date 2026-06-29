@@ -73,7 +73,7 @@ export async function createCommand(skillName, options) {
 
     if (options.interactive || !id) {
       id = await input({
-        message: 'Skill ID (e.g., rr-midstream-code-quality-001):',
+        message: 'Skill ID (e.g., code-quality):',
         default: id,
         validate: validateSkillId,
       });
@@ -170,7 +170,7 @@ export async function createCommand(skillName, options) {
       .filter(Boolean);
 
     const replacements = {
-      'rr-<phase>-<category>-<number>': id,
+      '<skill-id>': id,
       '<Skill Name>': name,
       '<What this skill does>': description,
       '"0.1.0"': `"${version}"`,
