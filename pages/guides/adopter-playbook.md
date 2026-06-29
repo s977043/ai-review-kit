@@ -50,7 +50,7 @@ severity と失敗条件の対応（CLI / runner 既定）:
 導入後の運用では、レビュー結果を次の単位で資産化すると陳腐化を防げます。
 
 - **accepted（有用だった指摘）**: 繰り返し出したい観点なら skill として明文化する（[スキルを追加する](./add-new-skill.md)）。
-- **false positive（誤検出）**: 決定論で判定できる誤検出は skill の fixture（false-positive guard ケース）として固定し、回帰を防ぐ。プロジェクト固有の抑制は [suppression memory](./repo-wide-review.md#false-positive-suppression-memory)（`rr-midstream-suppression-feedback-001` の運用）で扱う。
+- **false positive（誤検出）**: 決定論で判定できる誤検出は skill の fixture（false-positive guard ケース）として固定し、回帰を防ぐ。プロジェクト固有の抑制は [suppression memory](./repo-wide-review.md#false-positive-suppression-memory)（`suppression-feedback` の運用）で扱う。
 - **missed issue（見逃し）**: 拾えなかった観点は新しい fixture（happy path）と skill 観点に落とす。
 
 この昇格ループにより、AI レビューの判断を「再現可能な検査」へコード化していきます。判断単位の詳細は [スキルの選択と組み合わせ](./choose-skills.md) と [スキル作成ガイド](./write-a-skill.md) を参照してください。

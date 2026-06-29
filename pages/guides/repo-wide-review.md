@@ -258,17 +258,17 @@ debug 出力 / artifact / dashboard へ流れる `prompt` と `debug.promptPrevi
 
 ## cross-context skills の追加方法
 
-cross-context skills は、変更ファイル単独では検出しづらいパターンを集めたスキル群です。`skills/midstream/rr-midstream-*-001/` 配下に既に以下が同梱されています（[Issue #654](https://github.com/s977043/river-review/issues/654) で完了）。
+cross-context skills は、変更ファイル単独では検出しづらいパターンを集めたスキル群です。`skills/midstream/*/` 配下に既に以下が同梱されています（[Issue #654](https://github.com/s977043/river-review/issues/654) で完了）。
 
-- `rr-midstream-i18n-unused-key-001` — 翻訳キーの削除と locale エントリの整合
-- `rr-midstream-normalization-consistency-001` — ドメイン正規化（ID 形式、小文字化など）の不揃い
-- `rr-midstream-loading-state-001` — early return / loading state の遷移漏れ
-- `rr-midstream-nullability-contract-001` — null/undefined 契約の崩れ
-- `rr-midstream-api-compatibility-001` — API 互換性破壊と対応テスト欠落
+- `i18n-unused-key` — 翻訳キーの削除と locale エントリの整合
+- `normalization-consistency` — ドメイン正規化（ID 形式、小文字化など）の不揃い
+- `loading-state` — early return / loading state の遷移漏れ
+- `nullability-contract` — null/undefined 契約の崩れ
+- `api-compatibility` — API 互換性破壊と対応テスト欠落
 
 新しい cross-context skill を追加する手順は [スキル作成ガイド](./write-a-skill.md) を参照してください。要点だけ抜粋すると:
 
-1. `skills/midstream/rr-midstream-<your-skill>-001/SKILL.md` を作る（YAML frontmatter + 本文）。
+1. `skills/midstream/<your-skill>/SKILL.md` を作る（YAML frontmatter + 本文）。
 2. `inputContext` に `diff` だけでなく `fullFile` を含める（含めると collector の出力が LLM へ渡る）
 3. fixture を `fixtures/01-should-detect.md` / `02-should-not-detect.md` に置く
 4. `npm run skills:validate` で schema を検証する

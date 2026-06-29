@@ -6,7 +6,7 @@ River Review を最小構成で動かすための流れです。River Review は
 
    ```yaml
    ---
-   id: rr-midstream-my-check-001
+   id: my-check
    name: My Check
    description: サンプルのコード品質チェック
    category: midstream
@@ -20,7 +20,7 @@ River Review を最小構成で動かすための流れです。River Review は
    ---
    ```
 
-   ファイルは `skills/midstream/rr-midstream-my-check-001.md` のように配置する。必須フィールドの詳細は `schemas/skill.schema.json` を、フェーズの意味は [上流・中流・下流フェーズ](../explanation/upstream-midstream-downstream.md) を参照すること。作成手順を順を追って確認したい場合は [はじめてのスキル作成](../tutorials/creating-your-first-skill.md) を参照すること。
+   ファイルは `skills/midstream/my-check.md` のように配置する。必須フィールドの詳細は `schemas/skill.schema.json` を、フェーズの意味は [上流・中流・下流フェーズ](../explanation/upstream-midstream-downstream.md) を参照すること。作成手順を順を追って確認したい場合は [はじめてのスキル作成](../tutorials/creating-your-first-skill.md) を参照すること。
 
 2. `.github/workflows/river-review.yml` などに GitHub Actions ワークフローを追加する（詳細は [GitHub Actions ガイド](./github-actions.md) を参照）。
 3. 認証情報は、GitHub Action では LLM API キー（`OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` のいずれか）をリポジトリ Secrets に設定する。追加のトークンが必要になるのは、独自の連携や拡張を行う場合のみ。なお **LLM キーが要るのはこのヘッドレス GitHub Action（や standalone CLI）だけ**で、Claude Code / Cursor 等の **AI エージェントがスキルを適用する通常利用ではキーは不要**（[River Review とは § 実行モデル](../explanation/what-is-river-review.md) を参照）。

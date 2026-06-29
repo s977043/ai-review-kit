@@ -11,7 +11,7 @@ test('buildHeuristicComments detects hardcoded secrets for security skill', () =
     'utf8'
   );
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -27,7 +27,7 @@ test('buildHeuristicComments is quiet when security skill is not selected', () =
     'utf8'
   );
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-typescript-strict-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'typescript-strict' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -45,7 +45,7 @@ index 1111111..2222222 100644
  }
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   const evalC = comments.find((c) => c.kind === 'dangerous-eval');
   assert.ok(evalC, 'expected a dangerous-eval finding');
@@ -74,7 +74,7 @@ test('buildHeuristicComments flags document.write and string-arg setTimeout (#da
  const a = 1;
 +setTimeout(() => doStuff(), 100);
 `;
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const dw = buildHeuristicComments({ diff: { files: parseUnifiedDiff(docWrite).files }, plan });
   const st = buildHeuristicComments({ diff: { files: parseUnifiedDiff(strTimer).files }, plan });
   const safe = buildHeuristicComments({ diff: { files: parseUnifiedDiff(safeTimer).files }, plan });
@@ -95,7 +95,7 @@ test('buildHeuristicComments flags document.writeln (#1085 review)', () => {
 +document.writeln(userHtml);
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.ok(comments.find((c) => c.kind === 'dangerous-eval'));
 });
@@ -111,7 +111,7 @@ test('buildHeuristicComments still flags eval after a // inside a string (#1085 
 +const u = "http://x"; eval(payload);
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.ok(comments.find((c) => c.kind === 'dangerous-eval'));
 });
@@ -127,7 +127,7 @@ index 1111111..2222222 100644
  });
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.equal(
     comments.find((c) => c.kind === 'dangerous-eval'),
@@ -146,7 +146,7 @@ index 1111111..2222222 100644
  }
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-logging-observability-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'logging-observability' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   const dbg = comments.find((c) => c.kind === 'debugger-leftover');
   assert.ok(dbg, 'expected a debugger-leftover finding');
@@ -164,7 +164,7 @@ index 1111111..2222222 100644
  }
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-logging-observability-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'logging-observability' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.equal(
     comments.find((c) => c.kind === 'debugger-leftover'),
@@ -183,7 +183,7 @@ index 1111111..2222222 100644
  });
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   const tls = comments.find((c) => c.kind === 'insecure-tls');
   assert.ok(tls, 'expected an insecure-tls finding');
@@ -202,7 +202,7 @@ index 1111111..2222222 100644
 +>>>>>>> feature
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-logging-observability-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'logging-observability' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.ok(comments.find((c) => c.kind === 'merge-conflict'));
 });
@@ -216,7 +216,7 @@ test('buildHeuristicComments detects weak hash (md5/sha1) for security skill (no
 +const h = crypto.createHash('md5').update(x).digest('hex');
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.ok(comments.find((c) => c.kind === 'weak-hash'));
 });
@@ -236,7 +236,7 @@ test('buildHeuristicComments detects command injection via template literal (no 
  import { execFile } from 'child_process';
 +execFile('ls', [userInput]);
 `;
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const injComments = buildHeuristicComments({
     diff: { files: parseUnifiedDiff(inj).files },
     plan,
@@ -261,7 +261,7 @@ test('buildHeuristicComments does not flag weak hash in a trailing comment (#108
 +const h = strong(); // do not use createHash('md5')
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.equal(
     comments.find((c) => c.kind === 'weak-hash'),
@@ -278,7 +278,7 @@ test('buildHeuristicComments does not flag regex.exec as command injection (#108
 +const m = re.exec(\`value \${userInput}\`);
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.equal(
     comments.find((c) => c.kind === 'command-injection'),
@@ -298,7 +298,7 @@ index 1111111..2222222 100644
 +xcontext('group disabled', () => {});
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-downstream-test-existence-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'test-existence' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.ok(comments.find((c) => c.kind === 'disabled-test'));
 });
@@ -313,7 +313,7 @@ index 1111111..2222222 100644
 +||||||| base
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-logging-observability-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'logging-observability' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.ok(comments.find((c) => c.kind === 'merge-conflict'));
 });
@@ -333,7 +333,7 @@ test('buildHeuristicComments detects @ts-ignore but not @ts-expect-error (no LLM
  const a = 1;
 +// @ts-expect-error reason
 `;
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-typescript-strict-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'typescript-strict' } }] };
   const ignoreComments = buildHeuristicComments({
     diff: { files: parseUnifiedDiff(ignore).files },
     plan,
@@ -360,7 +360,7 @@ index 1111111..2222222 100644
  }
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-logging-observability-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'logging-observability' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.equal(
     comments.find((c) => c.kind === 'debugger-leftover'),
@@ -383,7 +383,7 @@ test('buildHeuristicComments flags NODE_TLS_REJECT_UNAUTHORIZED=0 but not =1 (#1
  const a = 1;
 +process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
 `;
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const insecureComments = buildHeuristicComments({
     diff: { files: parseUnifiedDiff(insecure).files },
     plan,
@@ -410,7 +410,7 @@ index 1111111..2222222 100644
  }
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.equal(
     comments.find((c) => c.kind === 'dangerous-eval'),
@@ -428,7 +428,7 @@ index 1111111..2222222 100644
 +// test.only('focused', () => {});
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-downstream-test-existence-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'test-existence' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.equal(
     comments.find((c) => c.kind === 'focused-test'),
@@ -446,7 +446,7 @@ index 1111111..2222222 100644
 +test.only('focused', () => {});
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-downstream-test-existence-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'test-existence' } }] };
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   const focused = comments.find((c) => c.kind === 'focused-test');
   assert.ok(focused, 'expected a focused-test finding');
@@ -465,7 +465,7 @@ index 1111111..2222222 100644
  };
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -486,7 +486,7 @@ index 1111111..2222222 100644
 +export const API_KEY = 'sk-1234567890abcdef1234567890abcdef';
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -505,7 +505,7 @@ index 1111111..2222222 100644
 +export const TOKEN = import.meta.env.VITE_TOKEN;
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -522,7 +522,7 @@ index 1111111..2222222 100644
 +export const API_TOKEN = 'short';
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -541,7 +541,7 @@ index 1111111..2222222 100644
 +export const TOKEN_4 = 'DUMMY_TOKEN_456';
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -560,7 +560,7 @@ index 1111111..2222222 100644
  };
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -574,7 +574,7 @@ test('buildHeuristicComments detects silent catch for observability skill', () =
     'utf8'
   );
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-logging-observability-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'logging-observability' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -590,7 +590,7 @@ test('buildHeuristicComments detects missing tests for downstream test skills', 
     'utf8'
   );
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-downstream-test-existence-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'test-existence' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -613,7 +613,7 @@ index 1111111..2222222 100644
 +    branches: [main]
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -634,7 +634,7 @@ index 1111111..2222222 100644
 +on: [push, pull_request_target]
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -655,7 +655,7 @@ index 1111111..2222222 100644
      steps:
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -676,7 +676,7 @@ index 1111111..2222222 100644
 +      - run: echo $\{\{ secrets.API_KEY \}\}
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -697,7 +697,7 @@ index 1111111..2222222 100644
 +      - run: echo "$\{\{ github.event.issue.title \}\}"
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 
@@ -717,7 +717,7 @@ index 1111111..2222222 100644
 +permissions: write-all
 `;
   const parsed = parseUnifiedDiff(diffText);
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
 
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
 

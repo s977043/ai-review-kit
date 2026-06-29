@@ -60,7 +60,7 @@ Evaluate and validate skill definitions.
 
 ```bash
 # Evaluate a specific skill
-river eval skills/rr-midstream-security-basic-001/skill.yaml
+river eval skills/midstream/security-basic/SKILL.md
 
 # Evaluate all skills
 river eval --all
@@ -85,10 +85,10 @@ Create a new skill from the template.
 river create skill --interactive
 
 # Non-interactive with skill name
-river create skill rr-midstream-security-001
+river create skill security-review
 
 # With additional options
-river create skill rr-midstream-security-001 \
+river create skill security-review \
   --phase midstream \
   --apply-to "src/**/*.ts,tests/**/*.test.ts" \
   --tags "security,authentication" \
@@ -124,7 +124,7 @@ Reviewing 12 file(s) in midstream phase
 ✓ Execution plan ready
 
 Selected skills (5):
-  rr-midstream-security-basic-001, rr-midstream-code-quality-001, ...
+  security-basic, code-quality, ...
 
 Impact tags: security, api
 
@@ -144,12 +144,12 @@ Output:
 
 Skill Evaluation Summary:
 
-✓ rr-midstream-security-basic-001
+✓ security-basic
   Name: Basic Security Review
   Phase: midstream
   Apply to: src/**/*.ts, tests/**/*.test.ts
 
-✓ rr-midstream-code-quality-001
+✓ code-quality
   Name: Code Quality Review
   Phase: midstream
   Apply to: src/**/*.{ts,js}
@@ -170,7 +170,7 @@ Output:
 ```text
 Creating new skill
 
-? Skill ID (e.g., rr-midstream-code-quality-001): rr-midstream-auth-001
+? Skill ID (e.g., code-quality): auth-review
 ? Version: 0.1.0
 ? Skill name: Authentication Review
 ? Description: Review authentication and authorization patterns
@@ -178,14 +178,14 @@ Creating new skill
 ? File patterns (comma-separated globs): src/auth/**/*.ts,src/middleware/auth.ts
 ? Tags (comma-separated): security,authentication
 ? Severity: major
-? Create skill at /path/to/skills/rr-midstream-auth-001? Yes
+? Create skill at /path/to/skills/auth-review? Yes
 
 ✓ Skill created successfully
 
-✓ Skill created at: /path/to/skills/rr-midstream-auth-001
+✓ Skill created at: /path/to/skills/auth-review
 
 Next steps:
-  1. cd /path/to/skills/rr-midstream-auth-001
+  1. cd /path/to/skills/auth-review
   2. Edit prompt/system.md and prompt/user.md
   3. Add test fixtures to fixtures/
   4. Add expected output to golden/

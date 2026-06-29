@@ -244,7 +244,7 @@ test('import writes SKILL.md files to output directory', async () => {
 test('serializes RR skill to Agent Skills SKILL.md format', () => {
   const skill = {
     metadata: {
-      id: 'rr-midstream-example-001',
+      id: 'example',
       name: 'Example Skill',
       description: 'An example skill',
       category: 'midstream',
@@ -268,7 +268,7 @@ test('serializes RR skill to Agent Skills SKILL.md format', () => {
   const { metadata: fm } = parseFrontMatter(output);
   assert.equal(fm.name, 'Example Skill');
   assert.equal(fm.description, 'An example skill');
-  assert.ok(fm.metadata?.rr?.id === 'rr-midstream-example-001');
+  assert.ok(fm.metadata?.rr?.id === 'example');
 });
 
 // ---------------------------------------------------------------------------
@@ -279,7 +279,7 @@ test('exports RR skill to directory with SKILL.md', async () => {
   await withTempDir(async (tmpDir) => {
     const skill = {
       metadata: {
-        id: 'rr-test-export-001',
+        id: 'export',
         name: 'Export Test',
         description: 'A test for export',
         category: 'midstream',

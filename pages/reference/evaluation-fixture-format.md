@@ -30,7 +30,7 @@ River Review は、差分に対するレビュー出力の品質を継続的に�
   "name": "secrets: hardcoded token (export const)",
   "phase": "midstream",
   "diffFile": "../planner-dataset/diffs/midstream-security-hardcoded-token.diff",
-  "planSkills": ["rr-midstream-security-basic-001"],
+  "planSkills": ["security-basic"],
   "mustInclude": [
     "Finding:",
     "Evidence:",

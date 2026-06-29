@@ -17,11 +17,11 @@ Figma のデザインを忠実にコード化するには、プロンプトだ�
 
 river-review には Figma → コードの品質チェックを担う 2 つの midstream スキルが含まれています。
 
-### `rr-midstream-design-token-enforcement-001`
+### `design-token-enforcement`
 
 デザイントークンの**直書き**を検出するスキルです。カラーコード・フォントサイズ・スペーシングなどが設計システム変数を経由せず直接ハードコードされている場合に警告を発します。
 
-### `rr-midstream-design-system-component-reuse-001`
+### `design-system-component-reuse`
 
 既存コンポーネントを**再実装**しているコードを検出するスキルです。すでにコンポーネントライブラリに同等の実装が存在するにもかかわらず、インラインで再定義しているケースを報告します。
 

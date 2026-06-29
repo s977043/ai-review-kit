@@ -3,7 +3,7 @@
  * dry-run 時はこのマッピングに含まれるスキルのみ実行される
  */
 export const SKILL_HEURISTIC_MAP = {
-  'rr-midstream-security-basic-001': [
+  'security-basic': [
     'findHardcodedSecrets',
     'findGitHubActionsIssues',
     'findDangerousEval',
@@ -11,14 +11,10 @@ export const SKILL_HEURISTIC_MAP = {
     'findWeakHash',
     'findCommandInjection',
   ],
-  'rr-midstream-logging-observability-001': [
-    'findSilentCatch',
-    'findDebuggerLeftover',
-    'findMergeConflict',
-  ],
-  'rr-midstream-typescript-strict-001': ['findTsSuppression'],
-  'rr-downstream-test-existence-001': ['findMissingTests', 'findFocusedTests', 'findDisabledTests'],
-  'rr-downstream-coverage-gap-001': ['findMissingTests', 'findFocusedTests', 'findDisabledTests'],
+  'logging-observability': ['findSilentCatch', 'findDebuggerLeftover', 'findMergeConflict'],
+  'typescript-strict': ['findTsSuppression'],
+  'test-existence': ['findMissingTests', 'findFocusedTests', 'findDisabledTests'],
+  'coverage-gap': ['findMissingTests', 'findFocusedTests', 'findDisabledTests'],
 };
 
 /**
@@ -640,8 +636,8 @@ export function buildHeuristicComments({ diff, plan }) {
   const comments = [];
 
   // セキュリティ基本チェック
-  if (hasSkill(plan, 'rr-midstream-security-basic-001')) {
-    const skillId = 'rr-midstream-security-basic-001';
+  if (hasSkill(plan, 'security-basic')) {
+    const skillId = 'security-basic';
     for (const c of findHardcodedSecrets({ diff })) {
       comments.push({ ...c, skillId });
     }
@@ -663,8 +659,8 @@ export function buildHeuristicComments({ diff, plan }) {
   }
 
   // ロギング・可観測性チェック
-  if (hasSkill(plan, 'rr-midstream-logging-observability-001')) {
-    const skillId = 'rr-midstream-logging-observability-001';
+  if (hasSkill(plan, 'logging-observability')) {
+    const skillId = 'logging-observability';
     for (const c of findSilentCatch({ diff })) {
       comments.push({ ...c, skillId });
     }
@@ -677,16 +673,16 @@ export function buildHeuristicComments({ diff, plan }) {
   }
 
   // TypeScript 型チェック抑制
-  if (hasSkill(plan, 'rr-midstream-typescript-strict-001')) {
-    const skillId = 'rr-midstream-typescript-strict-001';
+  if (hasSkill(plan, 'typescript-strict')) {
+    const skillId = 'typescript-strict';
     for (const c of findTsSuppression({ diff })) {
       comments.push({ ...c, skillId });
     }
   }
 
   // テスト存在チェック
-  if (hasSkill(plan, 'rr-downstream-test-existence-001')) {
-    const skillId = 'rr-downstream-test-existence-001';
+  if (hasSkill(plan, 'test-existence')) {
+    const skillId = 'test-existence';
     for (const c of findMissingTests({ diff })) {
       comments.push({ ...c, skillId });
     }
@@ -696,8 +692,8 @@ export function buildHeuristicComments({ diff, plan }) {
     for (const c of findDisabledTests({ diff })) {
       comments.push({ ...c, skillId });
     }
-  } else if (hasSkill(plan, 'rr-downstream-coverage-gap-001')) {
-    const skillId = 'rr-downstream-coverage-gap-001';
+  } else if (hasSkill(plan, 'coverage-gap')) {
+    const skillId = 'coverage-gap';
     for (const c of findMissingTests({ diff })) {
       comments.push({ ...c, skillId });
     }

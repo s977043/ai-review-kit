@@ -70,7 +70,7 @@ describe('computeFindingBreakdown', () => {
         evidence: ['abc'],
         confidence: 'medium',
         severity: 'major',
-        ruleId: 'rr-downstream-test-existence-001',
+        ruleId: 'test-existence',
       },
     ];
     for (const finding of cases) {

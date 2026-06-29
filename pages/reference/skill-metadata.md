@@ -108,7 +108,7 @@ export interface SkillMetadata {
 
 ```yaml
 ---
-id: rr-midstream-code-quality-sample-001
+id: code-quality-sample
 name: 'Sample Code Quality Pass'
 description: 'Checks common code quality and maintainability risks.'
 category: midstream
@@ -129,7 +129,7 @@ severity: 'minor'
 
 ```yaml
 ---
-id: rr-midstream-code-quality-sample-001
+id: code-quality-sample
 name: 'Sample Code Quality Pass'
 description: 'Checks common code quality and maintainability risks.'
 category: midstream
@@ -159,7 +159,7 @@ dependencies:
 
 ```yaml
 ---
-id: rr-midstream-code-quality-sample-001
+id: code-quality-sample
 name: 'Sample Code Quality Pass'
 description: 'Checks common code quality and maintainability risks.'
 category: midstream

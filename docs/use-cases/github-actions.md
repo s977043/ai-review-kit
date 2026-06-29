@@ -347,7 +347,7 @@ Structured data for custom processing:
 {
   "findings": [
     {
-      "skill": "rr-midstream-security-basic-001",
+      "skill": "security-basic",
       "file": "src/api/users.ts",
       "line": 15,
       "severity": "major",

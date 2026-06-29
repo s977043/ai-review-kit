@@ -1,133 +1,133 @@
 {
   "selected": [
     {
-      "id": "rr-midstream-a11y-accessible-name-001",
+      "id": "a11y-accessible-name",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-code-quality-sample-001",
+      "id": "code-quality-sample",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": ["code_search"]
     },
     {
-      "id": "rr-midstream-design-source-conformance-001",
+      "id": "design-source-conformance",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "questions"],
       "dependencies": ["code_search"]
     },
     {
-      "id": "rr-midstream-design-system-component-reuse-001",
+      "id": "design-system-component-reuse",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-design-token-enforcement-001",
+      "id": "design-token-enforcement",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-loading-state-001",
+      "id": "loading-state",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-logging-observability-001",
+      "id": "logging-observability",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": ["tracing", "code_search"]
     },
     {
-      "id": "rr-midstream-modern-web-a11y-interactive-001",
+      "id": "modern-web-a11y-interactive",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-modern-web-browser-compat-001",
+      "id": "modern-web-browser-compat",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-modern-web-performance-001",
+      "id": "modern-web-performance",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-modern-web-semantic-001",
+      "id": "modern-web-semantic",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-review-automation-boundary-001",
+      "id": "review-automation-boundary",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions", "metrics"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-secret-credential-scan-001",
+      "id": "secret-credential-scan",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "actions"],
       "dependencies": ["code_search"]
     },
     {
-      "id": "rr-midstream-ubiquitous-language-naming-001",
+      "id": "ubiquitous-language-naming",
       "phase": "midstream",
       "modelHint": "balanced",
       "outputKind": ["findings", "questions"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-e2e-wiring-001",
+      "id": "e2e-wiring",
       "phase": "midstream",
       "modelHint": "high-accuracy",
       "outputKind": ["findings", "questions"],
       "dependencies": ["code_search"]
     },
     {
-      "id": "rr-midstream-existing-pattern-conformance-001",
+      "id": "existing-pattern-conformance",
       "phase": "midstream",
       "modelHint": "high-accuracy",
       "outputKind": ["findings", "questions"],
       "dependencies": ["code_search"]
     },
     {
-      "id": "rr-midstream-gh-address-comments-001",
+      "id": "gh-address-comments",
       "phase": "midstream",
       "modelHint": "high-accuracy",
       "outputKind": ["actions", "questions", "summary"],
       "dependencies": ["custom:github"]
     },
     {
-      "id": "rr-midstream-hello-skill-001",
+      "id": "hello-skill",
       "phase": "midstream",
       "modelHint": "cheap",
       "outputKind": ["findings", "summary"],
       "dependencies": []
     },
     {
-      "id": "rr-midstream-review-comment-triage-001",
+      "id": "review-comment-triage",
       "phase": "midstream",
       "modelHint": "high-accuracy",
       "outputKind": ["findings", "summary", "questions"],
@@ -136,23 +136,7 @@
   ],
   "skippedWatched": [
     {
-      "id": "rr-downstream-review-policy-standard-001",
-      "reasons": [
-        "phase mismatch: downstream !== midstream",
-        "applyTo did not match any changed file",
-        "missing inputContext: tests"
-      ]
-    },
-    {
-      "id": "rr-midstream-review-policy-standard-001",
-      "reasons": ["missing inputContext: fullFile"]
-    },
-    {
-      "id": "rr-midstream-typescript-strict-001",
-      "reasons": ["missing inputContext: fullFile"]
-    },
-    {
-      "id": "rr-upstream-api-design-001",
+      "id": "api-design",
       "reasons": [
         "phase mismatch: upstream !== midstream",
         "applyTo did not match any changed file",
@@ -160,11 +144,27 @@
       ]
     },
     {
-      "id": "rr-upstream-review-policy-standard-001",
+      "id": "review-policy-standard-downstream",
+      "reasons": [
+        "phase mismatch: downstream !== midstream",
+        "applyTo did not match any changed file",
+        "missing inputContext: tests"
+      ]
+    },
+    {
+      "id": "review-policy-standard-midstream",
+      "reasons": ["missing inputContext: fullFile"]
+    },
+    {
+      "id": "review-policy-standard-upstream",
       "reasons": [
         "phase mismatch: upstream !== midstream",
         "applyTo did not match any changed file"
       ]
+    },
+    {
+      "id": "typescript-strict",
+      "reasons": ["missing inputContext: fullFile"]
     }
   ]
 }

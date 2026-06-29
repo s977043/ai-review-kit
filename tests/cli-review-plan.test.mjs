@@ -233,7 +233,7 @@ describe('runReviewPlan — output (#802 Phase 3)', () => {
       phase: 'upstream',
       now: fixedNow,
       loadConfigImpl: okConfig,
-      skillIds: ['rr-upstream-requirements-acceptance-001'],
+      skillIds: ['requirements-acceptance'],
       resolveAllArtifactsImpl: async () => ({
         diff: { id: 'diff', path: '/repo/d.patch', source: 'cwd', exists: true, optional: true },
       }),
@@ -243,7 +243,7 @@ describe('runReviewPlan — output (#802 Phase 3)', () => {
         return { selected: [], skipped: [] };
       },
     });
-    assert.deepEqual(planArgs.skillIds, ['rr-upstream-requirements-acceptance-001']);
+    assert.deepEqual(planArgs.skillIds, ['requirements-acceptance']);
   });
 
   test('skillIds defaults to null when --skill-set is not given', async () => {

@@ -2,7 +2,7 @@
   "issues": [
     {
       "id": "rr-1",
-      "ruleId": "rr-midstream-security-001",
+      "ruleId": "security",
       "title": "Hardcoded API key detected",
       "message": "Finding: Hardcoded API key Evidence: OPENAI_API_KEY in source Impact: Credential leak Fix: Use environment variable Severity: critical Confidence: high",
       "severity": "critical",

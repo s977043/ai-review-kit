@@ -64,7 +64,7 @@ jobs:
           FILTER: ${{ inputs.skill_filter }}
         run: |
           set -euo pipefail
-          mapfile -t configs < <(find skills/midstream/community -name promptfoo.yaml -path '*/eval/*' | sort)
+          mapfile -t configs < <(find skills/midstream -maxdepth 3 -name promptfoo.yaml -path '*/eval/*' | sort)
           if [ -n "${FILTER}" ]; then
             mapfile -t configs < <(printf '%s\n' "${configs[@]}" | grep -E "${FILTER}" || true)
           fi
@@ -115,4 +115,4 @@ jobs:
           echo "" >> "${GITHUB_STEP_SUMMARY}"
           echo "Configs evaluated: ${{ steps.discover.outputs.count }}" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
-          echo "Next step: download the **promptfoo-eval-output** artifact, review per-skill JSON outputs against the assertion rubrics in each \`eval/promptfoo.yaml\`, and commit accepted outputs to \`skills/midstream/community/<skill>/golden/\` to enable \`recommended: true\` promotion. See \`docs/runbook/community-skill-eval.md\`." >> "${GITHUB_STEP_SUMMARY}"
+          echo "Next step: download the **promptfoo-eval-output** artifact, review per-skill JSON outputs against the assertion rubrics in each \`eval/promptfoo.yaml\`, and commit accepted outputs to \`skills/midstream/<skill>/golden/\` to enable \`recommended: true\` promotion. See \`docs/runbook/community-skill-eval.md\`." >> "${GITHUB_STEP_SUMMARY}"

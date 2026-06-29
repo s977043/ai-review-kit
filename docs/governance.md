@@ -126,7 +126,7 @@ gh api --paginate 'repos/:owner/:repo/pulls/<N>/comments?per_page=100' \
 
 #### 関連
 
-- River Review 利用者（レビュー対象側）から見た対応フローは `skills/midstream/rr-midstream-gh-address-comments-001/SKILL.md` を参照してください。本セクションはリポジトリメンテナ視点のマージ前チェックリストです。
+- River Review 利用者（レビュー対象側）から見た対応フローは `skills/midstream/gh-address-comments/SKILL.md` を参照してください。本セクションはリポジトリメンテナ視点のマージ前チェックリストです。
 
 ## Breaking change の扱い
 

@@ -45,7 +45,7 @@ river review plan   # build a review plan from upstream artifacts (plan / pbi-in
 river review exec   # run the review against the plan
 ```
 
-Skills such as `rr-upstream-plangate-exec-conformance-001` check plan-vs-diff conformance.
+Skills such as `plangate-exec-conformance` check plan-vs-diff conformance.
 
 ## Notes
 

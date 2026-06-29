@@ -84,7 +84,7 @@ test('generateReview returns structured findings[]', async () => {
   );
   const parsed = parseUnifiedDiff(diffText);
   const diff = { diffText, files: parsed.files, changedFiles: parsed.files.map((f) => f.path) };
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }], skipped: [] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }], skipped: [] };
 
   const result = await generateReview({ diff, plan, phase: 'midstream', dryRun: true });
   assert.ok(Array.isArray(result.findings), 'findings should be an array');
@@ -107,7 +107,7 @@ test('generateReview uses labeled format for heuristic findings', async () => {
   );
   const parsed = parseUnifiedDiff(diffText);
   const diff = { diffText, files: parsed.files, changedFiles: parsed.files.map((f) => f.path) };
-  const plan = { selected: [{ metadata: { id: 'rr-midstream-security-basic-001' } }], skipped: [] };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }], skipped: [] };
 
   const result = await generateReview({ diff, plan, phase: 'midstream', dryRun: true });
   assert.equal(result.comments.length, 1);
