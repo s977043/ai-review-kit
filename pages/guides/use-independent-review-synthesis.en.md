@@ -60,7 +60,7 @@ Each finding uses the block form `Finding:` / `Evidence:` / `Reviewers:` / `Seve
 Verify behavior with `promptfoo eval`:
 
 ```bash
-cd skills/midstream/community/independent-review-synthesis/eval
+cd skills/midstream/independent-review-synthesis/eval
 promptfoo eval
 ```
 

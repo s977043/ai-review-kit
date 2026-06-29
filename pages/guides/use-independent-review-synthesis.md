@@ -60,7 +60,7 @@ artifact 定義の詳細は [`pages/reference/artifact-input-contract.md`](../re
 `promptfoo eval` で動作確認:
 
 ```bash
-cd skills/midstream/community/independent-review-synthesis/eval
+cd skills/midstream/independent-review-synthesis/eval
 promptfoo eval
 ```
 

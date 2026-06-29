@@ -16,11 +16,11 @@ Every skill belongs to `upstream`, `midstream`, or `downstream`. Identifying the
 
 Skills with the same tags may cover overlapping concerns. Check tags before combining.
 
-| Tag combination             | Overlap risk                                                                                                                                                              |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `typescript / type-safety`  | `typescript-nullcheck` and `typescript-strict` share identical `applyTo` globs — enabling both produces duplicate findings on the same files                              |
-| `community / modern-web`    | The four skills `semantic-001`, `performance-001`, `browser-compat-001`, `a11y-interactive-001` share the same globs — start with one or two that match your goal         |
-| `community / design-system` | `design-token-enforcement-001` (hardcoded values) and `design-system-component-reuse-001` (reimplemented components) cover different axes — enabling both has low overlap |
+| Tag combination             | Overlap risk                                                                                                                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `typescript / type-safety`  | `typescript-nullcheck` and `typescript-strict` share identical `applyTo` globs — enabling both produces duplicate findings on the same files                                                      |
+| `community / modern-web`    | The four skills `modern-web-semantic`, `modern-web-performance`, `modern-web-browser-compat`, and `modern-web-a11y-interactive` share the same globs — start with one or two that match your goal |
+| `community / design-system` | `design-token-enforcement` (hardcoded values) and `design-system-component-reuse` (reimplemented components) cover different axes — enabling both has low overlap                                 |
 
 ## 3. Prioritize by severity
 

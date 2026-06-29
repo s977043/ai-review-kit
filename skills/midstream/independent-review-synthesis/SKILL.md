@@ -33,7 +33,7 @@ modelHint: high-accuracy
 
 複数 reviewer の指摘をそのまま採用せず、差分・周辺コード・テスト・既存レビュー結果に照らして検証し、merge 判断に資する形に統合する。
 
-入力チャネル (artifact contract 参照: [`pages/reference/artifact-input-contract.md`](../../../../pages/reference/artifact-input-contract.md)):
+入力チャネル (artifact contract 参照: [`pages/reference/artifact-input-contract.md`](../../../pages/reference/artifact-input-contract.md)):
 
 - `diff` — 当該 PR の差分
 - `review-self` — 実装者のセルフレビュー (Markdown)
@@ -132,6 +132,6 @@ dedup されたグループに `agreement[]` (reviewer 名のリスト) を付�
 ## 参考
 
 - Nolan Lawson 氏の Triple Agent skill (取り込み方針: provider-agnostic な synthesis pattern として再構成)
-- [`pages/reference/artifact-input-contract.md`](../../../../pages/reference/artifact-input-contract.md) — review-self / review-external / findings-pool 定義
-- [`skills/agent-skills/river-review-code/SKILL.md`](../../../agent-skills/river-review-code/SKILL.md) — multi-perspective review（旧 agent-code-review を統合。synthesis ではない、補完層として独立）
+- [`pages/reference/artifact-input-contract.md`](../../../pages/reference/artifact-input-contract.md) — review-self / review-external / findings-pool 定義
+- [`skills/agent-skills/river-review-code/SKILL.md`](../../agent-skills/river-review-code/SKILL.md) — multi-perspective review（旧 agent-code-review を統合。synthesis ではない、補完層として独立）
 - Epic: [#911](https://github.com/s977043/river-review/issues/911) — Phase 1 着手 acceptance gate を満たした上で本 skill を追加

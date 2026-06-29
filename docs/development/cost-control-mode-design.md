@@ -115,5 +115,5 @@ Build the mode-branching workflow when **all** of:
 - Parent epic: #911 (closed)
 - This tracker: #921
 - CLI input mechanism already shipped: #917 (`--ensemble`)
-- Synthesis skill: `skills/midstream/community/independent-review-synthesis/`
+- Synthesis skill: `skills/midstream/independent-review-synthesis/`
 - Retrospective on stop-condition discipline: `docs/development/retrospectives/2026-05-21-25.md`

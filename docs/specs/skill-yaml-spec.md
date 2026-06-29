@@ -53,7 +53,7 @@ goldenDir: string # golden ディレクトリ（デフォルト: "golden"）
 - **説明**: スキルの一意識別子
 - **制約**:
   - 1文字以上
-  - 推奨形式: `rr-{phase}-{category}-{number}`（例: `code-quality`）
+  - 推奨形式: kebab-case（例: `code-quality`）
 - **例**: `"design-review"`, `"adr-quality"`
 
 ### version

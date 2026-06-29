@@ -214,10 +214,10 @@ synthesis skill が生成する JSON 出力の構造例です（フィールド�
 
 `status: "verified"` は差分との照合で実在が確認された finding、`status: "suppressed"` はハルシネーション等で除外された finding を表します。`summary.notes` に verdict（`merge-ready` / `human-review` / `block`）が記録されます。出力スキーマの完全な定義は [`schemas/output.schema.json`](../../schemas/output.schema.json) を参照してください。
 
-skill の詳細: [`skills/midstream/community/independent-review-synthesis/SKILL.md`](https://github.com/s977043/river-review/blob/main/skills/midstream/community/independent-review-synthesis/SKILL.md)
+skill の詳細: [`skills/midstream/independent-review-synthesis/SKILL.md`](https://github.com/s977043/river-review/blob/main/skills/midstream/independent-review-synthesis/SKILL.md)
 
 ## 関連ページ
 
 - [Artifact Input Contract](../reference/artifact-input-contract.md) — `review-self` / `review-external` の仕様詳細
-- [Independent Review Synthesis skill](https://github.com/s977043/river-review/blob/main/skills/midstream/community/independent-review-synthesis/SKILL.md) — synthesis skill の全ルール
+- [Independent Review Synthesis skill](https://github.com/s977043/river-review/blob/main/skills/midstream/independent-review-synthesis/SKILL.md) — synthesis skill の全ルール
 - [GitHub Actions セットアップ](./github-actions.md) — 基本的な GitHub Actions 構成

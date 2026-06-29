@@ -198,10 +198,10 @@ The following is an example of the JSON structure emitted by the synthesis skill
 
 `status: "verified"` means the finding was confirmed against the actual diff. `status: "suppressed"` means the finding was excluded (e.g., hallucinated reference). The verdict (`merge-ready` / `human-review` / `block`) is recorded in `summary.notes`. For the complete output schema, see [`schemas/output.schema.json`](../../schemas/output.schema.json).
 
-Full skill reference: [`skills/midstream/community/independent-review-synthesis/SKILL.md`](https://github.com/s977043/river-review/blob/main/skills/midstream/community/independent-review-synthesis/SKILL.md)
+Full skill reference: [`skills/midstream/independent-review-synthesis/SKILL.md`](https://github.com/s977043/river-review/blob/main/skills/midstream/independent-review-synthesis/SKILL.md)
 
 ## Related Pages
 
 - [Artifact Input Contract](../reference/artifact-input-contract.md) — full specification of `review-self` / `review-external`
-- [Independent Review Synthesis skill](https://github.com/s977043/river-review/blob/main/skills/midstream/community/independent-review-synthesis/SKILL.md) — complete synthesis skill rules
+- [Independent Review Synthesis skill](https://github.com/s977043/river-review/blob/main/skills/midstream/independent-review-synthesis/SKILL.md) — complete synthesis skill rules
 - [GitHub Actions Setup](./github-actions.md) — basic GitHub Actions configuration

@@ -330,7 +330,7 @@
     {
       "id": "independent-review-synthesis",
       "path": "skills/midstream/independent-review-synthesis",
-      "checksum": "sha256:a25d2b5fd73561a3661e58dc891058873f7ba8f00b12a5ed08e8e60d58cb7fd3",
+      "checksum": "sha256:14fe83c658f6654c3bc792a636c753f94ab44c0a3de3c21a5c5cfa12e1921673",
       "files": 9
     },
     {
@@ -408,7 +408,7 @@
     {
       "id": "modern-web-semantic",
       "path": "skills/midstream/modern-web-semantic",
-      "checksum": "sha256:376e073668fa671047fbddee5308ba762b04eca420c82531883dfe0cf36b96be",
+      "checksum": "sha256:db478a93d8f6be937acbffcbff6e55150284edd29c4d7acfcd98fa9ea1867f52",
       "files": 9
     },
     {

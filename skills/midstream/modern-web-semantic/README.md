@@ -8,7 +8,7 @@ Golden output must be generated and verified by running the actual evaluation
 (`promptfoo eval` against a real LLM), not hand-written. Hand-writing goldens
 would create the appearance of quality without the underlying verification —
 the same "posture, not progress" pattern flagged in
-[`docs/development/retrospectives/2026-05-21-25.md`](../../../../docs/development/retrospectives/2026-05-21-25.md).
+[`docs/development/retrospectives/2026-05-21-25.md`](../../../docs/development/retrospectives/2026-05-21-25.md).
 
 ## How to generate goldens
 
