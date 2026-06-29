@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.35.0](https://github.com/s977043/river-review/compare/v1.34.0...v1.35.0) (2026-06-29)
+
+
+### Features
+
+* **review-team:** add review-team skill and /review-team command ([#1309](https://github.com/s977043/river-review/issues/1309)) ([b817f32](https://github.com/s977043/river-review/commit/b817f327c3417e249c9c5e67d583167618519e1a))
+
+
+### Bug Fixes
+
+* **plugin:** add review-team command to Claude Code plugin manifest ([#1311](https://github.com/s977043/river-review/issues/1311)) ([f92428c](https://github.com/s977043/river-review/commit/f92428c92ce36adc10a278c0c58d329e2f4df044))
+
 ## [1.34.0](https://github.com/s977043/river-review/compare/v1.33.0...v1.34.0) (2026-06-25)
 
 
