@@ -324,7 +324,7 @@ skills:
   # ------------------------------------------------------------------
   # Community Skills (Experimental tier; recommended: false)
   # ------------------------------------------------------------------
-  # These skills live under skills/midstream/community/ and are intentionally
+  # These skills live under skills/midstream/ and are intentionally
   # marked `recommended: false` so the catalog distinguishes "core / curated"
   # from "experimental / not yet eval-backed". A community skill becomes a
   # candidate for `recommended: true` when it gains good/bad fixtures and a
