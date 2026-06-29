@@ -62,7 +62,7 @@ Why: 設計の差分から失敗モード・エラー契約・観測性の抜け
 - [ ] 差分にAPI定義・ルート定義・設計ドキュメントのいずれかが含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-failure-modes-observability-001 — 失敗モード/観測性に関連する設計差分がない`
+ゲート不成立時の出力: `NO_REVIEW: failure-modes-observability — 失敗モード/観測性に関連する設計差分がない`
 
 ## False-positive guards / 抑制条件
 

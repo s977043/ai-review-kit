@@ -41,7 +41,7 @@ Why: ADRの記録品質を多面的チェックリストで検証し、不足を
 - [ ] 差分がADRの意思決定内容（Context / Decision / Alternatives / Follow-ups）に実質的な変更を含んでいる
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-adr-decision-quality-001 — ADR関連ファイルの実質的変更なし`
+ゲート不成立時の出力: `NO_REVIEW: adr-decision-quality — ADR関連ファイルの実質的変更なし`
 
 ## False-positive guards / 抑制条件
 

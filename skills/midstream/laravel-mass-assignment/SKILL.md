@@ -39,7 +39,7 @@ Why: mass assignment 脆弱性と認可漏れをチェックリスト型で検�
 - [ ] 差分にモデルの create / update / fill、またはコントローラの mutating アクションの追加変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-laravel-mass-assignment-001 — 対象操作の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: laravel-mass-assignment — 対象操作の変更なし`
 
 ## False-positive guards / 抑制条件
 

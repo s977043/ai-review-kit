@@ -46,7 +46,7 @@ Why: ADR・図・仕様間の食い違いを検出し、設計ドリフトの早
 - [ ] 差分に意思決定・構成要素・契約に関する記述の追加・変更が含まれている
 - [ ] inputContextに`diff`が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-architecture-traceability-001 — 設計トレーサビリティに関連するドキュメントの変更なし`
+ゲート不成立時の出力: `NO_REVIEW: architecture-traceability — 設計トレーサビリティに関連するドキュメントの変更なし`
 
 ## False-positive guards / 抑制条件
 

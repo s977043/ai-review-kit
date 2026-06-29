@@ -43,7 +43,7 @@ Why: PRテンプレートの差分から必須項目・検証コマンド・チ�
 - [ ] 差分にPRテンプレートファイル（`.github/pull_request_template.md` または `.github/PULL_REQUEST_TEMPLATE.md`）が含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-pr-template-qa-001 — PRテンプレートファイルの差分がない`
+ゲート不成立時の出力: `NO_REVIEW: pr-template-qa — PRテンプレートファイルの差分がない`
 
 ## False-positive guards / 抑制条件
 

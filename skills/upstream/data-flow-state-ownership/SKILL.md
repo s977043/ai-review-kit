@@ -48,7 +48,7 @@ Why: データフローと状態所有の曖昧さをチェックリスト型で
 - [ ] 差分にデータフロー・状態所有・境界横断の書き込みに関わる記述の追加または変更がある
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-data-flow-state-ownership-001 — データフロー・状態所有に関わる変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: data-flow-state-ownership — データフロー・状態所有に関わる変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

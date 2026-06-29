@@ -40,7 +40,7 @@ Why: 先行実装との突合は grep による決定論的特定が主だが、
 - [ ] 差分に、リポジトリ内で**同レイヤ・同責務・同概念の先行実装が grep で実在確認できる**追加 / 変更を含む（防御・バリデーション・エラー処理・規約・共通化ロジック・概念定義を持つ同種コード / 設計 / migration）。「存在しうる」という推測では発火させず、**先行実装を grep で1件以上特定できたときのみ**レビューに進む
 - [ ] inputContext に diff が含まれ、`code_search`（grep）が利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-existing-pattern-conformance-001 — 先行実装と突合すべき変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: existing-pattern-conformance — 先行実装と突合すべき変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

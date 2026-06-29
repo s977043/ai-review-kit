@@ -42,7 +42,7 @@ Why: ドキュメントの役割汚染・内部メモ混入はパターン的に
 - [ ] 差分に**ドキュメントファイル**（`*.md` / `*.mdx` / `AGENTS.md` など、恒久ドキュメントまたは公開物）の追加・変更が含まれている
 - [ ] inputContext に diff が含まれ、`code_search`（grep）が利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-doc-hygiene-001 — ドキュメントの変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: doc-hygiene — ドキュメントの変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

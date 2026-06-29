@@ -45,7 +45,7 @@ Why: 設計ドキュメントの責務境界・依存方向・変更影響の記
 - [ ] 差分にコンポーネントの境界・責務・依存関係に関する記述の追加・変更が含まれている
 - [ ] inputContextに`diff`が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-architecture-boundaries-001 — 境界/依存に関する設計ドキュメントの変更なし`
+ゲート不成立時の出力: `NO_REVIEW: architecture-boundaries — 境界/依存に関する設計ドキュメントの変更なし`
 
 ## False-positive guards / 抑制条件
 

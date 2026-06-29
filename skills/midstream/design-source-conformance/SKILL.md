@@ -42,7 +42,7 @@ Why: 定義済みスケールとの照合は決定論で判定できる部分が
 - [ ] 差分に UI 実装の値（色・余白・フォントサイズ・角丸・シャドウ）の追加・変更が含まれている
 - [ ] inputContext に diff が含まれ、`code_search`（grep）が利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-design-source-conformance-001 — 参照すべきデザイン定義または UI 値の変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: design-source-conformance — 参照すべきデザイン定義または UI 値の変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

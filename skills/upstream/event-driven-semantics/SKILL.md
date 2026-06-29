@@ -47,7 +47,7 @@ Why: イベント駆動設計の差分から配信保証・冪等性・スキー
 - [ ] 差分にイベント駆動・メッセージング・キュー・ストリーム関連のドキュメントまたはスキーマが含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-event-driven-semantics-001 — イベント駆動設計関連の差分がない`
+ゲート不成立時の出力: `NO_REVIEW: event-driven-semantics — イベント駆動設計関連の差分がない`
 
 ## False-positive guards / 抑制条件
 

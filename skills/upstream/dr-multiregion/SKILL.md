@@ -47,7 +47,7 @@ Why: DR/マルチリージョン設計の差分からRPO/RTO・フェイルオ�
 - [ ] 差分にDR・災害復旧・事業継続・マルチリージョン・レジリエンスに関するドキュメントが含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-dr-multiregion-001 — DR/マルチリージョン関連のドキュメント差分がない`
+ゲート不成立時の出力: `NO_REVIEW: dr-multiregion — DR/マルチリージョン関連のドキュメント差分がない`
 
 ## False-positive guards / 抑制条件
 

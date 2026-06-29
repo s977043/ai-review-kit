@@ -45,7 +45,7 @@ Why: 失敗シナリオ分析はチェックリスト型評価が主だが、設
 - [ ] テストコードやフィクスチャのみの変更ではない
 - [ ] inputContextにdiffまたはfullFileが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-pre-mortem-001 — 設計判断を含む変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: pre-mortem — 設計判断を含む変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

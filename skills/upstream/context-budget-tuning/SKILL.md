@@ -79,7 +79,7 @@ Why: `.river-review` の context 設定変更時に、reviewMode プリセット
 - [ ] 差分にリポジトリ直下の `.river-review.{yaml,yml,json}` の変更が含まれている（`src/config/loader.mjs` が探索する対象はこの 3 ファイルのみ）
 - [ ] 変更が `context.budget` / `context.ranking` / `context.reviewMode` のいずれかに触れている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-context-budget-tuning-001 — context.* 設定の変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: context-budget-tuning — context.* 設定の変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

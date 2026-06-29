@@ -43,7 +43,7 @@ Why: 運用上蓄積された review findings / retrospective を観察し、再
 - [ ] 入力として `review-self` / `review-external` / `findings-pool` artifact（`pages/reference/artifact-input-contract.md` 参照） のいずれか1つ以上が解決できている、または `retrospective` / `decision-log` のいずれかが解決できている
 - [ ] inputContext に `fullFile` が含まれ、対象アーティファクトの本文が読み取れる
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-plangate-rule-promotion-001 — 昇格判定に必要な findings プールまたは retrospective 入力が不足`
+ゲート不成立時の出力: `NO_REVIEW: plangate-rule-promotion — 昇格判定に必要な findings プールまたは retrospective 入力が不足`
 
 **Gate と抑制条件の違い:**
 

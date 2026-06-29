@@ -42,7 +42,7 @@ Why: Firebase Security Rules の過剰許可と認可漏れ、機密 config 露�
 - [ ] 差分に Security Rules（`*.rules` / firestore.rules / storage.rules）の追加・変更、または `firebase*.{ts,js}` の config 変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-firebase-security-rules-001 — Security Rules / config の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: firebase-security-rules — Security Rules / config の変更なし`
 
 ## False-positive guards / 抑制条件
 

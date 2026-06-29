@@ -49,7 +49,7 @@ Why: ローディング状態の管理ミスはUXに直結するが、テスト�
 - [ ] 差分にasync data fetchingまたはUIコンポーネントのレンダリングロジックが含まれている
 - [ ] loading/error/data stateを扱うコードパターンが存在する（useQuery, useSWR, useState + fetch等）
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-loading-state-001 — loading state関連のUI変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: loading-state — loading state関連のUI変更が検出されない`
 
 ## False-positive guards
 

@@ -37,7 +37,7 @@ Why: migration の破壊的・ロック誘発操作をチェックリスト型�
 - [ ] 差分に `database/migrations/` 配下の追加変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-laravel-migration-safety-001 — migration の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: laravel-migration-safety — migration の変更なし`
 
 ## False-positive guards / 抑制条件
 

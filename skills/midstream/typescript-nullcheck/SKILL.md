@@ -62,7 +62,7 @@ Why: TypeScriptコードの差分からnull/undefinedの安全性をレビュー
 - [ ] 差分にTypeScriptファイル（`*.ts` または `*.tsx`）が含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-typescript-nullcheck-001 — TypeScriptファイルの差分がない`
+ゲート不成立時の出力: `NO_REVIEW: typescript-nullcheck — TypeScriptファイルの差分がない`
 
 ## False-positive guards / 抑制条件
 

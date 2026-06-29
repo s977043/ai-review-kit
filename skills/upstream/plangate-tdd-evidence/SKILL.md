@@ -50,7 +50,7 @@ Why: `tdd-ledger` のフェーズ別証跡を基準として妥当性を突き�
 - [ ] `tdd-ledger` に 1 つ以上の `phases[]` エントリが含まれている
 - [ ] inputContext に `diff` が含まれ、レビュー対象の差分が空でない
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-plangate-tdd-evidence-001 — tdd-ledger artifact または差分が揃っていない`
+ゲート不成立時の出力: `NO_REVIEW: plangate-tdd-evidence — tdd-ledger artifact または差分が揃っていない`
 
 **Gate と抑制条件の違い:**
 

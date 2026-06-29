@@ -39,7 +39,7 @@ Why: 仕様書からPHPUnit形式のテスト足場を生成するジェネレ�
 - [ ] 仕様書にPHP/Laravelアプリケーションに関する記述がある
 - [ ] inputContextにfullFileが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-test-code-php-laravel-001 — 対象となるLaravel仕様が差分に含まれていない`
+ゲート不成立時の出力: `NO_REVIEW: code-php-laravel — 対象となるLaravel仕様が差分に含まれていない`
 
 ## False-positive guards / 抑制条件
 

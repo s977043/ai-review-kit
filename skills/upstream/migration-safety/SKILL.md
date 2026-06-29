@@ -42,7 +42,7 @@ Why: 移行の破壊的・ロック誘発・不可逆操作をチェックリス
 - [ ] 差分にスキーマ/データ移行（migrations ディレクトリ・`schema.prisma`・`*.sql`・`ALTER`/`CREATE`/`DROP` を含む変更）が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-migration-safety-001 — 移行の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: migration-safety — 移行の変更なし`
 
 ## False-positive guards / 抑制条件
 

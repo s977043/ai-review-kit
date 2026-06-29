@@ -41,7 +41,7 @@ Why: OpenAPI仕様の差分から契約不備・互換性事故・型の曖昧�
 - [ ] 差分にOpenAPI/Swagger仕様ファイルまたはAPI設計ドキュメントが含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-openapi-contract-001 — OpenAPI/API仕様に関する差分がない`
+ゲート不成立時の出力: `NO_REVIEW: openapi-contract — OpenAPI/API仕様に関する差分がない`
 
 ## False-positive guards / 抑制条件
 

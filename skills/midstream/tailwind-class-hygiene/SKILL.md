@@ -39,7 +39,7 @@ Why: Tailwind の utility class 構文（arbitrary value / クラス競合）を
 - [ ] 差分に `className` / `class` への Tailwind utility の追加・変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-tailwind-class-hygiene-001 — className/class への Tailwind utility 変更なし`
+ゲート不成立時の出力: `NO_REVIEW: tailwind-class-hygiene — className/class への Tailwind utility 変更なし`
 
 ## False-positive guards / 抑制条件
 

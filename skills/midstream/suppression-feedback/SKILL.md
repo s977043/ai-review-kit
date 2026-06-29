@@ -87,7 +87,7 @@ river suppression add \
 - [ ] 差分がドキュメント / フィクスチャ / 自動生成物のみでない
 - [ ] PR 本文・コミットメッセージに `accepted_risk` / `false_positive` / `wont_fix` / `suppress` / `Riverbed Memory` / `fingerprint` のいずれかが言及されている、または同 PR 内で他の midstream skill が `major` / `critical` 指摘を出している
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-suppression-feedback-001 — suppression workflow に関連する変更や指摘が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: suppression-feedback — suppression workflow に関連する変更や指摘が検出されない`
 
 ## False-positive guards / 抑制条件
 

@@ -45,7 +45,7 @@ Why: PR 本文の品質と差分整合をレビューする。PR 本文が無い
 - [ ] inputContext に `prDescription` が含まれている（PR 本文が利用可能）
 - [ ] inputContext に `diff` が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-pr-description-001 — PR 本文が利用できないため評価対象なし`
+ゲート不成立時の出力: `NO_REVIEW: pr-description — PR 本文が利用できないため評価対象なし`
 
 ## Guidance
 

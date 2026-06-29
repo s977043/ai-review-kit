@@ -39,7 +39,7 @@ Why: 仕様書からVue.jsコンポーネントテストの足場を生成する
 - [ ] 仕様書にVue.jsコンポーネントに関する記述がある
 - [ ] inputContextにfullFileが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-test-code-vue-001 — 対象となるVue.jsコンポーネント仕様が差分に含まれていない`
+ゲート不成立時の出力: `NO_REVIEW: code-vue — 対象となるVue.jsコンポーネント仕様が差分に含まれていない`
 
 ## False-positive guards / 抑制条件
 

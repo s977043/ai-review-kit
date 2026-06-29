@@ -43,7 +43,7 @@ Why: 設計変更の差分から移行計画・段階リリース・ロールバ
 - [ ] 差分に設計ドキュメント・移行計画・ロールアウト/ロールバック・リリース・デプロイに関するファイルが含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-migration-rollout-rollback-001 — 移行/ロールアウト/ロールバックに関する差分がない`
+ゲート不成立時の出力: `NO_REVIEW: migration-rollout-rollback — 移行/ロールアウト/ロールバックに関する差分がない`
 
 ## False-positive guards / 抑制条件
 

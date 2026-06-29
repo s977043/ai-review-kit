@@ -62,7 +62,7 @@ Why: TypeScriptコードの差分からany/型アサーションの乱用をレ�
 - [ ] 差分にTypeScriptファイル（`*.ts` または `*.tsx`）が含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-typescript-strict-001 — TypeScriptファイルの差分がない`
+ゲート不成立時の出力: `NO_REVIEW: typescript-strict — TypeScriptファイルの差分がない`
 
 ## False-positive guards / 抑制条件
 

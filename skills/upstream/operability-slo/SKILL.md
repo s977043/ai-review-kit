@@ -44,7 +44,7 @@ Why: 設計/要件の差分から運用性・SLO・監視・障害対応手順�
 - [ ] 差分に設計ドキュメント・SLO/SLI定義・Runbook・運用/監視/アラート関連のファイルが含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-operability-slo-001 — 運用性/SLO関連の差分がない`
+ゲート不成立時の出力: `NO_REVIEW: operability-slo — 運用性/SLO関連の差分がない`
 
 ## False-positive guards / 抑制条件
 

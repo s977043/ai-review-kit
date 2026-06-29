@@ -44,7 +44,7 @@ Why: 境界と用語の一貫性をチェックリスト型で評価し、ドメ
 - [ ] 差分に境界定義・責務分担・ドメイン用語に関わる記述の追加または変更がある
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-bounded-context-language-001 — 境界・用語に関わる変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: bounded-context-language — 境界・用語に関わる変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

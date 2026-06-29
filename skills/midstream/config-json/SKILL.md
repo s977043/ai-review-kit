@@ -54,7 +54,7 @@ Why: 設定ファイルの構文・セキュリティ・妥当性をチェック
 - [ ] 対象ファイルが`package-lock.json`や自動生成ファイルではない
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-config-json-001 — レビュー対象の設定ファイル変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: config-json — レビュー対象の設定ファイル変更が検出されない`
 
 ## False-positive guards
 

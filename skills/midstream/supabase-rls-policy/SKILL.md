@@ -41,7 +41,7 @@ Why: Supabase RLS の未有効化・過剰 policy・service_role 露出をチェ
 - [ ] 差分に `CREATE TABLE` / `CREATE POLICY` / RLS 設定を含む SQL、または `supabase/**` のクライアントコード変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-supabase-rls-policy-001 — RLS / policy / key の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: supabase-rls-policy — RLS / policy / key の変更なし`
 
 ## False-positive guards / 抑制条件
 

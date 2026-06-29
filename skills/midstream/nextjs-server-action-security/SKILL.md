@@ -42,7 +42,7 @@ Why: Server Action を「誰でも呼べる公開エンドポイント」と仮�
 - [ ] 差分に `'use server'` 関数 / Server Action（actions.ts など）の追加・変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-nextjs-server-action-security-001 — Server Action の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: nextjs-server-action-security — Server Action の変更なし`
 
 ## False-positive guards / 抑制条件
 

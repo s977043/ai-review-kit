@@ -52,7 +52,7 @@ Why: 正規化の不整合は差分単体では見えにくく、既存コード
 - [ ] 差分にUI表示に関連するコード（date, amount, id, status labelの表示処理）が含まれている
 - [ ] または差分にフォーマット処理関数の変更が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-normalization-consistency-001 — 表示正規化に関連する変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: normalization-consistency — 表示正規化に関連する変更が検出されない`
 
 ## False-positive guards
 

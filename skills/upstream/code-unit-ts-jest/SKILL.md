@@ -39,7 +39,7 @@ Why: 仕様書からTypeScriptユニットテストの足場を生成するジ�
 - [ ] 仕様書にTypeScriptアプリケーションに関する記述がある
 - [ ] inputContextにfullFileが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-test-code-unit-ts-jest-001 — 対象となるTypeScript仕様が差分に含まれていない`
+ゲート不成立時の出力: `NO_REVIEW: code-unit-ts-jest — 対象となるTypeScript仕様が差分に含まれていない`
 
 ## False-positive guards / 抑制条件
 

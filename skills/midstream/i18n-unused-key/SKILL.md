@@ -51,7 +51,7 @@ Why: i18n key管理はdiff単体では判断が難しく、ファイル全体と
 - [ ] 差分にi18n/locale関連ファイル（\*.json, **/i18n/**, **/locales/**）の変更が含まれている
 - [ ] または差分にUI文言を削除・変更するソースコードの変更が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-i18n-unused-key-001 — i18n/locale関連の変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: i18n-unused-key — i18n/locale関連の変更が検出されない`
 
 ## False-positive guards
 

@@ -44,7 +44,7 @@ Why: 論理検証はチェックリスト型評価が主だが、判断を含ま
 - [ ] 変更が機械的なもの（リネーム、フォーマット、依存更新のみ）ではない
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-logic-torturing-001 — 論理検証の対象となる判断が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: logic-torturing — 論理検証の対象となる判断が検出されない`
 
 ## False-positive guards / 抑制条件
 

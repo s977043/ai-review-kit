@@ -44,7 +44,7 @@ Why: 設計ドキュメントの暗黙の前提・未決事項・リスクの放
 - [ ] 差分に前提・リスク・未決事項・意思決定に関する記述の追加・変更が含まれている
 - [ ] inputContextに`diff`が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-architecture-risk-register-001 — 前提/リスク/未決に関する設計ドキュメントの変更なし`
+ゲート不成立時の出力: `NO_REVIEW: architecture-risk-register — 前提/リスク/未決に関する設計ドキュメントの変更なし`
 
 ## False-positive guards / 抑制条件
 

@@ -53,7 +53,7 @@ Why: キャッシュ戦略の整合性・無効化・障害対策をチェック
 - [ ] 差分にキャッシュ戦略・キャッシュレイヤー・TTL・無効化に関わる記述の追加または変更がある
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-cache-strategy-consistency-001 — キャッシュ戦略に関わる変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: cache-strategy-consistency — キャッシュ戦略に関わる変更が検出されない`
 
 ## False-positive guards
 

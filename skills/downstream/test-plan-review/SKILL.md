@@ -53,7 +53,7 @@ Why: テスト観点レビューはチェックリスト型評価が主だが、
 - [ ] 実行パスへ影響する変更が差分に含まれている（ドキュメントや設定値のみの変更ではない）
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-downstream-test-plan-review-001 — テスト観点レビューの対象となるコード変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: test-plan-review — テスト観点レビューの対象となるコード変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

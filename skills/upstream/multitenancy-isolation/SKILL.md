@@ -55,7 +55,7 @@ Why: マルチテナント設計の差分からテナント分離（データ/�
 - [ ] 対象ファイルにテナント分離（データアクセス・権限・リソース分離）に関する記述がある
 - [ ] inputContextにfullFileが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-multitenancy-isolation-001 — マルチテナント設計に関する差分がない`
+ゲート不成立時の出力: `NO_REVIEW: multitenancy-isolation — マルチテナント設計に関する差分がない`
 
 ## False-positive guards
 

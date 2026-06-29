@@ -49,7 +49,7 @@ Why: 自動化可能なレビュー指摘を検出しCI/lint委譲を提案す�
 - [ ] 差分がツール設定ファイル（`.eslintrc`, `.prettierrc`, `tsconfig.json`等）のみの変更ではない
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-review-automation-boundary-001 — 自動化境界レビューの対象となるソースコード変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: review-automation-boundary — 自動化境界レビューの対象となるソースコード変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

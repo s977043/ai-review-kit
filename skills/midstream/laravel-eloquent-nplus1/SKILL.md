@@ -39,7 +39,7 @@ Why: Eloquent のクエリ効率規約への適合をチェックリスト型で
 - [ ] 差分に Eloquent モデルのクエリ・relation アクセスの追加変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-laravel-eloquent-nplus1-001 — Eloquent クエリの変更なし`
+ゲート不成立時の出力: `NO_REVIEW: laravel-eloquent-nplus1 — Eloquent クエリの変更なし`
 
 ## False-positive guards / 抑制条件
 

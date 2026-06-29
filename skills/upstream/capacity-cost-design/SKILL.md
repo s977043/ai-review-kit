@@ -46,7 +46,7 @@ Why: 性能・容量・コストの前提漏れをチェックリスト型で評
 - [ ] 差分に性能・容量・コストの前提や目標に関わる記述の追加または変更がある
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-capacity-cost-design-001 — 性能・容量・コスト設計に関わる変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: capacity-cost-design — 性能・容量・コスト設計に関わる変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

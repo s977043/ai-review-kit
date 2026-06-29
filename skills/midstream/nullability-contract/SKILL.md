@@ -69,7 +69,7 @@ Why: null/undefined/emptyの処理漏れはランタイムエラーの主要因�
 - [ ] 差分にnull/undefined/emptyを返しうる処理またはそれらを受け取る処理が含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-nullability-contract-001 — null/undefined処理のTypeScript差分がない`
+ゲート不成立時の出力: `NO_REVIEW: nullability-contract — null/undefined処理のTypeScript差分がない`
 
 ## False-positive guards / 抑制条件
 
