@@ -42,10 +42,10 @@ community スキルはフィクスチャと golden output を揃えると `recom
 ## 2) ひな形からスキルを作る
 
 1. `skills/_template.md` をコピーして、選んだディレクトリに配置する。
-   - 例 (first-party): `skills/midstream/rr-midstream-my-skill-001.md`
-   - 例 (community): `skills/midstream/community/rr-midstream-nextjs-my-skill-001/SKILL.md`
+   - 例 (first-party): `skills/midstream/my-skill.md`
+   - 例 (community): `skills/midstream/community/nextjs-my-skill/SKILL.md`
 2. YAML frontmatter を最低限埋める（必須フィールドは `schemas/skill.schema.json` を参照する）。
-   - `id`: 一意な ID（例: `rr-midstream-my-skill-001`）
+   - `id`: 一意な ID（例: `my-skill`）
    - `name`: スキル名
    - `description`: 何を検知/指摘するか（短く）
    - `category`: `core` / `upstream` / `midstream` / `downstream` のいずれか（ルーティングの第一キー）

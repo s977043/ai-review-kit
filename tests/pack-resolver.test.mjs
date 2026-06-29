@@ -113,10 +113,6 @@ test('resolveSkillSet returns empty array for empty input', async () => {
 test('real registry: typescript pack resolves via packs and stays consistent', async () => {
   const warnings = [];
   const ids = await resolveSkillSet('typescript', { warn: (m) => warnings.push(m) });
-  assert.deepEqual(ids, [
-    'rr-midstream-typescript-strict-001',
-    'rr-midstream-typescript-nullcheck-001',
-    'rr-midstream-type-driven-design-001',
-  ]);
+  assert.deepEqual(ids, ['typescript-strict', 'typescript-nullcheck', 'type-driven-design']);
   assert.equal(warnings.length, 1, 'coexistence period: deprecated recommendation still present');
 });

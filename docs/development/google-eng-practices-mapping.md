@@ -26,13 +26,13 @@
 
 `google/eng-practices` の "What to look for in a code review" は Design > Functionality > Complexity > Tests > Naming の優先順を提示しています。River Review ではこれを **phase + 既存 skill** に分解します。
 
-| Google 観点   | River Review 上の主担当                                                                                                                                                                           |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Design        | `phase: upstream` の skill（`rr-upstream-architecture-*`, `rr-upstream-api-*`, `rr-upstream-plangate-*` ほか）。`review-policy-standard` の upstream 版が「設計フェーズの重点」を prompt で明示。 |
-| Functionality | `phase: midstream` の `review-policy-standard` が「壊れる/漏れる/回復できない」順を prompt で固定。                                                                                               |
-| Complexity    | `phase: midstream` の中で `rr-midstream-logic-torturing-001` / `rr-midstream-type-driven-design-001` などが cognitive load / clever code を扱う。                                                 |
-| Tests         | `phase: downstream` の skill 群（`rr-downstream-coverage-gap-001`, `rr-downstream-flaky-test-001`, `rr-downstream-test-existence-001` ほか）と `rr-upstream-test-code-*`。                        |
-| Naming        | 各 phase の policy skill が prompt で軽量な命名ガイドを持ち、`rr-midstream-normalization-consistency-001` が一貫性視点を補完。                                                                    |
+| Google 観点   | River Review 上の主担当                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design        | `phase: upstream` の skill（`architecture-*`, `api-*`, `plangate-*` ほか）。`review-policy-standard` の upstream 版が「設計フェーズの重点」を prompt で明示。 |
+| Functionality | `phase: midstream` の `review-policy-standard` が「壊れる/漏れる/回復できない」順を prompt で固定。                                                           |
+| Complexity    | `phase: midstream` の中で `logic-torturing` / `type-driven-design` などが cognitive load / clever code を扱う。                                               |
+| Tests         | `phase: downstream` の skill 群（`coverage-gap`, `flaky-test`, `test-existence` ほか）と `code-*`。                                                           |
+| Naming        | 各 phase の policy skill が prompt で軽量な命名ガイドを持ち、`normalization-consistency` が一貫性視点を補完。                                                 |
 
 ## 採用しない（取り込まない）要素
 

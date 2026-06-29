@@ -14,9 +14,9 @@ For detailed writing guidelines (Anti-patterns, Evidence, Non-goals, False posit
 ## 1) Create Skill from Template
 
 1. Copy `skills/_template.md` and place it under the target category directory.
-   - Example: `skills/midstream/rr-midstream-my-skill-001.md`
+   - Example: `skills/midstream/my-skill.md`
 2. Fill in the minimum YAML frontmatter (Refer to `schemas/skill.schema.json` for required fields).
-   - `id`: Unique ID (e.g., `rr-midstream-my-skill-001`)
+   - `id`: Unique ID (e.g., `my-skill`)
    - `name`: Skill name
    - `description`: What to detect/point out (short)
    - `category`: one of `core` / `upstream` / `midstream` / `downstream` (the primary routing key)

@@ -16,11 +16,11 @@ Every skill belongs to `upstream`, `midstream`, or `downstream`. Identifying the
 
 Skills with the same tags may cover overlapping concerns. Check tags before combining.
 
-| Tag combination             | Overlap risk                                                                                                                                                                   |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `typescript / type-safety`  | `rr-midstream-typescript-nullcheck-001` and `rr-midstream-typescript-strict-001` share identical `applyTo` globs — enabling both produces duplicate findings on the same files |
-| `community / modern-web`    | The four skills `semantic-001`, `performance-001`, `browser-compat-001`, `a11y-interactive-001` share the same globs — start with one or two that match your goal              |
-| `community / design-system` | `design-token-enforcement-001` (hardcoded values) and `design-system-component-reuse-001` (reimplemented components) cover different axes — enabling both has low overlap      |
+| Tag combination             | Overlap risk                                                                                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `typescript / type-safety`  | `typescript-nullcheck` and `typescript-strict` share identical `applyTo` globs — enabling both produces duplicate findings on the same files                              |
+| `community / modern-web`    | The four skills `semantic-001`, `performance-001`, `browser-compat-001`, `a11y-interactive-001` share the same globs — start with one or two that match your goal         |
+| `community / design-system` | `design-token-enforcement-001` (hardcoded values) and `design-system-component-reuse-001` (reimplemented components) cover different axes — enabling both has low overlap |
 
 ## 3. Prioritize by severity
 
@@ -34,31 +34,31 @@ When multiple skills match the same file, prefer enabling higher-severity skills
 
 ### TypeScript frontend (Next.js / React)
 
-- `rr-midstream-typescript-strict-001` — type-safety baseline
-- `rr-midstream-security-basic-001` — XSS and secret leaks
-- `rr-midstream-nextjs-app-router-boundary-001` (if using Next.js App Router)
-- `rr-midstream-modern-web-a11y-interactive-001` — interactive UI accessibility
-- `rr-midstream-design-token-enforcement-001` (if a design system is in use)
+- `typescript-strict` — type-safety baseline
+- `security-basic` — XSS and secret leaks
+- `nextjs-app-router-boundary` (if using Next.js App Router)
+- `modern-web-a11y-interactive` — interactive UI accessibility
+- `design-token-enforcement` (if a design system is in use)
 
 ### Python API
 
-- `rr-midstream-security-basic-001`
-- `rr-midstream-logging-observability-001`
-- `rr-downstream-coverage-gap-001`
+- `security-basic`
+- `logging-observability`
+- `coverage-gap`
 
 ### Design / documentation focus
 
-- `rr-upstream-adr-decision-quality-001`
-- `rr-upstream-architecture-boundaries-001`
-- `rr-upstream-security-privacy-design-001`
+- `adr-decision-quality`
+- `architecture-boundaries`
+- `security-privacy-design`
 
 ### Multi-agent / AI review integration
 
-- Run `rr-midstream-independent-review-synthesis-001` last to consolidate multiple review results.
+- Run `independent-review-synthesis` last to consolidate multiple review results.
 
 ## 5. Choosing between TypeScript nullcheck and strict
 
-`rr-midstream-typescript-nullcheck-001` and `rr-midstream-typescript-strict-001` target the same globs.
+`typescript-nullcheck` and `typescript-strict` target the same globs.
 
 - `strict-001` covers `any` types, unsafe assertions, and null handling broadly.
 - `nullcheck-001` specializes in null/undefined safety with deeper checks.

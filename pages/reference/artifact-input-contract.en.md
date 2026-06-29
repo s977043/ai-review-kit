@@ -71,7 +71,7 @@ The input artifacts recognized by River Review are listed below. See "Legend" at
       {
         "timestamp": "2026-04-17T00:00:00Z",
         "phase": "exec",
-        "skillId": "rr-upstream-plangate-plan-integrity-001",
+        "skillId": "plangate-plan-integrity",
         "severity": "major",
         "file": "path/to/file.ts",
         "line": 42,
@@ -92,7 +92,7 @@ The input artifacts recognized by River Review are listed below. See "Legend" at
   - `entries[].source` (optional): Path of the originating Review Artifact. Recommended to preserve provenance.
 
 - **Construction**: CLI consumers are expected to build this artifact by reading multiple `review-artifact.json` files and concatenating their `findings[]` into `entries[]` (implementation tracked in follow-up issue).
-- **When absent**: Skills that require this artifact, such as `rr-upstream-plangate-rule-promotion-001`, return `NO_REVIEW` at the Pre-execution Gate and skip the promotion-judgement process.
+- **When absent**: Skills that require this artifact, such as `plangate-rule-promotion`, return `NO_REVIEW` at the Pre-execution Gate and skip the promotion-judgement process.
 
 ### `tdd-ledger`
 
@@ -131,7 +131,7 @@ The input artifacts recognized by River Review are listed below. See "Legend" at
   - `phases[].conclusion` (optional): Explanation of the phase outcome or failure reason.
   - `phases[].testCaseRefs` (optional): Array of corresponding `test-cases` IDs.
 
-- **When absent**: Skills that require this artifact, such as `rr-upstream-plangate-tdd-evidence-001`, return `NO_REVIEW` at the Pre-execution Gate and skip the TDD evidence review.
+- **When absent**: Skills that require this artifact, such as `plangate-tdd-evidence`, return `NO_REVIEW` at the Pre-execution Gate and skip the TDD evidence review.
 
 ### `diff`
 

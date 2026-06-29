@@ -117,7 +117,7 @@ describe('river run - markdown output', () => {
     assert.match(result.stdout, /## River Review/);
     assert.match(result.stdout, /### 指摘/);
     // skill id はサニタイズでハイフンがエスケープされる
-    assert.match(result.stdout, /#### 🔍 rr\\-midstream\\-logging\\-observability\\-001/);
+    assert.match(result.stdout, /#### 🔍 logging\\-observability/);
     assert.doesNotMatch(result.stdout, /--- diff preview ---/);
     assert.match(result.stderr, /River Review \(local\)/);
   });

@@ -150,7 +150,7 @@ jobs:
 
 ## How the Synthesis Skill Works
 
-The synthesis step of W-check is handled by the `rr-midstream-independent-review-synthesis-001` skill (`recommended: true`). It operates in three main steps:
+The synthesis step of W-check is handled by the `independent-review-synthesis` skill (`recommended: true`). It operates in three main steps:
 
 1. **Deduplicate**: When multiple reviewers flag the same location, findings are merged into a single entry based on file path, line range, and evidence text similarity.
 2. **Hallucination guard**: Each finding's `evidence` is checked against the actual diff and source files. Findings that reference non-existent code are classified as `dismissed-hallucination` and excluded from the final output.
@@ -170,7 +170,7 @@ The following is an example of the JSON structure emitted by the synthesis skill
   "issues": [
     {
       "id": "w-001",
-      "ruleId": "rr-midstream-independent-review-synthesis-001",
+      "ruleId": "independent-review-synthesis",
       "title": "Possible SQL injection",
       "message": "User input is interpolated directly into the query. Switch to parameterized binding.",
       "severity": "critical",
@@ -182,7 +182,7 @@ The following is an example of the JSON structure emitted by the synthesis skill
     },
     {
       "id": "w-002",
-      "ruleId": "rr-midstream-independent-review-synthesis-001",
+      "ruleId": "independent-review-synthesis",
       "title": "Reference to non-existent function",
       "message": "The validateInput() function cited by the reviewer does not appear in the diff and has been excluded.",
       "severity": "minor",
@@ -198,10 +198,10 @@ The following is an example of the JSON structure emitted by the synthesis skill
 
 `status: "verified"` means the finding was confirmed against the actual diff. `status: "suppressed"` means the finding was excluded (e.g., hallucinated reference). The verdict (`merge-ready` / `human-review` / `block`) is recorded in `summary.notes`. For the complete output schema, see [`schemas/output.schema.json`](../../schemas/output.schema.json).
 
-Full skill reference: [`skills/midstream/community/rr-midstream-independent-review-synthesis-001/SKILL.md`](https://github.com/s977043/river-review/blob/main/skills/midstream/community/rr-midstream-independent-review-synthesis-001/SKILL.md)
+Full skill reference: [`skills/midstream/community/independent-review-synthesis/SKILL.md`](https://github.com/s977043/river-review/blob/main/skills/midstream/community/independent-review-synthesis/SKILL.md)
 
 ## Related Pages
 
 - [Artifact Input Contract](../reference/artifact-input-contract.md) — full specification of `review-self` / `review-external`
-- [Independent Review Synthesis skill](https://github.com/s977043/river-review/blob/main/skills/midstream/community/rr-midstream-independent-review-synthesis-001/SKILL.md) — complete synthesis skill rules
+- [Independent Review Synthesis skill](https://github.com/s977043/river-review/blob/main/skills/midstream/community/independent-review-synthesis/SKILL.md) — complete synthesis skill rules
 - [GitHub Actions Setup](./github-actions.md) — basic GitHub Actions configuration

@@ -12,7 +12,7 @@ In River Review, checks for each phase are added as "skills". Skills are defined
 
 ```markdown
 ---
-id: rr-upstream-architecture-001
+id: architecture
 name: Architecture Consistency Check
 description: Verify alignment with ADRs and design guides in the upstream phase.
 phase: upstream

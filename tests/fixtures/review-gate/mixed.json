@@ -2,7 +2,7 @@
   "issues": [
     {
       "id": "rr-1",
-      "ruleId": "rr-midstream-security-001",
+      "ruleId": "security",
       "title": "SQL injection risk",
       "message": "Finding: SQL injection via unsanitized input Evidence: User input concatenated into query Impact: Data breach Fix: Use parameterized queries Severity: critical Confidence: high",
       "severity": "critical",
@@ -12,7 +12,7 @@
     },
     {
       "id": "rr-2",
-      "ruleId": "rr-midstream-code-quality-001",
+      "ruleId": "code-quality",
       "title": "Unbounded loop without timeout",
       "message": "Finding: While loop has no exit condition Evidence: while(true) without break/timeout Impact: Process hang Fix: Add timeout or max iterations Severity: major Confidence: high",
       "severity": "major",
@@ -22,7 +22,7 @@
     },
     {
       "id": "rr-3",
-      "ruleId": "rr-midstream-code-quality-001",
+      "ruleId": "code-quality",
       "title": "Missing error handling on fetch",
       "message": "Finding: Fetch call without try/catch Evidence: await fetch() on L15 Impact: Unhandled rejection on network failure Fix: Wrap in try/catch Severity: major Confidence: high",
       "severity": "major",
@@ -32,7 +32,7 @@
     },
     {
       "id": "rr-4",
-      "ruleId": "rr-midstream-style-001",
+      "ruleId": "style",
       "title": "Inconsistent naming convention",
       "message": "Finding: camelCase and snake_case mixed Evidence: getUserData vs get_user_data Impact: Readability Fix: Unify to camelCase Severity: minor Confidence: medium",
       "severity": "minor",
@@ -42,7 +42,7 @@
     },
     {
       "id": "rr-5",
-      "ruleId": "rr-midstream-docs-001",
+      "ruleId": "docs",
       "title": "Consider adding JSDoc",
       "message": "Finding: Public function lacks documentation Evidence: exportFunction without JSDoc Impact: Maintainability Fix: Add JSDoc comment Severity: info Confidence: low",
       "severity": "info",

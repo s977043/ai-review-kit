@@ -10,7 +10,7 @@ This is an implementation guide for describing River Review skills flexibly in "
 
 ```markdown
 ---
-id: rr-midstream-observability-001-en
+id: observability-en
 name: Logging and Observability Guard
 description: Encourage proper logging instead of swallowing exceptions
 phase:
@@ -36,7 +36,7 @@ modelHint: balanced
 
 ```yaml
 metadata:
-  id: rr-downstream-test-coverage-001
+  id: test-coverage
   name: Test Coverage Guard
   description: Detect missing tests for added features
   phase: [downstream]
@@ -51,7 +51,7 @@ instruction: |
 ### YAML (Flat Structure)
 
 ```yaml
-id: rr-midstream-security-001-en
+id: security-en
 name: Basic Security Review
 description: Detect basic security pitfalls
 phase: [midstream, downstream]

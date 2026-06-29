@@ -6,7 +6,7 @@ River Review skills use YAML frontmatter for metadata and Markdown for guidance.
 
 The required fields are `id` / `name` / `description` / `category`. In addition, the schema requires one of `phase` / `category` / `trigger`, and one of `applyTo` / `files` / `path_patterns` / `trigger` (see the `anyOf` constraint in `schemas/skill.schema.json`).
 
-- `id` (string, required): unique identifier (for example, `rr-upstream-design-architecture-001`); stable across moves/renames.
+- `id` (string, required): unique identifier (for example, `design-architecture`); stable across moves/renames.
 - `name` (string, required): human-readable skill name.
 - `description` (string, required): concise explanation of what the skill checks.
 - `category` (string, required): stream classification of the skill. One of `core` / `upstream` / `midstream` / `downstream`. The primary routing key.
@@ -26,7 +26,7 @@ The required fields are `id` / `name` / `description` / `category`. In addition,
 
 ```yaml
 ---
-id: rr-midstream-performance-002-en
+id: performance-en
 name: Midstream Performance Budget Check
 description: Flag midstream changes that risk latency regressions or heavy resource use.
 category: midstream
@@ -46,7 +46,7 @@ Ensure changed code paths avoid unnecessary synchronous I/O and unbounded concur
 
 ```yaml
 ---
-id: rr-midstream-performance-003-en
+id: performance-en
 name: Midstream Performance Budget Check
 description: Flag midstream changes that risk latency regressions or heavy resource use.
 category: midstream

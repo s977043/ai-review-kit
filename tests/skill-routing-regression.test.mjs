@@ -11,7 +11,7 @@ function findSkillInPlan(plan, id) {
 }
 
 test('upstream skill is gated by inputContext', async () => {
-  const skillId = 'rr-upstream-api-design-001';
+  const skillId = 'api-design';
   const changedFiles = ['src/api/users.ts'];
 
   const withoutAdr = await buildExecutionPlan({
@@ -33,7 +33,7 @@ test('upstream skill is gated by inputContext', async () => {
 });
 
 test('downstream skills are gated by declared dependencies when enabled', async () => {
-  const skillId = 'rr-downstream-coverage-gap-001';
+  const skillId = 'coverage-gap';
   const changedFiles = ['src/app.ts'];
   const availableContexts = ['diff', 'tests'];
 
