@@ -18,7 +18,7 @@
 
 | タグの組み合わせ例          | 重複の可能性                                                                                                                                        |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `typescript / type-safety`  | `rr-midstream-typescript-nullcheck-001` と `rr-midstream-typescript-strict-001` は対象グロブが同一。両方有効にすると同一ファイルへの指摘が重複する  |
+| `typescript / type-safety`  | `typescript-nullcheck` と `typescript-strict` は対象グロブが同一。両方有効にすると同一ファイルへの指摘が重複する                                    |
 | `community / modern-web`    | `semantic-001`・`performance-001`・`browser-compat-001`・`a11y-interactive-001` の 4 つは対象グロブが同一。最初は目的に合う 1〜2 本を選んで試す     |
 | `community / design-system` | `design-token-enforcement-001` と `design-system-component-reuse-001` は異なる軸（トークン vs. コンポーネント）なので、両方有効にしても重複は少ない |
 
@@ -34,31 +34,31 @@
 
 ### TypeScript フロントエンド（Next.js / React）
 
-- `rr-midstream-typescript-strict-001` — 型安全の基盤
-- `rr-midstream-security-basic-001` — XSS・シークレット漏洩
-- `rr-midstream-nextjs-app-router-boundary-001`（Next.js App Router を使う場合）
-- `rr-midstream-modern-web-a11y-interactive-001` — インタラクティブ UI のアクセシビリティ
-- `rr-midstream-design-token-enforcement-001`（デザインシステムがある場合）
+- `typescript-strict` — 型安全の基盤
+- `security-basic` — XSS・シークレット漏洩
+- `nextjs-app-router-boundary`（Next.js App Router を使う場合）
+- `modern-web-a11y-interactive` — インタラクティブ UI のアクセシビリティ
+- `design-token-enforcement`（デザインシステムがある場合）
 
 ### Python API
 
-- `rr-midstream-security-basic-001`
-- `rr-midstream-logging-observability-001`
-- `rr-downstream-coverage-gap-001`
+- `security-basic`
+- `logging-observability`
+- `coverage-gap`
 
 ### 設計・ドキュメント重視
 
-- `rr-upstream-adr-decision-quality-001`
-- `rr-upstream-architecture-boundaries-001`
-- `rr-upstream-security-privacy-design-001`
+- `adr-decision-quality`
+- `architecture-boundaries`
+- `security-privacy-design`
 
 ### マルチエージェント・AI レビュー統合
 
-- `rr-midstream-independent-review-synthesis-001` を最後に実行して複数レビュー結果を統合する
+- `independent-review-synthesis` を最後に実行して複数レビュー結果を統合する
 
 ## 5. TypeScript の nullcheck vs. strict をどう選ぶか
 
-`rr-midstream-typescript-nullcheck-001` と `rr-midstream-typescript-strict-001` は対象グロブが同一です。
+`typescript-nullcheck` と `typescript-strict` は対象グロブが同一です。
 
 - `strict-001` は `any` 型・unsafe assertion・null ハンドリングを幅広くカバーする
 - `nullcheck-001` は null/undefined 安全性に特化してより深くチェックする

@@ -5,7 +5,7 @@
     "category": "i18n",
     "seedRepo": "seeds/i18n-unused-key-01/",
     "diffFile": "diffs/i18n-unused-key-01.diff",
-    "planSkills": ["rr-midstream-i18n-unused-key-001"],
+    "planSkills": ["i18n-unused-key"],
     "expected": {
       "withRepoContext": {
         "minFindings": 0,
@@ -23,7 +23,7 @@
     "category": "normalization",
     "seedRepo": "seeds/normalization-id-format-01/",
     "diffFile": "diffs/normalization-id-format-01.diff",
-    "planSkills": ["rr-midstream-normalization-consistency-001"],
+    "planSkills": ["normalization-consistency"],
     "expected": {
       "withRepoContext": {
         "minFindings": 0,
@@ -41,7 +41,7 @@
     "category": "loading",
     "seedRepo": "seeds/loading-state-early-return-01/",
     "diffFile": "diffs/loading-state-early-return-01.diff",
-    "planSkills": ["rr-midstream-loading-state-001"],
+    "planSkills": ["loading-state"],
     "expected": {
       "withRepoContext": {
         "minFindings": 0,
@@ -59,7 +59,7 @@
     "category": "nullability",
     "seedRepo": "seeds/nullability-api-response-01/",
     "diffFile": "diffs/nullability-api-response-01.diff",
-    "planSkills": ["rr-midstream-nullability-contract-001"],
+    "planSkills": ["nullability-contract"],
     "expected": {
       "withRepoContext": {
         "minFindings": 0,
@@ -77,7 +77,7 @@
     "category": "api-compat",
     "seedRepo": "seeds/api-contract-no-test-01/",
     "diffFile": "diffs/api-contract-no-test-01.diff",
-    "planSkills": ["rr-midstream-api-compatibility-001"],
+    "planSkills": ["api-compatibility"],
     "expected": {
       "withRepoContext": {
         "minFindings": 0,
@@ -96,7 +96,7 @@
     "guard": true,
     "seedRepo": "seeds/guard-future-use-comment/",
     "diffFile": "diffs/guard-future-use-comment.diff",
-    "planSkills": ["rr-midstream-i18n-unused-key-001"],
+    "planSkills": ["i18n-unused-key"],
     "expected": {
       "withRepoContext": {
         "minFindings": 0,
@@ -115,7 +115,7 @@
     "guard": true,
     "seedRepo": "seeds/guard-generated-file/",
     "diffFile": "diffs/guard-generated-file.diff",
-    "planSkills": ["rr-midstream-api-compatibility-001"],
+    "planSkills": ["api-compatibility"],
     "expected": {
       "withRepoContext": {
         "minFindings": 0,
@@ -134,7 +134,7 @@
     "guard": true,
     "seedRepo": "seeds/guard-related-test-updated/",
     "diffFile": "diffs/guard-related-test-updated.diff",
-    "planSkills": ["rr-midstream-api-compatibility-001"],
+    "planSkills": ["api-compatibility"],
     "expected": {
       "withRepoContext": {
         "minFindings": 0,

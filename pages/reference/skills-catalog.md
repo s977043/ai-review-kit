@@ -6,17 +6,17 @@ River Review に同梱されているスキル一覧です。フェーズ別に�
 
 梱包済みレビューナレッジの配布単位です。`--skill-set <id>` で導入できます（詳細は [Skill Pack を使う](../guides/use-skill-packs.md) を参照）。
 
-| id             | name                                     | axis        | tier      | skills                                                                                                                               |
-| -------------- | ---------------------------------------- | ----------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `typescript`   | TypeScript Review Pack                   | technology  | official  | `rr-midstream-typescript-strict-001` / `rr-midstream-typescript-nullcheck-001` / `rr-midstream-type-driven-design-001`               |
-| `ddd`          | Domain-Driven Design Review Pack         | methodology | community | `rr-upstream-bounded-context-language-001` / `rr-midstream-type-driven-design-001` / `rr-midstream-ubiquitous-language-naming-001`   |
-| `react-router` | React Router Review Pack                 | technology  | community | `rr-midstream-react-router-loader-boundary-001` / `rr-midstream-react-router-action-contract-001`                                    |
-| `laravel`      | Laravel Review Pack                      | technology  | community | `rr-midstream-laravel-eloquent-nplus1-001` / `rr-upstream-laravel-migration-safety-001` / `rr-midstream-laravel-mass-assignment-001` |
-| `gha-security` | GitHub Actions Security Pack             | concern     | community | `rr-downstream-gha-workflow-security-001`                                                                                            |
-| `tailwind`     | Tailwind CSS Review Pack                 | technology  | community | `rr-midstream-tailwind-class-hygiene-001`                                                                                            |
-| `vitest`       | Vitest Review Pack                       | technology  | community | `rr-midstream-vitest-mock-isolation-001`                                                                                             |
-| `firebase`     | Firebase / Supabase (BaaS) Security Pack | concern     | community | `rr-midstream-firebase-security-rules-001` / `rr-midstream-supabase-rls-policy-001`                                                  |
-| `nextjs`       | Next.js Review Pack                      | technology  | community | `rr-midstream-nextjs-app-router-boundary-001` / `rr-midstream-nextjs-server-action-security-001`                                     |
+| id             | name                                     | axis        | tier      | skills                                                                             |
+| -------------- | ---------------------------------------- | ----------- | --------- | ---------------------------------------------------------------------------------- |
+| `typescript`   | TypeScript Review Pack                   | technology  | official  | `typescript-strict` / `typescript-nullcheck` / `type-driven-design`                |
+| `ddd`          | Domain-Driven Design Review Pack         | methodology | community | `bounded-context-language` / `type-driven-design` / `ubiquitous-language-naming`   |
+| `react-router` | React Router Review Pack                 | technology  | community | `react-router-loader-boundary` / `react-router-action-contract`                    |
+| `laravel`      | Laravel Review Pack                      | technology  | community | `laravel-eloquent-nplus1` / `laravel-migration-safety` / `laravel-mass-assignment` |
+| `gha-security` | GitHub Actions Security Pack             | concern     | community | `gha-workflow-security`                                                            |
+| `tailwind`     | Tailwind CSS Review Pack                 | technology  | community | `tailwind-class-hygiene`                                                           |
+| `vitest`       | Vitest Review Pack                       | technology  | community | `vitest-mock-isolation`                                                            |
+| `firebase`     | Firebase / Supabase (BaaS) Security Pack | concern     | community | `firebase-security-rules` / `supabase-rls-policy`                                  |
+| `nextjs`       | Next.js Review Pack                      | technology  | community | `nextjs-app-router-boundary` / `nextjs-server-action-security`                     |
 
 ## upstream
 
@@ -38,7 +38,7 @@ River Review に同梱されているスキル一覧です。フェーズ別に�
 
 - findings / questions / actions
 
-### `rr-upstream-adr-decision-quality-001`
+### `adr-decision-quality`
 
 - 名前: `ADR Decision Quality`
 - 概要: `Ensure ADRs capture context; decision; alternatives; tradeoffs; and follow-ups in a way that prevents future
@@ -57,7 +57,7 @@ drift.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-api-design-001`
+### `api-design`
 
 - 名前: `API Design Consistency`
 - 概要: `Ensure API design follows RESTful naming and consistent conventions.`
@@ -73,7 +73,7 @@ drift.`
 
 - findings / summary / actions
 
-### `rr-upstream-api-versioning-compat-001`
+### `api-versioning-compat`
 
 - 名前: `API Versioning & Backward Compatibility`
 - 概要: `Ensure API/contract changes specify versioning strategy; backward compatibility; deprecation plan; and
@@ -99,7 +99,7 @@ migration guidance.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-architecture-boundaries-001`
+### `architecture-boundaries`
 
 - 名前: `Architecture Boundaries & Dependencies`
 - 概要: `Ensure architecture/design docs define clear boundaries; ownership; dependency direction; and change impact to
@@ -122,7 +122,7 @@ avoid tight coupling.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-architecture-diagrams-001`
+### `architecture-diagrams`
 
 - 名前: `Architecture Diagrams Readiness`
 - 概要: `Ensure architecture diagrams are readable; consistent with text; and clear on scope; boundaries; and data
@@ -151,7 +151,7 @@ flow.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-architecture-risk-register-001`
+### `architecture-risk-register`
 
 - 名前: `Architecture Risks, Assumptions & Open Questions`
 - 概要: `Ensure design docs explicitly capture risks; assumptions; and open questions with owners; deadlines; and
@@ -173,7 +173,7 @@ mitigation plans.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-architecture-sample-001`
+### `architecture-sample`
 
 - 名前: `Sample Architecture Consistency Review`
 - 概要: `Checks design/ADR docs for consistency and missing decisions.`
@@ -189,7 +189,7 @@ mitigation plans.`
 
 - findings / summary / questions / actions
 
-### `rr-upstream-architecture-traceability-001`
+### `architecture-traceability`
 
 - 名前: `Architecture Traceability & Consistency`
 - 概要: `Ensure design changes stay consistent across ADRs; diagrams; and specs; decisions are traceable; and drift is
@@ -213,7 +213,7 @@ explicitly managed.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-architecture-validation-plan-001`
+### `architecture-validation-plan`
 
 - 名前: `Architecture Validation Plan Guard`
 - 概要: `Detect missing validation plans (how to verify the design is correct) in design documents and ADRs.`
@@ -234,7 +234,7 @@ explicitly managed.`
 
 - findings / actions / questions
 
-### `rr-upstream-availability-architecture-001`
+### `availability-architecture`
 
 - 名前: `Availability & Resilience Architecture`
 - 概要: `Ensure architecture docs capture availability targets; failover strategy; capacity headroom; and resilience
@@ -256,7 +256,7 @@ trade-offs for critical services.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-bounded-context-language-001`
+### `bounded-context-language`
 
 - 名前: `Bounded Context & Ubiquitous Language`
 - 概要: `Ensure architecture docs define bounded contexts; ownership; and a consistent ubiquitous language to prevent
@@ -278,7 +278,7 @@ domain drift and coupling.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-cache-strategy-consistency-001`
+### `cache-strategy-consistency`
 
 - 名前: `Cache Strategy Consistency Guard`
 - 概要: `Detect undefined or inconsistent cache strategies (layers; consistency; invalidation; TTL; failure handling)
@@ -300,7 +300,7 @@ in design documents.`
 
 - findings / actions
 
-### `rr-upstream-capacity-cost-design-001`
+### `capacity-cost-design`
 
 - 名前: `Capacity, Performance & Cost Assumptions`
 - 概要: `Ensure architecture/design docs state traffic assumptions; performance budgets; resource limits; and cost
@@ -324,7 +324,7 @@ risks for critical paths.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-change-communication-001`
+### `change-communication`
 
 - 名前: `Architecture Change Communication`
 - 概要: `Ensure architecture updates document affected stakeholders; notification plan; and deprecation/retirement
@@ -346,7 +346,7 @@ signals to keep knowledge aligned.`
 
 - summary / findings / questions
 
-### `rr-upstream-context-budget-tuning-001`
+### `context-budget-tuning`
 
 - 名前: `Context Budget Tuning`
 - 概要: `.river-review.{yaml; json} の context.budget / ranking / reviewMode 設定をモデル仕様とリポジトリ規模に合わせて調整するレビュー観点。`
@@ -363,7 +363,7 @@ signals to keep knowledge aligned.`
 
 - findings / actions
 
-### `rr-upstream-data-flow-state-ownership-001`
+### `data-flow-state-ownership`
 
 - 名前: `Data Flow & State Ownership`
 - 概要: `Ensure designs define data flow; state ownership; consistency boundaries; and cross-boundary writes to prevent
@@ -389,7 +389,7 @@ drift and incidents.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-data-model-db-design-001`
+### `data-model-db-design`
 
 - 名前: `Data Model & DB Design Review`
 - 概要: `Ensure data model/DB designs cover constraints; integrity; indexes; migrations; rollback; and operational
@@ -411,7 +411,7 @@ impacts.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-dr-multiregion-001`
+### `dr-multiregion`
 
 - 名前: `Disaster Recovery & Multi-Region Readiness`
 - 概要: `Ensure architecture docs define RPO/RTO; failover paths; data consistency; and DR drillability.`
@@ -436,7 +436,7 @@ impacts.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-eval-driven-skill-design-001`
+### `eval-driven-skill-design`
 
 - 名前: `Eval-Driven Skill Design`
 - 概要: `新規 skill SKILL.md PR で `fixtures/`と`eval/` の happy-path × guard ペアが揃っているかを確認し、欠けている場合は eval cycle (#688)
@@ -452,7 +452,7 @@ impacts.`
 
 - findings / actions
 
-### `rr-upstream-event-driven-semantics-001`
+### `event-driven-semantics`
 
 - 名前: `Event-Driven Semantics & Delivery Guarantees`
 - 概要: `Ensure event-driven designs specify delivery guarantees; ordering; idempotency; schema evolution; and
@@ -478,7 +478,7 @@ replay/backfill strategy.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-external-dependencies-001`
+### `external-dependencies`
 
 - 名前: `External Dependencies & Vendor Risks`
 - 概要: `Ensure designs document third-party dependencies; SLAs; quotas; failure modes; and vendor lock-in mitigation.`
@@ -498,7 +498,7 @@ replay/backfill strategy.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-failure-modes-observability-001`
+### `failure-modes-observability`
 
 - 名前: `Failure Modes & Observability in Design`
 - 概要: `Ensure designs specify failure modes; timeouts; error contracts; and observability for critical flows.`
@@ -516,7 +516,7 @@ replay/backfill strategy.`
 
 - findings / actions / questions / summary
 
-### `rr-upstream-integration-contracts-001`
+### `integration-contracts`
 
 - 名前: `Service Integration & Contracts`
 - 概要: `Ensure cross-service integration defines contracts; ownership; failure handling; versioning; and
@@ -541,7 +541,7 @@ rollout/rollback expectations.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-laravel-migration-safety-001`
+### `laravel-migration-safety`
 
 - 名前: `Laravel Migration Safety Review`
 - 概要: `Reviews Laravel migrations for destructive operations; change() dropping modifiers; locking index creation on
@@ -557,7 +557,7 @@ large tables (PostgreSQL); and asymmetric down().`
 
 - findings / questions
 
-### `rr-upstream-migration-rollout-rollback-001`
+### `migration-rollout-rollback`
 
 - 名前: `Migration, Rollout & Rollback Plan`
 - 概要: `Ensure design/ADR changes include a concrete migration plan; rollout strategy; rollback conditions; and
@@ -579,7 +579,7 @@ compatibility considerations.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-multitenancy-isolation-001`
+### `multitenancy-isolation`
 
 - 名前: `Multitenancy Isolation Guard`
 - 概要: `マルチテナント前提の設計差分から、テナント分離（データ/権限/リソース/障害影響）の抜けや越境リスクを検出`
@@ -599,7 +599,7 @@ compatibility considerations.`
 
 - findings / actions
 
-### `rr-upstream-openapi-contract-001`
+### `openapi-contract`
 
 - 名前: `OpenAPI Contract Completeness`
 - 概要: `Ensure OpenAPI specs define consistent request/response schemas; error model; auth; pagination; and backward
@@ -619,7 +619,7 @@ compatibility.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-operability-slo-001`
+### `operability-slo`
 
 - 名前: `Operability, SLO & Runbook Readiness`
 - 概要: `Ensure designs define operability basics: SLO/SLI; monitoring; alerting; on-call actions; and incident
@@ -642,7 +642,7 @@ handling expectations.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-plangate-exec-conformance-001`
+### `plangate-exec-conformance`
 
 - 名前: `PlanGate Exec Conformance Guard`
 - 概要: `実装差分が plan / todo / test-cases アーティファクトの方針と一致しているかを検査し、逸脱・漏れ・意図外変更を検知する`
@@ -657,7 +657,7 @@ handling expectations.`
 
 - findings / summary / questions
 
-### `rr-upstream-plangate-gc-deterministic-001`
+### `plangate-gc-deterministic`
 
 - 名前: `PlanGate 決定論的 GC 判定`
 - 概要: `River Review の artifact / memory / log に対して、retention 設定 + hard guards + excludes から決定論的に KEEP/REMOVE を判定する GC
@@ -675,7 +675,7 @@ skill`
 
 - summary / findings / actions
 
-### `rr-upstream-plangate-plan-integrity-001`
+### `plangate-plan-integrity`
 
 - 名前: `PlanGate 計画整合性チェック`
 - 概要: `pbi-input; plan; todo; test-cases 間の整合性をチェックし、実装着手前の仕様漏れを検知する`
@@ -693,7 +693,7 @@ skill`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-plangate-rule-promotion-001`
+### `plangate-rule-promotion`
 
 - 名前: `PlanGate ルール昇格判定`
 - 概要: `運用で発見されたレビューパターン (findings / retrospective) を分析し、新 skill への昇格候補 / 既存 skill 更新候補 / 人間判断が必要な項目に分類する`
@@ -711,7 +711,7 @@ skill`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-plangate-verification-audit-001`
+### `plangate-verification-audit`
 
 - 名前: `PlanGate 検証監査 (W チェック)`
 - 概要: `既存のレビュー結果 (review-self / review-external) を再点検し、漏れ・誤検知・ハルシネーション・根拠欠落を検出する W チェック skill`
@@ -727,7 +727,7 @@ skill`
 
 - summary / findings / actions / questions / review-audit
 
-### `rr-upstream-pr-template-qa-001`
+### `pr-template-qa`
 
 - 名前: `PRテンプレート品質チェック`
 - 概要: `PRテンプレートの必須項目（日本語記載、Diátaxis、検証コマンド、チェックリスト）が明確かを確認し、抜けや誤解を生む文言を指摘する`
@@ -743,7 +743,7 @@ skill`
 
 - findings / summary
 
-### `rr-upstream-pre-mortem-001`
+### `pre-mortem`
 
 - 名前: `Pre-mortem 失敗シナリオ分析`
 - 概要: `変更が将来インシデントや技術的負債を引き起こすと仮定し、その原因と経路を逆算して設計の盲点を可視化する`
@@ -762,7 +762,7 @@ skill`
 
 - findings / questions / actions
 
-### `rr-upstream-requirements-acceptance-001`
+### `requirements-acceptance`
 
 - 名前: `Requirements Clarity & Acceptance Criteria`
 - 概要: `Ensure requirement docs define scope; terminology; acceptance criteria; edge cases; and non-functional
@@ -783,7 +783,7 @@ requirements.`
 
 - summary / findings / actions / questions
 
-### `rr-upstream-review-policy-standard-001`
+### `review-policy-standard`
 
 - 名前: `Standard Review Policy for Upstream`
 - 概要: `Applies standard AI review policy guidelines for upstream (design) phase reviews.`
@@ -801,7 +801,7 @@ requirements.`
 
 - findings / summary
 
-### `rr-upstream-security-privacy-design-001`
+### `security-privacy-design`
 
 - 名前: `Security & Privacy Design Review`
 - 概要: `Review data retention; deletion; backup residency; and cross-border data transfer.`
@@ -819,7 +819,7 @@ requirements.`
 
 - findings / actions
 
-### `rr-upstream-test-code-nextjs-001`
+### `test-code-nextjs`
 
 - 名前: `Component Test Scaffold (Next.js)`
 - 概要: `Generate React/Next.js component test skeletons (RTL) from specifications.`
@@ -835,7 +835,7 @@ requirements.`
 
 - tests
 
-### `rr-upstream-test-code-php-laravel-001`
+### `test-code-php-laravel`
 
 - 名前: `Test Scaffold (Laravel/PHPUnit)`
 - 概要: `Generate PHP/Laravel (PHPUnit) test skeletons from specifications.`
@@ -851,7 +851,7 @@ requirements.`
 
 - tests
 
-### `rr-upstream-test-code-react-001`
+### `test-code-react`
 
 - 名前: `Component Test Scaffold (React)`
 - 概要: `Generate generic React component test skeletons (RTL) from specifications.`
@@ -867,7 +867,7 @@ requirements.`
 
 - tests
 
-### `rr-upstream-test-code-remix-001`
+### `test-code-remix`
 
 - 名前: `Route/Function Test Scaffold (Remix)`
 - 概要: `Generate Remix loader/action and route component test skeletons.`
@@ -883,7 +883,7 @@ requirements.`
 
 - tests
 
-### `rr-upstream-test-code-unit-python-pytest-001`
+### `test-code-unit-python-pytest`
 
 - 名前: `Unit Test Scaffold (Python/pytest)`
 - 概要: `Generate Python/pytest unit test skeletons from specifications.`
@@ -899,7 +899,7 @@ requirements.`
 
 - tests
 
-### `rr-upstream-test-code-unit-ts-jest-001`
+### `test-code-unit-ts-jest`
 
 - 名前: `Unit Test Scaffold (TypeScript)`
 - 概要: `Generate TypeScript unit test skeletons (Jest/Vitest) from specifications.`
@@ -915,7 +915,7 @@ requirements.`
 
 - tests
 
-### `rr-upstream-test-code-vue-001`
+### `test-code-vue`
 
 - 名前: `Component Test Scaffold (Vue.js)`
 - 概要: `Generate Vue.js component test skeletons (Vue Test Utils) from specifications.`
@@ -931,7 +931,7 @@ requirements.`
 
 - tests
 
-### `rr-upstream-trust-boundaries-authz-001`
+### `trust-boundaries-authz`
 
 - 名前: `Trust Boundaries & Authorization Architecture`
 - 概要: `Ensure designs define trust boundaries; authn/authz responsibilities; and propagation of identity/claims
@@ -1046,7 +1046,7 @@ Torturing（論理検証）を組み合わせ、通常のレビューでは見�
 
 - findings / actions
 
-### `rr-midstream-a11y-accessible-name-001`
+### `a11y-accessible-name`
 
 - 名前: `a11y Accessible Name Basics`
 - 概要: `画像・ボタン・フォーム要素に適切なアクセシブルネームがあるか確認する。`
@@ -1063,7 +1063,7 @@ Torturing（論理検証）を組み合わせ、通常のレビューでは見�
 
 - findings / actions
 
-### `rr-midstream-agent-skill-bridge-001`
+### `agent-skill-bridge`
 
 - 名前: `Agent Skill Bridge Review`
 - 概要: `Review changes to the Agent Skills import/export bridge for path safety; round-trip fidelity; and validation
@@ -1082,7 +1082,7 @@ correctness.`
 
 - findings / actions
 
-### `rr-midstream-api-compatibility-001`
+### `api-compatibility`
 
 - 名前: `API Compatibility and Test Gap Review`
 - 概要: `Detect breaking API contract changes; DTO modifications without compatibility handling; and missing tests for
@@ -1102,7 +1102,7 @@ changed API boundaries.`
 
 - findings / actions
 
-### `rr-midstream-code-quality-sample-001`
+### `code-quality-sample`
 
 - 名前: `Sample Code Quality Pass`
 - 概要: `Checks common code quality and maintainability risks.`
@@ -1119,7 +1119,7 @@ changed API boundaries.`
 
 - findings / actions
 
-### `rr-midstream-config-json-001`
+### `config-json`
 
 - 名前: `Configuration File Review`
 - 概要: `Review JSON/YAML configuration files for common issues and best practices.`
@@ -1136,7 +1136,7 @@ changed API boundaries.`
 
 - findings
 
-### `rr-midstream-design-system-component-reuse-001`
+### `design-system-component-reuse`
 
 - 名前: `Design System Component Reuse Guard`
 - 概要: `既存デザインシステムコンポーネント（Button / Input / Modal / Card 等）を再実装していないかを検出する。Figma→コード実装時に既存コンポーネントを無視した実装を防ぐ。`
@@ -1153,7 +1153,7 @@ changed API boundaries.`
 
 - findings / actions
 
-### `rr-midstream-design-token-enforcement-001`
+### `design-token-enforcement`
 
 - 名前: `Design Token Enforcement`
 - 概要: `デザイントークンを使わずに直書きされた色・余白・フォントサイズ・角丸・シャドウを検出する。Figma Variables / Tailwind config / CSS custom properties
@@ -1171,7 +1171,7 @@ changed API boundaries.`
 
 - findings / actions
 
-### `rr-midstream-firebase-security-rules-001`
+### `firebase-security-rules`
 
 - 名前: `Firebase Security Rules Review`
 - 概要: `Detects over-permissive Firestore/Storage rules (allow read; write: if true / auth-only without ownership);
@@ -1190,7 +1190,7 @@ missing auth checks on writes; and admin SDK private key exposure to client bund
 
 - findings / actions
 
-### `rr-midstream-gh-address-comments-001`
+### `gh-address-comments`
 
 - 名前: `GitHubレビューコメント対応（修正案つき）`
 - 概要: `PRレビューコメントを重要度ごとに整理し、対応方針・修正案・質問をまとめて返信案を作る`
@@ -1211,7 +1211,7 @@ missing auth checks on writes; and admin SDK private key exposure to client bund
 
 - actions / questions / summary
 
-### `rr-midstream-hello-skill-001`
+### `hello-skill`
 
 - 名前: `Hello Skill (Always-On Sample)`
 - 概要: `Minimal always-on sample skill to guarantee an end-to-end review experience.`
@@ -1226,7 +1226,7 @@ missing auth checks on writes; and admin SDK private key exposure to client bund
 
 - findings / summary
 
-### `rr-midstream-i18n-unused-key-001`
+### `i18n-unused-key`
 
 - 名前: `i18n Unused Key Review`
 - 概要: `Detect i18n/locale keys that are removed from source but remain in locale files; or keys added to locale files
@@ -1245,7 +1245,7 @@ without source usage.`
 
 - findings
 
-### `rr-midstream-independent-review-synthesis-001`
+### `independent-review-synthesis`
 
 - 名前: `Independent Review Synthesis`
 - 概要: `複数の AI / 人間レビュー結果 (review-self / review-external / findings-pool) を統合し、実在性・重大度・対応優先度・merge 可否を検証する。`
@@ -1260,7 +1260,7 @@ without source usage.`
 
 - findings / summary / actions
 
-### `rr-midstream-laravel-eloquent-nplus1-001`
+### `laravel-eloquent-nplus1`
 
 - 名前: `Laravel Eloquent N+1 and Query Efficiency Review`
 - 概要: `Detects N+1 query patterns (relation access inside loops without eager loading); full-table get()/all() loads;
@@ -1277,7 +1277,7 @@ and unsafe chunk()/cursor() usage in Laravel Eloquent code.`
 
 - findings / questions
 
-### `rr-midstream-laravel-mass-assignment-001`
+### `laravel-mass-assignment`
 
 - 名前: `Laravel Mass Assignment and Authorization Review`
 - 概要: `Detects mass assignment via create/update($request->all()); unguarded models; and missing authorization on
@@ -1294,7 +1294,7 @@ mutating controller actions in Laravel.`
 
 - findings / questions
 
-### `rr-midstream-loading-state-001`
+### `loading-state`
 
 - 名前: `Loading State Transition Review`
 - 概要: `Detect missing loading/error/empty state handling that could trap users in spinners or disabled states.`
@@ -1312,7 +1312,7 @@ mutating controller actions in Laravel.`
 
 - findings
 
-### `rr-midstream-logging-observability-001`
+### `logging-observability`
 
 - 名前: `Logging and Observability Guard`
 - 概要: `Ensure code changes keep logs/metrics/traces useful for debugging failures and regressions.`
@@ -1330,7 +1330,7 @@ mutating controller actions in Laravel.`
 
 - findings / actions
 
-### `rr-midstream-logic-torturing-001`
+### `logic-torturing`
 
 - 名前: `Logic Torturing 論理検証`
 - 概要: `変更に含まれる設計判断・実装選択の論理的整合性を徹底的に検証し、確証バイアスを排除して判断精度を高める`
@@ -1349,7 +1349,7 @@ mutating controller actions in Laravel.`
 
 - findings / questions
 
-### `rr-midstream-modern-web-a11y-interactive-001`
+### `modern-web-a11y-interactive`
 
 - 名前: `Modern Web Accessibility for Interactive UI`
 - 概要: `キーボード操作 / focus 管理 / 動的コンテンツ更新 / ARIA role など、インタラクティブ UI のアクセシビリティ観点を suggestion で提示する。`
@@ -1369,7 +1369,7 @@ mutating controller actions in Laravel.`
 
 - findings / actions
 
-### `rr-midstream-modern-web-browser-compat-001`
+### `modern-web-browser-compat`
 
 - 名前: `Modern Web Browser Compatibility + Baseline Awareness`
 - 概要: `新しい Web API / CSS の利用追加に対し、Baseline 状態とブラウザ互換性 / progressive enhancement の有無を suggestion で示す。`
@@ -1389,7 +1389,7 @@ mutating controller actions in Laravel.`
 
 - findings / actions
 
-### `rr-midstream-modern-web-performance-001`
+### `modern-web-performance`
 
 - 名前: `Modern Web Performance + Core Web Vitals`
 - 概要: `画像・スクリプト・スタイル・interaction 変更が LCP / INP / CLS / リソースコストに与える影響を suggestion で提示する。`
@@ -1409,7 +1409,7 @@ mutating controller actions in Laravel.`
 
 - findings / actions
 
-### `rr-midstream-modern-web-semantic-001`
+### `modern-web-semantic`
 
 - 名前: `Modern Web Semantic + Platform-Native`
 - 概要: `legacy workaround を避け、semantic HTML / Web Platform Native API / modern CSS の利用機会を提示する。`
@@ -1429,7 +1429,7 @@ mutating controller actions in Laravel.`
 
 - findings / actions
 
-### `rr-midstream-nextjs-app-router-boundary-001`
+### `nextjs-app-router-boundary`
 
 - 名前: `Next.js App Router Client/Server Boundary`
 - 概要: `App Router の Server Component でクライアント専用APIを使っていないか確認する。`
@@ -1445,7 +1445,7 @@ mutating controller actions in Laravel.`
 
 - findings / actions
 
-### `rr-midstream-nextjs-server-action-security-001`
+### `nextjs-server-action-security`
 
 - 名前: `Next.js Server Action Security Review`
 - 概要: `Checks Next.js Server Actions ('use server') for missing authentication/authorization before mutations;
@@ -1463,7 +1463,7 @@ missing input validation; and untrusted client-supplied IDs — treating each ac
 
 - findings / actions
 
-### `rr-midstream-normalization-consistency-001`
+### `normalization-consistency`
 
 - 名前: `Normalization Consistency Review`
 - 概要: `Detect inconsistencies in ID formatting; date/time display; monetary amounts; and enum/status labels compared
@@ -1482,7 +1482,7 @@ to existing patterns in the codebase.`
 
 - findings
 
-### `rr-midstream-nullability-contract-001`
+### `nullability-contract`
 
 - 名前: `Nullability Contract Review`
 - 概要: `Detect null/undefined/empty handling gaps where callers or consumers may receive unexpected nullish values.`
@@ -1500,7 +1500,7 @@ to existing patterns in the codebase.`
 
 - findings / actions
 
-### `rr-midstream-pr-description-001`
+### `pr-description`
 
 - 名前: `PR Description Review`
 - 概要: `Review whether the PR description is review-ready and consistent with the diff (Why/What; impact; tests;
@@ -1516,7 +1516,7 @@ linked issues).`
 
 - findings / actions
 
-### `rr-midstream-react-router-action-contract-001`
+### `react-router-action-contract`
 
 - 名前: `React Router Action Contract Review`
 - 概要: `Checks React Router v7 action conventions: validation errors returned as data with 4xx status (not thrown);
@@ -1533,7 +1533,7 @@ redirect on success; and 3-branch ErrorBoundary handling.`
 
 - findings / questions
 
-### `rr-midstream-react-router-loader-boundary-001`
+### `react-router-loader-boundary`
 
 - 名前: `React Router Loader Boundary Review`
 - 概要: `Detects route data fetched in useEffect instead of loaders; server/client API leaks across loader boundaries;
@@ -1550,7 +1550,7 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / questions
 
-### `rr-midstream-review-automation-boundary-001`
+### `review-automation-boundary`
 
 - 名前: `Review Automation Boundary Guard`
 - 概要: `Detect review findings that belong in CI/lint/formatter rather than human review.`
@@ -1565,7 +1565,7 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / actions / metrics
 
-### `rr-midstream-review-comment-triage-001`
+### `review-comment-triage`
 
 - 名前: `Review Comment Triage (No-Code-Fix Mode)`
 - 概要: `レビューコメントの重要度ラベリングと対応方針・返信案を整理する。AI はコード修正やパッチ提案を行わない。`
@@ -1580,7 +1580,7 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / summary / questions
 
-### `rr-midstream-review-policy-standard-001`
+### `review-policy-standard`
 
 - 名前: `Standard Review Policy for Midstream`
 - 概要: `Applies standard AI review policy guidelines for midstream (implementation) phase reviews.`
@@ -1602,7 +1602,7 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / summary / actions
 
-### `rr-midstream-security-basic-001`
+### `security-basic`
 
 - 名前: `Baseline Security Checks`
 - 概要: `Check common security risks in application code (SQLi; XSS; secrets).`
@@ -1617,7 +1617,7 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / actions
 
-### `rr-midstream-supabase-rls-policy-001`
+### `supabase-rls-policy`
 
 - 名前: `Supabase RLS Policy Review`
 - 概要: `Detects tables created without ROW LEVEL SECURITY enabled; over-permissive policies (USING (true) / WITH CHECK
@@ -1635,7 +1635,7 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / actions
 
-### `rr-midstream-suppression-feedback-001`
+### `suppression-feedback`
 
 - 名前: `Suppression Feedback Workflow`
 - 概要: `Riverbed Memory の suppression entry を活用するときの判断基準と CLI 操作を案内する。`
@@ -1653,7 +1653,7 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / actions
 
-### `rr-midstream-tailwind-class-hygiene-001`
+### `tailwind-class-hygiene`
 
 - 名前: `Tailwind CSS Class Hygiene Review`
 - 概要: `Checks Tailwind utility class hygiene at the syntax level: arbitrary-value overuse that bypasses the theme
@@ -1670,7 +1670,7 @@ tokens.`
 
 - findings / actions
 
-### `rr-midstream-type-driven-design-001`
+### `type-driven-design`
 
 - 名前: `Type-Driven Design Guard`
 - 概要: `Detect primitive obsession and missing domain/brand types; check that state is modeled via discriminated
@@ -1689,7 +1689,7 @@ unions.`
 
 - findings / actions
 
-### `rr-midstream-typescript-nullcheck-001`
+### `typescript-nullcheck`
 
 - 名前: `TypeScript Null Safety Guardrails`
 - 概要: `Enforce null/undefined safety for changed TypeScript code and suggest safer patterns.`
@@ -1707,7 +1707,7 @@ unions.`
 
 - findings / actions
 
-### `rr-midstream-typescript-strict-001`
+### `typescript-strict`
 
 - 名前: `TypeScript Strictness Guard`
 - 概要: `Enforce TypeScript strictness by reducing any/unsafe assertions and ensuring null handling.`
@@ -1725,7 +1725,7 @@ unions.`
 
 - findings / actions
 
-### `rr-midstream-ubiquitous-language-naming-001`
+### `ubiquitous-language-naming`
 
 - 名前: `Ubiquitous Language Naming Consistency`
 - 概要: `Detects domain terms drifting between code identifiers and the established ubiquitous language (same concept
@@ -1743,7 +1743,7 @@ under different names; or different concepts sharing a name).`
 
 - findings / questions
 
-### `rr-midstream-vitest-mock-isolation-001`
+### `vitest-mock-isolation`
 
 - 名前: `Vitest Mock Isolation Review`
 - 概要: `Detects Vitest test-isolation hazards: unrestored vi.spyOn/vi.mock without afterEach cleanup or restoreMocks
@@ -1760,7 +1760,7 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 
 - findings / actions
 
-### `rr-midstream-war-game-001`
+### `war-game`
 
 - 名前: `War Game 敵対的シミュレーション`
 - 概要: `攻撃者・競合・悪意あるユーザーの視点で変更を分析し、防御の盲点と悪用シナリオを可視化する`
@@ -1799,7 +1799,7 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 
 - findings / actions
 
-### `rr-downstream-coverage-gap-001`
+### `coverage-gap`
 
 - 名前: `Coverage and Failure Path Gaps`
 - 概要: `Find missing tests for critical paths; edge cases; and failure handling in changed code.`
@@ -1817,7 +1817,7 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 
 - tests / findings / actions / summary
 
-### `rr-downstream-flaky-test-001`
+### `flaky-test`
 
 - 名前: `Flaky Test Risk Check`
 - 概要: `Detects patterns that make tests flaky and proposes stabilization steps.`
@@ -1837,7 +1837,7 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 
 - findings / actions / summary
 
-### `rr-downstream-gha-workflow-security-001`
+### `gha-workflow-security`
 
 - 名前: `GitHub Actions Workflow Security Review`
 - 概要: `Reviews GitHub Actions workflow diffs for script injection of untrusted input; pull_request_target with
@@ -1853,7 +1853,7 @@ untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-part
 
 - findings / questions
 
-### `rr-downstream-review-policy-standard-001`
+### `review-policy-standard`
 
 - 名前: `Standard Review Policy for Downstream`
 - 概要: `Applies standard AI review policy guidelines for downstream (test/QA) phase reviews.`
@@ -1875,7 +1875,7 @@ untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-part
 
 - findings / summary / tests
 
-### `rr-downstream-test-existence-001`
+### `test-existence`
 
 - 名前: `Test Presence for Changed Code`
 - 概要: `Check whether changed code paths have corresponding tests and suggest minimal coverage.`
@@ -1893,7 +1893,7 @@ untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-part
 
 - tests / findings / actions
 
-### `rr-downstream-test-naming-001`
+### `test-naming`
 
 - 名前: `Test Naming and Structure`
 - 概要: `Ensure tests use clear naming and cover edge cases with proper describe/it structure.`
@@ -1909,7 +1909,7 @@ untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-part
 
 - tests / findings / summary
 
-### `rr-downstream-test-plan-review-001`
+### `test-plan-review`
 
 - 名前: `テスト観点レビュー（差分ドリブン）`
 - 概要: `変更差分から重要なテスト観点と欠落を洗い出し、優先度付きでテストケース案を提示する`
@@ -1928,7 +1928,7 @@ untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-part
 
 - tests / findings / questions / actions
 
-### `rr-downstream-test-review-sample-001`
+### `test-review-sample`
 
 - 名前: `Sample Test Coverage Review`
 - 概要: `Evaluates downstream tests for coverage and edge cases.`

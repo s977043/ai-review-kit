@@ -125,7 +125,7 @@ river run . --reviewers auto --output json
 
 > セットを指定しない場合は、フェーズ・対象パス・入力コンテキストから**自動選択**されます。迷ったら無指定（自動）で始め、観点を絞りたいときだけ `--skill-set` を使うのが基本。
 >
-> ⚠️ **phase trap**: `comprehensive` / `multitenancy` / `adversarial` は upstream skill（例 `rr-upstream-multitenancy-isolation-001` / `rr-upstream-pre-mortem-001`）を含む。既定の midstream で `river run` するとそれらは**フェーズ不一致で無警告 skip**される。upstream 観点も効かせたいなら別途 `--phase upstream` で実行するか、`--debug` の `skippedSkills` で実際に走った skill を必ず確認すること。
+> ⚠️ **phase trap**: `comprehensive` / `multitenancy` / `adversarial` は upstream skill（例 `multitenancy-isolation` / `pre-mortem`）を含む。既定の midstream で `river run` するとそれらは**フェーズ不一致で無警告 skip**される。upstream 観点も効かせたいなら別途 `--phase upstream` で実行するか、`--debug` の `skippedSkills` で実際に走った skill を必ず確認すること。
 
 ## エージェント運用の補助機能
 

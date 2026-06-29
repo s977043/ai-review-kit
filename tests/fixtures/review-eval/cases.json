@@ -3,7 +3,7 @@
     "name": "secrets: hardcoded token (export const)",
     "phase": "midstream",
     "diffFile": "../planner-dataset/diffs/midstream-security-hardcoded-token.diff",
-    "planSkills": ["rr-midstream-security-basic-001"],
+    "planSkills": ["security-basic"],
     "mustInclude": [
       "Finding:",
       "Evidence:",
@@ -18,7 +18,7 @@
     "name": "secrets: guard (process.env reference)",
     "phase": "midstream",
     "diffFile": "diffs/secrets-env-reference.diff",
-    "planSkills": ["rr-midstream-security-basic-001"],
+    "planSkills": ["security-basic"],
     "expectNoFindings": true,
     "mustInclude": [],
     "maxFindings": 0
@@ -27,7 +27,7 @@
     "name": "secrets: explicit token patterns (AKIA/ghp_/sk-)",
     "phase": "midstream",
     "diffFile": "diffs/secrets-explicit-patterns.diff",
-    "planSkills": ["rr-midstream-security-basic-001"],
+    "planSkills": ["security-basic"],
     "mustInclude": ["Evidence:", "Severity: blocker", "Confidence: high"],
     "maxFindings": 3
   },
@@ -35,7 +35,7 @@
     "name": "secrets: object literal (unquoted key)",
     "phase": "midstream",
     "diffFile": "diffs/secrets-object-literal.diff",
-    "planSkills": ["rr-midstream-security-basic-001"],
+    "planSkills": ["security-basic"],
     "mustInclude": ["Evidence:", "Severity: blocker", "Confidence: high"],
     "maxFindings": 3
   },
@@ -43,7 +43,7 @@
     "name": "observability: silent catch (return;)",
     "phase": "midstream",
     "diffFile": "../planner-dataset/diffs/midstream-observability-silent-catch.diff",
-    "planSkills": ["rr-midstream-logging-observability-001"],
+    "planSkills": ["logging-observability"],
     "mustInclude": ["Evidence:", "catch", "ログ", "再throw", "Severity: nit"],
     "maxFindings": 3
   },
@@ -51,7 +51,7 @@
     "name": "observability: silent catch (return null;)",
     "phase": "midstream",
     "diffFile": "../planner-dataset/diffs/midstream-observability-silent-catch-return.diff",
-    "planSkills": ["rr-midstream-logging-observability-001"],
+    "planSkills": ["logging-observability"],
     "mustInclude": ["Evidence:", "catch", "Severity: nit"],
     "maxFindings": 3
   },
@@ -59,7 +59,7 @@
     "name": "observability: guard (catch with logging)",
     "phase": "midstream",
     "diffFile": "diffs/observability-catch-with-logging.diff",
-    "planSkills": ["rr-midstream-logging-observability-001"],
+    "planSkills": ["logging-observability"],
     "expectNoFindings": true,
     "mustInclude": [],
     "maxFindings": 0
@@ -68,7 +68,7 @@
     "name": "tests: missing tests for new behavior (throw new Error)",
     "phase": "downstream",
     "diffFile": "../planner-dataset/diffs/downstream-new-behavior-no-tests.diff",
-    "planSkills": ["rr-downstream-test-existence-001"],
+    "planSkills": ["test-existence"],
     "mustInclude": ["Evidence:", "テスト", "1〜3件", "Severity: warning"],
     "maxFindings": 2
   },
@@ -76,7 +76,7 @@
     "name": "tests: missing tests for new guard (throw new Error)",
     "phase": "downstream",
     "diffFile": "../planner-dataset/diffs/downstream-input-size-guard-no-tests.diff",
-    "planSkills": ["rr-downstream-coverage-gap-001"],
+    "planSkills": ["coverage-gap"],
     "mustInclude": ["Evidence:", "テスト", "Severity: warning"],
     "maxFindings": 2
   },
@@ -84,7 +84,7 @@
     "name": "tests: missing tests for new branch (if added)",
     "phase": "downstream",
     "diffFile": "../planner-dataset/diffs/downstream-coverage-missing-branch.diff",
-    "planSkills": ["rr-downstream-coverage-gap-001"],
+    "planSkills": ["coverage-gap"],
     "mustInclude": ["Evidence:", "テスト", "Severity: warning"],
     "maxFindings": 2
   },
@@ -92,7 +92,7 @@
     "name": "tests: missing tests for error validation path",
     "phase": "downstream",
     "diffFile": "diffs/missing-tests-validation-throw.diff",
-    "planSkills": ["rr-downstream-test-existence-001"],
+    "planSkills": ["test-existence"],
     "mustInclude": ["Evidence:", "テスト", "Severity: warning"],
     "maxFindings": 2
   },
@@ -100,7 +100,7 @@
     "name": "tests: missing tests for branch/exception changes",
     "phase": "downstream",
     "diffFile": "../planner-dataset/diffs/downstream-coverage-missing-branch.diff",
-    "planSkills": ["rr-downstream-test-existence-001"],
+    "planSkills": ["test-existence"],
     "mustInclude": ["Evidence:", "テスト", "Severity: warning"],
     "maxFindings": 2
   },
@@ -108,7 +108,7 @@
     "name": "tests: guard (test file changed too)",
     "phase": "downstream",
     "diffFile": "diffs/tests-changed-too.diff",
-    "planSkills": ["rr-downstream-test-existence-001"],
+    "planSkills": ["test-existence"],
     "expectNoFindings": true,
     "mustInclude": [],
     "maxFindings": 0

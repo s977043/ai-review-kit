@@ -1,5 +1,5 @@
 ---
-id: rr-<phase>-<category>-<number>
+id: '<skill-id>'
 name: <Skill Name>
 description: <What this skill does>
 version: '0.1.0'

@@ -29,8 +29,8 @@ Issue の狙いは「バグ修正や複雑なロジック変更などの高リ�
   - `buildExecutionPlan(options)`（L181〜）: `selectSkills()` で phase / applyTo / context により候補を絞り、planner あり/なしの3つの return 経路を持つ。
   - `selectSkills(skills, options)`: `evaluateSkill` が `phase` 一致を要求するため、現状は現在フェーズのスキルしか `selected` に入らない。
 - 対象スキル（注入候補）
-  - `rr-downstream-test-existence-001`—**phase: downstream**, severity: major
-  - `rr-downstream-coverage-gap-001`—**phase: downstream**, severity: major
+  - `test-existence`—**phase: downstream**, severity: major
+  - `coverage-gap`—**phase: downstream**, severity: major
 - ガード: `docs/development/pipeline-params-checklist.md`
   - `buildExecutionPlan` に**新パラメータを追加**する場合の call site チェックリスト。
   - 本件は `changedFiles`（既存パラメータ）から内部計算し、出力フィールドを足すだけなので**入力シグネチャは不変**。ただし**出力フィールド追加**はスナップショットテストに影響する。
@@ -110,7 +110,7 @@ C は phase 整合性は良いが Issue の中核を外すため、単独の最�
 B の `testImpact.riskLevel` 信号を入力に、**方針 D（フラグ opt-in）** を実装した。
 
 - 環境変数 `RIVER_ESCALATE_TEST_SKILLS`（`1` / `true` / `yes` / `on` で有効、既定 off）を追加。
-- 有効かつ `testImpact.riskLevel === 'high'` のとき、`buildExecutionPlan` の選択結果に downstream テストスキル（`rr-downstream-test-existence-001` / `rr-downstream-coverage-gap-001`）を**フェーズ横断で注入**する。注入時は `skipped` から該当エントリを除去し、`selected` / `skipped` の二重計上を防ぐ。
+- 有効かつ `testImpact.riskLevel === 'high'` のとき、`buildExecutionPlan` の選択結果に downstream テストスキル（`test-existence` / `coverage-gap`）を**フェーズ横断で注入**する。注入時は `skipped` から該当エントリを除去し、`selected` / `skipped` の二重計上を防ぐ。
 - 注入は `selectSkills` 後・空判定前に行うため、3 つの return 経路すべて（早期 return / planner / 決定論）と空セレクション判定に一貫して反映される。
 - **既定 off** なので baseline の選択結果・midstream dry-run の heuristic 挙動・既存スナップショットは不変。フラグ on は明示的なオプトインであり、dry-run でも downstream スキルが選択され得る点は利用者が許容する前提とする。
 - 検証: `tests/review-runner.test.mjs` に flag off / flag on(high) / flag on(low) の 3 ケースを追加。`npm test`（全 1521 件）と `npm run lint` が green。

@@ -27,7 +27,7 @@ test('skills resolve lists deterministic skills for a midstream ts path', () => 
   ]);
   assert.equal(code, 0);
   assert.match(stdout, /Resolved skills \(phase=midstream/);
-  assert.match(stdout, /rr-midstream-typescript-strict-001|rr-midstream-type-driven-design-001/);
+  assert.match(stdout, /typescript-strict|type-driven-design/);
 });
 
 test('skills resolve --output json returns a machine-readable plan', () => {

@@ -1,6 +1,6 @@
 ---
 # Required metadata (validate with schemas/skill.schema.json)
-id: rr-<phase>-<category>-<number> # 例: rr-midstream-code-quality-001（フェーズ-カテゴリ-連番）
+id: '<skill-id>' # 例: code-quality（kebab-case、プレフィックスなし）
 name: <Human readable title> # 50文字以内で簡潔に
 description: <What this skill checks> # 具体的なチェック目的
 category: midstream # core | upstream | midstream | downstream

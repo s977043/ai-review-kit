@@ -34,7 +34,7 @@ test('runRepoWideCase produces with/without findings counts and a contextLift de
     category: 'i18n',
     seedRepo: 'seeds/i18n-unused-key-01/',
     diffFile: 'diffs/i18n-unused-key-01.diff',
-    planSkills: ['rr-midstream-i18n-unused-key-001'],
+    planSkills: ['i18n-unused-key'],
     expected: {},
   };
   const result = await runRepoWideCase(caseDef, FIXTURES_DIR);
@@ -98,7 +98,7 @@ test('runRepoWideCase defaults guard to false on detection cases', async () => {
     category: 'i18n',
     seedRepo: 'seeds/i18n-unused-key-01/',
     diffFile: 'diffs/i18n-unused-key-01.diff',
-    planSkills: ['rr-midstream-i18n-unused-key-001'],
+    planSkills: ['i18n-unused-key'],
     expected: {},
   };
   const result = await runRepoWideCase(detectionCase, FIXTURES_DIR);

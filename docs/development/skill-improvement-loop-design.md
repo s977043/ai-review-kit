@@ -49,7 +49,7 @@ review 実行 ──finding──▶ feedback 分類（7型） ──▶ 対応�
   "timestamp": "2026-06-10T03:00:00Z",
   "trigger": "pr-comment",
   "feedbackType": "false_positive",
-  "skillId": "rr-midstream-typescript-strict-001",
+  "skillId": "typescript-strict",
   "findingFingerprint": "a1b2c3d4e5f60718",
   "evidence": "strict 設定済みの tsconfig を誤検出",
   "pr": 1100
