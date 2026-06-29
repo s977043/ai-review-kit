@@ -94,7 +94,7 @@
     "js-yaml": "^4.2.0",
     "minimatch": "^10.1.1",
     "openai": "^6.44.0",
-    "ora": "^9.4.0",
+    "ora": "^9.4.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
