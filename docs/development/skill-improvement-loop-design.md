@@ -130,7 +130,7 @@ skill-pack-design.md の tier（official / community / experimental）は、初�
 
 ## 5. 実行計画
 
-skill-pack-design.md の Phase B〜D と独立して進められるよう、別トラック（Phase L1〜L3）として定義します。
+skill-pack-design.md の Phase B〜D と独立して進められるよう、別トラック（Phase L-1〜L-5）として定義します。
 
 | Phase | 内容                                                                                | 変更範囲                           |
 | ----- | ----------------------------------------------------------------------------------- | ---------------------------------- |
