@@ -49018,7 +49018,7 @@ const src_safeJSON = (text) => {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //# sourceMappingURL=sleep.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/version.mjs
-const VERSION = '6.44.0'; // x-release-please-version
+const VERSION = '6.45.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -49988,6 +49988,7 @@ const formatRequestDetails = (details) => {
             (name.toLowerCase() === 'authorization' ||
                 name.toLowerCase() === 'api-key' ||
                 name.toLowerCase() === 'x-api-key' ||
+                name.toLowerCase() === 'x-amz-security-token' ||
                 name.toLowerCase() === 'cookie' ||
                 name.toLowerCase() === 'set-cookie') ?
                 '***'
@@ -50669,14 +50670,22 @@ class WorkloadIdentityAuth {
             }
             throw APIError.generate(response.status, body, `Token exchange failed with status ${response.status}`, response.headers);
         }
-        const tokenResponse = (await response.json());
-        const expiresIn = tokenResponse.expires_in || 3600;
+        const tokenResponse = await response.json();
+        if (typeof tokenResponse !== 'object' ||
+            tokenResponse === null ||
+            !('access_token' in tokenResponse) ||
+            typeof tokenResponse.access_token !== 'string' ||
+            tokenResponse.access_token.trim().length === 0) {
+            throw new error_OpenAIError("Token exchange response missing 'access_token' field");
+        }
+        const accessToken = tokenResponse.access_token;
+        const expiresIn = tokenResponse.expires_in ?? 3600;
         const expiresAt = Date.now() + expiresIn * 1000;
         this.cachedToken = {
-            token: tokenResponse.access_token,
+            token: accessToken,
             expiresAt,
         };
-        return tokenResponse.access_token;
+        return accessToken;
     }
     isTokenExpired(cachedToken) {
         return Date.now() >= cachedToken.expiresAt;
@@ -51206,7 +51215,7 @@ function isPresent(obj) {
 }
 //# sourceMappingURL=chatCompletionUtils.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/EventStream.mjs
-var _EventStream_instances, _EventStream_connectedPromise, _EventStream_resolveConnectedPromise, _EventStream_rejectConnectedPromise, _EventStream_endPromise, _EventStream_resolveEndPromise, _EventStream_rejectEndPromise, _EventStream_listeners, _EventStream_ended, _EventStream_errored, _EventStream_aborted, _EventStream_catchingPromiseCreated, _EventStream_handleError;
+var _EventStream_instances, _EventStream_connectedPromise, _EventStream_resolveConnectedPromise, _EventStream_rejectConnectedPromise, _EventStream_endPromise, _EventStream_resolveEndPromise, _EventStream_rejectEndPromise, _EventStream_listeners, _EventStream_abortListeners, _EventStream_ended, _EventStream_errored, _EventStream_aborted, _EventStream_catchingPromiseCreated, _EventStream_removeAbortListeners, _EventStream_handleError;
 
 
 class EventStream {
@@ -51220,6 +51229,7 @@ class EventStream {
         _EventStream_resolveEndPromise.set(this, () => { });
         _EventStream_rejectEndPromise.set(this, () => { });
         _EventStream_listeners.set(this, {});
+        _EventStream_abortListeners.set(this, []);
         _EventStream_ended.set(this, false);
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
@@ -51266,6 +51276,17 @@ class EventStream {
     }
     abort() {
         this.controller.abort();
+    }
+    _listenForAbort(signal) {
+        if (!signal || this.ended)
+            return;
+        if (signal.aborted) {
+            this.controller.abort();
+            return;
+        }
+        const listener = () => this.controller.abort();
+        signal.addEventListener('abort', listener, { once: true });
+        __classPrivateFieldGet(this, _EventStream_abortListeners, "f").push({ signal, listener });
     }
     /**
      * Adds the listener function to the end of the listeners array for the event.
@@ -51334,6 +51355,7 @@ class EventStream {
             return;
         }
         if (event === 'end') {
+            __classPrivateFieldGet(this, _EventStream_instances, "m", _EventStream_removeAbortListeners).call(this);
             __classPrivateFieldSet(this, _EventStream_ended, true, "f");
             __classPrivateFieldGet(this, _EventStream_resolveEndPromise, "f").call(this);
         }
@@ -51371,7 +51393,11 @@ class EventStream {
     }
     _emitFinal() { }
 }
-_EventStream_connectedPromise = new WeakMap(), _EventStream_resolveConnectedPromise = new WeakMap(), _EventStream_rejectConnectedPromise = new WeakMap(), _EventStream_endPromise = new WeakMap(), _EventStream_resolveEndPromise = new WeakMap(), _EventStream_rejectEndPromise = new WeakMap(), _EventStream_listeners = new WeakMap(), _EventStream_ended = new WeakMap(), _EventStream_errored = new WeakMap(), _EventStream_aborted = new WeakMap(), _EventStream_catchingPromiseCreated = new WeakMap(), _EventStream_instances = new WeakSet(), _EventStream_handleError = function _EventStream_handleError(error) {
+_EventStream_connectedPromise = new WeakMap(), _EventStream_resolveConnectedPromise = new WeakMap(), _EventStream_rejectConnectedPromise = new WeakMap(), _EventStream_endPromise = new WeakMap(), _EventStream_resolveEndPromise = new WeakMap(), _EventStream_rejectEndPromise = new WeakMap(), _EventStream_listeners = new WeakMap(), _EventStream_abortListeners = new WeakMap(), _EventStream_ended = new WeakMap(), _EventStream_errored = new WeakMap(), _EventStream_aborted = new WeakMap(), _EventStream_catchingPromiseCreated = new WeakMap(), _EventStream_instances = new WeakSet(), _EventStream_removeAbortListeners = function _EventStream_removeAbortListeners() {
+    for (const { signal, listener } of __classPrivateFieldGet(this, _EventStream_abortListeners, "f").splice(0)) {
+        signal.removeEventListener('abort', listener);
+    }
+}, _EventStream_handleError = function _EventStream_handleError(error) {
     __classPrivateFieldSet(this, _EventStream_errored, true, "f");
     if (error instanceof Error && error.name === 'AbortError') {
         error = new APIUserAbortError();
@@ -51470,7 +51496,7 @@ class AbstractChatCompletionRunner extends EventStream {
         return __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_getFinalContent).call(this);
     }
     /**
-     * @returns a promise that resolves with the the final assistant ChatCompletionMessage response,
+     * @returns a promise that resolves with the final assistant ChatCompletionMessage response,
      * or rejects if an error occurred or the stream ended prematurely without producing a ChatCompletionMessage.
      */
     async finalMessage() {
@@ -51517,12 +51543,7 @@ class AbstractChatCompletionRunner extends EventStream {
         }
     }
     async _createChatCompletion(client, params, options) {
-        const signal = options?.signal;
-        if (signal) {
-            if (signal.aborted)
-                this.controller.abort();
-            signal.addEventListener('abort', () => this.controller.abort());
-        }
+        this._listenForAbort(options?.signal);
         __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_validateParams).call(this, params);
         const chatCompletion = await client.chat.completions.create({ ...params, stream: false }, { ...options, signal: this.controller.signal });
         this._connected();
@@ -51534,11 +51555,11 @@ class AbstractChatCompletionRunner extends EventStream {
         }
         return await this._createChatCompletion(client, params, options);
     }
-    async _runTools(client, params, options) {
+    async _runTools(client, params, runner, options) {
         const role = 'tool';
         const { tool_choice = 'auto', stream, ...restParams } = params;
         const singleFunctionToCall = typeof tool_choice !== 'string' && tool_choice.type === 'function' && tool_choice?.function?.name;
-        const { maxChatCompletions = DEFAULT_MAX_CHAT_COMPLETIONS } = options || {};
+        const { maxChatCompletions = DEFAULT_MAX_CHAT_COMPLETIONS, afterCompletion } = options || {};
         // TODO(someday): clean this logic up
         const inputTools = params.tools.map((tool) => {
             if (isAutoParsableTool(tool)) {
@@ -51581,6 +51602,40 @@ class AbstractChatCompletionRunner extends EventStream {
         for (const message of params.messages) {
             this._addMessage(message, false);
         }
+        const runToolCall = async (toolCall) => {
+            if (toolCall.type !== 'function')
+                return { message: undefined, functionCalled: false };
+            const tool_call_id = toolCall.id;
+            const { name, arguments: args } = toolCall.function;
+            const fn = functionsByName[name];
+            if (!fn) {
+                const content = `Invalid tool_call: ${JSON.stringify(name)}. Available options are: ${Object.keys(functionsByName)
+                    .map((name) => JSON.stringify(name))
+                    .join(', ')}. Please try again`;
+                return { message: { role, tool_call_id, content }, functionCalled: false };
+            }
+            if (singleFunctionToCall && singleFunctionToCall !== name) {
+                const content = `Invalid tool_call: ${JSON.stringify(name)}. ${JSON.stringify(singleFunctionToCall)} requested. Please try again`;
+                return { message: { role, tool_call_id, content }, functionCalled: false };
+            }
+            let rawContent;
+            if (isRunnableFunctionWithParse(fn)) {
+                let parsed;
+                try {
+                    parsed = await fn.parse(args);
+                }
+                catch (error) {
+                    const content = error instanceof Error ? error.message : String(error);
+                    return { message: { role, tool_call_id, content }, functionCalled: false };
+                }
+                rawContent = await fn.function(parsed, runner);
+            }
+            else {
+                rawContent = await fn.function(args, runner);
+            }
+            const content = __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_stringifyFunctionCallResult).call(this, rawContent);
+            return { message: { role, tool_call_id, content }, functionCalled: true };
+        };
         for (let i = 0; i < maxChatCompletions; ++i) {
             const chatCompletion = await this._createChatCompletion(client, {
                 ...restParams,
@@ -51593,43 +51648,37 @@ class AbstractChatCompletionRunner extends EventStream {
                 throw new error_OpenAIError(`missing message in ChatCompletion response`);
             }
             if (!message.tool_calls?.length) {
+                await afterCompletion?.(chatCompletion, runner);
                 return;
             }
-            for (const tool_call of message.tool_calls) {
-                if (tool_call.type !== 'function')
-                    continue;
-                const tool_call_id = tool_call.id;
-                const { name, arguments: args } = tool_call.function;
-                const fn = functionsByName[name];
-                if (!fn) {
-                    const content = `Invalid tool_call: ${JSON.stringify(name)}. Available options are: ${Object.keys(functionsByName)
-                        .map((name) => JSON.stringify(name))
-                        .join(', ')}. Please try again`;
-                    this._addMessage({ role, tool_call_id, content });
-                    continue;
-                }
-                else if (singleFunctionToCall && singleFunctionToCall !== name) {
-                    const content = `Invalid tool_call: ${JSON.stringify(name)}. ${JSON.stringify(singleFunctionToCall)} requested. Please try again`;
-                    this._addMessage({ role, tool_call_id, content });
-                    continue;
-                }
-                let parsed;
-                try {
-                    parsed = isRunnableFunctionWithParse(fn) ? await fn.parse(args) : args;
-                }
-                catch (error) {
-                    const content = error instanceof Error ? error.message : String(error);
-                    this._addMessage({ role, tool_call_id, content });
-                    continue;
-                }
-                // @ts-expect-error it can't rule out `never` type.
-                const rawContent = await fn.function(parsed, this);
-                const content = __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_stringifyFunctionCallResult).call(this, rawContent);
-                this._addMessage({ role, tool_call_id, content });
-                if (singleFunctionToCall) {
-                    return;
+            if (singleFunctionToCall || params.parallel_tool_calls === false) {
+                for (const toolCall of message.tool_calls) {
+                    const result = await runToolCall(toolCall);
+                    if (result.message)
+                        this._addMessage(result.message);
+                    if (singleFunctionToCall && result.functionCalled) {
+                        await afterCompletion?.(chatCompletion, runner);
+                        return;
+                    }
                 }
             }
+            else {
+                const results = await Promise.allSettled(message.tool_calls.map(runToolCall));
+                // Wait for every concurrently running tool to settle before surfacing an
+                // error so tool side effects cannot continue after the runner has ended.
+                for (const result of results) {
+                    if (result.status === 'rejected')
+                        throw result.reason;
+                }
+                // Promise.allSettled preserves input order, so the next request receives
+                // tool result messages in the same order as the assistant's tool calls.
+                for (const result of results) {
+                    if (result.status === 'fulfilled' && result.value.message) {
+                        this._addMessage(result.value.message);
+                    }
+                }
+            }
+            await afterCompletion?.(chatCompletion, runner);
         }
         return;
     }
@@ -51710,7 +51759,7 @@ class ChatCompletionRunner extends AbstractChatCompletionRunner {
             ...options,
             headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'runTools' },
         };
-        runner._run(() => runner._runTools(client, params, opts));
+        runner._run(() => runner._runTools(client, params, runner, opts));
         return runner;
     }
     _addMessage(message, emit = true) {
@@ -52007,12 +52056,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
     }
     async _createChatCompletion(client, params, options) {
         super._createChatCompletion;
-        const signal = options?.signal;
-        if (signal) {
-            if (signal.aborted)
-                this.controller.abort();
-            signal.addEventListener('abort', () => this.controller.abort());
-        }
+        this._listenForAbort(options?.signal);
         __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_beginRequest).call(this);
         const stream = await client.chat.completions.create({ ...params, stream: true }, { ...options, signal: this.controller.signal });
         this._connected();
@@ -52025,12 +52069,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         return this._addChatCompletion(__classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_endRequest).call(this));
     }
     async _fromReadableStream(readableStream, options) {
-        const signal = options?.signal;
-        if (signal) {
-            if (signal.aborted)
-                this.controller.abort();
-            signal.addEventListener('abort', () => this.controller.abort());
-        }
+        this._listenForAbort(options?.signal);
         __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_beginRequest).call(this);
         this._connected();
         const stream = src_Stream.fromReadableStream(readableStream, this.controller);
@@ -52280,7 +52319,8 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
             if (content) {
                 choice.message.content = (choice.message.content || '') + content;
                 if (!choice.message.refusal && __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_getAutoParseableResponseFormat).call(this)) {
-                    choice.message.parsed = partialParse(choice.message.content);
+                    // The partial parser does not accept whitespace-only input.
+                    choice.message.parsed = choice.message.content.trim() ? partialParse(choice.message.content) : null;
                 }
             }
             if (tool_calls) {
@@ -52473,7 +52513,7 @@ class ChatCompletionStreamingRunner extends ChatCompletionStream {
             ...options,
             headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'runTools' },
         };
-        runner._run(() => runner._runTools(client, params, opts));
+        runner._run(() => runner._runTools(client, params, runner, opts));
         return runner;
     }
 }
@@ -55846,12 +55886,7 @@ class AssistantStream extends EventStream {
         return runner;
     }
     async _fromReadableStream(readableStream, options) {
-        const signal = options?.signal;
-        if (signal) {
-            if (signal.aborted)
-                this.controller.abort();
-            signal.addEventListener('abort', () => this.controller.abort());
-        }
+        this._listenForAbort(options?.signal);
         this._connected();
         const stream = src_Stream.fromReadableStream(readableStream, this.controller);
         for await (const event of stream) {
@@ -55875,12 +55910,7 @@ class AssistantStream extends EventStream {
         return runner;
     }
     async _createToolAssistantStream(run, runId, params, options) {
-        const signal = options?.signal;
-        if (signal) {
-            if (signal.aborted)
-                this.controller.abort();
-            signal.addEventListener('abort', () => this.controller.abort());
-        }
+        this._listenForAbort(options?.signal);
         const body = { ...params, stream: true };
         const stream = await run.submitToolOutputs(runId, body, {
             ...options,
@@ -55938,12 +55968,7 @@ class AssistantStream extends EventStream {
         return __classPrivateFieldGet(this, _AssistantStream_finalRun, "f");
     }
     async _createThreadAssistantStream(thread, params, options) {
-        const signal = options?.signal;
-        if (signal) {
-            if (signal.aborted)
-                this.controller.abort();
-            signal.addEventListener('abort', () => this.controller.abort());
-        }
+        this._listenForAbort(options?.signal);
         const body = { ...params, stream: true };
         const stream = await thread.createAndRun(body, { ...options, signal: this.controller.signal });
         this._connected();
@@ -55956,12 +55981,7 @@ class AssistantStream extends EventStream {
         return this._addRun(__classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_endRequest).call(this));
     }
     async _createAssistantStream(run, threadId, params, options) {
-        const signal = options?.signal;
-        if (signal) {
-            if (signal.aborted)
-                this.controller.abort();
-            signal.addEventListener('abort', () => this.controller.abort());
-        }
+        this._listenForAbort(options?.signal);
         const body = { ...params, stream: true };
         const stream = await run.create(threadId, body, { ...options, signal: this.controller.signal });
         this._connected();
@@ -57780,7 +57800,7 @@ realtime_Realtime.Calls = Calls;
 
 function maybeParseResponse(response, params) {
     if (!params || !ResponsesParser_hasAutoParseableInput(params)) {
-        return {
+        const parsed = {
             ...response,
             output_parsed: null,
             output: response.output.map((item) => {
@@ -57804,15 +57824,20 @@ function maybeParseResponse(response, params) {
                 }
             }),
         };
+        if (needsOutputText(response, parsed)) {
+            addOutputText(parsed);
+        }
+        return parsed;
     }
     return parseResponse(response, params);
 }
 function parseResponse(response, params) {
+    const shouldParse = !response.status || response.status === 'completed';
     const output = response.output.map((item) => {
         if (item.type === 'function_call') {
             return {
                 ...item,
-                parsed_arguments: ResponsesParser_parseToolCall(params, item),
+                parsed_arguments: shouldParse ? ResponsesParser_parseToolCall(params, item) : null,
             };
         }
         if (item.type === 'message') {
@@ -57820,7 +57845,7 @@ function parseResponse(response, params) {
                 if (content.type === 'output_text') {
                     return {
                         ...content,
-                        parsed: parseTextFormat(params, content.text),
+                        parsed: shouldParse ? parseTextFormat(params, content.text) : null,
                     };
                 }
                 return content;
@@ -57833,7 +57858,7 @@ function parseResponse(response, params) {
         return item;
     });
     const parsed = Object.assign({}, response, { output });
-    if (!Object.getOwnPropertyDescriptor(response, 'output_text')) {
+    if (needsOutputText(response, parsed)) {
         addOutputText(parsed);
     }
     Object.defineProperty(parsed, 'output_parsed', {
@@ -57921,6 +57946,9 @@ function ResponsesParser_validateInputTools(tools) {
         }
     }
 }
+function needsOutputText(response, target) {
+    return !Object.getOwnPropertyDescriptor(response, 'output_text') || target.output_text == null;
+}
 function addOutputText(rsp) {
     const texts = [];
     for (const output of rsp.output) {
@@ -57936,8 +57964,409 @@ function addOutputText(rsp) {
     rsp.output_text = texts.join('');
 }
 //# sourceMappingURL=ResponsesParser.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/lib/responses/ResponseAccumulator.mjs
+
+
+/**
+ * Applies a streaming event to a response snapshot.
+ *
+ * Always use the returned snapshot. Incremental events update the supplied snapshot
+ * in place, while response lifecycle events return a detached replacement. Event
+ * payloads are cloned, so retaining or replaying the raw events is safe.
+ */
+function accumulateResponse(event, snapshot) {
+    if (!snapshot) {
+        if (event.type !== 'response.created') {
+            throw new error_OpenAIError(`When snapshot hasn't been set yet, expected 'response.created' event, got ${event.type}`);
+        }
+        return cloneResponse(event.response);
+    }
+    switch (event.type) {
+        case 'response.output_item.added': {
+            snapshot.output.push(structuredClone(event.item));
+            if (event.item.type === 'message') {
+                addOutputText(snapshot);
+            }
+            break;
+        }
+        case 'response.output_item.done': {
+            getOutput(snapshot, event.output_index);
+            snapshot.output[event.output_index] = structuredClone(event.item);
+            if (event.item.type === 'message') {
+                addOutputText(snapshot);
+            }
+            break;
+        }
+        case 'response.content_part.added': {
+            const output = getOutput(snapshot, event.output_index);
+            const type = output.type;
+            const part = event.part;
+            if (type === 'message' && part.type !== 'reasoning_text') {
+                output.content.push(structuredClone(part));
+                if (part.type === 'output_text') {
+                    addOutputText(snapshot);
+                }
+            }
+            else if (type === 'reasoning' && part.type === 'reasoning_text') {
+                if (!output.content) {
+                    output.content = [];
+                }
+                output.content.push(structuredClone(part));
+            }
+            break;
+        }
+        case 'response.content_part.done': {
+            const output = getOutput(snapshot, event.output_index);
+            const part = event.part;
+            if (output.type === 'message' && part.type !== 'reasoning_text') {
+                getContent(output.content, event.content_index);
+                output.content[event.content_index] = structuredClone(part);
+                if (part.type === 'output_text') {
+                    addOutputText(snapshot);
+                }
+            }
+            else if (output.type === 'reasoning' && part.type === 'reasoning_text') {
+                const content = output.content;
+                if (!content) {
+                    throw new error_OpenAIError(`missing content at index ${event.content_index}`);
+                }
+                getContent(content, event.content_index);
+                content[event.content_index] = structuredClone(part);
+            }
+            break;
+        }
+        case 'response.output_text.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'message') {
+                const content = getContent(output.content, event.content_index);
+                if (content.type !== 'output_text') {
+                    throw new error_OpenAIError(`expected content to be 'output_text', got ${content.type}`);
+                }
+                content.text += event.delta;
+                snapshot.output_text += event.delta;
+            }
+            break;
+        }
+        case 'response.output_text.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'message') {
+                const content = getContent(output.content, event.content_index);
+                if (content.type !== 'output_text') {
+                    throw new error_OpenAIError(`expected content to be 'output_text', got ${content.type}`);
+                }
+                content.text = event.text;
+                addOutputText(snapshot);
+            }
+            break;
+        }
+        case 'response.output_text.annotation.added': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'message') {
+                const content = getContent(output.content, event.content_index);
+                if (content.type !== 'output_text') {
+                    throw new error_OpenAIError(`expected content to be 'output_text', got ${content.type}`);
+                }
+                content.annotations[event.annotation_index] = structuredClone(event.annotation);
+            }
+            break;
+        }
+        case 'response.refusal.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'message') {
+                const content = getContent(output.content, event.content_index);
+                if (content.type !== 'refusal') {
+                    throw new error_OpenAIError(`expected content to be 'refusal', got ${content.type}`);
+                }
+                content.refusal += event.delta;
+            }
+            break;
+        }
+        case 'response.refusal.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'message') {
+                const content = getContent(output.content, event.content_index);
+                if (content.type !== 'refusal') {
+                    throw new error_OpenAIError(`expected content to be 'refusal', got ${content.type}`);
+                }
+                content.refusal = event.refusal;
+            }
+            break;
+        }
+        case 'response.function_call_arguments.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'function_call') {
+                output.arguments += event.delta;
+            }
+            break;
+        }
+        case 'response.function_call_arguments.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'function_call') {
+                output.arguments = event.arguments;
+            }
+            break;
+        }
+        case 'response.reasoning_text.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'reasoning') {
+                if (!output.content) {
+                    throw new error_OpenAIError(`missing content at index ${event.content_index}`);
+                }
+                const content = getContent(output.content, event.content_index);
+                if (content.type !== 'reasoning_text') {
+                    throw new error_OpenAIError(`expected content to be 'reasoning_text', got ${content.type}`);
+                }
+                content.text += event.delta;
+            }
+            break;
+        }
+        case 'response.reasoning_text.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'reasoning') {
+                if (!output.content) {
+                    throw new error_OpenAIError(`missing content at index ${event.content_index}`);
+                }
+                const content = getContent(output.content, event.content_index);
+                if (content.type !== 'reasoning_text') {
+                    throw new error_OpenAIError(`expected content to be 'reasoning_text', got ${content.type}`);
+                }
+                content.text = event.text;
+            }
+            break;
+        }
+        case 'response.reasoning_summary_part.added': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'reasoning') {
+                output.summary.push(structuredClone(event.part));
+            }
+            break;
+        }
+        case 'response.reasoning_summary_part.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'reasoning') {
+                getContent(output.summary, event.summary_index);
+                output.summary[event.summary_index] = structuredClone(event.part);
+            }
+            break;
+        }
+        case 'response.reasoning_summary_text.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'reasoning') {
+                const part = getContent(output.summary, event.summary_index);
+                part.text += event.delta;
+            }
+            break;
+        }
+        case 'response.reasoning_summary_text.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'reasoning') {
+                const part = getContent(output.summary, event.summary_index);
+                part.text = event.text;
+            }
+            break;
+        }
+        case 'response.custom_tool_call_input.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'custom_tool_call') {
+                output.input += event.delta;
+            }
+            break;
+        }
+        case 'response.custom_tool_call_input.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'custom_tool_call') {
+                output.input = event.input;
+            }
+            break;
+        }
+        case 'response.mcp_call_arguments.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'mcp_call') {
+                output.arguments += event.delta;
+            }
+            break;
+        }
+        case 'response.mcp_call_arguments.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'mcp_call') {
+                output.arguments = event.arguments;
+            }
+            break;
+        }
+        case 'response.code_interpreter_call_code.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'code_interpreter_call') {
+                output.code = (output.code ?? '') + event.delta;
+            }
+            break;
+        }
+        case 'response.code_interpreter_call_code.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'code_interpreter_call') {
+                output.code = event.code;
+            }
+            break;
+        }
+        case 'response.code_interpreter_call.in_progress': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'code_interpreter_call') {
+                output.status = 'in_progress';
+            }
+            break;
+        }
+        case 'response.code_interpreter_call.interpreting': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'code_interpreter_call') {
+                output.status = 'interpreting';
+            }
+            break;
+        }
+        case 'response.code_interpreter_call.completed': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'code_interpreter_call') {
+                output.status = 'completed';
+            }
+            break;
+        }
+        case 'response.file_search_call.in_progress': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'file_search_call') {
+                output.status = 'in_progress';
+            }
+            break;
+        }
+        case 'response.file_search_call.searching': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'file_search_call') {
+                output.status = 'searching';
+            }
+            break;
+        }
+        case 'response.file_search_call.completed': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'file_search_call') {
+                output.status = 'completed';
+            }
+            break;
+        }
+        case 'response.web_search_call.in_progress': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'web_search_call') {
+                output.status = 'in_progress';
+            }
+            break;
+        }
+        case 'response.web_search_call.searching': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'web_search_call') {
+                output.status = 'searching';
+            }
+            break;
+        }
+        case 'response.web_search_call.completed': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'web_search_call') {
+                output.status = 'completed';
+            }
+            break;
+        }
+        case 'response.image_generation_call.in_progress': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'image_generation_call') {
+                output.status = 'in_progress';
+            }
+            break;
+        }
+        case 'response.image_generation_call.generating': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'image_generation_call') {
+                output.status = 'generating';
+            }
+            break;
+        }
+        case 'response.image_generation_call.completed': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'image_generation_call') {
+                output.status = 'completed';
+            }
+            break;
+        }
+        case 'response.mcp_call.in_progress': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'mcp_call') {
+                output.status = 'in_progress';
+            }
+            break;
+        }
+        case 'response.mcp_call.completed': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'mcp_call') {
+                output.status = 'completed';
+            }
+            break;
+        }
+        case 'response.mcp_call.failed': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'mcp_call') {
+                output.status = 'failed';
+            }
+            break;
+        }
+        case 'response.created':
+        case 'response.queued':
+        case 'response.in_progress':
+        case 'response.completed':
+        case 'response.failed':
+        case 'response.incomplete': {
+            snapshot = cloneResponse(event.response);
+            break;
+        }
+        case 'response.audio.delta':
+        case 'response.audio.done':
+        case 'response.audio.transcript.delta':
+        case 'response.audio.transcript.done':
+        case 'response.image_generation_call.partial_image':
+        case 'response.mcp_list_tools.in_progress':
+        case 'response.mcp_list_tools.completed':
+        case 'response.mcp_list_tools.failed':
+        case 'error': {
+            // These events do not contain state represented by the Response object.
+            break;
+        }
+        default: {
+            ResponseAccumulator_assertNever(event);
+        }
+    }
+    return snapshot;
+}
+function cloneResponse(response) {
+    const snapshot = structuredClone(response);
+    if (!Object.getOwnPropertyDescriptor(snapshot, 'output_text') || snapshot.output_text == null) {
+        addOutputText(snapshot);
+    }
+    return snapshot;
+}
+function getOutput(snapshot, outputIndex) {
+    const output = snapshot.output[outputIndex];
+    if (!output) {
+        throw new error_OpenAIError(`missing output at index ${outputIndex}`);
+    }
+    return output;
+}
+function getContent(content, contentIndex) {
+    const part = content[contentIndex];
+    if (!part) {
+        throw new error_OpenAIError(`missing content at index ${contentIndex}`);
+    }
+    return part;
+}
+function ResponseAccumulator_assertNever(value) {
+    throw new error_OpenAIError(`Unhandled response stream event: ${JSON.stringify(value)}`);
+}
+//# sourceMappingURL=ResponseAccumulator.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/responses/ResponseStream.mjs
-var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest, _ResponseStream_accumulateResponse;
+var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest;
+
 
 
 
@@ -57960,12 +58389,7 @@ class ResponseStream extends EventStream {
         return runner;
     }
     async _createOrRetrieveResponse(client, params, options) {
-        const signal = options?.signal;
-        if (signal) {
-            if (signal.aborted)
-                this.controller.abort();
-            signal.addEventListener('abort', () => this.controller.abort());
-        }
+        this._listenForAbort(options?.signal);
         __classPrivateFieldGet(this, _ResponseStream_instances, "m", _ResponseStream_beginRequest).call(this);
         let stream;
         let starting_after = null;
@@ -57997,7 +58421,8 @@ class ResponseStream extends EventStream {
                 this._emit(name, event);
             }
         };
-        const response = __classPrivateFieldGet(this, _ResponseStream_instances, "m", _ResponseStream_accumulateResponse).call(this, event);
+        const response = accumulateResponse(event, __classPrivateFieldGet(this, _ResponseStream_currentResponseSnapshot, "f"));
+        __classPrivateFieldSet(this, _ResponseStream_currentResponseSnapshot, response, "f");
         maybeEmit('event', event);
         switch (event.type) {
             case 'response.output_text.delta': {
@@ -58049,88 +58474,6 @@ class ResponseStream extends EventStream {
         const parsedResponse = finalizeResponse(snapshot, __classPrivateFieldGet(this, _ResponseStream_params, "f"));
         __classPrivateFieldSet(this, _ResponseStream_finalResponse, parsedResponse, "f");
         return parsedResponse;
-    }, _ResponseStream_accumulateResponse = function _ResponseStream_accumulateResponse(event) {
-        let snapshot = __classPrivateFieldGet(this, _ResponseStream_currentResponseSnapshot, "f");
-        if (!snapshot) {
-            if (event.type !== 'response.created') {
-                throw new error_OpenAIError(`When snapshot hasn't been set yet, expected 'response.created' event, got ${event.type}`);
-            }
-            snapshot = __classPrivateFieldSet(this, _ResponseStream_currentResponseSnapshot, event.response, "f");
-            return snapshot;
-        }
-        switch (event.type) {
-            case 'response.output_item.added': {
-                snapshot.output.push(event.item);
-                break;
-            }
-            case 'response.content_part.added': {
-                const output = snapshot.output[event.output_index];
-                if (!output) {
-                    throw new error_OpenAIError(`missing output at index ${event.output_index}`);
-                }
-                const type = output.type;
-                const part = event.part;
-                if (type === 'message' && part.type !== 'reasoning_text') {
-                    output.content.push(part);
-                }
-                else if (type === 'reasoning' && part.type === 'reasoning_text') {
-                    if (!output.content) {
-                        output.content = [];
-                    }
-                    output.content.push(part);
-                }
-                break;
-            }
-            case 'response.output_text.delta': {
-                const output = snapshot.output[event.output_index];
-                if (!output) {
-                    throw new error_OpenAIError(`missing output at index ${event.output_index}`);
-                }
-                if (output.type === 'message') {
-                    const content = output.content[event.content_index];
-                    if (!content) {
-                        throw new error_OpenAIError(`missing content at index ${event.content_index}`);
-                    }
-                    if (content.type !== 'output_text') {
-                        throw new error_OpenAIError(`expected content to be 'output_text', got ${content.type}`);
-                    }
-                    content.text += event.delta;
-                }
-                break;
-            }
-            case 'response.function_call_arguments.delta': {
-                const output = snapshot.output[event.output_index];
-                if (!output) {
-                    throw new error_OpenAIError(`missing output at index ${event.output_index}`);
-                }
-                if (output.type === 'function_call') {
-                    output.arguments += event.delta;
-                }
-                break;
-            }
-            case 'response.reasoning_text.delta': {
-                const output = snapshot.output[event.output_index];
-                if (!output) {
-                    throw new error_OpenAIError(`missing output at index ${event.output_index}`);
-                }
-                if (output.type === 'reasoning') {
-                    const content = output.content?.[event.content_index];
-                    if (!content) {
-                        throw new error_OpenAIError(`missing content at index ${event.content_index}`);
-                    }
-                    if (content.type !== 'reasoning_text') {
-                        throw new error_OpenAIError(`expected content to be 'reasoning_text', got ${content.type}`);
-                    }
-                    content.text += event.delta;
-                }
-                break;
-            }
-            case 'response.completed': {
-                __classPrivateFieldSet(this, _ResponseStream_currentResponseSnapshot, event.response, "f");
-                break;
-            }
-        }
-        return snapshot;
     }, Symbol.asyncIterator)]() {
         const pushQueue = [];
         const readQueue = [];
@@ -59225,9 +59568,43 @@ _Webhooks_instances = new WeakSet(), _Webhooks_validateSecret = function _Webhoo
 
 
 //# sourceMappingURL=index.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/provider.mjs
+/**
+ * A provider factory such as `bedrock(options)` captures configuration in a
+ * definition, while every OpenAI client receives a fresh runtime from
+ * `definition.configure()`. Keeping definitions out of the provider object
+ * makes providers opaque and prevents arbitrary objects from imitating one.
+ * It also leaves provider-specific dependencies outside the core SDK.
+ *
+ * The registry lives on `globalThis` under a global symbol so a provider made
+ * by one copy of the package still works with another copy, including mixed
+ * CommonJS and ESM installations. The WeakMap avoids retaining discarded
+ * provider configurations.
+ */
+const providerDefinitionsKey = Symbol.for('openai.node.providerDefinitions.v1');
+const providerGlobal = globalThis;
+const existingProviderDefinitions = providerGlobal[providerDefinitionsKey];
+const providerDefinitions = existingProviderDefinitions ?? new WeakMap();
+if (!existingProviderDefinitions) {
+    Object.defineProperty(providerGlobal, providerDefinitionsKey, { value: providerDefinitions });
+}
+function createProvider(definition) {
+    const provider = Object.freeze({});
+    providerDefinitions.set(provider, definition);
+    return provider;
+}
+function configureProvider(provider) {
+    const definition = providerDefinitions.get(provider);
+    if (!definition) {
+        throw new Error('Invalid provider. Providers must be created with createProvider().');
+    }
+    return definition.configure();
+}
+//# sourceMappingURL=provider.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/client.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _OpenAI_instances, client_a, _OpenAI_encoder, _OpenAI_baseURLOverridden;
+
 
 
 
@@ -59287,6 +59664,7 @@ class OpenAI {
      * @param {string | null | undefined} [opts.project=process.env['OPENAI_PROJECT_ID'] ?? null]
      * @param {string | null | undefined} [opts.webhookSecret=process.env['OPENAI_WEBHOOK_SECRET'] ?? null]
      * @param {string} [opts.baseURL=process.env['OPENAI_BASE_URL'] ?? https://api.openai.com/v1] - Override the default base URL for the API.
+     * @param {Provider} [opts.provider] - Configure a third-party API provider. Mutually exclusive with top-level authentication and base URL options.
      * @param {number} [opts.timeout=10 minutes] - The maximum amount of time (in milliseconds) the client will wait for a response before timing out.
      * @param {MergedRequestInit} [opts.fetchOptions] - Additional `RequestInit` options to be passed to `fetch` calls.
      * @param {Fetch} [opts.fetch] - Specify a custom `fetch` function implementation.
@@ -59295,7 +59673,7 @@ class OpenAI {
      * @param {Record<string, string | undefined>} opts.defaultQuery - Default query parameters to include with every request to the API.
      * @param {boolean} [opts.dangerouslyAllowBrowser=false] - By default, client-side use of this library is not allowed, as it risks exposing your secret API credentials to attackers.
      */
-    constructor({ baseURL = readEnv('OPENAI_BASE_URL'), apiKey = readEnv('OPENAI_API_KEY') ?? null, adminAPIKey = readEnv('OPENAI_ADMIN_KEY') ?? null, organization = readEnv('OPENAI_ORG_ID') ?? null, project = readEnv('OPENAI_PROJECT_ID') ?? null, webhookSecret = readEnv('OPENAI_WEBHOOK_SECRET') ?? null, workloadIdentity, ...opts } = {}) {
+    constructor(clientOptions = {}) {
         _OpenAI_instances.add(this);
         _OpenAI_encoder.set(this, void 0);
         /**
@@ -59351,6 +59729,17 @@ class OpenAI {
         this.containers = new Containers(this);
         this.skills = new Skills(this);
         this.videos = new Videos(this);
+        const provider = clientOptions.provider;
+        if (provider) {
+            const conflictingOptions = ['apiKey', 'adminAPIKey', 'workloadIdentity', 'baseURL'].filter((key) => clientOptions[key] != null);
+            if (conflictingOptions.length) {
+                throw new error_OpenAIError(`The \`provider\` option cannot be used with ${conflictingOptions
+                    .map((key) => `\`${key}\``)
+                    .join(', ')}. Configure authentication and the base URL through the provider instead.`);
+            }
+        }
+        const { baseURL = provider ? null : readEnv('OPENAI_BASE_URL'), apiKey = provider ? null : readEnv('OPENAI_API_KEY') ?? null, adminAPIKey = provider ? null : readEnv('OPENAI_ADMIN_KEY') ?? null, organization = provider ? null : readEnv('OPENAI_ORG_ID') ?? null, project = provider ? null : readEnv('OPENAI_PROJECT_ID') ?? null, webhookSecret = readEnv('OPENAI_WEBHOOK_SECRET') ?? null, workloadIdentity, ...opts } = clientOptions;
+        const providerRuntime = provider ? configureProvider(provider) : undefined;
         const options = {
             apiKey,
             adminAPIKey,
@@ -59358,13 +59747,14 @@ class OpenAI {
             project,
             webhookSecret,
             workloadIdentity,
+            provider,
             ...opts,
-            baseURL: baseURL || `https://api.openai.com/v1`,
+            baseURL: providerRuntime?.baseURL ?? (baseURL || `https://api.openai.com/v1`),
         };
         if (apiKey && workloadIdentity) {
             throw new error_OpenAIError('The `apiKey` and `workloadIdentity` options are mutually exclusive');
         }
-        if (!apiKey && !adminAPIKey && !workloadIdentity) {
+        if (!providerRuntime && !apiKey && !adminAPIKey && !workloadIdentity) {
             throw new error_OpenAIError('Missing credentials. Please pass an `apiKey`, `workloadIdentity`, `adminAPIKey`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable.');
         }
         if (!options.dangerouslyAllowBrowser && isRunningInBrowser()) {
@@ -59384,7 +59774,7 @@ class OpenAI {
         this.maxRetries = options.maxRetries ?? 2;
         this.fetch = options.fetch ?? getDefaultFetch();
         __classPrivateFieldSet(this, _OpenAI_encoder, FallbackEncoder, "f");
-        const customHeadersEnv = readEnv('OPENAI_CUSTOM_HEADERS');
+        const customHeadersEnv = provider ? undefined : readEnv('OPENAI_CUSTOM_HEADERS');
         if (customHeadersEnv) {
             const parsed = {};
             for (const line of customHeadersEnv.split('\n')) {
@@ -59396,6 +59786,7 @@ class OpenAI {
             options.defaultHeaders = buildHeaders([parsed, options.defaultHeaders]);
         }
         this._options = options;
+        this._provider = providerRuntime;
         if (workloadIdentity) {
             this._workloadIdentityAuth = new WorkloadIdentityAuth(workloadIdentity, this.fetch);
         }
@@ -59409,7 +59800,9 @@ class OpenAI {
      * Create a new client instance re-using the same options given to the current client with optional overriding.
      */
     withOptions(options) {
-        const client = new this.constructor({
+        const inheritedProvider = this._options.provider;
+        const provider = options.provider ?? inheritedProvider;
+        const inheritedOptions = {
             ...this._options,
             baseURL: this.baseURL,
             maxRetries: this.maxRetries,
@@ -59424,7 +59817,22 @@ class OpenAI {
             organization: this.organization,
             project: this.project,
             webhookSecret: this.webhookSecret,
+        };
+        if (provider) {
+            delete inheritedOptions.apiKey;
+            delete inheritedOptions.adminAPIKey;
+            delete inheritedOptions.workloadIdentity;
+            delete inheritedOptions.baseURL;
+            if (provider !== inheritedProvider) {
+                delete inheritedOptions.organization;
+                delete inheritedOptions.project;
+                delete inheritedOptions.defaultHeaders;
+            }
+        }
+        const client = new this.constructor({
+            ...inheritedOptions,
             ...options,
+            provider,
         });
         return client;
     }
@@ -59483,6 +59891,8 @@ class OpenAI {
         return APIError.generate(status, error, message, headers);
     }
     async _callApiKey() {
+        if (this._provider)
+            return false;
         const apiKey = this._options.apiKey;
         if (typeof apiKey !== 'function')
             return false;
@@ -59522,6 +59932,8 @@ class OpenAI {
      * Used as a callback for mutating the given `FinalRequestOptions` object.
      */
     async prepareOptions(options) {
+        if (this._provider)
+            return;
         const security = options.__security ?? { bearerAuth: true };
         if (security.bearerAuth) {
             await this._callApiKey();
@@ -59568,6 +59980,7 @@ class OpenAI {
             retryCount: maxRetries - retriesRemaining,
         });
         await this.prepareRequest(req, { url, options });
+        await this._provider?.prepareRequest?.(req, { url, options });
         /** Not an API request ID, just for correlating local log entries. */
         const requestLogID = 'log_' + ((Math.random() * (1 << 24)) | 0).toString(16).padStart(6, '0');
         const retryLogStr = retryOfRequestLogID === undefined ? '' : `, retryOf: ${retryOfRequestLogID}`;
@@ -59845,12 +60258,14 @@ class OpenAI {
                 'OpenAI-Organization': this.organization,
                 'OpenAI-Project': this.project,
             },
-            await this.authHeaders(options, options.__security ?? { bearerAuth: true }),
+            this._provider ? undefined : (await this.authHeaders(options, options.__security ?? { bearerAuth: true })),
             this._options.defaultHeaders,
             bodyHeaders,
             options.headers,
         ]);
-        this.validateHeaders(headers, options.__security ?? { bearerAuth: true });
+        if (!this._provider) {
+            this.validateHeaders(headers, options.__security ?? { bearerAuth: true });
+        }
         return headers.values;
     }
     _makeAbort(controller) {
@@ -59858,8 +60273,16 @@ class OpenAI {
         //       would capture all request options, and cause a memory leak.
         return () => controller.abort();
     }
-    buildBody({ options: { body, headers: rawHeaders } }) {
+    buildBody({ options }) {
+        const { body, headers: rawHeaders } = options;
         if (!body) {
+            // A resource method always passes a `body` key when its operation defines a
+            // request body, even if the caller omitted an optional body param. Keep the
+            // content-type for those, and only elide it for operations with no body at
+            // all (e.g. GET/DELETE).
+            if (body === undefined && 'body' in options) {
+                return { ...__classPrivateFieldGet(this, _OpenAI_encoder, "f").call(this, { body, headers: buildHeaders([rawHeaders]) }), isStreamingBody: false };
+            }
             return { bodyHeaders: undefined, body: undefined, isStreamingBody: false };
         }
         const headers = buildHeaders([rawHeaders]);
@@ -59913,7 +60336,7 @@ class OpenAI {
     }
 }
 client_a = OpenAI, _OpenAI_encoder = new WeakMap(), _OpenAI_instances = new WeakSet(), _OpenAI_baseURLOverridden = function _OpenAI_baseURLOverridden() {
-    return this.baseURL !== 'https://api.openai.com/v1';
+    return this._provider !== undefined || this.baseURL !== 'https://api.openai.com/v1';
 };
 OpenAI.OpenAI = client_a;
 OpenAI.DEFAULT_TIMEOUT = 600000; // 10 minutes
