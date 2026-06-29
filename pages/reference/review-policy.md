@@ -155,6 +155,47 @@ AI レビューは以下の品質基準を満たす必要があります。
 - 新しいベストプラクティスや技術動向を取り入れる。
 - プロジェクト固有のニーズに応じてカスタマイズ可能にする。
 
+## 8. レビューモードルーター / レビュー深度の自動選択
+
+`river review route` サブコマンドは、変更内容を静的に解析して適切なレビュー深度を自動選択します。risk-map のルール、変更ファイル数・行数、ファイル種別を優先順位付きで評価し、4 つのモードのいずれかに分類します。
+
+### 8.1 モード分類
+
+| Router モード    | 内部 reviewMode | 相当する `--depth` | 説明                                                                                           |
+| ---------------- | --------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
+| `light`          | `tiny`          | `quick`            | docs / test のみの変更。最小コスト                                                             |
+| `standard`       | `medium`        | `standard`         | 通常の app コード変更                                                                          |
+| `team`           | `large`         | `thorough`         | migration / schema / 大規模変更。`--reviewers auto` 推薦                                       |
+| `human-required` | (なし)          | (なし)             | risk-map の `require_human_review` ルールが適用された場合。AI レビューでなく人間レビューが必要 |
+
+### 8.2 ルーティングトリガー（優先順位順）
+
+1. risk-map `require_human_review` → `human-required`
+2. risk-map `escalate` → `team` 以上
+3. migration / schema ファイルの変更 → `team` 以上
+4. 変更ファイル数 ≥ 20 または変更行数 ≥ 500 → `team` 以上
+5. infra / config ファイルの変更 → `standard` 以上
+6. docs / test ファイルのみ → `light`
+7. デフォルト → `standard`
+
+### 8.3 出力フィールド
+
+ルーターは以下のフィールドを出力します。
+
+- `selectedMode`：選択されたモード（`light` / `standard` / `team` / `human-required`）
+- `confidence`：判定の確信度（`high` / `medium`）
+- `reasons`：選択理由の説明
+- `matchedTriggers`：適合したトリガーの一覧
+- `recommendedReviewers`：推薦レビュアー（`team` モード時）
+- `riskAction`：risk-map から適用されたアクション
+- `nextCommand`：次に実行すべき CLI コマンドの提案
+
+### 8.4 CLI 使用方法
+
+```sh
+river review route . [--format json|markdown] [--base <branch>]
+```
+
 ## 関連ドキュメント
 
 - [Skill Metadata](./metadata-fields.md)：スキルメタデータの仕様
