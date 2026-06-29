@@ -51,7 +51,7 @@ const createCmd = program.command('create').description('Create new resources');
 createCmd
   .command('skill')
   .description('Create a new skill')
-  .argument('[name]', 'Skill ID (e.g., rr-midstream-security-001)')
+  .argument('[name]', 'Skill ID (e.g., security)')
   .option('-i, --interactive', 'Interactive mode with prompts', false)
   .option('--version <version>', 'Skill version (semver format)', '0.1.0')
   .option('--phase <phase>', 'Review phase', 'midstream')

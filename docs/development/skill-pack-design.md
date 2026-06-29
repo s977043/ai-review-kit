@@ -80,9 +80,9 @@ pack はいずれか 1 つの軸に分類します。軸をまたぐ関心は ta
 
 - **テスト関連の生成・実行 skill（rr-test-code-\* 7 件、Playwright 系 2 件）は review-adjacent として残す**。レビュー指摘（カバレッジギャップ等）への修正提案としてテスト追加を支援する位置づけであり、`review-support` tag で検査系と区別する
 - 汎用コードレビュー系の重複 skill は plugin の `river-review-code` に統合する（agent-code-review の多観点実行・件数制約、agent-code-quality の命名・カプセル化観点を統合済み）
-- 計画「作成」（旧 rr-upstream-create-plan-001）は PlanGate の責務として移管完了（PlanGate#523 で受け入れ、2026-06-11 に本リポジトリから削除）。以降は plan を検査する側の skill のみ持つ
+- 計画「作成」（旧 create-plan）は PlanGate の責務として移管完了（PlanGate#523 で受け入れ、2026-06-11 に本リポジトリから削除）。以降は plan を検査する側の skill のみ持つ
 - レビューと無関係な汎用開発ガイド（ドキュメント執筆・リファクタ手順）は持たない
-- plugin commands の `/check` / `/pr` は review-adjacent として **維持** する（2026-06-10 決定）。`/check` はレビュー前のハーネス検証（決定論チェックを先に走らせ AI レビューを高次判断に集中させる）、`/pr` は検査 skill `rr-midstream-pr-description-001` とペアを成す「レビュー可能な PR 本文」の生成側という位置づけである
+- plugin commands の `/check` / `/pr` は review-adjacent として **維持** する（2026-06-10 決定）。`/check` はレビュー前のハーネス検証（決定論チェックを先に走らせ AI レビューを高次判断に集中させる）、`/pr` は検査 skill `pr-description` とペアを成す「レビュー可能な PR 本文」の生成側という位置づけである
 
 ## 4. 成熟度 tier
 
@@ -118,9 +118,9 @@ packs:
         url: 'https://www.typescriptlang.org/docs/handbook/'
         reviewed_at: '2026-06-10'
     skills:
-      - rr-midstream-typescript-strict-001
-      - rr-midstream-typescript-nullcheck-001
-      - rr-midstream-type-driven-design-001
+      - typescript-strict
+      - typescript-nullcheck
+      - type-driven-design
 ```
 
 設計上のポイントは次の通りです。
@@ -145,9 +145,9 @@ selection:
     - a11y
   skills:
     include: # pack 外の個別 skill を追加
-      - rr-midstream-loading-state-001
+      - loading-state
     exclude: # pack に含まれるが使わない skill を除外
-      - rr-midstream-typescript-strict-001
+      - typescript-strict
   minTier: community # この tier 未満の pack を既定で除外
 ```
 

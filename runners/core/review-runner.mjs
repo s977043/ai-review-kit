@@ -184,10 +184,7 @@ function rankByImpactTags(skills, impactTags, preferredModelHint = 'balanced') {
 // downstream test skills are force-selected regardless of phase so untested
 // high-risk changes still get a test-coverage review. Default off — see
 // docs/development/1255-test-impact-routing-design.md.
-const ESCALATION_TEST_SKILL_IDS = [
-  'rr-downstream-test-existence-001',
-  'rr-downstream-coverage-gap-001',
-];
+const ESCALATION_TEST_SKILL_IDS = ['test-existence', 'coverage-gap'];
 
 function isTestSkillEscalationEnabled() {
   const v = String(process.env.RIVER_ESCALATE_TEST_SKILLS ?? '')

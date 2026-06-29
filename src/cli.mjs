@@ -385,7 +385,7 @@ function parseArgs(argv) {
     if (arg === '--ensemble') {
       // #911 Phase 3 Slice B. Sugar for "concatenate every *.md file under
       // <dir> into a single review-external artifact". The synthesis skill
-      // (`rr-midstream-independent-review-synthesis-001`) consumes the merged
+      // (`independent-review-synthesis`) consumes the merged
       // file. We deliberately do NOT pin specific reviewer names (Claude /
       // Codex / Cursor) in the flag — file names carry that information, so
       // the CLI stays provider-agnostic.

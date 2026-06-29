@@ -468,7 +468,7 @@ export async function review(options: ReviewOptions): Promise<ReviewResult> {
  * @example
  * ```typescript
  * const result = await evaluateSkill({
- *   skillId: 'rr-midstream-security-basic-001',
+ *   skillId: 'security-basic',
  *   provider: 'openai:gpt-4o',
  *   files: ['src/app.ts'],
  * });

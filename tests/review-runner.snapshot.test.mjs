@@ -8,11 +8,11 @@ import { buildExecutionPlan } from '../runners/core/review-runner.mjs';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const snapshotPath = path.join(repoRoot, 'tests', 'fixtures', 'execution-plan-midstream.json');
 const watchedSkippedIds = new Set([
-  'rr-downstream-review-policy-standard-001',
-  'rr-midstream-review-policy-standard-001',
-  'rr-midstream-typescript-strict-001',
-  'rr-upstream-api-design-001',
-  'rr-upstream-review-policy-standard-001',
+  'review-policy-standard-midstream',
+  'review-policy-standard-upstream',
+  'review-policy-standard-downstream',
+  'typescript-strict',
+  'api-design',
 ]);
 
 async function loadSnapshot() {

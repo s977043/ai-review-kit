@@ -35,7 +35,7 @@ mkdir -p skills/{skill-id}/{prompt,fixtures,golden,eval}
 例：
 
 ```bash
-mkdir -p skills/rr-midstream-security-basic-001/{prompt,fixtures,golden,eval}
+mkdir -p skills/security-basic/{prompt,fixtures,golden,eval}
 ```
 
 ### 3. skill.yaml の作成
@@ -46,7 +46,7 @@ YAML frontmatter のメタデータを `skill.yaml` に移植します。
 
 ```yaml
 ---
-id: rr-midstream-security-basic-001
+id: security-basic
 name: Baseline Security Checks
 description: Check common security risks...
 phase: midstream
@@ -62,7 +62,7 @@ dependencies: [code_search]
 **Registry 形式 (skill.yaml)**:
 
 ```yaml
-id: rr-midstream-security-basic-001
+id: security-basic
 version: 0.1.0 # 新規フィールド
 name: Baseline Security Checks
 description: Check common security risks...
@@ -346,7 +346,7 @@ npm run validate:skill-yaml
 
 初めて移植する場合は、以下を参考にしてください：
 
-- `skills/rr-midstream-security-basic-001/`: 最初の完全な移植例
+- `skills/security-basic/`: 最初の完全な移植例
 
 ## 関連ドキュメント
 
@@ -361,7 +361,7 @@ npm run validate:skill-yaml
 - [x] Zod スキーマと検証スクリプト
 - [x] create-skill スキャフォールディング
 - [x] skills/ README と registry.yaml
-- [x] 最初の1スキルの移植（rr-midstream-security-basic-001）
+- [x] 最初の1スキルの移植（security-basic）
 
 ### Phase 2: 評価基盤（v0.2.0）
 

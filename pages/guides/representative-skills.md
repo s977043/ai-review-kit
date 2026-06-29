@@ -17,7 +17,7 @@ River Review のスキルが「なぜ重要か」「どう機能するか」「�
 
 ## スキル 1: Logging and Observability Guard
 
-ID は `rr-midstream-logging-observability-001` です。midstream フェーズで動作します。
+ID は `logging-observability` です。midstream フェーズで動作します。
 
 ### 目的と選定理由
 
@@ -26,7 +26,7 @@ ID は `rr-midstream-logging-observability-001` です。midstream フェーズ�
 ### frontmatter の抜粋
 
 ```yaml
-id: rr-midstream-logging-observability-001
+id: logging-observability
 name: Logging and Observability Guard
 description: Ensure code changes keep logs/metrics/traces useful for debugging failures and regressions.
 category: midstream
@@ -84,7 +84,7 @@ finding は `ファイル:行: 説明。Fix: 改善案` の形式です。`sever
 
 ## スキル 2: Coverage and Failure Path Gaps
 
-ID は `rr-downstream-coverage-gap-001` です。downstream フェーズで動作します。
+ID は `coverage-gap` です。downstream フェーズで動作します。
 
 ### 目的と選定理由
 
@@ -93,7 +93,7 @@ ID は `rr-downstream-coverage-gap-001` です。downstream フェーズで動�
 ### frontmatter の抜粋
 
 ```yaml
-id: rr-downstream-coverage-gap-001
+id: coverage-gap
 name: Coverage and Failure Path Gaps
 description: Find missing tests for critical paths, edge cases, and failure handling in changed code.
 category: downstream

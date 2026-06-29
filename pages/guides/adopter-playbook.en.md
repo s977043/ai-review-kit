@@ -50,7 +50,7 @@ Examples of low-noise initial settings:
 In ongoing operation, turning review results into assets at the following granularity prevents staleness:
 
 - **accepted (useful findings)**: If you want a viewpoint repeatedly, codify it as a skill ([add a new skill](./add-new-skill.en.md)).
-- **false positive**: Pin deterministically-decidable false positives as a skill fixture (false-positive guard case) to prevent regressions. Handle project-specific cases via the [suppression workflow](./repo-wide-review.en.md#false-positive-suppression-memory) (`rr-midstream-suppression-feedback-001`).
+- **false positive**: Pin deterministically-decidable false positives as a skill fixture (false-positive guard case) to prevent regressions. Handle project-specific cases via the [suppression workflow](./repo-wide-review.en.md#false-positive-suppression-memory) (`suppression-feedback`).
 - **missed issue**: Turn missed viewpoints into a new fixture (happy path) and a skill viewpoint.
 
 This promotion loop codifies AI-review judgment into reproducible checks. For the judgment units, see [choosing skills](./choose-skills.en.md) and the [skill-writing guide](./write-a-skill.en.md).

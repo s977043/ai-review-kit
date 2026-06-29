@@ -166,7 +166,7 @@ jobs:
 
 ## synthesis skill の動作
 
-W チェックの統合処理は `rr-midstream-independent-review-synthesis-001` skill（`recommended: true`）が担います。この skill は以下の 3 つの主要ステップで動作します。
+W チェックの統合処理は `independent-review-synthesis` skill（`recommended: true`）が担います。この skill は以下の 3 つの主要ステップで動作します。
 
 1. **重複排除 (Deduplicate)**: 複数のレビュアーが同じ箇所を指摘した場合、file path・行範囲・evidence テキストに基づいて同一 finding として統合する。
 2. **ハルシネーション検証 (Hallucination guard)**: 各 finding の `evidence` が参照するファイルパスとコードスニペットを実際の差分と照合し、実在しないコードを参照している指摘を `dismissed-hallucination` として除外する。
@@ -186,7 +186,7 @@ synthesis skill が生成する JSON 出力の構造例です（フィールド�
   "issues": [
     {
       "id": "w-001",
-      "ruleId": "rr-midstream-independent-review-synthesis-001",
+      "ruleId": "independent-review-synthesis",
       "title": "SQL インジェクションの可能性",
       "message": "userInput を直接クエリに埋め込んでいる。パラメータバインドに変更してください。",
       "severity": "critical",
@@ -198,7 +198,7 @@ synthesis skill が生成する JSON 出力の構造例です（フィールド�
     },
     {
       "id": "w-002",
-      "ruleId": "rr-midstream-independent-review-synthesis-001",
+      "ruleId": "independent-review-synthesis",
       "title": "存在しない関数への参照",
       "message": "レビュアーが指摘した validateInput() は差分に存在しないため除外。",
       "severity": "minor",
@@ -214,10 +214,10 @@ synthesis skill が生成する JSON 出力の構造例です（フィールド�
 
 `status: "verified"` は差分との照合で実在が確認された finding、`status: "suppressed"` はハルシネーション等で除外された finding を表します。`summary.notes` に verdict（`merge-ready` / `human-review` / `block`）が記録されます。出力スキーマの完全な定義は [`schemas/output.schema.json`](../../schemas/output.schema.json) を参照してください。
 
-skill の詳細: [`skills/midstream/community/rr-midstream-independent-review-synthesis-001/SKILL.md`](https://github.com/s977043/river-review/blob/main/skills/midstream/community/rr-midstream-independent-review-synthesis-001/SKILL.md)
+skill の詳細: [`skills/midstream/independent-review-synthesis/SKILL.md`](https://github.com/s977043/river-review/blob/main/skills/midstream/independent-review-synthesis/SKILL.md)
 
 ## 関連ページ
 
 - [Artifact Input Contract](../reference/artifact-input-contract.md) — `review-self` / `review-external` の仕様詳細
-- [Independent Review Synthesis skill](https://github.com/s977043/river-review/blob/main/skills/midstream/community/rr-midstream-independent-review-synthesis-001/SKILL.md) — synthesis skill の全ルール
+- [Independent Review Synthesis skill](https://github.com/s977043/river-review/blob/main/skills/midstream/independent-review-synthesis/SKILL.md) — synthesis skill の全ルール
 - [GitHub Actions セットアップ](./github-actions.md) — 基本的な GitHub Actions 構成

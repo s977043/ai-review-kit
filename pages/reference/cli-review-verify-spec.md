@@ -5,7 +5,7 @@ title: CLI Spec — `river review verify`
 `river review verify` は、既に生成されたレビュー結果（`review-self` / `review-external`）と元の上流アーティファクト（`plan` / `diff` / `test-cases` など）を入力として受け取る CLI コマンドです。verify 系 skill を走らせて **W チェック（レビューの再監査）** を行い、既存レビューの抜け・誤検知・ハルシネーションを再点検し、META finding（レビューに対するレビュー）を [Review Artifact](./review-artifact.md) として出力します。本ドキュメントはコマンドの引数・入力・出力・終了コードを spec として固定し、CI から安定して呼び出せる契約を定義します。
 
 > 関連 Issue: #575（Task）/ #509（Capability）/ #507（Epic）
-> 関連 spec: `river review plan`（#517）/ `river review exec`（#518）/ `rr-upstream-plangate-verification-audit-001`（skill spec は #577 で完了済み、`skills/upstream/rr-upstream-plangate-verification-audit-001/SKILL.md`）
+> 関連 spec: `river review plan`（#517）/ `river review exec`（#518）/ `plangate-verification-audit`（skill spec は #577 で完了済み、`skills/upstream/plangate-verification-audit/SKILL.md`）
 
 ## 責務分担（plan / exec / verify の関係）
 
@@ -86,7 +86,7 @@ river review verify --advisory-only \
 
 > 備考（#802 Phase 3、2026-05-18 改訂）: 出力契約は `plan`/`exec`/`verify` で統一され、`--output <format>` = 形式、`--output-file <path>` = 出力先となります（[PlanGate CLI 安定化ロードマップ](./plangate-cli-roadmap.md) の決定）。グローバル `--output <mode>`（`river run`）と意味が一致します。`--format` は review 系の互換 alias として受理されますが canonical は `--output` であり、`--output` と `--format` が両指定かつ不一致なら設定エラー（exit 3）。旧 spec の `--output <path>`（出力先）は撤回されました。
 >
-> 実装状況（#802 Phase 3 PR-3、2026-05-18）: 現時点では **CLI 引数 / 出力契約の parser・dispatch foundation のみ実装**。`river review verify` は `--plan` / `--artifact <id=path>`（`review-self` / `review-external` 等）/ `--output` / `--format` / `--output-file` を受理し出力契約を検証するが、verify skill 実行・artifact 読み込みは未実装で exit 3 を返す。この parser 契約は [Artifact Input Contract](./artifact-input-contract.md) の artifact ID のみに依存し、**PlanGate には依存しない**。verify skill レイヤ（`rr-upstream-plangate-verification-*`）は別レイヤであり parser 契約とは独立。
+> 実装状況（#802 Phase 3 PR-3、2026-05-18）: 現時点では **CLI 引数 / 出力契約の parser・dispatch foundation のみ実装**。`river review verify` は `--plan` / `--artifact <id=path>`（`review-self` / `review-external` 等）/ `--output` / `--format` / `--output-file` を受理し出力契約を検証するが、verify skill 実行・artifact 読み込みは未実装で exit 3 を返す。この parser 契約は [Artifact Input Contract](./artifact-input-contract.md) の artifact ID のみに依存し、**PlanGate には依存しない**。verify skill レイヤ（`plangate-verification-*`）は別レイヤであり parser 契約とは独立。
 
 META finding の severity 語彙は [`schemas/output.schema.json`](../../schemas/output.schema.json) と `.claude/rules/review-core.md` の severity マッピングに準ずる（`critical` / `major` / `minor` / `info`）。不明な severity 値は fail-safe として `major` に分類される。severity に応じた fail / warn 判定は `exec` と同様に CLI では行わず、Review Artifact の `findings` を読んだ CI 側のゲートで判定する運用を推奨する。
 
@@ -94,7 +94,7 @@ META finding の severity 語彙は [`schemas/output.schema.json`](../../schemas
 
 `verify` は実行対象を **verify 系 skill** に限定します。判定は次のいずれかを満たす skill を verify 系と見なすヒューリスティクスです。
 
-- `id` が `rr-upstream-plangate-verification-` で始まる（代表: `rr-upstream-plangate-verification-audit-001`、spec は #577 で完了済み）。
+- `id` が `plangate-verification-` で始まる（代表: `plangate-verification-audit`、spec は #577 で完了済み）。
 - skill メタデータの `outputKind` に `review-audit` が含まれる。
 
 非 verify skill は `plan.selectedSkills` には含めず、`plan.skippedSkills` に `reason: "not-verify-skill"` として記録します。Review Artifact を読む CI や Riverbed Memory 側で、`verify` 経由のレビュー監査であることを明示的に判別できるようにするためです。

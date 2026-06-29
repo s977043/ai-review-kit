@@ -4,7 +4,7 @@
 Nolan Lawson 氏の Triple Agent skill にインスパイアされつつ、ツール固定を避け、
 River Review の artifact-driven 思想に合わせて再構成した「synthesis pattern」。
 
-- 該当 skill: `rr-midstream-independent-review-synthesis-001`
+- 該当 skill: `independent-review-synthesis`
 - 関連 epic: [#911](https://github.com/s977043/river-review/issues/911)
 - ステータス: Phase 1 (community / `recommended: false`)。Phase 2 で artifact contract 拡張、Phase 3 で CLI ensemble mode を予定。
 
@@ -60,7 +60,7 @@ artifact 定義の詳細は [`pages/reference/artifact-input-contract.md`](../re
 `promptfoo eval` で動作確認:
 
 ```bash
-cd skills/midstream/community/rr-midstream-independent-review-synthesis-001/eval
+cd skills/midstream/independent-review-synthesis/eval
 promptfoo eval
 ```
 

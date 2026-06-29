@@ -29,13 +29,10 @@ async function createTempSkillDir() {
 
 test('loads existing sample skill and applies default outputKind', async () => {
   const validator = await buildValidator();
-  const skillPath = path.join(
-    defaultPaths.skillsDir,
-    'upstream/sample-architecture-review/SKILL.md'
-  );
+  const skillPath = path.join(defaultPaths.skillsDir, 'upstream/architecture-sample/SKILL.md');
   const loaded = await loadSkillFile(skillPath, { validator });
 
-  assert.equal(loaded.metadata.id, 'rr-upstream-architecture-sample-001');
+  assert.equal(loaded.metadata.id, 'architecture-sample');
   assert.equal(loaded.metadata.category, 'upstream');
   assert.deepEqual(loaded.metadata.outputKind, ['findings', 'summary', 'questions', 'actions']);
   assert.ok(loaded.body.trim().length > 0);
@@ -46,7 +43,7 @@ test('loads skill with extended metadata fields', async () => {
   const tmpDir = await createTempSkillDir();
   const skillPath = path.join(tmpDir, 'with-extensions.md');
   const content = `---
-id: rr-downstream-newmeta-001
+id: newmeta
 name: 'Extended Metadata Skill'
 description: 'Uses new metadata fields for loader'
 category: downstream
@@ -81,7 +78,7 @@ test('loads skill with trigger container and normalizes phase/applyTo', async ()
   const tmpDir = await createTempSkillDir();
   const skillPath = path.join(tmpDir, 'with-trigger.md');
   const content = `---
-id: rr-midstream-trigger-001
+id: trigger
 name: 'Trigger Skill'
 description: 'Uses trigger container for activation'
 category: midstream
@@ -104,7 +101,7 @@ test('trigger does not override top-level phase/applyTo', async () => {
   const tmpDir = await createTempSkillDir();
   const skillPath = path.join(tmpDir, 'with-trigger-precedence.md');
   const content = `---
-id: rr-midstream-trigger-002
+id: trigger
 name: 'Trigger Precedence Skill'
 description: 'Top-level values win over trigger'
 category: midstream
@@ -131,7 +128,7 @@ test('normalizes path_patterns aliases and prefers category for phase resolution
   await withTempDir(async (tmpDir) => {
     const skillPath = path.join(tmpDir, 'with-path-patterns.md');
     const content = `---
-id: rr-midstream-path-patterns-001
+id: path-patterns
 name: 'Path Pattern Skill'
 description: 'Uses path_patterns aliases'
 category: midstream
@@ -158,7 +155,7 @@ test('derives category from phase and trigger paths when category is missing', a
   await withTempDir(async (tmpDir) => {
     const skillPath = path.join(tmpDir, 'derive-category.md');
     const content = `---
-id: rr-core-derived-001
+id: derived
 name: 'Derived Category Skill'
 description: 'Relies on trigger for applyTo'
 phase:
@@ -186,7 +183,7 @@ test('fails when dependencies contain unsupported values', async () => {
   const tmpDir = await createTempSkillDir();
   const skillPath = path.join(tmpDir, 'invalid-deps.md');
   const content = `---
-id: rr-upstream-invalid-deps-001
+id: invalid-deps
 name: 'Invalid deps'
 description: 'Contains unsupported dependency'
 phase: upstream
@@ -209,7 +206,7 @@ test('fails validation when required fields are missing', async () => {
   const tmpDir = await createTempSkillDir();
   const skillPath = path.join(tmpDir, 'invalid-skill.md');
   const content = `---
-id: rr-upstream-missing-applyto-001
+id: missing-applyto
 name: 'Invalid Skill'
 description: 'Missing applyTo field'
 phase: upstream
@@ -232,7 +229,7 @@ test('loadSkills skips files that fail validation and continues', async () => {
     await writeFile(
       validPath,
       `---
-id: rr-test-valid-001
+id: valid
 name: Valid Skill
 description: Valid metadata
 phase: upstream
@@ -245,7 +242,7 @@ Valid body
     await writeFile(
       invalidPath,
       `---
-id: rr-test-invalid-001
+id: invalid
 name: Invalid Skill
 description: Missing applyTo
 phase: upstream
@@ -260,7 +257,7 @@ Body
     try {
       const loaded = await loadSkills({ skillsDir: tmpDir, validator });
       assert.equal(loaded.length, 1);
-      assert.equal(loaded[0].metadata.id, 'rr-test-valid-001');
+      assert.equal(loaded[0].metadata.id, 'valid');
       assert.ok(errors.some((line) => line.includes('Failed to load skill')));
     } finally {
       console.error = originalError;
@@ -276,7 +273,7 @@ test('loadSkills prefers the first file when duplicate ids are found', async () 
     await writeFile(
       firstPath,
       `---
-id: rr-test-dup-001
+id: dup
 name: First copy
 description: First version
 phase: midstream
@@ -289,7 +286,7 @@ First body
     await writeFile(
       secondPath,
       `---
-id: rr-test-dup-001
+id: dup
 name: Second copy
 description: Second version
 phase: midstream
@@ -307,7 +304,7 @@ Second body
       const loaded = await loadSkills({ skillsDir: tmpDir, validator });
       assert.equal(loaded.length, 1);
       assert.equal(loaded[0].metadata.name, 'First copy');
-      assert.ok(warnings.some((line) => line.includes('Duplicate skill id "rr-test-dup-001"')));
+      assert.ok(warnings.some((line) => line.includes('Duplicate skill id "dup"')));
     } finally {
       console.warn = originalWarn;
     }
@@ -322,7 +319,7 @@ test('loadSkills excludes skills with filtered tags by default', async () => {
     await writeFile(
       keptPath,
       `---
-id: rr-test-keep-001
+id: keep
 name: Kept Skill
 description: Visible skill
 phase: midstream
@@ -335,7 +332,7 @@ Body
     await writeFile(
       agentPath,
       `---
-id: rr-test-agent-001
+id: agent
 name: Agent Skill
 description: Should be excluded by default
 phase: midstream
@@ -349,11 +346,11 @@ Agent body
 
     const defaultLoaded = await loadSkills({ skillsDir: tmpDir, validator });
     assert.equal(defaultLoaded.length, 1);
-    assert.equal(defaultLoaded[0].metadata.id, 'rr-test-keep-001');
+    assert.equal(defaultLoaded[0].metadata.id, 'keep');
 
     const allLoaded = await loadSkills({ skillsDir: tmpDir, validator, excludedTags: [] });
     const ids = allLoaded.map((s) => s.metadata.id);
-    assert.deepEqual(ids.sort(), ['rr-test-agent-001', 'rr-test-keep-001']);
+    assert.deepEqual(ids.sort(), ['agent', 'keep']);
   });
 });
 
@@ -374,7 +371,7 @@ test('loadSkillMetadata returns only {metadata, path} without body', async () =>
     await writeFile(
       skillPath,
       `---
-id: rr-test-metadata-only-001
+id: metadata-only
 name: Metadata Only Skill
 description: Progressive disclosure stage 1 target
 phase: midstream
@@ -387,7 +384,7 @@ This body text should not be returned
 
     const loaded = await loadSkillMetadata(skillPath, { validator });
     assert.deepEqual(Object.keys(loaded).sort(), ['metadata', 'path']);
-    assert.equal(loaded.metadata.id, 'rr-test-metadata-only-001');
+    assert.equal(loaded.metadata.id, 'metadata-only');
     assert.equal(loaded.path, skillPath);
     assert.ok(!('body' in loaded), 'body property must not be present');
   });
@@ -401,7 +398,7 @@ test('loadAllSkillMetadata excludes skills tagged "agent" by default', async () 
     await writeFile(
       keptPath,
       `---
-id: rr-test-meta-keep-001
+id: meta-keep
 name: Kept Skill
 description: Visible skill
 phase: midstream
@@ -414,7 +411,7 @@ Body
     await writeFile(
       agentPath,
       `---
-id: rr-test-meta-agent-001
+id: meta-agent
 name: Agent Skill
 description: Should be excluded by default
 phase: midstream
@@ -428,7 +425,7 @@ Agent body
 
     const defaultLoaded = await loadAllSkillMetadata({ skillsDir: tmpDir, validator });
     assert.equal(defaultLoaded.length, 1);
-    assert.equal(defaultLoaded[0].metadata.id, 'rr-test-meta-keep-001');
+    assert.equal(defaultLoaded[0].metadata.id, 'meta-keep');
     assert.ok(!('body' in defaultLoaded[0]));
 
     const allLoaded = await loadAllSkillMetadata({
@@ -437,7 +434,7 @@ Agent body
       excludedTags: [],
     });
     const ids = allLoaded.map((s) => s.metadata.id).sort();
-    assert.deepEqual(ids, ['rr-test-meta-agent-001', 'rr-test-meta-keep-001']);
+    assert.deepEqual(ids, ['meta-agent', 'meta-keep']);
   });
 });
 
@@ -447,7 +444,7 @@ test('loadSkillMetadata and loadAllSkillMetadata skip duplicate ids with a warni
     const firstPath = path.join(tmpDir, 'a-first.md');
     const secondPath = path.join(tmpDir, 'b-second.md');
     const body = (name) => `---
-id: rr-test-meta-dup-001
+id: meta-dup
 name: ${name}
 description: Duplicate id check
 phase: midstream
@@ -467,7 +464,7 @@ Body
       assert.equal(loaded.length, 1);
       assert.equal(loaded[0].metadata.name, 'First copy');
       assert.ok(
-        warnings.some((line) => line.includes('Duplicate skill id "rr-test-meta-dup-001"')),
+        warnings.some((line) => line.includes('Duplicate skill id "meta-dup"')),
         'duplicate warning must be emitted'
       );
     } finally {
@@ -477,8 +474,8 @@ Body
     // loadSkillMetadata (single file) succeeds independently and has no body.
     const singleFirst = await loadSkillMetadata(firstPath, { validator });
     const singleSecond = await loadSkillMetadata(secondPath, { validator });
-    assert.equal(singleFirst.metadata.id, 'rr-test-meta-dup-001');
-    assert.equal(singleSecond.metadata.id, 'rr-test-meta-dup-001');
+    assert.equal(singleFirst.metadata.id, 'meta-dup');
+    assert.equal(singleSecond.metadata.id, 'meta-dup');
     assert.ok(!('body' in singleFirst));
     assert.ok(!('body' in singleSecond));
   });
@@ -488,23 +485,20 @@ test('loadRecommendationSets exposes named bundles from the registry', async () 
   const sets = await loadRecommendationSets();
   assert.ok(sets.basic, 'basic set must exist');
   assert.ok(Array.isArray(sets.basic.skills));
-  assert.ok(sets.basic.skills.includes('rr-midstream-security-basic-001'));
+  assert.ok(sets.basic.skills.includes('security-basic'));
 });
 
 test('resolveRecommendationSet returns the skill ids for a known set', async () => {
   const ids = await resolveRecommendationSet('basic');
-  assert.deepEqual(ids, [
-    'rr-midstream-security-basic-001',
-    'rr-midstream-logging-observability-001',
-  ]);
+  assert.deepEqual(ids, ['security-basic', 'logging-observability']);
 });
 
 test('resolveRecommendationSet resolves the pre-exec gate set (#976)', async () => {
   const ids = await resolveRecommendationSet('pre-exec');
   assert.deepEqual(ids, [
-    'rr-upstream-requirements-acceptance-001',
-    'rr-upstream-architecture-validation-plan-001',
-    'rr-upstream-plangate-plan-integrity-001',
+    'requirements-acceptance',
+    'architecture-validation-plan',
+    'plangate-plan-integrity',
   ]);
 });
 
