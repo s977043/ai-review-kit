@@ -46,7 +46,7 @@ Why: 信頼境界・認可設計はチェックリスト型評価が主だが、
 - [ ] 誤字・リンク更新のみの変更ではない
 - [ ] inputContextにdiffまたはadrが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-trust-boundaries-authz-001 — 信頼境界・認可設計に関連する変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: trust-boundaries-authz — 信頼境界・認可設計に関連する変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

@@ -52,7 +52,7 @@ Why: ログ・メトリクス・トレースの品質をチェックリスト型
 - [ ] 差分にエラーハンドリング、ログ出力、リトライ/フォールバック/キャッシュのいずれかに関連するコードが含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-logging-observability-001 — 可観測性に関連するアプリケーションコード変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: logging-observability — 可観測性に関連するアプリケーションコード変更が検出されない`
 
 ## False-positive guards
 

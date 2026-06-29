@@ -39,7 +39,7 @@ Why: React Router framework mode の data loading 規約への適合をチェッ
 - [ ] 差分が React Router framework mode のルートモジュール（loader / clientLoader / action の export、または routes 配下）に関係する
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-react-router-loader-boundary-001 — framework mode ルートの変更なし`
+ゲート不成立時の出力: `NO_REVIEW: react-router-loader-boundary — framework mode ルートの変更なし`
 
 ## False-positive guards / 抑制条件
 

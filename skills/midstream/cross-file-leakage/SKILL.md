@@ -51,7 +51,7 @@ Why: 構造変更に対する caller 走査は grep による決定論的突合�
 - [ ] 差分に構造変更（記号の再採番、シンボル名変更、シグネチャ変更、セクション番号の振り直し、ファイル分割・移動）が含まれている
 - [ ] inputContext に diff が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-cross-file-leakage-001 — 構造変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: cross-file-leakage — 構造変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

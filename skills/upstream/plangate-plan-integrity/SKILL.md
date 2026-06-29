@@ -43,7 +43,7 @@ Why: PlanGate の計画成果物（pbi-input / plan / todo / test-cases）を横
 - [ ] 入力 artifact に `pbi-input` / `todo` / `test-cases` のいずれか1つ以上が存在する
 - [ ] 差分または fullFile のいずれかの inputContext が利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-plangate-plan-integrity-001 — 計画アーティファクト（plan + 関連1つ以上）が揃っていない`
+ゲート不成立時の出力: `NO_REVIEW: plangate-plan-integrity — 計画アーティファクト（plan + 関連1つ以上）が揃っていない`
 
 **Gateと抑制条件の違い:**
 

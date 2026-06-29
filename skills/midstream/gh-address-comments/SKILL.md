@@ -53,7 +53,7 @@ Why: レビューコメントの整理・対応方針作成がチェックリス
 - [ ] PRにレビューコメント（未対応または要確認）が存在する
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-gh-address-comments-001 — 対応すべきレビューコメントが検出されない`
+ゲート不成立時の出力: `NO_REVIEW: gh-address-comments — 対応すべきレビューコメントが検出されない`
 
 ## False-positive guards / 抑制条件
 

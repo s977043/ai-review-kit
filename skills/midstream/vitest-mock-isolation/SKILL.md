@@ -40,7 +40,7 @@ Why: Vitest 固有の mock lifecycle と async expect 契約をチェックリ�
 - [ ] 差分に `vi.mock` / `vi.spyOn` / `expect(...)` の追加・変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-vitest-mock-isolation-001 — mock / spy / expect の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: vitest-mock-isolation — mock / spy / expect の変更なし`
 
 ## False-positive guards / 抑制条件
 

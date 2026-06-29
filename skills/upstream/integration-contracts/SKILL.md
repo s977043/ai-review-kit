@@ -46,7 +46,7 @@ Why: サービス間連携の差分から契約不備・責任境界・障害時
 - [ ] 差分にサービス間連携・契約・インターフェイス・イベント定義に関するドキュメントまたはスキーマが含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-integration-contracts-001 — サービス間連携/契約に関する差分がない`
+ゲート不成立時の出力: `NO_REVIEW: integration-contracts — サービス間連携/契約に関する差分がない`
 
 ## False-positive guards / 抑制条件
 

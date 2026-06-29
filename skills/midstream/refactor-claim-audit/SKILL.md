@@ -41,7 +41,7 @@ Why: 完了主張の反証は grep 検索による決定論的突合が主だが
 - [ ] 差分・commit message・PR description に完了主張（「全」「すべて」「all」「完了」「移行済」「置換」「-N%」「削減」等）が含まれている
 - [ ] inputContext に diff が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-refactor-claim-audit-001 — 完了主張が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: refactor-claim-audit — 完了主張が検出されない`
 
 ## False-positive guards / 抑制条件
 

@@ -44,7 +44,7 @@ Why: 設計変更の影響範囲・通知計画・非推奨措置をチェック
 - [ ] 差分にアーキテクチャ変更・API変更・非推奨化など影響範囲を伴う記述の追加または変更がある
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-change-communication-001 — コミュニケーション計画が必要な設計変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: change-communication — コミュニケーション計画が必要な設計変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

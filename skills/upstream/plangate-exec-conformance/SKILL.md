@@ -52,7 +52,7 @@ Why: plan/todo/test-cases を基準として差分を突き合わせる照合型
 - [ ] artifact として `plan`（または `pbi-input`）が解決できている
 - [ ] artifact として `todo` または `test-cases` のいずれかが解決できている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-plangate-exec-conformance-001 — 差分または plan/todo/test-cases artifact が揃っていない`
+ゲート不成立時の出力: `NO_REVIEW: plangate-exec-conformance — 差分または plan/todo/test-cases artifact が揃っていない`
 
 **Gate と抑制条件の違い:**
 

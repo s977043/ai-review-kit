@@ -37,7 +37,7 @@ Why: workflow の意味的なセキュリティ判断（権限の必要性・ト
 - [ ] 差分に `.github/workflows/` 配下の追加変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-downstream-gha-workflow-security-001 — workflow の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: gha-workflow-security — workflow の変更なし`
 
 ## False-positive guards / 抑制条件
 

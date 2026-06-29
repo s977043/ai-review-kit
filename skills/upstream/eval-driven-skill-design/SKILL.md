@@ -98,7 +98,7 @@ new SKILL.md
 ゲート不成立時の出力:
 
 ```text
-NO_REVIEW: rr-upstream-eval-driven-skill-design-001 — 新規 skill 追加が検出されない、または fixture / eval は既に整備済み
+NO_REVIEW: eval-driven-skill-design — 新規 skill 追加が検出されない、または fixture / eval は既に整備済み
 ```
 
 ## False-positive guards / 抑制条件

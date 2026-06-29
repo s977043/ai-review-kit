@@ -45,7 +45,7 @@ Why: `river gc` から呼び出され、retention 設定・hard guards・exclude
 - [ ] retention 設定 `{ "days": N, "maxEntries": N, "maxSizeMb": N }` のすべてのキーが数値として与えられている
 - [ ] 基準時刻 `now` が epoch 秒として明示的に与えられている（呼び出し時刻へのフォールバックは決定論を破るため禁止）
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-plangate-gc-deterministic-001 — inventory / retention config が不足`
+ゲート不成立時の出力: `NO_REVIEW: plangate-gc-deterministic — inventory / retention config が不足`
 
 **Gate と抑制条件の違い:**
 

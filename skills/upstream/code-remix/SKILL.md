@@ -39,7 +39,7 @@ Why: 仕様書からRemixルートモジュールのテスト足場を生成す�
 - [ ] 仕様書にRemixのLoader/Action/ルートコンポーネントに関する記述がある
 - [ ] inputContextにfullFileが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-test-code-remix-001 — 対象となるRemix仕様が差分に含まれていない`
+ゲート不成立時の出力: `NO_REVIEW: code-remix — 対象となるRemix仕様が差分に含まれていない`
 
 ## False-positive guards / 抑制条件
 

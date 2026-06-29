@@ -43,7 +43,7 @@ Why: 外部依存の設計差分からSLA・クォータ・障害時の扱い・
 - [ ] 差分に外部サービス・SaaS・API・ベンダーに関する記述がある
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-external-dependencies-001 — 外部依存に関する設計ドキュメントの差分がない`
+ゲート不成立時の出力: `NO_REVIEW: external-dependencies — 外部依存に関する設計ドキュメントの差分がない`
 
 ## False-positive guards / 抑制条件
 

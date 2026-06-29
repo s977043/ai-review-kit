@@ -42,7 +42,7 @@ Why: 要件/仕様ドキュメントの差分から曖昧さ・受け入れ条�
 - [ ] 差分に要件定義・仕様書・PRD・ユーザーストーリーに関するドキュメントが含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-requirements-acceptance-001 — 要件/仕様ドキュメントの差分がない`
+ゲート不成立時の出力: `NO_REVIEW: requirements-acceptance — 要件/仕様ドキュメントの差分がない`
 
 ## False-positive guards / 抑制条件
 

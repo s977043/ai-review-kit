@@ -69,7 +69,7 @@ Why: API契約変更は下流の呼び出し元を静かに壊す。差分内の
 - [ ] 差分にAPIエンドポイント定義、DTO/インターフェース/型定義の変更が含まれている
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-api-compatibility-001 — API契約・DTO変更の差分がない`
+ゲート不成立時の出力: `NO_REVIEW: api-compatibility — API契約・DTO変更の差分がない`
 
 ## False-positive guards / 抑制条件
 

@@ -68,7 +68,7 @@ Why: Flakyテストリスク検出はチェックリスト型評価が主だが�
 - [ ] 差分にテストの実行内容に影響する変更がある（コメントや説明文のみの変更ではない）
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-downstream-flaky-test-001 — Flakyテストリスク検出の対象となるテスト変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: flaky-test — Flakyテストリスク検出の対象となるテスト変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

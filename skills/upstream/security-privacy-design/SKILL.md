@@ -53,7 +53,7 @@ Why: プライバシー設計レビューはチェックリスト型評価が主
 - [ ] 差分が非データ領域のみの変更ではない
 - [ ] inputContextにfullFileが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-security-privacy-design-001 — プライバシー・データ設計に関連する変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: security-privacy-design — プライバシー・データ設計に関連する変更が検出されない`
 
 ## False-positive guards
 

@@ -39,7 +39,7 @@ Why: action のエラー契約と ErrorBoundary 分岐をチェックリスト�
 - [ ] 差分に action / clientAction の追加・変更、または ErrorBoundary の変更が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-react-router-action-contract-001 — action / ErrorBoundary の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: react-router-action-contract — action / ErrorBoundary の変更なし`
 
 ## False-positive guards / 抑制条件
 

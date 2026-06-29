@@ -60,7 +60,7 @@ Why: APIエンドポイントの命名・エラー応答・認可の一貫性を
 - [ ] 差分にエンドポイントの追加・変更・削除が含まれている
 - [ ] inputContextに`diff`が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-api-design-001 — API定義/ルーティングの変更なし`
+ゲート不成立時の出力: `NO_REVIEW: api-design — API定義/ルーティングの変更なし`
 
 ## False-positive guards / 抑制条件
 

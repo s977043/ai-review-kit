@@ -44,7 +44,7 @@ Why: データモデル・DB設計の制約・移行・運用リスクをチェ�
 - [ ] 差分にテーブル定義・制約・インデックス・マイグレーション手順に関わる記述の追加または変更がある
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-data-model-db-design-001 — データモデル・DB設計に関わる変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: data-model-db-design — データモデル・DB設計に関わる変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

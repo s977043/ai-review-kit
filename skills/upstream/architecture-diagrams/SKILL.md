@@ -51,7 +51,7 @@ Why: アーキテクチャ図の差分から読み手の誤解を招く要因（
 - [ ] 差分に図の構成要素（コンポーネント・矢印・境界・ラベル・フロー）の追加・変更が含まれている
 - [ ] inputContextに`diff`が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-architecture-diagrams-001 — 図関連ファイルの変更なし`
+ゲート不成立時の出力: `NO_REVIEW: architecture-diagrams — 図関連ファイルの変更なし`
 
 ## False-positive guards / 抑制条件
 

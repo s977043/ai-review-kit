@@ -48,7 +48,7 @@ Why: API/契約変更のバージョニング・後方互換性・移行計画�
 - [ ] 差分にAPIのフィールド・型・エンドポイント・バージョンの追加・変更・削除が含まれている
 - [ ] inputContextに`diff`が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-api-versioning-compat-001 — API/契約の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: api-versioning-compat — API/契約の変更なし`
 
 ## False-positive guards / 抑制条件
 

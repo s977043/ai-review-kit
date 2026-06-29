@@ -44,7 +44,7 @@ Why: 可用性・復旧設計の抜け漏れをチェックリスト型で評価
 - [ ] 差分に可用性・冗長性・復旧・容量に関わる記述の追加または変更がある
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-availability-architecture-001 — 可用性設計に関わる変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: availability-architecture — 可用性設計に関わる変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

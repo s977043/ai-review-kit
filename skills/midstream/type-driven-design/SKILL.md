@@ -54,7 +54,7 @@ Why: プリミティブ型の濫用やドメイン型の欠如をチェックリ
 - [ ] 差分がテストファイル（`*.spec.ts`, `*.test.ts`, `__tests__/**`）のみではない
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-type-driven-design-001 — Type-Driven Design評価の対象となるTypeScriptコード変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: type-driven-design — Type-Driven Design評価の対象となるTypeScriptコード変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

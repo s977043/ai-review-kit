@@ -48,7 +48,7 @@ Why: 機密情報の検出はパターン的・決定論で判定できる領域
 - [ ] 差分の**追加行**に、機密情報の候補（高エントロピー文字列・`API_KEY`/`SECRET`/`TOKEN` 等のキー・`-----BEGIN ... PRIVATE KEY-----`・`/Users/` や `/home/`、`C:\Users\` で始まる個人パス・`.env` 実値行）が含まれている
 - [ ] inputContext に diff が含まれ、`code_search`（grep）が利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-secret-credential-scan-001 — 機密情報の候補が差分に検出されない`
+ゲート不成立時の出力: `NO_REVIEW: secret-credential-scan — 機密情報の候補が差分に検出されない`
 
 ## False-positive guards / 抑制条件
 

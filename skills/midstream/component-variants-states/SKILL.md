@@ -42,7 +42,7 @@ Why: 新規コンポーネントの状態網羅はチェックリスト的に確
 - [ ] 差分に**新規 UI コンポーネント**（再利用可能な表示要素を export する `.tsx` / `.jsx` の追加）が含まれている
 - [ ] inputContext に diff が含まれ、`code_search`（grep）が利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-component-variants-states-001 — 新規 UI コンポーネントの追加が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: component-variants-states — 新規 UI コンポーネントの追加が検出されない`
 
 ## False-positive guards / 抑制条件
 

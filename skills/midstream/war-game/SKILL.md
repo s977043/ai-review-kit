@@ -43,7 +43,7 @@ Why: 攻撃シナリオ分析はチェックリスト型評価が主だが、攻
 - [ ] テストコード・フィクスチャ・ドキュメントのみの変更ではない
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-war-game-001 — 攻撃面を持つ変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: war-game — 攻撃面を持つ変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

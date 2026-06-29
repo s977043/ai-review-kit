@@ -42,7 +42,7 @@ Why: 宣言（declarative phrase）と実装の突合はチェックリスト型
 - [ ] 差分に宣言的フレーズ（「〜しない」「禁止」「必ず〜する」「don't」「never」「MUST」「always」等）が含まれている、またはそれを含む既存ファイルへの変更である
 - [ ] inputContext に diff または fullFile が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-self-contradiction-001 — 宣言的フレーズが検出されない`
+ゲート不成立時の出力: `NO_REVIEW: self-contradiction — 宣言的フレーズが検出されない`
 
 ## False-positive guards / 抑制条件
 

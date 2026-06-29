@@ -42,7 +42,7 @@ Why: テスト存在チェックはチェックリスト型評価が主だが、
 - [ ] 実行パスへ影響する変更が差分に含まれている（挙動変更のシグナルが存在する）
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-downstream-test-existence-001 — テスト存在チェックの対象となるコード変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: test-existence — テスト存在チェックの対象となるコード変更が検出されない`
 
 ## False-positive guards / 抑制条件
 

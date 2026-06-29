@@ -58,7 +58,7 @@ Why: 設計ドキュメントに検証計画（SLO/テスト/ロールバック/
 - [ ] 差分に設計上の意思決定・新規コンポーネント・依存関係の追加など検証計画が必要な変更が含まれている
 - [ ] inputContextに`diff`が含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-architecture-validation-plan-001 — 検証計画が必要な設計ドキュメントの変更なし`
+ゲート不成立時の出力: `NO_REVIEW: architecture-validation-plan — 検証計画が必要な設計ドキュメントの変更なし`
 
 ## False-positive guards
 

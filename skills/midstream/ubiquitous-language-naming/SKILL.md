@@ -40,7 +40,7 @@ Why: 差分内の識別子をドメイン用語の一貫性という単一観点
 - [ ] 差分にドメイン語彙を含む識別子（型名・関数名・プロパティ名）の追加または改名が含まれている
 - [ ] diff コンテキストが利用可能である
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-ubiquitous-language-naming-001 — ドメイン識別子の変更なし`
+ゲート不成立時の出力: `NO_REVIEW: ubiquitous-language-naming — ドメイン識別子の変更なし`
 
 補足: plan / ADR / 用語集が利用可能な場合はそれを正とし、無い場合は **差分周辺の既存コードの語彙** を正とする（degraded mode）。
 

@@ -51,7 +51,7 @@ Why: 実装計画アーティファクトを読み込み、AI が自律実行す
 - [ ] diff または fullFile のいずれかの inputContext が利用可能である
 
 ゲート不成立時の出力:
-`NO_REVIEW: rr-upstream-plan-review-gate-001 — plan.md または pbi-input.md が見つからない`
+`NO_REVIEW: plan-review-gate — plan.md または pbi-input.md が見つからない`
 
 ## Rule / ルール
 

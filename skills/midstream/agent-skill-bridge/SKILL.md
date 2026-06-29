@@ -50,7 +50,7 @@ Why: ブリッジモジュールのパス安全性・往復忠実性・バリデ
 - [ ] 差分がコメント・JSDoc・空白のみの変更ではない
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-agent-skill-bridge-001 — Agent Skillブリッジ関連の実質的なコード変更が検出されない`
+ゲート不成立時の出力: `NO_REVIEW: agent-skill-bridge — Agent Skillブリッジ関連の実質的なコード変更が検出されない`
 
 ## False-positive guards
 

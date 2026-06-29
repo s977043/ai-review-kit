@@ -42,7 +42,7 @@ Why: 既存レビュー（`review-self` / `review-external`）を artifact と�
 - [ ] 入力 artifact に `review-self` または `review-external` のいずれか1つ以上が解決できている（`pages/reference/artifact-input-contract.md` の ID に準拠）
 - [ ] `diff` artifact が解決できている（未指定時は `git diff <mergeBase>..HEAD` による fallback を許容）
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-plangate-verification-audit-001 — レビュー入力 (review-self / review-external) または diff が不足`
+ゲート不成立時の出力: `NO_REVIEW: plangate-verification-audit — レビュー入力 (review-self / review-external) または diff が不足`
 
 **Gate と抑制条件の違い:**
 

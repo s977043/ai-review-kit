@@ -34,7 +34,7 @@ Why: 最小構成のサンプルスキルとしてほぼ常に選択されるが
 - [ ] 差分が空でない（1行以上の変更がある）
 - [ ] inputContextにdiffが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-midstream-hello-skill-001 — レビュー対象の差分が存在しない`
+ゲート不成立時の出力: `NO_REVIEW: hello-skill — レビュー対象の差分が存在しない`
 
 ## 評価指標（Evaluation）
 

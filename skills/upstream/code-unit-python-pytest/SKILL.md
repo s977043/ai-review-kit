@@ -39,7 +39,7 @@ Why: 仕様書からpytestユニットテストの足場を生成するジェネ
 - [ ] 仕様書にPythonアプリケーションに関する記述がある
 - [ ] inputContextにfullFileが含まれている
 
-ゲート不成立時の出力: `NO_REVIEW: rr-upstream-test-code-unit-python-pytest-001 — 対象となるPython仕様が差分に含まれていない`
+ゲート不成立時の出力: `NO_REVIEW: code-unit-python-pytest — 対象となるPython仕様が差分に含まれていない`
 
 ## False-positive guards / 抑制条件
 
