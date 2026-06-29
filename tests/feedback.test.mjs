@@ -20,7 +20,7 @@ const NOW = new Date('2026-06-10T03:00:00Z');
 function entryInput(overrides = {}) {
   return {
     feedbackType: 'false_positive',
-    skillId: 'rr-midstream-typescript-strict-001',
+    skillId: 'typescript-strict',
     findingFingerprint: 'a1b2c3d4e5f60718',
     evidence: 'strict 設定済みの tsconfig を誤検出',
     pr: 1100,
@@ -35,7 +35,7 @@ test('buildFeedbackEntry produces the documented schema', () => {
     timestamp: '2026-06-10T03:00:00.000Z',
     trigger: 'pr-comment',
     feedbackType: 'false_positive',
-    skillId: 'rr-midstream-typescript-strict-001',
+    skillId: 'typescript-strict',
     findingFingerprint: 'a1b2c3d4e5f60718',
     evidence: 'strict 設定済みの tsconfig を誤検出',
     pr: 1100,

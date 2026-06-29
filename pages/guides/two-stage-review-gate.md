@@ -45,7 +45,7 @@ river review plan   # 上流アーティファクト（plan / pbi-input 等）�
 river review exec   # 計画に沿ってレビューを実行
 ```
 
-`rr-upstream-plangate-exec-conformance-001` などの skill が plan と diff の整合をチェックします。
+`plangate-exec-conformance` などの skill が plan と diff の整合をチェックします。
 
 ## ポイント
 

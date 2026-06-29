@@ -39,7 +39,7 @@ id: skills
 ```yaml
 # Before: 「SQLインジェクションを確認すること」
 # After:  バージョン管理されテスト可能なスキル
-id: rr-midstream-security-basic-001
+id: security-basic
 name: Baseline Security Checks
 version: 0.1.0
 ```
@@ -60,7 +60,7 @@ version: 0.1.0
 スキルの内容と実行タイミングを宣言します。
 
 ```yaml
-id: rr-midstream-security-basic-001 # 一意の識別子
+id: security-basic # 一意の識別子
 name: Baseline Security Checks # 人間が読める名前
 version: 0.1.0 # セマンティックバージョン
 description: Detects common vulnerabilities
@@ -242,7 +242,7 @@ TypeScriptのnullチェック漏れを検出するスキルを作成します。
 npm run create:skill
 
 # 入力:
-# ID: rr-midstream-typescript-nullcheck-002
+# ID: typescript-nullcheck
 # Name: TypeScript Null Safety
 # Phase: midstream
 # Files: src/**/*.ts
@@ -329,7 +329,7 @@ tests:
 **7. テスト:**
 
 ```bash
-cd skills/rr-midstream-typescript-nullcheck-002
+cd skills/typescript-nullcheck
 npx promptfoo eval
 
 # eval/results.jsonで結果を確認
@@ -338,7 +338,7 @@ npx promptfoo eval
 **8. コミット:**
 
 ```bash
-git add skills/rr-midstream-typescript-nullcheck-002
+git add skills/typescript-nullcheck
 git commit -m "feat: add TypeScript null safety skill"
 ```
 
@@ -558,8 +558,8 @@ npm run eval:fixtures
 ### セキュリティスキル
 
 ```yaml
-# skills/midstream/rr-midstream-security-basic-001.md（frontmatter）
-id: rr-midstream-security-basic-001
+# skills/midstream/security-basic.md（frontmatter）
+id: security-basic
 name: Baseline Security Checks
 phase: midstream
 applyTo: ['src/**/*.{ts,js}']
@@ -573,8 +573,8 @@ severity: major
 ### アーキテクチャスキル
 
 ```yaml
-# skills/upstream/rr-upstream-adr-decision-quality-001.md
-id: rr-upstream-adr-decision-quality-001
+# skills/upstream/adr-decision-quality.md
+id: adr-decision-quality
 name: ADR Decision Quality
 phase: upstream
 applyTo: ['docs/adr/*.md']
@@ -588,8 +588,8 @@ severity: info
 ### テストカバレッジスキル
 
 ```yaml
-# skills/downstream/rr-downstream-coverage-gap-001.md
-id: rr-downstream-coverage-gap-001
+# skills/downstream/coverage-gap.md
+id: coverage-gap
 name: Test Coverage Gap Detection
 phase: downstream
 applyTo: ['src/**/*.{ts,js}']

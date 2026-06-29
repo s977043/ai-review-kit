@@ -15,10 +15,7 @@ test('selects skills by phase and applyTo glob', async () => {
     availableContexts: ['diff'],
   });
   const ids = selected.map((s) => s.metadata.id);
-  assert.ok(
-    ids.includes('rr-midstream-code-quality-sample-001'),
-    'midstream skill should be selected'
-  );
+  assert.ok(ids.includes('code-quality-sample'), 'midstream skill should be selected');
 });
 
 test('skips when required inputContext is missing', () => {
@@ -224,7 +221,7 @@ test('selectSkills skips LLM-only skills when llmEnabled is false', () => {
   const skills = [
     {
       metadata: {
-        id: 'rr-midstream-security-basic-001', // Known heuristic skill
+        id: 'security-basic', // Known heuristic skill
         phase: 'midstream',
         applyTo: ['src/**'],
       },
@@ -247,7 +244,7 @@ test('selectSkills skips LLM-only skills when llmEnabled is false', () => {
 
   const ids = selected.map((s) => s.metadata.id);
   assert.equal(ids.length, 1);
-  assert.ok(ids.includes('rr-midstream-security-basic-001'), 'heuristic skill should be selected');
+  assert.ok(ids.includes('security-basic'), 'heuristic skill should be selected');
   assert.ok(!ids.includes('llm-only-skill'), 'LLM skill should be skipped');
 
   const llmSkip = skipped.find((s) => s.skill.metadata.id === 'llm-only-skill');
@@ -295,7 +292,7 @@ test('buildExecutionPlan reports low test-impact risk when tests accompany chang
   assert.equal(plan.testImpact.riskLevel, 'low');
 });
 
-const ESCALATION_IDS = ['rr-downstream-test-existence-001', 'rr-downstream-coverage-gap-001'];
+const ESCALATION_IDS = ['test-existence', 'coverage-gap'];
 
 test('buildExecutionPlan does not escalate test skills by default (flag off)', async () => {
   // #1255 approach D: default off — high-risk midstream diff must NOT pull in
@@ -358,7 +355,7 @@ test('buildExecutionPlan does not escalate when flag on but risk not high', asyn
 test('buildExecutionPlan propagates llmEnabled: false to selectSkills', async () => {
   const skills = [
     {
-      metadata: { id: 'rr-midstream-security-basic-001', phase: 'midstream', applyTo: ['src/**'] },
+      metadata: { id: 'security-basic', phase: 'midstream', applyTo: ['src/**'] },
     },
     { metadata: { id: 'llm-only-skill', phase: 'midstream', applyTo: ['src/**'] } },
   ];
@@ -372,7 +369,7 @@ test('buildExecutionPlan propagates llmEnabled: false to selectSkills', async ()
   });
 
   const selectedIds = plan.selected.map((s) => s.metadata.id);
-  assert.ok(selectedIds.includes('rr-midstream-security-basic-001'));
+  assert.ok(selectedIds.includes('security-basic'));
   assert.ok(!selectedIds.includes('llm-only-skill'));
 
   const skippedIds = plan.skipped.map((s) => s.skill.metadata.id);

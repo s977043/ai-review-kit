@@ -79,9 +79,9 @@ describe('computeAxisScores', () => {
 
   it('clamps score at 0', () => {
     const scores = computeAxisScores([
-      { severity: 'critical', ruleId: 'rr-mid-sec-1' },
-      { severity: 'critical', ruleId: 'rr-mid-sec-2' },
-      { severity: 'critical', ruleId: 'rr-mid-sec-3' },
+      { severity: 'critical', ruleId: 'sec' },
+      { severity: 'critical', ruleId: 'sec' },
+      { severity: 'critical', ruleId: 'sec' },
     ]);
     assert.equal(scores.security, 0);
   });

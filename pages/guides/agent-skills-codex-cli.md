@@ -10,7 +10,7 @@ River Review のスキルを「マニフェスト（YAML/Markdown）」で柔軟
 
 ```markdown
 ---
-id: rr-midstream-observability-001
+id: observability
 name: Logging and Observability Guard
 description: 例外を握り潰さず、適切にロギングすることを促す
 phase:
@@ -36,7 +36,7 @@ modelHint: balanced
 
 ```yaml
 metadata:
-  id: rr-downstream-test-coverage-001
+  id: test-coverage
   name: Test Coverage Guard
   description: 追加機能に対するテスト不足を検知する
   phase: [downstream]
@@ -51,7 +51,7 @@ instruction: |
 ### YAML（フラット構造）
 
 ```yaml
-id: rr-midstream-security-001
+id: security
 name: Basic Security Review
 description: セキュリティ上の初歩的な落とし穴を検知する
 phase: [midstream, downstream]

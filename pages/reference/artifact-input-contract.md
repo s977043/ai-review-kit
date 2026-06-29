@@ -70,7 +70,7 @@ River Review が認識する入力アーティファクトは以下の通りで�
       {
         "timestamp": "2026-04-17T00:00:00Z",
         "phase": "exec",
-        "skillId": "rr-upstream-plangate-plan-integrity-001",
+        "skillId": "plangate-plan-integrity",
         "severity": "major",
         "file": "path/to/file.ts",
         "line": 42,
@@ -91,7 +91,7 @@ River Review が認識する入力アーティファクトは以下の通りで�
   - `entries[].source`（任意）: 集約元となった Review Artifact のパス。provenance を保つために推奨。
 
 - **生成方法**: CLI 側で複数の `review-artifact.json` を読み、その `findings[]` を `entries[]` に連結して構築する想定（実装は別途追跡中）。
-- **欠損時**: `rr-upstream-plangate-rule-promotion-001` など本アーティファクトを必要とする skill は Pre-execution Gate で `NO_REVIEW` を返し、昇格判定処理をスキップする。
+- **欠損時**: `plangate-rule-promotion` など本アーティファクトを必要とする skill は Pre-execution Gate で `NO_REVIEW` を返し、昇格判定処理をスキップする。
 
 ### `tdd-ledger`
 
@@ -130,7 +130,7 @@ River Review が認識する入力アーティファクトは以下の通りで�
   - `phases[].conclusion`（任意）: そのフェーズの結論・失敗理由の説明。
   - `phases[].testCaseRefs`（任意）: 対応する `test-cases` の ID 配列。
 
-- **欠損時**: `rr-upstream-plangate-tdd-evidence-001` など本アーティファクトを必要とする skill は Pre-execution Gate で `NO_REVIEW` を返し、TDD 証跡レビューをスキップする。
+- **欠損時**: `plangate-tdd-evidence` など本アーティファクトを必要とする skill は Pre-execution Gate で `NO_REVIEW` を返し、TDD 証跡レビューをスキップする。
 
 ### `diff`
 

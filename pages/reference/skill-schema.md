@@ -6,7 +6,7 @@ River Review のスキルは、メタデータに YAML frontmatter を使用し�
 
 必須フィールドは `id` / `name` / `description` / `category` の 4 つ。さらに `phase` / `category` / `trigger` のいずれか、`applyTo` / `files` / `path_patterns` / `trigger` のいずれかの組合せが必要になる (`schemas/skill.schema.json` の `anyOf` 制約)。
 
-- `id` (string, required): 一意の識別子（例: `rr-upstream-design-architecture-001`）。移動やリネームを行っても安定している。
+- `id` (string, required): 一意の識別子（例: `design-architecture`）。移動やリネームを行っても安定している。
 - `name` (string, required): 人間が読めるスキル名。
 - `description` (string, required): スキルが何をチェックするかの簡潔な説明。
 - `category` (string, required): スキルのストリーム分類。`core` / `upstream` / `midstream` / `downstream` のいずれか。ルーティングの第一キー。
@@ -26,7 +26,7 @@ River Review のスキルは、メタデータに YAML frontmatter を使用し�
 
 ```yaml
 ---
-id: rr-midstream-performance-002
+id: performance
 name: Midstream Performance Budget Check
 description: Flag midstream changes that risk latency regressions or heavy resource use.
 category: midstream
@@ -46,7 +46,7 @@ Ensure changed code paths avoid unnecessary synchronous I/O and unbounded concur
 
 ```yaml
 ---
-id: rr-midstream-performance-003
+id: performance
 name: Midstream Performance Budget Check
 description: Flag midstream changes that risk latency regressions or heavy resource use.
 category: midstream

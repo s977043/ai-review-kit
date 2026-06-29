@@ -19,7 +19,7 @@ function entry({ fpRate, scores = { fixtures_recall: 1 } }) {
     scores,
     snapshots: {
       perSkillFp: {
-        'rr-midstream-typescript-strict-001': { guards: 10, fps: fpRate * 10, fpRate },
+        'typescript-strict': { guards: 10, fps: fpRate * 10, fpRate },
       },
     },
     results: [],
@@ -51,7 +51,7 @@ test('per-skill FP worsening beyond +3pt flags a regression (exit 1)', async () 
   assert.equal(code, 1);
   assert.equal(out.regression, true);
   assert.equal(out.perSkillFpRegressions.length, 1);
-  assert.equal(out.perSkillFpRegressions[0].id, 'rr-midstream-typescript-strict-001');
+  assert.equal(out.perSkillFpRegressions[0].id, 'typescript-strict');
 });
 
 test('per-skill FP change within +3pt stays informational (exit 0)', async () => {
@@ -81,7 +81,7 @@ test('no false regression when the previous entry lacks per-skill snapshots', as
 test('a skill appearing only in the latest snapshot does not regress', async () => {
   const prev = entry({ fpRate: 0.01 });
   const curr = entry({ fpRate: 0.01 });
-  curr.snapshots.perSkillFp['rr-brand-new-skill-001'] = { guards: 10, fps: 5, fpRate: 0.5 };
+  curr.snapshots.perSkillFp['new-skill'] = { guards: 10, fps: 5, fpRate: 0.5 };
   const ledger = await writeLedger([prev, curr]);
   const { code, out } = run(ledger);
   assert.equal(code, 0);

@@ -53,8 +53,8 @@ goldenDir: string # golden ディレクトリ（デフォルト: "golden"）
 - **説明**: スキルの一意識別子
 - **制約**:
   - 1文字以上
-  - 推奨形式: `rr-{phase}-{category}-{number}`（例: `rr-midstream-code-quality-001`）
-- **例**: `"design-review"`, `"rr-upstream-adr-quality-001"`
+  - 推奨形式: kebab-case（例: `code-quality`）
+- **例**: `"design-review"`, `"adr-quality"`
 
 ### version
 
@@ -232,7 +232,7 @@ applyTo:
 ### フル機能
 
 ```yaml
-id: 'rr-upstream-adr-quality-001'
+id: 'adr-quality'
 version: '0.1.0'
 name: 'ADR Decision Quality'
 description: 'Ensure ADRs capture context, decision, alternatives, and tradeoffs'
@@ -271,7 +271,7 @@ goldenDir: 'golden'
 
 ```markdown
 ---
-id: rr-midstream-hello-001
+id: hello
 name: Hello Skill
 description: ...
 phase: midstream

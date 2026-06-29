@@ -39,7 +39,7 @@ Skills make implicit knowledge explicit and executable:
 ```yaml
 # Before: "Remember to check for SQL injection"
 # After:  A versioned, testable skill
-id: rr-midstream-security-basic-001
+id: security-basic
 name: Baseline Security Checks
 version: 0.1.0
 ```
@@ -60,7 +60,7 @@ Every skill has five core components:
 Declares what the skill does and when to run it:
 
 ```yaml
-id: rr-midstream-security-basic-001 # Unique identifier
+id: security-basic # Unique identifier
 name: Baseline Security Checks # Human-readable name
 version: 0.1.0 # Semantic version
 description: Detects common vulnerabilities
@@ -242,7 +242,7 @@ Let's create a skill that checks for missing TypeScript null checks:
 npm run create:skill
 
 # Enter:
-# ID: rr-midstream-typescript-nullcheck-002
+# ID: typescript-nullcheck
 # Name: TypeScript Null Safety
 # Phase: midstream
 # Files: src/**/*.ts
@@ -330,7 +330,7 @@ tests:
 **7. Test:**
 
 ```bash
-cd skills/rr-midstream-typescript-nullcheck-002
+cd skills/typescript-nullcheck
 npx promptfoo eval
 
 # Review results in eval/results.json
@@ -339,7 +339,7 @@ npx promptfoo eval
 **8. Commit:**
 
 ```bash
-git add skills/rr-midstream-typescript-nullcheck-002
+git add skills/typescript-nullcheck
 git commit -m "feat: add TypeScript null safety skill"
 ```
 
@@ -458,7 +458,7 @@ Skills will be able to reference other skills:
 
 ```yaml
 dependencies:
-  - skill:rr-midstream-typescript-strict-001 # Run this first
+  - skill:typescript-strict # Run this first
 ```
 
 This enables:
@@ -564,8 +564,8 @@ Treat skill quality like code quality—test before merge.
 ### Security Skill
 
 ```yaml
-# skills/rr-midstream-security-basic-001/skill.yaml
-id: rr-midstream-security-basic-001
+# skills/security-basic/skill.yaml
+id: security-basic
 name: Baseline Security Checks
 phase: midstream
 applyTo: ['src/**/*.{ts,js}']
@@ -579,8 +579,8 @@ severity: major
 ### Architecture Skill
 
 ```yaml
-# skills/upstream/rr-upstream-adr-decision-quality-001.md
-id: rr-upstream-adr-decision-quality-001
+# skills/upstream/adr-decision-quality.md
+id: adr-decision-quality
 name: ADR Decision Quality
 phase: upstream
 applyTo: ['docs/adr/*.md']
@@ -594,8 +594,8 @@ severity: info
 ### Test Coverage Skill
 
 ```yaml
-# skills/downstream/rr-downstream-coverage-gap-001.md
-id: rr-downstream-coverage-gap-001
+# skills/downstream/coverage-gap.md
+id: coverage-gap
 name: Test Coverage Gap Detection
 phase: downstream
 applyTo: ['src/**/*.{ts,js}']

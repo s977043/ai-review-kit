@@ -4,7 +4,7 @@ A skill that synthesizes multiple AI / human review results to support the merge
 Inspired by Nolan Lawson's Triple Agent skill, but avoiding tool lock-in and
 restructured to fit River Review's artifact-driven philosophy — a "synthesis pattern".
 
-- Skill: `rr-midstream-independent-review-synthesis-001`
+- Skill: `independent-review-synthesis`
 - Related epic: [#911](https://github.com/s977043/river-review/issues/911)
 - Status: Phase 1 (community / `recommended: false`). Phase 2 will extend the artifact contract; Phase 3 will add a CLI ensemble mode.
 
@@ -60,7 +60,7 @@ Each finding uses the block form `Finding:` / `Evidence:` / `Reviewers:` / `Seve
 Verify behavior with `promptfoo eval`:
 
 ```bash
-cd skills/midstream/community/rr-midstream-independent-review-synthesis-001/eval
+cd skills/midstream/independent-review-synthesis/eval
 promptfoo eval
 ```
 

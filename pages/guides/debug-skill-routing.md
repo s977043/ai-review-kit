@@ -9,19 +9,19 @@
    ```bash
    # 正常時の出力例
    $ npm run skills:validate
-   ✔ skills/midstream/rr-midstream-security-001/SKILL.md — OK
-   ✔ skills/midstream/rr-midstream-perf-001/SKILL.md — OK
+   ✔ skills/midstream/security/SKILL.md — OK
+   ✔ skills/midstream/perf/SKILL.md — OK
    ... (省略)
    All N skills passed validation.
 
    # 失敗時の出力例（未知の phase 値）
    $ npm run skills:validate
-   ✖ skills/midstream/rr-midstream-foo-001/SKILL.md
+   ✖ skills/midstream/foo/SKILL.md
      ValidationError: "phase" must be one of [upstream, midstream, downstream]
        received: "release"
 
    # 失敗時の出力例（必須フィールド欠落）
-   ✖ skills/upstream/rr-upstream-bar-001/SKILL.md
+   ✖ skills/upstream/bar/SKILL.md
      ValidationError: "applyTo" is required (or provide "files" / "path_patterns" / "trigger")
    ```
 
@@ -57,8 +57,8 @@ node src/cli.mjs run . --debug
 Debug info:
 - Impact tags: security, performance
 - Token estimate: 1240
-Matched skills (3): rr-midstream-security-001, rr-midstream-perf-001, rr-midstream-code-quality-001
-Skipped skills (2): rr-upstream-arch-001 [glob no match], rr-downstream-release-001 [phase mismatch]
+Matched skills (3): security, perf, code-quality
+Skipped skills (2): arch [glob no match], release [phase mismatch]
 ```
 
 **ゼロトリガーの症状例**: `phase` に `release` など有効でない値を指定すると、validate は失敗し、スキルは一切トリガーされない。`npm run skills:validate` でエラーを確認してから再実行してください。

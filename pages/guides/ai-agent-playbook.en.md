@@ -126,7 +126,7 @@ Within each stage, pick `--skill-set` by task type (sets: `adversarial` / `basic
 
 > When no set is given, skills are **auto-selected** by phase, target paths, and input context. Start with no flag (auto) and reach for `--skill-set` only when you want to narrow the lens.
 >
-> ⚠️ **phase trap**: `comprehensive` / `multitenancy` / `adversarial` bundle upstream skills (e.g. `rr-upstream-multitenancy-isolation-001` / `rr-upstream-pre-mortem-001`). Running them with `river run` under the default midstream **silently skips** those on a phase mismatch. To also apply the upstream lens, run a separate `--phase upstream`, or always check `--debug`'s `skippedSkills` for what actually ran.
+> ⚠️ **phase trap**: `comprehensive` / `multitenancy` / `adversarial` bundle upstream skills (e.g. `multitenancy-isolation` / `pre-mortem`). Running them with `river run` under the default midstream **silently skips** those on a phase mismatch. To also apply the upstream lens, run a separate `--phase upstream`, or always check `--debug`'s `skippedSkills` for what actually ran.
 
 ## Agent operations helpers
 
