@@ -6,7 +6,7 @@ import { classifyChangedFiles } from './file-classifier.mjs';
  * @param {string} diffText
  * @returns {number}
  */
-function countChangedLinesFromText(diffText) {
+export function countChangedLinesFromText(diffText) {
   if (!diffText) return 0;
   let lines = 0;
   for (const line of diffText.split('\n')) {

@@ -299,6 +299,10 @@ function parseArgs(argv) {
       if (args[0] && !args[0].startsWith('-')) {
         parsed.reviewSubcommand = args.shift(); // plan | exec | verify
       }
+      // Consume optional positional target path (e.g., `river review route .`)
+      if (args[0] && !args[0].startsWith('-')) {
+        parsed.target = args.shift();
+      }
       continue;
     }
     if (arg === '--plan-only') {
@@ -1247,17 +1251,26 @@ async function main(argv = process.argv.slice(2)) {
         const defaultBranch = await detectDefaultBranch(repoRoot);
         const mergeBase = await findMergeBase(repoRoot, parsed.base ?? defaultBranch);
         const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
-        const riskMap = await loadRiskMap(repoRoot).catch(() => null);
+        const riskMap = await loadRiskMap(repoRoot).catch((err) => {
+          console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
+          return null;
+        });
         const result = routeReviewMode({
           changedFiles: repoDiff.changedFiles,
           diffText: repoDiff.rawDiffText,
           riskMap,
+          targetPath: routeTargetPath,
         });
         const outputFormat = parsed.format ?? parsed.output ?? 'json';
         if (outputFormat === 'markdown') {
           console.log(formatRouterResultMarkdown(result));
-        } else {
+        } else if (outputFormat === 'json') {
           console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.error(
+            `Error: river review route only supports --format json or --format markdown (got "${outputFormat}").`
+          );
+          return 3;
         }
         return 0;
       } catch (err) {

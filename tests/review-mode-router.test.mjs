@@ -148,6 +148,14 @@ test('confidence is high for migration trigger', () => {
   assert.equal(result.confidence, 'high');
 });
 
+test('confidence is high for schema trigger', () => {
+  const result = routeReviewMode({
+    changedFiles: ['schemas/skill.schema.json'],
+    riskMap: null,
+  });
+  assert.equal(result.confidence, 'high');
+});
+
 test('confidence is medium for large diff trigger', () => {
   const files = Array.from({ length: 25 }, (_, i) => `src/lib/module${i}.mjs`);
   const result = routeReviewMode({ changedFiles: files, riskMap: null });

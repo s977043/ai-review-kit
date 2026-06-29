@@ -1,4 +1,5 @@
 import { classifyChangedFiles } from './file-classifier.mjs';
+import { countChangedLinesFromText } from './diff-meta.mjs';
 import { evaluateRisk } from './risk-map.mjs';
 
 /** @typedef {'light' | 'standard' | 'team' | 'human-required'} ReviewRouterMode */
@@ -9,33 +10,18 @@ function raiseMode(current, candidate) {
   return MODE_PRIORITY[candidate] > MODE_PRIORITY[current] ? candidate : current;
 }
 
-function countChangedLines(diffText) {
-  if (!diffText) return 0;
-  let count = 0;
-  for (const line of diffText.split('\n')) {
-    if (
-      (line.startsWith('+') || line.startsWith('-')) &&
-      !line.startsWith('+++') &&
-      !line.startsWith('---')
-    ) {
-      count++;
-    }
-  }
-  return count;
-}
-
-function buildNextCommand(mode) {
+function buildNextCommand(mode, targetPath = '.') {
   switch (mode) {
     case 'light':
-      return 'river review plan . --depth quick';
+      return `river review plan ${targetPath} --depth quick`;
     case 'standard':
-      return 'river review plan .';
+      return `river review plan ${targetPath}`;
     case 'team':
-      return 'river review plan . --depth thorough --reviewers auto';
+      return `river review plan ${targetPath} --depth thorough --reviewers auto`;
     case 'human-required':
       return '# No AI review recommended. Assign human reviewer.';
     default:
-      return 'river review plan .';
+      return `river review plan ${targetPath}`;
   }
 }
 
@@ -43,15 +29,15 @@ function buildNextCommand(mode) {
  * Route a PR to the appropriate review mode based on diff risk.
  * No LLM calls are made — all decisions are heuristic.
  *
- * @param {{ changedFiles: string[], diffText?: string, riskMap?: object | null }} input
- * @returns {{ selectedMode: ReviewRouterMode, confidence: 'high' | 'medium' | 'low', reasons: string[], matchedTriggers: string[], recommendedReviewers: string, riskAction: string, nextCommand: string }}
+ * @param {{ changedFiles: string[], diffText?: string, riskMap?: object | null, targetPath?: string }} input
+ * @returns {{ selectedMode: ReviewRouterMode, confidence: 'high' | 'medium', reasons: string[], matchedTriggers: string[], recommendedReviewers: string, riskAction: string, nextCommand: string }}
  */
-export function routeReviewMode({ changedFiles = [], diffText, riskMap }) {
+export function routeReviewMode({ changedFiles = [], diffText, riskMap, targetPath = '.' }) {
   const fileTypes = classifyChangedFiles(changedFiles);
   const riskAssessment = riskMap ? evaluateRisk(riskMap, changedFiles) : null;
   const aggregateAction = riskAssessment?.aggregateAction ?? 'comment_only';
   const fileCount = changedFiles.length;
-  const changedLines = countChangedLines(diffText);
+  const changedLines = countChangedLinesFromText(diffText);
 
   let mode = 'standard';
   const reasons = [];
@@ -132,7 +118,8 @@ export function routeReviewMode({ changedFiles = [], diffText, riskMap }) {
   } else if (
     matchedTriggers.includes('risk-map:require_human_review') ||
     matchedTriggers.includes('risk-map:escalate') ||
-    matchedTriggers.includes('fileType:migration')
+    matchedTriggers.includes('fileType:migration') ||
+    matchedTriggers.includes('fileType:schema')
   ) {
     confidence = 'high';
   } else {
@@ -148,7 +135,7 @@ export function routeReviewMode({ changedFiles = [], diffText, riskMap }) {
     matchedTriggers,
     recommendedReviewers,
     riskAction: aggregateAction,
-    nextCommand: buildNextCommand(mode),
+    nextCommand: buildNextCommand(mode, targetPath),
   };
 }
 
