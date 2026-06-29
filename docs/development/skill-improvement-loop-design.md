@@ -40,7 +40,7 @@ review 実行 ──finding──▶ feedback 分類（7型） ──▶ 対応�
 | L4  | suppression パターン分析         | 同一 fingerprint が N 回（目安 3 PR）以上 suppress されたら「skill 改善が必要」と判定し、skill-optimizer 診断の起票につなげる                 | P1     |
 | L5  | per-skill FP rate の時系列追跡   | ledger に skill 別 FP rate を追記し、悪化トレンド（例: 2 snapshot 連続で +3pt）でアラートする                                                 | P1     |
 | L6  | rule 昇格の機械検出              | 同種 feedback が 2 回以上発生したクラスを検出し、ルール化候補として提示する（IMPROVEMENT_LOOP Step 9 の自動化）                               | P2     |
-| L7  | 修正PR → feedback 取り込み       | 修正PR / follow-up PR を `fix-pr` trigger として記録し、元PRレビューの `missed_issue` を fixture / routing / reference 改善へ戻す              | P2     |
+| L7  | 修正PR → feedback 取り込み       | 修正PR / follow-up PR を `fix-pr` trigger として記録し、元PRレビューの `missed_issue` を fixture / routing / reference 改善へ戻す             | P2     |
 
 ### L1: feedback キャプチャのスキーマ案
 
