@@ -48,6 +48,7 @@ interface RouterInput {
   changedFiles: string[]; // 変更ファイルパス一覧
   diffText?: string; // raw diff（行数カウントに使用、省略可）
   riskMap?: RiskMapConfig; // loadRiskMap() の返り値（null = 設定なし）
+  targetPath?: string; // 解析対象パス（省略時は '.'）nextCommand に使用
 }
 ```
 
@@ -68,7 +69,7 @@ interface RouterInput {
 ```ts
 interface RouterOutput {
   selectedMode: 'light' | 'standard' | 'team' | 'human-required';
-  confidence: 'high' | 'medium' | 'low';
+  confidence: 'high' | 'medium';
   reasons: string[];
   matchedTriggers: string[];
   recommendedReviewers: string;
@@ -80,8 +81,11 @@ interface RouterOutput {
 #### `nextCommand` の例
 
 ```bash
-# light
+# light （targetPath = '.'）
 river review plan . --depth quick
+
+# light （targetPath = '/my/repo'）
+river review plan /my/repo --depth quick
 
 # standard
 river review plan .

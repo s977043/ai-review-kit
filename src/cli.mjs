@@ -1261,14 +1261,21 @@ async function main(argv = process.argv.slice(2)) {
           riskMap,
           targetPath: routeTargetPath,
         });
-        const outputFormat = parsed.format ?? parsed.output ?? 'json';
+        const outputFormat = parsed.formatExplicit
+          ? parsed.format
+          : parsed.outputExplicit && ['json', 'markdown'].includes(parsed.output)
+            ? parsed.output
+            : 'json';
         if (outputFormat === 'markdown') {
           console.log(formatRouterResultMarkdown(result));
         } else if (outputFormat === 'json') {
           console.log(JSON.stringify(result, null, 2));
         } else {
           console.error(
-            `Error: river review route only supports --format json or --format markdown (got "${outputFormat}").`
+            `Error: river review route only supports --format json or --format markdown` +
+              (parsed.outputExplicit
+                ? ` (--output is not supported for this subcommand; use --format instead)`
+                : ` (got "${outputFormat}").`)
           );
           return 3;
         }

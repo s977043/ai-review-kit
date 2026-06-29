@@ -154,6 +154,54 @@ This policy itself is continuously improved:
 - Adopt new best practices and technology trends
 - Allow customization according to project-specific needs
 
+## 8. Review Mode Router / Automatic Review Depth Selection
+
+The `river review route` sub-command statically analyzes the change set and automatically selects the appropriate review depth. It evaluates risk-map rules, the number of changed files and lines, and file types in priority order, then classifies the result into one of four modes.
+
+### 8.1 Mode Classification
+
+| Router Mode      | Internal reviewMode | Equivalent `--depth` | Description                                                                                               |
+| ---------------- | ------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `light`          | `tiny`              | `quick`              | Changes limited to docs or tests only. Minimum cost.                                                      |
+| `standard`       | `medium`            | `standard`           | Normal application code changes.                                                                          |
+| `team`           | `large`             | `thorough`           | Migration, schema, or large-scale changes. `--reviewers auto` is recommended.                             |
+| `human-required` | (none)              | (none)               | A `require_human_review` rule in the risk-map was matched. Human review is required instead of AI review. |
+
+### 8.2 Routing Triggers (in priority order)
+
+1. risk-map `require_human_review` → `human-required`
+2. risk-map `escalate` → `team` or higher
+3. Migration or schema file changes → `team` or higher
+4. Changed file count ≥ 20 or changed line count ≥ 500 → `team` or higher
+5. Infra or config file changes → `standard` or higher
+6. Docs or test files only → `light`
+7. Default → `standard`
+
+### 8.3 Output Fields
+
+The router outputs the following fields:
+
+- `selectedMode`: The selected mode (`light` / `standard` / `team` / `human-required`)
+- `confidence`: Confidence level of the decision (`high` / `medium`)
+- `reasons`: Explanation of why the mode was selected
+- `matchedTriggers`: List of triggers that were matched
+- `recommendedReviewers`: Recommended reviewers (when mode is `team`)
+- `riskAction`: The action applied from the risk-map
+- `nextCommand`: Suggested CLI command to run next
+
+### 8.4 CLI Usage Examples
+
+```bash
+# Route the diff in the current directory (JSON output)
+river review route .
+
+# Output in markdown format
+river review route . --format markdown
+
+# Compare against a specific base branch
+river review route . --base main
+```
+
 ## Related Documents
 
 - [Skill Metadata](./metadata-fields.md): Skill metadata specification

@@ -11,17 +11,18 @@ function raiseMode(current, candidate) {
 }
 
 function buildNextCommand(mode, targetPath = '.') {
+  const p = targetPath.includes(' ') ? `"${targetPath.replace(/"/g, '\\"')}"` : targetPath;
   switch (mode) {
     case 'light':
-      return `river review plan ${targetPath} --depth quick`;
+      return `river review plan ${p} --depth quick`;
     case 'standard':
-      return `river review plan ${targetPath}`;
+      return `river review plan ${p}`;
     case 'team':
-      return `river review plan ${targetPath} --depth thorough --reviewers auto`;
+      return `river review plan ${p} --depth thorough --reviewers auto`;
     case 'human-required':
       return '# No AI review recommended. Assign human reviewer.';
     default:
-      return `river review plan ${targetPath}`;
+      return `river review plan ${p}`;
   }
 }
 
@@ -81,7 +82,8 @@ export function routeReviewMode({ changedFiles = [], diffText, riskMap, targetPa
     matchedTriggers.push('diffSize:changedLines');
   }
 
-  // Rule 5: infra / config
+  // Rule 5: infra/config keeps the mode at standard; skip when a higher trigger already fired
+  // (avoids adding redundant reasons when team/human-required is already decided)
   if (mode !== 'human-required' && mode !== 'team') {
     if (fileTypes.infra.length > 0) {
       mode = raiseMode(mode, 'standard');
@@ -102,7 +104,7 @@ export function routeReviewMode({ changedFiles = [], diffText, riskMap, targetPa
     fileTypes.schema.length > 0 ||
     fileTypes.migration.length > 0 ||
     fileTypes.infra.length > 0;
-  const hasAnyFiles = changedFiles.length > 0;
+  const hasAnyFiles = fileCount > 0;
 
   if (hasAnyFiles && !hasSubstantiveFiles && mode === 'standard') {
     mode = 'light';
