@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.35.1](https://github.com/s977043/river-review/compare/v1.35.0...v1.35.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* update NO_REVIEW output strings from rr-*-001 to simplified skill IDs ([#1321](https://github.com/s977043/river-review/issues/1321)) ([45e66bc](https://github.com/s977043/river-review/commit/45e66bc94451b6c0fad6e7e5382dd20e93c5aa7f))
+
 ## [1.35.0](https://github.com/s977043/river-review/compare/v1.34.0...v1.35.0) (2026-06-29)
 
 
