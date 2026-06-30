@@ -299,6 +299,10 @@ function parseArgs(argv) {
       if (args[0] && !args[0].startsWith('-')) {
         parsed.reviewSubcommand = args.shift(); // plan | exec | verify
       }
+      // Consume optional positional target path (e.g., `river review route .`)
+      if (args[0] && !args[0].startsWith('-')) {
+        parsed.target = args.shift();
+      }
       continue;
     }
     if (arg === '--plan-only') {
@@ -1236,13 +1240,58 @@ async function main(argv = process.argv.slice(2)) {
       );
       return 3;
     }
-    // At this point, the verify branch above has already returned, so the
+    // route: risk-based review mode recommendation (dry-run, no LLM)
+    if (parsed.reviewSubcommand === 'route') {
+      try {
+        const { routeReviewMode, formatRouterResultMarkdown } =
+          await import('./lib/review-mode-router.mjs');
+        const { loadRiskMap } = await import('./lib/risk-map.mjs');
+        const routeTargetPath = path.resolve(parsed.target);
+        const repoRoot = await ensureGitRepo(routeTargetPath);
+        const defaultBranch = await detectDefaultBranch(repoRoot);
+        const mergeBase = await findMergeBase(repoRoot, parsed.base ?? defaultBranch);
+        const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
+        const riskMap = await loadRiskMap(repoRoot).catch((err) => {
+          console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
+          return null;
+        });
+        const result = routeReviewMode({
+          changedFiles: repoDiff.changedFiles,
+          diffText: repoDiff.rawDiffText,
+          riskMap,
+          targetPath: routeTargetPath,
+        });
+        const outputFormat = parsed.formatExplicit
+          ? parsed.format
+          : parsed.outputExplicit && ['json', 'markdown'].includes(parsed.output)
+            ? parsed.output
+            : 'json';
+        if (outputFormat === 'markdown') {
+          console.log(formatRouterResultMarkdown(result));
+        } else if (outputFormat === 'json') {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.error(
+            `Error: river review route only supports --format json or --format markdown` +
+              (parsed.outputExplicit
+                ? ` (--output is not supported for this subcommand; use --format instead)`
+                : ` (got "${outputFormat}").`)
+          );
+          return 3;
+        }
+        return 0;
+      } catch (err) {
+        console.error(`Error: ${err?.message ?? err}`);
+        return 1;
+      }
+    }
+    // At this point, the verify/route branches above have already returned, so the
     // remaining valid subcommands are `plan` and `exec` (in any of its
     // exec dry-run / replay / deferred forms). Anything else is unknown.
     if (parsed.reviewSubcommand !== 'plan' && parsed.reviewSubcommand !== 'exec') {
       console.error(
         parsed.reviewSubcommand
-          ? `river review ${parsed.reviewSubcommand} is not a known subcommand. Use: plan | exec | verify`
+          ? `river review ${parsed.reviewSubcommand} is not a known subcommand. Use: plan | exec | verify | route`
           : 'Usage: river review plan --plan-only'
       );
       return 3;

@@ -191,8 +191,8 @@ async function _fileExists(filePath, fsImpl) {
 
 // EXTERNAL MODULE: ./src/lib/diff.mjs
 var diff = __webpack_require__(4382);
-// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 6 modules
-var review_runner = __webpack_require__(980);
+// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
+var review_runner = __webpack_require__(7050);
 // EXTERNAL MODULE: ./src/lib/review-engine.mjs
 var review_engine = __webpack_require__(2022);
 // EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
@@ -1001,7 +1001,7 @@ async function runReviewPlan({
   resolveAllArtifactsImpl = resolveAllArtifacts,
   buildExecutionPlanImpl = review_runner.buildExecutionPlan,
   generateReviewImpl = review_engine/* generateReview */.G1,
-  loadRiskMapImpl = risk_map/* loadRiskMap */.E$,
+  loadRiskMapImpl = risk_map.loadRiskMap,
   readFileImpl = (p) => (0,promises_.readFile)(p, 'utf8'),
   generateRunId = defaultGenerateRunId,
 } = {}) {
