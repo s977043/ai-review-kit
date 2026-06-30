@@ -38510,7 +38510,7 @@ function preprocess(fn, schema) {
 
 /***/ }),
 
-/***/ 980:
+/***/ 7050:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -38714,110 +38714,8 @@ function inferImpactTags(changedFiles, options = {}) {
   return [...tags].sort();
 }
 
-;// CONCATENATED MODULE: ./src/lib/file-classifier.mjs
-// Module-scope regexes to avoid re-creation per call
-const RE_TEST_EXT = /\.(?:test|spec)\.(?:[jt]sx?|mjs)$/;
-const RE_SCHEMA_EXT = /\.schema\.[jt]s$/;
-const RE_MIGRATION = /(?:^|\/)migrations?\//;
-const RE_MIGRATE = /(?:^|\/)migrate/;
-const RE_CONFIG_EXT = /\.config\.(?:[jt]sx?|mjs)$/;
-const RE_RC_FILE = /^\.[a-z]+rc(?:\.[a-z]+)?$/;
-const RE_TSCONFIG = /^tsconfig.*\.json$/;
-const RE_DOCKERFILE = /^Dockerfile/;
-const RE_DOCKER_COMPOSE = /^docker-compose/;
-
-const CONFIG_NAMES = new Set([
-  'package.json',
-  '.river-review.json',
-  '.lychee.toml',
-  '.markdownlint.json',
-  '.markdownlint-cli2.yaml',
-  '.textlintrc.json',
-]);
-
-/**
- * Classify changed files by type for routing and evidence collection.
- * Complementary to impact-scope.mjs which classifies by quality domain.
- *
- * @param {string[]} files - Array of file paths (relative to repo root)
- * @returns {{ config: string[], schema: string[], migration: string[], app: string[], test: string[], infra: string[], docs: string[], unknown: string[] }}
- */
-function classifyChangedFiles(files) {
-  const result = {
-    config: [],
-    schema: [],
-    migration: [],
-    app: [],
-    test: [],
-    infra: [],
-    docs: [],
-    unknown: [],
-  };
-
-  for (const file of files) {
-    result[classifyFile(file)].push(file);
-  }
-
-  return result;
-}
-
-// Priority: test > schema > migration > config > infra > docs > app > unknown
-function classifyFile(file) {
-  const normalized = file.replaceAll('\\', '/');
-  const basename = normalized.split('/').pop() ?? '';
-
-  if (isTest(normalized, basename)) return 'test';
-  if (isSchema(normalized, basename)) return 'schema';
-  if (isMigration(normalized)) return 'migration';
-  if (isConfig(normalized, basename)) return 'config';
-  if (isInfra(normalized, basename)) return 'infra';
-  if (isDocs(normalized, basename)) return 'docs';
-  if (isApp(normalized)) return 'app';
-  return 'unknown';
-}
-
-function isTest(file, basename) {
-  return file.startsWith('tests/') || file.includes('/__tests__/') || RE_TEST_EXT.test(basename);
-}
-
-function isSchema(file, basename) {
-  return (
-    file.startsWith('schemas/') || RE_SCHEMA_EXT.test(basename) || basename.endsWith('.schema.json')
-  );
-}
-
-function isMigration(file) {
-  return RE_MIGRATION.test(file) || RE_MIGRATE.test(file) || file.startsWith('db/');
-}
-
-function isConfig(file, basename) {
-  if (RE_CONFIG_EXT.test(basename)) return true;
-  if (RE_RC_FILE.test(basename)) return true;
-  if (CONFIG_NAMES.has(basename) || basename.startsWith('.env')) return true;
-  if (RE_TSCONFIG.test(basename)) return true;
-  return false;
-}
-
-function isInfra(file, basename) {
-  return (
-    file.startsWith('.github/') ||
-    file.startsWith('.husky/') ||
-    file.startsWith('scripts/') ||
-    RE_DOCKERFILE.test(basename) ||
-    RE_DOCKER_COMPOSE.test(basename)
-  );
-}
-
-function isDocs(file, basename) {
-  if (basename.endsWith('.md') || basename.endsWith('.mdx')) return true;
-  if (file.startsWith('docs/') || file.startsWith('pages/')) return true;
-  return false;
-}
-
-function isApp(file) {
-  return file.startsWith('src/') || file.startsWith('runners/');
-}
-
+// EXTERNAL MODULE: ./src/lib/file-classifier.mjs
+var file_classifier = __nccwpck_require__(4673);
 ;// CONCATENATED MODULE: ./src/lib/test-impact.mjs
 
 
@@ -38828,7 +38726,7 @@ function isApp(file) {
  * @returns {{ appFilesChanged: number, testFilesChanged: number, gapFiles: string[], coverageRatio: number, riskLevel: 'low'|'medium'|'high' }}
  */
 function analyzeTestImpact(changedFiles) {
-  const classified = classifyChangedFiles(changedFiles);
+  const classified = (0,file_classifier/* classifyChangedFiles */.q)(changedFiles);
 
   const appFiles = classified.app;
   const testFiles = classified.test;
@@ -38963,50 +38861,8 @@ function extractTitle(markdown) {
   return match ? match[1].trim() : null;
 }
 
-;// CONCATENATED MODULE: ./src/lib/diff-meta.mjs
-
-
-/**
- * Count changed lines from raw unified diff text.
- *
- * @param {string} diffText
- * @returns {number}
- */
-function countChangedLinesFromText(diffText) {
-  if (!diffText) return 0;
-  let lines = 0;
-  for (const line of diffText.split('\n')) {
-    if (
-      (line.startsWith('+') && !line.startsWith('+++')) ||
-      (line.startsWith('-') && !line.startsWith('---'))
-    ) {
-      lines++;
-    }
-  }
-  return lines;
-}
-
-/**
- * Extract metadata from a diff object for review depth control.
- *
- * @param {{ changedFiles?: string[], diffText?: string }} diff
- * @returns {{ fileCount: number, changedLines: number, fileTypes: object, hasTests: boolean, hasMigrations: boolean, hasSchemas: boolean }}
- */
-function extractDiffMeta(diff) {
-  const changedFiles = diff?.changedFiles ?? [];
-  const changedLines = countChangedLinesFromText(diff?.diffText);
-  const fileTypes = classifyChangedFiles(changedFiles);
-
-  return {
-    fileCount: changedFiles.length,
-    changedLines,
-    fileTypes,
-    hasTests: fileTypes.test.length > 0,
-    hasMigrations: fileTypes.migration.length > 0,
-    hasSchemas: fileTypes.schema.length > 0,
-  };
-}
-
+// EXTERNAL MODULE: ./src/lib/diff-meta.mjs
+var diff_meta = __nccwpck_require__(1912);
 // EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
 var review_plan_generator = __nccwpck_require__(8069);
 ;// CONCATENATED MODULE: ./runners/core/review-runner.mjs
@@ -39241,7 +39097,7 @@ async function buildExecutionPlan(options) {
     llmEnabled,
   });
   const impactTags = inferImpactTags(changedFiles, { diffText });
-  const fileTypes = classifyChangedFiles(changedFiles);
+  const fileTypes = (0,file_classifier/* classifyChangedFiles */.q)(changedFiles);
   const riskAssessment = riskMap ? (0,risk_map/* evaluateRisk */.lm)(riskMap, changedFiles) : null;
   // #1255: surface test-impact signal (riskLevel high = app changed, no tests)
   // on the plan so downstream planners/consumers can route test skills. This
@@ -39280,7 +39136,7 @@ async function buildExecutionPlan(options) {
     extraDirs: specDirs,
   });
 
-  const diffMeta = extractDiffMeta({ changedFiles, diffText });
+  const diffMeta = (0,diff_meta/* extractDiffMeta */.S)({ changedFiles, diffText });
   const reviewMode = (0,review_plan_generator/* determineReviewMode */.Xf)(diffMeta, { manualMode: manualReviewMode });
 
   // If planner is provided, try LLM-based planning, fallback to deterministic rank
@@ -40553,6 +40409,60 @@ async function loadConfig(repoRoot) {
 
 /***/ }),
 
+/***/ 1912:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   S: () => (/* binding */ extractDiffMeta),
+/* harmony export */   y: () => (/* binding */ countChangedLinesFromText)
+/* harmony export */ });
+/* harmony import */ var _file_classifier_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(4673);
+
+
+/**
+ * Count changed lines from raw unified diff text.
+ *
+ * @param {string} diffText
+ * @returns {number}
+ */
+function countChangedLinesFromText(diffText) {
+  if (!diffText) return 0;
+  let lines = 0;
+  for (const line of diffText.split('\n')) {
+    if (
+      (line.startsWith('+') && !line.startsWith('+++')) ||
+      (line.startsWith('-') && !line.startsWith('---'))
+    ) {
+      lines++;
+    }
+  }
+  return lines;
+}
+
+/**
+ * Extract metadata from a diff object for review depth control.
+ *
+ * @param {{ changedFiles?: string[], diffText?: string }} diff
+ * @returns {{ fileCount: number, changedLines: number, fileTypes: object, hasTests: boolean, hasMigrations: boolean, hasSchemas: boolean }}
+ */
+function extractDiffMeta(diff) {
+  const changedFiles = diff?.changedFiles ?? [];
+  const changedLines = countChangedLinesFromText(diff?.diffText);
+  const fileTypes = (0,_file_classifier_mjs__WEBPACK_IMPORTED_MODULE_0__/* .classifyChangedFiles */ .q)(changedFiles);
+
+  return {
+    fileCount: changedFiles.length,
+    changedLines,
+    fileTypes,
+    hasTests: fileTypes.test.length > 0,
+    hasMigrations: fileTypes.migration.length > 0,
+    hasSchemas: fileTypes.schema.length > 0,
+  };
+}
+
+
+/***/ }),
+
 /***/ 1092:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -40830,6 +40740,118 @@ async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = {}) {
     tokenEstimate: optimized.tokenEstimate,
     reduction: optimized.reduction,
   };
+}
+
+
+/***/ }),
+
+/***/ 4673:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   q: () => (/* binding */ classifyChangedFiles)
+/* harmony export */ });
+// Module-scope regexes to avoid re-creation per call
+const RE_TEST_EXT = /\.(?:test|spec)\.(?:[jt]sx?|mjs)$/;
+const RE_SCHEMA_EXT = /\.schema\.[jt]s$/;
+const RE_MIGRATION = /(?:^|\/)migrations?\//;
+const RE_MIGRATE = /(?:^|\/)migrate/;
+const RE_CONFIG_EXT = /\.config\.(?:[jt]sx?|mjs)$/;
+const RE_RC_FILE = /^\.[a-z]+rc(?:\.[a-z]+)?$/;
+const RE_TSCONFIG = /^tsconfig.*\.json$/;
+const RE_DOCKERFILE = /^Dockerfile/;
+const RE_DOCKER_COMPOSE = /^docker-compose/;
+
+const CONFIG_NAMES = new Set([
+  'package.json',
+  '.river-review.json',
+  '.lychee.toml',
+  '.markdownlint.json',
+  '.markdownlint-cli2.yaml',
+  '.textlintrc.json',
+]);
+
+/**
+ * Classify changed files by type for routing and evidence collection.
+ * Complementary to impact-scope.mjs which classifies by quality domain.
+ *
+ * @param {string[]} files - Array of file paths (relative to repo root)
+ * @returns {{ config: string[], schema: string[], migration: string[], app: string[], test: string[], infra: string[], docs: string[], unknown: string[] }}
+ */
+function classifyChangedFiles(files) {
+  const result = {
+    config: [],
+    schema: [],
+    migration: [],
+    app: [],
+    test: [],
+    infra: [],
+    docs: [],
+    unknown: [],
+  };
+
+  for (const file of files) {
+    result[classifyFile(file)].push(file);
+  }
+
+  return result;
+}
+
+// Priority: test > schema > migration > config > infra > docs > app > unknown
+function classifyFile(file) {
+  const normalized = file.replaceAll('\\', '/');
+  const basename = normalized.split('/').pop() ?? '';
+
+  if (isTest(normalized, basename)) return 'test';
+  if (isSchema(normalized, basename)) return 'schema';
+  if (isMigration(normalized)) return 'migration';
+  if (isConfig(normalized, basename)) return 'config';
+  if (isInfra(normalized, basename)) return 'infra';
+  if (isDocs(normalized, basename)) return 'docs';
+  if (isApp(normalized)) return 'app';
+  return 'unknown';
+}
+
+function isTest(file, basename) {
+  return file.startsWith('tests/') || file.includes('/__tests__/') || RE_TEST_EXT.test(basename);
+}
+
+function isSchema(file, basename) {
+  return (
+    file.startsWith('schemas/') || RE_SCHEMA_EXT.test(basename) || basename.endsWith('.schema.json')
+  );
+}
+
+function isMigration(file) {
+  return RE_MIGRATION.test(file) || RE_MIGRATE.test(file) || file.startsWith('db/');
+}
+
+function isConfig(file, basename) {
+  if (RE_CONFIG_EXT.test(basename)) return true;
+  if (RE_RC_FILE.test(basename)) return true;
+  if (CONFIG_NAMES.has(basename) || basename.startsWith('.env')) return true;
+  if (RE_TSCONFIG.test(basename)) return true;
+  return false;
+}
+
+function isInfra(file, basename) {
+  return (
+    file.startsWith('.github/') ||
+    file.startsWith('.husky/') ||
+    file.startsWith('scripts/') ||
+    RE_DOCKERFILE.test(basename) ||
+    RE_DOCKER_COMPOSE.test(basename)
+  );
+}
+
+function isDocs(file, basename) {
+  if (basename.endsWith('.md') || basename.endsWith('.mdx')) return true;
+  if (file.startsWith('docs/') || file.startsWith('pages/')) return true;
+  return false;
+}
+
+function isApp(file) {
+  return file.startsWith('src/') || file.startsWith('runners/');
 }
 
 
@@ -42907,7 +42929,7 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 /* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(9946);
 /* harmony import */ var _finding_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(7440);
 /* harmony import */ var _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(4807);
-/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(980);
+/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(7050);
 /* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(2294);
 /* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(9746);
 /* harmony import */ var _finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(5942);
@@ -43914,7 +43936,7 @@ function getReviewDepthConfig(reviewMode) {
 __nccwpck_require__.d(__webpack_exports__, {
   _Z: () => (/* binding */ RiskMapError),
   lm: () => (/* binding */ evaluateRisk),
-  E$: () => (/* binding */ loadRiskMap)
+  loadRiskMap: () => (/* binding */ loadRiskMap)
 });
 
 // UNUSED EXPORTS: aggregateRiskLevel
@@ -46144,8 +46166,8 @@ function createOpenAIPlanner(options = {}) {
 
 // EXTERNAL MODULE: ./src/lib/planner-utils.mjs
 var planner_utils = __nccwpck_require__(1013);
-// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 6 modules
-var review_runner = __nccwpck_require__(980);
+// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
+var review_runner = __nccwpck_require__(7050);
 ;// CONCATENATED MODULE: ./src/lib/rules.mjs
 
 
@@ -46603,7 +46625,7 @@ async function collectLocalContext({
   const prLabels = await resolvePullRequestLabels();
   const prBody = await resolvePullRequestBody();
   const { rulesText: projectRules } = await loadProjectRules(repoRoot);
-  const riskMap = await (0,risk_map/* loadRiskMap */.E$)(repoRoot);
+  const riskMap = await (0,risk_map.loadRiskMap)(repoRoot);
   // When --base is provided, compare against the explicit ref instead of the
   // auto-detected default branch. Falls back to detection when unset.
   const defaultBranch = baseRef ?? (await (0,git/* detectDefaultBranch */.Rd)(repoRoot));
@@ -61593,6 +61615,10 @@ function parseArgs(argv) {
       if (args[0] && !args[0].startsWith('-')) {
         parsed.reviewSubcommand = args.shift(); // plan | exec | verify
       }
+      // Consume optional positional target path (e.g., `river review route .`)
+      if (args[0] && !args[0].startsWith('-')) {
+        parsed.target = args.shift();
+      }
       continue;
     }
     if (arg === '--plan-only') {
@@ -62530,13 +62556,58 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       );
       return 3;
     }
-    // At this point, the verify branch above has already returned, so the
+    // route: risk-based review mode recommendation (dry-run, no LLM)
+    if (parsed.reviewSubcommand === 'route') {
+      try {
+        const { routeReviewMode, formatRouterResultMarkdown } =
+          await __nccwpck_require__.e(/* import() */ 709).then(__nccwpck_require__.bind(__nccwpck_require__, 1709));
+        const { loadRiskMap } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 572));
+        const routeTargetPath = external_node_path_.resolve(parsed.target);
+        const repoRoot = await (0,git/* ensureGitRepo */.NC)(routeTargetPath);
+        const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
+        const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, parsed.base ?? defaultBranch);
+        const repoDiff = await (0,lib_diff/* collectRepoDiff */.KD)(repoRoot, mergeBase);
+        const riskMap = await loadRiskMap(repoRoot).catch((err) => {
+          console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
+          return null;
+        });
+        const result = routeReviewMode({
+          changedFiles: repoDiff.changedFiles,
+          diffText: repoDiff.rawDiffText,
+          riskMap,
+          targetPath: routeTargetPath,
+        });
+        const outputFormat = parsed.formatExplicit
+          ? parsed.format
+          : parsed.outputExplicit && ['json', 'markdown'].includes(parsed.output)
+            ? parsed.output
+            : 'json';
+        if (outputFormat === 'markdown') {
+          console.log(formatRouterResultMarkdown(result));
+        } else if (outputFormat === 'json') {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.error(
+            `Error: river review route only supports --format json or --format markdown` +
+              (parsed.outputExplicit
+                ? ` (--output is not supported for this subcommand; use --format instead)`
+                : ` (got "${outputFormat}").`)
+          );
+          return 3;
+        }
+        return 0;
+      } catch (err) {
+        console.error(`Error: ${err?.message ?? err}`);
+        return 1;
+      }
+    }
+    // At this point, the verify/route branches above have already returned, so the
     // remaining valid subcommands are `plan` and `exec` (in any of its
     // exec dry-run / replay / deferred forms). Anything else is unknown.
     if (parsed.reviewSubcommand !== 'plan' && parsed.reviewSubcommand !== 'exec') {
       console.error(
         parsed.reviewSubcommand
-          ? `river review ${parsed.reviewSubcommand} is not a known subcommand. Use: plan | exec | verify`
+          ? `river review ${parsed.reviewSubcommand} is not a known subcommand. Use: plan | exec | verify | route`
           : 'Usage: river review plan --plan-only'
       );
       return 3;
@@ -62677,7 +62748,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
         console.error('Error: `river skills resolve` requires at least one --path <file>.');
         return 1;
       }
-      const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 980));
+      const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 7050));
       const plan = await buildExecutionPlan({
         phase: parsed.phase,
         changedFiles: paths,
