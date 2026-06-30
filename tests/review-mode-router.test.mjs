@@ -134,6 +134,14 @@ test('empty changedFiles → standard mode', () => {
   assert.equal(result.selectedMode, 'standard');
 });
 
+test('unknown file type only → standard mode (not light)', () => {
+  const result = routeReviewMode({
+    changedFiles: ['src/main.rs', 'lib/utils.py'],
+    riskMap: null,
+  });
+  assert.equal(result.selectedMode, 'standard');
+});
+
 test('no riskMap arg → standard mode for app file', () => {
   const result = routeReviewMode({ changedFiles: ['src/lib/foo.mjs'] });
   assert.equal(result.selectedMode, 'standard');

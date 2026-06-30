@@ -11,7 +11,9 @@ function raiseMode(current, candidate) {
 }
 
 function buildNextCommand(mode, targetPath = '.') {
-  const p = targetPath.includes(' ') ? `"${targetPath.replace(/"/g, '\\"')}"` : targetPath;
+  const p = targetPath.includes(' ')
+    ? `"${targetPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+    : targetPath;
   switch (mode) {
     case 'light':
       return `river review plan ${p} --depth quick`;
@@ -103,7 +105,8 @@ export function routeReviewMode({ changedFiles = [], diffText, riskMap, targetPa
     fileTypes.config.length > 0 ||
     fileTypes.schema.length > 0 ||
     fileTypes.migration.length > 0 ||
-    fileTypes.infra.length > 0;
+    fileTypes.infra.length > 0 ||
+    fileTypes.unknown.length > 0;
   const hasAnyFiles = fileCount > 0;
 
   if (hasAnyFiles && !hasSubstantiveFiles && mode === 'standard') {
