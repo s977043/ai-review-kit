@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-import { parseUnifiedDiff } from '../src/lib/diff.mjs';
+import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
 import { generateReview } from '../src/lib/review-engine.mjs';
 import {
   formatFindingMessage,

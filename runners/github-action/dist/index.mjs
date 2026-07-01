@@ -38861,8 +38861,8 @@ function extractTitle(markdown) {
   return match ? match[1].trim() : null;
 }
 
-// EXTERNAL MODULE: ./src/lib/diff-meta.mjs
-var diff_meta = __nccwpck_require__(1912);
+// EXTERNAL MODULE: ./src/lib/diff-processor.mjs
+var diff_processor = __nccwpck_require__(861);
 // EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
 var review_plan_generator = __nccwpck_require__(8069);
 ;// CONCATENATED MODULE: ./runners/core/review-runner.mjs
@@ -39136,7 +39136,7 @@ async function buildExecutionPlan(options) {
     extraDirs: specDirs,
   });
 
-  const diffMeta = (0,diff_meta/* extractDiffMeta */.S)({ changedFiles, diffText });
+  const diffMeta = (0,diff_processor/* extractDiffMeta */.So)({ changedFiles, diffText });
   const reviewMode = (0,review_plan_generator/* determineReviewMode */.Xf)(diffMeta, { manualMode: manualReviewMode });
 
   // If planner is provided, try LLM-based planning, fallback to deterministic rank
@@ -40415,67 +40415,26 @@ async function loadConfig(repoRoot) {
 
 /***/ }),
 
-/***/ 1912:
+/***/ 861:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   S: () => (/* binding */ extractDiffMeta),
-/* harmony export */   y: () => (/* binding */ countChangedLinesFromText)
+/* harmony export */   KD: () => (/* binding */ collectRepoDiff),
+/* harmony export */   So: () => (/* binding */ extractDiffMeta),
+/* harmony export */   pQ: () => (/* binding */ renderDiffText),
+/* harmony export */   rj: () => (/* binding */ parseUnifiedDiff),
+/* harmony export */   ye: () => (/* binding */ countChangedLinesFromText)
 /* harmony export */ });
-/* harmony import */ var _file_classifier_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(4673);
+/* unused harmony exports optimizeDiff, deriveChangedFiles */
+/* harmony import */ var _git_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(8613);
+/* harmony import */ var _file_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(4673);
 
 
-/**
- * Count changed lines from raw unified diff text.
- *
- * @param {string} diffText
- * @returns {number}
- */
-function countChangedLinesFromText(diffText) {
-  if (!diffText) return 0;
-  let lines = 0;
-  for (const line of diffText.split('\n')) {
-    if (
-      (line.startsWith('+') && !line.startsWith('+++')) ||
-      (line.startsWith('-') && !line.startsWith('---'))
-    ) {
-      lines++;
-    }
-  }
-  return lines;
-}
 
-/**
- * Extract metadata from a diff object for review depth control.
- *
- * @param {{ changedFiles?: string[], diffText?: string }} diff
- * @returns {{ fileCount: number, changedLines: number, fileTypes: object, hasTests: boolean, hasMigrations: boolean, hasSchemas: boolean }}
- */
-function extractDiffMeta(diff) {
-  const changedFiles = diff?.changedFiles ?? [];
-  const changedLines = countChangedLinesFromText(diff?.diffText);
-  const fileTypes = (0,_file_classifier_mjs__WEBPACK_IMPORTED_MODULE_0__/* .classifyChangedFiles */ .q)(changedFiles);
+// ---------------------------------------------------------------------------
+// diff-optimizer — filter and compress diff for LLM consumption
+// ---------------------------------------------------------------------------
 
-  return {
-    fileCount: changedFiles.length,
-    changedLines,
-    fileTypes,
-    hasTests: fileTypes.test.length > 0,
-    hasMigrations: fileTypes.migration.length > 0,
-    hasSchemas: fileTypes.schema.length > 0,
-  };
-}
-
-
-/***/ }),
-
-/***/ 1092:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   J: () => (/* binding */ optimizeDiff),
-/* harmony export */   p: () => (/* binding */ renderDiffText)
-/* harmony export */ });
 const EXCLUDED_EXTENSIONS = new Set(['.md']);
 const EXCLUDED_FILES = new Set(['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']);
 const MAX_HUNK_LINES = 200;
@@ -40514,7 +40473,7 @@ function isWhitespaceOnlyChange(lines) {
   return normalizeWhitespace(added.join('')) === normalizeWhitespace(removed.join(''));
 }
 
-const COMMENT_MARKERS = [/^\/\//, /^\/\*/, /^\*($|\s)/, /^\*\/$/, /^#/, /^<!--/, /^-->/];
+const COMMENT_MARKERS = [/^\/\//, /^\/\*/, /^\*($|\s)/, /^\*\/$/, /^#/, /^<!--/, /^--!?>/];
 
 function isCommentOnlyChange(lines) {
   const changed = lines.filter((line) => line.startsWith('+') || line.startsWith('-'));
@@ -40535,7 +40494,7 @@ function compressHunkLines(lines) {
 
 /**
  * Filter and compress parsed diff files.
- * @param {{files: Array<{path: string, hunks: Array<{header: string, lines: string[]}>}>}} diff
+ * @param {{files: Array<{path: string, hunks: Array<{header: string, lines: string[]}>}>, diffText?: string}} diff
  * @returns {{files: Array, diffText: string, tokenEstimate: number, reduction: number, rawTokenEstimate: number}}
  */
 function optimizeDiff(diff) {
@@ -40604,21 +40563,9 @@ function renderDiffText(files) {
   return chunks.join('\n');
 }
 
-
-/***/ }),
-
-/***/ 4382:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   KD: () => (/* binding */ collectRepoDiff),
-/* harmony export */   rj: () => (/* binding */ parseUnifiedDiff)
-/* harmony export */ });
-/* unused harmony export deriveChangedFiles */
-/* harmony import */ var _git_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(8613);
-/* harmony import */ var _diff_optimizer_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1092);
-
-
+// ---------------------------------------------------------------------------
+// diff — parse unified diff and collect repo diff from git
+// ---------------------------------------------------------------------------
 
 function stripPrefix(path) {
   if (!path) return path;
@@ -40633,6 +40580,8 @@ function stripPrefix(path) {
  * can locate where to attach review comments.
  */
 function parseUnifiedDiff(diffText) {
+  if (!diffText || typeof diffText !== 'string') return { files: [] };
+
   const files = [];
   let currentFile = null;
   let currentHunk = null;
@@ -40734,7 +40683,7 @@ async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = {}) {
         addedLines: [],
       }));
   const rawTokenEstimate = Math.ceil(rawDiffText.length / 4);
-  const optimized = (0,_diff_optimizer_mjs__WEBPACK_IMPORTED_MODULE_1__/* .optimizeDiff */ .J)({ files, diffText: rawDiffText });
+  const optimized = optimizeDiff({ files, diffText: rawDiffText });
 
   return {
     changedFiles,
@@ -40745,6 +40694,51 @@ async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = {}) {
     filesForReview: optimized.files,
     tokenEstimate: optimized.tokenEstimate,
     reduction: optimized.reduction,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// diff-meta — extract metadata from diff for review depth control
+// ---------------------------------------------------------------------------
+
+/**
+ * Count changed lines from raw unified diff text.
+ *
+ * @param {string} diffText
+ * @returns {number}
+ */
+function countChangedLinesFromText(diffText) {
+  if (!diffText) return 0;
+  let lines = 0;
+  for (const line of diffText.split('\n')) {
+    if (
+      (line.startsWith('+') && !line.startsWith('+++')) ||
+      (line.startsWith('-') && !line.startsWith('---'))
+    ) {
+      lines++;
+    }
+  }
+  return lines;
+}
+
+/**
+ * Extract metadata from a diff object for review depth control.
+ *
+ * @param {{ changedFiles?: string[], diffText?: string }} diff
+ * @returns {{ fileCount: number, changedLines: number, fileTypes: object, hasTests: boolean, hasMigrations: boolean, hasSchemas: boolean }}
+ */
+function extractDiffMeta(diff) {
+  const changedFiles = diff?.changedFiles ?? [];
+  const changedLines = countChangedLinesFromText(diff?.diffText);
+  const fileTypes = (0,_file_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__/* .classifyChangedFiles */ .q)(changedFiles);
+
+  return {
+    fileCount: changedFiles.length,
+    changedLines,
+    fileTypes,
+    hasTests: fileTypes.test.length > 0,
+    hasMigrations: fileTypes.migration.length > 0,
+    hasSchemas: fileTypes.schema.length > 0,
   };
 }
 
@@ -45442,10 +45436,8 @@ async function resolveSelectionSkillIds(
   });
 }
 
-// EXTERNAL MODULE: ./src/lib/diff.mjs
-var lib_diff = __nccwpck_require__(4382);
-// EXTERNAL MODULE: ./src/lib/diff-optimizer.mjs
-var diff_optimizer = __nccwpck_require__(1092);
+// EXTERNAL MODULE: ./src/lib/diff-processor.mjs
+var diff_processor = __nccwpck_require__(861);
 // EXTERNAL MODULE: ./src/lib/review-engine.mjs
 var review_engine = __nccwpck_require__(2022);
 // EXTERNAL MODULE: ./src/lib/finding-factory.mjs
@@ -45691,7 +45683,7 @@ function splitDiffIntoChunks(diff) {
       ...diff,
       files: chunkFiles,
       filesForReview: chunkFiles,
-      diffText: (0,diff_optimizer/* renderDiffText */.p)(chunkFiles),
+      diffText: (0,diff_processor/* renderDiffText */.pQ)(chunkFiles),
       _chunkLabel: chunkFiles
         .map((f) => f.path)
         .join(', ')
@@ -46532,8 +46524,8 @@ function applyFileExclusions(diff, patterns = []) {
     (file) => !shouldExclude(file.path, patterns)
   );
 
-  const rawDiffText = (0,diff_optimizer/* renderDiffText */.p)(rawFiles);
-  const diffText = (0,diff_optimizer/* renderDiffText */.p)(optimizedFiles);
+  const rawDiffText = (0,diff_processor/* renderDiffText */.pQ)(rawFiles);
+  const diffText = (0,diff_processor/* renderDiffText */.pQ)(optimizedFiles);
   const rawTokenEstimate = Math.ceil(rawDiffText.length / 4);
   const tokenEstimate = Math.ceil(diffText.length / 4);
   const reduction =
@@ -46629,7 +46621,7 @@ async function collectLocalContext({
   // auto-detected default branch. Falls back to detection when unset.
   const defaultBranch = baseRef ?? (await (0,git/* detectDefaultBranch */.Rd)(repoRoot));
   const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
-  const rawDiff = await (0,lib_diff/* collectRepoDiff */.KD)(repoRoot, mergeBase, { contextLines });
+  const rawDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase, { contextLines });
   const diff = applyFileExclusions(rawDiff, config.exclude?.files ?? []);
   const reviewFiles = diff.filesForReview?.map((file) => file.path) ?? diff.changedFiles;
   // Expose `prDescription` as an available input context only when a PR body is
@@ -61341,7 +61333,6 @@ var dist = __nccwpck_require__(2815);
 
 
 
-
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_DIFF_PREVIEW_LINES = 200;
 const COMMENT_MARKER = '<!-- river-review -->';
@@ -62563,7 +62554,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
         const repoRoot = await (0,git/* ensureGitRepo */.NC)(routeTargetPath);
         const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
         const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, parsed.base ?? defaultBranch);
-        const repoDiff = await (0,lib_diff/* collectRepoDiff */.KD)(repoRoot, mergeBase);
+        const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
         const riskMap = await loadRiskMap(repoRoot).catch((err) => {
           console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
           return null;
@@ -62794,14 +62785,14 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
       const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
       const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
-      const repoDiff = await (0,lib_diff/* collectRepoDiff */.KD)(repoRoot, mergeBase);
+      const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
 
       const dispatcher = new SkillDispatcher(repoRoot);
 
       const getFileDiff = async (targetFile) => {
         const fileData = repoDiff.files.find((f) => f.path === targetFile);
         if (!fileData) return '';
-        return (0,diff_optimizer/* renderDiffText */.p)([fileData]);
+        return (0,diff_processor/* renderDiffText */.pQ)([fileData]);
       };
 
       console.log(`River Review (Skills) - Target: ${targetPath}`);

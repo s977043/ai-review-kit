@@ -13,8 +13,7 @@ import {
 } from './lib/git.mjs';
 import { doctorLocalReview, planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError, resolveSkillSet } from '../runners/core/skill-loader.mjs';
-import { collectRepoDiff } from './lib/diff.mjs';
-import { renderDiffText } from './lib/diff-optimizer.mjs';
+import { collectRepoDiff, renderDiffText } from './lib/diff-processor.mjs';
 import CostEstimator from './core/cost-estimator.mjs';
 import { SkillDispatcher } from './core/skill-dispatcher.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
