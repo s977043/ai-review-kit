@@ -28,8 +28,8 @@ Why: 宣言された処理の配線追跡はチェックリスト型だが、貫
 
 ## Non-goals / 扱わないこと
 
-- 個別関数の論理的正しさ（`rr-midstream-logic-torturing-001` の領域）。
-- caller 側の旧構造残骸（リファクタ後ドリフトは `rr-midstream-cross-file-leakage-001` の領域）。
+- 個別関数の論理的正しさ（`logic-torturing` の領域）。
+- caller 側の旧構造残骸（リファクタ後ドリフトは `cross-file-leakage` の領域）。
 - テストの有無そのもの（テスト不足は test 系スキルの領域。本スキルは「本番経路の配線」を見る）。
 
 ## Pre-execution Gate / 実行前ゲート

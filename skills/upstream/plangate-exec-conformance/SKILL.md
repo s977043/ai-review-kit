@@ -39,7 +39,7 @@ Why: plan/todo/test-cases を基準として差分を突き合わせる照合型
 
 ## Non-goals / 扱わないこと
 
-- plan / todo / test-cases 自体の内部整合性チェック（それは姉妹 skill `rr-upstream-plangate-plan-integrity-001` の責務）。
+- plan / todo / test-cases 自体の内部整合性チェック（それは姉妹 skill `plangate-plan-integrity` の責務）。
 - 実装コードの品質・性能・セキュリティ観点の指摘（midstream の各 skill が担当）。
 - 差分量や規模に対する一般論（PlanGate の計画と無関係な規模指摘はしない）。
 - PlanGate 固有のディレクトリ構成や内部コマンドへの依存（`pages/reference/artifact-input-contract.md` の契約に従う）。
@@ -162,5 +162,5 @@ Why: plan/todo/test-cases を基準として差分を突き合わせる照合型
 
 - [Artifact Input Contract](../../../pages/reference/artifact-input-contract.md) — 入力アーティファクトの契約
 - [Review Policy](../../../pages/reference/review-policy.md) — レビュー標準ポリシー
-- 姉妹 skill: `rr-upstream-plangate-plan-integrity-001`（Issue #519）— plan/pbi/todo/test-cases 自体の整合性チェック
+- 姉妹 skill: `plangate-plan-integrity`（Issue #519）— plan/pbi/todo/test-cases 自体の整合性チェック
 - 親: Capability #510 / Epic #507

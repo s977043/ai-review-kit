@@ -28,7 +28,7 @@ index 1234567..89abcdef 100644
 
 ## Companion finding (out of band)
 
-`rr-midstream-logging-observability-001` has emitted (in the same PR):
+`logging-observability` has emitted (in the same PR):
 
 ```text
 **Finding:** try / catch swallows the upstream error without re-throwing or logging

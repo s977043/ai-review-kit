@@ -102,7 +102,7 @@ L-3 では skills-audit の拡張ではなく、suppression 分析専用のス�
 ```bash
 npm run river -- feedback add \
   --type missed_issue \
-  --skill rr-midstream-typescript-strict-001 \
+  --skill typescript-strict \
   --trigger fix-pr \
   --pr 1234 \
   --evidence "Fix PR #1234 showed original PR #1200 missed a nullable response edge case."

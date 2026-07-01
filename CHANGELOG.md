@@ -749,7 +749,7 @@
 
 ### Features
 
-* **skills:** add rr-upstream-eval-driven-skill-design-001 ([#737](https://github.com/s977043/river-reviewer/issues/737)) ([#759](https://github.com/s977043/river-reviewer/issues/759)) ([c41f065](https://github.com/s977043/river-reviewer/commit/c41f06526e47419666c2e54202ed06166582b47c))
+* **skills:** add eval-driven-skill-design ([#737](https://github.com/s977043/river-reviewer/issues/737)) ([#759](https://github.com/s977043/river-reviewer/issues/759)) ([c41f065](https://github.com/s977043/river-reviewer/commit/c41f06526e47419666c2e54202ed06166582b47c))
 
 ## [0.31.0](https://github.com/s977043/river-reviewer/compare/v0.30.0...v0.31.0) (2026-05-06)
 

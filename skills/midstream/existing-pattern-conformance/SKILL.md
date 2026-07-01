@@ -30,8 +30,8 @@ Why: 先行実装との突合は grep による決定論的特定が主だが、
 ## Non-goals / 扱わないこと
 
 - 設計の良し悪しそのもの（既存が間違っていれば従う必要はない。意図的差分は根拠の明文で許容）。
-- リファクタ後の caller 残骸（`rr-midstream-cross-file-leakage-001` の領域）。
-- 宣言と実装の自己矛盾（`rr-midstream-self-contradiction-001` の領域）。
+- リファクタ後の caller 残骸（`cross-file-leakage` の領域）。
+- 宣言と実装の自己矛盾（`self-contradiction` の領域）。
 
 ## Pre-execution Gate / 実行前ゲート
 

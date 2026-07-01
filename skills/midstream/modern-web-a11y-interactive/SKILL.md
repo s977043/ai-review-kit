@@ -22,12 +22,12 @@ modelHint: balanced
 ## Goal / 目的
 
 - インタラクティブ UI 差分（modal / popover / menu / tabs / live updates / form interactions）に対し、キーボード操作と支援技術ユーザーの操作可能性を確保する suggestion を返す。
-- accessible name（既存 `rr-midstream-a11y-accessible-name-001`）が扱わない「動的振る舞い」「focus state」「role / state semantics」を担当する。
+- accessible name（既存 `a11y-accessible-name`）が扱わない「動的振る舞い」「focus state」「role / state semantics」を担当する。
 - 出力は suggestion 扱い。「強制」ではなく「検討すべき代替案 / 確認ポイント」として返す。
 
 ## Non-goals / 扱わないこと
 
-- accessible name（alt / aria-label）の網羅的チェック → `rr-midstream-a11y-accessible-name-001` の担当。
+- accessible name（alt / aria-label）の網羅的チェック → `a11y-accessible-name` の担当。
 - コントラスト比 / 視覚的アクセシビリティ → 別 skill / 別 audit ツールの領域。
 - 完全な WCAG 等級判定。
 - screen reader を直接 emulate しての挙動検証。

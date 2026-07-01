@@ -31,8 +31,8 @@ Why: 移行の破壊的・ロック誘発・不可逆操作をチェックリス
 
 ## Non-goals / 扱わないこと
 
-- データモデル設計の妥当性（正規化・関連設計）は `rr-upstream-data-model-db-design-001` のスコープ。
-- フレームワーク固有の細則（Laravel 固有は `rr-upstream-laravel-migration-safety-001`）。
+- データモデル設計の妥当性（正規化・関連設計）は `data-model-db-design` のスコープ。
+- フレームワーク固有の細則（Laravel 固有は `laravel-migration-safety`）。
 - アプリ側のクエリ効率（N+1 等）。
 
 ## Pre-execution Gate / 実行前ゲート

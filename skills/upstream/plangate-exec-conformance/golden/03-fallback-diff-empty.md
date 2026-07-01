@@ -7,7 +7,7 @@ Pre-execution Gate が不成立のため、このスキルはレビューを実�
 ## Findings
 
 ```text
-NO_REVIEW: rr-upstream-plangate-exec-conformance-001 — 差分または plan/todo/test-cases artifact が揃っていない
+NO_REVIEW: plangate-exec-conformance — 差分または plan/todo/test-cases artifact が揃っていない
 ```
 
 ### Gate 不成立理由

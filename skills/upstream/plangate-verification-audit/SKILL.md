@@ -30,8 +30,8 @@ Why: 既存レビュー（`review-self` / `review-external`）を artifact と�
 ## Non-goals / 扱わないこと
 
 - 実装コード自体の品質レビュー（midstream / downstream skill の責務）。
-- 計画アーティファクト（`plan` / `pbi-input` / `todo` / `test-cases`）の内部整合性チェック（姉妹 skill `rr-upstream-plangate-plan-integrity-001` の責務）。
-- 差分が plan と整合しているかの検査（姉妹 skill `rr-upstream-plangate-exec-conformance-001` の責務）。
+- 計画アーティファクト（`plan` / `pbi-input` / `todo` / `test-cases`）の内部整合性チェック（姉妹 skill `plangate-plan-integrity` の責務）。
+- 差分が plan と整合しているかの検査（姉妹 skill `plangate-exec-conformance` の責務）。
 - 既存レビューの severity 再マッピング全般（本 skill は「過剰指摘」観点のみに限定し、妥当な severity の再評価は行わない）。
 - レビューアーの意図や主観の推定。書かれた内容から客観的に判断できる範囲のみを扱う。
 
@@ -154,6 +154,6 @@ META finding の severity は**外部語彙**（`critical` / `major` / `minor` /
 - `pages/reference/cli-review-verify-spec.md` — `river review verify` CLI の呼び出し契約と verify ファミリー制限
 - `pages/reference/artifact-input-contract.md` — 入力 artifact の契約（ID / 形式 / 欠損時挙動）
 - `docs/review/output-format.md` — severity とコメント形式の SSoT
-- 姉妹 skill: `rr-upstream-plangate-plan-integrity-001` — 計画アーティファクト自体の整合性チェック
-- 姉妹 skill: `rr-upstream-plangate-exec-conformance-001` — 差分と plan の整合性チェック
+- 姉妹 skill: `plangate-plan-integrity` — 計画アーティファクト自体の整合性チェック
+- 姉妹 skill: `plangate-exec-conformance` — 差分と plan の整合性チェック
 - 親: Capability #510 / Epic #507 / Task #577

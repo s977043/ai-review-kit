@@ -29,8 +29,8 @@ Why: 差分内の識別子をドメイン用語の一貫性という単一観点
 
 ## Non-goals / 扱わないこと
 
-- 集約境界・コンテキスト境界の設計判断（`rr-upstream-bounded-context-language-001` が artifact ベースで扱う）。
-- primitive obsession / brand 型の検出（`rr-midstream-type-driven-design-001` に委譲する）。
+- 集約境界・コンテキスト境界の設計判断（`bounded-context-language` が artifact ベースで扱う）。
+- primitive obsession / brand 型の検出（`type-driven-design` に委譲する）。
 - 一般的な命名の良し悪し（広すぎる名前等）。ドメイン用語の **一貫性** のみを見る。
 
 ## Pre-execution Gate / 実行前ゲート

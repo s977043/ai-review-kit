@@ -32,15 +32,15 @@ license: MIT
 
 ## Routing / ルーティング
 
-| キーワード                          | スキルID                                  | 説明                     |
-| ----------------------------------- | ----------------------------------------- | ------------------------ |
-| 脆弱性, XSS, SQLi, インジェクション | `rr-midstream-security-basic-001`         | 基本セキュリティチェック |
-| プライバシー, 個人情報, GDPR        | `rr-upstream-security-privacy-design-001` | プライバシー設計         |
-| 認可, 権限, アクセス制御            | `rr-upstream-trust-boundaries-authz-001`  | 信頼境界・認可設計       |
+| キーワード                          | スキルID                  | 説明                     |
+| ----------------------------------- | ------------------------- | ------------------------ |
+| 脆弱性, XSS, SQLi, インジェクション | `security-basic`          | 基本セキュリティチェック |
+| プライバシー, 個人情報, GDPR        | `security-privacy-design` | プライバシー設計         |
+| 認可, 権限, アクセス制御            | `trust-boundaries-authz`  | 信頼境界・認可設計       |
 
 ### デフォルト動作
 
-- キーワード指定なし → `rr-midstream-security-basic-001` を実行
+- キーワード指定なし → `security-basic` を実行
 - セキュリティ関連ファイル（auth/, middleware/）→ 全スキル実行
 
 ## Execution Flow / 実行フロー

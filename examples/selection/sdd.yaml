@@ -9,13 +9,13 @@ selection:
   skills:
     include:
       # 仕様・計画の品質（実装前ゲート）
-      - rr-upstream-requirements-acceptance-001 # 受け入れ基準・スコープの明確性
-      - rr-upstream-plangate-plan-integrity-001 # pbi-input / plan / todo / test-cases の整合
+      - requirements-acceptance # 受け入れ基準・スコープの明確性
+      - plangate-plan-integrity # pbi-input / plan / todo / test-cases の整合
       # 実装と計画の整合（実装中ゲート）
-      - rr-upstream-plangate-exec-conformance-001 # 差分が plan から逸脱していないか
-      - rr-upstream-adr-decision-quality-001 # ADR の意思決定品質
-      - rr-upstream-architecture-traceability-001 # ADR・図・仕様間のドリフト検知
+      - plangate-exec-conformance # 差分が plan から逸脱していないか
+      - adr-decision-quality # ADR の意思決定品質
+      - architecture-traceability # ADR・図・仕様間のドリフト検知
       # レビュー結果の再点検（検証ゲート、W チェック）
-      - rr-upstream-plangate-verification-audit-001
+      - plangate-verification-audit
     exclude: []
   minTier: community

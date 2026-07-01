@@ -27,8 +27,8 @@ Why: migration の破壊的・ロック誘発操作をチェックリスト型�
 
 ## Non-goals / 扱わないこと
 
-- データモデル設計の妥当性（`rr-upstream-data-model-db-design-001` のスコープ）。
-- アプリ側クエリ効率（`rr-midstream-laravel-eloquent-nplus1-001` のスコープ）。
+- データモデル設計の妥当性（`data-model-db-design` のスコープ）。
+- アプリ側クエリ効率（`laravel-eloquent-nplus1` のスコープ）。
 
 ## Pre-execution Gate / 実行前ゲート
 

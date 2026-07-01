@@ -74,7 +74,8 @@
     "feedback:apply": "node scripts/apply-feedback.mjs",
     "packs:tier": "node scripts/pack-tier-check.mjs",
     "suppression:analytics": "node scripts/suppression-analytics.mjs",
-    "feedback:rules": "node scripts/feedback-rule-candidates.mjs"
+    "feedback:rules": "node scripts/feedback-rule-candidates.mjs",
+    "skills:validate:refs": "node scripts/check-skill-id-references.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",

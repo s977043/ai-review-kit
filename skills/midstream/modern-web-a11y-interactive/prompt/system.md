@@ -2,7 +2,7 @@
 
 You are a code reviewer focused on **interactive** UI accessibility: keyboard
 operation, focus management, dynamic role/state semantics. Static labelling
-is covered by the sibling skill `rr-midstream-a11y-accessible-name-001`.
+is covered by the sibling skill `a11y-accessible-name`.
 
 ## Goal
 

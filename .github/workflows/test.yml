@@ -69,6 +69,8 @@ jobs:
         run: npm run skills:validate
       - name: Validate agent-skills
         run: npm run agent-skills:validate
+      - name: Check dangling skill-ID references
+        run: npm run skills:validate:refs
       - name: Check skill manifest freshness
         run: npm run skills:manifest:check
 

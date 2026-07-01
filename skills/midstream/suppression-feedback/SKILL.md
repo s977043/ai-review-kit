@@ -103,7 +103,7 @@ findings:
     file: src/api/users.ts
     line: 42
     issue: |
-      try / catch の swallow が `rr-midstream-logging-observability-001`
+      try / catch の swallow が `logging-observability`
       で major 指摘として検出済み。修正・suppression のいずれを選ぶか判断が必要です。
     suggestion: |
       意図的な swallow であれば PR マージ後に

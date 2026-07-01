@@ -176,5 +176,5 @@ GC 判定は以下の順序で**固定適用**する。順序を変えると同�
 - [Artifact Input Contract](../../../pages/reference/artifact-input-contract.md) — 入力 artifact の契約（GC 対象 scope の前提）
 - [Review Policy](../../../pages/reference/review-policy.md) — レビュー標準ポリシー
 - `docs/review/output-format.md` — severity とコメント形式の SSoT
-- 姉妹 skill: `rr-upstream-plangate-plan-integrity-001`（#519）、`rr-upstream-plangate-exec-conformance-001`（Exec Conformance Guard）
+- 姉妹 skill: `plangate-plan-integrity`（#519）、`plangate-exec-conformance`（Exec Conformance Guard）
 - 親: Capability #510 / Epic #507 / Task #578

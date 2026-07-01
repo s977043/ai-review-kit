@@ -22,7 +22,7 @@ index 1234567..89abcdef 100644
 
 ## Companion finding (out of band)
 
-`rr-midstream-logging-observability-001` raised:
+`logging-observability` raised:
 
 ```text
 **Finding:** counter increment is not awaited; failure cannot be observed

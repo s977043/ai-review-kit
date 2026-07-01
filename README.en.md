@@ -169,8 +169,8 @@ The primary integration today is with **PlanGate v6**: River Review receives `pl
 
 > **Note**: The `river review plan` and `river review exec` CLI commands are stable as of v0.53.0. `river review exec --plan` replay execution shipped in v0.68.0 (#935). The `river review verify` command is not yet implemented (placeholder only).
 
-- **Design review**: pass `pbi-input` / `plan` to check plan integrity and completeness with upstream skills (e.g. `skills/upstream/rr-upstream-plangate-plan-integrity-001/`).
-- **Implementation review**: pass `plan` + `diff` to check that the code change matches the plan (e.g. `skills/upstream/rr-upstream-plangate-exec-conformance-001/`).
+- **Design review**: pass `pbi-input` / `plan` to check plan integrity and completeness with upstream skills (e.g. `skills/upstream/plangate-plan-integrity/`).
+- **Implementation review**: pass `plan` + `diff` to check that the code change matches the plan (e.g. `skills/upstream/plangate-exec-conformance/`).
 - **QA review**: pass `test-cases` / `junit` / `coverage` so downstream skills can surface coverage gaps and failure paths.
 - **Double-check (W-check)**: pass existing AI or human review output as `review-self` / `review-external` to review the review itself.
 
@@ -270,7 +270,7 @@ Skills are Markdown files with YAML frontmatter; River Review uses the metadata 
 
 ```markdown
 ---
-id: rr-midstream-code-quality-sample-001
+id: code-quality-sample
 name: Sample Code Quality Pass
 description: Checks common code quality and maintainability risks.
 category: midstream

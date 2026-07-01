@@ -30,8 +30,8 @@ Why: 定義済みスケールとの照合は決定論で判定できる部分が
 
 ## Non-goals / 扱わないこと
 
-- デザイン定義が**存在しない**リポジトリでの生値ハードコード検出（`rr-midstream-design-token-enforcement-001` の領域。本スキルは定義との照合に限定する）。
-- 既存コンポーネントの再利用可否（`rr-midstream-design-system-component-reuse-001` の領域）。
+- デザイン定義が**存在しない**リポジトリでの生値ハードコード検出（`design-token-enforcement` の領域。本スキルは定義との照合に限定する）。
+- 既存コンポーネントの再利用可否（`design-system-component-reuse` の領域）。
 - アクセシビリティやインタラクティブ状態（a11y / loading-state 系の領域）。
 
 ## Pre-execution Gate / 実行前ゲート

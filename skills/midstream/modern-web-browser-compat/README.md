@@ -2,7 +2,7 @@
 
 Status: **fixtures + eval scaffolding only**. `golden/` intentionally empty.
 
-See `../rr-midstream-modern-web-semantic-001/README.md` for the rationale
+See `../modern-web-semantic/README.md` for the rationale
 (hand-written goldens reproduce the "posture, not progress" anti-pattern) and
 the `promptfoo eval` workflow to generate verified goldens.
 

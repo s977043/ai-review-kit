@@ -12,9 +12,9 @@ selection:
       - rr-upstream-test-code-unit-ts-jest-001 # TypeScript (Jest/Vitest)
       - rr-upstream-test-code-react-001 # React コンポーネント (RTL)
       # 実装中〜実装後のテスト品質ゲート
-      - rr-downstream-test-existence-001 # 変更に対応するテストの存在
-      - rr-downstream-coverage-gap-001 # カバレッジの穴
-      - rr-downstream-test-naming-001 # テスト名の意図明確性
-      - rr-downstream-flaky-test-001 # flaky パターンの検出
+      - test-existence # 変更に対応するテストの存在
+      - coverage-gap # カバレッジの穴
+      - test-naming # テスト名の意図明確性
+      - flaky-test # flaky パターンの検出
     exclude: []
   minTier: community

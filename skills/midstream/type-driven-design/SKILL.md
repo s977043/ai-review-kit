@@ -40,8 +40,8 @@ Why: プリミティブ型の濫用やドメイン型の欠如をチェックリ
 
 ## Non-goals / 扱わないこと
 
-- `any` の排除や型アサーションの削減（`rr-midstream-typescript-strict-001` のスコープ）。
-- null/undefined のガードや非 null アサーションの排除（`rr-midstream-typescript-nullcheck-001` のスコープ）。
+- `any` の排除や型アサーションの削減（`typescript-strict` のスコープ）。
+- null/undefined のガードや非 null アサーションの排除（`typescript-nullcheck` のスコープ）。
 - 既存の関数シグネチャ（差分に含まれていない）のリファクタ提案。
 - `tsconfig.json` の設定変更。
 - スタイル/命名規則のレビュー（nit は出さない）。

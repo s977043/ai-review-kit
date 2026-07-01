@@ -30,9 +30,9 @@ Why: 新規コンポーネントの状態網羅はチェックリスト的に確
 
 ## Non-goals / 扱わないこと
 
-- 既存コンポーネントの再利用可否（`rr-midstream-design-system-component-reuse-001` の領域）。
-- 実行時の loading / error 状態の配線そのもの（mutation 中の loading は `rr-midstream-loading-state-001` の領域。本スキルはコンポーネント定義側の状態網羅を見る）。
-- focus-visible のアクセシビリティ実装（`rr-midstream-modern-web-a11y-interactive-001` の領域）。
+- 既存コンポーネントの再利用可否（`design-system-component-reuse` の領域）。
+- 実行時の loading / error 状態の配線そのもの（mutation 中の loading は `loading-state` の領域。本スキルはコンポーネント定義側の状態網羅を見る）。
+- focus-visible のアクセシビリティ実装（`modern-web-a11y-interactive` の領域）。
 - デザイントークン準拠（design-source / token-enforcement の領域）。
 
 ## Pre-execution Gate / 実行前ゲート

@@ -29,19 +29,19 @@ Why: 実装計画アーティファクトを読み込み、AI が自律実行す
 
 ## Non-goals / 扱わないこと
 
-- 計画アーティファクト間の整合性チェック（`rr-upstream-plangate-plan-integrity-001` の責務）。
+- 計画アーティファクト間の整合性チェック（`plangate-plan-integrity` の責務）。
 - 実装コードそのものの品質レビュー（midstream skill の責務）。
 - テストコードの実装妥当性（downstream skill の責務）。
 - ビジネス価値や優先度の妥当性判断（人間の責務）。
 
 ## 責務分界 / plangate-plan-integrity との違い
 
-| 観点             | rr-upstream-plangate-plan-integrity-001   | rr-upstream-plan-review-gate-001（本スキル） |
-| ---------------- | ----------------------------------------- | -------------------------------------------- |
-| 主目的           | PBI / plan / todo / test-cases 間の整合性 | 危険操作・スコープ外・承認必須の検出         |
-| 検出対象         | アーティファクト間の矛盾・欠落            | 安全性・権限・影響範囲のリスク               |
-| ゲート条件       | plan + 関連 artifact 1 件以上             | plan または pbi-input が存在すれば起動       |
-| 人間への引き渡し | 再計画が必要な場合                        | 人間承認必須トリガーを検出した場合           |
+| 観点             | plangate-plan-integrity                   | plan-review-gate（本スキル）           |
+| ---------------- | ----------------------------------------- | -------------------------------------- |
+| 主目的           | PBI / plan / todo / test-cases 間の整合性 | 危険操作・スコープ外・承認必須の検出   |
+| 検出対象         | アーティファクト間の矛盾・欠落            | 安全性・権限・影響範囲のリスク         |
+| ゲート条件       | plan + 関連 artifact 1 件以上             | plan または pbi-input が存在すれば起動 |
+| 人間への引き渡し | 再計画が必要な場合                        | 人間承認必須トリガーを検出した場合     |
 
 ## Pre-execution Gate / 実行前ゲート
 
@@ -166,5 +166,5 @@ Rule 1 の危険操作トリガーが1件以上検出された場合:
 
 - `docs/review/output-format.md` — severity とコメント形式の SSoT
 - `src/lib/plan-review/human-approval-policy.mjs` — 危険操作パターン定義（機械的検出の実装）
-- `skills/upstream/rr-upstream-plangate-plan-integrity-001/SKILL.md` — 計画整合性チェック（関連スキル）
+- `skills/upstream/plangate-plan-integrity/SKILL.md` — 計画整合性チェック（関連スキル）
 - `pages/reference/artifact-input-contract.md` — 入力 artifact の契約

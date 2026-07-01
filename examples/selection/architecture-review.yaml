@@ -8,11 +8,11 @@ selection:
     - architecture
   skills:
     include:
-      - rr-upstream-architecture-boundaries-001 # 境界・依存方向・所有権
-      - rr-upstream-data-flow-state-ownership-001 # データフローと状態の所有
-      - rr-upstream-integration-contracts-001 # サービス間契約
-      - rr-upstream-event-driven-semantics-001 # イベント駆動の配信保証・冪等性
-      - rr-upstream-api-versioning-compat-001 # API 互換性と versioning
-      - rr-upstream-trust-boundaries-authz-001 # 信頼境界と認可
+      - architecture-boundaries # 境界・依存方向・所有権
+      - data-flow-state-ownership # データフローと状態の所有
+      - integration-contracts # サービス間契約
+      - event-driven-semantics # イベント駆動の配信保証・冪等性
+      - api-versioning-compat # API 互換性と versioning
+      - trust-boundaries-authz # 信頼境界と認可
     exclude: []
   minTier: community # packs への明示指定（ddd）は minTier より優先される（警告のみ）

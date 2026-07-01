@@ -10,9 +10,9 @@ selection:
   skills:
     include:
       # フロントエンド固有の観点を個別追加（いずれも registry.yaml 実在の skill）
-      - rr-midstream-nextjs-app-router-boundary-001 # Server/Client Component 境界（Next.js 利用時）
-      - rr-midstream-loading-state-001 # ローディング状態の網羅
-      - rr-midstream-nullability-contract-001 # null/undefined の契約
-      - rr-midstream-security-basic-001 # 基本セキュリティ
+      - nextjs-app-router-boundary # Server/Client Component 境界（Next.js 利用時）
+      - loading-state # ローディング状態の網羅
+      - nullability-contract # null/undefined の契約
+      - security-basic # 基本セキュリティ
     exclude: []
   minTier: community

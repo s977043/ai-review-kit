@@ -205,7 +205,7 @@ Evaluate a specific skill (placeholder for AI integration).
 
 ```typescript
 const result = await evaluateSkill({
-  skillId: 'rr-midstream-security-basic-001',
+  skillId: 'security-basic',
   provider: 'openai:gpt-4o',
   files: ['src/app.ts'],
 });

@@ -6,31 +6,31 @@
 
 - 日本語: キャッシュ, TTL, 無効化, Redis
 - 英語: cache, TTL, invalidation, Redis
-- → `rr-upstream-cache-strategy-consistency-001`
+- → `cache-strategy-consistency`
 
 ### 障害モード・可観測性
 
 - 日本語: 障害, 監視, メトリクス, アラート, ダッシュボード
 - 英語: failure, monitoring, metrics, alert, dashboard
-- → `rr-upstream-failure-modes-observability-001`
+- → `failure-modes-observability`
 
 ### ロギング・可観測性
 
 - 日本語: ログ, トレース, 構造化ログ
 - 英語: log, trace, structured logging
-- → `rr-midstream-logging-observability-001`
+- → `logging-observability`
 
 ### 運用性・SLO
 
 - 日本語: SLO, レイテンシ, スループット, 運用
 - 英語: SLO, latency, throughput, operability
-- → `rr-upstream-operability-slo-001`
+- → `operability-slo`
 
 ### Core Web Vitals・Modern Web パフォーマンス
 
 - 日本語: Core Web Vitals, LCP, INP, CLS, リソースコスト, loading, fetchpriority
 - 英語: Core Web Vitals, LCP, INP, CLS, resource cost, loading lazy, fetchpriority
-- → `rr-midstream-modern-web-performance-001`
+- → `modern-web-performance`
 
 ## ヒューリスティクス（キーワードなしの場合）
 

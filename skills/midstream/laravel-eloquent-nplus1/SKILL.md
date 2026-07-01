@@ -28,8 +28,8 @@ Why: Eloquent のクエリ効率規約への適合をチェックリスト型で
 
 ## Non-goals / 扱わないこと
 
-- mass assignment / 認可（`rr-midstream-laravel-mass-assignment-001` のスコープ）。
-- migration の安全性（`rr-upstream-laravel-migration-safety-001` のスコープ）。
+- mass assignment / 認可（`laravel-mass-assignment` のスコープ）。
+- migration の安全性（`laravel-migration-safety` のスコープ）。
 - SQL チューニング一般・index 設計。
 
 ## Pre-execution Gate / 実行前ゲート

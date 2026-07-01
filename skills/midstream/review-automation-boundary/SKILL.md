@@ -101,7 +101,7 @@ Why: 自動化可能なレビュー指摘を検出しCI/lint委譲を提案す�
 
 ### Level 3: CI/型チェックで解決すべきパターン
 
-注: このレベルでは`any`や`!`の**コード品質上の問題**を指摘しない（それは`rr-midstream-typescript-strict-001` / `rr-midstream-typescript-nullcheck-001`のスコープ）。ここでは「そのルールがCIで強制されていない」という**プロセスの不備**のみを指摘し、ツール設定の追加を提案する。
+注: このレベルでは`any`や`!`の**コード品質上の問題**を指摘しない（それは`typescript-strict` / `typescript-nullcheck`のスコープ）。ここでは「そのルールがCIで強制されていない」という**プロセスの不備**のみを指摘し、ツール設定の追加を提案する。
 
 - `any` の使用（`@typescript-eslint/no-explicit-any` でゼロトレランスにできる）
 - 非 null アサーション `!` の使用（`@typescript-eslint/no-non-null-assertion`）

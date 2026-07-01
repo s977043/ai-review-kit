@@ -29,7 +29,7 @@ index 1234567..89abcdef 100644
 
 ## Companion finding (out of band)
 
-`rr-midstream-security-basic-001` raised:
+`security-basic` raised:
 
 ```text
 **Finding:** hardcoded credential in source

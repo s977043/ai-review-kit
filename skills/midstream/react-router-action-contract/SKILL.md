@@ -28,7 +28,7 @@ Why: action のエラー契約と ErrorBoundary 分岐をチェックリスト�
 
 ## Non-goals / 扱わないこと
 
-- loader / data loading の規約（`rr-midstream-react-router-loader-boundary-001` のスコープ）。
+- loader / data loading の規約（`react-router-loader-boundary` のスコープ）。
 - Form と fetcher のどちらを使うべきかの UX 判断（要件依存のため一律指摘しない。質問に留める）。
 - バリデーションライブラリの選定。
 

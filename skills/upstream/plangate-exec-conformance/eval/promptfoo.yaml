@@ -51,7 +51,7 @@ tests:
       - type: contains
         value: 'NO_REVIEW'
       - type: contains
-        value: 'rr-upstream-plangate-exec-conformance-001'
+        value: 'plangate-exec-conformance'
 
   # Test case 4: True positive — a todo item marked done is missing from the diff
   - description: 'Detect planned-but-missing (completed todo not in diff)'

@@ -33,12 +33,12 @@ Why: 機密情報の検出はパターン的・決定論で判定できる領域
 ## Goal / 目的
 
 - 差分へ**新規追加された**機密情報を、言語やファイル種別を問わず検出する。対象は API キー / トークン / credential / 秘密鍵 / `.env` 値 / 個人ローカルパス / ローカル固有設定とする。
-- 既存の言語限定 secret チェック（`rr-midstream-security-basic-001` は `.ts/.tsx/.js/.jsx`、`rr-midstream-config-json-001` は `.json/.yml`）が見ない種別・ファイルの取りこぼしを補う。
+- 既存の言語限定 secret チェック（`security-basic` は `.ts/.tsx/.js/.jsx`、`config-json` は `.json/.yml`）が見ない種別・ファイルの取りこぼしを補う。
 
 ## Non-goals / 扱わないこと
 
-- アプリコード内の SQLi / XSS など機密以外のセキュリティ（`rr-midstream-security-basic-001` の領域）。
-- BaaS のルール/鍵露出（`rr-midstream-firebase-security-rules-001` / `rr-midstream-supabase-rls-policy-001` の領域）。
+- アプリコード内の SQLi / XSS など機密以外のセキュリティ（`security-basic` の領域）。
+- BaaS のルール/鍵露出（`firebase-security-rules` / `supabase-rls-policy` の領域）。
 - 決定論で完全な判定ができる検出を恒久的な肩代わりとすること（本スキルは CI = gitleaks / trufflehog 等の導入を促し、移譲する）。
 
 ## Pre-execution Gate / 実行前ゲート

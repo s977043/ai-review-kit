@@ -7,7 +7,7 @@ Pre-execution Gate が不成立のため、このスキルはレビューを実�
 ## Findings
 
 ```text
-NO_REVIEW: rr-upstream-plangate-plan-integrity-001 — 計画アーティファクト（plan + 関連1つ以上）が揃っていない
+NO_REVIEW: plangate-plan-integrity — 計画アーティファクト（plan + 関連1つ以上）が揃っていない
 ```
 
 ### Gate 不成立理由

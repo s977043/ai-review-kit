@@ -28,16 +28,16 @@ license: MIT
 
 ## Routing / ルーティング
 
-| キーワード                | スキルID                                      | 説明                         |
-| ------------------------- | --------------------------------------------- | ---------------------------- |
-| 型, TypeScript, strict    | `rr-midstream-typescript-strict-001`          | TypeScript strict モード準拠 |
-| null, undefined, optional | `rr-midstream-typescript-nullcheck-001`       | null 安全性チェック          |
-| 型駆動, 設計              | `rr-midstream-type-driven-design-001`         | 型駆動設計                   |
-| ログ, 監視                | `rr-midstream-logging-observability-001`      | ロギング・可観測性           |
-| 自動化, 境界              | `rr-midstream-review-automation-boundary-001` | レビュー自動化の境界         |
-| コメント, トリアージ      | `rr-midstream-review-comment-triage-001`      | レビューコメント分類         |
-| a11y, アクセシビリティ    | `rr-midstream-a11y-accessible-name-001`       | アクセシビリティ基本         |
-| Next.js, App Router       | `rr-midstream-nextjs-app-router-boundary-001` | Next.js 境界チェック         |
+| キーワード                | スキルID                     | 説明                         |
+| ------------------------- | ---------------------------- | ---------------------------- |
+| 型, TypeScript, strict    | `typescript-strict`          | TypeScript strict モード準拠 |
+| null, undefined, optional | `typescript-nullcheck`       | null 安全性チェック          |
+| 型駆動, 設計              | `type-driven-design`         | 型駆動設計                   |
+| ログ, 監視                | `logging-observability`      | ロギング・可観測性           |
+| 自動化, 境界              | `review-automation-boundary` | レビュー自動化の境界         |
+| コメント, トリアージ      | `review-comment-triage`      | レビューコメント分類         |
+| a11y, アクセシビリティ    | `a11y-accessible-name`       | アクセシビリティ基本         |
+| Next.js, App Router       | `nextjs-app-router-boundary` | Next.js 境界チェック         |
 
 ### デフォルト動作
 

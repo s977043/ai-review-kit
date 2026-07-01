@@ -1,5 +1,5 @@
 ---
-description: 'Draft a review-ready PR description using our template (pairs with rr-midstream-pr-description-001)'
+description: 'Draft a review-ready PR description using our template (pairs with pr-description)'
 ---
 
 この差分を、以下のテンプレートで PR 本文にして：

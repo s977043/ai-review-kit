@@ -1,6 +1,6 @@
 # Expected Output: False Positive Candidate (Minor Severity)
 
-**Finding:** A `minor` severity credential finding from `rr-midstream-security-basic-001` is in `tests/auth.test.ts` with `test-`-prefixed mock values; this is the canonical false-positive shape for credential checks. Recommend `feedbackType=false_positive`, not `accepted_risk`.
+**Finding:** A `minor` severity credential finding from `security-basic` is in `tests/auth.test.ts` with `test-`-prefixed mock values; this is the canonical false-positive shape for credential checks. Recommend `feedbackType=false_positive`, not `accepted_risk`.
 
 **Evidence:** Companion finding at `tests/auth.test.ts:11` is `Severity: minor`, `Confidence: low`. The diff is entirely in a `tests/` path and the values are `test-password-123-rotated`, `test-api-key-mock-value`, `test-session-id-stub`, and `test-token-do-not-use-in-prod` — all visibly mock-shaped.
 
@@ -17,10 +17,10 @@ river suppression add \
   --pr <this PR number>
 ```
 
-If similar test fixtures recur, prefer adding a guard fixture under `skills/midstream/rr-midstream-security-basic-001/fixtures/` so the underlying detector stops misfiring instead of suppressing every instance.
+If similar test fixtures recur, prefer adding a guard fixture under `skills/midstream/security-basic/fixtures/` so the underlying detector stops misfiring instead of suppressing every instance.
 
 **Severity:** minor
 
 **Confidence:** medium
 
-**Skill ID:** rr-midstream-suppression-feedback-001
+**Skill ID:** suppression-feedback
