@@ -1,7 +1,7 @@
 # Security & Privacy Design Review
 
 設計ドキュメントのセキュリティ・プライバシー設計をレビューするスキルです。
-スキル定義: `skills/upstream/security-privacy-design.md`（YAML frontmatter + Markdown）。
+スキル定義: `skills/upstream/security-privacy-design/SKILL.md`（YAML frontmatter + Markdown）。
 
 ## 概要
 
@@ -34,7 +34,7 @@
 npm run skills:validate
 
 # promptfoo での評価（設定完了後）
-cd skills/security-privacy-design
+cd skills/upstream/security-privacy-design
 npx promptfoo eval
 ```
 

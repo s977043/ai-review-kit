@@ -1,7 +1,7 @@
 # Baseline Security Checks
 
 セキュリティレビューの基本的なチェックを行うスキルです。
-スキル定義: `skills/midstream/security-basic.md`（YAML frontmatter + Markdown）。
+スキル定義: `skills/midstream/security-basic/SKILL.md`（YAML frontmatter + Markdown）。
 
 ## 概要
 
@@ -30,7 +30,7 @@
 npm run skills:validate
 
 # promptfoo での評価（設定完了後）
-cd skills/security-basic
+cd skills/midstream/security-basic
 npx promptfoo eval
 ```
 

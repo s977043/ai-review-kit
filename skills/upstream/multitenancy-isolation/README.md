@@ -1,7 +1,7 @@
 # Multitenancy Isolation Guard
 
 マルチテナント設計におけるテナント分離のレビューを行うスキルです。
-スキル定義: `skills/upstream/multitenancy-isolation.md`（YAML frontmatter + Markdown）。
+スキル定義: `skills/upstream/multitenancy-isolation/SKILL.md`（YAML frontmatter + Markdown）。
 
 ## 概要
 
@@ -47,7 +47,7 @@ specs/**/*
 npm run skills:validate
 
 # promptfoo での評価（設定完了後）
-cd skills/multitenancy-isolation
+cd skills/upstream/multitenancy-isolation
 npx promptfoo eval
 ```
 
