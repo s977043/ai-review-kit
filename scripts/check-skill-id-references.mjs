@@ -22,13 +22,15 @@ const SCAN_DIRS = [
   'skills',
   'scripts',
   'src',
+  'pages',
   'runners/node-api',
+  'runners/github-action/src',
   '.github',
   'examples',
   'commands',
   'docs',
 ];
-const SCAN_FILES = ['README.md', 'README.en.md', 'CLAUDE.md', 'AGENTS.md'];
+const SCAN_FILES = ['README.md', 'README.en.md', 'CLAUDE.md', 'AGENTS.md', 'GEMINI.md'];
 const EXTS = new Set(['.md', '.mjs', '.js', '.ts', '.cjs', '.yaml', '.yml', '.sh', '.json']);
 
 // 除外 path（履歴 / 生成物 / 意図的 fixture / worktree）
@@ -53,8 +55,6 @@ const ALLOWED_LEGACY_IDS = new Set([
   'rr-midstream-plan-conformance-001', // plan-conformance-demo の期待値 fixture
   'rr-upstream-design-architecture-001', // setup script（要移行判定）
   'rr-upstream-pr-body-required-sections-001', // plangate-rule-promotion（要移行判定）
-  'rr-upstream-test-code-react-001', // selection/tdd.yaml の例示
-  'rr-upstream-test-code-unit-ts-jest-001', // selection/tdd.yaml の例示
 ]);
 
 const OLD_ID_RE = /rr-(?:upstream|midstream|downstream)-[a-z0-9-]+-\d{3}/g;
@@ -71,7 +71,14 @@ const ALLOWED_FLAT_PATHS = new Set([
   'skills/upstream/sample-architecture-review.md',
   'skills/midstream/sample-code-quality.md',
   'skills/downstream/sample-test-review.md',
+  // pages/ docs の架空例示スキル（存在しないスキル名）
+  'skills/midstream/my-skill.md',
+  'skills/midstream/old-skill.md',
+  'skills/midstream/my-check.md',
 ]);
+
+// 許容する phase なし cd 引数（意図的な doc 例示・架空スキル名）
+const ALLOWED_CD_DIRS = new Set(['my-skill', 'new-skill']);
 
 function isExcluded(p) {
   return EXCLUDE.some((e) => p.includes(e));
@@ -167,11 +174,13 @@ for (const file of collectFiles()) {
     const cdMatches = line.match(CD_NO_PHASE_RE);
     if (cdMatches) {
       for (const m of cdMatches) {
+        const dirName = m.trim().replace(/^cd\s+skills\//, '');
+        if (ALLOWED_CD_DIRS.has(dirName)) continue;
         pathViolations.push({
           file: relative(ROOT, file),
           line: idx + 1,
           found: m.trim(),
-          fix: `cd skills/<phase>/${m.trim().replace(/^cd\s+skills\//, '')}`,
+          fix: `cd skills/<phase>/${dirName}`,
           kind: 'cd-no-phase',
         });
       }

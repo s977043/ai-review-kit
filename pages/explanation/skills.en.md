@@ -330,7 +330,7 @@ tests:
 **7. Test:**
 
 ```bash
-cd skills/typescript-nullcheck
+cd skills/midstream/typescript-nullcheck
 npx promptfoo eval
 
 # Review results in eval/results.json
@@ -579,7 +579,7 @@ severity: major
 ### Architecture Skill
 
 ```yaml
-# skills/upstream/adr-decision-quality.md
+# skills/upstream/adr-decision-quality/SKILL.md
 id: adr-decision-quality
 name: ADR Decision Quality
 phase: upstream
@@ -594,7 +594,7 @@ severity: info
 ### Test Coverage Skill
 
 ```yaml
-# skills/downstream/coverage-gap.md
+# skills/downstream/coverage-gap/SKILL.md
 id: coverage-gap
 name: Test Coverage Gap Detection
 phase: downstream
