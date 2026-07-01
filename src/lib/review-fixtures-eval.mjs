@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { parseUnifiedDiff } from './diff.mjs';
+import { parseUnifiedDiff } from './diff-processor.mjs';
 import { generateReview } from './review-engine.mjs';
 
 function formatFailure(name, message) {

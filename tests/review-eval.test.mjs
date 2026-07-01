@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
 
-import { parseUnifiedDiff } from '../src/lib/diff.mjs';
+import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
 import { generateReview } from '../src/lib/review-engine.mjs';
 import { evaluateReviewFixtures } from '../src/lib/review-fixtures-eval.mjs';
 

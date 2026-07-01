@@ -1,6 +1,6 @@
 import { generateReview } from './review-engine.mjs';
 import { classifyFindings } from './finding-classifier.mjs';
-import { renderDiffText } from './diff-optimizer.mjs';
+import { renderDiffText } from './diff-processor.mjs';
 import { synthesizeTeamLeadReport } from './team-lead-synthesizer.mjs';
 
 export const REVIEWER_ROLES = {
