@@ -19,14 +19,16 @@ applyTo:
   - '**/*spec*.md'
   - '**/*agent*.md'
   - '**/*workflow*.md'
+  - '**/*pbi*.md'
+  - '**/*todo*.md'
   - '.github/ISSUE_TEMPLATE/**/*.md'
 ---
 
 ## Pattern declaration
 
-Primary pattern: Gate
-Secondary patterns: Reviewer
-Why: AI エージェント委譲の文脈があるドキュメントのみを対象に、委譲前の readiness を統合的にチェックするゲートとして機能する。
+Primary pattern: Reviewer
+Secondary patterns: Gate
+Why: AI エージェント委譲の文脈があるドキュメントを対象に、委譲前の readiness を統合的にチェックする。Pre-execution Gate で適用対象を絞り込む。
 
 ## Goal / 目的
 
@@ -46,8 +48,8 @@ Why: AI エージェント委譲の文脈があるドキュメントのみを対
 
 - [ ] diff に AI エージェントへの作業委譲・タスク委任の文脈が含まれている
       （キーワードは大文字小文字を区別しない。例: "agent", "delegate", "AI にやらせる",
-      "Codex", "Claude Code", "agentic", "ai-assisted", "LLM", "copilot", "GPT",
-      "Gemini", "自動実行", "委任", "委譲" 等が **委譲・自動実行の意図** を伴って
+      "Cursor", "Claude Code", "Aider", "agentic", "ai-assisted", "LLM", "copilot",
+      "GPT", "Gemini", "自動実行", "委任", "委譲" 等が **委譲・自動実行の意図** を伴って
       使われている。一般的な自動化（CI/CD 説明等）には適用しない）
 - [ ] inputContext に diff が含まれている
 
@@ -101,7 +103,7 @@ AI 委譲タスクの文書に以下が定義されていない場合に finding
 - 依存関係の追加・削除
 - 本番操作・データ変換
 
-## Output guidance / 出力ガイド
+## Output / 出力フォーマット
 
 すべて日本語。`<file>:<line>: <message>` 形式で出力する。
 
