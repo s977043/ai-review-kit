@@ -23,7 +23,7 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 
 import { applySuppressions } from '../src/lib/suppression-apply.mjs';
-import { computeFingerprint, annotateFingerprints } from '../src/lib/finding-fingerprint.mjs';
+import { computeFingerprint, annotateFingerprints } from '../src/lib/finding-factory.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const localRunnerSource = readFileSync(

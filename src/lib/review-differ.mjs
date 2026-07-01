@@ -1,5 +1,5 @@
 import { computeFindingBreakdown } from './scoring/breakdown.mjs';
-import { annotateFingerprints } from './finding-fingerprint.mjs';
+import { annotateFingerprints } from './finding-factory.mjs';
 
 /**
  * @typedef {'new'|'resolved'|'persisting'|'score_changed'|'oscillated'} FindingStatus

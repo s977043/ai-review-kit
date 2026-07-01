@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyFindings, SUPPRESS_REASONS } from '../src/lib/finding-classifier.mjs';
+import { classifyFindings, SUPPRESS_REASONS } from '../src/lib/finding-factory.mjs';
 
 function makeFinding(overrides = {}) {
   return {
