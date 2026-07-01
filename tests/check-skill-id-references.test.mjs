@@ -19,14 +19,20 @@ function runIn(dir) {
     execFileSync('node', [SCRIPT], { cwd: dir, stdio: 'pipe' });
     return 0;
   } catch (e) {
-    return e.status ?? 1;
+    if (typeof e.status === 'number') return e.status;
+    throw e;
   }
 }
 
 function fixture(content) {
   const dir = mkdtempSync(join(tmpdir(), 'rr-refs-'));
-  mkdirSync(join(dir, 'skills', 'upstream', 'x'), { recursive: true });
-  writeFileSync(join(dir, 'skills', 'upstream', 'x', 'SKILL.md'), content);
+  try {
+    mkdirSync(join(dir, 'skills', 'upstream', 'x'), { recursive: true });
+    writeFileSync(join(dir, 'skills', 'upstream', 'x', 'SKILL.md'), content);
+  } catch (e) {
+    rmSync(dir, { recursive: true, force: true });
+    throw e;
+  }
   return dir;
 }
 
