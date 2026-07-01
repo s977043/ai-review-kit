@@ -1,7 +1,7 @@
 import path from 'node:path'; // Added for path.join
 import { minimatch } from 'minimatch';
 import { loadConfig } from '../config/loader.mjs';
-import { loadSkills } from '../../runners/core/skill-loader.mjs'; // Added
+import { loadSkillsCached as loadSkills } from '../../runners/core/skill-cache.mjs';
 import { AIClientFactory } from '../ai/factory.mjs';
 import { buildSystemPrompt } from '../prompts/buildSystemPrompt.mjs';
 import { isLlmEnabled } from '../lib/utils.mjs';
