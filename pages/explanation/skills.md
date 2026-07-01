@@ -329,7 +329,7 @@ tests:
 **7. テスト:**
 
 ```bash
-cd skills/typescript-nullcheck
+cd skills/midstream/typescript-nullcheck
 npx promptfoo eval
 
 # eval/results.jsonで結果を確認
@@ -558,7 +558,7 @@ npm run eval:fixtures
 ### セキュリティスキル
 
 ```yaml
-# skills/midstream/security-basic.md（frontmatter）
+# skills/midstream/security-basic/SKILL.md（frontmatter）
 id: security-basic
 name: Baseline Security Checks
 phase: midstream
@@ -573,7 +573,7 @@ severity: major
 ### アーキテクチャスキル
 
 ```yaml
-# skills/upstream/adr-decision-quality.md
+# skills/upstream/adr-decision-quality/SKILL.md
 id: adr-decision-quality
 name: ADR Decision Quality
 phase: upstream
@@ -588,7 +588,7 @@ severity: info
 ### テストカバレッジスキル
 
 ```yaml
-# skills/downstream/coverage-gap.md
+# skills/downstream/coverage-gap/SKILL.md
 id: coverage-gap
 name: Test Coverage Gap Detection
 phase: downstream
