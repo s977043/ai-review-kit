@@ -30,7 +30,7 @@ import { readFile } from 'node:fs/promises';
 
 import { loadConfig as defaultLoadConfig } from '../config/loader.mjs';
 import { resolveAllArtifacts as defaultResolveAllArtifacts } from '../config/artifact-resolver.mjs';
-import { parseUnifiedDiff } from './diff.mjs';
+import { parseUnifiedDiff } from './diff-processor.mjs';
 import { buildExecutionPlan as defaultBuildExecutionPlan } from '../../runners/core/review-runner.mjs';
 import { generateReview as defaultGenerateReview } from './review-engine.mjs';
 import { loadRiskMap as defaultLoadRiskMap } from './risk-map.mjs';

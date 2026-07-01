@@ -8,7 +8,7 @@ import { normalizePlannerMode } from '../../src/lib/planner-utils.mjs';
 import { HEURISTIC_SKILL_IDS } from '../../src/lib/heuristic-review.mjs';
 import { evaluateRisk } from '../../src/lib/risk-map.mjs';
 import { findRelatedADRs } from '../../src/lib/adr-linker.mjs';
-import { extractDiffMeta } from '../../src/lib/diff-meta.mjs';
+import { extractDiffMeta } from '../../src/lib/diff-processor.mjs';
 import { determineReviewMode } from '../../src/lib/review-plan-generator.mjs';
 
 const MODEL_PRIORITY = {

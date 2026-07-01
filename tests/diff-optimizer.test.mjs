@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { optimizeDiff } from '../src/lib/diff-optimizer.mjs';
-import { parseUnifiedDiff } from '../src/lib/diff.mjs';
+import { optimizeDiff } from '../src/lib/diff-processor.mjs';
+import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
 
 const whitespaceDiff = `diff --git a/src/app.js b/src/app.js
 --- a/src/app.js

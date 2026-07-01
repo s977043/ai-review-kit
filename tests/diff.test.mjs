@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseUnifiedDiff } from '../src/lib/diff.mjs';
+import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
 
 const sampleDiff = `diff --git a/README.md b/README.md
 index 1111111..2222222 100644

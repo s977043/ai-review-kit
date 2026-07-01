@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { extractDiffMeta } from '../src/lib/diff-meta.mjs';
+import { extractDiffMeta } from '../src/lib/diff-processor.mjs';
 
 test('extractDiffMeta: computes fileCount and changedLines from diffText', () => {
   const diff = {

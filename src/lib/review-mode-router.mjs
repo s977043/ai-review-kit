@@ -1,5 +1,5 @@
 import { classifyChangedFiles } from './file-classifier.mjs';
-import { countChangedLinesFromText } from './diff-meta.mjs';
+import { countChangedLinesFromText } from './diff-processor.mjs';
 import { evaluateRisk } from './risk-map.mjs';
 
 /** @typedef {'light' | 'standard' | 'team' | 'human-required'} ReviewRouterMode */
