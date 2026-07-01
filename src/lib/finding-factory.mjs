@@ -139,8 +139,8 @@ export function validateFindingMessage(message) {
 
   const sevMatch = /Severity:\s*(\w+)/.exec(text);
   const confMatch = /Confidence:\s*(\w+)/.exec(text);
-  const severity = sevMatch?.[1] ?? null;
-  const confidence = confMatch?.[1] ?? null;
+  const severity = sevMatch?.[1]?.toLowerCase() ?? null;
+  const confidence = confMatch?.[1]?.toLowerCase() ?? null;
 
   const invalid = [];
   if (severity && !FINDING_SEVERITIES.includes(severity)) invalid.push(`Severity:${severity}`);
