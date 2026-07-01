@@ -10,7 +10,7 @@ export const modules = {
 /* harmony export */   routeReviewMode: () => (/* binding */ routeReviewMode)
 /* harmony export */ });
 /* harmony import */ var _file_classifier_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(4673);
-/* harmony import */ var _diff_meta_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(1912);
+/* harmony import */ var _diff_processor_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(861);
 /* harmony import */ var _risk_map_mjs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(572);
 
 
@@ -54,7 +54,7 @@ function routeReviewMode({ changedFiles = [], diffText, riskMap, targetPath = '.
   const riskAssessment = riskMap ? (0,_risk_map_mjs__WEBPACK_IMPORTED_MODULE_2__/* .evaluateRisk */ .lm)(riskMap, changedFiles) : null;
   const aggregateAction = riskAssessment?.aggregateAction ?? 'comment_only';
   const fileCount = changedFiles.length;
-  const changedLines = (0,_diff_meta_mjs__WEBPACK_IMPORTED_MODULE_1__/* .countChangedLinesFromText */ .y)(diffText);
+  const changedLines = (0,_diff_processor_mjs__WEBPACK_IMPORTED_MODULE_1__/* .countChangedLinesFromText */ .ye)(diffText);
 
   let mode = 'standard';
   const reasons = [];

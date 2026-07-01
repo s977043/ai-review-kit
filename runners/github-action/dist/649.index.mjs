@@ -189,8 +189,8 @@ async function _fileExists(filePath, fsImpl) {
   }
 }
 
-// EXTERNAL MODULE: ./src/lib/diff.mjs
-var diff = __webpack_require__(4382);
+// EXTERNAL MODULE: ./src/lib/diff-processor.mjs
+var diff_processor = __webpack_require__(861);
 // EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
 var review_runner = __webpack_require__(7050);
 // EXTERNAL MODULE: ./src/lib/review-engine.mjs
@@ -777,7 +777,7 @@ async function runReviewExecReplay({
       } catch (err) {
         throw new ReviewPlanError(`Failed to read diff artifact: ${err.message}`);
       }
-      const parsedDiff = (0,diff/* parseUnifiedDiff */.rj)(diffText);
+      const parsedDiff = (0,diff_processor/* parseUnifiedDiff */.rj)(diffText);
       // #936: report (non-blocking) membership drift between the replay-time
       // diff and the source plan's snapshot. Null when the snapshot predates A2-3.
       replayDrift = computeReplayDrift(
@@ -1073,7 +1073,7 @@ async function runReviewPlan({
     // Parse the diff once and reuse the result. The same parser used to
     // power deriveChangedFiles (planning input) also exposes the per-file
     // structure generateReview needs (execution input).
-    const parsedDiff = (0,diff/* parseUnifiedDiff */.rj)(diffText);
+    const parsedDiff = (0,diff_processor/* parseUnifiedDiff */.rj)(diffText);
     const changedFiles = (parsedDiff.files ?? [])
       .map((f) => f.path)
       .filter((p) => p && p !== '/dev/null');
