@@ -1,7 +1,7 @@
 ---
 id: 'ai-agent-review-readiness'
 name: 'AI Agent Review Readiness'
-description: 'Checks whether AI-assisted work defines review criteria, accessible context, explicit review loop, and human judgment boundary before delegating to an agent.'
+description: 'Checks whether AI-assisted work defines review criteria, accessible context, explicit review loop, human judgment boundary, and feedback capture before delegating to an agent.'
 version: '0.1.0'
 category: upstream
 phase:

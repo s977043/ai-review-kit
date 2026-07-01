@@ -13,8 +13,8 @@ prompts:
   - file://../prompt/user.md
 
 tests:
-  # Test case 1: Missing readiness — should detect major/critical issues (Check 1-4)
-  - description: 'Detect missing review criteria, context, loop, and human boundary'
+  # Test case 1: Missing readiness — should detect major/critical issues (Check 1-4; Check 5 is minor)
+  - description: 'Detect missing review criteria, context, loop, human boundary (and optionally feedback capture)'
     vars:
       diff: file://../fixtures/01-missing-readiness.md
     assert:
@@ -42,13 +42,8 @@ tests:
         value: 'severity=critical'
       - type: not-contains
         value: 'severity=major'
-      - type: contains-any
-        value:
-          - 'NO_ISSUES'
-          - '問題なし'
-          - '適切'
-          - '満たされて'
-          - '網羅'
+      - type: not-contains
+        value: 'severity=minor'
 
   # Test case 3: Partial readiness — should detect missing loop and human boundary
   - description: 'Detect missing review loop and human approval in partial document'
