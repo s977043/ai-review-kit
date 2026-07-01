@@ -24,7 +24,7 @@ import { PLANNER_MODES } from './lib/planner-utils.mjs';
 import { DEPTH_TO_REVIEW_MODE, resolveDepthToReviewMode } from './lib/review-plan-generator.mjs';
 import { resolveVerdict, scoreReview } from './lib/scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
-import { severityToPriority } from './lib/finding-format.mjs';
+import { severityToPriority } from './lib/finding-factory.mjs';
 import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';

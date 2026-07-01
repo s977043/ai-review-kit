@@ -10,7 +10,7 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 
 test('collectRepoContext returns sections for changed source files', async () => {
   const result = await collectRepoContext({
-    changedFiles: ['src/lib/finding-format.mjs'],
+    changedFiles: ['src/lib/finding-factory.mjs'],
     repoRoot: REPO_ROOT,
   });
   assert.ok(Array.isArray(result.sections), 'sections is array');
@@ -24,7 +24,7 @@ test('collectRepoContext returns sections for changed source files', async () =>
 
 test('collectRepoContext respects maxChars budget', async () => {
   const result = await collectRepoContext({
-    changedFiles: ['src/lib/finding-format.mjs', 'src/lib/review-engine.mjs'],
+    changedFiles: ['src/lib/finding-factory.mjs', 'src/lib/review-engine.mjs'],
     repoRoot: REPO_ROOT,
     maxChars: 500,
   });
