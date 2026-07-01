@@ -1,5 +1,5 @@
 import { generateReview } from './review-engine.mjs';
-import { classifyFindings } from './finding-classifier.mjs';
+import { classifyFindings } from './finding-factory.mjs';
 import { renderDiffText } from './diff-processor.mjs';
 import { synthesizeTeamLeadReport } from './team-lead-synthesizer.mjs';
 

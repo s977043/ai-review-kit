@@ -40857,15 +40857,31 @@ function isApp(file) {
 
 /***/ }),
 
-/***/ 7440:
+/***/ 1535:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Z: () => (/* binding */ classifyFindings)
+/* harmony export */   UB: () => (/* binding */ parseFindingMessage),
+/* harmony export */   Yo: () => (/* binding */ computeFingerprint),
+/* harmony export */   ZY: () => (/* binding */ classifyFindings),
+/* harmony export */   ic: () => (/* binding */ annotateFingerprints),
+/* harmony export */   lv: () => (/* binding */ normalizeSeverity),
+/* harmony export */   nG: () => (/* binding */ severityToPriority),
+/* harmony export */   xv: () => (/* binding */ validateFindingMessage),
+/* harmony export */   yv: () => (/* binding */ formatFindingMessage)
 /* harmony export */ });
-/* unused harmony export SUPPRESS_REASONS */
-/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9946);
+/* unused harmony exports FINDING_SEVERITIES, FINDING_CONFIDENCE, SUPPRESS_REASONS */
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
+/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9946);
 
+
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
+const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
 
 const SUPPRESS_REASONS = {
   LOW_CONFIDENCE: 'low_confidence',
@@ -40875,151 +40891,9 @@ const SUPPRESS_REASONS = {
   COVERED_BY_HIGHER_LEVEL: 'covered_by_higher_level_finding',
 };
 
-function evidenceTotalChars(finding) {
-  const ev = finding.evidence;
-  if (!Array.isArray(ev) || ev.length === 0) return 0;
-  return ev.reduce((sum, e) => sum + String(e ?? '').length, 0);
-}
-
-function deduplicateWithinFile(findings) {
-  const seen = new Set();
-  return findings.filter((f) => {
-    const ruleId = String(f.ruleId ?? '');
-    if (ruleId === 'unknown') return true; // ruleId が未確定の finding は file-level dedup もスキップ
-    const key = `${f.file ?? ''}::${ruleId}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function deduplicateWithinPR(findings) {
-  const seen = new Set();
-  return findings.filter((f) => {
-    const key = String(f.ruleId ?? '');
-    if (key === 'unknown') return true; // ruleId が確定していない finding は PR-level dedup をスキップ
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-/**
- * @param {object[]} findings
- * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
- * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
- */
-function classifyFindings(findings, options = {}) {
-  const reviewMode = options.reviewMode ?? 'medium';
-  const maxOverview = reviewMode === 'tiny' ? 3 : reviewMode === 'large' ? 8 : 5;
-
-  const suppressed = [];
-  const active = [];
-
-  for (const finding of findings) {
-    if (finding.confidence === 'low' && finding.severity !== 'critical') {
-      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.LOW_CONFIDENCE });
-      continue;
-    }
-    if (evidenceTotalChars(finding) < 30 && finding.severity !== 'critical') {
-      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.INSUFFICIENT_EVIDENCE });
-      continue;
-    }
-    const ruleId = String(finding.ruleId ?? '');
-    if (finding.severity === 'minor' && /readability|style|format/i.test(ruleId)) {
-      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.STYLE_ONLY });
-      continue;
-    }
-    active.push(finding);
-  }
-
-  const deduped = deduplicateWithinPR(deduplicateWithinFile(active));
-  const dedupedSet = new Set(deduped.map((f) => f.id));
-  for (const f of active) {
-    if (!dedupedSet.has(f.id)) {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.DUPLICATE });
-    }
-  }
-
-  const sorted = [...deduped].sort(
-    (a, b) => (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_0__/* .computeFindingBreakdown */ ._)(b).composite - (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_0__/* .computeFindingBreakdown */ ._)(a).composite
-  );
-
-  const overview = [];
-  const overviewRuleIds = new Set();
-  for (const f of sorted) {
-    const rid = String(f.ruleId ?? '');
-    const isUnknown = rid === 'unknown';
-    if (!isUnknown && overviewRuleIds.has(rid)) {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
-    } else if (overview.length < maxOverview) {
-      overview.push(f);
-      if (!isUnknown) overviewRuleIds.add(rid);
-    } else {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
-    }
-  }
-
-  return { overview, inlineCandidates: [], suppressed };
-}
-
-
-/***/ }),
-
-/***/ 9597:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Y: () => (/* binding */ computeFingerprint),
-/* harmony export */   i: () => (/* binding */ annotateFingerprints)
-/* harmony export */ });
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
-
-
-/**
- * Stable fingerprint for a finding so that the same logical issue can be
- * matched across review runs even when IDs regenerate.
- *
- * Strategy: hash(ruleId + file + first-60-chars-of-message).
- * Intentionally omits lineStart/lineEnd because line numbers shift as code
- * changes, but the same logical finding should still be considered persisting.
- */
-function computeFingerprint(finding) {
-  const ruleId = String(finding.ruleId ?? 'unknown');
-  const file = String(finding.file ?? '');
-  // Normalize message: lowercase, collapse whitespace, take first 60 chars
-  const msgNorm = String(finding.message ?? finding.title ?? '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 60);
-  const raw = `${ruleId}::${file}::${msgNorm}`;
-  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(raw).digest('hex').slice(0, 16);
-}
-
-/**
- * Annotate findings with their fingerprint (non-mutating).
- */
-function annotateFingerprints(findings) {
-  return findings.map((f) => ({ ...f, fingerprint: computeFingerprint(f) }));
-}
-
-
-/***/ }),
-
-/***/ 5942:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   UB: () => (/* binding */ parseFindingMessage),
-/* harmony export */   lv: () => (/* binding */ normalizeSeverity),
-/* harmony export */   nG: () => (/* binding */ severityToPriority),
-/* harmony export */   xv: () => (/* binding */ validateFindingMessage),
-/* harmony export */   yv: () => (/* binding */ formatFindingMessage)
-/* harmony export */ });
-/* unused harmony exports FINDING_SEVERITIES, FINDING_CONFIDENCE */
-const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
-const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
+// ---------------------------------------------------------------------------
+// Format helpers (finding-format)
+// ---------------------------------------------------------------------------
 
 function normalizeWhitespace(text) {
   return String(text ?? '')
@@ -41035,7 +40909,6 @@ function clamp(text, maxChars) {
 
 /**
  * Format a finding message for line-comments (`<file>:<line>: <message>`).
- * Evidence is already anchored by `<file>:<line>`, so we keep the message compact.
  * @param {{
  *   finding: string,
  *   evidence: string,
@@ -41141,8 +41014,8 @@ function validateFindingMessage(message) {
 
   const sevMatch = /Severity:\s*(\w+)/.exec(text);
   const confMatch = /Confidence:\s*(\w+)/.exec(text);
-  const severity = sevMatch?.[1] ?? null;
-  const confidence = confMatch?.[1] ?? null;
+  const severity = sevMatch?.[1]?.toLowerCase() ?? null;
+  const confidence = confMatch?.[1]?.toLowerCase() ?? null;
 
   const invalid = [];
   if (severity && !FINDING_SEVERITIES.includes(severity)) invalid.push(`Severity:${severity}`);
@@ -41154,6 +41027,129 @@ function validateFindingMessage(message) {
     missing,
     invalid,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Classifier (finding-classifier)
+// ---------------------------------------------------------------------------
+
+function evidenceTotalChars(finding) {
+  const ev = finding.evidence;
+  if (!Array.isArray(ev) || ev.length === 0) return 0;
+  return ev.reduce((sum, e) => sum + String(e ?? '').length, 0);
+}
+
+function deduplicateWithinFile(findings) {
+  const seen = new Set();
+  return findings.filter((f) => {
+    const ruleId = String(f.ruleId ?? '');
+    if (ruleId === 'unknown') return true;
+    const key = `${f.file ?? ''}::${ruleId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function deduplicateWithinPR(findings) {
+  const seen = new Set();
+  return findings.filter((f) => {
+    const key = String(f.ruleId ?? '');
+    if (key === 'unknown') return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * @param {object[]} findings
+ * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
+ * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
+ */
+function classifyFindings(findings, options = {}) {
+  const reviewMode = options.reviewMode ?? 'medium';
+  const maxOverview = reviewMode === 'tiny' ? 3 : reviewMode === 'large' ? 8 : 5;
+
+  const suppressed = [];
+  const active = [];
+
+  for (const finding of findings) {
+    if (finding.confidence === 'low' && finding.severity !== 'critical') {
+      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.LOW_CONFIDENCE });
+      continue;
+    }
+    if (evidenceTotalChars(finding) < 30 && finding.severity !== 'critical') {
+      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.INSUFFICIENT_EVIDENCE });
+      continue;
+    }
+    const ruleId = String(finding.ruleId ?? '');
+    if (finding.severity === 'minor' && /readability|style|format/i.test(ruleId)) {
+      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.STYLE_ONLY });
+      continue;
+    }
+    active.push(finding);
+  }
+
+  const deduped = deduplicateWithinPR(deduplicateWithinFile(active));
+  const dedupedSet = new Set(deduped.map((f) => f.id));
+  for (const f of active) {
+    if (!dedupedSet.has(f.id)) {
+      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.DUPLICATE });
+    }
+  }
+
+  const sorted = [...deduped].sort(
+    (a, b) => (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(b).composite - (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(a).composite
+  );
+
+  const overview = [];
+  const overviewRuleIds = new Set();
+  for (const f of sorted) {
+    const rid = String(f.ruleId ?? '');
+    const isUnknown = rid === 'unknown';
+    if (!isUnknown && overviewRuleIds.has(rid)) {
+      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
+    } else if (overview.length < maxOverview) {
+      overview.push(f);
+      if (!isUnknown) overviewRuleIds.add(rid);
+    } else {
+      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
+    }
+  }
+
+  return { overview, inlineCandidates: [], suppressed };
+}
+
+// ---------------------------------------------------------------------------
+// Fingerprint (finding-fingerprint)
+// ---------------------------------------------------------------------------
+
+/**
+ * Stable fingerprint for a finding so that the same logical issue can be
+ * matched across review runs even when IDs regenerate.
+ *
+ * Strategy: hash(ruleId + file + first-60-chars-of-message).
+ * Intentionally omits lineStart/lineEnd because line numbers shift as code
+ * changes, but the same logical finding should still be considered persisting.
+ */
+function computeFingerprint(finding) {
+  const ruleId = String(finding.ruleId ?? 'unknown');
+  const file = String(finding.file ?? '');
+  const msgNorm = String(finding.message ?? finding.title ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60);
+  const raw = `${ruleId}::${file}::${msgNorm}`;
+  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(raw).digest('hex').slice(0, 16);
+}
+
+/**
+ * Annotate findings with their fingerprint (non-mutating).
+ */
+function annotateFingerprints(findings) {
+  return findings.map((f) => ({ ...f, fingerprint: computeFingerprint(f) }));
 }
 
 
@@ -42926,16 +42922,15 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 /* harmony export */ });
 /* unused harmony exports buildPrompt, parseLineComments, isRetryableStatus, isRetryableNetworkError, computeBackoffMs */
 /* harmony import */ var _config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3833);
-/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(9946);
-/* harmony import */ var _finding_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(7440);
+/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(9946);
+/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1535);
 /* harmony import */ var _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(4807);
 /* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(7050);
 /* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(2294);
-/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(9746);
-/* harmony import */ var _finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(5942);
-/* harmony import */ var _review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(8069);
-/* harmony import */ var _repo_context_mjs__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(8601);
-/* harmony import */ var _secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(12);
+/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(9746);
+/* harmony import */ var _review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(8069);
+/* harmony import */ var _repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(8601);
+/* harmony import */ var _secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(12);
 
 
 
@@ -43120,7 +43115,7 @@ function buildPrompt({
   const wantHandoff = reviewConfig.agentHandoff ?? false;
   const truncated = diffText.length > maxChars;
   const diffBody = truncated ? `${diffText.slice(0, maxChars)}\n...[truncated]` : diffText;
-  const depthConfig = (0,_review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_6__/* .getReviewDepthConfig */ .i3)(reviewMode ?? 'medium');
+  const depthConfig = (0,_review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__/* .getReviewDepthConfig */ .i3)(reviewMode ?? 'medium');
   const prompt = `You are River Review, an AI code review agent.
 Phase: ${phase}
 
@@ -43130,7 +43125,7 @@ ${buildFileSummary(diffFiles)}
 Relevant skills:
 ${buildSkillSummary(plan)}
 
-${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${(0,_repo_context_mjs__WEBPACK_IMPORTED_MODULE_7__/* .buildRepoContextSection */ .l)(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}Review the unified git diff below and produce concise findings.
+${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${(0,_repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__/* .buildRepoContextSection */ .l)(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}Review the unified git diff below and produce concise findings.
 ${buildLanguageInstruction(language)}
 - Output each finding on its own line using the format "<file>:<line>: <message>".
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
@@ -43284,7 +43279,7 @@ function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
       {
         file: '(no-files)',
         line: 1,
-        message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
           finding: 'レビュー対象ファイルが特定できない',
           evidence: '差分ファイルが空',
           impact: 'レビューの自動化ができない',
@@ -43312,7 +43307,7 @@ function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
       {
         file: firstFile.path,
         line,
-        message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
           finding: 'マッチするスキルがなく自動指摘を生成できなかった',
           evidence: evidenceBase,
           impact: '重要なリスクを見落とす可能性がある',
@@ -43333,7 +43328,7 @@ function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
       file: firstFile.path,
       line,
       skillId,
-      message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+      message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
         finding: `スキル「${skillName}」の観点で自動指摘を生成できなかった`,
         evidence: evidenceBase,
         impact: 'このスキルが検出する問題を見落とす可能性がある',
@@ -43353,7 +43348,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: 'catch で例外が握りつぶされる可能性がある',
             evidence: 'catch 内で return（ログ/再throwなし）',
             impact: '障害調査や失敗検知が困難になる',
@@ -43367,7 +43362,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: '挙動変更に対するテスト差分が見当たらない',
             evidence: 'コード差分あり・テスト差分なし',
             impact: '回帰の検知漏れや仕様逸脱が起きやすい',
@@ -43381,7 +43376,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: '秘密情報（トークン/キー）の直書きの可能性がある',
             evidence: 'トークン/キーらしい文字列が追加されている',
             impact: '漏洩時に不正利用やインシデントにつながる',
@@ -43395,7 +43390,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: 'pull_request_targetイベントは権限昇格のリスクがある',
             evidence: 'pull_request_targetトリガーが追加されている',
             impact: 'フォークからのPRで任意コードが本リポジトリの権限で実行される可能性',
@@ -43409,7 +43404,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: '過剰な権限設定（write-all）が検出された',
             evidence: 'permissions: write-all が設定されている',
             impact: 'ワークフローが侵害された場合の影響範囲が最大化される',
@@ -43423,7 +43418,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: 'runブロック内でsecretsを直接使用している',
             evidence: 'run: と secrets.* が同一行に存在',
             impact: 'ログ出力やエラーメッセージでシークレットが漏洩する可能性',
@@ -43437,7 +43432,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: 'ユーザー入力がサニタイズされずに使用されている',
             evidence: 'github.event.*.title/body/name がrunブロックで直接使用',
             impact: 'コマンドインジェクション攻撃のリスクがある',
@@ -43451,7 +43446,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: 'コード実行/インジェクションのリスクがある API が追加されている',
             evidence:
               'eval / new Function / dangerouslySetInnerHTML / document.write(ln) / 文字列引数の setTimeout・setInterval のいずれかが追加された',
@@ -43466,7 +43461,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: 'フォーカス済みテスト（.only）がコミットされている',
             evidence: 'describe/it/test 等の .only が追加された',
             impact: '他のテストが CI で実行されず、回帰を見逃す',
@@ -43480,7 +43475,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: 'デバッグ用 `debugger` 文がコミットされている',
             evidence: '`debugger;` が追加された',
             impact: '実行が一時停止する／本番に混入すると不具合や情報露出につながる',
@@ -43494,7 +43489,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: 'TLS 証明書検証が無効化されている',
             evidence:
               '`rejectUnauthorized: false` または `NODE_TLS_REJECT_UNAUTHORIZED=0` が追加された',
@@ -43509,7 +43504,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: '弱いハッシュアルゴリズム（MD5 / SHA-1）が使われている',
             evidence: "`createHash('md5')` または `createHash('sha1')` が追加された",
             impact: '衝突攻撃に弱く、署名やパスワード等の用途では安全でない',
@@ -43523,7 +43518,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: 'シェルコマンドが文字列補間で組み立てられている',
             evidence: '`exec`/`spawn` 系にテンプレートリテラルの `${...}` 補間が渡されている',
             impact: '補間値が信頼できない場合、コマンドインジェクションにつながる',
@@ -43537,7 +43532,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: '未解決のマージコンフリクトマーカーがコミットされている',
             evidence: '`<<<<<<<` / `>>>>>>>`（diff3 では `|||||||` も）マーカーが追加された',
             impact: 'コードが壊れ、ビルド/実行が失敗する',
@@ -43551,7 +43546,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: '無効化されたテスト（.skip / xit / xdescribe / xcontext）がコミットされている',
             evidence: '`.skip` または `xit`/`xdescribe`/`xcontext` が追加された',
             impact: 'テストが実行されず、対象の挙動が未検証のまま残る',
@@ -43565,7 +43560,7 @@ function normalizeHeuristicComments(rawComments) {
           file: c.file,
           line: c.line,
           skillId: c.skillId,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: '型チェックの抑制（@ts-ignore / @ts-nocheck）が追加されている',
             evidence: '`@ts-ignore` または `@ts-nocheck` が追加された',
             impact: '型エラーが隠れ、潜在的な不具合を見逃す',
@@ -43578,7 +43573,7 @@ function normalizeHeuristicComments(rawComments) {
         return {
           file: c.file,
           line: c.line,
-          message: (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .formatFindingMessage */ .yv)({
+          message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
             finding: `想定外のヒューリスティック（kind=${String(c.kind ?? 'unknown')}）`,
             evidence: 'ヒューリスティック kind が未知',
             impact: 'レビュー結果が不安定になる可能性がある',
@@ -43649,7 +43644,7 @@ async function generateReview({
   // otherwise leave process memory (debug.promptPreview, returned
   // `prompt`, downstream artifact writes). The LLM call still uses the
   // original `promptInfo.prompt` because it must.
-  const safePrompt = (0,_secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_8__/* .redactText */ .Rd)(promptInfo.prompt, {
+  const safePrompt = (0,_secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__/* .redactText */ .Rd)(promptInfo.prompt, {
     allowlist: effectiveConfig.security?.redact?.allowlist ?? [],
     ...(effectiveConfig.security?.redact?.entropyThreshold != null
       ? { entropyThreshold: effectiveConfig.security.redact.entropyThreshold }
@@ -43682,7 +43677,7 @@ async function generateReview({
 
   const skipReason = dryRun
     ? 'dry-run enabled'
-    : (0,_utils_mjs__WEBPACK_IMPORTED_MODULE_9__/* .isOfflineMode */ .hN)()
+    : (0,_utils_mjs__WEBPACK_IMPORTED_MODULE_8__/* .isOfflineMode */ .hN)()
       ? 'offline (rules-only) mode enabled'
       : openAIConfig.provider !== 'openai'
         ? `provider ${openAIConfig.provider} is not supported yet`
@@ -43705,7 +43700,7 @@ async function generateReview({
       const parsed = parseLineComments(output);
       if (parsed !== null) {
         const redacted = parsed.map((c) => ({ ...c, message: redactSecrets(c.message) }));
-        const checks = redacted.map((c) => (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .validateFindingMessage */ .xv)(c.message));
+        const checks = redacted.map((c) => (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFindingMessage */ .xv)(c.message));
         const invalidCount = checks.filter((c) => !c.ok).length;
         if (invalidCount === 0) {
           comments = redacted;
@@ -43751,7 +43746,7 @@ async function generateReview({
   const formatChecks = comments.map((c) => ({
     file: c.file,
     line: c.line,
-    ...(0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .validateFindingMessage */ .xv)(c.message),
+    ...(0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFindingMessage */ .xv)(c.message),
   }));
   const invalidCount = formatChecks.filter((c) => !c.ok).length;
   debug.findingFormat = invalidCount
@@ -43791,8 +43786,8 @@ async function generateReview({
 
   // Build structured findings from verified comments
   const findings = comments.map((c, i) => {
-    const parsed = (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .parseFindingMessage */ .UB)(c.message);
-    const severity = (0,_finding_format_mjs__WEBPACK_IMPORTED_MODULE_5__/* .normalizeSeverity */ .lv)(parsed.severity);
+    const parsed = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .parseFindingMessage */ .UB)(c.message);
+    const severity = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeSeverity */ .lv)(parsed.severity);
     const confidence =
       parsed.confidence && ['high', 'medium', 'low'].includes(parsed.confidence)
         ? parsed.confidence
@@ -43814,12 +43809,12 @@ async function generateReview({
   });
 
   findings.sort((a, b) => {
-    const bA = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(a);
-    const bB = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(b);
+    const bA = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_9__/* .computeFindingBreakdown */ ._)(a);
+    const bB = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_9__/* .computeFindingBreakdown */ ._)(b);
     return bB.composite - bA.composite;
   });
 
-  const classified = (0,_finding_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__/* .classifyFindings */ .Z)(findings, { reviewMode: reviewMode ?? 'medium' });
+  const classified = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .classifyFindings */ .ZY)(findings, { reviewMode: reviewMode ?? 'medium' });
 
   return {
     comments,
@@ -45445,8 +45440,8 @@ async function resolveSelectionSkillIds(
 var diff_processor = __nccwpck_require__(861);
 // EXTERNAL MODULE: ./src/lib/review-engine.mjs
 var review_engine = __nccwpck_require__(2022);
-// EXTERNAL MODULE: ./src/lib/finding-classifier.mjs
-var finding_classifier = __nccwpck_require__(7440);
+// EXTERNAL MODULE: ./src/lib/finding-factory.mjs
+var finding_factory = __nccwpck_require__(1535);
 ;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
 
 
@@ -45971,7 +45966,7 @@ async function runReviewerOrchestration({
   const allFindings = deduped.map((f) => ({ ...f, id: `rr-${nextId++}` }));
 
   const allComments = succeeded.flatMap((r) => r.comments ?? []);
-  const classified = (0,finding_classifier/* classifyFindings */.Z)(allFindings, { reviewMode: reviewMode ?? 'medium' });
+  const classified = (0,finding_factory/* classifyFindings */.ZY)(allFindings, { reviewMode: reviewMode ?? 'medium' });
 
   // Summarise per-role results (aggregate across chunks)
   const reviewerResults = roles.map((name) => {
@@ -46352,8 +46347,6 @@ function buildReviewEntry(reviewResult, { phase, changedFiles, commit } = {}) {
 var repo_context = __nccwpck_require__(8601);
 // EXTERNAL MODULE: ./src/lib/utils.mjs
 var utils = __nccwpck_require__(9746);
-// EXTERNAL MODULE: ./src/lib/finding-fingerprint.mjs
-var finding_fingerprint = __nccwpck_require__(9597);
 ;// CONCATENATED MODULE: ./src/lib/suppression-apply.mjs
 // Apply Riverbed Memory suppressions to a list of findings (#687 PR-B).
 //
@@ -46920,7 +46913,7 @@ async function runLocalReview({
   // Run AFTER fingerprint annotation so applySuppressions sees the canonical
   // 16-hex fingerprint produced by computeFingerprint(). Bypassed when
   // config.memory.suppressionEnabled === false (see suppression-apply.mjs).
-  const annotatedFindings = (0,finding_fingerprint/* annotateFingerprints */.i)(review.findings ?? []);
+  const annotatedFindings = (0,finding_factory/* annotateFingerprints */.ic)(review.findings ?? []);
   const {
     keptFindings,
     suppressedFindings,
@@ -46942,7 +46935,7 @@ async function runLocalReview({
     suppressedFingerprints.size === 0
       ? reviewComments
       : reviewComments.filter((c) => {
-          const fp = (0,finding_fingerprint/* computeFingerprint */.Y)({
+          const fp = (0,finding_factory/* computeFingerprint */.Yo)({
             ruleId: c.skillId || 'unknown',
             file: c.file,
             message: c.message,
@@ -61310,8 +61303,6 @@ var review_plan_generator = __nccwpck_require__(8069);
 var engine = __nccwpck_require__(9487);
 // EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
 var rubric = __nccwpck_require__(5034);
-// EXTERNAL MODULE: ./src/lib/finding-format.mjs
-var finding_format = __nccwpck_require__(5942);
 // EXTERNAL MODULE: ./src/lib/loop-signal.mjs
 var loop_signal = __nccwpck_require__(4702);
 // EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
@@ -62205,7 +62196,7 @@ function formatPrioritySummaryMarkdown(result) {
   const findings = result.findings ?? [];
   const counts = { P1: 0, P2: 0, P3: 0, P4: 0 };
   for (const f of findings) {
-    const p = (0,finding_format/* severityToPriority */.nG)(f.severity);
+    const p = (0,finding_factory/* severityToPriority */.nG)(f.severity);
     counts[p]++;
   }
 
@@ -62425,7 +62416,7 @@ function formatJsonOutput(result, phase) {
 
   const priorityCounts = { P1: 0, P2: 0, P3: 0, P4: 0 };
   for (const f of result.findings ?? []) {
-    const p = (0,finding_format/* severityToPriority */.nG)(f.severity);
+    const p = (0,finding_factory/* severityToPriority */.nG)(f.severity);
     priorityCounts[p]++;
   }
   const prioritySummary = {
