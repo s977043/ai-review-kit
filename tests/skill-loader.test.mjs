@@ -523,3 +523,27 @@ test('loadRecommendationSets returns {} when registry is absent', async () => {
     { prefix: TMP_PREFIX }
   );
 });
+
+test('respects explicit multi-phase array when category is a stream value', async () => {
+  await withTempDir(async (tmpDir) => {
+    const validator = await buildValidator();
+    const skillPath = path.join(tmpDir, 'multi-phase.md');
+    const content = `---
+id: multi-phase
+name: 'Multi Phase Skill'
+description: 'Active in upstream and midstream'
+category: upstream
+phase:
+  - upstream
+  - midstream
+applyTo:
+  - 'docs/**/*'
+---
+Body
+`;
+    await writeFile(skillPath, content, 'utf8');
+    const loaded = await loadSkillFile(skillPath, { validator });
+    assert.deepEqual(loaded.metadata.phase, ['upstream', 'midstream']);
+    assert.equal(loaded.metadata.category, 'upstream');
+  });
+});
