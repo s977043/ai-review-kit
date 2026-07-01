@@ -22,13 +22,15 @@ const SCAN_DIRS = [
   'skills',
   'scripts',
   'src',
+  'pages',
   'runners/node-api',
+  'runners/github-action/src',
   '.github',
   'examples',
   'commands',
   'docs',
 ];
-const SCAN_FILES = ['README.md', 'README.en.md', 'CLAUDE.md', 'AGENTS.md'];
+const SCAN_FILES = ['README.md', 'README.en.md', 'CLAUDE.md', 'AGENTS.md', 'GEMINI.md'];
 const EXTS = new Set(['.md', '.mjs', '.js', '.ts', '.cjs', '.yaml', '.yml', '.sh', '.json']);
 
 // 除外 path（履歴 / 生成物 / 意図的 fixture / worktree）
@@ -53,8 +55,6 @@ const ALLOWED_LEGACY_IDS = new Set([
   'rr-midstream-plan-conformance-001', // plan-conformance-demo の期待値 fixture
   'rr-upstream-design-architecture-001', // setup script（要移行判定）
   'rr-upstream-pr-body-required-sections-001', // plangate-rule-promotion（要移行判定）
-  'rr-upstream-test-code-react-001', // selection/tdd.yaml の例示
-  'rr-upstream-test-code-unit-ts-jest-001', // selection/tdd.yaml の例示
 ]);
 
 const OLD_ID_RE = /rr-(?:upstream|midstream|downstream)-[a-z0-9-]+-\d{3}/g;
