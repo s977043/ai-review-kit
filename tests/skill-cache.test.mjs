@@ -92,7 +92,7 @@ describe('skill-cache', () => {
 
   it('rejected load removes the cache entry so the next call retries', async () => {
     clearSkillCache();
-    const nonExistentDir = '/tmp/__nonexistent_skills_dir__';
+    const nonExistentDir = join(root, '__nonexistent_skills_subdir__');
     await assert.rejects(
       () => loadSkillsCached({ skillsDir: nonExistentDir, excludedTags: [] }),
       'rejected load should throw'

@@ -30,7 +30,7 @@
   - `Evidence`: `docs/runbook/dev.md`「並行タスク（Git Worktree）」セクション。
 - `2026-04-30`: Suppression matching is keyed by **fingerprint** (file + issue pattern hash), not by message text. Severity `major` / `critical` only auto-suppress when the entry sets `feedbackType: accepted_risk`; lower severities pass through automatically. The hard-coded `HIGH_SEVERITY` set in `suppression-apply.mjs` is the P1 guard that protects against silently dropping security/risk findings.
   - `Applies to`: any change to suppression policy, fingerprint stability, or feedback-loop UX.
-  - `Evidence`: `src/lib/finding-fingerprint.mjs`, `src/lib/suppression-apply.mjs`, `schemas/suppression-context.schema.json`, `pages/guides/repo-wide-review.md` "false positive suppression" section.
+  - `Evidence`: `src/lib/finding-factory.mjs` (`annotateFingerprints`), `src/lib/suppression-apply.mjs`, `schemas/suppression-context.schema.json`, `pages/guides/repo-wide-review.md` "false positive suppression" section.
 - `2026-04-30`: Context budgets are tuned via three knobs that all apply simultaneously: `maxTokens` (256–64000), `maxChars` (1024–200000), and per-section caps (`fullFile` / `tests` / `usages` / `config`). The collector takes `Math.min` across all of them. `reviewMode: tiny | medium | large` selects a preset (1024 / 4000 / 16000 max tokens) only when `context.budget` is omitted; an explicit `budget` always wins. The token estimator is a CJK-aware heuristic with a safe upper bound (chars/2), not a real tokenizer.
   - `Applies to`: tuning prompt size, debugging "context too small" reports, choosing reviewMode for new model classes.
   - `Evidence`: `src/lib/context-presets.mjs`, `src/lib/token-estimator.mjs`, `src/lib/repo-context.mjs` budget computation.

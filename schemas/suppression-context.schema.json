@@ -42,7 +42,7 @@
       "minLength": 16,
       "maxLength": 16,
       "pattern": "^[0-9a-f]{16}$",
-      "description": "16-hex sha256-derived fingerprint produced by computeFingerprint(finding) in src/lib/finding-fingerprint.mjs. Required for auto-suppression matching introduced in #687 PR-B."
+      "description": "16-hex sha256-derived fingerprint produced by computeFingerprint(finding) in src/lib/finding-factory.mjs. Required for auto-suppression matching introduced in #687 PR-B."
     },
     "fingerprintAlgo": {
       "$ref": "#/$defs/fingerprintAlgo"

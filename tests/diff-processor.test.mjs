@@ -34,6 +34,7 @@ test('optimizeDiff strips hunks consisting only of --> comment lines', () => {
   };
   const result = optimizeDiff(diff);
   assert.equal(result.files.length, 0, '--> only hunk should be stripped as comment-only');
+  assert.equal(result.diffText, '', 'diffText should be empty when all files stripped');
 });
 
 test('optimizeDiff strips hunks consisting only of --!> comment lines', () => {
@@ -55,4 +56,5 @@ test('optimizeDiff strips hunks consisting only of --!> comment lines', () => {
   };
   const result = optimizeDiff(diff);
   assert.equal(result.files.length, 0, '--!> only hunk should be stripped as comment-only');
+  assert.equal(result.diffText, '', 'diffText should be empty when all files stripped');
 });
