@@ -24,7 +24,7 @@
 | 部品                  | 既存実装                                                                                                         |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | 並列 reviewer + dedup | `src/lib/reviewer-orchestrator.mjs`（bug-hunter / security-scanner / test-gap、fan-out + `deduplicateFindings`） |
-| finding 同一性        | `src/lib/finding-fingerprint.mjs`（line を意図的に除外）                                                         |
+| finding 同一性        | `src/lib/finding-factory.mjs`（line を意図的に除外）                                                             |
 | verdict / score       | `src/lib/scoring/engine.mjs`（`deriveVerdict` / `scoreReview`）                                                  |
 | reviewer 同意メタ     | `schemas/review-artifact.schema.json` の `agreement`（多数決に使わない、severity は evidence で決定）            |
 

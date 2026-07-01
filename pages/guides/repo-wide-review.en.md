@@ -275,7 +275,7 @@ For the full procedure, see the [skill authoring guide](./write-a-skill.en.md). 
 
 ## Reading the P1 / P2 / P3 / P4 priorities
 
-The severity emitted by the LLM (`critical` / `major` / `minor` / `info`) is mapped to P1–P4 for display in PR comments (implementation: `src/lib/finding-format.mjs:severityToPriority`).
+The severity emitted by the LLM (`critical` / `major` / `minor` / `info`) is mapped to P1–P4 for display in PR comments (implementation: `src/lib/finding-factory.mjs:severityToPriority`).
 
 | Display | severity   | Examples                                                           |
 | ------- | ---------- | ------------------------------------------------------------------ |
@@ -292,7 +292,7 @@ A mechanism that accumulates feedback such as "this was a false positive" or "ac
 
 ### How it works
 
-- Each finding has a stable 16-hex fingerprint via `computeFingerprint(ruleId + file + normalized message)` (implementation: `src/lib/finding-fingerprint.mjs`).
+- Each finding has a stable 16-hex fingerprint via `computeFingerprint(ruleId + file + normalized message)` (implementation: `src/lib/finding-factory.mjs`).
 - Writing a `type: 'suppression'` entry into Riverbed Memory with the fingerprint and feedbackType makes subsequent findings with the same fingerprint automatically excluded from `findings`.
 - The matching PR comment is also not posted (implementation: `src/lib/suppression-apply.mjs`, `src/lib/local-runner.mjs`).
 - **P1 guard**: findings whose severity is `major` / `critical` are auto-suppressed only when `feedbackType=accepted_risk`.

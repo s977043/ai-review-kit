@@ -275,7 +275,7 @@ cross-context skills は、変更ファイル単独では検出しづらいパ�
 
 ## P1 / P2 / P3 / P4 priority の読み方
 
-LLM が出力する severity（`critical` / `major` / `minor` / `info`）は、PR コメント上では P1〜P4 にマッピングして表示されます（実装: `src/lib/finding-format.mjs:severityToPriority`）。
+LLM が出力する severity（`critical` / `major` / `minor` / `info`）は、PR コメント上では P1〜P4 にマッピングして表示されます（実装: `src/lib/finding-factory.mjs:severityToPriority`）。
 
 | 表示 | severity   | 例                                                           |
 | ---- | ---------- | ------------------------------------------------------------ |
@@ -292,7 +292,7 @@ PR コメントの先頭サマリには P1 / P2 件数が強調表示されま�
 
 ### 仕組み
 
-- 各 finding は `computeFingerprint(ruleId + file + 正規化メッセージ)` で 16-hex の安定 fingerprint を持つ（実装: `src/lib/finding-fingerprint.mjs`）
+- 各 finding は `computeFingerprint(ruleId + file + 正規化メッセージ)` で 16-hex の安定 fingerprint を持つ（実装: `src/lib/finding-factory.mjs`）
 - Riverbed Memory に `type: 'suppression'` エントリとして fingerprint と feedbackType を書き込むと、次回以降同 fingerprint の指摘は自動的に `findings` から除外される
 - 対応する PR コメントも投稿されない（実装: `src/lib/suppression-apply.mjs`、`src/lib/local-runner.mjs`）
 - **P1 ガード**: severity が `major` / `critical` の指摘は `feedbackType=accepted_risk` のみ自動抑制を許可
