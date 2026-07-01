@@ -366,5 +366,19 @@
     "availableContexts": ["diff"],
     "availableDependencies": ["code_search"],
     "expectedAny": ["component-variants-states"]
+  },
+  {
+    "name": "coverage: upstream ai-agent review readiness — missing criteria — #1325",
+    "phase": "upstream",
+    "diffFile": "diffs/upstream-ai-agent-review-readiness-missing.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "expectedAny": ["ai-agent-review-readiness"]
+  },
+  {
+    "name": "coverage: midstream ai-agent review readiness — no review loop — #1325",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-ai-agent-review-readiness-no-loop.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "expectedAny": ["ai-agent-review-readiness"]
   }
 ]

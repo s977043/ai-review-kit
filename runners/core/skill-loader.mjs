@@ -325,6 +325,12 @@ function resolvePhase(metaPhase, category) {
   if (category === 'core') {
     return [...allPhases];
   }
+  // Explicit multi-phase array takes precedence over a stream category's implied
+  // single phase. Allows a skill with category: upstream (organizational) to also
+  // activate in midstream by declaring phase: [upstream, midstream].
+  if (Array.isArray(metaPhase) && metaPhase.length > 1) {
+    return normalizePhaseValue(metaPhase);
+  }
   if (category && streamCategories.has(category)) {
     return category;
   }
