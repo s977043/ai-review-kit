@@ -39222,7 +39222,18 @@ async function buildExecutionPlan(options) {
 // Prevents redundant disk I/O when the same skillsDir is loaded multiple
 // times in a single process (e.g. agent-skill-bridge calls loadSkills twice
 // with identical options).
+//
+// Safety bound: evict the oldest entry when the cache exceeds MAX_ENTRIES.
+// In practice the number of distinct option sets is very small (< 5), so this
+// bound is only a safeguard against unbounded growth in unusual scenarios.
+const MAX_ENTRIES = 50;
 const cache = new Map();
+
+function evictIfNeeded() {
+  if (cache.size >= MAX_ENTRIES) {
+    cache.delete(cache.keys().next().value);
+  }
+}
 
 function cacheKey(options) {
   const { skillsDir, schemaPath, excludedTags } = options ?? {};
@@ -39255,7 +39266,12 @@ async function loadSkillsCached(options = {}) {
 
   const key = cacheKey(options);
   if (cache.has(key)) return cache.get(key);
-  const promise = (0,_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .loadSkills */ .l1)(options);
+
+  evictIfNeeded();
+  const promise = (0,_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .loadSkills */ .l1)(options).catch((err) => {
+    cache.delete(key);
+    throw err;
+  });
   cache.set(key, promise);
   return promise;
 }

@@ -6,7 +6,18 @@ import { loadSkills as _loadSkills } from './skill-loader.mjs';
 // Prevents redundant disk I/O when the same skillsDir is loaded multiple
 // times in a single process (e.g. agent-skill-bridge calls loadSkills twice
 // with identical options).
+//
+// Safety bound: evict the oldest entry when the cache exceeds MAX_ENTRIES.
+// In practice the number of distinct option sets is very small (< 5), so this
+// bound is only a safeguard against unbounded growth in unusual scenarios.
+const MAX_ENTRIES = 50;
 const cache = new Map();
+
+function evictIfNeeded() {
+  if (cache.size >= MAX_ENTRIES) {
+    cache.delete(cache.keys().next().value);
+  }
+}
 
 function cacheKey(options) {
   const { skillsDir, schemaPath, excludedTags } = options ?? {};
@@ -39,7 +50,12 @@ export async function loadSkillsCached(options = {}) {
 
   const key = cacheKey(options);
   if (cache.has(key)) return cache.get(key);
-  const promise = _loadSkills(options);
+
+  evictIfNeeded();
+  const promise = _loadSkills(options).catch((err) => {
+    cache.delete(key);
+    throw err;
+  });
   cache.set(key, promise);
   return promise;
 }
