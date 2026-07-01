@@ -39206,6 +39206,95 @@ async function buildExecutionPlan(options) {
 
 /***/ }),
 
+/***/ 7328:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   $b: () => (/* binding */ loadSkillsCached)
+/* harmony export */ });
+/* unused harmony exports clearSkillCache, skillCacheSize */
+/* harmony import */ var _skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(8478);
+
+
+// Module-level cache: serialized options key → Promise<SkillDefinition[]>
+// Caching the promise prevents thundering-herd: concurrent callers with the
+// same key await the same in-flight promise rather than launching duplicates.
+// Prevents redundant disk I/O when the same skillsDir is loaded multiple
+// times in a single process (e.g. agent-skill-bridge calls loadSkills twice
+// with identical options).
+//
+// Safety bound: evict the oldest entry when the cache exceeds MAX_ENTRIES.
+// In practice the number of distinct option sets is very small (< 5), so this
+// bound is only a safeguard against unbounded growth in unusual scenarios.
+const MAX_ENTRIES = 50;
+const cache = new Map();
+
+function evictIfNeeded() {
+  if (cache.size >= MAX_ENTRIES) {
+    cache.delete(cache.keys().next().value);
+  }
+}
+
+function cacheKey(options) {
+  const { skillsDir, schemaPath, excludedTags } = options ?? {};
+  return JSON.stringify({
+    skillsDir: skillsDir ?? null,
+    schemaPath: schemaPath ?? null,
+    excludedTags: excludedTags ? [...excludedTags].sort() : null,
+  });
+}
+
+/**
+ * Load skills with in-process memoization.
+ * Identical calls within the same process return the cached result without
+ * re-reading the filesystem. Call {@link clearSkillCache} between test cases
+ * or whenever fresh data is needed.
+ *
+ * If a custom `validator` function is supplied, the cache is bypassed because
+ * functions cannot be serialised into a stable key.
+ *
+ * @param {{ skillsDir?: string, schemaPath?: string, excludedTags?: string[], validator?: Function }} [options]
+ * @returns {Promise<object[]>}
+ */
+async function loadSkillsCached(options = {}) {
+  // Bypass cache when a custom validator is provided — functions are not
+  // serialisable, so two calls with different validators would collide on
+  // the same key even though their results may differ.
+  if (options.validator) {
+    return (0,_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .loadSkills */ .l1)(options);
+  }
+
+  const key = cacheKey(options);
+  if (cache.has(key)) return cache.get(key);
+
+  evictIfNeeded();
+  const promise = (0,_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .loadSkills */ .l1)(options).catch((err) => {
+    cache.delete(key);
+    throw err;
+  });
+  cache.set(key, promise);
+  return promise;
+}
+
+/**
+ * Evict all cached entries.
+ * Call this in tests or when skill files on disk may have changed.
+ */
+function clearSkillCache() {
+  cache.clear();
+}
+
+/**
+ * Number of distinct option sets currently cached.
+ * Primarily for testing; not intended for production use.
+ */
+function skillCacheSize() {
+  return cache.size;
+}
+
+
+/***/ }),
+
 /***/ 8478:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -47186,6 +47275,8 @@ Pricing last updated: ${this.lastUpdated}`;
 
 /* harmony default export */ const cost_estimator = (CostEstimator);
 
+// EXTERNAL MODULE: ./runners/core/skill-cache.mjs
+var skill_cache = __nccwpck_require__(7328);
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 80 modules
 var sdk = __nccwpck_require__(4973);
 ;// CONCATENATED MODULE: ./node_modules/@google/generative-ai/dist/index.mjs
@@ -61120,7 +61211,7 @@ async function persistUsageEvents(events, opts) {
  // Added for path.join
 
 
- // Added
+
 
 
 
@@ -61163,7 +61254,7 @@ class SkillDispatcher {
     if (skills.length === 0) {
       // Fallback: load skills from local directory if not in config
       console.log('Loading skills from local directory...');
-      const loaded = await (0,skill_loader/* loadSkills */.l1)({ skillsDir: external_node_path_.join(this.repoRoot, 'skills') });
+      const loaded = await (0,skill_cache/* loadSkillsCached */.$b)({ skillsDir: external_node_path_.join(this.repoRoot, 'skills') });
       skills = loaded.map((s) => ({
         ...s.metadata,
         body: s.body, // Include body for prompt generation

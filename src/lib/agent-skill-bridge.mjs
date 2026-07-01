@@ -9,9 +9,9 @@ import {
   parseFrontMatter,
   loadSchema,
   createSkillValidator,
-  loadSkills,
   defaultPaths,
 } from '../../runners/core/skill-loader.mjs';
+import { loadSkillsCached as loadSkills } from '../../runners/core/skill-cache.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
