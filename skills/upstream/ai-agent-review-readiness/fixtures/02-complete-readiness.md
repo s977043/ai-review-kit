@@ -35,7 +35,11 @@ We'll use Claude Code to implement the auth module. This is an AI-assisted task.
 
 This task touches authentication. Human review and explicit approval are required before merge.
 
+## Feedback capture
+
+Review findings will be recorded in `docs/memory/auth-implementation-review.md` and promoted to a reusable skill if a recurring pattern is identified.
+
 <!-- expected:
 findings: []
-reason: 4 つの readiness 条件（成功基準・コンテキスト参照・レビューループ・人間承認）がすべて明示されている
+reason: 5 つの readiness 条件（成功基準・コンテキスト参照・レビューループ・人間承認・フィードバック記録）がすべて明示されている
 -->

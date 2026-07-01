@@ -13,7 +13,7 @@ prompts:
   - file://../prompt/user.md
 
 tests:
-  # Test case 1: Missing readiness — should detect all 4 checks (Check 5 is minor/optional)
+  # Test case 1: Missing readiness — should detect major/critical issues (Check 1-4)
   - description: 'Detect missing review criteria, context, loop, and human boundary'
     vars:
       diff: file://../fixtures/01-missing-readiness.md
