@@ -23,7 +23,7 @@ import {
   resolveAvailableContexts as resolveAvailableContextsShared,
   resolveAvailableDependencies as resolveAvailableDependenciesShared,
 } from './utils.mjs';
-import { annotateFingerprints, computeFingerprint } from './finding-fingerprint.mjs';
+import { annotateFingerprints, computeFingerprint } from './finding-factory.mjs';
 import { applySuppressions } from './suppression-apply.mjs';
 
 function normalizePhase(phase) {

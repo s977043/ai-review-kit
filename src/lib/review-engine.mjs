@@ -1,6 +1,6 @@
 import { mergeConfig } from '../config/loader.mjs';
 import { computeFindingBreakdown } from './scoring/breakdown.mjs';
-import { classifyFindings } from './finding-classifier.mjs';
+import { classifyFindings } from './finding-factory.mjs';
 import { defaultConfig } from '../config/default.mjs';
 import { summarizeSkill } from '../../runners/core/review-runner.mjs';
 import { buildHeuristicComments, HEURISTIC_SKILL_IDS } from './heuristic-review.mjs';
@@ -10,7 +10,7 @@ import {
   validateFindingMessage,
   parseFindingMessage,
   normalizeSeverity,
-} from './finding-format.mjs';
+} from './finding-factory.mjs';
 import { getReviewDepthConfig } from './review-plan-generator.mjs';
 import { buildRepoContextSection } from './repo-context.mjs';
 import { redactText } from './secret-redactor.mjs';

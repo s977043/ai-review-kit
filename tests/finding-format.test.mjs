@@ -10,7 +10,7 @@ import {
   parseFindingMessage,
   normalizeSeverity,
   severityToPriority,
-} from '../src/lib/finding-format.mjs';
+} from '../src/lib/finding-factory.mjs';
 
 test('formatFindingMessage produces a valid labeled message', () => {
   const msg = formatFindingMessage({

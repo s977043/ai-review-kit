@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeFingerprint, annotateFingerprints } from '../src/lib/finding-fingerprint.mjs';
+import { computeFingerprint, annotateFingerprints } from '../src/lib/finding-factory.mjs';
 
 function makeFinding(overrides = {}) {
   return {
