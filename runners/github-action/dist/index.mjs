@@ -40633,6 +40633,8 @@ function stripPrefix(path) {
  * can locate where to attach review comments.
  */
 function parseUnifiedDiff(diffText) {
+  if (!diffText || typeof diffText !== 'string') return { files: [] };
+
   const files = [];
   let currentFile = null;
   let currentHunk = null;
