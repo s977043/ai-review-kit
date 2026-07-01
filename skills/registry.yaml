@@ -1042,7 +1042,7 @@ skills:
     name: 'AI Agent Review Readiness'
     path: skills/upstream/ai-agent-review-readiness/SKILL.md
     category: upstream
-    phase: upstream
+    phase: [upstream, midstream]
     tags: [ai-agent, delegation, review-design, human-in-the-loop, upstream]
     severity: major
     recommended: false

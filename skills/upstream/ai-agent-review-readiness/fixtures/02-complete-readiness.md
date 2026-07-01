@@ -34,3 +34,8 @@ We'll use Claude Code to implement the auth module. This is an AI-assisted task.
 ## Human approval required
 
 This task touches authentication. Human review and explicit approval are required before merge.
+
+<!-- expected:
+findings: []
+reason: 4 つの readiness 条件（成功基準・コンテキスト参照・レビューループ・人間承認）がすべて明示されている
+-->

@@ -54,8 +54,8 @@
     {
       "id": "ai-agent-review-readiness",
       "path": "skills/upstream/ai-agent-review-readiness",
-      "checksum": "sha256:e322403ffa9a3fff2124cff224e9668b263e1a9373203b788a6e675ee6bb9bc3",
-      "files": 3
+      "checksum": "sha256:57d831e7b50d469da599d1bfd7b8129d59ebeb30751b3cd65718dd92235c0913",
+      "files": 4
     },
     {
       "id": "api-compatibility",
