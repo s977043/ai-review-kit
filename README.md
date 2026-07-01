@@ -178,8 +178,8 @@ River Review は **artifact-driven review agent** です。外部から渡され
 
 ### 4 つのユースケース
 
-- **設計レビュー**: `pbi-input` / `plan` を入力に、計画の整合性・網羅性を上流 skill で検査します（例: `skills/upstream/rr-upstream-plangate-plan-integrity-001/`）。
-- **実装レビュー**: `plan` と `diff` を入力に、実装差分が計画と一致しているかを検査します（例: `skills/upstream/rr-upstream-plangate-exec-conformance-001/`）。
+- **設計レビュー**: `pbi-input` / `plan` を入力に、計画の整合性・網羅性を上流 skill で検査します（例: `skills/upstream/plangate-plan-integrity/`）。
+- **実装レビュー**: `plan` と `diff` を入力に、実装差分が計画と一致しているかを検査します（例: `skills/upstream/plangate-exec-conformance/`）。
 - **QA レビュー**: `test-cases` / `junit` / `coverage` を入力に、テストカバレッジや失敗パスの抜けを下流 skill で浮かび上がらせます。
 - **W チェック（二重レビュー）**: 既存の AI / 人間レビュー結果を `review-self` / `review-external` として渡し、レビューそのものを再点検します。
 
@@ -614,7 +614,7 @@ Planner の出力品質を簡易評価する手順とメトリクスは `pages/g
 
 ```markdown
 ---
-id: rr-midstream-code-quality-sample-001
+id: code-quality-sample
 name: Sample Code Quality Pass
 description: Checks common code quality and maintainability risks.
 phase: midstream

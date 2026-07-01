@@ -29,10 +29,10 @@ For each companion finding decide which of these three states applies and emit a
 
 ## Output Format
 
-Use the format from the system prompt for every finding. The skill's own `Severity` is `minor` for workflow nudges (case 2 — suppression workflow needed) and `info` for already-suppressed acknowledgements (case 1 — but prefer `NO_REVIEW` when the acknowledgement adds no information); never `major` or `critical`. Always end with `**Skill ID:** rr-midstream-suppression-feedback-001`.
+Use the format from the system prompt for every finding. The skill's own `Severity` is `minor` for workflow nudges (case 2 — suppression workflow needed) and `info` for already-suppressed acknowledgements (case 1 — but prefer `NO_REVIEW` when the acknowledgement adds no information); never `major` or `critical`. Always end with `**Skill ID:** suppression-feedback`.
 
 If no finding is emitted, output exactly:
 
 ```text
-NO_REVIEW: rr-midstream-suppression-feedback-001 — suppression workflow に関連する変更や指摘が検出されない
+NO_REVIEW: suppression-feedback — suppression workflow に関連する変更や指摘が検出されない
 ```

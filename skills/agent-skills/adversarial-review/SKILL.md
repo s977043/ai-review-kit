@@ -72,15 +72,15 @@ AIをレビューに使う最大の価値は、情報の整理ではなく **思
 
 入力に応じて、適切な手法へルーティングする。複数手法の併用も可能。
 
-| キーワード                                          | 手法                 | スキルID                                |
-| --------------------------------------------------- | -------------------- | --------------------------------------- |
-| 失敗, リスク, 負債, インシデント, pre-mortem        | Pre-mortem           | `rr-upstream-pre-mortem-001`            |
-| 攻撃, セキュリティ, 悪用, 脆弱性, war-game          | War Game             | `rr-midstream-war-game-001`             |
-| 論理, 判断, 根拠, なぜ, 代替案, logic               | Logic Torturing      | `rr-midstream-logic-torturing-001`      |
-| 自己矛盾, contradiction, 宣言と実装, declared but   | Self-Contradiction   | `rr-midstream-self-contradiction-001`   |
-| 削減, 完了, 全て置換, all replaced, -N%, リファクタ | Refactor-Claim Audit | `rr-midstream-refactor-claim-audit-001` |
-| caller, 残骸, 参照漏れ, 再採番, leakage             | Cross-File Leakage   | `rr-midstream-cross-file-leakage-001`   |
-| 敵対的, adversarial, 全部, フル                     | **全手法実行**       | 上記6つすべて                           |
+| キーワード                                          | 手法                 | スキルID               |
+| --------------------------------------------------- | -------------------- | ---------------------- |
+| 失敗, リスク, 負債, インシデント, pre-mortem        | Pre-mortem           | `pre-mortem`           |
+| 攻撃, セキュリティ, 悪用, 脆弱性, war-game          | War Game             | `war-game`             |
+| 論理, 判断, 根拠, なぜ, 代替案, logic               | Logic Torturing      | `logic-torturing`      |
+| 自己矛盾, contradiction, 宣言と実装, declared but   | Self-Contradiction   | `self-contradiction`   |
+| 削減, 完了, 全て置換, all replaced, -N%, リファクタ | Refactor-Claim Audit | `refactor-claim-audit` |
+| caller, 残骸, 参照漏れ, 再採番, leakage             | Cross-File Leakage   | `cross-file-leakage`   |
+| 敵対的, adversarial, 全部, フル                     | **全手法実行**       | 上記6つすべて          |
 
 ### デフォルト動作
 
@@ -143,11 +143,11 @@ AIをレビューに使う最大の価値は、情報の整理ではなく **思
 
 ## 他スキルとの関係
 
-| 既存スキル                                   | 関係 | 棲み分け                                                                                                          |
-| -------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------- |
-| `rr-upstream-architecture-risk-register-001` | 補完 | risk-register は「リスクが文書化されているか」を確認。Pre-mortem は「文書化されていないリスクを発見」する         |
-| `rr-midstream-security-basic-001`            | 補完 | security-basic は既知パターン（SQLi, XSS等）を検出。War Game は「既知パターンに当てはまらない攻撃経路」を発見する |
-| `rr-upstream-adr-decision-quality-001`       | 補完 | adr-decision は ADR の形式品質を確認。Logic Torturing は「記述された判断の論理的強度」を検証する                  |
+| 既存スキル                   | 関係 | 棲み分け                                                                                                          |
+| ---------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------- |
+| `architecture-risk-register` | 補完 | risk-register は「リスクが文書化されているか」を確認。Pre-mortem は「文書化されていないリスクを発見」する         |
+| `security-basic`             | 補完 | security-basic は既知パターン（SQLi, XSS等）を検出。War Game は「既知パターンに当てはまらない攻撃経路」を発見する |
+| `adr-decision-quality`       | 補完 | adr-decision は ADR の形式品質を確認。Logic Torturing は「記述された判断の論理的強度」を検証する                  |
 
 ## References
 

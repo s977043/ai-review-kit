@@ -31,8 +31,8 @@ Why: 宣言（declarative phrase）と実装の突合はチェックリスト型
 
 ## Non-goals / 扱わないこと
 
-- 個別の論理的整合性の検証（`rr-midstream-logic-torturing-001` の役割）。
-- 攻撃経路の分析（`rr-midstream-war-game-001` の役割）。
+- 個別の論理的整合性の検証（`logic-torturing` の役割）。
+- 攻撃経路の分析（`war-game` の役割）。
 - 規則そのものの妥当性判断（規則が正しいか否かではなく、宣言と実装が一致するかを見る）。
 
 ## Pre-execution Gate / 実行前ゲート

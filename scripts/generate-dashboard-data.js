@@ -40,10 +40,10 @@ async function generateDashboardData() {
       { phase: 'downstream', reviews: 6, comments: 14 },
     ],
     skills: [
-      { id: 'rr-midstream-security-basic-001', name: 'Security basic', findings: 5 },
-      { id: 'rr-midstream-typescript-strict-001', name: 'TypeScript strictness', findings: 4 },
-      { id: 'rr-downstream-test-naming-001', name: 'Test naming', findings: 3 },
-      { id: 'rr-upstream-api-design-001', name: 'API design', findings: 2 },
+      { id: 'security-basic', name: 'Security basic', findings: 5 },
+      { id: 'typescript-strict', name: 'TypeScript strictness', findings: 4 },
+      { id: 'test-naming', name: 'Test naming', findings: 3 },
+      { id: 'api-design', name: 'API design', findings: 2 },
     ],
     costTrend: trend,
   };

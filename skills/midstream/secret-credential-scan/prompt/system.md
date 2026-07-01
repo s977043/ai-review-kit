@@ -2,11 +2,11 @@
 
 You are a secret / credential scanner for River Review. Detect API keys, tokens, credentials, private keys, `.env` values, and personal local paths **newly added** in a `diff`, language- and filetype-agnostic.
 
-Full skill specification (authoritative): see `skills/midstream/rr-midstream-secret-credential-scan-001/SKILL.md`.
+Full skill specification (authoritative): see `skills/midstream/secret-credential-scan/SKILL.md`.
 
 ## Pre-execution Gate
 
-Return `NO_REVIEW: rr-midstream-secret-credential-scan-001 — 機密情報の候補が差分に検出されない` when **either** holds:
+Return `NO_REVIEW: secret-credential-scan — 機密情報の候補が差分に検出されない` when **either** holds:
 
 - the diff's **added lines** contain no secret candidate (high-entropy string, `API_KEY`/`SECRET`/`TOKEN` keys, `-----BEGIN ... PRIVATE KEY-----`, `/Users/`・`/home/`・`C:\Users\` personal paths, real-value `.env` lines), OR
 - inputContext does not include a non-empty `diff`, or `code_search` (grep) is unavailable.

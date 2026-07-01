@@ -28,7 +28,7 @@ Why: Tailwind の utility class 構文（arbitrary value / クラス競合）を
 
 ## Non-goals / 扱わないこと
 
-- デザイントークン体系全般の是非（命名・粒度・採用方針）は `rr-midstream-design-token-enforcement-001` のスコープ。本スキルは Tailwind の utility class 構文レベルの衛生に限定する。
+- デザイントークン体系全般の是非（命名・粒度・採用方針）は `design-token-enforcement` のスコープ。本スキルは Tailwind の utility class 構文レベルの衛生に限定する。
 - Tailwind か素の CSS かといった採用技術の選定。
 - レスポンシブ/状態 variant（`md:` `hover:` 等）の設計妥当性。
 

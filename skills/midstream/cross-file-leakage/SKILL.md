@@ -42,7 +42,7 @@ Why: 構造変更に対する caller 走査は grep による決定論的突合�
 
 - 構造変更そのものの良し悪しの判断。
 - 静的型エラーの検出（型システムが捕捉できる drift はコンパイラ/tsc の役割）。
-- 当該ファイル内の整合性（それは `rr-midstream-self-contradiction-001` の領域）。
+- 当該ファイル内の整合性（それは `self-contradiction` の領域）。
 
 ## Pre-execution Gate / 実行前ゲート
 

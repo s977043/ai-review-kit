@@ -40,5 +40,5 @@ Tailwind config, CSS custom properties) is in use.
 
 ## Golden generation workflow
 
-See `../rr-midstream-modern-web-semantic-001/README.md` for the golden-generation
+See `../modern-web-semantic/README.md` for the golden-generation
 workflow. Promotion to `recommended: true` requires verified goldens.

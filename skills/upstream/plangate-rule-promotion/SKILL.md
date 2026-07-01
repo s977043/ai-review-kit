@@ -160,6 +160,6 @@ Why: 運用上蓄積された review findings / retrospective を観察し、再
 - `pages/reference/review-policy.md` — レビュー標準ポリシー（severity / 出力形式）。
 - `docs/review/output-format.md` — severity マッピングの SSoT。
 - `pages/reference/artifact-input-contract.md` — 入力アーティファクトの契約。
-- 姉妹 skill: `rr-upstream-plangate-verification-audit-001`（verify audit findings が本 skill の母集団に流入する想定）。
-- 姉妹 skill: `rr-upstream-plangate-plan-integrity-001` / `rr-upstream-plangate-exec-conformance-001`（PlanGate スイートの既存 2 skill、本 skill は運用フィードバックループ側を担当）。
+- 姉妹 skill: `plangate-verification-audit`（verify audit findings が本 skill の母集団に流入する想定）。
+- 姉妹 skill: `plangate-plan-integrity` / `plangate-exec-conformance`（PlanGate スイートの既存 2 skill、本 skill は運用フィードバックループ側を担当）。
 - 消費元: `river review exec`（定期実行）および `river review verify`（post-verify 振り返り）から呼び出される想定。

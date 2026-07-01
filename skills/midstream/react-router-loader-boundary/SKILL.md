@@ -28,7 +28,7 @@ Why: React Router framework mode の data loading 規約への適合をチェッ
 
 ## Non-goals / 扱わないこと
 
-- action / mutation の規約（`rr-midstream-react-router-action-contract-001` のスコープ）。
+- action / mutation の規約（`react-router-action-contract` のスコープ）。
 - data mode / declarative mode のコード（framework mode のルートモジュールのみ対象）。
 - 一般的な React パフォーマンス（modern-web 系 skill のスコープ）。
 

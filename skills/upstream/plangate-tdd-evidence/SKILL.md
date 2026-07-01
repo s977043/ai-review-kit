@@ -38,8 +38,8 @@ Why: `tdd-ledger` のフェーズ別証跡を基準として妥当性を突き�
 ## Non-goals / 扱わないこと
 
 - テストコードの書き方・命名・カバレッジ品質（`rr-test-code-*` 系 skill の領域）。
-- plan / todo / test-cases と差分の整合（姉妹 skill `rr-upstream-plangate-exec-conformance-001` の領域）。
-- 既存レビュー文書の W チェック（`rr-upstream-plangate-verification-audit-001` の領域）。
+- plan / todo / test-cases と差分の整合（姉妹 skill `plangate-exec-conformance` の領域）。
+- 既存レビュー文書の W チェック（`plangate-verification-audit` の領域）。
 - すべての PR に TDD を要求すること（TDD が宣言・要求された変更のみが対象）。
 
 ## Pre-execution Gate / 実行前ゲート
@@ -139,8 +139,8 @@ Why: `tdd-ledger` のフェーズ別証跡を基準として妥当性を突き�
 
 - [Artifact Input Contract](../../../pages/reference/artifact-input-contract.md) — `tdd-ledger` の契約
 - [Review Policy](../../../pages/reference/review-policy.md) — レビュー標準ポリシー
-- 姉妹 skill: `rr-upstream-plangate-exec-conformance-001`（plan/todo/test-cases と差分の整合）
-- 姉妹 skill: `rr-upstream-plangate-verification-audit-001`（既存レビュー文書の W チェック）
+- 姉妹 skill: `plangate-exec-conformance`（plan/todo/test-cases と差分の整合）
+- 姉妹 skill: `plangate-verification-audit`（既存レビュー文書の W チェック）
 - 出典: Issue #1223（Superpowers 由来の TDD Evidence Review）
 
 ### `tdd-ledger` の生成元（producer）について

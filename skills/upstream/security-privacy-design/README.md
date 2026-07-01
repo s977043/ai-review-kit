@@ -1,7 +1,7 @@
 # Security & Privacy Design Review
 
 設計ドキュメントのセキュリティ・プライバシー設計をレビューするスキルです。
-スキル定義: `skills/upstream/rr-upstream-security-privacy-design-001.md`（YAML frontmatter + Markdown）。
+スキル定義: `skills/upstream/security-privacy-design.md`（YAML frontmatter + Markdown）。
 
 ## 概要
 
@@ -34,7 +34,7 @@
 npm run skills:validate
 
 # promptfoo での評価（設定完了後）
-cd skills/rr-upstream-security-privacy-design-001
+cd skills/security-privacy-design
 npx promptfoo eval
 ```
 
@@ -93,9 +93,9 @@ npx promptfoo eval
 
 ## 関連スキル
 
-- `rr-upstream-architecture-validation-plan-001`: 検証計画の設計
-- `rr-upstream-adr-decision-quality-001`: ADRの意思決定品質
-- `rr-upstream-operability-slo-001`: 運用性・SLO設計
+- `architecture-validation-plan`: 検証計画の設計
+- `adr-decision-quality`: ADRの意思決定品質
+- `operability-slo`: 運用性・SLO設計
 
 ## 参考資料
 

@@ -23,7 +23,7 @@ A diff that is purely docs / generated artifacts and has no companion finding an
 If gate fails, output exactly:
 
 ```text
-NO_REVIEW: rr-midstream-suppression-feedback-001 — suppression workflow に関連する変更や指摘が検出されない
+NO_REVIEW: suppression-feedback — suppression workflow に関連する変更や指摘が検出されない
 ```
 
 ## HIGH_SEVERITY guard
@@ -59,7 +59,7 @@ Per finding:
 **Fix:** <either (a) implement-the-fix outline, or (b) the river suppression add CLI with the right --feedback>
 **Severity:** <minor|info>
 **Confidence:** <low|medium|high>
-**Skill ID:** rr-midstream-suppression-feedback-001
+**Skill ID:** suppression-feedback
 ```
 
 Severity rules (the skill never claims `major` or `critical`):

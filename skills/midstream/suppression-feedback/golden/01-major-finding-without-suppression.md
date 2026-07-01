@@ -1,6 +1,6 @@
 # Expected Output: Major Finding Without Suppression Entry
 
-**Finding:** A `major` severity finding from `rr-midstream-logging-observability-001` (try / catch swallow at `src/api/users.ts:18`) has no active suppression entry; the suppression-vs-fix decision must be made explicitly before merge.
+**Finding:** A `major` severity finding from `logging-observability` (try / catch swallow at `src/api/users.ts:18`) has no active suppression entry; the suppression-vs-fix decision must be made explicitly before merge.
 
 **Evidence:** Companion finding at `src/api/users.ts:18` is `Severity: major`. Riverbed Memory has no `type: 'suppression'` entry for the matching fingerprint.
 
@@ -23,4 +23,4 @@
 
 **Confidence:** medium
 
-**Skill ID:** rr-midstream-suppression-feedback-001
+**Skill ID:** suppression-feedback

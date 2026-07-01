@@ -30,12 +30,12 @@ license: MIT
 
 ## Routing / ルーティング
 
-| キーワード             | スキルID                                      | 説明                   |
-| ---------------------- | --------------------------------------------- | ---------------------- |
-| キャッシュ, TTL        | `rr-upstream-cache-strategy-consistency-001`  | キャッシュ戦略の一貫性 |
-| 障害, 監視, メトリクス | `rr-upstream-failure-modes-observability-001` | 障害モードと可観測性   |
-| ログ, トレース         | `rr-midstream-logging-observability-001`      | ロギング・可観測性     |
-| SLO, レイテンシ        | `rr-upstream-operability-slo-001`             | 運用性・SLO            |
+| キーワード             | スキルID                      | 説明                   |
+| ---------------------- | ----------------------------- | ---------------------- |
+| キャッシュ, TTL        | `cache-strategy-consistency`  | キャッシュ戦略の一貫性 |
+| 障害, 監視, メトリクス | `failure-modes-observability` | 障害モードと可観測性   |
+| ログ, トレース         | `logging-observability`       | ロギング・可観測性     |
+| SLO, レイテンシ        | `operability-slo`             | 運用性・SLO            |
 
 ### デフォルト動作
 

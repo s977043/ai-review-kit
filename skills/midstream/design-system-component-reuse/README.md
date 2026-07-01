@@ -1,4 +1,4 @@
-# rr-midstream-design-system-component-reuse-001
+# design-system-component-reuse
 
 ## Design System Component Reuse Guard
 

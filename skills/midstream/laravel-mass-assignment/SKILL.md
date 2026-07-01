@@ -28,7 +28,7 @@ Why: mass assignment 脆弱性と認可漏れをチェックリスト型で検�
 
 ## Non-goals / 扱わないこと
 
-- クエリ効率（`rr-midstream-laravel-eloquent-nplus1-001` のスコープ）。
+- クエリ効率（`laravel-eloquent-nplus1` のスコープ）。
 - バリデーションルールの網羅性（要件依存のため一律指摘しない）。
 - Gate と Policy の使い分けの強制（公式が混在を許容）。
 

@@ -58,7 +58,7 @@ tests:
       - type: contains
         value: 'NO_REVIEW'
       - type: contains
-        value: 'rr-midstream-secret-credential-scan-001'
+        value: 'secret-credential-scan'
 
 outputPath: ./output.json
 

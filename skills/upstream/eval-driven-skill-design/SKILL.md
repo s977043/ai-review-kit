@@ -138,6 +138,6 @@ actions:
 ## References
 
 - Repo-wide eval 実装: `src/lib/repo-wide-fixtures-eval.mjs` / `scripts/evaluate-review-fixtures.mjs`
-- Fixture 構造の参考: `skills/midstream/rr-midstream-security-basic-001/`
+- Fixture 構造の参考: `skills/midstream/security-basic/`
 - Schema: `schemas/skill.schema.json`
 - 改善ループ: `skills/agent-skills/river-review/references/IMPROVEMENT_LOOP.md`

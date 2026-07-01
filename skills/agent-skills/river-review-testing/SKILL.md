@@ -32,18 +32,18 @@ license: MIT
 
 ## Routing / ルーティング
 
-| キーワード           | スキルID                             | 説明                   |
-| -------------------- | ------------------------------------ | ---------------------- |
-| カバレッジ, 網羅     | `rr-downstream-coverage-gap-001`     | カバレッジギャップ検出 |
-| フレーキー, 不安定   | `rr-downstream-flaky-test-001`       | フレーキーテストリスク |
-| テスト有無, 存在     | `rr-downstream-test-existence-001`   | テスト存在確認         |
-| 命名, 構造, describe | `rr-downstream-test-naming-001`      | テスト命名・構造       |
-| テスト観点, 計画     | `rr-downstream-test-plan-review-001` | テスト観点レビュー     |
+| キーワード           | スキルID           | 説明                   |
+| -------------------- | ------------------ | ---------------------- |
+| カバレッジ, 網羅     | `coverage-gap`     | カバレッジギャップ検出 |
+| フレーキー, 不安定   | `flaky-test`       | フレーキーテストリスク |
+| テスト有無, 存在     | `test-existence`   | テスト存在確認         |
+| 命名, 構造, describe | `test-naming`      | テスト命名・構造       |
+| テスト観点, 計画     | `test-plan-review` | テスト観点レビュー     |
 
 ### デフォルト動作
 
-- テストファイルの変更 → `rr-downstream-test-naming-001` + `rr-downstream-flaky-test-001`
-- ソースコードの変更 → `rr-downstream-test-existence-001` + `rr-downstream-coverage-gap-001`
+- テストファイルの変更 → `test-naming` + `flaky-test`
+- ソースコードの変更 → `test-existence` + `coverage-gap`
 - 大規模変更 → 全スキル実行
 
 ## Execution Flow / 実行フロー

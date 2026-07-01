@@ -40,5 +40,5 @@ index 8888888..9999999 100644
 期待出力:
 
 ```text
-NO_REVIEW: rr-midstream-secret-credential-scan-001 — 機密情報の候補が差分に検出されない
+NO_REVIEW: secret-credential-scan — 機密情報の候補が差分に検出されない
 ```

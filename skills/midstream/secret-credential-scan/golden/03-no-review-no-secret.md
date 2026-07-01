@@ -7,7 +7,7 @@ Pre-execution Gate が不成立のため、このスキルはレビューを実�
 ## Findings
 
 ```text
-NO_REVIEW: rr-midstream-secret-credential-scan-001 — 機密情報の候補が差分に検出されない
+NO_REVIEW: secret-credential-scan — 機密情報の候補が差分に検出されない
 ```
 
 ### Gate 不成立理由

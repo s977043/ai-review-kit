@@ -30,7 +30,7 @@ Why: Server Action を「誰でも呼べる公開エンドポイント」と仮�
 
 ## Non-goals / 扱わないこと
 
-- client/server 境界判定（`use client` 誤用）は `rr-midstream-nextjs-app-router-boundary-001` の領域。本スキルでは扱わない。
+- client/server 境界判定（`use client` 誤用）は `nextjs-app-router-boundary` の領域。本スキルでは扱わない。
 - read-only の Server Action（mutation を伴わないもの）への認可指摘。
 - 認証ライブラリ・バリデーションライブラリの選定や設計全般。
 - CSRF / レート制限などインフラ層の防御（フレームワーク・基盤の責務）。

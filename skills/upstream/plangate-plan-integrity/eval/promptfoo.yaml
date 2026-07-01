@@ -52,7 +52,7 @@ tests:
       - type: contains
         value: 'NO_REVIEW'
       - type: contains
-        value: 'rr-upstream-plangate-plan-integrity-001'
+        value: 'plangate-plan-integrity'
 
 outputPath: ./output.json
 

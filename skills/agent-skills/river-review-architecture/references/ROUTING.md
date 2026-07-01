@@ -6,148 +6,148 @@
 
 - 日本語: ADR, 意思決定, 判断, 記録
 - 英語: ADR, decision, record
-- → `rr-upstream-adr-decision-quality-001`
+- → `adr-decision-quality`
 
 ### API 設計
 
 - 日本語: API, エンドポイント, REST, GraphQL
 - 英語: API, endpoint, REST, GraphQL
-- → `rr-upstream-api-design-001`
+- → `api-design`
 
 ### API バージョニング
 
 - 日本語: API互換, バージョニング, 後方互換
 - 英語: versioning, compatibility, breaking change
-- → `rr-upstream-api-versioning-compat-001`
+- → `api-versioning-compat`
 
 ### アーキテクチャ境界
 
 - 日本語: 境界, モジュール, レイヤー, 依存方向
 - 英語: boundary, module, layer, dependency direction
-- → `rr-upstream-architecture-boundaries-001`
+- → `architecture-boundaries`
 
 ### 設計図
 
 - 日本語: 図, ダイアグラム, 構成図
 - 英語: diagram, architecture diagram
-- → `rr-upstream-architecture-diagrams-001`
+- → `architecture-diagrams`
 
 ### リスク登録
 
 - 日本語: リスク, リスク登録
 - 英語: risk, risk register
-- → `rr-upstream-architecture-risk-register-001`
+- → `architecture-risk-register`
 
 ### トレーサビリティ
 
 - 日本語: トレーサビリティ, 追跡, 要件紐付け
 - 英語: traceability, trace, requirement link
-- → `rr-upstream-architecture-traceability-001`
+- → `architecture-traceability`
 
 ### 検証計画
 
 - 日本語: 検証計画, バリデーション
 - 英語: validation plan
-- → `rr-upstream-architecture-validation-plan-001`
+- → `architecture-validation-plan`
 
 ### 可用性
 
 - 日本語: 可用性, 冗長, HA
 - 英語: availability, redundancy, HA
-- → `rr-upstream-availability-architecture-001`
+- → `availability-architecture`
 
 ### ドメインモデリング
 
 - 日本語: ドメイン, コンテキスト, ユビキタス言語
 - 英語: domain, bounded context, ubiquitous language
-- → `rr-upstream-bounded-context-language-001`
+- → `bounded-context-language`
 
 ### キャッシュ
 
 - 日本語: キャッシュ, TTL, 無効化
 - 英語: cache, TTL, invalidation
-- → `rr-upstream-cache-strategy-consistency-001`
+- → `cache-strategy-consistency`
 
 ### キャパシティ・コスト
 
 - 日本語: コスト, キャパシティ, スケーリング
 - 英語: cost, capacity, scaling
-- → `rr-upstream-capacity-cost-design-001`
+- → `capacity-cost-design`
 
 ### データフロー
 
 - 日本語: データフロー, 状態管理, オーナーシップ
 - 英語: data flow, state, ownership
-- → `rr-upstream-data-flow-state-ownership-001`
+- → `data-flow-state-ownership`
 
 ### データモデル
 
 - 日本語: データモデル, DB, テーブル, スキーマ
 - 英語: data model, database, table, schema
-- → `rr-upstream-data-model-db-design-001`
+- → `data-model-db-design`
 
 ### DR・マルチリージョン
 
 - 日本語: DR, 災害復旧, マルチリージョン
 - 英語: DR, disaster recovery, multi-region
-- → `rr-upstream-dr-multiregion-001`
+- → `dr-multiregion`
 
 ### イベント駆動
 
 - 日本語: イベント駆動, メッセージ, Pub/Sub
 - 英語: event-driven, message, pub/sub
-- → `rr-upstream-event-driven-semantics-001`
+- → `event-driven-semantics`
 
 ### 外部依存
 
 - 日本語: 外部依存, サードパーティ, ライブラリ
 - 英語: external dependency, third-party, library
-- → `rr-upstream-external-dependencies-001`
+- → `external-dependencies`
 
 ### 障害モード
 
 - 日本語: 障害, 可観測性, アラート
 - 英語: failure mode, observability, alert
-- → `rr-upstream-failure-modes-observability-001`
+- → `failure-modes-observability`
 
 ### 結合コントラクト
 
 - 日本語: 結合, コントラクト, インターフェース
 - 英語: integration, contract, interface
-- → `rr-upstream-integration-contracts-001`
+- → `integration-contracts`
 
 ### マイグレーション
 
 - 日本語: マイグレーション, ロールアウト, ロールバック
 - 英語: migration, rollout, rollback
-- → `rr-upstream-migration-rollout-rollback-001`
+- → `migration-rollout-rollback`
 
 ### マルチテナント
 
 - 日本語: マルチテナント, テナント分離
 - 英語: multi-tenant, tenant isolation
-- → `rr-upstream-multitenancy-isolation-001`
+- → `multitenancy-isolation`
 
 ### OpenAPI
 
 - 日本語: OpenAPI, Swagger, API仕様
 - 英語: OpenAPI, Swagger, API spec
-- → `rr-upstream-openapi-contract-001`
+- → `openapi-contract`
 
 ### SLO・運用性
 
 - 日本語: SLO, 運用性, オンコール
 - 英語: SLO, operability, on-call
-- → `rr-upstream-operability-slo-001`
+- → `operability-slo`
 
 ### 要件・受入
 
 - 日本語: 要件, 受入条件, ストーリー
 - 英語: requirement, acceptance criteria, story
-- → `rr-upstream-requirements-acceptance-001`
+- → `requirements-acceptance`
 
 ## フォールバックルール
 
 1. 複数カテゴリに該当 → 最も変更量が多い領域を優先
 2. 明示的指定あり → そのスキルを優先
-3. 不明な場合 → `rr-upstream-architecture-boundaries-001`（最も汎用的）
+3. 不明な場合 → `architecture-boundaries`（最も汎用的）

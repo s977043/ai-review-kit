@@ -7,8 +7,8 @@ name: PlanGate Review (PR)
 # - spec: pages/reference/cli-review-exec-spec.md (Issue #518)
 # - input contract: pages/reference/artifact-input-contract.md (Issue #516)
 # - skills:
-#   - skills/upstream/rr-upstream-plangate-plan-integrity-001/ (#519)
-#   - skills/upstream/rr-upstream-plangate-exec-conformance-001/ (#520)
+#   - skills/upstream/plangate-plan-integrity/ (#519)
+#   - skills/upstream/plangate-exec-conformance/ (#520)
 # - parent: Capability #511 / Epic #507 / Task #521
 #
 # 注意: `river review plan` / `river review exec` / `river review verify` の
