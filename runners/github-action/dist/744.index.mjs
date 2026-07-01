@@ -11,7 +11,7 @@ export const modules = {
 /* harmony export */   formatRegressionSummary: () => (/* binding */ formatRegressionSummary)
 /* harmony export */ });
 /* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(9946);
-/* harmony import */ var _finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(9597);
+/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(1535);
 
 
 
@@ -34,8 +34,8 @@ export const modules = {
  * @returns {{ new: ComparedFinding[], resolved: ComparedFinding[], persisting: ComparedFinding[], scoreChanged: ComparedFinding[], summary: object }}
  */
 function diffReviews(previousFindings, currentFindings) {
-  const prev = (0,_finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .i)(previousFindings ?? []);
-  const curr = (0,_finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .i)(currentFindings ?? []);
+  const prev = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .ic)(previousFindings ?? []);
+  const curr = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .ic)(currentFindings ?? []);
 
   const prevByFp = new Map(prev.map((f) => [f.fingerprint, f]));
   const currByFp = new Map(curr.map((f) => [f.fingerprint, f]));
@@ -162,7 +162,7 @@ function diffRunHistory(runRecords) {
   const allFingerprints = new Set();
 
   const annotatedRuns = sorted.map((record) => {
-    const annotated = (0,_finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .i)(record.findings ?? []);
+    const annotated = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .ic)(record.findings ?? []);
     const fingerprints = new Set();
     for (const f of annotated) {
       fingerprints.add(f.fingerprint);
