@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { collectRepoContext } from './repo-context.mjs';
-import { parseUnifiedDiff } from './diff.mjs';
+import { parseUnifiedDiff } from './diff-processor.mjs';
 import { generateReview } from './review-engine.mjs';
 
 /**

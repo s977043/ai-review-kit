@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseUnifiedDiff } from '../src/lib/diff.mjs';
+import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
 import { buildHeuristicComments } from '../src/lib/heuristic-review.mjs';
 
 test('buildHeuristicComments detects hardcoded secrets for security skill', () => {

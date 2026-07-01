@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { deriveChangedFiles } from './diff.mjs';
+import { deriveChangedFiles } from './diff-processor.mjs';
 import { loadSkills } from '../../runners/core/skill-loader.mjs';
 import { buildExecutionPlan } from '../../runners/core/review-runner.mjs';
 
