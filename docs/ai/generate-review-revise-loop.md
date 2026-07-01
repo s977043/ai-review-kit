@@ -17,14 +17,14 @@
 
 - 機械可読 critic 出力: revise する AI が次アクションへ変換できる構造。`findings` / `verdict` / Agent Handoff（`agentHandoff` config）が素地。
 - 収束ゲート: ループ停止条件。`deriveVerdict` の 3 値（auto-approve / human-review-recommended / human-review-required）を起点とする。ただし後述のとおり verdict 単独では停止条件にならない。
-- 回帰メモリ: 振動（fix A により break B、次周で B が再出現）の検知。`finding-fingerprint`（ruleId + file + message 先頭）と run history が基盤。`suppression` は false positive / accepted risk の除外機構であり**回帰追跡とは別責務**として扱う（混ぜると再発を検知する前に finding が消える）。
+- 回帰メモリ: 振動（fix A により break B、次周で B が再出現）の検知。`computeFingerprint`（`src/lib/finding-factory.mjs`、ruleId + file + message 先頭）と run history が基盤。`suppression` は false positive / accepted risk の除外機構であり**回帰追跡とは別責務**として扱う（混ぜると再発を検知する前に finding が消える）。
 
 3 要件とも素地は既にあるため、欠けているのは束ね役の Agent 層のみです。なお既存資産の所在は次のとおりで、本 doc は新規実装でなく**既存実装の契約化・連携**が主眼です。
 
 | 部品                  | 既存実装                                                                                                         |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | 並列 reviewer + dedup | `src/lib/reviewer-orchestrator.mjs`（bug-hunter / security-scanner / test-gap、fan-out + `deduplicateFindings`） |
-| finding 同一性        | `src/lib/finding-fingerprint.mjs`（line を意図的に除外）                                                         |
+| finding 同一性        | `src/lib/finding-factory.mjs`（line を意図的に除外）                                                             |
 | verdict / score       | `src/lib/scoring/engine.mjs`（`deriveVerdict` / `scoreReview`）                                                  |
 | reviewer 同意メタ     | `schemas/review-artifact.schema.json` の `agreement`（多数決に使わない、severity は evidence で決定）            |
 
@@ -47,7 +47,7 @@ caller が使う収束シグナルは次のとおり。
 
 - 停止条件: `verdict == auto-approve` 単独では停止条件にならない（`auto-approve` は HITL 非バイパスの助言で、minor / info finding が残存しても成立する）。**「blocking finding ゼロ かつ unresolved major / critical ゼロ」を満たし、許容対象の minor / info の扱いを明示**した複合条件とする。`human-review-required` は caller が即 escalate する。
 - 発散ガード: max iterations 上限と「新規 finding ゼロが N 周連続（loop-until-dry）」。
-- 振動検知: 既存 `finding-fingerprint`（ruleId + file + message 先頭、line は含めない）と run history（new / resolved / persisted）を基準とする。同一 fingerprint が resolved 後に再出現したら「revise が別問題を生んだ」と判定し caller へ escalate シグナルを返す。line 近傍は補助シグナルに留める（修正で行番号が動いただけの同一問題を見逃さないため）。
+- 振動検知: `computeFingerprint`（`src/lib/finding-factory.mjs`、ruleId + file + message 先頭、line は含めない）と run history（new / resolved / persisted）を基準とする。同一 fingerprint が resolved 後に再出現したら「revise が別問題を生んだ」と判定し caller へ escalate シグナルを返す。line 近傍は補助シグナルに留める（修正で行番号が動いただけの同一問題を見逃さないため）。
 - コスト上限: 1 ループあたりのトークン予算とイテレーション予算（#921 cost control mode の接続点）。
 
 ## マルチエージェント Review Team
@@ -101,7 +101,7 @@ S4（plan-review-gate）は #976 の pre-exec skill set で即時利用できる
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | S1       | critic API: `river run` の verdict と handoff をループ消費可能な契約として固める                                                                                                                                                                     | 既存ほぼ完成 |
 | S2a      | 停止条件の契約明文化（[pages/reference/loop-convergence-contract.md](../../pages/reference/loop-convergence-contract.md)）: blocking ゼロ / human-review-required 即エスカレ / oscillated 即エスカレの複合条件を docs ページとして確定（#1150 完了） | S1, S2b      |
-| S2b      | 振動検知: 既存 `finding-fingerprint` と run history による再発検知                                                                                                                                                                                   | S1           |
+| S2b      | 振動検知: `computeFingerprint`（`src/lib/finding-factory.mjs`）と run history による再発検知                                                                                                                                                         | S1           |
 | S3       | review team の契約化: 既存 `reviewer-orchestrator.mjs` に `mergeFindings` + adversarial 追加                                                                                                                                                         | S1           |
 | S4       | plan-review-gate（#1148）: 既存 skill set + verdict 契約で実装、S1 後に前倒し可。`deriveVerdict` の拡張を含む（下記）                                                                                                                                | S1           |
 

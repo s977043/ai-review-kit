@@ -38,7 +38,7 @@ function cacheKey(options) {
  * functions cannot be serialised into a stable key.
  *
  * @param {{ skillsDir?: string, schemaPath?: string, excludedTags?: string[], validator?: Function }} [options]
- * @returns {Promise<object[]>}
+ * @returns {Promise<SkillDefinition[]>}
  */
 export async function loadSkillsCached(options = {}) {
   // Bypass cache when a custom validator is provided — functions are not

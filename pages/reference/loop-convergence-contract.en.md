@@ -89,7 +89,7 @@ When a finding that was resolved in one iteration reappears in the next, the rev
 river runs diff <id1> <id2> <id3>
 ```
 
-When `oscillated` is non-empty, the caller escalates immediately. Detection is based on `finding-fingerprint` (`ruleId + file + message` prefix), so the same finding is tracked even when line numbers shift due to a fix.
+When `oscillated` is non-empty, the caller escalates immediately. Detection is based on `computeFingerprint` (`src/lib/finding-factory.mjs`, `ruleId + file + message` prefix), so the same finding is tracked even when line numbers shift due to a fix.
 
 ## Exit code contract (implementation-accurate)
 

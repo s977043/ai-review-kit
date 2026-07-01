@@ -89,7 +89,7 @@ revise によって解消した finding が次のイテレーションで再出�
 river runs diff <id1> <id2> <id3>
 ```
 
-`oscillated` が非空であれば caller は即 escalate します。振動検知は `finding-fingerprint`（`ruleId + file + message` の先頭）に基づくため、修正で行番号が変化しても同一 finding を追跡できます。
+`oscillated` が非空であれば caller は即 escalate します。振動検知は `computeFingerprint`（`src/lib/finding-factory.mjs`、`ruleId + file + message` の先頭）に基づくため、修正で行番号が変化しても同一 finding を追跡できます。
 
 ## exit code 契約（実装準拠）
 

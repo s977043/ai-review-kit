@@ -66,6 +66,21 @@ test('parseFindingMessage returns empty evidence array when field is missing', (
   assert.deepEqual(parsed.evidence, []);
 });
 
+test('validateFindingMessage accepts mixed-case Severity and Confidence values', () => {
+  const msg = formatFindingMessage({
+    finding: 'テスト問題',
+    evidence: '根拠',
+    impact: '影響',
+    fix: '修正',
+    severity: 'blocker',
+    confidence: 'high',
+  })
+    .replace('Severity: blocker', 'Severity: Blocker')
+    .replace('Confidence: high', 'Confidence: High');
+  const validated = validateFindingMessage(msg);
+  assert.equal(validated.ok, true, 'mixed-case severity/confidence should be accepted');
+});
+
 test('normalizeSeverity maps internal vocabulary to schema vocabulary', () => {
   assert.equal(normalizeSeverity('blocker'), 'critical');
   assert.equal(normalizeSeverity('warning'), 'major');

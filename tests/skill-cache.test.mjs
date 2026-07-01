@@ -89,4 +89,18 @@ describe('skill-cache', () => {
     await loadSkillsCached({ skillsDir, excludedTags: [], validator: customValidator });
     assert.equal(skillCacheSize(), 0, 'validator bypass must not pollute the cache');
   });
+
+  it('rejected load removes the cache entry so the next call retries', async () => {
+    clearSkillCache();
+    const nonExistentDir = join(root, '__nonexistent_skills_subdir__');
+    await assert.rejects(
+      () => loadSkillsCached({ skillsDir: nonExistentDir, excludedTags: [] }),
+      'rejected load should throw'
+    );
+    assert.equal(skillCacheSize(), 0, 'rejected entry must be evicted from cache');
+    await assert.rejects(
+      () => loadSkillsCached({ skillsDir: nonExistentDir, excludedTags: [] }),
+      'second call should also reject (not return stale rejected promise)'
+    );
+  });
 });

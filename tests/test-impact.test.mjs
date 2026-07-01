@@ -16,7 +16,7 @@ test('analyzeTestImpact: app changes with tests is low risk', () => {
 });
 
 test('analyzeTestImpact: app changes without tests is high risk', () => {
-  const result = analyzeTestImpact(['src/lib/review-engine.mjs', 'src/lib/diff.mjs']);
+  const result = analyzeTestImpact(['src/lib/review-engine.mjs', 'src/lib/diff-processor.mjs']);
   assert.equal(result.riskLevel, 'high');
   assert.equal(result.gapFiles.length, 2);
 });

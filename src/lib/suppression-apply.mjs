@@ -3,7 +3,7 @@
 // PR-A landed the data model (suppression context schema and the new
 // fingerprint / feedbackType / severity fields on createSuppression). This
 // PR-B is the gate that consumes those entries: given a list of findings
-// already annotated with fingerprints (see src/lib/finding-fingerprint.mjs)
+// already annotated with fingerprints (see src/lib/finding-factory.mjs)
 // and a memoryContext loaded by src/lib/memory-context.mjs, it splits the
 // findings into kept vs suppressed and returns observability metadata.
 //
@@ -30,7 +30,7 @@ function severityOf(finding) {
  * Apply matching suppressions to findings.
  *
  * @param {Array<object>} findings  Findings already annotated with `.fingerprint`
- *   by `annotateFingerprints` (src/lib/finding-fingerprint.mjs).
+ *   by `annotateFingerprints` (src/lib/finding-factory.mjs).
  * @param {object} memoryContext    Bucketed memory from `loadReviewMemory`.
  *   Only `memoryContext.suppressions` is consulted.
  * @param {object} [opts]

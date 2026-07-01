@@ -1,6 +1,6 @@
 # Skill Severity Rubric
 
-A skill's `severity` frontmatter declares the **maximum severity** the skill is allowed to emit, and is also the default for findings whose severity is not explicitly set in the prompt. The runner normalizes downstream values via `severityToPriority` (`src/lib/finding-format.mjs`) into the P1〜P4 PR-comment display.
+A skill's `severity` frontmatter declares the **maximum severity** the skill is allowed to emit, and is also the default for findings whose severity is not explicitly set in the prompt. The runner normalizes downstream values via `severityToPriority` (`src/lib/finding-factory.mjs`) into the P1〜P4 PR-comment display.
 
 This document codifies objective criteria for choosing a skill's `severity`, so future authors classify consistently and existing skills can be re-audited against the rubric.
 
