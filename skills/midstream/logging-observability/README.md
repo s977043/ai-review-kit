@@ -1,7 +1,7 @@
 # Logging and Observability Guard
 
 観測性（ログ/メトリクス/トレース）のレビューを行うスキルです。
-スキル定義: `skills/midstream/logging-observability.md`（YAML frontmatter + Markdown）。
+スキル定義: `skills/midstream/logging-observability/SKILL.md`（YAML frontmatter + Markdown）。
 
 ## 概要
 
@@ -34,7 +34,7 @@ lib/**/*
 npm run skills:validate
 
 # promptfoo での評価（設定完了後）
-cd skills/logging-observability
+cd skills/midstream/logging-observability
 npx promptfoo eval
 ```
 

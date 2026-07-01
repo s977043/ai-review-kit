@@ -7,6 +7,10 @@
 // 判定: 旧形式 `rr-(upstream|midstream|downstream)-<name>-<NNN>` はすべて陳腐化参照とみなす
 //       （現行 ID は簡素名で rr- 接頭辞を持たないため）。
 //       ALLOWED_LEGACY_IDS（意図的プレースホルダ / 追跡中の移行）と除外 path のみ許容。
+//
+// 追加チェック（#1332）:
+//   - 旧パス形式: `skills/<phase>/<name>.md`（正しくは `skills/<phase>/<name>/SKILL.md`）
+//   - cd パス省略: `cd skills/<name>`（正しくは `cd skills/<phase>/<name>`）
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -54,6 +58,20 @@ const ALLOWED_LEGACY_IDS = new Set([
 ]);
 
 const OLD_ID_RE = /rr-(?:upstream|midstream|downstream)-[a-z0-9-]+-\d{3}/g;
+
+// skills/<phase>/<name>.md（正しくは skills/<phase>/<name>/SKILL.md）
+// ただし skills/<phase>/<name>/SKILL.md 自体や skills/README.md は除外
+const FLAT_SKILL_PATH_RE = /skills\/(?:upstream|midstream|downstream)\/[a-z0-9-]+\.md(?!\/)/g;
+
+// cd skills/<name>（phase なし。正しくは cd skills/<phase>/<name>）
+const CD_NO_PHASE_RE = /\bcd\s+skills\/(?!upstream\/|midstream\/|downstream\/)([a-z0-9-]+)\b/g;
+
+// 許容するフラットパス（意図的な doc 例示）
+const ALLOWED_FLAT_PATHS = new Set([
+  'skills/upstream/sample-architecture-review.md',
+  'skills/midstream/sample-code-quality.md',
+  'skills/downstream/sample-test-review.md',
+]);
 
 function isExcluded(p) {
   return EXCLUDE.some((e) => p.includes(e));
@@ -110,6 +128,7 @@ function collectFiles() {
 }
 
 const violations = [];
+const pathViolations = [];
 for (const file of collectFiles()) {
   let text;
   try {
@@ -119,14 +138,48 @@ for (const file of collectFiles()) {
   }
   const lines = text.split('\n');
   lines.forEach((line, idx) => {
-    const matches = line.match(OLD_ID_RE);
-    if (!matches) return;
-    for (const m of matches) {
-      if (ALLOWED_LEGACY_IDS.has(m)) continue;
-      violations.push({ file: relative(ROOT, file), line: idx + 1, id: m });
+    // Check 1: old rr-<phase>-<name>-NNN ID format
+    const idMatches = line.match(OLD_ID_RE);
+    if (idMatches) {
+      for (const m of idMatches) {
+        if (ALLOWED_LEGACY_IDS.has(m)) continue;
+        violations.push({ file: relative(ROOT, file), line: idx + 1, id: m });
+      }
+    }
+
+    // Check 2: flat skill path skills/<phase>/<name>.md (missing /SKILL.md)
+    const flatMatches = line.match(FLAT_SKILL_PATH_RE);
+    if (flatMatches) {
+      for (const m of flatMatches) {
+        if (ALLOWED_FLAT_PATHS.has(m)) continue;
+        const correct = m.replace(/\.md$/, '/SKILL.md');
+        pathViolations.push({
+          file: relative(ROOT, file),
+          line: idx + 1,
+          found: m,
+          fix: correct,
+          kind: 'flat-path',
+        });
+      }
+    }
+
+    // Check 3: cd skills/<name> without phase prefix
+    const cdMatches = line.match(CD_NO_PHASE_RE);
+    if (cdMatches) {
+      for (const m of cdMatches) {
+        pathViolations.push({
+          file: relative(ROOT, file),
+          line: idx + 1,
+          found: m.trim(),
+          fix: `cd skills/<phase>/${m.trim().replace(/^cd\s+skills\//, '')}`,
+          kind: 'cd-no-phase',
+        });
+      }
     }
   });
 }
+
+let hasError = false;
 
 if (violations.length > 0) {
   console.error(
@@ -139,7 +192,29 @@ if (violations.length > 0) {
   console.error(
     '意図的な例示/移行中の場合は scripts/check-skill-id-references.mjs の ALLOWED_LEGACY_IDS に追記。'
   );
-  process.exit(1);
+  hasError = true;
 }
+
+if (pathViolations.length > 0) {
+  console.error(`\n❌ skill パス誤りを ${pathViolations.length} 件検出:`);
+  for (const v of pathViolations) {
+    if (v.kind === 'flat-path') {
+      console.error(`  ${v.file}:${v.line}  "${v.found}" → 正しくは "${v.fix}"`);
+    } else {
+      console.error(
+        `  ${v.file}:${v.line}  "${v.found}" → phase ディレクトリを含むパスに修正してください（例: "${v.fix}"）`
+      );
+    }
+  }
+  console.error(
+    '\nskills/<phase>/<name>.md は skills/<phase>/<name>/SKILL.md、cd はフェーズ付きパスに修正してください。'
+  );
+  console.error(
+    '意図的な例示の場合は scripts/check-skill-id-references.mjs の ALLOWED_FLAT_PATHS に追記。'
+  );
+  hasError = true;
+}
+
+if (hasError) process.exit(1);
 
 console.log('✅ dangling skill-ID 参照なし（scan 対象・allowlist 除く）');

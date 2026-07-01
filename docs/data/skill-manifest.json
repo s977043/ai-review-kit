@@ -108,7 +108,7 @@
     {
       "id": "architecture-validation-plan",
       "path": "skills/upstream/architecture-validation-plan",
-      "checksum": "sha256:40aa6cc609e628f5e9cc1664554c5c441cc77a367cb39c0b340cfcaa6b69b8ed",
+      "checksum": "sha256:047f5d9f6e3232a661ab86b083f4e9baa0f490596d15785474a1458c755d674e",
       "files": 9
     },
     {
@@ -126,7 +126,7 @@
     {
       "id": "cache-strategy-consistency",
       "path": "skills/upstream/cache-strategy-consistency",
-      "checksum": "sha256:3277671bd798554ad7ef4e85270d9ff4bc24605bacf518ab87efcb6dcff94f90",
+      "checksum": "sha256:5f8f9ce9b52c172c0530b762d0cedea535695085cb1c52a292bb5a131937e888",
       "files": 9
     },
     {
@@ -372,7 +372,7 @@
     {
       "id": "logging-observability",
       "path": "skills/midstream/logging-observability",
-      "checksum": "sha256:ec23d1afd21259fad0a95a343129dc025fd0ac74b533a82b1343ad0dbd9166b0",
+      "checksum": "sha256:f66ce6f707d374467d886275e084ac92bede6fb6afa148dd09a08c5d53a28154",
       "files": 12
     },
     {
@@ -420,7 +420,7 @@
     {
       "id": "multitenancy-isolation",
       "path": "skills/upstream/multitenancy-isolation",
-      "checksum": "sha256:15966aba47f447526405cc44ac6d49a59ec74f4f303d4b7b028fc1cb58f819dd",
+      "checksum": "sha256:f80cdbe17a19062b513976abaf84804e6a1d19b938e1cd427e095e6ecf187c7b",
       "files": 11
     },
     {
@@ -630,13 +630,13 @@
     {
       "id": "security-basic",
       "path": "skills/midstream/security-basic",
-      "checksum": "sha256:a7c9d804c5381c054b98c93a2415519bb5234ab2f17399ef48e499325db85bf1",
+      "checksum": "sha256:eab9674357e90d305c130bae747b0995ea05d8e4cdc6365823fd738b0b574db7",
       "files": 9
     },
     {
       "id": "security-privacy-design",
       "path": "skills/upstream/security-privacy-design",
-      "checksum": "sha256:9a98b25af317a0e833b725b73071d7a1b44e8386db8a40a7df1572ecbcb080b9",
+      "checksum": "sha256:a9705c254d8c58fc2287c999ae2e4bc9b8cde64227f0c6787f5cfcda5154f3b3",
       "files": 9
     },
     {

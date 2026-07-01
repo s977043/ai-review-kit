@@ -1,7 +1,7 @@
 # Architecture Validation Plan Guard
 
 設計/ADRの差分から「その設計が正しいとどう確かめるか（検証計画）」の抜けを検出するスキルです。
-スキル定義: `skills/upstream/architecture-validation-plan.md`（YAML frontmatter + Markdown）。
+スキル定義: `skills/upstream/architecture-validation-plan/SKILL.md`（YAML frontmatter + Markdown）。
 
 ## 概要
 
@@ -39,7 +39,7 @@ pages/**/*architecture*.md
 npm run skills:validate
 
 # promptfoo での評価（設定完了後）
-cd skills/architecture-validation-plan
+cd skills/upstream/architecture-validation-plan
 npx promptfoo eval
 ```
 

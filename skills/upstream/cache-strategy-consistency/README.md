@@ -1,7 +1,7 @@
 # Cache Strategy Consistency Guard
 
 設計ドキュメントのキャッシュ戦略レビューを行うスキルです。
-スキル定義: `skills/upstream/cache-strategy-consistency.md`（YAML frontmatter + Markdown）。
+スキル定義: `skills/upstream/cache-strategy-consistency/SKILL.md`（YAML frontmatter + Markdown）。
 
 ## 概要
 
@@ -36,7 +36,7 @@ rfc/**/*.md
 npm run skills:validate
 
 # promptfoo での評価（設定完了後）
-cd skills/cache-strategy-consistency
+cd skills/upstream/cache-strategy-consistency
 npx promptfoo eval
 ```
 
