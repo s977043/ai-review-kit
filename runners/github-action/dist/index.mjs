@@ -40514,7 +40514,7 @@ function isWhitespaceOnlyChange(lines) {
   return normalizeWhitespace(added.join('')) === normalizeWhitespace(removed.join(''));
 }
 
-const COMMENT_MARKERS = [/^\/\//, /^\/\*/, /^\*($|\s)/, /^\*\/$/, /^#/, /^<!--/, /^-->/];
+const COMMENT_MARKERS = [/^\/\//, /^\/\*/, /^\*($|\s)/, /^\*\/$/, /^#/, /^<!--/, /^--!?>/];
 
 function isCommentOnlyChange(lines) {
   const changed = lines.filter((line) => line.startsWith('+') || line.startsWith('-'));
