@@ -82,4 +82,11 @@ describe('skill-cache', () => {
     clearSkillCache();
     assert.equal(skillCacheSize(), 0, 'cache empty after clear');
   });
+
+  it('custom validator bypasses cache (no entry added)', async () => {
+    clearSkillCache();
+    const customValidator = () => true;
+    await loadSkillsCached({ skillsDir, excludedTags: [], validator: customValidator });
+    assert.equal(skillCacheSize(), 0, 'validator bypass must not pollute the cache');
+  });
 });

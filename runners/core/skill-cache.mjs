@@ -1,6 +1,8 @@
 import { loadSkills as _loadSkills } from './skill-loader.mjs';
 
-// Module-level cache: serialized options key → resolved SkillDefinition[]
+// Module-level cache: serialized options key → Promise<SkillDefinition[]>
+// Caching the promise prevents thundering-herd: concurrent callers with the
+// same key await the same in-flight promise rather than launching duplicates.
 // Prevents redundant disk I/O when the same skillsDir is loaded multiple
 // times in a single process (e.g. agent-skill-bridge calls loadSkills twice
 // with identical options).
@@ -21,15 +23,25 @@ function cacheKey(options) {
  * re-reading the filesystem. Call {@link clearSkillCache} between test cases
  * or whenever fresh data is needed.
  *
- * @param {import('./skill-loader.mjs').LoadSkillsOptions} [options]
- * @returns {Promise<import('./skill-loader.mjs').SkillDefinition[]>}
+ * If a custom `validator` function is supplied, the cache is bypassed because
+ * functions cannot be serialised into a stable key.
+ *
+ * @param {{ skillsDir?: string, schemaPath?: string, excludedTags?: string[], validator?: Function }} [options]
+ * @returns {Promise<object[]>}
  */
 export async function loadSkillsCached(options = {}) {
+  // Bypass cache when a custom validator is provided — functions are not
+  // serialisable, so two calls with different validators would collide on
+  // the same key even though their results may differ.
+  if (options.validator) {
+    return _loadSkills(options);
+  }
+
   const key = cacheKey(options);
   if (cache.has(key)) return cache.get(key);
-  const skills = await _loadSkills(options);
-  cache.set(key, skills);
-  return skills;
+  const promise = _loadSkills(options);
+  cache.set(key, promise);
+  return promise;
 }
 
 /**
