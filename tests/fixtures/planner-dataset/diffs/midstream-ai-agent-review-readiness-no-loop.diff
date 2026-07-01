@@ -1,0 +1,28 @@
+diff --git a/docs/tasks/migrate-payment-service.md b/docs/tasks/migrate-payment-service.md
+new file mode 100644
+index 0000000..ddeeff0
+--- /dev/null
++++ b/docs/tasks/migrate-payment-service.md
+@@ -0,0 +1,22 @@
++# Task: Migrate payment service to new provider
++
++Delegate this migration to Claude Code.
++
++## Success criteria
++
++- All existing payment tests pass
++- New provider API is integrated
++- Retry logic is implemented
++
++## Non-goals
++
++- Refund flow (separate ticket)
++
++## Required context
++
++See docs/architecture/payment-design.md for service contracts.
++Payment provider API docs: see docs/integrations/stripe-v3.md
++
++## Review perspectives
++
++- Correctness: edge cases for failed payments and retries

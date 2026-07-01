@@ -1,0 +1,20 @@
+diff --git a/docs/tasks/implement-auth.md b/docs/tasks/implement-auth.md
+new file mode 100644
+index 0000000..aabbccd
+--- /dev/null
++++ b/docs/tasks/implement-auth.md
+@@ -0,0 +1,14 @@
++# Task: Implement user authentication
++
++We'll use Claude Code to implement the auth module.
++
++## Steps
++
++1. Create login endpoint
++2. Add JWT token generation
++3. Write unit tests
++4. Write integration tests
++
++## Notes
++
++- Follow the existing project conventions
