@@ -1037,6 +1037,17 @@ skills:
     recommended: true
     description: 'Ensure requirement docs define scope, terminology, acceptance criteria, edge cases, and non-functional requirements.'
 
+  - id: ai-agent-review-readiness
+    version: '0.1.0'
+    name: 'AI Agent Review Readiness'
+    path: skills/upstream/ai-agent-review-readiness/SKILL.md
+    category: upstream
+    phase: upstream
+    tags: [ai-agent, delegation, review-design, human-in-the-loop, upstream]
+    severity: major
+    recommended: false
+    description: 'Checks whether AI-assisted work defines review criteria, accessible context, explicit review loop, and human judgment boundary before delegating to an agent.'
+
   - id: trust-boundaries-authz
     version: '0.1.0'
     name: 'Trust Boundaries & Authorization Architecture'
