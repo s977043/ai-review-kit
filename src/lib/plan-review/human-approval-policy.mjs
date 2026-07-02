@@ -37,7 +37,7 @@
  * @param {string} raw
  * @returns {string}
  */
-function normalizeText(raw) {
+export function normalizeText(raw) {
   return (
     String(raw ?? '')
       .normalize('NFKC')
@@ -143,13 +143,13 @@ const HIGH_CONFIDENCE_PATTERNS = [
   // bypassable by mentioning e.g. "renamed" anywhere nearby.
   {
     pattern:
-      /recursively\s+(?:(?!(?:refactor|restructur|renam|reformat|lint))\w+\s+){0,4}(?:clean(?:s|ed|ing)?(?:\s*up)?|clear(?:s|ed|ing)?|purge(?:s|d)?|prune(?:s|d)?|wipe(?:s|d)?|empt(?:y|ies|ied))/i,
+      /recursively\s+(?:(?!(?:refactor|restructur|renam|reformat|lint))\w+\s+){0,4}(?:clean(?:s|ed|ing)?(?:\s*up)?|clear(?:s|ed|ing)?|purge(?:s|d)?|prune(?:s|d)?|wipe(?:s|d)?|scrub(?:s|bed|bing)?|empt(?:y|ies|ied))/i,
     name: 'recursive-cleanup-euphemism',
     confidence: 'high',
   },
   // 「一時ディレクトリを再帰的に整理」— 削除と書かない再帰削除
   {
-    pattern: /再帰的[^\n。]{0,15}(?:整理|クリーンアップ|一掃|片付け|掃除|空に)/,
+    pattern: /再帰的[^\n。]{0,15}(?:整理|クリーンアップ|一掃|片付け|掃除|空に|処分|削除)/,
     name: 'ja-recursive-cleanup-euphemism',
     confidence: 'high',
   },
@@ -163,6 +163,13 @@ const HIGH_CONFIDENCE_PATTERNS = [
     name: 'ja-empty-storage-euphemism',
     confidence: 'high',
   },
+  // 語順逆転:「空にする対象は…テーブル」(#1350 S3 recall variant v03)
+  {
+    pattern:
+      /(?:空に(?:する|し)|まっさらに(?:する|し)|初期化(?!され))[^。]{0,10}(?:対象|範囲)[^。]{0,10}(?:テーブル|ディレクトリ|フォルダ|バケット|データベース)/,
+    name: 'ja-empty-storage-reversed',
+    confidence: 'high',
+  },
   // "empty the table / bucket / directory" — TRUNCATE without saying truncate.
   // Verb usage only (#1356): inflected forms (empties/emptied/emptying)
   // anywhere; bare "empty" needs either a determiner or — when no determiner —
@@ -171,7 +178,7 @@ const HIGH_CONFIDENCE_PATTERNS = [
   // verb "empty staging bucket" must).
   {
     pattern:
-      /\bempt(?:ies|ied|ying)\b(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b|(?<!\b(?:a|an|the|this|that|these|those|each|every|any|some|my|your|his|her|its|our|their)\s+)\bempty\s+(?:(?:the|all|every|each|this|that|these|those|its|our|your|their|any)\s+(?:\w+\s+){0,2}?(?:table|bucket|director(?:y|ies)|database|folder)s?|(?:\w+\s+){0,2}?(?:table|bucket|directory|database|folder))\b/i,
+      /\bempt(?:ies|ied|ying)\b(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b|\b(?:table|bucket|director(?:y|ies)|database|folder)s?\s+(?:is|are|was|were|gets?|got|being)\s+(?:\w+\s+){0,2}?emptied\b(?!\s+(?:correctly|automatically))|(?<!\b(?:a|an|the|this|that|these|those|each|every|any|some|my|your|his|her|its|our|their)\s+)\bempty\s+(?:(?:the|all|every|each|this|that|these|those|its|our|your|their|any)\s+(?:\w+\s+){0,2}?(?:table|bucket|director(?:y|ies)|database|folder)s?|(?:\w+\s+){0,2}?(?:table|bucket|directory|database|folder))\b/i,
     name: 'empty-storage-euphemism',
     confidence: 'high',
   },
@@ -182,9 +189,17 @@ const HIGH_CONFIDENCE_PATTERNS = [
     confidence: 'high',
   },
   { pattern: /connection\s+string/i, name: 'connection-string', confidence: 'high' },
+  // "reset the database to a clean state" — destructive re-initialization
+  // without saying drop/truncate (#1350 S3 recall variant v09).
+  {
+    pattern:
+      /(?<!how\s+to\s+)\breset(?:s|ting)?\b(?:\s+\w+){0,3}?\s+(?:database|table|bucket|environment|schema)s?\b(?:\s+\w+){0,3}?\s+to\s+(?:a\s+|an\s+)?(?:clean|empty|initial|fresh|pristine)\b/i,
+    name: 'reset-to-clean-euphemism',
+    confidence: 'high',
+  },
   // 「稼働環境へ反映」「実環境に適用」— 本番と書かない本番反映
   {
-    pattern: /(?:実|稼働)環境[^\n。]{0,12}(?:反映|適用|更新|リリース|デプロイ|切り替え)/,
+    pattern: /(?:実|稼働|商用)環境[^\n。]{0,12}(?:反映|適用|更新|リリース|デプロイ|切り替え)/,
     name: 'ja-live-env-apply-euphemism',
     confidence: 'high',
   },
@@ -235,7 +250,7 @@ const LOW_CONFIDENCE_PATTERNS = [
   // adjudicator instead of vanishing entirely.
   {
     pattern:
-      /recursively\s+(?:\w+\s+){0,4}(?:clean(?:s|ed|ing)?(?:\s*up)?|clear(?:s|ed|ing)?|purge(?:s|d)?|prune(?:s|d)?|wipe(?:s|d)?|empt(?:y|ies|ied))/i,
+      /recursively\s+(?:\w+\s+){0,4}(?:clean(?:s|ed|ing)?(?:\s*up)?|clear(?:s|ed|ing)?|purge(?:s|d)?|prune(?:s|d)?|wipe(?:s|d)?|scrub(?:s|bed|bing)?|empt(?:y|ies|ied))/i,
     name: 'recursive-cleanup-lowconf',
     confidence: 'low',
   },
@@ -279,7 +294,9 @@ export function detectHumanApprovalCandidates(text) {
       const start = Math.max(0, match.index - 20);
       const end = Math.min(input.length, match.index + match[0].length + 20);
       const snippet = input.slice(start, end).replace(/\n/g, ' ').trim();
-      candidates.push({ trigger: name, snippet, confidence, source: 'regex' });
+      // index: offset in the NORMALIZED text (additive; lets the adjudicator
+      // excerpt windows around out-of-view candidates, #1350 S3 PR-A).
+      candidates.push({ trigger: name, snippet, confidence, source: 'regex', index: match.index });
     }
   }
 
