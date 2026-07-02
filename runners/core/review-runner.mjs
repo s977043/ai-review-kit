@@ -6,6 +6,7 @@ import { classifyChangedFiles } from '../../src/lib/file-classifier.mjs';
 import { analyzeTestImpact } from '../../src/lib/test-impact.mjs';
 import { normalizePlannerMode } from '../../src/lib/planner-utils.mjs';
 import { HEURISTIC_SKILL_IDS } from '../../src/lib/heuristic-review.mjs';
+import { estimateTokens } from '../../src/lib/token-estimator.mjs';
 import { evaluateRisk } from '../../src/lib/risk-map.mjs';
 import { findRelatedADRs } from '../../src/lib/adr-linker.mjs';
 import { extractDiffMeta } from '../../src/lib/diff-processor.mjs';
@@ -16,6 +17,26 @@ const MODEL_PRIORITY = {
   balanced: 2,
   'high-accuracy': 3,
 };
+
+// Epic #1347 S2 (#1349, merged from #1339): declared multi-layer execution
+// order. Derived from each selected skill's evaluationType (fallback:
+// SKILL_HEURISTIC_MAP membership → heuristic, else agentic→llm). S2 emits the
+// DECLARATION only; reordering enforcement (strict_block routing) is S4.
+const EVALUATION_LAYER_ORDER = ['deterministic', 'heuristic', 'llm'];
+
+function skillEvaluationLayer(skill) {
+  const meta = getMeta(skill);
+  const declared = meta?.evaluationType;
+  if (declared === 'deterministic') return 'deterministic';
+  if (declared === 'heuristic') return 'heuristic';
+  if (declared === 'agentic') return 'llm';
+  return HEURISTIC_SKILL_IDS.includes(meta?.id) ? 'heuristic' : 'llm';
+}
+
+export function deriveExecutionOrder(selected) {
+  const layers = new Set((selected ?? []).map(skillEvaluationLayer));
+  return EVALUATION_LAYER_ORDER.filter((l) => layers.has(l));
+}
 
 function getMeta(skill) {
   return skill?.metadata ?? skill;
@@ -259,6 +280,8 @@ export async function buildExecutionPlan(options) {
       fileTypes,
       riskAssessment,
       testImpact,
+      executionOrder: [],
+      estimatedCost: { tokens: estimateTokens(diffText ?? ''), source: 'token-estimator' },
       snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
     };
   }
@@ -309,6 +332,9 @@ export async function buildExecutionPlan(options) {
       riskAssessment,
       // #1255: test-impact signal (see analyzeTestImpact call above).
       testImpact,
+      // Epic #1347 S2: declared layer order + rough cost estimate (advisory).
+      executionOrder: deriveExecutionOrder(ranked),
+      estimatedCost: { tokens: estimateTokens(diffText ?? ''), source: 'token-estimator' },
       // #878 A2-3-runners: carry-over context for --plan replay execution.
       // Consumers should propagate this to `artifact.debug.execution.snapshot`
       // per docs/development/a2-3-replay-execution-design.md.
@@ -328,6 +354,8 @@ export async function buildExecutionPlan(options) {
     reviewMode,
     riskAssessment,
     testImpact,
+    executionOrder: deriveExecutionOrder(ordered),
+    estimatedCost: { tokens: estimateTokens(diffText ?? ''), source: 'token-estimator' },
     snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
   };
 }

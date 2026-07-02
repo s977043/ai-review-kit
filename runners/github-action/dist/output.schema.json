@@ -3,13 +3,18 @@
   "title": "River Review Output Schema",
   "description": "Structured output for River Review findings, aggregated per run.",
   "type": "object",
-  "required": ["issues", "summary"],
+  "required": [
+    "issues",
+    "summary"
+  ],
   "additionalProperties": false,
   "properties": {
     "issues": {
       "type": "array",
       "description": "List of individual review issues raised by River Review.",
-      "items": { "$ref": "#/$defs/issue" }
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
     },
     "summary": {
       "description": "Aggregated counts and optional notes for this review run.",
@@ -17,14 +22,30 @@
     },
     "decision": {
       "type": "string",
-      "enum": ["auto-approve", "human-review-recommended", "human-review-required"],
+      "enum": [
+        "auto-approve",
+        "human-review-recommended",
+        "human-review-required"
+      ],
       "description": "Run-level verdict derived deterministically from findings (same vocabulary as review-artifact decision). Optional; absent when scoring fails."
+    },
+    "gate": {
+      "type": "object",
+      "description": "Machine-readable gate signal for loop-running hosts (Epic #1347 S2 / #1349). Same shape and trust-boundary contract as the `gate` object in review-artifact.schema.json (the authoritative definition — see that schema and src/lib/gate-decision.mjs). Additive/optional. Note: the `river run` path performs no plan-text human-approval scan, so inputs.humanApprovalRequired is always false here; the plan-review cliff applies to the `river review` namespace."
     }
   },
   "$defs": {
     "issue": {
       "type": "object",
-      "required": ["id", "ruleId", "title", "message", "severity", "phase", "file"],
+      "required": [
+        "id",
+        "ruleId",
+        "title",
+        "message",
+        "severity",
+        "phase",
+        "file"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -50,12 +71,21 @@
         "severity": {
           "type": "string",
           "description": "Severity level assigned to the issue.",
-          "enum": ["info", "minor", "major", "critical"]
+          "enum": [
+            "info",
+            "minor",
+            "major",
+            "critical"
+          ]
         },
         "phase": {
           "type": "string",
           "description": "SDLC phase where this issue was found.",
-          "enum": ["upstream", "midstream", "downstream"]
+          "enum": [
+            "upstream",
+            "midstream",
+            "downstream"
+          ]
         },
         "file": {
           "type": "string",
@@ -75,17 +105,27 @@
         "confidence": {
           "type": "string",
           "description": "Confidence level of the finding.",
-          "enum": ["high", "medium", "low"]
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
         },
         "status": {
           "type": "string",
           "description": "Current lifecycle status of the finding.",
-          "enum": ["open", "suppressed", "verified"]
+          "enum": [
+            "open",
+            "suppressed",
+            "verified"
+          ]
         },
         "evidence": {
           "type": "array",
           "description": "Evidence snippets supporting this finding.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "reviewer": {
           "type": "string",
@@ -105,30 +145,63 @@
     },
     "summary": {
       "type": "object",
-      "required": ["issueCountBySeverity", "issueCountByPhase"],
+      "required": [
+        "issueCountBySeverity",
+        "issueCountByPhase"
+      ],
       "additionalProperties": false,
       "properties": {
         "issueCountBySeverity": {
           "type": "object",
           "description": "Aggregated counts keyed by severity.",
-          "required": ["info", "minor", "major", "critical"],
+          "required": [
+            "info",
+            "minor",
+            "major",
+            "critical"
+          ],
           "additionalProperties": false,
           "properties": {
-            "info": { "type": "integer", "minimum": 0 },
-            "minor": { "type": "integer", "minimum": 0 },
-            "major": { "type": "integer", "minimum": 0 },
-            "critical": { "type": "integer", "minimum": 0 }
+            "info": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "major": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "critical": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
         "issueCountByPhase": {
           "type": "object",
           "description": "Aggregated counts keyed by SDLC phase.",
-          "required": ["upstream", "midstream", "downstream"],
+          "required": [
+            "upstream",
+            "midstream",
+            "downstream"
+          ],
           "additionalProperties": false,
           "properties": {
-            "upstream": { "type": "integer", "minimum": 0 },
-            "midstream": { "type": "integer", "minimum": 0 },
-            "downstream": { "type": "integer", "minimum": 0 }
+            "upstream": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "midstream": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "downstream": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
         "notes": {
@@ -138,33 +211,71 @@
         "riskSummary": {
           "type": "object",
           "description": "Risk assessment summary from risk map evaluation.",
-          "required": ["aggregateAction", "escalatedFiles", "humanReviewFiles"],
+          "required": [
+            "aggregateAction",
+            "escalatedFiles",
+            "humanReviewFiles"
+          ],
           "additionalProperties": false,
           "properties": {
             "aggregateAction": {
               "type": "string",
-              "enum": ["comment_only", "escalate", "require_human_review"]
+              "enum": [
+                "comment_only",
+                "escalate",
+                "require_human_review"
+              ]
             },
-            "escalatedFiles": { "type": "array", "items": { "type": "string" } },
-            "humanReviewFiles": { "type": "array", "items": { "type": "string" } }
+            "escalatedFiles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "humanReviewFiles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
         "prioritySummary": {
           "type": "object",
           "description": "Priority rollup derived from severity (P1=critical, P2=major, P3=minor, P4=info). Optional for backward compatibility; always emitted by current river run.",
-          "required": ["counts", "requiresImmediateAttention"],
+          "required": [
+            "counts",
+            "requiresImmediateAttention"
+          ],
           "additionalProperties": false,
           "properties": {
             "counts": {
               "type": "object",
               "description": "Issue counts keyed by priority bucket.",
-              "required": ["P1", "P2", "P3", "P4"],
+              "required": [
+                "P1",
+                "P2",
+                "P3",
+                "P4"
+              ],
               "additionalProperties": false,
               "properties": {
-                "P1": { "type": "integer", "minimum": 0 },
-                "P2": { "type": "integer", "minimum": 0 },
-                "P3": { "type": "integer", "minimum": 0 },
-                "P4": { "type": "integer", "minimum": 0 }
+                "P1": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "P2": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "P3": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "P4": {
+                  "type": "integer",
+                  "minimum": 0
+                }
               }
             },
             "requiresImmediateAttention": {

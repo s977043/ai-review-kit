@@ -266,3 +266,23 @@ describe('deriveGateDecision — audit block', () => {
     assert.equal(r.observation.files.length, 100);
   });
 });
+
+describe('deriveExecutionOrder (Epic #1347 S2, merged from #1339)', () => {
+  test('derives canonical layer order from evaluationType declarations', async () => {
+    const { deriveExecutionOrder } = await import('../runners/core/review-runner.mjs');
+    const skills = [
+      { metadata: { id: 'a', evaluationType: 'agentic' } },
+      { metadata: { id: 'b', evaluationType: 'deterministic' } },
+      { metadata: { id: 'c', evaluationType: 'heuristic' } },
+    ];
+    assert.deepEqual(deriveExecutionOrder(skills), ['deterministic', 'heuristic', 'llm']);
+  });
+
+  test('falls back to SKILL_HEURISTIC_MAP membership, else llm', async () => {
+    const { deriveExecutionOrder } = await import('../runners/core/review-runner.mjs');
+    // security-basic is a known heuristic skill id; unknown ids default to llm
+    const skills = [{ metadata: { id: 'security-basic' } }, { metadata: { id: 'some-llm-skill' } }];
+    assert.deepEqual(deriveExecutionOrder(skills), ['heuristic', 'llm']);
+    assert.deepEqual(deriveExecutionOrder([]), []);
+  });
+});

@@ -717,6 +717,9 @@ export async function runReviewPlan({
     }
 
     gateRiskAction = plan?.riskAssessment?.aggregateAction;
+    // Epic #1347 S2 (#1349): additive plan declarations from buildExecutionPlan.
+    if (Array.isArray(plan?.executionOrder)) artifact.plan.executionOrder = plan.executionOrder;
+    if (plan?.estimatedCost) artifact.plan.estimatedCost = plan.estimatedCost;
     artifact.plan.selectedSkills = (plan.selected ?? []).map(toSelectedView);
     artifact.plan.skippedSkills = (plan.skipped ?? []).map((s) => ({
       id: String(meta(s.skill).id ?? ''),
