@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.38.0](https://github.com/s977043/river-review/compare/v1.37.0...v1.38.0) (2026-07-02)
+
+
+### Features
+
+* **plan-review:** S1 検出器強化 — LLM adjudicator 配線 + recall 改善 + 敵対的 canary ([#1354](https://github.com/s977043/river-review/issues/1354)) ([bcb9733](https://github.com/s977043/river-review/commit/bcb973398473ec92902910001cc0875124ed5018))
+
 ## [1.37.0](https://github.com/s977043/river-review/compare/v1.36.0...v1.37.0) (2026-07-01)
 
 
