@@ -7,5 +7,5 @@
     "bash -c 'npm run skills:manifest && git add docs/data/skill-manifest.json'"
   ],
   "skills/agent-skills/**/*.md": ["npm run agent-skills:validate"],
-  "pages/**/*.md": ["npm run check:bilingual"]
+  "pages/**/*.md": ["npm run check:bilingual", "textlint --no-cache"]
 }
