@@ -11,7 +11,11 @@
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { callChatCompletion } from '../src/lib/llm-pipeline.mjs';
+import {
+  callChatCompletion,
+  computeBackoffMs,
+  LLM_MAX_BACKOFF_MS,
+} from '../src/lib/llm-pipeline.mjs';
 
 const originalFetch = global.fetch;
 
@@ -43,6 +47,16 @@ const baseParams = {
   endpoint: 'https://example.invalid/v1/chat/completions',
 };
 
+describe('computeBackoffMs cap', () => {
+  test('caps pathological Retry-After values at LLM_MAX_BACKOFF_MS', () => {
+    assert.equal(computeBackoffMs(1, { retryAfterSec: '3600' }), LLM_MAX_BACKOFF_MS);
+  });
+
+  test('caps exponential backoff at LLM_MAX_BACKOFF_MS', () => {
+    assert.equal(computeBackoffMs(20, { baseMs: 500 }), LLM_MAX_BACKOFF_MS);
+  });
+});
+
 describe('callChatCompletion', () => {
   test('returns trimmed assistant content on success', async () => {
     global.fetch = async () => okResponse('  hello  ');
@@ -73,7 +87,7 @@ describe('callChatCompletion', () => {
     assert.equal(captured.body.messages[0].content, 'system message');
   });
 
-  test('retries a 429 (honoring Retry-After) and succeeds', async () => {
+  test('retries a 429 and succeeds on the next attempt', async () => {
     let calls = 0;
     global.fetch = async () => {
       calls += 1;

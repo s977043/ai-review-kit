@@ -11,12 +11,17 @@
 // original issue) already route all LLM access through generateReview(), so
 // they needed no changes. The multi-provider AIClientFactory (src/ai/
 // factory.mjs, used by skill-dispatcher) keeps its own provider-specific
-// retry layer and is out of scope here.
+// retry layer and is out of scope here, as is the standalone
+// callOpenAICompatible in runners/node-api/src/index.ts (separate runner
+// package with its own build).
 
 const LLM_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 export const LLM_MAX_ATTEMPTS = 3; // 1 try + 2 retries
 export const LLM_RETRY_BASE_MS = 500;
 export const LLM_TIMEOUT_MS = 15000;
+// Cap Retry-After-driven waits so a pathological header (e.g. 3600s) cannot
+// stall the pipeline. Mirrors MAX_RETRY_DELAY_MS in src/ai/factory.mjs.
+export const LLM_MAX_BACKOFF_MS = 30_000;
 
 /** Retryable HTTP statuses: rate-limit and transient server/gateway errors. */
 export function isRetryableStatus(status) {
@@ -46,9 +51,9 @@ export function computeBackoffMs(
   // be treated as "Retry-After: 0s" when the header is simply absent.
   if (retryAfterSec !== null && retryAfterSec !== undefined && retryAfterSec !== '') {
     const ra = Number(retryAfterSec);
-    if (Number.isFinite(ra) && ra >= 0) return Math.round(ra * 1000);
+    if (Number.isFinite(ra) && ra >= 0) return Math.min(Math.round(ra * 1000), LLM_MAX_BACKOFF_MS);
   }
-  return baseMs * 2 ** Math.max(0, attempt - 1);
+  return Math.min(baseMs * 2 ** Math.max(0, attempt - 1), LLM_MAX_BACKOFF_MS);
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -132,6 +137,7 @@ export async function callChatCompletion({
       throw err;
     }
   }
-  // Exhausted retries on a transient failure.
+  // Not dead code: the loop always returns or throws when maxAttempts >= 1,
+  // but this guards the degenerate maxAttempts < 1 case (loop body never runs).
   throw lastError ?? new Error('OpenAI API error: retries exhausted');
 }
