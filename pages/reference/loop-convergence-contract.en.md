@@ -40,7 +40,7 @@ Above `suggestedLoopSignal` sits `gate`, a machine-readable signal that composes
 | --------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `GO`                  | field | Autonomous continuation permitted                                                                                                                                        |
 | `GO_WITH_OBSERVATION` | hill  | Proceed, with an async review due within `observation.expiresInHours`. **On expiry, stop** and treat changes from `observation.files` as unreviewed (re-review required) |
-| `NO_GO`               | —     | Route to revise (`reasonCode` explains why; `NOT_EXECUTED` = review did not run, `UNDETERMINED` = verdict indeterminate)                                                 |
+| `NO_GO`               | —     | Route to revise (`reasonCode` explains why; e.g. `NOT_EXECUTED` = review did not run, `UNDETERMINED` = verdict indeterminate — review-artifact.schema.json is the authoritative enum)                                                 |
 | `ESCALATE`            | cliff | Stop until a human approves                                                                                                                                              |
 
 - **Fail-safe**: indeterminate or unknown inputs always map to `NO_GO`, never to the `GO` family
