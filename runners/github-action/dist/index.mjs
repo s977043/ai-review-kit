@@ -42089,6 +42089,154 @@ function buildHeuristicComments({ diff, plan }) {
 
 /***/ }),
 
+/***/ 7303:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   pQ: () => (/* binding */ callChatCompletion)
+/* harmony export */ });
+/* unused harmony exports LLM_MAX_ATTEMPTS, LLM_RETRY_BASE_MS, LLM_TIMEOUT_MS, isRetryableStatus, isRetryableNetworkError, computeBackoffMs */
+// Unified LLM call pipeline (#1338).
+//
+// Consolidates the two raw chat-completion implementations that had drifted
+// apart — review-engine.mjs (retry + Retry-After + timeout) and
+// openai-planner.mjs (timeout only, no retry) — into one module. The retry
+// policy helpers were moved verbatim from review-engine.mjs (originally
+// #1196-adjacent adoption from the Gemma concurrent demo) and are re-exported
+// there for backward compatibility.
+//
+// Scope note: reviewer-orchestrator.mjs and local-runner.mjs (named in the
+// original issue) already route all LLM access through generateReview(), so
+// they needed no changes. The multi-provider AIClientFactory (src/ai/
+// factory.mjs, used by skill-dispatcher) keeps its own provider-specific
+// retry layer and is out of scope here.
+
+const LLM_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const LLM_MAX_ATTEMPTS = 3; // 1 try + 2 retries
+const LLM_RETRY_BASE_MS = 500;
+const LLM_TIMEOUT_MS = 15000;
+
+/** Retryable HTTP statuses: rate-limit and transient server/gateway errors. */
+function isRetryableStatus(status) {
+  return LLM_RETRYABLE_STATUS.has(status);
+}
+
+/** Network-level errors worth retrying: timeouts, aborts, connection resets, DNS. */
+function isRetryableNetworkError(err) {
+  if (!err) return false;
+  if (err.name === 'TimeoutError' || err.name === 'AbortError') return true;
+  const msg = `${err.code ?? ''} ${err.message ?? ''}`;
+  return /fetch failed|network|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|terminated|aborted/i.test(
+    msg
+  );
+}
+
+/**
+ * Backoff before the next attempt (ms). Honors a `Retry-After` header (seconds)
+ * when present, else exponential: base * 2^(attempt-1).
+ * @param {number} attempt - 1-based attempt that just failed.
+ */
+function computeBackoffMs(
+  attempt,
+  { baseMs = LLM_RETRY_BASE_MS, retryAfterSec = null } = {}
+) {
+  // Guard before Number(): Number(null) and Number('') are 0, which would wrongly
+  // be treated as "Retry-After: 0s" when the header is simply absent.
+  if (retryAfterSec !== null && retryAfterSec !== undefined && retryAfterSec !== '') {
+    const ra = Number(retryAfterSec);
+    if (Number.isFinite(ra) && ra >= 0) return Math.round(ra * 1000);
+  }
+  return baseMs * 2 ** Math.max(0, attempt - 1);
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Call an OpenAI-compatible chat-completion endpoint with timeout and
+ * transient-failure retry. Returns the assistant message text ('' when the
+ * response has no content).
+ *
+ * Behavior is identical to the former review-engine.mjs `callOpenAI`;
+ * `timeoutMs` and `maxAttempts` are parameterized so the planner can keep its
+ * historical single-attempt behavior (`maxAttempts: 1`).
+ *
+ * @param {object} params
+ * @param {string} params.prompt          User message content.
+ * @param {string} params.systemMessage   System message content (caller resolves defaults).
+ * @param {string} params.apiKey
+ * @param {string} params.model
+ * @param {string} params.endpoint
+ * @param {number} [params.temperature]
+ * @param {number} [params.maxTokens]
+ * @param {number} [params.timeoutMs]     Per-attempt timeout (default 15000).
+ * @param {number} [params.maxAttempts]   Total attempts incl. first (default 3).
+ * @returns {Promise<string>}
+ */
+async function callChatCompletion({
+  prompt,
+  systemMessage,
+  apiKey,
+  model,
+  endpoint,
+  temperature,
+  maxTokens,
+  timeoutMs = LLM_TIMEOUT_MS,
+  maxAttempts = LLM_MAX_ATTEMPTS,
+}) {
+  const body = JSON.stringify({
+    model,
+    temperature,
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: systemMessage },
+      { role: 'user', content: prompt },
+    ],
+  });
+
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        signal: AbortSignal.timeout(timeoutMs), // fresh per attempt (one-shot)
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body,
+      });
+
+      // Body reads are inside the try so a mid-stream abort/disconnect is also
+      // treated as a retryable transient failure rather than escaping uncaught.
+      if (res.ok) {
+        const json = await res.json();
+        return json.choices?.[0]?.message?.content?.trim() ?? '';
+      }
+
+      const detail = await res.text();
+      if (attempt < maxAttempts && isRetryableStatus(res.status)) {
+        await sleep(
+          computeBackoffMs(attempt, { retryAfterSec: res.headers?.get?.('retry-after') })
+        );
+        continue;
+      }
+      throw new Error(`OpenAI API error ${res.status}: ${detail}`);
+    } catch (err) {
+      // Network error, timeout, or body-read failure — retry transient cases.
+      // A non-retryable HTTP error (thrown above) has a non-network message, so
+      // isRetryableNetworkError returns false and it propagates immediately.
+      lastError = err;
+      if (attempt < maxAttempts && isRetryableNetworkError(err)) {
+        await sleep(computeBackoffMs(attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+  // Exhausted retries on a transient failure.
+  throw lastError ?? new Error('OpenAI API error: retries exhausted');
+}
+
+
+/***/ }),
+
 /***/ 4702:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -43009,17 +43157,19 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   G1: () => (/* binding */ generateReview)
 /* harmony export */ });
-/* unused harmony exports buildPrompt, parseLineComments, isRetryableStatus, isRetryableNetworkError, computeBackoffMs */
+/* unused harmony exports buildPrompt, parseLineComments */
 /* harmony import */ var _config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3833);
-/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(9946);
+/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(9946);
 /* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1535);
 /* harmony import */ var _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(4807);
 /* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(7050);
 /* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(2294);
-/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(9746);
+/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(9746);
 /* harmony import */ var _review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(8069);
 /* harmony import */ var _repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(8601);
 /* harmony import */ var _secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(12);
+/* harmony import */ var _llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(7303);
+
 
 
 
@@ -43250,109 +43400,10 @@ function parseLineComments(outputText) {
   return comments.length ? comments : null;
 }
 
-// Transient-failure retry policy for LLM calls (#1196-adjacent adoption from the
-// Gemma concurrent demo: in-process parallel review already exists; retry was the
-// one gap). Helpers are pure and exported for unit testing.
-const LLM_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
-const LLM_MAX_ATTEMPTS = 3; // 1 try + 2 retries
-const LLM_RETRY_BASE_MS = 500;
-const LLM_TIMEOUT_MS = 15000;
+// Transient-failure retry policy and the chat-completion call moved to
+// llm-pipeline.mjs (#1338). The retry helpers are re-exported here so existing
+// importers (tests, downstream consumers) keep working unchanged.
 
-/** Retryable HTTP statuses: rate-limit and transient server/gateway errors. */
-function isRetryableStatus(status) {
-  return LLM_RETRYABLE_STATUS.has(status);
-}
-
-/** Network-level errors worth retrying: timeouts, aborts, connection resets, DNS. */
-function isRetryableNetworkError(err) {
-  if (!err) return false;
-  if (err.name === 'TimeoutError' || err.name === 'AbortError') return true;
-  const msg = `${err.code ?? ''} ${err.message ?? ''}`;
-  return /fetch failed|network|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|terminated|aborted/i.test(
-    msg
-  );
-}
-
-/**
- * Backoff before the next attempt (ms). Honors a `Retry-After` header (seconds)
- * when present, else exponential: base * 2^(attempt-1).
- * @param {number} attempt - 1-based attempt that just failed.
- */
-function computeBackoffMs(
-  attempt,
-  { baseMs = LLM_RETRY_BASE_MS, retryAfterSec = null } = {}
-) {
-  // Guard before Number(): Number(null) and Number('') are 0, which would wrongly
-  // be treated as "Retry-After: 0s" when the header is simply absent.
-  if (retryAfterSec !== null && retryAfterSec !== undefined && retryAfterSec !== '') {
-    const ra = Number(retryAfterSec);
-    if (Number.isFinite(ra) && ra >= 0) return Math.round(ra * 1000);
-  }
-  return baseMs * 2 ** Math.max(0, attempt - 1);
-}
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function callOpenAI({
-  prompt,
-  apiKey,
-  model,
-  endpoint,
-  temperature,
-  maxTokens,
-  systemMessage,
-  maxAttempts = LLM_MAX_ATTEMPTS,
-}) {
-  const body = JSON.stringify({
-    model,
-    temperature,
-    max_tokens: maxTokens,
-    messages: [
-      { role: 'system', content: systemMessage ?? buildSystemMessage('ja') },
-      { role: 'user', content: prompt },
-    ],
-  });
-
-  let lastError;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        signal: AbortSignal.timeout(LLM_TIMEOUT_MS), // fresh per attempt (one-shot)
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body,
-      });
-
-      // Body reads are inside the try so a mid-stream abort/disconnect is also
-      // treated as a retryable transient failure rather than escaping uncaught.
-      if (res.ok) {
-        const json = await res.json();
-        return json.choices?.[0]?.message?.content?.trim() ?? '';
-      }
-
-      const detail = await res.text();
-      if (attempt < maxAttempts && isRetryableStatus(res.status)) {
-        await sleep(
-          computeBackoffMs(attempt, { retryAfterSec: res.headers?.get?.('retry-after') })
-        );
-        continue;
-      }
-      throw new Error(`OpenAI API error ${res.status}: ${detail}`);
-    } catch (err) {
-      // Network error, timeout, or body-read failure — retry transient cases.
-      // A non-retryable HTTP error (thrown above) has a non-network message, so
-      // isRetryableNetworkError returns false and it propagates immediately.
-      lastError = err;
-      if (attempt < maxAttempts && isRetryableNetworkError(err)) {
-        await sleep(computeBackoffMs(attempt));
-        continue;
-      }
-      throw err;
-    }
-  }
-  // Exhausted retries on a transient failure.
-  throw lastError ?? new Error('OpenAI API error: retries exhausted');
-}
 
 function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
   const allSkills = plan?.selected ?? [];
@@ -43766,7 +43817,7 @@ async function generateReview({
 
   const skipReason = dryRun
     ? 'dry-run enabled'
-    : (0,_utils_mjs__WEBPACK_IMPORTED_MODULE_8__/* .isOfflineMode */ .hN)()
+    : (0,_utils_mjs__WEBPACK_IMPORTED_MODULE_9__/* .isOfflineMode */ .hN)()
       ? 'offline (rules-only) mode enabled'
       : openAIConfig.provider !== 'openai'
         ? `provider ${openAIConfig.provider} is not supported yet`
@@ -43776,7 +43827,7 @@ async function generateReview({
 
   if (!skipReason) {
     try {
-      const output = await callOpenAI({
+      const output = await (0,_llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__/* .callChatCompletion */ .pQ)({
         prompt: promptInfo.prompt,
         apiKey: openAIConfig.apiKey,
         model: openAIConfig.model,
@@ -43898,8 +43949,8 @@ async function generateReview({
   });
 
   findings.sort((a, b) => {
-    const bA = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_9__/* .computeFindingBreakdown */ ._)(a);
-    const bB = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_9__/* .computeFindingBreakdown */ ._)(b);
+    const bA = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(a);
+    const bB = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(b);
     return bB.composite - bA.composite;
   });
 
@@ -46100,7 +46151,11 @@ async function runReviewerOrchestration({
   };
 }
 
+// EXTERNAL MODULE: ./src/lib/llm-pipeline.mjs
+var llm_pipeline = __nccwpck_require__(7303);
 ;// CONCATENATED MODULE: ./src/lib/openai-planner.mjs
+
+
 const DEFAULT_PLANNER_MODEL =
   process.env.RIVER_PLANNER_MODEL ||
   process.env.RIVER_OPENAI_MODEL ||
@@ -46166,36 +46221,24 @@ Rules:
 `;
 }
 
-async function callOpenAI({ prompt, apiKey, model, endpoint, timeoutMs }) {
-  const signal = AbortSignal.timeout(timeoutMs ?? resolvePlannerTimeoutMs());
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    signal,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      max_tokens: 600,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are River Review, an expert code review skill planner. Return valid JSON only; do not wrap in Markdown.',
-        },
-        { role: 'user', content: prompt },
-      ],
-    }),
-  });
+const PLANNER_SYSTEM_MESSAGE =
+  'You are River Review, an expert code review skill planner. Return valid JSON only; do not wrap in Markdown.';
 
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(`OpenAI API error ${res.status}: ${detail}`);
-  }
-  const json = await res.json();
-  return json.choices?.[0]?.message?.content?.trim() ?? '';
+// Chat-completion transport lives in llm-pipeline.mjs (#1338). The planner
+// historically made a single attempt with no retry; maxAttempts: 1 preserves
+// that behavior exactly.
+function callOpenAI({ prompt, apiKey, model, endpoint, timeoutMs }) {
+  return (0,llm_pipeline/* callChatCompletion */.pQ)({
+    prompt,
+    systemMessage: PLANNER_SYSTEM_MESSAGE,
+    apiKey,
+    model,
+    endpoint,
+    temperature: 0,
+    maxTokens: 600,
+    timeoutMs: timeoutMs ?? resolvePlannerTimeoutMs(),
+    maxAttempts: 1,
+  });
 }
 
 function parsePlannerJson(text) {
