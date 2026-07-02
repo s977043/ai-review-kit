@@ -84,6 +84,15 @@ else:
     continue  # next iteration
 ```
 
+### Supervision digest and audit records (Epic #1347 S3)
+
+Run records saved with `--save` (automatic on GitHub Actions) carry `gate` and `decision`, and `river runs digest` aggregates them into the supervisor-facing summary. On GitHub Actions the digest is **appended to the job summary automatically** — a forced display point, because a digest nobody runs is the same as no digest.
+
+- **Runs-store trust boundary**: `.river/runs/` sits inside the reviewed agent's write authority, and runtime tampering is invisible to gate rule 0 (which only inspects diffs). Records are a convenience reference with no tamper evidence; append-only storage, signing, or off-repo persistence is the caller / CI's responsibility
+- **Escape candidates are NOT a rate**: the digest lists cases where a GO-family run was followed by a run (overlapping changed files) that produced new blocking findings. Fingerprints drift with LLM phrasing and later diffs introduce their own problems, so **attribution is a human judgment; threshold or automated decisions on this list are forbidden by contract**
+- **Override records are always UNVERIFIED**: the optional `override` on a run record (`actor` / `timestamp` / `gateInputsHash` required) is host-attested; River Review does not verify it. The digest force-labels it UNVERIFIED and warns on `gateInputsHash` mismatches
+- **The circuit breaker only warns**: when consecutive auto-GO runs exceed `configSnapshot.maxConsecutiveAutoGo`, the digest warns; stopping is the caller's job (S4)
+
 ## Divergence guards
 
 Two safety mechanisms when an autonomous loop fails to converge.

@@ -84,6 +84,15 @@ else:
     continue  # 次のイテレーションへ
 ```
 
+### 監督ダイジェストと監査記録（Epic #1347 S3）
+
+`--save`（GitHub Actions 上では自動）で保存された run record には `gate` と `decision` が含まれ、`river runs digest` が監督者向けサマリを集計する。GitHub Actions 上では digest が **job summary に自動出力**される（「実行されない digest は存在しない digest と同じ」という設計判断による強制表示点）。
+
+- **runs store の信頼境界**: `.river/runs/` は被レビューエージェントの書込権限内にあり、ランタイム改竄は gate の規則0（diff のみ検査）の対象外である。record は改竄検知性のない参考記録であり、append-only 化・署名・リポジトリ外永続化は caller / CI の責務となる
+- **escape 候補は率ではない**: digest の escape 候補一覧は「GO 系 run の後、変更ファイルの交差する後続 run で新規 blocking finding の出た事例」の列挙である。fingerprint は LLM 生成文の表現ゆらぎに敏感で、後続 diff が持ち込んだ新問題も含まれるため、**帰責は人間が判断する。閾値・自動判断への使用は契約で禁止**する
+- **override 記録は常に UNVERIFIED**: run record の `override`（`actor` / `timestamp` / `gateInputsHash` 必須）は caller が書く host-attested 記録であり、River Review は検証しない。digest は UNVERIFIED ラベルを強制付与し、`gateInputsHash` 不一致には警告を出す
+- **circuit breaker は警告のみ**: 連続 auto-GO が `configSnapshot.maxConsecutiveAutoGo` を超えると digest が警告するが、停止の執行は caller 責務である（S4）
+
 ## 発散ガード
 
 自律ループが収束しない場合の安全策を 2 つ設けます。

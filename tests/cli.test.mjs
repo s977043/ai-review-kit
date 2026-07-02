@@ -444,3 +444,23 @@ describe('river run - gate block', () => {
     assert.strictEqual(artifact.gate.inputs.reviewExecuted, false);
   });
 });
+
+// -----------------------------------------------------------------------------
+// river runs digest (Epic #1347 S3)
+// -----------------------------------------------------------------------------
+describe('river runs digest', () => {
+  test('saved run appears in the digest with its gate decision', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+
+    const save = await runCliInProcess(['run', '.', '--dry-run', '--save'], { cwd: dir });
+    assert.strictEqual(save.code, 0, save.stderr);
+    assert.match(save.stderr, /Run saved:/);
+
+    const digest = await runCliInProcess(['runs', 'digest'], { cwd: dir });
+    assert.strictEqual(digest.code, 0, digest.stderr);
+    assert.match(digest.stdout, /runs digest/);
+    // dry-run gates as NO_GO NOT_EXECUTED and must be visible in the digest.
+    assert.match(digest.stdout, /NO_GO: 1/);
+  });
+});

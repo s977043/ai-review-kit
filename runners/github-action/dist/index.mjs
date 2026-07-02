@@ -61811,12 +61811,74 @@ class SkillDispatcher {
 var review_plan_generator = __nccwpck_require__(8069);
 // EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
 var engine = __nccwpck_require__(9487);
-// EXTERNAL MODULE: ./src/lib/gate-decision.mjs
-var gate_decision = __nccwpck_require__(2773);
-// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
-var rubric = __nccwpck_require__(5034);
 // EXTERNAL MODULE: ./src/lib/loop-signal.mjs
 var loop_signal = __nccwpck_require__(4702);
+// EXTERNAL MODULE: ./src/lib/gate-decision.mjs
+var gate_decision = __nccwpck_require__(2773);
+;// CONCATENATED MODULE: ./src/lib/run-gate.mjs
+/**
+ * Gate derivation for `river run` results (Epic #1347 S3 / #1350).
+ *
+ * Extracted from cli.mjs formatJsonOutput so the same derivation feeds both
+ * the JSON output artifact and the persisted run record (result store) —
+ * the audit trail must record the same gate the consumer saw.
+ *
+ * The `river run` path performs no plan-text human-approval scan, so
+ * humanApprovalRequired is always false here (documented in
+ * schemas/output.schema.json); riskMapDigest is likewise null on this path.
+ */
+
+
+
+
+
+/**
+ * Derive `{ decision, gate }` for a runLocalReview result. Both fields are
+ * undefined on derivation failure (same fail-soft contract as
+ * finalizeArtifact — the caller's output must never break on scoring).
+ *
+ * @param {object} result - runLocalReview result
+ * @returns {{ decision: string|undefined, gate: object|undefined }}
+ */
+function deriveRunGate(result) {
+  let decision;
+  try {
+    decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
+  } catch {
+    if (typeof result.decision === 'string' && result.decision.length > 0) {
+      decision = result.decision;
+    }
+  }
+
+  let gate;
+  try {
+    const findings = result.findings ?? [];
+    const riskAssessment = result.plan?.riskAssessment;
+    const loopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)({ decision, findings });
+    gate = (0,gate_decision/* deriveGateDecision */.RF)({
+      loopSignal,
+      decision,
+      humanApprovalRequired: false,
+      riskAction: riskAssessment?.aggregateAction,
+      blockingFindings: findings.filter(
+        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
+      ).length,
+      changedFiles: result.changedFiles ?? [],
+      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
+      artifactStatus: result.status ?? null,
+      riskMapPresent: riskAssessment != null,
+      riskMapDigest: null,
+      config: result.config ?? {},
+    });
+  } catch {
+    // leave gate unset on derivation failure
+  }
+
+  return { decision, gate };
+}
+
+// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
+var rubric = __nccwpck_require__(5034);
 // EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
 var _2020 = __nccwpck_require__(2210);
 // EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
@@ -61912,6 +61974,7 @@ Commands:
   river runs list           List stored review runs
   river runs diff <id1> <id2> [<id3>...] Diff stored review runs (3+ runs detect oscillation)
   river runs summary        Show aggregate dashboard metrics
+  river runs digest         Supervision digest (gate decisions, warnings, escape candidates)
   --cases <path>    (eval) Path to fixtures cases.json (default: tests/fixtures/review-eval/cases.json)
   --verbose         (eval) Print detailed per-case results
   -h, --help        Show this help message
@@ -62006,7 +62069,7 @@ function parseArgs(argv) {
       if (arg === 'skills' && args[0] && SKILLS_SUBCOMMANDS.has(args[0])) {
         parsed.skillsSubcommand = args.shift();
       } else if (arg === 'runs' && args[0] && !args[0].startsWith('-')) {
-        parsed.runsSubcommand = args.shift(); // list | diff | summary
+        parsed.runsSubcommand = args.shift(); // list | diff | summary | digest
         // diff takes two or more positional run IDs
         if (parsed.runsSubcommand === 'diff') {
           parsed.runsId1 = args.shift() ?? null;
@@ -62946,44 +63009,10 @@ function formatJsonOutput(result, phase) {
       humanReviewFiles: riskAssessment.humanReviewFiles,
     };
   }
-  let decision;
-  try {
-    // Prefer the canonical verdict if the result already carries one (#1170 F3);
-    // otherwise derive it from the findings present.
-    decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
-  } catch {
-    // scoring failure: fall back to the canonical decision if present, else omit
-    // (same fail-safe as finalizeArtifact).
-    if (typeof result.decision === 'string' && result.decision.length > 0) {
-      decision = result.decision;
-    }
-  }
-  // gate: same contract as review-artifact `gate` (Epic #1347 S2). The
-  // `river run` path has no plan-text human-approval scan, so that cliff
-  // input is always false here; risk-map / loop-signal / bootstrap-cliff
-  // inputs are fully wired. Additive + fail-safe (never breaks the output).
-  let gate;
-  try {
-    const findings = result.findings ?? [];
-    const loopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)({ decision, findings });
-    gate = (0,gate_decision/* deriveGateDecision */.RF)({
-      loopSignal,
-      decision,
-      humanApprovalRequired: false,
-      riskAction: riskAssessment?.aggregateAction,
-      blockingFindings: findings.filter(
-        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
-      ).length,
-      changedFiles: result.changedFiles ?? [],
-      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
-      artifactStatus: result.status ?? null,
-      riskMapPresent: riskAssessment != null,
-      riskMapDigest: null,
-      config: result.config ?? {},
-    });
-  } catch {
-    // leave gate unset on derivation failure
-  }
+  // Gate + decision derivation shared with the run-record audit trail
+  // (#1350 S3): extracted to src/lib/run-gate.mjs so the persisted record
+  // and the JSON output always carry the same gate.
+  const { decision, gate } = deriveRunGate(result);
 
   const artifact = {
     issues,
@@ -63576,8 +63605,27 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
         return 0;
       }
 
+      if (parsed.runsSubcommand === 'digest') {
+        const runs = await listRunRecords(storeDir);
+        if (!runs.length) {
+          console.log('No stored runs found in ' + storeDir);
+          return 0;
+        }
+        const fullRuns = await Promise.all(
+          runs.map((r) => loadRunRecord(storeDir, r.runId).catch(() => null))
+        );
+        const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
+        const digest = buildRunsDigest(fullRuns.filter(Boolean), { now: () => new Date() });
+        if (parsed.output === 'json') {
+          console.log(JSON.stringify(digest, null, 2));
+        } else {
+          console.log(formatDigestMarkdown(digest));
+        }
+        return 0;
+      }
+
       console.error(
-        `Unknown runs subcommand: ${parsed.runsSubcommand}. Use: list | diff | summary`
+        `Unknown runs subcommand: ${parsed.runsSubcommand}. Use: list | diff | summary | digest`
       );
       return 1;
     }
@@ -63756,17 +63804,44 @@ Dependencies: ${
       printExplain(result);
     }
 
-    // Persist run to result store when --save is provided
-    if (parsed.save && result.status === 'ok') {
+    // Persist run to result store when --save is provided. Under GitHub
+    // Actions the save is AUTOMATIC (Epic #1347 S3, adversarial design
+    // review Blocker 1: an opt-in store never accumulates the audit trail),
+    // and the digest is appended to the job summary as the forced display
+    // point — supervision that requires someone to remember a command is
+    // not supervision.
+    const isGithubActions = external_node_process_namespaceObject.env.GITHUB_ACTIONS === 'true';
+    if ((parsed.save || isGithubActions) && result.status === 'ok') {
       try {
         const { buildRunRecord, saveRunRecord, resolveStoreDir } =
           await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
-        const record = buildRunRecord(result, { phase: parsed.phase });
+        const { decision: runDecision, gate: runGate } = deriveRunGate(result);
+        const record = buildRunRecord(result, {
+          phase: parsed.phase,
+          gate: runGate,
+          decision: runDecision,
+        });
         // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
         const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });
         console.error(`Run saved: ${record.runId} → ${savedPath}`);
       } catch (err) {
         console.error(`Warning: --save failed: ${err.message}`);
+      }
+    }
+
+    // Forced display point (Epic #1347 S3): under GitHub Actions, append the
+    // runs digest to the job summary. Fail-soft — the review result must
+    // never break on digest generation.
+    if (isGithubActions && external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
+      try {
+        const { listRunRecords, resolveStoreDir } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+        const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
+        const records = await listRunRecords(resolveStoreDir(targetPath));
+        const digest = buildRunsDigest(records, { now: () => new Date() });
+        const fs = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
+        await fs.appendFile(external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY, formatDigestMarkdown(digest));
+      } catch (err) {
+        console.error(`Warning: job summary digest failed: ${err.message}`);
       }
     }
 
