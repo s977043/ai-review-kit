@@ -2,11 +2,12 @@
 
 Repo-development slash commands (NOT part of the distributed plugin surface).
 
-| Command             | File                  | Purpose                                                   |
-| ------------------- | --------------------- | --------------------------------------------------------- |
-| `/propose-issue`    | `propose-issue.md`    | Research codebase before creating an issue                |
-| `/plan-merge-order` | `plan-merge-order.md` | Plan merge order for multiple PRs to minimize rebase cost |
-| `/preflight`        | `preflight.md`        | Verify tasks are not obsolete or in parallel before work  |
+| Command                | File                     | Purpose                                                                 |
+| ---------------------- | ------------------------ | ----------------------------------------------------------------------- |
+| `/propose-issue`       | `propose-issue.md`       | Research codebase before creating an issue                              |
+| `/plan-merge-order`    | `plan-merge-order.md`    | Plan merge order for multiple PRs to minimize rebase cost               |
+| `/preflight`           | `preflight.md`           | Verify tasks are not obsolete or in parallel before work                |
+| `/verify-agent-report` | `verify-agent-report.md` | Verify agent completion reports against real branches, PRs, and commits |
 
 > **配布対象のコマンド** (`/check` `/pr` `/skill` `/review-local` `/challenge`) は #996 で top-level [`commands/`](../../commands/) へ分離し、`.claude-plugin/plugin.json` がそこを参照します。本ディレクトリには repo-dev 専用コマンドのみが残ります。
 >

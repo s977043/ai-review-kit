@@ -50,7 +50,7 @@ If a check fails, show the failure output and proposed fix before applying.
 - **Review-doc SSoT sync**: `docs/review/viewpoints.md` and `docs/review/output-format.md` declare `pages/reference/review-policy.md` (ja+en) as their 出典/source. When changing review criteria, output sections, or severity vocabulary in the derived docs, update `review-policy.md` (both languages) in the same PR — otherwise the derived docs drift from the SSoT (#1196/#1197).
 - **Plugin bundle mirror**: When adding or updating fields in a distribution bundle (e.g. `awesome-codex-plugins` fork's `plugin.json`), apply the same change to the canonical manifest in this repo (`.codex-plugin/plugin.json`, `.claude-plugin/plugin.json`) in the same PR. Fields that diverge between the bundle and the repo are not covered by `npm run plugin:sync` and will silently drift. Run `npm run plugin:validate` to catch asset-path and parity errors before pushing (#1250).
 - **Skill-check fixture/description drift**: When adding, removing, or renaming a Check section in `skills/upstream/ai-agent-review-readiness/SKILL.md` (or any skill that uses embedded `<!-- expected: -->` blocks in its fixtures), update the following in the same commit: (1) each `fixtures/*.md` — confirm that the `<!-- expected: -->` block reflects the new Check; for fixtures that expect `findings: []`, add a section that satisfies the new Check so the expectation remains valid; (2) the frontmatter `description` field — verify it enumerates all current Checks so downstream consumers and bot reviewers see a complete list.
-- **Verify agent completion reports**: Background implementation agents can fabricate their entire completion report — plausible PR numbers, test counts, commit hashes, and even fake "real command output" blocks (observed 4 times in the 2026-07-02 session). Report quality is NOT evidence of execution. Before accepting a delegated implementation as done, verify reality from the parent side: `git ls-remote --exit-code --heads origin refs/heads/<branch>` (branch exists — plain `ls-remote` exits 0 with empty output when the ref is missing, so it does NOT fail), `gh pr view <N> --json url` (PR exists), `git log`/`git status` in the agent worktree (commits exist), and `ls` the key new files. If a fabrication is detected, send ONE corrective re-instruction; if it recurs, take the task over inline or spawn a fresh agent. Read-only review/research agents did not exhibit this failure mode.
+- **Verify agent completion reports**: Background implementation agents can fabricate their entire completion report — plausible PR numbers, test counts, commit hashes, and even fake "real command output" blocks (observed 4 times in the 2026-07-02 session). Report quality is NOT evidence of execution. Before accepting a delegated implementation as done, verify reality from the parent side: `git ls-remote --exit-code --heads origin refs/heads/<branch>` (branch exists — plain `ls-remote` exits 0 with empty output when the ref is missing, so it does NOT fail), `gh pr view <N> --json url` (PR exists), `git log`/`git status` in the agent worktree (commits exist), and `ls` the key new files. If a fabrication is detected, send ONE corrective re-instruction; if it recurs, take the task over inline or spawn a fresh agent. Read-only review/research agents did not exhibit this failure mode. Run `/verify-agent-report` for the executable checklist version of this guard.
 - **Worktree-held branches refuse switch**: `git switch <branch>` fails when that branch is checked out in any worktree (including agent worktrees under `.claude/worktrees/`), and with `2>/dev/null` the failure is silent — subsequent `git reset` / commits then land on whatever branch was current (observed: commits landing on local main, recovered because origin/main was untouched). Extends "Verify git output before chaining": after EVERY `git switch`, confirm with `git rev-parse --abbrev-ref HEAD` before running state-changing git commands, and check `git worktree list` before manipulating a branch an agent may hold.
 
 ## Improvement Flow
@@ -68,17 +68,18 @@ When a retrospective identifies a recurring mistake or missing guardrail, follow
 
 ## Custom Commands
 
-| Command             | Purpose                                                   |
-| ------------------- | --------------------------------------------------------- |
-| `/check`            | Run quality checks (lint + test)                          |
-| `/pr`               | Draft PR description                                      |
-| `/skill`            | Find or create skill definition                           |
-| `/review-local`     | Self-review current diff                                  |
-| `/challenge`        | Adversarial review (pre-mortem, war game)                 |
-| `/propose-issue`    | Research codebase before creating an issue                |
-| `/plan-merge-order` | Plan merge order for multiple PRs to minimize rebase cost |
-| `/preflight`        | Verify tasks are not obsolete or in parallel before work  |
+| Command                | Purpose                                                                 |
+| ---------------------- | ----------------------------------------------------------------------- |
+| `/check`               | Run quality checks (lint + test)                                        |
+| `/pr`                  | Draft PR description                                                    |
+| `/skill`               | Find or create skill definition                                         |
+| `/review-local`        | Self-review current diff                                                |
+| `/challenge`           | Adversarial review (pre-mortem, war game)                               |
+| `/propose-issue`       | Research codebase before creating an issue                              |
+| `/plan-merge-order`    | Plan merge order for multiple PRs to minimize rebase cost               |
+| `/preflight`           | Verify tasks are not obsolete or in parallel before work                |
+| `/verify-agent-report` | Verify agent completion reports against real branches, PRs, and commits |
 
-Details: distributed commands (`/check` `/pr` `/skill` `/review-local` `/challenge`) live in top-level `commands/` (plugin surface, per #996); repo-dev commands (`/propose-issue` `/plan-merge-order` `/preflight`) stay in `.claude/commands/`.
+Details: distributed commands (`/check` `/pr` `/skill` `/review-local` `/challenge`) live in top-level `commands/` (plugin surface, per #996); repo-dev commands (`/propose-issue` `/plan-merge-order` `/preflight` `/verify-agent-report`) stay in `.claude/commands/`.
 
 > Note: the distributed commands resolve only when river-review is **installed as a plugin**. When working inside this repo directly, Claude Code auto-discovers project commands from `.claude/commands/` only — so the five distributed commands are not available as in-repo slash commands (the repo-dev commands are).
