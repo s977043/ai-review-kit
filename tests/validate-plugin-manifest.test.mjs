@@ -116,3 +116,11 @@ test('checkBundleFieldAllowlist reports missing listing-required fields', () => 
   assert.match(errors[0], /required bundle field "repository"/);
   assert.match(errors[1], /required bundle field "license"/);
 });
+
+test('checkBundleFieldAllowlist reports null listing-required field', () => {
+  const codex = makeCodexManifest();
+  codex.license = null;
+  const errors = checkBundleFieldAllowlist(codex);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /required bundle field "license"/);
+});

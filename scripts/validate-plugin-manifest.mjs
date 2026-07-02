@@ -101,7 +101,11 @@ export function checkBundleFieldAllowlist(codexManifest) {
   }
 
   for (const field of CODEX_BUNDLE_REQUIRED_FIELDS) {
-    if (codexManifest[field] === undefined || codexManifest[field] === '') {
+    if (
+      codexManifest[field] === undefined ||
+      codexManifest[field] === null ||
+      codexManifest[field] === ''
+    ) {
       errors.push(
         `.codex-plugin/plugin.json: required bundle field "${field}" is missing or empty ` +
           `(required by the awesome-codex-plugins listing)`
