@@ -26,14 +26,14 @@ cat .nvmrc
 
 ## 自動再ビルド（Auto Rebuild Action Dist）
 
-`.github/workflows/auto-rebuild-action-dist.yml` が PR 上で dist の再ビルドを自動化します。bundled sources（`runners/github-action/src/**`、`src/**`、`package-lock.json`）を変更した PR では、workflow が `.nvmrc` の Node で `npm run build:action` を実行します。byte 差分が出た場合のみ `chore(action): rebuild github-action dist` コミットを PR branch に push します。差分が出なければ何も push しません。
+`.github/workflows/auto-rebuild-action-dist.yml` が PR 上で dist の再ビルドを自動化します。bundled sources（`runners/github-action/src/**`、`src/**`、`package-lock.json`）が変更された PR において、workflow は `.nvmrc` の Node により `npm run build:action` を実行します。byte 差分が出た場合のみ `chore(action): rebuild github-action dist` コミットを PR branch に push します。差分が出なければ何も push しません。
 
 対象となる条件は以下のとおりです。
 
-- 同一リポジトリの branch からの PR（fork PR は push 不可能なため対象外、従来どおり `Action dist freshness` job が staleness を検出する）
+- 同一リポジトリ内ブランチからの PR（fork PR は push 不可のため対象外。従来どおり `Action dist freshness` job が staleness を検出する）
 - `release-please--` で始まる branch は対象外（自動コミットが release PR を汚染しないようにするため）
 
-トークンと no-recursion 制約は `release-please-kick.yml` と同じ方針です。`GITHUB_TOKEN` による push は GitHub の no-recursion 制約により `pull_request` workflow を再発火させません。そのため `RELEASE_KICK_PAT`（contents:write）があればそれを優先し、新しい head SHA で CI が再実行されます。fallback の `GITHUB_TOKEN` で push した場合は warning が出るため、empty commit の push などで手動により CI を発火させてください。
+トークンおよび no-recursion 制約の扱いは、`release-please-kick.yml` と同様です。`GITHUB_TOKEN` による push は GitHub の no-recursion 制約により `pull_request` workflow を再発火させません。そのため `RELEASE_KICK_PAT`（contents:write）があればそれを優先し、新しい head SHA で CI が再実行されます。`RELEASE_KICK_PAT` が未設定の場合、fallback push は warning を表示します。その際は empty commit などにより手動で CI を発火させてください。
 
 以下の場合は次節の手動手順を fallback として使います。
 
