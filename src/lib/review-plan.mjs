@@ -37,11 +37,7 @@ import { loadRiskMap as defaultLoadRiskMap } from './risk-map.mjs';
 import { PHASES, PLANNER_MODES } from './planner-utils.mjs';
 import { resolveAvailableContexts, resolveAvailableDependencies } from './utils.mjs';
 import { scoreReview } from './scoring/engine.mjs';
-import {
-  detectHumanApprovalCandidates,
-  adjudicateHumanApproval,
-} from './plan-review/human-approval-policy.mjs';
-import { createHumanApprovalAdjudicator } from './plan-review/llm-adjudicator.mjs';
+import { scanArtifactsForHumanApproval } from './plan-review/approval-scan.mjs';
 import { deriveLoopSignalFromArtifact } from './loop-signal.mjs';
 import { deriveGateDecision } from './gate-decision.mjs';
 import { createHash } from 'node:crypto';
@@ -773,127 +769,26 @@ export async function runReviewPlan({
     if (executionTrace) artifact.debug.execution = executionTrace;
   }
 
-  // Human-approval policy check: scan pbi-input and plan text for triggers
-  // that require human approval before execution. Each file is scanned
-  // separately so that the info finding `file` attribute accurately reflects
-  // which document contained the trigger (gemini review #1168).
-  // Non-blocking — read errors fall back to empty string so the rest of the
-  // artifact is unaffected.
-  let humanApprovalRequired = false;
-  {
-    const pbiPath = resolved?.['pbi-input']?.path;
-    const planPath = resolved?.plan?.path;
-
-    // LLM adjudicator wiring (#1348 S1). `undefined` = derive the default:
-    // only the executeReview path may call an LLM (the --plan-only path is
-    // documented as never making an LLM call). `null` (or an unavailable
-    // environment — offline / no OpenAI-compatible key) keeps the pre-#1348
-    // regex-only behavior. The adjudicator is escalation-only by contract.
-    const effectiveAdjudicator =
-      humanApprovalAdjudicator !== undefined
-        ? humanApprovalAdjudicator
-        : executeReview
-          ? createHumanApprovalAdjudicator({ config })
-          : null;
-    // Per-file audit trail (mode + candidate count) surfaced under debug.
-    const humanApprovalAudit = [];
-
-    /**
-     * Read filePath (non-blocking), detect human-approval candidates and
-     * adjudicate them (regex-only or LLM-escalated).
-     * If the verdict is required, push an info finding attributed to that
-     * file and set humanApprovalRequired.
-     *
-     * @param {string} filePath
-     */
-    // Stable IDs already emitted across both files, keyed by trigger name, to
-    // deduplicate when the same trigger fires in both pbi-input and plan
-    // (#1170 F5). Each trigger gets one finding (attributed to the FIRST file
-    // that contained it); subsequent occurrences of the same trigger in other
-    // files are merged into the existing finding's message rather than emitting
-    // a duplicate. This preserves the invariant: one finding per trigger.
-    const emittedTriggers = new Map(); // trigger → finding object
-    const alsoInAppended = new Set(); // `${trigger}:${filePath}` pairs already appended
-
-    const scanFile = async (filePath) => {
-      let text = '';
-      try {
-        text = await readFileImpl(filePath);
-      } catch {
-        // non-blocking — missing / unreadable file is not an error
-      }
-      const { candidates } = detectHumanApprovalCandidates(text);
-      const approval = await adjudicateHumanApproval({
-        text,
-        candidates,
-        artifactKind: filePath === pbiPath ? 'pbi-input' : 'plan',
-        adjudicator: effectiveAdjudicator,
-      });
-      if (candidates.length > 0) {
-        humanApprovalAudit.push({
-          file: filePath,
-          mode: approval.mode,
-          candidates: candidates.length,
-          required: approval.required,
-        });
-      }
-      if (approval.required) {
-        humanApprovalRequired = true;
-        artifact.findings = artifact.findings ?? [];
-
-        // Determine new triggers not yet emitted (dedup cross-file)
-        const newTriggers = approval.triggers.filter((t) => !emittedTriggers.has(t));
-        const dupTriggers = approval.triggers.filter((t) => emittedTriggers.has(t));
-
-        // Merge duplicate triggers into the existing finding's message
-        for (const t of dupTriggers) {
-          const existing = emittedTriggers.get(t);
-          const key = `${t}:${filePath}`;
-          if (existing && !existing.file.includes(filePath) && !alsoInAppended.has(key)) {
-            existing.message += `; also in ${filePath}`;
-            alsoInAppended.add(key);
-          }
-        }
-
-        if (newTriggers.length > 0) {
-          // Derive a stable finding ID from the trigger names and file role
-          // so the finding ID is deterministic across runs (#1170 F5).
-          const fileRole = filePath === pbiPath ? 'pbi' : 'plan';
-          const triggerId = newTriggers[0].replace(/[^a-z0-9-]/g, '-');
-          const id = `rr-human-approval-${fileRole}-${triggerId}`;
-          const finding = {
-            id,
-            ruleId: 'rr-plan-review-human-approval',
-            severity: 'info',
-            // `phase` is required by the finding schema — its absence made any
-            // artifact containing this finding schema-invalid (latent since
-            // #1348; surfaced by the S2 gate E2E test that ajv-validates a
-            // triggering artifact).
-            phase,
-            title: 'Human approval required',
-            message: `Plan contains triggers requiring human approval: ${newTriggers.join(', ')}`,
-            file: filePath,
-          };
-          artifact.findings.push(finding);
-          for (const t of newTriggers) {
-            emittedTriggers.set(t, finding);
-          }
-        }
-      }
-    };
-
-    if (pbiPath) await scanFile(pbiPath);
-    if (planPath) await scanFile(planPath);
-
-    // Audit trail (Epic #1347 supervisability): record how each verdict was
-    // produced (regex-only / llm-adjudicated / llm-skipped / regex-fallback). Debug-gated so
-    // the artifact contract is unchanged for existing consumers.
-    if (debug && humanApprovalAudit.length > 0) {
-      artifact.debug = artifact.debug ?? {};
-      artifact.debug.humanApproval = humanApprovalAudit;
-    }
-    gateHumanApprovalModes = humanApprovalAudit.map((a) => a.mode);
+  // Human-approval policy check (#1363: extracted to plan-review/approval-scan.mjs;
+  // behavior pinned by the #1348/#1357 contract tests and the canary suite).
+  const approvalScan = await scanArtifactsForHumanApproval({
+    resolved,
+    artifact,
+    phase,
+    executeReview,
+    humanApprovalAdjudicator,
+    config,
+    readFileImpl,
+  });
+  const humanApprovalRequired = approvalScan.humanApprovalRequired;
+  // Audit trail (Epic #1347 supervisability): record how each verdict was
+  // produced (regex-only / llm-adjudicated / llm-skipped / regex-fallback).
+  // Debug-gated so the artifact contract is unchanged for existing consumers.
+  if (debug && approvalScan.audit.length > 0) {
+    artifact.debug = artifact.debug ?? {};
+    artifact.debug.humanApproval = approvalScan.audit;
   }
+  gateHumanApprovalModes = approvalScan.audit.map((a) => a.mode);
 
   // Gate derivation context (Epic #1347 S2). humanApprovalMode picks the most
   // informative mode across scanned files (fallback > adjudicated > skipped >

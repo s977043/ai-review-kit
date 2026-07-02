@@ -423,3 +423,24 @@ describe('river run - JSON output decision field', () => {
     }
   });
 });
+
+// -----------------------------------------------------------------------------
+// river run - gate block (Epic #1347 S2)
+// -----------------------------------------------------------------------------
+describe('river run - gate block', () => {
+  test('dry-run json output gates as NO_GO NOT_EXECUTED (M1 fail-safe)', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+
+    const result = await runCliInProcess(['run', '.', '--dry-run', '--output', 'json'], {
+      cwd: dir,
+    });
+    assert.strictEqual(result.code, 0, result.stderr);
+    const artifact = JSON.parse(result.stdout);
+    assert.ok(artifact.gate, 'gate block must be present in run json output');
+    // dry-run skips the LLM: a vacuous verdict must never read as converged.
+    assert.strictEqual(artifact.gate.decision, 'NO_GO');
+    assert.strictEqual(artifact.gate.reasonCode, 'NOT_EXECUTED');
+    assert.strictEqual(artifact.gate.inputs.reviewExecuted, false);
+  });
+});

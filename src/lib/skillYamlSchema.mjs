@@ -105,7 +105,7 @@ export const SkillYamlSchema = z
           .describe(
             'External command deciding pass/fail (executed only inside the trust boundary; S4)'
           ),
-        failSeverity: z.enum(['strict_block', 'bypass_warning']).optional(),
+        failSeverity: z.enum(['strict_block', 'bypass_warning']).default('strict_block'),
       })
       .strict()
       .optional()

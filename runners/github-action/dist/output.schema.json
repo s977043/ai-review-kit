@@ -31,7 +31,7 @@
     },
     "gate": {
       "type": "object",
-      "description": "Machine-readable gate signal for loop-running hosts (Epic #1347 S2 / #1349). Same shape and trust-boundary contract as the `gate` object in review-artifact.schema.json (the authoritative definition — see that schema and src/lib/gate-decision.mjs). Additive/optional. Note: the `river run` path performs no plan-text human-approval scan, so inputs.humanApprovalRequired is always false here; the plan-review cliff applies to the `river review` namespace."
+      "description": "Machine-readable gate signal for loop-running hosts (Epic #1347 S2 / #1349). Same shape and trust-boundary contract as the `gate` object in review-artifact.schema.json (the authoritative definition — see that schema and src/lib/gate-decision.mjs). Additive/optional. Note: the `river run` path performs no plan-text human-approval scan, so inputs.humanApprovalRequired is always false here; the plan-review cliff applies to the `river review` namespace. Additionally, inputs.riskMapDigest is always null on this path (the raw risk map is not available at output formatting time), so inputsHash values are not comparable across the run / review namespaces."
     }
   },
   "$defs": {
