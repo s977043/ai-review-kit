@@ -1,16 +1,16 @@
 import { mergeConfig } from '../config/loader.mjs';
 import { computeFindingBreakdown } from './scoring/breakdown.mjs';
-import { classifyFindings } from './finding-factory.mjs';
-import { defaultConfig } from '../config/default.mjs';
-import { summarizeSkill } from '../../runners/core/review-runner.mjs';
-import { buildHeuristicComments, HEURISTIC_SKILL_IDS } from './heuristic-review.mjs';
-import { isOfflineMode } from './utils.mjs';
 import {
+  classifyFindings,
   formatFindingMessage,
   validateFindingMessage,
   parseFindingMessage,
   normalizeSeverity,
 } from './finding-factory.mjs';
+import { defaultConfig } from '../config/default.mjs';
+import { summarizeSkill } from '../../runners/core/review-runner.mjs';
+import { buildHeuristicComments, HEURISTIC_SKILL_IDS } from './heuristic-review.mjs';
+import { isOfflineMode } from './utils.mjs';
 import { getReviewDepthConfig } from './review-plan-generator.mjs';
 import { buildRepoContextSection } from './repo-context.mjs';
 import { redactText } from './secret-redactor.mjs';

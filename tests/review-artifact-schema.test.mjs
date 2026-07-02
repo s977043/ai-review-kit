@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import os from 'node:os';
+import path from 'node:path';
 import test, { describe } from 'node:test';
 
 import { compileReviewArtifactValidator } from './helpers/schema-validator.mjs';
@@ -230,7 +232,7 @@ describe('review-artifact.schema.json', () => {
         minimalArtifact({
           debug: {
             execution: { snapshot: { fileTypes: ['md'] } },
-            resolvedArtifacts: { diff: '/tmp/diff.patch' },
+            resolvedArtifacts: { diff: path.join(os.tmpdir(), 'diff.patch') },
             replay: { sourceTimestamp: '2026-05-25T03:48:53Z' },
           },
         })

@@ -12,11 +12,9 @@
 // Background: #929 (post-#868 quality gate). Lets contributors validate
 // authoring changes locally without an API key.
 
-import { readFileSync } from 'node:fs';
-import { existsSync } from 'node:fs';
+import { readFileSync, existsSync, globSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { globSync } from 'node:fs';
 import YAML from 'yaml';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
