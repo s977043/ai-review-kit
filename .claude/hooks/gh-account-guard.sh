@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# PreToolUse hook (matcher: Bash): guard the active gh CLI account before gh write ops.
+#
+# Background: the local gh keyring holds two accounts (s977043 for this repo,
+# kominem-unilabo for work) and the active account silently switches mid-session,
+# causing 404 / permission errors on gh pr create / merge / gh api write calls.
+# This hook makes the prose guard in CLAUDE.md ("Verify gh active account before
+# write ops") deterministic.
+#
+# Contract (PreToolUse):
+#   stdin  : JSON payload; the Bash tool command is .tool_input.command
+#   exit 0 : allow the tool call to proceed
+#   exit 2 : block the tool call; stderr is fed back to Claude
+#
+# Behavior:
+#   - Non-gh commands and gh READ ops: exit 0 immediately (minimal overhead).
+#   - gh WRITE ops: verify `gh api user --jq .login` == expected account.
+#     If it differs, run `gh auth switch -u <expected>` and notify via stderr
+#     (exit 0 so the original command proceeds on the corrected account).
+#     If the switch itself fails, exit 2 to block the write op.
+#
+# Testability: expected account overridable via GH_ACCOUNT_GUARD_EXPECTED;
+# `gh` is resolved via PATH so tests can inject a stub.
+set -u
+
+EXPECTED_ACCOUNT="${GH_ACCOUNT_GUARD_EXPECTED:-s977043}"
+
+# --- Extract the Bash command from the stdin JSON payload -------------------
+if [ -t 0 ]; then
+  # No hook payload (manual invocation without stdin): nothing to check.
+  exit 0
+fi
+HOOK_INPUT="$(cat 2>/dev/null || true)"
+if [ -z "$HOOK_INPUT" ] || ! command -v jq >/dev/null 2>&1; then
+  exit 0
+fi
+COMMAND="$(printf '%s' "$HOOK_INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)"
+if [ -z "$COMMAND" ]; then
+  exit 0
+fi
+
+# --- Fast path: skip anything that cannot contain a gh invocation -----------
+case "$COMMAND" in
+  *gh*) ;;
+  *) exit 0 ;;
+esac
+
+# --- Write-op detection ------------------------------------------------------
+# G = a `gh` word start: beginning of string or a shell separator, then `gh`
+# followed by whitespace, then any number of global options — with an inline
+# value (`--repo=o/r`) or a separate value token (`-R o/r`) — before the
+# subcommand. Uses POSIX ERE only (portable across BSD/GNU grep).
+GH_OPT='(-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*)?[[:space:]]+)*'
+G="(^|[;&|([:space:]])gh[[:space:]]+${GH_OPT}"
+WRITE_RE="${G}pr[[:space:]]+(create|merge|edit|close|comment|ready|reopen|review|update-branch)"
+WRITE_RE="${WRITE_RE}|${G}issue[[:space:]]+(create|edit|close|comment|reopen|delete|transfer|pin|unpin|lock|unlock)"
+# gh api: explicit non-GET method (value may be quoted, e.g. -X "POST") ...
+WRITE_RE="${WRITE_RE}|${G}api[[:space:]][^;|&]*(-X|--method)[[:space:]=]*[\"']?(POST|PATCH|PUT|DELETE|post|patch|put|delete)"
+# ... or body fields / input, which make gh api default to POST
+WRITE_RE="${WRITE_RE}|${G}api[[:space:]][^;|&]*[[:space:]](-f|-F|--field|--raw-field|--input)([[:space:]=]|\$)"
+WRITE_RE="${WRITE_RE}|${G}release[[:space:]]+(create|edit|delete|delete-asset|upload)"
+WRITE_RE="${WRITE_RE}|${G}workflow[[:space:]]+(run|enable|disable)"
+WRITE_RE="${WRITE_RE}|${G}run[[:space:]]+(rerun|cancel|delete)"
+WRITE_RE="${WRITE_RE}|${G}repo[[:space:]]+(create|delete|edit|rename|archive|unarchive|fork|sync)"
+WRITE_RE="${WRITE_RE}|${G}label[[:space:]]+(create|edit|delete|clone)"
+WRITE_RE="${WRITE_RE}|${G}(secret|variable)[[:space:]]+(set|delete)"
+
+if ! printf '%s' "$COMMAND" | grep -qE "$WRITE_RE"; then
+  # Read op or unrelated gh usage (includes `gh auth ...`): allow.
+  exit 0
+fi
+
+# --- Verify / correct the active account -------------------------------------
+if ! command -v gh >/dev/null 2>&1; then
+  # gh not installed: nothing to guard; the command will fail on its own.
+  exit 0
+fi
+
+ACTIVE_LOGIN="$(gh api user --jq .login 2>/dev/null || true)"
+if [ "$ACTIVE_LOGIN" = "$EXPECTED_ACCOUNT" ]; then
+  exit 0
+fi
+
+if gh auth switch -u "$EXPECTED_ACCOUNT" >/dev/null 2>&1; then
+  echo "[gh-account-guard] active gh account was '${ACTIVE_LOGIN:-unknown}'; switched to '${EXPECTED_ACCOUNT}' before gh write op" >&2
+  exit 0
+fi
+
+echo "[gh-account-guard] BLOCKED: active gh account is '${ACTIVE_LOGIN:-unknown}' (expected '${EXPECTED_ACCOUNT}') and 'gh auth switch -u ${EXPECTED_ACCOUNT}' failed. Run 'gh auth status' and switch manually before retrying." >&2
+exit 2
