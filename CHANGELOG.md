@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.39.0](https://github.com/s977043/river-review/compare/v1.38.1...v1.39.0) (2026-07-02)
+
+
+### Features
+
+* **gate:** evaluationType スキーマ + executionOrder/estimatedCost + river run 配線 ([#1349](https://github.com/s977043/river-review/issues/1349)) ([#1366](https://github.com/s977043/river-review/issues/1366)) ([32f1633](https://github.com/s977043/river-review/commit/32f1633592ec84063fe32c244ac688a6c050fac9))
+* **gate:** gateDecision 契約 — 決定論純関数 + fail-safe + 監査ブロック ([#1364](https://github.com/s977043/river-review/issues/1364)) ([4ec8690](https://github.com/s977043/river-review/commit/4ec8690ddc644f03beba0f398a8b96d4389eec27))
+* **gate:** 契約 doc の gate 節 + conformance fixture + approval-scan 抽出 ([#1367](https://github.com/s977043/river-review/issues/1367)) ([9a43ed5](https://github.com/s977043/river-review/commit/9a43ed5d7489332d2014e39dcc9c4fce9b9d701b))
+
 ## [1.38.1](https://github.com/s977043/river-review/compare/v1.38.0...v1.38.1) (2026-07-02)
 
 

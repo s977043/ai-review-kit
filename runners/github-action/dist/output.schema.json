@@ -3,10 +3,7 @@
   "title": "River Review Output Schema",
   "description": "Structured output for River Review findings, aggregated per run.",
   "type": "object",
-  "required": [
-    "issues",
-    "summary"
-  ],
+  "required": ["issues", "summary"],
   "additionalProperties": false,
   "properties": {
     "issues": {
@@ -22,11 +19,7 @@
     },
     "decision": {
       "type": "string",
-      "enum": [
-        "auto-approve",
-        "human-review-recommended",
-        "human-review-required"
-      ],
+      "enum": ["auto-approve", "human-review-recommended", "human-review-required"],
       "description": "Run-level verdict derived deterministically from findings (same vocabulary as review-artifact decision). Optional; absent when scoring fails."
     },
     "gate": {
@@ -37,15 +30,7 @@
   "$defs": {
     "issue": {
       "type": "object",
-      "required": [
-        "id",
-        "ruleId",
-        "title",
-        "message",
-        "severity",
-        "phase",
-        "file"
-      ],
+      "required": ["id", "ruleId", "title", "message", "severity", "phase", "file"],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -71,21 +56,12 @@
         "severity": {
           "type": "string",
           "description": "Severity level assigned to the issue.",
-          "enum": [
-            "info",
-            "minor",
-            "major",
-            "critical"
-          ]
+          "enum": ["info", "minor", "major", "critical"]
         },
         "phase": {
           "type": "string",
           "description": "SDLC phase where this issue was found.",
-          "enum": [
-            "upstream",
-            "midstream",
-            "downstream"
-          ]
+          "enum": ["upstream", "midstream", "downstream"]
         },
         "file": {
           "type": "string",
@@ -105,20 +81,12 @@
         "confidence": {
           "type": "string",
           "description": "Confidence level of the finding.",
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ]
+          "enum": ["high", "medium", "low"]
         },
         "status": {
           "type": "string",
           "description": "Current lifecycle status of the finding.",
-          "enum": [
-            "open",
-            "suppressed",
-            "verified"
-          ]
+          "enum": ["open", "suppressed", "verified"]
         },
         "evidence": {
           "type": "array",
@@ -145,21 +113,13 @@
     },
     "summary": {
       "type": "object",
-      "required": [
-        "issueCountBySeverity",
-        "issueCountByPhase"
-      ],
+      "required": ["issueCountBySeverity", "issueCountByPhase"],
       "additionalProperties": false,
       "properties": {
         "issueCountBySeverity": {
           "type": "object",
           "description": "Aggregated counts keyed by severity.",
-          "required": [
-            "info",
-            "minor",
-            "major",
-            "critical"
-          ],
+          "required": ["info", "minor", "major", "critical"],
           "additionalProperties": false,
           "properties": {
             "info": {
@@ -183,11 +143,7 @@
         "issueCountByPhase": {
           "type": "object",
           "description": "Aggregated counts keyed by SDLC phase.",
-          "required": [
-            "upstream",
-            "midstream",
-            "downstream"
-          ],
+          "required": ["upstream", "midstream", "downstream"],
           "additionalProperties": false,
           "properties": {
             "upstream": {
@@ -211,20 +167,12 @@
         "riskSummary": {
           "type": "object",
           "description": "Risk assessment summary from risk map evaluation.",
-          "required": [
-            "aggregateAction",
-            "escalatedFiles",
-            "humanReviewFiles"
-          ],
+          "required": ["aggregateAction", "escalatedFiles", "humanReviewFiles"],
           "additionalProperties": false,
           "properties": {
             "aggregateAction": {
               "type": "string",
-              "enum": [
-                "comment_only",
-                "escalate",
-                "require_human_review"
-              ]
+              "enum": ["comment_only", "escalate", "require_human_review"]
             },
             "escalatedFiles": {
               "type": "array",
@@ -243,21 +191,13 @@
         "prioritySummary": {
           "type": "object",
           "description": "Priority rollup derived from severity (P1=critical, P2=major, P3=minor, P4=info). Optional for backward compatibility; always emitted by current river run.",
-          "required": [
-            "counts",
-            "requiresImmediateAttention"
-          ],
+          "required": ["counts", "requiresImmediateAttention"],
           "additionalProperties": false,
           "properties": {
             "counts": {
               "type": "object",
               "description": "Issue counts keyed by priority bucket.",
-              "required": [
-                "P1",
-                "P2",
-                "P3",
-                "P4"
-              ],
+              "required": ["P1", "P2", "P3", "P4"],
               "additionalProperties": false,
               "properties": {
                 "P1": {
