@@ -77,7 +77,8 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
 
   // Accumulate-only: no inline assert, so one failing check cannot abort the
   // remaining checks of the same fixture and shrink the measured denominator
-  // (#1356 F11). The suite-level assertion below fails with the full list.
+  // (#1356 F11). Each `it` asserts its OWN slice at the end (attribution in
+  // CI output) and the suite-level assertion repeats the full list.
   const check = (name, label, condition, detail) => {
     total += 1;
     if (condition) {
@@ -87,12 +88,19 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
     }
   };
 
+  /** Assert (at the END of an `it`) that this test added no failures. */
+  const assertOwnChecks = (before) => {
+    const own = failures.slice(before);
+    assert.equal(own.length, 0, own.join('\n'));
+  };
+
   for (const file of files) {
     const raw = fs.readFileSync(path.join(FIXTURES_DIR, file), 'utf8');
     const expected = parseExpected(raw, file);
     const body = fixtureBody(raw);
 
     it(`${file}: regex tier verdict is ${expected.regexOnly}`, () => {
+      const before = failures.length;
       const result = detectHumanApprovalTriggers(body);
       check(
         file,
@@ -101,9 +109,11 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
         `expected required=${expected.regexOnly === 'required'}, ` +
           `got ${result.required} (triggers: ${JSON.stringify(result.triggers)})`
       );
+      assertOwnChecks(before);
     });
 
     it(`${file}: expected triggers fire`, () => {
+      const before = failures.length;
       const { candidates } = detectHumanApprovalCandidates(body);
       const names = candidates.map((c) => c.trigger);
       if (expected.triggersInclude.length === 0) {
@@ -118,10 +128,12 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
           check(file, `trigger:${t}`, names.includes(t), `missing in ${JSON.stringify(names)}`);
         }
       }
+      assertOwnChecks(before);
     });
 
     if (expected.llmEscalation === 'escalated') {
       it(`${file}: LOW-only candidates escalate via the LLM adjudicator`, async () => {
+        const before = failures.length;
         const { candidates } = detectHumanApprovalCandidates(body);
         check(
           file,
@@ -150,6 +162,7 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
           regexOnly.required === false && regexOnly.mode === 'regex-only',
           `expected regex-only false, got required=${regexOnly.required} mode=${regexOnly.mode}`
         );
+        assertOwnChecks(before);
       });
     }
   }

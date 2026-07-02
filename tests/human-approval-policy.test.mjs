@@ -408,3 +408,96 @@ describe('detectHumanApprovalCandidates — #1356 hardening regressions', () => 
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// #1356 — gemini review bypasses (tempered token / determiner-less verb)
+// ---------------------------------------------------------------------------
+describe('detectHumanApprovalCandidates — #1356 review-round hardening', () => {
+  const highTriggers = (text) =>
+    detectHumanApprovalCandidates(text).candidates.filter((c) => c.confidence === 'high');
+
+  it('still fires when an excluded word appears AFTER the cleanup verb', () => {
+    assert.ok(
+      highTriggers('The job recursively wipes the renamed folder').some(
+        (c) => c.trigger === 'recursive-cleanup-euphemism'
+      ),
+      'whole-span lookahead was bypassable by mentioning "renamed" nearby'
+    );
+  });
+
+  it('fires on determiner-less verb usage of empty + singular noun', () => {
+    assert.ok(
+      highTriggers('The retention step will empty staging bucket after export').some(
+        (c) => c.trigger === 'empty-storage-euphemism'
+      )
+    );
+  });
+
+  it('does not fire on adjectival singular with a preceding determiner', () => {
+    assert.equal(
+      highTriggers('The empty table is dropped from the report layout').length,
+      0,
+      'lookbehind must treat "the empty table" as adjectival'
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #1356 — reviewer findings round 2 (list boundaries / noun-phrase recall /
+// LOW twin defense-in-depth / ReDoS for new patterns)
+// ---------------------------------------------------------------------------
+describe('detectHumanApprovalCandidates — #1356 round-2 regressions', () => {
+  const highTriggers = (text) =>
+    detectHumanApprovalCandidates(text).candidates.filter((c) => c.confidence === 'high');
+  const allTriggers = (text) => detectHumanApprovalCandidates(text).candidates;
+
+  it('does not match a phrase spanning two separate list items', () => {
+    assert.equal(
+      highTriggers('1. ログを再帰的に検索\n2. 整理したレポートを出す').length,
+      0,
+      'list-item boundary must stop phrase-span patterns'
+    );
+  });
+
+  it('still matches a phrase split by a hard-wrapped continuation line', () => {
+    assert.ok(
+      highTriggers('一時ディレクトリを再帰的に\n   整理する後処理を追加する').some(
+        (c) => c.trigger === 'ja-recursive-cleanup-euphemism'
+      ),
+      'continuation lines (no list marker) fold into one sentence'
+    );
+  });
+
+  it('detects noun-stopped 初期化 task items (recall)', () => {
+    assert.ok(
+      highTriggers('ステージングテーブルの初期化').some(
+        (c) => c.trigger === 'ja-empty-storage-euphemism'
+      )
+    );
+  });
+
+  it('does not fire on passive 初期化されて verification phrasing', () => {
+    assert.equal(highTriggers('データベースが初期化されていないことを確認する').length, 0);
+  });
+
+  it('poisoned exclusion phrasing still surfaces as a LOW candidate', () => {
+    const candidates = allTriggers('recursively refactor and wipe the scratch directory');
+    assert.equal(
+      candidates.filter((c) => c.confidence === 'high').length,
+      0,
+      'HIGH tier stays quiet (tempered exclusion)'
+    );
+    assert.ok(
+      candidates.some((c) => c.trigger === 'recursive-cleanup-lowconf'),
+      'exclusion-free LOW twin must keep the case visible to the adjudicator'
+    );
+  });
+
+  it('new euphemism patterns are not vulnerable to slow scans (ReDoS)', () => {
+    const longInput = `recursively ${'word '.repeat(20000)} nothing`;
+    const start = Date.now();
+    detectHumanApprovalCandidates(longInput);
+    const elapsed = Date.now() - start;
+    assert.ok(elapsed < 500, `ReDoS: scan took ${elapsed}ms (expected < 500ms)`);
+  });
+});

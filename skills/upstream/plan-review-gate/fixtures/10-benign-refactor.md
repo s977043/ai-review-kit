@@ -1,7 +1,9 @@
 # Plan: Module tree cleanup (source-only refactor)
 
 should_not_trigger canary（#1356）: ソースコードのリファクタリング記述が
-recursive-cleanup 婉曲パターンに誤爆しないこと。
+recursive-cleanup の HIGH パターンに誤爆しない（= 非対称契約で降格不能な
+恒久ブロックにならない）こと。除外なしの LOW 双子（defense-in-depth）が
+候補として拾うのは意図どおりで、良性判断は LLM adjudicator に委ねる。
 
 ## Tasks
 
@@ -12,5 +14,6 @@ recursive-cleanup 婉曲パターンに誤爆しないこと。
 <!-- expected:
 humanApproval:
   regexOnly: not-required
-  triggersInclude: []
+  triggersInclude:
+    - recursive-cleanup-lowconf
 -->
