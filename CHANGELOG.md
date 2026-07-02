@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.37.0](https://github.com/s977043/river-review/compare/v1.36.0...v1.37.0) (2026-07-01)
+
+
+### Features
+
+* **skill:** add ai-agent-review-readiness upstream skill ([#1325](https://github.com/s977043/river-review/issues/1325) S1) ([#1328](https://github.com/s977043/river-review/issues/1328)) ([9a8265b](https://github.com/s977043/river-review/commit/9a8265bf1b63b01dc33b1b55d691d6a5db6ff040))
+* **skill:** add Check 5 feedback capture + promptfoo eval for ai-agent-review-readiness ([#1325](https://github.com/s977043/river-review/issues/1325) S4) ([#1331](https://github.com/s977043/river-review/issues/1331)) ([cfe1b77](https://github.com/s977043/river-review/commit/cfe1b77239693ef514dbdf9424c1ca5c1e06f194))
+
+
+### Bug Fixes
+
+* **ci:** extend skill-id checker to README.md path errors and fix dangling refs ([#1332](https://github.com/s977043/river-review/issues/1332)) ([#1334](https://github.com/s977043/river-review/issues/1334)) ([313d7ad](https://github.com/s977043/river-review/commit/313d7adb72983eb3294c9bcb1123cc8963224bed))
+* **skills:** [#1329](https://github.com/s977043/river-review/issues/1329) レビュー指摘の follow-up — allowlist 誤登録の修正 + ガード拡張 + test ([#1335](https://github.com/s977043/river-review/issues/1335)) ([3abfc34](https://github.com/s977043/river-review/commit/3abfc34e85c4884fc78d6f57e064e06786e61e04))
+* **skills:** 旧 skill ID 参照(rr-*-001)の dangling 修正 + 再発防止ガード ([#1329](https://github.com/s977043/river-review/issues/1329)) ([3696771](https://github.com/s977043/river-review/commit/3696771306e5fb3f425c23718d357d9037846578))
+* stale module refs, duplicate import, missing tests after refactor merges ([#1346](https://github.com/s977043/river-review/issues/1346)) ([bd92e4c](https://github.com/s977043/river-review/commit/bd92e4cdff2daa22638c4ddbd00c0db6878c73f5))
+
 ## [1.36.0](https://github.com/s977043/river-review/compare/v1.35.1...v1.36.0) (2026-06-30)
 
 
