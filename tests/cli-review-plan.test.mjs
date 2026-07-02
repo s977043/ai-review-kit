@@ -1526,7 +1526,10 @@ describe('runReviewPlan — LLM adjudicator wiring (#1348 S1)', () => {
 // Epic #1347 S2 (#1349) — gate block wiring
 // ---------------------------------------------------------------------------
 describe('runReviewPlan — gate block (Epic #1347 S2)', () => {
-  test('clean no-changes run emits a schema-valid GO gate block', async () => {
+  test('a plan-only / no-changes run gates as NO_GO NOT_EXECUTED (fail-safe M1)', async () => {
+    // A vacuous perfect score over zero executed findings must not read as
+    // CONVERGED_CLEAN — and an agent suppressing diff resolution must not
+    // obtain a GO.
     const artifact = await runReviewPlan({
       planOnly: true,
       phase: 'midstream',
@@ -1537,13 +1540,48 @@ describe('runReviewPlan — gate block (Epic #1347 S2)', () => {
     });
     assert.equal(validate(artifact), true, JSON.stringify(validate.errors));
     assert.ok(artifact.gate, 'gate block must be attached on the exec/plan path');
-    assert.equal(artifact.gate.decision, 'GO');
-    assert.equal(artifact.gate.reasonCode, 'CONVERGED_CLEAN');
-    assert.equal(artifact.gate.tier, 'field');
+    assert.equal(artifact.gate.decision, 'NO_GO');
+    assert.equal(artifact.gate.reasonCode, 'NOT_EXECUTED');
+    assert.equal(artifact.gate.inputs.reviewExecuted, false);
+    assert.equal(artifact.gate.inputs.artifactStatus, 'no-changes');
     assert.equal(artifact.gate.inputs.riskMapPresent, false);
-    assert.equal(artifact.gate.inputs.riskMapDigest, null);
     assert.match(artifact.gate.inputsHash, /^[0-9a-f]{16}$/);
     assert.equal(artifact.gate.schemaVersion, '1');
+  });
+
+  test('risk-map require_human_review reaches the gate as RISK_MAP_HUMAN_REVIEW (C1 wiring)', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'midstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      resolveAllArtifactsImpl: async () => ({
+        diff: { id: 'diff', path: '/repo/d.patch', source: 'cwd', exists: true, optional: true },
+      }),
+      readFileImpl: async () => '+++ b/src/db/migrate.mjs\n@@ -0,0 +1 @@\n+x\n',
+      loadRiskMapImpl: async () => ({
+        version: '1',
+        rules: [{ match: 'src/db/**', action: 'require_human_review' }],
+      }),
+      buildExecutionPlanImpl: async (args) => ({
+        selected: [],
+        skipped: [],
+        // Same shape review-runner returns since #877: riskAssessment rides
+        // on the plan result, NOT on artifact.plan (the C1 regression).
+        riskAssessment: {
+          fileRisks: [{ file: 'src/db/migrate.mjs', action: 'require_human_review' }],
+          aggregateAction: 'require_human_review',
+          escalatedFiles: [],
+          humanReviewFiles: ['src/db/migrate.mjs'],
+        },
+      }),
+    });
+    assert.equal(validate(artifact), true, JSON.stringify(validate.errors));
+    assert.equal(artifact.gate.decision, 'ESCALATE');
+    assert.equal(artifact.gate.reasonCode, 'RISK_MAP_HUMAN_REVIEW');
+    assert.equal(artifact.gate.inputs.riskAction, 'require_human_review');
+    assert.equal(artifact.gate.inputs.riskMapPresent, true);
+    assert.match(artifact.gate.inputs.riskMapDigest, /^[0-9a-f]{16}$/);
   });
 
   test('a diff touching .river/ escalates via the bootstrap cliff (rule 0)', async () => {

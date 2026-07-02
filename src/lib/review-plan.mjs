@@ -118,6 +118,8 @@ function finalizeArtifact(
         riskAction: gateContext.riskAction,
         blockingFindings,
         changedFiles: gateContext.changedFiles ?? [],
+        reviewExecuted: gateContext.reviewExecuted === true,
+        artifactStatus: gateContext.artifactStatus ?? null,
         riskMapPresent: gateContext.riskMapPresent === true,
         riskMapDigest: gateContext.riskMapDigest ?? null,
         config: gateContext.config ?? {},
@@ -633,6 +635,7 @@ export async function runReviewPlan({
   // diff / human-approval branches below, consumed at finalizeArtifact.
   let gateChangedFiles = [];
   let gateHumanApprovalModes = [];
+  let gateRiskAction; // plan.riskAssessment.aggregateAction (C1: artifact.plan does NOT carry it)
 
   const configArtifacts =
     config && typeof config.artifacts === 'object' && config.artifacts ? config.artifacts : {};
@@ -713,6 +716,7 @@ export async function runReviewPlan({
       throw new ReviewPlanError(`Failed to build execution plan: ${err.message}`);
     }
 
+    gateRiskAction = plan?.riskAssessment?.aggregateAction;
     artifact.plan.selectedSkills = (plan.selected ?? []).map(toSelectedView);
     artifact.plan.skippedSkills = (plan.skipped ?? []).map((s) => ({
       id: String(meta(s.skill).id ?? ''),
@@ -904,9 +908,14 @@ export async function runReviewPlan({
     llmUsed: executionTrace?.llmUsed === true,
     humanApprovalRequired,
     gateContext: {
-      riskAction: artifact?.plan?.riskAssessment?.aggregateAction,
+      riskAction: gateRiskAction,
       changedFiles: gateChangedFiles,
       humanApprovalMode,
+      // Fail-safe (M1): a GO-family outcome requires that skills actually ran
+      // against a resolved diff. plan-only / no-changes runs gate as
+      // NO_GO NOT_EXECUTED (escalation rules still fire before it).
+      reviewExecuted: executeReview === true && artifact.status === 'ok',
+      artifactStatus: artifact.status ?? null,
       riskMapPresent: riskMap != null,
       riskMapDigest,
       config,

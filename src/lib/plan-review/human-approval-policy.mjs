@@ -352,7 +352,7 @@ export async function adjudicateHumanApproval({
       // failing adjudicator — i.e. the LOW tier silently disabled — is
       // observable in logs (#1357).
       console.warn(
-        `[plan-review] human-approval adjudicator failed; degraded to regex-only verdict: ${err instanceof Error ? err.message : JSON.stringify(err)}`
+        `[plan-review] human-approval adjudicator failed; degraded to regex-only verdict: ${err instanceof Error ? err.message : String(err)}`
       );
       return { required: regexRequired, triggers, evidence, mode: 'regex-fallback' };
     }

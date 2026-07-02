@@ -24,6 +24,8 @@ const base = {
   riskAction: 'comment_only',
   blockingFindings: 0,
   changedFiles: ['src/lib/foo.mjs'],
+  reviewExecuted: true,
+  artifactStatus: 'ok',
 };
 
 describe('deriveGateDecision — rule precedence', () => {
@@ -77,7 +79,38 @@ describe('deriveGateDecision — rule precedence', () => {
     assert.equal(r.inputs.riskAction, 'comment_only');
   });
 
-  test('rule 6: REVISE_REQUIRED → NO_GO', () => {
+  test('rule 6: not-executed runs never reach a GO-family outcome', () => {
+    // plan-only / no-changes: a vacuous perfect score over [] findings.
+    const r = deriveGateDecision({ ...base, reviewExecuted: false, artifactStatus: 'no-changes' });
+    assert.equal(r.decision, 'NO_GO');
+    assert.equal(r.reasonCode, 'NOT_EXECUTED');
+    assert.equal(r.inputs.reviewExecuted, false);
+    assert.equal(r.inputs.artifactStatus, 'no-changes');
+  });
+
+  test('rule 6: escalation rules still fire on not-executed runs', () => {
+    const r = deriveGateDecision({
+      ...base,
+      reviewExecuted: false,
+      humanApprovalRequired: true,
+    });
+    assert.equal(r.decision, 'ESCALATE');
+    assert.equal(r.reasonCode, 'HUMAN_APPROVAL_REQUIRED');
+    const r0 = deriveGateDecision({
+      ...base,
+      reviewExecuted: false,
+      changedFiles: ['.river/risk-map.yaml'],
+    });
+    assert.equal(r0.reasonCode, 'GATE_CONFIG_CHANGED');
+    const r4 = deriveGateDecision({
+      ...base,
+      reviewExecuted: false,
+      riskAction: 'require_human_review',
+    });
+    assert.equal(r4.reasonCode, 'RISK_MAP_HUMAN_REVIEW');
+  });
+
+  test('rule 7: REVISE_REQUIRED → NO_GO', () => {
     const r = deriveGateDecision({
       ...base,
       loopSignal: 'REVISE_REQUIRED',
@@ -181,6 +214,8 @@ describe('deriveGateDecision — audit block', () => {
       riskAction: 'comment_only',
       blockingFindings: 0,
       gateConfigChanged: false,
+      reviewExecuted: true,
+      artifactStatus: 'ok',
       riskMapPresent: true,
       riskMapDigest: 'abcd1234abcd1234',
     });

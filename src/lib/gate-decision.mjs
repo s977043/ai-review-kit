@@ -34,13 +34,21 @@
  *  3. loopSignal STOP_OSCILLATED             → ESCALATE  OSCILLATION_DETECTED
  *  4. riskAction require_human_review        → ESCALATE  RISK_MAP_HUMAN_REVIEW
  *  5. riskAction unknown (not absent)        → NO_GO     UNKNOWN_RISK_ACTION
- *  6. loopSignal REVISE_REQUIRED             → NO_GO     BLOCKING_FINDINGS
- *  7. NO_SIGNAL + human-review-recommended
+ *  6. review did not actually execute        → NO_GO     NOT_EXECUTED
+ *     (plan-only / no-changes runs must not claim CONVERGED_CLEAN: a
+ *     score of [] findings is vacuous, and an agent suppressing diff
+ *     resolution must not obtain a GO — escalation rules 0-4 still fire)
+ *  7. loopSignal REVISE_REQUIRED             → NO_GO     BLOCKING_FINDINGS
+ *  8. NO_SIGNAL + human-review-recommended
  *     + zero blocking findings               → GO_WITH_OBSERVATION MINOR_FINDINGS_OBSERVE
- *  8. NO_SIGNAL (decision absent/unknown)    → NO_GO     UNDETERMINED
- *  9. CONVERGED + riskAction escalate        → GO_WITH_OBSERVATION RISK_MAP_OBSERVE
- * 10. CONVERGED                              → GO        CONVERGED_CLEAN
- * 11. anything else (unknown loopSignal)     → NO_GO     UNKNOWN_SIGNAL
+ *  9. NO_SIGNAL (decision absent/unknown)    → NO_GO     UNDETERMINED
+ * 10. CONVERGED + riskAction escalate        → GO_WITH_OBSERVATION RISK_MAP_OBSERVE
+ * 11. CONVERGED                              → GO        CONVERGED_CLEAN
+ * 12. anything else (unknown loopSignal)     → NO_GO     UNKNOWN_SIGNAL
+ *
+ * Rule 3 (STOP_OSCILLATED) is unreachable from the production wiring — the
+ * artifact's suggestedLoopSignal carries only Layer-1 values. It exists for
+ * host-side replay of Layer-2 (runs diff) signals through the same contract.
  *
  * Fail-safe direction: everything unknown or undetermined maps to NO_GO
  * (never GO), and rule 7 exists because `human-review-recommended` is the
@@ -71,6 +79,7 @@ export const GATE_REASON_CODES = /** @type {const} */ ([
   'OSCILLATION_DETECTED',
   'RISK_MAP_HUMAN_REVIEW',
   'UNKNOWN_RISK_ACTION',
+  'NOT_EXECUTED',
   'BLOCKING_FINDINGS',
   'MINOR_FINDINGS_OBSERVE',
   'UNDETERMINED',
@@ -117,12 +126,14 @@ export function gateConfigChanged(changedFiles) {
  */
 export function computeGateInputsHash(inputs) {
   const FIELDS = [
+    'artifactStatus',
     'blockingFindings',
     'decision',
     'gateConfigChanged',
     'humanApprovalMode',
     'humanApprovalRequired',
     'loopSignal',
+    'reviewExecuted',
     'riskAction',
     'riskMapDigest',
     'riskMapPresent',
@@ -152,6 +163,12 @@ export function computeGateInputsHash(inputs) {
  * @param {boolean} [opts.gateConfigChanged] - explicit override so a host can
  *   replay a recorded `gate.inputs` object verbatim (rule 0 is derived from
  *   changedFiles when this is omitted)
+ * @param {boolean} [opts.reviewExecuted] - true only when skills actually ran
+ *   against a resolved diff (executeReview path, status ok). Fail-safe: when
+ *   false, non-escalated outcomes are NO_GO NOT_EXECUTED — a vacuous perfect
+ *   score over zero executed findings must not read as CONVERGED_CLEAN.
+ * @param {string} [opts.artifactStatus] - artifact.status echo (ok | no-changes)
+ *   so hosts can distinguish "nothing to review" from "review suppressed".
  * @param {boolean} [opts.riskMapPresent]
  * @param {string|null} [opts.riskMapDigest]
  * @param {object} [opts.config] - effective config; gate.observation / gate.circuitBreaker read here
@@ -168,6 +185,8 @@ export function deriveGateDecision({
   blockingFindings = 0,
   changedFiles = [],
   gateConfigChanged: gateConfigChangedOverride,
+  reviewExecuted = false,
+  artifactStatus = null,
   riskMapPresent = false,
   riskMapDigest = null,
   config = {},
@@ -186,6 +205,8 @@ export function deriveGateDecision({
     riskAction: effectiveRiskAction,
     blockingFindings: Number.isFinite(blockingFindings) ? blockingFindings : 0,
     gateConfigChanged: configChanged,
+    reviewExecuted: reviewExecuted === true,
+    artifactStatus: artifactStatus ?? null,
     riskMapPresent: riskMapPresent === true,
     riskMapDigest: riskMapDigest ?? null,
   };
@@ -209,21 +230,25 @@ export function deriveGateDecision({
       return ['ESCALATE', 'RISK_MAP_HUMAN_REVIEW'];
     // 5. Unknown risk action never falls through to GO (fail-safe).
     if (!KNOWN_RISK_ACTIONS.has(effectiveRiskAction)) return ['NO_GO', 'UNKNOWN_RISK_ACTION'];
-    // 6. Blocking findings → revise.
+    // 6. Review must have actually executed for any GO-family outcome:
+    // plan-only / no-changes runs score [] findings as a vacuous perfect
+    // verdict, and suppressed diff resolution must not earn a GO.
+    if (!inputs.reviewExecuted) return ['NO_GO', 'NOT_EXECUTED'];
+    // 7. Blocking findings → revise.
     if (loopSignal === 'REVISE_REQUIRED') return ['NO_GO', 'BLOCKING_FINDINGS'];
-    // 7-8. NO_SIGNAL: the common "warn" verdict observes; true unknowns stop.
+    // 8-9. NO_SIGNAL: the common "warn" verdict observes; true unknowns stop.
     if (loopSignal === 'NO_SIGNAL') {
       if (decision === 'human-review-recommended' && inputs.blockingFindings === 0) {
         return ['GO_WITH_OBSERVATION', 'MINOR_FINDINGS_OBSERVE'];
       }
       return ['NO_GO', 'UNDETERMINED'];
     }
-    // 9-10. Converged: hill when the risk map asks for observation, else field.
+    // 10-11. Converged: hill when the risk map asks for observation, else field.
     if (loopSignal === 'CONVERGED') {
       if (effectiveRiskAction === 'escalate') return ['GO_WITH_OBSERVATION', 'RISK_MAP_OBSERVE'];
       return ['GO', 'CONVERGED_CLEAN'];
     }
-    // 11. Forward-compatible fail-safe.
+    // 12. Forward-compatible fail-safe.
     return ['NO_GO', 'UNKNOWN_SIGNAL'];
   };
 

@@ -142,6 +142,7 @@
             "OSCILLATION_DETECTED",
             "RISK_MAP_HUMAN_REVIEW",
             "UNKNOWN_RISK_ACTION",
+            "NOT_EXECUTED",
             "BLOCKING_FINDINGS",
             "MINOR_FINDINGS_OBSERVE",
             "UNDETERMINED",
