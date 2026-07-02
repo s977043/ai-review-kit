@@ -152,6 +152,33 @@ describe('buildAdjudicationPrompt', () => {
     assert.match(prompt, /<\\\/untrusted/, 'forged tag is escaped, content preserved');
   });
 
+  it('redaction cannot shift excerpt offsets (offset-poisoning regression)', () => {
+    // Redaction changes string length; excerpting must happen on the
+    // normalized (pre-redaction) text so planted secrets before a candidate
+    // cannot push it out of its own excerpt window.
+    const secrets = Array.from(
+      { length: 12 },
+      () => 'ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    ).join(' tok ');
+    const text = `${secrets} ${'x'.repeat(2200)} テーブルを空にする処理 ${'y'.repeat(300)}`;
+    const prompt = buildAdjudicationPrompt({
+      candidates: [
+        {
+          trigger: 'ja-empty-storage-euphemism',
+          confidence: 'high',
+          snippet: 'テーブルを空にする',
+          index: text.indexOf('テーブル'),
+        },
+      ],
+      text,
+    });
+    assert.match(prompt, /テーブルを空にする/, 'excerpt must still contain the candidate');
+    assert.ok(
+      !prompt.includes('ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'),
+      'secrets stay redacted'
+    );
+  });
+
   it('redacts secrets from the plan body before it leaves the process (S3 PR-A)', () => {
     const prompt = buildAdjudicationPrompt({
       candidates: [],

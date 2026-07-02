@@ -68,11 +68,14 @@ const SYSTEM_MESSAGE =
  */
 export function buildAdjudicationPrompt({ candidates = [], text = '', artifactKind = '' } = {}) {
   // Same normalization the detector used, so candidate `index` offsets align.
+  // IMPORTANT ordering: excerpt from the NORMALIZED text first, THEN redact
+  // each piece. Redaction changes string length (<REDACTED:...> replacements),
+  // so redact-before-excerpt would shift candidate offsets — an attacker
+  // could plant long secret-like strings early in the document to push a
+  // candidate out of its own excerpt window.
   const normalized = normalizeText(text);
-  // Redact before anything leaves the process (S3 PR-A item H).
-  const redacted = redactText(normalized).text;
 
-  const head = redacted.slice(0, HEAD_WINDOW_CHARS);
+  const head = normalized.slice(0, HEAD_WINDOW_CHARS);
   const pieces = [{ label: 'document head', body: head }];
   let budget = MAX_TEXT_CHARS - head.length;
 
@@ -89,9 +92,9 @@ export function buildAdjudicationPrompt({ candidates = [], text = '', artifactKi
   for (const c of outOfView) {
     if (budget <= 0) break;
     const start = Math.max(HEAD_WINDOW_CHARS, c.index - EXCERPT_RADIUS);
-    const end = Math.min(redacted.length, c.index + EXCERPT_RADIUS);
+    const end = Math.min(normalized.length, c.index + EXCERPT_RADIUS);
     if (coveredRanges.some(([s0, e0]) => start >= s0 && end <= e0)) continue;
-    const excerpt = redacted.slice(start, Math.min(end, start + budget));
+    const excerpt = normalized.slice(start, Math.min(end, start + budget));
     coveredRanges.push([start, end]);
     budget -= excerpt.length;
     pieces.push({ label: `excerpt around "${c.trigger}" (offset ${c.index})`, body: excerpt });
@@ -101,7 +104,12 @@ export function buildAdjudicationPrompt({ candidates = [], text = '', artifactKi
   // the untrusted block early.
   const neutralize = (t) => t.replace(/<\s*\/\s*untrusted/gi, '<\\/untrusted');
 
-  const sections = pieces.map((p) => `[${p.label}]\n${neutralize(p.body)}`).join('\n...\n');
+  // Redact each piece before it leaves the process (S3 PR-A item H) —
+  // applied AFTER excerpting so candidate offsets stay aligned (see the
+  // ordering note above).
+  const sections = pieces
+    .map((p) => `[${p.label}]\n${neutralize(redactText(p.body).text)}`)
+    .join('\n...\n');
 
   const candidateLines = candidates
     .map((c) => `- trigger=${c.trigger} confidence=${c.confidence} snippet="${c.snippet}"`)
