@@ -18,3 +18,11 @@ River Review does **not** aim to be:
 - **A general-purpose AI agent framework**: it is a context engineering framework specialized for code review, not a generic task execution platform. The review team, too, is a single orchestrator running perspective-based reviewer roles in parallel and merging their findings via connected-components — not a set of fully autonomous, independent agents.
 - **A replacement for human review judgment**: AI assists by surfacing review perspectives and evidence. Findings and the verdict are decision material only; GO / NO-GO, iteration, and stop decisions remain the responsibility of the caller or a human (HITL). It does not assert auto-approval or auto-merge.
 - **An automatic code fixer**: it identifies and reports issues but does not transform or auto-fix code.
+
+## Direction of travel: from HITL to HOTL
+
+This section frames River Review's automation direction around two states: HITL (Human-in-the-Loop — a human judges every instance) and HOTL (Human-on-the-Loop — a human supervises the loop). The "replacement for human review judgment" Non-Goal above is not a permanent constraint but a current milestone. Even the areas judged to require humans only (misalignment with intent, soundness of design decisions, risk weighting, tacit assumptions) become reviewable by AI to the extent that the right context can be extracted and shaped for it.
+
+- **Current state (HITL)**: AI supplies decision material — findings and a verdict — and a human makes the GO / NO-GO call each time.
+- **Direction of travel (toward HOTL)**: by continuing to strengthen context extraction and progressive disclosure (the `Context-aware` principle) and raising AI judgment accuracy, shift the human's role from judging every instance (in the loop) to supervising the loop and stepping in only when needed (on the loop) — widening the scope of automation over time.
+- **Precondition for the shift**: accuracy gains must be backed by finding verification and improvement-loop feedback. Concretely, automation widens first for the perspectives where consensusLevel and verification track records have accumulated evidence — not ahead of that evidence.
