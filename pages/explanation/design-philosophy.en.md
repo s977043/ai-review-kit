@@ -21,8 +21,8 @@ River Review does **not** aim to be:
 
 ## Direction of travel: from HITL to HOTL
 
-"Not aiming to replace human review judgment" is a current milestone, not a fixed ceiling. Even the areas judged to require humans only (misalignment with intent, soundness of design decisions, risk weighting, tacit assumptions) become reviewable by AI to the extent that the right context can be extracted and shaped for it.
+The "replacement for human review judgment" Non-Goal above is not a permanent constraint but a current milestone. Even the areas judged to require humans only (misalignment with intent, soundness of design decisions, risk weighting, tacit assumptions) become reviewable by AI to the extent that the right context can be extracted and shaped for it.
 
 - **Current state (HITL)**: AI supplies decision material — findings and a verdict — and a human makes the GO / NO-GO call each time.
 - **Direction of travel (toward HOTL)**: by continuing to strengthen context extraction and progressive disclosure (the `Context-aware` principle) and raising AI judgment accuracy, shift the human's role from judging every instance (in the loop) to supervising the loop and stepping in only when needed (on the loop) — widening the scope of automation over time.
-- **Precondition for the shift**: accuracy gains must be backed by finding verification and the improvement loop's feedback. The scope of automation is not widened without that evidence.
+- **Precondition for the shift**: accuracy gains must be backed by finding verification and the improvement loop's feedback. Concretely, automation widens first for the perspectives where consensusLevel and verification track records have accumulated evidence — not ahead of that evidence.
