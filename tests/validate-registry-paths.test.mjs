@@ -96,3 +96,54 @@ test('validateRegistryPaths only warns (still passes) for an unregistered SKILL.
   assert.equal(ok, true);
   assert.ok(warnings.some((w) => w.includes('skill-b') && w.includes('not listed')));
 });
+
+test('validateRegistryPaths skips agent-skills/ segment but not substring matches', async () => {
+  const dir = await buildSkillsDir({
+    registryYaml: `skills:\n${registryEntry('skill-a', 'midstream/skill-a/SKILL.md')}`,
+    skills: ['skill-a', 'my-agent-skills-bridge'],
+  });
+  // A SKILL.md under an actual agent-skills/ directory segment must be skipped.
+  const agentSkillDir = path.join(dir, 'agent-skills', 'router');
+  await fs.mkdir(agentSkillDir, { recursive: true });
+  await fs.writeFile(path.join(agentSkillDir, 'SKILL.md'), SKILL_MD('router'), 'utf8');
+
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (msg) => warnings.push(String(msg));
+  let ok;
+  try {
+    ok = await validateRegistryPaths({ skillsDir: dir, repoRoot: dir });
+  } finally {
+    console.warn = originalWarn;
+  }
+  assert.equal(ok, true);
+  // A directory merely containing the substring must still warn (not be skipped).
+  assert.ok(warnings.some((w) => w.includes('my-agent-skills-bridge') && w.includes('not listed')));
+  // A true agent-skills/ segment must not warn.
+  assert.ok(!warnings.some((w) => w.includes(`agent-skills${path.sep}router`)));
+});
+
+test('validateRegistryPaths is independent of process.cwd()', async () => {
+  const dir = await buildSkillsDir({
+    registryYaml: `skills:\n${registryEntry('skill-a', 'midstream/skill-a/SKILL.md')}`,
+  });
+  const otherCwd = await createTempDirAsync({ prefix: `${TMP_PREFIX}cwd-` });
+  const warnings = [];
+  const originalWarn = console.warn;
+  const originalCwd = process.cwd();
+  console.warn = (msg) => warnings.push(String(msg));
+  let ok;
+  try {
+    process.chdir(otherCwd);
+    ok = await validateRegistryPaths({ skillsDir: dir, repoRoot: dir });
+  } finally {
+    process.chdir(originalCwd);
+    console.warn = originalWarn;
+  }
+  assert.equal(ok, true);
+  // No spurious "not listed" warning when cwd differs from repoRoot.
+  assert.deepEqual(
+    warnings.filter((w) => w.includes('not listed')),
+    []
+  );
+});

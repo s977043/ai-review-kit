@@ -391,8 +391,12 @@ export async function validateRegistryPaths({
   for (const filePath of skillFiles) {
     if (path.basename(filePath) !== 'SKILL.md') continue;
     const relativePath = path.relative(repoRoot, filePath);
-    if (relativePath.includes('agent-skills')) continue;
-    if (!registeredPaths.has(path.resolve(filePath))) {
+    // Segment-wise match so a skill directory merely containing the substring
+    // (e.g. my-agent-skills-bridge) is not skipped by accident.
+    if (relativePath.split(path.sep).includes('agent-skills')) continue;
+    // Resolve against repoRoot (not process.cwd()) so the comparison with
+    // registeredPaths (repoRoot-based) holds regardless of the caller's cwd.
+    if (!registeredPaths.has(path.resolve(repoRoot, relativePath))) {
       console.warn(
         `⚠️  ${relativePath}: SKILL.md exists but is not listed in skills/registry.yaml`
       );
