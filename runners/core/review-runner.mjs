@@ -24,17 +24,21 @@ const MODEL_PRIORITY = {
 // DECLARATION only; reordering enforcement (strict_block routing) is S4.
 const EVALUATION_LAYER_ORDER = ['deterministic', 'heuristic', 'llm'];
 
-function skillEvaluationLayer(skill) {
+function skillEvaluationLayers(skill) {
   const meta = getMeta(skill);
   const declared = meta?.evaluationType;
-  if (declared === 'deterministic') return 'deterministic';
-  if (declared === 'heuristic') return 'heuristic';
-  if (declared === 'agentic') return 'llm';
-  return HEURISTIC_SKILL_IDS.includes(meta?.id) ? 'heuristic' : 'llm';
+  if (declared === 'deterministic') return ['deterministic'];
+  if (declared === 'heuristic') return ['heuristic'];
+  if (declared === 'agentic') return ['llm'];
+  // Undeclared fallback: SKILL_HEURISTIC_MAP members have heuristic detectors
+  // AND run through the LLM in normal (non-dry-run) execution, so they
+  // contribute BOTH layers — declaring only 'heuristic' would omit the llm
+  // layer that actually runs (review M1 of the S2 plan-contract PR).
+  return HEURISTIC_SKILL_IDS.includes(meta?.id) ? ['heuristic', 'llm'] : ['llm'];
 }
 
 export function deriveExecutionOrder(selected) {
-  const layers = new Set((selected ?? []).map(skillEvaluationLayer));
+  const layers = new Set((selected ?? []).flatMap(skillEvaluationLayers));
   return EVALUATION_LAYER_ORDER.filter((l) => layers.has(l));
 }
 

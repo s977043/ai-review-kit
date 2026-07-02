@@ -38894,17 +38894,21 @@ const MODEL_PRIORITY = {
 // DECLARATION only; reordering enforcement (strict_block routing) is S4.
 const EVALUATION_LAYER_ORDER = ['deterministic', 'heuristic', 'llm'];
 
-function skillEvaluationLayer(skill) {
+function skillEvaluationLayers(skill) {
   const meta = getMeta(skill);
   const declared = meta?.evaluationType;
-  if (declared === 'deterministic') return 'deterministic';
-  if (declared === 'heuristic') return 'heuristic';
-  if (declared === 'agentic') return 'llm';
-  return heuristic_review/* HEURISTIC_SKILL_IDS */.y2.includes(meta?.id) ? 'heuristic' : 'llm';
+  if (declared === 'deterministic') return ['deterministic'];
+  if (declared === 'heuristic') return ['heuristic'];
+  if (declared === 'agentic') return ['llm'];
+  // Undeclared fallback: SKILL_HEURISTIC_MAP members have heuristic detectors
+  // AND run through the LLM in normal (non-dry-run) execution, so they
+  // contribute BOTH layers — declaring only 'heuristic' would omit the llm
+  // layer that actually runs (review M1 of the S2 plan-contract PR).
+  return heuristic_review/* HEURISTIC_SKILL_IDS */.y2.includes(meta?.id) ? ['heuristic', 'llm'] : ['llm'];
 }
 
 function deriveExecutionOrder(selected) {
-  const layers = new Set((selected ?? []).map(skillEvaluationLayer));
+  const layers = new Set((selected ?? []).flatMap(skillEvaluationLayers));
   return EVALUATION_LAYER_ORDER.filter((l) => layers.has(l));
 }
 
@@ -47445,6 +47449,10 @@ async function runLocalReview({
 
   return {
     status: 'ok',
+    // Gate fail-safe input (Epic #1347 S2 review M1): dry-run skips the LLM,
+    // so a clean diff scores a vacuous auto-approve — the gate must not read
+    // that as CONVERGED_CLEAN.
+    dryRun: dryRun === true,
     repoRoot: external_node_path_.resolve(context.repoRoot),
     defaultBranch: context.defaultBranch,
     mergeBase: context.mergeBase,
@@ -61803,18 +61811,17 @@ class SkillDispatcher {
 var review_plan_generator = __nccwpck_require__(8069);
 // EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
 var engine = __nccwpck_require__(9487);
-// EXTERNAL MODULE: ./src/lib/loop-signal.mjs
-var loop_signal = __nccwpck_require__(4702);
 // EXTERNAL MODULE: ./src/lib/gate-decision.mjs
 var gate_decision = __nccwpck_require__(2773);
 // EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
 var rubric = __nccwpck_require__(5034);
+// EXTERNAL MODULE: ./src/lib/loop-signal.mjs
+var loop_signal = __nccwpck_require__(4702);
 // EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
 var _2020 = __nccwpck_require__(2210);
 // EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
 var dist = __nccwpck_require__(2815);
 ;// CONCATENATED MODULE: ./src/cli.mjs
-
 
 
 
@@ -62968,7 +62975,7 @@ function formatJsonOutput(result, phase) {
         (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
       ).length,
       changedFiles: result.changedFiles ?? [],
-      reviewExecuted: result.status === 'ok',
+      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
       artifactStatus: result.status ?? null,
       riskMapPresent: riskAssessment != null,
       riskMapDigest: null,
@@ -63055,7 +63062,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     if (parsed.reviewSubcommand === 'verify') {
       try {
         const { ReviewPlanError, resolveReviewOutputFormat } =
-          await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
+          await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
         try {
           resolveReviewOutputFormat(parsed);
         } catch (err) {
@@ -63136,7 +63143,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     }
     try {
       const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =
-        await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
+        await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
       let reviewFormat;
       try {
         reviewFormat = resolveReviewOutputFormat(parsed);
@@ -63237,7 +63244,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       // is given do we translate findings into a CI exit code; otherwise exit 0
       // (non-breaking for existing callers / the plangate-review workflow).
       if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-        const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
+        const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
         const gate = evaluateReviewGate(artifact, {
           failOn: parsed.failOn ?? 'critical',
           warnOn: parsed.warnOn ?? 'major',
@@ -63833,7 +63840,7 @@ Dependencies: ${
     // the run path (only `river review` gated), so agents that relied on the
     // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
     if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-      const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
+      const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
       const issues = formatJsonOutput(result, parsed.phase).issues;
       const gate = evaluateReviewGate(
         { findings: issues },

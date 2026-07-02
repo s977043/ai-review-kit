@@ -476,6 +476,10 @@ export async function runLocalReview({
 
   return {
     status: 'ok',
+    // Gate fail-safe input (Epic #1347 S2 review M1): dry-run skips the LLM,
+    // so a clean diff scores a vacuous auto-approve — the gate must not read
+    // that as CONVERGED_CLEAN.
+    dryRun: dryRun === true,
     repoRoot: path.resolve(context.repoRoot),
     defaultBranch: context.defaultBranch,
     mergeBase: context.mergeBase,

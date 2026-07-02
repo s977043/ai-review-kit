@@ -32,6 +32,26 @@ River Review は各アーティファクトおよび `runs diff --output json` �
 
 `suggestedLoopSignal` は**追加フィールドかつ省略可能**です。`decision` / `verdict` を変更せず、GO/NO-GO ゲートとしては機能しません。旧アーティファクトでは省略されます。
 
+## `gate` — リスク階層型のゲート信号（Epic #1347 S2）
+
+`suggestedLoopSignal` の上位に、リスク階層（崖・丘・原っぱ）を合成した機械可読ゲート信号 `gate` があります（`river review` の Review Artifact と `river run --output json` の両方に付与、additive / 省略可能）。導出は `src/lib/gate-decision.mjs` の**決定論純関数**で行われ、LLM 出力はエスカレーション方向にのみ寄与します。
+
+| `gate.decision`       | 階層（tier） | caller の期待挙動                                                                                                                                            |
+| --------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GO`                  | 原っぱ       | 自律継続してよい                                                                                                                                             |
+| `GO_WITH_OBSERVATION` | 丘           | 進行しつつ `observation.expiresInHours` 以内に非同期レビュー。**期限超過時は停止**し、`observation.files` 由来の変更を未レビュー扱い（re-review 必須）にする |
+| `NO_GO`               | —            | revise へ回す（`reasonCode` が理由を示す。`NOT_EXECUTED` = レビュー未実行、`UNDETERMINED` = 判定不能）                                                       |
+| `ESCALATE`            | 崖           | 人間の事前承認まで停止                                                                                                                                       |
+
+- **fail-safe**: 判定不能・未知の入力は常に `NO_GO` に写像され、`GO` 側には決して倒れない
+- **ブートストラップ崖**: diff が `.river/**`（risk-map 等の gate 設定）に触れる場合は内容に関わらず `ESCALATE`（`GATE_CONFIG_CHANGED`）となる。gate 設定で gate 自身を無防備化する変更（risk-map の削除を含む）は必ず人間承認を通る
+- **信頼境界**: risk-map / config / plan 文言は被レビューエージェントの書込権限内にある。gate ブロックは**エージェントの書込権限の外（host / CI 側チェックアウト）で導出されたときのみ**信頼できる。`.river/**` は CODEOWNERS / branch protection での保護を推奨する
+- **replay check（正当性検証）**: 導出は純関数のため、caller は `gate.inputs` を `deriveGateDecision` に再投入して `decision` の一致を検証できる（`inputsHash` は S3 の回帰比較用サマリであり改竄防止ではない）。`inputs.riskMapDigest` は「YAML load → `JSON.stringify` → sha256 先頭16hex」で算出される
+- **circuit breaker**: `gate.configSnapshot.maxConsecutiveAutoGo` は助言値である。連続 auto-GO のカウントと強制チェックポイントの執行は caller 責務であり、**caller 側に独自設定がある場合は厳しい方（min）が優先**される
+- 執行のリファレンス実装と conformance fixture（`tests/fixtures/gate-conformance/`）で caller 側の振る舞いを検証できる
+
+`gate` は advisory です。判定の執行（`--gate` モード、strict_block ルーティング）は Epic #1347 S4 で導入されます。
+
 ## 停止（収束）条件の複合式
 
 ### `decision == "auto-approve"` 単独では停止条件にならない理由

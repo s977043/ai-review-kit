@@ -69,7 +69,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["command"],
-      "description": "Declaration for evaluationType 'deterministic' skills. TRUST BOUNDARY: `command` is an arbitrary command specified by a repo-owned file — the agent under review can edit it (e.g. `command: \"true\"` makes L1 always green). Execution (S4 strict_block routing) must happen only inside the trust boundary (host-approved configuration); S2 defines the schema only.",
+      "description": "Declaration for evaluationType 'deterministic' skills. TRUST BOUNDARY: `command` is an arbitrary command specified by a repo-owned file — the agent under review can edit it (e.g. `command: \"true\"` makes L1 always green). Execution (S4 strict_block routing) must happen only inside the trust boundary (host-approved configuration); S2 defines the schema only; the cross-field constraint (evaluationType \"deterministic\" requiring deterministicGate) is introduced together with S4 enforcement.",
       "properties": {
         "command": { "type": "string", "minLength": 1 },
         "failSeverity": {

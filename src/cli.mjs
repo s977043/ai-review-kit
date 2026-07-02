@@ -22,11 +22,10 @@ import { isLlmEnabled, parseList } from './lib/utils.mjs';
 import { PLANNER_MODES } from './lib/planner-utils.mjs';
 import { DEPTH_TO_REVIEW_MODE, resolveDepthToReviewMode } from './lib/review-plan-generator.mjs';
 import { resolveVerdict, scoreReview } from './lib/scoring/engine.mjs';
-import { deriveLoopSignalFromArtifact } from './lib/loop-signal.mjs';
 import { deriveGateDecision } from './lib/gate-decision.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
 import { severityToPriority } from './lib/finding-factory.mjs';
-import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
+import { deriveLoopSignalFromArtifact, deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
@@ -1159,7 +1158,7 @@ function formatJsonOutput(result, phase) {
         (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
       ).length,
       changedFiles: result.changedFiles ?? [],
-      reviewExecuted: result.status === 'ok',
+      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
       artifactStatus: result.status ?? null,
       riskMapPresent: riskAssessment != null,
       riskMapDigest: null,
