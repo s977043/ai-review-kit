@@ -43,6 +43,8 @@ import {
 } from './plan-review/human-approval-policy.mjs';
 import { createHumanApprovalAdjudicator } from './plan-review/llm-adjudicator.mjs';
 import { deriveLoopSignalFromArtifact } from './loop-signal.mjs';
+import { deriveGateDecision } from './gate-decision.mjs';
+import { createHash } from 'node:crypto';
 
 const VALID_PHASES = new Set(PHASES);
 
@@ -73,7 +75,13 @@ function defaultGenerateRunId() {
  */
 function finalizeArtifact(
   artifact,
-  { generateRunId, modelConfig = null, llmUsed = false, humanApprovalRequired = false }
+  {
+    generateRunId,
+    modelConfig = null,
+    llmUsed = false,
+    humanApprovalRequired = false,
+    gateContext = null,
+  }
 ) {
   // decision: derive the top-level verdict from the findings present in the
   // artifact. Never let a scoring error break the artifact contract.
@@ -90,6 +98,35 @@ function finalizeArtifact(
     artifact.suggestedLoopSignal = deriveLoopSignalFromArtifact(artifact);
   } catch {
     // leave suggestedLoopSignal unset on derivation failure
+  }
+
+  // gate: machine-readable gate signal for loop-running hosts (Epic #1347 S2).
+  // Derived after decision/suggestedLoopSignal (they are inputs). Only the
+  // exec path supplies gateContext — the replay path omits it because a
+  // replayed artifact's risk-map / diff context is not this run's context.
+  // Additive: never let derivation errors break the artifact contract.
+  if (gateContext) {
+    try {
+      const blockingFindings = (artifact.findings ?? []).filter(
+        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
+      ).length;
+      artifact.gate = deriveGateDecision({
+        loopSignal: artifact.suggestedLoopSignal,
+        decision: artifact.decision,
+        humanApprovalRequired,
+        humanApprovalMode: gateContext.humanApprovalMode ?? null,
+        riskAction: gateContext.riskAction,
+        blockingFindings,
+        changedFiles: gateContext.changedFiles ?? [],
+        reviewExecuted: gateContext.reviewExecuted === true,
+        artifactStatus: gateContext.artifactStatus ?? null,
+        riskMapPresent: gateContext.riskMapPresent === true,
+        riskMapDigest: gateContext.riskMapDigest ?? null,
+        config: gateContext.config ?? {},
+      });
+    } catch {
+      // leave gate unset on derivation failure
+    }
   }
 
   artifact.trace = { run_id: generateRunId() };
@@ -594,6 +631,11 @@ export async function runReviewPlan({
   } catch (err) {
     throw new ReviewPlanError(`Failed to load risk map: ${err.message}`);
   }
+  // Hoisted gate-derivation context (Epic #1347 S2): populated inside the
+  // diff / human-approval branches below, consumed at finalizeArtifact.
+  let gateChangedFiles = [];
+  let gateHumanApprovalModes = [];
+  let gateRiskAction; // plan.riskAssessment.aggregateAction (C1: artifact.plan does NOT carry it)
 
   const configArtifacts =
     config && typeof config.artifacts === 'object' && config.artifacts ? config.artifacts : {};
@@ -631,6 +673,7 @@ export async function runReviewPlan({
     const changedFiles = (parsedDiff.files ?? [])
       .map((f) => f.path)
       .filter((p) => p && p !== '/dev/null');
+    gateChangedFiles = changedFiles;
 
     // Declare which artifact contexts are actually available so the plan
     // layer's inputContext check doesn't silently skip skills that need a
@@ -673,6 +716,7 @@ export async function runReviewPlan({
       throw new ReviewPlanError(`Failed to build execution plan: ${err.message}`);
     }
 
+    gateRiskAction = plan?.riskAssessment?.aggregateAction;
     artifact.plan.selectedSkills = (plan.selected ?? []).map(toSelectedView);
     artifact.plan.skippedSkills = (plan.skipped ?? []).map((s) => ({
       id: String(meta(s.skill).id ?? ''),
@@ -818,6 +862,11 @@ export async function runReviewPlan({
             id,
             ruleId: 'rr-plan-review-human-approval',
             severity: 'info',
+            // `phase` is required by the finding schema — its absence made any
+            // artifact containing this finding schema-invalid (latent since
+            // #1348; surfaced by the S2 gate E2E test that ajv-validates a
+            // triggering artifact).
+            phase,
             title: 'Human approval required',
             message: `Plan contains triggers requiring human approval: ${newTriggers.join(', ')}`,
             file: filePath,
@@ -840,13 +889,37 @@ export async function runReviewPlan({
       artifact.debug = artifact.debug ?? {};
       artifact.debug.humanApproval = humanApprovalAudit;
     }
+    gateHumanApprovalModes = humanApprovalAudit.map((a) => a.mode);
   }
+
+  // Gate derivation context (Epic #1347 S2). humanApprovalMode picks the most
+  // informative mode across scanned files (fallback > adjudicated > skipped >
+  // regex-only) so a degraded adjudicator is visible in gate.inputs.
+  const MODE_PRIORITY = ['regex-fallback', 'llm-adjudicated', 'llm-skipped', 'regex-only'];
+  const seenModes = new Set(gateHumanApprovalModes);
+  const humanApprovalMode = MODE_PRIORITY.find((m) => seenModes.has(m)) ?? null;
+  const riskMapDigest = riskMap
+    ? createHash('sha256').update(JSON.stringify(riskMap)).digest('hex').slice(0, 16)
+    : null;
 
   finalizeArtifact(artifact, {
     generateRunId,
     modelConfig: config?.model ?? null,
     llmUsed: executionTrace?.llmUsed === true,
     humanApprovalRequired,
+    gateContext: {
+      riskAction: gateRiskAction,
+      changedFiles: gateChangedFiles,
+      humanApprovalMode,
+      // Fail-safe (M1): a GO-family outcome requires that skills actually ran
+      // against a resolved diff. plan-only / no-changes runs gate as
+      // NO_GO NOT_EXECUTED (escalation rules still fire before it).
+      reviewExecuted: executeReview === true && artifact.status === 'ok',
+      artifactStatus: artifact.status ?? null,
+      riskMapPresent: riskMap != null,
+      riskMapDigest,
+      config,
+    },
   });
 
   return artifact;

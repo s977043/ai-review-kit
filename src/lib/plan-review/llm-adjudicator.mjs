@@ -113,13 +113,13 @@ export function createHumanApprovalAdjudicator({
   fetchImpl = globalThis.fetch,
 } = {}) {
   if (!isLlmEnabled(env)) return null;
-  const apiKey = env.RIVER_OPENAI_API_KEY || env.OPENAI_API_KEY;
+  const apiKey = env?.RIVER_OPENAI_API_KEY || env?.OPENAI_API_KEY;
   if (!apiKey) return null; // only OpenAI-compatible endpoints are wired here
   const model =
-    env.RIVER_OPENAI_MODEL || env.OPENAI_MODEL || config?.model?.modelName || 'gpt-4o-mini';
+    env?.RIVER_OPENAI_MODEL || env?.OPENAI_MODEL || config?.model?.modelName || 'gpt-4o-mini';
   const endpoint =
-    env.RIVER_OPENAI_BASE_URL ||
-    env.OPENAI_BASE_URL ||
+    env?.RIVER_OPENAI_BASE_URL ||
+    env?.OPENAI_BASE_URL ||
     'https://api.openai.com/v1/chat/completions';
 
   return async function humanApprovalAdjudicator(candidates, text, artifactKind) {

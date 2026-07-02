@@ -17,7 +17,7 @@ export function parseList(value) {
  * @returns {boolean}
  */
 export function isOfflineMode(env = process.env) {
-  const offline = String(env.RIVER_OFFLINE ?? '')
+  const offline = String(env?.RIVER_OFFLINE ?? '')
     .trim()
     .toLowerCase();
   return offline === '1' || offline === 'true' || offline === 'yes' || offline === 'on';
@@ -37,11 +37,11 @@ export function isLlmEnabled(env = process.env) {
     return false;
   }
   return !!(
-    env.RIVER_OPENAI_API_KEY ||
-    env.OPENAI_API_KEY ||
-    env.GOOGLE_API_KEY ||
-    env.ANTHROPIC_API_KEY ||
-    env.RIVER_ANTHROPIC_API_KEY
+    env?.RIVER_OPENAI_API_KEY ||
+    env?.OPENAI_API_KEY ||
+    env?.GOOGLE_API_KEY ||
+    env?.ANTHROPIC_API_KEY ||
+    env?.RIVER_ANTHROPIC_API_KEY
   );
 }
 
