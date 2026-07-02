@@ -55,6 +55,56 @@ describe('detectHumanApprovalTriggers — should_trigger canary', () => {
     { label: 'terraform apply', text: 'terraform apply' },
     { label: 'Japanese: データベース削除', text: 'データベース削除を実行する' },
     { label: 'Japanese: 秘密鍵', text: '秘密鍵をローテーションする' },
+    // Adversarial euphemism canary (#1348 S1): plans that avoid literal
+    // danger words must still trigger on semantic phrasings.
+    {
+      label: 'euphemism: 一時ディレクトリを再帰的に整理 (rm -rf avoidance)',
+      text: 'ビルド後に一時ディレクトリを再帰的に整理するステップを追加する',
+    },
+    {
+      label: 'euphemism: recursively clean up the temp directory',
+      text: 'recursively clean up the temp directory after each build',
+    },
+    {
+      label: 'euphemism: recursively purge old artifacts',
+      text: 'recursively purge old artifacts from the workspace',
+    },
+    {
+      label: 'euphemism: 接続情報 (secret avoidance)',
+      text: '新しい環境へ接続情報を書き写す',
+    },
+    {
+      label: 'euphemism: connection string',
+      text: 'copy the connection string into the new config',
+    },
+    {
+      label: 'euphemism: 環境変数ファイル (.env avoidance)',
+      text: '環境変数ファイルを新しいサーバーに配置する',
+    },
+    {
+      label: 'euphemism: 稼働環境へ反映 (本番 avoidance)',
+      text: '検証完了後、稼働環境へ設定を反映する',
+    },
+    {
+      label: 'euphemism: 実環境に適用 (本番 avoidance)',
+      text: '実環境に新しい設定を適用する',
+    },
+    {
+      label: 'euphemism: into the live environment',
+      text: 'roll the change into the live environment',
+    },
+    {
+      label: 'euphemism: テーブルを空にする (TRUNCATE avoidance)',
+      text: '移行前にテーブルを空にする',
+    },
+    {
+      label: 'euphemism: データベースを初期化 (DROP avoidance)',
+      text: 'データベースを初期化してから再投入する',
+    },
+    {
+      label: 'euphemism: empty the table',
+      text: 'empty the table before re-import',
+    },
   ];
 
   for (const { label, text } of TRIGGER_CASES) {
@@ -96,6 +146,16 @@ describe('detectHumanApprovalTriggers — should_not_trigger canary (false-posit
     { label: 'add a deployment note (benign)', text: 'add a deployment note' },
     { label: 'update deployment guide (benign)', text: 'update deployment guide' },
     { label: 'deployment is documented (benign)', text: 'deployment is documented' },
+    // Benign phrasings near the new euphemism patterns (#1348 S1) — the
+    // euphemism detectors must not over-trigger on ordinary tidy-up language.
+    { label: 'ドキュメントを整理する (benign)', text: 'ドキュメントの構成を整理する' },
+    { label: 'コードを整理する (benign)', text: '重複したユーティリティ関数を整理して共通化する' },
+    {
+      label: 'clean up code style (benign)',
+      text: 'clean up the code style in the helpers module',
+    },
+    { label: 'empty array handling (benign)', text: 'handle the empty array case in the parser' },
+    { label: '環境構築手順の更新 (benign)', text: '開発環境の構築手順を最新化する' },
   ];
 
   for (const { label, text } of NO_TRIGGER_CASES) {
@@ -175,13 +235,38 @@ describe('adjudicateHumanApproval', () => {
     assert.equal(result.mode, 'llm-adjudicated');
   });
 
-  it('llm-adjudicated mode: adjudicator returning false → required=false', async () => {
+  it('asymmetric escalation: adjudicator returning false can NOT overturn a HIGH match', async () => {
     const { candidates } = detectHumanApprovalCandidates('rm -rf /data');
-    // Simulate adjudicator deciding this is actually safe (unlikely, but tests the wiring)
+    // Epic #1347 design principle: the LLM only contributes in the escalation
+    // direction. Even if it deems the plan safe, the HIGH regex verdict wins.
+    const adjudicator = async () => false;
+    const result = await adjudicateHumanApproval({ candidates, adjudicator });
+    assert.equal(result.required, true, 'HIGH-confidence regex verdict must not be loosened');
+    assert.equal(result.mode, 'llm-adjudicated');
+  });
+
+  it('asymmetric escalation: adjudicator returning false on LOW-only → required=false', async () => {
+    const { candidates } = detectHumanApprovalCandidates('deploy to staging');
     const adjudicator = async () => false;
     const result = await adjudicateHumanApproval({ candidates, adjudicator });
     assert.equal(result.required, false);
     assert.equal(result.mode, 'llm-adjudicated');
+  });
+
+  it('fail-safe: adjudicator throwing degrades to the regex verdict (regex-fallback)', async () => {
+    const boom = async () => {
+      throw new Error('LLM unavailable');
+    };
+    // LOW-only text: regex verdict is false
+    const low = detectHumanApprovalCandidates('deploy to staging').candidates;
+    const lowResult = await adjudicateHumanApproval({ candidates: low, adjudicator: boom });
+    assert.equal(lowResult.required, false);
+    assert.equal(lowResult.mode, 'regex-fallback');
+    // HIGH text: regex verdict is true and survives the failure
+    const high = detectHumanApprovalCandidates('rm -rf /data').candidates;
+    const highResult = await adjudicateHumanApproval({ candidates: high, adjudicator: boom });
+    assert.equal(highResult.required, true);
+    assert.equal(highResult.mode, 'regex-fallback');
   });
 
   it('evidence array includes all candidates (audit trail)', async () => {

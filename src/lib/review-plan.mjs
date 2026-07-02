@@ -37,7 +37,11 @@ import { loadRiskMap as defaultLoadRiskMap } from './risk-map.mjs';
 import { PHASES, PLANNER_MODES } from './planner-utils.mjs';
 import { resolveAvailableContexts, resolveAvailableDependencies } from './utils.mjs';
 import { scoreReview } from './scoring/engine.mjs';
-import { detectHumanApprovalTriggers } from './plan-review/human-approval-policy.mjs';
+import {
+  detectHumanApprovalCandidates,
+  adjudicateHumanApproval,
+} from './plan-review/human-approval-policy.mjs';
+import { createHumanApprovalAdjudicator } from './plan-review/llm-adjudicator.mjs';
 import { deriveLoopSignalFromArtifact } from './loop-signal.mjs';
 
 const VALID_PHASES = new Set(PHASES);
@@ -523,6 +527,14 @@ function toSelectedView(skill) {
  *   (the default `.river/risk-map.yaml` path is missing), preserving the
  *   backward-compatible "no risk-based action" behaviour.
  * @param {(p: string) => Promise<string>} [opts.readFileImpl]
+ * @param {((candidates: object[], text: string, artifactKind: string) => Promise<boolean>)|null} [opts.humanApprovalAdjudicator]
+ *   LLM adjudicator for LOW-confidence human-approval candidates (#1348 S1).
+ *   `null` forces regex-only mode. When omitted (undefined) the default is
+ *   derived from the environment via `createHumanApprovalAdjudicator`, but
+ *   ONLY on the `executeReview` path — the `--plan-only` path keeps its
+ *   documented "no LLM call is ever made here" contract. The adjudicator is
+ *   escalation-only: it can never overturn a HIGH-confidence regex verdict
+ *   (see adjudicateHumanApproval).
  * @returns {Promise<object>} Review Artifact (schema version "1")
  */
 export async function runReviewPlan({
@@ -537,6 +549,7 @@ export async function runReviewPlan({
   skillIds = null,
   availableContexts,
   availableDependencies,
+  humanApprovalAdjudicator,
   now = () => new Date().toISOString(),
   loadConfigImpl = defaultLoadConfig,
   resolveAllArtifactsImpl = defaultResolveAllArtifacts,
@@ -724,10 +737,25 @@ export async function runReviewPlan({
     const pbiPath = resolved?.['pbi-input']?.path;
     const planPath = resolved?.plan?.path;
 
+    // LLM adjudicator wiring (#1348 S1). `undefined` = derive the default:
+    // only the executeReview path may call an LLM (the --plan-only path is
+    // documented as never making an LLM call). `null` (or an unavailable
+    // environment — offline / no OpenAI-compatible key) keeps the pre-#1348
+    // regex-only behavior. The adjudicator is escalation-only by contract.
+    const effectiveAdjudicator =
+      humanApprovalAdjudicator !== undefined
+        ? humanApprovalAdjudicator
+        : executeReview
+          ? createHumanApprovalAdjudicator({ config })
+          : null;
+    // Per-file audit trail (mode + candidate count) surfaced under debug.
+    const humanApprovalAudit = [];
+
     /**
-     * Read filePath (non-blocking) and run detectHumanApprovalTriggers.
-     * If triggers are found, push an info finding attributed to that file
-     * and set humanApprovalRequired.
+     * Read filePath (non-blocking), detect human-approval candidates and
+     * adjudicate them (regex-only or LLM-escalated).
+     * If the verdict is required, push an info finding attributed to that
+     * file and set humanApprovalRequired.
      *
      * @param {string} filePath
      */
@@ -747,7 +775,21 @@ export async function runReviewPlan({
       } catch {
         // non-blocking — missing / unreadable file is not an error
       }
-      const approval = detectHumanApprovalTriggers(text);
+      const { candidates } = detectHumanApprovalCandidates(text);
+      const approval = await adjudicateHumanApproval({
+        text,
+        candidates,
+        artifactKind: filePath === pbiPath ? 'pbi-input' : 'plan',
+        adjudicator: effectiveAdjudicator,
+      });
+      if (candidates.length > 0) {
+        humanApprovalAudit.push({
+          file: filePath,
+          mode: approval.mode,
+          candidates: candidates.length,
+          required: approval.required,
+        });
+      }
       if (approval.required) {
         humanApprovalRequired = true;
         artifact.findings = artifact.findings ?? [];
@@ -790,6 +832,14 @@ export async function runReviewPlan({
 
     if (pbiPath) await scanFile(pbiPath);
     if (planPath) await scanFile(planPath);
+
+    // Audit trail (Epic #1347 supervisability): record how each verdict was
+    // produced (regex-only / llm-adjudicated / regex-fallback). Debug-gated so
+    // the artifact contract is unchanged for existing consumers.
+    if (debug && humanApprovalAudit.length > 0) {
+      artifact.debug = artifact.debug ?? {};
+      artifact.debug.humanApproval = humanApprovalAudit;
+    }
   }
 
   finalizeArtifact(artifact, {

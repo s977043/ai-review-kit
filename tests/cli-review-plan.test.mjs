@@ -1427,3 +1427,97 @@ describe('runReviewPlan — human approval F5: stable id + dedup', () => {
     assert.equal(artifact.decision, 'human-review-required');
   });
 });
+
+describe('runReviewPlan — LLM adjudicator wiring (#1348 S1)', () => {
+  const fixedNow = () => '2026-07-02T00:00:00.000Z';
+  const okConfig = async () => ({});
+  const fixedRunId = () => 'fixed-run-id-adjudicator';
+  // LOW-confidence-only plan text: cron + webhook, no HIGH keyword
+  const lowOnlyPlan = 'Register a cron entry that calls the customer webhook nightly.';
+
+  const baseOpts = (overrides = {}) => ({
+    planOnly: true,
+    phase: 'upstream',
+    now: fixedNow,
+    loadConfigImpl: okConfig,
+    loadRiskMapImpl: async () => null,
+    generateRunId: fixedRunId,
+    resolveAllArtifactsImpl: async () => ({
+      plan: { id: 'plan', path: '/repo/plan.md', source: 'cwd', exists: true, optional: true },
+    }),
+    readFileImpl: async (p) => (p === '/repo/plan.md' ? lowOnlyPlan : ''),
+    buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    ...overrides,
+  });
+
+  test('injected adjudicator escalates LOW-only candidates → human-review-required', async () => {
+    let received = null;
+    const artifact = await runReviewPlan(
+      baseOpts({
+        humanApprovalAdjudicator: async (candidates, text, artifactKind) => {
+          received = { candidates, text, artifactKind };
+          return true;
+        },
+      })
+    );
+    assert.ok(received, 'adjudicator should be invoked');
+    assert.equal(received.artifactKind, 'plan');
+    assert.ok(
+      received.candidates.some((c) => c.confidence === 'low'),
+      'adjudicator should receive the LOW candidates'
+    );
+    const infoFinding = artifact.findings.find((f) => f.ruleId === 'rr-plan-review-human-approval');
+    assert.ok(infoFinding, 'escalated verdict should emit the info finding');
+    assert.equal(artifact.decision, 'human-review-required');
+  });
+
+  test('adjudicator returning false keeps LOW-only plan at auto-approve', async () => {
+    const artifact = await runReviewPlan(baseOpts({ humanApprovalAdjudicator: async () => false }));
+    const infoFinding = artifact.findings.find((f) => f.ruleId === 'rr-plan-review-human-approval');
+    assert.equal(infoFinding, undefined);
+    assert.equal(artifact.decision, 'auto-approve');
+  });
+
+  test('adjudicator can NOT loosen a HIGH-confidence regex verdict (asymmetric escalation)', async () => {
+    const artifact = await runReviewPlan(
+      baseOpts({
+        readFileImpl: async (p) => (p === '/repo/plan.md' ? 'Run rm -rf /data as cleanup' : ''),
+        humanApprovalAdjudicator: async () => false, // lenient LLM must be ignored
+      })
+    );
+    assert.equal(artifact.decision, 'human-review-required');
+  });
+
+  test('adjudicator failure degrades to the regex verdict (fail-safe, no throw)', async () => {
+    const artifact = await runReviewPlan(
+      baseOpts({
+        debug: true,
+        humanApprovalAdjudicator: async () => {
+          throw new Error('LLM down');
+        },
+      })
+    );
+    assert.equal(artifact.decision, 'auto-approve');
+    assert.equal(artifact.debug.humanApproval?.[0]?.mode, 'regex-fallback');
+  });
+
+  test('default plan-only path stays regex-only (documented no-LLM contract)', async () => {
+    // humanApprovalAdjudicator omitted + executeReview=false → no adjudicator
+    const artifact = await runReviewPlan(baseOpts({ debug: true }));
+    assert.equal(artifact.decision, 'auto-approve');
+    assert.equal(artifact.debug.humanApproval?.[0]?.mode, 'regex-only');
+    assert.equal(artifact.debug.humanApproval?.[0]?.required, false);
+  });
+
+  test('debug audit trail records mode + candidate count per file', async () => {
+    const artifact = await runReviewPlan(
+      baseOpts({ debug: true, humanApprovalAdjudicator: async () => true })
+    );
+    const audit = artifact.debug.humanApproval;
+    assert.ok(Array.isArray(audit) && audit.length === 1, 'one scanned file with candidates');
+    assert.equal(audit[0].file, '/repo/plan.md');
+    assert.equal(audit[0].mode, 'llm-adjudicated');
+    assert.ok(audit[0].candidates >= 2, 'cron + external-posting candidates expected');
+    assert.equal(audit[0].required, true);
+  });
+});

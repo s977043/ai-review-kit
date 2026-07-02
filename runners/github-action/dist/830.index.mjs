@@ -37,6 +37,8 @@ const HIGH_RISK_IMPACT_TAGS = new Set(['security', 'migration', 'auth', 'payment
 function formatYamlOutput(artifact) {
   const findings = artifact.findings ?? [];
   const score = (0,_scoring_engine_mjs__WEBPACK_IMPORTED_MODULE_0__/* .scoreReview */ .lS)(findings);
+  // Honor the canonical verdict if the artifact carries one (#1170 F3).
+  score.verdict = (0,_scoring_engine_mjs__WEBPACK_IMPORTED_MODULE_0__/* .resolveVerdict */ .Cq)(artifact.decision, score.verdict);
   const yamlBlock = buildYamlBlock(artifact, findings, score);
   const summary = buildHumanSummary(score, findings);
   return `${yamlBlock}\n\n${summary}`;

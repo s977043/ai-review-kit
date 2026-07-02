@@ -111,6 +111,58 @@ const HIGH_CONFIDENCE_PATTERNS = [
     name: 'ja-danger-word',
     confidence: 'high',
   },
+  // ---------------------------------------------------------------------
+  // Euphemistic dangerous operations (#1348 S1 adversarial canary).
+  // Implementation agents that avoid literal danger words (`rm -rf`, 削除)
+  // still match on semantic phrasings of the same operation. Guarded by the
+  // false-negative canary fixtures in
+  // skills/upstream/plan-review-gate/fixtures/.
+  // ---------------------------------------------------------------------
+  // "recursively clean up the temp directory" — rm -rf without saying rm -rf
+  {
+    pattern:
+      /recursively\s+(?:\w+\s+){0,2}(?:clean(?:s|ed|ing)?(?:\s*up)?|clear(?:s|ed|ing)?|purge(?:s|d)?|prune(?:s|d)?|wipe(?:s|d)?|empt(?:y|ies|ied))/i,
+    name: 'recursive-cleanup-euphemism',
+    confidence: 'high',
+  },
+  // 「一時ディレクトリを再帰的に整理」— 削除と書かない再帰削除
+  {
+    pattern: /再帰的[^\n。]{0,15}(?:整理|クリーンアップ|一掃|片付け|掃除|空に)/,
+    name: 'ja-recursive-cleanup-euphemism',
+    confidence: 'high',
+  },
+  // 「テーブルを空にする」「データベースを初期化」— TRUNCATE/DROP の言い換え
+  {
+    pattern:
+      /(?:テーブル|ディレクトリ|フォルダ|バケット|データベース)[^\n。]{0,6}(?:空に|まっさらに|初期化)/,
+    name: 'ja-empty-storage-euphemism',
+    confidence: 'high',
+  },
+  // "empty the table / bucket / directory" — TRUNCATE without saying truncate
+  {
+    pattern:
+      /empt(?:y|ies|ied)(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b/i,
+    name: 'empty-storage-euphemism',
+    confidence: 'high',
+  },
+  // 「接続情報」「環境変数ファイル」— secret / credential / .env の言い換え
+  {
+    pattern: /接続情報|接続文字列|環境変数ファイル|アクセスキー/,
+    name: 'ja-connection-info-euphemism',
+    confidence: 'high',
+  },
+  { pattern: /connection\s+string/i, name: 'connection-string', confidence: 'high' },
+  // 「稼働環境へ反映」「実環境に適用」— 本番と書かない本番反映
+  {
+    pattern: /(?:実|稼働)環境[^\n。]{0,12}(?:反映|適用|更新|リリース|デプロイ|切り替え)/,
+    name: 'ja-live-env-apply-euphemism',
+    confidence: 'high',
+  },
+  {
+    pattern: /(?:to|into)\s+the\s+live\s+environment/i,
+    name: 'live-environment',
+    confidence: 'high',
+  },
   // Existing high-signal patterns (carried forward from original TRIGGER_PATTERNS)
   {
     pattern: /destructive\s+(command|operation|action|step)s?/i,
@@ -197,11 +249,19 @@ export function detectHumanApprovalCandidates(text) {
  *
  * Modes:
  *   'regex-only'       — no adjudicator provided; required = any high-confidence match
- *   'llm-adjudicated'  — adjudicator provided; required = adjudicator's verdict
+ *   'llm-adjudicated'  — adjudicator ran; required = high-confidence match OR
+ *                        adjudicator verdict (escalation-only, see below)
+ *   'regex-fallback'   — adjudicator was provided but threw; degraded to the
+ *                        regex-only verdict (fail-safe, never throws upward)
  *
- * The LLM adjudicator path is intentionally deferred (not wired to any caller
- * yet). The interface is defined here so callers can opt in without changes to
- * this module. See Epic #1171 item1 / #1170 F1.
+ * Asymmetric escalation (Epic #1347 design principle, wired by #1348 S1):
+ * the LLM adjudicator may only ESCALATE — it converts LOW-confidence
+ * candidates into required=true. It can never overturn a HIGH-confidence
+ * regex verdict downwards, so a compromised or lenient LLM cannot loosen the
+ * gate. Callers without an LLM keep the regex-only behavior unchanged.
+ *
+ * Wired caller: src/lib/review-plan.mjs (`river review exec` path via
+ * createHumanApprovalAdjudicator in ./llm-adjudicator.mjs).
  *
  * @param {object} opts
  * @param {string} [opts.text] - Original text (passed to adjudicator if provided)
@@ -221,14 +281,28 @@ export async function adjudicateHumanApproval({
   const triggers = candidates.map((c) => c.trigger);
   const evidence = candidates; // full candidate list for audit trail
 
+  // regex verdict: required when at least one HIGH-confidence candidate fired.
+  // This is the floor the adjudicator can never lower.
+  const regexRequired = candidates.some((c) => c.confidence === 'high');
+
   if (adjudicator) {
-    const required = await adjudicator(candidates, text, artifactKind);
-    return { required: Boolean(required), triggers, evidence, mode: 'llm-adjudicated' };
+    let verdict;
+    try {
+      verdict = await adjudicator(candidates, text, artifactKind);
+    } catch {
+      // Fail-safe: an adjudicator failure (network, parse, timeout) degrades
+      // to the regex-only verdict instead of breaking the caller.
+      return { required: regexRequired, triggers, evidence, mode: 'regex-fallback' };
+    }
+    return {
+      required: regexRequired || Boolean(verdict),
+      triggers,
+      evidence,
+      mode: 'llm-adjudicated',
+    };
   }
 
-  // regex-only: required only when at least one HIGH-confidence candidate fired
-  const required = candidates.some((c) => c.confidence === 'high');
-  return { required, triggers, evidence, mode: 'regex-only' };
+  return { required: regexRequired, triggers, evidence, mode: 'regex-only' };
 }
 
 /**
