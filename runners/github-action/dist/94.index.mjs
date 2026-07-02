@@ -231,16 +231,21 @@ var engine = __webpack_require__(9487);
 /**
  * Normalize input before pattern matching:
  *  - NFKC: unify fullwidth/halfwidth and composed forms
- *  - strip zero-width chars that could split a keyword across code units
+ *  - strip ALL Unicode format characters (category Cf): the previous 5-char
+ *    list (U+200B/C/D, U+FEFF, U+00AD) let siblings like U+2060 WORD JOINER
+ *    split a keyword across code units and bypass every HIGH pattern (#1356)
+ *  - fold whitespace runs (including newlines) into a single space so
+ *    Markdown line wrapping cannot split a phrase across a pattern's
+ *    negated-newline span (#1356)
  *
  * @param {string} raw
  * @returns {string}
  */
 function normalizeText(raw) {
-  // eslint-disable-next-line no-control-regex
   return String(raw ?? '')
     .normalize('NFKC')
-    .replace(/[\u200b\u200c\u200d\ufeff\u00ad]/g, '');
+    .replace(/\p{Cf}/gu, '')
+    .replace(/\s+/g, ' ');
 }
 
 /**
@@ -324,10 +329,13 @@ const HIGH_CONFIDENCE_PATTERNS = [
   // false-negative canary fixtures in
   // skills/upstream/plan-review-gate/fixtures/.
   // ---------------------------------------------------------------------
-  // "recursively clean up the temp directory" — rm -rf without saying rm -rf
+  // "recursively clean up the temp directory" — rm -rf without saying rm -rf.
+  // Insertion span widened to 4 words (#1356); a negative lookahead excludes
+  // code-maintenance phrasings ("recursively refactored and cleaned up") that
+  // describe source edits, not filesystem destruction.
   {
     pattern:
-      /recursively\s+(?:\w+\s+){0,2}(?:clean(?:s|ed|ing)?(?:\s*up)?|clear(?:s|ed|ing)?|purge(?:s|d)?|prune(?:s|d)?|wipe(?:s|d)?|empt(?:y|ies|ied))/i,
+      /recursively\s+(?!(?:\w+\s+){0,4}(?:refactor|restructur|renam|reformat|lint))(?:\w+\s+){0,4}(?:clean(?:s|ed|ing)?(?:\s*up)?|clear(?:s|ed|ing)?|purge(?:s|d)?|prune(?:s|d)?|wipe(?:s|d)?|empt(?:y|ies|ied))/i,
     name: 'recursive-cleanup-euphemism',
     confidence: 'high',
   },
@@ -337,17 +345,22 @@ const HIGH_CONFIDENCE_PATTERNS = [
     name: 'ja-recursive-cleanup-euphemism',
     confidence: 'high',
   },
-  // 「テーブルを空にする」「データベースを初期化」— TRUNCATE/DROP の言い換え
+  // 「テーブルを空にする」「データベースを初期化する」— TRUNCATE/DROP の言い換え。
+  // 動詞用法（空にする/し、初期化する/し/を行う）に限定し、状態記述・検証文
+  // （「空になっていないことを検証」）への誤爆を防ぐ (#1356)。
   {
     pattern:
-      /(?:テーブル|ディレクトリ|フォルダ|バケット|データベース)[^\n。]{0,6}(?:空に|まっさらに|初期化)/,
+      /(?:テーブル|ディレクトリ|フォルダ|バケット|データベース)[^。]{0,6}(?:空に(?:する|し)|まっさらに(?:する|し)|初期化(?:する|し|を行))/,
     name: 'ja-empty-storage-euphemism',
     confidence: 'high',
   },
-  // "empty the table / bucket / directory" — TRUNCATE without saying truncate
+  // "empty the table / bucket / directory" — TRUNCATE without saying truncate.
+  // Verb usage only: inflected forms (empties/emptied/emptying) anywhere, or
+  // bare "empty" followed by a determiner. Bare "empty" + plural noun
+  // ("empty tables are skipped") is adjectival and must not fire (#1356).
   {
     pattern:
-      /empt(?:y|ies|ied)(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b/i,
+      /\bempt(?:ies|ied|ying)\b(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b|\bempty\s+(?:the|all|every|each|this|that|these|those|its|our|your|their|any)\s+(?:\w+\s+){0,2}?(?:table|bucket|director(?:y|ies)|database|folder)s?\b/i,
     name: 'empty-storage-euphemism',
     confidence: 'high',
   },

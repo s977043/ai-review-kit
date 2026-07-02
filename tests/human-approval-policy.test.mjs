@@ -335,3 +335,76 @@ describe('detectHumanApprovalTriggers — edge cases', () => {
     assert.ok(result.triggers.includes('billing'), 'billing should be in triggers');
   });
 });
+
+// ---------------------------------------------------------------------------
+// #1356 — detector hardening regressions (bypass + precision)
+// All cases were empirically demonstrated in the post-merge review of #1354.
+// ---------------------------------------------------------------------------
+describe('detectHumanApprovalCandidates — #1356 hardening regressions', () => {
+  const highTriggers = (text) =>
+    detectHumanApprovalCandidates(text).candidates.filter((c) => c.confidence === 'high');
+
+  it('detects rm -rf split by a zero-width format char (U+2060)', () => {
+    const result = highTriggers('r⁠m -rf /tmp/build');
+    assert.ok(
+      result.some((c) => c.trigger === 'rm-rf'),
+      'Cf-category removal must defeat zero-width insertion'
+    );
+  });
+
+  it('detects a euphemism split across a Markdown line wrap', () => {
+    const result = highTriggers('一時ディレクトリを再帰的に\n整理する');
+    assert.ok(
+      result.some((c) => c.trigger === 'ja-recursive-cleanup-euphemism'),
+      'whitespace folding must defeat newline splitting'
+    );
+  });
+
+  it('does not fire on a benign verification sentence (state, not action)', () => {
+    assert.equal(
+      highTriggers('移行後にテーブルが空になっていないことを検証する').length,
+      0,
+      'state descriptions must not trip ja-empty-storage-euphemism'
+    );
+  });
+
+  it('does not fire on adjectival "empty tables/folders"', () => {
+    assert.equal(
+      highTriggers('Migrations skip empty tables and empty folders automatically').length,
+      0,
+      'adjectival usage must not trip empty-storage-euphemism'
+    );
+  });
+
+  it('does not fire on source-only recursive refactor phrasing', () => {
+    assert.equal(
+      highTriggers('The module tree was recursively refactored and cleaned up for readability')
+        .length,
+      0,
+      'code-maintenance phrasing must not trip recursive-cleanup-euphemism'
+    );
+  });
+
+  it('still fires with up to 4 inserted words before the cleanup verb', () => {
+    const result = highTriggers(
+      'The job recursively and then completely wipes the cache directory'
+    );
+    assert.ok(
+      result.some((c) => c.trigger === 'recursive-cleanup-euphemism'),
+      'widened insertion span must keep detecting'
+    );
+  });
+
+  it('still fires on the verb usages the euphemism patterns exist for', () => {
+    assert.ok(
+      highTriggers('テーブルを新構成で作り直す前にテーブルを空にする').some(
+        (c) => c.trigger === 'ja-empty-storage-euphemism'
+      )
+    );
+    assert.ok(
+      highTriggers('The cleanup step empties the staging bucket nightly').some(
+        (c) => c.trigger === 'empty-storage-euphemism'
+      )
+    );
+  });
+});

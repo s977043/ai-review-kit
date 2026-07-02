@@ -75,6 +75,9 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
   let total = 0;
   const failures = [];
 
+  // Accumulate-only: no inline assert, so one failing check cannot abort the
+  // remaining checks of the same fixture and shrink the measured denominator
+  // (#1356 F11). The suite-level assertion below fails with the full list.
   const check = (name, label, condition, detail) => {
     total += 1;
     if (condition) {
@@ -82,7 +85,6 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
     } else {
       failures.push(`${name} [${label}] ${detail}`);
     }
-    assert.ok(condition, `${name} [${label}] ${detail}`);
   };
 
   for (const file of files) {
@@ -151,6 +153,14 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
       });
     }
   }
+
+  it('canary suite: measured pass rate is 100%', () => {
+    assert.equal(
+      failures.length,
+      0,
+      `canary failures (${failures.length}):\n  - ${failures.join('\n  - ')}`
+    );
+  });
 
   after(() => {
     // DoD (#1348): the canary pass rate is a measured number, not a claim.

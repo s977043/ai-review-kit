@@ -462,8 +462,8 @@
     {
       "id": "plan-review-gate",
       "path": "skills/upstream/plan-review-gate",
-      "checksum": "sha256:faf8b14f50047396f86778134ddb17122125b185fec2a961dd6368ddf882b881",
-      "files": 6
+      "checksum": "sha256:74e16c0995a7ee7629773e097862ea95f16788cfd3288012045d9dd28b57e4f9",
+      "files": 11
     },
     {
       "id": "plangate-exec-conformance",

@@ -2,7 +2,7 @@
 id: 'plan-review-gate'
 name: 実装計画レビューゲート
 description: 実装計画（plan.md / pbi-input.md）に含まれる危険操作・触れてはならないスコープ・人間承認必須条件を検出し、AI 自律実行前のゲートとして機能する
-version: 0.2.0
+version: 0.2.1
 category: upstream
 phase: upstream
 applyTo:
