@@ -75,6 +75,10 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
   let total = 0;
   const failures = [];
 
+  // Accumulate-only: no inline assert, so one failing check cannot abort the
+  // remaining checks of the same fixture and shrink the measured denominator
+  // (#1356 F11). Each `it` asserts its OWN slice at the end (attribution in
+  // CI output) and the suite-level assertion repeats the full list.
   const check = (name, label, condition, detail) => {
     total += 1;
     if (condition) {
@@ -82,7 +86,12 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
     } else {
       failures.push(`${name} [${label}] ${detail}`);
     }
-    assert.ok(condition, `${name} [${label}] ${detail}`);
+  };
+
+  /** Assert (at the END of an `it`) that this test added no failures. */
+  const assertOwnChecks = (before) => {
+    const own = failures.slice(before);
+    assert.equal(own.length, 0, own.join('\n'));
   };
 
   for (const file of files) {
@@ -91,6 +100,7 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
     const body = fixtureBody(raw);
 
     it(`${file}: regex tier verdict is ${expected.regexOnly}`, () => {
+      const before = failures.length;
       const result = detectHumanApprovalTriggers(body);
       check(
         file,
@@ -99,9 +109,11 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
         `expected required=${expected.regexOnly === 'required'}, ` +
           `got ${result.required} (triggers: ${JSON.stringify(result.triggers)})`
       );
+      assertOwnChecks(before);
     });
 
     it(`${file}: expected triggers fire`, () => {
+      const before = failures.length;
       const { candidates } = detectHumanApprovalCandidates(body);
       const names = candidates.map((c) => c.trigger);
       if (expected.triggersInclude.length === 0) {
@@ -116,10 +128,12 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
           check(file, `trigger:${t}`, names.includes(t), `missing in ${JSON.stringify(names)}`);
         }
       }
+      assertOwnChecks(before);
     });
 
     if (expected.llmEscalation === 'escalated') {
       it(`${file}: LOW-only candidates escalate via the LLM adjudicator`, async () => {
+        const before = failures.length;
         const { candidates } = detectHumanApprovalCandidates(body);
         check(
           file,
@@ -148,9 +162,18 @@ describe('plan-review-gate — adversarial canary fixtures (#1348 S1)', () => {
           regexOnly.required === false && regexOnly.mode === 'regex-only',
           `expected regex-only false, got required=${regexOnly.required} mode=${regexOnly.mode}`
         );
+        assertOwnChecks(before);
       });
     }
   }
+
+  it('canary suite: measured pass rate is 100%', () => {
+    assert.equal(
+      failures.length,
+      0,
+      `canary failures (${failures.length}):\n  - ${failures.join('\n  - ')}`
+    );
+  });
 
   after(() => {
     // DoD (#1348): the canary pass rate is a measured number, not a claim.

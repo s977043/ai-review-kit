@@ -335,3 +335,169 @@ describe('detectHumanApprovalTriggers — edge cases', () => {
     assert.ok(result.triggers.includes('billing'), 'billing should be in triggers');
   });
 });
+
+// ---------------------------------------------------------------------------
+// #1356 — detector hardening regressions (bypass + precision)
+// All cases were empirically demonstrated in the post-merge review of #1354.
+// ---------------------------------------------------------------------------
+describe('detectHumanApprovalCandidates — #1356 hardening regressions', () => {
+  const highTriggers = (text) =>
+    detectHumanApprovalCandidates(text).candidates.filter((c) => c.confidence === 'high');
+
+  it('detects rm -rf split by a zero-width format char (U+2060)', () => {
+    const result = highTriggers('r⁠m -rf /tmp/build');
+    assert.ok(
+      result.some((c) => c.trigger === 'rm-rf'),
+      'Cf-category removal must defeat zero-width insertion'
+    );
+  });
+
+  it('detects a euphemism split across a Markdown line wrap', () => {
+    const result = highTriggers('一時ディレクトリを再帰的に\n整理する');
+    assert.ok(
+      result.some((c) => c.trigger === 'ja-recursive-cleanup-euphemism'),
+      'whitespace folding must defeat newline splitting'
+    );
+  });
+
+  it('does not fire on a benign verification sentence (state, not action)', () => {
+    assert.equal(
+      highTriggers('移行後にテーブルが空になっていないことを検証する').length,
+      0,
+      'state descriptions must not trip ja-empty-storage-euphemism'
+    );
+  });
+
+  it('does not fire on adjectival "empty tables/folders"', () => {
+    assert.equal(
+      highTriggers('Migrations skip empty tables and empty folders automatically').length,
+      0,
+      'adjectival usage must not trip empty-storage-euphemism'
+    );
+  });
+
+  it('does not fire on source-only recursive refactor phrasing', () => {
+    assert.equal(
+      highTriggers('The module tree was recursively refactored and cleaned up for readability')
+        .length,
+      0,
+      'code-maintenance phrasing must not trip recursive-cleanup-euphemism'
+    );
+  });
+
+  it('still fires with up to 4 inserted words before the cleanup verb', () => {
+    const result = highTriggers(
+      'The job recursively and then completely wipes the cache directory'
+    );
+    assert.ok(
+      result.some((c) => c.trigger === 'recursive-cleanup-euphemism'),
+      'widened insertion span must keep detecting'
+    );
+  });
+
+  it('still fires on the verb usages the euphemism patterns exist for', () => {
+    assert.ok(
+      highTriggers('テーブルを新構成で作り直す前にテーブルを空にする').some(
+        (c) => c.trigger === 'ja-empty-storage-euphemism'
+      )
+    );
+    assert.ok(
+      highTriggers('The cleanup step empties the staging bucket nightly').some(
+        (c) => c.trigger === 'empty-storage-euphemism'
+      )
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #1356 — gemini review bypasses (tempered token / determiner-less verb)
+// ---------------------------------------------------------------------------
+describe('detectHumanApprovalCandidates — #1356 review-round hardening', () => {
+  const highTriggers = (text) =>
+    detectHumanApprovalCandidates(text).candidates.filter((c) => c.confidence === 'high');
+
+  it('still fires when an excluded word appears AFTER the cleanup verb', () => {
+    assert.ok(
+      highTriggers('The job recursively wipes the renamed folder').some(
+        (c) => c.trigger === 'recursive-cleanup-euphemism'
+      ),
+      'whole-span lookahead was bypassable by mentioning "renamed" nearby'
+    );
+  });
+
+  it('fires on determiner-less verb usage of empty + singular noun', () => {
+    assert.ok(
+      highTriggers('The retention step will empty staging bucket after export').some(
+        (c) => c.trigger === 'empty-storage-euphemism'
+      )
+    );
+  });
+
+  it('does not fire on adjectival singular with a preceding determiner', () => {
+    assert.equal(
+      highTriggers('The empty table is dropped from the report layout').length,
+      0,
+      'lookbehind must treat "the empty table" as adjectival'
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #1356 — reviewer findings round 2 (list boundaries / noun-phrase recall /
+// LOW twin defense-in-depth / ReDoS for new patterns)
+// ---------------------------------------------------------------------------
+describe('detectHumanApprovalCandidates — #1356 round-2 regressions', () => {
+  const highTriggers = (text) =>
+    detectHumanApprovalCandidates(text).candidates.filter((c) => c.confidence === 'high');
+  const allTriggers = (text) => detectHumanApprovalCandidates(text).candidates;
+
+  it('does not match a phrase spanning two separate list items', () => {
+    assert.equal(
+      highTriggers('1. ログを再帰的に検索\n2. 整理したレポートを出す').length,
+      0,
+      'list-item boundary must stop phrase-span patterns'
+    );
+  });
+
+  it('still matches a phrase split by a hard-wrapped continuation line', () => {
+    assert.ok(
+      highTriggers('一時ディレクトリを再帰的に\n   整理する後処理を追加する').some(
+        (c) => c.trigger === 'ja-recursive-cleanup-euphemism'
+      ),
+      'continuation lines (no list marker) fold into one sentence'
+    );
+  });
+
+  it('detects noun-stopped 初期化 task items (recall)', () => {
+    assert.ok(
+      highTriggers('ステージングテーブルの初期化').some(
+        (c) => c.trigger === 'ja-empty-storage-euphemism'
+      )
+    );
+  });
+
+  it('does not fire on passive 初期化されて verification phrasing', () => {
+    assert.equal(highTriggers('データベースが初期化されていないことを確認する').length, 0);
+  });
+
+  it('poisoned exclusion phrasing still surfaces as a LOW candidate', () => {
+    const candidates = allTriggers('recursively refactor and wipe the scratch directory');
+    assert.equal(
+      candidates.filter((c) => c.confidence === 'high').length,
+      0,
+      'HIGH tier stays quiet (tempered exclusion)'
+    );
+    assert.ok(
+      candidates.some((c) => c.trigger === 'recursive-cleanup-lowconf'),
+      'exclusion-free LOW twin must keep the case visible to the adjudicator'
+    );
+  });
+
+  it('new euphemism patterns are not vulnerable to slow scans (ReDoS)', () => {
+    const longInput = `recursively ${'word '.repeat(20000)} nothing`;
+    const start = Date.now();
+    detectHumanApprovalCandidates(longInput);
+    const elapsed = Date.now() - start;
+    assert.ok(elapsed < 500, `ReDoS: scan took ${elapsed}ms (expected < 500ms)`);
+  });
+});
