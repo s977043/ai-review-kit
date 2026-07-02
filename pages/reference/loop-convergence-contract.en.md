@@ -40,7 +40,7 @@ Above `suggestedLoopSignal` sits `gate`, a machine-readable signal that composes
 | --------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `GO`                  | field | Autonomous continuation permitted                                                                                                                                        |
 | `GO_WITH_OBSERVATION` | hill  | Proceed, with an async review due within `observation.expiresInHours`. **On expiry, stop** and treat changes from `observation.files` as unreviewed (re-review required) |
-| `NO_GO`               | —     | Route to revise (`reasonCode` explains why; e.g. `NOT_EXECUTED` = review did not run, `UNDETERMINED` = verdict indeterminate — review-artifact.schema.json is the authoritative enum)                                                 |
+| `NO_GO`               | — (emitted as `field`; not a supervision tier, kept for enum totality) | Route to revise (`reasonCode` explains why; e.g. `NOT_EXECUTED` = review did not run, `UNDETERMINED` = verdict indeterminate — review-artifact.schema.json is the authoritative enum)                                                 |
 | `ESCALATE`            | cliff | Stop until a human approves                                                                                                                                              |
 
 - **Fail-safe**: indeterminate or unknown inputs always map to `NO_GO`, never to the `GO` family
@@ -48,7 +48,7 @@ Above `suggestedLoopSignal` sits `gate`, a machine-readable signal that composes
 - **Trust boundary**: the risk map, config, and plan text live inside the reviewed repository and are writable by the agent under review. A gate block is trustworthy **only when derived outside that agent's write authority** (host / CI checkout). Protecting `.river/**` via CODEOWNERS / branch protection is recommended
 - **Replay check (integrity verification)**: since derivation is pure, callers can re-feed `gate.inputs` into `deriveGateDecision` and compare decisions (`inputsHash` is a lightweight summary for S3 regression comparison, not a tamper-proof control). `inputs.riskMapDigest` is computed as "YAML load → `JSON.stringify` → sha256 first 16 hex"
 - **Circuit breaker**: `gate.configSnapshot.maxConsecutiveAutoGo` is advisory. Counting consecutive auto-GOs and enforcing checkpoints is the caller's job, and **when the caller has its own limit, the stricter value (min) wins**
-- Conformance fixtures (`tests/fixtures/gate-conformance/`) let external callers verify their enforcement behavior
+- The reference enforcement implementation lives in `examples/loop-reference-agent/`; conformance fixtures (`tests/fixtures/gate-conformance/`) let external callers verify their enforcement behavior
 
 `gate` is advisory. Enforcement (`--gate` mode, strict_block routing) lands in Epic #1347 S4.
 

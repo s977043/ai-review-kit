@@ -1,12 +1,22 @@
 {
-  "$comment": "Gate conformance fixture (Epic #1347 S2 / #1349). Feed the artifact to your host loop and assert the expectedHostAction. gate.inputs replays through src/lib/gate-decision.mjs deriveGateDecision.",
+  "$comment": "Gate conformance fixture (Epic #1347 S2 / #1349). Feed the artifact to your host loop and assert the expectedHostAction. gate.inputs replays through src/lib/gate-decision.mjs deriveGateDecision. Note: observation.files derives from changedFiles, which is NOT echoed in gate.inputs — a replay reproduces decision/reasonCode/tier/inputsHash but not observation.files.",
   "expectedHostAction": "Proceed AND request an async human review. If the window expires unreviewed: stop the loop and treat observation.files changes as unreviewed (re-review required).",
   "artifact": {
     "version": "1",
     "timestamp": "2026-07-02T00:00:00.000Z",
     "phase": "midstream",
     "status": "ok",
-    "findings": [],
+    "findings": [
+      {
+        "id": "example-minor-1",
+        "ruleId": "example-rule",
+        "severity": "minor",
+        "phase": "midstream",
+        "title": "Example minor finding",
+        "message": "A single security-classified minor finding is enough to drop below the auto-approve bar.",
+        "file": "src/lib/example.mjs"
+      }
+    ],
     "gate": {
       "decision": "GO_WITH_OBSERVATION",
       "reasonCode": "MINOR_FINDINGS_OBSERVE",
@@ -33,7 +43,9 @@
       "observation": {
         "expiresInHours": 72,
         "onExpiry": "stop",
-        "files": ["src/lib/example.mjs"]
+        "files": [
+          "src/lib/example.mjs"
+        ]
       }
     }
   }

@@ -280,9 +280,14 @@ describe('deriveExecutionOrder (Epic #1347 S2, merged from #1339)', () => {
 
   test('falls back to SKILL_HEURISTIC_MAP membership, else llm', async () => {
     const { deriveExecutionOrder } = await import('../runners/core/review-runner.mjs');
-    // security-basic is a known heuristic skill id; unknown ids default to llm
-    const skills = [{ metadata: { id: 'security-basic' } }, { metadata: { id: 'some-llm-skill' } }];
-    assert.deepEqual(deriveExecutionOrder(skills), ['heuristic', 'llm']);
+    // security-basic has heuristic detectors AND runs through the LLM in
+    // normal execution → a SINGLE such skill must declare both layers
+    // (isolates the m1 fix: heuristic-only declaration would break S4 routing).
+    assert.deepEqual(deriveExecutionOrder([{ metadata: { id: 'security-basic' } }]), [
+      'heuristic',
+      'llm',
+    ]);
+    assert.deepEqual(deriveExecutionOrder([{ metadata: { id: 'some-llm-skill' } }]), ['llm']);
     assert.deepEqual(deriveExecutionOrder([]), []);
   });
 });

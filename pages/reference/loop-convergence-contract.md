@@ -40,7 +40,7 @@ River Review は各アーティファクトおよび `runs diff --output json` �
 | --------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `GO`                  | 原っぱ       | 自律継続してよい                                                                                                                                             |
 | `GO_WITH_OBSERVATION` | 丘           | 進行しつつ `observation.expiresInHours` 以内に非同期レビュー。**期限超過時は停止**し、`observation.files` 由来の変更を未レビュー扱い（re-review 必須）にする |
-| `NO_GO`               | —            | revise へ回す（`reasonCode` が理由を示す。`NOT_EXECUTED` = レビュー未実行、`UNDETERMINED` = 判定不能など。全列挙は review-artifact.schema.json が正）                                                       |
+| `NO_GO`               | —（emit 値は `field`。監督階層ではなく enum 充足のための値） | revise へ回す（`reasonCode` が理由を示す。`NOT_EXECUTED` = レビュー未実行、`UNDETERMINED` = 判定不能など。全列挙は review-artifact.schema.json が正）                                                       |
 | `ESCALATE`            | 崖           | 人間の事前承認まで停止                                                                                                                                       |
 
 - **fail-safe**: 判定不能・未知の入力は常に `NO_GO` に写像され、`GO` 側には決して倒れない
