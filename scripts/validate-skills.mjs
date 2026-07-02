@@ -324,13 +324,99 @@ export async function validateRecommendedEvalCoverage({
   return success;
 }
 
+/**
+ * Registry/filesystem drift gate: every `skills[].path` in skills/registry.yaml
+ * must point to an existing file, so renames (e.g. #1320) cannot leave dangling
+ * catalog entries behind. The reverse direction — a SKILL.md on disk that is
+ * not listed in the registry — is reported as a warning only, because some
+ * directories (skills/agent-skills/, validated by npm run agent-skills:validate)
+ * are intentionally kept out of the catalog.
+ *
+ * @param {{ skillsDir?: string, repoRoot?: string }} [options]
+ * @returns {Promise<boolean>} false (→ exitCode 1) if any registry path is
+ *   missing or a registry entry is malformed.
+ */
+export async function validateRegistryPaths({
+  skillsDir = defaultPaths.skillsDir,
+  repoRoot = defaultPaths.repoRoot,
+} = {}) {
+  const registryPath = path.join(skillsDir, 'registry.yaml');
+  let raw;
+  try {
+    raw = await fs.readFile(registryPath, 'utf8');
+  } catch (err) {
+    console.error(`❌ Failed to read skill registry at ${registryPath}: ${err.message}`);
+    return false;
+  }
+  let parsed;
+  try {
+    parsed = yaml.load(raw) ?? {};
+  } catch (err) {
+    console.error(`❌ Failed to parse skill registry at ${registryPath}: ${err.message}`);
+    return false;
+  }
+
+  const skills = Array.isArray(parsed?.skills) ? parsed.skills : [];
+  let success = true;
+  const registeredPaths = new Set();
+
+  for (const skill of skills) {
+    const { id, path: skillPath } = skill ?? {};
+    if (!id || typeof skillPath !== 'string') {
+      console.error(
+        `❌ registry entry is malformed (missing id or non-string path): ${JSON.stringify(skill)}`
+      );
+      success = false;
+      continue;
+    }
+    const resolved = path.resolve(repoRoot, skillPath);
+    registeredPaths.add(resolved);
+    try {
+      await fs.access(resolved);
+    } catch {
+      console.error(`❌ registry skill "${id}": path does not exist: ${skillPath}`);
+      success = false;
+    }
+  }
+
+  // Reverse direction (warning only): SKILL.md files present on disk but
+  // missing from the catalog. agent-skills/ is intentionally uncataloged.
+  let skillFiles = [];
+  try {
+    skillFiles = await listSkillFiles(skillsDir);
+  } catch (err) {
+    console.error(`❌ Failed to list skills: ${err.message}`);
+    return false;
+  }
+  for (const filePath of skillFiles) {
+    if (path.basename(filePath) !== 'SKILL.md') continue;
+    const relativePath = path.relative(repoRoot, filePath);
+    // Segment-wise match so a skill directory merely containing the substring
+    // (e.g. my-agent-skills-bridge) is not skipped by accident.
+    if (relativePath.split(path.sep).includes('agent-skills')) continue;
+    // Resolve against repoRoot (not process.cwd()) so the comparison with
+    // registeredPaths (repoRoot-based) holds regardless of the caller's cwd.
+    if (!registeredPaths.has(path.resolve(repoRoot, relativePath))) {
+      console.warn(
+        `⚠️  ${relativePath}: SKILL.md exists but is not listed in skills/registry.yaml`
+      );
+    }
+  }
+
+  if (success) {
+    console.log(`✅ registry paths: ${skills.length} entry path(s) resolve to existing files`);
+  }
+  return success;
+}
+
 const isDirectRun =
   process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
 if (isDirectRun) {
   const skillsOk = await validateSkills();
   const packsOk = await validatePacks();
   const evalCoverageOk = await validateRecommendedEvalCoverage();
-  const ok = skillsOk && packsOk && evalCoverageOk;
+  const registryPathsOk = await validateRegistryPaths();
+  const ok = skillsOk && packsOk && evalCoverageOk && registryPathsOk;
   if (!ok) {
     process.exitCode = 1;
   }
