@@ -9,6 +9,7 @@ import {
   createSkillValidator,
   loadSchema,
   loadSkillFile,
+  parseSkillFile,
   listSkillFiles,
   loadPacks,
   loadRecommendationSets,
@@ -409,6 +410,233 @@ export async function validateRegistryPaths({
   return success;
 }
 
+// ---------------------------------------------------------------------------
+// Fixture / description drift validation (CLAUDE.md guard
+// "Skill-check fixture/description drift", mechanized)
+// ---------------------------------------------------------------------------
+
+/** Matches `<!-- expected: ... -->` blocks embedded in fixture files. */
+const RE_EXPECTED_BLOCK = /<!--\s*expected:\s*\n?([\s\S]*?)-->/g;
+
+/** Matches `## Check N — Title / 日本語` style headings in a SKILL.md body. */
+const RE_CHECK_HEADING = /^#{2,4}\s+Check\s+(\d+)\b[\s]*(?:[—–-]\s*(.*))?$/gm;
+
+/** Words too generic to serve as evidence that a description covers a Check. */
+const DESCRIPTION_STOPWORDS = new Set([
+  'check',
+  'checks',
+  'with',
+  'without',
+  'that',
+  'this',
+  'when',
+  'then',
+  'from',
+  'into',
+  'only',
+  'must',
+  'should',
+  'before',
+  'after',
+  'work',
+]);
+
+/**
+ * Extract the numbered Check headings from a SKILL.md body.
+ * Pure and exported for unit testing.
+ *
+ * @param {string} body - SKILL.md markdown body (without frontmatter)
+ * @returns {Array<{ id: number, title: string|null }>} title is the English
+ *   part of the heading (text after the dash, before an optional ` / ` that
+ *   separates the Japanese title), or null when absent.
+ */
+export function extractCheckHeadings(body) {
+  const headings = [];
+  for (const match of (body ?? '').matchAll(RE_CHECK_HEADING)) {
+    const id = Number(match[1]);
+    let title = match[2]?.trim() ?? '';
+    if (title.includes('/')) title = title.split('/')[0].trim();
+    headings.push({ id, title: title || null });
+  }
+  return headings;
+}
+
+/**
+ * Extract the raw YAML payloads of every `<!-- expected: -->` block in a
+ * fixture file. Pure and exported for unit testing.
+ *
+ * @param {string} text - fixture file content
+ * @returns {string[]}
+ */
+export function extractExpectedBlocks(text) {
+  return [...(text ?? '').matchAll(RE_EXPECTED_BLOCK)].map((m) => m[1]);
+}
+
+/**
+ * Deterministic proxy for "the frontmatter description enumerates this
+ * Check": at least one significant word (>= 4 latin letters, not a stopword)
+ * of the Check's English title must appear as a case-insensitive substring of
+ * the description. Substring matching keeps morphological variants covered
+ * (e.g. title "knowledge access" ↔ description "accessible context").
+ * Returns true (skip) when the title yields no usable tokens (e.g. a
+ * Japanese-only title), because no deterministic judgment is possible.
+ *
+ * @param {string} description - skill frontmatter description
+ * @param {string|null} title - English Check title
+ * @returns {boolean}
+ */
+export function descriptionCoversCheck(description, title) {
+  if (!title) return true;
+  const tokens = (title.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter(
+    (t) => !DESCRIPTION_STOPWORDS.has(t)
+  );
+  if (!tokens.length) return true;
+  const haystack = String(description ?? '').toLowerCase();
+  return tokens.some((t) => haystack.includes(t));
+}
+
+/**
+ * Drift gate between a skill's Check sections, its fixtures' embedded
+ * `<!-- expected: -->` blocks, and its frontmatter description (mechanizes the
+ * CLAUDE.md guard "Skill-check fixture/description drift"). All rules are
+ * deterministic and opt-in by structure — skills without expected blocks or
+ * without `Check N` headings are untouched:
+ *
+ * - every expected block must parse as YAML (error otherwise);
+ * - every `findings[].check` number referenced by a fixture must exist as a
+ *   `Check N` heading in the sibling SKILL.md (error: dangling expectation);
+ * - when a skill has >= 2 Check headings AND at least one fixture references
+ *   checks by number, the frontmatter description must cover every Check
+ *   (see {@link descriptionCoversCheck}; error: enumeration drift);
+ * - a Check never referenced by any fixture is a warning only, and is
+ *   suppressed when an all-pass fixture (`findings: []`) exists, since that
+ *   fixture implicitly exercises every Check.
+ *
+ * Out of scope (needs semantic judgment, kept with the AI-review side per
+ * .claude/rules/review-core.md): whether a `findings: []` fixture actually
+ * satisfies every Check's conditions.
+ *
+ * @param {{ skillsDir?: string, repoRoot?: string }} [options]
+ * @returns {Promise<boolean>} false (→ exitCode 1) on any drift error.
+ */
+export async function validateFixtureDrift({
+  skillsDir = defaultPaths.skillsDir,
+  repoRoot = defaultPaths.repoRoot,
+} = {}) {
+  let files = [];
+  try {
+    files = await listSkillFiles(skillsDir);
+  } catch (err) {
+    console.error(`❌ Failed to list skills: ${err.message}`);
+    return false;
+  }
+
+  let success = true;
+  let skillsWithExpectations = 0;
+
+  for (const filePath of files) {
+    const basename = path.basename(filePath);
+    if (basename !== 'SKILL.md') continue;
+    const relativePath = path.relative(repoRoot, filePath);
+    if (relativePath.split(path.sep).includes('agent-skills')) continue;
+
+    const skillDir = path.dirname(filePath);
+    const fixturesDir = path.join(skillDir, 'fixtures');
+    const fixtureNames = (await fs.readdir(fixturesDir).catch(() => [])).filter((f) =>
+      f.endsWith('.md')
+    );
+    if (!fixtureNames.length) continue;
+
+    let skill;
+    try {
+      skill = await parseSkillFile(filePath);
+    } catch {
+      // Unparseable SKILL.md files are reported by validateSkills(); skip here.
+      continue;
+    }
+    const checkHeadings = extractCheckHeadings(skill.body);
+    const checkIds = new Set(checkHeadings.map((h) => h.id));
+
+    const referencedChecks = new Set();
+    let hasCheckExpectations = false;
+    let hasEmptyFindingsFixture = false;
+    let hasAnyExpectedBlock = false;
+
+    for (const name of fixtureNames.sort()) {
+      const fixturePath = path.join(fixturesDir, name);
+      const fixtureRel = path.relative(repoRoot, fixturePath);
+      const content = await fs.readFile(fixturePath, 'utf8');
+      for (const block of extractExpectedBlocks(content)) {
+        hasAnyExpectedBlock = true;
+        let parsed;
+        try {
+          parsed = yaml.load(block);
+        } catch (err) {
+          console.error(`❌ ${fixtureRel}: expected block is not valid YAML: ${err.message}`);
+          success = false;
+          continue;
+        }
+        const findings = parsed?.findings;
+        if (!Array.isArray(findings)) continue;
+        if (findings.length === 0) {
+          hasEmptyFindingsFixture = true;
+          continue;
+        }
+        for (const finding of findings) {
+          const check = finding?.check;
+          if (!Number.isInteger(check)) continue;
+          hasCheckExpectations = true;
+          referencedChecks.add(check);
+          if (!checkIds.has(check)) {
+            console.error(
+              `❌ ${fixtureRel}: expected block references Check ${check}, ` +
+                `but ${relativePath} has no "Check ${check}" heading (dangling expectation)`
+            );
+            success = false;
+          }
+        }
+      }
+    }
+
+    if (!hasAnyExpectedBlock) continue;
+    skillsWithExpectations += 1;
+
+    // Description enumeration gate — only for skills whose fixtures reference
+    // Checks by number (the drift contract of the CLAUDE.md guard).
+    if (hasCheckExpectations && checkHeadings.length >= 2) {
+      const description = skill.metadata?.description ?? '';
+      for (const { id, title } of checkHeadings) {
+        if (!descriptionCoversCheck(description, title)) {
+          console.error(
+            `❌ ${relativePath}: frontmatter description does not mention Check ${id}` +
+              ` ("${title}") — update the description to enumerate all current Checks`
+          );
+          success = false;
+        }
+      }
+    }
+
+    // Coverage is advisory: an uncovered Check is fine when an all-pass
+    // fixture (findings: []) exists, since it implicitly exercises every Check.
+    if (hasCheckExpectations && !hasEmptyFindingsFixture) {
+      for (const id of checkIds) {
+        if (!referencedChecks.has(id)) {
+          console.warn(
+            `⚠️  ${relativePath}: Check ${id} is not referenced by any fixture expected block`
+          );
+        }
+      }
+    }
+  }
+
+  if (success) {
+    console.log(
+      `✅ fixture drift: ${skillsWithExpectations} skill(s) with expected blocks consistent`
+    );
+  }
+  return success;
+}
+
 const isDirectRun =
   process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
 if (isDirectRun) {
@@ -416,7 +644,8 @@ if (isDirectRun) {
   const packsOk = await validatePacks();
   const evalCoverageOk = await validateRecommendedEvalCoverage();
   const registryPathsOk = await validateRegistryPaths();
-  const ok = skillsOk && packsOk && evalCoverageOk && registryPathsOk;
+  const fixtureDriftOk = await validateFixtureDrift();
+  const ok = skillsOk && packsOk && evalCoverageOk && registryPathsOk && fixtureDriftOk;
   if (!ok) {
     process.exitCode = 1;
   }
