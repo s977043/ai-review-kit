@@ -36,12 +36,12 @@ River Review は各アーティファクトおよび `runs diff --output json` �
 
 `suggestedLoopSignal` の上位に、リスク階層（崖・丘・原っぱ）を合成した機械可読ゲート信号 `gate` があります（`river review` の Review Artifact と `river run --output json` の両方に付与、additive / 省略可能）。導出は `src/lib/gate-decision.mjs` の**決定論純関数**で行われ、LLM 出力はエスカレーション方向にのみ寄与します。
 
-| `gate.decision`       | 階層（tier） | caller の期待挙動                                                                                                                                            |
-| --------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GO`                  | 原っぱ       | 自律継続してよい                                                                                                                                             |
-| `GO_WITH_OBSERVATION` | 丘           | 進行しつつ `observation.expiresInHours` 以内に非同期レビュー。**期限超過時は停止**し、`observation.files` 由来の変更を未レビュー扱い（re-review 必須）にする |
-| `NO_GO`               | —（emit 値は `field`。監督階層ではなく enum 充足のための値） | revise へ回す（`reasonCode` が理由を示す。`NOT_EXECUTED` = レビュー未実行、`UNDETERMINED` = 判定不能など。全列挙は review-artifact.schema.json が正）                                                       |
-| `ESCALATE`            | 崖           | 人間の事前承認まで停止                                                                                                                                       |
+| `gate.decision`       | 階層（tier）                                                 | caller の期待挙動                                                                                                                                            |
+| --------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GO`                  | 原っぱ                                                       | 自律継続してよい                                                                                                                                             |
+| `GO_WITH_OBSERVATION` | 丘                                                           | 進行しつつ `observation.expiresInHours` 以内に非同期レビュー。**期限超過時は停止**し、`observation.files` 由来の変更を未レビュー扱い（re-review 必須）にする |
+| `NO_GO`               | —（emit 値は `field`。監督階層ではなく enum 充足のための値） | revise へ回す（`reasonCode` が理由を示す。`NOT_EXECUTED` = レビュー未実行、`UNDETERMINED` = 判定不能など。全列挙は review-artifact.schema.json が正）        |
+| `ESCALATE`            | 崖                                                           | 人間の事前承認まで停止                                                                                                                                       |
 
 - **fail-safe**: 判定不能・未知の入力は常に `NO_GO` に写像され、`GO` 側には決して倒れない
 - **ブートストラップ崖**: diff が `.river/**`（risk-map 等の gate 設定）に触れる場合は内容に関わらず `ESCALATE`（`GATE_CONFIG_CHANGED`）となる。gate 設定で gate 自身を無防備化する変更（risk-map の削除を含む）は必ず人間承認を通る

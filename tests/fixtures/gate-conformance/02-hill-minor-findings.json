@@ -43,9 +43,7 @@
       "observation": {
         "expiresInHours": 72,
         "onExpiry": "stop",
-        "files": [
-          "src/lib/example.mjs"
-        ]
+        "files": ["src/lib/example.mjs"]
       }
     }
   }
