@@ -1,7 +1,7 @@
 ---
 description: background 実装エージェントの完了報告 (branch / PR / commit / ファイル) が実在するか親側で検証する
 argument-hint: '<branch name> [PR number] [commit SHA] [key files]'
-allowed-tools: Bash(git ls-remote:*), Bash(git fetch:*), Bash(git log:*), Bash(git show:*), Bash(gh pr view:*), Bash(gh api:*), Bash(ls:*)
+allowed-tools: Bash(git ls-remote:*), Bash(git fetch:*), Bash(git log:*), Bash(git show:*), Bash(git worktree:*), Bash(gh pr view:*), Bash(gh api:*), Bash(ls:*), Bash(npm test:*), Bash(npm run:*)
 ---
 
 エージェント完了報告の検証: 「$ARGUMENTS」で報告された branch / PR / commit / ファイルが実在するか、親セッション側のコマンド実行で裏取りする。
@@ -51,18 +51,25 @@ git fetch origin <branch> && git log --oneline -5 FETCH_HEAD
 ### Step 4. 報告ファイルの実在確認
 
 ```bash
-git show FETCH_HEAD --stat
+git show <commit SHA> --stat  # SHA 未報告の場合のみ FETCH_HEAD で代用
 ```
 
-報告された新規・変更ファイルが `--stat` の出力に全て含まれるか突合する。エージェント worktree が残っている場合は `ls <worktree>/<key file>` でも補強できる。
+**重要**: commit SHA が報告されている場合は FETCH_HEAD でなく報告 SHA を直接指定する。FETCH_HEAD は branch 先頭であり、報告 SHA と別 commit を検証してしまうと一致確認にならない。報告された新規・変更ファイルが `--stat` の出力に全て含まれるか突合する。エージェント worktree が残っている場合は `ls <worktree>/<key file>` でも補強できる。
 
 ### Step 5. テスト実行主張の再実行 (テスト green の主張がある場合)
 
 報告に「テスト N 件 pass」「lint green」等の主張がある場合、その検証コマンドを**最低 1 つ親側で再実行**する:
 
 ```bash
-git fetch origin <branch> && git switch --detach FETCH_HEAD  # または worktree 上で
-npm test  # 報告された検証コマンドをそのまま実行
+git fetch origin <branch>
+git worktree add --detach /tmp/verify-agent-report-<branch> FETCH_HEAD
+cd /tmp/verify-agent-report-<branch> && npm test  # 報告された検証コマンドをそのまま実行
+```
+
+**重要**: 親セッションの作業ツリーで `git switch --detach` してはならない。ダーティツリーと衝突し「Commit before branch switches」ガードに抵触する。`git worktree add --detach` で独立した検証用 worktree を作り、検証後に掃除する:
+
+```bash
+git worktree remove /tmp/verify-agent-report-<branch>
 ```
 
 実行できない事情がある場合は「未検証」として判定に明記し、pass 扱いにしない。
