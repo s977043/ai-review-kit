@@ -93,6 +93,23 @@ export const SkillYamlSchema = z
     inputContext: z.array(InputContextEnum).optional().describe('Input context references'),
     outputKind: z.array(OutputKindEnum).default(['findings']).describe('Output types'),
     modelHint: ModelHintEnum.optional().describe('Recommended model type'),
+    evaluationType: z
+      .enum(['deterministic', 'heuristic', 'agentic'])
+      .optional()
+      .describe('Evaluation layer (Epic #1347 S2): deterministic | heuristic | agentic'),
+    deterministicGate: z
+      .object({
+        command: z
+          .string()
+          .min(1)
+          .describe(
+            'External command deciding pass/fail (executed only inside the trust boundary; S4)'
+          ),
+        failSeverity: z.enum(['strict_block', 'bypass_warning']).optional(),
+      })
+      .strict()
+      .optional()
+      .describe('Declaration for deterministic skills; execution lands in S4'),
     dependencies: z.array(DependencySchema).optional().describe('Feature dependencies'),
     priority: z.number().int().optional().describe('Ordering hint for execution priority'),
 

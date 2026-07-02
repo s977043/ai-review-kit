@@ -38521,7 +38521,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   P0: () => (/* reexport */ summarizeSkill)
 });
 
-// UNUSED EXPORTS: matchesPhase, selectSkills
+// UNUSED EXPORTS: deriveExecutionOrder, matchesPhase, selectSkills
 
 // EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
 var esm = __nccwpck_require__(9519);
@@ -38763,6 +38763,8 @@ function analyzeTestImpact(changedFiles) {
 var planner_utils = __nccwpck_require__(1013);
 // EXTERNAL MODULE: ./src/lib/heuristic-review.mjs
 var heuristic_review = __nccwpck_require__(2294);
+// EXTERNAL MODULE: ./src/lib/token-estimator.mjs
+var token_estimator = __nccwpck_require__(467);
 // EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
 var risk_map = __nccwpck_require__(572);
 // EXTERNAL MODULE: external "node:fs"
@@ -38879,11 +38881,32 @@ var review_plan_generator = __nccwpck_require__(8069);
 
 
 
+
 const MODEL_PRIORITY = {
   cheap: 1,
   balanced: 2,
   'high-accuracy': 3,
 };
+
+// Epic #1347 S2 (#1349, merged from #1339): declared multi-layer execution
+// order. Derived from each selected skill's evaluationType (fallback:
+// SKILL_HEURISTIC_MAP membership → heuristic, else agentic→llm). S2 emits the
+// DECLARATION only; reordering enforcement (strict_block routing) is S4.
+const EVALUATION_LAYER_ORDER = ['deterministic', 'heuristic', 'llm'];
+
+function skillEvaluationLayer(skill) {
+  const meta = getMeta(skill);
+  const declared = meta?.evaluationType;
+  if (declared === 'deterministic') return 'deterministic';
+  if (declared === 'heuristic') return 'heuristic';
+  if (declared === 'agentic') return 'llm';
+  return heuristic_review/* HEURISTIC_SKILL_IDS */.y2.includes(meta?.id) ? 'heuristic' : 'llm';
+}
+
+function deriveExecutionOrder(selected) {
+  const layers = new Set((selected ?? []).map(skillEvaluationLayer));
+  return EVALUATION_LAYER_ORDER.filter((l) => layers.has(l));
+}
 
 function getMeta(skill) {
   return skill?.metadata ?? skill;
@@ -39127,6 +39150,8 @@ async function buildExecutionPlan(options) {
       fileTypes,
       riskAssessment,
       testImpact,
+      executionOrder: [],
+      estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
       snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
     };
   }
@@ -39177,6 +39202,9 @@ async function buildExecutionPlan(options) {
       riskAssessment,
       // #1255: test-impact signal (see analyzeTestImpact call above).
       testImpact,
+      // Epic #1347 S2: declared layer order + rough cost estimate (advisory).
+      executionOrder: deriveExecutionOrder(ranked),
+      estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
       // #878 A2-3-runners: carry-over context for --plan replay execution.
       // Consumers should propagate this to `artifact.debug.execution.snapshot`
       // per docs/development/a2-3-replay-execution-design.md.
@@ -39196,6 +39224,8 @@ async function buildExecutionPlan(options) {
     reviewMode,
     riskAssessment,
     testImpact,
+    executionOrder: deriveExecutionOrder(ordered),
+    estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
     snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
   };
 }
@@ -41267,6 +41297,298 @@ function annotateFingerprints(findings) {
 
 /***/ }),
 
+/***/ 2773:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   RF: () => (/* binding */ deriveGateDecision)
+/* harmony export */ });
+/* unused harmony exports GATE_DECISIONS, GATE_REASON_CODES, gateConfigChanged, computeGateInputsHash */
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
+/**
+ * Gate-decision derivation (Epic #1347 S2 / #1349).
+ *
+ * Derives the machine-readable gate signal a loop-running host consumes:
+ * GO | GO_WITH_OBSERVATION | NO_GO | ESCALATE. River Review DERIVES the
+ * decision; EXECUTION (continuing, stopping, notifying, expiring an
+ * observation window) is the host's responsibility. This module is a pure
+ * function — no I/O, no AI calls, no side effects — so hosts can verify any
+ * emitted gate block by replaying `gate.inputs` through deriveGateDecision
+ * and comparing the result (the authoritative integrity check; see below).
+ *
+ * ## Trust boundary (adversarial design review, 2026-07-02)
+ *
+ * Of the inputs, risk-map / config / plan text live INSIDE the reviewed
+ * repository and are writable by the implementation agent under review. The
+ * gate decision is therefore trustworthy only when derived OUTSIDE the
+ * agent's write authority (host / CI checkout). Two in-contract mitigations:
+ *
+ *  - Bootstrap cliff (rule 0): any change under `.river/**` in the diff —
+ *    including DELETING the risk map, which would otherwise silently degrade
+ *    every file to comment_only — escalates unconditionally. The gate config
+ *    cannot be used to unguard itself.
+ *  - `inputs.riskMapPresent` / `inputs.riskMapDigest` expose which risk map
+ *    (if any) was loaded so hosts can compare against a trusted baseline.
+ *
+ * Renaming files off the risk-map globs remains out of scope for S2 (tracked
+ * for S3 escape-rate metrics / S4 deterministic gates).
+ *
+ * ## Decision rules (first match wins)
+ *
+ *  0. gate config changed in diff            → ESCALATE  GATE_CONFIG_CHANGED
+ *  1. humanApprovalRequired                  → ESCALATE  HUMAN_APPROVAL_REQUIRED
+ *  2. loopSignal ESCALATE_HUMAN              → ESCALATE  DECISION_ESCALATED
+ *  3. loopSignal STOP_OSCILLATED             → ESCALATE  OSCILLATION_DETECTED
+ *  4. riskAction require_human_review        → ESCALATE  RISK_MAP_HUMAN_REVIEW
+ *  5. riskAction unknown (not absent)        → NO_GO     UNKNOWN_RISK_ACTION
+ *  6. review did not actually execute        → NO_GO     NOT_EXECUTED
+ *     (plan-only / no-changes runs must not claim CONVERGED_CLEAN: a
+ *     score of [] findings is vacuous, and an agent suppressing diff
+ *     resolution must not obtain a GO — escalation rules 0-4 still fire)
+ *  7. loopSignal REVISE_REQUIRED             → NO_GO     BLOCKING_FINDINGS
+ *  8. NO_SIGNAL + human-review-recommended
+ *     + zero blocking findings               → GO_WITH_OBSERVATION MINOR_FINDINGS_OBSERVE
+ *  9. NO_SIGNAL (decision absent/unknown)    → NO_GO     UNDETERMINED
+ * 10. CONVERGED + riskAction escalate        → GO_WITH_OBSERVATION RISK_MAP_OBSERVE
+ * 11. CONVERGED                              → GO        CONVERGED_CLEAN
+ * 12. anything else (unknown loopSignal)     → NO_GO     UNKNOWN_SIGNAL
+ *
+ * Rule 3 (STOP_OSCILLATED) is unreachable from the production wiring — the
+ * artifact's suggestedLoopSignal carries only Layer-1 values. It exists for
+ * host-side replay of Layer-2 (runs diff) signals through the same contract.
+ *
+ * Fail-safe direction: everything unknown or undetermined maps to NO_GO
+ * (never GO), and rule 7 exists because `human-review-recommended` is the
+ * COMMON verdict in practice (a single security-classified minor finding
+ * already drops the security score below the auto-approve bar) — without it
+ * most real runs would land on NO_GO and loops would never converge.
+ */
+
+
+
+/** @typedef {'GO' | 'GO_WITH_OBSERVATION' | 'NO_GO' | 'ESCALATE'} GateDecisionValue */
+/** @typedef {'cliff' | 'hill' | 'field'} GateTier */
+
+/** Files whose change forces rule 0 — the gate config must not unguard itself. */
+const GATE_CONFIG_PREFIX = '.river/';
+
+const GATE_DECISIONS = /** @type {const} */ ((/* unused pure expression or super */ null && ([
+  'GO',
+  'GO_WITH_OBSERVATION',
+  'NO_GO',
+  'ESCALATE',
+])));
+
+const GATE_REASON_CODES = /** @type {const} */ ((/* unused pure expression or super */ null && ([
+  'GATE_CONFIG_CHANGED',
+  'HUMAN_APPROVAL_REQUIRED',
+  'DECISION_ESCALATED',
+  'OSCILLATION_DETECTED',
+  'RISK_MAP_HUMAN_REVIEW',
+  'UNKNOWN_RISK_ACTION',
+  'NOT_EXECUTED',
+  'BLOCKING_FINDINGS',
+  'MINOR_FINDINGS_OBSERVE',
+  'UNDETERMINED',
+  'RISK_MAP_OBSERVE',
+  'CONVERGED_CLEAN',
+  'UNKNOWN_SIGNAL',
+])));
+
+const KNOWN_RISK_ACTIONS = new Set(['comment_only', 'escalate', 'require_human_review']);
+
+const DECISION_TO_TIER = {
+  ESCALATE: 'cliff',
+  GO_WITH_OBSERVATION: 'hill',
+  GO: 'field',
+  NO_GO: 'field', // NO_GO is "revise", not a supervision tier; field keeps the enum total
+};
+
+const DEFAULT_OBSERVATION_EXPIRES_IN_HOURS = 72;
+const DEFAULT_MAX_CONSECUTIVE_AUTO_GO = 5;
+
+/**
+ * True when the diff touches the gate's own configuration (rule 0).
+ * @param {string[]} changedFiles
+ * @returns {boolean}
+ */
+function gateConfigChanged(changedFiles) {
+  return (Array.isArray(changedFiles) ? changedFiles : []).some(
+    (f) => typeof f === 'string' && f.replace(/\\/g, '/').startsWith(GATE_CONFIG_PREFIX)
+  );
+}
+
+/**
+ * Canonical hash of the gate inputs (sha256, first 16 hex chars).
+ *
+ * Canonicalization: the FIXED field list below, keys in lexicographic order,
+ * undefined normalized to null, JSON.stringify of that object. This is a
+ * lightweight summary for S3 "same inputs, different decision" regression
+ * comparison — it is NOT a tamper-proof / security control (anyone can
+ * recompute it). The authoritative integrity check is replaying
+ * `gate.inputs` through deriveGateDecision.
+ *
+ * @param {object} inputs
+ * @returns {string}
+ */
+function computeGateInputsHash(inputs) {
+  const FIELDS = [
+    'artifactStatus',
+    'blockingFindings',
+    'decision',
+    'gateConfigChanged',
+    'humanApprovalMode',
+    'humanApprovalRequired',
+    'loopSignal',
+    'reviewExecuted',
+    'riskAction',
+    'riskMapDigest',
+    'riskMapPresent',
+  ];
+  const canonical = {};
+  for (const key of FIELDS) {
+    canonical[key] = inputs?.[key] === undefined ? null : inputs[key];
+  }
+  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(JSON.stringify(canonical)).digest('hex').slice(0, 16);
+}
+
+/**
+ * Derive the gate decision for a finalized review artifact.
+ *
+ * Pure and deterministic: LLM output can only have contributed in the
+ * escalation direction upstream (via humanApprovalRequired /
+ * blocking findings); nothing here lets it push a decision toward GO.
+ *
+ * @param {object} opts
+ * @param {string} [opts.loopSignal] - artifact.suggestedLoopSignal (Layer 1/2 value)
+ * @param {string} [opts.decision] - artifact.decision (verdict)
+ * @param {boolean} [opts.humanApprovalRequired]
+ * @param {string} [opts.humanApprovalMode] - audit: regex-only | llm-adjudicated | llm-skipped | regex-fallback
+ * @param {string} [opts.riskAction] - risk-map aggregateAction; absent → comment_only
+ * @param {number} [opts.blockingFindings] - count of critical/major findings
+ * @param {string[]} [opts.changedFiles]
+ * @param {boolean} [opts.gateConfigChanged] - explicit override so a host can
+ *   replay a recorded `gate.inputs` object verbatim (rule 0 is derived from
+ *   changedFiles when this is omitted)
+ * @param {boolean} [opts.reviewExecuted] - true only when skills actually ran
+ *   against a resolved diff (executeReview path, status ok). Fail-safe: when
+ *   false, non-escalated outcomes are NO_GO NOT_EXECUTED — a vacuous perfect
+ *   score over zero executed findings must not read as CONVERGED_CLEAN.
+ * @param {string} [opts.artifactStatus] - artifact.status echo (ok | no-changes)
+ *   so hosts can distinguish "nothing to review" from "review suppressed".
+ * @param {boolean} [opts.riskMapPresent]
+ * @param {string|null} [opts.riskMapDigest]
+ * @param {object} [opts.config] - effective config; gate.observation / gate.circuitBreaker read here
+ * @returns {{ decision: GateDecisionValue, reasonCode: string, tier: GateTier,
+ *   inputs: object, inputsHash: string, configSnapshot: object, observation?: object,
+ *   schemaVersion: '1' }}
+ */
+function deriveGateDecision({
+  loopSignal,
+  decision,
+  humanApprovalRequired = false,
+  humanApprovalMode,
+  riskAction,
+  blockingFindings = 0,
+  changedFiles = [],
+  gateConfigChanged: gateConfigChangedOverride,
+  reviewExecuted = false,
+  artifactStatus = null,
+  riskMapPresent = false,
+  riskMapDigest = null,
+  config = {},
+} = {}) {
+  const configChanged =
+    typeof gateConfigChangedOverride === 'boolean'
+      ? gateConfigChangedOverride
+      : gateConfigChanged(changedFiles);
+  const effectiveRiskAction = riskAction ?? 'comment_only';
+
+  const inputs = {
+    loopSignal: loopSignal ?? null,
+    decision: decision ?? null,
+    humanApprovalRequired: humanApprovalRequired === true,
+    humanApprovalMode: humanApprovalMode ?? null,
+    riskAction: effectiveRiskAction,
+    blockingFindings: Number.isFinite(blockingFindings) ? blockingFindings : 0,
+    gateConfigChanged: configChanged,
+    reviewExecuted: reviewExecuted === true,
+    artifactStatus: artifactStatus ?? null,
+    riskMapPresent: riskMapPresent === true,
+    riskMapDigest: riskMapDigest ?? null,
+  };
+
+  const expiresInHours =
+    config?.gate?.observation?.expiresInHours ?? DEFAULT_OBSERVATION_EXPIRES_IN_HOURS;
+  const maxConsecutiveAutoGo =
+    config?.gate?.circuitBreaker?.maxConsecutiveAutoGo ?? DEFAULT_MAX_CONSECUTIVE_AUTO_GO;
+  const configSnapshot = { expiresInHours, maxConsecutiveAutoGo };
+
+  const decide = () => {
+    // 0. Bootstrap cliff: the gate config must not unguard itself.
+    if (configChanged) return ['ESCALATE', 'GATE_CONFIG_CHANGED'];
+    // 1. Plan-review cliff (regex floor + escalation-only LLM upstream).
+    if (inputs.humanApprovalRequired) return ['ESCALATE', 'HUMAN_APPROVAL_REQUIRED'];
+    // 2-3. Loop-signal escalations.
+    if (loopSignal === 'ESCALATE_HUMAN') return ['ESCALATE', 'DECISION_ESCALATED'];
+    if (loopSignal === 'STOP_OSCILLATED') return ['ESCALATE', 'OSCILLATION_DETECTED'];
+    // 4. Risk-map cliff.
+    if (effectiveRiskAction === 'require_human_review')
+      return ['ESCALATE', 'RISK_MAP_HUMAN_REVIEW'];
+    // 5. Unknown risk action never falls through to GO (fail-safe).
+    if (!KNOWN_RISK_ACTIONS.has(effectiveRiskAction)) return ['NO_GO', 'UNKNOWN_RISK_ACTION'];
+    // 6. Review must have actually executed for any GO-family outcome:
+    // plan-only / no-changes runs score [] findings as a vacuous perfect
+    // verdict, and suppressed diff resolution must not earn a GO.
+    if (!inputs.reviewExecuted) return ['NO_GO', 'NOT_EXECUTED'];
+    // 7. Blocking findings → revise.
+    if (loopSignal === 'REVISE_REQUIRED') return ['NO_GO', 'BLOCKING_FINDINGS'];
+    // 8-9. NO_SIGNAL: the common "warn" verdict observes; true unknowns stop.
+    if (loopSignal === 'NO_SIGNAL') {
+      if (decision === 'human-review-recommended' && inputs.blockingFindings === 0) {
+        return ['GO_WITH_OBSERVATION', 'MINOR_FINDINGS_OBSERVE'];
+      }
+      return ['NO_GO', 'UNDETERMINED'];
+    }
+    // 10-11. Converged: hill when the risk map asks for observation, else field.
+    if (loopSignal === 'CONVERGED') {
+      if (effectiveRiskAction === 'escalate') return ['GO_WITH_OBSERVATION', 'RISK_MAP_OBSERVE'];
+      return ['GO', 'CONVERGED_CLEAN'];
+    }
+    // 12. Forward-compatible fail-safe.
+    return ['NO_GO', 'UNKNOWN_SIGNAL'];
+  };
+
+  const [gateDecision, reasonCode] = decide();
+
+  const result = {
+    decision: gateDecision,
+    reasonCode,
+    tier: DECISION_TO_TIER[gateDecision],
+    inputs,
+    inputsHash: computeGateInputsHash(inputs),
+    configSnapshot,
+    schemaVersion: '1',
+  };
+
+  if (gateDecision === 'GO_WITH_OBSERVATION') {
+    // Execution semantics (host responsibility): on expiry the host stops the
+    // loop AND treats changes originating from `files` as unreviewed
+    // (re-review required). "stop" is the only permitted value in S2;
+    // "promote" lands with the S4 enforcement implementation.
+    result.observation = {
+      expiresInHours,
+      onExpiry: 'stop',
+      files: Array.isArray(changedFiles) ? changedFiles.slice(0, 100) : [],
+    };
+  }
+
+  return result;
+}
+
+
+/***/ }),
+
 /***/ 8613:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -42402,7 +42724,7 @@ function normalizePlannerMode(mode, { defaultMode = 'off' } = {}) {
 
 /***/ }),
 
-/***/ 8601:
+/***/ 5597:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -42422,119 +42744,8 @@ var external_node_fs_ = __nccwpck_require__(3024);
 var external_node_path_ = __nccwpck_require__(6760);
 // EXTERNAL MODULE: ./src/lib/secret-redactor.mjs
 var secret_redactor = __nccwpck_require__(12);
-;// CONCATENATED MODULE: ./src/lib/token-estimator.mjs
-// Token estimator for prompt budget accounting (#689 PR-A).
-//
-// Lightweight, deterministic estimator that the upcoming context-ranking
-// + budget control work in #689 PR-B/PR-C will consume. PR-A ships the
-// pure function and tests; pipeline integration lands in PR-C.
-//
-// Design notes:
-// - The default `heuristic` algorithm uses chars/4 for ASCII-dominant text
-//   and chars/2 for CJK-dominant text. This is **deliberately rough**:
-//   exact tokenization (tiktoken / @anthropic-ai/tokenizer) lives in PR-E
-//   as an opt-in adapter so PR-A can stay dependency-free.
-// - Detection is per-string, not per-character. We bucket the input by the
-//   ratio of CJK code points and pick a divisor accordingly so a mostly-
-//   English string with a few Japanese variable names still gets the more
-//   accurate ascii estimate.
-// - The exported `estimateTokens` is pure: same input always returns the
-//   same number. This matters for #687 fingerprint stability if anything
-//   downstream ever incorporates the estimate.
-
-const ASCII_DIVISOR = 4;
-const CJK_DIVISOR = 2;
-
-// Hiragana, Katakana (incl. half-width fullwidth), CJK Unified Ideographs
-// and the most common compatibility ranges. Intentionally narrow — we only
-// need a quick "is this string CJK-heavy" test, not full unicode coverage.
-const CJK_RE = /[぀-ゟ゠-ヿ一-鿿ｦ-ﾟ]/g;
-
-/**
- * Count Unicode code points (not UTF-16 code units) so surrogate pairs
- * (e.g. some emoji) don't double-count. Matters for very long strings
- * where the difference moves the estimate by several percent.
- */
-function codePointLength(text) {
-  let n = 0;
-  // for...of on a string iterates code points.
-  for (const _ of text) n += 1;
-  return n;
-}
-
-function cjkCount(text) {
-  // matchAll + counter avoids materializing the full match array, which
-  // matters once callers feed in 200k-char prompts (config.context.budget
-  // upper bound). Counting the iterator stays O(matches) on memory.
-  let n = 0;
-  for (const _ of text.matchAll(CJK_RE)) n += 1;
-  return n;
-}
-
-/**
- * Estimate the number of tokens an LLM tokenizer would assign to `text`.
- *
- * PR-A only implements the `heuristic` tokenizer. The schema
- * (`contextConfigSchema.tokenizer` enum: `heuristic`) is intentionally
- * strict — it rejects unknown values at config-load time so typos
- * surface immediately rather than silently degrading to heuristic. PR-E
- * will add `tiktoken` to both the schema enum and the dispatch below.
- *
- * `opts.model` is reserved for the same PR-E work.
- *
- * @param {string} text
- * @param {object} [opts]
- * @param {string} [opts.model] reserved for future tokenizer plugins
- * @returns {number} non-negative integer
- */
-function estimateTokens(text, opts = {}) {
-  if (text == null) return 0;
-  const s = String(text);
-  if (s.length === 0) return 0;
-  // opts is currently unused at runtime; kept for the API contract
-  // documented above so PR-E can extend without a breaking change.
-  void opts;
-
-  const cjk = cjkCount(s);
-  const total = codePointLength(s);
-  if (total === 0) return 0;
-
-  // Mixed: weight each code point by whether it looks CJK. This keeps
-  // mostly-English strings on the ASCII divisor even when they contain a
-  // few katakana variable names.
-  const ascii = total - cjk;
-  const tokens = ascii / ASCII_DIVISOR + cjk / CJK_DIVISOR;
-  return Math.max(1, Math.ceil(tokens));
-}
-
-/**
- * Char budget -> safe upper bound on tokens.
- *
- * Returns the worst-case token count for a budget of `maxChars`: assumes
- * the entire input is CJK (chars/2). Callers using this to gate "will
- * the prompt fit" stay under the real LLM tokenizer limit even when the
- * input shifts toward Japanese. Use estimateTokens() for the actual
- * per-string estimate when accuracy matters more than safety.
- */
-function charsToTokens(maxChars, _opts = {}) {
-  if (!Number.isFinite(maxChars) || maxChars <= 0) return 0;
-  return Math.floor(maxChars / CJK_DIVISOR);
-}
-
-/**
- * Token budget -> safe upper bound on chars.
- *
- * Returns the maximum chars that cannot exceed `maxTokens` even for
- * fully-CJK input (where every char counts as 1/2 token). Callers using
- * this to gate per-section maxChars stay under the prompt budget even
- * when the section ends up CJK-heavy. Use estimateTokens() to verify
- * a specific assembled prompt fits.
- */
-function tokensToChars(maxTokens, _opts = {}) {
-  if (!Number.isFinite(maxTokens) || maxTokens <= 0) return 0;
-  return Math.floor(maxTokens * CJK_DIVISOR);
-}
-
+// EXTERNAL MODULE: ./src/lib/token-estimator.mjs
+var token_estimator = __nccwpck_require__(467);
 ;// CONCATENATED MODULE: ./src/lib/context-ranker.mjs
 // Context ranking for repo-wide review (#689 PR-B).
 //
@@ -42865,7 +43076,7 @@ async function collectRepoContext({
   let tokenBudget = maxTokensCfg;
   const billTokens = (text) => {
     if (tokenBudget == null || !text) return;
-    tokenBudget -= estimateTokens(text);
+    tokenBudget -= (0,token_estimator/* estimateTokens */.bP)(text);
   };
   const tokenBudgetExhausted = () => tokenBudget != null && tokenBudget <= 0;
 
@@ -42955,7 +43166,7 @@ async function collectRepoContext({
     // Use the tighter of the char-budget cap and the token-budget cap
     // (translated to chars) so we never read more than either budget
     // allows. PR-A (#712) charsToTokens is the safe upper bound.
-    const tokenChars = tokenBudget != null ? Math.max(0, charsToTokens(tokenBudget)) : Infinity;
+    const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
     const cap = Math.min(SECTION_CAPS.fullFile, budget, tokenChars);
     if (cap <= 0) break;
     const raw = readFileCapped(abs, cap);
@@ -42980,7 +43191,7 @@ async function collectRepoContext({
       }
       const abs = external_node_path_.join(repoRoot, candidate);
       if (fileExists(abs)) {
-        const tokenChars = tokenBudget != null ? Math.max(0, charsToTokens(tokenBudget)) : Infinity;
+        const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
         const cap = Math.min(SECTION_CAPS.tests, budget, tokenChars);
         if (cap <= 0) break;
         const raw = readFileCapped(abs, cap);
@@ -43010,7 +43221,7 @@ async function collectRepoContext({
   if (budget > 0 && !tokenBudgetExhausted()) {
     const exportedSymbols = extractExportedSymbols({ changedFiles, repoRoot });
     if (exportedSymbols.length) {
-      const tokenChars = tokenBudget != null ? Math.max(0, charsToTokens(tokenBudget)) : Infinity;
+      const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
       const usagesCap = Math.min(SECTION_CAPS.usages, budget, tokenChars);
       if (usagesCap > 0) {
         const usages = await searchSymbolUsages({
@@ -43199,7 +43410,7 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 /* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(2294);
 /* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(9746);
 /* harmony import */ var _review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(8069);
-/* harmony import */ var _repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(8601);
+/* harmony import */ var _repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(5597);
 /* harmony import */ var _secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(12);
 /* harmony import */ var _llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(7303);
 
@@ -45128,6 +45339,129 @@ function shouldExcludeForContext(relPath, opts = {}) {
 
 /***/ }),
 
+/***/ 467:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   b9: () => (/* binding */ charsToTokens),
+/* harmony export */   bP: () => (/* binding */ estimateTokens)
+/* harmony export */ });
+/* unused harmony export tokensToChars */
+// Token estimator for prompt budget accounting (#689 PR-A).
+//
+// Lightweight, deterministic estimator that the upcoming context-ranking
+// + budget control work in #689 PR-B/PR-C will consume. PR-A ships the
+// pure function and tests; pipeline integration lands in PR-C.
+//
+// Design notes:
+// - The default `heuristic` algorithm uses chars/4 for ASCII-dominant text
+//   and chars/2 for CJK-dominant text. This is **deliberately rough**:
+//   exact tokenization (tiktoken / @anthropic-ai/tokenizer) lives in PR-E
+//   as an opt-in adapter so PR-A can stay dependency-free.
+// - Detection is per-string, not per-character. We bucket the input by the
+//   ratio of CJK code points and pick a divisor accordingly so a mostly-
+//   English string with a few Japanese variable names still gets the more
+//   accurate ascii estimate.
+// - The exported `estimateTokens` is pure: same input always returns the
+//   same number. This matters for #687 fingerprint stability if anything
+//   downstream ever incorporates the estimate.
+
+const ASCII_DIVISOR = 4;
+const CJK_DIVISOR = 2;
+
+// Hiragana, Katakana (incl. half-width fullwidth), CJK Unified Ideographs
+// and the most common compatibility ranges. Intentionally narrow — we only
+// need a quick "is this string CJK-heavy" test, not full unicode coverage.
+const CJK_RE = /[぀-ゟ゠-ヿ一-鿿ｦ-ﾟ]/g;
+
+/**
+ * Count Unicode code points (not UTF-16 code units) so surrogate pairs
+ * (e.g. some emoji) don't double-count. Matters for very long strings
+ * where the difference moves the estimate by several percent.
+ */
+function codePointLength(text) {
+  let n = 0;
+  // for...of on a string iterates code points.
+  for (const _ of text) n += 1;
+  return n;
+}
+
+function cjkCount(text) {
+  // matchAll + counter avoids materializing the full match array, which
+  // matters once callers feed in 200k-char prompts (config.context.budget
+  // upper bound). Counting the iterator stays O(matches) on memory.
+  let n = 0;
+  for (const _ of text.matchAll(CJK_RE)) n += 1;
+  return n;
+}
+
+/**
+ * Estimate the number of tokens an LLM tokenizer would assign to `text`.
+ *
+ * PR-A only implements the `heuristic` tokenizer. The schema
+ * (`contextConfigSchema.tokenizer` enum: `heuristic`) is intentionally
+ * strict — it rejects unknown values at config-load time so typos
+ * surface immediately rather than silently degrading to heuristic. PR-E
+ * will add `tiktoken` to both the schema enum and the dispatch below.
+ *
+ * `opts.model` is reserved for the same PR-E work.
+ *
+ * @param {string} text
+ * @param {object} [opts]
+ * @param {string} [opts.model] reserved for future tokenizer plugins
+ * @returns {number} non-negative integer
+ */
+function estimateTokens(text, opts = {}) {
+  if (text == null) return 0;
+  const s = String(text);
+  if (s.length === 0) return 0;
+  // opts is currently unused at runtime; kept for the API contract
+  // documented above so PR-E can extend without a breaking change.
+  void opts;
+
+  const cjk = cjkCount(s);
+  const total = codePointLength(s);
+  if (total === 0) return 0;
+
+  // Mixed: weight each code point by whether it looks CJK. This keeps
+  // mostly-English strings on the ASCII divisor even when they contain a
+  // few katakana variable names.
+  const ascii = total - cjk;
+  const tokens = ascii / ASCII_DIVISOR + cjk / CJK_DIVISOR;
+  return Math.max(1, Math.ceil(tokens));
+}
+
+/**
+ * Char budget -> safe upper bound on tokens.
+ *
+ * Returns the worst-case token count for a budget of `maxChars`: assumes
+ * the entire input is CJK (chars/2). Callers using this to gate "will
+ * the prompt fit" stay under the real LLM tokenizer limit even when the
+ * input shifts toward Japanese. Use estimateTokens() for the actual
+ * per-string estimate when accuracy matters more than safety.
+ */
+function charsToTokens(maxChars, _opts = {}) {
+  if (!Number.isFinite(maxChars) || maxChars <= 0) return 0;
+  return Math.floor(maxChars / CJK_DIVISOR);
+}
+
+/**
+ * Token budget -> safe upper bound on chars.
+ *
+ * Returns the maximum chars that cannot exceed `maxTokens` even for
+ * fully-CJK input (where every char counts as 1/2 token). Callers using
+ * this to gate per-section maxChars stay under the prompt budget even
+ * when the section ends up CJK-heavy. Use estimateTokens() to verify
+ * a specific assembled prompt fits.
+ */
+function tokensToChars(maxTokens, _opts = {}) {
+  if (!Number.isFinite(maxTokens) || maxTokens <= 0) return 0;
+  return Math.floor(maxTokens * CJK_DIVISOR);
+}
+
+
+/***/ }),
+
 /***/ 9746:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -46510,8 +46844,8 @@ function buildReviewEntry(reviewResult, { phase, changedFiles, commit } = {}) {
   };
 }
 
-// EXTERNAL MODULE: ./src/lib/repo-context.mjs + 3 modules
-var repo_context = __nccwpck_require__(8601);
+// EXTERNAL MODULE: ./src/lib/repo-context.mjs + 2 modules
+var repo_context = __nccwpck_require__(5597);
 // EXTERNAL MODULE: ./src/lib/utils.mjs
 var utils = __nccwpck_require__(9746);
 ;// CONCATENATED MODULE: ./src/lib/suppression-apply.mjs
@@ -61469,15 +61803,19 @@ class SkillDispatcher {
 var review_plan_generator = __nccwpck_require__(8069);
 // EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
 var engine = __nccwpck_require__(9487);
-// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
-var rubric = __nccwpck_require__(5034);
 // EXTERNAL MODULE: ./src/lib/loop-signal.mjs
 var loop_signal = __nccwpck_require__(4702);
+// EXTERNAL MODULE: ./src/lib/gate-decision.mjs
+var gate_decision = __nccwpck_require__(2773);
+// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
+var rubric = __nccwpck_require__(5034);
 // EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
 var _2020 = __nccwpck_require__(2210);
 // EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
 var dist = __nccwpck_require__(2815);
 ;// CONCATENATED MODULE: ./src/cli.mjs
+
+
 
 
 
@@ -62613,10 +62951,38 @@ function formatJsonOutput(result, phase) {
       decision = result.decision;
     }
   }
+  // gate: same contract as review-artifact `gate` (Epic #1347 S2). The
+  // `river run` path has no plan-text human-approval scan, so that cliff
+  // input is always false here; risk-map / loop-signal / bootstrap-cliff
+  // inputs are fully wired. Additive + fail-safe (never breaks the output).
+  let gate;
+  try {
+    const findings = result.findings ?? [];
+    const loopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)({ decision, findings });
+    gate = (0,gate_decision/* deriveGateDecision */.RF)({
+      loopSignal,
+      decision,
+      humanApprovalRequired: false,
+      riskAction: riskAssessment?.aggregateAction,
+      blockingFindings: findings.filter(
+        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
+      ).length,
+      changedFiles: result.changedFiles ?? [],
+      reviewExecuted: result.status === 'ok',
+      artifactStatus: result.status ?? null,
+      riskMapPresent: riskAssessment != null,
+      riskMapDigest: null,
+      config: result.config ?? {},
+    });
+  } catch {
+    // leave gate unset on derivation failure
+  }
+
   const artifact = {
     issues,
     summary,
     ...(decision !== undefined ? { decision } : {}),
+    ...(gate ? { gate } : {}),
     ...(result.teamLeadReport ? { teamLeadReport: result.teamLeadReport } : {}),
   };
   validateOutputArtifact(artifact);
@@ -62689,7 +63055,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     if (parsed.reviewSubcommand === 'verify') {
       try {
         const { ReviewPlanError, resolveReviewOutputFormat } =
-          await __nccwpck_require__.e(/* import() */ 320).then(__nccwpck_require__.bind(__nccwpck_require__, 5320));
+          await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
         try {
           resolveReviewOutputFormat(parsed);
         } catch (err) {
@@ -62770,7 +63136,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     }
     try {
       const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =
-        await __nccwpck_require__.e(/* import() */ 320).then(__nccwpck_require__.bind(__nccwpck_require__, 5320));
+        await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
       let reviewFormat;
       try {
         reviewFormat = resolveReviewOutputFormat(parsed);
@@ -62871,7 +63237,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       // is given do we translate findings into a CI exit code; otherwise exit 0
       // (non-breaking for existing callers / the plangate-review workflow).
       if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-        const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 320).then(__nccwpck_require__.bind(__nccwpck_require__, 5320));
+        const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
         const gate = evaluateReviewGate(artifact, {
           failOn: parsed.failOn ?? 'critical',
           warnOn: parsed.warnOn ?? 'major',
@@ -63467,7 +63833,7 @@ Dependencies: ${
     // the run path (only `river review` gated), so agents that relied on the
     // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
     if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-      const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 320).then(__nccwpck_require__.bind(__nccwpck_require__, 5320));
+      const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
       const issues = formatJsonOutput(result, parsed.phase).issues;
       const gate = evaluateReviewGate(
         { findings: issues },

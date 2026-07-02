@@ -22,6 +22,8 @@ import { isLlmEnabled, parseList } from './lib/utils.mjs';
 import { PLANNER_MODES } from './lib/planner-utils.mjs';
 import { DEPTH_TO_REVIEW_MODE, resolveDepthToReviewMode } from './lib/review-plan-generator.mjs';
 import { resolveVerdict, scoreReview } from './lib/scoring/engine.mjs';
+import { deriveLoopSignalFromArtifact } from './lib/loop-signal.mjs';
+import { deriveGateDecision } from './lib/gate-decision.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
 import { severityToPriority } from './lib/finding-factory.mjs';
 import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
@@ -1140,10 +1142,38 @@ function formatJsonOutput(result, phase) {
       decision = result.decision;
     }
   }
+  // gate: same contract as review-artifact `gate` (Epic #1347 S2). The
+  // `river run` path has no plan-text human-approval scan, so that cliff
+  // input is always false here; risk-map / loop-signal / bootstrap-cliff
+  // inputs are fully wired. Additive + fail-safe (never breaks the output).
+  let gate;
+  try {
+    const findings = result.findings ?? [];
+    const loopSignal = deriveLoopSignalFromArtifact({ decision, findings });
+    gate = deriveGateDecision({
+      loopSignal,
+      decision,
+      humanApprovalRequired: false,
+      riskAction: riskAssessment?.aggregateAction,
+      blockingFindings: findings.filter(
+        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
+      ).length,
+      changedFiles: result.changedFiles ?? [],
+      reviewExecuted: result.status === 'ok',
+      artifactStatus: result.status ?? null,
+      riskMapPresent: riskAssessment != null,
+      riskMapDigest: null,
+      config: result.config ?? {},
+    });
+  } catch {
+    // leave gate unset on derivation failure
+  }
+
   const artifact = {
     issues,
     summary,
     ...(decision !== undefined ? { decision } : {}),
+    ...(gate ? { gate } : {}),
     ...(result.teamLeadReport ? { teamLeadReport: result.teamLeadReport } : {}),
   };
   validateOutputArtifact(artifact);

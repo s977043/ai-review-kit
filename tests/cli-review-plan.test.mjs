@@ -1549,6 +1549,28 @@ describe('runReviewPlan — gate block (Epic #1347 S2)', () => {
     assert.equal(artifact.gate.schemaVersion, '1');
   });
 
+  test('plan.executionOrder / estimatedCost flow into the artifact (S2 PR-2)', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'midstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      resolveAllArtifactsImpl: async () => ({
+        diff: { id: 'diff', path: '/repo/d.patch', source: 'cwd', exists: true, optional: true },
+      }),
+      readFileImpl: async () => '+++ b/src/foo.mjs\n@@ -0,0 +1 @@\n+x\n',
+      buildExecutionPlanImpl: async () => ({
+        selected: [],
+        skipped: [],
+        executionOrder: ['heuristic', 'llm'],
+        estimatedCost: { tokens: 12, source: 'token-estimator' },
+      }),
+    });
+    assert.equal(validate(artifact), true, JSON.stringify(validate.errors));
+    assert.deepEqual(artifact.plan.executionOrder, ['heuristic', 'llm']);
+    assert.deepEqual(artifact.plan.estimatedCost, { tokens: 12, source: 'token-estimator' });
+  });
+
   test('risk-map require_human_review reaches the gate as RISK_MAP_HUMAN_REVIEW (C1 wiring)', async () => {
     const artifact = await runReviewPlan({
       planOnly: true,

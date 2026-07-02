@@ -60,6 +60,25 @@
       "type": "string",
       "enum": ["cheap", "balanced", "high-accuracy"]
     },
+    "evaluationType": {
+      "type": "string",
+      "enum": ["deterministic", "heuristic", "agentic"],
+      "description": "Which evaluation layer runs this skill (Epic #1347 S2 / #1349, adopted from the L1/L2/L3 review). deterministic: an external command decides pass/fail with no LLM; heuristic: pure-code detectors (see SKILL_HEURISTIC_MAP); agentic: LLM-backed. Optional and additive — skills without it keep current behavior; the executionOrder plan field is derived from these declarations."
+    },
+    "deterministicGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command"],
+      "description": "Declaration for evaluationType 'deterministic' skills. TRUST BOUNDARY: `command` is an arbitrary command specified by a repo-owned file — the agent under review can edit it (e.g. `command: \"true\"` makes L1 always green). Execution (S4 strict_block routing) must happen only inside the trust boundary (host-approved configuration); S2 defines the schema only.",
+      "properties": {
+        "command": { "type": "string", "minLength": 1 },
+        "failSeverity": {
+          "type": "string",
+          "enum": ["strict_block", "bypass_warning"],
+          "default": "strict_block"
+        }
+      }
+    },
     "dependency": {
       "anyOf": [
         {

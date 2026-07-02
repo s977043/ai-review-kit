@@ -9,7 +9,9 @@
     "issues": {
       "type": "array",
       "description": "List of individual review issues raised by River Review.",
-      "items": { "$ref": "#/$defs/issue" }
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
     },
     "summary": {
       "description": "Aggregated counts and optional notes for this review run.",
@@ -19,6 +21,10 @@
       "type": "string",
       "enum": ["auto-approve", "human-review-recommended", "human-review-required"],
       "description": "Run-level verdict derived deterministically from findings (same vocabulary as review-artifact decision). Optional; absent when scoring fails."
+    },
+    "gate": {
+      "type": "object",
+      "description": "Machine-readable gate signal for loop-running hosts (Epic #1347 S2 / #1349). Same shape and trust-boundary contract as the `gate` object in review-artifact.schema.json (the authoritative definition — see that schema and src/lib/gate-decision.mjs). Additive/optional. Note: the `river run` path performs no plan-text human-approval scan, so inputs.humanApprovalRequired is always false here; the plan-review cliff applies to the `river review` namespace."
     }
   },
   "$defs": {
@@ -85,7 +91,9 @@
         "evidence": {
           "type": "array",
           "description": "Evidence snippets supporting this finding.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "reviewer": {
           "type": "string",
@@ -114,10 +122,22 @@
           "required": ["info", "minor", "major", "critical"],
           "additionalProperties": false,
           "properties": {
-            "info": { "type": "integer", "minimum": 0 },
-            "minor": { "type": "integer", "minimum": 0 },
-            "major": { "type": "integer", "minimum": 0 },
-            "critical": { "type": "integer", "minimum": 0 }
+            "info": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "major": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "critical": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
         "issueCountByPhase": {
@@ -126,9 +146,18 @@
           "required": ["upstream", "midstream", "downstream"],
           "additionalProperties": false,
           "properties": {
-            "upstream": { "type": "integer", "minimum": 0 },
-            "midstream": { "type": "integer", "minimum": 0 },
-            "downstream": { "type": "integer", "minimum": 0 }
+            "upstream": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "midstream": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "downstream": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
         "notes": {
@@ -145,8 +174,18 @@
               "type": "string",
               "enum": ["comment_only", "escalate", "require_human_review"]
             },
-            "escalatedFiles": { "type": "array", "items": { "type": "string" } },
-            "humanReviewFiles": { "type": "array", "items": { "type": "string" } }
+            "escalatedFiles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "humanReviewFiles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
         "prioritySummary": {
@@ -161,10 +200,22 @@
               "required": ["P1", "P2", "P3", "P4"],
               "additionalProperties": false,
               "properties": {
-                "P1": { "type": "integer", "minimum": 0 },
-                "P2": { "type": "integer", "minimum": 0 },
-                "P3": { "type": "integer", "minimum": 0 },
-                "P4": { "type": "integer", "minimum": 0 }
+                "P1": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "P2": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "P3": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "P4": {
+                  "type": "integer",
+                  "minimum": 0
+                }
               }
             },
             "requiresImmediateAttention": {

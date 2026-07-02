@@ -109,6 +109,21 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Tags describing the impact area of the changes (e.g. security, performance)."
+        },
+        "executionOrder": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["deterministic", "heuristic", "llm"] },
+          "description": "Declared multi-layer execution order derived from the selected skills' evaluationType (Epic #1347 S2, merged from #1339). Declaration only — reordering enforcement (strict_block routing) is S4. Additive/optional."
+        },
+        "estimatedCost": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tokens", "source"],
+          "description": "Rough pre-execution cost estimate. Advisory only: deliberately NOT a gate-decision input (a cost-based downgrade would need S3 measured metrics first). Additive/optional.",
+          "properties": {
+            "tokens": { "type": "number", "minimum": 0 },
+            "source": { "type": "string", "enum": ["token-estimator"] }
+          }
         }
       }
     },
