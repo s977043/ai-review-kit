@@ -203,7 +203,7 @@ skills:
   - id: code-quality-sample
     version: '0.1.0'
     name: 'Sample Code Quality'
-    path: skills/midstream/sample-code-quality/SKILL.md
+    path: skills/midstream/code-quality-sample/SKILL.md
     category: midstream
     phase: midstream
     tags: [sample, code-quality, midstream]
@@ -320,6 +320,72 @@ skills:
     severity: major
     recommended: false
     description: 'Detect null/undefined/empty handling gaps where callers or consumers may receive unexpected nullish values.'
+
+  - id: agent-skill-bridge
+    version: '0.1.0'
+    name: 'Agent Skill Bridge Review'
+    path: skills/midstream/agent-skill-bridge/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [bridge, skills, midstream]
+    severity: major
+    recommended: false
+    description: 'Review changes to the Agent Skills import/export bridge for path safety, round-trip fidelity, and validation correctness.'
+
+  - id: api-compatibility
+    version: '0.1.0'
+    name: 'API Compatibility and Test Gap Review'
+    path: skills/midstream/api-compatibility/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [api, compatibility, dto, breaking-change, test-coverage, midstream]
+    severity: major
+    recommended: false
+    description: 'Detect breaking API contract changes, DTO modifications without compatibility handling, and missing tests for changed API boundaries.'
+
+  - id: config-json
+    version: '0.1.0'
+    name: 'Configuration File Review'
+    path: skills/midstream/config-json/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [config, json, yaml, midstream]
+    severity: minor
+    recommended: false
+    description: 'Review JSON/YAML configuration files for common issues and best practices.'
+
+  - id: i18n-unused-key
+    version: '0.1.0'
+    name: 'i18n Unused Key Review'
+    path: skills/midstream/i18n-unused-key/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [i18n, localization, dead-code, midstream]
+    severity: minor
+    recommended: false
+    description: 'Detect i18n/locale keys removed from source but left in locale files, or added without source usage.'
+
+  - id: normalization-consistency
+    version: '0.1.0'
+    name: 'Normalization Consistency Review'
+    path: skills/midstream/normalization-consistency/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [consistency, normalization, formatting, midstream]
+    severity: minor
+    recommended: false
+    description: 'Detect inconsistencies in ID formatting, date/time display, monetary amounts, and enum/status labels versus existing patterns.'
+
+  - id: suppression-feedback
+    version: '0.1.0'
+    name: 'Suppression Feedback Workflow'
+    path: skills/midstream/suppression-feedback/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [suppression, process, midstream, riverbed-memory]
+    severity: minor
+    recommended: false
+    description: 'Riverbed Memory の suppression entry を活用するときの判断基準と CLI 操作を案内する'
 
   # ------------------------------------------------------------------
   # Community Skills (Experimental tier; recommended: false)
@@ -584,6 +650,39 @@ skills:
     severity: major
     recommended: false
     description: 'Detects patterns that make tests flaky and proposes stabilization steps.'
+
+  - id: review-policy-standard-downstream
+    version: '0.1.0'
+    name: 'Standard Review Policy for Downstream'
+    path: skills/downstream/review-policy-standard-downstream/SKILL.md
+    category: downstream
+    phase: downstream
+    tags: [policy, downstream, testing, qa]
+    severity: info
+    recommended: false
+    description: 'Applies standard AI review policy guidelines for downstream (test/QA) phase reviews.'
+
+  - id: test-plan-review
+    version: '0.1.0'
+    name: 'テスト観点レビュー（差分ドリブン）'
+    path: skills/downstream/test-plan-review/SKILL.md
+    category: downstream
+    phase: downstream
+    tags: [tests, coverage, downstream]
+    severity: major
+    recommended: false
+    description: '変更差分から重要なテスト観点と欠落を洗い出し、優先度付きでテストケース案を提示する'
+
+  - id: test-review-sample
+    version: '0.1.0'
+    name: 'Sample Test Coverage Review'
+    path: skills/downstream/test-review-sample/SKILL.md
+    category: downstream
+    phase: downstream
+    tags: [sample, tests, coverage, downstream]
+    severity: major
+    recommended: false
+    description: 'Evaluates downstream tests for coverage and edge cases.'
 
   # Adversarial Review Skills (Cognitive Bias Countermeasures)
   - id: pre-mortem
@@ -1062,7 +1161,7 @@ skills:
   - id: architecture-sample
     version: '0.1.0'
     name: 'Sample Architecture Consistency Review'
-    path: skills/upstream/sample-architecture-review/SKILL.md
+    path: skills/upstream/architecture-sample/SKILL.md
     category: upstream
     phase: upstream
     tags: [sample, design, architecture, upstream]
@@ -1135,6 +1234,50 @@ skills:
     severity: major
     recommended: false
     description: '既存のレビュー結果 (review-self / review-external) を再点検し、漏れ・誤検知・ハルシネーション・根拠欠落を検出する W チェック skill'
+
+  - id: plangate-gc-deterministic
+    version: '0.1.0'
+    name: 'PlanGate 決定論的 GC 判定'
+    path: skills/upstream/plangate-gc-deterministic/SKILL.md
+    category: upstream
+    phase: upstream
+    tags: [plangate, gc, maintenance, deterministic, upstream]
+    severity: minor
+    recommended: false
+    description: 'artifact / memory / log に対して retention 設定 + hard guards + excludes から決定論的に KEEP/REMOVE を判定する GC skill'
+
+  - id: plangate-rule-promotion
+    version: '0.1.0'
+    name: 'PlanGate ルール昇格判定'
+    path: skills/upstream/plangate-rule-promotion/SKILL.md
+    category: upstream
+    phase: upstream
+    tags: [plangate, rule-promotion, governance, skill-registry, upstream]
+    severity: info
+    recommended: false
+    description: '運用で発見されたレビューパターンを分析し、新 skill への昇格候補 / 既存 skill 更新候補 / 人間判断が必要な項目に分類する'
+
+  - id: context-budget-tuning
+    version: '0.1.0'
+    name: 'Context Budget Tuning'
+    path: skills/upstream/context-budget-tuning/SKILL.md
+    category: upstream
+    phase: upstream
+    tags: [configuration, context, process, upstream]
+    severity: minor
+    recommended: false
+    description: '.river-review.{yaml,json} の context.budget / ranking / reviewMode 設定をモデル仕様とリポジトリ規模に合わせて調整するレビュー観点'
+
+  - id: eval-driven-skill-design
+    version: '0.1.0'
+    name: 'Eval-Driven Skill Design'
+    path: skills/upstream/eval-driven-skill-design/SKILL.md
+    category: upstream
+    phase: upstream
+    tags: [skill-authoring, eval, process, upstream]
+    severity: minor
+    recommended: false
+    description: '新規 skill PR で fixtures/ と eval/ の happy-path × guard ペアが揃っているかを確認し、欠けている場合は eval cycle (#688) に乗せる手順を案内する'
 
 # ------------------------------------------------------------------
 # Skill Packs (distribution units for bundled open review knowledge)
