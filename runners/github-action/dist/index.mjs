@@ -42175,6 +42175,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @param {number} [params.maxTokens]
  * @param {number} [params.timeoutMs]     Per-attempt timeout (default 15000).
  * @param {number} [params.maxAttempts]   Total attempts incl. first (default 3).
+ * @param {typeof fetch} [params.fetchImpl] Injectable transport for tests (#1357).
+ * @param {number} [params.baseMs]        Retry backoff base ms (injectable for tests).
  * @returns {Promise<string>}
  */
 async function callChatCompletion({
@@ -42187,6 +42189,8 @@ async function callChatCompletion({
   maxTokens,
   timeoutMs = LLM_TIMEOUT_MS,
   maxAttempts = LLM_MAX_ATTEMPTS,
+  fetchImpl = globalThis.fetch,
+  baseMs = LLM_RETRY_BASE_MS,
 }) {
   const body = JSON.stringify({
     model,
@@ -42201,7 +42205,7 @@ async function callChatCompletion({
   let lastError;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetchImpl(endpoint, {
         method: 'POST',
         signal: AbortSignal.timeout(timeoutMs), // fresh per attempt (one-shot)
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -42218,7 +42222,7 @@ async function callChatCompletion({
       const detail = await res.text();
       if (attempt < maxAttempts && isRetryableStatus(res.status)) {
         await sleep(
-          computeBackoffMs(attempt, { retryAfterSec: res.headers?.get?.('retry-after') })
+          computeBackoffMs(attempt, { baseMs, retryAfterSec: res.headers?.get?.('retry-after') })
         );
         continue;
       }
@@ -42229,7 +42233,7 @@ async function callChatCompletion({
       // isRetryableNetworkError returns false and it propagates immediately.
       lastError = err;
       if (attempt < maxAttempts && isRetryableNetworkError(err)) {
-        await sleep(computeBackoffMs(attempt));
+        await sleep(computeBackoffMs(attempt, { baseMs }));
         continue;
       }
       throw err;
@@ -45127,10 +45131,11 @@ function parseList(value) {
 /**
  * Check if offline (rules-only) mode is enabled via `RIVER_OFFLINE`
  * (set by `--offline` / `--rules-only`; ADR-002 / #1071).
+ * @param {NodeJS.ProcessEnv} [env] - injectable for tests (#1357)
  * @returns {boolean}
  */
-function isOfflineMode() {
-  const offline = String(process.env.RIVER_OFFLINE ?? '')
+function isOfflineMode(env = process.env) {
+  const offline = String(env.RIVER_OFFLINE ?? '')
     .trim()
     .toLowerCase();
   return offline === '1' || offline === 'true' || offline === 'yes' || offline === 'on';
@@ -45142,18 +45147,19 @@ function isOfflineMode() {
  * Offline (rules-only) mode: when `RIVER_OFFLINE` is set (via `--offline` /
  * `--rules-only`), AI is force-disabled even if a key is present, so the review
  * runs on deterministic heuristics only (ADR-002 / #1071).
+ * @param {NodeJS.ProcessEnv} [env] - injectable for tests (#1357)
  * @returns {boolean}
  */
-function isLlmEnabled() {
-  if (isOfflineMode()) {
+function isLlmEnabled(env = process.env) {
+  if (isOfflineMode(env)) {
     return false;
   }
   return !!(
-    process.env.RIVER_OPENAI_API_KEY ||
-    process.env.OPENAI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.ANTHROPIC_API_KEY ||
-    process.env.RIVER_ANTHROPIC_API_KEY
+    env.RIVER_OPENAI_API_KEY ||
+    env.OPENAI_API_KEY ||
+    env.GOOGLE_API_KEY ||
+    env.ANTHROPIC_API_KEY ||
+    env.RIVER_ANTHROPIC_API_KEY
   );
 }
 

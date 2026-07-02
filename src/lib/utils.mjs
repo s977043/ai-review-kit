@@ -13,10 +13,11 @@ export function parseList(value) {
 /**
  * Check if offline (rules-only) mode is enabled via `RIVER_OFFLINE`
  * (set by `--offline` / `--rules-only`; ADR-002 / #1071).
+ * @param {NodeJS.ProcessEnv} [env] - injectable for tests (#1357)
  * @returns {boolean}
  */
-export function isOfflineMode() {
-  const offline = String(process.env.RIVER_OFFLINE ?? '')
+export function isOfflineMode(env = process.env) {
+  const offline = String(env.RIVER_OFFLINE ?? '')
     .trim()
     .toLowerCase();
   return offline === '1' || offline === 'true' || offline === 'yes' || offline === 'on';
@@ -28,18 +29,19 @@ export function isOfflineMode() {
  * Offline (rules-only) mode: when `RIVER_OFFLINE` is set (via `--offline` /
  * `--rules-only`), AI is force-disabled even if a key is present, so the review
  * runs on deterministic heuristics only (ADR-002 / #1071).
+ * @param {NodeJS.ProcessEnv} [env] - injectable for tests (#1357)
  * @returns {boolean}
  */
-export function isLlmEnabled() {
-  if (isOfflineMode()) {
+export function isLlmEnabled(env = process.env) {
+  if (isOfflineMode(env)) {
     return false;
   }
   return !!(
-    process.env.RIVER_OPENAI_API_KEY ||
-    process.env.OPENAI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.ANTHROPIC_API_KEY ||
-    process.env.RIVER_ANTHROPIC_API_KEY
+    env.RIVER_OPENAI_API_KEY ||
+    env.OPENAI_API_KEY ||
+    env.GOOGLE_API_KEY ||
+    env.ANTHROPIC_API_KEY ||
+    env.RIVER_ANTHROPIC_API_KEY
   );
 }
 

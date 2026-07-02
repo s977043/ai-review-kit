@@ -325,13 +325,29 @@ export async function adjudicateHumanApproval({
   // This is the floor the adjudicator can never lower.
   const regexRequired = candidates.some((c) => c.confidence === 'high');
 
-  if (adjudicator) {
+  // The adjudicator's ONLY job is escalating LOW-confidence candidates, so it
+  // is invoked exclusively when that decision is actually open (#1357):
+  //  - candidates.length === 0 → nothing to escalate. Calling the LLM here
+  //    also created "evidence-free verdicts": a YES with zero candidates set
+  //    required=true while the caller's audit/finding guards (which key off
+  //    candidates/triggers) recorded nothing.
+  //  - regexRequired → the verdict is already required; the LLM cannot lower
+  //    it, so the call would be pure cost + injection surface.
+  const escalationOpen = !regexRequired && candidates.length > 0;
+
+  if (adjudicator && escalationOpen) {
     let verdict;
     try {
       verdict = await adjudicator(candidates, text, artifactKind);
-    } catch {
+    } catch (err) {
       // Fail-safe: an adjudicator failure (network, parse, timeout) degrades
-      // to the regex-only verdict instead of breaking the caller.
+      // to the regex-only verdict instead of breaking the caller. Warn on
+      // stderr unconditionally (not only under --debug) so a persistently
+      // failing adjudicator — i.e. the LOW tier silently disabled — is
+      // observable in logs (#1357).
+      console.warn(
+        `[plan-review] human-approval adjudicator failed; degraded to regex-only verdict: ${err?.message ?? err}`
+      );
       return { required: regexRequired, triggers, evidence, mode: 'regex-fallback' };
     }
     return {
@@ -342,6 +358,12 @@ export async function adjudicateHumanApproval({
     };
   }
 
+  if (adjudicator) {
+    // Adjudicator supplied but no escalation decision open: report the same
+    // shape as regex-only, with a mode that records the skip for audit.
+    return { required: regexRequired, triggers, evidence, mode: 'llm-skipped' };
+  }
+
   return { required: regexRequired, triggers, evidence, mode: 'regex-only' };
 }
 
@@ -350,6 +372,10 @@ export async function adjudicateHumanApproval({
  * Backward-compatible wrapper around detectHumanApprovalCandidates +
  * adjudicateHumanApproval (regex-only mode).
  *
+ * @deprecated No production caller remains (#1357) — review-plan.mjs moved to
+ *   detectHumanApprovalCandidates + adjudicateHumanApproval in #1348. Kept as
+ *   a stable regex-only entry point for tests and external consumers; prefer
+ *   the two-step API for new code.
  * @param {string} text - Plan text or finding text to scan.
  * @returns {{ required: boolean, triggers: string[] }}
  *   `required` is true when at least one HIGH-confidence trigger matched.

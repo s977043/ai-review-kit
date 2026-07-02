@@ -88,9 +88,16 @@ describe('createHumanApprovalAdjudicator — availability gating', () => {
 
   it('adjudicator throws on non-2xx so the policy layer can fall back', async () => {
     process.env.OPENAI_API_KEY = 'sk-test-key';
-    const fetchImpl = async () => ({ ok: false, status: 500, json: async () => ({}) });
+    // Transport moved to llm-pipeline callChatCompletion (#1357): error shape
+    // is the pipeline's, and maxAttempts: 1 keeps 500 a single-shot failure.
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      return { ok: false, status: 500, text: async () => 'boom', json: async () => ({}) };
+    };
     const adjudicator = createHumanApprovalAdjudicator({ fetchImpl });
-    await assert.rejects(() => adjudicator([], 'text', 'plan'), /HTTP 500/);
+    await assert.rejects(() => adjudicator([], 'text', 'plan'), /OpenAI API error 500/);
+    assert.equal(calls, 1, 'adjudicator keeps the single-attempt contract');
   });
 });
 
@@ -127,5 +134,33 @@ describe('parseAdjudicationVerdict', () => {
     assert.throws(() => parseAdjudicationVerdict('MAYBE'), /Unparseable/);
     assert.throws(() => parseAdjudicationVerdict(''), /Unparseable/);
     assert.throws(() => parseAdjudicationVerdict(null), /Unparseable/);
+  });
+});
+
+describe('createHumanApprovalAdjudicator — env DI contract (#1357)', () => {
+  it('works with an injected env only (no process.env mutation needed)', () => {
+    // Before #1357 isLlmEnabled() read process.env directly, so the injected
+    // env was only half-honored and tests had to mutate process.env.
+    const saved = {};
+    for (const k of ['RIVER_OPENAI_API_KEY', 'OPENAI_API_KEY', 'RIVER_OFFLINE']) {
+      saved[k] = process.env[k];
+      delete process.env[k];
+    }
+    try {
+      const adjudicator = createHumanApprovalAdjudicator({
+        env: { RIVER_OPENAI_API_KEY: 'sk-injected' },
+        fetchImpl: async () => ({ ok: true, json: async () => ({}) }),
+      });
+      assert.notEqual(adjudicator, null, 'injected env alone must enable the adjudicator');
+      const disabled = createHumanApprovalAdjudicator({
+        env: { RIVER_OPENAI_API_KEY: 'sk-injected', RIVER_OFFLINE: '1' },
+      });
+      assert.equal(disabled, null, 'injected RIVER_OFFLINE must gate via isLlmEnabled(env)');
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
   });
 });
