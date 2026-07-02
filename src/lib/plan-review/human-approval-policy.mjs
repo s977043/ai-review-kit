@@ -1,7 +1,9 @@
 /**
  * Human-approval policy for plan review gate.
  *
- * Pure function — no I/O, no side effects. Detects keywords in plan text or
+ * Pure function — no I/O, no side effects (single exception: the
+ * regex-fallback path emits one stderr warning so a persistently failing
+ * adjudicator stays observable, #1357). Detects keywords in plan text or
  * finding text that require mandatory human approval before execution proceeds.
  *
  * Used by the plan-review-gate skill and scoreReview() via the
