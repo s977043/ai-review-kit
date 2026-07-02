@@ -2,7 +2,7 @@
  * Human-approval policy for plan review gate.
  *
  * Pure function — no I/O, no side effects (single exception: the
- * regex-fallback path emits one stderr warning so a persistently failing
+ * regex-fallback path emits one stderr warning per failed adjudication so a persistently failing
  * adjudicator stays observable, #1357). Detects keywords in plan text or
  * finding text that require mandatory human approval before execution proceeds.
  *
@@ -293,7 +293,10 @@ export function detectHumanApprovalCandidates(text) {
  *   'regex-only'       — no adjudicator provided; required = any high-confidence match
  *   'llm-adjudicated'  — adjudicator ran; required = high-confidence match OR
  *                        adjudicator verdict (escalation-only, see below)
- *   'regex-fallback'   — adjudicator was provided but threw; degraded to the
+ *   'llm-skipped'      — adjudicator provided but not invoked (#1357): the
+ *                        verdict was already required (HIGH match) or there
+ *                        were no candidates to escalate
+ *   'regex-fallback'   — adjudicator ran and threw; degraded to the
  *                        regex-only verdict (fail-safe, never throws upward)
  *
  * Asymmetric escalation (Epic #1347 design principle, wired by #1348 S1):
@@ -311,7 +314,8 @@ export function detectHumanApprovalCandidates(text) {
  * @param {string} [opts.artifactKind] - e.g. 'pbi-input' | 'plan' (for adjudicator context)
  * @param {((candidates: object[], text: string, artifactKind: string) => Promise<boolean>)|null} [opts.adjudicator]
  *   Optional async function that receives candidates + text + artifactKind and returns a boolean.
- *   When provided the mode becomes 'llm-adjudicated'.
+ *   Invoked only while an escalation decision is open (no HIGH match and at
+ *   least one candidate); then the mode becomes 'llm-adjudicated'.
  * @returns {Promise<{ required: boolean, triggers: string[], evidence: object[], mode: string }>}
  */
 export async function adjudicateHumanApproval({

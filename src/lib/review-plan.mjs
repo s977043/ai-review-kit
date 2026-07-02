@@ -834,7 +834,7 @@ export async function runReviewPlan({
     if (planPath) await scanFile(planPath);
 
     // Audit trail (Epic #1347 supervisability): record how each verdict was
-    // produced (regex-only / llm-adjudicated / regex-fallback). Debug-gated so
+    // produced (regex-only / llm-adjudicated / llm-skipped / regex-fallback). Debug-gated so
     // the artifact contract is unchanged for existing consumers.
     if (debug && humanApprovalAudit.length > 0) {
       artifact.debug = artifact.debug ?? {};
