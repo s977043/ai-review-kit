@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.38.1](https://github.com/s977043/river-review/compare/v1.38.0...v1.38.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* **plan-review:** adjudicator の呼び出しガード・injection 防御・pipeline 統合・観測性を修繕する ([#1360](https://github.com/s977043/river-review/issues/1360)) ([8e2196d](https://github.com/s977043/river-review/commit/8e2196dc8c991543e5d58ee071a91c21fbcfd2c0))
+* **plan-review:** 検出器のゼロ幅・改行バイパスと形容詞用法の誤爆を修正する ([#1358](https://github.com/s977043/river-review/issues/1358)) ([c8037f1](https://github.com/s977043/river-review/commit/c8037f16d3972bc172c683ddbe72688d11d163b2))
+
 ## [1.38.0](https://github.com/s977043/river-review/compare/v1.37.0...v1.38.0) (2026-07-02)
 
 
