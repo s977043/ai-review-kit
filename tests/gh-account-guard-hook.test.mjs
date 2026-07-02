@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, chmodSync, existsSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, chmodSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, delimiter } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,21 +39,25 @@ function makeStub() {
 
 function runHook(command, { login = 's977043', switchExit = 0 } = {}) {
   const { dir, log } = makeStub();
-  const input = JSON.stringify({ tool_input: { command } });
-  const res = spawnSync('bash', [HOOK], {
-    input,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PATH: `${dir}${delimiter}${process.env.PATH}`,
-      FAKE_GH_LOG: log,
-      FAKE_GH_LOGIN: login,
-      FAKE_GH_SWITCH_EXIT: String(switchExit),
-      GH_ACCOUNT_GUARD_EXPECTED: 's977043',
-    },
-  });
-  const calls = existsSync(log) ? readFileSync(log, 'utf8').trim() : '';
-  return { status: res.status, stderr: res.stderr, calls };
+  try {
+    const input = JSON.stringify({ tool_input: { command } });
+    const res = spawnSync('bash', [HOOK], {
+      input,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${dir}${delimiter}${process.env.PATH}`,
+        FAKE_GH_LOG: log,
+        FAKE_GH_LOGIN: login,
+        FAKE_GH_SWITCH_EXIT: String(switchExit),
+        GH_ACCOUNT_GUARD_EXPECTED: 's977043',
+      },
+    });
+    const calls = existsSync(log) ? readFileSync(log, 'utf8').trim() : '';
+    return { status: res.status, stderr: res.stderr, calls };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 test('non-gh command passes without invoking gh', () => {
@@ -111,6 +115,43 @@ test('write-op detection covers api methods, body fields, and compound commands'
     const r = runHook(cmd, { login: 'kominem-unilabo' });
     assert.equal(r.status, 0, cmd);
     assert.match(r.calls, /auth switch -u s977043/, cmd);
+  }
+});
+
+test('write op with global options between gh and subcommand is detected', () => {
+  for (const cmd of [
+    'gh -R s977043/river-review pr create --fill',
+    'gh --repo s977043/river-review pr merge 1 --squash',
+    'gh --repo=s977043/river-review issue close 9',
+    'gh -R s977043/river-review api repos/{owner}/{repo}/issues -f title=hi',
+  ]) {
+    const r = runHook(cmd, { login: 'kominem-unilabo' });
+    assert.equal(r.status, 0, cmd);
+    assert.match(r.calls, /auth switch -u s977043/, cmd);
+  }
+});
+
+test('quoted -X / --method values are detected as write', () => {
+  for (const cmd of [
+    'gh api repos/a/b/pulls/1/update-branch -X "PUT"',
+    "gh api repos/a/b/issues --method='POST' --input body.json",
+    'gh api graphql --method "post"',
+  ]) {
+    const r = runHook(cmd, { login: 'kominem-unilabo' });
+    assert.equal(r.status, 0, cmd);
+    assert.match(r.calls, /auth switch -u s977043/, cmd);
+  }
+});
+
+test('read ops with global options are not misdetected as write', () => {
+  for (const cmd of [
+    'gh -R s977043/river-review pr view 1375',
+    'gh --repo s977043/river-review pr list --search "create"',
+    'gh -R s977043/river-review api repos/{owner}/{repo}/pulls/1',
+  ]) {
+    const r = runHook(cmd, { login: 'kominem-unilabo' });
+    assert.equal(r.status, 0, cmd);
+    assert.equal(r.calls, '', cmd);
   }
 });
 

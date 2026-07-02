@@ -47,12 +47,15 @@ esac
 
 # --- Write-op detection ------------------------------------------------------
 # G = a `gh` word start: beginning of string or a shell separator, then `gh`
-# followed by whitespace. Uses POSIX ERE only (portable across BSD/GNU grep).
-G='(^|[;&|([:space:]])gh[[:space:]]+'
+# followed by whitespace, then any number of global options — with an inline
+# value (`--repo=o/r`) or a separate value token (`-R o/r`) — before the
+# subcommand. Uses POSIX ERE only (portable across BSD/GNU grep).
+GH_OPT='(-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*)?[[:space:]]+)*'
+G="(^|[;&|([:space:]])gh[[:space:]]+${GH_OPT}"
 WRITE_RE="${G}pr[[:space:]]+(create|merge|edit|close|comment|ready|reopen|review|update-branch)"
 WRITE_RE="${WRITE_RE}|${G}issue[[:space:]]+(create|edit|close|comment|reopen|delete|transfer|pin|unpin|lock|unlock)"
-# gh api: explicit non-GET method ...
-WRITE_RE="${WRITE_RE}|${G}api[[:space:]][^;|&]*(-X|--method)[[:space:]=]*(POST|PATCH|PUT|DELETE|post|patch|put|delete)"
+# gh api: explicit non-GET method (value may be quoted, e.g. -X "POST") ...
+WRITE_RE="${WRITE_RE}|${G}api[[:space:]][^;|&]*(-X|--method)[[:space:]=]*[\"']?(POST|PATCH|PUT|DELETE|post|patch|put|delete)"
 # ... or body fields / input, which make gh api default to POST
 WRITE_RE="${WRITE_RE}|${G}api[[:space:]][^;|&]*[[:space:]](-f|-F|--field|--raw-field|--input)([[:space:]=]|\$)"
 WRITE_RE="${WRITE_RE}|${G}release[[:space:]]+(create|edit|delete|delete-asset|upload)"
