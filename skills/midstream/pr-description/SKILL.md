@@ -2,7 +2,7 @@
 id: 'pr-description'
 name: PR Description Review
 description: Review whether the PR description is review-ready and consistent with the diff (Why/What, impact, tests, linked issues).
-version: 0.1.0
+version: 0.2.0
 category: midstream
 phase: midstream
 applyTo:
@@ -54,6 +54,9 @@ Why: PR 本文の品質と差分整合をレビューする。PR 本文が無い
 - 影響範囲・破壊的変更の有無が書かれているか確認する。
 - テスト方針 / 動作確認方法が書かれているか確認する。
 - 関連 Issue / 仕様 / 設計へのリンクがあるか確認する。
+- `Closes #N` / `Fixes #N` がある場合、参照先 Issue の完了条件（受入条件・チェックリスト）を diff が満たしているか確認する。未達なら `Refs` への変更または残課題の明記を提案する。
+- ja/en 対訳ファイル（`*.md` と `*.en.md`、`pages/` 配下の対）の片側のみが diff に含まれ、本文にその理由が無い場合は指摘する。
+- 本文の宣言（「〜は変更しない」等の変更対象外の宣言、件数・列挙）が実 diff と矛盾していないか確認する。
 - PR 本文に関する指摘は対象を `PR-DESCRIPTION:0` として出力する。
 
 ## False-positive guards / 抑制条件
