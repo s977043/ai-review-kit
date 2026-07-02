@@ -1,3 +1,5 @@
+import { callChatCompletion } from './llm-pipeline.mjs';
+
 const DEFAULT_PLANNER_MODEL =
   process.env.RIVER_PLANNER_MODEL ||
   process.env.RIVER_OPENAI_MODEL ||
@@ -63,36 +65,24 @@ Rules:
 `;
 }
 
-async function callOpenAI({ prompt, apiKey, model, endpoint, timeoutMs }) {
-  const signal = AbortSignal.timeout(timeoutMs ?? resolvePlannerTimeoutMs());
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    signal,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      max_tokens: 600,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are River Review, an expert code review skill planner. Return valid JSON only; do not wrap in Markdown.',
-        },
-        { role: 'user', content: prompt },
-      ],
-    }),
-  });
+const PLANNER_SYSTEM_MESSAGE =
+  'You are River Review, an expert code review skill planner. Return valid JSON only; do not wrap in Markdown.';
 
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(`OpenAI API error ${res.status}: ${detail}`);
-  }
-  const json = await res.json();
-  return json.choices?.[0]?.message?.content?.trim() ?? '';
+// Chat-completion transport lives in llm-pipeline.mjs (#1338). The planner
+// historically made a single attempt with no retry; maxAttempts: 1 preserves
+// that behavior exactly.
+function callOpenAI({ prompt, apiKey, model, endpoint, timeoutMs }) {
+  return callChatCompletion({
+    prompt,
+    systemMessage: PLANNER_SYSTEM_MESSAGE,
+    apiKey,
+    model,
+    endpoint,
+    temperature: 0,
+    maxTokens: 600,
+    timeoutMs: timeoutMs ?? resolvePlannerTimeoutMs(),
+    maxAttempts: 1,
+  });
 }
 
 function parsePlannerJson(text) {
