@@ -14,9 +14,11 @@ export const modules = {
 /* harmony import */ var node_url__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(3136);
 /* harmony import */ var js_yaml__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(1813);
 /* harmony import */ var gray_matter__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(493);
-/* harmony import */ var ajv_dist_2020_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(7720);
+/* harmony import */ var ajv_dist_2020_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(7720);
 /* harmony import */ var ajv_formats__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(8613);
 /* harmony import */ var _runners_core_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(1928);
+/* harmony import */ var _runners_core_skill_cache_mjs__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(1924);
+
 
 
 
@@ -241,7 +243,7 @@ async function loadLooseSchema() {
 }
 
 function createLooseValidator(schema) {
-  const ajv = new ajv_dist_2020_js__WEBPACK_IMPORTED_MODULE_7__({ allErrors: true, strict: false });
+  const ajv = new ajv_dist_2020_js__WEBPACK_IMPORTED_MODULE_8__({ allErrors: true, strict: false });
   ajv_formats__WEBPACK_IMPORTED_MODULE_5__(ajv);
   return ajv.compile(schema);
 }
@@ -454,7 +456,7 @@ async function exportSkillToAgentFormat(skill, outputDir, options = {}) {
 async function exportAllSkills(projectRoot, options = {}) {
   const { outputDir, includeAssets = false } = options;
   const dest = outputDir ?? node_path__WEBPACK_IMPORTED_MODULE_1__.join(projectRoot, '.agents', 'skills');
-  const skills = await (0,_runners_core_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_6__/* .loadSkills */ .l1)({
+  const skills = await (0,_runners_core_skill_cache_mjs__WEBPACK_IMPORTED_MODULE_7__/* .loadSkillsCached */ .$b)({
     skillsDir: node_path__WEBPACK_IMPORTED_MODULE_1__.join(projectRoot, 'skills'),
     excludedTags: [],
   });
@@ -487,7 +489,7 @@ async function listAllSkills(projectRoot, options = {}) {
   const seenIds = new Set();
 
   if (source === 'rr' || source === 'all') {
-    const rrSkills = await (0,_runners_core_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_6__/* .loadSkills */ .l1)({
+    const rrSkills = await (0,_runners_core_skill_cache_mjs__WEBPACK_IMPORTED_MODULE_7__/* .loadSkillsCached */ .$b)({
       skillsDir: node_path__WEBPACK_IMPORTED_MODULE_1__.join(projectRoot, 'skills'),
       excludedTags: [],
     });

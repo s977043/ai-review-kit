@@ -1,3 +1,677 @@
+export const id = 94;
+export const ids = [94];
+export const modules = {
+
+/***/ 3094:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+
+// EXPORTS
+__webpack_require__.d(__webpack_exports__, {
+  ReviewPlanError: () => (/* binding */ ReviewPlanError),
+  evaluateReviewGate: () => (/* binding */ evaluateReviewGate),
+  resolveReviewOutputFormat: () => (/* binding */ resolveReviewOutputFormat),
+  runReviewExecReplay: () => (/* binding */ runReviewExecReplay),
+  runReviewPlan: () => (/* binding */ runReviewPlan)
+});
+
+// UNUSED EXPORTS: REVIEW_GATE_SEVERITIES, computeReplayDrift
+
+// EXTERNAL MODULE: external "node:path"
+var external_node_path_ = __webpack_require__(6760);
+// EXTERNAL MODULE: external "node:fs/promises"
+var promises_ = __webpack_require__(1455);
+// EXTERNAL MODULE: ./src/config/loader.mjs + 1 modules
+var loader = __webpack_require__(3833);
+;// CONCATENATED MODULE: ./src/config/artifact-resolver.mjs
+/**
+ * Artifact Input resolver — #802 Phase 2b
+ *
+ * Resolution order (per artifact-input-contract.md):
+ *   1. CLI arg     – path passed explicitly by the caller
+ *   2. config      – artifacts.<id> in river.config.*
+ *   3. cwd default – well-known filename in the working directory
+ *
+ * Pure module: no singleton state; fs is injectable.
+ * Scope: resolve path + existence check only.
+ * Content reading / skill injection / CLI parsing → Phase 3.
+ */
+
+
+
+
+// CWD default filenames (from artifact-input-contract.md)
+
+/** @type {Readonly<Record<string, string>>} */
+const CWD_DEFAULTS = Object.freeze({
+  'pbi-input': 'pbi-input.md',
+  plan: 'plan.md',
+  todo: 'todo.md',
+  'test-cases': 'test-cases.md',
+  'review-self': 'review-self.md',
+  'review-external': 'review-external.md',
+  diff: 'diff.patch',
+  junit: 'junit.xml',
+  coverage: 'coverage.xml',
+  lint: 'lint.json',
+  typecheck: 'typecheck.txt',
+  'findings-pool': 'findings-pool.json',
+  'tdd-ledger': 'tdd-ledger.json',
+});
+
+/**
+ * @typedef {'cli'|'config'|'cwd'} ArtifactSource
+ * @typedef {object} ArtifactResolution
+ * @property {string}              id
+ * @property {string|null}         path
+ * @property {ArtifactSource|null} source
+ * @property {boolean}             exists
+ * @property {boolean}             optional
+ */
+
+/**
+ * Resolve a single artifact path using the three-tier order.
+ *
+ * Path base: CLI → cwd; config → configDir ?? cwd; cwd-default → cwd.
+ *
+ * @param {object} opts
+ * @param {string} opts.id
+ * @param {string|null} [opts.cliArg]
+ * @param {string|{path:string,optional?:boolean}|null} [opts.configValue]
+ * @param {string} [opts.configDir]
+ * @param {string} [opts.cwd]
+ * @param {Pick<import('node:fs/promises'),'access'>} [opts.fsImpl]
+ * @returns {Promise<ArtifactResolution>}
+ */
+async function resolveArtifact({
+  id,
+  cliArg = null,
+  configValue = null,
+  configDir,
+  cwd = process.cwd(),
+  fsImpl = promises_,
+}) {
+  // Tier 1: CLI arg
+  if (cliArg != null && cliArg !== '') {
+    const resolved = external_node_path_.resolve(cwd, cliArg);
+    const exists = await _fileExists(resolved, fsImpl);
+    return { id, path: resolved, source: 'cli', exists, optional: false };
+  }
+
+  // Tier 2: config value
+  if (configValue != null) {
+    const base = configDir ?? cwd;
+    const { rawPath, optional } = _normalizeConfigValue(configValue);
+    if (rawPath) {
+      const resolved = external_node_path_.resolve(base, rawPath);
+      const exists = await _fileExists(resolved, fsImpl);
+      return { id, path: resolved, source: 'config', exists, optional: optional ?? false };
+    }
+  }
+
+  // Tier 3: cwd default (only if the file exists)
+  const defaultName = CWD_DEFAULTS[id];
+  if (defaultName) {
+    const resolved = external_node_path_.resolve(cwd, defaultName);
+    const exists = await _fileExists(resolved, fsImpl);
+    if (exists) {
+      return { id, path: resolved, source: 'cwd', exists: true, optional: true };
+    }
+  }
+
+  // Not found
+  return { id, path: null, source: null, exists: false, optional: true };
+}
+
+/**
+ * Resolve all artifact IDs in parallel.
+ *
+ * The ID set is the union of the contract's known IDs (CWD_DEFAULTS) plus
+ * any IDs explicitly named via cliArgs or configArtifacts. Explicitly
+ * named IDs are never silently dropped — this keeps the resolver
+ * consistent with the Phase 2a schema, which accepts unknown artifact
+ * keys via `.catchall` so the contract can add IDs in a
+ * backward-compatible minor bump. cwd-default lookup still only applies
+ * to known IDs (CWD_DEFAULTS); an unknown ID resolves only if supplied
+ * via CLI/config, otherwise it reports path:null/source:null.
+ *
+ * @param {object} [opts]
+ * @param {Record<string,string>} [opts.cliArgs]
+ * @param {Record<string,string|{path:string,optional?:boolean}>} [opts.configArtifacts]
+ * @param {string} [opts.configDir]
+ * @param {string} [opts.cwd]
+ * @param {Pick<import('node:fs/promises'),'access'>} [opts.fsImpl]
+ * @returns {Promise<Record<string, ArtifactResolution>>}
+ */
+async function resolveAllArtifacts({
+  cliArgs = {},
+  configArtifacts = {},
+  configDir,
+  cwd,
+  fsImpl,
+} = {}) {
+  const ids = new Set([
+    ...Object.keys(CWD_DEFAULTS),
+    ...Object.keys(cliArgs),
+    ...Object.keys(configArtifacts),
+  ]);
+  const entries = await Promise.all(
+    [...ids].map((id) =>
+      resolveArtifact({
+        id,
+        cliArg: cliArgs[id] ?? null,
+        configValue: configArtifacts[id] ?? null,
+        configDir,
+        cwd,
+        fsImpl,
+      }).then((r) => [id, r])
+    )
+  );
+  return Object.fromEntries(entries);
+}
+
+// Internal helpers
+
+function _normalizeConfigValue(value) {
+  if (typeof value === 'string') return { rawPath: value || null, optional: false };
+  if (value && typeof value === 'object') {
+    return { rawPath: value.path || null, optional: value.optional ?? false };
+  }
+  return { rawPath: null, optional: false };
+}
+
+async function _fileExists(filePath, fsImpl) {
+  try {
+    await fsImpl.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// EXTERNAL MODULE: ./src/lib/diff-processor.mjs
+var diff_processor = __webpack_require__(861);
+// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
+var review_runner = __webpack_require__(7050);
+// EXTERNAL MODULE: ./src/lib/review-engine.mjs
+var review_engine = __webpack_require__(2022);
+// EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
+var risk_map = __webpack_require__(572);
+// EXTERNAL MODULE: ./src/lib/planner-utils.mjs
+var planner_utils = __webpack_require__(1013);
+// EXTERNAL MODULE: ./src/lib/utils.mjs
+var utils = __webpack_require__(9746);
+// EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
+var engine = __webpack_require__(9487);
+;// CONCATENATED MODULE: ./src/lib/plan-review/human-approval-policy.mjs
+/**
+ * Human-approval policy for plan review gate.
+ *
+ * Pure function — no I/O, no side effects. Detects keywords in plan text or
+ * finding text that require mandatory human approval before execution proceeds.
+ *
+ * Used by the plan-review-gate skill and scoreReview() via the
+ * humanApprovalRequired flag.
+ *
+ * ## Two-tier confidence model (Epic #1171 item1 / #1170 F1)
+ *
+ * HIGH confidence  — regex match alone is sufficient to require approval
+ *                    (destructive commands, secret material, Japanese danger words).
+ * LOW confidence   — regex fires on a word that is often benign; an LLM
+ *                    adjudicator (adjudicateHumanApproval) is needed for the
+ *                    final verdict. In regex-only mode these do NOT set required=true.
+ *
+ * Public surface:
+ *   detectHumanApprovalCandidates(text)  → { candidates }
+ *   adjudicateHumanApproval({ text, candidates, artifactKind, adjudicator })
+ *                                        → { required, triggers, evidence, mode }
+ *   detectHumanApprovalTriggers(text)    → { required, triggers }   ← backward compat
+ */
+
+/**
+ * Normalize input before pattern matching:
+ *  - NFKC: unify fullwidth/halfwidth and composed forms
+ *  - strip zero-width chars that could split a keyword across code units
+ *
+ * @param {string} raw
+ * @returns {string}
+ */
+function normalizeText(raw) {
+  // eslint-disable-next-line no-control-regex
+  return String(raw ?? '')
+    .normalize('NFKC')
+    .replace(/[\u200b\u200c\u200d\ufeff\u00ad]/g, '');
+}
+
+/**
+ * HIGH-confidence candidate patterns.
+ * A regex match here is sufficient to require human approval without an LLM.
+ *
+ * @type {Array<{pattern: RegExp, name: string, confidence: 'high'}>}
+ */
+const HIGH_CONFIDENCE_PATTERNS = [
+  // Destructive shell commands
+  { pattern: /rm\s+-rf?/i, name: 'rm-rf', confidence: 'high' },
+  { pattern: /drop\s+(table|database)/i, name: 'drop-table-db', confidence: 'high' },
+  { pattern: /\btruncate\b/i, name: 'truncate', confidence: 'high' },
+  { pattern: /git\s+push\s+--force/i, name: 'git-force-push', confidence: 'high' },
+  {
+    pattern: /kubectl\s+.*\s+(delete|apply)\s+.*prod/i,
+    name: 'kubectl-prod',
+    confidence: 'high',
+  },
+  {
+    pattern: /kubectl\s+(apply|delete)\b/i,
+    name: 'kubectl-apply-delete',
+    confidence: 'high',
+  },
+  // Production deploy — action verb + prod/production/本番 context
+  {
+    pattern: /deploy(?:ment|ing)?\s+(?:to\s+)?(?:prod(?:uction)?|本番)/i,
+    name: 'deploy-to-prod',
+    confidence: 'high',
+  },
+  {
+    pattern: /本番.{0,15}(?:デプロイ|反映|リリース)/,
+    name: 'ja-prod-deploy',
+    confidence: 'high',
+  },
+  {
+    pattern: /(?:デプロイ|反映|リリース).{0,15}本番/,
+    name: 'ja-deploy-to-prod',
+    confidence: 'high',
+  },
+  {
+    pattern: /本番リリース/,
+    name: 'ja-prod-release',
+    confidence: 'high',
+  },
+  {
+    pattern: /release\s+to\s+production/i,
+    name: 'release-to-production',
+    confidence: 'high',
+  },
+  {
+    pattern: /helm\s+(?:install|upgrade)\b.*prod/i,
+    name: 'helm-prod',
+    confidence: 'high',
+  },
+  {
+    pattern: /terraform\s+apply\b/i,
+    name: 'terraform-apply',
+    confidence: 'high',
+  },
+  // Secret material / credentials
+  // AKIA + 16 uppercase alnum = AWS access key ID format
+  { pattern: /AKIA[0-9A-Z]{16}/, name: 'aws-key', confidence: 'high' },
+  { pattern: /sk-(live|test)-\w+/, name: 'stripe-key', confidence: 'high' },
+  { pattern: /\.env\b/i, name: 'dotenv-file', confidence: 'high' },
+  {
+    pattern: /\b(password|token|api[_-]?key)\b/i,
+    name: 'secret-material',
+    confidence: 'high',
+  },
+  // Japanese danger words
+  {
+    pattern: /削除|本番デプロイ|データベース削除|秘密鍵|認証情報|課金|顧客データ/,
+    name: 'ja-danger-word',
+    confidence: 'high',
+  },
+  // ---------------------------------------------------------------------
+  // Euphemistic dangerous operations (#1348 S1 adversarial canary).
+  // Implementation agents that avoid literal danger words (`rm -rf`, 削除)
+  // still match on semantic phrasings of the same operation. Guarded by the
+  // false-negative canary fixtures in
+  // skills/upstream/plan-review-gate/fixtures/.
+  // ---------------------------------------------------------------------
+  // "recursively clean up the temp directory" — rm -rf without saying rm -rf
+  {
+    pattern:
+      /recursively\s+(?:\w+\s+){0,2}(?:clean(?:s|ed|ing)?(?:\s*up)?|clear(?:s|ed|ing)?|purge(?:s|d)?|prune(?:s|d)?|wipe(?:s|d)?|empt(?:y|ies|ied))/i,
+    name: 'recursive-cleanup-euphemism',
+    confidence: 'high',
+  },
+  // 「一時ディレクトリを再帰的に整理」— 削除と書かない再帰削除
+  {
+    pattern: /再帰的[^\n。]{0,15}(?:整理|クリーンアップ|一掃|片付け|掃除|空に)/,
+    name: 'ja-recursive-cleanup-euphemism',
+    confidence: 'high',
+  },
+  // 「テーブルを空にする」「データベースを初期化」— TRUNCATE/DROP の言い換え
+  {
+    pattern:
+      /(?:テーブル|ディレクトリ|フォルダ|バケット|データベース)[^\n。]{0,6}(?:空に|まっさらに|初期化)/,
+    name: 'ja-empty-storage-euphemism',
+    confidence: 'high',
+  },
+  // "empty the table / bucket / directory" — TRUNCATE without saying truncate
+  {
+    pattern:
+      /empt(?:y|ies|ied)(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b/i,
+    name: 'empty-storage-euphemism',
+    confidence: 'high',
+  },
+  // 「接続情報」「環境変数ファイル」— secret / credential / .env の言い換え
+  {
+    pattern: /接続情報|接続文字列|環境変数ファイル|アクセスキー/,
+    name: 'ja-connection-info-euphemism',
+    confidence: 'high',
+  },
+  { pattern: /connection\s+string/i, name: 'connection-string', confidence: 'high' },
+  // 「稼働環境へ反映」「実環境に適用」— 本番と書かない本番反映
+  {
+    pattern: /(?:実|稼働)環境[^\n。]{0,12}(?:反映|適用|更新|リリース|デプロイ|切り替え)/,
+    name: 'ja-live-env-apply-euphemism',
+    confidence: 'high',
+  },
+  {
+    pattern: /(?:to|into)\s+the\s+live\s+environment/i,
+    name: 'live-environment',
+    confidence: 'high',
+  },
+  // Existing high-signal patterns (carried forward from original TRIGGER_PATTERNS)
+  {
+    pattern: /destructive\s+(command|operation|action|step)s?/i,
+    name: 'destructive-command',
+    confidence: 'high',
+  },
+  { pattern: /\bcredentials?\b/i, name: 'credential', confidence: 'high' },
+  { pattern: /\bsecrets?\b/i, name: 'secret', confidence: 'high' },
+  { pattern: /config\s+overwrite/i, name: 'config-overwrite', confidence: 'high' },
+  { pattern: /memory\s+write/i, name: 'memory-write', confidence: 'high' },
+  { pattern: /\bbilling\b/i, name: 'billing', confidence: 'high' },
+  {
+    pattern: /\bproviders?\s+(change|update|switch)s?\b|\b(change|update|switch)s?\s+providers?\b/i,
+    name: 'provider-change',
+    confidence: 'high',
+  },
+  {
+    pattern:
+      /\bpermissions?\s+(change|update|modify|grant|revoke)s?\b|\b(change|update|modify|grant|revoke)s?\s+permissions?\b/i,
+    name: 'permission-change',
+    confidence: 'high',
+  },
+  { pattern: /\buser\s+data\b/i, name: 'user-data', confidence: 'high' },
+];
+
+/**
+ * LOW-confidence candidate patterns.
+ * These fire on words that are context-dependent and often benign.
+ * In regex-only mode they do NOT set required=true; an LLM adjudicator
+ * is needed to convert them to a final verdict.
+ *
+ * @type {Array<{pattern: RegExp, name: string, confidence: 'low'}>}
+ */
+const LOW_CONFIDENCE_PATTERNS = [
+  // deployment / deploy without prod/force context (could be dev deploy)
+  { pattern: /\bdeploy(ment|ing)?s?\b/i, name: 'deployment', confidence: 'low' },
+  // auth — loose match catches OAuth, Auth0 etc. (no leading \b so 'auth' substring fires)
+  { pattern: /auth/i, name: 'auth', confidence: 'low' },
+  // scheduling / external I/O that may or may not be risky
+  { pattern: /\bcron\b/i, name: 'cron', confidence: 'low' },
+  {
+    pattern: /external\s+post(ing)?|\bslack\b|\bwebhook\b|\bemail\b|\bnotification\b/i,
+    name: 'external-posting',
+    confidence: 'low',
+  },
+  { pattern: /\bpermissions?\b/i, name: 'permission', confidence: 'low' },
+];
+
+/**
+ * Detect human-approval candidates in the given text using regex patterns.
+ * Returns all matching candidates (high AND low confidence) for audit and
+ * adjudication. Does NOT make a final required/not-required decision — call
+ * adjudicateHumanApproval for that.
+ *
+ * @param {string} text - Plan text or finding text to scan.
+ * @returns {{ candidates: Array<{trigger: string, snippet: string, confidence: 'high'|'low', source: 'regex'}> }}
+ */
+function detectHumanApprovalCandidates(text) {
+  const input = normalizeText(text);
+  const candidates = [];
+  const seen = new Set();
+
+  for (const { pattern, name, confidence } of [
+    ...HIGH_CONFIDENCE_PATTERNS,
+    ...LOW_CONFIDENCE_PATTERNS,
+  ]) {
+    if (seen.has(name)) continue; // deduplicate by trigger name
+    const match = pattern.exec(input);
+    if (match) {
+      seen.add(name);
+      // Extract a short snippet around the match for audit context
+      const start = Math.max(0, match.index - 20);
+      const end = Math.min(input.length, match.index + match[0].length + 20);
+      const snippet = input.slice(start, end).replace(/\n/g, ' ').trim();
+      candidates.push({ trigger: name, snippet, confidence, source: 'regex' });
+    }
+  }
+
+  return { candidates };
+}
+
+/**
+ * Adjudicate whether human approval is required given a set of candidates.
+ *
+ * Modes:
+ *   'regex-only'       — no adjudicator provided; required = any high-confidence match
+ *   'llm-adjudicated'  — adjudicator ran; required = high-confidence match OR
+ *                        adjudicator verdict (escalation-only, see below)
+ *   'regex-fallback'   — adjudicator was provided but threw; degraded to the
+ *                        regex-only verdict (fail-safe, never throws upward)
+ *
+ * Asymmetric escalation (Epic #1347 design principle, wired by #1348 S1):
+ * the LLM adjudicator may only ESCALATE — it converts LOW-confidence
+ * candidates into required=true. It can never overturn a HIGH-confidence
+ * regex verdict downwards, so a compromised or lenient LLM cannot loosen the
+ * gate. Callers without an LLM keep the regex-only behavior unchanged.
+ *
+ * Wired caller: src/lib/review-plan.mjs (`river review exec` path via
+ * createHumanApprovalAdjudicator in ./llm-adjudicator.mjs).
+ *
+ * @param {object} opts
+ * @param {string} [opts.text] - Original text (passed to adjudicator if provided)
+ * @param {Array<{trigger: string, snippet: string, confidence: 'high'|'low', source: 'regex'}>} opts.candidates
+ * @param {string} [opts.artifactKind] - e.g. 'pbi-input' | 'plan' (for adjudicator context)
+ * @param {((candidates: object[], text: string, artifactKind: string) => Promise<boolean>)|null} [opts.adjudicator]
+ *   Optional async function that receives candidates + text + artifactKind and returns a boolean.
+ *   When provided the mode becomes 'llm-adjudicated'.
+ * @returns {Promise<{ required: boolean, triggers: string[], evidence: object[], mode: string }>}
+ */
+async function adjudicateHumanApproval({
+  text = '',
+  candidates = [],
+  artifactKind = '',
+  adjudicator = null,
+} = {}) {
+  const triggers = candidates.map((c) => c.trigger);
+  const evidence = candidates; // full candidate list for audit trail
+
+  // regex verdict: required when at least one HIGH-confidence candidate fired.
+  // This is the floor the adjudicator can never lower.
+  const regexRequired = candidates.some((c) => c.confidence === 'high');
+
+  if (adjudicator) {
+    let verdict;
+    try {
+      verdict = await adjudicator(candidates, text, artifactKind);
+    } catch {
+      // Fail-safe: an adjudicator failure (network, parse, timeout) degrades
+      // to the regex-only verdict instead of breaking the caller.
+      return { required: regexRequired, triggers, evidence, mode: 'regex-fallback' };
+    }
+    return {
+      required: regexRequired || Boolean(verdict),
+      triggers,
+      evidence,
+      mode: 'llm-adjudicated',
+    };
+  }
+
+  return { required: regexRequired, triggers, evidence, mode: 'regex-only' };
+}
+
+/**
+ * Detects human-approval triggers in the given text.
+ * Backward-compatible wrapper around detectHumanApprovalCandidates +
+ * adjudicateHumanApproval (regex-only mode).
+ *
+ * @param {string} text - Plan text or finding text to scan.
+ * @returns {{ required: boolean, triggers: string[] }}
+ *   `required` is true when at least one HIGH-confidence trigger matched.
+ *   `triggers` lists the stable names of ALL matched patterns (high + low).
+ */
+function detectHumanApprovalTriggers(text) {
+  const { candidates } = detectHumanApprovalCandidates(text);
+  const required = candidates.some((c) => c.confidence === 'high');
+  const triggers = candidates.map((c) => c.trigger);
+  return { required, triggers };
+}
+
+;// CONCATENATED MODULE: ./src/lib/plan-review/llm-adjudicator.mjs
+/**
+ * LLM adjudicator for human-approval candidates (#1348 S1, Epic #1347).
+ *
+ * Provides the `adjudicator` callback consumed by `adjudicateHumanApproval`
+ * (./human-approval-policy.mjs). The adjudicator answers ONE narrow question:
+ * "do the LOW-confidence regex candidates in this plan describe an operation
+ * that needs human approval before an AI agent executes it?"
+ *
+ * Design constraints (Epic #1347 design principles):
+ *   - Escalation-only: the boolean returned here can only ADD a human-approval
+ *     requirement. `adjudicateHumanApproval` ORs it with the HIGH-confidence
+ *     regex verdict, so this module can never loosen the gate.
+ *   - Regex-only fallback: when no LLM is available (offline mode, no
+ *     OpenAI-compatible key) `createHumanApprovalAdjudicator` returns `null`
+ *     and callers keep the pre-#1348 regex-only behavior unchanged.
+ *   - Fail-safe: any runtime failure (HTTP error, timeout, unparseable output)
+ *     throws; `adjudicateHumanApproval` catches it and degrades to the
+ *     regex verdict (`mode: 'regex-fallback'`).
+ */
+
+
+
+const ADJUDICATOR_TIMEOUT_MS = 15000;
+const ADJUDICATOR_MAX_TOKENS = 8;
+const MAX_TEXT_CHARS = 4000;
+
+const SYSTEM_MESSAGE =
+  'You are the safety adjudicator of an AI code-review gate. ' +
+  'You decide whether a plan needs human approval before an AI agent executes it. ' +
+  'Answer with exactly one word: YES or NO.';
+
+/**
+ * Build the adjudication prompt from regex candidates + plan text.
+ * Exported for unit testing.
+ *
+ * @param {object} opts
+ * @param {Array<{trigger: string, snippet: string, confidence: string}>} opts.candidates
+ * @param {string} opts.text
+ * @param {string} [opts.artifactKind]
+ * @returns {string}
+ */
+function buildAdjudicationPrompt({ candidates = [], text = '', artifactKind = '' } = {}) {
+  const body =
+    String(text).length > MAX_TEXT_CHARS
+      ? `${String(text).slice(0, MAX_TEXT_CHARS)}\n...[truncated]`
+      : String(text);
+  const candidateLines = candidates
+    .map((c) => `- trigger=${c.trigger} confidence=${c.confidence} snippet="${c.snippet}"`)
+    .join('\n');
+  return `An automated regex scan of an implementation plan (artifact kind: ${
+    artifactKind || 'unknown'
+  }) found these candidate risk keywords:
+
+${candidateLines || '- (no candidates)'}
+
+Plan text:
+---
+${body}
+---
+
+Question: does this plan describe an operation that requires HUMAN APPROVAL before an AI agent executes it autonomously? Approval is required for: production / live-environment impact, destructive or irreversible changes (including euphemistic phrasings), secret or credential handling, permission changes, billing, or externally visible side effects (posting, notifications, scheduled jobs with external impact).
+
+Answer with exactly one word: YES (approval required) or NO (safe to proceed).`;
+}
+
+/**
+ * Parse the adjudicator model output into a boolean verdict.
+ * Exported for unit testing.
+ *
+ * @param {string} output
+ * @returns {boolean}
+ * @throws {Error} when the output is neither YES nor NO — callers
+ *   (adjudicateHumanApproval) treat this as adjudicator failure and fall
+ *   back to the regex verdict.
+ */
+function parseAdjudicationVerdict(output) {
+  const head = String(output ?? '')
+    .trim()
+    .split(/\s/)[0]
+    ?.toUpperCase()
+    .replace(/[^A-Z]/g, '');
+  if (head === 'YES') return true;
+  if (head === 'NO') return false;
+  throw new Error(`Unparseable adjudicator verdict: "${String(output ?? '').slice(0, 80)}"`);
+}
+
+/**
+ * Create the default LLM adjudicator, or `null` when no LLM is usable.
+ *
+ * `null` is the documented "regex-only mode" sentinel: callers pass it as
+ * `adjudicator` to `adjudicateHumanApproval`, which then behaves exactly as
+ * before #1348 (backward compatible). Only the OpenAI-compatible chat
+ * endpoint is supported here — the same env contract as review-engine.mjs
+ * (`RIVER_OPENAI_API_KEY` / `OPENAI_API_KEY`, `RIVER_OPENAI_BASE_URL`,
+ * `RIVER_OPENAI_MODEL` / `OPENAI_MODEL`). Other providers fall back to
+ * regex-only rather than guessing an incompatible API shape.
+ *
+ * @param {object} [opts]
+ * @param {object} [opts.config] - loaded river config (config.model.modelName used as model fallback)
+ * @param {NodeJS.ProcessEnv} [opts.env]
+ * @param {typeof fetch} [opts.fetchImpl] - injectable for tests
+ * @returns {((candidates: object[], text: string, artifactKind: string) => Promise<boolean>)|null}
+ */
+function createHumanApprovalAdjudicator({
+  config = {},
+  env = process.env,
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  if (!(0,utils/* isLlmEnabled */.Rq)()) return null;
+  const apiKey = env.RIVER_OPENAI_API_KEY || env.OPENAI_API_KEY;
+  if (!apiKey) return null; // only OpenAI-compatible endpoints are wired here
+  const model =
+    env.RIVER_OPENAI_MODEL || env.OPENAI_MODEL || config?.model?.modelName || 'gpt-4o-mini';
+  const endpoint = env.RIVER_OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions';
+
+  return async function humanApprovalAdjudicator(candidates, text, artifactKind) {
+    const prompt = buildAdjudicationPrompt({ candidates, text, artifactKind });
+    const res = await fetchImpl(endpoint, {
+      method: 'POST',
+      signal: AbortSignal.timeout(ADJUDICATOR_TIMEOUT_MS),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        max_tokens: ADJUDICATOR_MAX_TOKENS,
+        messages: [
+          { role: 'system', content: SYSTEM_MESSAGE },
+          { role: 'user', content: prompt },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Human-approval adjudicator HTTP ${res.status}`);
+    }
+    const json = await res.json();
+    const output = json?.choices?.[0]?.message?.content ?? '';
+    return parseAdjudicationVerdict(output);
+  };
+}
+
+// EXTERNAL MODULE: ./src/lib/loop-signal.mjs
+var loop_signal = __webpack_require__(4702);
+;// CONCATENATED MODULE: ./src/lib/review-plan.mjs
 /**
  * `river review plan` core — #802 Phase 3 (slices 1 + B-1)
  *
@@ -25,26 +699,23 @@
  * diff reader are injectable for tests.
  */
 
-import path from 'node:path';
-import { readFile } from 'node:fs/promises';
 
-import { loadConfig as defaultLoadConfig } from '../config/loader.mjs';
-import { resolveAllArtifacts as defaultResolveAllArtifacts } from '../config/artifact-resolver.mjs';
-import { parseUnifiedDiff } from './diff-processor.mjs';
-import { buildExecutionPlan as defaultBuildExecutionPlan } from '../../runners/core/review-runner.mjs';
-import { generateReview as defaultGenerateReview } from './review-engine.mjs';
-import { loadRiskMap as defaultLoadRiskMap } from './risk-map.mjs';
-import { PHASES, PLANNER_MODES } from './planner-utils.mjs';
-import { resolveAvailableContexts, resolveAvailableDependencies } from './utils.mjs';
-import { scoreReview } from './scoring/engine.mjs';
-import {
-  detectHumanApprovalCandidates,
-  adjudicateHumanApproval,
-} from './plan-review/human-approval-policy.mjs';
-import { createHumanApprovalAdjudicator } from './plan-review/llm-adjudicator.mjs';
-import { deriveLoopSignalFromArtifact } from './loop-signal.mjs';
 
-const VALID_PHASES = new Set(PHASES);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const VALID_PHASES = new Set(planner_utils/* PHASES */.ZG);
 
 /**
  * Default run-id generator for the Review Artifact `trace.run_id`. Mirrors the
@@ -78,7 +749,7 @@ function finalizeArtifact(
   // decision: derive the top-level verdict from the findings present in the
   // artifact. Never let a scoring error break the artifact contract.
   try {
-    artifact.decision = scoreReview(artifact.findings ?? [], { humanApprovalRequired }).verdict;
+    artifact.decision = (0,engine/* scoreReview */.lS)(artifact.findings ?? [], { humanApprovalRequired }).verdict;
   } catch {
     // leave decision unset on scoring failure
   }
@@ -87,7 +758,7 @@ function finalizeArtifact(
   // Derived after decision is set so the two are always consistent.
   // Never let derivation errors break the artifact contract.
   try {
-    artifact.suggestedLoopSignal = deriveLoopSignalFromArtifact(artifact);
+    artifact.suggestedLoopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)(artifact);
   } catch {
     // leave suggestedLoopSignal unset on derivation failure
   }
@@ -105,11 +776,11 @@ function finalizeArtifact(
 
   return artifact;
 }
-const VALID_PLANNER_MODES = new Set(PLANNER_MODES);
+const VALID_PLANNER_MODES = new Set(planner_utils/* PLANNER_MODES */.Er);
 const MODEL_HINTS = new Set(['cheap', 'balanced', 'high-accuracy']);
 
 /** Raised for argument/config errors that map to CLI exit code 3. */
-export class ReviewPlanError extends Error {
+class ReviewPlanError extends Error {
   constructor(message) {
     super(message);
     this.name = 'ReviewPlanError';
@@ -128,7 +799,7 @@ export class ReviewPlanError extends Error {
  * @param {object|null} sourceSnapshot the carried-over plan snapshot
  * @returns {{ filesAdded: string[], filesRemoved: string[], summary: string }|null}
  */
-export function computeReplayDrift(currentFiles, sourceSnapshot) {
+function computeReplayDrift(currentFiles, sourceSnapshot) {
   const fileTypes = sourceSnapshot?.fileTypes;
   if (!fileTypes || typeof fileTypes !== 'object') return null;
   const notSentinel = (p) => p && p !== '/dev/null';
@@ -167,11 +838,11 @@ export function computeReplayDrift(currentFiles, sourceSnapshot) {
  * @param {(p: string) => Promise<string>} [opts.readFileImpl]
  * @returns {Promise<object>} Review Artifact (schema version "1")
  */
-export async function runReviewExecReplay({
+async function runReviewExecReplay({
   planFile,
   debug = false,
   now = () => new Date().toISOString(),
-  readFileImpl = (p) => readFile(p, 'utf8'),
+  readFileImpl = (p) => (0,promises_.readFile)(p, 'utf8'),
   // #878 A2-3-impl: execution params. When executeReview is true and a diff
   // artifact resolves, the replay path invokes generateReview with the source
   // plan's selectedSkills and the carried-over snapshot context (no re-plan).
@@ -179,9 +850,9 @@ export async function runReviewExecReplay({
   cwd = process.cwd(),
   cliArtifacts = {},
   artifactsDir,
-  loadConfigImpl = defaultLoadConfig,
-  resolveAllArtifactsImpl = defaultResolveAllArtifacts,
-  generateReviewImpl = defaultGenerateReview,
+  loadConfigImpl = loader/* loadConfig */.Z9,
+  resolveAllArtifactsImpl = resolveAllArtifacts,
+  generateReviewImpl = review_engine/* generateReview */.G1,
   generateRunId = defaultGenerateRunId,
 } = {}) {
   if (!planFile || typeof planFile !== 'string') {
@@ -308,7 +979,7 @@ export async function runReviewExecReplay({
     modelConfigForUsage = config?.model ?? null;
     const configArtifacts =
       config && typeof config.artifacts === 'object' && config.artifacts ? config.artifacts : {};
-    const detectionRoot = artifactsDir ? path.resolve(cwd, artifactsDir) : cwd;
+    const detectionRoot = artifactsDir ? external_node_path_.resolve(cwd, artifactsDir) : cwd;
     const resolved = await resolveAllArtifactsImpl({
       cliArgs: cliArtifacts,
       configArtifacts,
@@ -322,7 +993,7 @@ export async function runReviewExecReplay({
       } catch (err) {
         throw new ReviewPlanError(`Failed to read diff artifact: ${err.message}`);
       }
-      const parsedDiff = parseUnifiedDiff(diffText);
+      const parsedDiff = (0,diff_processor/* parseUnifiedDiff */.rj)(diffText);
       // #936: report (non-blocking) membership drift between the replay-time
       // diff and the source plan's snapshot. Null when the snapshot predates A2-3.
       replayDrift = computeReplayDrift(
@@ -401,7 +1072,7 @@ export async function runReviewExecReplay({
  * @returns {'json'|'markdown'}
  * @throws {ReviewPlanError} on an unsupported or conflicting combination
  */
-export function resolveReviewOutputFormat({
+function resolveReviewOutputFormat({
   output = 'text',
   outputExplicit = false,
   format = null,
@@ -429,7 +1100,7 @@ export function resolveReviewOutputFormat({
   );
 }
 
-export const REVIEW_GATE_SEVERITIES = ['info', 'minor', 'major', 'critical'];
+const REVIEW_GATE_SEVERITIES = (/* unused pure expression or super */ null && (['info', 'minor', 'major', 'critical']));
 const SEVERITY_RANK = { info: 0, minor: 1, major: 2, critical: 3 };
 
 /**
@@ -443,7 +1114,7 @@ const SEVERITY_RANK = { info: 0, minor: 1, major: 2, critical: 3 };
  * @param {{ failOn?: string, warnOn?: string, advisoryOnly?: boolean }} [opts]
  * @returns {{ code: 0|1|2, level: 'pass'|'warn'|'fail', maxSeverity: string|null }}
  */
-export function evaluateReviewGate(
+function evaluateReviewGate(
   artifact,
   { failOn = 'critical', warnOn = 'major', advisoryOnly = false } = {}
 ) {
@@ -537,7 +1208,7 @@ function toSelectedView(skill) {
  *   (see adjudicateHumanApproval).
  * @returns {Promise<object>} Review Artifact (schema version "1")
  */
-export async function runReviewPlan({
+async function runReviewPlan({
   cwd = process.cwd(),
   phase = 'midstream',
   planOnly = false,
@@ -551,12 +1222,12 @@ export async function runReviewPlan({
   availableDependencies,
   humanApprovalAdjudicator,
   now = () => new Date().toISOString(),
-  loadConfigImpl = defaultLoadConfig,
-  resolveAllArtifactsImpl = defaultResolveAllArtifacts,
-  buildExecutionPlanImpl = defaultBuildExecutionPlan,
-  generateReviewImpl = defaultGenerateReview,
-  loadRiskMapImpl = defaultLoadRiskMap,
-  readFileImpl = (p) => readFile(p, 'utf8'),
+  loadConfigImpl = loader/* loadConfig */.Z9,
+  resolveAllArtifactsImpl = resolveAllArtifacts,
+  buildExecutionPlanImpl = review_runner.buildExecutionPlan,
+  generateReviewImpl = review_engine/* generateReview */.G1,
+  loadRiskMapImpl = risk_map.loadRiskMap,
+  readFileImpl = (p) => (0,promises_.readFile)(p, 'utf8'),
   generateRunId = defaultGenerateRunId,
 } = {}) {
   if (executeReview && executionDeferred) {
@@ -598,7 +1269,7 @@ export async function runReviewPlan({
   const configArtifacts =
     config && typeof config.artifacts === 'object' && config.artifacts ? config.artifacts : {};
 
-  const detectionRoot = artifactsDir ? path.resolve(cwd, artifactsDir) : cwd;
+  const detectionRoot = artifactsDir ? external_node_path_.resolve(cwd, artifactsDir) : cwd;
 
   const resolved = await resolveAllArtifactsImpl({
     cliArgs: cliArtifacts,
@@ -627,7 +1298,7 @@ export async function runReviewPlan({
     // Parse the diff once and reuse the result. The same parser used to
     // power deriveChangedFiles (planning input) also exposes the per-file
     // structure generateReview needs (execution input).
-    const parsedDiff = parseUnifiedDiff(diffText);
+    const parsedDiff = (0,diff_processor/* parseUnifiedDiff */.rj)(diffText);
     const changedFiles = (parsedDiff.files ?? [])
       .map((f) => f.path)
       .filter((p) => p && p !== '/dev/null');
@@ -638,14 +1309,14 @@ export async function runReviewPlan({
     // guarantees that a CLI override like `--context tests` does NOT drop
     // 'diff' from the set (would re-introduce the A1 silent-skip failure).
     // env var RIVER_AVAILABLE_CONTEXTS is merged in for CI overrides.
-    const effectiveAvailableContexts = resolveAvailableContexts(availableContexts, {
+    const effectiveAvailableContexts = (0,utils/* resolveAvailableContexts */.ud)(availableContexts, {
       alwaysInclude: ['diff'],
     });
 
     // Same silent-skip pattern for dependencies. `null` is the documented
     // disabled sentinel — dependency-based skipping is opt-in via env or
     // `--dependency` so legacy invocations stay backward-compatible.
-    const effectiveAvailableDependencies = resolveAvailableDependencies(availableDependencies);
+    const effectiveAvailableDependencies = (0,utils/* resolveAvailableDependencies */.TK)(availableDependencies);
 
     // The plan layer's selection rules differ by exec mode: for
     // plan-only/dry-run/deferred we restrict to heuristic skills, while
@@ -908,3 +1579,10 @@ function normalizeFindingForArtifact(finding, index, phase) {
   }
   return out;
 }
+
+
+/***/ })
+
+};
+
+//# sourceMappingURL=94.index.mjs.map

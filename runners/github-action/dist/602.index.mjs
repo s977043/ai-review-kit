@@ -36,7 +36,13 @@ const FEEDBACK_TYPES = [
 ];
 
 // Trigger conditions from references/IMPROVEMENT_LOOP.md.
-const FEEDBACK_TRIGGERS = ['pr-comment', 'self-review', 'eval-regression', 'retrospective'];
+const FEEDBACK_TRIGGERS = [
+  'pr-comment',
+  'self-review',
+  'eval-regression',
+  'retrospective',
+  'fix-pr',
+];
 
 class FeedbackError extends Error {
   constructor(message) {

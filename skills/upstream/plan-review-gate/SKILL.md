@@ -2,7 +2,7 @@
 id: 'plan-review-gate'
 name: 実装計画レビューゲート
 description: 実装計画（plan.md / pbi-input.md）に含まれる危険操作・触れてはならないスコープ・人間承認必須条件を検出し、AI 自律実行前のゲートとして機能する
-version: 0.1.0
+version: 0.2.0
 category: upstream
 phase: upstream
 applyTo:
@@ -104,6 +104,14 @@ Rule 1 の危険操作トリガーが1件以上検出された場合:
 - scoring engine の `humanApprovalRequired=true` フラグに対応する verdict `human-review-required` が返される
 - findings の最初に Stop-work 項目を配置する
 
+機械的検出は 2 層で行う（#1348 S1 / Epic #1347）:
+
+- **HIGH confidence（regex 単独で確定）**: 破壊的コマンド・具体的シークレット・日本語危険語に加え、危険語を避けた婉曲表現（「再帰的に整理」「接続情報」「稼働環境へ反映」等）も HIGH として検出する
+- **LOW confidence（LLM adjudicator が最終判定）**: `cron` / `webhook` / `auth` 等の文脈依存語。LLM が使える実行パス（`river review exec`）では adjudicator がエスカレーション方向にのみ判定し、LLM 不在時は regex-only mode で従来どおり動作する
+- adjudicator は HIGH 判定を覆して緩める方向には決して使われない（非対称エスカレーション）
+
+既知のすり抜けパターン（婉曲表現）と過検出パターンは `fixtures/` の双方向 canary（should_trigger / should_not_trigger）で回帰監視し、pass 率は `tests/plan-review-gate-canary.test.mjs` が機械的に計測する。
+
 ## False-positive guards / 抑制条件
 
 - コメント・例示・Non-goals セクションに登場するキーワードは、実際のタスクへの言及でない限り指摘しない。
@@ -166,5 +174,7 @@ Rule 1 の危険操作トリガーが1件以上検出された場合:
 
 - `docs/review/output-format.md` — severity とコメント形式の SSoT
 - `src/lib/plan-review/human-approval-policy.mjs` — 危険操作パターン定義（機械的検出の実装）
+- `src/lib/plan-review/llm-adjudicator.mjs` — LOW confidence 候補の LLM 最終判定（エスカレーション専用）
+- `fixtures/` — 敵対的（婉曲表現）プランと良性プランの双方向 canary
 - `skills/upstream/plangate-plan-integrity/SKILL.md` — 計画整合性チェック（関連スキル）
 - `pages/reference/artifact-input-contract.md` — 入力 artifact の契約

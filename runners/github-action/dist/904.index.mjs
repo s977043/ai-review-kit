@@ -6,7 +6,8 @@ export const modules = {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   formatHtmlOutput: () => (/* binding */ formatHtmlOutput)
+/* harmony export */   formatHtmlOutput: () => (/* binding */ formatHtmlOutput),
+/* harmony export */   formatLoopDashboardHtml: () => (/* binding */ formatLoopDashboardHtml)
 /* harmony export */ });
 /* unused harmony export escHtml */
 /* harmony import */ var _scoring_engine_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(6899);
@@ -103,7 +104,8 @@ function formatHtmlOutput(result, phase) {
     if (sev in issueCountBySeverity) issueCountBySeverity[sev]++;
   }
 
-  const decision = score.verdict;
+  // Honor the canonical verdict if the result carries one (#1170 F3).
+  const decision = (0,_scoring_engine_mjs__WEBPACK_IMPORTED_MODULE_0__/* .resolveVerdict */ .Cq)(result.decision, score.verdict);
 
   const riskAssessment = result.plan?.riskAssessment;
   const riskSummary = riskAssessment
@@ -222,6 +224,141 @@ function formatHtmlOutput(result, phase) {
     }
     parts.push('</table>');
   }
+
+  parts.push('</body>');
+  parts.push('</html>');
+
+  return parts.join('\n');
+}
+
+/**
+ * suggestedLoopSignal → banner styling (mirrors the loop-convergence contract).
+ */
+const SIGNAL_CONFIG = {
+  CONVERGED: { bg: '#e8f5e9', border: '#2e7d32', icon: '✓', label: 'CONVERGED' },
+  REVISE_REQUIRED: { bg: '#fff8e1', border: '#f9a825', icon: '↻', label: 'REVISE_REQUIRED' },
+  ESCALATE_HUMAN: { bg: '#ffebee', border: '#c62828', icon: '×', label: 'ESCALATE_HUMAN' },
+  STOP_OSCILLATED: { bg: '#ffebee', border: '#c62828', icon: '∿', label: 'STOP_OSCILLATED' },
+  NO_SIGNAL: { bg: '#f5f5f5', border: '#9e9e9e', icon: '–', label: 'NO_SIGNAL' },
+};
+
+/**
+ * Format a multi-run loop dashboard as a self-contained HTML report
+ * (Epic #1191, #1158 Phase 2). Visualizes how findings evolve across a
+ * generate → review → revise loop: the suggested signal, churn counts, and
+ * an oscillation timeline. All user-derived strings are HTML-escaped.
+ *
+ * @param {object} diff - Output of diffRunHistory / diffReviews
+ *   ({ new, resolved, persisting, scoreChanged?, oscillated?, summary? }).
+ * @param {object} [meta]
+ * @param {string[]} [meta.runIds] - Run ids in chronological order.
+ * @param {string} [meta.suggestedLoopSignal] - Derived loop signal.
+ * @returns {string} Complete HTML document.
+ */
+function formatLoopDashboardHtml(diff, meta = {}) {
+  const runIds = Array.isArray(meta.runIds) ? meta.runIds : [];
+  const signal = meta.suggestedLoopSignal;
+  const newF = Array.isArray(diff?.new) ? diff.new : [];
+  const resolvedF = Array.isArray(diff?.resolved) ? diff.resolved : [];
+  const persistingF = Array.isArray(diff?.persisting) ? diff.persisting : [];
+  const oscillated = Array.isArray(diff?.oscillated) ? diff.oscillated : [];
+
+  const parts = [];
+  parts.push('<!DOCTYPE html>');
+  parts.push('<html lang="ja">');
+  parts.push('<head>');
+  parts.push('<meta charset="UTF-8">');
+  parts.push('<meta name="viewport" content="width=device-width, initial-scale=1">');
+  parts.push('<title>River Review Loop Dashboard</title>');
+  parts.push(`<style>${INLINE_STYLE}</style>`);
+  parts.push('</head>');
+  parts.push('<body>');
+
+  parts.push('<h1>River Review Loop Dashboard</h1>');
+  parts.push(
+    `<p class="meta">Runs: <strong>${runIds.length}</strong>${
+      runIds.length ? ' &nbsp;|&nbsp; ' + runIds.map(escHtml).join(' → ') : ''
+    }</p>`
+  );
+
+  // Suggested loop signal banner
+  const sc = signal ? SIGNAL_CONFIG[signal] : null;
+  if (sc) {
+    parts.push(`<div class="banner" style="background:${sc.bg};border-color:${sc.border}">`);
+    parts.push(`${sc.icon} suggestedLoopSignal: ${escHtml(sc.label)}`);
+    parts.push('</div>');
+  } else if (signal) {
+    parts.push('<div class="banner" style="background:#f5f5f5;border-color:#9e9e9e">');
+    parts.push(`suggestedLoopSignal: ${escHtml(String(signal))}`);
+    parts.push('</div>');
+  }
+
+  // Churn counts
+  parts.push('<h2>Churn</h2>');
+  parts.push('<div class="counts">');
+  parts.push(`<span class="count-chip" style="background:#1565c0">new ${newF.length}</span>`);
+  parts.push(
+    `<span class="count-chip" style="background:#2e7d32">resolved ${resolvedF.length}</span>`
+  );
+  parts.push(
+    `<span class="count-chip" style="background:#757575">persisting ${persistingF.length}</span>`
+  );
+  parts.push(
+    `<span class="count-chip" style="background:#c62828">oscillated ${oscillated.length}</span>`
+  );
+  parts.push('</div>');
+
+  // Oscillation timeline — the core loop signal
+  parts.push('<h2>Oscillation timeline</h2>');
+  if (oscillated.length === 0) {
+    parts.push('<p>No oscillating findings detected.</p>');
+  } else {
+    parts.push('<table>');
+    parts.push('<tr><th>Finding</th><th>File</th><th>Timeline</th></tr>');
+    for (const o of oscillated) {
+      const f = o.finding ?? {};
+      const title = escHtml((f.title || f.message || o.fingerprint || '').slice(0, 80));
+      const file = escHtml(f.file ?? '');
+      const timeline = (Array.isArray(o.timeline) ? o.timeline : [])
+        .map((t) => {
+          const id = escHtml(String(t.runId ?? '').slice(0, 8));
+          const mark = t.present ? '●' : '○';
+          return `<span title="${id}">${mark}</span>`;
+        })
+        .join(' ');
+      parts.push(`<tr><td>${title}</td><td>${file}</td><td>${timeline}</td></tr>`);
+    }
+    parts.push('</table>');
+    parts.push(
+      '<p class="meta">● present &nbsp; ○ absent — present→absent→present indicates a revise loop re-introducing a finding.</p>'
+    );
+  }
+
+  // New / resolved lists. diff entries are ComparedFinding wrappers: the actual
+  // finding lives under `.current` (new) or `.previous` (resolved). Fall back to
+  // the entry itself for callers that pass raw findings.
+  const findingList = (heading, list, isResolved) => {
+    parts.push(`<h2>${escHtml(heading)} (${list.length})</h2>`);
+    if (list.length === 0) {
+      parts.push('<p>None.</p>');
+      return;
+    }
+    parts.push('<table>');
+    parts.push('<tr><th>Severity</th><th>File</th><th>Title</th></tr>');
+    for (const item of list) {
+      const f = (isResolved ? item?.previous : item?.current) ?? item ?? {};
+      const sev = f.severity ?? 'info';
+      const color = SEVERITY_COLOR[sev] ?? '#1565c0';
+      parts.push(
+        `<tr><td><span class="sev" style="background:${color}">${escHtml(sev)}</span></td>` +
+          `<td>${escHtml(f.file ?? '')}</td>` +
+          `<td>${escHtml((f.title || f.message || '').slice(0, 120))}</td></tr>`
+      );
+    }
+    parts.push('</table>');
+  };
+  findingList('New findings', newF, false);
+  findingList('Resolved findings', resolvedF, true);
 
   parts.push('</body>');
   parts.push('</html>');

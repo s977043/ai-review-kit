@@ -11,7 +11,7 @@ export const modules = {
 /* harmony export */   formatRegressionSummary: () => (/* binding */ formatRegressionSummary)
 /* harmony export */ });
 /* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3926);
-/* harmony import */ var _finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(9905);
+/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7563);
 
 
 
@@ -34,8 +34,8 @@ export const modules = {
  * @returns {{ new: ComparedFinding[], resolved: ComparedFinding[], persisting: ComparedFinding[], scoreChanged: ComparedFinding[], summary: object }}
  */
 function diffReviews(previousFindings, currentFindings) {
-  const prev = (0,_finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .i)(previousFindings ?? []);
-  const curr = (0,_finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .i)(currentFindings ?? []);
+  const prev = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .ic)(previousFindings ?? []);
+  const curr = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .ic)(currentFindings ?? []);
 
   const prevByFp = new Map(prev.map((f) => [f.fingerprint, f]));
   const currByFp = new Map(curr.map((f) => [f.fingerprint, f]));
@@ -136,8 +136,8 @@ function diffReviews(previousFindings, currentFindings) {
 function diffRunHistory(runRecords) {
   // Defensive: sort by timestamp ascending, NaN-safe with runId tie-break
   const sorted = [...runRecords].sort((a, b) => {
-    const ta = new Date(a.timestamp).getTime();
-    const tb = new Date(b.timestamp).getTime();
+    const ta = a.timestamp != null ? new Date(a.timestamp).getTime() : NaN;
+    const tb = b.timestamp != null ? new Date(b.timestamp).getTime() : NaN;
     const aNaN = Number.isNaN(ta);
     const bNaN = Number.isNaN(tb);
     if (aNaN && bNaN) return (a.runId ?? '').localeCompare(b.runId ?? '');
@@ -162,7 +162,7 @@ function diffRunHistory(runRecords) {
   const allFingerprints = new Set();
 
   const annotatedRuns = sorted.map((record) => {
-    const annotated = (0,_finding_fingerprint_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .i)(record.findings ?? []);
+    const annotated = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .annotateFingerprints */ .ic)(record.findings ?? []);
     const fingerprints = new Set();
     for (const f of annotated) {
       fingerprints.add(f.fingerprint);

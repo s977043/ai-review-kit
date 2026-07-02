@@ -1,8 +1,8 @@
-export const id = 649;
-export const ids = [649];
+export const id = 101;
+export const ids = [101];
 export const modules = {
 
-/***/ 1649:
+/***/ 3482:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
 
@@ -22,7 +22,7 @@ var external_node_path_ = __webpack_require__(6760);
 // EXTERNAL MODULE: external "node:fs/promises"
 var promises_ = __webpack_require__(1455);
 // EXTERNAL MODULE: ./src/config/loader.mjs + 1 modules
-var loader = __webpack_require__(3833);
+var loader = __webpack_require__(759);
 ;// CONCATENATED MODULE: ./src/config/artifact-resolver.mjs
 /**
  * Artifact Input resolver — #802 Phase 2b
@@ -190,19 +190,19 @@ async function _fileExists(filePath, fsImpl) {
 }
 
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
-var diff_processor = __webpack_require__(861);
+var diff_processor = __webpack_require__(3249);
 // EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
-var review_runner = __webpack_require__(7050);
+var review_runner = __webpack_require__(1030);
 // EXTERNAL MODULE: ./src/lib/review-engine.mjs
-var review_engine = __webpack_require__(2022);
+var review_engine = __webpack_require__(2010);
 // EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
-var risk_map = __webpack_require__(572);
+var risk_map = __webpack_require__(2374);
 // EXTERNAL MODULE: ./src/lib/planner-utils.mjs
-var planner_utils = __webpack_require__(1013);
+var planner_utils = __webpack_require__(633);
 // EXTERNAL MODULE: ./src/lib/utils.mjs
-var utils = __webpack_require__(9746);
+var utils = __webpack_require__(958);
 // EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
-var engine = __webpack_require__(9487);
+var engine = __webpack_require__(6899);
 ;// CONCATENATED MODULE: ./src/lib/plan-review/human-approval-policy.mjs
 /**
  * Human-approval policy for plan review gate.
@@ -317,6 +317,58 @@ const HIGH_CONFIDENCE_PATTERNS = [
     name: 'ja-danger-word',
     confidence: 'high',
   },
+  // ---------------------------------------------------------------------
+  // Euphemistic dangerous operations (#1348 S1 adversarial canary).
+  // Implementation agents that avoid literal danger words (`rm -rf`, 削除)
+  // still match on semantic phrasings of the same operation. Guarded by the
+  // false-negative canary fixtures in
+  // skills/upstream/plan-review-gate/fixtures/.
+  // ---------------------------------------------------------------------
+  // "recursively clean up the temp directory" — rm -rf without saying rm -rf
+  {
+    pattern:
+      /recursively\s+(?:\w+\s+){0,2}(?:clean(?:s|ed|ing)?(?:\s*up)?|clear(?:s|ed|ing)?|purge(?:s|d)?|prune(?:s|d)?|wipe(?:s|d)?|empt(?:y|ies|ied))/i,
+    name: 'recursive-cleanup-euphemism',
+    confidence: 'high',
+  },
+  // 「一時ディレクトリを再帰的に整理」— 削除と書かない再帰削除
+  {
+    pattern: /再帰的[^\n。]{0,15}(?:整理|クリーンアップ|一掃|片付け|掃除|空に)/,
+    name: 'ja-recursive-cleanup-euphemism',
+    confidence: 'high',
+  },
+  // 「テーブルを空にする」「データベースを初期化」— TRUNCATE/DROP の言い換え
+  {
+    pattern:
+      /(?:テーブル|ディレクトリ|フォルダ|バケット|データベース)[^\n。]{0,6}(?:空に|まっさらに|初期化)/,
+    name: 'ja-empty-storage-euphemism',
+    confidence: 'high',
+  },
+  // "empty the table / bucket / directory" — TRUNCATE without saying truncate
+  {
+    pattern:
+      /empt(?:y|ies|ied)(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b/i,
+    name: 'empty-storage-euphemism',
+    confidence: 'high',
+  },
+  // 「接続情報」「環境変数ファイル」— secret / credential / .env の言い換え
+  {
+    pattern: /接続情報|接続文字列|環境変数ファイル|アクセスキー/,
+    name: 'ja-connection-info-euphemism',
+    confidence: 'high',
+  },
+  { pattern: /connection\s+string/i, name: 'connection-string', confidence: 'high' },
+  // 「稼働環境へ反映」「実環境に適用」— 本番と書かない本番反映
+  {
+    pattern: /(?:実|稼働)環境[^\n。]{0,12}(?:反映|適用|更新|リリース|デプロイ|切り替え)/,
+    name: 'ja-live-env-apply-euphemism',
+    confidence: 'high',
+  },
+  {
+    pattern: /(?:to|into)\s+the\s+live\s+environment/i,
+    name: 'live-environment',
+    confidence: 'high',
+  },
   // Existing high-signal patterns (carried forward from original TRIGGER_PATTERNS)
   {
     pattern: /destructive\s+(command|operation|action|step)s?/i,
@@ -403,11 +455,19 @@ function detectHumanApprovalCandidates(text) {
  *
  * Modes:
  *   'regex-only'       — no adjudicator provided; required = any high-confidence match
- *   'llm-adjudicated'  — adjudicator provided; required = adjudicator's verdict
+ *   'llm-adjudicated'  — adjudicator ran; required = high-confidence match OR
+ *                        adjudicator verdict (escalation-only, see below)
+ *   'regex-fallback'   — adjudicator was provided but threw; degraded to the
+ *                        regex-only verdict (fail-safe, never throws upward)
  *
- * The LLM adjudicator path is intentionally deferred (not wired to any caller
- * yet). The interface is defined here so callers can opt in without changes to
- * this module. See Epic #1171 item1 / #1170 F1.
+ * Asymmetric escalation (Epic #1347 design principle, wired by #1348 S1):
+ * the LLM adjudicator may only ESCALATE — it converts LOW-confidence
+ * candidates into required=true. It can never overturn a HIGH-confidence
+ * regex verdict downwards, so a compromised or lenient LLM cannot loosen the
+ * gate. Callers without an LLM keep the regex-only behavior unchanged.
+ *
+ * Wired caller: src/lib/review-plan.mjs (`river review exec` path via
+ * createHumanApprovalAdjudicator in ./llm-adjudicator.mjs).
  *
  * @param {object} opts
  * @param {string} [opts.text] - Original text (passed to adjudicator if provided)
@@ -427,14 +487,28 @@ async function adjudicateHumanApproval({
   const triggers = candidates.map((c) => c.trigger);
   const evidence = candidates; // full candidate list for audit trail
 
+  // regex verdict: required when at least one HIGH-confidence candidate fired.
+  // This is the floor the adjudicator can never lower.
+  const regexRequired = candidates.some((c) => c.confidence === 'high');
+
   if (adjudicator) {
-    const required = await adjudicator(candidates, text, artifactKind);
-    return { required: Boolean(required), triggers, evidence, mode: 'llm-adjudicated' };
+    let verdict;
+    try {
+      verdict = await adjudicator(candidates, text, artifactKind);
+    } catch {
+      // Fail-safe: an adjudicator failure (network, parse, timeout) degrades
+      // to the regex-only verdict instead of breaking the caller.
+      return { required: regexRequired, triggers, evidence, mode: 'regex-fallback' };
+    }
+    return {
+      required: regexRequired || Boolean(verdict),
+      triggers,
+      evidence,
+      mode: 'llm-adjudicated',
+    };
   }
 
-  // regex-only: required only when at least one HIGH-confidence candidate fired
-  const required = candidates.some((c) => c.confidence === 'high');
-  return { required, triggers, evidence, mode: 'regex-only' };
+  return { required: regexRequired, triggers, evidence, mode: 'regex-only' };
 }
 
 /**
@@ -454,8 +528,149 @@ function detectHumanApprovalTriggers(text) {
   return { required, triggers };
 }
 
+;// CONCATENATED MODULE: ./src/lib/plan-review/llm-adjudicator.mjs
+/**
+ * LLM adjudicator for human-approval candidates (#1348 S1, Epic #1347).
+ *
+ * Provides the `adjudicator` callback consumed by `adjudicateHumanApproval`
+ * (./human-approval-policy.mjs). The adjudicator answers ONE narrow question:
+ * "do the LOW-confidence regex candidates in this plan describe an operation
+ * that needs human approval before an AI agent executes it?"
+ *
+ * Design constraints (Epic #1347 design principles):
+ *   - Escalation-only: the boolean returned here can only ADD a human-approval
+ *     requirement. `adjudicateHumanApproval` ORs it with the HIGH-confidence
+ *     regex verdict, so this module can never loosen the gate.
+ *   - Regex-only fallback: when no LLM is available (offline mode, no
+ *     OpenAI-compatible key) `createHumanApprovalAdjudicator` returns `null`
+ *     and callers keep the pre-#1348 regex-only behavior unchanged.
+ *   - Fail-safe: any runtime failure (HTTP error, timeout, unparseable output)
+ *     throws; `adjudicateHumanApproval` catches it and degrades to the
+ *     regex verdict (`mode: 'regex-fallback'`).
+ */
+
+
+
+const ADJUDICATOR_TIMEOUT_MS = 15000;
+const ADJUDICATOR_MAX_TOKENS = 8;
+const MAX_TEXT_CHARS = 4000;
+
+const SYSTEM_MESSAGE =
+  'You are the safety adjudicator of an AI code-review gate. ' +
+  'You decide whether a plan needs human approval before an AI agent executes it. ' +
+  'Answer with exactly one word: YES or NO.';
+
+/**
+ * Build the adjudication prompt from regex candidates + plan text.
+ * Exported for unit testing.
+ *
+ * @param {object} opts
+ * @param {Array<{trigger: string, snippet: string, confidence: string}>} opts.candidates
+ * @param {string} opts.text
+ * @param {string} [opts.artifactKind]
+ * @returns {string}
+ */
+function buildAdjudicationPrompt({ candidates = [], text = '', artifactKind = '' } = {}) {
+  const body =
+    String(text).length > MAX_TEXT_CHARS
+      ? `${String(text).slice(0, MAX_TEXT_CHARS)}\n...[truncated]`
+      : String(text);
+  const candidateLines = candidates
+    .map((c) => `- trigger=${c.trigger} confidence=${c.confidence} snippet="${c.snippet}"`)
+    .join('\n');
+  return `An automated regex scan of an implementation plan (artifact kind: ${
+    artifactKind || 'unknown'
+  }) found these candidate risk keywords:
+
+${candidateLines || '- (no candidates)'}
+
+Plan text:
+---
+${body}
+---
+
+Question: does this plan describe an operation that requires HUMAN APPROVAL before an AI agent executes it autonomously? Approval is required for: production / live-environment impact, destructive or irreversible changes (including euphemistic phrasings), secret or credential handling, permission changes, billing, or externally visible side effects (posting, notifications, scheduled jobs with external impact).
+
+Answer with exactly one word: YES (approval required) or NO (safe to proceed).`;
+}
+
+/**
+ * Parse the adjudicator model output into a boolean verdict.
+ * Exported for unit testing.
+ *
+ * @param {string} output
+ * @returns {boolean}
+ * @throws {Error} when the output is neither YES nor NO — callers
+ *   (adjudicateHumanApproval) treat this as adjudicator failure and fall
+ *   back to the regex verdict.
+ */
+function parseAdjudicationVerdict(output) {
+  const head = String(output ?? '')
+    .trim()
+    .split(/\s/)[0]
+    ?.toUpperCase()
+    .replace(/[^A-Z]/g, '');
+  if (head === 'YES') return true;
+  if (head === 'NO') return false;
+  throw new Error(`Unparseable adjudicator verdict: "${String(output ?? '').slice(0, 80)}"`);
+}
+
+/**
+ * Create the default LLM adjudicator, or `null` when no LLM is usable.
+ *
+ * `null` is the documented "regex-only mode" sentinel: callers pass it as
+ * `adjudicator` to `adjudicateHumanApproval`, which then behaves exactly as
+ * before #1348 (backward compatible). Only the OpenAI-compatible chat
+ * endpoint is supported here — the same env contract as review-engine.mjs
+ * (`RIVER_OPENAI_API_KEY` / `OPENAI_API_KEY`, `RIVER_OPENAI_BASE_URL`,
+ * `RIVER_OPENAI_MODEL` / `OPENAI_MODEL`). Other providers fall back to
+ * regex-only rather than guessing an incompatible API shape.
+ *
+ * @param {object} [opts]
+ * @param {object} [opts.config] - loaded river config (config.model.modelName used as model fallback)
+ * @param {NodeJS.ProcessEnv} [opts.env]
+ * @param {typeof fetch} [opts.fetchImpl] - injectable for tests
+ * @returns {((candidates: object[], text: string, artifactKind: string) => Promise<boolean>)|null}
+ */
+function createHumanApprovalAdjudicator({
+  config = {},
+  env = process.env,
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  if (!(0,utils/* isLlmEnabled */.Rq)()) return null;
+  const apiKey = env.RIVER_OPENAI_API_KEY || env.OPENAI_API_KEY;
+  if (!apiKey) return null; // only OpenAI-compatible endpoints are wired here
+  const model =
+    env.RIVER_OPENAI_MODEL || env.OPENAI_MODEL || config?.model?.modelName || 'gpt-4o-mini';
+  const endpoint = env.RIVER_OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions';
+
+  return async function humanApprovalAdjudicator(candidates, text, artifactKind) {
+    const prompt = buildAdjudicationPrompt({ candidates, text, artifactKind });
+    const res = await fetchImpl(endpoint, {
+      method: 'POST',
+      signal: AbortSignal.timeout(ADJUDICATOR_TIMEOUT_MS),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        max_tokens: ADJUDICATOR_MAX_TOKENS,
+        messages: [
+          { role: 'system', content: SYSTEM_MESSAGE },
+          { role: 'user', content: prompt },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Human-approval adjudicator HTTP ${res.status}`);
+    }
+    const json = await res.json();
+    const output = json?.choices?.[0]?.message?.content ?? '';
+    return parseAdjudicationVerdict(output);
+  };
+}
+
 // EXTERNAL MODULE: ./src/lib/loop-signal.mjs
-var loop_signal = __webpack_require__(4702);
+var loop_signal = __webpack_require__(570);
 ;// CONCATENATED MODULE: ./src/lib/review-plan.mjs
 /**
  * `river review plan` core — #802 Phase 3 (slices 1 + B-1)
@@ -483,6 +698,7 @@ var loop_signal = __webpack_require__(4702);
  * Pure-ish module: config loader, resolver, buildExecutionPlan and the
  * diff reader are injectable for tests.
  */
+
 
 
 
@@ -982,6 +1198,14 @@ function toSelectedView(skill) {
  *   (the default `.river/risk-map.yaml` path is missing), preserving the
  *   backward-compatible "no risk-based action" behaviour.
  * @param {(p: string) => Promise<string>} [opts.readFileImpl]
+ * @param {((candidates: object[], text: string, artifactKind: string) => Promise<boolean>)|null} [opts.humanApprovalAdjudicator]
+ *   LLM adjudicator for LOW-confidence human-approval candidates (#1348 S1).
+ *   `null` forces regex-only mode. When omitted (undefined) the default is
+ *   derived from the environment via `createHumanApprovalAdjudicator`, but
+ *   ONLY on the `executeReview` path — the `--plan-only` path keeps its
+ *   documented "no LLM call is ever made here" contract. The adjudicator is
+ *   escalation-only: it can never overturn a HIGH-confidence regex verdict
+ *   (see adjudicateHumanApproval).
  * @returns {Promise<object>} Review Artifact (schema version "1")
  */
 async function runReviewPlan({
@@ -996,6 +1220,7 @@ async function runReviewPlan({
   skillIds = null,
   availableContexts,
   availableDependencies,
+  humanApprovalAdjudicator,
   now = () => new Date().toISOString(),
   loadConfigImpl = loader/* loadConfig */.Z9,
   resolveAllArtifactsImpl = resolveAllArtifacts,
@@ -1183,10 +1408,25 @@ async function runReviewPlan({
     const pbiPath = resolved?.['pbi-input']?.path;
     const planPath = resolved?.plan?.path;
 
+    // LLM adjudicator wiring (#1348 S1). `undefined` = derive the default:
+    // only the executeReview path may call an LLM (the --plan-only path is
+    // documented as never making an LLM call). `null` (or an unavailable
+    // environment — offline / no OpenAI-compatible key) keeps the pre-#1348
+    // regex-only behavior. The adjudicator is escalation-only by contract.
+    const effectiveAdjudicator =
+      humanApprovalAdjudicator !== undefined
+        ? humanApprovalAdjudicator
+        : executeReview
+          ? createHumanApprovalAdjudicator({ config })
+          : null;
+    // Per-file audit trail (mode + candidate count) surfaced under debug.
+    const humanApprovalAudit = [];
+
     /**
-     * Read filePath (non-blocking) and run detectHumanApprovalTriggers.
-     * If triggers are found, push an info finding attributed to that file
-     * and set humanApprovalRequired.
+     * Read filePath (non-blocking), detect human-approval candidates and
+     * adjudicate them (regex-only or LLM-escalated).
+     * If the verdict is required, push an info finding attributed to that
+     * file and set humanApprovalRequired.
      *
      * @param {string} filePath
      */
@@ -1206,7 +1446,21 @@ async function runReviewPlan({
       } catch {
         // non-blocking — missing / unreadable file is not an error
       }
-      const approval = detectHumanApprovalTriggers(text);
+      const { candidates } = detectHumanApprovalCandidates(text);
+      const approval = await adjudicateHumanApproval({
+        text,
+        candidates,
+        artifactKind: filePath === pbiPath ? 'pbi-input' : 'plan',
+        adjudicator: effectiveAdjudicator,
+      });
+      if (candidates.length > 0) {
+        humanApprovalAudit.push({
+          file: filePath,
+          mode: approval.mode,
+          candidates: candidates.length,
+          required: approval.required,
+        });
+      }
       if (approval.required) {
         humanApprovalRequired = true;
         artifact.findings = artifact.findings ?? [];
@@ -1249,6 +1503,14 @@ async function runReviewPlan({
 
     if (pbiPath) await scanFile(pbiPath);
     if (planPath) await scanFile(planPath);
+
+    // Audit trail (Epic #1347 supervisability): record how each verdict was
+    // produced (regex-only / llm-adjudicated / regex-fallback). Debug-gated so
+    // the artifact contract is unchanged for existing consumers.
+    if (debug && humanApprovalAudit.length > 0) {
+      artifact.debug = artifact.debug ?? {};
+      artifact.debug.humanApproval = humanApprovalAudit;
+    }
   }
 
   finalizeArtifact(artifact, {
@@ -1323,4 +1585,4 @@ function normalizeFindingForArtifact(finding, index, phase) {
 
 };
 
-//# sourceMappingURL=649.index.mjs.map
+//# sourceMappingURL=101.index.mjs.map
