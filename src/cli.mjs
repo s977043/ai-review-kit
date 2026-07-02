@@ -1727,16 +1727,14 @@ async function main(argv = process.argv.slice(2)) {
       }
 
       if (parsed.runsSubcommand === 'digest') {
-        const runs = await listRunRecords(storeDir);
-        if (!runs.length) {
+        const { loadAllRunRecords } = await import('./lib/result-store.mjs');
+        const fullRuns = await loadAllRunRecords(storeDir);
+        if (!fullRuns.length) {
           console.log('No stored runs found in ' + storeDir);
           return 0;
         }
-        const fullRuns = await Promise.all(
-          runs.map((r) => loadRunRecord(storeDir, r.runId).catch(() => null))
-        );
         const { buildRunsDigest, formatDigestMarkdown } = await import('./lib/runs-digest.mjs');
-        const digest = buildRunsDigest(fullRuns.filter(Boolean), { now: () => new Date() });
+        const digest = buildRunsDigest(fullRuns, { now: () => new Date() });
         if (parsed.output === 'json') {
           console.log(JSON.stringify(digest, null, 2));
         } else {
@@ -1931,7 +1929,10 @@ Dependencies: ${
     // and the digest is appended to the job summary as the forced display
     // point — supervision that requires someone to remember a command is
     // not supervision.
-    const isGithubActions = process.env.GITHUB_ACTIONS === 'true';
+    // M1 (#1372 review): RIVER_AUTO_SAVE=false opts out of the CI auto-save
+    // (documented in the contract doc; the write target is .river/runs/).
+    const isGithubActions =
+      process.env.GITHUB_ACTIONS === 'true' && process.env.RIVER_AUTO_SAVE !== 'false';
     if ((parsed.save || isGithubActions) && result.status === 'ok') {
       try {
         const { buildRunRecord, saveRunRecord, resolveStoreDir } =
@@ -1955,12 +1956,15 @@ Dependencies: ${
     // never break on digest generation.
     if (isGithubActions && process.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
       try {
-        const { listRunRecords, resolveStoreDir } = await import('./lib/result-store.mjs');
+        // C1 (#1372 review): the digest needs FULL records — the light
+        // listRunRecords metadata has no gate/findings and silently produced
+        // an empty digest here.
+        const { loadAllRunRecords, resolveStoreDir } = await import('./lib/result-store.mjs');
         const { buildRunsDigest, formatDigestMarkdown } = await import('./lib/runs-digest.mjs');
-        const records = await listRunRecords(resolveStoreDir(targetPath));
+        const records = await loadAllRunRecords(resolveStoreDir(targetPath));
         const digest = buildRunsDigest(records, { now: () => new Date() });
         const fs = await import('node:fs/promises');
-        await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, formatDigestMarkdown(digest));
+        await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
       } catch (err) {
         console.error(`Warning: job summary digest failed: ${err.message}`);
       }

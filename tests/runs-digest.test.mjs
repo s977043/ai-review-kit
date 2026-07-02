@@ -85,6 +85,35 @@ describe('buildRunsDigest', () => {
     assert.ok(!d2.warnings.some((w) => w.kind === 'regex-fallback-streak'));
   });
 
+  test('a RESOLVED streak (checkpoint happened) does not warn forever (M2)', () => {
+    const runs = [
+      ...[1, 2, 3].map((i) =>
+        runRecord({ runId: `g${i}`, hours: i, decision: 'GO', maxConsecutiveAutoGo: 2 })
+      ),
+      // human checkpoint happened — the streak is broken
+      runRecord({
+        runId: 'esc',
+        hours: 4,
+        decision: 'ESCALATE',
+        reasonCode: 'RISK_MAP_HUMAN_REVIEW',
+      }),
+      runRecord({ runId: 'after', hours: 5, decision: 'GO', maxConsecutiveAutoGo: 2 }),
+    ];
+    const d = buildRunsDigest(runs, { now: NOW });
+    assert.ok(
+      !d.warnings.some((w) => w.kind === 'circuit-breaker-exceeded'),
+      'past streaks must not cry wolf after a checkpoint'
+    );
+    const fallbackRuns = [
+      ...[1, 2, 3].map((i) =>
+        runRecord({ runId: `f${i}`, hours: i, humanApprovalMode: 'regex-fallback' })
+      ),
+      runRecord({ runId: 'ok', hours: 4, humanApprovalMode: 'llm-adjudicated' }),
+    ];
+    const d2 = buildRunsDigest(fallbackRuns, { now: NOW });
+    assert.ok(!d2.warnings.some((w) => w.kind === 'regex-fallback-streak'));
+  });
+
   test('warns when consecutive auto-GO exceeds the advisory circuit breaker', () => {
     const runs = [1, 2, 3].map((i) =>
       runRecord({ runId: `g${i}`, hours: i, decision: 'GO', maxConsecutiveAutoGo: 2 })

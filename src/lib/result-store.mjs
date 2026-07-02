@@ -73,6 +73,22 @@ export function buildRunRecord(result, { phase, runId, gate, decision } = {}) {
 }
 
 /**
+ * Load ALL full run records (shared by `runs digest` / `runs summary` and the
+ * GitHub Actions job-summary path — the digest needs full records; the light
+ * listRunRecords metadata has no gate/findings and would silently produce an
+ * empty digest, #1372 review C1).
+ * @param {string} storeDir
+ * @returns {Promise<Array<object>>}
+ */
+export async function loadAllRunRecords(storeDir) {
+  const runs = await listRunRecords(storeDir);
+  const full = await Promise.all(
+    runs.map((r) => loadRunRecord(storeDir, r.runId).catch(() => null))
+  );
+  return full.filter(Boolean);
+}
+
+/**
  * Persist a run record to the store directory.
  * @returns {string} path to saved file
  */

@@ -86,7 +86,7 @@ else:
 
 ### Supervision digest and audit records (Epic #1347 S3)
 
-Run records saved with `--save` (automatic on GitHub Actions) carry `gate` and `decision`, and `river runs digest` aggregates them into the supervisor-facing summary. On GitHub Actions the digest is **appended to the job summary automatically** — a forced display point, because a digest nobody runs is the same as no digest.
+Run records saved with `--save` (automatic on GitHub Actions; opt out with `RIVER_AUTO_SAVE=false`, write target `.river/runs/`) carry `gate` and `decision`, and `river runs digest` aggregates them into the supervisor-facing summary. On GitHub Actions the digest is **appended to the job summary automatically** — a forced display point, because a digest nobody runs is the same as no digest.
 
 - **Runs-store trust boundary**: `.river/runs/` sits inside the reviewed agent's write authority, and runtime tampering is invisible to gate rule 0 (which only inspects diffs). Records are a convenience reference with no tamper evidence; append-only storage, signing, or off-repo persistence is the caller / CI's responsibility
 - **Escape candidates are NOT a rate**: the digest lists cases where a GO-family run was followed by a run (overlapping changed files) that produced new blocking findings. Fingerprints drift with LLM phrasing and later diffs introduce their own problems, so **attribution is a human judgment; threshold or automated decisions on this list are forbidden by contract**

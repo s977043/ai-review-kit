@@ -464,3 +464,35 @@ describe('river runs digest', () => {
     assert.match(digest.stdout, /NO_GO: 1/);
   });
 });
+
+describe('river run - GitHub Actions supervision wiring (#1372 C1/M1)', () => {
+  test('auto-save + job summary digest carries gate aggregates (C1)', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+    const summaryFile = join(dir, 'step-summary.md');
+    writeFileSync(summaryFile, '# prior content');
+
+    const result = await runCliInProcess(['run', '.', '--dry-run'], {
+      cwd: dir,
+      env: { GITHUB_ACTIONS: 'true', GITHUB_STEP_SUMMARY: summaryFile },
+    });
+    assert.strictEqual(result.code, 0, result.stderr);
+    // auto-save without --save
+    assert.match(result.stderr, /Run saved:/);
+    const summary = await import('node:fs/promises').then((fs) => fs.readFile(summaryFile, 'utf8'));
+    assert.match(summary, /runs digest/);
+    // C1: the digest must aggregate FULL records — gate decisions must appear.
+    assert.match(summary, /NO_GO: 1/);
+  });
+
+  test('RIVER_AUTO_SAVE=false opts out of the CI auto-save (M1)', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+    const result = await runCliInProcess(['run', '.', '--dry-run'], {
+      cwd: dir,
+      env: { GITHUB_ACTIONS: 'true', RIVER_AUTO_SAVE: 'false' },
+    });
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.ok(!/Run saved:/.test(result.stderr), 'opt-out must skip the save');
+  });
+});

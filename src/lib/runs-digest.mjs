@@ -25,6 +25,9 @@ import { computeFingerprint } from './finding-factory.mjs';
 
 const GO_FAMILY = new Set(['GO', 'GO_WITH_OBSERVATION']);
 const DEFAULT_FALLBACK_STREAK_THRESHOLD = 3;
+// m3 (#1372 review): the store grows unbounded under CI auto-save and the
+// escape scan is O(n²); cap the digest window to the most recent runs.
+const MAX_DIGEST_RECORDS = 100;
 
 /**
  * @param {Array<object>} records - run records, any order (sorted internally by timestamp)
@@ -37,7 +40,8 @@ export function buildRunsDigest(records, { now = () => new Date(), ...opts } = {
   const fallbackStreakThreshold = opts.fallbackStreakThreshold ?? DEFAULT_FALLBACK_STREAK_THRESHOLD;
   const sorted = [...(records ?? [])]
     .filter((r) => r && typeof r === 'object')
-    .sort((a, b) => String(a.timestamp ?? '').localeCompare(String(b.timestamp ?? '')));
+    .sort((a, b) => String(a.timestamp ?? '').localeCompare(String(b.timestamp ?? '')))
+    .slice(-MAX_DIGEST_RECORDS);
 
   const withGate = sorted.filter((r) => r.gate && typeof r.gate === 'object');
 
@@ -58,47 +62,46 @@ export function buildRunsDigest(records, { now = () => new Date(), ...opts } = {
 
   // regex-fallback streak: a persistently failing adjudicator means the LOW
   // tier is silently disabled (S1/#1357 stderr warning is per-run; the digest
-  // is where the STREAK becomes visible).
-  let streak = 0;
-  let maxStreak = 0;
-  for (const r of withGate) {
-    if (r.gate.inputs?.humanApprovalMode === 'regex-fallback') {
-      streak += 1;
-      maxStreak = Math.max(maxStreak, streak);
-    } else {
-      streak = 0;
-    }
+  // is where the STREAK becomes visible). M2 (#1372 review): judged on the
+  // TRAILING (currently ongoing) streak so a long-resolved incident does not
+  // cry wolf forever. Note: run-path records always carry
+  // humanApprovalMode=null (no plan-text scan on `river run`), so this
+  // warning can only fire for review-namespace records.
+  let trailingFallback = 0;
+  for (let i = withGate.length - 1; i >= 0; i--) {
+    if (withGate[i].gate.inputs?.humanApprovalMode === 'regex-fallback') trailingFallback += 1;
+    else break;
   }
-  if (maxStreak >= fallbackStreakThreshold) {
+  if (trailingFallback >= fallbackStreakThreshold) {
     warnings.push({
       kind: 'regex-fallback-streak',
       message:
-        `LLM adjudicator failed on ${maxStreak} consecutive runs — the LOW-confidence ` +
-        'escalation tier is effectively disabled. Check API keys / endpoint health.',
+        `LLM adjudicator failed on the last ${trailingFallback} consecutive runs — the ` +
+        'LOW-confidence escalation tier is currently disabled. Check API keys / endpoint health.',
     });
   }
 
   // circuit-breaker advisory: consecutive auto-GO runs vs the recorded limit.
   // The digest WARNS only — enforcement is host responsibility (S4).
-  let goStreak = 0;
-  let maxGoStreak = 0;
+  // M2 (#1372 review): trailing streak only — a past streak that already hit
+  // an ESCALATE/NO_GO checkpoint must not warn forever.
+  let trailingGo = 0;
   let breakerLimit = null;
-  for (const r of withGate) {
-    if (GO_FAMILY.has(r.gate.decision)) {
-      goStreak += 1;
-      maxGoStreak = Math.max(maxGoStreak, goStreak);
-      breakerLimit = r.gate.configSnapshot?.maxConsecutiveAutoGo ?? breakerLimit;
+  for (let i = withGate.length - 1; i >= 0; i--) {
+    if (GO_FAMILY.has(withGate[i].gate.decision)) {
+      trailingGo += 1;
+      breakerLimit = breakerLimit ?? withGate[i].gate.configSnapshot?.maxConsecutiveAutoGo ?? null;
     } else {
-      goStreak = 0;
+      break;
     }
   }
-  if (breakerLimit != null && maxGoStreak > breakerLimit) {
+  if (breakerLimit != null && trailingGo > breakerLimit) {
     warnings.push({
       kind: 'circuit-breaker-exceeded',
       message:
-        `${maxGoStreak} consecutive auto-GO runs exceed the advisory circuit-breaker ` +
-        `limit (${breakerLimit}). A human checkpoint is overdue — enforcement is the ` +
-        'host loop’s responsibility.',
+        `The last ${trailingGo} consecutive runs were auto-GO, exceeding the advisory ` +
+        `circuit-breaker limit (${breakerLimit}). A human checkpoint is overdue — ` +
+        'enforcement is the host loop’s responsibility.',
     });
   }
 
@@ -193,6 +196,15 @@ export function buildRunsDigest(records, { now = () => new Date(), ...opts } = {
  * @param {ReturnType<typeof buildRunsDigest>} digest
  * @returns {string}
  */
+/** Strip markdown-significant characters from untrusted display strings (m2). */
+function sanitizeInline(value) {
+  return String(value ?? '')
+    .replace(/[\r\n|#>`*_[\]]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
+
 export function formatDigestMarkdown(digest) {
   const lines = ['## River Review — runs digest', ''];
   lines.push(
@@ -226,7 +238,7 @@ export function formatDigestMarkdown(digest) {
     for (const e of digest.escapeCandidates) {
       lines.push(
         `- GO run \`${e.goRunId}\` → later run \`${e.laterRunId}\` added blocking finding(s) ` +
-          `on overlapping files (${e.overlappingFiles.join(', ')}): ${e.newBlockingFindings.join('; ')}`
+          `on overlapping files (${e.overlappingFiles.map(sanitizeInline).join(', ')}): ${e.newBlockingFindings.map(sanitizeInline).join('; ')}`
       );
     }
   }

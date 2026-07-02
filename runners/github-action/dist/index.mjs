@@ -63606,16 +63606,14 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       }
 
       if (parsed.runsSubcommand === 'digest') {
-        const runs = await listRunRecords(storeDir);
-        if (!runs.length) {
+        const { loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+        const fullRuns = await loadAllRunRecords(storeDir);
+        if (!fullRuns.length) {
           console.log('No stored runs found in ' + storeDir);
           return 0;
         }
-        const fullRuns = await Promise.all(
-          runs.map((r) => loadRunRecord(storeDir, r.runId).catch(() => null))
-        );
         const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
-        const digest = buildRunsDigest(fullRuns.filter(Boolean), { now: () => new Date() });
+        const digest = buildRunsDigest(fullRuns, { now: () => new Date() });
         if (parsed.output === 'json') {
           console.log(JSON.stringify(digest, null, 2));
         } else {
@@ -63810,7 +63808,10 @@ Dependencies: ${
     // and the digest is appended to the job summary as the forced display
     // point — supervision that requires someone to remember a command is
     // not supervision.
-    const isGithubActions = external_node_process_namespaceObject.env.GITHUB_ACTIONS === 'true';
+    // M1 (#1372 review): RIVER_AUTO_SAVE=false opts out of the CI auto-save
+    // (documented in the contract doc; the write target is .river/runs/).
+    const isGithubActions =
+      external_node_process_namespaceObject.env.GITHUB_ACTIONS === 'true' && external_node_process_namespaceObject.env.RIVER_AUTO_SAVE !== 'false';
     if ((parsed.save || isGithubActions) && result.status === 'ok') {
       try {
         const { buildRunRecord, saveRunRecord, resolveStoreDir } =
@@ -63834,12 +63835,15 @@ Dependencies: ${
     // never break on digest generation.
     if (isGithubActions && external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
       try {
-        const { listRunRecords, resolveStoreDir } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+        // C1 (#1372 review): the digest needs FULL records — the light
+        // listRunRecords metadata has no gate/findings and silently produced
+        // an empty digest here.
+        const { loadAllRunRecords, resolveStoreDir } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
         const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
-        const records = await listRunRecords(resolveStoreDir(targetPath));
+        const records = await loadAllRunRecords(resolveStoreDir(targetPath));
         const digest = buildRunsDigest(records, { now: () => new Date() });
         const fs = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
-        await fs.appendFile(external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY, formatDigestMarkdown(digest));
+        await fs.appendFile(external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
       } catch (err) {
         console.error(`Warning: job summary digest failed: ${err.message}`);
       }
