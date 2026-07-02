@@ -146,3 +146,56 @@ describe('callChatCompletion', () => {
     assert.equal(calls, 1);
   });
 });
+
+describe('callChatCompletion — network-error retry path (#1357)', () => {
+  test('recovers when a transient network error is followed by success', async () => {
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('fetch failed');
+      return okResponse('recovered');
+    };
+    const result = await callChatCompletion({ ...baseParams, fetchImpl, baseMs: 1 });
+    assert.equal(result, 'recovered');
+    assert.equal(calls, 2, 'network error must be retried');
+  });
+
+  test('classifies TimeoutError as retryable', async () => {
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      if (calls === 1) {
+        const err = new Error('operation timed out');
+        err.name = 'TimeoutError';
+        throw err;
+      }
+      return okResponse('after-timeout');
+    };
+    assert.equal(
+      await callChatCompletion({ ...baseParams, fetchImpl, baseMs: 1 }),
+      'after-timeout'
+    );
+    assert.equal(calls, 2);
+  });
+
+  test('treats a mid-body json() failure as retryable (terminated stream)', async () => {
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      if (calls === 1) {
+        return {
+          ok: true,
+          json: async () => {
+            throw new Error('terminated');
+          },
+        };
+      }
+      return okResponse('after-body-fail');
+    };
+    assert.equal(
+      await callChatCompletion({ ...baseParams, fetchImpl, baseMs: 1 }),
+      'after-body-fail'
+    );
+    assert.equal(calls, 2);
+  });
+});

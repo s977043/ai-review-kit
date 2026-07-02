@@ -238,11 +238,18 @@ describe('adjudicateHumanApproval', () => {
   it('asymmetric escalation: adjudicator returning false can NOT overturn a HIGH match', async () => {
     const { candidates } = detectHumanApprovalCandidates('rm -rf /data');
     // Epic #1347 design principle: the LLM only contributes in the escalation
-    // direction. Even if it deems the plan safe, the HIGH regex verdict wins.
-    const adjudicator = async () => false;
+    // direction. Since #1357 the adjudicator is not even INVOKED for a HIGH
+    // verdict (no decision is open), which is strictly stronger: a compromised
+    // LLM gets no opportunity at all.
+    let invoked = false;
+    const adjudicator = async () => {
+      invoked = true;
+      return false;
+    };
     const result = await adjudicateHumanApproval({ candidates, adjudicator });
     assert.equal(result.required, true, 'HIGH-confidence regex verdict must not be loosened');
-    assert.equal(result.mode, 'llm-adjudicated');
+    assert.equal(result.mode, 'llm-skipped');
+    assert.equal(invoked, false, 'adjudicator must not be called when regex already requires');
   });
 
   it('asymmetric escalation: adjudicator returning false on LOW-only → required=false', async () => {
@@ -257,16 +264,30 @@ describe('adjudicateHumanApproval', () => {
     const boom = async () => {
       throw new Error('LLM unavailable');
     };
-    // LOW-only text: regex verdict is false
+    // LOW-only text: escalation decision is open → adjudicator runs, throws,
+    // and the verdict degrades to regex-only (false).
     const low = detectHumanApprovalCandidates('deploy to staging').candidates;
     const lowResult = await adjudicateHumanApproval({ candidates: low, adjudicator: boom });
     assert.equal(lowResult.required, false);
     assert.equal(lowResult.mode, 'regex-fallback');
-    // HIGH text: regex verdict is true and survives the failure
+    // HIGH text (#1357): no escalation decision is open, so the adjudicator is
+    // skipped entirely — it cannot even throw.
     const high = detectHumanApprovalCandidates('rm -rf /data').candidates;
     const highResult = await adjudicateHumanApproval({ candidates: high, adjudicator: boom });
     assert.equal(highResult.required, true);
-    assert.equal(highResult.mode, 'regex-fallback');
+    assert.equal(highResult.mode, 'llm-skipped');
+  });
+
+  it('adjudicator is skipped when there are zero candidates (#1357)', async () => {
+    let invoked = false;
+    const adjudicator = async () => {
+      invoked = true;
+      return true; // even a YES here must not create an evidence-free verdict
+    };
+    const result = await adjudicateHumanApproval({ candidates: [], adjudicator });
+    assert.equal(result.required, false, 'zero candidates can never become required');
+    assert.equal(result.mode, 'llm-skipped');
+    assert.equal(invoked, false, 'adjudicator must not run without candidates');
   });
 
   it('evidence array includes all candidates (audit trail)', async () => {

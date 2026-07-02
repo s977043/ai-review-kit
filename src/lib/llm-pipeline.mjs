@@ -77,6 +77,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @param {number} [params.maxTokens]
  * @param {number} [params.timeoutMs]     Per-attempt timeout (default 15000).
  * @param {number} [params.maxAttempts]   Total attempts incl. first (default 3).
+ * @param {typeof fetch} [params.fetchImpl] Injectable transport for tests (#1357).
+ * @param {number} [params.baseMs]        Retry backoff base ms (injectable for tests).
  * @returns {Promise<string>}
  */
 export async function callChatCompletion({
@@ -89,6 +91,8 @@ export async function callChatCompletion({
   maxTokens,
   timeoutMs = LLM_TIMEOUT_MS,
   maxAttempts = LLM_MAX_ATTEMPTS,
+  fetchImpl = globalThis.fetch,
+  baseMs = LLM_RETRY_BASE_MS,
 }) {
   const body = JSON.stringify({
     model,
@@ -103,7 +107,7 @@ export async function callChatCompletion({
   let lastError;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetchImpl(endpoint, {
         method: 'POST',
         signal: AbortSignal.timeout(timeoutMs), // fresh per attempt (one-shot)
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -120,7 +124,7 @@ export async function callChatCompletion({
       const detail = await res.text();
       if (attempt < maxAttempts && isRetryableStatus(res.status)) {
         await sleep(
-          computeBackoffMs(attempt, { retryAfterSec: res.headers?.get?.('retry-after') })
+          computeBackoffMs(attempt, { baseMs, retryAfterSec: res.headers?.get?.('retry-after') })
         );
         continue;
       }
@@ -131,7 +135,7 @@ export async function callChatCompletion({
       // isRetryableNetworkError returns false and it propagates immediately.
       lastError = err;
       if (attempt < maxAttempts && isRetryableNetworkError(err)) {
-        await sleep(computeBackoffMs(attempt));
+        await sleep(computeBackoffMs(attempt, { baseMs }));
         continue;
       }
       throw err;
