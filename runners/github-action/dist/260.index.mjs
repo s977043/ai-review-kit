@@ -10,6 +10,7 @@ export const modules = {
 /* harmony export */   computeDashboard: () => (/* binding */ computeDashboard),
 /* harmony export */   formatDashboard: () => (/* binding */ formatDashboard),
 /* harmony export */   listRunRecords: () => (/* binding */ listRunRecords),
+/* harmony export */   loadAllRunRecords: () => (/* binding */ loadAllRunRecords),
 /* harmony export */   loadRunRecord: () => (/* binding */ loadRunRecord),
 /* harmony export */   resolveStoreDir: () => (/* binding */ resolveStoreDir),
 /* harmony export */   saveRunRecord: () => (/* binding */ saveRunRecord)
@@ -51,7 +52,17 @@ function generateRunId() {
  * @param {{ phase?: string, runId?: string }} [opts]
  * @returns {object} run record ready for persistence
  */
-function buildRunRecord(result, { phase, runId } = {}) {
+/**
+ * Trust-boundary note (Epic #1347 S3, adversarial design review): the run
+ * store lives at `.river/runs/` INSIDE the reviewed repository, writable by
+ * the agent under review, and runtime tampering is invisible to the gate's
+ * rule 0 (which only sees diffs). Records here are a convenience audit
+ * reference, NOT tamper-evident evidence — append-only storage, signing, or
+ * off-repo persistence is host/CI responsibility (S4). The optional
+ * `override` field is host-attested and always rendered as UNVERIFIED by
+ * `river runs digest`.
+ */
+function buildRunRecord(result, { phase, runId, gate, decision } = {}) {
   const id = runId ?? generateRunId();
   const findings = result.findings ?? [];
   const suppressed = result.classified?.suppressed ?? [];
@@ -66,6 +77,10 @@ function buildRunRecord(result, { phase, runId } = {}) {
     mergeBase: result.mergeBase ?? null,
     defaultBranch: result.defaultBranch ?? null,
     changedFiles: result.changedFiles ?? [],
+    // Epic #1347 S3: persist the same gate/decision the consumer saw so the
+    // digest can aggregate them (see trust-boundary note above).
+    ...(decision !== undefined ? { decision } : {}),
+    ...(gate ? { gate } : {}),
     findings,
     suppressedFindings: suppressed,
     finalSummary: {
@@ -76,6 +91,20 @@ function buildRunRecord(result, { phase, runId } = {}) {
       tokenEstimate: result.tokenEstimate ?? null,
     },
   };
+}
+
+/**
+ * Load ALL full run records (shared by `runs digest` / `runs summary` and the
+ * GitHub Actions job-summary path — the digest needs full records; the light
+ * listRunRecords metadata has no gate/findings and would silently produce an
+ * empty digest, #1372 review C1).
+ * @param {string} storeDir
+ * @returns {Promise<Array<object>>}
+ */
+async function loadAllRunRecords(storeDir) {
+  const runs = await listRunRecords(storeDir);
+  const full = await Promise.all(runs.map((r) => loadRunRecord(storeDir, r.runId).catch(() => null)));
+  return full.filter(Boolean);
 }
 
 /**

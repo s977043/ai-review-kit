@@ -220,3 +220,29 @@ describe('result-store', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Epic #1347 S3 (#1350) — gate/decision persistence
+// ---------------------------------------------------------------------------
+describe('buildRunRecord — gate audit trail (S3)', () => {
+  it('persists gate and decision when supplied (additive)', () => {
+    const gate = {
+      decision: 'GO',
+      reasonCode: 'CONVERGED_CLEAN',
+      tier: 'field',
+      inputs: {},
+      inputsHash: 'abcdefabcdefabcd',
+      configSnapshot: { expiresInHours: 72, maxConsecutiveAutoGo: 5 },
+      schemaVersion: '1',
+    };
+    const rec = buildRunRecord(makeResult(), { gate, decision: 'auto-approve' });
+    assert.deepEqual(rec.gate, gate);
+    assert.equal(rec.decision, 'auto-approve');
+  });
+
+  it('omits gate/decision when absent (backward compatible)', () => {
+    const rec = buildRunRecord(makeResult());
+    assert.equal('gate' in rec, false);
+    assert.equal('decision' in rec, false);
+  });
+});

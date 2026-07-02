@@ -444,3 +444,55 @@ describe('river run - gate block', () => {
     assert.strictEqual(artifact.gate.inputs.reviewExecuted, false);
   });
 });
+
+// -----------------------------------------------------------------------------
+// river runs digest (Epic #1347 S3)
+// -----------------------------------------------------------------------------
+describe('river runs digest', () => {
+  test('saved run appears in the digest with its gate decision', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+
+    const save = await runCliInProcess(['run', '.', '--dry-run', '--save'], { cwd: dir });
+    assert.strictEqual(save.code, 0, save.stderr);
+    assert.match(save.stderr, /Run saved:/);
+
+    const digest = await runCliInProcess(['runs', 'digest'], { cwd: dir });
+    assert.strictEqual(digest.code, 0, digest.stderr);
+    assert.match(digest.stdout, /runs digest/);
+    // dry-run gates as NO_GO NOT_EXECUTED and must be visible in the digest.
+    assert.match(digest.stdout, /NO_GO: 1/);
+  });
+});
+
+describe('river run - GitHub Actions supervision wiring (#1372 C1/M1)', () => {
+  test('auto-save + job summary digest carries gate aggregates (C1)', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+    const summaryFile = join(dir, 'step-summary.md');
+    writeFileSync(summaryFile, '# prior content');
+
+    const result = await runCliInProcess(['run', '.', '--dry-run'], {
+      cwd: dir,
+      env: { GITHUB_ACTIONS: 'true', GITHUB_STEP_SUMMARY: summaryFile },
+    });
+    assert.strictEqual(result.code, 0, result.stderr);
+    // auto-save without --save
+    assert.match(result.stderr, /Run saved:/);
+    const summary = await import('node:fs/promises').then((fs) => fs.readFile(summaryFile, 'utf8'));
+    assert.match(summary, /runs digest/);
+    // C1: the digest must aggregate FULL records — gate decisions must appear.
+    assert.match(summary, /NO_GO: 1/);
+  });
+
+  test('RIVER_AUTO_SAVE=false opts out of the CI auto-save (M1)', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+    const result = await runCliInProcess(['run', '.', '--dry-run'], {
+      cwd: dir,
+      env: { GITHUB_ACTIONS: 'true', RIVER_AUTO_SAVE: 'false' },
+    });
+    assert.strictEqual(result.code, 0, result.stderr);
+    assert.ok(!/Run saved:/.test(result.stderr), 'opt-out must skip the save');
+  });
+});

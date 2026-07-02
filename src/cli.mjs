@@ -22,10 +22,10 @@ import { isLlmEnabled, parseList } from './lib/utils.mjs';
 import { PLANNER_MODES } from './lib/planner-utils.mjs';
 import { DEPTH_TO_REVIEW_MODE, resolveDepthToReviewMode } from './lib/review-plan-generator.mjs';
 import { resolveVerdict, scoreReview } from './lib/scoring/engine.mjs';
-import { deriveGateDecision } from './lib/gate-decision.mjs';
+import { deriveRunGate } from './lib/run-gate.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
 import { severityToPriority } from './lib/finding-factory.mjs';
-import { deriveLoopSignalFromArtifact, deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
+import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
@@ -95,6 +95,7 @@ Commands:
   river runs list           List stored review runs
   river runs diff <id1> <id2> [<id3>...] Diff stored review runs (3+ runs detect oscillation)
   river runs summary        Show aggregate dashboard metrics
+  river runs digest         Supervision digest (gate decisions, warnings, escape candidates)
   --cases <path>    (eval) Path to fixtures cases.json (default: tests/fixtures/review-eval/cases.json)
   --verbose         (eval) Print detailed per-case results
   -h, --help        Show this help message
@@ -189,7 +190,7 @@ function parseArgs(argv) {
       if (arg === 'skills' && args[0] && SKILLS_SUBCOMMANDS.has(args[0])) {
         parsed.skillsSubcommand = args.shift();
       } else if (arg === 'runs' && args[0] && !args[0].startsWith('-')) {
-        parsed.runsSubcommand = args.shift(); // list | diff | summary
+        parsed.runsSubcommand = args.shift(); // list | diff | summary | digest
         // diff takes two or more positional run IDs
         if (parsed.runsSubcommand === 'diff') {
           parsed.runsId1 = args.shift() ?? null;
@@ -1129,44 +1130,10 @@ function formatJsonOutput(result, phase) {
       humanReviewFiles: riskAssessment.humanReviewFiles,
     };
   }
-  let decision;
-  try {
-    // Prefer the canonical verdict if the result already carries one (#1170 F3);
-    // otherwise derive it from the findings present.
-    decision = resolveVerdict(result.decision, scoreReview(result.findings ?? []).verdict);
-  } catch {
-    // scoring failure: fall back to the canonical decision if present, else omit
-    // (same fail-safe as finalizeArtifact).
-    if (typeof result.decision === 'string' && result.decision.length > 0) {
-      decision = result.decision;
-    }
-  }
-  // gate: same contract as review-artifact `gate` (Epic #1347 S2). The
-  // `river run` path has no plan-text human-approval scan, so that cliff
-  // input is always false here; risk-map / loop-signal / bootstrap-cliff
-  // inputs are fully wired. Additive + fail-safe (never breaks the output).
-  let gate;
-  try {
-    const findings = result.findings ?? [];
-    const loopSignal = deriveLoopSignalFromArtifact({ decision, findings });
-    gate = deriveGateDecision({
-      loopSignal,
-      decision,
-      humanApprovalRequired: false,
-      riskAction: riskAssessment?.aggregateAction,
-      blockingFindings: findings.filter(
-        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
-      ).length,
-      changedFiles: result.changedFiles ?? [],
-      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
-      artifactStatus: result.status ?? null,
-      riskMapPresent: riskAssessment != null,
-      riskMapDigest: null,
-      config: result.config ?? {},
-    });
-  } catch {
-    // leave gate unset on derivation failure
-  }
+  // Gate + decision derivation shared with the run-record audit trail
+  // (#1350 S3): extracted to src/lib/run-gate.mjs so the persisted record
+  // and the JSON output always carry the same gate.
+  const { decision, gate } = deriveRunGate(result);
 
   const artifact = {
     issues,
@@ -1759,8 +1726,25 @@ async function main(argv = process.argv.slice(2)) {
         return 0;
       }
 
+      if (parsed.runsSubcommand === 'digest') {
+        const { loadAllRunRecords } = await import('./lib/result-store.mjs');
+        const fullRuns = await loadAllRunRecords(storeDir);
+        if (!fullRuns.length) {
+          console.log('No stored runs found in ' + storeDir);
+          return 0;
+        }
+        const { buildRunsDigest, formatDigestMarkdown } = await import('./lib/runs-digest.mjs');
+        const digest = buildRunsDigest(fullRuns, { now: () => new Date() });
+        if (parsed.output === 'json') {
+          console.log(JSON.stringify(digest, null, 2));
+        } else {
+          console.log(formatDigestMarkdown(digest));
+        }
+        return 0;
+      }
+
       console.error(
-        `Unknown runs subcommand: ${parsed.runsSubcommand}. Use: list | diff | summary`
+        `Unknown runs subcommand: ${parsed.runsSubcommand}. Use: list | diff | summary | digest`
       );
       return 1;
     }
@@ -1939,17 +1923,50 @@ Dependencies: ${
       printExplain(result);
     }
 
-    // Persist run to result store when --save is provided
-    if (parsed.save && result.status === 'ok') {
+    // Persist run to result store when --save is provided. Under GitHub
+    // Actions the save is AUTOMATIC (Epic #1347 S3, adversarial design
+    // review Blocker 1: an opt-in store never accumulates the audit trail),
+    // and the digest is appended to the job summary as the forced display
+    // point — supervision that requires someone to remember a command is
+    // not supervision.
+    // M1 (#1372 review): RIVER_AUTO_SAVE=false opts out of the CI auto-save
+    // (documented in the contract doc; the write target is .river/runs/).
+    const isGithubActions =
+      process.env.GITHUB_ACTIONS === 'true' && process.env.RIVER_AUTO_SAVE !== 'false';
+    if ((parsed.save || isGithubActions) && result.status === 'ok') {
       try {
         const { buildRunRecord, saveRunRecord, resolveStoreDir } =
           await import('./lib/result-store.mjs');
-        const record = buildRunRecord(result, { phase: parsed.phase });
+        const { decision: runDecision, gate: runGate } = deriveRunGate(result);
+        const record = buildRunRecord(result, {
+          phase: parsed.phase,
+          gate: runGate,
+          decision: runDecision,
+        });
         // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
         const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });
         console.error(`Run saved: ${record.runId} → ${savedPath}`);
       } catch (err) {
         console.error(`Warning: --save failed: ${err.message}`);
+      }
+    }
+
+    // Forced display point (Epic #1347 S3): under GitHub Actions, append the
+    // runs digest to the job summary. Fail-soft — the review result must
+    // never break on digest generation.
+    if (isGithubActions && process.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
+      try {
+        // C1 (#1372 review): the digest needs FULL records — the light
+        // listRunRecords metadata has no gate/findings and silently produced
+        // an empty digest here.
+        const { loadAllRunRecords, resolveStoreDir } = await import('./lib/result-store.mjs');
+        const { buildRunsDigest, formatDigestMarkdown } = await import('./lib/runs-digest.mjs');
+        const records = await loadAllRunRecords(resolveStoreDir(targetPath));
+        const digest = buildRunsDigest(records, { now: () => new Date() });
+        const fs = await import('node:fs/promises');
+        await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
+      } catch (err) {
+        console.error(`Warning: job summary digest failed: ${err.message}`);
       }
     }
 
