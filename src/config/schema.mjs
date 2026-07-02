@@ -93,6 +93,30 @@ export const memoryConfigSchema = z
   })
   .strict();
 
+// --- Epic #1347 S2 (#1349): gate contract config ---
+//
+// Companion to src/lib/gate-decision.mjs. Values are DERIVATION inputs and
+// advisory contract values only — enforcement (observation expiry, the
+// circuit-breaker counter) is the host's responsibility. Note the trust
+// boundary: this file lives inside the reviewed repo, so when a host has its
+// own limits the stricter value wins.
+export const gateConfigSchema = z
+  .object({
+    observation: z
+      .object({
+        expiresInHours: z.number().positive().max(720).optional(),
+      })
+      .strict()
+      .optional(),
+    circuitBreaker: z
+      .object({
+        maxConsecutiveAutoGo: z.number().int().positive().max(1000).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 // --- #689 PR-A: context.budget config surface ---
 //
 // Companion to src/lib/token-estimator.mjs. PR-A teaches the loader to
@@ -217,6 +241,7 @@ export const riverReviewerConfigSchema = z.object({
   context: contextConfigSchema.optional(),
   artifacts: artifactsConfigSchema.optional(),
   selection: selectionConfigSchema.optional(),
+  gate: gateConfigSchema.optional(),
 });
 
 // --- New Skill-based Schema (for river skills) ---
@@ -285,6 +310,7 @@ export const ConfigSchema = z
     context: contextConfigSchema.optional(),
     artifacts: artifactsConfigSchema.optional(),
     selection: selectionConfigSchema.optional(),
+    gate: gateConfigSchema.optional(),
     skills: z.array(SkillSchema).default([]),
   })
   // Allow forward-compatible / custom keys; unknown detection is handled in loader for warnings

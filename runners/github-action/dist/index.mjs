@@ -40079,6 +40079,27 @@ const memoryConfigSchema = schemas/* object */.Ik({
   })
   .strict();
 
+// --- Epic #1347 S2 (#1349): gate contract config ---
+//
+// Companion to src/lib/gate-decision.mjs. Values are DERIVATION inputs and
+// advisory contract values only — enforcement (observation expiry, the
+// circuit-breaker counter) is the host's responsibility. Note the trust
+// boundary: this file lives inside the reviewed repo, so when a host has its
+// own limits the stricter value wins.
+const gateConfigSchema = schemas/* object */.Ik({
+    observation: schemas/* object */.Ik({
+        expiresInHours: schemas/* number */.ai().positive().max(720).optional(),
+      })
+      .strict()
+      .optional(),
+    circuitBreaker: schemas/* object */.Ik({
+        maxConsecutiveAutoGo: schemas/* number */.ai().int().positive().max(1000).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 // --- #689 PR-A: context.budget config surface ---
 //
 // Companion to src/lib/token-estimator.mjs. PR-A teaches the loader to
@@ -40194,6 +40215,7 @@ const riverReviewerConfigSchema = schemas/* object */.Ik({
   context: contextConfigSchema.optional(),
   artifacts: artifactsConfigSchema.optional(),
   selection: selectionConfigSchema.optional(),
+  gate: gateConfigSchema.optional(),
 });
 
 // --- New Skill-based Schema (for river skills) ---
@@ -40261,6 +40283,7 @@ const ConfigSchema = schemas/* object */.Ik({
     context: contextConfigSchema.optional(),
     artifacts: artifactsConfigSchema.optional(),
     selection: selectionConfigSchema.optional(),
+    gate: gateConfigSchema.optional(),
     skills: schemas/* array */.YO(SkillSchema).default([]),
   })
   // Allow forward-compatible / custom keys; unknown detection is handled in loader for warnings
@@ -45135,7 +45158,7 @@ function parseList(value) {
  * @returns {boolean}
  */
 function isOfflineMode(env = process.env) {
-  const offline = String(env.RIVER_OFFLINE ?? '')
+  const offline = String(env?.RIVER_OFFLINE ?? '')
     .trim()
     .toLowerCase();
   return offline === '1' || offline === 'true' || offline === 'yes' || offline === 'on';
@@ -45155,11 +45178,11 @@ function isLlmEnabled(env = process.env) {
     return false;
   }
   return !!(
-    env.RIVER_OPENAI_API_KEY ||
-    env.OPENAI_API_KEY ||
-    env.GOOGLE_API_KEY ||
-    env.ANTHROPIC_API_KEY ||
-    env.RIVER_ANTHROPIC_API_KEY
+    env?.RIVER_OPENAI_API_KEY ||
+    env?.OPENAI_API_KEY ||
+    env?.GOOGLE_API_KEY ||
+    env?.ANTHROPIC_API_KEY ||
+    env?.RIVER_ANTHROPIC_API_KEY
   );
 }
 
@@ -62666,7 +62689,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     if (parsed.reviewSubcommand === 'verify') {
       try {
         const { ReviewPlanError, resolveReviewOutputFormat } =
-          await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
+          await __nccwpck_require__.e(/* import() */ 320).then(__nccwpck_require__.bind(__nccwpck_require__, 5320));
         try {
           resolveReviewOutputFormat(parsed);
         } catch (err) {
@@ -62747,7 +62770,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     }
     try {
       const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =
-        await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
+        await __nccwpck_require__.e(/* import() */ 320).then(__nccwpck_require__.bind(__nccwpck_require__, 5320));
       let reviewFormat;
       try {
         reviewFormat = resolveReviewOutputFormat(parsed);
@@ -62848,7 +62871,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       // is given do we translate findings into a CI exit code; otherwise exit 0
       // (non-breaking for existing callers / the plangate-review workflow).
       if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-        const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
+        const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 320).then(__nccwpck_require__.bind(__nccwpck_require__, 5320));
         const gate = evaluateReviewGate(artifact, {
           failOn: parsed.failOn ?? 'critical',
           warnOn: parsed.warnOn ?? 'major',
@@ -63444,7 +63467,7 @@ Dependencies: ${
     // the run path (only `river review` gated), so agents that relied on the
     // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
     if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-      const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 94).then(__nccwpck_require__.bind(__nccwpck_require__, 3094));
+      const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 320).then(__nccwpck_require__.bind(__nccwpck_require__, 5320));
       const issues = formatJsonOutput(result, parsed.phase).issues;
       const gate = evaluateReviewGate(
         { findings: issues },

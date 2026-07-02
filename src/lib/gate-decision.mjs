@@ -1,0 +1,255 @@
+/**
+ * Gate-decision derivation (Epic #1347 S2 / #1349).
+ *
+ * Derives the machine-readable gate signal a loop-running host consumes:
+ * GO | GO_WITH_OBSERVATION | NO_GO | ESCALATE. River Review DERIVES the
+ * decision; EXECUTION (continuing, stopping, notifying, expiring an
+ * observation window) is the host's responsibility. This module is a pure
+ * function — no I/O, no AI calls, no side effects — so hosts can verify any
+ * emitted gate block by replaying `gate.inputs` through deriveGateDecision
+ * and comparing the result (the authoritative integrity check; see below).
+ *
+ * ## Trust boundary (adversarial design review, 2026-07-02)
+ *
+ * Of the inputs, risk-map / config / plan text live INSIDE the reviewed
+ * repository and are writable by the implementation agent under review. The
+ * gate decision is therefore trustworthy only when derived OUTSIDE the
+ * agent's write authority (host / CI checkout). Two in-contract mitigations:
+ *
+ *  - Bootstrap cliff (rule 0): any change under `.river/**` in the diff —
+ *    including DELETING the risk map, which would otherwise silently degrade
+ *    every file to comment_only — escalates unconditionally. The gate config
+ *    cannot be used to unguard itself.
+ *  - `inputs.riskMapPresent` / `inputs.riskMapDigest` expose which risk map
+ *    (if any) was loaded so hosts can compare against a trusted baseline.
+ *
+ * Renaming files off the risk-map globs remains out of scope for S2 (tracked
+ * for S3 escape-rate metrics / S4 deterministic gates).
+ *
+ * ## Decision rules (first match wins)
+ *
+ *  0. gate config changed in diff            → ESCALATE  GATE_CONFIG_CHANGED
+ *  1. humanApprovalRequired                  → ESCALATE  HUMAN_APPROVAL_REQUIRED
+ *  2. loopSignal ESCALATE_HUMAN              → ESCALATE  DECISION_ESCALATED
+ *  3. loopSignal STOP_OSCILLATED             → ESCALATE  OSCILLATION_DETECTED
+ *  4. riskAction require_human_review        → ESCALATE  RISK_MAP_HUMAN_REVIEW
+ *  5. riskAction unknown (not absent)        → NO_GO     UNKNOWN_RISK_ACTION
+ *  6. loopSignal REVISE_REQUIRED             → NO_GO     BLOCKING_FINDINGS
+ *  7. NO_SIGNAL + human-review-recommended
+ *     + zero blocking findings               → GO_WITH_OBSERVATION MINOR_FINDINGS_OBSERVE
+ *  8. NO_SIGNAL (decision absent/unknown)    → NO_GO     UNDETERMINED
+ *  9. CONVERGED + riskAction escalate        → GO_WITH_OBSERVATION RISK_MAP_OBSERVE
+ * 10. CONVERGED                              → GO        CONVERGED_CLEAN
+ * 11. anything else (unknown loopSignal)     → NO_GO     UNKNOWN_SIGNAL
+ *
+ * Fail-safe direction: everything unknown or undetermined maps to NO_GO
+ * (never GO), and rule 7 exists because `human-review-recommended` is the
+ * COMMON verdict in practice (a single security-classified minor finding
+ * already drops the security score below the auto-approve bar) — without it
+ * most real runs would land on NO_GO and loops would never converge.
+ */
+
+import { createHash } from 'node:crypto';
+
+/** @typedef {'GO' | 'GO_WITH_OBSERVATION' | 'NO_GO' | 'ESCALATE'} GateDecisionValue */
+/** @typedef {'cliff' | 'hill' | 'field'} GateTier */
+
+/** Files whose change forces rule 0 — the gate config must not unguard itself. */
+const GATE_CONFIG_PREFIX = '.river/';
+
+export const GATE_DECISIONS = /** @type {const} */ ([
+  'GO',
+  'GO_WITH_OBSERVATION',
+  'NO_GO',
+  'ESCALATE',
+]);
+
+export const GATE_REASON_CODES = /** @type {const} */ ([
+  'GATE_CONFIG_CHANGED',
+  'HUMAN_APPROVAL_REQUIRED',
+  'DECISION_ESCALATED',
+  'OSCILLATION_DETECTED',
+  'RISK_MAP_HUMAN_REVIEW',
+  'UNKNOWN_RISK_ACTION',
+  'BLOCKING_FINDINGS',
+  'MINOR_FINDINGS_OBSERVE',
+  'UNDETERMINED',
+  'RISK_MAP_OBSERVE',
+  'CONVERGED_CLEAN',
+  'UNKNOWN_SIGNAL',
+]);
+
+const KNOWN_RISK_ACTIONS = new Set(['comment_only', 'escalate', 'require_human_review']);
+
+const DECISION_TO_TIER = {
+  ESCALATE: 'cliff',
+  GO_WITH_OBSERVATION: 'hill',
+  GO: 'field',
+  NO_GO: 'field', // NO_GO is "revise", not a supervision tier; field keeps the enum total
+};
+
+const DEFAULT_OBSERVATION_EXPIRES_IN_HOURS = 72;
+const DEFAULT_MAX_CONSECUTIVE_AUTO_GO = 5;
+
+/**
+ * True when the diff touches the gate's own configuration (rule 0).
+ * @param {string[]} changedFiles
+ * @returns {boolean}
+ */
+export function gateConfigChanged(changedFiles) {
+  return (Array.isArray(changedFiles) ? changedFiles : []).some(
+    (f) => typeof f === 'string' && f.replace(/\\/g, '/').startsWith(GATE_CONFIG_PREFIX)
+  );
+}
+
+/**
+ * Canonical hash of the gate inputs (sha256, first 16 hex chars).
+ *
+ * Canonicalization: the FIXED field list below, keys in lexicographic order,
+ * undefined normalized to null, JSON.stringify of that object. This is a
+ * lightweight summary for S3 "same inputs, different decision" regression
+ * comparison — it is NOT a tamper-proof / security control (anyone can
+ * recompute it). The authoritative integrity check is replaying
+ * `gate.inputs` through deriveGateDecision.
+ *
+ * @param {object} inputs
+ * @returns {string}
+ */
+export function computeGateInputsHash(inputs) {
+  const FIELDS = [
+    'blockingFindings',
+    'decision',
+    'gateConfigChanged',
+    'humanApprovalMode',
+    'humanApprovalRequired',
+    'loopSignal',
+    'riskAction',
+    'riskMapDigest',
+    'riskMapPresent',
+  ];
+  const canonical = {};
+  for (const key of FIELDS) {
+    canonical[key] = inputs?.[key] === undefined ? null : inputs[key];
+  }
+  return createHash('sha256').update(JSON.stringify(canonical)).digest('hex').slice(0, 16);
+}
+
+/**
+ * Derive the gate decision for a finalized review artifact.
+ *
+ * Pure and deterministic: LLM output can only have contributed in the
+ * escalation direction upstream (via humanApprovalRequired /
+ * blocking findings); nothing here lets it push a decision toward GO.
+ *
+ * @param {object} opts
+ * @param {string} [opts.loopSignal] - artifact.suggestedLoopSignal (Layer 1/2 value)
+ * @param {string} [opts.decision] - artifact.decision (verdict)
+ * @param {boolean} [opts.humanApprovalRequired]
+ * @param {string} [opts.humanApprovalMode] - audit: regex-only | llm-adjudicated | llm-skipped | regex-fallback
+ * @param {string} [opts.riskAction] - risk-map aggregateAction; absent → comment_only
+ * @param {number} [opts.blockingFindings] - count of critical/major findings
+ * @param {string[]} [opts.changedFiles]
+ * @param {boolean} [opts.gateConfigChanged] - explicit override so a host can
+ *   replay a recorded `gate.inputs` object verbatim (rule 0 is derived from
+ *   changedFiles when this is omitted)
+ * @param {boolean} [opts.riskMapPresent]
+ * @param {string|null} [opts.riskMapDigest]
+ * @param {object} [opts.config] - effective config; gate.observation / gate.circuitBreaker read here
+ * @returns {{ decision: GateDecisionValue, reasonCode: string, tier: GateTier,
+ *   inputs: object, inputsHash: string, configSnapshot: object, observation?: object,
+ *   schemaVersion: '1' }}
+ */
+export function deriveGateDecision({
+  loopSignal,
+  decision,
+  humanApprovalRequired = false,
+  humanApprovalMode,
+  riskAction,
+  blockingFindings = 0,
+  changedFiles = [],
+  gateConfigChanged: gateConfigChangedOverride,
+  riskMapPresent = false,
+  riskMapDigest = null,
+  config = {},
+} = {}) {
+  const configChanged =
+    typeof gateConfigChangedOverride === 'boolean'
+      ? gateConfigChangedOverride
+      : gateConfigChanged(changedFiles);
+  const effectiveRiskAction = riskAction ?? 'comment_only';
+
+  const inputs = {
+    loopSignal: loopSignal ?? null,
+    decision: decision ?? null,
+    humanApprovalRequired: humanApprovalRequired === true,
+    humanApprovalMode: humanApprovalMode ?? null,
+    riskAction: effectiveRiskAction,
+    blockingFindings: Number.isFinite(blockingFindings) ? blockingFindings : 0,
+    gateConfigChanged: configChanged,
+    riskMapPresent: riskMapPresent === true,
+    riskMapDigest: riskMapDigest ?? null,
+  };
+
+  const expiresInHours =
+    config?.gate?.observation?.expiresInHours ?? DEFAULT_OBSERVATION_EXPIRES_IN_HOURS;
+  const maxConsecutiveAutoGo =
+    config?.gate?.circuitBreaker?.maxConsecutiveAutoGo ?? DEFAULT_MAX_CONSECUTIVE_AUTO_GO;
+  const configSnapshot = { expiresInHours, maxConsecutiveAutoGo };
+
+  const decide = () => {
+    // 0. Bootstrap cliff: the gate config must not unguard itself.
+    if (configChanged) return ['ESCALATE', 'GATE_CONFIG_CHANGED'];
+    // 1. Plan-review cliff (regex floor + escalation-only LLM upstream).
+    if (inputs.humanApprovalRequired) return ['ESCALATE', 'HUMAN_APPROVAL_REQUIRED'];
+    // 2-3. Loop-signal escalations.
+    if (loopSignal === 'ESCALATE_HUMAN') return ['ESCALATE', 'DECISION_ESCALATED'];
+    if (loopSignal === 'STOP_OSCILLATED') return ['ESCALATE', 'OSCILLATION_DETECTED'];
+    // 4. Risk-map cliff.
+    if (effectiveRiskAction === 'require_human_review')
+      return ['ESCALATE', 'RISK_MAP_HUMAN_REVIEW'];
+    // 5. Unknown risk action never falls through to GO (fail-safe).
+    if (!KNOWN_RISK_ACTIONS.has(effectiveRiskAction)) return ['NO_GO', 'UNKNOWN_RISK_ACTION'];
+    // 6. Blocking findings → revise.
+    if (loopSignal === 'REVISE_REQUIRED') return ['NO_GO', 'BLOCKING_FINDINGS'];
+    // 7-8. NO_SIGNAL: the common "warn" verdict observes; true unknowns stop.
+    if (loopSignal === 'NO_SIGNAL') {
+      if (decision === 'human-review-recommended' && inputs.blockingFindings === 0) {
+        return ['GO_WITH_OBSERVATION', 'MINOR_FINDINGS_OBSERVE'];
+      }
+      return ['NO_GO', 'UNDETERMINED'];
+    }
+    // 9-10. Converged: hill when the risk map asks for observation, else field.
+    if (loopSignal === 'CONVERGED') {
+      if (effectiveRiskAction === 'escalate') return ['GO_WITH_OBSERVATION', 'RISK_MAP_OBSERVE'];
+      return ['GO', 'CONVERGED_CLEAN'];
+    }
+    // 11. Forward-compatible fail-safe.
+    return ['NO_GO', 'UNKNOWN_SIGNAL'];
+  };
+
+  const [gateDecision, reasonCode] = decide();
+
+  const result = {
+    decision: gateDecision,
+    reasonCode,
+    tier: DECISION_TO_TIER[gateDecision],
+    inputs,
+    inputsHash: computeGateInputsHash(inputs),
+    configSnapshot,
+    schemaVersion: '1',
+  };
+
+  if (gateDecision === 'GO_WITH_OBSERVATION') {
+    // Execution semantics (host responsibility): on expiry the host stops the
+    // loop AND treats changes originating from `files` as unreviewed
+    // (re-review required). "stop" is the only permitted value in S2;
+    // "promote" lands with the S4 enforcement implementation.
+    result.observation = {
+      expiresInHours,
+      onExpiry: 'stop',
+      files: Array.isArray(changedFiles) ? changedFiles.slice(0, 100) : [],
+    };
+  }
+
+  return result;
+}

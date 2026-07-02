@@ -122,6 +122,75 @@
       "enum": ["NO_SIGNAL", "REVISE_REQUIRED", "CONVERGED", "ESCALATE_HUMAN"],
       "description": "Layer-1 loop signal for agentic fix loops (Epic #1171 item3). Derived deterministically from decision + blocking finding counts. NO_SIGNAL: cannot determine loop action; REVISE_REQUIRED: blocking findings (critical/major) present — agent should revise and re-run; CONVERGED: no blocking findings and decision is auto-approve — agent may stop; ESCALATE_HUMAN: decision is human-review-required — agent must hand off. Additive/optional; absent on older artifacts. Does NOT affect decision/verdict and is NOT a GO/NO-GO gate. Layer 3 values (STOP_MAX_ITERATIONS, STOP_POLICY_REQUIRED) are caller-synthesized and are never emitted by River Review."
     },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "reasonCode", "tier", "inputs", "inputsHash", "schemaVersion"],
+      "description": "Machine-readable gate signal for loop-running hosts (Epic #1347 S2 / #1349). River Review DERIVES the decision; EXECUTION (continuing, stopping, notifying, expiring an observation window) is the host's responsibility — this block is advisory until a host enforces it. Trust boundary: the block is trustworthy only when derived outside the reviewed agent's write authority (host/CI checkout); hosts verify integrity by replaying `inputs` through src/lib/gate-decision.mjs deriveGateDecision and comparing (inputsHash is a lightweight regression summary, NOT a tamper-proof control). Additive/optional; absent on older artifacts.",
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": ["GO", "GO_WITH_OBSERVATION", "NO_GO", "ESCALATE"],
+          "description": "GO: autonomous continuation permitted (field tier). GO_WITH_OBSERVATION: proceed with a time-boxed async-review window (hill tier). NO_GO: revise required or verdict undetermined (fail-safe: unknown inputs always land here, never on GO). ESCALATE: mandatory human approval before proceeding (cliff tier)."
+        },
+        "reasonCode": {
+          "type": "string",
+          "enum": [
+            "GATE_CONFIG_CHANGED",
+            "HUMAN_APPROVAL_REQUIRED",
+            "DECISION_ESCALATED",
+            "OSCILLATION_DETECTED",
+            "RISK_MAP_HUMAN_REVIEW",
+            "UNKNOWN_RISK_ACTION",
+            "BLOCKING_FINDINGS",
+            "MINOR_FINDINGS_OBSERVE",
+            "UNDETERMINED",
+            "RISK_MAP_OBSERVE",
+            "CONVERGED_CLEAN",
+            "UNKNOWN_SIGNAL"
+          ],
+          "description": "First-match rule that produced the decision (rule order documented in src/lib/gate-decision.mjs). GATE_CONFIG_CHANGED is the bootstrap cliff: any diff touching .river/** escalates so the gate config cannot be used to unguard itself (including deleting the risk map)."
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["cliff", "hill", "field"],
+          "description": "Risk tier (崖/丘/原っぱ). NO_GO reports field: it is a revise instruction, not a supervision tier."
+        },
+        "inputs": {
+          "type": "object",
+          "description": "Echo of every decision input, sufficient for a host-side replay check. Includes riskMapPresent/riskMapDigest so hosts can compare the loaded risk map against a trusted baseline (the risk map lives inside the reviewed repo and is writable by the agent under review)."
+        },
+        "inputsHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$",
+          "description": "sha256 (first 16 hex) of the canonicalized inputs (fixed field list, sorted keys, undefined→null). For S3 same-inputs regression comparison only; not a security control."
+        },
+        "configSnapshot": {
+          "type": "object",
+          "description": "Gate-related config values in effect (observation expiry, circuit-breaker advisory limits). When the host has its own limits, the stricter value wins — repo config is writable by the reviewed agent, so hosts should treat their own settings as the source of truth."
+        },
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["expiresInHours", "onExpiry"],
+          "description": "Present only for GO_WITH_OBSERVATION. On expiry the host stops the loop AND treats changes originating from `files` as unreviewed (re-review required).",
+          "properties": {
+            "expiresInHours": { "type": "number", "exclusiveMinimum": 0 },
+            "onExpiry": {
+              "type": "string",
+              "enum": ["stop"],
+              "description": "S2 permits only 'stop'. 'promote' is deliberately NOT in the enum until the S4 enforcement implementation lands, so hosts cannot be invited to auto-promote past the default-stop contract."
+            },
+            "files": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Changed files under observation (capped at 100 entries)."
+            }
+          }
+        },
+        "schemaVersion": { "type": "string", "enum": ["1"] }
+      }
+    },
     "usage": {
       "type": "object",
       "additionalProperties": false,

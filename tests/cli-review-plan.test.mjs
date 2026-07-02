@@ -1521,3 +1521,76 @@ describe('runReviewPlan — LLM adjudicator wiring (#1348 S1)', () => {
     assert.equal(audit[0].required, true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Epic #1347 S2 (#1349) — gate block wiring
+// ---------------------------------------------------------------------------
+describe('runReviewPlan — gate block (Epic #1347 S2)', () => {
+  test('clean no-changes run emits a schema-valid GO gate block', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'midstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      resolveAllArtifactsImpl: async () => ({}),
+      generateRunId: () => 'gate-run-1',
+    });
+    assert.equal(validate(artifact), true, JSON.stringify(validate.errors));
+    assert.ok(artifact.gate, 'gate block must be attached on the exec/plan path');
+    assert.equal(artifact.gate.decision, 'GO');
+    assert.equal(artifact.gate.reasonCode, 'CONVERGED_CLEAN');
+    assert.equal(artifact.gate.tier, 'field');
+    assert.equal(artifact.gate.inputs.riskMapPresent, false);
+    assert.equal(artifact.gate.inputs.riskMapDigest, null);
+    assert.match(artifact.gate.inputsHash, /^[0-9a-f]{16}$/);
+    assert.equal(artifact.gate.schemaVersion, '1');
+  });
+
+  test('a diff touching .river/ escalates via the bootstrap cliff (rule 0)', async () => {
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'midstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      resolveAllArtifactsImpl: async () => ({
+        diff: { id: 'diff', path: '/repo/d.patch', source: 'cwd', exists: true, optional: true },
+      }),
+      readFileImpl: async () => '+++ b/.river/risk-map.yaml\n@@ -0,0 +1 @@\n+x\n',
+      buildExecutionPlanImpl: async () => ({ selected: [], skipped: [] }),
+    });
+    assert.equal(validate(artifact), true, JSON.stringify(validate.errors));
+    assert.equal(artifact.gate.decision, 'ESCALATE');
+    assert.equal(artifact.gate.reasonCode, 'GATE_CONFIG_CHANGED');
+    assert.equal(artifact.gate.tier, 'cliff');
+    assert.equal(artifact.gate.inputs.gateConfigChanged, true);
+  });
+
+  test('llm-skipped end-to-end: HIGH plan trigger skips the adjudicator and gates as cliff', async () => {
+    let adjudicatorCalls = 0;
+    const artifact = await runReviewPlan({
+      planOnly: true,
+      phase: 'upstream',
+      now: fixedNow,
+      loadConfigImpl: okConfig,
+      resolveAllArtifactsImpl: async () => ({
+        'pbi-input': {
+          id: 'pbi-input',
+          path: '/repo/pbi.md',
+          source: 'cwd',
+          exists: true,
+          optional: true,
+        },
+      }),
+      readFileImpl: async () => 'このプランは rm -rf /data を実行する',
+      humanApprovalAdjudicator: async () => {
+        adjudicatorCalls += 1;
+        return false; // even a lenient LLM must never be consulted here
+      },
+    });
+    assert.equal(validate(artifact), true, JSON.stringify(validate.errors));
+    assert.equal(adjudicatorCalls, 0, 'HIGH match must skip the adjudicator (llm-skipped)');
+    assert.equal(artifact.gate.decision, 'ESCALATE');
+    assert.equal(artifact.gate.reasonCode, 'HUMAN_APPROVAL_REQUIRED');
+    assert.equal(artifact.gate.inputs.humanApprovalMode, 'llm-skipped');
+  });
+});
