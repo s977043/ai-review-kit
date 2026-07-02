@@ -36,12 +36,145 @@ function normalizeRef(ref) {
 }
 
 /**
+ * Distribution-bundle field allowlist for .codex-plugin/plugin.json (#1250).
+ *
+ * The external `awesome-codex-plugins` fork carries a bundle copy of this
+ * manifest that cannot be reached from this repo, so parity with the fork is
+ * enforced indirectly: every field the bundle may carry must be declared here.
+ * A field present in the manifest but absent from this allowlist fails
+ * `npm run plugin:validate`, forcing the mirror rule in CLAUDE.md
+ * ("Plugin bundle mirror") to be applied consciously instead of drifting
+ * silently.
+ */
+export const CODEX_BUNDLE_ALLOWED_FIELDS = [
+  '$schema',
+  'name',
+  'version',
+  'description',
+  'author',
+  'homepage',
+  'repository',
+  'license',
+  'keywords',
+  'skills',
+  'interface',
+];
+
+/** Fields awesome-codex-plugins listing requires in the bundle manifest. */
+export const CODEX_BUNDLE_REQUIRED_FIELDS = [
+  'name',
+  'version',
+  'description',
+  'repository',
+  'license',
+];
+
+export const CODEX_INTERFACE_ALLOWED_FIELDS = [
+  'displayName',
+  'shortDescription',
+  'longDescription',
+  'developerName',
+  'category',
+  'capabilities',
+  'websiteURL',
+  'composerIcon',
+];
+
+/**
+ * Check that the .codex-plugin manifest (the in-repo mirror of the
+ * distribution bundle) only carries allowlisted fields and carries every
+ * field the external listing requires.
+ *
+ * Pure function; returns array of error strings (empty = pass).
+ */
+export function checkBundleFieldAllowlist(codexManifest) {
+  const errors = [];
+
+  for (const field of Object.keys(codexManifest)) {
+    if (!CODEX_BUNDLE_ALLOWED_FIELDS.includes(field)) {
+      errors.push(
+        `.codex-plugin/plugin.json: field "${field}" is not in the bundle allowlist — ` +
+          `add it to CODEX_BUNDLE_ALLOWED_FIELDS in scripts/validate-plugin-manifest.mjs ` +
+          `and mirror it to the distribution bundle in the same PR (#1250)`
+      );
+    }
+  }
+
+  for (const field of CODEX_BUNDLE_REQUIRED_FIELDS) {
+    if (codexManifest[field] === undefined || codexManifest[field] === '') {
+      errors.push(
+        `.codex-plugin/plugin.json: required bundle field "${field}" is missing or empty ` +
+          `(required by the awesome-codex-plugins listing)`
+      );
+    }
+  }
+
+  const iface = codexManifest.interface;
+  if (iface && typeof iface === 'object') {
+    for (const field of Object.keys(iface)) {
+      if (!CODEX_INTERFACE_ALLOWED_FIELDS.includes(field)) {
+        errors.push(
+          `.codex-plugin/plugin.json: interface field "${field}" is not in the bundle allowlist — ` +
+            `add it to CODEX_INTERFACE_ALLOWED_FIELDS in scripts/validate-plugin-manifest.mjs ` +
+            `and mirror it to the distribution bundle in the same PR (#1250)`
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Check parity of fields shared between the two canonical manifests that are
+ * NOT owned by `npm run plugin:sync` (which only syncs keywords/homepage/
+ * author/license from package.json). These pairs previously drifted silently
+ * (#1250: composerIcon updated in the bundle only).
+ *
+ * Not compared: description/version (intentionally differ or release-please
+ * owned), keywords/homepage/author/license (plugin:sync owns them).
+ *
+ * Pure function; returns array of error strings (empty = pass).
+ */
+export function checkCrossManifestParity(ccManifest, codexManifest) {
+  const errors = [];
+  const iface =
+    codexManifest.interface && typeof codexManifest.interface === 'object'
+      ? codexManifest.interface
+      : {};
+
+  const pairs = [
+    ['repository', ccManifest.repository, 'repository', codexManifest.repository],
+    ['skills', ccManifest.skills, 'skills', codexManifest.skills],
+    ['displayName', ccManifest.displayName, 'interface.displayName', iface.displayName],
+    ['composerIcon', ccManifest.composerIcon, 'interface.composerIcon', iface.composerIcon],
+    ['homepage', ccManifest.homepage, 'interface.websiteURL', iface.websiteURL],
+    ['author.name', ccManifest.author?.name, 'interface.developerName', iface.developerName],
+  ];
+
+  for (const [ccField, ccVal, codexField, codexVal] of pairs) {
+    if (JSON.stringify(ccVal) !== JSON.stringify(codexVal)) {
+      errors.push(
+        `manifest parity: .claude-plugin "${ccField}" (${JSON.stringify(ccVal)}) !== ` +
+          `.codex-plugin "${codexField}" (${JSON.stringify(codexVal)})`
+      );
+    }
+  }
+
+  return errors;
+}
+
+/**
  * Validate the Claude Code + Codex plugin manifests and the marketplace
  * manifest against the repository:
  *  - every component path referenced by .claude-plugin/plugin.json exists
  *  - .claude-plugin and .codex-plugin manifest versions match package.json
  *  - marketplace plugins[].name matches the plugin manifest name
  *  - the Codex manifest's skills path exists
+ *  - the Codex manifest carries only allowlisted bundle fields and all
+ *    listing-required fields (checkBundleFieldAllowlist)
+ *  - shared fields not owned by plugin:sync match across both canonical
+ *    manifests (checkCrossManifestParity)
  *
  * Returns array of error strings (empty = pass).
  */
@@ -189,6 +322,10 @@ export async function validatePluginManifest() {
         }
       }
     }
+
+    // --- Bundle field allowlist + canonical cross-manifest parity (#1250) ---
+    errors.push(...checkBundleFieldAllowlist(codexManifest));
+    errors.push(...checkCrossManifestParity(ccManifest, codexManifest));
 
     // --- Cross-plugin field parity (synced fields must match package.json) ---
     // repository is excluded: package.json uses {type, url} object; plugins use plain string URL.
