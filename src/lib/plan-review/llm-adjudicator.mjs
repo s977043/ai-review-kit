@@ -75,7 +75,11 @@ export function buildAdjudicationPrompt({ candidates = [], text = '', artifactKi
   // candidate out of its own excerpt window.
   const normalized = normalizeText(text);
 
-  const head = normalized.slice(0, HEAD_WINDOW_CHARS);
+  // m1 (review): include a margin so secrets straddling a piece boundary
+  // stay whole and redactable. The bounded overrun is accounted like labels
+  // (see budget note below).
+  const BOUNDARY_MARGIN = 64;
+  const head = normalized.slice(0, HEAD_WINDOW_CHARS + BOUNDARY_MARGIN);
   const pieces = [{ label: 'document head', body: head }];
   let budget = MAX_TEXT_CHARS - head.length;
 
@@ -91,11 +95,23 @@ export function buildAdjudicationPrompt({ candidates = [], text = '', artifactKi
   const coveredRanges = [];
   for (const c of outOfView) {
     if (budget <= 0) break;
-    const start = Math.max(HEAD_WINDOW_CHARS, c.index - EXCERPT_RADIUS);
-    const end = Math.min(normalized.length, c.index + EXCERPT_RADIUS);
+    const start = Math.max(HEAD_WINDOW_CHARS, c.index - EXCERPT_RADIUS - BOUNDARY_MARGIN);
+    const end = Math.min(normalized.length, c.index + EXCERPT_RADIUS + BOUNDARY_MARGIN);
     if (coveredRanges.some(([s0, e0]) => start >= s0 && end <= e0)) continue;
-    const excerpt = normalized.slice(start, Math.min(end, start + budget));
-    coveredRanges.push([start, end]);
+    // m3 (review): when the remaining budget cannot reach the trigger from
+    // the left edge, center the slice on the trigger instead; if even the
+    // trigger itself cannot be included, emit no piece (a mis-aimed excerpt
+    // with a confident label is worse than none).
+    let sliceStart = start;
+    let sliceEnd = Math.min(end, start + budget);
+    if (sliceEnd <= c.index) {
+      sliceStart = Math.max(HEAD_WINDOW_CHARS, c.index - Math.floor(budget / 2));
+      sliceEnd = Math.min(normalized.length, sliceStart + budget);
+      if (sliceEnd <= c.index) continue;
+    }
+    const excerpt = normalized.slice(sliceStart, sliceEnd);
+    // m2 (review): record what was ACTUALLY covered, not the intended range.
+    coveredRanges.push([sliceStart, sliceStart + excerpt.length]);
     budget -= excerpt.length;
     pieces.push({ label: `excerpt around "${c.trigger}" (offset ${c.index})`, body: excerpt });
   }
@@ -111,8 +127,13 @@ export function buildAdjudicationPrompt({ candidates = [], text = '', artifactKi
     .map((p) => `[${p.label}]\n${neutralize(redactText(p.body).text)}`)
     .join('\n...\n');
 
+  // M1 (review): snippets come from the pre-redaction text and sit OUTSIDE
+  // the untrusted tags — redact and neutralize them too.
   const candidateLines = candidates
-    .map((c) => `- trigger=${c.trigger} confidence=${c.confidence} snippet="${c.snippet}"`)
+    .map(
+      (c) =>
+        `- trigger=${c.trigger} confidence=${c.confidence} snippet="${neutralize(redactText(c.snippet ?? '').text)}"`
+    )
     .join('\n');
   return `An automated regex scan of an implementation plan (artifact kind: ${
     artifactKind || 'unknown'

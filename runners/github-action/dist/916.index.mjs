@@ -384,7 +384,7 @@ const HIGH_CONFIDENCE_PATTERNS = [
   // verb "empty staging bucket" must).
   {
     pattern:
-      /\bempt(?:ies|ied|ying)\b(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b|\b(?:table|bucket|director(?:y|ies)|database|folder)s?\s+(?:is|are|was|were|gets?|got|being)\s+(?:\w+\s+){0,2}?emptied\b|(?<!\b(?:a|an|the|this|that|these|those|each|every|any|some|my|your|his|her|its|our|their)\s+)\bempty\s+(?:(?:the|all|every|each|this|that|these|those|its|our|your|their|any)\s+(?:\w+\s+){0,2}?(?:table|bucket|director(?:y|ies)|database|folder)s?|(?:\w+\s+){0,2}?(?:table|bucket|directory|database|folder))\b/i,
+      /\bempt(?:ies|ied|ying)\b(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b|\b(?:table|bucket|director(?:y|ies)|database|folder)s?\s+(?:is|are|was|were|gets?|got|being)\s+(?:\w+\s+){0,2}?emptied\b(?!\s+(?:correctly|automatically))|(?<!\b(?:a|an|the|this|that|these|those|each|every|any|some|my|your|his|her|its|our|their)\s+)\bempty\s+(?:(?:the|all|every|each|this|that|these|those|its|our|your|their|any)\s+(?:\w+\s+){0,2}?(?:table|bucket|director(?:y|ies)|database|folder)s?|(?:\w+\s+){0,2}?(?:table|bucket|directory|database|folder))\b/i,
     name: 'empty-storage-euphemism',
     confidence: 'high',
   },
@@ -399,7 +399,7 @@ const HIGH_CONFIDENCE_PATTERNS = [
   // without saying drop/truncate (#1350 S3 recall variant v09).
   {
     pattern:
-      /\breset\b(?:\s+\w+){0,3}?\s+(?:database|table|bucket|environment|schema)s?\b(?:\s+\w+){0,3}?\s+to\s+(?:a\s+|an\s+)?(?:clean|empty|initial|fresh|pristine)\b/i,
+      /(?<!how\s+to\s+)\breset(?:s|ting)?\b(?:\s+\w+){0,3}?\s+(?:database|table|bucket|environment|schema)s?\b(?:\s+\w+){0,3}?\s+to\s+(?:a\s+|an\s+)?(?:clean|empty|initial|fresh|pristine)\b/i,
     name: 'reset-to-clean-euphemism',
     confidence: 'high',
   },
@@ -699,7 +699,11 @@ function buildAdjudicationPrompt({ candidates = [], text = '', artifactKind = ''
   // candidate out of its own excerpt window.
   const normalized = normalizeText(text);
 
-  const head = normalized.slice(0, HEAD_WINDOW_CHARS);
+  // m1 (review): include a margin so secrets straddling a piece boundary
+  // stay whole and redactable. The bounded overrun is accounted like labels
+  // (see budget note below).
+  const BOUNDARY_MARGIN = 64;
+  const head = normalized.slice(0, HEAD_WINDOW_CHARS + BOUNDARY_MARGIN);
   const pieces = [{ label: 'document head', body: head }];
   let budget = MAX_TEXT_CHARS - head.length;
 
@@ -715,11 +719,23 @@ function buildAdjudicationPrompt({ candidates = [], text = '', artifactKind = ''
   const coveredRanges = [];
   for (const c of outOfView) {
     if (budget <= 0) break;
-    const start = Math.max(HEAD_WINDOW_CHARS, c.index - EXCERPT_RADIUS);
-    const end = Math.min(normalized.length, c.index + EXCERPT_RADIUS);
+    const start = Math.max(HEAD_WINDOW_CHARS, c.index - EXCERPT_RADIUS - BOUNDARY_MARGIN);
+    const end = Math.min(normalized.length, c.index + EXCERPT_RADIUS + BOUNDARY_MARGIN);
     if (coveredRanges.some(([s0, e0]) => start >= s0 && end <= e0)) continue;
-    const excerpt = normalized.slice(start, Math.min(end, start + budget));
-    coveredRanges.push([start, end]);
+    // m3 (review): when the remaining budget cannot reach the trigger from
+    // the left edge, center the slice on the trigger instead; if even the
+    // trigger itself cannot be included, emit no piece (a mis-aimed excerpt
+    // with a confident label is worse than none).
+    let sliceStart = start;
+    let sliceEnd = Math.min(end, start + budget);
+    if (sliceEnd <= c.index) {
+      sliceStart = Math.max(HEAD_WINDOW_CHARS, c.index - Math.floor(budget / 2));
+      sliceEnd = Math.min(normalized.length, sliceStart + budget);
+      if (sliceEnd <= c.index) continue;
+    }
+    const excerpt = normalized.slice(sliceStart, sliceEnd);
+    // m2 (review): record what was ACTUALLY covered, not the intended range.
+    coveredRanges.push([sliceStart, sliceStart + excerpt.length]);
     budget -= excerpt.length;
     pieces.push({ label: `excerpt around "${c.trigger}" (offset ${c.index})`, body: excerpt });
   }
@@ -735,8 +751,13 @@ function buildAdjudicationPrompt({ candidates = [], text = '', artifactKind = ''
     .map((p) => `[${p.label}]\n${neutralize((0,secret_redactor/* redactText */.Rd)(p.body).text)}`)
     .join('\n...\n');
 
+  // M1 (review): snippets come from the pre-redaction text and sit OUTSIDE
+  // the untrusted tags — redact and neutralize them too.
   const candidateLines = candidates
-    .map((c) => `- trigger=${c.trigger} confidence=${c.confidence} snippet="${c.snippet}"`)
+    .map(
+      (c) =>
+        `- trigger=${c.trigger} confidence=${c.confidence} snippet="${neutralize((0,secret_redactor/* redactText */.Rd)(c.snippet ?? '').text)}"`
+    )
     .join('\n');
   return `An automated regex scan of an implementation plan (artifact kind: ${
     artifactKind || 'unknown'

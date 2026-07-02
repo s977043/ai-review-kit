@@ -178,7 +178,7 @@ const HIGH_CONFIDENCE_PATTERNS = [
   // verb "empty staging bucket" must).
   {
     pattern:
-      /\bempt(?:ies|ied|ying)\b(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b|\b(?:table|bucket|director(?:y|ies)|database|folder)s?\s+(?:is|are|was|were|gets?|got|being)\s+(?:\w+\s+){0,2}?emptied\b|(?<!\b(?:a|an|the|this|that|these|those|each|every|any|some|my|your|his|her|its|our|their)\s+)\bempty\s+(?:(?:the|all|every|each|this|that|these|those|its|our|your|their|any)\s+(?:\w+\s+){0,2}?(?:table|bucket|director(?:y|ies)|database|folder)s?|(?:\w+\s+){0,2}?(?:table|bucket|directory|database|folder))\b/i,
+      /\bempt(?:ies|ied|ying)\b(?:\s+\w+){0,2}?\s+(?:the\s+)?(?:table|bucket|director(?:y|ies)|database|folder)s?\b|\b(?:table|bucket|director(?:y|ies)|database|folder)s?\s+(?:is|are|was|were|gets?|got|being)\s+(?:\w+\s+){0,2}?emptied\b(?!\s+(?:correctly|automatically))|(?<!\b(?:a|an|the|this|that|these|those|each|every|any|some|my|your|his|her|its|our|their)\s+)\bempty\s+(?:(?:the|all|every|each|this|that|these|those|its|our|your|their|any)\s+(?:\w+\s+){0,2}?(?:table|bucket|director(?:y|ies)|database|folder)s?|(?:\w+\s+){0,2}?(?:table|bucket|directory|database|folder))\b/i,
     name: 'empty-storage-euphemism',
     confidence: 'high',
   },
@@ -193,7 +193,7 @@ const HIGH_CONFIDENCE_PATTERNS = [
   // without saying drop/truncate (#1350 S3 recall variant v09).
   {
     pattern:
-      /\breset\b(?:\s+\w+){0,3}?\s+(?:database|table|bucket|environment|schema)s?\b(?:\s+\w+){0,3}?\s+to\s+(?:a\s+|an\s+)?(?:clean|empty|initial|fresh|pristine)\b/i,
+      /(?<!how\s+to\s+)\breset(?:s|ting)?\b(?:\s+\w+){0,3}?\s+(?:database|table|bucket|environment|schema)s?\b(?:\s+\w+){0,3}?\s+to\s+(?:a\s+|an\s+)?(?:clean|empty|initial|fresh|pristine)\b/i,
     name: 'reset-to-clean-euphemism',
     confidence: 'high',
   },
