@@ -1,0 +1,111 @@
+name: Auto Rebuild Action Dist
+
+# Automatically rebuild runners/github-action/dist/ on pull requests when the
+# bundled sources change and the committed dist is stale, then push the
+# rebuild commit back to the PR branch. This replaces the manual
+# "chore(action): rebuild github-action dist" commits (12 in the last 400
+# commits) that contributors had to run locally with an .nvmrc-matched Node.
+#
+# Scope guards:
+# - Same-repo branches only: pushing to fork branches is not possible with
+#   repo-scoped credentials, so fork PRs are excluded and keep relying on the
+#   `Action dist freshness` job in test.yml to flag staleness.
+# - release-please branches are excluded so automated commits never pollute
+#   release PRs (release-please force-updates its branch and would fight any
+#   foreign commit).
+#
+# Token / no-recursion (same policy as release-please-kick.yml): pushes
+# authored by `GITHUB_TOKEN` do NOT trigger `pull_request: synchronize`
+# workflows by GitHub design (no-recursion safety). With strict required
+# status checks, a GITHUB_TOKEN push would leave the new head SHA without CI
+# and block the merge. We therefore prefer `RELEASE_KICK_PAT` (contents:write)
+# so the rebuild commit re-fires CI, and fall back to GITHUB_TOKEN with a loud
+# warning telling the contributor to kick CI manually (e.g. an empty commit or
+# `gh workflow run`). Recursion is naturally bounded either way: the re-run
+# rebuilds, finds no diff, and exits without pushing.
+#
+# Cross-platform determinism: the runner is Linux and `.gitattributes` pins
+# `runners/github-action/dist/*.{mjs,map,cjs} text eol=lf`, plus `npm run build:action`
+# ends with scripts/normalize-dist.mjs — so the bot-built bundle is
+# byte-identical to a compliant local rebuild.
+
+on:
+  pull_request:
+    # Keep in sync with the path set watched by the `Action dist freshness`
+    # job in test.yml (src_ts computation): bundled action sources, src/
+    # modules imported by the action entrypoint, and the lockfile (ncc vendors
+    # production deps into dist/, see #1057).
+    paths:
+      - 'runners/github-action/src/**'
+      - 'src/**'
+      - 'package-lock.json'
+
+permissions: read-all
+
+concurrency:
+  group: auto-rebuild-action-dist-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild-dist:
+    name: Rebuild dist if stale
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Same-repo PRs only (fork branches are not pushable) and never
+    # release-please branches (automated commits must not pollute release PRs).
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !startsWith(github.event.pull_request.head.ref, 'release-please--')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          # Check out the PR head BRANCH (not the merge ref) so the rebuild
+          # commit can be pushed back to it.
+          ref: ${{ github.event.pull_request.head.ref }}
+          # Prefer RELEASE_KICK_PAT so the push re-triggers pull_request CI;
+          # GITHUB_TOKEN fallback pushes fine but cannot re-fire CI.
+          token: ${{ secrets.RELEASE_KICK_PAT || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          # .nvmrc is the SSoT for the Node version; ncc output differs across
+          # Node majors (see docs/development/dist-check-rebuild-guide.md).
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Rebuild dist and detect staleness
+        id: rebuild
+        run: |
+          set -euo pipefail
+          npm run build:action
+          if git diff --quiet -- runners/github-action/dist/; then
+            echo "dist/ is already fresh; nothing to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "dist/ is stale; rebuild produced changes:"
+            git diff --stat -- runners/github-action/dist/
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push rebuilt dist
+        if: steps.rebuild.outputs.changed == 'true'
+        env:
+          USING_PAT: ${{ secrets.RELEASE_KICK_PAT != '' }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add runners/github-action/dist/
+          git commit -m "chore(action): rebuild github-action dist"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
+          echo "Pushed rebuild commit to ${GITHUB_HEAD_REF}."
+
+          if [ "${USING_PAT}" != "true" ]; then
+            echo "::warning::RELEASE_KICK_PAT is not set; the rebuild commit was pushed with GITHUB_TOKEN."
+            echo "::warning::GitHub blocks GITHUB_TOKEN pushes from re-triggering pull_request workflows (no-recursion safety), so CI will NOT re-run on the new head SHA."
+            echo "::warning::Kick CI manually: push an empty commit to the branch, or close/reopen the PR."
+          fi
