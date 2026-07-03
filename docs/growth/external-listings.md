@@ -49,9 +49,9 @@ Codify team review judgment as repo-owned skills; run them as GitHub Action / pl
 ## 申請優先順位
 
 1. **awesome-codex-plugins**—✅ **掲載済み（live on `main`）**。同梱プラグインと manifest が揃っており、外部からの提案もあった
-2. **awesome-actions**—GitHub Action として直球で適合。⏳ 提出済み・マージ待ち（#829）
-3. **awesome-code-review**—ドメイン一致。非宣伝的な説明文を用意。⏳ 提出済み・マージ待ち（#131）
-4. **awesome-ai-devtools**—PR & Code Review Bots カテゴリ。⏳ 提出済み・マージ待ち（#697）
+2. **awesome-actions**—GitHub Action として直球で適合。⏳ 提出済み・マージ待ち（[#829](https://github.com/sdras/awesome-actions/pull/829)）
+3. **awesome-code-review**—ドメイン一致。非宣伝的な説明文を用意。⏳ 提出済み・マージ待ち（[#131](https://github.com/joho/awesome-code-review/pull/131)）
+4. **awesome-ai-devtools**—PR & Code Review Bots カテゴリ。⏳ 提出済み・マージ待ち（[#697](https://github.com/jamesmurdza/awesome-ai-devtools/pull/697)）
 5. **awesome-ai-agents**—位置づけを慎重に検討（優先度低）。未提出
 
 > 提出済み PR の一覧と状態は下記「提出状況（トラッキング）」を参照。
