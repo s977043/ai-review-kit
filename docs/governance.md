@@ -28,7 +28,7 @@
 
 ### マージ前チェックリスト
 
-CLAUDE.md "AI Misoperation Guards" の運用ガードのうち、PR マージ判断に直結するものを本セクションに集約します。CLAUDE.md は要旨のみを残し、詳細手順はここを正とします。
+CLAUDE.md "AI Misoperation Guards" の運用ガードのうち、PR マージ判断に直結するものを本セクションに集約します。CLAUDE.md は要旨のみを残し、詳細手順はここを正とします。このチェックリストは repo-dev コマンド `/merge-check <PR 番号>`（`.claude/commands/merge-check.md`）で実行できます。
 
 #### 1. CI green の確認
 

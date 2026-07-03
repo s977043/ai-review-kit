@@ -79,7 +79,8 @@ When a retrospective identifies a recurring mistake or missing guardrail, follow
 | `/plan-merge-order`    | Plan merge order for multiple PRs to minimize rebase cost               |
 | `/preflight`           | Verify tasks are not obsolete or in parallel before work                |
 | `/verify-agent-report` | Verify agent completion reports against real branches, PRs, and commits |
+| `/merge-check`         | Run the pre-merge checklist (docs/governance.md) against a PR number    |
 
-Details: distributed commands (`/check` `/pr` `/skill` `/review-local` `/challenge`) live in top-level `commands/` (plugin surface, per #996); repo-dev commands (`/propose-issue` `/plan-merge-order` `/preflight` `/verify-agent-report`) stay in `.claude/commands/`.
+Details: distributed commands (`/check` `/pr` `/skill` `/review-local` `/challenge`) live in top-level `commands/` (plugin surface, per #996); repo-dev commands (`/propose-issue` `/plan-merge-order` `/preflight` `/verify-agent-report` `/merge-check`) stay in `.claude/commands/`.
 
 > Note: the distributed commands resolve only when river-review is **installed as a plugin**. When working inside this repo directly, Claude Code auto-discovers project commands from `.claude/commands/` only — so the five distributed commands are not available as in-repo slash commands (the repo-dev commands are).
