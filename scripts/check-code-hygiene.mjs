@@ -43,9 +43,12 @@ const MKDTEMP_RE = /\bmkdtemp(?:Sync)?\s*\(/;
 const CLEANUP_RE = /\brmSync\s*\(|\brm\s*\(|\bafter\s*\(|\.after\s*\(|\bfinally\b/;
 
 // 判定は ROOT からの相対 path で行う（絶対 path だと、repo 自体が
-// .claude/worktrees/ 配下にある worktree で全ファイルが除外されてしまう）
-function isExcluded(p) {
-  return EXCLUDE.some((e) => relative(ROOT, p).includes(e));
+// .claude/worktrees/ 配下にある worktree で全ファイルが除外されてしまう）。
+// ディレクトリは末尾に sep を付けて判定するため、呼び出し側で dir か file かを
+// Dirent.isDirectory() で確定させてから渡す（`.git` 等のドットディレクトリを
+// 拡張子と誤認しない）。
+function isExcluded(relPath) {
+  return EXCLUDE.some((e) => relPath.includes(e));
 }
 
 function extOf(name) {
@@ -56,22 +59,22 @@ function extOf(name) {
 function* walk(dir) {
   let entries;
   try {
-    entries = readdirSync(dir);
+    // withFileTypes で Dirent を得て、statSync のファイル毎 I/O を排除する。
+    // isDirectory() で確実に判定するため、`.git` / `.claude` / `node_modules`
+    // 等のドットディレクトリもディレクトリ段階で確実に prune できる。
+    entries = readdirSync(dir, { withFileTypes: true });
   } catch {
     return;
   }
-  for (const name of entries) {
-    const full = join(dir, name);
-    if (isExcluded(full + (extOf(name) ? '' : sep))) continue;
-    let st;
-    try {
-      st = statSync(full);
-    } catch {
-      continue;
-    }
-    if (st.isDirectory()) {
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    const rel = relative(ROOT, full);
+    if (entry.isDirectory()) {
+      // ディレクトリは末尾 sep 付きで prune 判定（`.git${sep}` 等と整合）
+      if (isExcluded(rel + sep)) continue;
       yield* walk(full);
-    } else if (EXTS.has(extOf(name))) {
+    } else if (entry.isFile() && EXTS.has(extOf(entry.name))) {
+      if (isExcluded(rel)) continue;
       yield full;
     }
   }

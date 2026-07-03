@@ -136,3 +136,30 @@ test('fixtures ディレクトリ配下は scan 対象外（exit 0）', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// gemini #1382 指摘: ドットディレクトリ（.git 等）は extOf が拡張子と誤判定して
+// ディレクトリ段階の prune に失敗し、内部まで再帰走査していた。Dirent ベースの
+// prune で、scan dir 内の .git / node_modules がディレクトリ段階で除外されることを固定する。
+test('scan dir 内の .git ディレクトリはディレクトリ段階で prune される（exit 0）', () => {
+  const dir = fixture({
+    'src/.git/bad.mjs':
+      "import { x } from 'node:fs';\nimport { y } from 'node:fs';\nexport { x, y };\n",
+  });
+  try {
+    assert.equal(runIn(dir), 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('scan dir 内の node_modules ディレクトリは prune される（exit 0）', () => {
+  const dir = fixture({
+    'src/node_modules/pkg/bad.mjs':
+      "import { x } from 'node:fs';\nimport { y } from 'node:fs';\nexport { x, y };\n",
+  });
+  try {
+    assert.equal(runIn(dir), 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
