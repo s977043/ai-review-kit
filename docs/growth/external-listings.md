@@ -2,7 +2,7 @@
 
 River Review の外部流入を増やすため、関連する awesome 系・curated list への掲載候補と、各リストの掲載条件・PR 方針・紹介文を整理します。
 
-> 親エピック: [#1276](https://github.com/s977043/river-review/issues/1276) / 追跡 Issue: [#1283](https://github.com/s977043/river-review/issues/1283) / 関連: [#1247](https://github.com/s977043/river-review/issues/1247)
+> 親エピック: [#1276](https://github.com/s977043/river-review/issues/1276) / 追跡 Issue: [#1283](https://github.com/s977043/river-review/issues/1283)
 
 掲載申請では River Review を一般的な AI review bot ではなく、`Review Judgment as Code` / `team-owned audit layer` として説明します。誇張表現・自動承認/自動マージの強調は避けます。
 
@@ -26,11 +26,11 @@ Codify team review judgment as repo-owned skills; run them as GitHub Action / pl
 
 ### 優先度: 高
 
-| リスト                | repo                                                                                                | 掲載方法                                                                                                      | 主な条件                                                                                                                                                                                                        | River Review の適合                                                                                                                                  |
-| --------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| awesome-codex-plugins | [hashgraph-online/awesome-codex-plugins](https://github.com/hashgraph-online/awesome-codex-plugins) | スキャナCIを自リポに追加 → ローカル実行 → fork して README にアルファベット順 1 行追加（PR 説明にスコア記載） | スキャナスコア 80/130 以上・critical/high なし、`.codex-plugin/plugin.json`（name/version/description/repository/license/composerIcon）、512×512 アイコン、SECURITY.md / LICENSE / README.md、1 PR 1 プラグイン | Good — 既に Codex プラグインと `.codex-plugin/plugin.json` を同梱。[#1247](https://github.com/s977043/river-review/issues/1247) で外部からも提案済み |
-| awesome-code-review   | [joho/awesome-code-review](https://github.com/joho/awesome-code-review)                             | `Tools` セクションへ PR                                                                                       | アルファベット順、説明は**非宣伝的**で簡潔・末尾に句読点、新カテゴリは 3 件以上、CoC 同意                                                                                                                       | Good — コードレビューツールそのもの。GitHub/Gerrit 等と並ぶ。説明は中立トーン必須                                                                    |
-| awesome-actions       | [sdras/awesome-actions](https://github.com/sdras/awesome-actions)                                   | 該当カテゴリ末尾へ PR                                                                                         | 意味のある PR タイトル（"Update readme" は却下）、1 PR 1 提案、1 行説明（3 行に折り返さない）、Title Case、重複不可                                                                                             | Good — GitHub Action として配布しており直球で適合                                                                                                    |
+| リスト                | repo                                                                                                | 掲載方法                                                                                                      | 主な条件                                                                                                                                                                                                        | River Review の適合                                                                                              |
+| --------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| awesome-codex-plugins | [hashgraph-online/awesome-codex-plugins](https://github.com/hashgraph-online/awesome-codex-plugins) | スキャナCIを自リポに追加 → ローカル実行 → fork して README にアルファベット順 1 行追加（PR 説明にスコア記載） | スキャナスコア 80/130 以上・critical/high なし、`.codex-plugin/plugin.json`（name/version/description/repository/license/composerIcon）、512×512 アイコン、SECURITY.md / LICENSE / README.md、1 PR 1 プラグイン | **掲載済み（live）**—upstream の `main` に `plugins/s977043/river-review` として反映済み。外部からの提案もあった |
+| awesome-code-review   | [joho/awesome-code-review](https://github.com/joho/awesome-code-review)                             | `Tools` セクションへ PR                                                                                       | アルファベット順、説明は**非宣伝的**で簡潔・末尾に句読点、新カテゴリは 3 件以上、CoC 同意                                                                                                                       | Good — コードレビューツールそのもの。GitHub/Gerrit 等と並ぶ。説明は中立トーン必須                                |
+| awesome-actions       | [sdras/awesome-actions](https://github.com/sdras/awesome-actions)                                   | 該当カテゴリ末尾へ PR                                                                                         | 意味のある PR タイトル（"Update readme" は却下）、1 PR 1 提案、1 行説明（3 行に折り返さない）、Title Case、重複不可                                                                                             | Good — GitHub Action として配布しており直球で適合                                                                |
 
 ### 優先度: 中
 
@@ -48,7 +48,7 @@ Codify team review judgment as repo-owned skills; run them as GitHub Action / pl
 
 ## 申請優先順位
 
-1. **awesome-codex-plugins**—同梱プラグインと manifest が揃っており、外部提案（#1247）もある。最短で成立する見込み
+1. **awesome-codex-plugins**—✅ **掲載済み（live on `main`）**。同梱プラグインと manifest が揃っており、外部からの提案もあった
 2. **awesome-actions**—GitHub Action として直球で適合
 3. **awesome-code-review**—ドメイン一致。非宣伝的な説明文を用意
 4. **awesome-ai-devtools**—PR & Code Review Bots カテゴリ。PR テンプレートを確認のうえ申請
@@ -58,7 +58,7 @@ Codify team review judgment as repo-owned skills; run them as GitHub Action / pl
 
 各リストの実際の README / CONTRIBUTING を確認して作成したコピペ用ドラフト。fork → 該当箇所に追記 → PR の流れで使う（外部リポジトリへの操作はリポジトリ管理者が実施）。提出直前に各リストの規約が変わっていないか再確認すること。
 
-> awesome-codex-plugins は提出済み（[hashgraph-online/awesome-codex-plugins#229](https://github.com/hashgraph-online/awesome-codex-plugins/pull/229)、マージ待ち、[#1247](https://github.com/s977043/river-review/issues/1247)）。
+> awesome-codex-plugins は**掲載済み**（upstream の `main` に `plugins/s977043/river-review` として反映）。提出 PR [hashgraph-online/awesome-codex-plugins#229](https://github.com/hashgraph-online/awesome-codex-plugins/pull/229) は GitHub 上は CLOSED（merge ボタン経由ではなく maintainer が別経路で main へ取り込み）だが、掲載自体は成立している。
 
 ### awesome-actions（sdras/awesome-actions）
 
