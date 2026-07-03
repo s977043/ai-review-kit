@@ -7,8 +7,7 @@
 //
 // Usage: node scripts/apply-feedback.mjs [--month YYYY-MM] [--write]
 import path from 'path';
-import { promises as fs } from 'fs';
-import { realpathSync } from 'fs';
+import { promises as fs, realpathSync } from 'fs';
 import { pathToFileURL, fileURLToPath } from 'url';
 import { listFeedbackEntries, buildFeedbackScaffold } from '../src/lib/feedback.mjs';
 

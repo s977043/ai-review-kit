@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { writeFileSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { describe } from 'node:test';
 
@@ -42,10 +43,13 @@ describe('ensureGitRepo', () => {
   });
 
   test('throws for non-existent path', async () => {
-    await assert.rejects(ensureGitRepo('/tmp/nonexistent-path-xyz-' + Date.now()), (err) => {
-      assert.ok(err instanceof GitError);
-      return true;
-    });
+    await assert.rejects(
+      ensureGitRepo(join(tmpdir(), 'nonexistent-path-xyz-' + Date.now())),
+      (err) => {
+        assert.ok(err instanceof GitError);
+        return true;
+      }
+    );
   });
 });
 

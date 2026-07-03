@@ -12,8 +12,7 @@
  */
 
 import path from 'path';
-import { readFileSync } from 'fs';
-import { realpathSync } from 'fs';
+import { readFileSync, realpathSync } from 'fs';
 import { pathToFileURL, fileURLToPath } from 'url';
 
 import { diffRunHistory } from '../src/lib/review-differ.mjs';

@@ -103,7 +103,9 @@ function buildRunRecord(result, { phase, runId, gate, decision } = {}) {
  */
 async function loadAllRunRecords(storeDir) {
   const runs = await listRunRecords(storeDir);
-  const full = await Promise.all(runs.map((r) => loadRunRecord(storeDir, r.runId).catch(() => null)));
+  const full = await Promise.all(
+    runs.map((r) => loadRunRecord(storeDir, r.runId).catch(() => null))
+  );
   return full.filter(Boolean);
 }
 
