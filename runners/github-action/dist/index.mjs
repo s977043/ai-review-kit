@@ -43429,7 +43429,6 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 
 
 
-
 const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
 const MAX_PROMPT_CHARS = 12000;
 const MAX_PROMPT_PREVIEW_CHARS = 2000;

@@ -1,12 +1,11 @@
 import process from 'process';
-import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
+import { diag, DiagConsoleLogger, DiagLogLevel, trace } from '@opentelemetry/api';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import resources from '@opentelemetry/resources';
 const { resourceFromAttributes } = resources;
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { trace } from '@opentelemetry/api';
 
 // Enable diagnostic logging for development when OTEL_DEBUG env is set.
 if (process.env.OTEL_DEBUG) {

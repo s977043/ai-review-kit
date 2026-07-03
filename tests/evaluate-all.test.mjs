@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import url from 'node:url';
@@ -34,9 +35,10 @@ test('parseArgs: --skip collects multiple values', () => {
 });
 
 test('parseArgs: all flags combined', () => {
+  const gateInputPath = path.join(os.tmpdir(), 'out.json');
   const result = parseArgs([
     '--gate-input',
-    '/tmp/out.json',
+    gateInputPath,
     '--append-ledger',
     '--description',
     'test run',
@@ -44,7 +46,7 @@ test('parseArgs: all flags combined', () => {
     '--skip',
     'meta',
   ]);
-  assert.equal(result.gateInput, '/tmp/out.json');
+  assert.equal(result.gateInput, gateInputPath);
   assert.equal(result.appendLedger, true);
   assert.equal(result.description, 'test run');
   assert.equal(result.json, true);

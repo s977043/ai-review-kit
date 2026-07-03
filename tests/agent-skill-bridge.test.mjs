@@ -287,7 +287,7 @@ test('exports RR skill to directory with SKILL.md', async () => {
         applyTo: ['**/*.js'],
       },
       body: '# Export Test\n\nInstructions.',
-      path: '/tmp/fake.md',
+      path: path.join(os.tmpdir(), 'fake.md'),
     };
 
     const result = await exportSkillToAgentFormat(skill, tmpDir);
@@ -316,7 +316,7 @@ test('round-trip: export then re-import preserves name, description, body', asyn
         severity: 'major',
       },
       body: '# Round Trip\n\nThis body must survive the round trip.',
-      path: '/tmp/roundtrip.md',
+      path: path.join(os.tmpdir(), 'roundtrip.md'),
     };
 
     // Export
@@ -505,7 +505,7 @@ test('exportSkillToAgentFormat sanitizes directory name', async () => {
         applyTo: ['**/*'],
       },
       body: '# Evil Export',
-      path: '/tmp/fake.md',
+      path: path.join(os.tmpdir(), 'fake.md'),
     };
 
     const result = await exportSkillToAgentFormat(skill, tmpDir);

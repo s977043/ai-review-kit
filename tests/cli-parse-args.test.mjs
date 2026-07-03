@@ -5,6 +5,8 @@
 // 各テストは < 50ms で完走する想定。
 
 import assert from 'node:assert/strict';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import { parseArgs, isLlmlessEmptyReview } from '../src/cli.mjs';
@@ -82,9 +84,10 @@ test('parseArgs: run command with default target', () => {
 });
 
 test('parseArgs: run command with explicit target path', () => {
-  const parsed = parseArgs(['run', '/tmp/myrepo']);
+  const repoPath = path.join(os.tmpdir(), 'myrepo');
+  const parsed = parseArgs(['run', repoPath]);
   assert.equal(parsed.command, 'run');
-  assert.equal(parsed.target, '/tmp/myrepo');
+  assert.equal(parsed.target, repoPath);
 });
 
 test('parseArgs: doctor command', () => {

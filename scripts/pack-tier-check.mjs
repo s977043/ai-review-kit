@@ -12,8 +12,7 @@
 // Usage: node scripts/pack-tier-check.mjs [--strict]
 //   --strict  exit 1 when a declared tier exceeds its mechanical assessment
 import path from 'path';
-import { promises as fs } from 'fs';
-import { realpathSync } from 'fs';
+import { promises as fs, realpathSync } from 'fs';
 import { pathToFileURL } from 'url';
 import {
   defaultPaths,
