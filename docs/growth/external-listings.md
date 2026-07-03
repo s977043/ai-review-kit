@@ -49,16 +49,28 @@ Codify team review judgment as repo-owned skills; run them as GitHub Action / pl
 ## 申請優先順位
 
 1. **awesome-codex-plugins**—✅ **掲載済み（live on `main`）**。同梱プラグインと manifest が揃っており、外部からの提案もあった
-2. **awesome-actions**—GitHub Action として直球で適合
-3. **awesome-code-review**—ドメイン一致。非宣伝的な説明文を用意
-4. **awesome-ai-devtools**—PR & Code Review Bots カテゴリ。PR テンプレートを確認のうえ申請
-5. **awesome-ai-agents**—位置づけを慎重に検討（優先度低）
+2. **awesome-actions**—GitHub Action として直球で適合。⏳ 提出済み・マージ待ち（[#829](https://github.com/sdras/awesome-actions/pull/829)）
+3. **awesome-code-review**—ドメイン一致。非宣伝的な説明文を用意。⏳ 提出済み・マージ待ち（[#131](https://github.com/joho/awesome-code-review/pull/131)）
+4. **awesome-ai-devtools**—PR & Code Review Bots カテゴリ。⏳ 提出済み・マージ待ち（[#697](https://github.com/jamesmurdza/awesome-ai-devtools/pull/697)）
+5. **awesome-ai-agents**—位置づけを慎重に検討（優先度低）。未提出
+
+> 提出済み PR の一覧と状態は下記「提出状況（トラッキング）」を参照。
+
+## 提出状況（トラッキング）
+
+各リストへの提出 PR と、その時点の状態。状態は変わりうるため、確認時は各 PR / upstream の `main` を直接参照すること（最終確認: 2026-07-04）。
+
+| リスト                | 提出 PR                                                                    | 状態                          | 備考                                                                                      |
+| --------------------- | -------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------- |
+| awesome-codex-plugins | [#229](https://github.com/hashgraph-online/awesome-codex-plugins/pull/229) | ✅ 掲載済み（live on `main`） | PR は GitHub 上 CLOSED だが maintainer が別経路で `main` へ反映。掲載成立                 |
+| awesome-actions       | [#829](https://github.com/sdras/awesome-actions/pull/829)                  | ⏳ Open・マージ待ち           | 2026-06-24 提出。mergeable、修正すべき CI 失敗なし（`UNSTABLE` は upstream 側の良性状態） |
+| awesome-code-review   | [#131](https://github.com/joho/awesome-code-review/pull/131)               | ⏳ Open・マージ待ち           | 2026-06-24 提出。mergeable、レビュー未着                                                  |
+| awesome-ai-devtools   | [#697](https://github.com/jamesmurdza/awesome-ai-devtools/pull/697)        | ⏳ Open・マージ待ち           | 2026-06-24 提出（旧 #696 は差し替えのため CLOSED）。mergeable、レビュー未着               |
+| awesome-ai-agents     | —                                                                          | 未提出                        | Marginal 適合のため優先度低（下記参照）                                                   |
 
 ## 提出材料ドラフト
 
-各リストの実際の README / CONTRIBUTING を確認して作成したコピペ用ドラフト。fork → 該当箇所に追記 → PR の流れで使う（外部リポジトリへの操作はリポジトリ管理者が実施）。提出直前に各リストの規約が変わっていないか再確認すること。
-
-> awesome-codex-plugins は**掲載済み**（upstream の `main` に `plugins/s977043/river-review` として反映）。提出 PR [hashgraph-online/awesome-codex-plugins#229](https://github.com/hashgraph-online/awesome-codex-plugins/pull/229) は GitHub 上は CLOSED（merge ボタン経由ではなく maintainer が別経路で main へ取り込み）だが、掲載自体は成立している。
+各リストの実際の README / CONTRIBUTING を確認して作成したコピペ用ドラフト。fork → 該当箇所に追記 → PR の流れで使う（外部リポジトリへの操作はリポジトリ管理者が実施）。提出直前に各リストの規約が変わっていないか再確認すること。提出済み PR の状態は上記「提出状況（トラッキング）」を参照。
 
 ### awesome-actions（sdras/awesome-actions）
 
