@@ -83,6 +83,14 @@ export function findBadGlobs(metadata) {
   return globs.filter((g) => typeof g === 'string' && RE_SINGLE_BRACE.test(g));
 }
 
+// True when a repoRoot-relative path lives under the new Agent Skills tree
+// (skills/agent-skills/, validated separately by npm run agent-skills:validate).
+// Segment-wise match so a directory merely containing the substring
+// (e.g. my-agent-skills-bridge) is not skipped by accident.
+export function isAgentSkillsPath(relativePath) {
+  return relativePath.split(path.sep).includes('agent-skills');
+}
+
 function warnMissingGuardsAndNonGoals(skill, relativePath) {
   const tags = skill?.metadata?.tags ?? [];
   const excludedTags = ['sample', 'hello', 'policy', 'process'];
@@ -130,8 +138,8 @@ async function validateSkills() {
       continue;
     }
 
-    // Skip new Agent Skills format (validated by npm run agent-skills:validate)
-    if (relativePath.includes('agent-skills')) {
+    // Skip new Agent Skills format (validated by npm run agent-skills:validate).
+    if (isAgentSkillsPath(relativePath)) {
       console.log(`ℹ️  ${relativePath} (skipped - agent skill)`);
       continue;
     }
@@ -203,7 +211,7 @@ export async function validatePacks({
   for (const filePath of await listSkillFiles(skillsDir)) {
     const basename = path.basename(filePath);
     if (basename === 'skill.yaml' || basename === 'skill.yml') continue;
-    if (path.relative(repoRoot, filePath).includes('agent-skills')) continue;
+    if (isAgentSkillsPath(path.relative(repoRoot, filePath))) continue;
     try {
       const skill = await loadSkillFile(filePath, { validator: skillValidator });
       if (skill?.metadata?.id) knownIds.set(skill.metadata.id, filePath);
@@ -392,9 +400,7 @@ export async function validateRegistryPaths({
   for (const filePath of skillFiles) {
     if (path.basename(filePath) !== 'SKILL.md') continue;
     const relativePath = path.relative(repoRoot, filePath);
-    // Segment-wise match so a skill directory merely containing the substring
-    // (e.g. my-agent-skills-bridge) is not skipped by accident.
-    if (relativePath.split(path.sep).includes('agent-skills')) continue;
+    if (isAgentSkillsPath(relativePath)) continue;
     // Resolve against repoRoot (not process.cwd()) so the comparison with
     // registeredPaths (repoRoot-based) holds regardless of the caller's cwd.
     if (!registeredPaths.has(path.resolve(repoRoot, relativePath))) {
@@ -538,7 +544,7 @@ export async function validateFixtureDrift({
     const basename = path.basename(filePath);
     if (basename !== 'SKILL.md') continue;
     const relativePath = path.relative(repoRoot, filePath);
-    if (relativePath.split(path.sep).includes('agent-skills')) continue;
+    if (isAgentSkillsPath(relativePath)) continue;
 
     const skillDir = path.dirname(filePath);
     const fixturesDir = path.join(skillDir, 'fixtures');

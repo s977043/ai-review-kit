@@ -627,7 +627,7 @@ severity: minor
 - Instruction text for the reviewer goes here.
 ```
 
-- サンプル: `skills/upstream/sample-architecture-review.md`, `skills/midstream/sample-code-quality.md`, `skills/downstream/sample-test-review.md`
+- サンプル: `skills/upstream/architecture-sample/SKILL.md`, `skills/midstream/code-quality-sample/SKILL.md`, `skills/downstream/test-review-sample/SKILL.md`
 - examples: `examples/README.md`
 - スキーマ: スキルメタデータは `schemas/skill.schema.json`, レビュー出力は `schemas/output.schema.json`
 - 参考: スキルスキーマの詳細は `pages/reference/skill-schema-reference.md`、Riverbed Memory の設計ドラフトは `pages/explanation/riverbed-memory.md`

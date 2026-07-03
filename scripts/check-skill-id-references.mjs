@@ -68,9 +68,6 @@ const CD_NO_PHASE_RE = /\bcd\s+skills\/(?!upstream\/|midstream\/|downstream\/)([
 
 // 許容するフラットパス（意図的な doc 例示）
 const ALLOWED_FLAT_PATHS = new Set([
-  'skills/upstream/sample-architecture-review.md',
-  'skills/midstream/sample-code-quality.md',
-  'skills/downstream/sample-test-review.md',
   // pages/ docs の架空例示スキル（存在しないスキル名）
   'skills/midstream/my-skill.md',
   'skills/midstream/old-skill.md',
