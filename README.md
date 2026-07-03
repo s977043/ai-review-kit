@@ -7,6 +7,7 @@
 [![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-review.the3396.com/explanation/intro/)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13339/badge)](https://www.bestpractices.dev/projects/13339)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/s977043/river-review/badge)](https://securityscorecards.dev/viewer/?uri=github.com/s977043/river-review)
+[![Listed on awesome-codex-plugins](https://img.shields.io/badge/awesome--codex--plugins-listed-brightgreen)](https://github.com/hashgraph-online/awesome-codex-plugins/tree/main/plugins/s977043/river-review)
 
 ![River Review logo](assets/logo/river-review-logo.svg)
 
