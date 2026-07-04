@@ -56,6 +56,7 @@ module.exports = {
         'reference/skill-template',
         'reference/runner-cli-reference',
         'reference/known-limitations',
+        'reference/detector-evaluation-report',
         'reference/glossary',
       ],
     },
