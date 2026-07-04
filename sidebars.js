@@ -3,6 +3,7 @@ module.exports = {
   docs: [
     'index',
     'dashboard',
+    'comparison/ai-code-review-tools',
     {
       type: 'category',
       label: 'チュートリアル',
