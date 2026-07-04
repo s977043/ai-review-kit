@@ -25,7 +25,7 @@ River Review は誤検出への対処を 2 つの層に分けています。決�
 - `false_positive`: 実装意図に対する誤検知として記録する区分である。
 - `accepted_risk`: リスクを認識したうえで残すと決めた指摘に付ける区分である。
 - `duplicate`: 既存 fingerprint の指摘と重複するときに参照を張る区分である。
-- major / critical の指摘は `accepted_risk` 以外で自動抑制されない（HIGH_SEVERITY guard）。
+- major / critical の指摘は、`accepted_risk` として根拠つきで区分した場合を除き、自動抑制されない（HIGH_SEVERITY guard）。minor / info のノイズはどの区分でも自動抑制される。
 
 この判断が Riverbed Memory に残ると、後続 PR のレビューは同じノイズの再燃を防げます。
 

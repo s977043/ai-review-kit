@@ -28,7 +28,7 @@ River Review splits false-positive handling into two layers:
 - `false_positive` — records a comment that contradicts the implementation intent.
 - `accepted_risk` — records a finding you knowingly keep after weighing the cost.
 - `duplicate` — points at an existing fingerprint instead of repeating the comment.
-- `major` / `critical` findings are **not** auto-suppressed except via `accepted_risk` with a rationale (the HIGH_SEVERITY guard). Everything else is blocked and must be handled manually.
+- `major` / `critical` findings are **not** auto-suppressed unless the classification is `accepted_risk` with a rationale (the HIGH_SEVERITY guard); lower-severity `minor` / `info` noise is auto-suppressed for any classification.
 
 Because the decision lives in Riverbed Memory, the next PR's review can recall it and stop re-firing the same noise.
 
