@@ -114,6 +114,15 @@ Tracking issue: [#1282](https://github.com/s977043/river-review/issues/1282)
 
 Tracking issue: [#1283](https://github.com/s977043/river-review/issues/1283)
 
+### Phase 8: Coordinated launch execution
+
+- Publish the technical article 1-2 days ahead so search indexing is ready
+- Post to Hacker News / Reddit / X (and optionally Product Hunt) together on a Tue-Thu PT morning to build organic initial velocity
+- Respond to all feedback within 24-48 hours, then move from broadcast to one-on-one user conversations
+- Follow the day-of runbook and checklist in [launch-playbook](../growth/launch-playbook.md)
+
+Runbook: [launch-playbook](../growth/launch-playbook.md)
+
 ## Weekly tracking template
 
 ```md
