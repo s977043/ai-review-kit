@@ -7,12 +7,18 @@ import { useDashboardData } from './useDashboardData';
 
 export default function DashboardPage() {
   const data = useDashboardData();
+  // Until real LLM review runs are committed, the dashboard shows the
+  // deterministic, offline-verifiable Skill Registry + detector coverage.
+  const hasRuns = data.totals?.reviews != null;
 
   return (
     <div className="container margin-vert--lg">
       <h1>River Reviewer ダッシュボード</h1>
       <p className="margin-bottom--md">
-        レビュー実行回数やコストの推移を可視化します。生成日時: {data.generatedAt || 'N/A'}
+        {hasRuns
+          ? 'レビュー実行回数やコストの推移を可視化します。'
+          : 'スキルレジストリと決定論的検出器のカバレッジを表示します。レビュー実行回数・コストは、実際のレビュー実行が記録され次第反映されます。'}
+        生成日時: {data.generatedAt || 'N/A'}
       </p>
 
       <ReviewStatsCard totals={data.totals} />
@@ -21,7 +27,9 @@ export default function DashboardPage() {
         <div className="col col--6">
           <div className="card">
             <div className="card__header">
-              <h3 className="card__title">フェーズ別レビュー数</h3>
+              <h3 className="card__title">
+                {hasRuns ? 'フェーズ別レビュー数' : 'フェーズ別スキル数'}
+              </h3>
             </div>
             <div className="card__body">
               <PhaseDistribution phases={data.phases} />

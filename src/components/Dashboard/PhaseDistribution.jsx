@@ -7,6 +7,10 @@ export default function PhaseDistribution({ phases }) {
     return <p>フェーズ別のデータがまだありません。</p>;
   }
 
+  // Real run artifacts carry reviews/comments per phase; the offline registry
+  // inventory carries a skills count per phase. Render whichever is present.
+  const isInventory = phases[0]?.skills != null;
+
   return (
     <BrowserOnly fallback={<p>Chart is loading...</p>}>
       {() => (
@@ -16,8 +20,14 @@ export default function PhaseDistribution({ phases }) {
             <XAxis dataKey="phase" />
             <YAxis allowDecimals={false} />
             <Tooltip />
-            <Bar dataKey="reviews" name="Reviews" fill="#4285f4" />
-            <Bar dataKey="comments" name="Comments" fill="#34a853" />
+            {isInventory ? (
+              <Bar dataKey="skills" name="Skills" fill="#4285f4" />
+            ) : (
+              <>
+                <Bar dataKey="reviews" name="Reviews" fill="#4285f4" />
+                <Bar dataKey="comments" name="Comments" fill="#34a853" />
+              </>
+            )}
           </BarChart>
         </ResponsiveContainer>
       )}
