@@ -2,7 +2,7 @@
 id: detector-evaluation-report-en
 title: Deterministic Detector Evaluation Report (Reproducible)
 sidebar_label: Detector evaluation report
-description: What River Review's deterministic (LLM-free) detectors catch and what they never false-positive on — shown as a fixture regression anyone can reproduce with one command.
+description: What River Review's deterministic (LLM-free) detectors catch and the false-positive patterns they are guarded against — shown as a fixture regression anyone can reproduce with one command.
 keywords:
   - AI code review evaluation
   - deterministic code review
@@ -11,7 +11,7 @@ keywords:
   - River Review
 ---
 
-This report shows what River Review's deterministic (LLM-free) heuristic detectors catch, and what they deliberately do not false-positive on, as a reproducible fixture regression. Unlike vendor self-reported benchmarks, every number here can be reproduced by anyone with a single command.
+This report shows what River Review's deterministic (LLM-free) heuristic detectors catch, and what they deliberately do not false-positive on, as a reproducible fixture regression. Every number here can be reproduced by anyone with a single command.
 
 LLM-based review varies from run to run. Deterministic detectors, by contrast, return the same result for the same input, so their quality can be guaranteed mechanically with fixture regression tests. River Review guards this layer with canary cases (a collection of known false-positive patterns) so that a fixed false-positive never silently reappears.
 

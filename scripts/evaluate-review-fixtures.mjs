@@ -62,8 +62,8 @@ Defaults:
 }
 
 main()
-  .then((code) => {
-    process.exitCode = code;
+  .then((result) => {
+    process.exitCode = result.exitCode;
   })
   .catch((err) => {
     console.error(`Fixture runner error: ${err.message}`);
