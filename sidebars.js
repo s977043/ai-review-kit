@@ -67,6 +67,7 @@ module.exports = {
         'reference/runner-cli-reference',
         'reference/known-limitations',
         'reference/detector-evaluation-report',
+        'reference/how-to-cite',
         'reference/glossary',
       ],
     },
