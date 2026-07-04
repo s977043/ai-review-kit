@@ -1,10 +1,19 @@
 cff-version: 1.2.0
-title: "River Review"
-message: "Cite River Review when referencing this repository."
+title: River Review
+message: "If you use River Review, please cite it using the metadata in this file."
+type: software
+abstract: "River Review is an open-source \"Review Judgment as Code\" framework for AI-assisted code review. Teams codify their review standards as versioned, repo-owned SKILL.md skills and run them across plans, diffs, tests, JUnit, and prior review artifacts, keeping humans in the loop rather than auto-merging."
 authors:
-  - family-names: "River Review"
-    given-names: "Maintainers"
-version: "2025.10"
-date-released: "2025-10-26"
+  - name: "River Review maintainers"
 repository-code: "https://github.com/s977043/river-review"
-doi: ""
+url: "https://river-review.the3396.com/"
+license: MIT
+version: "1.39.0"
+date-released: "2026-07-02"
+keywords:
+  - code-review
+  - ai-code-review
+  - review-judgment-as-code
+  - skill-registry
+  - human-in-the-loop
+# doi: 10.5281/zenodo.XXXXXXX  # add after enabling the Zenodo–GitHub integration and minting a DOI
