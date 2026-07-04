@@ -6,6 +6,16 @@ module.exports = {
     'comparison/ai-code-review-tools',
     {
       type: 'category',
+      label: 'ユースケース',
+      items: [
+        'use-cases/use-cases-index',
+        'use-cases/enforce-plan-conformance',
+        'use-cases/review-design-adrs-upstream',
+        'use-cases/suppress-flaky-review-comments',
+      ],
+    },
+    {
+      type: 'category',
       label: 'チュートリアル',
       items: [
         'tutorials/getting-started',
