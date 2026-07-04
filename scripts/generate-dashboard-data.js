@@ -14,7 +14,8 @@ const { pathToFileURL } = require('url');
 const yaml = require('js-yaml');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const RUNS_DIR = path.join(REPO_ROOT, 'docs', 'data', 'dogfooding');
+const RUNS_DIR =
+  process.env.RIVER_DASHBOARD_RUNS_DIR || path.join(REPO_ROOT, 'docs', 'data', 'dogfooding');
 
 const PHASE_ORDER = ['upstream', 'midstream', 'downstream'];
 
@@ -79,7 +80,11 @@ async function readRunArtifacts() {
       if (!file.endsWith('.json')) continue;
       try {
         const raw = await fs.readFile(path.join(RUNS_DIR, file), 'utf8');
-        entries.push(JSON.parse(raw));
+        const parsed = JSON.parse(raw);
+        // Ignore null / non-object artifacts so downstream property access is safe.
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          entries.push(parsed);
+        }
       } catch {
         // skip unreadable/invalid artifact
       }
@@ -110,7 +115,7 @@ function buildOperational(runs) {
     perPhase.set(phase, cur);
   }
   const costTrend = runs
-    .filter((r) => r.date)
+    .filter((r) => typeof r.date === 'string')
     .map((r) => ({
       date: r.date,
       costUsd: Number(r.costUsd) || 0,
@@ -129,6 +134,21 @@ function buildOperational(runs) {
     phases: Array.from(perPhase.values()),
     costTrend,
   };
+}
+
+// Real findings aggregated per skill from committed run artifacts (used by
+// SkillHeatmap once real runs exist; empty until then).
+function buildSkillFindings(runs, registrySkills) {
+  const counts = new Map();
+  for (const r of runs) {
+    for (const finding of Array.isArray(r.findings) ? r.findings : []) {
+      if (finding?.skill) counts.set(finding.skill, (counts.get(finding.skill) || 0) + 1);
+    }
+  }
+  return Array.from(counts.entries()).map(([id, findings]) => {
+    const registrySkill = registrySkills.find((s) => s.id === id);
+    return { id, name: registrySkill?.name || HEURISTIC_SKILL_NAMES[id] || id, findings };
+  });
 }
 
 async function generateDashboardData() {
@@ -162,8 +182,12 @@ async function generateDashboardData() {
           },
     // PhaseDistribution: real skill inventory per phase (falls back to run phases).
     phases: operational.phases.length > 0 ? operational.phases : inventory.phases,
-    // SkillHeatmap: real deterministic detector coverage per heuristic skill.
-    skills: coverage.skills.map((s) => ({ id: s.id, name: s.name, detectors: s.detectors })),
+    // SkillHeatmap: real findings per skill once runs exist, else deterministic
+    // detector coverage per heuristic skill.
+    skills:
+      runs.length > 0
+        ? buildSkillFindings(runs, registrySkills)
+        : coverage.skills.map((s) => ({ id: s.id, name: s.name, detectors: s.detectors })),
     // CostTrends: only real runs; empty otherwise (honest "no data yet" state).
     costTrend: operational.costTrend,
   };
