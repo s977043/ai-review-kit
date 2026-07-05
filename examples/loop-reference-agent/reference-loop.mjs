@@ -103,17 +103,31 @@ function decideFromGate({ gate, signal, iteration, maxIterations }) {
         reason: `gate GO (${gate.reasonCode}) — autonomous continuation permitted`,
       };
     case 'GO_WITH_OBSERVATION': {
-      // The hill tier: continue, but the caller must track the observation
-      // window. The decision SURFACES the full observation contract
+      // The hill tier: continue, but under a bounded observation window the
+      // caller must track. The decision SURFACES the full observation contract
       // (deadline + files + onExpiry) so the caller can enforce it; this
       // reference driver does not itself track wall-clock time (a revise loop
       // terminates here — expiry is a post-loop concern for the merged change).
+      //
+      // A well-formed gate ALWAYS carries a finite expiresInHours
+      // (deriveGateDecision defaults it), so a missing/non-finite deadline means
+      // a malformed gate. Fail-safe = escalate: never continue an UNBOUNDED
+      // observation, and never fall back to the loop-signal path (which could
+      // promote a CONVERGED artifact to a full GO — the wrong direction for the
+      // hill tier, contra the Epic's unknown-never-toward-GO invariant).
       const hours = gate.observation?.expiresInHours;
+      if (!Number.isFinite(hours)) {
+        return {
+          signal,
+          action: LOOP_ACTIONS.STOP_ESCALATE,
+          reason: `gate GO_WITH_OBSERVATION (${gate.reasonCode}) without a finite observation deadline — malformed gate, escalating`,
+        };
+      }
       return {
         signal,
         action: LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION,
         reason: `gate GO_WITH_OBSERVATION (${gate.reasonCode}) — proceed under a review window`,
-        ...(Number.isFinite(hours) ? { observationDeadline: hours } : {}),
+        observationDeadline: hours,
         ...(gate.observation ? { observation: gate.observation } : {}),
       };
     }

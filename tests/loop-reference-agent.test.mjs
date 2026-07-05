@@ -230,6 +230,19 @@ describe('decideLoopAction — gate block (S4)', () => {
     assert.deepEqual(d.observation, { expiresInHours: 72, onExpiry: 'stop', files: ['a.mjs'] });
   });
 
+  test('gate GO_WITH_OBSERVATION without a finite deadline → stop-escalate (fail-safe, not unbounded observe)', () => {
+    // A malformed hill gate (no finite expiresInHours) must NOT continue an
+    // unbounded observation, and must NOT fall back to the loop-signal path
+    // (which would promote this findings:[] artifact to a full GO). #1400 review.
+    const d = decideLoopAction({
+      artifact: withGate('GO_WITH_OBSERVATION'), // no observation block → no deadline
+      iteration: 1,
+      maxIterations: 5,
+    });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_ESCALATE);
+    assert.equal(d.observationDeadline, undefined);
+  });
+
   test('oscillation (runs diff) overrides the gate block', () => {
     const artifact = withGate('GO'); // gate says GO...
     const d = decideLoopAction({
