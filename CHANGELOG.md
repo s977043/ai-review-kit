@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.40.0](https://github.com/s977043/river-review/compare/v1.39.0...v1.40.0) (2026-07-05)
+
+
+### Features
+
+* **ci:** auto-rebuild github-action dist on stale PRs ([#1380](https://github.com/s977043/river-review/issues/1380)) ([e964db2](https://github.com/s977043/river-review/commit/e964db24f100856a66e19eafa559105f191132ef))
+* **commands:** add /merge-check repo-dev command for pre-merge checklist ([#1383](https://github.com/s977043/river-review/issues/1383)) ([a3ea08b](https://github.com/s977043/river-review/commit/a3ea08b92a166666745e507f25a615b795a77c48))
+* **commands:** add /verify-agent-report repo-dev command ([#1377](https://github.com/s977043/river-review/issues/1377)) ([99e274f](https://github.com/s977043/river-review/commit/99e274fd988e2142cff8b4be1aac96a04dbc18bc))
+* **hooks:** add gh account guard as a PreToolUse hook ([#1375](https://github.com/s977043/river-review/issues/1375)) ([5ad09e6](https://github.com/s977043/river-review/commit/5ad09e6a38cac63c056c81c8d9daa82765adaf04))
+* **lint:** bot 頻出指摘を機械化する code hygiene checker を追加 ([#1382](https://github.com/s977043/river-review/issues/1382)) ([4643677](https://github.com/s977043/river-review/commit/4643677b96b8a58e23e6a80e3e904fcda504482d))
+* **metrics:** context lift + schema parity canary + SKIPPED_BY_POLICY ([#1398](https://github.com/s977043/river-review/issues/1398)) ([815e1c6](https://github.com/s977043/river-review/commit/815e1c6ce89fa7c1fc931d09ce1bae70231fef1b))
+* **plan-review:** adjudicator 堅牢化 + regex recall の ratchet 実測 ([#1370](https://github.com/s977043/river-review/issues/1370)) ([f2f7f40](https://github.com/s977043/river-review/commit/f2f7f40b964d04e42f3a79d0ab3be505741d9511))
+* **plugin:** add bundle field allowlist and cross-manifest parity checks ([#1378](https://github.com/s977043/river-review/issues/1378)) ([f74e40f](https://github.com/s977043/river-review/commit/f74e40f20b84ebda22c0d25772240fff160b2f69))
+* **pr:** add description-vs-actual consistency checks to /pr and pr-description skill ([#1379](https://github.com/s977043/river-review/issues/1379)) ([c0ae895](https://github.com/s977043/river-review/commit/c0ae895ed21281a4b4c1bbb747ac1b564bb12c5f))
+* **supervision:** 監査証跡の蓄積 + runs digest + Action 強制表示点 ([#1372](https://github.com/s977043/river-review/issues/1372)) ([8a1c864](https://github.com/s977043/river-review/commit/8a1c8642c40af17dd9a637530aa13429a2d56b89))
+* **validate:** mechanize skill fixture/description drift guard ([#1381](https://github.com/s977043/river-review/issues/1381)) ([3173200](https://github.com/s977043/river-review/commit/3173200f181d75b776c6f336c956afeb97c37b2e))
+
+
+### Bug Fixes
+
+* **dashboard:** replace fabricated stats with real, offline-verifiable data ([#1389](https://github.com/s977043/river-review/issues/1389)) ([509d63f](https://github.com/s977043/river-review/commit/509d63fa41df659949cde4155c47052dec1c1820))
+* **scripts:** segment-match agent-skills skip and trim resolved flat-path allowlist ([#1384](https://github.com/s977043/river-review/issues/1384)) ([91d1ccd](https://github.com/s977043/river-review/commit/91d1ccdfbe023e54fff0160ad96f76669a0ee081))
+* **skills:** repair registry path drift and add registry path validation ([#1376](https://github.com/s977043/river-review/issues/1376)) ([3c87caa](https://github.com/s977043/river-review/commit/3c87caabaa5eecbb2c177ad4c493894bcf914226))
+
 ## [1.39.0](https://github.com/s977043/river-review/compare/v1.38.1...v1.39.0) (2026-07-02)
 
 
