@@ -12,7 +12,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -162,4 +162,116 @@ describe('runReferenceLoop', () => {
     assert.equal(result.action, LOOP_ACTIONS.STOP_CONVERGED);
     assert.equal(result.iteration, 2);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Gate consumption (Epic #1347 S4) — the gate block is authoritative when
+// present; older artifacts without gate fall back to the loop-signal path.
+// ---------------------------------------------------------------------------
+describe('decideLoopAction — gate block (S4)', () => {
+  const withGate = (decision, extra = {}) => ({
+    version: '1',
+    timestamp: '2026-07-05T00:00:00.000Z',
+    phase: 'midstream',
+    status: 'ok',
+    findings: [],
+    gate: {
+      decision,
+      reasonCode:
+        decision === 'GO'
+          ? 'CONVERGED_CLEAN'
+          : decision === 'ESCALATE'
+            ? 'HUMAN_APPROVAL_REQUIRED'
+            : decision === 'GO_WITH_OBSERVATION'
+              ? 'MINOR_FINDINGS_OBSERVE'
+              : 'BLOCKING_FINDINGS',
+      tier: 'field',
+      inputs: {},
+      inputsHash: 'aaaaaaaaaaaaaaaa',
+      schemaVersion: '1',
+      ...extra,
+    },
+  });
+
+  test('gate GO → stop-converged', () => {
+    const d = decideLoopAction({ artifact: withGate('GO'), iteration: 1, maxIterations: 5 });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_CONVERGED);
+  });
+
+  test('gate ESCALATE → stop-escalate (cliff isolated from revise)', () => {
+    const d = decideLoopAction({ artifact: withGate('ESCALATE'), iteration: 1, maxIterations: 5 });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_ESCALATE);
+  });
+
+  test('gate NO_GO → revise (with iteration cap)', () => {
+    const d = decideLoopAction({ artifact: withGate('NO_GO'), iteration: 1, maxIterations: 5 });
+    assert.equal(d.action, LOOP_ACTIONS.REVISE);
+    const capped = decideLoopAction({
+      artifact: withGate('NO_GO'),
+      iteration: 5,
+      maxIterations: 5,
+    });
+    assert.equal(capped.action, LOOP_ACTIONS.STOP_MAX_ITERATIONS);
+  });
+
+  test('gate GO_WITH_OBSERVATION → continue-with-observation + deadline', () => {
+    const d = decideLoopAction({
+      artifact: withGate('GO_WITH_OBSERVATION', {
+        observation: { expiresInHours: 72, onExpiry: 'stop', files: ['a.mjs'] },
+      }),
+      iteration: 1,
+      maxIterations: 5,
+    });
+    assert.equal(d.action, LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION);
+    assert.equal(d.observationDeadline, 72);
+  });
+
+  test('oscillation (runs diff) overrides the gate block', () => {
+    const artifact = withGate('GO'); // gate says GO...
+    const d = decideLoopAction({
+      artifact,
+      runsDiff: OSCILLATED_DIFF, // ...but oscillation is detected
+      iteration: 1,
+      maxIterations: 5,
+    });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_ESCALATE);
+  });
+
+  test('caller policy still overrides the gate block', () => {
+    const d = decideLoopAction({
+      artifact: withGate('GO'),
+      iteration: 1,
+      maxIterations: 5,
+      policySignal: 'STOP_POLICY_REQUIRED',
+    });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_POLICY);
+  });
+
+  test('unknown gate decision falls back to the loop-signal path', () => {
+    const artifact = { ...CONVERGED, gate: { decision: 'FUTURE_VALUE', reasonCode: 'x' } };
+    const d = decideLoopAction({ artifact, iteration: 1, maxIterations: 5 });
+    // falls through to loop-signal → CONVERGED artifact yields stop-converged
+    assert.equal(d.action, LOOP_ACTIONS.STOP_CONVERGED);
+  });
+});
+
+// Conformance fixtures (S3) drive the same Reference Loop, proving the
+// documented expectedHostAction is what a real caller reaches (S4 wiring).
+describe('gate conformance fixtures drive the reference loop (S4)', () => {
+  const confDir = join(here, 'fixtures', 'gate-conformance');
+  const expectedAction = {
+    GO: LOOP_ACTIONS.STOP_CONVERGED,
+    GO_WITH_OBSERVATION: LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION,
+    NO_GO: LOOP_ACTIONS.REVISE,
+    ESCALATE: LOOP_ACTIONS.STOP_ESCALATE,
+  };
+  const files = readdirSync(confDir).filter((f) => f.endsWith('.json'));
+  for (const f of files) {
+    test(`${f}: reference loop reaches the tier-appropriate action`, () => {
+      const fixture = JSON.parse(readFileSync(join(confDir, f), 'utf8'));
+      const gate = fixture.artifact.gate;
+      const d = decideLoopAction({ artifact: fixture.artifact, iteration: 1, maxIterations: 5 });
+      assert.equal(d.action, expectedAction[gate.decision], `for gate ${gate.decision}`);
+    });
+  }
 });

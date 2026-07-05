@@ -36,6 +36,32 @@ specifies, so it works as both an executable demo and a contract test.
 `CONVERGED` / escalation take priority over the max-iterations guard: reaching
 the cap on a converged or escalated result is not a "max iterations" stop.
 
+## Gate consumption (Epic #1347 S4)
+
+When the artifact carries a `gate` block (Epic #1347 S2), it is the
+**authoritative** signal — it composes the risk tiers (cliff / hill / field)
+with the loop signal. `decideLoopAction` maps it directly:
+
+| `gate.decision`       | action                      | tier  |
+| --------------------- | --------------------------- | ----- |
+| `GO`                  | `stop-converged`            | field |
+| `GO_WITH_OBSERVATION` | `continue-with-observation` | hill  |
+| `NO_GO`               | `revise` (iteration-capped) | —     |
+| `ESCALATE`            | `stop-escalate`             | cliff |
+
+Two overrides still take priority over the gate block, because they express
+information the gate does not carry: caller policy (`STOP_POLICY_REQUIRED`)
+and Layer-2 oscillation (`STOP_OSCILLATED` from `runs diff`). A caller that
+only read the gate would otherwise loop forever on an oscillating fix.
+
+`continue-with-observation` returns an `observationDeadline` (hours); the
+caller must stop the loop on expiry and treat `gate.observation.files` as
+unreviewed (re-review required). This example implements that enforcement;
+external hosts verify their own via `tests/fixtures/gate-conformance/`.
+
+Older artifacts without a `gate` block fall back to the loop-signal path
+below (backward compatible).
+
 Layers 1–2 (`CONVERGED` / `REVISE_REQUIRED` / `ESCALATE_HUMAN` / `STOP_OSCILLATED`)
 are derived by River Review via `src/lib/loop-signal.mjs`. Layer 3
 (`STOP_MAX_ITERATIONS` / `STOP_POLICY_REQUIRED`) is synthesized by the caller —
