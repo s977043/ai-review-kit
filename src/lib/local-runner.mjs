@@ -24,6 +24,7 @@ import {
 } from './utils.mjs';
 import { annotateFingerprints, computeFingerprint } from './finding-factory.mjs';
 import { applySuppressions } from './suppression-apply.mjs';
+import { computeStrictBlock } from './deterministic-gate.mjs';
 
 function normalizePhase(phase) {
   const normalized = (phase || '').toLowerCase();
@@ -451,6 +452,15 @@ export async function runLocalReview({
     applied: suppressionsApplied,
   } = applySuppressions(annotatedFindings, memoryContext, { config: context.config });
 
+  // Epic #1347 S4 (#1351): deterministic strict_block gate. Computed over the
+  // PRE-suppression finding set joined with the selected skills so a suppressed
+  // deterministic block still forces the gate — a suppression must not be a
+  // strict_block bypass (fail-safe, mirroring SKIPPED_BY_POLICY).
+  const { strictBlock } = computeStrictBlock({
+    findings: annotatedFindings,
+    selected: context.plan?.selected ?? [],
+  });
+
   // Comments and findings are 1:1 in review-engine.mjs (`findings =
   // comments.map(...)`). When a finding is suppressed, the corresponding
   // PR comment must also be filtered — otherwise the suppressed finding
@@ -480,6 +490,9 @@ export async function runLocalReview({
     // so a clean diff scores a vacuous auto-approve — the gate must not read
     // that as CONVERGED_CLEAN.
     dryRun: dryRun === true,
+    // Epic #1347 S4 (#1351): deterministic strict_block signal for the gate.
+    // deriveRunGate forwards this to deriveGateDecision → unconditional NO_GO.
+    strictBlock,
     repoRoot: path.resolve(context.repoRoot),
     defaultBranch: context.defaultBranch,
     mergeBase: context.mergeBase,

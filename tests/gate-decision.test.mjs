@@ -218,6 +218,7 @@ describe('deriveGateDecision — audit block', () => {
       artifactStatus: 'ok',
       riskMapPresent: true,
       riskMapDigest: 'abcd1234abcd1234',
+      strictBlock: false,
     });
     // Replay: feeding inputs back must reproduce the decision.
     const replayed = deriveGateDecision({ ...r.inputs, changedFiles: [] });
@@ -313,6 +314,67 @@ describe('SKIPPED_BY_POLICY (S3 PR-C)', () => {
       humanApprovalRequired: true,
     });
     assert.equal(r.reasonCode, 'HUMAN_APPROVAL_REQUIRED');
+  });
+});
+
+describe('STRICT_BLOCK (Epic #1347 S4, #1351)', () => {
+  test('a deterministic strict_block forces an unconditional NO_GO', () => {
+    // base is a clean CONVERGED artifact that would otherwise GO.
+    const clean = deriveGateDecision(base);
+    assert.equal(clean.decision, 'GO');
+    const r = deriveGateDecision({ ...base, strictBlock: true });
+    assert.equal(r.decision, 'NO_GO');
+    assert.equal(r.reasonCode, 'STRICT_BLOCK');
+  });
+
+  test('blocks even with zero critical/major findings (below the blockingFindings floor)', () => {
+    const r = deriveGateDecision({ ...base, blockingFindings: 0, strictBlock: true });
+    assert.equal(r.decision, 'NO_GO');
+    assert.equal(r.reasonCode, 'STRICT_BLOCK');
+  });
+
+  test('cannot be waived by a label-skip or a dry-run', () => {
+    const skip = deriveGateDecision({
+      ...base,
+      reviewExecuted: false,
+      artifactStatus: 'skipped-by-label',
+      strictBlock: true,
+    });
+    assert.equal(skip.reasonCode, 'STRICT_BLOCK');
+    const notExecuted = deriveGateDecision({ ...base, reviewExecuted: false, strictBlock: true });
+    assert.equal(notExecuted.reasonCode, 'STRICT_BLOCK');
+  });
+
+  test('escalation cliffs still win — ESCALATE is more conservative than NO_GO', () => {
+    const configChange = deriveGateDecision({
+      ...base,
+      changedFiles: ['.river/risk-map.yaml'],
+      strictBlock: true,
+    });
+    assert.equal(configChange.reasonCode, 'GATE_CONFIG_CHANGED');
+    const humanApproval = deriveGateDecision({
+      ...base,
+      humanApprovalRequired: true,
+      strictBlock: true,
+    });
+    assert.equal(humanApproval.reasonCode, 'HUMAN_APPROVAL_REQUIRED');
+  });
+
+  test('inputs echo strictBlock and replay reproduces the decision + hash', () => {
+    const r = deriveGateDecision({ ...base, strictBlock: true });
+    assert.equal(r.inputs.strictBlock, true);
+    const replayed = deriveGateDecision({ ...r.inputs, changedFiles: [] });
+    assert.equal(replayed.decision, r.decision);
+    assert.equal(replayed.reasonCode, r.reasonCode);
+    assert.equal(replayed.inputsHash, r.inputsHash);
+  });
+
+  test('strictBlock:false leaves the inputsHash byte-identical to a pre-S4 gate', () => {
+    // Backward-compat: the hash omits strictBlock when false, so no existing
+    // recorded gate hash changes.
+    const withFlag = deriveGateDecision({ ...base, strictBlock: false });
+    const withoutFlag = deriveGateDecision(base);
+    assert.equal(withFlag.inputsHash, withoutFlag.inputsHash);
   });
 });
 
