@@ -20,20 +20,17 @@ skills/
 ├── README.md                       # This file
 ├── registry.yaml                   # Skill catalog
 ├── _template.md                    # Skill frontmatter template
-├── core/                           # Always-on or cross-stream skills
+├── core/                           # Always-on or cross-stream skills (currently empty)
 ├── upstream/                       # Design & Architecture skills
-│   ├── rr-upstream-*.md            # Upstream skill definitions (frontmatter + Markdown)
-│   └── agent-*.md                  # Upstream agent skills
+│   └── <skill-id>/SKILL.md         # One directory per skill (frontmatter + Markdown)
 ├── midstream/                      # Implementation skills
-│   ├── rr-midstream-*.md           # Midstream skill definitions (frontmatter + Markdown)
-│   ├── community/                  # Community midstream skills — externally contributed or library/framework-specific skills not bundled in the core distribution; recommended: false by default
-│   └── agent-*.md                  # Midstream agent skills
+│   └── <skill-id>/SKILL.md         # Includes community-contributed skills (recommended: false by default)
 ├── downstream/                     # Testing & Release skills
-│   └── rr-downstream-*.md          # Downstream skill definitions (frontmatter + Markdown)
-└── agent-skills/                   # Legacy references/checklists (skill bodies live in agent-*.md)
+│   └── <skill-id>/SKILL.md
+└── agent-skills/                   # Agent Skills format (entry/router skills; validated by npm run agent-skills:validate)
 ```
 
-Some skills keep fixtures/prompt/eval assets in sibling folders for documentation and evaluation, but the source of truth for each skill is the `.md` file listed above.
+Some skills keep fixtures/prompt/eval assets in sibling folders (e.g. `fixtures/`, `eval/`) inside the skill directory, but the source of truth for each skill is its `SKILL.md`.
 
 ## Skill Format
 
@@ -85,7 +82,8 @@ This interactive tool will:
 1. Copy the template:
 
    ```bash
-   cp skills/_template.md skills/<phase>/<skill-id>.md
+   mkdir -p skills/<phase>/<skill-id>
+   cp skills/_template.md skills/<phase>/<skill-id>/SKILL.md
    ```
 
 2. Fill in the YAML frontmatter (id, name, description, category, applyTo, inputContext, outputKind, priority, etc.)

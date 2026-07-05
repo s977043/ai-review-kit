@@ -1,111 +1,56 @@
 {
-  "generatedAt": "2025-12-09T21:12:37.289Z",
+  "generatedAt": "2026-07-04T10:48:09.559Z",
+  "dataSource": "skills/registry.yaml + heuristic detectors (deterministic, offline); operational metrics await live LLM runs",
+  "registry": {
+    "totalSkills": 112,
+    "heuristicSkills": 5,
+    "heuristicDetectors": 13
+  },
   "totals": {
-    "reviews": 29,
-    "filesReviewed": 87,
-    "comments": 116,
-    "averageCostUsd": 0.0293,
-    "tokenEstimate": 38500
+    "skills": 112,
+    "heuristicSkills": 5,
+    "heuristicDetectors": 13
   },
   "phases": [
     {
       "phase": "upstream",
-      "reviews": 4,
-      "comments": 10
+      "skills": 51
     },
     {
       "phase": "midstream",
-      "reviews": 8,
-      "comments": 26
+      "skills": 52
     },
     {
       "phase": "downstream",
-      "reviews": 6,
-      "comments": 14
+      "skills": 10
     }
   ],
   "skills": [
     {
       "id": "security-basic",
-      "name": "Security basic",
-      "findings": 5
+      "name": "Security basics",
+      "detectors": 6
+    },
+    {
+      "id": "coverage-gap",
+      "name": "Coverage gap",
+      "detectors": 3
+    },
+    {
+      "id": "logging-observability",
+      "name": "Logging & observability",
+      "detectors": 3
+    },
+    {
+      "id": "test-existence",
+      "name": "Test existence",
+      "detectors": 3
     },
     {
       "id": "typescript-strict",
       "name": "TypeScript strictness",
-      "findings": 4
-    },
-    {
-      "id": "test-naming",
-      "name": "Test naming",
-      "findings": 3
-    },
-    {
-      "id": "api-design",
-      "name": "API design",
-      "findings": 2
+      "detectors": 1
     }
   ],
-  "costTrend": [
-    {
-      "date": "2025-11-22",
-      "costUsd": 0.04,
-      "tokens": 2500,
-      "requests": 2
-    },
-    {
-      "date": "2025-11-23",
-      "costUsd": 0.05,
-      "tokens": 2800,
-      "requests": 3
-    },
-    {
-      "date": "2025-11-24",
-      "costUsd": 0.06,
-      "tokens": 3100,
-      "requests": 4
-    },
-    {
-      "date": "2025-11-25",
-      "costUsd": 0.07,
-      "tokens": 3400,
-      "requests": 2
-    },
-    {
-      "date": "2025-11-26",
-      "costUsd": 0.08,
-      "tokens": 3700,
-      "requests": 3
-    },
-    {
-      "date": "2025-11-27",
-      "costUsd": 0.09,
-      "tokens": 4000,
-      "requests": 4
-    },
-    {
-      "date": "2025-11-28",
-      "costUsd": 0.1,
-      "tokens": 4300,
-      "requests": 2
-    },
-    {
-      "date": "2025-11-29",
-      "costUsd": 0.11,
-      "tokens": 4600,
-      "requests": 3
-    },
-    {
-      "date": "2025-11-30",
-      "costUsd": 0.12,
-      "tokens": 4900,
-      "requests": 4
-    },
-    {
-      "date": "2025-12-01",
-      "costUsd": 0.13,
-      "tokens": 5200,
-      "requests": 2
-    }
-  ]
+  "costTrend": []
 }

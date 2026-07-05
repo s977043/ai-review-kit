@@ -11,8 +11,7 @@
 //
 // Usage: node scripts/suppression-analytics.mjs [--index <path>] [--issue-body] [--json]
 import path from 'path';
-import { promises as fs } from 'fs';
-import { realpathSync } from 'fs';
+import { promises as fs, realpathSync } from 'fs';
 import { pathToFileURL, fileURLToPath } from 'url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

@@ -14,15 +14,25 @@ function Stat({ label, value }) {
 }
 
 export default function ReviewStatsCard({ totals }) {
-  const stats = [
-    { label: 'Reviews', value: totals?.reviews ?? 0 },
-    { label: 'Files reviewed', value: totals?.filesReviewed ?? 0 },
-    { label: 'Comments', value: totals?.comments ?? 0 },
-    {
-      label: 'Avg cost (USD)',
-      value: totals?.averageCostUsd ? `$${totals.averageCostUsd.toFixed(4)}` : '$0.0000',
-    },
-  ];
+  // When real run artifacts exist, `totals` carries operational metrics
+  // (reviews / cost). Until then it carries the deterministic, offline-real
+  // registry + detector facts. Render whichever shape is present.
+  const hasRuns = totals?.reviews != null;
+  const stats = hasRuns
+    ? [
+        { label: 'Reviews', value: totals?.reviews ?? 0 },
+        { label: 'Files reviewed', value: totals?.filesReviewed ?? 0 },
+        { label: 'Comments', value: totals?.comments ?? 0 },
+        {
+          label: 'Avg cost (USD)',
+          value: totals?.averageCostUsd ? `$${totals.averageCostUsd.toFixed(4)}` : '$0.0000',
+        },
+      ]
+    : [
+        { label: 'Skills', value: totals?.skills ?? 0 },
+        { label: 'Heuristic skills', value: totals?.heuristicSkills ?? 0 },
+        { label: 'Deterministic detectors', value: totals?.heuristicDetectors ?? 0 },
+      ];
 
   return (
     <div className="row">

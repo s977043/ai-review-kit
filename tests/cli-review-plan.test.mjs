@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import test, { describe } from 'node:test';
 
 import {
@@ -393,7 +394,7 @@ describe('runReviewExecReplay (#802 Phase 3 — --plan replay contract)', () => 
 
   test('echoes a schema-valid Review Artifact from a full plan JSON', async () => {
     const artifact = await runReviewExecReplay({
-      planFile: '/tmp/plan.json',
+      planFile: join(tmpdir(), 'plan.json'),
       now: fixedNow,
       readFileImpl: async () => JSON.stringify(samplePlanArtifact),
     });
@@ -415,7 +416,7 @@ describe('runReviewExecReplay (#802 Phase 3 — --plan replay contract)', () => 
       skippedSkills: [],
     };
     const artifact = await runReviewExecReplay({
-      planFile: '/tmp/bare.json',
+      planFile: join(tmpdir(), 'bare.json'),
       now: fixedNow,
       readFileImpl: async () => JSON.stringify(bare),
     });
@@ -435,7 +436,7 @@ describe('runReviewExecReplay (#802 Phase 3 — --plan replay contract)', () => 
       plan: { plannerMode: 'off', selectedSkills: [], skippedSkills: [] },
     };
     const artifact = await runReviewExecReplay({
-      planFile: '/tmp/empty.json',
+      planFile: join(tmpdir(), 'empty.json'),
       now: fixedNow,
       readFileImpl: async () => JSON.stringify(empty),
     });
@@ -445,7 +446,7 @@ describe('runReviewExecReplay (#802 Phase 3 — --plan replay contract)', () => 
 
   test('normalizes unknown plannerMode to "off"', async () => {
     const artifact = await runReviewExecReplay({
-      planFile: '/tmp/p.json',
+      planFile: join(tmpdir(), 'p.json'),
       now: fixedNow,
       readFileImpl: async () =>
         JSON.stringify({
@@ -457,14 +458,15 @@ describe('runReviewExecReplay (#802 Phase 3 — --plan replay contract)', () => 
   });
 
   test('debug:true attaches replay metadata', async () => {
+    const planFile = join(tmpdir(), 'dbg.json');
     const artifact = await runReviewExecReplay({
-      planFile: '/tmp/dbg.json',
+      planFile,
       debug: true,
       now: fixedNow,
       readFileImpl: async () => JSON.stringify(samplePlanArtifact),
     });
     assert.ok(artifact.debug?.replay);
-    assert.equal(artifact.debug.replay.source, '/tmp/dbg.json');
+    assert.equal(artifact.debug.replay.source, planFile);
     assert.equal(artifact.debug.replay.sourcePhase, 'upstream');
     assert.equal(artifact.debug.replay.sourceTimestamp, '2026-05-19T00:00:00Z');
   });

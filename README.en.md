@@ -7,6 +7,7 @@
 [![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-review.the3396.com/explanation/intro/)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13339/badge)](https://www.bestpractices.dev/projects/13339)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/s977043/river-review/badge)](https://securityscorecards.dev/viewer/?uri=github.com/s977043/river-review)
+[![Listed on awesome-codex-plugins](https://img.shields.io/badge/awesome--codex--plugins-listed-brightgreen)](https://github.com/hashgraph-online/awesome-codex-plugins/tree/main/plugins/s977043/river-review)
 
 ![River Review logo](assets/logo/river-review-logo.svg)
 
@@ -284,7 +285,7 @@ severity: minor
 - Instruction text for the reviewer goes here.
 ```
 
-- Sample skills: `skills/upstream/sample-architecture-review.md`, `skills/midstream/sample-code-quality.md`, `skills/downstream/sample-test-review.md`
+- Sample skills: `skills/upstream/architecture-sample/SKILL.md`, `skills/midstream/code-quality-sample/SKILL.md`, `skills/downstream/test-review-sample/SKILL.md`
 - Examples: `examples/README.md`
 - Schemas: `schemas/skill.schema.json` (skill metadata) and `schemas/output.schema.json` (structured review output)
 - References: Skill schema details live in `pages/reference/skill-schema-reference.md`; Riverbed Memory v1 (shipped in #474) is documented in `pages/explanation/riverbed-memory.md` and `pages/guides/use-riverbed-memory.md`.

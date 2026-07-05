@@ -3,6 +3,17 @@ module.exports = {
   docs: [
     'index',
     'dashboard',
+    'comparison/ai-code-review-tools',
+    {
+      type: 'category',
+      label: 'ユースケース',
+      items: [
+        'use-cases/use-cases-index',
+        'use-cases/enforce-plan-conformance',
+        'use-cases/review-design-adrs-upstream',
+        'use-cases/suppress-flaky-review-comments',
+      ],
+    },
     {
       type: 'category',
       label: 'チュートリアル',
@@ -55,6 +66,8 @@ module.exports = {
         'reference/skill-template',
         'reference/runner-cli-reference',
         'reference/known-limitations',
+        'reference/detector-evaluation-report',
+        'reference/how-to-cite',
         'reference/glossary',
       ],
     },
@@ -68,6 +81,7 @@ module.exports = {
         'explanation/design-philosophy',
         'explanation/upstream-midstream-downstream',
         'explanation/riverbed-memory',
+        'explanation/security-model',
         {
           type: 'category',
           label: 'フレームワーク',

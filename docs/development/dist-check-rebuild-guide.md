@@ -24,7 +24,24 @@ cat .nvmrc
 # → 22.22.2
 ```
 
-## ローカル rebuild 手順
+## 自動再ビルド（Auto Rebuild Action Dist）
+
+`.github/workflows/auto-rebuild-action-dist.yml` が PR 上で dist の再ビルドを自動化します。bundled sources（`runners/github-action/src/**`、`src/**`、`package-lock.json`）が変更された PR において、workflow は `.nvmrc` の Node により `npm run build:action` を実行します。byte 差分が出た場合のみ `chore(action): rebuild github-action dist` コミットを PR branch に push します。差分が出なければ何も push しません。
+
+対象となる条件は以下のとおりです。
+
+- 同一リポジトリ内ブランチからの PR（fork PR は push 不可のため対象外。従来どおり `Action dist freshness` job が staleness を検出する）
+- `release-please--` で始まる branch は対象外（自動コミットが release PR を汚染しないようにするため）
+
+トークンおよび no-recursion 制約の扱いは、`release-please-kick.yml` と同様です。`GITHUB_TOKEN` による push は GitHub の no-recursion 制約により `pull_request` workflow を再発火させません。そのため `RELEASE_KICK_PAT`（contents:write）があればそれを優先し、新しい head SHA で CI が再実行されます。`RELEASE_KICK_PAT` が未設定の場合、fallback push は warning を表示します。その際は empty commit などにより手動で CI を発火させてください。
+
+以下の場合は次節の手動手順を fallback として使います。
+
+- fork からの PR
+- release-please branch 上での staleness
+- workflow 自体が失敗した場合
+
+## ローカル rebuild 手順（手動 fallback）
 
 ### 1. Node を `.nvmrc` に合わせる
 

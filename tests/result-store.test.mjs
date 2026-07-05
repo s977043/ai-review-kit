@@ -16,7 +16,7 @@ import {
 function makeResult(overrides = {}) {
   return {
     status: 'ok',
-    repoRoot: '/tmp/test-repo',
+    repoRoot: path.join(os.tmpdir(), 'test-repo'),
     defaultBranch: 'main',
     mergeBase: 'abc123',
     changedFiles: ['src/foo.mjs'],

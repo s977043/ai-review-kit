@@ -1,0 +1,64 @@
+# River Review
+
+> River Review is an open-source "Review Judgment as Code" framework: a capability pack / Skill Registry that runs a team's review criteria as versioned, repo-owned skills across plans, diffs, tests, and prior reviews — keeping a human in the loop rather than auto-merging.
+
+River Review versions your team's review know-how as repo-owned SKILL.md files (validated by `schemas/skill.schema.json`) and runs them across upstream (requirements / design / plan), midstream (diff / plan-conformance / tests), and downstream (report) SDLC gates. It is distributed as a Claude Code / Codex plugin and as a GitHub Action for headless CI review; npm distribution is intentionally out of scope. Its differentiators are repo-owned skills (review judgment travels with the code), perspective-based reviewer roles, and findings that are verified against the actual diff. The pipeline augments human reviewers — focusing them on high-risk judgment instead of replacing them (human-in-the-loop, no auto-merge).
+
+## Docs
+
+- [River Review docs (landing)](https://river-review.the3396.com/): Japanese-first, Diátaxis-structured documentation home (site root).
+
+## Explanation
+
+- [River Review へようこそ (Introduction)](https://river-review.the3396.com/explanation/intro/): Positioning — an OSS framework that versions team review judgment as skills and runs them at each SDLC gate.
+- [River Review とは (What is River Review)](https://river-review.the3396.com/explanation/what-is-river-review/): Core concept — Context-Engineering-driven, Skill-Registry-centric review across requirements/design/plan/diff/report with the capability-pack execution model.
+- [River Review のアーキテクチャ (Architecture)](https://river-review.the3396.com/explanation/river-architecture/): Upstream/midstream/downstream context-engineering architecture (metadata → loader → planner → runner) plus the Riverbed Memory layer.
+- [設計哲学 (Design Philosophy)](https://river-review.the3396.com/explanation/design-philosophy/): Design principles — flow-first, small testable steps, schema-driven, empathetic tone, evidence-based, context-aware.
+- [Human Judgment Focus (人間の判断に集中する)](https://river-review.the3396.com/explanation/human-judgment-focus/): Why River Review augments rather than replaces human review, focusing people on high-risk judgment via versioned skills.
+- [上流・中流・下流 (Upstream / Midstream / Downstream)](https://river-review.the3396.com/explanation/upstream-midstream-downstream/): The three SDLC phases and how phase-declared skills route each issue to the earliest phase that can catch it.
+- [Riverbed Memory](https://river-review.the3396.com/explanation/riverbed-memory/): The operating-memory layer (v1) that persists decisions and premises for consistent reviews, including suppression.
+
+## Tutorials
+
+- [River Review をはじめる (Getting Started)](https://river-review.the3396.com/tutorials/getting-started/): Beginner tutorial to run your first review via GitHub Actions, including repository-secret setup for the LLM API key.
+- [最初のスキルを作成する (Create Your First Skill)](https://river-review.the3396.com/tutorials/creating-your-first-skill/): Author a simple upstream→midstream→downstream skill as a SKILL.md matching `schemas/skill.schema.json`.
+
+## Guides
+
+- [クイックスタート (Quickstart)](https://river-review.the3396.com/guides/quickstart/): Minimal how-to — create skills/{upstream,midstream,downstream} and invoke the three pillars from CI.
+- [GitHub Actions セットアップ (GitHub Actions Setup)](https://river-review.the3396.com/guides/github-actions/): Wire River Review into GitHub Actions as a headless CI review, with the minimal workflow and forked-PR secret caveats.
+- [Riverbed Memory を使用する (Use Riverbed Memory)](https://river-review.the3396.com/guides/use-riverbed-memory/): End-to-end how-to for saving and reusing structured past review decisions across runs.
+- [Skill Pack を使う (Use Skill Packs)](https://river-review.the3396.com/guides/use-skill-packs/): How to adopt pre-packaged official / community skill packs instead of authoring every skill from scratch.
+- [コスト見積もりと最適化ガイド (Cost Estimation)](https://river-review.the3396.com/guides/cost-estimation/): Estimate and control LLM API usage cost (estimate-only mode, max-cost abort, diff optimization).
+- [W チェック（二重レビュー）ガイド (Double Review)](https://river-review.the3396.com/guides/w-check/): Cross-check review findings from multiple AI/human reviewers against the diff to filter hallucinations and dedupe.
+- [AI エージェントから River Review を使う (Agent Workflow)](https://river-review.the3396.com/guides/agent-workflow/): Drive River Review from AI coding agents (Claude Code / Codex) via the skill-routed review agent.
+- [リポジトリ全体を踏まえたレビュー (Repo-wide Review)](https://river-review.the3396.com/guides/repo-wide-review/): Enable and tune repository-wide, context-aware review beyond the single diff.
+- [トラブルシューティング (Troubleshooting)](https://river-review.the3396.com/guides/troubleshooting/): Common issues, error messages, and how to resolve them.
+
+## Reference
+
+- [スキルスキーマ概要 (Skill Schema Overview)](https://river-review.the3396.com/reference/skill-schema/): Skill metadata fields (id/name/description/category, phase/trigger/applyTo) validated by `schemas/skill.schema.json`.
+- [スキルスキーマ・リファレンス (Skill Schema Reference)](https://river-review.the3396.com/reference/skill-schema-reference/): Detailed JSON-schema reference every skill must conform to, with required-field tables.
+- [コンフィグ / スキーマ概要 (Config Schema)](https://river-review.the3396.com/reference/config-schema/): The runtime `.river-review.json` config (model/provider, review language/severity, exclude), validated by a Zod schema.
+- [メタデータ・フィールド (Metadata Fields)](https://river-review.the3396.com/reference/metadata-fields/): Table of skill metadata fields (id/name/description/category/phase/applyTo) for consistent routing.
+- [スキルテンプレート (Skill Template)](https://river-review.the3396.com/reference/skill-template/): Base template (`skills/_template.md`) and structure for creating new skills.
+- [--reviewers フラグリファレンス (Runner CLI Reference)](https://river-review.the3396.com/reference/runner-cli-reference/): The `river run --reviewers` flag and validation commands producing schema-conformant structured output.
+- [既知の制限 (Known Limitations)](https://river-review.the3396.com/reference/known-limitations/): Current caveats — local `river run` is preview-oriented, mixed sample/production skills, pin GitHub Actions to release tags.
+- [用語集 (Glossary)](https://river-review.the3396.com/reference/glossary/): Definitions of core terms — Upstream/Midstream/Downstream, Skill, Skill Registry, Stream Router, Context Engineering/Budget, Attention Budget.
+- [Artifact Input Contract (アーティファクト入力コントラクト)](https://river-review.the3396.com/reference/artifact-input-contract/): Schema/structure of the input artifacts (plan, diff, tests, JUnit) passed to the review agent.
+- [レビューアーティファクト (Review Artifact)](https://river-review.the3396.com/reference/review-artifact/): Schema/structure of the output review artifact — findings and verdict.
+- [river review plan CLI 仕様 (Review Plan CLI Spec)](https://river-review.the3396.com/reference/cli-review-plan-spec/): CLI contract for `river review plan` — auto-detect input artifacts and emit a review plan.
+- [river review exec CLI 仕様 (Review Exec CLI Spec)](https://river-review.the3396.com/reference/cli-review-exec-spec/): CLI contract for `river review exec` — run the planned review from detected inputs.
+- [AI レビュー標準ポリシー (Review Policy)](https://river-review.the3396.com/reference/review-policy/): The SSoT review policy — evaluation criteria, output format, and severity vocabulary.
+- [ループ収束コントラクト (Loop Convergence Contract)](https://river-review.the3396.com/reference/loop-convergence-contract/): Stop conditions for generate-review-revise self-correction loops.
+
+## Examples
+
+- [plan-conformance-demo](https://github.com/s977043/river-review/tree/main/examples/plan-conformance-demo): 5-minute, no-API-key demo — River Review detects a diff that deviates from an approved plan (midstream: plan vs diff vs tests).
+- [upstream-design-review-demo](https://github.com/s977043/river-review/tree/main/examples/upstream-design-review-demo): 5-minute, no-API-key demo — upstream design-plan/ADR review detecting missing failure-mode, backward-compat, and observability considerations.
+- [examples/ (index)](https://github.com/s977043/river-review/tree/main/examples): Index of copy-paste-ready minimal examples — hello-skill, upstream-only, planner, minimal-js, risk-map, and the two read-only demos.
+
+## Optional
+
+- [River Review docs (English landing)](https://river-review.the3396.com/index-en/): English documentation landing page (English editions lag the Japanese source of truth).
+- [What is River Review (English)](https://river-review.the3396.com/explanation/what-is-river-review-en/): English overview of the Context-Engineering-driven, Skill-Registry-centric review framework across the three phases.

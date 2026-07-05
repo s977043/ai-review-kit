@@ -2,7 +2,7 @@
 description: 'Draft a review-ready PR description using our template (pairs with pr-description)'
 ---
 
-この差分を、以下のテンプレートで PR 本文にして：
+この差分を、以下のテンプレートで PR 本文にして。本文を確定する前に、末尾の「PR 説明と実態の突合チェック」を必ず実施する：
 
 ## 目的
 
@@ -23,3 +23,11 @@ description: 'Draft a review-ready PR description using our template (pairs with
 ## ロールバック手順
 
 （問題発生時の戻し方）
+
+---
+
+本文を確定する前に、以下の「PR 説明と実態の突合チェック」を実施する。
+
+1. Closes/Fixes の突合 — `Closes #N` / `Fixes #N` を書く前に `gh issue view N` で Issue の完了条件（受入条件・チェックリスト）を取得し、diff が各条件を満たすか 1 件ずつ突合する。未達の条件がある場合は `Closes` を `Refs` に変更するか、PR 本文に残課題として明記する。
+2. ja/en 対訳の同時更新 — ja/en 対訳ファイル（`*.md` と `*.en.md`、`pages/` 配下の対）に触れた場合、両方が同一のコミットセットに含まれているか確認する。片側のみ更新する場合はその理由を本文に明記する。
+3. 本文と実 diff の最終セルフチェック — 本文の記述（「〜は変更しない」等の変更対象外の宣言、件数・列挙）が実 diff と矛盾しないか、`git diff --stat` と照合して確認する。
