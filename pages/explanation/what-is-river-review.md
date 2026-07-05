@@ -69,7 +69,7 @@ River Review は、generate → review → revise の反復ループの中で **
 
 - ループの各周回で、レビュー結果を **判定素材（findings / verdict / suggestedLoopSignal）**として返す。
 - verdict はあくまで判定素材であり、GO / NO-GO・自動承認・自動マージを主張しない。反復を続けるか止めるかの判断は **caller の責務**である。
-- `auto-approve` のような仕組みも、人間の確認（HITL）をバイパスしない助言である。
+- `auto-approve` のような仕組みも助言であり、人間の確認（HITL）をバイパスしない。原っぱの自律継続はマージ権限ではなく、崖では人間承認を必須とする。
 
 この契約と参照実装は、[反復収束の契約](../reference/loop-convergence-contract.md) と、リポジトリ内の参照エージェント（`examples/loop-reference-agent/`）で定義しています。
 

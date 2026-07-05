@@ -76,7 +76,7 @@ River Review には、レビューに特化した 3 つの実行形態があり�
 - **観点別レビュアーを並列実行する review team**: 観点別ロールを 1 つの orchestrator（`src/lib/reviewer-orchestrator.mjs`）内で並列に走らせ findings を connected-components でマージする。ロールは bug-hunter / security-scanner / test-gap / dependency-reviewer / frontend-reviewer / ci-cd-reviewer であり、`--reviewers auto` 指定で差分タイプから自動選択される。
 - **verdict 付きの critic（Agent 層）**: generate → review → revise のループにおいて findings と verdict（判定素材）を出す。Reference Loop は `examples/loop-reference-agent/`、収束契約は [`pages/reference/loop-convergence-contract.md`](pages/reference/loop-convergence-contract.md) にある（Agent 層 Epic [#1150](https://github.com/s977043/river-review/issues/1150)）。
 
-> **役割分担と HITL 境界**: review team は findings + verdict を出力しますが、GO / NO-GO の判断・反復・停止は呼び出し側／人間の責務です。自動承認・自動マージは行いません。ここでの review team は「1 つの orchestrator 内で観点別レビュアーロールを並列実行し findings をマージするもの」であり、完全自律な独立エージェント群ではありません。「River Review = レビューする / PlanGate = 止める・通す」という役割分担を維持しています。
+> **役割分担と監督境界**: review team は findings + verdict を出力しますが、GO / NO-GO の判断・反復・停止は呼び出し側／人間の責務です。この判定はリスク階層型の人間監督に沿います（崖＝人間承認必須／丘＝期限付き観測／原っぱ＝自律収束と事後監査）。自動承認・自動マージは行いません。ここでの review team は「1 つの orchestrator 内で観点別レビュアーロールを並列実行し findings をマージするもの」であり、完全自律な独立エージェント群ではありません。「River Review = レビューする / PlanGate = 止める・通す」という役割分担を維持しています。
 
 ## はじめる
 
@@ -153,13 +153,13 @@ River Review は、単にコードをAIに読ませるツールではありま�
 
 チーム固有の「判断基準」や「手順」といった暗黙知を、**再利用可能な「Agent Skills（マニュアル付きの道具箱）」** として定義し、組織の資産として育てるための実験的フレームワークです。
 
-さらに、レビューの「自由度」をリスクで設計し、**HITL（Human-in-the-Loop）** を前提にした Plan / Validate / Verify の運用で、実務に耐える再現性を確保します。
+さらに、レビューの「自由度」をリスク階層で設計します。**リスク階層型の人間監督**（崖＝人間承認必須／丘＝期限付き観測／原っぱ＝自律収束と事後監査）により、実務に耐える再現性を確保します。
 
 要点は次の3つです。
 
 - **Agent Skills**: 暗黙知をレビュー資産として明示化し、継続的に改善できる状態にする。
 - **自由度の設計**: 崖・丘・原っぱのリスク設計で、AIの裁量と検証コストを制御する。
-- **HITLワークフロー**: 実行前に計画を人が検証し、レビュー結果は検証可能にする。
+- **リスク階層型の人間監督**: 崖・丘・原っぱへ監督を配分する（崖＝人間承認必須／丘＝期限付き観測／原っぱ＝自律収束と事後監査）。単体でも従来どおり使え、ループに組み込むとさらに強い。
 
 🔗 **Read the full story (Japanese):**
 [「プロンプトを磨けば勝てる」をやめた：AIレビューを運用に乗せる“Agent Skills”設計](https://note.com/mine_unilabo/n/nd21c3f1df22e)

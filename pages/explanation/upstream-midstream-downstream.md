@@ -10,4 +10,4 @@ River Review は、ソフトウェアデリバリーの自然な流れを反映�
 
 これら 3 つのフェーズは、SDLC の流れを表す軸にあたり、プロダクトの 3 主軸（capability pack / Skill Registry / review team）とは区別する。3 主軸はどのフェーズにも適用できる。Skill Registry の観点別スキルが各フェーズへ配られ、review team がそれを capability pack として動かす。review team は `agents/river-review.md` と `src/lib/reviewer-orchestrator.mjs` の観点別レビュアーロールを並列実行し、結果を connected-components でマージする。
 
-なお、いずれのフェーズでも River Review の役割は **レビュー**（問題点・リスク・不足情報の指摘）にとどまる。findings と verdict は判定素材であり、進行を **止める / 通す** 判定は PlanGate と人間（HITL）が担う。
+なお、いずれのフェーズでも River Review の役割は **レビュー**（問題点・リスク・不足情報の指摘）にとどまる。findings と verdict は判定素材であり、進行を **止める / 通す** 判定は PlanGate と人間（HITL）が担う。その判定はリスク階層で配分される（崖＝人間承認必須／丘＝期限付き観測／原っぱ＝自律収束と事後監査）。
