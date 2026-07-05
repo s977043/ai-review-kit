@@ -38521,7 +38521,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   P0: () => (/* reexport */ summarizeSkill)
 });
 
-// UNUSED EXPORTS: deriveExecutionOrder, matchesPhase, selectSkills
+// UNUSED EXPORTS: computeContextLift, deriveExecutionOrder, matchesPhase, selectSkills
 
 // EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
 var esm = __nccwpck_require__(9519);
@@ -38912,6 +38912,22 @@ function deriveExecutionOrder(selected) {
   return EVALUATION_LAYER_ORDER.filter((l) => layers.has(l));
 }
 
+// Epic #1347 S3 (#1350, Gemini-proposal adoption): Context Lift — how much
+// skill-prompt context progressive disclosure saved. totalSkillTokens counts
+// every CANDIDATE skill body; loadedSkillTokens counts only the selected
+// ones. liftRatio = 1 - loaded/total (0 when nothing was saved or nothing
+// was measurable). Declaration/metric only — no behavior depends on it.
+function computeContextLift(candidates, selected) {
+  const bodyTokens = (skill) => (0,token_estimator/* estimateTokens */.bP)(skill?.body ?? '');
+  const totalSkillTokens = (candidates ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
+  const loadedSkillTokens = (selected ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
+  const liftRatio =
+    totalSkillTokens > 0
+      ? Math.round((1 - loadedSkillTokens / totalSkillTokens) * 1000) / 1000
+      : 0;
+  return { totalSkillTokens, loadedSkillTokens, liftRatio };
+}
+
 function getMeta(skill) {
   return skill?.metadata ?? skill;
 }
@@ -39156,6 +39172,7 @@ async function buildExecutionPlan(options) {
       testImpact,
       executionOrder: [],
       estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
+      contextLift: computeContextLift(skills, []),
       snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
     };
   }
@@ -39209,6 +39226,7 @@ async function buildExecutionPlan(options) {
       // Epic #1347 S2: declared layer order + rough cost estimate (advisory).
       executionOrder: deriveExecutionOrder(ranked),
       estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
+      contextLift: computeContextLift(skills, ranked),
       // #878 A2-3-runners: carry-over context for --plan replay execution.
       // Consumers should propagate this to `artifact.debug.execution.snapshot`
       // per docs/development/a2-3-replay-execution-design.md.
@@ -39230,6 +39248,7 @@ async function buildExecutionPlan(options) {
     testImpact,
     executionOrder: deriveExecutionOrder(ordered),
     estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
+    contextLift: computeContextLift(skills, ordered),
     snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
   };
 }
@@ -41390,6 +41409,7 @@ const GATE_REASON_CODES = /** @type {const} */ ((/* unused pure expression or su
   'OSCILLATION_DETECTED',
   'RISK_MAP_HUMAN_REVIEW',
   'UNKNOWN_RISK_ACTION',
+  'SKIPPED_BY_POLICY',
   'NOT_EXECUTED',
   'BLOCKING_FINDINGS',
   'MINOR_FINDINGS_OBSERVE',
@@ -41541,7 +41561,12 @@ function deriveGateDecision({
       return ['ESCALATE', 'RISK_MAP_HUMAN_REVIEW'];
     // 5. Unknown risk action never falls through to GO (fail-safe).
     if (!KNOWN_RISK_ACTIONS.has(effectiveRiskAction)) return ['NO_GO', 'UNKNOWN_RISK_ACTION'];
-    // 6. Review must have actually executed for any GO-family outcome:
+    // 6a. Team-labeled skip (#1350 PR-C): the decision stays NO_GO (a label
+    // must not become a gate bypass — the conservative call from the S2
+    // design review), but the reasonCode tells hosts this was an explicit
+    // policy skip rather than a suppressed/unresolved review.
+    if (inputs.artifactStatus === 'skipped-by-label') return ['NO_GO', 'SKIPPED_BY_POLICY'];
+    // 6b. Review must have actually executed for any GO-family outcome:
     // plan-only / no-changes runs score [] findings as a vacuous perfect
     // verdict, and suppressed diff resolution must not earn a GO.
     if (!inputs.reviewExecuted) return ['NO_GO', 'NOT_EXECUTED'];
@@ -61841,6 +61866,11 @@ var gate_decision = __nccwpck_require__(2773);
  * @returns {{ decision: string|undefined, gate: object|undefined }}
  */
 function deriveRunGate(result) {
+  // Defensive (PR #1372 gemini): a null/undefined result yields the same
+  // fail-soft shape instead of throwing on property access.
+  if (result == null || typeof result !== 'object') {
+    return { decision: undefined, gate: undefined };
+  }
   let decision;
   try {
     decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);

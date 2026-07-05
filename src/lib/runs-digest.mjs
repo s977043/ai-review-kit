@@ -130,21 +130,27 @@ export function buildRunsDigest(records, { now = () => new Date(), ...opts } = {
 
   // --- escape candidates (reference list, NOT a rate) ----------------------
   const escapeCandidates = [];
+  // Precompute per-run file sets, fingerprints, and blocking findings once
+  // (PR #1372 gemini: the inner loop recomputed Sets/fingerprints per pair).
+  const runMeta = withGate.map((r) => ({
+    files: new Set(r.changedFiles ?? []),
+    prints: new Set((r.findings ?? []).map((f) => f.fingerprint ?? computeFingerprint(f))),
+    blocking: (r.findings ?? [])
+      .filter((f) => f != null && (f.severity === 'critical' || f.severity === 'major'))
+      .map((f) => ({ finding: f, print: f.fingerprint ?? computeFingerprint(f) })),
+  }));
   for (let i = 0; i < withGate.length; i++) {
     const x = withGate[i];
     if (!GO_FAMILY.has(x.gate.decision)) continue;
-    const xFiles = new Set(x.changedFiles ?? []);
-    const xPrints = new Set((x.findings ?? []).map((f) => f.fingerprint ?? computeFingerprint(f)));
+    const xFiles = runMeta[i].files;
+    const xPrints = runMeta[i].prints;
     for (let j = i + 1; j < withGate.length; j++) {
       const y = withGate[j];
       const overlap = (y.changedFiles ?? []).filter((f) => xFiles.has(f));
       if (overlap.length === 0) continue;
-      const newBlocking = (y.findings ?? []).filter(
-        (f) =>
-          f != null &&
-          (f.severity === 'critical' || f.severity === 'major') &&
-          !xPrints.has(f.fingerprint ?? computeFingerprint(f))
-      );
+      const newBlocking = runMeta[j].blocking
+        .filter((b) => !xPrints.has(b.print))
+        .map((b) => b.finding);
       if (newBlocking.length > 0) {
         escapeCandidates.push({
           goRunId: x.runId,

@@ -291,3 +291,44 @@ describe('deriveExecutionOrder (Epic #1347 S2, merged from #1339)', () => {
     assert.deepEqual(deriveExecutionOrder([]), []);
   });
 });
+
+describe('SKIPPED_BY_POLICY (S3 PR-C)', () => {
+  test('skipped-by-label gates as NO_GO with the dedicated reason', () => {
+    const r = deriveGateDecision({
+      ...base,
+      reviewExecuted: false,
+      artifactStatus: 'skipped-by-label',
+    });
+    // A team label is an explicit policy skip — still NO_GO (a label must not
+    // become a gate bypass), but hosts can distinguish it from NOT_EXECUTED.
+    assert.equal(r.decision, 'NO_GO');
+    assert.equal(r.reasonCode, 'SKIPPED_BY_POLICY');
+  });
+
+  test('escalation rules still precede the policy skip', () => {
+    const r = deriveGateDecision({
+      ...base,
+      reviewExecuted: false,
+      artifactStatus: 'skipped-by-label',
+      humanApprovalRequired: true,
+    });
+    assert.equal(r.reasonCode, 'HUMAN_APPROVAL_REQUIRED');
+  });
+});
+
+describe('computeContextLift (S3 PR-C)', () => {
+  test('measures candidate vs loaded skill-body tokens', async () => {
+    const { computeContextLift } = await import('../runners/core/review-runner.mjs');
+    const skill = (body) => ({ metadata: { id: 'x' }, body });
+    const candidates = [skill('a'.repeat(400)), skill('b'.repeat(400)), skill('c'.repeat(400))];
+    const lift = computeContextLift(candidates, [candidates[0]]);
+    assert.ok(lift.totalSkillTokens > lift.loadedSkillTokens);
+    assert.ok(lift.liftRatio > 0.5 && lift.liftRatio < 1);
+    // empty candidates → ratio 0, no division by zero
+    assert.deepEqual(computeContextLift([], []), {
+      totalSkillTokens: 0,
+      loadedSkillTokens: 0,
+      liftRatio: 0,
+    });
+  });
+});

@@ -42,6 +42,20 @@ export function deriveExecutionOrder(selected) {
   return EVALUATION_LAYER_ORDER.filter((l) => layers.has(l));
 }
 
+// Epic #1347 S3 (#1350, Gemini-proposal adoption): Context Lift — how much
+// skill-prompt context progressive disclosure saved. totalSkillTokens counts
+// every CANDIDATE skill body; loadedSkillTokens counts only the selected
+// ones. liftRatio = 1 - loaded/total (0 when nothing was saved or nothing
+// was measurable). Declaration/metric only — no behavior depends on it.
+export function computeContextLift(candidates, selected) {
+  const bodyTokens = (skill) => estimateTokens(skill?.body ?? '');
+  const totalSkillTokens = (candidates ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
+  const loadedSkillTokens = (selected ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
+  const liftRatio =
+    totalSkillTokens > 0 ? Math.round((1 - loadedSkillTokens / totalSkillTokens) * 1000) / 1000 : 0;
+  return { totalSkillTokens, loadedSkillTokens, liftRatio };
+}
+
 function getMeta(skill) {
   return skill?.metadata ?? skill;
 }
@@ -286,6 +300,7 @@ export async function buildExecutionPlan(options) {
       testImpact,
       executionOrder: [],
       estimatedCost: { tokens: estimateTokens(diffText ?? ''), source: 'token-estimator' },
+      contextLift: computeContextLift(skills, []),
       snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
     };
   }
@@ -339,6 +354,7 @@ export async function buildExecutionPlan(options) {
       // Epic #1347 S2: declared layer order + rough cost estimate (advisory).
       executionOrder: deriveExecutionOrder(ranked),
       estimatedCost: { tokens: estimateTokens(diffText ?? ''), source: 'token-estimator' },
+      contextLift: computeContextLift(skills, ranked),
       // #878 A2-3-runners: carry-over context for --plan replay execution.
       // Consumers should propagate this to `artifact.debug.execution.snapshot`
       // per docs/development/a2-3-replay-execution-design.md.
@@ -360,6 +376,7 @@ export async function buildExecutionPlan(options) {
     testImpact,
     executionOrder: deriveExecutionOrder(ordered),
     estimatedCost: { tokens: estimateTokens(diffText ?? ''), source: 'token-estimator' },
+    contextLift: computeContextLift(skills, ordered),
     snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
   };
 }

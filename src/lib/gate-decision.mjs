@@ -79,6 +79,7 @@ export const GATE_REASON_CODES = /** @type {const} */ ([
   'OSCILLATION_DETECTED',
   'RISK_MAP_HUMAN_REVIEW',
   'UNKNOWN_RISK_ACTION',
+  'SKIPPED_BY_POLICY',
   'NOT_EXECUTED',
   'BLOCKING_FINDINGS',
   'MINOR_FINDINGS_OBSERVE',
@@ -230,7 +231,12 @@ export function deriveGateDecision({
       return ['ESCALATE', 'RISK_MAP_HUMAN_REVIEW'];
     // 5. Unknown risk action never falls through to GO (fail-safe).
     if (!KNOWN_RISK_ACTIONS.has(effectiveRiskAction)) return ['NO_GO', 'UNKNOWN_RISK_ACTION'];
-    // 6. Review must have actually executed for any GO-family outcome:
+    // 6a. Team-labeled skip (#1350 PR-C): the decision stays NO_GO (a label
+    // must not become a gate bypass — the conservative call from the S2
+    // design review), but the reasonCode tells hosts this was an explicit
+    // policy skip rather than a suppressed/unresolved review.
+    if (inputs.artifactStatus === 'skipped-by-label') return ['NO_GO', 'SKIPPED_BY_POLICY'];
+    // 6b. Review must have actually executed for any GO-family outcome:
     // plan-only / no-changes runs score [] findings as a vacuous perfect
     // verdict, and suppressed diff resolution must not earn a GO.
     if (!inputs.reviewExecuted) return ['NO_GO', 'NOT_EXECUTED'];

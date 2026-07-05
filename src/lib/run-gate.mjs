@@ -23,6 +23,11 @@ import { deriveGateDecision } from './gate-decision.mjs';
  * @returns {{ decision: string|undefined, gate: object|undefined }}
  */
 export function deriveRunGate(result) {
+  // Defensive (PR #1372 gemini): a null/undefined result yields the same
+  // fail-soft shape instead of throwing on property access.
+  if (result == null || typeof result !== 'object') {
+    return { decision: undefined, gate: undefined };
+  }
   let decision;
   try {
     decision = resolveVerdict(result.decision, scoreReview(result.findings ?? []).verdict);
