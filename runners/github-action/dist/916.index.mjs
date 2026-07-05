@@ -1000,6 +1000,8 @@ async function scanArtifactsForHumanApproval({
 var loop_signal = __webpack_require__(4702);
 // EXTERNAL MODULE: ./src/lib/gate-decision.mjs
 var gate_decision = __webpack_require__(2773);
+// EXTERNAL MODULE: ./src/lib/deterministic-gate.mjs
+var deterministic_gate = __webpack_require__(5837);
 // EXTERNAL MODULE: external "node:crypto"
 var external_node_crypto_ = __webpack_require__(7598);
 ;// CONCATENATED MODULE: ./src/lib/review-plan.mjs
@@ -1029,6 +1031,7 @@ var external_node_crypto_ = __webpack_require__(7598);
  * Pure-ish module: config loader, resolver, buildExecutionPlan and the
  * diff reader are injectable for tests.
  */
+
 
 
 
@@ -1123,6 +1126,7 @@ function finalizeArtifact(
         artifactStatus: gateContext.artifactStatus ?? null,
         riskMapPresent: gateContext.riskMapPresent === true,
         riskMapDigest: gateContext.riskMapDigest ?? null,
+        strictBlock: gateContext.strictBlock === true,
         config: gateContext.config ?? {},
       });
     } catch {
@@ -1637,6 +1641,11 @@ async function runReviewPlan({
   let gateChangedFiles = [];
   let gateHumanApprovalModes = [];
   let gateRiskAction; // plan.riskAssessment.aggregateAction (C1: artifact.plan does NOT carry it)
+  // Epic #1347 S4 (#1351): deterministic strict_block on the exec-execute path.
+  // Only the live `--execute` branch has full skill objects (plan.selected) +
+  // findings; the `--plan` replay path projects skills to schema views without
+  // deterministicGate, so it stays advisory (strict_block not derivable there).
+  let gateStrictBlock = false;
 
   const configArtifacts =
     config && typeof config.artifacts === 'object' && config.artifacts ? config.artifacts : {};
@@ -1754,6 +1763,12 @@ async function runReviewPlan({
       }
       const rawFindings = Array.isArray(review?.findings) ? review.findings : [];
       artifact.findings = rawFindings.map((f, i) => normalizeFindingForArtifact(f, i, phase));
+      // Deterministic strict_block (#1351): join over the raw findings (which
+      // still carry ruleId = skillId) and the full selected skills.
+      gateStrictBlock = (0,deterministic_gate/* computeStrictBlock */.Si)({
+        findings: rawFindings,
+        selected: plan.selected ?? [],
+      }).strictBlock;
       executionTrace = {
         skillsExecuted: artifact.plan.selectedSkills.length,
         findingsCount: artifact.findings.length,
@@ -1822,6 +1837,7 @@ async function runReviewPlan({
       artifactStatus: artifact.status ?? null,
       riskMapPresent: riskMap != null,
       riskMapDigest,
+      strictBlock: gateStrictBlock,
       config,
     },
   });

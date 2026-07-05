@@ -49,12 +49,30 @@ describe('isStrictBlockSkill', () => {
     assert.equal(isStrictBlockSkill(deterministicBypass), false);
   });
 
+  test('an unknown/malformed failSeverity still blocks (fail-safe, self-review #1403)', () => {
+    const weird = {
+      metadata: {
+        id: 'weird-sev',
+        evaluationType: 'deterministic',
+        deterministicGate: { command: 'x', failSeverity: 'not-a-real-value' },
+      },
+    };
+    assert.equal(isStrictBlockSkill(weird), true);
+  });
+
   test('deterministic WITHOUT a declared gate stays advisory (opt-in enforcement)', () => {
     assert.equal(isStrictBlockSkill(deterministicNoGate), false);
   });
 
   test('non-deterministic skills are never strict_block', () => {
     assert.equal(isStrictBlockSkill(agentic), false);
+  });
+
+  test('a malformed array deterministicGate does NOT read as a declared gate (gemini #1403)', () => {
+    const arrayGate = {
+      metadata: { id: 'weird', evaluationType: 'deterministic', deterministicGate: [] },
+    };
+    assert.equal(isStrictBlockSkill(arrayGate), false);
   });
 
   test('accepts a bare metadata object as well as a wrapped skill', () => {

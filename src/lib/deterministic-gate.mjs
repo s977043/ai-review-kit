@@ -39,8 +39,15 @@ export function isStrictBlockSkill(skill) {
   const m = skillMeta(skill);
   if (m.evaluationType !== 'deterministic') return false;
   const gate = m.deterministicGate;
-  if (!gate || typeof gate !== 'object') return false; // no declared gate → advisory
-  return (gate.failSeverity ?? STRICT_BLOCK) === STRICT_BLOCK;
+  // typeof [] === 'object', so exclude arrays: a malformed array gate must not
+  // read as a declared strict_block object (gemini #1403).
+  if (!gate || typeof gate !== 'object' || Array.isArray(gate)) return false; // no gate → advisory
+  // Fail-safe: a declared gate BLOCKS unless failSeverity is explicitly
+  // 'bypass_warning'. An omitted failSeverity (schema default 'strict_block')
+  // or an unknown/malformed value blocks — deterministic detectors are
+  // authoritative and the Epic invariant forbids falling toward GO on malformed
+  // input (self-review #1403 Minor).
+  return gate.failSeverity !== BYPASS_WARNING;
 }
 
 /**
