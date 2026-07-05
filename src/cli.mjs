@@ -2095,8 +2095,8 @@ Dependencies: ${
       // (GO→0 / NO_GO→1 / ESCALATE→3). Derived the same way as the JSON-output
       // gate so the exit code and the emitted artifact agree. Stricter wins.
       if (parsed.gate) {
-        const { deriveRunGate } = await import('./lib/run-gate.mjs');
         const { gateDecisionExitCode, combineExitCodes } = await import('./lib/gate-exit.mjs');
+        // deriveRunGate is already statically imported at the top of this module.
         const { gate } = deriveRunGate(result);
         const gateCode = gateDecisionExitCode(gate?.decision);
         console.error(

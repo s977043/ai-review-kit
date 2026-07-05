@@ -462,6 +462,29 @@ describe('river run - gate block', () => {
     assert.strictEqual(result.code, 1, result.stderr);
     assert.match(result.stderr, /--gate cannot be combined with --advisory-only/);
   });
+
+  test('review exec --gate maps the gate decision to the exit code (review path wiring)', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+    // `review exec` without --execute is plan-only → gate NOT_EXECUTED (NO_GO) →
+    // exit 1. Exercises the review path's combineExitCodes wiring end-to-end.
+    const result = await runCliInProcess(['review', 'exec', '--gate'], { cwd: dir });
+    assert.strictEqual(result.code, 1, result.stderr);
+    assert.match(result.stderr, /Gate: NO_GO/);
+  });
+
+  test('--gate combined with --warn-on takes the stricter exit (gate NO_GO wins)', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+    // dry-run: severity gate is pass (no findings), gate is NO_GO → combined 1.
+    const result = await runCliInProcess(
+      ['run', '.', '--dry-run', '--gate', '--warn-on', 'major'],
+      {
+        cwd: dir,
+      }
+    );
+    assert.strictEqual(result.code, 1, result.stderr);
+  });
 });
 
 // -----------------------------------------------------------------------------

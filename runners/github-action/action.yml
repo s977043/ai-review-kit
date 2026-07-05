@@ -123,7 +123,11 @@ runs:
           echo "comment_path=${out}" >> "${GITHUB_OUTPUT}"
         fi
         if [ "${rc}" -ne 0 ]; then
-          echo "::warning::River Review gate exited ${rc} (see 'Gate:' line above)."
+          if [ "${{ inputs.gate }}" = "true" ]; then
+            echo "::warning::River Review exited ${rc} (gate enforcement — see the 'Gate:' line above)."
+          else
+            echo "::warning::River Review exited ${rc}."
+          fi
           exit "${rc}"
         fi
 

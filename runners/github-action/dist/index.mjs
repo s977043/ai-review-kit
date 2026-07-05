@@ -44764,86 +44764,6 @@ function expireEntries(indexPath) {
 
 /***/ }),
 
-/***/ 594:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   deriveRunGate: () => (/* binding */ deriveRunGate)
-/* harmony export */ });
-/* harmony import */ var _scoring_engine_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9487);
-/* harmony import */ var _loop_signal_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(4702);
-/* harmony import */ var _gate_decision_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(2773);
-/**
- * Gate derivation for `river run` results (Epic #1347 S3 / #1350).
- *
- * Extracted from cli.mjs formatJsonOutput so the same derivation feeds both
- * the JSON output artifact and the persisted run record (result store) —
- * the audit trail must record the same gate the consumer saw.
- *
- * The `river run` path performs no plan-text human-approval scan, so
- * humanApprovalRequired is always false here (documented in
- * schemas/output.schema.json); riskMapDigest is likewise null on this path.
- */
-
-
-
-
-
-/**
- * Derive `{ decision, gate }` for a runLocalReview result. Both fields are
- * undefined on derivation failure (same fail-soft contract as
- * finalizeArtifact — the caller's output must never break on scoring).
- *
- * @param {object} result - runLocalReview result
- * @returns {{ decision: string|undefined, gate: object|undefined }}
- */
-function deriveRunGate(result) {
-  // Defensive (PR #1372 gemini): a null/undefined result yields the same
-  // fail-soft shape instead of throwing on property access.
-  if (result == null || typeof result !== 'object') {
-    return { decision: undefined, gate: undefined };
-  }
-  let decision;
-  try {
-    decision = (0,_scoring_engine_mjs__WEBPACK_IMPORTED_MODULE_0__/* .resolveVerdict */ .Cq)(result.decision, (0,_scoring_engine_mjs__WEBPACK_IMPORTED_MODULE_0__/* .scoreReview */ .lS)(result.findings ?? []).verdict);
-  } catch {
-    if (typeof result.decision === 'string' && result.decision.length > 0) {
-      decision = result.decision;
-    }
-  }
-
-  let gate;
-  try {
-    const findings = result.findings ?? [];
-    const riskAssessment = result.plan?.riskAssessment;
-    const loopSignal = (0,_loop_signal_mjs__WEBPACK_IMPORTED_MODULE_2__/* .deriveLoopSignalFromArtifact */ .K)({ decision, findings });
-    gate = (0,_gate_decision_mjs__WEBPACK_IMPORTED_MODULE_1__/* .deriveGateDecision */ .RF)({
-      loopSignal,
-      decision,
-      humanApprovalRequired: false,
-      riskAction: riskAssessment?.aggregateAction,
-      blockingFindings: findings.filter(
-        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
-      ).length,
-      changedFiles: result.changedFiles ?? [],
-      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
-      artifactStatus: result.status ?? null,
-      riskMapPresent: riskAssessment != null,
-      riskMapDigest: null,
-      // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
-      strictBlock: result.strictBlock === true,
-      config: result.config ?? {},
-    });
-  } catch {
-    // leave gate unset on derivation failure
-  }
-
-  return { decision, gate };
-}
-
-
-/***/ }),
-
 /***/ 9946:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -62044,12 +61964,81 @@ class SkillDispatcher {
 var review_plan_generator = __nccwpck_require__(8069);
 // EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
 var engine = __nccwpck_require__(9487);
-// EXTERNAL MODULE: ./src/lib/run-gate.mjs
-var run_gate = __nccwpck_require__(594);
-// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
-var rubric = __nccwpck_require__(5034);
 // EXTERNAL MODULE: ./src/lib/loop-signal.mjs
 var loop_signal = __nccwpck_require__(4702);
+// EXTERNAL MODULE: ./src/lib/gate-decision.mjs
+var gate_decision = __nccwpck_require__(2773);
+;// CONCATENATED MODULE: ./src/lib/run-gate.mjs
+/**
+ * Gate derivation for `river run` results (Epic #1347 S3 / #1350).
+ *
+ * Extracted from cli.mjs formatJsonOutput so the same derivation feeds both
+ * the JSON output artifact and the persisted run record (result store) —
+ * the audit trail must record the same gate the consumer saw.
+ *
+ * The `river run` path performs no plan-text human-approval scan, so
+ * humanApprovalRequired is always false here (documented in
+ * schemas/output.schema.json); riskMapDigest is likewise null on this path.
+ */
+
+
+
+
+
+/**
+ * Derive `{ decision, gate }` for a runLocalReview result. Both fields are
+ * undefined on derivation failure (same fail-soft contract as
+ * finalizeArtifact — the caller's output must never break on scoring).
+ *
+ * @param {object} result - runLocalReview result
+ * @returns {{ decision: string|undefined, gate: object|undefined }}
+ */
+function deriveRunGate(result) {
+  // Defensive (PR #1372 gemini): a null/undefined result yields the same
+  // fail-soft shape instead of throwing on property access.
+  if (result == null || typeof result !== 'object') {
+    return { decision: undefined, gate: undefined };
+  }
+  let decision;
+  try {
+    decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
+  } catch {
+    if (typeof result.decision === 'string' && result.decision.length > 0) {
+      decision = result.decision;
+    }
+  }
+
+  let gate;
+  try {
+    const findings = result.findings ?? [];
+    const riskAssessment = result.plan?.riskAssessment;
+    const loopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)({ decision, findings });
+    gate = (0,gate_decision/* deriveGateDecision */.RF)({
+      loopSignal,
+      decision,
+      humanApprovalRequired: false,
+      riskAction: riskAssessment?.aggregateAction,
+      blockingFindings: findings.filter(
+        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
+      ).length,
+      changedFiles: result.changedFiles ?? [],
+      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
+      artifactStatus: result.status ?? null,
+      riskMapPresent: riskAssessment != null,
+      riskMapDigest: null,
+      // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
+      strictBlock: result.strictBlock === true,
+      config: result.config ?? {},
+    });
+  } catch {
+    // leave gate unset on derivation failure
+  }
+
+  return { decision, gate };
+}
+
+// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
+var rubric = __nccwpck_require__(5034);
 // EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
 var _2020 = __nccwpck_require__(2210);
 // EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
@@ -63191,7 +63180,7 @@ function formatJsonOutput(result, phase) {
   // Gate + decision derivation shared with the run-record audit trail
   // (#1350 S3): extracted to src/lib/run-gate.mjs so the persisted record
   // and the JSON output always carry the same gate.
-  const { decision, gate } = (0,run_gate.deriveRunGate)(result);
+  const { decision, gate } = deriveRunGate(result);
 
   const artifact = {
     issues,
@@ -64019,7 +64008,7 @@ Dependencies: ${
       try {
         const { buildRunRecord, saveRunRecord, resolveStoreDir } =
           await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
-        const { decision: runDecision, gate: runGate } = (0,run_gate.deriveRunGate)(result);
+        const { decision: runDecision, gate: runGate } = deriveRunGate(result);
         const record = buildRunRecord(result, {
           phase: parsed.phase,
           gate: runGate,
@@ -64145,8 +64134,8 @@ Dependencies: ${
       // (GO→0 / NO_GO→1 / ESCALATE→3). Derived the same way as the JSON-output
       // gate so the exit code and the emitted artifact agree. Stricter wins.
       if (parsed.gate) {
-        const { deriveRunGate } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 594));
         const { gateDecisionExitCode, combineExitCodes } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
+        // deriveRunGate is already statically imported at the top of this module.
         const { gate } = deriveRunGate(result);
         const gateCode = gateDecisionExitCode(gate?.decision);
         console.error(
