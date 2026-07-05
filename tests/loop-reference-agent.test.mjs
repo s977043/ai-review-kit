@@ -20,6 +20,7 @@ import {
   decideLoopAction,
   runReferenceLoop,
   LOOP_ACTIONS,
+  GATE_DECISION_TO_ACTION,
 } from '../examples/loop-reference-agent/reference-loop.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -224,6 +225,9 @@ describe('decideLoopAction — gate block (S4)', () => {
     });
     assert.equal(d.action, LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION);
     assert.equal(d.observationDeadline, 72);
+    // The full observation contract is surfaced so the caller can enforce it
+    // (#1400 review Minor 2) — not just the deadline.
+    assert.deepEqual(d.observation, { expiresInHours: 72, onExpiry: 'stop', files: ['a.mjs'] });
   });
 
   test('oscillation (runs diff) overrides the gate block', () => {
@@ -258,20 +262,20 @@ describe('decideLoopAction — gate block (S4)', () => {
 // Conformance fixtures (S3) drive the same Reference Loop, proving the
 // documented expectedHostAction is what a real caller reaches (S4 wiring).
 describe('gate conformance fixtures drive the reference loop (S4)', () => {
+  // Assert against the driver's OWN exported map (single source of truth) so
+  // the conformance action mapping cannot drift from the driver (#1400 review
+  // Info 5). Note: fixtures 03 (NO_GO/BLOCKING_FINDINGS) and 05
+  // (NO_GO/NOT_EXECUTED) both map to REVISE here — the revise loop re-runs the
+  // review in either case; the reasonCode distinction (revise vs run-first)
+  // lives in gate.reasonCode, which callers needing the nuance can read.
   const confDir = join(here, 'fixtures', 'gate-conformance');
-  const expectedAction = {
-    GO: LOOP_ACTIONS.STOP_CONVERGED,
-    GO_WITH_OBSERVATION: LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION,
-    NO_GO: LOOP_ACTIONS.REVISE,
-    ESCALATE: LOOP_ACTIONS.STOP_ESCALATE,
-  };
   const files = readdirSync(confDir).filter((f) => f.endsWith('.json'));
   for (const f of files) {
     test(`${f}: reference loop reaches the tier-appropriate action`, () => {
       const fixture = JSON.parse(readFileSync(join(confDir, f), 'utf8'));
       const gate = fixture.artifact.gate;
       const d = decideLoopAction({ artifact: fixture.artifact, iteration: 1, maxIterations: 5 });
-      assert.equal(d.action, expectedAction[gate.decision], `for gate ${gate.decision}`);
+      assert.equal(d.action, GATE_DECISION_TO_ACTION[gate.decision], `for gate ${gate.decision}`);
     });
   }
 });

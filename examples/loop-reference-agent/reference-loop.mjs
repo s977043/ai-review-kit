@@ -69,6 +69,25 @@ export const LOOP_ACTIONS = Object.freeze({
  * @param {number} params.maxIterations
  * @returns {{signal: string, action: string, reason: string, observationDeadline?: number}|null}
  */
+/** Resolve the divergence-guard iteration limit (shared by gate + loop-signal
+ * paths so the cap cannot drift asymmetrically). A bad value must not disable
+ * the cap (infinite loop) or trip it on iteration 1. */
+function resolveIterationLimit(maxIterations) {
+  return typeof maxIterations === 'number' && maxIterations > 0 ? maxIterations : 5;
+}
+
+/**
+ * Single source of truth mapping a gate decision to its loop action (Epic
+ * #1347 S4). Exported so contract tests assert against the SAME map the
+ * driver uses, instead of re-deriving it (which would silently drift).
+ */
+export const GATE_DECISION_TO_ACTION = Object.freeze({
+  GO: LOOP_ACTIONS.STOP_CONVERGED,
+  GO_WITH_OBSERVATION: LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION,
+  NO_GO: LOOP_ACTIONS.REVISE,
+  ESCALATE: LOOP_ACTIONS.STOP_ESCALATE,
+});
+
 function decideFromGate({ gate, signal, iteration, maxIterations }) {
   switch (gate.decision) {
     case 'ESCALATE':
@@ -85,18 +104,21 @@ function decideFromGate({ gate, signal, iteration, maxIterations }) {
       };
     case 'GO_WITH_OBSERVATION': {
       // The hill tier: continue, but the caller must track the observation
-      // window. observationDeadline is advisory hours-from-now; enforcement
-      // (stop on expiry, treat files as unreviewed) is the caller's job.
+      // window. The decision SURFACES the full observation contract
+      // (deadline + files + onExpiry) so the caller can enforce it; this
+      // reference driver does not itself track wall-clock time (a revise loop
+      // terminates here — expiry is a post-loop concern for the merged change).
       const hours = gate.observation?.expiresInHours;
       return {
         signal,
         action: LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION,
         reason: `gate GO_WITH_OBSERVATION (${gate.reasonCode}) — proceed under a review window`,
         ...(Number.isFinite(hours) ? { observationDeadline: hours } : {}),
+        ...(gate.observation ? { observation: gate.observation } : {}),
       };
     }
     case 'NO_GO': {
-      const limit = typeof maxIterations === 'number' && maxIterations > 0 ? maxIterations : 5;
+      const limit = resolveIterationLimit(maxIterations);
       if (iteration >= limit) {
         return {
           signal: 'STOP_MAX_ITERATIONS',
@@ -178,9 +200,7 @@ export function decideLoopAction({
   }
 
   // 4. We would revise (REVISE_REQUIRED or NO_SIGNAL) — apply the divergence guard.
-  // Guard against null / NaN / non-numeric maxIterations: a bad value must not
-  // silently disable the cap (infinite loop) or trip it on iteration 1.
-  const limit = typeof maxIterations === 'number' && maxIterations > 0 ? maxIterations : 5;
+  const limit = resolveIterationLimit(maxIterations);
   if (iteration >= limit) {
     return {
       signal: 'STOP_MAX_ITERATIONS',

@@ -54,13 +54,18 @@ information the gate does not carry: caller policy (`STOP_POLICY_REQUIRED`)
 and Layer-2 oscillation (`STOP_OSCILLATED` from `runs diff`). A caller that
 only read the gate would otherwise loop forever on an oscillating fix.
 
-`continue-with-observation` returns an `observationDeadline` (hours); the
-caller must stop the loop on expiry and treat `gate.observation.files` as
-unreviewed (re-review required). This example implements that enforcement;
-external hosts verify their own via `tests/fixtures/gate-conformance/`.
+`continue-with-observation` **surfaces** the full observation contract on the
+returned decision (`observationDeadline` hours + `observation.files` +
+`observation.onExpiry`) so the caller can enforce it: on expiry, stop and
+treat `observation.files` as unreviewed (re-review required). This reference
+driver does not itself track wall-clock time — a revise loop terminates at
+`continue-with-observation`, and expiry is a post-loop concern for the merged
+change. External hosts verify their own enforcement against
+`tests/fixtures/gate-conformance/`.
 
 Older artifacts without a `gate` block fall back to the loop-signal path
-below (backward compatible).
+below (backward compatible). The precedence, including the gate short-circuit,
+is: caller policy → oscillation → **gate block** → loop signal.
 
 Layers 1–2 (`CONVERGED` / `REVISE_REQUIRED` / `ESCALATE_HUMAN` / `STOP_OSCILLATED`)
 are derived by River Review via `src/lib/loop-signal.mjs`. Layer 3
