@@ -88,6 +88,9 @@ Options:
   --fail-on <sev>   (run/review) Exit 1 if a finding >= severity exists. Opt-in; default critical when set
   --warn-on <sev>   (run/review) Exit 2 if a finding >= severity exists (below --fail-on). Default major when set
   --advisory-only   (run/review) Report findings but always exit 0 (disables --fail-on/--warn-on gating)
+  --gate            (run/review) Map the gate decision to the exit code: GO/GO_WITH_OBSERVATION=0,
+                    NO_GO=1, ESCALATE=3. Opt-in; combines with --fail-on/--warn-on (stricter wins).
+                    Conflicts with --advisory-only.
   --offline         (run) Skip AI; review on deterministic heuristics only, even if an API key is set.
                     Reproduces the Auto-approve gate locally when CI/AI is unavailable. Alias: --rules-only
 
@@ -165,6 +168,7 @@ function parseArgs(argv) {
     failOn: null,
     warnOn: null,
     advisoryOnly: false,
+    gate: false,
     offline: false,
     outputFile: null,
     summaryFile: null,
@@ -326,6 +330,10 @@ function parseArgs(argv) {
     }
     if (arg === '--advisory-only') {
       parsed.advisoryOnly = true;
+      continue;
+    }
+    if (arg === '--gate') {
+      parsed.gate = true;
       continue;
     }
     if (arg === '--offline' || arg === '--rules-only') {
@@ -1162,6 +1170,13 @@ async function main(argv = process.argv.slice(2)) {
     printHelp();
     return 0;
   }
+  // Epic #1347 S4 (#1351): `--gate` enforces the gate decision as an exit code;
+  // `--advisory-only` forces exit 0. They are contradictory — fail loudly
+  // (exit 1) rather than silently letting one win.
+  if (parsed.gate && parsed.advisoryOnly) {
+    console.error('Error: --gate cannot be combined with --advisory-only (contradictory).');
+    return 1;
+  }
   // Offline (rules-only) mode: force-disable AI for this process so the review
   // runs on deterministic heuristics only (ADR-002 / #1071). isLlmEnabled()
   // honors RIVER_OFFLINE across all call sites (dispatcher / runner / engine).
@@ -1391,21 +1406,38 @@ async function main(argv = process.argv.slice(2)) {
         await writeFile(summaryFilePath, formatReviewPlanSummaryMarkdown(artifact) + '\n', 'utf8');
       }
       // #976: opt-in review gate. Only when --fail-on / --warn-on / --advisory-only
-      // is given do we translate findings into a CI exit code; otherwise exit 0
-      // (non-breaking for existing callers / the plangate-review workflow).
-      if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-        const { evaluateReviewGate } = await import('./lib/review-plan.mjs');
-        const gate = evaluateReviewGate(artifact, {
-          failOn: parsed.failOn ?? 'critical',
-          warnOn: parsed.warnOn ?? 'major',
-          advisoryOnly: parsed.advisoryOnly,
-        });
-        if (gate.level === 'fail') {
-          console.error(`Review gate: FAIL (max severity: ${gate.maxSeverity}).`);
-        } else if (gate.level === 'warn') {
-          console.error(`Review gate: WARN (max severity: ${gate.maxSeverity}).`);
+      // / --gate is given do we translate findings into a CI exit code; otherwise
+      // exit 0 (non-breaking for existing callers / the plangate-review workflow).
+      if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
+        let severityCode = 0;
+        if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
+          const { evaluateReviewGate } = await import('./lib/review-plan.mjs');
+          const gate = evaluateReviewGate(artifact, {
+            failOn: parsed.failOn ?? 'critical',
+            warnOn: parsed.warnOn ?? 'major',
+            advisoryOnly: parsed.advisoryOnly,
+          });
+          if (gate.level === 'fail') {
+            console.error(`Review gate: FAIL (max severity: ${gate.maxSeverity}).`);
+          } else if (gate.level === 'warn') {
+            console.error(`Review gate: WARN (max severity: ${gate.maxSeverity}).`);
+          }
+          severityCode = gate.code;
         }
-        return gate.code;
+        // Epic #1347 S4 (#1351): --gate maps the gate DECISION to an exit code
+        // (GO→0 / NO_GO→1 / ESCALATE→3). When combined with a severity gate the
+        // stricter outcome wins.
+        let gateCode = 0;
+        if (parsed.gate) {
+          const { gateDecisionExitCode, combineExitCodes } = await import('./lib/gate-exit.mjs');
+          const decision = artifact.gate?.decision;
+          gateCode = gateDecisionExitCode(decision);
+          console.error(
+            `Gate: ${decision ?? 'UNKNOWN'} (${artifact.gate?.reasonCode ?? 'n/a'}) → exit ${gateCode}.`
+          );
+          return combineExitCodes(severityCode, gateCode);
+        }
+        return severityCode;
       }
       return 0;
     } catch (err) {
@@ -2039,23 +2071,40 @@ Dependencies: ${
     // `river run` too. Previously these were parsed but silently ignored on
     // the run path (only `river review` gated), so agents that relied on the
     // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
-    if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-      const { evaluateReviewGate } = await import('./lib/review-plan.mjs');
-      const issues = formatJsonOutput(result, parsed.phase).issues;
-      const gate = evaluateReviewGate(
-        { findings: issues },
-        {
-          failOn: parsed.failOn ?? 'critical',
-          warnOn: parsed.warnOn ?? 'major',
-          advisoryOnly: parsed.advisoryOnly,
+    if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
+      let severityCode = 0;
+      if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
+        const { evaluateReviewGate } = await import('./lib/review-plan.mjs');
+        const issues = formatJsonOutput(result, parsed.phase).issues;
+        const gate = evaluateReviewGate(
+          { findings: issues },
+          {
+            failOn: parsed.failOn ?? 'critical',
+            warnOn: parsed.warnOn ?? 'major',
+            advisoryOnly: parsed.advisoryOnly,
+          }
+        );
+        if (gate.level === 'fail') {
+          console.error(`Review gate: FAIL (max severity: ${gate.maxSeverity}).`);
+        } else if (gate.level === 'warn') {
+          console.error(`Review gate: WARN (max severity: ${gate.maxSeverity}).`);
         }
-      );
-      if (gate.level === 'fail') {
-        console.error(`Review gate: FAIL (max severity: ${gate.maxSeverity}).`);
-      } else if (gate.level === 'warn') {
-        console.error(`Review gate: WARN (max severity: ${gate.maxSeverity}).`);
+        severityCode = gate.code;
       }
-      return gate.code;
+      // Epic #1347 S4 (#1351): --gate maps the gate DECISION to an exit code
+      // (GO→0 / NO_GO→1 / ESCALATE→3). Derived the same way as the JSON-output
+      // gate so the exit code and the emitted artifact agree. Stricter wins.
+      if (parsed.gate) {
+        const { deriveRunGate } = await import('./lib/run-gate.mjs');
+        const { gateDecisionExitCode, combineExitCodes } = await import('./lib/gate-exit.mjs');
+        const { gate } = deriveRunGate(result);
+        const gateCode = gateDecisionExitCode(gate?.decision);
+        console.error(
+          `Gate: ${gate?.decision ?? 'UNKNOWN'} (${gate?.reasonCode ?? 'n/a'}) → exit ${gateCode}.`
+        );
+        return combineExitCodes(severityCode, gateCode);
+      }
+      return severityCode;
     }
 
     return 0;
