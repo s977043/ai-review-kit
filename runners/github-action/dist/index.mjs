@@ -38922,9 +38922,7 @@ function computeContextLift(candidates, selected) {
   const totalSkillTokens = (candidates ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
   const loadedSkillTokens = (selected ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
   const liftRatio =
-    totalSkillTokens > 0
-      ? Math.round((1 - loadedSkillTokens / totalSkillTokens) * 1000) / 1000
-      : 0;
+    totalSkillTokens > 0 ? Math.round((1 - loadedSkillTokens / totalSkillTokens) * 1000) / 1000 : 0;
   return { totalSkillTokens, loadedSkillTokens, liftRatio };
 }
 
