@@ -115,6 +115,17 @@
           "items": { "type": "string", "enum": ["deterministic", "heuristic", "llm"] },
           "description": "Declared multi-layer execution order derived from the selected skills' evaluationType (Epic #1347 S2, merged from #1339). Declaration only — reordering enforcement (strict_block routing) is S4. Additive/optional."
         },
+        "contextLift": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["totalSkillTokens", "loadedSkillTokens", "liftRatio"],
+          "description": "Progressive-disclosure savings metric (Epic #1347 S3): candidate skill-body tokens vs actually selected. Declaration/metric only. Additive/optional.",
+          "properties": {
+            "totalSkillTokens": { "type": "number", "minimum": 0 },
+            "loadedSkillTokens": { "type": "number", "minimum": 0 },
+            "liftRatio": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
         "estimatedCost": {
           "type": "object",
           "additionalProperties": false,
@@ -157,6 +168,7 @@
             "OSCILLATION_DETECTED",
             "RISK_MAP_HUMAN_REVIEW",
             "UNKNOWN_RISK_ACTION",
+            "SKIPPED_BY_POLICY",
             "NOT_EXECUTED",
             "BLOCKING_FINDINGS",
             "MINOR_FINDINGS_OBSERVE",

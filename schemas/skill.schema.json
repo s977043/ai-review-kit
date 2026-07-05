@@ -6,19 +6,40 @@
   "allOf": [
     {
       "anyOf": [
-        { "required": ["phase"] },
-        { "required": ["category"] },
-        { "required": ["trigger"], "properties": { "trigger": { "$ref": "#/properties/trigger" } } }
+        {
+          "required": ["phase"]
+        },
+        {
+          "required": ["category"]
+        },
+        {
+          "required": ["trigger"],
+          "properties": {
+            "trigger": {
+              "$ref": "#/properties/trigger"
+            }
+          }
+        }
       ]
     },
     {
       "anyOf": [
-        { "required": ["applyTo"] },
-        { "required": ["files"] },
-        { "required": ["path_patterns"] },
+        {
+          "required": ["applyTo"]
+        },
+        {
+          "required": ["files"]
+        },
+        {
+          "required": ["path_patterns"]
+        },
         {
           "required": ["trigger"],
-          "properties": { "trigger": { "$ref": "#/properties/trigger" } }
+          "properties": {
+            "trigger": {
+              "$ref": "#/properties/trigger"
+            }
+          }
         }
       ]
     }
@@ -59,25 +80,6 @@
     "modelHint": {
       "type": "string",
       "enum": ["cheap", "balanced", "high-accuracy"]
-    },
-    "evaluationType": {
-      "type": "string",
-      "enum": ["deterministic", "heuristic", "agentic"],
-      "description": "Which evaluation layer runs this skill (Epic #1347 S2 / #1349, adopted from the L1/L2/L3 review). deterministic: an external command decides pass/fail with no LLM; heuristic: pure-code detectors (see SKILL_HEURISTIC_MAP); agentic: LLM-backed. Optional and additive — skills without it keep current behavior; the executionOrder plan field is derived from these declarations."
-    },
-    "deterministicGate": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["command"],
-      "description": "Declaration for evaluationType 'deterministic' skills. TRUST BOUNDARY: `command` is an arbitrary command specified by a repo-owned file — the agent under review can edit it (e.g. `command: \"true\"` makes L1 always green). Execution (S4 strict_block routing) must happen only inside the trust boundary (host-approved configuration); S2 defines the schema only; the cross-field constraint (evaluationType \"deterministic\" requiring deterministicGate) is introduced together with S4 enforcement.",
-      "properties": {
-        "command": { "type": "string", "minLength": 1 },
-        "failSeverity": {
-          "type": "string",
-          "enum": ["strict_block", "bypass_warning"],
-          "default": "strict_block"
-        }
-      }
     },
     "dependency": {
       "anyOf": [
@@ -121,10 +123,14 @@
     },
     "phase": {
       "oneOf": [
-        { "$ref": "#/$defs/phase" },
+        {
+          "$ref": "#/$defs/phase"
+        },
         {
           "type": "array",
-          "items": { "$ref": "#/$defs/phase" },
+          "items": {
+            "$ref": "#/$defs/phase"
+          },
           "minItems": 1
         }
       ],
@@ -133,30 +139,40 @@
     "applyTo": {
       "type": "array",
       "description": "Glob patterns defining which files to check",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "minItems": 1
     },
     "files": {
       "type": "array",
       "description": "Alias for applyTo",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "minItems": 1
     },
     "path_patterns": {
       "type": "array",
       "description": "Alias for applyTo",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "minItems": 1
     },
     "exclude": {
       "type": "array",
       "description": "Glob patterns for files to exclude from this skill even when applyTo matches (honored by the midstream skill-dispatcher; snapshot/planner selection ignores it)",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "tags": {
       "type": "array",
       "description": "Optional metadata for classification",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "uniqueItems": true
     },
     "severity": {
@@ -166,14 +182,18 @@
     "inputContext": {
       "type": "array",
       "description": "Input sources required for the skill to run",
-      "items": { "$ref": "#/$defs/inputContext" },
+      "items": {
+        "$ref": "#/$defs/inputContext"
+      },
       "minItems": 1,
       "uniqueItems": true
     },
     "outputKind": {
       "type": "array",
       "description": "Output categories produced by this skill",
-      "items": { "$ref": "#/$defs/outputKind" },
+      "items": {
+        "$ref": "#/$defs/outputKind"
+      },
       "minItems": 1,
       "uniqueItems": true,
       "default": ["findings"]
@@ -182,6 +202,28 @@
       "$ref": "#/$defs/modelHint",
       "description": "Hint for model selection (cost/accuracy balance)"
     },
+    "evaluationType": {
+      "type": "string",
+      "enum": ["deterministic", "heuristic", "agentic"],
+      "description": "Which evaluation layer runs this skill (Epic #1347 S2 / #1349, adopted from the L1/L2/L3 review). deterministic: an external command decides pass/fail with no LLM; heuristic: pure-code detectors (see SKILL_HEURISTIC_MAP); agentic: LLM-backed. Optional and additive — skills without it keep current behavior; the executionOrder plan field is derived from these declarations."
+    },
+    "deterministicGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command"],
+      "description": "Declaration for evaluationType 'deterministic' skills. TRUST BOUNDARY: `command` is an arbitrary command specified by a repo-owned file — the agent under review can edit it (e.g. `command: \"true\"` makes L1 always green). Execution (S4 strict_block routing) must happen only inside the trust boundary (host-approved configuration); S2 defines the schema only; the cross-field constraint (evaluationType \"deterministic\" requiring deterministicGate) is introduced together with S4 enforcement.",
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failSeverity": {
+          "type": "string",
+          "enum": ["strict_block", "bypass_warning"],
+          "default": "strict_block"
+        }
+      }
+    },
     "license": {
       "type": "string",
       "description": "SPDX license identifier (e.g. MIT). Optional. Aligns with the Agent Skills standard frontmatter (agentskills.io / Warp / Oz / Claude Code) so river-review skill files can be discovered by external tooling."
@@ -189,7 +231,9 @@
     "dependencies": {
       "type": "array",
       "description": "Tools or resources this skill depends on",
-      "items": { "$ref": "#/$defs/dependency" },
+      "items": {
+        "$ref": "#/$defs/dependency"
+      },
       "minItems": 1,
       "uniqueItems": true
     },
@@ -200,10 +244,14 @@
       "properties": {
         "phase": {
           "oneOf": [
-            { "$ref": "#/$defs/phase" },
+            {
+              "$ref": "#/$defs/phase"
+            },
             {
               "type": "array",
-              "items": { "$ref": "#/$defs/phase" },
+              "items": {
+                "$ref": "#/$defs/phase"
+              },
               "minItems": 1
             }
           ]
@@ -211,19 +259,25 @@
         "applyTo": {
           "type": "array",
           "description": "Glob patterns defining which files to check",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "minItems": 1
         },
         "path_patterns": {
           "type": "array",
           "description": "Alias for applyTo",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "minItems": 1
         },
         "files": {
           "type": "array",
           "description": "Alias for applyTo",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "minItems": 1
         }
       }
