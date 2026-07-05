@@ -79,6 +79,7 @@ export const GATE_REASON_CODES = /** @type {const} */ ([
   'OSCILLATION_DETECTED',
   'RISK_MAP_HUMAN_REVIEW',
   'UNKNOWN_RISK_ACTION',
+  'STRICT_BLOCK',
   'SKIPPED_BY_POLICY',
   'NOT_EXECUTED',
   'BLOCKING_FINDINGS',
@@ -143,6 +144,11 @@ export function computeGateInputsHash(inputs) {
   for (const key of FIELDS) {
     canonical[key] = inputs?.[key] === undefined ? null : inputs[key];
   }
+  // Epic #1347 S4: strictBlock joins the hashed inputs, but only when true, so
+  // every pre-S4 gate (strictBlock absent/false) keeps its exact recorded hash
+  // — no conformance-fixture churn. A true value produces a distinct hash so
+  // the S3 "same inputs, different decision" regression check stays sound.
+  if (inputs?.strictBlock === true) canonical.strictBlock = true;
   return createHash('sha256').update(JSON.stringify(canonical)).digest('hex').slice(0, 16);
 }
 
@@ -172,6 +178,13 @@ export function computeGateInputsHash(inputs) {
  *   so hosts can distinguish "nothing to review" from "review suppressed".
  * @param {boolean} [opts.riskMapPresent]
  * @param {string|null} [opts.riskMapDigest]
+ * @param {boolean} [opts.strictBlock] - Epic #1347 S4: a deterministic skill
+ *   (evaluationType 'deterministic') with deterministicGate.failSeverity
+ *   'strict_block' produced a finding. Forces an UNCONDITIONAL NO_GO
+ *   (reasonCode STRICT_BLOCK) — it blocks even below the critical/major
+ *   severity floor that blockingFindings counts, and cannot be waived by a
+ *   label-skip or a dry-run. The escalation cliffs (rules 0-4) still win, as
+ *   ESCALATE is more conservative than NO_GO.
  * @param {object} [opts.config] - effective config; gate.observation / gate.circuitBreaker read here
  * @returns {{ decision: GateDecisionValue, reasonCode: string, tier: GateTier,
  *   inputs: object, inputsHash: string, configSnapshot: object, observation?: object,
@@ -190,6 +203,7 @@ export function deriveGateDecision({
   artifactStatus = null,
   riskMapPresent = false,
   riskMapDigest = null,
+  strictBlock = false,
   config = {},
 } = {}) {
   const configChanged =
@@ -210,6 +224,7 @@ export function deriveGateDecision({
     artifactStatus: artifactStatus ?? null,
     riskMapPresent: riskMapPresent === true,
     riskMapDigest: riskMapDigest ?? null,
+    strictBlock: strictBlock === true,
   };
 
   const expiresInHours =
@@ -231,6 +246,15 @@ export function deriveGateDecision({
       return ['ESCALATE', 'RISK_MAP_HUMAN_REVIEW'];
     // 5. Unknown risk action never falls through to GO (fail-safe).
     if (!KNOWN_RISK_ACTIONS.has(effectiveRiskAction)) return ['NO_GO', 'UNKNOWN_RISK_ACTION'];
+    // 5b. Deterministic strict_block (Epic #1347 S4, #1351): a deterministic
+    // skill (evaluationType 'deterministic', failSeverity 'strict_block')
+    // produced a finding. Unconditional NO_GO — deterministic detectors are
+    // authoritative (see .claude/rules/review-core.md §#1070), so this blocks
+    // even below the critical/major floor and cannot be waived by a label-skip
+    // or dry-run. Placed AFTER the escalation cliffs (0-4) — ESCALATE is more
+    // conservative than NO_GO — and BEFORE the skip/not-executed exemptions so
+    // a bypass attempt cannot suppress a deterministic block.
+    if (inputs.strictBlock) return ['NO_GO', 'STRICT_BLOCK'];
     // 6a. Team-labeled skip (#1350 PR-C): the decision stays NO_GO (a label
     // must not become a gate bypass — the conservative call from the S2
     // design review), but the reasonCode tells hosts this was an explicit

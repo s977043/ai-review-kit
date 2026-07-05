@@ -41407,6 +41407,7 @@ const GATE_REASON_CODES = /** @type {const} */ ((/* unused pure expression or su
   'OSCILLATION_DETECTED',
   'RISK_MAP_HUMAN_REVIEW',
   'UNKNOWN_RISK_ACTION',
+  'STRICT_BLOCK',
   'SKIPPED_BY_POLICY',
   'NOT_EXECUTED',
   'BLOCKING_FINDINGS',
@@ -41471,6 +41472,11 @@ function computeGateInputsHash(inputs) {
   for (const key of FIELDS) {
     canonical[key] = inputs?.[key] === undefined ? null : inputs[key];
   }
+  // Epic #1347 S4: strictBlock joins the hashed inputs, but only when true, so
+  // every pre-S4 gate (strictBlock absent/false) keeps its exact recorded hash
+  // — no conformance-fixture churn. A true value produces a distinct hash so
+  // the S3 "same inputs, different decision" regression check stays sound.
+  if (inputs?.strictBlock === true) canonical.strictBlock = true;
   return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(JSON.stringify(canonical)).digest('hex').slice(0, 16);
 }
 
@@ -41500,6 +41506,13 @@ function computeGateInputsHash(inputs) {
  *   so hosts can distinguish "nothing to review" from "review suppressed".
  * @param {boolean} [opts.riskMapPresent]
  * @param {string|null} [opts.riskMapDigest]
+ * @param {boolean} [opts.strictBlock] - Epic #1347 S4: a deterministic skill
+ *   (evaluationType 'deterministic') with deterministicGate.failSeverity
+ *   'strict_block' produced a finding. Forces an UNCONDITIONAL NO_GO
+ *   (reasonCode STRICT_BLOCK) — it blocks even below the critical/major
+ *   severity floor that blockingFindings counts, and cannot be waived by a
+ *   label-skip or a dry-run. The escalation cliffs (rules 0-4) still win, as
+ *   ESCALATE is more conservative than NO_GO.
  * @param {object} [opts.config] - effective config; gate.observation / gate.circuitBreaker read here
  * @returns {{ decision: GateDecisionValue, reasonCode: string, tier: GateTier,
  *   inputs: object, inputsHash: string, configSnapshot: object, observation?: object,
@@ -41518,6 +41531,7 @@ function deriveGateDecision({
   artifactStatus = null,
   riskMapPresent = false,
   riskMapDigest = null,
+  strictBlock = false,
   config = {},
 } = {}) {
   const configChanged =
@@ -41538,6 +41552,7 @@ function deriveGateDecision({
     artifactStatus: artifactStatus ?? null,
     riskMapPresent: riskMapPresent === true,
     riskMapDigest: riskMapDigest ?? null,
+    strictBlock: strictBlock === true,
   };
 
   const expiresInHours =
@@ -41559,6 +41574,15 @@ function deriveGateDecision({
       return ['ESCALATE', 'RISK_MAP_HUMAN_REVIEW'];
     // 5. Unknown risk action never falls through to GO (fail-safe).
     if (!KNOWN_RISK_ACTIONS.has(effectiveRiskAction)) return ['NO_GO', 'UNKNOWN_RISK_ACTION'];
+    // 5b. Deterministic strict_block (Epic #1347 S4, #1351): a deterministic
+    // skill (evaluationType 'deterministic', failSeverity 'strict_block')
+    // produced a finding. Unconditional NO_GO — deterministic detectors are
+    // authoritative (see .claude/rules/review-core.md §#1070), so this blocks
+    // even below the critical/major floor and cannot be waived by a label-skip
+    // or dry-run. Placed AFTER the escalation cliffs (0-4) — ESCALATE is more
+    // conservative than NO_GO — and BEFORE the skip/not-executed exemptions so
+    // a bypass attempt cannot suppress a deterministic block.
+    if (inputs.strictBlock) return ['NO_GO', 'STRICT_BLOCK'];
     // 6a. Team-labeled skip (#1350 PR-C): the decision stays NO_GO (a label
     // must not become a gate bypass — the conservative call from the S2
     // design review), but the reasonCode tells hosts this was an explicit
@@ -47005,7 +47029,84 @@ function applySuppressions(findings, memoryContext, opts = {}) {
   return { keptFindings: kept, suppressedFindings: suppressed, applied };
 }
 
+;// CONCATENATED MODULE: ./src/lib/deterministic-gate.mjs
+/**
+ * Deterministic strict_block detection (Epic #1347 S4, #1351).
+ *
+ * Consumes the previously declaration-only skill schema fields
+ * `evaluationType: 'deterministic'` and `deterministicGate.failSeverity`.
+ * A finding from a deterministic skill whose gate is `strict_block` is a
+ * NON-NEGOTIABLE hard block: deterministic detectors are authoritative (see
+ * `.claude/rules/review-core.md` §#1070 — static analysis owns the syntactic /
+ * pattern layer 100%, and the AI review must not re-adjudicate it). The gate
+ * turns that into an unconditional NO_GO (reasonCode STRICT_BLOCK) that blocks
+ * even below the critical/major severity floor and that a label-skip or dry-run
+ * cannot waive.
+ *
+ * Design principle preserved: enforcement is OPT-IN. A skill blocks only when
+ * it EXPLICITLY declares a `deterministicGate` object; a deterministic skill
+ * with no declared gate stays advisory.
+ *
+ * Pure / side-effect-free.
+ */
+
+/** deterministicGate.failSeverity vocabulary (mirrors skillYamlSchema.mjs). */
+const STRICT_BLOCK = 'strict_block';
+const BYPASS_WARNING = 'bypass_warning';
+
+function skillMeta(skill) {
+  return skill?.metadata ?? skill ?? {};
+}
+
+/**
+ * True when a skill's findings are deterministic hard blocks: it declares
+ * `evaluationType: 'deterministic'` AND an explicit `deterministicGate` whose
+ * `failSeverity` is `strict_block` (the schema default within the gate object,
+ * so an omitted failSeverity on a declared gate still blocks).
+ *
+ * @param {object} skill - loaded skill (full object with `.metadata`) or a bare metadata object
+ * @returns {boolean}
+ */
+function isStrictBlockSkill(skill) {
+  const m = skillMeta(skill);
+  if (m.evaluationType !== 'deterministic') return false;
+  const gate = m.deterministicGate;
+  if (!gate || typeof gate !== 'object') return false; // no declared gate → advisory
+  return (gate.failSeverity ?? STRICT_BLOCK) === STRICT_BLOCK;
+}
+
+/**
+ * Identify findings that originate from a deterministic strict_block skill.
+ *
+ * A finding's `ruleId` is its emitting skill's id (review-engine sets
+ * `ruleId = c.skillId`). Callers should pass the PRE-suppression finding set so
+ * that a suppressed deterministic block still forces the gate — a suppression
+ * must not become a strict_block bypass (same fail-safe stance as
+ * SKIPPED_BY_POLICY in gate-decision.mjs).
+ *
+ * @param {object} params
+ * @param {Array<object>} [params.findings] - review findings (ruleId = skillId)
+ * @param {Array<object>} [params.selected] - selected skills (full objects with metadata)
+ * @returns {{ strictBlock: boolean, findings: Array<object> }}
+ */
+function computeStrictBlock({ findings, selected } = {}) {
+  const strictIds = new Set(
+    (Array.isArray(selected) ? selected : [])
+      .filter(isStrictBlockSkill)
+      .map((s) => String(skillMeta(s).id ?? ''))
+      .filter(Boolean)
+  );
+  const blocking =
+    strictIds.size === 0
+      ? []
+      : (Array.isArray(findings) ? findings : []).filter(
+          (f) => f != null && strictIds.has(String(f.ruleId ?? ''))
+        );
+  return { strictBlock: blocking.length > 0, findings: blocking };
+}
+
 ;// CONCATENATED MODULE: ./src/lib/local-runner.mjs
+
 
 
 
@@ -47446,6 +47547,15 @@ async function runLocalReview({
     applied: suppressionsApplied,
   } = applySuppressions(annotatedFindings, memoryContext, { config: context.config });
 
+  // Epic #1347 S4 (#1351): deterministic strict_block gate. Computed over the
+  // PRE-suppression finding set joined with the selected skills so a suppressed
+  // deterministic block still forces the gate — a suppression must not be a
+  // strict_block bypass (fail-safe, mirroring SKIPPED_BY_POLICY).
+  const { strictBlock } = computeStrictBlock({
+    findings: annotatedFindings,
+    selected: context.plan?.selected ?? [],
+  });
+
   // Comments and findings are 1:1 in review-engine.mjs (`findings =
   // comments.map(...)`). When a finding is suppressed, the corresponding
   // PR comment must also be filtered — otherwise the suppressed finding
@@ -47475,6 +47585,9 @@ async function runLocalReview({
     // so a clean diff scores a vacuous auto-approve — the gate must not read
     // that as CONVERGED_CLEAN.
     dryRun: dryRun === true,
+    // Epic #1347 S4 (#1351): deterministic strict_block signal for the gate.
+    // deriveRunGate forwards this to deriveGateDecision → unconditional NO_GO.
+    strictBlock,
     repoRoot: external_node_path_.resolve(context.repoRoot),
     defaultBranch: context.defaultBranch,
     mergeBase: context.mergeBase,
@@ -61895,6 +62008,8 @@ function deriveRunGate(result) {
       artifactStatus: result.status ?? null,
       riskMapPresent: riskAssessment != null,
       riskMapDigest: null,
+      // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
+      strictBlock: result.strictBlock === true,
       config: result.config ?? {},
     });
   } catch {

@@ -55,6 +55,8 @@ export function deriveRunGate(result) {
       artifactStatus: result.status ?? null,
       riskMapPresent: riskAssessment != null,
       riskMapDigest: null,
+      // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
+      strictBlock: result.strictBlock === true,
       config: result.config ?? {},
     });
   } catch {
