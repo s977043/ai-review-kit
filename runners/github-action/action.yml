@@ -45,6 +45,15 @@ inputs:
     description: 'Output format (text|markdown|json|yaml|html).'
     required: false
     default: 'markdown'
+  gate:
+    description: >-
+      Enforce the gate decision as the job status (Epic #1347 S4): pass --gate so
+      GO/GO_WITH_OBSERVATION exit 0, NO_GO exits 1, ESCALATE exits 3 — a non-zero
+      exit fails the job. Default false keeps advisory behavior (findings are
+      reported but never fail the job). Adopt in two stages: watch advisory
+      results first, then set gate=true.
+    required: false
+    default: 'false'
 outputs:
   json_path:
     description: 'Path to the JSON output file (only when output_format=json).'
@@ -91,17 +100,35 @@ runs:
         if [ -n "${{ inputs.max_cost }}" ]; then
           cmd+=("--max-cost" "${{ inputs.max_cost }}")
         fi
+        # Epic #1347 S4: opt-in gate enforcement. --gate makes NO_GO/ESCALATE a
+        # non-zero exit; default (gate=false) stays advisory.
+        if [ "${{ inputs.gate }}" = "true" ]; then
+          cmd+=("--gate")
+        fi
         echo "Running: ${cmd[*]}"
 
+        # Capture the CLI exit code rather than letting `set -e` abort the step
+        # immediately, so the output wiring below still runs (json_path is needed
+        # by the inline-comment step). We re-exit with the captured code at the
+        # end, so a --gate NO_GO/ESCALATE still fails the job.
+        rc=0
         if [ "${output_fmt}" = "json" ]; then
           json_out="${RUNNER_TEMP}/river-review-output.json"
-          "${cmd[@]}" > "${json_out}"
+          "${cmd[@]}" > "${json_out}" || rc=$?
           echo "json_path=${json_out}" >> "${GITHUB_OUTPUT}"
           cat "${json_out}"
         else
           out="${RUNNER_TEMP}/river-review-comment.md"
-          "${cmd[@]}" | tee "${out}"
+          "${cmd[@]}" | tee "${out}" || rc=$?
           echo "comment_path=${out}" >> "${GITHUB_OUTPUT}"
+        fi
+        if [ "${rc}" -ne 0 ]; then
+          if [ "${{ inputs.gate }}" = "true" ]; then
+            echo "::warning::River Review exited ${rc} (gate enforcement — see the 'Gate:' line above)."
+          else
+            echo "::warning::River Review exited ${rc}."
+          fi
+          exit "${rc}"
         fi
 
     - name: Post PR comment

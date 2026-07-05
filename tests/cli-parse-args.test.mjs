@@ -261,6 +261,12 @@ test('parseArgs: --fail-on defaults null; --advisory-only defaults false', () =>
   assert.equal(parsed.advisoryOnly, false);
 });
 
+test('parseArgs: --gate sets the flag; defaults false (Epic #1347 S4)', () => {
+  assert.equal(parseArgs(['run', '.', '--gate']).gate, true);
+  assert.equal(parseArgs(['review', 'exec', '--gate']).gate, true);
+  assert.equal(parseArgs(['run', '.']).gate, false);
+});
+
 test('parseArgs: --offline and --rules-only set offline; defaults false (#1071)', () => {
   assert.equal(parseArgs(['run', '.', '--offline']).offline, true);
   assert.equal(parseArgs(['run', '.', '--rules-only']).offline, true);
