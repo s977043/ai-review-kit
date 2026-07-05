@@ -39,7 +39,7 @@ const structuredData = {
   isAccessibleForFree: true,
   keywords:
     'AI code review, code review, review judgment as code, skill registry, human-in-the-loop, GitHub Action, Claude Code plugin',
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  offers: { '@type': 'Offer', price: 0, priceCurrency: 'USD' },
   author: {
     '@type': 'Organization',
     name: 'River Review maintainers',
