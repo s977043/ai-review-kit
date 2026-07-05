@@ -81,6 +81,7 @@ module.exports = {
         'explanation/design-philosophy',
         'explanation/upstream-midstream-downstream',
         'explanation/riverbed-memory',
+        'explanation/security-model',
         {
           type: 'category',
           label: 'フレームワーク',
