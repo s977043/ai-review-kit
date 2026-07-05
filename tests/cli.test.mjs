@@ -473,6 +473,16 @@ describe('river run - gate block', () => {
     assert.match(result.stderr, /Gate: NO_GO/);
   });
 
+  test('--gate with --plan (replay) is rejected explicitly (no silent always-1)', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+    const result = await runCliInProcess(['review', 'exec', '--plan', 'some-plan.json', '--gate'], {
+      cwd: dir,
+    });
+    assert.strictEqual(result.code, 1, result.stderr);
+    assert.match(result.stderr, /--gate is not supported with --plan/);
+  });
+
   test('--gate combined with --warn-on takes the stricter exit (gate NO_GO wins)', async (t) => {
     const { dir, cleanup } = await createRepoWithSilentCatchChange();
     t.after(cleanup);

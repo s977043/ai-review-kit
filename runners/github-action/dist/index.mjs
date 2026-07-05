@@ -63216,6 +63216,16 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     console.error('Error: --gate cannot be combined with --advisory-only (contradictory).');
     return 1;
   }
+  // The replay path (`review exec --plan <file>`) deliberately omits the gate
+  // block — a replayed artifact's risk-map / diff context is not this run's
+  // (see review-plan.mjs finalizeArtifact). So --gate on replay could only ever
+  // fail-safe to exit 1; reject it explicitly rather than always exiting 1.
+  if (parsed.gate && typeof parsed.planFile === 'string') {
+    console.error(
+      'Error: --gate is not supported with --plan (the replay path does not derive an authoritative gate).'
+    );
+    return 1;
+  }
   // Offline (rules-only) mode: force-disable AI for this process so the review
   // runs on deterministic heuristics only (ADR-002 / #1071). isLlmEnabled()
   // honors RIVER_OFFLINE across all call sites (dispatcher / runner / engine).

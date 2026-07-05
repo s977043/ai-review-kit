@@ -59,9 +59,16 @@ const EXIT_SEVERITY_RANK = { 0: 0, 2: 1, 1: 2, 3: 3 };
  */
 function combineExitCodes(...codes) {
   let best = 0;
+  let bestRank = 0;
   for (const c of codes) {
     const rank = EXIT_SEVERITY_RANK[c] ?? EXIT_SEVERITY_RANK[1]; // unknown → fail rank
-    if (rank > (EXIT_SEVERITY_RANK[best] ?? 0)) best = c;
+    // Track bestRank explicitly: re-deriving it as EXIT_SEVERITY_RANK[best]
+    // would yield undefined→0 for an unknown `best` and let a lower-rank code
+    // (e.g. warn) overwrite it (gemini #1404).
+    if (rank > bestRank) {
+      best = c;
+      bestRank = rank;
+    }
   }
   return best;
 }

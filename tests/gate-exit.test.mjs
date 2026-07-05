@@ -52,4 +52,9 @@ describe('combineExitCodes — severity precedence, not numeric max', () => {
   test('NO_GO(1) + warn(2) → 1 (a warn must not mask a hard block)', () => {
     assert.equal(combineExitCodes(2, 1), 1);
   });
+
+  test('an unknown code (fail rank) is not masked by a later warn(2) (gemini #1404)', () => {
+    assert.equal(combineExitCodes(99, 2), 99);
+    assert.equal(combineExitCodes(2, 99), 99);
+  });
 });
