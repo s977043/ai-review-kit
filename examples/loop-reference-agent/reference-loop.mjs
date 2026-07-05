@@ -28,6 +28,10 @@ export const LOOP_ACTIONS = Object.freeze({
   STOP_ESCALATE: 'stop-escalate',
   STOP_MAX_ITERATIONS: 'stop-max-iterations',
   STOP_POLICY: 'stop-policy',
+  // Epic #1347 S4: the "hill" tier — continue, but the change is under a
+  // time-boxed observation window the caller must track (see
+  // observationDeadline in the returned decision).
+  CONTINUE_WITH_OBSERVATION: 'continue-with-observation',
 });
 
 /**
@@ -53,6 +57,100 @@ export const LOOP_ACTIONS = Object.freeze({
  *   e.g. 'STOP_POLICY_REQUIRED' when a cost cap or HITL label fires.
  * @returns {{signal: string, action: string, reason: string}}
  */
+/**
+ * Map a `gate` block to a loop action (Epic #1347 S4). Returns null when the
+ * gate does not determine the action (unknown decision → fall back to the
+ * loop-signal path). The iteration cap still applies to NO_GO (revise).
+ *
+ * @param {object} params
+ * @param {object} params.gate - artifact.gate
+ * @param {string} params.signal - the loop signal (for the returned decision's `signal`)
+ * @param {number} params.iteration
+ * @param {number} params.maxIterations
+ * @returns {{signal: string, action: string, reason: string, observationDeadline?: number}|null}
+ */
+/** Resolve the divergence-guard iteration limit (shared by gate + loop-signal
+ * paths so the cap cannot drift asymmetrically). A bad value must not disable
+ * the cap (infinite loop) or trip it on iteration 1. */
+function resolveIterationLimit(maxIterations) {
+  return typeof maxIterations === 'number' && maxIterations > 0 ? maxIterations : 5;
+}
+
+/**
+ * Single source of truth mapping a gate decision to its loop action (Epic
+ * #1347 S4). Exported so contract tests assert against the SAME map the
+ * driver uses, instead of re-deriving it (which would silently drift).
+ */
+export const GATE_DECISION_TO_ACTION = Object.freeze({
+  GO: LOOP_ACTIONS.STOP_CONVERGED,
+  GO_WITH_OBSERVATION: LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION,
+  NO_GO: LOOP_ACTIONS.REVISE,
+  ESCALATE: LOOP_ACTIONS.STOP_ESCALATE,
+});
+
+function decideFromGate({ gate, signal, iteration, maxIterations }) {
+  switch (gate.decision) {
+    case 'ESCALATE':
+      return {
+        signal,
+        action: LOOP_ACTIONS.STOP_ESCALATE,
+        reason: `gate ESCALATE (${gate.reasonCode}) — human approval required`,
+      };
+    case 'GO':
+      return {
+        signal,
+        action: LOOP_ACTIONS.STOP_CONVERGED,
+        reason: `gate GO (${gate.reasonCode}) — autonomous continuation permitted`,
+      };
+    case 'GO_WITH_OBSERVATION': {
+      // The hill tier: continue, but under a bounded observation window the
+      // caller must track. The decision SURFACES the full observation contract
+      // (deadline + files + onExpiry) so the caller can enforce it; this
+      // reference driver does not itself track wall-clock time (a revise loop
+      // terminates here — expiry is a post-loop concern for the merged change).
+      //
+      // A well-formed gate ALWAYS carries a finite expiresInHours
+      // (deriveGateDecision defaults it), so a missing/non-finite deadline means
+      // a malformed gate. Fail-safe = escalate: never continue an UNBOUNDED
+      // observation, and never fall back to the loop-signal path (which could
+      // promote a CONVERGED artifact to a full GO — the wrong direction for the
+      // hill tier, contra the Epic's unknown-never-toward-GO invariant).
+      const hours = gate.observation?.expiresInHours;
+      if (!Number.isFinite(hours)) {
+        return {
+          signal,
+          action: LOOP_ACTIONS.STOP_ESCALATE,
+          reason: `gate GO_WITH_OBSERVATION (${gate.reasonCode}) without a finite observation deadline — malformed gate, escalating`,
+        };
+      }
+      return {
+        signal,
+        action: LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION,
+        reason: `gate GO_WITH_OBSERVATION (${gate.reasonCode}) — proceed under a review window`,
+        observationDeadline: hours,
+        ...(gate.observation ? { observation: gate.observation } : {}),
+      };
+    }
+    case 'NO_GO': {
+      const limit = resolveIterationLimit(maxIterations);
+      if (iteration >= limit) {
+        return {
+          signal: 'STOP_MAX_ITERATIONS',
+          action: LOOP_ACTIONS.STOP_MAX_ITERATIONS,
+          reason: `gate NO_GO but reached max iterations (${limit}) without converging`,
+        };
+      }
+      return {
+        signal,
+        action: LOOP_ACTIONS.REVISE,
+        reason: `gate NO_GO (${gate.reasonCode}) — revise and re-run`,
+      };
+    }
+    default:
+      return null; // unknown gate decision → fall back to loop-signal path
+  }
+}
+
 export function decideLoopAction({
   artifact,
   runsDiff = null,
@@ -74,12 +172,29 @@ export function decideLoopAction({
     ? deriveLoopSignalFromRunsDiff(runsDiff, artifact)
     : deriveLoopSignalFromArtifact(artifact);
 
+  // Oscillation is a Layer-2 (runs diff) signal the gate block does not carry,
+  // so it stays an override even in gate mode — a caller that only reads the
+  // gate would otherwise loop forever on an oscillating fix.
   if (signal === 'STOP_OSCILLATED') {
     return {
       signal,
       action: LOOP_ACTIONS.STOP_ESCALATE,
       reason: 'oscillation detected — revise is re-introducing resolved findings',
     };
+  }
+
+  // Epic #1347 S4: when the artifact carries a `gate` block, it is the
+  // authoritative signal (it composes the risk tiers with the loop signal).
+  // Older artifacts without `gate` fall through to the loop-signal path below
+  // (backward compatible).
+  if (artifact?.gate && typeof artifact.gate === 'object') {
+    const gateDecision = decideFromGate({
+      gate: artifact.gate,
+      signal,
+      iteration,
+      maxIterations,
+    });
+    if (gateDecision) return gateDecision;
   }
 
   if (signal === 'ESCALATE_HUMAN') {
@@ -99,9 +214,7 @@ export function decideLoopAction({
   }
 
   // 4. We would revise (REVISE_REQUIRED or NO_SIGNAL) — apply the divergence guard.
-  // Guard against null / NaN / non-numeric maxIterations: a bad value must not
-  // silently disable the cap (infinite loop) or trip it on iteration 1.
-  const limit = typeof maxIterations === 'number' && maxIterations > 0 ? maxIterations : 5;
+  const limit = resolveIterationLimit(maxIterations);
   if (iteration >= limit) {
     return {
       signal: 'STOP_MAX_ITERATIONS',

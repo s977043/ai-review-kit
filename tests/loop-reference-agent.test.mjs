@@ -12,7 +12,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -20,6 +20,7 @@ import {
   decideLoopAction,
   runReferenceLoop,
   LOOP_ACTIONS,
+  GATE_DECISION_TO_ACTION,
 } from '../examples/loop-reference-agent/reference-loop.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -162,4 +163,132 @@ describe('runReferenceLoop', () => {
     assert.equal(result.action, LOOP_ACTIONS.STOP_CONVERGED);
     assert.equal(result.iteration, 2);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Gate consumption (Epic #1347 S4) — the gate block is authoritative when
+// present; older artifacts without gate fall back to the loop-signal path.
+// ---------------------------------------------------------------------------
+describe('decideLoopAction — gate block (S4)', () => {
+  const withGate = (decision, extra = {}) => ({
+    version: '1',
+    timestamp: '2026-07-05T00:00:00.000Z',
+    phase: 'midstream',
+    status: 'ok',
+    findings: [],
+    gate: {
+      decision,
+      reasonCode:
+        decision === 'GO'
+          ? 'CONVERGED_CLEAN'
+          : decision === 'ESCALATE'
+            ? 'HUMAN_APPROVAL_REQUIRED'
+            : decision === 'GO_WITH_OBSERVATION'
+              ? 'MINOR_FINDINGS_OBSERVE'
+              : 'BLOCKING_FINDINGS',
+      tier: 'field',
+      inputs: {},
+      inputsHash: 'aaaaaaaaaaaaaaaa',
+      schemaVersion: '1',
+      ...extra,
+    },
+  });
+
+  test('gate GO → stop-converged', () => {
+    const d = decideLoopAction({ artifact: withGate('GO'), iteration: 1, maxIterations: 5 });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_CONVERGED);
+  });
+
+  test('gate ESCALATE → stop-escalate (cliff isolated from revise)', () => {
+    const d = decideLoopAction({ artifact: withGate('ESCALATE'), iteration: 1, maxIterations: 5 });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_ESCALATE);
+  });
+
+  test('gate NO_GO → revise (with iteration cap)', () => {
+    const d = decideLoopAction({ artifact: withGate('NO_GO'), iteration: 1, maxIterations: 5 });
+    assert.equal(d.action, LOOP_ACTIONS.REVISE);
+    const capped = decideLoopAction({
+      artifact: withGate('NO_GO'),
+      iteration: 5,
+      maxIterations: 5,
+    });
+    assert.equal(capped.action, LOOP_ACTIONS.STOP_MAX_ITERATIONS);
+  });
+
+  test('gate GO_WITH_OBSERVATION → continue-with-observation + deadline', () => {
+    const d = decideLoopAction({
+      artifact: withGate('GO_WITH_OBSERVATION', {
+        observation: { expiresInHours: 72, onExpiry: 'stop', files: ['a.mjs'] },
+      }),
+      iteration: 1,
+      maxIterations: 5,
+    });
+    assert.equal(d.action, LOOP_ACTIONS.CONTINUE_WITH_OBSERVATION);
+    assert.equal(d.observationDeadline, 72);
+    // The full observation contract is surfaced so the caller can enforce it
+    // (#1400 review Minor 2) — not just the deadline.
+    assert.deepEqual(d.observation, { expiresInHours: 72, onExpiry: 'stop', files: ['a.mjs'] });
+  });
+
+  test('gate GO_WITH_OBSERVATION without a finite deadline → stop-escalate (fail-safe, not unbounded observe)', () => {
+    // A malformed hill gate (no finite expiresInHours) must NOT continue an
+    // unbounded observation, and must NOT fall back to the loop-signal path
+    // (which would promote this findings:[] artifact to a full GO). #1400 review.
+    const d = decideLoopAction({
+      artifact: withGate('GO_WITH_OBSERVATION'), // no observation block → no deadline
+      iteration: 1,
+      maxIterations: 5,
+    });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_ESCALATE);
+    assert.equal(d.observationDeadline, undefined);
+  });
+
+  test('oscillation (runs diff) overrides the gate block', () => {
+    const artifact = withGate('GO'); // gate says GO...
+    const d = decideLoopAction({
+      artifact,
+      runsDiff: OSCILLATED_DIFF, // ...but oscillation is detected
+      iteration: 1,
+      maxIterations: 5,
+    });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_ESCALATE);
+  });
+
+  test('caller policy still overrides the gate block', () => {
+    const d = decideLoopAction({
+      artifact: withGate('GO'),
+      iteration: 1,
+      maxIterations: 5,
+      policySignal: 'STOP_POLICY_REQUIRED',
+    });
+    assert.equal(d.action, LOOP_ACTIONS.STOP_POLICY);
+  });
+
+  test('unknown gate decision falls back to the loop-signal path', () => {
+    const artifact = { ...CONVERGED, gate: { decision: 'FUTURE_VALUE', reasonCode: 'x' } };
+    const d = decideLoopAction({ artifact, iteration: 1, maxIterations: 5 });
+    // falls through to loop-signal → CONVERGED artifact yields stop-converged
+    assert.equal(d.action, LOOP_ACTIONS.STOP_CONVERGED);
+  });
+});
+
+// Conformance fixtures (S3) drive the same Reference Loop, proving the
+// documented expectedHostAction is what a real caller reaches (S4 wiring).
+describe('gate conformance fixtures drive the reference loop (S4)', () => {
+  // Assert against the driver's OWN exported map (single source of truth) so
+  // the conformance action mapping cannot drift from the driver (#1400 review
+  // Info 5). Note: fixtures 03 (NO_GO/BLOCKING_FINDINGS) and 05
+  // (NO_GO/NOT_EXECUTED) both map to REVISE here — the revise loop re-runs the
+  // review in either case; the reasonCode distinction (revise vs run-first)
+  // lives in gate.reasonCode, which callers needing the nuance can read.
+  const confDir = join(here, 'fixtures', 'gate-conformance');
+  const files = readdirSync(confDir).filter((f) => f.endsWith('.json'));
+  for (const f of files) {
+    test(`${f}: reference loop reaches the tier-appropriate action`, () => {
+      const fixture = JSON.parse(readFileSync(join(confDir, f), 'utf8'));
+      const gate = fixture.artifact.gate;
+      const d = decideLoopAction({ artifact: fixture.artifact, iteration: 1, maxIterations: 5 });
+      assert.equal(d.action, GATE_DECISION_TO_ACTION[gate.decision], `for gate ${gate.decision}`);
+    });
+  }
 });
