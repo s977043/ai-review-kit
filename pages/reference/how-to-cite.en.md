@@ -26,6 +26,7 @@ For `version` and `date`, use the `version` in [`CITATION.cff`](https://github.c
   author  = {{River Review maintainers}},
   url     = {https://github.com/s977043/river-review},
   version = {X.Y.Z},
+  date    = {YYYY-MM-DD},
   license = {MIT}
 }
 ```
@@ -33,7 +34,7 @@ For `version` and `date`, use the `version` in [`CITATION.cff`](https://github.c
 ## Plain text
 
 ```text
-River Review maintainers. River Review (Version X.Y.Z) [Software]. https://github.com/s977043/river-review
+River Review maintainers (YYYY). River Review (Version X.Y.Z) [Software]. https://github.com/s977043/river-review
 ```
 
 ## About the DOI
