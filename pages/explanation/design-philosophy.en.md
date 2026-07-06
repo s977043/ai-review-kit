@@ -19,10 +19,15 @@ River Review does **not** aim to be:
 - **A replacement for human review judgment**: AI assists by surfacing review perspectives and evidence. Findings and the verdict are decision material only; GO / NO-GO, iteration, and stop decisions remain the responsibility of the caller or a human (HITL). It does not assert auto-approval or auto-merge.
 - **An automatic code fixer**: it identifies and reports issues but does not transform or auto-fix code.
 
-## Direction of travel: from HITL to HOTL
+## Direction of travel: risk-tiered human supervision
 
-This section frames River Review's automation direction around two states: HITL (Human-in-the-Loop — a human judges every instance) and HOTL (Human-on-the-Loop — a human supervises the loop). The "replacement for human review judgment" Non-Goal above is not a permanent constraint but a current milestone. Even the areas judged to require humans only (misalignment with intent, soundness of design decisions, risk weighting, tacit assumptions) become reviewable by AI to the extent that the right context can be extracted and shaped for it.
+River Review splits change into three risk tiers and varies how much human supervision each tier receives. The cliff tier — high-risk changes — keeps HITL: human approval stays mandatory. On top of that, the hill tier imposes time-boxed observation, and the field tier lets clean, converged changes continue autonomously and audits them after the fact. The goal is to reallocate scarce human attention to the cliff, not to reduce supervision. See ADR-003 (`docs/adr/003-risk-tiered-human-supervision.md`) for details.
 
-- **Current state (HITL)**: AI supplies decision material — findings and a verdict — and a human makes the GO / NO-GO call each time.
-- **Direction of travel (toward HOTL)**: by continuing to strengthen context extraction and progressive disclosure (the `Context-aware` principle) and raising AI judgment accuracy, shift the human's role from judging every instance (in the loop) to supervising the loop and stepping in only when needed (on the loop) — widening the scope of automation over time.
-- **Precondition for the shift**: accuracy gains must be backed by finding verification and improvement-loop feedback. Concretely, automation widens first for the perspectives where consensusLevel and verification track records have accumulated evidence — not ahead of that evidence.
+The "replacement for human review judgment" Non-Goal above is not a permanent constraint but a current milestone. Even the areas judged to require humans only (misalignment with intent, soundness of design decisions, risk weighting, tacit assumptions) become reviewable by AI to the extent that the right context can be extracted and shaped for it.
+
+- **Cliff (ESCALATE)**: high-risk changes require human approval and preserve HITL. The final call here is always a human's.
+- **Hill (GO_WITH_OBSERVATION)**: continuation is allowed but carries time-boxed observation; once the deadline passes, the change reverts to unreviewed.
+- **Field (GO)**: clean, converged changes may continue autonomously and are audited after the fact via the run-record and digest.
+- **Precondition for wider automation**: expanding the automated scope is limited to what finding verification and improvement-loop feedback back up. It widens first for perspectives where consensusLevel and verification track records have accumulated — never ahead of that evidence.
+
+As a design principle for loop supervision, the human's role shifts from judging every instance to supervising the loop and stepping in only when needed (Human-on-the-Loop). The banner remains risk-tiered human supervision, and the cliff's human approval is never relaxed.

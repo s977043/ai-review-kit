@@ -54,7 +54,7 @@ River Review can be embedded as the **review stage** of a generating agent's **g
 
 - River Review acts as a **critic** that returns findings / verdict / `suggestedLoopSignal`.
 - Deciding whether to iterate, stop, or escalate is the **caller's responsibility** (the calling agent). River Review does not run the loop itself; it only returns material for the decision.
-- Findings and verdict are decision material, not auto-approval. The design preserves a human confirmation boundary (HITL).
+- Findings and verdict are decision material, not auto-approval. Under risk-tiered human supervision, the cliff preserves the human-approval boundary (HITL).
 
 For the contract and reference implementation, see:
 
