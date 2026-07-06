@@ -25928,9 +25928,10 @@ class ToolError extends Error {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Ay: () => (/* binding */ index_vite_proxy_tmp_default)
+/* harmony export */   Bh: () => (/* binding */ dump),
+/* harmony export */   Hh: () => (/* binding */ load)
 /* harmony export */ });
-/* unused harmony exports CORE_SCHEMA, DEFAULT_SCHEMA, FAILSAFE_SCHEMA, JSON_SCHEMA, Schema, Type, YAMLException, dump, load, loadAll, safeDump, safeLoad, safeLoadAll, types */
+/* unused harmony exports CORE_SCHEMA, DEFAULT_SCHEMA, FAILSAFE_SCHEMA, JSON_SCHEMA, Schema, Type, YAMLException, default, loadAll, safeDump, safeLoad, safeLoadAll, types */
 /*! js-yaml 4.2.0 https://github.com/nodeca/js-yaml @license MIT */
 //#region \0rolldown/runtime.js
 var __create = Object.create;
@@ -39495,7 +39496,7 @@ async function loadRecommendationSets({ skillsDir = defaultSkillsDir } = {}) {
   }
   let parsed;
   try {
-    parsed = js_yaml/* default.load */.Ay.load(raw) ?? {};
+    parsed = js_yaml/* load */.Hh(raw) ?? {};
   } catch (err) {
     throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
   }
@@ -39540,7 +39541,7 @@ async function loadPacks({ skillsDir = defaultSkillsDir } = {}) {
   }
   let parsed;
   try {
-    parsed = js_yaml/* default.load */.Ay.load(raw) ?? {};
+    parsed = js_yaml/* load */.Hh(raw) ?? {};
   } catch (err) {
     throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
   }
@@ -39809,7 +39810,7 @@ async function parseSkillFile(filePath) {
   // YAML handling
   let loaded = {};
   try {
-    loaded = js_yaml/* default.load */.Ay.load(raw) ?? {};
+    loaded = js_yaml/* load */.Hh(raw) ?? {};
   } catch (err) {
     throw new SkillLoaderError(`YAML parse error: ${err.message}`);
   }
@@ -40453,7 +40454,7 @@ class ConfigLoader {
     const ext = external_node_path_.extname(filePath).toLowerCase();
     let parsed;
     if (ext === '.yaml' || ext === '.yml') {
-      parsed = js_yaml/* default.load */.Ay.load(raw);
+      parsed = js_yaml/* load */.Hh(raw);
     } else {
       parsed = JSON.parse(raw);
     }
@@ -44539,7 +44540,7 @@ async function loadRiskMap(repoRoot, options = {}) {
 
   let parsed;
   try {
-    parsed = js_yaml/* default.load */.Ay.load(trimmed);
+    parsed = js_yaml/* load */.Hh(trimmed);
   } catch (error) {
     throw new RiskMapError(`Failed to parse risk map YAML: ${error.message}`);
   }

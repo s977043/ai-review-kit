@@ -363,7 +363,7 @@ async function writeImportedSkill(skill, destDir) {
 
   // Write as RR-compatible SKILL.md (with full RR metadata in frontmatter)
   const frontmatter = { ...skill.metadata };
-  const content = `---\n${js_yaml__WEBPACK_IMPORTED_MODULE_3__/* ["default"].dump */ .Ay.dump(frontmatter, { lineWidth: 120, quotingType: "'", noCompatMode: true }).trimEnd()}\n---\n\n${skill.body}\n`;
+  const content = `---\n${js_yaml__WEBPACK_IMPORTED_MODULE_3__/* .dump */ .Bh(frontmatter, { lineWidth: 120, quotingType: "'", noCompatMode: true }).trimEnd()}\n---\n\n${skill.body}\n`;
   await node_fs__WEBPACK_IMPORTED_MODULE_0__.promises.writeFile(node_path__WEBPACK_IMPORTED_MODULE_1__.join(skillDir, AGENT_SKILL_FILENAME), content, 'utf8');
 }
 
@@ -420,7 +420,7 @@ function serializeToSkillMd(skill) {
     fm.metadata = { ...(fm.metadata ?? {}), rr: rrMeta };
   }
 
-  const yamlStr = js_yaml__WEBPACK_IMPORTED_MODULE_3__/* ["default"].dump */ .Ay.dump(fm, { lineWidth: 120, quotingType: "'", noCompatMode: true }).trimEnd();
+  const yamlStr = js_yaml__WEBPACK_IMPORTED_MODULE_3__/* .dump */ .Bh(fm, { lineWidth: 120, quotingType: "'", noCompatMode: true }).trimEnd();
   const body = skill.body || '';
   return `---\n${yamlStr}\n---\n\n${body}\n`;
 }
