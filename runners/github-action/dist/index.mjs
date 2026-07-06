@@ -25928,9 +25928,10 @@ class ToolError extends Error {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Ay: () => (/* binding */ index_vite_proxy_tmp_default)
+/* harmony export */   Bh: () => (/* binding */ dump),
+/* harmony export */   Hh: () => (/* binding */ load)
 /* harmony export */ });
-/* unused harmony exports CORE_SCHEMA, DEFAULT_SCHEMA, FAILSAFE_SCHEMA, JSON_SCHEMA, Schema, Type, YAMLException, dump, load, loadAll, safeDump, safeLoad, safeLoadAll, types */
+/* unused harmony exports CORE_SCHEMA, DEFAULT_SCHEMA, FAILSAFE_SCHEMA, JSON_SCHEMA, Schema, Type, YAMLException, default, loadAll, safeDump, safeLoad, safeLoadAll, types */
 /*! js-yaml 4.2.0 https://github.com/nodeca/js-yaml @license MIT */
 //#region \0rolldown/runtime.js
 var __create = Object.create;
@@ -28316,7 +28317,7 @@ var index_vite_proxy_tmp_default = import_js_yaml.default;
 
 /***/ }),
 
-/***/ 9519:
+/***/ 3581:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -28327,7 +28328,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // UNUSED EXPORTS: AST, GLOBSTAR, Minimatch, braceExpand, defaults, escape, filter, makeRe, match, sep, unescape
 
-;// CONCATENATED MODULE: ./node_modules/minimatch/node_modules/balanced-match/dist/esm/index.js
+;// CONCATENATED MODULE: ./node_modules/balanced-match/dist/esm/index.js
 const balanced = (a, b, str) => {
     const ma = a instanceof RegExp ? maybeMatch(a, str) : a;
     const mb = b instanceof RegExp ? maybeMatch(b, str) : b;
@@ -28382,7 +28383,7 @@ const range = (a, b, str) => {
     return result;
 };
 //# sourceMappingURL=index.js.map
-;// CONCATENATED MODULE: ./node_modules/minimatch/node_modules/brace-expansion/dist/esm/index.js
+;// CONCATENATED MODULE: ./node_modules/brace-expansion/dist/esm/index.js
 
 const escSlash = '\0SLASH' + Math.random() + '\0';
 const escOpen = '\0OPEN' + Math.random() + '\0';
@@ -38524,7 +38525,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 // UNUSED EXPORTS: computeContextLift, deriveExecutionOrder, matchesPhase, selectSkills
 
 // EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
-var esm = __nccwpck_require__(9519);
+var esm = __nccwpck_require__(3581);
 // EXTERNAL MODULE: ./runners/core/skill-loader.mjs + 1 modules
 var skill_loader = __nccwpck_require__(8478);
 ;// CONCATENATED MODULE: ./src/lib/skill-planner.mjs
@@ -39495,7 +39496,7 @@ async function loadRecommendationSets({ skillsDir = defaultSkillsDir } = {}) {
   }
   let parsed;
   try {
-    parsed = js_yaml/* default.load */.Ay.load(raw) ?? {};
+    parsed = js_yaml/* load */.Hh(raw) ?? {};
   } catch (err) {
     throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
   }
@@ -39540,7 +39541,7 @@ async function loadPacks({ skillsDir = defaultSkillsDir } = {}) {
   }
   let parsed;
   try {
-    parsed = js_yaml/* default.load */.Ay.load(raw) ?? {};
+    parsed = js_yaml/* load */.Hh(raw) ?? {};
   } catch (err) {
     throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
   }
@@ -39809,7 +39810,7 @@ async function parseSkillFile(filePath) {
   // YAML handling
   let loaded = {};
   try {
-    loaded = js_yaml/* default.load */.Ay.load(raw) ?? {};
+    loaded = js_yaml/* load */.Hh(raw) ?? {};
   } catch (err) {
     throw new SkillLoaderError(`YAML parse error: ${err.message}`);
   }
@@ -40453,7 +40454,7 @@ class ConfigLoader {
     const ext = external_node_path_.extname(filePath).toLowerCase();
     let parsed;
     if (ext === '.yaml' || ext === '.yml') {
-      parsed = js_yaml/* default.load */.Ay.load(raw);
+      parsed = js_yaml/* load */.Hh(raw);
     } else {
       parsed = JSON.parse(raw);
     }
@@ -44469,7 +44470,7 @@ var external_node_path_ = __nccwpck_require__(6760);
 // EXTERNAL MODULE: ./node_modules/js-yaml/dist/js-yaml.mjs
 var js_yaml = __nccwpck_require__(3243);
 // EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
-var esm = __nccwpck_require__(9519);
+var esm = __nccwpck_require__(3581);
 // EXTERNAL MODULE: ./node_modules/zod/v4/classic/schemas.js + 16 modules
 var schemas = __nccwpck_require__(2314);
 ;// CONCATENATED MODULE: ./src/config/risk-map-schema.mjs
@@ -44539,7 +44540,7 @@ async function loadRiskMap(repoRoot, options = {}) {
 
   let parsed;
   try {
-    parsed = js_yaml/* default.load */.Ay.load(trimmed);
+    parsed = js_yaml/* load */.Hh(trimmed);
   } catch (error) {
     throw new RiskMapError(`Failed to parse risk map YAML: ${error.message}`);
   }
@@ -45188,7 +45189,7 @@ const VERDICT_THRESHOLDS = {
 /* harmony export */   g: () => (/* binding */ shouldExcludeForContext)
 /* harmony export */ });
 /* unused harmony exports DEFAULT_DENY_GLOBS, shannonEntropy */
-/* harmony import */ var minimatch__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9519);
+/* harmony import */ var minimatch__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3581);
 // Secret redaction for repo-wide review context (#692 PR-A).
 //
 // This module is **additive** and not yet wired into the review pipeline.
@@ -46000,7 +46001,7 @@ var git = __nccwpck_require__(8613);
 // EXTERNAL MODULE: external "node:fs/promises"
 var promises_ = __nccwpck_require__(1455);
 // EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
-var esm = __nccwpck_require__(9519);
+var esm = __nccwpck_require__(3581);
 // EXTERNAL MODULE: ./src/config/loader.mjs + 1 modules
 var loader = __nccwpck_require__(3833);
 // EXTERNAL MODULE: ./runners/core/skill-loader.mjs + 1 modules
