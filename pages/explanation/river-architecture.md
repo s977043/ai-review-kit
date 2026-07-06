@@ -52,7 +52,7 @@ River Review は、生成系エージェントの **generate → review → revi
 
 - River Review は findings / verdict / `suggestedLoopSignal` を返す **critic** として振る舞う。
 - 反復・停止・エスカレーションの判断は **caller（呼び出し側エージェント）の責務**である。River Review 自身はループを回さず、判定素材を返すだけにとどめる。
-- findings と verdict はあくまで判定素材であり、自動承認はしない。人手の確認境界（HITL）を保つ設計である。
+- findings と verdict はあくまで判定素材であり、自動承認はしない。リスク階層型の人間監督のもと、崖では人間承認の境界（HITL）を温存する設計である。
 
 契約と参照実装は次を参照してください。
 
