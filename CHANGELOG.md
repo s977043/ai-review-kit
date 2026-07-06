@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.41.0](https://github.com/s977043/river-review/compare/v1.40.0...v1.41.0) (2026-07-06)
+
+
+### Features
+
+* **cli:** --gate で gate 判定を exit code に写像する ([#1351](https://github.com/s977043/river-review/issues/1351)) ([#1404](https://github.com/s977043/river-review/issues/1404)) ([c97f955](https://github.com/s977043/river-review/commit/c97f955723d81b4b954c2d6d7cf0ab33fccc2bbf))
+* **gate:** deterministic strict_block を gate が消費する ([#1351](https://github.com/s977043/river-review/issues/1351)) ([#1403](https://github.com/s977043/river-review/issues/1403)) ([1f6a47f](https://github.com/s977043/river-review/commit/1f6a47fd6ac48cc2a6de9426d8f9afa79d5a9280))
+* **loop:** reference loop に gate 消費を実装する ([#1400](https://github.com/s977043/river-review/issues/1400)) ([bf7e281](https://github.com/s977043/river-review/commit/bf7e2811c4916f741e99448af2f87f54a3b6d79c))
+
 ## [1.40.0](https://github.com/s977043/river-review/compare/v1.39.0...v1.40.0) (2026-07-05)
 
 
