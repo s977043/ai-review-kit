@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { ConfigSchema, riverReviewerConfigSchema } from './schema.mjs';
 import { defaultConfig, defaultSkillConfig } from './default.mjs';
 
