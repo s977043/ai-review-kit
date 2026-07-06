@@ -93,7 +93,7 @@
     "commander": "^15.0.0",
     "date-fns": "^4.4.0",
     "gray-matter": "^4.0.3",
-    "js-yaml": "^4.2.0",
+    "js-yaml": "^5.2.1",
     "minimatch": "^10.1.1",
     "openai": "^6.45.0",
     "ora": "^9.4.1",
