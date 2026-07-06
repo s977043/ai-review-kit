@@ -48,7 +48,7 @@ River Review serves as the **review stage** in a generate → review → revise 
 
 - On each pass, it returns review results as **decision material (findings / verdict / suggestedLoopSignal)**.
 - The verdict is decision material only; it does not assert GO / NO-GO, auto-approval, or auto-merge. Whether to keep iterating or stop is the **caller's responsibility**.
-- Mechanisms such as `auto-approve` are advisory and do not bypass human-in-the-loop (HITL) review. The field tier's autonomous continuation is not merge authority, and the cliff still requires human approval.
+- Mechanisms such as `auto-approve` are advisory and do not bypass human-in-the-loop (HITL) review. The cliff still requires human approval, and the field tier's autonomous continuation is not merge authority.
 
 This contract and its reference implementation are defined in the [loop convergence contract](../reference/loop-convergence-contract.en.md) and the in-repo reference agent (`examples/loop-reference-agent/`).
 

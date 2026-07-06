@@ -21,7 +21,7 @@ River Review does **not** aim to be:
 
 ## Direction of travel: risk-tiered human supervision
 
-River Review splits change into three risk tiers and varies how much human supervision each tier receives. The cliff tier — high-risk changes — keeps HITL: human approval stays mandatory. On top of that, the hill tier imposes time-boxed observation, and the field tier lets clean, converged changes continue autonomously and audits them after the fact. The goal is to reallocate scarce human attention to the cliff, not to reduce supervision. See [ADR-003](../../docs/adr/003-risk-tiered-human-supervision.md) for details.
+River Review splits change into three risk tiers and varies how much human supervision each tier receives. The cliff tier — high-risk changes — keeps HITL: human approval stays mandatory. On top of that, the hill tier imposes time-boxed observation, and the field tier lets clean, converged changes continue autonomously and audits them after the fact. The goal is to reallocate scarce human attention to the cliff, not to reduce supervision. See ADR-003 (`docs/adr/003-risk-tiered-human-supervision.md`) for details.
 
 The "replacement for human review judgment" Non-Goal above is not a permanent constraint but a current milestone. Even the areas judged to require humans only (misalignment with intent, soundness of design decisions, risk weighting, tacit assumptions) become reviewable by AI to the extent that the right context can be extracted and shaped for it.
 
