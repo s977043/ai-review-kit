@@ -18,13 +18,14 @@ On the repository's GitHub page, the right sidebar's **"Cite this repository"** 
 
 ## BibTeX
 
+For `version` and `date`, use the `version` in [`CITATION.cff`](https://github.com/s977043/river-review/blob/main/CITATION.cff) at citation time and the date of the release you used.
+
 ```bibtex
 @software{river_review,
   title   = {River Review},
   author  = {{River Review maintainers}},
   url     = {https://github.com/s977043/river-review},
-  version = {1.39.0},
-  date    = {2026-07-02},
+  version = {X.Y.Z},
   license = {MIT}
 }
 ```
@@ -32,7 +33,7 @@ On the repository's GitHub page, the right sidebar's **"Cite this repository"** 
 ## Plain text
 
 ```text
-River Review maintainers (2026). River Review (Version 1.39.0) [Software]. https://github.com/s977043/river-review
+River Review maintainers. River Review (Version X.Y.Z) [Software]. https://github.com/s977043/river-review
 ```
 
 ## About the DOI
