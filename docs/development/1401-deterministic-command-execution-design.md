@@ -21,6 +21,9 @@
 >    判定は exit code のみとする。DoS の 1 MiB 上限は機密性を守らない。
 >
 > 詳細は §6（残る攻撃面）に反映済み。**この 3 点が設計で解決されるまで実装しない。**
+> 3 ブロッカーの具体的な解決設計は §10 に深掘りした。判定は **CONDITIONAL 据え置き**だが、
+> §10.5 の DoD 3 条件を実装 PR で固定できれば **Phase 1（opt-in・既定 OFF・advisory）に限り GO 相当**へ
+> 引き上げ可（無制限実行・`npm run` 許可は CONDITIONAL のまま）。
 
 ## 1. 背景と本ドキュメントの位置づけ
 
@@ -525,5 +528,290 @@ ADR-003 の Non-Goals「既定を advisory から enforced へ勝手に変えな
 - `runners/github-action/action.yml`（CI 実行構成・env・`--gate` 2 段階導入）
 - `docs/adr/003-risk-tiered-human-supervision.md`（trust boundary・#1401 への委譲）
 - `docs/development/pipeline-params-checklist.md`（`deriveGateDecision` 引数伝播）
-  </content>
-  </invoke>
+
+## 10. ブロッカー解決設計（設計のみ）
+
+> Status: 本セクションは冒頭 Status ボックスの 3 ブロッカーに対する**実装前に確定すべき設計**である。
+> コードは書かない。冒頭の「この 3 点が設計で解決されるまで実装しない」方針は維持し、§10 は
+> その解決仕様を先に固定するためのものである。以下はいずれも**攻撃面をゼロにはせず縮小する緩和
+> （mitigation）**であり、「絶対に安全」を主張しない。各ブロッカーの残余リスクを §10.4 に集約する。
+
+### 10.1 ブロッカー 1: ゲート健全性の崩壊（command 実体が PR 制御）
+
+#### 10.1.1 解決方針
+
+「自己完結 command」を**運用規約ではなく schema/実装で機械判定**できる形に落とす。核は 2 段。
+
+1. **入口の pin（既存機構 1・2 の徹底）**: 何を起動するか（argv）は base checkout から解決する。
+2. **入口の先の pin（本ブロッカーの新規部分）**: 起動した command が **PR head の設定・スクリプト・
+   `node_modules` を一切読まない**ことを、(a) argv 静的検査（危険フラグ拒否）、(b) 実行時の config
+   autoload 無効化（env / cwd / フラグ）、(c) 素の interpreter 登録の禁止、の 3 点で強制する。
+
+これにより「`npm run lint:ci` を allowlist したが `scripts.lint:ci` を `exit 0` に書換える」経路
+（保護資産 #3 の直接崩壊）を塞ぐ。ただし後述のとおり `npm run`/`npx` 系はこの規約を満たせないため
+Phase 1 の対象から外す。
+
+#### 10.1.2 具体仕様
+
+##### (A) allowlist エントリの形式強化（`.river/deterministic-allowlist.yaml`）
+
+既存 §3.2 の argv 完全一致に加え、各エントリへ次のフィールドを必須化する。
+
+```yaml
+version: 1
+commands:
+  - id: eslint-flat # skill 側から名前参照する識別子（任意運用）
+    command: /usr/bin/actionlint # 絶対パス必須（PATH 探索を許さない）
+    args: ['-color', 'never']
+    selfContained: true # 自己完結宣言。true 以外は Phase 1 で実行しない
+```
+
+- `command` は**絶対パス必須**。`npm` / `npx` / `bash` / `sh` / `node` / `python` 等の
+  「素の interpreter 名」および相対パスは schema 検証で拒否する（下記 (C)）。
+- `selfContained: true` を必須とし、これが立っていないエントリは実行器が
+  `DETERMINISTIC_UNRUNNABLE` に倒す。将来 `selfContained: false` を許す拡張余地のためフィールド化する
+  が、Phase 1 では true のみ実行可能とする。
+
+##### (B) 危険フラグの静的拒否リスト（argv インジェクション検査）
+
+allowlist ロード時（base 側）に、各エントリの `args` を次の denylist と照合し、1 つでも一致したら
+そのエントリを**ロード時に無効化**（`DETERMINISTIC_UNRUNNABLE`、reasonCode に対象 id を載せる）する。
+denylist は「コード/スクリプトを間接実行する、または config を外部から差し込むフラグ」を対象とする。
+
+| 分類                          | 拒否トークン（例、完全一致 or プレフィックス一致）                         |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| インライン評価                | `-e`, `--eval`, `-c`, `--command`, `-p`（node の print eval 経路）         |
+| スクリプト/モジュール強制読込 | `-r`, `--require`, `--import`, `--loader`, `--experimental-loader`         |
+| 間接サブコマンド実行          | `run`, `exec`, `run-script`, `dlx`, `-x`（npx exec）                       |
+| shell 委譲                    | `-lc`, `-ic`, `--rcfile`, `--init-file`                                    |
+| config 差込                   | `--config`, `--rc`, `--require-config` 等（後述 (D) と重複するが二重防御） |
+
+- 照合は「トークン完全一致」を基本とし、`--eval=...` 形式の取りこぼしを防ぐため `=` より左を
+  正規化してから比較する。
+- denylist は**追加漏れが fail-open** になる（新種フラグを見逃す）。したがってこの denylist 単体を
+  信頼せず、(A) の絶対パス限定・(C) の interpreter 禁止・(D) の autoload 無効化と**多層**で守る。
+  denylist は「素の interpreter を誤って登録した場合の第二の網」と位置づける。
+
+##### (C) 素の interpreter 登録の拒否（schema/実装レベル）
+
+`command` の basename が interpreter denylist（`npm`, `npx`, `pnpm`, `yarn`, `node`, `deno`, `bun`,
+`bash`, `sh`, `zsh`, `python`, `python3`, `ruby`, `perl`, `make`, `env`, `xargs` 等）に一致する
+エントリは、絶対パス指定であっても Phase 1 では `selfContained` を満たせないものとして拒否する。
+理由: これらは本質的に「引数で任意コードを走らせる」設計であり、(B) の denylist を完全化できない。
+
+##### (D) config autoload 無効化（実行時 env / cwd / フラグ）
+
+実行器が子プロセスを起動する際、cwd から自動ロードされる設定を読ませない。§10.2 の HOME/cwd 分離と
+一体で効かせる。
+
+- cwd を **base checkout でも PR head でもない、レビュー対象を read-only bind した専用ディレクトリ**に
+  する（§10.2.2）。`.npmrc` / `tsconfig` / `.eslintrc` / `.git/hooks` を cwd から拾わせない。
+- env から `NODE_OPTIONS` / `NODE_PATH` / `*_CONFIG` / `XDG_CONFIG_HOME` を除去し、
+  `XDG_CONFIG_HOME` は空一時ディレクトリを指す（§10.2 の HOME 差替と同型）。
+- config 明示フラグ（`--no-config` 等）はツール依存で一般化できないため、**規約ではなく「config を
+  そもそも読ませない環境」で担保**する（フラグに頼らない）。
+
+##### (E) `npm run`/`npx` が必要なユースケースの第 2 段 pin（Phase 3 送り）
+
+どうしても script 経由が要る場合の設計は、script 本体も `RIVER_TRUSTED_TREE`（base）から解決する
+第 2 段 pin（§3.1 却下代替案の格上げ）とし、Phase 1 では**採用しない**。Phase 1 の対象 command は
+「config 非依存の自己完結チェッカー（例: 単一バイナリで完結する構文チェッカー）」に限定する。
+
+#### 10.1.3 処理順（ロード時 → 実行時）
+
+1. base checkout から `.river/deterministic-allowlist.yaml` を読む（§3.2）。
+2. 各エントリを検証: 絶対パス (A) → interpreter 拒否 (C) → 危険フラグ denylist (B) →
+   `selfContained: true` (A)。1 つでも失格なら当該エントリを無効化し理由を記録。
+3. skill の `deterministicGate.{command,args}`（base 側解決値）を、生き残った allowlist エントリと
+   argv 完全一致で突合。
+4. 一致した command のみ、(D) の autoload 無効化環境で実行。
+
+#### 10.1.4 CI 側要件
+
+- CI 追加要件は基本なし（allowlist は `.river/` 配下、base checkout から読む）。ただし
+  「絶対パスで参照するバイナリ（例 `actionlint`）が CI ランナーに存在すること」を利用者が保証する
+  必要がある。存在しなければ ENOENT → `DETERMINISTIC_UNRUNNABLE`（§3.5）に倒れ、fail-open しない。
+
+#### 10.1.5 却下した代替案
+
+- **AI レビューに「config 依存かどうか」を都度判定させる**: `.claude/rules/review-core.md` §#1070 の
+  責務分界に反する。決定論で判定できる領域は静的検査 + canary で守るべきで、AI に委ねると誤検出の
+  回帰に気づけない。
+- **allowlist を許すが script 本体を diff 検査して変更を ESCALATE**: §3.1 却下と同型。難読化・間接
+  呼び出しで fail-open。base pin（構造的）に劣る。
+- **`--no-config` 系フラグを規約で必須化**: ツールごとにフラグ名が異なり網羅不能。フラグに頼らず
+  「config を読ませない環境」で担保する (D) を採る。
+
+### 10.2 ブロッカー 2: on-disk secret の遮断
+
+#### 10.2.1 解決方針
+
+env スクラブ（§3.3）が塞げない **on-disk 経路**を 2 系統で閉じる。
+
+1. **`.git` 経由の token 露出**: `actions/checkout` 既定 `persist-credentials: true` は
+   `GITHUB_TOKEN` を `.git/config` の `http.<host>.extraheader` に永続化する。command の cwd から
+   `.git` を到達不能にし、かつ checkout 時に credentials を永続化させない。
+2. **`$HOME` 配下の資格情報**: `~/.aws` / `~/.npmrc` / `~/.git-credentials` / `~/.config/gh` 等。
+   子プロセスの `HOME`（および `XDG_CONFIG_HOME`）を**空の一時ディレクトリ**へ差し替える。
+
+#### 10.2.2 具体仕様（command 専用の clean cwd）
+
+##### (A) レビュー対象を read-only で見せる専用 cwd を作る
+
+command は「PR head そのもの」ではなく、**レビュー対象ファイルだけを含み `.git` を含まない専用
+ディレクトリ**を cwd として与える。データ形と手順:
+
+1. `mktemp -d` で `RIVER_EXEC_ROOT` を作る（空・実行器のみ書込可）。
+2. レビュー対象（lint 対象ファイル群）を `RIVER_EXEC_ROOT` に **copy**（symlink ではなくコピー、
+   §10.3 の symlink 遮断と一体）で配置する。`.git` ディレクトリはコピーしない。
+3. 子プロセスの cwd を `RIVER_EXEC_ROOT` にする。したがって `git config` / `.git/config` は
+   到達不能になり、`.npmrc` / `tsconfig` 等の cwd autoload も発生しない（§10.1 (D) と一体）。
+
+> **`git worktree` vs 別 checkout vs copy の選択**: `git worktree` は `.git`（gitdir リンク）を
+> 経由して元リポジトリの `.git/config`（token）に到達し得るため**不採用**。別 checkout
+> （`actions/checkout` を第 2 path へ `persist-credentials: false` で）でも `.git` は残るため、
+> command の cwd はさらにその中の作業ツリーではなく `.git` を含まない copy とする。copy コストは
+> レビュー対象ファイル数に比例するが、Phase 1 は逐次・小規模を前提に許容する。
+
+##### (B) `HOME` / `XDG_CONFIG_HOME` の差し替え
+
+§3.3 の SAFE_ENV 構築を次のとおり確定する。
+
+- `HOME` = `mktemp -d` の空ディレクトリ（実 `$HOME` を継承しない）。
+- `XDG_CONFIG_HOME` = 同上または `HOME/.config` を空で作る。
+- `NODE_OPTIONS` / `NODE_PATH` / `AWS_*` / `*_TOKEN` / `*_SECRET` / `GITHUB_*` は継承しない
+  （allowlist 方式、既定は空 + `PATH`/`LANG`/`LC_ALL`/`TZ` のみ）。
+
+#### 10.2.3 CI 側要件（action.yml / workflow の具体変更）
+
+現行 `.github/workflows/plangate-review.yml` は全 job で `actions/checkout@…v7` を
+`persist-credentials` 未指定（＝既定 true）・`fetch-depth: 0` で実行している。deterministic exec を
+有効化する構成では次を要求する。
+
+1. **command を走らせる checkout は `persist-credentials: false`**。既存の plan/exec/verify job の
+   checkout は River 本体を動かすためのもので token 永続化が要る場合があるが、**command 実行専用の
+   checkout step を分離**し、そこは `persist-credentials: false` にする。
+2. `runners/github-action/action.yml` 側は、command 実行を有効化する入力
+   （例 `deterministic_exec: 'false'` 既定、Phase 1 opt-in）を追加し、有効時に実行器へ
+   `RIVER_TRUSTED_TREE`（base checkout path）と `RIVER_EXEC_ROOT`（clean cwd の親）を環境変数で渡す。
+   これらの実ディレクトリ生成（`mktemp -d`・copy・base checkout）は composite action の bash step で
+   行い、実行器は「与えられたパスを使うだけ」にする（実行器に checkout 権限を持たせない）。
+3. base checkout は `github.event.pull_request.base.sha` を明示 ref に取得する（§3.1）。fork PR では
+   secret 非注入・token read-only（§2.1 訂正）だが、same-repo ブランチ構成では上記 1・2 を満たさない
+   限り on-disk token 窃取が成立するため、**dark-launch（advisory）段階でも 1・2 を先に満たす**
+   （§7 Phase 1 前提条件）。
+
+#### 10.2.4 却下した代替案
+
+- **env スクラブだけで足りるとする**: `.git/config` / `~/.aws` は env 経由でないため塞げない。
+  構造的迂回として敵対レビューが指摘済み。
+- **`persist-credentials: true` のまま `.git` を chmod で隠す**: 権限操作は取りこぼしやすく、
+  同一 runner の別 step が戻す可能性がある。cwd から `.git` を**物理的に含めない**方が堅い。
+
+### 10.3 ブロッカー 3: stdout / findings exfil の遮断
+
+#### 10.3.1 解決方針
+
+2 経路で機密の外部露出を閉じる。
+
+1. **symlink 非追跡**: レビュー対象を `~/.aws/credentials` や `/proc/self/environ` への symlink に
+   すると、linter が実体を読んで stdout に載せ、それが PR コメント/findings へ露出する。
+2. **stdout を PR/findings に生出力しない**: 判定は **exit code のみ**に還元し、command の stdout/stderr
+   を PR コメント・findings の本文へそのまま載せない。
+
+#### 10.3.2 具体仕様
+
+##### (A) symlink 非追跡（clean cwd 構築時に検査）
+
+§10.2.2 の copy 手順で、レビュー対象を `RIVER_EXEC_ROOT` へ配置する前に各エントリを検査する。
+
+1. `lstat` で各対象パスを検査し、**symlink は copy しない**（スキップし、記録）。
+2. ディレクトリを再帰コピーする場合も symlink をたどらない（`cp -R` ではなく symlink 非追跡の
+   コピー、または各ファイルを `lstat` 判定してから通常ファイルのみコピー）。
+3. コピー後の `RIVER_EXEC_ROOT` 内に絶対パス参照・`..` を含む symlink が残っていないことを
+   再検査する（TOCTOU 緩和。§6.8 の path traversal 角度と一体で canary 固定）。
+
+これにより command が「レビュー対象に見せかけた secret ファイル」を開く経路を、実行前の環境構築で
+断つ。command 自身の symlink 追跡挙動に依存しない（linter に `--no-follow` 相当があっても信頼しない）。
+
+##### (B) exit code のみで判定・stdout は host 側で隔離
+
+- gate 判定への入力は **exit code のみ**（§3.5 の分岐: 0=パス / 非ゼロ=違反 / spawn 失敗・timeout=
+  unrunnable）。command の stdout/stderr 文字列を finding の `message` や PR コメント本文へ**転記しない**。
+- stdout/stderr は**捨てるのではなく、secret を載せない形で隔離保存**する。設計上の既定:
+  - PR コメント・inline findings には **1 バイトも生出力しない**。
+  - デバッグ用途には、`RUNNER_TEMP` 配下の**アーティファクトとして host 側のみに保存**し、
+    PR には「command X が exit=N で違反」の**メタ情報のみ**を出す。アーティファクトは
+    `pull-requests:write` 経由の外部露出面に載らない（Actions のアーティファクトはリポジトリ
+    アクセス権限に閉じる）。
+  - さらに保存前に既知 secret パターン（`GITHUB_TOKEN` 値・`AKIA[0-9A-Z]{16}` 等）を host 側で
+    マスクする二重防御を推奨とする（完全性は主張せず、あくまで生 stdout を露出面から外すことが主）。
+- finding の生成は「command 名（base 側 allowlist の id）+ exit code + 分類」から host が組み立てる。
+  攻撃者が stdout 経由で finding 本文を制御する余地をなくす。
+
+##### (C) DoS 上限（1 MiB）の位置づけの訂正
+
+§3.6 の stdout 1 MiB 上限は**可用性（DoS）対策であって機密性を守らない**（secret は 1 MiB 未満）。
+機密性は (B) の「そもそも stdout を露出面に載せない」で守る。両者は目的が異なる別レイヤであることを
+ドキュメントに明記する（§8.3 DoD へ追加）。
+
+#### 10.3.3 CI 側要件
+
+- inline findings / PR コメントを生成する step（action.yml の `Post inline review comments` /
+  `Post PR comment`、workflow の comment step）に、**command stdout を渡さない**ことを配線で保証する。
+  command 実行結果は「exit code + 分類 + command id」の構造化データのみを River 本体へ返す。
+- デバッグ用 stdout アーティファクトを保存する場合は `actions/upload-artifact` で
+  `retention-days` を短く設定し、PR コメント経路とは分離する。
+
+#### 10.3.4 却下した代替案
+
+- **stdout を丸ごと PR に貼り、secret は 1 MiB 上限で防ぐ**: 上限は機密性に無関係。生出力は不可。
+- **command 側に「secret を出力しない」規約を課す**: 攻撃者が破る規約は無効（§3.3 と同型）。
+- **stdout を完全破棄しデバッグ不能にする**: 運用性が落ち、実行不能の原因究明が困難になる。
+  host 側隔離保存 + マスクで、露出面から外しつつデバッグ性を残す。
+
+### 10.4 この深掘りでも残る攻撃面（正直な列挙）
+
+§10 は 3 ブロッカーを**縮小**するが、次は Phase 1 の緩和後も残る。
+
+1. **allowlist 内 command が読むツールチェーン自体の完全性**: 絶対パスバイナリ
+   （例 `actionlint`）が CI イメージ側で汚染される供給網リスクは River 単体では守れない
+   （§6 論点、CI イメージ・pin の責務）。
+2. **copy コスト・大規模ツリーでの TOCTOU**: clean cwd の copy + 再検査は実行前一時点の保証で、
+   極端に大きいツリーやコピー中の競合は残余。Phase 1 を逐次・小規模に絞ることで緩和。
+3. **PATH 経由バイナリ**: 絶対パス強制 (10.1 A) で allowlist 側は縛れるが、`PATH` を env に残す限り
+   command が内部で子プロセスを PATH 解決する余地は残る（§6 論点 3）。Phase 3 で PATH ハードニング。
+4. **マスク漏れ**: §10.3 (B) の secret マスクは既知パターンのみで、未知形式の secret が
+   デバッグアーティファクトに残る可能性。露出面（PR）からは外れるが host 側保存には残る。
+5. **base への悪意 command 混入**: trusted-ref pin の大前提。CODEOWNERS / required review
+   （§6 論点 7）が崩れれば全防御が無効。本設計のスコープ外だが前提条件として明記。
+6. **`setsid` による pgroup 回避 / fork 爆弾**: §3.6・§6.8 の既知残余。cgroup/コンテナ資源制限依存。
+
+### 10.5 実装 GO 判定（本セクションの結論）
+
+- **ブロッカー 1**: 「絶対パス限定 + interpreter 拒否 + 危険フラグ denylist + `selfContained` 必須 +
+  cwd/env による autoload 無効化」で、素の interpreter と config 差込経路を機械判定で塞ぐ設計を確定。
+  ただし `npm run`/`npx` 系は Phase 1 対象外（Phase 3 の第 2 段 pin 送り）とする**適用範囲の縮小**が
+  前提。
+- **ブロッカー 2**: 「command 専用 clean cwd（`.git` 非露出・copy）+ `persist-credentials: false` +
+  `HOME`/`XDG_CONFIG_HOME` 空一時ディレクトリ」で on-disk 経路を塞ぐ設計を確定。CI 側は
+  command 実行専用 checkout の分離が必須。
+- **ブロッカー 3**: 「clean cwd 構築時の symlink 非追跡コピー + exit code のみ判定 + stdout を
+  露出面に載せず host 側隔離保存 + マスク」で exfil を塞ぐ設計を確定。1 MiB 上限は可用性専用と再定義。
+
+**総合所感**: 3 ブロッカーはいずれも**実装可能な設計仕様まで具体化**でき、canary で回帰固定できる
+形になった。しかし §10.4 の残余（供給網・PATH・base 前提・fork 爆弾）は Phase 1 の緩和では潰れず、
+かつブロッカー 1 は「対象 command を config 非依存の自己完結チェッカーに絞る」という**適用範囲の
+大幅縮小**を代償にしている。したがって判定は **GO ではなく CONDITIONAL（据え置き）**。GO 相当に
+上げる条件は次の 3 点である。
+
+1. §10.1〜10.3 の各仕様に対する canary/敵対テスト（§8.2 に追記済みの観点 + 本節の
+   symlink・clean cwd・interpreter 拒否・stdout 非露出）の実装計画が DoD に組み込まれること。
+2. Phase 1 の allowlist 対象を「config 非依存の自己完結バイナリ」に限る運用規約が
+   `.river/deterministic-allowlist.yaml` の schema（`selfContained: true` 必須・interpreter 拒否）で
+   強制されること。
+3. §10.4 残余（特に base の人間レビュー必須・供給網・PATH）を利用者向けドキュメント（§8.3）へ
+   明示し、既定 OFF・advisory 先行（§7）を維持すること。
+
+上記 3 点を実装 PR の DoD に固定できれば、Phase 1（opt-in・既定 OFF・advisory）に限り GO 相当へ
+引き上げてよい。無制限の command 実行や `npm run` 系の許可は引き続き CONDITIONAL のままとする。
