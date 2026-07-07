@@ -76,6 +76,40 @@ const CASES = [
     expectValid: false,
   },
   {
+    // #1401 §4: args + selfContained added to deterministicGate (ajv + zod).
+    label: 'deterministicGate with args + selfContained',
+    skill: {
+      ...base,
+      evaluationType: 'deterministic',
+      deterministicGate: {
+        command: '/usr/bin/actionlint',
+        args: ['-color', 'never'],
+        selfContained: true,
+      },
+    },
+    expectValid: true,
+  },
+  {
+    label: 'deterministicGate args not an array',
+    skill: { ...base, deterministicGate: { command: 'x', args: 'not-array' } },
+    expectValid: false,
+  },
+  {
+    label: 'deterministicGate args item not a string',
+    skill: { ...base, deterministicGate: { command: 'x', args: [1, 2] } },
+    expectValid: false,
+  },
+  {
+    label: 'deterministicGate selfContained not a boolean',
+    skill: { ...base, deterministicGate: { command: 'x', selfContained: 'yes' } },
+    expectValid: false,
+  },
+  {
+    label: 'deterministicGate with unknown sub-field (strict / additionalProperties)',
+    skill: { ...base, deterministicGate: { command: 'x', unknownField: true } },
+    expectValid: false,
+  },
+  {
     label: 'invalid modelHint value',
     skill: { ...base, modelHint: 'gigantic' },
     expectValid: false,

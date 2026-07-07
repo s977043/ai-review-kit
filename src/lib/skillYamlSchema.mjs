@@ -113,6 +113,18 @@ export const SkillYamlSchema = z
           .describe(
             'External command deciding pass/fail (executed only inside the trust boundary; S4)'
           ),
+        args: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'argv (shell 非経由 execFile); command は実行ファイル名、args がその引数 (#1401 §4)'
+          ),
+        selfContained: z
+          .boolean()
+          .optional()
+          .describe(
+            'Self-contained command declaration; reads no PR-head config/scripts/node_modules (#1401 §10.1.2). Phase 1 executes only when true'
+          ),
         failSeverity: z.enum(['strict_block', 'bypass_warning']).default('strict_block'),
       })
       .strict()

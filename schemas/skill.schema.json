@@ -217,6 +217,15 @@
           "type": "string",
           "minLength": 1
         },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "argv (shell 非経由 execFile)。command は実行ファイル名、args がその引数。#1401 §4。"
+        },
+        "selfContained": {
+          "type": "boolean",
+          "description": "PR head の設定・スクリプト・node_modules を一切読まない自己完結 command 宣言。#1401 §10.1.2 (A)。Phase 1 は true のみ実行可能。"
+        },
         "failSeverity": {
           "type": "string",
           "enum": ["strict_block", "bypass_warning"],
