@@ -786,6 +786,29 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
 5. **base への悪意 command 混入**: trusted-ref pin の大前提。CODEOWNERS / required review
    （§6 論点 7）が崩れれば全防御が無効。本設計のスコープ外だが前提条件として明記。
 6. **`setsid` による pgroup 回避 / fork 爆弾**: §3.6・§6.8 の既知残余。cgroup/コンテナ資源制限依存。
+7. **OS サンドボックス不在での絶対パス直読み（gemini #1426, security）**: `HOME`/`cwd` の差し替えは
+   **config autoload を防ぐだけ**で、プロセス自体は OS レベルで隔離されていない。悪意ある command や
+   脆弱なリンターが `/home/runner/.aws/credentials`・`/etc/passwd`・元 checkout（`.git` が残る場所）を
+   **絶対パスで直接読む**ことは防げない。真の隔離（Docker / chroot / gVisor 等のコンテナサンドボックス）は
+   Phase 3 以降の課題。Phase 1 は「絶対パス直読みは緩和できない」ことを明記して advisory・既定 OFF で運用。
+8. **`@file` 引数構文による argv denylist バイパス（gemini #1426, security）**: `tsc`/`javac` 等は
+   引数をファイルから読む `@filename` 構文を持つ。allowlist の command がこれを解釈すると、攻撃者は
+   PR 内に `--eval`/`--require` を書いたファイルを置き `@path` を渡すことで §10.1.2 (B) の危険フラグ
+   静的拒否を**完全に回避**できる。対策候補（実装時に確定）: `@` で始まる引数の静的拒否、`@file`
+   構文をサポートする command の除外。denylist 単体を信頼しない多層防御の一部として扱う。
+9. **public repo の Actions アーティファクト公開性（gemini #1426, security）**: §10.3.2 (B) は stdout を
+   PR コメントに載せず `RUNNER_TEMP` アーティファクトへ隔離するが、**public repo では Actions
+   アーティファクトはフォーク PR 著者を含め誰でも DL 可能**。secret が stdout に漏れてアーティファクト化
+   されれば取得され得る。アーティファクト隔離は「PR コメント露出」を防ぐだけで機密保護の完結ではない。
+   → host 側の既知 secret マスク（§10.3.2）を**二重防御**として必須化し、public repo では
+   アーティファクト保存自体を最小化/無効化する運用を推奨。
+
+> **コピー範囲のトレードオフ（gemini #1426, §10.2 補足）**: clean cwd に「変更ファイルのみ」を置くと
+> `tsc`/`eslint`/テストランナーが未変更ファイル・型定義・共通設定を解決できず `Module not found` で
+> 実行失敗しやすい。一方「`.git` 除くリポジトリ全体」を毎回 copy すると大規模リポジトリで I/O・時間の
+> オーバーヘッドが大きい。Phase 1 は「config 非依存の自己完結チェッカー」に絞る（§10.1）ため
+> 全体 copy を要さないが、`npm run` 系を許す将来 Phase では「必要最小の依存サブツリーのみ copy」か
+> 「読み取り専用 bind mount + サンドボックス」を実装時に確定する。
 
 ### 10.5 実装 GO 判定（本セクションの結論）
 
