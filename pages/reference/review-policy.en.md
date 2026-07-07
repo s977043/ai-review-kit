@@ -61,6 +61,7 @@ To strengthen the basis for judgment, add the following when useful. All are opt
 - **Good Points**: Sound design decisions or appropriate test additions worth keeping, so the review is not purely a list of problems.
 - **Missing Tests**: Test angles that should be added (absent error/boundary/regression cases). Surfaces the absence of tests, which is hard to express as a finding.
 - **Follow-up Issues**: Concerns outside this change's scope that should be tracked separately. Connects to the practice of tracking non-blocker Majors in separate issues.
+- **Unverified / Residual Risk**: Assumptions the review could not verify, behavior it could not observe, and concerns that remain — stated for the report as a whole, separately from findings, so the limits of the judgment stay traceable.
 
 ## 3. Prohibited Actions
 
