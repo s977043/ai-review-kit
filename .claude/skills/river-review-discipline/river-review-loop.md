@@ -14,7 +14,7 @@
 ## 1. Classify
 
 - **input**: Intake の対象一覧。
-- **output**: 各対象の分類（requirements / design / implementation_plan / diff / test / verification_report / documentation / release_readiness / security_sensitive_change / data_sensitive_change / unknown）。
+- **output**: 各対象の分類（requirements / design / implementation_plan / diff / test / verification_report / report / documentation / release_readiness / security_sensitive_change / data_sensitive_change / unknown）。
 - **checklist**: `unknown` を残していないか。security/data に該当しないか（該当なら強制 high 以上）。
 - **stop conditions**: `unknown` のまま Review に進もうとしている。
 - **human escalation**: 分類できるだけの情報が無い。
