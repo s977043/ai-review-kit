@@ -12447,6 +12447,13 @@ module.exports = function(str) {
 
 /***/ }),
 
+/***/ 181:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("buffer");
+
+/***/ }),
+
 /***/ 9896:
 /***/ ((module) => {
 
@@ -12535,6 +12542,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:util");
 /***/ ((module) => {
 
 module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("path");
+
+/***/ }),
+
+/***/ 932:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("process");
 
 /***/ }),
 
@@ -41333,6 +41347,44 @@ async function loadConfig(repoRoot) {
 
 /***/ }),
 
+/***/ 2785:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   z: () => (/* binding */ isDeterministicExecEnabled)
+/* harmony export */ });
+/**
+ * Deterministic-exec opt-in predicate (#1401 §11.8 (c2)) — the SINGLE source of
+ * truth for the double env-var gate that guards the command executor.
+ *
+ * Kept in its own dependency-free module ON PURPOSE. The review pipeline
+ * (local-runner / review-plan) imports THIS statically to decide whether to
+ * proceed, then `await import()`s the orchestrator only when this returns true.
+ * Importing the predicate from the orchestrator module instead would pull in
+ * `child_process` (transitively via the executor) at load time and break the
+ * "not even imported when opted out" invariant. This module imports nothing.
+ *
+ * Both env vars are REQUIRED and checked strictly so no near-miss value
+ * (`'true'`, `'0'`, `' 1'`, `''`) can flip the gate on:
+ *   - `RIVER_DETERMINISTIC_EXEC` must be exactly the string `'1'`.
+ *   - `RIVER_TRUSTED_TREE` must be a non-empty string (the host-trusted base
+ *     checkout the allowlist is read from; §11.6 trust boundary).
+ *
+ * @param {Record<string, string | undefined> | undefined} env process.env-like object
+ * @returns {boolean} true only when the host has explicitly opted in with BOTH vars
+ */
+function isDeterministicExecEnabled(env) {
+  if (env == null) return false;
+  return (
+    env.RIVER_DETERMINISTIC_EXEC === '1' &&
+    typeof env.RIVER_TRUSTED_TREE === 'string' &&
+    env.RIVER_TRUSTED_TREE.length > 0
+  );
+}
+
+
+/***/ }),
+
 /***/ 5837:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -47900,7 +47952,10 @@ function applySuppressions(findings, memoryContext, opts = {}) {
 
 // EXTERNAL MODULE: ./src/lib/deterministic-gate.mjs
 var deterministic_gate = __nccwpck_require__(5837);
+// EXTERNAL MODULE: ./src/lib/deterministic-exec-gate.mjs
+var deterministic_exec_gate = __nccwpck_require__(2785);
 ;// CONCATENATED MODULE: ./src/lib/local-runner.mjs
+
 
 
 
@@ -48346,10 +48401,48 @@ async function runLocalReview({
   // PRE-suppression finding set joined with the selected skills so a suppressed
   // deterministic block still forces the gate — a suppression must not be a
   // strict_block bypass (fail-safe, mirroring SKIPPED_BY_POLICY).
-  const { strictBlock } = (0,deterministic_gate/* computeStrictBlock */.Si)({
+  const { strictBlock: findingStrictBlock } = (0,deterministic_gate/* computeStrictBlock */.Si)({
     findings: annotatedFindings,
     selected: context.plan?.selected ?? [],
   });
+
+  // Epic #1347 §11.8 (c2) (#1401): deterministic-gate COMMAND execution. This is
+  // the review-pipeline wiring for the executor built in (c1). It is DOUBLE-gated
+  // and OFF by default — the executor is invoked only when the host explicitly
+  // opts in (`RIVER_DETERMINISTIC_EXEC=1`) AND supplies a host-trusted base tree
+  // (`RIVER_TRUSTED_TREE`) from which the allowlist is read. If either env var is
+  // absent the orchestrator is NEVER called (not even imported, so child_process
+  // stays unloaded) and behavior is byte-for-byte unchanged. The allowlist is
+  // read ONLY from the trusted tree, never from the PR head (§11.6 trust
+  // boundary). A `fail` result folds into strict_block (rule 5b, NO_GO); an
+  // `unrunnable` result surfaces as deterministicUnrunnable (rule 5c, ESCALATE).
+  let deterministicExecStrictBlock = false;
+  let deterministicUnrunnable = false;
+  if ((0,deterministic_exec_gate/* isDeterministicExecEnabled */.z)(process.env)) {
+    try {
+      const { runDeterministicGates } = await Promise.all(/* import() */[__nccwpck_require__.e(815), __nccwpck_require__.e(944)]).then(__nccwpck_require__.bind(__nccwpck_require__, 8944));
+      const gateResult = await runDeterministicGates({
+        trustedTree: process.env.RIVER_TRUSTED_TREE,
+        selected: context.plan?.selected ?? [],
+        reviewSourceDir: external_node_path_.resolve(context.repoRoot),
+        changedFiles: context.changedFiles ?? [],
+        processEnv: process.env,
+      });
+      deterministicExecStrictBlock = gateResult.strictBlock === true;
+      deterministicUnrunnable = gateResult.deterministicUnrunnable === true;
+    } catch {
+      // Fail-safe (§11.5.2): an infrastructure error while running the gate
+      // (temp-dir creation, staging, spawn setup) means we could NOT reach a
+      // verdict. Surface that as deterministicUnrunnable → rule 5c ESCALATE
+      // rather than letting the exception crash the whole review or, worse,
+      // slip through as a clean GO. Never GO on an unrun gate.
+      deterministicUnrunnable = true;
+    }
+  }
+
+  // Either signal (findings-derived OR command-execution-derived) forces the
+  // strict_block gate — they are ORed so neither path can be a bypass.
+  const strictBlock = findingStrictBlock || deterministicExecStrictBlock;
 
   // Comments and findings are 1:1 in review-engine.mjs (`findings =
   // comments.map(...)`). When a finding is suppressed, the corresponding
@@ -48383,6 +48476,10 @@ async function runLocalReview({
     // Epic #1347 S4 (#1351): deterministic strict_block signal for the gate.
     // deriveRunGate forwards this to deriveGateDecision → unconditional NO_GO.
     strictBlock,
+    // Epic #1347 §11.8 (c2) (#1401): deterministic-gate command execution could
+    // not run to a verdict (opt-in only; false unless double-gated). deriveRunGate
+    // forwards this to deriveGateDecision → rule 5c ESCALATE.
+    deterministicUnrunnable,
     repoRoot: external_node_path_.resolve(context.repoRoot),
     defaultBranch: context.defaultBranch,
     mergeBase: context.mergeBase,
@@ -62805,6 +62902,9 @@ function deriveRunGate(result) {
       riskMapDigest: null,
       // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
       strictBlock: result.strictBlock === true,
+      // Epic #1347 §11.8 (c2) (#1401): deterministic gate could not run → rule 5c
+      // ESCALATE. False unless the double-gated executor was opted in (§11.6).
+      deterministicUnrunnable: result.deterministicUnrunnable === true,
       config: result.config ?? {},
     });
   } catch {

@@ -1002,6 +1002,8 @@ var loop_signal = __webpack_require__(4702);
 var gate_decision = __webpack_require__(2773);
 // EXTERNAL MODULE: ./src/lib/deterministic-gate.mjs
 var deterministic_gate = __webpack_require__(5837);
+// EXTERNAL MODULE: ./src/lib/deterministic-exec-gate.mjs
+var deterministic_exec_gate = __webpack_require__(2785);
 // EXTERNAL MODULE: external "node:crypto"
 var external_node_crypto_ = __webpack_require__(7598);
 ;// CONCATENATED MODULE: ./src/lib/review-plan.mjs
@@ -1031,6 +1033,7 @@ var external_node_crypto_ = __webpack_require__(7598);
  * Pure-ish module: config loader, resolver, buildExecutionPlan and the
  * diff reader are injectable for tests.
  */
+
 
 
 
@@ -1127,6 +1130,8 @@ function finalizeArtifact(
         riskMapPresent: gateContext.riskMapPresent === true,
         riskMapDigest: gateContext.riskMapDigest ?? null,
         strictBlock: gateContext.strictBlock === true,
+        // Epic #1347 §11.8 (c2) (#1401): deterministic gate could not run → 5c.
+        deterministicUnrunnable: gateContext.deterministicUnrunnable === true,
         config: gateContext.config ?? {},
       });
     } catch {
@@ -1646,6 +1651,10 @@ async function runReviewPlan({
   // findings; the `--plan` replay path projects skills to schema views without
   // deterministicGate, so it stays advisory (strict_block not derivable there).
   let gateStrictBlock = false;
+  // Epic #1347 §11.8 (c2) (#1401): deterministic-gate COMMAND execution signal.
+  // Opt-in only (double-gated below); false on the replay path and whenever the
+  // host has not enabled the executor, so the artifact contract is unchanged.
+  let gateDeterministicUnrunnable = false;
 
   const configArtifacts =
     config && typeof config.artifacts === 'object' && config.artifacts ? config.artifacts : {};
@@ -1769,6 +1778,35 @@ async function runReviewPlan({
         findings: rawFindings,
         selected: plan.selected ?? [],
       }).strictBlock;
+
+      // Epic #1347 §11.8 (c2) (#1401): deterministic-gate command execution.
+      // DOUBLE-gated + OFF by default — the executor is invoked only when the
+      // host opts in (`RIVER_DETERMINISTIC_EXEC=1`) AND supplies a host-trusted
+      // base tree (`RIVER_TRUSTED_TREE`) the allowlist is read from. Absent either
+      // env var, the orchestrator is never imported and behavior is unchanged.
+      // The allowlist is read ONLY from the trusted tree, never from `cwd` (the
+      // PR head under review; §11.6 trust boundary). `fail` → strict_block (5b);
+      // `unrunnable` → deterministicUnrunnable (5c).
+      if ((0,deterministic_exec_gate/* isDeterministicExecEnabled */.z)(process.env)) {
+        try {
+          const { runDeterministicGates } =
+            await Promise.all(/* import() */[__webpack_require__.e(815), __webpack_require__.e(944)]).then(__webpack_require__.bind(__webpack_require__, 8944));
+          const gateResult = await runDeterministicGates({
+            trustedTree: process.env.RIVER_TRUSTED_TREE,
+            selected: plan.selected ?? [],
+            reviewSourceDir: cwd,
+            changedFiles: gateChangedFiles,
+            processEnv: process.env,
+          });
+          if (gateResult.strictBlock === true) gateStrictBlock = true;
+          gateDeterministicUnrunnable = gateResult.deterministicUnrunnable === true;
+        } catch {
+          // Fail-safe (§11.5.2): an infrastructure error while running the gate
+          // means no verdict was reached → deterministicUnrunnable (rule 5c
+          // ESCALATE), never a crash that skips the gate or a clean GO.
+          gateDeterministicUnrunnable = true;
+        }
+      }
       executionTrace = {
         skillsExecuted: artifact.plan.selectedSkills.length,
         findingsCount: artifact.findings.length,
@@ -1838,6 +1876,7 @@ async function runReviewPlan({
       riskMapPresent: riskMap != null,
       riskMapDigest,
       strictBlock: gateStrictBlock,
+      deterministicUnrunnable: gateDeterministicUnrunnable,
       config,
     },
   });

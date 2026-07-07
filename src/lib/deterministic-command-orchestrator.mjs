@@ -13,13 +13,16 @@
  * base allowlist file is absent, this function runs NOTHING and returns the
  * safe-default empty result — deterministic gates are opt-in (§11.6).
  *
- * INJECTABLE EXECUTOR / INERT BY DEFAULT. The actual process launch is reached
+ * INJECTABLE EXECUTOR / OFF BY DEFAULT. The actual process launch is reached
  * only through the injected `execImpl` (default `executeDeterministicCommand`).
  * This module itself imports `child_process` transitively via the executor but
  * starts no process on import: nothing runs until a caller invokes
- * `runDeterministicGates`, and no caller is wired yet (local-runner / run-gate /
- * review-plan / action.yml are untouched — wiring lands in a later PR). Tests
- * inject a mock `execImpl` and `mkdtempImpl` so no real process is spawned.
+ * `runDeterministicGates`. As of §11.8 (c2) the review pipeline (local-runner /
+ * review-plan) invokes this — but ONLY behind a double env-var gate
+ * (`RIVER_DETERMINISTIC_EXEC=1` AND `RIVER_TRUSTED_TREE`); absent either, the
+ * caller never imports this module and behavior is unchanged. CI wiring
+ * (action.yml) lands in (d). Tests inject a mock `execImpl` and `mkdtempImpl`
+ * so no real process is spawned.
  */
 
 import fs from 'node:fs/promises';

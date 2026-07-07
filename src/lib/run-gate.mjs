@@ -57,6 +57,9 @@ export function deriveRunGate(result) {
       riskMapDigest: null,
       // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
       strictBlock: result.strictBlock === true,
+      // Epic #1347 §11.8 (c2) (#1401): deterministic gate could not run → rule 5c
+      // ESCALATE. False unless the double-gated executor was opted in (§11.6).
+      deterministicUnrunnable: result.deterministicUnrunnable === true,
       config: result.config ?? {},
     });
   } catch {
