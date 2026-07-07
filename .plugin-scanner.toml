@@ -16,4 +16,11 @@ ignore_paths = [
   "src/lib/review-engine.mjs",
   "src/lib/heuristic-review.mjs",
   "runners/cli/src/commands/create.mjs",
+  # False positive: the scanner's HARDCODED_SECRET heuristic flags the long
+  # kebab-case ADR filename (docs/adr/003-risk-tiered-…) referenced in these
+  # prose docs as secret material (verified by bisect: the bare slug alone
+  # triggers it; the surrounding sentences do not). Prose-only files.
+  "docs/vision.md",
+  "pages/explanation/design-philosophy.md",
+  "pages/explanation/design-philosophy.en.md",
 ]

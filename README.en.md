@@ -74,7 +74,7 @@ River Review offers three review-focused execution shapes.
 - **A review team that runs perspective-based reviewers in parallel**: roles such as bug-hunter, security-scanner, test-gap, dependency-reviewer, frontend-reviewer, and ci-cd-reviewer run in parallel inside a single orchestrator (`src/lib/reviewer-orchestrator.mjs`), and their findings are merged via connected-components. Pass `--reviewers auto` to select perspectives automatically from the diff type.
 - **A verdict-bearing critic (the Agent layer)**: in a generate → review → revise loop, it emits findings plus a verdict (decision material). The Reference Loop lives in `examples/loop-reference-agent/`, and the convergence contract in [`pages/reference/loop-convergence-contract.en.md`](pages/reference/loop-convergence-contract.en.md) (Agent-layer Epic [#1150](https://github.com/s977043/river-review/issues/1150)).
 
-> **Role split and HITL boundary**: the review team emits findings plus a verdict, but the GO / NO-GO decision, iteration, and stopping remain the caller's or human's responsibility. It does not auto-approve or auto-merge. The review team here means "perspective-based reviewer roles run in parallel inside one orchestrator with their findings merged," not a set of fully autonomous independent agents. River Review keeps the "River Review reviews / PlanGate stops or passes" role split.
+> **Role split and supervision boundary**: the review team emits findings plus a verdict, but the GO / NO-GO decision, iteration, and stopping remain the caller's or human's responsibility. This decision follows risk-tiered human supervision (cliff = human approval required / hill = time-boxed observation / field = autonomous convergence plus post-hoc audit). It does not auto-approve or auto-merge. The review team here means "perspective-based reviewer roles run in parallel inside one orchestrator with their findings merged," not a set of fully autonomous independent agents. River Review keeps the "River Review reviews / PlanGate stops or passes" role split.
 
 ## Getting Started
 
@@ -227,7 +227,7 @@ Pin to a release tag such as `@v1.14.0` for stability. Alternatively, use the fl
 
 <!-- x-release-please-start-version -->
 
-Latest release: [v1.40.0](https://github.com/s977043/river-review/releases/latest)
+Latest release: [v1.41.0](https://github.com/s977043/river-review/releases/latest)
 
 <!-- x-release-please-end -->
 

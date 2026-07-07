@@ -2,7 +2,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import matter from 'gray-matter';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

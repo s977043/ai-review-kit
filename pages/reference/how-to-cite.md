@@ -18,13 +18,15 @@ GitHub のリポジトリページ右サイドバーにある「Cite this reposi
 
 ## BibTeX
 
+`version` と `date` には、引用時点の [`CITATION.cff`](https://github.com/s977043/river-review/blob/main/CITATION.cff) の `version` と、利用したリリースの日付を入れてください。
+
 ```bibtex
 @software{river_review,
   title   = {River Review},
   author  = {{River Review maintainers}},
   url     = {https://github.com/s977043/river-review},
-  version = {1.39.0},
-  date    = {2026-07-02},
+  version = {X.Y.Z},
+  date    = {YYYY-MM-DD},
   license = {MIT}
 }
 ```
@@ -32,7 +34,7 @@ GitHub のリポジトリページ右サイドバーにある「Cite this reposi
 ## プレーンテキスト
 
 ```text
-River Review maintainers (2026). River Review (Version 1.39.0) [Software]. https://github.com/s977043/river-review
+River Review maintainers (YYYY). River Review (Version X.Y.Z) [Software]. https://github.com/s977043/river-review
 ```
 
 ## DOI について
