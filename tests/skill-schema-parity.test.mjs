@@ -186,6 +186,25 @@ describe('known trigger divergences (documented, pinned)', () => {
       ajv: true,
       zod: false,
     },
+    {
+      // #1418 gemini: with NO top-level phase/applyTo, an incomplete trigger
+      // (no file spec) diverges. ajv's allOf/anyOf only requires the `trigger`
+      // key to exist, so it accepts; zod's top-level refine still demands a file
+      // requirement (applyTo/path_patterns) and rejects. This is the top-level
+      // `files` alias / refine gap, not a trigger-container gap — pinned here so
+      // a silent schema change fails loudly. Fixing it needs a coordinated
+      // ajv anyOf + zod refine change (tracked as follow-up).
+      label: 'trigger empty object, no top-level file spec: ajv accepts, zod rejects (refine)',
+      skill: { ...base, phase: undefined, applyTo: undefined, trigger: {} },
+      ajv: true,
+      zod: false,
+    },
+    {
+      label: 'trigger phase only, no top-level file spec: ajv accepts, zod rejects (refine)',
+      skill: { ...base, phase: undefined, applyTo: undefined, trigger: { phase: 'midstream' } },
+      ajv: true,
+      zod: false,
+    },
   ];
 
   for (const { label, skill, ajv: expectAjv, zod: expectZod } of cases) {
