@@ -235,7 +235,7 @@ Latest release: [v1.41.0](https://github.com/s977043/river-review/releases/lates
 
 ## Quick start (local)
 
-1. Environment: Node 22 required (`package.json` engines is `22.x`; CI runs on Node 22)
+1. Environment: Node 22 required (`package.json` `engines.node` is `22.x`; CI runs on Node 22)
 2. Install dependencies: `npm install`
 3. Validate skills: `npm run skills:validate`
 4. Validate Agent Skills (optional): `npm run agent-skills:validate`

@@ -387,7 +387,7 @@ GitHub Actions では:
 
 ## クイックスタート（ローカル）
 
-1. 環境: Node 22 必須（`package.json` の engines は `22.x`、CI も Node 22 で運用）
+1. 環境: Node 22 必須（`package.json` の `engines.node` は `22.x`、CI も Node 22 で運用）
 2. 依存導入: `npm install`
 3. スキル検証: `npm run skills:validate`
 4. Agent Skills 検証（任意）: `npm run agent-skills:validate`
