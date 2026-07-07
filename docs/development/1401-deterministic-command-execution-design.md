@@ -838,3 +838,269 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
 
 上記 3 点を実装 PR の DoD に固定できれば、Phase 1（opt-in・既定 OFF・advisory）に限り GO 相当へ
 引き上げてよい。無制限の command 実行や `npm run` 系の許可は引き続き CONDITIONAL のままとする。
+
+## 11. Executor 実装仕様と DoD
+
+> Status: Design（設計のみ）。本セクションは #1401 の**実行層（executor）**を確定するものである。
+> **executor の実装コードは書かない**。検証層（`src/lib/deterministic-command-allowlist.mjs`,
+> §10.1 の parseAllowlist / validateAllowlistEntry / loadValidAllowlist / matchCommand）は実装済みで、
+> 子プロセスを起動しない。残るのは「valid entry を実際に子プロセスとして起動し exit code を得る」
+> RCE 面の本体であり、本セクションはその I/F・環境構築・gate 接続・DoD・実装増分を固定する。
+> §1-10 の判定（CONDITIONAL・Phase 1 opt-in・既定 OFF）は無改変で、本セクションはその上に載る。
+
+### 11.1 Executor の I/F（純設計）
+
+#### 11.1.1 関数シグネチャ
+
+executor は「valid entry を 1 件受け取り、clean cwd と scrub 済み env で起動し、exit code を
+分類して返す」単一責務の関数とする。
+
+```js
+// 概念シグネチャ（実装はしない）。stdout を返り値に含めないのが要点（§10.3）。
+executeDeterministicCommand({
+  entry,        // matchCommand が返した valid entry（絶対パス command + args + selfContained:true）
+  targetDir,    // レビュー対象（PR head）ツリーの絶対パス。ここから clean cwd へ copy する
+  limits,       // { timeoutMs=60000, maxBufferBytes=1<<20 }（host 設定で上書き可、§3.6）
+  trustedTree,  // RIVER_TRUSTED_TREE（base checkout）。entry はここ由来である前提の再確認に使う
+}) => {
+  // return {
+  //   status: 'pass' | 'fail' | 'unrunnable',
+  //   exitCode?: number,          // 起動成功時のみ。unrunnable では undefined
+  //   reasonCode: string,         // 'STRICT_BLOCK' 相当 | 'DETERMINISTIC_UNRUNNABLE'
+  //   durationMs: number,
+  //   commandId?: string,         // entry.id（finding 生成用のメタ。stdout は含めない）
+  //   unrunnableCause?: 'spawn_error' | 'timeout' | 'not_allowlisted' | 'argv_unmigrated'
+  //                    | 'symlink_rejected' | 'setup_error',
+  // }
+}
+```
+
+- **stdout / stderr を返り値に含めない**（§10.3.2 (B)）。判定は exit code のみに還元する。
+  stdout/stderr は host 側で `RUNNER_TEMP` アーティファクトへ隔離保存し（後述 11.4）、返り値・
+  finding 本文・PR コメントには 1 バイトも載せない。攻撃者が stdout 経由で finding を制御する
+  余地をなくす。
+- 返り値は **3 状態**（`pass` / `fail` / `unrunnable`）に閉じる。gate 方向はこの状態から一意に
+  決まる（11.5）。`fail` = 違反 → NO_GO 相当、`unrunnable` = 判定不能 → ESCALATE。
+
+#### 11.1.2 入力の多層再確認（executor 側でも実行不能条件を再チェック）
+
+executor は検証層 `matchCommand` の出力（valid entry）を入力とするが、**起動直前に実行不能条件を
+再確認**してから spawn する（多層防御。検証層と executor の間で entry が差し替わる・path が
+すり替わる経路を塞ぐ）。再確認項目:
+
+1. `entry.command` が絶対パス・basename が interpreter denylist 非該当・`args` に危険フラグ /
+   `@file` を含まない・`selfContained === true`（= `validateAllowlistEntry` を executor 側でも
+   再評価する。検証層と同じ関数を再利用し、二重評価の一貫性を canary で固定）。
+2. `entry` が `trustedTree` 由来であること（base pin。11.6）。base に無い skill id / PR head 由来の
+   entry は起動しない。
+3. clean cwd 構築（11.2）が成功したこと。symlink 検出・copy 失敗時は spawn せず
+   `unrunnable`（`setup_error` / `symlink_rejected`）。
+
+いずれか失格なら **spawn せず `unrunnable`** を返す（fail-open しない）。
+
+### 11.2 clean cwd の構築（§10.2.2 の具体化）
+
+レビュー対象のみを含み `.git` を含まない専用ディレクトリを cwd として与える。
+
+1. `fs.mkdtemp` で `RIVER_EXEC_ROOT` を作る（実行器のみ書込可の空ディレクトリ）。
+2. `targetDir` のレビュー対象ファイルを `RIVER_EXEC_ROOT` へ **copy**（symlink 非追跡）で配置する。
+   各エントリを `lstat` で検査し、**symlink はコピーせず記録**（§10.3.2 (A)）。再帰コピーも symlink を
+   たどらない（`cp -R` に頼らず、各ファイルを `lstat` 判定してから通常ファイルのみコピー）。
+   `.git` ディレクトリは**コピー対象から除外**する（on-disk token 遮断、§10.2）。
+3. コピー後、`RIVER_EXEC_ROOT` 内に絶対パス参照・`..` を含む symlink が残っていないことを**再検査**
+   する（TOCTOU 緩和、§6.8 path traversal 角度）。1 つでも残れば `unrunnable`（`symlink_rejected`）。
+4. 子プロセスの cwd を `RIVER_EXEC_ROOT` にする。`git config` / `.git/config`（persist された token）は
+   到達不能になり、`.npmrc` / `tsconfig` 等の cwd autoload も発生しない（§10.1 (D) と一体）。
+
+**ライフサイクル・後始末**: `RIVER_EXEC_ROOT` と後述の空 `HOME` は executor が作成し、
+`try/finally` で**必ず削除**する（timeout kill・spawn 失敗・例外の全経路で残さない）。
+削除失敗はログのみで gate 判定に影響させない。**コピー範囲は Phase 1 の「config 非依存の自己完結
+チェッカー」前提で最小化**する（§10.4 補足。`tsc`/`eslint` 等の依存解決を要する command は Phase 1
+対象外なので全体 copy を要さない）。
+
+### 11.3 env の構築（§3.3 / §10.2）
+
+`process.env` を継承させず、空 env から SAFE_ENV allowlist のみを積む。
+
+- **SAFE_ENV allowlist**: `PATH`, `LANG`, `LC_ALL`, `TZ` のみ（親に存在するときだけ積む）。
+- **`HOME`**: 実 `$HOME` を継承せず、`fs.mkdtemp` の**空一時ディレクトリ**を割り当てる
+  （`~/.aws` / `~/.npmrc` / `~/.git-credentials` 遮断）。`XDG_CONFIG_HOME` も同じ空ディレクトリ
+  （または `HOME/.config` を空で作成）を指す。
+- **継承しないもの（明示）**: `NODE_OPTIONS`（`--require ./evil.js` 実行時コード注入）,
+  `NODE_PATH`, `XDG_CONFIG_HOME`（上書きで空へ）, `GITHUB_*`, `AWS_*`, `*_TOKEN`, `*_SECRET`,
+  `*_CONFIG`。denylist ではなく **allowlist 方式**（新種 secret 変数に fail-open しない）。
+- SAFE_ENV allowlist は host 設定（`.river/deterministic-allowlist.yaml` の将来 `env:` 拡張）で
+  足せるが、**既定に secret 系・`NODE_OPTIONS` を一切含めない**不変条件を実装で固定する。
+
+### 11.4 実行（§3.4 / §3.6）
+
+- **`execFile`（shell 非経由 / `shell: false`）**で `entry.command`（絶対パス）+ `entry.args` を起動する。
+  単一文字列を shell 解釈させる経路は**作らない**（argv 契約、§3.4）。
+- **`timeout`**: 既定 60s（`limits.timeoutMs`）。超過で kill。
+- **`maxBuffer`**: 各 1 MiB（`limits.maxBufferBytes`）。**stdout/stderr は判定に使わず**、
+  host artifact へ隔離（11.1.1）。上限超過は打ち切り（DoS 対策であって機密性ではない、§10.3.2 (C)）。
+- **プロセスグループ kill**: `spawn` の `detached: true` + `process.kill(-pid, 'SIGKILL')` で
+  子孫プロセスごと終了させる。**Linux 前提**（CI は `ubuntu-latest`）。Windows では負 PID kill を
+  行わず timeout 単体にフォールバックする旨を実装コメントで明示（§3.6 移植性注意）。`setsid` で
+  pgid を変える子には届かない点は既知残余（§6.8 Low）。
+- **逐次実行**（同時 1 プロセス、§3.6）。並列化は将来拡張。
+
+### 11.5 結果 → reasonCode → gate 接続（§3.5）
+
+#### 11.5.1 status → reasonCode → gate 方向
+
+| executor status | 事象                                                                              | reasonCode                 | gate 方向              |
+| --------------- | --------------------------------------------------------------------------------- | -------------------------- | ---------------------- |
+| `pass`          | 起動成功・exit 0                                                                  | （なし）                   | gate へ何も足さない    |
+| `fail`          | 起動成功・exit 非0                                                                | `STRICT_BLOCK` 相当        | `NO_GO`（strictBlock） |
+| `unrunnable`    | spawn 失敗 / timeout / allowlist 不一致 / argv 未移行 / symlink 拒否 / setup 失敗 | `DETERMINISTIC_UNRUNNABLE` | `ESCALATE`             |
+
+- `pass` は「gate へ何も足さない」（既存判定を素通し）。deterministic の合格は「ブロックしない」
+  だけで GO を積極的に押さない（fail-safe 非対称性の維持）。
+- `fail` は既存 `strictBlock` 入力へ合流させる。executor は `computeStrictBlock`（§既存）が
+  finding ベースで立てる `strictBlock` と**同じ真偽入力に写像**する。すなわち executor の `fail` は
+  「deterministic skill が違反を検出した」ことの別経路の証拠であり、`deriveGateDecision` の
+  `strictBlock` パラメータへ **OR 合成**する（どちらか true なら NO_GO STRICT_BLOCK）。
+- `unrunnable` は新パラメータ `deterministicUnrunnable: boolean`（+ 対象 skill/command id 群）で
+  `deriveGateDecision` に渡し、新 reasonCode `DETERMINISTIC_UNRUNNABLE` → `ESCALATE` に写像する。
+
+#### 11.5.2 deriveGateDecision への配線（rule 順の確定）
+
+§5 で「rule 5b の直後」と仮置きした位置を、executor 接続に合わせて確定する。
+
+- `deriveGateDecision` に **`deterministicUnrunnable`（boolean）** を追加する。既存
+  `strictBlock`（rule 5b, `NO_GO STRICT_BLOCK`）の**直後に rule 5c** を新設する。
+
+  ```text
+  5b. strictBlock (finding OR executor fail) → NO_GO     STRICT_BLOCK
+  5c. deterministicUnrunnable               → ESCALATE  DETERMINISTIC_UNRUNNABLE
+  ```
+
+- **合成順序の確定（§6.8-5 の論点）**: 同一 run で「skill A が違反（strictBlock=true）」かつ
+  「skill B が実行不能（deterministicUnrunnable=true）」のとき、**strictBlock（NO_GO）を優先**する
+  （5c より 5b が先）。理由: **違反はすでに確定した情報**であり、確定した block を「別 command が
+  実行不能だから」という弱い情報で ESCALATE へ格上げするのは、攻撃者が「わざと別 skill を
+  実行不能にして strict_block を人間承認フローへ逃がす」余地を生む。escalation cliffs（rule 0-4）は
+  従来どおり 5b/5c の**両方に優先**する（`.river/**` 変更・humanApprovalRequired 等は最優先）。
+  この非対称は「cliffs(0-4) > 確定違反(5b) > 実行不能(5c)」という一貫した保守順を保つ。
+  - 補足: この判断は §3.5 表「ESCALATE の方が保守的」と一見矛盾するが、**ESCALATE が保守的なのは
+    "GO/NO_GO を確定できないとき" に限る**。違反が確定している 5b はすでに最も安全な NO_GO に
+    倒れており、5c で人間承認へ緩めるのは可用性・回避耐性の両面で劣る。§6 論点 5 をこの順で解決する。
+
+- **inputsHash の扱い**: `computeGateInputsHash` の `FIELDS` へ `deterministicUnrunnable` を
+  「**真のときだけ canonical に足す**」方式で加える（既存 `strictBlock === true` と同型）。
+  これで pre-existing fixture の hash churn を避ける（gate-decision.mjs の既存コメント準拠）。
+- **パラメータ伝播**: `deriveGateDecision` に引数を足すため、CLAUDE.md「Propagate signatures」/
+  `docs/development/pipeline-params-checklist.md` に従い全呼び出し箇所を洗う。`strictBlock` を組む
+  既存経路（`computeStrictBlock` の呼び出し元）と同じ場所で executor 結果を合流させる。
+
+#### 11.5.3 executor 結果の合流点
+
+- executor は review-engine のパイプライン内で、`computeStrictBlock` が finding ベースで
+  `strictBlock` を組む**直後**に呼ぶ。executor の `fail` を既存 `strictBlock` へ OR し、
+  `unrunnable` を `deterministicUnrunnable` へ集約する。
+- gate 接続は `deriveGateDecision`（`deriveRunGate` 相当の呼び出し元）でのみ行い、executor 自体は
+  gate を知らない（executor は exit code の分類までで責務を閉じ、gate 写像は純関数側に集約する）。
+
+### 11.6 CI 側要件（action.yml / workflow）
+
+- **`RIVER_TRUSTED_TREE`**: base ref（`github.event.pull_request.base.sha`）を第 2 の checkout path に
+  取得し、その絶対パスを executor へ渡す。command/args/allowlist はここからのみ解決する（§3.1）。
+- **`persist-credentials: false`**: command 実行に関わる checkout（および base checkout）で token を
+  `.git/config` に永続化させない（§10.2.3）。clean cwd は `.git` 非露出なので二重防御。
+- **opt-in フラグ `RIVER_DETERMINISTIC_EXEC=1`（既定 OFF）**: `action.yml` に入力
+  `deterministic_exec`（既定 `'false'`）を追加し、true のときだけ executor を有効化する。
+  **フラグ無しでは executor を一切呼ばない**（11.7 の「既定 OFF」DoD）。
+- **advisory 先行**: Phase 1 は `gate: false`（advisory）と組み合わせ、digest で実行実績・
+  unrunnable 率を観測する（§7 Phase 1）。dark-launch でも §7 の 3 前提（自己完結 command 限定 /
+  clean cwd + persist-credentials:false / stdout 非露出）を先に満たす。
+- **clean cwd / 空 HOME の生成主体**: `mkdtemp`・copy・base checkout の実ディレクトリ生成は
+  composite action の bash step が行い、executor は「与えられたパスを使うだけ」にする
+  （executor に checkout 権限を持たせない、§10.2.3）。
+- **stdout をコメント経路へ渡さない配線**: `Post inline review comments` / `Post PR comment` step へ
+  command stdout を渡さない。デバッグ stdout は `actions/upload-artifact`（短い `retention-days`）で
+  隔離し、public repo ではアーティファクト保存を最小化/無効化する（§10.3.3 / §10.4-9）。
+
+### 11.7 DoD（executor 実装 PR が満たすべき完了条件）
+
+§10.5 の DoD 3 条件を executor に落とす。
+
+#### 11.7.1 機能 DoD
+
+- [ ] executor が **valid entry のみ起動**する（起動前に `validateAllowlistEntry` を再評価。多層）。
+- [ ] clean cwd（`.git` 非含・symlink 非追跡 copy・再検査）を構築し、`try/finally` で必ず後始末。
+- [ ] env が SAFE*ENV allowlist のみ（`HOME`/`XDG_CONFIG_HOME` は空一時ディレクトリ、
+      `NODE_OPTIONS`/`*_TOKEN`/`AWS*_`/`GITHUB\__` 非継承）。
+- [ ] `execFile`（shell 非経由）・timeout 60s・maxBuffer 1 MiB・detached + pgroup kill が効く。
+- [ ] status → reasonCode 写像（`fail`→`STRICT_BLOCK` OR 合流 / `unrunnable`→`DETERMINISTIC_UNRUNNABLE`）。
+- [ ] `deriveGateDecision` に rule 5c（`deterministicUnrunnable`→ESCALATE）を追加、合成順 5b>5c を固定、
+      inputsHash は真のときだけ加算。
+- [ ] **既定 OFF**: `deterministic_exec`/`RIVER_DETERMINISTIC_EXEC` 無しで executor を一切呼ばない。
+
+#### 11.7.2 テスト計画（canary / 敵対テスト）
+
+- **canary（検証層と executor の一貫性）**: `validateAllowlistEntry` が reject する entry を
+  executor が**絶対に起動しない**こと（valid entry のみ spawn）。検証層で reject 済みの
+  interpreter / 危険フラグ / `@file` / 相対パス / `selfContained:false` を executor 入口でも
+  弾く二重評価の一致を assert。
+- **env スクラブ実証**: 親に `GITHUB_TOKEN=secret` / `AWS_SECRET_ACCESS_KEY=…` を設定した状態で
+  「env をダンプする無害バイナリ」を起動し、子がそれらを**読めない**（空/未定義）こと、
+  allowlist した `PATH` のみ渡ることを assert。
+- **on-disk token 到達不可**: clean cwd に `.git` が無いこと、`HOME` が空一時ディレクトリで
+  `~/.aws` 等に到達できないことを、`cat $HOME/.aws/credentials` 相当が失敗することで実証。
+- **symlink exfil 遮断**: レビュー対象に `~/.aws/credentials` / `/proc/self/environ` への symlink を
+  仕込んだ fixture で、symlink が clean cwd に**コピーされない**こと・再検査で `symlink_rejected`
+  → `unrunnable` になることを assert。
+- **spawn error / timeout 分離**: ENOENT（存在しない絶対パス）→ `unrunnable`（ESCALATE）、
+  `sleep 999` 相当（timeout）→ kill → `unrunnable`、`exit 1` → `fail`（NO_GO）を各々 assert。
+- **NO_GO ストーム回帰**: 複数 skill が一斉に `unrunnable` でも全体が NO_GO でなく **ESCALATE** に
+  倒れること。加えて「A=fail + B=unrunnable」で **NO_GO（5b 優先）** になることを assert（合成順）。
+- **絶対パス直読みは緩和できない旨の明示テスト**: `HOME`/cwd 差替は config autoload を防ぐだけで、
+  command が `/etc/passwd` 等を**絶対パスで直接読む**ことは防げない（§10.4-7）。この限界を
+  「既知の残余」として**明示的に文書化・テストコメント化**し、Phase 1 は advisory・既定 OFF で
+  運用する前提を固定する（過大な安全性主張をしないためのネガティブテスト）。
+- **DoS**: 巨大 stdout（>1 MiB）で打ち切り、timeout kill 後に子孫プロセスが残らないこと。
+- **既定 OFF 確認**: フラグ無しの run で executor が一度も呼ばれないこと（spy/mock で 0 回）。
+
+#### 11.7.3 dist 影響
+
+- executor は `src/**` に置き、action にバンドルされる（`runners/github-action/dist/index.mjs`）。
+  `src/**` を触るため、`.nvmrc` に合わせた `npm run build:action` で dist を再生成し、dist-check を
+  green にする（CLAUDE.md「Merge-time checks」/ `docs/development/dist-check-rebuild-guide.md`）。
+- 既定 OFF のため dist に含まれても実行時フラグ無しでは起動しない。バンドルサイズ影響は
+  `child_process`/`fs` 等の Node 標準のみで新規依存を増やさない（新依存を足さない DoD）。
+
+### 11.8 実装順（executor を安全に刻む増分）
+
+executor をさらに小さく分け、各段を単独でテスト可能にする。
+
+1. **(a) clean cwd + env builder（実行なし・純関数）**: `RIVER_EXEC_ROOT` 構築（symlink 非追跡 copy +
+   再検査）と SAFE_ENV/空 HOME 構築を、**子プロセスを起動しない純関数**として実装する。
+   ここまでは検証層と同じく RCE 面ゼロで、symlink 遮断・env allowlist・後始末を canary で固定できる。
+2. **(b) execFile 起動（exit code 分類）**: (a) の出力を使って `execFile`（shell 非経由・timeout・
+   maxBuffer・pgroup kill）で起動し、status（`pass`/`fail`/`unrunnable`）へ分類する。**gate には
+   まだ接続しない**。spawn error/timeout 分離・DoS 上限・stdout 非返却をここで固定する。
+3. **(c) gate 接続**: `deriveGateDecision` に rule 5c（`deterministicUnrunnable`）を追加し、
+   executor の `fail`/`unrunnable` を `strictBlock` OR / `deterministicUnrunnable` へ合流させる。
+   合成順（5b>5c）・inputsHash・パラメータ伝播をこの段で確定する。
+4. **(d) CI 配線 + opt-in**: `action.yml` に `deterministic_exec`（既定 OFF）・`RIVER_TRUSTED_TREE`・
+   `persist-credentials: false`・clean cwd 生成 bash step を足し、advisory（`gate:false`）で dark-launch。
+
+各段は前段の canary を壊さないことを条件に進める。(a)(b) は RCE 面を持たない／持っても gate に
+影響しないため、レビュー負荷を (c)(d) に集中できる。
+
+### 11.9 まだ設計で詰めきれていない論点（実装時に確定）
+
+- **レビュー対象の copy 範囲の確定**: Phase 1 は「config 非依存の自己完結チェッカー」前提で
+  「変更ファイルのみ」か「（`.git` 除く）対象サブツリー」かを、対象 command の入力仕様に合わせて
+  実装時に確定する（§10.4 補足のトレードオフ）。単一バイナリ構文チェッカーなら変更ファイルのみで足りる。
+- **`fail`（executor）と finding-based `strictBlock` の finding 表現**: executor の `fail` は
+  stdout を持たないため、finding 本文は「command id + exit code + 分類」から host が組み立てる
+  （§10.3.2）。この合成 finding を既存 finding 配列にどう混ぜるか（ruleId の割当・重複排除）は
+  review-engine 側で確定する。
+- **base pin の path 解決 TOCTOU / skill-id 同定**（§6.8 Med）: executor 入口の「entry が
+  `trustedTree` 由来」再確認を、`..`/symlink/id 衝突に耐える形で実装する具体手順は canary と
+  合わせて固定する。検証層は「値が base 由来か」を守るが path traversal 角度は executor 側で追加する。
+- **stdout マスクの完全性は主張しない**: host 側 secret マスク（§10.3.2）は既知パターンのみ。
+  public repo のアーティファクト公開性（§10.4-9）と合わせ、Phase 1 は「露出面から外す」ことを
+  主眼にし、完全な機密保護は Phase 3（OS サンドボックス）送りとする境界を実装コメントで明示する。
