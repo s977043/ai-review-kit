@@ -219,6 +219,7 @@ describe('deriveGateDecision — audit block', () => {
       riskMapPresent: true,
       riskMapDigest: 'abcd1234abcd1234',
       strictBlock: false,
+      deterministicUnrunnable: false,
     });
     // Replay: feeding inputs back must reproduce the decision.
     const replayed = deriveGateDecision({ ...r.inputs, changedFiles: [] });
@@ -373,6 +374,49 @@ describe('STRICT_BLOCK (Epic #1347 S4, #1351)', () => {
     // Backward-compat: the hash omits strictBlock when false, so no existing
     // recorded gate hash changes.
     const withFlag = deriveGateDecision({ ...base, strictBlock: false });
+    const withoutFlag = deriveGateDecision(base);
+    assert.equal(withFlag.inputsHash, withoutFlag.inputsHash);
+  });
+});
+
+describe('DETERMINISTIC_UNRUNNABLE (Epic #1347 §11.5, #1401 rule 5c)', () => {
+  test('deterministicUnrunnable → ESCALATE', () => {
+    const clean = deriveGateDecision(base);
+    assert.equal(clean.decision, 'GO');
+    const r = deriveGateDecision({ ...base, deterministicUnrunnable: true });
+    assert.equal(r.decision, 'ESCALATE');
+    assert.equal(r.reasonCode, 'DETERMINISTIC_UNRUNNABLE');
+    assert.equal(r.tier, 'cliff');
+  });
+
+  test('strictBlock (5b, NO_GO) wins over unrunnable (5c, ESCALATE)', () => {
+    // A confirmed violation must not be softened to human-approval by an
+    // induced-unrunnable elsewhere (§11.5.2).
+    const r = deriveGateDecision({ ...base, strictBlock: true, deterministicUnrunnable: true });
+    assert.equal(r.decision, 'NO_GO');
+    assert.equal(r.reasonCode, 'STRICT_BLOCK');
+  });
+
+  test('escalation cliffs (0-4) still precede unrunnable', () => {
+    const r = deriveGateDecision({
+      ...base,
+      changedFiles: ['.river/risk-map.yaml'],
+      deterministicUnrunnable: true,
+    });
+    assert.equal(r.reasonCode, 'GATE_CONFIG_CHANGED');
+  });
+
+  test('inputs echo deterministicUnrunnable; replay reproduces decision + hash', () => {
+    const r = deriveGateDecision({ ...base, deterministicUnrunnable: true });
+    assert.equal(r.inputs.deterministicUnrunnable, true);
+    const replayed = deriveGateDecision({ ...r.inputs, changedFiles: [] });
+    assert.equal(replayed.decision, r.decision);
+    assert.equal(replayed.reasonCode, r.reasonCode);
+    assert.equal(replayed.inputsHash, r.inputsHash);
+  });
+
+  test('deterministicUnrunnable:false keeps the inputsHash byte-identical', () => {
+    const withFlag = deriveGateDecision({ ...base, deterministicUnrunnable: false });
     const withoutFlag = deriveGateDecision(base);
     assert.equal(withFlag.inputsHash, withoutFlag.inputsHash);
   });
