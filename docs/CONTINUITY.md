@@ -8,8 +8,10 @@
   - Red/Green: `npm run lint` と `npm test` で回帰なしを確認。
 - Constraints / Assumptions:
   - AGENTS.mdをSSOTとして遵守。
-- Key decisions（理由は1行）:
+- Key decisions（採用理由は1行）:
   - （次のタスクで記入）
+- Rejected alternatives（却下した代替案と理由）:
+  - （なし）
 - State:
   - Done:
     - （なし）
