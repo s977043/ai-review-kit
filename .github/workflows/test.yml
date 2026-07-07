@@ -45,8 +45,18 @@ jobs:
       - uses: ./.github/actions/setup-node-deps
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Run unit tests with coverage
-        run: NODE_V8_COVERAGE=coverage npm test
+      # Coverage is only uploaded for 22.x (see the Codecov step below), so
+      # collect it only there. Setting NODE_V8_COVERAGE enlarges the node:test
+      # child→parent IPC payload and aggravates a structured-clone deserialize
+      # flake ("Unable to deserialize cloned data"); the 20.x run gained nothing
+      # from coverage but paid that flake cost (#1415).
+      - name: Run unit tests (coverage on 22.x only)
+        run: |
+          if [ "${{ matrix.node-version }}" = "22.x" ]; then
+            NODE_V8_COVERAGE=coverage npm test
+          else
+            npm test
+          fi
       - name: Upload coverage to Codecov
         # Coverage from one Node version is enough; skip the duplicate upload.
         if: matrix.node-version == '22.x'
