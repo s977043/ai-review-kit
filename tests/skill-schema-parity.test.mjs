@@ -9,8 +9,11 @@
  * was) fails loudly instead of drifting.
  *
  * Note: agreement is only checked on ACCEPTANCE — error details differ by
- * design. The zod schema is stricter about some structures (trigger shape),
- * so fixtures stick to the shared surface.
+ * design. Most trigger shapes ARE part of the shared surface and are covered
+ * by CASES below (#1399). A few trigger constraints still diverge by design
+ * (array minItems vs empty-array, string minLength vs empty-string item);
+ * those are pinned explicitly in the "known trigger divergences" block so a
+ * silent change to them also fails loudly instead of being assumed-in-sync.
  */
 
 import { test, describe } from 'node:test';
@@ -77,6 +80,54 @@ const CASES = [
     skill: { ...base, modelHint: 'gigantic' },
     expectValid: false,
   },
+
+  // --- trigger shape parity (#1399) -------------------------------------
+  // base already carries top-level phase+applyTo, so these exercise the
+  // trigger container's own field validation while both validators accept.
+  {
+    label: 'trigger phase + applyTo',
+    skill: { ...base, trigger: { phase: 'midstream', applyTo: ['docs/**/*.md'] } },
+    expectValid: true,
+  },
+  {
+    label: 'trigger phase + files',
+    skill: { ...base, trigger: { phase: 'midstream', files: ['docs/**/*.md'] } },
+    expectValid: true,
+  },
+  {
+    label: 'trigger phase + path_patterns',
+    skill: { ...base, trigger: { phase: 'midstream', path_patterns: ['docs/**/*.md'] } },
+    expectValid: true,
+  },
+  {
+    label: 'trigger phase array',
+    skill: { ...base, trigger: { phase: ['upstream', 'midstream'], applyTo: ['a/**'] } },
+    expectValid: true,
+  },
+  {
+    label: 'trigger empty object (top-level satisfies conditions)',
+    skill: { ...base, trigger: {} },
+    expectValid: true,
+  },
+  {
+    label: 'trigger invalid phase enum',
+    skill: { ...base, trigger: { phase: 'quantum', applyTo: ['a/**'] } },
+    expectValid: false,
+  },
+  {
+    label: 'trigger applyTo not an array',
+    skill: { ...base, trigger: { phase: 'midstream', applyTo: 'a/**' } },
+    expectValid: false,
+  },
+  {
+    // Guards the exact #1399 gap: an unknown trigger sub-field must be rejected
+    // by BOTH. ajv rejects via trigger.additionalProperties:false; zod rejects
+    // via TriggerSchema.strict(). If either loses that constraint, a trigger
+    // field added to only one schema would drift silently.
+    label: 'trigger with unknown sub-field',
+    skill: { ...base, trigger: { phase: 'midstream', applyTo: ['a/**'], unknownField: true } },
+    expectValid: false,
+  },
 ];
 
 describe('skill schema parity (ajv vs zod)', () => {
@@ -105,4 +156,49 @@ describe('skill schema parity (ajv vs zod)', () => {
     assert.equal(ajvCopy.deterministicGate.failSeverity, 'strict_block');
     assert.equal(zodParsed.data.deterministicGate.failSeverity, 'strict_block');
   });
+});
+
+/**
+ * Known trigger-shape divergences (NOT parity — pinned on purpose).
+ *
+ * These are the residual "zod is stricter about some structures" cases the old
+ * header note alluded to. They are constraint-granularity differences that exist
+ * symmetrically at the TOP LEVEL too (e.g. top-level applyTo: [] and applyTo: ['']
+ * diverge identically), so aligning only the trigger container would introduce a
+ * new inconsistency rather than remove one; a proper fix would touch both levels
+ * of both schemas and is out of scope for #1399 (trigger field parity).
+ *
+ * Instead we pin the current behavior: if either schema silently changes one of
+ * these, the assertion below flips and this test fails loudly. `files` and
+ * `path_patterns` behave identically to `applyTo` on both sides.
+ */
+describe('known trigger divergences (documented, pinned)', () => {
+  const cases = [
+    {
+      label: 'trigger applyTo empty array: ajv rejects (minItems), zod accepts',
+      skill: { ...base, trigger: { phase: 'midstream', applyTo: [] } },
+      ajv: false,
+      zod: true,
+    },
+    {
+      label: 'trigger applyTo empty-string item: ajv accepts, zod rejects (minLength)',
+      skill: { ...base, trigger: { phase: 'midstream', applyTo: [''] } },
+      ajv: true,
+      zod: false,
+    },
+  ];
+
+  for (const { label, skill, ajv: expectAjv, zod: expectZod } of cases) {
+    test(label, () => {
+      const ajvOk = ajvValidate(JSON.parse(JSON.stringify(skill)));
+      const zodOk = SkillYamlSchema.safeParse(skill).success;
+      assert.equal(ajvOk, expectAjv, `ajv expected ${expectAjv} for: ${label}`);
+      assert.equal(zodOk, expectZod, `zod expected ${expectZod} for: ${label}`);
+      assert.notEqual(
+        ajvOk,
+        zodOk,
+        'this case is a documented divergence; if they now agree, promote it into CASES'
+      );
+    });
+  }
 });
