@@ -29,7 +29,7 @@ import {
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 describe('buildSandboxEnv — SAFE_ENV allowlist (§11.3)', () => {
-  const home = '/tmp/empty-home-xyz';
+  const home = path.join(os.tmpdir(), 'empty-home-xyz');
 
   test('only SAFE_ENV keys pass through', () => {
     const env = buildSandboxEnv(
