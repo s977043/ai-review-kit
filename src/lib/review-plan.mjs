@@ -41,6 +41,7 @@ import { scanArtifactsForHumanApproval } from './plan-review/approval-scan.mjs';
 import { deriveLoopSignalFromArtifact } from './loop-signal.mjs';
 import { deriveGateDecision } from './gate-decision.mjs';
 import { computeStrictBlock } from './deterministic-gate.mjs';
+import { isDeterministicExecEnabled } from './deterministic-exec-gate.mjs';
 import { createHash } from 'node:crypto';
 
 const VALID_PHASES = new Set(PHASES);
@@ -777,17 +778,25 @@ export async function runReviewPlan({
       // The allowlist is read ONLY from the trusted tree, never from `cwd` (the
       // PR head under review; §11.6 trust boundary). `fail` → strict_block (5b);
       // `unrunnable` → deterministicUnrunnable (5c).
-      if (process.env.RIVER_DETERMINISTIC_EXEC === '1' && process.env.RIVER_TRUSTED_TREE) {
-        const { runDeterministicGates } = await import('./deterministic-command-orchestrator.mjs');
-        const gateResult = await runDeterministicGates({
-          trustedTree: process.env.RIVER_TRUSTED_TREE,
-          selected: plan.selected ?? [],
-          reviewSourceDir: cwd,
-          changedFiles: gateChangedFiles,
-          processEnv: process.env,
-        });
-        if (gateResult.strictBlock === true) gateStrictBlock = true;
-        gateDeterministicUnrunnable = gateResult.deterministicUnrunnable === true;
+      if (isDeterministicExecEnabled(process.env)) {
+        try {
+          const { runDeterministicGates } =
+            await import('./deterministic-command-orchestrator.mjs');
+          const gateResult = await runDeterministicGates({
+            trustedTree: process.env.RIVER_TRUSTED_TREE,
+            selected: plan.selected ?? [],
+            reviewSourceDir: cwd,
+            changedFiles: gateChangedFiles,
+            processEnv: process.env,
+          });
+          if (gateResult.strictBlock === true) gateStrictBlock = true;
+          gateDeterministicUnrunnable = gateResult.deterministicUnrunnable === true;
+        } catch {
+          // Fail-safe (§11.5.2): an infrastructure error while running the gate
+          // means no verdict was reached → deterministicUnrunnable (rule 5c
+          // ESCALATE), never a crash that skips the gate or a clean GO.
+          gateDeterministicUnrunnable = true;
+        }
       }
       executionTrace = {
         skillsExecuted: artifact.plan.selectedSkills.length,

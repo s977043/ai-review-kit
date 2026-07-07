@@ -25,6 +25,7 @@ import {
 import { annotateFingerprints, computeFingerprint } from './finding-factory.mjs';
 import { applySuppressions } from './suppression-apply.mjs';
 import { computeStrictBlock } from './deterministic-gate.mjs';
+import { isDeterministicExecEnabled } from './deterministic-exec-gate.mjs';
 
 function normalizePhase(phase) {
   const normalized = (phase || '').toLowerCase();
@@ -473,17 +474,26 @@ export async function runLocalReview({
   // `unrunnable` result surfaces as deterministicUnrunnable (rule 5c, ESCALATE).
   let deterministicExecStrictBlock = false;
   let deterministicUnrunnable = false;
-  if (process.env.RIVER_DETERMINISTIC_EXEC === '1' && process.env.RIVER_TRUSTED_TREE) {
-    const { runDeterministicGates } = await import('./deterministic-command-orchestrator.mjs');
-    const gateResult = await runDeterministicGates({
-      trustedTree: process.env.RIVER_TRUSTED_TREE,
-      selected: context.plan?.selected ?? [],
-      reviewSourceDir: path.resolve(context.repoRoot),
-      changedFiles: context.changedFiles ?? [],
-      processEnv: process.env,
-    });
-    deterministicExecStrictBlock = gateResult.strictBlock === true;
-    deterministicUnrunnable = gateResult.deterministicUnrunnable === true;
+  if (isDeterministicExecEnabled(process.env)) {
+    try {
+      const { runDeterministicGates } = await import('./deterministic-command-orchestrator.mjs');
+      const gateResult = await runDeterministicGates({
+        trustedTree: process.env.RIVER_TRUSTED_TREE,
+        selected: context.plan?.selected ?? [],
+        reviewSourceDir: path.resolve(context.repoRoot),
+        changedFiles: context.changedFiles ?? [],
+        processEnv: process.env,
+      });
+      deterministicExecStrictBlock = gateResult.strictBlock === true;
+      deterministicUnrunnable = gateResult.deterministicUnrunnable === true;
+    } catch {
+      // Fail-safe (§11.5.2): an infrastructure error while running the gate
+      // (temp-dir creation, staging, spawn setup) means we could NOT reach a
+      // verdict. Surface that as deterministicUnrunnable → rule 5c ESCALATE
+      // rather than letting the exception crash the whole review or, worse,
+      // slip through as a clean GO. Never GO on an unrun gate.
+      deterministicUnrunnable = true;
+    }
   }
 
   // Either signal (findings-derived OR command-execution-derived) forces the
