@@ -163,3 +163,56 @@ test('scan dir 内の node_modules ディレクトリは prune される（exit 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// phantom-dep（#1401）: src/lib/** の import が package.json の dependencies に
+// 未宣言なら exit 1。fixture に package.json を置いて deps を制御する。
+const PKG = (deps) => JSON.stringify({ name: 'fx', dependencies: deps });
+
+test('phantom-dep: src/lib/** の未宣言 import を検出して exit 1', () => {
+  const dir = fixture({
+    'package.json': PKG({}),
+    'src/lib/a.mjs': "import YAML from 'yaml';\nexport default YAML;\n",
+  });
+  try {
+    assert.equal(runIn(dir), 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('phantom-dep canary: 宣言済み dep / scope 付き / node builtin / 相対 import は誤検出しない（exit 0）', () => {
+  const dir = fixture({
+    'package.json': PKG({ yaml: '^2.9.0', '@scope/pkg': '^1.0.0' }),
+    'src/lib/a.mjs':
+      "import YAML from 'yaml';\nimport { z } from '@scope/pkg';\nimport { readFileSync } from 'node:fs';\nimport { local } from './b.mjs';\nimport sub from 'yaml/util';\nexport { YAML, z, readFileSync, local, sub };\n",
+  });
+  try {
+    assert.equal(runIn(dir), 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('phantom-dep canary: src/lib 外（src/components 等）の未宣言 import は対象外（exit 0）', () => {
+  const dir = fixture({
+    'package.json': PKG({}),
+    'src/components/Widget.mjs':
+      "import useData from '@docusaurus/useGlobalData';\nexport default useData;\n",
+  });
+  try {
+    assert.equal(runIn(dir), 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('phantom-dep canary: package.json 不在（fixture）では phantom-dep 判定を無効化（exit 0）', () => {
+  const dir = fixture({
+    'src/lib/a.mjs': "import YAML from 'yaml';\nexport default YAML;\n",
+  });
+  try {
+    assert.equal(runIn(dir), 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

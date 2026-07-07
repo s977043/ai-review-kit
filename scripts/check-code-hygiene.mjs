@@ -9,6 +9,10 @@
 //   3. mkdtemp-cleanup: tests/** で mkdtemp / mkdtempSync を使うのに、
 //      cleanup（rm / rmSync / after / finally）が同一ファイルに 1 つも無い
 //      （#1335 ×2、#1375 で再発）
+//   4. phantom-dep: src/lib/** の import が package.json の dependencies に
+//      未宣言（transitive 依存に依存する phantom dependency）。src/lib は
+//      publish/bundle される production コードなので、直接 import は必ず
+//      dependencies に宣言されていなければ transitive 依存の消失で壊れる（#1401）
 //
 // 誤検出（false-positive）は tests/check-code-hygiene.test.mjs の canary で回帰防止する
 // （.claude/rules/review-core.md の責務分界 #1070 に従う）。
@@ -16,8 +20,37 @@
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { builtinModules } from 'node:module';
 
 const ROOT = process.cwd();
+
+// package.json の production dependencies（phantom-dep 判定の許可リスト）。
+// package.json が無い場所（テスト fixture 等）では空集合とし、phantom-dep 判定を
+// 事実上スキップする（src/lib/** が存在しなければどのみち走らない）。
+function loadDeclaredDeps() {
+  try {
+    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+    return new Set(Object.keys(pkg.dependencies ?? {}));
+  } catch {
+    return null; // package.json 不在 → phantom-dep 判定を無効化
+  }
+}
+const DECLARED_DEPS = loadDeclaredDeps();
+const NODE_BUILTINS = new Set(builtinModules);
+
+// phantom-dep を判定する scope。src/lib は CLI 本体の production ライブラリで、
+// site（src/components の docusaurus）や生成物（dist）を含めると外部提供前提の
+// import が false-positive になるため、意図的に src/lib のみに絞る。
+const PHANTOM_SCAN_PREFIX = `src${sep}lib${sep}`;
+
+// import 指定子から npm パッケージ名（scope 付きは @scope/pkg）を取り出す。
+// 相対 / 絶対 / node: builtin は対象外（null を返す）。
+function packageBaseOf(spec) {
+  if (spec.startsWith('.') || spec.startsWith('/') || spec.startsWith('node:')) return null;
+  const base = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
+  if (NODE_BUILTINS.has(base)) return null;
+  return base;
+}
 
 const SCAN_DIRS = ['src', 'scripts', 'tests', 'tools', 'runners'];
 const EXTS = new Set(['.mjs', '.js', '.cjs']);
@@ -109,6 +142,7 @@ function isCommentLine(line) {
 const duplicateImports = [];
 const tmpLiterals = [];
 const mkdtempNoCleanup = [];
+const phantomDeps = [];
 
 for (const file of collectFiles()) {
   let text;
@@ -129,6 +163,15 @@ for (const file of collectFiles()) {
       duplicateImports.push({ file: rel, line, spec, first: seen.get(spec) });
     } else {
       seen.set(spec, line);
+    }
+  }
+
+  // Check 4: phantom-dep（src/lib/** の import が dependencies 未宣言）
+  if (DECLARED_DEPS != null && rel.startsWith(PHANTOM_SCAN_PREFIX)) {
+    for (const m of text.matchAll(IMPORT_RE)) {
+      const base = packageBaseOf(m[1]);
+      if (base == null || DECLARED_DEPS.has(base)) continue;
+      phantomDeps.push({ file: rel, line: lineOf(text, m.index), pkg: base });
     }
   }
 
@@ -189,6 +232,19 @@ if (mkdtempNoCleanup.length > 0) {
   hasError = true;
 }
 
+if (phantomDeps.length > 0) {
+  console.error(`\n❌ phantom-dep: src/lib/** の未宣言 import を ${phantomDeps.length} 件検出:`);
+  for (const v of phantomDeps) {
+    console.error(
+      `  ${v.file}:${v.line}  '${v.pkg}' は package.json の dependencies 未宣言（transitive 依存頼み）`
+    );
+  }
+  console.error(
+    '\n直接 import するパッケージは package.json の dependencies に宣言してください（transitive 依存の消失で production が壊れます）。'
+  );
+  hasError = true;
+}
+
 if (hasError) process.exit(1);
 
-console.log('✅ code hygiene OK（duplicate-import / tmp-literal / mkdtemp-cleanup）');
+console.log('✅ code hygiene OK（duplicate-import / tmp-literal / mkdtemp-cleanup / phantom-dep）');
