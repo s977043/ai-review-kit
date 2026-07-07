@@ -1,6 +1,6 @@
 # 設計哲学
 
-River Review は、チームの暗黙知を versioned / repo-owned な Skill（Skill Registry）へ落とし込み、共有資産として再利用できる基盤にしている。その基盤の上に、AI エージェントのレビュー能力向上に資する capability pack、共有資産としてのレビュースキル、観点別レビュアーを並列実行する review team という 3 主軸が乗る。以下の原則は、この 3 主軸を支える設計判断をまとめている。
+River Review は、チームの暗黙知を versioned / repo-owned な Skill（Skill Registry）へ落とし込み、共有資産として再利用することを基盤としている。その基盤の上に、AI エージェントのレビュー能力向上に資する capability pack、共有資産としてのレビュースキル、観点別レビュアーを並列実行する review team という 3 主軸が乗る。以下の原則は、この 3 主軸を支える設計判断をまとめている。
 
 River Review は、チームの速度を落とすことなく、タイムリーでフェーズを意識したフィードバックを提供するために構築されている。
 
