@@ -42255,6 +42255,7 @@ const GATE_REASON_CODES = /** @type {const} */ ((/* unused pure expression or su
   'RISK_MAP_HUMAN_REVIEW',
   'UNKNOWN_RISK_ACTION',
   'STRICT_BLOCK',
+  'DETERMINISTIC_UNRUNNABLE',
   'SKIPPED_BY_POLICY',
   'NOT_EXECUTED',
   'BLOCKING_FINDINGS',
@@ -42324,6 +42325,8 @@ function computeGateInputsHash(inputs) {
   // — no conformance-fixture churn. A true value produces a distinct hash so
   // the S3 "same inputs, different decision" regression check stays sound.
   if (inputs?.strictBlock === true) canonical.strictBlock = true;
+  // #1401 §11.5: same "only when true" scheme so pre-#1401 gates keep their hash.
+  if (inputs?.deterministicUnrunnable === true) canonical.deterministicUnrunnable = true;
   return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(JSON.stringify(canonical)).digest('hex').slice(0, 16);
 }
 
@@ -42360,6 +42363,13 @@ function computeGateInputsHash(inputs) {
  *   severity floor that blockingFindings counts, and cannot be waived by a
  *   label-skip or a dry-run. The escalation cliffs (rules 0-4) still win, as
  *   ESCALATE is more conservative than NO_GO.
+ * @param {boolean} [opts.deterministicUnrunnable] - Epic #1347 §11.5 (#1401): a
+ *   deterministic-gate command could not be run (spawn failure / timeout /
+ *   signal kill / invalid entry). Forces ESCALATE (reasonCode
+ *   DETERMINISTIC_UNRUNNABLE) — a "cannot judge" state, not a violation. Placed
+ *   AFTER strictBlock so a confirmed NO_GO is never softened to ESCALATE by an
+ *   induced-unrunnable elsewhere. Nothing populates this until the executor
+ *   wiring (§11.8 c2/d) lands; this is the gate contract only.
  * @param {object} [opts.config] - effective config; gate.observation / gate.circuitBreaker read here
  * @returns {{ decision: GateDecisionValue, reasonCode: string, tier: GateTier,
  *   inputs: object, inputsHash: string, configSnapshot: object, observation?: object,
@@ -42379,6 +42389,7 @@ function deriveGateDecision({
   riskMapPresent = false,
   riskMapDigest = null,
   strictBlock = false,
+  deterministicUnrunnable = false,
   config = {},
 } = {}) {
   const configChanged =
@@ -42400,6 +42411,7 @@ function deriveGateDecision({
     riskMapPresent: riskMapPresent === true,
     riskMapDigest: riskMapDigest ?? null,
     strictBlock: strictBlock === true,
+    deterministicUnrunnable: deterministicUnrunnable === true,
   };
 
   const expiresInHours =
@@ -42430,6 +42442,16 @@ function deriveGateDecision({
     // conservative than NO_GO — and BEFORE the skip/not-executed exemptions so
     // a bypass attempt cannot suppress a deterministic block.
     if (inputs.strictBlock) return ['NO_GO', 'STRICT_BLOCK'];
+    // 5c. Deterministic command unrunnable (Epic #1347 §11.5, #1401): a
+    // deterministic-gate command could not produce a verdict (spawn failure /
+    // timeout / signal kill / invalid entry). Not a confirmed violation but a
+    // "cannot judge" state → ESCALATE (human looks). Placed AFTER strictBlock
+    // (5b): a CONFIRMED violation (NO_GO) must not be softened to human-approval
+    // by a weak "another command was unrunnable" signal — that would let an
+    // attacker escape strict_block by inducing an unrunnable elsewhere (§11.5.2).
+    // The cliffs (0-4) still precede both. Nothing produces this input yet — the
+    // executor wiring lands with §11.8(c2)/(d); this is the gate contract only.
+    if (inputs.deterministicUnrunnable) return ['ESCALATE', 'DETERMINISTIC_UNRUNNABLE'];
     // 6a. Team-labeled skip (#1350 PR-C): the decision stays NO_GO (a label
     // must not become a gate bypass — the conservative call from the S2
     // design review), but the reasonCode tells hosts this was an explicit
