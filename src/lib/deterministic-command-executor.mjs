@@ -69,9 +69,19 @@ export const DEFAULT_MAX_BUFFER = 1 << 20; // 1 MiB
 function runExecFile(command, args, options) {
   return new Promise((resolve) => {
     // execFile — NO shell. This is the sole process-execution call in the module.
-    execFile(command, args, options, (error, stdout, stderr) => {
-      resolve({ error: error ?? null, stdout: String(stdout ?? ''), stderr: String(stderr ?? '') });
-    });
+    // execFile can throw SYNCHRONOUSLY on malformed options (bad cwd/env); catch
+    // so runExecFile never rejects (gemini #1431). A sync throw is a setup error.
+    try {
+      execFile(command, args, options, (error, stdout, stderr) => {
+        resolve({
+          error: error ?? null,
+          stdout: String(stdout ?? ''),
+          stderr: String(stderr ?? ''),
+        });
+      });
+    } catch (syncError) {
+      resolve({ error: syncError, stdout: '', stderr: '' });
+    }
   });
 }
 
@@ -157,12 +167,18 @@ export async function executeDeterministicCommand({ entry, sandboxDir, env, limi
     return { status: 'pass', reasonCode: DETERMINISTIC_PASS, durationMs, exitCode: 0, stdoutBytes };
   }
 
-  // (2) Timeout / resource kill → unrunnable (ESCALATE). `killed` is set by the
-  //     runtime when the child is SIGKILLed for exceeding `timeout` (or when
-  //     `maxBuffer` overflows). Both are DoS-limit kills → "cannot judge", not a
-  //     violation. Checked BEFORE the numeric-exit-code branch because a killed
-  //     process has no meaningful exit code.
-  if (error.killed === true || error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+  // (2) Killed by a signal → unrunnable (ESCALATE). `error.killed` is true when
+  //     the runtime SIGKILLs the child for exceeding `timeout` (or `maxBuffer`
+  //     overflow). An EXTERNAL signal (SIGKILL/SIGTERM/SIGSEGV crash) instead
+  //     sets `error.signal` (a string) but NOT `error.killed` (gemini #1431), so
+  //     check both. A signal-terminated process produced no clean verdict →
+  //     "cannot judge", not a violation. Checked BEFORE the numeric-exit-code
+  //     branch because a killed process has no meaningful exit code.
+  if (
+    error.killed === true ||
+    typeof error.signal === 'string' ||
+    error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'
+  ) {
     return {
       status: 'unrunnable',
       reasonCode: DETERMINISTIC_UNRUNNABLE,
