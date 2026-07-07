@@ -55,15 +55,23 @@ const EvalSchema = z.object({
 });
 
 // Trigger configuration (alternative format)
-const TriggerSchema = z.object({
-  phase: z
-    .union([PhaseEnum, z.array(PhaseEnum)])
-    .optional()
-    .describe('SDLC phase(s)'),
-  files: z.array(z.string().min(1)).optional().describe('File patterns (glob)'),
-  path_patterns: z.array(z.string().min(1)).optional().describe('File patterns (alias)'),
-  applyTo: z.array(z.string().min(1)).optional().describe('File patterns (alias)'),
-});
+// `.strict()` mirrors the ajv side (schemas/skill.schema.json → properties.trigger
+// has `additionalProperties: false`). Without it an unknown trigger sub-field would
+// be accepted here but rejected by ajv, i.e. a trigger field added to only one
+// schema would drift silently — the exact gap the skill-schema-parity canary guards
+// (#1399). Matches the deterministicGate object, the other nested schema that uses
+// `.strict()` to track ajv `additionalProperties: false`.
+const TriggerSchema = z
+  .object({
+    phase: z
+      .union([PhaseEnum, z.array(PhaseEnum)])
+      .optional()
+      .describe('SDLC phase(s)'),
+    files: z.array(z.string().min(1)).optional().describe('File patterns (glob)'),
+    path_patterns: z.array(z.string().min(1)).optional().describe('File patterns (alias)'),
+    applyTo: z.array(z.string().min(1)).optional().describe('File patterns (alias)'),
+  })
+  .strict();
 
 // Main Skill YAML Schema
 export const SkillYamlSchema = z
