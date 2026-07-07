@@ -106,11 +106,21 @@ runs:
         if [ "${{ inputs.deterministic_exec }}" = "true" ]; then
           trusted_in="${{ inputs.trusted_tree }}"
           if [ -n "${trusted_in}" ] && [ -d "${trusted_in}" ]; then
-            export RIVER_TRUSTED_TREE="$(cd "${trusted_in}" && pwd)"
-            export RIVER_DETERMINISTIC_EXEC=1
-            echo "Deterministic exec: ON (trusted tree: ${RIVER_TRUSTED_TREE})"
+            trusted_abs="$(cd "${trusted_in}" && pwd)"
+            # Defense-in-depth: refuse to treat the reviewed target (PR head) as
+            # the trusted allowlist source. If they resolve to the same path the
+            # author has misconfigured trusted_tree, which would let an author
+            # under review allowlist their own command — the exact RCE this gate
+            # prevents. Stay OFF (fail-safe) rather than trust the PR head.
+            if [ "${trusted_abs}" = "${repo_path}" ]; then
+              echo "::warning::trusted_tree resolves to the reviewed target ('${repo_path}'); it must be a separate host-trusted base checkout. Deterministic command execution stays OFF (fail-safe)."
+            else
+              export RIVER_TRUSTED_TREE="${trusted_abs}"
+              export RIVER_DETERMINISTIC_EXEC=1
+              echo "Deterministic exec: ON (trusted tree: ${RIVER_TRUSTED_TREE})"
+            fi
           else
-            echo "::warning::deterministic_exec=true but trusted_tree is empty or not a directory ('${trusted_in}'); deterministic command execution stays OFF (fail-safe)."
+            echo "::warning::deterministic_exec=true but trusted_tree is empty or not a directory; deterministic command execution stays OFF (fail-safe)."
           fi
         fi
 
