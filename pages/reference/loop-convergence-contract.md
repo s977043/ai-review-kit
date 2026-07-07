@@ -212,14 +212,14 @@ exit 4
 
 Claude Code の loop 設計（Goal-based loop / review-fix cycle / stop condition / finding classification）が扱う概念は、River Review では新しい語彙を作らず既存の仕組みへ写像されます。対応関係は次のとおりです。
 
-| Claude Code loop の概念                  | River Review の既存対応                                                                                      |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Goal-based loop の停止条件               | 本ドキュメントの「停止（収束）条件の複合式」（`critical + major == 0` かつ振動なし）が定義する               |
-| 最大 review-fix cycle                    | 「発散ガード」の `STOP_MAX_ITERATIONS`（`iteration_count >= max_iterations`）が上限を執行する                |
-| pass / needs_review / fail               | `gate.decision`（`GO` / `GO_WITH_OBSERVATION` は pass、`NO_GO` は needs_review、`ESCALATE` は fail・要人間） |
-| 指摘分類 blocking / important / optional | severity の `critical` / `major` / `minor`（`info` は参考）が対応する                                        |
-| 指摘分類 accepted-risk / deferred        | Riverbed Memory の suppression / WontFix が対応する                                                          |
-| 指摘分類 out-of-scope                    | 出力フォーマットの Follow-up Issues 節が対応する                                                             |
+| Claude Code loop の概念                  | River Review の既存対応                                                                                              |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Goal-based loop の停止条件               | 本ドキュメントの「停止（収束）条件の複合式」（`critical + major == 0` かつ振動なし）が定義する                       |
+| 最大 review-fix cycle                    | 「発散ガード」の `STOP_MAX_ITERATIONS`（`iteration_count >= max_iterations`）が上限を執行する                        |
+| pass / needs_review / fail               | `gate.decision`（`GO` / `GO_WITH_OBSERVATION` は pass、`ESCALATE` は needs_review・要人間、`NO_GO` は fail・要修正） |
+| 指摘分類 blocking / important / optional | severity の `critical` / `major` / `minor`（`info` は参考）が対応する                                                |
+| 指摘分類 accepted-risk / deferred        | Riverbed Memory の suppression / WontFix が対応する                                                                  |
+| 指摘分類 out-of-scope                    | 出力フォーマットの Follow-up Issues 節が対応する                                                                     |
 
 review-fix cycle の既定回数は reference loop 実装の `resolveIterationLimit`（既定 5）が持ち、呼び出し側が調整します。3 回への固定は運用側の tunable であり、契約としては複合停止条件と上限の両立で過剰レビューを抑制します。Proactive loop（新規 PR のレビュー候補検出など）は本契約の対象外であり、安全境界は ADR-003 の Non-Goals（無承認の自動マージを行わない）が定めます。
 
