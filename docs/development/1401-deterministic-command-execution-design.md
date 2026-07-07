@@ -1102,6 +1102,8 @@ executor をさらに小さく分け、各段を単独でテスト可能にす�
 ```yaml
 steps:
   - uses: actions/checkout@v4 # PR head（レビュー対象）
+    with:
+      persist-credentials: false # 多層防御: .git/config に GITHUB_TOKEN を残さない
   - uses: actions/checkout@v4 # base ref（ホスト信頼）
     with:
       ref: ${{ github.event.pull_request.base.sha }}

@@ -93,6 +93,11 @@ runs:
       env:
         RIVER_REPO_ROOT: ${{ github.action_path }}/../..
         RIVER_OUTPUT_FORMAT: ${{ inputs.output_format }}
+        # Pass the deterministic-exec opt-in inputs via env (not inline ${{ }})
+        # so no input value is expanded into the shell script — the GitHub
+        # hardening pattern against script injection (#1401 (d) review).
+        INPUT_DETERMINISTIC_EXEC: ${{ inputs.deterministic_exec }}
+        INPUT_TRUSTED_TREE: ${{ inputs.trusted_tree }}
       run: |
         set -euo pipefail
         export RIVER_REPO_ROOT="$(cd "${RIVER_REPO_ROOT}" && pwd)"
@@ -103,10 +108,12 @@ runs:
         # (fail-safe): deterministic_exec=true AND trusted_tree resolves to an
         # existing directory. RIVER_TRUSTED_TREE is the SOLE allowlist source
         # (must be a host-trusted base checkout, never the reviewed target).
-        if [ "${{ inputs.deterministic_exec }}" = "true" ]; then
-          trusted_in="${{ inputs.trusted_tree }}"
+        if [ "${INPUT_DETERMINISTIC_EXEC}" = "true" ]; then
+          trusted_in="${INPUT_TRUSTED_TREE}"
           if [ -n "${trusted_in}" ] && [ -d "${trusted_in}" ]; then
-            trusted_abs="$(cd "${trusted_in}" && pwd)"
+            # `cd --` so a trusted_tree value beginning with '-' is treated as a
+            # path, not a cd option.
+            trusted_abs="$(cd -- "${trusted_in}" && pwd)"
             # Defense-in-depth: refuse to treat the reviewed target (PR head) as
             # the trusted allowlist source. If they resolve to the same path the
             # author has misconfigured trusted_tree, which would let an author
