@@ -78,6 +78,21 @@ describe('validateAllowlistEntry — (C) interpreter denylist', () => {
       assert.match(r.reason, /interpreter/);
     });
   }
+
+  test('trailing-slash path does not bypass the interpreter denylist (gemini #1427)', () => {
+    // `/usr/bin/node/` must still resolve basename to `node`, not "".
+    const r = validateAllowlistEntry(goodEntry({ command: '/usr/bin/node/', args: [] }));
+    assert.equal(r.valid, false);
+    assert.match(r.reason, /interpreter/);
+  });
+
+  for (const interp of ['dash', 'ksh', 'fish', 'pwsh', 'powershell', 'osascript']) {
+    test(`shell interpreter ${interp} rejected (gemini #1427)`, () => {
+      const r = validateAllowlistEntry(goodEntry({ command: `/usr/bin/${interp}`, args: [] }));
+      assert.equal(r.valid, false);
+      assert.match(r.reason, /interpreter/);
+    });
+  }
 });
 
 describe('validateAllowlistEntry — (B) danger flags', () => {
@@ -278,6 +293,16 @@ commands:
   test('null gate / empty entries safe', () => {
     assert.equal(matchCommand(null, valid), null);
     assert.equal(matchCommand({ command: '/usr/bin/actionlint' }, null), null);
+  });
+
+  test('null / undefined entries in the list do not crash (gemini #1427 defensive)', () => {
+    const entries = [
+      null,
+      undefined,
+      { command: '/usr/bin/actionlint', args: ['-color', 'never'] },
+    ];
+    assert.ok(matchCommand({ command: '/usr/bin/actionlint', args: ['-color', 'never'] }, entries));
+    assert.equal(matchCommand(null, entries), null);
   });
 });
 

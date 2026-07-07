@@ -18,6 +18,8 @@
  * separate PR.
  */
 
+import path from 'node:path';
+
 import YAML from 'yaml';
 
 /** reasonCode returned for entries/commands that cannot be run (§3.5, §5). */
@@ -41,6 +43,15 @@ export const INTERPRETER_DENYLIST = Object.freeze([
   'bash',
   'sh',
   'zsh',
+  'dash',
+  'ash',
+  'ksh',
+  'csh',
+  'tcsh',
+  'fish',
+  'pwsh',
+  'powershell',
+  'osascript',
   'python',
   'python3',
   'ruby',
@@ -92,9 +103,9 @@ export const DANGER_FLAG_DENYLIST = Object.freeze([
  * @returns {string}
  */
 function basename(p) {
-  const s = String(p ?? '');
-  const idx = s.lastIndexOf('/');
-  return idx === -1 ? s : s.slice(idx + 1);
+  // Use path.posix.basename so trailing-slash paths (e.g. `/usr/bin/node/`) do
+  // not yield "" and bypass the interpreter denylist (gemini #1427, security-high).
+  return path.posix.basename(String(p ?? ''));
 }
 
 /**
@@ -265,6 +276,7 @@ export function loadValidAllowlist(yamlText) {
  * @returns {boolean}
  */
 function argvEqual(a, b) {
+  if (!a || !b) return false; // defensive: matchCommand may receive null entries (gemini #1427)
   if (a.command !== b.command) return false;
   const aa = Array.isArray(a.args) ? a.args : [];
   const bb = Array.isArray(b.args) ? b.args : [];
