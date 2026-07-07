@@ -34,7 +34,7 @@ S4 では command 実行を descope した。strict_block ルーティングは�
 - `schemas/skill.schema.json` の `deterministicGate` は `command`（string, minLength 1）と
   `failSeverity`（`strict_block` | `bypass_warning`, default `strict_block`）を宣言のみで定義する。
   同スキーマの `description` は明示的に「`command` is an arbitrary command specified by a repo-owned
-  file — the agent under review can edit it」と TRUST BOUNDARY を警告している。
+  file—the agent under review can edit it」と TRUST BOUNDARY を警告している。
 - `src/lib/skillYamlSchema.mjs` の zod 側 `deterministicGate` も同形で `.strict()` 付き（#1399 の
   skill-schema-parity canary が ajv 側 `additionalProperties: false` との整合を守る）。
 - `src/lib/gate-decision.mjs` の `deriveGateDecision` は純関数で、`strictBlock === true` を
@@ -211,7 +211,7 @@ for (const k of SAFE_ENV_ALLOWLIST) {
 - `PATH` は必要だが、これ自体が「PATH 上の悪意あるバイナリ実行」経路になりうる（§6 残攻撃面）。
   機構 1 の base pin と機構 2 の allowlist で「何を起動するか」を縛ることで緩和する。
 
-**却下した代替案**: _env をそのまま渡し、command 側で secret を使わない規約にする_ — 規約は
+**却下した代替案**: _env をそのまま渡し、command 側で secret を使わない規約にする_—規約は
 攻撃者が破るので不可。スクラブは機械的強制でなければ意味がない。
 
 ### 3.4 機構 4: argv 契約
@@ -229,7 +229,7 @@ execFile にそのまま渡すと `"npm run lint"` という 1 つの実行フ�
   これにより「文字列を shell で分割実行」という危険なフォールバックを**作らない**。
 - shell は一切経由しない（`shell: false`、execFile 既定）。
 
-**却下した代替案**: _`command` 文字列を空白で split して argv 化_ — クォート・変数展開の
+**却下した代替案**: _`command` 文字列を空白で split して argv 化_—クォート・変数展開の
 解釈が曖昧で、`;` `&&` `$()` 等を含む文字列の扱いが実装依存になる。明示 `args` を必須方向に
 倒す方が安全。
 
@@ -257,7 +257,7 @@ command が CI の一時障害（ネットワーク断・依存未インスト�
 **reasonCode 追加案**: §5 参照。中心は `DETERMINISTIC_UNRUNNABLE`（実行不能 → ESCALATE）を
 新設し、既存 `STRICT_BLOCK`（違反 → NO_GO）と分ける。
 
-**却下した代替案**: _実行不能も NO_GO にして「安全側」とする_ — 一見 fail-safe だが、
+**却下した代替案**: _実行不能も NO_GO にして「安全側」とする_—一見 fail-safe だが、
 可用性を破壊し（NO_GO ストーム）、かつ攻撃者が「わざと実行不能にして特定 skill の
 strict_block を回避」する余地を残す。ESCALATE（人間判断）が真の fail-safe。
 
@@ -281,7 +281,7 @@ strict_block を回避」する余地を残す。ESCALATE（人間判断）が�
 - fork 爆弾・メモリ枯渇の完全防御は Node 単体では困難であり、CI ランナー側の cgroup /
   コンテナ資源制限に依存する部分が残る（§6 残攻撃面）。
 
-**却下した代替案**: _無制限 + CI 全体 timeout に委ねる_ — 1 command の暴走が review 全体を
+**却下した代替案**: _無制限 + CI 全体 timeout に委ねる_—1 command の暴走が review 全体を
 道連れにし、原因特定も困難。command 単位の上限が必要。
 
 ## 4. schema 変更案（ajv + zod, 後方互換）
