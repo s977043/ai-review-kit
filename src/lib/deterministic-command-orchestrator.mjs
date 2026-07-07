@@ -137,9 +137,13 @@ export async function runDeterministicGates({
     // Not on the host-trusted allowlist → never run it.
     if (entry == null) continue;
 
-    const cleanCwd = await makeSandboxTempDir(mkdtempImpl);
-    const emptyHome = await makeSandboxTempDir(mkdtempImpl);
+    // Declared outside try so finally can clean up whichever dirs were created
+    // even if the SECOND makeSandboxTempDir throws (gemini #1433 leak fix).
+    let cleanCwd;
+    let emptyHome;
     try {
+      cleanCwd = await makeSandboxTempDir(mkdtempImpl);
+      emptyHome = await makeSandboxTempDir(mkdtempImpl);
       await copyReviewTargetToSandbox({
         sourceDir: reviewSourceDir,
         destDir: cleanCwd,
@@ -154,9 +158,16 @@ export async function runDeterministicGates({
       if (status === 'unrunnable') deterministicUnrunnable = true;
       results.push({ skillId: gate.skillId, status, reasonCode });
     } finally {
-      // Remove both sandbox temp dirs on every path (success / throw).
-      await fs.rm(cleanCwd, { recursive: true, force: true });
-      await fs.rm(emptyHome, { recursive: true, force: true });
+      // Remove both sandbox temp dirs on every path. Each rm is individually
+      // guarded so a failure removing one still attempts the other (gemini #1433).
+      for (const dir of [cleanCwd, emptyHome]) {
+        if (!dir) continue;
+        try {
+          await fs.rm(dir, { recursive: true, force: true });
+        } catch {
+          // Ignore cleanup errors so the remaining dir is still attempted.
+        }
+      }
     }
   }
 
