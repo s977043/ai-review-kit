@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.42.0](https://github.com/s977043/river-review/compare/v1.41.0...v1.42.0) (2026-07-07)
+
+
+### Features
+
+* **action:** deterministic 実行の opt-in を CI に dark-launch 配線する ([#1401](https://github.com/s977043/river-review/issues/1401)) ([#1435](https://github.com/s977043/river-review/issues/1435)) ([1668dab](https://github.com/s977043/river-review/commit/1668dab030a90c2e6538ee3d5d839282cc556219))
+* **gate:** deterministic gate orchestrator を追加する ([#1401](https://github.com/s977043/river-review/issues/1401)) ([#1433](https://github.com/s977043/river-review/issues/1433)) ([b765958](https://github.com/s977043/river-review/commit/b7659589f46a0a12250640324d930e5c058378bb))
+* **gate:** deterministicGate command allowlist の検証層を追加する ([#1401](https://github.com/s977043/river-review/issues/1401)) ([#1427](https://github.com/s977043/river-review/issues/1427)) ([ff7733a](https://github.com/s977043/river-review/commit/ff7733ac478fc02d636df495bcb892188091e9ca))
+* **gate:** deterministicUnrunnable → ESCALATE の gate 契約(rule 5c)を追加する ([#1401](https://github.com/s977043/river-review/issues/1401)) ([#1432](https://github.com/s977043/river-review/issues/1432)) ([ce29cd1](https://github.com/s977043/river-review/commit/ce29cd128e4f0461253b5793071d156542ac17ee))
+* **gate:** executor の clean cwd + env builder を追加する ([#1401](https://github.com/s977043/river-review/issues/1401)) ([#1430](https://github.com/s977043/river-review/issues/1430)) ([392fd69](https://github.com/s977043/river-review/commit/392fd69b32ea1f41d1314b2711bd906647efee56))
+* **gate:** executor の execFile 起動 + exit code 分類を追加する ([#1401](https://github.com/s977043/river-review/issues/1401)) ([#1431](https://github.com/s977043/river-review/issues/1431)) ([7063b0f](https://github.com/s977043/river-review/commit/7063b0f4707c2d795d7574dec8aab2dd251bf48a))
+* **gate:** review pipeline が deterministic 実行を二重ゲート越しに消費する ([#1401](https://github.com/s977043/river-review/issues/1401)) ([#1434](https://github.com/s977043/river-review/issues/1434)) ([04b9f17](https://github.com/s977043/river-review/commit/04b9f17ee5c057f6de1d9f4881583afa762114ed))
+* RiverReview Discipline レビュー規律 skill を追加する ([#1424](https://github.com/s977043/river-review/issues/1424)) ([9c35a5d](https://github.com/s977043/river-review/commit/9c35a5d2bb51bae0c8cb63b62052799daee2d6d0))
+
 ## [1.41.0](https://github.com/s977043/river-review/compare/v1.40.0...v1.41.0) (2026-07-06)
 
 
