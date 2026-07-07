@@ -54,6 +54,29 @@ inputs:
       results first, then set gate=true.
     required: false
     default: 'false'
+  deterministic_exec:
+    description: >-
+      Opt in to running skills' deterministicGate.command in a sandbox (#1401).
+      Default false — the command executor is never invoked and behavior is
+      unchanged. When true you MUST also pass trusted_tree; if it is empty or
+      missing, this input is ignored (fail-safe, executor stays off). The
+      allowlist is read ONLY from trusted_tree (the host-trusted base checkout),
+      never from the reviewed target, so an author under review cannot allowlist
+      their own command. Dark-launch: even when enabled the gate stays advisory
+      unless you also set gate=true, so an unrunnable/failed command surfaces as
+      ESCALATE/NO_GO in the report without failing the job.
+    required: false
+    default: 'false'
+  trusted_tree:
+    description: >-
+      Absolute path to a host-trusted BASE checkout of the repository, used only
+      when deterministic_exec=true as the sole source of the deterministic
+      allowlist (.river/deterministic-allowlist.yaml). Check the base ref out to
+      a separate path with actions/checkout (persist-credentials: false) and pass
+      that path here. Leave empty to keep the executor off. Never point this at
+      the PR-head checkout being reviewed (that would break the trust boundary).
+    required: false
+    default: ''
 outputs:
   json_path:
     description: 'Path to the JSON output file (only when output_format=json).'
@@ -74,6 +97,22 @@ runs:
         set -euo pipefail
         export RIVER_REPO_ROOT="$(cd "${RIVER_REPO_ROOT}" && pwd)"
         repo_path="$(cd "${{ inputs.target }}" && pwd)"
+
+        # #1401 §11.8 (d): deterministic-command executor opt-in (dark-launch,
+        # default OFF). Both conditions must hold or the executor stays off
+        # (fail-safe): deterministic_exec=true AND trusted_tree resolves to an
+        # existing directory. RIVER_TRUSTED_TREE is the SOLE allowlist source
+        # (must be a host-trusted base checkout, never the reviewed target).
+        if [ "${{ inputs.deterministic_exec }}" = "true" ]; then
+          trusted_in="${{ inputs.trusted_tree }}"
+          if [ -n "${trusted_in}" ] && [ -d "${trusted_in}" ]; then
+            export RIVER_TRUSTED_TREE="$(cd "${trusted_in}" && pwd)"
+            export RIVER_DETERMINISTIC_EXEC=1
+            echo "Deterministic exec: ON (trusted tree: ${RIVER_TRUSTED_TREE})"
+          else
+            echo "::warning::deterministic_exec=true but trusted_tree is empty or not a directory ('${trusted_in}'); deterministic command execution stays OFF (fail-safe)."
+          fi
+        fi
 
         # Validate output format
         output_fmt="${RIVER_OUTPUT_FORMAT}"

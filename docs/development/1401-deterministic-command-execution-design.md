@@ -1083,11 +1083,36 @@ executor をさらに小さく分け、各段を単独でテスト可能にす�
 3. **(c) gate 接続**: `deriveGateDecision` に rule 5c（`deterministicUnrunnable`）を追加し、
    executor の `fail`/`unrunnable` を `strictBlock` OR / `deterministicUnrunnable` へ合流させる。
    合成順（5b>5c）・inputsHash・パラメータ伝播をこの段で確定する。
-4. **(d) CI 配線 + opt-in**: `action.yml` に `deterministic_exec`（既定 OFF）・`RIVER_TRUSTED_TREE`・
-   `persist-credentials: false`・clean cwd 生成 bash step を足し、advisory（`gate:false`）で dark-launch。
+4. **(d) CI 配線 + opt-in（実装済み）**: `action.yml` に opt-in の `deterministic_exec`（既定 OFF）と
+   `trusted_tree`（既定空）を追加した。両方が揃った（`deterministic_exec=true` かつ `trusted_tree` が
+   実在ディレクトリ）ときだけ `RIVER_DETERMINISTIC_EXEC=1` と `RIVER_TRUSTED_TREE` を export し、
+   欠ければ executor は OFF のまま（fail-safe）である。gate は既定 advisory のままなので、
+   有効化しても `gate=true` を別途指定しない限りジョブは落ちない dark-launch となる。
+   trusted tree は composite action が推測せず、呼び出し側が base ref を別パスに checkout して渡す。
 
 各段は前段の canary を壊さないことを条件に進める。(a)(b) は RCE 面を持たない／持っても gate に
 影響しないため、レビュー負荷を (c)(d) に集中できる。
+
+#### (d) 呼び出し側の利用例
+
+`trusted_tree` はホスト信頼された base checkout を指す必要があります。次のように base ref を
+別パスへ `persist-credentials: false` で checkout して渡します。allowlist はこの tree の
+`.river/deterministic-allowlist.yaml` からのみ読まれ、レビュー対象（PR head）からは決して読まれません。
+
+```yaml
+steps:
+  - uses: actions/checkout@v4 # PR head（レビュー対象）
+  - uses: actions/checkout@v4 # base ref（ホスト信頼）
+    with:
+      ref: ${{ github.event.pull_request.base.sha }}
+      path: .river-trusted
+      persist-credentials: false
+  - uses: your-org/river-review@v1
+    with:
+      deterministic_exec: 'true'
+      trusted_tree: ${{ github.workspace }}/.river-trusted
+      # gate は既定 false のまま（dark-launch）。観測後に true へ。
+```
 
 ### 11.9 まだ設計で詰めきれていない論点（実装時に確定）
 
