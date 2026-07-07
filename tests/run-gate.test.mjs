@@ -46,3 +46,27 @@ describe('deriveRunGate — strict_block forwarding (Epic #1347 S4)', () => {
     assert.equal(gate, undefined);
   });
 });
+
+describe('deriveRunGate — deterministicUnrunnable forwarding (Epic #1347 §11.8 c2)', () => {
+  test('result.deterministicUnrunnable === true → ESCALATE / DETERMINISTIC_UNRUNNABLE', () => {
+    const { gate } = deriveRunGate({ ...okResult, deterministicUnrunnable: true });
+    assert.equal(gate.decision, 'ESCALATE');
+    assert.equal(gate.reasonCode, 'DETERMINISTIC_UNRUNNABLE');
+  });
+
+  test('a missing deterministicUnrunnable field is treated as false (default OFF)', () => {
+    const { gate } = deriveRunGate(okResult);
+    assert.notEqual(gate.reasonCode, 'DETERMINISTIC_UNRUNNABLE');
+    assert.equal(gate.decision, 'GO');
+  });
+
+  test('strictBlock outranks deterministicUnrunnable (rule 5b > 5c)', () => {
+    const { gate } = deriveRunGate({
+      ...okResult,
+      strictBlock: true,
+      deterministicUnrunnable: true,
+    });
+    assert.equal(gate.decision, 'NO_GO');
+    assert.equal(gate.reasonCode, 'STRICT_BLOCK');
+  });
+});
