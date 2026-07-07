@@ -22,6 +22,7 @@ Reviews are conducted from the following perspectives:
 - **Security**: Vulnerabilities, data protection, authentication and authorization appropriateness
 - **Maintainability**: Debuggability, test coverage, documentation
 - **Operations**: Observability, ease of incident investigation, safe rollout and rollback. For diffs touching infra, schema, config, public APIs, or authorization, check log/monitoring sufficiency, secret leakage, migration safety, the need for feature flags or staged rollout, and the blast radius on failure.
+- **Plan alignment**: For large, first-touch, or design-heavy changes, whether deviations from the plan (plan / design / requirements) and their reasons are recorded in the PR and open to review. Not required for small fixes, clear bug fixes, or pattern-following additions.
 
 ### 1.3 Review Attitude
 
