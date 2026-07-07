@@ -87,3 +87,11 @@ npm test
 ## Reviewer Notes
 
 Context, roll-out risks, or follow-up tasks for reviewers.
+
+## Deviations / 計画からの逸脱（#1412）
+
+> 大型・初見コード領域・設計判断が多い・UI/UX の暗黙品質が入りやすい PR で記入してください。小さな文言修正・明確なバグ修正・既存パターン踏襲の追加・影響範囲が限定的なリファクタは「なし」で構いません。
+> Record deviations for large, first-touch, design-heavy, or implicit-UX-quality PRs. Small doc fixes, clear bug fixes, pattern-following additions, and narrowly scoped refactors may write "none".
+
+- 当初計画（plan / 設計 / requirements）から逸脱した点 / Deviations from the original plan:
+- 逸脱した理由（実装中に発見した制約・変更した判断）/ Reason for the deviation:
