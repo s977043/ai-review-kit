@@ -1030,7 +1030,7 @@ executor は検証層 `matchCommand` の出力（valid entry）を入力とす�
 - [ ] executor が **valid entry のみ起動**する（起動前に `validateAllowlistEntry` を再評価。多層）。
 - [ ] clean cwd（`.git` 非含・symlink 非追跡 copy・再検査）を構築し、`try/finally` で必ず後始末。
 - [ ] env が SAFE*ENV allowlist のみ（`HOME`/`XDG_CONFIG_HOME` は空一時ディレクトリ、
-      `NODE_OPTIONS`/`*_TOKEN`/`AWS*_`/`GITHUB\__` 非継承）。
+      `NODE_OPTIONS`/`*_TOKEN`/`AWS\*_`/`GITHUB\_\_` 非継承）。
 - [ ] `execFile`（shell 非経由）・timeout 60s・maxBuffer 1 MiB・detached + pgroup kill が効く。
 - [ ] status → reasonCode 写像（`fail`→`STRICT_BLOCK` OR 合流 / `unrunnable`→`DETERMINISTIC_UNRUNNABLE`）。
 - [ ] `deriveGateDecision` に rule 5c（`deterministicUnrunnable`→ESCALATE）を追加、合成順 5b>5c を固定、
