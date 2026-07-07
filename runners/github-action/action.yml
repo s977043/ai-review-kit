@@ -54,6 +54,29 @@ inputs:
       results first, then set gate=true.
     required: false
     default: 'false'
+  deterministic_exec:
+    description: >-
+      Opt in to running skills' deterministicGate.command in a sandbox (#1401).
+      Default false — the command executor is never invoked and behavior is
+      unchanged. When true you MUST also pass trusted_tree; if it is empty or
+      missing, this input is ignored (fail-safe, executor stays off). The
+      allowlist is read ONLY from trusted_tree (the host-trusted base checkout),
+      never from the reviewed target, so an author under review cannot allowlist
+      their own command. Dark-launch: even when enabled the gate stays advisory
+      unless you also set gate=true, so an unrunnable/failed command surfaces as
+      ESCALATE/NO_GO in the report without failing the job.
+    required: false
+    default: 'false'
+  trusted_tree:
+    description: >-
+      Absolute path to a host-trusted BASE checkout of the repository, used only
+      when deterministic_exec=true as the sole source of the deterministic
+      allowlist (.river/deterministic-allowlist.yaml). Check the base ref out to
+      a separate path with actions/checkout (persist-credentials: false) and pass
+      that path here. Leave empty to keep the executor off. Never point this at
+      the PR-head checkout being reviewed (that would break the trust boundary).
+    required: false
+    default: ''
 outputs:
   json_path:
     description: 'Path to the JSON output file (only when output_format=json).'
@@ -70,10 +93,43 @@ runs:
       env:
         RIVER_REPO_ROOT: ${{ github.action_path }}/../..
         RIVER_OUTPUT_FORMAT: ${{ inputs.output_format }}
+        # Pass the deterministic-exec opt-in inputs via env (not inline ${{ }})
+        # so no input value is expanded into the shell script — the GitHub
+        # hardening pattern against script injection (#1401 (d) review).
+        INPUT_DETERMINISTIC_EXEC: ${{ inputs.deterministic_exec }}
+        INPUT_TRUSTED_TREE: ${{ inputs.trusted_tree }}
       run: |
         set -euo pipefail
         export RIVER_REPO_ROOT="$(cd "${RIVER_REPO_ROOT}" && pwd)"
         repo_path="$(cd "${{ inputs.target }}" && pwd)"
+
+        # #1401 §11.8 (d): deterministic-command executor opt-in (dark-launch,
+        # default OFF). Both conditions must hold or the executor stays off
+        # (fail-safe): deterministic_exec=true AND trusted_tree resolves to an
+        # existing directory. RIVER_TRUSTED_TREE is the SOLE allowlist source
+        # (must be a host-trusted base checkout, never the reviewed target).
+        if [ "${INPUT_DETERMINISTIC_EXEC}" = "true" ]; then
+          trusted_in="${INPUT_TRUSTED_TREE}"
+          if [ -n "${trusted_in}" ] && [ -d "${trusted_in}" ]; then
+            # `cd --` so a trusted_tree value beginning with '-' is treated as a
+            # path, not a cd option.
+            trusted_abs="$(cd -- "${trusted_in}" && pwd)"
+            # Defense-in-depth: refuse to treat the reviewed target (PR head) as
+            # the trusted allowlist source. If they resolve to the same path the
+            # author has misconfigured trusted_tree, which would let an author
+            # under review allowlist their own command — the exact RCE this gate
+            # prevents. Stay OFF (fail-safe) rather than trust the PR head.
+            if [ "${trusted_abs}" = "${repo_path}" ]; then
+              echo "::warning::trusted_tree resolves to the reviewed target ('${repo_path}'); it must be a separate host-trusted base checkout. Deterministic command execution stays OFF (fail-safe)."
+            else
+              export RIVER_TRUSTED_TREE="${trusted_abs}"
+              export RIVER_DETERMINISTIC_EXEC=1
+              echo "Deterministic exec: ON (trusted tree: ${RIVER_TRUSTED_TREE})"
+            fi
+          else
+            echo "::warning::deterministic_exec=true but trusted_tree is empty or not a directory; deterministic command execution stays OFF (fail-safe)."
+          fi
+        fi
 
         # Validate output format
         output_fmt="${RIVER_OUTPUT_FORMAT}"
