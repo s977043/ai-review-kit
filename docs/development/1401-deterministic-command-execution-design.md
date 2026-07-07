@@ -196,16 +196,22 @@ allowlist のエントリと**構造的完全一致**（command 文字列一致 
 
 ```js
 // 概念コード（実装時の指針。本ドキュメントでは実装しない）
-const SAFE_ENV_ALLOWLIST = ['PATH', 'HOME', 'LANG', 'LC_ALL', 'TZ'];
-const childEnv = {};
+// HOME は「実 $HOME をコピーしない」。~/.aws・~/.npmrc・~/.git-credentials 等の
+// on-disk secret を晒さないため、空の一時ディレクトリを HOME として与える（ブロッカー 2）。
+const SAFE_ENV_ALLOWLIST = ['PATH', 'LANG', 'LC_ALL', 'TZ']; // HOME/NODE_OPTIONS は含めない
+const childEnv = { HOME: freshEmptyTempDir() };
 for (const k of SAFE_ENV_ALLOWLIST) {
   if (process.env[k] !== undefined) childEnv[k] = process.env[k];
 }
-// GITHUB_TOKEN / AWS_* / *_SECRET / *_TOKEN 等は一切継承しない
+// GITHUB_TOKEN / AWS_* / *_SECRET / *_TOKEN / NODE_OPTIONS 等は一切継承しない
 ```
 
 - **denylist ではなく allowlist**。`GITHUB_*` を除去する denylist 方式は新種の secret 変数名
   （`VERCEL_TOKEN` 等）に追随できず fail-open になる。既定は空で、必要分だけ足す。
+- **`HOME` は実 `$HOME` をコピーしない**（ブロッカー 2 と整合）。`~/.aws` / `~/.npmrc` /
+  `~/.git-credentials` 等の on-disk secret を子プロセスに晒さないため、空の一時ディレクトリを
+  HOME として渡す。`NODE_OPTIONS`（`--require ./evil.js` 等の実行時コード注入）も allowlist に
+  含めない。
 - allowlist するキー集合は host 設定（`.river/deterministic-allowlist.yaml` の
   トップレベル `env:` 等）で拡張可能にするが、**既定に secret 系は一切含めない**。
 - `PATH` は必要だが、これ自体が「PATH 上の悪意あるバイナリ実行」経路になりうる（§6 残攻撃面）。
@@ -277,7 +283,11 @@ strict_block を回避」する余地を残す。ESCALATE（人間判断）が�
 - `execFile` の `timeout` + `maxBuffer` を第一の防御にする（`git.mjs` は既に `maxBuffer:
 200MB` を使うが、こちらは攻撃者制御なので**逆に小さく**する）。
 - timeout kill は子プロセスだけでなく**プロセスグループ全体**を対象にする（fork した子孫が
-  残るのを防ぐ）。`spawn` の `detached: true` + `process.kill(-pid)` を想定。
+  残るのを防ぐ）。`spawn` の `detached: true` + `process.kill(-pid)` を想定。**移植性の注意
+  （gemini #1423）**: 負 PID によるプロセスグループ kill は POSIX 前提で、Windows では未対応。
+  River Review の CI は `ubuntu-latest`（Linux）だが、実装は「Linux 前提・Windows では
+  プロセスグループ kill を行わず timeout 単体にフォールバック」を明示する。`setsid` で pgid を
+  変える子には `kill(-pid)` が届かない点も残攻撃面（§6.8 Low）として既知。
 - fork 爆弾・メモリ枯渇の完全防御は Node 単体では困難であり、CI ランナー側の cgroup /
   コンテナ資源制限に依存する部分が残る（§6 残攻撃面）。
 
@@ -406,6 +416,14 @@ NO_GO/ESCALATE）を厳守する。
   常時グリーン化する。これは secret 窃取以前に**保護資産 #3（ゲート integrity）の直接崩壊**。
   → Phase 1 は「PR head の設定・スクリプト・`node_modules` を一切読まない自己完結 command」に限定し、
   素の `npm`/`npx`/`bash`/`node`/`sh` の allowlist 登録を schema/実装で拒否する。
+  **「自己完結 command」の定義（ブロッカー 1 の解決方向、gemini #1423）**: 実装前に次のいずれかで
+  具体化する。(a) allowlist の command を**絶対パスのバイナリ**に限り、`args` に `-e`/`-c`/`run`/
+  `exec` 等のコード・スクリプト間接実行フラグを禁止する静的検査を入れる。(b) 実行時に config
+  autoload を無効化する（`--no-config` 相当・`NODE_OPTIONS` 除去・`HOME`/`cwd` 分離で PR head の
+  `tsconfig`/`.eslintrc`/`.npmrc`/`.git/hooks` を読ませない）。(c) どうしても `npm run` 系が要る
+  ユースケースは、script 本体も `RIVER_TRUSTED_TREE`（base）から解決する第2段の pin を課す。
+  実用性（多くの lint/test は config を読む）と安全性のトレードオフが大きいため、**Phase 1 の
+  対象 command を「config 非依存の自己完結チェッカー」に絞る運用規約から始める**のが現実的。
 - **[High・新規] on-disk GITHUB_TOKEN 露出**: `actions/checkout` 既定 `persist-credentials: true` は
   token を `.git/config` の `http.<host>.extraheader` に書く。cwd=PR head の command は `git config`
   / `.git/config` 読取で env スクラブを迂回して token を取得できる。→ command を走らせる checkout は
