@@ -36,6 +36,19 @@ function normalizeRef(ref) {
 }
 
 /**
+ * List top-level `*.md` files (not recursing into subdirectories) under a
+ * repo-relative directory. Returns basenames (e.g. "pr.md"). Missing dir → [].
+ */
+async function listMarkdownFiles(dir) {
+  try {
+    const entries = await fs.readdir(path.join(ROOT, dir), { withFileTypes: true });
+    return entries.filter((e) => e.isFile() && e.name.endsWith('.md')).map((e) => e.name);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Distribution-bundle field allowlist for .codex-plugin/plugin.json (#1250).
  *
  * The external `awesome-codex-plugins` fork carries a bundle copy of this
@@ -169,9 +182,55 @@ export function checkCrossManifestParity(ccManifest, codexManifest) {
 }
 
 /**
+ * Reverse-drift check: every distributed command/agent file on disk must be
+ * registered in the .claude-plugin manifest. `validatePluginManifest` only
+ * checks the forward direction (manifest refs exist), so a newly added
+ * `commands/<name>.md` or `agents/<name>.md` that the author forgot to list is
+ * silently unshipped. This closes that gap (plugin asset registration
+ * checklist: docs/development/plugin-asset-registration-checklist.md).
+ *
+ * `commandFiles` / `agentFiles` are injected basename lists (e.g. "pr.md") to
+ * keep this pure and testable; the caller supplies the real directory listing.
+ * `README.md` is never a distributed asset and is excluded.
+ *
+ * Pure function; returns array of error strings (empty = pass).
+ */
+export function checkAssetRegistration(ccManifest, { commandFiles = [], agentFiles = [] } = {}) {
+  const errors = [];
+
+  const registeredCommands = new Set((ccManifest.commands || []).map(normalizeRef));
+  for (const file of commandFiles) {
+    if (file === 'README.md') continue;
+    if (!registeredCommands.has(`commands/${file}`)) {
+      errors.push(
+        `.claude-plugin/plugin.json: commands/${file} exists but is not registered in "commands[]" — ` +
+          `add "./commands/${file}" (see docs/development/plugin-asset-registration-checklist.md)`
+      );
+    }
+  }
+
+  const agentRefs =
+    typeof ccManifest.agents === 'string' ? [ccManifest.agents] : ccManifest.agents || [];
+  const registeredAgents = new Set(agentRefs.map(normalizeRef));
+  for (const file of agentFiles) {
+    if (file === 'README.md') continue;
+    if (!registeredAgents.has(`agents/${file}`)) {
+      errors.push(
+        `.claude-plugin/plugin.json: agents/${file} exists but is not referenced by "agents" — ` +
+          `add "./agents/${file}" (see docs/development/plugin-asset-registration-checklist.md)`
+      );
+    }
+  }
+
+  return errors;
+}
+
+/**
  * Validate the Claude Code + Codex plugin manifests and the marketplace
  * manifest against the repository:
  *  - every component path referenced by .claude-plugin/plugin.json exists
+ *  - every on-disk distributed command/agent file is registered in the
+ *    manifest (reverse drift; checkAssetRegistration)
  *  - .claude-plugin and .codex-plugin manifest versions match package.json
  *  - marketplace plugins[].name matches the plugin manifest name
  *  - the Codex manifest's skills path exists
@@ -261,6 +320,11 @@ export async function validatePluginManifest() {
       }
     }
   }
+
+  // --- Reverse drift: on-disk command/agent files must be registered ---
+  const commandFiles = await listMarkdownFiles('commands');
+  const agentFiles = await listMarkdownFiles('agents');
+  errors.push(...checkAssetRegistration(ccManifest, { commandFiles, agentFiles }));
 
   // --- Marketplace: plugins[].name matches manifest name ---
   const entry = (marketplace.plugins || []).find((p) => p.name === ccManifest.name);
