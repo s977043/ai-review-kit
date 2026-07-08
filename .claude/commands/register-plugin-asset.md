@@ -1,7 +1,7 @@
 ---
 description: 新しい配布 command / agent / agent-skill を plugin manifest に登録し、検証シーケンスまで実行する
 argument-hint: '[command|agent|skill] <name>'
-allowed-tools: Bash(npm run plugin:validate:*), Bash(npm run plugin:sync:check:*), Bash(npm run agent-skills:validate:*), Bash(npm run meta:validate:*), Bash(ls:*), Bash(git status:*), Bash(git diff:*), Read, Edit
+allowed-tools: Bash(npm run plugin:validate:*), Bash(npm run plugin:sync*), Bash(npm run agent-skills:validate:*), Bash(npm run meta:validate:*), Bash(ls:*), Bash(git status:*), Bash(git diff:*), Read, Edit
 ---
 
 新しい配布アセット（command / agent / agent-skill）を plugin manifest に登録し、検証まで通す。手順の SSoT は `docs/development/plugin-asset-registration-checklist.md` にあり、本コマンドはその実行手順の具体化のみを担う。$ARGUMENTS で種別と名前を受け取る（省略時は `git status` の差分から種別を推定する）。
