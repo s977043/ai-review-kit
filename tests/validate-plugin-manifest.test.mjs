@@ -4,6 +4,7 @@ import {
   validatePluginManifest,
   checkBundleFieldAllowlist,
   checkCrossManifestParity,
+  checkAssetRegistration,
 } from '../scripts/validate-plugin-manifest.mjs';
 
 test('validatePluginManifest passes on current repo state', async () => {
@@ -123,4 +124,83 @@ test('checkBundleFieldAllowlist reports null listing-required field', () => {
   const errors = checkBundleFieldAllowlist(codex);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /required bundle field "license"/);
+});
+
+test('checkAssetRegistration passes when every command/agent file is registered', () => {
+  const cc = {
+    commands: ['./commands/pr.md', './commands/check.md'],
+    agents: './agents/river-review.md',
+  };
+  const errors = checkAssetRegistration(cc, {
+    commandFiles: ['pr.md', 'check.md', 'README.md'],
+    agentFiles: ['river-review.md'],
+  });
+  assert.deepEqual(errors, [], `Expected no errors but got: ${errors.join(', ')}`);
+});
+
+test('checkAssetRegistration detects an unregistered command file', () => {
+  const cc = { commands: ['./commands/pr.md'], agents: './agents/river-review.md' };
+  const errors = checkAssetRegistration(cc, {
+    commandFiles: ['pr.md', 'new-cmd.md'],
+    agentFiles: ['river-review.md'],
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /commands\/new-cmd\.md exists but is not registered/);
+});
+
+test('checkAssetRegistration never flags README.md', () => {
+  const cc = { commands: [], agents: [] };
+  const errors = checkAssetRegistration(cc, {
+    commandFiles: ['README.md'],
+    agentFiles: ['README.md'],
+  });
+  assert.deepEqual(errors, [], `Expected no errors but got: ${errors.join(', ')}`);
+});
+
+test('checkAssetRegistration detects an unregistered agent file', () => {
+  const cc = { commands: [], agents: './agents/river-review.md' };
+  const errors = checkAssetRegistration(cc, {
+    commandFiles: [],
+    agentFiles: ['river-review.md', 'extra-agent.md'],
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /agents\/extra-agent\.md exists but is not referenced/);
+});
+
+test('checkAssetRegistration accepts agents declared as an array', () => {
+  const cc = {
+    commands: [],
+    agents: ['./agents/river-review.md', './agents/extra-agent.md'],
+  };
+  const errors = checkAssetRegistration(cc, {
+    commandFiles: [],
+    agentFiles: ['river-review.md', 'extra-agent.md'],
+  });
+  assert.deepEqual(errors, [], `Expected no errors but got: ${errors.join(', ')}`);
+});
+
+test('checkAssetRegistration tolerates unexpected field/manifest types without throwing (gemini #1443)', () => {
+  // commands/agents of unexpected types → treated as "nothing registered".
+  assert.doesNotThrow(() => {
+    const errors = checkAssetRegistration(
+      { commands: { not: 'an array' }, agents: 42 },
+      { commandFiles: ['new-cmd.md'], agentFiles: ['new-agent.md'] }
+    );
+    assert.equal(errors.length, 2);
+  });
+  // null manifest → no throw, no registrations.
+  assert.doesNotThrow(() => {
+    const errors = checkAssetRegistration(null, { commandFiles: ['x.md'], agentFiles: [] });
+    assert.equal(errors.length, 1);
+  });
+  // Non-string array elements are skipped, not passed to normalizeRef (no throw).
+  assert.doesNotThrow(() => {
+    const errors = checkAssetRegistration(
+      { commands: [123, null, './commands/pr.md'], agents: [{}, './agents/river-review.md'] },
+      { commandFiles: ['pr.md', 'other.md'], agentFiles: ['river-review.md'] }
+    );
+    // pr.md / river-review.md registered (valid string refs); only other.md flagged.
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /commands\/other\.md/);
+  });
 });
