@@ -193,4 +193,14 @@ test('checkAssetRegistration tolerates unexpected field/manifest types without t
     const errors = checkAssetRegistration(null, { commandFiles: ['x.md'], agentFiles: [] });
     assert.equal(errors.length, 1);
   });
+  // Non-string array elements are skipped, not passed to normalizeRef (no throw).
+  assert.doesNotThrow(() => {
+    const errors = checkAssetRegistration(
+      { commands: [123, null, './commands/pr.md'], agents: [{}, './agents/river-review.md'] },
+      { commandFiles: ['pr.md', 'other.md'], agentFiles: ['river-review.md'] }
+    );
+    // pr.md / river-review.md registered (valid string refs); only other.md flagged.
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /commands\/other\.md/);
+  });
 });

@@ -200,12 +200,15 @@ export function checkAssetRegistration(ccManifest, { commandFiles = [], agentFil
 
   // Defensive: ccManifest is normally a $schema-validated manifest object, but
   // this is an exported entry point that may receive arbitrary input. Treat a
-  // non-array `commands` / non-string-or-array `agents` as "nothing registered"
-  // rather than throwing on .map.
+  // non-array `commands` / non-string-or-array `agents`, and any non-string
+  // array element, as "nothing registered" rather than throwing on .map.
   const manifest = ccManifest && typeof ccManifest === 'object' ? ccManifest : {};
+  const toRefSet = (value) => {
+    const list = typeof value === 'string' ? [value] : Array.isArray(value) ? value : [];
+    return new Set(list.filter((ref) => typeof ref === 'string').map(normalizeRef));
+  };
 
-  const commandRefs = Array.isArray(manifest.commands) ? manifest.commands : [];
-  const registeredCommands = new Set(commandRefs.map(normalizeRef));
+  const registeredCommands = toRefSet(manifest.commands);
   for (const file of commandFiles) {
     if (file === 'README.md') continue;
     if (!registeredCommands.has(`commands/${file}`)) {
@@ -216,13 +219,7 @@ export function checkAssetRegistration(ccManifest, { commandFiles = [], agentFil
     }
   }
 
-  const agentRefs =
-    typeof manifest.agents === 'string'
-      ? [manifest.agents]
-      : Array.isArray(manifest.agents)
-        ? manifest.agents
-        : [];
-  const registeredAgents = new Set(agentRefs.map(normalizeRef));
+  const registeredAgents = toRefSet(manifest.agents);
   for (const file of agentFiles) {
     if (file === 'README.md') continue;
     if (!registeredAgents.has(`agents/${file}`)) {
