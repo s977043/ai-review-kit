@@ -178,3 +178,19 @@ test('checkAssetRegistration accepts agents declared as an array', () => {
   });
   assert.deepEqual(errors, [], `Expected no errors but got: ${errors.join(', ')}`);
 });
+
+test('checkAssetRegistration tolerates unexpected field/manifest types without throwing (gemini #1443)', () => {
+  // commands/agents of unexpected types → treated as "nothing registered".
+  assert.doesNotThrow(() => {
+    const errors = checkAssetRegistration(
+      { commands: { not: 'an array' }, agents: 42 },
+      { commandFiles: ['new-cmd.md'], agentFiles: ['new-agent.md'] }
+    );
+    assert.equal(errors.length, 2);
+  });
+  // null manifest → no throw, no registrations.
+  assert.doesNotThrow(() => {
+    const errors = checkAssetRegistration(null, { commandFiles: ['x.md'], agentFiles: [] });
+    assert.equal(errors.length, 1);
+  });
+});

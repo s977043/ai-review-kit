@@ -198,7 +198,14 @@ export function checkCrossManifestParity(ccManifest, codexManifest) {
 export function checkAssetRegistration(ccManifest, { commandFiles = [], agentFiles = [] } = {}) {
   const errors = [];
 
-  const registeredCommands = new Set((ccManifest.commands || []).map(normalizeRef));
+  // Defensive: ccManifest is normally a $schema-validated manifest object, but
+  // this is an exported entry point that may receive arbitrary input. Treat a
+  // non-array `commands` / non-string-or-array `agents` as "nothing registered"
+  // rather than throwing on .map.
+  const manifest = ccManifest && typeof ccManifest === 'object' ? ccManifest : {};
+
+  const commandRefs = Array.isArray(manifest.commands) ? manifest.commands : [];
+  const registeredCommands = new Set(commandRefs.map(normalizeRef));
   for (const file of commandFiles) {
     if (file === 'README.md') continue;
     if (!registeredCommands.has(`commands/${file}`)) {
@@ -210,7 +217,11 @@ export function checkAssetRegistration(ccManifest, { commandFiles = [], agentFil
   }
 
   const agentRefs =
-    typeof ccManifest.agents === 'string' ? [ccManifest.agents] : ccManifest.agents || [];
+    typeof manifest.agents === 'string'
+      ? [manifest.agents]
+      : Array.isArray(manifest.agents)
+        ? manifest.agents
+        : [];
   const registeredAgents = new Set(agentRefs.map(normalizeRef));
   for (const file of agentFiles) {
     if (file === 'README.md') continue;
