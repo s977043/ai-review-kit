@@ -41,6 +41,7 @@
 
 ### 新しい agent-skill（`skills/agent-skills/<name>/SKILL.md`）を追加した場合
 
+- [ ] ディレクトリに `SKILL.md` が実在する（丸ごと無い / `skill.md` 等の誤名・大小文字違いの dir は `agent-skills:validate` / `plugin:validate` のどちらでも検出されず silent skip となり、スキルが無言で no-ship される）
 - [ ] ディレクトリ名 `<name>` が kebab-case で、frontmatter `metadata.name` と一致する
 - [ ] `npm run agent-skills:validate` が pass する（frontmatter 必須: `metadata.name` / `metadata.description`）
 - [ ] `skills` はディレクトリ参照のため manifest 編集は不要（新規登録の manifest 差分は出ない）
@@ -51,6 +52,14 @@
 - [ ] 外部 bundle（awesome-codex-plugins fork の `plugin.json`）にも同じフィールドを反映した（CLAUDE.md「Plugin bundle mirror」）
 - [ ] cross-manifest parity 対象フィールド（repository / skills / displayName / composerIcon / homepage↔websiteURL / author.name↔developerName）を両 manifest で一致させた
 - [ ] `package.json` を SSoT とする同期フィールド（keywords / homepage / author / license）は手編集せず `npm run plugin:sync` で反映した
+
+### その他 validator が検査するサーフェス（種別として明示）
+
+逆ドリフト検査（`checkAssetRegistration`）の対象は commands / agents のみです。以下は主要 asset ではありませんが、変更時に `plugin:validate` が検査するため登録漏れの対象になります。
+
+- **hooks**: manifest に `hooks` フィールドは現状未配布。配布 hooks を足す場合は `hooks` フィールドの登録が要る（逆ドリフト検査は commands/agents のみで、hooks は forward 検査のみ）
+- **marketplace.json**: plugin 名をリネームした場合、`.claude-plugin/marketplace.json` の `plugins[].name` も更新する（`plugin:validate` が不一致を検出する）
+- **assets**: `composerIcon`（`assets/icon.svg`）のパスを変えた場合、両 manifest と実ファイルを一致させる（`plugin:validate` が実在を検査する）
 
 ## 検証シーケンス（共通・登録後に必ず実行）
 
