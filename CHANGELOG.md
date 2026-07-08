@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.43.0](https://github.com/s977043/river-review/compare/v1.42.0...v1.43.0) (2026-07-08)
+
+
+### Features
+
+* **plugin:** plugin:validate に command/agent の逆ドリフト検査を追加する ([#1443](https://github.com/s977043/river-review/issues/1443)) ([4d479e2](https://github.com/s977043/river-review/commit/4d479e21fa3aefdff9464c984bca13cf0918d4e4))
+
 ## [1.42.0](https://github.com/s977043/river-review/compare/v1.41.0...v1.42.0) (2026-07-07)
 
 
