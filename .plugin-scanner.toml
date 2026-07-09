@@ -23,4 +23,5 @@ ignore_paths = [
   "docs/vision.md",
   "pages/explanation/design-philosophy.md",
   "pages/explanation/design-philosophy.en.md",
+  "docs/development/1401-deterministic-command-execution-design.md",
 ]
