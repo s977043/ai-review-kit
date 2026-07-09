@@ -1,6 +1,6 @@
 ---
 description: 'Run review-team skill: parallel multi-role review with consensusLevel and Tech Lead report'
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(river-review:*), Bash(npx river-review:*)
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(npm run river:*)
 ---
 
 スキル定義: `skills/agent-skills/review-team/SKILL.md`
@@ -21,17 +21,21 @@ allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(river
 
 引数でロールが指定された場合はそれを使う。なければ `auto`（差分から自動選択）。
 
-### Step 2: river-review を実行する
+### Step 2: レビューを実行する
+
+River Review は npm 未公開のため `npx river-review` は使えない。**エージェントがこのスキルの手順を直接実行する**（CLI 不要）。上記 Step 1 で決めたロールを並列に走らせ、Union-Find で finding を統合し、consensusLevel と teamLeadReport を生成する。
+
+リポジトリ内で作業していて `river` CLI をアクセラレータとして使える場合のみ、次を利用してよい（任意）。コスト確認が必要なら先に `--dry-run`。
 
 ```bash
 # auto モード（推奨）
-river-review run --reviewers auto --output json
+npm run river -- run . --reviewers auto --output json
 
 # ロール明示指定
-river-review run --reviewers <role1,role2,...> --output json
+npm run river -- run . --reviewers <role1,role2,...> --output json
 ```
 
-`river-review` がなければ `npx river-review` を使う。コスト確認が必要なら先に `--dry-run`。
+CLI が存在しない、または失敗した場合は、スキル駆動のレビューで継続する。
 
 ### Step 3: 結果を報告する
 
