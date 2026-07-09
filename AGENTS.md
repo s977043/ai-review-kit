@@ -57,14 +57,15 @@ Use **npm**.
 
 Run the applicable checks before handoff. All must pass.
 
-| Changed path                           | Required validation                |
-| -------------------------------------- | ---------------------------------- |
-| `skills/**/*.md`                       | `npm run skills:validate`          |
-| `skills/agent-skills/**`               | `npm run agent-skills:validate`    |
-| `.github/agents/` or `.claude/agents/` | `npm run agents:validate`          |
-| `pages/**/*.md`                        | `npm run check:links:local`        |
-| `src/` changes that affect skills      | Confirm schema and skill alignment |
-| Any file                               | `npm run lint && npm test`         |
+| Changed path                           | Required validation                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------------------ |
+| `skills/**/*.md`                       | `npm run skills:validate`                                                            |
+| `skills/agent-skills/**`               | `npm run agent-skills:validate`                                                      |
+| `skills/**/*.md` (manifest freshness)  | `npm run skills:manifest:check` (regenerate with `npm run skills:manifest` if stale) |
+| `.github/agents/` or `.claude/agents/` | `npm run agents:validate`                                                            |
+| `pages/**/*.md`                        | `npm run check:links:local`                                                          |
+| `src/` changes that affect skills      | Confirm schema and skill alignment                                                   |
+| Any file                               | `npm run lint && npm test`                                                           |
 
 Completion gate: all applicable validations pass. If any fail, fix before handoff.
 

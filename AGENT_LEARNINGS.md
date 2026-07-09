@@ -63,3 +63,7 @@
   Once the ref advances, the required status checks re-register and the PR transitions BLOCKED → CLEAN.
   - `Applies to`: release-please workflow recovery, fs-loss / sandbox-restricted environments, any case where the branch head must advance without a local checkout.
   - `Evidence`: validated on PR #876 (v0.53.0) during a session where the working tree was inaccessible; the BLOCKED → CLEAN → squash-merge → release-publish flow completed entirely via gh API.
+
+- `2026-07-09`: `git commit --no-verify` skips the lint-staged pre-commit hooks, including the `skills/**/*.md` step that runs `npm run skills:manifest && git add docs/data/skill-manifest.json`. Committing skill-doc edits with `--no-verify` therefore leaves `docs/data/skill-manifest.json` stale, and the CI `Skill schema validation` job (`skills:manifest:check`) fails with "skill manifest is stale". After editing `skills/**/*.md`, either commit without `--no-verify`, or run `npm run skills:manifest` and stage `docs/data/skill-manifest.json` in the same commit. The same bypass also drops `check:dashes` / `prettier --write` / `markdownlint --fix` on `**/*.md` and `textlint --no-cache` on `pages/**`.
+  - `Applies to`: any commit that edits `skills/**/*.md` (especially `skills/agent-skills/**`) and uses `--no-verify`.
+  - `Evidence`: `.lintstagedrc.json` `skills/**/*.md` block; PR #1447's first commit failed CI `Skill schema validation`, fixed by regenerating the manifest in the second commit.
