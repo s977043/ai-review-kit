@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.43.1](https://github.com/s977043/river-review/compare/v1.43.0...v1.43.1) (2026-07-09)
+
+
+### Bug Fixes
+
+* **ci:** scan の HARDCODED_SECRET 誤検出を ignore_paths に追加する ([#1448](https://github.com/s977043/river-review/issues/1448)) ([7481b00](https://github.com/s977043/river-review/commit/7481b00dd319a25c328f2c2805c816946a462cc0))
+
 ## [1.43.0](https://github.com/s977043/river-review/compare/v1.42.0...v1.43.0) (2026-07-08)
 
 
