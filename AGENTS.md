@@ -57,14 +57,15 @@ Use **npm**.
 
 Run the applicable checks before handoff. All must pass.
 
-| Changed path                           | Required validation                |
-| -------------------------------------- | ---------------------------------- |
-| `skills/**/*.md`                       | `npm run skills:validate`          |
-| `skills/agent-skills/**`               | `npm run agent-skills:validate`    |
-| `.github/agents/` or `.claude/agents/` | `npm run agents:validate`          |
-| `pages/**/*.md`                        | `npm run check:links:local`        |
-| `src/` changes that affect skills      | Confirm schema and skill alignment |
-| Any file                               | `npm run lint && npm test`         |
+| Changed path                           | Required validation                                                                                                                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skills/**/*.md`                       | `npm run skills:validate`                                                                                                                                                                         |
+| `skills/agent-skills/**`               | `npm run agent-skills:validate`                                                                                                                                                                   |
+| `skills/**/*.md` (manifest freshness)  | `npm run skills:manifest:check` (regen with `npm run skills:manifest`, commit `docs/data/skill-manifest.json`; the lint-staged hook does this automatically unless you commit with `--no-verify`) |
+| `.github/agents/` or `.claude/agents/` | `npm run agents:validate`                                                                                                                                                                         |
+| `pages/**/*.md`                        | `npm run check:links:local`                                                                                                                                                                       |
+| `src/` changes that affect skills      | Confirm schema and skill alignment                                                                                                                                                                |
+| Any file                               | `npm run lint && npm test`                                                                                                                                                                        |
 
 Completion gate: all applicable validations pass. If any fail, fix before handoff.
 
