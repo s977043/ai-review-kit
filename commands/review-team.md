@@ -35,7 +35,7 @@ npm run river -- run . --reviewers auto --output json
 npm run river -- run . --reviewers <role1,role2,...> --output json
 ```
 
-CLI が absent または失敗した場合は、スキル駆動のレビューで継続する。
+CLI が存在しない、または失敗した場合は、スキル駆動のレビューで継続する。
 
 ### Step 3: 結果を報告する
 

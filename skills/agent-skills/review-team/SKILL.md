@@ -103,6 +103,9 @@ Claude Code / Codex のプラグイン経由では、**エージェントがこ�
 # 差分から自動選択（推奨）
 npm run river -- run . --reviewers auto
 
+# ロールを明示指定
+npm run river -- run . --reviewers bug-hunter,security-scanner,test-gap
+
 # JSON 出力（teamLeadReport を含む）
 npm run river -- run . --reviewers auto --output json
 
@@ -110,7 +113,7 @@ npm run river -- run . --reviewers auto --output json
 npm run river -- run . --reviewers auto --dry-run
 ```
 
-CLI は必須でない。absent または失敗した場合はスキル駆動のレビューで継続する。
+CLI は必須でない。存在しない、または失敗した場合はスキル駆動のレビューで継続する。
 
 ### GitHub Actions
 
