@@ -69,7 +69,7 @@ Why: 非同期 correctness はチェックリスト型評価が主だが、async
 
 ## Output / 出力（短文版の推奨）
 
-River Review のコメントは`<file>:<line>`形式です。コメントは日本語で返す。
+River Review のコメントは`<file>:<line>: <message>`形式です。コメントは日本語で返す。
 
 - Finding: 何が問題か（1文）
 - Impact: 何が困るか（短く）
