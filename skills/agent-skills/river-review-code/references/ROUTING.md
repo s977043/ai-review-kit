@@ -105,6 +105,19 @@
 - 英語: simplify, duplication, dead code, cleanup, reinvent
 - → SIMPLIFY 観点を本 skill 内で実行（[SIMPLIFY.md](./SIMPLIFY.md) の品質クリーンアップ4観点）
 - 注意: 「リファクタ」単独は adversarial-review の `refactor-claim-audit`（完了主張の反証）に割り当て済みのため、本観点のキーワードにしない。リファクタの**完了主張の検証**は adversarial-review、**差分の簡素化余地の検出**は本観点が担う
+- 注意: Altitude の caller special-case 検出と Efficiency の closure 保持検出は registry skill へ委譲済み（下記2セクション）。SIMPLIFY 観点は残余のみを扱う（[SIMPLIFY.md](./SIMPLIFY.md) の委譲表参照）
+
+### 実装の深さ・一般化（Altitude）
+
+- 日本語: 実装の深さ, 一般化, 特例分岐, 継ぎ接ぎ, 呼び出し元分岐
+- 英語: altitude, generalization, special-case, bandaid, caller-specific branch
+- → `altitude-generalization`
+
+### closure スコープ保持（メモリ）
+
+- 日本語: クロージャ, スコープ保持, メモリ保持, シングルトンのキャッシュ肥大
+- 英語: closure, scope retention, memory retention, environment capture
+- → `closure-scope-retention`
 
 ### 幻覚的参照の実在確認
 

@@ -17,23 +17,25 @@ LLM 駆動のレビューは実行ごとに結果がぶれます。一方、決�
 
 ## 対象と方法
 
-- **検出器**: `security-basic` / `logging-observability` / `test-existence` / `coverage-gap` である。いずれもオフライン（`--offline` / rules-only）で動き、API キーを必要としない。
+- **検出器**: `security-basic` / `logging-observability` / `test-existence` / `coverage-gap` / `altitude-generalization` / `closure-scope-retention` である。いずれもオフライン（`--offline` / rules-only）で動き、API キーを必要としない。
 - **fixture**: 検出できるべきケース（true positive）と、誤検出してはならない guard ケース（false-positive 防止）の両方を含む。
 - **判定**: 各 fixture の期待値（`mustInclude` と `maxFindings`）を満たすかを機械的に検証する。
 - **出典**: ケース定義は [`tests/fixtures/review-eval/cases.json`](https://github.com/s977043/river-review/blob/main/tests/fixtures/review-eval/cases.json) にある。
 
-## 結果（2026-07-05 時点）
+## 結果（2026-07-10 時点）
 
-**13 件中 13 件が PASS** しました。内訳は次のとおりです。
+**17 件中 17 件が PASS** しました。内訳は次のとおりです。
 
 | カテゴリ      | 検出器                          | 検出ケース | guard（誤検出防止） | 計  |
 | ------------- | ------------------------------- | ---------- | ------------------- | --- |
 | secrets       | `security-basic`                | 3          | 1                   | 4   |
 | observability | `logging-observability`         | 2          | 1                   | 3   |
 | tests         | `test-existence` `coverage-gap` | 5          | 1                   | 6   |
-| **合計**      |                                 | **10**     | **3**               | 13  |
+| altitude      | `altitude-generalization`       | 1          | 1                   | 2   |
+| closure       | `closure-scope-retention`       | 1          | 1                   | 2   |
+| **合計**      |                                 | **12**     | **5**               | 17  |
 
-guard ケースは、安全なパターン（例: 秘密情報ではなく `process.env` 参照、ログ付きの `catch`、テストファイルも変更済み）を誤って指摘しないことを確認します。これらは既知の誤検出の再発を防ぐ canary として機能します（[#1070](https://github.com/s977043/river-review/issues/1070)）。
+guard ケースは、安全なパターン（例: 秘密情報ではなく `process.env` 参照、ログ付きの `catch`、テストファイルも変更済み、任意の呼び出し元が使える公開オプション、大きなデータを即時縮約して解放する関数）を誤って指摘しないことを確認します。これらは既知の誤検出の再発を防ぐ canary として機能します（[#1070](https://github.com/s977043/river-review/issues/1070)）。
 
 ## 再現方法
 

@@ -723,3 +723,195 @@ index 1111111..2222222 100644
 
   assert.equal(comments.length, 0);
 });
+
+test('buildHeuristicComments detects a caller special-case for altitude-generalization', () => {
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/midstream-altitude-caller-special-case.diff',
+    'utf8'
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'altitude-generalization' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].file, 'src/lib/finding-formatter.mjs');
+  assert.equal(comments[0].line, 51);
+  assert.equal(comments[0].kind, 'caller-special-case');
+});
+
+test('caller special-case is quiet on a host opt-in public option (FP canary)', () => {
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/midstream-altitude-host-optin.diff',
+    'utf8'
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'altitude-generalization' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 0);
+});
+
+test('caller special-case is quiet when the only branch is a single added one', () => {
+  const diffText = `diff --git a/src/lib/format.mjs b/src/lib/format.mjs
+index 1111111..2222222 100644
+--- a/src/lib/format.mjs
++++ b/src/lib/format.mjs
+@@ -1,2 +1,5 @@
+ export function format(x, options = {}) {
++  if (options.caller === 'cli') {
++    x = x.trim();
++  }
+ }
+`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'altitude-generalization' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 0);
+});
+
+test('caller special-case ignores comment-only mentions of a caller branch', () => {
+  const diffText = `diff --git a/src/lib/format.mjs b/src/lib/format.mjs
+index 1111111..2222222 100644
+--- a/src/lib/format.mjs
++++ b/src/lib/format.mjs
+@@ -1,3 +1,5 @@
+ export function format(x, options = {}) {
+   if (options.caller === 'cli') {
++  // TODO: remove if (options.caller === 'exporter') { someday
++  // if (options.caller === 'exporter') { legacy branch }
+ }
+`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'altitude-generalization' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 0);
+});
+
+test('buildHeuristicComments detects closure scope retention on a lazy singleton', () => {
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/midstream-closure-scope-retention.diff',
+    'utf8'
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'closure-scope-retention' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].file, 'src/lib/skill-cache.mjs');
+  assert.equal(comments[0].line, 18);
+  assert.equal(comments[0].kind, 'closure-scope-retention');
+});
+
+test('closure scope retention is quiet on immediate reduce-and-release (FP canary)', () => {
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/midstream-closure-immediate-reduce.diff',
+    'utf8'
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'closure-scope-retention' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 0);
+});
+
+test('closure scope retention is quiet when the cached object has no methods over large data', () => {
+  const diffText = `diff --git a/src/lib/config-cache.mjs b/src/lib/config-cache.mjs
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/src/lib/config-cache.mjs
+@@ -0,0 +1,10 @@
++import { readFile } from 'node:fs/promises';
++
++let cachedConfig = null;
++
++export async function getConfig(path) {
++  if (cachedConfig) return cachedConfig;
++  const rawText = await readFile(path, 'utf8');
++  cachedConfig = { port: Number(JSON.parse(rawText).port) };
++  return cachedConfig;
++}
+`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'closure-scope-retention' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 0);
+});
+
+test('new simplify heuristics are quiet when their skills are not selected', () => {
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/midstream-closure-scope-retention.diff',
+    'utf8'
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'altitude-generalization' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 0);
+});
+
+test('caller special-case does not add up across unrelated hunks (per-hunk counting)', () => {
+  const diffText = `diff --git a/src/lib/format.mjs b/src/lib/format.mjs
+index 1111111..2222222 100644
+--- a/src/lib/format.mjs
++++ b/src/lib/format.mjs
+@@ -10,3 +10,6 @@ export function formatA(x, options = {}) {
+ export function formatA(x, options = {}) {
++  if (options.caller === 'cli') {
++    x = trim(x);
++  }
+ }
+@@ -40,3 +43,6 @@ export function formatB(y, options = {}) {
+ export function formatB(y, options = {}) {
++  if (options.caller === 'exporter') {
++    y = pad(y);
++  }
+ }
+`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'altitude-generalization' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 0);
+});
+
+test('closure scope retention fires when the slot declaration is outside the diff', () => {
+  const diffText = `diff --git a/src/lib/registry-cache.mjs b/src/lib/registry-cache.mjs
+index 1111111..2222222 100644
+--- a/src/lib/registry-cache.mjs
++++ b/src/lib/registry-cache.mjs
+@@ -5,4 +5,13 @@ let cachedLookup = null;
+ export async function getLookup(registryPath) {
+   if (cachedLookup) return cachedLookup;
++  const rawText = await readFile(registryPath, 'utf8');
++  const entries = parseAllDocuments(rawText).flatMap((doc) => doc.toJS()?.skills ?? []);
++  cachedLookup = {
++    severityOf(id) {
++      const entry = entries.find((e) => e.id === id);
++      return entry ? entry.severity : 'major';
++    },
++  };
+   return cachedLookup;
+ }
+`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'closure-scope-retention' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].file, 'src/lib/registry-cache.mjs');
+  assert.equal(comments[0].kind, 'closure-scope-retention');
+});
