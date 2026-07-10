@@ -45091,8 +45091,10 @@ function normalizeHeuristicComments(rawComments) {
           line: c.line,
           skillId: c.skillId,
           message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
-            finding: '長寿命オブジェクトが closure で enclosing scope の大きなデータを保持し続ける可能性がある',
-            evidence: 'module-level キャッシュへ代入される closure が readFile / parse 結果の変数を参照している',
+            finding:
+              '長寿命オブジェクトが closure で enclosing scope の大きなデータを保持し続ける可能性がある',
+            evidence:
+              'module-level キャッシュへ代入される closure が readFile / parse 結果の変数を参照している',
             impact: 'オブジェクトの生存中、大きな元データが解放されずメモリを圧迫する',
             fix: '必要なフィールドだけを Map / 明示フィールドへ縮約し、closure に大きな元データを掴ませない',
             severity: 'warning',
