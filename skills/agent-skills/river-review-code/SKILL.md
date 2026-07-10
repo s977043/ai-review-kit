@@ -28,18 +28,18 @@ license: MIT
 
 ## Routing / ルーティング
 
-| キーワード                | スキルID                         | 説明                         |
-| ------------------------- | -------------------------------- | ---------------------------- |
-| 型, TypeScript, strict    | `typescript-strict`              | TypeScript strict モード準拠 |
-| null, undefined, optional | `typescript-nullcheck`           | null 安全性チェック          |
-| 型駆動, 設計              | `type-driven-design`             | 型駆動設計                   |
-| ログ, 監視                | `logging-observability`          | ロギング・可観測性           |
-| 自動化, 境界              | `review-automation-boundary`     | レビュー自動化の境界         |
-| コメント, トリアージ      | `review-comment-triage`          | レビューコメント分類         |
-| a11y, アクセシビリティ    | `a11y-accessible-name`           | アクセシビリティ基本         |
-| Next.js, App Router       | `nextjs-app-router-boundary`     | Next.js 境界チェック         |
-| 簡素化, 整理, simplify    | SIMPLIFY 観点（本 skill 内）     | 品質クリーンアップ4観点      |
-| 破壊的操作, 確認, 回復    | UX-SAFEGUARD 観点（本 skill 内） | 操作の安全装置2観点          |
+| キーワード                 | スキルID                         | 説明                         |
+| -------------------------- | -------------------------------- | ---------------------------- |
+| 型, TypeScript, strict     | `typescript-strict`              | TypeScript strict モード準拠 |
+| null, undefined, optional  | `typescript-nullcheck`           | null 安全性チェック          |
+| 型駆動, 設計               | `type-driven-design`             | 型駆動設計                   |
+| ログ, 監視                 | `logging-observability`          | ロギング・可観測性           |
+| 自動化, 境界               | `review-automation-boundary`     | レビュー自動化の境界         |
+| コメント, トリアージ       | `review-comment-triage`          | レビューコメント分類         |
+| a11y, アクセシビリティ     | `a11y-accessible-name`           | アクセシビリティ基本         |
+| Next.js, App Router        | `nextjs-app-router-boundary`     | Next.js 境界チェック         |
+| 簡素化, 整理, simplify     | SIMPLIFY 観点（本 skill 内）     | 品質クリーンアップ4観点      |
+| 破壊的操作, undo, 回復支援 | UX-SAFEGUARD 観点（本 skill 内） | 操作の安全装置2観点          |
 
 ### デフォルト動作
 

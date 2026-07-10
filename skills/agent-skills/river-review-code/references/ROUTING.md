@@ -101,7 +101,7 @@
 
 ### 操作の安全装置（UX-SAFEGUARD 観点）
 
-- 日本語: 破壊的操作, 確認ダイアログ, 取り消し, undo, エラーメッセージ, 回復
+- 日本語: 破壊的操作, 確認ダイアログ, 取り消し, undo, 回復支援
 - 英語: destructive action, confirmation, undo, error message, recovery
 - → UX-SAFEGUARD 観点を本 skill 内で実行（[UX-SAFEGUARD.md](./UX-SAFEGUARD.md) の操作の安全装置2観点）
 - 注意: loading/error/empty state の**表示欠落**は `loading-state`、mutation の**認可**は security 系、DB の破壊的変更は `migration-safety` に割り当て済み（委譲表は UX-SAFEGUARD.md を参照）。本観点は「確認・取り消し手段の欠如」と「回復方法を示さない文言」のみを扱う
