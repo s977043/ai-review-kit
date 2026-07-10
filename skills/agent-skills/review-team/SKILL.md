@@ -5,6 +5,11 @@ description: |
   6つの専門レビュアーロールを並列実行し、consensusLevel（複数ロールの合意度）と
   Tech Lead レポート（top3指摘・blindSpots・consensusSummary）で結果を統合する
   マルチエージェントレビュー entry skill。
+  Parallel multi-role review with consensus scoring (consensusLevel) and Tech
+  Lead report. Use when a major release needs exhaustive multi-angle review,
+  or when a single-perspective review is not enough and you want confidence
+  that no reviewer angle was missed（重要リリース前の網羅レビュー・多視点の確証が
+  欲しいとき）。
 phase: [upstream, midstream, downstream]
 severity: major
 applyTo: ['**/*']
