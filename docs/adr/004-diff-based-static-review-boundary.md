@@ -14,10 +14,10 @@ Accepted—#1455 のレビュー観点カバレッジ拡張で、視覚評価・
 
 一方、River Review のレビュー実行には次の契約がある。
 
-- レビューエージェントのツールは Read / Grep / Glob / Bash のみ（`agents/river-review.md`）
+- レビューエージェントのツールは Read / Grep / Glob / Bash のみ（[agents/river-review.md](../../agents/river-review.md)）
 - GitHub Action ランナー上でも同一の挙動で動作する
-- 指摘は差分内のコードにアンカーする（`pages/reference/review-policy.md` §3.1、`.claude/rules/review-core.md`）
-- スキルは fixtures / golden で回帰検証できる（`pages/guides/add-new-skill.md`）
+- 指摘は差分内のコードにアンカーする（[pages/reference/review-policy.md](../../pages/reference/review-policy.md) §3.1・§3.4、[.claude/rules/review-core.md](../../.claude/rules/review-core.md)）
+- スキルは fixtures / golden で回帰検証できる（[pages/guides/add-new-skill.md](../../pages/guides/add-new-skill.md)）
 
 視覚評価・計測ベース比較は MCP（Figma / Playwright / ブラウザ）と対話的な実行環境を前提とし、この契約のすべてに反する。スクリーンショットは fixtures として決定論的に検証できず、CI ランナーには計測環境がなく、指摘は差分ではなく描画結果にアンカーされる。
 
