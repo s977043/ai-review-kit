@@ -28,17 +28,17 @@ license: MIT
 
 ## Routing / ルーティング
 
-| キーワード                                       | スキルID                           | 説明                                                                                                               |
-| ------------------------------------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| 型, TypeScript, strict                           | `typescript-strict`                | TypeScript strict モード準拠                                                                                       |
-| null, undefined, optional                        | `typescript-nullcheck`             | null 安全性チェック                                                                                                |
-| 型駆動, 設計                                     | `type-driven-design`               | 型駆動設計                                                                                                         |
-| ログ, 監視                                       | `logging-observability`            | ロギング・可観測性                                                                                                 |
-| 自動化, 境界                                     | `review-automation-boundary`       | レビュー自動化の境界                                                                                               |
-| コメント, トリアージ                             | `review-comment-triage`            | レビューコメント分類                                                                                               |
-| a11y, アクセシビリティ                           | `a11y-accessible-name`             | アクセシビリティ基本                                                                                               |
-| Next.js, App Router                              | `nextjs-app-router-boundary`       | Next.js 境界チェック                                                                                               |
-| 簡素化, 重複コード, デッドコード, 整理, simplify | SIMPLIFY 観点（本 skill 内で実行） | 品質クリーンアップ4観点: Reuse / Simplification / Efficiency / Altitude（[SIMPLIFY.md](./references/SIMPLIFY.md)） |
+| キーワード                | スキルID                     | 説明                         |
+| ------------------------- | ---------------------------- | ---------------------------- |
+| 型, TypeScript, strict    | `typescript-strict`          | TypeScript strict モード準拠 |
+| null, undefined, optional | `typescript-nullcheck`       | null 安全性チェック          |
+| 型駆動, 設計              | `type-driven-design`         | 型駆動設計                   |
+| ログ, 監視                | `logging-observability`      | ロギング・可観測性           |
+| 自動化, 境界              | `review-automation-boundary` | レビュー自動化の境界         |
+| コメント, トリアージ      | `review-comment-triage`      | レビューコメント分類         |
+| a11y, アクセシビリティ    | `a11y-accessible-name`       | アクセシビリティ基本         |
+| Next.js, App Router       | `nextjs-app-router-boundary` | Next.js 境界チェック         |
+| 簡素化, 整理, simplify    | SIMPLIFY 観点（本 skill 内） | 品質クリーンアップ4観点      |
 
 ### デフォルト動作
 
@@ -86,7 +86,7 @@ license: MIT
    ├─ コンポーネントファイル → a11yチェックを追加
    ├─ 設定ファイル → 型駆動設計チェックを選択
    └─ キーワード指定あり → 該当スキルを直接選択
-      （簡素化/重複コード/デッドコード/整理/simplify → SIMPLIFY 観点を本 skill 内で実行）
+      （SIMPLIFY 観点のキーワード該当時は本 skill 内で実行。キーワードは ROUTING.md を参照）
 
 2. スキルの実行
    ├─ typescript-strict: strictモード準拠
@@ -145,4 +145,4 @@ license: MIT
 ## References
 
 - [ROUTING.md](./references/ROUTING.md): 詳細なルーティングルール
-- [SIMPLIFY.md](./references/SIMPLIFY.md): 品質クリーンアップ4観点（Reuse / Simplification / Efficiency / Altitude）の実行手順と委譲表
+- [SIMPLIFY.md](./references/SIMPLIFY.md): 品質クリーンアップ4観点の実行手順と委譲表
