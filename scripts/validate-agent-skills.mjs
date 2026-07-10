@@ -34,10 +34,24 @@ export const PROHIBITED_NOUN_EXEMPT = new Set(['setup-team', 'review-team']);
 export const NAME_MAX_LENGTH = 64;
 export const RESERVED_NAME_WORDS = ['anthropic', 'claude'];
 
-/** Return the prohibited organizational noun used as a word in `name`, or null. */
+/**
+ * Return the prohibited organizational noun used as a hyphen-delimited word in
+ * `name`, or null. Case-insensitive so an uppercase variant (e.g. `Foo-Team`)
+ * cannot slip past the check (gemini review on PR #1468).
+ */
 export function findProhibitedNoun(name) {
-  const words = String(name ?? '').split('-');
+  const words = String(name ?? '')
+    .toLowerCase()
+    .split('-');
   return PROHIBITED_NAME_NOUNS.find((noun) => words.includes(noun)) ?? null;
+}
+
+/**
+ * True when `name` is on the grandfathered exemption list, compared
+ * case-insensitively for robustness (gemini review on PR #1468).
+ */
+export function isProhibitedNounExempt(name) {
+  return PROHIBITED_NOUN_EXEMPT.has(String(name ?? '').toLowerCase());
 }
 
 /** Return the reserved word contained in `name` (case-insensitive), or null. */
@@ -177,7 +191,7 @@ async function validateSkill(skillPath) {
   // Advisory: organizational noun in the name (warning-level, grandfathered
   // names exempt). See skills/README.md § "Common prohibitions and consistency".
   const nounTarget = name ?? dirName;
-  if (!PROHIBITED_NOUN_EXEMPT.has(nounTarget) && !PROHIBITED_NOUN_EXEMPT.has(dirName)) {
+  if (!isProhibitedNounExempt(nounTarget) && !isProhibitedNounExempt(dirName)) {
     const noun = findProhibitedNoun(nounTarget);
     if (noun) {
       console.warn(

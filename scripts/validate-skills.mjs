@@ -649,7 +649,12 @@ export async function validateFixtureDrift({
  * `foobar`, or `foo-bar` in the registry vs `foobar` as an agent-skill) are a
  * naming collision (skills/README.md § "Common prohibitions and consistency":
  * no names that differ only by hyphenation). A label repeated with the same
- * kind is de-duplicated so it does not self-collide. Pure and exported for
+ * kind is de-duplicated so it does not self-collide. The SAME label across
+ * DIFFERENT kinds (e.g. a registry id equal to an agent-skill name) IS a
+ * collision: it is just as ambiguous at resolution time, and no such pair
+ * exists in the current data (verified against skills/registry.yaml and
+ * skills/agent-skills/ for #1468 review), so erroring is forward-protective
+ * without grandfathering (gemini review on PR #1468). Pure and exported for
  * unit testing.
  *
  * @param {Array<{ label: string, kind: string }>} entries
@@ -662,8 +667,9 @@ export function findRegistryNamingCollisions(entries) {
     const norm = label.toLowerCase().replace(/-/g, '');
     if (!norm) continue;
     if (!byNorm.has(norm)) byNorm.set(norm, new Map());
-    // Key by exact label so the same label listed twice is not a self-collision.
-    byNorm.get(norm).set(label, { label, kind: entry.kind });
+    // Key by label AND kind: the same label listed twice under one kind is not
+    // a self-collision, but the same label under two kinds is reported.
+    byNorm.get(norm).set(`${label}|${entry.kind}`, { label, kind: entry.kind });
   }
   const collisions = [];
   for (const [normalized, map] of byNorm) {

@@ -19,6 +19,7 @@ import {
   findReservedWord,
   normalizeHyphenVariant,
   findHyphenVariantCollisions,
+  isProhibitedNounExempt,
   NAME_MAX_LENGTH,
   PROHIBITED_NOUN_EXEMPT,
 } from '../scripts/validate-agent-skills.mjs';
@@ -80,6 +81,19 @@ test('findProhibitedNoun matches nouns only as whole hyphen-delimited words', ()
   assert.equal(findProhibitedNoun('code-quality'), null);
 });
 
+test('findProhibitedNoun is case-insensitive (gemini #1468)', () => {
+  assert.equal(findProhibitedNoun('Foo-Team'), 'team');
+  assert.equal(findProhibitedNoun('DATA-UTIL'), 'util');
+  assert.equal(findProhibitedNoun('Some-Manager-Skill'), 'manager');
+});
+
+test('isProhibitedNounExempt is case-insensitive (gemini #1468)', () => {
+  assert.ok(isProhibitedNounExempt('review-team'));
+  assert.ok(isProhibitedNounExempt('Review-Team'));
+  assert.ok(isProhibitedNounExempt('SETUP-TEAM'));
+  assert.ok(!isProhibitedNounExempt('other-team'));
+});
+
 // ---------------------------------------------------------------------------
 // Anthropic-derived hard constraints (error-level).
 // ---------------------------------------------------------------------------
@@ -138,12 +152,26 @@ test('findRegistryNamingCollisions flags a registry id colliding with an agent-s
   assert.deepEqual(collisions[0].entries.map((e) => e.label).sort(), ['code-review', 'codereview']);
 });
 
-test('findRegistryNamingCollisions de-duplicates identical labels (no self-collision)', () => {
+test('findRegistryNamingCollisions de-duplicates identical label+kind (no self-collision)', () => {
   const entries = [
     { label: 'same-id', kind: 'registry id' },
     { label: 'same-id', kind: 'registry id' },
   ];
   assert.deepEqual(findRegistryNamingCollisions(entries), []);
+});
+
+test('findRegistryNamingCollisions flags the SAME label across different kinds (gemini #1468)', () => {
+  // A registry id identical to an agent-skill name is ambiguous at resolution
+  // time. No such pair exists in the current data (verified for #1468), so
+  // this is error-level with no grandfathering.
+  const entries = [
+    { label: 'shared-name', kind: 'registry id' },
+    { label: 'shared-name', kind: 'agent-skill' },
+  ];
+  const collisions = findRegistryNamingCollisions(entries);
+  assert.equal(collisions.length, 1);
+  assert.equal(collisions[0].normalized, 'sharedname');
+  assert.deepEqual(collisions[0].entries.map((e) => e.kind).sort(), ['agent-skill', 'registry id']);
 });
 
 // ---------------------------------------------------------------------------
