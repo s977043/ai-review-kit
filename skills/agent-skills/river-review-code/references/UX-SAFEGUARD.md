@@ -39,7 +39,7 @@ River Review の契約に従い **report-only** である。fix は「次の最�
 - 差分に追加された削除・上書き・公開・送信取り消し不能な操作のハンドラに、確認ステップ（確認ダイアログ・タイプ確認・二段階操作）または取り消し手段（undo・ソフトデリート・猶予期間）が存在するか
 - 一括操作（複数件削除・全件更新）は単件操作より高い基準で確認する（影響件数の提示があるか）
 - 検出時は**差分内の操作ハンドラ**（`file:line`）にアンカーし、どの安全装置が欠けているかを特定して指摘する
-- 証拠要件: 確認 UI・undo 機構が**別ファイルに存在する可能性**を code_search（confirm / dialog / undo / restore / softDelete 等）で棄却できた場合のみ findings とする。棄却できない場合は questions に落とす
+- 証拠要件: 確認 UI・undo 機構が**別ファイルに存在する可能性**を code_search（confirm / dialog / modal / alert / prompt / cancel / undo / restore / rollback / softDelete 等）で棄却できた場合のみ findings とする。棄却できない場合は questions に落とす
 
 ### 2. Error Recovery（入力エラーの回復支援）
 
