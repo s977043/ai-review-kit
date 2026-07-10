@@ -38,7 +38,7 @@ Why: 非同期 correctness はチェックリスト型評価が主だが、async
 
 このスキルは以下の条件が**すべて**満たされない限り`NO_REVIEW`を返す。
 
-- [ ] 差分の追加・変更行に `async` / `await` / `.then` / `Promise` / `.catch` のいずれかが出現する
+- [ ] 差分の追加・変更行に `async` / `await` / `.then` / `.catch` / `.finally` / `Promise` のいずれかが出現する
 - [ ] inputContext に diff が含まれている
 
 ゲート不成立時の出力: `NO_REVIEW: async-correctness — 非同期処理を含む変更が検出されない`
@@ -59,6 +59,7 @@ Why: 非同期 correctness はチェックリスト型評価が主だが、async
 - **エラー伝播の断絶**: `try` ブロック内で await せずに Promise を return し、catch が効かない構造になっていないか。
 - **並行競合**: 同一リソースへの check-then-act（TOCTOU）、`Promise.all` 内での同一状態への書き込み、ループ内の共有変数への非同期書き込みがないか。
 - **待たれないコレクション反復**: `forEach` に async コールバックを渡して完了を待たずに後続処理へ進んでいないか（`for...of` + await または `Promise.all(map(...))` が必要な文脈か確認）。
+- **非同期コールバックの誤用**: `filter` に async コールバックを渡していないか（Promise は常に truthy のため全件が残り、フィルタリングが機能しない）。`reduce` で Promise のハンドリングが壊れていないか。
 - 指摘は最大 5 件。データ破壊・順序依存バグに直結するものを優先する。
 
 ## Evidence / 根拠の取り方
@@ -82,9 +83,9 @@ River Review のコメントは`<file>:<line>: <message>`形式です。コメ�
 ## Heuristics / 判定の手がかり
 
 - `async` 関数内で戻り値が使われない Promise 呼び出し（`.then` / `await` / `void` / 変数代入のいずれもない）
-- `if` / 三項演算子 / `!` の条件位置にある async 関数呼び出し
+- `if` / `while` / `switch` / 三項演算子 / `!` の条件位置にある async 関数呼び出し
 - `try { return asyncFn(); } catch` の形（await なし return）
-- `forEach(async ...)` パターン
+- `forEach(async ...)` / `filter(async ...)` パターン
 - ループ・`Promise.all` 内での同一変数・同一キーへの書き込み
 
 ## Good / Bad Examples
