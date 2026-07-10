@@ -17,14 +17,14 @@ River Review の契約に従い **report-only** である。fix は「次の最�
 
 重複指摘を避けるため、以下の領域は既存 registry skill に委譲する。本観点は**委譲先が扱わない残余のみ**を検出する。
 
-| 対象領域                             | 委譲先                            | 本観点が扱う残余                                                                                                                                                   |
-| ------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 先行実装と同型の共通ロジック再実装   | `existing-pattern-conformance`    | 委譲するのは「呼び出して置換可能」と確定した先行パターンへの準拠のみ。inline の先行実装・標準/依存 API の再実装・同型性が不確定な重複（info で出す）は本観点が扱う |
-| UI プリミティブ（Button 等）の再実装 | `design-system-component-reuse`   | UI 以外の再実装                                                                                                                                                    |
-| 冗長・無効 state の型による排除      | `type-driven-design`              | 型で表現しない導出 state（既存 state から計算可能な保持）                                                                                                          |
-| N+1・逐次 DB I/O（Laravel）          | `laravel-eloquent-nplus1`         | Laravel 以外の繰返し I/O・並列化可能な独立 await                                                                                                                   |
-| i18n 未使用キー                      | `i18n-unused-key`                 | i18n 以外の dead code（未使用 export・到達不能分岐）                                                                                                               |
-| 深いネストの平坦化                   | SKILL.md チェックリスト（可読性） | —                                                                                                                                                                  |
+| 対象領域                             | 委譲先                                           | 本観点が扱う残余                                                                                                                                                   |
+| ------------------------------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 先行実装と同型の共通ロジック再実装   | `existing-pattern-conformance`                   | 委譲するのは「呼び出して置換可能」と確定した先行パターンへの準拠のみ。inline の先行実装・標準/依存 API の再実装・同型性が不確定な重複（info で出す）は本観点が扱う |
+| UI プリミティブ（Button 等）の再実装 | `design-system-component-reuse`                  | UI 以外の再実装                                                                                                                                                    |
+| 冗長・無効 state の型による排除      | `type-driven-design`                             | 型で表現しない導出 state（既存 state から計算可能な保持）                                                                                                          |
+| N+1・逐次 DB I/O（Laravel）          | `laravel-eloquent-nplus1`                        | Laravel 以外の繰返し I/O・並列化可能な独立 await                                                                                                                   |
+| i18n 未使用キー                      | `i18n-unused-key`                                | i18n 以外の dead code（未使用 export・到達不能分岐）                                                                                                               |
+| 深いネストの平坦化                   | [SKILL.md](../SKILL.md) チェックリスト（可読性） | —                                                                                                                                                                  |
 
 ## 各観点のチェック / Checks
 
@@ -76,4 +76,4 @@ River Review の契約に従い **report-only** である。fix は「次の最�
 
 ## Output
 
-SKILL.md の Output Format に従い（Finding / Impact / Fix）、各 finding に Severity と Confidence（`high` / `medium` / `low`）を併記する。severity は**出力スキーマ語彙**（`info` / `minor` / `major`）で書く（内部語彙 blocker/warning/nit との対応は `.claude/rules/review-core.md` を参照）。`minor` を起点とし、無駄の規模が大きく確証が強い場合のみ `major`。確信が持てない場合は `info` に落とす（VERIFICATION の calibration 規則）。
+[SKILL.md](../SKILL.md) の Output Format に従い（Finding / Impact / Fix）、各 finding に Severity と Confidence（`high` / `medium` / `low`）を併記する。severity は**出力スキーマ語彙**（`info` / `minor` / `major`）で書く（内部語彙 blocker/warning/nit との対応は `.claude/rules/review-core.md` を参照）。`minor` を起点とし、無駄の規模が大きく確証が強い場合のみ `major`。確信が持てない場合は `info` に落とす（VERIFICATION の calibration 規則）。
