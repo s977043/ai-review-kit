@@ -25,6 +25,8 @@
 
 メタデータの定義は `schemas/skill.schema.json`、一覧は `pages/reference/metadata-fields.md` を参照してください。
 
+スキル名の付け方（新規作成・外部からの取り込みの命名規則）は [skills/README.md の「Naming」節](https://github.com/s977043/river-review/blob/main/skills/README.md#naming) を参照してください。
+
 最小の frontmatter（必須）:
 
 - `id`: 安定した識別子（移動・リネームしても不変）
