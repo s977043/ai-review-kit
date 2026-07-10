@@ -39,6 +39,7 @@ license: MIT
 | コメント, トリアージ      | `review-comment-triage`      | レビューコメント分類         |
 | a11y, アクセシビリティ    | `a11y-accessible-name`       | アクセシビリティ基本         |
 | Next.js, App Router       | `nextjs-app-router-boundary` | Next.js 境界チェック         |
+| 幻覚的参照, 実在確認      | `hallucinated-reference`     | 新規参照の実在確認           |
 | 簡素化, 整理, simplify    | SIMPLIFY 観点（本 skill 内） | 品質クリーンアップ4観点      |
 
 ### デフォルト動作
@@ -97,6 +98,7 @@ license: MIT
    ├─ logging-observability: ロギング・可観測性
    ├─ review-automation-boundary: レビュー自動化の境界
    ├─ a11y-accessible-name: アクセシビリティ
+   ├─ hallucinated-reference: 新規参照の実在確認
    └─ nextjs-app-router-boundary: Next.js境界
 
 3. 統合

@@ -90,6 +90,117 @@ This interactive tool will:
 3. Keep the body concise with Guidance / Non-goals / False-positive guards
 4. (Optional) Add fixtures or promptfoo configs under a sibling directory if you need evaluations
 
+## Naming
+
+Rules for naming skills — both when creating a new skill and when importing a concept or implementation from another project. These rules apply to **new names only**; existing names are grandfathered (see [Grandfathered names](#grandfathered-names)).
+
+### Import decision framework (Q0–Q5)
+
+When importing from another project (an OSS tool, another repo's skill, a published technique), decide between "keep the original name" and "rename" with the gates below. Q0 only classifies the input; Q1–Q5 are sequential gates evaluated top-down with early return — the first gate that decides is final.
+
+```text
+Q0 (input node). Are you importing the artifact itself, or reimplementing the concept?
+    -> Artifact (vendoring / wrapper / bundle): default to keeping the original name; go to Q1
+       (Homebrew rule: use the name the project calls itself)
+    -> Concept / technique reimplementation: default to renaming; go to Q1
+       (fork rule: the name is outside the license)
+
+---- Sequential gates: stop at the first gate that decides ----
+
+Q1 (hard gate, highest priority). Does the original name collide?
+   Is there a trademark or origin-confusion risk?
+    -> Collides with an id / dir / command name inside this repo: RENAME (unconditional)
+    -> Is another company's brand or trademark, or implies the same origin: RENAME (unconditional)
+    -> Collides only across the ecosystem (other plugins): if a namespace prefix
+       (e.g. `river-review:`) resolves the ambiguity, balance against Q3
+       (keeping the original name is allowed)
+    Explicit exception: /simplify collides with the built-in simplify skill across the
+    ecosystem, but is prefix-resolvable and has high recognition value (Q3), so the
+    original name was kept.
+
+Q2. Does the role or meaning change from the original in this repo?
+    -> Changes fundamentally: rename
+    -> Partial adaptation (definition below): keep the original name + state the origin
+    "Partial adaptation" = the core detection/evaluation value is identical to the
+    original, and only the application or output mode changes.
+    Example: /simplify changed "auto-apply" to "report-only", but the core value
+    (readability / duplication / efficiency cleanups) is identical
+    -> partial adaptation -> original name kept.
+
+Q3. Is the original name's recognition value high (users search by that name)?
+    -> YES: keep the original name + state the origin (subordinate to the Q1 hard gate)
+
+Q4. Does the original name fit this repo's naming family?
+    -> NO: rename + state the origin
+
+Q5. None of the above -> coin a new name that states the role
+    (name the value, not the mechanism).
+```
+
+The framework is a tie-breaker; the final call is made in PR review. The Q0 defaults follow the Homebrew convention for imported artifacts [^homebrew] and the fork convention for concept reimplementations [^fork].
+
+Common rules for either outcome:
+
+- State the origin ("inspired by ..." + link) at the top of `SKILL.md` for every new import. Wording that implies the same origin or an endorsement is not allowed (stay within nominative fair use). This requirement applies to new imports only.
+- Never use another company's brand or trademark as a skill name.
+- When renaming, keep the original name in `tags` or in the body for searchability.
+- Renaming a distributed command requires a calendar-based deprecation window (at minimum 90 days, or an explicit removal version recorded in `docs/deprecated.md`) — never "N releases", which under a weekly release cadence amounts to no grace period.
+
+### Naming rules by skill kind
+
+This repo has two naming systems. Do not mix them up.
+
+**Agent skills** (`skills/agent-skills/<dir>/SKILL.md`):
+
+| Field             | Rule                                                                                    | Enforced by                     |
+| ----------------- | --------------------------------------------------------------------------------------- | ------------------------------- |
+| directory name    | lowercase kebab-case                                                                    | `npm run agent-skills:validate` |
+| `metadata.name`   | must equal the directory name (no separate display name)                                | `npm run agent-skills:validate` |
+| router skills     | `river-review-<domain>` (e.g. `river-review-code`, `river-review-security`)             | convention                      |
+| review techniques | `<value>-review` — name the differentiating value, not the mechanism                    | convention (see note below)     |
+| imported skills   | `metadata.metadata.source: agent` may use a generated id (`as-<name>`) as the directory | validator exemption             |
+
+**Registry skills** (`skills/registry.yaml` entries):
+
+| Field  | Rule                                                           | Example                            |
+| ------ | -------------------------------------------------------------- | ---------------------------------- |
+| `id`   | lowercase kebab-case; the reference and identity key           | `security-privacy-design`          |
+| `name` | display name; Title Case, symbols, and Japanese are acceptable | `Security & Privacy Design Review` |
+
+Agent skills use a "directory = name" identity rule; registry skills separate `id` (kebab-case) from `name` (display). Applying Title Case to an agent-skill directory, or forcing kebab-case onto a registry display name, are both wrong.
+
+### Common prohibitions and consistency
+
+- No organizational nouns (team / manager / helper / util), no names that state only the mechanism, no names that differ from an existing one only by hyphenation, and no collisions with reserved vocabulary already used elsewhere in the repo.
+- A skill name should echo **one primary output key** of its output contract (e.g. a consensus-scoring skill echoing `consensusLevel`). Correspondence with every output key is not required.
+- Use noun phrases. The rationale is collection-internal consistency (Anthropic accepts noun phrases) [^anthropic]; do not switch the collection to gerunds.
+- The `<value>-review` family currently has a single precedent (`adversarial-review`). Align with that precedent for now; revisit the pattern if later additions diverge.
+- "When to use" belongs in `description` — `name` is for reference and identity [^anthropic] [^npm].
+
+### Anthropic-derived constraints
+
+- `name` must be at most 64 characters and must not contain the reserved words `anthropic` or `claude` [^anthropic].
+- These constraints are codified here but are **not yet enforced by the validators**; the validator work is tracked separately (see issue [#1463](https://github.com/s977043/river-review/issues/1463)).
+
+### Grandfathered names
+
+The rules above apply to new names only. The following existing names are explicitly exempt; renaming any of them requires a dedicated issue with a cost/benefit case:
+
+- `setup-team` (distributed command)
+- `review-team` (rename deferred; see issue [#1463](https://github.com/s977043/river-review/issues/1463))
+- `teamLeadReport` (JSON output key; kept stable for output consumers)
+- imported-skill generated ids (`as-<name>`; already exempted by the validator)
+
+### Sources
+
+[^homebrew]: [Homebrew Formula Cookbook](https://docs.brew.sh/Formula-Cookbook) — imported artifacts keep the name the project calls itself.
+
+[^fork]: [Open Source Guides: The Legal Side of Open Source](https://opensource.guide/legal/) — reimplementations and forks rename; attribution stays nominative.
+
+[^anthropic]: [Anthropic skill authoring best practices](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/best-practices) — name length and reserved words, avoiding vague names, collection consistency, and description-driven discovery.
+
+[^npm]: [npm package name guidelines](https://docs.npmjs.com/package-name-guidelines) — avoid generic names; typosquat protections.
+
 ## Validating Skills
 
 ```bash
