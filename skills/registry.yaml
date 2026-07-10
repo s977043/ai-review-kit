@@ -761,6 +761,17 @@ skills:
     recommended: true
     description: 'モジュール/スキルの構造変更で当該ファイルは更新したが、caller 側が古い構造（旧参照・旧シグネチャ・旧採番）を参照したまま残るパターンを検出する'
 
+  - id: hallucinated-reference
+    version: '0.1.0'
+    name: 'Hallucinated Reference 幻覚的参照の実在確認'
+    path: skills/midstream/hallucinated-reference/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [hallucination, reference-existence, ai-generated-code, correctness, midstream]
+    severity: major
+    recommended: false
+    description: '差分で新規導入された import・呼び出し・ライブラリ API の実在を code_search で検証し、AI 生成コードの幻覚的参照を検出する'
+
   - id: e2e-wiring
     version: '0.1.0'
     name: 'End-to-End Wiring 末端到達・貫通の検証'
