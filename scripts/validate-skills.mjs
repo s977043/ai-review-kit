@@ -643,6 +643,93 @@ export async function validateFixtureDrift({
   return success;
 }
 
+/**
+ * Detect hyphen-variant collisions across a labeled set of identifiers: two
+ * DISTINCT labels that become equal after stripping hyphens (e.g. `foo-bar` vs
+ * `foobar`, or `foo-bar` in the registry vs `foobar` as an agent-skill) are a
+ * naming collision (skills/README.md § "Common prohibitions and consistency":
+ * no names that differ only by hyphenation). A label repeated with the same
+ * kind is de-duplicated so it does not self-collide. Pure and exported for
+ * unit testing.
+ *
+ * @param {Array<{ label: string, kind: string }>} entries
+ * @returns {Array<{ normalized: string, entries: Array<{ label: string, kind: string }> }>}
+ */
+export function findRegistryNamingCollisions(entries) {
+  const byNorm = new Map();
+  for (const entry of entries ?? []) {
+    const label = typeof entry?.label === 'string' ? entry.label : '';
+    const norm = label.toLowerCase().replace(/-/g, '');
+    if (!norm) continue;
+    if (!byNorm.has(norm)) byNorm.set(norm, new Map());
+    // Key by exact label so the same label listed twice is not a self-collision.
+    byNorm.get(norm).set(label, { label, kind: entry.kind });
+  }
+  const collisions = [];
+  for (const [normalized, map] of byNorm) {
+    if (map.size > 1) collisions.push({ normalized, entries: [...map.values()] });
+  }
+  return collisions;
+}
+
+/**
+ * Registry naming-collision gate: every registry `id` and every agent-skill
+ * directory name must stay unique after hyphen-normalization, so a new entry
+ * cannot shadow an existing identifier by merely adding/removing a hyphen
+ * (skills/README.md § Naming; issue #1463). agent-skill directory names are
+ * folded in because a registry id colliding with an agent-skill name is just as
+ * ambiguous at resolution time.
+ *
+ * @param {{ skillsDir?: string, repoRoot?: string }} [options]
+ * @returns {Promise<boolean>} false (→ exitCode 1) on any collision.
+ */
+export async function validateNamingCollisions({ skillsDir = defaultPaths.skillsDir } = {}) {
+  const registryPath = path.join(skillsDir, 'registry.yaml');
+  let parsed;
+  try {
+    parsed = yaml.load(await fs.readFile(registryPath, 'utf8')) ?? {};
+  } catch (err) {
+    console.error(`❌ Failed to read/parse skill registry at ${registryPath}: ${err.message}`);
+    return false;
+  }
+
+  const ids = (Array.isArray(parsed?.skills) ? parsed.skills : [])
+    .map((s) => s?.id)
+    .filter((id) => typeof id === 'string');
+
+  // agent-skill directory names (top-level dirs under skills/agent-skills/).
+  const agentSkillsDir = path.join(skillsDir, 'agent-skills');
+  let agentNames = [];
+  try {
+    const dirents = await fs.readdir(agentSkillsDir, { withFileTypes: true });
+    agentNames = dirents.filter((d) => d.isDirectory()).map((d) => d.name);
+  } catch {
+    // agent-skills dir absent: skip that side.
+  }
+
+  const entries = [
+    ...ids.map((label) => ({ label, kind: 'registry id' })),
+    ...agentNames.map((label) => ({ label, kind: 'agent-skill' })),
+  ];
+  const collisions = findRegistryNamingCollisions(entries);
+
+  let success = true;
+  for (const { normalized, entries: colliding } of collisions) {
+    const desc = colliding.map((e) => `${e.label} (${e.kind})`).join(', ');
+    console.error(
+      `❌ naming collision by hyphenation only: ${desc} — all normalize to "${normalized}"`
+    );
+    success = false;
+  }
+
+  if (success) {
+    console.log(
+      `✅ naming collisions: ${entries.length} identifier(s) unique after hyphen-normalization`
+    );
+  }
+  return success;
+}
+
 const isDirectRun =
   process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
 if (isDirectRun) {
@@ -651,7 +738,14 @@ if (isDirectRun) {
   const evalCoverageOk = await validateRecommendedEvalCoverage();
   const registryPathsOk = await validateRegistryPaths();
   const fixtureDriftOk = await validateFixtureDrift();
-  const ok = skillsOk && packsOk && evalCoverageOk && registryPathsOk && fixtureDriftOk;
+  const namingCollisionsOk = await validateNamingCollisions();
+  const ok =
+    skillsOk &&
+    packsOk &&
+    evalCoverageOk &&
+    registryPathsOk &&
+    fixtureDriftOk &&
+    namingCollisionsOk;
   if (!ok) {
     process.exitCode = 1;
   }
