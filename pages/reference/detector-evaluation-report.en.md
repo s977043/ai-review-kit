@@ -17,23 +17,25 @@ LLM-based review varies from run to run. Deterministic detectors, by contrast, r
 
 ## Scope and method
 
-- **Detectors**: `security-basic` / `logging-observability` / `test-existence` / `coverage-gap`. They run offline (`--offline` / rules-only) and require no API key.
+- **Detectors**: `security-basic` / `logging-observability` / `test-existence` / `coverage-gap` / `altitude-generalization` / `closure-scope-retention`. They run offline (`--offline` / rules-only) and require no API key.
 - **Fixtures**: both cases that _should_ be detected (true positives) and guard cases that must _not_ be flagged (false-positive prevention).
 - **Assertion**: each fixture is checked mechanically against its expectations (`mustInclude` and `maxFindings`).
 - **Source**: the case definitions live in [`tests/fixtures/review-eval/cases.json`](https://github.com/s977043/river-review/blob/main/tests/fixtures/review-eval/cases.json).
 
-## Results (as of 2026-07-05)
+## Results (as of 2026-07-10)
 
-**13 of 13 fixtures pass.** The breakdown:
+**17 of 17 fixtures pass.** The breakdown:
 
 | Category      | Detector(s)                     | Detection cases | Guard (no false positive) | Total |
 | ------------- | ------------------------------- | --------------- | ------------------------- | ----- |
 | secrets       | `security-basic`                | 3               | 1                         | 4     |
 | observability | `logging-observability`         | 2               | 1                         | 3     |
 | tests         | `test-existence` `coverage-gap` | 5               | 1                         | 6     |
-| **Total**     |                                 | **10**          | **3**                     | 13    |
+| altitude      | `altitude-generalization`       | 1               | 1                         | 2     |
+| closure       | `closure-scope-retention`       | 1               | 1                         | 2     |
+| **Total**     |                                 | **12**          | **5**                     | 17    |
 
-Guard cases confirm that safe patterns (for example a `process.env` reference rather than a secret, a `catch` block that logs, or a diff that also updates a test file) are not flagged. They act as canaries that prevent known false positives from recurring ([#1070](https://github.com/s977043/river-review/issues/1070)).
+Guard cases confirm that safe patterns (for example a `process.env` reference rather than a secret, a `catch` block that logs, a diff that also updates a test file, a public option any caller may opt into, or a function that immediately reduces large data and releases it) are not flagged. They act as canaries that prevent known false positives from recurring ([#1070](https://github.com/s977043/river-review/issues/1070)).
 
 ## How to reproduce
 

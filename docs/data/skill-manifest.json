@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 123,
+  "skillCount": 125,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -56,6 +56,12 @@
       "path": "skills/upstream/ai-agent-review-readiness",
       "checksum": "sha256:3211eb63486d24317dbaa0276b23942034bea02556136ce40a20dc3d3a38aab9",
       "files": 7
+    },
+    {
+      "id": "altitude-generalization",
+      "path": "skills/midstream/altitude-generalization",
+      "checksum": "sha256:a0c36f752b3cdf102980a3dbe9a525e9ab42a9252b96aa08c460cacbb85a62cf",
+      "files": 10
     },
     {
       "id": "api-compatibility",
@@ -146,6 +152,12 @@
       "path": "skills/upstream/change-communication",
       "checksum": "sha256:b8f4aea08bf9639420a48a3c1618c2685d87f4ff174f5afe197e3ff3b722386c",
       "files": 1
+    },
+    {
+      "id": "closure-scope-retention",
+      "path": "skills/midstream/closure-scope-retention",
+      "checksum": "sha256:5371b7f7078955a0db36d5302b53b8d00ef54c7fbe403fcaca2f5a7e3ac26cd6",
+      "files": 10
     },
     {
       "id": "code-nextjs",
@@ -606,7 +618,7 @@
     {
       "id": "river-review-code",
       "path": "skills/agent-skills/river-review-code",
-      "checksum": "sha256:fc0fccb5083bec5d24b1f772e0bf83152ab7ba41d98e417bcd4c87a2a9e5e70b",
+      "checksum": "sha256:2e01b7a1efc6247c003093c60508a8f9e0c5e5f76ff583c2e933858083cc00a5",
       "files": 4
     },
     {
