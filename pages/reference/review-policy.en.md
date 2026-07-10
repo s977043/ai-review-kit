@@ -23,6 +23,7 @@ Reviews are conducted from the following perspectives:
 - **Maintainability**: Debuggability, test coverage, documentation
 - **Operations**: Observability, ease of incident investigation, safe rollout and rollback. For diffs touching infra, schema, config, public APIs, or authorization, check log/monitoring sufficiency, secret leakage, migration safety, the need for feature flags or staged rollout, and the blast radius on failure.
 - **Plan alignment**: For large, first-touch, or design-heavy changes, whether deviations from the plan (plan / design / requirements) and their reasons are recorded in the PR and open to review. Not required for small fixes, clear bug fixes, or pattern-following additions.
+- **UX (Usability)**: For diffs touching user-facing operations, whether outcomes and failures are visible to the user and mistakes are recoverable. Covers confirmation steps and undo paths for destructive operations (delete, overwrite, irreversible actions), error messages that show how to recover from invalid input, and the presentation of pending, failure, and empty states. Findings are limited to what can be anchored to code present in the diff.
 
 ### 1.3 Review Attitude
 
@@ -75,6 +76,8 @@ AI reviewers must avoid the following:
 - Assumptions about unstated requirements or context
 - Reviews based on unfounded assumptions
 
+Note that "absence findings" (pointing out something that does not exist, such as a missing confirmation step or missing error-state handling) do not fall under this prohibition as long as they are anchored to trigger code that exists in the diff (`file:line`). If a code search cannot rule out that the missing piece exists outside the diff or in another file, return a question instead of a finding.
+
 ### 3.2 Abstract Reviews
 
 - Reviews with only generic statements (no specific reference to the diff)
@@ -103,6 +106,8 @@ River Review adopts flow-based reviews, emphasizing the following in each phase 
 - Verification against ADRs (Architecture Decision Records)
 - Clarity of design intent
 - Appropriateness of interface design
+- Restraint of over-implementation: question speculative abstractions, unused extension points, and excessive generalization that appear in the diff or ADRs against current requirements. Code-level duplication and simplification belong to the Midstream quality perspectives, and this is distinct from the plan-artifact-based over-implementation checks of the PlanGate skills.
+- Self-sufficiency of the API/tool layer: whether APIs and tool definitions work safely and self-descriptively on their own, assuming no UI guardrails. Concrete detection is handled by skills such as `trust-boundaries-authz` and `nextjs-server-action-security`; this item names their shared principle.
 
 ### 4.2 Midstream (Implementation Phase)
 
