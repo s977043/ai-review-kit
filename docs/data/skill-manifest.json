@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 121,
+  "skillCount": 123,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -110,6 +110,12 @@
       "path": "skills/upstream/architecture-validation-plan",
       "checksum": "sha256:047f5d9f6e3232a661ab86b083f4e9baa0f490596d15785474a1458c755d674e",
       "files": 9
+    },
+    {
+      "id": "async-correctness",
+      "path": "skills/midstream/async-correctness",
+      "checksum": "sha256:efeeb9ef33613f27d5e4efbb1a16595d84f74ff0aca711ba6ddcd5e93f53a11b",
+      "files": 3
     },
     {
       "id": "availability-architecture",
@@ -322,6 +328,12 @@
       "files": 4
     },
     {
+      "id": "hallucinated-reference",
+      "path": "skills/midstream/hallucinated-reference",
+      "checksum": "sha256:3af7f1364671db3066019c6ba0f868425e59a8004c5582685d2298719fa793b6",
+      "files": 3
+    },
+    {
       "id": "hello-skill",
       "path": "skills/midstream/hello-skill",
       "checksum": "sha256:99efc6ec9a9e7b77de1fba3fb48afbe0c99f62e85a4f5973927336ee14e45927",
@@ -444,7 +456,7 @@
     {
       "id": "nullability-contract",
       "path": "skills/midstream/nullability-contract",
-      "checksum": "sha256:bb69a0ef8d91fcd428080b0a4787480cebcd26c57bd5d531a8aee9b96d0447c2",
+      "checksum": "sha256:407cd9614b449ce32437d5f585a315b750bad893e9d66b436fdcd1eff744aa9a",
       "files": 5
     },
     {
@@ -576,7 +588,7 @@
     {
       "id": "review-team",
       "path": "skills/agent-skills/review-team",
-      "checksum": "sha256:da4bcadd468ce2c6a49d6e0888e167e756c592aae7ffa33e288b7a46661e2f3f",
+      "checksum": "sha256:88096e5bd66c27dd4b21b48f648bd88678b012f56d7eca6d740de2a1afc5ffa1",
       "files": 1
     },
     {
@@ -594,7 +606,7 @@
     {
       "id": "river-review-code",
       "path": "skills/agent-skills/river-review-code",
-      "checksum": "sha256:1ee942eb4bb71ee816584d284ee244f34ed2cdaebda5434026fe90207a1aa624",
+      "checksum": "sha256:fc0fccb5083bec5d24b1f772e0bf83152ab7ba41d98e417bcd4c87a2a9e5e70b",
       "files": 4
     },
     {

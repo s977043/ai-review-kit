@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.44.0](https://github.com/s977043/river-review/compare/v1.43.1...v1.44.0) (2026-07-10)
+
+
+### Features
+
+* **skills:** river-review-code に simplify 品質クリーンアップ観点を追加する ([#1453](https://github.com/s977043/river-review/issues/1453)) ([c5bb2d8](https://github.com/s977043/river-review/commit/c5bb2d8a331ced5562b61eb1f7e0c956b1a4d7cb))
+
 ## [1.43.1](https://github.com/s977043/river-review/compare/v1.43.0...v1.43.1) (2026-07-09)
 
 

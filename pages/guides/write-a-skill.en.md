@@ -25,6 +25,8 @@ A skill consists of YAML frontmatter (metadata) and Markdown body (instruction).
 
 See `schemas/skill.schema.json` for definitions and `pages/reference/metadata-fields.en.md` for the list.
 
+For naming rules (new skills and imports), see the [Naming section of skills/README.md](https://github.com/s977043/river-review/blob/main/skills/README.md#naming).
+
 Minimum frontmatter (Required):
 
 - `id`: Stable identifier (Invariant across move/rename)
