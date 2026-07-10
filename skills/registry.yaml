@@ -770,7 +770,7 @@ skills:
     tags: [hallucination, reference-existence, ai-generated-code, correctness, midstream]
     severity: major
     recommended: false
-    description: '差分で新規に導入された import・メソッド呼び出し・ライブラリ API 参照が実在するかを code_search で検証し、AI 生成コード特有の幻覚的参照（存在しない関数・メソッド・モジュール・引数シグネチャ）を検出する'
+    description: '差分で新規導入された import・呼び出し・ライブラリ API の実在を code_search で検証し、AI 生成コードの幻覚的参照を検出する'
 
   - id: e2e-wiring
     version: '0.1.0'
