@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 121,
+  "skillCount": 122,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -322,6 +322,12 @@
       "files": 4
     },
     {
+      "id": "hallucinated-reference",
+      "path": "skills/midstream/hallucinated-reference",
+      "checksum": "sha256:3af7f1364671db3066019c6ba0f868425e59a8004c5582685d2298719fa793b6",
+      "files": 3
+    },
+    {
       "id": "hello-skill",
       "path": "skills/midstream/hello-skill",
       "checksum": "sha256:99efc6ec9a9e7b77de1fba3fb48afbe0c99f62e85a4f5973927336ee14e45927",
@@ -594,7 +600,7 @@
     {
       "id": "river-review-code",
       "path": "skills/agent-skills/river-review-code",
-      "checksum": "sha256:280ed02abd0dad7b7b2ac1ea667884c3a56c9b9e387b4d8b75d8f71b6509011b",
+      "checksum": "sha256:675d730679fa96a587f86558aca655c04256a4ec7310a8b18b7c3622274ebff6",
       "files": 3
     },
     {
