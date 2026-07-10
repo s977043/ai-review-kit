@@ -594,8 +594,8 @@
     {
       "id": "river-review-code",
       "path": "skills/agent-skills/river-review-code",
-      "checksum": "sha256:088891e62d8de81138fcf323c5457c9f9cafe4cc42a3056fe1db80deefdec171",
-      "files": 2
+      "checksum": "sha256:21f0d2f0c35f859cc4e6c101b664680ef9982982ce876dba46912ca0b3474faf",
+      "files": 3
     },
     {
       "id": "river-review-docs",
