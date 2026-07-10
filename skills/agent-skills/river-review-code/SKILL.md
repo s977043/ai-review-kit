@@ -28,19 +28,20 @@ license: MIT
 
 ## Routing / ルーティング
 
-| キーワード                | スキルID                     | 説明                         |
-| ------------------------- | ---------------------------- | ---------------------------- |
-| 型, TypeScript, strict    | `typescript-strict`          | TypeScript strict モード準拠 |
-| null, undefined, optional | `typescript-nullcheck`       | null 安全性チェック          |
-| 非同期, await, Promise    | `async-correctness`          | 非同期処理の正しさ検証       |
-| 型駆動, 設計              | `type-driven-design`         | 型駆動設計                   |
-| ログ, 監視                | `logging-observability`      | ロギング・可観測性           |
-| 自動化, 境界              | `review-automation-boundary` | レビュー自動化の境界         |
-| コメント, トリアージ      | `review-comment-triage`      | レビューコメント分類         |
-| a11y, アクセシビリティ    | `a11y-accessible-name`       | アクセシビリティ基本         |
-| Next.js, App Router       | `nextjs-app-router-boundary` | Next.js 境界チェック         |
-| 幻覚的参照, 実在確認      | `hallucinated-reference`     | 新規参照の実在確認           |
-| 簡素化, 整理, simplify    | SIMPLIFY 観点（本 skill 内） | 品質クリーンアップ4観点      |
+| キーワード                 | スキルID                         | 説明                         |
+| -------------------------- | -------------------------------- | ---------------------------- |
+| 型, TypeScript, strict     | `typescript-strict`              | TypeScript strict モード準拠 |
+| null, undefined, optional  | `typescript-nullcheck`           | null 安全性チェック          |
+| 非同期, await, Promise     | `async-correctness`              | 非同期処理の正しさ検証       |
+| 型駆動, 設計               | `type-driven-design`             | 型駆動設計                   |
+| ログ, 監視                 | `logging-observability`          | ロギング・可観測性           |
+| 自動化, 境界               | `review-automation-boundary`     | レビュー自動化の境界         |
+| コメント, トリアージ       | `review-comment-triage`          | レビューコメント分類         |
+| a11y, アクセシビリティ     | `a11y-accessible-name`           | アクセシビリティ基本         |
+| Next.js, App Router        | `nextjs-app-router-boundary`     | Next.js 境界チェック         |
+| 幻覚的参照, 実在確認       | `hallucinated-reference`         | 新規参照の実在確認           |
+| 簡素化, 整理, simplify     | SIMPLIFY 観点（本 skill 内）     | 品質クリーンアップ4観点      |
+| 破壊的操作, undo, 回復支援 | UX-SAFEGUARD 観点（本 skill 内） | 操作の安全装置2観点          |
 
 ### デフォルト動作
 
@@ -88,7 +89,7 @@ license: MIT
    ├─ コンポーネントファイル → a11yチェックを追加
    ├─ 設定ファイル → 型駆動設計チェックを選択
    └─ キーワード指定あり → 該当スキルを直接選択
-      （SIMPLIFY 観点のキーワード該当時は本 skill 内で実行。キーワードは ROUTING.md を参照）
+      （SIMPLIFY / UX-SAFEGUARD 観点のキーワード該当時は本 skill 内で実行。キーワードは ROUTING.md を参照）
 
 2. スキルの実行
    ├─ typescript-strict: strictモード準拠
@@ -150,3 +151,4 @@ license: MIT
 
 - [ROUTING.md](./references/ROUTING.md): 詳細なルーティングルール
 - [SIMPLIFY.md](./references/SIMPLIFY.md): 品質クリーンアップ4観点の実行手順と委譲表
+- [UX-SAFEGUARD.md](./references/UX-SAFEGUARD.md): 操作の安全装置2観点（破壊的操作の確認・取り消し / 入力エラーの回復支援）の実行手順と委譲表
