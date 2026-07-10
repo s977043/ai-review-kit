@@ -14,6 +14,13 @@
 - 英語: null, undefined, optional, nullable
 - → `typescript-nullcheck`
 
+### 非同期処理の正しさ
+
+- 日本語: 非同期, await 漏れ, Promise, 競合, レースコンディション
+- 英語: async, await, floating promise, race condition, unhandled rejection
+- → `async-correctness`
+- 注意: 逐次 await の**並列化提案**は SIMPLIFY 観点 Efficiency、**配線断点**（発火しっぱなしで経路が途切れる）は `e2e-wiring` が担う。本スキルは「await を忘れて結果・順序・エラー伝播が壊れる」correctness のみ
+
 ### 型駆動設計
 
 - 日本語: 型駆動, 設計, 型で表現
@@ -111,6 +118,13 @@
 - 日本語: クロージャ, スコープ保持, メモリ保持, シングルトンのキャッシュ肥大
 - 英語: closure, scope retention, memory retention, environment capture
 - → `closure-scope-retention`
+
+### 幻覚的参照の実在確認
+
+- 日本語: 幻覚的参照, 存在しない参照, 実在確認, 未定義の関数, 存在しない API
+- 英語: hallucinated reference, nonexistent reference, reference existence, undefined function
+- → `hallucinated-reference`
+- 注意: 「ハルシネーション検証 / hallucination guard」は `independent-review-synthesis`（レビュー指摘の evidence 実在確認）に割り当て済みのため、本スキルのキーワードにしない。**レビュー指摘の幻覚**は independent-review-synthesis、**コード内参照の幻覚**は hallucinated-reference が担う
 
 ## 自動判定ルール
 

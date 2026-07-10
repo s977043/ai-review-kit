@@ -783,6 +783,17 @@ skills:
     recommended: true
     description: 'モジュール/スキルの構造変更で当該ファイルは更新したが、caller 側が古い構造（旧参照・旧シグネチャ・旧採番）を参照したまま残るパターンを検出する'
 
+  - id: hallucinated-reference
+    version: '0.1.0'
+    name: 'Hallucinated Reference 幻覚的参照の実在確認'
+    path: skills/midstream/hallucinated-reference/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [hallucination, reference-existence, ai-generated-code, correctness, midstream]
+    severity: major
+    recommended: false
+    description: '差分で新規導入された import・呼び出し・ライブラリ API の実在を code_search で検証し、AI 生成コードの幻覚的参照を検出する'
+
   - id: e2e-wiring
     version: '0.1.0'
     name: 'End-to-End Wiring 末端到達・貫通の検証'
@@ -793,6 +804,17 @@ skills:
     severity: major
     recommended: true
     description: '宣言した処理（計測 / 通知 / 保存 / 検証 / 例外通知）が起点から末端まで途切れず配線されているかを確認し、「実装したつもり」で経路が途中で止まっている欠落を検出する'
+
+  - id: async-correctness
+    version: '0.1.0'
+    name: 'Async Correctness 非同期処理の正しさ検証'
+    path: skills/midstream/async-correctness/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [async, await, promise, race-condition, correctness, midstream]
+    severity: major
+    recommended: false
+    description: 'await 漏れ・floating promise・並行競合など非同期処理の correctness バグを検出する（並列化提案・配線断点は対象外）'
 
   - id: existing-pattern-conformance
     version: '0.1.0'

@@ -30,6 +30,7 @@ Reviews are conducted from the following perspectives:
 - **Emphasize Specificity**: Provide concrete comments based on the diff, not generic statements
 - **Present Improvements**: Not only point out problems but also suggest improvements or alternatives when possible
 - **Constructive Tone**: Aim to assist developers with a neutral and collaborative tone, not critical
+- **Healthy Skepticism toward Generated Code**: In AI-generated code, plausible-looking references and implementations may not match reality or intent. Verify that newly introduced references and API usages actually exist before evaluating them
 
 ## 2. Output Format
 
@@ -114,6 +115,7 @@ River Review adopts flow-based reviews, emphasizing the following in each phase 
 - Adherence to naming conventions and style guides
 - Appropriate error handling
 - Reduction of code duplication
+- Async correctness (missing await, floating promises, race conditions — distinct from parallelization suggestions for efficiency)
 
 ### 4.3 Downstream (Test/QA Phase)
 

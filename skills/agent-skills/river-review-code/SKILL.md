@@ -32,12 +32,14 @@ license: MIT
 | ------------------------- | ---------------------------- | ---------------------------- |
 | 型, TypeScript, strict    | `typescript-strict`          | TypeScript strict モード準拠 |
 | null, undefined, optional | `typescript-nullcheck`       | null 安全性チェック          |
+| 非同期, await, Promise    | `async-correctness`          | 非同期処理の正しさ検証       |
 | 型駆動, 設計              | `type-driven-design`         | 型駆動設計                   |
 | ログ, 監視                | `logging-observability`      | ロギング・可観測性           |
 | 自動化, 境界              | `review-automation-boundary` | レビュー自動化の境界         |
 | コメント, トリアージ      | `review-comment-triage`      | レビューコメント分類         |
 | a11y, アクセシビリティ    | `a11y-accessible-name`       | アクセシビリティ基本         |
 | Next.js, App Router       | `nextjs-app-router-boundary` | Next.js 境界チェック         |
+| 幻覚的参照, 実在確認      | `hallucinated-reference`     | 新規参照の実在確認           |
 | 簡素化, 整理, simplify    | SIMPLIFY 観点（本 skill 内） | 品質クリーンアップ4観点      |
 
 ### デフォルト動作
@@ -91,10 +93,12 @@ license: MIT
 2. スキルの実行
    ├─ typescript-strict: strictモード準拠
    ├─ typescript-nullcheck: null安全性
+   ├─ async-correctness: 非同期処理の正しさ
    ├─ type-driven-design: 型駆動設計
    ├─ logging-observability: ロギング・可観測性
    ├─ review-automation-boundary: レビュー自動化の境界
    ├─ a11y-accessible-name: アクセシビリティ
+   ├─ hallucinated-reference: 新規参照の実在確認
    └─ nextjs-app-router-boundary: Next.js境界
 
 3. 統合
