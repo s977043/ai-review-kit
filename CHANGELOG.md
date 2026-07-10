@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.45.0](https://github.com/s977043/river-review/compare/v1.44.0...v1.45.0) (2026-07-10)
+
+
+### Features
+
+* **skills:** river-review-code に UX-SAFEGUARD 操作安全装置観点を追加する ([#1460](https://github.com/s977043/river-review/issues/1460)) ([4324ea3](https://github.com/s977043/river-review/commit/4324ea3245ca72a60f06abeff889f5792ee6cd6b))
+* **skills:** SIMPLIFY 観点の真ギャップ2観点（altitude / closure）を registry skill 化する ([#1465](https://github.com/s977043/river-review/issues/1465)) ([7c1150f](https://github.com/s977043/river-review/commit/7c1150f970a0aa9f38d419db91e002b80f640765))
+* **skills:** 幻覚的参照の実在確認スキル hallucinated-reference を追加する ([#1457](https://github.com/s977043/river-review/issues/1457)) ([d4068f8](https://github.com/s977043/river-review/commit/d4068f837bdc278d6d2b80c83b69f2ebee0c4eec))
+* **skills:** 非同期処理の正しさ検証スキル async-correctness を追加する ([#1458](https://github.com/s977043/river-review/issues/1458)) ([ba5b9db](https://github.com/s977043/river-review/commit/ba5b9db7d68960fd5ec6cfaa08a4656f46014df1))
+
 ## [1.44.0](https://github.com/s977043/river-review/compare/v1.43.1...v1.44.0) (2026-07-10)
 
 
