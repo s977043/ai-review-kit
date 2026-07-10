@@ -860,3 +860,58 @@ test('new simplify heuristics are quiet when their skills are not selected', () 
 
   assert.equal(comments.length, 0);
 });
+
+test('caller special-case does not add up across unrelated hunks (per-hunk counting)', () => {
+  const diffText = `diff --git a/src/lib/format.mjs b/src/lib/format.mjs
+index 1111111..2222222 100644
+--- a/src/lib/format.mjs
++++ b/src/lib/format.mjs
+@@ -10,3 +10,6 @@ export function formatA(x, options = {}) {
+ export function formatA(x, options = {}) {
++  if (options.caller === 'cli') {
++    x = trim(x);
++  }
+ }
+@@ -40,3 +43,6 @@ export function formatB(y, options = {}) {
+ export function formatB(y, options = {}) {
++  if (options.caller === 'exporter') {
++    y = pad(y);
++  }
+ }
+`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'altitude-generalization' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 0);
+});
+
+test('closure scope retention fires when the slot declaration is outside the diff', () => {
+  const diffText = `diff --git a/src/lib/registry-cache.mjs b/src/lib/registry-cache.mjs
+index 1111111..2222222 100644
+--- a/src/lib/registry-cache.mjs
++++ b/src/lib/registry-cache.mjs
+@@ -5,4 +5,13 @@ let cachedLookup = null;
+ export async function getLookup(registryPath) {
+   if (cachedLookup) return cachedLookup;
++  const rawText = await readFile(registryPath, 'utf8');
++  const entries = parseAllDocuments(rawText).flatMap((doc) => doc.toJS()?.skills ?? []);
++  cachedLookup = {
++    severityOf(id) {
++      const entry = entries.find((e) => e.id === id);
++      return entry ? entry.severity : 'major';
++    },
++  };
+   return cachedLookup;
+ }
+`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'closure-scope-retention' } }] };
+
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].file, 'src/lib/registry-cache.mjs');
+  assert.equal(comments[0].kind, 'closure-scope-retention');
+});

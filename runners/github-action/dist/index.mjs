@@ -42751,25 +42751,28 @@ function* iterateAddedLines(file) {
   }
 }
 
-function* iterateHunkLines(file) {
-  const hunks = ensureArray(file?.hunks);
-  for (const hunk of hunks) {
-    let newLineNumber = hunk.newStart ?? 0;
-    for (const rawLine of ensureArray(hunk.lines)) {
-      if (rawLine.startsWith('+') && !rawLine.startsWith('+++')) {
-        yield { type: 'add', line: newLineNumber, text: rawLine.slice(1) };
-        newLineNumber += 1;
-        continue;
-      }
-      if (rawLine.startsWith('-') && !rawLine.startsWith('---')) {
-        yield { type: 'del', line: null, text: rawLine.slice(1) };
-        continue;
-      }
-      // context line (usually starts with a space)
-      const text = rawLine.startsWith(' ') ? rawLine.slice(1) : rawLine;
-      yield { type: 'ctx', line: newLineNumber, text };
+function* iterateSingleHunkLines(hunk) {
+  let newLineNumber = hunk?.newStart ?? 0;
+  for (const rawLine of ensureArray(hunk?.lines)) {
+    if (rawLine.startsWith('+') && !rawLine.startsWith('+++')) {
+      yield { type: 'add', line: newLineNumber, text: rawLine.slice(1) };
       newLineNumber += 1;
+      continue;
     }
+    if (rawLine.startsWith('-') && !rawLine.startsWith('---')) {
+      yield { type: 'del', line: null, text: rawLine.slice(1) };
+      continue;
+    }
+    // context line (usually starts with a space)
+    const text = rawLine.startsWith(' ') ? rawLine.slice(1) : rawLine;
+    yield { type: 'ctx', line: newLineNumber, text };
+    newLineNumber += 1;
+  }
+}
+
+function* iterateHunkLines(file) {
+  for (const hunk of ensureArray(file?.hunks)) {
+    yield* iterateSingleHunkLines(hunk);
   }
 }
 
@@ -43338,9 +43341,12 @@ function matchesCallerSpecialCase(code) {
 }
 
 // Altitude: fires only when the diff ADDS a caller-identity branch AND the
-// hunk shows two or more same-kind branches in total (added + surrounding
-// context). A single branch is not enough evidence to propose generalizing
-// the lower-level mechanism (see skills/midstream/altitude-generalization).
+// SAME hunk shows two or more same-kind branches in total (added +
+// surrounding context). Counting is per hunk, not per file: two unrelated
+// functions each carrying a single branch are different contexts and must
+// not add up to a finding (FP-first, #1070). A single branch is not enough
+// evidence to propose generalizing the lower-level mechanism (see
+// skills/midstream/altitude-generalization).
 function findCallerSpecialCase({ diff }) {
   const MAX_CALLER_SPECIAL_CASE_COMMENTS = 3;
   const comments = [];
@@ -43352,34 +43358,41 @@ function findCallerSpecialCase({ diff }) {
     const normalized = String(filePath).replaceAll('\\', '/');
     if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
 
-    let sameKindCount = 0;
-    let firstAddedLine = null;
-    for (const { type, line, text } of iterateHunkLines(file)) {
-      if (type === 'del') continue;
-      if (!matchesCallerSpecialCase(text)) continue;
-      sameKindCount += 1;
-      if (type === 'add' && firstAddedLine === null) firstAddedLine = line;
+    for (const hunk of ensureArray(file?.hunks)) {
+      let sameKindCount = 0;
+      let firstAddedLine = null;
+      for (const { type, line, text } of iterateSingleHunkLines(hunk)) {
+        if (type === 'del') continue;
+        if (!matchesCallerSpecialCase(text)) continue;
+        sameKindCount += 1;
+        if (type === 'add' && firstAddedLine === null) firstAddedLine = line;
+      }
+      if (firstAddedLine === null || sameKindCount < 2) continue;
+      comments.push({ file: filePath, line: firstAddedLine, kind: 'caller-special-case' });
+      if (comments.length >= MAX_CALLER_SPECIAL_CASE_COMMENTS) return comments;
     }
-    if (firstAddedLine === null || sameKindCount < 2) continue;
-    comments.push({ file: filePath, line: firstAddedLine, kind: 'caller-special-case' });
-    if (comments.length >= MAX_CALLER_SPECIAL_CASE_COMMENTS) return comments;
   }
   return comments;
 }
 
 // Long-lived singleton built from closures that keep large enclosing-scope
-// data (file contents / parsed documents) reachable. Conservative 4-signal
+// data (file contents / parsed documents) reachable. Conservative 3-signal
 // conjunction (all required) to stay low-false-positive:
-//   A. module-level cache-like nullable slot (`let cachedX = null`, unindented)
+//   A. a cache-like slot is assigned an object literal (`cachedX = {`). The
+//      slot name is extracted from the assignment itself, so the detector
+//      also fires when the declaration (`let cachedX = null`) already exists
+//      outside the diff — the common "add a closure to an existing cache
+//      variable" change (gemini review on #1465)
 //   B. large-data locals bound from readFile / parse* / flatMap-map pipelines
-//   C. the slot is later assigned an object literal (`cachedX = {`)
-//   D. a shorthand method inside that object references one of the large-data
+//   C. a shorthand method inside that object references one of the large-data
 //      locals on a line after the assignment (the closure capture)
 // The recommended "reduce immediately into a small Map and return it" pattern
-// has no module-level slot (A) and therefore never fires.
+// has no cache-slot assignment (A) and therefore never fires.
 function findClosureScopeRetention({ diff }) {
   const MAX_CLOSURE_RETENTION_COMMENTS = 3;
-  const SLOT_RE = /^(?:let|var)\s+(\w*(?:cache|cached|memo|singleton|lookup)\w*)\s*=\s*null\b/i;
+  // Plain assignment only (no let/var/const): the cache slot is declared
+  // elsewhere (module level), which is what makes the object long-lived.
+  const SLOT_ASSIGN_RE = /^\s*(\w*(?:cache|cached|memo|singleton|lookup)\w*)\s*=\s*\{/i;
   const LARGE_DATA_RE =
     /\bconst\s+(\w+)\s*=\s*(?:await\s+)?(?:readFile(?:Sync)?\s*\(|parse\w*\s*\(|[\w$.]+\.(?:flatMap|map)\s*\()/;
   const METHOD_SHORTHAND_RE = /^\s*(?:async\s+)?\w+\s*\([^)]*\)\s*\{/;
@@ -43402,16 +43415,18 @@ function findClosureScopeRetention({ diff }) {
       codeLines.push({ line, code: isComment ? '' : stripTrailingLineComment(String(text)) });
     }
 
-    // A. module-level cache-like nullable slot
-    let slotName = null;
-    for (const { code } of codeLines) {
-      const m = SLOT_RE.exec(code);
-      if (m) {
-        slotName = m[1];
+    // A. cache-like slot assigned an object literal (slot name taken from
+    // the assignment itself; the declaration may live outside the diff)
+    let assignLine = null;
+    let assignIndex = -1;
+    for (let i = 0; i < codeLines.length; i += 1) {
+      if (SLOT_ASSIGN_RE.test(codeLines[i].code)) {
+        assignLine = codeLines[i].line;
+        assignIndex = i;
         break;
       }
     }
-    if (!slotName) continue;
+    if (assignLine === null) continue;
 
     // B. large-data locals (file contents / parsed structures)
     const largeDataNames = [];
@@ -43421,20 +43436,7 @@ function findClosureScopeRetention({ diff }) {
     }
     if (!largeDataNames.length) continue;
 
-    // C. slot assigned an object literal
-    const assignRe = new RegExp(`^\\s*${slotName}\\s*=\\s*\\{`);
-    let assignLine = null;
-    let assignIndex = -1;
-    for (let i = 0; i < codeLines.length; i += 1) {
-      if (assignRe.test(codeLines[i].code)) {
-        assignLine = codeLines[i].line;
-        assignIndex = i;
-        break;
-      }
-    }
-    if (assignLine === null) continue;
-
-    // D. a method in the object references a large-data local (closure capture)
+    // C. a method in the object references a large-data local (closure capture)
     let sawMethod = false;
     let capturesLargeData = false;
     for (let i = assignIndex + 1; i < codeLines.length; i += 1) {
