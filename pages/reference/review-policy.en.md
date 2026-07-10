@@ -109,6 +109,7 @@ River Review adopts flow-based reviews, emphasizing the following in each phase 
 - Adherence to naming conventions and style guides
 - Appropriate error handling
 - Reduction of code duplication
+- Async correctness (missing await, floating promises, race conditions — distinct from parallelization suggestions for efficiency)
 
 ### 4.3 Downstream (Test/QA Phase)
 

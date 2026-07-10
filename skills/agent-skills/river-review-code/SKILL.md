@@ -32,6 +32,7 @@ license: MIT
 | ------------------------- | ---------------------------- | ---------------------------- |
 | 型, TypeScript, strict    | `typescript-strict`          | TypeScript strict モード準拠 |
 | null, undefined, optional | `typescript-nullcheck`       | null 安全性チェック          |
+| 非同期, await, Promise    | `async-correctness`          | 非同期処理の正しさ検証       |
 | 型駆動, 設計              | `type-driven-design`         | 型駆動設計                   |
 | ログ, 監視                | `logging-observability`      | ロギング・可観測性           |
 | 自動化, 境界              | `review-automation-boundary` | レビュー自動化の境界         |
@@ -91,6 +92,7 @@ license: MIT
 2. スキルの実行
    ├─ typescript-strict: strictモード準拠
    ├─ typescript-nullcheck: null安全性
+   ├─ async-correctness: 非同期処理の正しさ
    ├─ type-driven-design: 型駆動設計
    ├─ logging-observability: ロギング・可観測性
    ├─ review-automation-boundary: レビュー自動化の境界
