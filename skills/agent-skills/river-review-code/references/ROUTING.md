@@ -99,6 +99,13 @@
 - → SIMPLIFY 観点を本 skill 内で実行（[SIMPLIFY.md](./SIMPLIFY.md) の品質クリーンアップ4観点）
 - 注意: 「リファクタ」単独は adversarial-review の `refactor-claim-audit`（完了主張の反証）に割り当て済みのため、本観点のキーワードにしない。リファクタの**完了主張の検証**は adversarial-review、**差分の簡素化余地の検出**は本観点が担う
 
+### 操作の安全装置（UX-SAFEGUARD 観点）
+
+- 日本語: 破壊的操作, 確認ダイアログ, 取り消し, undo, エラーメッセージ, 回復
+- 英語: destructive action, confirmation, undo, error message, recovery
+- → UX-SAFEGUARD 観点を本 skill 内で実行（[UX-SAFEGUARD.md](./UX-SAFEGUARD.md) の操作の安全装置2観点）
+- 注意: loading/error/empty state の**表示欠落**は `loading-state`、mutation の**認可**は security 系、DB の破壊的変更は `migration-safety` に割り当て済み（委譲表は UX-SAFEGUARD.md を参照）。本観点は「確認・取り消し手段の欠如」と「回復方法を示さない文言」のみを扱う
+
 ## 自動判定ルール
 
 1. `.ts`/`.tsx` ファイル → `typescript-strict` + `typescript-nullcheck`
