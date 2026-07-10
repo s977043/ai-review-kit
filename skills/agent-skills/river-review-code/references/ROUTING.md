@@ -92,6 +92,13 @@
 - 英語: Next.js, App Router, server component, client component, use client directive
 - → `nextjs-app-router-boundary`
 
+### 品質クリーンアップ（SIMPLIFY 観点）
+
+- 日本語: 簡素化, 重複コード, デッドコード, 整理, 無駄, 車輪の再発明
+- 英語: simplify, duplication, dead code, cleanup, reinvent
+- → SIMPLIFY 観点を本 skill 内で実行（[SIMPLIFY.md](./SIMPLIFY.md) の品質クリーンアップ4観点）
+- 注意: 「リファクタ」単独は adversarial-review の `refactor-claim-audit`（完了主張の反証）に割り当て済みのため、本観点のキーワードにしない。リファクタの**完了主張の検証**は adversarial-review、**差分の簡素化余地の検出**は本観点が担う
+
 ## 自動判定ルール
 
 1. `.ts`/`.tsx` ファイル → `typescript-strict` + `typescript-nullcheck`

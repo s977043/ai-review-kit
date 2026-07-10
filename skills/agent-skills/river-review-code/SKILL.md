@@ -38,6 +38,7 @@ license: MIT
 | コメント, トリアージ      | `review-comment-triage`      | レビューコメント分類         |
 | a11y, アクセシビリティ    | `a11y-accessible-name`       | アクセシビリティ基本         |
 | Next.js, App Router       | `nextjs-app-router-boundary` | Next.js 境界チェック         |
+| 簡素化, 整理, simplify    | SIMPLIFY 観点（本 skill 内） | 品質クリーンアップ4観点      |
 
 ### デフォルト動作
 
@@ -85,6 +86,7 @@ license: MIT
    ├─ コンポーネントファイル → a11yチェックを追加
    ├─ 設定ファイル → 型駆動設計チェックを選択
    └─ キーワード指定あり → 該当スキルを直接選択
+      （SIMPLIFY 観点のキーワード該当時は本 skill 内で実行。キーワードは ROUTING.md を参照）
 
 2. スキルの実行
    ├─ typescript-strict: strictモード準拠
@@ -143,3 +145,4 @@ license: MIT
 ## References
 
 - [ROUTING.md](./references/ROUTING.md): 詳細なルーティングルール
+- [SIMPLIFY.md](./references/SIMPLIFY.md): 品質クリーンアップ4観点の実行手順と委譲表
