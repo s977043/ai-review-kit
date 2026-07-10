@@ -14,6 +14,13 @@
 - 英語: null, undefined, optional, nullable
 - → `typescript-nullcheck`
 
+### 非同期処理の正しさ
+
+- 日本語: 非同期, await 漏れ, Promise, 競合, レースコンディション
+- 英語: async, await, floating promise, race condition, unhandled rejection
+- → `async-correctness`
+- 注意: 逐次 await の**並列化提案**は SIMPLIFY 観点 Efficiency、**配線断点**（発火しっぱなしで経路が途切れる）は `e2e-wiring` が担う。本スキルは「await を忘れて結果・順序・エラー伝播が壊れる」correctness のみ
+
 ### 型駆動設計
 
 - 日本語: 型駆動, 設計, 型で表現
