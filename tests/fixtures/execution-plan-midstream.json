@@ -99,6 +99,20 @@
       "dependencies": []
     },
     {
+      "id": "altitude-generalization",
+      "phase": "midstream",
+      "modelHint": "high-accuracy",
+      "outputKind": ["findings", "actions"],
+      "dependencies": []
+    },
+    {
+      "id": "closure-scope-retention",
+      "phase": "midstream",
+      "modelHint": "high-accuracy",
+      "outputKind": ["findings", "actions"],
+      "dependencies": []
+    },
+    {
       "id": "e2e-wiring",
       "phase": "midstream",
       "modelHint": "high-accuracy",

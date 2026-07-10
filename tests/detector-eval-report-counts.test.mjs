@@ -17,9 +17,11 @@ const EXPECTED = {
   secrets: { detect: 3, guard: 1 },
   observability: { detect: 2, guard: 1 },
   tests: { detect: 5, guard: 1 },
+  altitude: { detect: 1, guard: 1 },
+  closure: { detect: 1, guard: 1 },
 };
-const EXPECTED_TOTAL = 13;
-const EXPECTED_GUARDS = 3;
+const EXPECTED_TOTAL = 17;
+const EXPECTED_GUARDS = 5;
 
 function categoryOf(name) {
   return String(name).split(':')[0].trim();

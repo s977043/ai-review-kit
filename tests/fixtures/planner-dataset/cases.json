@@ -380,5 +380,21 @@
     "diffFile": "diffs/midstream-ai-agent-review-readiness-no-loop.diff",
     "availableContexts": ["diff", "fullFile"],
     "expectedAny": ["ai-agent-review-readiness"]
+  },
+  {
+    "name": "midstream: altitude caller special-case (simplify)",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-altitude-caller-special-case.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["altitude-generalization"]
+  },
+  {
+    "name": "midstream: closure scope retention (simplify)",
+    "phase": "midstream",
+    "diffFile": "diffs/midstream-closure-scope-retention.diff",
+    "availableContexts": ["diff", "fullFile"],
+    "availableDependencies": ["code_search"],
+    "expectedAny": ["closure-scope-retention"]
   }
 ]

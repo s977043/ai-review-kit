@@ -15,6 +15,8 @@ export const SKILL_HEURISTIC_MAP = {
   'typescript-strict': ['findTsSuppression'],
   'test-existence': ['findMissingTests', 'findFocusedTests', 'findDisabledTests'],
   'coverage-gap': ['findMissingTests', 'findFocusedTests', 'findDisabledTests'],
+  'altitude-generalization': ['findCallerSpecialCase'],
+  'closure-scope-retention': ['findClosureScopeRetention'],
 };
 
 /**
@@ -627,6 +629,135 @@ function findTsSuppression({ diff }) {
   return comments;
 }
 
+// Per-caller special-case branch ("bandaid") on a shared function, e.g.
+// `if (options.caller === 'markdown-exporter') { ... }`. Keyed strictly on a
+// caller-identity comparison so a first-class public option (host opt-in,
+// e.g. `if (options.compact)`) is never flagged.
+function matchesCallerSpecialCase(code) {
+  let trimmed = String(code).trim();
+  // Skip comment lines and trailing comments so a mention in a comment is
+  // not counted as a branch.
+  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
+  trimmed = stripTrailingLineComment(trimmed).trim();
+  return /\bif\s*\(\s*[\w$.]+\.caller\s*===\s*['"`]/.test(trimmed);
+}
+
+// Altitude: fires only when the diff ADDS a caller-identity branch AND the
+// hunk shows two or more same-kind branches in total (added + surrounding
+// context). A single branch is not enough evidence to propose generalizing
+// the lower-level mechanism (see skills/midstream/altitude-generalization).
+function findCallerSpecialCase({ diff }) {
+  const MAX_CALLER_SPECIAL_CASE_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    const normalized = String(filePath).replaceAll('\\', '/');
+    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
+
+    let sameKindCount = 0;
+    let firstAddedLine = null;
+    for (const { type, line, text } of iterateHunkLines(file)) {
+      if (type === 'del') continue;
+      if (!matchesCallerSpecialCase(text)) continue;
+      sameKindCount += 1;
+      if (type === 'add' && firstAddedLine === null) firstAddedLine = line;
+    }
+    if (firstAddedLine === null || sameKindCount < 2) continue;
+    comments.push({ file: filePath, line: firstAddedLine, kind: 'caller-special-case' });
+    if (comments.length >= MAX_CALLER_SPECIAL_CASE_COMMENTS) return comments;
+  }
+  return comments;
+}
+
+// Long-lived singleton built from closures that keep large enclosing-scope
+// data (file contents / parsed documents) reachable. Conservative 4-signal
+// conjunction (all required) to stay low-false-positive:
+//   A. module-level cache-like nullable slot (`let cachedX = null`, unindented)
+//   B. large-data locals bound from readFile / parse* / flatMap-map pipelines
+//   C. the slot is later assigned an object literal (`cachedX = {`)
+//   D. a shorthand method inside that object references one of the large-data
+//      locals on a line after the assignment (the closure capture)
+// The recommended "reduce immediately into a small Map and return it" pattern
+// has no module-level slot (A) and therefore never fires.
+function findClosureScopeRetention({ diff }) {
+  const MAX_CLOSURE_RETENTION_COMMENTS = 3;
+  const SLOT_RE = /^(?:let|var)\s+(\w*(?:cache|cached|memo|singleton|lookup)\w*)\s*=\s*null\b/i;
+  const LARGE_DATA_RE =
+    /\bconst\s+(\w+)\s*=\s*(?:await\s+)?(?:readFile(?:Sync)?\s*\(|parse\w*\s*\(|[\w$.]+\.(?:flatMap|map)\s*\()/;
+  const METHOD_SHORTHAND_RE = /^\s*(?:async\s+)?\w+\s*\([^)]*\)\s*\{/;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    const normalized = String(filePath).replaceAll('\\', '/');
+    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
+
+    // Comment-stripped view of the added lines (checklist §1).
+    const codeLines = [];
+    for (const { line, text } of iterateAddedLines(file)) {
+      const trimmed = String(text).trim();
+      const isComment =
+        trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*');
+      codeLines.push({ line, code: isComment ? '' : stripTrailingLineComment(String(text)) });
+    }
+
+    // A. module-level cache-like nullable slot
+    let slotName = null;
+    for (const { code } of codeLines) {
+      const m = SLOT_RE.exec(code);
+      if (m) {
+        slotName = m[1];
+        break;
+      }
+    }
+    if (!slotName) continue;
+
+    // B. large-data locals (file contents / parsed structures)
+    const largeDataNames = [];
+    for (const { code } of codeLines) {
+      const m = LARGE_DATA_RE.exec(code);
+      if (m) largeDataNames.push(m[1]);
+    }
+    if (!largeDataNames.length) continue;
+
+    // C. slot assigned an object literal
+    const assignRe = new RegExp(`^\\s*${slotName}\\s*=\\s*\\{`);
+    let assignLine = null;
+    let assignIndex = -1;
+    for (let i = 0; i < codeLines.length; i += 1) {
+      if (assignRe.test(codeLines[i].code)) {
+        assignLine = codeLines[i].line;
+        assignIndex = i;
+        break;
+      }
+    }
+    if (assignLine === null) continue;
+
+    // D. a method in the object references a large-data local (closure capture)
+    let sawMethod = false;
+    let capturesLargeData = false;
+    for (let i = assignIndex + 1; i < codeLines.length; i += 1) {
+      const { code } = codeLines[i];
+      if (METHOD_SHORTHAND_RE.test(code)) sawMethod = true;
+      if (sawMethod && largeDataNames.some((name) => new RegExp(`\\b${name}\\b`).test(code))) {
+        capturesLargeData = true;
+        break;
+      }
+    }
+    if (!capturesLargeData) continue;
+
+    comments.push({ file: filePath, line: assignLine, kind: 'closure-scope-retention' });
+    if (comments.length >= MAX_CLOSURE_RETENTION_COMMENTS) return comments;
+  }
+  return comments;
+}
+
 /**
  * Generate deterministic review comments from heuristics.
  * These comments are used as a fallback when LLM is not available.
@@ -676,6 +807,22 @@ export function buildHeuristicComments({ diff, plan }) {
   if (hasSkill(plan, 'typescript-strict')) {
     const skillId = 'typescript-strict';
     for (const c of findTsSuppression({ diff })) {
+      comments.push({ ...c, skillId });
+    }
+  }
+
+  // 実装の深さ（caller special-case）チェック
+  if (hasSkill(plan, 'altitude-generalization')) {
+    const skillId = 'altitude-generalization';
+    for (const c of findCallerSpecialCase({ diff })) {
+      comments.push({ ...c, skillId });
+    }
+  }
+
+  // closure スコープ保持チェック
+  if (hasSkill(plan, 'closure-scope-retention')) {
+    const skillId = 'closure-scope-retention';
+    for (const c of findClosureScopeRetention({ diff })) {
       comments.push({ ...c, skillId });
     }
   }

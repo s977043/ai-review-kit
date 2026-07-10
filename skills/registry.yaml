@@ -387,6 +387,28 @@ skills:
     recommended: false
     description: 'Riverbed Memory の suppression entry を活用するときの判断基準と CLI 操作を案内する'
 
+  - id: altitude-generalization
+    version: '0.1.0'
+    name: 'Altitude Generalization Guard'
+    path: skills/midstream/altitude-generalization/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [simplify, altitude, generalization, maintainability, midstream]
+    severity: minor
+    recommended: false
+    description: 'Detects per-caller special-cases (bandaids) on shared infrastructure and proposes generalizing the lower-level mechanism when same-kind special-cases accumulate'
+
+  - id: closure-scope-retention
+    version: '0.1.0'
+    name: 'Closure Scope Retention Guard'
+    path: skills/midstream/closure-scope-retention/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [simplify, memory, closure, retention, midstream]
+    severity: major
+    recommended: false
+    description: 'Detects long-lived objects (caches, listeners, singletons) whose closures keep an entire enclosing scope alive, and proposes copying only the needed fields'
+
   # ------------------------------------------------------------------
   # Community Skills (Experimental tier; recommended: false)
   # ------------------------------------------------------------------

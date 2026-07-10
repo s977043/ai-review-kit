@@ -543,6 +543,36 @@ function normalizeHeuristicComments(rawComments) {
             confidence: 'medium',
           }),
         };
+      case 'caller-special-case':
+        return {
+          file: c.file,
+          line: c.line,
+          skillId: c.skillId,
+          message: formatFindingMessage({
+            finding: '共有関数に特定の呼び出し元専用の分岐（special-case）が追加されている',
+            evidence: '呼び出し元判定の分岐（`.caller === ...`）が同種2つ以上存在する',
+            impact: '呼び出し元が増えるたびに共有関数が肥大化し、保守が難化する',
+            fix: '呼び出し元ごとの設定を宣言的マップ / strategy へ寄せ、下層機構を一般化する',
+            severity: 'nit',
+            confidence: 'high',
+          }),
+        };
+      case 'closure-scope-retention':
+        return {
+          file: c.file,
+          line: c.line,
+          skillId: c.skillId,
+          message: formatFindingMessage({
+            finding:
+              '長寿命オブジェクトが closure で enclosing scope の大きなデータを保持し続ける可能性がある',
+            evidence:
+              'module-level キャッシュへ代入される closure が readFile / parse 結果の変数を参照している',
+            impact: 'オブジェクトの生存中、大きな元データが解放されずメモリを圧迫する',
+            fix: '必要なフィールドだけを Map / 明示フィールドへ縮約し、closure に大きな元データを掴ませない',
+            severity: 'warning',
+            confidence: 'medium',
+          }),
+        };
       default:
         return {
           file: c.file,
