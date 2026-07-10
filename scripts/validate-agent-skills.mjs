@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { promises as fs } from 'fs';
+import { promises as fs, realpathSync } from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { parseFrontMatter } from '../runners/core/skill-loader.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -11,6 +11,83 @@ const agentSkillsDir = path.join(repoRoot, 'skills', 'agent-skills');
 
 function isKebabCaseName(name) {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name);
+}
+
+// ---------------------------------------------------------------------------
+// Naming rules (SSoT: skills/README.md § "Naming"; issue #1463 PR-3).
+// The semantic Q0–Q5 import framework stays with human PR review; only the
+// deterministic parts are mechanized here (repo principle #1070).
+// ---------------------------------------------------------------------------
+
+// Organizational nouns forbidden as a hyphen-delimited word in a skill name
+// (skills/README.md § "Common prohibitions and consistency"). Warning-level:
+// this is advisory to avoid false positives, and existing names are
+// grandfathered via PROHIBITED_NOUN_EXEMPT.
+export const PROHIBITED_NAME_NOUNS = ['team', 'manager', 'helper', 'util'];
+
+// Grandfathered names exempt from the prohibited-noun warning
+// (skills/README.md § "Grandfathered names").
+export const PROHIBITED_NOUN_EXEMPT = new Set(['setup-team', 'review-team']);
+
+// Anthropic-derived hard constraints (skills/README.md § "Anthropic-derived
+// constraints"): max name length and reserved words. Error-level.
+export const NAME_MAX_LENGTH = 64;
+export const RESERVED_NAME_WORDS = ['anthropic', 'claude'];
+
+/**
+ * Return the prohibited organizational noun used as a hyphen-delimited word in
+ * `name`, or null. Case-insensitive so an uppercase variant (e.g. `Foo-Team`)
+ * cannot slip past the check (gemini review on PR #1468).
+ */
+export function findProhibitedNoun(name) {
+  const words = String(name ?? '')
+    .toLowerCase()
+    .split('-');
+  return PROHIBITED_NAME_NOUNS.find((noun) => words.includes(noun)) ?? null;
+}
+
+/**
+ * True when `name` is on the grandfathered exemption list, compared
+ * case-insensitively for robustness (gemini review on PR #1468).
+ */
+export function isProhibitedNounExempt(name) {
+  return PROHIBITED_NOUN_EXEMPT.has(String(name ?? '').toLowerCase());
+}
+
+/** Return the reserved word contained in `name` (case-insensitive), or null. */
+export function findReservedWord(name) {
+  const lower = String(name ?? '').toLowerCase();
+  return RESERVED_NAME_WORDS.find((word) => lower.includes(word)) ?? null;
+}
+
+/** Normalize a name for hyphen-variant collision detection: drop hyphens, lowercase. */
+export function normalizeHyphenVariant(name) {
+  return String(name ?? '')
+    .toLowerCase()
+    .replace(/-/g, '');
+}
+
+/**
+ * Given a list of names, return groups where two or more DISTINCT names share a
+ * hyphen-stripped normalized form (e.g. `river-review` vs `riverreview`). A name
+ * repeated verbatim is not a collision. Pure and exported for unit testing.
+ *
+ * @param {string[]} names
+ * @returns {Array<{ normalized: string, names: string[] }>}
+ */
+export function findHyphenVariantCollisions(names) {
+  const byNorm = new Map();
+  for (const name of names) {
+    const norm = normalizeHyphenVariant(name);
+    if (!norm) continue;
+    if (!byNorm.has(norm)) byNorm.set(norm, new Set());
+    byNorm.get(norm).add(name);
+  }
+  const collisions = [];
+  for (const [normalized, set] of byNorm) {
+    if (set.size > 1) collisions.push({ normalized, names: [...set].sort() });
+  }
+  return collisions;
 }
 
 async function hasReferencesDir(dirPath) {
@@ -77,6 +154,20 @@ async function validateSkill(skillPath) {
     errors.push('missing metadata.description');
   }
 
+  // Anthropic-derived hard constraints on the name (error-level; applies to all
+  // skills including imported ones, since these are platform limits). See
+  // skills/README.md § "Anthropic-derived constraints".
+  const name = typeof metadata?.name === 'string' ? metadata.name : null;
+  if (name) {
+    if (name.length > NAME_MAX_LENGTH) {
+      errors.push(`name exceeds ${NAME_MAX_LENGTH} characters (${name.length})`);
+    }
+    const reserved = findReservedWord(name);
+    if (reserved) {
+      errors.push(`name must not contain the reserved word "${reserved}" (Anthropic constraint)`);
+    }
+  }
+
   if (errors.length) {
     console.error(`❌ ${relativePath}`);
     for (const error of errors) {
@@ -95,6 +186,19 @@ async function validateSkill(skillPath) {
     console.warn(
       `⚠  ${relativePath} — missing recommended fields: ${missingRecommended.join(', ')}`
     );
+  }
+
+  // Advisory: organizational noun in the name (warning-level, grandfathered
+  // names exempt). See skills/README.md § "Common prohibitions and consistency".
+  const nounTarget = name ?? dirName;
+  if (!isProhibitedNounExempt(nounTarget) && !isProhibitedNounExempt(dirName)) {
+    const noun = findProhibitedNoun(nounTarget);
+    if (noun) {
+      console.warn(
+        `⚠️  ${relativePath}: name contains organizational noun "${noun}" — ` +
+          'prefer a name that states the value (skills/README.md § Naming)'
+      );
+    }
   }
 
   console.log(`✅ ${relativePath}`);
@@ -124,10 +228,27 @@ async function validateAgentSkills() {
     const ok = await validateSkill(skillPath);
     if (!ok) success = false;
   }
+
+  // Cross-skill: two agent-skill directory names that differ only by
+  // hyphenation collide when resolved (skills/README.md § "Common prohibitions
+  // and consistency"). Error-level.
+  const dirNames = packages.map((p) => path.basename(path.dirname(p)));
+  for (const { normalized, names } of findHyphenVariantCollisions(dirNames)) {
+    console.error(
+      `❌ agent-skill names differ only by hyphenation: ${names.join(', ')} ` +
+        `(both normalize to "${normalized}")`
+    );
+    success = false;
+  }
+
   return success;
 }
 
-const ok = await validateAgentSkills();
-if (!ok) {
-  process.exitCode = 1;
+const isDirectRun =
+  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+if (isDirectRun) {
+  const ok = await validateAgentSkills();
+  if (!ok) {
+    process.exitCode = 1;
+  }
 }

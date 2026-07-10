@@ -234,6 +234,83 @@ export function checkAssetRegistration(ccManifest, { commandFiles = [], agentFil
 }
 
 /**
+ * Extract the distributed-command names listed in CLAUDE.md's
+ * `Details: distributed commands (...)` sentence. Returns basenames without the
+ * leading slash (e.g. "check", "review-team"). Only the tokens inside the first
+ * parenthesized group are read, so the trailing repo-dev command list is
+ * ignored. Pure and exported for unit testing.
+ *
+ * @param {string} claudeMd
+ * @returns {string[]}
+ */
+export function parseClaudeMdDistributedCommands(claudeMd) {
+  const line = String(claudeMd ?? '')
+    .split('\n')
+    .find((l) => l.includes('Details: distributed commands'));
+  if (!line) return [];
+  const open = line.indexOf('(');
+  const close = line.indexOf(')', open);
+  if (open < 0 || close < 0) return [];
+  const group = line.slice(open + 1, close);
+  return [...group.matchAll(/`\/([a-z0-9-]+)`/g)].map((m) => m[1]);
+}
+
+/**
+ * Parity check between the distributed commands enumerated in CLAUDE.md's prose
+ * ("Details: distributed commands (...)") and the commands[] registered in
+ * .claude-plugin/plugin.json. The two sets must be identical; a command present
+ * in one but not the other means the manual sync (#1451) drifted. Mechanizes
+ * the CLAUDE.md ↔ plugin.json command-table sync (#1463 carry-over).
+ *
+ * Pure function; returns array of error strings (empty = pass).
+ *
+ * @param {string} claudeMd
+ * @param {object} ccManifest
+ * @returns {string[]}
+ */
+export function checkClaudeMdCommandParity(claudeMd, ccManifest) {
+  const errors = [];
+  const claudeCmds = new Set(parseClaudeMdDistributedCommands(claudeMd));
+  if (claudeCmds.size === 0) {
+    errors.push(
+      'CLAUDE.md: could not find the "Details: distributed commands (...)" list to verify ' +
+        'against .claude-plugin/plugin.json commands[]'
+    );
+    return errors;
+  }
+
+  const manifest = ccManifest && typeof ccManifest === 'object' ? ccManifest : {};
+  const commandList = Array.isArray(manifest.commands) ? manifest.commands : [];
+  const manifestCmds = new Set(
+    commandList
+      .filter((ref) => typeof ref === 'string')
+      .map((ref) =>
+        normalizeRef(ref)
+          .replace(/^commands\//, '')
+          .replace(/\.md$/, '')
+      )
+  );
+
+  for (const cmd of claudeCmds) {
+    if (!manifestCmds.has(cmd)) {
+      errors.push(
+        `CLAUDE.md lists distributed command "/${cmd}" but .claude-plugin/plugin.json ` +
+          'commands[] does not register it (#1451 manual-sync drift)'
+      );
+    }
+  }
+  for (const cmd of manifestCmds) {
+    if (!claudeCmds.has(cmd)) {
+      errors.push(
+        `.claude-plugin/plugin.json registers command "${cmd}" but CLAUDE.md's ` +
+          '"Details: distributed commands (...)" list omits it (#1451 manual-sync drift)'
+      );
+    }
+  }
+  return errors;
+}
+
+/**
  * Validate the Claude Code + Codex plugin manifests and the marketplace
  * manifest against the repository:
  *  - every component path referenced by .claude-plugin/plugin.json exists
@@ -333,6 +410,14 @@ export async function validatePluginManifest() {
   const commandFiles = await listMarkdownFiles('commands');
   const agentFiles = await listMarkdownFiles('agents');
   errors.push(...checkAssetRegistration(ccManifest, { commandFiles, agentFiles }));
+
+  // --- CLAUDE.md prose command list ↔ plugin.json commands[] parity (#1451/#1463) ---
+  try {
+    const claudeMd = await fs.readFile(path.join(ROOT, 'CLAUDE.md'), 'utf8');
+    errors.push(...checkClaudeMdCommandParity(claudeMd, ccManifest));
+  } catch (err) {
+    errors.push(`CLAUDE.md: not readable for distributed-command parity check (${err.message})`);
+  }
 
   // --- Marketplace: plugins[].name matches manifest name ---
   const entry = (marketplace.plugins || []).find((p) => p.name === ccManifest.name);
