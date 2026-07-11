@@ -35,7 +35,7 @@ Issue #1471 は、レビュー結果（finding 単位の採否・理由）を蓄
 
 Issue #1471 は**新システムの構築ではなく、既存 improvement-loop の欠落ピースを埋める増分拡張**として採用する。真のギャップは次の3点に限定されると判断した。
 
-1. finding 単位の decision 記録の粒度不足（severity / confidence / model フィールドの欠如）
+1. finding 単位の `decision` 記録の粒度不足（`severity` / `confidence` / `model` フィールドの欠如）
 2. クロスリポ（`ai-second-brain` / PlanGate）への出力契約の不在
 3. escape rate / recurrence rate / モデル別コストの計測軸の不足
 
@@ -43,7 +43,7 @@ Issue #1471 は**新システムの構築ではなく、既存 improvement-loop 
 
 ### 増分A（PR #1488・マージ済み）
 
-`src/lib/feedback.mjs` の `buildFeedbackEntry` に、8番目の feedbackType `out_of_scope`（skip-scope disposition 用）を追加した。あわせて省略可能フィールド `reviewer` / `model` / `reversedBy` を後方互換で追加した。省略時は既存 JSONL の形状を変えない。理由コード・カテゴリ体系は新設しない。既存 7→8型の `feedbackType`（destination 軸）と直交させ、severity 語彙（`.claude/rules/review-core.md` #1070 の blocker→critical 等）との二重管理を避けた。`findingFingerprint` は実データがない場合に捏造せず `null` を許容する（feedback.mjs 冒頭のコメント参照）。
+`src/lib/feedback.mjs` の `buildFeedbackEntry` に、8番目の feedbackType `out_of_scope`（skip-scope disposition 用）を追加した。あわせて省略可能フィールド `reviewer` / `model` / `reversedBy` を後方互換で追加した。省略時は既存 JSONL の形状を変えない。理由コード・カテゴリ体系は新設しない。既存 7→8型の `feedbackType`（destination 軸）と直交させ、severity 語彙（`.claude/rules/review-core.md` #1070 の blocker→critical 等）との二重管理を避けた。`findingFingerprint` は実データがない場合に捏造せず `null` を許容する（`src/lib/feedback.mjs` 冒頭のコメント参照）。
 
 ### 増分B（PR #1492・マージ済み）
 
@@ -59,7 +59,7 @@ Issue #1471 は**新システムの構築ではなく、既存 improvement-loop 
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | finding 単位の新 yaml スキーマ store を新設                | `.river/feedback/*.jsonl`（decision）+ `.river/runs/*.json`（finding）                                         | 新 store を作らず既存 JSONL を増分A で拡張すれば足りる                                                                               |
 | `/review-ai-feedback` Skill を新規追加                     | orchestrator の Verify→Classify FB ステップ + `FEEDBACK.md` + `VERIFICATION.md`                                | 既存 orchestrator の強化で代替可能（#1471 自身も既存強化を推奨）                                                                     |
-| 13 カテゴリ + 11 理由コードの独立体系を導入                | 7→8 型 `FEEDBACK_TYPES`（`FEEDBACK.md`）+ severity 語彙マッピング（#1070）                                     | reason_code を既存 taxonomy と直交フィールドとして併存させれば、severity は既存 blocker/warning/nit を正のまま保てる                 |
+| 13 カテゴリ + 11 理由コードの独立体系を導入                | 7→8 型 `FEEDBACK_TYPES`（`FEEDBACK.md`）+ severity 語彙マッピング（#1070）                                     | `reason_code` を既存 taxonomy と直交フィールドとして併存させれば、severity は既存 `blocker`/`warning`/`nit` を正のまま保てる         |
 | 多因子の昇格エンジンを新規構築                             | `feedback-rule-candidates.mjs`（`findRuleCandidates` の `min` 閾値）+ `suppression:analytics` + `eval:compare` | 既存3コマンドの閾値・多因子化を段階拡張すればよく、固定回数閾値の検出のみに留め、codify は人間判断に委ねる既存原則（HITL）と整合する |
 | escape rate / recurrence / モデル別の新 KPI ダッシュボード | `skill-eval-kpi.md` + `artifacts/evals/results.jsonl` ledger + `nightly-eval.yml`                              | 不足軸は既存 ledger スキーマへの追記で埋められ、新規ダッシュボードは不要                                                             |
 | River Review 内で昇格実行まで完結させる                    | HITL 原則（`skill-improvement-loop-design.md` 非ゴール）                                                       | 実行はせず artifact 出力に留め、審査は人間または PlanGate 側で行う（増分B の設計判断）                                               |
@@ -75,7 +75,7 @@ Issue #1471 は**新システムの構築ではなく、既存 improvement-loop 
 
 ### Negative
 
-- finding 単位の decision 記録は依然として skill × feedbackType の粗い粒度であり、reason_code の enum 化・多因子昇格スコアリングは未着手のまま残る
+- finding 単位の `decision` 記録は依然として `skill` × `feedbackType` の粗い粒度であり、`reason_code` の enum 化・多因子昇格スコアリングは未着手のまま残る
 - escape rate / recurrence rate / モデル別コストの計測は増分A で `model` フィールドを追加しただけで、集計・ダッシュボード化は別途の増分が必要
 - `ai-second-brain` / PlanGate との実連携（artifact を実際に消費する側）は本 ADR の範囲外であり、増分B は「契約の型」を用意したのみ
 
