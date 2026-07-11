@@ -5,6 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { scanText } from '../scripts/check-skill-id-references.mjs';
 
 // check-skill-id-references.mjs のガード挙動を、一時 fixture を cwd にして実プロセス実行で検証する。
 const SCRIPT = join(
@@ -61,4 +62,20 @@ test('簡素名（現行 ID）のみなら pass（exit 0）', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// --- in-process 単体テスト（export した純関数を直接呼ぶ。#1473 Step 5） ---
+// 上の subprocess テストは canary として維持し、検出ロジックの中核関数を
+// プロセス起動なしで直接検証する。
+
+test('scanText: 現行 ID のみのテキストは違反なし（in-process happy）', () => {
+  const found = scanText('skills/upstream/x/SKILL.md', 'ref: api-design\n');
+  assert.deepEqual(found.violations, []);
+  assert.deepEqual(found.pathViolations, []);
+});
+
+test('scanText: 旧形式 ID を違反として検出（in-process violation）', () => {
+  const found = scanText('skills/upstream/x/SKILL.md', 'ref: rr-upstream-api-design-001\n');
+  assert.equal(found.violations.length, 1);
+  assert.equal(found.violations[0].id, 'rr-upstream-api-design-001');
 });

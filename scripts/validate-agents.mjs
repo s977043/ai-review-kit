@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { tracer, enabled as otelEnabled } from '../src/tracing.mjs';
 import { SpanStatusCode } from '@opentelemetry/api';
-import { promises as fs } from 'fs';
+import { promises as fs, realpathSync } from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import * as yaml from 'js-yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
@@ -14,7 +14,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const schemaPath = path.join(repoRoot, 'agents/spec/agent.schema.json');
 const examplesDir = path.join(repoRoot, 'agents/examples');
 
-async function loadSchema() {
+export async function loadSchema() {
   const raw = await fs.readFile(schemaPath, 'utf8');
   try {
     return JSON.parse(raw);
@@ -24,7 +24,7 @@ async function loadSchema() {
   }
 }
 
-async function listAgentFiles() {
+export async function listAgentFiles() {
   try {
     const entries = await fs.readdir(examplesDir, { withFileTypes: true });
     return entries
@@ -38,23 +38,10 @@ async function listAgentFiles() {
   }
 }
 
-async function validateAgents() {
-  let schema;
-  if (otelEnabled) {
-    schema = await tracer.startActiveSpan('load-schema', async (span) => {
-      try {
-        const s = await loadSchema();
-        // mark as ok
-        // No explicit status API used here to keep SDK compatibility
-        return s;
-      } catch (e) {
-        span.recordException(e);
-        throw e;
-      }
-    });
-  } else {
-    schema = await loadSchema();
-  }
+// schema をコンパイルして検証関数を返す純関数。CLI 実行時は validateAgents()
+// から、in-process テストからは直接呼び出して検出ロジック（schema 検証）を
+// 単体検証できるよう export する。
+export async function createAgentValidator(schema) {
   const ajv = new Ajv({ allErrors: true, strict: true });
   addFormats(ajv);
 
@@ -88,7 +75,27 @@ async function validateAgents() {
     );
   }
 
-  const validate = ajv.compile(schema);
+  return ajv.compile(schema);
+}
+
+export async function validateAgents() {
+  let schema;
+  if (otelEnabled) {
+    schema = await tracer.startActiveSpan('load-schema', async (span) => {
+      try {
+        const s = await loadSchema();
+        // mark as ok
+        // No explicit status API used here to keep SDK compatibility
+        return s;
+      } catch (e) {
+        span.recordException(e);
+        throw e;
+      }
+    });
+  } else {
+    schema = await loadSchema();
+  }
+  const validate = await createAgentValidator(schema);
   const files = otelEnabled
     ? await tracer.startActiveSpan('list-files', async (span) => {
         try {
@@ -138,7 +145,7 @@ async function validateAgents() {
   return success;
 }
 
-async function validateSingleFile(filePath, validate, repoRoot) {
+export async function validateSingleFile(filePath, validate, repoRoot) {
   const relativePath = path.relative(repoRoot, filePath);
   const raw = await fs.readFile(filePath, 'utf8');
   let data = {};
@@ -164,7 +171,15 @@ async function validateSingleFile(filePath, validate, repoRoot) {
   }
 }
 
-const ok = await validateAgents();
-if (!ok) {
-  process.exitCode = 1;
+async function main() {
+  const ok = await validateAgents();
+  if (!ok) {
+    process.exitCode = 1;
+  }
+}
+
+const isDirectRun =
+  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+if (isDirectRun) {
+  await main();
 }
