@@ -62,6 +62,7 @@ AI coding agent の実行能力が上がるほど、見逃しは単純なコー�
 - 入力に少なくとも `diff` があり、差分が **リポジトリ内で実行されるコード・migration・schema・公開 API・設定**のいずれかに触れる。docs・コメントのみの差分は対象外とする。
 - ビルド成果物・生成物（`dist/**`・`*.map`・lockfile・自動生成 manifest）は Gate 判定からもレビュー対象からも除外する。
 - **PlanGate 非依存**: `plan` / `review-self` などの artifact が欠損しても動作する。欠損した観点は finding を出さず `skippedSkills` に記録してデグレードする（artifact-input-contract の既定挙動）。
+- **観点6 の plan 代替 evidence**: 観点6（Plan / Assumption）は `plan` artifact 欠損時、**PR 本文へ前提・open question が inline 列挙されていれば列挙分のみ部分評価**する（外部 issue は取得・推測しない）。**計画 issue の bare 参照（`#NNNN`）のみなら skip** し `skippedSkills` に記録する。この分岐は registry skill `assumption-resolution-trace` と同一ルールに揃える。
 
 ## 6 Unknown 観点 / Perspectives
 
@@ -99,6 +100,7 @@ report-only 契約に従う。**本観点はマージを止めない**。判定�
 判別軸は **resolution の実行タイミング（merge 前 / merge 後）** に置く。非 Blocking Unknown が残ること自体は `needs_review` を意味しない。その resolution が merge 後の観測（次回 eval run・運用レビュー等）で足りるなら `pass`（`GO_WITH_OBSERVATION`）に倒し、merge 前に解消すべきものだけを `needs_review`（`ESCALATE`）に倒す。
 
 - **判定原則**: Unknown の存在だけで自動的に `fail` にはしない。severity・blocking・根拠・復旧可能性で判断し、**未確認と「確認済みでリスク受容」を区別**する。fail-safe（判定不能 → NO_GO / ESCALATE）は `src/lib/gate-decision.mjs` の決定論純関数が担う。resolution が merge 後の観測で足りる非 Blocking Unknown を finding として出す場合、severity は **`minor` / `info` に制限**する（`major` 以上を出しながら `verdict: pass` に写像すると矛盾するため）。
+- **resolution の追跡先明示**: `GO_WITH_OBSERVATION` へ写像する残存 Unknown の resolution には、追跡可能な観測先（次回 eval run / follow-up issue / 運用レビュー等）を明示する。追跡先の無い resolution は放置されると観測ではなく単なる未解消に陥るため、その場合は `needs_review`（`ESCALATE`）へ倒す。
 - **`skippedSkills` の出力例**: `plan` / `review-self` 欠損時は該当観点を `skippedSkills` に記録し、finding は出さずデグレードする（[artifact-input-contract.md](../../../pages/reference/artifact-input-contract.md) と同じ語彙・`review-artifact.md` の `id` / `reasons` スキーマに整合）。例:
 
   ```json

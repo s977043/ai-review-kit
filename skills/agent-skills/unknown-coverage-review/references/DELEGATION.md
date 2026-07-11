@@ -30,5 +30,8 @@ Unknown Coverage Review は **evidence-sufficiency（証拠が足りているか
 ## 分界の原則
 
 - **defect（S）は委譲先、evidence-sufficiency（M）は本観点**。委譲先は「リスクが差分に顕在化した時」に指摘し、本観点は「そのリスク種別を調査した証拠が残っているか」を横断合成する。
+- **diff-time の evidence-sufficiency は registry skill へ委譲する**。本観点（agent-skill 合成層）が扱う evidence-sufficiency のうち、diff-time で単独実行できる部分は次の registry skill へ切り出し済みで、合成層はそれらの findings を残余に取り込み重複指摘しない。
+  - `impact-evidence-coverage`: Impact / Failure / External の 3 軸の証拠充足を diff-time で検出する。
+  - `assumption-resolution-trace`: 観点6（Plan / Assumption）を `plan` 保有時に単独実行し、前提解消の証拠を突合する。
 - 委譲先が upstream 設計文書向け（`applyTo: docs/**`）で code-only diff に発火しない場合でも、本観点は defect を代替検出しない。あくまで「証拠の不在」を Unknown として記録し、解消手順（resolution）を添える。
 - 出力・verdict 写像は [SKILL.md](../SKILL.md) の Output 節に従う。新語彙は作らない。
