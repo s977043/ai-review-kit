@@ -57,3 +57,4 @@ license: MIT
 
 - 文章スタイル（textlint / markdownlint）の機械的チェックは既存の lint が担うため、本スキルは**内容の整合性**に集中する。
 - 多言語パリティの指摘では、SSoT（通常は JA）を基準に欠落を示す。
+- **レンダリング文脈を無視したリンク形式の指摘はしない**（#1464）。`pages/` 配下から repo 内の非公開領域への絶対 GitHub URL は Docusaurus 配信の制約による意図的選択であり、相対化を提案しない。bare `#N` 化は `.md` レンダリングで常に非リンク化するため、一律で簡約の提案を禁止する。詳細と canary は `doc-hygiene` の「False-positive guards」を参照。
