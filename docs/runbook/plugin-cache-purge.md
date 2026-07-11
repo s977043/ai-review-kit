@@ -4,7 +4,7 @@
 
 ## いつ使うか
 
-- `review-team` など河川レビューの skill が、最新版と異なる古い挙動をする。
+- `review-team` などriver-review の skill が、最新版と異なる古い挙動をする。
 - 同名 skill が複数解決され、どの版が呼ばれたか判然としない。
 - プラグイン更新後も旧版の description や本文が参照される。
 
