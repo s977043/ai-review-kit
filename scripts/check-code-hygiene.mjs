@@ -18,8 +18,9 @@
 // （.claude/rules/review-core.md の責務分界 #1070 に従う）。
 // 意図的な '/tmp' リテラルは行末に `code-hygiene-ignore` コメントで抑制できる。
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { isBuiltin } from 'node:module';
 
 const ROOT = process.cwd();
@@ -44,7 +45,7 @@ const PHANTOM_SCAN_PREFIX = `src${sep}lib${sep}`;
 
 // import 指定子から npm パッケージ名（scope 付きは @scope/pkg）を取り出す。
 // 相対 / 絶対 / node: builtin は対象外（null を返す）。
-function packageBaseOf(spec) {
+export function packageBaseOf(spec) {
   if (spec.startsWith('.') || spec.startsWith('/') || isBuiltin(spec)) return null;
   const base = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
   if (isBuiltin(base)) return null;
@@ -138,19 +139,15 @@ function isCommentLine(line) {
   return trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*');
 }
 
-const duplicateImports = [];
-const tmpLiterals = [];
-const mkdtempNoCleanup = [];
-const phantomDeps = [];
+// ファイル 1 つ分の検出を行う純関数。CLI 実行時は main() から、in-process
+// テストからは直接呼び出せるよう export する（rel: ROOT からの相対 path、
+// declaredDeps: production dependencies の Set か null）。
+export function analyzeFile(rel, text, declaredDeps) {
+  const duplicateImports = [];
+  const tmpLiterals = [];
+  const mkdtempNoCleanup = [];
+  const phantomDeps = [];
 
-for (const file of collectFiles()) {
-  let text;
-  try {
-    text = readFileSync(file, 'utf8');
-  } catch {
-    continue;
-  }
-  const rel = relative(ROOT, file);
   const isTestFile = rel.startsWith(`tests${sep}`);
 
   // import 文は 1 度だけ materialize し、Check 1 / Check 4 で共有する
@@ -170,84 +167,116 @@ for (const file of collectFiles()) {
   }
 
   // Check 4: phantom-dep（src/lib/** の import が dependencies 未宣言）
-  if (DECLARED_DEPS != null && rel.startsWith(PHANTOM_SCAN_PREFIX)) {
+  if (declaredDeps != null && rel.startsWith(PHANTOM_SCAN_PREFIX)) {
     for (const m of imports) {
       const base = packageBaseOf(m[1]);
-      if (base == null || DECLARED_DEPS.has(base)) continue;
+      if (base == null || declaredDeps.has(base)) continue;
       phantomDeps.push({ file: rel, line: lineOf(text, m.index), pkg: base });
     }
   }
 
-  if (!isTestFile) continue;
+  if (isTestFile) {
+    // Check 2: tests/** の '/tmp' リテラル（コメント行と明示抑制行は除外）
+    text.split('\n').forEach((line, idx) => {
+      if (isCommentLine(line)) return;
+      if (line.includes('code-hygiene-ignore')) return;
+      if (TMP_LITERAL_RE.test(line)) {
+        tmpLiterals.push({ file: rel, line: idx + 1, text: line.trim() });
+      }
+    });
 
-  // Check 2: tests/** の '/tmp' リテラル（コメント行と明示抑制行は除外）
-  text.split('\n').forEach((line, idx) => {
-    if (isCommentLine(line)) return;
-    if (line.includes('code-hygiene-ignore')) return;
-    if (TMP_LITERAL_RE.test(line)) {
-      tmpLiterals.push({ file: rel, line: idx + 1, text: line.trim() });
+    // Check 3: tests/** の mkdtemp なのに cleanup 無し（ファイル単位）
+    if (MKDTEMP_RE.test(text) && !CLEANUP_RE.test(text)) {
+      mkdtempNoCleanup.push({ file: rel });
     }
-  });
-
-  // Check 3: tests/** の mkdtemp なのに cleanup 無し（ファイル単位）
-  if (MKDTEMP_RE.test(text) && !CLEANUP_RE.test(text)) {
-    mkdtempNoCleanup.push({ file: rel });
   }
+
+  return { duplicateImports, tmpLiterals, mkdtempNoCleanup, phantomDeps };
 }
 
-let hasError = false;
+function main() {
+  const duplicateImports = [];
+  const tmpLiterals = [];
+  const mkdtempNoCleanup = [];
+  const phantomDeps = [];
 
-if (duplicateImports.length > 0) {
-  console.error(
-    `❌ duplicate-import: 同一モジュールからの重複 import を ${duplicateImports.length} 件検出:`
-  );
-  for (const v of duplicateImports) {
+  for (const file of collectFiles()) {
+    let text;
+    try {
+      text = readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+    const rel = relative(ROOT, file);
+    const found = analyzeFile(rel, text, DECLARED_DEPS);
+    duplicateImports.push(...found.duplicateImports);
+    tmpLiterals.push(...found.tmpLiterals);
+    mkdtempNoCleanup.push(...found.mkdtempNoCleanup);
+    phantomDeps.push(...found.phantomDeps);
+  }
+
+  let hasError = false;
+
+  if (duplicateImports.length > 0) {
     console.error(
-      `  ${v.file}:${v.line}  '${v.spec}'（初出: line ${v.first}）→ 1 つの import 文に統合してください`
+      `❌ duplicate-import: 同一モジュールからの重複 import を ${duplicateImports.length} 件検出:`
     );
+    for (const v of duplicateImports) {
+      console.error(
+        `  ${v.file}:${v.line}  '${v.spec}'（初出: line ${v.first}）→ 1 つの import 文に統合してください`
+      );
+    }
+    hasError = true;
   }
-  hasError = true;
-}
 
-if (tmpLiterals.length > 0) {
-  console.error(
-    `\n❌ tmp-literal: tests/** の '/tmp' ハードコードを ${tmpLiterals.length} 件検出:`
-  );
-  for (const v of tmpLiterals) {
-    console.error(`  ${v.file}:${v.line}  ${v.text}`);
-  }
-  console.error(
-    "\n実 FS を使う場合は mkdtempSync(path.join(os.tmpdir(), 'prefix-'))、純粋な fixture 文字列も path.join(os.tmpdir(), ...) を使ってください。"
-  );
-  console.error('意図的な場合は行末に // code-hygiene-ignore を付けて抑制できます。');
-  hasError = true;
-}
-
-if (mkdtempNoCleanup.length > 0) {
-  console.error(
-    `\n❌ mkdtemp-cleanup: mkdtemp を使うのに cleanup が無いテストを ${mkdtempNoCleanup.length} 件検出:`
-  );
-  for (const v of mkdtempNoCleanup) {
+  if (tmpLiterals.length > 0) {
     console.error(
-      `  ${v.file}  → rmSync(dir, { recursive: true, force: true }) を t.after() / finally で必ず実行してください`
+      `\n❌ tmp-literal: tests/** の '/tmp' ハードコードを ${tmpLiterals.length} 件検出:`
     );
-  }
-  hasError = true;
-}
-
-if (phantomDeps.length > 0) {
-  console.error(`\n❌ phantom-dep: src/lib/** の未宣言 import を ${phantomDeps.length} 件検出:`);
-  for (const v of phantomDeps) {
+    for (const v of tmpLiterals) {
+      console.error(`  ${v.file}:${v.line}  ${v.text}`);
+    }
     console.error(
-      `  ${v.file}:${v.line}  '${v.pkg}' は package.json の dependencies 未宣言（transitive 依存頼み）`
+      "\n実 FS を使う場合は mkdtempSync(path.join(os.tmpdir(), 'prefix-'))、純粋な fixture 文字列も path.join(os.tmpdir(), ...) を使ってください。"
     );
+    console.error('意図的な場合は行末に // code-hygiene-ignore を付けて抑制できます。');
+    hasError = true;
   }
-  console.error(
-    '\n直接 import するパッケージは package.json の dependencies に宣言してください（transitive 依存の消失で production が壊れます）。'
+
+  if (mkdtempNoCleanup.length > 0) {
+    console.error(
+      `\n❌ mkdtemp-cleanup: mkdtemp を使うのに cleanup が無いテストを ${mkdtempNoCleanup.length} 件検出:`
+    );
+    for (const v of mkdtempNoCleanup) {
+      console.error(
+        `  ${v.file}  → rmSync(dir, { recursive: true, force: true }) を t.after() / finally で必ず実行してください`
+      );
+    }
+    hasError = true;
+  }
+
+  if (phantomDeps.length > 0) {
+    console.error(`\n❌ phantom-dep: src/lib/** の未宣言 import を ${phantomDeps.length} 件検出:`);
+    for (const v of phantomDeps) {
+      console.error(
+        `  ${v.file}:${v.line}  '${v.pkg}' は package.json の dependencies 未宣言（transitive 依存頼み）`
+      );
+    }
+    console.error(
+      '\n直接 import するパッケージは package.json の dependencies に宣言してください（transitive 依存の消失で production が壊れます）。'
+    );
+    hasError = true;
+  }
+
+  if (hasError) process.exit(1);
+
+  console.log(
+    '✅ code hygiene OK（duplicate-import / tmp-literal / mkdtemp-cleanup / phantom-dep）'
   );
-  hasError = true;
 }
 
-if (hasError) process.exit(1);
-
-console.log('✅ code hygiene OK（duplicate-import / tmp-literal / mkdtemp-cleanup / phantom-dep）');
+const isDirectRun =
+  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+if (isDirectRun) {
+  main();
+}

@@ -12,8 +12,9 @@
 //   - 旧パス形式: `skills/<phase>/<name>.md`（正しくは `skills/<phase>/<name>/SKILL.md`）
 //   - cd パス省略: `cd skills/<name>`（正しくは `cd skills/<phase>/<name>`）
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = process.cwd();
 
@@ -131,15 +132,11 @@ function collectFiles() {
   return files;
 }
 
-const violations = [];
-const pathViolations = [];
-for (const file of collectFiles()) {
-  let text;
-  try {
-    text = readFileSync(file, 'utf8');
-  } catch {
-    continue;
-  }
+// ファイル 1 つ分の検出を行う純関数。CLI 実行時は main() から、in-process
+// テストからは直接呼び出せるよう export する（relFile: ROOT からの相対 path）。
+export function scanText(relFile, text) {
+  const violations = [];
+  const pathViolations = [];
   const lines = text.split('\n');
   lines.forEach((line, idx) => {
     // Check 1: old rr-<phase>-<name>-NNN ID format
@@ -147,7 +144,7 @@ for (const file of collectFiles()) {
     if (idMatches) {
       for (const m of idMatches) {
         if (ALLOWED_LEGACY_IDS.has(m)) continue;
-        violations.push({ file: relative(ROOT, file), line: idx + 1, id: m });
+        violations.push({ file: relFile, line: idx + 1, id: m });
       }
     }
 
@@ -158,7 +155,7 @@ for (const file of collectFiles()) {
         if (ALLOWED_FLAT_PATHS.has(m)) continue;
         const correct = m.replace(/\.md$/, '/SKILL.md');
         pathViolations.push({
-          file: relative(ROOT, file),
+          file: relFile,
           line: idx + 1,
           found: m,
           fix: correct,
@@ -174,7 +171,7 @@ for (const file of collectFiles()) {
         const dirName = m.trim().replace(/^cd\s+skills\//, '');
         if (ALLOWED_CD_DIRS.has(dirName)) continue;
         pathViolations.push({
-          file: relative(ROOT, file),
+          file: relFile,
           line: idx + 1,
           found: m.trim(),
           fix: `cd skills/<phase>/${dirName}`,
@@ -183,44 +180,67 @@ for (const file of collectFiles()) {
       }
     }
   });
+  return { violations, pathViolations };
 }
 
-let hasError = false;
-
-if (violations.length > 0) {
-  console.error(
-    `❌ dangling skill-ID 参照を ${violations.length} 件検出（旧形式 rr-<phase>-<name>-NNN）:`
-  );
-  for (const v of violations) {
-    console.error(`  ${v.file}:${v.line}  ${v.id}`);
-  }
-  console.error('\n旧形式 ID は簡素名（rr- 接頭辞・-NNN 無し）へ更新してください。');
-  console.error(
-    '意図的な例示/移行中の場合は scripts/check-skill-id-references.mjs の ALLOWED_LEGACY_IDS に追記。'
-  );
-  hasError = true;
-}
-
-if (pathViolations.length > 0) {
-  console.error(`\n❌ skill パス誤りを ${pathViolations.length} 件検出:`);
-  for (const v of pathViolations) {
-    if (v.kind === 'flat-path') {
-      console.error(`  ${v.file}:${v.line}  "${v.found}" → 正しくは "${v.fix}"`);
-    } else {
-      console.error(
-        `  ${v.file}:${v.line}  "${v.found}" → phase ディレクトリを含むパスに修正してください（例: "${v.fix}"）`
-      );
+function main() {
+  const violations = [];
+  const pathViolations = [];
+  for (const file of collectFiles()) {
+    let text;
+    try {
+      text = readFileSync(file, 'utf8');
+    } catch {
+      continue;
     }
+    const found = scanText(relative(ROOT, file), text);
+    violations.push(...found.violations);
+    pathViolations.push(...found.pathViolations);
   }
-  console.error(
-    '\nskills/<phase>/<name>.md は skills/<phase>/<name>/SKILL.md、cd はフェーズ付きパスに修正してください。'
-  );
-  console.error(
-    '意図的な例示の場合は scripts/check-skill-id-references.mjs の ALLOWED_FLAT_PATHS に追記。'
-  );
-  hasError = true;
+
+  let hasError = false;
+
+  if (violations.length > 0) {
+    console.error(
+      `❌ dangling skill-ID 参照を ${violations.length} 件検出（旧形式 rr-<phase>-<name>-NNN）:`
+    );
+    for (const v of violations) {
+      console.error(`  ${v.file}:${v.line}  ${v.id}`);
+    }
+    console.error('\n旧形式 ID は簡素名（rr- 接頭辞・-NNN 無し）へ更新してください。');
+    console.error(
+      '意図的な例示/移行中の場合は scripts/check-skill-id-references.mjs の ALLOWED_LEGACY_IDS に追記。'
+    );
+    hasError = true;
+  }
+
+  if (pathViolations.length > 0) {
+    console.error(`\n❌ skill パス誤りを ${pathViolations.length} 件検出:`);
+    for (const v of pathViolations) {
+      if (v.kind === 'flat-path') {
+        console.error(`  ${v.file}:${v.line}  "${v.found}" → 正しくは "${v.fix}"`);
+      } else {
+        console.error(
+          `  ${v.file}:${v.line}  "${v.found}" → phase ディレクトリを含むパスに修正してください（例: "${v.fix}"）`
+        );
+      }
+    }
+    console.error(
+      '\nskills/<phase>/<name>.md は skills/<phase>/<name>/SKILL.md、cd はフェーズ付きパスに修正してください。'
+    );
+    console.error(
+      '意図的な例示の場合は scripts/check-skill-id-references.mjs の ALLOWED_FLAT_PATHS に追記。'
+    );
+    hasError = true;
+  }
+
+  if (hasError) process.exit(1);
+
+  console.log('✅ dangling skill-ID 参照なし（scan 対象・allowlist 除く）');
 }
 
-if (hasError) process.exit(1);
-
-console.log('✅ dangling skill-ID 参照なし（scan 対象・allowlist 除く）');
+const isDirectRun =
+  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+if (isDirectRun) {
+  main();
+}

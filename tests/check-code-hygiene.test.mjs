@@ -5,6 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { analyzeFile, packageBaseOf } from '../scripts/check-code-hygiene.mjs';
 
 // check-code-hygiene.mjs のガード挙動を、一時 fixture を cwd にして実プロセス実行で検証する。
 // positive（検出される）と negative（誤検出しない canary）の両方を持つ
@@ -215,4 +216,37 @@ test('phantom-dep canary: package.json 不在（fixture）では phantom-dep 判
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// --- in-process 単体テスト（export した純関数を直接呼ぶ。#1473 Step 5） ---
+// 上の subprocess テストは canary として維持し、検出ロジックの中核関数を
+// プロセス起動なしで直接検証する（境界は subprocess 側と重複させない）。
+
+test('analyzeFile: 重複 import の無いファイルは findings 空（in-process happy）', () => {
+  const found = analyzeFile(
+    'src/a.mjs',
+    "import { x } from 'node:fs';\nimport { p } from 'node:path';\nexport { x, p };\n",
+    null
+  );
+  assert.deepEqual(found.duplicateImports, []);
+  assert.deepEqual(found.tmpLiterals, []);
+  assert.deepEqual(found.mkdtempNoCleanup, []);
+  assert.deepEqual(found.phantomDeps, []);
+});
+
+test('analyzeFile: 同一モジュールの重複 import を 1 件検出（in-process violation）', () => {
+  const found = analyzeFile(
+    'src/a.mjs',
+    "import { x } from 'node:fs';\nimport { y } from 'node:fs';\nexport { x, y };\n",
+    null
+  );
+  assert.equal(found.duplicateImports.length, 1);
+  assert.equal(found.duplicateImports[0].spec, 'node:fs');
+});
+
+test('packageBaseOf: パッケージ名の抽出と対象外（相対 / builtin）判定（in-process）', () => {
+  assert.equal(packageBaseOf('yaml'), 'yaml');
+  assert.equal(packageBaseOf('@scope/pkg/sub'), '@scope/pkg');
+  assert.equal(packageBaseOf('./local.mjs'), null);
+  assert.equal(packageBaseOf('node:fs'), null);
 });
