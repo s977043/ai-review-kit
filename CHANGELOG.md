@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.46.1](https://github.com/s977043/river-review/compare/v1.46.0...v1.46.1) (2026-07-11)
+
+
+### Bug Fixes
+
+* isDirectRun 判定を単一ヘルパーに集約し ENOENT クラッシュを解消する ([#1483](https://github.com/s977043/river-review/issues/1483)) ([832e0ab](https://github.com/s977043/river-review/commit/832e0ab239548e09d347d41d53bac5661a345f8a))
+* Step 6 集約後の防波堤強化（F-2 symlink 追跡復元 / F-3 テスト / F-4 export 除去） ([#1482](https://github.com/s977043/river-review/issues/1482)) ([8701b28](https://github.com/s977043/river-review/commit/8701b28c6d9a119c1efe31efb40b43ba6d1db07b))
+
 ## [1.46.0](https://github.com/s977043/river-review/compare/v1.45.0...v1.46.0) (2026-07-10)
 
 
