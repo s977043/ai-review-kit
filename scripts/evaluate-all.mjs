@@ -25,6 +25,8 @@ import path from 'node:path';
 import process from 'node:process';
 import url from 'node:url';
 
+import { isDirectRun } from './lib/is-direct-run.mjs';
+
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
@@ -478,11 +480,7 @@ Options:
 
 export { main as evaluateAll, parseArgs, appendLedger };
 
-const isDirectRun =
-  process.argv[1] &&
-  (process.argv[1].endsWith('evaluate-all.mjs') || process.argv[1].endsWith('evaluate-all'));
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   main()
     .then((code) => {
       if (typeof code === 'number' && code !== 0) {

@@ -7,6 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
 
+import { isDirectRun } from './lib/is-direct-run.mjs';
+
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const LEDGER_PATH = path.join(ROOT, 'artifacts', 'evals', 'results.jsonl');
@@ -164,12 +166,7 @@ async function main() {
   console.log('Audit report written to ' + OUTPUT_PATH);
 }
 
-const isDirectRun =
-  process.argv[1] &&
-  (process.argv[1].endsWith('generate-audit-report.mjs') ||
-    process.argv[1].endsWith('generate-audit-report'));
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   main().catch((err) => {
     console.error('Audit report error: ' + err.message);
     process.exitCode = 1;
