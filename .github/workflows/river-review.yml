@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, labeled]
 
 permissions:
   contents: read
@@ -18,6 +19,9 @@ jobs:
   river-review:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'river-review')
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -28,7 +32,10 @@ jobs:
         uses: ./runners/github-action
         with:
           phase: midstream
-          dry_run: true # set false after verifying secrets/models
+          dry_run: false # LLM review enabled (Stage1: label opt-in)
           debug: true
+          gate: false # advisory only — never fail the job
+          max_cost: '0.50' # safety cap (OPENAI_MODEL とセットで有効)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: gpt-4o-mini # max_cost の見積単価を実モデルに一致させる（見積器既定 gpt-4-turbo のままだと大型PRを誤abortするため必須の結合）
