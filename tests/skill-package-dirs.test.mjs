@@ -56,7 +56,8 @@ test('follows a package directory that is itself a symlink', async () => {
       await fs.mkdir(path.join(root, 'container'), { recursive: true });
       await fs.symlink(
         path.join('..', 'store', 'real-pkg'),
-        path.join(root, 'container', 'linked-pkg')
+        path.join(root, 'container', 'linked-pkg'),
+        'dir' // explicit type for Windows compatibility
       );
 
       const dirs = await listSkillPackageDirs(path.join(root, 'container'));

@@ -40463,25 +40463,27 @@ async function listSkillPackageDirs(root, { includeRoot = true } = {}) {
     }
     return false;
   }
-  async function isDirEntry(entry, entryPath) {
-    if (entry.isDirectory()) return true;
-    if (entry.isSymbolicLink()) {
-      try {
-        return (await fs.stat(entryPath)).isDirectory();
-      } catch {
-        return false; // broken symlink
-      }
-    }
-    return false;
-  }
   async function walkChildren(dir, entries) {
-    // Resolve directory-ness for every entry index-parallel so the retained
-    // order matches the original (filtered) order despite the async stat calls.
-    const dirFlags = await Promise.all(
-      entries.map((entry) => isDirEntry(entry, path.join(dir, entry.name)))
+    // Synchronous Dirent filter first: regular files never allocate a Promise.
+    // Only symlinked survivors pay an fs.stat to resolve their target kind
+    // (a broken or non-directory symlink descends into nothing).
+    const groups = await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+        .map(async (entry) => {
+          const entryPath = path.join(dir, entry.name);
+          if (entry.isSymbolicLink()) {
+            let stats;
+            try {
+              stats = await fs.stat(entryPath);
+            } catch {
+              return []; // broken symlink
+            }
+            if (!stats.isDirectory()) return [];
+          }
+          return walk(entryPath);
+        })
     );
-    const subdirs = entries.filter((_, i) => dirFlags[i]);
-    const groups = await Promise.all(subdirs.map((entry) => walk(path.join(dir, entry.name))));
     return groups.flat();
   }
   async function walk(dir) {
