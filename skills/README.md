@@ -145,6 +145,7 @@ Common rules for either outcome:
 - Never use another company's brand or trademark as a skill name.
 - When renaming, keep the original name in `tags` or in the body for searchability.
 - Renaming a distributed command requires a calendar-based deprecation window (at minimum 90 days, or an explicit removal version recorded in `docs/deprecated.md`) — never "N releases", which under a weekly release cadence amounts to no grace period.
+- When invoking a skill in a multi-plugin environment, use the namespace prefix (`river-review:<name>`) so a same-named skill from another plugin or a stale cache is not resolved by mistake; see [Plugin cache purge](../docs/runbook/plugin-cache-purge.md).
 
 ### Naming rules by skill kind
 
