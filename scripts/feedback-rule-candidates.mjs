@@ -121,10 +121,15 @@ if (isDirectRun(import.meta.url)) {
   // runs; it does not change stdout content or the exit-code-2-on-candidates
   // behavior (kept for backward compatibility with existing CI usage).
   if (outPath) {
-    await writeCandidatesArtifact(
-      path.resolve(outPath),
-      buildCandidatesArtifact({ entriesCount: entries.length, min, candidates })
-    );
+    try {
+      await writeCandidatesArtifact(
+        path.resolve(outPath),
+        buildCandidatesArtifact({ entriesCount: entries.length, min, candidates })
+      );
+    } catch (err) {
+      console.error(`Error: Failed to write artifact to ${outPath}: ${err.message}`);
+      process.exit(1);
+    }
   }
   if (args.includes('--json')) {
     console.log(JSON.stringify({ entries: entries.length, candidates }, null, 2));

@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'path';
 import fs from 'fs/promises';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import {
   findRuleCandidates,
@@ -9,6 +11,9 @@ import {
   writeCandidatesArtifact,
 } from '../scripts/feedback-rule-candidates.mjs';
 import { createTempDirAsync, cleanupTempDirAsync } from './helpers/temp-dir.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SCRIPT = path.resolve(__dirname, '../scripts/feedback-rule-candidates.mjs');
 
 const fp = (skillId, pr) => ({ skillId, feedbackType: 'false_positive', pr });
 
@@ -117,6 +122,28 @@ test('writeCandidatesArtifact writes structured JSON to disk, creating parent di
       'skillId',
       'suggestedAction',
     ]);
+  } finally {
+    await cleanupTempDirAsync(dir);
+  }
+});
+
+test('CLI: --out with an invalid path reports a clean error and exits 1 instead of crashing', async () => {
+  // A blocking file at the parent path makes fs.mkdir(..., {recursive:true})
+  // fail with ENOTDIR/EEXIST — exercising the writeCandidatesArtifact
+  // try/catch in the direct-run block (gemini-code-assist review on #1492).
+  const dir = await createTempDirAsync({ prefix: 'feedback-rule-out-err-' });
+  try {
+    const blockerPath = path.join(dir, 'blocker');
+    await fs.writeFile(blockerPath, 'not a directory', 'utf8');
+    const outPath = path.join(blockerPath, 'out.json');
+
+    const result = spawnSync(process.execPath, [SCRIPT, '--month', '1999-01', '--out', outPath], {
+      encoding: 'utf8',
+    });
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Error: Failed to write artifact to/);
+    assert.doesNotMatch(result.stderr, /at (Object\.|writeFile|async)/); // no raw Node stack trace
   } finally {
     await cleanupTempDirAsync(dir);
   }
