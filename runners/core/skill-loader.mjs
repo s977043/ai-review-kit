@@ -269,6 +269,50 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
   return files.sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * Recursively discover skill-package directories under `root`: directories that
+ * directly contain a `SKILL.md`. Descent stops at the first `SKILL.md` found on
+ * a branch, so a nested `SKILL.md` (e.g. under `fixtures/`) does not create a
+ * second entry. This is the shared lower layer for the manifest generator's
+ * `findSkillDirs` and the agent-skills validator's package discovery.
+ *
+ * Unlike {@link listSkillFiles}, the unit of discovery here is the SKILL.md
+ * package directory, not individual skill definition files: it returns directory
+ * paths and applies no extension or ignore-name filtering. Sibling directories
+ * are explored concurrently via `Promise.all`, preserving the performance
+ * profile of the original agent-skills validator implementation. Results are
+ * unsorted so each caller can apply the sort its output contract requires —
+ * sorting SKILL.md paths and sorting their parent directories are not
+ * equivalent orderings when one sibling name is a prefix of another.
+ *
+ * @param {string} root directory to scan
+ * @param {{ includeRoot?: boolean }} [options] when false, `root` itself is not
+ *   tested for a `SKILL.md`; scanning begins at its immediate child directories
+ *   (the agent-skills validator's root is a container, never a package).
+ * @returns {Promise<string[]>} SKILL.md-bearing directory paths, unsorted
+ */
+export async function listSkillPackageDirs(root, { includeRoot = true } = {}) {
+  async function walkChildren(dir, entries) {
+    const groups = await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => walk(path.join(dir, entry.name)))
+    );
+    return groups.flat();
+  }
+  async function walk(dir) {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    if (entries.some((entry) => entry.isFile() && entry.name === 'SKILL.md')) {
+      return [dir]; // do not descend into nested skill dirs
+    }
+    return walkChildren(dir, entries);
+  }
+  if (includeRoot) {
+    return walk(root);
+  }
+  return walkChildren(root, await fs.readdir(root, { withFileTypes: true }));
+}
+
 function normalizeStringArray(value) {
   if (!value) return undefined;
   const asArray = Array.isArray(value) ? value : [value];

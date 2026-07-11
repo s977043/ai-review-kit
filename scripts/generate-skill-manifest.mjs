@@ -22,6 +22,8 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
+import { listSkillPackageDirs } from '../runners/core/skill-loader.mjs';
+
 const SKILLS_ROOT = 'skills';
 const OUTPUT_PATH = path.join('docs', 'data', 'skill-manifest.json');
 
@@ -85,20 +87,16 @@ export async function computeSkillEntry(skillDir, rootDir = '.') {
   };
 }
 
-/** Find every directory under `skillsRoot` that contains a SKILL.md. */
+/**
+ * Find every directory under `skillsRoot` that contains a SKILL.md.
+ *
+ * Delegates the walk to the shared {@link listSkillPackageDirs} (skill-loader),
+ * then applies this generator's default lexicographic sort. The final manifest
+ * re-sorts entries by id, so the dir order here is not output-visible, but the
+ * sort is kept for a stable, self-consistent return value.
+ */
 export async function findSkillDirs(skillsRoot = SKILLS_ROOT) {
-  const dirs = [];
-  async function walk(dir) {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
-    if (entries.some((e) => e.isFile() && e.name === 'SKILL.md')) {
-      dirs.push(dir);
-      return; // do not descend into nested skill dirs
-    }
-    for (const entry of entries) {
-      if (entry.isDirectory()) await walk(path.join(dir, entry.name));
-    }
-  }
-  await walk(skillsRoot);
+  const dirs = await listSkillPackageDirs(skillsRoot);
   return dirs.sort();
 }
 
