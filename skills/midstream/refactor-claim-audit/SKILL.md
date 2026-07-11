@@ -49,7 +49,7 @@ Why: 完了主張の反証は grep 検索による決定論的突合が主だが
 
 このスキルは以下の条件がすべて満たされない限り `NO_REVIEW` を返す。
 
-- [ ] 差分・commit message・PR description に完了主張（「全」「すべて」「all」「完了」「移行済」「置換」「-N%」「削減」等）、または抽出・集約リファクタの挙動不変主張（「抽出」「切り出し」「集約」「リファクタ」「挙動不変」「動作は変えていない」「テストは通る」等）が含まれている
+- [ ] 差分・commit message・PR description に完了主張（「全」「すべて」「all」「完了」「移行済」「置換」「-N%」「削減」等）、または抽出・集約リファクタの挙動不変主張（「抽出」「切り出し」「集約」「リファクタ」「挙動不変」「動作は変えていない」「テストは通る」「extract」「refactor」「aggregate」「consolidate」「no behavioral change(s)」「behavior unchanged」「tests pass」等）が含まれている
 - [ ] inputContext に diff が含まれている
 
 ゲート不成立時の出力: `NO_REVIEW: refactor-claim-audit — 完了主張・リファクタ挙動不変主張が検出されない`

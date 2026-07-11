@@ -753,15 +753,25 @@ skills:
     description: '同一ファイル/隣接ファイル内で「規則Xを守れ」と宣言した直後にXを破っている、宣言と実装の乖離を検出する'
 
   - id: refactor-claim-audit
-    version: '0.1.0'
+    version: '0.2.0'
     name: 'Refactor-Claim Audit リファクタ完了主張の検証'
     path: skills/midstream/refactor-claim-audit/SKILL.md
     category: midstream
     phase: midstream
-    tags: [adversarial, refactor-claim, claim-vs-actual, verification, midstream, cognitive-bias]
+    tags:
+      [
+        adversarial,
+        refactor-claim,
+        claim-vs-actual,
+        verification,
+        midstream,
+        cognitive-bias,
+        performance-regression,
+        key-collision,
+      ]
     severity: major
     recommended: true
-    description: 'コミット/PR の「全部置換した」「-N%削減」等の完了主張を、grep で反証できる残骸や best/typical/worst 試算で検証する'
+    description: 'コミット/PR の「全部置換した」「-N%削減」等の完了主張を grep で反証できる残骸や best/typical/worst 試算で検証し、抽出・集約リファクタでは並列度(Promise.all)/fast-path/遅延評価の性能特性退行と、Map/Set 集約キーの cross-kind 衝突による検出漏れも監査する'
 
   - id: cross-file-leakage
     version: '0.1.0'
