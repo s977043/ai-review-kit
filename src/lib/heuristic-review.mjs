@@ -1,28 +1,305 @@
 /**
- * スキルIDとヒューリスティック関数のマッピング
- * dry-run 時はこのマッピングに含まれるスキルのみ実行される
+ * ヒューリスティック検出器レジストリ（単一の真実 / SSoT）
+ *
+ * detector 1 本の追加・変更はこの配列の 1 エントリで完結する。以前は
+ *   (a) 検出関数 `findXxx`
+ *   (b) `SKILL_HEURISTIC_MAP` の関数名文字列配列（プログラム未消費の第2真実）
+ *   (c) `buildHeuristicComments` の手書き dispatch
+ *   (d) `review-engine.mjs` の kind→日本語メッセージ switch（別ファイル）
+ * の最大4箇所・2ファイルを同期する必要があったが、それらをこのレジストリから
+ * 導出することでドリフト源を解消した。
+ *
+ * エントリのフィールド:
+ *   - skillId:     対応スキル ID（dry-run フィルタと配線に使用）
+ *   - detect:      ({ diff }) => Array<{ file, line, kind }> の検出関数
+ *   - skipIfSkill: （任意）指定スキルが plan に含まれる場合はこの detector を実行しない
+ *   - findings:    kind → { finding, evidence, impact, fix, severity, confidence }
+ *                  （review-engine の日本語メッセージ生成に使用）
+ *
+ * 配列順は `buildHeuristicComments` の出力順序（golden/fixtures が pin）と一致させる。
  */
-export const SKILL_HEURISTIC_MAP = {
-  'security-basic': [
-    'findHardcodedSecrets',
-    'findGitHubActionsIssues',
-    'findDangerousEval',
-    'findInsecureTls',
-    'findWeakHash',
-    'findCommandInjection',
-  ],
-  'logging-observability': ['findSilentCatch', 'findDebuggerLeftover', 'findMergeConflict'],
-  'typescript-strict': ['findTsSuppression'],
-  'test-existence': ['findMissingTests', 'findFocusedTests', 'findDisabledTests'],
-  'coverage-gap': ['findMissingTests', 'findFocusedTests', 'findDisabledTests'],
-  'altitude-generalization': ['findCallerSpecialCase'],
-  'closure-scope-retention': ['findClosureScopeRetention'],
+
+// test-existence / coverage-gap は同一の 3 検出器を共有する。プレゼンテーションは
+// 一度だけ定義して両スキルのエントリから参照し、二重定義を避ける。
+const MISSING_TESTS_FINDING = {
+  finding: '挙動変更に対するテスト差分が見当たらない',
+  evidence: 'コード差分あり・テスト差分なし',
+  impact: '回帰の検知漏れや仕様逸脱が起きやすい',
+  fix: '新分岐/例外/境界の最小テストを1〜3件追加する',
+  severity: 'warning',
+  confidence: 'medium',
 };
+const FOCUSED_TEST_FINDING = {
+  finding: 'フォーカス済みテスト（.only）がコミットされている',
+  evidence: 'describe/it/test 等の .only が追加された',
+  impact: '他のテストが CI で実行されず、回帰を見逃す',
+  fix: '.only を外してから commit する（誤ってフォーカスを残さない）',
+  severity: 'warning',
+  confidence: 'high',
+};
+const DISABLED_TEST_FINDING = {
+  finding: '無効化されたテスト（.skip / xit / xdescribe / xcontext）がコミットされている',
+  evidence: '`.skip` または `xit`/`xdescribe`/`xcontext` が追加された',
+  impact: 'テストが実行されず、対象の挙動が未検証のまま残る',
+  fix: '修正してスキップを外す。意図的な保留なら理由（Issue 等）をコメントで残す',
+  severity: 'nit',
+  confidence: 'medium',
+};
+
+const HEURISTIC_REGISTRY = [
+  {
+    skillId: 'security-basic',
+    detect: findHardcodedSecrets,
+    findings: {
+      'hardcoded-secret': {
+        finding: '秘密情報（トークン/キー）の直書きの可能性がある',
+        evidence: 'トークン/キーらしい文字列が追加されている',
+        impact: '漏洩時に不正利用やインシデントにつながる',
+        fix: '環境変数（GitHub Secrets等）へ移し、漏洩時はローテーションも検討する',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findGitHubActionsIssues,
+    findings: {
+      'gh-actions-pull-request-target': {
+        finding: 'pull_request_targetイベントは権限昇格のリスクがある',
+        evidence: 'pull_request_targetトリガーが追加されている',
+        impact: 'フォークからのPRで任意コードが本リポジトリの権限で実行される可能性',
+        fix: 'pull_requestイベントを使用するか、pull_request_targetの場合はチェックアウト前に入力を検証する',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+      'gh-actions-excessive-permissions': {
+        finding: '過剰な権限設定（write-all）が検出された',
+        evidence: 'permissions: write-all が設定されている',
+        impact: 'ワークフローが侵害された場合の影響範囲が最大化される',
+        fix: '最小権限の原則に従い、必要な権限のみを個別に指定する（例: contents: read, pull-requests: write）',
+        severity: 'warning',
+        confidence: 'high',
+      },
+      'gh-actions-secret-in-run': {
+        finding: 'runブロック内でsecretsを直接使用している',
+        evidence: 'run: と secrets.* が同一行に存在',
+        impact: 'ログ出力やエラーメッセージでシークレットが漏洩する可能性',
+        fix: 'シークレットを環境変数として設定し、envブロック経由で参照する',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+      'gh-actions-unsanitized-input': {
+        finding: 'ユーザー入力がサニタイズされずに使用されている',
+        evidence: 'github.event.*.title/body/name がrunブロックで直接使用',
+        impact: 'コマンドインジェクション攻撃のリスクがある',
+        fix: 'jqやtoJSONを使用して入力をサニタイズする、または環境変数経由で渡す',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findDangerousEval,
+    findings: {
+      'dangerous-eval': {
+        finding: 'コード実行/インジェクションのリスクがある API が追加されている',
+        evidence:
+          'eval / new Function / dangerouslySetInnerHTML / document.write(ln) / 文字列引数の setTimeout・setInterval のいずれかが追加された',
+        impact: '入力が信頼できない場合に任意コード実行や XSS につながる',
+        fix: '動的評価を避ける（パース/ホワイトリスト化）、HTML はサニタイズして挿入し、タイマーには関数を渡す',
+        severity: 'warning',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findInsecureTls,
+    findings: {
+      'insecure-tls': {
+        finding: 'TLS 証明書検証が無効化されている',
+        evidence:
+          '`rejectUnauthorized: false` または `NODE_TLS_REJECT_UNAUTHORIZED=0` が追加された',
+        impact: '中間者攻撃に対して脆弱になる',
+        fix: '証明書検証を有効に保つ。自己署名証明書は CA を信頼ストアへ追加して対応する',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findWeakHash,
+    findings: {
+      'weak-hash': {
+        finding: '弱いハッシュアルゴリズム（MD5 / SHA-1）が使われている',
+        evidence: "`createHash('md5')` または `createHash('sha1')` が追加された",
+        impact: '衝突攻撃に弱く、署名やパスワード等の用途では安全でない',
+        fix: 'SHA-256 以上を使う。パスワードは bcrypt/scrypt/argon2 を使う',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findCommandInjection,
+    findings: {
+      'command-injection': {
+        finding: 'シェルコマンドが文字列補間で組み立てられている',
+        evidence: '`exec`/`spawn` 系にテンプレートリテラルの `${...}` 補間が渡されている',
+        impact: '補間値が信頼できない場合、コマンドインジェクションにつながる',
+        fix: '引数配列を使う（例: `execFile(cmd, [args])`）、または入力を厳格に検証/エスケープする',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+    },
+  },
+  {
+    skillId: 'logging-observability',
+    detect: findSilentCatch,
+    findings: {
+      'silent-catch': {
+        finding: 'catch で例外が握りつぶされる可能性がある',
+        evidence: 'catch 内で return（ログ/再throwなし）',
+        impact: '障害調査や失敗検知が困難になる',
+        fix: 'ログ+再throw / 上位へ返す / 無視するなら理由コメント+計測を検討する',
+        severity: 'nit',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'logging-observability',
+    detect: findDebuggerLeftover,
+    findings: {
+      'debugger-leftover': {
+        finding: 'デバッグ用 `debugger` 文がコミットされている',
+        evidence: '`debugger;` が追加された',
+        impact: '実行が一時停止する／本番に混入すると不具合や情報露出につながる',
+        fix: 'commit 前に `debugger` 文を削除する',
+        severity: 'warning',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'logging-observability',
+    detect: findMergeConflict,
+    findings: {
+      'merge-conflict': {
+        finding: '未解決のマージコンフリクトマーカーがコミットされている',
+        evidence: '`<<<<<<<` / `>>>>>>>`（diff3 では `|||||||` も）マーカーが追加された',
+        impact: 'コードが壊れ、ビルド/実行が失敗する',
+        fix: 'コンフリクトを解消し、マーカーを完全に削除する',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'typescript-strict',
+    detect: findTsSuppression,
+    findings: {
+      'ts-suppression': {
+        finding: '型チェックの抑制（@ts-ignore / @ts-nocheck）が追加されている',
+        evidence: '`@ts-ignore` または `@ts-nocheck` が追加された',
+        impact: '型エラーが隠れ、潜在的な不具合を見逃す',
+        fix: '型を修正する。やむを得ない場合は範囲を限定した `@ts-expect-error` + 理由コメントを使う',
+        severity: 'nit',
+        confidence: 'medium',
+      },
+    },
+  },
+  {
+    skillId: 'altitude-generalization',
+    detect: findCallerSpecialCase,
+    findings: {
+      'caller-special-case': {
+        finding: '共有関数に特定の呼び出し元専用の分岐（special-case）が追加されている',
+        evidence: '呼び出し元判定の分岐（`.caller === ...`）が同種2つ以上存在する',
+        impact: '呼び出し元が増えるたびに共有関数が肥大化し、保守が難化する',
+        fix: '呼び出し元ごとの設定を宣言的マップ / strategy へ寄せ、下層機構を一般化する',
+        severity: 'nit',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'closure-scope-retention',
+    detect: findClosureScopeRetention,
+    findings: {
+      'closure-scope-retention': {
+        finding:
+          '長寿命オブジェクトが closure で enclosing scope の大きなデータを保持し続ける可能性がある',
+        evidence:
+          'module-level キャッシュへ代入される closure が readFile / parse 結果の変数を参照している',
+        impact: 'オブジェクトの生存中、大きな元データが解放されずメモリを圧迫する',
+        fix: '必要なフィールドだけを Map / 明示フィールドへ縮約し、closure に大きな元データを掴ませない',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+    },
+  },
+  {
+    skillId: 'test-existence',
+    detect: findMissingTests,
+    findings: { 'missing-tests': MISSING_TESTS_FINDING },
+  },
+  {
+    skillId: 'test-existence',
+    detect: findFocusedTests,
+    findings: { 'focused-test': FOCUSED_TEST_FINDING },
+  },
+  {
+    skillId: 'test-existence',
+    detect: findDisabledTests,
+    findings: { 'disabled-test': DISABLED_TEST_FINDING },
+  },
+  {
+    skillId: 'coverage-gap',
+    skipIfSkill: 'test-existence',
+    detect: findMissingTests,
+    findings: { 'missing-tests': MISSING_TESTS_FINDING },
+  },
+  {
+    skillId: 'coverage-gap',
+    skipIfSkill: 'test-existence',
+    detect: findFocusedTests,
+    findings: { 'focused-test': FOCUSED_TEST_FINDING },
+  },
+  {
+    skillId: 'coverage-gap',
+    skipIfSkill: 'test-existence',
+    detect: findDisabledTests,
+    findings: { 'disabled-test': DISABLED_TEST_FINDING },
+  },
+];
+
+/**
+ * スキルIDとヒューリスティック検出関数名のマッピング（レジストリから導出）。
+ * dry-run 時はこのマッピングに含まれるスキルのみ実行される。
+ * value（関数名配列）はドキュメント用途で、プログラムは keys のみ消費する。
+ */
+export const SKILL_HEURISTIC_MAP = HEURISTIC_REGISTRY.reduce((map, { skillId, detect }) => {
+  (map[skillId] ??= []).push(detect.name);
+  return map;
+}, {});
 
 /**
  * ヒューリスティック対応スキルIDの一覧（dry-run 時のフィルタリング用）
  */
 export const HEURISTIC_SKILL_IDS = Object.keys(SKILL_HEURISTIC_MAP);
+
+/**
+ * kind → プレゼンテーション（finding/evidence/impact/fix/severity/confidence）の
+ * ルックアップ（レジストリから導出）。review-engine の日本語メッセージ生成が消費する。
+ */
+export const HEURISTIC_KIND_PRESENTATIONS = new Map(
+  HEURISTIC_REGISTRY.flatMap((entry) => Object.entries(entry.findings))
+);
 
 function ensureArray(value) {
   if (!value) return [];
@@ -768,88 +1045,12 @@ function findClosureScopeRetention({ diff }) {
 export function buildHeuristicComments({ diff, plan }) {
   const comments = [];
 
-  // セキュリティ基本チェック
-  if (hasSkill(plan, 'security-basic')) {
-    const skillId = 'security-basic';
-    for (const c of findHardcodedSecrets({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findGitHubActionsIssues({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findDangerousEval({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findInsecureTls({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findWeakHash({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findCommandInjection({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-  }
-
-  // ロギング・可観測性チェック
-  if (hasSkill(plan, 'logging-observability')) {
-    const skillId = 'logging-observability';
-    for (const c of findSilentCatch({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findDebuggerLeftover({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findMergeConflict({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-  }
-
-  // TypeScript 型チェック抑制
-  if (hasSkill(plan, 'typescript-strict')) {
-    const skillId = 'typescript-strict';
-    for (const c of findTsSuppression({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-  }
-
-  // 実装の深さ（caller special-case）チェック
-  if (hasSkill(plan, 'altitude-generalization')) {
-    const skillId = 'altitude-generalization';
-    for (const c of findCallerSpecialCase({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-  }
-
-  // closure スコープ保持チェック
-  if (hasSkill(plan, 'closure-scope-retention')) {
-    const skillId = 'closure-scope-retention';
-    for (const c of findClosureScopeRetention({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-  }
-
-  // テスト存在チェック
-  if (hasSkill(plan, 'test-existence')) {
-    const skillId = 'test-existence';
-    for (const c of findMissingTests({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findFocusedTests({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findDisabledTests({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-  } else if (hasSkill(plan, 'coverage-gap')) {
-    const skillId = 'coverage-gap';
-    for (const c of findMissingTests({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findFocusedTests({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-    for (const c of findDisabledTests({ diff })) {
+  for (const { skillId, detect, skipIfSkill } of HEURISTIC_REGISTRY) {
+    if (!hasSkill(plan, skillId)) continue;
+    // skipIfSkill: 上位スキルが選択されている場合は重複実行を避ける
+    // （test-existence が選択されていれば coverage-gap の同一検出器は実行しない）。
+    if (skipIfSkill && hasSkill(plan, skipIfSkill)) continue;
+    for (const c of detect({ diff })) {
       comments.push({ ...c, skillId });
     }
   }

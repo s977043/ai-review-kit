@@ -9,7 +9,11 @@ import {
 } from './finding-factory.mjs';
 import { defaultConfig } from '../config/default.mjs';
 import { summarizeSkill } from '../../runners/core/review-runner.mjs';
-import { buildHeuristicComments, HEURISTIC_SKILL_IDS } from './heuristic-review.mjs';
+import {
+  buildHeuristicComments,
+  HEURISTIC_SKILL_IDS,
+  HEURISTIC_KIND_PRESENTATIONS,
+} from './heuristic-review.mjs';
 import { isOfflineMode } from './utils.mjs';
 import { getReviewDepthConfig } from './review-plan-generator.mjs';
 import { buildRepoContextSection } from './repo-context.mjs';
@@ -316,277 +320,30 @@ function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
 
 function normalizeHeuristicComments(rawComments) {
   return rawComments.map((c) => {
-    switch (c.kind) {
-      case 'silent-catch':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: 'catch で例外が握りつぶされる可能性がある',
-            evidence: 'catch 内で return（ログ/再throwなし）',
-            impact: '障害調査や失敗検知が困難になる',
-            fix: 'ログ+再throw / 上位へ返す / 無視するなら理由コメント+計測を検討する',
-            severity: 'nit',
-            confidence: 'high',
-          }),
-        };
-      case 'missing-tests':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: '挙動変更に対するテスト差分が見当たらない',
-            evidence: 'コード差分あり・テスト差分なし',
-            impact: '回帰の検知漏れや仕様逸脱が起きやすい',
-            fix: '新分岐/例外/境界の最小テストを1〜3件追加する',
-            severity: 'warning',
-            confidence: 'medium',
-          }),
-        };
-      case 'hardcoded-secret':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: '秘密情報（トークン/キー）の直書きの可能性がある',
-            evidence: 'トークン/キーらしい文字列が追加されている',
-            impact: '漏洩時に不正利用やインシデントにつながる',
-            fix: '環境変数（GitHub Secrets等）へ移し、漏洩時はローテーションも検討する',
-            severity: 'blocker',
-            confidence: 'high',
-          }),
-        };
-      case 'gh-actions-pull-request-target':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: 'pull_request_targetイベントは権限昇格のリスクがある',
-            evidence: 'pull_request_targetトリガーが追加されている',
-            impact: 'フォークからのPRで任意コードが本リポジトリの権限で実行される可能性',
-            fix: 'pull_requestイベントを使用するか、pull_request_targetの場合はチェックアウト前に入力を検証する',
-            severity: 'blocker',
-            confidence: 'high',
-          }),
-        };
-      case 'gh-actions-excessive-permissions':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: '過剰な権限設定（write-all）が検出された',
-            evidence: 'permissions: write-all が設定されている',
-            impact: 'ワークフローが侵害された場合の影響範囲が最大化される',
-            fix: '最小権限の原則に従い、必要な権限のみを個別に指定する（例: contents: read, pull-requests: write）',
-            severity: 'warning',
-            confidence: 'high',
-          }),
-        };
-      case 'gh-actions-secret-in-run':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: 'runブロック内でsecretsを直接使用している',
-            evidence: 'run: と secrets.* が同一行に存在',
-            impact: 'ログ出力やエラーメッセージでシークレットが漏洩する可能性',
-            fix: 'シークレットを環境変数として設定し、envブロック経由で参照する',
-            severity: 'warning',
-            confidence: 'medium',
-          }),
-        };
-      case 'gh-actions-unsanitized-input':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: 'ユーザー入力がサニタイズされずに使用されている',
-            evidence: 'github.event.*.title/body/name がrunブロックで直接使用',
-            impact: 'コマンドインジェクション攻撃のリスクがある',
-            fix: 'jqやtoJSONを使用して入力をサニタイズする、または環境変数経由で渡す',
-            severity: 'blocker',
-            confidence: 'high',
-          }),
-        };
-      case 'dangerous-eval':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: 'コード実行/インジェクションのリスクがある API が追加されている',
-            evidence:
-              'eval / new Function / dangerouslySetInnerHTML / document.write(ln) / 文字列引数の setTimeout・setInterval のいずれかが追加された',
-            impact: '入力が信頼できない場合に任意コード実行や XSS につながる',
-            fix: '動的評価を避ける（パース/ホワイトリスト化）、HTML はサニタイズして挿入し、タイマーには関数を渡す',
-            severity: 'warning',
-            confidence: 'high',
-          }),
-        };
-      case 'focused-test':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: 'フォーカス済みテスト（.only）がコミットされている',
-            evidence: 'describe/it/test 等の .only が追加された',
-            impact: '他のテストが CI で実行されず、回帰を見逃す',
-            fix: '.only を外してから commit する（誤ってフォーカスを残さない）',
-            severity: 'warning',
-            confidence: 'high',
-          }),
-        };
-      case 'debugger-leftover':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: 'デバッグ用 `debugger` 文がコミットされている',
-            evidence: '`debugger;` が追加された',
-            impact: '実行が一時停止する／本番に混入すると不具合や情報露出につながる',
-            fix: 'commit 前に `debugger` 文を削除する',
-            severity: 'warning',
-            confidence: 'high',
-          }),
-        };
-      case 'insecure-tls':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: 'TLS 証明書検証が無効化されている',
-            evidence:
-              '`rejectUnauthorized: false` または `NODE_TLS_REJECT_UNAUTHORIZED=0` が追加された',
-            impact: '中間者攻撃に対して脆弱になる',
-            fix: '証明書検証を有効に保つ。自己署名証明書は CA を信頼ストアへ追加して対応する',
-            severity: 'blocker',
-            confidence: 'high',
-          }),
-        };
-      case 'weak-hash':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: '弱いハッシュアルゴリズム（MD5 / SHA-1）が使われている',
-            evidence: "`createHash('md5')` または `createHash('sha1')` が追加された",
-            impact: '衝突攻撃に弱く、署名やパスワード等の用途では安全でない',
-            fix: 'SHA-256 以上を使う。パスワードは bcrypt/scrypt/argon2 を使う',
-            severity: 'warning',
-            confidence: 'medium',
-          }),
-        };
-      case 'command-injection':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: 'シェルコマンドが文字列補間で組み立てられている',
-            evidence: '`exec`/`spawn` 系にテンプレートリテラルの `${...}` 補間が渡されている',
-            impact: '補間値が信頼できない場合、コマンドインジェクションにつながる',
-            fix: '引数配列を使う（例: `execFile(cmd, [args])`）、または入力を厳格に検証/エスケープする',
-            severity: 'warning',
-            confidence: 'medium',
-          }),
-        };
-      case 'merge-conflict':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: '未解決のマージコンフリクトマーカーがコミットされている',
-            evidence: '`<<<<<<<` / `>>>>>>>`（diff3 では `|||||||` も）マーカーが追加された',
-            impact: 'コードが壊れ、ビルド/実行が失敗する',
-            fix: 'コンフリクトを解消し、マーカーを完全に削除する',
-            severity: 'blocker',
-            confidence: 'high',
-          }),
-        };
-      case 'disabled-test':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: '無効化されたテスト（.skip / xit / xdescribe / xcontext）がコミットされている',
-            evidence: '`.skip` または `xit`/`xdescribe`/`xcontext` が追加された',
-            impact: 'テストが実行されず、対象の挙動が未検証のまま残る',
-            fix: '修正してスキップを外す。意図的な保留なら理由（Issue 等）をコメントで残す',
-            severity: 'nit',
-            confidence: 'medium',
-          }),
-        };
-      case 'ts-suppression':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: '型チェックの抑制（@ts-ignore / @ts-nocheck）が追加されている',
-            evidence: '`@ts-ignore` または `@ts-nocheck` が追加された',
-            impact: '型エラーが隠れ、潜在的な不具合を見逃す',
-            fix: '型を修正する。やむを得ない場合は範囲を限定した `@ts-expect-error` + 理由コメントを使う',
-            severity: 'nit',
-            confidence: 'medium',
-          }),
-        };
-      case 'caller-special-case':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding: '共有関数に特定の呼び出し元専用の分岐（special-case）が追加されている',
-            evidence: '呼び出し元判定の分岐（`.caller === ...`）が同種2つ以上存在する',
-            impact: '呼び出し元が増えるたびに共有関数が肥大化し、保守が難化する',
-            fix: '呼び出し元ごとの設定を宣言的マップ / strategy へ寄せ、下層機構を一般化する',
-            severity: 'nit',
-            confidence: 'high',
-          }),
-        };
-      case 'closure-scope-retention':
-        return {
-          file: c.file,
-          line: c.line,
-          skillId: c.skillId,
-          message: formatFindingMessage({
-            finding:
-              '長寿命オブジェクトが closure で enclosing scope の大きなデータを保持し続ける可能性がある',
-            evidence:
-              'module-level キャッシュへ代入される closure が readFile / parse 結果の変数を参照している',
-            impact: 'オブジェクトの生存中、大きな元データが解放されずメモリを圧迫する',
-            fix: '必要なフィールドだけを Map / 明示フィールドへ縮約し、closure に大きな元データを掴ませない',
-            severity: 'warning',
-            confidence: 'medium',
-          }),
-        };
-      default:
-        return {
-          file: c.file,
-          line: c.line,
-          message: formatFindingMessage({
-            finding: `想定外のヒューリスティック（kind=${String(c.kind ?? 'unknown')}）`,
-            evidence: 'ヒューリスティック kind が未知',
-            impact: 'レビュー結果が不安定になる可能性がある',
-            fix: 'ヒューリスティック定義と出力の対応を見直す',
-            severity: 'warning',
-            confidence: 'low',
-          }),
-        };
+    // kind → プレゼンテーションは heuristic-review.mjs の単一レジストリ
+    // (HEURISTIC_KIND_PRESENTATIONS) から導出する。detector の追加はレジストリ
+    // 1 箇所で完結し、ここに case を足す必要はない。
+    const preset = HEURISTIC_KIND_PRESENTATIONS.get(c.kind);
+    if (!preset) {
+      return {
+        file: c.file,
+        line: c.line,
+        message: formatFindingMessage({
+          finding: `想定外のヒューリスティック（kind=${String(c.kind ?? 'unknown')}）`,
+          evidence: 'ヒューリスティック kind が未知',
+          impact: 'レビュー結果が不安定になる可能性がある',
+          fix: 'ヒューリスティック定義と出力の対応を見直す',
+          severity: 'warning',
+          confidence: 'low',
+        }),
+      };
     }
+    return {
+      file: c.file,
+      line: c.line,
+      skillId: c.skillId,
+      message: formatFindingMessage(preset),
+    };
   });
 }
 

@@ -8,7 +8,9 @@
 
 - `heuristic-review.mjs` に `findXxx` 検出器を追加する
 - 既存検出器の正規表現を変更する
-- `SKILL_HEURISTIC_MAP` にエントリを追加する
+- `HEURISTIC_REGISTRY` にエントリを追加する
+
+> 配線は `heuristic-review.mjs` の単一レジストリ `HEURISTIC_REGISTRY` に集約されている。detector の追加はこのレジストリの 1 エントリで完結し、`SKILL_HEURISTIC_MAP` / `HEURISTIC_SKILL_IDS` / `HEURISTIC_KIND_PRESENTATIONS` はそこから導出される（`review-engine.mjs` の switch は廃止済み）。
 
 ## 1. コメント行・文字列の扱い（最頻出の FP/FN 源）
 
@@ -38,13 +40,13 @@
 
 ## 5. severity / confidence の較正
 
-- [ ] `review-engine.mjs` の `switch (c.kind)` に対応 case を追加し、finding / evidence / impact / fix / severity / confidence を埋める。
+- [ ] レジストリエントリの `findings[kind]` に finding / evidence / impact / fix / severity / confidence を埋める（`review-engine.mjs` に case を足す必要はない。メッセージ生成はレジストリから導出される）。
 - [ ] severity は内部語彙（blocker / warning / nit）。確実な危険は `blocker`、レビュー喚起レベルは `warning`、任意保留があり得るものは `nit`（例: `.skip` は意図的な保留がありうるため nit）。confidence は regex の確度に合わせる。
 
 ## 6. 配線
 
-- [ ] `SKILL_HEURISTIC_MAP` の該当スキルに detector 名を追加する（ドキュメントとしての意味。実際の呼び出しは `buildHeuristicComments` 内で明示的に行う）。
-- [ ] `buildHeuristicComments` の該当スキルブロックに `for (const c of findXxx({ diff })) comments.push({ ...c, skillId });` を追加する。
+- [ ] `heuristic-review.mjs` の `HEURISTIC_REGISTRY` に 1 エントリ（`{ skillId, detect, findings }`）を追加する。配列順が `buildHeuristicComments` の出力順序（golden/fixtures が pin）になるため、既存スキルのブロック内の適切な位置に挿入する。
+- [ ] 1 つの検出関数が複数 kind を emit する場合（例: `findGitHubActionsIssues`）は `findings` に複数 kind を列挙する。複数スキルが同一検出器を共有する場合（例: `test-existence` / `coverage-gap`）は presentation を const に切り出して参照し、二重定義を避ける。上位スキル優先で重複実行を避けたい場合は `skipIfSkill` を使う。
 - [ ] 新スキルを heuristic 化する場合は、そのスキルの `applyTo` が対象ファイルに一致することを確認する（`SKILL.md` の `applyTo` を読む）。
 
 ## 7. テスト（positive と negative の両方）
@@ -60,8 +62,8 @@
 
 ## 関連
 
-- `src/lib/heuristic-review.mjs`—検出器本体と `stripTrailingLineComment` ヘルパー
-- `src/lib/review-engine.mjs`—`kind` → finding メッセージの `switch`
+- `src/lib/heuristic-review.mjs`—検出器本体・`HEURISTIC_REGISTRY`（配線と kind→presentation の SSoT）・`stripTrailingLineComment` ヘルパー
+- `src/lib/review-engine.mjs`—`normalizeHeuristicComments`（レジストリの `HEURISTIC_KIND_PRESENTATIONS` を参照して finding メッセージを生成）
 - `docs/development/skill-severity-rubric.md`—severity 較正
 - `docs/development/dist-check-rebuild-guide.md`—dist 再ビルド手順
 - `pages/explanation/what-is-river-review.md`—実行モデル（no-key 観点リストの SSoT）
