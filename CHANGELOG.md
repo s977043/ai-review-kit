@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.46.0](https://github.com/s977043/river-review/compare/v1.45.0...v1.46.0) (2026-07-10)
+
+
+### Features
+
+* **scripts:** skill 命名規則の validator と canary を追加する ([#1468](https://github.com/s977043/river-review/issues/1468)) ([00206ea](https://github.com/s977043/river-review/commit/00206ea09fcdf7274294b1ad5bf626e14fce29fe))
+
 ## [1.45.0](https://github.com/s977043/river-review/compare/v1.44.0...v1.45.0) (2026-07-10)
 
 
