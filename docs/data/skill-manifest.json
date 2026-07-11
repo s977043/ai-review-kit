@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 128,
+  "skillCount": 129,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -362,6 +362,12 @@
       "path": "skills/midstream/i18n-unused-key",
       "checksum": "sha256:b4bc3f91e74311dc416dd5ab7e51d4e467156d412e829a888a4092974e96d186",
       "files": 5
+    },
+    {
+      "id": "impact-evidence-coverage",
+      "path": "skills/midstream/impact-evidence-coverage",
+      "checksum": "sha256:116dafbe8a19b9f86330d6ba56ad5dde4007d0762eb6f452268063ea0ee914c4",
+      "files": 3
     },
     {
       "id": "independent-review-synthesis",
@@ -756,7 +762,7 @@
     {
       "id": "unknown-coverage-review",
       "path": "skills/agent-skills/unknown-coverage-review",
-      "checksum": "sha256:48f1033ce20ec7db3701c217e1bca655b92f1609524855caeb2f438a0c249a8e",
+      "checksum": "sha256:a2a56c08c772ee08ec1e1c538e6bfe5861d0670199c343d36315cb537bcced40",
       "files": 5
     },
     {
