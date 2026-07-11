@@ -270,8 +270,8 @@
     {
       "id": "doc-hygiene",
       "path": "skills/midstream/doc-hygiene",
-      "checksum": "sha256:4bbec57bd0ebf84694a57634828f74aed0ba184b4c1be73d120d3cfd04b089de",
-      "files": 1
+      "checksum": "sha256:b7d73e7a1bad4d85f1bd8444ad96903db3e004ef52f274354f3c86ccf784c66f",
+      "files": 2
     },
     {
       "id": "dr-multiregion",
@@ -300,8 +300,8 @@
     {
       "id": "existing-pattern-conformance",
       "path": "skills/midstream/existing-pattern-conformance",
-      "checksum": "sha256:81f00d0c212904ac48a0bed286aefd22cd547ba21471c199d16aa67ed478ca8a",
-      "files": 1
+      "checksum": "sha256:0a8a2b1f7acc1824f787a01b284ba23341a440b0a5a7835c97e6e5c51862de8f",
+      "files": 2
     },
     {
       "id": "external-dependencies",
@@ -468,8 +468,8 @@
     {
       "id": "nullability-contract",
       "path": "skills/midstream/nullability-contract",
-      "checksum": "sha256:407cd9614b449ce32437d5f585a315b750bad893e9d66b436fdcd1eff744aa9a",
-      "files": 5
+      "checksum": "sha256:a20cc3991a65e3ca31cdb44b7501d6a3e39ea91b989657f23278dee018ae8fcd",
+      "files": 7
     },
     {
       "id": "openapi-contract",
@@ -618,13 +618,13 @@
     {
       "id": "river-review-code",
       "path": "skills/agent-skills/river-review-code",
-      "checksum": "sha256:2e01b7a1efc6247c003093c60508a8f9e0c5e5f76ff583c2e933858083cc00a5",
+      "checksum": "sha256:289f9bedebccc8e9505c23c41f746032b0f52ab66b107f8965efeadcb3c7e771",
       "files": 4
     },
     {
       "id": "river-review-docs",
       "path": "skills/agent-skills/river-review-docs",
-      "checksum": "sha256:0376ede01ffbac77ba22af05dd60e4c9891137a6db3cd4804eafd054064e949b",
+      "checksum": "sha256:e2a750c2fab414c800bef86e771801fd22aac34dc4d94ca6046a40d52dc398f5",
       "files": 2
     },
     {
