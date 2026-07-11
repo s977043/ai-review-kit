@@ -793,6 +793,26 @@ skills:
     recommended: true
     description: 'diff-time で影響調査・失敗系検証・外部依存確認の証拠欠落を検出する evidence-sufficiency 観点。defect は既存 skill へ委譲し、証拠が同一 diff に同梱されていれば充足とみなす。unknown-coverage-review 合成層が委譲する Impact/Failure/External の 3 軸を registry として単独実行する'
 
+  - id: assumption-resolution-trace
+    version: '0.1.0'
+    name: 'Assumption Resolution Trace Plan の前提解消トレーサビリティ'
+    path: skills/midstream/assumption-resolution-trace/SKILL.md
+    category: midstream
+    phase: midstream
+    tags:
+      [
+        assumption-resolution-trace,
+        evidence-sufficiency,
+        plan-traceability,
+        assumption,
+        open-question,
+        unknown-coverage,
+        midstream,
+      ]
+    severity: major
+    recommended: true
+    description: 'plan artifact がある時のみ、plan の assumption / open question が実装で解消された証拠を diff・PR 本文と突合する evidence-sufficiency 観点。plan 欠損時は発火せず、PR 本文に前提が inline 列挙されていれば列挙分のみ部分評価する。unknown-coverage-review 合成層の観点6 を registry として単独実行する'
+
   - id: cross-file-leakage
     version: '0.1.0'
     name: 'Cross-File Leakage リファクタ後の caller 側残骸検出'
