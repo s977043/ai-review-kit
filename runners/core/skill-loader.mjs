@@ -269,6 +269,49 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
   return files.sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * Recursively discover skill-package directories under `root`: directories that
+ * directly contain a `SKILL.md`. Descent stops at the first `SKILL.md` found on
+ * a branch, so a nested `SKILL.md` (e.g. under `fixtures/`) does not create a
+ * second entry. This is the shared lower layer for the manifest generator's
+ * `findSkillDirs` and the agent-skills validator's package discovery.
+ *
+ * Unlike {@link listSkillFiles}, the unit of discovery here is the SKILL.md
+ * package directory, not individual skill definition files: it returns directory
+ * paths and applies no extension or ignore-name filtering. Results are returned
+ * in walk order (unsorted) so each caller can apply the sort its output contract
+ * requires — sorting SKILL.md paths and sorting their parent directories are not
+ * equivalent orderings when one sibling name is a prefix of another.
+ *
+ * @param {string} root directory to scan
+ * @param {{ includeRoot?: boolean }} [options] when false, `root` itself is not
+ *   tested for a `SKILL.md`; scanning begins at its immediate child directories
+ *   (the agent-skills validator's root is a container, never a package).
+ * @returns {Promise<string[]>} SKILL.md-bearing directory paths, in walk order
+ */
+export async function listSkillPackageDirs(root, { includeRoot = true } = {}) {
+  const dirs = [];
+  async function walk(dir) {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    if (entries.some((entry) => entry.isFile() && entry.name === 'SKILL.md')) {
+      dirs.push(dir);
+      return; // do not descend into nested skill dirs
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) await walk(path.join(dir, entry.name));
+    }
+  }
+  if (includeRoot) {
+    await walk(root);
+  } else {
+    const entries = await fs.readdir(root, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) await walk(path.join(root, entry.name));
+    }
+  }
+  return dirs;
+}
+
 function normalizeStringArray(value) {
   if (!value) return undefined;
   const asArray = Array.isArray(value) ? value : [value];

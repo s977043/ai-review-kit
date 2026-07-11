@@ -2,7 +2,7 @@
 import './sourcemap-register.cjs';import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
 /******/ var __webpack_modules__ = ({
 
-/***/ 973:
+/***/ 7743:
 /***/ (function(__unused_webpack_module, exports) {
 
 
@@ -290,7 +290,7 @@ exports.decodedLength = function (s) {
 
 /***/ }),
 
-/***/ 779:
+/***/ 4194:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -504,14 +504,14 @@ function regex(str) {
 
 /***/ }),
 
-/***/ 2815:
+/***/ 8613:
 /***/ ((module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const formats_1 = __nccwpck_require__(779);
-const limit_1 = __nccwpck_require__(1284);
-const codegen_1 = __nccwpck_require__(1436);
+const formats_1 = __nccwpck_require__(4194);
+const limit_1 = __nccwpck_require__(8142);
+const codegen_1 = __nccwpck_require__(3626);
 const fullName = new codegen_1.Name("fullFormats");
 const fastName = new codegen_1.Name("fastFormats");
 const formatsPlugin = (ajv, opts = { keywords: true }) => {
@@ -547,14 +547,14 @@ exports["default"] = formatsPlugin;
 
 /***/ }),
 
-/***/ 1284:
+/***/ 8142:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.formatLimitDefinition = void 0;
-const ajv_1 = __nccwpck_require__(2463);
-const codegen_1 = __nccwpck_require__(1436);
+const ajv_1 = __nccwpck_require__(3457);
+const codegen_1 = __nccwpck_require__(3626);
 const ops = codegen_1.operators;
 const KWDs = {
     formatMaximum: { okStr: "<=", ok: ops.LTE, fail: ops.GT },
@@ -622,16 +622,16 @@ exports["default"] = formatLimitPlugin;
 
 /***/ }),
 
-/***/ 2210:
+/***/ 7720:
 /***/ ((module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
-const core_1 = __nccwpck_require__(3893);
-const draft2020_1 = __nccwpck_require__(4298);
-const discriminator_1 = __nccwpck_require__(8886);
-const json_schema_2020_12_1 = __nccwpck_require__(3995);
+const core_1 = __nccwpck_require__(9927);
+const draft2020_1 = __nccwpck_require__(2196);
+const discriminator_1 = __nccwpck_require__(1448);
+const json_schema_2020_12_1 = __nccwpck_require__(6949);
 const META_SCHEMA_ID = "https://json-schema.org/draft/2020-12/schema";
 class Ajv2020 extends core_1.default {
     constructor(opts = {}) {
@@ -666,33 +666,33 @@ module.exports = exports = Ajv2020;
 module.exports.Ajv2020 = Ajv2020;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports["default"] = Ajv2020;
-var validate_1 = __nccwpck_require__(7881);
+var validate_1 = __nccwpck_require__(7007);
 Object.defineProperty(exports, "KeywordCxt", ({ enumerable: true, get: function () { return validate_1.KeywordCxt; } }));
-var codegen_1 = __nccwpck_require__(1436);
+var codegen_1 = __nccwpck_require__(3626);
 Object.defineProperty(exports, "_", ({ enumerable: true, get: function () { return codegen_1._; } }));
 Object.defineProperty(exports, "str", ({ enumerable: true, get: function () { return codegen_1.str; } }));
 Object.defineProperty(exports, "stringify", ({ enumerable: true, get: function () { return codegen_1.stringify; } }));
 Object.defineProperty(exports, "nil", ({ enumerable: true, get: function () { return codegen_1.nil; } }));
 Object.defineProperty(exports, "Name", ({ enumerable: true, get: function () { return codegen_1.Name; } }));
 Object.defineProperty(exports, "CodeGen", ({ enumerable: true, get: function () { return codegen_1.CodeGen; } }));
-var validation_error_1 = __nccwpck_require__(3021);
+var validation_error_1 = __nccwpck_require__(871);
 Object.defineProperty(exports, "ValidationError", ({ enumerable: true, get: function () { return validation_error_1.default; } }));
-var ref_error_1 = __nccwpck_require__(3162);
+var ref_error_1 = __nccwpck_require__(7524);
 Object.defineProperty(exports, "MissingRefError", ({ enumerable: true, get: function () { return ref_error_1.default; } }));
 //# sourceMappingURL=2020.js.map
 
 /***/ }),
 
-/***/ 2463:
+/***/ 3457:
 /***/ ((module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv = void 0;
-const core_1 = __nccwpck_require__(3893);
-const draft7_1 = __nccwpck_require__(9941);
-const discriminator_1 = __nccwpck_require__(8886);
-const draft7MetaSchema = __nccwpck_require__(2079);
+const core_1 = __nccwpck_require__(9927);
+const draft7_1 = __nccwpck_require__(1631);
+const discriminator_1 = __nccwpck_require__(1448);
+const draft7MetaSchema = __nccwpck_require__(8061);
 const META_SUPPORT_DATA = ["/properties"];
 const META_SCHEMA_ID = "http://json-schema.org/draft-07/schema";
 class Ajv extends core_1.default {
@@ -722,24 +722,24 @@ module.exports = exports = Ajv;
 module.exports.Ajv = Ajv;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports["default"] = Ajv;
-var validate_1 = __nccwpck_require__(7881);
+var validate_1 = __nccwpck_require__(7007);
 Object.defineProperty(exports, "KeywordCxt", ({ enumerable: true, get: function () { return validate_1.KeywordCxt; } }));
-var codegen_1 = __nccwpck_require__(1436);
+var codegen_1 = __nccwpck_require__(3626);
 Object.defineProperty(exports, "_", ({ enumerable: true, get: function () { return codegen_1._; } }));
 Object.defineProperty(exports, "str", ({ enumerable: true, get: function () { return codegen_1.str; } }));
 Object.defineProperty(exports, "stringify", ({ enumerable: true, get: function () { return codegen_1.stringify; } }));
 Object.defineProperty(exports, "nil", ({ enumerable: true, get: function () { return codegen_1.nil; } }));
 Object.defineProperty(exports, "Name", ({ enumerable: true, get: function () { return codegen_1.Name; } }));
 Object.defineProperty(exports, "CodeGen", ({ enumerable: true, get: function () { return codegen_1.CodeGen; } }));
-var validation_error_1 = __nccwpck_require__(3021);
+var validation_error_1 = __nccwpck_require__(871);
 Object.defineProperty(exports, "ValidationError", ({ enumerable: true, get: function () { return validation_error_1.default; } }));
-var ref_error_1 = __nccwpck_require__(3162);
+var ref_error_1 = __nccwpck_require__(7524);
 Object.defineProperty(exports, "MissingRefError", ({ enumerable: true, get: function () { return ref_error_1.default; } }));
 //# sourceMappingURL=ajv.js.map
 
 /***/ }),
 
-/***/ 567:
+/***/ 1101:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -901,15 +901,15 @@ exports.regexpCode = regexpCode;
 
 /***/ }),
 
-/***/ 1436:
+/***/ 3626:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
-const code_1 = __nccwpck_require__(567);
-const scope_1 = __nccwpck_require__(7788);
-var code_2 = __nccwpck_require__(567);
+const code_1 = __nccwpck_require__(1101);
+const scope_1 = __nccwpck_require__(3874);
+var code_2 = __nccwpck_require__(1101);
 Object.defineProperty(exports, "_", ({ enumerable: true, get: function () { return code_2._; } }));
 Object.defineProperty(exports, "str", ({ enumerable: true, get: function () { return code_2.str; } }));
 Object.defineProperty(exports, "strConcat", ({ enumerable: true, get: function () { return code_2.strConcat; } }));
@@ -918,7 +918,7 @@ Object.defineProperty(exports, "getProperty", ({ enumerable: true, get: function
 Object.defineProperty(exports, "stringify", ({ enumerable: true, get: function () { return code_2.stringify; } }));
 Object.defineProperty(exports, "regexpCode", ({ enumerable: true, get: function () { return code_2.regexpCode; } }));
 Object.defineProperty(exports, "Name", ({ enumerable: true, get: function () { return code_2.Name; } }));
-var scope_2 = __nccwpck_require__(7788);
+var scope_2 = __nccwpck_require__(3874);
 Object.defineProperty(exports, "Scope", ({ enumerable: true, get: function () { return scope_2.Scope; } }));
 Object.defineProperty(exports, "ValueScope", ({ enumerable: true, get: function () { return scope_2.ValueScope; } }));
 Object.defineProperty(exports, "ValueScopeName", ({ enumerable: true, get: function () { return scope_2.ValueScopeName; } }));
@@ -1604,13 +1604,13 @@ function par(x) {
 
 /***/ }),
 
-/***/ 7788:
+/***/ 3874:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
-const code_1 = __nccwpck_require__(567);
+const code_1 = __nccwpck_require__(1101);
 class ValueError extends Error {
     constructor(name) {
         super(`CodeGen: "code" for ${name} not defined`);
@@ -1753,15 +1753,15 @@ exports.ValueScope = ValueScope;
 
 /***/ }),
 
-/***/ 1283:
+/***/ 6865:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const names_1 = __nccwpck_require__(630);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const names_1 = __nccwpck_require__(1740);
 exports.keywordError = {
     message: ({ keyword }) => (0, codegen_1.str) `must pass "${keyword}" keyword validation`,
 };
@@ -1882,18 +1882,18 @@ function extraErrorProps(cxt, { params, message }, keyValues) {
 
 /***/ }),
 
-/***/ 2718:
+/***/ 4688:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const validation_error_1 = __nccwpck_require__(3021);
-const names_1 = __nccwpck_require__(630);
-const resolve_1 = __nccwpck_require__(4090);
-const util_1 = __nccwpck_require__(4464);
-const validate_1 = __nccwpck_require__(7881);
+const codegen_1 = __nccwpck_require__(3626);
+const validation_error_1 = __nccwpck_require__(871);
+const names_1 = __nccwpck_require__(1740);
+const resolve_1 = __nccwpck_require__(3032);
+const util_1 = __nccwpck_require__(6362);
+const validate_1 = __nccwpck_require__(7007);
 class SchemaEnv {
     constructor(env) {
         var _a;
@@ -2130,12 +2130,12 @@ function getJsonPointer(parsedRef, { baseId, schema, root }) {
 
 /***/ }),
 
-/***/ 630:
+/***/ 1740:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
+const codegen_1 = __nccwpck_require__(3626);
 const names = {
     // validation function arguments
     data: new codegen_1.Name("data"), // data passed to validation function
@@ -2164,12 +2164,12 @@ exports["default"] = names;
 
 /***/ }),
 
-/***/ 3162:
+/***/ 7524:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const resolve_1 = __nccwpck_require__(4090);
+const resolve_1 = __nccwpck_require__(3032);
 class MissingRefError extends Error {
     constructor(resolver, baseId, ref, msg) {
         super(msg || `can't resolve reference ${ref} from id ${baseId}`);
@@ -2182,15 +2182,15 @@ exports["default"] = MissingRefError;
 
 /***/ }),
 
-/***/ 4090:
+/***/ 3032:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
-const util_1 = __nccwpck_require__(4464);
-const equal = __nccwpck_require__(3430);
-const traverse = __nccwpck_require__(1167);
+const util_1 = __nccwpck_require__(6362);
+const equal = __nccwpck_require__(7272);
+const traverse = __nccwpck_require__(3533);
 // TODO refactor to use keyword definitions
 const SIMPLE_INLINED = new Set([
     "type",
@@ -2343,7 +2343,7 @@ exports.getSchemaRefs = getSchemaRefs;
 
 /***/ }),
 
-/***/ 7353:
+/***/ 2399:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -2375,14 +2375,14 @@ exports.getRules = getRules;
 
 /***/ }),
 
-/***/ 4464:
+/***/ 6362:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const code_1 = __nccwpck_require__(567);
+const codegen_1 = __nccwpck_require__(3626);
+const code_1 = __nccwpck_require__(1101);
 // TODO refactor to use Set
 function toHash(arr) {
     const hash = {};
@@ -2559,7 +2559,7 @@ exports.checkStrictMode = checkStrictMode;
 
 /***/ }),
 
-/***/ 7692:
+/***/ 3078:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -2584,15 +2584,15 @@ exports.shouldUseRule = shouldUseRule;
 
 /***/ }),
 
-/***/ 5346:
+/***/ 7164:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
-const errors_1 = __nccwpck_require__(1283);
-const codegen_1 = __nccwpck_require__(1436);
-const names_1 = __nccwpck_require__(630);
+const errors_1 = __nccwpck_require__(6865);
+const codegen_1 = __nccwpck_require__(3626);
+const names_1 = __nccwpck_require__(1740);
 const boolError = {
     message: "boolean schema is false",
 };
@@ -2640,17 +2640,17 @@ function falseSchemaError(it, overrideAllErrors) {
 
 /***/ }),
 
-/***/ 6685:
+/***/ 7931:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
-const rules_1 = __nccwpck_require__(7353);
-const applicability_1 = __nccwpck_require__(7692);
-const errors_1 = __nccwpck_require__(1283);
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const rules_1 = __nccwpck_require__(2399);
+const applicability_1 = __nccwpck_require__(3078);
+const errors_1 = __nccwpck_require__(6865);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 var DataType;
 (function (DataType) {
     DataType[DataType["Correct"] = 0] = "Correct";
@@ -2849,14 +2849,14 @@ function getTypeErrorContext(it) {
 
 /***/ }),
 
-/***/ 1699:
+/***/ 1497:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.assignDefaults = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 function assignDefaults(it, ty) {
     const { properties, items } = it.schema;
     if (ty === "object" && properties) {
@@ -2890,24 +2890,24 @@ function assignDefault(it, prop, defaultValue) {
 
 /***/ }),
 
-/***/ 7881:
+/***/ 7007:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
-const boolSchema_1 = __nccwpck_require__(5346);
-const dataType_1 = __nccwpck_require__(6685);
-const applicability_1 = __nccwpck_require__(7692);
-const dataType_2 = __nccwpck_require__(6685);
-const defaults_1 = __nccwpck_require__(1699);
-const keyword_1 = __nccwpck_require__(5202);
-const subschema_1 = __nccwpck_require__(6200);
-const codegen_1 = __nccwpck_require__(1436);
-const names_1 = __nccwpck_require__(630);
-const resolve_1 = __nccwpck_require__(4090);
-const util_1 = __nccwpck_require__(4464);
-const errors_1 = __nccwpck_require__(1283);
+const boolSchema_1 = __nccwpck_require__(7164);
+const dataType_1 = __nccwpck_require__(7931);
+const applicability_1 = __nccwpck_require__(3078);
+const dataType_2 = __nccwpck_require__(7931);
+const defaults_1 = __nccwpck_require__(1497);
+const keyword_1 = __nccwpck_require__(4004);
+const subschema_1 = __nccwpck_require__(234);
+const codegen_1 = __nccwpck_require__(3626);
+const names_1 = __nccwpck_require__(1740);
+const resolve_1 = __nccwpck_require__(3032);
+const util_1 = __nccwpck_require__(6362);
+const errors_1 = __nccwpck_require__(6865);
 // schema compilation - generates validation function, subschemaCode (below) is used for subschemas
 function validateFunctionCode(it) {
     if (isSchemaObj(it)) {
@@ -3416,16 +3416,16 @@ exports.getData = getData;
 
 /***/ }),
 
-/***/ 5202:
+/***/ 4004:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const names_1 = __nccwpck_require__(630);
-const code_1 = __nccwpck_require__(8484);
-const errors_1 = __nccwpck_require__(1283);
+const codegen_1 = __nccwpck_require__(3626);
+const names_1 = __nccwpck_require__(1740);
+const code_1 = __nccwpck_require__(4434);
+const errors_1 = __nccwpck_require__(6865);
 function macroKeywordCode(cxt, def) {
     const { gen, keyword, schema, parentSchema, it } = cxt;
     const macroSchema = def.macro.call(it.self, schema, parentSchema, it);
@@ -3546,14 +3546,14 @@ exports.validateKeywordUsage = validateKeywordUsage;
 
 /***/ }),
 
-/***/ 6200:
+/***/ 234:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 function getSubschema(it, { keyword, schemaProp, schema, schemaPath, errSchemaPath, topSchemaRef }) {
     if (keyword !== undefined && schema !== undefined) {
         throw new Error('both "keyword" and "schema" passed, only one allowed');
@@ -3633,31 +3633,31 @@ exports.extendSubschemaMode = extendSubschemaMode;
 
 /***/ }),
 
-/***/ 3893:
+/***/ 9927:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
-var validate_1 = __nccwpck_require__(7881);
+var validate_1 = __nccwpck_require__(7007);
 Object.defineProperty(exports, "KeywordCxt", ({ enumerable: true, get: function () { return validate_1.KeywordCxt; } }));
-var codegen_1 = __nccwpck_require__(1436);
+var codegen_1 = __nccwpck_require__(3626);
 Object.defineProperty(exports, "_", ({ enumerable: true, get: function () { return codegen_1._; } }));
 Object.defineProperty(exports, "str", ({ enumerable: true, get: function () { return codegen_1.str; } }));
 Object.defineProperty(exports, "stringify", ({ enumerable: true, get: function () { return codegen_1.stringify; } }));
 Object.defineProperty(exports, "nil", ({ enumerable: true, get: function () { return codegen_1.nil; } }));
 Object.defineProperty(exports, "Name", ({ enumerable: true, get: function () { return codegen_1.Name; } }));
 Object.defineProperty(exports, "CodeGen", ({ enumerable: true, get: function () { return codegen_1.CodeGen; } }));
-const validation_error_1 = __nccwpck_require__(3021);
-const ref_error_1 = __nccwpck_require__(3162);
-const rules_1 = __nccwpck_require__(7353);
-const compile_1 = __nccwpck_require__(2718);
-const codegen_2 = __nccwpck_require__(1436);
-const resolve_1 = __nccwpck_require__(4090);
-const dataType_1 = __nccwpck_require__(6685);
-const util_1 = __nccwpck_require__(4464);
-const $dataRefSchema = __nccwpck_require__(3837);
-const uri_1 = __nccwpck_require__(6285);
+const validation_error_1 = __nccwpck_require__(871);
+const ref_error_1 = __nccwpck_require__(7524);
+const rules_1 = __nccwpck_require__(2399);
+const compile_1 = __nccwpck_require__(4688);
+const codegen_2 = __nccwpck_require__(3626);
+const resolve_1 = __nccwpck_require__(3032);
+const dataType_1 = __nccwpck_require__(7931);
+const util_1 = __nccwpck_require__(6362);
+const $dataRefSchema = __nccwpck_require__(2783);
+const uri_1 = __nccwpck_require__(2703);
 const defaultRegExp = (str, flags) => new RegExp(str, flags);
 defaultRegExp.code = "new RegExp";
 const META_IGNORE_OPTIONS = ["removeAdditional", "useDefaults", "coerceTypes"];
@@ -4257,19 +4257,19 @@ function schemaOrData(schema) {
 
 /***/ }),
 
-/***/ 3995:
+/***/ 6949:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const metaSchema = __nccwpck_require__(1678);
-const applicator = __nccwpck_require__(7216);
-const unevaluated = __nccwpck_require__(9547);
-const content = __nccwpck_require__(8226);
-const core = __nccwpck_require__(518);
-const format = __nccwpck_require__(4588);
-const metadata = __nccwpck_require__(5707);
-const validation = __nccwpck_require__(7082);
+const metaSchema = __nccwpck_require__(1016);
+const applicator = __nccwpck_require__(6006);
+const unevaluated = __nccwpck_require__(9334);
+const content = __nccwpck_require__(5464);
+const core = __nccwpck_require__(3892);
+const format = __nccwpck_require__(7442);
+const metadata = __nccwpck_require__(2617);
+const validation = __nccwpck_require__(9064);
 const META_SUPPORT_DATA = ["/properties"];
 function addMetaSchema2020($data) {
     ;
@@ -4293,20 +4293,20 @@ exports["default"] = addMetaSchema2020;
 
 /***/ }),
 
-/***/ 4951:
+/***/ 1077:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 // https://github.com/ajv-validator/ajv/issues/889
-const equal = __nccwpck_require__(3430);
+const equal = __nccwpck_require__(7272);
 equal.code = 'require("ajv/dist/runtime/equal").default';
 exports["default"] = equal;
 //# sourceMappingURL=equal.js.map
 
 /***/ }),
 
-/***/ 6214:
+/***/ 9140:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -4336,19 +4336,19 @@ ucs2length.code = 'require("ajv/dist/runtime/ucs2length").default';
 
 /***/ }),
 
-/***/ 6285:
+/***/ 2703:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const uri = __nccwpck_require__(4352);
+const uri = __nccwpck_require__(7374);
 uri.code = 'require("ajv/dist/runtime/uri").default';
 exports["default"] = uri;
 //# sourceMappingURL=uri.js.map
 
 /***/ }),
 
-/***/ 3021:
+/***/ 871:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -4365,14 +4365,14 @@ exports["default"] = ValidationError;
 
 /***/ }),
 
-/***/ 3448:
+/***/ 2:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateAdditionalItems = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 const error = {
     message: ({ params: { len } }) => (0, codegen_1.str) `must NOT have more than ${len} items`,
     params: ({ params: { len } }) => (0, codegen_1._) `{limit: ${len}}`,
@@ -4420,15 +4420,15 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 2431:
+/***/ 6953:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const code_1 = __nccwpck_require__(8484);
-const codegen_1 = __nccwpck_require__(1436);
-const names_1 = __nccwpck_require__(630);
-const util_1 = __nccwpck_require__(4464);
+const code_1 = __nccwpck_require__(4434);
+const codegen_1 = __nccwpck_require__(3626);
+const names_1 = __nccwpck_require__(1740);
+const util_1 = __nccwpck_require__(6362);
 const error = {
     message: "must NOT have additional properties",
     params: ({ params }) => (0, codegen_1._) `{additionalProperty: ${params.additionalProperty}}`,
@@ -4532,12 +4532,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 9205:
+/***/ 8843:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const util_1 = __nccwpck_require__(4464);
+const util_1 = __nccwpck_require__(6362);
 const def = {
     keyword: "allOf",
     schemaType: "array",
@@ -4561,12 +4561,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 9380:
+/***/ 9446:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const code_1 = __nccwpck_require__(8484);
+const code_1 = __nccwpck_require__(4434);
 const def = {
     keyword: "anyOf",
     schemaType: "array",
@@ -4579,13 +4579,13 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 6182:
+/***/ 3276:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 const error = {
     message: ({ params: { min, max } }) => max === undefined
         ? (0, codegen_1.str) `must contain at least ${min} valid item(s)`
@@ -4680,15 +4680,15 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 5826:
+/***/ 4588:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const code_1 = __nccwpck_require__(8484);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const code_1 = __nccwpck_require__(4434);
 exports.error = {
     message: ({ params: { property, depsCount, deps } }) => {
         const property_ies = depsCount === 1 ? "property" : "properties";
@@ -4771,12 +4771,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 3818:
+/***/ 9720:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const dependencies_1 = __nccwpck_require__(5826);
+const dependencies_1 = __nccwpck_require__(4588);
 const def = {
     keyword: "dependentSchemas",
     type: "object",
@@ -4788,13 +4788,13 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 8584:
+/***/ 9358:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 const error = {
     message: ({ params }) => (0, codegen_1.str) `must match "${params.ifClause}" schema`,
     params: ({ params }) => (0, codegen_1._) `{failingKeyword: ${params.ifClause}}`,
@@ -4860,27 +4860,27 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 8775:
+/***/ 1345:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const additionalItems_1 = __nccwpck_require__(3448);
-const prefixItems_1 = __nccwpck_require__(6467);
-const items_1 = __nccwpck_require__(5791);
-const items2020_1 = __nccwpck_require__(2959);
-const contains_1 = __nccwpck_require__(6182);
-const dependencies_1 = __nccwpck_require__(5826);
-const propertyNames_1 = __nccwpck_require__(1372);
-const additionalProperties_1 = __nccwpck_require__(2431);
-const properties_1 = __nccwpck_require__(8778);
-const patternProperties_1 = __nccwpck_require__(664);
-const not_1 = __nccwpck_require__(8350);
-const anyOf_1 = __nccwpck_require__(9380);
-const oneOf_1 = __nccwpck_require__(2490);
-const allOf_1 = __nccwpck_require__(9205);
-const if_1 = __nccwpck_require__(8584);
-const thenElse_1 = __nccwpck_require__(6829);
+const additionalItems_1 = __nccwpck_require__(2);
+const prefixItems_1 = __nccwpck_require__(4805);
+const items_1 = __nccwpck_require__(9305);
+const items2020_1 = __nccwpck_require__(2921);
+const contains_1 = __nccwpck_require__(3276);
+const dependencies_1 = __nccwpck_require__(4588);
+const propertyNames_1 = __nccwpck_require__(5230);
+const additionalProperties_1 = __nccwpck_require__(6953);
+const properties_1 = __nccwpck_require__(8492);
+const patternProperties_1 = __nccwpck_require__(3014);
+const not_1 = __nccwpck_require__(3628);
+const anyOf_1 = __nccwpck_require__(9446);
+const oneOf_1 = __nccwpck_require__(3056);
+const allOf_1 = __nccwpck_require__(8843);
+const if_1 = __nccwpck_require__(9358);
+const thenElse_1 = __nccwpck_require__(9255);
 function getApplicator(draft2020 = false) {
     const applicator = [
         // any
@@ -4910,15 +4910,15 @@ exports["default"] = getApplicator;
 
 /***/ }),
 
-/***/ 5791:
+/***/ 9305:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateTuple = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const code_1 = __nccwpck_require__(8484);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const code_1 = __nccwpck_require__(4434);
 const def = {
     keyword: "items",
     type: "array",
@@ -4968,15 +4968,15 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 2959:
+/***/ 2921:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const code_1 = __nccwpck_require__(8484);
-const additionalItems_1 = __nccwpck_require__(3448);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const code_1 = __nccwpck_require__(4434);
+const additionalItems_1 = __nccwpck_require__(2);
 const error = {
     message: ({ params: { len } }) => (0, codegen_1.str) `must NOT have more than ${len} items`,
     params: ({ params: { len } }) => (0, codegen_1._) `{limit: ${len}}`,
@@ -5004,12 +5004,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 8350:
+/***/ 3628:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const util_1 = __nccwpck_require__(4464);
+const util_1 = __nccwpck_require__(6362);
 const def = {
     keyword: "not",
     schemaType: ["object", "boolean"],
@@ -5036,13 +5036,13 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 2490:
+/***/ 3056:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 const error = {
     message: "must match exactly one schema in oneOf",
     params: ({ params }) => (0, codegen_1._) `{passingSchemas: ${params.passing}}`,
@@ -5102,15 +5102,15 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 664:
+/***/ 3014:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const code_1 = __nccwpck_require__(8484);
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const util_2 = __nccwpck_require__(4464);
+const code_1 = __nccwpck_require__(4434);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const util_2 = __nccwpck_require__(6362);
 const def = {
     keyword: "patternProperties",
     type: "object",
@@ -5183,12 +5183,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 6467:
+/***/ 4805:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const items_1 = __nccwpck_require__(5791);
+const items_1 = __nccwpck_require__(9305);
 const def = {
     keyword: "prefixItems",
     type: "array",
@@ -5201,15 +5201,15 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 8778:
+/***/ 8492:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const validate_1 = __nccwpck_require__(7881);
-const code_1 = __nccwpck_require__(8484);
-const util_1 = __nccwpck_require__(4464);
-const additionalProperties_1 = __nccwpck_require__(2431);
+const validate_1 = __nccwpck_require__(7007);
+const code_1 = __nccwpck_require__(4434);
+const util_1 = __nccwpck_require__(6362);
+const additionalProperties_1 = __nccwpck_require__(6953);
 const def = {
     keyword: "properties",
     type: "object",
@@ -5261,13 +5261,13 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 1372:
+/***/ 5230:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 const error = {
     message: "property name must be valid",
     params: ({ params }) => (0, codegen_1._) `{propertyName: ${params.propertyName}}`,
@@ -5305,12 +5305,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 6829:
+/***/ 9255:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const util_1 = __nccwpck_require__(4464);
+const util_1 = __nccwpck_require__(6362);
 const def = {
     keyword: ["then", "else"],
     schemaType: ["object", "boolean"],
@@ -5324,16 +5324,16 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 8484:
+/***/ 4434:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const names_1 = __nccwpck_require__(630);
-const util_2 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const names_1 = __nccwpck_require__(1740);
+const util_2 = __nccwpck_require__(6362);
 function checkReportMissingProp(cxt, prop) {
     const { gen, data, it } = cxt;
     gen.if(noPropertyInData(gen, data, prop, it.opts.ownProperties), () => {
@@ -5461,7 +5461,7 @@ exports.validateUnion = validateUnion;
 
 /***/ }),
 
-/***/ 9872:
+/***/ 9066:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -5477,13 +5477,13 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 7397:
+/***/ 6751:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const id_1 = __nccwpck_require__(9872);
-const ref_1 = __nccwpck_require__(2996);
+const id_1 = __nccwpck_require__(9066);
+const ref_1 = __nccwpck_require__(6842);
 const core = [
     "$schema",
     "$id",
@@ -5499,18 +5499,18 @@ exports["default"] = core;
 
 /***/ }),
 
-/***/ 2996:
+/***/ 6842:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.callRef = exports.getValidate = void 0;
-const ref_error_1 = __nccwpck_require__(3162);
-const code_1 = __nccwpck_require__(8484);
-const codegen_1 = __nccwpck_require__(1436);
-const names_1 = __nccwpck_require__(630);
-const compile_1 = __nccwpck_require__(2718);
-const util_1 = __nccwpck_require__(4464);
+const ref_error_1 = __nccwpck_require__(7524);
+const code_1 = __nccwpck_require__(4434);
+const codegen_1 = __nccwpck_require__(3626);
+const names_1 = __nccwpck_require__(1740);
+const compile_1 = __nccwpck_require__(4688);
+const util_1 = __nccwpck_require__(6362);
 const def = {
     keyword: "$ref",
     schemaType: "string",
@@ -5627,16 +5627,16 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 8886:
+/***/ 1448:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const types_1 = __nccwpck_require__(7115);
-const compile_1 = __nccwpck_require__(2718);
-const ref_error_1 = __nccwpck_require__(3162);
-const util_1 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const types_1 = __nccwpck_require__(2189);
+const compile_1 = __nccwpck_require__(4688);
+const ref_error_1 = __nccwpck_require__(7524);
+const util_1 = __nccwpck_require__(6362);
 const error = {
     message: ({ params: { discrError, tagName } }) => discrError === types_1.DiscrError.Tag
         ? `tag "${tagName}" must be string`
@@ -5737,7 +5737,7 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 7115:
+/***/ 2189:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -5752,19 +5752,19 @@ var DiscrError;
 
 /***/ }),
 
-/***/ 4298:
+/***/ 2196:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core_1 = __nccwpck_require__(7397);
-const validation_1 = __nccwpck_require__(5481);
-const applicator_1 = __nccwpck_require__(8775);
-const dynamic_1 = __nccwpck_require__(9923);
-const next_1 = __nccwpck_require__(7844);
-const unevaluated_1 = __nccwpck_require__(2010);
-const format_1 = __nccwpck_require__(2601);
-const metadata_1 = __nccwpck_require__(6620);
+const core_1 = __nccwpck_require__(6751);
+const validation_1 = __nccwpck_require__(8251);
+const applicator_1 = __nccwpck_require__(1345);
+const dynamic_1 = __nccwpck_require__(2053);
+const next_1 = __nccwpck_require__(134);
+const unevaluated_1 = __nccwpck_require__(2372);
+const format_1 = __nccwpck_require__(3211);
+const metadata_1 = __nccwpck_require__(7234);
 const draft2020Vocabularies = [
     dynamic_1.default,
     core_1.default,
@@ -5781,16 +5781,16 @@ exports["default"] = draft2020Vocabularies;
 
 /***/ }),
 
-/***/ 9941:
+/***/ 1631:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core_1 = __nccwpck_require__(7397);
-const validation_1 = __nccwpck_require__(5481);
-const applicator_1 = __nccwpck_require__(8775);
-const format_1 = __nccwpck_require__(2601);
-const metadata_1 = __nccwpck_require__(6620);
+const core_1 = __nccwpck_require__(6751);
+const validation_1 = __nccwpck_require__(8251);
+const applicator_1 = __nccwpck_require__(1345);
+const format_1 = __nccwpck_require__(3211);
+const metadata_1 = __nccwpck_require__(7234);
 const draft7Vocabularies = [
     core_1.default,
     validation_1.default,
@@ -5804,16 +5804,16 @@ exports["default"] = draft7Vocabularies;
 
 /***/ }),
 
-/***/ 8639:
+/***/ 2533:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.dynamicAnchor = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const names_1 = __nccwpck_require__(630);
-const compile_1 = __nccwpck_require__(2718);
-const ref_1 = __nccwpck_require__(2996);
+const codegen_1 = __nccwpck_require__(3626);
+const names_1 = __nccwpck_require__(1740);
+const compile_1 = __nccwpck_require__(4688);
+const ref_1 = __nccwpck_require__(6842);
 const def = {
     keyword: "$dynamicAnchor",
     schemaType: "string",
@@ -5840,15 +5840,15 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 5065:
+/***/ 4323:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.dynamicRef = void 0;
-const codegen_1 = __nccwpck_require__(1436);
-const names_1 = __nccwpck_require__(630);
-const ref_1 = __nccwpck_require__(2996);
+const codegen_1 = __nccwpck_require__(3626);
+const names_1 = __nccwpck_require__(1740);
+const ref_1 = __nccwpck_require__(6842);
 const def = {
     keyword: "$dynamicRef",
     schemaType: "string",
@@ -5897,28 +5897,28 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 9923:
+/***/ 2053:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const dynamicAnchor_1 = __nccwpck_require__(8639);
-const dynamicRef_1 = __nccwpck_require__(5065);
-const recursiveAnchor_1 = __nccwpck_require__(9982);
-const recursiveRef_1 = __nccwpck_require__(1794);
+const dynamicAnchor_1 = __nccwpck_require__(2533);
+const dynamicRef_1 = __nccwpck_require__(4323);
+const recursiveAnchor_1 = __nccwpck_require__(968);
+const recursiveRef_1 = __nccwpck_require__(7656);
 const dynamic = [dynamicAnchor_1.default, dynamicRef_1.default, recursiveAnchor_1.default, recursiveRef_1.default];
 exports["default"] = dynamic;
 //# sourceMappingURL=index.js.map
 
 /***/ }),
 
-/***/ 9982:
+/***/ 968:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const dynamicAnchor_1 = __nccwpck_require__(8639);
-const util_1 = __nccwpck_require__(4464);
+const dynamicAnchor_1 = __nccwpck_require__(2533);
+const util_1 = __nccwpck_require__(6362);
 const def = {
     keyword: "$recursiveAnchor",
     schemaType: "boolean",
@@ -5934,12 +5934,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 1794:
+/***/ 7656:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const dynamicRef_1 = __nccwpck_require__(5065);
+const dynamicRef_1 = __nccwpck_require__(4323);
 const def = {
     keyword: "$recursiveRef",
     schemaType: "string",
@@ -5950,12 +5950,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 6402:
+/***/ 8128:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
+const codegen_1 = __nccwpck_require__(3626);
 const error = {
     message: ({ schemaCode }) => (0, codegen_1.str) `must match format "${schemaCode}"`,
     params: ({ schemaCode }) => (0, codegen_1._) `{format: ${schemaCode}}`,
@@ -6048,19 +6048,19 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 2601:
+/***/ 3211:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const format_1 = __nccwpck_require__(6402);
+const format_1 = __nccwpck_require__(8128);
 const format = [format_1.default];
 exports["default"] = format;
 //# sourceMappingURL=index.js.map
 
 /***/ }),
 
-/***/ 6620:
+/***/ 7234:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6084,40 +6084,40 @@ exports.contentVocabulary = [
 
 /***/ }),
 
-/***/ 7844:
+/***/ 134:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const dependentRequired_1 = __nccwpck_require__(643);
-const dependentSchemas_1 = __nccwpck_require__(3818);
-const limitContains_1 = __nccwpck_require__(3907);
+const dependentRequired_1 = __nccwpck_require__(25);
+const dependentSchemas_1 = __nccwpck_require__(9720);
+const limitContains_1 = __nccwpck_require__(6517);
 const next = [dependentRequired_1.default, dependentSchemas_1.default, limitContains_1.default];
 exports["default"] = next;
 //# sourceMappingURL=next.js.map
 
 /***/ }),
 
-/***/ 2010:
+/***/ 2372:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const unevaluatedProperties_1 = __nccwpck_require__(6855);
-const unevaluatedItems_1 = __nccwpck_require__(4144);
+const unevaluatedProperties_1 = __nccwpck_require__(509);
+const unevaluatedItems_1 = __nccwpck_require__(8710);
 const unevaluated = [unevaluatedProperties_1.default, unevaluatedItems_1.default];
 exports["default"] = unevaluated;
 //# sourceMappingURL=index.js.map
 
 /***/ }),
 
-/***/ 4144:
+/***/ 8710:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 const error = {
     message: ({ params: { len } }) => (0, codegen_1.str) `must NOT have more than ${len} items`,
     params: ({ params: { len } }) => (0, codegen_1._) `{limit: ${len}}`,
@@ -6157,14 +6157,14 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 6855:
+/***/ 509:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const names_1 = __nccwpck_require__(630);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const names_1 = __nccwpck_require__(1740);
 const error = {
     message: "must NOT have unevaluated properties",
     params: ({ params }) => (0, codegen_1._) `{unevaluatedProperty: ${params.unevaluatedProperty}}`,
@@ -6228,14 +6228,14 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 8026:
+/***/ 8288:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const equal_1 = __nccwpck_require__(4951);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const equal_1 = __nccwpck_require__(1077);
 const error = {
     message: "must be equal to constant",
     params: ({ schemaCode }) => (0, codegen_1._) `{allowedValue: ${schemaCode}}`,
@@ -6259,12 +6259,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 643:
+/***/ 25:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const dependencies_1 = __nccwpck_require__(5826);
+const dependencies_1 = __nccwpck_require__(4588);
 const def = {
     keyword: "dependentRequired",
     type: "object",
@@ -6277,14 +6277,14 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 3200:
+/***/ 1558:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const equal_1 = __nccwpck_require__(4951);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const equal_1 = __nccwpck_require__(1077);
 const error = {
     message: "must be equal to one of the allowed values",
     params: ({ schemaCode }) => (0, codegen_1._) `{allowedValues: ${schemaCode}}`,
@@ -6331,21 +6331,21 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 5481:
+/***/ 8251:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const limitNumber_1 = __nccwpck_require__(3723);
-const multipleOf_1 = __nccwpck_require__(8132);
-const limitLength_1 = __nccwpck_require__(6962);
-const pattern_1 = __nccwpck_require__(6023);
-const limitProperties_1 = __nccwpck_require__(895);
-const required_1 = __nccwpck_require__(2123);
-const limitItems_1 = __nccwpck_require__(6296);
-const uniqueItems_1 = __nccwpck_require__(5132);
-const const_1 = __nccwpck_require__(8026);
-const enum_1 = __nccwpck_require__(3200);
+const limitNumber_1 = __nccwpck_require__(3117);
+const multipleOf_1 = __nccwpck_require__(7934);
+const limitLength_1 = __nccwpck_require__(160);
+const pattern_1 = __nccwpck_require__(3037);
+const limitProperties_1 = __nccwpck_require__(1541);
+const required_1 = __nccwpck_require__(3034);
+const limitItems_1 = __nccwpck_require__(1966);
+const uniqueItems_1 = __nccwpck_require__(9018);
+const const_1 = __nccwpck_require__(8288);
+const enum_1 = __nccwpck_require__(1558);
 const validation = [
     // number
     limitNumber_1.default,
@@ -6370,12 +6370,12 @@ exports["default"] = validation;
 
 /***/ }),
 
-/***/ 3907:
+/***/ 6517:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const util_1 = __nccwpck_require__(4464);
+const util_1 = __nccwpck_require__(6362);
 const def = {
     keyword: ["maxContains", "minContains"],
     type: "array",
@@ -6391,12 +6391,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 6296:
+/***/ 1966:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
+const codegen_1 = __nccwpck_require__(3626);
 const error = {
     message({ keyword, schemaCode }) {
         const comp = keyword === "maxItems" ? "more" : "fewer";
@@ -6421,14 +6421,14 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 6962:
+/***/ 160:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const ucs2length_1 = __nccwpck_require__(6214);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const ucs2length_1 = __nccwpck_require__(9140);
 const error = {
     message({ keyword, schemaCode }) {
         const comp = keyword === "maxLength" ? "more" : "fewer";
@@ -6454,12 +6454,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 3723:
+/***/ 3117:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
+const codegen_1 = __nccwpck_require__(3626);
 const ops = codegen_1.operators;
 const KWDs = {
     maximum: { okStr: "<=", ok: ops.LTE, fail: ops.GT },
@@ -6487,12 +6487,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 895:
+/***/ 1541:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
+const codegen_1 = __nccwpck_require__(3626);
 const error = {
     message({ keyword, schemaCode }) {
         const comp = keyword === "maxProperties" ? "more" : "fewer";
@@ -6517,12 +6517,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 8132:
+/***/ 7934:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const codegen_1 = __nccwpck_require__(1436);
+const codegen_1 = __nccwpck_require__(3626);
 const error = {
     message: ({ schemaCode }) => (0, codegen_1.str) `must be multiple of ${schemaCode}`,
     params: ({ schemaCode }) => (0, codegen_1._) `{multipleOf: ${schemaCode}}`,
@@ -6549,14 +6549,14 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 6023:
+/***/ 3037:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const code_1 = __nccwpck_require__(8484);
-const util_1 = __nccwpck_require__(4464);
-const codegen_1 = __nccwpck_require__(1436);
+const code_1 = __nccwpck_require__(4434);
+const util_1 = __nccwpck_require__(6362);
+const codegen_1 = __nccwpck_require__(3626);
 const error = {
     message: ({ schemaCode }) => (0, codegen_1.str) `must match pattern "${schemaCode}"`,
     params: ({ schemaCode }) => (0, codegen_1._) `{pattern: ${schemaCode}}`,
@@ -6588,14 +6588,14 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 2123:
+/***/ 3034:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const code_1 = __nccwpck_require__(8484);
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
+const code_1 = __nccwpck_require__(4434);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
 const error = {
     message: ({ params: { missingProperty } }) => (0, codegen_1.str) `must have required property '${missingProperty}'`,
     params: ({ params: { missingProperty } }) => (0, codegen_1._) `{missingProperty: ${missingProperty}}`,
@@ -6673,15 +6673,15 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 5132:
+/***/ 9018:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const dataType_1 = __nccwpck_require__(6685);
-const codegen_1 = __nccwpck_require__(1436);
-const util_1 = __nccwpck_require__(4464);
-const equal_1 = __nccwpck_require__(4951);
+const dataType_1 = __nccwpck_require__(7931);
+const codegen_1 = __nccwpck_require__(3626);
+const util_1 = __nccwpck_require__(6362);
+const equal_1 = __nccwpck_require__(1077);
 const error = {
     message: ({ params: { i, j } }) => (0, codegen_1.str) `must NOT have duplicate items (items ## ${j} and ${i} are identical)`,
     params: ({ params: { i, j } }) => (0, codegen_1._) `{i: ${i}, j: ${j}}`,
@@ -6743,12 +6743,12 @@ exports["default"] = def;
 
 /***/ }),
 
-/***/ 8905:
+/***/ 2815:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var isObject = __nccwpck_require__(6403);
+var isObject = __nccwpck_require__(2137);
 
 module.exports = function extend(o/*, objects*/) {
   if (!isObject(o)) { o = {}; }
@@ -6783,7 +6783,7 @@ function hasOwn(obj, key) {
 
 /***/ }),
 
-/***/ 3430:
+/***/ 7272:
 /***/ ((module) => {
 
 
@@ -6836,7 +6836,7 @@ module.exports = function equal(a, b) {
 
 /***/ }),
 
-/***/ 4887:
+/***/ 2385:
 /***/ (function(module) {
 
 (function (root, factory) {
@@ -7270,20 +7270,20 @@ exports.pbkdf2 = pbkdf2;
 
 /***/ }),
 
-/***/ 9599:
+/***/ 493:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
 const fs = __nccwpck_require__(9896);
-const sections = __nccwpck_require__(9495);
-const defaults = __nccwpck_require__(7545);
-const stringify = __nccwpck_require__(4710);
-const excerpt = __nccwpck_require__(7894);
-const engines = __nccwpck_require__(4452);
-const toFile = __nccwpck_require__(8073);
-const parse = __nccwpck_require__(8120);
-const utils = __nccwpck_require__(8698);
+const sections = __nccwpck_require__(8945);
+const defaults = __nccwpck_require__(223);
+const stringify = __nccwpck_require__(7604);
+const excerpt = __nccwpck_require__(8432);
+const engines = __nccwpck_require__(8446);
+const toFile = __nccwpck_require__(395);
+const parse = __nccwpck_require__(6938);
+const utils = __nccwpck_require__(3472);
 
 /**
  * Takes a string or object with `content` property, extracts
@@ -7505,13 +7505,13 @@ module.exports = matter;
 
 /***/ }),
 
-/***/ 7545:
+/***/ 223:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-const engines = __nccwpck_require__(4452);
-const utils = __nccwpck_require__(8698);
+const engines = __nccwpck_require__(8446);
+const utils = __nccwpck_require__(3472);
 
 module.exports = function(options) {
   const opts = Object.assign({}, options);
@@ -7530,7 +7530,7 @@ module.exports = function(options) {
 
 /***/ }),
 
-/***/ 5921:
+/***/ 3611:
 /***/ ((module) => {
 
 
@@ -7567,12 +7567,12 @@ function aliase(name) {
 
 /***/ }),
 
-/***/ 4452:
+/***/ 8446:
 /***/ ((module, exports, __nccwpck_require__) => {
 
 
 
-const yaml = __nccwpck_require__(188);
+const yaml = __nccwpck_require__(9922);
 
 /**
  * Default engines
@@ -7628,12 +7628,12 @@ engines.javascript = {
 
 /***/ }),
 
-/***/ 7894:
+/***/ 8432:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-const defaults = __nccwpck_require__(7545);
+const defaults = __nccwpck_require__(223);
 
 module.exports = function(file, options) {
   const opts = defaults(options);
@@ -7667,13 +7667,13 @@ module.exports = function(file, options) {
 
 /***/ }),
 
-/***/ 8120:
+/***/ 6938:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-const getEngine = __nccwpck_require__(5921);
-const defaults = __nccwpck_require__(7545);
+const getEngine = __nccwpck_require__(3611);
+const defaults = __nccwpck_require__(223);
 
 module.exports = function(language, str, options) {
   const opts = defaults(options);
@@ -7687,14 +7687,14 @@ module.exports = function(language, str, options) {
 
 /***/ }),
 
-/***/ 4710:
+/***/ 7604:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-const typeOf = __nccwpck_require__(5140);
-const getEngine = __nccwpck_require__(5921);
-const defaults = __nccwpck_require__(7545);
+const typeOf = __nccwpck_require__(5902);
+const getEngine = __nccwpck_require__(3611);
+const defaults = __nccwpck_require__(223);
 
 module.exports = function(file, data, options) {
   if (data == null && options == null) {
@@ -7750,14 +7750,14 @@ function newline(str) {
 
 /***/ }),
 
-/***/ 8073:
+/***/ 395:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-const typeOf = __nccwpck_require__(5140);
-const stringify = __nccwpck_require__(4710);
-const utils = __nccwpck_require__(8698);
+const typeOf = __nccwpck_require__(5902);
+const stringify = __nccwpck_require__(7604);
+const utils = __nccwpck_require__(3472);
 
 /**
  * Normalize the given value to ensure an object is returned
@@ -7800,13 +7800,13 @@ module.exports = function(file) {
 
 /***/ }),
 
-/***/ 8698:
+/***/ 3472:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 
-const stripBom = __nccwpck_require__(1389);
-const typeOf = __nccwpck_require__(5140);
+const stripBom = __nccwpck_require__(291);
+const typeOf = __nccwpck_require__(5902);
 
 exports.define = function(obj, key, val) {
   Reflect.defineProperty(obj, key, {
@@ -7873,13 +7873,13 @@ exports.startsWith = function(str, substr, len) {
 
 /***/ }),
 
-/***/ 188:
+/***/ 9922:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
 
-var yaml = __nccwpck_require__(993);
+var yaml = __nccwpck_require__(5043);
 
 
 module.exports = yaml;
@@ -7887,14 +7887,14 @@ module.exports = yaml;
 
 /***/ }),
 
-/***/ 993:
+/***/ 5043:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
 
-var loader = __nccwpck_require__(9559);
-var dumper = __nccwpck_require__(9081);
+var loader = __nccwpck_require__(3969);
+var dumper = __nccwpck_require__(9855);
 
 
 function deprecated(name) {
@@ -7904,25 +7904,25 @@ function deprecated(name) {
 }
 
 
-module.exports.Type = __nccwpck_require__(7592);
-module.exports.Schema = __nccwpck_require__(995);
-module.exports.FAILSAFE_SCHEMA = __nccwpck_require__(6587);
-module.exports.JSON_SCHEMA = __nccwpck_require__(5636);
-module.exports.CORE_SCHEMA = __nccwpck_require__(4773);
-module.exports.DEFAULT_SAFE_SCHEMA = __nccwpck_require__(8693);
-module.exports.DEFAULT_FULL_SCHEMA = __nccwpck_require__(1285);
+module.exports.Type = __nccwpck_require__(7850);
+module.exports.Schema = __nccwpck_require__(1261);
+module.exports.FAILSAFE_SCHEMA = __nccwpck_require__(9185);
+module.exports.JSON_SCHEMA = __nccwpck_require__(1902);
+module.exports.CORE_SCHEMA = __nccwpck_require__(2011);
+module.exports.DEFAULT_SAFE_SCHEMA = __nccwpck_require__(3935);
+module.exports.DEFAULT_FULL_SCHEMA = __nccwpck_require__(203);
 module.exports.load                = loader.load;
 module.exports.loadAll             = loader.loadAll;
 module.exports.safeLoad            = loader.safeLoad;
 module.exports.safeLoadAll         = loader.safeLoadAll;
 module.exports.dump                = dumper.dump;
 module.exports.safeDump            = dumper.safeDump;
-module.exports.YAMLException = __nccwpck_require__(7627);
+module.exports.YAMLException = __nccwpck_require__(397);
 
 // Deprecated schema names from JS-YAML 2.0.x
-module.exports.MINIMAL_SCHEMA = __nccwpck_require__(6587);
-module.exports.SAFE_SCHEMA = __nccwpck_require__(8693);
-module.exports.DEFAULT_SCHEMA = __nccwpck_require__(1285);
+module.exports.MINIMAL_SCHEMA = __nccwpck_require__(9185);
+module.exports.SAFE_SCHEMA = __nccwpck_require__(3935);
+module.exports.DEFAULT_SCHEMA = __nccwpck_require__(203);
 
 // Deprecated functions from JS-YAML 1.x.x
 module.exports.scan           = deprecated('scan');
@@ -7933,7 +7933,7 @@ module.exports.addConstructor = deprecated('addConstructor');
 
 /***/ }),
 
-/***/ 3973:
+/***/ 5975:
 /***/ ((module) => {
 
 
@@ -7999,17 +7999,17 @@ module.exports.extend         = extend;
 
 /***/ }),
 
-/***/ 9081:
+/***/ 9855:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
 /*eslint-disable no-use-before-define*/
 
-var common              = __nccwpck_require__(3973);
-var YAMLException       = __nccwpck_require__(7627);
-var DEFAULT_FULL_SCHEMA = __nccwpck_require__(1285);
-var DEFAULT_SAFE_SCHEMA = __nccwpck_require__(8693);
+var common              = __nccwpck_require__(5975);
+var YAMLException       = __nccwpck_require__(397);
+var DEFAULT_FULL_SCHEMA = __nccwpck_require__(203);
+var DEFAULT_SAFE_SCHEMA = __nccwpck_require__(3935);
 
 var _toString       = Object.prototype.toString;
 var _hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -8856,7 +8856,7 @@ module.exports.safeDump = safeDump;
 
 /***/ }),
 
-/***/ 7627:
+/***/ 397:
 /***/ ((module) => {
 
 // YAML error class. http://stackoverflow.com/questions/8458984
@@ -8906,18 +8906,18 @@ module.exports = YAMLException;
 
 /***/ }),
 
-/***/ 9559:
+/***/ 3969:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
 /*eslint-disable max-len,no-use-before-define*/
 
-var common              = __nccwpck_require__(3973);
-var YAMLException       = __nccwpck_require__(7627);
-var Mark                = __nccwpck_require__(1233);
-var DEFAULT_SAFE_SCHEMA = __nccwpck_require__(8693);
-var DEFAULT_FULL_SCHEMA = __nccwpck_require__(1285);
+var common              = __nccwpck_require__(5975);
+var YAMLException       = __nccwpck_require__(397);
+var Mark                = __nccwpck_require__(4427);
+var DEFAULT_SAFE_SCHEMA = __nccwpck_require__(3935);
+var DEFAULT_FULL_SCHEMA = __nccwpck_require__(203);
 
 
 var _hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -10573,13 +10573,13 @@ module.exports.safeLoad    = safeLoad;
 
 /***/ }),
 
-/***/ 1233:
+/***/ 4427:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
 
-var common = __nccwpck_require__(3973);
+var common = __nccwpck_require__(5975);
 
 
 function Mark(name, buffer, position, line, column) {
@@ -10656,16 +10656,16 @@ module.exports = Mark;
 
 /***/ }),
 
-/***/ 995:
+/***/ 1261:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
 /*eslint-disable max-len*/
 
-var common        = __nccwpck_require__(3973);
-var YAMLException = __nccwpck_require__(7627);
-var Type          = __nccwpck_require__(7592);
+var common        = __nccwpck_require__(5975);
+var YAMLException = __nccwpck_require__(397);
+var Type          = __nccwpck_require__(7850);
 
 
 function compileList(schema, name, result) {
@@ -10771,7 +10771,7 @@ module.exports = Schema;
 
 /***/ }),
 
-/***/ 4773:
+/***/ 2011:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 // Standard YAML's Core schema.
@@ -10784,19 +10784,19 @@ module.exports = Schema;
 
 
 
-var Schema = __nccwpck_require__(995);
+var Schema = __nccwpck_require__(1261);
 
 
 module.exports = new Schema({
   include: [
-    __nccwpck_require__(5636)
+    __nccwpck_require__(1902)
   ]
 });
 
 
 /***/ }),
 
-/***/ 1285:
+/***/ 203:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 // JS-YAML's default schema for `load` function.
@@ -10811,24 +10811,24 @@ module.exports = new Schema({
 
 
 
-var Schema = __nccwpck_require__(995);
+var Schema = __nccwpck_require__(1261);
 
 
 module.exports = Schema.DEFAULT = new Schema({
   include: [
-    __nccwpck_require__(8693)
+    __nccwpck_require__(3935)
   ],
   explicit: [
-    __nccwpck_require__(1775),
-    __nccwpck_require__(7394),
-    __nccwpck_require__(9531)
+    __nccwpck_require__(201),
+    __nccwpck_require__(7548),
+    __nccwpck_require__(2897)
   ]
 });
 
 
 /***/ }),
 
-/***/ 8693:
+/***/ 3935:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 // JS-YAML's default schema for `safeLoad` function.
@@ -10841,29 +10841,29 @@ module.exports = Schema.DEFAULT = new Schema({
 
 
 
-var Schema = __nccwpck_require__(995);
+var Schema = __nccwpck_require__(1261);
 
 
 module.exports = new Schema({
   include: [
-    __nccwpck_require__(4773)
+    __nccwpck_require__(2011)
   ],
   implicit: [
-    __nccwpck_require__(5339),
-    __nccwpck_require__(4543)
+    __nccwpck_require__(3365),
+    __nccwpck_require__(2317)
   ],
   explicit: [
-    __nccwpck_require__(2946),
-    __nccwpck_require__(7742),
-    __nccwpck_require__(770),
-    __nccwpck_require__(1723)
+    __nccwpck_require__(5752),
+    __nccwpck_require__(2172),
+    __nccwpck_require__(4568),
+    __nccwpck_require__(6277)
   ]
 });
 
 
 /***/ }),
 
-/***/ 6587:
+/***/ 9185:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 // Standard YAML's Failsafe schema.
@@ -10873,21 +10873,21 @@ module.exports = new Schema({
 
 
 
-var Schema = __nccwpck_require__(995);
+var Schema = __nccwpck_require__(1261);
 
 
 module.exports = new Schema({
   explicit: [
-    __nccwpck_require__(4504),
-    __nccwpck_require__(1848),
-    __nccwpck_require__(7021)
+    __nccwpck_require__(5550),
+    __nccwpck_require__(7786),
+    __nccwpck_require__(1547)
   ]
 });
 
 
 /***/ }),
 
-/***/ 5636:
+/***/ 1902:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 // Standard YAML's JSON schema.
@@ -10901,30 +10901,30 @@ module.exports = new Schema({
 
 
 
-var Schema = __nccwpck_require__(995);
+var Schema = __nccwpck_require__(1261);
 
 
 module.exports = new Schema({
   include: [
-    __nccwpck_require__(6587)
+    __nccwpck_require__(9185)
   ],
   implicit: [
-    __nccwpck_require__(7658),
-    __nccwpck_require__(6699),
-    __nccwpck_require__(9158),
-    __nccwpck_require__(1641)
+    __nccwpck_require__(6832),
+    __nccwpck_require__(9481),
+    __nccwpck_require__(5904),
+    __nccwpck_require__(7839)
   ]
 });
 
 
 /***/ }),
 
-/***/ 7592:
+/***/ 7850:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var YAMLException = __nccwpck_require__(7627);
+var YAMLException = __nccwpck_require__(397);
 
 var TYPE_CONSTRUCTOR_OPTIONS = [
   'kind',
@@ -10987,7 +10987,7 @@ module.exports = Type;
 
 /***/ }),
 
-/***/ 2946:
+/***/ 5752:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
@@ -11002,7 +11002,7 @@ try {
   NodeBuffer = _require('buffer').Buffer;
 } catch (__) {}
 
-var Type       = __nccwpck_require__(7592);
+var Type       = __nccwpck_require__(7850);
 
 
 // [ 64, 65, 66 ] -> [ padding, CR, LF ]
@@ -11132,12 +11132,12 @@ module.exports = new Type('tag:yaml.org,2002:binary', {
 
 /***/ }),
 
-/***/ 6699:
+/***/ 9481:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 function resolveYamlBoolean(data) {
   if (data === null) return false;
@@ -11174,13 +11174,13 @@ module.exports = new Type('tag:yaml.org,2002:bool', {
 
 /***/ }),
 
-/***/ 1641:
+/***/ 7839:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var common = __nccwpck_require__(3973);
-var Type   = __nccwpck_require__(7592);
+var common = __nccwpck_require__(5975);
+var Type   = __nccwpck_require__(7850);
 
 var YAML_FLOAT_PATTERN = new RegExp(
   // 2.5e4, 2.5 and integers
@@ -11297,13 +11297,13 @@ module.exports = new Type('tag:yaml.org,2002:float', {
 
 /***/ }),
 
-/***/ 9158:
+/***/ 5904:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var common = __nccwpck_require__(3973);
-var Type   = __nccwpck_require__(7592);
+var common = __nccwpck_require__(5975);
+var Type   = __nccwpck_require__(7850);
 
 function isHexCode(c) {
   return ((0x30/* 0 */ <= c) && (c <= 0x39/* 9 */)) ||
@@ -11477,7 +11477,7 @@ module.exports = new Type('tag:yaml.org,2002:int', {
 
 /***/ }),
 
-/***/ 9531:
+/***/ 2897:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
@@ -11501,7 +11501,7 @@ try {
   if (typeof window !== 'undefined') esprima = window.esprima;
 }
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 function resolveJavascriptFunction(data) {
   if (data === null) return false;
@@ -11577,12 +11577,12 @@ module.exports = new Type('tag:yaml.org,2002:js/function', {
 
 /***/ }),
 
-/***/ 7394:
+/***/ 7548:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 function resolveJavascriptRegExp(data) {
   if (data === null) return false;
@@ -11644,12 +11644,12 @@ module.exports = new Type('tag:yaml.org,2002:js/regexp', {
 
 /***/ }),
 
-/***/ 1775:
+/***/ 201:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 function resolveJavascriptUndefined() {
   return true;
@@ -11679,12 +11679,12 @@ module.exports = new Type('tag:yaml.org,2002:js/undefined', {
 
 /***/ }),
 
-/***/ 7021:
+/***/ 1547:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 module.exports = new Type('tag:yaml.org,2002:map', {
   kind: 'mapping',
@@ -11694,12 +11694,12 @@ module.exports = new Type('tag:yaml.org,2002:map', {
 
 /***/ }),
 
-/***/ 4543:
+/***/ 2317:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 function resolveYamlMerge(data) {
   return data === '<<' || data === null;
@@ -11713,12 +11713,12 @@ module.exports = new Type('tag:yaml.org,2002:merge', {
 
 /***/ }),
 
-/***/ 7658:
+/***/ 6832:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 function resolveYamlNull(data) {
   if (data === null) return true;
@@ -11754,12 +11754,12 @@ module.exports = new Type('tag:yaml.org,2002:null', {
 
 /***/ }),
 
-/***/ 7742:
+/***/ 2172:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 var _hasOwnProperty = Object.prototype.hasOwnProperty;
 var _toString       = Object.prototype.toString;
@@ -11805,12 +11805,12 @@ module.exports = new Type('tag:yaml.org,2002:omap', {
 
 /***/ }),
 
-/***/ 770:
+/***/ 4568:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 var _toString = Object.prototype.toString;
 
@@ -11865,12 +11865,12 @@ module.exports = new Type('tag:yaml.org,2002:pairs', {
 
 /***/ }),
 
-/***/ 1848:
+/***/ 7786:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 module.exports = new Type('tag:yaml.org,2002:seq', {
   kind: 'sequence',
@@ -11880,12 +11880,12 @@ module.exports = new Type('tag:yaml.org,2002:seq', {
 
 /***/ }),
 
-/***/ 1723:
+/***/ 6277:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 var _hasOwnProperty = Object.prototype.hasOwnProperty;
 
@@ -11916,12 +11916,12 @@ module.exports = new Type('tag:yaml.org,2002:set', {
 
 /***/ }),
 
-/***/ 4504:
+/***/ 5550:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 module.exports = new Type('tag:yaml.org,2002:str', {
   kind: 'scalar',
@@ -11931,12 +11931,12 @@ module.exports = new Type('tag:yaml.org,2002:str', {
 
 /***/ }),
 
-/***/ 5339:
+/***/ 3365:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var Type = __nccwpck_require__(7592);
+var Type = __nccwpck_require__(7850);
 
 var YAML_DATE_REGEXP = new RegExp(
   '^([0-9][0-9][0-9][0-9])'          + // [1] year
@@ -12026,7 +12026,7 @@ module.exports = new Type('tag:yaml.org,2002:timestamp', {
 
 /***/ }),
 
-/***/ 6403:
+/***/ 2137:
 /***/ ((module) => {
 
 /*!
@@ -12046,7 +12046,7 @@ module.exports = function isExtendable(val) {
 
 /***/ }),
 
-/***/ 1167:
+/***/ 3533:
 /***/ ((module) => {
 
 
@@ -12146,7 +12146,7 @@ function escapeJsonPtr(str) {
 
 /***/ }),
 
-/***/ 5140:
+/***/ 5902:
 /***/ ((module) => {
 
 var toString = Object.prototype.toString;
@@ -12282,13 +12282,13 @@ function isBuffer(val) {
 
 /***/ }),
 
-/***/ 9495:
+/***/ 8945:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-var typeOf = __nccwpck_require__(5140);
-var extend = __nccwpck_require__(8905);
+var typeOf = __nccwpck_require__(5902);
+var extend = __nccwpck_require__(2815);
 
 /**
  * Parse sections in `input` with the given `options`.
@@ -12425,7 +12425,7 @@ function isBuffer(val) {
 
 /***/ }),
 
-/***/ 1389:
+/***/ 291:
 /***/ ((module) => {
 
 /*!
@@ -12552,13 +12552,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("process");
 
 /***/ }),
 
-/***/ 4352:
+/***/ 7374:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-const { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = __nccwpck_require__(5077)
-const { SCHEMES, getSchemeHandler } = __nccwpck_require__(5300)
+const { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = __nccwpck_require__(2787)
+const { SCHEMES, getSchemeHandler } = __nccwpck_require__(426)
 
 /**
  * @template {import('./types/index').URIComponent|string} T
@@ -12965,12 +12965,12 @@ module.exports.fastUri = fastUri
 
 /***/ }),
 
-/***/ 5300:
+/***/ 426:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 
 
-const { isUUID } = __nccwpck_require__(5077)
+const { isUUID } = __nccwpck_require__(2787)
 const URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu
 
 const supportedSchemeNames = /** @type {const} */ (['http', 'https', 'ws',
@@ -13239,7 +13239,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5077:
+/***/ 2787:
 /***/ ((module) => {
 
 
@@ -13689,16 +13689,16 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5487:
+/***/ 1073:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 var __webpack_unused_export__;
 
 __webpack_unused_export__ = ({ value: true });
 exports.KD = __webpack_unused_export__ = void 0;
-const timing_safe_equal_1 = __nccwpck_require__(2514);
-const base64 = __nccwpck_require__(973);
-const sha256 = __nccwpck_require__(4887);
+const timing_safe_equal_1 = __nccwpck_require__(3376);
+const base64 = __nccwpck_require__(7743);
+const sha256 = __nccwpck_require__(2385);
 const WEBHOOK_TOLERANCE_IN_SECONDS = 5 * 60;
 class ExtendableError extends Error {
     constructor(message) {
@@ -13802,7 +13802,7 @@ Webhook.prefix = "whsec_";
 
 /***/ }),
 
-/***/ 2514:
+/***/ 3376:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -13838,7 +13838,7535 @@ exports.timingSafeEqual = timingSafeEqual;
 
 /***/ }),
 
-/***/ 5064:
+/***/ 1030:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  buildExecutionPlan: () => (/* binding */ buildExecutionPlan),
+  Ay: () => (/* binding */ rankByModelHint),
+  P0: () => (/* reexport */ summarizeSkill)
+});
+
+// UNUSED EXPORTS: computeContextLift, deriveExecutionOrder, matchesPhase, selectSkills
+
+// EXTERNAL MODULE: ../../../node_modules/minimatch/dist/esm/index.js + 7 modules
+var esm = __nccwpck_require__(9061);
+// EXTERNAL MODULE: ./runners/core/skill-loader.mjs + 1 modules
+var skill_loader = __nccwpck_require__(1928);
+;// CONCATENATED MODULE: ./src/lib/skill-planner.mjs
+
+
+/**
+ * Summarize a skill's metadata for LLM consumption.
+ * @param {import('../../runners/core/review-runner.mjs').SkillDefinition|import('../../runners/core/review-runner.mjs').SkillMetadata} skill
+ */
+function summarizeSkill(skill) {
+  const meta = skill?.metadata ?? skill;
+  return {
+    id: meta.id,
+    name: meta.name,
+    description: meta.description,
+    phase: meta.phase,
+    applyTo: meta.applyTo ?? [],
+    inputContext: meta.inputContext ?? [],
+    outputKind: meta.outputKind ?? ['findings'],
+    modelHint: meta.modelHint ?? null,
+    dependencies: meta.dependencies ?? [],
+    tags: meta.tags ?? [],
+    severity: meta.severity ?? null,
+  };
+}
+
+/**
+ * Plan skills using an LLM (or provided planner function). Falls back to deterministic ordering on error.
+ * @param {Object} options
+ * @param {Array} options.skills - candidate skills (already filtered)
+ * @param {Object} options.context - review context (e.g., changedFiles/diff summary/prompt)
+ * @param {Function} [options.llmPlan] - async function receiving {skills, context}, returning [{id, priority, reason}]
+ * @param {boolean} [options.appendRemaining=true] - whether to append unreferenced skills in deterministic order
+ * @returns {Promise<{planned: Array, reasons: Array, fallback: boolean}>}
+ */
+async function planSkills({ skills, context, llmPlan, appendRemaining = true }) {
+  const summaries = skills.map(summarizeSkill);
+
+  if (!llmPlan) {
+    return {
+      planned: rankByModelHint(skills),
+      reasons: [],
+      fallback: false,
+    };
+  }
+
+  try {
+    const plan = await llmPlan({ skills: summaries, context });
+    if (!Array.isArray(plan)) {
+      throw new Error('planner returned non-array response');
+    }
+    const order = plan;
+    const byId = new Map(summaries.map((summary, idx) => [summary.id, skills[idx]]));
+    const planned = [];
+    const reasons = [];
+    let matchedCount = 0;
+
+    for (const entry of order) {
+      if (!entry?.id) continue;
+      const candidate = byId.get(entry.id);
+      if (candidate) {
+        planned.push(candidate);
+        matchedCount += 1;
+        if (entry.reason) reasons.push({ id: entry.id, reason: entry.reason });
+        byId.delete(entry.id);
+      }
+    }
+
+    if (appendRemaining) {
+      // append any not referenced by LLM in deterministic order
+      const remaining = rankByModelHint(Array.from(byId.values()));
+      planned.push(...remaining);
+    } else if (matchedCount === 0 && order.length > 0) {
+      // In prune mode, a non-empty plan that matches nothing is almost certainly invalid output.
+      throw new Error('planner returned no known skill ids');
+    }
+
+    return { planned, reasons, fallback: false };
+  } catch (err) {
+    return {
+      planned: rankByModelHint(skills),
+      reasons: [{ id: 'fallback', reason: `planner error: ${err.message}` }],
+      fallback: true,
+    };
+  }
+}
+
+;// CONCATENATED MODULE: ./src/lib/impact-scope.mjs
+function ensureArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function extOf(file) {
+  const idx = file.lastIndexOf('.');
+  if (idx < 0) return '';
+  return file.slice(idx + 1).toLowerCase();
+}
+
+function containsSegment(file, segment) {
+  const normalized = file.replaceAll('\\', '/');
+  return normalized.split('/').includes(segment);
+}
+
+function matchesAny(file, needles) {
+  const normalized = file.toLowerCase();
+  return needles.some((n) => normalized.includes(n));
+}
+
+/**
+ * Infer impact tags from changed file paths.
+ * Tags are intentionally small and map to existing `skills/**` tags.
+ * @param {string[]|string} changedFiles
+ * @param {{diffText?: string}} [options]
+ * @returns {string[]}
+ */
+function inferImpactTags(changedFiles, options = {}) {
+  const files = ensureArray(changedFiles);
+  const tags = new Set();
+
+  for (const file of files) {
+    const ext = extOf(file);
+
+    if (['ts', 'tsx', 'cts', 'mts'].includes(ext)) tags.add('typescript');
+    if (['js', 'jsx', 'cjs', 'mjs'].includes(ext)) tags.add('javascript');
+    if (
+      ['md', 'mdx', 'adr'].includes(ext) ||
+      matchesAny(file, ['/docs/', '/design/']) ||
+      containsSegment(file, 'docs')
+    ) {
+      tags.add('design');
+    }
+
+    if (
+      containsSegment(file, 'tests') ||
+      containsSegment(file, 'test') ||
+      containsSegment(file, '__tests__') ||
+      matchesAny(file, ['.test.', '.spec.'])
+    ) {
+      tags.add('tests');
+    }
+
+    if (containsSegment(file, 'api') || containsSegment(file, 'routes')) tags.add('api');
+    if (containsSegment(file, 'db') || matchesAny(file, ['/migrations/', '/schema/']))
+      tags.add('reliability');
+
+    if (
+      containsSegment(file, 'auth') ||
+      containsSegment(file, 'security') ||
+      matchesAny(file, ['/oauth', '/jwt', '/session', '/cookie', '/csrf'])
+    ) {
+      tags.add('security');
+    }
+
+    if (
+      tags.has('api') ||
+      containsSegment(file, 'config') ||
+      containsSegment(file, 'db') ||
+      matchesAny(file, ['/env', '/secrets', '/headers'])
+    ) {
+      tags.add('security');
+    }
+
+    if (
+      containsSegment(file, 'logging') ||
+      matchesAny(file, ['/logger', '/trace', '/tracing', '/otel', 'opentelemetry'])
+    ) {
+      tags.add('observability');
+      tags.add('reliability');
+    }
+  }
+
+  const diffText = options?.diffText;
+  if (typeof diffText === 'string' && diffText.length) {
+    const lower = diffText.toLowerCase();
+    const hasCatch = lower.includes('catch (') || lower.includes('catch(');
+    const addsSilentReturn =
+      /^\+.*\breturn\s*;\s*(?:\/\/.*)?$/m.test(diffText) ||
+      /^\+.*\breturn\s+null\s*;\s*(?:\/\/.*)?$/m.test(diffText);
+    const mentionsIgnore = lower.includes('ignore') || lower.includes('swallow');
+    if (hasCatch && (addsSilentReturn || mentionsIgnore)) {
+      tags.add('observability');
+      tags.add('reliability');
+    }
+  }
+
+  return [...tags].sort();
+}
+
+// EXTERNAL MODULE: ./src/lib/file-classifier.mjs
+var file_classifier = __nccwpck_require__(1437);
+;// CONCATENATED MODULE: ./src/lib/test-impact.mjs
+
+
+/**
+ * Analyze test coverage gaps based on changed file classification.
+ *
+ * @param {string[]} changedFiles - Array of changed file paths
+ * @returns {{ appFilesChanged: number, testFilesChanged: number, gapFiles: string[], coverageRatio: number, riskLevel: 'low'|'medium'|'high' }}
+ */
+function analyzeTestImpact(changedFiles) {
+  const classified = (0,file_classifier/* classifyChangedFiles */.q)(changedFiles);
+
+  const appFiles = classified.app;
+  const testFiles = classified.test;
+
+  // Files in app that likely need corresponding tests
+  const gapFiles = appFiles.filter((appFile) => {
+    const basename =
+      appFile
+        .split('/')
+        .pop()
+        ?.replace(/\.[^.]+$/, '') ?? '';
+    // Check if any test file references this app file's basename
+    return !testFiles.some((testFile) => testFile.includes(basename));
+  });
+
+  const appCount = appFiles.length;
+  const testCount = testFiles.length;
+  const coverageRatio = appCount === 0 ? 1 : testCount / appCount;
+
+  let riskLevel = 'low';
+  if (appCount > 0 && testCount === 0) riskLevel = 'high';
+  else if (appCount > 0 && gapFiles.length >= appCount / 2) riskLevel = 'medium';
+
+  return {
+    appFilesChanged: appCount,
+    testFilesChanged: testCount,
+    gapFiles,
+    coverageRatio: Math.min(coverageRatio, 1), // cap at 1
+    riskLevel,
+  };
+}
+
+// EXTERNAL MODULE: ./src/lib/planner-utils.mjs
+var planner_utils = __nccwpck_require__(633);
+// EXTERNAL MODULE: ./src/lib/heuristic-review.mjs
+var heuristic_review = __nccwpck_require__(418);
+// EXTERNAL MODULE: ./src/lib/token-estimator.mjs
+var token_estimator = __nccwpck_require__(3159);
+// EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
+var risk_map = __nccwpck_require__(2374);
+// EXTERNAL MODULE: external "node:fs"
+var external_node_fs_ = __nccwpck_require__(3024);
+// EXTERNAL MODULE: external "node:path"
+var external_node_path_ = __nccwpck_require__(6760);
+;// CONCATENATED MODULE: ./src/lib/adr-linker.mjs
+
+
+
+const DEFAULT_ADR_DIRS = ['docs/adr', 'pages/explanation', 'specs'];
+
+/**
+ * Scan known ADR/spec directories and find documents relevant to changed files.
+ *
+ * @param {string} repoRoot - Repository root path
+ * @param {{ changedFiles?: string[], keywords?: string[], extraDirs?: string[] }} options
+ *   extraDirs: additional spec/ADR directories from project config
+ *   (review.specDirs), merged with the defaults and de-duplicated.
+ * @returns {{ path: string, title: string, matchReason: string }[]}
+ */
+function findRelatedADRs(
+  repoRoot,
+  { changedFiles = [], keywords = [], extraDirs = [] } = {}
+) {
+  // Resolve and validate scan directories. extraDirs come from user config
+  // (review.specDirs); on shared/fork CI a traversal like '../../etc' must not
+  // escape the repo. Keep only in-repo, existing directories; de-dupe by path.
+  const candidateDirs = [
+    ...DEFAULT_ADR_DIRS,
+    ...(Array.isArray(extraDirs) ? extraDirs.filter(Boolean) : []),
+  ];
+  const adrDirs = [];
+  const seen = new Set();
+  for (const dir of candidateDirs) {
+    const fullDir = external_node_path_.resolve(repoRoot, dir);
+    const relative = external_node_path_.relative(repoRoot, fullDir);
+    // Reject the repo root itself, path traversal, absolute escapes, duplicates.
+    if (
+      relative === '' ||
+      relative.startsWith('..') ||
+      external_node_path_.isAbsolute(relative) ||
+      seen.has(relative)
+    ) {
+      continue;
+    }
+    try {
+      if (external_node_fs_.statSync(fullDir).isDirectory()) {
+        seen.add(relative);
+        adrDirs.push(relative);
+      }
+    } catch {
+      // missing or inaccessible → skip
+    }
+  }
+  const results = [];
+
+  for (const dir of adrDirs) {
+    const fullDir = external_node_path_.join(repoRoot, dir);
+    const files = external_node_fs_.readdirSync(fullDir).filter((f) => f.endsWith('.md'));
+    for (const file of files) {
+      const filePath = external_node_path_.join(dir, file);
+      const content = external_node_fs_.readFileSync(external_node_path_.join(fullDir, file), 'utf-8');
+      const title = extractTitle(content) || file;
+
+      // Match by keyword in content
+      for (const kw of keywords) {
+        if (content.toLowerCase().includes(kw.toLowerCase())) {
+          results.push({ path: filePath, title, matchReason: `keyword: ${kw}` });
+          break; // one match per file is enough
+        }
+      }
+
+      // Match by changed file mention in content
+      for (const cf of changedFiles) {
+        const basename = cf.split('/').pop();
+        if (content.includes(cf) || content.includes(basename)) {
+          if (!results.some((r) => r.path === filePath)) {
+            results.push({
+              path: filePath,
+              title,
+              matchReason: `references: ${cf}`,
+            });
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
+function extractTitle(markdown) {
+  const match = /^#\s+(.+)/m.exec(markdown);
+  return match ? match[1].trim() : null;
+}
+
+// EXTERNAL MODULE: ./src/lib/diff-processor.mjs
+var diff_processor = __nccwpck_require__(3249);
+// EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
+var review_plan_generator = __nccwpck_require__(7817);
+;// CONCATENATED MODULE: ./runners/core/review-runner.mjs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const MODEL_PRIORITY = {
+  cheap: 1,
+  balanced: 2,
+  'high-accuracy': 3,
+};
+
+// Epic #1347 S2 (#1349, merged from #1339): declared multi-layer execution
+// order. Derived from each selected skill's evaluationType (fallback:
+// SKILL_HEURISTIC_MAP membership → heuristic, else agentic→llm). S2 emits the
+// DECLARATION only; reordering enforcement (strict_block routing) is S4.
+const EVALUATION_LAYER_ORDER = ['deterministic', 'heuristic', 'llm'];
+
+function skillEvaluationLayers(skill) {
+  const meta = getMeta(skill);
+  const declared = meta?.evaluationType;
+  if (declared === 'deterministic') return ['deterministic'];
+  if (declared === 'heuristic') return ['heuristic'];
+  if (declared === 'agentic') return ['llm'];
+  // Undeclared fallback: SKILL_HEURISTIC_MAP members have heuristic detectors
+  // AND run through the LLM in normal (non-dry-run) execution, so they
+  // contribute BOTH layers — declaring only 'heuristic' would omit the llm
+  // layer that actually runs (review M1 of the S2 plan-contract PR).
+  return heuristic_review/* HEURISTIC_SKILL_IDS */.y2.includes(meta?.id) ? ['heuristic', 'llm'] : ['llm'];
+}
+
+function deriveExecutionOrder(selected) {
+  const layers = new Set((selected ?? []).flatMap(skillEvaluationLayers));
+  return EVALUATION_LAYER_ORDER.filter((l) => layers.has(l));
+}
+
+// Epic #1347 S3 (#1350, Gemini-proposal adoption): Context Lift — how much
+// skill-prompt context progressive disclosure saved. totalSkillTokens counts
+// every CANDIDATE skill body; loadedSkillTokens counts only the selected
+// ones. liftRatio = 1 - loaded/total (0 when nothing was saved or nothing
+// was measurable). Declaration/metric only — no behavior depends on it.
+function computeContextLift(candidates, selected) {
+  const bodyTokens = (skill) => (0,token_estimator/* estimateTokens */.bP)(skill?.body ?? '');
+  const totalSkillTokens = (candidates ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
+  const loadedSkillTokens = (selected ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
+  const liftRatio =
+    totalSkillTokens > 0 ? Math.round((1 - loadedSkillTokens / totalSkillTokens) * 1000) / 1000 : 0;
+  return { totalSkillTokens, loadedSkillTokens, liftRatio };
+}
+
+function getMeta(skill) {
+  return skill?.metadata ?? skill;
+}
+
+function review_runner_ensureArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function matchesPhase(skill, phase) {
+  const meta = getMeta(skill);
+  if (Array.isArray(meta.phase)) {
+    return meta.phase.includes(phase);
+  }
+  return meta.phase === phase;
+}
+
+function matchesApplyTo(skill, changedFiles) {
+  const meta = getMeta(skill);
+  const globs = review_runner_ensureArray(meta.applyTo);
+  if (!globs.length) return false;
+  return changedFiles.some((file) =>
+    globs.some((pattern) => (0,esm/* minimatch */.xF)(file, pattern, { dot: true }))
+  );
+}
+
+function missingInputContexts(skill, availableContexts) {
+  const meta = getMeta(skill);
+  if (!meta.inputContext || meta.inputContext.length === 0) return [];
+  const available = new Set(availableContexts);
+  return meta.inputContext.filter((ctx) => !available.has(ctx));
+}
+
+function missingDependencies(skill, availableDependencies) {
+  const meta = getMeta(skill);
+  const deps = review_runner_ensureArray(meta.dependencies);
+  if (!deps.length) return [];
+  if (availableDependencies == null) return [];
+  const available = new Set(review_runner_ensureArray(availableDependencies));
+  return deps.filter((dep) => !available.has(dep));
+}
+
+function evaluateSkill(skill, options) {
+  const reasons = [];
+  const meta = getMeta(skill);
+  if (!matchesPhase(meta, options.phase)) {
+    reasons.push(`phase mismatch: ${meta.phase} !== ${options.phase}`);
+  }
+  if (!matchesApplyTo(meta, options.changedFiles)) {
+    reasons.push('applyTo did not match any changed file');
+  }
+  const missingContexts = missingInputContexts(meta, options.availableContexts);
+  if (missingContexts.length) {
+    reasons.push(`missing inputContext: ${missingContexts.join(', ')}`);
+  }
+  const depsMissing = missingDependencies(meta, options.availableDependencies);
+  if (depsMissing.length) {
+    reasons.push(`missing dependencies: ${depsMissing.join(', ')}`);
+  }
+  return {
+    ok: reasons.length === 0,
+    reasons,
+  };
+}
+
+function selectSkills(skills, options) {
+  const changedFiles = review_runner_ensureArray(options.changedFiles);
+  const availableContexts = review_runner_ensureArray(options.availableContexts);
+  const availableDependencies = options.availableDependencies ?? null;
+  const dryRun = options.dryRun ?? false;
+  const llmEnabled = options.llmEnabled ?? true;
+  const selected = [];
+  const skipped = [];
+
+  for (const skill of skills) {
+    const meta = skill.metadata ?? skill;
+    const skillId = meta.id;
+
+    // ルーティングスキル（エントリポイント）は実行対象外
+    const tags = review_runner_ensureArray(meta.tags);
+    if (tags.includes('routing')) {
+      skipped.push({ skill, reasons: ['routing skill: not an executable review skill'] });
+      continue;
+    }
+
+    // dry-run または LLM 無効時はヒューリスティック対応スキルのみ選択
+    const isLlmRestricted = dryRun || !llmEnabled;
+    if (isLlmRestricted && !heuristic_review/* HEURISTIC_SKILL_IDS */.y2.includes(skillId)) {
+      const reason = dryRun
+        ? 'dry-run: LLM必須スキル（ヒューリスティック未対応）'
+        : 'LLM disabled: LLM必須スキル（APIキー未設定）';
+      skipped.push({ skill, reasons: [reason] });
+      continue;
+    }
+
+    const result = evaluateSkill(meta, {
+      phase: options.phase,
+      changedFiles,
+      availableContexts,
+      availableDependencies,
+    });
+    if (result.ok) {
+      selected.push(skill);
+    } else {
+      skipped.push({ skill, reasons: result.reasons });
+    }
+  }
+  return { selected, skipped };
+}
+
+function rankByModelHint(skills, preferredModelHint = 'balanced') {
+  const preferredWeight = MODEL_PRIORITY[preferredModelHint] ?? MODEL_PRIORITY.balanced;
+  const weight = (hint) => MODEL_PRIORITY[hint] ?? MODEL_PRIORITY.balanced;
+  return [...skills].sort((a, b) => {
+    const wa = Math.abs(weight(getMeta(a).modelHint) - preferredWeight);
+    const wb = Math.abs(weight(getMeta(b).modelHint) - preferredWeight);
+    if (wa !== wb) return wa - wb;
+    return getMeta(a).id.localeCompare(getMeta(b).id);
+  });
+}
+
+function computeTagScore(skill, impactTags) {
+  if (!impactTags?.length) return 0;
+  const tags = new Set(getMeta(skill).tags ?? []);
+  let score = 0;
+  for (const tag of impactTags) {
+    if (tags.has(tag)) score += 1;
+  }
+  return score;
+}
+
+function rankByImpactTags(skills, impactTags, preferredModelHint = 'balanced') {
+  const scores = new Map(skills.map((s) => [getMeta(s).id, computeTagScore(s, impactTags)]));
+  const anyMatched = Array.from(scores.values()).some((v) => v > 0);
+  if (!anyMatched) {
+    return rankByModelHint(skills, preferredModelHint);
+  }
+
+  const preferredWeight = MODEL_PRIORITY[preferredModelHint] ?? MODEL_PRIORITY.balanced;
+  const weight = (hint) => MODEL_PRIORITY[hint] ?? MODEL_PRIORITY.balanced;
+
+  return [...skills].sort((a, b) => {
+    const idA = getMeta(a).id;
+    const idB = getMeta(b).id;
+    const scoreA = scores.get(idA) ?? 0;
+    const scoreB = scores.get(idB) ?? 0;
+    if (scoreA !== scoreB) return scoreB - scoreA;
+
+    const wa = Math.abs(weight(getMeta(a).modelHint) - preferredWeight);
+    const wb = Math.abs(weight(getMeta(b).modelHint) - preferredWeight);
+    if (wa !== wb) return wa - wb;
+    return idA.localeCompare(idB);
+  });
+}
+
+/**
+ * Build an execution plan from skills and review context.
+ * - planner 未指定: メタデと modelHint に基づく決定論的な並び替え
+ * - planner 指定: LLM 等で優先度決定し、エラー時は決定論的順序にフォールバック
+ *   - plannerMode=order: 優先度づけ（未参照スキルは後ろに決定論で追加）
+ *   - plannerMode=prune: 絞り込み（LLM が選んだスキルのみを実行）
+ */
+// #1255 (approach D): opt-in escalation. When RIVER_ESCALATE_TEST_SKILLS is
+// enabled and the diff is high test-impact risk (app changed, no tests), these
+// downstream test skills are force-selected regardless of phase so untested
+// high-risk changes still get a test-coverage review. Default off — see
+// docs/development/1255-test-impact-routing-design.md.
+const ESCALATION_TEST_SKILL_IDS = ['test-existence', 'coverage-gap'];
+
+function isTestSkillEscalationEnabled() {
+  const v = String(process.env.RIVER_ESCALATE_TEST_SKILLS ?? '')
+    .trim()
+    .toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
+
+async function buildExecutionPlan(options) {
+  const {
+    phase,
+    changedFiles = [],
+    availableContexts = [],
+    availableDependencies = null,
+    preferredModelHint = 'balanced',
+    skills: providedSkills,
+    planner,
+    plannerMode,
+    diffText,
+    dryRun = false,
+    llmEnabled = true,
+    repoRoot,
+    riskMap,
+    skillIds = null,
+    manualReviewMode = null,
+    specDirs = [],
+  } = options;
+
+  const loadedSkills = providedSkills ?? (await (0,skill_loader/* loadSkills */.l1)());
+  // When a skill set is requested (--skill-set), narrow the candidate skills to
+  // the set's ids before phase/applyTo selection. Default (null) keeps all skills.
+  const skills =
+    Array.isArray(skillIds) && skillIds.length > 0
+      ? loadedSkills.filter((skill) => skillIds.includes(skill.metadata?.id ?? skill.id))
+      : loadedSkills;
+  const selection = selectSkills(skills, {
+    phase,
+    changedFiles,
+    availableContexts,
+    availableDependencies,
+    dryRun,
+    llmEnabled,
+  });
+  const impactTags = inferImpactTags(changedFiles, { diffText });
+  const fileTypes = (0,file_classifier/* classifyChangedFiles */.q)(changedFiles);
+  const riskAssessment = riskMap ? (0,risk_map/* evaluateRisk */.lm)(riskMap, changedFiles) : null;
+  // #1255: surface test-impact signal (riskLevel high = app changed, no tests)
+  // on the plan so downstream planners/consumers can route test skills. This
+  // exposes the previously dead-code analyzeTestImpact() without forcing skill
+  // injection (approach B).
+  const testImpact = analyzeTestImpact(changedFiles);
+  // #1255 (approach D): opt-in escalation of downstream test skills for high
+  // test-impact risk diffs. Injects regardless of phase; default off so the
+  // baseline selection (and dry-run heuristic behavior) is unchanged.
+  if (testImpact.riskLevel === 'high' && isTestSkillEscalationEnabled()) {
+    const selectedIds = new Set(selection.selected.map((s) => getMeta(s).id));
+    for (const id of ESCALATION_TEST_SKILL_IDS) {
+      if (selectedIds.has(id)) continue;
+      const skill = skills.find((s) => getMeta(s).id === id);
+      if (!skill) continue;
+      selection.selected.push(skill);
+      selection.skipped = selection.skipped.filter((entry) => getMeta(entry.skill).id !== id);
+    }
+  }
+  if (selection.selected.length === 0) {
+    // #878 A2-3-runners: even when no skills are selected, expose the
+    // snapshot so consumers can attach it to the artifact for downstream
+    // diagnostics (drift detection, audit). Cheap to compute, cheap to drop.
+    return {
+      selected: [],
+      skipped: selection.skipped,
+      fileTypes,
+      riskAssessment,
+      testImpact,
+      executionOrder: [],
+      estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
+      contextLift: computeContextLift(skills, []),
+      snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
+    };
+  }
+  const relatedADRs = findRelatedADRs(repoRoot ?? process.cwd(), {
+    changedFiles,
+    keywords: impactTags,
+    extraDirs: specDirs,
+  });
+
+  const diffMeta = (0,diff_processor/* extractDiffMeta */.So)({ changedFiles, diffText });
+  const reviewMode = (0,review_plan_generator/* determineReviewMode */.Xf)(diffMeta, { manualMode: manualReviewMode });
+
+  // If planner is provided, try LLM-based planning, fallback to deterministic rank
+  const effectivePlannerMode = planner
+    ? (0,planner_utils/* normalizePlannerMode */.p$)(plannerMode, { defaultMode: 'order' })
+    : 'off';
+  if (planner && effectivePlannerMode !== 'off') {
+    const context = {
+      phase,
+      changedFiles,
+      availableContexts,
+      impactTags,
+      fileTypes,
+    };
+    const { planned, reasons, fallback } = await planSkills({
+      skills: selection.selected,
+      context,
+      llmPlan: planner.plan ?? planner,
+      appendRemaining: effectivePlannerMode !== 'prune',
+    });
+    const ranked = fallback
+      ? rankByImpactTags(selection.selected, impactTags, preferredModelHint)
+      : planned;
+    return {
+      selected: ranked,
+      skipped: selection.skipped,
+      plannerMode: effectivePlannerMode,
+      plannerReasons: reasons,
+      plannerFallback: fallback,
+      ...(fallback ? { plannerError: reasons?.[0]?.reason ?? 'planner fallback' } : {}),
+      impactTags,
+      fileTypes,
+      relatedADRs,
+      reviewMode,
+      // #877 silent-skip cleanup: riskAssessment was previously computed but
+      // never returned, so consumers received `undefined`. Top-level for
+      // back-compat; also nested in `snapshot` for the #878 A2-3 carry-over.
+      riskAssessment,
+      // #1255: test-impact signal (see analyzeTestImpact call above).
+      testImpact,
+      // Epic #1347 S2: declared layer order + rough cost estimate (advisory).
+      executionOrder: deriveExecutionOrder(ranked),
+      estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
+      contextLift: computeContextLift(skills, ranked),
+      // #878 A2-3-runners: carry-over context for --plan replay execution.
+      // Consumers should propagate this to `artifact.debug.execution.snapshot`
+      // per docs/development/a2-3-replay-execution-design.md.
+      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
+    };
+  }
+
+  // planner が無い場合（LLM未設定）は決定論的順位付けで実行
+  const ordered = rankByImpactTags(selection.selected, impactTags, preferredModelHint);
+
+  return {
+    selected: ordered,
+    skipped: selection.skipped,
+    impactTags,
+    fileTypes,
+    relatedADRs,
+    reviewMode,
+    riskAssessment,
+    testImpact,
+    executionOrder: deriveExecutionOrder(ordered),
+    estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
+    contextLift: computeContextLift(skills, ordered),
+    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
+  };
+}
+
+// Re-export summarizeSkill for consumers that want the same view used by planner
+
+
+
+/***/ }),
+
+/***/ 1924:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   $b: () => (/* binding */ loadSkillsCached)
+/* harmony export */ });
+/* unused harmony exports clearSkillCache, skillCacheSize */
+/* harmony import */ var _skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1928);
+
+
+// Module-level cache: serialized options key → Promise<SkillDefinition[]>
+// Caching the promise prevents thundering-herd: concurrent callers with the
+// same key await the same in-flight promise rather than launching duplicates.
+// Prevents redundant disk I/O when the same skillsDir is loaded multiple
+// times in a single process (e.g. agent-skill-bridge calls loadSkills twice
+// with identical options).
+//
+// Safety bound: evict the oldest entry when the cache exceeds MAX_ENTRIES.
+// In practice the number of distinct option sets is very small (< 5), so this
+// bound is only a safeguard against unbounded growth in unusual scenarios.
+const MAX_ENTRIES = 50;
+const cache = new Map();
+
+function evictIfNeeded() {
+  if (cache.size >= MAX_ENTRIES) {
+    cache.delete(cache.keys().next().value);
+  }
+}
+
+function cacheKey(options) {
+  const { skillsDir, schemaPath, excludedTags } = options ?? {};
+  return JSON.stringify({
+    skillsDir: skillsDir ?? null,
+    schemaPath: schemaPath ?? null,
+    excludedTags: excludedTags ? [...excludedTags].sort() : null,
+  });
+}
+
+/**
+ * Load skills with in-process memoization.
+ * Identical calls within the same process return the cached result without
+ * re-reading the filesystem. Call {@link clearSkillCache} between test cases
+ * or whenever fresh data is needed.
+ *
+ * If a custom `validator` function is supplied, the cache is bypassed because
+ * functions cannot be serialised into a stable key.
+ *
+ * @param {{ skillsDir?: string, schemaPath?: string, excludedTags?: string[], validator?: Function }} [options]
+ * @returns {Promise<SkillDefinition[]>}
+ */
+async function loadSkillsCached(options = {}) {
+  // Bypass cache when a custom validator is provided — functions are not
+  // serialisable, so two calls with different validators would collide on
+  // the same key even though their results may differ.
+  if (options.validator) {
+    return (0,_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .loadSkills */ .l1)(options);
+  }
+
+  const key = cacheKey(options);
+  if (cache.has(key)) return cache.get(key);
+
+  evictIfNeeded();
+  const promise = (0,_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .loadSkills */ .l1)(options).catch((err) => {
+    cache.delete(key);
+    throw err;
+  });
+  cache.set(key, promise);
+  return promise;
+}
+
+/**
+ * Evict all cached entries.
+ * Call this in tests or when skill files on disk may have changed.
+ */
+function clearSkillCache() {
+  cache.clear();
+}
+
+/**
+ * Number of distinct option sets currently cached.
+ * Primarily for testing; not intended for production use.
+ */
+function skillCacheSize() {
+  return cache.size;
+}
+
+
+/***/ }),
+
+/***/ 1928:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  vN: () => (/* binding */ SkillLoaderError),
+  m: () => (/* binding */ createSkillValidator),
+  KJ: () => (/* binding */ defaultPaths),
+  Qv: () => (/* binding */ loadAllSkillMetadata),
+  rn: () => (/* binding */ loadPacks),
+  e$: () => (/* binding */ loadSchema),
+  l1: () => (/* binding */ loadSkills),
+  eJ: () => (/* binding */ parseFrontMatter),
+  mw: () => (/* binding */ resolveSkillSet)
+});
+
+// UNUSED EXPORTS: listSkillFiles, listSkillPackageDirs, loadRecommendationSets, loadSkillFile, loadSkillMetadata, parseSkillFile, resolveRecommendationSet
+
+// EXTERNAL MODULE: external "fs"
+var external_fs_ = __nccwpck_require__(9896);
+// EXTERNAL MODULE: external "path"
+var external_path_ = __nccwpck_require__(6928);
+;// CONCATENATED MODULE: external "url"
+const external_url_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("url");
+// EXTERNAL MODULE: ../../../node_modules/js-yaml/dist/js-yaml.mjs
+var js_yaml = __nccwpck_require__(1813);
+// EXTERNAL MODULE: ../../../node_modules/gray-matter/index.js
+var gray_matter = __nccwpck_require__(493);
+// EXTERNAL MODULE: ../../../node_modules/ajv/dist/2020.js
+var _2020 = __nccwpck_require__(7720);
+// EXTERNAL MODULE: ../../../node_modules/ajv-formats/dist/index.js
+var dist = __nccwpck_require__(8613);
+;// CONCATENATED MODULE: ./runners/core/skill-loader.mjs
+
+
+
+
+
+
+
+
+/**
+ * @typedef {'upstream' | 'midstream' | 'downstream'} PhaseEnum
+ * @typedef {PhaseEnum | PhaseEnum[]} Phase
+ * @typedef {'info' | 'minor' | 'major' | 'critical'} Severity
+ * @typedef {'diff' | 'fullFile' | 'tests' | 'adr' | 'commitMessage' | 'repoConfig'} InputContext
+ * @typedef {'findings' | 'summary' | 'actions' | 'tests' | 'metrics' | 'questions'} OutputKind
+ * @typedef {'cheap' | 'balanced' | 'high-accuracy'} ModelHint
+ * @typedef {'code_search' | 'test_runner' | 'adr_lookup' | 'repo_metadata' | 'coverage_report' | 'tracing' | `custom:${string}`} Dependency
+ *
+ * @typedef {Object} SkillMetadata
+ * @property {string} id
+ * @property {string} name
+ * @property {string} description
+ * @property {Phase} phase
+ * @property {string[]} applyTo
+ * @property {string[]=} files
+ * @property {string[]=} tags
+ * @property {Severity=} severity
+ * @property {InputContext[]=} inputContext
+ * @property {OutputKind[]=} outputKind
+ * @property {ModelHint=} modelHint
+ * @property {Dependency[]=} dependencies
+ * @property {{phase?: Phase, applyTo?: string[], files?: string[]}=} trigger
+ * @property {number=} priority
+ *
+ * @typedef {Object} SkillDefinition
+ * @property {SkillMetadata} metadata
+ * @property {string} body
+ * @property {string} path
+ */
+
+const skill_loader_filename = (0,external_url_namespaceObject.fileURLToPath)(import.meta.url);
+const skill_loader_dirname = external_path_.dirname(skill_loader_filename);
+const repoRoot = process.env.RIVER_REPO_ROOT
+  ? external_path_.resolve(process.env.RIVER_REPO_ROOT)
+  : external_path_.resolve(skill_loader_dirname, '..', '..');
+const defaultSkillsDir = external_path_.join(repoRoot, 'skills');
+const defaultSchemaPath = external_path_.join(repoRoot, 'schemas', 'skill.schema.json');
+const markdownExtensions = new Set(['.md', '.mdx']);
+const yamlExtensions = new Set(['.yaml', '.yml']);
+const allowedExtensions = new Set([...markdownExtensions, ...yamlExtensions]);
+const ignoredSkillDirNames = new Set([
+  'references',
+  'fixtures',
+  'golden',
+  'eval',
+  'prompt',
+  'prompts',
+]);
+const ignoredFileNames = new Set([
+  '.gitkeep',
+  'README.md',
+  'registry.yaml',
+  'registry.yml',
+  '_template.md',
+]);
+const legacySkillFiles = new Set(['skill.yaml', 'skill.yml']);
+const streamCategories = new Set(['core', 'upstream', 'midstream', 'downstream']);
+const allPhases = ['upstream', 'midstream', 'downstream'];
+
+const defaultPaths = {
+  repoRoot,
+  skillsDir: defaultSkillsDir,
+  schemaPath: defaultSchemaPath,
+};
+
+class SkillLoaderError extends Error {
+  constructor(message, details = undefined) {
+    super(message);
+    this.name = 'SkillLoaderError';
+    this.details = details;
+  }
+}
+
+async function loadSchema(schemaPath = defaultSchemaPath) {
+  const raw = await external_fs_.promises.readFile(schemaPath, 'utf8');
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    throw new SkillLoaderError(`Failed to parse JSON schema at ${schemaPath}: ${err.message}`);
+  }
+}
+
+function createSkillValidator(schema) {
+  const ajv = new _2020({ allErrors: true, strict: false, useDefaults: true });
+  dist(ajv);
+  return ajv.compile(schema);
+}
+
+/**
+ * Read the named skill bundles declared under `recommendations:` in
+ * skills/registry.yaml. These are maintainer-curated sets (basic, typescript,
+ * comprehensive, ...) that `--skill-set <name>` exposes for selective runs.
+ *
+ * @param {{ skillsDir?: string }} [options]
+ * @returns {Promise<Record<string, { description?: string, skills: string[] }>>}
+ */
+async function loadRecommendationSets({ skillsDir = defaultSkillsDir } = {}) {
+  const registryPath = external_path_.join(skillsDir, 'registry.yaml');
+  let raw;
+  try {
+    raw = await external_fs_.promises.readFile(registryPath, 'utf8');
+  } catch {
+    return {};
+  }
+  let parsed;
+  try {
+    parsed = js_yaml/* load */.Hh(raw) ?? {};
+  } catch (err) {
+    throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
+  }
+  const recommendations = parsed?.recommendations;
+  return recommendations && typeof recommendations === 'object' ? recommendations : {};
+}
+
+/**
+ * Resolve a recommendation set name to its skill id list.
+ *
+ * @param {string} name
+ * @param {{ skillsDir?: string }} [options]
+ * @returns {Promise<string[]>} skill ids in the set
+ * @throws {SkillLoaderError} when the name is not a known recommendation set
+ */
+async function resolveRecommendationSet(name, { skillsDir = defaultSkillsDir } = {}) {
+  const sets = await loadRecommendationSets({ skillsDir });
+  const entry = sets[name];
+  if (!entry || !Array.isArray(entry.skills)) {
+    const available = Object.keys(sets).sort().join(', ') || '(none)';
+    throw new SkillLoaderError(`Unknown skill set "${name}". Available sets: ${available}.`);
+  }
+  return entry.skills.filter((id) => typeof id === 'string' && id.length > 0);
+}
+
+/**
+ * Read the pack manifests declared under `packs:` in skills/registry.yaml.
+ * Packs are the distribution unit for bundled open review knowledge
+ * (docs/development/skill-pack-design.md). Unlike `recommendations:` (an
+ * object keyed by name), `packs:` is an array of entries with an `id` field.
+ *
+ * @param {{ skillsDir?: string }} [options]
+ * @returns {Promise<Array<{ id: string, skills: string[] }>>}
+ */
+async function loadPacks({ skillsDir = defaultSkillsDir } = {}) {
+  const registryPath = external_path_.join(skillsDir, 'registry.yaml');
+  let raw;
+  try {
+    raw = await external_fs_.promises.readFile(registryPath, 'utf8');
+  } catch {
+    return [];
+  }
+  let parsed;
+  try {
+    parsed = js_yaml/* load */.Hh(raw) ?? {};
+  } catch (err) {
+    throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
+  }
+  const packs = parsed?.packs;
+  return Array.isArray(packs) ? packs.filter((p) => p && typeof p.id === 'string') : [];
+}
+
+/**
+ * Resolve one or more skill-set names (comma separated) to a deduplicated
+ * skill id list. Resolution order per name: packs first, then
+ * recommendations as a fallback. Multiple names are set-unioned so each
+ * skill runs at most once (skill-pack-design.md §2 principle 1).
+ *
+ * During the packs/recommendations coexistence period a name present in
+ * both resolves to the pack and emits a warning (same-id conflicts become
+ * validate errors in Phase D).
+ *
+ * @param {string} names comma-separated pack/recommendation-set names
+ * @param {{ skillsDir?: string, warn?: (msg: string) => void }} [options]
+ * @returns {Promise<string[]>} deduplicated skill ids preserving first-seen order
+ * @throws {SkillLoaderError} when a name matches neither a pack nor a recommendation set
+ */
+async function resolveSkillSet(
+  names,
+  { skillsDir = defaultSkillsDir, warn = (msg) => console.warn(msg) } = {}
+) {
+  const requested = String(names ?? '')
+    .split(',')
+    .map((n) => n.trim())
+    .filter(Boolean);
+  if (!requested.length) return [];
+  const [packs, sets] = await Promise.all([
+    loadPacks({ skillsDir }),
+    loadRecommendationSets({ skillsDir }),
+  ]);
+  const resolved = [];
+  for (const name of requested) {
+    const pack = packs.find((p) => p.id === name);
+    const recommendation = sets[name];
+    if (pack && !Array.isArray(pack.skills)) {
+      throw new SkillLoaderError(
+        `Pack "${name}" is malformed: \`skills\` must be an array. Fix skills/registry.yaml.`
+      );
+    }
+    if (pack) {
+      if (recommendation) {
+        warn(
+          `⚠️  Skill set "${name}" exists as both a pack and a recommendation set; using the pack. ` +
+            'Rename or remove the recommendation entry before Phase D, when this becomes an error.'
+        );
+      }
+      resolved.push(...pack.skills);
+      continue;
+    }
+    if (recommendation && Array.isArray(recommendation.skills)) {
+      resolved.push(...recommendation.skills);
+      continue;
+    }
+    const available =
+      [...packs.map((p) => p.id), ...Object.keys(sets)].sort().join(', ') || '(none)';
+    throw new SkillLoaderError(`Unknown skill set "${name}". Available sets: ${available}.`);
+  }
+  const seen = new Set();
+  return resolved.filter((id) => {
+    if (typeof id !== 'string' || !id.length || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+async function listSkillFiles(dir = defaultSkillsDir) {
+  const entries = await external_fs_.promises.readdir(dir, { withFileTypes: true });
+  const files = [];
+
+  const hasLegacySkillFile = entries.some(
+    (entry) => !entry.isDirectory() && legacySkillFiles.has(entry.name)
+  );
+  if (hasLegacySkillFile) {
+    const legacyEntry = entries.find(
+      (entry) => !entry.isDirectory() && legacySkillFiles.has(entry.name)
+    );
+    if (!legacyEntry) {
+      throw new Error(`skill.yaml detected but not found in ${dir}`);
+    }
+    files.push(external_path_.join(dir, legacyEntry.name));
+    return files.sort((a, b) => a.localeCompare(b));
+  }
+
+  for (const entry of entries) {
+    const entryPath = external_path_.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (ignoredSkillDirNames.has(entry.name) || entry.name.startsWith('.')) {
+        continue;
+      }
+      const nested = await listSkillFiles(entryPath);
+      files.push(...nested);
+      continue;
+    }
+
+    const ext = external_path_.extname(entry.name).toLowerCase();
+    if (!allowedExtensions.has(ext)) continue;
+    if (ignoredFileNames.has(entry.name)) continue;
+    if (entry.name.startsWith('_')) continue;
+    files.push(entryPath);
+  }
+
+  return files.sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Recursively discover skill-package directories under `root`: directories that
+ * directly contain a `SKILL.md`. Descent stops at the first `SKILL.md` found on
+ * a branch, so a nested `SKILL.md` (e.g. under `fixtures/`) does not create a
+ * second entry. This is the shared lower layer for the manifest generator's
+ * `findSkillDirs` and the agent-skills validator's package discovery.
+ *
+ * Unlike {@link listSkillFiles}, the unit of discovery here is the SKILL.md
+ * package directory, not individual skill definition files: it returns directory
+ * paths and applies no extension or ignore-name filtering. Results are returned
+ * in walk order (unsorted) so each caller can apply the sort its output contract
+ * requires — sorting SKILL.md paths and sorting their parent directories are not
+ * equivalent orderings when one sibling name is a prefix of another.
+ *
+ * @param {string} root directory to scan
+ * @param {{ includeRoot?: boolean }} [options] when false, `root` itself is not
+ *   tested for a `SKILL.md`; scanning begins at its immediate child directories
+ *   (the agent-skills validator's root is a container, never a package).
+ * @returns {Promise<string[]>} SKILL.md-bearing directory paths, in walk order
+ */
+async function listSkillPackageDirs(root, { includeRoot = true } = {}) {
+  const dirs = [];
+  async function walk(dir) {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    if (entries.some((entry) => entry.isFile() && entry.name === 'SKILL.md')) {
+      dirs.push(dir);
+      return; // do not descend into nested skill dirs
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) await walk(path.join(dir, entry.name));
+    }
+  }
+  if (includeRoot) {
+    await walk(root);
+  } else {
+    const entries = await fs.readdir(root, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) await walk(path.join(root, entry.name));
+    }
+  }
+  return dirs;
+}
+
+function normalizeStringArray(value) {
+  if (!value) return undefined;
+  const asArray = Array.isArray(value) ? value : [value];
+  const filtered = asArray
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter(Boolean);
+  return filtered.length ? filtered : undefined;
+}
+
+function normalizePhaseValue(value) {
+  if (!value) return undefined;
+  if (Array.isArray(value)) {
+    const phases = value.filter(Boolean);
+    if (phases.length === 1) return phases[0];
+    return phases.length ? phases : undefined;
+  }
+  return value;
+}
+
+function inferCategoryFromPhase(phase) {
+  if (!phase) return undefined;
+  if (Array.isArray(phase)) {
+    const unique = Array.from(new Set(phase));
+    if (unique.length === 1 && streamCategories.has(unique[0])) {
+      return unique[0];
+    }
+    if (unique.length > 1) {
+      return 'core';
+    }
+    return undefined;
+  }
+  return streamCategories.has(phase) ? phase : undefined;
+}
+
+function inferCategoryFromPath(filePath) {
+  if (!filePath) return undefined;
+  const segments = external_path_.normalize(filePath).split(external_path_.sep);
+  const skillsIndex = segments.lastIndexOf('skills');
+  const candidate = skillsIndex >= 0 ? segments[skillsIndex + 1] : undefined;
+  if (candidate && streamCategories.has(candidate)) {
+    return candidate;
+  }
+  return undefined;
+}
+
+function resolveCategory(metaCategory, { phase, filePath } = {}) {
+  if (typeof metaCategory === 'string' && streamCategories.has(metaCategory)) {
+    return metaCategory;
+  }
+  return inferCategoryFromPath(filePath) ?? inferCategoryFromPhase(phase);
+}
+
+function resolvePhase(metaPhase, category) {
+  if (category === 'core') {
+    return [...allPhases];
+  }
+  // Explicit multi-phase array takes precedence over a stream category's implied
+  // single phase. Allows a skill with category: upstream (organizational) to also
+  // activate in midstream by declaring phase: [upstream, midstream].
+  if (Array.isArray(metaPhase) && metaPhase.length > 1) {
+    return normalizePhaseValue(metaPhase);
+  }
+  if (category && streamCategories.has(category)) {
+    return category;
+  }
+  return normalizePhaseValue(metaPhase);
+}
+
+function normalizeMetadata(metadata, { filePath } = {}) {
+  const meta = { ...metadata };
+
+  if (meta.priority !== undefined) {
+    const parsedPriority =
+      typeof meta.priority === 'string' ? Number(meta.priority) : meta.priority;
+    if (Number.isFinite(parsedPriority)) {
+      meta.priority = parsedPriority;
+    } else {
+      delete meta.priority;
+    }
+  }
+
+  const topLevelApplyTo =
+    normalizeStringArray(meta.applyTo) ??
+    normalizeStringArray(meta.files) ??
+    normalizeStringArray(meta.path_patterns);
+  if (topLevelApplyTo) {
+    meta.applyTo = topLevelApplyTo;
+  }
+
+  const trigger =
+    meta.trigger && typeof meta.trigger === 'object' && !Array.isArray(meta.trigger)
+      ? meta.trigger
+      : null;
+  const triggerApplyTo =
+    normalizeStringArray(trigger?.applyTo) ??
+    normalizeStringArray(trigger?.files) ??
+    normalizeStringArray(trigger?.path_patterns);
+
+  if (!meta.phase && trigger?.phase) {
+    meta.phase = trigger.phase;
+  }
+  if (!meta.applyTo && triggerApplyTo) {
+    meta.applyTo = triggerApplyTo;
+  }
+
+  meta.category = resolveCategory(meta.category, { phase: meta.phase, filePath });
+  meta.phase = resolvePhase(meta.phase, meta.category);
+
+  // Trigger is consumed during normalization; avoid leaking nested state.
+  if (trigger) {
+    delete meta.trigger;
+  }
+  if ('path_patterns' in meta) {
+    delete meta.path_patterns;
+  }
+
+  return meta;
+}
+
+function parseFrontMatter(content, { filePath } = {}) {
+  const trimmed = content.trimStart();
+  if (!trimmed.startsWith('---')) {
+    throw new SkillLoaderError('Missing front matter block (---)');
+  }
+
+  let parsed;
+  try {
+    parsed = gray_matter(trimmed);
+  } catch (err) {
+    throw new SkillLoaderError(
+      `Front matter parse error${filePath ? ` (${filePath})` : ''}: ${err.message}`
+    );
+  }
+
+  const metadata = parsed.data ?? {};
+  if (typeof metadata !== 'object' || Array.isArray(metadata)) {
+    throw new SkillLoaderError('Front matter must be a mapping');
+  }
+  if (Object.keys(metadata).length === 0) {
+    throw new SkillLoaderError('Front matter is empty');
+  }
+  const normalized = normalizeMetadata(metadata, { filePath });
+  const body = (parsed.content ?? '').trim();
+  return { metadata: normalized, body };
+}
+
+async function parseSkillFile(filePath) {
+  const ext = external_path_.extname(filePath).toLowerCase();
+  if (!allowedExtensions.has(ext)) {
+    throw new SkillLoaderError(`Unsupported skill file extension: ${ext}`);
+  }
+  const raw = await external_fs_.promises.readFile(filePath, 'utf8');
+  if (markdownExtensions.has(ext)) {
+    return parseFrontMatter(raw, { filePath });
+  }
+
+  // YAML handling
+  let loaded = {};
+  try {
+    loaded = js_yaml/* load */.Hh(raw) ?? {};
+  } catch (err) {
+    throw new SkillLoaderError(`YAML parse error: ${err.message}`);
+  }
+  if (typeof loaded !== 'object' || Array.isArray(loaded)) {
+    throw new SkillLoaderError('Skill YAML must be a mapping');
+  }
+
+  let metadata = loaded;
+  let body = '';
+
+  // Support nested metadata block
+  if (loaded.metadata && typeof loaded.metadata === 'object' && !Array.isArray(loaded.metadata)) {
+    metadata = { ...loaded.metadata };
+    if (typeof metadata.instruction === 'string') {
+      body = metadata.instruction;
+      delete metadata.instruction;
+    } else if (typeof loaded.instruction === 'string') {
+      body = loaded.instruction;
+    }
+  } else if (typeof loaded.instruction === 'string') {
+    // Support flat structure with optional instruction field
+    body = loaded.instruction;
+    delete metadata.instruction;
+  }
+
+  metadata = normalizeMetadata(metadata, { filePath });
+  return { metadata, body };
+}
+
+function validateMetadata(metadata, validate) {
+  const metaCopy = JSON.parse(JSON.stringify(metadata ?? {}));
+  const ok = validate(metaCopy);
+  if (!ok) {
+    const details = (validate.errors ?? [])
+      .map((err) => `${err.instancePath || '/'} ${err.message}`)
+      .join('; ');
+    throw new SkillLoaderError(`Validation failed: ${details}`, validate.errors);
+  }
+  return metaCopy;
+}
+
+function relativeToRepo(filePath) {
+  return filePath.startsWith(repoRoot) ? external_path_.relative(repoRoot, filePath) : filePath;
+}
+
+function logSkillLoadError(filePath, err) {
+  const location = relativeToRepo(filePath);
+  const reason = err instanceof Error ? err.message : String(err);
+  console.error(`⚠️  Failed to load skill ${location}: ${reason}`);
+  if (err?.details && Array.isArray(err.details)) {
+    for (const detail of err.details) {
+      const instance = detail.instancePath || '/';
+      console.error(`   - ${instance}: ${detail.message}`);
+    }
+  }
+}
+
+function logDuplicateSkill(id, filePath, originalPath) {
+  const location = relativeToRepo(filePath);
+  const first = relativeToRepo(originalPath);
+  console.warn(
+    `⚠️  Duplicate skill id "${id}" in ${location}; already loaded from ${first}. Skipping.`
+  );
+}
+
+function hasExcludedTag(metadata, excludedTags) {
+  if (!excludedTags?.length) return false;
+  const tags = metadata?.tags ?? [];
+  return tags.some((tag) => excludedTags.includes(tag));
+}
+
+async function loadSkillFile(filePath, options = {}) {
+  const { validator, schemaPath = defaultSchemaPath } = options;
+  const compiledValidator = validator ?? createSkillValidator(await loadSchema(schemaPath));
+  const parsed = await parseSkillFile(filePath);
+  const metadata = validateMetadata(parsed.metadata, compiledValidator);
+  return {
+    metadata,
+    body: parsed.body,
+    path: filePath,
+  };
+}
+
+/**
+ * Shared loader loop used by {@link loadSkills} and {@link loadAllSkillMetadata}.
+ * Differs only in the per-file loader function (`loaderFn`), so the skill-discovery
+ * semantics (schema validation, excluded tags, duplicate-id handling) stay in sync
+ * across the two public entry points.
+ *
+ * @param {(filePath: string, options: { validator: Function }) => Promise<{ metadata: SkillMetadata, path: string }>} loaderFn
+ * @param {object} options
+ */
+async function _loadFromDir(loaderFn, options = {}) {
+  const {
+    skillsDir = defaultSkillsDir,
+    schemaPath = defaultSchemaPath,
+    validator: providedValidator,
+    excludedTags = ['agent'],
+  } = options;
+  const schema = providedValidator ? null : await loadSchema(schemaPath);
+  const validator = providedValidator ?? createSkillValidator(schema);
+  const files = await listSkillFiles(skillsDir);
+  const skillsById = new Map();
+
+  for (const filePath of files) {
+    try {
+      const skill = await loaderFn(filePath, { validator });
+      const id = skill?.metadata?.id;
+      if (!id) {
+        logSkillLoadError(filePath, new SkillLoaderError('Missing id in skill metadata'));
+        continue;
+      }
+      if (hasExcludedTag(skill.metadata, excludedTags)) {
+        continue;
+      }
+      if (skillsById.has(id)) {
+        logDuplicateSkill(id, filePath, skillsById.get(id).path);
+        continue;
+      }
+      skillsById.set(id, skill);
+    } catch (err) {
+      logSkillLoadError(filePath, err);
+    }
+  }
+
+  return Array.from(skillsById.values());
+}
+
+async function loadSkills(options = {}) {
+  return _loadFromDir(loadSkillFile, options);
+}
+
+/**
+ * Load only skill metadata (Stage 1 of Progressive Disclosure).
+ * Returns metadata and path without the body, suitable for filtering
+ * and routing before full skill loading.
+ *
+ * @param {string} filePath
+ * @param {object} [options]
+ * @param {Function} [options.validator]
+ * @param {string} [options.schemaPath]
+ * @returns {Promise<{metadata: SkillMetadata, path: string}>}
+ */
+async function loadSkillMetadata(filePath, options = {}) {
+  const { validator, schemaPath = defaultSchemaPath } = options;
+  const compiledValidator = validator ?? createSkillValidator(await loadSchema(schemaPath));
+  const parsed = await parseSkillFile(filePath);
+  const metadata = validateMetadata(parsed.metadata, compiledValidator);
+  return {
+    metadata,
+    path: filePath,
+  };
+}
+
+/**
+ * Load metadata for all skills (Stage 1 of Progressive Disclosure).
+ * Returns an array of {metadata, path} objects without skill bodies.
+ *
+ * @param {object} [options]
+ * @param {string} [options.skillsDir]
+ * @param {string} [options.schemaPath]
+ * @param {Function} [options.validator]
+ * @param {string[]} [options.excludedTags]
+ * @returns {Promise<Array<{metadata: SkillMetadata, path: string}>>}
+ */
+async function loadAllSkillMetadata(options = {}) {
+  return _loadFromDir(loadSkillMetadata, options);
+}
+
+
+/***/ }),
+
+/***/ 5163:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   s: () => (/* binding */ defaultConfig),
+/* harmony export */   z: () => (/* binding */ defaultSkillConfig)
+/* harmony export */ });
+// Unified default config supporting both legacy and skill-based flows
+const defaultConfig = Object.freeze({
+  version: '1.0',
+  model: {
+    provider: 'openai',
+    modelName: 'gpt-4o-mini',
+    temperature: 0,
+    maxTokens: 600,
+  },
+  review: {
+    language: 'ja',
+    severity: 'normal',
+    additionalInstructions: [],
+  },
+  exclude: {
+    files: [],
+    prLabelsToIgnore: [],
+  },
+  skills: [],
+});
+
+// Alias kept for compatibility with newer skill-only imports
+const defaultSkillConfig = defaultConfig;
+
+
+/***/ }),
+
+/***/ 759:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  UT: () => (/* binding */ ConfigLoader),
+  Z9: () => (/* binding */ loadConfig),
+  R2: () => (/* binding */ mergeConfig)
+});
+
+// UNUSED EXPORTS: ConfigLoaderError, ConfigMergeError, defaultGlobalConfigDir
+
+// EXTERNAL MODULE: external "node:fs/promises"
+var promises_ = __nccwpck_require__(1455);
+// EXTERNAL MODULE: external "node:os"
+var external_node_os_ = __nccwpck_require__(8161);
+// EXTERNAL MODULE: external "node:path"
+var external_node_path_ = __nccwpck_require__(6760);
+// EXTERNAL MODULE: ../../../node_modules/js-yaml/dist/js-yaml.mjs
+var js_yaml = __nccwpck_require__(1813);
+// EXTERNAL MODULE: ../../../node_modules/zod/v4/classic/schemas.js + 16 modules
+var schemas = __nccwpck_require__(3460);
+;// CONCATENATED MODULE: ./src/config/schema.mjs
+
+
+// --- Legacy Schema (for river run) ---
+const modelConfigSchema = schemas/* object */.Ik({
+  provider: schemas/* enum */.k5(['google', 'openai', 'anthropic']).optional(),
+  modelName: schemas/* string */.Yj().min(1).optional(),
+  temperature: schemas/* number */.ai().min(0).max(1).optional(),
+  maxTokens: schemas/* number */.ai().int().positive().optional(),
+});
+
+const reviewConfigSchema = schemas/* object */.Ik({
+  language: schemas/* enum */.k5(['ja', 'en']).optional(),
+  severity: schemas/* enum */.k5(['strict', 'normal', 'relaxed']).optional(),
+  additionalInstructions: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
+  // Extra spec/ADR directories (relative to repo root) scanned when linking
+  // changed files to related design docs. Merged with the built-in defaults.
+  specDirs: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
+  // Opt-in output enhancements. When true, the prompt asks the model to also
+  // emit a per-file walkthrough / a provider-agnostic agent-handoff section.
+  walkthrough: schemas/* boolean */.zM().optional(),
+  agentHandoff: schemas/* boolean */.zM().optional(),
+});
+
+const excludeConfigSchema = schemas/* object */.Ik({
+  files: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
+  prLabelsToIgnore: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
+});
+
+// --- #692 PR-B: security.redact.* schema ---
+//
+// Pure schema addition: this PR only teaches the loader to accept and
+// validate `security.redact.*`. The keys are not yet read by the review
+// pipeline; PR-C of #692 will plumb `config.security` into
+// src/lib/repo-context.mjs and src/lib/local-runner.mjs.
+//
+// Default policy: redaction enabled; every named category on; entropy
+// fallback at 4.5 bits/char with a 24-char minimum length. Users tighten
+// or loosen via `extraPatterns`, `allowlist`, and `denyFiles`.
+
+const redactCategoriesSchema = schemas/* object */.Ik({
+    githubToken: schemas/* boolean */.zM().optional(),
+    openaiKey: schemas/* boolean */.zM().optional(),
+    anthropicKey: schemas/* boolean */.zM().optional(),
+    googleApiKey: schemas/* boolean */.zM().optional(),
+    awsAccessKey: schemas/* boolean */.zM().optional(),
+    awsSecretKey: schemas/* boolean */.zM().optional(),
+    privateKey: schemas/* boolean */.zM().optional(),
+    bearerToken: schemas/* boolean */.zM().optional(),
+    databaseUrl: schemas/* boolean */.zM().optional(),
+    webhookUrl: schemas/* boolean */.zM().optional(),
+    oauthSecret: schemas/* boolean */.zM().optional(),
+    envAssignment: schemas/* boolean */.zM().optional(),
+    highEntropy: schemas/* boolean */.zM().optional(),
+  })
+  .strict();
+
+const redactExtraPatternSchema = schemas/* object */.Ik({
+    id: schemas/* string */.Yj().min(1),
+    pattern: schemas/* string */.Yj().min(1),
+    replacement: schemas/* string */.Yj().min(1).optional(),
+  })
+  .strict();
+
+const redactConfigSchema = schemas/* object */.Ik({
+    enabled: schemas/* boolean */.zM().optional(),
+    categories: redactCategoriesSchema.optional(),
+    extraPatterns: schemas/* array */.YO(redactExtraPatternSchema).optional(),
+    allowlist: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
+    denyFiles: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
+    entropyThreshold: schemas/* number */.ai().min(3.0).max(6.0).optional(),
+    entropyMinLength: schemas/* number */.ai().int().min(8).optional(),
+  })
+  .strict();
+
+const securityConfigSchema = schemas/* object */.Ik({
+    redact: redactConfigSchema.optional(),
+  })
+  .strict();
+
+// --- #687 PR-D: memory.suppressionEnabled ---
+//
+// Companion to applySuppressions in src/lib/suppression-apply.mjs. When
+// `false`, the suppression gate is bypassed entirely (debugging /
+// emergency disable). Defaults to true at runtime; the schema only needs
+// to know the field exists.
+const memoryConfigSchema = schemas/* object */.Ik({
+    suppressionEnabled: schemas/* boolean */.zM().optional(),
+  })
+  .strict();
+
+// --- Epic #1347 S2 (#1349): gate contract config ---
+//
+// Companion to src/lib/gate-decision.mjs. Values are DERIVATION inputs and
+// advisory contract values only — enforcement (observation expiry, the
+// circuit-breaker counter) is the host's responsibility. Note the trust
+// boundary: this file lives inside the reviewed repo, so when a host has its
+// own limits the stricter value wins.
+const gateConfigSchema = schemas/* object */.Ik({
+    observation: schemas/* object */.Ik({
+        expiresInHours: schemas/* number */.ai().positive().max(720).optional(),
+      })
+      .strict()
+      .optional(),
+    circuitBreaker: schemas/* object */.Ik({
+        maxConsecutiveAutoGo: schemas/* number */.ai().int().positive().max(1000).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+// --- #689 PR-A: context.budget config surface ---
+//
+// Companion to src/lib/token-estimator.mjs. PR-A teaches the loader to
+// accept and validate the new keys; pipeline integration (collectRepoContext
+// reading these and adjusting per-section caps) lands in #689 PR-C.
+//
+// Defaults are documented at runtime in repo-context.mjs (DEFAULT_MAX_CHARS,
+// SECTION_CAPS) and preserved when this block is omitted entirely.
+
+const contextBudgetSchema = schemas/* object */.Ik({
+    maxTokens: schemas/* number */.ai().int().min(256).max(64000).optional(),
+    maxChars: schemas/* number */.ai().int().min(1024).max(200000).optional(),
+    perSectionCaps: schemas/* object */.Ik({
+        fullFile: schemas/* number */.ai().int().min(0).optional(),
+        tests: schemas/* number */.ai().int().min(0).optional(),
+        usages: schemas/* number */.ai().int().min(0).optional(),
+        config: schemas/* number */.ai().int().min(0).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+const contextRankingSchema = schemas/* object */.Ik({
+    enabled: schemas/* boolean */.zM().optional(),
+    weights: schemas/* object */.Ik({
+        pathProximity: schemas/* number */.ai().min(0).max(1).optional(),
+        symbolUsage: schemas/* number */.ai().min(0).max(1).optional(),
+        siblingTest: schemas/* number */.ai().min(0).max(1).optional(),
+        commitRecency: schemas/* number */.ai().min(0).max(1).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+// --- #689 PR-D: reviewMode preset budgets ---
+//
+// reviewMode is a friendly knob that picks a preset budget so users do
+// not have to think in token counts. The runtime preset table lives in
+// src/lib/context-presets.mjs; PR-D applies the preset when budget is
+// omitted, so an explicit `budget: { ... }` always wins.
+const contextReviewModeSchema = schemas/* enum */.k5(['tiny', 'medium', 'large']);
+
+const contextConfigSchema = schemas/* object */.Ik({
+    budget: contextBudgetSchema.optional(),
+    ranking: contextRankingSchema.optional(),
+    tokenizer: schemas/* enum */.k5(['heuristic']).optional(),
+    reviewMode: contextReviewModeSchema.optional(),
+  })
+  .strict();
+
+// --- #802 Phase 2a: artifacts.* schema ---
+//
+// Pure schema addition: this PR only teaches the loader to accept and
+// validate the `artifacts.*` config section. The keys are not yet read
+// by the review pipeline; the artifact resolver (Phase 2b) and the
+// `river review plan/exec/verify` CLI vertical slice (Phase 3) plumb
+// these into the resolution order documented in
+// pages/reference/artifact-input-contract.md (CLI/Action args -> config
+// -> cwd default filenames).
+//
+// The known artifact IDs mirror the Artifact Input Contract. `.catchall`
+// (not `.strict`) is intentional: the contract treats adding a new
+// artifact ID as a backward-compatible minor bump, so a config naming a
+// future artifact ID must not fail validation against an older schema.
+const artifactPathConfigSchema = schemas/* union */.KC([
+  schemas/* string */.Yj().min(1),
+  schemas/* object */.Ik({
+      path: schemas/* string */.Yj().min(1),
+      optional: schemas/* boolean */.zM().optional(),
+    })
+    .strict(),
+]);
+
+const artifactsConfigSchema = schemas/* object */.Ik({
+    'pbi-input': artifactPathConfigSchema.optional(),
+    plan: artifactPathConfigSchema.optional(),
+    todo: artifactPathConfigSchema.optional(),
+    'test-cases': artifactPathConfigSchema.optional(),
+    'review-self': artifactPathConfigSchema.optional(),
+    'review-external': artifactPathConfigSchema.optional(),
+    diff: artifactPathConfigSchema.optional(),
+    junit: artifactPathConfigSchema.optional(),
+    coverage: artifactPathConfigSchema.optional(),
+    lint: artifactPathConfigSchema.optional(),
+    typecheck: artifactPathConfigSchema.optional(),
+    'findings-pool': artifactPathConfigSchema.optional(),
+    'tdd-ledger': artifactPathConfigSchema.optional(),
+  })
+  .catchall(schemas/* unknown */.L5());
+
+const selectionConfigSchema = schemas/* object */.Ik({
+    packs: schemas/* array */.YO(schemas/* string */.Yj()).default([]),
+    tags: schemas/* array */.YO(schemas/* string */.Yj()).default([]),
+    skills: schemas/* object */.Ik({
+        include: schemas/* array */.YO(schemas/* string */.Yj()).default([]),
+        exclude: schemas/* array */.YO(schemas/* string */.Yj()).default([]),
+      })
+      .strict()
+      .default({ include: [], exclude: [] }),
+    minTier: schemas/* enum */.k5(['official', 'community', 'experimental']).optional(),
+  })
+  .strict()
+  .describe('Project-level skill selection (packs / tags / individual skills)');
+
+const riverReviewerConfigSchema = schemas/* object */.Ik({
+  model: modelConfigSchema.optional(),
+  review: reviewConfigSchema.optional(),
+  exclude: excludeConfigSchema.optional(),
+  security: securityConfigSchema.optional(),
+  memory: memoryConfigSchema.optional(),
+  context: contextConfigSchema.optional(),
+  artifacts: artifactsConfigSchema.optional(),
+  selection: selectionConfigSchema.optional(),
+  gate: gateConfigSchema.optional(),
+});
+
+// --- New Skill-based Schema (for river skills) ---
+
+// Skill-based schemas
+// Hybrid model identifier: keep the curated enum for typo protection on
+// well-known names, but also accept any string that matches a known provider
+// prefix. This lets users adopt newer SDK-supported snapshots (e.g.
+// `claude-sonnet-4-6-20260301`, `gpt-4o-mini-2026`) without waiting for an
+// enum update PR. Completely foreign prefixes (e.g. `mistral-*`) still fail
+// validation upstream, surfacing typos early.
+const KnownAIModels = schemas/* enum */.k5([
+  'gemini-2.0-flash', // Default: Fast & Smart
+  'gemini-2.0-flash-thinking', // Reasoning: For Security/Architecture
+  'gemini-2.0-pro', // High Spec
+  'gemini-1.5-pro', // Legacy Balanced
+  'gpt-4o', // OpenAI Option
+  'o1', // OpenAI Reasoning
+  'o1-mini', // OpenAI Fast Reasoning
+  'claude-sonnet-4-6', // Anthropic Balanced
+  'claude-opus-4-7', // Anthropic Top-tier
+  'claude-haiku-4-5', // Anthropic Fast
+]);
+
+const AIModelSchema = schemas/* union */.KC([
+  KnownAIModels,
+  schemas/* string */.Yj().regex(/^(gemini|gpt|o1|claude)-[a-z0-9.\-_]+$/i, {
+    message:
+      'modelName must be a known model or match a supported provider prefix (gemini-* / gpt-* / o1-* / claude-*)',
+  }),
+]);
+
+const RuleSchema = schemas/* object */.Ik({
+  id: schemas/* string */.Yj().describe('Unique identifier for the rule'),
+  severity: schemas/* enum */.k5(['info', 'warning', 'error', 'critical']),
+  description: schemas/* string */.Yj(),
+  context: schemas/* string */.Yj().describe('Why this matters (Understanding)'),
+  patterns: schemas/* array */.YO(schemas/* string */.Yj()).describe('Keywords or patterns to look for'),
+  anti_patterns: schemas/* array */.YO(schemas/* string */.Yj()).describe('Bad code examples'),
+  fix_guidance: schemas/* string */.Yj().describe('How to fix it (Expertise Transfer)'),
+});
+
+const SkillSchema = schemas/* object */.Ik({
+  name: schemas/* string */.Yj(),
+  description: schemas/* string */.Yj().optional(),
+  files: schemas/* array */.YO(schemas/* string */.Yj()).describe('Glob patterns for target files'),
+  exclude: schemas/* array */.YO(schemas/* string */.Yj()).optional(),
+  model: AIModelSchema.default('gemini-2.0-flash'),
+  temperature: schemas/* number */.ai().min(0).max(1).default(0.2),
+  maxTokens: schemas/* number */.ai().int().positive().optional(),
+  // Anthropic-specific: opt out of ephemeral prompt caching for this skill.
+  // Useful for skills whose systemPrompt is highly dynamic (where cache
+  // misses dominate), or for A/B testing cache impact.
+  disableCache: schemas/* boolean */.zM().optional(),
+  rules: schemas/* array */.YO(RuleSchema),
+});
+
+const ConfigSchema = schemas/* object */.Ik({
+    version: schemas/* string */.Yj().default('1.0'),
+    model: modelConfigSchema.optional(),
+    review: reviewConfigSchema.optional(),
+    exclude: excludeConfigSchema.optional(),
+    security: securityConfigSchema.optional(),
+    memory: memoryConfigSchema.optional(),
+    context: contextConfigSchema.optional(),
+    artifacts: artifactsConfigSchema.optional(),
+    selection: selectionConfigSchema.optional(),
+    gate: gateConfigSchema.optional(),
+    skills: schemas/* array */.YO(SkillSchema).default([]),
+  })
+  // Allow forward-compatible / custom keys; unknown detection is handled in loader for warnings
+  .catchall(schemas/* unknown */.L5());
+
+// EXTERNAL MODULE: ./src/config/default.mjs
+var config_default = __nccwpck_require__(5163);
+;// CONCATENATED MODULE: ./src/config/loader.mjs
+
+
+
+
+
+
+
+class ConfigMergeError extends Error {
+  constructor(message, options = {}) {
+    super(message, options);
+    this.name = 'ConfigMergeError';
+    if (options.cause) this.cause = options.cause;
+  }
+}
+
+function mergeValue(base, override) {
+  if (Array.isArray(override)) return [...override];
+  if (override && typeof override === 'object') {
+    const baseIsPlainObject = base && typeof base === 'object' && !Array.isArray(base);
+    return mergeConfig(baseIsPlainObject ? base : {}, override);
+  }
+  return override ?? base;
+}
+
+function mergeConfig(base, override) {
+  const result = { ...base };
+  for (const [key, value] of Object.entries(override ?? {})) {
+    const baseValue = base?.[key];
+    result[key] = mergeValue(baseValue, value);
+  }
+  return result;
+}
+
+class ConfigLoaderError extends Error {
+  constructor(message, options = {}) {
+    super(message, options);
+    this.name = 'ConfigLoaderError';
+    if (options.path) this.path = options.path;
+  }
+}
+
+/**
+ * Resolve the default global config directory (~/.river-review). Returns null
+ * (disabling the global tier) when:
+ * - `RIVER_REVIEW_DISABLE_GLOBAL_CONFIG=1` is set — an explicit opt-out for CI
+ *   and shared hosts where a stray `~/.river-review/config.*` (or a writable
+ *   home) must not silently alter review behavior (trust-boundary guard), or
+ * - the home directory cannot be determined (e.g. minimal containers where
+ *   os.homedir() throws or yields an empty string).
+ */
+function defaultGlobalConfigDir() {
+  // Trust-boundary opt-out: accept common truthy spellings (1 / true, any case,
+  // surrounding whitespace) so the guard fails safe toward disabling.
+  const optOut = String(process.env.RIVER_REVIEW_DISABLE_GLOBAL_CONFIG ?? '')
+    .trim()
+    .toLowerCase();
+  if (optOut === '1' || optOut === 'true') return null;
+  try {
+    const home = external_node_os_.homedir();
+    return home ? external_node_path_.join(home, '.river-review') : null;
+  } catch {
+    return null;
+  }
+}
+
+class ConfigLoader {
+  constructor({
+    baseConfig = config_default/* defaultConfig */.s,
+    fileNames = ['.river-review.json', '.river-review.yaml', '.river-review.yml'],
+    // Global user tier (#1045 A2): merged UNDER the repository-local config so a
+    // repo-local file always wins; the global file supplies a user-wide base.
+    // Injectable so tests can point it at a temp dir. os.homedir() can throw or
+    // return falsy in minimal containers — fall back to null (tier disabled).
+    globalConfigDir = defaultGlobalConfigDir(),
+    globalFileNames = ['config.json', 'config.yaml', 'config.yml'],
+    fsImpl = promises_,
+  } = {}) {
+    this.baseConfig = baseConfig;
+    this.fileNames = Array.isArray(fileNames) ? [...fileNames] : [fileNames];
+    this.globalConfigDir = globalConfigDir;
+    this.globalFileNames = Array.isArray(globalFileNames)
+      ? [...globalFileNames]
+      : [globalFileNames];
+    this.fs = fsImpl;
+  }
+
+  async findConfigPath(repoRoot, fileNames = this.fileNames) {
+    // Guard: a null/undefined root (e.g. a disabled global tier) has no config.
+    if (!repoRoot) return null;
+    for (const candidate of fileNames) {
+      const fullPath = external_node_path_.join(repoRoot, candidate);
+      try {
+        await this.fs.access(fullPath);
+        return fullPath;
+      } catch (err) {
+        if (err?.code !== 'ENOENT') {
+          throw new ConfigLoaderError('設定ファイルの存在確認に失敗しました', {
+            cause: err,
+            path: fullPath,
+          });
+        }
+      }
+    }
+    return null;
+  }
+
+  parseConfig(raw, filePath) {
+    const ext = external_node_path_.extname(filePath).toLowerCase();
+    let parsed;
+    if (ext === '.yaml' || ext === '.yml') {
+      parsed = js_yaml/* load */.Hh(raw);
+    } else {
+      parsed = JSON.parse(raw);
+    }
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new ConfigLoaderError('設定ファイルのトップレベルはオブジェクトである必要があります', {
+        path: filePath,
+      });
+    }
+    return parsed;
+  }
+
+  /**
+   * Read, parse, and validate a single config file. Returns the validated
+   * input object (and whether it used the new "skill" schema). Throws
+   * ConfigLoaderError on read / parse / validation failure.
+   *
+   * @param {string} configPath
+   * @returns {Promise<{ parsedInput: object, isNewSchema: boolean }>}
+   */
+  async readConfigFile(configPath) {
+    try {
+      const raw = await this.fs.readFile(configPath, 'utf8');
+      const parsed = this.parseConfig(raw, configPath);
+
+      // Determine schema based on content
+      const isNewSchema = 'skills' in parsed || 'version' in parsed;
+
+      if (isNewSchema) {
+        const validated = ConfigSchema.safeParse(parsed);
+        if (!validated.success) {
+          const detail = validated.error.errors
+            .map((err) => `${err.path.join('.')}: ${err.message}`)
+            .join('; ');
+          throw new ConfigLoaderError(
+            `設定ファイルの形式が正しくありません (Skill Schema): ${detail}`,
+            { path: configPath }
+          );
+        }
+        const parsedInput = validated.data;
+
+        const knownKeys = new Set(['version', 'model', 'review', 'exclude', 'skills']);
+        const unknownKeys = Object.keys(parsedInput).filter((key) => !knownKeys.has(key));
+        if (unknownKeys.length) {
+          const message = `Unknown config keys ignored: ${unknownKeys.join(', ')}`;
+          if (process.env.RIVER_CONFIG_STRICT === '1') {
+            throw new ConfigLoaderError(message, { path: configPath });
+          }
+          // eslint-disable-next-line no-console
+          console.warn(message);
+        }
+        return { parsedInput, isNewSchema: true };
+      }
+
+      // Fallback to old schema
+      const validated = riverReviewerConfigSchema.safeParse(parsed);
+      if (!validated.success) {
+        const detail = validated.error.errors
+          .map((err) => `${err.path.join('.')}: ${err.message}`)
+          .join('; ');
+        throw new ConfigLoaderError(
+          `設定ファイルの形式が正しくありません (Legacy Schema): ${detail}`,
+          { path: configPath }
+        );
+      }
+      return { parsedInput: validated.data, isNewSchema: false };
+    } catch (err) {
+      if (err instanceof ConfigLoaderError) throw err;
+      if (err instanceof SyntaxError || err?.name === 'YAMLException') {
+        throw new ConfigLoaderError('設定ファイルのパースに失敗しました', {
+          cause: err,
+          path: configPath,
+        });
+      }
+      throw new ConfigLoaderError('設定ファイルの読み込みに失敗しました', {
+        cause: err,
+        path: configPath,
+      });
+    }
+  }
+
+  async load(repoRoot = process.cwd()) {
+    const repoPath = await this.findConfigPath(repoRoot, this.fileNames);
+    const globalPath = await this.findConfigPath(this.globalConfigDir, this.globalFileNames);
+
+    // Resolution order (top wins): repository-local > global user > built-in.
+    const globalFile = globalPath ? await this.readConfigFile(globalPath) : null;
+    const repoFile = repoPath ? await this.readConfigFile(repoPath) : null;
+
+    if (!globalFile && !repoFile) {
+      return { config: this.baseConfig, path: null, source: 'default' };
+    }
+
+    try {
+      const usesNewSchema = (globalFile?.isNewSchema ?? false) || (repoFile?.isNewSchema ?? false);
+      const baseToUse = usesNewSchema ? config_default/* defaultSkillConfig */.z : this.baseConfig;
+
+      // Layer global UNDER repo-local so a repo-local file always wins.
+      let merged = baseToUse;
+      if (globalFile) merged = mergeConfig(merged, globalFile.parsedInput);
+      if (repoFile) merged = mergeConfig(merged, repoFile.parsedInput);
+
+      // `path` / `source` reflect the highest-precedence file that contributed.
+      return {
+        config: merged,
+        path: repoPath ?? globalPath,
+        source: repoFile ? 'file' : 'global',
+      };
+    } catch (err) {
+      throw new ConfigMergeError('設定のマージに失敗しました', { cause: err });
+    }
+  }
+}
+
+// Export loadConfig helper for SkillDispatcher (always uses default loader for now)
+async function loadConfig(repoRoot) {
+  const loader = new ConfigLoader(); // Uses legacy default, but load() will switch base if new schema detected
+  const { config } = await loader.load(repoRoot);
+  return config;
+}
+
+
+/***/ }),
+
+/***/ 4709:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   K: () => (/* binding */ runDeterministicExecGateIfEnabled)
+/* harmony export */ });
+/* unused harmony export isDeterministicExecEnabled */
+/**
+ * Deterministic-exec opt-in predicate (#1401 §11.8 (c2)) — the SINGLE source of
+ * truth for the double env-var gate that guards the command executor.
+ *
+ * Kept in its own module with NO static imports ON PURPOSE. The review pipeline
+ * (local-runner / review-plan) imports THIS statically to decide whether to
+ * proceed, then `await import()`s the orchestrator only when the gate is on (see
+ * runDeterministicExecGateIfEnabled below, which owns that dynamic import).
+ * Importing the predicate from the orchestrator module instead would pull in
+ * `child_process` (transitively via the executor) at load time and break the
+ * "not even imported when opted out" invariant. This module has no static imports.
+ *
+ * Both env vars are REQUIRED and checked strictly so no near-miss value
+ * (`'true'`, `'0'`, `' 1'`, `''`) can flip the gate on:
+ *   - `RIVER_DETERMINISTIC_EXEC` must be exactly the string `'1'`.
+ *   - `RIVER_TRUSTED_TREE` must be a non-empty string (the host-trusted base
+ *     checkout the allowlist is read from; §11.6 trust boundary).
+ *
+ * @param {Record<string, string | undefined> | undefined} env process.env-like object
+ * @returns {boolean} true only when the host has explicitly opted in with BOTH vars
+ */
+function isDeterministicExecEnabled(env) {
+  if (env == null) return false;
+  return (
+    env.RIVER_DETERMINISTIC_EXEC === '1' &&
+    typeof env.RIVER_TRUSTED_TREE === 'string' &&
+    env.RIVER_TRUSTED_TREE.length > 0
+  );
+}
+
+/**
+ * Deterministic-exec COMMAND-gate wiring (Epic #1347 §11.8 (c2), #1401) — the
+ * SINGLE source of truth for the review-pipeline block that activates the
+ * command executor. Both local-runner and review-plan call this; keeping the
+ * copy-pasted block here prevents the two from drifting apart (P2 #1434) — the
+ * gate guards the RCE path, so an independent drift is a security risk.
+ *
+ * SECURITY INVARIANTS (why this is double-gated and OFF by default):
+ *  - The executor runs ONLY when the host explicitly opts in with BOTH
+ *    `RIVER_DETERMINISTIC_EXEC=1` AND a non-empty `RIVER_TRUSTED_TREE` (checked
+ *    by isDeterministicExecEnabled). Absent either, this returns
+ *    `{ strictBlock: false, deterministicUnrunnable: false }` WITHOUT importing
+ *    the orchestrator — so `child_process` (pulled in transitively by the
+ *    executor) stays unloaded and behavior is byte-for-byte unchanged. The
+ *    dynamic import lives INSIDE this function body precisely so opting out never
+ *    even loads the orchestrator module ("not even imported when opted out").
+ *  - The allowlist is read ONLY from the host-trusted base tree, never from the
+ *    PR head under review (§11.6 trust boundary; enforced by runDeterministicGates).
+ *  - Fail-safe (§11.5.2): an infrastructure error while running the gate (temp-dir
+ *    creation, staging, spawn setup) means NO verdict was reached — surface that
+ *    as `deterministicUnrunnable: true` (rule 5c ESCALATE) rather than crashing
+ *    the review or, worse, slipping through as a clean GO. Never GO on an unrun gate.
+ *
+ * A `fail` verdict folds into `strictBlock` (rule 5b, NO_GO); an `unrunnable`
+ * verdict (or any thrown infra error) surfaces as `deterministicUnrunnable`
+ * (rule 5c, ESCALATE). Callers OR the returned `strictBlock` into their existing
+ * strict_block signal so neither path can be a bypass.
+ *
+ * @param {object} opts
+ * @param {Record<string, string | undefined> | undefined} opts.env process.env-like object
+ * @param {Array<object>} [opts.selected] selected skills (metadata.deterministicGate)
+ * @param {string} [opts.reviewSourceDir] dir the changed files are copied FROM
+ * @param {string[]} [opts.changedFiles] relative paths to stage into the clean cwd
+ * @param {() => Promise<{ runDeterministicGates: Function }>} [opts.importOrchestrator]
+ *   injected dynamic-import of the orchestrator module (tests only); defaults to
+ *   the real `await import('./deterministic-command-orchestrator.mjs')`. Only ever
+ *   invoked AFTER the opt-in check passes, preserving the opt-out no-import invariant.
+ * @returns {Promise<{ strictBlock: boolean, deterministicUnrunnable: boolean }>}
+ */
+async function runDeterministicExecGateIfEnabled({
+  env,
+  selected,
+  reviewSourceDir,
+  changedFiles,
+  importOrchestrator,
+} = {}) {
+  if (!isDeterministicExecEnabled(env)) {
+    return { strictBlock: false, deterministicUnrunnable: false };
+  }
+  try {
+    const { runDeterministicGates } =
+      typeof importOrchestrator === 'function'
+        ? await importOrchestrator()
+        : await Promise.all(/* import() */[__nccwpck_require__.e(917), __nccwpck_require__.e(252)]).then(__nccwpck_require__.bind(__nccwpck_require__, 5252));
+    const gateResult = await runDeterministicGates({
+      trustedTree: env.RIVER_TRUSTED_TREE,
+      selected: selected ?? [],
+      reviewSourceDir,
+      changedFiles: changedFiles ?? [],
+      processEnv: env,
+    });
+    return {
+      strictBlock: gateResult.strictBlock === true,
+      deterministicUnrunnable: gateResult.deterministicUnrunnable === true,
+    };
+  } catch {
+    return { strictBlock: false, deterministicUnrunnable: true };
+  }
+}
+
+
+/***/ }),
+
+/***/ 8817:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   Si: () => (/* binding */ computeStrictBlock)
+/* harmony export */ });
+/* unused harmony exports STRICT_BLOCK, BYPASS_WARNING, isStrictBlockSkill */
+/**
+ * Deterministic strict_block detection (Epic #1347 S4, #1351).
+ *
+ * Consumes the previously declaration-only skill schema fields
+ * `evaluationType: 'deterministic'` and `deterministicGate.failSeverity`.
+ * A finding from a deterministic skill whose gate is `strict_block` is a
+ * NON-NEGOTIABLE hard block: deterministic detectors are authoritative (see
+ * `.claude/rules/review-core.md` §#1070 — static analysis owns the syntactic /
+ * pattern layer 100%, and the AI review must not re-adjudicate it). The gate
+ * turns that into an unconditional NO_GO (reasonCode STRICT_BLOCK) that blocks
+ * even below the critical/major severity floor and that a label-skip or dry-run
+ * cannot waive.
+ *
+ * Design principle preserved: enforcement is OPT-IN. A skill blocks only when
+ * it EXPLICITLY declares a `deterministicGate` object; a deterministic skill
+ * with no declared gate stays advisory.
+ *
+ * Pure / side-effect-free.
+ */
+
+/** deterministicGate.failSeverity vocabulary (mirrors skillYamlSchema.mjs). */
+const STRICT_BLOCK = 'strict_block';
+const BYPASS_WARNING = 'bypass_warning';
+
+function skillMeta(skill) {
+  return skill?.metadata ?? skill ?? {};
+}
+
+/**
+ * True when a skill's findings are deterministic hard blocks: it declares
+ * `evaluationType: 'deterministic'` AND an explicit `deterministicGate` whose
+ * `failSeverity` is `strict_block` (the schema default within the gate object,
+ * so an omitted failSeverity on a declared gate still blocks).
+ *
+ * @param {object} skill - loaded skill (full object with `.metadata`) or a bare metadata object
+ * @returns {boolean}
+ */
+function isStrictBlockSkill(skill) {
+  const m = skillMeta(skill);
+  if (m.evaluationType !== 'deterministic') return false;
+  const gate = m.deterministicGate;
+  // typeof [] === 'object', so exclude arrays: a malformed array gate must not
+  // read as a declared strict_block object (gemini #1403).
+  if (!gate || typeof gate !== 'object' || Array.isArray(gate)) return false; // no gate → advisory
+  // Fail-safe: a declared gate BLOCKS unless failSeverity is explicitly
+  // 'bypass_warning'. An omitted failSeverity (schema default 'strict_block')
+  // or an unknown/malformed value blocks — deterministic detectors are
+  // authoritative and the Epic invariant forbids falling toward GO on malformed
+  // input (self-review #1403 Minor).
+  return gate.failSeverity !== BYPASS_WARNING;
+}
+
+/**
+ * Identify findings that originate from a deterministic strict_block skill.
+ *
+ * A finding's `ruleId` is its emitting skill's id (review-engine sets
+ * `ruleId = c.skillId`). Callers should pass the PRE-suppression finding set so
+ * that a suppressed deterministic block still forces the gate — a suppression
+ * must not become a strict_block bypass (same fail-safe stance as
+ * SKIPPED_BY_POLICY in gate-decision.mjs).
+ *
+ * @param {object} params
+ * @param {Array<object>} [params.findings] - review findings (ruleId = skillId)
+ * @param {Array<object>} [params.selected] - selected skills (full objects with metadata)
+ * @returns {{ strictBlock: boolean, findings: Array<object> }}
+ */
+function computeStrictBlock({ findings, selected } = {}) {
+  const strictIds = new Set(
+    (Array.isArray(selected) ? selected : [])
+      .filter(isStrictBlockSkill)
+      .map((s) => String(skillMeta(s).id ?? ''))
+      .filter(Boolean)
+  );
+  const blocking =
+    strictIds.size === 0
+      ? []
+      : (Array.isArray(findings) ? findings : []).filter(
+          (f) => f != null && strictIds.has(String(f.ruleId ?? ''))
+        );
+  return { strictBlock: blocking.length > 0, findings: blocking };
+}
+
+
+/***/ }),
+
+/***/ 3249:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   KD: () => (/* binding */ collectRepoDiff),
+/* harmony export */   So: () => (/* binding */ extractDiffMeta),
+/* harmony export */   pQ: () => (/* binding */ renderDiffText),
+/* harmony export */   rj: () => (/* binding */ parseUnifiedDiff),
+/* harmony export */   ye: () => (/* binding */ countChangedLinesFromText)
+/* harmony export */ });
+/* unused harmony exports optimizeDiff, deriveChangedFiles */
+/* harmony import */ var _git_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(8937);
+/* harmony import */ var _file_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1437);
+
+
+
+// ---------------------------------------------------------------------------
+// diff-optimizer — filter and compress diff for LLM consumption
+// ---------------------------------------------------------------------------
+
+const EXCLUDED_EXTENSIONS = new Set(['.md']);
+const EXCLUDED_FILES = new Set(['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']);
+const MAX_HUNK_LINES = 200;
+const MAX_HUNK_HEAD = 120;
+const MAX_HUNK_TAIL = 40;
+
+function extension(path) {
+  const idx = path.lastIndexOf('.');
+  return idx >= 0 ? path.slice(idx).toLowerCase() : '';
+}
+
+function baseName(path) {
+  const parts = path.split('/');
+  return parts[parts.length - 1];
+}
+
+function isExcludedFile(path) {
+  const ext = extension(path);
+  if (EXCLUDED_EXTENSIONS.has(ext)) return true;
+  if (EXCLUDED_FILES.has(baseName(path))) return true;
+  return false;
+}
+
+function normalizeWhitespace(line) {
+  return line.replace(/\s+/g, '');
+}
+
+function isWhitespaceOnlyChange(lines) {
+  const added = lines
+    .filter((line) => line.startsWith('+') && !line.startsWith('+++'))
+    .map((line) => line.slice(1));
+  const removed = lines
+    .filter((line) => line.startsWith('-') && !line.startsWith('---'))
+    .map((line) => line.slice(1));
+  if (added.length === 0 && removed.length === 0) return false;
+  return normalizeWhitespace(added.join('')) === normalizeWhitespace(removed.join(''));
+}
+
+const COMMENT_MARKERS = [/^\/\//, /^\/\*/, /^\*($|\s)/, /^\*\/$/, /^#/, /^<!--/, /^--!?>/];
+
+function isCommentOnlyChange(lines) {
+  const changed = lines.filter((line) => line.startsWith('+') || line.startsWith('-'));
+  if (!changed.length) return false;
+  return changed.every((line) => {
+    const content = line.slice(1).trim();
+    if (!content) return true;
+    return COMMENT_MARKERS.some((re) => re.test(content));
+  });
+}
+
+function compressHunkLines(lines) {
+  if (lines.length <= MAX_HUNK_LINES) return lines;
+  const head = lines.slice(0, MAX_HUNK_HEAD);
+  const tail = lines.slice(-MAX_HUNK_TAIL);
+  return [...head, '... (hunk truncated) ...', ...tail];
+}
+
+/**
+ * Filter and compress parsed diff files.
+ * @param {{files: Array<{path: string, hunks: Array<{header: string, lines: string[]}>}>, diffText?: string}} diff
+ * @returns {{files: Array, diffText: string, tokenEstimate: number, reduction: number, rawTokenEstimate: number}}
+ */
+function optimizeDiff(diff) {
+  const rawTokenEstimate = Math.ceil((diff.diffText ?? '').length / 4);
+  const optimizedFiles = [];
+
+  for (const file of diff.files ?? []) {
+    if (isExcludedFile(file.path)) continue;
+
+    const keptHunks = [];
+    for (const hunk of file.hunks ?? []) {
+      const lines = hunk.lines ?? [];
+      if (isWhitespaceOnlyChange(lines)) continue;
+      if (isCommentOnlyChange(lines)) continue;
+
+      const compressedLines = compressHunkLines(lines);
+      keptHunks.push({
+        ...hunk,
+        lines: compressedLines,
+      });
+    }
+
+    if (keptHunks.length) {
+      optimizedFiles.push({
+        ...file,
+        hunks: keptHunks,
+      });
+    }
+  }
+
+  const diffText = renderDiffText(optimizedFiles);
+  const tokenEstimate = Math.ceil(diffText.length / 4);
+  const reduction =
+    rawTokenEstimate === 0
+      ? 0
+      : Math.max(0, Math.round(((rawTokenEstimate - tokenEstimate) / rawTokenEstimate) * 100));
+
+  return {
+    files: optimizedFiles,
+    diffText,
+    tokenEstimate,
+    reduction,
+    rawTokenEstimate,
+  };
+}
+
+function renderDiffText(files) {
+  if (!files.length) return '';
+  const chunks = [];
+  for (const file of files) {
+    const isNewFile = !file.oldPath || file.oldPath === '/dev/null';
+    const isDeletedFile = !file.newPath || file.newPath === '/dev/null';
+    const oldPath = isNewFile ? '/dev/null' : (file.oldPath ?? file.path);
+    const newPath = isDeletedFile ? '/dev/null' : (file.newPath ?? file.path);
+    const oldDisplay = oldPath === '/dev/null' ? '/dev/null' : `a/${oldPath}`;
+    const newDisplay = newPath === '/dev/null' ? '/dev/null' : `b/${newPath}`;
+
+    chunks.push(`diff --git a/${oldPath} b/${newPath}`);
+    chunks.push(`--- ${oldDisplay}`);
+    chunks.push(`+++ ${newDisplay}`);
+    for (const hunk of file.hunks ?? []) {
+      chunks.push(hunk.header);
+      chunks.push(...(hunk.lines ?? []));
+    }
+  }
+  return chunks.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// diff — parse unified diff and collect repo diff from git
+// ---------------------------------------------------------------------------
+
+function stripPrefix(path) {
+  if (!path) return path;
+  if (path.startsWith('a/')) return path.slice(2);
+  if (path.startsWith('b/')) return path.slice(2);
+  return path;
+}
+
+/**
+ * Parse a unified diff into a structured representation.
+ * Returns files with hunks and added line hints so downstream consumers
+ * can locate where to attach review comments.
+ */
+function parseUnifiedDiff(diffText) {
+  if (!diffText || typeof diffText !== 'string') return { files: [] };
+
+  const files = [];
+  let currentFile = null;
+  let currentHunk = null;
+  let newLineNumber = 0;
+  let pendingOldPath = null;
+
+  for (const line of diffText.split('\n')) {
+    if (line.startsWith('diff --git')) {
+      currentHunk = null;
+      continue;
+    }
+    if (line.startsWith('--- ')) {
+      pendingOldPath = stripPrefix(line.slice(4).trim());
+      continue;
+    }
+    if (line.startsWith('+++ ')) {
+      const newPathRaw = stripPrefix(line.slice(4).trim());
+      const isDeletion = newPathRaw === '/dev/null';
+      const oldPath = pendingOldPath ?? (isDeletion ? '/dev/null' : newPathRaw);
+      const newPath = isDeletion ? '/dev/null' : newPathRaw;
+      const path = isDeletion ? oldPath : newPath;
+
+      currentFile = { path, newPath, oldPath, hunks: [], addedLines: [] };
+      files.push(currentFile);
+      currentHunk = null;
+      newLineNumber = 0;
+      pendingOldPath = null;
+      continue;
+    }
+    if (!currentFile) continue;
+    if (line.startsWith('@@')) {
+      const match = /@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
+      if (!match) continue;
+      const oldStart = Number.parseInt(match[1], 10);
+      const oldLines = match[2] ? Number.parseInt(match[2], 10) : 1;
+      const newStart = Number.parseInt(match[3], 10);
+      const newLines = match[4] ? Number.parseInt(match[4], 10) : 1;
+      currentHunk = {
+        header: line,
+        oldStart,
+        oldLines,
+        newStart,
+        newLines,
+        lines: [],
+        addedLines: [],
+      };
+      currentFile.hunks.push(currentHunk);
+      newLineNumber = newStart;
+      continue;
+    }
+    if (!currentHunk) continue;
+    currentHunk.lines.push(line);
+    if (line.startsWith('+') && !line.startsWith('+++')) {
+      currentFile.addedLines.push(newLineNumber);
+      currentHunk.addedLines.push(newLineNumber);
+      newLineNumber += 1;
+    } else if (line.startsWith('-') && !line.startsWith('---')) {
+      // deletion: do not advance new line number
+    } else {
+      newLineNumber += 1;
+    }
+  }
+  return { files };
+}
+
+/**
+ * Derive the list of changed file paths from unified diff text,
+ * excluding deletions (/dev/null).
+ * @param {string} diffText
+ * @returns {string[]}
+ */
+function deriveChangedFiles(diffText) {
+  const parsed = parseUnifiedDiff(diffText);
+  const files = parsed.files?.map((f) => f.path).filter(Boolean) ?? [];
+  return files.filter((p) => p !== '/dev/null');
+}
+
+async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = {}) {
+  const changedFiles = await (0,_git_mjs__WEBPACK_IMPORTED_MODULE_0__/* .listChangedFiles */ .AC)(repoRoot, baseRef);
+  if (!changedFiles.length) {
+    return {
+      changedFiles: [],
+      rawDiffText: '',
+      rawTokenEstimate: 0,
+      files: [],
+      diffText: '',
+      tokenEstimate: 0,
+      reduction: 0,
+    };
+  }
+
+  const rawDiffText = await (0,_git_mjs__WEBPACK_IMPORTED_MODULE_0__/* .diffWithContext */ .LL)(repoRoot, baseRef, { unified: contextLines });
+  const parsed = parseUnifiedDiff(rawDiffText);
+  const files = parsed.files.length
+    ? parsed.files
+    : changedFiles.map((file) => ({
+        path: file,
+        hunks: [],
+        addedLines: [],
+      }));
+  const rawTokenEstimate = Math.ceil(rawDiffText.length / 4);
+  const optimized = optimizeDiff({ files, diffText: rawDiffText });
+
+  return {
+    changedFiles,
+    files,
+    rawDiffText,
+    rawTokenEstimate,
+    diffText: optimized.diffText,
+    filesForReview: optimized.files,
+    tokenEstimate: optimized.tokenEstimate,
+    reduction: optimized.reduction,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// diff-meta — extract metadata from diff for review depth control
+// ---------------------------------------------------------------------------
+
+/**
+ * Count changed lines from raw unified diff text.
+ *
+ * @param {string} diffText
+ * @returns {number}
+ */
+function countChangedLinesFromText(diffText) {
+  if (!diffText) return 0;
+  let lines = 0;
+  for (const line of diffText.split('\n')) {
+    if (
+      (line.startsWith('+') && !line.startsWith('+++')) ||
+      (line.startsWith('-') && !line.startsWith('---'))
+    ) {
+      lines++;
+    }
+  }
+  return lines;
+}
+
+/**
+ * Extract metadata from a diff object for review depth control.
+ *
+ * @param {{ changedFiles?: string[], diffText?: string }} diff
+ * @returns {{ fileCount: number, changedLines: number, fileTypes: object, hasTests: boolean, hasMigrations: boolean, hasSchemas: boolean }}
+ */
+function extractDiffMeta(diff) {
+  const changedFiles = diff?.changedFiles ?? [];
+  const changedLines = countChangedLinesFromText(diff?.diffText);
+  const fileTypes = (0,_file_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__/* .classifyChangedFiles */ .q)(changedFiles);
+
+  return {
+    fileCount: changedFiles.length,
+    changedLines,
+    fileTypes,
+    hasTests: fileTypes.test.length > 0,
+    hasMigrations: fileTypes.migration.length > 0,
+    hasSchemas: fileTypes.schema.length > 0,
+  };
+}
+
+
+/***/ }),
+
+/***/ 1437:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   q: () => (/* binding */ classifyChangedFiles)
+/* harmony export */ });
+// Module-scope regexes to avoid re-creation per call
+const RE_TEST_EXT = /\.(?:test|spec)\.(?:[jt]sx?|mjs)$/;
+const RE_SCHEMA_EXT = /\.schema\.[jt]s$/;
+const RE_MIGRATION = /(?:^|\/)migrations?\//;
+const RE_MIGRATE = /(?:^|\/)migrate/;
+const RE_CONFIG_EXT = /\.config\.(?:[jt]sx?|mjs)$/;
+const RE_RC_FILE = /^\.[a-z]+rc(?:\.[a-z]+)?$/;
+const RE_TSCONFIG = /^tsconfig.*\.json$/;
+const RE_DOCKERFILE = /^Dockerfile/;
+const RE_DOCKER_COMPOSE = /^docker-compose/;
+
+const CONFIG_NAMES = new Set([
+  'package.json',
+  '.river-review.json',
+  '.lychee.toml',
+  '.markdownlint.json',
+  '.markdownlint-cli2.yaml',
+  '.textlintrc.json',
+]);
+
+/**
+ * Classify changed files by type for routing and evidence collection.
+ * Complementary to impact-scope.mjs which classifies by quality domain.
+ *
+ * @param {string[]} files - Array of file paths (relative to repo root)
+ * @returns {{ config: string[], schema: string[], migration: string[], app: string[], test: string[], infra: string[], docs: string[], unknown: string[] }}
+ */
+function classifyChangedFiles(files) {
+  const result = {
+    config: [],
+    schema: [],
+    migration: [],
+    app: [],
+    test: [],
+    infra: [],
+    docs: [],
+    unknown: [],
+  };
+
+  for (const file of files) {
+    result[classifyFile(file)].push(file);
+  }
+
+  return result;
+}
+
+// Priority: test > schema > migration > config > infra > docs > app > unknown
+function classifyFile(file) {
+  const normalized = file.replaceAll('\\', '/');
+  const basename = normalized.split('/').pop() ?? '';
+
+  if (isTest(normalized, basename)) return 'test';
+  if (isSchema(normalized, basename)) return 'schema';
+  if (isMigration(normalized)) return 'migration';
+  if (isConfig(normalized, basename)) return 'config';
+  if (isInfra(normalized, basename)) return 'infra';
+  if (isDocs(normalized, basename)) return 'docs';
+  if (isApp(normalized)) return 'app';
+  return 'unknown';
+}
+
+function isTest(file, basename) {
+  return file.startsWith('tests/') || file.includes('/__tests__/') || RE_TEST_EXT.test(basename);
+}
+
+function isSchema(file, basename) {
+  return (
+    file.startsWith('schemas/') || RE_SCHEMA_EXT.test(basename) || basename.endsWith('.schema.json')
+  );
+}
+
+function isMigration(file) {
+  return RE_MIGRATION.test(file) || RE_MIGRATE.test(file) || file.startsWith('db/');
+}
+
+function isConfig(file, basename) {
+  if (RE_CONFIG_EXT.test(basename)) return true;
+  if (RE_RC_FILE.test(basename)) return true;
+  if (CONFIG_NAMES.has(basename) || basename.startsWith('.env')) return true;
+  if (RE_TSCONFIG.test(basename)) return true;
+  return false;
+}
+
+function isInfra(file, basename) {
+  return (
+    file.startsWith('.github/') ||
+    file.startsWith('.husky/') ||
+    file.startsWith('scripts/') ||
+    RE_DOCKERFILE.test(basename) ||
+    RE_DOCKER_COMPOSE.test(basename)
+  );
+}
+
+function isDocs(file, basename) {
+  if (basename.endsWith('.md') || basename.endsWith('.mdx')) return true;
+  if (file.startsWith('docs/') || file.startsWith('pages/')) return true;
+  return false;
+}
+
+function isApp(file) {
+  return file.startsWith('src/') || file.startsWith('runners/');
+}
+
+
+/***/ }),
+
+/***/ 7563:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   UB: () => (/* binding */ parseFindingMessage),
+/* harmony export */   Yo: () => (/* binding */ computeFingerprint),
+/* harmony export */   ZY: () => (/* binding */ classifyFindings),
+/* harmony export */   ic: () => (/* binding */ annotateFingerprints),
+/* harmony export */   lv: () => (/* binding */ normalizeSeverity),
+/* harmony export */   nG: () => (/* binding */ severityToPriority),
+/* harmony export */   xv: () => (/* binding */ validateFindingMessage),
+/* harmony export */   yv: () => (/* binding */ formatFindingMessage)
+/* harmony export */ });
+/* unused harmony exports FINDING_SEVERITIES, FINDING_CONFIDENCE, SUPPRESS_REASONS */
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
+/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(3926);
+
+
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
+const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
+
+const SUPPRESS_REASONS = {
+  LOW_CONFIDENCE: 'low_confidence',
+  DUPLICATE: 'duplicate',
+  STYLE_ONLY: 'style_only',
+  INSUFFICIENT_EVIDENCE: 'insufficient_evidence',
+  COVERED_BY_HIGHER_LEVEL: 'covered_by_higher_level_finding',
+};
+
+// ---------------------------------------------------------------------------
+// Format helpers (finding-format)
+// ---------------------------------------------------------------------------
+
+function normalizeWhitespace(text) {
+  return String(text ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function clamp(text, maxChars) {
+  const normalized = normalizeWhitespace(text);
+  if (normalized.length <= maxChars) return normalized;
+  return `${normalized.slice(0, Math.max(0, maxChars - 1))}…`;
+}
+
+/**
+ * Format a finding message for line-comments (`<file>:<line>: <message>`).
+ * @param {{
+ *   finding: string,
+ *   evidence: string,
+ *   impact: string,
+ *   fix: string,
+ *   severity: typeof FINDING_SEVERITIES[number],
+ *   confidence: typeof FINDING_CONFIDENCE[number],
+ * }} finding
+ */
+function formatFindingMessage({ finding, evidence, impact, fix, severity, confidence }) {
+  const sev = FINDING_SEVERITIES.includes(severity) ? severity : 'warning';
+  const conf = FINDING_CONFIDENCE.includes(confidence) ? confidence : 'medium';
+
+  return [
+    `Finding: ${clamp(finding, 80)}`,
+    `Evidence: ${clamp(evidence, 60)}`,
+    `Impact: ${clamp(impact, 60)}`,
+    `Fix: ${clamp(fix, 80)}`,
+    `Severity: ${sev}`,
+    `Confidence: ${conf}`,
+  ].join(' ');
+}
+
+const LABEL_NAMES = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confidence'];
+const LABEL_ALTERNATION = LABEL_NAMES.join('|');
+
+/**
+ * Parse a labeled finding message string into structured fields.
+ * @param {string} message
+ * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null }}
+ */
+function parseFindingMessage(message) {
+  const text = String(message ?? '');
+  const get = (label) => {
+    const re = new RegExp(`${label}:\\s*([^]*?)(?=\\s+(?:${LABEL_ALTERNATION}):|$)`, 'm');
+    return (text.match(re)?.[1] ?? '').trim();
+  };
+  const evidenceText = get('Evidence');
+  return {
+    title: get('Finding'),
+    evidence: evidenceText ? [evidenceText] : [],
+    impact: get('Impact'),
+    suggestion: get('Fix'),
+    severity: get('Severity') || null,
+    confidence: get('Confidence') || null,
+  };
+}
+
+/**
+ * Map internal severity vocabulary (blocker/warning/nit) to output schema vocabulary.
+ * Accepts both vocabularies; unknown values default to 'major' (fail-safe).
+ * @param {string|null|undefined} internalSeverity
+ * @returns {'critical'|'major'|'minor'|'info'}
+ */
+function normalizeSeverity(internalSeverity) {
+  switch ((internalSeverity ?? '').toLowerCase().trim()) {
+    case 'blocker':
+    case 'critical':
+      return 'critical';
+    case 'warning':
+    case 'major':
+      return 'major';
+    case 'nit':
+    case 'minor':
+      return 'minor';
+    case 'info':
+      return 'info';
+    default:
+      return 'major';
+  }
+}
+
+/**
+ * Map output schema severity to P1/P2/P3/P4 priority label.
+ * @param {'critical'|'major'|'minor'|'info'|string|null|undefined} severity
+ * @returns {'P1'|'P2'|'P3'|'P4'}
+ */
+function severityToPriority(severity) {
+  switch ((severity ?? '').toLowerCase().trim()) {
+    case 'critical':
+      return 'P1';
+    case 'major':
+      return 'P2';
+    case 'minor':
+      return 'P3';
+    case 'info':
+      return 'P4';
+    default:
+      return 'P2';
+  }
+}
+
+/**
+ * Validate whether a finding message contains the required labeled fields.
+ * @param {string} message
+ */
+function validateFindingMessage(message) {
+  const text = String(message ?? '');
+  const missing = [];
+  for (const label of ['Finding:', 'Evidence:', 'Impact:', 'Fix:', 'Severity:', 'Confidence:']) {
+    if (!text.includes(label)) missing.push(label);
+  }
+
+  const sevMatch = /Severity:\s*(\w+)/.exec(text);
+  const confMatch = /Confidence:\s*(\w+)/.exec(text);
+  const severity = sevMatch?.[1]?.toLowerCase() ?? null;
+  const confidence = confMatch?.[1]?.toLowerCase() ?? null;
+
+  const invalid = [];
+  if (severity && !FINDING_SEVERITIES.includes(severity)) invalid.push(`Severity:${severity}`);
+  if (confidence && !FINDING_CONFIDENCE.includes(confidence))
+    invalid.push(`Confidence:${confidence}`);
+
+  return {
+    ok: missing.length === 0 && invalid.length === 0,
+    missing,
+    invalid,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Classifier (finding-classifier)
+// ---------------------------------------------------------------------------
+
+function evidenceTotalChars(finding) {
+  const ev = finding.evidence;
+  if (!Array.isArray(ev) || ev.length === 0) return 0;
+  return ev.reduce((sum, e) => sum + String(e ?? '').length, 0);
+}
+
+function deduplicateWithinFile(findings) {
+  const seen = new Set();
+  return findings.filter((f) => {
+    const ruleId = String(f.ruleId ?? '');
+    if (ruleId === 'unknown') return true;
+    const key = `${f.file ?? ''}::${ruleId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function deduplicateWithinPR(findings) {
+  const seen = new Set();
+  return findings.filter((f) => {
+    const key = String(f.ruleId ?? '');
+    if (key === 'unknown') return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * @param {object[]} findings
+ * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
+ * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
+ */
+function classifyFindings(findings, options = {}) {
+  const reviewMode = options.reviewMode ?? 'medium';
+  const maxOverview = reviewMode === 'tiny' ? 3 : reviewMode === 'large' ? 8 : 5;
+
+  const suppressed = [];
+  const active = [];
+
+  for (const finding of findings) {
+    if (finding.confidence === 'low' && finding.severity !== 'critical') {
+      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.LOW_CONFIDENCE });
+      continue;
+    }
+    if (evidenceTotalChars(finding) < 30 && finding.severity !== 'critical') {
+      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.INSUFFICIENT_EVIDENCE });
+      continue;
+    }
+    const ruleId = String(finding.ruleId ?? '');
+    if (finding.severity === 'minor' && /readability|style|format/i.test(ruleId)) {
+      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.STYLE_ONLY });
+      continue;
+    }
+    active.push(finding);
+  }
+
+  const deduped = deduplicateWithinPR(deduplicateWithinFile(active));
+  const dedupedSet = new Set(deduped.map((f) => f.id));
+  for (const f of active) {
+    if (!dedupedSet.has(f.id)) {
+      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.DUPLICATE });
+    }
+  }
+
+  const sorted = [...deduped].sort(
+    (a, b) => (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(b).composite - (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(a).composite
+  );
+
+  const overview = [];
+  const overviewRuleIds = new Set();
+  for (const f of sorted) {
+    const rid = String(f.ruleId ?? '');
+    const isUnknown = rid === 'unknown';
+    if (!isUnknown && overviewRuleIds.has(rid)) {
+      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
+    } else if (overview.length < maxOverview) {
+      overview.push(f);
+      if (!isUnknown) overviewRuleIds.add(rid);
+    } else {
+      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
+    }
+  }
+
+  return { overview, inlineCandidates: [], suppressed };
+}
+
+// ---------------------------------------------------------------------------
+// Fingerprint (finding-fingerprint)
+// ---------------------------------------------------------------------------
+
+/**
+ * Stable fingerprint for a finding so that the same logical issue can be
+ * matched across review runs even when IDs regenerate.
+ *
+ * Strategy: hash(ruleId + file + first-60-chars-of-message).
+ * Intentionally omits lineStart/lineEnd because line numbers shift as code
+ * changes, but the same logical finding should still be considered persisting.
+ */
+function computeFingerprint(finding) {
+  const ruleId = String(finding.ruleId ?? 'unknown');
+  const file = String(finding.file ?? '');
+  const msgNorm = String(finding.message ?? finding.title ?? '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60);
+  const raw = `${ruleId}::${file}::${msgNorm}`;
+  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(raw).digest('hex').slice(0, 16);
+}
+
+/**
+ * Annotate findings with their fingerprint (non-mutating).
+ */
+function annotateFingerprints(findings) {
+  return findings.map((f) => ({ ...f, fingerprint: computeFingerprint(f) }));
+}
+
+
+/***/ }),
+
+/***/ 5801:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   RF: () => (/* binding */ deriveGateDecision)
+/* harmony export */ });
+/* unused harmony exports GATE_DECISIONS, GATE_REASON_CODES, gateConfigChanged, computeGateInputsHash */
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
+/**
+ * Gate-decision derivation (Epic #1347 S2 / #1349).
+ *
+ * Derives the machine-readable gate signal a loop-running host consumes:
+ * GO | GO_WITH_OBSERVATION | NO_GO | ESCALATE. River Review DERIVES the
+ * decision; EXECUTION (continuing, stopping, notifying, expiring an
+ * observation window) is the host's responsibility. This module is a pure
+ * function — no I/O, no AI calls, no side effects — so hosts can verify any
+ * emitted gate block by replaying `gate.inputs` through deriveGateDecision
+ * and comparing the result (the authoritative integrity check; see below).
+ *
+ * ## Trust boundary (adversarial design review, 2026-07-02)
+ *
+ * Of the inputs, risk-map / config / plan text live INSIDE the reviewed
+ * repository and are writable by the implementation agent under review. The
+ * gate decision is therefore trustworthy only when derived OUTSIDE the
+ * agent's write authority (host / CI checkout). Two in-contract mitigations:
+ *
+ *  - Bootstrap cliff (rule 0): any change under `.river/**` in the diff —
+ *    including DELETING the risk map, which would otherwise silently degrade
+ *    every file to comment_only — escalates unconditionally. The gate config
+ *    cannot be used to unguard itself.
+ *  - `inputs.riskMapPresent` / `inputs.riskMapDigest` expose which risk map
+ *    (if any) was loaded so hosts can compare against a trusted baseline.
+ *
+ * Renaming files off the risk-map globs remains out of scope for S2 (tracked
+ * for S3 escape-rate metrics / S4 deterministic gates).
+ *
+ * ## Decision rules (first match wins)
+ *
+ *  0. gate config changed in diff            → ESCALATE  GATE_CONFIG_CHANGED
+ *  1. humanApprovalRequired                  → ESCALATE  HUMAN_APPROVAL_REQUIRED
+ *  2. loopSignal ESCALATE_HUMAN              → ESCALATE  DECISION_ESCALATED
+ *  3. loopSignal STOP_OSCILLATED             → ESCALATE  OSCILLATION_DETECTED
+ *  4. riskAction require_human_review        → ESCALATE  RISK_MAP_HUMAN_REVIEW
+ *  5. riskAction unknown (not absent)        → NO_GO     UNKNOWN_RISK_ACTION
+ *  6. review did not actually execute        → NO_GO     NOT_EXECUTED
+ *     (plan-only / no-changes runs must not claim CONVERGED_CLEAN: a
+ *     score of [] findings is vacuous, and an agent suppressing diff
+ *     resolution must not obtain a GO — escalation rules 0-4 still fire)
+ *  7. loopSignal REVISE_REQUIRED             → NO_GO     BLOCKING_FINDINGS
+ *  8. NO_SIGNAL + human-review-recommended
+ *     + zero blocking findings               → GO_WITH_OBSERVATION MINOR_FINDINGS_OBSERVE
+ *  9. NO_SIGNAL (decision absent/unknown)    → NO_GO     UNDETERMINED
+ * 10. CONVERGED + riskAction escalate        → GO_WITH_OBSERVATION RISK_MAP_OBSERVE
+ * 11. CONVERGED                              → GO        CONVERGED_CLEAN
+ * 12. anything else (unknown loopSignal)     → NO_GO     UNKNOWN_SIGNAL
+ *
+ * Rule 3 (STOP_OSCILLATED) is unreachable from the production wiring — the
+ * artifact's suggestedLoopSignal carries only Layer-1 values. It exists for
+ * host-side replay of Layer-2 (runs diff) signals through the same contract.
+ *
+ * Fail-safe direction: everything unknown or undetermined maps to NO_GO
+ * (never GO), and rule 7 exists because `human-review-recommended` is the
+ * COMMON verdict in practice (a single security-classified minor finding
+ * already drops the security score below the auto-approve bar) — without it
+ * most real runs would land on NO_GO and loops would never converge.
+ */
+
+
+
+/** @typedef {'GO' | 'GO_WITH_OBSERVATION' | 'NO_GO' | 'ESCALATE'} GateDecisionValue */
+/** @typedef {'cliff' | 'hill' | 'field'} GateTier */
+
+/** Files whose change forces rule 0 — the gate config must not unguard itself. */
+const GATE_CONFIG_PREFIX = '.river/';
+
+const GATE_DECISIONS = /** @type {const} */ ((/* unused pure expression or super */ null && ([
+  'GO',
+  'GO_WITH_OBSERVATION',
+  'NO_GO',
+  'ESCALATE',
+])));
+
+const GATE_REASON_CODES = /** @type {const} */ ((/* unused pure expression or super */ null && ([
+  'GATE_CONFIG_CHANGED',
+  'HUMAN_APPROVAL_REQUIRED',
+  'DECISION_ESCALATED',
+  'OSCILLATION_DETECTED',
+  'RISK_MAP_HUMAN_REVIEW',
+  'UNKNOWN_RISK_ACTION',
+  'STRICT_BLOCK',
+  'DETERMINISTIC_UNRUNNABLE',
+  'SKIPPED_BY_POLICY',
+  'NOT_EXECUTED',
+  'BLOCKING_FINDINGS',
+  'MINOR_FINDINGS_OBSERVE',
+  'UNDETERMINED',
+  'RISK_MAP_OBSERVE',
+  'CONVERGED_CLEAN',
+  'UNKNOWN_SIGNAL',
+])));
+
+const KNOWN_RISK_ACTIONS = new Set(['comment_only', 'escalate', 'require_human_review']);
+
+const DECISION_TO_TIER = {
+  ESCALATE: 'cliff',
+  GO_WITH_OBSERVATION: 'hill',
+  GO: 'field',
+  NO_GO: 'field', // NO_GO is "revise", not a supervision tier; field keeps the enum total
+};
+
+const DEFAULT_OBSERVATION_EXPIRES_IN_HOURS = 72;
+const DEFAULT_MAX_CONSECUTIVE_AUTO_GO = 5;
+
+/**
+ * True when the diff touches the gate's own configuration (rule 0).
+ * @param {string[]} changedFiles
+ * @returns {boolean}
+ */
+function gateConfigChanged(changedFiles) {
+  return (Array.isArray(changedFiles) ? changedFiles : []).some(
+    (f) => typeof f === 'string' && f.replace(/\\/g, '/').startsWith(GATE_CONFIG_PREFIX)
+  );
+}
+
+/**
+ * Canonical hash of the gate inputs (sha256, first 16 hex chars).
+ *
+ * Canonicalization: the FIXED field list below, keys in lexicographic order,
+ * undefined normalized to null, JSON.stringify of that object. This is a
+ * lightweight summary for S3 "same inputs, different decision" regression
+ * comparison — it is NOT a tamper-proof / security control (anyone can
+ * recompute it). The authoritative integrity check is replaying
+ * `gate.inputs` through deriveGateDecision.
+ *
+ * @param {object} inputs
+ * @returns {string}
+ */
+function computeGateInputsHash(inputs) {
+  const FIELDS = [
+    'artifactStatus',
+    'blockingFindings',
+    'decision',
+    'gateConfigChanged',
+    'humanApprovalMode',
+    'humanApprovalRequired',
+    'loopSignal',
+    'reviewExecuted',
+    'riskAction',
+    'riskMapDigest',
+    'riskMapPresent',
+  ];
+  const canonical = {};
+  for (const key of FIELDS) {
+    canonical[key] = inputs?.[key] === undefined ? null : inputs[key];
+  }
+  // Epic #1347 S4: strictBlock joins the hashed inputs, but only when true, so
+  // every pre-S4 gate (strictBlock absent/false) keeps its exact recorded hash
+  // — no conformance-fixture churn. A true value produces a distinct hash so
+  // the S3 "same inputs, different decision" regression check stays sound.
+  if (inputs?.strictBlock === true) canonical.strictBlock = true;
+  // #1401 §11.5: same "only when true" scheme so pre-#1401 gates keep their hash.
+  if (inputs?.deterministicUnrunnable === true) canonical.deterministicUnrunnable = true;
+  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(JSON.stringify(canonical)).digest('hex').slice(0, 16);
+}
+
+/**
+ * Derive the gate decision for a finalized review artifact.
+ *
+ * Pure and deterministic: LLM output can only have contributed in the
+ * escalation direction upstream (via humanApprovalRequired /
+ * blocking findings); nothing here lets it push a decision toward GO.
+ *
+ * @param {object} opts
+ * @param {string} [opts.loopSignal] - artifact.suggestedLoopSignal (Layer 1/2 value)
+ * @param {string} [opts.decision] - artifact.decision (verdict)
+ * @param {boolean} [opts.humanApprovalRequired]
+ * @param {string} [opts.humanApprovalMode] - audit: regex-only | llm-adjudicated | llm-skipped | regex-fallback
+ * @param {string} [opts.riskAction] - risk-map aggregateAction; absent → comment_only
+ * @param {number} [opts.blockingFindings] - count of critical/major findings
+ * @param {string[]} [opts.changedFiles]
+ * @param {boolean} [opts.gateConfigChanged] - explicit override so a host can
+ *   replay a recorded `gate.inputs` object verbatim (rule 0 is derived from
+ *   changedFiles when this is omitted)
+ * @param {boolean} [opts.reviewExecuted] - true only when skills actually ran
+ *   against a resolved diff (executeReview path, status ok). Fail-safe: when
+ *   false, non-escalated outcomes are NO_GO NOT_EXECUTED — a vacuous perfect
+ *   score over zero executed findings must not read as CONVERGED_CLEAN.
+ * @param {string} [opts.artifactStatus] - artifact.status echo (ok | no-changes)
+ *   so hosts can distinguish "nothing to review" from "review suppressed".
+ * @param {boolean} [opts.riskMapPresent]
+ * @param {string|null} [opts.riskMapDigest]
+ * @param {boolean} [opts.strictBlock] - Epic #1347 S4: a deterministic skill
+ *   (evaluationType 'deterministic') with deterministicGate.failSeverity
+ *   'strict_block' produced a finding. Forces an UNCONDITIONAL NO_GO
+ *   (reasonCode STRICT_BLOCK) — it blocks even below the critical/major
+ *   severity floor that blockingFindings counts, and cannot be waived by a
+ *   label-skip or a dry-run. The escalation cliffs (rules 0-4) still win, as
+ *   ESCALATE is more conservative than NO_GO.
+ * @param {boolean} [opts.deterministicUnrunnable] - Epic #1347 §11.5 (#1401): a
+ *   deterministic-gate command could not be run (spawn failure / timeout /
+ *   signal kill / invalid entry). Forces ESCALATE (reasonCode
+ *   DETERMINISTIC_UNRUNNABLE) — a "cannot judge" state, not a violation. Placed
+ *   AFTER strictBlock so a confirmed NO_GO is never softened to ESCALATE by an
+ *   induced-unrunnable elsewhere. Nothing populates this until the executor
+ *   wiring (§11.8 c2/d) lands; this is the gate contract only.
+ * @param {object} [opts.config] - effective config; gate.observation / gate.circuitBreaker read here
+ * @returns {{ decision: GateDecisionValue, reasonCode: string, tier: GateTier,
+ *   inputs: object, inputsHash: string, configSnapshot: object, observation?: object,
+ *   schemaVersion: '1' }}
+ */
+function deriveGateDecision({
+  loopSignal,
+  decision,
+  humanApprovalRequired = false,
+  humanApprovalMode,
+  riskAction,
+  blockingFindings = 0,
+  changedFiles = [],
+  gateConfigChanged: gateConfigChangedOverride,
+  reviewExecuted = false,
+  artifactStatus = null,
+  riskMapPresent = false,
+  riskMapDigest = null,
+  strictBlock = false,
+  deterministicUnrunnable = false,
+  config = {},
+} = {}) {
+  const configChanged =
+    typeof gateConfigChangedOverride === 'boolean'
+      ? gateConfigChangedOverride
+      : gateConfigChanged(changedFiles);
+  const effectiveRiskAction = riskAction ?? 'comment_only';
+
+  const inputs = {
+    loopSignal: loopSignal ?? null,
+    decision: decision ?? null,
+    humanApprovalRequired: humanApprovalRequired === true,
+    humanApprovalMode: humanApprovalMode ?? null,
+    riskAction: effectiveRiskAction,
+    blockingFindings: Number.isFinite(blockingFindings) ? blockingFindings : 0,
+    gateConfigChanged: configChanged,
+    reviewExecuted: reviewExecuted === true,
+    artifactStatus: artifactStatus ?? null,
+    riskMapPresent: riskMapPresent === true,
+    riskMapDigest: riskMapDigest ?? null,
+    strictBlock: strictBlock === true,
+    deterministicUnrunnable: deterministicUnrunnable === true,
+  };
+
+  const expiresInHours =
+    config?.gate?.observation?.expiresInHours ?? DEFAULT_OBSERVATION_EXPIRES_IN_HOURS;
+  const maxConsecutiveAutoGo =
+    config?.gate?.circuitBreaker?.maxConsecutiveAutoGo ?? DEFAULT_MAX_CONSECUTIVE_AUTO_GO;
+  const configSnapshot = { expiresInHours, maxConsecutiveAutoGo };
+
+  const decide = () => {
+    // 0. Bootstrap cliff: the gate config must not unguard itself.
+    if (configChanged) return ['ESCALATE', 'GATE_CONFIG_CHANGED'];
+    // 1. Plan-review cliff (regex floor + escalation-only LLM upstream).
+    if (inputs.humanApprovalRequired) return ['ESCALATE', 'HUMAN_APPROVAL_REQUIRED'];
+    // 2-3. Loop-signal escalations.
+    if (loopSignal === 'ESCALATE_HUMAN') return ['ESCALATE', 'DECISION_ESCALATED'];
+    if (loopSignal === 'STOP_OSCILLATED') return ['ESCALATE', 'OSCILLATION_DETECTED'];
+    // 4. Risk-map cliff.
+    if (effectiveRiskAction === 'require_human_review')
+      return ['ESCALATE', 'RISK_MAP_HUMAN_REVIEW'];
+    // 5. Unknown risk action never falls through to GO (fail-safe).
+    if (!KNOWN_RISK_ACTIONS.has(effectiveRiskAction)) return ['NO_GO', 'UNKNOWN_RISK_ACTION'];
+    // 5b. Deterministic strict_block (Epic #1347 S4, #1351): a deterministic
+    // skill (evaluationType 'deterministic', failSeverity 'strict_block')
+    // produced a finding. Unconditional NO_GO — deterministic detectors are
+    // authoritative (see .claude/rules/review-core.md §#1070), so this blocks
+    // even below the critical/major floor and cannot be waived by a label-skip
+    // or dry-run. Placed AFTER the escalation cliffs (0-4) — ESCALATE is more
+    // conservative than NO_GO — and BEFORE the skip/not-executed exemptions so
+    // a bypass attempt cannot suppress a deterministic block.
+    if (inputs.strictBlock) return ['NO_GO', 'STRICT_BLOCK'];
+    // 5c. Deterministic command unrunnable (Epic #1347 §11.5, #1401): a
+    // deterministic-gate command could not produce a verdict (spawn failure /
+    // timeout / signal kill / invalid entry). Not a confirmed violation but a
+    // "cannot judge" state → ESCALATE (human looks). Placed AFTER strictBlock
+    // (5b): a CONFIRMED violation (NO_GO) must not be softened to human-approval
+    // by a weak "another command was unrunnable" signal — that would let an
+    // attacker escape strict_block by inducing an unrunnable elsewhere (§11.5.2).
+    // The cliffs (0-4) still precede both. Nothing produces this input yet — the
+    // executor wiring lands with §11.8(c2)/(d); this is the gate contract only.
+    if (inputs.deterministicUnrunnable) return ['ESCALATE', 'DETERMINISTIC_UNRUNNABLE'];
+    // 6a. Team-labeled skip (#1350 PR-C): the decision stays NO_GO (a label
+    // must not become a gate bypass — the conservative call from the S2
+    // design review), but the reasonCode tells hosts this was an explicit
+    // policy skip rather than a suppressed/unresolved review.
+    if (inputs.artifactStatus === 'skipped-by-label') return ['NO_GO', 'SKIPPED_BY_POLICY'];
+    // 6b. Review must have actually executed for any GO-family outcome:
+    // plan-only / no-changes runs score [] findings as a vacuous perfect
+    // verdict, and suppressed diff resolution must not earn a GO.
+    if (!inputs.reviewExecuted) return ['NO_GO', 'NOT_EXECUTED'];
+    // 7. Blocking findings → revise.
+    if (loopSignal === 'REVISE_REQUIRED') return ['NO_GO', 'BLOCKING_FINDINGS'];
+    // 8-9. NO_SIGNAL: the common "warn" verdict observes; true unknowns stop.
+    if (loopSignal === 'NO_SIGNAL') {
+      if (decision === 'human-review-recommended' && inputs.blockingFindings === 0) {
+        return ['GO_WITH_OBSERVATION', 'MINOR_FINDINGS_OBSERVE'];
+      }
+      return ['NO_GO', 'UNDETERMINED'];
+    }
+    // 10-11. Converged: hill when the risk map asks for observation, else field.
+    if (loopSignal === 'CONVERGED') {
+      if (effectiveRiskAction === 'escalate') return ['GO_WITH_OBSERVATION', 'RISK_MAP_OBSERVE'];
+      return ['GO', 'CONVERGED_CLEAN'];
+    }
+    // 12. Forward-compatible fail-safe.
+    return ['NO_GO', 'UNKNOWN_SIGNAL'];
+  };
+
+  const [gateDecision, reasonCode] = decide();
+
+  const result = {
+    decision: gateDecision,
+    reasonCode,
+    tier: DECISION_TO_TIER[gateDecision],
+    inputs,
+    inputsHash: computeGateInputsHash(inputs),
+    configSnapshot,
+    schemaVersion: '1',
+  };
+
+  if (gateDecision === 'GO_WITH_OBSERVATION') {
+    // Execution semantics (host responsibility): on expiry the host stops the
+    // loop AND treats changes originating from `files` as unreviewed
+    // (re-review required). "stop" is the only permitted value in S2;
+    // "promote" lands with the S4 enforcement implementation.
+    result.observation = {
+      expiresInHours,
+      onExpiry: 'stop',
+      files: Array.isArray(changedFiles) ? changedFiles.slice(0, 100) : [],
+    };
+  }
+
+  return result;
+}
+
+
+/***/ }),
+
+/***/ 8937:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   AC: () => (/* binding */ listChangedFiles),
+/* harmony export */   LL: () => (/* binding */ diffWithContext),
+/* harmony export */   NC: () => (/* binding */ ensureGitRepo),
+/* harmony export */   Rd: () => (/* binding */ detectDefaultBranch),
+/* harmony export */   XS: () => (/* binding */ GitError),
+/* harmony export */   fe: () => (/* binding */ findMergeBase),
+/* harmony export */   kG: () => (/* binding */ GitRepoNotFoundError)
+/* harmony export */ });
+/* unused harmony export collectAddedLineHints */
+/* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1421);
+/* harmony import */ var node_util__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(7975);
+
+
+
+const exec = (0,node_util__WEBPACK_IMPORTED_MODULE_1__.promisify)(node_child_process__WEBPACK_IMPORTED_MODULE_0__.execFile);
+
+class GitError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'GitError';
+  }
+}
+
+class GitRepoNotFoundError extends GitError {
+  constructor(cwd) {
+    super(`Not a git repository: ${cwd}`);
+    this.name = 'GitRepoNotFoundError';
+  }
+}
+
+async function runGit(args, { cwd }) {
+  try {
+    // Use a large maxBuffer (200MB) to handle large diffs (e.g., pnpm-lock.yaml changes)
+    const { stdout } = await exec('git', args, { cwd, maxBuffer: 200 * 1024 * 1024 });
+    return stdout.trim();
+  } catch (error) {
+    const detail = error.stderr?.toString().trim() || error.message;
+    throw new GitError(detail);
+  }
+}
+
+async function ensureGitRepo(cwd) {
+  const insideWorkTree = await runGit(['rev-parse', '--is-inside-work-tree'], { cwd }).catch(
+    () => null
+  );
+  if (insideWorkTree !== 'true') {
+    throw new GitRepoNotFoundError(cwd);
+  }
+  return runGit(['rev-parse', '--show-toplevel'], { cwd });
+}
+
+async function detectDefaultBranch(cwd) {
+  const candidates = [];
+  const ref = await runGit(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'], { cwd }).catch(
+    () => null
+  );
+  if (ref) {
+    const parts = ref.split('/');
+    candidates.push(parts[parts.length - 1]);
+  }
+  candidates.push('main', 'master');
+
+  for (const branch of candidates) {
+    const exists = await runGit(['rev-parse', '--quiet', '--verify', branch], { cwd }).catch(
+      () => null
+    );
+    if (exists) return branch;
+    const remoteExists = await runGit(['rev-parse', '--quiet', '--verify', `origin/${branch}`], {
+      cwd,
+    }).catch(() => null);
+    if (remoteExists) return branch;
+  }
+  return 'HEAD';
+}
+
+async function findMergeBase(cwd, baseRef) {
+  const candidates = [`origin/${baseRef}`, baseRef];
+  for (const ref of candidates) {
+    const mergeBase = await runGit(['merge-base', 'HEAD', ref], { cwd }).catch(() => null);
+    if (mergeBase) return mergeBase;
+  }
+  // fallback to current HEAD to keep diff calculations deterministic
+  return runGit(['rev-parse', 'HEAD'], { cwd });
+}
+
+async function listChangedFiles(cwd, baseRef) {
+  const stdout = await runGit(['diff', '--name-only', baseRef], { cwd });
+  return stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+async function diffWithContext(cwd, baseRef, { unified = 3 } = {}) {
+  return runGit(['diff', `--unified=${unified}`, '--no-color', baseRef], { cwd });
+}
+
+function collectAddedLineHints(diffText) {
+  const hints = new Map();
+  let currentFile = null;
+
+  for (const line of diffText.split('\n')) {
+    if (line.startsWith('+++ b/')) {
+      // We record the first hunk per file; this keeps output stable for the placeholder comments.
+      currentFile = line.replace('+++ b/', '').trim();
+      continue;
+    }
+    if (!line.startsWith('@@')) continue;
+    const match = /@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
+    if (match && currentFile && !hints.has(currentFile)) {
+      const startLine = Number.parseInt(match[1], 10);
+      hints.set(currentFile, startLine);
+    }
+  }
+  return hints;
+}
+
+
+/***/ }),
+
+/***/ 418:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   EF: () => (/* binding */ HEURISTIC_KIND_PRESENTATIONS),
+/* harmony export */   y2: () => (/* binding */ HEURISTIC_SKILL_IDS),
+/* harmony export */   zq: () => (/* binding */ buildHeuristicComments)
+/* harmony export */ });
+/* unused harmony export SKILL_HEURISTIC_MAP */
+/**
+ * ヒューリスティック検出器レジストリ（単一の真実 / SSoT）
+ *
+ * detector 1 本の追加・変更はこの配列の 1 エントリで完結する。以前は
+ *   (a) 検出関数 `findXxx`
+ *   (b) `SKILL_HEURISTIC_MAP` の関数名文字列配列（プログラム未消費の第2真実）
+ *   (c) `buildHeuristicComments` の手書き dispatch
+ *   (d) `review-engine.mjs` の kind→日本語メッセージ switch（別ファイル）
+ * の最大4箇所・2ファイルを同期する必要があったが、それらをこのレジストリから
+ * 導出することでドリフト源を解消した。
+ *
+ * エントリのフィールド:
+ *   - skillId:     対応スキル ID（dry-run フィルタと配線に使用）
+ *   - detect:      ({ diff }) => Array<{ file, line, kind }> の検出関数
+ *   - skipIfSkill: （任意）指定スキルが plan に含まれる場合はこの detector を実行しない
+ *   - findings:    kind → { finding, evidence, impact, fix, severity, confidence }
+ *                  （review-engine の日本語メッセージ生成に使用）
+ *
+ * 配列順は `buildHeuristicComments` の出力順序（golden/fixtures が pin）と一致させる。
+ */
+
+// test-existence / coverage-gap は同一の 3 検出器を共有する。プレゼンテーションは
+// 一度だけ定義して両スキルのエントリから参照し、二重定義を避ける。
+const MISSING_TESTS_FINDING = {
+  finding: '挙動変更に対するテスト差分が見当たらない',
+  evidence: 'コード差分あり・テスト差分なし',
+  impact: '回帰の検知漏れや仕様逸脱が起きやすい',
+  fix: '新分岐/例外/境界の最小テストを1〜3件追加する',
+  severity: 'warning',
+  confidence: 'medium',
+};
+const FOCUSED_TEST_FINDING = {
+  finding: 'フォーカス済みテスト（.only）がコミットされている',
+  evidence: 'describe/it/test 等の .only が追加された',
+  impact: '他のテストが CI で実行されず、回帰を見逃す',
+  fix: '.only を外してから commit する（誤ってフォーカスを残さない）',
+  severity: 'warning',
+  confidence: 'high',
+};
+const DISABLED_TEST_FINDING = {
+  finding: '無効化されたテスト（.skip / xit / xdescribe / xcontext）がコミットされている',
+  evidence: '`.skip` または `xit`/`xdescribe`/`xcontext` が追加された',
+  impact: 'テストが実行されず、対象の挙動が未検証のまま残る',
+  fix: '修正してスキップを外す。意図的な保留なら理由（Issue 等）をコメントで残す',
+  severity: 'nit',
+  confidence: 'medium',
+};
+
+const HEURISTIC_REGISTRY = [
+  {
+    skillId: 'security-basic',
+    detect: findHardcodedSecrets,
+    findings: {
+      'hardcoded-secret': {
+        finding: '秘密情報（トークン/キー）の直書きの可能性がある',
+        evidence: 'トークン/キーらしい文字列が追加されている',
+        impact: '漏洩時に不正利用やインシデントにつながる',
+        fix: '環境変数（GitHub Secrets等）へ移し、漏洩時はローテーションも検討する',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findGitHubActionsIssues,
+    findings: {
+      'gh-actions-pull-request-target': {
+        finding: 'pull_request_targetイベントは権限昇格のリスクがある',
+        evidence: 'pull_request_targetトリガーが追加されている',
+        impact: 'フォークからのPRで任意コードが本リポジトリの権限で実行される可能性',
+        fix: 'pull_requestイベントを使用するか、pull_request_targetの場合はチェックアウト前に入力を検証する',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+      'gh-actions-excessive-permissions': {
+        finding: '過剰な権限設定（write-all）が検出された',
+        evidence: 'permissions: write-all が設定されている',
+        impact: 'ワークフローが侵害された場合の影響範囲が最大化される',
+        fix: '最小権限の原則に従い、必要な権限のみを個別に指定する（例: contents: read, pull-requests: write）',
+        severity: 'warning',
+        confidence: 'high',
+      },
+      'gh-actions-secret-in-run': {
+        finding: 'runブロック内でsecretsを直接使用している',
+        evidence: 'run: と secrets.* が同一行に存在',
+        impact: 'ログ出力やエラーメッセージでシークレットが漏洩する可能性',
+        fix: 'シークレットを環境変数として設定し、envブロック経由で参照する',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+      'gh-actions-unsanitized-input': {
+        finding: 'ユーザー入力がサニタイズされずに使用されている',
+        evidence: 'github.event.*.title/body/name がrunブロックで直接使用',
+        impact: 'コマンドインジェクション攻撃のリスクがある',
+        fix: 'jqやtoJSONを使用して入力をサニタイズする、または環境変数経由で渡す',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findDangerousEval,
+    findings: {
+      'dangerous-eval': {
+        finding: 'コード実行/インジェクションのリスクがある API が追加されている',
+        evidence:
+          'eval / new Function / dangerouslySetInnerHTML / document.write(ln) / 文字列引数の setTimeout・setInterval のいずれかが追加された',
+        impact: '入力が信頼できない場合に任意コード実行や XSS につながる',
+        fix: '動的評価を避ける（パース/ホワイトリスト化）、HTML はサニタイズして挿入し、タイマーには関数を渡す',
+        severity: 'warning',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findInsecureTls,
+    findings: {
+      'insecure-tls': {
+        finding: 'TLS 証明書検証が無効化されている',
+        evidence:
+          '`rejectUnauthorized: false` または `NODE_TLS_REJECT_UNAUTHORIZED=0` が追加された',
+        impact: '中間者攻撃に対して脆弱になる',
+        fix: '証明書検証を有効に保つ。自己署名証明書は CA を信頼ストアへ追加して対応する',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findWeakHash,
+    findings: {
+      'weak-hash': {
+        finding: '弱いハッシュアルゴリズム（MD5 / SHA-1）が使われている',
+        evidence: "`createHash('md5')` または `createHash('sha1')` が追加された",
+        impact: '衝突攻撃に弱く、署名やパスワード等の用途では安全でない',
+        fix: 'SHA-256 以上を使う。パスワードは bcrypt/scrypt/argon2 を使う',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+    },
+  },
+  {
+    skillId: 'security-basic',
+    detect: findCommandInjection,
+    findings: {
+      'command-injection': {
+        finding: 'シェルコマンドが文字列補間で組み立てられている',
+        evidence: '`exec`/`spawn` 系にテンプレートリテラルの `${...}` 補間が渡されている',
+        impact: '補間値が信頼できない場合、コマンドインジェクションにつながる',
+        fix: '引数配列を使う（例: `execFile(cmd, [args])`）、または入力を厳格に検証/エスケープする',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+    },
+  },
+  {
+    skillId: 'logging-observability',
+    detect: findSilentCatch,
+    findings: {
+      'silent-catch': {
+        finding: 'catch で例外が握りつぶされる可能性がある',
+        evidence: 'catch 内で return（ログ/再throwなし）',
+        impact: '障害調査や失敗検知が困難になる',
+        fix: 'ログ+再throw / 上位へ返す / 無視するなら理由コメント+計測を検討する',
+        severity: 'nit',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'logging-observability',
+    detect: findDebuggerLeftover,
+    findings: {
+      'debugger-leftover': {
+        finding: 'デバッグ用 `debugger` 文がコミットされている',
+        evidence: '`debugger;` が追加された',
+        impact: '実行が一時停止する／本番に混入すると不具合や情報露出につながる',
+        fix: 'commit 前に `debugger` 文を削除する',
+        severity: 'warning',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'logging-observability',
+    detect: findMergeConflict,
+    findings: {
+      'merge-conflict': {
+        finding: '未解決のマージコンフリクトマーカーがコミットされている',
+        evidence: '`<<<<<<<` / `>>>>>>>`（diff3 では `|||||||` も）マーカーが追加された',
+        impact: 'コードが壊れ、ビルド/実行が失敗する',
+        fix: 'コンフリクトを解消し、マーカーを完全に削除する',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'typescript-strict',
+    detect: findTsSuppression,
+    findings: {
+      'ts-suppression': {
+        finding: '型チェックの抑制（@ts-ignore / @ts-nocheck）が追加されている',
+        evidence: '`@ts-ignore` または `@ts-nocheck` が追加された',
+        impact: '型エラーが隠れ、潜在的な不具合を見逃す',
+        fix: '型を修正する。やむを得ない場合は範囲を限定した `@ts-expect-error` + 理由コメントを使う',
+        severity: 'nit',
+        confidence: 'medium',
+      },
+    },
+  },
+  {
+    skillId: 'altitude-generalization',
+    detect: findCallerSpecialCase,
+    findings: {
+      'caller-special-case': {
+        finding: '共有関数に特定の呼び出し元専用の分岐（special-case）が追加されている',
+        evidence: '呼び出し元判定の分岐（`.caller === ...`）が同種2つ以上存在する',
+        impact: '呼び出し元が増えるたびに共有関数が肥大化し、保守が難化する',
+        fix: '呼び出し元ごとの設定を宣言的マップ / strategy へ寄せ、下層機構を一般化する',
+        severity: 'nit',
+        confidence: 'high',
+      },
+    },
+  },
+  {
+    skillId: 'closure-scope-retention',
+    detect: findClosureScopeRetention,
+    findings: {
+      'closure-scope-retention': {
+        finding:
+          '長寿命オブジェクトが closure で enclosing scope の大きなデータを保持し続ける可能性がある',
+        evidence:
+          'module-level キャッシュへ代入される closure が readFile / parse 結果の変数を参照している',
+        impact: 'オブジェクトの生存中、大きな元データが解放されずメモリを圧迫する',
+        fix: '必要なフィールドだけを Map / 明示フィールドへ縮約し、closure に大きな元データを掴ませない',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+    },
+  },
+  {
+    skillId: 'test-existence',
+    detect: findMissingTests,
+    findings: { 'missing-tests': MISSING_TESTS_FINDING },
+  },
+  {
+    skillId: 'test-existence',
+    detect: findFocusedTests,
+    findings: { 'focused-test': FOCUSED_TEST_FINDING },
+  },
+  {
+    skillId: 'test-existence',
+    detect: findDisabledTests,
+    findings: { 'disabled-test': DISABLED_TEST_FINDING },
+  },
+  {
+    skillId: 'coverage-gap',
+    skipIfSkill: 'test-existence',
+    detect: findMissingTests,
+    findings: { 'missing-tests': MISSING_TESTS_FINDING },
+  },
+  {
+    skillId: 'coverage-gap',
+    skipIfSkill: 'test-existence',
+    detect: findFocusedTests,
+    findings: { 'focused-test': FOCUSED_TEST_FINDING },
+  },
+  {
+    skillId: 'coverage-gap',
+    skipIfSkill: 'test-existence',
+    detect: findDisabledTests,
+    findings: { 'disabled-test': DISABLED_TEST_FINDING },
+  },
+];
+
+/**
+ * スキルIDとヒューリスティック検出関数名のマッピング（レジストリから導出）。
+ * dry-run 時はこのマッピングに含まれるスキルのみ実行される。
+ * value（関数名配列）はドキュメント用途で、プログラムは keys のみ消費する。
+ */
+const SKILL_HEURISTIC_MAP = HEURISTIC_REGISTRY.reduce((map, { skillId, detect }) => {
+  (map[skillId] ??= []).push(detect.name);
+  return map;
+}, {});
+
+/**
+ * ヒューリスティック対応スキルIDの一覧（dry-run 時のフィルタリング用）
+ */
+const HEURISTIC_SKILL_IDS = Object.keys(SKILL_HEURISTIC_MAP);
+
+/**
+ * kind → プレゼンテーション（finding/evidence/impact/fix/severity/confidence）の
+ * ルックアップ（レジストリから導出）。review-engine の日本語メッセージ生成が消費する。
+ */
+const HEURISTIC_KIND_PRESENTATIONS = new Map(
+  HEURISTIC_REGISTRY.flatMap((entry) => Object.entries(entry.findings))
+);
+
+function ensureArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function getSkillId(skill) {
+  return skill?.metadata?.id ?? skill?.id ?? null;
+}
+
+function hasSkill(plan, skillId) {
+  const selected = ensureArray(plan?.selected);
+  return selected.some((skill) => getSkillId(skill) === skillId);
+}
+
+function* iterateAddedLines(file) {
+  const hunks = ensureArray(file?.hunks);
+  for (const hunk of hunks) {
+    let newLineNumber = hunk.newStart ?? 0;
+    for (const rawLine of ensureArray(hunk.lines)) {
+      if (rawLine.startsWith('+') && !rawLine.startsWith('+++')) {
+        yield { line: newLineNumber, text: rawLine.slice(1) };
+        newLineNumber += 1;
+        continue;
+      }
+      if (rawLine.startsWith('-') && !rawLine.startsWith('---')) {
+        continue;
+      }
+      newLineNumber += 1;
+    }
+  }
+}
+
+function* iterateSingleHunkLines(hunk) {
+  let newLineNumber = hunk?.newStart ?? 0;
+  for (const rawLine of ensureArray(hunk?.lines)) {
+    if (rawLine.startsWith('+') && !rawLine.startsWith('+++')) {
+      yield { type: 'add', line: newLineNumber, text: rawLine.slice(1) };
+      newLineNumber += 1;
+      continue;
+    }
+    if (rawLine.startsWith('-') && !rawLine.startsWith('---')) {
+      yield { type: 'del', line: null, text: rawLine.slice(1) };
+      continue;
+    }
+    // context line (usually starts with a space)
+    const text = rawLine.startsWith(' ') ? rawLine.slice(1) : rawLine;
+    yield { type: 'ctx', line: newLineNumber, text };
+    newLineNumber += 1;
+  }
+}
+
+function* iterateHunkLines(file) {
+  for (const hunk of ensureArray(file?.hunks)) {
+    yield* iterateSingleHunkLines(hunk);
+  }
+}
+
+function isEnvReference(code) {
+  return /\b(process\.env|import\.meta\.env)\b/.test(code);
+}
+
+function looksLikeLogging(code) {
+  return /\b(console\.(?:log|info|warn|error)|logger\.\w+|log\.\w+)\b/.test(code);
+}
+
+function matchesHardcodedSecretLine(code) {
+  if (isEnvReference(code)) return false;
+
+  // Typical high-signal tokens/keys
+  const explicitPatterns = [
+    /\bAKIA[0-9A-Z]{16}\b/, // AWS Access Key ID
+    /\bghp_[A-Za-z0-9]{36,}\b/, // GitHub token
+    /\bsk-(?:live|test)?_[A-Za-z0-9]{16,}\b/, // Stripe-like
+    /\bsk-[A-Za-z0-9]{16,}\b/, // OpenAI-like (generic)
+  ];
+  if (explicitPatterns.some((re) => re.test(code))) return true;
+
+  // Heuristic: suspicious identifier name + long-ish string literal
+  const assignMatch =
+    /\b(?:export\s+)?(?:const|let|var)\s+(?<name>[A-Za-z0-9_]+)\s*=\s*(?<quote>['"`])(?<value>[^'"`]+)\k<quote>/.exec(
+      code
+    ) ||
+    /['"](?<name>[A-Za-z0-9_]+)['"]\s*:\s*(?<quote>['"`])(?<value>[^'"`]+)\k<quote>/.exec(code) ||
+    /\b(?<name>[A-Za-z0-9_]+)\s*:\s*(?<quote>['"`])(?<value>[^'"`]+)\k<quote>/.exec(code);
+  if (!assignMatch) return false;
+
+  const name = assignMatch.groups?.name ?? '';
+  const value = assignMatch.groups?.value ?? '';
+  if (!/(token|secret|api[_-]?key|password|passwd|private[_-]?key)/i.test(name)) return false;
+  if (value.length < 10) return false;
+  if (/^https?:\/\//i.test(value)) return false;
+  return true;
+}
+
+function findHardcodedSecrets({ diff }) {
+  // Avoid noisy output when many hardcoded values are introduced at once.
+  const MAX_HARDCODED_SECRET_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    const normalized = String(filePath).replaceAll('\\', '/');
+    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesHardcodedSecretLine(text)) continue;
+      comments.push({
+        file: filePath,
+        line,
+        kind: 'hardcoded-secret',
+      });
+      if (comments.length >= MAX_HARDCODED_SECRET_COMMENTS) return comments;
+    }
+  }
+
+  return comments;
+}
+
+function matchesSilentCatchLine(code) {
+  const lower = code.toLowerCase();
+  const hasCatch = lower.includes('catch (') || lower.includes('catch(') || /\bcatch\b/.test(lower);
+  if (!hasCatch) return false;
+  if (looksLikeLogging(code)) return false;
+  if (/\bthrow\b/.test(code)) return false;
+  if (/\breturn\s*;\s*(?:\/\/.*)?$/.test(code)) return true;
+  if (/\breturn\s+(null|undefined)\s*;\s*(?:\/\/.*)?$/.test(code)) return true;
+  if (/\bcatch\s*\([^)]*\)\s*\{\s*\}\s*$/.test(code)) return true;
+  return false;
+}
+
+function findSilentCatch({ diff }) {
+  const comments = [];
+  const files = ensureArray(diff?.files);
+
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    let catchAnchor = null;
+    let window = 0;
+    let sawLogOrThrow = false;
+
+    for (const entry of iterateHunkLines(file)) {
+      const text = entry.text ?? '';
+
+      // One-liner: catch (...) {}
+      if (matchesSilentCatchLine(text) && entry.line != null) {
+        comments.push({ file: filePath, line: entry.line, kind: 'silent-catch' });
+        if (comments.length >= 3) return comments;
+        catchAnchor = null;
+        window = 0;
+        sawLogOrThrow = false;
+        continue;
+      }
+
+      if (entry.line != null && /\bcatch\s*\(/.test(text)) {
+        catchAnchor = entry.line;
+        window = 8;
+        sawLogOrThrow = false;
+        continue;
+      }
+
+      if (window > 0) {
+        if (entry.type === 'add') {
+          if (looksLikeLogging(text) || /\bthrow\b/.test(text)) {
+            sawLogOrThrow = true;
+          }
+          if (
+            !sawLogOrThrow &&
+            (/\breturn\s*;\s*(?:\/\/.*)?$/.test(text) ||
+              /\breturn\s+(null|undefined)\s*;/.test(text))
+          ) {
+            comments.push({
+              file: filePath,
+              line: catchAnchor ?? entry.line ?? 1,
+              kind: 'silent-catch',
+            });
+            if (comments.length >= 3) return comments;
+            catchAnchor = null;
+            window = 0;
+            sawLogOrThrow = false;
+            continue;
+          }
+        }
+        window -= 1;
+      }
+    }
+  }
+
+  return comments;
+}
+
+function looksLikeTestFile(filePath) {
+  const normalized = String(filePath).replaceAll('\\', '/');
+  return (
+    normalized.startsWith('test/') ||
+    normalized.startsWith('tests/') ||
+    normalized.startsWith('__tests__/') ||
+    normalized.includes('/test/') ||
+    normalized.includes('/tests/') ||
+    normalized.includes('/__tests__/') ||
+    /\.(test|spec)\./.test(normalized)
+  );
+}
+
+// Strip a trailing `//` line comment, but only when the `//` is NOT inside a
+// string literal. A naive `/\/\/.*$/` strip would corrupt lines like
+// `const u = "http://x"; eval(y)` (removing the real `eval`). We treat the
+// first `//` whose preceding text has balanced quotes as the comment start.
+function stripTrailingLineComment(code) {
+  const s = String(code);
+  let searchFrom = 0;
+  for (;;) {
+    const idx = s.indexOf('//', searchFrom);
+    if (idx === -1) return s;
+    const before = s.slice(0, idx);
+    const dq = (before.match(/"/g) || []).length;
+    const sq = (before.match(/'/g) || []).length;
+    const bq = (before.match(/`/g) || []).length;
+    if (dq % 2 === 0 && sq % 2 === 0 && bq % 2 === 0) {
+      return before;
+    }
+    searchFrom = idx + 2;
+  }
+}
+
+function looksLikeProductCodeFile(filePath) {
+  const normalized = String(filePath).replaceAll('\\', '/');
+  if (looksLikeTestFile(normalized)) return false;
+  if (!/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(normalized)) return false;
+  return (
+    normalized.startsWith('src/') ||
+    normalized.startsWith('lib/') ||
+    normalized.includes('/src/') ||
+    normalized.includes('/lib/')
+  );
+}
+
+function hasBehaviorChangeSignal({ diff }) {
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    for (const { text } of iterateAddedLines(file)) {
+      if (/\bif\s*\(/.test(text) || /\bswitch\s*\(/.test(text) || /\bthrow\s+new\b/.test(text))
+        return true;
+    }
+  }
+  return false;
+}
+
+function findMissingTests({ diff }) {
+  const files = ensureArray(diff?.files);
+  const changedPaths = files
+    .map((f) => f?.path)
+    .filter(Boolean)
+    .filter((p) => p !== '/dev/null');
+  const touchesTests = changedPaths.some(looksLikeTestFile);
+  const touchesCode = changedPaths.some(looksLikeProductCodeFile);
+  if (!touchesCode || touchesTests) return [];
+  if (!hasBehaviorChangeSignal({ diff })) return [];
+
+  const firstCodeFile = files.find((f) => looksLikeProductCodeFile(f?.path));
+  const filePath = firstCodeFile?.path;
+  const line = firstCodeFile?.addedLines?.[0] || firstCodeFile?.hunks?.[0]?.newStart || 1;
+  return [
+    {
+      file: filePath,
+      line,
+      kind: 'missing-tests',
+    },
+  ];
+}
+
+/**
+ * Check if a file path is a GitHub Actions workflow file.
+ * @param {string} filePath - File path to check
+ * @returns {boolean} True if the file is a workflow YAML file in .github/workflows/
+ */
+function looksLikeGitHubWorkflowFile(filePath) {
+  const normalized = String(filePath).replaceAll('\\', '/');
+  return normalized.startsWith('.github/workflows/') && /\.(yml|yaml)$/.test(normalized);
+}
+
+/**
+ * Detect GitHub Actions security issues in workflow files.
+ * Checks for common security vulnerabilities including:
+ * - pull_request_target privilege escalation risks
+ * - Excessive permissions (write-all)
+ * - Secrets exposed in run blocks
+ * - Unsanitized user input in run blocks (command injection)
+ * @param {{diff: {files?: Array}}} options - Diff object containing file changes
+ * @returns {Array<{file: string, line: number, kind: string}>} Array of detected security issues
+ */
+function findGitHubActionsIssues({ diff }) {
+  const MAX_WORKFLOW_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || !looksLikeGitHubWorkflowFile(filePath)) continue;
+
+    for (const { line, text } of iterateAddedLines(file)) {
+      // Check for pull_request_target usage (privilege escalation risk)
+      if (
+        /^\s*(-\s+)?pull_request_target\s*:?\s*$/.test(text) ||
+        /\bon\s*:\s*\[[^\]]*\bpull_request_target\b[^\]]*\]/.test(text)
+      ) {
+        comments.push({
+          file: filePath,
+          line,
+          kind: 'gh-actions-pull-request-target',
+        });
+        if (comments.length >= MAX_WORKFLOW_COMMENTS) return comments;
+        continue;
+      }
+
+      // Check for excessive permissions
+      if (/permissions\s*:\s*(write-all|'write-all'|"write-all")/.test(text)) {
+        comments.push({
+          file: filePath,
+          line,
+          kind: 'gh-actions-excessive-permissions',
+        });
+        if (comments.length >= MAX_WORKFLOW_COMMENTS) return comments;
+        continue;
+      }
+
+      // Check for secrets in run blocks (potential exposure)
+      if (/\$\{\{\s*secrets\.\w+\s*\}\}/.test(text) && /run\s*:/.test(text)) {
+        comments.push({
+          file: filePath,
+          line,
+          kind: 'gh-actions-secret-in-run',
+        });
+        if (comments.length >= MAX_WORKFLOW_COMMENTS) return comments;
+        continue;
+      }
+
+      // Check for unsanitized user input in run blocks (command injection)
+      if (
+        /run\s*:/.test(text) &&
+        /\$\{\{\s*github\.event\.(issue|pull_request|comment)\.(title|body)\s*\}\}/.test(text) &&
+        !/\|\s*jq\b/.test(text) &&
+        !/toJSON/.test(text)
+      ) {
+        comments.push({
+          file: filePath,
+          line,
+          kind: 'gh-actions-unsanitized-input',
+        });
+        if (comments.length >= MAX_WORKFLOW_COMMENTS) return comments;
+        continue;
+      }
+    }
+  }
+
+  return comments;
+}
+
+// High-confidence code-injection / XSS smells. Deliberately conservative
+// (only patterns that are rarely intentional or safe) so the no-LLM path
+// stays low-false-positive.
+function matchesDangerousEval(code) {
+  let trimmed = String(code).trim();
+  // Skip comment lines and trailing comments so an `eval` in a comment is
+  // not flagged.
+  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
+  trimmed = stripTrailingLineComment(trimmed).trim();
+  if (/\beval\s*\(/.test(trimmed)) return true;
+  if (/\bnew\s+Function\s*\(/.test(trimmed)) return true;
+  if (/dangerouslySetInnerHTML/.test(trimmed)) return true;
+  if (/\bdocument\.write(?:ln)?\s*\(/.test(trimmed)) return true;
+  // A string first argument to a timer is an implicit eval.
+  if (/\b(?:setTimeout|setInterval)\s*\(\s*['"`]/.test(trimmed)) return true;
+  return false;
+}
+
+function findDangerousEval({ diff }) {
+  const MAX_DANGEROUS_EVAL_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    const normalized = String(filePath).replaceAll('\\', '/');
+    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesDangerousEval(text)) continue;
+      comments.push({ file: filePath, line, kind: 'dangerous-eval' });
+      if (comments.length >= MAX_DANGEROUS_EVAL_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// Accidental focused tests (`.only`) silently skip the rest of the suite in CI.
+function matchesFocusedTest(code) {
+  const trimmed = String(code).trim();
+  // Skip comment lines so a commented-out `.only` is not flagged.
+  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
+  return /\b(?:describe|context|it|test|suite|bench)\.only\s*\(/.test(trimmed);
+}
+
+function findFocusedTests({ diff }) {
+  const MAX_FOCUSED_TEST_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (!looksLikeTestFile(filePath)) continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesFocusedTest(text)) continue;
+      comments.push({ file: filePath, line, kind: 'focused-test' });
+      if (comments.length >= MAX_FOCUSED_TEST_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// Disabled tests (`.skip` / `xit` / `xdescribe`) committed into the suite.
+// Advisory only (nit): sometimes intentional for known-pending tests.
+function matchesDisabledTest(code) {
+  const trimmed = String(code).trim();
+  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
+  return (
+    /\b(?:describe|context|it|test|suite|bench)\.skip\s*\(/.test(trimmed) ||
+    /\b(?:xit|xdescribe|xtest|xcontext)\s*\(/.test(trimmed)
+  );
+}
+
+function findDisabledTests({ diff }) {
+  const MAX_DISABLED_TEST_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (!looksLikeTestFile(filePath)) continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesDisabledTest(text)) continue;
+      comments.push({ file: filePath, line, kind: 'disabled-test' });
+      if (comments.length >= MAX_DISABLED_TEST_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// Leftover `debugger;` statement (a near-zero-false-positive debug artifact).
+function matchesDebuggerLeftover(code) {
+  let trimmed = String(code).trim();
+  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
+  // Drop a trailing line comment so `const x = 1; // debugger` is not flagged.
+  trimmed = stripTrailingLineComment(trimmed).trim();
+  return /\bdebugger\s*;/.test(trimmed) || /(?:^|[;{}\s])debugger\s*$/.test(trimmed);
+}
+
+function findDebuggerLeftover({ diff }) {
+  const MAX_DEBUGGER_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesDebuggerLeftover(text)) continue;
+      comments.push({ file: filePath, line, kind: 'debugger-leftover' });
+      if (comments.length >= MAX_DEBUGGER_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// Disabled TLS certificate verification — a near-zero-false-positive security smell.
+function matchesInsecureTls(code) {
+  const trimmed = String(code).trim();
+  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
+  if (/rejectUnauthorized\s*:\s*false/.test(trimmed)) return true;
+  // Only when NODE_TLS_REJECT_UNAUTHORIZED is being SET to 0 (which disables
+  // verification) — not when it is merely read or set to 1.
+  if (/NODE_TLS_REJECT_UNAUTHORIZED\s*[:=]\s*['"`]?0\b/.test(trimmed)) return true;
+  return false;
+}
+
+function findInsecureTls({ diff }) {
+  const MAX_INSECURE_TLS_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesInsecureTls(text)) continue;
+      comments.push({ file: filePath, line, kind: 'insecure-tls' });
+      if (comments.length >= MAX_INSECURE_TLS_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// Weak hash algorithm via the Node crypto idiom (near-zero false positive).
+function matchesWeakHash(code) {
+  let trimmed = String(code).trim();
+  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
+  trimmed = stripTrailingLineComment(trimmed).trim();
+  return /createHash\s*\(\s*['"`](?:md5|sha1)['"`]/i.test(trimmed);
+}
+
+function findWeakHash({ diff }) {
+  const MAX_WEAK_HASH_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesWeakHash(text)) continue;
+      comments.push({ file: filePath, line, kind: 'weak-hash' });
+      if (comments.length >= MAX_WEAK_HASH_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// Shell command built from a template literal with interpolation — a command
+// injection smell when the interpolated value can be attacker-controlled.
+function matchesCommandInjection(code) {
+  let trimmed = String(code).trim();
+  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
+  trimmed = stripTrailingLineComment(trimmed).trim();
+  // execSync / spawn / spawnSync are unambiguous child_process APIs. Bare `exec`
+  // is matched only when NOT a method call (negative lookbehind) so that
+  // `regex.exec(`...`)` and `db.exec(`...`)` are not false-flagged.
+  return (
+    /(?<![.\w])exec\s*\(\s*`[^`]*\$\{/.test(trimmed) ||
+    /\b(?:execSync|spawnSync|spawn)\s*\(\s*`[^`]*\$\{/.test(trimmed)
+  );
+}
+
+function findCommandInjection({ diff }) {
+  const MAX_COMMAND_INJECTION_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesCommandInjection(text)) continue;
+      comments.push({ file: filePath, line, kind: 'command-injection' });
+      if (comments.length >= MAX_COMMAND_INJECTION_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// Unresolved git conflict markers committed into a file. The `<<<<<<<` /
+// `>>>>>>>` markers are unambiguous; `=======` is intentionally excluded
+// (it collides with Markdown h1 underlines).
+function matchesMergeConflict(code) {
+  // <<<<<<< / >>>>>>> are always present; ||||||| is the diff3/zdiff3 base
+  // marker. ======= is intentionally excluded (Markdown h1-underline collision).
+  return /^<{7}(?:\s|$)/.test(code) || /^>{7}(?:\s|$)/.test(code) || /^\|{7}(?:\s|$)/.test(code);
+}
+
+function findMergeConflict({ diff }) {
+  const MAX_MERGE_CONFLICT_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesMergeConflict(text)) continue;
+      comments.push({ file: filePath, line, kind: 'merge-conflict' });
+      if (comments.length >= MAX_MERGE_CONFLICT_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// `@ts-ignore` / `@ts-nocheck` suppress type checking. `@ts-expect-error` is
+// the recommended, scoped form and is intentionally NOT flagged.
+function matchesTsSuppression(code) {
+  return /@ts-ignore\b/.test(code) || /@ts-nocheck\b/.test(code);
+}
+
+function findTsSuppression({ diff }) {
+  const MAX_TS_SUPPRESSION_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      if (!matchesTsSuppression(text)) continue;
+      comments.push({ file: filePath, line, kind: 'ts-suppression' });
+      if (comments.length >= MAX_TS_SUPPRESSION_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// Per-caller special-case branch ("bandaid") on a shared function, e.g.
+// `if (options.caller === 'markdown-exporter') { ... }`. Keyed strictly on a
+// caller-identity comparison so a first-class public option (host opt-in,
+// e.g. `if (options.compact)`) is never flagged.
+function matchesCallerSpecialCase(code) {
+  let trimmed = String(code).trim();
+  // Skip comment lines and trailing comments so a mention in a comment is
+  // not counted as a branch.
+  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
+  trimmed = stripTrailingLineComment(trimmed).trim();
+  return /\bif\s*\(\s*[\w$.]+\.caller\s*===\s*['"`]/.test(trimmed);
+}
+
+// Altitude: fires only when the diff ADDS a caller-identity branch AND the
+// SAME hunk shows two or more same-kind branches in total (added +
+// surrounding context). Counting is per hunk, not per file: two unrelated
+// functions each carrying a single branch are different contexts and must
+// not add up to a finding (FP-first, #1070). A single branch is not enough
+// evidence to propose generalizing the lower-level mechanism (see
+// skills/midstream/altitude-generalization).
+function findCallerSpecialCase({ diff }) {
+  const MAX_CALLER_SPECIAL_CASE_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    const normalized = String(filePath).replaceAll('\\', '/');
+    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
+
+    for (const hunk of ensureArray(file?.hunks)) {
+      let sameKindCount = 0;
+      let firstAddedLine = null;
+      for (const { type, line, text } of iterateSingleHunkLines(hunk)) {
+        if (type === 'del') continue;
+        if (!matchesCallerSpecialCase(text)) continue;
+        sameKindCount += 1;
+        if (type === 'add' && firstAddedLine === null) firstAddedLine = line;
+      }
+      if (firstAddedLine === null || sameKindCount < 2) continue;
+      comments.push({ file: filePath, line: firstAddedLine, kind: 'caller-special-case' });
+      if (comments.length >= MAX_CALLER_SPECIAL_CASE_COMMENTS) return comments;
+    }
+  }
+  return comments;
+}
+
+// Long-lived singleton built from closures that keep large enclosing-scope
+// data (file contents / parsed documents) reachable. Conservative 3-signal
+// conjunction (all required) to stay low-false-positive:
+//   A. a cache-like slot is assigned an object literal (`cachedX = {`). The
+//      slot name is extracted from the assignment itself, so the detector
+//      also fires when the declaration (`let cachedX = null`) already exists
+//      outside the diff — the common "add a closure to an existing cache
+//      variable" change (gemini review on #1465)
+//   B. large-data locals bound from readFile / parse* / flatMap-map pipelines
+//   C. a shorthand method inside that object references one of the large-data
+//      locals on a line after the assignment (the closure capture)
+// The recommended "reduce immediately into a small Map and return it" pattern
+// has no cache-slot assignment (A) and therefore never fires.
+function findClosureScopeRetention({ diff }) {
+  const MAX_CLOSURE_RETENTION_COMMENTS = 3;
+  // Plain assignment only (no let/var/const): the cache slot is declared
+  // elsewhere (module level), which is what makes the object long-lived.
+  const SLOT_ASSIGN_RE = /^\s*(\w*(?:cache|cached|memo|singleton|lookup)\w*)\s*=\s*\{/i;
+  const LARGE_DATA_RE =
+    /\bconst\s+(\w+)\s*=\s*(?:await\s+)?(?:readFile(?:Sync)?\s*\(|parse\w*\s*\(|[\w$.]+\.(?:flatMap|map)\s*\()/;
+  const METHOD_SHORTHAND_RE = /^\s*(?:async\s+)?\w+\s*\([^)]*\)\s*\{/;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    const normalized = String(filePath).replaceAll('\\', '/');
+    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
+
+    // Comment-stripped view of the added lines (checklist §1).
+    const codeLines = [];
+    for (const { line, text } of iterateAddedLines(file)) {
+      const trimmed = String(text).trim();
+      const isComment =
+        trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*');
+      codeLines.push({ line, code: isComment ? '' : stripTrailingLineComment(String(text)) });
+    }
+
+    // A. cache-like slot assigned an object literal (slot name taken from
+    // the assignment itself; the declaration may live outside the diff)
+    let assignLine = null;
+    let assignIndex = -1;
+    for (let i = 0; i < codeLines.length; i += 1) {
+      if (SLOT_ASSIGN_RE.test(codeLines[i].code)) {
+        assignLine = codeLines[i].line;
+        assignIndex = i;
+        break;
+      }
+    }
+    if (assignLine === null) continue;
+
+    // B. large-data locals (file contents / parsed structures)
+    const largeDataNames = [];
+    for (const { code } of codeLines) {
+      const m = LARGE_DATA_RE.exec(code);
+      if (m) largeDataNames.push(m[1]);
+    }
+    if (!largeDataNames.length) continue;
+
+    // C. a method in the object references a large-data local (closure capture)
+    let sawMethod = false;
+    let capturesLargeData = false;
+    for (let i = assignIndex + 1; i < codeLines.length; i += 1) {
+      const { code } = codeLines[i];
+      if (METHOD_SHORTHAND_RE.test(code)) sawMethod = true;
+      if (sawMethod && largeDataNames.some((name) => new RegExp(`\\b${name}\\b`).test(code))) {
+        capturesLargeData = true;
+        break;
+      }
+    }
+    if (!capturesLargeData) continue;
+
+    comments.push({ file: filePath, line: assignLine, kind: 'closure-scope-retention' });
+    if (comments.length >= MAX_CLOSURE_RETENTION_COMMENTS) return comments;
+  }
+  return comments;
+}
+
+/**
+ * Generate deterministic review comments from heuristics.
+ * These comments are used as a fallback when LLM is not available.
+ * @param {{diff: {files?: Array}, plan: {selected?: Array}}} options
+ */
+function buildHeuristicComments({ diff, plan }) {
+  const comments = [];
+
+  for (const { skillId, detect, skipIfSkill } of HEURISTIC_REGISTRY) {
+    if (!hasSkill(plan, skillId)) continue;
+    // skipIfSkill: 上位スキルが選択されている場合は重複実行を避ける
+    // （test-existence が選択されていれば coverage-gap の同一検出器は実行しない）。
+    if (skipIfSkill && hasSkill(plan, skipIfSkill)) continue;
+    for (const c of detect({ diff })) {
+      comments.push({ ...c, skillId });
+    }
+  }
+
+  return comments.slice(0, 8);
+}
+
+
+/***/ }),
+
+/***/ 2435:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   pQ: () => (/* binding */ callChatCompletion)
+/* harmony export */ });
+/* unused harmony exports LLM_MAX_ATTEMPTS, LLM_RETRY_BASE_MS, LLM_TIMEOUT_MS, LLM_MAX_BACKOFF_MS, isRetryableStatus, isRetryableNetworkError, computeBackoffMs */
+// Unified LLM call pipeline (#1338).
+//
+// Consolidates the two raw chat-completion implementations that had drifted
+// apart — review-engine.mjs (retry + Retry-After + timeout) and
+// openai-planner.mjs (timeout only, no retry) — into one module. The retry
+// policy helpers were moved verbatim from review-engine.mjs (originally
+// #1196-adjacent adoption from the Gemma concurrent demo) and are re-exported
+// there for backward compatibility.
+//
+// Scope note: reviewer-orchestrator.mjs and local-runner.mjs (named in the
+// original issue) already route all LLM access through generateReview(), so
+// they needed no changes. The multi-provider AIClientFactory (src/ai/
+// factory.mjs, used by skill-dispatcher) keeps its own provider-specific
+// retry layer and is out of scope here, as is the standalone
+// callOpenAICompatible in runners/node-api/src/index.ts (separate runner
+// package with its own build).
+
+const LLM_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const LLM_MAX_ATTEMPTS = 3; // 1 try + 2 retries
+const LLM_RETRY_BASE_MS = 500;
+const LLM_TIMEOUT_MS = 15000;
+// Cap Retry-After-driven waits so a pathological header (e.g. 3600s) cannot
+// stall the pipeline. Mirrors MAX_RETRY_DELAY_MS in src/ai/factory.mjs.
+const LLM_MAX_BACKOFF_MS = 30_000;
+
+/** Retryable HTTP statuses: rate-limit and transient server/gateway errors. */
+function isRetryableStatus(status) {
+  return LLM_RETRYABLE_STATUS.has(status);
+}
+
+/** Network-level errors worth retrying: timeouts, aborts, connection resets, DNS. */
+function isRetryableNetworkError(err) {
+  if (!err) return false;
+  if (err.name === 'TimeoutError' || err.name === 'AbortError') return true;
+  const msg = `${err.code ?? ''} ${err.message ?? ''}`;
+  return /fetch failed|network|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|terminated|aborted/i.test(
+    msg
+  );
+}
+
+/**
+ * Backoff before the next attempt (ms). Honors a `Retry-After` header (seconds)
+ * when present, else exponential: base * 2^(attempt-1).
+ * @param {number} attempt - 1-based attempt that just failed.
+ */
+function computeBackoffMs(
+  attempt,
+  { baseMs = LLM_RETRY_BASE_MS, retryAfterSec = null } = {}
+) {
+  // Guard before Number(): Number(null) and Number('') are 0, which would wrongly
+  // be treated as "Retry-After: 0s" when the header is simply absent.
+  if (retryAfterSec !== null && retryAfterSec !== undefined && retryAfterSec !== '') {
+    const ra = Number(retryAfterSec);
+    if (Number.isFinite(ra) && ra >= 0) return Math.min(Math.round(ra * 1000), LLM_MAX_BACKOFF_MS);
+  }
+  return Math.min(baseMs * 2 ** Math.max(0, attempt - 1), LLM_MAX_BACKOFF_MS);
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Call an OpenAI-compatible chat-completion endpoint with timeout and
+ * transient-failure retry. Returns the assistant message text ('' when the
+ * response has no content).
+ *
+ * Behavior is identical to the former review-engine.mjs `callOpenAI`;
+ * `timeoutMs` and `maxAttempts` are parameterized so the planner can keep its
+ * historical single-attempt behavior (`maxAttempts: 1`).
+ *
+ * @param {object} params
+ * @param {string} params.prompt          User message content.
+ * @param {string} params.systemMessage   System message content (caller resolves defaults).
+ * @param {string} params.apiKey
+ * @param {string} params.model
+ * @param {string} params.endpoint
+ * @param {number} [params.temperature]
+ * @param {number} [params.maxTokens]
+ * @param {number} [params.timeoutMs]     Per-attempt timeout (default 15000).
+ * @param {number} [params.maxAttempts]   Total attempts incl. first (default 3).
+ * @param {typeof fetch} [params.fetchImpl] Injectable transport for tests (#1357).
+ * @param {number} [params.baseMs]        Retry backoff base ms (injectable for tests).
+ * @returns {Promise<string>}
+ */
+async function callChatCompletion({
+  prompt,
+  systemMessage,
+  apiKey,
+  model,
+  endpoint,
+  temperature,
+  maxTokens,
+  timeoutMs = LLM_TIMEOUT_MS,
+  maxAttempts = LLM_MAX_ATTEMPTS,
+  fetchImpl = globalThis.fetch,
+  baseMs = LLM_RETRY_BASE_MS,
+}) {
+  const body = JSON.stringify({
+    model,
+    temperature,
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: systemMessage },
+      { role: 'user', content: prompt },
+    ],
+  });
+
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetchImpl(endpoint, {
+        method: 'POST',
+        signal: AbortSignal.timeout(timeoutMs), // fresh per attempt (one-shot)
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body,
+      });
+
+      // Body reads are inside the try so a mid-stream abort/disconnect is also
+      // treated as a retryable transient failure rather than escaping uncaught.
+      if (res.ok) {
+        const json = await res.json();
+        return json.choices?.[0]?.message?.content?.trim() ?? '';
+      }
+
+      const detail = await res.text();
+      if (attempt < maxAttempts && isRetryableStatus(res.status)) {
+        await sleep(
+          computeBackoffMs(attempt, { baseMs, retryAfterSec: res.headers?.get?.('retry-after') })
+        );
+        continue;
+      }
+      throw new Error(`OpenAI API error ${res.status}: ${detail}`);
+    } catch (err) {
+      // Network error, timeout, or body-read failure — retry transient cases.
+      // A non-retryable HTTP error (thrown above) has a non-network message, so
+      // isRetryableNetworkError returns false and it propagates immediately.
+      lastError = err;
+      if (attempt < maxAttempts && isRetryableNetworkError(err)) {
+        await sleep(computeBackoffMs(attempt, { baseMs }));
+        continue;
+      }
+      throw err;
+    }
+  }
+  // Not dead code: the loop always returns or throws when maxAttempts >= 1,
+  // but this guards the degenerate maxAttempts < 1 case (loop body never runs).
+  throw lastError ?? new Error('OpenAI API error: retries exhausted');
+}
+
+
+/***/ }),
+
+/***/ 570:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   K: () => (/* binding */ deriveLoopSignalFromArtifact),
+/* harmony export */   v: () => (/* binding */ deriveLoopSignalFromRunsDiff)
+/* harmony export */ });
+/**
+ * Loop-signal derivation (Epic #1171 item3).
+ *
+ * River Review emits two layers of loop signals:
+ *
+ * Layer 1 — single `river run` artifact:
+ *   NO_SIGNAL | REVISE_REQUIRED | CONVERGED | ESCALATE_HUMAN
+ *
+ * Layer 2 — `runs diff` (3+ runs, oscillation detectable):
+ *   adds STOP_OSCILLATED
+ *
+ * Layer 3 (STOP_MAX_ITERATIONS | STOP_POLICY_REQUIRED) is caller-synthesized.
+ * River Review deliberately does NOT emit those values.
+ *
+ * All functions are pure — no side effects, no AI calls, no file I/O.
+ */
+
+/** @typedef {'NO_SIGNAL' | 'REVISE_REQUIRED' | 'CONVERGED' | 'ESCALATE_HUMAN'} ArtifactSignal */
+/** @typedef {ArtifactSignal | 'STOP_OSCILLATED'} RunsDiffSignal */
+
+/**
+ * Derive the loop signal for a single review artifact (Layer 1).
+ *
+ * Rules (evaluated in order):
+ * 1. decision === 'human-review-required'  → ESCALATE_HUMAN
+ * 2. blocking findings (critical or major)  → REVISE_REQUIRED
+ * 3. no blocking findings + decision is auto-approve equivalent → CONVERGED
+ * 4. otherwise                              → NO_SIGNAL
+ *
+ * "auto-approve equivalent" covers 'auto-approve', 'approve', and 'approved'
+ * to be forward-compatible with any future verdict alias.
+ *
+ * @param {object} artifact  A Review Artifact (schema version "1")
+ * @returns {ArtifactSignal}
+ */
+function deriveLoopSignalFromArtifact(artifact) {
+  const decision = artifact?.decision;
+
+  if (decision === 'human-review-required') {
+    return 'ESCALATE_HUMAN';
+  }
+
+  const rawFindings = artifact?.findings;
+  const findings = Array.isArray(rawFindings) ? rawFindings : [];
+  const blockingCount = findings.filter(
+    (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
+  ).length;
+
+  if (blockingCount > 0) {
+    return 'REVISE_REQUIRED';
+  }
+
+  const AUTO_APPROVE = new Set(['auto-approve', 'approve', 'approved']);
+  if (decision !== undefined && AUTO_APPROVE.has(decision)) {
+    return 'CONVERGED';
+  }
+
+  return 'NO_SIGNAL';
+}
+
+/**
+ * Derive the loop signal for a `runs diff` result (Layer 2).
+ *
+ * When `diff.oscillated` is non-empty, oscillation takes priority and returns
+ * STOP_OSCILLATED regardless of finding severity — the fix loop is spinning
+ * and human triage is needed.
+ *
+ * Otherwise, derives from the latest run's artifact:
+ * 1. `latestArtifact` parameter (explicit, preferred for 2-run and multi-run CLI paths)
+ * 2. `diff.runs[last].artifact` or `diff.runs[last]` (embedded in diff object)
+ * Falls back to NO_SIGNAL when neither is available.
+ *
+ * @param {object} diff  Output of diffRunHistory / diffReviews
+ * @param {object|null} [latestArtifact]  Latest run's artifact (findings + decision).
+ *   Pass the latest run record directly when the diff object does not embed it.
+ * @returns {RunsDiffSignal}
+ */
+function deriveLoopSignalFromRunsDiff(diff, latestArtifact) {
+  if (Array.isArray(diff?.oscillated) && diff.oscillated.length > 0) {
+    return 'STOP_OSCILLATED';
+  }
+
+  // Prefer the explicitly passed latest artifact.
+  if (latestArtifact != null && typeof latestArtifact === 'object') {
+    return deriveLoopSignalFromArtifact(latestArtifact);
+  }
+
+  // Fall back to runs[] embedded in diff (for callers that populate it).
+  const runs = diff?.runs;
+  if (Array.isArray(runs) && runs.length > 0) {
+    const latest = runs[runs.length - 1];
+    const embedded = latest?.artifact ?? latest;
+    if (embedded && typeof embedded === 'object') {
+      return deriveLoopSignalFromArtifact(embedded);
+    }
+  }
+
+  return 'NO_SIGNAL';
+}
+
+
+/***/ }),
+
+/***/ 633:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   Er: () => (/* binding */ PLANNER_MODES),
+/* harmony export */   ZG: () => (/* binding */ PHASES),
+/* harmony export */   p$: () => (/* binding */ normalizePlannerMode)
+/* harmony export */ });
+const PLANNER_MODES = /** @type {const} */ (['off', 'order', 'prune']);
+
+const PHASES = /** @type {const} */ (['upstream', 'midstream', 'downstream']);
+
+function normalizePlannerMode(mode, { defaultMode = 'off' } = {}) {
+  const fallback = PLANNER_MODES.includes(defaultMode) ? defaultMode : 'off';
+  const normalized = (mode || '').toLowerCase();
+  if (PLANNER_MODES.includes(normalized)) return normalized;
+  return fallback;
+}
+
+
+/***/ }),
+
+/***/ 6759:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  l: () => (/* binding */ buildRepoContextSection),
+  o: () => (/* binding */ collectRepoContext)
+});
+
+// EXTERNAL MODULE: external "node:child_process"
+var external_node_child_process_ = __nccwpck_require__(1421);
+// EXTERNAL MODULE: external "node:util"
+var external_node_util_ = __nccwpck_require__(7975);
+// EXTERNAL MODULE: external "node:fs"
+var external_node_fs_ = __nccwpck_require__(3024);
+// EXTERNAL MODULE: external "node:path"
+var external_node_path_ = __nccwpck_require__(6760);
+// EXTERNAL MODULE: ./src/lib/secret-redactor.mjs
+var secret_redactor = __nccwpck_require__(9664);
+// EXTERNAL MODULE: ./src/lib/token-estimator.mjs
+var token_estimator = __nccwpck_require__(3159);
+;// CONCATENATED MODULE: ./src/lib/context-ranker.mjs
+// Context ranking for repo-wide review (#689 PR-B).
+//
+// Pure-function building blocks the upcoming PR-C will use to rank
+// candidate context entries (full files, tests, symbol usages, configs)
+// before they get assembled into the prompt under a token budget. This
+// PR ships the ranker functions and tests; pipeline integration is
+// PR-C scope.
+//
+// Design principles
+// - Every signal is a pure function of its arguments. The collector
+//   computes signals from disk / git in PR-C, then hands them off to
+//   scoreContextCandidate as plain values. This keeps the ranker
+//   testable without spinning up a temp filesystem.
+// - Each signal returns a number in [0, 1]. Callers feed weights through
+//   scoreContextCandidate; the weights themselves are 0..1 and the
+//   final score is the weighted average normalized to [0, 1].
+// - Signals that cannot be computed in PR-B (commit recency from git,
+//   skill input-context match, risk-map level) are NOT implemented here
+//   — they live on the caller side in PR-C and are passed in as a
+//   pre-computed score on the `signals` parameter to
+//   scoreContextCandidate. PR-B intentionally stays self-contained.
+
+
+
+// Default weights mirror the proposal in the #689 plan §3. Callers can
+// override per-signal via scoreContextCandidate(..., { weights: ... }).
+// Keys must match the user-facing schema in src/config/schema.mjs
+// (contextRankingSchema.weights) so `signals[k]` and `weights[k]` line
+// up when user config flows through scoreContextCandidate.
+const DEFAULT_WEIGHTS = Object.freeze({
+  pathProximity: 0.25,
+  symbolUsage: 0.2,
+  siblingTest: 0.15,
+  // Reserved for PR-C; PR-B does not compute these but the combiner
+  // accepts them as `signals.<name>` if the caller pre-computed them.
+  importGraph: 0.15,
+  commitRecency: 0.1,
+  riskMapWeight: 0.1,
+  skillInputContextHit: 0.05,
+});
+
+/**
+ * Path-proximity signal: how close `candidate` lives to `changed` in the
+ * directory tree, normalized so 1.0 means identical path and 0.0 means
+ * no shared dir prefix.
+ *
+ * @param {string} candidate relative repo path of the candidate file
+ * @param {string} changed relative repo path of the changed file
+ * @returns {number} 0..1
+ */
+function pathProximity(candidate, changed) {
+  if (typeof candidate !== 'string' || typeof changed !== 'string') return 0;
+  if (!candidate || !changed) return 0;
+  if (candidate === changed) return 1;
+
+  // Normalize to forward slashes so Windows-style paths score the same.
+  const a = candidate.replace(/\\/g, '/').split('/').filter(Boolean);
+  const b = changed.replace(/\\/g, '/').split('/').filter(Boolean);
+
+  let shared = 0;
+  const min = Math.min(a.length, b.length);
+  for (let i = 0; i < min; i += 1) {
+    if (a[i] === b[i]) shared += 1;
+    else break;
+  }
+  // Use the deeper of the two paths as the denominator. This avoids
+  // rewarding shallow paths (`src/x.ts` vs `src/y.ts`) the same as deep
+  // paths sharing the same prefix.
+  const max = Math.max(a.length, b.length, 1);
+  return Math.min(1, shared / max);
+}
+
+/**
+ * Symbol-usage signal (a.k.a. asymmetric symbol overlap): fraction of
+ * `candidateSymbols` that appear in `referenceSymbols`. Unlike a Jaccard
+ * index this is asymmetric — we care whether the candidate's exports
+ * are referenced anywhere in the known usage set, not whether the sets
+ * agree as a whole. The name matches contextRankingSchema.weights in
+ * src/config/schema.mjs so user config flows through unchanged.
+ *
+ * @param {string[]} candidateSymbols
+ * @param {string[]} referenceSymbols
+ * @returns {number} 0..1
+ */
+function symbolUsage(candidateSymbols, referenceSymbols) {
+  if (!Array.isArray(candidateSymbols) || candidateSymbols.length === 0) return 0;
+  if (!Array.isArray(referenceSymbols) || referenceSymbols.length === 0) return 0;
+  const refSet = new Set(referenceSymbols);
+  let hits = 0;
+  for (const s of candidateSymbols) {
+    if (refSet.has(s)) hits += 1;
+  }
+  return Math.min(1, hits / candidateSymbols.length);
+}
+
+/**
+ * Sibling-test signal (a.k.a. test affinity): did the candidate look
+ * like a test file paired with `changed`? Returns 1 when the candidate
+ * path matches one of the standard test path heuristics for `changed`,
+ * else 0. The name matches contextRankingSchema.weights in
+ * src/config/schema.mjs so user config flows through unchanged.
+ *
+ * @param {string} candidate
+ * @param {string} changed
+ * @returns {number} 0..1
+ */
+function siblingTest(candidate, changed) {
+  if (typeof candidate !== 'string' || typeof changed !== 'string') return 0;
+  if (!candidate || !changed) return 0;
+
+  const norm = (p) => p.replace(/\\/g, '/');
+  const cand = norm(candidate);
+  const orig = norm(changed);
+
+  // Mirror the heuristics in src/lib/repo-context.mjs:TEST_SUFFIXES so
+  // the ranker agrees with the collector. If those heuristics expand
+  // there, update this set.
+  const ext = '.test.$1';
+  const spec = '.spec.$1';
+  const candidates = [
+    orig.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, ext),
+    orig.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, spec),
+    orig.replace(/src\//, 'tests/').replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, ext),
+    (() => {
+      const base = path.posix.basename(orig);
+      const dir = path.posix.dirname(orig);
+      return path.posix.join(dir, '__tests__', base.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, ext));
+    })(),
+  ];
+  return candidates.includes(cand) ? 1 : 0;
+}
+
+/**
+ * Combine signals into a final ranking score.
+ *
+ * Caller passes a {signals} object with per-signal scores in [0, 1].
+ * Missing signals are treated as 0 so the function is total. The final
+ * score is the dot product of signals and weights divided by the sum of
+ * the weights actually used (so omitting commitRecency does not
+ * artificially shrink the score).
+ *
+ * @param {object} args
+ * @param {object} args.signals per-signal scores in [0, 1]
+ * @param {object} [args.weights] override weights; defaults to DEFAULT_WEIGHTS
+ * @returns {number} 0..1
+ */
+function scoreContextCandidate({ signals = {}, weights = DEFAULT_WEIGHTS } = {}) {
+  let dot = 0;
+  let usedWeight = 0;
+  for (const [k, w] of Object.entries(weights)) {
+    if (typeof w !== 'number' || w <= 0) continue;
+    const raw = signals[k];
+    if (typeof raw !== 'number') continue;
+    const clamped = Math.max(0, Math.min(1, raw));
+    dot += w * clamped;
+    usedWeight += w;
+  }
+  if (usedWeight === 0) return 0;
+  return Math.max(0, Math.min(1, dot / usedWeight));
+}
+
+;// CONCATENATED MODULE: ./src/lib/context-presets.mjs
+// Context preset budgets for collectRepoContext (#689 PR-D).
+//
+// reviewMode is a friendly knob that picks a preset budget so users do
+// not have to think in token counts. When the user sets
+// config.context.reviewMode but omits config.context.budget, the
+// collector applies the preset below; an explicit `budget: { ... }`
+// always wins.
+//
+// Per-section caps are deliberately conservative so the legacy char
+// budget is also respected automatically (collectRepoContext uses
+// Math.min(SECTION_CAPS, perSectionCap, charBudget, tokenBudget)).
+
+const PRESETS = Object.freeze({
+  // tiny: short prompts, model with a tight context window, or a CI
+  // regression run that wants the absolute minimum context.
+  tiny: Object.freeze({
+    maxTokens: 1024,
+    perSectionCaps: Object.freeze({
+      fullFile: 1500,
+      tests: 1000,
+      usages: 800,
+      config: 300,
+    }),
+  }),
+  // medium: default working budget — good for typical PRs on
+  // gpt-4o-mini / sonnet-class models.
+  medium: Object.freeze({
+    maxTokens: 4000,
+    perSectionCaps: Object.freeze({
+      fullFile: 3000,
+      tests: 2000,
+      usages: 1500,
+      config: 500,
+    }),
+  }),
+  // large: roomy budget for big-model deep dives. Stops shy of the
+  // contextBudgetSchema upper bound (64k) so callers still have head
+  // room for the diff and the system prompt itself.
+  large: Object.freeze({
+    maxTokens: 16000,
+    perSectionCaps: Object.freeze({
+      fullFile: 8000,
+      tests: 4000,
+      usages: 3000,
+      config: 1000,
+    }),
+  }),
+});
+
+/**
+ * Look up the preset for a reviewMode value. Unknown / falsy values
+ * return null so callers fall back to their existing defaults.
+ *
+ * @param {('tiny'|'medium'|'large'|null|undefined)} reviewMode
+ * @returns {{ maxTokens: number, perSectionCaps: object } | null}
+ */
+function presetForReviewMode(reviewMode) {
+  if (!reviewMode) return null;
+  return PRESETS[reviewMode] ?? null;
+}
+
+/**
+ * Resolve the effective budget given a `config.context` payload. The
+ * resolution order is:
+ *   1. explicit `budget` (always wins)
+ *   2. preset matching `reviewMode`
+ *   3. null (collector uses its built-in defaults)
+ *
+ * @param {object} [contextConfig]
+ * @returns {{ maxTokens?: number, maxChars?: number, perSectionCaps?: object } | null}
+ */
+function resolveContextBudget(contextConfig) {
+  if (!contextConfig) return null;
+  if (contextConfig.budget) return contextConfig.budget;
+  return presetForReviewMode(contextConfig.reviewMode);
+}
+
+// Exported for tests.
+const _PRESETS = (/* unused pure expression or super */ null && (PRESETS));
+
+;// CONCATENATED MODULE: ./src/lib/repo-context.mjs
+/**
+ * Repo-wide context collector for River Review.
+ * Gathers full file text, corresponding tests, symbol usages, and config
+ * snippets relevant to the changed files, within a configurable token budget.
+ */
+
+
+
+
+
+
+
+
+
+
+
+const execFileAsync = (0,external_node_util_.promisify)(external_node_child_process_.execFile);
+
+/** Maximum total characters of repo context injected into the prompt. */
+const DEFAULT_MAX_CHARS = 8000;
+
+/** Per-section character caps (applied before the global budget). */
+const SECTION_CAPS = {
+  fullFile: 3000,
+  tests: 2000,
+  usages: 1500,
+  config: 500,
+};
+
+/** Test file path heuristics. */
+const TEST_SUFFIXES = [
+  (f) => f.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '.test.$1'),
+  (f) => f.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '.spec.$1'),
+  (f) => f.replace(/src\//, 'tests/').replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '.test.$1'),
+  (f) => {
+    const base = external_node_path_.basename(f);
+    const dir = external_node_path_.dirname(f);
+    return external_node_path_.join(dir, '__tests__', base.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '.test.$1'));
+  },
+];
+
+/** Config files to include a snippet of. */
+const CONFIG_GLOBS = [
+  'tsconfig.json',
+  'package.json',
+  'next.config.*',
+  '.eslintrc*',
+  'vite.config.*',
+];
+
+/**
+ * Collect repo-wide context relevant to the changed files.
+ *
+ * @param {object} opts
+ * @param {string[]} opts.changedFiles - Relative paths of changed files
+ * @param {string} opts.repoRoot - Absolute path to the repository root
+ * @param {number} [opts.maxChars] - Total character budget (default 8000)
+ * @param {object} [opts.security] - `config.security` block (#692). When omitted,
+ *   redaction defaults are used and `shouldExcludeForContext` runs against
+ *   `DEFAULT_DENY_GLOBS` only.
+ * @returns {Promise<RepoContext>}
+ */
+async function collectRepoContext({
+  changedFiles,
+  repoRoot,
+  maxChars = DEFAULT_MAX_CHARS,
+  security,
+  context: contextConfig,
+}) {
+  const sections = [];
+
+  // #689 PR-C: optional token budget on top of the legacy char budget.
+  // When `config.context.budget.maxTokens` is set, we also gate by an
+  // estimated token cost so callers can think in tokens. The char
+  // budget remains authoritative for backward compat — both must be
+  // satisfied for a candidate to land. estimateTokens is approximate
+  // (ASCII chars/4, CJK chars/2 in #689 PR-A) so callers should treat
+  // the result as best-effort, not a hard ceiling.
+  // PR-D (#689): if the user picks a reviewMode without an explicit
+  // budget, resolve the preset; the explicit `budget: { ... }` always
+  // wins. resolveContextBudget returns null when both are absent.
+  const budgetCfg = resolveContextBudget(contextConfig);
+  const maxTokensCfg = Number.isFinite(budgetCfg?.maxTokens) ? budgetCfg.maxTokens : null;
+  let tokenBudget = maxTokensCfg;
+  const billTokens = (text) => {
+    if (tokenBudget == null || !text) return;
+    tokenBudget -= (0,token_estimator/* estimateTokens */.bP)(text);
+  };
+  const tokenBudgetExhausted = () => tokenBudget != null && tokenBudget <= 0;
+
+  // #689 PR-C: optional ranking. When `config.context.ranking.enabled`
+  // is true (and changedFiles has more than one entry), score each
+  // candidate against the rest of the change set and process the most
+  // relevant ones first. PR-B (#714) shipped the pure scoring
+  // primitives; here we wire the simplest signal — pathProximity — and
+  // PR-D will layer in commit recency / risk-map weights.
+  const rankingCfg = contextConfig?.ranking;
+  const rankingEnabled = rankingCfg?.enabled === true;
+  const weights = rankingCfg?.weights ?? DEFAULT_WEIGHTS;
+  const rankCandidates = (paths) => {
+    if (!rankingEnabled || paths.length <= 1)
+      return paths.map((p, i) => ({ path: p, score: 1, originalIndex: i }));
+    return paths
+      .map((p, i) => {
+        // Proximity to the most recently-changed file in the set is a
+        // useful first-order signal. The collector picks the highest
+        // score across the rest of the change set so the head of the
+        // list always has at least one strong neighbor.
+        const proximities = paths.filter((_, j) => j !== i).map((other) => pathProximity(p, other));
+        const proximity = proximities.length ? Math.max(...proximities) : 0;
+        const score = scoreContextCandidate({
+          signals: { pathProximity: proximity },
+          weights,
+        });
+        return { path: p, score, originalIndex: i };
+      })
+      .sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
+  };
+
+  let budget = maxChars;
+
+  // #692 PR-C: redaction & path-level deny.
+  // - shouldExcludeForContext runs BEFORE we even read a file so dotenv,
+  //   pem keys, lock files, build artifacts never enter process memory.
+  // - redactText runs AFTER reading so any secret that slipped past the
+  //   path filter (e.g. an inline AWS key in a regular .ts file) is masked
+  //   before being injected into the prompt.
+  // The tally feeds debug output via redactionHits below.
+  const redactCfg = security?.redact;
+  const redactionEnabled = redactCfg?.enabled !== false; // default true
+  const denyExtra = Array.isArray(redactCfg?.denyFiles) ? redactCfg.denyFiles : [];
+  const allowExtra = Array.isArray(redactCfg?.allowlist) ? redactCfg.allowlist : [];
+  const redactOpts = redactionEnabled
+    ? {
+        allowlist: allowExtra,
+        ...(redactCfg?.entropyThreshold != null
+          ? { entropyThreshold: redactCfg.entropyThreshold }
+          : {}),
+        ...(redactCfg?.categories?.highEntropy === false ? { highEntropy: false } : {}),
+      }
+    : null;
+  const totalHits = new Map();
+  const excludedPaths = [];
+  const bumpHits = (hits) => {
+    for (const { category, count } of hits) {
+      totalHits.set(category, (totalHits.get(category) || 0) + count);
+    }
+  };
+  const isPathExcluded = (rel) =>
+    (0,secret_redactor/* shouldExcludeForContext */.g)(rel, { extraDenyGlobs: denyExtra, allowlist: allowExtra });
+  const maybeRedact = (text) => {
+    if (!redactionEnabled || !text) return text;
+    const { text: redacted, hits } = (0,secret_redactor/* redactText */.Rd)(text, redactOpts);
+    if (hits.length) bumpHits(hits);
+    return redacted;
+  };
+
+  // 1. Full text of changed source files.
+  // PR-C (#689): rankCandidates orders the change set so the most
+  // relevant files (highest pathProximity to the rest of the change
+  // set) get processed first under the budget. Without ranking the
+  // legacy first-N-files behavior is preserved by handing back the
+  // candidates in their original order.
+  const rankedFullFile = rankCandidates(changedFiles.slice(0, 5));
+  const rankedScores = [];
+  for (const { path: rel, score } of rankedFullFile) {
+    if (budget <= 0 || tokenBudgetExhausted()) break;
+    if (isPathExcluded(rel)) {
+      excludedPaths.push({ path: rel, section: 'fullFile' });
+      continue;
+    }
+    const abs = external_node_path_.join(repoRoot, rel);
+    if (!isSourceFile(rel) || !fileExists(abs)) continue;
+    // Use the tighter of the char-budget cap and the token-budget cap
+    // (translated to chars) so we never read more than either budget
+    // allows. PR-A (#712) charsToTokens is the safe upper bound.
+    const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
+    const cap = Math.min(SECTION_CAPS.fullFile, budget, tokenChars);
+    if (cap <= 0) break;
+    const raw = readFileCapped(abs, cap);
+    if (raw) {
+      const content = maybeRedact(raw);
+      sections.push({ label: `Full file: ${rel}`, content, file: rel });
+      budget -= content.length;
+      billTokens(content);
+      rankedScores.push({ path: rel, score });
+    }
+  }
+
+  // 2. Corresponding test files
+  const testContents = [];
+  for (const rel of changedFiles.slice(0, 5)) {
+    if (budget <= 0 || tokenBudgetExhausted()) break;
+    for (const toTest of TEST_SUFFIXES) {
+      const candidate = toTest(rel);
+      if (isPathExcluded(candidate)) {
+        excludedPaths.push({ path: candidate, section: 'tests' });
+        break;
+      }
+      const abs = external_node_path_.join(repoRoot, candidate);
+      if (fileExists(abs)) {
+        const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
+        const cap = Math.min(SECTION_CAPS.tests, budget, tokenChars);
+        if (cap <= 0) break;
+        const raw = readFileCapped(abs, cap);
+        if (raw) {
+          const content = maybeRedact(raw);
+          // The pushed entry includes a `// candidate\n` header; bill the
+          // entire entry against the budget so the running total stays
+          // accurate when many test files are aggregated.
+          const entry = `// ${candidate}\n${content}`;
+          testContents.push(entry);
+          budget -= entry.length;
+          billTokens(entry);
+        }
+        break;
+      }
+    }
+  }
+  if (testContents.length) {
+    sections.push({
+      label: 'Corresponding test files',
+      content: testContents.join('\n\n'),
+      file: null,
+    });
+  }
+
+  // 3. Symbol usage search via ripgrep
+  if (budget > 0 && !tokenBudgetExhausted()) {
+    const exportedSymbols = extractExportedSymbols({ changedFiles, repoRoot });
+    if (exportedSymbols.length) {
+      const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
+      const usagesCap = Math.min(SECTION_CAPS.usages, budget, tokenChars);
+      if (usagesCap > 0) {
+        const usages = await searchSymbolUsages({
+          symbols: exportedSymbols.slice(0, 5),
+          repoRoot,
+          excludeFiles: changedFiles,
+          maxChars: usagesCap,
+        });
+        if (usages) {
+          const content = maybeRedact(usages);
+          sections.push({ label: 'Symbol usage references', content, file: null });
+          budget -= content.length;
+          billTokens(content);
+        }
+      }
+    }
+  }
+
+  // 4. Config snippets
+  if (budget > 0 && !tokenBudgetExhausted()) {
+    const configSnippets = [];
+    for (const glob of CONFIG_GLOBS) {
+      if (isPathExcluded(glob)) {
+        excludedPaths.push({ path: glob, section: 'config' });
+        continue;
+      }
+      const abs = external_node_path_.join(repoRoot, glob);
+      if (fileExists(abs)) {
+        const snippet = readFileCapped(
+          abs,
+          Math.min(SECTION_CAPS.config, budget - configSnippets.reduce((s, c) => s + c.length, 0))
+        );
+        if (snippet) configSnippets.push(`// ${glob}\n${maybeRedact(snippet)}`);
+      }
+    }
+    if (configSnippets.length) {
+      const content = configSnippets.join('\n\n');
+      sections.push({ label: 'Config files', content, file: null });
+      budget -= content.length;
+      billTokens(content);
+    }
+  }
+
+  const redactionHits = [...totalHits.entries()].map(([category, count]) => ({ category, count }));
+
+  return {
+    sections,
+    totalChars: maxChars - budget,
+    truncated: budget <= 0 || tokenBudgetExhausted(),
+    redactionHits,
+    excludedPaths,
+    // PR-C (#689): expose ranking + budget telemetry on the result so
+    // callers can surface it via reviewDebug. Raw context never appears
+    // here — only counts and per-path scores.
+    ranking: rankingEnabled
+      ? {
+          enabled: true,
+          scores: rankedScores,
+        }
+      : null,
+    tokenBudget:
+      maxTokensCfg != null
+        ? {
+            max: maxTokensCfg,
+            remaining: Math.max(0, tokenBudget),
+            exhausted: tokenBudgetExhausted(),
+          }
+        : null,
+  };
+}
+
+/**
+ * Build the "Repository Context" section string for prompt injection.
+ * Returns empty string when no context is available.
+ *
+ * @param {RepoContext|null|undefined} repoContext
+ * @returns {string}
+ */
+function buildRepoContextSection(repoContext) {
+  if (!repoContext?.sections?.length) return '';
+  const parts = ['\n### Repository Context\n'];
+  parts.push('差分の外側にある関連コードです。cross-file の影響分析に使用してください。\n');
+  for (const sec of repoContext.sections) {
+    parts.push(`#### ${sec.label}\n\`\`\`\n${sec.content}\n\`\`\`\n`);
+  }
+  if (repoContext.truncated) {
+    parts.push('> _Repository context was truncated to fit the prompt budget._\n');
+  }
+  return parts.join('\n');
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function isSourceFile(rel) {
+  return /\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte|py|rb|go|java|kt|swift)$/.test(rel);
+}
+
+function fileExists(abs) {
+  try {
+    return external_node_fs_.statSync(abs).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function readFileCapped(abs, cap) {
+  try {
+    const raw = external_node_fs_.readFileSync(abs, 'utf8');
+    if (!raw.trim()) return null;
+    return raw.length > cap ? raw.slice(0, cap) + '\n// ...[truncated]' : raw;
+  } catch {
+    return null;
+  }
+}
+
+function extractExportedSymbols({ changedFiles, repoRoot }) {
+  const symbols = [];
+  const exportRe = /^export\s+(?:(?:async\s+)?function|class|const|let|var)\s+(\w+)/gm;
+  for (const rel of changedFiles.slice(0, 5)) {
+    const abs = external_node_path_.join(repoRoot, rel);
+    if (!isSourceFile(rel) || !fileExists(abs)) continue;
+    try {
+      const text = external_node_fs_.readFileSync(abs, 'utf8');
+      for (const m of text.matchAll(exportRe)) {
+        if (m[1] && !symbols.includes(m[1])) symbols.push(m[1]);
+      }
+    } catch {
+      // skip
+    }
+  }
+  return symbols;
+}
+
+async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars }) {
+  if (!symbols.length) return null;
+  const pattern = symbols.map((s) => `\\b${s}\\b`).join('|');
+  const excludeArgs = excludeFiles.flatMap((f) => ['--iglob', `!${f}`]);
+  try {
+    const { stdout } = await execFileAsync(
+      'rg',
+      [
+        '--no-heading',
+        '--line-number',
+        '--max-count',
+        '3',
+        '--max-filesize',
+        '200K',
+        '--glob',
+        '*.{ts,tsx,js,jsx,mjs,cjs}',
+        ...excludeArgs,
+        '-e',
+        pattern,
+        '.',
+      ],
+      { cwd: repoRoot, timeout: 5000 }
+    );
+    const trimmed = stdout.slice(0, maxChars);
+    return trimmed || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @typedef {object} RepoContext
+ * @property {Array<{label: string, content: string, file: string|null}>} sections
+ * @property {number} totalChars
+ * @property {boolean} truncated
+ */
+
+
+/***/ }),
+
+/***/ 2010:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   G1: () => (/* binding */ generateReview)
+/* harmony export */ });
+/* unused harmony exports buildPrompt, parseLineComments */
+/* harmony import */ var _config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(759);
+/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(3926);
+/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(7563);
+/* harmony import */ var _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(5163);
+/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(1030);
+/* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(418);
+/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(958);
+/* harmony import */ var _review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(7817);
+/* harmony import */ var _repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(6759);
+/* harmony import */ var _secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(9664);
+/* harmony import */ var _llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(2435);
+
+
+
+
+
+
+
+
+
+
+
+
+const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
+const MAX_PROMPT_CHARS = 12000;
+const MAX_PROMPT_PREVIEW_CHARS = 2000;
+const NO_ISSUES_REGEX = /^NO_ISSUES/i;
+const LINE_COMMENT_REGEX = /^(.+?):(\d+):\s*(.+)$/;
+
+/**
+ * スキル名のサニタイズ: Markdown インジェクション対策
+ */
+function sanitizeSkillName(name) {
+  if (!name) return '';
+  return String(name).replace(/[\[\]`*_{}()#+\-.!|<>\n]/g, '');
+}
+
+function buildSystemMessage(language) {
+  return language === 'en'
+    ? 'You are River Review, an expert code review assistant. Respond in English. You excel at spotting risky changes and explaining them briefly.'
+    : 'You are River Review, an expert code review assistant. Respond in Japanese. You excel at spotting risky changes and explaining them briefly.';
+}
+
+function buildLanguageInstruction(language) {
+  return language === 'en'
+    ? '- Write the <message> in English.'
+    : '- <message>は日本語で記述すること。';
+}
+
+function buildSeverityInstruction(severity, language) {
+  const japanese = {
+    strict: '軽微な懸念も含めて網羅的に指摘する',
+    normal: '重要度と再現性のバランスを取り、主要なリスクを指摘する',
+    relaxed: '重大・致命的な問題に限定し、軽微な指摘は省く',
+  };
+  const english = {
+    strict: 'Capture even minor risks and style regressions',
+    normal: 'Balance breadth with impact; focus on notable risks',
+    relaxed: 'Limit findings to critical or high-impact issues; skip nits',
+  };
+  const map = language === 'en' ? english : japanese;
+  const label = language === 'en' ? 'Severity focus' : '厳格度';
+  return `- ${label} (${severity}): ${map[severity] ?? map.normal}`;
+}
+
+function buildAdditionalSection(instructions, language) {
+  if (!instructions?.length) return '';
+  const header = language === 'en' ? 'Additional instructions:' : '追加指示:';
+  const body = instructions.map((item) => `- ${item}`).join('\n');
+  return `\n${header}\n${body}\n`;
+}
+
+function resolveOpenAIConfig(options = {}, config = _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s) {
+  const provider = config.model?.provider ?? 'openai';
+  const modelName = options.model || ENV_DEFAULT_MODEL || config.model?.modelName;
+  return {
+    provider,
+    apiKey: options.apiKey || process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+    model: modelName,
+    endpoint:
+      options.endpoint ||
+      process.env.RIVER_OPENAI_BASE_URL ||
+      'https://api.openai.com/v1/chat/completions',
+    temperature: config.model?.temperature ?? 0,
+    maxTokens: config.model?.maxTokens ?? 600,
+  };
+}
+
+function buildSkillSummary(plan) {
+  if (!plan?.selected?.length) return 'No skills selected; provide general review notes.';
+  const summaries = plan.selected.map((skill) => (0,_runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__/* .summarizeSkill */ .P0)(skill));
+  const top = summaries.slice(0, 6);
+  const body = top
+    .map(
+      (s) =>
+        `- ${s.id}: ${s.name} [phase=${s.phase}, severity=${s.severity ?? 'unknown'}, modelHint=${s.modelHint}]`
+    )
+    .join('\n');
+  const truncated =
+    summaries.length > top.length ? `\n...and ${summaries.length - top.length} more skills.` : '';
+  return `${body}${truncated}`;
+}
+
+function buildFileSummary(files = []) {
+  if (!files.length) return 'No files changed';
+  return files.map((file) => `- ${file.path} (hunks: ${file.hunks.length || 1})`).join('\n');
+}
+
+function buildProjectRulesSection(rulesText) {
+  if (!rulesText) return '';
+  return `\n### Project-specific review rules\n\n以下は、このリポジトリ専用のレビューガイドラインです。必ず考慮してください。\n\n---\n${rulesText}\n---\n`;
+}
+
+const MAX_PR_BODY_CHARS = 4000;
+
+function buildPrDescriptionSection(prBody) {
+  if (typeof prBody !== 'string' || !prBody.trim()) return '';
+  const body =
+    prBody.length > MAX_PR_BODY_CHARS
+      ? `${prBody.slice(0, MAX_PR_BODY_CHARS)}\n...[truncated]`
+      : prBody;
+  return `\n### PR Description\n\n以下はこの変更の PR 本文です。差分そのものに加えて、PR 本文がレビュー可能な状態かを確認してください。\n\n- Why（変更理由）と What（変更内容）が書かれているか\n- 本文の説明が差分と一致しているか（説明にあるが差分に無い／差分にあるが説明に無い）\n- 影響範囲が書かれているか\n- テスト方針・確認方法が書かれているか\n- 関連 Issue / 仕様 / 設計へのリンクがあるか\n\nPR 本文に関する指摘は、対象を \`PR-DESCRIPTION:0\` として出力してください。\n\n---\n${body}\n---\n`;
+}
+
+// Opt-in (review.walkthrough). Asks the model to prepend a per-file walkthrough
+// to its output so reviewers see what changed, the risk, and a reading order.
+function buildWalkthroughSection(enabled) {
+  if (!enabled) return '';
+  return `\n### File Walkthrough (output request)\n\nFindings の前に "## File Walkthrough" セクションを出力してください。変更ファイルごとに 1 行で:\n- 何がどう変わったか（要約）\n- 変更リスク（high/medium/low）\n- 読むべき順番（依存や影響の大きい順）\nを示してください。差分に無いファイルは含めないでください。\n`;
+}
+
+// Opt-in (review.agentHandoff). Asks the model to append provider-agnostic
+// fix instructions another AI agent can act on. Distinct from per-finding
+// `suggestion` (a human hint); this is an executable instruction set.
+function buildHandoffSection(enabled) {
+  if (!enabled) return '';
+  return `\n### Agent Handoff (output request)\n\nFindings の後に "## Agent Handoff" セクションを出力してください。blocking な指摘を別の AI エージェントが修正できるよう、特定のツール名・CLI 名を含めずに以下を記述してください:\n- 修正の目的\n- 対象ファイル\n- 制約（壊してはいけない挙動・後方互換）\n- 実装手順\n- テスト手順\n- 完了条件\n`;
+}
+
+function buildADRContextSection(relatedADRs) {
+  if (!relatedADRs?.length) return '';
+  const lines = ['\n### Related ADRs/Specs\n'];
+  for (const adr of relatedADRs.slice(0, 5)) {
+    lines.push(`- ${adr.title} (${adr.path}) — ${adr.matchReason}`);
+  }
+  lines.push('\nこれらの設計文書との整合性を考慮してレビューしてください。\n');
+  return lines.join('\n');
+}
+
+function sanitizePath(p) {
+  return String(p)
+    .replace(/[\n\r]/g, '')
+    .slice(0, 200);
+}
+
+function buildRiskAssessmentSection(riskAssessment) {
+  if (!riskAssessment) return '';
+  const { escalatedFiles, humanReviewFiles } = riskAssessment;
+  if (!escalatedFiles?.length && !humanReviewFiles?.length) return '';
+  const lines = ['\n### Risk Assessment\n'];
+  if (humanReviewFiles?.length) {
+    lines.push('以下のファイルは人間によるレビューが必須です:');
+    for (const f of humanReviewFiles) lines.push('- ' + sanitizePath(f) + ': require_human_review');
+  }
+  if (escalatedFiles?.length) {
+    lines.push('以下のファイルはエスカレーション対象です:');
+    for (const f of escalatedFiles) lines.push('- ' + sanitizePath(f) + ': escalate');
+  }
+  lines.push('これらのファイルには特に注意してレビューしてください。\n');
+  return lines.join('\n');
+}
+
+function buildPrompt({
+  diffText,
+  diffFiles,
+  plan,
+  phase,
+  projectRules,
+  riskAssessment,
+  memoryContext,
+  relatedADRs,
+  reviewMode,
+  repoContext,
+  prBody,
+  maxChars = MAX_PROMPT_CHARS,
+  config = _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s,
+}) {
+  const effectiveConfig = (0,_config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .mergeConfig */ .R2)(_config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s, config ?? {});
+  const reviewConfig = effectiveConfig.review ?? _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s.review;
+  const language = reviewConfig.language ?? _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s.review.language;
+  const severity = reviewConfig.severity ?? _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s.review.severity;
+  const wantWalkthrough = reviewConfig.walkthrough ?? false;
+  const wantHandoff = reviewConfig.agentHandoff ?? false;
+  const truncated = diffText.length > maxChars;
+  const diffBody = truncated ? `${diffText.slice(0, maxChars)}\n...[truncated]` : diffText;
+  const depthConfig = (0,_review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__/* .getReviewDepthConfig */ .i3)(reviewMode ?? 'medium');
+  const prompt = `You are River Review, an AI code review agent.
+Phase: ${phase}
+
+Changed files:
+${buildFileSummary(diffFiles)}
+
+Relevant skills:
+${buildSkillSummary(plan)}
+
+${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${(0,_repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__/* .buildRepoContextSection */ .l)(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}Review the unified git diff below and produce concise findings.
+${buildLanguageInstruction(language)}
+- Output each finding on its own line using the format "<file>:<line>: <message>".
+- In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
+- Use Severity: blocker|warning|nit and Confidence: high|medium|low.
+- Focus on correctness, safety, and maintainability risks in the changed code.
+- Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
+- Limit to ${depthConfig.maxFindings} findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
+- Keep messages brief (<=200 characters).
+- ${depthConfig.focusHint}
+${buildSeverityInstruction(severity, language)}
+${buildAdditionalSection(reviewConfig.additionalInstructions, language)}
+Diff:
+${diffBody}`;
+  return { prompt, truncated, language, severity };
+}
+
+function parseLineComments(outputText) {
+  if (!outputText) return null;
+  const comments = [];
+  for (const rawLine of outputText.split('\n')) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (NO_ISSUES_REGEX.test(line)) return [];
+    const match = LINE_COMMENT_REGEX.exec(line);
+    if (match) {
+      comments.push({
+        file: match[1].trim(),
+        line: Number.parseInt(match[2], 10),
+        message: match[3].trim(),
+      });
+    }
+  }
+  return comments.length ? comments : null;
+}
+
+// Transient-failure retry policy and the chat-completion call moved to
+// llm-pipeline.mjs (#1338). The retry helpers are re-exported here so existing
+// importers (tests, downstream consumers) keep working unchanged.
+
+
+function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
+  const allSkills = plan?.selected ?? [];
+  // ヒューリスティック対応スキルは除外（ヒューリスティックで処理済み）
+  const skills = allSkills.filter((skill) => {
+    const skillId = skill.metadata?.id ?? skill.id;
+    return !_heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .HEURISTIC_SKILL_IDS */ .y2.includes(skillId);
+  });
+
+  const firstFile = diff.files?.find((f) => f?.path && f.path !== '/dev/null') ?? null;
+  if (!firstFile) {
+    return [
+      {
+        file: '(no-files)',
+        line: 1,
+        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
+          finding: 'レビュー対象ファイルが特定できない',
+          evidence: '差分ファイルが空',
+          impact: 'レビューの自動化ができない',
+          fix: '差分がある状態で再実行する',
+          severity: 'warning',
+          confidence: 'low',
+        }),
+      },
+    ];
+  }
+
+  const line =
+    firstFile.addedLines?.[0] ||
+    firstFile.hunks?.[0]?.newStart ||
+    1; /* default to first added line or hunk start to keep pointers stable */
+
+  // Build specific reason message
+  const evidenceBase = llmSkipReason
+    ? `LLM: ${llmSkipReason}`
+    : 'ヒューリスティック検出パターンに該当なし';
+
+  // スキルがない場合は1件のコメントを生成
+  if (skills.length === 0) {
+    return [
+      {
+        file: firstFile.path,
+        line,
+        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
+          finding: 'マッチするスキルがなく自動指摘を生成できなかった',
+          evidence: evidenceBase,
+          impact: '重要なリスクを見落とす可能性がある',
+          fix: 'このファイル種別に対応するスキルを追加するか、手動レビューを実施する',
+          severity: 'warning',
+          confidence: 'low',
+        }),
+      },
+    ];
+  }
+
+  // スキル単位でコメントを生成
+  return skills.map((skill) => {
+    const skillId = skill.metadata?.id ?? skill.id;
+    const rawSkillName = skill.metadata?.name ?? skillId;
+    const skillName = sanitizeSkillName(rawSkillName);
+    return {
+      file: firstFile.path,
+      line,
+      skillId,
+      message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
+        finding: `スキル「${skillName}」の観点で自動指摘を生成できなかった`,
+        evidence: evidenceBase,
+        impact: 'このスキルが検出する問題を見落とす可能性がある',
+        fix: `「${skillName}」の観点で手動レビューを実施する`,
+        severity: 'warning',
+        confidence: 'low',
+      }),
+    };
+  });
+}
+
+function normalizeHeuristicComments(rawComments) {
+  return rawComments.map((c) => {
+    // kind → プレゼンテーションは heuristic-review.mjs の単一レジストリ
+    // (HEURISTIC_KIND_PRESENTATIONS) から導出する。detector の追加はレジストリ
+    // 1 箇所で完結し、ここに case を足す必要はない。
+    const preset = _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .HEURISTIC_KIND_PRESENTATIONS */ .EF.get(c.kind);
+    if (!preset) {
+      return {
+        file: c.file,
+        line: c.line,
+        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
+          finding: `想定外のヒューリスティック（kind=${String(c.kind ?? 'unknown')}）`,
+          evidence: 'ヒューリスティック kind が未知',
+          impact: 'レビュー結果が不安定になる可能性がある',
+          fix: 'ヒューリスティック定義と出力の対応を見直す',
+          severity: 'warning',
+          confidence: 'low',
+        }),
+      };
+    }
+    return {
+      file: c.file,
+      line: c.line,
+      skillId: c.skillId,
+      message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)(preset),
+    };
+  });
+}
+
+function redactSecrets(text) {
+  if (!text) return text;
+  return String(text)
+    .replace(/\bAKIA[0-9A-Z]{16}\b/g, 'AKIA****************')
+    .replace(/\bghp_[A-Za-z0-9]{20,}\b/g, 'ghp_***REDACTED***')
+    .replace(/\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/g, 'sk_***REDACTED***')
+    .replace(/\bsk-[A-Za-z0-9]{16,}\b/g, 'sk-***REDACTED***')
+    .replace(/-----BEGIN [^-]* PRIVATE KEY-----/g, '-----BEGIN PRIVATE KEY-----')
+    .replace(/-----END [^-]* PRIVATE KEY-----/g, '-----END PRIVATE KEY-----');
+}
+
+/**
+ * Generate review comments using LLM when configured, otherwise fall back to deterministic hints.
+ */
+async function generateReview({
+  diff,
+  plan,
+  phase,
+  dryRun = false,
+  includeFallback = true,
+  model,
+  apiKey,
+  projectRules,
+  fileTypes,
+  relatedADRs,
+  riskAssessment,
+  reviewMode,
+  repoContext,
+  prBody,
+  maxPromptChars = MAX_PROMPT_CHARS,
+  config,
+}) {
+  const effectiveConfig = (0,_config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .mergeConfig */ .R2)(_config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s, config ?? {});
+  const promptInfo = buildPrompt({
+    diffText: diff.diffText,
+    diffFiles: diff.files,
+    plan,
+    phase,
+    projectRules,
+    relatedADRs,
+    riskAssessment,
+    reviewMode,
+    repoContext,
+    prBody,
+    maxChars: maxPromptChars,
+    config: effectiveConfig,
+  });
+  const openAIConfig = resolveOpenAIConfig({ model, apiKey }, effectiveConfig);
+  const language = promptInfo.language ?? effectiveConfig.review.language;
+
+  // #692 PR-D: defense-in-depth redaction at the artifact boundary.
+  // PR-C already redacts repo context before it reaches the prompt, but
+  // any other path (project rules with a pasted token, additional
+  // instructions, etc.) could still slip a secret in. Build a single
+  // redacted view of the prompt and use it everywhere the prompt would
+  // otherwise leave process memory (debug.promptPreview, returned
+  // `prompt`, downstream artifact writes). The LLM call still uses the
+  // original `promptInfo.prompt` because it must.
+  const safePrompt = (0,_secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__/* .redactText */ .Rd)(promptInfo.prompt, {
+    allowlist: effectiveConfig.security?.redact?.allowlist ?? [],
+    ...(effectiveConfig.security?.redact?.entropyThreshold != null
+      ? { entropyThreshold: effectiveConfig.security.redact.entropyThreshold }
+      : {}),
+    ...(effectiveConfig.security?.redact?.categories?.highEntropy === false
+      ? { highEntropy: false }
+      : {}),
+  }).text;
+
+  let comments = [];
+  const debug = {
+    promptTruncated: promptInfo.truncated,
+    promptPreview: safePrompt.slice(0, MAX_PROMPT_PREVIEW_CHARS),
+    llmModel: openAIConfig.model,
+    llmProvider: openAIConfig.provider,
+    reviewLanguage: language,
+    reviewSeverity: promptInfo.severity,
+    repoContext: repoContext
+      ? {
+          sections: repoContext.sections.map((s) => ({
+            label: s.label,
+            chars: s.content.length,
+            file: s.file,
+          })),
+          totalChars: repoContext.totalChars,
+          truncated: repoContext.truncated,
+        }
+      : null,
+  };
+
+  const skipReason = dryRun
+    ? 'dry-run enabled'
+    : (0,_utils_mjs__WEBPACK_IMPORTED_MODULE_9__/* .isOfflineMode */ .hN)()
+      ? 'offline (rules-only) mode enabled'
+      : openAIConfig.provider !== 'openai'
+        ? `provider ${openAIConfig.provider} is not supported yet`
+        : openAIConfig.apiKey
+          ? null
+          : 'LLM API key (ANTHROPIC_API_KEY / OPENAI_API_KEY / GOOGLE_API_KEY) not set';
+
+  if (!skipReason) {
+    try {
+      const output = await (0,_llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__/* .callChatCompletion */ .pQ)({
+        prompt: promptInfo.prompt,
+        apiKey: openAIConfig.apiKey,
+        model: openAIConfig.model,
+        endpoint: openAIConfig.endpoint,
+        temperature: openAIConfig.temperature,
+        maxTokens: openAIConfig.maxTokens,
+        systemMessage: buildSystemMessage(language),
+      });
+      debug.rawLlmOutput = output;
+      const parsed = parseLineComments(output);
+      if (parsed !== null) {
+        const redacted = parsed.map((c) => ({ ...c, message: redactSecrets(c.message) }));
+        const checks = redacted.map((c) => (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFindingMessage */ .xv)(c.message));
+        const invalidCount = checks.filter((c) => !c.ok).length;
+        if (invalidCount === 0) {
+          comments = redacted;
+          debug.llmUsed = true;
+        } else {
+          debug.llmUsed = false;
+          debug.llmError = `LLM findings violate required format (invalidCount=${invalidCount}). Falling back.`;
+        }
+      } else {
+        debug.llmUsed = false;
+        debug.llmError = 'LLM output could not be parsed';
+      }
+    } catch (err) {
+      debug.llmUsed = false;
+      debug.llmError = err.message;
+    }
+  } else {
+    debug.llmUsed = false;
+    debug.llmSkipped = skipReason;
+  }
+
+  if (!comments.length) {
+    const heuristic = (0,_heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .buildHeuristicComments */ .zq)({ diff, plan });
+    debug.heuristicsUsed = true;
+    if (heuristic.length) {
+      comments = normalizeHeuristicComments(heuristic);
+      debug.heuristicsCount = heuristic.length;
+    } else {
+      const llmSkipReason = debug.llmSkipped || debug.llmError || null;
+      // If skipped due to missing API key, do not generate fallback warnings (user request)
+      const isMissingKey = llmSkipReason && llmSkipReason.includes('not set');
+
+      if (isMissingKey) {
+        comments = [];
+      } else {
+        comments = includeFallback ? buildFallbackComments(diff, plan, { llmSkipReason }) : [];
+      }
+      debug.heuristicsCount = 0;
+      debug.fallbackIncluded = includeFallback;
+    }
+  }
+
+  const formatChecks = comments.map((c) => ({
+    file: c.file,
+    line: c.line,
+    ...(0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFindingMessage */ .xv)(c.message),
+  }));
+  const invalidCount = formatChecks.filter((c) => !c.ok).length;
+  debug.findingFormat = invalidCount
+    ? { ok: false, invalidCount, samples: formatChecks.filter((c) => !c.ok).slice(0, 3) }
+    : { ok: true };
+
+  debug.fileClassification = fileTypes ?? null;
+
+  // Verifier pass: filter findings that fail quality checks
+  const { verifyFinding } = await __nccwpck_require__.e(/* import() */ 209).then(__nccwpck_require__.bind(__nccwpck_require__, 1209));
+  const verifierResults = comments.map((comment) => ({
+    comment,
+    verification: verifyFinding({
+      finding: comment,
+      diff: diff.diffText,
+      skill: plan?.selected?.[0] ?? {},
+      fileTypes,
+    }),
+  }));
+
+  const verified = verifierResults.filter((r) => r.verification.verified).map((r) => r.comment);
+  const rejected = verifierResults.filter((r) => !r.verification.verified);
+
+  debug.verifierRejected = rejected.map((r) => ({
+    file: r.comment.file,
+    line: r.comment.line,
+    reasons: r.verification.reasons,
+  }));
+  debug.verifierStats = {
+    total: comments.length,
+    verified: verified.length,
+    rejected: rejected.length,
+  };
+
+  // Replace comments with verified-only set
+  comments = verified;
+
+  // Build structured findings from verified comments
+  const findings = comments.map((c, i) => {
+    const parsed = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .parseFindingMessage */ .UB)(c.message);
+    const severity = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeSeverity */ .lv)(parsed.severity);
+    const confidence =
+      parsed.confidence && ['high', 'medium', 'low'].includes(parsed.confidence)
+        ? parsed.confidence
+        : 'medium';
+    return {
+      id: `rr-${i + 1}`,
+      ruleId: c.skillId || 'unknown',
+      file: c.file,
+      lineStart: c.line ?? null,
+      lineEnd: c.line ?? null,
+      title: parsed.title || c.message.slice(0, 80),
+      message: c.message,
+      severity,
+      confidence,
+      status: /** @type {'open'} */ ('open'),
+      evidence: parsed.evidence,
+      suggestion: parsed.suggestion || null,
+    };
+  });
+
+  findings.sort((a, b) => {
+    const bA = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(a);
+    const bB = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(b);
+    return bB.composite - bA.composite;
+  });
+
+  const classified = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .classifyFindings */ .ZY)(findings, { reviewMode: reviewMode ?? 'medium' });
+
+  return {
+    comments,
+    findings,
+    classified,
+    // The returned prompt flows into local-runner result, artifacts, and
+    // dashboards. Use the redacted view so a leaked secret never leaves
+    // process memory through these paths. The LLM call above used the
+    // original promptInfo.prompt and is unaffected.
+    prompt: safePrompt,
+    promptTruncated: promptInfo.truncated,
+    llmModel: openAIConfig.model,
+    debug,
+  };
+}
+
+
+/***/ }),
+
+/***/ 7817:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   To: () => (/* binding */ DEPTH_TO_REVIEW_MODE),
+/* harmony export */   Xf: () => (/* binding */ determineReviewMode),
+/* harmony export */   c8: () => (/* binding */ resolveDepthToReviewMode),
+/* harmony export */   i3: () => (/* binding */ getReviewDepthConfig)
+/* harmony export */ });
+const REVIEW_MODES = new Set(['tiny', 'medium', 'large']);
+
+/**
+ * Agent-agnostic depth vocabulary mapped onto the existing review modes.
+ * Lets users force a depth without introducing a parallel sizing system.
+ */
+const DEPTH_TO_REVIEW_MODE = Object.freeze({
+  quick: 'tiny',
+  standard: 'medium',
+  thorough: 'large',
+});
+
+/**
+ * Resolve a user-facing depth name to a review mode, or null when unset.
+ *
+ * @param {string|null|undefined} depth
+ * @returns {'tiny' | 'medium' | 'large' | null}
+ */
+function resolveDepthToReviewMode(depth) {
+  if (!depth) return null;
+  return DEPTH_TO_REVIEW_MODE[depth] ?? null;
+}
+
+/**
+ * Determine review mode based on diff metadata.
+ *
+ * @param {{ fileCount: number, changedLines: number, hasMigrations: boolean, hasSchemas: boolean }} diffMeta
+ * @param {{ manualMode?: 'tiny' | 'medium' | 'large' | null }} [options]
+ * @returns {'tiny' | 'medium' | 'large'}
+ */
+function determineReviewMode(diffMeta, options = {}) {
+  // An explicit manual mode overrides diff-size auto-detection.
+  // Optional chaining guards against an explicit `null` options argument.
+  if (options?.manualMode && REVIEW_MODES.has(options.manualMode)) {
+    return options.manualMode;
+  }
+
+  const { fileCount, changedLines, hasMigrations, hasSchemas } = diffMeta;
+
+  let mode;
+  if (fileCount <= 3 && changedLines <= 100) {
+    mode = 'tiny';
+  } else if (fileCount > 20 || changedLines > 800) {
+    mode = 'large';
+  } else {
+    mode = 'medium';
+  }
+
+  if (hasMigrations || hasSchemas) {
+    if (mode === 'tiny') mode = 'medium';
+    else if (mode === 'medium') mode = 'large';
+  }
+
+  return mode;
+}
+
+/**
+ * Get review depth configuration for the given mode.
+ *
+ * @param {'tiny' | 'medium' | 'large'} reviewMode
+ * @returns {{ maxFindings: number, focusHint: string }}
+ */
+function getReviewDepthConfig(reviewMode) {
+  const configs = {
+    tiny: {
+      maxFindings: 3,
+      focusHint: 'This is a small PR. Focus on the most critical issues only.',
+    },
+    medium: { maxFindings: 8, focusHint: 'Provide a balanced review covering important issues.' },
+    large: {
+      maxFindings: 15,
+      focusHint: 'This is a large PR. Prioritize high-severity issues over minor style concerns.',
+    },
+  };
+  return configs[reviewMode] ?? configs.medium;
+}
+
+
+/***/ }),
+
+/***/ 2374:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  _Z: () => (/* binding */ RiskMapError),
+  lm: () => (/* binding */ evaluateRisk),
+  loadRiskMap: () => (/* binding */ loadRiskMap)
+});
+
+// UNUSED EXPORTS: aggregateRiskLevel
+
+// EXTERNAL MODULE: external "node:fs/promises"
+var promises_ = __nccwpck_require__(1455);
+// EXTERNAL MODULE: external "node:path"
+var external_node_path_ = __nccwpck_require__(6760);
+// EXTERNAL MODULE: ../../../node_modules/js-yaml/dist/js-yaml.mjs
+var js_yaml = __nccwpck_require__(1813);
+// EXTERNAL MODULE: ../../../node_modules/minimatch/dist/esm/index.js + 7 modules
+var esm = __nccwpck_require__(9061);
+// EXTERNAL MODULE: ../../../node_modules/zod/v4/classic/schemas.js + 16 modules
+var schemas = __nccwpck_require__(3460);
+;// CONCATENATED MODULE: ./src/config/risk-map-schema.mjs
+
+
+const RiskActionSchema = schemas/* enum */.k5(['comment_only', 'escalate', 'require_human_review']);
+
+const RiskRuleSchema = schemas/* object */.Ik({
+  pattern: schemas/* string */.Yj().min(1),
+  action: RiskActionSchema,
+  reason: schemas/* string */.Yj().optional(),
+});
+
+const RiskMapSchema = schemas/* object */.Ik({
+  version: schemas/* string */.Yj().default('1'),
+  rules: schemas/* array */.YO(RiskRuleSchema).min(1),
+  defaults: schemas/* object */.Ik({
+      action: RiskActionSchema.default('comment_only'),
+    })
+    .default({ action: 'comment_only' }),
+});
+
+;// CONCATENATED MODULE: ./src/lib/risk-map.mjs
+
+
+
+
+
+
+const DEFAULT_RISK_MAP_PATH = external_node_path_.join('.river', 'risk-map.yaml');
+
+class RiskMapError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'RiskMapError';
+  }
+}
+
+/**
+ * Load a risk map from .river/risk-map.yaml (or a custom path).
+ * Missing files are treated as "no risk map" without error.
+ * @param {string} repoRoot
+ * @param {{ riskMapPath?: string }} [options]
+ * @returns {Promise<import('../../schemas/risk-map.schema.json') | null>}
+ */
+async function loadRiskMap(repoRoot, options = {}) {
+  const repoRootAbs = external_node_path_.resolve(repoRoot);
+  const relativePath = options.riskMapPath ?? DEFAULT_RISK_MAP_PATH;
+  const fullPath = external_node_path_.resolve(repoRootAbs, relativePath);
+
+  if (!fullPath.startsWith(repoRootAbs + external_node_path_.sep) && fullPath !== repoRootAbs) {
+    throw new RiskMapError(`Risk map path is outside of the repository: ${relativePath}`);
+  }
+
+  let raw;
+  try {
+    raw = await promises_.readFile(fullPath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return null;
+    }
+    throw new RiskMapError(`Failed to read risk map at ${fullPath}: ${error.message}`);
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  let parsed;
+  try {
+    parsed = js_yaml/* load */.Hh(trimmed);
+  } catch (error) {
+    throw new RiskMapError(`Failed to parse risk map YAML: ${error.message}`);
+  }
+
+  const result = RiskMapSchema.safeParse(parsed);
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+    throw new RiskMapError(`Invalid risk map schema: ${issues}`);
+  }
+
+  return result.data;
+}
+
+const ACTION_PRIORITY = {
+  comment_only: 0,
+  escalate: 1,
+  require_human_review: 2,
+};
+
+/**
+ * Evaluate risk for a list of changed files against a risk map.
+ * First matching rule wins per file.
+ * @param {object} riskMap - Parsed risk map config
+ * @param {string[]} filePaths - List of changed file paths
+ * @returns {{ fileRisks: Array<{ file: string, action: string, rule?: object }>, aggregateAction: string, escalatedFiles: string[], humanReviewFiles: string[] }}
+ */
+function evaluateRisk(riskMap, filePaths) {
+  if (!riskMap || !filePaths?.length) {
+    return {
+      fileRisks: [],
+      aggregateAction: riskMap?.defaults?.action ?? 'comment_only',
+      escalatedFiles: [],
+      humanReviewFiles: [],
+    };
+  }
+
+  const defaultAction = riskMap.defaults?.action ?? 'comment_only';
+  const fileRisks = [];
+
+  for (const file of filePaths) {
+    let matched = false;
+    for (const rule of riskMap.rules) {
+      if ((0,esm/* minimatch */.xF)(file, rule.pattern, { dot: true })) {
+        fileRisks.push({
+          file,
+          action: rule.action,
+          rule: { pattern: rule.pattern, reason: rule.reason },
+        });
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      fileRisks.push({ file, action: defaultAction });
+    }
+  }
+
+  const escalatedFiles = fileRisks.filter((r) => r.action === 'escalate').map((r) => r.file);
+  const humanReviewFiles = fileRisks
+    .filter((r) => r.action === 'require_human_review')
+    .map((r) => r.file);
+  const aggregateAction = aggregateRiskLevel(fileRisks, defaultAction);
+
+  return { fileRisks, aggregateAction, escalatedFiles, humanReviewFiles };
+}
+
+/**
+ * Aggregate to the highest risk action across all file risks.
+ * @param {Array<{ action: string }>} fileRisks
+ * @param {string} [fallback='comment_only']
+ * @returns {string}
+ */
+function aggregateRiskLevel(fileRisks, fallback = 'comment_only') {
+  if (!fileRisks?.length) return fallback;
+
+  let maxPriority = -1;
+  let maxAction = fallback;
+  for (const { action } of fileRisks) {
+    const priority = ACTION_PRIORITY[action] ?? 0;
+    if (priority > maxPriority) {
+      maxPriority = priority;
+      maxAction = action;
+    }
+  }
+  return maxAction;
+}
+
+
+/***/ }),
+
+/***/ 20:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   D4: () => (/* binding */ appendEntry),
+/* harmony export */   ab: () => (/* binding */ loadMemory),
+/* harmony export */   qU: () => (/* binding */ queryMemory)
+/* harmony export */ });
+/* unused harmony exports supersede, expireEntries */
+/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3024);
+/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
+
+
+
+/**
+ * Load the Riverbed Memory index from disk.
+ * Returns empty structure if file doesn't exist (stateless fallback).
+ *
+ * @param {string} indexPath - Path to the index.json file
+ * @returns {{ entries: object[], version: string }}
+ */
+function loadMemory(indexPath) {
+  try {
+    const raw = node_fs__WEBPACK_IMPORTED_MODULE_0__.readFileSync(indexPath, 'utf-8');
+    return JSON.parse(raw);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return { entries: [], version: '1' };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Append a memory entry to the index.
+ * Creates the directory and file if they don't exist.
+ *
+ * @param {string} indexPath - Path to the index.json file
+ * @param {object} entry - Entry conforming to riverbed-entry.schema.json
+ */
+function appendEntry(indexPath, entry) {
+  const index = loadMemory(indexPath);
+
+  // Validate required fields
+  if (!entry.id || !entry.type || !entry.content || !entry.metadata) {
+    throw new Error('Entry must have id, type, content, and metadata fields');
+  }
+
+  // Prevent duplicate IDs
+  if (index.entries.some((e) => e.id === entry.id)) {
+    throw new Error(`Duplicate entry ID: ${entry.id}`);
+  }
+
+  index.entries.push(entry);
+
+  const dir = node_path__WEBPACK_IMPORTED_MODULE_1__.dirname(indexPath);
+  if (!node_fs__WEBPACK_IMPORTED_MODULE_0__.existsSync(dir)) {
+    node_fs__WEBPACK_IMPORTED_MODULE_0__.mkdirSync(dir, { recursive: true });
+  }
+  node_fs__WEBPACK_IMPORTED_MODULE_0__.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
+}
+
+/**
+ * Query memory entries by filter criteria.
+ * All filter fields are optional; entries must match ALL provided criteria.
+ * By default, only active entries are returned.
+ *
+ * @param {{ entries: object[] }} index - Loaded memory index
+ * @param {{ type?: string, tags?: string[], phase?: string, includeInactive?: boolean }} filter
+ * @returns {object[]}
+ */
+function queryMemory(index, { type, tags, phase, includeInactive = false } = {}) {
+  return index.entries.filter((entry) => {
+    if (!includeInactive) {
+      const status = entry.status ?? 'active';
+      if (status !== 'active') return false;
+    }
+    if (type && entry.type !== type) return false;
+    if (phase && entry.metadata?.phase !== phase) return false;
+    if (tags && tags.length > 0) {
+      const entryTags = entry.metadata?.tags ?? [];
+      if (!tags.every((t) => entryTags.includes(t))) return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Supersede an entry by marking it as superseded and pointing to the new entry.
+ *
+ * @param {string} indexPath - Path to the index.json file
+ * @param {string} oldId - ID of the entry to supersede
+ * @param {string} newId - ID of the superseding entry
+ */
+function supersede(indexPath, oldId, newId) {
+  const index = loadMemory(indexPath);
+  const entry = index.entries.find((e) => e.id === oldId);
+  if (!entry) {
+    throw new Error(`Entry not found: ${oldId}`);
+  }
+  entry.status = 'superseded';
+  entry.supersededBy = newId;
+  fs.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
+}
+
+/**
+ * Archive entries whose expiresAt timestamp has passed.
+ *
+ * @param {string} indexPath - Path to the index.json file
+ * @returns {number} Number of entries archived
+ */
+function expireEntries(indexPath) {
+  const index = loadMemory(indexPath);
+  const now = new Date();
+  let count = 0;
+  for (const entry of index.entries) {
+    if (
+      entry.expiresAt &&
+      new Date(entry.expiresAt) <= now &&
+      (entry.status ?? 'active') === 'active'
+    ) {
+      entry.status = 'archived';
+      count++;
+    }
+  }
+  if (count > 0) {
+    fs.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
+  }
+  return count;
+}
+
+
+/***/ }),
+
+/***/ 3926:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   _: () => (/* binding */ computeFindingBreakdown)
+/* harmony export */ });
+function computeEvidenceStrength(finding) {
+  const evidence = finding.evidence;
+  if (!Array.isArray(evidence) || evidence.length === 0) return 0.0;
+  const totalChars = evidence.reduce((sum, e) => sum + String(e ?? '').length, 0);
+  if (totalChars === 0) return 0.0;
+  if (totalChars <= 50) return 0.3;
+  if (totalChars <= 150) return 0.6;
+  return 1.0;
+}
+
+// Mirrors (and refines) verifier's actionability heuristic: a Fix/Suggestion
+// with >=10 chars of substance, in the message body or the suggestion field.
+// `\b` avoids matching Prefix:/Suffix:; `[\s\S]` lets the fix span newlines.
+const ACTIONABLE_RE = /\b(?:Fix|Suggestion):\s*([\s\S]{10,})/;
+
+/**
+ * How clear/actionable the fix is. Derived from the presence of a concrete
+ * Fix/Suggestion. Intentionally NOT folded into `composite` (it is an
+ * independent axis, surfaced for prioritization without double-counting).
+ *
+ * @param {object} finding
+ * @returns {number} 0.0 (no actionable fix) | 0.5 (brief) | 1.0 (substantive)
+ */
+function computeActionability(finding) {
+  const suggestion = String(finding?.suggestion ?? '').trim();
+  if (suggestion.length >= 10) return 1.0;
+  const message = String(finding?.message ?? '');
+  if (ACTIONABLE_RE.test(message)) return 1.0;
+  if (suggestion.length > 0) return 0.5;
+  return 0.0;
+}
+
+function computeReproducibility(finding) {
+  const confidence = finding.confidence ?? 'medium';
+  const severity = finding.severity ?? 'info';
+
+  let base;
+  if (confidence === 'high') base = 1.0;
+  else if (confidence === 'medium') base = 0.5;
+  else base = 0.2;
+
+  if (severity === 'critical') base = Math.min(1.0, base + 0.2);
+  if (severity === 'minor') base = Math.max(0.0, base - 0.1);
+
+  return base;
+}
+
+function computeBlastRadius(finding) {
+  const severity = finding.severity ?? 'info';
+  const ruleId = String(finding.ruleId ?? '');
+
+  let base;
+  if (severity === 'critical') base = 1.0;
+  else if (severity === 'major') base = 0.7;
+  else if (severity === 'minor') base = 0.3;
+  else base = 0.1;
+
+  if (ruleId.includes('security')) base = Math.min(1.0, base * 1.2);
+
+  return base;
+}
+
+function computeReviewerAgreement(finding) {
+  const confidence = finding.confidence ?? 'medium';
+  if (confidence === 'high') return 0.9;
+  if (confidence === 'medium') return 0.7;
+  return 0.4;
+}
+
+/**
+ * Compute a 4-axis score breakdown for a single finding.
+ *
+ * @param {{
+ *   evidence?: string[],
+ *   confidence?: 'high' | 'medium' | 'low',
+ *   severity?: string,
+ *   ruleId?: string,
+ * }} finding
+ * @returns {{
+ *   evidenceStrength: number,
+ *   reproducibility: number,
+ *   blastRadius: number,
+ *   reviewerAgreement: number,
+ *   actionability: number,
+ *   composite: number,
+ * }}
+ */
+function computeFindingBreakdown(finding) {
+  const evidenceStrength = computeEvidenceStrength(finding);
+  const reproducibility = computeReproducibility(finding);
+  const blastRadius = computeBlastRadius(finding);
+  const reviewerAgreement = computeReviewerAgreement(finding);
+  const actionability = computeActionability(finding);
+  // `composite` intentionally excludes `actionability` to avoid double-counting
+  // and to keep existing composite values stable; it is reported as a separate axis.
+  const composite =
+    evidenceStrength * 0.3 + reproducibility * 0.25 + blastRadius * 0.3 + reviewerAgreement * 0.15;
+  return {
+    evidenceStrength,
+    reproducibility,
+    blastRadius,
+    reviewerAgreement,
+    actionability,
+    composite,
+  };
+}
+
+
+/***/ }),
+
+/***/ 6899:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   Cq: () => (/* binding */ resolveVerdict),
+/* harmony export */   lS: () => (/* binding */ scoreReview),
+/* harmony export */   w8: () => (/* binding */ classifyAxis)
+/* harmony export */ });
+/* unused harmony exports computeAxisScores, computeOverallScore, countBySeverity, deriveVerdict */
+/* harmony import */ var _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5486);
+/* harmony import */ var _breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(3926);
+/**
+ * Review scoring engine.
+ *
+ * Deterministic (no AI): derives axis scores, overall score, and verdict from
+ * structured findings. Inspired by unilabo/site-management-system's scoring
+ * rubric, adapted to river-review's HITL-first posture.
+ *
+ * The output is always flagged `derived: true` to signal that this is a
+ * heuristic indicator, not an authoritative quality metric.
+ */
+
+
+
+
+/**
+ * Classify a finding into one of the 5 axes based on its ruleId.
+ * Falls back to `maintainability` when no pattern matches.
+ *
+ * @param {{ ruleId?: string, category?: string }} finding
+ * @returns {typeof AXES[number]}
+ */
+function classifyAxis(finding) {
+  if (finding?.category && _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AXES */ .gR.includes(finding.category)) {
+    return finding.category;
+  }
+  const ruleId = finding?.ruleId ?? '';
+  for (const { axis, pattern } of _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AXIS_PATTERNS */ .SZ) {
+    if (pattern.test(ruleId)) return axis;
+  }
+  return 'maintainability';
+}
+
+/**
+ * Compute axis scores from findings.
+ *
+ * @param {Array<{severity: string, ruleId?: string, category?: string}>} findings
+ * @param {object} [options]
+ * @param {object} [options.deductions] - Override default deduction table.
+ * @returns {Record<typeof AXES[number], number>}
+ */
+function computeAxisScores(findings, options = {}) {
+  const deductions = options.deductions ?? _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .DEFAULT_DEDUCTIONS */ .Fh;
+  const scores = Object.fromEntries(_rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AXES */ .gR.map((a) => [a, 100]));
+
+  for (const finding of findings ?? []) {
+    const axis = classifyAxis(finding);
+    const severity = normalizeSeverity(finding.severity);
+    const deduction = deductions[axis]?.[severity] ?? 0;
+    scores[axis] = Math.max(0, scores[axis] - deduction);
+  }
+
+  return scores;
+}
+
+/**
+ * Compute overall score as the mean of axis scores.
+ *
+ * @param {Record<typeof AXES[number], number>} axisScores
+ * @returns {number}
+ */
+function computeOverallScore(axisScores) {
+  const values = _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AXES */ .gR.map((a) => axisScores[a] ?? 100);
+  const sum = values.reduce((a, b) => a + b, 0);
+  return Math.round(sum / values.length);
+}
+
+/**
+ * Count findings per severity.
+ *
+ * @param {Array<{severity: string}>} findings
+ * @returns {{critical: number, major: number, minor: number, info: number}}
+ */
+function countBySeverity(findings) {
+  const counts = { critical: 0, major: 0, minor: 0, info: 0 };
+  for (const f of findings ?? []) {
+    const s = normalizeSeverity(f.severity);
+    counts[s]++;
+  }
+  return counts;
+}
+
+/**
+ * Derive verdict from overall score, axis scores, and severity counts.
+ *
+ * Return values:
+ * - `auto-approve`: Recommendation only; does NOT bypass HITL policy.
+ * - `human-review-recommended`: Notable findings but not blocking.
+ * - `human-review-required`: Critical findings or very low score.
+ * - `human-review-required` (via humanApprovalRequired): Policy-level override
+ *   (e.g. destructive commands, credentials, deployment). Returned before
+ *   score-based logic so axis scores are unaffected.
+ *
+ * @param {{overall: number, axes: Record<string, number>, counts: object, humanApprovalRequired?: boolean}} args
+ * @returns {'auto-approve' | 'human-review-recommended' | 'human-review-required'}
+ */
+function deriveVerdict({ overall, axes, counts, humanApprovalRequired = false }) {
+  if (humanApprovalRequired) {
+    return 'human-review-required';
+  }
+
+  const t = _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .VERDICT_THRESHOLDS */ .n;
+
+  if (counts.critical > t.humanReviewRecommended.maxCritical) {
+    return 'human-review-required';
+  }
+  if (overall < t.humanReviewRecommended.minOverall) {
+    return 'human-review-required';
+  }
+  if (
+    overall >= t.autoApprove.minOverall &&
+    (axes.security ?? 100) >= t.autoApprove.minSecurity &&
+    counts.critical <= t.autoApprove.maxCritical &&
+    counts.major <= t.autoApprove.maxMajor
+  ) {
+    return 'auto-approve';
+  }
+  return 'human-review-recommended';
+}
+
+/**
+ * Complete scoring entry point.
+ *
+ * @param {Array<object>} findings - Findings with at least `severity` and `ruleId`.
+ * @param {object} [options]
+ * @param {boolean} [options.humanApprovalRequired=false] - When true, forces verdict to
+ *   'human-review-required' regardless of score (e.g. plan-review-gate trigger).
+ * @returns {{
+ *   overall: number,
+ *   axes: Record<typeof AXES[number], number>,
+ *   verdict: string,
+ *   counts: {critical: number, major: number, minor: number, info: number},
+ *   findingBreakdowns: Array<{id: string, evidenceStrength: number, reproducibility: number, blastRadius: number, reviewerAgreement: number, composite: number}>,
+ *   derived: true,
+ * }}
+ */
+function scoreReview(findings, { humanApprovalRequired = false } = {}) {
+  const axes = computeAxisScores(findings);
+  const overall = computeOverallScore(axes);
+  const counts = countBySeverity(findings);
+  const verdict = deriveVerdict({ overall, axes, counts, humanApprovalRequired });
+  const findingBreakdowns = (findings ?? []).map((f) => ({
+    id: f.id,
+    ...(0,_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(f),
+  }));
+  return { overall, axes, verdict, counts, findingBreakdowns, derived: true };
+}
+
+/**
+ * Resolve the verdict a formatter should render (#1170 F3).
+ *
+ * The canonical verdict is finalized once on the artifact (`artifact.decision`),
+ * reflecting gate signals such as `humanApprovalRequired` that formatters do not
+ * receive. Prefer that canonical value over a formatter-local recomputation,
+ * which would silently drop those signals and let the verdict drift across the
+ * JSON / YAML / HTML / Markdown outputs. Fall back to the recomputed verdict
+ * when no canonical decision is present (the run / diff path never sets one).
+ *
+ * @param {unknown} canonicalDecision - `artifact.decision`, may be absent.
+ * @param {string} recomputedVerdict - `scoreReview(findings).verdict`.
+ * @returns {string} The verdict to display.
+ */
+function resolveVerdict(canonicalDecision, recomputedVerdict) {
+  if (typeof canonicalDecision === 'string' && canonicalDecision.length > 0) {
+    return canonicalDecision;
+  }
+  return recomputedVerdict;
+}
+
+/**
+ * Normalize severity to the canonical vocabulary used by the scoring engine.
+ * Accepts both the output schema values (critical/major/minor/info) and
+ * internal values (blocker/warning/nit) via fall-through.
+ *
+ * @param {string} severity
+ * @returns {'critical' | 'major' | 'minor' | 'info'}
+ */
+function normalizeSeverity(severity) {
+  const s = String(severity ?? '')
+    .toLowerCase()
+    .trim();
+  if (s === 'critical' || s === 'blocker') return 'critical';
+  if (s === 'major' || s === 'warning') return 'major';
+  if (s === 'minor' || s === 'nit') return 'minor';
+  return 'info';
+}
+
+
+/***/ }),
+
+/***/ 5486:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   Fh: () => (/* binding */ DEFAULT_DEDUCTIONS),
+/* harmony export */   SZ: () => (/* binding */ AXIS_PATTERNS),
+/* harmony export */   Sf: () => (/* binding */ AXIS_LABELS_JA),
+/* harmony export */   gR: () => (/* binding */ AXES),
+/* harmony export */   n: () => (/* binding */ VERDICT_THRESHOLDS)
+/* harmony export */ });
+/**
+ * Default scoring rubric for deterministic review scoring.
+ *
+ * Derived from unilabo/site-management-system's review-prompt.md, adapted to
+ * river-review's skill taxonomy. Scores are **derived from finding severity
+ * and axis**, not AI-generated. See docs/review/scoring-model.md for rationale.
+ */
+
+const AXES = /** @type {const} */ ([
+  'readability',
+  'extensibility',
+  'performance',
+  'security',
+  'maintainability',
+]);
+
+const AXIS_LABELS_JA = {
+  readability: '可読性',
+  extensibility: '拡張性',
+  performance: 'パフォーマンス',
+  security: 'セキュリティ',
+  maintainability: '保守性',
+};
+
+/**
+ * Regex patterns mapping ruleId to axis. First match wins.
+ * Falls back to `maintainability` when no pattern matches.
+ *
+ * Patterns use a leading `\b` to anchor at word boundary, but intentionally
+ * omit a trailing `\b` so that keyword prefixes match extended identifiers
+ * (e.g. `depend` matches `dependency`, `read` matches `readability`).
+ */
+const AXIS_PATTERNS = [
+  {
+    axis: 'security',
+    pattern: /\b(sec|security|auth|authz|authn|injection|xss|csrf|crypto)/i,
+  },
+  {
+    axis: 'performance',
+    pattern: /\b(perf|performance|n-?plus-?one|n1\b|slow|query|memory)/i,
+  },
+  {
+    axis: 'extensibility',
+    pattern: /\b(arch|architecture|depend|layer|fat|coupling|boundary)/i,
+  },
+  {
+    axis: 'readability',
+    pattern: /\b(read|readability|naming|complexity|style|clarity)/i,
+  },
+  {
+    axis: 'maintainability',
+    pattern: /\b(test|coverage|maint|maintainability|doc|comment)/i,
+  },
+];
+
+/**
+ * Default deduction table.
+ * Per-severity deductions per axis. Security is penalized more heavily.
+ */
+const DEFAULT_DEDUCTIONS = {
+  security: { critical: 50, major: 30, minor: 15, info: 5 },
+  readability: { critical: 30, major: 20, minor: 10, info: 3 },
+  extensibility: { critical: 30, major: 20, minor: 10, info: 3 },
+  performance: { critical: 30, major: 20, minor: 10, info: 3 },
+  maintainability: { critical: 30, major: 20, minor: 10, info: 3 },
+};
+
+/**
+ * Verdict thresholds (display only; HITL-respecting).
+ *
+ * `auto-approve` is a recommendation for automation (e.g. CI bot), NOT a policy
+ * to merge without human review. river-review remains HITL-first.
+ */
+const VERDICT_THRESHOLDS = {
+  autoApprove: {
+    minOverall: 90,
+    minSecurity: 95,
+    maxCritical: 0,
+    maxMajor: 0,
+  },
+  humanReviewRecommended: {
+    minOverall: 70,
+    maxCritical: 0,
+  },
+  // below humanReviewRecommended threshold -> humanReviewRequired
+};
+
+
+/***/ }),
+
+/***/ 9664:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   Rd: () => (/* binding */ redactText),
+/* harmony export */   g: () => (/* binding */ shouldExcludeForContext)
+/* harmony export */ });
+/* unused harmony exports DEFAULT_DENY_GLOBS, shannonEntropy */
+/* harmony import */ var minimatch__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9061);
+// Secret redaction for repo-wide review context (#692 PR-A).
+//
+// This module is **additive** and not yet wired into the review pipeline.
+// PR-C of #692 will hook it into src/lib/repo-context.mjs and
+// src/lib/local-runner.mjs so that prompt input and debug artifacts are
+// redacted before they leave process memory.
+//
+// Design notes (see Issue #692 plan):
+// - Replacements are *length-independent* (`<REDACTED:category>`) so that
+//   suppression fingerprints stay stable when redaction is toggled on/off
+//   (interaction with #687 PR-B applySuppressions).
+// - High-entropy detection is opt-in by config and runs LAST so that named
+//   categories take priority and avoid double-counting.
+// - Allowlist substrings (example, dummy, placeholder, missing, xxxxx)
+//   suppress redaction on the surrounding token to protect documentation
+//   examples and obvious test fixtures from being mangled.
+// - DEFAULT_DENY_GLOBS is exported separately so that path-level exclusion
+//   can run BEFORE redaction (avoids reading .env / *.pem files at all).
+
+
+
+/**
+ * Path globs that must be excluded from repo-wide context regardless of
+ * user config. Lock files and build artifacts are also denied because they
+ * carry no review value but inflate the budget.
+ */
+const DEFAULT_DENY_GLOBS = Object.freeze([
+  '**/.env',
+  '**/.env.*',
+  '**/.envrc',
+  '**/secrets.*',
+  '**/credentials.*',
+  '**/credentials/**',
+  '**/*.pem',
+  '**/*.key',
+  '**/*.p12',
+  '**/*.pfx',
+  '**/*.jks',
+  '**/*.keystore',
+  '**/id_rsa',
+  '**/id_dsa',
+  '**/id_ecdsa',
+  '**/id_ed25519',
+  '**/*.lock',
+  '**/package-lock.json',
+  '**/pnpm-lock.yaml',
+  '**/yarn.lock',
+  '**/composer.lock',
+  '**/Cargo.lock',
+  '**/poetry.lock',
+  '**/Gemfile.lock',
+  '**/dist/**',
+  '**/build/**',
+  '**/out/**',
+  '**/.next/**',
+  '**/coverage/**',
+  '**/*.min.js',
+  '**/*.min.css',
+  '**/*.map',
+]);
+
+/**
+ * Substrings that, when found near a candidate match, mark the match as a
+ * documentation example or test placeholder rather than a real secret.
+ *
+ * `xxxxx` was rejected as too aggressive: legitimate hex / base64 tokens
+ * frequently contain runs of repeated characters and would be incorrectly
+ * skipped. The high-entropy fallback already protects monotonic strings
+ * (entropy below threshold) so the placeholder list is intentionally short.
+ */
+const ALLOWLIST_TOKENS = Object.freeze([
+  'example',
+  'dummy',
+  'placeholder',
+  '<missing>',
+  // Common substrings used in test fixtures so they don't get redacted
+  // when test files are included in repo-wide context scans (#808 follow-up).
+  'test-key',
+  'fake-key',
+]);
+
+const ALLOWLIST_RE = new RegExp(
+  ALLOWLIST_TOKENS.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+  'i'
+);
+
+const REPLACEMENT = (category) => `<REDACTED:${category}>`;
+
+/**
+ * Pattern categories. Order matters — more specific / longer alternatives
+ * come first so they win over weaker patterns and don't get partly eaten by
+ * the high-entropy fallback.
+ *
+ * Each entry: { id, regex, replacement?, requireValueShape? }.
+ */
+const PATTERNS = [
+  // GitHub
+  { id: 'githubToken', regex: /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\b/g },
+  { id: 'githubToken', regex: /\bgithub_pat_[A-Za-z0-9_]{82}\b/g },
+  // OpenAI / Anthropic / Google
+  { id: 'openaiKey', regex: /\bsk-proj-[A-Za-z0-9_-]{40,}\b/g },
+  { id: 'anthropicKey', regex: /\bsk-ant-[A-Za-z0-9_-]{40,}\b/g },
+  { id: 'openaiKey', regex: /\bsk-[A-Za-z0-9]{20,}\b/g },
+  { id: 'googleApiKey', regex: /\bAIza[0-9A-Za-z_-]{35}\b/g },
+  // AWS
+  { id: 'awsAccessKey', regex: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/g },
+  // Long-form private keys (multi-line block)
+  {
+    id: 'privateKey',
+    regex:
+      /-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED |PGP |)PRIVATE KEY-----[\s\S]*?-----END[^-]*PRIVATE KEY-----/g,
+  },
+  // Bearer tokens — capture the surrounding "Bearer " keyword to limit FP
+  { id: 'bearerToken', regex: /\b[Bb]earer\s+[A-Za-z0-9._~+/=-]{20,}\b/g },
+  // Database connection strings
+  {
+    id: 'databaseUrl',
+    regex: /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|amqp|mssql):\/\/[^\s'"`<>]+/g,
+  },
+  // Webhook URLs (Slack / Discord)
+  { id: 'webhookUrl', regex: /https:\/\/hooks\.slack\.com\/[A-Z0-9/]+/g },
+  {
+    id: 'webhookUrl',
+    regex: /https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+/g,
+  },
+];
+
+/**
+ * Patterns that are case-insensitive *value-shape* patterns and require an
+ * explicit assignment context (key=value). These run after the explicit
+ * patterns above so a literal `aws_secret_access_key=...` does not get
+ * partially consumed.
+ */
+const ASSIGNMENT_PATTERNS = [
+  // aws_secret_access_key = "..."
+  {
+    id: 'awsSecretKey',
+    regex: /\baws[_-]?secret[_-]?access[_-]?key\s*[:=]\s*['"]?[A-Za-z0-9/+=]{40}['"]?/gi,
+  },
+  // client_secret = "...", consumer_secret = "..."
+  {
+    id: 'oauthSecret',
+    regex: /\b(?:client|consumer)[_-]?secret\s*[:=]\s*['"][^'"]{16,}['"]/gi,
+  },
+];
+
+/**
+ * Variable-name based assignment redaction. Only redacts values when the
+ * name itself implies a secret, so plain dotenv lines like `PORT=3000` or
+ * `LOG_LEVEL=info` are left alone.
+ */
+// Two-step approach so the regex can capture short and unprefixed names
+// (`TOKEN=`, `MY_TOKEN=`, `export TOKEN=`) without exploding the alternation.
+// The captured name is then sanity-checked with SENSITIVE_NAME_RE before
+// the value is masked, which keeps `PORT=3000` and `LOG_LEVEL=info`
+// untouched.
+const ENV_VAR_RE = /^[ \t]*(?:export[ \t]+)?([A-Z][A-Z0-9_]*)\s*=\s*(.+)$/gm;
+const SENSITIVE_NAME_RE =
+  /(?:^|_)(?:TOKEN|SECRET|KEY|PASSWORD|PASSWD|CREDENTIAL|CREDENTIALS|API_KEY|ACCESS_KEY|PRIVATE_KEY)$/;
+
+const MIN_HIGH_ENTROPY_LENGTH = 24;
+const DEFAULT_HIGH_ENTROPY_THRESHOLD = 4.5;
+const HIGH_ENTROPY_TOKEN_RE = /[A-Za-z0-9+/=_-]{24,}/g;
+
+/**
+ * Shannon entropy in bits per character. Higher = more random.
+ * @param {string} s
+ */
+function shannonEntropy(s) {
+  if (!s) return 0;
+  const counts = new Map();
+  for (const ch of s) counts.set(ch, (counts.get(ch) || 0) + 1);
+  const len = s.length;
+  let h = 0;
+  for (const c of counts.values()) {
+    const p = c / len;
+    h -= p * Math.log2(p);
+  }
+  return h;
+}
+
+function isAllowlisted(snippet) {
+  return ALLOWLIST_RE.test(snippet);
+}
+
+/**
+ * Redact secrets in a text string.
+ *
+ * @param {string} text
+ * @param {object} [opts]
+ * @param {boolean} [opts.highEntropy] enable Shannon-entropy fallback (default true)
+ * @param {number} [opts.entropyThreshold] entropy bits/char threshold (default 4.5)
+ * @param {string[]} [opts.allowlist] additional substrings that suppress redaction
+ * @returns {{ text: string, hits: Array<{ category: string, count: number }> }}
+ */
+function redactText(text, opts = {}) {
+  if (text == null || text === '') return { text: text ?? '', hits: [] };
+  const {
+    highEntropy = true,
+    entropyThreshold = DEFAULT_HIGH_ENTROPY_THRESHOLD,
+    allowlist = [],
+  } = opts;
+  const extraAllow = allowlist.length
+    ? new RegExp(allowlist.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i')
+    : null;
+
+  const hits = new Map();
+  const bump = (category, n = 1) => hits.set(category, (hits.get(category) || 0) + n);
+  const skipMatch = (full) => isAllowlisted(full) || (extraAllow ? extraAllow.test(full) : false);
+
+  let out = String(text);
+
+  for (const { id, regex } of PATTERNS) {
+    out = out.replace(regex, (m) => {
+      if (skipMatch(m)) return m;
+      bump(id);
+      return REPLACEMENT(id);
+    });
+  }
+
+  for (const { id, regex } of ASSIGNMENT_PATTERNS) {
+    out = out.replace(regex, (m) => {
+      if (skipMatch(m)) return m;
+      bump(id);
+      return REPLACEMENT(id);
+    });
+  }
+
+  out = out.replace(ENV_VAR_RE, (full, name, value) => {
+    if (skipMatch(full)) return full;
+    if (!SENSITIVE_NAME_RE.test(name)) return full;
+    if (!value || value.trim().length < 8) return full;
+    bump('envAssignment');
+    // Reconstruct so we keep the (optional) `export ` prefix and the exact
+    // whitespace around `=`. Slicing `full` up to the start of `value` is
+    // safer than rebuilding the line by hand.
+    const valueStart = full.length - value.length;
+    return full.slice(0, valueStart) + REPLACEMENT('envAssignment');
+  });
+
+  if (highEntropy) {
+    out = out.replace(HIGH_ENTROPY_TOKEN_RE, (m) => {
+      if (m.length < MIN_HIGH_ENTROPY_LENGTH) return m;
+      if (skipMatch(m)) return m;
+      // Skip tokens that are still mid-replacement (we already redacted nearby).
+      if (m.includes('REDACTED')) return m;
+      const h = shannonEntropy(m);
+      if (h < entropyThreshold) return m;
+      bump('highEntropy');
+      return REPLACEMENT('highEntropy');
+    });
+  }
+
+  return {
+    text: out,
+    hits: [...hits.entries()].map(([category, count]) => ({ category, count })),
+  };
+}
+
+/**
+ * True when `relPath` should be excluded from repo-wide context.
+ * Combines the built-in deny list with caller-supplied additions, then
+ * applies an allowlist of explicit "force-include" globs.
+ *
+ * @param {string} relPath
+ * @param {object} [opts]
+ * @param {string[]} [opts.extraDenyGlobs]
+ * @param {string[]} [opts.allowlist] globs that override deny matches
+ * @returns {boolean}
+ */
+function shouldExcludeForContext(relPath, opts = {}) {
+  if (!relPath) return false;
+  const { extraDenyGlobs = [], allowlist = [] } = opts;
+  const deny = [...DEFAULT_DENY_GLOBS, ...extraDenyGlobs];
+
+  // nocase: case-insensitive so `.ENV`, `Package-Lock.json`, `ID_RSA` etc.
+  // are still excluded on case-preserving filesystems.
+  const matchOpts = { dot: true, nocase: true, matchBase: false };
+  // Allowlist beats deny so users can opt back into specific paths if they
+  // truly need them (e.g., a sample .env they want reviewed).
+  for (const g of allowlist) {
+    if ((0,minimatch__WEBPACK_IMPORTED_MODULE_0__/* .minimatch */ .xF)(relPath, g, matchOpts)) return false;
+  }
+  for (const g of deny) {
+    if ((0,minimatch__WEBPACK_IMPORTED_MODULE_0__/* .minimatch */ .xF)(relPath, g, matchOpts)) return true;
+  }
+  return false;
+}
+
+
+/***/ }),
+
+/***/ 3159:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   b9: () => (/* binding */ charsToTokens),
+/* harmony export */   bP: () => (/* binding */ estimateTokens)
+/* harmony export */ });
+/* unused harmony export tokensToChars */
+// Token estimator for prompt budget accounting (#689 PR-A).
+//
+// Lightweight, deterministic estimator that the upcoming context-ranking
+// + budget control work in #689 PR-B/PR-C will consume. PR-A ships the
+// pure function and tests; pipeline integration lands in PR-C.
+//
+// Design notes:
+// - The default `heuristic` algorithm uses chars/4 for ASCII-dominant text
+//   and chars/2 for CJK-dominant text. This is **deliberately rough**:
+//   exact tokenization (tiktoken / @anthropic-ai/tokenizer) lives in PR-E
+//   as an opt-in adapter so PR-A can stay dependency-free.
+// - Detection is per-string, not per-character. We bucket the input by the
+//   ratio of CJK code points and pick a divisor accordingly so a mostly-
+//   English string with a few Japanese variable names still gets the more
+//   accurate ascii estimate.
+// - The exported `estimateTokens` is pure: same input always returns the
+//   same number. This matters for #687 fingerprint stability if anything
+//   downstream ever incorporates the estimate.
+
+const ASCII_DIVISOR = 4;
+const CJK_DIVISOR = 2;
+
+// Hiragana, Katakana (incl. half-width fullwidth), CJK Unified Ideographs
+// and the most common compatibility ranges. Intentionally narrow — we only
+// need a quick "is this string CJK-heavy" test, not full unicode coverage.
+const CJK_RE = /[぀-ゟ゠-ヿ一-鿿ｦ-ﾟ]/g;
+
+/**
+ * Count Unicode code points (not UTF-16 code units) so surrogate pairs
+ * (e.g. some emoji) don't double-count. Matters for very long strings
+ * where the difference moves the estimate by several percent.
+ */
+function codePointLength(text) {
+  let n = 0;
+  // for...of on a string iterates code points.
+  for (const _ of text) n += 1;
+  return n;
+}
+
+function cjkCount(text) {
+  // matchAll + counter avoids materializing the full match array, which
+  // matters once callers feed in 200k-char prompts (config.context.budget
+  // upper bound). Counting the iterator stays O(matches) on memory.
+  let n = 0;
+  for (const _ of text.matchAll(CJK_RE)) n += 1;
+  return n;
+}
+
+/**
+ * Estimate the number of tokens an LLM tokenizer would assign to `text`.
+ *
+ * PR-A only implements the `heuristic` tokenizer. The schema
+ * (`contextConfigSchema.tokenizer` enum: `heuristic`) is intentionally
+ * strict — it rejects unknown values at config-load time so typos
+ * surface immediately rather than silently degrading to heuristic. PR-E
+ * will add `tiktoken` to both the schema enum and the dispatch below.
+ *
+ * `opts.model` is reserved for the same PR-E work.
+ *
+ * @param {string} text
+ * @param {object} [opts]
+ * @param {string} [opts.model] reserved for future tokenizer plugins
+ * @returns {number} non-negative integer
+ */
+function estimateTokens(text, opts = {}) {
+  if (text == null) return 0;
+  const s = String(text);
+  if (s.length === 0) return 0;
+  // opts is currently unused at runtime; kept for the API contract
+  // documented above so PR-E can extend without a breaking change.
+  void opts;
+
+  const cjk = cjkCount(s);
+  const total = codePointLength(s);
+  if (total === 0) return 0;
+
+  // Mixed: weight each code point by whether it looks CJK. This keeps
+  // mostly-English strings on the ASCII divisor even when they contain a
+  // few katakana variable names.
+  const ascii = total - cjk;
+  const tokens = ascii / ASCII_DIVISOR + cjk / CJK_DIVISOR;
+  return Math.max(1, Math.ceil(tokens));
+}
+
+/**
+ * Char budget -> safe upper bound on tokens.
+ *
+ * Returns the worst-case token count for a budget of `maxChars`: assumes
+ * the entire input is CJK (chars/2). Callers using this to gate "will
+ * the prompt fit" stay under the real LLM tokenizer limit even when the
+ * input shifts toward Japanese. Use estimateTokens() for the actual
+ * per-string estimate when accuracy matters more than safety.
+ */
+function charsToTokens(maxChars, _opts = {}) {
+  if (!Number.isFinite(maxChars) || maxChars <= 0) return 0;
+  return Math.floor(maxChars / CJK_DIVISOR);
+}
+
+/**
+ * Token budget -> safe upper bound on chars.
+ *
+ * Returns the maximum chars that cannot exceed `maxTokens` even for
+ * fully-CJK input (where every char counts as 1/2 token). Callers using
+ * this to gate per-section maxChars stay under the prompt budget even
+ * when the section ends up CJK-heavy. Use estimateTokens() to verify
+ * a specific assembled prompt fits.
+ */
+function tokensToChars(maxTokens, _opts = {}) {
+  if (!Number.isFinite(maxTokens) || maxTokens <= 0) return 0;
+  return Math.floor(maxTokens * CJK_DIVISOR);
+}
+
+
+/***/ }),
+
+/***/ 958:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   E1: () => (/* binding */ parseList),
+/* harmony export */   Rq: () => (/* binding */ isLlmEnabled),
+/* harmony export */   TK: () => (/* binding */ resolveAvailableDependencies),
+/* harmony export */   hN: () => (/* binding */ isOfflineMode),
+/* harmony export */   ud: () => (/* binding */ resolveAvailableContexts)
+/* harmony export */ });
+/* unused harmony export dependencyStubs */
+/**
+ * Parse a comma-separated list string into a trimmed array.
+ * Empty/undefined input returns an empty array.
+ */
+function parseList(value) {
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Check if offline (rules-only) mode is enabled via `RIVER_OFFLINE`
+ * (set by `--offline` / `--rules-only`; ADR-002 / #1071).
+ * @param {NodeJS.ProcessEnv} [env] - injectable for tests (#1357)
+ * @returns {boolean}
+ */
+function isOfflineMode(env = process.env) {
+  const offline = String(env?.RIVER_OFFLINE ?? '')
+    .trim()
+    .toLowerCase();
+  return offline === '1' || offline === 'true' || offline === 'yes' || offline === 'on';
+}
+
+/**
+ * Check if an LLM (OpenAI / Gemini / Anthropic) API key is configured in the environment.
+ *
+ * Offline (rules-only) mode: when `RIVER_OFFLINE` is set (via `--offline` /
+ * `--rules-only`), AI is force-disabled even if a key is present, so the review
+ * runs on deterministic heuristics only (ADR-002 / #1071).
+ * @param {NodeJS.ProcessEnv} [env] - injectable for tests (#1357)
+ * @returns {boolean}
+ */
+function isLlmEnabled(env = process.env) {
+  if (isOfflineMode(env)) {
+    return false;
+  }
+  return !!(
+    env?.RIVER_OPENAI_API_KEY ||
+    env?.OPENAI_API_KEY ||
+    env?.GOOGLE_API_KEY ||
+    env?.ANTHROPIC_API_KEY ||
+    env?.RIVER_ANTHROPIC_API_KEY
+  );
+}
+
+/**
+ * Resolve the effective `availableContexts` for `buildExecutionPlan`'s
+ * `inputContext`-based skill selection. Combines caller-supplied contexts
+ * with `RIVER_AVAILABLE_CONTEXTS` (deduplicated). If the caller does not
+ * supply any contexts, falls back to `defaultContexts` (defaults to
+ * `['diff']`). The `alwaysInclude` option forces specific contexts to
+ * remain present even when the caller passes a narrower list — useful
+ * when the runtime has actually resolved an artifact (e.g. diff) and
+ * should not let a CLI override silently strip it.
+ *
+ * Shared between `src/lib/local-runner.mjs` (legacy `river run`) and
+ * `src/lib/review-plan.mjs` (`river review exec` / Phase 3).
+ *
+ * @param {string[] | null | undefined} inputContexts
+ * @param {{ defaultContexts?: string[]; alwaysInclude?: string[] }} [options]
+ * @returns {string[]}
+ */
+function resolveAvailableContexts(
+  inputContexts,
+  { defaultContexts = ['diff'], alwaysInclude = [] } = {}
+) {
+  const envContexts = parseList(process.env.RIVER_AVAILABLE_CONTEXTS);
+  const base = inputContexts && inputContexts.length ? inputContexts : defaultContexts;
+  return [...new Set([...alwaysInclude, ...base, ...envContexts])];
+}
+
+/**
+ * Known dependency identifiers that `RIVER_DEPENDENCY_STUBS=1` should
+ * mark as "available". Keep in sync with `schemas/skill.schema.json`
+ * dependencies enum.
+ */
+const dependencyStubs = [
+  'code_search',
+  'test_runner',
+  'coverage_report',
+  'adr_lookup',
+  'repo_metadata',
+  'tracing',
+];
+
+/**
+ * Resolve the effective `availableDependencies` for `buildExecutionPlan`.
+ * Returns `null` (the disabled sentinel) when the caller passes nothing
+ * and neither `RIVER_AVAILABLE_DEPENDENCIES` nor `RIVER_DEPENDENCY_STUBS`
+ * is set, which preserves backward-compatible "do not skip on missing
+ * dependency" behavior.
+ *
+ * Shared between `src/lib/local-runner.mjs` and `src/lib/review-plan.mjs`
+ * (#802 Phase 3 silent-skip follow-up).
+ *
+ * @param {string[] | null | undefined} inputDependencies
+ * @returns {string[] | null}
+ */
+function resolveAvailableDependencies(inputDependencies) {
+  const envDeps = parseList(process.env.RIVER_AVAILABLE_DEPENDENCIES);
+  const stubEnabled =
+    typeof process.env.RIVER_DEPENDENCY_STUBS === 'string' &&
+    ['1', 'true', 'yes', 'stub'].includes(process.env.RIVER_DEPENDENCY_STUBS.toLowerCase());
+  if (inputDependencies?.length) return [...new Set(inputDependencies)];
+  if (envDeps.length) return [...new Set(envDeps)];
+  if (stubEnabled) return [...dependencyStubs];
+  return null; // null disables dependency-based skipping
+}
+
+
+/***/ }),
+
+/***/ 7446:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
@@ -13857,7 +21385,7 @@ exports.timingSafeEqual = timingSafeEqual;
 /* harmony export */   v7: () => (/* binding */ BadRequestError),
 /* harmony export */   xX: () => (/* binding */ APIConnectionError)
 /* harmony export */ });
-/* harmony import */ var _internal_errors_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(2533);
+/* harmony import */ var _internal_errors_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9227);
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 class AnthropicError extends Error {
@@ -13976,7 +21504,7 @@ class InternalServerError extends APIError {
 
 /***/ }),
 
-/***/ 4973:
+/***/ 1755:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -13987,9 +21515,9 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // UNUSED EXPORTS: AI_PROMPT, APIConnectionError, APIConnectionTimeoutError, APIError, APIPromise, APIUserAbortError, Anthropic, AnthropicError, AuthenticationError, BadRequestError, BaseAnthropic, BetaFallbackState, ConflictError, HUMAN_PROMPT, InternalServerError, NotFoundError, PagePromise, PermissionDeniedError, RateLimitError, RetryableError, UnprocessableEntityError, betaRefusalFallbackMiddleware, toFile
 
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/tslib.mjs
-var tslib = __nccwpck_require__(3364);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/uuid.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/tslib.mjs
+var tslib = __nccwpck_require__(5050);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/uuid.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 /**
  * https://stackoverflow.com/a/2117523
@@ -14005,9 +21533,9 @@ let uuid4 = function () {
     return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) => (+c ^ (randomByte() & (15 >> (+c / 4)))).toString(16));
 };
 //# sourceMappingURL=uuid.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
-var utils_values = __nccwpck_require__(9296);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/sleep.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
+var utils_values = __nccwpck_require__(6482);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/sleep.mjs
 /**
  * Resolve after `ms`, or immediately when `signal` aborts.
  *
@@ -14032,12 +21560,12 @@ const sleep = (ms, signal) => new Promise((resolve) => {
     signal?.addEventListener('abort', onAbort, { once: true });
 });
 //# sourceMappingURL=sleep.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/errors.mjs
-var errors = __nccwpck_require__(2533);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/version.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/errors.mjs
+var errors = __nccwpck_require__(9227);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/version.mjs
 const VERSION = '0.105.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 const isRunningInBrowser = () => {
@@ -14195,7 +21723,7 @@ const getPlatformHeaders = () => {
     return (_platformHeaders ?? (_platformHeaders = getPlatformProperties()));
 };
 //# sourceMappingURL=detect-platform.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/shims.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/shims.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 function getDefaultFetch() {
     if (typeof fetch !== 'undefined') {
@@ -14281,7 +21809,7 @@ async function CancelReadableStream(stream) {
     await cancelPromise;
 }
 //# sourceMappingURL=shims.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/request-options.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/request-options.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 /**
  * Tracks which fallback a sequence of requests is pinned to.
@@ -14302,11 +21830,11 @@ const FallbackEncoder = ({ headers, body }) => {
     };
 };
 //# sourceMappingURL=request-options.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/query.mjs + 3 modules
-var utils_query = __nccwpck_require__(626);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/core/error.mjs
-var core_error = __nccwpck_require__(5064);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/credentials/types.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/query.mjs + 3 modules
+var utils_query = __nccwpck_require__(4300);
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/core/error.mjs
+var core_error = __nccwpck_require__(7446);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/credentials/types.mjs
 
 const GRANT_TYPE_JWT_BEARER = 'urn:ietf:params:oauth:grant-type:jwt-bearer';
 const GRANT_TYPE_REFRESH_TOKEN = 'refresh_token';
@@ -14531,13 +22059,13 @@ class WorkloadIdentityError extends core_error/* AnthropicError */.pJ {
     }
 }
 //# sourceMappingURL=types.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/time.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/time.mjs
 /** Current time as unix epoch seconds. */
 function nowAsSeconds() {
     return Math.floor(Date.now() / 1000);
 }
 //# sourceMappingURL=time.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/credentials/token-cache.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/credentials/token-cache.mjs
 
 
 /**
@@ -14646,11 +22174,11 @@ class TokenCache {
     }
 }
 //# sourceMappingURL=token-cache.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
-var env = __nccwpck_require__(111);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils.mjs + 1 modules
-var utils = __nccwpck_require__(2534);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/core/credentials.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
+var env = __nccwpck_require__(5805);
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils.mjs + 1 modules
+var utils = __nccwpck_require__(6051);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/core/credentials.mjs
 
 
 /** Current schema version written to `configs/<profile>.json`. Absent on read ⇒ "1.0". */
@@ -14928,7 +22456,7 @@ const getActiveProfileName = async () => {
     }
 };
 //# sourceMappingURL=credentials.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/credentials/identity-token.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/credentials/identity-token.mjs
 
 /**
  * Reads a JWT from a file on every call. Supports automatic rotation
@@ -14964,7 +22492,7 @@ function identityTokenFromValue(token) {
     return () => token;
 }
 //# sourceMappingURL=identity-token.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/credentials/oidc-federation.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/credentials/oidc-federation.mjs
 
 
 
@@ -15044,7 +22572,7 @@ function oidcFederationProvider(config) {
     };
 }
 //# sourceMappingURL=oidc-federation.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/credentials/user-oauth.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/credentials/user-oauth.mjs
 
 
 
@@ -15139,7 +22667,7 @@ function userOAuthProvider(config) {
     };
 }
 //# sourceMappingURL=user-oauth.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/credentials/credential-chain.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/credentials/credential-chain.mjs
 
 
 
@@ -15348,7 +22876,7 @@ function cachedExchangeProvider(exchange, credentialsPath, onCacheWriteError, on
     };
 }
 //# sourceMappingURL=credential-chain.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/bytes.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/bytes.mjs
 function concatBytes(buffers) {
     let length = 0;
     for (const buffer of buffers) {
@@ -15375,7 +22903,7 @@ function decodeUTF8(bytes) {
         ((decoder = new globalThis.TextDecoder()), (decodeUTF8_ = decoder.decode.bind(decoder))))(bytes);
 }
 //# sourceMappingURL=bytes.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/decoders/line.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/decoders/line.mjs
 var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex;
 
 
@@ -15484,9 +23012,9 @@ function findDoubleNewlineIndex(buffer) {
     return -1;
 }
 //# sourceMappingURL=line.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/log.mjs
-var utils_log = __nccwpck_require__(7412);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/core/streaming.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/log.mjs
+var utils_log = __nccwpck_require__(1154);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/core/streaming.mjs
 var _Stream_client;
 
 
@@ -15820,7 +23348,7 @@ function partition(str, delimiter) {
     return [str, '', ''];
 }
 //# sourceMappingURL=streaming.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/parse.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/parse.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -15874,7 +23402,7 @@ function addRequestID(value, response) {
     });
 }
 //# sourceMappingURL=parse.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/core/middleware.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/core/middleware.mjs
 
 
 
@@ -16043,7 +23571,7 @@ function applyMiddleware(fetchFn, middleware, options, client) {
     return next;
 }
 //# sourceMappingURL=middleware.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/core/api-promise.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/core/api-promise.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _APIPromise_client;
 
@@ -16116,7 +23644,7 @@ class APIPromise extends Promise {
 }
 _APIPromise_client = new WeakMap();
 //# sourceMappingURL=api-promise.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/core/pagination.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/core/pagination.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _AbstractPage_client;
 
@@ -16287,7 +23815,7 @@ class PageCursor extends AbstractPage {
     }
 }
 //# sourceMappingURL=pagination.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/uploads.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/uploads.mjs
 
 const checkFileSupport = () => {
     if (typeof File === 'undefined') {
@@ -16423,7 +23951,7 @@ const addFormValue = async (form, key, value, stripFilenames) => {
     }
 };
 //# sourceMappingURL=uploads.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/to-file.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/to-file.mjs
 
 
 /**
@@ -16517,10 +24045,10 @@ function propsForError(value) {
     return `; props: [${props.map((p) => `"${p}"`).join(', ')}]`;
 }
 //# sourceMappingURL=to-file.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/core/uploads.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/core/uploads.mjs
 
 //# sourceMappingURL=uploads.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/core/resource.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/core/resource.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 class APIResource {
     constructor(client) {
@@ -16528,7 +24056,7 @@ class APIResource {
     }
 }
 //# sourceMappingURL=resource.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/headers.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/headers.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 const brand_privateNullableHeaders = Symbol.for('brand.privateNullableHeaders');
@@ -16603,7 +24131,7 @@ const isEmptyHeaders = (headers) => {
     return true;
 };
 //# sourceMappingURL=headers.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/path.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/path.mjs
 
 /**
  * Percent-encode everything that isn't safe to have in a path without encoding safe chars.
@@ -16678,7 +24206,7 @@ const createPathTagFunction = (pathEncoder = encodeURIPath) => function path(sta
  */
 const path = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
 //# sourceMappingURL=path.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/deployment-runs.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/deployment-runs.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -16730,7 +24258,7 @@ class DeploymentRuns extends APIResource {
     }
 }
 //# sourceMappingURL=deployment-runs.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/deployments.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/deployments.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -16911,7 +24439,7 @@ class Deployments extends APIResource {
     }
 }
 //# sourceMappingURL=deployments.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/stainless-helper-header.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/stainless-helper-header.mjs
 /**
  * Shared utilities for tracking SDK helper usage.
  */
@@ -16975,7 +24503,7 @@ function stainlessHelperHeaderFromFile(file) {
     return {};
 }
 //# sourceMappingURL=stainless-helper-header.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/files.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/files.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -17096,7 +24624,7 @@ class Files extends APIResource {
     }
 }
 //# sourceMappingURL=files.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/models.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/models.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -17153,7 +24681,7 @@ class Models extends APIResource {
     }
 }
 //# sourceMappingURL=models.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/user-profiles.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/user-profiles.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -17268,9 +24796,9 @@ class UserProfiles extends APIResource {
     }
 }
 //# sourceMappingURL=user-profiles.mjs.map
-// EXTERNAL MODULE: ./node_modules/standardwebhooks/dist/index.js
-var dist = __nccwpck_require__(5487);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/webhooks.mjs
+// EXTERNAL MODULE: ../../../node_modules/standardwebhooks/dist/index.js
+var dist = __nccwpck_require__(1073);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/webhooks.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -17287,7 +24815,7 @@ class Webhooks extends APIResource {
     }
 }
 //# sourceMappingURL=webhooks.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/agents/versions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/agents/versions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -17320,7 +24848,7 @@ class Versions extends APIResource {
     }
 }
 //# sourceMappingURL=versions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/agents/agents.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/agents/agents.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -17447,7 +24975,7 @@ class Agents extends APIResource {
 }
 Agents.Versions = Versions;
 //# sourceMappingURL=agents.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/abort.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/abort.mjs
 /**
  * Chain an external {@link AbortSignal} into a local {@link AbortController}:
  * the controller aborts whenever `external` aborts (synchronously if it is
@@ -17471,7 +24999,7 @@ function linkAbort(external, controller) {
     return () => external.removeEventListener('abort', onAbort);
 }
 //# sourceMappingURL=abort.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/backoff.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/backoff.mjs
 
 /** True when `e` is an {@link APIError} whose HTTP status equals `code`. */
 function isStatus(e, code) {
@@ -17508,7 +25036,7 @@ function applyJitter(ms) {
     return ms * (1 - Math.random() * 0.25);
 }
 //# sourceMappingURL=backoff.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/helper-client.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/helper-client.mjs
 
 
 /**
@@ -17563,7 +25091,7 @@ function copyClientForHelper(client, { authToken, helper }) {
     });
 }
 //# sourceMappingURL=helper-client.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/environments/poller.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/environments/poller.mjs
 var _WorkPoller_runnerClient, _WorkPoller_consumed, _WorkPoller_controller, _WorkPoller_detachExternal, _WorkPoller_autoStop, _WorkPoller_drain, _WorkPoller_blockMs, _WorkPoller_reclaimOlderThanMs, _WorkPoller_requestOpts;
 
 
@@ -17736,7 +25264,7 @@ function defaultWorkerId() {
     return host ? `${host}-${uuid4()}` : uuid4();
 }
 //# sourceMappingURL=poller.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/async-queue.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/async-queue.mjs
 var _AsyncQueue_items, _AsyncQueue_waiters, _AsyncQueue_closed;
 
 /**
@@ -17808,9 +25336,9 @@ class AsyncQueue {
 }
 _AsyncQueue_items = new WeakMap(), _AsyncQueue_waiters = new WeakMap(), _AsyncQueue_closed = new WeakMap();
 //# sourceMappingURL=async-queue.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/ToolError.mjs
-var ToolError = __nccwpck_require__(7618);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/BetaRunnableTool.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/tools/ToolError.mjs
+var ToolError = __nccwpck_require__(852);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/tools/BetaRunnableTool.mjs
 
 /**
  * Resolve the registry key for a tool — the name the model addresses it by.
@@ -17846,7 +25374,7 @@ async function runRunnableTool(tool, rawInput, context) {
     }
 }
 //# sourceMappingURL=BetaRunnableTool.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/SessionToolRunner.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/tools/SessionToolRunner.mjs
 var _SessionToolRunner_instances, _SessionToolRunner_consumed, _SessionToolRunner_controller, _SessionToolRunner_detachExternal, _SessionToolRunner_requestOpts, _SessionToolRunner_toolByName, _SessionToolRunner_logger, _SessionToolRunner_seen, _SessionToolRunner_answered, _SessionToolRunner_results, _SessionToolRunner_inFlightCount, _SessionToolRunner_onIdle, _SessionToolRunner_idleTimer, _SessionToolRunner_requestOptions, _SessionToolRunner_streamLoop, _SessionToolRunner_reconcile, _SessionToolRunner_ingestHistory, _SessionToolRunner_handleStreamEvent, _SessionToolRunner_armIdleTimer, _SessionToolRunner_disarmIdleTimer, _SessionToolRunner_execute, _SessionToolRunner_sendResult, _SessionToolRunner_drain;
 
 
@@ -18314,7 +25842,7 @@ function toSessionContent(content) {
     return out.length > 0 ? out : [{ type: 'text', text: '(no output)' }];
 }
 //# sourceMappingURL=SessionToolRunner.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/environments/worker.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/environments/worker.mjs
 var _EnvironmentWorker_instances, _EnvironmentWorker_signal, _EnvironmentWorker_handleItem;
 
 
@@ -18475,7 +26003,7 @@ async function _EnvironmentWorker_handleItem(work, environmentKey, externalSigna
         ...(this.maxFileBytes !== undefined ? { maxFileBytes: this.maxFileBytes } : {}),
     };
     // Lazily load the Node-only toolset module — see the import note at the top.
-    const agentToolset = await __nccwpck_require__.e(/* import() */ 157).then(__nccwpck_require__.bind(__nccwpck_require__, 4157));
+    const agentToolset = await __nccwpck_require__.e(/* import() */ 343).then(__nccwpck_require__.bind(__nccwpck_require__, 4343));
     let cleanupSkills = async () => { };
     try {
         cleanupSkills = await agentToolset.setupSkills(ctx);
@@ -18578,7 +26106,7 @@ async function heartbeatLoop(client, work, ctrl, logger, requestOptions) {
     }
 }
 //# sourceMappingURL=worker.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/environments/work.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/environments/work.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -18847,7 +26375,7 @@ class Work extends APIResource {
 Work.WorkPoller = WorkPoller;
 Work.EnvironmentWorker = EnvironmentWorker;
 //# sourceMappingURL=work.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/environments/environments.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/environments/environments.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -18993,7 +26521,7 @@ class Environments extends APIResource {
 }
 Environments.Work = Work;
 //# sourceMappingURL=environments.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/memory-stores/memories.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/memory-stores/memories.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -19120,7 +26648,7 @@ class Memories extends APIResource {
     }
 }
 //# sourceMappingURL=memories.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/memory-stores/memory-versions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/memory-stores/memory-versions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -19198,7 +26726,7 @@ class MemoryVersions extends APIResource {
     }
 }
 //# sourceMappingURL=memory-versions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/memory-stores/memory-stores.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/memory-stores/memory-stores.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -19339,11 +26867,11 @@ class MemoryStores extends APIResource {
 MemoryStores.Memories = Memories;
 MemoryStores.MemoryVersions = MemoryVersions;
 //# sourceMappingURL=memory-stores.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/error.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/error.mjs
 /** @deprecated Import from ./core/error instead */
 
 //# sourceMappingURL=error.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/decoders/jsonl.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/decoders/jsonl.mjs
 
 
 
@@ -19379,7 +26907,7 @@ class JSONLDecoder {
     }
 }
 //# sourceMappingURL=jsonl.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/messages/batches.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/messages/batches.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -19580,7 +27108,7 @@ class Batches extends APIResource {
     }
 }
 //# sourceMappingURL=batches.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/constants.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/constants.mjs
 // File containing shared constants
 /**
  * Model-specific timeout constraints for non-streaming requests
@@ -19596,7 +27124,7 @@ const MODEL_NONSTREAMING_TOKENS = {
     'claude-opus-4-1@20250805': 8192,
 };
 //# sourceMappingURL=constants.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/beta-parser.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/beta-parser.mjs
 
 function getOutputFormat(params) {
     // Prefer output_format (deprecated) over output_config.format for backward compatibility
@@ -19672,11 +27200,11 @@ function parseBetaOutputFormat(params, content) {
     }
 }
 //# sourceMappingURL=beta-parser.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/streaming.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/streaming.mjs
 /** @deprecated Import from ./core/streaming instead */
 
 //# sourceMappingURL=streaming.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/_vendor/partial-json-parser/parser.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/_vendor/partial-json-parser/parser.mjs
 const tokenize = (input) => {
     let current = 0;
     let tokens = [];
@@ -19912,7 +27440,7 @@ const tokenize = (input) => {
 }, partialParse = (input) => JSON.parse(generate(unstrip(strip(tokenize(input)))));
 
 //# sourceMappingURL=parser.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/message-stream-utils.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/message-stream-utils.mjs
 
 const JSON_BUF_PROPERTY = '__json_buf';
 /**
@@ -19943,7 +27471,7 @@ function withLazyInput(prev, jsonBuf) {
     return next;
 }
 //# sourceMappingURL=message-stream-utils.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/BetaMessageStream.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/BetaMessageStream.mjs
 var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _BetaMessageStream_params, _BetaMessageStream_connectedPromise, _BetaMessageStream_resolveConnectedPromise, _BetaMessageStream_rejectConnectedPromise, _BetaMessageStream_endPromise, _BetaMessageStream_resolveEndPromise, _BetaMessageStream_rejectEndPromise, _BetaMessageStream_listeners, _BetaMessageStream_ended, _BetaMessageStream_errored, _BetaMessageStream_aborted, _BetaMessageStream_catchingPromiseCreated, _BetaMessageStream_response, _BetaMessageStream_request_id, _BetaMessageStream_logger, _BetaMessageStream_getFinalMessage, _BetaMessageStream_getFinalText, _BetaMessageStream_handleError, _BetaMessageStream_beginRequest, _BetaMessageStream_addStreamEvent, _BetaMessageStream_endRequest, _BetaMessageStream_accumulateMessage, _BetaMessageStream_toolInputParseError;
 
 
@@ -20578,9 +28106,9 @@ class BetaMessageStream {
 // used to ensure exhaustive case matching without throwing a runtime error
 function checkNever(x) { }
 //# sourceMappingURL=BetaMessageStream.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/promise.mjs
-var promise = __nccwpck_require__(7793);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/CompactionControl.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/promise.mjs
+var promise = __nccwpck_require__(3923);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/tools/CompactionControl.mjs
 const DEFAULT_TOKEN_THRESHOLD = 100000;
 const DEFAULT_SUMMARY_PROMPT = `You have been working on the task described above but have not yet completed it. Write a continuation summary that will allow you (or another instance of yourself) to resume work efficiently in a future context window where the conversation history will be replaced with this summary. Your summary should be structured, concise, and actionable. Include:
 1. Task Overview
@@ -20606,7 +28134,7 @@ Any promises made to the user
 Be concise but complete—err on the side of including information that would prevent duplicate work or repeated mistakes. Write in a way that enables immediate resumption of the task.
 Wrap your summary in <summary></summary> tags.`;
 //# sourceMappingURL=CompactionControl.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/BetaToolRunner.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/tools/BetaToolRunner.mjs
 var _BetaToolRunner_instances, _BetaToolRunner_consumed, _BetaToolRunner_mutated, _BetaToolRunner_state, _BetaToolRunner_options, _BetaToolRunner_message, _BetaToolRunner_toolResponse, _BetaToolRunner_completion, _BetaToolRunner_iterationCount, _BetaToolRunner_checkAndCompact, _BetaToolRunner_generateToolResponse;
 
 
@@ -20997,7 +28525,7 @@ async function generateToolResponse(params, lastMessage = params.messages.at(-1)
     };
 }
 //# sourceMappingURL=BetaToolRunner.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/messages/messages.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/messages/messages.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -21163,7 +28691,7 @@ Messages.Batches = Batches;
 Messages.BetaToolRunner = BetaToolRunner;
 Messages.ToolError = ToolError/* ToolError */.v;
 //# sourceMappingURL=messages.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/sessions/events.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/sessions/events.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -21278,7 +28806,7 @@ class Events extends APIResource {
 
 Events.SessionToolRunner = SessionToolRunner;
 //# sourceMappingURL=events.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/sessions/resources.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/sessions/resources.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -21407,7 +28935,7 @@ class Resources extends APIResource {
     }
 }
 //# sourceMappingURL=resources.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/sessions/threads/events.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/sessions/threads/events.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -21464,7 +28992,7 @@ class events_Events extends APIResource {
     }
 }
 //# sourceMappingURL=events.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/sessions/threads/threads.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/sessions/threads/threads.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -21548,7 +29076,7 @@ class Threads extends APIResource {
 }
 Threads.Events = events_Events;
 //# sourceMappingURL=threads.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/sessions/sessions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/sessions/sessions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -21702,7 +29230,7 @@ Sessions.Events = Events;
 Sessions.Resources = Resources;
 Sessions.Threads = Threads;
 //# sourceMappingURL=sessions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/skills/versions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/skills/versions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -21827,7 +29355,7 @@ class versions_Versions extends APIResource {
     }
 }
 //# sourceMappingURL=versions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/skills/skills.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/skills/skills.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -21921,7 +29449,7 @@ class Skills extends APIResource {
 }
 Skills.Versions = versions_Versions;
 //# sourceMappingURL=skills.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/vaults/credentials.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/vaults/credentials.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -22095,7 +29623,7 @@ class Credentials extends APIResource {
     }
 }
 //# sourceMappingURL=credentials.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/vaults/vaults.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/vaults/vaults.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -22240,7 +29768,7 @@ class Vaults extends APIResource {
 }
 Vaults.Credentials = Credentials;
 //# sourceMappingURL=vaults.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/beta.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/beta/beta.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -22301,7 +29829,7 @@ Beta.Skills = Skills;
 Beta.Webhooks = Webhooks;
 Beta.UserProfiles = UserProfiles;
 //# sourceMappingURL=beta.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/completions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/completions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -22321,7 +29849,7 @@ class Completions extends APIResource {
     }
 }
 //# sourceMappingURL=completions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/parser.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/parser.mjs
 
 function parser_getOutputFormat(params) {
     return params?.output_config?.format;
@@ -22384,7 +29912,7 @@ function parseOutputFormat(params, content) {
     }
 }
 //# sourceMappingURL=parser.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs
 var _MessageStream_instances, _MessageStream_currentMessageSnapshot, _MessageStream_params, _MessageStream_connectedPromise, _MessageStream_resolveConnectedPromise, _MessageStream_rejectConnectedPromise, _MessageStream_endPromise, _MessageStream_resolveEndPromise, _MessageStream_rejectEndPromise, _MessageStream_listeners, _MessageStream_ended, _MessageStream_errored, _MessageStream_aborted, _MessageStream_catchingPromiseCreated, _MessageStream_response, _MessageStream_request_id, _MessageStream_logger, _MessageStream_getFinalMessage, _MessageStream_getFinalText, _MessageStream_handleError, _MessageStream_beginRequest, _MessageStream_addStreamEvent, _MessageStream_endRequest, _MessageStream_accumulateMessage;
 
 
@@ -22975,7 +30503,7 @@ class MessageStream {
 // used to ensure exhaustive case matching without throwing a runtime error
 function MessageStream_checkNever(x) { }
 //# sourceMappingURL=MessageStream.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/messages/batches.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/messages/batches.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -23125,7 +30653,7 @@ class batches_Batches extends APIResource {
     }
 }
 //# sourceMappingURL=batches.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/messages/messages.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/messages/messages.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -23256,7 +30784,7 @@ const messages_DEPRECATED_MODELS = {
 const messages_MODELS_TO_WARN_WITH_THINKING_ENABLED = ['claude-mythos-preview', 'claude-opus-4-6'];
 messages_Messages.Batches = batches_Batches;
 //# sourceMappingURL=messages.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/models.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/models.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -23298,7 +30826,7 @@ class models_Models extends APIResource {
     }
 }
 //# sourceMappingURL=models.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/index.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/resources/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -23306,7 +30834,7 @@ class models_Models extends APIResource {
 
 
 //# sourceMappingURL=index.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/client.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/client.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _BaseAnthropic_instances, _a, _BaseAnthropic_encoder, _BaseAnthropic_baseURLOverridden;
 
@@ -24218,7 +31746,7 @@ Anthropic.Messages = messages_Messages;
 Anthropic.Models = models_Models;
 Anthropic.Beta = Beta;
 //# sourceMappingURL=client.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/middleware.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/lib/middleware.mjs
 
 
 
@@ -24923,7 +32451,7 @@ function makeAbort(controller, signal) {
     return () => controller.abort(signal.reason);
 }
 //# sourceMappingURL=middleware.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -24936,7 +32464,7 @@ function makeAbort(controller, signal) {
 
 /***/ }),
 
-/***/ 2533:
+/***/ 9227:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
@@ -24982,7 +32510,7 @@ const castToError = (err) => {
 
 /***/ }),
 
-/***/ 3364:
+/***/ 5050:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
@@ -25010,7 +32538,7 @@ function __classPrivateFieldGet(receiver, state, kind, f) {
 
 /***/ }),
 
-/***/ 2534:
+/***/ 6051:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -25021,11 +32549,11 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // UNUSED EXPORTS: coerceBoolean, coerceFloat, coerceInteger, defaultLogLevel, defaultLogger, ensurePresent, formatRequestDetails, fromBase64, hasOwn, isAbsoluteURL, isArray, isEmptyObj, isObj, isReadonlyArray, loggerFor, maybeCoerceBoolean, maybeCoerceFloat, maybeCoerceInteger, maybeObj, parseLogLevel, pop, safeJSON, sleep, stringifyQuery, toBase64, uuid4, validatePositiveInteger
 
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
-var values = __nccwpck_require__(9296);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/core/error.mjs
-var error = __nccwpck_require__(5064);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/base64.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
+var values = __nccwpck_require__(6482);
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/core/error.mjs
+var error = __nccwpck_require__(7446);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/base64.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -25059,13 +32587,13 @@ const fromBase64 = (str) => {
     throw new AnthropicError('Cannot decode base64 string; Expected `Buffer` or `atob` to be defined');
 };
 //# sourceMappingURL=base64.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
-var env = __nccwpck_require__(111);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/log.mjs
-var log = __nccwpck_require__(7412);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/query.mjs + 3 modules
-var query = __nccwpck_require__(626);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
+var env = __nccwpck_require__(5805);
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/log.mjs
+var log = __nccwpck_require__(1154);
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/query.mjs + 3 modules
+var query = __nccwpck_require__(4300);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -25078,7 +32606,7 @@ var query = __nccwpck_require__(626);
 
 /***/ }),
 
-/***/ 111:
+/***/ 5805:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
@@ -25105,7 +32633,7 @@ const readEnv = (env) => {
 
 /***/ }),
 
-/***/ 7412:
+/***/ 1154:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
@@ -25115,8 +32643,8 @@ const readEnv = (env) => {
 /* harmony export */   WG: () => (/* binding */ loggerFor),
 /* harmony export */   xL: () => (/* binding */ formatRequestDetails)
 /* harmony export */ });
-/* harmony import */ var _values_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9296);
-/* harmony import */ var _env_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(111);
+/* harmony import */ var _values_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(6482);
+/* harmony import */ var _env_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(5805);
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -25225,7 +32753,7 @@ const formatRequestDetails = (details) => {
 
 /***/ }),
 
-/***/ 7793:
+/***/ 3923:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
@@ -25249,7 +32777,7 @@ function promiseWithResolvers() {
 
 /***/ }),
 
-/***/ 626:
+/***/ 4300:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -25258,7 +32786,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   _: () => (/* binding */ stringifyQuery)
 });
 
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/qs/formats.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/qs/formats.mjs
 const default_format = 'RFC3986';
 const default_formatter = (v) => String(v);
 const formatters = {
@@ -25268,9 +32796,9 @@ const formatters = {
 const RFC1738 = 'RFC1738';
 const RFC3986 = 'RFC3986';
 //# sourceMappingURL=formats.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
-var utils_values = __nccwpck_require__(9296);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/qs/utils.mjs
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
+var utils_values = __nccwpck_require__(6482);
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/qs/utils.mjs
 
 
 let has = (obj, key) => ((has = Object.hasOwn ?? Function.prototype.call.bind(Object.prototype.hasOwnProperty)),
@@ -25488,7 +33016,7 @@ function maybe_map(val, fn) {
     return fn(val);
 }
 //# sourceMappingURL=utils.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/qs/stringify.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/qs/stringify.mjs
 
 
 
@@ -25763,7 +33291,7 @@ function stringify(object, opts = {}) {
     return joined.length > 0 ? prefix + joined : '';
 }
 //# sourceMappingURL=stringify.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/query.mjs
+;// CONCATENATED MODULE: ../../../node_modules/@anthropic-ai/sdk/internal/utils/query.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 function stringifyQuery(query) {
@@ -25773,7 +33301,7 @@ function stringifyQuery(query) {
 
 /***/ }),
 
-/***/ 9296:
+/***/ 6482:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
@@ -25787,7 +33315,7 @@ function stringifyQuery(query) {
 /* harmony export */   ze: () => (/* binding */ isEmptyObj)
 /* harmony export */ });
 /* unused harmony exports isObj, ensurePresent, coerceInteger, coerceFloat, coerceBoolean, maybeCoerceInteger, maybeCoerceFloat, maybeCoerceBoolean, pop */
-/* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5064);
+/* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7446);
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 // https://url.spec.whatwg.org/#url-scheme-string
@@ -25891,7 +33419,7 @@ const pop = (obj, key) => {
 
 /***/ }),
 
-/***/ 7618:
+/***/ 852:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
@@ -25938,7 +33466,7 @@ class ToolError extends Error {
 
 /***/ }),
 
-/***/ 3243:
+/***/ 1813:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
@@ -29085,7 +36613,7 @@ function eventsToAst(events, options) {
 
 /***/ }),
 
-/***/ 9519:
+/***/ 9061:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -29096,7 +36624,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // UNUSED EXPORTS: AST, GLOBSTAR, Minimatch, braceExpand, defaults, escape, filter, makeRe, match, sep, unescape
 
-;// CONCATENATED MODULE: ./node_modules/minimatch/node_modules/balanced-match/dist/esm/index.js
+;// CONCATENATED MODULE: ../../../node_modules/minimatch/node_modules/balanced-match/dist/esm/index.js
 const balanced = (a, b, str) => {
     const ma = a instanceof RegExp ? maybeMatch(a, str) : a;
     const mb = b instanceof RegExp ? maybeMatch(b, str) : b;
@@ -29151,7 +36679,7 @@ const range = (a, b, str) => {
     return result;
 };
 //# sourceMappingURL=index.js.map
-;// CONCATENATED MODULE: ./node_modules/minimatch/node_modules/brace-expansion/dist/esm/index.js
+;// CONCATENATED MODULE: ../../../node_modules/minimatch/node_modules/brace-expansion/dist/esm/index.js
 
 const escSlash = '\0SLASH' + Math.random() + '\0';
 const escOpen = '\0OPEN' + Math.random() + '\0';
@@ -29349,7 +36877,7 @@ function expand_(str, max, isTop) {
     return expansions;
 }
 //# sourceMappingURL=index.js.map
-;// CONCATENATED MODULE: ./node_modules/minimatch/dist/esm/assert-valid-pattern.js
+;// CONCATENATED MODULE: ../../../node_modules/minimatch/dist/esm/assert-valid-pattern.js
 const MAX_PATTERN_LENGTH = 1024 * 64;
 const assertValidPattern = (pattern) => {
     if (typeof pattern !== 'string') {
@@ -29360,7 +36888,7 @@ const assertValidPattern = (pattern) => {
     }
 };
 //# sourceMappingURL=assert-valid-pattern.js.map
-;// CONCATENATED MODULE: ./node_modules/minimatch/dist/esm/brace-expressions.js
+;// CONCATENATED MODULE: ../../../node_modules/minimatch/dist/esm/brace-expressions.js
 // translate the various posix character classes into unicode properties
 // this works across all unicode locales
 // { <posix class>: [<translation>, /u flag required, negated]
@@ -29507,7 +37035,7 @@ const parseClass = (glob, position) => {
     return [comb, uflag, endPos - pos, true];
 };
 //# sourceMappingURL=brace-expressions.js.map
-;// CONCATENATED MODULE: ./node_modules/minimatch/dist/esm/unescape.js
+;// CONCATENATED MODULE: ../../../node_modules/minimatch/dist/esm/unescape.js
 /**
  * Un-escape a string that has been escaped with {@link escape}.
  *
@@ -29542,7 +37070,7 @@ const unescape_unescape = (s, { windowsPathsNoEscape = false, magicalBraces = tr
             .replace(/\\([^/{}])/g, '$1');
 };
 //# sourceMappingURL=unescape.js.map
-;// CONCATENATED MODULE: ./node_modules/minimatch/dist/esm/ast.js
+;// CONCATENATED MODULE: ../../../node_modules/minimatch/dist/esm/ast.js
 // parse a single path portion
 var _a;
 
@@ -30384,7 +37912,7 @@ class AST {
 }
 _a = AST;
 //# sourceMappingURL=ast.js.map
-;// CONCATENATED MODULE: ./node_modules/minimatch/dist/esm/escape.js
+;// CONCATENATED MODULE: ../../../node_modules/minimatch/dist/esm/escape.js
 /**
  * Escape all magic characters in a glob pattern.
  *
@@ -30411,7 +37939,7 @@ const escape_escape = (s, { windowsPathsNoEscape = false, magicalBraces = false,
         : s.replace(/[?*()[\]\\]/g, '\\$&');
 };
 //# sourceMappingURL=escape.js.map
-;// CONCATENATED MODULE: ./node_modules/minimatch/dist/esm/index.js
+;// CONCATENATED MODULE: ../../../node_modules/minimatch/dist/esm/index.js
 
 
 
@@ -31529,7 +39057,7 @@ minimatch.unescape = unescape_unescape;
 
 /***/ }),
 
-/***/ 2314:
+/***/ 3460:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -31548,7 +39076,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // UNUSED EXPORTS: ZodAny, ZodArray, ZodBase64, ZodBase64URL, ZodBigInt, ZodBigIntFormat, ZodBoolean, ZodCIDRv4, ZodCIDRv6, ZodCUID, ZodCUID2, ZodCatch, ZodCodec, ZodCustom, ZodCustomStringFormat, ZodDate, ZodDefault, ZodDiscriminatedUnion, ZodE164, ZodEmail, ZodEmoji, ZodEnum, ZodExactOptional, ZodFile, ZodFunction, ZodGUID, ZodIPv4, ZodIPv6, ZodIntersection, ZodJWT, ZodKSUID, ZodLazy, ZodLiteral, ZodMAC, ZodMap, ZodNaN, ZodNanoID, ZodNever, ZodNonOptional, ZodNull, ZodNullable, ZodNumber, ZodNumberFormat, ZodObject, ZodOptional, ZodPipe, ZodPrefault, ZodPreprocess, ZodPromise, ZodReadonly, ZodRecord, ZodSet, ZodString, ZodSuccess, ZodSymbol, ZodTemplateLiteral, ZodTransform, ZodTuple, ZodType, ZodULID, ZodURL, ZodUUID, ZodUndefined, ZodUnion, ZodUnknown, ZodVoid, ZodXID, ZodXor, _ZodString, _default, _function, any, base64, base64url, bigint, catch, check, cidrv4, cidrv6, codec, cuid, cuid2, custom, date, describe, discriminatedUnion, e164, email, emoji, exactOptional, file, float32, float64, function, guid, hash, hex, hostname, httpUrl, instanceof, int, int32, int64, intersection, invertCodec, ipv4, ipv6, json, jwt, keyof, ksuid, lazy, literal, looseObject, looseRecord, mac, map, meta, nan, nanoid, nativeEnum, never, nonoptional, null, nullable, nullish, optional, partialRecord, pipe, prefault, preprocess, promise, readonly, record, refine, set, strictObject, stringFormat, stringbool, success, superRefine, symbol, templateLiteral, transform, tuple, uint32, uint64, ulid, undefined, url, uuid, uuidv4, uuidv6, uuidv7, void, xid, xor
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/core.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/core.js
 var _a;
 /** A special constant with type `never` */
 const NEVER = /*@__PURE__*/ Object.freeze({
@@ -31628,7 +39156,7 @@ function config(newConfig) {
     return globalConfig;
 }
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/regexes.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/regexes.js
 
 /**
  * @deprecated CUID v1 is deprecated by its authors due to information leakage
@@ -31769,7 +39297,7 @@ const sha512_hex = /^[0-9a-fA-F]{128}$/;
 const sha512_base64 = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64(86, "==")));
 const sha512_base64url = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64url(86)));
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/util.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/util.js
 
 // functions
 function assertEqual(val) {
@@ -32445,7 +39973,7 @@ class Class {
     constructor(..._args) { }
 }
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/checks.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/checks.js
 // import { $ZodType } from "./schemas.js";
 
 
@@ -33022,7 +40550,7 @@ const $ZodCheckOverwrite = /*@__PURE__*/ $constructor("$ZodCheckOverwrite", (ins
     };
 });
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/doc.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/doc.js
 class Doc {
     constructor(args = []) {
         this.content = [];
@@ -33059,7 +40587,7 @@ class Doc {
     }
 }
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/errors.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/errors.js
 
 
 const initializer = (inst, def) => {
@@ -33246,7 +40774,7 @@ function prettifyError(error) {
     return lines.join("\n");
 }
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/parse.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/parse.js
 
 
 
@@ -33341,14 +40869,14 @@ const _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
 };
 const safeDecodeAsync = /* @__PURE__*/ _safeDecodeAsync($ZodRealError);
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/versions.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/versions.js
 const version = {
     major: 4,
     minor: 4,
     patch: 3,
 };
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/schemas.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/schemas.js
 
 
 
@@ -35589,7 +43117,7 @@ function handleRefineResult(result, payload, input, inst) {
     }
 }
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/registries.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/registries.js
 var registries_a;
 const $output = Symbol("ZodOutput");
 const $input = Symbol("ZodInput");
@@ -35642,7 +43170,7 @@ function registry() {
 (registries_a = globalThis).__zod_globalRegistry ?? (registries_a.__zod_globalRegistry = registry());
 const globalRegistry = globalThis.__zod_globalRegistry;
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/api.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/api.js
 
 
 
@@ -36727,7 +44255,7 @@ function _stringFormat(Class, format, fnOrRegex, _params = {}) {
     return inst;
 }
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/to-json-schema.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/to-json-schema.js
 
 // function initializeContext<T extends schemas.$ZodType>(inputs: JSONSchemaGeneratorParams<T>): ToJSONSchemaContext<T> {
 //   return {
@@ -37177,7 +44705,7 @@ const createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params)
     return to_json_schema_finalize(ctx, schema);
 };
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/core/json-schema-processors.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/core/json-schema-processors.js
 
 
 const formatMap = {
@@ -37780,7 +45308,7 @@ function toJSONSchema(input, params) {
     return finalize(ctx, input);
 }
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/classic/iso.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/classic/iso.js
 
 
 const ZodISODateTime = /*@__PURE__*/ $constructor("ZodISODateTime", (inst, def) => {
@@ -37812,7 +45340,7 @@ function iso_duration(params) {
     return _isoDuration(ZodISODuration, params);
 }
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/classic/errors.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/classic/errors.js
 
 
 
@@ -37862,7 +45390,7 @@ const ZodRealError = /*@__PURE__*/ $constructor("ZodError", errors_initializer, 
 // /** @deprecated Use `z.core.$ZodErrorMapCtx` instead. */
 // export type ErrorMapCtx = core.$ZodErrorMapCtx;
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/classic/parse.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/classic/parse.js
 
 
 const classic_parse_parse = /* @__PURE__ */ _parse(ZodRealError);
@@ -37879,7 +45407,7 @@ const parse_safeDecode = /* @__PURE__ */ _safeDecode(ZodRealError);
 const parse_safeEncodeAsync = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 const parse_safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-;// CONCATENATED MODULE: ./node_modules/zod/v4/classic/schemas.js
+;// CONCATENATED MODULE: ../../../node_modules/zod/v4/classic/schemas.js
 
 
 
@@ -39279,7555 +46807,70 @@ function preprocess(fn, schema) {
 
 /***/ }),
 
-/***/ 7050:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-
-// EXPORTS
-__nccwpck_require__.d(__webpack_exports__, {
-  buildExecutionPlan: () => (/* binding */ buildExecutionPlan),
-  Ay: () => (/* binding */ rankByModelHint),
-  P0: () => (/* reexport */ summarizeSkill)
-});
-
-// UNUSED EXPORTS: computeContextLift, deriveExecutionOrder, matchesPhase, selectSkills
-
-// EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
-var esm = __nccwpck_require__(9519);
-// EXTERNAL MODULE: ./runners/core/skill-loader.mjs + 1 modules
-var skill_loader = __nccwpck_require__(8478);
-;// CONCATENATED MODULE: ./src/lib/skill-planner.mjs
-
-
-/**
- * Summarize a skill's metadata for LLM consumption.
- * @param {import('../../runners/core/review-runner.mjs').SkillDefinition|import('../../runners/core/review-runner.mjs').SkillMetadata} skill
- */
-function summarizeSkill(skill) {
-  const meta = skill?.metadata ?? skill;
-  return {
-    id: meta.id,
-    name: meta.name,
-    description: meta.description,
-    phase: meta.phase,
-    applyTo: meta.applyTo ?? [],
-    inputContext: meta.inputContext ?? [],
-    outputKind: meta.outputKind ?? ['findings'],
-    modelHint: meta.modelHint ?? null,
-    dependencies: meta.dependencies ?? [],
-    tags: meta.tags ?? [],
-    severity: meta.severity ?? null,
-  };
-}
-
-/**
- * Plan skills using an LLM (or provided planner function). Falls back to deterministic ordering on error.
- * @param {Object} options
- * @param {Array} options.skills - candidate skills (already filtered)
- * @param {Object} options.context - review context (e.g., changedFiles/diff summary/prompt)
- * @param {Function} [options.llmPlan] - async function receiving {skills, context}, returning [{id, priority, reason}]
- * @param {boolean} [options.appendRemaining=true] - whether to append unreferenced skills in deterministic order
- * @returns {Promise<{planned: Array, reasons: Array, fallback: boolean}>}
- */
-async function planSkills({ skills, context, llmPlan, appendRemaining = true }) {
-  const summaries = skills.map(summarizeSkill);
-
-  if (!llmPlan) {
-    return {
-      planned: rankByModelHint(skills),
-      reasons: [],
-      fallback: false,
-    };
-  }
-
-  try {
-    const plan = await llmPlan({ skills: summaries, context });
-    if (!Array.isArray(plan)) {
-      throw new Error('planner returned non-array response');
-    }
-    const order = plan;
-    const byId = new Map(summaries.map((summary, idx) => [summary.id, skills[idx]]));
-    const planned = [];
-    const reasons = [];
-    let matchedCount = 0;
-
-    for (const entry of order) {
-      if (!entry?.id) continue;
-      const candidate = byId.get(entry.id);
-      if (candidate) {
-        planned.push(candidate);
-        matchedCount += 1;
-        if (entry.reason) reasons.push({ id: entry.id, reason: entry.reason });
-        byId.delete(entry.id);
-      }
-    }
-
-    if (appendRemaining) {
-      // append any not referenced by LLM in deterministic order
-      const remaining = rankByModelHint(Array.from(byId.values()));
-      planned.push(...remaining);
-    } else if (matchedCount === 0 && order.length > 0) {
-      // In prune mode, a non-empty plan that matches nothing is almost certainly invalid output.
-      throw new Error('planner returned no known skill ids');
-    }
-
-    return { planned, reasons, fallback: false };
-  } catch (err) {
-    return {
-      planned: rankByModelHint(skills),
-      reasons: [{ id: 'fallback', reason: `planner error: ${err.message}` }],
-      fallback: true,
-    };
-  }
-}
-
-;// CONCATENATED MODULE: ./src/lib/impact-scope.mjs
-function ensureArray(value) {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-function extOf(file) {
-  const idx = file.lastIndexOf('.');
-  if (idx < 0) return '';
-  return file.slice(idx + 1).toLowerCase();
-}
-
-function containsSegment(file, segment) {
-  const normalized = file.replaceAll('\\', '/');
-  return normalized.split('/').includes(segment);
-}
-
-function matchesAny(file, needles) {
-  const normalized = file.toLowerCase();
-  return needles.some((n) => normalized.includes(n));
-}
-
-/**
- * Infer impact tags from changed file paths.
- * Tags are intentionally small and map to existing `skills/**` tags.
- * @param {string[]|string} changedFiles
- * @param {{diffText?: string}} [options]
- * @returns {string[]}
- */
-function inferImpactTags(changedFiles, options = {}) {
-  const files = ensureArray(changedFiles);
-  const tags = new Set();
-
-  for (const file of files) {
-    const ext = extOf(file);
-
-    if (['ts', 'tsx', 'cts', 'mts'].includes(ext)) tags.add('typescript');
-    if (['js', 'jsx', 'cjs', 'mjs'].includes(ext)) tags.add('javascript');
-    if (
-      ['md', 'mdx', 'adr'].includes(ext) ||
-      matchesAny(file, ['/docs/', '/design/']) ||
-      containsSegment(file, 'docs')
-    ) {
-      tags.add('design');
-    }
-
-    if (
-      containsSegment(file, 'tests') ||
-      containsSegment(file, 'test') ||
-      containsSegment(file, '__tests__') ||
-      matchesAny(file, ['.test.', '.spec.'])
-    ) {
-      tags.add('tests');
-    }
-
-    if (containsSegment(file, 'api') || containsSegment(file, 'routes')) tags.add('api');
-    if (containsSegment(file, 'db') || matchesAny(file, ['/migrations/', '/schema/']))
-      tags.add('reliability');
-
-    if (
-      containsSegment(file, 'auth') ||
-      containsSegment(file, 'security') ||
-      matchesAny(file, ['/oauth', '/jwt', '/session', '/cookie', '/csrf'])
-    ) {
-      tags.add('security');
-    }
-
-    if (
-      tags.has('api') ||
-      containsSegment(file, 'config') ||
-      containsSegment(file, 'db') ||
-      matchesAny(file, ['/env', '/secrets', '/headers'])
-    ) {
-      tags.add('security');
-    }
-
-    if (
-      containsSegment(file, 'logging') ||
-      matchesAny(file, ['/logger', '/trace', '/tracing', '/otel', 'opentelemetry'])
-    ) {
-      tags.add('observability');
-      tags.add('reliability');
-    }
-  }
-
-  const diffText = options?.diffText;
-  if (typeof diffText === 'string' && diffText.length) {
-    const lower = diffText.toLowerCase();
-    const hasCatch = lower.includes('catch (') || lower.includes('catch(');
-    const addsSilentReturn =
-      /^\+.*\breturn\s*;\s*(?:\/\/.*)?$/m.test(diffText) ||
-      /^\+.*\breturn\s+null\s*;\s*(?:\/\/.*)?$/m.test(diffText);
-    const mentionsIgnore = lower.includes('ignore') || lower.includes('swallow');
-    if (hasCatch && (addsSilentReturn || mentionsIgnore)) {
-      tags.add('observability');
-      tags.add('reliability');
-    }
-  }
-
-  return [...tags].sort();
-}
-
-// EXTERNAL MODULE: ./src/lib/file-classifier.mjs
-var file_classifier = __nccwpck_require__(4673);
-;// CONCATENATED MODULE: ./src/lib/test-impact.mjs
-
-
-/**
- * Analyze test coverage gaps based on changed file classification.
- *
- * @param {string[]} changedFiles - Array of changed file paths
- * @returns {{ appFilesChanged: number, testFilesChanged: number, gapFiles: string[], coverageRatio: number, riskLevel: 'low'|'medium'|'high' }}
- */
-function analyzeTestImpact(changedFiles) {
-  const classified = (0,file_classifier/* classifyChangedFiles */.q)(changedFiles);
-
-  const appFiles = classified.app;
-  const testFiles = classified.test;
-
-  // Files in app that likely need corresponding tests
-  const gapFiles = appFiles.filter((appFile) => {
-    const basename =
-      appFile
-        .split('/')
-        .pop()
-        ?.replace(/\.[^.]+$/, '') ?? '';
-    // Check if any test file references this app file's basename
-    return !testFiles.some((testFile) => testFile.includes(basename));
-  });
-
-  const appCount = appFiles.length;
-  const testCount = testFiles.length;
-  const coverageRatio = appCount === 0 ? 1 : testCount / appCount;
-
-  let riskLevel = 'low';
-  if (appCount > 0 && testCount === 0) riskLevel = 'high';
-  else if (appCount > 0 && gapFiles.length >= appCount / 2) riskLevel = 'medium';
-
-  return {
-    appFilesChanged: appCount,
-    testFilesChanged: testCount,
-    gapFiles,
-    coverageRatio: Math.min(coverageRatio, 1), // cap at 1
-    riskLevel,
-  };
-}
-
-// EXTERNAL MODULE: ./src/lib/planner-utils.mjs
-var planner_utils = __nccwpck_require__(1013);
-// EXTERNAL MODULE: ./src/lib/heuristic-review.mjs
-var heuristic_review = __nccwpck_require__(2294);
-// EXTERNAL MODULE: ./src/lib/token-estimator.mjs
-var token_estimator = __nccwpck_require__(467);
-// EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
-var risk_map = __nccwpck_require__(572);
-// EXTERNAL MODULE: external "node:fs"
-var external_node_fs_ = __nccwpck_require__(3024);
-// EXTERNAL MODULE: external "node:path"
-var external_node_path_ = __nccwpck_require__(6760);
-;// CONCATENATED MODULE: ./src/lib/adr-linker.mjs
-
-
-
-const DEFAULT_ADR_DIRS = ['docs/adr', 'pages/explanation', 'specs'];
-
-/**
- * Scan known ADR/spec directories and find documents relevant to changed files.
- *
- * @param {string} repoRoot - Repository root path
- * @param {{ changedFiles?: string[], keywords?: string[], extraDirs?: string[] }} options
- *   extraDirs: additional spec/ADR directories from project config
- *   (review.specDirs), merged with the defaults and de-duplicated.
- * @returns {{ path: string, title: string, matchReason: string }[]}
- */
-function findRelatedADRs(
-  repoRoot,
-  { changedFiles = [], keywords = [], extraDirs = [] } = {}
-) {
-  // Resolve and validate scan directories. extraDirs come from user config
-  // (review.specDirs); on shared/fork CI a traversal like '../../etc' must not
-  // escape the repo. Keep only in-repo, existing directories; de-dupe by path.
-  const candidateDirs = [
-    ...DEFAULT_ADR_DIRS,
-    ...(Array.isArray(extraDirs) ? extraDirs.filter(Boolean) : []),
-  ];
-  const adrDirs = [];
-  const seen = new Set();
-  for (const dir of candidateDirs) {
-    const fullDir = external_node_path_.resolve(repoRoot, dir);
-    const relative = external_node_path_.relative(repoRoot, fullDir);
-    // Reject the repo root itself, path traversal, absolute escapes, duplicates.
-    if (
-      relative === '' ||
-      relative.startsWith('..') ||
-      external_node_path_.isAbsolute(relative) ||
-      seen.has(relative)
-    ) {
-      continue;
-    }
-    try {
-      if (external_node_fs_.statSync(fullDir).isDirectory()) {
-        seen.add(relative);
-        adrDirs.push(relative);
-      }
-    } catch {
-      // missing or inaccessible → skip
-    }
-  }
-  const results = [];
-
-  for (const dir of adrDirs) {
-    const fullDir = external_node_path_.join(repoRoot, dir);
-    const files = external_node_fs_.readdirSync(fullDir).filter((f) => f.endsWith('.md'));
-    for (const file of files) {
-      const filePath = external_node_path_.join(dir, file);
-      const content = external_node_fs_.readFileSync(external_node_path_.join(fullDir, file), 'utf-8');
-      const title = extractTitle(content) || file;
-
-      // Match by keyword in content
-      for (const kw of keywords) {
-        if (content.toLowerCase().includes(kw.toLowerCase())) {
-          results.push({ path: filePath, title, matchReason: `keyword: ${kw}` });
-          break; // one match per file is enough
-        }
-      }
-
-      // Match by changed file mention in content
-      for (const cf of changedFiles) {
-        const basename = cf.split('/').pop();
-        if (content.includes(cf) || content.includes(basename)) {
-          if (!results.some((r) => r.path === filePath)) {
-            results.push({
-              path: filePath,
-              title,
-              matchReason: `references: ${cf}`,
-            });
-          }
-          break;
-        }
-      }
-    }
-  }
-
-  return results;
-}
-
-function extractTitle(markdown) {
-  const match = /^#\s+(.+)/m.exec(markdown);
-  return match ? match[1].trim() : null;
-}
-
-// EXTERNAL MODULE: ./src/lib/diff-processor.mjs
-var diff_processor = __nccwpck_require__(861);
-// EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
-var review_plan_generator = __nccwpck_require__(8069);
-;// CONCATENATED MODULE: ./runners/core/review-runner.mjs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const MODEL_PRIORITY = {
-  cheap: 1,
-  balanced: 2,
-  'high-accuracy': 3,
-};
-
-// Epic #1347 S2 (#1349, merged from #1339): declared multi-layer execution
-// order. Derived from each selected skill's evaluationType (fallback:
-// SKILL_HEURISTIC_MAP membership → heuristic, else agentic→llm). S2 emits the
-// DECLARATION only; reordering enforcement (strict_block routing) is S4.
-const EVALUATION_LAYER_ORDER = ['deterministic', 'heuristic', 'llm'];
-
-function skillEvaluationLayers(skill) {
-  const meta = getMeta(skill);
-  const declared = meta?.evaluationType;
-  if (declared === 'deterministic') return ['deterministic'];
-  if (declared === 'heuristic') return ['heuristic'];
-  if (declared === 'agentic') return ['llm'];
-  // Undeclared fallback: SKILL_HEURISTIC_MAP members have heuristic detectors
-  // AND run through the LLM in normal (non-dry-run) execution, so they
-  // contribute BOTH layers — declaring only 'heuristic' would omit the llm
-  // layer that actually runs (review M1 of the S2 plan-contract PR).
-  return heuristic_review/* HEURISTIC_SKILL_IDS */.y2.includes(meta?.id) ? ['heuristic', 'llm'] : ['llm'];
-}
-
-function deriveExecutionOrder(selected) {
-  const layers = new Set((selected ?? []).flatMap(skillEvaluationLayers));
-  return EVALUATION_LAYER_ORDER.filter((l) => layers.has(l));
-}
-
-// Epic #1347 S3 (#1350, Gemini-proposal adoption): Context Lift — how much
-// skill-prompt context progressive disclosure saved. totalSkillTokens counts
-// every CANDIDATE skill body; loadedSkillTokens counts only the selected
-// ones. liftRatio = 1 - loaded/total (0 when nothing was saved or nothing
-// was measurable). Declaration/metric only — no behavior depends on it.
-function computeContextLift(candidates, selected) {
-  const bodyTokens = (skill) => (0,token_estimator/* estimateTokens */.bP)(skill?.body ?? '');
-  const totalSkillTokens = (candidates ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
-  const loadedSkillTokens = (selected ?? []).reduce((sum, s) => sum + bodyTokens(s), 0);
-  const liftRatio =
-    totalSkillTokens > 0 ? Math.round((1 - loadedSkillTokens / totalSkillTokens) * 1000) / 1000 : 0;
-  return { totalSkillTokens, loadedSkillTokens, liftRatio };
-}
-
-function getMeta(skill) {
-  return skill?.metadata ?? skill;
-}
-
-function review_runner_ensureArray(value) {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-function matchesPhase(skill, phase) {
-  const meta = getMeta(skill);
-  if (Array.isArray(meta.phase)) {
-    return meta.phase.includes(phase);
-  }
-  return meta.phase === phase;
-}
-
-function matchesApplyTo(skill, changedFiles) {
-  const meta = getMeta(skill);
-  const globs = review_runner_ensureArray(meta.applyTo);
-  if (!globs.length) return false;
-  return changedFiles.some((file) =>
-    globs.some((pattern) => (0,esm/* minimatch */.xF)(file, pattern, { dot: true }))
-  );
-}
-
-function missingInputContexts(skill, availableContexts) {
-  const meta = getMeta(skill);
-  if (!meta.inputContext || meta.inputContext.length === 0) return [];
-  const available = new Set(availableContexts);
-  return meta.inputContext.filter((ctx) => !available.has(ctx));
-}
-
-function missingDependencies(skill, availableDependencies) {
-  const meta = getMeta(skill);
-  const deps = review_runner_ensureArray(meta.dependencies);
-  if (!deps.length) return [];
-  if (availableDependencies == null) return [];
-  const available = new Set(review_runner_ensureArray(availableDependencies));
-  return deps.filter((dep) => !available.has(dep));
-}
-
-function evaluateSkill(skill, options) {
-  const reasons = [];
-  const meta = getMeta(skill);
-  if (!matchesPhase(meta, options.phase)) {
-    reasons.push(`phase mismatch: ${meta.phase} !== ${options.phase}`);
-  }
-  if (!matchesApplyTo(meta, options.changedFiles)) {
-    reasons.push('applyTo did not match any changed file');
-  }
-  const missingContexts = missingInputContexts(meta, options.availableContexts);
-  if (missingContexts.length) {
-    reasons.push(`missing inputContext: ${missingContexts.join(', ')}`);
-  }
-  const depsMissing = missingDependencies(meta, options.availableDependencies);
-  if (depsMissing.length) {
-    reasons.push(`missing dependencies: ${depsMissing.join(', ')}`);
-  }
-  return {
-    ok: reasons.length === 0,
-    reasons,
-  };
-}
-
-function selectSkills(skills, options) {
-  const changedFiles = review_runner_ensureArray(options.changedFiles);
-  const availableContexts = review_runner_ensureArray(options.availableContexts);
-  const availableDependencies = options.availableDependencies ?? null;
-  const dryRun = options.dryRun ?? false;
-  const llmEnabled = options.llmEnabled ?? true;
-  const selected = [];
-  const skipped = [];
-
-  for (const skill of skills) {
-    const meta = skill.metadata ?? skill;
-    const skillId = meta.id;
-
-    // ルーティングスキル（エントリポイント）は実行対象外
-    const tags = review_runner_ensureArray(meta.tags);
-    if (tags.includes('routing')) {
-      skipped.push({ skill, reasons: ['routing skill: not an executable review skill'] });
-      continue;
-    }
-
-    // dry-run または LLM 無効時はヒューリスティック対応スキルのみ選択
-    const isLlmRestricted = dryRun || !llmEnabled;
-    if (isLlmRestricted && !heuristic_review/* HEURISTIC_SKILL_IDS */.y2.includes(skillId)) {
-      const reason = dryRun
-        ? 'dry-run: LLM必須スキル（ヒューリスティック未対応）'
-        : 'LLM disabled: LLM必須スキル（APIキー未設定）';
-      skipped.push({ skill, reasons: [reason] });
-      continue;
-    }
-
-    const result = evaluateSkill(meta, {
-      phase: options.phase,
-      changedFiles,
-      availableContexts,
-      availableDependencies,
-    });
-    if (result.ok) {
-      selected.push(skill);
-    } else {
-      skipped.push({ skill, reasons: result.reasons });
-    }
-  }
-  return { selected, skipped };
-}
-
-function rankByModelHint(skills, preferredModelHint = 'balanced') {
-  const preferredWeight = MODEL_PRIORITY[preferredModelHint] ?? MODEL_PRIORITY.balanced;
-  const weight = (hint) => MODEL_PRIORITY[hint] ?? MODEL_PRIORITY.balanced;
-  return [...skills].sort((a, b) => {
-    const wa = Math.abs(weight(getMeta(a).modelHint) - preferredWeight);
-    const wb = Math.abs(weight(getMeta(b).modelHint) - preferredWeight);
-    if (wa !== wb) return wa - wb;
-    return getMeta(a).id.localeCompare(getMeta(b).id);
-  });
-}
-
-function computeTagScore(skill, impactTags) {
-  if (!impactTags?.length) return 0;
-  const tags = new Set(getMeta(skill).tags ?? []);
-  let score = 0;
-  for (const tag of impactTags) {
-    if (tags.has(tag)) score += 1;
-  }
-  return score;
-}
-
-function rankByImpactTags(skills, impactTags, preferredModelHint = 'balanced') {
-  const scores = new Map(skills.map((s) => [getMeta(s).id, computeTagScore(s, impactTags)]));
-  const anyMatched = Array.from(scores.values()).some((v) => v > 0);
-  if (!anyMatched) {
-    return rankByModelHint(skills, preferredModelHint);
-  }
-
-  const preferredWeight = MODEL_PRIORITY[preferredModelHint] ?? MODEL_PRIORITY.balanced;
-  const weight = (hint) => MODEL_PRIORITY[hint] ?? MODEL_PRIORITY.balanced;
-
-  return [...skills].sort((a, b) => {
-    const idA = getMeta(a).id;
-    const idB = getMeta(b).id;
-    const scoreA = scores.get(idA) ?? 0;
-    const scoreB = scores.get(idB) ?? 0;
-    if (scoreA !== scoreB) return scoreB - scoreA;
-
-    const wa = Math.abs(weight(getMeta(a).modelHint) - preferredWeight);
-    const wb = Math.abs(weight(getMeta(b).modelHint) - preferredWeight);
-    if (wa !== wb) return wa - wb;
-    return idA.localeCompare(idB);
-  });
-}
-
-/**
- * Build an execution plan from skills and review context.
- * - planner 未指定: メタデと modelHint に基づく決定論的な並び替え
- * - planner 指定: LLM 等で優先度決定し、エラー時は決定論的順序にフォールバック
- *   - plannerMode=order: 優先度づけ（未参照スキルは後ろに決定論で追加）
- *   - plannerMode=prune: 絞り込み（LLM が選んだスキルのみを実行）
- */
-// #1255 (approach D): opt-in escalation. When RIVER_ESCALATE_TEST_SKILLS is
-// enabled and the diff is high test-impact risk (app changed, no tests), these
-// downstream test skills are force-selected regardless of phase so untested
-// high-risk changes still get a test-coverage review. Default off — see
-// docs/development/1255-test-impact-routing-design.md.
-const ESCALATION_TEST_SKILL_IDS = ['test-existence', 'coverage-gap'];
-
-function isTestSkillEscalationEnabled() {
-  const v = String(process.env.RIVER_ESCALATE_TEST_SKILLS ?? '')
-    .trim()
-    .toLowerCase();
-  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
-}
-
-async function buildExecutionPlan(options) {
-  const {
-    phase,
-    changedFiles = [],
-    availableContexts = [],
-    availableDependencies = null,
-    preferredModelHint = 'balanced',
-    skills: providedSkills,
-    planner,
-    plannerMode,
-    diffText,
-    dryRun = false,
-    llmEnabled = true,
-    repoRoot,
-    riskMap,
-    skillIds = null,
-    manualReviewMode = null,
-    specDirs = [],
-  } = options;
-
-  const loadedSkills = providedSkills ?? (await (0,skill_loader/* loadSkills */.l1)());
-  // When a skill set is requested (--skill-set), narrow the candidate skills to
-  // the set's ids before phase/applyTo selection. Default (null) keeps all skills.
-  const skills =
-    Array.isArray(skillIds) && skillIds.length > 0
-      ? loadedSkills.filter((skill) => skillIds.includes(skill.metadata?.id ?? skill.id))
-      : loadedSkills;
-  const selection = selectSkills(skills, {
-    phase,
-    changedFiles,
-    availableContexts,
-    availableDependencies,
-    dryRun,
-    llmEnabled,
-  });
-  const impactTags = inferImpactTags(changedFiles, { diffText });
-  const fileTypes = (0,file_classifier/* classifyChangedFiles */.q)(changedFiles);
-  const riskAssessment = riskMap ? (0,risk_map/* evaluateRisk */.lm)(riskMap, changedFiles) : null;
-  // #1255: surface test-impact signal (riskLevel high = app changed, no tests)
-  // on the plan so downstream planners/consumers can route test skills. This
-  // exposes the previously dead-code analyzeTestImpact() without forcing skill
-  // injection (approach B).
-  const testImpact = analyzeTestImpact(changedFiles);
-  // #1255 (approach D): opt-in escalation of downstream test skills for high
-  // test-impact risk diffs. Injects regardless of phase; default off so the
-  // baseline selection (and dry-run heuristic behavior) is unchanged.
-  if (testImpact.riskLevel === 'high' && isTestSkillEscalationEnabled()) {
-    const selectedIds = new Set(selection.selected.map((s) => getMeta(s).id));
-    for (const id of ESCALATION_TEST_SKILL_IDS) {
-      if (selectedIds.has(id)) continue;
-      const skill = skills.find((s) => getMeta(s).id === id);
-      if (!skill) continue;
-      selection.selected.push(skill);
-      selection.skipped = selection.skipped.filter((entry) => getMeta(entry.skill).id !== id);
-    }
-  }
-  if (selection.selected.length === 0) {
-    // #878 A2-3-runners: even when no skills are selected, expose the
-    // snapshot so consumers can attach it to the artifact for downstream
-    // diagnostics (drift detection, audit). Cheap to compute, cheap to drop.
-    return {
-      selected: [],
-      skipped: selection.skipped,
-      fileTypes,
-      riskAssessment,
-      testImpact,
-      executionOrder: [],
-      estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
-      contextLift: computeContextLift(skills, []),
-      snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
-    };
-  }
-  const relatedADRs = findRelatedADRs(repoRoot ?? process.cwd(), {
-    changedFiles,
-    keywords: impactTags,
-    extraDirs: specDirs,
-  });
-
-  const diffMeta = (0,diff_processor/* extractDiffMeta */.So)({ changedFiles, diffText });
-  const reviewMode = (0,review_plan_generator/* determineReviewMode */.Xf)(diffMeta, { manualMode: manualReviewMode });
-
-  // If planner is provided, try LLM-based planning, fallback to deterministic rank
-  const effectivePlannerMode = planner
-    ? (0,planner_utils/* normalizePlannerMode */.p$)(plannerMode, { defaultMode: 'order' })
-    : 'off';
-  if (planner && effectivePlannerMode !== 'off') {
-    const context = {
-      phase,
-      changedFiles,
-      availableContexts,
-      impactTags,
-      fileTypes,
-    };
-    const { planned, reasons, fallback } = await planSkills({
-      skills: selection.selected,
-      context,
-      llmPlan: planner.plan ?? planner,
-      appendRemaining: effectivePlannerMode !== 'prune',
-    });
-    const ranked = fallback
-      ? rankByImpactTags(selection.selected, impactTags, preferredModelHint)
-      : planned;
-    return {
-      selected: ranked,
-      skipped: selection.skipped,
-      plannerMode: effectivePlannerMode,
-      plannerReasons: reasons,
-      plannerFallback: fallback,
-      ...(fallback ? { plannerError: reasons?.[0]?.reason ?? 'planner fallback' } : {}),
-      impactTags,
-      fileTypes,
-      relatedADRs,
-      reviewMode,
-      // #877 silent-skip cleanup: riskAssessment was previously computed but
-      // never returned, so consumers received `undefined`. Top-level for
-      // back-compat; also nested in `snapshot` for the #878 A2-3 carry-over.
-      riskAssessment,
-      // #1255: test-impact signal (see analyzeTestImpact call above).
-      testImpact,
-      // Epic #1347 S2: declared layer order + rough cost estimate (advisory).
-      executionOrder: deriveExecutionOrder(ranked),
-      estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
-      contextLift: computeContextLift(skills, ranked),
-      // #878 A2-3-runners: carry-over context for --plan replay execution.
-      // Consumers should propagate this to `artifact.debug.execution.snapshot`
-      // per docs/development/a2-3-replay-execution-design.md.
-      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
-    };
-  }
-
-  // planner が無い場合（LLM未設定）は決定論的順位付けで実行
-  const ordered = rankByImpactTags(selection.selected, impactTags, preferredModelHint);
-
-  return {
-    selected: ordered,
-    skipped: selection.skipped,
-    impactTags,
-    fileTypes,
-    relatedADRs,
-    reviewMode,
-    riskAssessment,
-    testImpact,
-    executionOrder: deriveExecutionOrder(ordered),
-    estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
-    contextLift: computeContextLift(skills, ordered),
-    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
-  };
-}
-
-// Re-export summarizeSkill for consumers that want the same view used by planner
-
-
-
-/***/ }),
-
-/***/ 7328:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   $b: () => (/* binding */ loadSkillsCached)
-/* harmony export */ });
-/* unused harmony exports clearSkillCache, skillCacheSize */
-/* harmony import */ var _skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(8478);
-
-
-// Module-level cache: serialized options key → Promise<SkillDefinition[]>
-// Caching the promise prevents thundering-herd: concurrent callers with the
-// same key await the same in-flight promise rather than launching duplicates.
-// Prevents redundant disk I/O when the same skillsDir is loaded multiple
-// times in a single process (e.g. agent-skill-bridge calls loadSkills twice
-// with identical options).
-//
-// Safety bound: evict the oldest entry when the cache exceeds MAX_ENTRIES.
-// In practice the number of distinct option sets is very small (< 5), so this
-// bound is only a safeguard against unbounded growth in unusual scenarios.
-const MAX_ENTRIES = 50;
-const cache = new Map();
-
-function evictIfNeeded() {
-  if (cache.size >= MAX_ENTRIES) {
-    cache.delete(cache.keys().next().value);
-  }
-}
-
-function cacheKey(options) {
-  const { skillsDir, schemaPath, excludedTags } = options ?? {};
-  return JSON.stringify({
-    skillsDir: skillsDir ?? null,
-    schemaPath: schemaPath ?? null,
-    excludedTags: excludedTags ? [...excludedTags].sort() : null,
-  });
-}
-
-/**
- * Load skills with in-process memoization.
- * Identical calls within the same process return the cached result without
- * re-reading the filesystem. Call {@link clearSkillCache} between test cases
- * or whenever fresh data is needed.
- *
- * If a custom `validator` function is supplied, the cache is bypassed because
- * functions cannot be serialised into a stable key.
- *
- * @param {{ skillsDir?: string, schemaPath?: string, excludedTags?: string[], validator?: Function }} [options]
- * @returns {Promise<SkillDefinition[]>}
- */
-async function loadSkillsCached(options = {}) {
-  // Bypass cache when a custom validator is provided — functions are not
-  // serialisable, so two calls with different validators would collide on
-  // the same key even though their results may differ.
-  if (options.validator) {
-    return (0,_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .loadSkills */ .l1)(options);
-  }
-
-  const key = cacheKey(options);
-  if (cache.has(key)) return cache.get(key);
-
-  evictIfNeeded();
-  const promise = (0,_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .loadSkills */ .l1)(options).catch((err) => {
-    cache.delete(key);
-    throw err;
-  });
-  cache.set(key, promise);
-  return promise;
-}
-
-/**
- * Evict all cached entries.
- * Call this in tests or when skill files on disk may have changed.
- */
-function clearSkillCache() {
-  cache.clear();
-}
-
-/**
- * Number of distinct option sets currently cached.
- * Primarily for testing; not intended for production use.
- */
-function skillCacheSize() {
-  return cache.size;
-}
-
-
-/***/ }),
-
-/***/ 8478:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-
-// EXPORTS
-__nccwpck_require__.d(__webpack_exports__, {
-  vN: () => (/* binding */ SkillLoaderError),
-  m: () => (/* binding */ createSkillValidator),
-  KJ: () => (/* binding */ defaultPaths),
-  Qv: () => (/* binding */ loadAllSkillMetadata),
-  rn: () => (/* binding */ loadPacks),
-  e$: () => (/* binding */ loadSchema),
-  l1: () => (/* binding */ loadSkills),
-  eJ: () => (/* binding */ parseFrontMatter),
-  mw: () => (/* binding */ resolveSkillSet)
-});
-
-// UNUSED EXPORTS: listSkillFiles, loadRecommendationSets, loadSkillFile, loadSkillMetadata, parseSkillFile, resolveRecommendationSet
-
-// EXTERNAL MODULE: external "fs"
-var external_fs_ = __nccwpck_require__(9896);
-// EXTERNAL MODULE: external "path"
-var external_path_ = __nccwpck_require__(6928);
-;// CONCATENATED MODULE: external "url"
-const external_url_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("url");
-// EXTERNAL MODULE: ./node_modules/js-yaml/dist/js-yaml.mjs
-var js_yaml = __nccwpck_require__(3243);
-// EXTERNAL MODULE: ./node_modules/gray-matter/index.js
-var gray_matter = __nccwpck_require__(9599);
-// EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
-var _2020 = __nccwpck_require__(2210);
-// EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
-var dist = __nccwpck_require__(2815);
-;// CONCATENATED MODULE: ./runners/core/skill-loader.mjs
-
-
-
-
-
-
-
-
-/**
- * @typedef {'upstream' | 'midstream' | 'downstream'} PhaseEnum
- * @typedef {PhaseEnum | PhaseEnum[]} Phase
- * @typedef {'info' | 'minor' | 'major' | 'critical'} Severity
- * @typedef {'diff' | 'fullFile' | 'tests' | 'adr' | 'commitMessage' | 'repoConfig'} InputContext
- * @typedef {'findings' | 'summary' | 'actions' | 'tests' | 'metrics' | 'questions'} OutputKind
- * @typedef {'cheap' | 'balanced' | 'high-accuracy'} ModelHint
- * @typedef {'code_search' | 'test_runner' | 'adr_lookup' | 'repo_metadata' | 'coverage_report' | 'tracing' | `custom:${string}`} Dependency
- *
- * @typedef {Object} SkillMetadata
- * @property {string} id
- * @property {string} name
- * @property {string} description
- * @property {Phase} phase
- * @property {string[]} applyTo
- * @property {string[]=} files
- * @property {string[]=} tags
- * @property {Severity=} severity
- * @property {InputContext[]=} inputContext
- * @property {OutputKind[]=} outputKind
- * @property {ModelHint=} modelHint
- * @property {Dependency[]=} dependencies
- * @property {{phase?: Phase, applyTo?: string[], files?: string[]}=} trigger
- * @property {number=} priority
- *
- * @typedef {Object} SkillDefinition
- * @property {SkillMetadata} metadata
- * @property {string} body
- * @property {string} path
- */
-
-const skill_loader_filename = (0,external_url_namespaceObject.fileURLToPath)(import.meta.url);
-const skill_loader_dirname = external_path_.dirname(skill_loader_filename);
-const repoRoot = process.env.RIVER_REPO_ROOT
-  ? external_path_.resolve(process.env.RIVER_REPO_ROOT)
-  : external_path_.resolve(skill_loader_dirname, '..', '..');
-const defaultSkillsDir = external_path_.join(repoRoot, 'skills');
-const defaultSchemaPath = external_path_.join(repoRoot, 'schemas', 'skill.schema.json');
-const markdownExtensions = new Set(['.md', '.mdx']);
-const yamlExtensions = new Set(['.yaml', '.yml']);
-const allowedExtensions = new Set([...markdownExtensions, ...yamlExtensions]);
-const ignoredSkillDirNames = new Set([
-  'references',
-  'fixtures',
-  'golden',
-  'eval',
-  'prompt',
-  'prompts',
-]);
-const ignoredFileNames = new Set([
-  '.gitkeep',
-  'README.md',
-  'registry.yaml',
-  'registry.yml',
-  '_template.md',
-]);
-const legacySkillFiles = new Set(['skill.yaml', 'skill.yml']);
-const streamCategories = new Set(['core', 'upstream', 'midstream', 'downstream']);
-const allPhases = ['upstream', 'midstream', 'downstream'];
-
-const defaultPaths = {
-  repoRoot,
-  skillsDir: defaultSkillsDir,
-  schemaPath: defaultSchemaPath,
-};
-
-class SkillLoaderError extends Error {
-  constructor(message, details = undefined) {
-    super(message);
-    this.name = 'SkillLoaderError';
-    this.details = details;
-  }
-}
-
-async function loadSchema(schemaPath = defaultSchemaPath) {
-  const raw = await external_fs_.promises.readFile(schemaPath, 'utf8');
-  try {
-    return JSON.parse(raw);
-  } catch (err) {
-    throw new SkillLoaderError(`Failed to parse JSON schema at ${schemaPath}: ${err.message}`);
-  }
-}
-
-function createSkillValidator(schema) {
-  const ajv = new _2020({ allErrors: true, strict: false, useDefaults: true });
-  dist(ajv);
-  return ajv.compile(schema);
-}
-
-/**
- * Read the named skill bundles declared under `recommendations:` in
- * skills/registry.yaml. These are maintainer-curated sets (basic, typescript,
- * comprehensive, ...) that `--skill-set <name>` exposes for selective runs.
- *
- * @param {{ skillsDir?: string }} [options]
- * @returns {Promise<Record<string, { description?: string, skills: string[] }>>}
- */
-async function loadRecommendationSets({ skillsDir = defaultSkillsDir } = {}) {
-  const registryPath = external_path_.join(skillsDir, 'registry.yaml');
-  let raw;
-  try {
-    raw = await external_fs_.promises.readFile(registryPath, 'utf8');
-  } catch {
-    return {};
-  }
-  let parsed;
-  try {
-    parsed = js_yaml/* load */.Hh(raw) ?? {};
-  } catch (err) {
-    throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
-  }
-  const recommendations = parsed?.recommendations;
-  return recommendations && typeof recommendations === 'object' ? recommendations : {};
-}
-
-/**
- * Resolve a recommendation set name to its skill id list.
- *
- * @param {string} name
- * @param {{ skillsDir?: string }} [options]
- * @returns {Promise<string[]>} skill ids in the set
- * @throws {SkillLoaderError} when the name is not a known recommendation set
- */
-async function resolveRecommendationSet(name, { skillsDir = defaultSkillsDir } = {}) {
-  const sets = await loadRecommendationSets({ skillsDir });
-  const entry = sets[name];
-  if (!entry || !Array.isArray(entry.skills)) {
-    const available = Object.keys(sets).sort().join(', ') || '(none)';
-    throw new SkillLoaderError(`Unknown skill set "${name}". Available sets: ${available}.`);
-  }
-  return entry.skills.filter((id) => typeof id === 'string' && id.length > 0);
-}
-
-/**
- * Read the pack manifests declared under `packs:` in skills/registry.yaml.
- * Packs are the distribution unit for bundled open review knowledge
- * (docs/development/skill-pack-design.md). Unlike `recommendations:` (an
- * object keyed by name), `packs:` is an array of entries with an `id` field.
- *
- * @param {{ skillsDir?: string }} [options]
- * @returns {Promise<Array<{ id: string, skills: string[] }>>}
- */
-async function loadPacks({ skillsDir = defaultSkillsDir } = {}) {
-  const registryPath = external_path_.join(skillsDir, 'registry.yaml');
-  let raw;
-  try {
-    raw = await external_fs_.promises.readFile(registryPath, 'utf8');
-  } catch {
-    return [];
-  }
-  let parsed;
-  try {
-    parsed = js_yaml/* load */.Hh(raw) ?? {};
-  } catch (err) {
-    throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
-  }
-  const packs = parsed?.packs;
-  return Array.isArray(packs) ? packs.filter((p) => p && typeof p.id === 'string') : [];
-}
-
-/**
- * Resolve one or more skill-set names (comma separated) to a deduplicated
- * skill id list. Resolution order per name: packs first, then
- * recommendations as a fallback. Multiple names are set-unioned so each
- * skill runs at most once (skill-pack-design.md §2 principle 1).
- *
- * During the packs/recommendations coexistence period a name present in
- * both resolves to the pack and emits a warning (same-id conflicts become
- * validate errors in Phase D).
- *
- * @param {string} names comma-separated pack/recommendation-set names
- * @param {{ skillsDir?: string, warn?: (msg: string) => void }} [options]
- * @returns {Promise<string[]>} deduplicated skill ids preserving first-seen order
- * @throws {SkillLoaderError} when a name matches neither a pack nor a recommendation set
- */
-async function resolveSkillSet(
-  names,
-  { skillsDir = defaultSkillsDir, warn = (msg) => console.warn(msg) } = {}
-) {
-  const requested = String(names ?? '')
-    .split(',')
-    .map((n) => n.trim())
-    .filter(Boolean);
-  if (!requested.length) return [];
-  const [packs, sets] = await Promise.all([
-    loadPacks({ skillsDir }),
-    loadRecommendationSets({ skillsDir }),
-  ]);
-  const resolved = [];
-  for (const name of requested) {
-    const pack = packs.find((p) => p.id === name);
-    const recommendation = sets[name];
-    if (pack && !Array.isArray(pack.skills)) {
-      throw new SkillLoaderError(
-        `Pack "${name}" is malformed: \`skills\` must be an array. Fix skills/registry.yaml.`
-      );
-    }
-    if (pack) {
-      if (recommendation) {
-        warn(
-          `⚠️  Skill set "${name}" exists as both a pack and a recommendation set; using the pack. ` +
-            'Rename or remove the recommendation entry before Phase D, when this becomes an error.'
-        );
-      }
-      resolved.push(...pack.skills);
-      continue;
-    }
-    if (recommendation && Array.isArray(recommendation.skills)) {
-      resolved.push(...recommendation.skills);
-      continue;
-    }
-    const available =
-      [...packs.map((p) => p.id), ...Object.keys(sets)].sort().join(', ') || '(none)';
-    throw new SkillLoaderError(`Unknown skill set "${name}". Available sets: ${available}.`);
-  }
-  const seen = new Set();
-  return resolved.filter((id) => {
-    if (typeof id !== 'string' || !id.length || seen.has(id)) return false;
-    seen.add(id);
-    return true;
-  });
-}
-
-async function listSkillFiles(dir = defaultSkillsDir) {
-  const entries = await external_fs_.promises.readdir(dir, { withFileTypes: true });
-  const files = [];
-
-  const hasLegacySkillFile = entries.some(
-    (entry) => !entry.isDirectory() && legacySkillFiles.has(entry.name)
-  );
-  if (hasLegacySkillFile) {
-    const legacyEntry = entries.find(
-      (entry) => !entry.isDirectory() && legacySkillFiles.has(entry.name)
-    );
-    if (!legacyEntry) {
-      throw new Error(`skill.yaml detected but not found in ${dir}`);
-    }
-    files.push(external_path_.join(dir, legacyEntry.name));
-    return files.sort((a, b) => a.localeCompare(b));
-  }
-
-  for (const entry of entries) {
-    const entryPath = external_path_.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (ignoredSkillDirNames.has(entry.name) || entry.name.startsWith('.')) {
-        continue;
-      }
-      const nested = await listSkillFiles(entryPath);
-      files.push(...nested);
-      continue;
-    }
-
-    const ext = external_path_.extname(entry.name).toLowerCase();
-    if (!allowedExtensions.has(ext)) continue;
-    if (ignoredFileNames.has(entry.name)) continue;
-    if (entry.name.startsWith('_')) continue;
-    files.push(entryPath);
-  }
-
-  return files.sort((a, b) => a.localeCompare(b));
-}
-
-function normalizeStringArray(value) {
-  if (!value) return undefined;
-  const asArray = Array.isArray(value) ? value : [value];
-  const filtered = asArray
-    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
-    .filter(Boolean);
-  return filtered.length ? filtered : undefined;
-}
-
-function normalizePhaseValue(value) {
-  if (!value) return undefined;
-  if (Array.isArray(value)) {
-    const phases = value.filter(Boolean);
-    if (phases.length === 1) return phases[0];
-    return phases.length ? phases : undefined;
-  }
-  return value;
-}
-
-function inferCategoryFromPhase(phase) {
-  if (!phase) return undefined;
-  if (Array.isArray(phase)) {
-    const unique = Array.from(new Set(phase));
-    if (unique.length === 1 && streamCategories.has(unique[0])) {
-      return unique[0];
-    }
-    if (unique.length > 1) {
-      return 'core';
-    }
-    return undefined;
-  }
-  return streamCategories.has(phase) ? phase : undefined;
-}
-
-function inferCategoryFromPath(filePath) {
-  if (!filePath) return undefined;
-  const segments = external_path_.normalize(filePath).split(external_path_.sep);
-  const skillsIndex = segments.lastIndexOf('skills');
-  const candidate = skillsIndex >= 0 ? segments[skillsIndex + 1] : undefined;
-  if (candidate && streamCategories.has(candidate)) {
-    return candidate;
-  }
-  return undefined;
-}
-
-function resolveCategory(metaCategory, { phase, filePath } = {}) {
-  if (typeof metaCategory === 'string' && streamCategories.has(metaCategory)) {
-    return metaCategory;
-  }
-  return inferCategoryFromPath(filePath) ?? inferCategoryFromPhase(phase);
-}
-
-function resolvePhase(metaPhase, category) {
-  if (category === 'core') {
-    return [...allPhases];
-  }
-  // Explicit multi-phase array takes precedence over a stream category's implied
-  // single phase. Allows a skill with category: upstream (organizational) to also
-  // activate in midstream by declaring phase: [upstream, midstream].
-  if (Array.isArray(metaPhase) && metaPhase.length > 1) {
-    return normalizePhaseValue(metaPhase);
-  }
-  if (category && streamCategories.has(category)) {
-    return category;
-  }
-  return normalizePhaseValue(metaPhase);
-}
-
-function normalizeMetadata(metadata, { filePath } = {}) {
-  const meta = { ...metadata };
-
-  if (meta.priority !== undefined) {
-    const parsedPriority =
-      typeof meta.priority === 'string' ? Number(meta.priority) : meta.priority;
-    if (Number.isFinite(parsedPriority)) {
-      meta.priority = parsedPriority;
-    } else {
-      delete meta.priority;
-    }
-  }
-
-  const topLevelApplyTo =
-    normalizeStringArray(meta.applyTo) ??
-    normalizeStringArray(meta.files) ??
-    normalizeStringArray(meta.path_patterns);
-  if (topLevelApplyTo) {
-    meta.applyTo = topLevelApplyTo;
-  }
-
-  const trigger =
-    meta.trigger && typeof meta.trigger === 'object' && !Array.isArray(meta.trigger)
-      ? meta.trigger
-      : null;
-  const triggerApplyTo =
-    normalizeStringArray(trigger?.applyTo) ??
-    normalizeStringArray(trigger?.files) ??
-    normalizeStringArray(trigger?.path_patterns);
-
-  if (!meta.phase && trigger?.phase) {
-    meta.phase = trigger.phase;
-  }
-  if (!meta.applyTo && triggerApplyTo) {
-    meta.applyTo = triggerApplyTo;
-  }
-
-  meta.category = resolveCategory(meta.category, { phase: meta.phase, filePath });
-  meta.phase = resolvePhase(meta.phase, meta.category);
-
-  // Trigger is consumed during normalization; avoid leaking nested state.
-  if (trigger) {
-    delete meta.trigger;
-  }
-  if ('path_patterns' in meta) {
-    delete meta.path_patterns;
-  }
-
-  return meta;
-}
-
-function parseFrontMatter(content, { filePath } = {}) {
-  const trimmed = content.trimStart();
-  if (!trimmed.startsWith('---')) {
-    throw new SkillLoaderError('Missing front matter block (---)');
-  }
-
-  let parsed;
-  try {
-    parsed = gray_matter(trimmed);
-  } catch (err) {
-    throw new SkillLoaderError(
-      `Front matter parse error${filePath ? ` (${filePath})` : ''}: ${err.message}`
-    );
-  }
-
-  const metadata = parsed.data ?? {};
-  if (typeof metadata !== 'object' || Array.isArray(metadata)) {
-    throw new SkillLoaderError('Front matter must be a mapping');
-  }
-  if (Object.keys(metadata).length === 0) {
-    throw new SkillLoaderError('Front matter is empty');
-  }
-  const normalized = normalizeMetadata(metadata, { filePath });
-  const body = (parsed.content ?? '').trim();
-  return { metadata: normalized, body };
-}
-
-async function parseSkillFile(filePath) {
-  const ext = external_path_.extname(filePath).toLowerCase();
-  if (!allowedExtensions.has(ext)) {
-    throw new SkillLoaderError(`Unsupported skill file extension: ${ext}`);
-  }
-  const raw = await external_fs_.promises.readFile(filePath, 'utf8');
-  if (markdownExtensions.has(ext)) {
-    return parseFrontMatter(raw, { filePath });
-  }
-
-  // YAML handling
-  let loaded = {};
-  try {
-    loaded = js_yaml/* load */.Hh(raw) ?? {};
-  } catch (err) {
-    throw new SkillLoaderError(`YAML parse error: ${err.message}`);
-  }
-  if (typeof loaded !== 'object' || Array.isArray(loaded)) {
-    throw new SkillLoaderError('Skill YAML must be a mapping');
-  }
-
-  let metadata = loaded;
-  let body = '';
-
-  // Support nested metadata block
-  if (loaded.metadata && typeof loaded.metadata === 'object' && !Array.isArray(loaded.metadata)) {
-    metadata = { ...loaded.metadata };
-    if (typeof metadata.instruction === 'string') {
-      body = metadata.instruction;
-      delete metadata.instruction;
-    } else if (typeof loaded.instruction === 'string') {
-      body = loaded.instruction;
-    }
-  } else if (typeof loaded.instruction === 'string') {
-    // Support flat structure with optional instruction field
-    body = loaded.instruction;
-    delete metadata.instruction;
-  }
-
-  metadata = normalizeMetadata(metadata, { filePath });
-  return { metadata, body };
-}
-
-function validateMetadata(metadata, validate) {
-  const metaCopy = JSON.parse(JSON.stringify(metadata ?? {}));
-  const ok = validate(metaCopy);
-  if (!ok) {
-    const details = (validate.errors ?? [])
-      .map((err) => `${err.instancePath || '/'} ${err.message}`)
-      .join('; ');
-    throw new SkillLoaderError(`Validation failed: ${details}`, validate.errors);
-  }
-  return metaCopy;
-}
-
-function relativeToRepo(filePath) {
-  return filePath.startsWith(repoRoot) ? external_path_.relative(repoRoot, filePath) : filePath;
-}
-
-function logSkillLoadError(filePath, err) {
-  const location = relativeToRepo(filePath);
-  const reason = err instanceof Error ? err.message : String(err);
-  console.error(`⚠️  Failed to load skill ${location}: ${reason}`);
-  if (err?.details && Array.isArray(err.details)) {
-    for (const detail of err.details) {
-      const instance = detail.instancePath || '/';
-      console.error(`   - ${instance}: ${detail.message}`);
-    }
-  }
-}
-
-function logDuplicateSkill(id, filePath, originalPath) {
-  const location = relativeToRepo(filePath);
-  const first = relativeToRepo(originalPath);
-  console.warn(
-    `⚠️  Duplicate skill id "${id}" in ${location}; already loaded from ${first}. Skipping.`
-  );
-}
-
-function hasExcludedTag(metadata, excludedTags) {
-  if (!excludedTags?.length) return false;
-  const tags = metadata?.tags ?? [];
-  return tags.some((tag) => excludedTags.includes(tag));
-}
-
-async function loadSkillFile(filePath, options = {}) {
-  const { validator, schemaPath = defaultSchemaPath } = options;
-  const compiledValidator = validator ?? createSkillValidator(await loadSchema(schemaPath));
-  const parsed = await parseSkillFile(filePath);
-  const metadata = validateMetadata(parsed.metadata, compiledValidator);
-  return {
-    metadata,
-    body: parsed.body,
-    path: filePath,
-  };
-}
-
-/**
- * Shared loader loop used by {@link loadSkills} and {@link loadAllSkillMetadata}.
- * Differs only in the per-file loader function (`loaderFn`), so the skill-discovery
- * semantics (schema validation, excluded tags, duplicate-id handling) stay in sync
- * across the two public entry points.
- *
- * @param {(filePath: string, options: { validator: Function }) => Promise<{ metadata: SkillMetadata, path: string }>} loaderFn
- * @param {object} options
- */
-async function _loadFromDir(loaderFn, options = {}) {
-  const {
-    skillsDir = defaultSkillsDir,
-    schemaPath = defaultSchemaPath,
-    validator: providedValidator,
-    excludedTags = ['agent'],
-  } = options;
-  const schema = providedValidator ? null : await loadSchema(schemaPath);
-  const validator = providedValidator ?? createSkillValidator(schema);
-  const files = await listSkillFiles(skillsDir);
-  const skillsById = new Map();
-
-  for (const filePath of files) {
-    try {
-      const skill = await loaderFn(filePath, { validator });
-      const id = skill?.metadata?.id;
-      if (!id) {
-        logSkillLoadError(filePath, new SkillLoaderError('Missing id in skill metadata'));
-        continue;
-      }
-      if (hasExcludedTag(skill.metadata, excludedTags)) {
-        continue;
-      }
-      if (skillsById.has(id)) {
-        logDuplicateSkill(id, filePath, skillsById.get(id).path);
-        continue;
-      }
-      skillsById.set(id, skill);
-    } catch (err) {
-      logSkillLoadError(filePath, err);
-    }
-  }
-
-  return Array.from(skillsById.values());
-}
-
-async function loadSkills(options = {}) {
-  return _loadFromDir(loadSkillFile, options);
-}
-
-/**
- * Load only skill metadata (Stage 1 of Progressive Disclosure).
- * Returns metadata and path without the body, suitable for filtering
- * and routing before full skill loading.
- *
- * @param {string} filePath
- * @param {object} [options]
- * @param {Function} [options.validator]
- * @param {string} [options.schemaPath]
- * @returns {Promise<{metadata: SkillMetadata, path: string}>}
- */
-async function loadSkillMetadata(filePath, options = {}) {
-  const { validator, schemaPath = defaultSchemaPath } = options;
-  const compiledValidator = validator ?? createSkillValidator(await loadSchema(schemaPath));
-  const parsed = await parseSkillFile(filePath);
-  const metadata = validateMetadata(parsed.metadata, compiledValidator);
-  return {
-    metadata,
-    path: filePath,
-  };
-}
-
-/**
- * Load metadata for all skills (Stage 1 of Progressive Disclosure).
- * Returns an array of {metadata, path} objects without skill bodies.
- *
- * @param {object} [options]
- * @param {string} [options.skillsDir]
- * @param {string} [options.schemaPath]
- * @param {Function} [options.validator]
- * @param {string[]} [options.excludedTags]
- * @returns {Promise<Array<{metadata: SkillMetadata, path: string}>>}
- */
-async function loadAllSkillMetadata(options = {}) {
-  return _loadFromDir(loadSkillMetadata, options);
-}
-
-
-/***/ }),
-
-/***/ 4807:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   s: () => (/* binding */ defaultConfig),
-/* harmony export */   z: () => (/* binding */ defaultSkillConfig)
-/* harmony export */ });
-// Unified default config supporting both legacy and skill-based flows
-const defaultConfig = Object.freeze({
-  version: '1.0',
-  model: {
-    provider: 'openai',
-    modelName: 'gpt-4o-mini',
-    temperature: 0,
-    maxTokens: 600,
-  },
-  review: {
-    language: 'ja',
-    severity: 'normal',
-    additionalInstructions: [],
-  },
-  exclude: {
-    files: [],
-    prLabelsToIgnore: [],
-  },
-  skills: [],
-});
-
-// Alias kept for compatibility with newer skill-only imports
-const defaultSkillConfig = defaultConfig;
-
-
-/***/ }),
-
-/***/ 3833:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-
-// EXPORTS
-__nccwpck_require__.d(__webpack_exports__, {
-  UT: () => (/* binding */ ConfigLoader),
-  Z9: () => (/* binding */ loadConfig),
-  R2: () => (/* binding */ mergeConfig)
-});
-
-// UNUSED EXPORTS: ConfigLoaderError, ConfigMergeError, defaultGlobalConfigDir
-
-// EXTERNAL MODULE: external "node:fs/promises"
-var promises_ = __nccwpck_require__(1455);
-// EXTERNAL MODULE: external "node:os"
-var external_node_os_ = __nccwpck_require__(8161);
-// EXTERNAL MODULE: external "node:path"
-var external_node_path_ = __nccwpck_require__(6760);
-// EXTERNAL MODULE: ./node_modules/js-yaml/dist/js-yaml.mjs
-var js_yaml = __nccwpck_require__(3243);
-// EXTERNAL MODULE: ./node_modules/zod/v4/classic/schemas.js + 16 modules
-var schemas = __nccwpck_require__(2314);
-;// CONCATENATED MODULE: ./src/config/schema.mjs
-
-
-// --- Legacy Schema (for river run) ---
-const modelConfigSchema = schemas/* object */.Ik({
-  provider: schemas/* enum */.k5(['google', 'openai', 'anthropic']).optional(),
-  modelName: schemas/* string */.Yj().min(1).optional(),
-  temperature: schemas/* number */.ai().min(0).max(1).optional(),
-  maxTokens: schemas/* number */.ai().int().positive().optional(),
-});
-
-const reviewConfigSchema = schemas/* object */.Ik({
-  language: schemas/* enum */.k5(['ja', 'en']).optional(),
-  severity: schemas/* enum */.k5(['strict', 'normal', 'relaxed']).optional(),
-  additionalInstructions: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
-  // Extra spec/ADR directories (relative to repo root) scanned when linking
-  // changed files to related design docs. Merged with the built-in defaults.
-  specDirs: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
-  // Opt-in output enhancements. When true, the prompt asks the model to also
-  // emit a per-file walkthrough / a provider-agnostic agent-handoff section.
-  walkthrough: schemas/* boolean */.zM().optional(),
-  agentHandoff: schemas/* boolean */.zM().optional(),
-});
-
-const excludeConfigSchema = schemas/* object */.Ik({
-  files: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
-  prLabelsToIgnore: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
-});
-
-// --- #692 PR-B: security.redact.* schema ---
-//
-// Pure schema addition: this PR only teaches the loader to accept and
-// validate `security.redact.*`. The keys are not yet read by the review
-// pipeline; PR-C of #692 will plumb `config.security` into
-// src/lib/repo-context.mjs and src/lib/local-runner.mjs.
-//
-// Default policy: redaction enabled; every named category on; entropy
-// fallback at 4.5 bits/char with a 24-char minimum length. Users tighten
-// or loosen via `extraPatterns`, `allowlist`, and `denyFiles`.
-
-const redactCategoriesSchema = schemas/* object */.Ik({
-    githubToken: schemas/* boolean */.zM().optional(),
-    openaiKey: schemas/* boolean */.zM().optional(),
-    anthropicKey: schemas/* boolean */.zM().optional(),
-    googleApiKey: schemas/* boolean */.zM().optional(),
-    awsAccessKey: schemas/* boolean */.zM().optional(),
-    awsSecretKey: schemas/* boolean */.zM().optional(),
-    privateKey: schemas/* boolean */.zM().optional(),
-    bearerToken: schemas/* boolean */.zM().optional(),
-    databaseUrl: schemas/* boolean */.zM().optional(),
-    webhookUrl: schemas/* boolean */.zM().optional(),
-    oauthSecret: schemas/* boolean */.zM().optional(),
-    envAssignment: schemas/* boolean */.zM().optional(),
-    highEntropy: schemas/* boolean */.zM().optional(),
-  })
-  .strict();
-
-const redactExtraPatternSchema = schemas/* object */.Ik({
-    id: schemas/* string */.Yj().min(1),
-    pattern: schemas/* string */.Yj().min(1),
-    replacement: schemas/* string */.Yj().min(1).optional(),
-  })
-  .strict();
-
-const redactConfigSchema = schemas/* object */.Ik({
-    enabled: schemas/* boolean */.zM().optional(),
-    categories: redactCategoriesSchema.optional(),
-    extraPatterns: schemas/* array */.YO(redactExtraPatternSchema).optional(),
-    allowlist: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
-    denyFiles: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
-    entropyThreshold: schemas/* number */.ai().min(3.0).max(6.0).optional(),
-    entropyMinLength: schemas/* number */.ai().int().min(8).optional(),
-  })
-  .strict();
-
-const securityConfigSchema = schemas/* object */.Ik({
-    redact: redactConfigSchema.optional(),
-  })
-  .strict();
-
-// --- #687 PR-D: memory.suppressionEnabled ---
-//
-// Companion to applySuppressions in src/lib/suppression-apply.mjs. When
-// `false`, the suppression gate is bypassed entirely (debugging /
-// emergency disable). Defaults to true at runtime; the schema only needs
-// to know the field exists.
-const memoryConfigSchema = schemas/* object */.Ik({
-    suppressionEnabled: schemas/* boolean */.zM().optional(),
-  })
-  .strict();
-
-// --- Epic #1347 S2 (#1349): gate contract config ---
-//
-// Companion to src/lib/gate-decision.mjs. Values are DERIVATION inputs and
-// advisory contract values only — enforcement (observation expiry, the
-// circuit-breaker counter) is the host's responsibility. Note the trust
-// boundary: this file lives inside the reviewed repo, so when a host has its
-// own limits the stricter value wins.
-const gateConfigSchema = schemas/* object */.Ik({
-    observation: schemas/* object */.Ik({
-        expiresInHours: schemas/* number */.ai().positive().max(720).optional(),
-      })
-      .strict()
-      .optional(),
-    circuitBreaker: schemas/* object */.Ik({
-        maxConsecutiveAutoGo: schemas/* number */.ai().int().positive().max(1000).optional(),
-      })
-      .strict()
-      .optional(),
-  })
-  .strict();
-
-// --- #689 PR-A: context.budget config surface ---
-//
-// Companion to src/lib/token-estimator.mjs. PR-A teaches the loader to
-// accept and validate the new keys; pipeline integration (collectRepoContext
-// reading these and adjusting per-section caps) lands in #689 PR-C.
-//
-// Defaults are documented at runtime in repo-context.mjs (DEFAULT_MAX_CHARS,
-// SECTION_CAPS) and preserved when this block is omitted entirely.
-
-const contextBudgetSchema = schemas/* object */.Ik({
-    maxTokens: schemas/* number */.ai().int().min(256).max(64000).optional(),
-    maxChars: schemas/* number */.ai().int().min(1024).max(200000).optional(),
-    perSectionCaps: schemas/* object */.Ik({
-        fullFile: schemas/* number */.ai().int().min(0).optional(),
-        tests: schemas/* number */.ai().int().min(0).optional(),
-        usages: schemas/* number */.ai().int().min(0).optional(),
-        config: schemas/* number */.ai().int().min(0).optional(),
-      })
-      .strict()
-      .optional(),
-  })
-  .strict();
-
-const contextRankingSchema = schemas/* object */.Ik({
-    enabled: schemas/* boolean */.zM().optional(),
-    weights: schemas/* object */.Ik({
-        pathProximity: schemas/* number */.ai().min(0).max(1).optional(),
-        symbolUsage: schemas/* number */.ai().min(0).max(1).optional(),
-        siblingTest: schemas/* number */.ai().min(0).max(1).optional(),
-        commitRecency: schemas/* number */.ai().min(0).max(1).optional(),
-      })
-      .strict()
-      .optional(),
-  })
-  .strict();
-
-// --- #689 PR-D: reviewMode preset budgets ---
-//
-// reviewMode is a friendly knob that picks a preset budget so users do
-// not have to think in token counts. The runtime preset table lives in
-// src/lib/context-presets.mjs; PR-D applies the preset when budget is
-// omitted, so an explicit `budget: { ... }` always wins.
-const contextReviewModeSchema = schemas/* enum */.k5(['tiny', 'medium', 'large']);
-
-const contextConfigSchema = schemas/* object */.Ik({
-    budget: contextBudgetSchema.optional(),
-    ranking: contextRankingSchema.optional(),
-    tokenizer: schemas/* enum */.k5(['heuristic']).optional(),
-    reviewMode: contextReviewModeSchema.optional(),
-  })
-  .strict();
-
-// --- #802 Phase 2a: artifacts.* schema ---
-//
-// Pure schema addition: this PR only teaches the loader to accept and
-// validate the `artifacts.*` config section. The keys are not yet read
-// by the review pipeline; the artifact resolver (Phase 2b) and the
-// `river review plan/exec/verify` CLI vertical slice (Phase 3) plumb
-// these into the resolution order documented in
-// pages/reference/artifact-input-contract.md (CLI/Action args -> config
-// -> cwd default filenames).
-//
-// The known artifact IDs mirror the Artifact Input Contract. `.catchall`
-// (not `.strict`) is intentional: the contract treats adding a new
-// artifact ID as a backward-compatible minor bump, so a config naming a
-// future artifact ID must not fail validation against an older schema.
-const artifactPathConfigSchema = schemas/* union */.KC([
-  schemas/* string */.Yj().min(1),
-  schemas/* object */.Ik({
-      path: schemas/* string */.Yj().min(1),
-      optional: schemas/* boolean */.zM().optional(),
-    })
-    .strict(),
-]);
-
-const artifactsConfigSchema = schemas/* object */.Ik({
-    'pbi-input': artifactPathConfigSchema.optional(),
-    plan: artifactPathConfigSchema.optional(),
-    todo: artifactPathConfigSchema.optional(),
-    'test-cases': artifactPathConfigSchema.optional(),
-    'review-self': artifactPathConfigSchema.optional(),
-    'review-external': artifactPathConfigSchema.optional(),
-    diff: artifactPathConfigSchema.optional(),
-    junit: artifactPathConfigSchema.optional(),
-    coverage: artifactPathConfigSchema.optional(),
-    lint: artifactPathConfigSchema.optional(),
-    typecheck: artifactPathConfigSchema.optional(),
-    'findings-pool': artifactPathConfigSchema.optional(),
-    'tdd-ledger': artifactPathConfigSchema.optional(),
-  })
-  .catchall(schemas/* unknown */.L5());
-
-const selectionConfigSchema = schemas/* object */.Ik({
-    packs: schemas/* array */.YO(schemas/* string */.Yj()).default([]),
-    tags: schemas/* array */.YO(schemas/* string */.Yj()).default([]),
-    skills: schemas/* object */.Ik({
-        include: schemas/* array */.YO(schemas/* string */.Yj()).default([]),
-        exclude: schemas/* array */.YO(schemas/* string */.Yj()).default([]),
-      })
-      .strict()
-      .default({ include: [], exclude: [] }),
-    minTier: schemas/* enum */.k5(['official', 'community', 'experimental']).optional(),
-  })
-  .strict()
-  .describe('Project-level skill selection (packs / tags / individual skills)');
-
-const riverReviewerConfigSchema = schemas/* object */.Ik({
-  model: modelConfigSchema.optional(),
-  review: reviewConfigSchema.optional(),
-  exclude: excludeConfigSchema.optional(),
-  security: securityConfigSchema.optional(),
-  memory: memoryConfigSchema.optional(),
-  context: contextConfigSchema.optional(),
-  artifacts: artifactsConfigSchema.optional(),
-  selection: selectionConfigSchema.optional(),
-  gate: gateConfigSchema.optional(),
-});
-
-// --- New Skill-based Schema (for river skills) ---
-
-// Skill-based schemas
-// Hybrid model identifier: keep the curated enum for typo protection on
-// well-known names, but also accept any string that matches a known provider
-// prefix. This lets users adopt newer SDK-supported snapshots (e.g.
-// `claude-sonnet-4-6-20260301`, `gpt-4o-mini-2026`) without waiting for an
-// enum update PR. Completely foreign prefixes (e.g. `mistral-*`) still fail
-// validation upstream, surfacing typos early.
-const KnownAIModels = schemas/* enum */.k5([
-  'gemini-2.0-flash', // Default: Fast & Smart
-  'gemini-2.0-flash-thinking', // Reasoning: For Security/Architecture
-  'gemini-2.0-pro', // High Spec
-  'gemini-1.5-pro', // Legacy Balanced
-  'gpt-4o', // OpenAI Option
-  'o1', // OpenAI Reasoning
-  'o1-mini', // OpenAI Fast Reasoning
-  'claude-sonnet-4-6', // Anthropic Balanced
-  'claude-opus-4-7', // Anthropic Top-tier
-  'claude-haiku-4-5', // Anthropic Fast
-]);
-
-const AIModelSchema = schemas/* union */.KC([
-  KnownAIModels,
-  schemas/* string */.Yj().regex(/^(gemini|gpt|o1|claude)-[a-z0-9.\-_]+$/i, {
-    message:
-      'modelName must be a known model or match a supported provider prefix (gemini-* / gpt-* / o1-* / claude-*)',
-  }),
-]);
-
-const RuleSchema = schemas/* object */.Ik({
-  id: schemas/* string */.Yj().describe('Unique identifier for the rule'),
-  severity: schemas/* enum */.k5(['info', 'warning', 'error', 'critical']),
-  description: schemas/* string */.Yj(),
-  context: schemas/* string */.Yj().describe('Why this matters (Understanding)'),
-  patterns: schemas/* array */.YO(schemas/* string */.Yj()).describe('Keywords or patterns to look for'),
-  anti_patterns: schemas/* array */.YO(schemas/* string */.Yj()).describe('Bad code examples'),
-  fix_guidance: schemas/* string */.Yj().describe('How to fix it (Expertise Transfer)'),
-});
-
-const SkillSchema = schemas/* object */.Ik({
-  name: schemas/* string */.Yj(),
-  description: schemas/* string */.Yj().optional(),
-  files: schemas/* array */.YO(schemas/* string */.Yj()).describe('Glob patterns for target files'),
-  exclude: schemas/* array */.YO(schemas/* string */.Yj()).optional(),
-  model: AIModelSchema.default('gemini-2.0-flash'),
-  temperature: schemas/* number */.ai().min(0).max(1).default(0.2),
-  maxTokens: schemas/* number */.ai().int().positive().optional(),
-  // Anthropic-specific: opt out of ephemeral prompt caching for this skill.
-  // Useful for skills whose systemPrompt is highly dynamic (where cache
-  // misses dominate), or for A/B testing cache impact.
-  disableCache: schemas/* boolean */.zM().optional(),
-  rules: schemas/* array */.YO(RuleSchema),
-});
-
-const ConfigSchema = schemas/* object */.Ik({
-    version: schemas/* string */.Yj().default('1.0'),
-    model: modelConfigSchema.optional(),
-    review: reviewConfigSchema.optional(),
-    exclude: excludeConfigSchema.optional(),
-    security: securityConfigSchema.optional(),
-    memory: memoryConfigSchema.optional(),
-    context: contextConfigSchema.optional(),
-    artifacts: artifactsConfigSchema.optional(),
-    selection: selectionConfigSchema.optional(),
-    gate: gateConfigSchema.optional(),
-    skills: schemas/* array */.YO(SkillSchema).default([]),
-  })
-  // Allow forward-compatible / custom keys; unknown detection is handled in loader for warnings
-  .catchall(schemas/* unknown */.L5());
-
-// EXTERNAL MODULE: ./src/config/default.mjs
-var config_default = __nccwpck_require__(4807);
-;// CONCATENATED MODULE: ./src/config/loader.mjs
-
-
-
-
-
-
-
-class ConfigMergeError extends Error {
-  constructor(message, options = {}) {
-    super(message, options);
-    this.name = 'ConfigMergeError';
-    if (options.cause) this.cause = options.cause;
-  }
-}
-
-function mergeValue(base, override) {
-  if (Array.isArray(override)) return [...override];
-  if (override && typeof override === 'object') {
-    const baseIsPlainObject = base && typeof base === 'object' && !Array.isArray(base);
-    return mergeConfig(baseIsPlainObject ? base : {}, override);
-  }
-  return override ?? base;
-}
-
-function mergeConfig(base, override) {
-  const result = { ...base };
-  for (const [key, value] of Object.entries(override ?? {})) {
-    const baseValue = base?.[key];
-    result[key] = mergeValue(baseValue, value);
-  }
-  return result;
-}
-
-class ConfigLoaderError extends Error {
-  constructor(message, options = {}) {
-    super(message, options);
-    this.name = 'ConfigLoaderError';
-    if (options.path) this.path = options.path;
-  }
-}
-
-/**
- * Resolve the default global config directory (~/.river-review). Returns null
- * (disabling the global tier) when:
- * - `RIVER_REVIEW_DISABLE_GLOBAL_CONFIG=1` is set — an explicit opt-out for CI
- *   and shared hosts where a stray `~/.river-review/config.*` (or a writable
- *   home) must not silently alter review behavior (trust-boundary guard), or
- * - the home directory cannot be determined (e.g. minimal containers where
- *   os.homedir() throws or yields an empty string).
- */
-function defaultGlobalConfigDir() {
-  // Trust-boundary opt-out: accept common truthy spellings (1 / true, any case,
-  // surrounding whitespace) so the guard fails safe toward disabling.
-  const optOut = String(process.env.RIVER_REVIEW_DISABLE_GLOBAL_CONFIG ?? '')
-    .trim()
-    .toLowerCase();
-  if (optOut === '1' || optOut === 'true') return null;
-  try {
-    const home = external_node_os_.homedir();
-    return home ? external_node_path_.join(home, '.river-review') : null;
-  } catch {
-    return null;
-  }
-}
-
-class ConfigLoader {
-  constructor({
-    baseConfig = config_default/* defaultConfig */.s,
-    fileNames = ['.river-review.json', '.river-review.yaml', '.river-review.yml'],
-    // Global user tier (#1045 A2): merged UNDER the repository-local config so a
-    // repo-local file always wins; the global file supplies a user-wide base.
-    // Injectable so tests can point it at a temp dir. os.homedir() can throw or
-    // return falsy in minimal containers — fall back to null (tier disabled).
-    globalConfigDir = defaultGlobalConfigDir(),
-    globalFileNames = ['config.json', 'config.yaml', 'config.yml'],
-    fsImpl = promises_,
-  } = {}) {
-    this.baseConfig = baseConfig;
-    this.fileNames = Array.isArray(fileNames) ? [...fileNames] : [fileNames];
-    this.globalConfigDir = globalConfigDir;
-    this.globalFileNames = Array.isArray(globalFileNames)
-      ? [...globalFileNames]
-      : [globalFileNames];
-    this.fs = fsImpl;
-  }
-
-  async findConfigPath(repoRoot, fileNames = this.fileNames) {
-    // Guard: a null/undefined root (e.g. a disabled global tier) has no config.
-    if (!repoRoot) return null;
-    for (const candidate of fileNames) {
-      const fullPath = external_node_path_.join(repoRoot, candidate);
-      try {
-        await this.fs.access(fullPath);
-        return fullPath;
-      } catch (err) {
-        if (err?.code !== 'ENOENT') {
-          throw new ConfigLoaderError('設定ファイルの存在確認に失敗しました', {
-            cause: err,
-            path: fullPath,
-          });
-        }
-      }
-    }
-    return null;
-  }
-
-  parseConfig(raw, filePath) {
-    const ext = external_node_path_.extname(filePath).toLowerCase();
-    let parsed;
-    if (ext === '.yaml' || ext === '.yml') {
-      parsed = js_yaml/* load */.Hh(raw);
-    } else {
-      parsed = JSON.parse(raw);
-    }
-
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new ConfigLoaderError('設定ファイルのトップレベルはオブジェクトである必要があります', {
-        path: filePath,
-      });
-    }
-    return parsed;
-  }
-
-  /**
-   * Read, parse, and validate a single config file. Returns the validated
-   * input object (and whether it used the new "skill" schema). Throws
-   * ConfigLoaderError on read / parse / validation failure.
-   *
-   * @param {string} configPath
-   * @returns {Promise<{ parsedInput: object, isNewSchema: boolean }>}
-   */
-  async readConfigFile(configPath) {
-    try {
-      const raw = await this.fs.readFile(configPath, 'utf8');
-      const parsed = this.parseConfig(raw, configPath);
-
-      // Determine schema based on content
-      const isNewSchema = 'skills' in parsed || 'version' in parsed;
-
-      if (isNewSchema) {
-        const validated = ConfigSchema.safeParse(parsed);
-        if (!validated.success) {
-          const detail = validated.error.errors
-            .map((err) => `${err.path.join('.')}: ${err.message}`)
-            .join('; ');
-          throw new ConfigLoaderError(
-            `設定ファイルの形式が正しくありません (Skill Schema): ${detail}`,
-            { path: configPath }
-          );
-        }
-        const parsedInput = validated.data;
-
-        const knownKeys = new Set(['version', 'model', 'review', 'exclude', 'skills']);
-        const unknownKeys = Object.keys(parsedInput).filter((key) => !knownKeys.has(key));
-        if (unknownKeys.length) {
-          const message = `Unknown config keys ignored: ${unknownKeys.join(', ')}`;
-          if (process.env.RIVER_CONFIG_STRICT === '1') {
-            throw new ConfigLoaderError(message, { path: configPath });
-          }
-          // eslint-disable-next-line no-console
-          console.warn(message);
-        }
-        return { parsedInput, isNewSchema: true };
-      }
-
-      // Fallback to old schema
-      const validated = riverReviewerConfigSchema.safeParse(parsed);
-      if (!validated.success) {
-        const detail = validated.error.errors
-          .map((err) => `${err.path.join('.')}: ${err.message}`)
-          .join('; ');
-        throw new ConfigLoaderError(
-          `設定ファイルの形式が正しくありません (Legacy Schema): ${detail}`,
-          { path: configPath }
-        );
-      }
-      return { parsedInput: validated.data, isNewSchema: false };
-    } catch (err) {
-      if (err instanceof ConfigLoaderError) throw err;
-      if (err instanceof SyntaxError || err?.name === 'YAMLException') {
-        throw new ConfigLoaderError('設定ファイルのパースに失敗しました', {
-          cause: err,
-          path: configPath,
-        });
-      }
-      throw new ConfigLoaderError('設定ファイルの読み込みに失敗しました', {
-        cause: err,
-        path: configPath,
-      });
-    }
-  }
-
-  async load(repoRoot = process.cwd()) {
-    const repoPath = await this.findConfigPath(repoRoot, this.fileNames);
-    const globalPath = await this.findConfigPath(this.globalConfigDir, this.globalFileNames);
-
-    // Resolution order (top wins): repository-local > global user > built-in.
-    const globalFile = globalPath ? await this.readConfigFile(globalPath) : null;
-    const repoFile = repoPath ? await this.readConfigFile(repoPath) : null;
-
-    if (!globalFile && !repoFile) {
-      return { config: this.baseConfig, path: null, source: 'default' };
-    }
-
-    try {
-      const usesNewSchema = (globalFile?.isNewSchema ?? false) || (repoFile?.isNewSchema ?? false);
-      const baseToUse = usesNewSchema ? config_default/* defaultSkillConfig */.z : this.baseConfig;
-
-      // Layer global UNDER repo-local so a repo-local file always wins.
-      let merged = baseToUse;
-      if (globalFile) merged = mergeConfig(merged, globalFile.parsedInput);
-      if (repoFile) merged = mergeConfig(merged, repoFile.parsedInput);
-
-      // `path` / `source` reflect the highest-precedence file that contributed.
-      return {
-        config: merged,
-        path: repoPath ?? globalPath,
-        source: repoFile ? 'file' : 'global',
-      };
-    } catch (err) {
-      throw new ConfigMergeError('設定のマージに失敗しました', { cause: err });
-    }
-  }
-}
-
-// Export loadConfig helper for SkillDispatcher (always uses default loader for now)
-async function loadConfig(repoRoot) {
-  const loader = new ConfigLoader(); // Uses legacy default, but load() will switch base if new schema detected
-  const { config } = await loader.load(repoRoot);
-  return config;
-}
-
-
-/***/ }),
-
-/***/ 2785:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   K: () => (/* binding */ runDeterministicExecGateIfEnabled)
-/* harmony export */ });
-/* unused harmony export isDeterministicExecEnabled */
-/**
- * Deterministic-exec opt-in predicate (#1401 §11.8 (c2)) — the SINGLE source of
- * truth for the double env-var gate that guards the command executor.
- *
- * Kept in its own module with NO static imports ON PURPOSE. The review pipeline
- * (local-runner / review-plan) imports THIS statically to decide whether to
- * proceed, then `await import()`s the orchestrator only when the gate is on (see
- * runDeterministicExecGateIfEnabled below, which owns that dynamic import).
- * Importing the predicate from the orchestrator module instead would pull in
- * `child_process` (transitively via the executor) at load time and break the
- * "not even imported when opted out" invariant. This module has no static imports.
- *
- * Both env vars are REQUIRED and checked strictly so no near-miss value
- * (`'true'`, `'0'`, `' 1'`, `''`) can flip the gate on:
- *   - `RIVER_DETERMINISTIC_EXEC` must be exactly the string `'1'`.
- *   - `RIVER_TRUSTED_TREE` must be a non-empty string (the host-trusted base
- *     checkout the allowlist is read from; §11.6 trust boundary).
- *
- * @param {Record<string, string | undefined> | undefined} env process.env-like object
- * @returns {boolean} true only when the host has explicitly opted in with BOTH vars
- */
-function isDeterministicExecEnabled(env) {
-  if (env == null) return false;
-  return (
-    env.RIVER_DETERMINISTIC_EXEC === '1' &&
-    typeof env.RIVER_TRUSTED_TREE === 'string' &&
-    env.RIVER_TRUSTED_TREE.length > 0
-  );
-}
-
-/**
- * Deterministic-exec COMMAND-gate wiring (Epic #1347 §11.8 (c2), #1401) — the
- * SINGLE source of truth for the review-pipeline block that activates the
- * command executor. Both local-runner and review-plan call this; keeping the
- * copy-pasted block here prevents the two from drifting apart (P2 #1434) — the
- * gate guards the RCE path, so an independent drift is a security risk.
- *
- * SECURITY INVARIANTS (why this is double-gated and OFF by default):
- *  - The executor runs ONLY when the host explicitly opts in with BOTH
- *    `RIVER_DETERMINISTIC_EXEC=1` AND a non-empty `RIVER_TRUSTED_TREE` (checked
- *    by isDeterministicExecEnabled). Absent either, this returns
- *    `{ strictBlock: false, deterministicUnrunnable: false }` WITHOUT importing
- *    the orchestrator — so `child_process` (pulled in transitively by the
- *    executor) stays unloaded and behavior is byte-for-byte unchanged. The
- *    dynamic import lives INSIDE this function body precisely so opting out never
- *    even loads the orchestrator module ("not even imported when opted out").
- *  - The allowlist is read ONLY from the host-trusted base tree, never from the
- *    PR head under review (§11.6 trust boundary; enforced by runDeterministicGates).
- *  - Fail-safe (§11.5.2): an infrastructure error while running the gate (temp-dir
- *    creation, staging, spawn setup) means NO verdict was reached — surface that
- *    as `deterministicUnrunnable: true` (rule 5c ESCALATE) rather than crashing
- *    the review or, worse, slipping through as a clean GO. Never GO on an unrun gate.
- *
- * A `fail` verdict folds into `strictBlock` (rule 5b, NO_GO); an `unrunnable`
- * verdict (or any thrown infra error) surfaces as `deterministicUnrunnable`
- * (rule 5c, ESCALATE). Callers OR the returned `strictBlock` into their existing
- * strict_block signal so neither path can be a bypass.
- *
- * @param {object} opts
- * @param {Record<string, string | undefined> | undefined} opts.env process.env-like object
- * @param {Array<object>} [opts.selected] selected skills (metadata.deterministicGate)
- * @param {string} [opts.reviewSourceDir] dir the changed files are copied FROM
- * @param {string[]} [opts.changedFiles] relative paths to stage into the clean cwd
- * @param {() => Promise<{ runDeterministicGates: Function }>} [opts.importOrchestrator]
- *   injected dynamic-import of the orchestrator module (tests only); defaults to
- *   the real `await import('./deterministic-command-orchestrator.mjs')`. Only ever
- *   invoked AFTER the opt-in check passes, preserving the opt-out no-import invariant.
- * @returns {Promise<{ strictBlock: boolean, deterministicUnrunnable: boolean }>}
- */
-async function runDeterministicExecGateIfEnabled({
-  env,
-  selected,
-  reviewSourceDir,
-  changedFiles,
-  importOrchestrator,
-} = {}) {
-  if (!isDeterministicExecEnabled(env)) {
-    return { strictBlock: false, deterministicUnrunnable: false };
-  }
-  try {
-    const { runDeterministicGates } =
-      typeof importOrchestrator === 'function'
-        ? await importOrchestrator()
-        : await Promise.all(/* import() */[__nccwpck_require__.e(815), __nccwpck_require__.e(944)]).then(__nccwpck_require__.bind(__nccwpck_require__, 8944));
-    const gateResult = await runDeterministicGates({
-      trustedTree: env.RIVER_TRUSTED_TREE,
-      selected: selected ?? [],
-      reviewSourceDir,
-      changedFiles: changedFiles ?? [],
-      processEnv: env,
-    });
-    return {
-      strictBlock: gateResult.strictBlock === true,
-      deterministicUnrunnable: gateResult.deterministicUnrunnable === true,
-    };
-  } catch {
-    return { strictBlock: false, deterministicUnrunnable: true };
-  }
-}
-
-
-/***/ }),
-
-/***/ 5837:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Si: () => (/* binding */ computeStrictBlock)
-/* harmony export */ });
-/* unused harmony exports STRICT_BLOCK, BYPASS_WARNING, isStrictBlockSkill */
-/**
- * Deterministic strict_block detection (Epic #1347 S4, #1351).
- *
- * Consumes the previously declaration-only skill schema fields
- * `evaluationType: 'deterministic'` and `deterministicGate.failSeverity`.
- * A finding from a deterministic skill whose gate is `strict_block` is a
- * NON-NEGOTIABLE hard block: deterministic detectors are authoritative (see
- * `.claude/rules/review-core.md` §#1070 — static analysis owns the syntactic /
- * pattern layer 100%, and the AI review must not re-adjudicate it). The gate
- * turns that into an unconditional NO_GO (reasonCode STRICT_BLOCK) that blocks
- * even below the critical/major severity floor and that a label-skip or dry-run
- * cannot waive.
- *
- * Design principle preserved: enforcement is OPT-IN. A skill blocks only when
- * it EXPLICITLY declares a `deterministicGate` object; a deterministic skill
- * with no declared gate stays advisory.
- *
- * Pure / side-effect-free.
- */
-
-/** deterministicGate.failSeverity vocabulary (mirrors skillYamlSchema.mjs). */
-const STRICT_BLOCK = 'strict_block';
-const BYPASS_WARNING = 'bypass_warning';
-
-function skillMeta(skill) {
-  return skill?.metadata ?? skill ?? {};
-}
-
-/**
- * True when a skill's findings are deterministic hard blocks: it declares
- * `evaluationType: 'deterministic'` AND an explicit `deterministicGate` whose
- * `failSeverity` is `strict_block` (the schema default within the gate object,
- * so an omitted failSeverity on a declared gate still blocks).
- *
- * @param {object} skill - loaded skill (full object with `.metadata`) or a bare metadata object
- * @returns {boolean}
- */
-function isStrictBlockSkill(skill) {
-  const m = skillMeta(skill);
-  if (m.evaluationType !== 'deterministic') return false;
-  const gate = m.deterministicGate;
-  // typeof [] === 'object', so exclude arrays: a malformed array gate must not
-  // read as a declared strict_block object (gemini #1403).
-  if (!gate || typeof gate !== 'object' || Array.isArray(gate)) return false; // no gate → advisory
-  // Fail-safe: a declared gate BLOCKS unless failSeverity is explicitly
-  // 'bypass_warning'. An omitted failSeverity (schema default 'strict_block')
-  // or an unknown/malformed value blocks — deterministic detectors are
-  // authoritative and the Epic invariant forbids falling toward GO on malformed
-  // input (self-review #1403 Minor).
-  return gate.failSeverity !== BYPASS_WARNING;
-}
-
-/**
- * Identify findings that originate from a deterministic strict_block skill.
- *
- * A finding's `ruleId` is its emitting skill's id (review-engine sets
- * `ruleId = c.skillId`). Callers should pass the PRE-suppression finding set so
- * that a suppressed deterministic block still forces the gate — a suppression
- * must not become a strict_block bypass (same fail-safe stance as
- * SKIPPED_BY_POLICY in gate-decision.mjs).
- *
- * @param {object} params
- * @param {Array<object>} [params.findings] - review findings (ruleId = skillId)
- * @param {Array<object>} [params.selected] - selected skills (full objects with metadata)
- * @returns {{ strictBlock: boolean, findings: Array<object> }}
- */
-function computeStrictBlock({ findings, selected } = {}) {
-  const strictIds = new Set(
-    (Array.isArray(selected) ? selected : [])
-      .filter(isStrictBlockSkill)
-      .map((s) => String(skillMeta(s).id ?? ''))
-      .filter(Boolean)
-  );
-  const blocking =
-    strictIds.size === 0
-      ? []
-      : (Array.isArray(findings) ? findings : []).filter(
-          (f) => f != null && strictIds.has(String(f.ruleId ?? ''))
-        );
-  return { strictBlock: blocking.length > 0, findings: blocking };
-}
-
-
-/***/ }),
-
-/***/ 861:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   KD: () => (/* binding */ collectRepoDiff),
-/* harmony export */   So: () => (/* binding */ extractDiffMeta),
-/* harmony export */   pQ: () => (/* binding */ renderDiffText),
-/* harmony export */   rj: () => (/* binding */ parseUnifiedDiff),
-/* harmony export */   ye: () => (/* binding */ countChangedLinesFromText)
-/* harmony export */ });
-/* unused harmony exports optimizeDiff, deriveChangedFiles */
-/* harmony import */ var _git_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(8613);
-/* harmony import */ var _file_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(4673);
-
-
-
-// ---------------------------------------------------------------------------
-// diff-optimizer — filter and compress diff for LLM consumption
-// ---------------------------------------------------------------------------
-
-const EXCLUDED_EXTENSIONS = new Set(['.md']);
-const EXCLUDED_FILES = new Set(['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']);
-const MAX_HUNK_LINES = 200;
-const MAX_HUNK_HEAD = 120;
-const MAX_HUNK_TAIL = 40;
-
-function extension(path) {
-  const idx = path.lastIndexOf('.');
-  return idx >= 0 ? path.slice(idx).toLowerCase() : '';
-}
-
-function baseName(path) {
-  const parts = path.split('/');
-  return parts[parts.length - 1];
-}
-
-function isExcludedFile(path) {
-  const ext = extension(path);
-  if (EXCLUDED_EXTENSIONS.has(ext)) return true;
-  if (EXCLUDED_FILES.has(baseName(path))) return true;
-  return false;
-}
-
-function normalizeWhitespace(line) {
-  return line.replace(/\s+/g, '');
-}
-
-function isWhitespaceOnlyChange(lines) {
-  const added = lines
-    .filter((line) => line.startsWith('+') && !line.startsWith('+++'))
-    .map((line) => line.slice(1));
-  const removed = lines
-    .filter((line) => line.startsWith('-') && !line.startsWith('---'))
-    .map((line) => line.slice(1));
-  if (added.length === 0 && removed.length === 0) return false;
-  return normalizeWhitespace(added.join('')) === normalizeWhitespace(removed.join(''));
-}
-
-const COMMENT_MARKERS = [/^\/\//, /^\/\*/, /^\*($|\s)/, /^\*\/$/, /^#/, /^<!--/, /^--!?>/];
-
-function isCommentOnlyChange(lines) {
-  const changed = lines.filter((line) => line.startsWith('+') || line.startsWith('-'));
-  if (!changed.length) return false;
-  return changed.every((line) => {
-    const content = line.slice(1).trim();
-    if (!content) return true;
-    return COMMENT_MARKERS.some((re) => re.test(content));
-  });
-}
-
-function compressHunkLines(lines) {
-  if (lines.length <= MAX_HUNK_LINES) return lines;
-  const head = lines.slice(0, MAX_HUNK_HEAD);
-  const tail = lines.slice(-MAX_HUNK_TAIL);
-  return [...head, '... (hunk truncated) ...', ...tail];
-}
-
-/**
- * Filter and compress parsed diff files.
- * @param {{files: Array<{path: string, hunks: Array<{header: string, lines: string[]}>}>, diffText?: string}} diff
- * @returns {{files: Array, diffText: string, tokenEstimate: number, reduction: number, rawTokenEstimate: number}}
- */
-function optimizeDiff(diff) {
-  const rawTokenEstimate = Math.ceil((diff.diffText ?? '').length / 4);
-  const optimizedFiles = [];
-
-  for (const file of diff.files ?? []) {
-    if (isExcludedFile(file.path)) continue;
-
-    const keptHunks = [];
-    for (const hunk of file.hunks ?? []) {
-      const lines = hunk.lines ?? [];
-      if (isWhitespaceOnlyChange(lines)) continue;
-      if (isCommentOnlyChange(lines)) continue;
-
-      const compressedLines = compressHunkLines(lines);
-      keptHunks.push({
-        ...hunk,
-        lines: compressedLines,
-      });
-    }
-
-    if (keptHunks.length) {
-      optimizedFiles.push({
-        ...file,
-        hunks: keptHunks,
-      });
-    }
-  }
-
-  const diffText = renderDiffText(optimizedFiles);
-  const tokenEstimate = Math.ceil(diffText.length / 4);
-  const reduction =
-    rawTokenEstimate === 0
-      ? 0
-      : Math.max(0, Math.round(((rawTokenEstimate - tokenEstimate) / rawTokenEstimate) * 100));
-
-  return {
-    files: optimizedFiles,
-    diffText,
-    tokenEstimate,
-    reduction,
-    rawTokenEstimate,
-  };
-}
-
-function renderDiffText(files) {
-  if (!files.length) return '';
-  const chunks = [];
-  for (const file of files) {
-    const isNewFile = !file.oldPath || file.oldPath === '/dev/null';
-    const isDeletedFile = !file.newPath || file.newPath === '/dev/null';
-    const oldPath = isNewFile ? '/dev/null' : (file.oldPath ?? file.path);
-    const newPath = isDeletedFile ? '/dev/null' : (file.newPath ?? file.path);
-    const oldDisplay = oldPath === '/dev/null' ? '/dev/null' : `a/${oldPath}`;
-    const newDisplay = newPath === '/dev/null' ? '/dev/null' : `b/${newPath}`;
-
-    chunks.push(`diff --git a/${oldPath} b/${newPath}`);
-    chunks.push(`--- ${oldDisplay}`);
-    chunks.push(`+++ ${newDisplay}`);
-    for (const hunk of file.hunks ?? []) {
-      chunks.push(hunk.header);
-      chunks.push(...(hunk.lines ?? []));
-    }
-  }
-  return chunks.join('\n');
-}
-
-// ---------------------------------------------------------------------------
-// diff — parse unified diff and collect repo diff from git
-// ---------------------------------------------------------------------------
-
-function stripPrefix(path) {
-  if (!path) return path;
-  if (path.startsWith('a/')) return path.slice(2);
-  if (path.startsWith('b/')) return path.slice(2);
-  return path;
-}
-
-/**
- * Parse a unified diff into a structured representation.
- * Returns files with hunks and added line hints so downstream consumers
- * can locate where to attach review comments.
- */
-function parseUnifiedDiff(diffText) {
-  if (!diffText || typeof diffText !== 'string') return { files: [] };
-
-  const files = [];
-  let currentFile = null;
-  let currentHunk = null;
-  let newLineNumber = 0;
-  let pendingOldPath = null;
-
-  for (const line of diffText.split('\n')) {
-    if (line.startsWith('diff --git')) {
-      currentHunk = null;
-      continue;
-    }
-    if (line.startsWith('--- ')) {
-      pendingOldPath = stripPrefix(line.slice(4).trim());
-      continue;
-    }
-    if (line.startsWith('+++ ')) {
-      const newPathRaw = stripPrefix(line.slice(4).trim());
-      const isDeletion = newPathRaw === '/dev/null';
-      const oldPath = pendingOldPath ?? (isDeletion ? '/dev/null' : newPathRaw);
-      const newPath = isDeletion ? '/dev/null' : newPathRaw;
-      const path = isDeletion ? oldPath : newPath;
-
-      currentFile = { path, newPath, oldPath, hunks: [], addedLines: [] };
-      files.push(currentFile);
-      currentHunk = null;
-      newLineNumber = 0;
-      pendingOldPath = null;
-      continue;
-    }
-    if (!currentFile) continue;
-    if (line.startsWith('@@')) {
-      const match = /@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
-      if (!match) continue;
-      const oldStart = Number.parseInt(match[1], 10);
-      const oldLines = match[2] ? Number.parseInt(match[2], 10) : 1;
-      const newStart = Number.parseInt(match[3], 10);
-      const newLines = match[4] ? Number.parseInt(match[4], 10) : 1;
-      currentHunk = {
-        header: line,
-        oldStart,
-        oldLines,
-        newStart,
-        newLines,
-        lines: [],
-        addedLines: [],
-      };
-      currentFile.hunks.push(currentHunk);
-      newLineNumber = newStart;
-      continue;
-    }
-    if (!currentHunk) continue;
-    currentHunk.lines.push(line);
-    if (line.startsWith('+') && !line.startsWith('+++')) {
-      currentFile.addedLines.push(newLineNumber);
-      currentHunk.addedLines.push(newLineNumber);
-      newLineNumber += 1;
-    } else if (line.startsWith('-') && !line.startsWith('---')) {
-      // deletion: do not advance new line number
-    } else {
-      newLineNumber += 1;
-    }
-  }
-  return { files };
-}
-
-/**
- * Derive the list of changed file paths from unified diff text,
- * excluding deletions (/dev/null).
- * @param {string} diffText
- * @returns {string[]}
- */
-function deriveChangedFiles(diffText) {
-  const parsed = parseUnifiedDiff(diffText);
-  const files = parsed.files?.map((f) => f.path).filter(Boolean) ?? [];
-  return files.filter((p) => p !== '/dev/null');
-}
-
-async function collectRepoDiff(repoRoot, baseRef, { contextLines = 3 } = {}) {
-  const changedFiles = await (0,_git_mjs__WEBPACK_IMPORTED_MODULE_0__/* .listChangedFiles */ .AC)(repoRoot, baseRef);
-  if (!changedFiles.length) {
-    return {
-      changedFiles: [],
-      rawDiffText: '',
-      rawTokenEstimate: 0,
-      files: [],
-      diffText: '',
-      tokenEstimate: 0,
-      reduction: 0,
-    };
-  }
-
-  const rawDiffText = await (0,_git_mjs__WEBPACK_IMPORTED_MODULE_0__/* .diffWithContext */ .LL)(repoRoot, baseRef, { unified: contextLines });
-  const parsed = parseUnifiedDiff(rawDiffText);
-  const files = parsed.files.length
-    ? parsed.files
-    : changedFiles.map((file) => ({
-        path: file,
-        hunks: [],
-        addedLines: [],
-      }));
-  const rawTokenEstimate = Math.ceil(rawDiffText.length / 4);
-  const optimized = optimizeDiff({ files, diffText: rawDiffText });
-
-  return {
-    changedFiles,
-    files,
-    rawDiffText,
-    rawTokenEstimate,
-    diffText: optimized.diffText,
-    filesForReview: optimized.files,
-    tokenEstimate: optimized.tokenEstimate,
-    reduction: optimized.reduction,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// diff-meta — extract metadata from diff for review depth control
-// ---------------------------------------------------------------------------
-
-/**
- * Count changed lines from raw unified diff text.
- *
- * @param {string} diffText
- * @returns {number}
- */
-function countChangedLinesFromText(diffText) {
-  if (!diffText) return 0;
-  let lines = 0;
-  for (const line of diffText.split('\n')) {
-    if (
-      (line.startsWith('+') && !line.startsWith('+++')) ||
-      (line.startsWith('-') && !line.startsWith('---'))
-    ) {
-      lines++;
-    }
-  }
-  return lines;
-}
-
-/**
- * Extract metadata from a diff object for review depth control.
- *
- * @param {{ changedFiles?: string[], diffText?: string }} diff
- * @returns {{ fileCount: number, changedLines: number, fileTypes: object, hasTests: boolean, hasMigrations: boolean, hasSchemas: boolean }}
- */
-function extractDiffMeta(diff) {
-  const changedFiles = diff?.changedFiles ?? [];
-  const changedLines = countChangedLinesFromText(diff?.diffText);
-  const fileTypes = (0,_file_classifier_mjs__WEBPACK_IMPORTED_MODULE_1__/* .classifyChangedFiles */ .q)(changedFiles);
-
-  return {
-    fileCount: changedFiles.length,
-    changedLines,
-    fileTypes,
-    hasTests: fileTypes.test.length > 0,
-    hasMigrations: fileTypes.migration.length > 0,
-    hasSchemas: fileTypes.schema.length > 0,
-  };
-}
-
-
-/***/ }),
-
-/***/ 4673:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   q: () => (/* binding */ classifyChangedFiles)
-/* harmony export */ });
-// Module-scope regexes to avoid re-creation per call
-const RE_TEST_EXT = /\.(?:test|spec)\.(?:[jt]sx?|mjs)$/;
-const RE_SCHEMA_EXT = /\.schema\.[jt]s$/;
-const RE_MIGRATION = /(?:^|\/)migrations?\//;
-const RE_MIGRATE = /(?:^|\/)migrate/;
-const RE_CONFIG_EXT = /\.config\.(?:[jt]sx?|mjs)$/;
-const RE_RC_FILE = /^\.[a-z]+rc(?:\.[a-z]+)?$/;
-const RE_TSCONFIG = /^tsconfig.*\.json$/;
-const RE_DOCKERFILE = /^Dockerfile/;
-const RE_DOCKER_COMPOSE = /^docker-compose/;
-
-const CONFIG_NAMES = new Set([
-  'package.json',
-  '.river-review.json',
-  '.lychee.toml',
-  '.markdownlint.json',
-  '.markdownlint-cli2.yaml',
-  '.textlintrc.json',
-]);
-
-/**
- * Classify changed files by type for routing and evidence collection.
- * Complementary to impact-scope.mjs which classifies by quality domain.
- *
- * @param {string[]} files - Array of file paths (relative to repo root)
- * @returns {{ config: string[], schema: string[], migration: string[], app: string[], test: string[], infra: string[], docs: string[], unknown: string[] }}
- */
-function classifyChangedFiles(files) {
-  const result = {
-    config: [],
-    schema: [],
-    migration: [],
-    app: [],
-    test: [],
-    infra: [],
-    docs: [],
-    unknown: [],
-  };
-
-  for (const file of files) {
-    result[classifyFile(file)].push(file);
-  }
-
-  return result;
-}
-
-// Priority: test > schema > migration > config > infra > docs > app > unknown
-function classifyFile(file) {
-  const normalized = file.replaceAll('\\', '/');
-  const basename = normalized.split('/').pop() ?? '';
-
-  if (isTest(normalized, basename)) return 'test';
-  if (isSchema(normalized, basename)) return 'schema';
-  if (isMigration(normalized)) return 'migration';
-  if (isConfig(normalized, basename)) return 'config';
-  if (isInfra(normalized, basename)) return 'infra';
-  if (isDocs(normalized, basename)) return 'docs';
-  if (isApp(normalized)) return 'app';
-  return 'unknown';
-}
-
-function isTest(file, basename) {
-  return file.startsWith('tests/') || file.includes('/__tests__/') || RE_TEST_EXT.test(basename);
-}
-
-function isSchema(file, basename) {
-  return (
-    file.startsWith('schemas/') || RE_SCHEMA_EXT.test(basename) || basename.endsWith('.schema.json')
-  );
-}
-
-function isMigration(file) {
-  return RE_MIGRATION.test(file) || RE_MIGRATE.test(file) || file.startsWith('db/');
-}
-
-function isConfig(file, basename) {
-  if (RE_CONFIG_EXT.test(basename)) return true;
-  if (RE_RC_FILE.test(basename)) return true;
-  if (CONFIG_NAMES.has(basename) || basename.startsWith('.env')) return true;
-  if (RE_TSCONFIG.test(basename)) return true;
-  return false;
-}
-
-function isInfra(file, basename) {
-  return (
-    file.startsWith('.github/') ||
-    file.startsWith('.husky/') ||
-    file.startsWith('scripts/') ||
-    RE_DOCKERFILE.test(basename) ||
-    RE_DOCKER_COMPOSE.test(basename)
-  );
-}
-
-function isDocs(file, basename) {
-  if (basename.endsWith('.md') || basename.endsWith('.mdx')) return true;
-  if (file.startsWith('docs/') || file.startsWith('pages/')) return true;
-  return false;
-}
-
-function isApp(file) {
-  return file.startsWith('src/') || file.startsWith('runners/');
-}
-
-
-/***/ }),
-
-/***/ 1535:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   UB: () => (/* binding */ parseFindingMessage),
-/* harmony export */   Yo: () => (/* binding */ computeFingerprint),
-/* harmony export */   ZY: () => (/* binding */ classifyFindings),
-/* harmony export */   ic: () => (/* binding */ annotateFingerprints),
-/* harmony export */   lv: () => (/* binding */ normalizeSeverity),
-/* harmony export */   nG: () => (/* binding */ severityToPriority),
-/* harmony export */   xv: () => (/* binding */ validateFindingMessage),
-/* harmony export */   yv: () => (/* binding */ formatFindingMessage)
-/* harmony export */ });
-/* unused harmony exports FINDING_SEVERITIES, FINDING_CONFIDENCE, SUPPRESS_REASONS */
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
-/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9946);
-
-
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
-const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
-
-const SUPPRESS_REASONS = {
-  LOW_CONFIDENCE: 'low_confidence',
-  DUPLICATE: 'duplicate',
-  STYLE_ONLY: 'style_only',
-  INSUFFICIENT_EVIDENCE: 'insufficient_evidence',
-  COVERED_BY_HIGHER_LEVEL: 'covered_by_higher_level_finding',
-};
-
-// ---------------------------------------------------------------------------
-// Format helpers (finding-format)
-// ---------------------------------------------------------------------------
-
-function normalizeWhitespace(text) {
-  return String(text ?? '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function clamp(text, maxChars) {
-  const normalized = normalizeWhitespace(text);
-  if (normalized.length <= maxChars) return normalized;
-  return `${normalized.slice(0, Math.max(0, maxChars - 1))}…`;
-}
-
-/**
- * Format a finding message for line-comments (`<file>:<line>: <message>`).
- * @param {{
- *   finding: string,
- *   evidence: string,
- *   impact: string,
- *   fix: string,
- *   severity: typeof FINDING_SEVERITIES[number],
- *   confidence: typeof FINDING_CONFIDENCE[number],
- * }} finding
- */
-function formatFindingMessage({ finding, evidence, impact, fix, severity, confidence }) {
-  const sev = FINDING_SEVERITIES.includes(severity) ? severity : 'warning';
-  const conf = FINDING_CONFIDENCE.includes(confidence) ? confidence : 'medium';
-
-  return [
-    `Finding: ${clamp(finding, 80)}`,
-    `Evidence: ${clamp(evidence, 60)}`,
-    `Impact: ${clamp(impact, 60)}`,
-    `Fix: ${clamp(fix, 80)}`,
-    `Severity: ${sev}`,
-    `Confidence: ${conf}`,
-  ].join(' ');
-}
-
-const LABEL_NAMES = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confidence'];
-const LABEL_ALTERNATION = LABEL_NAMES.join('|');
-
-/**
- * Parse a labeled finding message string into structured fields.
- * @param {string} message
- * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null }}
- */
-function parseFindingMessage(message) {
-  const text = String(message ?? '');
-  const get = (label) => {
-    const re = new RegExp(`${label}:\\s*([^]*?)(?=\\s+(?:${LABEL_ALTERNATION}):|$)`, 'm');
-    return (text.match(re)?.[1] ?? '').trim();
-  };
-  const evidenceText = get('Evidence');
-  return {
-    title: get('Finding'),
-    evidence: evidenceText ? [evidenceText] : [],
-    impact: get('Impact'),
-    suggestion: get('Fix'),
-    severity: get('Severity') || null,
-    confidence: get('Confidence') || null,
-  };
-}
-
-/**
- * Map internal severity vocabulary (blocker/warning/nit) to output schema vocabulary.
- * Accepts both vocabularies; unknown values default to 'major' (fail-safe).
- * @param {string|null|undefined} internalSeverity
- * @returns {'critical'|'major'|'minor'|'info'}
- */
-function normalizeSeverity(internalSeverity) {
-  switch ((internalSeverity ?? '').toLowerCase().trim()) {
-    case 'blocker':
-    case 'critical':
-      return 'critical';
-    case 'warning':
-    case 'major':
-      return 'major';
-    case 'nit':
-    case 'minor':
-      return 'minor';
-    case 'info':
-      return 'info';
-    default:
-      return 'major';
-  }
-}
-
-/**
- * Map output schema severity to P1/P2/P3/P4 priority label.
- * @param {'critical'|'major'|'minor'|'info'|string|null|undefined} severity
- * @returns {'P1'|'P2'|'P3'|'P4'}
- */
-function severityToPriority(severity) {
-  switch ((severity ?? '').toLowerCase().trim()) {
-    case 'critical':
-      return 'P1';
-    case 'major':
-      return 'P2';
-    case 'minor':
-      return 'P3';
-    case 'info':
-      return 'P4';
-    default:
-      return 'P2';
-  }
-}
-
-/**
- * Validate whether a finding message contains the required labeled fields.
- * @param {string} message
- */
-function validateFindingMessage(message) {
-  const text = String(message ?? '');
-  const missing = [];
-  for (const label of ['Finding:', 'Evidence:', 'Impact:', 'Fix:', 'Severity:', 'Confidence:']) {
-    if (!text.includes(label)) missing.push(label);
-  }
-
-  const sevMatch = /Severity:\s*(\w+)/.exec(text);
-  const confMatch = /Confidence:\s*(\w+)/.exec(text);
-  const severity = sevMatch?.[1]?.toLowerCase() ?? null;
-  const confidence = confMatch?.[1]?.toLowerCase() ?? null;
-
-  const invalid = [];
-  if (severity && !FINDING_SEVERITIES.includes(severity)) invalid.push(`Severity:${severity}`);
-  if (confidence && !FINDING_CONFIDENCE.includes(confidence))
-    invalid.push(`Confidence:${confidence}`);
-
-  return {
-    ok: missing.length === 0 && invalid.length === 0,
-    missing,
-    invalid,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Classifier (finding-classifier)
-// ---------------------------------------------------------------------------
-
-function evidenceTotalChars(finding) {
-  const ev = finding.evidence;
-  if (!Array.isArray(ev) || ev.length === 0) return 0;
-  return ev.reduce((sum, e) => sum + String(e ?? '').length, 0);
-}
-
-function deduplicateWithinFile(findings) {
-  const seen = new Set();
-  return findings.filter((f) => {
-    const ruleId = String(f.ruleId ?? '');
-    if (ruleId === 'unknown') return true;
-    const key = `${f.file ?? ''}::${ruleId}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function deduplicateWithinPR(findings) {
-  const seen = new Set();
-  return findings.filter((f) => {
-    const key = String(f.ruleId ?? '');
-    if (key === 'unknown') return true;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-/**
- * @param {object[]} findings
- * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
- * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
- */
-function classifyFindings(findings, options = {}) {
-  const reviewMode = options.reviewMode ?? 'medium';
-  const maxOverview = reviewMode === 'tiny' ? 3 : reviewMode === 'large' ? 8 : 5;
-
-  const suppressed = [];
-  const active = [];
-
-  for (const finding of findings) {
-    if (finding.confidence === 'low' && finding.severity !== 'critical') {
-      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.LOW_CONFIDENCE });
-      continue;
-    }
-    if (evidenceTotalChars(finding) < 30 && finding.severity !== 'critical') {
-      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.INSUFFICIENT_EVIDENCE });
-      continue;
-    }
-    const ruleId = String(finding.ruleId ?? '');
-    if (finding.severity === 'minor' && /readability|style|format/i.test(ruleId)) {
-      suppressed.push({ ...finding, suppressReason: SUPPRESS_REASONS.STYLE_ONLY });
-      continue;
-    }
-    active.push(finding);
-  }
-
-  const deduped = deduplicateWithinPR(deduplicateWithinFile(active));
-  const dedupedSet = new Set(deduped.map((f) => f.id));
-  for (const f of active) {
-    if (!dedupedSet.has(f.id)) {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.DUPLICATE });
-    }
-  }
-
-  const sorted = [...deduped].sort(
-    (a, b) => (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(b).composite - (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(a).composite
-  );
-
-  const overview = [];
-  const overviewRuleIds = new Set();
-  for (const f of sorted) {
-    const rid = String(f.ruleId ?? '');
-    const isUnknown = rid === 'unknown';
-    if (!isUnknown && overviewRuleIds.has(rid)) {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
-    } else if (overview.length < maxOverview) {
-      overview.push(f);
-      if (!isUnknown) overviewRuleIds.add(rid);
-    } else {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
-    }
-  }
-
-  return { overview, inlineCandidates: [], suppressed };
-}
-
-// ---------------------------------------------------------------------------
-// Fingerprint (finding-fingerprint)
-// ---------------------------------------------------------------------------
-
-/**
- * Stable fingerprint for a finding so that the same logical issue can be
- * matched across review runs even when IDs regenerate.
- *
- * Strategy: hash(ruleId + file + first-60-chars-of-message).
- * Intentionally omits lineStart/lineEnd because line numbers shift as code
- * changes, but the same logical finding should still be considered persisting.
- */
-function computeFingerprint(finding) {
-  const ruleId = String(finding.ruleId ?? 'unknown');
-  const file = String(finding.file ?? '');
-  const msgNorm = String(finding.message ?? finding.title ?? '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 60);
-  const raw = `${ruleId}::${file}::${msgNorm}`;
-  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(raw).digest('hex').slice(0, 16);
-}
-
-/**
- * Annotate findings with their fingerprint (non-mutating).
- */
-function annotateFingerprints(findings) {
-  return findings.map((f) => ({ ...f, fingerprint: computeFingerprint(f) }));
-}
-
-
-/***/ }),
-
-/***/ 2773:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   RF: () => (/* binding */ deriveGateDecision)
-/* harmony export */ });
-/* unused harmony exports GATE_DECISIONS, GATE_REASON_CODES, gateConfigChanged, computeGateInputsHash */
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
-/**
- * Gate-decision derivation (Epic #1347 S2 / #1349).
- *
- * Derives the machine-readable gate signal a loop-running host consumes:
- * GO | GO_WITH_OBSERVATION | NO_GO | ESCALATE. River Review DERIVES the
- * decision; EXECUTION (continuing, stopping, notifying, expiring an
- * observation window) is the host's responsibility. This module is a pure
- * function — no I/O, no AI calls, no side effects — so hosts can verify any
- * emitted gate block by replaying `gate.inputs` through deriveGateDecision
- * and comparing the result (the authoritative integrity check; see below).
- *
- * ## Trust boundary (adversarial design review, 2026-07-02)
- *
- * Of the inputs, risk-map / config / plan text live INSIDE the reviewed
- * repository and are writable by the implementation agent under review. The
- * gate decision is therefore trustworthy only when derived OUTSIDE the
- * agent's write authority (host / CI checkout). Two in-contract mitigations:
- *
- *  - Bootstrap cliff (rule 0): any change under `.river/**` in the diff —
- *    including DELETING the risk map, which would otherwise silently degrade
- *    every file to comment_only — escalates unconditionally. The gate config
- *    cannot be used to unguard itself.
- *  - `inputs.riskMapPresent` / `inputs.riskMapDigest` expose which risk map
- *    (if any) was loaded so hosts can compare against a trusted baseline.
- *
- * Renaming files off the risk-map globs remains out of scope for S2 (tracked
- * for S3 escape-rate metrics / S4 deterministic gates).
- *
- * ## Decision rules (first match wins)
- *
- *  0. gate config changed in diff            → ESCALATE  GATE_CONFIG_CHANGED
- *  1. humanApprovalRequired                  → ESCALATE  HUMAN_APPROVAL_REQUIRED
- *  2. loopSignal ESCALATE_HUMAN              → ESCALATE  DECISION_ESCALATED
- *  3. loopSignal STOP_OSCILLATED             → ESCALATE  OSCILLATION_DETECTED
- *  4. riskAction require_human_review        → ESCALATE  RISK_MAP_HUMAN_REVIEW
- *  5. riskAction unknown (not absent)        → NO_GO     UNKNOWN_RISK_ACTION
- *  6. review did not actually execute        → NO_GO     NOT_EXECUTED
- *     (plan-only / no-changes runs must not claim CONVERGED_CLEAN: a
- *     score of [] findings is vacuous, and an agent suppressing diff
- *     resolution must not obtain a GO — escalation rules 0-4 still fire)
- *  7. loopSignal REVISE_REQUIRED             → NO_GO     BLOCKING_FINDINGS
- *  8. NO_SIGNAL + human-review-recommended
- *     + zero blocking findings               → GO_WITH_OBSERVATION MINOR_FINDINGS_OBSERVE
- *  9. NO_SIGNAL (decision absent/unknown)    → NO_GO     UNDETERMINED
- * 10. CONVERGED + riskAction escalate        → GO_WITH_OBSERVATION RISK_MAP_OBSERVE
- * 11. CONVERGED                              → GO        CONVERGED_CLEAN
- * 12. anything else (unknown loopSignal)     → NO_GO     UNKNOWN_SIGNAL
- *
- * Rule 3 (STOP_OSCILLATED) is unreachable from the production wiring — the
- * artifact's suggestedLoopSignal carries only Layer-1 values. It exists for
- * host-side replay of Layer-2 (runs diff) signals through the same contract.
- *
- * Fail-safe direction: everything unknown or undetermined maps to NO_GO
- * (never GO), and rule 7 exists because `human-review-recommended` is the
- * COMMON verdict in practice (a single security-classified minor finding
- * already drops the security score below the auto-approve bar) — without it
- * most real runs would land on NO_GO and loops would never converge.
- */
-
-
-
-/** @typedef {'GO' | 'GO_WITH_OBSERVATION' | 'NO_GO' | 'ESCALATE'} GateDecisionValue */
-/** @typedef {'cliff' | 'hill' | 'field'} GateTier */
-
-/** Files whose change forces rule 0 — the gate config must not unguard itself. */
-const GATE_CONFIG_PREFIX = '.river/';
-
-const GATE_DECISIONS = /** @type {const} */ ((/* unused pure expression or super */ null && ([
-  'GO',
-  'GO_WITH_OBSERVATION',
-  'NO_GO',
-  'ESCALATE',
-])));
-
-const GATE_REASON_CODES = /** @type {const} */ ((/* unused pure expression or super */ null && ([
-  'GATE_CONFIG_CHANGED',
-  'HUMAN_APPROVAL_REQUIRED',
-  'DECISION_ESCALATED',
-  'OSCILLATION_DETECTED',
-  'RISK_MAP_HUMAN_REVIEW',
-  'UNKNOWN_RISK_ACTION',
-  'STRICT_BLOCK',
-  'DETERMINISTIC_UNRUNNABLE',
-  'SKIPPED_BY_POLICY',
-  'NOT_EXECUTED',
-  'BLOCKING_FINDINGS',
-  'MINOR_FINDINGS_OBSERVE',
-  'UNDETERMINED',
-  'RISK_MAP_OBSERVE',
-  'CONVERGED_CLEAN',
-  'UNKNOWN_SIGNAL',
-])));
-
-const KNOWN_RISK_ACTIONS = new Set(['comment_only', 'escalate', 'require_human_review']);
-
-const DECISION_TO_TIER = {
-  ESCALATE: 'cliff',
-  GO_WITH_OBSERVATION: 'hill',
-  GO: 'field',
-  NO_GO: 'field', // NO_GO is "revise", not a supervision tier; field keeps the enum total
-};
-
-const DEFAULT_OBSERVATION_EXPIRES_IN_HOURS = 72;
-const DEFAULT_MAX_CONSECUTIVE_AUTO_GO = 5;
-
-/**
- * True when the diff touches the gate's own configuration (rule 0).
- * @param {string[]} changedFiles
- * @returns {boolean}
- */
-function gateConfigChanged(changedFiles) {
-  return (Array.isArray(changedFiles) ? changedFiles : []).some(
-    (f) => typeof f === 'string' && f.replace(/\\/g, '/').startsWith(GATE_CONFIG_PREFIX)
-  );
-}
-
-/**
- * Canonical hash of the gate inputs (sha256, first 16 hex chars).
- *
- * Canonicalization: the FIXED field list below, keys in lexicographic order,
- * undefined normalized to null, JSON.stringify of that object. This is a
- * lightweight summary for S3 "same inputs, different decision" regression
- * comparison — it is NOT a tamper-proof / security control (anyone can
- * recompute it). The authoritative integrity check is replaying
- * `gate.inputs` through deriveGateDecision.
- *
- * @param {object} inputs
- * @returns {string}
- */
-function computeGateInputsHash(inputs) {
-  const FIELDS = [
-    'artifactStatus',
-    'blockingFindings',
-    'decision',
-    'gateConfigChanged',
-    'humanApprovalMode',
-    'humanApprovalRequired',
-    'loopSignal',
-    'reviewExecuted',
-    'riskAction',
-    'riskMapDigest',
-    'riskMapPresent',
-  ];
-  const canonical = {};
-  for (const key of FIELDS) {
-    canonical[key] = inputs?.[key] === undefined ? null : inputs[key];
-  }
-  // Epic #1347 S4: strictBlock joins the hashed inputs, but only when true, so
-  // every pre-S4 gate (strictBlock absent/false) keeps its exact recorded hash
-  // — no conformance-fixture churn. A true value produces a distinct hash so
-  // the S3 "same inputs, different decision" regression check stays sound.
-  if (inputs?.strictBlock === true) canonical.strictBlock = true;
-  // #1401 §11.5: same "only when true" scheme so pre-#1401 gates keep their hash.
-  if (inputs?.deterministicUnrunnable === true) canonical.deterministicUnrunnable = true;
-  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(JSON.stringify(canonical)).digest('hex').slice(0, 16);
-}
-
-/**
- * Derive the gate decision for a finalized review artifact.
- *
- * Pure and deterministic: LLM output can only have contributed in the
- * escalation direction upstream (via humanApprovalRequired /
- * blocking findings); nothing here lets it push a decision toward GO.
- *
- * @param {object} opts
- * @param {string} [opts.loopSignal] - artifact.suggestedLoopSignal (Layer 1/2 value)
- * @param {string} [opts.decision] - artifact.decision (verdict)
- * @param {boolean} [opts.humanApprovalRequired]
- * @param {string} [opts.humanApprovalMode] - audit: regex-only | llm-adjudicated | llm-skipped | regex-fallback
- * @param {string} [opts.riskAction] - risk-map aggregateAction; absent → comment_only
- * @param {number} [opts.blockingFindings] - count of critical/major findings
- * @param {string[]} [opts.changedFiles]
- * @param {boolean} [opts.gateConfigChanged] - explicit override so a host can
- *   replay a recorded `gate.inputs` object verbatim (rule 0 is derived from
- *   changedFiles when this is omitted)
- * @param {boolean} [opts.reviewExecuted] - true only when skills actually ran
- *   against a resolved diff (executeReview path, status ok). Fail-safe: when
- *   false, non-escalated outcomes are NO_GO NOT_EXECUTED — a vacuous perfect
- *   score over zero executed findings must not read as CONVERGED_CLEAN.
- * @param {string} [opts.artifactStatus] - artifact.status echo (ok | no-changes)
- *   so hosts can distinguish "nothing to review" from "review suppressed".
- * @param {boolean} [opts.riskMapPresent]
- * @param {string|null} [opts.riskMapDigest]
- * @param {boolean} [opts.strictBlock] - Epic #1347 S4: a deterministic skill
- *   (evaluationType 'deterministic') with deterministicGate.failSeverity
- *   'strict_block' produced a finding. Forces an UNCONDITIONAL NO_GO
- *   (reasonCode STRICT_BLOCK) — it blocks even below the critical/major
- *   severity floor that blockingFindings counts, and cannot be waived by a
- *   label-skip or a dry-run. The escalation cliffs (rules 0-4) still win, as
- *   ESCALATE is more conservative than NO_GO.
- * @param {boolean} [opts.deterministicUnrunnable] - Epic #1347 §11.5 (#1401): a
- *   deterministic-gate command could not be run (spawn failure / timeout /
- *   signal kill / invalid entry). Forces ESCALATE (reasonCode
- *   DETERMINISTIC_UNRUNNABLE) — a "cannot judge" state, not a violation. Placed
- *   AFTER strictBlock so a confirmed NO_GO is never softened to ESCALATE by an
- *   induced-unrunnable elsewhere. Nothing populates this until the executor
- *   wiring (§11.8 c2/d) lands; this is the gate contract only.
- * @param {object} [opts.config] - effective config; gate.observation / gate.circuitBreaker read here
- * @returns {{ decision: GateDecisionValue, reasonCode: string, tier: GateTier,
- *   inputs: object, inputsHash: string, configSnapshot: object, observation?: object,
- *   schemaVersion: '1' }}
- */
-function deriveGateDecision({
-  loopSignal,
-  decision,
-  humanApprovalRequired = false,
-  humanApprovalMode,
-  riskAction,
-  blockingFindings = 0,
-  changedFiles = [],
-  gateConfigChanged: gateConfigChangedOverride,
-  reviewExecuted = false,
-  artifactStatus = null,
-  riskMapPresent = false,
-  riskMapDigest = null,
-  strictBlock = false,
-  deterministicUnrunnable = false,
-  config = {},
-} = {}) {
-  const configChanged =
-    typeof gateConfigChangedOverride === 'boolean'
-      ? gateConfigChangedOverride
-      : gateConfigChanged(changedFiles);
-  const effectiveRiskAction = riskAction ?? 'comment_only';
-
-  const inputs = {
-    loopSignal: loopSignal ?? null,
-    decision: decision ?? null,
-    humanApprovalRequired: humanApprovalRequired === true,
-    humanApprovalMode: humanApprovalMode ?? null,
-    riskAction: effectiveRiskAction,
-    blockingFindings: Number.isFinite(blockingFindings) ? blockingFindings : 0,
-    gateConfigChanged: configChanged,
-    reviewExecuted: reviewExecuted === true,
-    artifactStatus: artifactStatus ?? null,
-    riskMapPresent: riskMapPresent === true,
-    riskMapDigest: riskMapDigest ?? null,
-    strictBlock: strictBlock === true,
-    deterministicUnrunnable: deterministicUnrunnable === true,
-  };
-
-  const expiresInHours =
-    config?.gate?.observation?.expiresInHours ?? DEFAULT_OBSERVATION_EXPIRES_IN_HOURS;
-  const maxConsecutiveAutoGo =
-    config?.gate?.circuitBreaker?.maxConsecutiveAutoGo ?? DEFAULT_MAX_CONSECUTIVE_AUTO_GO;
-  const configSnapshot = { expiresInHours, maxConsecutiveAutoGo };
-
-  const decide = () => {
-    // 0. Bootstrap cliff: the gate config must not unguard itself.
-    if (configChanged) return ['ESCALATE', 'GATE_CONFIG_CHANGED'];
-    // 1. Plan-review cliff (regex floor + escalation-only LLM upstream).
-    if (inputs.humanApprovalRequired) return ['ESCALATE', 'HUMAN_APPROVAL_REQUIRED'];
-    // 2-3. Loop-signal escalations.
-    if (loopSignal === 'ESCALATE_HUMAN') return ['ESCALATE', 'DECISION_ESCALATED'];
-    if (loopSignal === 'STOP_OSCILLATED') return ['ESCALATE', 'OSCILLATION_DETECTED'];
-    // 4. Risk-map cliff.
-    if (effectiveRiskAction === 'require_human_review')
-      return ['ESCALATE', 'RISK_MAP_HUMAN_REVIEW'];
-    // 5. Unknown risk action never falls through to GO (fail-safe).
-    if (!KNOWN_RISK_ACTIONS.has(effectiveRiskAction)) return ['NO_GO', 'UNKNOWN_RISK_ACTION'];
-    // 5b. Deterministic strict_block (Epic #1347 S4, #1351): a deterministic
-    // skill (evaluationType 'deterministic', failSeverity 'strict_block')
-    // produced a finding. Unconditional NO_GO — deterministic detectors are
-    // authoritative (see .claude/rules/review-core.md §#1070), so this blocks
-    // even below the critical/major floor and cannot be waived by a label-skip
-    // or dry-run. Placed AFTER the escalation cliffs (0-4) — ESCALATE is more
-    // conservative than NO_GO — and BEFORE the skip/not-executed exemptions so
-    // a bypass attempt cannot suppress a deterministic block.
-    if (inputs.strictBlock) return ['NO_GO', 'STRICT_BLOCK'];
-    // 5c. Deterministic command unrunnable (Epic #1347 §11.5, #1401): a
-    // deterministic-gate command could not produce a verdict (spawn failure /
-    // timeout / signal kill / invalid entry). Not a confirmed violation but a
-    // "cannot judge" state → ESCALATE (human looks). Placed AFTER strictBlock
-    // (5b): a CONFIRMED violation (NO_GO) must not be softened to human-approval
-    // by a weak "another command was unrunnable" signal — that would let an
-    // attacker escape strict_block by inducing an unrunnable elsewhere (§11.5.2).
-    // The cliffs (0-4) still precede both. Nothing produces this input yet — the
-    // executor wiring lands with §11.8(c2)/(d); this is the gate contract only.
-    if (inputs.deterministicUnrunnable) return ['ESCALATE', 'DETERMINISTIC_UNRUNNABLE'];
-    // 6a. Team-labeled skip (#1350 PR-C): the decision stays NO_GO (a label
-    // must not become a gate bypass — the conservative call from the S2
-    // design review), but the reasonCode tells hosts this was an explicit
-    // policy skip rather than a suppressed/unresolved review.
-    if (inputs.artifactStatus === 'skipped-by-label') return ['NO_GO', 'SKIPPED_BY_POLICY'];
-    // 6b. Review must have actually executed for any GO-family outcome:
-    // plan-only / no-changes runs score [] findings as a vacuous perfect
-    // verdict, and suppressed diff resolution must not earn a GO.
-    if (!inputs.reviewExecuted) return ['NO_GO', 'NOT_EXECUTED'];
-    // 7. Blocking findings → revise.
-    if (loopSignal === 'REVISE_REQUIRED') return ['NO_GO', 'BLOCKING_FINDINGS'];
-    // 8-9. NO_SIGNAL: the common "warn" verdict observes; true unknowns stop.
-    if (loopSignal === 'NO_SIGNAL') {
-      if (decision === 'human-review-recommended' && inputs.blockingFindings === 0) {
-        return ['GO_WITH_OBSERVATION', 'MINOR_FINDINGS_OBSERVE'];
-      }
-      return ['NO_GO', 'UNDETERMINED'];
-    }
-    // 10-11. Converged: hill when the risk map asks for observation, else field.
-    if (loopSignal === 'CONVERGED') {
-      if (effectiveRiskAction === 'escalate') return ['GO_WITH_OBSERVATION', 'RISK_MAP_OBSERVE'];
-      return ['GO', 'CONVERGED_CLEAN'];
-    }
-    // 12. Forward-compatible fail-safe.
-    return ['NO_GO', 'UNKNOWN_SIGNAL'];
-  };
-
-  const [gateDecision, reasonCode] = decide();
-
-  const result = {
-    decision: gateDecision,
-    reasonCode,
-    tier: DECISION_TO_TIER[gateDecision],
-    inputs,
-    inputsHash: computeGateInputsHash(inputs),
-    configSnapshot,
-    schemaVersion: '1',
-  };
-
-  if (gateDecision === 'GO_WITH_OBSERVATION') {
-    // Execution semantics (host responsibility): on expiry the host stops the
-    // loop AND treats changes originating from `files` as unreviewed
-    // (re-review required). "stop" is the only permitted value in S2;
-    // "promote" lands with the S4 enforcement implementation.
-    result.observation = {
-      expiresInHours,
-      onExpiry: 'stop',
-      files: Array.isArray(changedFiles) ? changedFiles.slice(0, 100) : [],
-    };
-  }
-
-  return result;
-}
-
-
-/***/ }),
-
-/***/ 8613:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   AC: () => (/* binding */ listChangedFiles),
-/* harmony export */   LL: () => (/* binding */ diffWithContext),
-/* harmony export */   NC: () => (/* binding */ ensureGitRepo),
-/* harmony export */   Rd: () => (/* binding */ detectDefaultBranch),
-/* harmony export */   XS: () => (/* binding */ GitError),
-/* harmony export */   fe: () => (/* binding */ findMergeBase),
-/* harmony export */   kG: () => (/* binding */ GitRepoNotFoundError)
-/* harmony export */ });
-/* unused harmony export collectAddedLineHints */
-/* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1421);
-/* harmony import */ var node_util__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(7975);
-
-
-
-const exec = (0,node_util__WEBPACK_IMPORTED_MODULE_1__.promisify)(node_child_process__WEBPACK_IMPORTED_MODULE_0__.execFile);
-
-class GitError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'GitError';
-  }
-}
-
-class GitRepoNotFoundError extends GitError {
-  constructor(cwd) {
-    super(`Not a git repository: ${cwd}`);
-    this.name = 'GitRepoNotFoundError';
-  }
-}
-
-async function runGit(args, { cwd }) {
-  try {
-    // Use a large maxBuffer (200MB) to handle large diffs (e.g., pnpm-lock.yaml changes)
-    const { stdout } = await exec('git', args, { cwd, maxBuffer: 200 * 1024 * 1024 });
-    return stdout.trim();
-  } catch (error) {
-    const detail = error.stderr?.toString().trim() || error.message;
-    throw new GitError(detail);
-  }
-}
-
-async function ensureGitRepo(cwd) {
-  const insideWorkTree = await runGit(['rev-parse', '--is-inside-work-tree'], { cwd }).catch(
-    () => null
-  );
-  if (insideWorkTree !== 'true') {
-    throw new GitRepoNotFoundError(cwd);
-  }
-  return runGit(['rev-parse', '--show-toplevel'], { cwd });
-}
-
-async function detectDefaultBranch(cwd) {
-  const candidates = [];
-  const ref = await runGit(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'], { cwd }).catch(
-    () => null
-  );
-  if (ref) {
-    const parts = ref.split('/');
-    candidates.push(parts[parts.length - 1]);
-  }
-  candidates.push('main', 'master');
-
-  for (const branch of candidates) {
-    const exists = await runGit(['rev-parse', '--quiet', '--verify', branch], { cwd }).catch(
-      () => null
-    );
-    if (exists) return branch;
-    const remoteExists = await runGit(['rev-parse', '--quiet', '--verify', `origin/${branch}`], {
-      cwd,
-    }).catch(() => null);
-    if (remoteExists) return branch;
-  }
-  return 'HEAD';
-}
-
-async function findMergeBase(cwd, baseRef) {
-  const candidates = [`origin/${baseRef}`, baseRef];
-  for (const ref of candidates) {
-    const mergeBase = await runGit(['merge-base', 'HEAD', ref], { cwd }).catch(() => null);
-    if (mergeBase) return mergeBase;
-  }
-  // fallback to current HEAD to keep diff calculations deterministic
-  return runGit(['rev-parse', 'HEAD'], { cwd });
-}
-
-async function listChangedFiles(cwd, baseRef) {
-  const stdout = await runGit(['diff', '--name-only', baseRef], { cwd });
-  return stdout
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
-async function diffWithContext(cwd, baseRef, { unified = 3 } = {}) {
-  return runGit(['diff', `--unified=${unified}`, '--no-color', baseRef], { cwd });
-}
-
-function collectAddedLineHints(diffText) {
-  const hints = new Map();
-  let currentFile = null;
-
-  for (const line of diffText.split('\n')) {
-    if (line.startsWith('+++ b/')) {
-      // We record the first hunk per file; this keeps output stable for the placeholder comments.
-      currentFile = line.replace('+++ b/', '').trim();
-      continue;
-    }
-    if (!line.startsWith('@@')) continue;
-    const match = /@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
-    if (match && currentFile && !hints.has(currentFile)) {
-      const startLine = Number.parseInt(match[1], 10);
-      hints.set(currentFile, startLine);
-    }
-  }
-  return hints;
-}
-
-
-/***/ }),
-
-/***/ 2294:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   EF: () => (/* binding */ HEURISTIC_KIND_PRESENTATIONS),
-/* harmony export */   y2: () => (/* binding */ HEURISTIC_SKILL_IDS),
-/* harmony export */   zq: () => (/* binding */ buildHeuristicComments)
-/* harmony export */ });
-/* unused harmony export SKILL_HEURISTIC_MAP */
-/**
- * ヒューリスティック検出器レジストリ（単一の真実 / SSoT）
- *
- * detector 1 本の追加・変更はこの配列の 1 エントリで完結する。以前は
- *   (a) 検出関数 `findXxx`
- *   (b) `SKILL_HEURISTIC_MAP` の関数名文字列配列（プログラム未消費の第2真実）
- *   (c) `buildHeuristicComments` の手書き dispatch
- *   (d) `review-engine.mjs` の kind→日本語メッセージ switch（別ファイル）
- * の最大4箇所・2ファイルを同期する必要があったが、それらをこのレジストリから
- * 導出することでドリフト源を解消した。
- *
- * エントリのフィールド:
- *   - skillId:     対応スキル ID（dry-run フィルタと配線に使用）
- *   - detect:      ({ diff }) => Array<{ file, line, kind }> の検出関数
- *   - skipIfSkill: （任意）指定スキルが plan に含まれる場合はこの detector を実行しない
- *   - findings:    kind → { finding, evidence, impact, fix, severity, confidence }
- *                  （review-engine の日本語メッセージ生成に使用）
- *
- * 配列順は `buildHeuristicComments` の出力順序（golden/fixtures が pin）と一致させる。
- */
-
-// test-existence / coverage-gap は同一の 3 検出器を共有する。プレゼンテーションは
-// 一度だけ定義して両スキルのエントリから参照し、二重定義を避ける。
-const MISSING_TESTS_FINDING = {
-  finding: '挙動変更に対するテスト差分が見当たらない',
-  evidence: 'コード差分あり・テスト差分なし',
-  impact: '回帰の検知漏れや仕様逸脱が起きやすい',
-  fix: '新分岐/例外/境界の最小テストを1〜3件追加する',
-  severity: 'warning',
-  confidence: 'medium',
-};
-const FOCUSED_TEST_FINDING = {
-  finding: 'フォーカス済みテスト（.only）がコミットされている',
-  evidence: 'describe/it/test 等の .only が追加された',
-  impact: '他のテストが CI で実行されず、回帰を見逃す',
-  fix: '.only を外してから commit する（誤ってフォーカスを残さない）',
-  severity: 'warning',
-  confidence: 'high',
-};
-const DISABLED_TEST_FINDING = {
-  finding: '無効化されたテスト（.skip / xit / xdescribe / xcontext）がコミットされている',
-  evidence: '`.skip` または `xit`/`xdescribe`/`xcontext` が追加された',
-  impact: 'テストが実行されず、対象の挙動が未検証のまま残る',
-  fix: '修正してスキップを外す。意図的な保留なら理由（Issue 等）をコメントで残す',
-  severity: 'nit',
-  confidence: 'medium',
-};
-
-const HEURISTIC_REGISTRY = [
-  {
-    skillId: 'security-basic',
-    detect: findHardcodedSecrets,
-    findings: {
-      'hardcoded-secret': {
-        finding: '秘密情報（トークン/キー）の直書きの可能性がある',
-        evidence: 'トークン/キーらしい文字列が追加されている',
-        impact: '漏洩時に不正利用やインシデントにつながる',
-        fix: '環境変数（GitHub Secrets等）へ移し、漏洩時はローテーションも検討する',
-        severity: 'blocker',
-        confidence: 'high',
-      },
-    },
-  },
-  {
-    skillId: 'security-basic',
-    detect: findGitHubActionsIssues,
-    findings: {
-      'gh-actions-pull-request-target': {
-        finding: 'pull_request_targetイベントは権限昇格のリスクがある',
-        evidence: 'pull_request_targetトリガーが追加されている',
-        impact: 'フォークからのPRで任意コードが本リポジトリの権限で実行される可能性',
-        fix: 'pull_requestイベントを使用するか、pull_request_targetの場合はチェックアウト前に入力を検証する',
-        severity: 'blocker',
-        confidence: 'high',
-      },
-      'gh-actions-excessive-permissions': {
-        finding: '過剰な権限設定（write-all）が検出された',
-        evidence: 'permissions: write-all が設定されている',
-        impact: 'ワークフローが侵害された場合の影響範囲が最大化される',
-        fix: '最小権限の原則に従い、必要な権限のみを個別に指定する（例: contents: read, pull-requests: write）',
-        severity: 'warning',
-        confidence: 'high',
-      },
-      'gh-actions-secret-in-run': {
-        finding: 'runブロック内でsecretsを直接使用している',
-        evidence: 'run: と secrets.* が同一行に存在',
-        impact: 'ログ出力やエラーメッセージでシークレットが漏洩する可能性',
-        fix: 'シークレットを環境変数として設定し、envブロック経由で参照する',
-        severity: 'warning',
-        confidence: 'medium',
-      },
-      'gh-actions-unsanitized-input': {
-        finding: 'ユーザー入力がサニタイズされずに使用されている',
-        evidence: 'github.event.*.title/body/name がrunブロックで直接使用',
-        impact: 'コマンドインジェクション攻撃のリスクがある',
-        fix: 'jqやtoJSONを使用して入力をサニタイズする、または環境変数経由で渡す',
-        severity: 'blocker',
-        confidence: 'high',
-      },
-    },
-  },
-  {
-    skillId: 'security-basic',
-    detect: findDangerousEval,
-    findings: {
-      'dangerous-eval': {
-        finding: 'コード実行/インジェクションのリスクがある API が追加されている',
-        evidence:
-          'eval / new Function / dangerouslySetInnerHTML / document.write(ln) / 文字列引数の setTimeout・setInterval のいずれかが追加された',
-        impact: '入力が信頼できない場合に任意コード実行や XSS につながる',
-        fix: '動的評価を避ける（パース/ホワイトリスト化）、HTML はサニタイズして挿入し、タイマーには関数を渡す',
-        severity: 'warning',
-        confidence: 'high',
-      },
-    },
-  },
-  {
-    skillId: 'security-basic',
-    detect: findInsecureTls,
-    findings: {
-      'insecure-tls': {
-        finding: 'TLS 証明書検証が無効化されている',
-        evidence:
-          '`rejectUnauthorized: false` または `NODE_TLS_REJECT_UNAUTHORIZED=0` が追加された',
-        impact: '中間者攻撃に対して脆弱になる',
-        fix: '証明書検証を有効に保つ。自己署名証明書は CA を信頼ストアへ追加して対応する',
-        severity: 'blocker',
-        confidence: 'high',
-      },
-    },
-  },
-  {
-    skillId: 'security-basic',
-    detect: findWeakHash,
-    findings: {
-      'weak-hash': {
-        finding: '弱いハッシュアルゴリズム（MD5 / SHA-1）が使われている',
-        evidence: "`createHash('md5')` または `createHash('sha1')` が追加された",
-        impact: '衝突攻撃に弱く、署名やパスワード等の用途では安全でない',
-        fix: 'SHA-256 以上を使う。パスワードは bcrypt/scrypt/argon2 を使う',
-        severity: 'warning',
-        confidence: 'medium',
-      },
-    },
-  },
-  {
-    skillId: 'security-basic',
-    detect: findCommandInjection,
-    findings: {
-      'command-injection': {
-        finding: 'シェルコマンドが文字列補間で組み立てられている',
-        evidence: '`exec`/`spawn` 系にテンプレートリテラルの `${...}` 補間が渡されている',
-        impact: '補間値が信頼できない場合、コマンドインジェクションにつながる',
-        fix: '引数配列を使う（例: `execFile(cmd, [args])`）、または入力を厳格に検証/エスケープする',
-        severity: 'warning',
-        confidence: 'medium',
-      },
-    },
-  },
-  {
-    skillId: 'logging-observability',
-    detect: findSilentCatch,
-    findings: {
-      'silent-catch': {
-        finding: 'catch で例外が握りつぶされる可能性がある',
-        evidence: 'catch 内で return（ログ/再throwなし）',
-        impact: '障害調査や失敗検知が困難になる',
-        fix: 'ログ+再throw / 上位へ返す / 無視するなら理由コメント+計測を検討する',
-        severity: 'nit',
-        confidence: 'high',
-      },
-    },
-  },
-  {
-    skillId: 'logging-observability',
-    detect: findDebuggerLeftover,
-    findings: {
-      'debugger-leftover': {
-        finding: 'デバッグ用 `debugger` 文がコミットされている',
-        evidence: '`debugger;` が追加された',
-        impact: '実行が一時停止する／本番に混入すると不具合や情報露出につながる',
-        fix: 'commit 前に `debugger` 文を削除する',
-        severity: 'warning',
-        confidence: 'high',
-      },
-    },
-  },
-  {
-    skillId: 'logging-observability',
-    detect: findMergeConflict,
-    findings: {
-      'merge-conflict': {
-        finding: '未解決のマージコンフリクトマーカーがコミットされている',
-        evidence: '`<<<<<<<` / `>>>>>>>`（diff3 では `|||||||` も）マーカーが追加された',
-        impact: 'コードが壊れ、ビルド/実行が失敗する',
-        fix: 'コンフリクトを解消し、マーカーを完全に削除する',
-        severity: 'blocker',
-        confidence: 'high',
-      },
-    },
-  },
-  {
-    skillId: 'typescript-strict',
-    detect: findTsSuppression,
-    findings: {
-      'ts-suppression': {
-        finding: '型チェックの抑制（@ts-ignore / @ts-nocheck）が追加されている',
-        evidence: '`@ts-ignore` または `@ts-nocheck` が追加された',
-        impact: '型エラーが隠れ、潜在的な不具合を見逃す',
-        fix: '型を修正する。やむを得ない場合は範囲を限定した `@ts-expect-error` + 理由コメントを使う',
-        severity: 'nit',
-        confidence: 'medium',
-      },
-    },
-  },
-  {
-    skillId: 'altitude-generalization',
-    detect: findCallerSpecialCase,
-    findings: {
-      'caller-special-case': {
-        finding: '共有関数に特定の呼び出し元専用の分岐（special-case）が追加されている',
-        evidence: '呼び出し元判定の分岐（`.caller === ...`）が同種2つ以上存在する',
-        impact: '呼び出し元が増えるたびに共有関数が肥大化し、保守が難化する',
-        fix: '呼び出し元ごとの設定を宣言的マップ / strategy へ寄せ、下層機構を一般化する',
-        severity: 'nit',
-        confidence: 'high',
-      },
-    },
-  },
-  {
-    skillId: 'closure-scope-retention',
-    detect: findClosureScopeRetention,
-    findings: {
-      'closure-scope-retention': {
-        finding:
-          '長寿命オブジェクトが closure で enclosing scope の大きなデータを保持し続ける可能性がある',
-        evidence:
-          'module-level キャッシュへ代入される closure が readFile / parse 結果の変数を参照している',
-        impact: 'オブジェクトの生存中、大きな元データが解放されずメモリを圧迫する',
-        fix: '必要なフィールドだけを Map / 明示フィールドへ縮約し、closure に大きな元データを掴ませない',
-        severity: 'warning',
-        confidence: 'medium',
-      },
-    },
-  },
-  {
-    skillId: 'test-existence',
-    detect: findMissingTests,
-    findings: { 'missing-tests': MISSING_TESTS_FINDING },
-  },
-  {
-    skillId: 'test-existence',
-    detect: findFocusedTests,
-    findings: { 'focused-test': FOCUSED_TEST_FINDING },
-  },
-  {
-    skillId: 'test-existence',
-    detect: findDisabledTests,
-    findings: { 'disabled-test': DISABLED_TEST_FINDING },
-  },
-  {
-    skillId: 'coverage-gap',
-    skipIfSkill: 'test-existence',
-    detect: findMissingTests,
-    findings: { 'missing-tests': MISSING_TESTS_FINDING },
-  },
-  {
-    skillId: 'coverage-gap',
-    skipIfSkill: 'test-existence',
-    detect: findFocusedTests,
-    findings: { 'focused-test': FOCUSED_TEST_FINDING },
-  },
-  {
-    skillId: 'coverage-gap',
-    skipIfSkill: 'test-existence',
-    detect: findDisabledTests,
-    findings: { 'disabled-test': DISABLED_TEST_FINDING },
-  },
-];
-
-/**
- * スキルIDとヒューリスティック検出関数名のマッピング（レジストリから導出）。
- * dry-run 時はこのマッピングに含まれるスキルのみ実行される。
- * value（関数名配列）はドキュメント用途で、プログラムは keys のみ消費する。
- */
-const SKILL_HEURISTIC_MAP = HEURISTIC_REGISTRY.reduce((map, { skillId, detect }) => {
-  (map[skillId] ??= []).push(detect.name);
-  return map;
-}, {});
-
-/**
- * ヒューリスティック対応スキルIDの一覧（dry-run 時のフィルタリング用）
- */
-const HEURISTIC_SKILL_IDS = Object.keys(SKILL_HEURISTIC_MAP);
-
-/**
- * kind → プレゼンテーション（finding/evidence/impact/fix/severity/confidence）の
- * ルックアップ（レジストリから導出）。review-engine の日本語メッセージ生成が消費する。
- */
-const HEURISTIC_KIND_PRESENTATIONS = new Map(
-  HEURISTIC_REGISTRY.flatMap((entry) => Object.entries(entry.findings))
-);
-
-function ensureArray(value) {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-function getSkillId(skill) {
-  return skill?.metadata?.id ?? skill?.id ?? null;
-}
-
-function hasSkill(plan, skillId) {
-  const selected = ensureArray(plan?.selected);
-  return selected.some((skill) => getSkillId(skill) === skillId);
-}
-
-function* iterateAddedLines(file) {
-  const hunks = ensureArray(file?.hunks);
-  for (const hunk of hunks) {
-    let newLineNumber = hunk.newStart ?? 0;
-    for (const rawLine of ensureArray(hunk.lines)) {
-      if (rawLine.startsWith('+') && !rawLine.startsWith('+++')) {
-        yield { line: newLineNumber, text: rawLine.slice(1) };
-        newLineNumber += 1;
-        continue;
-      }
-      if (rawLine.startsWith('-') && !rawLine.startsWith('---')) {
-        continue;
-      }
-      newLineNumber += 1;
-    }
-  }
-}
-
-function* iterateSingleHunkLines(hunk) {
-  let newLineNumber = hunk?.newStart ?? 0;
-  for (const rawLine of ensureArray(hunk?.lines)) {
-    if (rawLine.startsWith('+') && !rawLine.startsWith('+++')) {
-      yield { type: 'add', line: newLineNumber, text: rawLine.slice(1) };
-      newLineNumber += 1;
-      continue;
-    }
-    if (rawLine.startsWith('-') && !rawLine.startsWith('---')) {
-      yield { type: 'del', line: null, text: rawLine.slice(1) };
-      continue;
-    }
-    // context line (usually starts with a space)
-    const text = rawLine.startsWith(' ') ? rawLine.slice(1) : rawLine;
-    yield { type: 'ctx', line: newLineNumber, text };
-    newLineNumber += 1;
-  }
-}
-
-function* iterateHunkLines(file) {
-  for (const hunk of ensureArray(file?.hunks)) {
-    yield* iterateSingleHunkLines(hunk);
-  }
-}
-
-function isEnvReference(code) {
-  return /\b(process\.env|import\.meta\.env)\b/.test(code);
-}
-
-function looksLikeLogging(code) {
-  return /\b(console\.(?:log|info|warn|error)|logger\.\w+|log\.\w+)\b/.test(code);
-}
-
-function matchesHardcodedSecretLine(code) {
-  if (isEnvReference(code)) return false;
-
-  // Typical high-signal tokens/keys
-  const explicitPatterns = [
-    /\bAKIA[0-9A-Z]{16}\b/, // AWS Access Key ID
-    /\bghp_[A-Za-z0-9]{36,}\b/, // GitHub token
-    /\bsk-(?:live|test)?_[A-Za-z0-9]{16,}\b/, // Stripe-like
-    /\bsk-[A-Za-z0-9]{16,}\b/, // OpenAI-like (generic)
-  ];
-  if (explicitPatterns.some((re) => re.test(code))) return true;
-
-  // Heuristic: suspicious identifier name + long-ish string literal
-  const assignMatch =
-    /\b(?:export\s+)?(?:const|let|var)\s+(?<name>[A-Za-z0-9_]+)\s*=\s*(?<quote>['"`])(?<value>[^'"`]+)\k<quote>/.exec(
-      code
-    ) ||
-    /['"](?<name>[A-Za-z0-9_]+)['"]\s*:\s*(?<quote>['"`])(?<value>[^'"`]+)\k<quote>/.exec(code) ||
-    /\b(?<name>[A-Za-z0-9_]+)\s*:\s*(?<quote>['"`])(?<value>[^'"`]+)\k<quote>/.exec(code);
-  if (!assignMatch) return false;
-
-  const name = assignMatch.groups?.name ?? '';
-  const value = assignMatch.groups?.value ?? '';
-  if (!/(token|secret|api[_-]?key|password|passwd|private[_-]?key)/i.test(name)) return false;
-  if (value.length < 10) return false;
-  if (/^https?:\/\//i.test(value)) return false;
-  return true;
-}
-
-function findHardcodedSecrets({ diff }) {
-  // Avoid noisy output when many hardcoded values are introduced at once.
-  const MAX_HARDCODED_SECRET_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (looksLikeTestFile(filePath)) continue;
-    const normalized = String(filePath).replaceAll('\\', '/');
-    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesHardcodedSecretLine(text)) continue;
-      comments.push({
-        file: filePath,
-        line,
-        kind: 'hardcoded-secret',
-      });
-      if (comments.length >= MAX_HARDCODED_SECRET_COMMENTS) return comments;
-    }
-  }
-
-  return comments;
-}
-
-function matchesSilentCatchLine(code) {
-  const lower = code.toLowerCase();
-  const hasCatch = lower.includes('catch (') || lower.includes('catch(') || /\bcatch\b/.test(lower);
-  if (!hasCatch) return false;
-  if (looksLikeLogging(code)) return false;
-  if (/\bthrow\b/.test(code)) return false;
-  if (/\breturn\s*;\s*(?:\/\/.*)?$/.test(code)) return true;
-  if (/\breturn\s+(null|undefined)\s*;\s*(?:\/\/.*)?$/.test(code)) return true;
-  if (/\bcatch\s*\([^)]*\)\s*\{\s*\}\s*$/.test(code)) return true;
-  return false;
-}
-
-function findSilentCatch({ diff }) {
-  const comments = [];
-  const files = ensureArray(diff?.files);
-
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    let catchAnchor = null;
-    let window = 0;
-    let sawLogOrThrow = false;
-
-    for (const entry of iterateHunkLines(file)) {
-      const text = entry.text ?? '';
-
-      // One-liner: catch (...) {}
-      if (matchesSilentCatchLine(text) && entry.line != null) {
-        comments.push({ file: filePath, line: entry.line, kind: 'silent-catch' });
-        if (comments.length >= 3) return comments;
-        catchAnchor = null;
-        window = 0;
-        sawLogOrThrow = false;
-        continue;
-      }
-
-      if (entry.line != null && /\bcatch\s*\(/.test(text)) {
-        catchAnchor = entry.line;
-        window = 8;
-        sawLogOrThrow = false;
-        continue;
-      }
-
-      if (window > 0) {
-        if (entry.type === 'add') {
-          if (looksLikeLogging(text) || /\bthrow\b/.test(text)) {
-            sawLogOrThrow = true;
-          }
-          if (
-            !sawLogOrThrow &&
-            (/\breturn\s*;\s*(?:\/\/.*)?$/.test(text) ||
-              /\breturn\s+(null|undefined)\s*;/.test(text))
-          ) {
-            comments.push({
-              file: filePath,
-              line: catchAnchor ?? entry.line ?? 1,
-              kind: 'silent-catch',
-            });
-            if (comments.length >= 3) return comments;
-            catchAnchor = null;
-            window = 0;
-            sawLogOrThrow = false;
-            continue;
-          }
-        }
-        window -= 1;
-      }
-    }
-  }
-
-  return comments;
-}
-
-function looksLikeTestFile(filePath) {
-  const normalized = String(filePath).replaceAll('\\', '/');
-  return (
-    normalized.startsWith('test/') ||
-    normalized.startsWith('tests/') ||
-    normalized.startsWith('__tests__/') ||
-    normalized.includes('/test/') ||
-    normalized.includes('/tests/') ||
-    normalized.includes('/__tests__/') ||
-    /\.(test|spec)\./.test(normalized)
-  );
-}
-
-// Strip a trailing `//` line comment, but only when the `//` is NOT inside a
-// string literal. A naive `/\/\/.*$/` strip would corrupt lines like
-// `const u = "http://x"; eval(y)` (removing the real `eval`). We treat the
-// first `//` whose preceding text has balanced quotes as the comment start.
-function stripTrailingLineComment(code) {
-  const s = String(code);
-  let searchFrom = 0;
-  for (;;) {
-    const idx = s.indexOf('//', searchFrom);
-    if (idx === -1) return s;
-    const before = s.slice(0, idx);
-    const dq = (before.match(/"/g) || []).length;
-    const sq = (before.match(/'/g) || []).length;
-    const bq = (before.match(/`/g) || []).length;
-    if (dq % 2 === 0 && sq % 2 === 0 && bq % 2 === 0) {
-      return before;
-    }
-    searchFrom = idx + 2;
-  }
-}
-
-function looksLikeProductCodeFile(filePath) {
-  const normalized = String(filePath).replaceAll('\\', '/');
-  if (looksLikeTestFile(normalized)) return false;
-  if (!/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(normalized)) return false;
-  return (
-    normalized.startsWith('src/') ||
-    normalized.startsWith('lib/') ||
-    normalized.includes('/src/') ||
-    normalized.includes('/lib/')
-  );
-}
-
-function hasBehaviorChangeSignal({ diff }) {
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    for (const { text } of iterateAddedLines(file)) {
-      if (/\bif\s*\(/.test(text) || /\bswitch\s*\(/.test(text) || /\bthrow\s+new\b/.test(text))
-        return true;
-    }
-  }
-  return false;
-}
-
-function findMissingTests({ diff }) {
-  const files = ensureArray(diff?.files);
-  const changedPaths = files
-    .map((f) => f?.path)
-    .filter(Boolean)
-    .filter((p) => p !== '/dev/null');
-  const touchesTests = changedPaths.some(looksLikeTestFile);
-  const touchesCode = changedPaths.some(looksLikeProductCodeFile);
-  if (!touchesCode || touchesTests) return [];
-  if (!hasBehaviorChangeSignal({ diff })) return [];
-
-  const firstCodeFile = files.find((f) => looksLikeProductCodeFile(f?.path));
-  const filePath = firstCodeFile?.path;
-  const line = firstCodeFile?.addedLines?.[0] || firstCodeFile?.hunks?.[0]?.newStart || 1;
-  return [
-    {
-      file: filePath,
-      line,
-      kind: 'missing-tests',
-    },
-  ];
-}
-
-/**
- * Check if a file path is a GitHub Actions workflow file.
- * @param {string} filePath - File path to check
- * @returns {boolean} True if the file is a workflow YAML file in .github/workflows/
- */
-function looksLikeGitHubWorkflowFile(filePath) {
-  const normalized = String(filePath).replaceAll('\\', '/');
-  return normalized.startsWith('.github/workflows/') && /\.(yml|yaml)$/.test(normalized);
-}
-
-/**
- * Detect GitHub Actions security issues in workflow files.
- * Checks for common security vulnerabilities including:
- * - pull_request_target privilege escalation risks
- * - Excessive permissions (write-all)
- * - Secrets exposed in run blocks
- * - Unsanitized user input in run blocks (command injection)
- * @param {{diff: {files?: Array}}} options - Diff object containing file changes
- * @returns {Array<{file: string, line: number, kind: string}>} Array of detected security issues
- */
-function findGitHubActionsIssues({ diff }) {
-  const MAX_WORKFLOW_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || !looksLikeGitHubWorkflowFile(filePath)) continue;
-
-    for (const { line, text } of iterateAddedLines(file)) {
-      // Check for pull_request_target usage (privilege escalation risk)
-      if (
-        /^\s*(-\s+)?pull_request_target\s*:?\s*$/.test(text) ||
-        /\bon\s*:\s*\[[^\]]*\bpull_request_target\b[^\]]*\]/.test(text)
-      ) {
-        comments.push({
-          file: filePath,
-          line,
-          kind: 'gh-actions-pull-request-target',
-        });
-        if (comments.length >= MAX_WORKFLOW_COMMENTS) return comments;
-        continue;
-      }
-
-      // Check for excessive permissions
-      if (/permissions\s*:\s*(write-all|'write-all'|"write-all")/.test(text)) {
-        comments.push({
-          file: filePath,
-          line,
-          kind: 'gh-actions-excessive-permissions',
-        });
-        if (comments.length >= MAX_WORKFLOW_COMMENTS) return comments;
-        continue;
-      }
-
-      // Check for secrets in run blocks (potential exposure)
-      if (/\$\{\{\s*secrets\.\w+\s*\}\}/.test(text) && /run\s*:/.test(text)) {
-        comments.push({
-          file: filePath,
-          line,
-          kind: 'gh-actions-secret-in-run',
-        });
-        if (comments.length >= MAX_WORKFLOW_COMMENTS) return comments;
-        continue;
-      }
-
-      // Check for unsanitized user input in run blocks (command injection)
-      if (
-        /run\s*:/.test(text) &&
-        /\$\{\{\s*github\.event\.(issue|pull_request|comment)\.(title|body)\s*\}\}/.test(text) &&
-        !/\|\s*jq\b/.test(text) &&
-        !/toJSON/.test(text)
-      ) {
-        comments.push({
-          file: filePath,
-          line,
-          kind: 'gh-actions-unsanitized-input',
-        });
-        if (comments.length >= MAX_WORKFLOW_COMMENTS) return comments;
-        continue;
-      }
-    }
-  }
-
-  return comments;
-}
-
-// High-confidence code-injection / XSS smells. Deliberately conservative
-// (only patterns that are rarely intentional or safe) so the no-LLM path
-// stays low-false-positive.
-function matchesDangerousEval(code) {
-  let trimmed = String(code).trim();
-  // Skip comment lines and trailing comments so an `eval` in a comment is
-  // not flagged.
-  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-  trimmed = stripTrailingLineComment(trimmed).trim();
-  if (/\beval\s*\(/.test(trimmed)) return true;
-  if (/\bnew\s+Function\s*\(/.test(trimmed)) return true;
-  if (/dangerouslySetInnerHTML/.test(trimmed)) return true;
-  if (/\bdocument\.write(?:ln)?\s*\(/.test(trimmed)) return true;
-  // A string first argument to a timer is an implicit eval.
-  if (/\b(?:setTimeout|setInterval)\s*\(\s*['"`]/.test(trimmed)) return true;
-  return false;
-}
-
-function findDangerousEval({ diff }) {
-  const MAX_DANGEROUS_EVAL_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (looksLikeTestFile(filePath)) continue;
-    const normalized = String(filePath).replaceAll('\\', '/');
-    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesDangerousEval(text)) continue;
-      comments.push({ file: filePath, line, kind: 'dangerous-eval' });
-      if (comments.length >= MAX_DANGEROUS_EVAL_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// Accidental focused tests (`.only`) silently skip the rest of the suite in CI.
-function matchesFocusedTest(code) {
-  const trimmed = String(code).trim();
-  // Skip comment lines so a commented-out `.only` is not flagged.
-  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-  return /\b(?:describe|context|it|test|suite|bench)\.only\s*\(/.test(trimmed);
-}
-
-function findFocusedTests({ diff }) {
-  const MAX_FOCUSED_TEST_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (!looksLikeTestFile(filePath)) continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesFocusedTest(text)) continue;
-      comments.push({ file: filePath, line, kind: 'focused-test' });
-      if (comments.length >= MAX_FOCUSED_TEST_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// Disabled tests (`.skip` / `xit` / `xdescribe`) committed into the suite.
-// Advisory only (nit): sometimes intentional for known-pending tests.
-function matchesDisabledTest(code) {
-  const trimmed = String(code).trim();
-  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-  return (
-    /\b(?:describe|context|it|test|suite|bench)\.skip\s*\(/.test(trimmed) ||
-    /\b(?:xit|xdescribe|xtest|xcontext)\s*\(/.test(trimmed)
-  );
-}
-
-function findDisabledTests({ diff }) {
-  const MAX_DISABLED_TEST_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (!looksLikeTestFile(filePath)) continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesDisabledTest(text)) continue;
-      comments.push({ file: filePath, line, kind: 'disabled-test' });
-      if (comments.length >= MAX_DISABLED_TEST_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// Leftover `debugger;` statement (a near-zero-false-positive debug artifact).
-function matchesDebuggerLeftover(code) {
-  let trimmed = String(code).trim();
-  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-  // Drop a trailing line comment so `const x = 1; // debugger` is not flagged.
-  trimmed = stripTrailingLineComment(trimmed).trim();
-  return /\bdebugger\s*;/.test(trimmed) || /(?:^|[;{}\s])debugger\s*$/.test(trimmed);
-}
-
-function findDebuggerLeftover({ diff }) {
-  const MAX_DEBUGGER_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesDebuggerLeftover(text)) continue;
-      comments.push({ file: filePath, line, kind: 'debugger-leftover' });
-      if (comments.length >= MAX_DEBUGGER_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// Disabled TLS certificate verification — a near-zero-false-positive security smell.
-function matchesInsecureTls(code) {
-  const trimmed = String(code).trim();
-  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-  if (/rejectUnauthorized\s*:\s*false/.test(trimmed)) return true;
-  // Only when NODE_TLS_REJECT_UNAUTHORIZED is being SET to 0 (which disables
-  // verification) — not when it is merely read or set to 1.
-  if (/NODE_TLS_REJECT_UNAUTHORIZED\s*[:=]\s*['"`]?0\b/.test(trimmed)) return true;
-  return false;
-}
-
-function findInsecureTls({ diff }) {
-  const MAX_INSECURE_TLS_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (looksLikeTestFile(filePath)) continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesInsecureTls(text)) continue;
-      comments.push({ file: filePath, line, kind: 'insecure-tls' });
-      if (comments.length >= MAX_INSECURE_TLS_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// Weak hash algorithm via the Node crypto idiom (near-zero false positive).
-function matchesWeakHash(code) {
-  let trimmed = String(code).trim();
-  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-  trimmed = stripTrailingLineComment(trimmed).trim();
-  return /createHash\s*\(\s*['"`](?:md5|sha1)['"`]/i.test(trimmed);
-}
-
-function findWeakHash({ diff }) {
-  const MAX_WEAK_HASH_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (looksLikeTestFile(filePath)) continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesWeakHash(text)) continue;
-      comments.push({ file: filePath, line, kind: 'weak-hash' });
-      if (comments.length >= MAX_WEAK_HASH_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// Shell command built from a template literal with interpolation — a command
-// injection smell when the interpolated value can be attacker-controlled.
-function matchesCommandInjection(code) {
-  let trimmed = String(code).trim();
-  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-  trimmed = stripTrailingLineComment(trimmed).trim();
-  // execSync / spawn / spawnSync are unambiguous child_process APIs. Bare `exec`
-  // is matched only when NOT a method call (negative lookbehind) so that
-  // `regex.exec(`...`)` and `db.exec(`...`)` are not false-flagged.
-  return (
-    /(?<![.\w])exec\s*\(\s*`[^`]*\$\{/.test(trimmed) ||
-    /\b(?:execSync|spawnSync|spawn)\s*\(\s*`[^`]*\$\{/.test(trimmed)
-  );
-}
-
-function findCommandInjection({ diff }) {
-  const MAX_COMMAND_INJECTION_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (looksLikeTestFile(filePath)) continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesCommandInjection(text)) continue;
-      comments.push({ file: filePath, line, kind: 'command-injection' });
-      if (comments.length >= MAX_COMMAND_INJECTION_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// Unresolved git conflict markers committed into a file. The `<<<<<<<` /
-// `>>>>>>>` markers are unambiguous; `=======` is intentionally excluded
-// (it collides with Markdown h1 underlines).
-function matchesMergeConflict(code) {
-  // <<<<<<< / >>>>>>> are always present; ||||||| is the diff3/zdiff3 base
-  // marker. ======= is intentionally excluded (Markdown h1-underline collision).
-  return /^<{7}(?:\s|$)/.test(code) || /^>{7}(?:\s|$)/.test(code) || /^\|{7}(?:\s|$)/.test(code);
-}
-
-function findMergeConflict({ diff }) {
-  const MAX_MERGE_CONFLICT_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesMergeConflict(text)) continue;
-      comments.push({ file: filePath, line, kind: 'merge-conflict' });
-      if (comments.length >= MAX_MERGE_CONFLICT_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// `@ts-ignore` / `@ts-nocheck` suppress type checking. `@ts-expect-error` is
-// the recommended, scoped form and is intentionally NOT flagged.
-function matchesTsSuppression(code) {
-  return /@ts-ignore\b/.test(code) || /@ts-nocheck\b/.test(code);
-}
-
-function findTsSuppression({ diff }) {
-  const MAX_TS_SUPPRESSION_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (looksLikeTestFile(filePath)) continue;
-    for (const { line, text } of iterateAddedLines(file)) {
-      if (!matchesTsSuppression(text)) continue;
-      comments.push({ file: filePath, line, kind: 'ts-suppression' });
-      if (comments.length >= MAX_TS_SUPPRESSION_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// Per-caller special-case branch ("bandaid") on a shared function, e.g.
-// `if (options.caller === 'markdown-exporter') { ... }`. Keyed strictly on a
-// caller-identity comparison so a first-class public option (host opt-in,
-// e.g. `if (options.compact)`) is never flagged.
-function matchesCallerSpecialCase(code) {
-  let trimmed = String(code).trim();
-  // Skip comment lines and trailing comments so a mention in a comment is
-  // not counted as a branch.
-  if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-  trimmed = stripTrailingLineComment(trimmed).trim();
-  return /\bif\s*\(\s*[\w$.]+\.caller\s*===\s*['"`]/.test(trimmed);
-}
-
-// Altitude: fires only when the diff ADDS a caller-identity branch AND the
-// SAME hunk shows two or more same-kind branches in total (added +
-// surrounding context). Counting is per hunk, not per file: two unrelated
-// functions each carrying a single branch are different contexts and must
-// not add up to a finding (FP-first, #1070). A single branch is not enough
-// evidence to propose generalizing the lower-level mechanism (see
-// skills/midstream/altitude-generalization).
-function findCallerSpecialCase({ diff }) {
-  const MAX_CALLER_SPECIAL_CASE_COMMENTS = 3;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (looksLikeTestFile(filePath)) continue;
-    const normalized = String(filePath).replaceAll('\\', '/');
-    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
-
-    for (const hunk of ensureArray(file?.hunks)) {
-      let sameKindCount = 0;
-      let firstAddedLine = null;
-      for (const { type, line, text } of iterateSingleHunkLines(hunk)) {
-        if (type === 'del') continue;
-        if (!matchesCallerSpecialCase(text)) continue;
-        sameKindCount += 1;
-        if (type === 'add' && firstAddedLine === null) firstAddedLine = line;
-      }
-      if (firstAddedLine === null || sameKindCount < 2) continue;
-      comments.push({ file: filePath, line: firstAddedLine, kind: 'caller-special-case' });
-      if (comments.length >= MAX_CALLER_SPECIAL_CASE_COMMENTS) return comments;
-    }
-  }
-  return comments;
-}
-
-// Long-lived singleton built from closures that keep large enclosing-scope
-// data (file contents / parsed documents) reachable. Conservative 3-signal
-// conjunction (all required) to stay low-false-positive:
-//   A. a cache-like slot is assigned an object literal (`cachedX = {`). The
-//      slot name is extracted from the assignment itself, so the detector
-//      also fires when the declaration (`let cachedX = null`) already exists
-//      outside the diff — the common "add a closure to an existing cache
-//      variable" change (gemini review on #1465)
-//   B. large-data locals bound from readFile / parse* / flatMap-map pipelines
-//   C. a shorthand method inside that object references one of the large-data
-//      locals on a line after the assignment (the closure capture)
-// The recommended "reduce immediately into a small Map and return it" pattern
-// has no cache-slot assignment (A) and therefore never fires.
-function findClosureScopeRetention({ diff }) {
-  const MAX_CLOSURE_RETENTION_COMMENTS = 3;
-  // Plain assignment only (no let/var/const): the cache slot is declared
-  // elsewhere (module level), which is what makes the object long-lived.
-  const SLOT_ASSIGN_RE = /^\s*(\w*(?:cache|cached|memo|singleton|lookup)\w*)\s*=\s*\{/i;
-  const LARGE_DATA_RE =
-    /\bconst\s+(\w+)\s*=\s*(?:await\s+)?(?:readFile(?:Sync)?\s*\(|parse\w*\s*\(|[\w$.]+\.(?:flatMap|map)\s*\()/;
-  const METHOD_SHORTHAND_RE = /^\s*(?:async\s+)?\w+\s*\([^)]*\)\s*\{/;
-  const comments = [];
-  const files = ensureArray(diff?.files);
-
-  for (const file of files) {
-    const filePath = file?.path;
-    if (!filePath || filePath === '/dev/null') continue;
-    if (looksLikeTestFile(filePath)) continue;
-    const normalized = String(filePath).replaceAll('\\', '/');
-    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
-
-    // Comment-stripped view of the added lines (checklist §1).
-    const codeLines = [];
-    for (const { line, text } of iterateAddedLines(file)) {
-      const trimmed = String(text).trim();
-      const isComment =
-        trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*');
-      codeLines.push({ line, code: isComment ? '' : stripTrailingLineComment(String(text)) });
-    }
-
-    // A. cache-like slot assigned an object literal (slot name taken from
-    // the assignment itself; the declaration may live outside the diff)
-    let assignLine = null;
-    let assignIndex = -1;
-    for (let i = 0; i < codeLines.length; i += 1) {
-      if (SLOT_ASSIGN_RE.test(codeLines[i].code)) {
-        assignLine = codeLines[i].line;
-        assignIndex = i;
-        break;
-      }
-    }
-    if (assignLine === null) continue;
-
-    // B. large-data locals (file contents / parsed structures)
-    const largeDataNames = [];
-    for (const { code } of codeLines) {
-      const m = LARGE_DATA_RE.exec(code);
-      if (m) largeDataNames.push(m[1]);
-    }
-    if (!largeDataNames.length) continue;
-
-    // C. a method in the object references a large-data local (closure capture)
-    let sawMethod = false;
-    let capturesLargeData = false;
-    for (let i = assignIndex + 1; i < codeLines.length; i += 1) {
-      const { code } = codeLines[i];
-      if (METHOD_SHORTHAND_RE.test(code)) sawMethod = true;
-      if (sawMethod && largeDataNames.some((name) => new RegExp(`\\b${name}\\b`).test(code))) {
-        capturesLargeData = true;
-        break;
-      }
-    }
-    if (!capturesLargeData) continue;
-
-    comments.push({ file: filePath, line: assignLine, kind: 'closure-scope-retention' });
-    if (comments.length >= MAX_CLOSURE_RETENTION_COMMENTS) return comments;
-  }
-  return comments;
-}
-
-/**
- * Generate deterministic review comments from heuristics.
- * These comments are used as a fallback when LLM is not available.
- * @param {{diff: {files?: Array}, plan: {selected?: Array}}} options
- */
-function buildHeuristicComments({ diff, plan }) {
-  const comments = [];
-
-  for (const { skillId, detect, skipIfSkill } of HEURISTIC_REGISTRY) {
-    if (!hasSkill(plan, skillId)) continue;
-    // skipIfSkill: 上位スキルが選択されている場合は重複実行を避ける
-    // （test-existence が選択されていれば coverage-gap の同一検出器は実行しない）。
-    if (skipIfSkill && hasSkill(plan, skipIfSkill)) continue;
-    for (const c of detect({ diff })) {
-      comments.push({ ...c, skillId });
-    }
-  }
-
-  return comments.slice(0, 8);
-}
-
-
-/***/ }),
-
-/***/ 7303:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   pQ: () => (/* binding */ callChatCompletion)
-/* harmony export */ });
-/* unused harmony exports LLM_MAX_ATTEMPTS, LLM_RETRY_BASE_MS, LLM_TIMEOUT_MS, LLM_MAX_BACKOFF_MS, isRetryableStatus, isRetryableNetworkError, computeBackoffMs */
-// Unified LLM call pipeline (#1338).
-//
-// Consolidates the two raw chat-completion implementations that had drifted
-// apart — review-engine.mjs (retry + Retry-After + timeout) and
-// openai-planner.mjs (timeout only, no retry) — into one module. The retry
-// policy helpers were moved verbatim from review-engine.mjs (originally
-// #1196-adjacent adoption from the Gemma concurrent demo) and are re-exported
-// there for backward compatibility.
-//
-// Scope note: reviewer-orchestrator.mjs and local-runner.mjs (named in the
-// original issue) already route all LLM access through generateReview(), so
-// they needed no changes. The multi-provider AIClientFactory (src/ai/
-// factory.mjs, used by skill-dispatcher) keeps its own provider-specific
-// retry layer and is out of scope here, as is the standalone
-// callOpenAICompatible in runners/node-api/src/index.ts (separate runner
-// package with its own build).
-
-const LLM_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
-const LLM_MAX_ATTEMPTS = 3; // 1 try + 2 retries
-const LLM_RETRY_BASE_MS = 500;
-const LLM_TIMEOUT_MS = 15000;
-// Cap Retry-After-driven waits so a pathological header (e.g. 3600s) cannot
-// stall the pipeline. Mirrors MAX_RETRY_DELAY_MS in src/ai/factory.mjs.
-const LLM_MAX_BACKOFF_MS = 30_000;
-
-/** Retryable HTTP statuses: rate-limit and transient server/gateway errors. */
-function isRetryableStatus(status) {
-  return LLM_RETRYABLE_STATUS.has(status);
-}
-
-/** Network-level errors worth retrying: timeouts, aborts, connection resets, DNS. */
-function isRetryableNetworkError(err) {
-  if (!err) return false;
-  if (err.name === 'TimeoutError' || err.name === 'AbortError') return true;
-  const msg = `${err.code ?? ''} ${err.message ?? ''}`;
-  return /fetch failed|network|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|terminated|aborted/i.test(
-    msg
-  );
-}
-
-/**
- * Backoff before the next attempt (ms). Honors a `Retry-After` header (seconds)
- * when present, else exponential: base * 2^(attempt-1).
- * @param {number} attempt - 1-based attempt that just failed.
- */
-function computeBackoffMs(
-  attempt,
-  { baseMs = LLM_RETRY_BASE_MS, retryAfterSec = null } = {}
-) {
-  // Guard before Number(): Number(null) and Number('') are 0, which would wrongly
-  // be treated as "Retry-After: 0s" when the header is simply absent.
-  if (retryAfterSec !== null && retryAfterSec !== undefined && retryAfterSec !== '') {
-    const ra = Number(retryAfterSec);
-    if (Number.isFinite(ra) && ra >= 0) return Math.min(Math.round(ra * 1000), LLM_MAX_BACKOFF_MS);
-  }
-  return Math.min(baseMs * 2 ** Math.max(0, attempt - 1), LLM_MAX_BACKOFF_MS);
-}
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * Call an OpenAI-compatible chat-completion endpoint with timeout and
- * transient-failure retry. Returns the assistant message text ('' when the
- * response has no content).
- *
- * Behavior is identical to the former review-engine.mjs `callOpenAI`;
- * `timeoutMs` and `maxAttempts` are parameterized so the planner can keep its
- * historical single-attempt behavior (`maxAttempts: 1`).
- *
- * @param {object} params
- * @param {string} params.prompt          User message content.
- * @param {string} params.systemMessage   System message content (caller resolves defaults).
- * @param {string} params.apiKey
- * @param {string} params.model
- * @param {string} params.endpoint
- * @param {number} [params.temperature]
- * @param {number} [params.maxTokens]
- * @param {number} [params.timeoutMs]     Per-attempt timeout (default 15000).
- * @param {number} [params.maxAttempts]   Total attempts incl. first (default 3).
- * @param {typeof fetch} [params.fetchImpl] Injectable transport for tests (#1357).
- * @param {number} [params.baseMs]        Retry backoff base ms (injectable for tests).
- * @returns {Promise<string>}
- */
-async function callChatCompletion({
-  prompt,
-  systemMessage,
-  apiKey,
-  model,
-  endpoint,
-  temperature,
-  maxTokens,
-  timeoutMs = LLM_TIMEOUT_MS,
-  maxAttempts = LLM_MAX_ATTEMPTS,
-  fetchImpl = globalThis.fetch,
-  baseMs = LLM_RETRY_BASE_MS,
-}) {
-  const body = JSON.stringify({
-    model,
-    temperature,
-    max_tokens: maxTokens,
-    messages: [
-      { role: 'system', content: systemMessage },
-      { role: 'user', content: prompt },
-    ],
-  });
-
-  let lastError;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const res = await fetchImpl(endpoint, {
-        method: 'POST',
-        signal: AbortSignal.timeout(timeoutMs), // fresh per attempt (one-shot)
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body,
-      });
-
-      // Body reads are inside the try so a mid-stream abort/disconnect is also
-      // treated as a retryable transient failure rather than escaping uncaught.
-      if (res.ok) {
-        const json = await res.json();
-        return json.choices?.[0]?.message?.content?.trim() ?? '';
-      }
-
-      const detail = await res.text();
-      if (attempt < maxAttempts && isRetryableStatus(res.status)) {
-        await sleep(
-          computeBackoffMs(attempt, { baseMs, retryAfterSec: res.headers?.get?.('retry-after') })
-        );
-        continue;
-      }
-      throw new Error(`OpenAI API error ${res.status}: ${detail}`);
-    } catch (err) {
-      // Network error, timeout, or body-read failure — retry transient cases.
-      // A non-retryable HTTP error (thrown above) has a non-network message, so
-      // isRetryableNetworkError returns false and it propagates immediately.
-      lastError = err;
-      if (attempt < maxAttempts && isRetryableNetworkError(err)) {
-        await sleep(computeBackoffMs(attempt, { baseMs }));
-        continue;
-      }
-      throw err;
-    }
-  }
-  // Not dead code: the loop always returns or throws when maxAttempts >= 1,
-  // but this guards the degenerate maxAttempts < 1 case (loop body never runs).
-  throw lastError ?? new Error('OpenAI API error: retries exhausted');
-}
-
-
-/***/ }),
-
-/***/ 4702:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   K: () => (/* binding */ deriveLoopSignalFromArtifact),
-/* harmony export */   v: () => (/* binding */ deriveLoopSignalFromRunsDiff)
-/* harmony export */ });
-/**
- * Loop-signal derivation (Epic #1171 item3).
- *
- * River Review emits two layers of loop signals:
- *
- * Layer 1 — single `river run` artifact:
- *   NO_SIGNAL | REVISE_REQUIRED | CONVERGED | ESCALATE_HUMAN
- *
- * Layer 2 — `runs diff` (3+ runs, oscillation detectable):
- *   adds STOP_OSCILLATED
- *
- * Layer 3 (STOP_MAX_ITERATIONS | STOP_POLICY_REQUIRED) is caller-synthesized.
- * River Review deliberately does NOT emit those values.
- *
- * All functions are pure — no side effects, no AI calls, no file I/O.
- */
-
-/** @typedef {'NO_SIGNAL' | 'REVISE_REQUIRED' | 'CONVERGED' | 'ESCALATE_HUMAN'} ArtifactSignal */
-/** @typedef {ArtifactSignal | 'STOP_OSCILLATED'} RunsDiffSignal */
-
-/**
- * Derive the loop signal for a single review artifact (Layer 1).
- *
- * Rules (evaluated in order):
- * 1. decision === 'human-review-required'  → ESCALATE_HUMAN
- * 2. blocking findings (critical or major)  → REVISE_REQUIRED
- * 3. no blocking findings + decision is auto-approve equivalent → CONVERGED
- * 4. otherwise                              → NO_SIGNAL
- *
- * "auto-approve equivalent" covers 'auto-approve', 'approve', and 'approved'
- * to be forward-compatible with any future verdict alias.
- *
- * @param {object} artifact  A Review Artifact (schema version "1")
- * @returns {ArtifactSignal}
- */
-function deriveLoopSignalFromArtifact(artifact) {
-  const decision = artifact?.decision;
-
-  if (decision === 'human-review-required') {
-    return 'ESCALATE_HUMAN';
-  }
-
-  const rawFindings = artifact?.findings;
-  const findings = Array.isArray(rawFindings) ? rawFindings : [];
-  const blockingCount = findings.filter(
-    (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
-  ).length;
-
-  if (blockingCount > 0) {
-    return 'REVISE_REQUIRED';
-  }
-
-  const AUTO_APPROVE = new Set(['auto-approve', 'approve', 'approved']);
-  if (decision !== undefined && AUTO_APPROVE.has(decision)) {
-    return 'CONVERGED';
-  }
-
-  return 'NO_SIGNAL';
-}
-
-/**
- * Derive the loop signal for a `runs diff` result (Layer 2).
- *
- * When `diff.oscillated` is non-empty, oscillation takes priority and returns
- * STOP_OSCILLATED regardless of finding severity — the fix loop is spinning
- * and human triage is needed.
- *
- * Otherwise, derives from the latest run's artifact:
- * 1. `latestArtifact` parameter (explicit, preferred for 2-run and multi-run CLI paths)
- * 2. `diff.runs[last].artifact` or `diff.runs[last]` (embedded in diff object)
- * Falls back to NO_SIGNAL when neither is available.
- *
- * @param {object} diff  Output of diffRunHistory / diffReviews
- * @param {object|null} [latestArtifact]  Latest run's artifact (findings + decision).
- *   Pass the latest run record directly when the diff object does not embed it.
- * @returns {RunsDiffSignal}
- */
-function deriveLoopSignalFromRunsDiff(diff, latestArtifact) {
-  if (Array.isArray(diff?.oscillated) && diff.oscillated.length > 0) {
-    return 'STOP_OSCILLATED';
-  }
-
-  // Prefer the explicitly passed latest artifact.
-  if (latestArtifact != null && typeof latestArtifact === 'object') {
-    return deriveLoopSignalFromArtifact(latestArtifact);
-  }
-
-  // Fall back to runs[] embedded in diff (for callers that populate it).
-  const runs = diff?.runs;
-  if (Array.isArray(runs) && runs.length > 0) {
-    const latest = runs[runs.length - 1];
-    const embedded = latest?.artifact ?? latest;
-    if (embedded && typeof embedded === 'object') {
-      return deriveLoopSignalFromArtifact(embedded);
-    }
-  }
-
-  return 'NO_SIGNAL';
-}
-
-
-/***/ }),
-
-/***/ 1013:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Er: () => (/* binding */ PLANNER_MODES),
-/* harmony export */   ZG: () => (/* binding */ PHASES),
-/* harmony export */   p$: () => (/* binding */ normalizePlannerMode)
-/* harmony export */ });
-const PLANNER_MODES = /** @type {const} */ (['off', 'order', 'prune']);
-
-const PHASES = /** @type {const} */ (['upstream', 'midstream', 'downstream']);
-
-function normalizePlannerMode(mode, { defaultMode = 'off' } = {}) {
-  const fallback = PLANNER_MODES.includes(defaultMode) ? defaultMode : 'off';
-  const normalized = (mode || '').toLowerCase();
-  if (PLANNER_MODES.includes(normalized)) return normalized;
-  return fallback;
-}
-
-
-/***/ }),
-
-/***/ 5597:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-
-// EXPORTS
-__nccwpck_require__.d(__webpack_exports__, {
-  l: () => (/* binding */ buildRepoContextSection),
-  o: () => (/* binding */ collectRepoContext)
-});
-
-// EXTERNAL MODULE: external "node:child_process"
-var external_node_child_process_ = __nccwpck_require__(1421);
-// EXTERNAL MODULE: external "node:util"
-var external_node_util_ = __nccwpck_require__(7975);
-// EXTERNAL MODULE: external "node:fs"
-var external_node_fs_ = __nccwpck_require__(3024);
-// EXTERNAL MODULE: external "node:path"
-var external_node_path_ = __nccwpck_require__(6760);
-// EXTERNAL MODULE: ./src/lib/secret-redactor.mjs
-var secret_redactor = __nccwpck_require__(12);
-// EXTERNAL MODULE: ./src/lib/token-estimator.mjs
-var token_estimator = __nccwpck_require__(467);
-;// CONCATENATED MODULE: ./src/lib/context-ranker.mjs
-// Context ranking for repo-wide review (#689 PR-B).
-//
-// Pure-function building blocks the upcoming PR-C will use to rank
-// candidate context entries (full files, tests, symbol usages, configs)
-// before they get assembled into the prompt under a token budget. This
-// PR ships the ranker functions and tests; pipeline integration is
-// PR-C scope.
-//
-// Design principles
-// - Every signal is a pure function of its arguments. The collector
-//   computes signals from disk / git in PR-C, then hands them off to
-//   scoreContextCandidate as plain values. This keeps the ranker
-//   testable without spinning up a temp filesystem.
-// - Each signal returns a number in [0, 1]. Callers feed weights through
-//   scoreContextCandidate; the weights themselves are 0..1 and the
-//   final score is the weighted average normalized to [0, 1].
-// - Signals that cannot be computed in PR-B (commit recency from git,
-//   skill input-context match, risk-map level) are NOT implemented here
-//   — they live on the caller side in PR-C and are passed in as a
-//   pre-computed score on the `signals` parameter to
-//   scoreContextCandidate. PR-B intentionally stays self-contained.
-
-
-
-// Default weights mirror the proposal in the #689 plan §3. Callers can
-// override per-signal via scoreContextCandidate(..., { weights: ... }).
-// Keys must match the user-facing schema in src/config/schema.mjs
-// (contextRankingSchema.weights) so `signals[k]` and `weights[k]` line
-// up when user config flows through scoreContextCandidate.
-const DEFAULT_WEIGHTS = Object.freeze({
-  pathProximity: 0.25,
-  symbolUsage: 0.2,
-  siblingTest: 0.15,
-  // Reserved for PR-C; PR-B does not compute these but the combiner
-  // accepts them as `signals.<name>` if the caller pre-computed them.
-  importGraph: 0.15,
-  commitRecency: 0.1,
-  riskMapWeight: 0.1,
-  skillInputContextHit: 0.05,
-});
-
-/**
- * Path-proximity signal: how close `candidate` lives to `changed` in the
- * directory tree, normalized so 1.0 means identical path and 0.0 means
- * no shared dir prefix.
- *
- * @param {string} candidate relative repo path of the candidate file
- * @param {string} changed relative repo path of the changed file
- * @returns {number} 0..1
- */
-function pathProximity(candidate, changed) {
-  if (typeof candidate !== 'string' || typeof changed !== 'string') return 0;
-  if (!candidate || !changed) return 0;
-  if (candidate === changed) return 1;
-
-  // Normalize to forward slashes so Windows-style paths score the same.
-  const a = candidate.replace(/\\/g, '/').split('/').filter(Boolean);
-  const b = changed.replace(/\\/g, '/').split('/').filter(Boolean);
-
-  let shared = 0;
-  const min = Math.min(a.length, b.length);
-  for (let i = 0; i < min; i += 1) {
-    if (a[i] === b[i]) shared += 1;
-    else break;
-  }
-  // Use the deeper of the two paths as the denominator. This avoids
-  // rewarding shallow paths (`src/x.ts` vs `src/y.ts`) the same as deep
-  // paths sharing the same prefix.
-  const max = Math.max(a.length, b.length, 1);
-  return Math.min(1, shared / max);
-}
-
-/**
- * Symbol-usage signal (a.k.a. asymmetric symbol overlap): fraction of
- * `candidateSymbols` that appear in `referenceSymbols`. Unlike a Jaccard
- * index this is asymmetric — we care whether the candidate's exports
- * are referenced anywhere in the known usage set, not whether the sets
- * agree as a whole. The name matches contextRankingSchema.weights in
- * src/config/schema.mjs so user config flows through unchanged.
- *
- * @param {string[]} candidateSymbols
- * @param {string[]} referenceSymbols
- * @returns {number} 0..1
- */
-function symbolUsage(candidateSymbols, referenceSymbols) {
-  if (!Array.isArray(candidateSymbols) || candidateSymbols.length === 0) return 0;
-  if (!Array.isArray(referenceSymbols) || referenceSymbols.length === 0) return 0;
-  const refSet = new Set(referenceSymbols);
-  let hits = 0;
-  for (const s of candidateSymbols) {
-    if (refSet.has(s)) hits += 1;
-  }
-  return Math.min(1, hits / candidateSymbols.length);
-}
-
-/**
- * Sibling-test signal (a.k.a. test affinity): did the candidate look
- * like a test file paired with `changed`? Returns 1 when the candidate
- * path matches one of the standard test path heuristics for `changed`,
- * else 0. The name matches contextRankingSchema.weights in
- * src/config/schema.mjs so user config flows through unchanged.
- *
- * @param {string} candidate
- * @param {string} changed
- * @returns {number} 0..1
- */
-function siblingTest(candidate, changed) {
-  if (typeof candidate !== 'string' || typeof changed !== 'string') return 0;
-  if (!candidate || !changed) return 0;
-
-  const norm = (p) => p.replace(/\\/g, '/');
-  const cand = norm(candidate);
-  const orig = norm(changed);
-
-  // Mirror the heuristics in src/lib/repo-context.mjs:TEST_SUFFIXES so
-  // the ranker agrees with the collector. If those heuristics expand
-  // there, update this set.
-  const ext = '.test.$1';
-  const spec = '.spec.$1';
-  const candidates = [
-    orig.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, ext),
-    orig.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, spec),
-    orig.replace(/src\//, 'tests/').replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, ext),
-    (() => {
-      const base = path.posix.basename(orig);
-      const dir = path.posix.dirname(orig);
-      return path.posix.join(dir, '__tests__', base.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, ext));
-    })(),
-  ];
-  return candidates.includes(cand) ? 1 : 0;
-}
-
-/**
- * Combine signals into a final ranking score.
- *
- * Caller passes a {signals} object with per-signal scores in [0, 1].
- * Missing signals are treated as 0 so the function is total. The final
- * score is the dot product of signals and weights divided by the sum of
- * the weights actually used (so omitting commitRecency does not
- * artificially shrink the score).
- *
- * @param {object} args
- * @param {object} args.signals per-signal scores in [0, 1]
- * @param {object} [args.weights] override weights; defaults to DEFAULT_WEIGHTS
- * @returns {number} 0..1
- */
-function scoreContextCandidate({ signals = {}, weights = DEFAULT_WEIGHTS } = {}) {
-  let dot = 0;
-  let usedWeight = 0;
-  for (const [k, w] of Object.entries(weights)) {
-    if (typeof w !== 'number' || w <= 0) continue;
-    const raw = signals[k];
-    if (typeof raw !== 'number') continue;
-    const clamped = Math.max(0, Math.min(1, raw));
-    dot += w * clamped;
-    usedWeight += w;
-  }
-  if (usedWeight === 0) return 0;
-  return Math.max(0, Math.min(1, dot / usedWeight));
-}
-
-;// CONCATENATED MODULE: ./src/lib/context-presets.mjs
-// Context preset budgets for collectRepoContext (#689 PR-D).
-//
-// reviewMode is a friendly knob that picks a preset budget so users do
-// not have to think in token counts. When the user sets
-// config.context.reviewMode but omits config.context.budget, the
-// collector applies the preset below; an explicit `budget: { ... }`
-// always wins.
-//
-// Per-section caps are deliberately conservative so the legacy char
-// budget is also respected automatically (collectRepoContext uses
-// Math.min(SECTION_CAPS, perSectionCap, charBudget, tokenBudget)).
-
-const PRESETS = Object.freeze({
-  // tiny: short prompts, model with a tight context window, or a CI
-  // regression run that wants the absolute minimum context.
-  tiny: Object.freeze({
-    maxTokens: 1024,
-    perSectionCaps: Object.freeze({
-      fullFile: 1500,
-      tests: 1000,
-      usages: 800,
-      config: 300,
-    }),
-  }),
-  // medium: default working budget — good for typical PRs on
-  // gpt-4o-mini / sonnet-class models.
-  medium: Object.freeze({
-    maxTokens: 4000,
-    perSectionCaps: Object.freeze({
-      fullFile: 3000,
-      tests: 2000,
-      usages: 1500,
-      config: 500,
-    }),
-  }),
-  // large: roomy budget for big-model deep dives. Stops shy of the
-  // contextBudgetSchema upper bound (64k) so callers still have head
-  // room for the diff and the system prompt itself.
-  large: Object.freeze({
-    maxTokens: 16000,
-    perSectionCaps: Object.freeze({
-      fullFile: 8000,
-      tests: 4000,
-      usages: 3000,
-      config: 1000,
-    }),
-  }),
-});
-
-/**
- * Look up the preset for a reviewMode value. Unknown / falsy values
- * return null so callers fall back to their existing defaults.
- *
- * @param {('tiny'|'medium'|'large'|null|undefined)} reviewMode
- * @returns {{ maxTokens: number, perSectionCaps: object } | null}
- */
-function presetForReviewMode(reviewMode) {
-  if (!reviewMode) return null;
-  return PRESETS[reviewMode] ?? null;
-}
-
-/**
- * Resolve the effective budget given a `config.context` payload. The
- * resolution order is:
- *   1. explicit `budget` (always wins)
- *   2. preset matching `reviewMode`
- *   3. null (collector uses its built-in defaults)
- *
- * @param {object} [contextConfig]
- * @returns {{ maxTokens?: number, maxChars?: number, perSectionCaps?: object } | null}
- */
-function resolveContextBudget(contextConfig) {
-  if (!contextConfig) return null;
-  if (contextConfig.budget) return contextConfig.budget;
-  return presetForReviewMode(contextConfig.reviewMode);
-}
-
-// Exported for tests.
-const _PRESETS = (/* unused pure expression or super */ null && (PRESETS));
-
-;// CONCATENATED MODULE: ./src/lib/repo-context.mjs
-/**
- * Repo-wide context collector for River Review.
- * Gathers full file text, corresponding tests, symbol usages, and config
- * snippets relevant to the changed files, within a configurable token budget.
- */
-
-
-
-
-
-
-
-
-
-
-
-const execFileAsync = (0,external_node_util_.promisify)(external_node_child_process_.execFile);
-
-/** Maximum total characters of repo context injected into the prompt. */
-const DEFAULT_MAX_CHARS = 8000;
-
-/** Per-section character caps (applied before the global budget). */
-const SECTION_CAPS = {
-  fullFile: 3000,
-  tests: 2000,
-  usages: 1500,
-  config: 500,
-};
-
-/** Test file path heuristics. */
-const TEST_SUFFIXES = [
-  (f) => f.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '.test.$1'),
-  (f) => f.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '.spec.$1'),
-  (f) => f.replace(/src\//, 'tests/').replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '.test.$1'),
-  (f) => {
-    const base = external_node_path_.basename(f);
-    const dir = external_node_path_.dirname(f);
-    return external_node_path_.join(dir, '__tests__', base.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '.test.$1'));
-  },
-];
-
-/** Config files to include a snippet of. */
-const CONFIG_GLOBS = [
-  'tsconfig.json',
-  'package.json',
-  'next.config.*',
-  '.eslintrc*',
-  'vite.config.*',
-];
-
-/**
- * Collect repo-wide context relevant to the changed files.
- *
- * @param {object} opts
- * @param {string[]} opts.changedFiles - Relative paths of changed files
- * @param {string} opts.repoRoot - Absolute path to the repository root
- * @param {number} [opts.maxChars] - Total character budget (default 8000)
- * @param {object} [opts.security] - `config.security` block (#692). When omitted,
- *   redaction defaults are used and `shouldExcludeForContext` runs against
- *   `DEFAULT_DENY_GLOBS` only.
- * @returns {Promise<RepoContext>}
- */
-async function collectRepoContext({
-  changedFiles,
-  repoRoot,
-  maxChars = DEFAULT_MAX_CHARS,
-  security,
-  context: contextConfig,
-}) {
-  const sections = [];
-
-  // #689 PR-C: optional token budget on top of the legacy char budget.
-  // When `config.context.budget.maxTokens` is set, we also gate by an
-  // estimated token cost so callers can think in tokens. The char
-  // budget remains authoritative for backward compat — both must be
-  // satisfied for a candidate to land. estimateTokens is approximate
-  // (ASCII chars/4, CJK chars/2 in #689 PR-A) so callers should treat
-  // the result as best-effort, not a hard ceiling.
-  // PR-D (#689): if the user picks a reviewMode without an explicit
-  // budget, resolve the preset; the explicit `budget: { ... }` always
-  // wins. resolveContextBudget returns null when both are absent.
-  const budgetCfg = resolveContextBudget(contextConfig);
-  const maxTokensCfg = Number.isFinite(budgetCfg?.maxTokens) ? budgetCfg.maxTokens : null;
-  let tokenBudget = maxTokensCfg;
-  const billTokens = (text) => {
-    if (tokenBudget == null || !text) return;
-    tokenBudget -= (0,token_estimator/* estimateTokens */.bP)(text);
-  };
-  const tokenBudgetExhausted = () => tokenBudget != null && tokenBudget <= 0;
-
-  // #689 PR-C: optional ranking. When `config.context.ranking.enabled`
-  // is true (and changedFiles has more than one entry), score each
-  // candidate against the rest of the change set and process the most
-  // relevant ones first. PR-B (#714) shipped the pure scoring
-  // primitives; here we wire the simplest signal — pathProximity — and
-  // PR-D will layer in commit recency / risk-map weights.
-  const rankingCfg = contextConfig?.ranking;
-  const rankingEnabled = rankingCfg?.enabled === true;
-  const weights = rankingCfg?.weights ?? DEFAULT_WEIGHTS;
-  const rankCandidates = (paths) => {
-    if (!rankingEnabled || paths.length <= 1)
-      return paths.map((p, i) => ({ path: p, score: 1, originalIndex: i }));
-    return paths
-      .map((p, i) => {
-        // Proximity to the most recently-changed file in the set is a
-        // useful first-order signal. The collector picks the highest
-        // score across the rest of the change set so the head of the
-        // list always has at least one strong neighbor.
-        const proximities = paths.filter((_, j) => j !== i).map((other) => pathProximity(p, other));
-        const proximity = proximities.length ? Math.max(...proximities) : 0;
-        const score = scoreContextCandidate({
-          signals: { pathProximity: proximity },
-          weights,
-        });
-        return { path: p, score, originalIndex: i };
-      })
-      .sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
-  };
-
-  let budget = maxChars;
-
-  // #692 PR-C: redaction & path-level deny.
-  // - shouldExcludeForContext runs BEFORE we even read a file so dotenv,
-  //   pem keys, lock files, build artifacts never enter process memory.
-  // - redactText runs AFTER reading so any secret that slipped past the
-  //   path filter (e.g. an inline AWS key in a regular .ts file) is masked
-  //   before being injected into the prompt.
-  // The tally feeds debug output via redactionHits below.
-  const redactCfg = security?.redact;
-  const redactionEnabled = redactCfg?.enabled !== false; // default true
-  const denyExtra = Array.isArray(redactCfg?.denyFiles) ? redactCfg.denyFiles : [];
-  const allowExtra = Array.isArray(redactCfg?.allowlist) ? redactCfg.allowlist : [];
-  const redactOpts = redactionEnabled
-    ? {
-        allowlist: allowExtra,
-        ...(redactCfg?.entropyThreshold != null
-          ? { entropyThreshold: redactCfg.entropyThreshold }
-          : {}),
-        ...(redactCfg?.categories?.highEntropy === false ? { highEntropy: false } : {}),
-      }
-    : null;
-  const totalHits = new Map();
-  const excludedPaths = [];
-  const bumpHits = (hits) => {
-    for (const { category, count } of hits) {
-      totalHits.set(category, (totalHits.get(category) || 0) + count);
-    }
-  };
-  const isPathExcluded = (rel) =>
-    (0,secret_redactor/* shouldExcludeForContext */.g)(rel, { extraDenyGlobs: denyExtra, allowlist: allowExtra });
-  const maybeRedact = (text) => {
-    if (!redactionEnabled || !text) return text;
-    const { text: redacted, hits } = (0,secret_redactor/* redactText */.Rd)(text, redactOpts);
-    if (hits.length) bumpHits(hits);
-    return redacted;
-  };
-
-  // 1. Full text of changed source files.
-  // PR-C (#689): rankCandidates orders the change set so the most
-  // relevant files (highest pathProximity to the rest of the change
-  // set) get processed first under the budget. Without ranking the
-  // legacy first-N-files behavior is preserved by handing back the
-  // candidates in their original order.
-  const rankedFullFile = rankCandidates(changedFiles.slice(0, 5));
-  const rankedScores = [];
-  for (const { path: rel, score } of rankedFullFile) {
-    if (budget <= 0 || tokenBudgetExhausted()) break;
-    if (isPathExcluded(rel)) {
-      excludedPaths.push({ path: rel, section: 'fullFile' });
-      continue;
-    }
-    const abs = external_node_path_.join(repoRoot, rel);
-    if (!isSourceFile(rel) || !fileExists(abs)) continue;
-    // Use the tighter of the char-budget cap and the token-budget cap
-    // (translated to chars) so we never read more than either budget
-    // allows. PR-A (#712) charsToTokens is the safe upper bound.
-    const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
-    const cap = Math.min(SECTION_CAPS.fullFile, budget, tokenChars);
-    if (cap <= 0) break;
-    const raw = readFileCapped(abs, cap);
-    if (raw) {
-      const content = maybeRedact(raw);
-      sections.push({ label: `Full file: ${rel}`, content, file: rel });
-      budget -= content.length;
-      billTokens(content);
-      rankedScores.push({ path: rel, score });
-    }
-  }
-
-  // 2. Corresponding test files
-  const testContents = [];
-  for (const rel of changedFiles.slice(0, 5)) {
-    if (budget <= 0 || tokenBudgetExhausted()) break;
-    for (const toTest of TEST_SUFFIXES) {
-      const candidate = toTest(rel);
-      if (isPathExcluded(candidate)) {
-        excludedPaths.push({ path: candidate, section: 'tests' });
-        break;
-      }
-      const abs = external_node_path_.join(repoRoot, candidate);
-      if (fileExists(abs)) {
-        const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
-        const cap = Math.min(SECTION_CAPS.tests, budget, tokenChars);
-        if (cap <= 0) break;
-        const raw = readFileCapped(abs, cap);
-        if (raw) {
-          const content = maybeRedact(raw);
-          // The pushed entry includes a `// candidate\n` header; bill the
-          // entire entry against the budget so the running total stays
-          // accurate when many test files are aggregated.
-          const entry = `// ${candidate}\n${content}`;
-          testContents.push(entry);
-          budget -= entry.length;
-          billTokens(entry);
-        }
-        break;
-      }
-    }
-  }
-  if (testContents.length) {
-    sections.push({
-      label: 'Corresponding test files',
-      content: testContents.join('\n\n'),
-      file: null,
-    });
-  }
-
-  // 3. Symbol usage search via ripgrep
-  if (budget > 0 && !tokenBudgetExhausted()) {
-    const exportedSymbols = extractExportedSymbols({ changedFiles, repoRoot });
-    if (exportedSymbols.length) {
-      const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
-      const usagesCap = Math.min(SECTION_CAPS.usages, budget, tokenChars);
-      if (usagesCap > 0) {
-        const usages = await searchSymbolUsages({
-          symbols: exportedSymbols.slice(0, 5),
-          repoRoot,
-          excludeFiles: changedFiles,
-          maxChars: usagesCap,
-        });
-        if (usages) {
-          const content = maybeRedact(usages);
-          sections.push({ label: 'Symbol usage references', content, file: null });
-          budget -= content.length;
-          billTokens(content);
-        }
-      }
-    }
-  }
-
-  // 4. Config snippets
-  if (budget > 0 && !tokenBudgetExhausted()) {
-    const configSnippets = [];
-    for (const glob of CONFIG_GLOBS) {
-      if (isPathExcluded(glob)) {
-        excludedPaths.push({ path: glob, section: 'config' });
-        continue;
-      }
-      const abs = external_node_path_.join(repoRoot, glob);
-      if (fileExists(abs)) {
-        const snippet = readFileCapped(
-          abs,
-          Math.min(SECTION_CAPS.config, budget - configSnippets.reduce((s, c) => s + c.length, 0))
-        );
-        if (snippet) configSnippets.push(`// ${glob}\n${maybeRedact(snippet)}`);
-      }
-    }
-    if (configSnippets.length) {
-      const content = configSnippets.join('\n\n');
-      sections.push({ label: 'Config files', content, file: null });
-      budget -= content.length;
-      billTokens(content);
-    }
-  }
-
-  const redactionHits = [...totalHits.entries()].map(([category, count]) => ({ category, count }));
-
-  return {
-    sections,
-    totalChars: maxChars - budget,
-    truncated: budget <= 0 || tokenBudgetExhausted(),
-    redactionHits,
-    excludedPaths,
-    // PR-C (#689): expose ranking + budget telemetry on the result so
-    // callers can surface it via reviewDebug. Raw context never appears
-    // here — only counts and per-path scores.
-    ranking: rankingEnabled
-      ? {
-          enabled: true,
-          scores: rankedScores,
-        }
-      : null,
-    tokenBudget:
-      maxTokensCfg != null
-        ? {
-            max: maxTokensCfg,
-            remaining: Math.max(0, tokenBudget),
-            exhausted: tokenBudgetExhausted(),
-          }
-        : null,
-  };
-}
-
-/**
- * Build the "Repository Context" section string for prompt injection.
- * Returns empty string when no context is available.
- *
- * @param {RepoContext|null|undefined} repoContext
- * @returns {string}
- */
-function buildRepoContextSection(repoContext) {
-  if (!repoContext?.sections?.length) return '';
-  const parts = ['\n### Repository Context\n'];
-  parts.push('差分の外側にある関連コードです。cross-file の影響分析に使用してください。\n');
-  for (const sec of repoContext.sections) {
-    parts.push(`#### ${sec.label}\n\`\`\`\n${sec.content}\n\`\`\`\n`);
-  }
-  if (repoContext.truncated) {
-    parts.push('> _Repository context was truncated to fit the prompt budget._\n');
-  }
-  return parts.join('\n');
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function isSourceFile(rel) {
-  return /\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte|py|rb|go|java|kt|swift)$/.test(rel);
-}
-
-function fileExists(abs) {
-  try {
-    return external_node_fs_.statSync(abs).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function readFileCapped(abs, cap) {
-  try {
-    const raw = external_node_fs_.readFileSync(abs, 'utf8');
-    if (!raw.trim()) return null;
-    return raw.length > cap ? raw.slice(0, cap) + '\n// ...[truncated]' : raw;
-  } catch {
-    return null;
-  }
-}
-
-function extractExportedSymbols({ changedFiles, repoRoot }) {
-  const symbols = [];
-  const exportRe = /^export\s+(?:(?:async\s+)?function|class|const|let|var)\s+(\w+)/gm;
-  for (const rel of changedFiles.slice(0, 5)) {
-    const abs = external_node_path_.join(repoRoot, rel);
-    if (!isSourceFile(rel) || !fileExists(abs)) continue;
-    try {
-      const text = external_node_fs_.readFileSync(abs, 'utf8');
-      for (const m of text.matchAll(exportRe)) {
-        if (m[1] && !symbols.includes(m[1])) symbols.push(m[1]);
-      }
-    } catch {
-      // skip
-    }
-  }
-  return symbols;
-}
-
-async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars }) {
-  if (!symbols.length) return null;
-  const pattern = symbols.map((s) => `\\b${s}\\b`).join('|');
-  const excludeArgs = excludeFiles.flatMap((f) => ['--iglob', `!${f}`]);
-  try {
-    const { stdout } = await execFileAsync(
-      'rg',
-      [
-        '--no-heading',
-        '--line-number',
-        '--max-count',
-        '3',
-        '--max-filesize',
-        '200K',
-        '--glob',
-        '*.{ts,tsx,js,jsx,mjs,cjs}',
-        ...excludeArgs,
-        '-e',
-        pattern,
-        '.',
-      ],
-      { cwd: repoRoot, timeout: 5000 }
-    );
-    const trimmed = stdout.slice(0, maxChars);
-    return trimmed || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * @typedef {object} RepoContext
- * @property {Array<{label: string, content: string, file: string|null}>} sections
- * @property {number} totalChars
- * @property {boolean} truncated
- */
-
-
-/***/ }),
-
-/***/ 2022:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   G1: () => (/* binding */ generateReview)
-/* harmony export */ });
-/* unused harmony exports buildPrompt, parseLineComments */
-/* harmony import */ var _config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3833);
-/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(9946);
-/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1535);
-/* harmony import */ var _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(4807);
-/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(7050);
-/* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(2294);
-/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(9746);
-/* harmony import */ var _review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(8069);
-/* harmony import */ var _repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(5597);
-/* harmony import */ var _secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(12);
-/* harmony import */ var _llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(7303);
-
-
-
-
-
-
-
-
-
-
-
-
-const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
-const MAX_PROMPT_CHARS = 12000;
-const MAX_PROMPT_PREVIEW_CHARS = 2000;
-const NO_ISSUES_REGEX = /^NO_ISSUES/i;
-const LINE_COMMENT_REGEX = /^(.+?):(\d+):\s*(.+)$/;
-
-/**
- * スキル名のサニタイズ: Markdown インジェクション対策
- */
-function sanitizeSkillName(name) {
-  if (!name) return '';
-  return String(name).replace(/[\[\]`*_{}()#+\-.!|<>\n]/g, '');
-}
-
-function buildSystemMessage(language) {
-  return language === 'en'
-    ? 'You are River Review, an expert code review assistant. Respond in English. You excel at spotting risky changes and explaining them briefly.'
-    : 'You are River Review, an expert code review assistant. Respond in Japanese. You excel at spotting risky changes and explaining them briefly.';
-}
-
-function buildLanguageInstruction(language) {
-  return language === 'en'
-    ? '- Write the <message> in English.'
-    : '- <message>は日本語で記述すること。';
-}
-
-function buildSeverityInstruction(severity, language) {
-  const japanese = {
-    strict: '軽微な懸念も含めて網羅的に指摘する',
-    normal: '重要度と再現性のバランスを取り、主要なリスクを指摘する',
-    relaxed: '重大・致命的な問題に限定し、軽微な指摘は省く',
-  };
-  const english = {
-    strict: 'Capture even minor risks and style regressions',
-    normal: 'Balance breadth with impact; focus on notable risks',
-    relaxed: 'Limit findings to critical or high-impact issues; skip nits',
-  };
-  const map = language === 'en' ? english : japanese;
-  const label = language === 'en' ? 'Severity focus' : '厳格度';
-  return `- ${label} (${severity}): ${map[severity] ?? map.normal}`;
-}
-
-function buildAdditionalSection(instructions, language) {
-  if (!instructions?.length) return '';
-  const header = language === 'en' ? 'Additional instructions:' : '追加指示:';
-  const body = instructions.map((item) => `- ${item}`).join('\n');
-  return `\n${header}\n${body}\n`;
-}
-
-function resolveOpenAIConfig(options = {}, config = _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s) {
-  const provider = config.model?.provider ?? 'openai';
-  const modelName = options.model || ENV_DEFAULT_MODEL || config.model?.modelName;
-  return {
-    provider,
-    apiKey: options.apiKey || process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-    model: modelName,
-    endpoint:
-      options.endpoint ||
-      process.env.RIVER_OPENAI_BASE_URL ||
-      'https://api.openai.com/v1/chat/completions',
-    temperature: config.model?.temperature ?? 0,
-    maxTokens: config.model?.maxTokens ?? 600,
-  };
-}
-
-function buildSkillSummary(plan) {
-  if (!plan?.selected?.length) return 'No skills selected; provide general review notes.';
-  const summaries = plan.selected.map((skill) => (0,_runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__/* .summarizeSkill */ .P0)(skill));
-  const top = summaries.slice(0, 6);
-  const body = top
-    .map(
-      (s) =>
-        `- ${s.id}: ${s.name} [phase=${s.phase}, severity=${s.severity ?? 'unknown'}, modelHint=${s.modelHint}]`
-    )
-    .join('\n');
-  const truncated =
-    summaries.length > top.length ? `\n...and ${summaries.length - top.length} more skills.` : '';
-  return `${body}${truncated}`;
-}
-
-function buildFileSummary(files = []) {
-  if (!files.length) return 'No files changed';
-  return files.map((file) => `- ${file.path} (hunks: ${file.hunks.length || 1})`).join('\n');
-}
-
-function buildProjectRulesSection(rulesText) {
-  if (!rulesText) return '';
-  return `\n### Project-specific review rules\n\n以下は、このリポジトリ専用のレビューガイドラインです。必ず考慮してください。\n\n---\n${rulesText}\n---\n`;
-}
-
-const MAX_PR_BODY_CHARS = 4000;
-
-function buildPrDescriptionSection(prBody) {
-  if (typeof prBody !== 'string' || !prBody.trim()) return '';
-  const body =
-    prBody.length > MAX_PR_BODY_CHARS
-      ? `${prBody.slice(0, MAX_PR_BODY_CHARS)}\n...[truncated]`
-      : prBody;
-  return `\n### PR Description\n\n以下はこの変更の PR 本文です。差分そのものに加えて、PR 本文がレビュー可能な状態かを確認してください。\n\n- Why（変更理由）と What（変更内容）が書かれているか\n- 本文の説明が差分と一致しているか（説明にあるが差分に無い／差分にあるが説明に無い）\n- 影響範囲が書かれているか\n- テスト方針・確認方法が書かれているか\n- 関連 Issue / 仕様 / 設計へのリンクがあるか\n\nPR 本文に関する指摘は、対象を \`PR-DESCRIPTION:0\` として出力してください。\n\n---\n${body}\n---\n`;
-}
-
-// Opt-in (review.walkthrough). Asks the model to prepend a per-file walkthrough
-// to its output so reviewers see what changed, the risk, and a reading order.
-function buildWalkthroughSection(enabled) {
-  if (!enabled) return '';
-  return `\n### File Walkthrough (output request)\n\nFindings の前に "## File Walkthrough" セクションを出力してください。変更ファイルごとに 1 行で:\n- 何がどう変わったか（要約）\n- 変更リスク（high/medium/low）\n- 読むべき順番（依存や影響の大きい順）\nを示してください。差分に無いファイルは含めないでください。\n`;
-}
-
-// Opt-in (review.agentHandoff). Asks the model to append provider-agnostic
-// fix instructions another AI agent can act on. Distinct from per-finding
-// `suggestion` (a human hint); this is an executable instruction set.
-function buildHandoffSection(enabled) {
-  if (!enabled) return '';
-  return `\n### Agent Handoff (output request)\n\nFindings の後に "## Agent Handoff" セクションを出力してください。blocking な指摘を別の AI エージェントが修正できるよう、特定のツール名・CLI 名を含めずに以下を記述してください:\n- 修正の目的\n- 対象ファイル\n- 制約（壊してはいけない挙動・後方互換）\n- 実装手順\n- テスト手順\n- 完了条件\n`;
-}
-
-function buildADRContextSection(relatedADRs) {
-  if (!relatedADRs?.length) return '';
-  const lines = ['\n### Related ADRs/Specs\n'];
-  for (const adr of relatedADRs.slice(0, 5)) {
-    lines.push(`- ${adr.title} (${adr.path}) — ${adr.matchReason}`);
-  }
-  lines.push('\nこれらの設計文書との整合性を考慮してレビューしてください。\n');
-  return lines.join('\n');
-}
-
-function sanitizePath(p) {
-  return String(p)
-    .replace(/[\n\r]/g, '')
-    .slice(0, 200);
-}
-
-function buildRiskAssessmentSection(riskAssessment) {
-  if (!riskAssessment) return '';
-  const { escalatedFiles, humanReviewFiles } = riskAssessment;
-  if (!escalatedFiles?.length && !humanReviewFiles?.length) return '';
-  const lines = ['\n### Risk Assessment\n'];
-  if (humanReviewFiles?.length) {
-    lines.push('以下のファイルは人間によるレビューが必須です:');
-    for (const f of humanReviewFiles) lines.push('- ' + sanitizePath(f) + ': require_human_review');
-  }
-  if (escalatedFiles?.length) {
-    lines.push('以下のファイルはエスカレーション対象です:');
-    for (const f of escalatedFiles) lines.push('- ' + sanitizePath(f) + ': escalate');
-  }
-  lines.push('これらのファイルには特に注意してレビューしてください。\n');
-  return lines.join('\n');
-}
-
-function buildPrompt({
-  diffText,
-  diffFiles,
-  plan,
-  phase,
-  projectRules,
-  riskAssessment,
-  memoryContext,
-  relatedADRs,
-  reviewMode,
-  repoContext,
-  prBody,
-  maxChars = MAX_PROMPT_CHARS,
-  config = _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s,
-}) {
-  const effectiveConfig = (0,_config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .mergeConfig */ .R2)(_config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s, config ?? {});
-  const reviewConfig = effectiveConfig.review ?? _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s.review;
-  const language = reviewConfig.language ?? _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s.review.language;
-  const severity = reviewConfig.severity ?? _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s.review.severity;
-  const wantWalkthrough = reviewConfig.walkthrough ?? false;
-  const wantHandoff = reviewConfig.agentHandoff ?? false;
-  const truncated = diffText.length > maxChars;
-  const diffBody = truncated ? `${diffText.slice(0, maxChars)}\n...[truncated]` : diffText;
-  const depthConfig = (0,_review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__/* .getReviewDepthConfig */ .i3)(reviewMode ?? 'medium');
-  const prompt = `You are River Review, an AI code review agent.
-Phase: ${phase}
-
-Changed files:
-${buildFileSummary(diffFiles)}
-
-Relevant skills:
-${buildSkillSummary(plan)}
-
-${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${(0,_repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__/* .buildRepoContextSection */ .l)(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}Review the unified git diff below and produce concise findings.
-${buildLanguageInstruction(language)}
-- Output each finding on its own line using the format "<file>:<line>: <message>".
-- In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
-- Use Severity: blocker|warning|nit and Confidence: high|medium|low.
-- Focus on correctness, safety, and maintainability risks in the changed code.
-- Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
-- Limit to ${depthConfig.maxFindings} findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
-- Keep messages brief (<=200 characters).
-- ${depthConfig.focusHint}
-${buildSeverityInstruction(severity, language)}
-${buildAdditionalSection(reviewConfig.additionalInstructions, language)}
-Diff:
-${diffBody}`;
-  return { prompt, truncated, language, severity };
-}
-
-function parseLineComments(outputText) {
-  if (!outputText) return null;
-  const comments = [];
-  for (const rawLine of outputText.split('\n')) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    if (NO_ISSUES_REGEX.test(line)) return [];
-    const match = LINE_COMMENT_REGEX.exec(line);
-    if (match) {
-      comments.push({
-        file: match[1].trim(),
-        line: Number.parseInt(match[2], 10),
-        message: match[3].trim(),
-      });
-    }
-  }
-  return comments.length ? comments : null;
-}
-
-// Transient-failure retry policy and the chat-completion call moved to
-// llm-pipeline.mjs (#1338). The retry helpers are re-exported here so existing
-// importers (tests, downstream consumers) keep working unchanged.
-
-
-function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
-  const allSkills = plan?.selected ?? [];
-  // ヒューリスティック対応スキルは除外（ヒューリスティックで処理済み）
-  const skills = allSkills.filter((skill) => {
-    const skillId = skill.metadata?.id ?? skill.id;
-    return !_heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .HEURISTIC_SKILL_IDS */ .y2.includes(skillId);
-  });
-
-  const firstFile = diff.files?.find((f) => f?.path && f.path !== '/dev/null') ?? null;
-  if (!firstFile) {
-    return [
-      {
-        file: '(no-files)',
-        line: 1,
-        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
-          finding: 'レビュー対象ファイルが特定できない',
-          evidence: '差分ファイルが空',
-          impact: 'レビューの自動化ができない',
-          fix: '差分がある状態で再実行する',
-          severity: 'warning',
-          confidence: 'low',
-        }),
-      },
-    ];
-  }
-
-  const line =
-    firstFile.addedLines?.[0] ||
-    firstFile.hunks?.[0]?.newStart ||
-    1; /* default to first added line or hunk start to keep pointers stable */
-
-  // Build specific reason message
-  const evidenceBase = llmSkipReason
-    ? `LLM: ${llmSkipReason}`
-    : 'ヒューリスティック検出パターンに該当なし';
-
-  // スキルがない場合は1件のコメントを生成
-  if (skills.length === 0) {
-    return [
-      {
-        file: firstFile.path,
-        line,
-        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
-          finding: 'マッチするスキルがなく自動指摘を生成できなかった',
-          evidence: evidenceBase,
-          impact: '重要なリスクを見落とす可能性がある',
-          fix: 'このファイル種別に対応するスキルを追加するか、手動レビューを実施する',
-          severity: 'warning',
-          confidence: 'low',
-        }),
-      },
-    ];
-  }
-
-  // スキル単位でコメントを生成
-  return skills.map((skill) => {
-    const skillId = skill.metadata?.id ?? skill.id;
-    const rawSkillName = skill.metadata?.name ?? skillId;
-    const skillName = sanitizeSkillName(rawSkillName);
-    return {
-      file: firstFile.path,
-      line,
-      skillId,
-      message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
-        finding: `スキル「${skillName}」の観点で自動指摘を生成できなかった`,
-        evidence: evidenceBase,
-        impact: 'このスキルが検出する問題を見落とす可能性がある',
-        fix: `「${skillName}」の観点で手動レビューを実施する`,
-        severity: 'warning',
-        confidence: 'low',
-      }),
-    };
-  });
-}
-
-function normalizeHeuristicComments(rawComments) {
-  return rawComments.map((c) => {
-    // kind → プレゼンテーションは heuristic-review.mjs の単一レジストリ
-    // (HEURISTIC_KIND_PRESENTATIONS) から導出する。detector の追加はレジストリ
-    // 1 箇所で完結し、ここに case を足す必要はない。
-    const preset = _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .HEURISTIC_KIND_PRESENTATIONS */ .EF.get(c.kind);
-    if (!preset) {
-      return {
-        file: c.file,
-        line: c.line,
-        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
-          finding: `想定外のヒューリスティック（kind=${String(c.kind ?? 'unknown')}）`,
-          evidence: 'ヒューリスティック kind が未知',
-          impact: 'レビュー結果が不安定になる可能性がある',
-          fix: 'ヒューリスティック定義と出力の対応を見直す',
-          severity: 'warning',
-          confidence: 'low',
-        }),
-      };
-    }
-    return {
-      file: c.file,
-      line: c.line,
-      skillId: c.skillId,
-      message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)(preset),
-    };
-  });
-}
-
-function redactSecrets(text) {
-  if (!text) return text;
-  return String(text)
-    .replace(/\bAKIA[0-9A-Z]{16}\b/g, 'AKIA****************')
-    .replace(/\bghp_[A-Za-z0-9]{20,}\b/g, 'ghp_***REDACTED***')
-    .replace(/\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/g, 'sk_***REDACTED***')
-    .replace(/\bsk-[A-Za-z0-9]{16,}\b/g, 'sk-***REDACTED***')
-    .replace(/-----BEGIN [^-]* PRIVATE KEY-----/g, '-----BEGIN PRIVATE KEY-----')
-    .replace(/-----END [^-]* PRIVATE KEY-----/g, '-----END PRIVATE KEY-----');
-}
-
-/**
- * Generate review comments using LLM when configured, otherwise fall back to deterministic hints.
- */
-async function generateReview({
-  diff,
-  plan,
-  phase,
-  dryRun = false,
-  includeFallback = true,
-  model,
-  apiKey,
-  projectRules,
-  fileTypes,
-  relatedADRs,
-  riskAssessment,
-  reviewMode,
-  repoContext,
-  prBody,
-  maxPromptChars = MAX_PROMPT_CHARS,
-  config,
-}) {
-  const effectiveConfig = (0,_config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .mergeConfig */ .R2)(_config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s, config ?? {});
-  const promptInfo = buildPrompt({
-    diffText: diff.diffText,
-    diffFiles: diff.files,
-    plan,
-    phase,
-    projectRules,
-    relatedADRs,
-    riskAssessment,
-    reviewMode,
-    repoContext,
-    prBody,
-    maxChars: maxPromptChars,
-    config: effectiveConfig,
-  });
-  const openAIConfig = resolveOpenAIConfig({ model, apiKey }, effectiveConfig);
-  const language = promptInfo.language ?? effectiveConfig.review.language;
-
-  // #692 PR-D: defense-in-depth redaction at the artifact boundary.
-  // PR-C already redacts repo context before it reaches the prompt, but
-  // any other path (project rules with a pasted token, additional
-  // instructions, etc.) could still slip a secret in. Build a single
-  // redacted view of the prompt and use it everywhere the prompt would
-  // otherwise leave process memory (debug.promptPreview, returned
-  // `prompt`, downstream artifact writes). The LLM call still uses the
-  // original `promptInfo.prompt` because it must.
-  const safePrompt = (0,_secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__/* .redactText */ .Rd)(promptInfo.prompt, {
-    allowlist: effectiveConfig.security?.redact?.allowlist ?? [],
-    ...(effectiveConfig.security?.redact?.entropyThreshold != null
-      ? { entropyThreshold: effectiveConfig.security.redact.entropyThreshold }
-      : {}),
-    ...(effectiveConfig.security?.redact?.categories?.highEntropy === false
-      ? { highEntropy: false }
-      : {}),
-  }).text;
-
-  let comments = [];
-  const debug = {
-    promptTruncated: promptInfo.truncated,
-    promptPreview: safePrompt.slice(0, MAX_PROMPT_PREVIEW_CHARS),
-    llmModel: openAIConfig.model,
-    llmProvider: openAIConfig.provider,
-    reviewLanguage: language,
-    reviewSeverity: promptInfo.severity,
-    repoContext: repoContext
-      ? {
-          sections: repoContext.sections.map((s) => ({
-            label: s.label,
-            chars: s.content.length,
-            file: s.file,
-          })),
-          totalChars: repoContext.totalChars,
-          truncated: repoContext.truncated,
-        }
-      : null,
-  };
-
-  const skipReason = dryRun
-    ? 'dry-run enabled'
-    : (0,_utils_mjs__WEBPACK_IMPORTED_MODULE_9__/* .isOfflineMode */ .hN)()
-      ? 'offline (rules-only) mode enabled'
-      : openAIConfig.provider !== 'openai'
-        ? `provider ${openAIConfig.provider} is not supported yet`
-        : openAIConfig.apiKey
-          ? null
-          : 'LLM API key (ANTHROPIC_API_KEY / OPENAI_API_KEY / GOOGLE_API_KEY) not set';
-
-  if (!skipReason) {
-    try {
-      const output = await (0,_llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__/* .callChatCompletion */ .pQ)({
-        prompt: promptInfo.prompt,
-        apiKey: openAIConfig.apiKey,
-        model: openAIConfig.model,
-        endpoint: openAIConfig.endpoint,
-        temperature: openAIConfig.temperature,
-        maxTokens: openAIConfig.maxTokens,
-        systemMessage: buildSystemMessage(language),
-      });
-      debug.rawLlmOutput = output;
-      const parsed = parseLineComments(output);
-      if (parsed !== null) {
-        const redacted = parsed.map((c) => ({ ...c, message: redactSecrets(c.message) }));
-        const checks = redacted.map((c) => (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFindingMessage */ .xv)(c.message));
-        const invalidCount = checks.filter((c) => !c.ok).length;
-        if (invalidCount === 0) {
-          comments = redacted;
-          debug.llmUsed = true;
-        } else {
-          debug.llmUsed = false;
-          debug.llmError = `LLM findings violate required format (invalidCount=${invalidCount}). Falling back.`;
-        }
-      } else {
-        debug.llmUsed = false;
-        debug.llmError = 'LLM output could not be parsed';
-      }
-    } catch (err) {
-      debug.llmUsed = false;
-      debug.llmError = err.message;
-    }
-  } else {
-    debug.llmUsed = false;
-    debug.llmSkipped = skipReason;
-  }
-
-  if (!comments.length) {
-    const heuristic = (0,_heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .buildHeuristicComments */ .zq)({ diff, plan });
-    debug.heuristicsUsed = true;
-    if (heuristic.length) {
-      comments = normalizeHeuristicComments(heuristic);
-      debug.heuristicsCount = heuristic.length;
-    } else {
-      const llmSkipReason = debug.llmSkipped || debug.llmError || null;
-      // If skipped due to missing API key, do not generate fallback warnings (user request)
-      const isMissingKey = llmSkipReason && llmSkipReason.includes('not set');
-
-      if (isMissingKey) {
-        comments = [];
-      } else {
-        comments = includeFallback ? buildFallbackComments(diff, plan, { llmSkipReason }) : [];
-      }
-      debug.heuristicsCount = 0;
-      debug.fallbackIncluded = includeFallback;
-    }
-  }
-
-  const formatChecks = comments.map((c) => ({
-    file: c.file,
-    line: c.line,
-    ...(0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFindingMessage */ .xv)(c.message),
-  }));
-  const invalidCount = formatChecks.filter((c) => !c.ok).length;
-  debug.findingFormat = invalidCount
-    ? { ok: false, invalidCount, samples: formatChecks.filter((c) => !c.ok).slice(0, 3) }
-    : { ok: true };
-
-  debug.fileClassification = fileTypes ?? null;
-
-  // Verifier pass: filter findings that fail quality checks
-  const { verifyFinding } = await __nccwpck_require__.e(/* import() */ 341).then(__nccwpck_require__.bind(__nccwpck_require__, 9341));
-  const verifierResults = comments.map((comment) => ({
-    comment,
-    verification: verifyFinding({
-      finding: comment,
-      diff: diff.diffText,
-      skill: plan?.selected?.[0] ?? {},
-      fileTypes,
-    }),
-  }));
-
-  const verified = verifierResults.filter((r) => r.verification.verified).map((r) => r.comment);
-  const rejected = verifierResults.filter((r) => !r.verification.verified);
-
-  debug.verifierRejected = rejected.map((r) => ({
-    file: r.comment.file,
-    line: r.comment.line,
-    reasons: r.verification.reasons,
-  }));
-  debug.verifierStats = {
-    total: comments.length,
-    verified: verified.length,
-    rejected: rejected.length,
-  };
-
-  // Replace comments with verified-only set
-  comments = verified;
-
-  // Build structured findings from verified comments
-  const findings = comments.map((c, i) => {
-    const parsed = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .parseFindingMessage */ .UB)(c.message);
-    const severity = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeSeverity */ .lv)(parsed.severity);
-    const confidence =
-      parsed.confidence && ['high', 'medium', 'low'].includes(parsed.confidence)
-        ? parsed.confidence
-        : 'medium';
-    return {
-      id: `rr-${i + 1}`,
-      ruleId: c.skillId || 'unknown',
-      file: c.file,
-      lineStart: c.line ?? null,
-      lineEnd: c.line ?? null,
-      title: parsed.title || c.message.slice(0, 80),
-      message: c.message,
-      severity,
-      confidence,
-      status: /** @type {'open'} */ ('open'),
-      evidence: parsed.evidence,
-      suggestion: parsed.suggestion || null,
-    };
-  });
-
-  findings.sort((a, b) => {
-    const bA = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(a);
-    const bB = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(b);
-    return bB.composite - bA.composite;
-  });
-
-  const classified = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .classifyFindings */ .ZY)(findings, { reviewMode: reviewMode ?? 'medium' });
-
-  return {
-    comments,
-    findings,
-    classified,
-    // The returned prompt flows into local-runner result, artifacts, and
-    // dashboards. Use the redacted view so a leaked secret never leaves
-    // process memory through these paths. The LLM call above used the
-    // original promptInfo.prompt and is unaffected.
-    prompt: safePrompt,
-    promptTruncated: promptInfo.truncated,
-    llmModel: openAIConfig.model,
-    debug,
-  };
-}
-
-
-/***/ }),
-
-/***/ 8069:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   To: () => (/* binding */ DEPTH_TO_REVIEW_MODE),
-/* harmony export */   Xf: () => (/* binding */ determineReviewMode),
-/* harmony export */   c8: () => (/* binding */ resolveDepthToReviewMode),
-/* harmony export */   i3: () => (/* binding */ getReviewDepthConfig)
-/* harmony export */ });
-const REVIEW_MODES = new Set(['tiny', 'medium', 'large']);
-
-/**
- * Agent-agnostic depth vocabulary mapped onto the existing review modes.
- * Lets users force a depth without introducing a parallel sizing system.
- */
-const DEPTH_TO_REVIEW_MODE = Object.freeze({
-  quick: 'tiny',
-  standard: 'medium',
-  thorough: 'large',
-});
-
-/**
- * Resolve a user-facing depth name to a review mode, or null when unset.
- *
- * @param {string|null|undefined} depth
- * @returns {'tiny' | 'medium' | 'large' | null}
- */
-function resolveDepthToReviewMode(depth) {
-  if (!depth) return null;
-  return DEPTH_TO_REVIEW_MODE[depth] ?? null;
-}
-
-/**
- * Determine review mode based on diff metadata.
- *
- * @param {{ fileCount: number, changedLines: number, hasMigrations: boolean, hasSchemas: boolean }} diffMeta
- * @param {{ manualMode?: 'tiny' | 'medium' | 'large' | null }} [options]
- * @returns {'tiny' | 'medium' | 'large'}
- */
-function determineReviewMode(diffMeta, options = {}) {
-  // An explicit manual mode overrides diff-size auto-detection.
-  // Optional chaining guards against an explicit `null` options argument.
-  if (options?.manualMode && REVIEW_MODES.has(options.manualMode)) {
-    return options.manualMode;
-  }
-
-  const { fileCount, changedLines, hasMigrations, hasSchemas } = diffMeta;
-
-  let mode;
-  if (fileCount <= 3 && changedLines <= 100) {
-    mode = 'tiny';
-  } else if (fileCount > 20 || changedLines > 800) {
-    mode = 'large';
-  } else {
-    mode = 'medium';
-  }
-
-  if (hasMigrations || hasSchemas) {
-    if (mode === 'tiny') mode = 'medium';
-    else if (mode === 'medium') mode = 'large';
-  }
-
-  return mode;
-}
-
-/**
- * Get review depth configuration for the given mode.
- *
- * @param {'tiny' | 'medium' | 'large'} reviewMode
- * @returns {{ maxFindings: number, focusHint: string }}
- */
-function getReviewDepthConfig(reviewMode) {
-  const configs = {
-    tiny: {
-      maxFindings: 3,
-      focusHint: 'This is a small PR. Focus on the most critical issues only.',
-    },
-    medium: { maxFindings: 8, focusHint: 'Provide a balanced review covering important issues.' },
-    large: {
-      maxFindings: 15,
-      focusHint: 'This is a large PR. Prioritize high-severity issues over minor style concerns.',
-    },
-  };
-  return configs[reviewMode] ?? configs.medium;
-}
-
-
-/***/ }),
-
-/***/ 572:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-
-// EXPORTS
-__nccwpck_require__.d(__webpack_exports__, {
-  _Z: () => (/* binding */ RiskMapError),
-  lm: () => (/* binding */ evaluateRisk),
-  loadRiskMap: () => (/* binding */ loadRiskMap)
-});
-
-// UNUSED EXPORTS: aggregateRiskLevel
-
-// EXTERNAL MODULE: external "node:fs/promises"
-var promises_ = __nccwpck_require__(1455);
-// EXTERNAL MODULE: external "node:path"
-var external_node_path_ = __nccwpck_require__(6760);
-// EXTERNAL MODULE: ./node_modules/js-yaml/dist/js-yaml.mjs
-var js_yaml = __nccwpck_require__(3243);
-// EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
-var esm = __nccwpck_require__(9519);
-// EXTERNAL MODULE: ./node_modules/zod/v4/classic/schemas.js + 16 modules
-var schemas = __nccwpck_require__(2314);
-;// CONCATENATED MODULE: ./src/config/risk-map-schema.mjs
-
-
-const RiskActionSchema = schemas/* enum */.k5(['comment_only', 'escalate', 'require_human_review']);
-
-const RiskRuleSchema = schemas/* object */.Ik({
-  pattern: schemas/* string */.Yj().min(1),
-  action: RiskActionSchema,
-  reason: schemas/* string */.Yj().optional(),
-});
-
-const RiskMapSchema = schemas/* object */.Ik({
-  version: schemas/* string */.Yj().default('1'),
-  rules: schemas/* array */.YO(RiskRuleSchema).min(1),
-  defaults: schemas/* object */.Ik({
-      action: RiskActionSchema.default('comment_only'),
-    })
-    .default({ action: 'comment_only' }),
-});
-
-;// CONCATENATED MODULE: ./src/lib/risk-map.mjs
-
-
-
-
-
-
-const DEFAULT_RISK_MAP_PATH = external_node_path_.join('.river', 'risk-map.yaml');
-
-class RiskMapError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'RiskMapError';
-  }
-}
-
-/**
- * Load a risk map from .river/risk-map.yaml (or a custom path).
- * Missing files are treated as "no risk map" without error.
- * @param {string} repoRoot
- * @param {{ riskMapPath?: string }} [options]
- * @returns {Promise<import('../../schemas/risk-map.schema.json') | null>}
- */
-async function loadRiskMap(repoRoot, options = {}) {
-  const repoRootAbs = external_node_path_.resolve(repoRoot);
-  const relativePath = options.riskMapPath ?? DEFAULT_RISK_MAP_PATH;
-  const fullPath = external_node_path_.resolve(repoRootAbs, relativePath);
-
-  if (!fullPath.startsWith(repoRootAbs + external_node_path_.sep) && fullPath !== repoRootAbs) {
-    throw new RiskMapError(`Risk map path is outside of the repository: ${relativePath}`);
-  }
-
-  let raw;
-  try {
-    raw = await promises_.readFile(fullPath, 'utf8');
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return null;
-    }
-    throw new RiskMapError(`Failed to read risk map at ${fullPath}: ${error.message}`);
-  }
-
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-
-  let parsed;
-  try {
-    parsed = js_yaml/* load */.Hh(trimmed);
-  } catch (error) {
-    throw new RiskMapError(`Failed to parse risk map YAML: ${error.message}`);
-  }
-
-  const result = RiskMapSchema.safeParse(parsed);
-  if (!result.success) {
-    const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
-    throw new RiskMapError(`Invalid risk map schema: ${issues}`);
-  }
-
-  return result.data;
-}
-
-const ACTION_PRIORITY = {
-  comment_only: 0,
-  escalate: 1,
-  require_human_review: 2,
-};
-
-/**
- * Evaluate risk for a list of changed files against a risk map.
- * First matching rule wins per file.
- * @param {object} riskMap - Parsed risk map config
- * @param {string[]} filePaths - List of changed file paths
- * @returns {{ fileRisks: Array<{ file: string, action: string, rule?: object }>, aggregateAction: string, escalatedFiles: string[], humanReviewFiles: string[] }}
- */
-function evaluateRisk(riskMap, filePaths) {
-  if (!riskMap || !filePaths?.length) {
-    return {
-      fileRisks: [],
-      aggregateAction: riskMap?.defaults?.action ?? 'comment_only',
-      escalatedFiles: [],
-      humanReviewFiles: [],
-    };
-  }
-
-  const defaultAction = riskMap.defaults?.action ?? 'comment_only';
-  const fileRisks = [];
-
-  for (const file of filePaths) {
-    let matched = false;
-    for (const rule of riskMap.rules) {
-      if ((0,esm/* minimatch */.xF)(file, rule.pattern, { dot: true })) {
-        fileRisks.push({
-          file,
-          action: rule.action,
-          rule: { pattern: rule.pattern, reason: rule.reason },
-        });
-        matched = true;
-        break;
-      }
-    }
-    if (!matched) {
-      fileRisks.push({ file, action: defaultAction });
-    }
-  }
-
-  const escalatedFiles = fileRisks.filter((r) => r.action === 'escalate').map((r) => r.file);
-  const humanReviewFiles = fileRisks
-    .filter((r) => r.action === 'require_human_review')
-    .map((r) => r.file);
-  const aggregateAction = aggregateRiskLevel(fileRisks, defaultAction);
-
-  return { fileRisks, aggregateAction, escalatedFiles, humanReviewFiles };
-}
-
-/**
- * Aggregate to the highest risk action across all file risks.
- * @param {Array<{ action: string }>} fileRisks
- * @param {string} [fallback='comment_only']
- * @returns {string}
- */
-function aggregateRiskLevel(fileRisks, fallback = 'comment_only') {
-  if (!fileRisks?.length) return fallback;
-
-  let maxPriority = -1;
-  let maxAction = fallback;
-  for (const { action } of fileRisks) {
-    const priority = ACTION_PRIORITY[action] ?? 0;
-    if (priority > maxPriority) {
-      maxPriority = priority;
-      maxAction = action;
-    }
-  }
-  return maxAction;
-}
-
-
-/***/ }),
-
-/***/ 4216:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   D4: () => (/* binding */ appendEntry),
-/* harmony export */   ab: () => (/* binding */ loadMemory),
-/* harmony export */   qU: () => (/* binding */ queryMemory)
-/* harmony export */ });
-/* unused harmony exports supersede, expireEntries */
-/* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3024);
-/* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
-
-
-
-/**
- * Load the Riverbed Memory index from disk.
- * Returns empty structure if file doesn't exist (stateless fallback).
- *
- * @param {string} indexPath - Path to the index.json file
- * @returns {{ entries: object[], version: string }}
- */
-function loadMemory(indexPath) {
-  try {
-    const raw = node_fs__WEBPACK_IMPORTED_MODULE_0__.readFileSync(indexPath, 'utf-8');
-    return JSON.parse(raw);
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      return { entries: [], version: '1' };
-    }
-    throw err;
-  }
-}
-
-/**
- * Append a memory entry to the index.
- * Creates the directory and file if they don't exist.
- *
- * @param {string} indexPath - Path to the index.json file
- * @param {object} entry - Entry conforming to riverbed-entry.schema.json
- */
-function appendEntry(indexPath, entry) {
-  const index = loadMemory(indexPath);
-
-  // Validate required fields
-  if (!entry.id || !entry.type || !entry.content || !entry.metadata) {
-    throw new Error('Entry must have id, type, content, and metadata fields');
-  }
-
-  // Prevent duplicate IDs
-  if (index.entries.some((e) => e.id === entry.id)) {
-    throw new Error(`Duplicate entry ID: ${entry.id}`);
-  }
-
-  index.entries.push(entry);
-
-  const dir = node_path__WEBPACK_IMPORTED_MODULE_1__.dirname(indexPath);
-  if (!node_fs__WEBPACK_IMPORTED_MODULE_0__.existsSync(dir)) {
-    node_fs__WEBPACK_IMPORTED_MODULE_0__.mkdirSync(dir, { recursive: true });
-  }
-  node_fs__WEBPACK_IMPORTED_MODULE_0__.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
-}
-
-/**
- * Query memory entries by filter criteria.
- * All filter fields are optional; entries must match ALL provided criteria.
- * By default, only active entries are returned.
- *
- * @param {{ entries: object[] }} index - Loaded memory index
- * @param {{ type?: string, tags?: string[], phase?: string, includeInactive?: boolean }} filter
- * @returns {object[]}
- */
-function queryMemory(index, { type, tags, phase, includeInactive = false } = {}) {
-  return index.entries.filter((entry) => {
-    if (!includeInactive) {
-      const status = entry.status ?? 'active';
-      if (status !== 'active') return false;
-    }
-    if (type && entry.type !== type) return false;
-    if (phase && entry.metadata?.phase !== phase) return false;
-    if (tags && tags.length > 0) {
-      const entryTags = entry.metadata?.tags ?? [];
-      if (!tags.every((t) => entryTags.includes(t))) return false;
-    }
-    return true;
-  });
-}
-
-/**
- * Supersede an entry by marking it as superseded and pointing to the new entry.
- *
- * @param {string} indexPath - Path to the index.json file
- * @param {string} oldId - ID of the entry to supersede
- * @param {string} newId - ID of the superseding entry
- */
-function supersede(indexPath, oldId, newId) {
-  const index = loadMemory(indexPath);
-  const entry = index.entries.find((e) => e.id === oldId);
-  if (!entry) {
-    throw new Error(`Entry not found: ${oldId}`);
-  }
-  entry.status = 'superseded';
-  entry.supersededBy = newId;
-  fs.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
-}
-
-/**
- * Archive entries whose expiresAt timestamp has passed.
- *
- * @param {string} indexPath - Path to the index.json file
- * @returns {number} Number of entries archived
- */
-function expireEntries(indexPath) {
-  const index = loadMemory(indexPath);
-  const now = new Date();
-  let count = 0;
-  for (const entry of index.entries) {
-    if (
-      entry.expiresAt &&
-      new Date(entry.expiresAt) <= now &&
-      (entry.status ?? 'active') === 'active'
-    ) {
-      entry.status = 'archived';
-      count++;
-    }
-  }
-  if (count > 0) {
-    fs.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
-  }
-  return count;
-}
-
-
-/***/ }),
-
-/***/ 9946:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   _: () => (/* binding */ computeFindingBreakdown)
-/* harmony export */ });
-function computeEvidenceStrength(finding) {
-  const evidence = finding.evidence;
-  if (!Array.isArray(evidence) || evidence.length === 0) return 0.0;
-  const totalChars = evidence.reduce((sum, e) => sum + String(e ?? '').length, 0);
-  if (totalChars === 0) return 0.0;
-  if (totalChars <= 50) return 0.3;
-  if (totalChars <= 150) return 0.6;
-  return 1.0;
-}
-
-// Mirrors (and refines) verifier's actionability heuristic: a Fix/Suggestion
-// with >=10 chars of substance, in the message body or the suggestion field.
-// `\b` avoids matching Prefix:/Suffix:; `[\s\S]` lets the fix span newlines.
-const ACTIONABLE_RE = /\b(?:Fix|Suggestion):\s*([\s\S]{10,})/;
-
-/**
- * How clear/actionable the fix is. Derived from the presence of a concrete
- * Fix/Suggestion. Intentionally NOT folded into `composite` (it is an
- * independent axis, surfaced for prioritization without double-counting).
- *
- * @param {object} finding
- * @returns {number} 0.0 (no actionable fix) | 0.5 (brief) | 1.0 (substantive)
- */
-function computeActionability(finding) {
-  const suggestion = String(finding?.suggestion ?? '').trim();
-  if (suggestion.length >= 10) return 1.0;
-  const message = String(finding?.message ?? '');
-  if (ACTIONABLE_RE.test(message)) return 1.0;
-  if (suggestion.length > 0) return 0.5;
-  return 0.0;
-}
-
-function computeReproducibility(finding) {
-  const confidence = finding.confidence ?? 'medium';
-  const severity = finding.severity ?? 'info';
-
-  let base;
-  if (confidence === 'high') base = 1.0;
-  else if (confidence === 'medium') base = 0.5;
-  else base = 0.2;
-
-  if (severity === 'critical') base = Math.min(1.0, base + 0.2);
-  if (severity === 'minor') base = Math.max(0.0, base - 0.1);
-
-  return base;
-}
-
-function computeBlastRadius(finding) {
-  const severity = finding.severity ?? 'info';
-  const ruleId = String(finding.ruleId ?? '');
-
-  let base;
-  if (severity === 'critical') base = 1.0;
-  else if (severity === 'major') base = 0.7;
-  else if (severity === 'minor') base = 0.3;
-  else base = 0.1;
-
-  if (ruleId.includes('security')) base = Math.min(1.0, base * 1.2);
-
-  return base;
-}
-
-function computeReviewerAgreement(finding) {
-  const confidence = finding.confidence ?? 'medium';
-  if (confidence === 'high') return 0.9;
-  if (confidence === 'medium') return 0.7;
-  return 0.4;
-}
-
-/**
- * Compute a 4-axis score breakdown for a single finding.
- *
- * @param {{
- *   evidence?: string[],
- *   confidence?: 'high' | 'medium' | 'low',
- *   severity?: string,
- *   ruleId?: string,
- * }} finding
- * @returns {{
- *   evidenceStrength: number,
- *   reproducibility: number,
- *   blastRadius: number,
- *   reviewerAgreement: number,
- *   actionability: number,
- *   composite: number,
- * }}
- */
-function computeFindingBreakdown(finding) {
-  const evidenceStrength = computeEvidenceStrength(finding);
-  const reproducibility = computeReproducibility(finding);
-  const blastRadius = computeBlastRadius(finding);
-  const reviewerAgreement = computeReviewerAgreement(finding);
-  const actionability = computeActionability(finding);
-  // `composite` intentionally excludes `actionability` to avoid double-counting
-  // and to keep existing composite values stable; it is reported as a separate axis.
-  const composite =
-    evidenceStrength * 0.3 + reproducibility * 0.25 + blastRadius * 0.3 + reviewerAgreement * 0.15;
-  return {
-    evidenceStrength,
-    reproducibility,
-    blastRadius,
-    reviewerAgreement,
-    actionability,
-    composite,
-  };
-}
-
-
-/***/ }),
-
-/***/ 9487:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Cq: () => (/* binding */ resolveVerdict),
-/* harmony export */   lS: () => (/* binding */ scoreReview),
-/* harmony export */   w8: () => (/* binding */ classifyAxis)
-/* harmony export */ });
-/* unused harmony exports computeAxisScores, computeOverallScore, countBySeverity, deriveVerdict */
-/* harmony import */ var _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5034);
-/* harmony import */ var _breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9946);
-/**
- * Review scoring engine.
- *
- * Deterministic (no AI): derives axis scores, overall score, and verdict from
- * structured findings. Inspired by unilabo/site-management-system's scoring
- * rubric, adapted to river-review's HITL-first posture.
- *
- * The output is always flagged `derived: true` to signal that this is a
- * heuristic indicator, not an authoritative quality metric.
- */
-
-
-
-
-/**
- * Classify a finding into one of the 5 axes based on its ruleId.
- * Falls back to `maintainability` when no pattern matches.
- *
- * @param {{ ruleId?: string, category?: string }} finding
- * @returns {typeof AXES[number]}
- */
-function classifyAxis(finding) {
-  if (finding?.category && _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AXES */ .gR.includes(finding.category)) {
-    return finding.category;
-  }
-  const ruleId = finding?.ruleId ?? '';
-  for (const { axis, pattern } of _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AXIS_PATTERNS */ .SZ) {
-    if (pattern.test(ruleId)) return axis;
-  }
-  return 'maintainability';
-}
-
-/**
- * Compute axis scores from findings.
- *
- * @param {Array<{severity: string, ruleId?: string, category?: string}>} findings
- * @param {object} [options]
- * @param {object} [options.deductions] - Override default deduction table.
- * @returns {Record<typeof AXES[number], number>}
- */
-function computeAxisScores(findings, options = {}) {
-  const deductions = options.deductions ?? _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .DEFAULT_DEDUCTIONS */ .Fh;
-  const scores = Object.fromEntries(_rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AXES */ .gR.map((a) => [a, 100]));
-
-  for (const finding of findings ?? []) {
-    const axis = classifyAxis(finding);
-    const severity = normalizeSeverity(finding.severity);
-    const deduction = deductions[axis]?.[severity] ?? 0;
-    scores[axis] = Math.max(0, scores[axis] - deduction);
-  }
-
-  return scores;
-}
-
-/**
- * Compute overall score as the mean of axis scores.
- *
- * @param {Record<typeof AXES[number], number>} axisScores
- * @returns {number}
- */
-function computeOverallScore(axisScores) {
-  const values = _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AXES */ .gR.map((a) => axisScores[a] ?? 100);
-  const sum = values.reduce((a, b) => a + b, 0);
-  return Math.round(sum / values.length);
-}
-
-/**
- * Count findings per severity.
- *
- * @param {Array<{severity: string}>} findings
- * @returns {{critical: number, major: number, minor: number, info: number}}
- */
-function countBySeverity(findings) {
-  const counts = { critical: 0, major: 0, minor: 0, info: 0 };
-  for (const f of findings ?? []) {
-    const s = normalizeSeverity(f.severity);
-    counts[s]++;
-  }
-  return counts;
-}
-
-/**
- * Derive verdict from overall score, axis scores, and severity counts.
- *
- * Return values:
- * - `auto-approve`: Recommendation only; does NOT bypass HITL policy.
- * - `human-review-recommended`: Notable findings but not blocking.
- * - `human-review-required`: Critical findings or very low score.
- * - `human-review-required` (via humanApprovalRequired): Policy-level override
- *   (e.g. destructive commands, credentials, deployment). Returned before
- *   score-based logic so axis scores are unaffected.
- *
- * @param {{overall: number, axes: Record<string, number>, counts: object, humanApprovalRequired?: boolean}} args
- * @returns {'auto-approve' | 'human-review-recommended' | 'human-review-required'}
- */
-function deriveVerdict({ overall, axes, counts, humanApprovalRequired = false }) {
-  if (humanApprovalRequired) {
-    return 'human-review-required';
-  }
-
-  const t = _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__/* .VERDICT_THRESHOLDS */ .n;
-
-  if (counts.critical > t.humanReviewRecommended.maxCritical) {
-    return 'human-review-required';
-  }
-  if (overall < t.humanReviewRecommended.minOverall) {
-    return 'human-review-required';
-  }
-  if (
-    overall >= t.autoApprove.minOverall &&
-    (axes.security ?? 100) >= t.autoApprove.minSecurity &&
-    counts.critical <= t.autoApprove.maxCritical &&
-    counts.major <= t.autoApprove.maxMajor
-  ) {
-    return 'auto-approve';
-  }
-  return 'human-review-recommended';
-}
-
-/**
- * Complete scoring entry point.
- *
- * @param {Array<object>} findings - Findings with at least `severity` and `ruleId`.
- * @param {object} [options]
- * @param {boolean} [options.humanApprovalRequired=false] - When true, forces verdict to
- *   'human-review-required' regardless of score (e.g. plan-review-gate trigger).
- * @returns {{
- *   overall: number,
- *   axes: Record<typeof AXES[number], number>,
- *   verdict: string,
- *   counts: {critical: number, major: number, minor: number, info: number},
- *   findingBreakdowns: Array<{id: string, evidenceStrength: number, reproducibility: number, blastRadius: number, reviewerAgreement: number, composite: number}>,
- *   derived: true,
- * }}
- */
-function scoreReview(findings, { humanApprovalRequired = false } = {}) {
-  const axes = computeAxisScores(findings);
-  const overall = computeOverallScore(axes);
-  const counts = countBySeverity(findings);
-  const verdict = deriveVerdict({ overall, axes, counts, humanApprovalRequired });
-  const findingBreakdowns = (findings ?? []).map((f) => ({
-    id: f.id,
-    ...(0,_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(f),
-  }));
-  return { overall, axes, verdict, counts, findingBreakdowns, derived: true };
-}
-
-/**
- * Resolve the verdict a formatter should render (#1170 F3).
- *
- * The canonical verdict is finalized once on the artifact (`artifact.decision`),
- * reflecting gate signals such as `humanApprovalRequired` that formatters do not
- * receive. Prefer that canonical value over a formatter-local recomputation,
- * which would silently drop those signals and let the verdict drift across the
- * JSON / YAML / HTML / Markdown outputs. Fall back to the recomputed verdict
- * when no canonical decision is present (the run / diff path never sets one).
- *
- * @param {unknown} canonicalDecision - `artifact.decision`, may be absent.
- * @param {string} recomputedVerdict - `scoreReview(findings).verdict`.
- * @returns {string} The verdict to display.
- */
-function resolveVerdict(canonicalDecision, recomputedVerdict) {
-  if (typeof canonicalDecision === 'string' && canonicalDecision.length > 0) {
-    return canonicalDecision;
-  }
-  return recomputedVerdict;
-}
-
-/**
- * Normalize severity to the canonical vocabulary used by the scoring engine.
- * Accepts both the output schema values (critical/major/minor/info) and
- * internal values (blocker/warning/nit) via fall-through.
- *
- * @param {string} severity
- * @returns {'critical' | 'major' | 'minor' | 'info'}
- */
-function normalizeSeverity(severity) {
-  const s = String(severity ?? '')
-    .toLowerCase()
-    .trim();
-  if (s === 'critical' || s === 'blocker') return 'critical';
-  if (s === 'major' || s === 'warning') return 'major';
-  if (s === 'minor' || s === 'nit') return 'minor';
-  return 'info';
-}
-
-
-/***/ }),
-
-/***/ 5034:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Fh: () => (/* binding */ DEFAULT_DEDUCTIONS),
-/* harmony export */   SZ: () => (/* binding */ AXIS_PATTERNS),
-/* harmony export */   Sf: () => (/* binding */ AXIS_LABELS_JA),
-/* harmony export */   gR: () => (/* binding */ AXES),
-/* harmony export */   n: () => (/* binding */ VERDICT_THRESHOLDS)
-/* harmony export */ });
-/**
- * Default scoring rubric for deterministic review scoring.
- *
- * Derived from unilabo/site-management-system's review-prompt.md, adapted to
- * river-review's skill taxonomy. Scores are **derived from finding severity
- * and axis**, not AI-generated. See docs/review/scoring-model.md for rationale.
- */
-
-const AXES = /** @type {const} */ ([
-  'readability',
-  'extensibility',
-  'performance',
-  'security',
-  'maintainability',
-]);
-
-const AXIS_LABELS_JA = {
-  readability: '可読性',
-  extensibility: '拡張性',
-  performance: 'パフォーマンス',
-  security: 'セキュリティ',
-  maintainability: '保守性',
-};
-
-/**
- * Regex patterns mapping ruleId to axis. First match wins.
- * Falls back to `maintainability` when no pattern matches.
- *
- * Patterns use a leading `\b` to anchor at word boundary, but intentionally
- * omit a trailing `\b` so that keyword prefixes match extended identifiers
- * (e.g. `depend` matches `dependency`, `read` matches `readability`).
- */
-const AXIS_PATTERNS = [
-  {
-    axis: 'security',
-    pattern: /\b(sec|security|auth|authz|authn|injection|xss|csrf|crypto)/i,
-  },
-  {
-    axis: 'performance',
-    pattern: /\b(perf|performance|n-?plus-?one|n1\b|slow|query|memory)/i,
-  },
-  {
-    axis: 'extensibility',
-    pattern: /\b(arch|architecture|depend|layer|fat|coupling|boundary)/i,
-  },
-  {
-    axis: 'readability',
-    pattern: /\b(read|readability|naming|complexity|style|clarity)/i,
-  },
-  {
-    axis: 'maintainability',
-    pattern: /\b(test|coverage|maint|maintainability|doc|comment)/i,
-  },
-];
-
-/**
- * Default deduction table.
- * Per-severity deductions per axis. Security is penalized more heavily.
- */
-const DEFAULT_DEDUCTIONS = {
-  security: { critical: 50, major: 30, minor: 15, info: 5 },
-  readability: { critical: 30, major: 20, minor: 10, info: 3 },
-  extensibility: { critical: 30, major: 20, minor: 10, info: 3 },
-  performance: { critical: 30, major: 20, minor: 10, info: 3 },
-  maintainability: { critical: 30, major: 20, minor: 10, info: 3 },
-};
-
-/**
- * Verdict thresholds (display only; HITL-respecting).
- *
- * `auto-approve` is a recommendation for automation (e.g. CI bot), NOT a policy
- * to merge without human review. river-review remains HITL-first.
- */
-const VERDICT_THRESHOLDS = {
-  autoApprove: {
-    minOverall: 90,
-    minSecurity: 95,
-    maxCritical: 0,
-    maxMajor: 0,
-  },
-  humanReviewRecommended: {
-    minOverall: 70,
-    maxCritical: 0,
-  },
-  // below humanReviewRecommended threshold -> humanReviewRequired
-};
-
-
-/***/ }),
-
-/***/ 12:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Rd: () => (/* binding */ redactText),
-/* harmony export */   g: () => (/* binding */ shouldExcludeForContext)
-/* harmony export */ });
-/* unused harmony exports DEFAULT_DENY_GLOBS, shannonEntropy */
-/* harmony import */ var minimatch__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9519);
-// Secret redaction for repo-wide review context (#692 PR-A).
-//
-// This module is **additive** and not yet wired into the review pipeline.
-// PR-C of #692 will hook it into src/lib/repo-context.mjs and
-// src/lib/local-runner.mjs so that prompt input and debug artifacts are
-// redacted before they leave process memory.
-//
-// Design notes (see Issue #692 plan):
-// - Replacements are *length-independent* (`<REDACTED:category>`) so that
-//   suppression fingerprints stay stable when redaction is toggled on/off
-//   (interaction with #687 PR-B applySuppressions).
-// - High-entropy detection is opt-in by config and runs LAST so that named
-//   categories take priority and avoid double-counting.
-// - Allowlist substrings (example, dummy, placeholder, missing, xxxxx)
-//   suppress redaction on the surrounding token to protect documentation
-//   examples and obvious test fixtures from being mangled.
-// - DEFAULT_DENY_GLOBS is exported separately so that path-level exclusion
-//   can run BEFORE redaction (avoids reading .env / *.pem files at all).
-
-
-
-/**
- * Path globs that must be excluded from repo-wide context regardless of
- * user config. Lock files and build artifacts are also denied because they
- * carry no review value but inflate the budget.
- */
-const DEFAULT_DENY_GLOBS = Object.freeze([
-  '**/.env',
-  '**/.env.*',
-  '**/.envrc',
-  '**/secrets.*',
-  '**/credentials.*',
-  '**/credentials/**',
-  '**/*.pem',
-  '**/*.key',
-  '**/*.p12',
-  '**/*.pfx',
-  '**/*.jks',
-  '**/*.keystore',
-  '**/id_rsa',
-  '**/id_dsa',
-  '**/id_ecdsa',
-  '**/id_ed25519',
-  '**/*.lock',
-  '**/package-lock.json',
-  '**/pnpm-lock.yaml',
-  '**/yarn.lock',
-  '**/composer.lock',
-  '**/Cargo.lock',
-  '**/poetry.lock',
-  '**/Gemfile.lock',
-  '**/dist/**',
-  '**/build/**',
-  '**/out/**',
-  '**/.next/**',
-  '**/coverage/**',
-  '**/*.min.js',
-  '**/*.min.css',
-  '**/*.map',
-]);
-
-/**
- * Substrings that, when found near a candidate match, mark the match as a
- * documentation example or test placeholder rather than a real secret.
- *
- * `xxxxx` was rejected as too aggressive: legitimate hex / base64 tokens
- * frequently contain runs of repeated characters and would be incorrectly
- * skipped. The high-entropy fallback already protects monotonic strings
- * (entropy below threshold) so the placeholder list is intentionally short.
- */
-const ALLOWLIST_TOKENS = Object.freeze([
-  'example',
-  'dummy',
-  'placeholder',
-  '<missing>',
-  // Common substrings used in test fixtures so they don't get redacted
-  // when test files are included in repo-wide context scans (#808 follow-up).
-  'test-key',
-  'fake-key',
-]);
-
-const ALLOWLIST_RE = new RegExp(
-  ALLOWLIST_TOKENS.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
-  'i'
-);
-
-const REPLACEMENT = (category) => `<REDACTED:${category}>`;
-
-/**
- * Pattern categories. Order matters — more specific / longer alternatives
- * come first so they win over weaker patterns and don't get partly eaten by
- * the high-entropy fallback.
- *
- * Each entry: { id, regex, replacement?, requireValueShape? }.
- */
-const PATTERNS = [
-  // GitHub
-  { id: 'githubToken', regex: /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\b/g },
-  { id: 'githubToken', regex: /\bgithub_pat_[A-Za-z0-9_]{82}\b/g },
-  // OpenAI / Anthropic / Google
-  { id: 'openaiKey', regex: /\bsk-proj-[A-Za-z0-9_-]{40,}\b/g },
-  { id: 'anthropicKey', regex: /\bsk-ant-[A-Za-z0-9_-]{40,}\b/g },
-  { id: 'openaiKey', regex: /\bsk-[A-Za-z0-9]{20,}\b/g },
-  { id: 'googleApiKey', regex: /\bAIza[0-9A-Za-z_-]{35}\b/g },
-  // AWS
-  { id: 'awsAccessKey', regex: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/g },
-  // Long-form private keys (multi-line block)
-  {
-    id: 'privateKey',
-    regex:
-      /-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED |PGP |)PRIVATE KEY-----[\s\S]*?-----END[^-]*PRIVATE KEY-----/g,
-  },
-  // Bearer tokens — capture the surrounding "Bearer " keyword to limit FP
-  { id: 'bearerToken', regex: /\b[Bb]earer\s+[A-Za-z0-9._~+/=-]{20,}\b/g },
-  // Database connection strings
-  {
-    id: 'databaseUrl',
-    regex: /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis|amqp|mssql):\/\/[^\s'"`<>]+/g,
-  },
-  // Webhook URLs (Slack / Discord)
-  { id: 'webhookUrl', regex: /https:\/\/hooks\.slack\.com\/[A-Z0-9/]+/g },
-  {
-    id: 'webhookUrl',
-    regex: /https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+/g,
-  },
-];
-
-/**
- * Patterns that are case-insensitive *value-shape* patterns and require an
- * explicit assignment context (key=value). These run after the explicit
- * patterns above so a literal `aws_secret_access_key=...` does not get
- * partially consumed.
- */
-const ASSIGNMENT_PATTERNS = [
-  // aws_secret_access_key = "..."
-  {
-    id: 'awsSecretKey',
-    regex: /\baws[_-]?secret[_-]?access[_-]?key\s*[:=]\s*['"]?[A-Za-z0-9/+=]{40}['"]?/gi,
-  },
-  // client_secret = "...", consumer_secret = "..."
-  {
-    id: 'oauthSecret',
-    regex: /\b(?:client|consumer)[_-]?secret\s*[:=]\s*['"][^'"]{16,}['"]/gi,
-  },
-];
-
-/**
- * Variable-name based assignment redaction. Only redacts values when the
- * name itself implies a secret, so plain dotenv lines like `PORT=3000` or
- * `LOG_LEVEL=info` are left alone.
- */
-// Two-step approach so the regex can capture short and unprefixed names
-// (`TOKEN=`, `MY_TOKEN=`, `export TOKEN=`) without exploding the alternation.
-// The captured name is then sanity-checked with SENSITIVE_NAME_RE before
-// the value is masked, which keeps `PORT=3000` and `LOG_LEVEL=info`
-// untouched.
-const ENV_VAR_RE = /^[ \t]*(?:export[ \t]+)?([A-Z][A-Z0-9_]*)\s*=\s*(.+)$/gm;
-const SENSITIVE_NAME_RE =
-  /(?:^|_)(?:TOKEN|SECRET|KEY|PASSWORD|PASSWD|CREDENTIAL|CREDENTIALS|API_KEY|ACCESS_KEY|PRIVATE_KEY)$/;
-
-const MIN_HIGH_ENTROPY_LENGTH = 24;
-const DEFAULT_HIGH_ENTROPY_THRESHOLD = 4.5;
-const HIGH_ENTROPY_TOKEN_RE = /[A-Za-z0-9+/=_-]{24,}/g;
-
-/**
- * Shannon entropy in bits per character. Higher = more random.
- * @param {string} s
- */
-function shannonEntropy(s) {
-  if (!s) return 0;
-  const counts = new Map();
-  for (const ch of s) counts.set(ch, (counts.get(ch) || 0) + 1);
-  const len = s.length;
-  let h = 0;
-  for (const c of counts.values()) {
-    const p = c / len;
-    h -= p * Math.log2(p);
-  }
-  return h;
-}
-
-function isAllowlisted(snippet) {
-  return ALLOWLIST_RE.test(snippet);
-}
-
-/**
- * Redact secrets in a text string.
- *
- * @param {string} text
- * @param {object} [opts]
- * @param {boolean} [opts.highEntropy] enable Shannon-entropy fallback (default true)
- * @param {number} [opts.entropyThreshold] entropy bits/char threshold (default 4.5)
- * @param {string[]} [opts.allowlist] additional substrings that suppress redaction
- * @returns {{ text: string, hits: Array<{ category: string, count: number }> }}
- */
-function redactText(text, opts = {}) {
-  if (text == null || text === '') return { text: text ?? '', hits: [] };
-  const {
-    highEntropy = true,
-    entropyThreshold = DEFAULT_HIGH_ENTROPY_THRESHOLD,
-    allowlist = [],
-  } = opts;
-  const extraAllow = allowlist.length
-    ? new RegExp(allowlist.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i')
-    : null;
-
-  const hits = new Map();
-  const bump = (category, n = 1) => hits.set(category, (hits.get(category) || 0) + n);
-  const skipMatch = (full) => isAllowlisted(full) || (extraAllow ? extraAllow.test(full) : false);
-
-  let out = String(text);
-
-  for (const { id, regex } of PATTERNS) {
-    out = out.replace(regex, (m) => {
-      if (skipMatch(m)) return m;
-      bump(id);
-      return REPLACEMENT(id);
-    });
-  }
-
-  for (const { id, regex } of ASSIGNMENT_PATTERNS) {
-    out = out.replace(regex, (m) => {
-      if (skipMatch(m)) return m;
-      bump(id);
-      return REPLACEMENT(id);
-    });
-  }
-
-  out = out.replace(ENV_VAR_RE, (full, name, value) => {
-    if (skipMatch(full)) return full;
-    if (!SENSITIVE_NAME_RE.test(name)) return full;
-    if (!value || value.trim().length < 8) return full;
-    bump('envAssignment');
-    // Reconstruct so we keep the (optional) `export ` prefix and the exact
-    // whitespace around `=`. Slicing `full` up to the start of `value` is
-    // safer than rebuilding the line by hand.
-    const valueStart = full.length - value.length;
-    return full.slice(0, valueStart) + REPLACEMENT('envAssignment');
-  });
-
-  if (highEntropy) {
-    out = out.replace(HIGH_ENTROPY_TOKEN_RE, (m) => {
-      if (m.length < MIN_HIGH_ENTROPY_LENGTH) return m;
-      if (skipMatch(m)) return m;
-      // Skip tokens that are still mid-replacement (we already redacted nearby).
-      if (m.includes('REDACTED')) return m;
-      const h = shannonEntropy(m);
-      if (h < entropyThreshold) return m;
-      bump('highEntropy');
-      return REPLACEMENT('highEntropy');
-    });
-  }
-
-  return {
-    text: out,
-    hits: [...hits.entries()].map(([category, count]) => ({ category, count })),
-  };
-}
-
-/**
- * True when `relPath` should be excluded from repo-wide context.
- * Combines the built-in deny list with caller-supplied additions, then
- * applies an allowlist of explicit "force-include" globs.
- *
- * @param {string} relPath
- * @param {object} [opts]
- * @param {string[]} [opts.extraDenyGlobs]
- * @param {string[]} [opts.allowlist] globs that override deny matches
- * @returns {boolean}
- */
-function shouldExcludeForContext(relPath, opts = {}) {
-  if (!relPath) return false;
-  const { extraDenyGlobs = [], allowlist = [] } = opts;
-  const deny = [...DEFAULT_DENY_GLOBS, ...extraDenyGlobs];
-
-  // nocase: case-insensitive so `.ENV`, `Package-Lock.json`, `ID_RSA` etc.
-  // are still excluded on case-preserving filesystems.
-  const matchOpts = { dot: true, nocase: true, matchBase: false };
-  // Allowlist beats deny so users can opt back into specific paths if they
-  // truly need them (e.g., a sample .env they want reviewed).
-  for (const g of allowlist) {
-    if ((0,minimatch__WEBPACK_IMPORTED_MODULE_0__/* .minimatch */ .xF)(relPath, g, matchOpts)) return false;
-  }
-  for (const g of deny) {
-    if ((0,minimatch__WEBPACK_IMPORTED_MODULE_0__/* .minimatch */ .xF)(relPath, g, matchOpts)) return true;
-  }
-  return false;
-}
-
-
-/***/ }),
-
-/***/ 467:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   b9: () => (/* binding */ charsToTokens),
-/* harmony export */   bP: () => (/* binding */ estimateTokens)
-/* harmony export */ });
-/* unused harmony export tokensToChars */
-// Token estimator for prompt budget accounting (#689 PR-A).
-//
-// Lightweight, deterministic estimator that the upcoming context-ranking
-// + budget control work in #689 PR-B/PR-C will consume. PR-A ships the
-// pure function and tests; pipeline integration lands in PR-C.
-//
-// Design notes:
-// - The default `heuristic` algorithm uses chars/4 for ASCII-dominant text
-//   and chars/2 for CJK-dominant text. This is **deliberately rough**:
-//   exact tokenization (tiktoken / @anthropic-ai/tokenizer) lives in PR-E
-//   as an opt-in adapter so PR-A can stay dependency-free.
-// - Detection is per-string, not per-character. We bucket the input by the
-//   ratio of CJK code points and pick a divisor accordingly so a mostly-
-//   English string with a few Japanese variable names still gets the more
-//   accurate ascii estimate.
-// - The exported `estimateTokens` is pure: same input always returns the
-//   same number. This matters for #687 fingerprint stability if anything
-//   downstream ever incorporates the estimate.
-
-const ASCII_DIVISOR = 4;
-const CJK_DIVISOR = 2;
-
-// Hiragana, Katakana (incl. half-width fullwidth), CJK Unified Ideographs
-// and the most common compatibility ranges. Intentionally narrow — we only
-// need a quick "is this string CJK-heavy" test, not full unicode coverage.
-const CJK_RE = /[぀-ゟ゠-ヿ一-鿿ｦ-ﾟ]/g;
-
-/**
- * Count Unicode code points (not UTF-16 code units) so surrogate pairs
- * (e.g. some emoji) don't double-count. Matters for very long strings
- * where the difference moves the estimate by several percent.
- */
-function codePointLength(text) {
-  let n = 0;
-  // for...of on a string iterates code points.
-  for (const _ of text) n += 1;
-  return n;
-}
-
-function cjkCount(text) {
-  // matchAll + counter avoids materializing the full match array, which
-  // matters once callers feed in 200k-char prompts (config.context.budget
-  // upper bound). Counting the iterator stays O(matches) on memory.
-  let n = 0;
-  for (const _ of text.matchAll(CJK_RE)) n += 1;
-  return n;
-}
-
-/**
- * Estimate the number of tokens an LLM tokenizer would assign to `text`.
- *
- * PR-A only implements the `heuristic` tokenizer. The schema
- * (`contextConfigSchema.tokenizer` enum: `heuristic`) is intentionally
- * strict — it rejects unknown values at config-load time so typos
- * surface immediately rather than silently degrading to heuristic. PR-E
- * will add `tiktoken` to both the schema enum and the dispatch below.
- *
- * `opts.model` is reserved for the same PR-E work.
- *
- * @param {string} text
- * @param {object} [opts]
- * @param {string} [opts.model] reserved for future tokenizer plugins
- * @returns {number} non-negative integer
- */
-function estimateTokens(text, opts = {}) {
-  if (text == null) return 0;
-  const s = String(text);
-  if (s.length === 0) return 0;
-  // opts is currently unused at runtime; kept for the API contract
-  // documented above so PR-E can extend without a breaking change.
-  void opts;
-
-  const cjk = cjkCount(s);
-  const total = codePointLength(s);
-  if (total === 0) return 0;
-
-  // Mixed: weight each code point by whether it looks CJK. This keeps
-  // mostly-English strings on the ASCII divisor even when they contain a
-  // few katakana variable names.
-  const ascii = total - cjk;
-  const tokens = ascii / ASCII_DIVISOR + cjk / CJK_DIVISOR;
-  return Math.max(1, Math.ceil(tokens));
-}
-
-/**
- * Char budget -> safe upper bound on tokens.
- *
- * Returns the worst-case token count for a budget of `maxChars`: assumes
- * the entire input is CJK (chars/2). Callers using this to gate "will
- * the prompt fit" stay under the real LLM tokenizer limit even when the
- * input shifts toward Japanese. Use estimateTokens() for the actual
- * per-string estimate when accuracy matters more than safety.
- */
-function charsToTokens(maxChars, _opts = {}) {
-  if (!Number.isFinite(maxChars) || maxChars <= 0) return 0;
-  return Math.floor(maxChars / CJK_DIVISOR);
-}
-
-/**
- * Token budget -> safe upper bound on chars.
- *
- * Returns the maximum chars that cannot exceed `maxTokens` even for
- * fully-CJK input (where every char counts as 1/2 token). Callers using
- * this to gate per-section maxChars stay under the prompt budget even
- * when the section ends up CJK-heavy. Use estimateTokens() to verify
- * a specific assembled prompt fits.
- */
-function tokensToChars(maxTokens, _opts = {}) {
-  if (!Number.isFinite(maxTokens) || maxTokens <= 0) return 0;
-  return Math.floor(maxTokens * CJK_DIVISOR);
-}
-
-
-/***/ }),
-
-/***/ 9746:
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
-
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   E1: () => (/* binding */ parseList),
-/* harmony export */   Rq: () => (/* binding */ isLlmEnabled),
-/* harmony export */   TK: () => (/* binding */ resolveAvailableDependencies),
-/* harmony export */   hN: () => (/* binding */ isOfflineMode),
-/* harmony export */   ud: () => (/* binding */ resolveAvailableContexts)
-/* harmony export */ });
-/* unused harmony export dependencyStubs */
-/**
- * Parse a comma-separated list string into a trimmed array.
- * Empty/undefined input returns an empty array.
- */
-function parseList(value) {
-  if (!value) return [];
-  return String(value)
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-/**
- * Check if offline (rules-only) mode is enabled via `RIVER_OFFLINE`
- * (set by `--offline` / `--rules-only`; ADR-002 / #1071).
- * @param {NodeJS.ProcessEnv} [env] - injectable for tests (#1357)
- * @returns {boolean}
- */
-function isOfflineMode(env = process.env) {
-  const offline = String(env?.RIVER_OFFLINE ?? '')
-    .trim()
-    .toLowerCase();
-  return offline === '1' || offline === 'true' || offline === 'yes' || offline === 'on';
-}
-
-/**
- * Check if an LLM (OpenAI / Gemini / Anthropic) API key is configured in the environment.
- *
- * Offline (rules-only) mode: when `RIVER_OFFLINE` is set (via `--offline` /
- * `--rules-only`), AI is force-disabled even if a key is present, so the review
- * runs on deterministic heuristics only (ADR-002 / #1071).
- * @param {NodeJS.ProcessEnv} [env] - injectable for tests (#1357)
- * @returns {boolean}
- */
-function isLlmEnabled(env = process.env) {
-  if (isOfflineMode(env)) {
-    return false;
-  }
-  return !!(
-    env?.RIVER_OPENAI_API_KEY ||
-    env?.OPENAI_API_KEY ||
-    env?.GOOGLE_API_KEY ||
-    env?.ANTHROPIC_API_KEY ||
-    env?.RIVER_ANTHROPIC_API_KEY
-  );
-}
-
-/**
- * Resolve the effective `availableContexts` for `buildExecutionPlan`'s
- * `inputContext`-based skill selection. Combines caller-supplied contexts
- * with `RIVER_AVAILABLE_CONTEXTS` (deduplicated). If the caller does not
- * supply any contexts, falls back to `defaultContexts` (defaults to
- * `['diff']`). The `alwaysInclude` option forces specific contexts to
- * remain present even when the caller passes a narrower list — useful
- * when the runtime has actually resolved an artifact (e.g. diff) and
- * should not let a CLI override silently strip it.
- *
- * Shared between `src/lib/local-runner.mjs` (legacy `river run`) and
- * `src/lib/review-plan.mjs` (`river review exec` / Phase 3).
- *
- * @param {string[] | null | undefined} inputContexts
- * @param {{ defaultContexts?: string[]; alwaysInclude?: string[] }} [options]
- * @returns {string[]}
- */
-function resolveAvailableContexts(
-  inputContexts,
-  { defaultContexts = ['diff'], alwaysInclude = [] } = {}
-) {
-  const envContexts = parseList(process.env.RIVER_AVAILABLE_CONTEXTS);
-  const base = inputContexts && inputContexts.length ? inputContexts : defaultContexts;
-  return [...new Set([...alwaysInclude, ...base, ...envContexts])];
-}
-
-/**
- * Known dependency identifiers that `RIVER_DEPENDENCY_STUBS=1` should
- * mark as "available". Keep in sync with `schemas/skill.schema.json`
- * dependencies enum.
- */
-const dependencyStubs = [
-  'code_search',
-  'test_runner',
-  'coverage_report',
-  'adr_lookup',
-  'repo_metadata',
-  'tracing',
-];
-
-/**
- * Resolve the effective `availableDependencies` for `buildExecutionPlan`.
- * Returns `null` (the disabled sentinel) when the caller passes nothing
- * and neither `RIVER_AVAILABLE_DEPENDENCIES` nor `RIVER_DEPENDENCY_STUBS`
- * is set, which preserves backward-compatible "do not skip on missing
- * dependency" behavior.
- *
- * Shared between `src/lib/local-runner.mjs` and `src/lib/review-plan.mjs`
- * (#802 Phase 3 silent-skip follow-up).
- *
- * @param {string[] | null | undefined} inputDependencies
- * @returns {string[] | null}
- */
-function resolveAvailableDependencies(inputDependencies) {
-  const envDeps = parseList(process.env.RIVER_AVAILABLE_DEPENDENCIES);
-  const stubEnabled =
-    typeof process.env.RIVER_DEPENDENCY_STUBS === 'string' &&
-    ['1', 'true', 'yes', 'stub'].includes(process.env.RIVER_DEPENDENCY_STUBS.toLowerCase());
-  if (inputDependencies?.length) return [...new Set(inputDependencies)];
-  if (envDeps.length) return [...new Set(envDeps)];
-  if (stubEnabled) return [...dependencyStubs];
-  return null; // null disables dependency-based skipping
-}
-
-
-/***/ }),
-
-/***/ 3837:
+/***/ 2783:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$id":"https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#","description":"Meta-schema for $data reference (JSON AnySchema extension proposal)","type":"object","required":["$data"],"properties":{"$data":{"type":"string","anyOf":[{"format":"relative-json-pointer"},{"format":"json-pointer"}]}},"additionalProperties":false}');
 
 /***/ }),
 
-/***/ 7216:
+/***/ 6006:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://json-schema.org/draft/2020-12/meta/applicator","$vocabulary":{"https://json-schema.org/draft/2020-12/vocab/applicator":true},"$dynamicAnchor":"meta","title":"Applicator vocabulary meta-schema","type":["object","boolean"],"properties":{"prefixItems":{"$ref":"#/$defs/schemaArray"},"items":{"$dynamicRef":"#meta"},"contains":{"$dynamicRef":"#meta"},"additionalProperties":{"$dynamicRef":"#meta"},"properties":{"type":"object","additionalProperties":{"$dynamicRef":"#meta"},"default":{}},"patternProperties":{"type":"object","additionalProperties":{"$dynamicRef":"#meta"},"propertyNames":{"format":"regex"},"default":{}},"dependentSchemas":{"type":"object","additionalProperties":{"$dynamicRef":"#meta"},"default":{}},"propertyNames":{"$dynamicRef":"#meta"},"if":{"$dynamicRef":"#meta"},"then":{"$dynamicRef":"#meta"},"else":{"$dynamicRef":"#meta"},"allOf":{"$ref":"#/$defs/schemaArray"},"anyOf":{"$ref":"#/$defs/schemaArray"},"oneOf":{"$ref":"#/$defs/schemaArray"},"not":{"$dynamicRef":"#meta"}},"$defs":{"schemaArray":{"type":"array","minItems":1,"items":{"$dynamicRef":"#meta"}}}}');
 
 /***/ }),
 
-/***/ 8226:
+/***/ 5464:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://json-schema.org/draft/2020-12/meta/content","$vocabulary":{"https://json-schema.org/draft/2020-12/vocab/content":true},"$dynamicAnchor":"meta","title":"Content vocabulary meta-schema","type":["object","boolean"],"properties":{"contentEncoding":{"type":"string"},"contentMediaType":{"type":"string"},"contentSchema":{"$dynamicRef":"#meta"}}}');
 
 /***/ }),
 
-/***/ 518:
+/***/ 3892:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://json-schema.org/draft/2020-12/meta/core","$vocabulary":{"https://json-schema.org/draft/2020-12/vocab/core":true},"$dynamicAnchor":"meta","title":"Core vocabulary meta-schema","type":["object","boolean"],"properties":{"$id":{"$ref":"#/$defs/uriReferenceString","$comment":"Non-empty fragments not allowed.","pattern":"^[^#]*#?$"},"$schema":{"$ref":"#/$defs/uriString"},"$ref":{"$ref":"#/$defs/uriReferenceString"},"$anchor":{"$ref":"#/$defs/anchorString"},"$dynamicRef":{"$ref":"#/$defs/uriReferenceString"},"$dynamicAnchor":{"$ref":"#/$defs/anchorString"},"$vocabulary":{"type":"object","propertyNames":{"$ref":"#/$defs/uriString"},"additionalProperties":{"type":"boolean"}},"$comment":{"type":"string"},"$defs":{"type":"object","additionalProperties":{"$dynamicRef":"#meta"}}},"$defs":{"anchorString":{"type":"string","pattern":"^[A-Za-z_][-A-Za-z0-9._]*$"},"uriString":{"type":"string","format":"uri"},"uriReferenceString":{"type":"string","format":"uri-reference"}}}');
 
 /***/ }),
 
-/***/ 4588:
+/***/ 7442:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://json-schema.org/draft/2020-12/meta/format-annotation","$vocabulary":{"https://json-schema.org/draft/2020-12/vocab/format-annotation":true},"$dynamicAnchor":"meta","title":"Format vocabulary meta-schema for annotation results","type":["object","boolean"],"properties":{"format":{"type":"string"}}}');
 
 /***/ }),
 
-/***/ 5707:
+/***/ 2617:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://json-schema.org/draft/2020-12/meta/meta-data","$vocabulary":{"https://json-schema.org/draft/2020-12/vocab/meta-data":true},"$dynamicAnchor":"meta","title":"Meta-data vocabulary meta-schema","type":["object","boolean"],"properties":{"title":{"type":"string"},"description":{"type":"string"},"default":true,"deprecated":{"type":"boolean","default":false},"readOnly":{"type":"boolean","default":false},"writeOnly":{"type":"boolean","default":false},"examples":{"type":"array","items":true}}}');
 
 /***/ }),
 
-/***/ 9547:
+/***/ 9334:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://json-schema.org/draft/2020-12/meta/unevaluated","$vocabulary":{"https://json-schema.org/draft/2020-12/vocab/unevaluated":true},"$dynamicAnchor":"meta","title":"Unevaluated applicator vocabulary meta-schema","type":["object","boolean"],"properties":{"unevaluatedItems":{"$dynamicRef":"#meta"},"unevaluatedProperties":{"$dynamicRef":"#meta"}}}');
 
 /***/ }),
 
-/***/ 7082:
+/***/ 9064:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://json-schema.org/draft/2020-12/meta/validation","$vocabulary":{"https://json-schema.org/draft/2020-12/vocab/validation":true},"$dynamicAnchor":"meta","title":"Validation vocabulary meta-schema","type":["object","boolean"],"properties":{"type":{"anyOf":[{"$ref":"#/$defs/simpleTypes"},{"type":"array","items":{"$ref":"#/$defs/simpleTypes"},"minItems":1,"uniqueItems":true}]},"const":true,"enum":{"type":"array","items":true},"multipleOf":{"type":"number","exclusiveMinimum":0},"maximum":{"type":"number"},"exclusiveMaximum":{"type":"number"},"minimum":{"type":"number"},"exclusiveMinimum":{"type":"number"},"maxLength":{"$ref":"#/$defs/nonNegativeInteger"},"minLength":{"$ref":"#/$defs/nonNegativeIntegerDefault0"},"pattern":{"type":"string","format":"regex"},"maxItems":{"$ref":"#/$defs/nonNegativeInteger"},"minItems":{"$ref":"#/$defs/nonNegativeIntegerDefault0"},"uniqueItems":{"type":"boolean","default":false},"maxContains":{"$ref":"#/$defs/nonNegativeInteger"},"minContains":{"$ref":"#/$defs/nonNegativeInteger","default":1},"maxProperties":{"$ref":"#/$defs/nonNegativeInteger"},"minProperties":{"$ref":"#/$defs/nonNegativeIntegerDefault0"},"required":{"$ref":"#/$defs/stringArray"},"dependentRequired":{"type":"object","additionalProperties":{"$ref":"#/$defs/stringArray"}}},"$defs":{"nonNegativeInteger":{"type":"integer","minimum":0},"nonNegativeIntegerDefault0":{"$ref":"#/$defs/nonNegativeInteger","default":0},"simpleTypes":{"enum":["array","boolean","integer","null","number","object","string"]},"stringArray":{"type":"array","items":{"type":"string"},"uniqueItems":true,"default":[]}}}');
 
 /***/ }),
 
-/***/ 1678:
+/***/ 1016:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://json-schema.org/draft/2020-12/schema","$vocabulary":{"https://json-schema.org/draft/2020-12/vocab/core":true,"https://json-schema.org/draft/2020-12/vocab/applicator":true,"https://json-schema.org/draft/2020-12/vocab/unevaluated":true,"https://json-schema.org/draft/2020-12/vocab/validation":true,"https://json-schema.org/draft/2020-12/vocab/meta-data":true,"https://json-schema.org/draft/2020-12/vocab/format-annotation":true,"https://json-schema.org/draft/2020-12/vocab/content":true},"$dynamicAnchor":"meta","title":"Core and Validation specifications meta-schema","allOf":[{"$ref":"meta/core"},{"$ref":"meta/applicator"},{"$ref":"meta/unevaluated"},{"$ref":"meta/validation"},{"$ref":"meta/meta-data"},{"$ref":"meta/format-annotation"},{"$ref":"meta/content"}],"type":["object","boolean"],"$comment":"This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.","properties":{"definitions":{"$comment":"\\"definitions\\" has been replaced by \\"$defs\\".","type":"object","additionalProperties":{"$dynamicRef":"#meta"},"deprecated":true,"default":{}},"dependencies":{"$comment":"\\"dependencies\\" has been split and replaced by \\"dependentSchemas\\" and \\"dependentRequired\\" in order to serve their differing semantics.","type":"object","additionalProperties":{"anyOf":[{"$dynamicRef":"#meta"},{"$ref":"meta/validation#/$defs/stringArray"}]},"deprecated":true,"default":{}},"$recursiveAnchor":{"$comment":"\\"$recursiveAnchor\\" has been replaced by \\"$dynamicAnchor\\".","$ref":"meta/core#/$defs/anchorString","deprecated":true},"$recursiveRef":{"$comment":"\\"$recursiveRef\\" has been replaced by \\"$dynamicRef\\".","$ref":"meta/core#/$defs/uriReferenceString","deprecated":true}}}');
 
 /***/ }),
 
-/***/ 2079:
+/***/ 8061:
 /***/ ((module) => {
 
 module.exports = /*#__PURE__*/JSON.parse('{"$schema":"http://json-schema.org/draft-07/schema#","$id":"http://json-schema.org/draft-07/schema#","title":"Core schema meta-schema","definitions":{"schemaArray":{"type":"array","minItems":1,"items":{"$ref":"#"}},"nonNegativeInteger":{"type":"integer","minimum":0},"nonNegativeIntegerDefault0":{"allOf":[{"$ref":"#/definitions/nonNegativeInteger"},{"default":0}]},"simpleTypes":{"enum":["array","boolean","integer","null","number","object","string"]},"stringArray":{"type":"array","items":{"type":"string"},"uniqueItems":true,"default":[]}},"type":["object","boolean"],"properties":{"$id":{"type":"string","format":"uri-reference"},"$schema":{"type":"string","format":"uri"},"$ref":{"type":"string","format":"uri-reference"},"$comment":{"type":"string"},"title":{"type":"string"},"description":{"type":"string"},"default":true,"readOnly":{"type":"boolean","default":false},"examples":{"type":"array","items":true},"multipleOf":{"type":"number","exclusiveMinimum":0},"maximum":{"type":"number"},"exclusiveMaximum":{"type":"number"},"minimum":{"type":"number"},"exclusiveMinimum":{"type":"number"},"maxLength":{"$ref":"#/definitions/nonNegativeInteger"},"minLength":{"$ref":"#/definitions/nonNegativeIntegerDefault0"},"pattern":{"type":"string","format":"regex"},"additionalItems":{"$ref":"#"},"items":{"anyOf":[{"$ref":"#"},{"$ref":"#/definitions/schemaArray"}],"default":true},"maxItems":{"$ref":"#/definitions/nonNegativeInteger"},"minItems":{"$ref":"#/definitions/nonNegativeIntegerDefault0"},"uniqueItems":{"type":"boolean","default":false},"contains":{"$ref":"#"},"maxProperties":{"$ref":"#/definitions/nonNegativeInteger"},"minProperties":{"$ref":"#/definitions/nonNegativeIntegerDefault0"},"required":{"$ref":"#/definitions/stringArray"},"additionalProperties":{"$ref":"#"},"definitions":{"type":"object","additionalProperties":{"$ref":"#"},"default":{}},"properties":{"type":"object","additionalProperties":{"$ref":"#"},"default":{}},"patternProperties":{"type":"object","additionalProperties":{"$ref":"#"},"propertyNames":{"format":"regex"},"default":{}},"dependencies":{"type":"object","additionalProperties":{"anyOf":[{"$ref":"#"},{"$ref":"#/definitions/stringArray"}]}},"propertyNames":{"$ref":"#"},"const":true,"enum":{"type":"array","items":true,"minItems":1,"uniqueItems":true},"type":{"anyOf":[{"$ref":"#/definitions/simpleTypes"},{"type":"array","items":{"$ref":"#/definitions/simpleTypes"},"minItems":1,"uniqueItems":true}]},"format":{"type":"string"},"contentMediaType":{"type":"string"},"contentEncoding":{"type":"string"},"if":{"$ref":"#"},"then":{"$ref":"#"},"else":{"$ref":"#"},"allOf":{"$ref":"#/definitions/schemaArray"},"anyOf":{"$ref":"#/definitions/schemaArray"},"oneOf":{"$ref":"#/definitions/schemaArray"},"not":{"$ref":"#"}},"default":true}');
@@ -47031,15 +47074,15 @@ const external_node_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(i
 // EXTERNAL MODULE: external "node:url"
 var external_node_url_ = __nccwpck_require__(3136);
 // EXTERNAL MODULE: ./src/lib/git.mjs
-var git = __nccwpck_require__(8613);
+var git = __nccwpck_require__(8937);
 // EXTERNAL MODULE: external "node:fs/promises"
 var promises_ = __nccwpck_require__(1455);
-// EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
-var esm = __nccwpck_require__(9519);
+// EXTERNAL MODULE: ../../../node_modules/minimatch/dist/esm/index.js + 7 modules
+var esm = __nccwpck_require__(9061);
 // EXTERNAL MODULE: ./src/config/loader.mjs + 1 modules
-var loader = __nccwpck_require__(3833);
+var loader = __nccwpck_require__(759);
 // EXTERNAL MODULE: ./runners/core/skill-loader.mjs + 1 modules
-var skill_loader = __nccwpck_require__(8478);
+var skill_loader = __nccwpck_require__(1928);
 ;// CONCATENATED MODULE: ./src/lib/selection.mjs
 // Project-level skill selection (`selection` in .river-review.yaml).
 // Design: docs/development/skill-pack-design.md §6.
@@ -47123,11 +47166,11 @@ async function resolveSelectionSkillIds(
 }
 
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
-var diff_processor = __nccwpck_require__(861);
+var diff_processor = __nccwpck_require__(3249);
 // EXTERNAL MODULE: ./src/lib/review-engine.mjs
-var review_engine = __nccwpck_require__(2022);
+var review_engine = __nccwpck_require__(2010);
 // EXTERNAL MODULE: ./src/lib/finding-factory.mjs
-var finding_factory = __nccwpck_require__(1535);
+var finding_factory = __nccwpck_require__(7563);
 ;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
 
 
@@ -47698,7 +47741,7 @@ async function runReviewerOrchestration({
 }
 
 // EXTERNAL MODULE: ./src/lib/llm-pipeline.mjs
-var llm_pipeline = __nccwpck_require__(7303);
+var llm_pipeline = __nccwpck_require__(2435);
 ;// CONCATENATED MODULE: ./src/lib/openai-planner.mjs
 
 
@@ -47836,9 +47879,9 @@ function createOpenAIPlanner(options = {}) {
 }
 
 // EXTERNAL MODULE: ./src/lib/planner-utils.mjs
-var planner_utils = __nccwpck_require__(1013);
+var planner_utils = __nccwpck_require__(633);
 // EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
-var review_runner = __nccwpck_require__(7050);
+var review_runner = __nccwpck_require__(1030);
 ;// CONCATENATED MODULE: ./src/lib/rules.mjs
 
 
@@ -47939,9 +47982,9 @@ async function loadProjectRules(repoRoot, options = {}) {
 }
 
 // EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
-var risk_map = __nccwpck_require__(572);
+var risk_map = __nccwpck_require__(2374);
 // EXTERNAL MODULE: ./src/lib/riverbed-memory.mjs
-var riverbed_memory = __nccwpck_require__(4216);
+var riverbed_memory = __nccwpck_require__(20);
 ;// CONCATENATED MODULE: ./src/lib/memory-context.mjs
 
 
@@ -48022,9 +48065,9 @@ function buildReviewEntry(reviewResult, { phase, changedFiles, commit } = {}) {
 }
 
 // EXTERNAL MODULE: ./src/lib/repo-context.mjs + 2 modules
-var repo_context = __nccwpck_require__(5597);
+var repo_context = __nccwpck_require__(6759);
 // EXTERNAL MODULE: ./src/lib/utils.mjs
-var utils = __nccwpck_require__(9746);
+var utils = __nccwpck_require__(958);
 ;// CONCATENATED MODULE: ./src/lib/suppression-apply.mjs
 // Apply Riverbed Memory suppressions to a list of findings (#687 PR-B).
 //
@@ -48157,9 +48200,9 @@ function applySuppressions(findings, memoryContext, opts = {}) {
 }
 
 // EXTERNAL MODULE: ./src/lib/deterministic-gate.mjs
-var deterministic_gate = __nccwpck_require__(5837);
+var deterministic_gate = __nccwpck_require__(8817);
 // EXTERNAL MODULE: ./src/lib/deterministic-exec-gate.mjs
-var deterministic_exec_gate = __nccwpck_require__(2785);
+var deterministic_exec_gate = __nccwpck_require__(4709);
 ;// CONCATENATED MODULE: ./src/lib/local-runner.mjs
 
 
@@ -48906,10 +48949,10 @@ Pricing last updated: ${this.lastUpdated}`;
 /* harmony default export */ const cost_estimator = (CostEstimator);
 
 // EXTERNAL MODULE: ./runners/core/skill-cache.mjs
-var skill_cache = __nccwpck_require__(7328);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 80 modules
-var sdk = __nccwpck_require__(4973);
-;// CONCATENATED MODULE: ./node_modules/@google/generative-ai/dist/index.mjs
+var skill_cache = __nccwpck_require__(1924);
+// EXTERNAL MODULE: ../../../node_modules/@anthropic-ai/sdk/index.mjs + 80 modules
+var sdk = __nccwpck_require__(1755);
+;// CONCATENATED MODULE: ../../../node_modules/@google/generative-ai/dist/index.mjs
 /**
  * Contains the list of OpenAPI data types
  * as defined by https://swagger.io/docs/specification/data-models/data-types/
@@ -50431,7 +50474,7 @@ class GoogleGenerativeAI {
 
 //# sourceMappingURL=index.mjs.map
 
-;// CONCATENATED MODULE: ./node_modules/openai/internal/tslib.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/tslib.mjs
 function __classPrivateFieldSet(receiver, state, value, kind, f) {
     if (kind === "m")
         throw new TypeError("Private method is not writable");
@@ -50450,7 +50493,7 @@ function __classPrivateFieldGet(receiver, state, kind, f) {
 }
 
 
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/uuid.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils/uuid.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 /**
  * https://stackoverflow.com/a/2117523
@@ -50466,7 +50509,7 @@ let uuid4 = function () {
     return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) => (+c ^ (randomByte() & (15 >> (+c / 4)))).toString(16));
 };
 //# sourceMappingURL=uuid.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/errors.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/errors.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 function src_isAbortError(err) {
     return (typeof err === 'object' &&
@@ -50503,7 +50546,7 @@ const castToError = (err) => {
     return new Error(err);
 };
 //# sourceMappingURL=errors.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/core/error.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/core/error.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 class error_OpenAIError extends Error {
@@ -50652,7 +50695,7 @@ class SubjectTokenProviderError extends error_OpenAIError {
     }
 }
 //# sourceMappingURL=error.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/values.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils/values.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 // https://url.spec.whatwg.org/#url-scheme-string
@@ -50747,14 +50790,14 @@ const src_safeJSON = (text) => {
     }
 };
 //# sourceMappingURL=values.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/sleep.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils/sleep.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //# sourceMappingURL=sleep.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/version.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/version.mjs
 const VERSION = '6.45.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/detect-platform.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 const isRunningInBrowser = () => {
@@ -50912,7 +50955,7 @@ const getPlatformHeaders = () => {
     return (_platformHeaders ?? (_platformHeaders = getPlatformProperties()));
 };
 //# sourceMappingURL=detect-platform.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/shims.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/shims.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 function getDefaultFetch() {
     if (typeof fetch !== 'undefined') {
@@ -50998,7 +51041,7 @@ async function CancelReadableStream(stream) {
     await cancelPromise;
 }
 //# sourceMappingURL=shims.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/request-options.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/request-options.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 const FallbackEncoder = ({ headers, body }) => {
     return {
@@ -51009,7 +51052,7 @@ const FallbackEncoder = ({ headers, body }) => {
     };
 };
 //# sourceMappingURL=request-options.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/qs/formats.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/qs/formats.mjs
 const default_format = 'RFC3986';
 const default_formatter = (v) => String(v);
 const formatters = {
@@ -51019,7 +51062,7 @@ const formatters = {
 const RFC1738 = 'RFC1738';
 const RFC3986 = 'RFC3986';
 //# sourceMappingURL=formats.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/qs/utils.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/qs/utils.mjs
 
 
 let has = (obj, key) => ((has = Object.hasOwn ?? Function.prototype.call.bind(Object.prototype.hasOwnProperty)),
@@ -51237,7 +51280,7 @@ function maybe_map(val, fn) {
     return fn(val);
 }
 //# sourceMappingURL=utils.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/qs/stringify.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/qs/stringify.mjs
 
 
 
@@ -51512,14 +51555,14 @@ function stringify(object, opts = {}) {
     return joined.length > 0 ? prefix + joined : '';
 }
 //# sourceMappingURL=stringify.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/query.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils/query.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 function stringifyQuery(query) {
     return stringify(query, { arrayFormat: 'brackets' });
 }
 //# sourceMappingURL=query.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/bytes.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils/bytes.mjs
 function concatBytes(buffers) {
     let length = 0;
     for (const buffer of buffers) {
@@ -51546,7 +51589,7 @@ function decodeUTF8(bytes) {
         ((decoder = new globalThis.TextDecoder()), (decodeUTF8_ = decoder.decode.bind(decoder))))(bytes);
 }
 //# sourceMappingURL=bytes.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/decoders/line.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/decoders/line.mjs
 var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex;
 
 
@@ -51655,7 +51698,7 @@ function findDoubleNewlineIndex(buffer) {
     return -1;
 }
 //# sourceMappingURL=line.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/log.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils/log.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 const levelNumbers = {
@@ -51738,7 +51781,7 @@ const formatRequestDetails = (details) => {
     return details;
 };
 //# sourceMappingURL=log.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/core/streaming.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/core/streaming.mjs
 var _Stream_client;
 
 
@@ -52027,7 +52070,7 @@ function partition(str, delimiter) {
     return [str, '', ''];
 }
 //# sourceMappingURL=streaming.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/parse.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/parse.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -52084,7 +52127,7 @@ function addRequestID(value, response) {
     });
 }
 //# sourceMappingURL=parse.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/core/api-promise.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/core/api-promise.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _APIPromise_client;
 
@@ -52157,7 +52200,7 @@ class APIPromise extends Promise {
 }
 _APIPromise_client = new WeakMap();
 //# sourceMappingURL=api-promise.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/core/pagination.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/core/pagination.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _AbstractPage_client;
 
@@ -52336,7 +52379,7 @@ class NextCursorPage extends AbstractPage {
     }
 }
 //# sourceMappingURL=pagination.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/auth/workload-identity-auth.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/auth/workload-identity-auth.mjs
 
 
 const SUBJECT_TOKEN_TYPES = {
@@ -52435,7 +52478,7 @@ class WorkloadIdentityAuth {
     }
 }
 //# sourceMappingURL=workload-identity-auth.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/uploads.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/uploads.mjs
 
 const checkFileSupport = () => {
     if (typeof File === 'undefined') {
@@ -52567,7 +52610,7 @@ const addFormValue = async (form, key, value) => {
     }
 };
 //# sourceMappingURL=uploads.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/to-file.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/to-file.mjs
 
 
 /**
@@ -52656,10 +52699,10 @@ function propsForError(value) {
     return `; props: [${props.map((p) => `"${p}"`).join(', ')}]`;
 }
 //# sourceMappingURL=to-file.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/core/uploads.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/core/uploads.mjs
 
 //# sourceMappingURL=uploads.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/core/resource.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/core/resource.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 class APIResource {
     constructor(client) {
@@ -52667,7 +52710,7 @@ class APIResource {
     }
 }
 //# sourceMappingURL=resource.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/path.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils/path.mjs
 
 /**
  * Percent-encode everything that isn't safe to have in a path without encoding safe chars.
@@ -52742,7 +52785,7 @@ const createPathTagFunction = (pathEncoder = encodeURIPath) => function path(sta
  */
 const src_path = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
 //# sourceMappingURL=path.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/completions/messages.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/chat/completions/messages.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -52770,11 +52813,11 @@ class Messages extends APIResource {
     }
 }
 //# sourceMappingURL=messages.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/error.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/error.mjs
 /** @deprecated Import from ./core/error instead */
 
 //# sourceMappingURL=error.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/parser.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/parser.mjs
 
 function isChatCompletionFunctionTool(tool) {
     return tool !== undefined && 'function' in tool && tool.function !== undefined;
@@ -52937,7 +52980,7 @@ function validateInputTools(tools) {
     }
 }
 //# sourceMappingURL=parser.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/chatCompletionUtils.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/chatCompletionUtils.mjs
 const isAssistantMessage = (message) => {
     return message?.role === 'assistant';
 };
@@ -52948,7 +52991,7 @@ function isPresent(obj) {
     return obj != null;
 }
 //# sourceMappingURL=chatCompletionUtils.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/EventStream.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/EventStream.mjs
 var _EventStream_instances, _EventStream_connectedPromise, _EventStream_resolveConnectedPromise, _EventStream_rejectConnectedPromise, _EventStream_endPromise, _EventStream_resolveEndPromise, _EventStream_rejectEndPromise, _EventStream_listeners, _EventStream_abortListeners, _EventStream_ended, _EventStream_errored, _EventStream_aborted, _EventStream_catchingPromiseCreated, _EventStream_removeAbortListeners, _EventStream_handleError;
 
 
@@ -53152,7 +53195,7 @@ _EventStream_connectedPromise = new WeakMap(), _EventStream_resolveConnectedProm
     return this._emit('error', new error_OpenAIError(String(error)));
 };
 //# sourceMappingURL=EventStream.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/RunnableFunction.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/RunnableFunction.mjs
 function isRunnableFunctionWithParse(fn) {
     return typeof fn.parse === 'function';
 }
@@ -53167,7 +53210,7 @@ class ParsingToolFunction {
     }
 }
 //# sourceMappingURL=RunnableFunction.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/AbstractChatCompletionRunner.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/AbstractChatCompletionRunner.mjs
 var _AbstractChatCompletionRunner_instances, _AbstractChatCompletionRunner_getFinalContent, _AbstractChatCompletionRunner_getFinalMessage, _AbstractChatCompletionRunner_getFinalFunctionToolCall, _AbstractChatCompletionRunner_getFinalFunctionToolCallResult, _AbstractChatCompletionRunner_calculateTotalUsage, _AbstractChatCompletionRunner_validateParams, _AbstractChatCompletionRunner_stringifyFunctionCallResult;
 
 
@@ -53483,7 +53526,7 @@ _AbstractChatCompletionRunner_instances = new WeakSet(), _AbstractChatCompletion
             : JSON.stringify(rawContent));
 };
 //# sourceMappingURL=AbstractChatCompletionRunner.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/ChatCompletionRunner.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/ChatCompletionRunner.mjs
 
 
 class ChatCompletionRunner extends AbstractChatCompletionRunner {
@@ -53504,7 +53547,7 @@ class ChatCompletionRunner extends AbstractChatCompletionRunner {
     }
 }
 //# sourceMappingURL=ChatCompletionRunner.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/_vendor/partial-json-parser/parser.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/_vendor/partial-json-parser/parser.mjs
 const STR = 0b000000001;
 const NUM = 0b000000010;
 const ARR = 0b000000100;
@@ -53746,11 +53789,11 @@ const _parseJSON = (jsonString, allow) => {
 const partialParse = (input) => parseJSON(input, Allow.ALL ^ Allow.NUM);
 
 //# sourceMappingURL=parser.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/streaming.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/streaming.mjs
 /** @deprecated Import from ./core/streaming instead */
 
 //# sourceMappingURL=streaming.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/ChatCompletionStream.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/ChatCompletionStream.mjs
 var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_endRequest, _ChatCompletionStream_getAutoParseableResponseFormat, _ChatCompletionStream_accumulateChatCompletion;
 
 
@@ -54231,7 +54274,7 @@ function assertIsEmpty(obj) {
 }
 function assertNever(_x) { }
 //# sourceMappingURL=ChatCompletionStream.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
 
 class ChatCompletionStreamingRunner extends ChatCompletionStream {
     static fromReadableStream(stream) {
@@ -54252,7 +54295,7 @@ class ChatCompletionStreamingRunner extends ChatCompletionStream {
     }
 }
 //# sourceMappingURL=ChatCompletionStreamingRunner.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/completions/completions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/chat/completions/completions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -54381,7 +54424,7 @@ class Completions extends APIResource {
 
 Completions.Messages = Messages;
 //# sourceMappingURL=completions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/chat.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/chat/chat.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -54394,18 +54437,18 @@ class Chat extends APIResource {
 }
 Chat.Completions = Completions;
 //# sourceMappingURL=chat.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/completions/index.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/chat/completions/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
 
 //# sourceMappingURL=index.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/index.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/chat/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
 //# sourceMappingURL=index.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/admin-api-keys.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/admin-api-keys.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -54483,7 +54526,7 @@ class AdminAPIKeys extends APIResource {
     }
 }
 //# sourceMappingURL=admin-api-keys.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/audit-logs.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/audit-logs.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -54511,7 +54554,7 @@ class AuditLogs extends APIResource {
     }
 }
 //# sourceMappingURL=audit-logs.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/certificates.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/certificates.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -54652,7 +54695,7 @@ class Certificates extends APIResource {
     }
 }
 //# sourceMappingURL=certificates.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/data-retention.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/data-retention.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 class DataRetention extends APIResource {
@@ -54691,7 +54734,7 @@ class DataRetention extends APIResource {
     }
 }
 //# sourceMappingURL=data-retention.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/invites.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/invites.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -54771,7 +54814,7 @@ class Invites extends APIResource {
     }
 }
 //# sourceMappingURL=invites.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/roles.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/roles.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -54864,7 +54907,7 @@ class Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/spend-alerts.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/spend-alerts.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -54971,7 +55014,7 @@ class SpendAlerts extends APIResource {
     }
 }
 //# sourceMappingURL=spend-alerts.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/usage.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/usage.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 class Usage extends APIResource {
@@ -55175,7 +55218,7 @@ class Usage extends APIResource {
     }
 }
 //# sourceMappingURL=usage.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/groups/roles.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/groups/roles.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55256,7 +55299,7 @@ class roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/groups/users.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/groups/users.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55337,7 +55380,7 @@ class Users extends APIResource {
     }
 }
 //# sourceMappingURL=users.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/groups/groups.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/groups/groups.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55442,7 +55485,7 @@ class Groups extends APIResource {
 Groups.Users = Users;
 Groups.Roles = roles_Roles;
 //# sourceMappingURL=groups.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/api-keys.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/api-keys.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55507,7 +55550,7 @@ class APIKeys extends APIResource {
     }
 }
 //# sourceMappingURL=api-keys.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/certificates.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/certificates.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55568,7 +55611,7 @@ class certificates_Certificates extends APIResource {
     }
 }
 //# sourceMappingURL=certificates.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/data-retention.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/data-retention.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55611,7 +55654,7 @@ class data_retention_DataRetention extends APIResource {
     }
 }
 //# sourceMappingURL=data-retention.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55653,7 +55696,7 @@ class HostedToolPermissions extends APIResource {
     }
 }
 //# sourceMappingURL=hosted-tool-permissions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55713,7 +55756,7 @@ class ModelPermissions extends APIResource {
     }
 }
 //# sourceMappingURL=model-permissions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55757,7 +55800,7 @@ class RateLimits extends APIResource {
     }
 }
 //# sourceMappingURL=rate-limits.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/roles.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/roles.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55862,7 +55905,7 @@ class projects_roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/service-accounts.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/service-accounts.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -55960,7 +56003,7 @@ class ServiceAccounts extends APIResource {
     }
 }
 //# sourceMappingURL=service-accounts.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56078,7 +56121,7 @@ class spend_alerts_SpendAlerts extends APIResource {
     }
 }
 //# sourceMappingURL=spend-alerts.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56162,7 +56205,7 @@ class groups_roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56251,7 +56294,7 @@ class groups_Groups extends APIResource {
 }
 groups_Groups.Roles = groups_roles_Roles;
 //# sourceMappingURL=groups.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/users/roles.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/users/roles.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56335,7 +56378,7 @@ class users_roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/users/users.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/users/users.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56447,7 +56490,7 @@ class users_Users extends APIResource {
 }
 users_Users.Roles = users_roles_Roles;
 //# sourceMappingURL=users.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/projects.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/projects/projects.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56592,7 +56635,7 @@ Projects.DataRetention = data_retention_DataRetention;
 Projects.SpendAlerts = spend_alerts_SpendAlerts;
 Projects.Certificates = certificates_Certificates;
 //# sourceMappingURL=projects.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/users/roles.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/users/roles.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56673,7 +56716,7 @@ class organization_users_roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/users/users.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/users/users.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56753,7 +56796,7 @@ class users_users_Users extends APIResource {
 }
 users_users_Users.Roles = organization_users_roles_Roles;
 //# sourceMappingURL=users.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/organization.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/organization/organization.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56806,7 +56849,7 @@ Organization.SpendAlerts = SpendAlerts;
 Organization.Certificates = Certificates;
 Organization.Projects = Projects;
 //# sourceMappingURL=organization.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/admin.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/admin/admin.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56819,7 +56862,7 @@ class Admin extends APIResource {
 }
 Admin.Organization = Organization;
 //# sourceMappingURL=admin.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/headers.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/headers.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 const brand_privateNullableHeaders = /* @__PURE__ */ Symbol('brand.privateNullableHeaders');
@@ -56894,7 +56937,7 @@ const isEmptyHeaders = (headers) => {
     return true;
 };
 //# sourceMappingURL=headers.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/audio/speech.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/audio/speech.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56930,7 +56973,7 @@ class Speech extends APIResource {
     }
 }
 //# sourceMappingURL=speech.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/audio/transcriptions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/audio/transcriptions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56949,7 +56992,7 @@ class Transcriptions extends APIResource {
     }
 }
 //# sourceMappingURL=transcriptions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/audio/translations.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/audio/translations.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56962,7 +57005,7 @@ class Translations extends APIResource {
     }
 }
 //# sourceMappingURL=translations.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/audio/audio.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/audio/audio.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -56983,7 +57026,7 @@ Audio.Transcriptions = Transcriptions;
 Audio.Translations = Translations;
 Audio.Speech = Speech;
 //# sourceMappingURL=audio.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/batches.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/batches.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57027,7 +57070,7 @@ class Batches extends APIResource {
     }
 }
 //# sourceMappingURL=batches.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/assistants.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/assistants.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57102,7 +57145,7 @@ class Assistants extends APIResource {
     }
 }
 //# sourceMappingURL=assistants.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/realtime/sessions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/realtime/sessions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57132,7 +57175,7 @@ class Sessions extends APIResource {
     }
 }
 //# sourceMappingURL=sessions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57162,7 +57205,7 @@ class TranscriptionSessions extends APIResource {
     }
 }
 //# sourceMappingURL=transcription-sessions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/realtime/realtime.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/realtime/realtime.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57182,7 +57225,7 @@ class Realtime extends APIResource {
 Realtime.Sessions = Sessions;
 Realtime.TranscriptionSessions = TranscriptionSessions;
 //# sourceMappingURL=realtime.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/chatkit/sessions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/chatkit/sessions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57228,7 +57271,7 @@ class sessions_Sessions extends APIResource {
     }
 }
 //# sourceMappingURL=sessions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/chatkit/threads.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/chatkit/threads.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57310,7 +57353,7 @@ class Threads extends APIResource {
     }
 }
 //# sourceMappingURL=threads.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/chatkit/chatkit.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/chatkit/chatkit.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57327,7 +57370,7 @@ class ChatKit extends APIResource {
 ChatKit.Sessions = sessions_Sessions;
 ChatKit.Threads = Threads;
 //# sourceMappingURL=chatkit.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/threads/messages.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/threads/messages.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57407,7 +57450,7 @@ class messages_Messages extends APIResource {
     }
 }
 //# sourceMappingURL=messages.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/threads/runs/steps.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/threads/runs/steps.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57449,7 +57492,7 @@ class Steps extends APIResource {
     }
 }
 //# sourceMappingURL=steps.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/base64.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils/base64.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57505,7 +57548,7 @@ const toFloat32Array = (base64Str) => {
     }
 };
 //# sourceMappingURL=base64.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/env.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils/env.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 /**
  * Read an environment variable.
@@ -57524,7 +57567,7 @@ const readEnv = (env) => {
     return undefined;
 };
 //# sourceMappingURL=env.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/utils.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -57534,7 +57577,7 @@ const readEnv = (env) => {
 
 
 //# sourceMappingURL=utils.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/AssistantStream.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/AssistantStream.mjs
 var _AssistantStream_instances, _a, _AssistantStream_events, _AssistantStream_runStepSnapshots, _AssistantStream_messageSnapshots, _AssistantStream_messageSnapshot, _AssistantStream_finalRun, _AssistantStream_currentContentIndex, _AssistantStream_currentContent, _AssistantStream_currentToolCallIndex, _AssistantStream_currentToolCall, _AssistantStream_currentEvent, _AssistantStream_currentRunSnapshot, _AssistantStream_currentRunStepSnapshot, _AssistantStream_addEvent, _AssistantStream_endRequest, _AssistantStream_handleMessage, _AssistantStream_handleRunStep, _AssistantStream_handleEvent, _AssistantStream_accumulateRunStep, _AssistantStream_accumulateMessage, _AssistantStream_accumulateContent, _AssistantStream_handleRun;
 
 
@@ -58064,7 +58107,7 @@ _a = AssistantStream, _AssistantStream_addEvent = function _AssistantStream_addE
 };
 function AssistantStream_assertNever(_x) { }
 //# sourceMappingURL=AssistantStream.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/threads/runs/runs.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/threads/runs/runs.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58252,7 +58295,7 @@ class Runs extends APIResource {
 }
 Runs.Steps = Steps;
 //# sourceMappingURL=runs.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/threads/threads.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/threads/threads.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58352,7 +58395,7 @@ class threads_Threads extends APIResource {
 threads_Threads.Runs = Runs;
 threads_Threads.Messages = messages_Messages;
 //# sourceMappingURL=threads.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/beta.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/beta/beta.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58377,7 +58420,7 @@ Beta.ChatKit = ChatKit;
 Beta.Assistants = Assistants;
 Beta.Threads = threads_Threads;
 //# sourceMappingURL=beta.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/completions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/completions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 /**
@@ -58394,7 +58437,7 @@ class completions_Completions extends APIResource {
     }
 }
 //# sourceMappingURL=completions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/containers/files/content.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/containers/files/content.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58414,7 +58457,7 @@ class Content extends APIResource {
     }
 }
 //# sourceMappingURL=content.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/containers/files/files.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/containers/files/files.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58471,7 +58514,7 @@ class Files extends APIResource {
 }
 Files.Content = Content;
 //# sourceMappingURL=files.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/containers/containers.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/containers/containers.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58522,7 +58565,7 @@ class Containers extends APIResource {
 }
 Containers.Files = Files;
 //# sourceMappingURL=containers.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/conversations/items.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/conversations/items.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58572,7 +58615,7 @@ class Items extends APIResource {
     }
 }
 //# sourceMappingURL=items.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/conversations/conversations.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/conversations/conversations.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58623,7 +58666,7 @@ class Conversations extends APIResource {
 }
 Conversations.Items = Items;
 //# sourceMappingURL=conversations.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/embeddings.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/embeddings.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58680,7 +58723,7 @@ class Embeddings extends APIResource {
     }
 }
 //# sourceMappingURL=embeddings.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/evals/runs/output-items.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/evals/runs/output-items.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58708,7 +58751,7 @@ class OutputItems extends APIResource {
     }
 }
 //# sourceMappingURL=output-items.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/evals/runs/runs.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/evals/runs/runs.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58778,7 +58821,7 @@ class runs_Runs extends APIResource {
 }
 runs_Runs.OutputItems = OutputItems;
 //# sourceMappingURL=runs.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/evals/evals.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/evals/evals.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58835,7 +58878,7 @@ class Evals extends APIResource {
 }
 Evals.Runs = runs_Runs;
 //# sourceMappingURL=evals.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/files.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/files.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -58933,13 +58976,13 @@ class files_Files extends APIResource {
     }
 }
 //# sourceMappingURL=files.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/methods.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/fine-tuning/methods.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 class Methods extends APIResource {
 }
 //# sourceMappingURL=methods.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/alpha/graders.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/fine-tuning/alpha/graders.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 /**
@@ -58996,7 +59039,7 @@ class Graders extends APIResource {
     }
 }
 //# sourceMappingURL=graders.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59009,7 +59052,7 @@ class Alpha extends APIResource {
 }
 Alpha.Graders = Graders;
 //# sourceMappingURL=alpha.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59096,7 +59139,7 @@ class Permissions extends APIResource {
     }
 }
 //# sourceMappingURL=permissions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59109,7 +59152,7 @@ class Checkpoints extends APIResource {
 }
 Checkpoints.Permissions = Permissions;
 //# sourceMappingURL=checkpoints.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59136,7 +59179,7 @@ class checkpoints_Checkpoints extends APIResource {
     }
 }
 //# sourceMappingURL=checkpoints.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59274,7 +59317,7 @@ class Jobs extends APIResource {
 }
 Jobs.Checkpoints = checkpoints_Checkpoints;
 //# sourceMappingURL=jobs.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/fine-tuning.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/fine-tuning/fine-tuning.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59299,13 +59342,13 @@ FineTuning.Jobs = Jobs;
 FineTuning.Checkpoints = Checkpoints;
 FineTuning.Alpha = Alpha;
 //# sourceMappingURL=fine-tuning.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/graders/grader-models.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/graders/grader-models.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 class GraderModels extends APIResource {
 }
 //# sourceMappingURL=grader-models.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/graders/graders.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/graders/graders.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59318,7 +59361,7 @@ class graders_Graders extends APIResource {
 }
 graders_Graders.GraderModels = GraderModels;
 //# sourceMappingURL=graders.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/images.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/images.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59352,7 +59395,7 @@ class Images extends APIResource {
     }
 }
 //# sourceMappingURL=images.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/models.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/models.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59384,7 +59427,7 @@ class Models extends APIResource {
     }
 }
 //# sourceMappingURL=models.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/moderations.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/moderations.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 /**
@@ -59400,7 +59443,7 @@ class Moderations extends APIResource {
     }
 }
 //# sourceMappingURL=moderations.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/realtime/calls.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/realtime/calls.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59476,7 +59519,7 @@ class Calls extends APIResource {
     }
 }
 //# sourceMappingURL=calls.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/realtime/client-secrets.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/realtime/client-secrets.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 class ClientSecrets extends APIResource {
@@ -59512,7 +59555,7 @@ class ClientSecrets extends APIResource {
     }
 }
 //# sourceMappingURL=client-secrets.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/realtime/realtime.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/realtime/realtime.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -59529,7 +59572,7 @@ class realtime_Realtime extends APIResource {
 realtime_Realtime.ClientSecrets = ClientSecrets;
 realtime_Realtime.Calls = Calls;
 //# sourceMappingURL=realtime.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/ResponsesParser.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/ResponsesParser.mjs
 
 
 function maybeParseResponse(response, params) {
@@ -59698,7 +59741,7 @@ function addOutputText(rsp) {
     rsp.output_text = texts.join('');
 }
 //# sourceMappingURL=ResponsesParser.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/responses/ResponseAccumulator.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/responses/ResponseAccumulator.mjs
 
 
 /**
@@ -60098,7 +60141,7 @@ function ResponseAccumulator_assertNever(value) {
     throw new error_OpenAIError(`Unhandled response stream event: ${JSON.stringify(value)}`);
 }
 //# sourceMappingURL=ResponseAccumulator.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/responses/ResponseStream.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/responses/ResponseStream.mjs
 var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest;
 
 
@@ -60275,7 +60318,7 @@ function finalizeResponse(snapshot, params) {
     return maybeParseResponse(snapshot, params);
 }
 //# sourceMappingURL=ResponseStream.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/responses/input-items.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/responses/input-items.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60299,7 +60342,7 @@ class InputItems extends APIResource {
     }
 }
 //# sourceMappingURL=input-items.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/responses/input-tokens.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/responses/input-tokens.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 class InputTokens extends APIResource {
@@ -60323,7 +60366,7 @@ class InputTokens extends APIResource {
     }
 }
 //# sourceMappingURL=input-tokens.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/responses/responses.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/responses/responses.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60434,7 +60477,7 @@ class Responses extends APIResource {
 Responses.InputItems = InputItems;
 Responses.InputTokens = InputTokens;
 //# sourceMappingURL=responses.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/skills/content.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/skills/content.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60453,7 +60496,7 @@ class content_Content extends APIResource {
     }
 }
 //# sourceMappingURL=content.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/skills/versions/content.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/skills/versions/content.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60473,7 +60516,7 @@ class versions_content_Content extends APIResource {
     }
 }
 //# sourceMappingURL=content.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/skills/versions/versions.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/skills/versions/versions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60525,7 +60568,7 @@ class Versions extends APIResource {
 }
 Versions.Content = versions_content_Content;
 //# sourceMappingURL=versions.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/skills/skills.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/skills/skills.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60583,7 +60626,7 @@ class Skills extends APIResource {
 Skills.Content = content_Content;
 Skills.Versions = Versions;
 //# sourceMappingURL=skills.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/uploads/parts.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/uploads/parts.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60610,7 +60653,7 @@ class Parts extends APIResource {
     }
 }
 //# sourceMappingURL=parts.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/uploads/uploads.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/uploads/uploads.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60688,7 +60731,7 @@ class Uploads extends APIResource {
 }
 Uploads.Parts = Parts;
 //# sourceMappingURL=uploads.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/Util.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/lib/Util.mjs
 /**
  * Like `Promise.allSettled()` but throws an error if any promises are rejected.
  */
@@ -60711,7 +60754,7 @@ const allSettledWithThrow = async (promises) => {
     return values;
 };
 //# sourceMappingURL=Util.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/vector-stores/file-batches.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/vector-stores/file-batches.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60849,7 +60892,7 @@ class FileBatches extends APIResource {
     }
 }
 //# sourceMappingURL=file-batches.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/vector-stores/files.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/vector-stores/files.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -60997,7 +61040,7 @@ class vector_stores_files_Files extends APIResource {
     }
 }
 //# sourceMappingURL=files.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/vector-stores/vector-stores.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/vector-stores/vector-stores.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -61083,7 +61126,7 @@ class VectorStores extends APIResource {
 VectorStores.Files = vector_stores_files_Files;
 VectorStores.FileBatches = FileBatches;
 //# sourceMappingURL=vector-stores.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/videos.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/videos.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -61169,7 +61212,7 @@ class Videos extends APIResource {
     }
 }
 //# sourceMappingURL=videos.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/webhooks/webhooks.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/webhooks/webhooks.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _Webhooks_instances, _Webhooks_validateSecret, _Webhooks_getRequiredHeader;
 
@@ -61267,15 +61310,15 @@ _Webhooks_instances = new WeakSet(), _Webhooks_validateSecret = function _Webhoo
     return value;
 };
 //# sourceMappingURL=webhooks.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/webhooks/index.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/webhooks/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 //# sourceMappingURL=index.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/webhooks.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/webhooks.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 //# sourceMappingURL=webhooks.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/index.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/resources/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -61302,7 +61345,7 @@ _Webhooks_instances = new WeakSet(), _Webhooks_validateSecret = function _Webhoo
 
 
 //# sourceMappingURL=index.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/provider.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/internal/provider.mjs
 /**
  * A provider factory such as `bedrock(options)` captures configuration in a
  * definition, while every OpenAI client receives a fresh runtime from
@@ -61335,7 +61378,7 @@ function configureProvider(provider) {
     return definition.configure();
 }
 //# sourceMappingURL=provider.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/client.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/client.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _OpenAI_instances, client_a, _OpenAI_encoder, _OpenAI_baseURLOverridden;
 
@@ -62132,7 +62175,7 @@ function isUndiciDispatcherVersionMismatchError(error) {
     return false;
 }
 //# sourceMappingURL=client.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/azure.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/azure.mjs
 
 
 
@@ -62226,7 +62269,7 @@ const _deployments_endpoints = new Set([
     '/images/edits',
 ]);
 //# sourceMappingURL=azure.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/bedrock.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/bedrock.mjs
 
 
 
@@ -62327,7 +62370,7 @@ class BedrockOpenAI extends OpenAI {
     }
 }
 //# sourceMappingURL=bedrock.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/index.mjs
+;// CONCATENATED MODULE: ../../../node_modules/openai/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -63019,13 +63062,13 @@ class SkillDispatcher {
 }
 
 // EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
-var review_plan_generator = __nccwpck_require__(8069);
+var review_plan_generator = __nccwpck_require__(7817);
 // EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
-var engine = __nccwpck_require__(9487);
+var engine = __nccwpck_require__(6899);
 // EXTERNAL MODULE: ./src/lib/loop-signal.mjs
-var loop_signal = __nccwpck_require__(4702);
+var loop_signal = __nccwpck_require__(570);
 // EXTERNAL MODULE: ./src/lib/gate-decision.mjs
-var gate_decision = __nccwpck_require__(2773);
+var gate_decision = __nccwpck_require__(5801);
 ;// CONCATENATED MODULE: ./src/lib/run-gate.mjs
 /**
  * Gate derivation for `river run` results (Epic #1347 S3 / #1350).
@@ -63099,11 +63142,11 @@ function deriveRunGate(result) {
 }
 
 // EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
-var rubric = __nccwpck_require__(5034);
-// EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
-var _2020 = __nccwpck_require__(2210);
-// EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
-var dist = __nccwpck_require__(2815);
+var rubric = __nccwpck_require__(5486);
+// EXTERNAL MODULE: ../../../node_modules/ajv/dist/2020.js
+var _2020 = __nccwpck_require__(7720);
+// EXTERNAL MODULE: ../../../node_modules/ajv-formats/dist/index.js
+var dist = __nccwpck_require__(8613);
 ;// CONCATENATED MODULE: ./src/cli.mjs
 
 
@@ -64337,7 +64380,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     if (parsed.reviewSubcommand === 'verify') {
       try {
         const { ReviewPlanError, resolveReviewOutputFormat } =
-          await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
+          await __nccwpck_require__.e(/* import() */ 85).then(__nccwpck_require__.bind(__nccwpck_require__, 6085));
         try {
           resolveReviewOutputFormat(parsed);
         } catch (err) {
@@ -64364,8 +64407,8 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     if (parsed.reviewSubcommand === 'route') {
       try {
         const { routeReviewMode, formatRouterResultMarkdown } =
-          await __nccwpck_require__.e(/* import() */ 709).then(__nccwpck_require__.bind(__nccwpck_require__, 1709));
-        const { loadRiskMap } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 572));
+          await __nccwpck_require__.e(/* import() */ 25).then(__nccwpck_require__.bind(__nccwpck_require__, 6025));
+        const { loadRiskMap } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 2374));
         const routeTargetPath = external_node_path_.resolve(parsed.target);
         const repoRoot = await (0,git/* ensureGitRepo */.NC)(routeTargetPath);
         const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
@@ -64418,7 +64461,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     }
     try {
       const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =
-        await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
+        await __nccwpck_require__.e(/* import() */ 85).then(__nccwpck_require__.bind(__nccwpck_require__, 6085));
       let reviewFormat;
       try {
         reviewFormat = resolveReviewOutputFormat(parsed);
@@ -64499,7 +64542,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       if (reviewFormat === 'markdown') {
         // #976: human-readable Markdown rendering of the artifact (findings +
         // plan). The JSON artifact stays the machine-readable contract.
-        const { formatReviewPlanSummaryMarkdown } = await __nccwpck_require__.e(/* import() */ 466).then(__nccwpck_require__.bind(__nccwpck_require__, 7466));
+        const { formatReviewPlanSummaryMarkdown } = await __nccwpck_require__.e(/* import() */ 254).then(__nccwpck_require__.bind(__nccwpck_require__, 7254));
         serialized = formatReviewPlanSummaryMarkdown(artifact);
       } else {
         serialized = JSON.stringify(artifact, null, 2);
@@ -64512,14 +64555,14 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
         external_node_process_namespaceObject.stdout.write(serialized + '\n');
       }
       if (summaryFilePath) {
-        const { formatReviewPlanSummaryMarkdown } = await __nccwpck_require__.e(/* import() */ 466).then(__nccwpck_require__.bind(__nccwpck_require__, 7466));
+        const { formatReviewPlanSummaryMarkdown } = await __nccwpck_require__.e(/* import() */ 254).then(__nccwpck_require__.bind(__nccwpck_require__, 7254));
         await writeFile(summaryFilePath, formatReviewPlanSummaryMarkdown(artifact) + '\n', 'utf8');
       }
       // #976: opt-in review gate. Only when --fail-on / --warn-on / --advisory-only
       // / --gate is given do we translate findings into a CI exit code; otherwise
       // exit 0 (non-breaking for existing callers / the plangate-review workflow).
       if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
-        const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
+        const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 659).then(__nccwpck_require__.bind(__nccwpck_require__, 4659));
         return await resolveGateExitCode({
           failOn: parsed.failOn,
           warnOn: parsed.warnOn,
@@ -64549,7 +64592,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
         console.error('Error: `river skills resolve` requires at least one --path <file>.');
         return 1;
       }
-      const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 7050));
+      const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 1030));
       const plan = await buildExecutionPlan({
         phase: parsed.phase,
         changedFiles: paths,
@@ -64590,7 +64633,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     }
 
     if (parsed.command === 'skills' && parsed.skillsSubcommand) {
-      const { runSkillsSubcommand } = await __nccwpck_require__.e(/* import() */ 488).then(__nccwpck_require__.bind(__nccwpck_require__, 6488));
+      const { runSkillsSubcommand } = await __nccwpck_require__.e(/* import() */ 684).then(__nccwpck_require__.bind(__nccwpck_require__, 8684));
       return runSkillsSubcommand(parsed);
     }
 
@@ -64673,7 +64716,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       }
       const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
       const indexPath = external_node_path_.resolve(repoRoot, '.river', 'memory', 'index.json');
-      const { createSuppression } = await __nccwpck_require__.e(/* import() */ 528).then(__nccwpck_require__.bind(__nccwpck_require__, 3528));
+      const { createSuppression } = await __nccwpck_require__.e(/* import() */ 868).then(__nccwpck_require__.bind(__nccwpck_require__, 3868));
       const entry = createSuppression({
         indexPath,
         findingId: parsed.suppressionFindingId,
@@ -64703,7 +64746,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
         return 1;
       }
       const { buildFeedbackEntry, appendFeedbackEntry, buildFeedbackScaffold, FeedbackError } =
-        await __nccwpck_require__.e(/* import() */ 638).then(__nccwpck_require__.bind(__nccwpck_require__, 7638));
+        await __nccwpck_require__.e(/* import() */ 602).then(__nccwpck_require__.bind(__nccwpck_require__, 7602));
       const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
       let entry;
       try {
@@ -64733,7 +64776,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
 
     if (parsed.command === 'runs') {
       const { resolveStoreDir, listRunRecords, loadRunRecord, computeDashboard, formatDashboard } =
-        await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+        await __nccwpck_require__.e(/* import() */ 560).then(__nccwpck_require__.bind(__nccwpck_require__, 4560));
       const storeDir = resolveStoreDir(targetPath);
 
       if (!parsed.runsSubcommand || parsed.runsSubcommand === 'list') {
@@ -64757,7 +64800,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
           return 1;
         }
         const { diffReviews, diffRunHistory, formatRegressionSummary } =
-          await __nccwpck_require__.e(/* import() */ 744).then(__nccwpck_require__.bind(__nccwpck_require__, 3744));
+          await __nccwpck_require__.e(/* import() */ 4).then(__nccwpck_require__.bind(__nccwpck_require__, 1004));
 
         if (parsed.runsIds.length >= 3) {
           // Multi-run path: load all runs and detect oscillation
@@ -64781,7 +64824,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
             const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
             console.log(JSON.stringify(diffWithSignal, null, 2));
           } else if (parsed.output === 'html') {
-            const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+            const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 904).then(__nccwpck_require__.bind(__nccwpck_require__, 2904));
             console.log(
               formatLoopDashboardHtml(diff, {
                 runIds: sortedRecords.map((r) => r.runId),
@@ -64818,7 +64861,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
             const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
             console.log(JSON.stringify(diffWithSignal, null, 2));
           } else if (parsed.output === 'html') {
-            const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+            const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 904).then(__nccwpck_require__.bind(__nccwpck_require__, 2904));
             console.log(
               formatLoopDashboardHtml(diff, {
                 runIds: [run1.runId, run2.runId].filter(Boolean),
@@ -64849,13 +64892,13 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       }
 
       if (parsed.runsSubcommand === 'digest') {
-        const { loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+        const { loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 560).then(__nccwpck_require__.bind(__nccwpck_require__, 4560));
         const fullRuns = await loadAllRunRecords(storeDir);
         if (!fullRuns.length) {
           console.log('No stored runs found in ' + storeDir);
           return 0;
         }
-        const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
+        const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 586).then(__nccwpck_require__.bind(__nccwpck_require__, 6586));
         const digest = buildRunsDigest(fullRuns, { now: () => new Date() });
         if (parsed.output === 'json') {
           console.log(JSON.stringify(digest, null, 2));
@@ -64872,7 +64915,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     }
 
     if (parsed.command === 'eval') {
-      const { evaluateReviewFixtures } = await __nccwpck_require__.e(/* import() */ 213).then(__nccwpck_require__.bind(__nccwpck_require__, 9213));
+      const { evaluateReviewFixtures } = await __nccwpck_require__.e(/* import() */ 145).then(__nccwpck_require__.bind(__nccwpck_require__, 4145));
       const casesPath =
         parsed.fixturesCasesPath ||
         external_node_path_.join(external_node_process_namespaceObject.cwd(), 'tests', 'fixtures', 'review-eval', 'cases.json');
@@ -65058,7 +65101,7 @@ Dependencies: ${
     if ((parsed.save || isGithubActions) && result.status === 'ok') {
       try {
         const { buildRunRecord, saveRunRecord, resolveStoreDir } =
-          await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+          await __nccwpck_require__.e(/* import() */ 560).then(__nccwpck_require__.bind(__nccwpck_require__, 4560));
         const { decision: runDecision, gate: runGate } = deriveRunGate(result);
         const record = buildRunRecord(result, {
           phase: parsed.phase,
@@ -65081,8 +65124,8 @@ Dependencies: ${
         // C1 (#1372 review): the digest needs FULL records — the light
         // listRunRecords metadata has no gate/findings and silently produced
         // an empty digest here.
-        const { loadAllRunRecords, resolveStoreDir } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
-        const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
+        const { loadAllRunRecords, resolveStoreDir } = await __nccwpck_require__.e(/* import() */ 560).then(__nccwpck_require__.bind(__nccwpck_require__, 4560));
+        const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 586).then(__nccwpck_require__.bind(__nccwpck_require__, 6586));
         const records = await loadAllRunRecords(resolveStoreDir(targetPath));
         const digest = buildRunsDigest(records, { now: () => new Date() });
         const fs = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
@@ -65095,7 +65138,7 @@ Dependencies: ${
     // Regression comparison when --baseline is provided
     if (parsed.baseline && result.status === 'ok') {
       try {
-        const { diffReviews, formatRegressionSummary } = await __nccwpck_require__.e(/* import() */ 744).then(__nccwpck_require__.bind(__nccwpck_require__, 3744));
+        const { diffReviews, formatRegressionSummary } = await __nccwpck_require__.e(/* import() */ 4).then(__nccwpck_require__.bind(__nccwpck_require__, 1004));
         const baselineRaw = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19)).then((fs) =>
           fs.readFile(parsed.baseline, 'utf8')
         );
@@ -65116,7 +65159,7 @@ Dependencies: ${
     } else if (parsed.output === 'markdown') {
       printMarkdownReport(result, parsed.phase);
     } else if (parsed.output === 'yaml') {
-      const { formatYamlOutput } = await __nccwpck_require__.e(/* import() */ 610).then(__nccwpck_require__.bind(__nccwpck_require__, 4610));
+      const { formatYamlOutput } = await __nccwpck_require__.e(/* import() */ 830).then(__nccwpck_require__.bind(__nccwpck_require__, 3830));
       const jsonOutput = formatJsonOutput(result, parsed.phase);
       const artifact = {
         phase: parsed.phase,
@@ -65128,7 +65171,7 @@ Dependencies: ${
       };
       console.log(formatYamlOutput(artifact));
     } else if (parsed.output === 'html') {
-      const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+      const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 904).then(__nccwpck_require__.bind(__nccwpck_require__, 2904));
       const jsonOutput = formatJsonOutput(result, parsed.phase);
       const htmlResult = {
         findings: result.findings ?? [],
@@ -65162,7 +65205,7 @@ Dependencies: ${
     // the run path (only `river review` gated), so agents that relied on the
     // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
     if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
-      const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
+      const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 659).then(__nccwpck_require__.bind(__nccwpck_require__, 4659));
       return await resolveGateExitCode({
         failOn: parsed.failOn,
         warnOn: parsed.warnOn,

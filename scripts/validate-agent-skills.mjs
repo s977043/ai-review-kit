@@ -2,7 +2,7 @@
 import { promises as fs, realpathSync } from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { parseFrontMatter } from '../runners/core/skill-loader.mjs';
+import { parseFrontMatter, listSkillPackageDirs } from '../runners/core/skill-loader.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -99,26 +99,17 @@ async function hasReferencesDir(dirPath) {
   }
 }
 
+/**
+ * List every `SKILL.md` under `dirPath`, sorted. The root itself is a container
+ * (never a package), so discovery starts at its child directories — hence
+ * `includeRoot: false`. Delegates the SKILL.md-non-descent walk to the shared
+ * {@link listSkillPackageDirs} (skill-loader) and sorts the resulting SKILL.md
+ * paths (sorting the paths, not their parent dirs, preserves the original order
+ * when a sibling name is a prefix of another).
+ */
 async function listSkillPackages(dirPath) {
-  const entries = await fs.readdir(dirPath, { withFileTypes: true });
-  const packageGroups = await Promise.all(
-    entries.map(async (entry) => {
-      if (!entry.isDirectory()) return [];
-      const entryPath = path.join(dirPath, entry.name);
-      const skillPath = path.join(entryPath, 'SKILL.md');
-      try {
-        const stat = await fs.stat(skillPath);
-        if (stat.isFile()) {
-          return [skillPath];
-        }
-      } catch {
-        // Continue to nested directories.
-      }
-      return listSkillPackages(entryPath);
-    })
-  );
-
-  return packageGroups.flat().sort();
+  const dirs = await listSkillPackageDirs(dirPath, { includeRoot: false });
+  return dirs.map((dir) => path.join(dir, 'SKILL.md')).sort();
 }
 
 async function validateSkill(skillPath) {
