@@ -11,8 +11,10 @@
 //
 // Usage: node scripts/suppression-analytics.mjs [--index <path>] [--issue-body] [--json]
 import path from 'path';
-import { promises as fs, realpathSync } from 'fs';
-import { pathToFileURL, fileURLToPath } from 'url';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
+
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_INDEX = path.join(repoRoot, '.river', 'memory', 'index.json');
@@ -134,9 +136,7 @@ export async function runSuppressionAnalytics({
   return analyzeSuppressions(entries, { now });
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   const args = process.argv.slice(2);
   const idx = args.indexOf('--index');
   if (idx >= 0 && !args[idx + 1]) {

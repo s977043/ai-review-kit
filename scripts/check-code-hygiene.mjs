@@ -18,10 +18,10 @@
 // （.claude/rules/review-core.md の責務分界 #1070 に従う）。
 // 意図的な '/tmp' リテラルは行末に `code-hygiene-ignore` コメントで抑制できる。
 
-import { readFileSync, readdirSync, statSync, realpathSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { isBuiltin } from 'node:module';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const ROOT = process.cwd();
 
@@ -275,8 +275,6 @@ function main() {
   );
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   main();
 }

@@ -11,9 +11,9 @@
 //
 // Usage: node scripts/feedback-rule-candidates.mjs [--min <n>] [--month YYYY-MM] [--json]
 import path from 'path';
-import { realpathSync } from 'fs';
-import { pathToFileURL, fileURLToPath } from 'url';
+import { fileURLToPath } from 'url';
 import { listFeedbackEntries } from '../src/lib/feedback.mjs';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -58,9 +58,7 @@ export function findRuleCandidates(entries, { min = 2 } = {}) {
   return candidates;
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   const args = process.argv.slice(2);
   const minIdx = args.indexOf('--min');
   let min = 2;

@@ -12,10 +12,11 @@
  */
 
 import path from 'path';
-import { readFileSync, realpathSync } from 'fs';
-import { pathToFileURL, fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
 
 import { diffRunHistory } from '../src/lib/review-differ.mjs';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_CASES = path.join(
@@ -150,16 +151,7 @@ function formatReport(results) {
   return lines.join('\n');
 }
 
-const isDirectRun = (() => {
-  try {
-    // realpathSync throws if argv[1] is a non-existent / synthetic path (some
-    // test runners / bundlers): importing this module must never crash.
-    return process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-  } catch {
-    return false;
-  }
-})();
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   const args = process.argv.slice(2);
   const idx = args.indexOf('--cases');
   const casesPath = idx >= 0 && args[idx + 1] ? args[idx + 1] : DEFAULT_CASES;

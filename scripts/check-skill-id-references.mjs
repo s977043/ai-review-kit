@@ -12,9 +12,9 @@
 //   - 旧パス形式: `skills/<phase>/<name>.md`（正しくは `skills/<phase>/<name>/SKILL.md`）
 //   - cd パス省略: `cd skills/<name>`（正しくは `cd skills/<phase>/<name>`）
 
-import { readFileSync, readdirSync, statSync, realpathSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const ROOT = process.cwd();
 
@@ -239,8 +239,6 @@ function main() {
   console.log('✅ dangling skill-ID 参照なし（scan 対象・allowlist 除く）');
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   main();
 }
