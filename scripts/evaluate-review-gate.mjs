@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
+import { isDirectRun } from './lib/is-direct-run.mjs';
+
 function parseArgs(argv) {
   const args = [...argv];
   const parsed = {
@@ -157,12 +159,7 @@ Options:
 }
 
 // Only run main when executed directly (not imported as a module)
-const isDirectRun =
-  process.argv[1] &&
-  (process.argv[1].endsWith('evaluate-review-gate.mjs') ||
-    process.argv[1].endsWith('evaluate-review-gate'));
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   main().then((code) => {
     if (typeof code === 'number' && code !== 0) {
       process.exitCode = code;

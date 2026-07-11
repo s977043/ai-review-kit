@@ -16,6 +16,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CostEstimator } from '../src/core/cost-estimator.mjs';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DIR = path.join(SCRIPT_DIR, '..', 'artifacts', 'usage');
@@ -162,7 +163,7 @@ async function main() {
 }
 
 // Only run when invoked as a script (not when imported by tests).
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectRun(import.meta.url)) {
   main().catch((err) => {
     process.stderr.write(`usage-summary failed: ${err?.message || err}\n`);
     process.exit(1);

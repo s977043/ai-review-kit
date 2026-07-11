@@ -2,6 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
+import { isDirectRun } from './lib/is-direct-run.mjs';
+
 const ROOT = path.resolve(import.meta.dirname, '..');
 
 async function readJson(filePath) {
@@ -90,12 +92,7 @@ export async function validateMeta() {
 }
 
 // CLI entry point
-const isDirectRun =
-  process.argv[1] &&
-  (process.argv[1].endsWith('validate-meta-consistency.mjs') ||
-    process.argv[1].endsWith('validate-meta-consistency'));
-
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   validateMeta()
     .then((errors) => {
       if (errors.length === 0) {
