@@ -45,17 +45,17 @@ cat ~/.claude/plugins/installed_plugins.json
 最新版のみ残し、古いバージョンディレクトリを削除します。次の手順は破壊的操作を含むため、削除対象を目視で確認してから実行してください。
 
 1. 残すべき最新バージョンを確定する（`installed_plugins.json` の値と `ls` の結果を照合する）。
-2. 削除候補を dry-run で列挙する。
+2. 削除候補を dry-run で列挙する。`<latest_version>` は手順1で確定した最新バージョンに置き換えてください。
 
    ```bash
    ls -1d ~/.claude/plugins/cache/river-review-marketplace/river-review/*/ \
-     | grep -v '/1.43.0/'
+     | grep -v '/<latest_version>/'
    ```
 
-3. 列挙結果が古いバージョンのみと確認できたら、対象ディレクトリを削除する。
+3. 列挙結果が古いバージョンのみと確認できたら、対象ディレクトリを削除する。`<old_version>` は手順2で列挙された古いバージョンに置き換えてください（最新バージョンを指定しないこと）。
 
    ```bash
-   rm -rf ~/.claude/plugins/cache/river-review-marketplace/river-review/1.34.0
+   rm -rf ~/.claude/plugins/cache/river-review-marketplace/river-review/<old_version>
    ```
 
 4. Claude Code を再起動し、cache が最新版のみになったことを確認する。
