@@ -18,6 +18,19 @@ ad hoc な prompt 修正で済ませず、**fixture / suppression / reference / 
 | `duplicate`      | 同じ問題を別 finding として複数出した         | dedupe policy / owner skill / priority を見直す（routing or merge ロジックの調整）     |
 | `accepted_risk`  | 問題は認識しているがプロジェクト判断で許容    | suppression に rationale 付きで登録                                                    |
 | `unclear`        | 何を言いたいか伝わらない / evidence が薄い    | wording 改善（VERIFICATION.md の自己点検を強化、もしくは reference example 追加）      |
+| `out_of_scope`   | finding は妥当だがレビュー対象 PR の範囲外    | リポジトリ変更なし（必要なら follow-up issue で追跡）                                  |
+
+`out_of_scope` は skip-scope（範囲外だが妥当）の受け皿として上記 7 型に加えた 8 番目の disposition である。指摘者が別の判断軸を持つのではなく、finding は常にこの 8 型のいずれか 1 つに排他分類される（`accepted`/`false_positive` などと同列で、二重の分類軸は設けない）。`accepted_risk` がプロジェクト判断で「許容」なのに対し、`out_of_scope` は「妥当だが今回の変更範囲外」であり durable な repository action を伴わない点で使い分ける。
+
+## 補助フィールド / optional metadata
+
+各 entry には以下の任意フィールドを付与できる（省略時は entry に書かれず、旧フォーマットと完全互換）。
+
+| field        | 意味                                                                                                                                               |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reviewer`   | 指摘者の識別子（`gemini` / `codex` / `copilot` / `river-review` / `human` 等）。モデル別 precision 計測に使う                                      |
+| `model`      | レビューに使ったモデル識別子（任意）                                                                                                               |
+| `reversedBy` | 判断を撤回・上書きする際、この entry が反転させる旧 entry の参照（fingerprint または id）。追記型 JSONL を壊さず、新 entry 側に linkage を持たせる |
 
 ## Mapping rules / 振り分けルール
 
@@ -26,8 +39,9 @@ ad hoc な prompt 修正で済ませず、**fixture / suppression / reference / 
 1. **動作の誤り** → `false_positive` か `missed_issue` を最優先（ground truth に直結）
 2. **内容は正しいが伝達不足** → `not_actionable` または `unclear`
 3. **構造的な重複・優先度の問題** → `duplicate`
-4. **プロジェクト判断による受容** → `accepted_risk`
-5. **明確に妥当 + 採用された** → `accepted`
+4. **妥当だが今回の変更範囲外** → `out_of_scope`
+5. **プロジェクト判断による受容** → `accepted_risk`
+6. **明確に妥当 + 採用された** → `accepted`
 
 ## Repository actions / 残し方の詳細
 
@@ -57,6 +71,11 @@ ad hoc な prompt 修正で済ませず、**fixture / suppression / reference / 
 - どの skill が owner なのか曖昧なケース → ROUTING.md を更新。
 - 同 skill 内の重複 → 出力統合ロジック / dedupe key を見直す。
 - severity が分散している場合 → 上位 severity に統合する基準を VERIFICATION.md に追加。
+
+### out_of_scope
+
+- 妥当な finding だが今回の PR の対象外。**リポジトリ変更は行わない**（fixture も suppression も作らない）。
+- 追跡が必要なら follow-up issue を作る。`evidence` に「なぜ範囲外か」を残す。
 
 ### accepted_risk
 

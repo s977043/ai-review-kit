@@ -63326,6 +63326,9 @@ function parseArgs(argv) {
     feedbackFingerprint: null,
     feedbackEvidence: null,
     feedbackPrNumber: null,
+    feedbackReviewer: null,
+    feedbackModel: null,
+    feedbackReversedBy: null,
     suppressionFingerprint: null,
     suppressionFindingId: null,
     suppressionFeedbackType: null,
@@ -63473,6 +63476,36 @@ function parseArgs(argv) {
       if (arg === '--pr') {
         const v = parseInt(args.shift() ?? '', 10);
         if (!Number.isNaN(v) && v > 0) parsed.feedbackPrNumber = v;
+        continue;
+      }
+      if (arg === '--reviewer') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --reviewer option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackReviewer = value;
+        continue;
+      }
+      if (arg === '--model') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --model option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackModel = value;
+        continue;
+      }
+      if (arg === '--reversed-by') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --reversed-by option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackReversedBy = value;
         continue;
       }
     }
@@ -64779,7 +64812,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     if (parsed.command === 'feedback') {
       if (parsed.feedbackSubcommand !== 'add') {
         console.error(
-          'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr).'
+          'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr --reviewer --model --reversed-by).'
         );
         return 1;
       }
@@ -64795,6 +64828,9 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
           findingFingerprint: parsed.feedbackFingerprint,
           evidence: parsed.feedbackEvidence,
           pr: parsed.feedbackPrNumber,
+          reviewer: parsed.feedbackReviewer,
+          model: parsed.feedbackModel,
+          reversedBy: parsed.feedbackReversedBy,
         });
       } catch (err) {
         if (err instanceof FeedbackError) {
