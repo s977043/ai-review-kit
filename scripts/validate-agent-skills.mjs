@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { promises as fs, realpathSync } from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { fileURLToPath } from 'url';
 import { parseFrontMatter, listSkillPackageDirs } from '../runners/core/skill-loader.mjs';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -235,9 +236,7 @@ async function validateAgentSkills() {
   return success;
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   const ok = await validateAgentSkills();
   if (!ok) {
     process.exitCode = 1;

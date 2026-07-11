@@ -12,8 +12,7 @@
 // Usage: node scripts/pack-tier-check.mjs [--strict]
 //   --strict  exit 1 when a declared tier exceeds its mechanical assessment
 import path from 'path';
-import { promises as fs, realpathSync } from 'fs';
-import { pathToFileURL } from 'url';
+import { promises as fs } from 'fs';
 import {
   defaultPaths,
   createSkillValidator,
@@ -22,6 +21,7 @@ import {
   listSkillFiles,
   loadPacks,
 } from '../runners/core/skill-loader.mjs';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const TIER_RANK = { experimental: 0, community: 1, official: 2 };
 
@@ -94,9 +94,7 @@ export async function checkPackTiers({
   return { packs: packs.length, overDeclared, promotable };
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   const strict = process.argv.includes('--strict');
   const result = await checkPackTiers({});
   if (strict && result.overDeclared.length > 0) {

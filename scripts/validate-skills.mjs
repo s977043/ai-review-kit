@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 import path from 'path';
 import fs from 'fs/promises';
-import { realpathSync } from 'fs';
-import { pathToFileURL } from 'url';
 import * as yaml from 'js-yaml';
 import {
   defaultPaths,
@@ -14,6 +12,7 @@ import {
   loadPacks,
   loadRecommendationSets,
 } from '../runners/core/skill-loader.mjs';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 // #1231: 既存の eval 未整備 recommended skill。新規追加分はこの集合に足さず
 // eval を用意すること（recommended skill は eval/ または fixtures/ を持つこと
@@ -746,9 +745,7 @@ export async function validateNamingCollisions({ skillsDir = defaultPaths.skills
   return success;
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   const skillsOk = await validateSkills();
   const packsOk = await validatePacks();
   const evalCoverageOk = await validateRecommendedEvalCoverage();

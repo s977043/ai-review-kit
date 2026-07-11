@@ -7,9 +7,10 @@
 //
 // Usage: node scripts/apply-feedback.mjs [--month YYYY-MM] [--write]
 import path from 'path';
-import { promises as fs, realpathSync } from 'fs';
-import { pathToFileURL, fileURLToPath } from 'url';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
 import { listFeedbackEntries, buildFeedbackScaffold } from '../src/lib/feedback.mjs';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -62,9 +63,7 @@ export async function applyFeedback({
   return { entries: entries.length, written };
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   const args = process.argv.slice(2);
   const monthIdx = args.indexOf('--month');
   const month = monthIdx >= 0 ? args[monthIdx + 1] : null;

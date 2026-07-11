@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { tracer, enabled as otelEnabled } from '../src/tracing.mjs';
 import { SpanStatusCode } from '@opentelemetry/api';
-import { promises as fs, realpathSync } from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { fileURLToPath } from 'url';
 import * as yaml from 'js-yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -178,8 +179,6 @@ async function main() {
   }
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   await main();
 }

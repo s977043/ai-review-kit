@@ -16,13 +16,12 @@
 //   node scripts/generate-skill-manifest.mjs --check    # exit 1 if stale
 
 import { createHash } from 'node:crypto';
-import { realpathSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { pathToFileURL } from 'node:url';
 
 import { listSkillPackageDirs } from '../runners/core/skill-loader.mjs';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const SKILLS_ROOT = 'skills';
 const OUTPUT_PATH = path.join('docs', 'data', 'skill-manifest.json');
@@ -149,9 +148,7 @@ async function main() {
   return 0;
 }
 
-const isDirectRun =
-  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   main().then(
     (code) => process.exit(code),
     (err) => {

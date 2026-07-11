@@ -21,6 +21,8 @@
 import { promises as fs } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
+import { isDirectRun } from './lib/is-direct-run.mjs';
+
 const MANIFEST_PATH = 'docs/data/skill-manifest.json';
 
 /**
@@ -148,8 +150,7 @@ async function main() {
   return 0;
 }
 
-const isDirectRun = process.argv[1] && process.argv[1].endsWith('skill-changelog.mjs');
-if (isDirectRun) {
+if (isDirectRun(import.meta.url)) {
   main()
     .then((code) => process.exit(code))
     .catch((err) => {
