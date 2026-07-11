@@ -223,6 +223,21 @@ Claude Code の loop 設計（Goal-based loop / review-fix cycle / stop conditio
 
 review-fix cycle の既定回数は reference loop 実装の `resolveIterationLimit`（既定 5）が持ち、呼び出し側が調整します。3 回への固定は運用側の tunable であり、契約としては複合停止条件と上限の両立で過剰レビューを抑制します。Proactive loop（新規 PR のレビュー候補検出など）は本契約の対象外であり、安全境界は ADR-003 の Non-Goals（無承認の自動マージを行わない）が定めます。
 
+### Unknown Coverage verdict の写像（#1470）
+
+Unknown Coverage Review（#1470）が出力する verdict も、新しい語彙を作らず上表と同じ方針で既存信号へ写像されます。残存 Unknown の判定は `gate.decision` と finding の `severity` へ次のとおり対応し、Unknown の存在だけで自動的に `fail` にはしません。証拠不足や解消済みの根拠は [output-format.md](https://github.com/s977043/river-review/blob/main/docs/review/output-format.md) §4「Unverified / Residual Risk」節（Unknown Coverage 下位構造）で表現します。
+
+| Unknown Coverage 出力                   | River Review 既存語彙                                 | 具体マッピング                                                                                    |
+| --------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `verdict: pass`                         | `GO` / `GO_WITH_OBSERVATION`                          | Blocking Unknown なし・必要証拠あり                                                               |
+| `verdict: needs_review`                 | `ESCALATE`（要人間）                                  | 非 Blocking Unknown / 軽微な証拠不足 → `severity: major` finding ＋ §4 残リスク節に残懸念を明記   |
+| `verdict: fail`                         | `NO_GO`（要修正）                                     | セキュリティ / データ損失 / 互換性 / 不可逆の重大 Blocking Unknown → `severity: critical` finding |
+| `blocking: true / false`                | finding `severity`（critical / major）＋ `confidence` | blocking かつ高確信 → critical。非 blocking → §4 残リスク節（finding 化しづらいものは report 節） |
+| `evidence_checked` / `evidence_missing` | finding `evidence[]` ＋ §4 節本文                     | 不足証拠は §4 の残リスク文と `suggestion`（解消手順）で表現する                                   |
+| `resolved`（解消済み Unknown）          | Good Points 節（§4）＋ 根拠 file / test 参照          | 「解消済みには根拠を関連付ける」受入条件を §4 で満たす                                            |
+
+`gate.decision` の fail-safe 方向（判定不能・未決 → `NO_GO` / `ESCALATE`）は `src/lib/gate-decision.mjs` の決定論純関数が担い、`severity` × `confidence` × `blocking` の 3 軸で出し分けます。出力スキーマ（`severity: critical / major / minor / info`）は変更せず、後方互換を保ちます。
+
 ## 関連ドキュメント
 
 - [AI 駆動開発プレイブック（Case 2 / Case 3）](../guides/ai-agent-playbook.md) — ケース別の呼び出し方
