@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.50.0](https://github.com/s977043/river-review/compare/v1.49.0...v1.50.0) (2026-07-11)
+
+
+### Features
+
+* **skills:** assumption-resolution-trace registry skill を追加する ([#1470](https://github.com/s977043/river-review/issues/1470) P2 G3) ([#1503](https://github.com/s977043/river-review/issues/1503)) ([1ecd666](https://github.com/s977043/river-review/commit/1ecd66624220131745601348a2321b517c8d6155))
+* **skills:** impact-evidence-coverage registry skill を追加する ([#1470](https://github.com/s977043/river-review/issues/1470) P2 G1/G2) ([#1502](https://github.com/s977043/river-review/issues/1502)) ([fad8f74](https://github.com/s977043/river-review/commit/fad8f747daec8d2c5d0d4b2c1e6cef33477c7ec7))
+* **skills:** unknown-coverage-review の Output・観点6・委譲を精緻化する ([#1470](https://github.com/s977043/river-review/issues/1470) P2) ([#1504](https://github.com/s977043/river-review/issues/1504)) ([5de796e](https://github.com/s977043/river-review/commit/5de796e4ff47c2830d23effa697bdcf27e3030e8))
+
 ## [1.49.0](https://github.com/s977043/river-review/compare/v1.48.0...v1.49.0) (2026-07-11)
 
 
