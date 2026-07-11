@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -514,9 +516,7 @@ export async function validatePluginManifest() {
 
 // CLI entry point
 const isDirectRun =
-  process.argv[1] &&
-  (process.argv[1].endsWith('validate-plugin-manifest.mjs') ||
-    process.argv[1].endsWith('validate-plugin-manifest'));
+  process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
 
 if (isDirectRun) {
   validatePluginManifest()
