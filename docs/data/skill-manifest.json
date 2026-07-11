@@ -270,7 +270,7 @@
     {
       "id": "doc-hygiene",
       "path": "skills/midstream/doc-hygiene",
-      "checksum": "sha256:b7d73e7a1bad4d85f1bd8444ad96903db3e004ef52f274354f3c86ccf784c66f",
+      "checksum": "sha256:8f344c8158db2c88c010ee3cf21d3016e1004bdae25f8108742e33850f2da847",
       "files": 2
     },
     {
@@ -468,7 +468,7 @@
     {
       "id": "nullability-contract",
       "path": "skills/midstream/nullability-contract",
-      "checksum": "sha256:a20cc3991a65e3ca31cdb44b7501d6a3e39ea91b989657f23278dee018ae8fcd",
+      "checksum": "sha256:e8934255f544914791c6a8e46bc28c9f7f2853a8ac6e896f6c075817b0058f8f",
       "files": 7
     },
     {
@@ -624,7 +624,7 @@
     {
       "id": "river-review-docs",
       "path": "skills/agent-skills/river-review-docs",
-      "checksum": "sha256:e2a750c2fab414c800bef86e771801fd22aac34dc4d94ca6046a40d52dc398f5",
+      "checksum": "sha256:54c50624fe95d4473101b3df5b0fd85cb6fd2c46c40f1d24615cd1ce25a3232d",
       "files": 2
     },
     {
