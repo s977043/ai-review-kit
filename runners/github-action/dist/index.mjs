@@ -64514,35 +64514,15 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       // / --gate is given do we translate findings into a CI exit code; otherwise
       // exit 0 (non-breaking for existing callers / the plangate-review workflow).
       if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
-        let severityCode = 0;
-        if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-          const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
-          const gate = evaluateReviewGate(artifact, {
-            failOn: parsed.failOn ?? 'critical',
-            warnOn: parsed.warnOn ?? 'major',
-            advisoryOnly: parsed.advisoryOnly,
-          });
-          if (gate.level === 'fail') {
-            console.error(`Review gate: FAIL (max severity: ${gate.maxSeverity}).`);
-          } else if (gate.level === 'warn') {
-            console.error(`Review gate: WARN (max severity: ${gate.maxSeverity}).`);
-          }
-          severityCode = gate.code;
-        }
-        // Epic #1347 S4 (#1351): --gate maps the gate DECISION to an exit code
-        // (GO→0 / NO_GO→1 / ESCALATE→3). When combined with a severity gate the
-        // stricter outcome wins.
-        let gateCode = 0;
-        if (parsed.gate) {
-          const { gateDecisionExitCode, combineExitCodes } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
-          const decision = artifact.gate?.decision;
-          gateCode = gateDecisionExitCode(decision);
-          console.error(
-            `Gate: ${decision ?? 'UNKNOWN'} (${artifact.gate?.reasonCode ?? 'n/a'}) → exit ${gateCode}.`
-          );
-          return combineExitCodes(severityCode, gateCode);
-        }
-        return severityCode;
+        const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
+        return await resolveGateExitCode({
+          failOn: parsed.failOn,
+          warnOn: parsed.warnOn,
+          advisoryOnly: parsed.advisoryOnly,
+          gate: parsed.gate,
+          getGateInput: () => artifact,
+          getGateObject: () => artifact.gate,
+        });
       }
       return 0;
     } catch (err) {
@@ -65177,39 +65157,17 @@ Dependencies: ${
     // the run path (only `river review` gated), so agents that relied on the
     // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
     if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
-      let severityCode = 0;
-      if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly) {
-        const { evaluateReviewGate } = await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
-        const issues = formatJsonOutput(result, parsed.phase).issues;
-        const gate = evaluateReviewGate(
-          { findings: issues },
-          {
-            failOn: parsed.failOn ?? 'critical',
-            warnOn: parsed.warnOn ?? 'major',
-            advisoryOnly: parsed.advisoryOnly,
-          }
-        );
-        if (gate.level === 'fail') {
-          console.error(`Review gate: FAIL (max severity: ${gate.maxSeverity}).`);
-        } else if (gate.level === 'warn') {
-          console.error(`Review gate: WARN (max severity: ${gate.maxSeverity}).`);
-        }
-        severityCode = gate.code;
-      }
-      // Epic #1347 S4 (#1351): --gate maps the gate DECISION to an exit code
-      // (GO→0 / NO_GO→1 / ESCALATE→3). Derived the same way as the JSON-output
-      // gate so the exit code and the emitted artifact agree. Stricter wins.
-      if (parsed.gate) {
-        const { gateDecisionExitCode, combineExitCodes } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
-        // deriveRunGate is already statically imported at the top of this module.
-        const { gate } = deriveRunGate(result);
-        const gateCode = gateDecisionExitCode(gate?.decision);
-        console.error(
-          `Gate: ${gate?.decision ?? 'UNKNOWN'} (${gate?.reasonCode ?? 'n/a'}) → exit ${gateCode}.`
-        );
-        return combineExitCodes(severityCode, gateCode);
-      }
-      return severityCode;
+      const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
+      return await resolveGateExitCode({
+        failOn: parsed.failOn,
+        warnOn: parsed.warnOn,
+        advisoryOnly: parsed.advisoryOnly,
+        gate: parsed.gate,
+        // Derived the same way as the JSON-output gate so the exit code and the
+        // emitted artifact agree. deriveRunGate is statically imported above.
+        getGateInput: () => ({ findings: formatJsonOutput(result, parsed.phase).issues }),
+        getGateObject: () => deriveRunGate(result).gate,
+      });
     }
 
     return 0;
