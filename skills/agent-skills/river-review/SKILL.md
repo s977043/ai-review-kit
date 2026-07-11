@@ -58,15 +58,16 @@ review 実行プランを組むときに参照する入力は、以下の優先�
 
 入力に応じて、以下の専門スキルへ案内します。詳細な優先度規則は [ROUTING.md](./references/ROUTING.md)。
 
-| キーワード                 | 専門スキル                | 説明                         |
-| -------------------------- | ------------------------- | ---------------------------- |
-| 設計, アーキテクチャ, ADR  | river-review-architecture | 設計・アーキテクチャレビュー |
-| セキュリティ, 脆弱性       | river-review-security     | セキュリティ観点レビュー     |
-| パフォーマンス, 最適化     | river-review-performance  | パフォーマンス観点レビュー   |
-| テスト, カバレッジ         | river-review-testing      | テスト観点レビュー           |
-| 敵対的, 壁打ち, バイアス   | adversarial-review        | 敵対的レビュー（3手法統合）  |
-| ドキュメント, README, i18n | river-review-docs         | ドキュメント整合性レビュー   |
-| (上記以外)                 | river-review-code         | 一般コード品質レビュー       |
+| キーワード                                                                   | 専門スキル                | 説明                         |
+| ---------------------------------------------------------------------------- | ------------------------- | ---------------------------- |
+| 設計, アーキテクチャ, ADR                                                    | river-review-architecture | 設計・アーキテクチャレビュー |
+| セキュリティ, 脆弱性                                                         | river-review-security     | セキュリティ観点レビュー     |
+| パフォーマンス, 最適化                                                       | river-review-performance  | パフォーマンス観点レビュー   |
+| テスト, カバレッジ                                                           | river-review-testing      | テスト観点レビュー           |
+| UI, フロントエンド, アクセシビリティ, a11y, デザインシステム, コンポーネント | river-review-frontend     | フロントエンド観点レビュー   |
+| 敵対的, 壁打ち, バイアス                                                     | adversarial-review        | 敵対的レビュー（3手法統合）  |
+| ドキュメント, README, i18n                                                   | river-review-docs         | ドキュメント整合性レビュー   |
+| (上記以外)                                                                   | river-review-code         | 一般コード品質レビュー       |
 
 > **デフォルト動作**: キーワードがどれにも当てはまらない場合は一般コードレビュー (river-review-code) にフォールバックします。
 >
@@ -85,6 +86,7 @@ review 実行プランを組むときに参照する入力は、以下の優先�
    ├─ river-review-security: セキュリティ観点
    ├─ river-review-performance: パフォーマンス観点
    ├─ river-review-testing: テスト観点
+   ├─ river-review-frontend: フロントエンド観点
    ├─ adversarial-review: 敵対的レビュー（3手法統合）
    ├─ river-review-docs: ドキュメント整合性観点
    └─ river-review-code: 一般コード品質（フォールバック）

@@ -26,6 +26,11 @@ River Review のルーティングロジックの詳細です。
 - 日本語: テスト, カバレッジ, 単体テスト, 結合テスト
 - 英語: test, coverage, unit test, integration test
 
+### フロントエンド (river-review-frontend)
+
+- 日本語: UI, フロントエンド, アクセシビリティ, a11y, デザインシステム, デザイントークン, コンポーネント, Tailwind
+- 英語: UI, frontend, accessibility, a11y, design system, design token, component, Tailwind
+
 ### 敵対的レビュー (adversarial-review)
 
 - 日本語: 敵対的, 壁打ち, プレモーテム, 失敗分析, 攻撃, ウォーゲーム, 論理検証, バイアス

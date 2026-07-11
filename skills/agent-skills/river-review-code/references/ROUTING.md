@@ -1,5 +1,7 @@
 # ルーティングルール — Code Quality Review
 
+> UI/コンポーネント系のキーワード（a11y, デザインシステム, デザイントークン, ブラウザ互換, セマンティック HTML, Next.js App Router 境界）は `river-review-frontend` の [ROUTING.md](../../river-review-frontend/references/ROUTING.md) へ移設済み（#1462）。本ファイルには残さず、二重発火を避ける。
+
 ## キーワードマッチング
 
 ### TypeScript strict
@@ -45,59 +47,11 @@
 - 英語: comment, triage, priority
 - → `review-comment-triage`
 
-### アクセシビリティ
-
-- 日本語: a11y, アクセシビリティ, スクリーンリーダー
-- 英語: a11y, accessibility, screen reader, aria
-- → `a11y-accessible-name`
-
-### アクセシビリティ（アクセシブルネーム）
-
-- 日本語: alt属性, aria-label, アクセシブルネーム, ボタンラベル, フォームラベル
-- 英語: alt text, aria-label, accessible name, button label, form label
-- → `a11y-accessible-name`
-
-### デザインシステム コンポーネント再利用
-
-- 日本語: デザインシステム, コンポーネント再利用, Button, Input, Modal, Card
-- 英語: design system, component reuse, Button, Input, Modal, Card
-- → `design-system-component-reuse`
-
-### デザイントークン
-
-- 日本語: デザイントークン, 色の直書き, 余白, フォントサイズ, 角丸
-- 英語: design token, hardcoded color, spacing, font size, border radius
-- → `design-token-enforcement`
-
 ### レビュー統合（マルチエージェント）
 
 - 日本語: レビュー統合, 複数レビュー, マージ推奨, ハルシネーション検証
 - 英語: review synthesis, multi-agent, merge recommendation, hallucination guard
 - → `independent-review-synthesis`
-
-### インタラクティブ UI アクセシビリティ
-
-- 日本語: キーボード操作, フォーカス管理, ARIA role, ライブリージョン
-- 英語: keyboard navigation, focus management, ARIA role, live region, interactive UI
-- → `modern-web-a11y-interactive`
-
-### ブラウザ互換性・Baseline
-
-- 日本語: ブラウザ互換, Baseline, プログレッシブエンハンスメント, feature detection
-- 英語: browser compatibility, Baseline, progressive enhancement, feature detection, @supports
-- → `modern-web-browser-compat`
-
-### セマンティック HTML・プラットフォームネイティブ
-
-- 日本語: セマンティック, div クリック, ネイティブ要素, Web Platform
-- 英語: semantic HTML, div onclick, platform-native, Web Platform, native API
-- → `modern-web-semantic`
-
-### Next.js App Router 境界
-
-- 日本語: Next.js, App Router, サーバーコンポーネント, クライアントコンポーネント, use client
-- 英語: Next.js, App Router, server component, client component, use client directive
-- → `nextjs-app-router-boundary`
 
 ### 品質クリーンアップ（SIMPLIFY 観点）
 
@@ -136,8 +90,8 @@
 ## 自動判定ルール
 
 1. `.ts`/`.tsx` ファイル → `typescript-strict` + `typescript-nullcheck`
-2. React コンポーネント → `a11y-accessible-name` を追加
-3. `app/` ディレクトリ（Next.js）→ `nextjs-app-router-boundary` を追加
+2. React コンポーネント → `river-review-frontend`（`a11y-accessible-name` 等）も参照
+3. `app/` ディレクトリ（Next.js）→ `river-review-frontend`（`nextjs-app-router-boundary`）も参照
 4. 設定・型定義ファイル → `type-driven-design`
 
 ## フォールバックルール
