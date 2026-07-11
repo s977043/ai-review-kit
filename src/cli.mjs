@@ -145,6 +145,9 @@ function parseArgs(argv) {
     feedbackFingerprint: null,
     feedbackEvidence: null,
     feedbackPrNumber: null,
+    feedbackReviewer: null,
+    feedbackModel: null,
+    feedbackReversedBy: null,
     suppressionFingerprint: null,
     suppressionFindingId: null,
     suppressionFeedbackType: null,
@@ -292,6 +295,18 @@ function parseArgs(argv) {
       if (arg === '--pr') {
         const v = parseInt(args.shift() ?? '', 10);
         if (!Number.isNaN(v) && v > 0) parsed.feedbackPrNumber = v;
+        continue;
+      }
+      if (arg === '--reviewer') {
+        parsed.feedbackReviewer = args.shift() ?? null;
+        continue;
+      }
+      if (arg === '--model') {
+        parsed.feedbackModel = args.shift() ?? null;
+        continue;
+      }
+      if (arg === '--reversed-by') {
+        parsed.feedbackReversedBy = args.shift() ?? null;
         continue;
       }
     }
@@ -1598,7 +1613,7 @@ async function main(argv = process.argv.slice(2)) {
     if (parsed.command === 'feedback') {
       if (parsed.feedbackSubcommand !== 'add') {
         console.error(
-          'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr).'
+          'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr --reviewer --model --reversed-by).'
         );
         return 1;
       }
@@ -1614,6 +1629,9 @@ async function main(argv = process.argv.slice(2)) {
           findingFingerprint: parsed.feedbackFingerprint,
           evidence: parsed.feedbackEvidence,
           pr: parsed.feedbackPrNumber,
+          reviewer: parsed.feedbackReviewer,
+          model: parsed.feedbackModel,
+          reversedBy: parsed.feedbackReversedBy,
         });
       } catch (err) {
         if (err instanceof FeedbackError) {

@@ -136,3 +136,79 @@ test('applyFeedback without entries reports cleanly', async () => {
   const result = await applyFeedback({ root: repoRoot, log: () => {} });
   assert.equal(result.entries, 0);
 });
+
+// --- #1471 increment A: reviewer / model / reversedBy + out_of_scope --------
+
+test('out_of_scope is an accepted feedbackType with a no-change scaffold', () => {
+  assert.ok(FEEDBACK_TYPES.includes('out_of_scope'));
+  const entry = buildFeedbackEntry(
+    entryInput({ feedbackType: 'out_of_scope', findingFingerprint: null })
+  );
+  assert.equal(entry.feedbackType, 'out_of_scope');
+  const scaffold = buildFeedbackScaffold(entry);
+  assert.match(scaffold.action, /no repository change/);
+  assert.ok(scaffold.verify.length > 0);
+});
+
+test('optional reviewer/model/reversedBy are stored when provided', () => {
+  const entry = buildFeedbackEntry(
+    entryInput({
+      reviewer: 'gemini',
+      model: 'gemini-2.5-pro',
+      reversedBy: 'a1b2c3d4e5f60718',
+    })
+  );
+  assert.equal(entry.reviewer, 'gemini');
+  assert.equal(entry.model, 'gemini-2.5-pro');
+  assert.equal(entry.reversedBy, 'a1b2c3d4e5f60718');
+});
+
+test('optional fields are omitted (not null) when absent — backward compatible shape', () => {
+  const entry = buildFeedbackEntry(entryInput());
+  assert.ok(!('reviewer' in entry), 'reviewer key absent when not provided');
+  assert.ok(!('model' in entry), 'model key absent when not provided');
+  assert.ok(!('reversedBy' in entry), 'reversedBy key absent when not provided');
+  // Empty/whitespace strings normalize away too.
+  const trimmed = buildFeedbackEntry(entryInput({ reviewer: '  ', model: '' }));
+  assert.ok(!('reviewer' in trimmed));
+  assert.ok(!('model' in trimmed));
+});
+
+test('optional fields reject non-string values', () => {
+  assert.throws(() => buildFeedbackEntry(entryInput({ reviewer: 42 })), FeedbackError);
+  assert.throws(() => buildFeedbackEntry(entryInput({ model: {} })), FeedbackError);
+  assert.throws(() => buildFeedbackEntry(entryInput({ reversedBy: [] })), FeedbackError);
+});
+
+test('reversedBy linkage survives append-only JSONL round-trip', async () => {
+  const repoRoot = await createTempDirAsync({ prefix: 'feedback-reversed-' });
+  // Original decision: skip-scope for a finding.
+  const original = buildFeedbackEntry(
+    entryInput({
+      feedbackType: 'out_of_scope',
+      reviewer: 'gemini',
+      findingFingerprint: 'a1b2c3d4e5f60718',
+      evidence: 'skip-scope: realpathSync 統一は別PRで',
+    })
+  );
+  await appendFeedbackEntry(original, { repoRoot });
+  // Later reversal: a new entry references the prior one instead of mutating it.
+  const reversal = buildFeedbackEntry(
+    entryInput({
+      feedbackType: 'accepted',
+      reviewer: 'gemini',
+      findingFingerprint: 'a1b2c3d4e5f60718',
+      reversedBy: 'a1b2c3d4e5f60718',
+      evidence: 'reversed: ENOENT クラッシュが実在した',
+      now: new Date('2026-06-11T03:00:00Z'),
+    })
+  );
+  await appendFeedbackEntry(reversal, { repoRoot });
+
+  const entries = await listFeedbackEntries({ repoRoot });
+  assert.equal(entries.length, 2, 'both entries retained (append-only, no mutation)');
+  assert.equal(entries[0].feedbackType, 'out_of_scope');
+  assert.ok(!('reversedBy' in entries[0]), 'original is untouched');
+  assert.equal(entries[1].feedbackType, 'accepted');
+  assert.equal(entries[1].reversedBy, 'a1b2c3d4e5f60718');
+});

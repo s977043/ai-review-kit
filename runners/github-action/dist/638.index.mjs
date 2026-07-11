@@ -33,6 +33,11 @@ const FEEDBACK_TYPES = [
   'duplicate',
   'accepted_risk',
   'unclear',
+  // `out_of_scope`: finding is valid but out of the reviewed change's scope
+  // (skip-scope). Added as an 8th disposition rather than a separate `decision`
+  // axis so a finding keeps a single mutually-exclusive classification (see
+  // FEEDBACK.md "Feedback types"). Maps to a "no repository change" scaffold.
+  'out_of_scope',
 ];
 
 // Trigger conditions from references/IMPROVEMENT_LOOP.md.
@@ -54,6 +59,10 @@ class FeedbackError extends Error {
 /**
  * Build and validate a feedback entry.
  *
+ * The `reviewer`, `model`, and `reversedBy` fields are optional and
+ * backward-compatible: when omitted they are not written to the entry at all,
+ * so historical readers and existing JSONL keep their exact shape.
+ *
  * @param {{
  *   feedbackType: string,
  *   skillId: string,
@@ -61,6 +70,9 @@ class FeedbackError extends Error {
  *   findingFingerprint?: string|null,
  *   evidence?: string|null,
  *   pr?: number|null,
+ *   reviewer?: string|null,
+ *   model?: string|null,
+ *   reversedBy?: string|null,
  *   now?: Date,
  * }} input
  */
@@ -71,6 +83,9 @@ function buildFeedbackEntry({
   findingFingerprint = null,
   evidence = null,
   pr = null,
+  reviewer = null,
+  model = null,
+  reversedBy = null,
   now = new Date(),
 }) {
   if (!FEEDBACK_TYPES.includes(feedbackType)) {
@@ -89,7 +104,10 @@ function buildFeedbackEntry({
   if (findingFingerprint != null && !/^[0-9a-f]{16}$/.test(findingFingerprint)) {
     throw new FeedbackError('findingFingerprint must be 16 lowercase hex chars when provided.');
   }
-  return {
+  const reviewerId = normalizeOptionalString(reviewer, 'reviewer');
+  const modelId = normalizeOptionalString(model, 'model');
+  const reversedByRef = normalizeOptionalString(reversedBy, 'reversedBy');
+  const entry = {
     timestamp: now.toISOString(),
     trigger,
     feedbackType,
@@ -98,6 +116,25 @@ function buildFeedbackEntry({
     evidence: evidence?.trim() || null,
     pr: Number.isInteger(pr) && pr > 0 ? pr : null,
   };
+  // Optional fields are only attached when present so existing entries and
+  // readers keep their exact shape (backward compatibility).
+  if (reviewerId) entry.reviewer = reviewerId;
+  if (modelId) entry.model = modelId;
+  if (reversedByRef) entry.reversedBy = reversedByRef;
+  return entry;
+}
+
+/**
+ * Normalize an optional free-form string field: null/empty → null (field is
+ * omitted by the caller), non-empty → trimmed. A non-string, non-null value is
+ * a programming error and is rejected.
+ */
+function normalizeOptionalString(value, fieldName) {
+  if (value == null) return null;
+  if (typeof value !== 'string') {
+    throw new FeedbackError(`${fieldName} must be a string when provided.`);
+  }
+  return value.trim() || null;
 }
 
 function feedbackFilePath(repoRoot, timestamp) {
@@ -209,6 +246,13 @@ function buildFeedbackScaffold(entry) {
         action: 'routing update proposal',
         verify: ['npm run planner:eval:dataset', 'npm run skills:validate'],
         note: `Clarify the owner skill for findings currently duplicated with ${skillId}. Evidence: ${evidence ?? '(none)'}`,
+      };
+    case 'out_of_scope':
+      return {
+        action:
+          'no repository change (finding valid but out of PR scope; consider a follow-up issue)',
+        verify: ['npm run skills:validate'],
+        note: `Finding is valid but out of scope for the reviewed change. Evidence: ${evidence ?? '(none)'}`,
       };
     case 'accepted':
     default:
