@@ -80,6 +80,7 @@ license: MIT
 - エラーを握り潰していないか
 - エラーメッセージが十分な情報を含むか
 - リカバリー可能なエラーと不可能なエラーの区別
+- 防衛的フォールバックの分界（#1480 FP / #1475 本物）: モジュール内部の不変条件（config・registry・内部で構築した構造の欠落 = fail-fast が意図）へ `?? {}` 等の防衛は提案しない。外部 IO・環境境界（`argv` / `fs` / network）の例外・null には防衛必須。詳細と canary は `nullability-contract` の「False-positive guards」を参照。
 
 ## Execution Flow / 実行フロー
 
