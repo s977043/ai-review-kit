@@ -9,7 +9,8 @@
 // gate fix, or a project rule. Detection only; codification stays a human
 // decision via the improvement flow.
 //
-// Usage: node scripts/feedback-rule-candidates.mjs [--min <n>] [--month YYYY-MM] [--json]
+// Usage: node scripts/feedback-rule-candidates.mjs [--min <n>] [--month YYYY-MM] [--json] [--out <path>]
+import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { listFeedbackEntries } from '../src/lib/feedback.mjs';
@@ -58,6 +59,39 @@ export function findRuleCandidates(entries, { min = 2 } = {}) {
   return candidates;
 }
 
+/**
+ * Build the structured artifact payload written by `--out`.
+ *
+ * Minimal shape: metadata plus the same per-candidate fields already used by
+ * `--json` stdout (`{skillId, feedbackType, count, prs, suggestedAction}`), so
+ * a future CI artifact / improvement-flow consumer has one contract to read
+ * regardless of which output mode produced it.
+ *
+ * @param {{ entriesCount: number, min: number, candidates: ReturnType<typeof findRuleCandidates>, now?: Date }} options
+ */
+export function buildCandidatesArtifact({ entriesCount, min, candidates, now = new Date() }) {
+  return {
+    generatedAt: now.toISOString(),
+    threshold: min,
+    entries: entriesCount,
+    candidates,
+  };
+}
+
+/**
+ * Write the artifact payload to `outPath` as pretty-printed JSON, creating
+ * parent directories as needed. Pure I/O helper kept separate from
+ * `buildCandidatesArtifact` so tests can validate the JSON shape without
+ * touching the filesystem.
+ *
+ * @param {string} outPath
+ * @param {ReturnType<typeof buildCandidatesArtifact>} payload
+ */
+export async function writeCandidatesArtifact(outPath, payload) {
+  await fs.mkdir(path.dirname(outPath), { recursive: true });
+  await fs.writeFile(outPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+}
+
 if (isDirectRun(import.meta.url)) {
   const args = process.argv.slice(2);
   const minIdx = args.indexOf('--min');
@@ -72,8 +106,26 @@ if (isDirectRun(import.meta.url)) {
   }
   const monthIdx = args.indexOf('--month');
   const month = monthIdx >= 0 ? args[monthIdx + 1] : null;
+  const outIdx = args.indexOf('--out');
+  let outPath = null;
+  if (outIdx >= 0) {
+    outPath = args[outIdx + 1];
+    if (!outPath || outPath.startsWith('--')) {
+      console.error('Error: --out requires a file path.');
+      process.exit(2);
+    }
+  }
   const entries = await listFeedbackEntries({ repoRoot, month, warn: (m) => console.warn(m) });
   const candidates = findRuleCandidates(entries, { min });
+  // --out writes a structured artifact alongside whichever stdout mode below
+  // runs; it does not change stdout content or the exit-code-2-on-candidates
+  // behavior (kept for backward compatibility with existing CI usage).
+  if (outPath) {
+    await writeCandidatesArtifact(
+      path.resolve(outPath),
+      buildCandidatesArtifact({ entriesCount: entries.length, min, candidates })
+    );
+  }
   if (args.includes('--json')) {
     console.log(JSON.stringify({ entries: entries.length, candidates }, null, 2));
   } else if (!candidates.length) {
