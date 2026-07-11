@@ -9,8 +9,16 @@ category: midstream
 phase: [midstream]
 severity: minor
 applyTo:
+  # ルーティング先 14 スキルの registry 上の applyTo の和集合（過剰に広いものは除く）。
+  # app/ と src/routes/ は Next.js Route Handlers（route.ts）/ React Router resource
+  # routes（JSX を含まない .ts/.js）を含むため拡張子を広げる（nextjs-app-router-boundary /
+  # react-router-loader-boundary / react-router-action-contract の applyTo に一致）。
+  # src/** 全体は {tsx,jsx,vue,svelte} に留める — .ts/.js へ広げるとバックエンド系 TS 差分
+  # でも frontend エントリが発火し、river-review-code との二重発火を再導入するため。
   - 'src/**/*.{tsx,jsx,vue,svelte}'
-  - 'app/**/*.{tsx,jsx}'
+  - 'src/routes/**/*.{ts,tsx,js,jsx}'
+  - 'app/**/*.{ts,tsx,js,jsx}'
+  - 'components/**/*.{ts,tsx,js,jsx}'
   - '**/*.{css,scss,less}'
 inputContext: [diff, fullFile]
 outputKind: [findings, actions]
