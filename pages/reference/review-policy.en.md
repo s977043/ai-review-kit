@@ -65,6 +65,7 @@ To strengthen the basis for judgment, add the following when useful. All are opt
 - **Missing Tests**: Test angles that should be added (absent error/boundary/regression cases). Surfaces the absence of tests, which is hard to express as a finding.
 - **Follow-up Issues**: Concerns outside this change's scope that should be tracked separately. Connects to the practice of tracking non-blocker Majors in separate issues.
 - **Unverified / Residual Risk**: Assumptions the review could not verify, behavior it could not observe, and concerns that remain — stated for the report as a whole, separately from findings, so the limits of the judgment stay traceable.
+  - **Unknown Coverage (residual Unknowns / evidence_missing / resolution)**: A sub-structure of the residual-risk section that lays out the Unknowns remaining at review time in a structured form. Each Unknown carries category, severity, blocking, evidence_missing (the evidence not yet gathered), and resolution (how to close it). It separates risks that were checked and accepted from risks left unverified, and it associates resolved Unknowns with evidence. The mapping to a verdict follows the table in [loop-convergence-contract.md](./loop-convergence-contract.md) and introduces no new vocabulary.
 
 ## 3. Prohibited Actions
 
