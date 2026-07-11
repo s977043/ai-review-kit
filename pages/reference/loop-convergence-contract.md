@@ -227,14 +227,16 @@ review-fix cycle の既定回数は reference loop 実装の `resolveIterationLi
 
 Unknown Coverage Review（#1470）が出力する verdict も、新しい語彙を作らず上表と同じ方針で既存信号へ写像されます。残存 Unknown の判定は `gate.decision` と finding の `severity` へ次のとおり対応し、Unknown の存在だけで自動的に `fail` にはしません。証拠不足や解消済みの根拠は [output-format.md](https://github.com/s977043/river-review/blob/main/docs/review/output-format.md) §4「Unverified / Residual Risk」節（Unknown Coverage 下位構造）で表現します。
 
-| Unknown Coverage 出力                   | River Review 既存語彙                                 | 具体マッピング                                                                                    |
-| --------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `verdict: pass`                         | `GO` / `GO_WITH_OBSERVATION`                          | Blocking Unknown なし・必要証拠あり                                                               |
-| `verdict: needs_review`                 | `ESCALATE`（要人間）                                  | 非 Blocking Unknown / 軽微な証拠不足 → `severity: major` finding ＋ §4 残リスク節に残懸念を明記   |
-| `verdict: fail`                         | `NO_GO`（要修正）                                     | セキュリティ / データ損失 / 互換性 / 不可逆の重大 Blocking Unknown → `severity: critical` finding |
-| `blocking: true / false`                | finding `severity`（critical / major）＋ `confidence` | blocking かつ高確信 → critical。非 blocking → §4 残リスク節（finding 化しづらいものは report 節） |
-| `evidence_checked` / `evidence_missing` | finding `evidence[]` ＋ §4 節本文                     | 不足証拠は §4 の残リスク文と `suggestion`（解消手順）で表現する                                   |
-| `resolved`（解消済み Unknown）          | Good Points 節（§4）＋ 根拠 file / test 参照          | 「解消済みには根拠を関連付ける」受入条件を §4 で満たす                                            |
+| Unknown Coverage 出力                   | River Review 既存語彙                                 | 具体マッピング                                                                                                                    |
+| --------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `verdict: pass`                         | `GO` / `GO_WITH_OBSERVATION`                          | Blocking Unknown なし・必要証拠あり。resolution が merge 後の観測で足りる非 Blocking Unknown のみ残る場合は `GO_WITH_OBSERVATION` |
+| `verdict: needs_review`                 | `ESCALATE`（要人間）                                  | merge 前に解消すべき非 Blocking Unknown / 証拠不足 → `severity: major` finding ＋ §4 残リスク節に残懸念を明記                     |
+| `verdict: fail`                         | `NO_GO`（要修正）                                     | セキュリティ / データ損失 / 互換性 / 不可逆の重大 Blocking Unknown → `severity: critical` finding                                 |
+| `blocking: true / false`                | finding `severity`（critical / major）＋ `confidence` | blocking かつ高確信 → critical。非 blocking → §4 残リスク節（finding 化しづらいものは report 節）                                 |
+| `evidence_checked` / `evidence_missing` | finding `evidence[]` ＋ §4 節本文                     | 不足証拠は §4 の残リスク文と `suggestion`（解消手順）で表現する                                                                   |
+| `resolved`（解消済み Unknown）          | Good Points 節（§4）＋ 根拠 file / test 参照          | 「解消済みには根拠を関連付ける」受入条件を §4 で満たす。分量目安は観点ごとに代表 1 件・1 行に要約する                             |
+
+`pass` と `needs_review` の境界は **resolution の実行タイミング（merge 前 / merge 後）** を判別軸とします。非 Blocking Unknown が1件でも残ることは、それだけで `needs_review` を意味しません。その resolution が merge 後の観測（次回 eval run・運用レビュー等）で足りるなら `pass`（`GO_WITH_OBSERVATION`）、merge 前に解消すべきものが残る場合のみ `needs_review`（`ESCALATE`）へ倒します（#1470 P1 受入後観測）。
 
 `gate.decision` の fail-safe 方向（判定不能・未決 → `NO_GO` / `ESCALATE`）は `src/lib/gate-decision.mjs` の決定論純関数が担い、`severity` × `confidence` × `blocking` の 3 軸で出し分けます。出力スキーマ（`severity: critical / major / minor / info`）は変更せず、後方互換を保ちます。
 

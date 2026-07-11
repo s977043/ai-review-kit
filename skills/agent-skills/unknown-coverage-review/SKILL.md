@@ -87,23 +87,32 @@ Issue #1470 の 6 カテゴリを、defect ではなく **evidence-sufficiency �
 report-only 契約に従う。**本観点はマージを止めない**。判定素材を返すだけで、反復・停止・エスカレは caller の責務である。
 
 - 残存 Unknown は [output-format.md](../../../docs/review/output-format.md) §4「Unverified / Residual Risk」の **Unknown Coverage（残存 Unknown / evidence_missing / resolution）** 下位構造へ出力する。各 Unknown は category・severity・blocking・evidence_missing・resolution を持つ。
-- 解消済み Unknown は Good Points 節に根拠（リンク済み受入条件・テスト等）を添えて記録する。
+- 解消済み Unknown は Good Points 節に根拠（リンク済み受入条件・テスト等）を添えて記録する。分量目安は**観点ごとに代表 1 件・1 行に要約**する（低リスク PR では解消済み記録が出力の大半を占めやすいため）。
 - verdict は新語彙を作らず既存 `gate.decision` へ写像する（loop-convergence-contract.md「Unknown Coverage verdict の写像」表が SSoT）。
 
-| verdict        | 既存語彙                     | 条件                                                                                      |
-| -------------- | ---------------------------- | ----------------------------------------------------------------------------------------- |
-| `pass`         | `GO` / `GO_WITH_OBSERVATION` | Blocking Unknown なし・必要証拠あり                                                       |
-| `needs_review` | `ESCALATE`（要人間）         | 非 Blocking Unknown / 軽微な証拠不足 → `severity: major` ＋ §4 残リスク                   |
-| `fail`         | `NO_GO`（要修正）            | セキュリティ / データ損失 / 互換性 / 不可逆の重大 Blocking Unknown → `severity: critical` |
+| verdict        | 既存語彙                     | 条件                                                                                                                              |
+| -------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `pass`         | `GO` / `GO_WITH_OBSERVATION` | Blocking Unknown なし・必要証拠あり。resolution が merge 後の観測で足りる非 Blocking Unknown のみ残る場合は `GO_WITH_OBSERVATION` |
+| `needs_review` | `ESCALATE`（要人間）         | merge 前に解消すべき非 Blocking Unknown / 証拠不足 → `severity: major` ＋ §4 残リスク                                             |
+| `fail`         | `NO_GO`（要修正）            | セキュリティ / データ損失 / 互換性 / 不可逆の重大 Blocking Unknown → `severity: critical`                                         |
+
+判別軸は **resolution の実行タイミング（merge 前 / merge 後）** に置く。非 Blocking Unknown が残ること自体は `needs_review` を意味しない。その resolution が merge 後の観測（次回 eval run・運用レビュー等）で足りるなら `pass`（`GO_WITH_OBSERVATION`）に倒し、merge 前に解消すべきものだけを `needs_review`（`ESCALATE`）に倒す。
 
 - **判定原則**: Unknown の存在だけで自動的に `fail` にはしない。severity・blocking・根拠・復旧可能性で判断し、**未確認と「確認済みでリスク受容」を区別**する。fail-safe（判定不能 → NO_GO / ESCALATE）は `src/lib/gate-decision.mjs` の決定論純関数が担う。
+- **`skippedSkills` の出力例**: `plan` / `review-self` 欠損時は該当観点を `skippedSkills` に記録し、finding は出さずデグレードする（[artifact-input-contract.md](../../../pages/reference/artifact-input-contract.md) と同じ語彙・`review-artifact.md` の `id` / `reasons` スキーマに整合）。例:
+
+  ```json
+  "skippedSkills": [
+    { "id": "unknown-coverage-review#6", "reasons": ["plan artifact missing"] }
+  ]
+  ```
 
 ## False-positive guards
 
 - 指摘の `file:line` は差分内にあること（VERIFICATION の evidence 規則）。差分外の推測に基づく Unknown は finding にせず question として返す。
 - 委譲表に該当する defect は出さない（委譲先 skill の実行に委ねる）。
 - 「証拠が repo 内・別ファイル・PR 本文に存在する可能性」を Grep / artifact 参照で棄却できない場合は、finding ではなく question にする。
-- 低リスク PR（小さな明確なバグ修正・既存パターン踏襲）では過剰な Unknown を出さない。観点ごとに最大 5 件、severity 降順で切り捨てる。
+- 低リスク PR（小さな明確なバグ修正・既存パターン踏襲）では過剰な Unknown を出さない。観点ごとに **finding と question の合算で** 最大 5 件、severity 降順で切り捨てる。
 - correctness bug・セキュリティ欠陥そのものは対象外（defect 系観点の責務）。
 
 ## References
