@@ -773,6 +773,26 @@ skills:
     recommended: true
     description: 'コミット/PR の「全部置換した」「-N%削減」等の完了主張を grep で反証できる残骸や best/typical/worst 試算で検証し、抽出・集約リファクタでは並列度(Promise.all)/fast-path/遅延評価の性能特性退行と、Map/Set 集約キーの cross-kind 衝突による検出漏れも監査する'
 
+  - id: impact-evidence-coverage
+    version: '0.1.0'
+    name: 'Impact Evidence Coverage 影響・失敗系・外部依存の証拠充足'
+    path: skills/midstream/impact-evidence-coverage/SKILL.md
+    category: midstream
+    phase: midstream
+    tags:
+      [
+        impact-evidence-coverage,
+        evidence-sufficiency,
+        impact-analysis,
+        failure-modes,
+        external-dependencies,
+        unknown-coverage,
+        midstream,
+      ]
+    severity: major
+    recommended: true
+    description: 'diff-time で影響調査・失敗系検証・外部依存確認の証拠欠落を検出する evidence-sufficiency 観点。defect は既存 skill へ委譲し、証拠が同一 diff に同梱されていれば充足とみなす。unknown-coverage-review 合成層が委譲する Impact/Failure/External の 3 軸を registry として単独実行する'
+
   - id: cross-file-leakage
     version: '0.1.0'
     name: 'Cross-File Leakage リファクタ後の caller 側残骸検出'
