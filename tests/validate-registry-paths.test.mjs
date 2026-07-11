@@ -147,3 +147,47 @@ test('validateRegistryPaths is independent of process.cwd()', async () => {
     []
   );
 });
+
+// loadSkillRegistry error paths — the shared read/parse helper is a single point
+// consumed by validateRegistryPaths / validateRecommendedEvalCoverage /
+// validateNamingCollisions. Pin that both failure phases surface as a false
+// return plus the phase-specific "Failed to read"/"Failed to parse" message.
+
+test('validateRegistryPaths fails with "Failed to read" when registry.yaml is missing', async () => {
+  // Empty skills dir → no registry.yaml → readFile ENOENT → phase "read".
+  const dir = await createTempDirAsync({ prefix: `${TMP_PREFIX}no-registry-` });
+  const errors = [];
+  const originalError = console.error;
+  console.error = (msg) => errors.push(String(msg));
+  let ok;
+  try {
+    ok = await validateRegistryPaths({ skillsDir: dir, repoRoot: dir });
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(ok, false);
+  assert.ok(
+    errors.some((e) => e.includes('Failed to read') && e.includes('registry')),
+    'expected a "Failed to read skill registry" error'
+  );
+});
+
+test('validateRegistryPaths fails with "Failed to parse" on malformed registry YAML', async () => {
+  const dir = await createTempDirAsync({ prefix: `${TMP_PREFIX}bad-yaml-` });
+  // Unclosed flow sequence → js-yaml throws → phase "parse".
+  await fs.writeFile(path.join(dir, 'registry.yaml'), 'skills: [\n', 'utf8');
+  const errors = [];
+  const originalError = console.error;
+  console.error = (msg) => errors.push(String(msg));
+  let ok;
+  try {
+    ok = await validateRegistryPaths({ skillsDir: dir, repoRoot: dir });
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(ok, false);
+  assert.ok(
+    errors.some((e) => e.includes('Failed to parse') && e.includes('registry')),
+    'expected a "Failed to parse skill registry" error'
+  );
+});
