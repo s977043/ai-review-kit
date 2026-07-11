@@ -76,6 +76,6 @@
   - `Applies to`: reviewing or authoring refactor PRs that claim behavior-invariance.
   - `Evidence`: #1473 (refactor wave issue); #1477, #1478, #1480, #1481 (merged PRs applying each technique).
 
-- `2026-07-11`: The commit-msg hook (`@commitlint/config-conventional`) rejects subjects whose first token after the type is sentence-/start-/pascal-/upper-case — e.g. `docs: AGENTS.md の...` fails with `subject-case`. Start the subject with a lowercase word or Japanese text.
+- `2026-07-11`: The commit-msg hook (`@commitlint/config-conventional`) rejects subjects whose first token after the type is sentence-/start-/pascal-/upper-case — e.g. `docs: AGENTS.md の...` fails with `subject-case`. Start the subject with a lowercase word or Japanese text; when the subject naturally starts with a proper noun or filename, prefix a lowercase action verb instead (e.g. `docs: update AGENTS.md ...`).
   - `Applies to`: any `git commit` on this repo, especially docs commits that would otherwise start with a proper noun or filename.
   - `Evidence`: masked historically by `--no-verify` usage (see the 2026-07-09 entry above); observed on #1450's fix commit.
