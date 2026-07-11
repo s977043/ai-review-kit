@@ -285,6 +285,16 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
  * sorting SKILL.md paths and sorting their parent directories are not
  * equivalent orderings when one sibling name is a prefix of another.
  *
+ * Symlinks are followed: `Dirent.isFile()`/`isDirectory()` do NOT resolve
+ * symlinks, so a `SKILL.md` reached through a symlink, or a package directory
+ * that is itself a symlink, would be silently skipped. For a symlinked entry we
+ * fall back to `fs.stat` (which follows the link target) to decide whether it is
+ * a `SKILL.md` file or a directory to descend into — restoring the fs.stat-based
+ * behavior of the former agent-skills validator. A broken symlink (stat throws)
+ * resolves to neither and is ignored. Non-symlink entries keep the synchronous
+ * `Dirent` fast path, so the performance profile is unchanged when no symlinks
+ * are present.
+ *
  * @param {string} root directory to scan
  * @param {{ includeRoot?: boolean }} [options] when false, `root` itself is not
  *   tested for a `SKILL.md`; scanning begins at its immediate child directories
@@ -292,17 +302,44 @@ export async function listSkillFiles(dir = defaultSkillsDir) {
  * @returns {Promise<string[]>} SKILL.md-bearing directory paths, unsorted
  */
 export async function listSkillPackageDirs(root, { includeRoot = true } = {}) {
+  async function isFileEntry(entry, entryPath) {
+    if (entry.isFile()) return true;
+    if (entry.isSymbolicLink()) {
+      try {
+        return (await fs.stat(entryPath)).isFile();
+      } catch {
+        return false; // broken symlink
+      }
+    }
+    return false;
+  }
   async function walkChildren(dir, entries) {
+    // Synchronous Dirent filter first: regular files never allocate a Promise.
+    // Only symlinked survivors pay an fs.stat to resolve their target kind
+    // (a broken or non-directory symlink descends into nothing).
     const groups = await Promise.all(
       entries
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => walk(path.join(dir, entry.name)))
+        .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+        .map(async (entry) => {
+          const entryPath = path.join(dir, entry.name);
+          if (entry.isSymbolicLink()) {
+            let stats;
+            try {
+              stats = await fs.stat(entryPath);
+            } catch {
+              return []; // broken symlink
+            }
+            if (!stats.isDirectory()) return [];
+          }
+          return walk(entryPath);
+        })
     );
     return groups.flat();
   }
   async function walk(dir) {
     const entries = await fs.readdir(dir, { withFileTypes: true });
-    if (entries.some((entry) => entry.isFile() && entry.name === 'SKILL.md')) {
+    const skillMd = entries.find((entry) => entry.name === 'SKILL.md');
+    if (skillMd && (await isFileEntry(skillMd, path.join(dir, 'SKILL.md')))) {
       return [dir]; // do not descend into nested skill dirs
     }
     return walkChildren(dir, entries);

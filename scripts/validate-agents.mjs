@@ -79,7 +79,7 @@ export async function createAgentValidator(schema) {
   return ajv.compile(schema);
 }
 
-export async function validateAgents() {
+async function validateAgents() {
   let schema;
   if (otelEnabled) {
     schema = await tracer.startActiveSpan('load-schema', async (span) => {
@@ -146,7 +146,7 @@ export async function validateAgents() {
   return success;
 }
 
-export async function validateSingleFile(filePath, validate, repoRoot) {
+async function validateSingleFile(filePath, validate, repoRoot) {
   const relativePath = path.relative(repoRoot, filePath);
   const raw = await fs.readFile(filePath, 'utf8');
   let data = {};
