@@ -256,6 +256,29 @@ export async function validatePacks({
 }
 
 /**
+ * Read and parse skills/registry.yaml once. Returns `{ ok: true, parsed }` on
+ * success (`parsed` is `{}` for an empty file), or `{ ok: false, phase, message }`
+ * where `phase` is 'read' or 'parse'. Callers keep their own error wording so the
+ * existing console messages stay byte-identical.
+ *
+ * @param {string} registryPath absolute/relative path to registry.yaml
+ * @returns {Promise<{ ok: true, parsed: unknown } | { ok: false, phase: 'read' | 'parse', message: string }>}
+ */
+async function loadSkillRegistry(registryPath) {
+  let raw;
+  try {
+    raw = await fs.readFile(registryPath, 'utf8');
+  } catch (err) {
+    return { ok: false, phase: 'read', message: err.message };
+  }
+  try {
+    return { ok: true, parsed: yaml.load(raw) ?? {} };
+  } catch (err) {
+    return { ok: false, phase: 'parse', message: err.message };
+  }
+}
+
+/**
  * Forward-gate: every `recommended: true` skill in skills/registry.yaml must
  * carry quality evidence — an `eval/` or `fixtures/` directory alongside its
  * SKILL.md (#1231). Skills already shipped without such assets are exempted via
@@ -271,20 +294,14 @@ export async function validateRecommendedEvalCoverage({
   repoRoot = defaultPaths.repoRoot,
 } = {}) {
   const registryPath = path.join(skillsDir, 'registry.yaml');
-  let raw;
-  try {
-    raw = await fs.readFile(registryPath, 'utf8');
-  } catch (err) {
-    console.error(`❌ Failed to read skill registry at ${registryPath}: ${err.message}`);
+  const registry = await loadSkillRegistry(registryPath);
+  if (!registry.ok) {
+    console.error(
+      `❌ Failed to ${registry.phase} skill registry at ${registryPath}: ${registry.message}`
+    );
     return false;
   }
-  let parsed;
-  try {
-    parsed = yaml.load(raw) ?? {};
-  } catch (err) {
-    console.error(`❌ Failed to parse skill registry at ${registryPath}: ${err.message}`);
-    return false;
-  }
+  const parsed = registry.parsed;
 
   const skills = Array.isArray(parsed?.skills) ? parsed.skills : [];
   const recommended = skills.filter((s) => s && s.recommended === true);
@@ -350,20 +367,14 @@ export async function validateRegistryPaths({
   repoRoot = defaultPaths.repoRoot,
 } = {}) {
   const registryPath = path.join(skillsDir, 'registry.yaml');
-  let raw;
-  try {
-    raw = await fs.readFile(registryPath, 'utf8');
-  } catch (err) {
-    console.error(`❌ Failed to read skill registry at ${registryPath}: ${err.message}`);
+  const registry = await loadSkillRegistry(registryPath);
+  if (!registry.ok) {
+    console.error(
+      `❌ Failed to ${registry.phase} skill registry at ${registryPath}: ${registry.message}`
+    );
     return false;
   }
-  let parsed;
-  try {
-    parsed = yaml.load(raw) ?? {};
-  } catch (err) {
-    console.error(`❌ Failed to parse skill registry at ${registryPath}: ${err.message}`);
-    return false;
-  }
+  const parsed = registry.parsed;
 
   const skills = Array.isArray(parsed?.skills) ? parsed.skills : [];
   let success = true;
@@ -691,13 +702,12 @@ export function findRegistryNamingCollisions(entries) {
  */
 export async function validateNamingCollisions({ skillsDir = defaultPaths.skillsDir } = {}) {
   const registryPath = path.join(skillsDir, 'registry.yaml');
-  let parsed;
-  try {
-    parsed = yaml.load(await fs.readFile(registryPath, 'utf8')) ?? {};
-  } catch (err) {
-    console.error(`❌ Failed to read/parse skill registry at ${registryPath}: ${err.message}`);
+  const registry = await loadSkillRegistry(registryPath);
+  if (!registry.ok) {
+    console.error(`❌ Failed to read/parse skill registry at ${registryPath}: ${registry.message}`);
     return false;
   }
+  const parsed = registry.parsed;
 
   const ids = (Array.isArray(parsed?.skills) ? parsed.skills : [])
     .map((s) => s?.id)
