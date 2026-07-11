@@ -25,7 +25,7 @@ import {
 import { annotateFingerprints, computeFingerprint } from './finding-factory.mjs';
 import { applySuppressions } from './suppression-apply.mjs';
 import { computeStrictBlock } from './deterministic-gate.mjs';
-import { isDeterministicExecEnabled } from './deterministic-exec-gate.mjs';
+import { runDeterministicExecGateIfEnabled } from './deterministic-exec-gate.mjs';
 
 function normalizePhase(phase) {
   const normalized = (phase || '').toLowerCase();
@@ -462,39 +462,17 @@ export async function runLocalReview({
     selected: context.plan?.selected ?? [],
   });
 
-  // Epic #1347 §11.8 (c2) (#1401): deterministic-gate COMMAND execution. This is
-  // the review-pipeline wiring for the executor built in (c1). It is DOUBLE-gated
-  // and OFF by default — the executor is invoked only when the host explicitly
-  // opts in (`RIVER_DETERMINISTIC_EXEC=1`) AND supplies a host-trusted base tree
-  // (`RIVER_TRUSTED_TREE`) from which the allowlist is read. If either env var is
-  // absent the orchestrator is NEVER called (not even imported, so child_process
-  // stays unloaded) and behavior is byte-for-byte unchanged. The allowlist is
-  // read ONLY from the trusted tree, never from the PR head (§11.6 trust
-  // boundary). A `fail` result folds into strict_block (rule 5b, NO_GO); an
-  // `unrunnable` result surfaces as deterministicUnrunnable (rule 5c, ESCALATE).
-  let deterministicExecStrictBlock = false;
-  let deterministicUnrunnable = false;
-  if (isDeterministicExecEnabled(process.env)) {
-    try {
-      const { runDeterministicGates } = await import('./deterministic-command-orchestrator.mjs');
-      const gateResult = await runDeterministicGates({
-        trustedTree: process.env.RIVER_TRUSTED_TREE,
-        selected: context.plan?.selected ?? [],
-        reviewSourceDir: path.resolve(context.repoRoot),
-        changedFiles: context.changedFiles ?? [],
-        processEnv: process.env,
-      });
-      deterministicExecStrictBlock = gateResult.strictBlock === true;
-      deterministicUnrunnable = gateResult.deterministicUnrunnable === true;
-    } catch {
-      // Fail-safe (§11.5.2): an infrastructure error while running the gate
-      // (temp-dir creation, staging, spawn setup) means we could NOT reach a
-      // verdict. Surface that as deterministicUnrunnable → rule 5c ESCALATE
-      // rather than letting the exception crash the whole review or, worse,
-      // slip through as a clean GO. Never GO on an unrun gate.
-      deterministicUnrunnable = true;
-    }
-  }
+  // Epic #1347 §11.8 (c2) (#1401): deterministic-gate COMMAND execution. Wiring,
+  // security invariants (double-gated + OFF by default + opt-out no-import +
+  // trust boundary + fail-safe) and the strict_block/unrunnable contract all live
+  // in runDeterministicExecGateIfEnabled (the SINGLE source of truth, P2 #1434).
+  const { strictBlock: deterministicExecStrictBlock, deterministicUnrunnable } =
+    await runDeterministicExecGateIfEnabled({
+      env: process.env,
+      selected: context.plan?.selected ?? [],
+      reviewSourceDir: path.resolve(context.repoRoot),
+      changedFiles: context.changedFiles ?? [],
+    });
 
   // Either signal (findings-derived OR command-execution-derived) forces the
   // strict_block gate — they are ORed so neither path can be a bypass.

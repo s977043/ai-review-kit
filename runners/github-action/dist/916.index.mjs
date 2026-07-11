@@ -1780,33 +1780,17 @@ async function runReviewPlan({
       }).strictBlock;
 
       // Epic #1347 §11.8 (c2) (#1401): deterministic-gate command execution.
-      // DOUBLE-gated + OFF by default — the executor is invoked only when the
-      // host opts in (`RIVER_DETERMINISTIC_EXEC=1`) AND supplies a host-trusted
-      // base tree (`RIVER_TRUSTED_TREE`) the allowlist is read from. Absent either
-      // env var, the orchestrator is never imported and behavior is unchanged.
-      // The allowlist is read ONLY from the trusted tree, never from `cwd` (the
-      // PR head under review; §11.6 trust boundary). `fail` → strict_block (5b);
-      // `unrunnable` → deterministicUnrunnable (5c).
-      if ((0,deterministic_exec_gate/* isDeterministicExecEnabled */.z)(process.env)) {
-        try {
-          const { runDeterministicGates } =
-            await Promise.all(/* import() */[__webpack_require__.e(815), __webpack_require__.e(944)]).then(__webpack_require__.bind(__webpack_require__, 8944));
-          const gateResult = await runDeterministicGates({
-            trustedTree: process.env.RIVER_TRUSTED_TREE,
-            selected: plan.selected ?? [],
-            reviewSourceDir: cwd,
-            changedFiles: gateChangedFiles,
-            processEnv: process.env,
-          });
-          if (gateResult.strictBlock === true) gateStrictBlock = true;
-          gateDeterministicUnrunnable = gateResult.deterministicUnrunnable === true;
-        } catch {
-          // Fail-safe (§11.5.2): an infrastructure error while running the gate
-          // means no verdict was reached → deterministicUnrunnable (rule 5c
-          // ESCALATE), never a crash that skips the gate or a clean GO.
-          gateDeterministicUnrunnable = true;
-        }
-      }
+      // Wiring, security invariants (double-gated + OFF by default + opt-out
+      // no-import + trust boundary + fail-safe) and the strict_block/unrunnable
+      // contract all live in runDeterministicExecGateIfEnabled (SSoT, P2 #1434).
+      const execGate = await (0,deterministic_exec_gate/* runDeterministicExecGateIfEnabled */.K)({
+        env: process.env,
+        selected: plan.selected ?? [],
+        reviewSourceDir: cwd,
+        changedFiles: gateChangedFiles,
+      });
+      if (execGate.strictBlock === true) gateStrictBlock = true;
+      gateDeterministicUnrunnable = execGate.deterministicUnrunnable === true;
       executionTrace = {
         skillsExecuted: artifact.plan.selectedSkills.length,
         findingsCount: artifact.findings.length,
