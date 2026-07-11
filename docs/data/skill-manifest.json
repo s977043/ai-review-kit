@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 126,
+  "skillCount": 127,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -606,7 +606,7 @@
     {
       "id": "river-review",
       "path": "skills/agent-skills/river-review",
-      "checksum": "sha256:ba37c22cf43e49672b4883d708c2cc05e21e97c574c22d5a8df07edf4ff6a824",
+      "checksum": "sha256:15994199904fe70afee468532cb30033315d058c24b6f7d67c05fcce8b617f61",
       "files": 6
     },
     {
@@ -618,13 +618,19 @@
     {
       "id": "river-review-code",
       "path": "skills/agent-skills/river-review-code",
-      "checksum": "sha256:289f9bedebccc8e9505c23c41f746032b0f52ab66b107f8965efeadcb3c7e771",
+      "checksum": "sha256:517839063bbf23946861f73446a8a1d30a6f3f7bed264037d00b03fd823beecb",
       "files": 4
     },
     {
       "id": "river-review-docs",
       "path": "skills/agent-skills/river-review-docs",
       "checksum": "sha256:54c50624fe95d4473101b3df5b0fd85cb6fd2c46c40f1d24615cd1ce25a3232d",
+      "files": 2
+    },
+    {
+      "id": "river-review-frontend",
+      "path": "skills/agent-skills/river-review-frontend",
+      "checksum": "sha256:a925f45e805073b2bb1147f98bbd5d48e1045cc987e01682fe7098da77a54bc2",
       "files": 2
     },
     {
