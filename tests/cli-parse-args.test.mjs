@@ -536,3 +536,50 @@ test('parseArgs: explain defaults to falsy without --explain', () => {
   const parsed = parseArgs(['run', '.']);
   assert.ok(!parsed.explain);
 });
+
+// --- #1471 increment A: feedback add --reviewer/--model/--reversed-by ---
+
+test('parseArgs: feedback add parses --reviewer/--model/--reversed-by values', () => {
+  const parsed = parseArgs([
+    'feedback',
+    'add',
+    '--type',
+    'out_of_scope',
+    '--skill',
+    'doc-hygiene',
+    '--reviewer',
+    'gemini',
+    '--model',
+    'gemini-2.5-pro',
+    '--reversed-by',
+    'a1b2c3d4e5f60718',
+  ]);
+  assert.equal(parsed.command, 'feedback');
+  assert.equal(parsed.feedbackSubcommand, 'add');
+  assert.equal(parsed.feedbackReviewer, 'gemini');
+  assert.equal(parsed.feedbackModel, 'gemini-2.5-pro');
+  assert.equal(parsed.feedbackReversedBy, 'a1b2c3d4e5f60718');
+});
+
+test('parseArgs: feedback --reviewer/--model/--reversed-by require a value', () => {
+  for (const flag of ['--reviewer', '--model', '--reversed-by']) {
+    const parsed = parseArgs(['feedback', 'add', '--type', 'accepted', '--skill', 's', flag]);
+    assert.equal(parsed.command, 'help', `${flag} without a value falls back to help`);
+  }
+});
+
+test('parseArgs: feedback --reviewer does not consume a following flag as its value', () => {
+  const parsed = parseArgs([
+    'feedback',
+    'add',
+    '--type',
+    'accepted',
+    '--skill',
+    's',
+    '--reviewer',
+    '--model',
+    'gpt-5',
+  ]);
+  assert.equal(parsed.command, 'help', 'next flag is not eaten as the value');
+  assert.equal(parsed.feedbackReviewer, null);
+});

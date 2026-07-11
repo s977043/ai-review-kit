@@ -63479,15 +63479,33 @@ function parseArgs(argv) {
         continue;
       }
       if (arg === '--reviewer') {
-        parsed.feedbackReviewer = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --reviewer option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackReviewer = value;
         continue;
       }
       if (arg === '--model') {
-        parsed.feedbackModel = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --model option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackModel = value;
         continue;
       }
       if (arg === '--reversed-by') {
-        parsed.feedbackReversedBy = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --reversed-by option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackReversedBy = value;
         continue;
       }
     }
