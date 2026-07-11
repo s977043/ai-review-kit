@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.47.0](https://github.com/s977043/river-review/compare/v1.46.1...v1.47.0) (2026-07-11)
+
+
+### Features
+
+* **feedback:** reviewer/model/reversedBy と out_of_scope を後方互換で追加する ([#1471](https://github.com/s977043/river-review/issues/1471) 増分A) ([#1488](https://github.com/s977043/river-review/issues/1488)) ([9d477d4](https://github.com/s977043/river-review/commit/9d477d47b40ad2bd2e34b424746753aedc419132))
+* **skill:** refactor-claim-audit に抽出・集約リファクタの退行観点を追加する ([#1487](https://github.com/s977043/river-review/issues/1487)) ([5d5423f](https://github.com/s977043/river-review/commit/5d5423fb362704110510dcdc2b0ea64f22c4c017))
+* **skills:** bot FP パターン3種を guard と canary で機械担保する ([#1489](https://github.com/s977043/river-review/issues/1489)) ([ebf9f33](https://github.com/s977043/river-review/commit/ebf9f33e6119bce2542b625951656cb73d6b9cdf))
+
 ## [1.46.1](https://github.com/s977043/river-review/compare/v1.46.0...v1.46.1) (2026-07-11)
 
 
