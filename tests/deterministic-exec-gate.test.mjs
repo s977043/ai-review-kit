@@ -9,7 +9,12 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isDeterministicExecEnabled } from '../src/lib/deterministic-exec-gate.mjs';
+import {
+  isDeterministicExecEnabled,
+  runDeterministicExecGateIfEnabled,
+} from '../src/lib/deterministic-exec-gate.mjs';
+
+const ON_ENV = { RIVER_DETERMINISTIC_EXEC: '1', RIVER_TRUSTED_TREE: '/base' };
 
 describe('isDeterministicExecEnabled — double env-var opt-in gate', () => {
   test('both vars set correctly → enabled', () => {
@@ -51,4 +56,61 @@ describe('isDeterministicExecEnabled — double env-var opt-in gate', () => {
       );
     });
   }
+});
+
+describe('runDeterministicExecGateIfEnabled — wiring + fail-safe (P2 #1434)', () => {
+  test('opt-out (default env) → returns all-false WITHOUT importing the orchestrator', async () => {
+    let imported = false;
+    const result = await runDeterministicExecGateIfEnabled({
+      env: {},
+      selected: [],
+      reviewSourceDir: '/src',
+      changedFiles: [],
+      importOrchestrator: async () => {
+        imported = true;
+        return { runDeterministicGates: async () => ({}) };
+      },
+    });
+    assert.equal(imported, false, 'orchestrator must NOT be imported when opted out');
+    assert.deepEqual(result, { strictBlock: false, deterministicUnrunnable: false });
+  });
+
+  test('opted in, orchestrator throws → fail-safe deterministicUnrunnable=true', async () => {
+    const result = await runDeterministicExecGateIfEnabled({
+      env: ON_ENV,
+      selected: [],
+      reviewSourceDir: '/src',
+      changedFiles: [],
+      importOrchestrator: async () => {
+        throw new Error('infra failure (temp-dir/staging/spawn)');
+      },
+    });
+    assert.deepEqual(result, { strictBlock: false, deterministicUnrunnable: true });
+  });
+
+  test('opted in, gate returns fail → strictBlock=true forwarded', async () => {
+    const result = await runDeterministicExecGateIfEnabled({
+      env: ON_ENV,
+      selected: [],
+      reviewSourceDir: '/src',
+      changedFiles: [],
+      importOrchestrator: async () => ({
+        runDeterministicGates: async () => ({ strictBlock: true, deterministicUnrunnable: false }),
+      }),
+    });
+    assert.deepEqual(result, { strictBlock: true, deterministicUnrunnable: false });
+  });
+
+  test('opted in, gate returns unrunnable → deterministicUnrunnable=true forwarded', async () => {
+    const result = await runDeterministicExecGateIfEnabled({
+      env: ON_ENV,
+      selected: [],
+      reviewSourceDir: '/src',
+      changedFiles: [],
+      importOrchestrator: async () => ({
+        runDeterministicGates: async () => ({ strictBlock: false, deterministicUnrunnable: true }),
+      }),
+    });
+    assert.deepEqual(result, { strictBlock: false, deterministicUnrunnable: true });
+  });
 });

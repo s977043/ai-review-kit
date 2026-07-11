@@ -5,13 +5,14 @@ export const modules = {
 /***/ 8944:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
+// ESM COMPAT FLAG
+__webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
+  ALLOWLIST_RELATIVE_PATH: () => (/* binding */ ALLOWLIST_RELATIVE_PATH),
   runDeterministicGates: () => (/* binding */ runDeterministicGates)
 });
-
-// UNUSED EXPORTS: ALLOWLIST_RELATIVE_PATH
 
 // EXTERNAL MODULE: external "node:fs/promises"
 var promises_ = __webpack_require__(1455);
