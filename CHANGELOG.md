@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.48.0](https://github.com/s977043/river-review/compare/v1.47.0...v1.48.0) (2026-07-11)
+
+
+### Features
+
+* **feedback:** feedback:rules に --out artifact 出力を追加する ([#1471](https://github.com/s977043/river-review/issues/1471) 増分B) ([#1492](https://github.com/s977043/river-review/issues/1492)) ([5fdcc36](https://github.com/s977043/river-review/commit/5fdcc368a2a8e61c73f8bbca949fa836a783bd67))
+* **skills:** Unknown Coverage Review のメタ観点 agent-skill を追加する ([#1470](https://github.com/s977043/river-review/issues/1470) P1) ([#1494](https://github.com/s977043/river-review/issues/1494)) ([6cd218c](https://github.com/s977043/river-review/commit/6cd218c233418bda2bde57c0921ecc89fb0e4651))
+
 ## [1.47.0](https://github.com/s977043/river-review/compare/v1.46.1...v1.47.0) (2026-07-11)
 
 
