@@ -33,6 +33,7 @@
 - **Missing Tests（不足テスト）**: 追加すべきテスト観点（正常系で抜けている異常系・境界・回帰）。finding 化しにくい「テストの不在」を可視化する
 - **Follow-up Issues（フォローアップ）**: 本 PR のスコープ外だが別途追跡すべき課題。Blocker でない Major を別 Issue で追う運用と接続する
 - **Unverified / Residual Risk（未確認事項・残リスク）**: レビュー時点で検証しきれなかった前提・観測できなかった挙動・残る懸念を、finding とは別にレポート全体として明示する。判断の限界を後から追跡可能にする
+  - **Unknown Coverage（残存 Unknown / evidence_missing / resolution）**: 残リスク節の下位構造。レビュー時点で残る Unknown を構造化して並べるブロックである。各 Unknown 項目は category・severity・blocking・evidence_missing（不足している証拠）・resolution（解消手順）を持つ。確認済みで受容したリスクと未確認のリスクを区別し、解消済み Unknown には根拠（evidence: リンク済み受入条件・テスト等）を関連付ける。verdict への写像は [loop-convergence-contract.md](../../pages/reference/loop-convergence-contract.md) の写像表に従う（新語彙は作らない）
 
 > これらは人間/エージェントが読む要約セクションであり、機械可読な finding は引き続き Comments（severity 付き）で表現する。
 
