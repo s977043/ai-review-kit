@@ -49,6 +49,7 @@ River Review が認識する入力アーティファクトは以下の通りで�
 - **形式**: UTF-8 Markdown。見出し構造・箇条書きは自由。
 - **サイズ目安**: 1 ファイルあたり 100KB 以下を推奨。上限を超える場合 River Review は差分最適化（要約・トリム）を適用する場合がある。
 - **欠損時**: 該当 artifact を参照する skill はその観点をスキップし、`skippedSkills` にその旨を記録する。
+- **PlanGate #810 連携（任意）**: PlanGate #810（Unknown Discovery）は assumption / unknown ledger（Assumptions・Known Unknowns・Blocking Unknowns 等の節）を出力する。River Review はこれを専用 artifact を新設せず `plan` artifact 内の追加セクションとして受け取る。欠損時の挙動は本節の「欠損時」と同一であり、PlanGate への依存は必須にしない。
 
 ### `review-self` / `review-external`
 
