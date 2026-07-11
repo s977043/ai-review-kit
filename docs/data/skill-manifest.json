@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 127,
+  "skillCount": 129,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -116,6 +116,12 @@
       "path": "skills/upstream/architecture-validation-plan",
       "checksum": "sha256:047f5d9f6e3232a661ab86b083f4e9baa0f490596d15785474a1458c755d674e",
       "files": 9
+    },
+    {
+      "id": "assumption-resolution-trace",
+      "path": "skills/midstream/assumption-resolution-trace",
+      "checksum": "sha256:756fdb5cb0699600e5f322c3191c1b539fcd33d94bea9fb69dad6f809c27d9fe",
+      "files": 3
     },
     {
       "id": "async-correctness",
@@ -356,6 +362,12 @@
       "path": "skills/midstream/i18n-unused-key",
       "checksum": "sha256:b4bc3f91e74311dc416dd5ab7e51d4e467156d412e829a888a4092974e96d186",
       "files": 5
+    },
+    {
+      "id": "impact-evidence-coverage",
+      "path": "skills/midstream/impact-evidence-coverage",
+      "checksum": "sha256:116dafbe8a19b9f86330d6ba56ad5dde4007d0762eb6f452268063ea0ee914c4",
+      "files": 3
     },
     {
       "id": "independent-review-synthesis",
@@ -750,7 +762,7 @@
     {
       "id": "unknown-coverage-review",
       "path": "skills/agent-skills/unknown-coverage-review",
-      "checksum": "sha256:7d4bcc5ae1e7c76dc3b5c95845375da65f8b008a879a2a3ece0c9616755732b2",
+      "checksum": "sha256:4034262cec38237bef65b2fe0728cc77a1ac843ca9ca8d1933ff72b72dfd7afe",
       "files": 5
     },
     {
