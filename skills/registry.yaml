@@ -773,6 +773,26 @@ skills:
     recommended: true
     description: 'コミット/PR の「全部置換した」「-N%削減」等の完了主張を grep で反証できる残骸や best/typical/worst 試算で検証し、抽出・集約リファクタでは並列度(Promise.all)/fast-path/遅延評価の性能特性退行と、Map/Set 集約キーの cross-kind 衝突による検出漏れも監査する'
 
+  - id: assumption-resolution-trace
+    version: '0.1.0'
+    name: 'Assumption Resolution Trace Plan の前提解消トレーサビリティ'
+    path: skills/midstream/assumption-resolution-trace/SKILL.md
+    category: midstream
+    phase: midstream
+    tags:
+      [
+        assumption-resolution-trace,
+        evidence-sufficiency,
+        plan-traceability,
+        assumption,
+        open-question,
+        unknown-coverage,
+        midstream,
+      ]
+    severity: major
+    recommended: true
+    description: 'plan artifact がある時のみ、plan の assumption / open question が実装で解消された証拠を diff・PR 本文と突合する evidence-sufficiency 観点。plan 欠損時は発火せず、PR 本文に前提が inline 列挙されていれば列挙分のみ部分評価する。unknown-coverage-review 合成層の観点6 を registry として単独実行する'
+
   - id: cross-file-leakage
     version: '0.1.0'
     name: 'Cross-File Leakage リファクタ後の caller 側残骸検出'
