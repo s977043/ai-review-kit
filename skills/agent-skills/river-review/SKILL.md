@@ -92,10 +92,13 @@ review 実行プランを組むときに参照する入力は、以下の優先�
 3. Finding verification
    └─ VERIFICATION.md の 6 項目 self-check を全件通過したものだけ出力
 
-4. Feedback classification（人間/エージェント返答受領後）
+4. Unknown Coverage 合成（finding verification 後のメタ観点）
+   └─ 検証済み finding + artifact を横断し、unknown-coverage-review へ委譲して残存 Unknown / 証拠不足を合成（report-only・マージは止めない・plan 欠損時は skippedSkills でデグレード）
+
+5. Feedback classification（人間/エージェント返答受領後）
    └─ FEEDBACK.md の 7 type で分類
 
-5. Improvement loop handoff
+6. Improvement loop handoff
    └─ IMPROVEMENT_LOOP.md の 9 ステップに従って fixture / reference / suppression / routing を更新
 ```
 
