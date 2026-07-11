@@ -98,7 +98,7 @@ report-only 契約に従う。**本観点はマージを止めない**。判定�
 
 判別軸は **resolution の実行タイミング（merge 前 / merge 後）** に置く。非 Blocking Unknown が残ること自体は `needs_review` を意味しない。その resolution が merge 後の観測（次回 eval run・運用レビュー等）で足りるなら `pass`（`GO_WITH_OBSERVATION`）に倒し、merge 前に解消すべきものだけを `needs_review`（`ESCALATE`）に倒す。
 
-- **判定原則**: Unknown の存在だけで自動的に `fail` にはしない。severity・blocking・根拠・復旧可能性で判断し、**未確認と「確認済みでリスク受容」を区別**する。fail-safe（判定不能 → NO_GO / ESCALATE）は `src/lib/gate-decision.mjs` の決定論純関数が担う。
+- **判定原則**: Unknown の存在だけで自動的に `fail` にはしない。severity・blocking・根拠・復旧可能性で判断し、**未確認と「確認済みでリスク受容」を区別**する。fail-safe（判定不能 → NO_GO / ESCALATE）は `src/lib/gate-decision.mjs` の決定論純関数が担う。resolution が merge 後の観測で足りる非 Blocking Unknown を finding として出す場合、severity は **`minor` / `info` に制限**する（`major` 以上を出しながら `verdict: pass` に写像すると矛盾するため）。
 - **`skippedSkills` の出力例**: `plan` / `review-self` 欠損時は該当観点を `skippedSkills` に記録し、finding は出さずデグレードする（[artifact-input-contract.md](../../../pages/reference/artifact-input-contract.md) と同じ語彙・`review-artifact.md` の `id` / `reasons` スキーマに整合）。例:
 
   ```json
@@ -112,7 +112,7 @@ report-only 契約に従う。**本観点はマージを止めない**。判定�
 - 指摘の `file:line` は差分内にあること（VERIFICATION の evidence 規則）。差分外の推測に基づく Unknown は finding にせず question として返す。
 - 委譲表に該当する defect は出さない（委譲先 skill の実行に委ねる）。
 - 「証拠が repo 内・別ファイル・PR 本文に存在する可能性」を Grep / artifact 参照で棄却できない場合は、finding ではなく question にする。
-- 低リスク PR（小さな明確なバグ修正・既存パターン踏襲）では過剰な Unknown を出さない。観点ごとに **finding と question の合算で** 最大 5 件、severity 降順で切り捨てる。
+- 低リスク PR（小さな明確なバグ修正・既存パターン踏襲）では過剰な Unknown を出さない。観点ごとに **finding と question の合算で** 最大 5 件、severity 降順で切り捨てる。question は severity を持たないため **`info` 相当として扱い、切り捨ては findings（severity 降順）→ questions の順**とする。
 - correctness bug・セキュリティ欠陥そのものは対象外（defect 系観点の責務）。
 
 ## References

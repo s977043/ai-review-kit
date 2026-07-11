@@ -236,7 +236,7 @@ Unknown Coverage Review（#1470）が出力する verdict も、新しい語彙�
 | `evidence_checked` / `evidence_missing` | finding `evidence[]` ＋ §4 節本文                     | 不足証拠は §4 の残リスク文と `suggestion`（解消手順）で表現する                                                                   |
 | `resolved`（解消済み Unknown）          | Good Points 節（§4）＋ 根拠 file / test 参照          | 「解消済みには根拠を関連付ける」受入条件を §4 で満たす。分量目安は観点ごとに代表 1 件・1 行に要約する                             |
 
-`pass` と `needs_review` の境界は **resolution の実行タイミング（merge 前 / merge 後）** を判別軸とします。非 Blocking Unknown が1件でも残ることは、それだけで `needs_review` を意味しません。その resolution が merge 後の観測（次回 eval run・運用レビュー等）で足りるなら `pass`（`GO_WITH_OBSERVATION`）、merge 前に解消すべきものが残る場合のみ `needs_review`（`ESCALATE`）へ倒します（#1470 P1 受入後観測）。
+`pass` と `needs_review` の境界は **resolution の実行タイミング（merge 前 / merge 後）** を判別軸とします。非 Blocking Unknown が1件でも残ることは、それだけで `needs_review` を意味しません。その resolution が merge 後の観測（次回 eval run・運用レビュー等）で足りるなら `pass`（`GO_WITH_OBSERVATION`）、merge 前に解消すべきものが残る場合のみ `needs_review`（`ESCALATE`）へ倒します（#1470 P1 受入後観測）。`GO_WITH_OBSERVATION` へ写像する非 Blocking Unknown を finding として出す場合、severity は `minor` / `info` に制限します。`major` 以上の finding を伴う `verdict: pass` は `gate.decision` の判定と矛盾するためです。
 
 `gate.decision` の fail-safe 方向（判定不能・未決 → `NO_GO` / `ESCALATE`）は `src/lib/gate-decision.mjs` の決定論純関数が担い、`severity` × `confidence` × `blocking` の 3 軸で出し分けます。出力スキーマ（`severity: critical / major / minor / info`）は変更せず、後方互換を保ちます。
 
