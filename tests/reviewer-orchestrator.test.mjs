@@ -73,7 +73,7 @@ describe('REVIEWER_ROLES', () => {
   // skills/agent-skills/review-team/SKILL.md role table (SSoT for role scope).
   it('bug-hunter focusInstructions covers concurrent access race conditions', () => {
     const focus = REVIEWER_ROLES['bug-hunter'].focusInstructions;
-    assert.match(focus.toLowerCase(), /concurrent access race condition/);
+    assert.match(focus, /concurrent access race[- ]conditions?/i);
   });
 });
 
