@@ -63,6 +63,7 @@ AI coding agent の実行能力が上がるほど、見逃しは単純なコー�
 - ビルド成果物・生成物（`dist/**`・`*.map`・lockfile・自動生成 manifest）は Gate 判定からもレビュー対象からも除外する。
 - **PlanGate 非依存**: `plan` / `review-self` などの artifact が欠損しても動作する。欠損した観点は finding を出さず `skippedSkills` に記録してデグレードする（artifact-input-contract の既定挙動）。
 - **観点6 の plan 代替 evidence**: 観点6（Plan / Assumption）は `plan` artifact 欠損時、**PR 本文へ前提・open question が inline 列挙されていれば列挙分のみ部分評価**する（外部 issue は取得・推測しない）。**計画 issue の bare 参照（`#NNNN`）のみなら skip** し `skippedSkills` に記録する。この分岐は registry skill `assumption-resolution-trace` と同一ルールに揃える。
+- **PlanGate #810 ledger**: PlanGate #810 が assumption/unknown ledger を出力する場合も、専用 artifact を新設しない。`plan` artifact 経由で受け取る同一の artifact-driven パターンに従う（[artifact-input-contract.md](../../../pages/reference/artifact-input-contract.md)）。欠損時は上記と同じデグレード（`skippedSkills`）を適用する。PlanGate への依存は必須にしない。
 
 ## 6 Unknown 観点 / Perspectives
 

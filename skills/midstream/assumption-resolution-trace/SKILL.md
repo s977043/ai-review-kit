@@ -143,4 +143,4 @@ plan の前提がいくつか未確認のようです
 ## References
 
 - `skills/agent-skills/unknown-coverage-review/references/DELEGATION.md` — 合成層との分界・委譲表（SSoT。観点6 Plan / Assumption Traceability）
-- `pages/reference/artifact-input-contract.md` — `plan` artifact の入力契約（PlanGate 非依存のデグレード挙動）
+- `pages/reference/artifact-input-contract.md` — `plan` artifact の入力契約（PlanGate 非依存のデグレード挙動、および PlanGate #810 ledger を専用 artifact なしで `plan` 経由に受け取る方針）
