@@ -18,6 +18,7 @@ applyTo:
   - 'scripts/**/*.mjs'
   - '**/migrations/**'
   - '**/*.sql'
+  - '**/*.{yaml,yml,json,toml}'
 inputContext: [diff, fullFile, plan, review-self, review-external, test-cases]
 outputKind: [findings, questions, actions]
 tags:
@@ -85,7 +86,7 @@ Issue #1470 の 6 カテゴリを、defect ではなく **evidence-sufficiency �
 
 report-only 契約に従う。**本観点はマージを止めない**。判定素材を返すだけで、反復・停止・エスカレは caller の責務である。
 
-- 残存 Unknown は [output-format.md](https://github.com/s977043/river-review/blob/main/docs/review/output-format.md) §4「Unverified / Residual Risk」の **Unknown Coverage（残存 Unknown / evidence_missing / resolution）** 下位構造へ出力する。各 Unknown は category・severity・blocking・evidence_missing・resolution を持つ。
+- 残存 Unknown は [output-format.md](../../../docs/review/output-format.md) §4「Unverified / Residual Risk」の **Unknown Coverage（残存 Unknown / evidence_missing / resolution）** 下位構造へ出力する。各 Unknown は category・severity・blocking・evidence_missing・resolution を持つ。
 - 解消済み Unknown は Good Points 節に根拠（リンク済み受入条件・テスト等）を添えて記録する。
 - verdict は新語彙を作らず既存 `gate.decision` へ写像する（loop-convergence-contract.md「Unknown Coverage verdict の写像」表が SSoT）。
 
