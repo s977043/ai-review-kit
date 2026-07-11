@@ -20,7 +20,7 @@
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { builtinModules } from 'node:module';
+import { isBuiltin } from 'node:module';
 
 const ROOT = process.cwd();
 
@@ -36,7 +36,6 @@ function loadDeclaredDeps() {
   }
 }
 const DECLARED_DEPS = loadDeclaredDeps();
-const NODE_BUILTINS = new Set(builtinModules);
 
 // phantom-dep を判定する scope。src/lib は CLI 本体の production ライブラリで、
 // site（src/components の docusaurus）や生成物（dist）を含めると外部提供前提の
@@ -46,9 +45,9 @@ const PHANTOM_SCAN_PREFIX = `src${sep}lib${sep}`;
 // import 指定子から npm パッケージ名（scope 付きは @scope/pkg）を取り出す。
 // 相対 / 絶対 / node: builtin は対象外（null を返す）。
 function packageBaseOf(spec) {
-  if (spec.startsWith('.') || spec.startsWith('/') || spec.startsWith('node:')) return null;
+  if (spec.startsWith('.') || spec.startsWith('/') || isBuiltin(spec)) return null;
   const base = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
-  if (NODE_BUILTINS.has(base)) return null;
+  if (isBuiltin(base)) return null;
   return base;
 }
 
@@ -154,9 +153,13 @@ for (const file of collectFiles()) {
   const rel = relative(ROOT, file);
   const isTestFile = rel.startsWith(`tests${sep}`);
 
+  // import 文は 1 度だけ materialize し、Check 1 / Check 4 で共有する
+  // （同一 IMPORT_RE の二重 matchAll を避ける）。
+  const imports = [...text.matchAll(IMPORT_RE)];
+
   // Check 1: duplicate imports（全 scan 対象）
   const seen = new Map();
-  for (const m of text.matchAll(IMPORT_RE)) {
+  for (const m of imports) {
     const spec = m[1];
     const line = lineOf(text, m.index);
     if (seen.has(spec)) {
@@ -168,7 +171,7 @@ for (const file of collectFiles()) {
 
   // Check 4: phantom-dep（src/lib/** の import が dependencies 未宣言）
   if (DECLARED_DEPS != null && rel.startsWith(PHANTOM_SCAN_PREFIX)) {
-    for (const m of text.matchAll(IMPORT_RE)) {
+    for (const m of imports) {
       const base = packageBaseOf(m[1]);
       if (base == null || DECLARED_DEPS.has(base)) continue;
       phantomDeps.push({ file: rel, line: lineOf(text, m.index), pkg: base });
