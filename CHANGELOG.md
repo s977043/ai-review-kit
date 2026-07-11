@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.49.0](https://github.com/s977043/river-review/compare/v1.48.0...v1.49.0) (2026-07-11)
+
+
+### Features
+
+* **review-team:** bug-hunter focusInstructions に並行アクセス競合を明示する ([#1455](https://github.com/s977043/river-review/issues/1455) C1) ([#1498](https://github.com/s977043/river-review/issues/1498)) ([d0f39b5](https://github.com/s977043/river-review/commit/d0f39b51f031a615aaba0bf9d9e8b1f561ba7395))
+* **skills:** river-review-frontend エントリスキルを新設する ([#1462](https://github.com/s977043/river-review/issues/1462) 案B) ([#1500](https://github.com/s977043/river-review/issues/1500)) ([8f38551](https://github.com/s977043/river-review/commit/8f38551f6d845837cd58cb8de6561bd6c0e127a9))
+
 ## [1.48.0](https://github.com/s977043/river-review/compare/v1.47.0...v1.48.0) (2026-07-11)
 
 
