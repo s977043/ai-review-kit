@@ -6,9 +6,9 @@ export const modules = {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   combineExitCodes: () => (/* binding */ combineExitCodes),
-/* harmony export */   gateDecisionExitCode: () => (/* binding */ gateDecisionExitCode)
+/* harmony export */   resolveGateExitCode: () => (/* binding */ resolveGateExitCode)
 /* harmony export */ });
+/* unused harmony exports gateDecisionExitCode, combineExitCodes */
 /**
  * Gate → CLI exit-code mapping (Epic #1347 S4 PR-C, #1351).
  *
@@ -71,6 +71,67 @@ function combineExitCodes(...codes) {
     }
   }
   return best;
+}
+
+/**
+ * Resolve the opt-in review-gate exit code shared by `river review` (plan/exec)
+ * and `river run`. Extracted verbatim from the two identical CLI blocks so the
+ * severity-gate + decision-gate combination stays in one place (#1452 refactor).
+ *
+ * Behavior is byte-identical to the inlined blocks: the FAIL/WARN and
+ * `Gate: … → exit N` lines, their order, and the returned code are unchanged.
+ * The two call sites differ only in HOW they source (a) the object passed to
+ * `evaluateReviewGate` and (b) the `{ decision, reasonCode }` gate object, so
+ * both are supplied as thunks and invoked lazily — `getGateInput` only when a
+ * severity flag is set, `getGateObject` only when `--gate` is set — to preserve
+ * the original blocks' lazy computation (e.g. `deriveRunGate` / `formatJsonOutput`
+ * are not called unless their branch runs).
+ *
+ * @param {object} params
+ * @param {string|undefined} params.failOn
+ * @param {string|undefined} params.warnOn
+ * @param {boolean|undefined} params.advisoryOnly
+ * @param {boolean|undefined} params.gate
+ * @param {() => object} params.getGateInput - object passed to evaluateReviewGate
+ * @param {() => ({ decision?: string, reasonCode?: string } | undefined)} params.getGateObject
+ * @returns {Promise<number>}
+ */
+async function resolveGateExitCode({
+  failOn,
+  warnOn,
+  advisoryOnly,
+  gate,
+  getGateInput,
+  getGateObject,
+}) {
+  let severityCode = 0;
+  if (failOn || warnOn || advisoryOnly) {
+    const { evaluateReviewGate } = await __webpack_require__.e(/* import() */ 916).then(__webpack_require__.bind(__webpack_require__, 6916));
+    const result = evaluateReviewGate(getGateInput(), {
+      failOn: failOn ?? 'critical',
+      warnOn: warnOn ?? 'major',
+      advisoryOnly,
+    });
+    if (result.level === 'fail') {
+      console.error(`Review gate: FAIL (max severity: ${result.maxSeverity}).`);
+    } else if (result.level === 'warn') {
+      console.error(`Review gate: WARN (max severity: ${result.maxSeverity}).`);
+    }
+    severityCode = result.code;
+  }
+  // Epic #1347 S4 (#1351): --gate maps the gate DECISION to an exit code
+  // (GO→0 / NO_GO→1 / ESCALATE→3). When combined with a severity gate the
+  // stricter outcome wins.
+  if (gate) {
+    const gateObject = getGateObject();
+    const decision = gateObject?.decision;
+    const gateCode = gateDecisionExitCode(decision);
+    console.error(
+      `Gate: ${decision ?? 'UNKNOWN'} (${gateObject?.reasonCode ?? 'n/a'}) → exit ${gateCode}.`
+    );
+    return combineExitCodes(severityCode, gateCode);
+  }
+  return severityCode;
 }
 
 
