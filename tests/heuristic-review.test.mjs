@@ -3,7 +3,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
-import { buildHeuristicComments } from '../src/lib/heuristic-review.mjs';
+import {
+  buildHeuristicComments,
+  SKILL_HEURISTIC_MAP,
+  HEURISTIC_SKILL_IDS,
+  HEURISTIC_KIND_PRESENTATIONS,
+} from '../src/lib/heuristic-review.mjs';
 
 test('buildHeuristicComments detects hardcoded secrets for security skill', () => {
   const diffText = fs.readFileSync(
@@ -914,4 +919,65 @@ index 1111111..2222222 100644
   assert.equal(comments.length, 1);
   assert.equal(comments[0].file, 'src/lib/registry-cache.mjs');
   assert.equal(comments[0].kind, 'closure-scope-retention');
+});
+
+// --- 単一レジストリ（SSoT）の不変条件 -------------------------------------
+// detector の追加は heuristic-review.mjs の HEURISTIC_REGISTRY 1 箇所で完結し、
+// SKILL_HEURISTIC_MAP / HEURISTIC_SKILL_IDS / HEURISTIC_KIND_PRESENTATIONS は
+// すべてそこから導出される。以下はその導出契約を固定する回帰テスト。
+test('registry derives HEURISTIC_SKILL_IDS from SKILL_HEURISTIC_MAP keys', () => {
+  assert.deepEqual(HEURISTIC_SKILL_IDS, Object.keys(SKILL_HEURISTIC_MAP));
+  // dry-run フィルタと review-runner が依存する既知スキル ID の集合。
+  assert.deepEqual([...HEURISTIC_SKILL_IDS].sort(), [
+    'altitude-generalization',
+    'closure-scope-retention',
+    'coverage-gap',
+    'logging-observability',
+    'security-basic',
+    'test-existence',
+    'typescript-strict',
+  ]);
+});
+
+test('SKILL_HEURISTIC_MAP values are non-empty detector-name arrays', () => {
+  for (const [skillId, names] of Object.entries(SKILL_HEURISTIC_MAP)) {
+    assert.ok(Array.isArray(names) && names.length > 0, `${skillId} has detectors`);
+    for (const name of names) {
+      assert.match(name, /^find[A-Z]/, `${name} looks like a detector function name`);
+    }
+  }
+});
+
+test('every registry kind has a fully-specified presentation (no drift)', () => {
+  const SEVERITIES = new Set(['blocker', 'warning', 'nit']);
+  const CONFIDENCES = new Set(['high', 'medium', 'low']);
+  assert.ok(HEURISTIC_KIND_PRESENTATIONS.size >= 18, 'covers all known kinds');
+  for (const [kind, preset] of HEURISTIC_KIND_PRESENTATIONS) {
+    for (const field of ['finding', 'evidence', 'impact', 'fix']) {
+      assert.equal(typeof preset[field], 'string', `${kind}.${field} is a string`);
+      assert.ok(preset[field].length > 0, `${kind}.${field} non-empty`);
+    }
+    assert.ok(SEVERITIES.has(preset.severity), `${kind}.severity in vocab`);
+    assert.ok(CONFIDENCES.has(preset.confidence), `${kind}.confidence in vocab`);
+  }
+});
+
+test('buildHeuristicComments emits only kinds known to the presentation registry', () => {
+  // security-basic のすべての detector を発火させる差分。emit された kind が
+  // すべて HEURISTIC_KIND_PRESENTATIONS に存在すれば、review-engine 側の
+  // default フォールバックに落ちる orphan kind が無いことを示す。
+  const diffText = `--- a/src/app.js
++++ b/src/app.js
+@@ -1,0 +1,3 @@
++const API_KEY = "ghp_0123456789012345678901234567890123456";
++eval(userInput);
++const h = createHash('md5');
+`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+  assert.ok(comments.length > 0, 'at least one detector fired');
+  for (const c of comments) {
+    assert.ok(HEURISTIC_KIND_PRESENTATIONS.has(c.kind), `kind ${c.kind} has a presentation`);
+  }
 });
