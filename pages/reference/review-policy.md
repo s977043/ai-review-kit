@@ -65,6 +65,7 @@ AI レビューの出力は以下の構造に従います。
 - **Missing Tests（不足テスト）**：追加すべきテスト観点（抜けている異常系・境界・回帰）。finding 化しにくいテストの不在を可視化する。
 - **Follow-up Issues（フォローアップ）**：本変更のスコープ外だが別途追跡すべき課題。Blocker でない Major を別 Issue で追う運用と接続する。
 - **Unverified / Residual Risk（未確認事項・残リスク）**：レビュー時点で検証しきれなかった前提や、観測できなかった挙動、残る懸念を、finding とは別にレポート全体として明示する。判断の限界を後から追跡できるようにする。
+  - **Unknown Coverage（残存 Unknown / evidence_missing / resolution）**：残リスク節の下位構造として、レビュー時点で残る Unknown を構造化して並べる。各 Unknown 項目は category・severity・blocking・evidence_missing（不足している証拠）・resolution（解消手順）を持つ。確認済みで受容したリスクと未確認のリスクを区別し、解消済み Unknown には根拠（evidence）を関連付ける。verdict への写像は [loop-convergence-contract.md](./loop-convergence-contract.md) の写像表に従い、新しい語彙は作らない。
 
 ## 3. 禁止事項
 
