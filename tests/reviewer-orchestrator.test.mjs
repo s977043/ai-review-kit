@@ -67,6 +67,14 @@ describe('REVIEWER_ROLES', () => {
       assert.ok(typeof role.focusInstructions === 'string' && role.focusInstructions.length > 10);
     }
   });
+
+  // #1455 C1: bug-hunter focusInstructions must call out concurrent access
+  // race conditions as a first-class concern, matching the
+  // skills/agent-skills/review-team/SKILL.md role table (SSoT for role scope).
+  it('bug-hunter focusInstructions covers concurrent access race conditions', () => {
+    const focus = REVIEWER_ROLES['bug-hunter'].focusInstructions;
+    assert.match(focus.toLowerCase(), /concurrent access race condition/);
+  });
 });
 
 describe('DEFAULT_REVIEWERS', () => {

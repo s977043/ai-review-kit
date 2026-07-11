@@ -47282,7 +47282,8 @@ const REVIEWER_ROLES = {
     focusInstructions: `You are the Bug Hunter reviewer. Focus exclusively on:
 - Logic errors, off-by-one mistakes, incorrect boolean conditions
 - Null/undefined dereference and missing guard clauses
-- Edge cases (empty collections, negative values, concurrent access)
+- Concurrent access race conditions (shared state mutated by parallel/async operations)
+- Edge cases (empty collections, negative values)
 - Incorrect or swallowed error handling
 Report only issues in these categories. Do NOT report security vulnerabilities or style issues.`,
   },
