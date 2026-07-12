@@ -8,13 +8,26 @@ category: midstream
 phase: [midstream]
 severity: major
 applyTo:
-  - 'src/**/*.{ts,tsx,js,jsx,mjs}'
+  # logging-observability（app/lib/packages + src の cjs 拡張）と
+  # modern-web-performance（app/components/pages/styles/public、html/css 拡張）の
+  # applyTo 包含検査 warning 解消（#1508 系）。modern-web-performance は frontend 側の
+  # exemption が「実行は performance」と宣言済みのため、本エントリで到達させる。
+  - 'src/**/*.{ts,tsx,js,jsx,mjs,cjs,html,css}'
+  - 'app/**/*.{ts,tsx,js,jsx,mjs,cjs,html,css}'
+  - 'components/**/*.{ts,tsx,js,jsx,html,css}'
+  - 'pages/**/*.{ts,tsx,js,jsx,html,css}'
+  - 'lib/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'packages/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'styles/**/*.css'
+  - 'public/**/*.html'
   - '**/*.sql'
 # applyTo 包含検査（#1508）の意図的除外。ルーティング表に載るが本エントリの
 # applyTo には含めないルーティング先を、理由付きで宣言する。
 applyToExemptions:
   - skill: cache-strategy-consistency
     reason: 参照のみ。cache-strategy-consistency は docs 向け設計文書レビュー（phase upstream、applyTo が docs/**/*.md 等のみ）で、code/sql 実行観点の本エントリ（phase midstream）とはドメインが異なる。実行は river-review-architecture に据置く（本 SKILL.md「cache-strategy-consistency の帰属について」）。本エントリの applyTo には含めない。
+  - skill: operability-slo
+    reason: 参照のみ。実行は river-review-architecture に据置く（ドメイン不一致。operability-slo は upstream/docs 系、本エントリは midstream/code 系。architecture 経由で完全到達済み）。cache-strategy-consistency exemption（#1522）の様式を踏襲。
 inputContext: [diff, fullFile]
 outputKind: [findings, actions]
 tags: [performance, optimization, entry, routing]
