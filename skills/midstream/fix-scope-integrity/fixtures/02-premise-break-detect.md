@@ -11,7 +11,7 @@ diff --git a/src/ui/widget.mjs b/src/ui/widget.mjs
 index 1111111..2222222 100644
 --- a/src/ui/widget.mjs
 +++ b/src/ui/widget.mjs
-@@ -10,9 +10,13 @@ export function renderWidget(props) {
+@@ -10,3 +10,5 @@ export function renderWidget(props) {
 -  // 呼び出し側が error state を保持する前提（caller が props.error を渡す）
 -  return { view: draw(props), error: props.error };
 +  // 責務統合: error state を Widget 内部で保持する

@@ -82,7 +82,7 @@ report-only（ADR-005）。finding/question のみを出力し、自動修正・
 - **前提変更が意図された目的なら指摘しない**: 前提を変えること自体がタスクの目的（例: 状態の持ち方を意図的に再設計する）である場合、premise break として指摘しない。
 - **前提列挙が済んでいれば充足**: 修正が依存する前提の列挙と影響確認が PR 本文・コメント・差分内に残っている場合、premise 軸は充足とみなし指摘しない。
 - **discover できなければ question**: 当初スコープ・前提を差分・PR 本文・参照コードから特定できない、または別在の可能性を Grep / Glob / artifact 参照で棄却できない場合は、finding ではなく question とする（false-positive-first）。
-- **指摘上限**: 観点（Scope creep / Premise break）ごとに finding と question の合算で最大 3 件、severity 降順で切り捨てる。切り捨ては findings（severity 降順）→ questions の順とする。
+- **指摘上限**: 観点（Scope creep / Premise break）ごとに finding と question の合算で最大 3 件とする。保持の優先順は findings（severity 降順）→ questions（info 相当）とし、上限超過分は優先度の低い側（questions → 低 severity findings）から切り捨てる。
 - 決定論的に判定できる領域（構文・パターン）はカスタム静的解析側の責務（`.claude/rules/review-core.md` #1070）。本 skill はスコープ整合性・前提破壊という意味的判断に集中し、canary が守る領域を重複指摘しない。
 
 ## Rule / ルール

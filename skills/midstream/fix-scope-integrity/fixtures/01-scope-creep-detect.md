@@ -11,7 +11,7 @@ diff --git a/src/forms/signup.mjs b/src/forms/signup.mjs
 index 1111111..2222222 100644
 --- a/src/forms/signup.mjs
 +++ b/src/forms/signup.mjs
-@@ -38,7 +38,11 @@ export function buildSignupSchema() {
+@@ -38,5 +38,5 @@ export function buildSignupSchema() {
    return {
      name: { type: 'string', required: true },
 -    age: { type: 'number', required: true },
