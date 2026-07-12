@@ -120,7 +120,7 @@
     {
       "id": "assumption-resolution-trace",
       "path": "skills/midstream/assumption-resolution-trace",
-      "checksum": "sha256:e4c53f59bbc6ddbacde1a787a07b670c4ba3c95a68c8a6ec93c5ab17cfd3ba39",
+      "checksum": "sha256:63b016a4d68691f1401667fdc3a741208bc9f344ace8cc2cb8cf60351b2cc703",
       "files": 3
     },
     {
@@ -372,7 +372,7 @@
     {
       "id": "impact-evidence-coverage",
       "path": "skills/midstream/impact-evidence-coverage",
-      "checksum": "sha256:116dafbe8a19b9f86330d6ba56ad5dde4007d0762eb6f452268063ea0ee914c4",
+      "checksum": "sha256:5572826fca5ec1a1f3ab7303fb3d5e0689eea07efd37be21e5404d2c00343f5e",
       "files": 3
     },
     {
@@ -768,7 +768,7 @@
     {
       "id": "unknown-coverage-review",
       "path": "skills/agent-skills/unknown-coverage-review",
-      "checksum": "sha256:cea34cbb9f3bc332517f79d44477e63663f17365f8147b2673a4519082940d94",
+      "checksum": "sha256:37cd303a0e0f4da4948283f2dfd430b4bf928be141862b60eb53dfdd65e83cb6",
       "files": 5
     },
     {
