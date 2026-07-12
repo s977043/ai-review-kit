@@ -414,8 +414,8 @@
     {
       "id": "logging-observability",
       "path": "skills/midstream/logging-observability",
-      "checksum": "sha256:f66ce6f707d374467d886275e084ac92bede6fb6afa148dd09a08c5d53a28154",
-      "files": 12
+      "checksum": "sha256:41cccd7a9a71431b4d79d51bdef6436871fe35ee137b92134aed9d30b712bb3f",
+      "files": 18
     },
     {
       "id": "logic-torturing",
