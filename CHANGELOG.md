@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.53.0](https://github.com/s977043/river-review/compare/v1.52.0...v1.53.0) (2026-07-12)
+
+
+### Features
+
+* **skills:** 配布文脈リンクとseverity二重語彙のFP2種をguard+canary化する ([#1523](https://github.com/s977043/river-review/issues/1523)) ([9a7a5aa](https://github.com/s977043/river-review/commit/9a7a5aaddb6752e69d5a3b4fb9e664d63277d487))
+
+
+### Bug Fixes
+
+* **agent-skills:** cache-strategy-consistency を performance から exemption 化する ([#1522](https://github.com/s977043/river-review/issues/1522)) ([25ce531](https://github.com/s977043/river-review/commit/25ce531287f4c46c8fe02f95ed47563ff7c27bd6))
+
 ## [1.52.0](https://github.com/s977043/river-review/compare/v1.51.0...v1.52.0) (2026-07-12)
 
 
