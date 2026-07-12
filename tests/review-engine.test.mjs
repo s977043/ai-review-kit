@@ -101,6 +101,36 @@ test('generateReview redacts secrets in debug.rawLlmOutput (T64 follow-up)', asy
   }
 });
 
+// Regression guard found via #1533 self-review E2E: a genuine "no issues
+// found" LLM response (NO_ISSUES) must not be routed through the
+// invalid/fallback branch just because it has zero findings to validate.
+// Before this test the partial-drop logic misclassified an empty findings
+// array as "all findings invalid" (invalidCount=0) and reported a spurious
+// fallback, when the correct behavior is llmUsed=true with zero comments.
+test('generateReview treats NO_ISSUES as a valid empty response, not a fallback (#1529 regression)', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: 'NO_ISSUES' } }] }),
+  });
+  try {
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: 'midstream',
+      dryRun: false,
+      includeFallback: false,
+      apiKey: 'test-key',
+    });
+    assert.equal(result.debug.llmUsed, true);
+    assert.equal(result.debug.llmError, undefined);
+    assert.equal(result.debug.droppedInvalidFindings, undefined);
+    assert.deepEqual(result.comments, []);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 // #1529 E2E follow-up: a maxTokens cutoff truncated the trailing finding so it
 // was missing the required Severity:/Confidence: labels. The old behavior
 // invalidated the *entire* batch (invalidCount>0 -> full fallback), discarding
