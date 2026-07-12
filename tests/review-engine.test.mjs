@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildPrompt, generateReview, parseLineComments } from '../src/lib/review-engine.mjs';
+import { formatFindingMessage } from '../src/lib/finding-factory.mjs';
 
 const diffText = `diff --git a/src/app.ts b/src/app.ts
 index 1111111..2222222 100644
@@ -95,6 +96,119 @@ test('generateReview redacts secrets in debug.rawLlmOutput (T64 follow-up)', asy
     assert.equal(result.debug.llmError, 'LLM output could not be parsed');
     assert.match(result.debug.rawLlmOutput, /ghp_\*\*\*REDACTED\*\*\*/);
     assert.equal(/ghp_[A-Za-z0-9]{20,}/.test(result.debug.rawLlmOutput), false);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+// Regression guard found via #1533 self-review E2E: a genuine "no issues
+// found" LLM response (NO_ISSUES) must not be routed through the
+// invalid/fallback branch just because it has zero findings to validate.
+// Before this test the partial-drop logic misclassified an empty findings
+// array as "all findings invalid" (invalidCount=0) and reported a spurious
+// fallback, when the correct behavior is llmUsed=true with zero comments.
+test('generateReview treats NO_ISSUES as a valid empty response, not a fallback (#1529 regression)', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: 'NO_ISSUES' } }] }),
+  });
+  try {
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: 'midstream',
+      dryRun: false,
+      includeFallback: false,
+      apiKey: 'test-key',
+    });
+    assert.equal(result.debug.llmUsed, true);
+    assert.equal(result.debug.llmError, undefined);
+    assert.equal(result.debug.droppedInvalidFindings, undefined);
+    assert.deepEqual(result.comments, []);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+// #1529 E2E follow-up: a maxTokens cutoff truncated the trailing finding so it
+// was missing the required Severity:/Confidence: labels. The old behavior
+// invalidated the *entire* batch (invalidCount>0 -> full fallback), discarding
+// otherwise-valid findings. The fix drops only the malformed finding(s) and
+// keeps the valid ones, recording the drop in debug for observability.
+test('generateReview drops individually-invalid findings and keeps the valid ones (#1529 partial-invalid)', async () => {
+  const validLine = (n) =>
+    `src/app.ts:11: ${formatFindingMessage({
+      finding: `Finding number ${n}`,
+      evidence: 'const value = 1;',
+      impact: 'Potential issue in added code',
+      fix: 'Review the added line and adjust as needed',
+      severity: 'warning',
+      confidence: 'medium',
+    })}`;
+  const validLines = Array.from({ length: 7 }, (_, i) => validLine(i + 1));
+  // Truncated finding: missing the trailing "Severity:"/"Confidence:" labels,
+  // simulating a maxTokens cutoff mid-response.
+  const truncatedLine =
+    'src/app.ts:12: Finding: truncated finding Evidence: const value = 1; Impact: cut off mid';
+  const rawLlmText = [...validLines, truncatedLine].join('\n');
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: rawLlmText } }] }),
+  });
+  try {
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: 'midstream',
+      dryRun: false,
+      includeFallback: false,
+      apiKey: 'test-key',
+    });
+    assert.equal(result.debug.llmUsed, true);
+    assert.equal(result.debug.droppedInvalidFindings, 1);
+    assert.equal(result.debug.droppedInvalidFindingsSample.file, 'src/app.ts');
+    assert.equal(result.debug.droppedInvalidFindingsSample.line, 12);
+    assert.match(result.debug.llmError, /dropped 1 of 8/);
+    assert.match(result.debug.llmError, /remaining 7 valid finding/);
+    // The truncated finding must not leak through to findingFormat as ok:true;
+    // debug.findingFormat is computed over the post-drop comment set, so it
+    // should report all-valid once the malformed entry has been filtered out.
+    assert.equal(result.debug.findingFormat.ok, true);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+// Fail-safe boundary: when *every* finding in the batch is malformed, the
+// pipeline must still fall back (unchanged behavior) rather than continuing
+// with zero valid findings.
+test('generateReview falls back when all findings are invalid (fail-safe unchanged, #1529)', async () => {
+  const rawLlmText = [
+    'src/app.ts:11: Finding: all invalid one Evidence: const value = 1; Impact: no labels',
+    'src/app.ts:12: Finding: all invalid two Evidence: const value = 1; Impact: no labels either',
+  ].join('\n');
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: rawLlmText } }] }),
+  });
+  try {
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: 'midstream',
+      dryRun: false,
+      includeFallback: false,
+      apiKey: 'test-key',
+    });
+    assert.equal(result.debug.llmUsed, false);
+    assert.equal(result.debug.droppedInvalidFindings, undefined);
+    assert.match(result.debug.llmError, /invalidCount=2/);
+    assert.match(result.debug.llmError, /Falling back/);
   } finally {
     global.fetch = originalFetch;
   }
