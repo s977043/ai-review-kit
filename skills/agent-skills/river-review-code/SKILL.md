@@ -74,6 +74,7 @@ license: MIT
 - `any`の使用が最小限か
 - 型ガードが適切か
 - null/undefinedの扱いが安全か
+- 型検査対象外の分界（#1476）: `scripts/`（tsconfig の `include` に含まれず tsc 検査対象外）の JSDoc で `unknown` を `any` へ緩める提案はしない。`unknown` は呼び出し側に絞り込みを強制する意図的で保守的な選択。詳細と canary は `existing-pattern-conformance` の「False-positive guards」を参照。
 
 ### エラーハンドリング
 
