@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.54.1](https://github.com/s977043/river-review/compare/v1.54.0...v1.54.1) (2026-07-12)
+
+
+### Bug Fixes
+
+* **review:** maxTokens引き上げと不正findingの部分許容でCI LLMレビューのfallbackを局所化する ([#1533](https://github.com/s977043/river-review/issues/1533)) ([fba8205](https://github.com/s977043/river-review/commit/fba820598b96ed7365007ac9720e2243652a4170))
+
 ## [1.54.0](https://github.com/s977043/river-review/compare/v1.53.0...v1.54.0) (2026-07-12)
 
 
