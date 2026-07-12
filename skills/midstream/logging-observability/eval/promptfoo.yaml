@@ -59,6 +59,34 @@ tests:
           - 'amount'
           - '追跡'
 
+  # Test case 4: New debug output path bypasses existing redaction invariant
+  # (reduced reproduction of PR #1529 / AGENT_LEARNINGS.md 2026-07-12 エントリ3) - should detect
+  - description: 'Detect new debug output path bypassing existing redaction invariant'
+    vars:
+      diff: file://../fixtures/04-debug-output-bypasses-redaction-should-detect.diff
+    assert:
+      - type: contains
+        value: 'src/lib/notification-dispatch.mjs'
+      - type: contains-any
+        value:
+          - 'redactSecrets'
+          - 'redact'
+          - 'マスク'
+          - '迂回'
+
+  # Test case 5: Same debug output path but redacted at the storage site
+  # (reduced reproduction of the #1529 fix, commit ca7eaa3b) - should NOT flag
+  - description: 'No false positive when debug output is redacted at the storage site'
+    vars:
+      diff: file://../fixtures/05-debug-output-redacted-at-storage-should-not-detect.diff
+    assert:
+      - type: not-contains-any
+        value:
+          - 'Finding:'
+          - '迂回'
+          - '露出'
+          - '問題'
+
 # Output format
 outputPath: ./output.json
 
