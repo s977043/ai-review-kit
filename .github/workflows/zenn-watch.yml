@@ -1,0 +1,263 @@
+name: Zenn Watch
+
+# 中核 topic（現状は `コードレビュー` のみ）の Zenn 公式 RSS を週次で収集し、
+# digest issue（label: zenn-watch-digest）に新着記事のみを追記する。
+# 記事本文は取得・保存しない（RSS は要約のみで本文非含有）。
+# 収集した新着は候補提示に留め、取り込み判定は人間が
+# docs/runbook/zenn-watch.md の手順に従って行う（HITL、ADR-005 準拠）。
+#
+# 新規 npm 依存は追加しない。RSS パースは actions/github-script 内の
+# 正規表現ベースの最小実装で行う。
+
+on:
+  schedule:
+    # 05:00 JST 火曜 (weekly-gc / codeql / link-check 等の月曜 0-3時UTC帯と衝突しないよう分散)
+    - cron: '0 20 * * 2'
+  workflow_dispatch:
+
+concurrency:
+  group: zenn-watch
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    name: Fetch Zenn feed and update digest issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Fetch Zenn RSS and update digest issue
+        id: watch
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // P1 初期スコープ: 中核 topic のみ (設計書 §1.1 実測: 週次20件上限に収まるのは
+            // `コードレビュー` のみ。高流量トピックを含める場合は P1.5 で日次化を検討する)。
+            const TOPICS = ['コードレビュー'];
+            const DIGEST_LABEL = 'zenn-watch-digest';
+            const DIGEST_TITLE = 'Zenn ウォッチ digest: コードレビュー';
+            const FETCH_TIMEOUT_MS = 15000;
+
+            function decodeXmlText(raw) {
+              if (raw == null) return null;
+              const cdataMatch = raw.match(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/);
+              const inner = cdataMatch ? cdataMatch[1] : raw;
+              return inner
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&amp;/g, '&')
+                .trim();
+            }
+
+            function extractTag(itemXml, tag) {
+              const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i');
+              const m = itemXml.match(re);
+              return m ? decodeXmlText(m[1]) : null;
+            }
+
+            function parseItems(xml, topic) {
+              const blocks = xml.match(/<item[^>]*>[\s\S]*?<\/item>/gi) || [];
+              return blocks.map((block) => {
+                const title = extractTag(block, 'title');
+                const link = extractTag(block, 'link');
+                const pubDateRaw = extractTag(block, 'pubDate');
+                const author = extractTag(block, 'dc:creator');
+                const pubDate = pubDateRaw ? new Date(pubDateRaw) : null;
+                return {
+                  topic,
+                  title: title || '(無題)',
+                  link,
+                  author: author || '(不明)',
+                  pubDateRaw: pubDateRaw || '(不明)',
+                  pubDateMs: pubDate && !Number.isNaN(pubDate.getTime()) ? pubDate.getTime() : 0,
+                };
+              }).filter((item) => item.link);
+            }
+
+            async function fetchFeed(topic) {
+              const url = `https://zenn.dev/topics/${encodeURIComponent(topic)}/feed`;
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+              try {
+                const res = await fetch(url, {
+                  signal: controller.signal,
+                  headers: {
+                    'User-Agent': 'river-review-zenn-watch/1.0 (+https://github.com/s977043/river-review)',
+                  },
+                });
+                if (!res.ok) {
+                  throw new Error(`HTTP ${res.status} ${res.statusText}`);
+                }
+                const xml = await res.text();
+                return parseItems(xml, topic);
+              } finally {
+                clearTimeout(timer);
+              }
+            }
+
+            // 1. 全 topic を取得（1 topic 1 リクエスト、失敗は topic 単位で記録して継続）
+            const allItems = [];
+            const failedTopics = [];
+            for (const topic of TOPICS) {
+              try {
+                const items = await fetchFeed(topic);
+                allItems.push(...items);
+                console.log(`topic=${topic}: ${items.length} 件取得`);
+              } catch (err) {
+                console.error(`topic=${topic} の取得に失敗: ${err.message}`);
+                failedTopics.push({ topic, error: err.message });
+              }
+            }
+
+            // 2. digest issue を label + title で特定。なければ新規作成 (weekly-gc.yml の dedup パターンを踏襲)
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              labels: DIGEST_LABEL,
+              per_page: 100,
+            });
+            let digestIssue = openIssues.find((issue) => issue.title === DIGEST_TITLE) || null;
+
+            if (!digestIssue) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: DIGEST_LABEL,
+                  color: '0e8a16',
+                  description: 'Zenn 記事ウォッチの digest（新着記事の既読台帳・トリアージ用）',
+                });
+              } catch (err) {
+                if (err.status !== 422) {
+                  console.warn(`ラベル作成に失敗しましたが、処理を継続します: ${err.message}`);
+                }
+              }
+
+              const initialBody = [
+                'Zenn の中核 topic（現状は `コードレビュー` のみ）の公式 RSS を週次で収集し、新着記事をこの issue に追記する digest issue です（`.github/workflows/zenn-watch.yml` が自動更新）。',
+                '',
+                '- 保存するのは記事の URL・タイトル・著者・公開日のみです。**記事本文は保存しません**。',
+                '- チェックボックスは「選別・取り込み検討が完了した（採用/見送りを判断した）」を表します。選別基準・検討手順は `docs/runbook/zenn-watch.md` を参照してください。',
+                '- 見送り/採用の判断理由はチェック時にこの issue へコメントで残してください。',
+                '',
+                '## 新着記事',
+              ].join('\n');
+
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title: DIGEST_TITLE,
+                body: initialBody,
+                labels: [DIGEST_LABEL],
+              });
+              digestIssue = created.data;
+              console.log(`digest issue を新規作成しました: #${digestIssue.number}`);
+            }
+
+            // 3. 既読突合（digest issue 本文に既に link が含まれていれば既読とみなす）
+            const existingBody = digestIssue.body || '';
+            const newItems = allItems
+              .filter((item) => !existingBody.includes(item.link))
+              .sort((a, b) => a.pubDateMs - b.pubDateMs);
+
+            // 4. 新着があれば日付順で追記。ゼロなら issue は更新しない。
+            if (newItems.length > 0) {
+              const lines = newItems.map((item) => {
+                const date = item.pubDateMs ? new Date(item.pubDateMs).toISOString().slice(0, 10) : item.pubDateRaw;
+                return `- [ ] **${item.title}** — ${item.link} (topic: ${item.topic} / 著者: ${item.author} / 公開日: ${date})`;
+              });
+              const updatedBody = `${existingBody}\n${lines.join('\n')}\n`;
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: digestIssue.number,
+                body: updatedBody,
+              });
+              console.log(`digest issue #${digestIssue.number} に新着 ${newItems.length} 件を追記しました`);
+            } else {
+              console.log('新着なし。digest issue は更新しません。');
+            }
+
+            core.setOutput('new_items_count', String(newItems.length));
+            core.setOutput('failed_topics_count', String(failedTopics.length));
+            core.setOutput('failed_topics_json', JSON.stringify(failedTopics));
+
+      - name: Create GitHub issue on feed fetch failure (schedule only)
+        if: github.event_name == 'schedule' && steps.watch.outputs.failed_topics_count != '0'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = '定期チェック: Zenn Watch がフィード取得に失敗しました';
+            const labelName = 'scheduled-check';
+            const failedTopics = JSON.parse('${{ steps.watch.outputs.failed_topics_json }}');
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              labels: labelName,
+              per_page: 100,
+            });
+            if (openIssues.some((issue) => issue.title === title)) {
+              console.log('既存の Issue があるため新規作成をスキップします。');
+              return;
+            }
+
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const body = [
+              '週次 Zenn Watch (`.github/workflows/zenn-watch.yml`) でフィード取得に失敗した topic があります。',
+              '',
+              `- 実行: ${runUrl}`,
+              `- 失敗 topic: ${failedTopics.map((f) => `\`${f.topic}\` (${f.error})`).join(', ')}`,
+              '',
+              'Zenn 側の一時障害・RSS 仕様変更・レート制限等が考えられます。人間が内容を確認し、対応が不要なら Issue を close してください。',
+            ].join('\n');
+
+            let useLabelForIssue = true;
+            try {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: labelName,
+                color: 'f29513',
+                description: '定期実行の自動検証で見つかった問題',
+              });
+            } catch (err) {
+              if (err.status !== 422) {
+                console.warn(`ラベル作成に失敗しましたが、処理を継続します: ${err.message}`);
+                useLabelForIssue = false;
+              }
+            }
+
+            try {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels: useLabelForIssue ? [labelName] : [],
+              });
+              console.log(`Issue を作成しました: ${title}`);
+            } catch (err) {
+              console.error(`Issue 作成に失敗しました: ${err.message}`);
+              throw err;
+            }
+
+      - name: Fail workflow if any topic fetch failed
+        if: steps.watch.outputs.failed_topics_count != '0'
+        run: |
+          echo "::error::${{ steps.watch.outputs.failed_topics_count }} 個の topic でフィード取得に失敗しました。"
+          exit 1
