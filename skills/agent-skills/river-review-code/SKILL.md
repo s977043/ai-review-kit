@@ -8,7 +8,17 @@ category: midstream
 phase: [midstream]
 severity: minor
 applyTo:
-  - 'src/**/*.{ts,tsx,js,jsx,mjs}'
+  # ルーティング先（typescript-strict / typescript-nullcheck / type-driven-design /
+  # logging-observability / altitude-generalization / closure-scope-retention）の
+  # applyTo 包含検査 warning 解消（#1508 系）。scripts/**・runners/** はこのリポジトリ
+  # 自身に実在する自己参照ギャップ（#1494/#1500 と同型）、app/lib/packages/** は
+  # #1500 の precedent 準拠。
+  - 'src/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'app/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'lib/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'packages/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'scripts/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'runners/**/*.{ts,tsx,js,jsx,mjs,cjs}'
 inputContext: [diff, fullFile]
 outputKind: [findings, actions]
 tags: [code-quality, default, entry, routing]
