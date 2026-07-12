@@ -10,6 +10,11 @@ severity: major
 applyTo:
   - 'src/**/*.{ts,tsx,js,jsx,mjs}'
   - '**/*.sql'
+# applyTo 包含検査（#1508）の意図的除外。ルーティング表に載るが本エントリの
+# applyTo には含めないルーティング先を、理由付きで宣言する。
+applyToExemptions:
+  - skill: cache-strategy-consistency
+    reason: 参照のみ。cache-strategy-consistency は docs 向け設計文書レビュー（phase upstream、applyTo が docs/**/*.md 等のみ）で、code/sql 実行観点の本エントリ（phase midstream）とはドメインが異なる。実行は river-review-architecture に据置く（本 SKILL.md「cache-strategy-consistency の帰属について」）。本エントリの applyTo には含めない。
 inputContext: [diff, fullFile]
 outputKind: [findings, actions]
 tags: [performance, optimization, entry, routing]
@@ -30,12 +35,16 @@ license: MIT
 
 ## Routing / ルーティング
 
-| キーワード             | スキルID                      | 説明                   |
-| ---------------------- | ----------------------------- | ---------------------- |
-| キャッシュ, TTL        | `cache-strategy-consistency`  | キャッシュ戦略の一貫性 |
-| 障害, 監視, メトリクス | `failure-modes-observability` | 障害モードと可観測性   |
-| ログ, トレース         | `logging-observability`       | ロギング・可観測性     |
-| SLO, レイテンシ        | `operability-slo`             | 運用性・SLO            |
+| キーワード             | スキルID                      | 説明                                                                                               |
+| ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| キャッシュ, TTL        | `cache-strategy-consistency`  | 参照のみ。実行は `river-review-architecture`（[理由](#cache-strategy-consistency-の帰属について)） |
+| 障害, 監視, メトリクス | `failure-modes-observability` | 障害モードと可観測性                                                                               |
+| ログ, トレース         | `logging-observability`       | ロギング・可観測性                                                                                 |
+| SLO, レイテンシ        | `operability-slo`             | 運用性・SLO                                                                                        |
+
+### `cache-strategy-consistency` の帰属について
+
+`cache-strategy-consistency` はキャッシュ戦略という語感から performance の懸念に見えるが、実体は設計ドキュメント（docs/spec/RFC 等）のキャッシュ戦略記述をレビューする upstream スキル（`applyTo` が `docs/**/*.md` 等の docs 系のみ、Pre-execution Gate も「差分に設計ドキュメントの変更がある」ことを要求）である。本エントリ（phase midstream、`applyTo` が code/sql）とはドメインが異なるため、ドメイン一貫性を優先し実行は `river-review-architecture`（phase upstream、docs 系 applyTo を保有）に据え置く。本表には**到達性のための参照行**として掲載するのみで、performance 側に重複するアクティブなキーワードルートは追加しない。
 
 ### デフォルト動作
 
