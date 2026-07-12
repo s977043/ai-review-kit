@@ -57,4 +57,5 @@ license: MIT
 
 - 文章スタイル（textlint / markdownlint）の機械的チェックは既存の lint が担うため、本スキルは**内容の整合性**に集中する。
 - 多言語パリティの指摘では、SSoT（通常は JA）を基準に欠落を示す。
-- **レンダリング文脈を無視したリンク形式の指摘はしない**（#1464）。`pages/` 配下から repo 内の非公開領域への絶対 GitHub URL は Docusaurus 配信の制約による意図的選択であり、相対化を提案しない。bare `#N` 化は `.md` レンダリングで常に非リンク化するため、一律で簡約の提案を禁止する。詳細と canary は `doc-hygiene` の「False-positive guards」を参照。
+- **レンダリング文脈を無視したリンク形式の指摘はしない**（#1464 / #1493）。`pages/` 配下から repo 内の非公開領域（`skills/` / `docs/` など）への絶対 GitHub URL は Docusaurus 配信の制約による意図的選択であり、相対化を提案しない。逆に `skills/` から `docs/` への参照は相対リンクが正典（#1494）。bare `#N` 化は `.md` レンダリングで常に非リンク化するため、一律で簡約の提案を禁止する。詳細と canary は `doc-hygiene` の「False-positive guards」を参照。
+- **観点5（用語統一）で severity の内部語彙とスキーマ語彙を混同しない**（#1502）。SKILL.md 内の `blocker` / `warning` / `nit` と出力スキーマの `critical` / `major` / `minor` は `.claude/rules/review-core.md` が定義する意図的な二層語彙であり、「表記揺れ」として一方への統一を提案しない。詳細と canary は `doc-hygiene` の「False-positive guards」を参照。
