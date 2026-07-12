@@ -546,7 +546,7 @@
     {
       "id": "pr-template-qa",
       "path": "skills/upstream/pr-template-qa",
-      "checksum": "sha256:70a96f0781617d1dd1548c668823544339d29eee91a503a88ff4345511f9ea45",
+      "checksum": "sha256:8db7d9606041a7cb208cdec9b844c43ccb59c1a54b55b11b5b54315ebf375f4e",
       "files": 1
     },
     {
@@ -582,7 +582,7 @@
     {
       "id": "review-automation-boundary",
       "path": "skills/midstream/review-automation-boundary",
-      "checksum": "sha256:ec4323b42fe947aed4026f97c0ff5147d0353c3c3c57c70340acaefa59db2c2a",
+      "checksum": "sha256:1212dd046c5ad799e8dc17cd1a7f575f2519ed92b9b6f0de7235fd0c292b4d4e",
       "files": 1
     },
     {
