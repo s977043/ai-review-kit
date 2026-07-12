@@ -45,6 +45,7 @@
 ### Node バージョン / worktree の `npm ci`
 
 既定シェルの `node` は v26 系だが、本リポジトリは `.nvmrc` で Node 22（`22.22.2`）に固定されている。lockfile 操作は Node 22 で行うことが安全側。worktree は独立した `node_modules` を持たないため、作業開始時に `npm ci` を実行しないと依存解決が壊れた状態で作業することになる。詳細: `docs/runbook/dev.md`、memory `local-node-version-mismatch`。
+なお `/opt/homebrew/opt/node@22/bin` というパスは、本リポジトリのメンテナ開発機（Apple Silicon + Homebrew）を前提とした値。他環境の場合、各自の Node 22 系の入手先に読み替える（バージョン要件の SSoT は `.nvmrc` / `engines.node`）。
 
 ### `--no-verify` 禁止
 

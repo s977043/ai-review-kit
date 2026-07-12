@@ -17,6 +17,7 @@ gh api user --jq .login | grep -q s977043 || gh auth switch -u s977043
 ```
 
 PreToolUse hook (`gh-account-guard.sh`) が defense-in-depth で効くが、セッション開始時の確認は省略しない。
+`s977043` は本リポジトリのメンテナアカウント（CLAUDE.md「Verify gh active account before write ops」ガードと同一の値で、そちらが SSoT）。フォーク運用時は自分のアカウントに読み替える。
 
 ### Step 2. PR 状態の確認
 
