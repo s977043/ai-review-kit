@@ -276,8 +276,8 @@
     {
       "id": "doc-hygiene",
       "path": "skills/midstream/doc-hygiene",
-      "checksum": "sha256:8f344c8158db2c88c010ee3cf21d3016e1004bdae25f8108742e33850f2da847",
-      "files": 2
+      "checksum": "sha256:2011bdeb615a231c371663140bbd0bd19b422359770202754e62433212fc2189",
+      "files": 4
     },
     {
       "id": "dr-multiregion",
@@ -642,7 +642,7 @@
     {
       "id": "river-review-docs",
       "path": "skills/agent-skills/river-review-docs",
-      "checksum": "sha256:54c50624fe95d4473101b3df5b0fd85cb6fd2c46c40f1d24615cd1ce25a3232d",
+      "checksum": "sha256:e133ddf177611c5eff4a90a7f578ce4f7551d4b20be2f2a721ddcc83e80b942b",
       "files": 2
     },
     {
