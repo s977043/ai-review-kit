@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.52.0](https://github.com/s977043/river-review/compare/v1.51.0...v1.52.0) (2026-07-12)
+
+
+### Features
+
+* **ci:** zenn 記事の週次ウォッチ workflow を追加する ([#1513](https://github.com/s977043/river-review/issues/1513)) ([a81906c](https://github.com/s977043/river-review/commit/a81906ccabc32152d4bebd7ae05c9076f9bc8003))
+* **skills:** fix-scope-integrity 観点で指摘対応ループのスコープ逸脱・前提破壊を検出する ([#1516](https://github.com/s977043/river-review/issues/1516)) ([#1520](https://github.com/s977043/river-review/issues/1520)) ([3610cf8](https://github.com/s977043/river-review/commit/3610cf8eb55ed27e162fb55477b9473ebc705962))
+
 ## [1.51.0](https://github.com/s977043/river-review/compare/v1.50.0...v1.51.0) (2026-07-12)
 
 
