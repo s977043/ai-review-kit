@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.54.0](https://github.com/s977043/river-review/compare/v1.53.0...v1.54.0) (2026-07-12)
+
+
+### Features
+
+* **ci:** river-review LLM レビューを GitHub Models（GITHUB_TOKEN）へ切替える ([#1526](https://github.com/s977043/river-review/issues/1526)) ([febb88f](https://github.com/s977043/river-review/commit/febb88f2febfff72eaf9dd0f9f1eebe0feca51dd))
+* **skills:** scripts/ JSDoc unknown-&gt;any 緩和提案のFPをguard+canary化する ([#1528](https://github.com/s977043/river-review/issues/1528)) ([dc1dd0e](https://github.com/s977043/river-review/commit/dc1dd0ea1a24ec0dd96f19136411f18095c43c15))
+
+
+### Bug Fixes
+
+* **agent-skills:** river-review-code の applyTo を app/lib/packages/scripts/runners へ拡張する ([#1530](https://github.com/s977043/river-review/issues/1530)) ([c1dd4e1](https://github.com/s977043/river-review/commit/c1dd4e18b0f8704289fe7434d3cf7410d0579db1))
+* **agent-skills:** river-review-frontend の applyTo を pages/lib/packages へ拡張する ([#1531](https://github.com/s977043/river-review/issues/1531)) ([3faf12b](https://github.com/s977043/river-review/commit/3faf12b03cbbaa8549c2849b377d723ed08b7da1))
+* **agent-skills:** river-review-performance の applyTo 拡張と operability-slo exemption を追加する ([#1532](https://github.com/s977043/river-review/issues/1532)) ([168712a](https://github.com/s977043/river-review/commit/168712a1ede8490dd62d1611b9ad4054bcec05bb))
+* **review:** レビュー結果のパース失敗を切り分け可能にし追加指示との競合を解消する (T64) ([#1529](https://github.com/s977043/river-review/issues/1529)) ([e212cf2](https://github.com/s977043/river-review/commit/e212cf2b1fa31be14fa80ccb86675dfa6da81fee))
+
 ## [1.53.0](https://github.com/s977043/river-review/compare/v1.52.0...v1.53.0) (2026-07-12)
 
 
