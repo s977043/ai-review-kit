@@ -103,7 +103,7 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.0",
     "@commitlint/config-conventional": "^21.2.0",
-    "@docusaurus/core": "^3.10.1",
+    "@docusaurus/core": "^3.10.2",
     "@docusaurus/preset-classic": "^3.10.1",
     "@docusaurus/theme-mermaid": "^3.10.1",
     "@mermaid-js/layout-elk": "^0.1.9",
