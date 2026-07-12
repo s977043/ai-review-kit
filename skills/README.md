@@ -170,6 +170,22 @@ This repo has two naming systems. Do not mix them up.
 
 Agent skills use a "directory = name" identity rule; registry skills separate `id` (kebab-case) from `name` (display). Applying Title Case to an agent-skill directory, or forcing kebab-case onto a registry display name, are both wrong.
 
+### Entry-skill `applyTo` coverage (#1508)
+
+An entry/router skill (an agent skill with `references/ROUTING.md` or `entry`/`routing` tags) must let every diff its routed registry skills care about reach the entry. `npm run agent-skills:validate` checks that the entry's `applyTo` covers the union of its routing targets' `applyTo`:
+
+- **Error** — a routed registry skill is unreachable via _every_ entry that routes to it (its `applyTo` is provably disjoint from all of them). This is the #1494 / #1500 failure class.
+- **Warning** — a routed skill is reachable, but the entry's `applyTo` never fires on some file category the target declares (e.g. a `.html` extension or a `route.ts` path). Widen the entry's `applyTo`, or exempt it.
+- **Exemption** — declare an intentional exclusion in the entry frontmatter so the reason sits next to the `applyTo` block:
+
+  ```yaml
+  applyToExemptions:
+    - skill: modern-web-performance
+      reason: 参照のみ。実行は river-review-performance に据置く。
+  ```
+
+Comparisons undecidable for the checker (unsupported glob grammar) degrade to a non-blocking warning, never an error (repo principle #1070, false-positive-first).
+
 ### Common prohibitions and consistency
 
 - No organizational nouns (team / manager / helper / util), no names that state only the mechanism, no names that differ from an existing one only by hyphenation, and no collisions with reserved vocabulary already used elsewhere in the repo.
