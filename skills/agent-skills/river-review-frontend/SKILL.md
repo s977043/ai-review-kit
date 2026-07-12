@@ -20,6 +20,11 @@ applyTo:
   - 'app/**/*.{ts,tsx,js,jsx}'
   - 'components/**/*.{ts,tsx,js,jsx}'
   - '**/*.{css,scss,less}'
+# applyTo 包含検査（#1508）の意図的除外。ルーティング表に載るが本エントリの
+# applyTo には含めないルーティング先を、理由付きで宣言する。
+applyToExemptions:
+  - skill: modern-web-performance
+    reason: 参照のみ。Core Web Vitals の実行は river-review-performance に据置く（ROUTING.md「modern-web-performance の帰属について」）。本エントリの applyTo には含めない。
 inputContext: [diff, fullFile]
 outputKind: [findings, actions]
 tags: [frontend, ui, accessibility, design-system, entry, routing]

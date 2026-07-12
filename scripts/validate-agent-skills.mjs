@@ -4,6 +4,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { parseFrontMatter, listSkillPackageDirs } from '../runners/core/skill-loader.mjs';
 import { isDirectRun } from './lib/is-direct-run.mjs';
+import {
+  extractRoutingTargetIds,
+  expandApplyTo,
+  analyzeCoverage,
+} from './lib/applyto-coverage.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -89,6 +94,249 @@ export function findHyphenVariantCollisions(names) {
     if (set.size > 1) collisions.push({ normalized, names: [...set].sort() });
   }
   return collisions;
+}
+
+// ---------------------------------------------------------------------------
+// Entry `applyTo` containment check (issue #1508).
+//
+// An entry skill (agent-skills router) must give every diff its routing-target
+// registry skills care about a path to reach the entry — i.e. the entry's
+// `applyTo` must cover the union of the routed targets' `applyTo`. Two incidents
+// (#1494, #1500) slipped past CI because nothing checked this. Per repo
+// principle #1070 this is mechanized here; genuinely-intentional exclusions are
+// declared in the entry frontmatter `applyToExemptions` array so the exclusion
+// (and its reason) sits next to the `applyTo` block a reviewer audits.
+// ---------------------------------------------------------------------------
+
+const MAX_UNCOVERED_REPORTED = 6;
+
+/**
+ * Parse the frontmatter `applyToExemptions` value into validated entries and
+ * structural errors. Each exemption must be an object with a non-empty `skill`
+ * ID and a non-empty `reason`.
+ *
+ * @param {unknown} value
+ * @returns {{ valid: Array<{skill: string, reason: string}>, errors: string[] }}
+ */
+export function parseExemptions(value) {
+  if (value == null) return { valid: [], errors: [] };
+  if (!Array.isArray(value)) {
+    return { valid: [], errors: ['must be an array of { skill, reason } objects'] };
+  }
+  const valid = [];
+  const errors = [];
+  value.forEach((item, i) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      errors.push(`entry ${i} must be an object with { skill, reason }`);
+      return;
+    }
+    const skill = item.skill;
+    const reason = item.reason;
+    if (typeof skill !== 'string' || !skill.trim()) {
+      errors.push(`entry ${i} is missing a non-empty "skill"`);
+      return;
+    }
+    if (typeof reason !== 'string' || !reason.trim()) {
+      errors.push(`entry ${i} ("${skill}") is missing a non-empty "reason"`);
+      return;
+    }
+    valid.push({ skill, reason });
+  });
+  return { valid, errors };
+}
+
+/**
+ * Build an index of every skill package in `skills/`, keyed by directory name
+ * (the skill ID). Records the raw `applyTo`, repo-relative path, and whether the
+ * package lives under `agent-skills/` (i.e. is itself an entry/router, not a
+ * routable registry leaf).
+ *
+ * @returns {Promise<Map<string, { applyTo: unknown, relPath: string, isAgentSkill: boolean }>>}
+ */
+async function buildSkillIndex() {
+  const skillsRoot = path.join(repoRoot, 'skills');
+  const index = new Map();
+
+  async function walk(dir) {
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    if (entries.some((e) => e.isFile() && e.name === 'SKILL.md')) {
+      const skillPath = path.join(dir, 'SKILL.md');
+      const id = path.basename(dir);
+      if (!index.has(id)) {
+        const relPath = path.relative(repoRoot, skillPath);
+        let applyTo;
+        try {
+          applyTo = parseFrontMatter(await fs.readFile(skillPath, 'utf8')).metadata?.applyTo;
+        } catch {
+          applyTo = undefined;
+        }
+        const isAgentSkill = relPath.split(path.sep).includes('agent-skills');
+        index.set(id, { applyTo, relPath, isAgentSkill });
+      }
+    }
+    for (const e of entries) {
+      if (e.isDirectory()) await walk(path.join(dir, e.name));
+    }
+  }
+
+  await walk(skillsRoot);
+  return index;
+}
+
+/**
+ * Check that each agent-skills entry's `applyTo` covers the union of its routed
+ * registry skills' `applyTo`. Returns false when any error was reported.
+ *
+ * @param {string[]} packages SKILL.md paths under skills/agent-skills
+ * @returns {Promise<boolean>}
+ */
+async function validateApplyToCoverage(packages) {
+  const index = await buildSkillIndex();
+  const agentSkillIds = new Set(packages.map((p) => path.basename(path.dirname(p))));
+  let success = true;
+
+  // Phase 1 — gather, per entry, the coverage result for each resolved routing
+  // target, and structural warnings/errors.
+  const results = []; // { relPath, entryId, id, targetRel, reachable, uncovered, undecidable }
+  // target id -> whether some routing entry can provably reach it. An entry that
+  // routes to a target but cannot reach it is only an error when NO entry can
+  // reach the target (the skill is globally orphaned); otherwise it is a warning
+  // (this entry references a skill executed via another entry).
+  const globallyReachable = new Map();
+
+  for (const skillPath of packages) {
+    const dir = path.dirname(skillPath);
+    const entryId = path.basename(dir);
+    const relPath = path.relative(repoRoot, skillPath);
+
+    let skillText;
+    let metadata;
+    try {
+      skillText = await fs.readFile(skillPath, 'utf8');
+      metadata = parseFrontMatter(skillText).metadata ?? {};
+    } catch {
+      continue; // per-skill validation already reported the parse failure
+    }
+
+    const tags = Array.isArray(metadata.tags) ? metadata.tags : [];
+    let routingText = '';
+    let hasRouting = false;
+    try {
+      routingText = await fs.readFile(path.join(dir, 'references', 'ROUTING.md'), 'utf8');
+      hasRouting = true;
+    } catch {
+      hasRouting = false;
+    }
+
+    const isEntry = hasRouting || tags.includes('entry') || tags.includes('routing');
+    if (!isEntry) continue;
+
+    // Candidate routing targets: backtick kebab IDs on routing lines of the
+    // ROUTING.md and the SKILL.md routing table (issue #1508 tolerant parser).
+    const candidateIds = new Set([
+      ...extractRoutingTargetIds(routingText),
+      ...extractRoutingTargetIds(skillText),
+    ]);
+    candidateIds.delete(entryId);
+
+    const { valid: exemptions, errors: exemptionErrors } = parseExemptions(
+      metadata.applyToExemptions
+    );
+    for (const err of exemptionErrors) {
+      console.error(`❌ ${relPath}: applyToExemptions ${err}`);
+      success = false;
+    }
+    const exemptSet = new Set(exemptions.map((e) => e.skill));
+    for (const ex of exemptions) {
+      if (!candidateIds.has(ex.skill)) {
+        console.warn(
+          `⚠️  ${relPath}: applyToExemptions lists "${ex.skill}" which is not a routing target ` +
+            'of this entry (stale exemption?)'
+        );
+      }
+    }
+
+    const entryPatterns = expandApplyTo(metadata.applyTo);
+
+    let resolvedCount = 0;
+    const unresolvedIds = [];
+    for (const id of candidateIds) {
+      if (exemptSet.has(id)) continue; // intentional exclusion — silent
+      if (agentSkillIds.has(id)) continue; // routes to another entry — out of scope
+      const target = index.get(id);
+      if (!target || target.isAgentSkill) {
+        unresolvedIds.push(id);
+        continue;
+      }
+      const targetPatterns = expandApplyTo(target.applyTo);
+      if (!targetPatterns.length) continue; // nothing to cover
+      resolvedCount += 1;
+
+      const { reachable, disjoint, undecidable } = analyzeCoverage(entryPatterns, targetPatterns);
+      results.push({
+        relPath,
+        id,
+        targetRel: target.relPath,
+        reachable,
+        disjoint,
+        undecidable,
+      });
+      globallyReachable.set(id, (globallyReachable.get(id) ?? false) || reachable);
+    }
+
+    // Only surface unresolved candidate IDs for entries that actually route to
+    // registry skills. An entry whose candidates NONE resolve (e.g. review-team,
+    // whose backtick tokens name perspective roles, not registry skills) is not
+    // doing applyTo-based routing, so its tokens are not phantom targets.
+    if (resolvedCount > 0) {
+      for (const id of unresolvedIds) {
+        console.warn(
+          `⚠️  ${relPath}: routing target "${id}" does not resolve to a registry skill ` +
+            '(unresolved — skipped)'
+        );
+      }
+    }
+  }
+
+  // Phase 2 — report. A target unreachable via its entry is an error only when
+  // no routing entry can reach it; otherwise it is a warning.
+  const orphanReported = new Set();
+  for (const r of results) {
+    if (!r.reachable) {
+      if (globallyReachable.get(r.id)) {
+        console.warn(
+          `⚠️  ${r.relPath}: routing target "${r.id}" is not reachable via this entry's applyTo, ` +
+            'but is reachable via another entry (referenced here, executed elsewhere). ' +
+            'Add an applyToExemptions entry to document the deferral if intentional.'
+        );
+      } else if (!orphanReported.has(r.id)) {
+        orphanReported.add(r.id);
+        console.error(
+          `❌ ${r.relPath}: routing target "${r.id}" is unreachable — none of its applyTo ` +
+            `patterns overlap any routing entry's applyTo (${r.targetRel})`
+        );
+        success = false;
+      }
+    } else if (r.disjoint.length) {
+      const shown = r.disjoint.slice(0, MAX_UNCOVERED_REPORTED).join(', ');
+      const more =
+        r.disjoint.length > MAX_UNCOVERED_REPORTED
+          ? ` (+${r.disjoint.length - MAX_UNCOVERED_REPORTED} more)`
+          : '';
+      console.warn(
+        `⚠️  ${r.relPath}: routing target "${r.id}" has applyTo pattern(s) the entry never ` +
+          `fires on — ${shown}${more}. Widen this entry's applyTo to reach them, or declare ` +
+          'an applyToExemptions entry if the exclusion is intentional.'
+      );
+    }
+  }
+
+  return success;
 }
 
 async function hasReferencesDir(dirPath) {
@@ -232,6 +480,11 @@ async function validateAgentSkills() {
     );
     success = false;
   }
+
+  // Entry `applyTo` must cover the union of routed registry skills' `applyTo`
+  // (issue #1508).
+  const coverageOk = await validateApplyToCoverage(packages);
+  if (!coverageOk) success = false;
 
   return success;
 }
