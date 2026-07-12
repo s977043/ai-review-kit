@@ -306,8 +306,8 @@
     {
       "id": "existing-pattern-conformance",
       "path": "skills/midstream/existing-pattern-conformance",
-      "checksum": "sha256:0a8a2b1f7acc1824f787a01b284ba23341a440b0a5a7835c97e6e5c51862de8f",
-      "files": 2
+      "checksum": "sha256:a412ca74c6edf238a444fbebb9effad65e0167cceae2721f04e403365d4b40d2",
+      "files": 3
     },
     {
       "id": "external-dependencies",
@@ -636,7 +636,7 @@
     {
       "id": "river-review-code",
       "path": "skills/agent-skills/river-review-code",
-      "checksum": "sha256:517839063bbf23946861f73446a8a1d30a6f3f7bed264037d00b03fd823beecb",
+      "checksum": "sha256:b6dcc5bb0b54167237f4c70ca086a923739743e2abf1e09225b7604a1b7e5299",
       "files": 4
     },
     {
@@ -648,7 +648,7 @@
     {
       "id": "river-review-frontend",
       "path": "skills/agent-skills/river-review-frontend",
-      "checksum": "sha256:c8d0025b1223c10be89683ef86414ee038ac1607ccacacb22bc6e1ddcc6970cb",
+      "checksum": "sha256:fb015a8c27e04b0b31a296653a92feeceb7364c61ba1618545a2f4469eef37ba",
       "files": 2
     },
     {

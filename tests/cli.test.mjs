@@ -101,6 +101,45 @@ describe('river run - dry-run outputs', () => {
 });
 
 // -----------------------------------------------------------------------------
+// river run - LLM raw output on parse failure (T64)
+// -----------------------------------------------------------------------------
+//
+// T64: LLM出力が "<file>:<line>: <message>" 形式にパースできず、かつ
+// debug.llmError しか出力されないため raw な LLM 応答が全く見えず切り分けが
+// できなかった。--debug 実行時は debug.rawLlmOutput（保持済み）を
+// printDebugInfo が出力することを確認する。
+
+describe('river run - LLM raw output on parse failure (T64)', () => {
+  test('prints raw LLM output when the LLM response cannot be parsed as line comments', async (t) => {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+
+    const originalFetch = global.fetch;
+    const rawLlmText = 'このPRには重大な問題は見つかりませんでした。詳細は割愛します。';
+    global.fetch = async () => ({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: rawLlmText } }] }),
+    });
+
+    try {
+      const result = await runCliInProcess(['run', '.', '--debug'], {
+        cwd: dir,
+        env: { OPENAI_API_KEY: 'test-key' },
+      });
+      assert.strictEqual(result.code, 0, result.stderr);
+      assert.match(result.stdout, /LLM error: LLM output could not be parsed/);
+      assert.match(result.stdout, /Raw LLM output:/);
+      assert.ok(
+        result.stdout.includes(rawLlmText),
+        `expected stdout to include raw LLM output, got: ${result.stdout}`
+      );
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+// -----------------------------------------------------------------------------
 // river run - markdown output
 // -----------------------------------------------------------------------------
 

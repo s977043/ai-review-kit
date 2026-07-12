@@ -8,7 +8,17 @@ category: midstream
 phase: [midstream]
 severity: minor
 applyTo:
-  - 'src/**/*.{ts,tsx,js,jsx,mjs}'
+  # ルーティング先（typescript-strict / typescript-nullcheck / type-driven-design /
+  # logging-observability / altitude-generalization / closure-scope-retention）の
+  # applyTo 包含検査 warning 解消（#1508 系）。scripts/**・runners/** はこのリポジトリ
+  # 自身に実在する自己参照ギャップ（#1494/#1500 と同型）、app/lib/packages/** は
+  # #1500 の precedent 準拠。
+  - 'src/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'app/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'lib/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'packages/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'scripts/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+  - 'runners/**/*.{ts,tsx,js,jsx,mjs,cjs}'
 inputContext: [diff, fullFile]
 outputKind: [findings, actions]
 tags: [code-quality, default, entry, routing]
@@ -74,6 +84,7 @@ license: MIT
 - `any`の使用が最小限か
 - 型ガードが適切か
 - null/undefinedの扱いが安全か
+- 型検査対象外の分界（#1476）: `scripts/`（tsconfig の `include` に含まれず tsc 検査対象外）の JSDoc で `unknown` を `any` へ緩める提案はしない。`unknown` は呼び出し側に絞り込みを強制する意図的で保守的な選択。詳細と canary は `existing-pattern-conformance` の「False-positive guards」を参照。
 
 ### エラーハンドリング
 

@@ -20,6 +20,13 @@ applyTo:
   - 'app/**/*.{ts,tsx,js,jsx}'
   - 'components/**/*.{ts,tsx,js,jsx}'
   - '**/*.{css,scss,less}'
+  # loading-state（lib/packages）を完全解消、modern-web-a11y-interactive /
+  # modern-web-semantic / modern-web-browser-compat の pages/** 分（ts/tsx/js/jsx）を
+  # 部分解消（applyTo 包含検査 warning、#1508 系）。html/astro 系は意図的に据置き
+  # （tailwind-class-hygiene 等、C 判定 — 追加しない）。
+  - 'pages/**/*.{ts,tsx,js,jsx}'
+  - 'lib/**/*.{ts,tsx,js,jsx}'
+  - 'packages/**/*.{ts,tsx,js,jsx}'
 # applyTo 包含検査（#1508）の意図的除外。ルーティング表に載るが本エントリの
 # applyTo には含めないルーティング先を、理由付きで宣言する。
 applyToExemptions:
