@@ -62,12 +62,13 @@ When a retrospective identifies a recurring mistake or missing guardrail, follow
 
 ## Tooling
 
-| Component   | Location                  | Behavior                                                              |
-| ----------- | ------------------------- | --------------------------------------------------------------------- |
-| Permissions | `.claude/settings.json`   | Defines allow/ask/deny command lists                                  |
-| Rules       | `.claude/rules/`          | Auto-loaded by glob pattern in frontmatter (e.g., `**/*`)             |
-| Hooks       | `.claude/hooks/format.sh` | PostToolUse: auto-runs prettier on all changed files (vs HEAD)        |
-| Sub-agent   | `agents/river-review.md`  | Distributed plugin agent (top-level per #996); Read, Grep, Glob, Bash |
+| Component         | Location                                         | Behavior                                                              |
+| ----------------- | ------------------------------------------------ | --------------------------------------------------------------------- |
+| Permissions       | `.claude/settings.json`                          | Defines allow/ask/deny command lists                                  |
+| Rules             | `.claude/rules/`                                 | Auto-loaded by glob pattern in frontmatter (e.g., `**/*`)             |
+| Hooks             | `.claude/hooks/format.sh`                        | PostToolUse: auto-runs prettier on all changed files (vs HEAD)        |
+| Sub-agent         | `agents/river-review.md`                         | Distributed plugin agent (top-level per #996); Read, Grep, Glob, Bash |
+| Worker discipline | `docs/development/worker-discipline-template.md` | Copy-paste discipline block for delegated worker prompts              |
 
 ## Custom Commands
 
@@ -86,7 +87,8 @@ When a retrospective identifies a recurring mistake or missing guardrail, follow
 | `/verify-agent-report`   | Verify agent completion reports against real branches, PRs, and commits                     |
 | `/merge-check`           | Run the pre-merge checklist (docs/governance.md) against a PR number                        |
 | `/register-plugin-asset` | Register a new distributed command/agent/agent-skill into the plugin manifests and validate |
+| `/release-kick`          | Drive a release-please PR from BLOCKED unblock through merge and release verification       |
 
-Details: distributed commands (`/check` `/pr` `/skill` `/review-local` `/challenge` `/review-team` `/setup-team`) live in top-level `commands/` (plugin surface, per #996); repo-dev commands (`/propose-issue` `/plan-merge-order` `/preflight` `/verify-agent-report` `/merge-check` `/register-plugin-asset`) stay in `.claude/commands/`.
+Details: distributed commands (`/check` `/pr` `/skill` `/review-local` `/challenge` `/review-team` `/setup-team`) live in top-level `commands/` (plugin surface, per #996); repo-dev commands (`/propose-issue` `/plan-merge-order` `/preflight` `/verify-agent-report` `/merge-check` `/register-plugin-asset` `/release-kick`) stay in `.claude/commands/`.
 
 > Note: the distributed commands resolve only when river-review is **installed as a plugin**. When working inside this repo directly, Claude Code auto-discovers project commands from `.claude/commands/` only — so the seven distributed commands are not available as in-repo slash commands (the repo-dev commands are).
