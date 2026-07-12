@@ -119,7 +119,7 @@ report-only 契約に従う。**本観点はマージを止めない**。判定�
 - 指摘の `file:line` は差分内にあること（VERIFICATION の evidence 規則）。差分外の推測に基づく Unknown は finding にせず question として返す。
 - 委譲表に該当する defect は出さない（委譲先 skill の実行に委ねる）。
 - 「証拠が repo 内・別ファイル・PR 本文に存在する可能性」を Grep / artifact 参照で棄却できない場合は、finding ではなく question にする。
-- 低リスク PR（小さな明確なバグ修正・既存パターン踏襲）では過剰な Unknown を出さない。観点ごとに **finding と question の合算で** 最大 5 件、severity 降順で切り捨てる。question は severity を持たないため **`info` 相当として扱い、切り捨ては findings（severity 降順）→ questions の順**とする。
+- 低リスク PR（小さな明確なバグ修正・既存パターン踏襲）では過剰な Unknown を出さない。観点ごとに **finding と question の合算で** 最大 5 件とする。question は severity を持たないため **`info` 相当として扱い、保持の優先順は findings（severity 降順）→ questions とし、上限超過分は優先度の低い側（questions → 低 severity findings）から切り捨てる**。
 - correctness bug・セキュリティ欠陥そのものは対象外（defect 系観点の責務）。
 
 ## References

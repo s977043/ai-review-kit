@@ -69,7 +69,7 @@ Why: 証拠の有無は grep / artifact 参照による決定論的突合が主�
   - タイムアウト・リトライ・レート制限・キャッシュ TTL の設定値が差分内に明示されている。
 - **証拠の別在の棄却が前提**: 「証拠が repo 内・別ファイル・既存テスト・PR 本文に存在する可能性」を Grep / Glob / artifact 参照で棄却できた場合のみ finding 化する。棄却できなければ finding ではなく question とする。
 - **委譲先の領分を侵さない**: 委譲表（`unknown-coverage-review` の DELEGATION.md）で defect 検出に割り当てられた指摘（caller 残骸・契約破壊・テスト欠落そのもの）は出さない。本 skill の finding は「証拠の不在（evidence_missing）」に限る。
-- **指摘上限**: 観点（Impact / Failure / External）ごとに finding と question の合算で最大 3 件、severity 降順で切り捨てる。question は `info` 相当として扱い、切り捨ては findings（severity 降順）→ questions の順とする。
+- **指摘上限**: 観点（Impact / Failure / External）ごとに finding と question の合算で最大 3 件とする。question は `info` 相当として扱い、保持の優先順は findings（severity 降順）→ questions とし、上限超過分は優先度の低い側（questions → 低 severity findings）から切り捨てる。
 - correctness bug・セキュリティ欠陥そのものは対象外（defect 系観点の責務）。
 
 ## Rule / ルール

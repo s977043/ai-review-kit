@@ -73,7 +73,7 @@ Why: plan の assumption と diff の突合は artifact 参照による決定論
 - 「assumption が解消された証拠が別ファイル・既存テスト・PR 本文に存在する可能性」を Grep / Glob / artifact 参照で棄却できた場合のみ finding 化する。棄却できなければ question とする。
 - plan / plan 整合の検証（`plangate-plan-integrity` / `plangate-verification-audit` の領分）は出さない。本 skill の finding は「解消の証拠不在」に限る。
 - bare な計画 issue 参照から外部 issue 本文を取得・推測して assumption を捏造しない（部分評価は PR 本文に inline された項目に限る）。
-- 指摘上限: finding と question の合算で最大 5 件、severity 降順で切り捨てる。question は `info` 相当として扱い、切り捨ては findings（severity 降順）→ questions の順とする。
+- 指摘上限: finding と question の合算で最大 5 件とする。question は `info` 相当として扱い、保持の優先順は findings（severity 降順）→ questions とし、上限超過分は優先度の低い側（questions → 低 severity findings）から切り捨てる。
 
 ## Rule / ルール
 
