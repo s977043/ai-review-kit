@@ -39,7 +39,7 @@ Why: ログ・メトリクス・トレースの品質をチェックリスト型
 - Require structured logs/metrics/traces with request IDs and minimal PII on new error paths.
 - Ensure retries/fallbacks/cache branches emit signals for hit/miss/attempt counts.
 - Highlight noisy or contextless logs that hinder debugging.
-- **既存マスク不変条件の迂回**: 新設の debug/log/artifact 出力・保持経路（例: パース失敗調査用に raw レスポンスを `debug.*` へ格納する、新しい診断ログを追加する）が、同種データの既存経路（パース済み・表示用データ）が通しているマスク処理（redact/mask 関数）を迂回していないか確認する。検出の問い: 「この diff が新設する出力・保持経路は、同種データの既存経路が通しているマスク処理を通っているか」。修正の定石は出力側（print/log 文）ではなく**格納段階**（値を変数へ代入する時点）で redact 関数を適用すること — これにより将来の全ての消費者（CI ログ、artifact export 等）が一律にマスク済みの値を受け取る。詳細は Origin を参照。
+- **既存マスク不変条件の迂回**: 新設の debug/log/artifact 出力・保持経路（例: パース失敗調査用に raw レスポンスを `debug.*` へ格納する、新しい診断ログを追加する）が、同種データの既存経路（パース済み・表示用データ）が通しているマスク処理（redact/mask 関数）を迂回していないか確認する。検出の問い: 「この diff が新設する出力・保持経路は、同種データの既存経路が通しているマスク処理を通っているか」。修正の定石は出力側（print/log 文）ではなく**格納段階**（値を変数やオブジェクトのプロパティへ代入する時点）で redact 関数を適用すること — これにより将来の全ての消費者（CI ログ、artifact export 等）が一律にマスク済みの値を受け取る。詳細は Origin を参照。
 
 ## Non-goals
 
