@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.55.0](https://github.com/s977043/river-review/compare/v1.54.1...v1.55.0) (2026-07-12)
+
+
+### Features
+
+* **skills:** logging-observability に debug 出力の redaction 迂回観点を追加する ([#1536](https://github.com/s977043/river-review/issues/1536)) ([ea448bc](https://github.com/s977043/river-review/commit/ea448bc286be4babc1802f0d3d58a5669dbcca4b))
+
 ## [1.54.1](https://github.com/s977043/river-review/compare/v1.54.0...v1.54.1) (2026-07-12)
 
 
