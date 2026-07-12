@@ -65,8 +65,14 @@ function buildSeverityInstruction(severity, language) {
 function buildAdditionalSection(instructions, language) {
   if (!instructions?.length) return '';
   const header = language === 'en' ? 'Additional instructions:' : '追加指示:';
+  // T64: additionalInstructions が単一行 "<file>:<line>: <message>" 形式と
+  // 競合し、LLM出力のパース失敗を招いていたため、適用範囲を明示する。
+  const formatNote =
+    language === 'en'
+      ? 'These additional instructions apply only to the content of each finding\'s <message>. Always keep the "<file>:<line>: <message>" line format above.'
+      : 'これらの追加指示は各 finding の <message> 内容にのみ適用してください。上記の「<file>:<line>: <message>」という行フォーマット自体は常に維持してください。';
   const body = instructions.map((item) => `- ${item}`).join('\n');
-  return `\n${header}\n${body}\n`;
+  return `\n${header}\n${formatNote}\n${body}\n`;
 }
 
 function resolveOpenAIConfig(options = {}, config = defaultConfig) {

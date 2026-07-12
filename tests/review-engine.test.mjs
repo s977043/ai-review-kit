@@ -247,6 +247,44 @@ test('buildPrompt omits ADR context section when relatedADRs is undefined', () =
   assert.ok(!prompt.includes('Related ADRs/Specs'));
 });
 
+// T64: additionalInstructions が単一行 "<file>:<line>: <message>" 形式の
+// 出力要求と競合し、LLM出力のパース失敗を招いていた。追加指示の適用範囲を
+// message 内容に限定し、行フォーマットは常に維持する旨をプロンプトに含める。
+test('buildPrompt scopes additionalInstructions to message content and preserves line format (T64)', () => {
+  const { prompt } = buildPrompt({
+    diffText,
+    diffFiles: diff.files,
+    plan,
+    phase: 'midstream',
+    config: {
+      review: {
+        additionalInstructions: ['出力は要約・重大な懸念・具体的な提案の3部構成を維持する。'],
+      },
+    },
+  });
+  assert.match(prompt, /追加指示:/);
+  assert.match(prompt, /<message> 内容にのみ適用/);
+  assert.match(prompt, /行フォーマット自体は常に維持/);
+  // format instruction line must precede the user-supplied instructions
+  const formatNoteIndex = prompt.indexOf('<message> 内容にのみ適用');
+  const userInstructionIndex = prompt.indexOf(
+    '出力は要約・重大な懸念・具体的な提案の3部構成を維持する。'
+  );
+  assert.ok(formatNoteIndex > -1 && userInstructionIndex > -1);
+  assert.ok(formatNoteIndex < userInstructionIndex);
+});
+
+test('buildPrompt omits the additionalInstructions format note when none are configured', () => {
+  const { prompt } = buildPrompt({
+    diffText,
+    diffFiles: diff.files,
+    plan,
+    phase: 'midstream',
+  });
+  assert.doesNotMatch(prompt, /追加指示:/);
+  assert.doesNotMatch(prompt, /<message> 内容にのみ適用/);
+});
+
 test('buildPrompt switches language based on config', () => {
   const { prompt, language } = buildPrompt({
     diffText,

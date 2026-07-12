@@ -44946,8 +44946,14 @@ function buildSeverityInstruction(severity, language) {
 function buildAdditionalSection(instructions, language) {
   if (!instructions?.length) return '';
   const header = language === 'en' ? 'Additional instructions:' : '追加指示:';
+  // T64: additionalInstructions が単一行 "<file>:<line>: <message>" 形式と
+  // 競合し、LLM出力のパース失敗を招いていたため、適用範囲を明示する。
+  const formatNote =
+    language === 'en'
+      ? 'These additional instructions apply only to the content of each finding\'s <message>. Always keep the "<file>:<line>: <message>" line format above.'
+      : 'これらの追加指示は各 finding の <message> 内容にのみ適用してください。上記の「<file>:<line>: <message>」という行フォーマット自体は常に維持してください。';
   const body = instructions.map((item) => `- ${item}`).join('\n');
-  return `\n${header}\n${body}\n`;
+  return `\n${header}\n${formatNote}\n${body}\n`;
 }
 
 function resolveOpenAIConfig(options = {}, config = _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s) {
@@ -63212,6 +63218,7 @@ var dist = __nccwpck_require__(2815);
 
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
+const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
 const MAX_DIFF_PREVIEW_LINES = 200;
 const COMMENT_MARKER = '<!-- river-review -->';
 
@@ -64241,6 +64248,9 @@ function printDebugInfo(result, { log = console.log } = {}) {
 `);
   if (debug.llmError) {
     log(`LLM error: ${debug.llmError}`);
+    // T64: パース失敗時に生のLLM出力が見えず切り分けができなかったため、
+    // debug.rawLlmOutput があれば truncate してログに出す。
+    logPreview('Raw LLM output', debug.rawLlmOutput, MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH, log);
   }
   logPreview('Prompt preview', debug.promptPreview, MAX_PROMPT_PREVIEW_LENGTH, log);
   logPreview(

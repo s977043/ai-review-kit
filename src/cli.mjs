@@ -30,6 +30,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
+const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
 const MAX_DIFF_PREVIEW_LINES = 200;
 const COMMENT_MARKER = '<!-- river-review -->';
 
@@ -1059,6 +1060,9 @@ function printDebugInfo(result, { log = console.log } = {}) {
 `);
   if (debug.llmError) {
     log(`LLM error: ${debug.llmError}`);
+    // T64: パース失敗時に生のLLM出力が見えず切り分けができなかったため、
+    // debug.rawLlmOutput があれば truncate してログに出す。
+    logPreview('Raw LLM output', debug.rawLlmOutput, MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH, log);
   }
   logPreview('Prompt preview', debug.promptPreview, MAX_PROMPT_PREVIEW_LENGTH, log);
   logPreview(
