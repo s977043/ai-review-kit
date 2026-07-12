@@ -80,6 +80,10 @@ Issue #1470 の 6 カテゴリを、defect ではなく **evidence-sufficiency �
 
 観点 3〜5 は既存の運用・影響・検証系 skill の多くが `applyTo: docs/**`（upstream 設計文書向け）で、**コードのみの diff では空振りする**。本観点はその空白を「証拠の有無」の meta として拾う（設計 §1 の Partial / Gap）。
 
+### 追加類型（#1517 由来）
+
+「[AIコードレビューの「見逃し」を3か月ログしたら、5つの盲点タイプに全部収まった](https://zenn.dev/kenimo49/articles/ai-code-review-blind-spots-3month-5-types)」（井本 賢 / 2026-07-06）が報告した5盲点タイプのうち、境界条件・契約違反・意味的矛盾は既存6観点の委譲先に包含される。**状態遷移（不正な遷移）・副作用（隠れた副作用）**の2類型は専用 defect 検出 skill が未整備のため、[DELEGATION.md](./references/DELEGATION.md)「追加 Unknown 種別（#1517 由来）」節に暫定的な evidence-sufficiency の meta 問いとして記録する。中期の軽量 detector 化は issue #1517 を参照。
+
 ## 委譲 / Delegation
 
 重複指摘を避けるため、個別 defect の検出は既存 registry skill に委譲し、本観点は **証拠充足の meta 評価のみ**を行う。委譲表・証拠要件・分界は [DELEGATION.md](./references/DELEGATION.md) を SSoT とする。委譲先が finding を出す領域を本観点は重複指摘しない。

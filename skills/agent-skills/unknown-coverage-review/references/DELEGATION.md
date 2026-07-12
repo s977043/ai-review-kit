@@ -27,6 +27,19 @@ Unknown Coverage Review は **evidence-sufficiency（証拠が足りているか
 | Validation                     | `coverage-gap`・`test-existence`・`e2e-wiring`・`test-plan-review`                                                                                                         | 「失敗系・境界・実利用経路を観測した証拠があるか」の meta（Missing Tests 節と接続）                                                                                                                                                                                         |
 | Plan / Assumption Traceability | `plangate-verification-audit`・`architecture-risk-register`・`plangate-plan-integrity`                                                                                     | 「Plan の Assumption が解消された証拠」「実装中に発見した Unknown を記録した証拠」の突合。diff-time で plan 保有時に単独実行する版は registry skill `assumption-resolution-trace` へ切り出し済みで、合成層はその findings を残余に取り込む                                  |
 
+## 追加 Unknown 種別（#1517 由来）
+
+由来 / Inspired by: 「[AIコードレビューの「見逃し」を3か月ログしたら、5つの盲点タイプに全部収まった](https://zenn.dev/kenimo49/articles/ai-code-review-blind-spots-3month-5-types)」（井本 賢 / 2026-07-06）— AI コードレビューの見逃しを3か月間ログし分類した結果、5つの盲点タイプに収束したという実測記事。原著者を名指しする nominative fair use に留め、本文の転載・endorsement は行わない。
+
+報告された5盲点タイプのうち、境界条件・契約違反・意味的矛盾の3類型は上表の既存委譲先（`nullability-contract`/`coverage-gap`、`api-compatibility`/`existing-pattern-conformance`、`self-contradiction`）で対応済み。残る2類型は #1517 時点で専用 defect 検出 skill が存在しないため、暫定的に本観点（合成層）が直接評価する残余として記録する。専用 detector を作らず、既存の meta 評価（evidence-sufficiency）の対象として言及するに留める。
+
+| Unknown 種別（zenn 5類型） | 委譲先（defect 検出）                                  | 本観点が扱う残余（evidence-sufficiency の meta）                                                                                                    |
+| -------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 状態遷移（不正な遷移）     | （未整備。中期で軽量 detector 化を検討 — issue #1517） | 許可されない状態遷移（不正な rollback・二重遷移・ガード条件の漏れなど）を diff 内で確認した証拠（状態遷移テスト・ガード条件のレビュー記録）があるか |
+| 副作用（隠れた副作用）     | （未整備。中期で軽量 detector 化を検討 — issue #1517） | 宣言・シグネチャに現れない副作用（意図しない外部呼び出し・共有状態への書き込み・ログ／通知の発火）を洗い出した証拠があるか                          |
+
+専用 skill を切り出した場合は、上の #1470 表と同じ形式で統合し、この節は削除する。中期の detector 化は `.claude/rules/review-core.md` の #1070 責務分界（決定論領域は静的解析、意味的判断は AI レビュー）に整合させ、FP guard + canary を用意することを条件とする（issue #1517 受入条件）。
+
 ## 分界の原則
 
 - **defect（S）は委譲先、evidence-sufficiency（M）は本観点**。委譲先は「リスクが差分に顕在化した時」に指摘し、本観点は「そのリスク種別を調査した証拠が残っているか」を横断合成する。
