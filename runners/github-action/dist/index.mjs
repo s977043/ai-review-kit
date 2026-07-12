@@ -45344,7 +45344,10 @@ async function generateReview({
         maxTokens: openAIConfig.maxTokens,
         systemMessage: buildSystemMessage(language),
       });
-      debug.rawLlmOutput = output;
+      // T64 follow-up (gemini security-high): redact at storage time so the
+      // raw LLM output never leaves process memory unmasked. Keeps the same
+      // redaction invariant already applied to parsed comment messages below.
+      debug.rawLlmOutput = redactSecrets(output);
       const parsed = parseLineComments(output);
       if (parsed !== null) {
         const redacted = parsed.map((c) => ({ ...c, message: redactSecrets(c.message) }));

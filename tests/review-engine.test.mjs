@@ -67,6 +67,39 @@ test('generateReview redacts secrets in debug.promptPreview and returned prompt 
   assert.equal(/ghp_[A-Za-z0-9]{36,}/.test(result.prompt), false);
 });
 
+// T64 follow-up (gemini security-high): debug.rawLlmOutput must go through the
+// same redaction invariant as parsed comment messages. A secret that the LLM
+// echoes back (e.g. leaked into the diff) must be masked at storage time so it
+// never reaches CI logs via printDebugInfo.
+test('generateReview redacts secrets in debug.rawLlmOutput (T64 follow-up)', async () => {
+  // Build a token at runtime so GitHub Push Protection does not flag this
+  // file (same trick as the #692 PR-D test above).
+  const ghpat =
+    'ghp_' + ['kZpL3xQ8mNvW', '5tJfRy2HcBd9', 'eAuQs7TgwY1i', 'OzMrPqXdLcVy'].join('').slice(0, 36);
+  const originalFetch = global.fetch;
+  // Unparseable output (no "<file>:<line>: <message>" line) that echoes a secret.
+  const rawLlmText = `検出されたトークン ${ghpat} を確認してください。`;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: rawLlmText } }] }),
+  });
+  try {
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: 'midstream',
+      dryRun: false,
+      includeFallback: false,
+      apiKey: 'test-key',
+    });
+    assert.equal(result.debug.llmError, 'LLM output could not be parsed');
+    assert.match(result.debug.rawLlmOutput, /ghp_\*\*\*REDACTED\*\*\*/);
+    assert.equal(/ghp_[A-Za-z0-9]{20,}/.test(result.debug.rawLlmOutput), false);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('generateReview skips the LLM in offline mode even with an API key (#1097 review)', async () => {
   const envBackup = {
     RIVER_OFFLINE: process.env.RIVER_OFFLINE,
