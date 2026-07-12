@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.51.0](https://github.com/s977043/river-review/compare/v1.50.0...v1.51.0) (2026-07-12)
+
+
+### Features
+
+* **validator:** agent-skills エントリの applyTo 包含検査を追加する ([#1508](https://github.com/s977043/river-review/issues/1508)) ([#1509](https://github.com/s977043/river-review/issues/1509)) ([48e75cf](https://github.com/s977043/river-review/commit/48e75cf1ce757dd8cc348e53b5e163e38b7990c5))
+
 ## [1.50.0](https://github.com/s977043/river-review/compare/v1.49.0...v1.50.0) (2026-07-11)
 
 
