@@ -333,6 +333,14 @@ async function validateApplyToCoverage(packages) {
           `fires on — ${shown}${more}. Widen this entry's applyTo to reach them, or declare ` +
           'an applyToExemptions entry if the exclusion is intentional.'
       );
+    } else if (r.undecidable) {
+      // Reachability leaned on an undecidable comparison (unsupported glob
+      // grammar treated as overlapping, fail-safe). Non-blocking visibility so
+      // the fallback is auditable rather than silent.
+      console.warn(
+        `ℹ️  ${r.relPath}: routing target "${r.id}" treated as reachable via an undecidable ` +
+          'glob comparison (unsupported grammar assumed to overlap, fail-safe)'
+      );
     }
   }
 

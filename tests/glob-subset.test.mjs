@@ -45,6 +45,19 @@ test('globContains: globstar matches zero segments', () => {
   assert.equal(globContains('a/**/b', 'a/b'), 'yes');
 });
 
+test('canary: adjacent globstars collapse to one (independent review on PR #1509)', () => {
+  // The trailing-`/**` and leading/middle-`**/` compilation branches each absorb
+  // a boundary `/`; compiled separately, "**/**" double-required the separator
+  // and wrongly returned 'no' for these.
+  assert.equal(globOverlaps('**/**', 'foo/bar'), 'yes');
+  assert.equal(globOverlaps('a/**/**', 'a/x/y'), 'yes');
+  assert.equal(globOverlaps('a/**/**', 'a'), 'yes');
+  // Normal middle case stays correct after the collapse.
+  assert.equal(globContains('a/**/**/b', 'a/b'), 'yes');
+  assert.equal(globContains('a/**/**/b', 'a/x/y/b'), 'yes');
+  assert.equal(globContains('a/**/**/b', 'a/x/c'), 'no');
+});
+
 test('globContains: literal path membership', () => {
   assert.equal(globContains('app/**/*.tsx', 'app/a/b/c.tsx'), 'yes');
   assert.equal(globContains('app/**/*.tsx', 'app/x.ts'), 'no');

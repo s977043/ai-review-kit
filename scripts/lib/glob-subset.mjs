@@ -7,9 +7,9 @@
 // `applyTo` (issue #1508). Following repo principle #1070 (deterministic checks
 // guard the deterministic domain, false-positives are caught by canary), the
 // decisions here are made false-positive-first: `globContains`/`globOverlaps`
-// return 'unknown' for any glob whose grammar this module does not model, and
-// the caller degrades an 'unknown' to a non-blocking warning rather than an
-// error.
+// return 'unknown' for any glob whose grammar this module does not model. The
+// caller treats an 'unknown' overlap as reachable (fail-safe) and surfaces the
+// fallback as a non-blocking notice — never an error.
 //
 // Supported glob grammar (after brace expansion):
 //   /   path separator
@@ -123,7 +123,15 @@ function compileSegment(seg) {
  * separator so that e.g. "a/(globstar)/b" also matches the path "a/b".
  */
 function globToAst(glob) {
-  const segments = glob.split('/');
+  // Normalize adjacent globstar segments first: a run of globstars matches
+  // exactly what a single one matches, but compiling them separately makes the
+  // trailing and leading/middle branches each demand the boundary `/`,
+  // double-requiring the separator and wrongly rejecting e.g. "a/(gs)/(gs)"
+  // vs "a" or "a/x/y". Collapse runs to one segment before compiling.
+  const rawSegments = glob.split('/');
+  const segments = rawSegments.filter(
+    (seg, i) => !(seg === '**' && i > 0 && rawSegments[i - 1] === '**')
+  );
   const n = segments.length;
   const parts = [];
   let prevSuppressSep = false;

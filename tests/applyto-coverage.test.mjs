@@ -20,20 +20,45 @@ test('extractRoutingTargetIds reads backtick IDs from table rows', () => {
   ]);
 });
 
-test('extractRoutingTargetIds takes only the first backtick ID after an arrow', () => {
-  // Parenthetical "see also" cross-references must not become phantom targets.
+test('extractRoutingTargetIds excludes full-width-parenthesized see-also refs after an arrow', () => {
+  // Real line from river-review-code/references/ROUTING.md: the parenthetical
+  // cross-reference must not become a phantom target.
   const md =
     '3. `app/` ディレクトリ（Next.js）→ `river-review-frontend`（`nextjs-app-router-boundary`）も参照';
   assert.deepEqual(extractRoutingTargetIds(md), ['river-review-frontend']);
+});
+
+test('canary: arrow-line combo idiom yields every target (real ROUTING.md data)', () => {
+  // Real lines: river-review-code/references/ROUTING.md ("+"-joined combo) and
+  // river-review-frontend/references/ROUTING.md 自動判定ルール. Only taking the
+  // first ID after the arrow would silently drop the later targets — a #1494/
+  // #1500-type zero-signal path for targets that appear only in a combo line.
+  const codeCombo =
+    '- キーワード指定なし & TS ファイル → `typescript-strict` + `typescript-nullcheck`';
+  assert.deepEqual(extractRoutingTargetIds(codeCombo), [
+    'typescript-strict',
+    'typescript-nullcheck',
+  ]);
+  const frontendCombo =
+    '1. React/Vue/Svelte コンポーネントファイル → `a11y-accessible-name` + `modern-web-a11y-interactive` を追加';
+  assert.deepEqual(extractRoutingTargetIds(frontendCombo), [
+    'a11y-accessible-name',
+    'modern-web-a11y-interactive',
+  ]);
 });
 
 test('extractRoutingTargetIds ignores prose lines without table/arrow', () => {
   assert.deepEqual(extractRoutingTargetIds('本スキルは `river-review-code` を補完する。'), []);
 });
 
+test('extractRoutingTargetIds accepts single-word IDs (no hyphen required)', () => {
+  assert.deepEqual(extractRoutingTargetIds('- → `router`'), ['router']);
+  assert.deepEqual(extractRoutingTargetIds('| kw | `planner` | 説明 |'), ['planner']);
+});
+
 test('extractRoutingTargetIds dedupes preserving first-seen order', () => {
-  const md = '- → `a`\n- → `a-b`\n- → `a-b`';
-  assert.deepEqual(extractRoutingTargetIds(md), ['a-b']);
+  const md = '- → `a-b`\n- → `c-d`\n- → `a-b`';
+  assert.deepEqual(extractRoutingTargetIds(md), ['a-b', 'c-d']);
 });
 
 test('expandApplyTo accepts array or string and expands braces', () => {

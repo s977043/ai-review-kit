@@ -8,7 +8,9 @@
 
 import { expandBraces, globOverlaps } from './glob-subset.mjs';
 
-const KEBAB_ID = /`([a-z0-9]+(?:-[a-z0-9]+)+)`/g;
+// Single-word IDs (no hyphen) are legal skill IDs too; requiring a hyphen would
+// silently drop them from both candidates and the unresolved-target warning.
+const KEBAB_ID = /`([a-z0-9]+(?:-[a-z0-9]+)*)`/g;
 
 /**
  * Extract candidate routing-target skill IDs from a routing document. To stay
@@ -17,10 +19,12 @@ const KEBAB_ID = /`([a-z0-9]+(?:-[a-z0-9]+)+)`/g;
  *
  *  - a markdown table row (starts with `|`): every backtick ID in the row is a
  *    candidate (the skill-ID column plus any referenced in the description).
- *  - an arrow line (contains `→`/`->`): only the FIRST backtick ID after the
- *    arrow is the route target; later IDs (typically parenthetical "see also"
- *    cross-references, e.g. "→ `river-review-frontend`（`nextjs-app-router-boundary`）
- *    も参照") are ignored so a cross-reference does not become a phantom target.
+ *  - an arrow line (contains `→`/`->`): every backtick ID after the arrow is a
+ *    candidate — combo routes list several targets on one line (e.g.
+ *    "→ `typescript-strict` + `typescript-nullcheck`") — EXCEPT IDs inside
+ *    full-width parentheses `（...）`, which are "see also" cross-references,
+ *    not route targets (e.g. "→ `river-review-frontend`
+ *    （`nextjs-app-router-boundary`）も参照").
  *
  * Prose mentions elsewhere are ignored entirely.
  *
@@ -45,9 +49,10 @@ export function extractRoutingTargetIds(text) {
     const arrowCandidates = [line.indexOf('→'), line.indexOf('->')].filter((i) => i !== -1);
     if (!arrowCandidates.length) continue;
     const arrowIdx = Math.min(...arrowCandidates);
-    const afterArrow = line.slice(arrowIdx);
-    const first = afterArrow.match(/`([a-z0-9]+(?:-[a-z0-9]+)+)`/);
-    if (first) push(first[1]);
+    // Drop full-width parenthesized spans (see-also cross-references), then take
+    // every backtick ID after the arrow (`+` / `、`-separated combos included).
+    const afterArrow = line.slice(arrowIdx).replace(/（[^）]*）/g, '');
+    for (const match of afterArrow.matchAll(KEBAB_ID)) push(match[1]);
   }
   return ids;
 }
