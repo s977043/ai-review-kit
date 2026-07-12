@@ -31,7 +31,7 @@ Unknown Coverage Review は **evidence-sufficiency（証拠が足りているか
 
 由来 / Inspired by: 「[AIコードレビューの「見逃し」を3か月ログしたら、5つの盲点タイプに全部収まった](https://zenn.dev/kenimo49/articles/ai-code-review-blind-spots-3month-5-types)」（井本 賢 / 2026-07-06）— AI コードレビューの見逃しを3か月間ログし分類した結果、5つの盲点タイプに収束したという実測記事。原著者を名指しする nominative fair use に留め、本文の転載・endorsement は行わない。
 
-報告された5盲点タイプのうち、境界条件・契約違反・意味的矛盾の3類型は上表の既存委譲先（`nullability-contract`/`coverage-gap`、`api-compatibility`/`existing-pattern-conformance`、`self-contradiction`）で対応済み。残る2類型は #1517 時点で専用 defect 検出 skill が存在しないため、暫定的に本観点（合成層）が直接評価する残余として記録する。専用 detector を作らず、既存の meta 評価（evidence-sufficiency）の対象として言及するに留める。
+報告された5盲点タイプのうち、境界条件・契約違反・意味的矛盾の3類型は既存の委譲先スキル（`nullability-contract`/`coverage-gap`、`api-compatibility`/`existing-pattern-conformance`、`self-contradiction`。一部は上の #1470 表に未掲載だが、いずれもリポジトリ内に registry skill として存在する）で対応済み。残る2類型は #1517 時点で専用 defect 検出 skill が存在しないため、暫定的に本観点（合成層）が直接評価する残余として記録する。専用 detector を作らず、既存の meta 評価（evidence-sufficiency）の対象として言及するに留める。
 
 | Unknown 種別（zenn 5類型） | 委譲先（defect 検出）                                  | 本観点が扱う残余（evidence-sufficiency の meta）                                                                                                    |
 | -------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
