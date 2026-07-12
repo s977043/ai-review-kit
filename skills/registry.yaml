@@ -813,6 +813,26 @@ skills:
     recommended: true
     description: 'plan artifact がある時のみ、plan の assumption / open question が実装で解消された証拠を diff・PR 本文と突合する evidence-sufficiency 観点。plan 欠損時は発火せず、PR 本文に前提が inline 列挙されていれば列挙分のみ部分評価する。unknown-coverage-review 合成層の観点6 を registry として単独実行する'
 
+  - id: fix-scope-integrity
+    version: '0.1.0'
+    name: 'Fix Scope Integrity 指摘対応ループのスコープ逸脱・前提破壊検出'
+    path: skills/midstream/fix-scope-integrity/SKILL.md
+    category: midstream
+    phase: midstream
+    tags:
+      [
+        fix-scope-integrity,
+        scope-creep,
+        premise-break,
+        fix-scope-guard,
+        review-response-loop,
+        scope-consistency,
+        midstream,
+      ]
+    severity: major
+    recommended: true
+    description: '指摘対応の反復（レビューコメント→修正→再レビュー）で、個別には正しい修正の蓄積が当初スコープを逸脱した（scope creep）、または成立済みの前提を破壊した（premise break）連鎖を diff-time で検出する。技術的正しさとスコープ整合性を別軸で評価し report-only。1コメント triage は review-comment-triage、構造変更後の caller 残骸は cross-file-leakage、plan 前提解消は assumption-resolution-trace へ委譲する'
+
   - id: cross-file-leakage
     version: '0.1.0'
     name: 'Cross-File Leakage リファクタ後の caller 側残骸検出'
