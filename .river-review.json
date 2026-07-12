@@ -1,4 +1,7 @@
 {
+  "model": {
+    "maxTokens": 1500
+  },
   "review": {
     "language": "ja",
     "severity": "normal",

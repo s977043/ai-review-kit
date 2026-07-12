@@ -471,10 +471,31 @@ export async function generateReview({
       if (parsed !== null) {
         const redacted = parsed.map((c) => ({ ...c, message: redactSecrets(c.message) }));
         const checks = redacted.map((c) => validateFindingMessage(c.message));
-        const invalidCount = checks.filter((c) => !c.ok).length;
-        if (invalidCount === 0) {
-          comments = redacted;
+        // T64 follow-up (#1529 E2E): a single truncated/malformed finding (e.g.
+        // maxTokens cutoff dropping the trailing Severity:/Confidence: labels)
+        // used to invalidate the whole batch and discard otherwise-valid
+        // findings. Drop only the invalid findings and keep the valid ones;
+        // fail-safe fallback still applies when *none* of the findings are
+        // valid (validCount === 0).
+        const validEntries = redacted.filter((_, i) => checks[i].ok);
+        const invalidEntries = redacted
+          .map((c, i) => ({ comment: c, check: checks[i] }))
+          .filter(({ check }) => !check.ok);
+        const invalidCount = invalidEntries.length;
+        if (validEntries.length > 0) {
+          comments = validEntries;
           debug.llmUsed = true;
+          if (invalidCount > 0) {
+            debug.droppedInvalidFindings = invalidCount;
+            const firstInvalid = invalidEntries[0];
+            debug.droppedInvalidFindingsSample = {
+              file: firstInvalid.comment.file,
+              line: firstInvalid.comment.line,
+              missing: firstInvalid.check.missing,
+              invalid: firstInvalid.check.invalid,
+            };
+            debug.llmError = `LLM findings partially violated required format (dropped ${invalidCount} of ${redacted.length}); continuing with LLM using the remaining ${validEntries.length} valid finding(s).`;
+          }
         } else {
           debug.llmUsed = false;
           debug.llmError = `LLM findings violate required format (invalidCount=${invalidCount}). Falling back.`;
