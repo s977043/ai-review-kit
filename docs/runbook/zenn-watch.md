@@ -74,8 +74,8 @@ Zenn 記事のテクニックを概念として再実装する場合は、`skill
 
 ## 関連
 
-- Tracking issue: 「tracking: Zenn AI レビュー/コードレビュー記事の定期ウォッチと取り込み検討」（本 runbook 作成と前後して作成）
-- ワークフロー: [`.github/workflows/zenn-watch.yml`](../../.github/workflows/zenn-watch.yml)
+- Tracking issue: [#1512](https://github.com/s977043/river-review/issues/1512)「tracking: Zenn AI レビュー/コードレビュー記事の定期ウォッチと取り込み検討」
+- ワークフロー: `.github/workflows/zenn-watch.yml`（別 PR で追加。本 runbook とはファイルを分離しているため相対リンクにはしない）
 - `docs/adr/005-review-learning-loop-incremental-extension.md`—自動化度を持ち込まない判断の前例
 - `docs/development/improvement-flow.md`—codify フロー本体
 - `.claude/commands/propose-issue.md`—既存実装調査の手順
