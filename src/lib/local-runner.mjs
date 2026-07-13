@@ -436,6 +436,10 @@ export async function runLocalReview({
     repoContext,
     prBody: context.prBody,
     config: context.config,
+    // #1545 P1: formalized stage/risk/artifact routing signals for `--reviewers
+    // auto`. Populated by the host/PlanGate via the plan; undefined here keeps
+    // the pre-#1545 auto-selection behavior unchanged.
+    signals: context.plan?.reviewSignals,
   };
 
   const review = reviewers?.length
