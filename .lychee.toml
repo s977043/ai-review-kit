@@ -93,8 +93,12 @@ accept = [
 # Exclude all private IPs from checking
 exclude_all_private = true
 
-# Include fragments in link checking (important for internal anchor links in documentation)
-include_fragments = true
+# Include fragments in link checking (important for internal anchor links in documentation).
+# lychee >= 0.24 (lychee-action >= 2.9.0, #1538) changed this option from a boolean to an
+# enum: "none" | "anchor-only" | "text-only" | "full". The pre-0.24 `true` checked anchor
+# fragments only, so "anchor-only" preserves the previous behavior. Requires lychee >= 0.24
+# for local runs (`npm run check:links*`); older lychee (<= 0.23) rejects the string value.
+include_fragments = "anchor-only"
 
 # Cache results for faster subsequent runs
 cache = true
