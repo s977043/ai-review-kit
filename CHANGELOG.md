@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.56.0](https://github.com/s977043/river-review/compare/v1.55.0...v1.56.0) (2026-07-13)
+
+
+### Features
+
+* **review:** selectRolesAuto に stage/risk/artifact signal を形式化する ([#1545](https://github.com/s977043/river-review/issues/1545)) ([#1547](https://github.com/s977043/river-review/issues/1547)) ([0f3e1a3](https://github.com/s977043/river-review/commit/0f3e1a33eb723874f014afc871c6ce8ecdf4eef1))
+
+
+### Bug Fixes
+
+* **ci:** lychee 0.24 の include_fragments 型変更に .lychee.toml を追随させる ([#1550](https://github.com/s977043/river-review/issues/1550)) ([eba9c3f](https://github.com/s977043/river-review/commit/eba9c3f5c566aaffe65f9f6c93e1a5ea742e43f8))
+
 ## [1.55.0](https://github.com/s977043/river-review/compare/v1.54.1...v1.55.0) (2026-07-12)
 
 
