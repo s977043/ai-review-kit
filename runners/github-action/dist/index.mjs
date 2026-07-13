@@ -47375,10 +47375,11 @@ const DEFAULT_REVIEWERS = ['bug-hunter', 'security-scanner'];
 const SPLIT_FILE_THRESHOLD = 10;
 const SPLIT_LINE_THRESHOLD = 500;
 
-function resolveReviewerRoles(reviewers, { fileTypes, riskAssessment } = {}) {
+function resolveReviewerRoles(reviewers, { fileTypes, riskAssessment, signals } = {}) {
   // 'auto' keyword: derive roles from diff content
   if (reviewers?.length === 1 && reviewers[0] === 'auto') {
-    return { valid: selectRolesAuto(fileTypes, riskAssessment), invalid: [] };
+    const autoSelection = computeAutoSelection(fileTypes, riskAssessment, signals);
+    return { valid: autoSelection.roles, invalid: [], autoSelection };
   }
   const names = reviewers ?? DEFAULT_REVIEWERS;
   const valid = names.filter((n) => REVIEWER_ROLES[n]);
@@ -47389,11 +47390,71 @@ function resolveReviewerRoles(reviewers, { fileTypes, riskAssessment } = {}) {
 /**
  * Automatically select reviewer roles based on diff content signals.
  * Always includes bug-hunter; adds security-scanner and test-gap when relevant.
+ *
+ * @param {object} [fileTypes] coarse file-classifier buckets (config/app/infra/…)
+ * @param {object} [riskAssessment] humanReviewFiles / escalatedFiles counts
+ * @param {object} [signals] optional formalized stage/risk/artifact signals (#1545 P1)
+ * @returns {string[]} selected reviewer role names
  */
-function selectRolesAuto(fileTypes, riskAssessment) {
-  const roles = new Set(['bug-hunter']);
+function selectRolesAuto(fileTypes, riskAssessment, signals) {
+  return computeAutoSelection(fileTypes, riskAssessment, signals).roles;
+}
 
-  // Security: risky files or config/infra/schema changes
+/**
+ * Stage → existing reviewer roles. Maps the Issue #1545 §E stage table onto the
+ * existing REVIEWER_ROLES only (no new roles are introduced; Lenses without a
+ * dedicated role stay documented Gaps in reviewer-lens-taxonomy).
+ */
+const STAGE_ROLE_MAP = {
+  requirements: [],
+  plan: ['security-scanner', 'test-gap'],
+  design: ['frontend-reviewer'],
+  exec: ['security-scanner'],
+  verify: ['test-gap'],
+  release: ['security-scanner'],
+};
+
+/**
+ * Semantic diff signals → existing reviewer roles (Issue #1545 §E routing). Only
+ * signals whose Lens maps to an existing role appear here; devex-only signals
+ * (changesPublicApi / changesCliInterface / changesInstallation) intentionally
+ * map to nothing and remain documented Gaps.
+ */
+const SIGNAL_ROLE_MAP = {
+  touchesAuth: 'security-scanner',
+  changesPermissions: 'security-scanner',
+  handlesSensitiveData: 'security-scanner',
+  databaseMigration: 'security-scanner',
+  breakingChange: 'security-scanner',
+  changesUi: 'frontend-reviewer',
+  changesUserFlow: 'frontend-reviewer',
+  deploymentChange: 'ci-cd-reviewer',
+};
+
+/**
+ * Compute the auto reviewer selection together with an explainable rationale.
+ *
+ * Backward compatible: with no `signals` argument the selected role set (and its
+ * order) is identical to the pre-#1545 behavior — bug-hunter first, then the
+ * file/risk heuristics in their original order. New signals are strictly
+ * additive and only ever ADD roles.
+ *
+ * @returns {{ roles: string[], reasons: Record<string, string[]>, required: string[], skipped: string[] }}
+ */
+function computeAutoSelection(fileTypes, riskAssessment, signals) {
+  /** @type {Map<string, string[]>} role → reasons (insertion order = role order) */
+  const reasons = new Map();
+  const add = (role, reason) => {
+    if (!REVIEWER_ROLES[role]) return; // never select a non-existent role
+    if (!reasons.has(role)) reasons.set(role, []);
+    const list = reasons.get(role);
+    if (!list.includes(reason)) list.push(reason);
+  };
+
+  // Fail-safe baseline: bug-hunter always runs.
+  add('bug-hunter', 'always-on');
+
+  // --- Existing file/risk heuristics (behavior unchanged) ---
   const riskyFiles =
     (riskAssessment?.humanReviewFiles?.length ?? 0) + (riskAssessment?.escalatedFiles?.length ?? 0);
   const infraFiles =
@@ -47402,35 +47463,44 @@ function selectRolesAuto(fileTypes, riskAssessment) {
     (fileTypes?.migration?.length ?? 0) +
     (fileTypes?.infra?.length ?? 0);
   if (riskyFiles > 0 || infraFiles > 0) {
-    roles.add('security-scanner');
+    add('security-scanner', 'files:risk-or-infra');
   }
 
-  // Test gap: test files changed or new app files without accompanying tests
   const testFiles = fileTypes?.test?.length ?? 0;
   const appFiles = fileTypes?.app?.length ?? 0;
   if (testFiles > 0 || appFiles > 2) {
-    roles.add('test-gap');
+    add('test-gap', 'files:tests-or-many-app');
   }
 
-  // Dependency: package manifest / lockfile changes (classified under `config`).
   const configList = fileTypes?.config ?? [];
   if (configList.some((f) => RE_DEPENDENCY_FILE.test(basenameOf(f)))) {
-    roles.add('dependency-reviewer');
+    add('dependency-reviewer', 'files:manifest-or-lockfile');
   }
 
-  // Frontend: UI/component/styling files (classified under `app`).
   const appList = fileTypes?.app ?? [];
   if (appList.some((f) => RE_FRONTEND_FILE.test(normalizePath(f)))) {
-    roles.add('frontend-reviewer');
+    add('frontend-reviewer', 'files:ui-or-styling');
   }
 
-  // CI/CD: workflow definitions (classified under `infra`).
   const infraList = fileTypes?.infra ?? [];
   if (infraList.some((f) => RE_CI_WORKFLOW.test(normalizePath(f)))) {
-    roles.add('ci-cd-reviewer');
+    add('ci-cd-reviewer', 'files:workflow');
   }
 
-  return [...roles];
+  // --- Formalized stage/risk/artifact signals (#1545 P1, optional & additive) ---
+  if (signals && typeof signals === 'object') {
+    const stage = typeof signals.stage === 'string' ? signals.stage : null;
+    if (stage && STAGE_ROLE_MAP[stage]) {
+      for (const role of STAGE_ROLE_MAP[stage]) add(role, `stage:${stage}`);
+    }
+    for (const [key, role] of Object.entries(SIGNAL_ROLE_MAP)) {
+      if (signals[key]) add(role, `signal:${key}`);
+    }
+  }
+
+  const roles = [...reasons.keys()];
+  const skipped = Object.keys(REVIEWER_ROLES).filter((r) => !reasons.has(r));
+  return { roles, reasons: Object.fromEntries(reasons), required: ['bug-hunter'], skipped };
 }
 
 // Sub-classification patterns for auto role selection (#1196 S3). These refine
@@ -47708,8 +47778,13 @@ async function runReviewerOrchestration({
   config,
   reviewers,
   prBody,
+  signals,
 } = {}) {
-  const { valid: roles, invalid } = resolveReviewerRoles(reviewers, { fileTypes, riskAssessment });
+  const {
+    valid: roles,
+    invalid,
+    autoSelection = null,
+  } = resolveReviewerRoles(reviewers, { fileTypes, riskAssessment, signals });
 
   if (!roles.length) {
     throw new Error(
@@ -47786,6 +47861,8 @@ async function runReviewerOrchestration({
       status: roleSucceeded.length > 0 ? 'fulfilled' : 'rejected',
       findingsCount: roleSucceeded.reduce((sum, r) => sum + (r.value?.findings?.length ?? 0), 0),
       chunksRun: chunked ? diffsToProcess.length : null,
+      // #1545 P1: why this role was auto-selected (only present in auto mode).
+      selectionReasons: autoSelection ? (autoSelection.reasons[name] ?? []) : null,
       error:
         roleSucceeded.length === 0 ? String(roleSettled[0]?.reason?.message ?? 'unknown') : null,
     };
@@ -47803,6 +47880,9 @@ async function runReviewerOrchestration({
     reviewerResults,
     invalidRoles: invalid,
     autoSelectedRoles: reviewers?.length === 1 && reviewers[0] === 'auto' ? roles : null,
+    // #1545 P1: explainable auto-selection — reasons per role, the always-on
+    // required set, and the roles skipped this run. null when not in auto mode.
+    autoSelection,
     teamLeadReport,
     chunked,
     chunkCount: chunked ? diffsToProcess.length : null,
@@ -48706,6 +48786,10 @@ async function runLocalReview({
     repoContext,
     prBody: context.prBody,
     config: context.config,
+    // #1545 P1: formalized stage/risk/artifact routing signals for `--reviewers
+    // auto`. Populated by the host/PlanGate via the plan; undefined here keeps
+    // the pre-#1545 auto-selection behavior unchanged.
+    signals: context.plan?.reviewSignals,
   };
 
   const review = reviewers?.length
