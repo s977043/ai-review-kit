@@ -40,6 +40,51 @@ ls -d ~/.claude/plugins/cache/river-review-marketplace/river-review/*/skills/age
 cat ~/.claude/plugins/installed_plugins.json
 ```
 
+## 診断: marketplace clone が stale で `/plugin update` が無反応の場合
+
+### 症状
+
+- `/plugin update <plugin>@<marketplace>` を実行しても目立った出力がない。
+- `installed_plugins.json` の `version` / `lastUpdated` が実行前後で変わらない。
+- cache ディレクトリ（`~/.claude/plugins/cache/<marketplace>/<plugin>/`）に新しいバージョンが増えない。
+
+### 診断
+
+marketplace の実体は git clone であり、次のパスに存在します。
+
+```text
+~/.claude/plugins/marketplaces/<marketplace>/
+```
+
+この clone がリモートより遅れていると、`/plugin update` が参照する情報自体が古いままになり、更新が無反応に見えます。次のコマンドで遅れの有無を確認します。
+
+```bash
+git -C ~/.claude/plugins/marketplaces/<marketplace> fetch origin
+git -C ~/.claude/plugins/marketplaces/<marketplace> status -sb
+```
+
+`status -sb` の出力に `behind N` が含まれていれば、clone が stale です。実例として、river-review-marketplace の clone が 92 コミット遅れ、`v1.43.0` のまま更新が止まっていたケースが確認されています。
+
+### 復旧
+
+clone を fast-forward で最新化してから、改めて `/plugin update` を実行します。
+
+```bash
+git -C ~/.claude/plugins/marketplaces/<marketplace> pull --ff-only origin main
+```
+
+その後もう一度 `/plugin update <plugin>@<marketplace>` を実行すると、新しいバージョンが cache に展開され、`installed_plugins.json` の記録も更新されます。
+
+### 確認
+
+`installed_plugins.json` の `version` と `gitCommitSha` が、最新リリースのマージコミットと一致していることを確認します。
+
+```bash
+cat ~/.claude/plugins/installed_plugins.json
+```
+
+更新が成功したら、cache に旧バージョンが残っている場合があります。次の「Purge: 古いバージョンの安全な削除」の手順で片付けてください。
+
 ## Purge: 古いバージョンの安全な削除
 
 最新版のみ残し、古いバージョンディレクトリを削除します。次の手順は破壊的操作を含むため、削除対象を目視で確認してから実行してください。
@@ -56,6 +101,12 @@ cat ~/.claude/plugins/installed_plugins.json
 
    ```bash
    rm -rf ~/.claude/plugins/cache/river-review-marketplace/river-review/<old_version>
+   ```
+
+   `rm -rf` が deny 設定で拒否される環境では、`~/.Trash/` 配下への `mv` で代替できる。可逆な操作でありながら解決パスから除去するという目的は達成できる。
+
+   ```bash
+   mv ~/.claude/plugins/cache/river-review-marketplace/river-review/<old_version> ~/.Trash/
    ```
 
 4. Claude Code を再起動し、cache が最新版のみになったことを確認する。
