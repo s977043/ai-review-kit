@@ -40,6 +40,25 @@ license: MIT
 | `frontend-reviewer`   | アクセシビリティ・レンダリング・レスポンシブ・loading/error 状態の欠落        | .tsx/.jsx/.css/.scss/.sass/.less/.vue/.svelte 変更 |
 | `ci-cd-reviewer`      | ワークフロー・アクションのピン・権限                                          | `.github/workflows/` 変更                          |
 
+### Stage / risk signal による選択（#1545 P1・任意）
+
+`auto` モードは、上記のファイル種別ヒューリスティックに加えて、ホスト（PlanGate 等）が渡す **形式化された signal** でもロールを選択できる。signal は任意で、渡さない場合の挙動は従来と不変（後方互換）。signal は既存ロールのみへ写像し、新ロールは作らない。写像先を持たない Lens（devex 等）は Reviewer Lens Taxonomy（Issue #1545）の Gap として記録され、レビュアーは追加しない。
+
+| signal 種別                                                   | 追加ロール                 |
+| ------------------------------------------------------------- | -------------------------- |
+| `stage: plan`                                                 | security-scanner, test-gap |
+| `stage: design`                                               | frontend-reviewer          |
+| `stage: exec` / `stage: release`                              | security-scanner           |
+| `stage: verify`                                               | test-gap                   |
+| `touchesAuth` / `changesPermissions` / `handlesSensitiveData` | security-scanner           |
+| `databaseMigration` / `breakingChange`                        | security-scanner           |
+| `changesUi` / `changesUserFlow`                               | frontend-reviewer          |
+| `deploymentChange`                                            | ci-cd-reviewer             |
+
+選択理由（`selectionReasons`）と required / skipped の状態は run 結果の `autoSelection` に記録される。`bug-hunter` は常に required、選択されなかったロールは `skipped` に入る。
+
+> 実装 SSoT: `src/lib/reviewer-orchestrator.mjs` の `selectRolesAuto` / `computeAutoSelection`。本表と実装は二重管理のため、片方を変更したら同一 PR で両方を整合させる。
+
 ## Execution Flow / 実行フロー
 
 ```text

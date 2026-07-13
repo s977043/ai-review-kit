@@ -343,6 +343,131 @@ describe('selectRolesAuto', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// #1545 P1: formalized stage/risk/artifact routing signals for selectRolesAuto.
+// New `signals` argument is optional and strictly additive.
+// ---------------------------------------------------------------------------
+describe('selectRolesAuto — formalized signals (#1545 P1)', () => {
+  const emptyFileTypes = { test: [], app: [], config: [], schema: [], migration: [], infra: [] };
+  const noRisk = { humanReviewFiles: [], escalatedFiles: [] };
+
+  it('backward compat: omitting signals equals passing undefined', () => {
+    const withArg = selectRolesAuto(emptyFileTypes, noRisk, undefined);
+    const withoutArg = selectRolesAuto(emptyFileTypes, noRisk);
+    assert.deepEqual(withArg, withoutArg);
+    assert.deepEqual(withoutArg, ['bug-hunter']);
+  });
+
+  it('backward compat: empty signals object does not change selection', () => {
+    const roles = selectRolesAuto(emptyFileTypes, noRisk, {});
+    assert.deepEqual(roles, ['bug-hunter']);
+  });
+
+  it('signal touchesAuth adds security-scanner', () => {
+    const roles = selectRolesAuto(emptyFileTypes, noRisk, { touchesAuth: true });
+    assert.ok(roles.includes('security-scanner'));
+  });
+
+  it('signal changesUi adds frontend-reviewer', () => {
+    const roles = selectRolesAuto(emptyFileTypes, noRisk, { changesUi: true });
+    assert.ok(roles.includes('frontend-reviewer'));
+  });
+
+  it('signal deploymentChange adds ci-cd-reviewer', () => {
+    const roles = selectRolesAuto(emptyFileTypes, noRisk, { deploymentChange: true });
+    assert.ok(roles.includes('ci-cd-reviewer'));
+  });
+
+  it('devex-only signals (changesPublicApi) map to no existing role', () => {
+    const roles = selectRolesAuto(emptyFileTypes, noRisk, {
+      changesPublicApi: true,
+      changesCliInterface: true,
+      changesInstallation: true,
+    });
+    assert.deepEqual(roles, ['bug-hunter']);
+  });
+
+  it('stage verify adds test-gap', () => {
+    const roles = selectRolesAuto(emptyFileTypes, noRisk, { stage: 'verify' });
+    assert.ok(roles.includes('test-gap'));
+  });
+
+  it('stage plan adds security-scanner and test-gap', () => {
+    const roles = selectRolesAuto(emptyFileTypes, noRisk, { stage: 'plan' });
+    assert.ok(roles.includes('security-scanner'));
+    assert.ok(roles.includes('test-gap'));
+  });
+
+  it('unknown stage is ignored', () => {
+    const roles = selectRolesAuto(emptyFileTypes, noRisk, { stage: 'not-a-stage' });
+    assert.deepEqual(roles, ['bug-hunter']);
+  });
+
+  it('signals are additive: never remove file-derived roles and always keep bug-hunter', () => {
+    const roles = selectRolesAuto({ ...emptyFileTypes, test: ['a.test.ts'] }, noRisk, {
+      changesUi: true,
+    });
+    assert.ok(roles.includes('bug-hunter'));
+    assert.ok(roles.includes('test-gap'), 'file-derived test-gap preserved');
+    assert.ok(roles.includes('frontend-reviewer'), 'signal-derived frontend added');
+  });
+
+  it('bug-hunter stays first in the selected order', () => {
+    const roles = selectRolesAuto(emptyFileTypes, noRisk, { touchesAuth: true, changesUi: true });
+    assert.equal(roles[0], 'bug-hunter');
+  });
+});
+
+describe('resolveReviewerRoles — auto rationale (#1545 P1)', () => {
+  it('auto mode returns autoSelection with reasons, required, and skipped', () => {
+    const { valid, autoSelection } = resolveReviewerRoles(['auto'], {
+      fileTypes: { test: [], app: [], config: [], schema: [], migration: [], infra: [] },
+      riskAssessment: { humanReviewFiles: [], escalatedFiles: [] },
+      signals: { touchesAuth: true },
+    });
+    assert.ok(valid.includes('security-scanner'));
+    assert.ok(autoSelection, 'autoSelection present in auto mode');
+    assert.deepEqual(autoSelection.required, ['bug-hunter']);
+    assert.ok(autoSelection.reasons['bug-hunter'].includes('always-on'));
+    assert.ok(autoSelection.reasons['security-scanner'].includes('signal:touchesAuth'));
+    // test-gap was not selected → recorded as skipped
+    assert.ok(autoSelection.skipped.includes('test-gap'));
+  });
+
+  it('explicit mode does not attach autoSelection', () => {
+    const result = resolveReviewerRoles(['bug-hunter'], {});
+    assert.equal(result.autoSelection, undefined);
+  });
+});
+
+describe('runReviewerOrchestration — signal routing + rationale (#1545 P1)', () => {
+  it('auto mode routes on signals and exposes autoSelection + selectionReasons', async () => {
+    const result = await runReviewerOrchestration({
+      diff: makeDiff(),
+      dryRun: true,
+      reviewers: ['auto'],
+      fileTypes: { test: [], app: [], config: [], schema: [], migration: [], infra: [] },
+      riskAssessment: { humanReviewFiles: [], escalatedFiles: [] },
+      signals: { touchesAuth: true },
+    });
+    assert.ok(result.autoSelectedRoles.includes('security-scanner'), 'signal routed to role');
+    assert.ok(result.autoSelection, 'autoSelection present');
+    assert.deepEqual(result.autoSelection.required, ['bug-hunter']);
+    const sec = result.reviewerResults.find((r) => r.role === 'security-scanner');
+    assert.ok(sec.selectionReasons.includes('signal:touchesAuth'));
+  });
+
+  it('explicit mode leaves autoSelection null and selectionReasons null', async () => {
+    const result = await runReviewerOrchestration({
+      diff: makeDiff(),
+      dryRun: true,
+      reviewers: ['bug-hunter'],
+    });
+    assert.equal(result.autoSelection, null);
+    assert.equal(result.reviewerResults[0].selectionReasons, null);
+  });
+});
+
 describe('splitDiffIntoChunks', () => {
   function makeFile(path, lines = 10) {
     return { path, hunks: [{ header: '@@ -1 +1 @@', lines: Array(lines).fill('+line') }] };
