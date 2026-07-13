@@ -13976,7 +13976,7 @@ class InternalServerError extends APIError {
 
 /***/ }),
 
-/***/ 4973:
+/***/ 4055:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -14035,7 +14035,7 @@ const sleep = (ms, signal) => new Promise((resolve) => {
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/errors.mjs
 var errors = __nccwpck_require__(2533);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/version.mjs
-const VERSION = '0.105.0'; // x-release-please-version
+const VERSION = '0.111.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -15579,7 +15579,10 @@ class streaming_Stream {
                         sse.event === 'session.thread_status_running' ||
                         sse.event === 'session.thread_status_idle' ||
                         sse.event === 'session.thread_status_rescheduled' ||
-                        sse.event === 'session.thread_status_terminated') {
+                        sse.event === 'session.thread_status_terminated' ||
+                        sse.event === 'event_start' ||
+                        sse.event === 'event_delta' ||
+                        sse.event === 'system.message') {
                         try {
                             yield JSON.parse(sse.data);
                         }
@@ -16286,6 +16289,30 @@ class PageCursor extends AbstractPage {
         };
     }
 }
+class BidirectionalPageCursor extends AbstractPage {
+    constructor(client, response, body, options) {
+        super(client, response, body, options);
+        this.data = body.data || [];
+        this.next_page = body.next_page || null;
+        this.prev_page = body.prev_page || null;
+    }
+    getPaginatedItems() {
+        return this.data ?? [];
+    }
+    nextPageRequestOptions() {
+        const cursor = this.next_page;
+        if (!cursor) {
+            return null;
+        }
+        return {
+            ...this.options,
+            query: {
+                ...(0,utils_values/* maybeObj */.i8)(this.options.query),
+                page: cursor,
+            },
+        };
+    }
+}
 //# sourceMappingURL=pagination.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/uploads.mjs
 
@@ -16565,15 +16592,38 @@ function* iterateHeaders(headers) {
             if (value === undefined)
                 continue;
             // Objects keys always overwrite older headers, they never append.
-            // Yield a null to clear the header before adding the new values.
+            // Yield the clear sentinel before adding the new values, so the
+            // consumer can tell this synthetic "clear-before-set" apart from a
+            // user's explicit `null` (= remove).
             if (shouldClear && !didClear) {
                 didClear = true;
-                yield [name, null];
+                yield [name, clearSentinel];
             }
             yield [name, value];
         }
     }
 }
+/** Distinguishes iterateHeaders' synthetic clear-before-set from a user `null`. */
+const clearSentinel = Symbol('clear');
+/**
+ * Headers whose values accumulate across {@link buildHeaders} sources instead
+ * of the later source's value replacing the earlier one. Values are
+ * comma-appended (deduplicated, order-preserving) into a single header line.
+ */
+const APPEND_HEADERS = new Set(['x-stainless-helper']);
+const headers_appendHeaderValue = (existing, addition) => {
+    const tokens = existing ?
+        existing
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [];
+    for (const tok of addition.split(',').map((t) => t.trim())) {
+        if (tok && !tokens.includes(tok))
+            tokens.push(tok);
+    }
+    return tokens.join(', ');
+};
 const buildHeaders = (newHeaders) => {
     const targetHeaders = new Headers();
     const nullHeaders = new Set();
@@ -16581,9 +16631,26 @@ const buildHeaders = (newHeaders) => {
         const seenHeaders = new Set();
         for (const [name, value] of iterateHeaders(headers)) {
             const lowerName = name.toLowerCase();
-            if (!seenHeaders.has(lowerName)) {
+            if (APPEND_HEADERS.has(lowerName)) {
+                // Accumulating headers ignore the synthetic clear-before-set; an
+                // explicit `null` (any source shape) is honored as removal.
+                if (value === clearSentinel)
+                    continue;
+                if (value === null) {
+                    targetHeaders.delete(name);
+                    nullHeaders.add(lowerName);
+                }
+                else {
+                    targetHeaders.set(name, headers_appendHeaderValue(targetHeaders.get(name), value));
+                    nullHeaders.delete(lowerName);
+                }
+                continue;
+            }
+            if (value === clearSentinel || !seenHeaders.has(lowerName)) {
                 targetHeaders.delete(name);
                 seenHeaders.add(lowerName);
+                if (value === clearSentinel)
+                    continue;
             }
             if (value === null) {
                 targetHeaders.delete(name);
@@ -16778,7 +16845,9 @@ class Deployments extends APIResource {
      * @example
      * ```ts
      * const betaManagedAgentsDeployment =
-     *   await client.beta.deployments.retrieve('deployment_id');
+     *   await client.beta.deployments.retrieve(
+     *     'depl_011CZkZcDH3vPqd7xnEfwTai',
+     *   );
      * ```
      */
     retrieve(deploymentID, params = {}, options) {
@@ -16797,7 +16866,9 @@ class Deployments extends APIResource {
      * @example
      * ```ts
      * const betaManagedAgentsDeployment =
-     *   await client.beta.deployments.update('deployment_id');
+     *   await client.beta.deployments.update(
+     *     'depl_011CZkZcDH3vPqd7xnEfwTai',
+     *   );
      * ```
      */
     update(deploymentID, params, options) {
@@ -16839,7 +16910,9 @@ class Deployments extends APIResource {
      * @example
      * ```ts
      * const betaManagedAgentsDeployment =
-     *   await client.beta.deployments.archive('deployment_id');
+     *   await client.beta.deployments.archive(
+     *     'depl_011CZkZcDH3vPqd7xnEfwTai',
+     *   );
      * ```
      */
     archive(deploymentID, params = {}, options) {
@@ -16858,7 +16931,9 @@ class Deployments extends APIResource {
      * @example
      * ```ts
      * const betaManagedAgentsDeployment =
-     *   await client.beta.deployments.pause('deployment_id');
+     *   await client.beta.deployments.pause(
+     *     'depl_011CZkZcDH3vPqd7xnEfwTai',
+     *   );
      * ```
      */
     pause(deploymentID, params = {}, options) {
@@ -16877,7 +16952,9 @@ class Deployments extends APIResource {
      * @example
      * ```ts
      * const betaManagedAgentsDeploymentRun =
-     *   await client.beta.deployments.run('deployment_id');
+     *   await client.beta.deployments.run(
+     *     'depl_011CZkZcDH3vPqd7xnEfwTai',
+     *   );
      * ```
      */
     run(deploymentID, params = {}, options) {
@@ -16896,7 +16973,9 @@ class Deployments extends APIResource {
      * @example
      * ```ts
      * const betaManagedAgentsDeployment =
-     *   await client.beta.deployments.unpause('deployment_id');
+     *   await client.beta.deployments.unpause(
+     *     'depl_011CZkZcDH3vPqd7xnEfwTai',
+     *   );
      * ```
      */
     unpause(deploymentID, params = {}, options) {
@@ -16911,10 +16990,142 @@ class Deployments extends APIResource {
     }
 }
 //# sourceMappingURL=deployments.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/stainless-helper-header.mjs
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/dreams.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class Dreams extends APIResource {
+    /**
+     * Create a Dream
+     *
+     * @example
+     * ```ts
+     * const betaDream = await client.beta.dreams.create({
+     *   inputs: [{ memory_store_id: 'x', type: 'memory_store' }],
+     *   model: 'string',
+     * });
+     * ```
+     */
+    create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post('/v1/dreams?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'dreaming-2026-04-21'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Get a Dream
+     *
+     * @example
+     * ```ts
+     * const betaDream = await client.beta.dreams.retrieve(
+     *   'dream_id',
+     * );
+     * ```
+     */
+    retrieve(dreamID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path `/v1/dreams/${dreamID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'dreaming-2026-04-21'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * List Dreams
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaDream of client.beta.dreams.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList('/v1/dreams?beta=true', (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'dreaming-2026-04-21'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Archive a Dream
+     *
+     * @example
+     * ```ts
+     * const betaDream = await client.beta.dreams.archive(
+     *   'dream_id',
+     * );
+     * ```
+     */
+    archive(dreamID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/dreams/${dreamID}/archive?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'dreaming-2026-04-21'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Cancel a Dream
+     *
+     * @example
+     * ```ts
+     * const betaDream = await client.beta.dreams.cancel(
+     *   'dream_id',
+     * );
+     * ```
+     */
+    cancel(dreamID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/dreams/${dreamID}/cancel?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'dreaming-2026-04-21'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+}
+//# sourceMappingURL=dreams.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/stainless-helper-header.mjs
 /**
- * Shared utilities for tracking SDK helper usage.
+ * Single source of truth for the `x-stainless-helper` telemetry header — the
+ * key, the closed value vocabulary, and per-object helper tagging. The
+ * append-don't-clobber merge for the header itself lives in
+ * {@link import('../internal/headers').buildHeaders} via `APPEND_HEADERS`.
  */
+/**
+ * Telemetry header naming the SDK helper(s) a request came from. Always this
+ * lowercase form; `buildHeaders` matches it case-insensitively for its append
+ * semantics, but a single canonical casing keeps every call site greppable.
+ */
+const stainless_helper_header_STAINLESS_HELPER_HEADER = 'x-stainless-helper';
+/** Telemetry header naming the SDK method (e.g. `stream`) in use. */
+const STAINLESS_HELPER_METHOD_HEADER = 'x-stainless-helper-method';
+/**
+ * The `{ 'x-stainless-helper': value }` header dict, for passing into
+ * `buildHeaders` (which comma-appends `x-stainless-helper` across sources)
+ * or as `defaultHeaders`/per-request `headers`.
+ */
+function helperHeader(value) {
+    return { [stainless_helper_header_STAINLESS_HELPER_HEADER]: value };
+}
 /**
  * Symbol used to mark objects created by SDK helpers for tracking.
  * The value is the helper name (e.g., 'mcpTool', 'betaZodTool').
@@ -16943,8 +17154,9 @@ function collectStainlessHelpers(tools, messages) {
             if (wasCreatedByStainlessHelper(message)) {
                 helpers.add(message[SDK_HELPER_SYMBOL]);
             }
-            if (Array.isArray(message.content)) {
-                for (const block of message.content) {
+            const content = message.content;
+            if (Array.isArray(content)) {
+                for (const block of content) {
                     if (wasCreatedByStainlessHelper(block)) {
                         helpers.add(block[SDK_HELPER_SYMBOL]);
                     }
@@ -16962,7 +17174,7 @@ function stainlessHelperHeader(tools, messages) {
     const helpers = collectStainlessHelpers(tools, messages);
     if (helpers.length === 0)
         return {};
-    return { 'x-stainless-helper': helpers.join(', ') };
+    return { [stainless_helper_header_STAINLESS_HELPER_HEADER]: helpers.join(', ') };
 }
 /**
  * Builds x-stainless-helper header value from a file object.
@@ -16970,7 +17182,7 @@ function stainlessHelperHeader(tools, messages) {
  */
 function stainlessHelperHeaderFromFile(file) {
     if (wasCreatedByStainlessHelper(file)) {
-        return { 'x-stainless-helper': file[SDK_HELPER_SYMBOL] };
+        return { [stainless_helper_header_STAINLESS_HELPER_HEADER]: file[SDK_HELPER_SYMBOL] };
     }
     return {};
 }
@@ -17511,6 +17723,7 @@ function applyJitter(ms) {
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/helper-client.mjs
 
 
+
 /**
  * Return a `withOptions()` clone of `client` set up for use *by* one of the
  * runner helpers: authenticated with `authToken` as Bearer credentials, with
@@ -17552,7 +17765,7 @@ function copyClientForHelper(client, { authToken, helper }) {
     const defaultHeaders = buildHeaders([
         inheritedAuthExtraHeaders,
         parentDefaults,
-        { 'x-stainless-helper': helper },
+        { [stainless_helper_header_STAINLESS_HELPER_HEADER]: helper },
     ]);
     return client.withOptions({
         apiKey: null,
@@ -17847,7 +18060,8 @@ async function runRunnableTool(tool, rawInput, context) {
 }
 //# sourceMappingURL=BetaRunnableTool.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/SessionToolRunner.mjs
-var _SessionToolRunner_instances, _SessionToolRunner_consumed, _SessionToolRunner_controller, _SessionToolRunner_detachExternal, _SessionToolRunner_requestOpts, _SessionToolRunner_toolByName, _SessionToolRunner_logger, _SessionToolRunner_seen, _SessionToolRunner_answered, _SessionToolRunner_results, _SessionToolRunner_inFlightCount, _SessionToolRunner_onIdle, _SessionToolRunner_idleTimer, _SessionToolRunner_requestOptions, _SessionToolRunner_streamLoop, _SessionToolRunner_reconcile, _SessionToolRunner_ingestHistory, _SessionToolRunner_handleStreamEvent, _SessionToolRunner_armIdleTimer, _SessionToolRunner_disarmIdleTimer, _SessionToolRunner_execute, _SessionToolRunner_sendResult, _SessionToolRunner_drain;
+var _IdleClock_maxIdleMs, _IdleClock_onExpire, _IdleClock_blockers, _IdleClock_armPending, _IdleClock_timer, _SessionToolRunner_instances, _SessionToolRunner_consumed, _SessionToolRunner_controller, _SessionToolRunner_detachExternal, _SessionToolRunner_requestOpts, _SessionToolRunner_toolByName, _SessionToolRunner_logger, _SessionToolRunner_seen, _SessionToolRunner_answered, _SessionToolRunner_confirmationVerdicts, _SessionToolRunner_awaitingConfirmation, _SessionToolRunner_results, _SessionToolRunner_inFlightCount, _SessionToolRunner_onIdle, _SessionToolRunner_idleClock, _SessionToolRunner_requestOptions, _SessionToolRunner_streamLoop, _SessionToolRunner_reconcile, _SessionToolRunner_ingestHistory, _SessionToolRunner_handleStreamEvent, _SessionToolRunner_routeToolEvent, _SessionToolRunner_noteConfirmation, _SessionToolRunner_applyVerdict, _SessionToolRunner_surfaceCall, _SessionToolRunner_execute, _SessionToolRunner_sendResult, _SessionToolRunner_drain;
+
 
 
 
@@ -17859,8 +18073,6 @@ var _SessionToolRunner_instances, _SessionToolRunner_consumed, _SessionToolRunne
 
 /** Beta header for the managed-agents API. */
 const MANAGED_AGENTS_BETA = 'managed-agents-2026-04-01';
-/** `x-stainless-helper` value identifying this helper in SDK telemetry. */
-const HELPER_NAME = 'SessionToolRunner';
 const STREAM_BACKOFF_START_MS = 500;
 const STREAM_BACKOFF_CAP_MS = 10000;
 const TOOL_TIMEOUT_MS = 120000;
@@ -17873,6 +18085,95 @@ function isEndTurnIdle(ev) {
     return ev.type === 'session.status_idle' && ev.stop_reason?.type === 'end_turn';
 }
 /**
+ * The `maxIdleMs` stop-countdown, including its deferral. {@link noteEvent}
+ * arms on `session.status_idle` with `stop_reason: end_turn` and disarms on
+ * anything else. Gated tool work registered via {@link block} — a call held for
+ * user confirmation, or a user-approved call still dispatching — keeps
+ * {@link arm} pending until {@link unblock} retires the last blocker, at which
+ * point the countdown starts. Event-driven — there is no polling watchdog.
+ */
+class IdleClock {
+    constructor(maxIdleMs, onExpire) {
+        _IdleClock_maxIdleMs.set(this, void 0);
+        _IdleClock_onExpire.set(this, void 0);
+        _IdleClock_blockers.set(this, new Set());
+        // Set when arm() found blockers outstanding; the unblock that retires the
+        // last blocker applies it. Cleared by any disarm.
+        _IdleClock_armPending.set(this, false);
+        _IdleClock_timer.set(this, void 0);
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleClock_maxIdleMs, maxIdleMs, "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleClock_onExpire, onExpire, "f");
+    }
+    /**
+     * Arm on `status_idle{end_turn}`; disarm otherwise. `user.tool_confirmation`
+     * is neutral: it signals neither agent activity nor an idle, and its effect
+     * on the clock flows through {@link block} / {@link unblock} instead —
+     * disarming here would discard the pending arm the verdict is about to
+     * settle.
+     */
+    noteEvent(ev) {
+        if (ev.type === 'user.tool_confirmation')
+            return;
+        if (isEndTurnIdle(ev))
+            this.arm();
+        else
+            this.disarm();
+    }
+    /** Register gated work that must resolve before an idle countdown starts. */
+    block(toolUseId) {
+        (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_blockers, "f").add(toolUseId);
+        if ((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_timer, "f") !== undefined) {
+            // Defensive: every caller disarms first (any event that routes a tool
+            // call is itself a disarming event), but a countdown running when gated
+            // work appears is stale evidence — the session is not idly waiting to
+            // stop. Convert it into a pending arm rather than let it fire over the
+            // gated call.
+            (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleClock_armPending, true, "f");
+            clearTimeout((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_timer, "f"));
+            (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleClock_timer, undefined, "f");
+        }
+    }
+    /**
+     * Retire gated work (a no-op for ids never blocked); applies a pending arm —
+     * with a fresh full `maxIdleMs` window — once the last blocker retires.
+     */
+    unblock(toolUseId) {
+        (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_blockers, "f").delete(toolUseId);
+        if ((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_blockers, "f").size === 0 && (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_armPending, "f"))
+            this.arm();
+    }
+    /**
+     * (Re)start the idle countdown — or, while blockers are outstanding, hold
+     * the arm pending instead. Stopping then would drop a held call when its
+     * verdict later arrives, or cut the runner off before a released call's
+     * result can drive the next turn.
+     */
+    arm() {
+        if ((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_maxIdleMs, "f") <= 0)
+            return;
+        if ((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_blockers, "f").size > 0) {
+            (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleClock_armPending, true, "f");
+            return;
+        }
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleClock_armPending, false, "f");
+        if ((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_timer, "f") !== undefined)
+            clearTimeout((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_timer, "f"));
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleClock_timer, setTimeout((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_onExpire, "f"), (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_maxIdleMs, "f")), "f");
+    }
+    /**
+     * Cancel the idle countdown and any pending arm. Blockers persist — they
+     * track real outstanding work, retired only by {@link unblock}.
+     */
+    disarm() {
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleClock_armPending, false, "f");
+        if ((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_timer, "f") !== undefined) {
+            clearTimeout((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleClock_timer, "f"));
+            (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleClock_timer, undefined, "f");
+        }
+    }
+}
+_IdleClock_maxIdleMs = new WeakMap(), _IdleClock_onExpire = new WeakMap(), _IdleClock_blockers = new WeakMap(), _IdleClock_armPending = new WeakMap(), _IdleClock_timer = new WeakMap();
+/**
  * The sessions-side counterpart to `client.beta.messages.toolRunner`: an
  * async-iterable that attaches to a managed-agents session, executes every
  * incoming `agent.tool_use` and `agent.custom_tool_use` event against a local
@@ -17881,6 +18182,18 @@ function isEndTurnIdle(ev) {
  * {@link DispatchedToolCall} per completed call. Server-side `agent.mcp_tool_use`
  * calls are not dispatched. Internally drives event-stream reconnect and result
  * posting.
+ *
+ * A call the server gated with `evaluated_permission: "ask"` (the `always_ask`
+ * policy — or any value this SDK doesn't recognize, which fails closed) is held
+ * until its `user.tool_confirmation` arrives: only an explicit `allow` runs it;
+ * `deny` — or any verdict this SDK doesn't recognize, failing closed — is never
+ * executed and posts nothing (the denial resolves the call server-side), but is
+ * still yielded (`confirmation="deny"`, `posted=false`, `result=undefined`) so
+ * the consumer can observe it. A held call — and a user-approved one still
+ * dispatching — defers the `maxIdleMs` countdown, so an `end_turn` idle
+ * observed in the meantime cannot stop the runner: it waits until the verdict
+ * arrives, the session terminates, or the abort signal fires — pass
+ * `AbortSignal.timeout(...)` for a wall-clock bound.
  *
  * Iteration ends when the session terminates (`session.status_terminated` /
  * `session.deleted`), when the consumer `break`s out of the loop or aborts the
@@ -17914,12 +18227,19 @@ class SessionToolRunner {
         _SessionToolRunner_logger.set(this, void 0);
         _SessionToolRunner_seen.set(this, new Set());
         _SessionToolRunner_answered.set(this, new Set());
+        // Confirmation gating (`always_ask` tools): `#confirmationVerdicts` records
+        // every `user.tool_confirmation` verdict by `tool_use_id`;
+        // `#awaitingConfirmation` holds the tool-call events whose
+        // `evaluated_permission` is `ask` and whose verdict has not arrived —
+        // released (or resolved as denied) by `#noteConfirmation` / the next
+        // reconcile pass. Like `#seen` and `#answered`, `#confirmationVerdicts` is
+        // per-session O(tool calls): recorded verdicts persist for the life of the run.
+        _SessionToolRunner_confirmationVerdicts.set(this, new Map());
+        _SessionToolRunner_awaitingConfirmation.set(this, new Map());
         _SessionToolRunner_results.set(this, new AsyncQueue());
         _SessionToolRunner_inFlightCount.set(this, 0);
         _SessionToolRunner_onIdle.set(this, null);
-        // When the session is idle past an `end_turn`, the pending stop timer; cleared
-        // by any new event. Event-driven — there is no polling watchdog.
-        _SessionToolRunner_idleTimer.set(this, void 0);
+        _SessionToolRunner_idleClock.set(this, void 0);
         this.client = opts.client;
         this.sessionId = sessionId;
         this.tools = opts.tools;
@@ -17929,6 +18249,14 @@ class SessionToolRunner {
         (0,tslib/* __classPrivateFieldSet */.G)(this, _SessionToolRunner_controller, new AbortController(), "f");
         (0,tslib/* __classPrivateFieldSet */.G)(this, _SessionToolRunner_detachExternal, linkAbort(opts.signal, (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f")), "f");
         (0,tslib/* __classPrivateFieldSet */.G)(this, _SessionToolRunner_requestOpts, opts.requestOptions, "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _SessionToolRunner_idleClock, new IdleClock(this.maxIdleMs, () => {
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").info('session idle after end_turn; stopping', {
+                component: 'session-tool-runner',
+                session_id: this.sessionId,
+                max_idle_ms: this.maxIdleMs,
+            });
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f").abort();
+        }), "f");
     }
     /** Read-only view of this runner's abort signal. */
     get signal() {
@@ -17938,7 +18266,7 @@ class SessionToolRunner {
     abort() {
         (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f").abort();
     }
-    async *[(_SessionToolRunner_consumed = new WeakMap(), _SessionToolRunner_controller = new WeakMap(), _SessionToolRunner_detachExternal = new WeakMap(), _SessionToolRunner_requestOpts = new WeakMap(), _SessionToolRunner_toolByName = new WeakMap(), _SessionToolRunner_logger = new WeakMap(), _SessionToolRunner_seen = new WeakMap(), _SessionToolRunner_answered = new WeakMap(), _SessionToolRunner_results = new WeakMap(), _SessionToolRunner_inFlightCount = new WeakMap(), _SessionToolRunner_onIdle = new WeakMap(), _SessionToolRunner_idleTimer = new WeakMap(), _SessionToolRunner_instances = new WeakSet(), Symbol.asyncIterator)]() {
+    async *[(_SessionToolRunner_consumed = new WeakMap(), _SessionToolRunner_controller = new WeakMap(), _SessionToolRunner_detachExternal = new WeakMap(), _SessionToolRunner_requestOpts = new WeakMap(), _SessionToolRunner_toolByName = new WeakMap(), _SessionToolRunner_logger = new WeakMap(), _SessionToolRunner_seen = new WeakMap(), _SessionToolRunner_answered = new WeakMap(), _SessionToolRunner_confirmationVerdicts = new WeakMap(), _SessionToolRunner_awaitingConfirmation = new WeakMap(), _SessionToolRunner_results = new WeakMap(), _SessionToolRunner_inFlightCount = new WeakMap(), _SessionToolRunner_onIdle = new WeakMap(), _SessionToolRunner_idleClock = new WeakMap(), _SessionToolRunner_instances = new WeakSet(), Symbol.asyncIterator)]() {
         if ((0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_consumed, "f")) {
             throw new core_error/* AnthropicError */.pJ('Cannot iterate over a consumed SessionToolRunner');
         }
@@ -17975,7 +18303,7 @@ class SessionToolRunner {
         }
         finally {
             (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f").abort();
-            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_disarmIdleTimer).call(this);
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleClock, "f").disarm();
             // Re-await defensively in case the consumer broke out of phase 1 before
             // phase 2 ran — a no-op if it already settled.
             await streamPromise;
@@ -18005,7 +18333,7 @@ class SessionToolRunner {
 _SessionToolRunner_requestOptions = function _SessionToolRunner_requestOptions() {
     return {
         ...(0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_requestOpts, "f"),
-        headers: buildHeaders([{ 'x-stainless-helper': HELPER_NAME }, (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_requestOpts, "f")?.headers]),
+        headers: buildHeaders([helperHeader('session-tool-runner'), (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_requestOpts, "f")?.headers]),
         signal: (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f").signal,
     };
 }, _SessionToolRunner_streamLoop = 
@@ -18075,15 +18403,31 @@ async function _SessionToolRunner_reconcile() {
         return;
     }
     const unanswered = pending.filter((ev) => !(0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_answered, "f").has(ev.id));
-    // If the most recent event in history is an `end_turn` idle and there's no
-    // outstanding tool work, the session is done — arm the idle timer so the
-    // runner stops even if that `end_turn` arrived during a disconnect.
-    if (lastWasEndTurn && unanswered.length === 0)
-        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_armIdleTimer).call(this);
-    else
-        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_disarmIdleTimer).call(this);
+    // Disarm before routing: `#execute` runs inline here, so a timer left armed
+    // from before the reconnect could fire over an in-flight tool.
+    (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleClock, "f").disarm();
     for (const ev of unanswered)
-        await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_execute).call(this, ev);
+        await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_routeToolEvent).call(this, ev);
+    // A held call's verdict is normally applied by the routing pass above; if
+    // its tool_use fell outside the listed window the pass never saw it, so
+    // apply the verdict to the held copy here.
+    for (const held of [...(0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_awaitingConfirmation, "f").values()]) {
+        const verdict = (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_confirmationVerdicts, "f").get(held.id);
+        if (verdict !== undefined)
+            await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_applyVerdict).call(this, held, verdict);
+    }
+    // Routing resolves denied calls in place (marking them answered) and holds
+    // ask-gated calls for their `user.tool_confirmation`. If the most recent
+    // event in history is an `end_turn` idle and no tool work is outstanding,
+    // the session is done — arm the idle clock so the runner stops even if that
+    // `end_turn` arrived during a disconnect. A held call is not outstanding
+    // here: it blocks the clock, so this arm stays pending until the verdict
+    // (and, for an allow, the dispatch it releases) resolves it.
+    const outstanding = unanswered.filter((ev) => !(0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_answered, "f").has(ev.id) && !(0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_awaitingConfirmation, "f").has(ev.id));
+    if (lastWasEndTurn && outstanding.length === 0)
+        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleClock, "f").arm();
+    else
+        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleClock, "f").disarm();
 }, _SessionToolRunner_ingestHistory = function _SessionToolRunner_ingestHistory(ev, pending) {
     if (ev.type === 'agent.tool_use' || ev.type === 'agent.custom_tool_use') {
         // Mark the event seen so a replay on the live stream is not dispatched
@@ -18100,22 +18444,28 @@ async function _SessionToolRunner_reconcile() {
     else if (ev.type === 'user.custom_tool_result') {
         (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_answered, "f").add(ev.custom_tool_use_id);
     }
+    else if (ev.type === 'user.tool_confirmation') {
+        // Record the verdict only, before the pending pass, so a call whose
+        // confirmation appears later in the same history routes with its verdict
+        // already known. Releasing a held call here as well would dispatch it a
+        // second time when the routing pass reaches its tool_use event.
+        if (!(0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_answered, "f").has(ev.tool_use_id))
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_confirmationVerdicts, "f").set(ev.tool_use_id, ev.result);
+    }
 }, _SessionToolRunner_handleStreamEvent = 
 /** Returns true when the runner should exit. */
 async function _SessionToolRunner_handleStreamEvent(ev) {
-    // Arm/disarm the idle timer: an `end_turn` idle starts the grace countdown;
-    // any other event cancels it.
-    if (isEndTurnIdle(ev))
-        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_armIdleTimer).call(this);
-    else
-        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_disarmIdleTimer).call(this);
+    (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleClock, "f").noteEvent(ev);
     switch (ev.type) {
         case 'agent.tool_use':
         case 'agent.custom_tool_use':
             if (!(0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_seen, "f").has(ev.id)) {
                 (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_seen, "f").add(ev.id);
-                await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_execute).call(this, ev);
+                await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_routeToolEvent).call(this, ev);
             }
+            return false;
+        case 'user.tool_confirmation':
+            await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_noteConfirmation).call(this, ev);
             return false;
         case 'user.tool_result':
             (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_answered, "f").add(ev.tool_use_id);
@@ -18134,26 +18484,109 @@ async function _SessionToolRunner_handleStreamEvent(ev) {
         default:
             return false;
     }
-}, _SessionToolRunner_armIdleTimer = function _SessionToolRunner_armIdleTimer() {
-    (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_disarmIdleTimer).call(this);
-    if (this.maxIdleMs <= 0)
+}, _SessionToolRunner_routeToolEvent = 
+// ===== confirmation gating (always_ask tools) =====
+/**
+ * Dispatch `ev`, honoring its evaluated permission. A call the server gated
+ * (`evaluated_permission == "ask"`) is held until its `user.tool_confirmation`
+ * arrives. Fails closed: only an explicit `allow` verdict releases a gated
+ * call; a server-side `deny` overrides any recorded verdict; an unrecognized
+ * permission is held like `ask` and an unrecognized verdict is denied.
+ */
+async function _SessionToolRunner_routeToolEvent(ev) {
+    // `getattr`-style read: today only `agent.tool_use` carries
+    // `evaluated_permission`, but if it ever lands on `agent.custom_tool_use`
+    // the gate must keep failing closed rather than dispatch by event type.
+    const permission = ev.evaluated_permission;
+    // A server-side `deny` overrides any (stray) recorded verdict.
+    const verdict = permission === 'deny' ? 'deny' : (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_confirmationVerdicts, "f").get(ev.id);
+    if (verdict === undefined) {
+        if (permission === undefined || permission === 'allow') {
+            await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_execute).call(this, ev, undefined);
+        }
+        else if (!(0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_awaitingConfirmation, "f").has(ev.id)) {
+            // "ask" — or a permission this SDK does not recognize, which must not
+            // dispatch unconfirmed — waits for the user's verdict. (Already-held: a
+            // reconcile after reconnect re-routes the call; keep the existing hold.)
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").info('tool call awaiting confirmation; holding', {
+                component: 'session-tool-runner',
+                session_id: this.sessionId,
+                tool: ev.name,
+                tool_use_id: ev.id,
+            });
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_awaitingConfirmation, "f").set(ev.id, ev);
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleClock, "f").block(ev.id);
+        }
         return;
-    (0,tslib/* __classPrivateFieldSet */.G)(this, _SessionToolRunner_idleTimer, setTimeout(() => {
-        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").info('session idle after end_turn; stopping', {
+    }
+    await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_applyVerdict).call(this, ev, verdict);
+}, _SessionToolRunner_noteConfirmation = 
+/** Record an allow/deny verdict and release the held call it gates, if any. */
+async function _SessionToolRunner_noteConfirmation(ev) {
+    (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_confirmationVerdicts, "f").set(ev.tool_use_id, ev.result);
+    const held = (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_awaitingConfirmation, "f").get(ev.tool_use_id);
+    // Nothing held: the verdict gates a call this runner has not seen yet (or
+    // one it never gates, e.g. an `agent.mcp_tool_use`). Keeping it in
+    // `#confirmationVerdicts` lets a later route of that call resolve instantly.
+    if (held === undefined)
+        return;
+    await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_applyVerdict).call(this, held, ev.result);
+}, _SessionToolRunner_applyVerdict = 
+/**
+ * Dispatch or resolve a gated call according to its verdict.
+ *
+ * The idle-clock blocker accounting lives here: a denial retires the held
+ * call's blocker, while an allow keeps one on the call — taking it now if the
+ * verdict was already known when the call was routed, so it was never held —
+ * until `#execute` has finished with it. The countdown must not run over
+ * gated work that is still in flight.
+ */
+async function _SessionToolRunner_applyVerdict(ev, verdict) {
+    const wasHeld = (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_awaitingConfirmation, "f").delete(ev.id);
+    if (verdict === 'allow') {
+        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").info('tool call confirmed', {
             component: 'session-tool-runner',
             session_id: this.sessionId,
-            max_idle_ms: this.maxIdleMs,
+            tool: ev.name,
+            tool_use_id: ev.id,
         });
-        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f").abort();
-    }, this.maxIdleMs), "f");
-}, _SessionToolRunner_disarmIdleTimer = function _SessionToolRunner_disarmIdleTimer() {
-    if ((0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleTimer, "f") !== undefined) {
-        clearTimeout((0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleTimer, "f"));
-        (0,tslib/* __classPrivateFieldSet */.G)(this, _SessionToolRunner_idleTimer, undefined, "f");
+        if (!wasHeld)
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleClock, "f").block(ev.id);
+        try {
+            await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_execute).call(this, ev, 'allow');
+        }
+        finally {
+            // The approved call is fully disposed of (executed, or moot because it
+            // was answered elsewhere) — the sole place an allow's blocker retires.
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleClock, "f").unblock(ev.id);
+        }
+        return;
     }
+    // "deny" — or any value other than an explicit "allow" (fail closed). The
+    // denial resolves the call server-side, so mark it answered and yield it
+    // (nothing ran, nothing posted).
+    if (wasHeld)
+        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_idleClock, "f").unblock(ev.id);
+    (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_answered, "f").add(ev.id);
+    (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").info('tool call denied; not executing', {
+        component: 'session-tool-runner',
+        session_id: this.sessionId,
+        tool: ev.name,
+        tool_use_id: ev.id,
+    });
+    (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_surfaceCall).call(this, {
+        event: ev,
+        toolUseId: ev.id,
+        name: ev.name,
+        isError: false,
+        posted: false,
+        confirmation: 'deny',
+    });
+}, _SessionToolRunner_surfaceCall = function _SessionToolRunner_surfaceCall(call) {
+    (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_results, "f").push(call);
 }, _SessionToolRunner_execute = 
 // ===== tool execution =====
-async function _SessionToolRunner_execute(ev) {
+async function _SessionToolRunner_execute(ev, confirmation) {
     var _a, _b;
     if ((0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_answered, "f").has(ev.id))
         return;
@@ -18183,7 +18616,14 @@ async function _SessionToolRunner_execute(ev) {
                 tool: ev.name,
                 tool_use_id: ev.id,
             });
-            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_results, "f").push({ event: ev, toolUseId: ev.id, name: ev.name, isError: false, posted: false });
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_surfaceCall).call(this, {
+                event: ev,
+                toolUseId: ev.id,
+                name: ev.name,
+                isError: false,
+                posted: false,
+                confirmation,
+            });
             return;
         }
         let content;
@@ -18216,13 +18656,14 @@ async function _SessionToolRunner_execute(ev) {
         // unanswered and the session stuck.
         const result = buildResultEvent(ev, isError, toSessionContent(content));
         const posted = await (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_sendResult).call(this, result, ev.id);
-        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_results, "f").push({
+        (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_instances, "m", _SessionToolRunner_surfaceCall).call(this, {
             event: ev,
             result,
             toolUseId: ev.id,
             name: ev.name,
             isError,
             posted,
+            confirmation,
         });
     }
     finally {
@@ -19019,7 +19460,7 @@ class Memories extends APIResource {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19042,7 +19483,7 @@ class Memories extends APIResource {
             query,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19066,7 +19507,7 @@ class Memories extends APIResource {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19090,7 +19531,7 @@ class Memories extends APIResource {
             query,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19113,7 +19554,7 @@ class Memories extends APIResource {
             query: { expected_content_sha256 },
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19145,7 +19586,7 @@ class MemoryVersions extends APIResource {
             query,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19169,7 +19610,7 @@ class MemoryVersions extends APIResource {
             query,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19191,7 +19632,7 @@ class MemoryVersions extends APIResource {
         return this._client.post(path `/v1/memory_stores/${memory_store_id}/memory_versions/${memoryVersionID}/redact?beta=true`, {
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19229,7 +19670,7 @@ class MemoryStores extends APIResource {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19250,7 +19691,7 @@ class MemoryStores extends APIResource {
         return this._client.get(path `/v1/memory_stores/${memoryStoreID}?beta=true`, {
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19270,7 +19711,7 @@ class MemoryStores extends APIResource {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19292,7 +19733,7 @@ class MemoryStores extends APIResource {
             query,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19311,7 +19752,7 @@ class MemoryStores extends APIResource {
         return this._client.delete(path `/v1/memory_stores/${memoryStoreID}?beta=true`, {
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19330,7 +19771,7 @@ class MemoryStores extends APIResource {
         return this._client.post(path `/v1/memory_stores/${memoryStoreID}/archive?beta=true`, {
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'agent-memory-2026-07-22'].toString() },
                 options?.headers,
             ]),
         });
@@ -19396,7 +19837,7 @@ class Batches extends APIResource {
      * can take up to 24 hours to complete.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -19418,12 +19859,15 @@ class Batches extends APIResource {
      * ```
      */
     create(params, options) {
-        const { betas, ...body } = params;
+        const { betas, user_profile_id, ...body } = params;
         return this._client.post('/v1/messages/batches?beta=true', {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
+                {
+                    'anthropic-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString(),
+                    ...(user_profile_id != null ? { 'anthropic-user-profile-id': user_profile_id } : undefined),
+                },
                 options?.headers,
             ]),
         });
@@ -19434,7 +19878,7 @@ class Batches extends APIResource {
      * `results_url` field in the response.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -19459,7 +19903,7 @@ class Batches extends APIResource {
      * returned first.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -19487,7 +19931,7 @@ class Batches extends APIResource {
      * like to delete an in-progress batch, you must first cancel it.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -19519,7 +19963,7 @@ class Batches extends APIResource {
      * non-interruptible.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -19547,7 +19991,7 @@ class Batches extends APIResource {
      * requests. Use the `custom_id` field to match results to requests.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -19951,6 +20395,7 @@ var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _Be
 
 
 
+
 function tracksToolInput(content) {
     return content.type === 'tool_use' || content.type === 'server_tool_use' || content.type === 'mcp_tool_use';
 }
@@ -20059,7 +20504,7 @@ class BetaMessageStream {
             runner._addMessageParam(message);
         }
         (0,tslib/* __classPrivateFieldSet */.G)(runner, _BetaMessageStream_params, { ...params, stream: true }, "f");
-        runner._run(() => runner._createMessage(messages, { ...params, stream: true }, { ...options, headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'stream' } }));
+        runner._run(() => runner._createMessage(messages, { ...params, stream: true }, { ...options, headers: { ...options?.headers, [STAINLESS_HELPER_METHOD_HEADER]: 'stream' } }));
         return runner;
     }
     _run(executor) {
@@ -20649,11 +21094,17 @@ class BetaToolRunner {
                 messages: structuredClone(params.messages),
             },
         }, "f");
-        const helpers = collectStainlessHelpers(params.tools, params.messages);
-        const helperValue = ['BetaToolRunner', ...helpers].join(', ');
+        // structuredClone drops symbol-keyed properties, so collect helper marks
+        // from the original params here — the create()-side collector won't see
+        // them on the cloned messages.
+        const collected = collectStainlessHelpers(params.tools, params.messages);
         (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaToolRunner_options, {
             ...options,
-            headers: buildHeaders([{ 'x-stainless-helper': helperValue }, options?.headers]),
+            headers: buildHeaders([
+                helperHeader('BetaToolRunner'),
+                collected.length ? { [stainless_helper_header_STAINLESS_HELPER_HEADER]: collected.join(', ') } : undefined,
+                options?.headers,
+            ]),
         }, "f");
         (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaToolRunner_completion, (0,promise/* promiseWithResolvers */.n)(), "f");
         if (params.compactionControl?.enabled) {
@@ -20720,7 +21171,7 @@ class BetaToolRunner {
             max_tokens: (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.max_tokens,
         }, {
             signal: (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_options, "f").signal,
-            headers: buildHeaders([(0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_options, "f").headers, { 'x-stainless-helper': 'compaction' }]),
+            headers: buildHeaders([(0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_options, "f").headers, helperHeader('compaction')]),
         });
         if (response.content[0]?.type !== 'text') {
             throw new core_error/* AnthropicError */.pJ('Expected text response for compaction');
@@ -21041,7 +21492,7 @@ class Messages extends APIResource {
     create(params, options) {
         // Transform deprecated output_format to output_config.format
         const modifiedParams = transformOutputFormat(params);
-        const { betas, ...body } = modifiedParams;
+        const { betas, user_profile_id, ...body } = modifiedParams;
         if (body.model in DEPRECATED_MODELS) {
             console.warn(`The model '${body.model}' is deprecated and will reach end-of-life on ${DEPRECATED_MODELS[body.model]}\nPlease migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.`);
         }
@@ -21062,7 +21513,10 @@ class Messages extends APIResource {
             timeout: timeout ?? 600000,
             ...options,
             headers: buildHeaders([
-                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                {
+                    ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined),
+                    ...(user_profile_id != null ? { 'anthropic-user-profile-id': user_profile_id } : undefined),
+                },
                 helperHeader,
                 options?.headers,
             ]),
@@ -21108,7 +21562,7 @@ class Messages extends APIResource {
      * including tools, images, and documents, without creating it.
      *
      * Learn more about token counting in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/token-counting)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/token-counting)
      *
      * @example
      * ```ts
@@ -21122,12 +21576,15 @@ class Messages extends APIResource {
     countTokens(params, options) {
         // Transform deprecated output_format to output_config.format
         const modifiedParams = transformOutputFormat(params);
-        const { betas, ...body } = modifiedParams;
+        const { betas, user_profile_id, ...body } = modifiedParams;
         return this._client.post('/v1/messages/count_tokens?beta=true', {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'token-counting-2024-11-01'].toString() },
+                {
+                    'anthropic-beta': [...(betas ?? []), 'token-counting-2024-11-01'].toString(),
+                    ...(user_profile_id != null ? { 'anthropic-user-profile-id': user_profile_id } : undefined),
+                },
                 options?.headers,
             ]),
         });
@@ -21242,8 +21699,9 @@ class Events extends APIResource {
      * ```
      */
     stream(sessionID, params = {}, options) {
-        const { betas } = params ?? {};
+        const { betas, ...query } = params ?? {};
         return this._client.get(path `/v1/sessions/${sessionID}/events/stream?beta=true`, {
+            query,
             ...options,
             headers: buildHeaders([
                 { 'anthropic-beta': [...(betas ?? []), 'managed-agents-2026-04-01'].toString() },
@@ -21646,7 +22104,7 @@ class Sessions extends APIResource {
      */
     list(params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList('/v1/sessions?beta=true', (PageCursor), {
+        return this._client.getAPIList('/v1/sessions?beta=true', (BidirectionalPageCursor), {
             query,
             ...options,
             headers: buildHeaders([
@@ -21717,11 +22175,12 @@ class versions_Versions extends APIResource {
      * ```ts
      * const version = await client.beta.skills.versions.create(
      *   'skill_id',
+     *   { files: [fs.createReadStream('path/to/file')] },
      * );
      * ```
      */
-    create(skillID, params = {}, options) {
-        const { betas, ...body } = params ?? {};
+    create(skillID, params, options) {
+        const { betas, ...body } = params;
         return this._client.post(path `/v1/skills/${skillID}/versions?beta=true`, multipartFormRequestOptions({
             body,
             ...options,
@@ -21846,11 +22305,13 @@ class Skills extends APIResource {
      *
      * @example
      * ```ts
-     * const skill = await client.beta.skills.create();
+     * const skill = await client.beta.skills.create({
+     *   files: [fs.createReadStream('path/to/file')],
+     * });
      * ```
      */
-    create(params = {}, options) {
-        const { betas, ...body } = params ?? {};
+    create(params, options) {
+        const { betas, ...body } = params;
         return this._client.post('/v1/skills?beta=true', multipartFormRequestOptions({
             body,
             ...options,
@@ -22269,6 +22730,8 @@ Vaults.Credentials = Credentials;
 
 
 
+
+
 class Beta extends APIResource {
     constructor() {
         super(...arguments);
@@ -22285,6 +22748,7 @@ class Beta extends APIResource {
         this.skills = new Skills(this._client);
         this.webhooks = new Webhooks(this._client);
         this.userProfiles = new UserProfiles(this._client);
+        this.dreams = new Dreams(this._client);
     }
 }
 Beta.Models = Models;
@@ -22300,6 +22764,7 @@ Beta.Files = Files;
 Beta.Skills = Skills;
 Beta.Webhooks = Webhooks;
 Beta.UserProfiles = UserProfiles;
+Beta.Dreams = Dreams;
 //# sourceMappingURL=beta.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/completions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -22386,6 +22851,7 @@ function parseOutputFormat(params, content) {
 //# sourceMappingURL=parser.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs
 var _MessageStream_instances, _MessageStream_currentMessageSnapshot, _MessageStream_params, _MessageStream_connectedPromise, _MessageStream_resolveConnectedPromise, _MessageStream_rejectConnectedPromise, _MessageStream_endPromise, _MessageStream_resolveEndPromise, _MessageStream_rejectEndPromise, _MessageStream_listeners, _MessageStream_ended, _MessageStream_errored, _MessageStream_aborted, _MessageStream_catchingPromiseCreated, _MessageStream_response, _MessageStream_request_id, _MessageStream_logger, _MessageStream_getFinalMessage, _MessageStream_getFinalText, _MessageStream_handleError, _MessageStream_beginRequest, _MessageStream_addStreamEvent, _MessageStream_endRequest, _MessageStream_accumulateMessage;
+
 
 
 
@@ -22500,7 +22966,7 @@ class MessageStream {
             runner._addMessageParam(message);
         }
         (0,tslib/* __classPrivateFieldSet */.G)(runner, _MessageStream_params, { ...params, stream: true }, "f");
-        runner._run(() => runner._createMessage(messages, { ...params, stream: true }, { ...options, headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'stream' } }));
+        runner._run(() => runner._createMessage(messages, { ...params, stream: true }, { ...options, headers: { ...options?.headers, [STAINLESS_HELPER_METHOD_HEADER]: 'stream' } }));
         return runner;
     }
     _run(executor) {
@@ -22992,7 +23458,7 @@ class batches_Batches extends APIResource {
      * can take up to 24 hours to complete.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -23012,8 +23478,16 @@ class batches_Batches extends APIResource {
      * });
      * ```
      */
-    create(body, options) {
-        return this._client.post('/v1/messages/batches', { body, ...options });
+    create(params, options) {
+        const { user_profile_id, ...body } = params;
+        return this._client.post('/v1/messages/batches', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(user_profile_id != null ? { 'anthropic-user-profile-id': user_profile_id } : undefined) },
+                options?.headers,
+            ]),
+        });
     }
     /**
      * This endpoint is idempotent and can be used to poll for Message Batch
@@ -23021,7 +23495,7 @@ class batches_Batches extends APIResource {
      * `results_url` field in the response.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -23038,7 +23512,7 @@ class batches_Batches extends APIResource {
      * returned first.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -23058,7 +23532,7 @@ class batches_Batches extends APIResource {
      * like to delete an in-progress batch, you must first cancel it.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -23081,7 +23555,7 @@ class batches_Batches extends APIResource {
      * non-interruptible.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -23101,7 +23575,7 @@ class batches_Batches extends APIResource {
      * requests. Use the `custom_id` field to match results to requests.
      *
      * Learn more about the Message Batches API in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/batch-processing)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/batch-processing)
      *
      * @example
      * ```ts
@@ -23140,7 +23614,8 @@ class messages_Messages extends APIResource {
         super(...arguments);
         this.batches = new batches_Batches(this._client);
     }
-    create(body, options) {
+    create(params, options) {
+        const { user_profile_id, ...body } = params;
         if (body.model in messages_DEPRECATED_MODELS) {
             console.warn(`The model '${body.model}' is deprecated and will reach end-of-life on ${messages_DEPRECATED_MODELS[body.model]}\nPlease migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.`);
         }
@@ -23160,8 +23635,12 @@ class messages_Messages extends APIResource {
             body,
             timeout: timeout ?? 600000,
             ...options,
-            headers: buildHeaders([helperHeader, options?.headers]),
-            stream: body.stream ?? false,
+            headers: buildHeaders([
+                { ...(user_profile_id != null ? { 'anthropic-user-profile-id': user_profile_id } : undefined) },
+                helperHeader,
+                options?.headers,
+            ]),
+            stream: params.stream ?? false,
         });
     }
     /**
@@ -23216,7 +23695,7 @@ class messages_Messages extends APIResource {
      * including tools, images, and documents, without creating it.
      *
      * Learn more about token counting in our
-     * [user guide](https://docs.claude.com/en/docs/build-with-claude/token-counting)
+     * [user guide](https://platform.claude.com/docs/en/build-with-claude/token-counting)
      *
      * @example
      * ```ts
@@ -23227,8 +23706,16 @@ class messages_Messages extends APIResource {
      *   });
      * ```
      */
-    countTokens(body, options) {
-        return this._client.post('/v1/messages/count_tokens', { body, ...options });
+    countTokens(params, options) {
+        const { user_profile_id, ...body } = params;
+        return this._client.post('/v1/messages/count_tokens', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(user_profile_id != null ? { 'anthropic-user-profile-id': user_profile_id } : undefined) },
+                options?.headers,
+            ]),
+        });
     }
 }
 const messages_DEPRECATED_MODELS = {
@@ -24224,6 +24711,8 @@ Anthropic.Beta = Beta;
 
 
 
+
+
 const encoder = new TextEncoder();
 /** Betas sent by default; override with {@link BetaRefusalFallbackOptions.betas}. */
 const DEFAULT_BETAS = (/* unused pure expression or super */ null && (['fallback-credit-2026-06-01']));
@@ -24313,8 +24802,9 @@ function betaRefusalFallbackMiddleware(fallbacks, options = {}) {
         }
         const onError = options.onError ??
             ((error) => ctx.logger.error(`anthropic-sdk: betaRefusalFallbackMiddleware: ${error.message}`));
-        // Send the configured betas on this and every hop request derived from it.
-        request = appendBetas(request, options.betas ?? DEFAULT_BETAS);
+        // Send the configured betas on this and every hop request derived from it,
+        // and tag this and every hop with the middleware's helper telemetry.
+        request = withMiddlewareHeaders(request, options.betas ?? DEFAULT_BETAS);
         const body = stripFallbackBlocks(ctx.options.body);
         const state = ctx.options.fallbackState;
         // start from the pinned fallback (-1 = the original params)
@@ -24857,9 +25347,7 @@ function toPrefillBlocks(responseBlocks) {
  * A copy of `request` with `betas` appended to its `anthropic-beta` header,
  * skipping values already present (set by the caller or another middleware).
  */
-function appendBetas(request, betas) {
-    if (!betas.length)
-        return request;
+function withMiddlewareHeaders(request, betas) {
     const headers = new Headers(request.headers);
     const existing = new Set(headers
         .get('anthropic-beta')
@@ -24871,6 +25359,7 @@ function appendBetas(request, betas) {
             existing.add(beta);
         }
     }
+    headers.set(STAINLESS_HELPER_HEADER, appendHeaderValue(headers.get(STAINLESS_HELPER_HEADER), 'fallback-refusal-middleware'));
     return { ...request, headers };
 }
 function emit(event, payload) {
@@ -49027,8 +49516,8 @@ Pricing last updated: ${this.lastUpdated}`;
 
 // EXTERNAL MODULE: ./runners/core/skill-cache.mjs
 var skill_cache = __nccwpck_require__(7328);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 80 modules
-var sdk = __nccwpck_require__(4973);
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 81 modules
+var sdk = __nccwpck_require__(4055);
 ;// CONCATENATED MODULE: ./node_modules/@google/generative-ai/dist/index.mjs
 /**
  * Contains the list of OpenAPI data types
