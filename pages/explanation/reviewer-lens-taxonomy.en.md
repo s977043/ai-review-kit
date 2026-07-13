@@ -54,7 +54,7 @@ Read the coverage column as follows.
 
 ## Handling Gaps
 
-The Gap and Partial Lenses (product, the dedicated architecture role, privacy, accessibility, release) are added as registry skills only when a real gap is observed in practice. Reviewers are not grown ahead of that signal. Lenses that need out-of-code artifacts, such as product or design, receive those artifacts through the artifact input contract (`pages/reference/artifact-input-contract.md`).
+The Gap and Partial Lenses (product, the dedicated architecture role, privacy, accessibility, release) are added as registry skills only when a real gap is observed in practice. Reviewers are not grown ahead of that signal. Lenses that need out-of-code artifacts, such as product or design, receive those artifacts through the [artifact input contract](../reference/artifact-input-contract.en.md).
 
 ## Boundary with PlanGate
 
@@ -64,7 +64,7 @@ Related documents:
 
 - Review team execution flow — `skills/agent-skills/review-team/SKILL.md`
 - Review-perspective axes — [Upstream, Midstream, Downstream](./upstream-midstream-downstream.en.md)
-- Artifact input contract — [config-schema](../reference/config-schema.en.md)
+- Artifact input contract — [artifact-input-contract](../reference/artifact-input-contract.en.md)
 
 ## Notes for Human Review
 

@@ -54,7 +54,7 @@ Lens は 3 つ目のテキソノミーではありません。上記 2 者を評
 
 ## Gap の扱い / Handling Gaps
 
-Gap と Partial の Lens（product / architecture の専任ロール / privacy / accessibility / release）は、真のギャップが運用で観測された場合にのみ registry skill として追加します。先回りしてレビュアーを増やすことはしません。product / design のようにコード外の成果物を必要とする Lens は、artifact 入力契約（`pages/reference/artifact-input-contract.md`）経由で成果物を受け取ります。
+Gap と Partial の Lens（product / architecture の専任ロール / privacy / accessibility / release）は、真のギャップが運用で観測された場合にのみ registry skill として追加します。先回りしてレビュアーを増やすことはしません。product / design のようにコード外の成果物を必要とする Lens は、[artifact 入力契約](../reference/artifact-input-contract.md)経由で成果物を受け取ります。
 
 ## PlanGate との境界 / Boundary with PlanGate
 
@@ -64,7 +64,7 @@ Lens の語彙定義は River Review を SSoT とします。River Review は「
 
 - review team の実行フロー — `skills/agent-skills/review-team/SKILL.md`
 - レビュー観点の切り口 — [上流、中流、下流](./upstream-midstream-downstream.md)
-- artifact 入力契約 — [config-schema](../reference/config-schema.md)
+- artifact 入力契約 — [artifact-input-contract](../reference/artifact-input-contract.md)
 
 ## 人間レビューの要点 / Notes for Human Review
 
