@@ -300,7 +300,7 @@
     {
       "id": "event-driven-semantics",
       "path": "skills/upstream/event-driven-semantics",
-      "checksum": "sha256:6b3bed9f88cad4565b76317aeda0b3073648151b8533a3a6f1c8c6b34227ab68",
+      "checksum": "sha256:edcb8b840abdbd6dcc2b443c3690317660851dc55b507ee183a73dfb07e96935",
       "files": 1
     },
     {
@@ -384,7 +384,7 @@
     {
       "id": "integration-contracts",
       "path": "skills/upstream/integration-contracts",
-      "checksum": "sha256:eaaf49ca4dd1998f2559816e5c7cf6a1e93ced44873fc86ae20a4fba1cba5a51",
+      "checksum": "sha256:508916403b5858fb8f8c133c3fccb135935f28bc8e5dcaa3b81f6a3cc2f6b462",
       "files": 1
     },
     {
