@@ -4,7 +4,7 @@ name: 'Laravel Migration Safety Review'
 description: 'Reviews Laravel migrations for destructive operations, change() dropping modifiers, locking index creation on large tables (PostgreSQL), and asymmetric down().'
 version: 0.1.0
 category: upstream
-phase: upstream
+phase: [upstream, midstream]
 applyTo:
   - 'database/migrations/**/*.php'
 tags: [laravel, migration, database, postgresql, safety, upstream]
