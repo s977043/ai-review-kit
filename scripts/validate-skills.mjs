@@ -18,7 +18,6 @@ import { isDirectRun } from './lib/is-direct-run.mjs';
 // eval を用意すること（recommended skill は eval/ または fixtures/ を持つこと
 // を validateRecommendedEvalCoverage() で前向きに強制する）。
 const GRANDFATHERED_WITHOUT_EVAL = new Set([
-  'doc-hygiene',
   'review-automation-boundary',
   'design-source-conformance',
   'component-variants-states',
@@ -31,7 +30,6 @@ const GRANDFATHERED_WITHOUT_EVAL = new Set([
   'refactor-claim-audit',
   'cross-file-leakage',
   'e2e-wiring',
-  'existing-pattern-conformance',
   'migration-safety',
   'adr-decision-quality',
   'api-design',
