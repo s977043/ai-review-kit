@@ -2,7 +2,13 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { parseFrontMatter, listSkillPackageDirs } from '../runners/core/skill-loader.mjs';
+import {
+  parseFrontMatter,
+  listSkillPackageDirs,
+  loadSchema,
+  createSkillValidator,
+  defaultPaths,
+} from '../runners/core/skill-loader.mjs';
 import { isDirectRun } from './lib/is-direct-run.mjs';
 import {
   extractRoutingTargetIds,
@@ -494,6 +500,63 @@ async function validateAgentSkills() {
   const coverageOk = await validateApplyToCoverage(packages);
   if (!coverageOk) success = false;
 
+  // Loose→strict drift guard: this validator (and the agent-skill bridge's
+  // loose schema, additionalProperties: true) tolerates fields/values that the
+  // strict runtime schema (schemas/skill.schema.json, additionalProperties:
+  // false) rejects — such a skill passes here yet is silently dropped by
+  // loadAllSkillMetadata(). Mirror the runtime validation (same parseFrontMatter
+  // normalization, same strict schema) and surface the drift as a warning.
+  const strictOk = await validateStrictSchemaDrift(packages);
+  if (!strictOk) success = false;
+
+  return success;
+}
+
+/**
+ * Validate each agent-skill's normalized frontmatter against the strict runtime
+ * schema used by loadAllSkillMetadata(). Error-level (blocking): a skill that
+ * passes the loose checks but fails the strict schema is silently dropped by
+ * the runtime loader — the exact bug class PR #1559 fixed — so drift must fail
+ * CI, not merely warn. If a field is genuinely needed, the correct move is to
+ * define it in schemas/skill.schema.json (as applyToExemptions was); a
+ * loose-only field failing this guard is by design.
+ *
+ * @param {string[]} packages absolute SKILL.md paths
+ * @returns {Promise<boolean>} false when any skill fails the strict schema or
+ *   the schema itself fails to load/compile
+ */
+async function validateStrictSchemaDrift(packages) {
+  let strictValidator;
+  try {
+    strictValidator = createSkillValidator(await loadSchema(defaultPaths.schemaPath));
+  } catch (err) {
+    console.error(`❌ failed to load strict schema (${defaultPaths.schemaPath}): ${err.message}`);
+    return false;
+  }
+  let success = true;
+  for (const skillPath of packages) {
+    const relPath = path.relative(repoRoot, skillPath);
+    let metadata;
+    try {
+      const content = await fs.readFile(skillPath, 'utf8');
+      metadata = parseFrontMatter(content, { filePath: skillPath }).metadata ?? {};
+    } catch {
+      continue; // per-skill validation already reported the parse failure
+    }
+    // Deep copy: the ajv validator applies schema defaults (useDefaults: true).
+    const metaCopy = JSON.parse(JSON.stringify(metadata));
+    if (!strictValidator(metaCopy)) {
+      const details = (strictValidator.errors ?? [])
+        .map((err) => `${err.instancePath || '/'} ${err.message}`)
+        .join('; ');
+      console.error(
+        `❌ ${relPath}: passes the loose agent-skill checks but FAILS the strict runtime ` +
+          `schema (schemas/skill.schema.json) — loadAllSkillMetadata() would silently drop ` +
+          `this skill: ${details}`
+      );
+      success = false;
+    }
+  }
   return success;
 }
 

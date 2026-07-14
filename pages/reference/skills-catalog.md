@@ -155,22 +155,6 @@ mitigation plans.`
 
 - summary / findings / actions / questions
 
-### `architecture-sample`
-
-- 名前: `Sample Architecture Consistency Review`
-- 概要: `Checks design/ADR docs for consistency and missing decisions.`
-- 対象:
-  - `docs/architecture/**/*.md`
-  - `docs/adr/**/*.md`
-- 重要度: minor
-- タグ: sample / design / architecture / upstream
-- 依存関係: adr_lookup
-- 適用条件: phase=upstream, inputContext=diff
-
-チェック項目の例:
-
-- findings / summary / questions / actions
-
 ### `architecture-traceability`
 
 - 名前: `Architecture Traceability & Consistency`
@@ -483,28 +467,6 @@ drift and incidents.`
 
 - summary / findings / actions / questions
 
-### `data-model-db-design`
-
-- 名前: `Data Model & DB Design Review`
-- 概要: `Ensure data model/DB designs cover constraints; integrity; indexes; migrations; rollback; and operational
-impacts.`
-- 対象:
-  - `**/*schema*.{sql,prisma}`
-  - `**/*migrate*/**/*.sql`
-  - `**/*migration*/**/*.sql`
-  - `**/*ddl*.sql`
-  - `**/*erd*.{md,png,svg}`
-  - `docs/**/*db*.md`
-  - `docs/**/*schema*.md`
-- 重要度: major
-- タグ: database / schema / migration / upstream
-- 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / fullFile / adr
-
-チェック項目の例:
-
-- summary / findings / actions / questions
-
 ### `dr-multiregion`
 
 - 名前: `Disaster Recovery & Multi-Region Readiness`
@@ -562,7 +524,7 @@ replay/backfill strategy.`
   - `pages/**/*message*.md`
   - `**/*asyncapi*.{yml,yaml,json}`
   - `**/*schema*.{avsc,json}`
-  - `**/*proto*.proto`
+  - `**/*.proto`
 - 重要度: major
 - タグ: architecture / events / messaging / reliability / upstream
 - 依存関係: repo_metadata
@@ -625,7 +587,7 @@ rollout/rollback expectations.`
   - `**/*openapi*.{yml,yaml,json}`
   - `**/*asyncapi*.{yml,yaml,json}`
   - `**/*schema*.{avsc,json}`
-  - `**/*proto*.proto`
+  - `**/*.proto`
 - 重要度: major
 - タグ: integration / contract / api / events / upstream
 - 依存関係: repo_metadata
@@ -634,22 +596,6 @@ rollout/rollback expectations.`
 チェック項目の例:
 
 - summary / findings / actions / questions
-
-### `laravel-migration-safety`
-
-- 名前: `Laravel Migration Safety Review`
-- 概要: `Reviews Laravel migrations for destructive operations; change() dropping modifiers; locking index creation on
-large tables (PostgreSQL); and asymmetric down().`
-- 対象:
-  - `database/migrations/**/*.php`
-- 重要度: major
-- タグ: laravel / migration / database / postgresql / safety / upstream
-- 依存関係: none
-- 適用条件: phase=upstream, inputContext=diff
-
-チェック項目の例:
-
-- findings / questions
 
 ### `migration-rollout-rollback`
 
@@ -672,25 +618,6 @@ compatibility considerations.`
 チェック項目の例:
 
 - summary / findings / actions / questions
-
-### `migration-safety`
-
-- 名前: `Migration Safety Review (framework-agnostic)`
-- 概要: `スキーマ/データ移行の安全性を framework 非依存で審査する。破壊的スキーマ変更・ロック誘発・backfill・ロールバック可逆性・expand-contract の段階適用を、prisma / typeorm
-/ Rails / Django / Alembic / 生 SQL などに横断適用する。`
-- 対象:
-  - `**/migrations/**/*`
-  - `**/migrate/**/*`
-  - `prisma/schema.prisma`
-  - `db/**/*.sql`
-- 重要度: major
-- タグ: migration / database / schema / safety / rollback / upstream
-- 依存関係: code_search
-- 適用条件: phase=upstream, inputContext=diff
-
-チェック項目の例:
-
-- findings / questions
 
 ### `multitenancy-isolation`
 
@@ -1137,23 +1064,6 @@ fields.`
 
 - findings / actions
 
-### `code-quality-sample`
-
-- 名前: `Sample Code Quality Pass`
-- 概要: `Checks common code quality and maintainability risks.`
-- 対象:
-  - `src/**/*.ts`
-  - `src/**/*.js`
-  - `src/**/*.py`
-- 重要度: minor
-- タグ: sample / style / maintainability / midstream
-- 依存関係: code_search
-- 適用条件: phase=midstream, inputContext=diff
-
-チェック項目の例:
-
-- findings / actions
-
 ### `component-variants-states`
 
 - 名前: `Component Variants / States Documentation コンポーネント状態の文書化`
@@ -1358,7 +1268,7 @@ diff-time で検出する。技術的正しさとスコープ整合性を別軸�
   - `tests/**/*`
   - `docs/**/*`
   - `pages/**/*`
-- 重要度: major
+- 重要度: info
 - タグ: review / github / midstream
 - 依存関係: custom:github
 - 適用条件: phase=midstream, inputContext=diff
@@ -1763,7 +1673,7 @@ and missing HydrateFallback in React Router v7 framework mode.`
 - 概要: `レビューコメントの重要度ラベリングと対応方針・返信案を整理する。AI はコード修正やパッチ提案を行わない。`
 - 対象:
   - `**/*`
-- 重要度: minor
+- 重要度: info
 - タグ: review / process / midstream
 - 依存関係: none
 - 適用条件: phase=midstream, inputContext=diff
@@ -1828,6 +1738,52 @@ and missing HydrateFallback in React Router v7 framework mode.`
   - `pages/**/*`
 - 重要度: minor
 - タグ: docs / documentation / i18n
+- 依存関係: none
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / actions
+
+### `river-review-frontend`
+
+- 名前: `river-review-frontend`
+- 概要: `フロントエンド観点のレビューエージェント。 アクセシビリティ、デザインシステム準拠、Tailwind クラス衛生、UI 状態設計、 Next.js / React Router
+のフレームワーク境界を個別スキルへルーティングする。`
+- 対象:
+  - `src/**/*.{tsx,jsx,vue,svelte}`
+  - `src/routes/**/*.{ts,tsx,js,jsx}`
+  - `app/**/*.{ts,tsx,js,jsx}`
+  - `components/**/*.{ts,tsx,js,jsx}`
+  - `**/*.{css,scss,less}`
+  - `pages/**/*.{ts,tsx,js,jsx}`
+  - `lib/**/*.{ts,tsx,js,jsx}`
+  - `packages/**/*.{ts,tsx,js,jsx}`
+- 重要度: minor
+- タグ: frontend / ui / accessibility / design-system / entry / routing
+- 依存関係: none
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / actions
+
+### `river-review-performance`
+
+- 名前: `river-review-performance`
+- 概要: `パフォーマンス観点のレビューエージェント。 N+1クエリ、メモリ効率、キャッシュ戦略、可観測性の観点でコード変更を評価する。`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs,cjs,html,css}`
+  - `app/**/*.{ts,tsx,js,jsx,mjs,cjs,html,css}`
+  - `components/**/*.{ts,tsx,js,jsx,html,css}`
+  - `pages/**/*.{ts,tsx,js,jsx,html,css}`
+  - `lib/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `packages/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `styles/**/*.css`
+  - `public/**/*.html`
+  - `**/*.sql`
+- 重要度: major
+- タグ: performance / optimization / entry / routing
 - 依存関係: none
 - 適用条件: phase=midstream, inputContext=diff / fullFile
 
@@ -2103,22 +2059,6 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 
 - findings / actions / summary
 
-### `gha-workflow-security`
-
-- 名前: `GitHub Actions Workflow Security Review`
-- 概要: `Reviews GitHub Actions workflow diffs for script injection of untrusted input; pull_request_target with
-untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-party actions.`
-- 対象:
-  - `.github/workflows/**/*.{yml,yaml}`
-- 重要度: major
-- タグ: github-actions / security / ci / supply-chain / downstream
-- 依存関係: none
-- 適用条件: phase=downstream, inputContext=diff
-
-チェック項目の例:
-
-- findings / questions
-
 ### `review-policy-standard-downstream`
 
 - 名前: `Standard Review Policy for Downstream`
@@ -2212,20 +2152,3 @@ untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-part
 チェック項目の例:
 
 - tests / findings / questions / actions
-
-### `test-review-sample`
-
-- 名前: `Sample Test Coverage Review`
-- 概要: `Evaluates downstream tests for coverage and edge cases.`
-- 対象:
-  - `tests/**/*.ts`
-  - `tests/**/*.js`
-  - `tests/**/*.py`
-- 重要度: major
-- タグ: sample / tests / coverage / downstream
-- 依存関係: test_runner / coverage_report / code_search
-- 適用条件: phase=downstream, inputContext=diff / tests
-
-チェック項目の例:
-
-- tests / findings / summary / actions

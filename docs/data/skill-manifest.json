@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 126,
+  "skillCount": 123,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -73,12 +73,6 @@
       "id": "architecture-risk-register",
       "path": "skills/upstream/architecture-risk-register",
       "checksum": "sha256:7af2dde3d101b72a614c210ad896c5752de0813c672cbe7a2f7698b459d638a5",
-      "files": 1
-    },
-    {
-      "id": "architecture-sample",
-      "path": "skills/upstream/architecture-sample",
-      "checksum": "sha256:fb34ccf4c877adcc2e4999e02fbdce6a87185a96976ba8636f6efd9e4273de5a",
       "files": 1
     },
     {
@@ -154,12 +148,6 @@
       "files": 1
     },
     {
-      "id": "code-quality-sample",
-      "path": "skills/midstream/code-quality-sample",
-      "checksum": "sha256:b6fdd7dc9dd4e35bc8d363684af8af4be95335cdcbb6081fc385da488be9861f",
-      "files": 1
-    },
-    {
       "id": "code-react",
       "path": "skills/upstream/code-react",
       "checksum": "sha256:88370b0b70df7f1f3ed50417eb3797eb6b870faa06a9f8dd986f18f4b4ac6bc0",
@@ -228,7 +216,7 @@
     {
       "id": "data-model-db-design",
       "path": "skills/upstream/data-model-db-design",
-      "checksum": "sha256:ff3101316392ca5e1cade6fe912da517a2be01d50cd51b714ccda27fd23e7de7",
+      "checksum": "sha256:f842a5e47f62b08d5ded9ef3122dcd153303bb0b81e79b065887030aeec9dfc9",
       "files": 1
     },
     {
@@ -276,7 +264,7 @@
     {
       "id": "event-driven-semantics",
       "path": "skills/upstream/event-driven-semantics",
-      "checksum": "sha256:6b3bed9f88cad4565b76317aeda0b3073648151b8533a3a6f1c8c6b34227ab68",
+      "checksum": "sha256:edcb8b840abdbd6dcc2b443c3690317660851dc55b507ee183a73dfb07e96935",
       "files": 1
     },
     {
@@ -318,13 +306,13 @@
     {
       "id": "gh-address-comments",
       "path": "skills/midstream/gh-address-comments",
-      "checksum": "sha256:337fc02c8a222e55c548b839c73f959d67bbfc357b45942e57a2427405a8171a",
+      "checksum": "sha256:2061e80ea8d0e44fea1a520b478075e7dbdbbcbd9c8f002316dbaf69c8783569",
       "files": 1
     },
     {
       "id": "gha-workflow-security",
       "path": "skills/downstream/gha-workflow-security",
-      "checksum": "sha256:542150693e92009527ada1134d95164eb25c0dec1127310484234d6983d84244",
+      "checksum": "sha256:129fcd3e90b5ec41cd768fa6373e135ddb26625e76837fc1146cacd20af8bf8c",
       "files": 4
     },
     {
@@ -360,7 +348,7 @@
     {
       "id": "integration-contracts",
       "path": "skills/upstream/integration-contracts",
-      "checksum": "sha256:eaaf49ca4dd1998f2559816e5c7cf6a1e93ced44873fc86ae20a4fba1cba5a51",
+      "checksum": "sha256:508916403b5858fb8f8c133c3fccb135935f28bc8e5dcaa3b81f6a3cc2f6b462",
       "files": 1
     },
     {
@@ -378,7 +366,7 @@
     {
       "id": "laravel-migration-safety",
       "path": "skills/upstream/laravel-migration-safety",
-      "checksum": "sha256:daf3b298d64346396b56aca248ef15e3d007cb92b970fca8e00f1f0c0c1c445c",
+      "checksum": "sha256:1b5dbb830ff3f0a78b9cc46d238dc6027ec5ca336609ce4d2cfd7a66891d98c4",
       "files": 4
     },
     {
@@ -408,7 +396,7 @@
     {
       "id": "migration-safety",
       "path": "skills/upstream/migration-safety",
-      "checksum": "sha256:72af98b37d7d02b41e88fd3bbec2c51603d8801277b5da43ed9645f8b5d0d738",
+      "checksum": "sha256:0fbb50c17633160d155295a34388aaa84289b927e2d5a4729a1eb43ef03c9862",
       "files": 1
     },
     {
@@ -510,7 +498,7 @@
     {
       "id": "plangate-tdd-evidence",
       "path": "skills/upstream/plangate-tdd-evidence",
-      "checksum": "sha256:d7cd17660159d599b1f5761e9577e2b1986f692003216bac67b0d3dac0f664f8",
+      "checksum": "sha256:780e39359a294a910b01982facd00c120cbf72906345c00bc52bc3d56a28d270",
       "files": 1
     },
     {
@@ -570,7 +558,7 @@
     {
       "id": "review-comment-triage",
       "path": "skills/midstream/review-comment-triage",
-      "checksum": "sha256:ee89a73323153d9aa33004a70483af50682fb142e9644a609887ef519eeba612",
+      "checksum": "sha256:073a1e292ce102946a98ebf3509b64815a691315fdfa0f8950dbe8f3e9eaff2c",
       "files": 1
     },
     {
@@ -706,12 +694,6 @@
       "files": 1
     },
     {
-      "id": "test-review-sample",
-      "path": "skills/downstream/test-review-sample",
-      "checksum": "sha256:cb9e2dda6f1c374096fa9d766373299794f64c7314d21961895f221a38ba4033",
-      "files": 1
-    },
-    {
       "id": "trust-boundaries-authz",
       "path": "skills/upstream/trust-boundaries-authz",
       "checksum": "sha256:1e12f557da121a534b84135fcc8219c195c7a5c5d7952c03fa81047547f34788",
@@ -744,7 +726,7 @@
     {
       "id": "unknown-coverage-review",
       "path": "skills/agent-skills/unknown-coverage-review",
-      "checksum": "sha256:37cd303a0e0f4da4948283f2dfd430b4bf928be141862b60eb53dfdd65e83cb6",
+      "checksum": "sha256:7a43c7896302491402a437c8da61bba7ec252fb89b7991822b7c42c473ab537d",
       "files": 5
     },
     {

@@ -37,7 +37,7 @@ Why: `tdd-ledger` のフェーズ別証跡を基準として妥当性を突き�
 
 ## Non-goals / 扱わないこと
 
-- テストコードの書き方・命名・カバレッジ品質（`rr-test-code-*` 系 skill の領域）。
+- テストコードの書き方・命名・カバレッジ品質（`code-*` 系 test scaffold skill の領域）。
 - plan / todo / test-cases と差分の整合（姉妹 skill `plangate-exec-conformance` の領域）。
 - 既存レビュー文書の W チェック（`plangate-verification-audit` の領域）。
 - すべての PR に TDD を要求すること（TDD が宣言・要求された変更のみが対象）。

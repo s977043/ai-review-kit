@@ -15,7 +15,7 @@ test('selects skills by phase and applyTo glob', async () => {
     availableContexts: ['diff'],
   });
   const ids = selected.map((s) => s.metadata.id);
-  assert.ok(ids.includes('code-quality-sample'), 'midstream skill should be selected');
+  assert.ok(ids.includes('hello-skill'), 'midstream skill should be selected');
 });
 
 test('skips when required inputContext is missing', () => {

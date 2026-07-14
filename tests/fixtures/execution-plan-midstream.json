@@ -8,13 +8,6 @@
       "dependencies": []
     },
     {
-      "id": "code-quality-sample",
-      "phase": "midstream",
-      "modelHint": "balanced",
-      "outputKind": ["findings", "actions"],
-      "dependencies": ["code_search"]
-    },
-    {
       "id": "design-source-conformance",
       "phase": "midstream",
       "modelHint": "balanced",

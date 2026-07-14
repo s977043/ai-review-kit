@@ -160,6 +160,28 @@
       },
       "minItems": 1
     },
+    "applyToExemptions": {
+      "type": "array",
+      "description": "Intentional exclusions from the entry applyTo containment check (#1508). Each entry declares a routing-target skill that is deliberately NOT covered by this entry's applyTo, with the reason next to the applyTo block. Parsed by scripts/validate-agent-skills.mjs parseExemptions(): every item must be an object with non-empty `skill` (routing-target skill ID) and non-empty `reason` strings.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["skill", "reason"],
+        "properties": {
+          "skill": {
+            "type": "string",
+            "description": "Routing-target skill ID exempted from applyTo coverage",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why the exclusion is intentional",
+            "minLength": 1
+          }
+        }
+      },
+      "minItems": 1
+    },
     "exclude": {
       "type": "array",
       "description": "Glob patterns for files to exclude from this skill even when applyTo matches (honored by the midstream skill-dispatcher; snapshot/planner selection ignores it)",

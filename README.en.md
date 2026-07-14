@@ -285,7 +285,7 @@ severity: minor
 - Instruction text for the reviewer goes here.
 ```
 
-- Sample skills: `skills/upstream/architecture-sample/SKILL.md`, `skills/midstream/code-quality-sample/SKILL.md`, `skills/downstream/test-review-sample/SKILL.md`
+- Sample skills: `examples/skills/architecture-sample/SKILL.md`, `examples/skills/code-quality-sample/SKILL.md`, `examples/skills/test-review-sample/SKILL.md` (reference only; never selected during reviews)
 - Examples: `examples/README.md`
 - Schemas: `schemas/skill.schema.json` (skill metadata) and `schemas/output.schema.json` (structured review output)
 - References: Skill schema details live in `pages/reference/skill-schema-reference.md`; Riverbed Memory v1 (shipped in #474) is documented in `pages/explanation/riverbed-memory.md` and `pages/guides/use-riverbed-memory.md`.
