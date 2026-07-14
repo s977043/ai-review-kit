@@ -78,7 +78,7 @@ pack はいずれか 1 つの軸に分類します。軸をまたぐ関心は ta
 
 リポジトリに置く skill は「アーティファクトを評価・検査するもの」を原則とします。次の例外と境界を定めます。
 
-- **テスト関連の生成・実行 skill（rr-test-code-\* 7 件、Playwright 系 2 件）は review-adjacent として残す**。レビュー指摘（カバレッジギャップ等）への修正提案としてテスト追加を支援する位置づけであり、`review-support` tag で検査系と区別する
+- **テスト関連の生成・実行 skill（code-\*（test scaffold 系）7 件、Playwright 系 2 件）は review-adjacent として残す**。レビュー指摘（カバレッジギャップ等）への修正提案としてテスト追加を支援する位置づけであり、`review-support` tag で検査系と区別する
 - 汎用コードレビュー系の重複 skill は plugin の `river-review-code` に統合する（agent-code-review の多観点実行・件数制約、agent-code-quality の命名・カプセル化観点を統合済み）
 - 計画「作成」（旧 create-plan）は PlanGate の責務として移管完了（PlanGate#523 で受け入れ、2026-06-11 に本リポジトリから削除）。以降は plan を検査する側の skill のみ持つ
 - レビューと無関係な汎用開発ガイド（ドキュメント執筆・リファクタ手順）は持たない
