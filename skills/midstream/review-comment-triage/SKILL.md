@@ -18,7 +18,7 @@ tags:
   - review
   - process
   - midstream
-severity: 'minor'
+severity: 'info'
 ---
 
 ## Pattern declaration
