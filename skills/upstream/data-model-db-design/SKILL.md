@@ -4,7 +4,7 @@ name: 'Data Model & DB Design Review'
 description: 'Ensure data model/DB designs cover constraints, integrity, indexes, migrations, rollback, and operational impacts.'
 version: 0.1.0
 category: upstream
-phase: upstream
+phase: [upstream, midstream]
 applyTo:
   - '**/*schema*.{sql,prisma}'
   - '**/*migrate*/**/*.sql'

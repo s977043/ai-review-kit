@@ -252,7 +252,7 @@
     {
       "id": "data-model-db-design",
       "path": "skills/upstream/data-model-db-design",
-      "checksum": "sha256:ff3101316392ca5e1cade6fe912da517a2be01d50cd51b714ccda27fd23e7de7",
+      "checksum": "sha256:f842a5e47f62b08d5ded9ef3122dcd153303bb0b81e79b065887030aeec9dfc9",
       "files": 1
     },
     {
@@ -348,7 +348,7 @@
     {
       "id": "gha-workflow-security",
       "path": "skills/downstream/gha-workflow-security",
-      "checksum": "sha256:542150693e92009527ada1134d95164eb25c0dec1127310484234d6983d84244",
+      "checksum": "sha256:129fcd3e90b5ec41cd768fa6373e135ddb26625e76837fc1146cacd20af8bf8c",
       "files": 4
     },
     {
@@ -402,7 +402,7 @@
     {
       "id": "laravel-migration-safety",
       "path": "skills/upstream/laravel-migration-safety",
-      "checksum": "sha256:daf3b298d64346396b56aca248ef15e3d007cb92b970fca8e00f1f0c0c1c445c",
+      "checksum": "sha256:1b5dbb830ff3f0a78b9cc46d238dc6027ec5ca336609ce4d2cfd7a66891d98c4",
       "files": 4
     },
     {
@@ -432,7 +432,7 @@
     {
       "id": "migration-safety",
       "path": "skills/upstream/migration-safety",
-      "checksum": "sha256:72af98b37d7d02b41e88fd3bbec2c51603d8801277b5da43ed9645f8b5d0d738",
+      "checksum": "sha256:0fbb50c17633160d155295a34388aaa84289b927e2d5a4729a1eb43ef03c9862",
       "files": 1
     },
     {

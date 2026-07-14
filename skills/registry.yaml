@@ -601,7 +601,7 @@ skills:
     name: 'GitHub Actions Workflow Security Review'
     path: skills/downstream/gha-workflow-security/SKILL.md
     category: downstream
-    phase: downstream
+    phase: [midstream, downstream]
     tags: [github-actions, security, ci, supply-chain, downstream]
     severity: major
     recommended: false
@@ -734,7 +734,7 @@ skills:
     name: 'Logic Torturing 論理検証'
     path: skills/midstream/logic-torturing/SKILL.md
     category: midstream
-    phase: midstream
+    phase: [upstream, midstream]
     tags:
       [adversarial, logic-torturing, decision-quality, critical-thinking, midstream, cognitive-bias]
     severity: major
@@ -902,7 +902,7 @@ skills:
     name: 'Migration Safety Review (framework-agnostic)'
     path: skills/upstream/migration-safety/SKILL.md
     category: upstream
-    phase: upstream
+    phase: [upstream, midstream]
     tags: [migration, database, schema, safety, rollback, upstream]
     severity: major
     recommended: true
@@ -913,7 +913,7 @@ skills:
     name: 'Laravel Migration Safety Review'
     path: skills/upstream/laravel-migration-safety/SKILL.md
     category: upstream
-    phase: upstream
+    phase: [upstream, midstream]
     tags: [laravel, migration, database, postgresql, safety, upstream]
     severity: major
     recommended: false
@@ -1145,7 +1145,7 @@ skills:
     name: 'Data Model & DB Design Review'
     path: skills/upstream/data-model-db-design/SKILL.md
     category: upstream
-    phase: upstream
+    phase: [upstream, midstream]
     tags: [database, schema, migration, upstream]
     severity: major
     recommended: true
