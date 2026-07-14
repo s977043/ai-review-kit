@@ -65,16 +65,19 @@ function checkEvidenceExists(finding) {
 
 /**
  * Check that the finding's phase matches the skill's declared phase.
+ * The skill phase may be a single phase or an array of phases.
  * Lenient: returns true when either side is missing phase information.
  * @param {{ phase?: string }} finding
- * @param {{ metadata?: { phase?: string } }} skill
+ * @param {{ metadata?: { phase?: string | string[] } }} skill
  * @returns {boolean}
  */
 function checkPhaseCoherent(finding, skill) {
   const findingPhase = finding?.phase;
   const skillPhase = skill?.metadata?.phase;
   if (!findingPhase || !skillPhase) return true;
-  return findingPhase === skillPhase;
+  return Array.isArray(skillPhase)
+    ? skillPhase.includes(findingPhase)
+    : findingPhase === skillPhase;
 }
 
 /**
@@ -183,10 +186,11 @@ function verifyFinding({ finding, diff, skill, fileTypes }) {
   if (!checks.evidenceExists) reasons.push('No evidence provided in finding');
   if (!checks.evidenceInDiff) reasons.push('Evidence references file not found in diff');
   if (!checks.filePhaseCoherent) reasons.push('File type does not match finding phase');
-  if (!checks.phaseCoherent)
-    reasons.push(
-      `Phase mismatch: finding phase does not match skill phase "${skill?.metadata?.phase}"`
-    );
+  if (!checks.phaseCoherent) {
+    const skillPhase = skill?.metadata?.phase;
+    const skillPhaseLabel = Array.isArray(skillPhase) ? skillPhase.join('/') : skillPhase;
+    reasons.push(`Phase mismatch: finding phase does not match skill phase "${skillPhaseLabel}"`);
+  }
   if (!checks.severityJustified)
     reasons.push('Severity exceeds skill severity without justification');
   if (!checks.suggestionActionable) reasons.push('Fix/suggestion is missing or too brief');
