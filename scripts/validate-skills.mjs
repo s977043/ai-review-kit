@@ -426,6 +426,71 @@ export async function validateRegistryPaths({
   return success;
 }
 
+/**
+ * Registry/frontmatter id drift gate: every `skills[].id` in
+ * skills/registry.yaml must equal the `id` declared in the frontmatter of the
+ * SKILL.md its `path` points to. The runtime (runners/core/skill-loader.mjs /
+ * src/lib/selection.mjs) keys skills by the frontmatter id, so a diverging
+ * registry id silently fails to resolve (e.g. the former `test-code-*` ids
+ * made examples/selection/tdd.yaml's include list a no-op).
+ *
+ * Entries whose path does not exist or whose SKILL.md fails to parse are
+ * skipped here — validateRegistryPaths() and validateSkills() already report
+ * those failures.
+ *
+ * @param {{ skillsDir?: string, repoRoot?: string }} [options]
+ * @returns {Promise<boolean>} false (→ exitCode 1) if any registry id differs
+ *   from its SKILL.md frontmatter id.
+ */
+export async function validateRegistryIdMatch({
+  skillsDir = defaultPaths.skillsDir,
+  repoRoot = defaultPaths.repoRoot,
+} = {}) {
+  const registryPath = path.join(skillsDir, 'registry.yaml');
+  const registry = await loadSkillRegistry(registryPath);
+  if (!registry.ok) {
+    console.error(
+      `❌ Failed to ${registry.phase} skill registry at ${registryPath}: ${registry.message}`
+    );
+    return false;
+  }
+  const parsed = registry.parsed;
+
+  const skills = Array.isArray(parsed?.skills) ? parsed.skills : [];
+  let success = true;
+  let checkedCount = 0;
+
+  for (const skill of skills) {
+    const { id, path: skillPath } = skill ?? {};
+    // Malformed entries are reported by validateRegistryPaths(); skip here.
+    if (!id || typeof skillPath !== 'string') continue;
+    const resolved = path.resolve(repoRoot, skillPath);
+    let parsedSkill;
+    try {
+      parsedSkill = await parseSkillFile(resolved);
+    } catch {
+      // Missing/unparseable files are reported by validateRegistryPaths() /
+      // validateSkills(); skip here.
+      continue;
+    }
+    checkedCount += 1;
+    const frontmatterId = parsedSkill?.metadata?.id;
+    if (frontmatterId !== id) {
+      console.error(
+        `❌ registry skill "${id}": id does not match SKILL.md frontmatter id ` +
+          `"${frontmatterId}" (path: ${skillPath}) — the runtime resolves skills by the ` +
+          'frontmatter id, so align the registry entry with it'
+      );
+      success = false;
+    }
+  }
+
+  if (success) {
+    console.log(`✅ registry ids: ${checkedCount} entry id(s) match their SKILL.md frontmatter id`);
+  }
+  return success;
+}
+
 // ---------------------------------------------------------------------------
 // Fixture / description drift validation (CLAUDE.md guard
 // "Skill-check fixture/description drift", mechanized)
@@ -750,6 +815,7 @@ if (isDirectRun(import.meta.url)) {
   const packsOk = await validatePacks();
   const evalCoverageOk = await validateRecommendedEvalCoverage();
   const registryPathsOk = await validateRegistryPaths();
+  const registryIdsOk = await validateRegistryIdMatch();
   const fixtureDriftOk = await validateFixtureDrift();
   const namingCollisionsOk = await validateNamingCollisions();
   const ok =
@@ -757,6 +823,7 @@ if (isDirectRun(import.meta.url)) {
     packsOk &&
     evalCoverageOk &&
     registryPathsOk &&
+    registryIdsOk &&
     fixtureDriftOk &&
     namingCollisionsOk;
   if (!ok) {

@@ -931,7 +931,7 @@ skills:
     recommended: false
     description: 'Applies standard AI review policy guidelines for upstream (design) phase reviews.'
 
-  - id: test-code-nextjs
+  - id: code-nextjs
     version: '0.1.0'
     name: 'Component Test Scaffold (Next.js)'
     path: skills/upstream/code-nextjs/SKILL.md
@@ -942,7 +942,7 @@ skills:
     recommended: false
     description: 'Generate React/Next.js component test skeletons (RTL) from specifications.'
 
-  - id: test-code-php-laravel
+  - id: code-php-laravel
     version: '0.1.0'
     name: 'Test Scaffold (Laravel/PHPUnit)'
     path: skills/upstream/code-php-laravel/SKILL.md
@@ -953,7 +953,7 @@ skills:
     recommended: false
     description: 'Generate PHP/Laravel (PHPUnit) test skeletons from specifications.'
 
-  - id: test-code-react
+  - id: code-react
     version: '0.1.0'
     name: 'Component Test Scaffold (React)'
     path: skills/upstream/code-react/SKILL.md
@@ -964,7 +964,7 @@ skills:
     recommended: false
     description: 'Generate generic React component test skeletons (RTL) from specifications.'
 
-  - id: test-code-remix
+  - id: code-remix
     version: '0.1.0'
     name: 'Route/Function Test Scaffold (Remix)'
     path: skills/upstream/code-remix/SKILL.md
@@ -975,7 +975,7 @@ skills:
     recommended: false
     description: 'Generate Remix loader/action and route component test skeletons.'
 
-  - id: test-code-unit-python-pytest
+  - id: code-unit-python-pytest
     version: '0.1.0'
     name: 'Unit Test Scaffold (Python/pytest)'
     path: skills/upstream/code-unit-python-pytest/SKILL.md
@@ -986,7 +986,7 @@ skills:
     recommended: false
     description: 'Generate Python/pytest unit test skeletons from specifications.'
 
-  - id: test-code-unit-ts-jest
+  - id: code-unit-ts-jest
     version: '0.1.0'
     name: 'Unit Test Scaffold (TypeScript)'
     path: skills/upstream/code-unit-ts-jest/SKILL.md
@@ -997,7 +997,7 @@ skills:
     recommended: false
     description: 'Generate TypeScript unit test skeletons (Jest/Vitest) from specifications.'
 
-  - id: test-code-vue
+  - id: code-vue
     version: '0.1.0'
     name: 'Component Test Scaffold (Vue.js)'
     path: skills/upstream/code-vue/SKILL.md

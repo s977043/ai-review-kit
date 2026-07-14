@@ -20,24 +20,6 @@ River Review に同梱されているスキル一覧です。フェーズ別に�
 
 ## upstream
 
-### `river-review-architecture`
-
-- 名前: `river-review-architecture`
-- 概要: `設計・アーキテクチャ観点のレビューエージェント。 依存関係、境界設計、データモデル、API設計等の個別スキルへルーティングする。`
-- 対象:
-  - `src/**/*.{ts,tsx,js,jsx,mjs}`
-  - `docs/**/*design*.md`
-  - `docs/adr/**/*`
-  - `pages/**/*design*.md`
-- 重要度: major
-- タグ: architecture / design / entry / routing
-- 依存関係: none
-- 適用条件: phase=upstream, inputContext=diff / fullFile / adr
-
-チェック項目の例:
-
-- findings / questions / actions
-
 ### `adr-decision-quality`
 
 - 名前: `ADR Decision Quality`
@@ -346,6 +328,118 @@ signals to keep knowledge aligned.`
 
 - summary / findings / questions
 
+### `code-nextjs`
+
+- 名前: `Component Test Scaffold (Next.js)`
+- 概要: `Generate React/Next.js component test skeletons (RTL) from specifications.`
+- 対象:
+  - `docs/**/*.md`
+  - `specs/**/*.md`
+- 重要度: major
+- タグ: review-support / unit-test / tdd / nextjs / react / testing-library
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=fullFile
+
+チェック項目の例:
+
+- tests
+
+### `code-php-laravel`
+
+- 名前: `Test Scaffold (Laravel/PHPUnit)`
+- 概要: `Generate PHP/Laravel (PHPUnit) test skeletons from specifications.`
+- 対象:
+  - `docs/**/*.md`
+  - `specs/**/*.md`
+- 重要度: major
+- タグ: review-support / unit-test / tdd / php / laravel / phpunit
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=fullFile
+
+チェック項目の例:
+
+- tests
+
+### `code-react`
+
+- 名前: `Component Test Scaffold (React)`
+- 概要: `Generate generic React component test skeletons (RTL) from specifications.`
+- 対象:
+  - `docs/**/*.md`
+  - `specs/**/*.md`
+- 重要度: major
+- タグ: review-support / unit-test / tdd / react / testing-library / vite
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=fullFile
+
+チェック項目の例:
+
+- tests
+
+### `code-remix`
+
+- 名前: `Route/Function Test Scaffold (Remix)`
+- 概要: `Generate Remix loader/action and route component test skeletons.`
+- 対象:
+  - `docs/**/*.md`
+  - `specs/**/*.md`
+- 重要度: major
+- タグ: review-support / unit-test / tdd / remix / react / vitest
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=fullFile
+
+チェック項目の例:
+
+- tests
+
+### `code-unit-python-pytest`
+
+- 名前: `Unit Test Scaffold (Python/pytest)`
+- 概要: `Generate Python/pytest unit test skeletons from specifications.`
+- 対象:
+  - `docs/**/*.md`
+  - `specs/**/*.md`
+- 重要度: major
+- タグ: review-support / unit-test / tdd / python
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=fullFile
+
+チェック項目の例:
+
+- tests
+
+### `code-unit-ts-jest`
+
+- 名前: `Unit Test Scaffold (TypeScript)`
+- 概要: `Generate TypeScript unit test skeletons (Jest/Vitest) from specifications.`
+- 対象:
+  - `docs/**/*.md`
+  - `specs/**/*.md`
+- 重要度: major
+- タグ: review-support / unit-test / tdd / typescript / jest / vitest
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=fullFile
+
+チェック項目の例:
+
+- tests
+
+### `code-vue`
+
+- 名前: `Component Test Scaffold (Vue.js)`
+- 概要: `Generate Vue.js component test skeletons (Vue Test Utils) from specifications.`
+- 対象:
+  - `docs/**/*.md`
+  - `specs/**/*.md`
+- 重要度: major
+- タグ: review-support / unit-test / tdd / vue / vitest / vue-test-utils
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=fullFile
+
+チェック項目の例:
+
+- tests
+
 ### `context-budget-tuning`
 
 - 名前: `Context Budget Tuning`
@@ -396,8 +490,8 @@ drift and incidents.`
 impacts.`
 - 対象:
   - `**/*schema*.{sql,prisma}`
-  - `**/*migrate*/**/*.{sql}`
-  - `**/*migration*/**/*.{sql}`
+  - `**/*migrate*/**/*.sql`
+  - `**/*migration*/**/*.sql`
   - `**/*ddl*.sql`
   - `**/*erd*.{md,png,svg}`
   - `docs/**/*db*.md`
@@ -579,6 +673,25 @@ compatibility considerations.`
 
 - summary / findings / actions / questions
 
+### `migration-safety`
+
+- 名前: `Migration Safety Review (framework-agnostic)`
+- 概要: `スキーマ/データ移行の安全性を framework 非依存で審査する。破壊的スキーマ変更・ロック誘発・backfill・ロールバック可逆性・expand-contract の段階適用を、prisma / typeorm
+/ Rails / Django / Alembic / 生 SQL などに横断適用する。`
+- 対象:
+  - `**/migrations/**/*`
+  - `**/migrate/**/*`
+  - `prisma/schema.prisma`
+  - `db/**/*.sql`
+- 重要度: major
+- タグ: migration / database / schema / safety / rollback / upstream
+- 依存関係: code_search
+- 適用条件: phase=upstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
+
 ### `multitenancy-isolation`
 
 - 名前: `Multitenancy Isolation Guard`
@@ -637,6 +750,22 @@ handling expectations.`
 - タグ: reliability / sre / operability / upstream
 - 依存関係: repo_metadata
 - 適用条件: phase=upstream, inputContext=diff / adr
+
+チェック項目の例:
+
+- summary / findings / actions / questions
+
+### `plan-review-gate`
+
+- 名前: `実装計画レビューゲート`
+- 概要: `実装計画（plan.md / pbi-input.md）に含まれる危険操作・触れてはならないスコープ・人間承認必須条件を検出し、AI 自律実行前のゲートとして機能する`
+- 対象:
+  - `**/plan.md`
+  - `**/pbi-input.md`
+- 重要度: major
+- タグ: plangate / plan-review / human-approval / safety / upstream / stop-work
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=diff / fullFile
 
 チェック項目の例:
 
@@ -711,6 +840,21 @@ skill`
 
 - summary / findings / actions / questions
 
+### `plangate-tdd-evidence`
+
+- 名前: `PlanGate TDD Evidence Review`
+- 概要: `TDD を主張する実装の RED/GREEN/REFACTOR VERIFY 証跡（tdd-ledger）の妥当性を検査し、フェーズ順序・exitCode・test-cases との対応の欠落や偽装を検知する`
+- 対象:
+  - `**/*`
+- 重要度: major
+- タグ: plangate / tdd / evidence / verification / upstream
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=diff / repoConfig
+
+チェック項目の例:
+
+- findings / summary / questions
+
 ### `plangate-verification-audit`
 
 - 名前: `PlanGate 検証監査 (W チェック)`
@@ -783,7 +927,7 @@ requirements.`
 
 - summary / findings / actions / questions
 
-### `review-policy-standard`
+### `review-policy-standard-upstream`
 
 - 名前: `Standard Review Policy for Upstream`
 - 概要: `Applies standard AI review policy guidelines for upstream (design) phase reviews.`
@@ -800,6 +944,24 @@ requirements.`
 チェック項目の例:
 
 - findings / summary
+
+### `river-review-architecture`
+
+- 名前: `river-review-architecture`
+- 概要: `設計・アーキテクチャ観点のレビューエージェント。 依存関係、境界設計、データモデル、API設計等の個別スキルへルーティングする。`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `docs/**/*design*.md`
+  - `docs/adr/**/*`
+  - `pages/**/*design*.md`
+- 重要度: major
+- タグ: architecture / design / entry / routing
+- 依存関係: none
+- 適用条件: phase=upstream, inputContext=diff / fullFile / adr
+
+チェック項目の例:
+
+- findings / questions / actions
 
 ### `security-privacy-design`
 
@@ -818,118 +980,6 @@ requirements.`
 チェック項目の例:
 
 - findings / actions
-
-### `test-code-nextjs`
-
-- 名前: `Component Test Scaffold (Next.js)`
-- 概要: `Generate React/Next.js component test skeletons (RTL) from specifications.`
-- 対象:
-  - `docs/**/*.md`
-  - `specs/**/*.md`
-- 重要度: major
-- タグ: review-support / unit-test / tdd / nextjs / react / testing-library
-- 依存関係: none
-- 適用条件: phase=upstream, inputContext=fullFile
-
-チェック項目の例:
-
-- tests
-
-### `test-code-php-laravel`
-
-- 名前: `Test Scaffold (Laravel/PHPUnit)`
-- 概要: `Generate PHP/Laravel (PHPUnit) test skeletons from specifications.`
-- 対象:
-  - `docs/**/*.md`
-  - `specs/**/*.md`
-- 重要度: major
-- タグ: review-support / unit-test / tdd / php / laravel / phpunit
-- 依存関係: none
-- 適用条件: phase=upstream, inputContext=fullFile
-
-チェック項目の例:
-
-- tests
-
-### `test-code-react`
-
-- 名前: `Component Test Scaffold (React)`
-- 概要: `Generate generic React component test skeletons (RTL) from specifications.`
-- 対象:
-  - `docs/**/*.md`
-  - `specs/**/*.md`
-- 重要度: major
-- タグ: review-support / unit-test / tdd / react / testing-library / vite
-- 依存関係: none
-- 適用条件: phase=upstream, inputContext=fullFile
-
-チェック項目の例:
-
-- tests
-
-### `test-code-remix`
-
-- 名前: `Route/Function Test Scaffold (Remix)`
-- 概要: `Generate Remix loader/action and route component test skeletons.`
-- 対象:
-  - `docs/**/*.md`
-  - `specs/**/*.md`
-- 重要度: major
-- タグ: review-support / unit-test / tdd / remix / react / vitest
-- 依存関係: none
-- 適用条件: phase=upstream, inputContext=fullFile
-
-チェック項目の例:
-
-- tests
-
-### `test-code-unit-python-pytest`
-
-- 名前: `Unit Test Scaffold (Python/pytest)`
-- 概要: `Generate Python/pytest unit test skeletons from specifications.`
-- 対象:
-  - `docs/**/*.md`
-  - `specs/**/*.md`
-- 重要度: major
-- タグ: review-support / unit-test / tdd / python
-- 依存関係: none
-- 適用条件: phase=upstream, inputContext=fullFile
-
-チェック項目の例:
-
-- tests
-
-### `test-code-unit-ts-jest`
-
-- 名前: `Unit Test Scaffold (TypeScript)`
-- 概要: `Generate TypeScript unit test skeletons (Jest/Vitest) from specifications.`
-- 対象:
-  - `docs/**/*.md`
-  - `specs/**/*.md`
-- 重要度: major
-- タグ: review-support / unit-test / tdd / typescript / jest / vitest
-- 依存関係: none
-- 適用条件: phase=upstream, inputContext=fullFile
-
-チェック項目の例:
-
-- tests
-
-### `test-code-vue`
-
-- 名前: `Component Test Scaffold (Vue.js)`
-- 概要: `Generate Vue.js component test skeletons (Vue Test Utils) from specifications.`
-- 対象:
-  - `docs/**/*.md`
-  - `specs/**/*.md`
-- 重要度: major
-- タグ: review-support / unit-test / tdd / vue / vitest / vue-test-utils
-- 依存関係: none
-- 適用条件: phase=upstream, inputContext=fullFile
-
-チェック項目の例:
-
-- tests
 
 ### `trust-boundaries-authz`
 
@@ -956,95 +1006,6 @@ across services.`
 - summary / findings / actions / questions
 
 ## midstream
-
-### `adversarial-review`
-
-- 名前: `adversarial-review`
-- 概要: `認知バイアスを排除するための3つの敵対的分析手法を統合したレビュースキル。 Pre-mortem（失敗シナリオ分析）、War Game（攻撃者シミュレーション）、 Logic
-Torturing（論理検証）を組み合わせ、通常のレビューでは見えない 設計の盲点・防御の穴・論理の弱点を可視化する。`
-- 対象:
-  - `src/**/*.{ts,tsx,js,jsx,mjs}`
-  - `docs/**/*design*.md`
-  - `docs/adr/**/*`
-  - `pages/**/*design*.md`
-- 重要度: major
-- タグ: adversarial / pre-mortem / war-game / logic-torturing / cognitive-bias / entry / routing
-- 依存関係: none
-- 適用条件: phase=midstream, inputContext=diff / fullFile
-
-チェック項目の例:
-
-- findings / questions / actions
-
-### `river-review-code`
-
-- 名前: `river-review-code`
-- 概要: `一般コード品質のレビューエージェント。デフォルトのフォールバック先。 可読性、保守性、型安全性、ロギング等の個別スキルへルーティングする。`
-- 対象:
-  - `src/**/*.{ts,tsx,js,jsx,mjs}`
-- 重要度: minor
-- タグ: code-quality / default / entry / routing
-- 依存関係: none
-- 適用条件: phase=midstream, inputContext=diff / fullFile
-
-チェック項目の例:
-
-- findings / actions
-
-### `river-review-docs`
-
-- 名前: `river-review-docs`
-- 概要: `ドキュメント観点のレビューエージェント。 README / docs / AGENTS.md と実装の整合性、API ドキュメントとコードの対応、 usage
-や例の正確性、i18n（JA/EN）整合性、用語統一を検証する。`
-- 対象:
-  - `**/*.md`
-  - `**/*.mdx`
-  - `README*`
-  - `AGENTS.md`
-  - `docs/**/*`
-  - `pages/**/*`
-- 重要度: minor
-- タグ: docs / documentation / i18n
-- 依存関係: none
-- 適用条件: phase=midstream, inputContext=diff / fullFile
-
-チェック項目の例:
-
-- findings / actions
-
-### `river-review-performance`
-
-- 名前: `river-review-performance`
-- 概要: `パフォーマンス観点のレビューエージェント。 N+1クエリ、メモリ効率、キャッシュ戦略、可観測性の観点でコード変更を評価する。`
-- 対象:
-  - `src/**/*.{ts,tsx,js,jsx,mjs}`
-  - `**/*.sql`
-- 重要度: major
-- タグ: performance / optimization / entry / routing
-- 依存関係: none
-- 適用条件: phase=midstream, inputContext=diff / fullFile
-
-チェック項目の例:
-
-- findings / actions
-
-### `river-review-security`
-
-- 名前: `river-review-security`
-- 概要: `セキュリティ観点のレビューエージェント。 基本的なセキュリティチェック、認証・認可設計、プライバシー設計の個別スキルへルーティングする。`
-- 対象:
-  - `src/**/*.{ts,tsx,js,jsx,mjs}`
-  - `**/*.env*`
-  - `**/auth/**/*`
-  - `**/middleware/**/*`
-- 重要度: critical
-- タグ: security / entry / routing
-- 依存関係: none
-- 適用条件: phase=midstream, inputContext=diff / fullFile
-
-チェック項目の例:
-
-- findings / actions
 
 ### `a11y-accessible-name`
 
@@ -1082,6 +1043,24 @@ correctness.`
 
 - findings / actions
 
+### `altitude-generalization`
+
+- 名前: `Altitude Generalization Guard`
+- 概要: `Detects per-caller special-cases (bandaids) bolted onto shared infrastructure/common functions; and when two
+or more same-kind special-cases exist proposes generalizing the lower-level mechanism instead.`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `scripts/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `runners/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+- 重要度: minor
+- タグ: simplify / altitude / generalization / maintainability / midstream
+- 依存関係: none
+- 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / actions
+
 ### `api-compatibility`
 
 - 名前: `API Compatibility and Test Gap Review`
@@ -1097,6 +1076,62 @@ changed API boundaries.`
 - タグ: api / compatibility / dto / breaking-change / test-coverage / midstream
 - 依存関係: code_search
 - 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / actions
+
+### `assumption-resolution-trace`
+
+- 名前: `Assumption Resolution Trace Plan の前提解消トレーサビリティ`
+- 概要: `plan artifact がある時のみ、plan 中の assumption / open question が実装で解消された証拠を diff・PR 本文と突合する evidence-sufficiency
+観点。解消されないまま残った前提・未記録の新規 Unknown を検出する。plan 欠損時は発火しない（Pre-execution Gate）。plan 欠損でも PR 本文に前提が inline
+列挙されていれば列挙分のみ部分評価し、計画 issue の bare 参照だけなら skip する`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `runners/**/*.{ts,js,mjs}`
+  - `scripts/**/*.mjs`
+  - `**/migrations/**`
+  - `**/*.sql`
+- 重要度: major
+- タグ: assumption-resolution-trace / evidence-sufficiency / plan-traceability / assumption / open-question / unknown-coverage / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / fullFile / prDescription / reviewSelf
+
+チェック項目の例:
+
+- findings / questions / actions
+
+### `async-correctness`
+
+- 名前: `Async Correctness 非同期処理の正しさ検証`
+- 概要: `await 漏れ・floating promise・並行競合など、非同期処理の correctness バグを検出する。並列化の効率提案（SIMPLIFY
+Efficiency）や配線断点（e2e-wiring）ではなく、「await を忘れて結果・順序・エラー伝播が壊れる」実装バグに限定する`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+- 重要度: major
+- タグ: async / await / promise / race-condition / correctness / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / questions
+
+### `closure-scope-retention`
+
+- 名前: `Closure Scope Retention Guard`
+- 概要: `Detects long-lived objects (caches; listeners; singletons) that capture an entire enclosing scope via
+closures/environment capture; keeping large arrays or buffers alive; and proposes copying only the needed
+fields.`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `scripts/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `runners/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+- 重要度: major
+- タグ: simplify / memory / closure / retention / midstream
+- 依存関係: none
+- 適用条件: phase=midstream, inputContext=diff
 
 チェック項目の例:
 
@@ -1119,6 +1154,24 @@ changed API boundaries.`
 
 - findings / actions
 
+### `component-variants-states`
+
+- 名前: `Component Variants / States Documentation コンポーネント状態の文書化`
+- 概要: `新規追加された UI コンポーネントに、variants（種類）とインタラクティブ状態（hover / focus / disabled / loading /
+error）が定義・文書化されているかを確認し、状態設計の欠落を検出する`
+- 対象:
+  - `src/**/*.{tsx,jsx}`
+  - `app/**/*.{tsx,jsx}`
+  - `components/**/*.{tsx,jsx}`
+- 重要度: minor
+- タグ: design-system / component / variants / states / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
+
 ### `config-json`
 
 - 名前: `Configuration File Review`
@@ -1135,6 +1188,41 @@ changed API boundaries.`
 チェック項目の例:
 
 - findings
+
+### `cross-file-leakage`
+
+- 名前: `Cross-File Leakage リファクタ後の caller 側残骸検出`
+- 概要: `モジュール/スキルの構造変更で当該ファイルは更新したが、caller 側が古い構造（旧参照・旧シグネチャ・旧採番）を参照したまま残るパターンを検出する`
+- 対象:
+  - `**/*.{ts,tsx,js,jsx,mjs}`
+  - `**/*.md`
+  - `**/SKILL.md`
+  - `**/*.{yaml,yml,json}`
+- 重要度: major
+- タグ: adversarial / cross-file-leakage / claim-vs-actual / refactor / caller-drift / midstream / cognitive-bias
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / actions
+
+### `design-source-conformance`
+
+- 名前: `Design Source-of-Truth Conformance デザイン定義準拠`
+- 概要: `リポジトリに DESIGN.md やデザイントークン定義が存在する場合に、新規 UI 実装の色・余白・フォントサイズ・角丸・シャドウがその定義済みスケールに準拠しているかを照合する。定義が無ければ実行しない`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,css,scss}`
+  - `app/**/*.{ts,tsx,js,jsx,css,scss}`
+  - `components/**/*.{ts,tsx,js,jsx,css,scss}`
+- 重要度: minor
+- タグ: design-system / design-source / conformance / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
 
 ### `design-system-component-reuse`
 
@@ -1171,6 +1259,54 @@ changed API boundaries.`
 
 - findings / actions
 
+### `doc-hygiene`
+
+- 名前: `Documentation Hygiene ドキュメント衛生`
+- 概要: `AGENTS.md などの恒久ドキュメントに一過性のタスクログが混入していないか、SOP / decision / log / learned の役割が混同されていないか、公開物（README / docs /
+記事）に内部メモ・ローカルパス・AI 会話断片が残っていないかを差分で検出する`
+- 対象:
+  - `**/*.md`
+  - `**/*.mdx`
+- 重要度: major
+- タグ: documentation / hygiene / maintainability / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
+
+### `e2e-wiring`
+
+- 名前: `End-to-End Wiring 末端到達・貫通の検証`
+- 概要: `宣言した処理（計測 / 通知 / 保存 / 検証 / 例外通知）が起点から末端まで途切れず配線されているかを確認し、「実装したつもり」で経路が途中で止まっている欠落を検出する`
+- 対象:
+  - `**/*.{ts,tsx,js,jsx,mjs,cjs,py,rb,go,php,java}`
+- 重要度: major
+- タグ: wiring / end-to-end / correctness / integration / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
+
+### `existing-pattern-conformance`
+
+- 名前: `Existing-Pattern Conformance 既存パターン準拠の確認`
+- 概要: `新実装が、同種の先行実装（同レイヤ・同責務・同概念）に在る防御 / バリデーション / エラー処理 / 規約 / 共通化ロジック / 概念定義を、欠落・重複・食い違いなく継承しているかを grep で先行特定して確認する`
+- 対象:
+  - `**/*.{ts,tsx,js,jsx,mjs,cjs,py,rb,go,php,java}`
+  - `**/migrations/**/*`
+- 重要度: major
+- タグ: conformance / prior-art / consistency / maintainability / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
+
 ### `firebase-security-rules`
 
 - 名前: `Firebase Security Rules Review`
@@ -1189,6 +1325,26 @@ missing auth checks on writes; and admin SDK private key exposure to client bund
 チェック項目の例:
 
 - findings / actions
+
+### `fix-scope-integrity`
+
+- 名前: `Fix Scope Integrity 指摘対応ループのスコープ逸脱・前提破壊検出`
+- 概要: `指摘対応の反復（レビューコメント→修正→再レビュー）で、個別には正しい修正の蓄積が当初スコープを逸脱した（scope creep）、または成立済みの前提（"動いていた"状態）を破壊した（premise break）連鎖を
+diff-time で検出する。技術的正しさとスコープ整合性を別軸で評価し、report-only で finding/question のみ出力する。1コメント単位のトリアージ・構造変更後の caller
+残骸・plan 前提解消は隣接 skill へ委譲する`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `runners/**/*.{ts,js,mjs}`
+  - `scripts/**/*.mjs`
+  - `app/**/*.{ts,tsx,js,jsx,php}`
+- 重要度: major
+- タグ: fix-scope-integrity / scope-creep / premise-break / fix-scope-guard / review-response-loop / scope-consistency / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / questions
 
 ### `gh-address-comments`
 
@@ -1210,6 +1366,22 @@ missing auth checks on writes; and admin SDK private key exposure to client bund
 チェック項目の例:
 
 - actions / questions / summary
+
+### `hallucinated-reference`
+
+- 名前: `Hallucinated Reference 幻覚的参照の実在確認`
+- 概要: `差分で新規に導入された import・メソッド呼び出し・ライブラリ API 参照が実在するかを code_search で検証し、AI
+生成コード特有の幻覚的参照（存在しない関数・メソッド・モジュール・引数シグネチャ）を検出する`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+- 重要度: major
+- タグ: hallucination / reference-existence / ai-generated-code / correctness / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / questions
 
 ### `hello-skill`
 
@@ -1244,6 +1416,27 @@ without source usage.`
 チェック項目の例:
 
 - findings
+
+### `impact-evidence-coverage`
+
+- 名前: `Impact Evidence Coverage 影響・失敗系・外部依存の証拠充足`
+- 概要: `diff-time で「影響範囲を repo 全体で調査した証拠」「失敗系を検証した証拠」「外部依存・レート制限・キャッシュ整合を確認した証拠」の欠落を検出する evidence-sufficiency
+観点。defect そのものは既存 skill へ委譲し、本 skill は「そのリスク種別を調査した証拠が差分・PR 本文・テストに残っているか」の meta 評価のみを行う。証拠が同一 diff
+に同梱（テスト・canary・grep 記録）されていれば充足とみなす`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `runners/**/*.{ts,js,mjs}`
+  - `scripts/**/*.mjs`
+  - `**/migrations/**`
+  - `**/*.sql`
+- 重要度: major
+- タグ: impact-evidence-coverage / evidence-sufficiency / impact-analysis / failure-modes / external-dependencies / unknown-coverage / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / actions
 
 ### `independent-review-synthesis`
 
@@ -1329,25 +1522,6 @@ mutating controller actions in Laravel.`
 チェック項目の例:
 
 - findings / actions
-
-### `logic-torturing`
-
-- 名前: `Logic Torturing 論理検証`
-- 概要: `変更に含まれる設計判断・実装選択の論理的整合性を徹底的に検証し、確証バイアスを排除して判断精度を高める`
-- 対象:
-  - `src/**/*.{ts,tsx,js,jsx,mjs}`
-  - `docs/**/*design*.md`
-  - `docs/adr/**/*`
-  - `pages/**/*design*.md`
-  - `pages/**/*architecture*.md`
-- 重要度: major
-- タグ: adversarial / logic-torturing / decision-quality / critical-thinking / midstream / cognitive-bias
-- 依存関係: code_search / repo_metadata
-- 適用条件: phase=midstream, inputContext=diff / fullFile / commitMessage / adr
-
-チェック項目の例:
-
-- findings / questions
 
 ### `modern-web-a11y-interactive`
 
@@ -1550,6 +1724,24 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / questions
 
+### `refactor-claim-audit`
+
+- 名前: `Refactor-Claim Audit リファクタ完了主張の検証`
+- 概要: `コミット/PR の「全部置換した」「-N%削減」等の完了主張を grep で反証できる残骸や best/typical/worst
+試算で検証し、抽出・集約リファクタでは並列度(Promise.all)/fast-path/遅延評価の性能特性退行と、Map/Set 集約キーの cross-kind 衝突による検出漏れも監査する`
+- 対象:
+  - `**/*.{ts,tsx,js,jsx,mjs}`
+  - `**/*.md`
+  - `**/*.{yaml,yml,json}`
+- 重要度: major
+- タグ: adversarial / refactor-claim / claim-vs-actual / verification / midstream / cognitive-bias / performance-regression / key-collision
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / actions
+
 ### `review-automation-boundary`
 
 - 名前: `Review Automation Boundary Guard`
@@ -1580,7 +1772,7 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / summary / questions
 
-### `review-policy-standard`
+### `review-policy-standard-midstream`
 
 - 名前: `Standard Review Policy for Midstream`
 - 概要: `Applies standard AI review policy guidelines for midstream (implementation) phase reviews.`
@@ -1602,6 +1794,81 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / summary / actions
 
+### `river-review-code`
+
+- 名前: `river-review-code`
+- 概要: `一般コード品質のレビューエージェント。デフォルトのフォールバック先。 可読性、保守性、型安全性、ロギング等の個別スキルへルーティングする。`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `app/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `lib/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `packages/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `scripts/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+  - `runners/**/*.{ts,tsx,js,jsx,mjs,cjs}`
+- 重要度: minor
+- タグ: code-quality / default / entry / routing
+- 依存関係: none
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / actions
+
+### `river-review-docs`
+
+- 名前: `river-review-docs`
+- 概要: `ドキュメント観点のレビューエージェント。 README / docs / AGENTS.md と実装の整合性、API ドキュメントとコードの対応、 usage
+や例の正確性、i18n（JA/EN）整合性、用語統一を検証する。`
+- 対象:
+  - `**/*.md`
+  - `**/*.mdx`
+  - `README*`
+  - `AGENTS.md`
+  - `docs/**/*`
+  - `pages/**/*`
+- 重要度: minor
+- タグ: docs / documentation / i18n
+- 依存関係: none
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / actions
+
+### `river-review-security`
+
+- 名前: `river-review-security`
+- 概要: `セキュリティ観点のレビューエージェント。 基本的なセキュリティチェック、認証・認可設計、プライバシー設計の個別スキルへルーティングする。`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `**/*.env*`
+  - `**/auth/**/*`
+  - `**/middleware/**/*`
+- 重要度: critical
+- タグ: security / entry / routing
+- 依存関係: none
+- 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / actions
+
+### `secret-credential-scan`
+
+- 名前: `Secret / Credential Scan 機密情報の混入検出`
+- 概要: `差分に追加された API キー・トークン・credential・秘密鍵・.env 値・個人ローカルパスなどの機密情報を、言語・ファイル種別に依存せず検出する。決定論的に判定できる範囲は CI（gitleaks
+等）へ移譲しつつ、レビューで取りこぼしを補足する`
+- 対象:
+  - `**/*`
+- 重要度: major
+- タグ: secret / credential / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / actions
+
 ### `security-basic`
 
 - 名前: `Baseline Security Checks`
@@ -1612,6 +1879,24 @@ and missing HydrateFallback in React Router v7 framework mode.`
 - タグ: security / midstream / web
 - 依存関係: code_search
 - 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / actions
+
+### `self-contradiction`
+
+- 名前: `Self-Contradiction Detector 自己矛盾検出`
+- 概要: `同一ファイル/隣接ファイル内で「規則Xを守れ」と宣言した直後にXを破っている、宣言と実装の乖離を検出する`
+- 対象:
+  - `**/*.md`
+  - `**/*.{ts,tsx,js,jsx,mjs}`
+  - `**/SKILL.md`
+  - `**/AGENTS.md`
+- 重要度: major
+- タグ: adversarial / self-contradiction / claim-vs-actual / consistency / midstream / cognitive-bias
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / fullFile
 
 チェック項目の例:
 
@@ -1780,25 +2065,6 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 
 ## downstream
 
-### `river-review-testing`
-
-- 名前: `river-review-testing`
-- 概要: `テスト観点のレビューエージェント。 テスト網羅性、命名規則、フレーキーテスト、カバレッジギャップの個別スキルへルーティングする。`
-- 対象:
-  - `**/*.test.{ts,tsx,js,jsx}`
-  - `**/*.spec.{ts,tsx,js,jsx}`
-  - `tests/**/*`
-  - `test/**/*`
-  - `__tests__/**/*`
-- 重要度: minor
-- タグ: testing / coverage / entry / routing
-- 依存関係: none
-- 適用条件: phase=downstream, inputContext=diff / fullFile / tests
-
-チェック項目の例:
-
-- findings / actions
-
 ### `coverage-gap`
 
 - 名前: `Coverage and Failure Path Gaps`
@@ -1853,7 +2119,7 @@ untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-part
 
 - findings / questions
 
-### `review-policy-standard`
+### `review-policy-standard-downstream`
 
 - 名前: `Standard Review Policy for Downstream`
 - 概要: `Applies standard AI review policy guidelines for downstream (test/QA) phase reviews.`
@@ -1874,6 +2140,25 @@ untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-part
 チェック項目の例:
 
 - findings / summary / tests
+
+### `river-review-testing`
+
+- 名前: `river-review-testing`
+- 概要: `テスト観点のレビューエージェント。 テスト網羅性、命名規則、フレーキーテスト、カバレッジギャップの個別スキルへルーティングする。`
+- 対象:
+  - `**/*.test.{ts,tsx,js,jsx}`
+  - `**/*.spec.{ts,tsx,js,jsx}`
+  - `tests/**/*`
+  - `test/**/*`
+  - `__tests__/**/*`
+- 重要度: minor
+- タグ: testing / coverage / entry / routing
+- 依存関係: none
+- 適用条件: phase=downstream, inputContext=diff / fullFile / tests
+
+チェック項目の例:
+
+- findings / actions
 
 ### `test-existence`
 
