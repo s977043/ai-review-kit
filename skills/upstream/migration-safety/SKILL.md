@@ -4,7 +4,7 @@ name: 'Migration Safety Review (framework-agnostic)'
 description: 'スキーマ/データ移行の安全性を framework 非依存で審査する。破壊的スキーマ変更・ロック誘発・backfill・ロールバック可逆性・expand-contract の段階適用を、prisma / typeorm / Rails / Django / Alembic / 生 SQL などに横断適用する。'
 version: 0.1.0
 category: upstream
-phase: upstream
+phase: [upstream, midstream]
 applyTo:
   - '**/migrations/**/*'
   - '**/migrate/**/*'

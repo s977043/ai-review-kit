@@ -15,7 +15,7 @@ applyTo:
   - '**/*openapi*.{yml,yaml,json}'
   - '**/*asyncapi*.{yml,yaml,json}'
   - '**/*schema*.{avsc,json}'
-  - '**/*proto*.proto'
+  - '**/*.proto'
 tags: [integration, contract, api, events, upstream]
 severity: major
 inputContext: [diff, fullFile, adr]

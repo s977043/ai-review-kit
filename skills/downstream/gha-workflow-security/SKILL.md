@@ -4,7 +4,7 @@ name: 'GitHub Actions Workflow Security Review'
 description: 'Reviews GitHub Actions workflow diffs for script injection of untrusted input, pull_request_target with untrusted checkout, over-broad GITHUB_TOKEN permissions, and unpinned third-party actions.'
 version: 0.1.0
 category: downstream
-phase: downstream
+phase: [midstream, downstream]
 applyTo:
   - '.github/workflows/**/*.{yml,yaml}'
 tags: [github-actions, security, ci, supply-chain, downstream]
