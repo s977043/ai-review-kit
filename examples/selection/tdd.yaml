@@ -9,8 +9,8 @@ selection:
   skills:
     include:
       # 仕様からテスト雛形を生成する upstream skill（スタックに合わせて取捨選択する）
-      - test-code-unit-ts-jest # TypeScript (Jest/Vitest)
-      - test-code-react # React コンポーネント (RTL)
+      - code-unit-ts-jest # TypeScript (Jest/Vitest)
+      - code-react # React コンポーネント (RTL)
       # 実装中〜実装後のテスト品質ゲート
       - test-existence # 変更に対応するテストの存在
       - coverage-gap # カバレッジの穴
