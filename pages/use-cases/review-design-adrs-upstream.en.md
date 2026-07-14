@@ -18,13 +18,12 @@ Flaws in a design document or ADR are cheapest to fix before implementation star
 
 ## How River Review addresses it
 
-River Review routes the design documents themselves — not the code — to **upstream** skills. When a design plan or ADR appears in the diff, three upstream skills are matched against the changed files and return judgments against your team's design criteria. Each returns `findings` plus concrete follow-up actions.
+River Review routes the design documents themselves — not the code — to **upstream** skills. When a design plan or ADR appears in the diff, two upstream skills are matched against the changed files and return judgments against your team's design criteria. Each returns `findings` plus concrete follow-up actions.
 
 - `architecture-validation-plan` — flags when a design doc lacks a validation plan: SLO/SLI targets, test plans, rollout/rollback/canary criteria, and observability for the new risks it introduces.
-- `agent-architecture-review` — checks overall design, responsibility separation, dependency direction, and boundary breakage, and asks for an ADR when a decision lacks rationale.
 - `security-privacy-design` — reviews data retention/deletion, backup residency, cross-border transfer, encryption, and privacy-rights flows (erasure/export).
 
-All three run in the `phase: upstream` and surface findings you can only see by reading the design document — not the implementation diff.
+Both run in the `phase: upstream` and surface findings you can only see by reading the design document — not the implementation diff.
 
 ## Try it
 
