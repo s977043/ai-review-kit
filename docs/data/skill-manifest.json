@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 130,
+  "skillCount": 127,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -100,12 +100,6 @@
       "files": 1
     },
     {
-      "id": "architecture-sample",
-      "path": "skills/upstream/architecture-sample",
-      "checksum": "sha256:fb34ccf4c877adcc2e4999e02fbdce6a87185a96976ba8636f6efd9e4273de5a",
-      "files": 1
-    },
-    {
       "id": "architecture-traceability",
       "path": "skills/upstream/architecture-traceability",
       "checksum": "sha256:f211aa9be389e40efc9a39ab231045413fabc1647bd22f0b78eb65689d55d073",
@@ -175,12 +169,6 @@
       "id": "code-php-laravel",
       "path": "skills/upstream/code-php-laravel",
       "checksum": "sha256:78d8b5f5361aded2a4261be17728cd29afc04f030785d5515a68f4faf3339f25",
-      "files": 1
-    },
-    {
-      "id": "code-quality-sample",
-      "path": "skills/midstream/code-quality-sample",
-      "checksum": "sha256:b6fdd7dc9dd4e35bc8d363684af8af4be95335cdcbb6081fc385da488be9861f",
       "files": 1
     },
     {
@@ -727,12 +715,6 @@
       "id": "test-plan-review",
       "path": "skills/downstream/test-plan-review",
       "checksum": "sha256:64b167651fec5059ab68ebb7dcd4e01eef94ba7ae84dc6d099918080df6a237a",
-      "files": 1
-    },
-    {
-      "id": "test-review-sample",
-      "path": "skills/downstream/test-review-sample",
-      "checksum": "sha256:cb9e2dda6f1c374096fa9d766373299794f64c7314d21961895f221a38ba4033",
       "files": 1
     },
     {
