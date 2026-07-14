@@ -58,29 +58,7 @@ skills:
     recommended: true
     description: 'Reviews data retention, deletion, backup residency, and cross-border data transfer'
 
-  - id: agent-architecture-review
-    version: '0.1.0'
-    name: 'Architecture Review'
-    path: skills/upstream/agent-architecture-review/SKILL.md
-    category: upstream
-    phase: upstream
-    tags: [agent, architecture, design]
-    severity: major
-    recommended: false
-    description: '変更の全体設計、責務分離、境界の破綻を検知するためのレビュー手順。'
-
   # Midstream Skills (Implementation Phase)
-  - id: agent-test-coverage
-    version: '0.1.0'
-    name: 'Test Coverage'
-    path: skills/midstream/agent-test-coverage/SKILL.md
-    category: midstream
-    phase: midstream
-    tags: [agent, testing, coverage]
-    severity: major
-    recommended: false
-    description: '変更に対するテスト不足を検知し、最低限の補完方針を提示する。'
-
   - id: hello-skill
     version: '0.1.0'
     name: 'Hello Skill (Always-On Sample)'
@@ -606,28 +584,6 @@ skills:
     severity: major
     recommended: false
     description: 'Reviews workflow diffs for script injection, pull_request_target with untrusted checkout, over-broad permissions, and unpinned actions.'
-
-  - id: agent-qa-regression
-    version: '0.1.0'
-    name: 'QA Regression (Playwright)'
-    path: skills/downstream/agent-qa-regression/SKILL.md
-    category: downstream
-    phase: downstream
-    tags: [review-support, agent, testing, regression, playwright]
-    severity: major
-    recommended: false
-    description: 'Playwright を使った回帰テストの設計と実行をガイドする。'
-
-  - id: agent-webapp-testing
-    version: '0.1.0'
-    name: 'Web App Testing (Playwright)'
-    path: skills/downstream/agent-webapp-testing/SKILL.md
-    category: downstream
-    phase: downstream
-    tags: [review-support, agent, testing, playwright, webapp]
-    severity: major
-    recommended: false
-    description: 'Playwright でローカル/プレビュー環境の Web アプリを操作・検証するための手順をまとめる。'
 
   - id: test-existence
     version: '0.1.0'
