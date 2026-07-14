@@ -16,7 +16,7 @@ applyTo:
   - 'pages/**/*message*.md'
   - '**/*asyncapi*.{yml,yaml,json}'
   - '**/*schema*.{avsc,json}'
-  - '**/*proto*.proto'
+  - '**/*.proto'
 tags: [architecture, events, messaging, reliability, upstream]
 severity: major
 inputContext: [diff, adr]
