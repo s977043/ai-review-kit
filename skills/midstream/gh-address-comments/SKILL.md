@@ -17,7 +17,7 @@ tags:
   - review
   - github
   - midstream
-severity: major
+severity: info
 inputContext:
   - diff
 outputKind:
