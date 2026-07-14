@@ -514,13 +514,16 @@ async function validateAgentSkills() {
 
 /**
  * Validate each agent-skill's normalized frontmatter against the strict runtime
- * schema used by loadAllSkillMetadata(). Warning-level (non-blocking): the
- * strict loader is the enforcement point; this check only makes the silent
- * drop visible in `npm run agent-skills:validate` output.
+ * schema used by loadAllSkillMetadata(). Error-level (blocking): a skill that
+ * passes the loose checks but fails the strict schema is silently dropped by
+ * the runtime loader — the exact bug class PR #1559 fixed — so drift must fail
+ * CI, not merely warn. If a field is genuinely needed, the correct move is to
+ * define it in schemas/skill.schema.json (as applyToExemptions was); a
+ * loose-only field failing this guard is by design.
  *
  * @param {string[]} packages absolute SKILL.md paths
- * @returns {Promise<boolean>} always true (warnings only) unless the schema
- *   itself fails to load/compile
+ * @returns {Promise<boolean>} false when any skill fails the strict schema or
+ *   the schema itself fails to load/compile
  */
 async function validateStrictSchemaDrift(packages) {
   let strictValidator;
@@ -530,6 +533,7 @@ async function validateStrictSchemaDrift(packages) {
     console.error(`❌ failed to load strict schema (${defaultPaths.schemaPath}): ${err.message}`);
     return false;
   }
+  let success = true;
   for (const skillPath of packages) {
     const relPath = path.relative(repoRoot, skillPath);
     let metadata;
@@ -545,14 +549,15 @@ async function validateStrictSchemaDrift(packages) {
       const details = (strictValidator.errors ?? [])
         .map((err) => `${err.instancePath || '/'} ${err.message}`)
         .join('; ');
-      console.warn(
-        `⚠️  ${relPath}: passes the loose agent-skill checks but FAILS the strict runtime ` +
-          `schema (schemas/skill.schema.json) — loadAllSkillMetadata() will silently drop ` +
+      console.error(
+        `❌ ${relPath}: passes the loose agent-skill checks but FAILS the strict runtime ` +
+          `schema (schemas/skill.schema.json) — loadAllSkillMetadata() would silently drop ` +
           `this skill: ${details}`
       );
+      success = false;
     }
   }
-  return true;
+  return success;
 }
 
 if (isDirectRun(import.meta.url)) {
