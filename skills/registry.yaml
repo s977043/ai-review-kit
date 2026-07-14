@@ -163,7 +163,7 @@ skills:
     category: midstream
     phase: midstream
     tags: [typescript, type-safety, midstream]
-    severity: minor
+    severity: major
     recommended: true
     description: 'Enforces TypeScript strict mode best practices'
 
@@ -174,7 +174,7 @@ skills:
     category: midstream
     phase: midstream
     tags: [typescript, null-safety, midstream]
-    severity: minor
+    severity: major
     recommended: true
     description: 'Checks for null/undefined handling'
 
@@ -437,7 +437,7 @@ skills:
     category: midstream
     phase: midstream
     tags: [community, nextjs, app-router, ui, midstream]
-    severity: minor
+    severity: major
     recommended: true
     description: 'Surfaces Next.js App Router boundary issues (server vs client component placement, "use client" misuse).'
 
