@@ -151,6 +151,49 @@ test('verifyFinding: phase mismatch is rejected', () => {
   assert.ok(result.reasons.some((r) => r.includes('Phase mismatch')));
 });
 
+test('verifyFinding: array skill phase containing finding phase passes', () => {
+  const result = verifyFinding({
+    finding: {
+      phase: 'midstream',
+      message:
+        'Finding:\nEvidence: some evidence here\nSeverity: warning\nFix: Replace the old API call with the new versioned endpoint',
+    },
+    diff: '...',
+    skill: { metadata: { phase: ['upstream', 'midstream'], severity: 'major' } },
+  });
+  assert.equal(result.checks.phaseCoherent, true);
+  assert.ok(result.verified);
+});
+
+test('verifyFinding: array skill phase not containing finding phase is rejected', () => {
+  const result = verifyFinding({
+    finding: {
+      phase: 'downstream',
+      message:
+        'Finding:\nEvidence: some evidence here\nSeverity: warning\nFix: Replace the old API call with the new versioned endpoint',
+    },
+    diff: '...',
+    skill: { metadata: { phase: ['upstream', 'midstream'], severity: 'major' } },
+  });
+  assert.equal(result.checks.phaseCoherent, false);
+  assert.ok(
+    result.reasons.some((r) => r.includes('Phase mismatch') && r.includes('upstream/midstream'))
+  );
+});
+
+test('verifyFinding: string skill phase matching finding phase still passes', () => {
+  const result = verifyFinding({
+    finding: {
+      phase: 'midstream',
+      message:
+        'Finding:\nEvidence: some evidence here\nSeverity: warning\nFix: Replace the old API call with the new versioned endpoint',
+    },
+    diff: '...',
+    skill: { metadata: { phase: 'midstream', severity: 'major' } },
+  });
+  assert.equal(result.checks.phaseCoherent, true);
+});
+
 test('verifyFinding: multiple failures are all reported', () => {
   const result = verifyFinding({
     finding: {
