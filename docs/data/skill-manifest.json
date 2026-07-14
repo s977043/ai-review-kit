@@ -342,7 +342,7 @@
     {
       "id": "gh-address-comments",
       "path": "skills/midstream/gh-address-comments",
-      "checksum": "sha256:337fc02c8a222e55c548b839c73f959d67bbfc357b45942e57a2427405a8171a",
+      "checksum": "sha256:2061e80ea8d0e44fea1a520b478075e7dbdbbcbd9c8f002316dbaf69c8783569",
       "files": 1
     },
     {
@@ -594,7 +594,7 @@
     {
       "id": "review-comment-triage",
       "path": "skills/midstream/review-comment-triage",
-      "checksum": "sha256:ee89a73323153d9aa33004a70483af50682fb142e9644a609887ef519eeba612",
+      "checksum": "sha256:073a1e292ce102946a98ebf3509b64815a691315fdfa0f8950dbe8f3e9eaff2c",
       "files": 1
     },
     {
