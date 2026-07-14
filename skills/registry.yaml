@@ -200,17 +200,6 @@ skills:
     recommended: false
     description: 'Triages and prioritizes review comments'
 
-  - id: code-quality-sample
-    version: '0.1.0'
-    name: 'Sample Code Quality'
-    path: skills/midstream/code-quality-sample/SKILL.md
-    category: midstream
-    phase: midstream
-    tags: [sample, code-quality, midstream]
-    severity: minor
-    recommended: false
-    description: 'Sample code quality review skill'
-
   - id: review-policy-standard-midstream
     version: '0.1.0'
     name: 'Review Policy Standard'
@@ -694,17 +683,6 @@ skills:
     severity: major
     recommended: false
     description: '変更差分から重要なテスト観点と欠落を洗い出し、優先度付きでテストケース案を提示する'
-
-  - id: test-review-sample
-    version: '0.1.0'
-    name: 'Sample Test Coverage Review'
-    path: skills/downstream/test-review-sample/SKILL.md
-    category: downstream
-    phase: downstream
-    tags: [sample, tests, coverage, downstream]
-    severity: major
-    recommended: false
-    description: 'Evaluates downstream tests for coverage and edge cases.'
 
   # Adversarial Review Skills (Cognitive Bias Countermeasures)
   - id: pre-mortem
@@ -1271,17 +1249,6 @@ skills:
     severity: critical
     recommended: true
     description: 'Ensure designs define trust boundaries, authn/authz responsibilities, and propagation of identity/claims across services.'
-
-  - id: architecture-sample
-    version: '0.1.0'
-    name: 'Sample Architecture Consistency Review'
-    path: skills/upstream/architecture-sample/SKILL.md
-    category: upstream
-    phase: upstream
-    tags: [sample, design, architecture, upstream]
-    severity: minor
-    recommended: false
-    description: 'Checks design/ADR docs for consistency and missing decisions.'
 
   - id: pr-template-qa
     version: '0.1.0'

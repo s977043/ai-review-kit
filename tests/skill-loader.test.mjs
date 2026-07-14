@@ -27,14 +27,14 @@ async function createTempSkillDir() {
   return createTempDirAsync({ prefix: TMP_PREFIX });
 }
 
-test('loads existing sample skill and applies default outputKind', async () => {
+test('loads existing sample skill with declared outputKind', async () => {
   const validator = await buildValidator();
-  const skillPath = path.join(defaultPaths.skillsDir, 'upstream/architecture-sample/SKILL.md');
+  const skillPath = path.join(defaultPaths.skillsDir, 'midstream/hello-skill/SKILL.md');
   const loaded = await loadSkillFile(skillPath, { validator });
 
-  assert.equal(loaded.metadata.id, 'architecture-sample');
-  assert.equal(loaded.metadata.category, 'upstream');
-  assert.deepEqual(loaded.metadata.outputKind, ['findings', 'summary', 'questions', 'actions']);
+  assert.equal(loaded.metadata.id, 'hello-skill');
+  assert.equal(loaded.metadata.category, 'midstream');
+  assert.deepEqual(loaded.metadata.outputKind, ['findings', 'summary']);
   assert.ok(loaded.body.trim().length > 0);
 });
 
