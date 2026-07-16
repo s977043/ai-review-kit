@@ -171,12 +171,14 @@
           "skill": {
             "type": "string",
             "description": "Routing-target skill ID exempted from applyTo coverage",
-            "minLength": 1
+            "minLength": 1,
+            "pattern": "\\S"
           },
           "reason": {
             "type": "string",
             "description": "Why the exclusion is intentional",
-            "minLength": 1
+            "minLength": 1,
+            "pattern": "\\S"
           }
         }
       },

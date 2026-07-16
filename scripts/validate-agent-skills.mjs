@@ -6,6 +6,7 @@ import {
   parseFrontMatter,
   listSkillPackageDirs,
   loadSchema,
+  loadSkillMetadata,
   createSkillValidator,
   defaultPaths,
 } from '../runners/core/skill-loader.mjs';
@@ -500,12 +501,7 @@ async function validateAgentSkills() {
   const coverageOk = await validateApplyToCoverage(packages);
   if (!coverageOk) success = false;
 
-  // Loose→strict drift guard: this validator (and the agent-skill bridge's
-  // loose schema, additionalProperties: true) tolerates fields/values that the
-  // strict runtime schema (schemas/skill.schema.json, additionalProperties:
-  // false) rejects — such a skill passes here yet is silently dropped by
-  // loadAllSkillMetadata(). Mirror the runtime validation (same parseFrontMatter
-  // normalization, same strict schema) and surface the drift as a warning.
+  // Loose→strict drift guard (blocking) — see the validateStrictSchemaDrift JSDoc.
   const strictOk = await validateStrictSchemaDrift(packages);
   if (!strictOk) success = false;
 
@@ -513,19 +509,26 @@ async function validateAgentSkills() {
 }
 
 /**
- * Validate each agent-skill's normalized frontmatter against the strict runtime
- * schema used by loadAllSkillMetadata(). Error-level (blocking): a skill that
- * passes the loose checks but fails the strict schema is silently dropped by
- * the runtime loader — the exact bug class PR #1559 fixed — so drift must fail
- * CI, not merely warn. If a field is genuinely needed, the correct move is to
- * define it in schemas/skill.schema.json (as applyToExemptions was); a
- * loose-only field failing this guard is by design.
+ * Validate each agent-skill through the same loader path the runtime uses:
+ * {@link loadSkillMetadata} with the strict schema (schemas/skill.schema.json),
+ * i.e. the per-file step of loadAllSkillMetadata(). Reusing the loader (rather
+ * than re-implementing parse → normalize → ajv here) keeps this guard aligned
+ * with future loader-side normalization changes by construction. Error-level
+ * (blocking): a skill that passes the loose checks but fails this path is
+ * silently dropped by the runtime loader — the exact bug class PR #1559 fixed —
+ * so drift must fail CI, not merely warn. If a field is genuinely needed, the
+ * correct move is to define it in schemas/skill.schema.json (as
+ * applyToExemptions was); a loose-only field failing this guard is by design.
+ *
+ * Skills tagged `agent` are skipped: the runtime drops them intentionally via
+ * `excludedTags: ['agent']` (a tag-reason drop, not a schema-drift drop), so
+ * flagging them here would misattribute the drop to schema drift.
  *
  * @param {string[]} packages absolute SKILL.md paths
- * @returns {Promise<boolean>} false when any skill fails the strict schema or
- *   the schema itself fails to load/compile
+ * @returns {Promise<boolean>} false when any skill fails the strict loader path
+ *   or the schema itself fails to load/compile
  */
-async function validateStrictSchemaDrift(packages) {
+export async function validateStrictSchemaDrift(packages) {
   let strictValidator;
   try {
     strictValidator = createSkillValidator(await loadSchema(defaultPaths.schemaPath));
@@ -543,16 +546,21 @@ async function validateStrictSchemaDrift(packages) {
     } catch {
       continue; // per-skill validation already reported the parse failure
     }
-    // Deep copy: the ajv validator applies schema defaults (useDefaults: true).
-    const metaCopy = JSON.parse(JSON.stringify(metadata));
-    if (!strictValidator(metaCopy)) {
-      const details = (strictValidator.errors ?? [])
-        .map((err) => `${err.instancePath || '/'} ${err.message}`)
-        .join('; ');
+    const tags = Array.isArray(metadata.tags) ? metadata.tags : [];
+    if (tags.includes('agent')) {
+      console.log(
+        `ℹ️  ${relPath}: tagged "agent" — intentionally dropped by the runtime loader ` +
+          `(excludedTags), skipping the strict-schema drift check`
+      );
+      continue;
+    }
+    try {
+      await loadSkillMetadata(skillPath, { validator: strictValidator });
+    } catch (err) {
       console.error(
         `❌ ${relPath}: passes the loose agent-skill checks but FAILS the strict runtime ` +
-          `schema (schemas/skill.schema.json) — loadAllSkillMetadata() would silently drop ` +
-          `this skill: ${details}`
+          `loader path (loadSkillMetadata / schemas/skill.schema.json) — ` +
+          `loadAllSkillMetadata() would silently drop this skill: ${err.message}`
       );
       success = false;
     }
