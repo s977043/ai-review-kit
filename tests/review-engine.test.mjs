@@ -217,12 +217,13 @@ test('generateReview falls back when all findings are invalid (fail-safe unchang
 
 // Regression (calibration run #1543): the model emitted findings as prose with
 // only Severity:/Confidence: appended inline at end-of-line (no Finding:/
-// Evidence:/Impact:/Fix: labels). The old validator required all six labels, so
-// every finding failed and the batch collapsed to the heuristic fallback. Now
-// the machine-load-bearing labels are present, so the LLM output is used
-// (llmUsed=true) and the batch is no longer forced into heuristics. Per-finding
-// verifier filtering downstream is a separate, non-fatal concern.
-test('generateReview uses LLM findings that carry only inline Severity/Confidence (#1543)', async () => {
+// Evidence:/Impact:/Fix: labels). The relaxed validator accepts them (llmUsed
+// true, batch not collapsed at the format gate), but the verifier still rejects
+// each one for lacking Evidence:/Fix:. The fix is that a *wholesale* verifier
+// rejection now degrades to the heuristic/fallback path instead of emitting an
+// empty review — so the final findings originate from the fallback, never the
+// inline-only LLM text.
+test('generateReview falls back when the verifier rejects every inline-only finding (#1543)', async () => {
   const rawLlmText = [
     'src/app.ts:11: console.log leaks the value and should be removed Severity: warning Confidence: high',
     'src/app.ts:12: added line lacks a guard for the null case Severity: nit Confidence: medium',
@@ -239,12 +240,30 @@ test('generateReview uses LLM findings that carry only inline Severity/Confidenc
       plan,
       phase: 'midstream',
       dryRun: false,
-      includeFallback: false,
+      includeFallback: true,
       apiKey: 'test-key',
     });
-    assert.equal(result.debug.llmUsed, true, 'inline-only findings must not collapse the batch');
-    assert.equal(result.debug.heuristicsUsed, undefined, 'no heuristic fallback should occur');
+    // Format gate: the inline-only findings validated (relaxed validator), so
+    // the batch was NOT collapsed at the format stage.
+    assert.equal(result.debug.llmUsed, true, 'inline-only findings pass format validation');
     assert.equal(result.debug.droppedInvalidFindings, undefined, 'no findings dropped as invalid');
+    assert.ok(
+      result.debug.findingFormat.recommendedGaps >= 2,
+      'recommended content-label gaps are surfaced for observability'
+    );
+    // Verifier gate: both LLM findings rejected (no Evidence:/Fix:).
+    assert.equal(result.debug.verifierAllRejected, true, 'wholesale verifier rejection detected');
+    assert.equal(result.debug.verifierStats.rejected, 2, 'both inline-only findings rejected');
+    assert.equal(result.debug.verifierStats.verified, 0, 'no inline-only finding survived');
+    // Fail-safe: a non-empty review is emitted from the fallback path, and none
+    // of the emitted findings carry the inline-only LLM text.
+    assert.ok(result.findings.length > 0, 'fallback emits a non-empty review, not an empty one');
+    for (const f of result.findings) {
+      assert.ok(
+        !/console\.log leaks the value/.test(f.message),
+        'emitted findings originate from fallback, not the rejected inline-only LLM output'
+      );
+    }
   } finally {
     global.fetch = originalFetch;
   }
