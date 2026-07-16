@@ -7,12 +7,13 @@ import { classifyChangedFiles } from './file-classifier.mjs';
 
 const EXCLUDED_EXTENSIONS = new Set(['.md']);
 const EXCLUDED_FILES = new Set(['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']);
-// Bundled build output (ncc dist, source maps, generated .d.ts) is
-// machine-generated and not meaningfully reviewable line-by-line; its hunks
-// waste the LLM prompt's char budget and produce noise findings (#1543/#1547).
-// Matches any path segment named `dist` (e.g. runners/github-action/dist/…).
-// LLM-facing diff optimization only — heuristic detection still reads the raw
-// diff.files, so this does not change other pipeline inputs.
+// Build output directories hold machine-generated bundles (ncc dist output,
+// source maps, generated type declarations) that are not meaningfully
+// reviewable line-by-line; their hunks waste the LLM prompt's char budget and
+// produce noise findings (#1543/#1547). This is a purely PATH-based rule — it
+// matches any `dist/` path segment (e.g. runners/github-action/dist/…), not a
+// content-type check. LLM-facing diff optimization only — heuristic detection
+// still reads the raw diff.files, so other pipeline inputs are unchanged.
 const EXCLUDED_DIR_RE = /(?:^|\/)dist\//;
 const MAX_HUNK_LINES = 200;
 const MAX_HUNK_HEAD = 120;
@@ -117,6 +118,39 @@ export function optimizeDiff(diff) {
     reduction,
     rawTokenEstimate,
   };
+}
+
+/**
+ * Build the LLM-facing view of a diff — the changed-file list and diff text
+ * with non-reviewable build artifacts (see isExcludedFile) removed. Used ONLY
+ * for prompt construction; heuristic detection, scoring, and fixture eval keep
+ * reading the raw `diff.files`, so this changes no other pipeline input.
+ *
+ * Two entry shapes converge here:
+ *  - collectRepoDiff already ran optimizeDiff and exposes `filesForReview` +
+ *    optimized `diffText` — reused as-is.
+ *  - the artifact-driven plan/exec path (review-plan.mjs) parses a diff
+ *    artifact and bypasses optimizeDiff — filtered on the fly. The diff text is
+ *    re-rendered only when a file was actually excluded, so the common
+ *    no-artifact case passes the caller's `diffText` through unchanged.
+ *
+ * @param {{files?: Array, filesForReview?: Array, diffText?: string}} diff
+ * @returns {{files: Array, diffText: string}}
+ */
+export function buildLlmDiffView(diff) {
+  if (Array.isArray(diff?.filesForReview)) {
+    return {
+      files: diff.filesForReview,
+      diffText: diff.diffText ?? renderDiffText(diff.filesForReview),
+    };
+  }
+  const rawFiles = Array.isArray(diff?.files) ? diff.files : [];
+  const files = rawFiles.filter((file) => !isExcludedFile(file?.path ?? ''));
+  const diffText =
+    files.length === rawFiles.length
+      ? (diff?.diffText ?? renderDiffText(files))
+      : renderDiffText(files);
+  return { files, diffText };
 }
 
 export function renderDiffText(files) {

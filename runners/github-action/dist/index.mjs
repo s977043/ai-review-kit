@@ -42127,6 +42127,7 @@ function computeStrictBlock({ findings, selected } = {}) {
 /* harmony export */   So: () => (/* binding */ extractDiffMeta),
 /* harmony export */   pQ: () => (/* binding */ renderDiffText),
 /* harmony export */   rj: () => (/* binding */ parseUnifiedDiff),
+/* harmony export */   wT: () => (/* binding */ buildLlmDiffView),
 /* harmony export */   ye: () => (/* binding */ countChangedLinesFromText)
 /* harmony export */ });
 /* unused harmony exports optimizeDiff, deriveChangedFiles */
@@ -42141,12 +42142,13 @@ function computeStrictBlock({ findings, selected } = {}) {
 
 const EXCLUDED_EXTENSIONS = new Set(['.md']);
 const EXCLUDED_FILES = new Set(['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']);
-// Bundled build output (ncc dist, source maps, generated .d.ts) is
-// machine-generated and not meaningfully reviewable line-by-line; its hunks
-// waste the LLM prompt's char budget and produce noise findings (#1543/#1547).
-// Matches any path segment named `dist` (e.g. runners/github-action/dist/…).
-// LLM-facing diff optimization only — heuristic detection still reads the raw
-// diff.files, so this does not change other pipeline inputs.
+// Build output directories hold machine-generated bundles (ncc dist output,
+// source maps, generated type declarations) that are not meaningfully
+// reviewable line-by-line; their hunks waste the LLM prompt's char budget and
+// produce noise findings (#1543/#1547). This is a purely PATH-based rule — it
+// matches any `dist/` path segment (e.g. runners/github-action/dist/…), not a
+// content-type check. LLM-facing diff optimization only — heuristic detection
+// still reads the raw diff.files, so other pipeline inputs are unchanged.
 const EXCLUDED_DIR_RE = /(?:^|\/)dist\//;
 const MAX_HUNK_LINES = 200;
 const MAX_HUNK_HEAD = 120;
@@ -42251,6 +42253,39 @@ function optimizeDiff(diff) {
     reduction,
     rawTokenEstimate,
   };
+}
+
+/**
+ * Build the LLM-facing view of a diff — the changed-file list and diff text
+ * with non-reviewable build artifacts (see isExcludedFile) removed. Used ONLY
+ * for prompt construction; heuristic detection, scoring, and fixture eval keep
+ * reading the raw `diff.files`, so this changes no other pipeline input.
+ *
+ * Two entry shapes converge here:
+ *  - collectRepoDiff already ran optimizeDiff and exposes `filesForReview` +
+ *    optimized `diffText` — reused as-is.
+ *  - the artifact-driven plan/exec path (review-plan.mjs) parses a diff
+ *    artifact and bypasses optimizeDiff — filtered on the fly. The diff text is
+ *    re-rendered only when a file was actually excluded, so the common
+ *    no-artifact case passes the caller's `diffText` through unchanged.
+ *
+ * @param {{files?: Array, filesForReview?: Array, diffText?: string}} diff
+ * @returns {{files: Array, diffText: string}}
+ */
+function buildLlmDiffView(diff) {
+  if (Array.isArray(diff?.filesForReview)) {
+    return {
+      files: diff.filesForReview,
+      diffText: diff.diffText ?? renderDiffText(diff.filesForReview),
+    };
+  }
+  const rawFiles = Array.isArray(diff?.files) ? diff.files : [];
+  const files = rawFiles.filter((file) => !isExcludedFile(file?.path ?? ''));
+  const diffText =
+    files.length === rawFiles.length
+      ? (diff?.diffText ?? renderDiffText(files))
+      : renderDiffText(files);
+  return { files, diffText };
 }
 
 function renderDiffText(files) {
@@ -45376,16 +45411,18 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 /* harmony export */ });
 /* unused harmony exports buildPrompt, parseLineComments */
 /* harmony import */ var _config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3833);
-/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(9946);
+/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_11__ = __nccwpck_require__(9946);
 /* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1535);
 /* harmony import */ var _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(4807);
 /* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(7050);
 /* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(2294);
-/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(9746);
+/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(9746);
 /* harmony import */ var _review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(8069);
 /* harmony import */ var _repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(5597);
 /* harmony import */ var _secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(12);
 /* harmony import */ var _llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(7303);
+/* harmony import */ var _diff_processor_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(861);
+
 
 
 
@@ -45764,9 +45801,14 @@ async function generateReview({
   config,
 }) {
   const effectiveConfig = (0,_config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .mergeConfig */ .R2)(_config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s, config ?? {});
+  // LLM-facing view: strip non-reviewable build artifacts (dist bundles, source
+  // maps) from BOTH the diff body and the "Changed files" summary. `diff` itself
+  // stays raw so heuristics/fallback below keep seeing every changed file
+  // (#1543/#1547).
+  const llmDiff = (0,_diff_processor_mjs__WEBPACK_IMPORTED_MODULE_9__/* .buildLlmDiffView */ .wT)(diff);
   const promptInfo = buildPrompt({
-    diffText: diff.diffText,
-    diffFiles: diff.files,
+    diffText: llmDiff.diffText,
+    diffFiles: llmDiff.files,
     plan,
     phase,
     projectRules,
@@ -45822,7 +45864,7 @@ async function generateReview({
 
   const skipReason = dryRun
     ? 'dry-run enabled'
-    : (0,_utils_mjs__WEBPACK_IMPORTED_MODULE_9__/* .isOfflineMode */ .hN)()
+    : (0,_utils_mjs__WEBPACK_IMPORTED_MODULE_10__/* .isOfflineMode */ .hN)()
       ? 'offline (rules-only) mode enabled'
       : openAIConfig.provider !== 'openai'
         ? `provider ${openAIConfig.provider} is not supported yet`
@@ -45986,8 +46028,8 @@ async function generateReview({
   });
 
   findings.sort((a, b) => {
-    const bA = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(a);
-    const bB = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_10__/* .computeFindingBreakdown */ ._)(b);
+    const bA = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_11__/* .computeFindingBreakdown */ ._)(a);
+    const bB = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_11__/* .computeFindingBreakdown */ ._)(b);
     return bB.composite - bA.composite;
   });
 

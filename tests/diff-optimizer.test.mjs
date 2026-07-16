@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { optimizeDiff, parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
+import { buildLlmDiffView, optimizeDiff, parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
 
 const whitespaceDiff = `diff --git a/src/app.js b/src/app.js
 --- a/src/app.js
@@ -75,16 +75,41 @@ test('filters bundled dist file changes', () => {
   assert.equal(result.diffText, '');
 });
 
-test('filters dist source-map and generated declaration changes', () => {
-  const generatedDiff = `diff --git a/runners/node-api/dist/index.d.ts b/runners/node-api/dist/index.d.ts
+test('filters files under a nested dist/ path segment (path-based, not by content type)', () => {
+  const nestedDistDiff = `diff --git a/runners/node-api/dist/index.d.ts b/runners/node-api/dist/index.d.ts
 --- a/runners/node-api/dist/index.d.ts
 +++ b/runners/node-api/dist/index.d.ts
 @@ -1,1 +1,1 @@
 -export declare const a: number;
 +export declare const a: string;
 `;
-  const result = optimizeFromText(generatedDiff);
+  const result = optimizeFromText(nestedDistDiff);
   assert.equal(result.files.length, 0);
+});
+
+test('filters files where dist/ is a mid-path segment', () => {
+  const midSegmentDiff = `diff --git a/packages/foo/dist/bar.js b/packages/foo/dist/bar.js
+--- a/packages/foo/dist/bar.js
++++ b/packages/foo/dist/bar.js
+@@ -1,2 +1,2 @@
+-const bar = 1;
++const bar = 2;
+`;
+  const result = optimizeFromText(midSegmentDiff);
+  assert.equal(result.files.length, 0);
+});
+
+test('does not exclude a file named dist.config.js (basename, not a dist/ segment)', () => {
+  const distConfigDiff = `diff --git a/dist.config.js b/dist.config.js
+--- a/dist.config.js
++++ b/dist.config.js
+@@ -1,2 +1,2 @@
+-const value = 1;
++const value = 2;
+`;
+  const result = optimizeFromText(distConfigDiff);
+  assert.equal(result.files.length, 1);
+  assert.equal(result.files[0].path, 'dist.config.js');
 });
 
 test('keeps normal source file changes (does not over-exclude)', () => {
@@ -137,4 +162,59 @@ test('renders new file paths with /dev/null correctly', () => {
   const result = optimizeFromText(newFileDiff);
   assert.match(result.diffText, /--- \/dev\/null/);
   assert.match(result.diffText, /\+\+\+ b\/new.js/);
+});
+
+// buildLlmDiffView — centralized LLM-facing view used by generateReview so both
+// the diff body and the "Changed files" summary drop non-reviewable artifacts.
+const twoFileArtifactDiff = `diff --git a/src/app.ts b/src/app.ts
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,2 +1,2 @@
+-const value = 1;
++const value = 2;
+diff --git a/runners/github-action/dist/index.mjs b/runners/github-action/dist/index.mjs
+--- a/runners/github-action/dist/index.mjs
++++ b/runners/github-action/dist/index.mjs
+@@ -1,2 +1,2 @@
+-const bundled = 1;
++const bundled = 2;
+`;
+
+test('buildLlmDiffView reuses the precomputed optimized view (collectRepoDiff shape)', () => {
+  const parsed = parseUnifiedDiff(twoFileArtifactDiff);
+  const srcOnly = parsed.files.filter((f) => f.path === 'src/app.ts');
+  const view = buildLlmDiffView({
+    files: parsed.files, // raw, incl dist
+    filesForReview: srcOnly, // optimizeDiff output, excl dist
+    diffText: 'PRECOMPUTED_OPTIMIZED',
+  });
+  assert.deepEqual(
+    view.files.map((f) => f.path),
+    ['src/app.ts']
+  );
+  assert.equal(view.diffText, 'PRECOMPUTED_OPTIMIZED');
+});
+
+test('buildLlmDiffView filters dist on the fly when filesForReview is absent (plan/exec path)', () => {
+  const parsed = parseUnifiedDiff(twoFileArtifactDiff);
+  const view = buildLlmDiffView({ diffText: twoFileArtifactDiff, files: parsed.files });
+  assert.deepEqual(
+    view.files.map((f) => f.path),
+    ['src/app.ts']
+  );
+  assert.equal(view.diffText.includes('dist/index.mjs'), false);
+  assert.match(view.diffText, /src\/app\.ts/);
+});
+
+test('buildLlmDiffView passes diffText through unchanged when nothing is excluded', () => {
+  const cleanDiff = `diff --git a/src/app.ts b/src/app.ts
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,1 +1,1 @@
+-const value = 1;
++const value = 2;`;
+  const parsed = parseUnifiedDiff(cleanDiff);
+  const view = buildLlmDiffView({ diffText: cleanDiff, files: parsed.files });
+  assert.equal(view.files.length, 1);
+  assert.equal(view.diffText, cleanDiff);
 });
