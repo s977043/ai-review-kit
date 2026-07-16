@@ -62,6 +62,58 @@ test('filters markdown file changes', () => {
   assert.equal(result.files.length, 0);
 });
 
+test('filters bundled dist file changes', () => {
+  const distDiff = `diff --git a/runners/github-action/dist/index.mjs b/runners/github-action/dist/index.mjs
+--- a/runners/github-action/dist/index.mjs
++++ b/runners/github-action/dist/index.mjs
+@@ -1,2 +1,2 @@
+-const bundled = 1;
++const bundled = 2;
+`;
+  const result = optimizeFromText(distDiff);
+  assert.equal(result.files.length, 0);
+  assert.equal(result.diffText, '');
+});
+
+test('filters dist source-map and generated declaration changes', () => {
+  const generatedDiff = `diff --git a/runners/node-api/dist/index.d.ts b/runners/node-api/dist/index.d.ts
+--- a/runners/node-api/dist/index.d.ts
++++ b/runners/node-api/dist/index.d.ts
+@@ -1,1 +1,1 @@
+-export declare const a: number;
++export declare const a: string;
+`;
+  const result = optimizeFromText(generatedDiff);
+  assert.equal(result.files.length, 0);
+});
+
+test('keeps normal source file changes (does not over-exclude)', () => {
+  const srcDiff = `diff --git a/src/lib/diff-processor.mjs b/src/lib/diff-processor.mjs
+--- a/src/lib/diff-processor.mjs
++++ b/src/lib/diff-processor.mjs
+@@ -1,2 +1,2 @@
+-const value = 1;
++const value = 2;
+`;
+  const result = optimizeFromText(srcDiff);
+  assert.equal(result.files.length, 1);
+  assert.equal(result.files[0].path, 'src/lib/diff-processor.mjs');
+  assert.match(result.diffText, /src\/lib\/diff-processor\.mjs/);
+});
+
+test('does not exclude paths that merely contain "dist" as a substring', () => {
+  const redistDiff = `diff --git a/src/redistribute.mjs b/src/redistribute.mjs
+--- a/src/redistribute.mjs
++++ b/src/redistribute.mjs
+@@ -1,2 +1,2 @@
+-const value = 1;
++const value = 2;
+`;
+  const result = optimizeFromText(redistDiff);
+  assert.equal(result.files.length, 1);
+  assert.equal(result.files[0].path, 'src/redistribute.mjs');
+});
+
 test('truncates large hunks', () => {
   const result = optimizeFromText(buildLargeDiff());
   const hunkLines = result.files[0].hunks[0].lines;

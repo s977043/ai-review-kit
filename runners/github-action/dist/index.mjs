@@ -42141,6 +42141,13 @@ function computeStrictBlock({ findings, selected } = {}) {
 
 const EXCLUDED_EXTENSIONS = new Set(['.md']);
 const EXCLUDED_FILES = new Set(['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']);
+// Bundled build output (ncc dist, source maps, generated .d.ts) is
+// machine-generated and not meaningfully reviewable line-by-line; its hunks
+// waste the LLM prompt's char budget and produce noise findings (#1543/#1547).
+// Matches any path segment named `dist` (e.g. runners/github-action/dist/…).
+// LLM-facing diff optimization only — heuristic detection still reads the raw
+// diff.files, so this does not change other pipeline inputs.
+const EXCLUDED_DIR_RE = /(?:^|\/)dist\//;
 const MAX_HUNK_LINES = 200;
 const MAX_HUNK_HEAD = 120;
 const MAX_HUNK_TAIL = 40;
@@ -42159,6 +42166,7 @@ function isExcludedFile(path) {
   const ext = extension(path);
   if (EXCLUDED_EXTENSIONS.has(ext)) return true;
   if (EXCLUDED_FILES.has(baseName(path))) return true;
+  if (EXCLUDED_DIR_RE.test(path)) return true;
   return false;
 }
 
