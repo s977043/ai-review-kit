@@ -213,7 +213,9 @@ ${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssess
 ${buildLanguageInstruction(language)}
 - Output each finding on its own line using the format "<file>:<line>: <message>".
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
+- "Severity:" and "Confidence:" are mandatory on every finding; the other four labels are strongly recommended.
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
+- Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block drops err Impact: failures are masked Fix: rethrow or log err Severity: warning Confidence: high
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
 - Limit to ${depthConfig.maxFindings} findings. If there are no issues worth mentioning, reply with "NO_ISSUES".

@@ -215,6 +215,41 @@ test('generateReview falls back when all findings are invalid (fail-safe unchang
   }
 });
 
+// Regression (calibration run #1543): the model emitted findings as prose with
+// only Severity:/Confidence: appended inline at end-of-line (no Finding:/
+// Evidence:/Impact:/Fix: labels). The old validator required all six labels, so
+// every finding failed and the batch collapsed to the heuristic fallback. Now
+// the machine-load-bearing labels are present, so the LLM output is used
+// (llmUsed=true) and the batch is no longer forced into heuristics. Per-finding
+// verifier filtering downstream is a separate, non-fatal concern.
+test('generateReview uses LLM findings that carry only inline Severity/Confidence (#1543)', async () => {
+  const rawLlmText = [
+    'src/app.ts:11: console.log leaks the value and should be removed Severity: warning Confidence: high',
+    'src/app.ts:12: added line lacks a guard for the null case Severity: nit Confidence: medium',
+  ].join('\n');
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: rawLlmText } }] }),
+  });
+  try {
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: 'midstream',
+      dryRun: false,
+      includeFallback: false,
+      apiKey: 'test-key',
+    });
+    assert.equal(result.debug.llmUsed, true, 'inline-only findings must not collapse the batch');
+    assert.equal(result.debug.heuristicsUsed, undefined, 'no heuristic fallback should occur');
+    assert.equal(result.debug.droppedInvalidFindings, undefined, 'no findings dropped as invalid');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('generateReview skips the LLM in offline mode even with an API key (#1097 review)', async () => {
   const envBackup = {
     RIVER_OFFLINE: process.env.RIVER_OFFLINE,

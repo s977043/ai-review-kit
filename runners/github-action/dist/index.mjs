@@ -42749,15 +42749,36 @@ function severityToPriority(severity) {
 }
 
 /**
+ * Labels a finding message may carry.
+ *
+ * `REQUIRED` are the machine-load-bearing labels: `normalizeSeverity`,
+ * `severityToPriority`, and the classifier's low-confidence suppression all
+ * key off Severity/Confidence, so a finding without them cannot be scored and
+ * must fail validation (fail-safe → dropped, and heuristic fallback when the
+ * whole batch is invalid).
+ *
+ * `RECOMMENDED` are prose content labels. When a model emits the finding text
+ * inline (as observed in a calibration run where Severity/Confidence were
+ * appended at end-of-line but the content labels were omitted), their absence
+ * loses no reviewer content — `parseFindingMessage`/finding construction fall
+ * back to the raw message for the title — so they are reported but do not
+ * invalidate the finding. This keeps validation aligned with the model's
+ * natural output instead of collapsing an otherwise-usable batch to the
+ * heuristic fallback. The per-finding verifier (verifier.mjs) still enforces
+ * evidence/actionability as a non-fatal filter downstream.
+ */
+const REQUIRED_FINDING_LABELS = ['Severity:', 'Confidence:'];
+const RECOMMENDED_FINDING_LABELS = ['Finding:', 'Evidence:', 'Impact:', 'Fix:'];
+
+/**
  * Validate whether a finding message contains the required labeled fields.
  * @param {string} message
+ * @returns {{ ok: boolean, missing: string[], missingRecommended: string[], invalid: string[] }}
  */
 function validateFindingMessage(message) {
   const text = String(message ?? '');
-  const missing = [];
-  for (const label of ['Finding:', 'Evidence:', 'Impact:', 'Fix:', 'Severity:', 'Confidence:']) {
-    if (!text.includes(label)) missing.push(label);
-  }
+  const missing = REQUIRED_FINDING_LABELS.filter((label) => !text.includes(label));
+  const missingRecommended = RECOMMENDED_FINDING_LABELS.filter((label) => !text.includes(label));
 
   const sevMatch = /Severity:\s*(\w+)/.exec(text);
   const confMatch = /Confidence:\s*(\w+)/.exec(text);
@@ -42772,6 +42793,7 @@ function validateFindingMessage(message) {
   return {
     ok: missing.length === 0 && invalid.length === 0,
     missing,
+    missingRecommended,
     invalid,
   };
 }
@@ -45627,7 +45649,9 @@ ${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssess
 ${buildLanguageInstruction(language)}
 - Output each finding on its own line using the format "<file>:<line>: <message>".
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
+- "Severity:" and "Confidence:" are mandatory on every finding; the other four labels are strongly recommended.
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
+- Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block drops err Impact: failures are masked Fix: rethrow or log err Severity: warning Confidence: high
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
 - Limit to ${depthConfig.maxFindings} findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
