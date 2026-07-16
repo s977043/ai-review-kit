@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildPrompt, generateReview, parseLineComments } from '../src/lib/review-engine.mjs';
 import { formatFindingMessage } from '../src/lib/finding-factory.mjs';
+import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
 
 const diffText = `diff --git a/src/app.ts b/src/app.ts
 index 1111111..2222222 100644
@@ -254,6 +255,65 @@ test('generateReview runs heuristics when LLM is skipped', async () => {
   assert.equal(result.debug.heuristicsUsed, true);
   // スキルが選択されているが検出パターンがない場合、コメントは0件
   assert.equal(result.comments.length, 0);
+});
+
+test('generateReview drops dist files from the LLM prompt summary and body — collectRepoDiff shape (#1543 finding 1)', async () => {
+  const srcFile = {
+    path: 'src/app.ts',
+    newPath: 'src/app.ts',
+    oldPath: 'src/app.ts',
+    hunks: [{ header: '@@ -1,2 +1,2 @@', lines: ['-const value = 1;', '+const value = 2;'] }],
+    addedLines: [1],
+  };
+  const distFile = {
+    path: 'runners/github-action/dist/index.mjs',
+    newPath: 'runners/github-action/dist/index.mjs',
+    oldPath: 'runners/github-action/dist/index.mjs',
+    hunks: [{ header: '@@ -1,2 +1,2 @@', lines: ['-const bundled = 1;', '+const bundled = 2;'] }],
+    addedLines: [1],
+  };
+  // collectRepoDiff shape: raw `files` include dist, `filesForReview` (optimizeDiff
+  // output) and optimized `diffText` exclude it.
+  const collectRepoDiffShape = {
+    files: [srcFile, distFile],
+    filesForReview: [srcFile],
+    diffText:
+      'diff --git a/src/app.ts b/src/app.ts\n@@ -1,2 +1,2 @@\n-const value = 1;\n+const value = 2;',
+  };
+  const result = await generateReview({
+    diff: collectRepoDiffShape,
+    plan: { selected: [] },
+    phase: 'implementation',
+    dryRun: true,
+  });
+  // "Changed files" summary (finding 1) and Diff body must both omit the dist file.
+  assert.equal(result.prompt.includes('runners/github-action/dist/index.mjs'), false);
+  assert.match(result.prompt, /- src\/app\.ts/);
+});
+
+test('generateReview drops dist files in the artifact-driven path that bypasses optimizeDiff (#1543 finding 2)', async () => {
+  const rawArtifactDiff = `diff --git a/src/app.ts b/src/app.ts
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,2 +1,2 @@
+-const value = 1;
++const value = 2;
+diff --git a/runners/github-action/dist/index.mjs b/runners/github-action/dist/index.mjs
+--- a/runners/github-action/dist/index.mjs
++++ b/runners/github-action/dist/index.mjs
+@@ -1,2 +1,2 @@
+-const bundled = 1;
++const bundled = 2;`;
+  // Mirror review-plan.mjs: no filesForReview, raw diffText + raw parsed files.
+  const parsed = parseUnifiedDiff(rawArtifactDiff);
+  const result = await generateReview({
+    diff: { diffText: rawArtifactDiff, files: parsed.files },
+    plan: { selected: [] },
+    phase: 'implementation',
+    dryRun: true,
+  });
+  assert.equal(result.prompt.includes('runners/github-action/dist/index.mjs'), false);
+  assert.match(result.prompt, /src\/app\.ts/);
 });
 
 test('parseLineComments parses structured lines', () => {
