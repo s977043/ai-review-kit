@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.56.1](https://github.com/s977043/river-review/compare/v1.56.0...v1.56.1) (2026-07-14)
+
+
+### Bug Fixes
+
+* **schema:** applyToExemptions 未定義と inputContext 値ズレによる strict loader 脱落を解消する ([#1559](https://github.com/s977043/river-review/issues/1559)) ([8c80372](https://github.com/s977043/river-review/commit/8c803726e5ae812d329ffd4dc19496ccf8c4aa76))
+* **skills:** proto スキーマに一切マッチしない dead glob を修正する ([#1554](https://github.com/s977043/river-review/issues/1554)) ([58536ac](https://github.com/s977043/river-review/commit/58536ac471066ea2eba1e3130b35b8fd5ed0d413))
+* **skills:** registry と SKILL.md の id ドリフトを解消し一致ガードを追加する ([#1558](https://github.com/s977043/river-review/issues/1558)) ([2be6165](https://github.com/s977043/river-review/commit/2be61653e4d3a87e38f79395cf08267324ec39ce))
+* **skills:** registry の severity を SKILL.md（実行時 SSoT）に同期する（major 3 件） ([#1553](https://github.com/s977043/river-review/issues/1553)) ([9723759](https://github.com/s977043/river-review/commit/9723759b0806dd396b5e94bbc62ef4dd8300fc54))
+* **skills:** プロセス補助スキル 2 件の severity を info に再分類する ([#1552](https://github.com/s977043/river-review/issues/1552)) ([bada65c](https://github.com/s977043/river-review/commit/bada65cf3cdec041f158790416bfc19d23286c55))
+* **skills:** 実装成果物を対象とするスキルの phase を複数指定に修正する ([#1556](https://github.com/s977043/river-review/issues/1556)) ([3a84021](https://github.com/s977043/river-review/commit/3a840212d68202892071c82e18d98ef3abc714b4))
+* **verifier:** 配列 phase スキルで finding が Phase mismatch 破棄されるのを修正する ([#1566](https://github.com/s977043/river-review/issues/1566)) ([2713519](https://github.com/s977043/river-review/commit/2713519d6f8727c7b667ed52d7379860dd683d51))
+
 ## [1.56.0](https://github.com/s977043/river-review/compare/v1.55.0...v1.56.0) (2026-07-13)
 
 
