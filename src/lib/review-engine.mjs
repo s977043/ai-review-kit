@@ -19,6 +19,7 @@ import { getReviewDepthConfig } from './review-plan-generator.mjs';
 import { buildRepoContextSection } from './repo-context.mjs';
 import { redactText } from './secret-redactor.mjs';
 import { callChatCompletion } from './llm-pipeline.mjs';
+import { buildLlmDiffView } from './diff-processor.mjs';
 
 const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
 const MAX_PROMPT_CHARS = 12000;
@@ -386,9 +387,14 @@ export async function generateReview({
   config,
 }) {
   const effectiveConfig = mergeConfig(defaultConfig, config ?? {});
+  // LLM-facing view: strip non-reviewable build artifacts (dist bundles, source
+  // maps) from BOTH the diff body and the "Changed files" summary. `diff` itself
+  // stays raw so heuristics/fallback below keep seeing every changed file
+  // (#1543/#1547).
+  const llmDiff = buildLlmDiffView(diff);
   const promptInfo = buildPrompt({
-    diffText: diff.diffText,
-    diffFiles: diff.files,
+    diffText: llmDiff.diffText,
+    diffFiles: llmDiff.files,
     plan,
     phase,
     projectRules,
