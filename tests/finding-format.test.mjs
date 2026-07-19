@@ -81,6 +81,49 @@ test('validateFindingMessage accepts mixed-case Severity and Confidence values',
   assert.equal(validated.ok, true, 'mixed-case severity/confidence should be accepted');
 });
 
+// Regression (calibration run #1543): the model emitted the finding text as
+// prose and appended only Severity:/Confidence: inline at end-of-line, omitting
+// the Finding:/Evidence:/Impact:/Fix: labels. The old validator required all
+// six labels, so every finding in the batch failed and the whole review fell
+// back to heuristics. The machine-load-bearing labels (Severity/Confidence)
+// are present, so this must now validate; the content labels are reported as
+// recommended-but-missing without failing the finding.
+test('validateFindingMessage accepts inline Severity/Confidence without content labels (#1543)', () => {
+  const message =
+    'retry loop swallows errors and could mask failures Severity: warning Confidence: high';
+  const validated = validateFindingMessage(message);
+  assert.equal(validated.ok, true, 'inline Severity/Confidence-only findings must validate');
+  assert.deepEqual(validated.missing, [], 'no required labels are missing');
+  assert.deepEqual(
+    validated.missingRecommended,
+    ['Finding:', 'Evidence:', 'Impact:', 'Fix:'],
+    'the omitted content labels are reported as recommended-but-missing'
+  );
+});
+
+// Fail-safe unchanged: a finding without the machine-load-bearing labels (or
+// with an out-of-vocabulary value) is still invalid, so it is dropped and the
+// batch still falls back to heuristics when nothing valid remains.
+test('validateFindingMessage rejects findings missing Severity/Confidence (fail-safe)', () => {
+  const missingBoth = validateFindingMessage('Finding: x Evidence: y Impact: z Fix: w');
+  assert.equal(missingBoth.ok, false);
+  assert.deepEqual(missingBoth.missing, ['Severity:', 'Confidence:']);
+
+  const missingConfidence = validateFindingMessage('some prose Severity: blocker');
+  assert.equal(missingConfidence.ok, false);
+  assert.deepEqual(missingConfidence.missing, ['Confidence:']);
+});
+
+test('validateFindingMessage rejects out-of-vocabulary Severity/Confidence values (fail-safe)', () => {
+  const badSeverity = validateFindingMessage('prose Severity: catastrophic Confidence: high');
+  assert.equal(badSeverity.ok, false);
+  assert.ok(badSeverity.invalid.includes('Severity:catastrophic'));
+
+  const badConfidence = validateFindingMessage('prose Severity: warning Confidence: certain');
+  assert.equal(badConfidence.ok, false);
+  assert.ok(badConfidence.invalid.includes('Confidence:certain'));
+});
+
 test('normalizeSeverity maps internal vocabulary to schema vocabulary', () => {
   assert.equal(normalizeSeverity('blocker'), 'critical');
   assert.equal(normalizeSeverity('warning'), 'major');

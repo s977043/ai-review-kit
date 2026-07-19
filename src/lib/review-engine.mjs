@@ -213,7 +213,9 @@ ${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssess
 ${buildLanguageInstruction(language)}
 - Output each finding on its own line using the format "<file>:<line>: <message>".
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
+- Every finding MUST carry "Severity:" and "Confidence:". It MUST also carry "Evidence:" (>=5 chars) and "Fix:" (>=10 chars) — findings without them are discarded during verification. "Finding:" and "Impact:" are recommended.
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
+- Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block at src/app.ts drops err Impact: failures are masked Fix: rethrow or log err with context Severity: warning Confidence: high
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
 - Limit to ${depthConfig.maxFindings} findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
@@ -557,24 +559,39 @@ export async function generateReview({
   debug.findingFormat = invalidCount
     ? { ok: false, invalidCount, samples: formatChecks.filter((c) => !c.ok).slice(0, 3) }
     : { ok: true };
+  // Surface findings that validated but omitted recommended content labels
+  // (Finding:/Evidence:/Impact:/Fix:). These pass format validation on the
+  // strength of Severity:/Confidence: alone, but the omission is worth
+  // observing during calibration because such findings tend to be rejected by
+  // the verifier downstream (Evidence:/Fix: are required there).
+  const recommendedGaps = formatChecks.filter((c) => c.ok && c.missingRecommended.length > 0);
+  if (recommendedGaps.length > 0) {
+    debug.findingFormat.recommendedGaps = recommendedGaps.length;
+    debug.findingFormat.recommendedGapsSample = recommendedGaps.slice(0, 3).map((c) => ({
+      file: c.file,
+      line: c.line,
+      missingRecommended: c.missingRecommended,
+    }));
+  }
 
   debug.fileClassification = fileTypes ?? null;
 
   // Verifier pass: filter findings that fail quality checks
   const { verifyFinding } = await import('./verifier.mjs');
-  const verifierResults = comments.map((comment) => ({
-    comment,
-    verification: verifyFinding({
-      finding: comment,
-      diff: diff.diffText,
-      skill: plan?.selected?.[0] ?? {},
-      fileTypes,
-    }),
-  }));
+  const skill = plan?.selected?.[0] ?? {};
+  const runVerifier = (cmts) =>
+    cmts.map((comment) => ({
+      comment,
+      verification: verifyFinding({ finding: comment, diff: diff.diffText, skill, fileTypes }),
+    }));
 
-  const verified = verifierResults.filter((r) => r.verification.verified).map((r) => r.comment);
+  const verifierResults = runVerifier(comments);
+  let verified = verifierResults.filter((r) => r.verification.verified).map((r) => r.comment);
   const rejected = verifierResults.filter((r) => !r.verification.verified);
 
+  // debug.verifierStats/verifierRejected describe the verifier pass over the
+  // primary (LLM or first-pass heuristic) comment set — i.e. the signal for why
+  // a fallback did or did not fire. The finally-emitted set is result.findings.
   debug.verifierRejected = rejected.map((r) => ({
     file: r.comment.file,
     line: r.comment.line,
@@ -586,6 +603,41 @@ export async function generateReview({
     rejected: rejected.length,
   };
 
+  // Fail-safe: mirror the format-validation fallback for a wholesale verifier
+  // rejection. Inline-only findings (Severity:/Confidence: present but
+  // Evidence:/Fix: omitted) pass format validation yet fail the verifier; the
+  // heuristic fallback above only runs when the LLM produced *no* usable
+  // comments (verifier runs after it), so without this branch a fully-rejected
+  // LLM batch would emit an empty review. Degrade to the same safe heuristic/
+  // fallback path instead. Guard on `!debug.heuristicsUsed` so a batch that was
+  // already heuristic is not reprocessed.
+  if (verified.length === 0 && verifierResults.length > 0 && !debug.heuristicsUsed) {
+    debug.verifierAllRejected = true;
+    const heuristic = buildHeuristicComments({ diff, plan });
+    if (heuristic.length) {
+      comments = normalizeHeuristicComments(heuristic);
+      debug.heuristicsUsed = true;
+      debug.heuristicsCount = heuristic.length;
+    } else {
+      const llmSkipReason = debug.llmSkipped || debug.llmError || null;
+      const isMissingKey = llmSkipReason && llmSkipReason.includes('not set');
+      comments = isMissingKey
+        ? []
+        : includeFallback
+          ? buildFallbackComments(diff, plan, { llmSkipReason })
+          : [];
+      debug.heuristicsCount = 0;
+      debug.fallbackIncluded = includeFallback;
+    }
+    // Re-verify the fallback set so the emitted comments still satisfy the
+    // verifier invariant (heuristic/fallback findings use the full labeled
+    // format and pass). verifierStats above intentionally keeps describing the
+    // rejected LLM batch.
+    verified = runVerifier(comments)
+      .filter((r) => r.verification.verified)
+      .map((r) => r.comment);
+  }
+
   // Replace comments with verified-only set
   comments = verified;
 
@@ -593,6 +645,9 @@ export async function generateReview({
   const findings = comments.map((c, i) => {
     const parsed = parseFindingMessage(c.message);
     const severity = normalizeSeverity(parsed.severity);
+    // Confidence is guaranteed present+valid here (validateFindingMessage gates
+    // it upstream), so the 'medium' branch is currently unreachable; it is kept
+    // as a conservative default in case an unverified path ever reaches this.
     const confidence =
       parsed.confidence && ['high', 'medium', 'low'].includes(parsed.confidence)
         ? parsed.confidence
