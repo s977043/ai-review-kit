@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.57.1](https://github.com/s977043/river-review/compare/v1.57.0...v1.57.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **deps:** bump js-yaml to 4.2.0 in runners/node-api lockfile ([#1587](https://github.com/s977043/river-review/issues/1587)) ([840e44b](https://github.com/s977043/river-review/commit/840e44b0ef491094b26ef5b5a067c5410256c7b4))
+
 ## [1.57.0](https://github.com/s977043/river-review/compare/v1.56.2...v1.57.0) (2026-07-19)
 
 
