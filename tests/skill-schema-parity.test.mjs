@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
-import { SkillYamlSchema } from '../src/lib/skillYamlSchema.mjs';
+import { SkillYamlSchema, InputContextEnum } from '../src/lib/skillYamlSchema.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const schema = JSON.parse(
@@ -189,6 +189,42 @@ describe('skill schema parity (ajv vs zod)', () => {
     assert.equal(zodParsed.success, true);
     assert.equal(ajvCopy.deterministicGate.failSeverity, 'strict_block');
     assert.equal(zodParsed.data.deterministicGate.failSeverity, 'strict_block');
+  });
+});
+
+/**
+ * inputContext enum parity canary (#1564).
+ *
+ * The set of allowed inputContext values is declared TWICE — as
+ * schemas/skill.schema.json $defs.inputContext.enum (ajv, the runtime authority)
+ * and as InputContextEnum in src/lib/skillYamlSchema.mjs (zod). #1559 uncovered a
+ * drift where the zod side was missing reviewSelf / reviewExternal / findingsPool
+ * / prDescription. This canary compares the two enum lists directly (not just via
+ * accept/reject cases) so any future add/remove on one side without the other
+ * fails loudly instead of drifting.
+ */
+describe('inputContext enum parity (zod vs JSON Schema $defs)', () => {
+  const schemaEnum = schema.$defs?.inputContext?.enum;
+  const zodEnum = InputContextEnum.options;
+
+  test('JSON Schema exposes $defs.inputContext.enum as an array', () => {
+    assert.ok(Array.isArray(schemaEnum), 'schema.$defs.inputContext.enum must be an array');
+    assert.ok(Array.isArray(zodEnum), 'InputContextEnum.options must be an array');
+  });
+
+  test('zod enum and JSON Schema enum contain the same values (order-insensitive)', () => {
+    const sortedSchema = [...schemaEnum].sort();
+    const sortedZod = [...zodEnum].sort();
+    assert.deepEqual(
+      sortedZod,
+      sortedSchema,
+      `inputContext enum drift: zod=${JSON.stringify(sortedZod)} vs schema=${JSON.stringify(sortedSchema)}`
+    );
+  });
+
+  test('no duplicate values in either enum', () => {
+    assert.equal(new Set(schemaEnum).size, schemaEnum.length, 'JSON Schema enum has duplicates');
+    assert.equal(new Set(zodEnum).size, zodEnum.length, 'zod enum has duplicates');
   });
 });
 
