@@ -1,13 +1,17 @@
 // tests/generate-registry-fields.test.mjs
 //
 // Registry structural-field generator (#1562): frontmatter parsing, value
-// normalization / rendering, and the in-place drift-resolving line rewrite.
+// normalization / rendering, the in-place drift-resolving line rewrite, and the
+// wrapped-flow (#1580 W1) handling + prettier canonicalization.
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+
+import * as yaml from 'js-yaml';
+import prettier from 'prettier';
 
 import {
   MANAGED_FIELDS,
@@ -18,6 +22,17 @@ import {
   renderFieldValue,
   syncRegistryFields,
 } from '../scripts/generate-registry-fields.mjs';
+
+// Match the repo's .prettierrc so the generator's canonicalization step in
+// these temp-dir tests behaves exactly like production (printWidth 100 wraps
+// long `tags` arrays across lines; short ones stay inline).
+const PRETTIER = { printWidth: 100, singleQuote: true, tabWidth: 2, proseWrap: 'preserve' };
+
+/** Look up a parsed skill entry by id from generated registry content. */
+function entryById(content, id) {
+  const parsed = yaml.load(content);
+  return (parsed.skills ?? []).find((s) => s.id === id);
+}
 
 test('parseFrontmatter reads the YAML frontmatter block', () => {
   const fm = parseFrontmatter('---\nid: x\nname: Y Z\ntags:\n  - a\n  - b\n---\nbody');
@@ -138,26 +153,35 @@ packs:
   - id: keep-me
 `;
 
-  const { content, changes } = await syncRegistryFields(raw, { rootDir: root });
+  const { content, changes, errors } = await syncRegistryFields(raw, {
+    rootDir: root,
+    prettierConfig: PRETTIER,
+  });
 
+  assert.deepEqual(errors, []);
   // Only a.version, a.name, a.tags changed; b is untouched (phase normalized).
   assert.deepEqual(changes.map((c) => `${c.id}.${c.field}`).sort(), [
     'a.name',
     'a.tags',
     'a.version',
   ]);
-  assert.match(content, /version: '0\.2\.0'/);
-  assert.match(content, /name: Alpha Guard/);
-  assert.match(content, /tags: \[x, y\]/);
-  // Preserved: comments, curated description, packs section, entry b.
+  const a = entryById(content, 'a');
+  assert.equal(a.version, '0.2.0');
+  assert.equal(a.name, 'Alpha Guard');
+  assert.deepEqual(a.tags, ['x', 'y']);
+  // Entry b untouched (single-element phase array normalized to the scalar).
+  const b = entryById(content, 'b');
+  assert.equal(b.name, 'Beta');
+  assert.equal(b.phase, 'midstream');
+  assert.deepEqual(b.tags, ['p']);
+  // Preserved: comments, curated description, packs section.
   assert.match(content, /# header comment/);
   assert.match(content, /# Section comment/);
   assert.match(content, /description: 'curated desc A'/);
-  assert.match(content, /phase: midstream\n {4}tags: \[p\]/);
   assert.match(content, /packs:\n {2}- id: keep-me/);
 });
 
-test('syncRegistryFields is idempotent', async (t) => {
+test('syncRegistryFields is idempotent and prettier-stable', async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'registry-'));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   await makeSkill(root, 'skills/midstream/a', {
@@ -181,9 +205,134 @@ test('syncRegistryFields is idempotent', async (t) => {
     recommended: true
     description: 'd'
 `;
-  const first = await syncRegistryFields(raw, { rootDir: root });
+  const first = await syncRegistryFields(raw, { rootDir: root, prettierConfig: PRETTIER });
   assert.equal(first.changes.length, 0);
+  assert.deepEqual(first.errors, []);
+  // Already synced + prettier-clean => byte-identical (no-drift run is a no-op).
   assert.equal(first.content, raw);
-  const second = await syncRegistryFields(first.content, { rootDir: root });
+  const second = await syncRegistryFields(first.content, {
+    rootDir: root,
+    prettierConfig: PRETTIER,
+  });
   assert.equal(second.content, first.content);
+});
+
+// --- #1580 W1: wrapped (multi-line flow) tags were a silent-miss hole. ---
+
+// Build a prettier-canonical registry whose `a` entry has a LONG tags array
+// that wraps across lines (the shape that defeated the same-line rewrite).
+async function wrappedRegistryFixture(root, frontmatterTags, registryTags) {
+  await makeSkill(root, 'skills/midstream/a', {
+    id: 'a',
+    version: '0.1.0',
+    name: 'Alpha',
+    category: 'midstream',
+    phase: 'midstream',
+    tags: frontmatterTags,
+    severity: 'major',
+  });
+  const inline = `skills:
+  - id: a
+    version: '0.1.0'
+    name: Alpha
+    path: skills/midstream/a/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [${registryTags.join(', ')}]
+    severity: major
+    recommended: true
+    description: 'd'
+`;
+  // Canonicalize so `tags:` really is wrapped onto its own following lines.
+  return prettier.format(inline, { ...PRETTIER, parser: 'yaml' });
+}
+
+test('wrapped-flow tags: drift IS detected and fixed (W1 regression)', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'registry-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+  const longTags = [
+    'adversarial',
+    'refactor-claim',
+    'claim-vs-actual',
+    'verification',
+    'midstream',
+    'cognitive-bias',
+    'performance-regression',
+  ];
+  const drifted = [...longTags.slice(0, 6), 'w1-probe-tag']; // frontmatter differs
+  const raw = await wrappedRegistryFixture(root, drifted, longTags);
+  // Precondition: the fixture really is wrapped (tags value not on the tags: line).
+  assert.match(raw, /^ {4}tags:\s*$/m);
+
+  const { content, changes, errors } = await syncRegistryFields(raw, {
+    rootDir: root,
+    prettierConfig: PRETTIER,
+  });
+  assert.deepEqual(errors, []);
+  // The silent miss is gone: the drift is now reported...
+  assert.deepEqual(
+    changes.map((c) => `${c.id}.${c.field}`),
+    ['a.tags']
+  );
+  // ...and actually realized in the output (re-parsed value equals frontmatter).
+  assert.deepEqual(entryById(content, 'a').tags, drifted);
+  // Output stays prettier-canonical.
+  assert.equal(content, await prettier.format(content, { ...PRETTIER, parser: 'yaml' }));
+});
+
+test('wrapped-flow tags: matching frontmatter is a no-op', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'registry-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+  const longTags = [
+    'adversarial',
+    'refactor-claim',
+    'claim-vs-actual',
+    'verification',
+    'midstream',
+    'cognitive-bias',
+    'performance-regression',
+  ];
+  const raw = await wrappedRegistryFixture(root, longTags, longTags); // identical
+  const { content, changes, errors } = await syncRegistryFields(raw, {
+    rootDir: root,
+    prettierConfig: PRETTIER,
+  });
+  assert.deepEqual(errors, []);
+  assert.equal(changes.length, 0);
+  assert.equal(content, raw); // steady state => byte-identical
+});
+
+test('backstop: drift with no locatable field line is a hard error, not a silent skip', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'registry-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await makeSkill(root, 'skills/midstream/a', {
+    id: 'a',
+    version: '0.1.0',
+    name: 'Alpha',
+    category: 'midstream',
+    phase: 'midstream',
+    tags: ['x', 'y'], // frontmatter has tags...
+    severity: 'major',
+  });
+  // ...but the registry entry has NO tags: line at all.
+  const raw = `skills:
+  - id: a
+    version: '0.1.0'
+    name: Alpha
+    path: skills/midstream/a/SKILL.md
+    category: midstream
+    phase: midstream
+    severity: major
+    recommended: true
+    description: 'd'
+`;
+  const { changes, errors } = await syncRegistryFields(raw, {
+    rootDir: root,
+    prettierConfig: PRETTIER,
+  });
+  assert.equal(changes.length, 0);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /no " {4}tags:" line exists/);
 });

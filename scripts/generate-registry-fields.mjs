@@ -20,6 +20,11 @@
 //       applyTo — duplicating it would re-introduce a second source; the way to
 //       single-source applyTo is to keep it out of registry.yaml entirely.
 //
+// Known boundary: this script only syncs fields of entries ALREADY present in
+// registry.yaml. A SKILL.md on disk that is absent from the catalog is not
+// added here — that reverse gap stays a warn-only signal in
+// validateRegistryPaths() (scripts/validate-skills.mjs), by existing design.
+//
 // The runtime skill-loader (runners/core/skill-loader.mjs) never reads the
 // `skills:` list — it resolves phase/category from frontmatter directly and
 // only reads registry.yaml for `packs:` and `recommendations:`. So syncing the
@@ -27,9 +32,24 @@
 // dashboard view and the drift guards.
 //
 // Editing strategy: an in-place, order- and comment-preserving line rewrite
-// keyed by each entry's `path`. Only a managed field line whose value actually
+// keyed by each entry's `path`. Only a managed field whose value actually
 // differs from its frontmatter is rewritten, so the diff is exactly the drift
-// being resolved — no quoting churn, no reordering, no lost comments.
+// being resolved — no reordering, no lost comments.
+//
+// Wrapped (multi-line flow) values: prettier (printWidth 100) wraps long `tags`
+// arrays across several lines (`tags:` on its own line, then the flow array).
+// A naive same-line rewrite would silently miss those (drift detected but never
+// realized in text → CI reports "in sync" — the #1580 W1 hole). So the rewrite
+// consumes the field's FULL span (its line plus any deeper-indented
+// continuation lines) and, as a backstop, a drift that cannot be located as a
+// `    <field>:` line is a HARD ERROR rather than a silent skip.
+//
+// Formatting: the rewrite always emits the inline form; the whole result is
+// then run through prettier (the repo's single source of truth for formatting)
+// so the output is byte-identical to what CI's format:check / the pre-commit
+// hook would produce — long arrays get re-wrapped canonically, short ones stay
+// inline. This keeps `--check` a pure drift signal: on an already-synced,
+// prettier-clean registry it is a no-op (prettier is idempotent).
 //
 // Usage:
 //   node scripts/generate-registry-fields.mjs          # write (sync) registry.yaml
@@ -40,6 +60,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 import * as yaml from 'js-yaml';
+import prettier from 'prettier';
 
 import { isDirectRun } from './lib/is-direct-run.mjs';
 
@@ -104,16 +125,25 @@ function valuesEqual(a, b) {
 }
 
 /**
- * Rewrite the managed structural fields of skills/registry.yaml in place from
- * frontmatter. Pure over its `raw` input plus filesystem reads of the
- * referenced SKILL.md files; returns the new file text and the list of
- * per-field changes (for reporting / the freshness check).
+ * True when `line` is a continuation of a wrapped managed-field value, i.e.
+ * indented DEEPER than the 4-space field indent (the flow array's `[`, its
+ * per-element lines, and the closing `]` prettier emits at 6+ spaces).
+ */
+function isContinuationLine(line) {
+  return /^ {6,}\S/.test(line) || /^ {6,}$/.test(line);
+}
+
+/**
+ * Rewrite the managed structural fields of skills/registry.yaml from
+ * frontmatter, then re-render through prettier. Reads the referenced SKILL.md
+ * files; returns the new (prettier-formatted) file text, the list of per-field
+ * changes, and any hard errors (drift that could not be located in the text).
  *
  * @param {string} raw - current registry.yaml content
- * @param {{ rootDir?: string }} [options]
- * @returns {Promise<{ content: string, changes: Array<{ id: string, field: string, from: unknown, to: unknown }> }>}
+ * @param {{ rootDir?: string, prettierConfig?: object|null }} [options]
+ * @returns {Promise<{ content: string, changes: Array<{ id: string, field: string, from: unknown, to: unknown }>, errors: string[] }>}
  */
-export async function syncRegistryFields(raw, { rootDir = ROOT } = {}) {
+export async function syncRegistryFields(raw, { rootDir = ROOT, prettierConfig } = {}) {
   const parsed = yaml.load(raw) ?? {};
   const entriesByPath = new Map();
   for (const entry of Array.isArray(parsed.skills) ? parsed.skills : []) {
@@ -134,13 +164,18 @@ export async function syncRegistryFields(raw, { rootDir = ROOT } = {}) {
     }
   }
 
-  // Collect entry start indices (list items) within the skills region.
+  // Collect entry spans (list items) within the skills region.
   const entryStarts = [];
   for (let i = skillsIdx + 1; i < regionEnd; i++) {
     if (/^ {2}- id:/.test(lines[i])) entryStarts.push(i);
   }
 
   const changes = [];
+  const errors = [];
+  // Plan replacements as {index, span, text} so multi-line spans collapse
+  // cleanly; apply them after scanning so index bookkeeping stays simple.
+  const replacements = [];
+
   for (let e = 0; e < entryStarts.length; e++) {
     const start = entryStarts[e];
     const end = e + 1 < entryStarts.length ? entryStarts[e + 1] : regionEnd;
@@ -171,35 +206,73 @@ export async function syncRegistryFields(raw, { rootDir = ROOT } = {}) {
       const desired = frontmatter[field];
       if (valuesEqual(registryEntry[field], desired)) continue;
 
-      // Rewrite the field's line (managed fields are always single-line in this
-      // registry: scalars and inline-flow arrays).
-      const fieldRe = new RegExp(`^( {4}${field}):\\s`);
-      let rewritten = false;
+      // Locate the field line — it may hold the value inline (`tags: [...]`) or
+      // be a wrapped key (`tags:`) whose value continues on deeper-indented
+      // lines. Consume the whole span so the wrapped case is not missed.
+      const fieldRe = new RegExp(`^ {4}${field}:`);
+      let fieldIdx = -1;
       for (let i = start; i < end; i++) {
-        const m = fieldRe.exec(lines[i]);
-        if (!m) continue;
-        lines[i] = `${m[1]}: ${renderFieldValue(field, desired)}`;
-        rewritten = true;
-        break;
+        if (fieldRe.test(lines[i])) {
+          fieldIdx = i;
+          break;
+        }
       }
-      if (rewritten) {
-        changes.push({
-          id: registryEntry.id ?? skillPath,
-          field,
-          from: registryEntry[field],
-          to: normalizeValue(desired),
-        });
+      if (fieldIdx === -1) {
+        // Backstop: real drift we cannot realize in text (e.g. a malformed
+        // entry missing this managed field line). Fail loudly instead of the
+        // silent skip that let #1580 W1 slip through.
+        errors.push(
+          `${registryEntry.id ?? skillPath}: frontmatter sets ${field}=` +
+            `${JSON.stringify(normalizeValue(desired))} but no "    ${field}:" line exists in ` +
+            'its registry entry to update'
+        );
+        continue;
       }
+      let spanEnd = fieldIdx + 1;
+      while (spanEnd < end && isContinuationLine(lines[spanEnd])) spanEnd++;
+
+      replacements.push({
+        index: fieldIdx,
+        span: spanEnd - fieldIdx,
+        text: `    ${field}: ${renderFieldValue(field, desired)}`,
+      });
+      changes.push({
+        id: registryEntry.id ?? skillPath,
+        field,
+        from: registryEntry[field],
+        to: normalizeValue(desired),
+      });
     }
   }
 
-  return { content: lines.join('\n'), changes };
+  // Apply replacements bottom-up so earlier indices stay valid.
+  replacements.sort((a, b) => b.index - a.index);
+  for (const r of replacements) lines.splice(r.index, r.span, r.text);
+
+  let content = lines.join('\n');
+  // Canonicalize with prettier so the output matches CI's format:check exactly
+  // (long tag arrays re-wrap; short ones stay inline). Idempotent on an
+  // already-clean file, so a no-drift run returns byte-identical content.
+  const cfg =
+    prettierConfig !== undefined
+      ? prettierConfig
+      : await prettier.resolveConfig(path.join(rootDir, 'skills', 'registry.yaml'));
+  content = await prettier.format(content, { ...(cfg ?? {}), parser: 'yaml' });
+
+  return { content, changes, errors };
 }
 
 async function main() {
   const check = process.argv.includes('--check');
   const raw = await fs.readFile(REGISTRY_PATH, 'utf8');
-  const { content, changes } = await syncRegistryFields(raw);
+  const { content, changes, errors } = await syncRegistryFields(raw);
+
+  // Hard errors (unrealizable drift) fail both modes — never write a partial file.
+  if (errors.length) {
+    console.error('registry structural-field sync could not proceed:');
+    for (const msg of errors) console.error(`  - ${msg}`);
+    return 1;
+  }
 
   if (check) {
     if (content === raw) {
