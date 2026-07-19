@@ -34,7 +34,7 @@ frontmatter の `description` は、レビュー実行時にプランナーや L
 | `schemas/agent-skill-loose.schema.json` | 外部 Agent Skills 仕様の受け入れフロント                    | `true`（未知フィールドを許容）    |
 | `schemas/skill.schema.json`             | ランタイムの権威。`loadAllSkillMetadata()` がこれで検証する | `false`（未定義フィールドを拒否） |
 
-- **strict schema がランタイムの権威である。** loose schema を通過しても、strict schema に定義のないフィールドは `loadAllSkillMetadata()` 読み込み時にサイレント脱落する。frontmatter 全体が失敗するのではなく、未定義フィールドだけが読み飛ばされる。
+- **strict schema がランタイムの権威である。** loose schema を通過しても、strict schema に定義のないフィールドがあると `loadAllSkillMetadata()` 読み込み時にバリデーションエラーとなる。未定義フィールドだけが読み飛ばされるのではなく、そのスキル（frontmatter）全体がロード対象から脱落する点に注意する。
 - **loose schema は外部 Agent Skills 仕様の受け入れフロントである。** `name` / `description` の最小要件のみを課し、それ以外の未知フィールドを許容する。これは外部ツール（agentskills.io / Warp / Oz / Claude Code 等）が発行する SKILL.md を広く受け入れるための設計であり、ランタイムでの利用を保証するものではない。
 - **両者に差分が生まれ、あるフィールドが実行時にも本当に必要だと判明した場合は、strict schema（`schemas/skill.schema.json`）側に定義を追加するのが正しい対応である。** `applyToExemptions`（#1508）はこの経路で追加された実例である。loose schema だけを通り strict schema で弾かれるフィールドは設計上の意図どおりの挙動であり、loose 側を緩めて合わせる対応は誤りとする。
 
