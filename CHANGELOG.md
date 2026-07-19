@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.59.1](https://github.com/s977043/river-review/compare/v1.59.0...v1.59.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **skills:** a-2/a-4 の 6 スキルを diff/fullFile 供給集合内に収め発火可能にする ([#1618](https://github.com/s977043/river-review/issues/1618)) ([686fcae](https://github.com/s977043/river-review/commit/686fcae443efb5a03ffad9bf8a73415ab1523416)), closes [#1606](https://github.com/s977043/river-review/issues/1606)
+
 ## [1.59.0](https://github.com/s977043/river-review/compare/v1.58.0...v1.59.0) (2026-07-19)
 
 
