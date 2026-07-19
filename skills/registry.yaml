@@ -774,6 +774,45 @@ skills:
     recommended: true
     description: '指摘対応の反復（レビューコメント→修正→再レビュー）で、個別には正しい修正の蓄積が当初スコープを逸脱した（scope creep）、または成立済みの前提を破壊した（premise break）連鎖を diff-time で検出する。技術的正しさとスコープ整合性を別軸で評価し report-only。1コメント triage は review-comment-triage、構造変更後の caller 残骸は cross-file-leakage、plan 前提解消は assumption-resolution-trace へ委譲する'
 
+  - id: knowledge-to-code-alignment
+    version: '0.1.0'
+    name: 'Knowledge-to-Code Alignment 新知識のコード反映・設計知識の保全'
+    path: skills/midstream/knowledge-to-code-alignment/SKILL.md
+    category: midstream
+    phase: midstream
+    tags:
+      [
+        knowledge-to-code,
+        knowledge-delta,
+        refactoring,
+        naming,
+        responsibility,
+        design-history,
+        midstream,
+      ]
+    severity: minor
+    recommended: true
+    description: 'リファクタリングを「更新された理解と過去の理解の差分同期」と捉え、今回得た新知識（要求・ドメイン知識・制約）が naming/responsibility へ反映され、boundary が現在の understanding を表現し、ADR/PR/コメントの過去の design history/constraint を失っていないかを diff-time で確認する。用語一貫性は ubiquitous-language-naming、境界設計は bounded-context-language、投機的抽象化は altitude-generalization、スコープ逸脱は fix-scope-integrity、振る舞い/構造分離は behavior-structure-separation、完了主張反証は refactor-claim-audit へ委譲'
+
+  - id: behavior-structure-separation
+    version: '0.1.0'
+    name: 'Behavior-Structure Separation 振る舞い変更と構造変更の分離・外部挙動維持'
+    path: skills/midstream/behavior-structure-separation/SKILL.md
+    category: midstream
+    phase: midstream
+    tags:
+      [
+        behavior-preservation,
+        refactoring,
+        characterization-test,
+        structural-change,
+        safety-net,
+        midstream,
+      ]
+    severity: minor
+    recommended: true
+    description: '構造変更（リファクタ）と機能変更（behavior change）が同一 diff に混在していないかを識別し、structural change に対する external behavior preservation の証拠（テスト・型・静的解析）が揃っているかを diff-time で確認する。証拠不足は Characterization Test 追加を促すか question 化。公開 API/DTO 破壊は api-compatibility、完了主張反証・性能退行は refactor-claim-audit、新知識のコード反映は knowledge-to-code-alignment、投機的抽象化/スコープ逸脱は altitude-generalization/fix-scope-integrity へ委譲'
+
   - id: cross-file-leakage
     version: '0.1.0'
     name: 'Cross-File Leakage リファクタ後の caller 側残骸検出'
