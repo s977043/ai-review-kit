@@ -19,7 +19,7 @@ import { getReviewDepthConfig } from './review-plan-generator.mjs';
 import { buildRepoContextSection } from './repo-context.mjs';
 import { redactText } from './secret-redactor.mjs';
 import { callChatCompletion } from './llm-pipeline.mjs';
-import { buildLlmDiffView } from './diff-processor.mjs';
+import { buildLlmDiffView, isGeneratedArtifactPath } from './diff-processor.mjs';
 
 const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
 const MAX_PROMPT_CHARS = 12000;
@@ -640,6 +640,37 @@ export async function generateReview({
 
   // Replace comments with verified-only set
   comments = verified;
+
+  // #1597: Output-stage filter for findings that point at a machine-generated
+  // build-artifact directory (a `dist/` path segment). #1570 excluded these
+  // paths from the LLM-facing diff only; the heuristic detectors still scan the
+  // raw diff.files by design (the #1070 canary boundary), so a heuristic finding
+  // can still land on `runners/github-action/dist/index.mjs` and reach output.
+  // Drop those findings here — the SINGLE choke point where `comments` becomes
+  // both the emitted PR comments AND the source of `findings`/`classified` — so
+  // display, PR comments, and score (rubric penalty is computed from `findings`)
+  // all exclude them consistently. The generated artifact's quality derives from
+  // its source, so scoring it would double-count. Detection stays intact;
+  // suppressed findings are surfaced in debug for observability. Uses
+  // `isGeneratedArtifactPath`, which is intentionally narrower than the LLM
+  // diff's `isExcludedFile`: it matches only the generated directory, so real
+  // findings on `.md` / lock files are NOT suppressed from output.
+  const keptComments = [];
+  const suppressedGeneratedPathComments = [];
+  for (const c of comments) {
+    if (isGeneratedArtifactPath(c.file)) {
+      suppressedGeneratedPathComments.push(c);
+    } else {
+      keptComments.push(c);
+    }
+  }
+  if (suppressedGeneratedPathComments.length > 0) {
+    comments = keptComments;
+    debug.suppressedGeneratedPathFindings = suppressedGeneratedPathComments.length;
+    debug.suppressedGeneratedPathFindingsSample = suppressedGeneratedPathComments
+      .slice(0, 3)
+      .map((c) => ({ file: c.file, line: c.line }));
+  }
 
   // Build structured findings from verified comments
   const findings = comments.map((c, i) => {
