@@ -16,18 +16,19 @@ import { readFileSync, existsSync, globSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
+import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
 
-function resolveFileRef(ref, configPath) {
+export function resolveFileRef(ref, configPath) {
   // file://../prompt/system.md → relative to configPath's directory
   if (!ref.startsWith('file://')) return null;
   const rel = ref.slice('file://'.length);
   return path.resolve(path.dirname(configPath), rel);
 }
 
-function validateConfig(configPath) {
+export function validateConfig(configPath) {
   const errors = [];
   const text = readFileSync(configPath, 'utf8');
   let doc;
@@ -78,8 +79,8 @@ function validateConfig(configPath) {
   return errors;
 }
 
-function main() {
-  const configs = globSync('skills/midstream/community/*/eval/promptfoo.yaml', {
+export function main() {
+  const configs = globSync('skills/midstream/*/eval/promptfoo.yaml', {
     cwd: REPO_ROOT,
   });
   if (configs.length === 0) {
@@ -106,4 +107,6 @@ function main() {
   if (bad > 0) process.exit(1);
 }
 
-main();
+if (isDirectRun(import.meta.url)) {
+  main();
+}

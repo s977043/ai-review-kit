@@ -73,6 +73,8 @@ jobs:
       - uses: ./.github/actions/setup-node-deps
       - name: Validate skills
         run: npm run skills:validate
+      - name: Validate promptfoo configs
+        run: npm run skills:validate:promptfoo
       - name: Validate agent-skills
         run: npm run agent-skills:validate
       - name: Check dangling skill-ID references
