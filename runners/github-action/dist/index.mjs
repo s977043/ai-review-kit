@@ -13968,7 +13968,7 @@ class InternalServerError extends APIError {
 
 /***/ }),
 
-/***/ 4055:
+/***/ 7938:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -14027,7 +14027,7 @@ const sleep = (ms, signal) => new Promise((resolve) => {
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/errors.mjs
 var errors = __nccwpck_require__(2533);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/version.mjs
-const VERSION = '0.111.0'; // x-release-please-version
+const VERSION = '0.112.3'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -22374,6 +22374,309 @@ class Skills extends APIResource {
 }
 Skills.Versions = versions_Versions;
 //# sourceMappingURL=skills.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/tunnels/certificates.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class Certificates extends APIResource {
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Registers a public CA certificate on a tunnel. Anthropic verifies the gateway's
+     * server certificate against this CA when it terminates the inner TLS session. A
+     * tunnel holds at most two non-archived certificates.
+     *
+     * @example
+     * ```ts
+     * const betaTunnelCertificate =
+     *   await client.beta.tunnels.certificates.create(
+     *     'tunnel_id',
+     *     { ca_certificate_pem: 'ca_certificate_pem' },
+     *   );
+     * ```
+     */
+    create(tunnelID, params, options) {
+        const { betas, ...body } = params;
+        return this._client.post(path `/v1/tunnels/${tunnelID}/certificates?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Fetches a tunnel certificate by ID.
+     *
+     * @example
+     * ```ts
+     * const betaTunnelCertificate =
+     *   await client.beta.tunnels.certificates.retrieve(
+     *     'certificate_id',
+     *     { tunnel_id: 'tunnel_id' },
+     *   );
+     * ```
+     */
+    retrieve(certificateID, params, options) {
+        const { tunnel_id, betas } = params;
+        return this._client.get(path `/v1/tunnels/${tunnel_id}/certificates/${certificateID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Lists the certificates registered on a tunnel. Archived certificates are
+     * excluded unless include_archived is set.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaTunnelCertificate of client.beta.tunnels.certificates.list(
+     *   'tunnel_id',
+     * )) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(tunnelID, params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList(path `/v1/tunnels/${tunnelID}/certificates?beta=true`, (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Archives a tunnel certificate, removing it from the set Anthropic trusts for the
+     * tunnel. The certificate record is retained. Archiving the last non-archived
+     * certificate is permitted; the tunnel rejects MCP traffic until a new certificate
+     * is added.
+     *
+     * @example
+     * ```ts
+     * const betaTunnelCertificate =
+     *   await client.beta.tunnels.certificates.archive(
+     *     'certificate_id',
+     *     { tunnel_id: 'tunnel_id' },
+     *   );
+     * ```
+     */
+    archive(certificateID, params, options) {
+        const { tunnel_id, betas } = params;
+        return this._client.post(path `/v1/tunnels/${tunnel_id}/certificates/${certificateID}/archive?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+}
+//# sourceMappingURL=certificates.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/tunnels/tunnels.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+class Tunnels extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.certificates = new Certificates(this._client);
+    }
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Creates a tunnel. Creation allocates a fresh hostname and provisions the tunnel;
+     * it is not idempotent. The new tunnel rejects MCP traffic until at least one CA
+     * certificate is added.
+     *
+     * @example
+     * ```ts
+     * const betaTunnel = await client.beta.tunnels.create();
+     * ```
+     */
+    create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post('/v1/tunnels?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Fetches a tunnel by ID.
+     *
+     * @example
+     * ```ts
+     * const betaTunnel = await client.beta.tunnels.retrieve(
+     *   'tunnel_id',
+     * );
+     * ```
+     */
+    retrieve(tunnelID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path `/v1/tunnels/${tunnelID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Lists tunnels. Results are ordered by creation time, newest first; archived
+     * tunnels are excluded unless include_archived is set.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaTunnel of client.beta.tunnels.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList('/v1/tunnels?beta=true', (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Archives a tunnel. Archival is irreversible: every non-archived certificate on
+     * the tunnel is archived in the same operation, the hostname is retired and never
+     * re-allocated, and the tunnel token is invalidated. Retrying against an
+     * already-archived tunnel returns the existing record unchanged.
+     *
+     * @example
+     * ```ts
+     * const betaTunnel = await client.beta.tunnels.archive(
+     *   'tunnel_id',
+     * );
+     * ```
+     */
+    archive(tunnelID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/tunnels/${tunnelID}/archive?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Reveals a tunnel's connector token. The value is fetched live on each call;
+     * Anthropic does not store it. Repeated calls return the same value until the
+     * token is rotated. Exposed as POST so the token does not appear in intermediary
+     * access logs.
+     *
+     * @example
+     * ```ts
+     * const betaTunnelToken =
+     *   await client.beta.tunnels.revealToken('tunnel_id');
+     * ```
+     */
+    revealToken(tunnelID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/tunnels/${tunnelID}/reveal_token?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * The Tunnels API is in research preview. It requires the
+     * `anthropic-beta: mcp-tunnels-2026-06-22` header and may change without a
+     * deprecation period. It supersedes the Admin API endpoints at
+     * `/v1/organizations/tunnels`, which remain available during a migration window.
+     *
+     * Rotates a tunnel's connector token. Rotation invalidates the current token for
+     * new connections and returns a fresh value; established connections are not
+     * severed. A connector restarted after rotation must use the new value.
+     *
+     * @example
+     * ```ts
+     * const betaTunnelToken =
+     *   await client.beta.tunnels.rotateToken('tunnel_id');
+     * ```
+     */
+    rotateToken(tunnelID, params, options) {
+        const { betas, ...body } = params;
+        return this._client.post(path `/v1/tunnels/${tunnelID}/rotate_token?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { 'anthropic-beta': [...(betas ?? []), 'mcp-tunnels-2026-06-22'].toString() },
+                options?.headers,
+            ]),
+        });
+    }
+}
+Tunnels.Certificates = Certificates;
+//# sourceMappingURL=tunnels.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/vaults/credentials.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -22724,6 +23027,8 @@ Vaults.Credentials = Credentials;
 
 
 
+
+
 class Beta extends APIResource {
     constructor() {
         super(...arguments);
@@ -22741,6 +23046,7 @@ class Beta extends APIResource {
         this.webhooks = new Webhooks(this._client);
         this.userProfiles = new UserProfiles(this._client);
         this.dreams = new Dreams(this._client);
+        this.tunnels = new Tunnels(this._client);
     }
 }
 Beta.Models = Models;
@@ -22757,6 +23063,7 @@ Beta.Skills = Skills;
 Beta.Webhooks = Webhooks;
 Beta.UserProfiles = UserProfiles;
 Beta.Dreams = Dreams;
+Beta.Tunnels = Tunnels;
 //# sourceMappingURL=beta.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/completions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -48336,8 +48643,8 @@ var esm = __nccwpck_require__(9519);
 var loader = __nccwpck_require__(3833);
 // EXTERNAL MODULE: ./runners/core/skill-cache.mjs
 var skill_cache = __nccwpck_require__(7328);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 81 modules
-var sdk = __nccwpck_require__(4055);
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 83 modules
+var sdk = __nccwpck_require__(7938);
 ;// CONCATENATED MODULE: ./node_modules/@google/generative-ai/dist/index.mjs
 /**
  * Contains the list of OpenAPI data types
