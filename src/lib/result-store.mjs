@@ -60,6 +60,13 @@ export function buildRunRecord(result, { phase, runId, gate, decision } = {}) {
     // digest can aggregate them (see trust-boundary note above).
     ...(decision !== undefined ? { decision } : {}),
     ...(gate ? { gate } : {}),
+    // #1600: persist the calibration debug telemetry (verifierStats,
+    // verifierAllRejected, findingFormat.recommendedGaps, etc.) so it
+    // survives past process memory and can be inspected from the CI
+    // artifact. `result.reviewDebug` is already redacted at the source
+    // (review-engine.mjs redacts promptPreview and rawLlmOutput before
+    // attaching them to `debug`), so no additional redaction is needed here.
+    ...(result.reviewDebug ? { debug: result.reviewDebug } : {}),
     findings,
     suppressedFindings: suppressed,
     finalSummary: {
