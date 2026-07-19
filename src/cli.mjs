@@ -31,6 +31,7 @@ import addFormats from 'ajv-formats';
 import { runReviewCommand } from './cli/commands/review.mjs';
 import { runSkillsCommand } from './cli/commands/skills.mjs';
 import { runRunsCommand } from './cli/commands/runs.mjs';
+import { runEvalCommand } from './cli/commands/eval.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
@@ -1367,11 +1368,7 @@ async function main(argv = process.argv.slice(2)) {
     }
 
     if (parsed.command === 'eval') {
-      const { evaluateReviewFixtures } = await import('./lib/review-fixtures-eval.mjs');
-      const casesPath =
-        parsed.fixturesCasesPath ||
-        path.join(process.cwd(), 'tests', 'fixtures', 'review-eval', 'cases.json');
-      return evaluateReviewFixtures({ casesPath, phase: parsed.phase, verbose: parsed.verbose });
+      return runEvalCommand(parsed);
     }
     if (parsed.command === 'doctor') {
       const result = await doctorLocalReview({
