@@ -142,6 +142,18 @@ test('normalizeSeverity is case-insensitive and trims whitespace', () => {
   assert.equal(normalizeSeverity('Nit'), 'minor');
 });
 
+test('normalizeSeverity fail-safes on non-string inputs without throwing', () => {
+  // Non-string severities (e.g. a numeric `severity: 3` in skill frontmatter)
+  // must coerce to 'major' fail-safe, not throw. Regression guard for the
+  // String() coercion that the removed per-module copies all carried.
+  assert.equal(normalizeSeverity(3), 'major');
+  assert.equal(normalizeSeverity(0), 'major');
+  assert.equal(normalizeSeverity({}), 'major');
+  assert.equal(normalizeSeverity([]), 'major');
+  assert.equal(normalizeSeverity(true), 'major');
+  assert.equal(normalizeSeverity(undefined), 'major');
+});
+
 test('SEVERITY_RANK is the canonical ascending rank of schema severities', () => {
   assert.deepEqual(SEVERITY_RANK, { info: 0, minor: 1, major: 2, critical: 3 });
   // Ranks must be strictly increasing in severity order (relied on by

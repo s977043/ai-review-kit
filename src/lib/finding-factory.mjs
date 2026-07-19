@@ -97,7 +97,11 @@ export function parseFindingMessage(message) {
  * @returns {'critical'|'major'|'minor'|'info'}
  */
 export function normalizeSeverity(internalSeverity) {
-  switch ((internalSeverity ?? '').toLowerCase().trim()) {
+  switch (
+    String(internalSeverity ?? '')
+      .toLowerCase()
+      .trim()
+  ) {
     case 'blocker':
     case 'critical':
       return 'critical';
