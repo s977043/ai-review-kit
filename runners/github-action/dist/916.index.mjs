@@ -1004,6 +1004,8 @@ var gate_decision = __webpack_require__(2773);
 var deterministic_gate = __webpack_require__(5837);
 // EXTERNAL MODULE: ./src/lib/deterministic-exec-gate.mjs
 var deterministic_exec_gate = __webpack_require__(2785);
+// EXTERNAL MODULE: ./src/lib/finding-factory.mjs
+var finding_factory = __webpack_require__(1535);
 // EXTERNAL MODULE: external "node:crypto"
 var external_node_crypto_ = __webpack_require__(7598);
 ;// CONCATENATED MODULE: ./src/lib/review-plan.mjs
@@ -1033,6 +1035,7 @@ var external_node_crypto_ = __webpack_require__(7598);
  * Pure-ish module: config loader, resolver, buildExecutionPlan and the
  * diff reader are injectable for tests.
  */
+
 
 
 
@@ -1477,7 +1480,6 @@ function resolveReviewOutputFormat({
 }
 
 const REVIEW_GATE_SEVERITIES = (/* unused pure expression or super */ null && (['info', 'minor', 'major', 'critical']));
-const SEVERITY_RANK = { info: 0, minor: 1, major: 2, critical: 3 };
 
 /**
  * Evaluate the review gate exit code from an artifact's findings (#976).
@@ -1498,7 +1500,7 @@ function evaluateReviewGate(
   let maxRank = -1;
   let maxSeverity = null;
   for (const f of findings) {
-    const rank = SEVERITY_RANK[f?.severity];
+    const rank = finding_factory/* SEVERITY_RANK */.f3[f?.severity];
     if (rank !== undefined && rank > maxRank) {
       maxRank = rank;
       maxSeverity = f.severity;
@@ -1507,8 +1509,8 @@ function evaluateReviewGate(
   if (advisoryOnly || maxRank < 0) {
     return { code: 0, level: 'pass', maxSeverity };
   }
-  const failRank = SEVERITY_RANK[failOn] ?? SEVERITY_RANK.critical;
-  const warnRank = SEVERITY_RANK[warnOn] ?? SEVERITY_RANK.major;
+  const failRank = finding_factory/* SEVERITY_RANK */.f3[failOn] ?? finding_factory/* SEVERITY_RANK */.f3.critical;
+  const warnRank = finding_factory/* SEVERITY_RANK */.f3[warnOn] ?? finding_factory/* SEVERITY_RANK */.f3.major;
   if (maxRank >= failRank) return { code: 1, level: 'fail', maxSeverity };
   if (maxRank >= warnRank) return { code: 2, level: 'warn', maxSeverity };
   return { code: 0, level: 'pass', maxSeverity };

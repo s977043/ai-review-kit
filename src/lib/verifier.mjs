@@ -5,41 +5,13 @@
  * with per-check details. Rejected findings should be logged but not emitted.
  */
 
-/**
- * Severity hierarchy for comparison (higher number = more severe).
- * Internal vocabulary is mapped to output schema equivalents.
- * @see .claude/rules/review-core.md for the canonical mapping
- */
+import { normalizeSeverity, SEVERITY_RANK } from './finding-factory.mjs';
+
 // Module-scope regexes to avoid re-creation per call
 const RE_EVIDENCE = /Evidence:\s*(\S.{4,})/;
 const RE_SEVERITY = /Severity:\s*(\w+)/;
 const RE_ACTIONABLE = /(?:Fix|Suggestion):\s*(.{10,})/;
 const RE_FILE_REF = /[\w/-]+(?:\.[\w]+)+/g;
-
-const SEVERITY_RANK = /** @type {const} */ ({
-  info: 0,
-  minor: 1,
-  major: 2,
-  critical: 3,
-});
-
-/**
- * Map internal vocabulary to output schema severity.
- * blocker → critical, warning → major, nit → minor.
- * Unknown values fall back to "major" (fail-safe per review-core.md).
- * @param {string} raw
- * @returns {keyof typeof SEVERITY_RANK}
- */
-function normalizeSeverity(raw) {
-  const lower = String(raw ?? '')
-    .toLowerCase()
-    .trim();
-  if (lower === 'blocker') return 'critical';
-  if (lower === 'warning') return 'major';
-  if (lower === 'nit') return 'minor';
-  if (lower in SEVERITY_RANK) return /** @type {keyof typeof SEVERITY_RANK} */ (lower);
-  return 'major'; // fail-safe
-}
 
 /**
  * Check that the finding message contains "Evidence:" followed by

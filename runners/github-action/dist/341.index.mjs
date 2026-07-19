@@ -8,6 +8,7 @@ export const modules = {
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   verifyFinding: () => (/* binding */ verifyFinding)
 /* harmony export */ });
+/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(1535);
 /**
  * Verify individual review findings before emission.
  *
@@ -15,41 +16,13 @@ export const modules = {
  * with per-check details. Rejected findings should be logged but not emitted.
  */
 
-/**
- * Severity hierarchy for comparison (higher number = more severe).
- * Internal vocabulary is mapped to output schema equivalents.
- * @see .claude/rules/review-core.md for the canonical mapping
- */
+
+
 // Module-scope regexes to avoid re-creation per call
 const RE_EVIDENCE = /Evidence:\s*(\S.{4,})/;
 const RE_SEVERITY = /Severity:\s*(\w+)/;
 const RE_ACTIONABLE = /(?:Fix|Suggestion):\s*(.{10,})/;
 const RE_FILE_REF = /[\w/-]+(?:\.[\w]+)+/g;
-
-const SEVERITY_RANK = /** @type {const} */ ({
-  info: 0,
-  minor: 1,
-  major: 2,
-  critical: 3,
-});
-
-/**
- * Map internal vocabulary to output schema severity.
- * blocker → critical, warning → major, nit → minor.
- * Unknown values fall back to "major" (fail-safe per review-core.md).
- * @param {string} raw
- * @returns {keyof typeof SEVERITY_RANK}
- */
-function normalizeSeverity(raw) {
-  const lower = String(raw ?? '')
-    .toLowerCase()
-    .trim();
-  if (lower === 'blocker') return 'critical';
-  if (lower === 'warning') return 'major';
-  if (lower === 'nit') return 'minor';
-  if (lower in SEVERITY_RANK) return /** @type {keyof typeof SEVERITY_RANK} */ (lower);
-  return 'major'; // fail-safe
-}
 
 /**
  * Check that the finding message contains "Evidence:" followed by
@@ -96,11 +69,11 @@ function checkSeverityJustified(finding, skill) {
   const skillSeverity = skill?.metadata?.severity;
   if (!skillSeverity) return true;
 
-  const findingNormalized = normalizeSeverity(sevMatch[1]);
-  const skillNormalized = normalizeSeverity(skillSeverity);
+  const findingNormalized = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .normalizeSeverity */ .lv)(sevMatch[1]);
+  const skillNormalized = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .normalizeSeverity */ .lv)(skillSeverity);
 
-  const findingRank = SEVERITY_RANK[findingNormalized] ?? SEVERITY_RANK.major;
-  const skillRank = SEVERITY_RANK[skillNormalized] ?? SEVERITY_RANK.major;
+  const findingRank = _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .SEVERITY_RANK */ .f3[findingNormalized] ?? _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .SEVERITY_RANK */ .f3.major;
+  const skillRank = _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .SEVERITY_RANK */ .f3[skillNormalized] ?? _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .SEVERITY_RANK */ .f3.major;
 
   return findingRank <= skillRank;
 }

@@ -19,8 +19,9 @@
 //   - the per-suppression `minSeverityToAutoSuppress` (added in PR-A)
 //     can RAISE the bar but never lower it; the global P1 guard wins.
 
+import { SEVERITY_RANK } from './finding-factory.mjs';
+
 const HIGH_SEVERITY = new Set(['major', 'critical']);
-const SEVERITY_RANK = { info: 0, minor: 1, major: 2, critical: 3 };
 
 function severityOf(finding) {
   return String(finding.severity || 'info').toLowerCase();

@@ -1,5 +1,5 @@
 import { generateReview } from './review-engine.mjs';
-import { classifyFindings } from './finding-factory.mjs';
+import { classifyFindings, normalizeSeverity, SEVERITY_RANK } from './finding-factory.mjs';
 import { renderDiffText } from './diff-processor.mjs';
 import { synthesizeTeamLeadReport } from './team-lead-synthesizer.mjs';
 
@@ -256,8 +256,6 @@ export function splitDiffIntoChunks(diff) {
     }));
 }
 
-const SEVERITY_ORDER = ['info', 'minor', 'major', 'critical'];
-
 /**
  * Compute consensusLevel from an agreement array.
  * Used as display-only metadata; MUST NOT influence severity decisions.
@@ -271,32 +269,10 @@ function computeConsensusLevel(agreement) {
   return 'single';
 }
 
-/**
- * Normalize a severity string to one of the canonical schema values.
- * Accepts both output schema values (critical/major/minor/info) and
- * internal LLM prompt values (blocker/warning/nit).
- * Unknown values fall back to 'major' per review-core.md.
- *
- * @param {string} severity
- * @returns {'critical' | 'major' | 'minor' | 'info'}
- */
-function normalizeSeverityLocal(severity) {
-  const s = String(severity ?? '')
-    .toLowerCase()
-    .trim();
-  if (s === 'critical' || s === 'blocker') return 'critical';
-  if (s === 'major' || s === 'warning') return 'major';
-  if (s === 'minor' || s === 'nit') return 'minor';
-  if (s === 'info') return 'info';
-  return 'major'; // fail-safe per review-core.md
-}
-
 function maxSeverity(a, b) {
-  const na = normalizeSeverityLocal(a);
-  const nb = normalizeSeverityLocal(b);
-  const ai = SEVERITY_ORDER.indexOf(na);
-  const bi = SEVERITY_ORDER.indexOf(nb);
-  return SEVERITY_ORDER[Math.max(ai, bi)];
+  const na = normalizeSeverity(a);
+  const nb = normalizeSeverity(b);
+  return SEVERITY_RANK[na] >= SEVERITY_RANK[nb] ? na : nb;
 }
 
 /**
@@ -379,7 +355,7 @@ export function mergeFindings(findings) {
       const passthroughAgreement = [...agreementSet];
       return {
         ...canonical,
-        severity: normalizeSeverityLocal(canonical.severity),
+        severity: normalizeSeverity(canonical.severity),
         agreement: passthroughAgreement,
         consensusLevel: computeConsensusLevel(passthroughAgreement),
       };

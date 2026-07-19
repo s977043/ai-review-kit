@@ -42,6 +42,7 @@ import { deriveLoopSignalFromArtifact } from './loop-signal.mjs';
 import { deriveGateDecision } from './gate-decision.mjs';
 import { computeStrictBlock } from './deterministic-gate.mjs';
 import { runDeterministicExecGateIfEnabled } from './deterministic-exec-gate.mjs';
+import { SEVERITY_RANK } from './finding-factory.mjs';
 import { createHash } from 'node:crypto';
 
 const VALID_PHASES = new Set(PHASES);
@@ -468,7 +469,6 @@ export function resolveReviewOutputFormat({
 }
 
 export const REVIEW_GATE_SEVERITIES = ['info', 'minor', 'major', 'critical'];
-const SEVERITY_RANK = { info: 0, minor: 1, major: 2, critical: 3 };
 
 /**
  * Evaluate the review gate exit code from an artifact's findings (#976).
