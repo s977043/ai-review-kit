@@ -110,7 +110,7 @@ jobs:
       - name: Judge dist freshness by commit timestamps
         id: judge
         run: |
-          src_ts=$(git log -1 --format=%ct -- 'runners/github-action/src/' 'src/' 'package-lock.json')
+          src_ts=$(git log -1 --format=%ct -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json')
           dist_ts=$(git log -1 --format=%ct -- 'runners/github-action/dist/')
 
           if [ -z "$src_ts" ]; then
@@ -125,7 +125,7 @@ jobs:
           fi
 
           if [ "$src_ts" -le "$dist_ts" ]; then
-            src_date=$(git log -1 --format=%ci -- 'runners/github-action/src/' 'src/' 'package-lock.json')
+            src_date=$(git log -1 --format=%ci -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json')
             dist_date=$(git log -1 --format=%ci -- 'runners/github-action/dist/')
             echo "dist/ is current (dist: ${dist_date}, src: ${src_date})"
             echo "needs_rebuild=false" >> "$GITHUB_OUTPUT"
@@ -155,17 +155,17 @@ jobs:
           # shipped bundle.
           npm run build:action
           if git diff --quiet -- runners/github-action/dist/; then
-            src_date=$(git log -1 --format=%ci -- 'runners/github-action/src/' 'src/' 'package-lock.json')
+            src_date=$(git log -1 --format=%ci -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json')
             dist_date=$(git log -1 --format=%ci -- 'runners/github-action/dist/')
             echo "dist/ rebuild produced no changes; bundle is genuinely fresh (dist commit: ${dist_date}, src commit: ${src_date})."
             exit 0
           fi
 
-          src_date=$(git log -1 --format=%ci -- 'runners/github-action/src/' 'src/' 'package-lock.json')
+          src_date=$(git log -1 --format=%ci -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json')
           dist_date=$(git log -1 --format=%ci -- 'runners/github-action/dist/')
           echo "::error::dist/ is stale. Source last changed at ${src_date} but dist last rebuilt at ${dist_date}, and rebuild produced byte-level changes. Run 'npm run build:action' and commit."
           echo "Recent src changes:"
-          git log -3 --oneline -- 'runners/github-action/src/' 'src/' 'package-lock.json'
+          git log -3 --oneline -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json'
           echo "Rebuild diff (file list):"
           git diff --name-only -- runners/github-action/dist/
           exit 1
