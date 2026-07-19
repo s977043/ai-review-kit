@@ -5,12 +5,12 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { GitError, GitRepoNotFoundError } from './lib/git.mjs';
-import { doctorLocalReview, planLocalReview, runLocalReview } from './lib/local-runner.mjs';
+import { planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError, resolveSkillSet } from '../runners/core/skill-loader.mjs';
 import CostEstimator from './core/cost-estimator.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
 import { RiskMapError } from './lib/risk-map.mjs';
-import { isLlmEnabled, parseList } from './lib/utils.mjs';
+import { parseList } from './lib/utils.mjs';
 import { PLANNER_MODES } from './lib/planner-utils.mjs';
 import { DEPTH_TO_REVIEW_MODE, resolveDepthToReviewMode } from './lib/review-plan-generator.mjs';
 import { deriveRunGate } from './lib/run-gate.mjs';
@@ -20,8 +20,8 @@ import { runRunsCommand } from './cli/commands/runs.mjs';
 import { runEvalCommand } from './cli/commands/eval.mjs';
 import { runFeedbackCommand } from './cli/commands/feedback.mjs';
 import { runSuppressionCommand } from './cli/commands/suppression.mjs';
+import { runDoctorCommand } from './cli/commands/doctor.mjs';
 import {
-  MAX_DIFF_PREVIEW_LINES,
   printHintLines,
   printPlan,
   printComments,
@@ -755,59 +755,7 @@ async function main(argv = process.argv.slice(2)) {
       return await runEvalCommand(parsed);
     }
     if (parsed.command === 'doctor') {
-      const result = await doctorLocalReview({
-        cwd: targetPath,
-        phase: parsed.phase,
-        debug: parsed.debug,
-        preferredModelHint: 'balanced',
-        availableContexts: parsed.availableContexts,
-        availableDependencies: parsed.availableDependencies,
-      });
-
-      const llmConfigured = isLlmEnabled();
-
-      console.log(`River Review doctor
-Repo: ${result.repoRoot}
-Base branch: ${result.defaultBranch}
-Merge base: ${result.mergeBase}
-Skills loaded: ${result.skillsCount}
-Project rules: ${result.projectRules ? 'present' : 'none'}
-LLM (review): ${llmConfigured ? 'configured' : 'not set'}
-LLM (planner): ${llmConfigured ? 'configured' : 'not set'}
-Contexts: ${(result.availableContexts || []).join(', ') || 'none'}
-Dependencies: ${
-        result.availableDependencies
-          ? result.availableDependencies.join(', ')
-          : 'not specified (skip disabled)'
-      }`);
-
-      if (!llmConfigured) {
-        printHintLines([
-          'Set `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_API_KEY` to enable headless LLM reviews.',
-          'Mechanical (no-key) checks and `--dry-run` / `--offline` still work without one.',
-        ]);
-      }
-
-      if (!result.changedFiles.length) {
-        console.log(`No changes to review compared to ${result.defaultBranch}.`);
-        return 0;
-      }
-
-      if (result.plan) {
-        printPlan(result.plan);
-      }
-      if (parsed.explain) {
-        printExplain(result);
-      }
-      if (parsed.debug) {
-        const impactTags = Array.isArray(result.plan?.impactTags) ? result.plan.impactTags : [];
-        console.log(
-          `\nDebug info:\n- Impact tags: ${impactTags.join(', ') || 'none'}\n- Token estimate: ${result.diff.tokenEstimate}\n`
-        );
-        console.log('--- diff preview ---');
-        console.log(result.diff.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
-      }
-      return 0;
+      return await runDoctorCommand(parsed, targetPath);
     }
 
     // Resolve --skill-set to its skill ids up front so an unknown name fails
