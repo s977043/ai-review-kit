@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.56.2](https://github.com/s977043/river-review/compare/v1.56.1...v1.56.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* **diff:** dist バンドル生成物を LLM プロンプト向け diff から除外する ([#1570](https://github.com/s977043/river-review/issues/1570)) ([62b0cf3](https://github.com/s977043/river-review/commit/62b0cf3bfe1c093d6fb052d1ca8a6a7752c8820e))
+* **review:** finding 検証を Severity/Confidence 必須に緩和しモデル実出力に合わせる ([#1571](https://github.com/s977043/river-review/issues/1571)) ([b15c950](https://github.com/s977043/river-review/commit/b15c950e6c220884e73a47a5af68b491a5107f1a))
+
 ## [1.56.1](https://github.com/s977043/river-review/compare/v1.56.0...v1.56.1) (2026-07-14)
 
 
