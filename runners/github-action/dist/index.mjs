@@ -64561,7 +64561,6 @@ var dist = __nccwpck_require__(2815);
 
 
 
-
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
 const MAX_DIFF_PREVIEW_LINES = 200;
@@ -64978,10 +64977,22 @@ function printDebugInfo(result, { log = console.log } = {}) {
  * validation problem never breaks JSON output emission.
  */
 let outputSchemaValidator;
+// Exported (not just used internally by validateOutputArtifact) so a canary
+// test can assert directly that schema loading succeeds — see #1599, where a
+// dist-only regression silently disabled validation because the failure mode
+// (falling back to null) is otherwise invisible from validateOutputArtifact's
+// return value alone.
 function getOutputSchemaValidator() {
   if (outputSchemaValidator !== undefined) return outputSchemaValidator;
   try {
-    const schemaPath = (0,external_node_url_.fileURLToPath)(__nccwpck_require__.ab + "output.schema.json");
+    // Pass the URL object straight to readFileSync instead of resolving it via
+    // fileURLToPath: readFileSync natively supports file: URLs, and this also
+    // sidesteps a dist-only regression (#1599) where ncc rewrites the `new
+    // URL(...)` expression into a plain path string
+    // (`__nccwpck_require2_.ab + "output.schema.json"`) — fileURLToPath then
+    // throws `TypeError [ERR_INVALID_URL]: Invalid URL` because that string is
+    // not a valid file: URL, while readFileSync accepts the plain path as-is.
+    const schemaPath = __nccwpck_require__.ab + "output.schema.json";
     const schema = JSON.parse((0,external_node_fs_.readFileSync)(schemaPath, 'utf8'));
     const ajv = new _2020({ allErrors: true, strict: false });
     dist(ajv);
