@@ -17,7 +17,7 @@ tags:
   - safety-net
   - midstream
 severity: minor
-inputContext: [diff, fullFile, tests]
+inputContext: [diff]
 outputKind: [findings, questions]
 modelHint: high-accuracy
 dependencies: [code_search, test_runner]
@@ -91,13 +91,13 @@ report-only。finding/question のみを出力し、自動修正・自動マー�
 
 ### Check 2 — External behavior preservation evidence / 外部挙動維持の証拠
 
-structural change の前後で**外部挙動が維持されている証拠（テスト・型・静的解析）が不足**している場合に指摘する。
+structural change の前後で**外部挙動が維持されている証拠（テスト・型・静的解析）が差分から観察できない**場合に指摘する。
 
-- 抽出・移動・改名・シグネチャ変更を行ったが、その対象を通すテストが差分にも既存にも見当たらない（Safety Net なしの構造変更）。
-- 挙動維持が型・静的解析で保証されない（動的な分岐・副作用を含む）のに、テスト証拠がない。
+- 抽出・移動・改名・シグネチャ変更を行ったが、その対象を通すテストの追加・更新が**同一 diff に含まれない**（Safety Net なしの構造変更）。
+- 挙動維持が型・静的解析で保証されない（動的な分岐・副作用を含む）のに、diff にテスト証拠がない。
 - 証拠不足の場合、`Characterization Test`（現状の外部挙動を固定するテスト）の追加を促すか、`needs_review`（question）とする。
 
-対象を通すテストの実在は `code_search` / `test_runner` で確認する。テストの存在を確認できないまま「テストがない」と断定しない（確認できなければ question）。
+判定は inputContext の `diff`（テスト差分を含む）を一次情報とする。`code_search` / `test_runner` が利用可能なら既存テストの実在確認に用いてよいが、これらは既定の runner では供給されない前提で運用する。「diff に安全網が観察できない構造変更」は Safety Net 未提示として `minor` の finding とし、Characterization Test の追加（または needs_review）を促す。ただし diff の外に既存テストがある可能性は排除できないため、「既存テストが無い」と断定する書き方はせず、指摘は「この変更に挙動維持の証拠が含まれていない」という diff 内で反証可能な形に限定する。構造変更かどうか自体が diff から判別できない場合は question とする。
 
 ## severity 較正
 
@@ -109,7 +109,7 @@ structural change の前後で**外部挙動が維持されている証拠（テ
 
 - finding の `file:line` は差分内にアンカーする。差分外の推測に基づく指摘は question として返す。
 - 「外部挙動を変える差分」と「構造変更の差分」を対比で示し、どこが behavior でどこが structure かを明示する。
-- 挙動維持の証拠（テストの `file:line`・型による保証・静的解析）を示すか、無いことを `code_search` の検索語付きで示す。
+- 挙動維持の証拠（diff 内のテスト差分の `file:line`・型による保証・静的解析）を示すか、diff に証拠が無いことを示す（既存テストの有無を diff だけでは断定できない場合は question とし、確認に使える検索語を添える）。
 - 批判的・攻撃的な口調を避ける（`.claude/rules/review-core.md`）。
 
 ## Output / 出力フォーマット

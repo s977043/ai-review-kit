@@ -99,6 +99,13 @@
       "dependencies": []
     },
     {
+      "id": "behavior-structure-separation",
+      "phase": "midstream",
+      "modelHint": "high-accuracy",
+      "outputKind": ["findings", "questions"],
+      "dependencies": ["code_search", "test_runner"]
+    },
+    {
       "id": "closure-scope-retention",
       "phase": "midstream",
       "modelHint": "high-accuracy",
@@ -132,6 +139,13 @@
       "modelHint": "cheap",
       "outputKind": ["findings", "summary"],
       "dependencies": []
+    },
+    {
+      "id": "knowledge-to-code-alignment",
+      "phase": "midstream",
+      "modelHint": "high-accuracy",
+      "outputKind": ["findings", "questions"],
+      "dependencies": ["code_search", "adr_lookup"]
     },
     {
       "id": "review-comment-triage",

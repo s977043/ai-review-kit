@@ -108,7 +108,7 @@
     {
       "id": "behavior-structure-separation",
       "path": "skills/midstream/behavior-structure-separation",
-      "checksum": "sha256:98863bbb58f78463919bf50b1c8a38ee046de850adcc47752848181263e7a71c",
+      "checksum": "sha256:436ee0c8bce446c41d6bdf5dcfe640fbad07de3332f2ea3bf7936b023e641717",
       "files": 4
     },
     {
@@ -360,7 +360,7 @@
     {
       "id": "knowledge-to-code-alignment",
       "path": "skills/midstream/knowledge-to-code-alignment",
-      "checksum": "sha256:b830d305603c547f60eaa82fccb3e3be2889106e5917cdd827c7ab2f37ee9c12",
+      "checksum": "sha256:5a553e5f75afed0270458743116d12d97595fe9905c0b6e6ca11901aa9e67a5f",
       "files": 4
     },
     {
