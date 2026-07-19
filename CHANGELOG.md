@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.57.2](https://github.com/s977043/river-review/compare/v1.57.1...v1.57.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* **scoring:** 不明 severity の fail-safe を info から major に修正し正典に委譲する ([#1595](https://github.com/s977043/river-review/issues/1595)) ([e8427e4](https://github.com/s977043/river-review/commit/e8427e4b047cd67dbc7754fd36a490229d972064)), closes [#1585](https://github.com/s977043/river-review/issues/1585)
+
 ## [1.57.1](https://github.com/s977043/river-review/compare/v1.57.0...v1.57.1) (2026-07-19)
 
 
