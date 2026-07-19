@@ -37,6 +37,30 @@ function isExcludedFile(path) {
   return false;
 }
 
+/**
+ * Whether a finding pointing at `path` targets a machine-generated build
+ * artifact directory (a `dist/` path segment, e.g.
+ * `runners/github-action/dist/index.mjs`).
+ *
+ * This is a DIFFERENT, deliberately NARROWER concept than `isExcludedFile`
+ * (the LLM-diff optimizer's exclusion rule). `isExcludedFile` also drops `.md`
+ * and lock files to save the LLM prompt's char budget — but for the
+ * finding-OUTPUT stage that over-suppresses: a real finding on `docs/how-to.md`
+ * (e.g. a hardcoded secret inside a code fence detected by findHardcodedSecrets)
+ * or on `package-lock.json` would be silently hidden. #1597's scope is
+ * "generated build artifacts" only, so output suppression matches the generated
+ * directory (`EXCLUDED_DIR_RE`) alone and never `.md` / lock files. The
+ * heuristic detectors still scan the raw diff by design (#1570/#1597 — the
+ * #1070 canary boundary); this predicate only gates the emitted findings.
+ *
+ * @param {string} path
+ * @returns {boolean}
+ */
+export function isGeneratedArtifactPath(path) {
+  if (!path || typeof path !== 'string') return false;
+  return EXCLUDED_DIR_RE.test(path);
+}
+
 function normalizeWhitespace(line) {
   return line.replace(/\s+/g, '');
 }
