@@ -46717,7 +46717,8 @@ function computeFindingBreakdown(finding) {
 /* harmony export */ });
 /* unused harmony exports computeAxisScores, computeOverallScore, countBySeverity, deriveVerdict */
 /* harmony import */ var _rubric_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5034);
-/* harmony import */ var _breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9946);
+/* harmony import */ var _breakdown_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(9946);
+/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1535);
 /**
  * Review scoring engine.
  *
@@ -46728,6 +46729,7 @@ function computeFindingBreakdown(finding) {
  * The output is always flagged `derived: true` to signal that this is a
  * heuristic indicator, not an authoritative quality metric.
  */
+
 
 
 
@@ -46764,7 +46766,7 @@ function computeAxisScores(findings, options = {}) {
 
   for (const finding of findings ?? []) {
     const axis = classifyAxis(finding);
-    const severity = normalizeSeverity(finding.severity);
+    const severity = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeSeverity */ .lv)(finding.severity);
     const deduction = deductions[axis]?.[severity] ?? 0;
     scores[axis] = Math.max(0, scores[axis] - deduction);
   }
@@ -46793,7 +46795,7 @@ function computeOverallScore(axisScores) {
 function countBySeverity(findings) {
   const counts = { critical: 0, major: 0, minor: 0, info: 0 };
   for (const f of findings ?? []) {
-    const s = normalizeSeverity(f.severity);
+    const s = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeSeverity */ .lv)(f.severity);
     counts[s]++;
   }
   return counts;
@@ -46860,7 +46862,7 @@ function scoreReview(findings, { humanApprovalRequired = false } = {}) {
   const verdict = deriveVerdict({ overall, axes, counts, humanApprovalRequired });
   const findingBreakdowns = (findings ?? []).map((f) => ({
     id: f.id,
-    ...(0,_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(f),
+    ...(0,_breakdown_mjs__WEBPACK_IMPORTED_MODULE_2__/* .computeFindingBreakdown */ ._)(f),
   }));
   return { overall, axes, verdict, counts, findingBreakdowns, derived: true };
 }
@@ -46884,24 +46886,6 @@ function resolveVerdict(canonicalDecision, recomputedVerdict) {
     return canonicalDecision;
   }
   return recomputedVerdict;
-}
-
-/**
- * Normalize severity to the canonical vocabulary used by the scoring engine.
- * Accepts both the output schema values (critical/major/minor/info) and
- * internal values (blocker/warning/nit) via fall-through.
- *
- * @param {string} severity
- * @returns {'critical' | 'major' | 'minor' | 'info'}
- */
-function normalizeSeverity(severity) {
-  const s = String(severity ?? '')
-    .toLowerCase()
-    .trim();
-  if (s === 'critical' || s === 'blocker') return 'critical';
-  if (s === 'major' || s === 'warning') return 'major';
-  if (s === 'minor' || s === 'nit') return 'minor';
-  return 'info';
 }
 
 

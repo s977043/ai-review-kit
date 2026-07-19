@@ -85,6 +85,13 @@ describe('computeAxisScores', () => {
     ]);
     assert.equal(scores.security, 0);
   });
+
+  it('deducts unknown severity as major, not info (canonical fail-safe, #1585)', () => {
+    // Before #1585 the local normalizer defaulted unknown → info (deduction 3);
+    // the canonical normalizer fail-safes to major (deduction 20).
+    const scores = computeAxisScores([{ severity: 'bogus', ruleId: 'rr-mid-perf-n1' }]);
+    assert.equal(scores.performance, 80);
+  });
 });
 
 describe('computeOverallScore', () => {
@@ -115,6 +122,23 @@ describe('countBySeverity', () => {
       major: 2,
       minor: 1,
       info: 1,
+    });
+  });
+
+  it('fail-safes unknown/empty severity to major (canonical, #1585)', () => {
+    // Unknown values fall through the canonical normalizeSeverity default,
+    // which is `major` per .claude/rules/review-core.md — not `info`.
+    const findings = [
+      { severity: 'bogus' },
+      { severity: '' },
+      { severity: undefined },
+      { severity: 'major' },
+    ];
+    assert.deepEqual(countBySeverity(findings), {
+      critical: 0,
+      major: 4,
+      minor: 0,
+      info: 0,
     });
   });
 });
