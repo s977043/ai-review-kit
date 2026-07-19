@@ -32,6 +32,7 @@ import { runReviewCommand } from './cli/commands/review.mjs';
 import { runSkillsCommand } from './cli/commands/skills.mjs';
 import { runRunsCommand } from './cli/commands/runs.mjs';
 import { runEvalCommand } from './cli/commands/eval.mjs';
+import { runFeedbackCommand } from './cli/commands/feedback.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
@@ -1325,42 +1326,7 @@ async function main(argv = process.argv.slice(2)) {
     }
 
     if (parsed.command === 'feedback') {
-      if (parsed.feedbackSubcommand !== 'add') {
-        console.error(
-          'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr --reviewer --model --reversed-by).'
-        );
-        return 1;
-      }
-      const { buildFeedbackEntry, appendFeedbackEntry, buildFeedbackScaffold, FeedbackError } =
-        await import('./lib/feedback.mjs');
-      const repoRoot = await ensureGitRepo(targetPath);
-      let entry;
-      try {
-        entry = buildFeedbackEntry({
-          feedbackType: parsed.feedbackType,
-          skillId: parsed.feedbackSkillId,
-          trigger: parsed.feedbackTrigger ?? undefined,
-          findingFingerprint: parsed.feedbackFingerprint,
-          evidence: parsed.feedbackEvidence,
-          pr: parsed.feedbackPrNumber,
-          reviewer: parsed.feedbackReviewer,
-          model: parsed.feedbackModel,
-          reversedBy: parsed.feedbackReversedBy,
-        });
-      } catch (err) {
-        if (err instanceof FeedbackError) {
-          console.error(`Error: ${err.message}`);
-          return 1;
-        }
-        throw err;
-      }
-      const filePath = await appendFeedbackEntry(entry, { repoRoot });
-      const scaffold = buildFeedbackScaffold(entry);
-      console.log('Feedback recorded: ' + entry.feedbackType + ' for ' + entry.skillId);
-      console.log('  written to: ' + filePath);
-      console.log('  next action: ' + scaffold.action);
-      console.log('  apply scaffolds with: npm run feedback:apply');
-      return 0;
+      return runFeedbackCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'runs') {
