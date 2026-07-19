@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.58.0](https://github.com/s977043/river-review/compare/v1.57.2...v1.58.0) (2026-07-19)
+
+
+### Features
+
+* **ci:** review run debug JSON を CI artifact として観測可能にする ([#1601](https://github.com/s977043/river-review/issues/1601)) ([94843d1](https://github.com/s977043/river-review/commit/94843d1f55dac1a398dff31ccb2c2ca5b68879a8))
+
+
+### Bug Fixes
+
+* **review:** suppress generated-path (dist/) findings at the output stage (Closes [#1597](https://github.com/s977043/river-review/issues/1597)) ([#1602](https://github.com/s977043/river-review/issues/1602)) ([c1dc2f6](https://github.com/s977043/river-review/commit/c1dc2f64d4bb49fd4d67ebfd25c0a4314617f36f))
+* **skills:** knowledge-to-code 系 2 スキルを diff 中心に再設計し context ガードを追加する ([#1605](https://github.com/s977043/river-review/issues/1605)) ([1468991](https://github.com/s977043/river-review/commit/146899178955202f643d5d712d0049fdc9826820))
+
 ## [1.57.2](https://github.com/s977043/river-review/compare/v1.57.1...v1.57.2) (2026-07-19)
 
 
