@@ -334,5 +334,139 @@ test('backstop: drift with no locatable field line is a hard error, not a silent
   });
   assert.equal(changes.length, 0);
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /no " {4}tags:" line exists/);
+  assert.match(errors[0], /no "tags:" line exists/);
+});
+
+// --- #1580 line review: id first-field, CRLF, malformed frontmatter, BOM. ---
+
+test('parseFrontmatter tolerates a BOM and leading whitespace (gemini #3609683790)', () => {
+  assert.equal(parseFrontmatter('﻿---\nid: a\nname: X\n---\nbody').id, 'a');
+  assert.equal(parseFrontmatter('\n\n  ---\nid: b\nname: Y\n---\nbody').id, 'b');
+});
+
+test('id drift on the `  - id:` first field self-repairs (gemini #3609683783)', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'registry-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await makeSkill(root, 'skills/midstream/a', {
+    id: 'new-id',
+    version: '0.1.0',
+    name: 'Alpha',
+    category: 'midstream',
+    phase: 'midstream',
+    tags: ['x'],
+    severity: 'major',
+  });
+  const raw = `skills:
+  - id: old-id
+    version: '0.1.0'
+    name: Alpha
+    path: skills/midstream/a/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [x]
+    severity: major
+    recommended: true
+    description: 'd'
+`;
+  const { content, changes, errors } = await syncRegistryFields(raw, {
+    rootDir: root,
+    prettierConfig: PRETTIER,
+  });
+  assert.deepEqual(errors, []);
+  assert.deepEqual(
+    changes.map((c) => `${c.field}`),
+    ['id']
+  );
+  assert.equal(entryById(content, 'new-id').id, 'new-id');
+  assert.match(content, /^ {2}- id: new-id$/m); // rewritten in place, prefix preserved
+});
+
+test('CRLF input is normalized: no phantom drift, LF output (gemini #3609683784/786)', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'registry-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await makeSkill(root, 'skills/midstream/a', {
+    id: 'a',
+    version: '0.1.0',
+    name: 'Alpha',
+    category: 'midstream',
+    phase: 'midstream',
+    tags: ['x'],
+    severity: 'major',
+  });
+  const lf = `skills:
+  - id: a
+    version: '0.1.0'
+    name: Alpha
+    path: skills/midstream/a/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [x]
+    severity: major
+    recommended: true
+    description: 'd'
+`;
+  const crlf = lf.replaceAll('\n', '\r\n');
+  const { content, changes, errors } = await syncRegistryFields(crlf, {
+    rootDir: root,
+    prettierConfig: PRETTIER,
+  });
+  assert.deepEqual(errors, []);
+  assert.equal(changes.length, 0); // CRLF must not read as stale
+  assert.ok(!content.includes('\r'));
+  assert.equal(content, lf);
+});
+
+test('malformed frontmatter YAML is a hard error, not a silent skip (gemini #3609683789)', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'registry-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const full = path.join(root, 'skills/midstream/a');
+  await fs.mkdir(full, { recursive: true });
+  // Unclosed flow sequence => js-yaml throws.
+  await fs.writeFile(
+    path.join(full, 'SKILL.md'),
+    '---\nid: a\nname: Alpha\ntags: [x, y\nseverity: major\n---\nbody\n'
+  );
+  const raw = `skills:
+  - id: a
+    version: '0.1.0'
+    name: Alpha
+    path: skills/midstream/a/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [z]
+    severity: major
+    recommended: true
+    description: 'd'
+`;
+  const { changes, errors } = await syncRegistryFields(raw, {
+    rootDir: root,
+    prettierConfig: PRETTIER,
+  });
+  assert.equal(changes.length, 0);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /frontmatter is not valid YAML/);
+});
+
+test('genuinely missing SKILL.md (ENOENT) is skipped, not an error', async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'registry-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  // No file created at the referenced path.
+  const raw = `skills:
+  - id: a
+    version: '0.1.0'
+    name: Alpha
+    path: skills/midstream/missing/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [z]
+    severity: major
+    recommended: true
+    description: 'd'
+`;
+  const { changes, errors } = await syncRegistryFields(raw, {
+    rootDir: root,
+    prettierConfig: PRETTIER,
+  });
+  assert.deepEqual(errors, []); // validateRegistryPaths owns the missing-file signal
+  assert.equal(changes.length, 0);
 });

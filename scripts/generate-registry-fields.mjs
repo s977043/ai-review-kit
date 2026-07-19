@@ -71,9 +71,16 @@ const REGISTRY_PATH = path.join(ROOT, 'skills', 'registry.yaml');
 // generated: it is the pointer to the file we read the frontmatter from).
 export const MANAGED_FIELDS = ['id', 'version', 'name', 'category', 'phase', 'tags', 'severity'];
 
-/** Parse the YAML frontmatter block of a SKILL.md into an object. */
+/**
+ * Parse the YAML frontmatter block of a SKILL.md into an object. Tolerates a
+ * leading UTF-8 BOM and leading blank lines/whitespace before the opening `---`
+ * so a stray editor artifact does not make a real skill's frontmatter vanish
+ * (which would look like "no drift" — a silent miss).
+ */
 export function parseFrontmatter(text) {
-  const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  // Strip a leading UTF-8 BOM (U+FEFF) and any leading whitespace in one pass.
+  const cleaned = String(text ?? '').replace(/^[﻿\s]+/, '');
+  const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(cleaned);
   if (!m) return {};
   return yaml.load(m[1]) ?? {};
 }
@@ -144,13 +151,18 @@ function isContinuationLine(line) {
  * @returns {Promise<{ content: string, changes: Array<{ id: string, field: string, from: unknown, to: unknown }>, errors: string[] }>}
  */
 export async function syncRegistryFields(raw, { rootDir = ROOT, prettierConfig } = {}) {
-  const parsed = yaml.load(raw) ?? {};
+  // Normalize CRLF → LF up front: on an autocrlf checkout `raw` may carry `\r`,
+  // which would make `l === 'skills:'` and the field regexes miss, and — since
+  // prettier always emits LF — make `--check` see a phantom diff. `.gitattributes`
+  // only pins LF for dist/*.sh, not registry.yaml, so this is load-bearing.
+  const normalizedRaw = raw.replaceAll('\r\n', '\n');
+  const parsed = yaml.load(normalizedRaw) ?? {};
   const entriesByPath = new Map();
   for (const entry of Array.isArray(parsed.skills) ? parsed.skills : []) {
     if (entry && typeof entry.path === 'string') entriesByPath.set(entry.path, entry);
   }
 
-  const lines = raw.split('\n');
+  const lines = normalizedRaw.split('\n');
   const skillsIdx = lines.findIndex((l) => l === 'skills:');
   if (skillsIdx === -1) {
     throw new Error('registry.yaml: could not find top-level `skills:` key');
@@ -192,12 +204,23 @@ export async function syncRegistryFields(raw, { rootDir = ROOT, prettierConfig }
     if (!skillPath) continue;
 
     const registryEntry = entriesByPath.get(skillPath) ?? {};
+    let skillText;
+    try {
+      skillText = await fs.readFile(path.resolve(rootDir, skillPath), 'utf8');
+    } catch (err) {
+      // A genuinely missing file is reported by validateRegistryPaths — skip it
+      // here. Any OTHER read error (permissions, IO) is unexpected: fail loudly
+      // rather than pretend there is no drift.
+      if (err && err.code === 'ENOENT') continue;
+      throw err;
+    }
     let frontmatter;
     try {
-      const skillText = await fs.readFile(path.resolve(rootDir, skillPath), 'utf8');
       frontmatter = parseFrontmatter(skillText);
-    } catch {
-      // Missing/unreadable SKILL.md is reported by validateRegistryPaths; skip.
+    } catch (err) {
+      // Malformed frontmatter YAML must not be swallowed as "no drift" — record
+      // a hard error so the sync/check fails visibly (gemini #3609683789).
+      errors.push(`${skillPath}: SKILL.md frontmatter is not valid YAML: ${err.message}`);
       continue;
     }
 
@@ -206,14 +229,19 @@ export async function syncRegistryFields(raw, { rootDir = ROOT, prettierConfig }
       const desired = frontmatter[field];
       if (valuesEqual(registryEntry[field], desired)) continue;
 
-      // Locate the field line — it may hold the value inline (`tags: [...]`) or
-      // be a wrapped key (`tags:`) whose value continues on deeper-indented
-      // lines. Consume the whole span so the wrapped case is not missed.
-      const fieldRe = new RegExp(`^ {4}${field}:`);
+      // Locate the field line. Two shapes exist: a normal 4-space field
+      // (`    tags: ...`) and the list-item first field, which in this registry
+      // is always `  - id: ...`. Match both and keep whichever prefix was used
+      // so an `id` (or any future first-field) drift can actually be rewritten
+      // rather than falling through to the backstop error (gemini #3609683783).
+      const fieldRe = new RegExp(`^( {4}|  - )${field}:`);
       let fieldIdx = -1;
+      let prefix = '    ';
       for (let i = start; i < end; i++) {
-        if (fieldRe.test(lines[i])) {
+        const m = fieldRe.exec(lines[i]);
+        if (m) {
           fieldIdx = i;
+          prefix = m[1];
           break;
         }
       }
@@ -223,7 +251,7 @@ export async function syncRegistryFields(raw, { rootDir = ROOT, prettierConfig }
         // silent skip that let #1580 W1 slip through.
         errors.push(
           `${registryEntry.id ?? skillPath}: frontmatter sets ${field}=` +
-            `${JSON.stringify(normalizeValue(desired))} but no "    ${field}:" line exists in ` +
+            `${JSON.stringify(normalizeValue(desired))} but no "${field}:" line exists in ` +
             'its registry entry to update'
         );
         continue;
@@ -234,7 +262,7 @@ export async function syncRegistryFields(raw, { rootDir = ROOT, prettierConfig }
       replacements.push({
         index: fieldIdx,
         span: spanEnd - fieldIdx,
-        text: `    ${field}: ${renderFieldValue(field, desired)}`,
+        text: `${prefix}${field}: ${renderFieldValue(field, desired)}`,
       });
       changes.push({
         id: registryEntry.id ?? skillPath,
@@ -265,6 +293,9 @@ export async function syncRegistryFields(raw, { rootDir = ROOT, prettierConfig }
 async function main() {
   const check = process.argv.includes('--check');
   const raw = await fs.readFile(REGISTRY_PATH, 'utf8');
+  // Compare against the LF-normalized input: prettier emits LF, so a CRLF
+  // checkout must not read as "stale". syncRegistryFields normalizes internally.
+  const rawLf = raw.replaceAll('\r\n', '\n');
   const { content, changes, errors } = await syncRegistryFields(raw);
 
   // Hard errors (unrealizable drift) fail both modes — never write a partial file.
@@ -275,7 +306,7 @@ async function main() {
   }
 
   if (check) {
-    if (content === raw) {
+    if (content === rawLf) {
       console.log('registry structural fields are in sync with SKILL.md frontmatter.');
       return 0;
     }
@@ -287,7 +318,7 @@ async function main() {
     return 1;
   }
 
-  if (content === raw) {
+  if (content === rawLf) {
     console.log('registry structural fields already in sync; no changes.');
     return 0;
   }
