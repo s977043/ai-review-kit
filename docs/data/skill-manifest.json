@@ -90,7 +90,7 @@
     {
       "id": "assumption-resolution-trace",
       "path": "skills/midstream/assumption-resolution-trace",
-      "checksum": "sha256:63b016a4d68691f1401667fdc3a741208bc9f344ace8cc2cb8cf60351b2cc703",
+      "checksum": "sha256:00fa4fc80aef184a97bbce46836f2a7934986322025071fc9a2b6de111a0de22",
       "files": 3
     },
     {
@@ -348,7 +348,7 @@
     {
       "id": "independent-review-synthesis",
       "path": "skills/midstream/independent-review-synthesis",
-      "checksum": "sha256:3366e84ddb38bfbcc38e08f3678ca0f8be9b29ef3e1fa6f88d4fc954e346336e",
+      "checksum": "sha256:9c0f2bbdc2a8c49fc89112a424868bce4946ee6d883f2d44f4bbbdee3b6d94eb",
       "files": 9
     },
     {
@@ -396,7 +396,7 @@
     {
       "id": "logic-torturing",
       "path": "skills/midstream/logic-torturing",
-      "checksum": "sha256:1d20839f5369a01409baf3abda336b648aca69f7dd7a7224ea7a5db8cfbd1d2a",
+      "checksum": "sha256:fe73a4922e853e7d2e9c9642e7238cdb3673d13210606aaa89c04ff81891c9aa",
       "files": 1
     },
     {
@@ -534,7 +534,7 @@
     {
       "id": "pre-mortem",
       "path": "skills/upstream/pre-mortem",
-      "checksum": "sha256:bfb2a02fe82cd0707b65ddd5c62cb2b4be40b24dd5c6ffeff1962efc3fa991fe",
+      "checksum": "sha256:111d032f16338212f499faf090e8a8a75c7754dfc32b97f1286db800bf4a260f",
       "files": 1
     },
     {
