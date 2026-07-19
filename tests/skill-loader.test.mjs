@@ -10,8 +10,11 @@ import {
   loadSkills,
   loadSkillMetadata,
   loadAllSkillMetadata,
+  loadRegistry,
   loadRecommendationSets,
   resolveRecommendationSet,
+  selectPacks,
+  selectRecommendationSets,
   SkillLoaderError,
 } from '../runners/core/skill-loader.mjs';
 import { withTempDir, createTempDirAsync } from './helpers/temp-dir.mjs';
@@ -522,6 +525,72 @@ test('loadRecommendationSets returns {} when registry is absent', async () => {
     },
     { prefix: TMP_PREFIX }
   );
+});
+
+test('loadRegistry returns the parsed document for the real registry', async () => {
+  const result = await loadRegistry();
+  assert.equal(result.ok, true);
+  assert.ok(result.parsed && typeof result.parsed === 'object');
+  assert.ok(Array.isArray(result.parsed.skills), 'skills: must be an array');
+  assert.ok(result.registryPath.endsWith(path.join('skills', 'registry.yaml')));
+});
+
+test('loadRegistry reports a read failure when registry.yaml is absent', async () => {
+  await withTempDir(
+    async (tmpDir) => {
+      const result = await loadRegistry({ skillsDir: tmpDir });
+      assert.equal(result.ok, false);
+      assert.equal(result.phase, 'read');
+      assert.ok(result.registryPath.endsWith('registry.yaml'));
+    },
+    { prefix: TMP_PREFIX }
+  );
+});
+
+test('loadRegistry reports a parse failure on malformed YAML', async () => {
+  await withTempDir(
+    async (tmpDir) => {
+      await writeFile(path.join(tmpDir, 'registry.yaml'), 'skills: [\n', 'utf8');
+      const result = await loadRegistry({ skillsDir: tmpDir });
+      assert.equal(result.ok, false);
+      assert.equal(result.phase, 'parse');
+      assert.ok(typeof result.message === 'string' && result.message.length > 0);
+    },
+    { prefix: TMP_PREFIX }
+  );
+});
+
+test('loadRegistry normalizes a null document to an empty object', async () => {
+  await withTempDir(
+    async (tmpDir) => {
+      // An explicit YAML null document (`~`) parses to null; loadRegistry
+      // normalizes it to {} via `?? {}`. (A zero-byte/comment-only file is a
+      // js-yaml parse error, reported as phase: 'parse' — the historical
+      // behavior of loadPacks/loadRecommendationSets.)
+      await writeFile(path.join(tmpDir, 'registry.yaml'), '~\n', 'utf8');
+      const result = await loadRegistry({ skillsDir: tmpDir });
+      assert.equal(result.ok, true);
+      assert.deepEqual(result.parsed, {});
+    },
+    { prefix: TMP_PREFIX }
+  );
+});
+
+test('selectPacks / selectRecommendationSets project registry sections', async () => {
+  const parsed = {
+    packs: [{ id: 'p1', skills: ['a'] }, { notId: true }, 'bogus'],
+    recommendations: { basic: { skills: ['a'] } },
+  };
+  assert.deepEqual(
+    selectPacks(parsed).map((p) => p.id),
+    ['p1']
+  );
+  assert.deepEqual(selectRecommendationSets(parsed), { basic: { skills: ['a'] } });
+  // Defensive defaults for missing / malformed sections.
+  assert.deepEqual(selectPacks({}), []);
+  assert.deepEqual(selectRecommendationSets({}), {});
+  assert.deepEqual(selectPacks(null), []);
+  assert.deepEqual(selectRecommendationSets(null), {});
 });
 
 test('respects explicit multi-phase array when category is a stream value', async () => {

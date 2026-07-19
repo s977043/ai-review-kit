@@ -11,7 +11,6 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { pathToFileURL } = require('url');
-const yaml = require('js-yaml');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const RUNS_DIR =
@@ -28,9 +27,21 @@ const HEURISTIC_SKILL_NAMES = {
   'coverage-gap': 'Coverage gap',
 };
 
+// Read the skill inventory through the shared loader's single read+parse entry
+// point (runners/core/skill-loader.mjs is ESM; this CJS script reaches it via
+// dynamic import, the same bridge buildDetectorCoverage already uses). A missing
+// or malformed registry still fails loudly, matching the prior direct readFile.
 async function readSkillRegistry() {
-  const raw = await fs.readFile(path.join(REPO_ROOT, 'skills', 'registry.yaml'), 'utf8');
-  const parsed = yaml.load(raw) || {};
+  const { loadRegistry } = await import(
+    pathToFileURL(path.join(REPO_ROOT, 'runners', 'core', 'skill-loader.mjs')).href
+  );
+  const result = await loadRegistry({ skillsDir: path.join(REPO_ROOT, 'skills') });
+  if (!result.ok) {
+    throw new Error(
+      `Failed to ${result.phase} skill registry at ${result.registryPath}: ${result.message}`
+    );
+  }
+  const parsed = result.parsed || {};
   return Array.isArray(parsed.skills) ? parsed.skills : [];
 }
 

@@ -37,6 +37,7 @@ on:
     # production deps into dist/, see #1057).
     paths:
       - 'runners/github-action/src/**'
+      - 'runners/core/**'
       - 'src/**'
       - 'package-lock.json'
 
