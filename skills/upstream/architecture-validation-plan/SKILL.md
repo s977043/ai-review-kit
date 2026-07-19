@@ -22,7 +22,6 @@ tags:
 severity: minor
 inputContext:
   - diff
-  - adr
 outputKind:
   - findings
   - actions

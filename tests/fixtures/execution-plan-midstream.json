@@ -160,8 +160,7 @@
       "id": "api-design",
       "reasons": [
         "phase mismatch: upstream !== midstream",
-        "applyTo did not match any changed file",
-        "missing inputContext: adr"
+        "applyTo did not match any changed file"
       ]
     },
     {

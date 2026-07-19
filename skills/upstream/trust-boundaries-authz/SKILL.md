@@ -17,7 +17,7 @@ applyTo:
   - 'pages/**/*architecture*.md'
 tags: [architecture, security, authz, trust-boundary, upstream]
 severity: critical
-inputContext: [diff, adr]
+inputContext: [diff]
 outputKind: [summary, findings, actions, questions]
 modelHint: high-accuracy
 dependencies: [repo_metadata]
@@ -44,7 +44,7 @@ Why: 信頼境界・認可設計はチェックリスト型評価が主だが、
 
 - [ ] 差分にセキュリティ設計・認証/認可・信頼境界に関連するドキュメント変更が含まれている
 - [ ] 誤字・リンク更新のみの変更ではない
-- [ ] inputContextにdiffまたはadrが含まれている
+- [ ] inputContextにdiffが含まれている
 
 ゲート不成立時の出力: `NO_REVIEW: trust-boundaries-authz — 信頼境界・認可設計に関連する変更が検出されない`
 

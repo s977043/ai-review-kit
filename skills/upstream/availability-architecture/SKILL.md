@@ -15,7 +15,7 @@ applyTo:
   - '**/*.adr'
 tags: [availability, resilience, sre, upstream]
 severity: major
-inputContext: [diff, adr]
+inputContext: [diff]
 outputKind: [summary, findings, actions, questions]
 modelHint: balanced
 dependencies: [repo_metadata]

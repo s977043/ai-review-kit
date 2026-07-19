@@ -10,7 +10,7 @@ applyTo:
   - '**/routes/**'
 tags: [api, design, upstream]
 severity: major
-inputContext: [diff, adr]
+inputContext: [diff]
 outputKind: [findings, summary, actions]
 modelHint: balanced
 dependencies: [repo_metadata]

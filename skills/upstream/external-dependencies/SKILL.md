@@ -14,7 +14,7 @@ applyTo:
   - 'pages/**/*architecture*.md'
 tags: [architecture, dependencies, vendor, risk, upstream]
 severity: major
-inputContext: [diff, adr]
+inputContext: [diff]
 outputKind: [summary, findings, actions, questions]
 modelHint: balanced
 dependencies: [repo_metadata]

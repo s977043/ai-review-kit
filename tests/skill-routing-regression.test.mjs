@@ -11,8 +11,8 @@ function findSkillInPlan(plan, id) {
 }
 
 test('upstream skill is gated by inputContext', async () => {
-  const skillId = 'api-design';
-  const changedFiles = ['src/api/users.ts'];
+  const skillId = 'architecture-traceability';
+  const changedFiles = ['docs/adr/0001-example.md'];
 
   const withoutAdr = await buildExecutionPlan({
     phase: 'upstream',

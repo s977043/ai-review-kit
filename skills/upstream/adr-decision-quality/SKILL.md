@@ -12,7 +12,7 @@ applyTo:
   - '**/*adr*.md'
 tags: [architecture, adr, decision, upstream]
 severity: major
-inputContext: [diff, adr]
+inputContext: [diff]
 outputKind: [summary, findings, actions, questions]
 modelHint: balanced
 dependencies: [adr_lookup, repo_metadata]
