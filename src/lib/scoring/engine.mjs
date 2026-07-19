@@ -11,6 +11,7 @@
 
 import { AXES, AXIS_PATTERNS, DEFAULT_DEDUCTIONS, VERDICT_THRESHOLDS } from './rubric.mjs';
 import { computeFindingBreakdown } from './breakdown.mjs';
+import { normalizeSeverity } from '../finding-factory.mjs';
 
 /**
  * Classify a finding into one of the 5 axes based on its ruleId.
@@ -164,22 +165,4 @@ export function resolveVerdict(canonicalDecision, recomputedVerdict) {
     return canonicalDecision;
   }
   return recomputedVerdict;
-}
-
-/**
- * Normalize severity to the canonical vocabulary used by the scoring engine.
- * Accepts both the output schema values (critical/major/minor/info) and
- * internal values (blocker/warning/nit) via fall-through.
- *
- * @param {string} severity
- * @returns {'critical' | 'major' | 'minor' | 'info'}
- */
-function normalizeSeverity(severity) {
-  const s = String(severity ?? '')
-    .toLowerCase()
-    .trim();
-  if (s === 'critical' || s === 'blocker') return 'critical';
-  if (s === 'major' || s === 'warning') return 'major';
-  if (s === 'minor' || s === 'nit') return 'minor';
-  return 'info';
 }
