@@ -60,12 +60,15 @@ const GRANDFATHERED_WITHOUT_EVAL = new Set([
 // `collectLocalContext`) declares as available for inputContext-based skill
 // selection. `diff` is always resolved (resolveAvailableContexts default in
 // src/lib/utils.mjs, alwaysInclude ['diff']); `prDescription` is added only when
-// a PR body is present (local-runner.mjs alwaysInclude). Adopters can widen this
-// via RIVER_AVAILABLE_CONTEXTS / --context, but a `recommended: true` skill whose
-// inputContext requires anything outside this set never fires on the default
-// path — the exact silent-skip regression #1598 documented. Kept in sync with
-// the runner by tests/validate-recommended-context.test.mjs.
-export const RUNNER_SUPPLIED_CONTEXTS = ['diff', 'prDescription'];
+// a PR body is present; `fullFile` is added only when the runner can honestly
+// supply the change set's full source text (#1606 — resolveFullFileSupply gates
+// this; content is injected by repo-context.mjs collectRepoContext). Adopters
+// can widen this via RIVER_AVAILABLE_CONTEXTS / --context, but a
+// `recommended: true` skill whose inputContext requires anything outside this
+// set never fires on the default path — the exact silent-skip regression #1598
+// documented. Kept in sync with the runner by
+// tests/validate-recommended-context.test.mjs.
+export const RUNNER_SUPPLIED_CONTEXTS = ['diff', 'prDescription', 'fullFile'];
 
 // #1598: recommended skills that still declare an inputContext outside
 // RUNNER_SUPPLIED_CONTEXTS and therefore never fire on the default runner path.
@@ -79,22 +82,25 @@ const GRANDFATHERED_UNSUPPLIED_CONTEXT = new Set([
   'api-versioning-compat',
   'architecture-traceability',
   'coverage-gap',
-  'cross-file-leakage',
   'data-model-db-design',
-  'fix-scope-integrity',
-  'impact-evidence-coverage',
   'integration-contracts',
   'multitenancy-isolation',
   'openapi-contract',
-  'refactor-claim-audit',
-  'security-privacy-design',
-  'self-contradiction',
   'test-existence',
-  'type-driven-design',
-  'typescript-nullcheck',
-  'typescript-strict',
-  'war-game',
 ]);
+// #1606: adding `fullFile` to RUNNER_SUPPLIED_CONTEXTS makes every skill whose
+// inputContext became a subset of {diff, prDescription, fullFile} compliant.
+// The stale-grandfather gate (below) therefore FORCES removing those entries in
+// this same change — leaving them would fail CI as "stale (compliant)". Removed
+// here: cross-file-leakage, fix-scope-integrity, impact-evidence-coverage,
+// refactor-claim-audit, security-privacy-design, self-contradiction,
+// type-driven-design, typescript-nullcheck, typescript-strict, war-game. Note:
+// cross-file-leakage / refactor-claim-audit / security-privacy-design ideally
+// want REPO-WIDE (unchanged-file) content, which the coarse `fullFile` token
+// cannot distinguish from changed-file content; they now select and lean on the
+// repo-wide symbol-usage context collectRepoContext also supplies. Their
+// diff-centric redesign vs repo-wide supply remains follow-up (#1606 groups
+// b / a-4).
 
 function hasSection(text, patterns) {
   return patterns.some((re) => re.test(text));

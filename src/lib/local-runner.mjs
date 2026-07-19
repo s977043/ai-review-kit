@@ -22,6 +22,7 @@ import {
   resolveAvailableContexts as resolveAvailableContextsShared,
   resolveAvailableDependencies as resolveAvailableDependenciesShared,
 } from './utils.mjs';
+import { resolveFullFileSupply } from './fullfile-supply.mjs';
 import { annotateFingerprints, computeFingerprint } from './finding-factory.mjs';
 import { applySuppressions } from './suppression-apply.mjs';
 import { computeStrictBlock } from './deterministic-gate.mjs';
@@ -150,10 +151,24 @@ async function collectLocalContext({
   const rawDiff = await collectRepoDiff(repoRoot, mergeBase, { contextLines });
   const diff = applyFileExclusions(rawDiff, config.exclude?.files ?? []);
   const reviewFiles = diff.filesForReview?.map((file) => file.path) ?? diff.changedFiles;
+  // #1606: declare `fullFile` as an available input context when the runner can
+  // honestly supply the current change set's full source text. The content is
+  // injected into the prompt by collectRepoContext (repo-context.mjs); this only
+  // gates the inputContext-based skill selection, so fullFile skills stop being
+  // silently skipped (#1598 class). Budget guards / binary+generated exclusion /
+  // fail-safe live in resolveFullFileSupply; the debug ledger is surfaced below.
+  const fullFileSupply = resolveFullFileSupply({
+    changedFiles: reviewFiles,
+    repoRoot,
+    excludePatterns: config.exclude?.files ?? [],
+  });
   // Expose `prDescription` as an available input context only when a PR body is
   // present, so the pr-description skill activates exactly when it has input.
   const contexts = resolveAvailableContexts(availableContexts, {
-    alwaysInclude: prBody ? ['prDescription'] : [],
+    alwaysInclude: [
+      ...(prBody ? ['prDescription'] : []),
+      ...(fullFileSupply.available ? ['fullFile'] : []),
+    ],
   });
   const dependencies = resolveAvailableDependencies(availableDependencies);
 
@@ -170,6 +185,7 @@ async function collectLocalContext({
     reviewFiles,
     availableContexts: contexts,
     availableDependencies: dependencies,
+    fullFileSupply,
     prLabels,
     prBody,
     debug,
@@ -217,6 +233,7 @@ export async function planLocalReview({
     reviewFiles,
     availableContexts: contexts,
     availableDependencies: dependencies,
+    fullFileSupply,
     config,
     configPath,
     configSource,
@@ -338,6 +355,7 @@ export async function planLocalReview({
     projectRules,
     availableContexts: contexts,
     availableDependencies: dependencies,
+    fullFileSupply,
     prLabels,
     prBody,
     config,
@@ -539,6 +557,10 @@ export async function runLocalReview({
     reviewDebug: {
       ...(review.debug ?? {}),
       suppressionsApplied,
+      // #1606: fullFile supply ledger (which changed files were declared as
+      // fullFile context vs skipped for budget/binary/generated/non-source).
+      // Only emitted when the resolver actually ran so no-op paths stay clean.
+      ...(context.fullFileSupply ? { fullFileSupply: context.fullFileSupply } : {}),
       // #692 PR-C: surface redaction telemetry without leaking the
       // pre-redaction text. `redactionHits` is a small {category, count}
       // tally; raw context never appears here.
