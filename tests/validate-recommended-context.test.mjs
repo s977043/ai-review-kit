@@ -105,12 +105,14 @@ test('passes for prDescription (a supplied context)', async () => {
 });
 
 test('fails when a recommended skill requires an unsupplied context', async () => {
+  // `adr` remains outside RUNNER_SUPPLIED_CONTEXTS (#1606 added only `fullFile`),
+  // so a recommended skill requiring it is still a silent-skip regression.
   const dir = await buildSkillsDir([
-    { id: 'skill-a', inputContext: ['diff', 'fullFile'], recommended: true },
+    { id: 'skill-a', inputContext: ['diff', 'adr'], recommended: true },
   ]);
   const { ok, errors } = await runQuiet(dir);
   assert.equal(ok, false);
-  assert.ok(errors.some((e) => e.includes('skill-a') && e.includes('fullFile')));
+  assert.ok(errors.some((e) => e.includes('skill-a') && e.includes('adr')));
 });
 
 test('ignores non-recommended skills with unsupplied contexts', async () => {
@@ -169,16 +171,23 @@ test('the real repo registry passes the gate (grandfather list stays complete)',
 
 test('RUNNER_SUPPLIED_CONTEXTS mirrors the default runner path (SSoT sync)', () => {
   // src/lib/local-runner.mjs collectLocalContext resolves availableContexts via
-  // resolveAvailableContexts(null, { alwaysInclude: prBody ? ['prDescription'] : [] }).
+  // resolveAvailableContexts(null, { alwaysInclude: [
+  //   ...(prBody ? ['prDescription'] : []),
+  //   ...(fullFileSupply.available ? ['fullFile'] : []),  // #1606
+  // ] }).
   // With no RIVER_AVAILABLE_CONTEXTS env, the base default is ['diff']; the
-  // conditional PR-body branch adds 'prDescription'. RUNNER_SUPPLIED_CONTEXTS
-  // must equal that union so the validator gate matches runtime reality.
+  // conditional PR-body branch adds 'prDescription' and the fullFile-supply
+  // branch adds 'fullFile'. RUNNER_SUPPLIED_CONTEXTS is the capability superset
+  // (every context the runner can conditionally add) so the validator gate
+  // matches runtime reality.
   const previous = process.env.RIVER_AVAILABLE_CONTEXTS;
   delete process.env.RIVER_AVAILABLE_CONTEXTS;
   try {
     assert.deepEqual(resolveAvailableContexts(null), ['diff']);
-    const withPrBody = resolveAvailableContexts(null, { alwaysInclude: ['prDescription'] });
-    assert.deepEqual([...withPrBody].sort(), [...RUNNER_SUPPLIED_CONTEXTS].sort());
+    const widest = resolveAvailableContexts(null, {
+      alwaysInclude: ['prDescription', 'fullFile'],
+    });
+    assert.deepEqual([...widest].sort(), [...RUNNER_SUPPLIED_CONTEXTS].sort());
   } finally {
     if (previous == null) delete process.env.RIVER_AVAILABLE_CONTEXTS;
     else process.env.RIVER_AVAILABLE_CONTEXTS = previous;
