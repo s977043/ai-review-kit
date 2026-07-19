@@ -10,6 +10,9 @@ dist/
 # Cache
 .cache/
 
+# Untracked scratch notes (not part of published docs)
+docs/Working/
+
 # Logs
 *.log
 
