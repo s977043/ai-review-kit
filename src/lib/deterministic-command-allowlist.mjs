@@ -20,7 +20,7 @@
 
 import path from 'node:path';
 
-import YAML from 'yaml';
+import * as YAML from 'js-yaml';
 
 /** reasonCode returned for entries/commands that cannot be run (§3.5, §5). */
 export const DETERMINISTIC_UNRUNNABLE = 'DETERMINISTIC_UNRUNNABLE';
@@ -31,7 +31,7 @@ export const DETERMINISTIC_UNRUNNABLE = 'DETERMINISTIC_UNRUNNABLE';
  * path, because these are designed to run arbitrary code via their arguments
  * and the danger-flag denylist (B) can never be made complete for them.
  */
-export const INTERPRETER_DENYLIST = Object.freeze([
+const INTERPRETER_DENYLIST = Object.freeze([
   'npm',
   'npx',
   'pnpm',
@@ -67,7 +67,7 @@ export const INTERPRETER_DENYLIST = Object.freeze([
  * rejects the entry: these tokens inline-eval code, force-load
  * scripts/modules, delegate to a sub-command/shell, or inject config.
  */
-export const DANGER_FLAG_DENYLIST = Object.freeze([
+const DANGER_FLAG_DENYLIST = Object.freeze([
   // inline eval
   '-e',
   '--eval',
@@ -150,7 +150,7 @@ function normalizeFlag(arg) {
 export function parseAllowlist(yamlText) {
   let doc;
   try {
-    doc = YAML.parse(String(yamlText ?? ''));
+    doc = YAML.load(String(yamlText ?? ''));
   } catch (err) {
     return { error: `invalid YAML: ${err?.message ?? String(err)}` };
   }

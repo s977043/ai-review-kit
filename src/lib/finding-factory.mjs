@@ -5,8 +5,8 @@ import { computeFindingBreakdown } from './scoring/breakdown.mjs';
 // Constants
 // ---------------------------------------------------------------------------
 
-export const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
-export const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
+const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
+const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
 
 /**
  * Canonical severity ranking for the output schema vocabulary

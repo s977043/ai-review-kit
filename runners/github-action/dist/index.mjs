@@ -12453,13 +12453,6 @@ module.exports = function(str) {
 
 /***/ }),
 
-/***/ 181:
-/***/ ((module) => {
-
-module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("buffer");
-
-/***/ }),
-
 /***/ 9896:
 /***/ ((module) => {
 
@@ -12548,13 +12541,6 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:util");
 /***/ ((module) => {
 
 module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("path");
-
-/***/ }),
-
-/***/ 932:
-/***/ ((module) => {
-
-module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("process");
 
 /***/ }),
 
@@ -42065,7 +42051,7 @@ async function runDeterministicExecGateIfEnabled({
     const { runDeterministicGates } =
       typeof importOrchestrator === 'function'
         ? await importOrchestrator()
-        : await Promise.all(/* import() */[__nccwpck_require__.e(815), __nccwpck_require__.e(944)]).then(__nccwpck_require__.bind(__nccwpck_require__, 8944));
+        : await __nccwpck_require__.e(/* import() */ 944).then(__nccwpck_require__.bind(__nccwpck_require__, 8944));
     const gateResult = await runDeterministicGates({
       trustedTree: env.RIVER_TRUSTED_TREE,
       selected: selected ?? [],
@@ -42676,7 +42662,7 @@ function isApp(file) {
 /* harmony export */   xv: () => (/* binding */ validateFindingMessage),
 /* harmony export */   yv: () => (/* binding */ formatFindingMessage)
 /* harmony export */ });
-/* unused harmony exports FINDING_SEVERITIES, FINDING_CONFIDENCE, SUPPRESS_REASONS */
+/* unused harmony export SUPPRESS_REASONS */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
 /* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9946);
 
@@ -44541,7 +44527,7 @@ function buildHeuristicComments({ diff, plan }) {
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   pQ: () => (/* binding */ callChatCompletion)
 /* harmony export */ });
-/* unused harmony exports LLM_MAX_ATTEMPTS, LLM_RETRY_BASE_MS, LLM_TIMEOUT_MS, LLM_MAX_BACKOFF_MS, isRetryableStatus, isRetryableNetworkError, computeBackoffMs */
+/* unused harmony exports LLM_MAX_BACKOFF_MS, isRetryableStatus, isRetryableNetworkError, computeBackoffMs */
 // Unified LLM call pipeline (#1338).
 //
 // Consolidates the two raw chat-completion implementations that had drifted
@@ -47455,7 +47441,6 @@ function tokensToChars(maxTokens, _opts = {}) {
 /* harmony export */   hN: () => (/* binding */ isOfflineMode),
 /* harmony export */   ud: () => (/* binding */ resolveAvailableContexts)
 /* harmony export */ });
-/* unused harmony export dependencyStubs */
 /**
  * Parse a comma-separated list string into a trimmed array.
  * Empty/undefined input returns an empty array.

@@ -468,8 +468,6 @@ export function resolveReviewOutputFormat({
   );
 }
 
-export const REVIEW_GATE_SEVERITIES = ['info', 'minor', 'major', 'critical'];
-
 /**
  * Evaluate the review gate exit code from an artifact's findings (#976).
  *
