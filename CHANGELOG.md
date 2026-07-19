@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.59.0](https://github.com/s977043/river-review/compare/v1.58.0...v1.59.0) (2026-07-19)
+
+
+### Features
+
+* **runner:** supply fullFile context for changed source files (Refs [#1606](https://github.com/s977043/river-review/issues/1606)) ([#1609](https://github.com/s977043/river-review/issues/1609)) ([84fdcd5](https://github.com/s977043/river-review/commit/84fdcd52d7a3e1664298f3c6c24dd00c9758aa32))
+
+
+### Bug Fixes
+
+* **skills:** 冗長な adr を inputContext から外し a-1 の 14 スキルを発火可能にする ([#1607](https://github.com/s977043/river-review/issues/1607)) ([6e21e08](https://github.com/s977043/river-review/commit/6e21e0873d47dcfc97cc7f8ad8059a2d6c2d9c7c)), closes [#1606](https://github.com/s977043/river-review/issues/1606)
+
 ## [1.58.0](https://github.com/s977043/river-review/compare/v1.57.2...v1.58.0) (2026-07-19)
 
 
