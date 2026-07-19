@@ -7,7 +7,6 @@
 // handlers. Behavior, messages, and exit codes are unchanged; only the enclosing
 // module and the relative import depth differ from the original inline code.
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { severityToPriority } from '../lib/finding-factory.mjs';
 import { resolveVerdict, scoreReview } from '../lib/scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from '../lib/scoring/rubric.mjs';
@@ -431,10 +430,22 @@ export function printDebugInfo(result, { log = console.log } = {}) {
  * validation problem never breaks JSON output emission.
  */
 let outputSchemaValidator;
-function getOutputSchemaValidator() {
+// Exported (not just used internally by validateOutputArtifact) so a canary
+// test can assert directly that schema loading succeeds — see #1599, where a
+// dist-only regression silently disabled validation because the failure mode
+// (falling back to null) is otherwise invisible from validateOutputArtifact's
+// return value alone.
+export function getOutputSchemaValidator() {
   if (outputSchemaValidator !== undefined) return outputSchemaValidator;
   try {
-    const schemaPath = fileURLToPath(new URL('../../schemas/output.schema.json', import.meta.url));
+    // Pass the URL object straight to readFileSync instead of resolving it via
+    // fileURLToPath: readFileSync natively supports file: URLs, and this also
+    // sidesteps a dist-only regression (#1599) where ncc rewrites the `new
+    // URL(...)` expression into a plain path string
+    // (`__nccwpck_require__.ab + "output.schema.json"`) — fileURLToPath then
+    // throws `TypeError [ERR_INVALID_URL]: Invalid URL` because that string is
+    // not a valid file: URL, while readFileSync accepts the plain path as-is.
+    const schemaPath = new URL('../../schemas/output.schema.json', import.meta.url);
     const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
     const ajv = new Ajv2020({ allErrors: true, strict: false });
     addFormats(ajv);
