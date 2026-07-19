@@ -23,14 +23,21 @@
 // src/ separately.
 import assert from 'node:assert/strict';
 import fs, { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 import { runCliAsSubprocess } from '../helpers/cli.mjs';
 import { createTempGitRepo, runGit } from '../helpers/temp-repo.mjs';
 
-const REPO_ROOT = resolve('.');
-const DIST_ENTRY = resolve('runners/github-action/dist/index.mjs');
+// resolve('.') is CWD-dependent — running the suite from a subdirectory (or
+// any CWD other than the repo root) would resolve REPO_ROOT/DIST_ENTRY to the
+// wrong place and silently skip this test instead of failing loudly. Anchor
+// to this file's own location instead (matches tests/helpers/schema-validator.mjs
+// and tests/integration/review-plan-cli.test.mjs).
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(__dirname, '..', '..');
+const DIST_ENTRY = resolve(REPO_ROOT, 'runners', 'github-action', 'dist', 'index.mjs');
 
 test(
   'built github-action dist bundle loads output.schema.json without warning (#1599)',
@@ -51,7 +58,10 @@ test(
       // The dist bundle resolves skills/schemas relative to RIVER_REPO_ROOT
       // (see runners/core/skill-loader.mjs), matching how action.yml sets it
       // (`${{ github.action_path }}/../..`) for the real GitHub Action.
-      env: { RIVER_REPO_ROOT: REPO_ROOT },
+      // Spread process.env explicitly here (in addition to runCliAsSubprocess's
+      // own internal spread) so PATH and other ambient vars are never lost if
+      // the helper's merge strategy changes.
+      env: { ...process.env, RIVER_REPO_ROOT: REPO_ROOT },
     });
 
     assert.strictEqual(result.code, 0, result.stderr);
