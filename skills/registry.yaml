@@ -6,6 +6,13 @@ description: 'Catalog of all River Review skills organized by stream category an
 
 # Skill Catalog
 #
+# 各エントリの構造フィールド（id / version / name / category / phase / tags / severity）は
+# 対応する SKILL.md frontmatter を SSoT として自動生成される（#1562）。手編集せず、frontmatter を
+# 変更したうえで `npm run skills:registry`（scripts/generate-registry-fields.mjs）で同期すること。
+# `path` は生成元 SKILL.md を指す結合キー。`recommended` / `description` / `exclude` はカタログ
+# キュレーション情報であり手編集で維持する（自動生成の対象外）。applyTo は frontmatter のみに置き、
+# 二重管理を避けるため registry には持たない。CI は `npm run skills:registry:check` で鮮度を守る。
+#
 # 各エントリの `description` は adopter がカタログを見るための短い要約であり（英語・短縮表現可）、
 # 対応する SKILL.md frontmatter の `description`（レビュー実行時に参照する詳細記述・SSoT）と
 # 文言を一致させる必要はない。両者は役割が異なる（カタログ要約 vs 実行時詳細）ため、不一致を
@@ -72,11 +79,11 @@ skills:
 
   - id: security-basic
     version: '0.1.0'
-    name: 'Basic Security Review'
+    name: Baseline Security Checks
     path: skills/midstream/security-basic/SKILL.md
     category: midstream
     phase: midstream
-    tags: [security, midstream, basic]
+    tags: [security, midstream, web]
     severity: major
     recommended: true
     description: 'Detects common security vulnerabilities'
@@ -114,7 +121,7 @@ skills:
 
   - id: logging-observability
     version: '0.1.0'
-    name: 'Logging & Observability'
+    name: Logging and Observability Guard
     path: skills/midstream/logging-observability/SKILL.md
     category: midstream
     phase: midstream
@@ -124,7 +131,7 @@ skills:
     description: 'Reviews logging and observability practices'
 
   - id: pr-description
-    version: '0.1.0'
+    version: '0.2.0'
     name: 'PR Description Review'
     path: skills/midstream/pr-description/SKILL.md
     category: midstream
@@ -136,7 +143,7 @@ skills:
 
   - id: typescript-strict
     version: '0.1.0'
-    name: 'TypeScript Strict Mode'
+    name: TypeScript Strictness Guard
     path: skills/midstream/typescript-strict/SKILL.md
     category: midstream
     phase: midstream
@@ -147,44 +154,44 @@ skills:
 
   - id: typescript-nullcheck
     version: '0.1.0'
-    name: 'TypeScript Null Safety'
+    name: TypeScript Null Safety Guardrails
     path: skills/midstream/typescript-nullcheck/SKILL.md
     category: midstream
     phase: midstream
-    tags: [typescript, null-safety, midstream]
+    tags: [typescript, type-safety, midstream]
     severity: major
     recommended: true
     description: 'Checks for null/undefined handling'
 
   - id: gh-address-comments
     version: '0.1.0'
-    name: 'GitHub Review Comment Addressing'
+    name: GitHubレビューコメント対応（修正案つき）
     path: skills/midstream/gh-address-comments/SKILL.md
     category: midstream
     phase: midstream
-    tags: [github, review-process, midstream]
+    tags: [review, github, midstream]
     severity: info
     recommended: false
     description: 'Checks if review comments have been addressed'
 
   - id: review-comment-triage
     version: '0.1.0'
-    name: 'Review Comment Triage'
+    name: Review Comment Triage (No-Code-Fix Mode)
     path: skills/midstream/review-comment-triage/SKILL.md
     category: midstream
     phase: midstream
-    tags: [review-process, triage, midstream]
+    tags: [review, process, midstream]
     severity: info
     recommended: false
     description: 'Triages and prioritizes review comments'
 
   - id: review-policy-standard-midstream
     version: '0.1.0'
-    name: 'Review Policy Standard'
+    name: Standard Review Policy for Midstream
     path: skills/midstream/review-policy-standard-midstream/SKILL.md
     category: midstream
     phase: midstream
-    tags: [policy, review-process, midstream]
+    tags: [policy, midstream, implementation, code-quality]
     severity: info
     recommended: false
     description: 'Enforces standard review policies'
@@ -399,11 +406,11 @@ skills:
 
   - id: nextjs-app-router-boundary
     version: '0.1.0'
-    name: 'Next.js App Router Boundary Guard'
+    name: Next.js App Router Client/Server Boundary
     path: skills/midstream/nextjs-app-router-boundary/SKILL.md
     category: midstream
     phase: midstream
-    tags: [community, nextjs, app-router, ui, midstream]
+    tags: [community, nextjs, midstream, react]
     severity: major
     recommended: true
     description: 'Surfaces Next.js App Router boundary issues (server vs client component placement, "use client" misuse).'
@@ -1268,7 +1275,7 @@ skills:
     description: 'pbi-input, plan, todo, test-cases 間の整合性をチェックし、実装着手前の仕様漏れを検知する'
 
   - id: plan-review-gate
-    version: '0.1.0'
+    version: '0.2.1'
     name: '実装計画レビューゲート'
     path: skills/upstream/plan-review-gate/SKILL.md
     category: upstream
