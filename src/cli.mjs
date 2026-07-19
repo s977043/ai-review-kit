@@ -4,18 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import {
-  GitError,
-  GitRepoNotFoundError,
-  ensureGitRepo,
-  detectDefaultBranch,
-  findMergeBase,
-} from './lib/git.mjs';
+import { GitError, GitRepoNotFoundError } from './lib/git.mjs';
 import { doctorLocalReview, planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError, resolveSkillSet } from '../runners/core/skill-loader.mjs';
-import { collectRepoDiff, renderDiffText } from './lib/diff-processor.mjs';
 import CostEstimator from './core/cost-estimator.mjs';
-import { SkillDispatcher } from './core/skill-dispatcher.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
 import { RiskMapError } from './lib/risk-map.mjs';
 import { isLlmEnabled, parseList } from './lib/utils.mjs';
@@ -25,7 +17,6 @@ import { resolveVerdict, scoreReview } from './lib/scoring/engine.mjs';
 import { deriveRunGate } from './lib/run-gate.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
 import { severityToPriority } from './lib/finding-factory.mjs';
-import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { runReviewCommand } from './cli/commands/review.mjs';
@@ -1256,25 +1247,31 @@ async function main(argv = process.argv.slice(2)) {
   const targetPath = path.resolve(parsed.target);
 
   try {
-    // Skills subcommands (import/export/list) – no git repo required
+    // Skills subcommands (import/export/list) – no git repo required.
+    // `return await` (not bare `return`) is required so a rejected handler
+    // promise is caught by this function's outer try/catch, which maps
+    // GitRepoNotFoundError / SkillLoaderError / ProjectRulesError /
+    // RiskMapError / GitError to friendly messages + Hints. A bare `return`
+    // settles the promise outside the try, regressing to a raw stack trace /
+    // unhandledRejection (adversarial review BLOCKER, PR #1592).
     if (parsed.command === 'skills') {
-      return runSkillsCommand(parsed, targetPath);
+      return await runSkillsCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'suppression') {
-      return runSuppressionCommand(parsed, targetPath);
+      return await runSuppressionCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'feedback') {
-      return runFeedbackCommand(parsed, targetPath);
+      return await runFeedbackCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'runs') {
-      return runRunsCommand(parsed, targetPath);
+      return await runRunsCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'eval') {
-      return runEvalCommand(parsed);
+      return await runEvalCommand(parsed);
     }
     if (parsed.command === 'doctor') {
       const result = await doctorLocalReview({
