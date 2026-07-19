@@ -1,7 +1,7 @@
 ---
 id: 'knowledge-to-code-alignment'
 name: 'Knowledge-to-Code Alignment 新知識のコード反映・設計知識の保全'
-description: 'リファクタリングを「更新されたチームの理解と、コードが表現する過去の理解の差分同期」と捉え、今回得た新知識（要求・ドメイン知識・制約）が naming と responsibility へ反映されているか、boundary が現在の understanding を表現しているか、ADR/PR/コメントに残る過去の design history と constraint を失っていないかを diff-time で確認する。Knowledge Delta を PR/issue/ADR/diff から推定し不確実なら question に留める。ドメイン用語の一貫性は ubiquitous-language-naming、集約/コンテキスト境界の設計判断は bounded-context-language、投機的抽象化・caller special-case は altitude-generalization、スコープ逸脱/前提破壊は fix-scope-integrity、振る舞い変更と構造変更の分離は behavior-structure-separation、完了主張の反証は refactor-claim-audit へ委譲する'
+description: 'リファクタリングを「更新されたチームの理解と、コードが表現する過去の理解の差分同期」と捉え、今回得た新知識（要求・ドメイン知識・制約）が naming と responsibility へ反映されているか、boundary が現在の understanding を表現しているか、diff の削除行やコメントに現れる過去の design history と constraint を失っていないかを diff-time で確認する。Knowledge Delta の signal は diff（追加/削除された hunk・コメント・ADR 参照）を一次情報とし、PR 本文が供給されるときは補助に用い、不確実なら question に留める。ドメイン用語の一貫性は ubiquitous-language-naming、集約/コンテキスト境界の設計判断は bounded-context-language、投機的抽象化・caller special-case は altitude-generalization、スコープ逸脱/前提破壊は fix-scope-integrity、振る舞い変更と構造変更の分離は behavior-structure-separation、完了主張の反証は refactor-claim-audit へ委譲する'
 version: 0.1.0
 category: midstream
 phase: midstream
@@ -18,7 +18,7 @@ tags:
   - design-history
   - midstream
 severity: minor
-inputContext: [diff, fullFile, adr, commitMessage]
+inputContext: [diff]
 outputKind: [findings, questions]
 modelHint: high-accuracy
 dependencies: [code_search, adr_lookup]
@@ -63,12 +63,12 @@ report-only。finding/question のみを出力し、自動修正・自動マー�
 
 - [ ] inputContext に `diff` が含まれている。
 - [ ] 差分が**リポジトリ内で実行されるコード**に触れる（docs・コメントのみの差分は対象外）。
-- [ ] **Knowledge Delta の signal** が discover できる。具体的には次のいずれか: PR 本文・issue・コミットメッセージ・ADR・差分周辺のコメントに「新しく得た要求・ドメイン知識・制約」または「過去の設計判断・制約」が読み取れる。PlanGate が `Knowledge Delta` を提供する場合はそれを入力とする。
+- [ ] **Knowledge Delta の signal** が **diff から discover** できる。具体的には次のいずれか: diff の追加/削除された hunk・差分内のコメント（`// ...`・`# ...` 等）・差分内に現れる issue/ADR 参照（`#1573`・`ADR-012` 等）・コミットや PR 本文が供給されている場合はその記述に、「新しく得た要求・ドメイン知識・制約」または「過去の設計判断・制約」が読み取れる。PlanGate が `Knowledge Delta` を提供する場合はそれを入力とする。
 - [ ] ビルド成果物・生成物（`dist/**`・`*.map`・lockfile・自動生成 manifest）は Gate 判定からもレビュー対象からも除外する。
 
-ゲート不成立時の出力: `NO_REVIEW: knowledge-to-code-alignment — Knowledge Delta の signal が discover できない`
+ゲート不成立時の出力: `NO_REVIEW: knowledge-to-code-alignment — Knowledge Delta の signal が diff から discover できない`
 
-補足（degraded mode）: PlanGate から Knowledge Delta が渡されない場合は、issue・PR 本文・ADR・diff から推定し、**不確実性を明示して question とする**。Plan を再作成しない。
+補足（degraded mode）: 既定の runner は inputContext として `diff` のみを供給する（`fullFile`・`adr`・`commitMessage` は供給されない前提）。PlanGate から Knowledge Delta が渡されない場合は、diff の hunk・コメント・参照から推定し、**不確実性を明示して question とする**。Plan を再作成しない。
 
 ## False-positive guards / 抑制条件
 
@@ -89,7 +89,7 @@ report-only。finding/question のみを出力し、自動修正・自動マー�
 - 責務が再解釈されたのに（例: ある関数の役割が変わった）、責務の所在（どこに置かれているか）が旧構造のまま。
 - 新知識を反映する変更が、コメント追記だけで済まされ、名前・責務に反映されていない。
 
-判定に使った Knowledge Delta の出典（PR 本文・issue・ADR・commit の該当行）を必ず示す。
+判定に使った Knowledge Delta の出典（diff 内のコメント・追加/削除行・issue/ADR 参照、または供給されていれば PR 本文の該当箇所）を必ず示す。diff から Knowledge Delta を特定できない場合は question とする。
 
 ### Check 2 — Boundary expresses current understanding / 境界が現在の理解を表現
 
@@ -103,13 +103,13 @@ report-only。finding/question のみを出力し、自動修正・自動マー�
 
 ### Check 3 — Design history and constraint preservation / 過去の設計判断・制約の保全
 
-ADR・過去 PR・コメントに残る**過去の design history（設計判断・制約・例外・運用知識）を、今回の変更で失っている**場合に指摘する。
+diff の**削除行（`-` 行）に現れる過去の design history（設計判断・制約・例外・運用知識）を、根拠を引き継がずに失っている**場合に指摘する。判定は diff の削除行を一次情報とする。
 
-- 一見不要に見える分岐・例外処理・ガードが削除されているが、それが過去の障害対応・制約に由来する（ADR/PR/コメントに記録がある）。
-- 「なぜこうなっているか」を説明するコメント・ドキュメントが、根拠を引き継がずに削除されている。
-- 過去の制約を無効化する変更が、その制約の存在を確認せずに行われている（回帰・データ不整合・互換性破壊のリスク）。
+- 一見不要に見える分岐・例外処理・ガードが削除行にあり、その近傍のコメントが過去の障害対応・制約（例: `ADR-012`・issue 番号・「除去しないと壊れる」等の理由）を明示している。
+- 「なぜこうなっているか」を説明するコメント・ドキュメントが削除行に含まれ、同じ diff 内に根拠の引き継ぎ（別コメント・PR 本文での正当化）が見当たらない。
+- 削除された制約・ガードに ADR/issue 参照が付いているのに、同じ diff にその参照先を更新した形跡（ADR ファイルの変更・PR 本文での前提変更の明示）がない。
 
-削除対象の制約が ADR/PR/コメントに実在することを `adr_lookup` / `code_search` で確認してから指摘する。確認できなければ question とする。
+指摘の根拠は削除行の `file:line` と、そこに現れる ADR/issue 参照・制約コメントの文言を引用して示す。削除行に制約の signal が読み取れ、かつ同じ diff（PR 本文が供給される場合はそれも含む）に正当化が見当たらない場合は finding とする（回帰リスクに応じて severity を較正）。`adr_lookup` / `code_search` が利用可能なら参照先の実在確認に用いてよいが、既定の runner では供給されない前提とする。diff の削除行に制約の signal が読み取れない場合は指摘しない。signal はあるが制約かどうか・正当化の有無が diff から判断しきれない場合は question とする。
 
 ## severity 較正
 
@@ -120,8 +120,8 @@ ADR・過去 PR・コメントに残る**過去の design history（設計判断
 ## Evidence / 根拠の取り方
 
 - finding の `file:line` は差分内にアンカーする。差分外の推測に基づく指摘は question として返す。
-- Knowledge Delta の出典（PR 本文・issue・ADR の該当箇所）と、判断に使った検索語（grep pattern）を明示し、再現可能にする。
-- 過去制約の実在は ADR/PR/コメントの位置を示す。推測で「制約があったはず」と断定しない。
+- Knowledge Delta の出典（diff 内のコメント・追加/削除行・issue/ADR 参照、または供給されていれば PR 本文の該当箇所）と、判断に使った検索語（grep pattern）を明示し、再現可能にする。
+- 過去制約の signal は diff の削除行とその近傍コメントの位置を示す。diff の外に制約が「あったはず」と推測で断定しない（確認できなければ question）。
 - 批判的・攻撃的な口調を避ける（`.claude/rules/review-core.md`）。
 
 ## Output / 出力フォーマット
@@ -133,7 +133,7 @@ ADR・過去 PR・コメントに残る**過去の design history（設計判断
 
 <file>:<line>: [Check N] <タイトル>
   check: 1 | 2 | 3
-  knowledge_delta: <今回の新知識 or 過去の設計判断>（出典: PR/issue/ADR/commit の該当箇所）
+  knowledge_delta: <今回の新知識 or 過去の設計判断>（出典: diff 内のコメント/参照、または供給されていれば PR 本文の該当箇所）
   gap: <知識とコード表現のギャップ>（検索語: `<grep pattern>`）
   Severity: major | minor | info（較正基準に従う）
   Fix: <名前/責務/境界の是正案 or 制約の復元・根拠の明示>
@@ -155,8 +155,8 @@ src/pricing/discount.ts:18: [Check 1] 新概念「会員ランク別割引」を
 ```text
 src/import/csv.ts:44: [Check 3] ADR-012 記載の BOM 除去例外を根拠確認せず削除
   check: 3
-  knowledge_delta: ADR-012「一部取引先の CSV は先頭 BOM 付き。除去しないと parse 失敗」（adr_lookup で確認）
-  gap: BOM 除去分岐を「不要」として削除。回帰で該当取引先の取込が壊れる（検索語: `\uFEFF`, src/import/csv.ts@base:44）
+  knowledge_delta: 削除行のコメント「一部取引先の CSV は先頭 BOM 付き（ADR-012）。除去しないと parse 失敗」（diff の `-` 行に明示）
+  gap: BOM 除去分岐を「不要」として削除。同じ diff に前提変更の正当化がなく、回帰で該当取引先の取込が壊れる（検索語: `\uFEFF`, 削除行 src/import/csv.ts:44）
   Severity: major
   Fix: BOM 除去を復元するか、前提が変わった旨を ADR/PR に明記して正当化する
 ```
