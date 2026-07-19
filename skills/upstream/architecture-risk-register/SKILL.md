@@ -15,7 +15,7 @@ applyTo:
   - '**/*.adr'
 tags: [architecture, risk, assumptions, upstream]
 severity: major
-inputContext: [diff, adr]
+inputContext: [diff]
 outputKind: [summary, findings, actions, questions]
 modelHint: balanced
 dependencies: [repo_metadata]

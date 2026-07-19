@@ -15,7 +15,7 @@ applyTo:
   - '**/*deploy*.md'
 tags: [migration, rollout, rollback, release, upstream]
 severity: major
-inputContext: [diff, adr]
+inputContext: [diff]
 outputKind: [summary, findings, actions, questions]
 modelHint: balanced
 dependencies: [repo_metadata]

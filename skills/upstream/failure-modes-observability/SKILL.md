@@ -12,7 +12,7 @@ applyTo:
   - 'pages/**/*'
 tags: [reliability, observability, api, design, upstream]
 severity: major
-inputContext: [diff, adr]
+inputContext: [diff]
 outputKind: [findings, actions, questions, summary]
 modelHint: balanced
 dependencies: [repo_metadata, tracing]
