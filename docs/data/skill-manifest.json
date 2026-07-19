@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 123,
+  "skillCount": 125,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -104,6 +104,12 @@
       "path": "skills/upstream/availability-architecture",
       "checksum": "sha256:63e6671e641e53d3b4a7b9a42bba4445920c92f0e68ec208314e5d370c496cc5",
       "files": 1
+    },
+    {
+      "id": "behavior-structure-separation",
+      "path": "skills/midstream/behavior-structure-separation",
+      "checksum": "sha256:98863bbb58f78463919bf50b1c8a38ee046de850adcc47752848181263e7a71c",
+      "files": 4
     },
     {
       "id": "bounded-context-language",
@@ -350,6 +356,12 @@
       "path": "skills/upstream/integration-contracts",
       "checksum": "sha256:508916403b5858fb8f8c133c3fccb135935f28bc8e5dcaa3b81f6a3cc2f6b462",
       "files": 1
+    },
+    {
+      "id": "knowledge-to-code-alignment",
+      "path": "skills/midstream/knowledge-to-code-alignment",
+      "checksum": "sha256:b830d305603c547f60eaa82fccb3e3be2889106e5917cdd827c7ab2f37ee9c12",
+      "files": 4
     },
     {
       "id": "laravel-eloquent-nplus1",
@@ -600,7 +612,7 @@
     {
       "id": "river-review-code",
       "path": "skills/agent-skills/river-review-code",
-      "checksum": "sha256:b6dcc5bb0b54167237f4c70ca086a923739743e2abf1e09225b7604a1b7e5299",
+      "checksum": "sha256:a67db9c3e75d481dd940f3ad9d453e5d8ebd490af04afdb5426ebed24f53808b",
       "files": 4
     },
     {
