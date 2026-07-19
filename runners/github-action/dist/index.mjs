@@ -50488,7 +50488,7 @@ const src_safeJSON = (text) => {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //# sourceMappingURL=sleep.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/version.mjs
-const VERSION = '6.45.0'; // x-release-please-version
+const VERSION = '6.48.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -51565,14 +51565,46 @@ class src_Stream {
         let consumed = false;
         async function* iterLines() {
             const lineDecoder = new LineDecoder();
-            const iter = ReadableStreamToAsyncIterable(readableStream);
-            for await (const chunk of iter) {
-                for (const line of lineDecoder.decode(chunk)) {
+            const reader = readableStream.getReader();
+            let closed = false;
+            let cancelPromise;
+            const cancel = () => {
+                cancelPromise ?? (cancelPromise = reader.cancel());
+                cancelPromise.catch(() => { });
+            };
+            controller.signal.addEventListener('abort', cancel, { once: true });
+            try {
+                if (controller.signal.aborted) {
+                    cancel();
+                    return;
+                }
+                while (true) {
+                    const { value: chunk, done } = await reader.read();
+                    if (done) {
+                        closed = true;
+                        break;
+                    }
+                    if (controller.signal.aborted)
+                        return;
+                    for (const line of lineDecoder.decode(chunk)) {
+                        if (controller.signal.aborted)
+                            return;
+                        yield line;
+                    }
+                }
+                if (controller.signal.aborted)
+                    return;
+                for (const line of lineDecoder.flush()) {
+                    if (controller.signal.aborted)
+                        return;
                     yield line;
                 }
             }
-            for (const line of lineDecoder.flush()) {
-                yield line;
+            finally {
+                controller.signal.removeEventListener('abort', cancel);
+                if (!closed)
+                    cancel();
+                reader.releaseLock();
             }
         }
         async function* iterator() {
@@ -51592,7 +51624,7 @@ class src_Stream {
             }
             catch (e) {
                 // If the user calls `stream.controller.abort()`, we should exit without throwing.
-                if (src_isAbortError(e))
+                if (controller.signal.aborted || src_isAbortError(e))
                     return;
                 throw e;
             }
@@ -52171,8 +52203,108 @@ class WorkloadIdentityAuth {
     }
 }
 //# sourceMappingURL=workload-identity-auth.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/headers.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+const brand_privateNullableHeaders = /* @__PURE__ */ Symbol('brand.privateNullableHeaders');
+const httpTokenHeaderName = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+function* iterateHeaders(headers) {
+    if (!headers)
+        return;
+    if (brand_privateNullableHeaders in headers) {
+        const { values, nulls } = headers;
+        yield* values.entries();
+        for (const name of nulls) {
+            yield [name, null];
+        }
+        return;
+    }
+    let shouldClear = false;
+    let iter;
+    if (headers instanceof Headers) {
+        iter = headers.entries();
+    }
+    else if (isReadonlyArray(headers)) {
+        iter = headers;
+    }
+    else {
+        shouldClear = true;
+        iter = Object.entries(headers ?? {});
+    }
+    for (let row of iter) {
+        const name = row[0];
+        if (typeof name !== 'string')
+            throw new TypeError('expected header name to be a string');
+        const values = isReadonlyArray(row[1]) ? row[1] : [row[1]];
+        let didClear = false;
+        for (const value of values) {
+            if (value === undefined)
+                continue;
+            // Objects keys always overwrite older headers, they never append.
+            // Yield a null to clear the header before adding the new values.
+            if (shouldClear && !didClear) {
+                didClear = true;
+                yield [name, null];
+            }
+            yield [name, value];
+        }
+    }
+}
+const buildHeaders = (newHeaders) => {
+    const targetHeaders = new Headers();
+    const nullHeaders = new Set();
+    for (const headers of newHeaders) {
+        const seenHeaders = new Set();
+        for (const [name, value] of iterateHeaders(headers)) {
+            if (!httpTokenHeaderName.test(name)) {
+                throw new TypeError(`Header name must be a valid HTTP token ["${name}"]`);
+            }
+            const lowerName = name.toLowerCase();
+            if (!seenHeaders.has(lowerName)) {
+                targetHeaders.delete(lowerName);
+                seenHeaders.add(lowerName);
+            }
+            if (value === null) {
+                targetHeaders.delete(lowerName);
+                nullHeaders.add(lowerName);
+            }
+            else {
+                targetHeaders.append(lowerName, value);
+                nullHeaders.delete(lowerName);
+            }
+        }
+    }
+    return { [brand_privateNullableHeaders]: true, values: targetHeaders, nulls: nullHeaders };
+};
+const isEmptyHeaders = (headers) => {
+    for (const _ of iterateHeaders(headers))
+        return false;
+    return true;
+};
+//# sourceMappingURL=headers.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/uploads.mjs
 
+
+
+const brand_privateStreamingFile = /* @__PURE__ */ Symbol('brand.privateStreamingFile');
+/**
+ * Wrap a stream as an uploadable file without reading it into memory.
+ *
+ * Unlike {@link toFile}, this helper does not create a web `File`, because the `File` constructor
+ * must consume all of its contents up front. The stream is instead encoded lazily as multipart
+ * form data when the request is sent.
+ */
+function toStreamingFile(data, name, options) {
+    if (!name) {
+        throw new TypeError('toStreamingFile requires a non-empty file name');
+    }
+    return {
+        [brand_privateStreamingFile]: true,
+        data,
+        name,
+        ...(options?.type ? { type: options.type } : {}),
+    };
+}
 const checkFileSupport = () => {
     if (typeof File === 'undefined') {
         const { process } = globalThis;
@@ -52210,9 +52342,15 @@ const isAsyncIterable = (value) => value != null && typeof value === 'object' &&
 const maybeMultipartFormRequestOptions = async (opts, fetch) => {
     if (!hasUploadableValue(opts.body))
         return opts;
+    if (hasStreamingUploadableValue(opts.body)) {
+        return createStreamingFormRequestOptions(opts);
+    }
     return { ...opts, body: await createForm(opts.body, fetch) };
 };
 const multipartFormRequestOptions = async (opts, fetch) => {
+    if (hasStreamingUploadableValue(opts.body)) {
+        return createStreamingFormRequestOptions(opts);
+    }
     return { ...opts, body: await createForm(opts.body, fetch) };
 };
 const supportsFormDataMap = /* @__PURE__ */ new WeakMap();
@@ -52257,9 +52395,31 @@ const createForm = async (body, fetch) => {
 // We check for Blob not File because Bun.File doesn't inherit from File,
 // but they both inherit from Blob and have a `name` property at runtime.
 const isNamedBlob = (value) => value instanceof Blob && 'name' in value;
+const isReadableStream = (value) => typeof value === 'object' &&
+    value !== null &&
+    'getReader' in value &&
+    typeof value.getReader === 'function';
+const isStreamingFile = (value) => typeof value === 'object' && value !== null && brand_privateStreamingFile in value;
 const isUploadable = (value) => typeof value === 'object' &&
     value !== null &&
-    (value instanceof Response || isAsyncIterable(value) || isNamedBlob(value));
+    (value instanceof Response ||
+        isAsyncIterable(value) ||
+        isReadableStream(value) ||
+        isStreamingFile(value) ||
+        isNamedBlob(value));
+const hasStreamingUploadableValue = (value) => {
+    if (isStreamingFile(value) || isAsyncIterable(value) || isReadableStream(value))
+        return true;
+    if (Array.isArray(value))
+        return value.some(hasStreamingUploadableValue);
+    if (value && typeof value === 'object' && !isNamedBlob(value) && !(value instanceof Response)) {
+        for (const k in value) {
+            if (hasStreamingUploadableValue(value[k]))
+                return true;
+        }
+    }
+    return false;
+};
 const hasUploadableValue = (value) => {
     if (isUploadable(value))
         return true;
@@ -52273,6 +52433,124 @@ const hasUploadableValue = (value) => {
     }
     return false;
 };
+const createStreamingFormRequestOptions = (opts) => {
+    const boundary = `openai-${Math.random().toString(36).slice(2)}`;
+    const body = ReadableStreamFrom(iterateMultipartBody(opts.body, boundary));
+    return {
+        ...opts,
+        body,
+        headers: buildHeaders([{ 'content-type': `multipart/form-data; boundary=${boundary}` }, opts.headers]),
+    };
+};
+async function* iterateMultipartBody(body, boundary) {
+    for await (const { key, value } of iterateFormEntries(body)) {
+        yield bytes_encodeUTF8(`--${boundary}\r\n`);
+        if (isUploadable(value)) {
+            const filename = getStreamingFileName(value);
+            const type = getStreamingFileType(value);
+            yield bytes_encodeUTF8(`Content-Disposition: form-data; name="${escapeHeaderValue(key)}"; filename="${escapeHeaderValue(filename)}"\r\n` + `Content-Type: ${type}\r\n\r\n`);
+            yield* iterateBytes(getStreamingFileData(value));
+        }
+        else {
+            yield bytes_encodeUTF8(`Content-Disposition: form-data; name="${escapeHeaderValue(key)}"\r\n\r\n${String(value)}`);
+        }
+        yield bytes_encodeUTF8('\r\n');
+    }
+    yield bytes_encodeUTF8(`--${boundary}--\r\n`);
+}
+async function* iterateFormEntries(body) {
+    if (!body || typeof body !== 'object')
+        return;
+    for (const [key, value] of Object.entries(body)) {
+        yield* iterateFormValue(key, value);
+    }
+}
+async function* iterateFormValue(key, value) {
+    if (value === undefined)
+        return;
+    if (value == null) {
+        throw new TypeError(`Received null for "${key}"; to pass null in FormData, you must use the string 'null'`);
+    }
+    if (typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean' ||
+        isUploadable(value)) {
+        yield { key, value };
+    }
+    else if (Array.isArray(value)) {
+        for (const entry of value) {
+            yield* iterateFormValue(key + '[]', entry);
+        }
+    }
+    else if (typeof value === 'object') {
+        for (const [name, prop] of Object.entries(value)) {
+            yield* iterateFormValue(`${key}[${name}]`, prop);
+        }
+    }
+    else {
+        throw new TypeError(`Invalid value given to form, expected a string, number, boolean, object, Array, File or Blob but got ${value} instead`);
+    }
+}
+function getStreamingFileName(value) {
+    return isStreamingFile(value) ? value.name : getName(value) ?? 'unknown_file';
+}
+function getStreamingFileType(value) {
+    if (isStreamingFile(value))
+        return value.type || 'application/octet-stream';
+    if (isNamedBlob(value) && value.type)
+        return value.type;
+    if (value instanceof Response)
+        return value.headers.get('content-type') || 'application/octet-stream';
+    return 'application/octet-stream';
+}
+function getStreamingFileData(value) {
+    if (isStreamingFile(value))
+        return value.data;
+    return value;
+}
+async function* iterateBytes(value) {
+    if (typeof value === 'string') {
+        yield bytes_encodeUTF8(value);
+    }
+    else if (ArrayBuffer.isView(value)) {
+        yield new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+    }
+    else if (value instanceof ArrayBuffer) {
+        yield new Uint8Array(value);
+    }
+    else if (value instanceof Response) {
+        if (value.body) {
+            yield* iterateBytes(value.body);
+        }
+        else {
+            yield* iterateBytes(await value.blob());
+        }
+    }
+    else if (value instanceof Blob) {
+        if (typeof value.stream === 'function') {
+            yield* iterateBytes(value.stream());
+        }
+        else {
+            yield new Uint8Array(await value.arrayBuffer());
+        }
+    }
+    else if (isReadableStream(value)) {
+        for await (const chunk of ReadableStreamToAsyncIterable(value)) {
+            yield* iterateBytes(chunk);
+        }
+    }
+    else if (isAsyncIterable(value)) {
+        for await (const chunk of value) {
+            yield* iterateBytes(chunk);
+        }
+    }
+    else {
+        throw new TypeError(`Invalid streaming file chunk: ${String(value)}`);
+    }
+}
+function escapeHeaderValue(value) {
+    return value.replace(/["\\\r\n]/g, (character) => encodeURIComponent(character));
+}
 const addFormValue = async (form, key, value) => {
     if (value === undefined)
         return;
@@ -52393,6 +52671,7 @@ function propsForError(value) {
 }
 //# sourceMappingURL=to-file.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/core/uploads.mjs
+
 
 //# sourceMappingURL=uploads.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/core/resource.mjs
@@ -52723,8 +53002,16 @@ class EventStream {
         // Unfortunately if we call `executor()` immediately we get runtime errors about
         // references to `this` before the `super()` constructor call returns.
         setTimeout(() => {
-            executor().then(() => {
-                this._emitFinal();
+            Promise.resolve()
+                .then(executor)
+                .then(() => {
+                try {
+                    this._emitFinal();
+                }
+                catch (error) {
+                    __classPrivateFieldGet(this, _EventStream_instances, "m", _EventStream_handleError).call(this, error);
+                    return;
+                }
                 this._emit('end');
             }, __classPrivateFieldGet(this, _EventStream_instances, "m", _EventStream_handleError).bind(this));
         }, 0);
@@ -52814,6 +53101,103 @@ class EventStream {
                 this.once('error', reject);
             this.once(event, resolve);
         });
+    }
+    /**
+     * Returns an async iterator that yields every time the event is triggered.
+     * The iterator ends when the stream ends and rejects if the stream errors
+     * or is aborted. If you request the 'error' or 'abort' event, the iterator
+     * yields that event instead of rejecting.
+     *
+     * Example:
+     *
+     *   for await (const [message] of stream.events('message')) {
+     *     await processMessage(message);
+     *   }
+     */
+    events(event) {
+        const pushQueue = [];
+        const readQueue = [];
+        let ended = this.ended;
+        let failure;
+        let failureDelivered = false;
+        const doneResult = () => ({ value: undefined, done: true });
+        const finishReaders = () => {
+            while (readQueue.length) {
+                readQueue.shift().resolve(doneResult());
+            }
+        };
+        const rejectReader = () => {
+            if (!failure || failureDelivered || !readQueue.length)
+                return;
+            failureDelivered = true;
+            readQueue.shift().reject(failure);
+        };
+        const cleanup = () => {
+            this.off(event, onEvent);
+            this.off('end', onEnd);
+            if (event !== 'error')
+                this.off('error', onFailure);
+            if (event !== 'abort')
+                this.off('abort', onFailure);
+        };
+        const onEvent = (...args) => {
+            if (ended)
+                return;
+            const reader = readQueue.shift();
+            if (reader) {
+                reader.resolve({ value: args, done: false });
+            }
+            else {
+                pushQueue.push(args);
+            }
+        };
+        const onFailure = (error) => {
+            failure = error;
+            if (!pushQueue.length)
+                rejectReader();
+        };
+        const onEnd = () => {
+            ended = true;
+            cleanup();
+            if (!pushQueue.length) {
+                rejectReader();
+                finishReaders();
+            }
+        };
+        if (!ended) {
+            this.on(event, onEvent);
+            this.on('end', onEnd);
+            if (event !== 'error')
+                this.on('error', onFailure);
+            if (event !== 'abort')
+                this.on('abort', onFailure);
+        }
+        return {
+            next: () => {
+                const value = pushQueue.shift();
+                if (value)
+                    return Promise.resolve({ value, done: false });
+                if (failure && !failureDelivered) {
+                    failureDelivered = true;
+                    return Promise.reject(failure);
+                }
+                if (ended)
+                    return Promise.resolve(doneResult());
+                return new Promise((resolve, reject) => {
+                    readQueue.push({ resolve, reject });
+                });
+            },
+            return: () => {
+                ended = true;
+                pushQueue.length = 0;
+                cleanup();
+                finishReaders();
+                return Promise.resolve(doneResult());
+            },
+            [Symbol.asyncIterator]() {
+                return this;
+            },
+        };
     }
     async done() {
         __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
@@ -52911,7 +53295,20 @@ var _AbstractChatCompletionRunner_instances, _AbstractChatCompletionRunner_getFi
 
 
 
+
 const DEFAULT_MAX_CHAT_COMPLETIONS = 10;
+function normalizeToolCallIds(chatCompletion) {
+    for (const choice of chatCompletion.choices) {
+        for (const toolCall of choice.message.tool_calls ?? []) {
+            // Some OpenAI-compatible providers omit tool call IDs or return an empty string.
+            // Generate a unique ID before the completion is stored or emitted so the assistant
+            // tool call and its result message always reference the same value.
+            if (!toolCall.id) {
+                toolCall.id = `call_${uuid4()}`;
+            }
+        }
+    }
+}
 class AbstractChatCompletionRunner extends EventStream {
     constructor() {
         super(...arguments);
@@ -52920,6 +53317,7 @@ class AbstractChatCompletionRunner extends EventStream {
         this.messages = [];
     }
     _addChatCompletion(chatCompletion) {
+        normalizeToolCallIds(chatCompletion);
         this._chatCompletions.push(chatCompletion);
         this._emit('chatCompletion', chatCompletion);
         const message = chatCompletion.choices[0]?.message;
@@ -53027,7 +53425,8 @@ class AbstractChatCompletionRunner extends EventStream {
     }
     async _runTools(client, params, runner, options) {
         const role = 'tool';
-        const { tool_choice = 'auto', stream, ...restParams } = params;
+        const { tool_choice = 'auto', stream, toolContext: inputToolContext, ...restParams } = params;
+        const toolContext = inputToolContext;
         const singleFunctionToCall = typeof tool_choice !== 'string' && tool_choice.type === 'function' && tool_choice?.function?.name;
         const { maxChatCompletions = DEFAULT_MAX_CHAT_COMPLETIONS, afterCompletion } = options || {};
         // TODO(someday): clean this logic up
@@ -53098,10 +53497,10 @@ class AbstractChatCompletionRunner extends EventStream {
                     const content = error instanceof Error ? error.message : String(error);
                     return { message: { role, tool_call_id, content }, functionCalled: false };
                 }
-                rawContent = await fn.function(parsed, runner);
+                rawContent = await fn.function(parsed, runner, toolContext);
             }
             else {
-                rawContent = await fn.function(args, runner);
+                rawContent = await fn.function(args, runner, toolContext);
             }
             const content = __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_stringifyFunctionCallResult).call(this, rawContent);
             return { message: { role, tool_call_id, content }, functionCalled: true };
@@ -53494,6 +53893,36 @@ var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompleti
 
 
 
+
+// Keep message records readable as empty chunks by older SDKs. Their finalizer
+// overwrites `object`, so the encoded payload does not leak into completions.
+const CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX = 'chat.completion.chunk.message:';
+function makeChatCompletionReadableStreamMessageChunk(chunk, message, toolCallIds) {
+    const payload = {
+        type: 'message',
+        message,
+        ...(toolCallIds ? { tool_call_ids: toolCallIds } : {}),
+    };
+    return {
+        id: chunk.id,
+        choices: [],
+        created: chunk.created,
+        model: chunk.model,
+        object: `${CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX}${JSON.stringify(payload)}`,
+    };
+}
+function isChatCompletionReadableStreamMessage(item) {
+    return (('type' in item && item.type === 'message' && 'message' in item) ||
+        ('object' in item &&
+            typeof item.object === 'string' &&
+            item.object.startsWith(CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX)));
+}
+function getChatCompletionReadableStreamMessage(item) {
+    if ('type' in item) {
+        return item;
+    }
+    return JSON.parse(item.object.slice(CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX.length));
+}
 class ChatCompletionStream extends AbstractChatCompletionRunner {
     constructor(params) {
         super();
@@ -53544,18 +53973,43 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         this._connected();
         const stream = src_Stream.fromReadableStream(readableStream, this.controller);
         let chatId;
-        for await (const chunk of stream) {
-            if (chatId && chatId !== chunk.id) {
+        for await (const item of stream) {
+            if (isChatCompletionReadableStreamMessage(item)) {
+                const message = getChatCompletionReadableStreamMessage(item);
+                if (__classPrivateFieldGet(this, _ChatCompletionStream_currentChatCompletionSnapshot, "f")) {
+                    const toolCalls = __classPrivateFieldGet(this, _ChatCompletionStream_currentChatCompletionSnapshot, "f").choices[0]?.message.tool_calls;
+                    for (const [index, id] of message.tool_call_ids?.entries() ?? []) {
+                        const toolCall = toolCalls?.[index];
+                        if (toolCall && id) {
+                            toolCall.id = id;
+                        }
+                    }
+                    this._addChatCompletion(__classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_endRequest).call(this));
+                    chatId = undefined;
+                }
+                this._addMessage(message.message);
+                continue;
+            }
+            const chunk = item;
+            if (chatId && chunk.id && chatId !== chunk.id) {
                 // A new request has been made.
                 this._addChatCompletion(__classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_endRequest).call(this));
             }
             __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_addChunk).call(this, chunk);
-            chatId = chunk.id;
+            if (chunk.id)
+                chatId = chunk.id;
         }
         if (stream.controller.signal?.aborted) {
             throw new APIUserAbortError();
         }
-        return this._addChatCompletion(__classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_endRequest).call(this));
+        if (__classPrivateFieldGet(this, _ChatCompletionStream_currentChatCompletionSnapshot, "f")) {
+            return this._addChatCompletion(__classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_endRequest).call(this));
+        }
+        const lastChatCompletion = this._chatCompletions[this._chatCompletions.length - 1];
+        if (lastChatCompletion) {
+            return lastChatCompletion;
+        }
+        throw new error_OpenAIError(`request ended without sending any chunks`);
     }
     [(_ChatCompletionStream_params = new WeakMap(), _ChatCompletionStream_choiceEventStates = new WeakMap(), _ChatCompletionStream_currentChatCompletionSnapshot = new WeakMap(), _ChatCompletionStream_instances = new WeakSet(), _ChatCompletionStream_beginRequest = function _ChatCompletionStream_beginRequest() {
         if (this.ended)
@@ -53583,21 +54037,22 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         this._emit('chunk', chunk, completion);
         for (const choice of chunk.choices) {
             const choiceSnapshot = completion.choices[choice.index];
-            if (choice.delta.content != null &&
+            const { delta } = choice;
+            if (delta?.content != null &&
                 choiceSnapshot.message?.role === 'assistant' &&
                 choiceSnapshot.message?.content) {
-                this._emit('content', choice.delta.content, choiceSnapshot.message.content);
+                this._emit('content', delta.content, choiceSnapshot.message.content);
                 this._emit('content.delta', {
-                    delta: choice.delta.content,
+                    delta: delta.content,
                     snapshot: choiceSnapshot.message.content,
                     parsed: choiceSnapshot.message.parsed,
                 });
             }
-            if (choice.delta.refusal != null &&
+            if (delta?.refusal != null &&
                 choiceSnapshot.message?.role === 'assistant' &&
                 choiceSnapshot.message?.refusal) {
                 this._emit('refusal.delta', {
-                    delta: choice.delta.refusal,
+                    delta: delta.refusal,
                     snapshot: choiceSnapshot.message.refusal,
                 });
             }
@@ -53620,7 +54075,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
                     __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_emitToolCallDoneEvent).call(this, choiceSnapshot, state.current_tool_call_index);
                 }
             }
-            for (const toolCall of choice.delta.tool_calls ?? []) {
+            for (const toolCall of delta?.tool_calls ?? []) {
                 if (state.current_tool_call_index !== toolCall.index) {
                     __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_emitContentDoneEvents).call(this, choiceSnapshot);
                     // new tool call started, the previous one is done
@@ -53630,7 +54085,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
                 }
                 state.current_tool_call_index = toolCall.index;
             }
-            for (const toolCallDelta of choice.delta.tool_calls ?? []) {
+            for (const toolCallDelta of delta?.tool_calls ?? []) {
                 const toolCallSnapshot = choiceSnapshot.message.tool_calls?.[toolCallDelta.index];
                 if (!toolCallSnapshot?.type) {
                     continue;
@@ -53725,7 +54180,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
                 choices: [],
             }, "f");
         }
-        else {
+        else if (chunk.id) {
             Object.assign(snapshot, rest);
         }
         for (const { delta, finish_reason, index, logprobs = null, ...other } of chunk.choices) {
@@ -53922,9 +54377,6 @@ function finalizeChatCompletion(snapshot, params) {
                         tool_calls: tool_calls.map((tool_call, i) => {
                             const { function: fn, type, id, ...toolRest } = tool_call;
                             const { arguments: args, name, ...fnRest } = fn || {};
-                            if (id == null) {
-                                throw new error_OpenAIError(`missing choices[${index}].tool_calls[${i}].id\n${str(snapshot)}`);
-                            }
                             if (type == null) {
                                 throw new error_OpenAIError(`missing choices[${index}].tool_calls[${i}].type\n${str(snapshot)}`);
                             }
@@ -53934,7 +54386,12 @@ function finalizeChatCompletion(snapshot, params) {
                             if (args == null) {
                                 throw new error_OpenAIError(`missing choices[${index}].tool_calls[${i}].function.arguments\n${str(snapshot)}`);
                             }
-                            return { ...toolRest, id, type, function: { ...fnRest, name, arguments: args } };
+                            return {
+                                ...toolRest,
+                                id: id || `call_${uuid4()}`,
+                                type,
+                                function: { ...fnRest, name, arguments: args },
+                            };
                         }),
                     },
                 };
@@ -53969,11 +54426,88 @@ function assertNever(_x) { }
 //# sourceMappingURL=ChatCompletionStream.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
 
+
+
+
 class ChatCompletionStreamingRunner extends ChatCompletionStream {
     static fromReadableStream(stream) {
         const runner = new ChatCompletionStreamingRunner(null);
         runner._run(() => runner._fromReadableStream(stream));
         return runner;
+    }
+    toReadableStream() {
+        const pushQueue = [];
+        const readQueue = [];
+        let done = false;
+        let lastChunk;
+        let toolCallIds;
+        const pushEvent = (event) => {
+            const reader = readQueue.shift();
+            if (reader) {
+                reader.resolve(event);
+            }
+            else {
+                pushQueue.push(event);
+            }
+        };
+        this.on('chunk', (chunk) => {
+            lastChunk = chunk;
+            pushEvent(chunk);
+        });
+        this.on('message', (message) => {
+            if (isAssistantMessage(message)) {
+                toolCallIds = message.tool_calls?.map((toolCall) => toolCall.id);
+                return;
+            }
+            if (isToolMessage(message)) {
+                if (!lastChunk) {
+                    throw new error_OpenAIError('cannot serialize a tool message before receiving any chunks');
+                }
+                pushEvent(makeChatCompletionReadableStreamMessageChunk(lastChunk, message, toolCallIds));
+            }
+        });
+        this.on('end', () => {
+            done = true;
+            for (const reader of readQueue) {
+                reader.resolve(undefined);
+            }
+            readQueue.length = 0;
+        });
+        this.on('abort', (err) => {
+            done = true;
+            for (const reader of readQueue) {
+                reader.reject(err);
+            }
+            readQueue.length = 0;
+        });
+        this.on('error', (err) => {
+            done = true;
+            for (const reader of readQueue) {
+                reader.reject(err);
+            }
+            readQueue.length = 0;
+        });
+        const iterator = () => ({
+            next: async () => {
+                if (!pushQueue.length) {
+                    if (done) {
+                        return { value: undefined, done: true };
+                    }
+                    return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((event) => (event ? { value: event, done: false } : { value: undefined, done: true }));
+                }
+                const event = pushQueue.shift();
+                if (!event) {
+                    return { value: undefined, done: true };
+                }
+                return { value: event, done: false };
+            },
+            return: async () => {
+                this.abort();
+                return { value: undefined, done: true };
+            },
+        });
+        const stream = new src_Stream(iterator, this.controller);
+        return stream.toReadableStream();
     }
     static runTools(client, params, options) {
         const runner = new ChatCompletionStreamingRunner(
@@ -55598,104 +56132,6 @@ class projects_roles_Roles extends APIResource {
     }
 }
 //# sourceMappingURL=roles.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/service-accounts.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-
-
-
-class ServiceAccounts extends APIResource {
-    /**
-     * Creates a new service account in the project. This also returns an unredacted
-     * API key for the service account.
-     *
-     * @example
-     * ```ts
-     * const serviceAccount =
-     *   await client.admin.organization.projects.serviceAccounts.create(
-     *     'project_id',
-     *     { name: 'name' },
-     *   );
-     * ```
-     */
-    create(projectID, body, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}/service_accounts`, {
-            body,
-            ...options,
-            __security: { adminAPIKeyAuth: true },
-        });
-    }
-    /**
-     * Retrieves a service account in the project.
-     *
-     * @example
-     * ```ts
-     * const projectServiceAccount =
-     *   await client.admin.organization.projects.serviceAccounts.retrieve(
-     *     'service_account_id',
-     *     { project_id: 'project_id' },
-     *   );
-     * ```
-     */
-    retrieve(serviceAccountID, params, options) {
-        const { project_id } = params;
-        return this._client.get(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
-            ...options,
-            __security: { adminAPIKeyAuth: true },
-        });
-    }
-    /**
-     * Updates a service account in the project.
-     *
-     * @example
-     * ```ts
-     * const projectServiceAccount =
-     *   await client.admin.organization.projects.serviceAccounts.update(
-     *     'service_account_id',
-     *     { project_id: 'project_id' },
-     *   );
-     * ```
-     */
-    update(serviceAccountID, params, options) {
-        const { project_id, ...body } = params;
-        return this._client.post(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
-    }
-    /**
-     * Returns a list of service accounts in the project.
-     *
-     * @example
-     * ```ts
-     * // Automatically fetches more pages as needed.
-     * for await (const projectServiceAccount of client.admin.organization.projects.serviceAccounts.list(
-     *   'project_id',
-     * )) {
-     *   // ...
-     * }
-     * ```
-     */
-    list(projectID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/service_accounts`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
-    }
-    /**
-     * Deletes a service account from the project.
-     *
-     * Returns confirmation of service account deletion, or an error if the project is
-     * archived (archived projects have no service accounts).
-     *
-     * @example
-     * ```ts
-     * const serviceAccount =
-     *   await client.admin.organization.projects.serviceAccounts.delete(
-     *     'service_account_id',
-     *     { project_id: 'project_id' },
-     *   );
-     * ```
-     */
-    delete(serviceAccountID, params, options) {
-        const { project_id } = params;
-        return this._client.delete(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
-    }
-}
-//# sourceMappingURL=service-accounts.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -55987,6 +56423,134 @@ class groups_Groups extends APIResource {
 }
 groups_Groups.Roles = groups_roles_Roles;
 //# sourceMappingURL=groups.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+class api_keys_APIKeys extends APIResource {
+    /**
+     * Creates an API key for a service account in the project.
+     *
+     * @example
+     * ```ts
+     * const apiKey =
+     *   await client.admin.organization.projects.serviceAccounts.apiKeys.create(
+     *     'service_account_id',
+     *     { project_id: 'project_id' },
+     *   );
+     * ```
+     */
+    create(serviceAccountID, params, options) {
+        const { project_id, ...body } = params;
+        return this._client.post(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+    }
+}
+//# sourceMappingURL=api-keys.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+class ServiceAccounts extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.apiKeys = new api_keys_APIKeys(this._client);
+    }
+    /**
+     * Creates a new service account in the project. By default, this also returns an
+     * unredacted API key for the service account.
+     *
+     * @example
+     * ```ts
+     * const serviceAccount =
+     *   await client.admin.organization.projects.serviceAccounts.create(
+     *     'project_id',
+     *     { name: 'name' },
+     *   );
+     * ```
+     */
+    create(projectID, body, options) {
+        return this._client.post(src_path `/organization/projects/${projectID}/service_accounts`, {
+            body,
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+    /**
+     * Retrieves a service account in the project.
+     *
+     * @example
+     * ```ts
+     * const projectServiceAccount =
+     *   await client.admin.organization.projects.serviceAccounts.retrieve(
+     *     'service_account_id',
+     *     { project_id: 'project_id' },
+     *   );
+     * ```
+     */
+    retrieve(serviceAccountID, params, options) {
+        const { project_id } = params;
+        return this._client.get(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+    /**
+     * Updates a service account in the project.
+     *
+     * @example
+     * ```ts
+     * const projectServiceAccount =
+     *   await client.admin.organization.projects.serviceAccounts.update(
+     *     'service_account_id',
+     *     { project_id: 'project_id' },
+     *   );
+     * ```
+     */
+    update(serviceAccountID, params, options) {
+        const { project_id, ...body } = params;
+        return this._client.post(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+    }
+    /**
+     * Returns a list of service accounts in the project.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const projectServiceAccount of client.admin.organization.projects.serviceAccounts.list(
+     *   'project_id',
+     * )) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(projectID, query = {}, options) {
+        return this._client.getAPIList(src_path `/organization/projects/${projectID}/service_accounts`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+    }
+    /**
+     * Deletes a service account from the project.
+     *
+     * Returns confirmation of service account deletion, or an error if the project is
+     * archived (archived projects have no service accounts).
+     *
+     * @example
+     * ```ts
+     * const serviceAccount =
+     *   await client.admin.organization.projects.serviceAccounts.delete(
+     *     'service_account_id',
+     *     { project_id: 'project_id' },
+     *   );
+     * ```
+     */
+    delete(serviceAccountID, params, options) {
+        const { project_id } = params;
+        return this._client.delete(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+    }
+}
+ServiceAccounts.APIKeys = api_keys_APIKeys;
+//# sourceMappingURL=service-accounts.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/users/roles.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -56555,81 +57119,6 @@ class Admin extends APIResource {
 }
 Admin.Organization = Organization;
 //# sourceMappingURL=admin.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/headers.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-
-const brand_privateNullableHeaders = /* @__PURE__ */ Symbol('brand.privateNullableHeaders');
-function* iterateHeaders(headers) {
-    if (!headers)
-        return;
-    if (brand_privateNullableHeaders in headers) {
-        const { values, nulls } = headers;
-        yield* values.entries();
-        for (const name of nulls) {
-            yield [name, null];
-        }
-        return;
-    }
-    let shouldClear = false;
-    let iter;
-    if (headers instanceof Headers) {
-        iter = headers.entries();
-    }
-    else if (isReadonlyArray(headers)) {
-        iter = headers;
-    }
-    else {
-        shouldClear = true;
-        iter = Object.entries(headers ?? {});
-    }
-    for (let row of iter) {
-        const name = row[0];
-        if (typeof name !== 'string')
-            throw new TypeError('expected header name to be a string');
-        const values = isReadonlyArray(row[1]) ? row[1] : [row[1]];
-        let didClear = false;
-        for (const value of values) {
-            if (value === undefined)
-                continue;
-            // Objects keys always overwrite older headers, they never append.
-            // Yield a null to clear the header before adding the new values.
-            if (shouldClear && !didClear) {
-                didClear = true;
-                yield [name, null];
-            }
-            yield [name, value];
-        }
-    }
-}
-const buildHeaders = (newHeaders) => {
-    const targetHeaders = new Headers();
-    const nullHeaders = new Set();
-    for (const headers of newHeaders) {
-        const seenHeaders = new Set();
-        for (const [name, value] of iterateHeaders(headers)) {
-            const lowerName = name.toLowerCase();
-            if (!seenHeaders.has(lowerName)) {
-                targetHeaders.delete(name);
-                seenHeaders.add(lowerName);
-            }
-            if (value === null) {
-                targetHeaders.delete(name);
-                nullHeaders.add(lowerName);
-            }
-            else {
-                targetHeaders.append(name, value);
-                nullHeaders.delete(lowerName);
-            }
-        }
-    }
-    return { [brand_privateNullableHeaders]: true, values: targetHeaders, nulls: nullHeaders };
-};
-const isEmptyHeaders = (headers) => {
-    for (const _ of iterateHeaders(headers))
-        return false;
-    return true;
-};
-//# sourceMappingURL=headers.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/audio/speech.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -57063,6 +57552,188 @@ class ChatKit extends APIResource {
 ChatKit.Sessions = sessions_Sessions;
 ChatKit.Threads = Threads;
 //# sourceMappingURL=chatkit.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/responses/input-items.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class InputItems extends APIResource {
+    /**
+     * Returns a list of input items for a given response.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaResponseItem of client.beta.responses.inputItems.list(
+     *   'response_id',
+     * )) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(responseID, params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList(src_path `/responses/${responseID}/input_items?beta=true`, (CursorPage), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'openai-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+            __security: { bearerAuth: true },
+        });
+    }
+}
+//# sourceMappingURL=input-items.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/responses/input-tokens.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+class InputTokens extends APIResource {
+    /**
+     * Returns input token counts of the request.
+     *
+     * Returns an object with `object` set to `response.input_tokens` and an
+     * `input_tokens` count.
+     *
+     * @example
+     * ```ts
+     * const response =
+     *   await client.beta.responses.inputTokens.count();
+     * ```
+     */
+    count(params = {}, options) {
+        const { betas, ...body } = params ?? {};
+        return this._client.post('/responses/input_tokens?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'openai-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+            __security: { bearerAuth: true },
+        });
+    }
+}
+//# sourceMappingURL=input-tokens.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/responses/responses.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+
+class Responses extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.inputItems = new InputItems(this._client);
+        this.inputTokens = new InputTokens(this._client);
+    }
+    create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post('/responses?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'openai-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+            stream: params.stream ?? false,
+            __security: { bearerAuth: true },
+        });
+    }
+    retrieve(responseID, params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.get(src_path `/responses/${responseID}?beta=true`, {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'openai-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+            stream: params?.stream ?? false,
+            __security: { bearerAuth: true },
+        });
+    }
+    /**
+     * Deletes a model response with the given ID.
+     *
+     * @example
+     * ```ts
+     * await client.beta.responses.delete(
+     *   'resp_677efb5139a88190b512bc3fef8e535d',
+     * );
+     * ```
+     */
+    delete(responseID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.delete(src_path `/responses/${responseID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { Accept: '*/*', ...(betas?.toString() != null ? { 'openai-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+            __security: { bearerAuth: true },
+        });
+    }
+    /**
+     * Cancels a model response with the given ID. Only responses created with the
+     * `background` parameter set to `true` can be cancelled.
+     * [Learn more](https://platform.openai.com/docs/guides/background).
+     *
+     * @example
+     * ```ts
+     * const betaResponse = await client.beta.responses.cancel(
+     *   'resp_677efb5139a88190b512bc3fef8e535d',
+     * );
+     * ```
+     */
+    cancel(responseID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(src_path `/responses/${responseID}/cancel?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'openai-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+            __security: { bearerAuth: true },
+        });
+    }
+    /**
+     * Compact a conversation. Returns a compacted response object.
+     *
+     * Learn when and how to compact long-running conversations in the
+     * [conversation state guide](https://platform.openai.com/docs/guides/conversation-state#managing-the-context-window).
+     * For ZDR-compatible compaction details, see
+     * [Compaction (advanced)](https://platform.openai.com/docs/guides/conversation-state#compaction-advanced).
+     *
+     * @example
+     * ```ts
+     * const betaCompactedResponse =
+     *   await client.beta.responses.compact({
+     *     model: 'gpt-5.6-sol',
+     *   });
+     * ```
+     */
+    compact(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post('/responses/compact?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'openai-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+            __security: { bearerAuth: true },
+        });
+    }
+}
+Responses.InputItems = InputItems;
+Responses.InputTokens = InputTokens;
+//# sourceMappingURL=responses.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/threads/messages.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -57304,12 +57975,13 @@ class AssistantStream extends EventStream {
         let done = false;
         //Catch all for passing along all events
         this.on('event', (event) => {
+            const eventCopy = structuredClone(event);
             const reader = readQueue.shift();
             if (reader) {
-                reader.resolve(event);
+                reader.resolve(eventCopy);
             }
             else {
-                pushQueue.push(event);
+                pushQueue.push(eventCopy);
             }
         });
         this.on('end', () => {
@@ -57508,7 +58180,7 @@ class AssistantStream extends EventStream {
                     }
                     const accEntry = accValue[index];
                     if (accEntry == null) {
-                        accValue.push(deltaEntry);
+                        accValue[index] = deltaEntry;
                     }
                     else {
                         accValue[index] = this.accumulateDelta(accEntry, deltaEntry);
@@ -58099,16 +58771,20 @@ threads_Threads.Messages = messages_Messages;
 
 
 
+
+
 class Beta extends APIResource {
     constructor() {
         super(...arguments);
         this.realtime = new Realtime(this._client);
+        this.responses = new Responses(this._client);
         this.chatkit = new ChatKit(this._client);
         this.assistants = new Assistants(this._client);
         this.threads = new threads_Threads(this._client);
     }
 }
 Beta.Realtime = Realtime;
+Beta.Responses = Responses;
 Beta.ChatKit = ChatKit;
 Beta.Assistants = Assistants;
 Beta.Threads = threads_Threads;
@@ -59799,6 +60475,7 @@ function accumulateResponse(event, snapshot) {
         case 'response.mcp_list_tools.in_progress':
         case 'response.mcp_list_tools.completed':
         case 'response.mcp_list_tools.failed':
+        case 'keepalive':
         case 'error': {
             // These events do not contain state represented by the Response object.
             break;
@@ -59841,6 +60518,7 @@ var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentRe
 
 
 
+
 class ResponseStream extends EventStream {
     constructor(params) {
         super();
@@ -59858,12 +60536,19 @@ class ResponseStream extends EventStream {
         }));
         return runner;
     }
+    static fromReadableStream(stream) {
+        const runner = new ResponseStream(null);
+        runner._run(() => runner._fromReadableStream(stream));
+        return runner;
+    }
     async _createOrRetrieveResponse(client, params, options) {
         this._listenForAbort(options?.signal);
         __classPrivateFieldGet(this, _ResponseStream_instances, "m", _ResponseStream_beginRequest).call(this);
         let stream;
         let starting_after = null;
         if ('response_id' in params) {
+            // Keep the full replay so that `accumulateResponse()` sees `response.created` and can build
+            // complete snapshots before locally filtering events at `starting_after`.
             stream = await client.responses.retrieve(params.response_id, { stream: true }, { ...options, signal: this.controller.signal, stream: true });
             starting_after = params.starting_after ?? null;
         }
@@ -59873,6 +60558,19 @@ class ResponseStream extends EventStream {
         this._connected();
         for await (const event of stream) {
             __classPrivateFieldGet(this, _ResponseStream_instances, "m", _ResponseStream_addEvent).call(this, event, starting_after);
+        }
+        if (stream.controller.signal?.aborted) {
+            throw new APIUserAbortError();
+        }
+        return __classPrivateFieldGet(this, _ResponseStream_instances, "m", _ResponseStream_endRequest).call(this);
+    }
+    async _fromReadableStream(readableStream, options) {
+        this._listenForAbort(options?.signal);
+        __classPrivateFieldGet(this, _ResponseStream_instances, "m", _ResponseStream_beginRequest).call(this);
+        this._connected();
+        const stream = src_Stream.fromReadableStream(readableStream, this.controller);
+        for await (const event of stream) {
+            __classPrivateFieldGet(this, _ResponseStream_instances, "m", _ResponseStream_addEvent).call(this, event, null);
         }
         if (stream.controller.signal?.aborted) {
             throw new APIUserAbortError();
@@ -60016,7 +60714,7 @@ function finalizeResponse(snapshot, params) {
 
 
 
-class InputItems extends APIResource {
+class input_items_InputItems extends APIResource {
     /**
      * Returns a list of input items for a given response.
      *
@@ -60038,7 +60736,7 @@ class InputItems extends APIResource {
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/responses/input-tokens.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
-class InputTokens extends APIResource {
+class input_tokens_InputTokens extends APIResource {
     /**
      * Returns input token counts of the request.
      *
@@ -60070,11 +60768,11 @@ class InputTokens extends APIResource {
 
 
 
-class Responses extends APIResource {
+class responses_Responses extends APIResource {
     constructor() {
         super(...arguments);
-        this.inputItems = new InputItems(this._client);
-        this.inputTokens = new InputTokens(this._client);
+        this.inputItems = new input_items_InputItems(this._client);
+        this.inputTokens = new input_tokens_InputTokens(this._client);
     }
     create(body, options) {
         return this._client.post('/responses', {
@@ -60159,7 +60857,7 @@ class Responses extends APIResource {
      * @example
      * ```ts
      * const compactedResponse = await client.responses.compact({
-     *   model: 'gpt-5.4',
+     *   model: 'gpt-5.6-sol',
      * });
      * ```
      */
@@ -60167,8 +60865,8 @@ class Responses extends APIResource {
         return this._client.post('/responses/compact', { body, ...options, __security: { bearerAuth: true } });
     }
 }
-Responses.InputItems = InputItems;
-Responses.InputTokens = InputTokens;
+responses_Responses.InputItems = input_items_InputItems;
+responses_Responses.InputTokens = input_tokens_InputTokens;
 //# sourceMappingURL=responses.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/skills/content.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -61186,7 +61884,7 @@ class OpenAI {
          */
         this.uploads = new Uploads(this);
         this.admin = new Admin(this);
-        this.responses = new Responses(this);
+        this.responses = new responses_Responses(this);
         this.realtime = new realtime_Realtime(this);
         /**
          * Manage conversations and conversation items.
@@ -61449,6 +62147,7 @@ class OpenAI {
         const { req, url, timeout } = await this.buildRequest(options, {
             retryCount: maxRetries - retriesRemaining,
         });
+        const hasStreamingBody = options.__metadata?.['hasStreamingBody'] === true;
         await this.prepareRequest(req, { url, options });
         await this._provider?.prepareRequest?.(req, { url, options });
         /** Not an API request ID, just for correlating local log entries. */
@@ -61480,7 +62179,7 @@ class OpenAI {
             // others do not provide enough information to distinguish timeouts from other connection errors
             const isTimeout = src_isAbortError(response) ||
                 /timed? ?out/i.test(String(response) + ('cause' in response ? String(response.cause) : ''));
-            if (retriesRemaining) {
+            if (retriesRemaining && !hasStreamingBody) {
                 loggerFor(this).info(`[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} - ${retryMessage}`);
                 loggerFor(this).debug(`[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} (${retryMessage})`, formatRequestDetails({
                     retryOfRequestLogID,
@@ -61490,8 +62189,9 @@ class OpenAI {
                 }));
                 return this.retryRequest(options, retriesRemaining, retryOfRequestLogID ?? requestLogID);
             }
-            loggerFor(this).info(`[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} - error; no more retries left`);
-            loggerFor(this).debug(`[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} (error; no more retries left)`, formatRequestDetails({
+            const terminalMessage = hasStreamingBody ? 'error; streaming body cannot be retried' : 'error; no more retries left';
+            loggerFor(this).info(`[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} - ${terminalMessage}`);
+            loggerFor(this).debug(`[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} (${terminalMessage})`, formatRequestDetails({
                 retryOfRequestLogID,
                 url,
                 durationMs: headersTime - startTime,
@@ -61530,7 +62230,7 @@ class OpenAI {
                 }, retriesRemaining, retryOfRequestLogID ?? requestLogID);
             }
             const shouldRetry = await this.shouldRetry(response);
-            if (retriesRemaining && shouldRetry) {
+            if (retriesRemaining && shouldRetry && !hasStreamingBody) {
                 const retryMessage = `retrying, ${retriesRemaining} attempts remaining`;
                 // We don't need the body of this response.
                 await CancelReadableStream(response.body);
@@ -61544,7 +62244,10 @@ class OpenAI {
                 }));
                 return this.retryRequest(options, retriesRemaining, retryOfRequestLogID ?? requestLogID, response.headers);
             }
-            const retryMessage = shouldRetry ? `error; no more retries left` : `error; not retryable`;
+            const retryMessage = shouldRetry ?
+                hasStreamingBody ? `error; streaming body cannot be retried`
+                    : `error; no more retries left`
+                : `error; not retryable`;
             loggerFor(this).info(`${responseInfo} - ${retryMessage}`);
             const errText = await response.text().catch((err) => castToError(err).message);
             const errJSON = src_safeJSON(errText);
@@ -61825,6 +62528,7 @@ OpenAI.PermissionDeniedError = PermissionDeniedError;
 OpenAI.UnprocessableEntityError = UnprocessableEntityError;
 OpenAI.InvalidWebhookSignatureError = InvalidWebhookSignatureError;
 OpenAI.toFile = toFile;
+OpenAI.toStreamingFile = toStreamingFile;
 OpenAI.Completions = completions_Completions;
 OpenAI.Chat = Chat;
 OpenAI.Embeddings = Embeddings;
@@ -61841,7 +62545,7 @@ OpenAI.Beta = Beta;
 OpenAI.Batches = Batches;
 OpenAI.Uploads = Uploads;
 OpenAI.Admin = Admin;
-OpenAI.Responses = Responses;
+OpenAI.Responses = responses_Responses;
 OpenAI.Realtime = realtime_Realtime;
 OpenAI.Conversations = Conversations;
 OpenAI.Evals = Evals;
@@ -62038,7 +62742,7 @@ class BedrockOpenAI extends OpenAI {
             ...opts,
         });
         this.bedrockTokenProvider = bedrockTokenProvider;
-        this.responses = restoreBedrockStreamOutputText(new Responses(this));
+        this.responses = restoreBedrockStreamOutputText(new responses_Responses(this));
     }
     async prepareOptions(options) {
         const security = options.__security ?? { bearerAuth: true };
