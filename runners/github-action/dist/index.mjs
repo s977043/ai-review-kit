@@ -49758,6 +49758,341 @@ Pricing last updated: ${this.lastUpdated}`;
 
 /* harmony default export */ const cost_estimator = (CostEstimator);
 
+// EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
+var review_plan_generator = __nccwpck_require__(8069);
+// EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
+var engine = __nccwpck_require__(9487);
+// EXTERNAL MODULE: ./src/lib/loop-signal.mjs
+var loop_signal = __nccwpck_require__(4702);
+// EXTERNAL MODULE: ./src/lib/gate-decision.mjs
+var gate_decision = __nccwpck_require__(2773);
+;// CONCATENATED MODULE: ./src/lib/run-gate.mjs
+/**
+ * Gate derivation for `river run` results (Epic #1347 S3 / #1350).
+ *
+ * Extracted from cli.mjs formatJsonOutput so the same derivation feeds both
+ * the JSON output artifact and the persisted run record (result store) —
+ * the audit trail must record the same gate the consumer saw.
+ *
+ * The `river run` path performs no plan-text human-approval scan, so
+ * humanApprovalRequired is always false here (documented in
+ * schemas/output.schema.json); riskMapDigest is likewise null on this path.
+ */
+
+
+
+
+
+/**
+ * Derive `{ decision, gate }` for a runLocalReview result. Both fields are
+ * undefined on derivation failure (same fail-soft contract as
+ * finalizeArtifact — the caller's output must never break on scoring).
+ *
+ * @param {object} result - runLocalReview result
+ * @returns {{ decision: string|undefined, gate: object|undefined }}
+ */
+function deriveRunGate(result) {
+  // Defensive (PR #1372 gemini): a null/undefined result yields the same
+  // fail-soft shape instead of throwing on property access.
+  if (result == null || typeof result !== 'object') {
+    return { decision: undefined, gate: undefined };
+  }
+  let decision;
+  try {
+    decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
+  } catch {
+    if (typeof result.decision === 'string' && result.decision.length > 0) {
+      decision = result.decision;
+    }
+  }
+
+  let gate;
+  try {
+    const findings = result.findings ?? [];
+    const riskAssessment = result.plan?.riskAssessment;
+    const loopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)({ decision, findings });
+    gate = (0,gate_decision/* deriveGateDecision */.RF)({
+      loopSignal,
+      decision,
+      humanApprovalRequired: false,
+      riskAction: riskAssessment?.aggregateAction,
+      blockingFindings: findings.filter(
+        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
+      ).length,
+      changedFiles: result.changedFiles ?? [],
+      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
+      artifactStatus: result.status ?? null,
+      riskMapPresent: riskAssessment != null,
+      riskMapDigest: null,
+      // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
+      strictBlock: result.strictBlock === true,
+      // Epic #1347 §11.8 (c2) (#1401): deterministic gate could not run → rule 5c
+      // ESCALATE. False unless the double-gated executor was opted in (§11.6).
+      deterministicUnrunnable: result.deterministicUnrunnable === true,
+      config: result.config ?? {},
+    });
+  } catch {
+    // leave gate unset on derivation failure
+  }
+
+  return { decision, gate };
+}
+
+// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
+var rubric = __nccwpck_require__(5034);
+// EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
+var _2020 = __nccwpck_require__(2210);
+// EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
+var dist = __nccwpck_require__(2815);
+;// CONCATENATED MODULE: ./src/cli/commands/review.mjs
+// `river review` subcommand handler.
+//
+// Extracted verbatim from src/cli.mjs main() as part of the CLI dispatch
+// refactor (#issue: split main() into per-subcommand handlers). Behavior,
+// messages, and exit codes are unchanged; only the enclosing function and the
+// relative import depth differ from the original inline block.
+
+
+
+
+
+
+/**
+ * Handle the `review` command (plan | exec | verify | route).
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @returns {Promise<number>} process exit code.
+ */
+async function runReviewCommand(parsed) {
+  // `review exec --dry-run` (without --plan): per spec, dry-run does
+  // no LLM/skill execution — it only resolves inputs and produces a
+  // deterministic plan, which is exactly `runReviewPlan`'s behavior.
+  // It is routed through the shared plan path below.
+  const isExecDryRun = parsed.reviewSubcommand === 'exec' && parsed.dryRun && !parsed.planFile;
+
+  // `review exec --plan <path>` (replay): the external plan is the
+  // source of truth (#802 Phase 3, replay contract). Artifact
+  // resolution and buildExecutionPlan are NOT re-run. Skill execution
+  // is out of scope here, so `findings` stays empty for now.
+  const isExecPlanReplay =
+    parsed.reviewSubcommand === 'exec' && typeof parsed.planFile === 'string';
+
+  // `review exec` (no flags): #802 Phase 3 A2-1. Resolve artifacts,
+  // build the execution plan with `llmEnabled: true` so non-heuristic
+  // skills can be selected, and call generateReview to populate the
+  // artifact findings via the LLM-or-heuristic pipeline. When no API
+  // key is configured, generateReview gracefully falls back to
+  // heuristic findings (or an empty set) instead of failing.
+  const isExecExecute =
+    parsed.reviewSubcommand === 'exec' && !parsed.dryRun && typeof parsed.planFile !== 'string';
+
+  // verify (and any future review subcommand that is not exec): the
+  // CLI/output contract is fixed and validated here (PR-3), but skill
+  // execution and verify-side artifact reading are not implemented
+  // yet. The contract depends only on the Artifact Input Contract IDs
+  // — it does not depend on PlanGate.
+  if (parsed.reviewSubcommand === 'verify') {
+    try {
+      const { ReviewPlanError, resolveReviewOutputFormat } =
+        await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
+      try {
+        resolveReviewOutputFormat(parsed);
+      } catch (err) {
+        if (err instanceof ReviewPlanError) {
+          console.error(`Error: ${err.message}`);
+          return 3;
+        }
+        throw err;
+      }
+    } catch (err) {
+      console.error(`Error: ${err?.message ?? err}`);
+      return 1;
+    }
+    console.error(
+      `river review ${parsed.reviewSubcommand}: the argument/output contract is accepted, ` +
+        'but execution is not implemented yet (#802 Phase 3). ' +
+        'See pages/reference/cli-review-' +
+        parsed.reviewSubcommand +
+        '-spec.md.'
+    );
+    return 3;
+  }
+  // route: risk-based review mode recommendation (dry-run, no LLM)
+  if (parsed.reviewSubcommand === 'route') {
+    try {
+      const { routeReviewMode, formatRouterResultMarkdown } =
+        await __nccwpck_require__.e(/* import() */ 709).then(__nccwpck_require__.bind(__nccwpck_require__, 1709));
+      const { loadRiskMap } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 572));
+      const routeTargetPath = external_node_path_.resolve(parsed.target);
+      const repoRoot = await (0,git/* ensureGitRepo */.NC)(routeTargetPath);
+      const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
+      const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, parsed.base ?? defaultBranch);
+      const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
+      const riskMap = await loadRiskMap(repoRoot).catch((err) => {
+        console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
+        return null;
+      });
+      const result = routeReviewMode({
+        changedFiles: repoDiff.changedFiles,
+        diffText: repoDiff.rawDiffText,
+        riskMap,
+        targetPath: routeTargetPath,
+      });
+      const outputFormat = parsed.formatExplicit
+        ? parsed.format
+        : parsed.outputExplicit && ['json', 'markdown'].includes(parsed.output)
+          ? parsed.output
+          : 'json';
+      if (outputFormat === 'markdown') {
+        console.log(formatRouterResultMarkdown(result));
+      } else if (outputFormat === 'json') {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        console.error(
+          `Error: river review route only supports --format json or --format markdown` +
+            (parsed.outputExplicit
+              ? ` (--output is not supported for this subcommand; use --format instead)`
+              : ` (got "${outputFormat}").`)
+        );
+        return 3;
+      }
+      return 0;
+    } catch (err) {
+      console.error(`Error: ${err?.message ?? err}`);
+      return 1;
+    }
+  }
+  // At this point, the verify/route branches above have already returned, so the
+  // remaining valid subcommands are `plan` and `exec` (in any of its
+  // exec dry-run / replay / deferred forms). Anything else is unknown.
+  if (parsed.reviewSubcommand !== 'plan' && parsed.reviewSubcommand !== 'exec') {
+    console.error(
+      parsed.reviewSubcommand
+        ? `river review ${parsed.reviewSubcommand} is not a known subcommand. Use: plan | exec | verify | route`
+        : 'Usage: river review plan --plan-only'
+    );
+    return 3;
+  }
+  try {
+    const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =
+      await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
+    let reviewFormat;
+    try {
+      reviewFormat = resolveReviewOutputFormat(parsed);
+    } catch (err) {
+      if (err instanceof ReviewPlanError) {
+        console.error(`Error: ${err.message}`);
+        return 3;
+      }
+      throw err;
+    }
+    // #976/#1027: resolve --skill-set within the review namespace so
+    // `river review plan|exec --skill-set <name>` restricts candidates
+    // (previously only `river run` honored it; the flag was silently
+    // ignored here). Skip on the replay path: --plan replays a fixed
+    // source plan, so skill selection (and thus --skill-set) does not apply.
+    let reviewSkillIds = null;
+    if (parsed.skillSet && !isExecPlanReplay) {
+      try {
+        reviewSkillIds = await (0,skill_loader/* resolveSkillSet */.mw)(parsed.skillSet);
+      } catch (err) {
+        if (err instanceof skill_loader/* SkillLoaderError */.vN) {
+          console.error(`Error: ${err.message}`);
+          return 3;
+        }
+        throw err;
+      }
+    }
+    let artifact;
+    try {
+      if (isExecPlanReplay) {
+        artifact = await runReviewExecReplay({
+          planFile: external_node_path_.resolve(parsed.planFile),
+          debug: parsed.debug,
+          // #878 A2-3-impl: replay executes (not just echoes) unless --dry-run.
+          // The source plan stays the source of truth (no re-plan); the diff
+          // is resolved from the current working tree / --artifact.
+          executeReview: !parsed.dryRun,
+          cwd: external_node_path_.resolve(parsed.target),
+          cliArtifacts: parsed.cliArtifacts,
+          artifactsDir: parsed.artifactsDir,
+        });
+      } else {
+        artifact = await runReviewPlan({
+          cwd: external_node_path_.resolve(parsed.target),
+          phase: parsed.phase,
+          // exec --dry-run and exec (real run) both reuse the plan path
+          // entrypoint; the differentiator is `executeReview`, which
+          // enables LLM-backed skill selection and the generateReview
+          // adapter so findings are populated.
+          planOnly: isExecDryRun || isExecExecute ? true : parsed.planOnly,
+          cliArtifacts: parsed.cliArtifacts,
+          artifactsDir: parsed.artifactsDir,
+          debug: parsed.debug,
+          executeReview: isExecExecute,
+          skillIds: reviewSkillIds,
+          // Forward CLI-level --context / --dependency overrides so
+          // authors can opt additional artifact IDs / dependency stubs
+          // into selection without env vars.
+          availableContexts: parsed.availableContexts ?? undefined,
+          availableDependencies: parsed.availableDependencies ?? undefined,
+        });
+      }
+    } catch (err) {
+      if (err instanceof ReviewPlanError) {
+        console.error(`Error: ${err.message}`);
+        return 3;
+      }
+      throw err;
+    }
+    const outputFilePath = parsed.outputFile ? external_node_path_.resolve(parsed.outputFile) : null;
+    const summaryFilePath = parsed.summaryFile ? external_node_path_.resolve(parsed.summaryFile) : null;
+    if (outputFilePath && summaryFilePath && outputFilePath === summaryFilePath) {
+      console.error('Error: --output-file and --summary-file must not point to the same path.');
+      return 3;
+    }
+    const { writeFile } = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
+    let serialized;
+    if (reviewFormat === 'markdown') {
+      // #976: human-readable Markdown rendering of the artifact (findings +
+      // plan). The JSON artifact stays the machine-readable contract.
+      const { formatReviewPlanSummaryMarkdown } = await __nccwpck_require__.e(/* import() */ 466).then(__nccwpck_require__.bind(__nccwpck_require__, 7466));
+      serialized = formatReviewPlanSummaryMarkdown(artifact);
+    } else {
+      serialized = JSON.stringify(artifact, null, 2);
+    }
+    if (outputFilePath) {
+      await writeFile(outputFilePath, serialized + '\n', 'utf8');
+    } else {
+      // The artifact (JSON or Markdown) is the requested output, not a
+      // progress log: --quiet does not suppress it.
+      external_node_process_namespaceObject.stdout.write(serialized + '\n');
+    }
+    if (summaryFilePath) {
+      const { formatReviewPlanSummaryMarkdown } = await __nccwpck_require__.e(/* import() */ 466).then(__nccwpck_require__.bind(__nccwpck_require__, 7466));
+      await writeFile(summaryFilePath, formatReviewPlanSummaryMarkdown(artifact) + '\n', 'utf8');
+    }
+    // #976: opt-in review gate. Only when --fail-on / --warn-on / --advisory-only
+    // / --gate is given do we translate findings into a CI exit code; otherwise
+    // exit 0 (non-breaking for existing callers / the plangate-review workflow).
+    if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
+      const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
+      return await resolveGateExitCode({
+        failOn: parsed.failOn,
+        warnOn: parsed.warnOn,
+        advisoryOnly: parsed.advisoryOnly,
+        gate: parsed.gate,
+        getGateInput: () => artifact,
+        getGateObject: () => artifact.gate,
+      });
+    }
+    return 0;
+  } catch (err) {
+    console.error(`Error: ${err?.message ?? err}`);
+    return 1;
+  }
+}
+
 // EXTERNAL MODULE: ./runners/core/skill-cache.mjs
 var skill_cache = __nccwpck_require__(7328);
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 81 modules
@@ -63871,341 +64206,6 @@ class SkillDispatcher {
   }
 }
 
-// EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
-var review_plan_generator = __nccwpck_require__(8069);
-// EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
-var engine = __nccwpck_require__(9487);
-// EXTERNAL MODULE: ./src/lib/loop-signal.mjs
-var loop_signal = __nccwpck_require__(4702);
-// EXTERNAL MODULE: ./src/lib/gate-decision.mjs
-var gate_decision = __nccwpck_require__(2773);
-;// CONCATENATED MODULE: ./src/lib/run-gate.mjs
-/**
- * Gate derivation for `river run` results (Epic #1347 S3 / #1350).
- *
- * Extracted from cli.mjs formatJsonOutput so the same derivation feeds both
- * the JSON output artifact and the persisted run record (result store) —
- * the audit trail must record the same gate the consumer saw.
- *
- * The `river run` path performs no plan-text human-approval scan, so
- * humanApprovalRequired is always false here (documented in
- * schemas/output.schema.json); riskMapDigest is likewise null on this path.
- */
-
-
-
-
-
-/**
- * Derive `{ decision, gate }` for a runLocalReview result. Both fields are
- * undefined on derivation failure (same fail-soft contract as
- * finalizeArtifact — the caller's output must never break on scoring).
- *
- * @param {object} result - runLocalReview result
- * @returns {{ decision: string|undefined, gate: object|undefined }}
- */
-function deriveRunGate(result) {
-  // Defensive (PR #1372 gemini): a null/undefined result yields the same
-  // fail-soft shape instead of throwing on property access.
-  if (result == null || typeof result !== 'object') {
-    return { decision: undefined, gate: undefined };
-  }
-  let decision;
-  try {
-    decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
-  } catch {
-    if (typeof result.decision === 'string' && result.decision.length > 0) {
-      decision = result.decision;
-    }
-  }
-
-  let gate;
-  try {
-    const findings = result.findings ?? [];
-    const riskAssessment = result.plan?.riskAssessment;
-    const loopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)({ decision, findings });
-    gate = (0,gate_decision/* deriveGateDecision */.RF)({
-      loopSignal,
-      decision,
-      humanApprovalRequired: false,
-      riskAction: riskAssessment?.aggregateAction,
-      blockingFindings: findings.filter(
-        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
-      ).length,
-      changedFiles: result.changedFiles ?? [],
-      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
-      artifactStatus: result.status ?? null,
-      riskMapPresent: riskAssessment != null,
-      riskMapDigest: null,
-      // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
-      strictBlock: result.strictBlock === true,
-      // Epic #1347 §11.8 (c2) (#1401): deterministic gate could not run → rule 5c
-      // ESCALATE. False unless the double-gated executor was opted in (§11.6).
-      deterministicUnrunnable: result.deterministicUnrunnable === true,
-      config: result.config ?? {},
-    });
-  } catch {
-    // leave gate unset on derivation failure
-  }
-
-  return { decision, gate };
-}
-
-// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
-var rubric = __nccwpck_require__(5034);
-// EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
-var _2020 = __nccwpck_require__(2210);
-// EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
-var dist = __nccwpck_require__(2815);
-;// CONCATENATED MODULE: ./src/cli/commands/review.mjs
-// `river review` subcommand handler.
-//
-// Extracted verbatim from src/cli.mjs main() as part of the CLI dispatch
-// refactor (#issue: split main() into per-subcommand handlers). Behavior,
-// messages, and exit codes are unchanged; only the enclosing function and the
-// relative import depth differ from the original inline block.
-
-
-
-
-
-
-/**
- * Handle the `review` command (plan | exec | verify | route).
- *
- * @param {Record<string, unknown>} parsed - parseArgs() result.
- * @returns {Promise<number>} process exit code.
- */
-async function runReviewCommand(parsed) {
-  // `review exec --dry-run` (without --plan): per spec, dry-run does
-  // no LLM/skill execution — it only resolves inputs and produces a
-  // deterministic plan, which is exactly `runReviewPlan`'s behavior.
-  // It is routed through the shared plan path below.
-  const isExecDryRun = parsed.reviewSubcommand === 'exec' && parsed.dryRun && !parsed.planFile;
-
-  // `review exec --plan <path>` (replay): the external plan is the
-  // source of truth (#802 Phase 3, replay contract). Artifact
-  // resolution and buildExecutionPlan are NOT re-run. Skill execution
-  // is out of scope here, so `findings` stays empty for now.
-  const isExecPlanReplay =
-    parsed.reviewSubcommand === 'exec' && typeof parsed.planFile === 'string';
-
-  // `review exec` (no flags): #802 Phase 3 A2-1. Resolve artifacts,
-  // build the execution plan with `llmEnabled: true` so non-heuristic
-  // skills can be selected, and call generateReview to populate the
-  // artifact findings via the LLM-or-heuristic pipeline. When no API
-  // key is configured, generateReview gracefully falls back to
-  // heuristic findings (or an empty set) instead of failing.
-  const isExecExecute =
-    parsed.reviewSubcommand === 'exec' && !parsed.dryRun && typeof parsed.planFile !== 'string';
-
-  // verify (and any future review subcommand that is not exec): the
-  // CLI/output contract is fixed and validated here (PR-3), but skill
-  // execution and verify-side artifact reading are not implemented
-  // yet. The contract depends only on the Artifact Input Contract IDs
-  // — it does not depend on PlanGate.
-  if (parsed.reviewSubcommand === 'verify') {
-    try {
-      const { ReviewPlanError, resolveReviewOutputFormat } =
-        await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
-      try {
-        resolveReviewOutputFormat(parsed);
-      } catch (err) {
-        if (err instanceof ReviewPlanError) {
-          console.error(`Error: ${err.message}`);
-          return 3;
-        }
-        throw err;
-      }
-    } catch (err) {
-      console.error(`Error: ${err?.message ?? err}`);
-      return 1;
-    }
-    console.error(
-      `river review ${parsed.reviewSubcommand}: the argument/output contract is accepted, ` +
-        'but execution is not implemented yet (#802 Phase 3). ' +
-        'See pages/reference/cli-review-' +
-        parsed.reviewSubcommand +
-        '-spec.md.'
-    );
-    return 3;
-  }
-  // route: risk-based review mode recommendation (dry-run, no LLM)
-  if (parsed.reviewSubcommand === 'route') {
-    try {
-      const { routeReviewMode, formatRouterResultMarkdown } =
-        await __nccwpck_require__.e(/* import() */ 709).then(__nccwpck_require__.bind(__nccwpck_require__, 1709));
-      const { loadRiskMap } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 572));
-      const routeTargetPath = external_node_path_.resolve(parsed.target);
-      const repoRoot = await (0,git/* ensureGitRepo */.NC)(routeTargetPath);
-      const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
-      const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, parsed.base ?? defaultBranch);
-      const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
-      const riskMap = await loadRiskMap(repoRoot).catch((err) => {
-        console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
-        return null;
-      });
-      const result = routeReviewMode({
-        changedFiles: repoDiff.changedFiles,
-        diffText: repoDiff.rawDiffText,
-        riskMap,
-        targetPath: routeTargetPath,
-      });
-      const outputFormat = parsed.formatExplicit
-        ? parsed.format
-        : parsed.outputExplicit && ['json', 'markdown'].includes(parsed.output)
-          ? parsed.output
-          : 'json';
-      if (outputFormat === 'markdown') {
-        console.log(formatRouterResultMarkdown(result));
-      } else if (outputFormat === 'json') {
-        console.log(JSON.stringify(result, null, 2));
-      } else {
-        console.error(
-          `Error: river review route only supports --format json or --format markdown` +
-            (parsed.outputExplicit
-              ? ` (--output is not supported for this subcommand; use --format instead)`
-              : ` (got "${outputFormat}").`)
-        );
-        return 3;
-      }
-      return 0;
-    } catch (err) {
-      console.error(`Error: ${err?.message ?? err}`);
-      return 1;
-    }
-  }
-  // At this point, the verify/route branches above have already returned, so the
-  // remaining valid subcommands are `plan` and `exec` (in any of its
-  // exec dry-run / replay / deferred forms). Anything else is unknown.
-  if (parsed.reviewSubcommand !== 'plan' && parsed.reviewSubcommand !== 'exec') {
-    console.error(
-      parsed.reviewSubcommand
-        ? `river review ${parsed.reviewSubcommand} is not a known subcommand. Use: plan | exec | verify | route`
-        : 'Usage: river review plan --plan-only'
-    );
-    return 3;
-  }
-  try {
-    const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =
-      await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
-    let reviewFormat;
-    try {
-      reviewFormat = resolveReviewOutputFormat(parsed);
-    } catch (err) {
-      if (err instanceof ReviewPlanError) {
-        console.error(`Error: ${err.message}`);
-        return 3;
-      }
-      throw err;
-    }
-    // #976/#1027: resolve --skill-set within the review namespace so
-    // `river review plan|exec --skill-set <name>` restricts candidates
-    // (previously only `river run` honored it; the flag was silently
-    // ignored here). Skip on the replay path: --plan replays a fixed
-    // source plan, so skill selection (and thus --skill-set) does not apply.
-    let reviewSkillIds = null;
-    if (parsed.skillSet && !isExecPlanReplay) {
-      try {
-        reviewSkillIds = await (0,skill_loader/* resolveSkillSet */.mw)(parsed.skillSet);
-      } catch (err) {
-        if (err instanceof skill_loader/* SkillLoaderError */.vN) {
-          console.error(`Error: ${err.message}`);
-          return 3;
-        }
-        throw err;
-      }
-    }
-    let artifact;
-    try {
-      if (isExecPlanReplay) {
-        artifact = await runReviewExecReplay({
-          planFile: external_node_path_.resolve(parsed.planFile),
-          debug: parsed.debug,
-          // #878 A2-3-impl: replay executes (not just echoes) unless --dry-run.
-          // The source plan stays the source of truth (no re-plan); the diff
-          // is resolved from the current working tree / --artifact.
-          executeReview: !parsed.dryRun,
-          cwd: external_node_path_.resolve(parsed.target),
-          cliArtifacts: parsed.cliArtifacts,
-          artifactsDir: parsed.artifactsDir,
-        });
-      } else {
-        artifact = await runReviewPlan({
-          cwd: external_node_path_.resolve(parsed.target),
-          phase: parsed.phase,
-          // exec --dry-run and exec (real run) both reuse the plan path
-          // entrypoint; the differentiator is `executeReview`, which
-          // enables LLM-backed skill selection and the generateReview
-          // adapter so findings are populated.
-          planOnly: isExecDryRun || isExecExecute ? true : parsed.planOnly,
-          cliArtifacts: parsed.cliArtifacts,
-          artifactsDir: parsed.artifactsDir,
-          debug: parsed.debug,
-          executeReview: isExecExecute,
-          skillIds: reviewSkillIds,
-          // Forward CLI-level --context / --dependency overrides so
-          // authors can opt additional artifact IDs / dependency stubs
-          // into selection without env vars.
-          availableContexts: parsed.availableContexts ?? undefined,
-          availableDependencies: parsed.availableDependencies ?? undefined,
-        });
-      }
-    } catch (err) {
-      if (err instanceof ReviewPlanError) {
-        console.error(`Error: ${err.message}`);
-        return 3;
-      }
-      throw err;
-    }
-    const outputFilePath = parsed.outputFile ? external_node_path_.resolve(parsed.outputFile) : null;
-    const summaryFilePath = parsed.summaryFile ? external_node_path_.resolve(parsed.summaryFile) : null;
-    if (outputFilePath && summaryFilePath && outputFilePath === summaryFilePath) {
-      console.error('Error: --output-file and --summary-file must not point to the same path.');
-      return 3;
-    }
-    const { writeFile } = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
-    let serialized;
-    if (reviewFormat === 'markdown') {
-      // #976: human-readable Markdown rendering of the artifact (findings +
-      // plan). The JSON artifact stays the machine-readable contract.
-      const { formatReviewPlanSummaryMarkdown } = await __nccwpck_require__.e(/* import() */ 466).then(__nccwpck_require__.bind(__nccwpck_require__, 7466));
-      serialized = formatReviewPlanSummaryMarkdown(artifact);
-    } else {
-      serialized = JSON.stringify(artifact, null, 2);
-    }
-    if (outputFilePath) {
-      await writeFile(outputFilePath, serialized + '\n', 'utf8');
-    } else {
-      // The artifact (JSON or Markdown) is the requested output, not a
-      // progress log: --quiet does not suppress it.
-      external_node_process_namespaceObject.stdout.write(serialized + '\n');
-    }
-    if (summaryFilePath) {
-      const { formatReviewPlanSummaryMarkdown } = await __nccwpck_require__.e(/* import() */ 466).then(__nccwpck_require__.bind(__nccwpck_require__, 7466));
-      await writeFile(summaryFilePath, formatReviewPlanSummaryMarkdown(artifact) + '\n', 'utf8');
-    }
-    // #976: opt-in review gate. Only when --fail-on / --warn-on / --advisory-only
-    // / --gate is given do we translate findings into a CI exit code; otherwise
-    // exit 0 (non-breaking for existing callers / the plangate-review workflow).
-    if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
-      const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
-      return await resolveGateExitCode({
-        failOn: parsed.failOn,
-        warnOn: parsed.warnOn,
-        advisoryOnly: parsed.advisoryOnly,
-        gate: parsed.gate,
-        getGateInput: () => artifact,
-        getGateObject: () => artifact.gate,
-      });
-    }
-    return 0;
-  } catch (err) {
-    console.error(`Error: ${err?.message ?? err}`);
-    return 1;
-  }
-}
-
 ;// CONCATENATED MODULE: ./src/cli/commands/skills.mjs
 // `river skills` subcommand handler.
 //
@@ -64632,9 +64632,6 @@ async function runSuppressionCommand(parsed, targetPath) {
 }
 
 ;// CONCATENATED MODULE: ./src/cli.mjs
-
-
-
 
 
 
@@ -65883,25 +65880,31 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
   const targetPath = external_node_path_.resolve(parsed.target);
 
   try {
-    // Skills subcommands (import/export/list) – no git repo required
+    // Skills subcommands (import/export/list) – no git repo required.
+    // `return await` (not bare `return`) is required so a rejected handler
+    // promise is caught by this function's outer try/catch, which maps
+    // GitRepoNotFoundError / SkillLoaderError / ProjectRulesError /
+    // RiskMapError / GitError to friendly messages + Hints. A bare `return`
+    // settles the promise outside the try, regressing to a raw stack trace /
+    // unhandledRejection (adversarial review BLOCKER, PR #1592).
     if (parsed.command === 'skills') {
-      return runSkillsCommand(parsed, targetPath);
+      return await runSkillsCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'suppression') {
-      return runSuppressionCommand(parsed, targetPath);
+      return await runSuppressionCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'feedback') {
-      return runFeedbackCommand(parsed, targetPath);
+      return await runFeedbackCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'runs') {
-      return runRunsCommand(parsed, targetPath);
+      return await runRunsCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'eval') {
-      return runEvalCommand(parsed);
+      return await runEvalCommand(parsed);
     }
     if (parsed.command === 'doctor') {
       const result = await doctorLocalReview({
