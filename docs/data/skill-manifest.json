@@ -54,7 +54,7 @@
     {
       "id": "api-versioning-compat",
       "path": "skills/upstream/api-versioning-compat",
-      "checksum": "sha256:69862782750f0583d1a675f9d15d164ac8cd2b49ff9d7cf0494bd21c1bd98e28",
+      "checksum": "sha256:b2e25550008d613843191944db52890053de74ab115e4fb18bfb5bc3557e4fe5",
       "files": 1
     },
     {
@@ -78,7 +78,7 @@
     {
       "id": "architecture-traceability",
       "path": "skills/upstream/architecture-traceability",
-      "checksum": "sha256:f211aa9be389e40efc9a39ab231045413fabc1647bd22f0b78eb65689d55d073",
+      "checksum": "sha256:781deea1fdcc43c2241ad549b9a834cade0f5327d26b674e36502a68d0ff99e2",
       "files": 1
     },
     {
@@ -222,7 +222,7 @@
     {
       "id": "data-model-db-design",
       "path": "skills/upstream/data-model-db-design",
-      "checksum": "sha256:f842a5e47f62b08d5ded9ef3122dcd153303bb0b81e79b065887030aeec9dfc9",
+      "checksum": "sha256:2a562de6764c5e724e70715e10bb79bce7d8b334e048c9faad696103481e797e",
       "files": 1
     },
     {
@@ -354,7 +354,7 @@
     {
       "id": "integration-contracts",
       "path": "skills/upstream/integration-contracts",
-      "checksum": "sha256:508916403b5858fb8f8c133c3fccb135935f28bc8e5dcaa3b81f6a3cc2f6b462",
+      "checksum": "sha256:d41450b819fd7c509a93a81ffde42aeb6c8944ceb45282826af1112aa767ec64",
       "files": 1
     },
     {
@@ -438,7 +438,7 @@
     {
       "id": "multitenancy-isolation",
       "path": "skills/upstream/multitenancy-isolation",
-      "checksum": "sha256:f80cdbe17a19062b513976abaf84804e6a1d19b938e1cd427e095e6ecf187c7b",
+      "checksum": "sha256:4558e6feb47cf4552d989f1210b1f176ea5e1d21016460bf80f2b49ba07bf59d",
       "files": 11
     },
     {
@@ -468,7 +468,7 @@
     {
       "id": "openapi-contract",
       "path": "skills/upstream/openapi-contract",
-      "checksum": "sha256:acccc65de50c0cd770bfc702d76632ee8798499db2a0bcc038a9a17baa83ca5f",
+      "checksum": "sha256:4fc868eb014792c2b221abd0d09aacd12b5ec5ef6140a8eada157733f524a0a5",
       "files": 1
     },
     {
