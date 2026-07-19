@@ -280,6 +280,59 @@ describe('river doctor', () => {
 });
 
 // -----------------------------------------------------------------------------
+// extracted subcommand handlers route errors through main()'s outer catch
+// -----------------------------------------------------------------------------
+//
+// Regression guard for PR #1592 (adversarial review BLOCKER): the subcommand
+// dispatch in main() must use `return await runXxxCommand(...)`, not a bare
+// `return`. A bare return settles the handler promise OUTSIDE main()'s
+// try/catch, so a GitRepoNotFoundError (thrown by ensureGitRepo inside the
+// handler) escapes as a raw stack trace / unhandledRejection instead of the
+// friendly "Not a git repository" message + Hints. These tests assert the
+// friendly path (message + Hints, exit 1) and that no raw stack trace leaks.
+describe('river extracted subcommands - error routing (PR #1592)', () => {
+  // Each argv reaches ensureGitRepo(targetPath) inside its handler.
+  const cases = [
+    { name: 'skills', argv: ['skills', '.'] },
+    {
+      name: 'suppression add',
+      argv: [
+        'suppression',
+        'add',
+        '--fingerprint',
+        '0123456789abcdef',
+        '--feedback',
+        'false_positive',
+        '--rationale',
+        'regression guard',
+      ],
+    },
+    {
+      name: 'feedback add',
+      argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 'some-skill'],
+    },
+  ];
+
+  for (const { name, argv } of cases) {
+    test(`${name} fails gracefully outside git repos (friendly message, no stack trace)`, async (t) => {
+      const dir = createTempDir({ prefix: 'river-cli-empty-' });
+      t.after(() => cleanupTempDirAsync(dir));
+
+      const result = await runCliInProcess(argv, { cwd: dir });
+      // main()'s outer catch maps GitRepoNotFoundError to a friendly message,
+      // exit 1, and appends Hints.
+      assert.strictEqual(result.code, 1, result.stderr);
+      assert.match(result.stderr, /Not a git repository/);
+      assert.match(result.stderr, /Hints:/);
+      // A bare `return` regression would surface a raw stack trace: the error
+      // class name and "    at <frame>" lines. Neither must appear.
+      assert.doesNotMatch(result.stderr, /GitRepoNotFoundError/);
+      assert.doesNotMatch(result.stderr, /\n\s+at\s/);
+    });
+  }
+});
+
+// -----------------------------------------------------------------------------
 // river skills subcommands
 // -----------------------------------------------------------------------------
 

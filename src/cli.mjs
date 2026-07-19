@@ -4,18 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import {
-  GitError,
-  GitRepoNotFoundError,
-  ensureGitRepo,
-  detectDefaultBranch,
-  findMergeBase,
-} from './lib/git.mjs';
+import { GitError, GitRepoNotFoundError } from './lib/git.mjs';
 import { doctorLocalReview, planLocalReview, runLocalReview } from './lib/local-runner.mjs';
 import { SkillLoaderError, resolveSkillSet } from '../runners/core/skill-loader.mjs';
-import { collectRepoDiff, renderDiffText } from './lib/diff-processor.mjs';
 import CostEstimator from './core/cost-estimator.mjs';
-import { SkillDispatcher } from './core/skill-dispatcher.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
 import { RiskMapError } from './lib/risk-map.mjs';
 import { isLlmEnabled, parseList } from './lib/utils.mjs';
@@ -25,9 +17,14 @@ import { resolveVerdict, scoreReview } from './lib/scoring/engine.mjs';
 import { deriveRunGate } from './lib/run-gate.mjs';
 import { AXES, AXIS_LABELS_JA } from './lib/scoring/rubric.mjs';
 import { severityToPriority } from './lib/finding-factory.mjs';
-import { deriveLoopSignalFromRunsDiff } from './lib/loop-signal.mjs';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+import { runReviewCommand } from './cli/commands/review.mjs';
+import { runSkillsCommand } from './cli/commands/skills.mjs';
+import { runRunsCommand } from './cli/commands/runs.mjs';
+import { runEvalCommand } from './cli/commands/eval.mjs';
+import { runFeedbackCommand } from './cli/commands/feedback.mjs';
+import { runSuppressionCommand } from './cli/commands/suppression.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
@@ -1244,579 +1241,37 @@ async function main(argv = process.argv.slice(2)) {
   // config + artifact resolution. Only `review plan --plan-only` is
   // wired in this slice.
   if (parsed.command === 'review') {
-    // `review exec --dry-run` (without --plan): per spec, dry-run does
-    // no LLM/skill execution — it only resolves inputs and produces a
-    // deterministic plan, which is exactly `runReviewPlan`'s behavior.
-    // It is routed through the shared plan path below.
-    const isExecDryRun = parsed.reviewSubcommand === 'exec' && parsed.dryRun && !parsed.planFile;
-
-    // `review exec --plan <path>` (replay): the external plan is the
-    // source of truth (#802 Phase 3, replay contract). Artifact
-    // resolution and buildExecutionPlan are NOT re-run. Skill execution
-    // is out of scope here, so `findings` stays empty for now.
-    const isExecPlanReplay =
-      parsed.reviewSubcommand === 'exec' && typeof parsed.planFile === 'string';
-
-    // `review exec` (no flags): #802 Phase 3 A2-1. Resolve artifacts,
-    // build the execution plan with `llmEnabled: true` so non-heuristic
-    // skills can be selected, and call generateReview to populate the
-    // artifact findings via the LLM-or-heuristic pipeline. When no API
-    // key is configured, generateReview gracefully falls back to
-    // heuristic findings (or an empty set) instead of failing.
-    const isExecExecute =
-      parsed.reviewSubcommand === 'exec' && !parsed.dryRun && typeof parsed.planFile !== 'string';
-
-    // verify (and any future review subcommand that is not exec): the
-    // CLI/output contract is fixed and validated here (PR-3), but skill
-    // execution and verify-side artifact reading are not implemented
-    // yet. The contract depends only on the Artifact Input Contract IDs
-    // — it does not depend on PlanGate.
-    if (parsed.reviewSubcommand === 'verify') {
-      try {
-        const { ReviewPlanError, resolveReviewOutputFormat } =
-          await import('./lib/review-plan.mjs');
-        try {
-          resolveReviewOutputFormat(parsed);
-        } catch (err) {
-          if (err instanceof ReviewPlanError) {
-            console.error(`Error: ${err.message}`);
-            return 3;
-          }
-          throw err;
-        }
-      } catch (err) {
-        console.error(`Error: ${err?.message ?? err}`);
-        return 1;
-      }
-      console.error(
-        `river review ${parsed.reviewSubcommand}: the argument/output contract is accepted, ` +
-          'but execution is not implemented yet (#802 Phase 3). ' +
-          'See pages/reference/cli-review-' +
-          parsed.reviewSubcommand +
-          '-spec.md.'
-      );
-      return 3;
-    }
-    // route: risk-based review mode recommendation (dry-run, no LLM)
-    if (parsed.reviewSubcommand === 'route') {
-      try {
-        const { routeReviewMode, formatRouterResultMarkdown } =
-          await import('./lib/review-mode-router.mjs');
-        const { loadRiskMap } = await import('./lib/risk-map.mjs');
-        const routeTargetPath = path.resolve(parsed.target);
-        const repoRoot = await ensureGitRepo(routeTargetPath);
-        const defaultBranch = await detectDefaultBranch(repoRoot);
-        const mergeBase = await findMergeBase(repoRoot, parsed.base ?? defaultBranch);
-        const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
-        const riskMap = await loadRiskMap(repoRoot).catch((err) => {
-          console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
-          return null;
-        });
-        const result = routeReviewMode({
-          changedFiles: repoDiff.changedFiles,
-          diffText: repoDiff.rawDiffText,
-          riskMap,
-          targetPath: routeTargetPath,
-        });
-        const outputFormat = parsed.formatExplicit
-          ? parsed.format
-          : parsed.outputExplicit && ['json', 'markdown'].includes(parsed.output)
-            ? parsed.output
-            : 'json';
-        if (outputFormat === 'markdown') {
-          console.log(formatRouterResultMarkdown(result));
-        } else if (outputFormat === 'json') {
-          console.log(JSON.stringify(result, null, 2));
-        } else {
-          console.error(
-            `Error: river review route only supports --format json or --format markdown` +
-              (parsed.outputExplicit
-                ? ` (--output is not supported for this subcommand; use --format instead)`
-                : ` (got "${outputFormat}").`)
-          );
-          return 3;
-        }
-        return 0;
-      } catch (err) {
-        console.error(`Error: ${err?.message ?? err}`);
-        return 1;
-      }
-    }
-    // At this point, the verify/route branches above have already returned, so the
-    // remaining valid subcommands are `plan` and `exec` (in any of its
-    // exec dry-run / replay / deferred forms). Anything else is unknown.
-    if (parsed.reviewSubcommand !== 'plan' && parsed.reviewSubcommand !== 'exec') {
-      console.error(
-        parsed.reviewSubcommand
-          ? `river review ${parsed.reviewSubcommand} is not a known subcommand. Use: plan | exec | verify | route`
-          : 'Usage: river review plan --plan-only'
-      );
-      return 3;
-    }
-    try {
-      const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =
-        await import('./lib/review-plan.mjs');
-      let reviewFormat;
-      try {
-        reviewFormat = resolveReviewOutputFormat(parsed);
-      } catch (err) {
-        if (err instanceof ReviewPlanError) {
-          console.error(`Error: ${err.message}`);
-          return 3;
-        }
-        throw err;
-      }
-      // #976/#1027: resolve --skill-set within the review namespace so
-      // `river review plan|exec --skill-set <name>` restricts candidates
-      // (previously only `river run` honored it; the flag was silently
-      // ignored here). Skip on the replay path: --plan replays a fixed
-      // source plan, so skill selection (and thus --skill-set) does not apply.
-      let reviewSkillIds = null;
-      if (parsed.skillSet && !isExecPlanReplay) {
-        try {
-          reviewSkillIds = await resolveSkillSet(parsed.skillSet);
-        } catch (err) {
-          if (err instanceof SkillLoaderError) {
-            console.error(`Error: ${err.message}`);
-            return 3;
-          }
-          throw err;
-        }
-      }
-      let artifact;
-      try {
-        if (isExecPlanReplay) {
-          artifact = await runReviewExecReplay({
-            planFile: path.resolve(parsed.planFile),
-            debug: parsed.debug,
-            // #878 A2-3-impl: replay executes (not just echoes) unless --dry-run.
-            // The source plan stays the source of truth (no re-plan); the diff
-            // is resolved from the current working tree / --artifact.
-            executeReview: !parsed.dryRun,
-            cwd: path.resolve(parsed.target),
-            cliArtifacts: parsed.cliArtifacts,
-            artifactsDir: parsed.artifactsDir,
-          });
-        } else {
-          artifact = await runReviewPlan({
-            cwd: path.resolve(parsed.target),
-            phase: parsed.phase,
-            // exec --dry-run and exec (real run) both reuse the plan path
-            // entrypoint; the differentiator is `executeReview`, which
-            // enables LLM-backed skill selection and the generateReview
-            // adapter so findings are populated.
-            planOnly: isExecDryRun || isExecExecute ? true : parsed.planOnly,
-            cliArtifacts: parsed.cliArtifacts,
-            artifactsDir: parsed.artifactsDir,
-            debug: parsed.debug,
-            executeReview: isExecExecute,
-            skillIds: reviewSkillIds,
-            // Forward CLI-level --context / --dependency overrides so
-            // authors can opt additional artifact IDs / dependency stubs
-            // into selection without env vars.
-            availableContexts: parsed.availableContexts ?? undefined,
-            availableDependencies: parsed.availableDependencies ?? undefined,
-          });
-        }
-      } catch (err) {
-        if (err instanceof ReviewPlanError) {
-          console.error(`Error: ${err.message}`);
-          return 3;
-        }
-        throw err;
-      }
-      const outputFilePath = parsed.outputFile ? path.resolve(parsed.outputFile) : null;
-      const summaryFilePath = parsed.summaryFile ? path.resolve(parsed.summaryFile) : null;
-      if (outputFilePath && summaryFilePath && outputFilePath === summaryFilePath) {
-        console.error('Error: --output-file and --summary-file must not point to the same path.');
-        return 3;
-      }
-      const { writeFile } = await import('node:fs/promises');
-      let serialized;
-      if (reviewFormat === 'markdown') {
-        // #976: human-readable Markdown rendering of the artifact (findings +
-        // plan). The JSON artifact stays the machine-readable contract.
-        const { formatReviewPlanSummaryMarkdown } = await import('./lib/review-plan-summary.mjs');
-        serialized = formatReviewPlanSummaryMarkdown(artifact);
-      } else {
-        serialized = JSON.stringify(artifact, null, 2);
-      }
-      if (outputFilePath) {
-        await writeFile(outputFilePath, serialized + '\n', 'utf8');
-      } else {
-        // The artifact (JSON or Markdown) is the requested output, not a
-        // progress log: --quiet does not suppress it.
-        process.stdout.write(serialized + '\n');
-      }
-      if (summaryFilePath) {
-        const { formatReviewPlanSummaryMarkdown } = await import('./lib/review-plan-summary.mjs');
-        await writeFile(summaryFilePath, formatReviewPlanSummaryMarkdown(artifact) + '\n', 'utf8');
-      }
-      // #976: opt-in review gate. Only when --fail-on / --warn-on / --advisory-only
-      // / --gate is given do we translate findings into a CI exit code; otherwise
-      // exit 0 (non-breaking for existing callers / the plangate-review workflow).
-      if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
-        const { resolveGateExitCode } = await import('./lib/gate-exit.mjs');
-        return await resolveGateExitCode({
-          failOn: parsed.failOn,
-          warnOn: parsed.warnOn,
-          advisoryOnly: parsed.advisoryOnly,
-          gate: parsed.gate,
-          getGateInput: () => artifact,
-          getGateObject: () => artifact.gate,
-        });
-      }
-      return 0;
-    } catch (err) {
-      console.error(`Error: ${err?.message ?? err}`);
-      return 1;
-    }
+    return runReviewCommand(parsed);
   }
 
   const targetPath = path.resolve(parsed.target);
 
   try {
-    // Skills subcommands (import/export/list) – no git repo required
-    if (parsed.command === 'skills' && parsed.skillsSubcommand === 'resolve') {
-      // Deterministic resolution: which skills would run for the given
-      // path(s) and phase. No git, no LLM — pure metadata routing, so
-      // agents and CI can introspect skill selection cheaply (#1045).
-      const paths = parsed.resolvePaths?.length ? parsed.resolvePaths : null;
-      if (!paths) {
-        console.error('Error: `river skills resolve` requires at least one --path <file>.');
-        return 1;
-      }
-      const { buildExecutionPlan } = await import('../runners/core/review-runner.mjs');
-      const plan = await buildExecutionPlan({
-        phase: parsed.phase,
-        changedFiles: paths,
-        availableContexts: parsed.availableContexts ?? ['diff'],
-        preferredModelHint: 'balanced',
-      });
-      if (parsed.output === 'json') {
-        console.log(
-          JSON.stringify(
-            {
-              phase: parsed.phase,
-              paths,
-              selected: plan.selected.map((s) => s.metadata?.id ?? s.id),
-              skipped: plan.skipped.map((e) => ({
-                id: e.skill?.metadata?.id ?? e.skill?.id,
-                reasons: e.reasons,
-              })),
-            },
-            null,
-            2
-          )
-        );
-        return 0;
-      }
-      console.log(`Resolved skills (phase=${parsed.phase}, paths=${paths.join(', ')}):`);
-      if (!plan.selected.length) console.log('  (none matched)');
-      for (const skill of plan.selected) {
-        console.log(`  ✓ ${skill.metadata?.id ?? skill.id}`);
-      }
-      const skippedWithReasons = plan.skipped.filter((e) => e.reasons?.length);
-      if (skippedWithReasons.length) {
-        console.log('Skipped:');
-        for (const e of skippedWithReasons) {
-          console.log(`  - ${e.skill?.metadata?.id ?? e.skill?.id}: ${e.reasons.join('; ')}`);
-        }
-      }
-      return 0;
-    }
-
-    if (parsed.command === 'skills' && parsed.skillsSubcommand) {
-      const { runSkillsSubcommand } = await import('./lib/agent-skill-bridge.mjs');
-      return runSkillsSubcommand(parsed);
-    }
-
+    // Skills subcommands (import/export/list) – no git repo required.
+    // `return await` (not bare `return`) is required so a rejected handler
+    // promise is caught by this function's outer try/catch, which maps
+    // GitRepoNotFoundError / SkillLoaderError / ProjectRulesError /
+    // RiskMapError / GitError to friendly messages + Hints. A bare `return`
+    // settles the promise outside the try, regressing to a raw stack trace /
+    // unhandledRejection (adversarial review BLOCKER, PR #1592).
     if (parsed.command === 'skills') {
-      const repoRoot = await ensureGitRepo(targetPath);
-      const defaultBranch = await detectDefaultBranch(repoRoot);
-      const mergeBase = await findMergeBase(repoRoot, defaultBranch);
-      const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
-
-      const dispatcher = new SkillDispatcher(repoRoot);
-
-      const getFileDiff = async (targetFile) => {
-        const fileData = repoDiff.files.find((f) => f.path === targetFile);
-        if (!fileData) return '';
-        return renderDiffText([fileData]);
-      };
-
-      console.log(`River Review (Skills) - Target: ${targetPath}`);
-      const results = await dispatcher.run(
-        repoDiff.changedFiles,
-        getFileDiff,
-        parsed.phase,
-        parsed.dryRun,
-        parsed.debug
-      );
-
-      if (parsed.output === 'markdown') {
-        console.log(`## Review Results\n`);
-        for (const res of results) {
-          console.log(`### ${res.file} (Skill: ${res.skill})`);
-          console.log(res.review);
-          console.log('\n---');
-        }
-      } else {
-        console.log(JSON.stringify(results, null, 2));
-      }
-      return 0;
+      return await runSkillsCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'suppression') {
-      if (parsed.suppressionSubcommand !== 'add') {
-        console.error(
-          'Error: only `river suppression add` is supported (need: --fingerprint --feedback --rationale).'
-        );
-        return 1;
-      }
-      if (!parsed.suppressionFingerprint) {
-        console.error('Error: --fingerprint <16-hex> is required.');
-        return 1;
-      }
-      if (!/^[0-9a-f]{16}$/.test(parsed.suppressionFingerprint)) {
-        console.error('Error: --fingerprint must be exactly 16 lowercase hex chars.');
-        return 1;
-      }
-      if (!parsed.suppressionFeedbackType) {
-        console.error(
-          'Error: --feedback <false_positive|accepted_risk|wont_fix|not_relevant|duplicate> is required.'
-        );
-        return 1;
-      }
-      const validFeedback = new Set([
-        'false_positive',
-        'accepted_risk',
-        'wont_fix',
-        'not_relevant',
-        'duplicate',
-      ]);
-      if (!validFeedback.has(parsed.suppressionFeedbackType)) {
-        console.error('Error: --feedback must be one of: ' + [...validFeedback].join(', ') + '.');
-        return 1;
-      }
-      if (!parsed.suppressionRationale) {
-        console.error('Error: --rationale "<why this finding is being suppressed>" is required.');
-        return 1;
-      }
-      const validScope = new Set(['global', 'subsystem', 'file']);
-      if (!validScope.has(parsed.suppressionScope)) {
-        console.error('Error: --scope must be one of: global, subsystem, file.');
-        return 1;
-      }
-      const repoRoot = await ensureGitRepo(targetPath);
-      const indexPath = path.resolve(repoRoot, '.river', 'memory', 'index.json');
-      const { createSuppression } = await import('./lib/suppression.mjs');
-      const entry = createSuppression({
-        indexPath,
-        findingId: parsed.suppressionFindingId,
-        fingerprint: parsed.suppressionFingerprint,
-        feedbackType: parsed.suppressionFeedbackType,
-        scope: parsed.suppressionScope,
-        rationale: parsed.suppressionRationale,
-        severity: parsed.suppressionSeverity,
-        filePaths: parsed.suppressionFiles,
-        expiresAt: parsed.suppressionExpiresAt,
-        prNumber: parsed.suppressionPrNumber,
-      });
-      console.log('Suppression created: ' + entry.id);
-      console.log('  fingerprint: ' + entry.context.fingerprint);
-      console.log('  feedbackType: ' + entry.context.feedbackType);
-      console.log('  scope: ' + entry.context.scope);
-      if (entry.context.severity) console.log('  severity: ' + entry.context.severity);
-      console.log('  written to: ' + indexPath);
-      return 0;
+      return await runSuppressionCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'feedback') {
-      if (parsed.feedbackSubcommand !== 'add') {
-        console.error(
-          'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr --reviewer --model --reversed-by).'
-        );
-        return 1;
-      }
-      const { buildFeedbackEntry, appendFeedbackEntry, buildFeedbackScaffold, FeedbackError } =
-        await import('./lib/feedback.mjs');
-      const repoRoot = await ensureGitRepo(targetPath);
-      let entry;
-      try {
-        entry = buildFeedbackEntry({
-          feedbackType: parsed.feedbackType,
-          skillId: parsed.feedbackSkillId,
-          trigger: parsed.feedbackTrigger ?? undefined,
-          findingFingerprint: parsed.feedbackFingerprint,
-          evidence: parsed.feedbackEvidence,
-          pr: parsed.feedbackPrNumber,
-          reviewer: parsed.feedbackReviewer,
-          model: parsed.feedbackModel,
-          reversedBy: parsed.feedbackReversedBy,
-        });
-      } catch (err) {
-        if (err instanceof FeedbackError) {
-          console.error(`Error: ${err.message}`);
-          return 1;
-        }
-        throw err;
-      }
-      const filePath = await appendFeedbackEntry(entry, { repoRoot });
-      const scaffold = buildFeedbackScaffold(entry);
-      console.log('Feedback recorded: ' + entry.feedbackType + ' for ' + entry.skillId);
-      console.log('  written to: ' + filePath);
-      console.log('  next action: ' + scaffold.action);
-      console.log('  apply scaffolds with: npm run feedback:apply');
-      return 0;
+      return await runFeedbackCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'runs') {
-      const { resolveStoreDir, listRunRecords, loadRunRecord, computeDashboard, formatDashboard } =
-        await import('./lib/result-store.mjs');
-      const storeDir = resolveStoreDir(targetPath);
-
-      if (!parsed.runsSubcommand || parsed.runsSubcommand === 'list') {
-        const runs = await listRunRecords(storeDir);
-        if (!runs.length) {
-          console.log('No stored runs found in ' + storeDir);
-          return 0;
-        }
-        console.log(`Stored runs (${storeDir}):\n`);
-        for (const r of runs) {
-          console.log(
-            `  ${r.runId}  phase=${r.phase}  findings=${r.findingsCount}  suppressed=${r.suppressedCount}  files=${r.changedFilesCount}  ${r.timestamp}`
-          );
-        }
-        return 0;
-      }
-
-      if (parsed.runsSubcommand === 'diff') {
-        if (!parsed.runsId1 || !parsed.runsId2) {
-          console.error('Error: river runs diff <id1> <id2> [<id3>...]');
-          return 1;
-        }
-        const { diffReviews, diffRunHistory, formatRegressionSummary } =
-          await import('./lib/review-differ.mjs');
-
-        if (parsed.runsIds.length >= 3) {
-          // Multi-run path: load all runs and detect oscillation
-          const runRecords = await Promise.all(
-            parsed.runsIds.map((id) => loadRunRecord(storeDir, id))
-          );
-          const diff = diffRunHistory(runRecords);
-          // Sort by timestamp to find the latest run (same order as diffRunHistory).
-          const sortedRecords = [...runRecords].sort((a, b) => {
-            const ta = a.timestamp != null ? new Date(a.timestamp).getTime() : NaN;
-            const tb = b.timestamp != null ? new Date(b.timestamp).getTime() : NaN;
-            if (Number.isNaN(ta) && Number.isNaN(tb))
-              return (a.runId ?? '').localeCompare(b.runId ?? '');
-            if (Number.isNaN(ta)) return 1;
-            if (Number.isNaN(tb)) return -1;
-            return ta !== tb ? ta - tb : (a.runId ?? '').localeCompare(b.runId ?? '');
-          });
-          const latestRunArtifact = sortedRecords[sortedRecords.length - 1];
-          const runsSignal = deriveLoopSignalFromRunsDiff(diff, latestRunArtifact);
-          if (parsed.output === 'json') {
-            const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
-            console.log(JSON.stringify(diffWithSignal, null, 2));
-          } else if (parsed.output === 'html') {
-            const { formatLoopDashboardHtml } = await import('./lib/output-formatters/html.mjs');
-            console.log(
-              formatLoopDashboardHtml(diff, {
-                runIds: sortedRecords.map((r) => r.runId),
-                suggestedLoopSignal: runsSignal,
-              })
-            );
-          } else {
-            console.log(formatRegressionSummary(diff));
-            if (diff.oscillated.length) {
-              console.log('\n### Oscillating findings (' + diff.oscillated.length + ')');
-              for (const o of diff.oscillated) {
-                const f = o.finding ?? {};
-                const file = f.file ?? '?';
-                const title = (f.title || f.message || '').slice(0, 80);
-                const timelineStr = o.timeline
-                  .map((t) => `${t.runId.slice(0, 8)}:${t.present ? 'present' : 'absent'}`)
-                  .join(' → ');
-                console.log(`- \`${o.fingerprint}\` \`${file}\`: ${title}`);
-                console.log(`  timeline: ${timelineStr}`);
-              }
-            } else {
-              console.log('\nNo oscillating findings detected.');
-            }
-          }
-        } else {
-          // 2-run path: existing behaviour, byte-compatible
-          const [run1, run2] = await Promise.all([
-            loadRunRecord(storeDir, parsed.runsId1),
-            loadRunRecord(storeDir, parsed.runsId2),
-          ]);
-          const diff = diffReviews(run1.findings ?? [], run2.findings ?? []);
-          const runsSignal = deriveLoopSignalFromRunsDiff(diff, run2);
-          if (parsed.output === 'json') {
-            const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
-            console.log(JSON.stringify(diffWithSignal, null, 2));
-          } else if (parsed.output === 'html') {
-            const { formatLoopDashboardHtml } = await import('./lib/output-formatters/html.mjs');
-            console.log(
-              formatLoopDashboardHtml(diff, {
-                runIds: [run1.runId, run2.runId].filter(Boolean),
-                suggestedLoopSignal: runsSignal,
-              })
-            );
-          } else {
-            console.log(formatRegressionSummary(diff));
-          }
-        }
-        return 0;
-      }
-
-      if (parsed.runsSubcommand === 'summary') {
-        const runs = await listRunRecords(storeDir);
-        if (!runs.length) {
-          console.log('No stored runs found in ' + storeDir);
-          return 0;
-        }
-        // Load full records for dashboard computation
-        const fullRuns = await Promise.all(
-          runs.map((r) => loadRunRecord(storeDir, r.runId).catch(() => null))
-        );
-        const valid = fullRuns.filter(Boolean);
-        const db = computeDashboard(valid);
-        console.log(formatDashboard(db));
-        return 0;
-      }
-
-      if (parsed.runsSubcommand === 'digest') {
-        const { loadAllRunRecords } = await import('./lib/result-store.mjs');
-        const fullRuns = await loadAllRunRecords(storeDir);
-        if (!fullRuns.length) {
-          console.log('No stored runs found in ' + storeDir);
-          return 0;
-        }
-        const { buildRunsDigest, formatDigestMarkdown } = await import('./lib/runs-digest.mjs');
-        const digest = buildRunsDigest(fullRuns, { now: () => new Date() });
-        if (parsed.output === 'json') {
-          console.log(JSON.stringify(digest, null, 2));
-        } else {
-          console.log(formatDigestMarkdown(digest));
-        }
-        return 0;
-      }
-
-      console.error(
-        `Unknown runs subcommand: ${parsed.runsSubcommand}. Use: list | diff | summary | digest`
-      );
-      return 1;
+      return await runRunsCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'eval') {
-      const { evaluateReviewFixtures } = await import('./lib/review-fixtures-eval.mjs');
-      const casesPath =
-        parsed.fixturesCasesPath ||
-        path.join(process.cwd(), 'tests', 'fixtures', 'review-eval', 'cases.json');
-      return evaluateReviewFixtures({ casesPath, phase: parsed.phase, verbose: parsed.verbose });
+      return await runEvalCommand(parsed);
     }
     if (parsed.command === 'doctor') {
       const result = await doctorLocalReview({
