@@ -42171,6 +42171,7 @@ function computeStrictBlock({ findings, selected } = {}) {
 /* harmony export */   So: () => (/* binding */ extractDiffMeta),
 /* harmony export */   pQ: () => (/* binding */ renderDiffText),
 /* harmony export */   rj: () => (/* binding */ parseUnifiedDiff),
+/* harmony export */   vS: () => (/* binding */ isGeneratedArtifactPath),
 /* harmony export */   wT: () => (/* binding */ buildLlmDiffView),
 /* harmony export */   ye: () => (/* binding */ countChangedLinesFromText)
 /* harmony export */ });
@@ -42214,6 +42215,30 @@ function isExcludedFile(path) {
   if (EXCLUDED_FILES.has(baseName(path))) return true;
   if (EXCLUDED_DIR_RE.test(path)) return true;
   return false;
+}
+
+/**
+ * Whether a finding pointing at `path` targets a machine-generated build
+ * artifact directory (a `dist/` path segment, e.g.
+ * `runners/github-action/dist/index.mjs`).
+ *
+ * This is a DIFFERENT, deliberately NARROWER concept than `isExcludedFile`
+ * (the LLM-diff optimizer's exclusion rule). `isExcludedFile` also drops `.md`
+ * and lock files to save the LLM prompt's char budget — but for the
+ * finding-OUTPUT stage that over-suppresses: a real finding on `docs/how-to.md`
+ * (e.g. a hardcoded secret inside a code fence detected by findHardcodedSecrets)
+ * or on `package-lock.json` would be silently hidden. #1597's scope is
+ * "generated build artifacts" only, so output suppression matches the generated
+ * directory (`EXCLUDED_DIR_RE`) alone and never `.md` / lock files. The
+ * heuristic detectors still scan the raw diff by design (#1570/#1597 — the
+ * #1070 canary boundary); this predicate only gates the emitted findings.
+ *
+ * @param {string} path
+ * @returns {boolean}
+ */
+function isGeneratedArtifactPath(path) {
+  if (!path || typeof path !== 'string') return false;
+  return EXCLUDED_DIR_RE.test(path);
 }
 
 function normalizeWhitespace(line) {
@@ -46133,6 +46158,37 @@ async function generateReview({
 
   // Replace comments with verified-only set
   comments = verified;
+
+  // #1597: Output-stage filter for findings that point at a machine-generated
+  // build-artifact directory (a `dist/` path segment). #1570 excluded these
+  // paths from the LLM-facing diff only; the heuristic detectors still scan the
+  // raw diff.files by design (the #1070 canary boundary), so a heuristic finding
+  // can still land on `runners/github-action/dist/index.mjs` and reach output.
+  // Drop those findings here — the SINGLE choke point where `comments` becomes
+  // both the emitted PR comments AND the source of `findings`/`classified` — so
+  // display, PR comments, and score (rubric penalty is computed from `findings`)
+  // all exclude them consistently. The generated artifact's quality derives from
+  // its source, so scoring it would double-count. Detection stays intact;
+  // suppressed findings are surfaced in debug for observability. Uses
+  // `isGeneratedArtifactPath`, which is intentionally narrower than the LLM
+  // diff's `isExcludedFile`: it matches only the generated directory, so real
+  // findings on `.md` / lock files are NOT suppressed from output.
+  const keptComments = [];
+  const suppressedGeneratedPathComments = [];
+  for (const c of comments) {
+    if ((0,_diff_processor_mjs__WEBPACK_IMPORTED_MODULE_9__/* .isGeneratedArtifactPath */ .vS)(c.file)) {
+      suppressedGeneratedPathComments.push(c);
+    } else {
+      keptComments.push(c);
+    }
+  }
+  if (suppressedGeneratedPathComments.length > 0) {
+    comments = keptComments;
+    debug.suppressedGeneratedPathFindings = suppressedGeneratedPathComments.length;
+    debug.suppressedGeneratedPathFindingsSample = suppressedGeneratedPathComments
+      .slice(0, 3)
+      .map((c) => ({ file: c.file, line: c.line }));
+  }
 
   // Build structured findings from verified comments
   const findings = comments.map((c, i) => {

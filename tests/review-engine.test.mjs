@@ -558,3 +558,173 @@ test('buildPrompt switches language based on config', () => {
   assert.equal(language, 'en');
   assert.match(prompt, /Write the <message> in English/);
 });
+
+// --- #1597: output-stage filter for findings on generated (dist) paths ---
+//
+// #1570 excluded dist/ paths from the LLM-facing diff only. The heuristic
+// detectors deliberately still scan the raw diff.files (the #1070 canary
+// boundary), so a heuristic finding can still land on a dist bundle and reach
+// output — observed in calibration run 29686736870 where logging-observability
+// findings pointed at runners/github-action/dist/index.mjs. The finding-output
+// stage now drops those, keeps non-generated findings unchanged, and records
+// the suppression in debug for observability.
+const silentCatchDiff = {
+  diffText: 'diff placeholder',
+  files: [
+    {
+      path: 'runners/github-action/dist/index.mjs',
+      hunks: [{ newStart: 47857, lines: ['+  } catch (e) {}'] }],
+      addedLines: [47857],
+    },
+    {
+      path: 'src/service.mjs',
+      hunks: [{ newStart: 20, lines: ['+  } catch (e) {}'] }],
+      addedLines: [20],
+    },
+  ],
+  changedFiles: ['runners/github-action/dist/index.mjs', 'src/service.mjs'],
+};
+
+const loggingPlan = {
+  selected: [
+    {
+      metadata: {
+        id: 'logging-observability',
+        name: 'Logging Observability',
+        phase: 'midstream',
+        applyTo: ['**/*'],
+      },
+    },
+  ],
+  skipped: [],
+};
+
+test('generateReview drops findings on generated (dist) paths but keeps source findings (#1597)', async () => {
+  const result = await generateReview({
+    diff: silentCatchDiff,
+    plan: loggingPlan,
+    phase: 'midstream',
+    dryRun: true, // skip LLM → heuristic detectors run over the raw diff
+    includeFallback: false,
+  });
+
+  // Heuristic silent-catch findings are raised for BOTH files (detection is
+  // untouched), but only the source-path one survives to output.
+  const findingFiles = result.findings.map((f) => f.file);
+  assert.ok(
+    findingFiles.includes('src/service.mjs'),
+    'the source-path finding must remain in the emitted findings'
+  );
+  assert.ok(
+    !findingFiles.some((f) => f.startsWith('runners/github-action/dist/')),
+    'no finding on a dist/ path may reach the emitted findings'
+  );
+
+  // The emitted PR comments (1:1 with findings) must also exclude the dist path.
+  const commentFiles = result.comments.map((c) => c.file);
+  assert.ok(
+    !commentFiles.some((f) => f.startsWith('runners/github-action/dist/')),
+    'no comment on a dist/ path may reach output'
+  );
+
+  // classified (display/severity buckets) is derived from findings, so it too
+  // must exclude the dist path — this also proves score exclusion, since the
+  // rubric penalty is computed from findings.
+  const classifiedFiles = Object.values(result.classified ?? {})
+    .flat()
+    .map((f) => f?.file)
+    .filter(Boolean);
+  assert.ok(
+    !classifiedFiles.some((f) => String(f).startsWith('runners/github-action/dist/')),
+    'no classified finding on a dist/ path may reach output'
+  );
+
+  // Suppression is observable in debug.
+  assert.ok(
+    result.debug.suppressedGeneratedPathFindings >= 1,
+    'debug must record the suppressed generated-path finding count'
+  );
+  assert.ok(
+    result.debug.suppressedGeneratedPathFindingsSample.some((s) =>
+      s.file.startsWith('runners/github-action/dist/')
+    ),
+    'debug sample must include the suppressed dist path'
+  );
+});
+
+test('generateReview leaves debug.suppressedGeneratedPathFindings unset when no generated-path finding (#1597)', async () => {
+  const sourceOnlyDiff = {
+    diffText: 'diff placeholder',
+    files: [
+      {
+        path: 'src/service.mjs',
+        hunks: [{ newStart: 20, lines: ['+  } catch (e) {}'] }],
+        addedLines: [20],
+      },
+    ],
+    changedFiles: ['src/service.mjs'],
+  };
+  const result = await generateReview({
+    diff: sourceOnlyDiff,
+    plan: loggingPlan,
+    phase: 'midstream',
+    dryRun: true,
+    includeFallback: false,
+  });
+  assert.equal(
+    result.debug.suppressedGeneratedPathFindings,
+    undefined,
+    'no suppression key when nothing was suppressed'
+  );
+  assert.ok(
+    result.findings.some((f) => f.file === 'src/service.mjs'),
+    'the source-path finding is unchanged'
+  );
+});
+
+// #1597 (adversarial-review boundary / canary): the output filter is narrowed
+// to generated `dist/` directories ONLY. Findings on `.md` and lock files —
+// which ARE stripped from the LLM-facing diff by isExcludedFile — must still
+// reach output, otherwise a real finding (e.g. a hardcoded secret in a docs
+// code fence, or a lock-file issue) would be silently hidden. The reviewer
+// measured a silent-catch finding on docs/how-to.md being wrongly suppressed;
+// this test locks the fix.
+test('generateReview does NOT suppress findings on .md or lock files (#1597 boundary)', async () => {
+  const docsAndLockDiff = {
+    diffText: 'diff placeholder',
+    files: [
+      {
+        path: 'docs/how-to.md',
+        hunks: [{ newStart: 5, lines: ['+  } catch (e) {}'] }],
+        addedLines: [5],
+      },
+      {
+        path: 'package-lock.json',
+        hunks: [{ newStart: 9, lines: ['+  } catch (e) {}'] }],
+        addedLines: [9],
+      },
+    ],
+    changedFiles: ['docs/how-to.md', 'package-lock.json'],
+  };
+  const result = await generateReview({
+    diff: docsAndLockDiff,
+    plan: loggingPlan,
+    phase: 'midstream',
+    dryRun: true,
+    includeFallback: false,
+  });
+  const findingFiles = result.findings.map((f) => f.file);
+  assert.ok(
+    findingFiles.includes('docs/how-to.md'),
+    'a finding on a .md file must reach output (not suppressed as a generated path)'
+  );
+  assert.ok(
+    findingFiles.includes('package-lock.json'),
+    'a finding on a lock file must reach output (not suppressed as a generated path)'
+  );
+  assert.equal(
+    result.debug.suppressedGeneratedPathFindings,
+    undefined,
+    'nothing was on a dist/ path, so no generated-path suppression occurred'
+  );
+});
