@@ -56,6 +56,64 @@ const GRANDFATHERED_WITHOUT_EVAL = new Set([
   'trust-boundaries-authz',
 ]);
 
+// #1598: contexts the default runner path (`river run` → src/lib/local-runner.mjs
+// `collectLocalContext`) declares as available for inputContext-based skill
+// selection. `diff` is always resolved (resolveAvailableContexts default in
+// src/lib/utils.mjs, alwaysInclude ['diff']); `prDescription` is added only when
+// a PR body is present (local-runner.mjs alwaysInclude). Adopters can widen this
+// via RIVER_AVAILABLE_CONTEXTS / --context, but a `recommended: true` skill whose
+// inputContext requires anything outside this set never fires on the default
+// path — the exact silent-skip regression #1598 documented. Kept in sync with
+// the runner by tests/validate-recommended-context.test.mjs.
+export const RUNNER_SUPPLIED_CONTEXTS = ['diff', 'prDescription'];
+
+// #1598: recommended skills that still declare an inputContext outside
+// RUNNER_SUPPLIED_CONTEXTS and therefore never fire on the default runner path.
+// They are grandfathered so the forward-gate does not break CI, but NEW
+// recommended skills must keep inputContext within RUNNER_SUPPLIED_CONTEXTS (or
+// the runner must be taught to supply the extra contexts) rather than be added
+// here. Shrinking this set — by making a skill diff-centric (#1598 did this for
+// behavior-structure-separation / knowledge-to-code-alignment) or by widening
+// the runner-supplied set — is the intended migration direction.
+const GRANDFATHERED_UNSUPPLIED_CONTEXT = new Set([
+  'adr-decision-quality',
+  'api-design',
+  'api-versioning-compat',
+  'architecture-boundaries',
+  'architecture-risk-register',
+  'architecture-traceability',
+  'architecture-validation-plan',
+  'assumption-resolution-trace',
+  'availability-architecture',
+  'capacity-cost-design',
+  'coverage-gap',
+  'cross-file-leakage',
+  'data-flow-state-ownership',
+  'data-model-db-design',
+  'event-driven-semantics',
+  'external-dependencies',
+  'failure-modes-observability',
+  'fix-scope-integrity',
+  'impact-evidence-coverage',
+  'independent-review-synthesis',
+  'integration-contracts',
+  'logic-torturing',
+  'migration-rollout-rollback',
+  'multitenancy-isolation',
+  'openapi-contract',
+  'operability-slo',
+  'pre-mortem',
+  'refactor-claim-audit',
+  'security-privacy-design',
+  'self-contradiction',
+  'test-existence',
+  'trust-boundaries-authz',
+  'type-driven-design',
+  'typescript-nullcheck',
+  'typescript-strict',
+  'war-game',
+]);
+
 function hasSection(text, patterns) {
   return patterns.some((re) => re.test(text));
 }
@@ -344,6 +402,88 @@ export async function validateRecommendedEvalCoverage({
     console.log(
       `✅ recommended eval coverage: ${okCount}/${recommended.length} recommended skill(s) ` +
         `satisfied (incl. ${grandfatheredCount} grandfathered)`
+    );
+  }
+  return success;
+}
+
+/**
+ * Forward-gate (#1598): every `recommended: true` skill's `inputContext` must be
+ * a subset of {@link RUNNER_SUPPLIED_CONTEXTS} — the contexts the default runner
+ * path actually declares — otherwise the skill is silently skipped on every run
+ * (`missing inputContext: ...`) and never fires despite being recommended.
+ * Already-shipped offenders are exempted via
+ * {@link GRANDFATHERED_UNSUPPLIED_CONTEXT}; new recommended skills must keep
+ * inputContext within the supplied set (or the runner must be widened) rather
+ * than be added to that set.
+ *
+ * @param {{ skillsDir?: string, repoRoot?: string, registry?: object }} [options]
+ * @returns {Promise<boolean>} false (→ exitCode 1) if any non-grandfathered
+ *   recommended skill declares an inputContext outside the supplied set.
+ */
+export async function validateRecommendedContextAvailability({
+  skillsDir = defaultPaths.skillsDir,
+  repoRoot = defaultPaths.repoRoot,
+  registry,
+} = {}) {
+  const registryPath = path.join(skillsDir, 'registry.yaml');
+  const result = registry ?? (await loadRegistry({ skillsDir }));
+  if (!result.ok) {
+    console.error(
+      `❌ Failed to ${result.phase} skill registry at ${registryPath}: ${result.message}`
+    );
+    return false;
+  }
+  const supplied = new Set(RUNNER_SUPPLIED_CONTEXTS);
+  const skills = Array.isArray(result.parsed?.skills) ? result.parsed.skills : [];
+  const recommended = skills.filter((s) => s && s.recommended === true);
+  let success = true;
+  let okCount = 0;
+  let grandfatheredCount = 0;
+
+  for (const skill of recommended) {
+    const { id, path: skillPath } = skill;
+    // Malformed entries are reported by validateRegistryPaths(); skip here.
+    if (!id || typeof skillPath !== 'string') continue;
+    const resolved = path.resolve(repoRoot, skillPath);
+    let parsedSkill;
+    try {
+      parsedSkill = await parseSkillFile(resolved);
+    } catch {
+      // Missing/unparseable files are reported elsewhere; skip here.
+      continue;
+    }
+    const inputContext = parsedSkill?.metadata?.inputContext;
+    // A skill with no inputContext (or an empty list) is never skipped on the
+    // context check, so it cannot regress here.
+    if (!Array.isArray(inputContext) || inputContext.length === 0) {
+      okCount += 1;
+      continue;
+    }
+    const missing = inputContext.filter((ctx) => !supplied.has(ctx));
+    if (missing.length === 0) {
+      okCount += 1;
+      continue;
+    }
+    if (GRANDFATHERED_UNSUPPLIED_CONTEXT.has(id)) {
+      okCount += 1;
+      grandfatheredCount += 1;
+      continue;
+    }
+    console.error(
+      `❌ recommended skill "${id}" requires inputContext [${missing.join(', ')}] ` +
+        `that the default runner does not supply (supplied: [${RUNNER_SUPPLIED_CONTEXTS.join(', ')}]); ` +
+        'it would be silently skipped on every run (#1598). Make the skill diff-centric, ' +
+        'teach the runner to supply the context, or — only for already-shipped skills — ' +
+        'add it to GRANDFATHERED_UNSUPPLIED_CONTEXT in scripts/validate-skills.mjs'
+    );
+    success = false;
+  }
+
+  if (success) {
+    console.log(
+      `✅ recommended context availability: ${okCount}/${recommended.length} recommended skill(s) ` +
+        `have inputContext within the runner-supplied set (incl. ${grandfatheredCount} grandfathered)`
     );
   }
   return success;
@@ -822,6 +962,7 @@ if (isDirectRun(import.meta.url)) {
   const skillsOk = await validateSkills();
   const packsOk = await validatePacks({ registry });
   const evalCoverageOk = await validateRecommendedEvalCoverage({ registry });
+  const contextAvailabilityOk = await validateRecommendedContextAvailability({ registry });
   const registryPathsOk = await validateRegistryPaths({ registry });
   const registryIdsOk = await validateRegistryIdMatch({ registry });
   const fixtureDriftOk = await validateFixtureDrift();
@@ -830,6 +971,7 @@ if (isDirectRun(import.meta.url)) {
     skillsOk &&
     packsOk &&
     evalCoverageOk &&
+    contextAvailabilityOk &&
     registryPathsOk &&
     registryIdsOk &&
     fixtureDriftOk &&
