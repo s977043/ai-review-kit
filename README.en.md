@@ -227,7 +227,7 @@ Pin to a release tag such as `@v1.14.0` for stability. Alternatively, use the fl
 
 <!-- x-release-please-start-version -->
 
-Latest release: [v1.57.1](https://github.com/s977043/river-review/releases/latest)
+Latest release: [v1.57.2](https://github.com/s977043/river-review/releases/latest)
 
 <!-- x-release-please-end -->
 
