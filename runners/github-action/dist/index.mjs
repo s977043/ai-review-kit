@@ -12453,13 +12453,6 @@ module.exports = function(str) {
 
 /***/ }),
 
-/***/ 181:
-/***/ ((module) => {
-
-module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("buffer");
-
-/***/ }),
-
 /***/ 9896:
 /***/ ((module) => {
 
@@ -12548,13 +12541,6 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:util");
 /***/ ((module) => {
 
 module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("path");
-
-/***/ }),
-
-/***/ 932:
-/***/ ((module) => {
-
-module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("process");
 
 /***/ }),
 
@@ -42065,7 +42051,7 @@ async function runDeterministicExecGateIfEnabled({
     const { runDeterministicGates } =
       typeof importOrchestrator === 'function'
         ? await importOrchestrator()
-        : await Promise.all(/* import() */[__nccwpck_require__.e(815), __nccwpck_require__.e(944)]).then(__nccwpck_require__.bind(__nccwpck_require__, 8944));
+        : await __nccwpck_require__.e(/* import() */ 944).then(__nccwpck_require__.bind(__nccwpck_require__, 8944));
     const gateResult = await runDeterministicGates({
       trustedTree: env.RIVER_TRUSTED_TREE,
       selected: selected ?? [],

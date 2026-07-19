@@ -20,7 +20,7 @@
 
 import path from 'node:path';
 
-import YAML from 'yaml';
+import * as YAML from 'js-yaml';
 
 /** reasonCode returned for entries/commands that cannot be run (§3.5, §5). */
 export const DETERMINISTIC_UNRUNNABLE = 'DETERMINISTIC_UNRUNNABLE';
@@ -150,7 +150,7 @@ function normalizeFlag(arg) {
 export function parseAllowlist(yamlText) {
   let doc;
   try {
-    doc = YAML.parse(String(yamlText ?? ''));
+    doc = YAML.load(String(yamlText ?? ''));
   } catch (err) {
     return { error: `invalid YAML: ${err?.message ?? String(err)}` };
   }
