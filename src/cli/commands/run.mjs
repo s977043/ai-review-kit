@@ -1,0 +1,275 @@
+// `river run` (default local review) subcommand handler.
+//
+// Extracted verbatim from src/cli.mjs main() as part of the CLI dispatch
+// refactor (split main() into per-subcommand handlers). Behavior, messages,
+// and exit codes are unchanged; only the enclosing function and the relative
+// import depth (static and dynamic imports) differ from the original inline
+// block. The shared render helpers live in src/cli/render.mjs.
+import process from 'node:process';
+import { planLocalReview, runLocalReview } from '../../lib/local-runner.mjs';
+import { SkillLoaderError, resolveSkillSet } from '../../../runners/core/skill-loader.mjs';
+import CostEstimator from '../../core/cost-estimator.mjs';
+import { resolveDepthToReviewMode } from '../../lib/review-plan-generator.mjs';
+import { deriveRunGate } from '../../lib/run-gate.mjs';
+import {
+  printPlan,
+  printComments,
+  printMarkdownReport,
+  printDebugInfo,
+  printExplain,
+  formatJsonOutput,
+  formatPlannerStatus,
+  countChangedLines,
+} from '../render.mjs';
+
+/**
+ * Handle the default `run` command (local review against the git repo).
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @param {string} targetPath - resolved repo target path.
+ * @returns {Promise<number>} process exit code.
+ */
+export async function runRunCommand(parsed, targetPath) {
+  // Resolve --skill-set to its skill ids up front so an unknown name fails
+  // fast with a clear message before any review work begins.
+  let skillIds = null;
+  if (parsed.skillSet) {
+    try {
+      skillIds = await resolveSkillSet(parsed.skillSet);
+    } catch (err) {
+      if (err instanceof SkillLoaderError) {
+        console.error(`Error: ${err.message}`);
+        return 1;
+      }
+      throw err;
+    }
+  }
+
+  const manualReviewMode = resolveDepthToReviewMode(parsed.depth);
+
+  const context = await planLocalReview({
+    cwd: targetPath,
+    phase: parsed.phase,
+    dryRun: parsed.dryRun,
+    debug: parsed.debug,
+    availableContexts: parsed.availableContexts,
+    availableDependencies: parsed.availableDependencies,
+    plannerMode: parsed.plannerMode,
+    baseRef: parsed.base,
+    skillIds,
+    manualReviewMode,
+  });
+
+  const estimator = new CostEstimator(
+    process.env.OPENAI_MODEL || process.env.RIVER_OPENAI_MODEL || undefined
+  );
+  const estimatedCost =
+    context.status === 'ok'
+      ? estimator.estimateFromDiff(context.diff, context.plan?.selected ?? [])
+      : null;
+
+  const logRunHeader =
+    parsed.output === 'markdown' || parsed.output === 'json' || parsed.output === 'yaml'
+      ? console.error
+      : console.log;
+  logRunHeader(`River Review (local)
+Phase: ${parsed.phase}
+Repo: ${context.repoRoot}
+Base branch: ${context.defaultBranch}
+Merge base: ${context.mergeBase}
+Dry run: ${parsed.dryRun ? 'yes' : 'no'}
+Debug: ${parsed.debug ? 'yes' : 'no'}
+Planner: ${formatPlannerStatus(context.plan ?? {})}
+Contexts: ${(context.availableContexts || []).join(', ') || 'none'}
+Dependencies: ${
+    context.availableDependencies
+      ? context.availableDependencies.join(', ')
+      : 'not specified (skip disabled)'
+  }`);
+
+  if (context.status === 'skipped-by-label') {
+    const labels = context.matchedLabels?.length
+      ? context.matchedLabels.join(', ')
+      : '(not specified)';
+    console.log(`Review skipped: PR labels matched exclude patterns (${labels}).`);
+    return 0;
+  }
+
+  if (context.status === 'no-changes') {
+    console.log(`No changes to review compared to ${context.defaultBranch}.`);
+    return 0;
+  }
+
+  if (estimatedCost && parsed.maxCost !== null && estimatedCost.usd > parsed.maxCost) {
+    console.log(estimator.formatCost(estimatedCost));
+    console.error(
+      `Estimated cost $${estimatedCost.usd.toFixed(4)} exceeds max-cost ${parsed.maxCost}. Aborting.`
+    );
+    return 1;
+  }
+
+  if (parsed.estimate) {
+    if (!estimatedCost) {
+      console.log('Cost estimation skipped (no changes or skipped by label).');
+      return 0;
+    }
+    console.log('Cost Estimate:');
+    console.log(estimator.formatCost(estimatedCost));
+    console.log(`Files to review: ${context.changedFiles.length}`);
+    console.log(
+      `Lines changed (approx): ${countChangedLines(context.diff.filesForReview ?? context.diff.files)}`
+    );
+    return 0;
+  }
+
+  const result = await runLocalReview({
+    cwd: targetPath,
+    phase: parsed.phase,
+    dryRun: parsed.dryRun,
+    debug: parsed.debug,
+    context,
+    availableContexts: parsed.availableContexts,
+    availableDependencies: parsed.availableDependencies,
+    plannerMode: parsed.plannerMode,
+    reviewers: parsed.reviewers,
+    baseRef: parsed.base,
+    skillIds,
+    manualReviewMode,
+  });
+
+  if (parsed.explain) {
+    printExplain(result);
+  }
+
+  // Persist run to result store when --save is provided. Under GitHub
+  // Actions the save is AUTOMATIC (Epic #1347 S3, adversarial design
+  // review Blocker 1: an opt-in store never accumulates the audit trail),
+  // and the digest is appended to the job summary as the forced display
+  // point — supervision that requires someone to remember a command is
+  // not supervision.
+  // M1 (#1372 review): RIVER_AUTO_SAVE=false opts out of the CI auto-save
+  // (documented in the contract doc; the write target is .river/runs/).
+  const isGithubActions =
+    process.env.GITHUB_ACTIONS === 'true' && process.env.RIVER_AUTO_SAVE !== 'false';
+  if ((parsed.save || isGithubActions) && result.status === 'ok') {
+    try {
+      const { buildRunRecord, saveRunRecord, resolveStoreDir } =
+        await import('../../lib/result-store.mjs');
+      const { decision: runDecision, gate: runGate } = deriveRunGate(result);
+      const record = buildRunRecord(result, {
+        phase: parsed.phase,
+        gate: runGate,
+        decision: runDecision,
+      });
+      // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
+      const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });
+      console.error(`Run saved: ${record.runId} → ${savedPath}`);
+    } catch (err) {
+      console.error(`Warning: --save failed: ${err.message}`);
+    }
+  }
+
+  // Forced display point (Epic #1347 S3): under GitHub Actions, append the
+  // runs digest to the job summary. Fail-soft — the review result must
+  // never break on digest generation.
+  if (isGithubActions && process.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
+    try {
+      // C1 (#1372 review): the digest needs FULL records — the light
+      // listRunRecords metadata has no gate/findings and silently produced
+      // an empty digest here.
+      const { loadAllRunRecords, resolveStoreDir } = await import('../../lib/result-store.mjs');
+      const { buildRunsDigest, formatDigestMarkdown } = await import('../../lib/runs-digest.mjs');
+      const records = await loadAllRunRecords(resolveStoreDir(targetPath));
+      const digest = buildRunsDigest(records, { now: () => new Date() });
+      const fs = await import('node:fs/promises');
+      await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
+    } catch (err) {
+      console.error(`Warning: job summary digest failed: ${err.message}`);
+    }
+  }
+
+  // Regression comparison when --baseline is provided
+  if (parsed.baseline && result.status === 'ok') {
+    try {
+      const { diffReviews, formatRegressionSummary } = await import('../../lib/review-differ.mjs');
+      const baselineRaw = await import('node:fs/promises').then((fs) =>
+        fs.readFile(parsed.baseline, 'utf8')
+      );
+      const baselineFindings = JSON.parse(baselineRaw);
+      const prevFindings = Array.isArray(baselineFindings)
+        ? baselineFindings
+        : (baselineFindings.findings ?? baselineFindings.issues ?? []);
+      const diff = diffReviews(prevFindings, result.findings ?? []);
+      const regSummary = formatRegressionSummary(diff);
+      console.log(regSummary);
+    } catch (err) {
+      console.error(`Warning: --baseline comparison failed: ${err.message}`);
+    }
+  }
+
+  if (parsed.output === 'json') {
+    console.log(JSON.stringify(formatJsonOutput(result, parsed.phase), null, 2));
+  } else if (parsed.output === 'markdown') {
+    printMarkdownReport(result, parsed.phase);
+  } else if (parsed.output === 'yaml') {
+    const { formatYamlOutput } = await import('../../lib/output-formatters/yaml.mjs');
+    const jsonOutput = formatJsonOutput(result, parsed.phase);
+    const artifact = {
+      phase: parsed.phase,
+      timestamp: new Date().toISOString(),
+      findings: jsonOutput.issues,
+      plan: result.plan,
+      // Propagate the canonical verdict so YAML matches JSON (#1170 F3).
+      ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
+    };
+    console.log(formatYamlOutput(artifact));
+  } else if (parsed.output === 'html') {
+    const { formatHtmlOutput } = await import('../../lib/output-formatters/html.mjs');
+    const jsonOutput = formatJsonOutput(result, parsed.phase);
+    const htmlResult = {
+      findings: result.findings ?? [],
+      plan: result.plan,
+      timestamp: new Date().toISOString(),
+      // Propagate the canonical verdict so HTML matches JSON (#1170 F3).
+      ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
+    };
+    console.log(formatHtmlOutput(htmlResult, parsed.phase));
+  } else {
+    printPlan(result.plan);
+    printComments(result.comments);
+  }
+
+  if (parsed.debug) {
+    if (
+      parsed.output === 'markdown' ||
+      parsed.output === 'json' ||
+      parsed.output === 'yaml' ||
+      parsed.output === 'html'
+    ) {
+      console.error('\nDebug info (not included in output):');
+      printDebugInfo(result, { log: console.error });
+    } else {
+      printDebugInfo(result);
+    }
+  }
+
+  // #1066 self-review: honor --fail-on / --warn-on / --advisory-only on
+  // `river run` too. Previously these were parsed but silently ignored on
+  // the run path (only `river review` gated), so agents that relied on the
+  // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
+  if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
+    const { resolveGateExitCode } = await import('../../lib/gate-exit.mjs');
+    return await resolveGateExitCode({
+      failOn: parsed.failOn,
+      warnOn: parsed.warnOn,
+      advisoryOnly: parsed.advisoryOnly,
+      gate: parsed.gate,
+      // Derived the same way as the JSON-output gate so the exit code and the
+      // emitted artifact agree. deriveRunGate is statically imported above.
+      getGateInput: () => ({ findings: formatJsonOutput(result, parsed.phase).issues }),
+      getGateObject: () => deriveRunGate(result).gate,
+    });
+  }
+
+  return 0;
+}
