@@ -76,7 +76,7 @@ export function resolveAvailableContexts(
  * mark as "available". Keep in sync with `schemas/skill.schema.json`
  * dependencies enum.
  */
-export const dependencyStubs = [
+const dependencyStubs = [
   'code_search',
   'test_runner',
   'coverage_report',

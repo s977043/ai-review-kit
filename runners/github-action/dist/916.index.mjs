@@ -15,7 +15,7 @@ __webpack_require__.d(__webpack_exports__, {
   runReviewPlan: () => (/* binding */ runReviewPlan)
 });
 
-// UNUSED EXPORTS: REVIEW_GATE_SEVERITIES, computeReplayDrift
+// UNUSED EXPORTS: computeReplayDrift
 
 // EXTERNAL MODULE: external "node:path"
 var external_node_path_ = __webpack_require__(6760);
@@ -1478,8 +1478,6 @@ function resolveReviewOutputFormat({
     `Unsupported output format "${effective}" for river review. Expected: json | markdown (text not yet implemented).`
   );
 }
-
-const REVIEW_GATE_SEVERITIES = (/* unused pure expression or super */ null && (['info', 'minor', 'major', 'critical']));
 
 /**
  * Evaluate the review gate exit code from an artifact's findings (#976).
