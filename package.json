@@ -80,7 +80,7 @@
     "skills:validate:refs": "node scripts/check-skill-id-references.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.111.0",
+    "@anthropic-ai/sdk": "^0.112.3",
     "@google/generative-ai": "^0.24.1",
     "@inquirer/prompts": "^8.5.2",
     "@opentelemetry/api": "^1.9.1",
@@ -109,7 +109,7 @@
     "@vercel/ncc": "^0.44.1",
     "glob": "^13.0.6",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.8",
+    "lint-staged": "^17.1.0",
     "markdownlint-cli": "^0.49.1",
     "prettier": "^3.8.4",
     "prh": "^6.0.6",
