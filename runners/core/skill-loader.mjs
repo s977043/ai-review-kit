@@ -97,6 +97,86 @@ export function createSkillValidator(schema) {
 }
 
 /**
+ * Read and parse skills/registry.yaml exactly once. This is the single
+ * read+parse entry point for the registry document; every consumer that needs
+ * `packs:` / `recommendations:` / `skills:` (loadPacks / loadRecommendationSets
+ * here, plus scripts/validate-skills.mjs and scripts/generate-dashboard-data.js)
+ * goes through it so the file is not re-read and re-parsed per section.
+ *
+ * Returns a discriminated result rather than throwing, so both tolerant callers
+ * (loadPacks / loadRecommendationSets treat a missing file as an empty registry)
+ * and strict callers (the validate-skills gates report read vs parse failures
+ * with phase-specific wording) can share one implementation:
+ * - `{ ok: true, parsed, registryPath }` — `parsed` is `{}` for a null document;
+ * - `{ ok: false, phase: 'read' | 'parse', message, registryPath }` on failure
+ *   (a zero-byte / comment-only file is a js-yaml parse error, as before).
+ *
+ * @param {{ skillsDir?: string }} [options]
+ * @returns {Promise<{ ok: true, parsed: unknown, registryPath: string } | { ok: false, phase: 'read' | 'parse', message: string, registryPath: string }>}
+ */
+export async function loadRegistry({ skillsDir = defaultSkillsDir } = {}) {
+  const registryPath = path.join(skillsDir, 'registry.yaml');
+  let raw;
+  try {
+    raw = await fs.readFile(registryPath, 'utf8');
+  } catch (err) {
+    return { ok: false, phase: 'read', message: err.message, registryPath };
+  }
+  try {
+    return { ok: true, parsed: yaml.load(raw) ?? {}, registryPath };
+  } catch (err) {
+    return { ok: false, phase: 'parse', message: err.message, registryPath };
+  }
+}
+
+/**
+ * Unwrap a {@link loadRegistry} result for the tolerant runtime consumers:
+ * a read failure (typically a missing registry) resolves to an empty document,
+ * while a parse failure throws the historical SkillLoaderError wording so
+ * existing callers/tests observe the same error. Keeps the parse-error message
+ * in a single place instead of duplicating it across loadPacks /
+ * loadRecommendationSets.
+ *
+ * @param {Awaited<ReturnType<typeof loadRegistry>>} result
+ * @returns {unknown} parsed registry document ({} when the file is absent)
+ */
+function unwrapRegistryOrEmpty(result) {
+  if (result.ok) return result.parsed;
+  if (result.phase === 'parse') {
+    throw new SkillLoaderError(
+      `Failed to parse skill registry at ${result.registryPath}: ${result.message}`
+    );
+  }
+  return {};
+}
+
+/**
+ * Project the `recommendations:` section out of a parsed registry document.
+ * Pure; shared by {@link loadRecommendationSets} and the validate-skills gates
+ * so both interpret the section identically.
+ *
+ * @param {unknown} parsed parsed registry document
+ * @returns {Record<string, { description?: string, skills: string[] }>}
+ */
+export function selectRecommendationSets(parsed) {
+  const recommendations = parsed?.recommendations;
+  return recommendations && typeof recommendations === 'object' ? recommendations : {};
+}
+
+/**
+ * Project the `packs:` section out of a parsed registry document, keeping only
+ * well-formed entries (an object with a string `id`). Pure; shared by
+ * {@link loadPacks} and the validate-skills gates.
+ *
+ * @param {unknown} parsed parsed registry document
+ * @returns {Array<{ id: string, skills: string[] }>}
+ */
+export function selectPacks(parsed) {
+  const packs = parsed?.packs;
+  return Array.isArray(packs) ? packs.filter((p) => p && typeof p.id === 'string') : [];
+}
+
+/**
  * Read the named skill bundles declared under `recommendations:` in
  * skills/registry.yaml. These are maintainer-curated sets (basic, typescript,
  * comprehensive, ...) that `--skill-set <name>` exposes for selective runs.
@@ -105,21 +185,7 @@ export function createSkillValidator(schema) {
  * @returns {Promise<Record<string, { description?: string, skills: string[] }>>}
  */
 export async function loadRecommendationSets({ skillsDir = defaultSkillsDir } = {}) {
-  const registryPath = path.join(skillsDir, 'registry.yaml');
-  let raw;
-  try {
-    raw = await fs.readFile(registryPath, 'utf8');
-  } catch {
-    return {};
-  }
-  let parsed;
-  try {
-    parsed = yaml.load(raw) ?? {};
-  } catch (err) {
-    throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
-  }
-  const recommendations = parsed?.recommendations;
-  return recommendations && typeof recommendations === 'object' ? recommendations : {};
+  return selectRecommendationSets(unwrapRegistryOrEmpty(await loadRegistry({ skillsDir })));
 }
 
 /**
@@ -150,21 +216,7 @@ export async function resolveRecommendationSet(name, { skillsDir = defaultSkills
  * @returns {Promise<Array<{ id: string, skills: string[] }>>}
  */
 export async function loadPacks({ skillsDir = defaultSkillsDir } = {}) {
-  const registryPath = path.join(skillsDir, 'registry.yaml');
-  let raw;
-  try {
-    raw = await fs.readFile(registryPath, 'utf8');
-  } catch {
-    return [];
-  }
-  let parsed;
-  try {
-    parsed = yaml.load(raw) ?? {};
-  } catch (err) {
-    throw new SkillLoaderError(`Failed to parse skill registry at ${registryPath}: ${err.message}`);
-  }
-  const packs = parsed?.packs;
-  return Array.isArray(packs) ? packs.filter((p) => p && typeof p.id === 'string') : [];
+  return selectPacks(unwrapRegistryOrEmpty(await loadRegistry({ skillsDir })));
 }
 
 /**
