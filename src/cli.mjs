@@ -33,6 +33,7 @@ import { runSkillsCommand } from './cli/commands/skills.mjs';
 import { runRunsCommand } from './cli/commands/runs.mjs';
 import { runEvalCommand } from './cli/commands/eval.mjs';
 import { runFeedbackCommand } from './cli/commands/feedback.mjs';
+import { runSuppressionCommand } from './cli/commands/suppression.mjs';
 
 const MAX_PROMPT_PREVIEW_LENGTH = 800;
 const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
@@ -1261,68 +1262,7 @@ async function main(argv = process.argv.slice(2)) {
     }
 
     if (parsed.command === 'suppression') {
-      if (parsed.suppressionSubcommand !== 'add') {
-        console.error(
-          'Error: only `river suppression add` is supported (need: --fingerprint --feedback --rationale).'
-        );
-        return 1;
-      }
-      if (!parsed.suppressionFingerprint) {
-        console.error('Error: --fingerprint <16-hex> is required.');
-        return 1;
-      }
-      if (!/^[0-9a-f]{16}$/.test(parsed.suppressionFingerprint)) {
-        console.error('Error: --fingerprint must be exactly 16 lowercase hex chars.');
-        return 1;
-      }
-      if (!parsed.suppressionFeedbackType) {
-        console.error(
-          'Error: --feedback <false_positive|accepted_risk|wont_fix|not_relevant|duplicate> is required.'
-        );
-        return 1;
-      }
-      const validFeedback = new Set([
-        'false_positive',
-        'accepted_risk',
-        'wont_fix',
-        'not_relevant',
-        'duplicate',
-      ]);
-      if (!validFeedback.has(parsed.suppressionFeedbackType)) {
-        console.error('Error: --feedback must be one of: ' + [...validFeedback].join(', ') + '.');
-        return 1;
-      }
-      if (!parsed.suppressionRationale) {
-        console.error('Error: --rationale "<why this finding is being suppressed>" is required.');
-        return 1;
-      }
-      const validScope = new Set(['global', 'subsystem', 'file']);
-      if (!validScope.has(parsed.suppressionScope)) {
-        console.error('Error: --scope must be one of: global, subsystem, file.');
-        return 1;
-      }
-      const repoRoot = await ensureGitRepo(targetPath);
-      const indexPath = path.resolve(repoRoot, '.river', 'memory', 'index.json');
-      const { createSuppression } = await import('./lib/suppression.mjs');
-      const entry = createSuppression({
-        indexPath,
-        findingId: parsed.suppressionFindingId,
-        fingerprint: parsed.suppressionFingerprint,
-        feedbackType: parsed.suppressionFeedbackType,
-        scope: parsed.suppressionScope,
-        rationale: parsed.suppressionRationale,
-        severity: parsed.suppressionSeverity,
-        filePaths: parsed.suppressionFiles,
-        expiresAt: parsed.suppressionExpiresAt,
-        prNumber: parsed.suppressionPrNumber,
-      });
-      console.log('Suppression created: ' + entry.id);
-      console.log('  fingerprint: ' + entry.context.fingerprint);
-      console.log('  feedbackType: ' + entry.context.feedbackType);
-      console.log('  scope: ' + entry.context.scope);
-      if (entry.context.severity) console.log('  severity: ' + entry.context.severity);
-      console.log('  written to: ' + indexPath);
-      return 0;
+      return runSuppressionCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'feedback') {
