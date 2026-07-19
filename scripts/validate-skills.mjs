@@ -417,14 +417,18 @@ export async function validateRecommendedEvalCoverage({
  * inputContext within the supplied set (or the runner must be widened) rather
  * than be added to that set.
  *
- * @param {{ skillsDir?: string, repoRoot?: string, registry?: object }} [options]
+ * @param {{ skillsDir?: string, repoRoot?: string, registry?: object,
+ *   grandfathered?: Set<string> }} [options] `grandfathered` is injectable for
+ *   tests; production callers use the module-level GRANDFATHERED_UNSUPPLIED_CONTEXT.
  * @returns {Promise<boolean>} false (→ exitCode 1) if any non-grandfathered
- *   recommended skill declares an inputContext outside the supplied set.
+ *   recommended skill declares an inputContext outside the supplied set, or if a
+ *   grandfather entry has gone stale (compliant or no longer recommended).
  */
 export async function validateRecommendedContextAvailability({
   skillsDir = defaultPaths.skillsDir,
   repoRoot = defaultPaths.repoRoot,
   registry,
+  grandfathered = GRANDFATHERED_UNSUPPLIED_CONTEXT,
 } = {}) {
   const registryPath = path.join(skillsDir, 'registry.yaml');
   const result = registry ?? (await loadRegistry({ skillsDir }));
@@ -440,11 +444,19 @@ export async function validateRecommendedContextAvailability({
   let success = true;
   let okCount = 0;
   let grandfatheredCount = 0;
+  // Ids whose grandfather entry actually earned its keep this run (a recommended
+  // skill that still requires an unsupplied context). Anything in
+  // GRANDFATHERED_UNSUPPLIED_CONTEXT that never lands here is stale — the skill
+  // was made compliant or dropped/un-recommended — and must be removed so the
+  // list only ever shrinks (gemini review on PR #1605).
+  const neededGrandfather = new Set();
+  const recommendedIds = new Set();
 
   for (const skill of recommended) {
     const { id, path: skillPath } = skill;
     // Malformed entries are reported by validateRegistryPaths(); skip here.
     if (!id || typeof skillPath !== 'string') continue;
+    recommendedIds.add(id);
     const resolved = path.resolve(repoRoot, skillPath);
     let parsedSkill;
     try {
@@ -465,9 +477,10 @@ export async function validateRecommendedContextAvailability({
       okCount += 1;
       continue;
     }
-    if (GRANDFATHERED_UNSUPPLIED_CONTEXT.has(id)) {
+    if (grandfathered.has(id)) {
       okCount += 1;
       grandfatheredCount += 1;
+      neededGrandfather.add(id);
       continue;
     }
     console.error(
@@ -476,6 +489,22 @@ export async function validateRecommendedContextAvailability({
         'it would be silently skipped on every run (#1598). Make the skill diff-centric, ' +
         'teach the runner to supply the context, or — only for already-shipped skills — ' +
         'add it to GRANDFATHERED_UNSUPPLIED_CONTEXT in scripts/validate-skills.mjs'
+    );
+    success = false;
+  }
+
+  // Stale-grandfather gate: fail loudly for any grandfathered id that no longer
+  // needs the exemption, so the list cannot accumulate dead entries that would
+  // silence a future regression of the same skill (gemini review on PR #1605).
+  for (const id of grandfathered) {
+    if (neededGrandfather.has(id)) continue;
+    const reason = recommendedIds.has(id)
+      ? 'its inputContext is now within the runner-supplied set (it is compliant)'
+      : 'it is no longer a recommended skill (removed, renamed, or un-recommended)';
+    console.error(
+      `❌ grandfathered skill "${id}" is stale: ${reason}. ` +
+        'Remove it from GRANDFATHERED_UNSUPPLIED_CONTEXT in scripts/validate-skills.mjs ' +
+        'so the exemption list only shrinks and cannot mask a future regression.'
     );
     success = false;
   }

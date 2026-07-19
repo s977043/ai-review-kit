@@ -70,7 +70,7 @@ async function buildSkillsDir(skills) {
   return dir;
 }
 
-async function runQuiet(dir) {
+async function runQuiet(dir, grandfathered = new Set()) {
   const errors = [];
   const originalError = console.error;
   const originalLog = console.log;
@@ -78,7 +78,11 @@ async function runQuiet(dir) {
   console.log = () => {};
   let ok;
   try {
-    ok = await validateRecommendedContextAvailability({ skillsDir: dir, repoRoot: dir });
+    ok = await validateRecommendedContextAvailability({
+      skillsDir: dir,
+      repoRoot: dir,
+      grandfathered,
+    });
   } finally {
     console.error = originalError;
     console.log = originalLog;
@@ -117,12 +121,40 @@ test('ignores non-recommended skills with unsupplied contexts', async () => {
   assert.equal(ok, true);
 });
 
+test('flags a grandfathered skill that has become compliant (stale entry)', async () => {
+  // `test-existence` is a real member of GRANDFATHERED_UNSUPPLIED_CONTEXT. If a
+  // registry declares it recommended with an inputContext that IS within the
+  // supplied set, the grandfather entry is stale and must be removed — the gate
+  // fails loudly rather than silently keeping a dead exemption that could mask a
+  // future regression (gemini review on PR #1605).
+  const dir = await buildSkillsDir([
+    { id: 'test-existence', inputContext: ['diff'], recommended: true },
+  ]);
+  const { ok, errors } = await runQuiet(dir, new Set(['test-existence']));
+  assert.equal(ok, false);
+  assert.ok(
+    errors.some(
+      (e) => e.includes('test-existence') && e.includes('stale') && e.includes('compliant')
+    )
+  );
+});
+
+test('flags a grandfathered skill that is no longer recommended (stale entry)', async () => {
+  // A grandfathered id absent from the recommended set (removed/renamed/
+  // un-recommended) is also stale — the exemption can never fire again, so it
+  // must be pruned. Here the registry contains no `test-existence` entry at all.
+  const dir = await buildSkillsDir([{ id: 'skill-a', inputContext: ['diff'], recommended: true }]);
+  const { ok, errors } = await runQuiet(dir, new Set(['test-existence']));
+  assert.equal(ok, false);
+  assert.ok(errors.some((e) => e.includes('stale') && e.includes('no longer a recommended skill')));
+});
+
 test('the real repo registry passes the gate (grandfather list stays complete)', async () => {
   // No skillsDir/repoRoot override → validates the actual skills/registry.yaml.
-  // This fails if a new recommended skill lands with an unsupplied inputContext
-  // and is not grandfathered, or if a grandfathered skill was made compliant
-  // but left in the list without shrinking it (the latter still passes — the set
-  // is a superset allowance — so this only catches the forward regression).
+  // Fails if a new recommended skill lands with an unsupplied inputContext and is
+  // not grandfathered, OR if a grandfather entry has gone stale (its skill is now
+  // compliant, or no longer recommended) and was left in the list — the stale
+  // gate keeps the exemption set shrinking-only.
   const logs = [];
   const originalLog = console.log;
   console.log = (msg) => logs.push(String(msg));
