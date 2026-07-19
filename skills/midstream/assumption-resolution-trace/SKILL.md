@@ -42,6 +42,8 @@ Why: plan の assumption と diff の突合は artifact 参照による決定論
 2. **Open question 解消の突合**: plan の各 open question に対し、diff・PR 本文に回答（解消 or 明示的な繰り越し）があるか。
 3. **新規 Unknown の記録**: 実装中に新たに判明した前提・制約が、plan・PR 本文・コメントに記録された証拠があるか。
 
+既定 CI レビューでは自動発火しない（`/challenge` 等の明示呼び出し向け）。
+
 ## Non-goals / 扱わないこと
 
 - **plan の設計妥当性の判断**（assumption 自体が妥当かは問わない）。本 skill は「解消された証拠が残っているか」だけを見る。

@@ -41,6 +41,8 @@ modelHint: high-accuracy
 - `findings-pool` — 複数 Review Artifact から集約した findings 履歴 (JSON)
 - `fullFile` (任意) — 該当ファイルの完全な内容
 
+既定 CI レビューでは自動発火しない（`/challenge` 等の明示呼び出し向け）。
+
 ## Non-goals / 扱わないこと
 
 - 新しいレビュー観点の追加 (security / a11y / performance などは個別 skill の責務)。
