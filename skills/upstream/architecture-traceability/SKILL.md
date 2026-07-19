@@ -17,7 +17,7 @@ applyTo:
   - '**/*diagram*.{md,png,svg}'
 tags: [architecture, adr, traceability, upstream]
 severity: major
-inputContext: [diff, adr]
+inputContext: [diff]
 outputKind: [summary, findings, actions, questions]
 modelHint: balanced
 dependencies: [adr_lookup, repo_metadata]

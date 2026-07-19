@@ -15,7 +15,7 @@ applyTo:
   - 'docs/**/*schema*.md'
 tags: [database, schema, migration, upstream]
 severity: major
-inputContext: [diff, fullFile, adr]
+inputContext: [diff, fullFile]
 outputKind: [summary, findings, actions, questions]
 modelHint: balanced
 dependencies: [repo_metadata]
