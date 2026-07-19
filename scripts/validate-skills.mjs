@@ -91,14 +91,22 @@ const GRANDFATHERED_UNSUPPLIED_CONTEXT = new Set([
 // #1606: adding `fullFile` to RUNNER_SUPPLIED_CONTEXTS makes every skill whose
 // inputContext became a subset of {diff, prDescription, fullFile} compliant.
 // The stale-grandfather gate (below) therefore FORCES removing those entries in
-// this same change — leaving them would fail CI as "stale (compliant)". Removed
-// here: cross-file-leakage, fix-scope-integrity, impact-evidence-coverage,
-// refactor-claim-audit, security-privacy-design, self-contradiction,
-// type-driven-design, typescript-nullcheck, typescript-strict, war-game. Note:
-// cross-file-leakage / refactor-claim-audit / security-privacy-design ideally
-// want REPO-WIDE (unchanged-file) content, which the coarse `fullFile` token
-// cannot distinguish from changed-file content; they now select and lean on the
-// repo-wide symbol-usage context collectRepoContext also supplies. Their
+// this same change — leaving them would fail CI as "stale (compliant)".
+//
+// Shrink history of this set (36 → 8), for reviewers diffing against an older
+// base:
+//   - a-1, 14 adr-only skills → removed by #1607 (adr made redundant, diff-centric).
+//   - c-tier, 4 skills (pre-mortem, logic-torturing, assumption-resolution-trace,
+//     independent-review-synthesis) → un-recommended by #1610.
+//   - THIS PR (#1606), 10 fullFile-compliant skills → removed here:
+//     cross-file-leakage, fix-scope-integrity, impact-evidence-coverage,
+//     refactor-claim-audit, security-privacy-design, self-contradiction,
+//     type-driven-design, typescript-nullcheck, typescript-strict, war-game.
+//
+// Note: cross-file-leakage / refactor-claim-audit / security-privacy-design
+// ideally want REPO-WIDE (unchanged-file) content, which the coarse `fullFile`
+// token cannot distinguish from changed-file content; they now select and lean
+// on the repo-wide symbol-usage context collectRepoContext also supplies. Their
 // diff-centric redesign vs repo-wide supply remains follow-up (#1606 groups
 // b / a-4).
 

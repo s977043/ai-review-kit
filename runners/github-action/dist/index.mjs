@@ -44842,9 +44842,12 @@ function normalizePlannerMode(mode, { defaultMode = 'off' } = {}) {
 
 // EXPORTS
 __nccwpck_require__.d(__webpack_exports__, {
-  l: () => (/* binding */ buildRepoContextSection),
-  o: () => (/* binding */ collectRepoContext)
+  lQ: () => (/* binding */ buildRepoContextSection),
+  IW: () => (/* binding */ collectFullFileSections),
+  oZ: () => (/* binding */ collectRepoContext)
 });
+
+// UNUSED EXPORTS: DEFAULT_MAX_CHARS, FULLFILE_MAX_FILES, SECTION_CAPS, createRedactionPrimitives
 
 // EXTERNAL MODULE: external "node:child_process"
 var external_node_child_process_ = __nccwpck_require__(1421);
@@ -45131,6 +45134,12 @@ const SECTION_CAPS = {
   config: 500,
 };
 
+/**
+ * Number of leading changed files eligible for fullFile content. The
+ * declaration path (#1606) and the actual injection share this so parity holds.
+ */
+const FULLFILE_MAX_FILES = 5;
+
 /** Test file path heuristics. */
 const TEST_SUFFIXES = [
   (f) => f.replace(/\.(ts|tsx|js|jsx|mjs|cjs)$/, '.test.$1'),
@@ -45164,72 +45173,24 @@ const CONFIG_GLOBS = [
  *   `DEFAULT_DENY_GLOBS` only.
  * @returns {Promise<RepoContext>}
  */
-async function collectRepoContext({
-  changedFiles,
-  repoRoot,
-  maxChars = DEFAULT_MAX_CHARS,
-  security,
-  context: contextConfig,
-}) {
-  const sections = [];
-
-  // #689 PR-C: optional token budget on top of the legacy char budget.
-  // When `config.context.budget.maxTokens` is set, we also gate by an
-  // estimated token cost so callers can think in tokens. The char
-  // budget remains authoritative for backward compat — both must be
-  // satisfied for a candidate to land. estimateTokens is approximate
-  // (ASCII chars/4, CJK chars/2 in #689 PR-A) so callers should treat
-  // the result as best-effort, not a hard ceiling.
-  // PR-D (#689): if the user picks a reviewMode without an explicit
-  // budget, resolve the preset; the explicit `budget: { ... }` always
-  // wins. resolveContextBudget returns null when both are absent.
-  const budgetCfg = resolveContextBudget(contextConfig);
-  const maxTokensCfg = Number.isFinite(budgetCfg?.maxTokens) ? budgetCfg.maxTokens : null;
-  let tokenBudget = maxTokensCfg;
-  const billTokens = (text) => {
-    if (tokenBudget == null || !text) return;
-    tokenBudget -= (0,token_estimator/* estimateTokens */.bP)(text);
-  };
-  const tokenBudgetExhausted = () => tokenBudget != null && tokenBudget <= 0;
-
-  // #689 PR-C: optional ranking. When `config.context.ranking.enabled`
-  // is true (and changedFiles has more than one entry), score each
-  // candidate against the rest of the change set and process the most
-  // relevant ones first. PR-B (#714) shipped the pure scoring
-  // primitives; here we wire the simplest signal — pathProximity — and
-  // PR-D will layer in commit recency / risk-map weights.
-  const rankingCfg = contextConfig?.ranking;
-  const rankingEnabled = rankingCfg?.enabled === true;
-  const weights = rankingCfg?.weights ?? DEFAULT_WEIGHTS;
-  const rankCandidates = (paths) => {
-    if (!rankingEnabled || paths.length <= 1)
-      return paths.map((p, i) => ({ path: p, score: 1, originalIndex: i }));
-    return paths
-      .map((p, i) => {
-        // Proximity to the most recently-changed file in the set is a
-        // useful first-order signal. The collector picks the highest
-        // score across the rest of the change set so the head of the
-        // list always has at least one strong neighbor.
-        const proximities = paths.filter((_, j) => j !== i).map((other) => pathProximity(p, other));
-        const proximity = proximities.length ? Math.max(...proximities) : 0;
-        const score = scoreContextCandidate({
-          signals: { pathProximity: proximity },
-          weights,
-        });
-        return { path: p, score, originalIndex: i };
-      })
-      .sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
-  };
-
-  let budget = maxChars;
-
+/**
+ * Build the redaction & path-level deny primitives shared by every context
+ * section. Extracted (#1606) so the fullFile section — used both for prompt
+ * injection here and for the fullFile-context availability declaration in
+ * fullfile-supply.mjs — runs the SAME exclusion / redaction rules.
+ *
+ * @param {object} [security] - `config.security`
+ * @returns {{ isPathExcluded: (rel: string) => boolean,
+ *   maybeRedact: (text: string) => string, totalHits: Map<string, number>,
+ *   excludedPaths: Array<{path: string, section: string}> }}
+ */
+function createRedactionPrimitives(security) {
   // #692 PR-C: redaction & path-level deny.
   // - shouldExcludeForContext runs BEFORE we even read a file so dotenv,
   //   pem keys, lock files, build artifacts never enter process memory.
   // - redactText runs AFTER reading so any secret that slipped past the
   //   path filter (e.g. an inline AWS key in a regular .ts file) is masked
   //   before being injected into the prompt.
-  // The tally feeds debug output via redactionHits below.
   const redactCfg = security?.redact;
   const redactionEnabled = redactCfg?.enabled !== false; // default true
   const denyExtra = Array.isArray(redactCfg?.denyFiles) ? redactCfg.denyFiles : [];
@@ -45258,38 +45219,182 @@ async function collectRepoContext({
     if (hits.length) bumpHits(hits);
     return redacted;
   };
+  return { isPathExcluded, maybeRedact, totalHits, excludedPaths };
+}
 
-  // 1. Full text of changed source files.
-  // PR-C (#689): rankCandidates orders the change set so the most
-  // relevant files (highest pathProximity to the rest of the change
-  // set) get processed first under the budget. Without ranking the
-  // legacy first-N-files behavior is preserved by handing back the
-  // candidates in their original order.
-  const rankedFullFile = rankCandidates(changedFiles.slice(0, 5));
+/**
+ * Build the candidate ranking function (#689 PR-C). When
+ * `config.context.ranking.enabled` is true and there is more than one
+ * candidate, files closest (pathProximity) to the rest of the change set are
+ * processed first under the budget; otherwise original order is preserved.
+ */
+function makeRankCandidates(contextConfig) {
+  const rankingCfg = contextConfig?.ranking;
+  const rankingEnabled = rankingCfg?.enabled === true;
+  const weights = rankingCfg?.weights ?? DEFAULT_WEIGHTS;
+  return (paths) => {
+    if (!rankingEnabled || paths.length <= 1)
+      return paths.map((p, i) => ({ path: p, score: 1, originalIndex: i }));
+    return paths
+      .map((p, i) => {
+        const proximities = paths.filter((_, j) => j !== i).map((other) => pathProximity(p, other));
+        const proximity = proximities.length ? Math.max(...proximities) : 0;
+        const score = scoreContextCandidate({
+          signals: { pathProximity: proximity },
+          weights,
+        });
+        return { path: p, score, originalIndex: i };
+      })
+      .sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
+  };
+}
+
+/**
+ * Compute the "Full file: …" prompt sections for the changed source files,
+ * plus a ledger of which files were supplied vs skipped and why. This is the
+ * SINGLE source of the fullFile budget / exclusion / truncation logic (#1606):
+ * `collectRepoContext` uses it for actual prompt injection, and
+ * `fullfile-supply.mjs` uses it (via the same call) to decide whether the
+ * `fullFile` inputContext can be honestly declared available. Because both go
+ * through this function, a declaration of `available` can never diverge from an
+ * empty real injection (the false-parity class #1606 warning-1 targeted).
+ *
+ * Budget accounting mirrors the legacy inline loop: char budget (`maxChars`,
+ * default DEFAULT_MAX_CHARS) and optional token budget
+ * (`config.context.budget.maxTokens`) both gate each file; per-file content is
+ * capped at SECTION_CAPS.fullFile and truncated (marked `truncated: true`) when
+ * larger. Files after the first FULLFILE_MAX_FILES are recorded, not read.
+ *
+ * @param {object} opts
+ * @param {string[]} opts.changedFiles
+ * @param {string} opts.repoRoot
+ * @param {object} [opts.security] - `config.security`
+ * @param {object} [opts.context] - `config.context`
+ * @param {number} [opts.maxChars]
+ * @param {ReturnType<typeof createRedactionPrimitives>} [opts.primitives]
+ * @returns {{ sections: Array<{label: string, content: string, file: string}>,
+ *   supplied: Array<{path: string, chars: number, truncated: boolean}>,
+ *   skipped: Array<{path: string, reason: string}>, budgetRemaining: number,
+ *   tokenBudgetRemaining: number|null, maxTokensCfg: number|null,
+ *   rankedScores: Array<{path: string, score: number}> }}
+ */
+function collectFullFileSections({
+  changedFiles = [],
+  repoRoot,
+  security,
+  context: contextConfig,
+  maxChars = DEFAULT_MAX_CHARS,
+  primitives = createRedactionPrimitives(security),
+}) {
+  const { isPathExcluded, maybeRedact, excludedPaths } = primitives;
+  // #689 PR-C/PR-D: optional token budget on top of the legacy char budget.
+  const budgetCfg = resolveContextBudget(contextConfig);
+  const maxTokensCfg = Number.isFinite(budgetCfg?.maxTokens) ? budgetCfg.maxTokens : null;
+  let tokenBudget = maxTokensCfg;
+  let budget = maxChars;
+  const rankCandidates = makeRankCandidates(contextConfig);
+
+  const sections = [];
+  const supplied = [];
+  const skipped = [];
   const rankedScores = [];
-  for (const { path: rel, score } of rankedFullFile) {
-    if (budget <= 0 || tokenBudgetExhausted()) break;
+
+  // Files past the read window are recorded (not read) so the ledger accounts
+  // for every changed file (#1606 gemini: avoid silent under-count).
+  for (const rel of changedFiles.slice(FULLFILE_MAX_FILES)) {
+    skipped.push({ path: rel, reason: 'beyond-file-limit' });
+  }
+
+  const ranked = rankCandidates(changedFiles.slice(0, FULLFILE_MAX_FILES));
+  for (const { path: rel, score } of ranked) {
+    // Budget exhausted: record remaining candidates instead of silently
+    // dropping them, then keep scanning (the budget cannot recover, so no
+    // further content lands — parity with the legacy early break).
+    if (budget <= 0 || (tokenBudget != null && tokenBudget <= 0)) {
+      skipped.push({ path: rel, reason: 'budget-exhausted' });
+      continue;
+    }
     if (isPathExcluded(rel)) {
       excludedPaths.push({ path: rel, section: 'fullFile' });
+      skipped.push({ path: rel, reason: 'excluded' });
+      continue;
+    }
+    if (!isSourceFile(rel)) {
+      skipped.push({ path: rel, reason: 'non-source' });
       continue;
     }
     const abs = external_node_path_.join(repoRoot, rel);
-    if (!isSourceFile(rel) || !fileExists(abs)) continue;
-    // Use the tighter of the char-budget cap and the token-budget cap
-    // (translated to chars) so we never read more than either budget
-    // allows. PR-A (#712) charsToTokens is the safe upper bound.
+    if (!fileExists(abs)) {
+      skipped.push({ path: rel, reason: 'missing' });
+      continue;
+    }
+    // Tighter of char-budget and token-budget (translated to chars); the file
+    // is truncated to whatever the remaining budget allows and still supplied,
+    // so a tight budget yields a smaller — never a phantom-empty — section.
     const tokenChars = tokenBudget != null ? Math.max(0, (0,token_estimator/* charsToTokens */.b9)(tokenBudget)) : Infinity;
     const cap = Math.min(SECTION_CAPS.fullFile, budget, tokenChars);
-    if (cap <= 0) break;
-    const raw = readFileCapped(abs, cap);
-    if (raw) {
-      const content = maybeRedact(raw);
-      sections.push({ label: `Full file: ${rel}`, content, file: rel });
-      budget -= content.length;
-      billTokens(content);
-      rankedScores.push({ path: rel, score });
+    if (cap <= 0) {
+      skipped.push({ path: rel, reason: 'budget-exceeded' });
+      continue;
     }
+    const raw = readFileCapped(abs, cap);
+    if (!raw) {
+      // readFileCapped returns null for empty or unreadable files.
+      skipped.push({ path: rel, reason: 'empty' });
+      continue;
+    }
+    const truncated = raw.endsWith('\n// ...[truncated]');
+    const content = maybeRedact(raw);
+    sections.push({ label: `Full file: ${rel}`, content, file: rel });
+    supplied.push({ path: rel, chars: content.length, truncated });
+    budget -= content.length;
+    if (tokenBudget != null) tokenBudget -= (0,token_estimator/* estimateTokens */.bP)(content);
+    rankedScores.push({ path: rel, score });
   }
+
+  return {
+    sections,
+    supplied,
+    skipped,
+    budgetRemaining: budget,
+    tokenBudgetRemaining: tokenBudget,
+    maxTokensCfg,
+    rankedScores,
+  };
+}
+
+async function collectRepoContext({
+  changedFiles,
+  repoRoot,
+  maxChars = DEFAULT_MAX_CHARS,
+  security,
+  context: contextConfig,
+}) {
+  const rankingEnabled = contextConfig?.ranking?.enabled === true;
+  const primitives = createRedactionPrimitives(security);
+  const { isPathExcluded, maybeRedact, totalHits, excludedPaths } = primitives;
+
+  // 1. Full text of changed source files — the SAME computation the fullFile
+  //    availability declaration uses (#1606), so declaration and injection can
+  //    never diverge.
+  const fullFile = collectFullFileSections({
+    changedFiles,
+    repoRoot,
+    maxChars,
+    security,
+    context: contextConfig,
+    primitives,
+  });
+  const sections = [...fullFile.sections];
+  const maxTokensCfg = fullFile.maxTokensCfg;
+  let budget = fullFile.budgetRemaining;
+  let tokenBudget = fullFile.tokenBudgetRemaining;
+  const billTokens = (text) => {
+    if (tokenBudget == null || !text) return;
+    tokenBudget -= (0,token_estimator/* estimateTokens */.bP)(text);
+  };
+  const tokenBudgetExhausted = () => tokenBudget != null && tokenBudget <= 0;
+  const rankedScores = fullFile.rankedScores;
 
   // 2. Corresponding test files
   const testContents = [];
@@ -45727,7 +45832,7 @@ ${buildFileSummary(diffFiles)}
 Relevant skills:
 ${buildSkillSummary(plan)}
 
-${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${(0,_repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__/* .buildRepoContextSection */ .l)(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}Review the unified git diff below and produce concise findings.
+${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${(0,_repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__/* .buildRepoContextSection */ .lQ)(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}Review the unified git diff below and produce concise findings.
 ${buildLanguageInstruction(language)}
 - Output each finding on its own line using the format "<file>:<line>: <message>".
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
@@ -63710,47 +63815,30 @@ var repo_context = __nccwpck_require__(5597);
 /**
  * fullFile context supply resolver (#1606).
  *
- * The default runner (`river run` → src/lib/local-runner.mjs) already injects
- * the full text of changed source files into the LLM prompt via
+ * The default runner (`river run` → src/lib/local-runner.mjs) injects the full
+ * text of changed source files into the LLM prompt via
  * {@link module:src/lib/repo-context.collectRepoContext} (the "Full file: …"
- * sections), under a per-file / total character budget. What was missing is a
- * DECLARATION of that capability in the `availableContexts` set used for
- * inputContext-based skill selection — so `recommended` skills whose
- * `inputContext` includes `fullFile` were silently skipped by
+ * sections), under a per-file / total character (and optional token) budget.
+ * What was missing is a DECLARATION of that capability in the `availableContexts`
+ * set used for inputContext-based skill selection — so `recommended` skills
+ * whose `inputContext` includes `fullFile` were silently skipped by
  * `missingInputContexts()` even though the content was present in the prompt
  * (the #1598 silent-skip class; #1606 a-3).
  *
- * This module decides — with the SAME eligibility rules and budget caps that
- * collectRepoContext actually applies — whether the runner can honestly claim
- * `fullFile` for the current change set, and records a debug ledger of which
- * files were supplied vs skipped (oversize / binary / generated / non-source).
- * It never injects content itself (collectRepoContext remains the single
- * content path, so the LLM prompt budget is unchanged); it only gates the
- * declaration. Fail-safe: any per-file error is recorded and skipped, and the
- * diff-only review continues regardless.
+ * PARITY (#1606 warning-1 fix): this resolver does NOT reimplement the
+ * eligibility rules. It calls the exact same `collectFullFileSections` that
+ * collectRepoContext uses, so the declaration (`available`) is true if and only
+ * if that shared computation produces at least one non-empty "Full file:"
+ * section. Security deny-globs (`shouldExcludeForContext`, e.g. secrets/pem/env),
+ * redaction, the char budget, the `context.budget.maxTokens` token budget, and
+ * per-file truncation are therefore all honored identically — there is no
+ * "declare true / inject empty" path. It reads files (same cost the injection
+ * pays) but discards the content; only the ledger is kept. Fail-safe: per-file
+ * read errors are recorded as skips by the shared helper and the diff-only
+ * review continues.
  */
 
 
-
-
-
-// Budget caps aligned with src/lib/repo-context.mjs (SECTION_CAPS.fullFile /
-// DEFAULT_MAX_CHARS). Kept in sync so the declaration never over-claims more
-// than collectRepoContext actually supplies to the prompt.
-const PER_FILE_CHAR_CAP = 3000;
-const TOTAL_CHAR_CAP = 8000;
-const MAX_FILES = 5;
-
-// Source-file extensions collectRepoContext.isSourceFile actually reads. Only
-// these carry `fullFile` content; docs / data / lock files never do.
-const SOURCE_RE = /\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte|py|rb|go|java|kt|swift)$/;
-
-// Machine-generated build output (mirror diff-processor.EXCLUDED_DIR_RE). These
-// are not meaningfully reviewable and must never be supplied as fullFile.
-const GENERATED_DIR_RE = /(?:^|\/)dist\//;
-
-// Bytes sampled when sniffing for a binary file (a NUL byte in the head).
-const BINARY_SNIFF_BYTES = 8000;
 
 /**
  * Whether fullFile supply is enabled. Opt-out via `RIVER_FULLFILE_SUPPLY`
@@ -63767,22 +63855,18 @@ function isFullFileSupplyEnabled(env = process.env) {
   return !(v === 'off' || v === '0' || v === 'false' || v === 'no');
 }
 
-function looksBinary(buf) {
-  const n = Math.min(buf.length, BINARY_SNIFF_BYTES);
-  for (let i = 0; i < n; i += 1) {
-    if (buf[i] === 0) return true;
-  }
-  return false;
-}
-
 /**
  * Decide whether the runner can declare `fullFile` for this change set and
- * produce a debug ledger of supplied / skipped files.
+ * produce a debug ledger of supplied / skipped files. `available` is derived
+ * from the SAME shared computation collectRepoContext uses for injection, so
+ * the two never diverge.
  *
  * @param {object} opts
  * @param {string[]} [opts.changedFiles] - repoRoot-relative changed file paths
+ *   (already narrowed by upstream diff exclusion; passed through verbatim)
  * @param {string} opts.repoRoot - absolute repository root
- * @param {string[]} [opts.excludePatterns] - config.exclude.files globs
+ * @param {object} [opts.security] - `config.security` (drives shouldExcludeForContext / redaction)
+ * @param {object} [opts.context] - `config.context` (drives char/token budget + ranking)
  * @param {NodeJS.ProcessEnv} [opts.env]
  * @returns {{ available: boolean, enabled: boolean, totalChars: number,
  *   supplied: Array<{path: string, chars: number, truncated: boolean}>,
@@ -63791,73 +63875,29 @@ function looksBinary(buf) {
 function resolveFullFileSupply({
   changedFiles = [],
   repoRoot,
-  excludePatterns = [],
+  security,
+  context: contextConfig,
   env = process.env,
 } = {}) {
-  const enabled = isFullFileSupplyEnabled(env);
-  const supplied = [];
-  const skipped = [];
-
-  if (!enabled) {
-    return { available: false, enabled: false, totalChars: 0, supplied, skipped };
+  if (!isFullFileSupplyEnabled(env)) {
+    return { available: false, enabled: false, totalChars: 0, supplied: [], skipped: [] };
   }
 
-  const considered = changedFiles.slice(0, MAX_FILES);
-  for (const rel of changedFiles.slice(MAX_FILES)) {
-    skipped.push({ path: rel, reason: 'beyond-file-limit' });
-  }
+  const { sections, supplied, skipped } = (0,repo_context/* collectFullFileSections */.IW)({
+    changedFiles,
+    repoRoot,
+    security,
+    context: contextConfig,
+  });
+  const totalChars = supplied.reduce((sum, s) => sum + s.chars, 0);
 
-  let totalChars = 0;
-  for (const rel of considered) {
-    if (
-      GENERATED_DIR_RE.test(rel) ||
-      excludePatterns.some((p) => (0,esm/* minimatch */.xF)(rel, p, { dot: true }))
-    ) {
-      skipped.push({ path: rel, reason: 'excluded' });
-      continue;
-    }
-    if (!SOURCE_RE.test(rel)) {
-      skipped.push({ path: rel, reason: 'non-source' });
-      continue;
-    }
-
-    const abs = external_node_path_.join(repoRoot, rel);
-    let buf;
-    try {
-      const stat = external_node_fs_.statSync(abs);
-      if (!stat.isFile()) {
-        skipped.push({ path: rel, reason: 'missing' });
-        continue;
-      }
-      buf = external_node_fs_.readFileSync(abs);
-    } catch {
-      // Fail-safe: an unreadable file is skipped, never fatal.
-      skipped.push({ path: rel, reason: 'unreadable' });
-      continue;
-    }
-
-    if (looksBinary(buf)) {
-      skipped.push({ path: rel, reason: 'binary' });
-      continue;
-    }
-
-    const text = buf.toString('utf8');
-    if (!text.trim()) {
-      skipped.push({ path: rel, reason: 'empty' });
-      continue;
-    }
-
-    const chars = Math.min(text.length, PER_FILE_CHAR_CAP);
-    if (totalChars + chars > TOTAL_CHAR_CAP) {
-      skipped.push({ path: rel, reason: 'budget-exceeded' });
-      continue;
-    }
-
-    totalChars += chars;
-    supplied.push({ path: rel, chars, truncated: text.length > PER_FILE_CHAR_CAP });
-  }
-
-  return { available: supplied.length > 0, enabled: true, totalChars, supplied, skipped };
+  return {
+    available: sections.length > 0,
+    enabled: true,
+    totalChars,
+    supplied,
+    skipped,
+  };
 }
 
 ;// CONCATENATED MODULE: ./src/lib/suppression-apply.mjs
@@ -64153,7 +64193,8 @@ async function collectLocalContext({
   const fullFileSupply = resolveFullFileSupply({
     changedFiles: reviewFiles,
     repoRoot,
-    excludePatterns: config.exclude?.files ?? [],
+    security: config.security,
+    context: config.context,
   });
   // Expose `prDescription` as an available input context only when a PR body is
   // present, so the pr-description skill activates exactly when it has input.
@@ -64417,7 +64458,7 @@ async function runLocalReview({
     changedFiles: context.changedFiles,
   });
 
-  const repoContext = await (0,repo_context/* collectRepoContext */.o)({
+  const repoContext = await (0,repo_context/* collectRepoContext */.oZ)({
     changedFiles: context.changedFiles,
     repoRoot: external_node_path_.resolve(context.repoRoot),
     security: context.config?.security,

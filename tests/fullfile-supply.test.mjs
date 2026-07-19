@@ -1,29 +1,35 @@
 /**
  * Tests for src/lib/fullfile-supply.mjs (#1606).
  *
- * Covers: basic supply, per-file + total budget guards, binary exclusion,
- * generated (dist/) + config exclusion, non-source skip, env kill-switch, and
- * the fail-safe (unreadable / missing files never throw).
+ * The resolver delegates to repo-context.collectFullFileSections — the same
+ * computation collectRepoContext uses for prompt injection — so these tests
+ * cover both the ledger semantics AND the declaration↔injection PARITY
+ * property (available ⇔ collectRepoContext produces a non-empty fullFile
+ * section) for the two false-parity cases the review flagged: security
+ * deny-globs and a tight token budget.
  */
 import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {
-  resolveFullFileSupply,
-  isFullFileSupplyEnabled,
-  PER_FILE_CHAR_CAP,
-  TOTAL_CHAR_CAP,
-  MAX_FILES,
-} from '../src/lib/fullfile-supply.mjs';
+import { resolveFullFileSupply, isFullFileSupplyEnabled } from '../src/lib/fullfile-supply.mjs';
+import { collectRepoContext, SECTION_CAPS, FULLFILE_MAX_FILES } from '../src/lib/repo-context.mjs';
 import { createTempDir, cleanupTempDir } from './helpers/temp-dir.mjs';
+
+const PER_FILE = SECTION_CAPS.fullFile; // 3000
 
 function write(dir, rel, content) {
   const abs = path.join(dir, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, content);
   return rel;
+}
+
+/** Count the "Full file:" sections collectRepoContext would inject. */
+async function injectedFullFileCount(dir, changedFiles, opts = {}) {
+  const ctx = await collectRepoContext({ changedFiles, repoRoot: dir, ...opts });
+  return ctx.sections.filter((s) => s.label.startsWith('Full file:')).length;
 }
 
 describe('isFullFileSupplyEnabled', () => {
@@ -40,7 +46,7 @@ describe('isFullFileSupplyEnabled', () => {
   });
 });
 
-describe('resolveFullFileSupply', () => {
+describe('resolveFullFileSupply ledger', () => {
   test('supplies changed source files and reports available', () => {
     const dir = createTempDir({ prefix: 'fullfile-supply-' });
     try {
@@ -59,73 +65,30 @@ describe('resolveFullFileSupply', () => {
   test('per-file cap marks the entry truncated but still supplied', () => {
     const dir = createTempDir({ prefix: 'fullfile-supply-' });
     try {
-      const big = write(dir, 'src/big.ts', 'x'.repeat(PER_FILE_CHAR_CAP + 500));
+      const big = write(dir, 'src/big.ts', 'x'.repeat(PER_FILE + 500));
       const res = resolveFullFileSupply({ changedFiles: [big], repoRoot: dir, env: {} });
       assert.equal(res.available, true);
-      assert.equal(res.supplied[0].chars, PER_FILE_CHAR_CAP);
       assert.equal(res.supplied[0].truncated, true);
+      assert.ok(res.supplied[0].chars <= PER_FILE + 32); // + truncation marker
     } finally {
       cleanupTempDir(dir);
     }
   });
 
-  test('total budget cap skips overflow files as budget-exceeded', () => {
+  test('total budget: overflow file is TRUNCATED and still supplied (no under-count)', () => {
     const dir = createTempDir({ prefix: 'fullfile-supply-' });
     try {
-      // Three files each at the per-file cap: 2 fit under TOTAL_CHAR_CAP (8000),
-      // the third overflows and is skipped.
-      const f1 = write(dir, 'src/f1.ts', 'a'.repeat(PER_FILE_CHAR_CAP));
-      const f2 = write(dir, 'src/f2.ts', 'b'.repeat(PER_FILE_CHAR_CAP));
-      const f3 = write(dir, 'src/f3.ts', 'c'.repeat(PER_FILE_CHAR_CAP));
-      const res = resolveFullFileSupply({
-        changedFiles: [f1, f2, f3],
-        repoRoot: dir,
-        env: {},
-      });
-      assert.ok(res.totalChars <= TOTAL_CHAR_CAP);
-      assert.equal(res.supplied.length, 2);
-      assert.ok(res.skipped.some((s) => s.path === 'src/f3.ts' && s.reason === 'budget-exceeded'));
-    } finally {
-      cleanupTempDir(dir);
-    }
-  });
-
-  test('excludes binary files (NUL byte)', () => {
-    const dir = createTempDir({ prefix: 'fullfile-supply-' });
-    try {
-      const bin = write(dir, 'src/bin.ts', Buffer.from([0x41, 0x00, 0x42]));
-      const res = resolveFullFileSupply({ changedFiles: [bin], repoRoot: dir, env: {} });
-      assert.equal(res.available, false);
-      assert.ok(res.skipped.some((s) => s.path === 'src/bin.ts' && s.reason === 'binary'));
-    } finally {
-      cleanupTempDir(dir);
-    }
-  });
-
-  test('excludes generated dist/ artifacts', () => {
-    const dir = createTempDir({ prefix: 'fullfile-supply-' });
-    try {
-      const gen = write(dir, 'runners/github-action/dist/index.mjs', 'export const x = 1;\n');
-      const res = resolveFullFileSupply({ changedFiles: [gen], repoRoot: dir, env: {} });
-      assert.equal(res.available, false);
-      assert.ok(res.skipped.some((s) => s.reason === 'excluded'));
-    } finally {
-      cleanupTempDir(dir);
-    }
-  });
-
-  test('excludes files matching config exclude patterns', () => {
-    const dir = createTempDir({ prefix: 'fullfile-supply-' });
-    try {
-      const gen = write(dir, 'src/generated/api.ts', 'export const x = 1;\n');
-      const res = resolveFullFileSupply({
-        changedFiles: [gen],
-        repoRoot: dir,
-        excludePatterns: ['**/generated/**'],
-        env: {},
-      });
-      assert.equal(res.available, false);
-      assert.ok(res.skipped.some((s) => s.reason === 'excluded'));
+      // Three files at the per-file cap. Total char budget is 8000, so the
+      // first two (3000 each) fit and the third is truncated to the remaining
+      // ~2000 chars — supplied, not silently skipped whole (gemini fix).
+      const f1 = write(dir, 'src/f1.ts', 'a'.repeat(PER_FILE));
+      const f2 = write(dir, 'src/f2.ts', 'b'.repeat(PER_FILE));
+      const f3 = write(dir, 'src/f3.ts', 'c'.repeat(PER_FILE));
+      const res = resolveFullFileSupply({ changedFiles: [f1, f2, f3], repoRoot: dir, env: {} });
+      assert.equal(res.supplied.length, 3);
+      const third = res.supplied.find((s) => s.path === 'src/f3.ts');
+      assert.ok(third && third.truncated, 'third file should be truncated to remaining budget');
+      assert.ok(res.totalChars <= 8000 + 64);
     } finally {
       cleanupTempDir(dir);
     }
@@ -161,7 +124,7 @@ describe('resolveFullFileSupply', () => {
     }
   });
 
-  test('fail-safe: missing / unreadable files are skipped, never throw', () => {
+  test('fail-safe: missing files are skipped, never throw', () => {
     const dir = createTempDir({ prefix: 'fullfile-supply-' });
     try {
       const res = resolveFullFileSupply({
@@ -171,24 +134,22 @@ describe('resolveFullFileSupply', () => {
       });
       assert.equal(res.available, false);
       assert.ok(
-        res.skipped.some(
-          (s) => s.path === 'src/does-not-exist.ts' && ['missing', 'unreadable'].includes(s.reason)
-        )
+        res.skipped.some((s) => s.path === 'src/does-not-exist.ts' && s.reason === 'missing')
       );
     } finally {
       cleanupTempDir(dir);
     }
   });
 
-  test('files beyond MAX_FILES are recorded as beyond-file-limit', () => {
+  test('files beyond FULLFILE_MAX_FILES are recorded as beyond-file-limit', () => {
     const dir = createTempDir({ prefix: 'fullfile-supply-' });
     try {
       const files = [];
-      for (let i = 0; i < MAX_FILES + 2; i += 1) {
+      for (let i = 0; i < FULLFILE_MAX_FILES + 2; i += 1) {
         files.push(write(dir, `src/f${i}.ts`, `export const v${i} = ${i};\n`));
       }
       const res = resolveFullFileSupply({ changedFiles: files, repoRoot: dir, env: {} });
-      assert.equal(res.supplied.length, MAX_FILES);
+      assert.equal(res.supplied.length, FULLFILE_MAX_FILES);
       assert.equal(res.skipped.filter((s) => s.reason === 'beyond-file-limit').length, 2);
     } finally {
       cleanupTempDir(dir);
@@ -202,6 +163,74 @@ describe('resolveFullFileSupply', () => {
       const res = resolveFullFileSupply({ changedFiles: [empty], repoRoot: dir, env: {} });
       assert.equal(res.available, false);
       assert.ok(res.skipped.some((s) => s.reason === 'empty'));
+    } finally {
+      cleanupTempDir(dir);
+    }
+  });
+});
+
+describe('declaration ↔ injection parity (#1606 warning-1)', () => {
+  test('security deny-glob: secrets.* declared unavailable AND not injected', async () => {
+    const dir = createTempDir({ prefix: 'fullfile-parity-' });
+    try {
+      // A source-extension file matching DEFAULT_DENY_GLOBS (**/secrets.*).
+      const secret = write(
+        dir,
+        'src/secrets.js',
+        'export const API_KEY = "AKIAEXAMPLE1234567890";\n'
+      );
+      const res = resolveFullFileSupply({ changedFiles: [secret], repoRoot: dir, env: {} });
+      const injected = await injectedFullFileCount(dir, [secret]);
+      // Parity: declaration false ⇔ zero injected sections. (Old code declared
+      // available:true here while collectRepoContext injected nothing.)
+      assert.equal(res.available, false);
+      assert.equal(injected, 0);
+      assert.ok(res.skipped.some((s) => s.path === 'src/secrets.js' && s.reason === 'excluded'));
+    } finally {
+      cleanupTempDir(dir);
+    }
+  });
+
+  test('tight token budget: nothing declared AND nothing injected', async () => {
+    const dir = createTempDir({ prefix: 'fullfile-parity-' });
+    try {
+      const a = write(dir, 'src/a.ts', 'export const a = 1;\n');
+      const context = { budget: { maxTokens: 0 } };
+      const res = resolveFullFileSupply({ changedFiles: [a], repoRoot: dir, context, env: {} });
+      const injected = await injectedFullFileCount(dir, [a], { context });
+      assert.equal(res.available, false);
+      assert.equal(injected, 0);
+    } finally {
+      cleanupTempDir(dir);
+    }
+  });
+
+  test('normal source file: declared available AND injected (positive parity)', async () => {
+    const dir = createTempDir({ prefix: 'fullfile-parity-' });
+    try {
+      const a = write(dir, 'src/a.ts', 'export const a = 1;\n');
+      const res = resolveFullFileSupply({ changedFiles: [a], repoRoot: dir, env: {} });
+      const injected = await injectedFullFileCount(dir, [a]);
+      assert.equal(res.available, true);
+      assert.ok(injected >= 1);
+    } finally {
+      cleanupTempDir(dir);
+    }
+  });
+
+  test('parity holds across a mixed change set', async () => {
+    const dir = createTempDir({ prefix: 'fullfile-parity-' });
+    try {
+      const files = [
+        write(dir, 'src/ok.ts', 'export const ok = 1;\n'),
+        write(dir, 'src/secrets.ts', 'export const S = "x";\n'), // deny-glob
+        write(dir, 'docs/n.md', '# n\n'), // non-source
+      ];
+      const res = resolveFullFileSupply({ changedFiles: files, repoRoot: dir, env: {} });
+      const injected = await injectedFullFileCount(dir, files);
+      // available ⇔ injected>0, and supplied count equals injected section count.
+      assert.equal(res.available, injected > 0);
+      assert.equal(res.supplied.length, injected);
     } finally {
       cleanupTempDir(dir);
     }

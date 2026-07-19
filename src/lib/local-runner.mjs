@@ -160,7 +160,8 @@ async function collectLocalContext({
   const fullFileSupply = resolveFullFileSupply({
     changedFiles: reviewFiles,
     repoRoot,
-    excludePatterns: config.exclude?.files ?? [],
+    security: config.security,
+    context: config.context,
   });
   // Expose `prDescription` as an available input context only when a PR body is
   // present, so the pr-description skill activates exactly when it has input.
