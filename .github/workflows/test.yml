@@ -79,6 +79,8 @@ jobs:
         run: npm run skills:validate:refs
       - name: Check skill manifest freshness
         run: npm run skills:manifest:check
+      - name: Check registry structural-field freshness
+        run: npm run skills:registry:check
 
   meta-check:
     name: Meta consistency

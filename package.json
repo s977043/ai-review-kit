@@ -71,6 +71,8 @@
     "usage:summary": "node scripts/usage-summary.mjs",
     "skills:manifest": "node scripts/generate-skill-manifest.mjs",
     "skills:manifest:check": "node scripts/generate-skill-manifest.mjs --check",
+    "skills:registry": "node scripts/generate-registry-fields.mjs",
+    "skills:registry:check": "node scripts/generate-registry-fields.mjs --check",
     "skills:changelog": "node scripts/skill-changelog.mjs",
     "feedback:apply": "node scripts/apply-feedback.mjs",
     "packs:tier": "node scripts/pack-tier-check.mjs",
