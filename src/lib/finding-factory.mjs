@@ -8,6 +8,14 @@ import { computeFindingBreakdown } from './scoring/breakdown.mjs';
 export const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
 export const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
 
+/**
+ * Canonical severity ranking for the output schema vocabulary
+ * (ascending: higher number = more severe). Single source of truth for every
+ * module that needs to compare or sort severities.
+ * @see .claude/rules/review-core.md for the canonical severity mapping
+ */
+export const SEVERITY_RANK = /** @type {const} */ ({ info: 0, minor: 1, major: 2, critical: 3 });
+
 export const SUPPRESS_REASONS = {
   LOW_CONFIDENCE: 'low_confidence',
   DUPLICATE: 'duplicate',
@@ -89,7 +97,11 @@ export function parseFindingMessage(message) {
  * @returns {'critical'|'major'|'minor'|'info'}
  */
 export function normalizeSeverity(internalSeverity) {
-  switch ((internalSeverity ?? '').toLowerCase().trim()) {
+  switch (
+    String(internalSeverity ?? '')
+      .toLowerCase()
+      .trim()
+  ) {
     case 'blocker':
     case 'critical':
       return 'critical';

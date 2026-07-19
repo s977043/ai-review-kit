@@ -42617,6 +42617,7 @@ function isApp(file) {
 /* harmony export */   UB: () => (/* binding */ parseFindingMessage),
 /* harmony export */   Yo: () => (/* binding */ computeFingerprint),
 /* harmony export */   ZY: () => (/* binding */ classifyFindings),
+/* harmony export */   f3: () => (/* binding */ SEVERITY_RANK),
 /* harmony export */   ic: () => (/* binding */ annotateFingerprints),
 /* harmony export */   lv: () => (/* binding */ normalizeSeverity),
 /* harmony export */   nG: () => (/* binding */ severityToPriority),
@@ -42635,6 +42636,14 @@ function isApp(file) {
 
 const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
 const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
+
+/**
+ * Canonical severity ranking for the output schema vocabulary
+ * (ascending: higher number = more severe). Single source of truth for every
+ * module that needs to compare or sort severities.
+ * @see .claude/rules/review-core.md for the canonical severity mapping
+ */
+const SEVERITY_RANK = /** @type {const} */ ({ info: 0, minor: 1, major: 2, critical: 3 });
 
 const SUPPRESS_REASONS = {
   LOW_CONFIDENCE: 'low_confidence',
@@ -42717,7 +42726,11 @@ function parseFindingMessage(message) {
  * @returns {'critical'|'major'|'minor'|'info'}
  */
 function normalizeSeverity(internalSeverity) {
-  switch ((internalSeverity ?? '').toLowerCase().trim()) {
+  switch (
+    String(internalSeverity ?? '')
+      .toLowerCase()
+      .trim()
+  ) {
     case 'blocker':
     case 'critical':
       return 'critical';
@@ -47872,8 +47885,8 @@ var finding_factory = __nccwpck_require__(1535);
 ;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
 
 
+
 const CONSENSUS_LEVEL_ORDER = { consensus: 3, multi: 2, single: 1 };
-const SEVERITY_ORDER = { critical: 4, major: 3, minor: 2, info: 1 };
 
 /**
  * consensusLevel → severity の順に findings をソートして返す。
@@ -47885,7 +47898,7 @@ function sortFindingsByPriority(findings) {
       (CONSENSUS_LEVEL_ORDER[b.consensusLevel] ?? 0) -
       (CONSENSUS_LEVEL_ORDER[a.consensusLevel] ?? 0);
     if (cl !== 0) return cl;
-    return (SEVERITY_ORDER[b.severity] ?? 0) - (SEVERITY_ORDER[a.severity] ?? 0);
+    return (finding_factory/* SEVERITY_RANK */.f3[b.severity] ?? -1) - (finding_factory/* SEVERITY_RANK */.f3[a.severity] ?? -1);
   });
 }
 
@@ -48189,8 +48202,6 @@ function splitDiffIntoChunks(diff) {
     }));
 }
 
-const reviewer_orchestrator_SEVERITY_ORDER = ['info', 'minor', 'major', 'critical'];
-
 /**
  * Compute consensusLevel from an agreement array.
  * Used as display-only metadata; MUST NOT influence severity decisions.
@@ -48204,32 +48215,10 @@ function computeConsensusLevel(agreement) {
   return 'single';
 }
 
-/**
- * Normalize a severity string to one of the canonical schema values.
- * Accepts both output schema values (critical/major/minor/info) and
- * internal LLM prompt values (blocker/warning/nit).
- * Unknown values fall back to 'major' per review-core.md.
- *
- * @param {string} severity
- * @returns {'critical' | 'major' | 'minor' | 'info'}
- */
-function normalizeSeverityLocal(severity) {
-  const s = String(severity ?? '')
-    .toLowerCase()
-    .trim();
-  if (s === 'critical' || s === 'blocker') return 'critical';
-  if (s === 'major' || s === 'warning') return 'major';
-  if (s === 'minor' || s === 'nit') return 'minor';
-  if (s === 'info') return 'info';
-  return 'major'; // fail-safe per review-core.md
-}
-
 function maxSeverity(a, b) {
-  const na = normalizeSeverityLocal(a);
-  const nb = normalizeSeverityLocal(b);
-  const ai = reviewer_orchestrator_SEVERITY_ORDER.indexOf(na);
-  const bi = reviewer_orchestrator_SEVERITY_ORDER.indexOf(nb);
-  return reviewer_orchestrator_SEVERITY_ORDER[Math.max(ai, bi)];
+  const na = (0,finding_factory/* normalizeSeverity */.lv)(a);
+  const nb = (0,finding_factory/* normalizeSeverity */.lv)(b);
+  return finding_factory/* SEVERITY_RANK */.f3[na] >= finding_factory/* SEVERITY_RANK */.f3[nb] ? na : nb;
 }
 
 /**
@@ -48312,7 +48301,7 @@ function mergeFindings(findings) {
       const passthroughAgreement = [...agreementSet];
       return {
         ...canonical,
-        severity: normalizeSeverityLocal(canonical.severity),
+        severity: (0,finding_factory/* normalizeSeverity */.lv)(canonical.severity),
         agreement: passthroughAgreement,
         consensusLevel: computeConsensusLevel(passthroughAgreement),
       };
@@ -48869,8 +48858,9 @@ var utils = __nccwpck_require__(9746);
 //   - the per-suppression `minSeverityToAutoSuppress` (added in PR-A)
 //     can RAISE the bar but never lower it; the global P1 guard wins.
 
+
+
 const HIGH_SEVERITY = new Set(['major', 'critical']);
-const SEVERITY_RANK = { info: 0, minor: 1, major: 2, critical: 3 };
 
 function severityOf(finding) {
   return String(finding.severity || 'info').toLowerCase();
@@ -48932,7 +48922,7 @@ function applySuppressions(findings, memoryContext, opts = {}) {
     // Per-suppression cap: `minSeverityToAutoSuppress` is the highest
     // severity this entry is allowed to auto-suppress. A finding above
     // that rank stays.
-    if (minSeverity && SEVERITY_RANK[sev] > SEVERITY_RANK[String(minSeverity).toLowerCase()]) {
+    if (minSeverity && finding_factory/* SEVERITY_RANK */.f3[sev] > finding_factory/* SEVERITY_RANK */.f3[String(minSeverity).toLowerCase()]) {
       kept.push(finding);
       applied.push({
         fingerprint: fp,

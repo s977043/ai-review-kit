@@ -10,6 +10,7 @@ import {
   parseFindingMessage,
   normalizeSeverity,
   severityToPriority,
+  SEVERITY_RANK,
 } from '../src/lib/finding-factory.mjs';
 
 test('formatFindingMessage produces a valid labeled message', () => {
@@ -133,6 +134,35 @@ test('normalizeSeverity maps internal vocabulary to schema vocabulary', () => {
   assert.equal(normalizeSeverity('major'), 'major');
   assert.equal(normalizeSeverity('unknown'), 'major');
   assert.equal(normalizeSeverity(null), 'major');
+});
+
+test('normalizeSeverity is case-insensitive and trims whitespace', () => {
+  assert.equal(normalizeSeverity('BLOCKER'), 'critical');
+  assert.equal(normalizeSeverity('  Warning  '), 'major');
+  assert.equal(normalizeSeverity('Nit'), 'minor');
+});
+
+test('normalizeSeverity fail-safes on non-string inputs without throwing', () => {
+  // Non-string severities (e.g. a numeric `severity: 3` in skill frontmatter)
+  // must coerce to 'major' fail-safe, not throw. Regression guard for the
+  // String() coercion that the removed per-module copies all carried.
+  assert.equal(normalizeSeverity(3), 'major');
+  assert.equal(normalizeSeverity(0), 'major');
+  assert.equal(normalizeSeverity({}), 'major');
+  assert.equal(normalizeSeverity([]), 'major');
+  assert.equal(normalizeSeverity(true), 'major');
+  assert.equal(normalizeSeverity(undefined), 'major');
+});
+
+test('SEVERITY_RANK is the canonical ascending rank of schema severities', () => {
+  assert.deepEqual(SEVERITY_RANK, { info: 0, minor: 1, major: 2, critical: 3 });
+  // Ranks must be strictly increasing in severity order (relied on by
+  // suppression-apply / review-plan / verifier / reviewer-orchestrator).
+  assert.ok(
+    SEVERITY_RANK.info < SEVERITY_RANK.minor &&
+      SEVERITY_RANK.minor < SEVERITY_RANK.major &&
+      SEVERITY_RANK.major < SEVERITY_RANK.critical
+  );
 });
 
 test('generateReview returns structured findings[]', async () => {

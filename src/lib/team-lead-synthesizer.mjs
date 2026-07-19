@@ -1,7 +1,7 @@
 import { REVIEWER_ROLES } from './reviewer-orchestrator.mjs';
+import { SEVERITY_RANK } from './finding-factory.mjs';
 
 const CONSENSUS_LEVEL_ORDER = { consensus: 3, multi: 2, single: 1 };
-const SEVERITY_ORDER = { critical: 4, major: 3, minor: 2, info: 1 };
 
 /**
  * consensusLevel → severity の順に findings をソートして返す。
@@ -13,7 +13,7 @@ function sortFindingsByPriority(findings) {
       (CONSENSUS_LEVEL_ORDER[b.consensusLevel] ?? 0) -
       (CONSENSUS_LEVEL_ORDER[a.consensusLevel] ?? 0);
     if (cl !== 0) return cl;
-    return (SEVERITY_ORDER[b.severity] ?? 0) - (SEVERITY_ORDER[a.severity] ?? 0);
+    return (SEVERITY_RANK[b.severity] ?? -1) - (SEVERITY_RANK[a.severity] ?? -1);
   });
 }
 
