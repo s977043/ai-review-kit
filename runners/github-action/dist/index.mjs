@@ -47823,870 +47823,10 @@ const external_node_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(i
 var external_node_url_ = __nccwpck_require__(3136);
 // EXTERNAL MODULE: ./src/lib/git.mjs
 var git = __nccwpck_require__(8613);
-// EXTERNAL MODULE: external "node:fs/promises"
-var promises_ = __nccwpck_require__(1455);
-// EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
-var esm = __nccwpck_require__(9519);
-// EXTERNAL MODULE: ./src/config/loader.mjs + 1 modules
-var loader = __nccwpck_require__(3833);
 // EXTERNAL MODULE: ./runners/core/skill-loader.mjs + 1 modules
 var skill_loader = __nccwpck_require__(8478);
-;// CONCATENATED MODULE: ./src/lib/selection.mjs
-// Project-level skill selection (`selection` in .river-review.yaml).
-// Design: docs/development/skill-pack-design.md §6.
-//
-// Resolution: union(packs, tag-matched skills, skills.include) minus
-// skills.exclude, deduplicated. `--skill-set` on the CLI overrides the
-// config selection entirely. minTier warns (but does not block) when an
-// explicitly listed pack sits below the threshold — explicit listing is
-// treated as an intentional choice.
-
-
-const TIER_RANK = { experimental: 0, community: 1, official: 2 };
-
-/** True when the selection declares anything that affects skill choice. */
-function hasSelection(selection) {
-  if (!selection || typeof selection !== 'object') return false;
-  return Boolean(
-    selection.packs?.length || selection.tags?.length || selection.skills?.include?.length
-  );
-}
-
-/**
- * Resolve a config `selection` block to a deduplicated skill id list.
- *
- * @param {{ packs?: string[], tags?: string[], skills?: { include?: string[], exclude?: string[] }, minTier?: string }} selection
- * @param {{ skillsDir?: string, warn?: (msg: string) => void }} [options]
- * @returns {Promise<string[]|null>} skill ids, or null when the selection is empty
- */
-async function resolveSelectionSkillIds(
-  selection,
-  { skillsDir, warn = (msg) => console.warn(msg) } = {}
-) {
-  if (!hasSelection(selection)) return null;
-  const resolved = [];
-
-  if (selection.packs?.length) {
-    const loaderOptions = skillsDir ? { skillsDir } : {};
-    const packs = await (0,skill_loader/* loadPacks */.rn)(loaderOptions);
-    for (const id of selection.packs) {
-      const pack = packs.find((p) => p.id === id);
-      if (!pack || !Array.isArray(pack.skills)) {
-        const available = packs.map((p) => p.id).join(', ') || '(none)';
-        throw new Error(`selection.packs: unknown pack "${id}". Available packs: ${available}.`);
-      }
-      const tierRank = TIER_RANK[pack.tier] ?? TIER_RANK.experimental;
-      if (selection.minTier && !(pack.tier in TIER_RANK)) {
-        warn(
-          `⚠️  selection: pack "${id}" declares unknown tier "${pack.tier}"; treating it as experimental.`
-        );
-      }
-      if (selection.minTier && tierRank < TIER_RANK[selection.minTier]) {
-        warn(
-          `⚠️  selection: pack "${id}" (tier: ${pack.tier ?? 'experimental'}) is below minTier ` +
-            `"${selection.minTier}" but runs anyway because it was listed explicitly.`
-        );
-      }
-      resolved.push(...pack.skills);
-    }
-  }
-
-  if (selection.tags?.length) {
-    const wanted = new Set(selection.tags);
-    const loaderOptions = skillsDir ? { skillsDir } : {};
-    const metas = await (0,skill_loader/* loadAllSkillMetadata */.Qv)(loaderOptions);
-    for (const skill of metas) {
-      const tags = skill.metadata?.tags ?? [];
-      if (tags.some((t) => wanted.has(t))) resolved.push(skill.metadata.id);
-    }
-  }
-
-  resolved.push(...(selection.skills?.include ?? []));
-
-  const exclude = new Set(selection.skills?.exclude ?? []);
-  const seen = new Set();
-  return resolved.filter((id) => {
-    if (typeof id !== 'string' || !id.length) return false;
-    if (exclude.has(id) || seen.has(id)) return false;
-    seen.add(id);
-    return true;
-  });
-}
-
-// EXTERNAL MODULE: ./src/lib/diff-processor.mjs
-var diff_processor = __nccwpck_require__(861);
-// EXTERNAL MODULE: ./src/lib/review-engine.mjs
-var review_engine = __nccwpck_require__(2022);
-// EXTERNAL MODULE: ./src/lib/finding-factory.mjs
-var finding_factory = __nccwpck_require__(1535);
-;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
-
-
-
-const CONSENSUS_LEVEL_ORDER = { consensus: 3, multi: 2, single: 1 };
-
-/**
- * consensusLevel → severity の順に findings をソートして返す。
- * 同値の場合は元の順序を維持（stable sort）。
- */
-function sortFindingsByPriority(findings) {
-  return [...findings].sort((a, b) => {
-    const cl =
-      (CONSENSUS_LEVEL_ORDER[b.consensusLevel] ?? 0) -
-      (CONSENSUS_LEVEL_ORDER[a.consensusLevel] ?? 0);
-    if (cl !== 0) return cl;
-    return (finding_factory/* SEVERITY_RANK */.f3[b.severity] ?? -1) - (finding_factory/* SEVERITY_RANK */.f3[a.severity] ?? -1);
-  });
-}
-
-/**
- * 実行されなかったレビュアーロールを blindSpots として返す。
- * 各 blindSpot には role キーと label (REVIEWER_ROLES[role].label) を含める。
- */
-function detectBlindSpots(executedRoles) {
-  const executedSet = new Set(executedRoles);
-  return Object.entries(REVIEWER_ROLES)
-    .filter(([role]) => !executedSet.has(role))
-    .map(([role, def]) => ({ role, label: def.label }));
-}
-
-/**
- * consensusLevel の件数を集計して返す。
- * @returns {{ consensus: number, multi: number, single: number, total: number }}
- */
-function buildConsensusSummary(findings) {
-  const summary = { consensus: 0, multi: 0, single: 0, total: findings.length };
-  for (const f of findings) {
-    const level = f.consensusLevel ?? 'single';
-    if (level in summary) summary[level]++;
-  }
-  return summary;
-}
-
-/**
- * Tech Lead 統合レポートを生成する。
- * LLM 呼び出しなし。全て deterministic な計算。
- *
- * @param {{ findings: object[], reviewerResults: object[] }} params
- * @returns {{ top3Findings: object[], blindSpots: object[], consensusSummary: object }}
- */
-function synthesizeTeamLeadReport({ findings = [], reviewerResults = [] }) {
-  const executedRoles = reviewerResults.map((r) => r.role);
-  const sorted = sortFindingsByPriority(findings);
-  return {
-    top3Findings: sorted.slice(0, 3),
-    blindSpots: detectBlindSpots(executedRoles),
-    consensusSummary: buildConsensusSummary(findings),
-  };
-}
-
-;// CONCATENATED MODULE: ./src/lib/reviewer-orchestrator.mjs
-
-
-
-
-
-const REVIEWER_ROLES = {
-  'bug-hunter': {
-    label: 'Bug Hunter',
-    focusInstructions: `You are the Bug Hunter reviewer. Focus exclusively on:
-- Logic errors, off-by-one mistakes, incorrect boolean conditions
-- Null/undefined dereference and missing guard clauses
-- Concurrent access race conditions (shared state mutated by parallel/async operations)
-- Edge cases (empty collections, negative values)
-- Incorrect or swallowed error handling
-Report only issues in these categories. Do NOT report security vulnerabilities or style issues.`,
-  },
-  'security-scanner': {
-    label: 'Security Scanner',
-    focusInstructions: `You are the Security Scanner reviewer. Focus exclusively on:
-- Injection vulnerabilities (SQL, shell command, path traversal, template injection)
-- Authentication and authorization bypasses
-- Sensitive data exposure (hardcoded secrets, PII in logs, tokens in URLs)
-- Insecure defaults, missing input validation at trust boundaries
-Report only security issues. Do NOT report logic bugs or style concerns.`,
-  },
-  'test-gap': {
-    label: 'Test Gap Finder',
-    focusInstructions: `You are the Test Gap Finder reviewer. Focus exclusively on:
-- New or changed code paths that lack test coverage
-- Missing edge-case tests (boundary values, error paths, empty inputs)
-- Tests that are present but do not assert meaningful outcomes
-Report only test coverage gaps. Do NOT report implementation bugs or style issues.`,
-  },
-  'dependency-reviewer': {
-    label: 'Dependency Reviewer',
-    focusInstructions: `You are the Dependency Reviewer. Focus exclusively on changes to package manifests and lockfiles:
-- Supply-chain risk (new/unfamiliar packages, scope/owner changes, typosquatting)
-- Version jumps that may carry breaking changes; missing peer dependencies
-- Production vs dev dependency placement; unjustified additions
-- Lockfile drift inconsistent with the manifest change
-Report only dependency concerns. Do NOT report unrelated logic or style issues.`,
-  },
-  'frontend-reviewer': {
-    label: 'Frontend Reviewer',
-    focusInstructions: `You are the Frontend Reviewer. Focus exclusively on UI/component and styling changes:
-- Accessibility (semantic HTML, ARIA, keyboard navigation, color contrast)
-- Avoidable re-renders and client-side performance
-- Responsive/layout regressions and unhandled loading/error states
-Report only frontend/UX concerns. Do NOT report backend logic or security bugs.`,
-  },
-  'ci-cd-reviewer': {
-    label: 'CI/CD Reviewer',
-    focusInstructions: `You are the CI/CD Reviewer. Focus exclusively on workflow and pipeline changes:
-- Unpinned/over-permissioned actions, secret exposure in logs, injection via untrusted inputs
-- Missing or weakened required checks; non-deterministic or flaky steps
-- Safe rollout/rollback of the pipeline itself
-Report only CI/CD concerns. Do NOT report application logic or style issues.`,
-  },
-};
-
-const DEFAULT_REVIEWERS = ['bug-hunter', 'security-scanner'];
-
-// Thresholds for diff splitting
-const SPLIT_FILE_THRESHOLD = 10;
-const SPLIT_LINE_THRESHOLD = 500;
-
-function resolveReviewerRoles(reviewers, { fileTypes, riskAssessment, signals } = {}) {
-  // 'auto' keyword: derive roles from diff content
-  if (reviewers?.length === 1 && reviewers[0] === 'auto') {
-    const autoSelection = computeAutoSelection(fileTypes, riskAssessment, signals);
-    return { valid: autoSelection.roles, invalid: [], autoSelection };
-  }
-  const names = reviewers ?? DEFAULT_REVIEWERS;
-  const valid = names.filter((n) => REVIEWER_ROLES[n]);
-  const invalid = names.filter((n) => !REVIEWER_ROLES[n]);
-  return { valid, invalid };
-}
-
-/**
- * Automatically select reviewer roles based on diff content signals.
- * Always includes bug-hunter; adds security-scanner and test-gap when relevant.
- *
- * @param {object} [fileTypes] coarse file-classifier buckets (config/app/infra/…)
- * @param {object} [riskAssessment] humanReviewFiles / escalatedFiles counts
- * @param {object} [signals] optional formalized stage/risk/artifact signals (#1545 P1)
- * @returns {string[]} selected reviewer role names
- */
-function selectRolesAuto(fileTypes, riskAssessment, signals) {
-  return computeAutoSelection(fileTypes, riskAssessment, signals).roles;
-}
-
-/**
- * Stage → existing reviewer roles. Maps the Issue #1545 §E stage table onto the
- * existing REVIEWER_ROLES only (no new roles are introduced; Lenses without a
- * dedicated role stay documented Gaps in reviewer-lens-taxonomy).
- */
-const STAGE_ROLE_MAP = {
-  requirements: [],
-  plan: ['security-scanner', 'test-gap'],
-  design: ['frontend-reviewer'],
-  exec: ['security-scanner'],
-  verify: ['test-gap'],
-  release: ['security-scanner'],
-};
-
-/**
- * Semantic diff signals → existing reviewer roles (Issue #1545 §E routing). Only
- * signals whose Lens maps to an existing role appear here; devex-only signals
- * (changesPublicApi / changesCliInterface / changesInstallation) intentionally
- * map to nothing and remain documented Gaps.
- */
-const SIGNAL_ROLE_MAP = {
-  touchesAuth: 'security-scanner',
-  changesPermissions: 'security-scanner',
-  handlesSensitiveData: 'security-scanner',
-  databaseMigration: 'security-scanner',
-  breakingChange: 'security-scanner',
-  changesUi: 'frontend-reviewer',
-  changesUserFlow: 'frontend-reviewer',
-  deploymentChange: 'ci-cd-reviewer',
-};
-
-/**
- * Compute the auto reviewer selection together with an explainable rationale.
- *
- * Backward compatible: with no `signals` argument the selected role set (and its
- * order) is identical to the pre-#1545 behavior — bug-hunter first, then the
- * file/risk heuristics in their original order. New signals are strictly
- * additive and only ever ADD roles.
- *
- * @returns {{ roles: string[], reasons: Record<string, string[]>, required: string[], skipped: string[] }}
- */
-function computeAutoSelection(fileTypes, riskAssessment, signals) {
-  /** @type {Map<string, string[]>} role → reasons (insertion order = role order) */
-  const reasons = new Map();
-  const add = (role, reason) => {
-    if (!REVIEWER_ROLES[role]) return; // never select a non-existent role
-    if (!reasons.has(role)) reasons.set(role, []);
-    const list = reasons.get(role);
-    if (!list.includes(reason)) list.push(reason);
-  };
-
-  // Fail-safe baseline: bug-hunter always runs.
-  add('bug-hunter', 'always-on');
-
-  // --- Existing file/risk heuristics (behavior unchanged) ---
-  const riskyFiles =
-    (riskAssessment?.humanReviewFiles?.length ?? 0) + (riskAssessment?.escalatedFiles?.length ?? 0);
-  const infraFiles =
-    (fileTypes?.config?.length ?? 0) +
-    (fileTypes?.schema?.length ?? 0) +
-    (fileTypes?.migration?.length ?? 0) +
-    (fileTypes?.infra?.length ?? 0);
-  if (riskyFiles > 0 || infraFiles > 0) {
-    add('security-scanner', 'files:risk-or-infra');
-  }
-
-  const testFiles = fileTypes?.test?.length ?? 0;
-  const appFiles = fileTypes?.app?.length ?? 0;
-  if (testFiles > 0 || appFiles > 2) {
-    add('test-gap', 'files:tests-or-many-app');
-  }
-
-  const configList = fileTypes?.config ?? [];
-  if (configList.some((f) => RE_DEPENDENCY_FILE.test(basenameOf(f)))) {
-    add('dependency-reviewer', 'files:manifest-or-lockfile');
-  }
-
-  const appList = fileTypes?.app ?? [];
-  if (appList.some((f) => RE_FRONTEND_FILE.test(normalizePath(f)))) {
-    add('frontend-reviewer', 'files:ui-or-styling');
-  }
-
-  const infraList = fileTypes?.infra ?? [];
-  if (infraList.some((f) => RE_CI_WORKFLOW.test(normalizePath(f)))) {
-    add('ci-cd-reviewer', 'files:workflow');
-  }
-
-  // --- Formalized stage/risk/artifact signals (#1545 P1, optional & additive) ---
-  if (signals && typeof signals === 'object') {
-    const stage = typeof signals.stage === 'string' ? signals.stage : null;
-    if (stage && STAGE_ROLE_MAP[stage]) {
-      for (const role of STAGE_ROLE_MAP[stage]) add(role, `stage:${stage}`);
-    }
-    for (const [key, role] of Object.entries(SIGNAL_ROLE_MAP)) {
-      if (signals[key]) add(role, `signal:${key}`);
-    }
-  }
-
-  const roles = [...reasons.keys()];
-  const skipped = Object.keys(REVIEWER_ROLES).filter((r) => !reasons.has(r));
-  return { roles, reasons: Object.fromEntries(reasons), required: ['bug-hunter'], skipped };
-}
-
-// Sub-classification patterns for auto role selection (#1196 S3). These refine
-// the coarse file-classifier buckets (config/app/infra) without changing them.
-const RE_DEPENDENCY_FILE = /^(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$/;
-const RE_FRONTEND_FILE = /\.(?:tsx|jsx|css|scss|sass|less|vue|svelte)$/;
-const RE_CI_WORKFLOW = /\.github\/workflows\//;
-
-// Null-safe path helpers: list elements may be non-strings in malformed input.
-function normalizePath(f) {
-  return typeof f === 'string' ? f.replaceAll('\\', '/') : '';
-}
-function basenameOf(f) {
-  return normalizePath(f).split('/').pop() ?? '';
-}
-
-/**
- * Split diff files into groups for parallel chunk execution.
- * Groups by directory prefix to keep related files together.
- */
-function splitDiffIntoChunks(diff) {
-  const files = diff.files ?? [];
-  const totalLines = files.reduce(
-    (sum, f) => sum + (f.hunks ?? []).reduce((s, h) => s + (h.lines?.length ?? 0), 0),
-    0
-  );
-
-  if (files.length <= SPLIT_FILE_THRESHOLD && totalLines <= SPLIT_LINE_THRESHOLD) {
-    return null; // No split needed
-  }
-
-  // Group files by top-level directory
-  const groups = new Map();
-  for (const file of files) {
-    const dir = file.path.split('/')[0] ?? '_root';
-    if (!groups.has(dir)) groups.set(dir, []);
-    groups.get(dir).push(file);
-  }
-
-  // Merge small groups to avoid excessive chunks (target: 2–4 chunks)
-  const targetChunks = Math.min(4, Math.ceil(files.length / SPLIT_FILE_THRESHOLD));
-  const buckets = [];
-  for (const groupFiles of groups.values()) {
-    if (buckets.length < targetChunks) {
-      buckets.push([...groupFiles]);
-    } else {
-      // Append to smallest bucket
-      buckets.sort((a, b) => a.length - b.length);
-      buckets[0].push(...groupFiles);
-    }
-  }
-
-  return buckets
-    .filter((b) => b.length > 0)
-    .map((chunkFiles) => ({
-      ...diff,
-      files: chunkFiles,
-      filesForReview: chunkFiles,
-      diffText: (0,diff_processor/* renderDiffText */.pQ)(chunkFiles),
-      _chunkLabel: chunkFiles
-        .map((f) => f.path)
-        .join(', ')
-        .slice(0, 60),
-    }));
-}
-
-/**
- * Compute consensusLevel from an agreement array.
- * Used as display-only metadata; MUST NOT influence severity decisions.
- * @param {string[]} agreement
- * @returns {'consensus' | 'multi' | 'single'}
- */
-function computeConsensusLevel(agreement) {
-  const count = Array.isArray(agreement) ? agreement.length : 0;
-  if (count >= 3) return 'consensus';
-  if (count >= 2) return 'multi';
-  return 'single';
-}
-
-function maxSeverity(a, b) {
-  const na = (0,finding_factory/* normalizeSeverity */.lv)(a);
-  const nb = (0,finding_factory/* normalizeSeverity */.lv)(b);
-  return finding_factory/* SEVERITY_RANK */.f3[na] >= finding_factory/* SEVERITY_RANK */.f3[nb] ? na : nb;
-}
-
-/**
- * Predicate: returns true when two findings are considered duplicates.
- * Criteria: same file, line positions within ±2, and message edit-distance ≤ 10
- * (compared on the first 80 chars, lower-cased).
- *
- * @param {object} a
- * @param {object} b
- * @returns {boolean}
- */
-function findingsOverlap(a, b) {
-  if (a.file !== b.file) return false;
-  const lineOverlap = Math.abs((a.lineStart ?? a.line ?? 0) - (b.lineStart ?? b.line ?? 0)) <= 2;
-  if (!lineOverlap) return false;
-  const msgA = (a.message ?? a.title ?? '').slice(0, 80).toLowerCase();
-  const msgB = (b.message ?? b.title ?? '').slice(0, 80).toLowerCase();
-  return editDistance(msgA, msgB) <= 10;
-}
-
-/**
- * Merge findings across reviewers using connected-components clustering.
- *
- * Two findings that are mutually overlapping (per findingsOverlap) are placed
- * in the same component. Because the graph may form A–B–C chains where A and C
- * are NOT directly overlapping, a union-find (path-compressed) is used so that
- * all transitively connected findings collapse into one cluster regardless of
- * input order.
- *
- * Each cluster produces ONE canonical finding (the first member) with:
- *   - severity = max of cluster (after normalization of blocker/warning/nit)
- *   - evidence = deduplicated union of all evidence arrays
- *   - agreement = array of all reviewerRole values in the cluster
- * Non-duplicate findings pass through unchanged, with agreement = [their reviewerRole] if set.
- */
-function mergeFindings(findings) {
-  const n = findings.length;
-  if (n === 0) return [];
-
-  // Union-Find with path halving
-  const parent = Array.from({ length: n }, (_, i) => i);
-  function find(x) {
-    while (parent[x] !== x) {
-      parent[x] = parent[parent[x]]; // path halving
-      x = parent[x];
-    }
-    return x;
-  }
-  function union(x, y) {
-    const rx = find(x);
-    const ry = find(y);
-    if (rx !== ry) parent[ry] = rx;
-  }
-
-  // Build adjacency: O(n²) — acceptable for typical review finding counts
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      if (findingsOverlap(findings[i], findings[j])) {
-        union(i, j);
-      }
-    }
-  }
-
-  // Group indices by root representative, preserving insertion order
-  const clusterMap = new Map(); // root → [indices]
-  for (let i = 0; i < n; i++) {
-    const root = find(i);
-    if (!clusterMap.has(root)) clusterMap.set(root, []);
-    clusterMap.get(root).push(i);
-  }
-
-  return [...clusterMap.values()].map((indices) => {
-    const canonical = { ...findings[indices[0]] };
-    if (indices.length === 1) {
-      // Passthrough: attach agreement with own role, preserving existing
-      const role = canonical.reviewerRole;
-      const existingAgreement = Array.isArray(canonical.agreement) ? canonical.agreement : [];
-      const agreementSet = new Set(existingAgreement);
-      if (role) agreementSet.add(role);
-      const passthroughAgreement = [...agreementSet];
-      return {
-        ...canonical,
-        severity: (0,finding_factory/* normalizeSeverity */.lv)(canonical.severity),
-        agreement: passthroughAgreement,
-        consensusLevel: computeConsensusLevel(passthroughAgreement),
-      };
-    }
-
-    // Merge cluster: max severity, union evidence, collect agreement
-    let mergedSeverity = canonical.severity;
-    const evidenceSet = new Set(Array.isArray(canonical.evidence) ? canonical.evidence : []);
-    const agreementSet = new Set(Array.isArray(canonical.agreement) ? canonical.agreement : []);
-    if (canonical.reviewerRole) agreementSet.add(canonical.reviewerRole);
-
-    for (const idx of indices.slice(1)) {
-      const m = findings[idx];
-      mergedSeverity = maxSeverity(mergedSeverity, m.severity);
-      for (const e of Array.isArray(m.evidence) ? m.evidence : []) evidenceSet.add(e);
-      for (const a of Array.isArray(m.agreement) ? m.agreement : []) agreementSet.add(a);
-      if (m.reviewerRole) agreementSet.add(m.reviewerRole);
-    }
-
-    const mergedAgreement = [...agreementSet];
-    return {
-      ...canonical,
-      severity: mergedSeverity,
-      evidence: [...evidenceSet],
-      agreement: mergedAgreement,
-      consensusLevel: computeConsensusLevel(mergedAgreement),
-    };
-  });
-}
-
-/**
- * Deduplicate findings across parallel runs.
- * Two findings are considered duplicates if findingsOverlap returns true.
- */
-function deduplicateFindings(findings) {
-  const seen = [];
-  const result = [];
-
-  for (const f of findings) {
-    const isDuplicate = seen.some((s) => findingsOverlap(s, f));
-
-    if (!isDuplicate) {
-      seen.push(f);
-      result.push(f);
-    }
-  }
-
-  return result;
-}
-
-function editDistance(a, b) {
-  if (a === b) return 0;
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-  // Only compute if strings are similar enough to be worth comparing
-  if (Math.abs(m - n) > 15) return 99;
-  const dp = Array.from({ length: m + 1 }, (_, i) => [i]);
-  for (let j = 1; j <= n; j++) dp[0][j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] =
-        a[i - 1] === b[j - 1]
-          ? dp[i - 1][j - 1]
-          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-    }
-  }
-  return dp[m][n];
-}
-
-async function runReviewerOrchestration({
-  diff,
-  plan,
-  phase,
-  dryRun = false,
-  model,
-  apiKey,
-  projectRules,
-  riskAssessment,
-  memoryContext,
-  fileTypes,
-  relatedADRs,
-  reviewMode,
-  config,
-  reviewers,
-  prBody,
-  signals,
-} = {}) {
-  const {
-    valid: roles,
-    invalid,
-    autoSelection = null,
-  } = resolveReviewerRoles(reviewers, { fileTypes, riskAssessment, signals });
-
-  if (!roles.length) {
-    throw new Error(
-      `No valid reviewer roles. Got: [${(reviewers ?? []).join(', ')}]. Valid: [${Object.keys(REVIEWER_ROLES).join(', ')}]`
-    );
-  }
-
-  // Attempt diff splitting for large PRs
-  const diffChunks = splitDiffIntoChunks(diff);
-  const chunked = diffChunks !== null;
-  const diffsToProcess = chunked ? diffChunks : [diff];
-
-  const generateArgs = {
-    plan,
-    phase,
-    dryRun,
-    model,
-    apiKey,
-    riskAssessment,
-    memoryContext,
-    fileTypes,
-    relatedADRs,
-    reviewMode,
-    config,
-    prBody,
-  };
-
-  // Fan out: each role × each diff chunk runs in parallel
-  const tasks = roles.flatMap((roleName) =>
-    diffsToProcess.map((chunkDiff, chunkIdx) => {
-      const role = REVIEWER_ROLES[roleName];
-      const roleRules = [role.focusInstructions, projectRules].filter(Boolean).join('\n\n');
-      return (0,review_engine/* generateReview */.G1)({ ...generateArgs, diff: chunkDiff, projectRules: roleRules }).then(
-        (result) => ({
-          ...result,
-          reviewerRole: roleName,
-          chunkIdx: chunked ? chunkIdx : null,
-          chunkLabel: chunked ? (chunkDiff._chunkLabel ?? `chunk-${chunkIdx}`) : null,
-        })
-      );
-    })
-  );
-
-  // Run each role in parallel; partial failure is tolerated
-  const settled = await Promise.allSettled(tasks);
-
-  const succeeded = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
-  const failed = settled.filter((r) => r.status === 'rejected');
-
-  // Merge findings, deduplicate across chunks/roles, then assign stable IDs
-  let nextId = 1;
-  const rawFindings = succeeded.flatMap((r) =>
-    (r.findings ?? []).map((f) => ({
-      ...f,
-      reviewerRole: r.reviewerRole,
-      chunkLabel: r.chunkLabel ?? null,
-    }))
-  );
-  const deduped = mergeFindings(rawFindings);
-  const allFindings = deduped.map((f) => ({ ...f, id: `rr-${nextId++}` }));
-
-  const allComments = succeeded.flatMap((r) => r.comments ?? []);
-  const classified = (0,finding_factory/* classifyFindings */.ZY)(allFindings, { reviewMode: reviewMode ?? 'medium' });
-
-  // Summarise per-role results (aggregate across chunks)
-  const reviewerResults = roles.map((name) => {
-    const roleSettled = settled.filter(
-      (_, i) => tasks[i] && roles.flatMap((r) => diffsToProcess.map(() => r))[i] === name
-    );
-    const roleSucceeded = roleSettled.filter((r) => r.status === 'fulfilled');
-    return {
-      role: name,
-      label: REVIEWER_ROLES[name].label,
-      status: roleSucceeded.length > 0 ? 'fulfilled' : 'rejected',
-      findingsCount: roleSucceeded.reduce((sum, r) => sum + (r.value?.findings?.length ?? 0), 0),
-      chunksRun: chunked ? diffsToProcess.length : null,
-      // #1545 P1: why this role was auto-selected (only present in auto mode).
-      selectionReasons: autoSelection ? (autoSelection.reasons[name] ?? []) : null,
-      error:
-        roleSucceeded.length === 0 ? String(roleSettled[0]?.reason?.message ?? 'unknown') : null,
-    };
-  });
-
-  const teamLeadReport = synthesizeTeamLeadReport({
-    findings: allFindings,
-    reviewerResults,
-  });
-
-  return {
-    comments: allComments,
-    findings: allFindings,
-    classified,
-    reviewerResults,
-    invalidRoles: invalid,
-    autoSelectedRoles: reviewers?.length === 1 && reviewers[0] === 'auto' ? roles : null,
-    // #1545 P1: explainable auto-selection — reasons per role, the always-on
-    // required set, and the roles skipped this run. null when not in auto mode.
-    autoSelection,
-    teamLeadReport,
-    chunked,
-    chunkCount: chunked ? diffsToProcess.length : null,
-    prompt: succeeded[0]?.prompt ?? null,
-    promptTruncated: succeeded.some((r) => r.promptTruncated),
-    llmModel: succeeded[0]?.llmModel ?? null,
-    debug: {
-      succeededReviewers: succeeded.length,
-      failedReviewers: failed.length,
-      deduplicatedCount: rawFindings.length - allFindings.length,
-    },
-  };
-}
-
-// EXTERNAL MODULE: ./src/lib/llm-pipeline.mjs
-var llm_pipeline = __nccwpck_require__(7303);
-;// CONCATENATED MODULE: ./src/lib/openai-planner.mjs
-
-
-const DEFAULT_PLANNER_MODEL =
-  process.env.RIVER_PLANNER_MODEL ||
-  process.env.RIVER_OPENAI_MODEL ||
-  process.env.OPENAI_MODEL ||
-  'gpt-4o-mini';
-
-const DEFAULT_TIMEOUT_MS = 15000;
-
-function resolveOpenAIConfig(options = {}) {
-  return {
-    apiKey: options.apiKey || process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-    model: options.model || DEFAULT_PLANNER_MODEL,
-    endpoint:
-      options.endpoint ||
-      process.env.RIVER_OPENAI_BASE_URL ||
-      process.env.OPENAI_BASE_URL ||
-      'https://api.openai.com/v1/chat/completions',
-  };
-}
-
-function resolvePlannerTimeoutMs(options = {}) {
-  if (
-    typeof options.timeoutMs === 'number' &&
-    Number.isFinite(options.timeoutMs) &&
-    options.timeoutMs > 0
-  ) {
-    return options.timeoutMs;
-  }
-  const value = Number(process.env.RIVER_PLANNER_TIMEOUT);
-  if (Number.isFinite(value) && value > 0) return value;
-  return DEFAULT_TIMEOUT_MS;
-}
-
-function buildPlannerPrompt({ skills, context }) {
-  const phase = context?.phase ?? 'midstream';
-  const changedFiles = Array.isArray(context?.changedFiles) ? context.changedFiles : [];
-  const availableContexts = Array.isArray(context?.availableContexts)
-    ? context.availableContexts
-    : [];
-  const impactTags = Array.isArray(context?.impactTags) ? context.impactTags : [];
-  const skillsText = (skills || [])
-    .map((s) => `- ${s.id}: ${s.name} (${s.phase}) — ${s.description}`)
-    .join('\n');
-
-  return `You are River Review, an AI skill planner.
-
-Goal: pick the most relevant review skills for this PR diff, and order them by priority.
-
-Context:
-- phase: ${phase}
-- changedFiles: ${changedFiles.join(', ') || '(none)'}
-- availableContexts: ${availableContexts.join(', ') || '(none)'}
-- impactTags: ${impactTags.join(', ') || '(none)'}
-
-Candidate skills:
-${skillsText}
-
-Rules:
-- Output MUST be valid JSON only (no markdown, no code fences).
-- Output format: [{"id":"<skill id>","priority":<number>,"reason":"<short reason>"}]
-- Include only skills you recommend to run. If none are needed, output [].
-- Do not invent ids; use only ids from the candidate list.
-`;
-}
-
-const PLANNER_SYSTEM_MESSAGE =
-  'You are River Review, an expert code review skill planner. Return valid JSON only; do not wrap in Markdown.';
-
-// Chat-completion transport lives in llm-pipeline.mjs (#1338). The planner
-// historically made a single attempt with no retry; maxAttempts: 1 preserves
-// that behavior exactly.
-function callOpenAI({ prompt, apiKey, model, endpoint, timeoutMs }) {
-  return (0,llm_pipeline/* callChatCompletion */.pQ)({
-    prompt,
-    systemMessage: PLANNER_SYSTEM_MESSAGE,
-    apiKey,
-    model,
-    endpoint,
-    temperature: 0,
-    maxTokens: 600,
-    timeoutMs: timeoutMs ?? resolvePlannerTimeoutMs(),
-    maxAttempts: 1,
-  });
-}
-
-function parsePlannerJson(text) {
-  const trimmed = (text || '').trim();
-  if (!trimmed) return [];
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const start = trimmed.indexOf('[');
-    const end = trimmed.lastIndexOf(']');
-    if (start >= 0 && end > start) {
-      try {
-        return JSON.parse(trimmed.slice(start, end + 1));
-      } catch {
-        throw new Error('planner output is not valid JSON');
-      }
-    }
-    throw new Error('planner output is not valid JSON');
-  }
-}
-
-// --- テスト用 named export (内部ヘルパー) ---
-
-
-function createOpenAIPlanner(options = {}) {
-  const config = resolveOpenAIConfig(options);
-  const timeoutMs = resolvePlannerTimeoutMs(options);
-  return {
-    model: config.model,
-    endpoint: config.endpoint,
-    plan: async ({ skills, context }) => {
-      if (!config.apiKey) {
-        throw new Error(
-          'AI API key (ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY) not set'
-        );
-      }
-      const prompt = buildPlannerPrompt({ skills, context });
-      const output = await callOpenAI({
-        prompt,
-        apiKey: config.apiKey,
-        model: config.model,
-        endpoint: config.endpoint,
-        timeoutMs,
-      });
-      const parsed = parsePlannerJson(output);
-      return Array.isArray(parsed) ? parsed : [];
-    },
-  };
-}
-
-// EXTERNAL MODULE: ./src/lib/planner-utils.mjs
-var planner_utils = __nccwpck_require__(1013);
-// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
-var review_runner = __nccwpck_require__(7050);
+// EXTERNAL MODULE: external "node:fs/promises"
+var promises_ = __nccwpck_require__(1455);
 ;// CONCATENATED MODULE: ./src/lib/rules.mjs
 
 
@@ -48788,1062 +47928,14 @@ async function loadProjectRules(repoRoot, options = {}) {
 
 // EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
 var risk_map = __nccwpck_require__(572);
-// EXTERNAL MODULE: ./src/lib/riverbed-memory.mjs
-var riverbed_memory = __nccwpck_require__(4216);
-;// CONCATENATED MODULE: ./src/lib/memory-context.mjs
-
-
-
-const DEFAULT_MEMORY_PATH = external_node_path_.join('.river', 'memory', 'index.json');
-
-function loadReviewMemory(repoRoot, { phase, changedFiles } = {}) {
-  const indexPath = external_node_path_.resolve(repoRoot, DEFAULT_MEMORY_PATH);
-  const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
-  // includeInactive: true keeps the phase and no-phase branches symmetric and
-  // preserves pre-lifecycle semantics where historical entries were surfaced.
-  const allEntries = phase
-    ? (0,riverbed_memory/* queryMemory */.qU)(index, { phase, includeInactive: true })
-    : (index.entries ?? []);
-  const relevant = changedFiles?.length
-    ? allEntries.filter((e) => {
-        const related = e.metadata?.relatedFiles ?? [];
-        if (!related.length) return true;
-        return related.some((r) => changedFiles.includes(r));
-      })
-    : allEntries;
-  const buckets = { wontfixes: [], patterns: [], decisions: [], reviews: [], suppressions: [] };
-  const typeMap = {
-    wontfix: 'wontfixes',
-    pattern: 'patterns',
-    decision: 'decisions',
-    review: 'reviews',
-    suppression: 'suppressions',
-  };
-  for (const e of relevant) {
-    const bucket = typeMap[e.type];
-    if (bucket) buckets[bucket].push(e);
-  }
-  return { entries: relevant, ...buckets };
-}
-
-function formatMemoryForPrompt(memoryContext, { maxChars = 1500 } = {}) {
-  if (!memoryContext) return '';
-  const { wontfixes, patterns, decisions } = memoryContext;
-  const sections = [];
-  if (wontfixes?.length) {
-    sections.push('以下の指摘は明示的に受け入れ済みです。再指摘は不要です:');
-    for (const w of wontfixes)
-      sections.push('- [' + w.id + '] ' + (w.title || w.content?.slice(0, 80)));
-  }
-  if (patterns?.length) {
-    sections.push('以下はチーム規約として記録されています:');
-    for (const p of patterns) sections.push('- ' + (p.title || p.content?.slice(0, 80)));
-  }
-  if (decisions?.length) {
-    sections.push('以下の設計判断が記録されています:');
-    for (const d of decisions) sections.push('- ' + (d.title || d.content?.slice(0, 80)));
-  }
-  if (!sections.length) return '';
-  const text = '\n### Memory Context (previous review decisions)\n\n' + sections.join('\n');
-  return text.length > maxChars ? text.slice(0, maxChars) + '\n...[truncated]' : text;
-}
-
-function buildReviewEntry(reviewResult, { phase, changedFiles, commit } = {}) {
-  const timestamp = new Date().toISOString();
-  const id = 'review-' + (commit || 'unknown') + '-' + Date.now();
-  const commentCount = reviewResult.comments?.length ?? 0;
-  const summary = commentCount + ' findings in ' + (phase || 'midstream') + ' phase';
-  return {
-    id,
-    type: 'review',
-    title: 'Review: ' + summary,
-    content: JSON.stringify({ commentCount, phase, changedFiles: changedFiles?.slice(0, 20) }),
-    metadata: {
-      createdAt: timestamp,
-      author: 'river-review',
-      ...(phase ? { phase } : {}),
-      tags: ['review', 'automated'],
-      relatedFiles: changedFiles?.slice(0, 50) ?? [],
-      summary,
-    },
-  };
-}
-
-// EXTERNAL MODULE: ./src/lib/repo-context.mjs + 2 modules
-var repo_context = __nccwpck_require__(5597);
 // EXTERNAL MODULE: ./src/lib/utils.mjs
 var utils = __nccwpck_require__(9746);
-;// CONCATENATED MODULE: ./src/lib/suppression-apply.mjs
-// Apply Riverbed Memory suppressions to a list of findings (#687 PR-B).
-//
-// PR-A landed the data model (suppression context schema and the new
-// fingerprint / feedbackType / severity fields on createSuppression). This
-// PR-B is the gate that consumes those entries: given a list of findings
-// already annotated with fingerprints (see src/lib/finding-factory.mjs)
-// and a memoryContext loaded by src/lib/memory-context.mjs, it splits the
-// findings into kept vs suppressed and returns observability metadata.
-//
-// PR-C of #687 will inject one call to applySuppressions inside
-// src/lib/local-runner.mjs:runLocalReview between annotateFingerprints and
-// the return statement so the pipeline behavior changes there, not here.
-//
-// P1 guard policy (do not silently auto-suppress dangerous findings):
-//   - findings of severity `major` or `critical` are kept unless the
-//     suppression's feedbackType is explicitly `accepted_risk`.
-//   - lower severities (`minor`, `info`) are auto-suppressed for any
-//     non-revoked, non-expired suppression that matches the fingerprint.
-//   - the per-suppression `minSeverityToAutoSuppress` (added in PR-A)
-//     can RAISE the bar but never lower it; the global P1 guard wins.
-
-
-
-const HIGH_SEVERITY = new Set(['major', 'critical']);
-
-function severityOf(finding) {
-  return String(finding.severity || 'info').toLowerCase();
-}
-
-/**
- * Apply matching suppressions to findings.
- *
- * @param {Array<object>} findings  Findings already annotated with `.fingerprint`
- *   by `annotateFingerprints` (src/lib/finding-factory.mjs).
- * @param {object} memoryContext    Bucketed memory from `loadReviewMemory`.
- *   Only `memoryContext.suppressions` is consulted.
- * @param {object} [opts]
- * @param {object} [opts.config]    Effective config; `config.memory.suppressionEnabled === false`
- *   bypasses suppression entirely (returns all findings as-is).
- * @returns {{ keptFindings: Array<object>, suppressedFindings: Array<object>, applied: Array<object> }}
- *   `applied` is the observability log. Each entry: `{ fingerprint, suppressionId,
- *   feedbackType, severity, action: 'suppressed' | 'skipped', reason? }`. Findings
- *   moved to `suppressedFindings` carry a `status: 'suppressed'` flag and a
- *   `suppressionRef` pointing back at the suppression entry id.
- */
-function applySuppressions(findings, memoryContext, opts = {}) {
-  const list = Array.isArray(findings) ? findings : [];
-  const result = { keptFindings: list, suppressedFindings: [], applied: [] };
-
-  if (opts?.config?.memory?.suppressionEnabled === false) return result;
-
-  const suppressions = memoryContext?.suppressions;
-  if (!Array.isArray(suppressions) || suppressions.length === 0) return result;
-  if (list.length === 0) return result;
-
-  // Index suppressions by canonical fingerprint. Entries that lack a
-  // fingerprint (pre-#687 PR-A) are intentionally ignored — they cannot
-  // gate findings safely without reintroducing the old hashFinding /
-  // computeFingerprint mismatch that PR-A documented as tech debt.
-  const byFingerprint = new Map();
-  for (const s of suppressions) {
-    const fp = s?.context?.fingerprint;
-    if (typeof fp === 'string' && fp.length === 16) byFingerprint.set(fp, s);
-  }
-  if (byFingerprint.size === 0) return result;
-
-  const kept = [];
-  const suppressed = [];
-  const applied = [];
-
-  for (const finding of list) {
-    const fp = finding?.fingerprint;
-    const match = fp ? byFingerprint.get(fp) : undefined;
-    if (!match) {
-      kept.push(finding);
-      continue;
-    }
-
-    const sev = severityOf(finding);
-    const feedbackType = match.context?.feedbackType ?? null;
-    const minSeverity = match.context?.minSeverityToAutoSuppress;
-
-    // Per-suppression cap: `minSeverityToAutoSuppress` is the highest
-    // severity this entry is allowed to auto-suppress. A finding above
-    // that rank stays.
-    if (minSeverity && finding_factory/* SEVERITY_RANK */.f3[sev] > finding_factory/* SEVERITY_RANK */.f3[String(minSeverity).toLowerCase()]) {
-      kept.push(finding);
-      applied.push({
-        fingerprint: fp,
-        suppressionId: match.id,
-        feedbackType,
-        severity: sev,
-        action: 'skipped',
-        reason: 'severity-above-min-severity-cap',
-      });
-      continue;
-    }
-
-    // Global P1 guard: never auto-suppress major/critical without
-    // accepted_risk. Other feedbackTypes (false_positive, wont_fix, ...)
-    // require manual handling for high-severity findings.
-    if (HIGH_SEVERITY.has(sev) && feedbackType !== 'accepted_risk') {
-      kept.push(finding);
-      applied.push({
-        fingerprint: fp,
-        suppressionId: match.id,
-        feedbackType,
-        severity: sev,
-        action: 'skipped',
-        reason: 'high-severity-requires-accepted-risk',
-      });
-      continue;
-    }
-
-    suppressed.push({
-      ...finding,
-      status: 'suppressed',
-      suppressionRef: match.id,
-    });
-    applied.push({
-      fingerprint: fp,
-      suppressionId: match.id,
-      feedbackType,
-      severity: sev,
-      action: 'suppressed',
-    });
-  }
-
-  return { keptFindings: kept, suppressedFindings: suppressed, applied };
-}
-
-// EXTERNAL MODULE: ./src/lib/deterministic-gate.mjs
-var deterministic_gate = __nccwpck_require__(5837);
-// EXTERNAL MODULE: ./src/lib/deterministic-exec-gate.mjs
-var deterministic_exec_gate = __nccwpck_require__(2785);
-;// CONCATENATED MODULE: ./src/lib/local-runner.mjs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function normalizePhase(phase) {
-  const normalized = (phase || '').toLowerCase();
-  if (planner_utils/* PHASES */.ZG.includes(normalized)) return normalized;
-  return 'midstream';
-}
-
-const configLoader = new loader/* ConfigLoader */.UT();
-
-function shouldExclude(filePath, patterns = []) {
-  return patterns.some((pattern) => (0,esm/* minimatch */.xF)(filePath, pattern, { dot: true }));
-}
-
-function applyFileExclusions(diff, patterns = []) {
-  if (!patterns.length) return diff;
-
-  const changedFiles = (diff.changedFiles ?? []).filter(
-    (filePath) => !shouldExclude(filePath, patterns)
-  );
-  const rawFiles = (diff.files ?? []).filter((file) => !shouldExclude(file.path, patterns));
-  const optimizedFiles = (diff.filesForReview ?? diff.files ?? []).filter(
-    (file) => !shouldExclude(file.path, patterns)
-  );
-
-  const rawDiffText = (0,diff_processor/* renderDiffText */.pQ)(rawFiles);
-  const diffText = (0,diff_processor/* renderDiffText */.pQ)(optimizedFiles);
-  const rawTokenEstimate = Math.ceil(rawDiffText.length / 4);
-  const tokenEstimate = Math.ceil(diffText.length / 4);
-  const reduction =
-    rawTokenEstimate === 0
-      ? 0
-      : Math.max(0, Math.round(((rawTokenEstimate - tokenEstimate) / rawTokenEstimate) * 100));
-
-  return {
-    ...diff,
-    changedFiles,
-    files: rawFiles,
-    filesForReview: optimizedFiles,
-    rawDiffText,
-    diffText,
-    rawTokenEstimate,
-    tokenEstimate,
-    reduction,
-  };
-}
-
-async function resolvePullRequestLabels() {
-  const envLabels = (0,utils/* parseList */.E1)(process.env.RIVER_PR_LABELS);
-  if (envLabels.length) return envLabels;
-
-  const eventPath = process.env.GITHUB_EVENT_PATH;
-  if (!eventPath) return [];
-
-  try {
-    const raw = await promises_.readFile(eventPath, 'utf8');
-    const event = JSON.parse(raw);
-    const pullRequestLabels = event?.pull_request?.labels ?? event?.labels ?? [];
-    return pullRequestLabels.map((label) => label?.name).filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-async function resolvePullRequestBody() {
-  // Explicit env wins (works for any runner / non-Action use).
-  const envBody = process.env.RIVER_PR_BODY;
-  if (envBody && envBody.trim()) return envBody;
-
-  const eventPath = process.env.GITHUB_EVENT_PATH;
-  if (!eventPath) return null;
-
-  try {
-    const raw = await promises_.readFile(eventPath, 'utf8');
-    const event = JSON.parse(raw);
-    const body = event?.pull_request?.body;
-    return body && String(body).trim() ? String(body) : null;
-  } catch {
-    return null;
-  }
-}
-
-function shouldSkipByLabel(prLabels = [], ignorePatterns = []) {
-  if (!prLabels.length || !ignorePatterns.length) return { matched: [], shouldSkip: false };
-  const normalizedLabels = prLabels.map((label) => label.toLowerCase());
-  const matched = ignorePatterns.filter((pattern) => {
-    const needle = pattern.toLowerCase();
-    return normalizedLabels.some((label) => label.includes(needle));
-  });
-  return { matched, shouldSkip: matched.length > 0 };
-}
-
-// Re-export the shared helper under the legacy name so the rest of this
-// module continues to call `resolveAvailableContexts(...)` unchanged.
-// The single source of truth now lives in src/lib/utils.mjs and is also
-// used by src/lib/review-plan.mjs (#802 Phase 3 A2-fix-1).
-const resolveAvailableContexts = (inputContexts, options = {}) =>
-  (0,utils/* resolveAvailableContexts */.ud)(inputContexts, options);
-
-// The helper now lives in src/lib/utils.mjs; this thin wrapper preserves
-// the legacy call sites inside this module unchanged.
-const resolveAvailableDependencies = (inputDependencies) =>
-  (0,utils/* resolveAvailableDependencies */.TK)(inputDependencies);
-
-async function collectLocalContext({
-  cwd,
-  debug = false,
-  contextLines = 3,
-  availableContexts,
-  availableDependencies,
-  baseRef = null,
-} = {}) {
-  const repoRoot = await (0,git/* ensureGitRepo */.NC)(cwd);
-  const { config, path: configPath, source: configSource } = await configLoader.load(repoRoot);
-  const prLabels = await resolvePullRequestLabels();
-  const prBody = await resolvePullRequestBody();
-  const { rulesText: projectRules } = await loadProjectRules(repoRoot);
-  const riskMap = await (0,risk_map.loadRiskMap)(repoRoot);
-  // When --base is provided, compare against the explicit ref instead of the
-  // auto-detected default branch. Falls back to detection when unset.
-  const defaultBranch = baseRef ?? (await (0,git/* detectDefaultBranch */.Rd)(repoRoot));
-  const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
-  const rawDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase, { contextLines });
-  const diff = applyFileExclusions(rawDiff, config.exclude?.files ?? []);
-  const reviewFiles = diff.filesForReview?.map((file) => file.path) ?? diff.changedFiles;
-  // Expose `prDescription` as an available input context only when a PR body is
-  // present, so the pr-description skill activates exactly when it has input.
-  const contexts = resolveAvailableContexts(availableContexts, {
-    alwaysInclude: prBody ? ['prDescription'] : [],
-  });
-  const dependencies = resolveAvailableDependencies(availableDependencies);
-
-  return {
-    repoRoot,
-    config,
-    configPath,
-    configSource,
-    projectRules,
-    riskMap,
-    defaultBranch,
-    mergeBase,
-    diff,
-    reviewFiles,
-    availableContexts: contexts,
-    availableDependencies: dependencies,
-    prLabels,
-    prBody,
-    debug,
-  };
-}
-
-// --- テスト用 named export (内部ヘルパー) ---
-
-
-async function planLocalReview({
-  cwd = process.cwd(),
-  phase = 'midstream',
-  dryRun = false,
-  debug = false,
-  preferredModelHint = 'balanced',
-  availableContexts,
-  availableDependencies,
-  plannerMode,
-  baseRef = null,
-  skillIds = null,
-  manualReviewMode = null,
-} = {}) {
-  const base = await collectLocalContext({
-    cwd,
-    debug,
-    contextLines: debug ? 10 : 3,
-    availableContexts,
-    availableDependencies,
-    baseRef,
-  });
-  const {
-    repoRoot,
-    projectRules,
-    riskMap,
-    defaultBranch,
-    mergeBase,
-    diff,
-    reviewFiles,
-    availableContexts: contexts,
-    availableDependencies: dependencies,
-    config,
-    configPath,
-    configSource,
-    prLabels,
-    prBody,
-  } = base;
-  const requestedPlannerMode = (0,planner_utils/* normalizePlannerMode */.p$)(plannerMode ?? process.env.RIVER_PLANNER_MODE, {
-    defaultMode: 'off',
-  });
-  const plannerRequested = requestedPlannerMode !== 'off';
-
-  // Config-level selection (.river-review.yaml `selection`) supplies the
-  // skill id list unless the CLI already provided one via --skill-set,
-  // which takes precedence as the explicit per-run override (design §6).
-  let effectiveSkillIds = skillIds;
-  if (effectiveSkillIds == null && hasSelection(config.selection)) {
-    effectiveSkillIds = await resolveSelectionSkillIds(config.selection, {});
-  } else if (
-    effectiveSkillIds == null &&
-    config.selection &&
-    !hasSelection(config.selection) &&
-    (config.selection.skills?.exclude?.length ?? 0) > 0
-  ) {
-    console.warn(
-      '⚠️  selection: skills.exclude has no effect without packs, tags, or skills.include; all skills remain eligible.'
-    );
-  }
-
-  const { matched: ignoredLabels, shouldSkip } = shouldSkipByLabel(
-    prLabels,
-    config.exclude?.prLabelsToIgnore ?? []
-  );
-
-  if (shouldSkip) {
-    return {
-      status: 'skipped-by-label',
-      repoRoot,
-      defaultBranch,
-      mergeBase,
-      projectRules,
-      availableContexts: contexts,
-      availableDependencies: dependencies,
-      config,
-      configPath,
-      configSource,
-      prLabels,
-      matchedLabels: ignoredLabels,
-    };
-  }
-
-  if (!reviewFiles.length) {
-    return {
-      status: 'no-changes',
-      repoRoot,
-      defaultBranch,
-      mergeBase,
-      projectRules,
-      diff,
-      availableContexts: contexts,
-      availableDependencies: dependencies,
-      config,
-      configPath,
-      configSource,
-      prLabels,
-    };
-  }
-
-  let planner = null;
-  let plannerSkipped = null;
-  const llmEnabled = (0,utils/* isLlmEnabled */.Rq)();
-
-  if (plannerRequested) {
-    if (dryRun) {
-      plannerSkipped = 'dry-run enabled';
-    } else if (!llmEnabled) {
-      plannerSkipped = (0,utils/* isOfflineMode */.hN)()
-        ? 'offline (rules-only) mode enabled'
-        : 'AI API key (ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY) not set';
-    } else {
-      planner = createOpenAIPlanner();
-    }
-  }
-
-  const plan = await (0,review_runner.buildExecutionPlan)({
-    phase: normalizePhase(phase),
-    changedFiles: reviewFiles,
-    diffText: diff.diffText,
-    availableContexts: contexts,
-    availableDependencies: dependencies,
-    preferredModelHint,
-    planner: planner ?? undefined,
-    plannerMode: requestedPlannerMode,
-    dryRun,
-    llmEnabled,
-    repoRoot,
-    riskMap,
-    skillIds: effectiveSkillIds,
-    manualReviewMode,
-    specDirs: config.review?.specDirs ?? [],
-  });
-
-  const plannerUsed = planner ? !plan.plannerFallback : false;
-  const augmentedPlan = {
-    ...plan,
-    plannerRequested,
-    plannerMode: plannerRequested ? requestedPlannerMode : 'off',
-    plannerUsed,
-    ...(plannerSkipped ? { plannerSkipped } : {}),
-  };
-
-  return {
-    status: 'ok',
-    repoRoot,
-    defaultBranch,
-    mergeBase,
-    changedFiles: reviewFiles,
-    plan: augmentedPlan,
-    diff,
-    projectRules,
-    availableContexts: contexts,
-    availableDependencies: dependencies,
-    prLabels,
-    prBody,
-    config,
-    configPath,
-    configSource,
-  };
-}
-
-async function runLocalReview({
-  cwd = process.cwd(),
-  phase = 'midstream',
-  dryRun = false,
-  debug = false,
-  preferredModelHint = 'balanced',
-  model,
-  apiKey,
-  context: providedContext,
-  availableContexts,
-  availableDependencies,
-  plannerMode,
-  reviewers,
-  baseRef = null,
-  skillIds = null,
-  manualReviewMode = null,
-} = {}) {
-  const context =
-    providedContext ??
-    (await planLocalReview({
-      cwd,
-      phase,
-      dryRun,
-      debug,
-      preferredModelHint,
-      availableContexts,
-      availableDependencies,
-      plannerMode,
-      baseRef,
-      skillIds,
-      manualReviewMode,
-    }));
-  if (context.status === 'no-changes') {
-    return {
-      status: 'no-changes',
-      repoRoot: context.repoRoot,
-      defaultBranch: context.defaultBranch,
-      mergeBase: context.mergeBase,
-      config: context.config,
-      configPath: context.configPath,
-      configSource: context.configSource,
-      prLabels: context.prLabels,
-    };
-  }
-
-  if (context.status === 'skipped-by-label') {
-    return {
-      status: 'skipped-by-label',
-      reason: 'pr-label',
-      matchedLabels: context.matchedLabels,
-      repoRoot: context.repoRoot,
-      defaultBranch: context.defaultBranch,
-      mergeBase: context.mergeBase,
-      availableContexts: context.availableContexts,
-      availableDependencies: context.availableDependencies,
-      config: context.config,
-      configPath: context.configPath,
-      configSource: context.configSource,
-      prLabels: context.prLabels,
-    };
-  }
-
-  const memoryContext = loadReviewMemory(context.repoRoot, {
-    phase: normalizePhase(phase),
-    changedFiles: context.changedFiles,
-  });
-
-  const repoContext = await (0,repo_context/* collectRepoContext */.o)({
-    changedFiles: context.changedFiles,
-    repoRoot: external_node_path_.resolve(context.repoRoot),
-    security: context.config?.security,
-    context: context.config?.context,
-  }).catch(() => null);
-
-  const reviewArgs = {
-    diff: context.diff,
-    plan: context.plan,
-    phase: normalizePhase(phase),
-    dryRun,
-    model,
-    apiKey,
-    projectRules: context.projectRules,
-    riskAssessment: context.plan?.riskAssessment ?? null,
-    memoryContext,
-    fileTypes: context.plan?.fileTypes,
-    relatedADRs: context.plan?.relatedADRs,
-    reviewMode: context.plan?.reviewMode,
-    repoContext,
-    prBody: context.prBody,
-    config: context.config,
-    // #1545 P1: formalized stage/risk/artifact routing signals for `--reviewers
-    // auto`. Populated by the host/PlanGate via the plan; undefined here keeps
-    // the pre-#1545 auto-selection behavior unchanged.
-    signals: context.plan?.reviewSignals,
-  };
-
-  const review = reviewers?.length
-    ? await runReviewerOrchestration({ ...reviewArgs, reviewers })
-    : await (0,review_engine/* generateReview */.G1)(reviewArgs);
-
-  // #687 PR-C: gate findings by Riverbed Memory suppressions.
-  // Run AFTER fingerprint annotation so applySuppressions sees the canonical
-  // 16-hex fingerprint produced by computeFingerprint(). Bypassed when
-  // config.memory.suppressionEnabled === false (see suppression-apply.mjs).
-  const annotatedFindings = (0,finding_factory/* annotateFingerprints */.ic)(review.findings ?? []);
-  const {
-    keptFindings,
-    suppressedFindings,
-    applied: suppressionsApplied,
-  } = applySuppressions(annotatedFindings, memoryContext, { config: context.config });
-
-  // Epic #1347 S4 (#1351): deterministic strict_block gate. Computed over the
-  // PRE-suppression finding set joined with the selected skills so a suppressed
-  // deterministic block still forces the gate — a suppression must not be a
-  // strict_block bypass (fail-safe, mirroring SKIPPED_BY_POLICY).
-  const { strictBlock: findingStrictBlock } = (0,deterministic_gate/* computeStrictBlock */.Si)({
-    findings: annotatedFindings,
-    selected: context.plan?.selected ?? [],
-  });
-
-  // Epic #1347 §11.8 (c2) (#1401): deterministic-gate COMMAND execution. Wiring,
-  // security invariants (double-gated + OFF by default + opt-out no-import +
-  // trust boundary + fail-safe) and the strict_block/unrunnable contract all live
-  // in runDeterministicExecGateIfEnabled (the SINGLE source of truth, P2 #1434).
-  const { strictBlock: deterministicExecStrictBlock, deterministicUnrunnable } =
-    await (0,deterministic_exec_gate/* runDeterministicExecGateIfEnabled */.K)({
-      env: process.env,
-      selected: context.plan?.selected ?? [],
-      reviewSourceDir: external_node_path_.resolve(context.repoRoot),
-      changedFiles: context.changedFiles ?? [],
-    });
-
-  // Either signal (findings-derived OR command-execution-derived) forces the
-  // strict_block gate — they are ORed so neither path can be a bypass.
-  const strictBlock = findingStrictBlock || deterministicExecStrictBlock;
-
-  // Comments and findings are 1:1 in review-engine.mjs (`findings =
-  // comments.map(...)`). When a finding is suppressed, the corresponding
-  // PR comment must also be filtered — otherwise the suppressed finding
-  // still surfaces verbatim in the review thread, defeating the entire
-  // point of the suppression. Match by fingerprint computed from the
-  // comment's own fields so this stays robust if the 1:1 ordering ever
-  // drifts.
-  const suppressedFingerprints = new Set(
-    suppressedFindings.map((f) => f.fingerprint).filter(Boolean)
-  );
-  const reviewComments = review.comments ?? [];
-  const keptComments =
-    suppressedFingerprints.size === 0
-      ? reviewComments
-      : reviewComments.filter((c) => {
-          const fp = (0,finding_factory/* computeFingerprint */.Yo)({
-            ruleId: c.skillId || 'unknown',
-            file: c.file,
-            message: c.message,
-          });
-          return !suppressedFingerprints.has(fp);
-        });
-
-  return {
-    status: 'ok',
-    // Gate fail-safe input (Epic #1347 S2 review M1): dry-run skips the LLM,
-    // so a clean diff scores a vacuous auto-approve — the gate must not read
-    // that as CONVERGED_CLEAN.
-    dryRun: dryRun === true,
-    // Epic #1347 S4 (#1351): deterministic strict_block signal for the gate.
-    // deriveRunGate forwards this to deriveGateDecision → unconditional NO_GO.
-    strictBlock,
-    // Epic #1347 §11.8 (c2) (#1401): deterministic-gate command execution could
-    // not run to a verdict (opt-in only; false unless double-gated). deriveRunGate
-    // forwards this to deriveGateDecision → rule 5c ESCALATE.
-    deterministicUnrunnable,
-    repoRoot: external_node_path_.resolve(context.repoRoot),
-    defaultBranch: context.defaultBranch,
-    mergeBase: context.mergeBase,
-    changedFiles: context.changedFiles,
-    plan: context.plan,
-    reviewMode: context.plan?.reviewMode ?? 'medium',
-    diffText: context.diff.diffText,
-    files: context.diff.filesForReview ?? context.diff.files,
-    comments: keptComments,
-    findings: keptFindings,
-    suppressedFindings,
-    classified: review.classified,
-    reviewerResults: review.reviewerResults ?? null,
-    teamLeadReport: review.teamLeadReport ?? null,
-    tokenEstimate: context.diff.tokenEstimate,
-    rawTokenEstimate: context.diff.rawTokenEstimate,
-    reduction: context.diff.reduction,
-    prompt: review.prompt,
-    reviewDebug: {
-      ...(review.debug ?? {}),
-      suppressionsApplied,
-      // #692 PR-C: surface redaction telemetry without leaking the
-      // pre-redaction text. `redactionHits` is a small {category, count}
-      // tally; raw context never appears here.
-      ...(repoContext?.redactionHits?.length || repoContext?.excludedPaths?.length
-        ? {
-            repoContextSecurity: {
-              redactionHits: repoContext?.redactionHits ?? [],
-              excludedPaths: repoContext?.excludedPaths ?? [],
-            },
-          }
-        : {}),
-      // #689 PR-C: ranking + budget telemetry. Only emitted when the
-      // collector actually used these signals so no-op runs stay clean.
-      ...(repoContext?.ranking || repoContext?.tokenBudget
-        ? {
-            repoContextRanking: repoContext?.ranking ?? null,
-            repoContextTokenBudget: repoContext?.tokenBudget ?? null,
-          }
-        : {}),
-    },
-    projectRules: context.projectRules,
-    availableContexts: context.availableContexts,
-    availableDependencies: context.availableDependencies,
-    prLabels: context.prLabels,
-    config: context.config,
-    configPath: context.configPath,
-    configSource: context.configSource,
-  };
-}
-
-async function doctorLocalReview({
-  cwd = process.cwd(),
-  phase = 'midstream',
-  debug = false,
-  preferredModelHint = 'balanced',
-  availableContexts,
-  availableDependencies,
-} = {}) {
-  const skills = await (0,skill_loader/* loadSkills */.l1)();
-  const base = await collectLocalContext({
-    cwd,
-    debug,
-    contextLines: debug ? 10 : 0,
-    availableContexts,
-    availableDependencies,
-  });
-  const {
-    repoRoot,
-    projectRules,
-    defaultBranch,
-    mergeBase,
-    diff,
-    reviewFiles,
-    availableContexts: contexts,
-    availableDependencies: dependencies,
-  } = base;
-
-  const llmEnabled = (0,utils/* isLlmEnabled */.Rq)();
-
-  const plan = reviewFiles.length
-    ? await (0,review_runner.buildExecutionPlan)({
-        phase: normalizePhase(phase),
-        changedFiles: reviewFiles,
-        diffText: diff.diffText,
-        availableContexts: contexts,
-        availableDependencies: dependencies,
-        preferredModelHint,
-        skills,
-        llmEnabled,
-        repoRoot,
-      })
-    : null;
-
-  return {
-    status: 'ok',
-    repoRoot,
-    defaultBranch,
-    mergeBase,
-    skillsCount: skills.length,
-    projectRules,
-    changedFiles: reviewFiles,
-    plan,
-    availableContexts: contexts,
-    availableDependencies: dependencies,
-    diff,
-    config: base.config,
-    configPath: base.configPath,
-    configSource: base.configSource,
-  };
-}
-
-;// CONCATENATED MODULE: ./src/core/cost-estimator.mjs
-const DEFAULT_MODEL = 'gpt-4-turbo';
-const PRICING_LAST_UPDATED = '2026-05-14'; // adjust when pricing changes
-
-// Per-1k-token rates in USD. `cacheReadPer1k` (optional) covers Anthropic
-// ephemeral prompt cache reads and OpenAI `cached_tokens` discounted inputs;
-// fallbacks to inputPer1k * 0.1 when omitted.
-const MODEL_PRICES = {
-  // --- OpenAI ---
-  'gpt-4': { inputPer1k: 0.03, outputPer1k: 0.06 },
-  'gpt-4-turbo': { inputPer1k: 0.01, outputPer1k: 0.03 },
-  'gpt-3.5-turbo': { inputPer1k: 0.0005, outputPer1k: 0.0015 },
-  'gpt-4o': { inputPer1k: 0.0025, outputPer1k: 0.01, cacheReadPer1k: 0.00125 },
-  'gpt-4o-mini': { inputPer1k: 0.00015, outputPer1k: 0.0006, cacheReadPer1k: 0.000075 },
-  o1: { inputPer1k: 0.015, outputPer1k: 0.06 },
-  'o1-mini': { inputPer1k: 0.003, outputPer1k: 0.012 },
-  // --- Anthropic ---
-  // Cache write surcharge (1.25x input) is included implicitly via inputPer1k
-  // for cacheCreationInputTokens billing; cache read is 0.1x input.
-  'claude-opus-4-7': { inputPer1k: 0.015, outputPer1k: 0.075, cacheReadPer1k: 0.0015 },
-  'claude-sonnet-4-6': { inputPer1k: 0.003, outputPer1k: 0.015, cacheReadPer1k: 0.0003 },
-  'claude-haiku-4-5': { inputPer1k: 0.001, outputPer1k: 0.005, cacheReadPer1k: 0.0001 },
-};
-
-function getPricing(model) {
-  return MODEL_PRICES[model] ?? MODEL_PRICES[DEFAULT_MODEL];
-}
-
-function toUSD(value) {
-  return Math.round(value * 10000) / 10000;
-}
-
-/**
- * Simple cost estimator for LLM usage.
- * Rates are approximate; adjust as pricing changes.
- */
-class CostEstimator {
-  constructor(model = DEFAULT_MODEL) {
-    this.model = model;
-    this.pricing = getPricing(model);
-    this.lastUpdated = PRICING_LAST_UPDATED;
-  }
-
-  /**
-   * Estimate cost from token counts.
-   * @param {number} inputTokens
-   * @param {number} outputTokens
-   * @returns {{usd: number, inputTokens: number, outputTokens: number, model: string}}
-   */
-  estimateCost(inputTokens = 0, outputTokens = 0) {
-    const inCost = (inputTokens / 1000) * this.pricing.inputPer1k;
-    const outCost = (outputTokens / 1000) * this.pricing.outputPer1k;
-    return {
-      usd: toUSD(inCost + outCost),
-      inputTokens,
-      outputTokens,
-      model: this.model,
-    };
-  }
-
-  /**
-   * Compute cost from a normalized usage record (the shape produced by
-   * AnthropicClient.lastUsage / OpenAIClient.lastUsage). Splits the input
-   * bucket into fresh vs cache-read so prompt-caching savings are surfaced.
-   *
-   * @param {{model?: string, inputTokens?: number, outputTokens?: number, cacheCreationInputTokens?: number, cacheReadInputTokens?: number}} usage
-   */
-  estimateFromUsage(usage) {
-    if (!usage) return null;
-    const pricing = MODEL_PRICES[usage.model] ?? this.pricing;
-    const freshInput = (usage.inputTokens ?? 0) - (usage.cacheReadInputTokens ?? 0);
-    const cacheRead = usage.cacheReadInputTokens ?? 0;
-    const cacheCreate = usage.cacheCreationInputTokens ?? 0;
-    const output = usage.outputTokens ?? 0;
-    const cacheReadRate = pricing.cacheReadPer1k ?? pricing.inputPer1k * 0.1;
-    // Anthropic charges 1.25x input rate for cache writes; we already count
-    // them via inputTokens (SDK reports cache_creation separately but it
-    // overlaps with input_tokens). Treat cacheCreation as a *surcharge* delta:
-    // extra 0.25 * input rate per token. OpenAI does not bill cache writes.
-    const cacheWriteSurcharge =
-      usage.provider === 'anthropic' ? (cacheCreate / 1000) * pricing.inputPer1k * 0.25 : 0;
-    const usd =
-      (Math.max(0, freshInput) / 1000) * pricing.inputPer1k +
-      (cacheRead / 1000) * cacheReadRate +
-      cacheWriteSurcharge +
-      (output / 1000) * pricing.outputPer1k;
-    return {
-      usd: toUSD(usd),
-      model: usage.model ?? this.model,
-      provider: usage.provider ?? null,
-      breakdown: {
-        freshInputTokens: Math.max(0, freshInput),
-        cacheReadTokens: cacheRead,
-        cacheCreationTokens: cacheCreate,
-        outputTokens: output,
-      },
-    };
-  }
-
-  /**
-   * Rough estimate from diff+skills.
-   * Uses diff token estimate plus skill overhead (instructions/prompts).
-   * @param {{tokenEstimate?: number, rawTokenEstimate?: number}} diff
-   * @param {Array} skills
-   */
-  estimateFromDiff(diff = {}, skills = []) {
-    const baseTokens = diff.tokenEstimate ?? diff.rawTokenEstimate ?? 0;
-    const skillTokens = skills.length * 200; // overhead per skill
-    const inputTokens = baseTokens + skillTokens;
-    const outputTokens = Math.max(300, skills.length * 50); // small response allowance
-    return this.estimateCost(inputTokens, outputTokens);
-  }
-
-  /**
-   * Format cost information for human-friendly display.
-   * @param {{usd: number, inputTokens: number, outputTokens: number, model: string}} cost
-   */
-  formatCost(cost) {
-    const usd = cost?.usd ?? 0;
-    return `Model: ${cost?.model || this.model}
-Estimated cost: $${usd.toFixed(4)} USD
-Tokens: ${cost.inputTokens} (input) + ${cost.outputTokens} (output)
-Pricing last updated: ${this.lastUpdated}`;
-  }
-}
-
-
-/* harmony default export */ const cost_estimator = (CostEstimator);
-
+// EXTERNAL MODULE: ./src/lib/planner-utils.mjs
+var planner_utils = __nccwpck_require__(1013);
 // EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
 var review_plan_generator = __nccwpck_require__(8069);
-// EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
-var engine = __nccwpck_require__(9487);
-// EXTERNAL MODULE: ./src/lib/loop-signal.mjs
-var loop_signal = __nccwpck_require__(4702);
-// EXTERNAL MODULE: ./src/lib/gate-decision.mjs
-var gate_decision = __nccwpck_require__(2773);
-;// CONCATENATED MODULE: ./src/lib/run-gate.mjs
-/**
- * Gate derivation for `river run` results (Epic #1347 S3 / #1350).
- *
- * Extracted from cli.mjs formatJsonOutput so the same derivation feeds both
- * the JSON output artifact and the persisted run record (result store) —
- * the audit trail must record the same gate the consumer saw.
- *
- * The `river run` path performs no plan-text human-approval scan, so
- * humanApprovalRequired is always false here (documented in
- * schemas/output.schema.json); riskMapDigest is likewise null on this path.
- */
-
-
-
-
-
-/**
- * Derive `{ decision, gate }` for a runLocalReview result. Both fields are
- * undefined on derivation failure (same fail-soft contract as
- * finalizeArtifact — the caller's output must never break on scoring).
- *
- * @param {object} result - runLocalReview result
- * @returns {{ decision: string|undefined, gate: object|undefined }}
- */
-function deriveRunGate(result) {
-  // Defensive (PR #1372 gemini): a null/undefined result yields the same
-  // fail-soft shape instead of throwing on property access.
-  if (result == null || typeof result !== 'object') {
-    return { decision: undefined, gate: undefined };
-  }
-  let decision;
-  try {
-    decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
-  } catch {
-    if (typeof result.decision === 'string' && result.decision.length > 0) {
-      decision = result.decision;
-    }
-  }
-
-  let gate;
-  try {
-    const findings = result.findings ?? [];
-    const riskAssessment = result.plan?.riskAssessment;
-    const loopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)({ decision, findings });
-    gate = (0,gate_decision/* deriveGateDecision */.RF)({
-      loopSignal,
-      decision,
-      humanApprovalRequired: false,
-      riskAction: riskAssessment?.aggregateAction,
-      blockingFindings: findings.filter(
-        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
-      ).length,
-      changedFiles: result.changedFiles ?? [],
-      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
-      artifactStatus: result.status ?? null,
-      riskMapPresent: riskAssessment != null,
-      riskMapDigest: null,
-      // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
-      strictBlock: result.strictBlock === true,
-      // Epic #1347 §11.8 (c2) (#1401): deterministic gate could not run → rule 5c
-      // ESCALATE. False unless the double-gated executor was opted in (§11.6).
-      deterministicUnrunnable: result.deterministicUnrunnable === true,
-      config: result.config ?? {},
-    });
-  } catch {
-    // leave gate unset on derivation failure
-  }
-
-  return { decision, gate };
-}
-
-// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
-var rubric = __nccwpck_require__(5034);
-// EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
-var _2020 = __nccwpck_require__(2210);
-// EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
-var dist = __nccwpck_require__(2815);
+// EXTERNAL MODULE: ./src/lib/diff-processor.mjs
+var diff_processor = __nccwpck_require__(861);
 ;// CONCATENATED MODULE: ./src/cli/commands/review.mjs
 // `river review` subcommand handler.
 //
@@ -50093,6 +48185,10 @@ async function runReviewCommand(parsed) {
   }
 }
 
+// EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
+var esm = __nccwpck_require__(9519);
+// EXTERNAL MODULE: ./src/config/loader.mjs + 1 modules
+var loader = __nccwpck_require__(3833);
 // EXTERNAL MODULE: ./runners/core/skill-cache.mjs
 var skill_cache = __nccwpck_require__(7328);
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 81 modules
@@ -64049,7 +62145,7 @@ function resolveModelName(skill) {
   return MODEL_HINT_TO_NAME.balanced;
 }
 
-function skill_dispatcher_shouldExclude(filePath, patterns = []) {
+function shouldExclude(filePath, patterns = []) {
   return patterns.some((pattern) => (0,esm/* minimatch */.xF)(filePath, pattern, { dot: true }));
 }
 
@@ -64087,7 +62183,7 @@ class SkillDispatcher {
     }
 
     const excludePatterns = config.exclude?.files ?? [];
-    const reviewFiles = changedFiles.filter((file) => !skill_dispatcher_shouldExclude(file, excludePatterns));
+    const reviewFiles = changedFiles.filter((file) => !shouldExclude(file, excludePatterns));
 
     if (!reviewFiles.length) {
       console.log('No files to review after applying exclude patterns.');
@@ -64225,7 +62321,10 @@ class SkillDispatcher {
  * @returns {Promise<number>} process exit code.
  */
 async function runSkillsCommand(parsed, targetPath) {
-  if (parsed.command === 'skills' && parsed.skillsSubcommand === 'resolve') {
+  // The command is guaranteed to be `skills` by the dispatch in cli.mjs main(),
+  // so the branches below key on the skills subcommand only (no redundant
+  // `parsed.command === 'skills'` re-check).
+  if (parsed.skillsSubcommand === 'resolve') {
     // Deterministic resolution: which skills would run for the given
     // path(s) and phase. No git, no LLM — pure metadata routing, so
     // agents and CI can introspect skill selection cheaply (#1045).
@@ -64274,48 +62373,49 @@ async function runSkillsCommand(parsed, targetPath) {
     return 0;
   }
 
-  if (parsed.command === 'skills' && parsed.skillsSubcommand) {
+  if (parsed.skillsSubcommand) {
     const { runSkillsSubcommand } = await __nccwpck_require__.e(/* import() */ 488).then(__nccwpck_require__.bind(__nccwpck_require__, 6488));
     return runSkillsSubcommand(parsed);
   }
 
-  if (parsed.command === 'skills') {
-    const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
-    const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
-    const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
-    const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
+  // Default `skills` run (no subcommand): Skill-based reviewer over the diff.
+  const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
+  const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
+  const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
+  const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
 
-    const dispatcher = new SkillDispatcher(repoRoot);
+  const dispatcher = new SkillDispatcher(repoRoot);
 
-    const getFileDiff = async (targetFile) => {
-      const fileData = repoDiff.files.find((f) => f.path === targetFile);
-      if (!fileData) return '';
-      return (0,diff_processor/* renderDiffText */.pQ)([fileData]);
-    };
+  const getFileDiff = async (targetFile) => {
+    const fileData = repoDiff.files.find((f) => f.path === targetFile);
+    if (!fileData) return '';
+    return (0,diff_processor/* renderDiffText */.pQ)([fileData]);
+  };
 
-    console.log(`River Review (Skills) - Target: ${targetPath}`);
-    const results = await dispatcher.run(
-      repoDiff.changedFiles,
-      getFileDiff,
-      parsed.phase,
-      parsed.dryRun,
-      parsed.debug
-    );
+  console.log(`River Review (Skills) - Target: ${targetPath}`);
+  const results = await dispatcher.run(
+    repoDiff.changedFiles,
+    getFileDiff,
+    parsed.phase,
+    parsed.dryRun,
+    parsed.debug
+  );
 
-    if (parsed.output === 'markdown') {
-      console.log(`## Review Results\n`);
-      for (const res of results) {
-        console.log(`### ${res.file} (Skill: ${res.skill})`);
-        console.log(res.review);
-        console.log('\n---');
-      }
-    } else {
-      console.log(JSON.stringify(results, null, 2));
+  if (parsed.output === 'markdown') {
+    console.log(`## Review Results\n`);
+    for (const res of results) {
+      console.log(`### ${res.file} (Skill: ${res.skill})`);
+      console.log(res.review);
+      console.log('\n---');
     }
-    return 0;
+  } else {
+    console.log(JSON.stringify(results, null, 2));
   }
+  return 0;
 }
 
+// EXTERNAL MODULE: ./src/lib/loop-signal.mjs
+var loop_signal = __nccwpck_require__(4702);
 ;// CONCATENATED MODULE: ./src/cli/commands/runs.mjs
 // `river runs` subcommand handler.
 //
@@ -64631,6 +62731,2797 @@ async function runSuppressionCommand(parsed, targetPath) {
   return 0;
 }
 
+;// CONCATENATED MODULE: ./src/lib/selection.mjs
+// Project-level skill selection (`selection` in .river-review.yaml).
+// Design: docs/development/skill-pack-design.md §6.
+//
+// Resolution: union(packs, tag-matched skills, skills.include) minus
+// skills.exclude, deduplicated. `--skill-set` on the CLI overrides the
+// config selection entirely. minTier warns (but does not block) when an
+// explicitly listed pack sits below the threshold — explicit listing is
+// treated as an intentional choice.
+
+
+const TIER_RANK = { experimental: 0, community: 1, official: 2 };
+
+/** True when the selection declares anything that affects skill choice. */
+function hasSelection(selection) {
+  if (!selection || typeof selection !== 'object') return false;
+  return Boolean(
+    selection.packs?.length || selection.tags?.length || selection.skills?.include?.length
+  );
+}
+
+/**
+ * Resolve a config `selection` block to a deduplicated skill id list.
+ *
+ * @param {{ packs?: string[], tags?: string[], skills?: { include?: string[], exclude?: string[] }, minTier?: string }} selection
+ * @param {{ skillsDir?: string, warn?: (msg: string) => void }} [options]
+ * @returns {Promise<string[]|null>} skill ids, or null when the selection is empty
+ */
+async function resolveSelectionSkillIds(
+  selection,
+  { skillsDir, warn = (msg) => console.warn(msg) } = {}
+) {
+  if (!hasSelection(selection)) return null;
+  const resolved = [];
+
+  if (selection.packs?.length) {
+    const loaderOptions = skillsDir ? { skillsDir } : {};
+    const packs = await (0,skill_loader/* loadPacks */.rn)(loaderOptions);
+    for (const id of selection.packs) {
+      const pack = packs.find((p) => p.id === id);
+      if (!pack || !Array.isArray(pack.skills)) {
+        const available = packs.map((p) => p.id).join(', ') || '(none)';
+        throw new Error(`selection.packs: unknown pack "${id}". Available packs: ${available}.`);
+      }
+      const tierRank = TIER_RANK[pack.tier] ?? TIER_RANK.experimental;
+      if (selection.minTier && !(pack.tier in TIER_RANK)) {
+        warn(
+          `⚠️  selection: pack "${id}" declares unknown tier "${pack.tier}"; treating it as experimental.`
+        );
+      }
+      if (selection.minTier && tierRank < TIER_RANK[selection.minTier]) {
+        warn(
+          `⚠️  selection: pack "${id}" (tier: ${pack.tier ?? 'experimental'}) is below minTier ` +
+            `"${selection.minTier}" but runs anyway because it was listed explicitly.`
+        );
+      }
+      resolved.push(...pack.skills);
+    }
+  }
+
+  if (selection.tags?.length) {
+    const wanted = new Set(selection.tags);
+    const loaderOptions = skillsDir ? { skillsDir } : {};
+    const metas = await (0,skill_loader/* loadAllSkillMetadata */.Qv)(loaderOptions);
+    for (const skill of metas) {
+      const tags = skill.metadata?.tags ?? [];
+      if (tags.some((t) => wanted.has(t))) resolved.push(skill.metadata.id);
+    }
+  }
+
+  resolved.push(...(selection.skills?.include ?? []));
+
+  const exclude = new Set(selection.skills?.exclude ?? []);
+  const seen = new Set();
+  return resolved.filter((id) => {
+    if (typeof id !== 'string' || !id.length) return false;
+    if (exclude.has(id) || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+// EXTERNAL MODULE: ./src/lib/review-engine.mjs
+var review_engine = __nccwpck_require__(2022);
+// EXTERNAL MODULE: ./src/lib/finding-factory.mjs
+var finding_factory = __nccwpck_require__(1535);
+;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
+
+
+
+const CONSENSUS_LEVEL_ORDER = { consensus: 3, multi: 2, single: 1 };
+
+/**
+ * consensusLevel → severity の順に findings をソートして返す。
+ * 同値の場合は元の順序を維持（stable sort）。
+ */
+function sortFindingsByPriority(findings) {
+  return [...findings].sort((a, b) => {
+    const cl =
+      (CONSENSUS_LEVEL_ORDER[b.consensusLevel] ?? 0) -
+      (CONSENSUS_LEVEL_ORDER[a.consensusLevel] ?? 0);
+    if (cl !== 0) return cl;
+    return (finding_factory/* SEVERITY_RANK */.f3[b.severity] ?? -1) - (finding_factory/* SEVERITY_RANK */.f3[a.severity] ?? -1);
+  });
+}
+
+/**
+ * 実行されなかったレビュアーロールを blindSpots として返す。
+ * 各 blindSpot には role キーと label (REVIEWER_ROLES[role].label) を含める。
+ */
+function detectBlindSpots(executedRoles) {
+  const executedSet = new Set(executedRoles);
+  return Object.entries(REVIEWER_ROLES)
+    .filter(([role]) => !executedSet.has(role))
+    .map(([role, def]) => ({ role, label: def.label }));
+}
+
+/**
+ * consensusLevel の件数を集計して返す。
+ * @returns {{ consensus: number, multi: number, single: number, total: number }}
+ */
+function buildConsensusSummary(findings) {
+  const summary = { consensus: 0, multi: 0, single: 0, total: findings.length };
+  for (const f of findings) {
+    const level = f.consensusLevel ?? 'single';
+    if (level in summary) summary[level]++;
+  }
+  return summary;
+}
+
+/**
+ * Tech Lead 統合レポートを生成する。
+ * LLM 呼び出しなし。全て deterministic な計算。
+ *
+ * @param {{ findings: object[], reviewerResults: object[] }} params
+ * @returns {{ top3Findings: object[], blindSpots: object[], consensusSummary: object }}
+ */
+function synthesizeTeamLeadReport({ findings = [], reviewerResults = [] }) {
+  const executedRoles = reviewerResults.map((r) => r.role);
+  const sorted = sortFindingsByPriority(findings);
+  return {
+    top3Findings: sorted.slice(0, 3),
+    blindSpots: detectBlindSpots(executedRoles),
+    consensusSummary: buildConsensusSummary(findings),
+  };
+}
+
+;// CONCATENATED MODULE: ./src/lib/reviewer-orchestrator.mjs
+
+
+
+
+
+const REVIEWER_ROLES = {
+  'bug-hunter': {
+    label: 'Bug Hunter',
+    focusInstructions: `You are the Bug Hunter reviewer. Focus exclusively on:
+- Logic errors, off-by-one mistakes, incorrect boolean conditions
+- Null/undefined dereference and missing guard clauses
+- Concurrent access race conditions (shared state mutated by parallel/async operations)
+- Edge cases (empty collections, negative values)
+- Incorrect or swallowed error handling
+Report only issues in these categories. Do NOT report security vulnerabilities or style issues.`,
+  },
+  'security-scanner': {
+    label: 'Security Scanner',
+    focusInstructions: `You are the Security Scanner reviewer. Focus exclusively on:
+- Injection vulnerabilities (SQL, shell command, path traversal, template injection)
+- Authentication and authorization bypasses
+- Sensitive data exposure (hardcoded secrets, PII in logs, tokens in URLs)
+- Insecure defaults, missing input validation at trust boundaries
+Report only security issues. Do NOT report logic bugs or style concerns.`,
+  },
+  'test-gap': {
+    label: 'Test Gap Finder',
+    focusInstructions: `You are the Test Gap Finder reviewer. Focus exclusively on:
+- New or changed code paths that lack test coverage
+- Missing edge-case tests (boundary values, error paths, empty inputs)
+- Tests that are present but do not assert meaningful outcomes
+Report only test coverage gaps. Do NOT report implementation bugs or style issues.`,
+  },
+  'dependency-reviewer': {
+    label: 'Dependency Reviewer',
+    focusInstructions: `You are the Dependency Reviewer. Focus exclusively on changes to package manifests and lockfiles:
+- Supply-chain risk (new/unfamiliar packages, scope/owner changes, typosquatting)
+- Version jumps that may carry breaking changes; missing peer dependencies
+- Production vs dev dependency placement; unjustified additions
+- Lockfile drift inconsistent with the manifest change
+Report only dependency concerns. Do NOT report unrelated logic or style issues.`,
+  },
+  'frontend-reviewer': {
+    label: 'Frontend Reviewer',
+    focusInstructions: `You are the Frontend Reviewer. Focus exclusively on UI/component and styling changes:
+- Accessibility (semantic HTML, ARIA, keyboard navigation, color contrast)
+- Avoidable re-renders and client-side performance
+- Responsive/layout regressions and unhandled loading/error states
+Report only frontend/UX concerns. Do NOT report backend logic or security bugs.`,
+  },
+  'ci-cd-reviewer': {
+    label: 'CI/CD Reviewer',
+    focusInstructions: `You are the CI/CD Reviewer. Focus exclusively on workflow and pipeline changes:
+- Unpinned/over-permissioned actions, secret exposure in logs, injection via untrusted inputs
+- Missing or weakened required checks; non-deterministic or flaky steps
+- Safe rollout/rollback of the pipeline itself
+Report only CI/CD concerns. Do NOT report application logic or style issues.`,
+  },
+};
+
+const DEFAULT_REVIEWERS = ['bug-hunter', 'security-scanner'];
+
+// Thresholds for diff splitting
+const SPLIT_FILE_THRESHOLD = 10;
+const SPLIT_LINE_THRESHOLD = 500;
+
+function resolveReviewerRoles(reviewers, { fileTypes, riskAssessment, signals } = {}) {
+  // 'auto' keyword: derive roles from diff content
+  if (reviewers?.length === 1 && reviewers[0] === 'auto') {
+    const autoSelection = computeAutoSelection(fileTypes, riskAssessment, signals);
+    return { valid: autoSelection.roles, invalid: [], autoSelection };
+  }
+  const names = reviewers ?? DEFAULT_REVIEWERS;
+  const valid = names.filter((n) => REVIEWER_ROLES[n]);
+  const invalid = names.filter((n) => !REVIEWER_ROLES[n]);
+  return { valid, invalid };
+}
+
+/**
+ * Automatically select reviewer roles based on diff content signals.
+ * Always includes bug-hunter; adds security-scanner and test-gap when relevant.
+ *
+ * @param {object} [fileTypes] coarse file-classifier buckets (config/app/infra/…)
+ * @param {object} [riskAssessment] humanReviewFiles / escalatedFiles counts
+ * @param {object} [signals] optional formalized stage/risk/artifact signals (#1545 P1)
+ * @returns {string[]} selected reviewer role names
+ */
+function selectRolesAuto(fileTypes, riskAssessment, signals) {
+  return computeAutoSelection(fileTypes, riskAssessment, signals).roles;
+}
+
+/**
+ * Stage → existing reviewer roles. Maps the Issue #1545 §E stage table onto the
+ * existing REVIEWER_ROLES only (no new roles are introduced; Lenses without a
+ * dedicated role stay documented Gaps in reviewer-lens-taxonomy).
+ */
+const STAGE_ROLE_MAP = {
+  requirements: [],
+  plan: ['security-scanner', 'test-gap'],
+  design: ['frontend-reviewer'],
+  exec: ['security-scanner'],
+  verify: ['test-gap'],
+  release: ['security-scanner'],
+};
+
+/**
+ * Semantic diff signals → existing reviewer roles (Issue #1545 §E routing). Only
+ * signals whose Lens maps to an existing role appear here; devex-only signals
+ * (changesPublicApi / changesCliInterface / changesInstallation) intentionally
+ * map to nothing and remain documented Gaps.
+ */
+const SIGNAL_ROLE_MAP = {
+  touchesAuth: 'security-scanner',
+  changesPermissions: 'security-scanner',
+  handlesSensitiveData: 'security-scanner',
+  databaseMigration: 'security-scanner',
+  breakingChange: 'security-scanner',
+  changesUi: 'frontend-reviewer',
+  changesUserFlow: 'frontend-reviewer',
+  deploymentChange: 'ci-cd-reviewer',
+};
+
+/**
+ * Compute the auto reviewer selection together with an explainable rationale.
+ *
+ * Backward compatible: with no `signals` argument the selected role set (and its
+ * order) is identical to the pre-#1545 behavior — bug-hunter first, then the
+ * file/risk heuristics in their original order. New signals are strictly
+ * additive and only ever ADD roles.
+ *
+ * @returns {{ roles: string[], reasons: Record<string, string[]>, required: string[], skipped: string[] }}
+ */
+function computeAutoSelection(fileTypes, riskAssessment, signals) {
+  /** @type {Map<string, string[]>} role → reasons (insertion order = role order) */
+  const reasons = new Map();
+  const add = (role, reason) => {
+    if (!REVIEWER_ROLES[role]) return; // never select a non-existent role
+    if (!reasons.has(role)) reasons.set(role, []);
+    const list = reasons.get(role);
+    if (!list.includes(reason)) list.push(reason);
+  };
+
+  // Fail-safe baseline: bug-hunter always runs.
+  add('bug-hunter', 'always-on');
+
+  // --- Existing file/risk heuristics (behavior unchanged) ---
+  const riskyFiles =
+    (riskAssessment?.humanReviewFiles?.length ?? 0) + (riskAssessment?.escalatedFiles?.length ?? 0);
+  const infraFiles =
+    (fileTypes?.config?.length ?? 0) +
+    (fileTypes?.schema?.length ?? 0) +
+    (fileTypes?.migration?.length ?? 0) +
+    (fileTypes?.infra?.length ?? 0);
+  if (riskyFiles > 0 || infraFiles > 0) {
+    add('security-scanner', 'files:risk-or-infra');
+  }
+
+  const testFiles = fileTypes?.test?.length ?? 0;
+  const appFiles = fileTypes?.app?.length ?? 0;
+  if (testFiles > 0 || appFiles > 2) {
+    add('test-gap', 'files:tests-or-many-app');
+  }
+
+  const configList = fileTypes?.config ?? [];
+  if (configList.some((f) => RE_DEPENDENCY_FILE.test(basenameOf(f)))) {
+    add('dependency-reviewer', 'files:manifest-or-lockfile');
+  }
+
+  const appList = fileTypes?.app ?? [];
+  if (appList.some((f) => RE_FRONTEND_FILE.test(normalizePath(f)))) {
+    add('frontend-reviewer', 'files:ui-or-styling');
+  }
+
+  const infraList = fileTypes?.infra ?? [];
+  if (infraList.some((f) => RE_CI_WORKFLOW.test(normalizePath(f)))) {
+    add('ci-cd-reviewer', 'files:workflow');
+  }
+
+  // --- Formalized stage/risk/artifact signals (#1545 P1, optional & additive) ---
+  if (signals && typeof signals === 'object') {
+    const stage = typeof signals.stage === 'string' ? signals.stage : null;
+    if (stage && STAGE_ROLE_MAP[stage]) {
+      for (const role of STAGE_ROLE_MAP[stage]) add(role, `stage:${stage}`);
+    }
+    for (const [key, role] of Object.entries(SIGNAL_ROLE_MAP)) {
+      if (signals[key]) add(role, `signal:${key}`);
+    }
+  }
+
+  const roles = [...reasons.keys()];
+  const skipped = Object.keys(REVIEWER_ROLES).filter((r) => !reasons.has(r));
+  return { roles, reasons: Object.fromEntries(reasons), required: ['bug-hunter'], skipped };
+}
+
+// Sub-classification patterns for auto role selection (#1196 S3). These refine
+// the coarse file-classifier buckets (config/app/infra) without changing them.
+const RE_DEPENDENCY_FILE = /^(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$/;
+const RE_FRONTEND_FILE = /\.(?:tsx|jsx|css|scss|sass|less|vue|svelte)$/;
+const RE_CI_WORKFLOW = /\.github\/workflows\//;
+
+// Null-safe path helpers: list elements may be non-strings in malformed input.
+function normalizePath(f) {
+  return typeof f === 'string' ? f.replaceAll('\\', '/') : '';
+}
+function basenameOf(f) {
+  return normalizePath(f).split('/').pop() ?? '';
+}
+
+/**
+ * Split diff files into groups for parallel chunk execution.
+ * Groups by directory prefix to keep related files together.
+ */
+function splitDiffIntoChunks(diff) {
+  const files = diff.files ?? [];
+  const totalLines = files.reduce(
+    (sum, f) => sum + (f.hunks ?? []).reduce((s, h) => s + (h.lines?.length ?? 0), 0),
+    0
+  );
+
+  if (files.length <= SPLIT_FILE_THRESHOLD && totalLines <= SPLIT_LINE_THRESHOLD) {
+    return null; // No split needed
+  }
+
+  // Group files by top-level directory
+  const groups = new Map();
+  for (const file of files) {
+    const dir = file.path.split('/')[0] ?? '_root';
+    if (!groups.has(dir)) groups.set(dir, []);
+    groups.get(dir).push(file);
+  }
+
+  // Merge small groups to avoid excessive chunks (target: 2–4 chunks)
+  const targetChunks = Math.min(4, Math.ceil(files.length / SPLIT_FILE_THRESHOLD));
+  const buckets = [];
+  for (const groupFiles of groups.values()) {
+    if (buckets.length < targetChunks) {
+      buckets.push([...groupFiles]);
+    } else {
+      // Append to smallest bucket
+      buckets.sort((a, b) => a.length - b.length);
+      buckets[0].push(...groupFiles);
+    }
+  }
+
+  return buckets
+    .filter((b) => b.length > 0)
+    .map((chunkFiles) => ({
+      ...diff,
+      files: chunkFiles,
+      filesForReview: chunkFiles,
+      diffText: (0,diff_processor/* renderDiffText */.pQ)(chunkFiles),
+      _chunkLabel: chunkFiles
+        .map((f) => f.path)
+        .join(', ')
+        .slice(0, 60),
+    }));
+}
+
+/**
+ * Compute consensusLevel from an agreement array.
+ * Used as display-only metadata; MUST NOT influence severity decisions.
+ * @param {string[]} agreement
+ * @returns {'consensus' | 'multi' | 'single'}
+ */
+function computeConsensusLevel(agreement) {
+  const count = Array.isArray(agreement) ? agreement.length : 0;
+  if (count >= 3) return 'consensus';
+  if (count >= 2) return 'multi';
+  return 'single';
+}
+
+function maxSeverity(a, b) {
+  const na = (0,finding_factory/* normalizeSeverity */.lv)(a);
+  const nb = (0,finding_factory/* normalizeSeverity */.lv)(b);
+  return finding_factory/* SEVERITY_RANK */.f3[na] >= finding_factory/* SEVERITY_RANK */.f3[nb] ? na : nb;
+}
+
+/**
+ * Predicate: returns true when two findings are considered duplicates.
+ * Criteria: same file, line positions within ±2, and message edit-distance ≤ 10
+ * (compared on the first 80 chars, lower-cased).
+ *
+ * @param {object} a
+ * @param {object} b
+ * @returns {boolean}
+ */
+function findingsOverlap(a, b) {
+  if (a.file !== b.file) return false;
+  const lineOverlap = Math.abs((a.lineStart ?? a.line ?? 0) - (b.lineStart ?? b.line ?? 0)) <= 2;
+  if (!lineOverlap) return false;
+  const msgA = (a.message ?? a.title ?? '').slice(0, 80).toLowerCase();
+  const msgB = (b.message ?? b.title ?? '').slice(0, 80).toLowerCase();
+  return editDistance(msgA, msgB) <= 10;
+}
+
+/**
+ * Merge findings across reviewers using connected-components clustering.
+ *
+ * Two findings that are mutually overlapping (per findingsOverlap) are placed
+ * in the same component. Because the graph may form A–B–C chains where A and C
+ * are NOT directly overlapping, a union-find (path-compressed) is used so that
+ * all transitively connected findings collapse into one cluster regardless of
+ * input order.
+ *
+ * Each cluster produces ONE canonical finding (the first member) with:
+ *   - severity = max of cluster (after normalization of blocker/warning/nit)
+ *   - evidence = deduplicated union of all evidence arrays
+ *   - agreement = array of all reviewerRole values in the cluster
+ * Non-duplicate findings pass through unchanged, with agreement = [their reviewerRole] if set.
+ */
+function mergeFindings(findings) {
+  const n = findings.length;
+  if (n === 0) return [];
+
+  // Union-Find with path halving
+  const parent = Array.from({ length: n }, (_, i) => i);
+  function find(x) {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]]; // path halving
+      x = parent[x];
+    }
+    return x;
+  }
+  function union(x, y) {
+    const rx = find(x);
+    const ry = find(y);
+    if (rx !== ry) parent[ry] = rx;
+  }
+
+  // Build adjacency: O(n²) — acceptable for typical review finding counts
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (findingsOverlap(findings[i], findings[j])) {
+        union(i, j);
+      }
+    }
+  }
+
+  // Group indices by root representative, preserving insertion order
+  const clusterMap = new Map(); // root → [indices]
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!clusterMap.has(root)) clusterMap.set(root, []);
+    clusterMap.get(root).push(i);
+  }
+
+  return [...clusterMap.values()].map((indices) => {
+    const canonical = { ...findings[indices[0]] };
+    if (indices.length === 1) {
+      // Passthrough: attach agreement with own role, preserving existing
+      const role = canonical.reviewerRole;
+      const existingAgreement = Array.isArray(canonical.agreement) ? canonical.agreement : [];
+      const agreementSet = new Set(existingAgreement);
+      if (role) agreementSet.add(role);
+      const passthroughAgreement = [...agreementSet];
+      return {
+        ...canonical,
+        severity: (0,finding_factory/* normalizeSeverity */.lv)(canonical.severity),
+        agreement: passthroughAgreement,
+        consensusLevel: computeConsensusLevel(passthroughAgreement),
+      };
+    }
+
+    // Merge cluster: max severity, union evidence, collect agreement
+    let mergedSeverity = canonical.severity;
+    const evidenceSet = new Set(Array.isArray(canonical.evidence) ? canonical.evidence : []);
+    const agreementSet = new Set(Array.isArray(canonical.agreement) ? canonical.agreement : []);
+    if (canonical.reviewerRole) agreementSet.add(canonical.reviewerRole);
+
+    for (const idx of indices.slice(1)) {
+      const m = findings[idx];
+      mergedSeverity = maxSeverity(mergedSeverity, m.severity);
+      for (const e of Array.isArray(m.evidence) ? m.evidence : []) evidenceSet.add(e);
+      for (const a of Array.isArray(m.agreement) ? m.agreement : []) agreementSet.add(a);
+      if (m.reviewerRole) agreementSet.add(m.reviewerRole);
+    }
+
+    const mergedAgreement = [...agreementSet];
+    return {
+      ...canonical,
+      severity: mergedSeverity,
+      evidence: [...evidenceSet],
+      agreement: mergedAgreement,
+      consensusLevel: computeConsensusLevel(mergedAgreement),
+    };
+  });
+}
+
+/**
+ * Deduplicate findings across parallel runs.
+ * Two findings are considered duplicates if findingsOverlap returns true.
+ */
+function deduplicateFindings(findings) {
+  const seen = [];
+  const result = [];
+
+  for (const f of findings) {
+    const isDuplicate = seen.some((s) => findingsOverlap(s, f));
+
+    if (!isDuplicate) {
+      seen.push(f);
+      result.push(f);
+    }
+  }
+
+  return result;
+}
+
+function editDistance(a, b) {
+  if (a === b) return 0;
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  // Only compute if strings are similar enough to be worth comparing
+  if (Math.abs(m - n) > 15) return 99;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+async function runReviewerOrchestration({
+  diff,
+  plan,
+  phase,
+  dryRun = false,
+  model,
+  apiKey,
+  projectRules,
+  riskAssessment,
+  memoryContext,
+  fileTypes,
+  relatedADRs,
+  reviewMode,
+  config,
+  reviewers,
+  prBody,
+  signals,
+} = {}) {
+  const {
+    valid: roles,
+    invalid,
+    autoSelection = null,
+  } = resolveReviewerRoles(reviewers, { fileTypes, riskAssessment, signals });
+
+  if (!roles.length) {
+    throw new Error(
+      `No valid reviewer roles. Got: [${(reviewers ?? []).join(', ')}]. Valid: [${Object.keys(REVIEWER_ROLES).join(', ')}]`
+    );
+  }
+
+  // Attempt diff splitting for large PRs
+  const diffChunks = splitDiffIntoChunks(diff);
+  const chunked = diffChunks !== null;
+  const diffsToProcess = chunked ? diffChunks : [diff];
+
+  const generateArgs = {
+    plan,
+    phase,
+    dryRun,
+    model,
+    apiKey,
+    riskAssessment,
+    memoryContext,
+    fileTypes,
+    relatedADRs,
+    reviewMode,
+    config,
+    prBody,
+  };
+
+  // Fan out: each role × each diff chunk runs in parallel
+  const tasks = roles.flatMap((roleName) =>
+    diffsToProcess.map((chunkDiff, chunkIdx) => {
+      const role = REVIEWER_ROLES[roleName];
+      const roleRules = [role.focusInstructions, projectRules].filter(Boolean).join('\n\n');
+      return (0,review_engine/* generateReview */.G1)({ ...generateArgs, diff: chunkDiff, projectRules: roleRules }).then(
+        (result) => ({
+          ...result,
+          reviewerRole: roleName,
+          chunkIdx: chunked ? chunkIdx : null,
+          chunkLabel: chunked ? (chunkDiff._chunkLabel ?? `chunk-${chunkIdx}`) : null,
+        })
+      );
+    })
+  );
+
+  // Run each role in parallel; partial failure is tolerated
+  const settled = await Promise.allSettled(tasks);
+
+  const succeeded = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+  const failed = settled.filter((r) => r.status === 'rejected');
+
+  // Merge findings, deduplicate across chunks/roles, then assign stable IDs
+  let nextId = 1;
+  const rawFindings = succeeded.flatMap((r) =>
+    (r.findings ?? []).map((f) => ({
+      ...f,
+      reviewerRole: r.reviewerRole,
+      chunkLabel: r.chunkLabel ?? null,
+    }))
+  );
+  const deduped = mergeFindings(rawFindings);
+  const allFindings = deduped.map((f) => ({ ...f, id: `rr-${nextId++}` }));
+
+  const allComments = succeeded.flatMap((r) => r.comments ?? []);
+  const classified = (0,finding_factory/* classifyFindings */.ZY)(allFindings, { reviewMode: reviewMode ?? 'medium' });
+
+  // Summarise per-role results (aggregate across chunks)
+  const reviewerResults = roles.map((name) => {
+    const roleSettled = settled.filter(
+      (_, i) => tasks[i] && roles.flatMap((r) => diffsToProcess.map(() => r))[i] === name
+    );
+    const roleSucceeded = roleSettled.filter((r) => r.status === 'fulfilled');
+    return {
+      role: name,
+      label: REVIEWER_ROLES[name].label,
+      status: roleSucceeded.length > 0 ? 'fulfilled' : 'rejected',
+      findingsCount: roleSucceeded.reduce((sum, r) => sum + (r.value?.findings?.length ?? 0), 0),
+      chunksRun: chunked ? diffsToProcess.length : null,
+      // #1545 P1: why this role was auto-selected (only present in auto mode).
+      selectionReasons: autoSelection ? (autoSelection.reasons[name] ?? []) : null,
+      error:
+        roleSucceeded.length === 0 ? String(roleSettled[0]?.reason?.message ?? 'unknown') : null,
+    };
+  });
+
+  const teamLeadReport = synthesizeTeamLeadReport({
+    findings: allFindings,
+    reviewerResults,
+  });
+
+  return {
+    comments: allComments,
+    findings: allFindings,
+    classified,
+    reviewerResults,
+    invalidRoles: invalid,
+    autoSelectedRoles: reviewers?.length === 1 && reviewers[0] === 'auto' ? roles : null,
+    // #1545 P1: explainable auto-selection — reasons per role, the always-on
+    // required set, and the roles skipped this run. null when not in auto mode.
+    autoSelection,
+    teamLeadReport,
+    chunked,
+    chunkCount: chunked ? diffsToProcess.length : null,
+    prompt: succeeded[0]?.prompt ?? null,
+    promptTruncated: succeeded.some((r) => r.promptTruncated),
+    llmModel: succeeded[0]?.llmModel ?? null,
+    debug: {
+      succeededReviewers: succeeded.length,
+      failedReviewers: failed.length,
+      deduplicatedCount: rawFindings.length - allFindings.length,
+    },
+  };
+}
+
+// EXTERNAL MODULE: ./src/lib/llm-pipeline.mjs
+var llm_pipeline = __nccwpck_require__(7303);
+;// CONCATENATED MODULE: ./src/lib/openai-planner.mjs
+
+
+const DEFAULT_PLANNER_MODEL =
+  process.env.RIVER_PLANNER_MODEL ||
+  process.env.RIVER_OPENAI_MODEL ||
+  process.env.OPENAI_MODEL ||
+  'gpt-4o-mini';
+
+const DEFAULT_TIMEOUT_MS = 15000;
+
+function resolveOpenAIConfig(options = {}) {
+  return {
+    apiKey: options.apiKey || process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+    model: options.model || DEFAULT_PLANNER_MODEL,
+    endpoint:
+      options.endpoint ||
+      process.env.RIVER_OPENAI_BASE_URL ||
+      process.env.OPENAI_BASE_URL ||
+      'https://api.openai.com/v1/chat/completions',
+  };
+}
+
+function resolvePlannerTimeoutMs(options = {}) {
+  if (
+    typeof options.timeoutMs === 'number' &&
+    Number.isFinite(options.timeoutMs) &&
+    options.timeoutMs > 0
+  ) {
+    return options.timeoutMs;
+  }
+  const value = Number(process.env.RIVER_PLANNER_TIMEOUT);
+  if (Number.isFinite(value) && value > 0) return value;
+  return DEFAULT_TIMEOUT_MS;
+}
+
+function buildPlannerPrompt({ skills, context }) {
+  const phase = context?.phase ?? 'midstream';
+  const changedFiles = Array.isArray(context?.changedFiles) ? context.changedFiles : [];
+  const availableContexts = Array.isArray(context?.availableContexts)
+    ? context.availableContexts
+    : [];
+  const impactTags = Array.isArray(context?.impactTags) ? context.impactTags : [];
+  const skillsText = (skills || [])
+    .map((s) => `- ${s.id}: ${s.name} (${s.phase}) — ${s.description}`)
+    .join('\n');
+
+  return `You are River Review, an AI skill planner.
+
+Goal: pick the most relevant review skills for this PR diff, and order them by priority.
+
+Context:
+- phase: ${phase}
+- changedFiles: ${changedFiles.join(', ') || '(none)'}
+- availableContexts: ${availableContexts.join(', ') || '(none)'}
+- impactTags: ${impactTags.join(', ') || '(none)'}
+
+Candidate skills:
+${skillsText}
+
+Rules:
+- Output MUST be valid JSON only (no markdown, no code fences).
+- Output format: [{"id":"<skill id>","priority":<number>,"reason":"<short reason>"}]
+- Include only skills you recommend to run. If none are needed, output [].
+- Do not invent ids; use only ids from the candidate list.
+`;
+}
+
+const PLANNER_SYSTEM_MESSAGE =
+  'You are River Review, an expert code review skill planner. Return valid JSON only; do not wrap in Markdown.';
+
+// Chat-completion transport lives in llm-pipeline.mjs (#1338). The planner
+// historically made a single attempt with no retry; maxAttempts: 1 preserves
+// that behavior exactly.
+function callOpenAI({ prompt, apiKey, model, endpoint, timeoutMs }) {
+  return (0,llm_pipeline/* callChatCompletion */.pQ)({
+    prompt,
+    systemMessage: PLANNER_SYSTEM_MESSAGE,
+    apiKey,
+    model,
+    endpoint,
+    temperature: 0,
+    maxTokens: 600,
+    timeoutMs: timeoutMs ?? resolvePlannerTimeoutMs(),
+    maxAttempts: 1,
+  });
+}
+
+function parsePlannerJson(text) {
+  const trimmed = (text || '').trim();
+  if (!trimmed) return [];
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const start = trimmed.indexOf('[');
+    const end = trimmed.lastIndexOf(']');
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(trimmed.slice(start, end + 1));
+      } catch {
+        throw new Error('planner output is not valid JSON');
+      }
+    }
+    throw new Error('planner output is not valid JSON');
+  }
+}
+
+// --- テスト用 named export (内部ヘルパー) ---
+
+
+function createOpenAIPlanner(options = {}) {
+  const config = resolveOpenAIConfig(options);
+  const timeoutMs = resolvePlannerTimeoutMs(options);
+  return {
+    model: config.model,
+    endpoint: config.endpoint,
+    plan: async ({ skills, context }) => {
+      if (!config.apiKey) {
+        throw new Error(
+          'AI API key (ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY) not set'
+        );
+      }
+      const prompt = buildPlannerPrompt({ skills, context });
+      const output = await callOpenAI({
+        prompt,
+        apiKey: config.apiKey,
+        model: config.model,
+        endpoint: config.endpoint,
+        timeoutMs,
+      });
+      const parsed = parsePlannerJson(output);
+      return Array.isArray(parsed) ? parsed : [];
+    },
+  };
+}
+
+// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
+var review_runner = __nccwpck_require__(7050);
+// EXTERNAL MODULE: ./src/lib/riverbed-memory.mjs
+var riverbed_memory = __nccwpck_require__(4216);
+;// CONCATENATED MODULE: ./src/lib/memory-context.mjs
+
+
+
+const DEFAULT_MEMORY_PATH = external_node_path_.join('.river', 'memory', 'index.json');
+
+function loadReviewMemory(repoRoot, { phase, changedFiles } = {}) {
+  const indexPath = external_node_path_.resolve(repoRoot, DEFAULT_MEMORY_PATH);
+  const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
+  // includeInactive: true keeps the phase and no-phase branches symmetric and
+  // preserves pre-lifecycle semantics where historical entries were surfaced.
+  const allEntries = phase
+    ? (0,riverbed_memory/* queryMemory */.qU)(index, { phase, includeInactive: true })
+    : (index.entries ?? []);
+  const relevant = changedFiles?.length
+    ? allEntries.filter((e) => {
+        const related = e.metadata?.relatedFiles ?? [];
+        if (!related.length) return true;
+        return related.some((r) => changedFiles.includes(r));
+      })
+    : allEntries;
+  const buckets = { wontfixes: [], patterns: [], decisions: [], reviews: [], suppressions: [] };
+  const typeMap = {
+    wontfix: 'wontfixes',
+    pattern: 'patterns',
+    decision: 'decisions',
+    review: 'reviews',
+    suppression: 'suppressions',
+  };
+  for (const e of relevant) {
+    const bucket = typeMap[e.type];
+    if (bucket) buckets[bucket].push(e);
+  }
+  return { entries: relevant, ...buckets };
+}
+
+function formatMemoryForPrompt(memoryContext, { maxChars = 1500 } = {}) {
+  if (!memoryContext) return '';
+  const { wontfixes, patterns, decisions } = memoryContext;
+  const sections = [];
+  if (wontfixes?.length) {
+    sections.push('以下の指摘は明示的に受け入れ済みです。再指摘は不要です:');
+    for (const w of wontfixes)
+      sections.push('- [' + w.id + '] ' + (w.title || w.content?.slice(0, 80)));
+  }
+  if (patterns?.length) {
+    sections.push('以下はチーム規約として記録されています:');
+    for (const p of patterns) sections.push('- ' + (p.title || p.content?.slice(0, 80)));
+  }
+  if (decisions?.length) {
+    sections.push('以下の設計判断が記録されています:');
+    for (const d of decisions) sections.push('- ' + (d.title || d.content?.slice(0, 80)));
+  }
+  if (!sections.length) return '';
+  const text = '\n### Memory Context (previous review decisions)\n\n' + sections.join('\n');
+  return text.length > maxChars ? text.slice(0, maxChars) + '\n...[truncated]' : text;
+}
+
+function buildReviewEntry(reviewResult, { phase, changedFiles, commit } = {}) {
+  const timestamp = new Date().toISOString();
+  const id = 'review-' + (commit || 'unknown') + '-' + Date.now();
+  const commentCount = reviewResult.comments?.length ?? 0;
+  const summary = commentCount + ' findings in ' + (phase || 'midstream') + ' phase';
+  return {
+    id,
+    type: 'review',
+    title: 'Review: ' + summary,
+    content: JSON.stringify({ commentCount, phase, changedFiles: changedFiles?.slice(0, 20) }),
+    metadata: {
+      createdAt: timestamp,
+      author: 'river-review',
+      ...(phase ? { phase } : {}),
+      tags: ['review', 'automated'],
+      relatedFiles: changedFiles?.slice(0, 50) ?? [],
+      summary,
+    },
+  };
+}
+
+// EXTERNAL MODULE: ./src/lib/repo-context.mjs + 2 modules
+var repo_context = __nccwpck_require__(5597);
+;// CONCATENATED MODULE: ./src/lib/suppression-apply.mjs
+// Apply Riverbed Memory suppressions to a list of findings (#687 PR-B).
+//
+// PR-A landed the data model (suppression context schema and the new
+// fingerprint / feedbackType / severity fields on createSuppression). This
+// PR-B is the gate that consumes those entries: given a list of findings
+// already annotated with fingerprints (see src/lib/finding-factory.mjs)
+// and a memoryContext loaded by src/lib/memory-context.mjs, it splits the
+// findings into kept vs suppressed and returns observability metadata.
+//
+// PR-C of #687 will inject one call to applySuppressions inside
+// src/lib/local-runner.mjs:runLocalReview between annotateFingerprints and
+// the return statement so the pipeline behavior changes there, not here.
+//
+// P1 guard policy (do not silently auto-suppress dangerous findings):
+//   - findings of severity `major` or `critical` are kept unless the
+//     suppression's feedbackType is explicitly `accepted_risk`.
+//   - lower severities (`minor`, `info`) are auto-suppressed for any
+//     non-revoked, non-expired suppression that matches the fingerprint.
+//   - the per-suppression `minSeverityToAutoSuppress` (added in PR-A)
+//     can RAISE the bar but never lower it; the global P1 guard wins.
+
+
+
+const HIGH_SEVERITY = new Set(['major', 'critical']);
+
+function severityOf(finding) {
+  return String(finding.severity || 'info').toLowerCase();
+}
+
+/**
+ * Apply matching suppressions to findings.
+ *
+ * @param {Array<object>} findings  Findings already annotated with `.fingerprint`
+ *   by `annotateFingerprints` (src/lib/finding-factory.mjs).
+ * @param {object} memoryContext    Bucketed memory from `loadReviewMemory`.
+ *   Only `memoryContext.suppressions` is consulted.
+ * @param {object} [opts]
+ * @param {object} [opts.config]    Effective config; `config.memory.suppressionEnabled === false`
+ *   bypasses suppression entirely (returns all findings as-is).
+ * @returns {{ keptFindings: Array<object>, suppressedFindings: Array<object>, applied: Array<object> }}
+ *   `applied` is the observability log. Each entry: `{ fingerprint, suppressionId,
+ *   feedbackType, severity, action: 'suppressed' | 'skipped', reason? }`. Findings
+ *   moved to `suppressedFindings` carry a `status: 'suppressed'` flag and a
+ *   `suppressionRef` pointing back at the suppression entry id.
+ */
+function applySuppressions(findings, memoryContext, opts = {}) {
+  const list = Array.isArray(findings) ? findings : [];
+  const result = { keptFindings: list, suppressedFindings: [], applied: [] };
+
+  if (opts?.config?.memory?.suppressionEnabled === false) return result;
+
+  const suppressions = memoryContext?.suppressions;
+  if (!Array.isArray(suppressions) || suppressions.length === 0) return result;
+  if (list.length === 0) return result;
+
+  // Index suppressions by canonical fingerprint. Entries that lack a
+  // fingerprint (pre-#687 PR-A) are intentionally ignored — they cannot
+  // gate findings safely without reintroducing the old hashFinding /
+  // computeFingerprint mismatch that PR-A documented as tech debt.
+  const byFingerprint = new Map();
+  for (const s of suppressions) {
+    const fp = s?.context?.fingerprint;
+    if (typeof fp === 'string' && fp.length === 16) byFingerprint.set(fp, s);
+  }
+  if (byFingerprint.size === 0) return result;
+
+  const kept = [];
+  const suppressed = [];
+  const applied = [];
+
+  for (const finding of list) {
+    const fp = finding?.fingerprint;
+    const match = fp ? byFingerprint.get(fp) : undefined;
+    if (!match) {
+      kept.push(finding);
+      continue;
+    }
+
+    const sev = severityOf(finding);
+    const feedbackType = match.context?.feedbackType ?? null;
+    const minSeverity = match.context?.minSeverityToAutoSuppress;
+
+    // Per-suppression cap: `minSeverityToAutoSuppress` is the highest
+    // severity this entry is allowed to auto-suppress. A finding above
+    // that rank stays.
+    if (minSeverity && finding_factory/* SEVERITY_RANK */.f3[sev] > finding_factory/* SEVERITY_RANK */.f3[String(minSeverity).toLowerCase()]) {
+      kept.push(finding);
+      applied.push({
+        fingerprint: fp,
+        suppressionId: match.id,
+        feedbackType,
+        severity: sev,
+        action: 'skipped',
+        reason: 'severity-above-min-severity-cap',
+      });
+      continue;
+    }
+
+    // Global P1 guard: never auto-suppress major/critical without
+    // accepted_risk. Other feedbackTypes (false_positive, wont_fix, ...)
+    // require manual handling for high-severity findings.
+    if (HIGH_SEVERITY.has(sev) && feedbackType !== 'accepted_risk') {
+      kept.push(finding);
+      applied.push({
+        fingerprint: fp,
+        suppressionId: match.id,
+        feedbackType,
+        severity: sev,
+        action: 'skipped',
+        reason: 'high-severity-requires-accepted-risk',
+      });
+      continue;
+    }
+
+    suppressed.push({
+      ...finding,
+      status: 'suppressed',
+      suppressionRef: match.id,
+    });
+    applied.push({
+      fingerprint: fp,
+      suppressionId: match.id,
+      feedbackType,
+      severity: sev,
+      action: 'suppressed',
+    });
+  }
+
+  return { keptFindings: kept, suppressedFindings: suppressed, applied };
+}
+
+// EXTERNAL MODULE: ./src/lib/deterministic-gate.mjs
+var deterministic_gate = __nccwpck_require__(5837);
+// EXTERNAL MODULE: ./src/lib/deterministic-exec-gate.mjs
+var deterministic_exec_gate = __nccwpck_require__(2785);
+;// CONCATENATED MODULE: ./src/lib/local-runner.mjs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function normalizePhase(phase) {
+  const normalized = (phase || '').toLowerCase();
+  if (planner_utils/* PHASES */.ZG.includes(normalized)) return normalized;
+  return 'midstream';
+}
+
+const configLoader = new loader/* ConfigLoader */.UT();
+
+function local_runner_shouldExclude(filePath, patterns = []) {
+  return patterns.some((pattern) => (0,esm/* minimatch */.xF)(filePath, pattern, { dot: true }));
+}
+
+function applyFileExclusions(diff, patterns = []) {
+  if (!patterns.length) return diff;
+
+  const changedFiles = (diff.changedFiles ?? []).filter(
+    (filePath) => !local_runner_shouldExclude(filePath, patterns)
+  );
+  const rawFiles = (diff.files ?? []).filter((file) => !local_runner_shouldExclude(file.path, patterns));
+  const optimizedFiles = (diff.filesForReview ?? diff.files ?? []).filter(
+    (file) => !local_runner_shouldExclude(file.path, patterns)
+  );
+
+  const rawDiffText = (0,diff_processor/* renderDiffText */.pQ)(rawFiles);
+  const diffText = (0,diff_processor/* renderDiffText */.pQ)(optimizedFiles);
+  const rawTokenEstimate = Math.ceil(rawDiffText.length / 4);
+  const tokenEstimate = Math.ceil(diffText.length / 4);
+  const reduction =
+    rawTokenEstimate === 0
+      ? 0
+      : Math.max(0, Math.round(((rawTokenEstimate - tokenEstimate) / rawTokenEstimate) * 100));
+
+  return {
+    ...diff,
+    changedFiles,
+    files: rawFiles,
+    filesForReview: optimizedFiles,
+    rawDiffText,
+    diffText,
+    rawTokenEstimate,
+    tokenEstimate,
+    reduction,
+  };
+}
+
+async function resolvePullRequestLabels() {
+  const envLabels = (0,utils/* parseList */.E1)(process.env.RIVER_PR_LABELS);
+  if (envLabels.length) return envLabels;
+
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath) return [];
+
+  try {
+    const raw = await promises_.readFile(eventPath, 'utf8');
+    const event = JSON.parse(raw);
+    const pullRequestLabels = event?.pull_request?.labels ?? event?.labels ?? [];
+    return pullRequestLabels.map((label) => label?.name).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function resolvePullRequestBody() {
+  // Explicit env wins (works for any runner / non-Action use).
+  const envBody = process.env.RIVER_PR_BODY;
+  if (envBody && envBody.trim()) return envBody;
+
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath) return null;
+
+  try {
+    const raw = await promises_.readFile(eventPath, 'utf8');
+    const event = JSON.parse(raw);
+    const body = event?.pull_request?.body;
+    return body && String(body).trim() ? String(body) : null;
+  } catch {
+    return null;
+  }
+}
+
+function shouldSkipByLabel(prLabels = [], ignorePatterns = []) {
+  if (!prLabels.length || !ignorePatterns.length) return { matched: [], shouldSkip: false };
+  const normalizedLabels = prLabels.map((label) => label.toLowerCase());
+  const matched = ignorePatterns.filter((pattern) => {
+    const needle = pattern.toLowerCase();
+    return normalizedLabels.some((label) => label.includes(needle));
+  });
+  return { matched, shouldSkip: matched.length > 0 };
+}
+
+// Re-export the shared helper under the legacy name so the rest of this
+// module continues to call `resolveAvailableContexts(...)` unchanged.
+// The single source of truth now lives in src/lib/utils.mjs and is also
+// used by src/lib/review-plan.mjs (#802 Phase 3 A2-fix-1).
+const resolveAvailableContexts = (inputContexts, options = {}) =>
+  (0,utils/* resolveAvailableContexts */.ud)(inputContexts, options);
+
+// The helper now lives in src/lib/utils.mjs; this thin wrapper preserves
+// the legacy call sites inside this module unchanged.
+const resolveAvailableDependencies = (inputDependencies) =>
+  (0,utils/* resolveAvailableDependencies */.TK)(inputDependencies);
+
+async function collectLocalContext({
+  cwd,
+  debug = false,
+  contextLines = 3,
+  availableContexts,
+  availableDependencies,
+  baseRef = null,
+} = {}) {
+  const repoRoot = await (0,git/* ensureGitRepo */.NC)(cwd);
+  const { config, path: configPath, source: configSource } = await configLoader.load(repoRoot);
+  const prLabels = await resolvePullRequestLabels();
+  const prBody = await resolvePullRequestBody();
+  const { rulesText: projectRules } = await loadProjectRules(repoRoot);
+  const riskMap = await (0,risk_map.loadRiskMap)(repoRoot);
+  // When --base is provided, compare against the explicit ref instead of the
+  // auto-detected default branch. Falls back to detection when unset.
+  const defaultBranch = baseRef ?? (await (0,git/* detectDefaultBranch */.Rd)(repoRoot));
+  const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
+  const rawDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase, { contextLines });
+  const diff = applyFileExclusions(rawDiff, config.exclude?.files ?? []);
+  const reviewFiles = diff.filesForReview?.map((file) => file.path) ?? diff.changedFiles;
+  // Expose `prDescription` as an available input context only when a PR body is
+  // present, so the pr-description skill activates exactly when it has input.
+  const contexts = resolveAvailableContexts(availableContexts, {
+    alwaysInclude: prBody ? ['prDescription'] : [],
+  });
+  const dependencies = resolveAvailableDependencies(availableDependencies);
+
+  return {
+    repoRoot,
+    config,
+    configPath,
+    configSource,
+    projectRules,
+    riskMap,
+    defaultBranch,
+    mergeBase,
+    diff,
+    reviewFiles,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
+    prLabels,
+    prBody,
+    debug,
+  };
+}
+
+// --- テスト用 named export (内部ヘルパー) ---
+
+
+async function planLocalReview({
+  cwd = process.cwd(),
+  phase = 'midstream',
+  dryRun = false,
+  debug = false,
+  preferredModelHint = 'balanced',
+  availableContexts,
+  availableDependencies,
+  plannerMode,
+  baseRef = null,
+  skillIds = null,
+  manualReviewMode = null,
+} = {}) {
+  const base = await collectLocalContext({
+    cwd,
+    debug,
+    contextLines: debug ? 10 : 3,
+    availableContexts,
+    availableDependencies,
+    baseRef,
+  });
+  const {
+    repoRoot,
+    projectRules,
+    riskMap,
+    defaultBranch,
+    mergeBase,
+    diff,
+    reviewFiles,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
+    config,
+    configPath,
+    configSource,
+    prLabels,
+    prBody,
+  } = base;
+  const requestedPlannerMode = (0,planner_utils/* normalizePlannerMode */.p$)(plannerMode ?? process.env.RIVER_PLANNER_MODE, {
+    defaultMode: 'off',
+  });
+  const plannerRequested = requestedPlannerMode !== 'off';
+
+  // Config-level selection (.river-review.yaml `selection`) supplies the
+  // skill id list unless the CLI already provided one via --skill-set,
+  // which takes precedence as the explicit per-run override (design §6).
+  let effectiveSkillIds = skillIds;
+  if (effectiveSkillIds == null && hasSelection(config.selection)) {
+    effectiveSkillIds = await resolveSelectionSkillIds(config.selection, {});
+  } else if (
+    effectiveSkillIds == null &&
+    config.selection &&
+    !hasSelection(config.selection) &&
+    (config.selection.skills?.exclude?.length ?? 0) > 0
+  ) {
+    console.warn(
+      '⚠️  selection: skills.exclude has no effect without packs, tags, or skills.include; all skills remain eligible.'
+    );
+  }
+
+  const { matched: ignoredLabels, shouldSkip } = shouldSkipByLabel(
+    prLabels,
+    config.exclude?.prLabelsToIgnore ?? []
+  );
+
+  if (shouldSkip) {
+    return {
+      status: 'skipped-by-label',
+      repoRoot,
+      defaultBranch,
+      mergeBase,
+      projectRules,
+      availableContexts: contexts,
+      availableDependencies: dependencies,
+      config,
+      configPath,
+      configSource,
+      prLabels,
+      matchedLabels: ignoredLabels,
+    };
+  }
+
+  if (!reviewFiles.length) {
+    return {
+      status: 'no-changes',
+      repoRoot,
+      defaultBranch,
+      mergeBase,
+      projectRules,
+      diff,
+      availableContexts: contexts,
+      availableDependencies: dependencies,
+      config,
+      configPath,
+      configSource,
+      prLabels,
+    };
+  }
+
+  let planner = null;
+  let plannerSkipped = null;
+  const llmEnabled = (0,utils/* isLlmEnabled */.Rq)();
+
+  if (plannerRequested) {
+    if (dryRun) {
+      plannerSkipped = 'dry-run enabled';
+    } else if (!llmEnabled) {
+      plannerSkipped = (0,utils/* isOfflineMode */.hN)()
+        ? 'offline (rules-only) mode enabled'
+        : 'AI API key (ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY) not set';
+    } else {
+      planner = createOpenAIPlanner();
+    }
+  }
+
+  const plan = await (0,review_runner.buildExecutionPlan)({
+    phase: normalizePhase(phase),
+    changedFiles: reviewFiles,
+    diffText: diff.diffText,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
+    preferredModelHint,
+    planner: planner ?? undefined,
+    plannerMode: requestedPlannerMode,
+    dryRun,
+    llmEnabled,
+    repoRoot,
+    riskMap,
+    skillIds: effectiveSkillIds,
+    manualReviewMode,
+    specDirs: config.review?.specDirs ?? [],
+  });
+
+  const plannerUsed = planner ? !plan.plannerFallback : false;
+  const augmentedPlan = {
+    ...plan,
+    plannerRequested,
+    plannerMode: plannerRequested ? requestedPlannerMode : 'off',
+    plannerUsed,
+    ...(plannerSkipped ? { plannerSkipped } : {}),
+  };
+
+  return {
+    status: 'ok',
+    repoRoot,
+    defaultBranch,
+    mergeBase,
+    changedFiles: reviewFiles,
+    plan: augmentedPlan,
+    diff,
+    projectRules,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
+    prLabels,
+    prBody,
+    config,
+    configPath,
+    configSource,
+  };
+}
+
+async function runLocalReview({
+  cwd = process.cwd(),
+  phase = 'midstream',
+  dryRun = false,
+  debug = false,
+  preferredModelHint = 'balanced',
+  model,
+  apiKey,
+  context: providedContext,
+  availableContexts,
+  availableDependencies,
+  plannerMode,
+  reviewers,
+  baseRef = null,
+  skillIds = null,
+  manualReviewMode = null,
+} = {}) {
+  const context =
+    providedContext ??
+    (await planLocalReview({
+      cwd,
+      phase,
+      dryRun,
+      debug,
+      preferredModelHint,
+      availableContexts,
+      availableDependencies,
+      plannerMode,
+      baseRef,
+      skillIds,
+      manualReviewMode,
+    }));
+  if (context.status === 'no-changes') {
+    return {
+      status: 'no-changes',
+      repoRoot: context.repoRoot,
+      defaultBranch: context.defaultBranch,
+      mergeBase: context.mergeBase,
+      config: context.config,
+      configPath: context.configPath,
+      configSource: context.configSource,
+      prLabels: context.prLabels,
+    };
+  }
+
+  if (context.status === 'skipped-by-label') {
+    return {
+      status: 'skipped-by-label',
+      reason: 'pr-label',
+      matchedLabels: context.matchedLabels,
+      repoRoot: context.repoRoot,
+      defaultBranch: context.defaultBranch,
+      mergeBase: context.mergeBase,
+      availableContexts: context.availableContexts,
+      availableDependencies: context.availableDependencies,
+      config: context.config,
+      configPath: context.configPath,
+      configSource: context.configSource,
+      prLabels: context.prLabels,
+    };
+  }
+
+  const memoryContext = loadReviewMemory(context.repoRoot, {
+    phase: normalizePhase(phase),
+    changedFiles: context.changedFiles,
+  });
+
+  const repoContext = await (0,repo_context/* collectRepoContext */.o)({
+    changedFiles: context.changedFiles,
+    repoRoot: external_node_path_.resolve(context.repoRoot),
+    security: context.config?.security,
+    context: context.config?.context,
+  }).catch(() => null);
+
+  const reviewArgs = {
+    diff: context.diff,
+    plan: context.plan,
+    phase: normalizePhase(phase),
+    dryRun,
+    model,
+    apiKey,
+    projectRules: context.projectRules,
+    riskAssessment: context.plan?.riskAssessment ?? null,
+    memoryContext,
+    fileTypes: context.plan?.fileTypes,
+    relatedADRs: context.plan?.relatedADRs,
+    reviewMode: context.plan?.reviewMode,
+    repoContext,
+    prBody: context.prBody,
+    config: context.config,
+    // #1545 P1: formalized stage/risk/artifact routing signals for `--reviewers
+    // auto`. Populated by the host/PlanGate via the plan; undefined here keeps
+    // the pre-#1545 auto-selection behavior unchanged.
+    signals: context.plan?.reviewSignals,
+  };
+
+  const review = reviewers?.length
+    ? await runReviewerOrchestration({ ...reviewArgs, reviewers })
+    : await (0,review_engine/* generateReview */.G1)(reviewArgs);
+
+  // #687 PR-C: gate findings by Riverbed Memory suppressions.
+  // Run AFTER fingerprint annotation so applySuppressions sees the canonical
+  // 16-hex fingerprint produced by computeFingerprint(). Bypassed when
+  // config.memory.suppressionEnabled === false (see suppression-apply.mjs).
+  const annotatedFindings = (0,finding_factory/* annotateFingerprints */.ic)(review.findings ?? []);
+  const {
+    keptFindings,
+    suppressedFindings,
+    applied: suppressionsApplied,
+  } = applySuppressions(annotatedFindings, memoryContext, { config: context.config });
+
+  // Epic #1347 S4 (#1351): deterministic strict_block gate. Computed over the
+  // PRE-suppression finding set joined with the selected skills so a suppressed
+  // deterministic block still forces the gate — a suppression must not be a
+  // strict_block bypass (fail-safe, mirroring SKIPPED_BY_POLICY).
+  const { strictBlock: findingStrictBlock } = (0,deterministic_gate/* computeStrictBlock */.Si)({
+    findings: annotatedFindings,
+    selected: context.plan?.selected ?? [],
+  });
+
+  // Epic #1347 §11.8 (c2) (#1401): deterministic-gate COMMAND execution. Wiring,
+  // security invariants (double-gated + OFF by default + opt-out no-import +
+  // trust boundary + fail-safe) and the strict_block/unrunnable contract all live
+  // in runDeterministicExecGateIfEnabled (the SINGLE source of truth, P2 #1434).
+  const { strictBlock: deterministicExecStrictBlock, deterministicUnrunnable } =
+    await (0,deterministic_exec_gate/* runDeterministicExecGateIfEnabled */.K)({
+      env: process.env,
+      selected: context.plan?.selected ?? [],
+      reviewSourceDir: external_node_path_.resolve(context.repoRoot),
+      changedFiles: context.changedFiles ?? [],
+    });
+
+  // Either signal (findings-derived OR command-execution-derived) forces the
+  // strict_block gate — they are ORed so neither path can be a bypass.
+  const strictBlock = findingStrictBlock || deterministicExecStrictBlock;
+
+  // Comments and findings are 1:1 in review-engine.mjs (`findings =
+  // comments.map(...)`). When a finding is suppressed, the corresponding
+  // PR comment must also be filtered — otherwise the suppressed finding
+  // still surfaces verbatim in the review thread, defeating the entire
+  // point of the suppression. Match by fingerprint computed from the
+  // comment's own fields so this stays robust if the 1:1 ordering ever
+  // drifts.
+  const suppressedFingerprints = new Set(
+    suppressedFindings.map((f) => f.fingerprint).filter(Boolean)
+  );
+  const reviewComments = review.comments ?? [];
+  const keptComments =
+    suppressedFingerprints.size === 0
+      ? reviewComments
+      : reviewComments.filter((c) => {
+          const fp = (0,finding_factory/* computeFingerprint */.Yo)({
+            ruleId: c.skillId || 'unknown',
+            file: c.file,
+            message: c.message,
+          });
+          return !suppressedFingerprints.has(fp);
+        });
+
+  return {
+    status: 'ok',
+    // Gate fail-safe input (Epic #1347 S2 review M1): dry-run skips the LLM,
+    // so a clean diff scores a vacuous auto-approve — the gate must not read
+    // that as CONVERGED_CLEAN.
+    dryRun: dryRun === true,
+    // Epic #1347 S4 (#1351): deterministic strict_block signal for the gate.
+    // deriveRunGate forwards this to deriveGateDecision → unconditional NO_GO.
+    strictBlock,
+    // Epic #1347 §11.8 (c2) (#1401): deterministic-gate command execution could
+    // not run to a verdict (opt-in only; false unless double-gated). deriveRunGate
+    // forwards this to deriveGateDecision → rule 5c ESCALATE.
+    deterministicUnrunnable,
+    repoRoot: external_node_path_.resolve(context.repoRoot),
+    defaultBranch: context.defaultBranch,
+    mergeBase: context.mergeBase,
+    changedFiles: context.changedFiles,
+    plan: context.plan,
+    reviewMode: context.plan?.reviewMode ?? 'medium',
+    diffText: context.diff.diffText,
+    files: context.diff.filesForReview ?? context.diff.files,
+    comments: keptComments,
+    findings: keptFindings,
+    suppressedFindings,
+    classified: review.classified,
+    reviewerResults: review.reviewerResults ?? null,
+    teamLeadReport: review.teamLeadReport ?? null,
+    tokenEstimate: context.diff.tokenEstimate,
+    rawTokenEstimate: context.diff.rawTokenEstimate,
+    reduction: context.diff.reduction,
+    prompt: review.prompt,
+    reviewDebug: {
+      ...(review.debug ?? {}),
+      suppressionsApplied,
+      // #692 PR-C: surface redaction telemetry without leaking the
+      // pre-redaction text. `redactionHits` is a small {category, count}
+      // tally; raw context never appears here.
+      ...(repoContext?.redactionHits?.length || repoContext?.excludedPaths?.length
+        ? {
+            repoContextSecurity: {
+              redactionHits: repoContext?.redactionHits ?? [],
+              excludedPaths: repoContext?.excludedPaths ?? [],
+            },
+          }
+        : {}),
+      // #689 PR-C: ranking + budget telemetry. Only emitted when the
+      // collector actually used these signals so no-op runs stay clean.
+      ...(repoContext?.ranking || repoContext?.tokenBudget
+        ? {
+            repoContextRanking: repoContext?.ranking ?? null,
+            repoContextTokenBudget: repoContext?.tokenBudget ?? null,
+          }
+        : {}),
+    },
+    projectRules: context.projectRules,
+    availableContexts: context.availableContexts,
+    availableDependencies: context.availableDependencies,
+    prLabels: context.prLabels,
+    config: context.config,
+    configPath: context.configPath,
+    configSource: context.configSource,
+  };
+}
+
+async function doctorLocalReview({
+  cwd = process.cwd(),
+  phase = 'midstream',
+  debug = false,
+  preferredModelHint = 'balanced',
+  availableContexts,
+  availableDependencies,
+} = {}) {
+  const skills = await (0,skill_loader/* loadSkills */.l1)();
+  const base = await collectLocalContext({
+    cwd,
+    debug,
+    contextLines: debug ? 10 : 0,
+    availableContexts,
+    availableDependencies,
+  });
+  const {
+    repoRoot,
+    projectRules,
+    defaultBranch,
+    mergeBase,
+    diff,
+    reviewFiles,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
+  } = base;
+
+  const llmEnabled = (0,utils/* isLlmEnabled */.Rq)();
+
+  const plan = reviewFiles.length
+    ? await (0,review_runner.buildExecutionPlan)({
+        phase: normalizePhase(phase),
+        changedFiles: reviewFiles,
+        diffText: diff.diffText,
+        availableContexts: contexts,
+        availableDependencies: dependencies,
+        preferredModelHint,
+        skills,
+        llmEnabled,
+        repoRoot,
+      })
+    : null;
+
+  return {
+    status: 'ok',
+    repoRoot,
+    defaultBranch,
+    mergeBase,
+    skillsCount: skills.length,
+    projectRules,
+    changedFiles: reviewFiles,
+    plan,
+    availableContexts: contexts,
+    availableDependencies: dependencies,
+    diff,
+    config: base.config,
+    configPath: base.configPath,
+    configSource: base.configSource,
+  };
+}
+
+// EXTERNAL MODULE: ./src/lib/scoring/engine.mjs
+var engine = __nccwpck_require__(9487);
+// EXTERNAL MODULE: ./src/lib/scoring/rubric.mjs
+var rubric = __nccwpck_require__(5034);
+// EXTERNAL MODULE: ./src/lib/gate-decision.mjs
+var gate_decision = __nccwpck_require__(2773);
+;// CONCATENATED MODULE: ./src/lib/run-gate.mjs
+/**
+ * Gate derivation for `river run` results (Epic #1347 S3 / #1350).
+ *
+ * Extracted from cli.mjs formatJsonOutput so the same derivation feeds both
+ * the JSON output artifact and the persisted run record (result store) —
+ * the audit trail must record the same gate the consumer saw.
+ *
+ * The `river run` path performs no plan-text human-approval scan, so
+ * humanApprovalRequired is always false here (documented in
+ * schemas/output.schema.json); riskMapDigest is likewise null on this path.
+ */
+
+
+
+
+
+/**
+ * Derive `{ decision, gate }` for a runLocalReview result. Both fields are
+ * undefined on derivation failure (same fail-soft contract as
+ * finalizeArtifact — the caller's output must never break on scoring).
+ *
+ * @param {object} result - runLocalReview result
+ * @returns {{ decision: string|undefined, gate: object|undefined }}
+ */
+function deriveRunGate(result) {
+  // Defensive (PR #1372 gemini): a null/undefined result yields the same
+  // fail-soft shape instead of throwing on property access.
+  if (result == null || typeof result !== 'object') {
+    return { decision: undefined, gate: undefined };
+  }
+  let decision;
+  try {
+    decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
+  } catch {
+    if (typeof result.decision === 'string' && result.decision.length > 0) {
+      decision = result.decision;
+    }
+  }
+
+  let gate;
+  try {
+    const findings = result.findings ?? [];
+    const riskAssessment = result.plan?.riskAssessment;
+    const loopSignal = (0,loop_signal/* deriveLoopSignalFromArtifact */.K)({ decision, findings });
+    gate = (0,gate_decision/* deriveGateDecision */.RF)({
+      loopSignal,
+      decision,
+      humanApprovalRequired: false,
+      riskAction: riskAssessment?.aggregateAction,
+      blockingFindings: findings.filter(
+        (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
+      ).length,
+      changedFiles: result.changedFiles ?? [],
+      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
+      artifactStatus: result.status ?? null,
+      riskMapPresent: riskAssessment != null,
+      riskMapDigest: null,
+      // Epic #1347 S4 (#1351): deterministic strict_block → unconditional NO_GO.
+      strictBlock: result.strictBlock === true,
+      // Epic #1347 §11.8 (c2) (#1401): deterministic gate could not run → rule 5c
+      // ESCALATE. False unless the double-gated executor was opted in (§11.6).
+      deterministicUnrunnable: result.deterministicUnrunnable === true,
+      config: result.config ?? {},
+    });
+  } catch {
+    // leave gate unset on derivation failure
+  }
+
+  return { decision, gate };
+}
+
+// EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
+var _2020 = __nccwpck_require__(2210);
+// EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
+var dist = __nccwpck_require__(2815);
+;// CONCATENATED MODULE: ./src/cli/render.mjs
+// Shared CLI render / output helpers.
+//
+// Extracted verbatim from src/cli.mjs as part of the CLI dispatch refactor
+// (split main() into per-subcommand handlers). These helpers are shared by the
+// `doctor` and default `run` handlers and by cli.mjs itself, so they live in a
+// standalone module to avoid a circular import between cli.mjs and the command
+// handlers. Behavior, messages, and exit codes are unchanged; only the enclosing
+// module and the relative import depth differ from the original inline code.
+
+
+
+
+
+
+
+
+
+const MAX_PROMPT_PREVIEW_LENGTH = 800;
+const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
+const MAX_DIFF_PREVIEW_LINES = 200;
+const COMMENT_MARKER = '<!-- river-review -->';
+
+function printHintLines(lines = []) {
+  const hints = lines.filter(Boolean);
+  if (!hints.length) return;
+  console.error('\nHints:');
+  hints.forEach((line) => console.error(`- ${line}`));
+}
+
+function formatPlan(plan) {
+  // Defensive defaults: a plan may arrive without selected/skipped (e.g. an
+  // empty `{}` from `--explain` when no plan was computed). Never throw.
+  const selected = (plan?.selected ?? []).map((skill) => skill.metadata?.id ?? skill.id);
+  const skipped = (plan?.skipped ?? []).map((item) => ({
+    id: item.skill?.metadata?.id ?? item.skill?.id,
+    reasons: item.reasons ?? [],
+  }));
+  const reasonCounts = skipped.reduce((acc, item) => {
+    (item.reasons || []).forEach((reason) => {
+      acc.set(reason, (acc.get(reason) ?? 0) + 1);
+    });
+    return acc;
+  }, new Map());
+  return { selected, skipped, reasonCounts };
+}
+
+function printPlan(plan) {
+  const summary = formatPlan(plan);
+  if (summary.selected.length) {
+    console.log(`Selected skills (${summary.selected.length}): ${summary.selected.join(', ')}`);
+  } else {
+    console.log('Selected skills (0): none matched this diff');
+  }
+  if (summary.skipped.length) {
+    console.log('Skipped skills:');
+    summary.skipped.forEach((item) => {
+      console.log(`- ${item.id}: ${item.reasons.join('; ')}`);
+    });
+    if (summary.reasonCounts.size) {
+      console.log('Skip reasons summary:');
+      for (const [reason, count] of summary.reasonCounts.entries()) {
+        console.log(`- ${reason}: ${count}`);
+      }
+    }
+  }
+}
+
+function printComments(comments) {
+  if (!comments.length) {
+    console.log('No review comments generated.');
+    return;
+  }
+  console.log('Review comments:');
+  comments.forEach((comment) => {
+    console.log(`- ${comment.file}:${comment.line}: ${comment.message}`);
+  });
+}
+
+function formatMessageForMarkdown(message) {
+  const labels = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confidence'];
+  let result = message;
+  for (const label of labels) {
+    result = result.replace(new RegExp(`\\s*${label}:`, 'g'), `\n  - **${label}:**`);
+  }
+  return result;
+}
+
+function groupCommentsBySkill(comments) {
+  return (comments ?? []).reduce((groups, comment) => {
+    const key = comment.skillId || '';
+    (groups[key] = groups[key] || []).push(comment);
+    return groups;
+  }, {});
+}
+
+/**
+ * Markdown インジェクション対策: 特殊文字をエスケープ
+ */
+function sanitizeForMarkdown(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/[\\`*_{}[\]()#+\-.!|<>]/g, '\\$&')
+    .replace(/\n/g, ' ');
+}
+
+function formatCommentsMarkdown(comments) {
+  if (!comments?.length) return '_No findings._';
+
+  // スキル単位でグループ化
+  const bySkill = groupCommentsBySkill(comments);
+  const entries = Object.entries(bySkill);
+
+  // スキルIDがないグループのみの場合は従来形式
+  if (entries.length === 1 && entries[0][0] === '') {
+    return comments
+      .map((c) => `- \`${c.file}:${c.line}\`${formatMessageForMarkdown(c.message)}`)
+      .join('\n');
+  }
+
+  // skillId でソートして出力順序を安定化
+  entries.sort((a, b) => a[0].localeCompare(b[0]));
+
+  // スキル単位でセクション化
+  return entries
+    .map(([skillId, items]) => {
+      // skillId をサニタイズして Markdown インジェクションを防止
+      const safeSkillId = sanitizeForMarkdown(skillId);
+      const header = skillId ? `#### 🔍 ${safeSkillId}` : '#### その他';
+      const body = items
+        .map((c) => `- \`${c.file}:${c.line}\`${formatMessageForMarkdown(c.message)}`)
+        .join('\n');
+      return `${header}\n${body}`;
+    })
+    .join('\n\n');
+}
+
+function formatPlanMarkdown(plan) {
+  const summary = formatPlan(plan);
+  const selected = summary.selected.length
+    ? summary.selected.map((id) => `- \`${id}\``).join('\n')
+    : '- _none_';
+
+  if (!summary.skipped.length) {
+    return `### 選択されたスキル (${summary.selected.length})\n${selected}\n`;
+  }
+
+  const skippedLines = summary.skipped
+    .map((item) => `- \`${item.id}\`: ${item.reasons.join('; ')}`)
+    .join('\n');
+  return `### 選択されたスキル (${summary.selected.length})\n${selected}\n\n<details>\n<summary>スキップされたスキル (${summary.skipped.length})</summary>\n\n${skippedLines}\n\n</details>\n`;
+}
+
+function formatDebugSummaryMarkdown(result) {
+  const debug = result.reviewDebug ?? {};
+  const llmStatus = debug.llmUsed
+    ? `used (\`${debug.llmModel}\`)`
+    : debug.llmSkipped || debug.llmError
+      ? `skipped (${debug.llmSkipped || debug.llmError})`
+      : 'not used';
+
+  const plan = result.plan ?? {};
+  const plannerStatus = formatPlannerStatus(plan, { markdown: true });
+  const impactTags = Array.isArray(plan?.impactTags) ? plan.impactTags : [];
+  const impactSummary = impactTags.length ? impactTags.map((t) => `\`${t}\``).join(', ') : '`none`';
+
+  return [
+    `- LLM: ${llmStatus}`,
+    `- Planner: ${plannerStatus}`,
+    `- Impact tags: ${impactSummary}`,
+    `- 変更ファイル数: ${result.changedFiles.length}`,
+    `- トークン見積もり: ${result.tokenEstimate}`,
+  ].join('\n');
+}
+
+function formatPlannerStatus(plan, { markdown = false } = {}) {
+  const wrap = (value) => (markdown ? `\`${value}\`` : value);
+  const requested = Boolean(plan?.plannerRequested);
+  const mode = plan?.plannerMode || 'off';
+  if (!requested || mode === 'off') return wrap('off');
+  if (plan?.plannerSkipped) return `${wrap(mode)} skipped (${plan.plannerSkipped})`;
+  if (plan?.plannerFallback) {
+    const reason = plan?.plannerError || '';
+    return reason ? `${wrap(mode)} fallback (${reason})` : `${wrap(mode)} fallback`;
+  }
+  return plan?.plannerUsed ? `${wrap(mode)} used` : `${wrap(mode)} not used`;
+}
+
+function logPreview(title, text, maxLength, log, { leadingNewline = false } = {}) {
+  if (!text) return;
+  const preview = text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+  const prefix = leadingNewline ? '\n' : '';
+  log(`${prefix}${title}:`);
+  log(preview);
+}
+
+function formatRiskSummaryMarkdown(plan) {
+  const risk = plan?.riskAssessment;
+  if (!risk) return '';
+  const badge =
+    risk.aggregateAction === 'require_human_review'
+      ? '🔴 require_human_review'
+      : risk.aggregateAction === 'escalate'
+        ? '🟡 escalate'
+        : '🟢 comment_only';
+  const lines = ['### リスク評価\n', '**判定**: ' + badge + '\n'];
+  if (risk.humanReviewFiles?.length) {
+    lines.push('**人間レビュー必須**:');
+    for (const f of risk.humanReviewFiles) lines.push('- ' + sanitizeForMarkdown(f));
+    lines.push('');
+  }
+  if (risk.escalatedFiles?.length) {
+    lines.push('**エスカレーション対象**:');
+    for (const f of risk.escalatedFiles) lines.push('- ' + sanitizeForMarkdown(f));
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+/**
+ * #1067: true when no LLM key is configured (LLM review skipped) AND there are
+ * no static findings — i.e. the run would otherwise post a value-less boilerplate
+ * PR comment (skipped-skills list / impact tags / token estimate). Used to emit a
+ * single concise note instead.
+ */
+function isLlmlessEmptyReview(result) {
+  const debug = result?.reviewDebug ?? {};
+  const llmKeyMissing = typeof debug.llmSkipped === 'string' && /not set/i.test(debug.llmSkipped);
+  const noFindings = (result?.comments?.length ?? 0) === 0;
+  return llmKeyMissing && noFindings;
+}
+
+function printMarkdownReport(result, phase) {
+  if (isLlmlessEmptyReview(result)) {
+    console.log(
+      `${COMMENT_MARKER}
+## River Review
+
+- フェーズ: \`${phase}\`
+- LLM レビュー未設定（\`ANTHROPIC_API_KEY\` / \`OPENAI_API_KEY\` / \`GOOGLE_API_KEY\` のいずれも未設定）のため静的チェックのみ実行し、**指摘はありません**。いずれか 1 つを設定すると LLM レビューが有効になり、リポジトリ固有の規約・差分スコープ等の観点でレビューします。`
+    );
+    return;
+  }
+  const header = `${COMMENT_MARKER}
+## River Review
+
+- フェーズ: \`${phase}\`
+${formatDebugSummaryMarkdown(result)}
+`;
+  const planSection = formatPlanMarkdown(result.plan);
+  const riskSection = formatRiskSummaryMarkdown(result.plan);
+  const prioritySummary = formatPrioritySummaryMarkdown(result);
+  const scoreSection = formatScoreSectionMarkdown(result, phase);
+  const findings = `### 指摘\n${formatCommentsMarkdown(result.comments)}\n`;
+  const suppressedSummary = formatSuppressedSummaryMarkdown(result.classified);
+  console.log(
+    [header, planSection, riskSection, prioritySummary, scoreSection, findings, suppressedSummary]
+      .filter(Boolean)
+      .join('\n')
+  );
+}
+
+function formatSuppressedSummaryMarkdown(classified) {
+  if (!classified?.suppressed?.length) return null;
+  const counts = {};
+  for (const f of classified.suppressed) {
+    counts[f.suppressReason] = (counts[f.suppressReason] ?? 0) + 1;
+  }
+  const top = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([r, n]) => `${r}(${n})`)
+    .join(', ');
+  return `> _${classified.suppressed.length} 件の指摘を抑制しました (主な理由: ${top})_\n`;
+}
+
+function formatPrioritySummaryMarkdown(result) {
+  const findings = result.findings ?? [];
+  const counts = { P1: 0, P2: 0, P3: 0, P4: 0 };
+  for (const f of findings) {
+    const p = (0,finding_factory/* severityToPriority */.nG)(f.severity);
+    counts[p]++;
+  }
+
+  const lines = ['### 優先度サマリー\n'];
+
+  if (counts.P1 > 0) {
+    lines.push(`> **P1 (マージ前必須修正): ${counts.P1} 件**\n`);
+  }
+
+  lines.push(
+    `- P1 (must fix before merge): ${counts.P1} 件`,
+    `- P2 (should fix or waive): ${counts.P2} 件`,
+    `- P3 (recommended improvement): ${counts.P3} 件`,
+    `- P4 (informational): ${counts.P4} 件`,
+    ''
+  );
+
+  const suppressed = result.classified?.suppressed ?? [];
+  if (suppressed.length > 0) {
+    const reasonCounts = {};
+    for (const f of suppressed) {
+      reasonCounts[f.suppressReason] = (reasonCounts[f.suppressReason] ?? 0) + 1;
+    }
+    const topReasons = Object.entries(reasonCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([r, n]) => `${r}(${n})`)
+      .join(', ');
+    lines.push(`- 抑制済み: ${suppressed.length} 件 (主な理由: ${topReasons})`, '');
+  }
+
+  const humanReviewFiles = result.plan?.riskMap?.require_human_review ?? [];
+  if (humanReviewFiles.length > 0) {
+    lines.push('> **Human review required**');
+    for (const f of humanReviewFiles) lines.push(`> - ${sanitizeForMarkdown(f)}`);
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+function formatScoreSectionMarkdown(result, phase) {
+  const artifact = formatJsonOutput(result, phase);
+  const score = (0,engine/* scoreReview */.lS)(artifact.issues ?? []);
+  // formatJsonOutput already resolved the canonical verdict; reuse it so the
+  // Markdown score section cannot drift from JSON/YAML/HTML (#1170 F3).
+  score.verdict = (0,engine/* resolveVerdict */.Cq)(artifact.decision, score.verdict);
+  const lines = ['### スコア (参考値)'];
+  lines.push('');
+  lines.push(`結果(スコア): **${score.overall}/100**`);
+  lines.push(`判定: **${score.verdict}**`);
+  lines.push('');
+  lines.push('内訳:');
+  for (const axis of rubric/* AXES */.gR) {
+    lines.push(`- ${rubric/* AXIS_LABELS_JA */.Sf[axis]}: ${score.axes[axis]}/100`);
+  }
+  lines.push('');
+  lines.push(
+    '> スコアは severity と axis から決定論的に算出された **参考値** (`derived: true`)。HITL レビューと併用してください。'
+  );
+  lines.push('');
+  return lines.join('\n');
+}
+
+/**
+ * #1045 A3 (#1141): human-readable explanation of which skills / gates / config
+ * tier were resolved for this run. A focused alias over the same deterministic
+ * resolution the planner already computed — printed to stderr so it never
+ * corrupts machine-readable stdout (json / yaml).
+ */
+function printExplain(result, { log = console.error } = {}) {
+  const summary = formatPlan(result?.plan ?? {});
+  log('\nResolution (--explain):');
+
+  // Config tier that won (CLI > repo-local > global > built-in default).
+  const sourceLabel =
+    result?.configSource === 'file'
+      ? 'repository-local'
+      : result?.configSource === 'global'
+        ? 'user-global'
+        : 'built-in default';
+  log(`- Config: ${sourceLabel}${result?.configPath ? ` (${result.configPath})` : ''}`);
+
+  // Skill / gate resolution.
+  log(
+    `- Planner: ${formatPlannerStatus(result?.plan ?? {})}` +
+      (result?.manualReviewMode ? ` / review mode: ${result.manualReviewMode}` : '')
+  );
+  if (summary.selected.length) {
+    log(`- Selected skills (${summary.selected.length}): ${summary.selected.join(', ')}`);
+  } else {
+    log('- Selected skills (0): none matched this diff');
+  }
+  if (summary.skipped.length) {
+    log(`- Skipped skills (${summary.skipped.length}):`);
+    summary.skipped.forEach((item) => {
+      log(`  - ${item.id}: ${item.reasons.join('; ')}`);
+    });
+  }
+}
+
+function printDebugInfo(result, { log = console.log } = {}) {
+  const debug = result.reviewDebug ?? {};
+  const rawTokens = result.rawTokenEstimate ?? result.tokenEstimate;
+  const reduction = result.reduction ?? 0;
+  const plannerStatus = formatPlannerStatus(result.plan ?? {});
+  const impactTags = Array.isArray(result.plan?.impactTags) ? result.plan.impactTags : [];
+  log(`\nDebug info:
+- LLM: ${debug.llmUsed ? `used (\`${debug.llmModel}\`)` : debug.llmSkipped || debug.llmError || 'not used'}
+- Planner: ${plannerStatus}
+- Impact tags: ${impactTags.join(', ') || 'none'}
+- Token estimate (raw -> optimized): ${rawTokens} -> ${result.tokenEstimate} (${reduction}% reduction)
+- Prompt truncated: ${debug.promptTruncated ? 'yes' : 'no'}
+- Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}
+- Project rules: ${result.projectRules ? 'present' : 'none'}
+- Available contexts: ${(result.availableContexts || []).join(', ') || 'none'}
+- Available dependencies: ${
+    result.availableDependencies
+      ? result.availableDependencies.join(', ')
+      : 'not specified (skip disabled)'
+  }
+`);
+  if (debug.llmError) {
+    log(`LLM error: ${debug.llmError}`);
+    // T64: パース失敗時に生のLLM出力が見えず切り分けができなかったため、
+    // debug.rawLlmOutput があれば truncate してログに出す。
+    logPreview('Raw LLM output', debug.rawLlmOutput, MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH, log);
+  }
+  logPreview('Prompt preview', debug.promptPreview, MAX_PROMPT_PREVIEW_LENGTH, log);
+  logPreview(
+    'Project-specific review rules (preview)',
+    result.projectRules,
+    MAX_PROMPT_PREVIEW_LENGTH,
+    log,
+    { leadingNewline: true }
+  );
+  if (result.plan?.skipped?.length) {
+    log('\nSkipped skills detail:');
+    result.plan.skipped.forEach((item) => {
+      const id = item.skill?.metadata?.id ?? item.skill?.id ?? '(unknown)';
+      log(`- ${id}: ${item.reasons.join('; ')}`);
+    });
+  }
+  log('\n--- diff preview ---');
+  log(result.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
+}
+
+/**
+ * Lazily compiled validator for schemas/output.schema.json (draft 2020-12).
+ * Compiled once on first use; null if the schema cannot be loaded so a
+ * validation problem never breaks JSON output emission.
+ */
+let outputSchemaValidator;
+function getOutputSchemaValidator() {
+  if (outputSchemaValidator !== undefined) return outputSchemaValidator;
+  try {
+    const schemaPath = (0,external_node_url_.fileURLToPath)(__nccwpck_require__.ab + "output.schema.json");
+    const schema = JSON.parse((0,external_node_fs_.readFileSync)(schemaPath, 'utf8'));
+    const ajv = new _2020({ allErrors: true, strict: false });
+    dist(ajv);
+    outputSchemaValidator = ajv.compile(schema);
+  } catch (err) {
+    console.error(`Warning: could not load output.schema.json for validation: ${err.message}`);
+    outputSchemaValidator = null;
+  }
+  return outputSchemaValidator;
+}
+
+/**
+ * Validate a formatted artifact against output.schema.json at runtime and
+ * report violations to stderr (#1254). Reporting only — the artifact is still
+ * returned so a non-conforming LLM payload surfaces loudly instead of failing
+ * silently downstream.
+ */
+function validateOutputArtifact(artifact) {
+  const validate = getOutputSchemaValidator();
+  if (!validate) return;
+  if (!validate(artifact)) {
+    console.error(
+      `Warning: JSON output does not conform to schemas/output.schema.json:\n${JSON.stringify(
+        validate.errors,
+        null,
+        2
+      )}`
+    );
+  }
+}
+
+/**
+ * Format review result as JSON conforming to schemas/output.schema.json.
+ * Consumes the structured findings[] produced by the Finding Pipeline.
+ * Additively includes a top-level `decision` field derived from scoreReview verdict.
+ */
+function formatJsonOutput(result, phase) {
+  const issueCountBySeverity = { info: 0, minor: 0, major: 0, critical: 0 };
+  const issueCountByPhase = { upstream: 0, midstream: 0, downstream: 0 };
+
+  const issues = (result.findings ?? []).map((f) => {
+    issueCountBySeverity[f.severity]++;
+    issueCountByPhase[phase] = (issueCountByPhase[phase] ?? 0) + 1;
+    return {
+      id: f.id,
+      ruleId: f.ruleId,
+      reviewer: f.reviewer,
+      title: f.title,
+      message: f.message,
+      severity: f.severity,
+      confidence: f.confidence,
+      status: f.status,
+      evidence: f.evidence,
+      phase,
+      file: f.file,
+      ...(f.lineStart ? { line: f.lineStart } : {}),
+      ...(f.lineEnd && f.lineEnd !== f.lineStart ? { lineEnd: f.lineEnd } : {}),
+      ...(f.suggestion ? { suggestion: f.suggestion } : {}),
+      ...(f.consensusLevel ? { consensusLevel: f.consensusLevel } : {}),
+      ...(f.reviewerRole ? { reviewerRole: f.reviewerRole } : {}),
+    };
+  });
+
+  const priorityCounts = { P1: 0, P2: 0, P3: 0, P4: 0 };
+  for (const f of result.findings ?? []) {
+    const p = (0,finding_factory/* severityToPriority */.nG)(f.severity);
+    priorityCounts[p]++;
+  }
+  const prioritySummary = {
+    counts: priorityCounts,
+    requiresImmediateAttention: priorityCounts.P1 > 0,
+  };
+
+  const summary = { issueCountBySeverity, issueCountByPhase, prioritySummary };
+  const riskAssessment = result.plan?.riskAssessment;
+  if (riskAssessment) {
+    summary.riskSummary = {
+      aggregateAction: riskAssessment.aggregateAction,
+      escalatedFiles: riskAssessment.escalatedFiles,
+      humanReviewFiles: riskAssessment.humanReviewFiles,
+    };
+  }
+  // Gate + decision derivation shared with the run-record audit trail
+  // (#1350 S3): extracted to src/lib/run-gate.mjs so the persisted record
+  // and the JSON output always carry the same gate.
+  const { decision, gate } = deriveRunGate(result);
+
+  const artifact = {
+    issues,
+    summary,
+    ...(decision !== undefined ? { decision } : {}),
+    ...(gate ? { gate } : {}),
+    ...(result.teamLeadReport ? { teamLeadReport: result.teamLeadReport } : {}),
+  };
+  validateOutputArtifact(artifact);
+  return artifact;
+}
+
+function countChangedLines(files) {
+  let lines = 0;
+  for (const file of files ?? []) {
+    for (const hunk of file.hunks ?? []) {
+      lines += (hunk.lines ?? []).filter((l) => l.startsWith('+') || l.startsWith('-')).length;
+    }
+  }
+  return lines;
+}
+
+;// CONCATENATED MODULE: ./src/cli/commands/doctor.mjs
+// `river doctor` subcommand handler.
+//
+// Extracted verbatim from src/cli.mjs main() as part of the CLI dispatch
+// refactor (split main() into per-subcommand handlers). Behavior, messages,
+// and exit codes are unchanged; only the enclosing function and the relative
+// import depth differ from the original inline block. The shared render helpers
+// (printPlan / printExplain / printHintLines) live in src/cli/render.mjs.
+
+
+
+
+/**
+ * Handle the `doctor` command (setup check + hints).
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @param {string} targetPath - resolved repo target path.
+ * @returns {Promise<number>} process exit code.
+ */
+async function runDoctorCommand(parsed, targetPath) {
+  const result = await doctorLocalReview({
+    cwd: targetPath,
+    phase: parsed.phase,
+    debug: parsed.debug,
+    preferredModelHint: 'balanced',
+    availableContexts: parsed.availableContexts,
+    availableDependencies: parsed.availableDependencies,
+  });
+
+  const llmConfigured = (0,utils/* isLlmEnabled */.Rq)();
+
+  console.log(`River Review doctor
+Repo: ${result.repoRoot}
+Base branch: ${result.defaultBranch}
+Merge base: ${result.mergeBase}
+Skills loaded: ${result.skillsCount}
+Project rules: ${result.projectRules ? 'present' : 'none'}
+LLM (review): ${llmConfigured ? 'configured' : 'not set'}
+LLM (planner): ${llmConfigured ? 'configured' : 'not set'}
+Contexts: ${(result.availableContexts || []).join(', ') || 'none'}
+Dependencies: ${
+    result.availableDependencies
+      ? result.availableDependencies.join(', ')
+      : 'not specified (skip disabled)'
+  }`);
+
+  if (!llmConfigured) {
+    printHintLines([
+      'Set `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_API_KEY` to enable headless LLM reviews.',
+      'Mechanical (no-key) checks and `--dry-run` / `--offline` still work without one.',
+    ]);
+  }
+
+  if (!result.changedFiles.length) {
+    console.log(`No changes to review compared to ${result.defaultBranch}.`);
+    return 0;
+  }
+
+  if (result.plan) {
+    printPlan(result.plan);
+  }
+  if (parsed.explain) {
+    printExplain(result);
+  }
+  if (parsed.debug) {
+    const impactTags = Array.isArray(result.plan?.impactTags) ? result.plan.impactTags : [];
+    console.log(
+      `\nDebug info:\n- Impact tags: ${impactTags.join(', ') || 'none'}\n- Token estimate: ${result.diff.tokenEstimate}\n`
+    );
+    console.log('--- diff preview ---');
+    console.log(result.diff.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
+  }
+  return 0;
+}
+
+;// CONCATENATED MODULE: ./src/core/cost-estimator.mjs
+const DEFAULT_MODEL = 'gpt-4-turbo';
+const PRICING_LAST_UPDATED = '2026-05-14'; // adjust when pricing changes
+
+// Per-1k-token rates in USD. `cacheReadPer1k` (optional) covers Anthropic
+// ephemeral prompt cache reads and OpenAI `cached_tokens` discounted inputs;
+// fallbacks to inputPer1k * 0.1 when omitted.
+const MODEL_PRICES = {
+  // --- OpenAI ---
+  'gpt-4': { inputPer1k: 0.03, outputPer1k: 0.06 },
+  'gpt-4-turbo': { inputPer1k: 0.01, outputPer1k: 0.03 },
+  'gpt-3.5-turbo': { inputPer1k: 0.0005, outputPer1k: 0.0015 },
+  'gpt-4o': { inputPer1k: 0.0025, outputPer1k: 0.01, cacheReadPer1k: 0.00125 },
+  'gpt-4o-mini': { inputPer1k: 0.00015, outputPer1k: 0.0006, cacheReadPer1k: 0.000075 },
+  o1: { inputPer1k: 0.015, outputPer1k: 0.06 },
+  'o1-mini': { inputPer1k: 0.003, outputPer1k: 0.012 },
+  // --- Anthropic ---
+  // Cache write surcharge (1.25x input) is included implicitly via inputPer1k
+  // for cacheCreationInputTokens billing; cache read is 0.1x input.
+  'claude-opus-4-7': { inputPer1k: 0.015, outputPer1k: 0.075, cacheReadPer1k: 0.0015 },
+  'claude-sonnet-4-6': { inputPer1k: 0.003, outputPer1k: 0.015, cacheReadPer1k: 0.0003 },
+  'claude-haiku-4-5': { inputPer1k: 0.001, outputPer1k: 0.005, cacheReadPer1k: 0.0001 },
+};
+
+function getPricing(model) {
+  return MODEL_PRICES[model] ?? MODEL_PRICES[DEFAULT_MODEL];
+}
+
+function toUSD(value) {
+  return Math.round(value * 10000) / 10000;
+}
+
+/**
+ * Simple cost estimator for LLM usage.
+ * Rates are approximate; adjust as pricing changes.
+ */
+class CostEstimator {
+  constructor(model = DEFAULT_MODEL) {
+    this.model = model;
+    this.pricing = getPricing(model);
+    this.lastUpdated = PRICING_LAST_UPDATED;
+  }
+
+  /**
+   * Estimate cost from token counts.
+   * @param {number} inputTokens
+   * @param {number} outputTokens
+   * @returns {{usd: number, inputTokens: number, outputTokens: number, model: string}}
+   */
+  estimateCost(inputTokens = 0, outputTokens = 0) {
+    const inCost = (inputTokens / 1000) * this.pricing.inputPer1k;
+    const outCost = (outputTokens / 1000) * this.pricing.outputPer1k;
+    return {
+      usd: toUSD(inCost + outCost),
+      inputTokens,
+      outputTokens,
+      model: this.model,
+    };
+  }
+
+  /**
+   * Compute cost from a normalized usage record (the shape produced by
+   * AnthropicClient.lastUsage / OpenAIClient.lastUsage). Splits the input
+   * bucket into fresh vs cache-read so prompt-caching savings are surfaced.
+   *
+   * @param {{model?: string, inputTokens?: number, outputTokens?: number, cacheCreationInputTokens?: number, cacheReadInputTokens?: number}} usage
+   */
+  estimateFromUsage(usage) {
+    if (!usage) return null;
+    const pricing = MODEL_PRICES[usage.model] ?? this.pricing;
+    const freshInput = (usage.inputTokens ?? 0) - (usage.cacheReadInputTokens ?? 0);
+    const cacheRead = usage.cacheReadInputTokens ?? 0;
+    const cacheCreate = usage.cacheCreationInputTokens ?? 0;
+    const output = usage.outputTokens ?? 0;
+    const cacheReadRate = pricing.cacheReadPer1k ?? pricing.inputPer1k * 0.1;
+    // Anthropic charges 1.25x input rate for cache writes; we already count
+    // them via inputTokens (SDK reports cache_creation separately but it
+    // overlaps with input_tokens). Treat cacheCreation as a *surcharge* delta:
+    // extra 0.25 * input rate per token. OpenAI does not bill cache writes.
+    const cacheWriteSurcharge =
+      usage.provider === 'anthropic' ? (cacheCreate / 1000) * pricing.inputPer1k * 0.25 : 0;
+    const usd =
+      (Math.max(0, freshInput) / 1000) * pricing.inputPer1k +
+      (cacheRead / 1000) * cacheReadRate +
+      cacheWriteSurcharge +
+      (output / 1000) * pricing.outputPer1k;
+    return {
+      usd: toUSD(usd),
+      model: usage.model ?? this.model,
+      provider: usage.provider ?? null,
+      breakdown: {
+        freshInputTokens: Math.max(0, freshInput),
+        cacheReadTokens: cacheRead,
+        cacheCreationTokens: cacheCreate,
+        outputTokens: output,
+      },
+    };
+  }
+
+  /**
+   * Rough estimate from diff+skills.
+   * Uses diff token estimate plus skill overhead (instructions/prompts).
+   * @param {{tokenEstimate?: number, rawTokenEstimate?: number}} diff
+   * @param {Array} skills
+   */
+  estimateFromDiff(diff = {}, skills = []) {
+    const baseTokens = diff.tokenEstimate ?? diff.rawTokenEstimate ?? 0;
+    const skillTokens = skills.length * 200; // overhead per skill
+    const inputTokens = baseTokens + skillTokens;
+    const outputTokens = Math.max(300, skills.length * 50); // small response allowance
+    return this.estimateCost(inputTokens, outputTokens);
+  }
+
+  /**
+   * Format cost information for human-friendly display.
+   * @param {{usd: number, inputTokens: number, outputTokens: number, model: string}} cost
+   */
+  formatCost(cost) {
+    const usd = cost?.usd ?? 0;
+    return `Model: ${cost?.model || this.model}
+Estimated cost: $${usd.toFixed(4)} USD
+Tokens: ${cost.inputTokens} (input) + ${cost.outputTokens} (output)
+Pricing last updated: ${this.lastUpdated}`;
+  }
+}
+
+
+/* harmony default export */ const cost_estimator = (CostEstimator);
+
+;// CONCATENATED MODULE: ./src/cli/commands/run.mjs
+// `river run` (default local review) subcommand handler.
+//
+// Extracted verbatim from src/cli.mjs main() as part of the CLI dispatch
+// refactor (split main() into per-subcommand handlers). Behavior, messages,
+// and exit codes are unchanged; only the enclosing function and the relative
+// import depth (static and dynamic imports) differ from the original inline
+// block. The shared render helpers live in src/cli/render.mjs.
+
+
+
+
+
+
+
+
+/**
+ * Handle the default `run` command (local review against the git repo).
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @param {string} targetPath - resolved repo target path.
+ * @returns {Promise<number>} process exit code.
+ */
+async function runRunCommand(parsed, targetPath) {
+  // Resolve --skill-set to its skill ids up front so an unknown name fails
+  // fast with a clear message before any review work begins.
+  let skillIds = null;
+  if (parsed.skillSet) {
+    try {
+      skillIds = await (0,skill_loader/* resolveSkillSet */.mw)(parsed.skillSet);
+    } catch (err) {
+      if (err instanceof skill_loader/* SkillLoaderError */.vN) {
+        console.error(`Error: ${err.message}`);
+        return 1;
+      }
+      throw err;
+    }
+  }
+
+  const manualReviewMode = (0,review_plan_generator/* resolveDepthToReviewMode */.c8)(parsed.depth);
+
+  const context = await planLocalReview({
+    cwd: targetPath,
+    phase: parsed.phase,
+    dryRun: parsed.dryRun,
+    debug: parsed.debug,
+    availableContexts: parsed.availableContexts,
+    availableDependencies: parsed.availableDependencies,
+    plannerMode: parsed.plannerMode,
+    baseRef: parsed.base,
+    skillIds,
+    manualReviewMode,
+  });
+
+  const estimator = new cost_estimator(
+    external_node_process_namespaceObject.env.OPENAI_MODEL || external_node_process_namespaceObject.env.RIVER_OPENAI_MODEL || undefined
+  );
+  const estimatedCost =
+    context.status === 'ok'
+      ? estimator.estimateFromDiff(context.diff, context.plan?.selected ?? [])
+      : null;
+
+  const logRunHeader =
+    parsed.output === 'markdown' || parsed.output === 'json' || parsed.output === 'yaml'
+      ? console.error
+      : console.log;
+  logRunHeader(`River Review (local)
+Phase: ${parsed.phase}
+Repo: ${context.repoRoot}
+Base branch: ${context.defaultBranch}
+Merge base: ${context.mergeBase}
+Dry run: ${parsed.dryRun ? 'yes' : 'no'}
+Debug: ${parsed.debug ? 'yes' : 'no'}
+Planner: ${formatPlannerStatus(context.plan ?? {})}
+Contexts: ${(context.availableContexts || []).join(', ') || 'none'}
+Dependencies: ${
+    context.availableDependencies
+      ? context.availableDependencies.join(', ')
+      : 'not specified (skip disabled)'
+  }`);
+
+  if (context.status === 'skipped-by-label') {
+    const labels = context.matchedLabels?.length
+      ? context.matchedLabels.join(', ')
+      : '(not specified)';
+    console.log(`Review skipped: PR labels matched exclude patterns (${labels}).`);
+    return 0;
+  }
+
+  if (context.status === 'no-changes') {
+    console.log(`No changes to review compared to ${context.defaultBranch}.`);
+    return 0;
+  }
+
+  if (estimatedCost && parsed.maxCost !== null && estimatedCost.usd > parsed.maxCost) {
+    console.log(estimator.formatCost(estimatedCost));
+    console.error(
+      `Estimated cost $${estimatedCost.usd.toFixed(4)} exceeds max-cost ${parsed.maxCost}. Aborting.`
+    );
+    return 1;
+  }
+
+  if (parsed.estimate) {
+    if (!estimatedCost) {
+      console.log('Cost estimation skipped (no changes or skipped by label).');
+      return 0;
+    }
+    console.log('Cost Estimate:');
+    console.log(estimator.formatCost(estimatedCost));
+    console.log(`Files to review: ${context.changedFiles.length}`);
+    console.log(
+      `Lines changed (approx): ${countChangedLines(context.diff.filesForReview ?? context.diff.files)}`
+    );
+    return 0;
+  }
+
+  const result = await runLocalReview({
+    cwd: targetPath,
+    phase: parsed.phase,
+    dryRun: parsed.dryRun,
+    debug: parsed.debug,
+    context,
+    availableContexts: parsed.availableContexts,
+    availableDependencies: parsed.availableDependencies,
+    plannerMode: parsed.plannerMode,
+    reviewers: parsed.reviewers,
+    baseRef: parsed.base,
+    skillIds,
+    manualReviewMode,
+  });
+
+  if (parsed.explain) {
+    printExplain(result);
+  }
+
+  // Persist run to result store when --save is provided. Under GitHub
+  // Actions the save is AUTOMATIC (Epic #1347 S3, adversarial design
+  // review Blocker 1: an opt-in store never accumulates the audit trail),
+  // and the digest is appended to the job summary as the forced display
+  // point — supervision that requires someone to remember a command is
+  // not supervision.
+  // M1 (#1372 review): RIVER_AUTO_SAVE=false opts out of the CI auto-save
+  // (documented in the contract doc; the write target is .river/runs/).
+  const isGithubActions =
+    external_node_process_namespaceObject.env.GITHUB_ACTIONS === 'true' && external_node_process_namespaceObject.env.RIVER_AUTO_SAVE !== 'false';
+  if ((parsed.save || isGithubActions) && result.status === 'ok') {
+    try {
+      const { buildRunRecord, saveRunRecord, resolveStoreDir } =
+        await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+      const { decision: runDecision, gate: runGate } = deriveRunGate(result);
+      const record = buildRunRecord(result, {
+        phase: parsed.phase,
+        gate: runGate,
+        decision: runDecision,
+      });
+      // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
+      const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });
+      console.error(`Run saved: ${record.runId} → ${savedPath}`);
+    } catch (err) {
+      console.error(`Warning: --save failed: ${err.message}`);
+    }
+  }
+
+  // Forced display point (Epic #1347 S3): under GitHub Actions, append the
+  // runs digest to the job summary. Fail-soft — the review result must
+  // never break on digest generation.
+  if (isGithubActions && external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
+    try {
+      // C1 (#1372 review): the digest needs FULL records — the light
+      // listRunRecords metadata has no gate/findings and silently produced
+      // an empty digest here.
+      const { loadAllRunRecords, resolveStoreDir } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+      const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
+      const records = await loadAllRunRecords(resolveStoreDir(targetPath));
+      const digest = buildRunsDigest(records, { now: () => new Date() });
+      const fs = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
+      await fs.appendFile(external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
+    } catch (err) {
+      console.error(`Warning: job summary digest failed: ${err.message}`);
+    }
+  }
+
+  // Regression comparison when --baseline is provided
+  if (parsed.baseline && result.status === 'ok') {
+    try {
+      const { diffReviews, formatRegressionSummary } = await __nccwpck_require__.e(/* import() */ 744).then(__nccwpck_require__.bind(__nccwpck_require__, 3744));
+      const baselineRaw = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19)).then((fs) =>
+        fs.readFile(parsed.baseline, 'utf8')
+      );
+      const baselineFindings = JSON.parse(baselineRaw);
+      const prevFindings = Array.isArray(baselineFindings)
+        ? baselineFindings
+        : (baselineFindings.findings ?? baselineFindings.issues ?? []);
+      const diff = diffReviews(prevFindings, result.findings ?? []);
+      const regSummary = formatRegressionSummary(diff);
+      console.log(regSummary);
+    } catch (err) {
+      console.error(`Warning: --baseline comparison failed: ${err.message}`);
+    }
+  }
+
+  if (parsed.output === 'json') {
+    console.log(JSON.stringify(formatJsonOutput(result, parsed.phase), null, 2));
+  } else if (parsed.output === 'markdown') {
+    printMarkdownReport(result, parsed.phase);
+  } else if (parsed.output === 'yaml') {
+    const { formatYamlOutput } = await __nccwpck_require__.e(/* import() */ 610).then(__nccwpck_require__.bind(__nccwpck_require__, 4610));
+    const jsonOutput = formatJsonOutput(result, parsed.phase);
+    const artifact = {
+      phase: parsed.phase,
+      timestamp: new Date().toISOString(),
+      findings: jsonOutput.issues,
+      plan: result.plan,
+      // Propagate the canonical verdict so YAML matches JSON (#1170 F3).
+      ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
+    };
+    console.log(formatYamlOutput(artifact));
+  } else if (parsed.output === 'html') {
+    const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+    const jsonOutput = formatJsonOutput(result, parsed.phase);
+    const htmlResult = {
+      findings: result.findings ?? [],
+      plan: result.plan,
+      timestamp: new Date().toISOString(),
+      // Propagate the canonical verdict so HTML matches JSON (#1170 F3).
+      ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
+    };
+    console.log(formatHtmlOutput(htmlResult, parsed.phase));
+  } else {
+    printPlan(result.plan);
+    printComments(result.comments);
+  }
+
+  if (parsed.debug) {
+    if (
+      parsed.output === 'markdown' ||
+      parsed.output === 'json' ||
+      parsed.output === 'yaml' ||
+      parsed.output === 'html'
+    ) {
+      console.error('\nDebug info (not included in output):');
+      printDebugInfo(result, { log: console.error });
+    } else {
+      printDebugInfo(result);
+    }
+  }
+
+  // #1066 self-review: honor --fail-on / --warn-on / --advisory-only on
+  // `river run` too. Previously these were parsed but silently ignored on
+  // the run path (only `river review` gated), so agents that relied on the
+  // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
+  if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
+    const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
+    return await resolveGateExitCode({
+      failOn: parsed.failOn,
+      warnOn: parsed.warnOn,
+      advisoryOnly: parsed.advisoryOnly,
+      gate: parsed.gate,
+      // Derived the same way as the JSON-output gate so the exit code and the
+      // emitted artifact agree. deriveRunGate is statically imported above.
+      getGateInput: () => ({ findings: formatJsonOutput(result, parsed.phase).issues }),
+      getGateObject: () => deriveRunGate(result).gate,
+    });
+  }
+
+  return 0;
+}
+
 ;// CONCATENATED MODULE: ./src/cli.mjs
 
 
@@ -64653,23 +65544,6 @@ async function runSuppressionCommand(parsed, targetPath) {
 
 
 
-
-
-
-
-
-
-const MAX_PROMPT_PREVIEW_LENGTH = 800;
-const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
-const MAX_DIFF_PREVIEW_LINES = 200;
-const COMMENT_MARKER = '<!-- river-review -->';
-
-function printHintLines(lines = []) {
-  const hints = lines.filter(Boolean);
-  if (!hints.length) return;
-  console.error('\nHints:');
-  hints.forEach((line) => console.error(`- ${line}`));
-}
 
 function printHelp() {
   console.log(`Usage: river <command> <path> [options]
@@ -65315,522 +66189,6 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function formatPlan(plan) {
-  // Defensive defaults: a plan may arrive without selected/skipped (e.g. an
-  // empty `{}` from `--explain` when no plan was computed). Never throw.
-  const selected = (plan?.selected ?? []).map((skill) => skill.metadata?.id ?? skill.id);
-  const skipped = (plan?.skipped ?? []).map((item) => ({
-    id: item.skill?.metadata?.id ?? item.skill?.id,
-    reasons: item.reasons ?? [],
-  }));
-  const reasonCounts = skipped.reduce((acc, item) => {
-    (item.reasons || []).forEach((reason) => {
-      acc.set(reason, (acc.get(reason) ?? 0) + 1);
-    });
-    return acc;
-  }, new Map());
-  return { selected, skipped, reasonCounts };
-}
-
-function printPlan(plan) {
-  const summary = formatPlan(plan);
-  if (summary.selected.length) {
-    console.log(`Selected skills (${summary.selected.length}): ${summary.selected.join(', ')}`);
-  } else {
-    console.log('Selected skills (0): none matched this diff');
-  }
-  if (summary.skipped.length) {
-    console.log('Skipped skills:');
-    summary.skipped.forEach((item) => {
-      console.log(`- ${item.id}: ${item.reasons.join('; ')}`);
-    });
-    if (summary.reasonCounts.size) {
-      console.log('Skip reasons summary:');
-      for (const [reason, count] of summary.reasonCounts.entries()) {
-        console.log(`- ${reason}: ${count}`);
-      }
-    }
-  }
-}
-
-function printComments(comments) {
-  if (!comments.length) {
-    console.log('No review comments generated.');
-    return;
-  }
-  console.log('Review comments:');
-  comments.forEach((comment) => {
-    console.log(`- ${comment.file}:${comment.line}: ${comment.message}`);
-  });
-}
-
-function formatMessageForMarkdown(message) {
-  const labels = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confidence'];
-  let result = message;
-  for (const label of labels) {
-    result = result.replace(new RegExp(`\\s*${label}:`, 'g'), `\n  - **${label}:**`);
-  }
-  return result;
-}
-
-function groupCommentsBySkill(comments) {
-  return (comments ?? []).reduce((groups, comment) => {
-    const key = comment.skillId || '';
-    (groups[key] = groups[key] || []).push(comment);
-    return groups;
-  }, {});
-}
-
-/**
- * Markdown インジェクション対策: 特殊文字をエスケープ
- */
-function sanitizeForMarkdown(text) {
-  if (!text) return '';
-  return String(text)
-    .replace(/[\\`*_{}[\]()#+\-.!|<>]/g, '\\$&')
-    .replace(/\n/g, ' ');
-}
-
-function formatCommentsMarkdown(comments) {
-  if (!comments?.length) return '_No findings._';
-
-  // スキル単位でグループ化
-  const bySkill = groupCommentsBySkill(comments);
-  const entries = Object.entries(bySkill);
-
-  // スキルIDがないグループのみの場合は従来形式
-  if (entries.length === 1 && entries[0][0] === '') {
-    return comments
-      .map((c) => `- \`${c.file}:${c.line}\`${formatMessageForMarkdown(c.message)}`)
-      .join('\n');
-  }
-
-  // skillId でソートして出力順序を安定化
-  entries.sort((a, b) => a[0].localeCompare(b[0]));
-
-  // スキル単位でセクション化
-  return entries
-    .map(([skillId, items]) => {
-      // skillId をサニタイズして Markdown インジェクションを防止
-      const safeSkillId = sanitizeForMarkdown(skillId);
-      const header = skillId ? `#### 🔍 ${safeSkillId}` : '#### その他';
-      const body = items
-        .map((c) => `- \`${c.file}:${c.line}\`${formatMessageForMarkdown(c.message)}`)
-        .join('\n');
-      return `${header}\n${body}`;
-    })
-    .join('\n\n');
-}
-
-function formatPlanMarkdown(plan) {
-  const summary = formatPlan(plan);
-  const selected = summary.selected.length
-    ? summary.selected.map((id) => `- \`${id}\``).join('\n')
-    : '- _none_';
-
-  if (!summary.skipped.length) {
-    return `### 選択されたスキル (${summary.selected.length})\n${selected}\n`;
-  }
-
-  const skippedLines = summary.skipped
-    .map((item) => `- \`${item.id}\`: ${item.reasons.join('; ')}`)
-    .join('\n');
-  return `### 選択されたスキル (${summary.selected.length})\n${selected}\n\n<details>\n<summary>スキップされたスキル (${summary.skipped.length})</summary>\n\n${skippedLines}\n\n</details>\n`;
-}
-
-function formatDebugSummaryMarkdown(result) {
-  const debug = result.reviewDebug ?? {};
-  const llmStatus = debug.llmUsed
-    ? `used (\`${debug.llmModel}\`)`
-    : debug.llmSkipped || debug.llmError
-      ? `skipped (${debug.llmSkipped || debug.llmError})`
-      : 'not used';
-
-  const plan = result.plan ?? {};
-  const plannerStatus = formatPlannerStatus(plan, { markdown: true });
-  const impactTags = Array.isArray(plan?.impactTags) ? plan.impactTags : [];
-  const impactSummary = impactTags.length ? impactTags.map((t) => `\`${t}\``).join(', ') : '`none`';
-
-  return [
-    `- LLM: ${llmStatus}`,
-    `- Planner: ${plannerStatus}`,
-    `- Impact tags: ${impactSummary}`,
-    `- 変更ファイル数: ${result.changedFiles.length}`,
-    `- トークン見積もり: ${result.tokenEstimate}`,
-  ].join('\n');
-}
-
-function formatPlannerStatus(plan, { markdown = false } = {}) {
-  const wrap = (value) => (markdown ? `\`${value}\`` : value);
-  const requested = Boolean(plan?.plannerRequested);
-  const mode = plan?.plannerMode || 'off';
-  if (!requested || mode === 'off') return wrap('off');
-  if (plan?.plannerSkipped) return `${wrap(mode)} skipped (${plan.plannerSkipped})`;
-  if (plan?.plannerFallback) {
-    const reason = plan?.plannerError || '';
-    return reason ? `${wrap(mode)} fallback (${reason})` : `${wrap(mode)} fallback`;
-  }
-  return plan?.plannerUsed ? `${wrap(mode)} used` : `${wrap(mode)} not used`;
-}
-
-function logPreview(title, text, maxLength, log, { leadingNewline = false } = {}) {
-  if (!text) return;
-  const preview = text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
-  const prefix = leadingNewline ? '\n' : '';
-  log(`${prefix}${title}:`);
-  log(preview);
-}
-
-function formatRiskSummaryMarkdown(plan) {
-  const risk = plan?.riskAssessment;
-  if (!risk) return '';
-  const badge =
-    risk.aggregateAction === 'require_human_review'
-      ? '🔴 require_human_review'
-      : risk.aggregateAction === 'escalate'
-        ? '🟡 escalate'
-        : '🟢 comment_only';
-  const lines = ['### リスク評価\n', '**判定**: ' + badge + '\n'];
-  if (risk.humanReviewFiles?.length) {
-    lines.push('**人間レビュー必須**:');
-    for (const f of risk.humanReviewFiles) lines.push('- ' + sanitizeForMarkdown(f));
-    lines.push('');
-  }
-  if (risk.escalatedFiles?.length) {
-    lines.push('**エスカレーション対象**:');
-    for (const f of risk.escalatedFiles) lines.push('- ' + sanitizeForMarkdown(f));
-    lines.push('');
-  }
-  return lines.join('\n');
-}
-
-/**
- * #1067: true when no LLM key is configured (LLM review skipped) AND there are
- * no static findings — i.e. the run would otherwise post a value-less boilerplate
- * PR comment (skipped-skills list / impact tags / token estimate). Used to emit a
- * single concise note instead.
- */
-function isLlmlessEmptyReview(result) {
-  const debug = result?.reviewDebug ?? {};
-  const llmKeyMissing = typeof debug.llmSkipped === 'string' && /not set/i.test(debug.llmSkipped);
-  const noFindings = (result?.comments?.length ?? 0) === 0;
-  return llmKeyMissing && noFindings;
-}
-
-function printMarkdownReport(result, phase) {
-  if (isLlmlessEmptyReview(result)) {
-    console.log(
-      `${COMMENT_MARKER}
-## River Review
-
-- フェーズ: \`${phase}\`
-- LLM レビュー未設定（\`ANTHROPIC_API_KEY\` / \`OPENAI_API_KEY\` / \`GOOGLE_API_KEY\` のいずれも未設定）のため静的チェックのみ実行し、**指摘はありません**。いずれか 1 つを設定すると LLM レビューが有効になり、リポジトリ固有の規約・差分スコープ等の観点でレビューします。`
-    );
-    return;
-  }
-  const header = `${COMMENT_MARKER}
-## River Review
-
-- フェーズ: \`${phase}\`
-${formatDebugSummaryMarkdown(result)}
-`;
-  const planSection = formatPlanMarkdown(result.plan);
-  const riskSection = formatRiskSummaryMarkdown(result.plan);
-  const prioritySummary = formatPrioritySummaryMarkdown(result);
-  const scoreSection = formatScoreSectionMarkdown(result, phase);
-  const findings = `### 指摘\n${formatCommentsMarkdown(result.comments)}\n`;
-  const suppressedSummary = formatSuppressedSummaryMarkdown(result.classified);
-  console.log(
-    [header, planSection, riskSection, prioritySummary, scoreSection, findings, suppressedSummary]
-      .filter(Boolean)
-      .join('\n')
-  );
-}
-
-function formatSuppressedSummaryMarkdown(classified) {
-  if (!classified?.suppressed?.length) return null;
-  const counts = {};
-  for (const f of classified.suppressed) {
-    counts[f.suppressReason] = (counts[f.suppressReason] ?? 0) + 1;
-  }
-  const top = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([r, n]) => `${r}(${n})`)
-    .join(', ');
-  return `> _${classified.suppressed.length} 件の指摘を抑制しました (主な理由: ${top})_\n`;
-}
-
-function formatPrioritySummaryMarkdown(result) {
-  const findings = result.findings ?? [];
-  const counts = { P1: 0, P2: 0, P3: 0, P4: 0 };
-  for (const f of findings) {
-    const p = (0,finding_factory/* severityToPriority */.nG)(f.severity);
-    counts[p]++;
-  }
-
-  const lines = ['### 優先度サマリー\n'];
-
-  if (counts.P1 > 0) {
-    lines.push(`> **P1 (マージ前必須修正): ${counts.P1} 件**\n`);
-  }
-
-  lines.push(
-    `- P1 (must fix before merge): ${counts.P1} 件`,
-    `- P2 (should fix or waive): ${counts.P2} 件`,
-    `- P3 (recommended improvement): ${counts.P3} 件`,
-    `- P4 (informational): ${counts.P4} 件`,
-    ''
-  );
-
-  const suppressed = result.classified?.suppressed ?? [];
-  if (suppressed.length > 0) {
-    const reasonCounts = {};
-    for (const f of suppressed) {
-      reasonCounts[f.suppressReason] = (reasonCounts[f.suppressReason] ?? 0) + 1;
-    }
-    const topReasons = Object.entries(reasonCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([r, n]) => `${r}(${n})`)
-      .join(', ');
-    lines.push(`- 抑制済み: ${suppressed.length} 件 (主な理由: ${topReasons})`, '');
-  }
-
-  const humanReviewFiles = result.plan?.riskMap?.require_human_review ?? [];
-  if (humanReviewFiles.length > 0) {
-    lines.push('> **Human review required**');
-    for (const f of humanReviewFiles) lines.push(`> - ${sanitizeForMarkdown(f)}`);
-    lines.push('');
-  }
-
-  return lines.join('\n');
-}
-
-function formatScoreSectionMarkdown(result, phase) {
-  const artifact = formatJsonOutput(result, phase);
-  const score = (0,engine/* scoreReview */.lS)(artifact.issues ?? []);
-  // formatJsonOutput already resolved the canonical verdict; reuse it so the
-  // Markdown score section cannot drift from JSON/YAML/HTML (#1170 F3).
-  score.verdict = (0,engine/* resolveVerdict */.Cq)(artifact.decision, score.verdict);
-  const lines = ['### スコア (参考値)'];
-  lines.push('');
-  lines.push(`結果(スコア): **${score.overall}/100**`);
-  lines.push(`判定: **${score.verdict}**`);
-  lines.push('');
-  lines.push('内訳:');
-  for (const axis of rubric/* AXES */.gR) {
-    lines.push(`- ${rubric/* AXIS_LABELS_JA */.Sf[axis]}: ${score.axes[axis]}/100`);
-  }
-  lines.push('');
-  lines.push(
-    '> スコアは severity と axis から決定論的に算出された **参考値** (`derived: true`)。HITL レビューと併用してください。'
-  );
-  lines.push('');
-  return lines.join('\n');
-}
-
-/**
- * #1045 A3 (#1141): human-readable explanation of which skills / gates / config
- * tier were resolved for this run. A focused alias over the same deterministic
- * resolution the planner already computed — printed to stderr so it never
- * corrupts machine-readable stdout (json / yaml).
- */
-function printExplain(result, { log = console.error } = {}) {
-  const summary = formatPlan(result?.plan ?? {});
-  log('\nResolution (--explain):');
-
-  // Config tier that won (CLI > repo-local > global > built-in default).
-  const sourceLabel =
-    result?.configSource === 'file'
-      ? 'repository-local'
-      : result?.configSource === 'global'
-        ? 'user-global'
-        : 'built-in default';
-  log(`- Config: ${sourceLabel}${result?.configPath ? ` (${result.configPath})` : ''}`);
-
-  // Skill / gate resolution.
-  log(
-    `- Planner: ${formatPlannerStatus(result?.plan ?? {})}` +
-      (result?.manualReviewMode ? ` / review mode: ${result.manualReviewMode}` : '')
-  );
-  if (summary.selected.length) {
-    log(`- Selected skills (${summary.selected.length}): ${summary.selected.join(', ')}`);
-  } else {
-    log('- Selected skills (0): none matched this diff');
-  }
-  if (summary.skipped.length) {
-    log(`- Skipped skills (${summary.skipped.length}):`);
-    summary.skipped.forEach((item) => {
-      log(`  - ${item.id}: ${item.reasons.join('; ')}`);
-    });
-  }
-}
-
-function printDebugInfo(result, { log = console.log } = {}) {
-  const debug = result.reviewDebug ?? {};
-  const rawTokens = result.rawTokenEstimate ?? result.tokenEstimate;
-  const reduction = result.reduction ?? 0;
-  const plannerStatus = formatPlannerStatus(result.plan ?? {});
-  const impactTags = Array.isArray(result.plan?.impactTags) ? result.plan.impactTags : [];
-  log(`\nDebug info:
-- LLM: ${debug.llmUsed ? `used (\`${debug.llmModel}\`)` : debug.llmSkipped || debug.llmError || 'not used'}
-- Planner: ${plannerStatus}
-- Impact tags: ${impactTags.join(', ') || 'none'}
-- Token estimate (raw -> optimized): ${rawTokens} -> ${result.tokenEstimate} (${reduction}% reduction)
-- Prompt truncated: ${debug.promptTruncated ? 'yes' : 'no'}
-- Changed files (${result.changedFiles.length}): ${result.changedFiles.join(', ')}
-- Project rules: ${result.projectRules ? 'present' : 'none'}
-- Available contexts: ${(result.availableContexts || []).join(', ') || 'none'}
-- Available dependencies: ${
-    result.availableDependencies
-      ? result.availableDependencies.join(', ')
-      : 'not specified (skip disabled)'
-  }
-`);
-  if (debug.llmError) {
-    log(`LLM error: ${debug.llmError}`);
-    // T64: パース失敗時に生のLLM出力が見えず切り分けができなかったため、
-    // debug.rawLlmOutput があれば truncate してログに出す。
-    logPreview('Raw LLM output', debug.rawLlmOutput, MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH, log);
-  }
-  logPreview('Prompt preview', debug.promptPreview, MAX_PROMPT_PREVIEW_LENGTH, log);
-  logPreview(
-    'Project-specific review rules (preview)',
-    result.projectRules,
-    MAX_PROMPT_PREVIEW_LENGTH,
-    log,
-    { leadingNewline: true }
-  );
-  if (result.plan?.skipped?.length) {
-    log('\nSkipped skills detail:');
-    result.plan.skipped.forEach((item) => {
-      const id = item.skill?.metadata?.id ?? item.skill?.id ?? '(unknown)';
-      log(`- ${id}: ${item.reasons.join('; ')}`);
-    });
-  }
-  log('\n--- diff preview ---');
-  log(result.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
-}
-
-/**
- * Lazily compiled validator for schemas/output.schema.json (draft 2020-12).
- * Compiled once on first use; null if the schema cannot be loaded so a
- * validation problem never breaks JSON output emission.
- */
-let outputSchemaValidator;
-function getOutputSchemaValidator() {
-  if (outputSchemaValidator !== undefined) return outputSchemaValidator;
-  try {
-    const schemaPath = (0,external_node_url_.fileURLToPath)(__nccwpck_require__.ab + "output.schema.json");
-    const schema = JSON.parse((0,external_node_fs_.readFileSync)(schemaPath, 'utf8'));
-    const ajv = new _2020({ allErrors: true, strict: false });
-    dist(ajv);
-    outputSchemaValidator = ajv.compile(schema);
-  } catch (err) {
-    console.error(`Warning: could not load output.schema.json for validation: ${err.message}`);
-    outputSchemaValidator = null;
-  }
-  return outputSchemaValidator;
-}
-
-/**
- * Validate a formatted artifact against output.schema.json at runtime and
- * report violations to stderr (#1254). Reporting only — the artifact is still
- * returned so a non-conforming LLM payload surfaces loudly instead of failing
- * silently downstream.
- */
-function validateOutputArtifact(artifact) {
-  const validate = getOutputSchemaValidator();
-  if (!validate) return;
-  if (!validate(artifact)) {
-    console.error(
-      `Warning: JSON output does not conform to schemas/output.schema.json:\n${JSON.stringify(
-        validate.errors,
-        null,
-        2
-      )}`
-    );
-  }
-}
-
-/**
- * Format review result as JSON conforming to schemas/output.schema.json.
- * Consumes the structured findings[] produced by the Finding Pipeline.
- * Additively includes a top-level `decision` field derived from scoreReview verdict.
- */
-function formatJsonOutput(result, phase) {
-  const issueCountBySeverity = { info: 0, minor: 0, major: 0, critical: 0 };
-  const issueCountByPhase = { upstream: 0, midstream: 0, downstream: 0 };
-
-  const issues = (result.findings ?? []).map((f) => {
-    issueCountBySeverity[f.severity]++;
-    issueCountByPhase[phase] = (issueCountByPhase[phase] ?? 0) + 1;
-    return {
-      id: f.id,
-      ruleId: f.ruleId,
-      reviewer: f.reviewer,
-      title: f.title,
-      message: f.message,
-      severity: f.severity,
-      confidence: f.confidence,
-      status: f.status,
-      evidence: f.evidence,
-      phase,
-      file: f.file,
-      ...(f.lineStart ? { line: f.lineStart } : {}),
-      ...(f.lineEnd && f.lineEnd !== f.lineStart ? { lineEnd: f.lineEnd } : {}),
-      ...(f.suggestion ? { suggestion: f.suggestion } : {}),
-      ...(f.consensusLevel ? { consensusLevel: f.consensusLevel } : {}),
-      ...(f.reviewerRole ? { reviewerRole: f.reviewerRole } : {}),
-    };
-  });
-
-  const priorityCounts = { P1: 0, P2: 0, P3: 0, P4: 0 };
-  for (const f of result.findings ?? []) {
-    const p = (0,finding_factory/* severityToPriority */.nG)(f.severity);
-    priorityCounts[p]++;
-  }
-  const prioritySummary = {
-    counts: priorityCounts,
-    requiresImmediateAttention: priorityCounts.P1 > 0,
-  };
-
-  const summary = { issueCountBySeverity, issueCountByPhase, prioritySummary };
-  const riskAssessment = result.plan?.riskAssessment;
-  if (riskAssessment) {
-    summary.riskSummary = {
-      aggregateAction: riskAssessment.aggregateAction,
-      escalatedFiles: riskAssessment.escalatedFiles,
-      humanReviewFiles: riskAssessment.humanReviewFiles,
-    };
-  }
-  // Gate + decision derivation shared with the run-record audit trail
-  // (#1350 S3): extracted to src/lib/run-gate.mjs so the persisted record
-  // and the JSON output always carry the same gate.
-  const { decision, gate } = deriveRunGate(result);
-
-  const artifact = {
-    issues,
-    summary,
-    ...(decision !== undefined ? { decision } : {}),
-    ...(gate ? { gate } : {}),
-    ...(result.teamLeadReport ? { teamLeadReport: result.teamLeadReport } : {}),
-  };
-  validateOutputArtifact(artifact);
-  return artifact;
-}
-
-function countChangedLines(files) {
-  let lines = 0;
-  for (const file of files ?? []) {
-    for (const hunk of file.hunks ?? []) {
-      lines += (hunk.lines ?? []).filter((l) => l.startsWith('+') || l.startsWith('-')).length;
-    }
-  }
-  return lines;
-}
-
 async function main(argv = external_node_process_namespaceObject.argv.slice(2)) {
   const parsed = parseArgs(argv);
   if (parsed.command === 'help' || !parsed.command) {
@@ -65907,300 +66265,11 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       return await runEvalCommand(parsed);
     }
     if (parsed.command === 'doctor') {
-      const result = await doctorLocalReview({
-        cwd: targetPath,
-        phase: parsed.phase,
-        debug: parsed.debug,
-        preferredModelHint: 'balanced',
-        availableContexts: parsed.availableContexts,
-        availableDependencies: parsed.availableDependencies,
-      });
-
-      const llmConfigured = (0,utils/* isLlmEnabled */.Rq)();
-
-      console.log(`River Review doctor
-Repo: ${result.repoRoot}
-Base branch: ${result.defaultBranch}
-Merge base: ${result.mergeBase}
-Skills loaded: ${result.skillsCount}
-Project rules: ${result.projectRules ? 'present' : 'none'}
-LLM (review): ${llmConfigured ? 'configured' : 'not set'}
-LLM (planner): ${llmConfigured ? 'configured' : 'not set'}
-Contexts: ${(result.availableContexts || []).join(', ') || 'none'}
-Dependencies: ${
-        result.availableDependencies
-          ? result.availableDependencies.join(', ')
-          : 'not specified (skip disabled)'
-      }`);
-
-      if (!llmConfigured) {
-        printHintLines([
-          'Set `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_API_KEY` to enable headless LLM reviews.',
-          'Mechanical (no-key) checks and `--dry-run` / `--offline` still work without one.',
-        ]);
-      }
-
-      if (!result.changedFiles.length) {
-        console.log(`No changes to review compared to ${result.defaultBranch}.`);
-        return 0;
-      }
-
-      if (result.plan) {
-        printPlan(result.plan);
-      }
-      if (parsed.explain) {
-        printExplain(result);
-      }
-      if (parsed.debug) {
-        const impactTags = Array.isArray(result.plan?.impactTags) ? result.plan.impactTags : [];
-        console.log(
-          `\nDebug info:\n- Impact tags: ${impactTags.join(', ') || 'none'}\n- Token estimate: ${result.diff.tokenEstimate}\n`
-        );
-        console.log('--- diff preview ---');
-        console.log(result.diff.diffText.split('\n').slice(0, MAX_DIFF_PREVIEW_LINES).join('\n'));
-      }
-      return 0;
+      return await runDoctorCommand(parsed, targetPath);
     }
 
-    // Resolve --skill-set to its skill ids up front so an unknown name fails
-    // fast with a clear message before any review work begins.
-    let skillIds = null;
-    if (parsed.skillSet) {
-      try {
-        skillIds = await (0,skill_loader/* resolveSkillSet */.mw)(parsed.skillSet);
-      } catch (err) {
-        if (err instanceof skill_loader/* SkillLoaderError */.vN) {
-          console.error(`Error: ${err.message}`);
-          return 1;
-        }
-        throw err;
-      }
-    }
-
-    const manualReviewMode = (0,review_plan_generator/* resolveDepthToReviewMode */.c8)(parsed.depth);
-
-    const context = await planLocalReview({
-      cwd: targetPath,
-      phase: parsed.phase,
-      dryRun: parsed.dryRun,
-      debug: parsed.debug,
-      availableContexts: parsed.availableContexts,
-      availableDependencies: parsed.availableDependencies,
-      plannerMode: parsed.plannerMode,
-      baseRef: parsed.base,
-      skillIds,
-      manualReviewMode,
-    });
-
-    const estimator = new cost_estimator(
-      external_node_process_namespaceObject.env.OPENAI_MODEL || external_node_process_namespaceObject.env.RIVER_OPENAI_MODEL || undefined
-    );
-    const estimatedCost =
-      context.status === 'ok'
-        ? estimator.estimateFromDiff(context.diff, context.plan?.selected ?? [])
-        : null;
-
-    const logRunHeader =
-      parsed.output === 'markdown' || parsed.output === 'json' || parsed.output === 'yaml'
-        ? console.error
-        : console.log;
-    logRunHeader(`River Review (local)
-Phase: ${parsed.phase}
-Repo: ${context.repoRoot}
-Base branch: ${context.defaultBranch}
-Merge base: ${context.mergeBase}
-Dry run: ${parsed.dryRun ? 'yes' : 'no'}
-Debug: ${parsed.debug ? 'yes' : 'no'}
-Planner: ${formatPlannerStatus(context.plan ?? {})}
-Contexts: ${(context.availableContexts || []).join(', ') || 'none'}
-Dependencies: ${
-      context.availableDependencies
-        ? context.availableDependencies.join(', ')
-        : 'not specified (skip disabled)'
-    }`);
-
-    if (context.status === 'skipped-by-label') {
-      const labels = context.matchedLabels?.length
-        ? context.matchedLabels.join(', ')
-        : '(not specified)';
-      console.log(`Review skipped: PR labels matched exclude patterns (${labels}).`);
-      return 0;
-    }
-
-    if (context.status === 'no-changes') {
-      console.log(`No changes to review compared to ${context.defaultBranch}.`);
-      return 0;
-    }
-
-    if (estimatedCost && parsed.maxCost !== null && estimatedCost.usd > parsed.maxCost) {
-      console.log(estimator.formatCost(estimatedCost));
-      console.error(
-        `Estimated cost $${estimatedCost.usd.toFixed(4)} exceeds max-cost ${parsed.maxCost}. Aborting.`
-      );
-      return 1;
-    }
-
-    if (parsed.estimate) {
-      if (!estimatedCost) {
-        console.log('Cost estimation skipped (no changes or skipped by label).');
-        return 0;
-      }
-      console.log('Cost Estimate:');
-      console.log(estimator.formatCost(estimatedCost));
-      console.log(`Files to review: ${context.changedFiles.length}`);
-      console.log(
-        `Lines changed (approx): ${countChangedLines(context.diff.filesForReview ?? context.diff.files)}`
-      );
-      return 0;
-    }
-
-    const result = await runLocalReview({
-      cwd: targetPath,
-      phase: parsed.phase,
-      dryRun: parsed.dryRun,
-      debug: parsed.debug,
-      context,
-      availableContexts: parsed.availableContexts,
-      availableDependencies: parsed.availableDependencies,
-      plannerMode: parsed.plannerMode,
-      reviewers: parsed.reviewers,
-      baseRef: parsed.base,
-      skillIds,
-      manualReviewMode,
-    });
-
-    if (parsed.explain) {
-      printExplain(result);
-    }
-
-    // Persist run to result store when --save is provided. Under GitHub
-    // Actions the save is AUTOMATIC (Epic #1347 S3, adversarial design
-    // review Blocker 1: an opt-in store never accumulates the audit trail),
-    // and the digest is appended to the job summary as the forced display
-    // point — supervision that requires someone to remember a command is
-    // not supervision.
-    // M1 (#1372 review): RIVER_AUTO_SAVE=false opts out of the CI auto-save
-    // (documented in the contract doc; the write target is .river/runs/).
-    const isGithubActions =
-      external_node_process_namespaceObject.env.GITHUB_ACTIONS === 'true' && external_node_process_namespaceObject.env.RIVER_AUTO_SAVE !== 'false';
-    if ((parsed.save || isGithubActions) && result.status === 'ok') {
-      try {
-        const { buildRunRecord, saveRunRecord, resolveStoreDir } =
-          await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
-        const { decision: runDecision, gate: runGate } = deriveRunGate(result);
-        const record = buildRunRecord(result, {
-          phase: parsed.phase,
-          gate: runGate,
-          decision: runDecision,
-        });
-        // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
-        const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });
-        console.error(`Run saved: ${record.runId} → ${savedPath}`);
-      } catch (err) {
-        console.error(`Warning: --save failed: ${err.message}`);
-      }
-    }
-
-    // Forced display point (Epic #1347 S3): under GitHub Actions, append the
-    // runs digest to the job summary. Fail-soft — the review result must
-    // never break on digest generation.
-    if (isGithubActions && external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
-      try {
-        // C1 (#1372 review): the digest needs FULL records — the light
-        // listRunRecords metadata has no gate/findings and silently produced
-        // an empty digest here.
-        const { loadAllRunRecords, resolveStoreDir } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
-        const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
-        const records = await loadAllRunRecords(resolveStoreDir(targetPath));
-        const digest = buildRunsDigest(records, { now: () => new Date() });
-        const fs = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
-        await fs.appendFile(external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
-      } catch (err) {
-        console.error(`Warning: job summary digest failed: ${err.message}`);
-      }
-    }
-
-    // Regression comparison when --baseline is provided
-    if (parsed.baseline && result.status === 'ok') {
-      try {
-        const { diffReviews, formatRegressionSummary } = await __nccwpck_require__.e(/* import() */ 744).then(__nccwpck_require__.bind(__nccwpck_require__, 3744));
-        const baselineRaw = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19)).then((fs) =>
-          fs.readFile(parsed.baseline, 'utf8')
-        );
-        const baselineFindings = JSON.parse(baselineRaw);
-        const prevFindings = Array.isArray(baselineFindings)
-          ? baselineFindings
-          : (baselineFindings.findings ?? baselineFindings.issues ?? []);
-        const diff = diffReviews(prevFindings, result.findings ?? []);
-        const regSummary = formatRegressionSummary(diff);
-        console.log(regSummary);
-      } catch (err) {
-        console.error(`Warning: --baseline comparison failed: ${err.message}`);
-      }
-    }
-
-    if (parsed.output === 'json') {
-      console.log(JSON.stringify(formatJsonOutput(result, parsed.phase), null, 2));
-    } else if (parsed.output === 'markdown') {
-      printMarkdownReport(result, parsed.phase);
-    } else if (parsed.output === 'yaml') {
-      const { formatYamlOutput } = await __nccwpck_require__.e(/* import() */ 610).then(__nccwpck_require__.bind(__nccwpck_require__, 4610));
-      const jsonOutput = formatJsonOutput(result, parsed.phase);
-      const artifact = {
-        phase: parsed.phase,
-        timestamp: new Date().toISOString(),
-        findings: jsonOutput.issues,
-        plan: result.plan,
-        // Propagate the canonical verdict so YAML matches JSON (#1170 F3).
-        ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
-      };
-      console.log(formatYamlOutput(artifact));
-    } else if (parsed.output === 'html') {
-      const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
-      const jsonOutput = formatJsonOutput(result, parsed.phase);
-      const htmlResult = {
-        findings: result.findings ?? [],
-        plan: result.plan,
-        timestamp: new Date().toISOString(),
-        // Propagate the canonical verdict so HTML matches JSON (#1170 F3).
-        ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
-      };
-      console.log(formatHtmlOutput(htmlResult, parsed.phase));
-    } else {
-      printPlan(result.plan);
-      printComments(result.comments);
-    }
-
-    if (parsed.debug) {
-      if (
-        parsed.output === 'markdown' ||
-        parsed.output === 'json' ||
-        parsed.output === 'yaml' ||
-        parsed.output === 'html'
-      ) {
-        console.error('\nDebug info (not included in output):');
-        printDebugInfo(result, { log: console.error });
-      } else {
-        printDebugInfo(result);
-      }
-    }
-
-    // #1066 self-review: honor --fail-on / --warn-on / --advisory-only on
-    // `river run` too. Previously these were parsed but silently ignored on
-    // the run path (only `river review` gated), so agents that relied on the
-    // exit code never actually gated. Opt-in: exit 0 unless a gate flag is set.
-    if (parsed.failOn || parsed.warnOn || parsed.advisoryOnly || parsed.gate) {
-      const { resolveGateExitCode } = await __nccwpck_require__.e(/* import() */ 39).then(__nccwpck_require__.bind(__nccwpck_require__, 1039));
-      return await resolveGateExitCode({
-        failOn: parsed.failOn,
-        warnOn: parsed.warnOn,
-        advisoryOnly: parsed.advisoryOnly,
-        gate: parsed.gate,
-        // Derived the same way as the JSON-output gate so the exit code and the
-        // emitted artifact agree. deriveRunGate is statically imported above.
-        getGateInput: () => ({ findings: formatJsonOutput(result, parsed.phase).issues }),
-        getGateObject: () => deriveRunGate(result).gate,
-      });
+    if (parsed.command === 'run') {
+      return await runRunCommand(parsed, targetPath);
     }
 
     return 0;
