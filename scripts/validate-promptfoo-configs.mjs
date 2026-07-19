@@ -15,7 +15,7 @@
 import { readFileSync, existsSync, globSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import YAML from 'yaml';
+import { load as loadYaml, YAMLException } from 'js-yaml';
 import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,14 +33,23 @@ export function validateConfig(configPath) {
   const text = readFileSync(configPath, 'utf8');
   let doc;
   try {
-    doc = YAML.parse(text);
+    doc = loadYaml(text);
   } catch (err) {
-    return [`YAML parse error: ${err.message}`];
+    // js-yaml throws "expected a document, but the input is empty" for
+    // empty/comment-only input, where the previous `yaml` package returned
+    // null. Preserve that null-normalization so comment-only configs still
+    // get structural errors (empty.yaml fixture) instead of a parse error;
+    // genuine syntax errors still surface as a parse error.
+    if (err instanceof YAMLException && /input is empty/.test(err.reason ?? err.message)) {
+      doc = null;
+    } else {
+      return [`YAML parse error: ${err.message}`];
+    }
   }
 
-  // YAML.parse returns null for empty/comment-only input. Normalize to an
-  // object so the checks below report structural errors instead of
-  // throwing a TypeError on `doc.prompts` / `doc.tests`.
+  // Empty/comment-only input yields null. Normalize to an object so the
+  // checks below report structural errors instead of throwing a TypeError
+  // on `doc.prompts` / `doc.tests`.
   if (doc === null || typeof doc !== 'object') {
     doc = {};
   }
