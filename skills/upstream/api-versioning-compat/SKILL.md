@@ -19,7 +19,7 @@ applyTo:
   - '**/*.adr'
 tags: [api, compatibility, versioning, upstream]
 severity: major
-inputContext: [diff, fullFile, adr]
+inputContext: [diff, fullFile]
 outputKind: [summary, findings, actions, questions]
 modelHint: balanced
 dependencies: [repo_metadata]

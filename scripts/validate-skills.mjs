@@ -78,37 +78,35 @@ export const RUNNER_SUPPLIED_CONTEXTS = ['diff', 'prDescription', 'fullFile'];
 // here. Shrinking this set — by making a skill diff-centric (#1598 did this for
 // behavior-structure-separation / knowledge-to-code-alignment) or by widening
 // the runner-supplied set — is the intended migration direction.
-const GRANDFATHERED_UNSUPPLIED_CONTEXT = new Set([
-  'api-versioning-compat',
-  'architecture-traceability',
-  'coverage-gap',
-  'data-model-db-design',
-  'integration-contracts',
-  'multitenancy-isolation',
-  'openapi-contract',
-  'test-existence',
-]);
+const GRANDFATHERED_UNSUPPLIED_CONTEXT = new Set(['coverage-gap', 'test-existence']);
 // #1606: adding `fullFile` to RUNNER_SUPPLIED_CONTEXTS makes every skill whose
 // inputContext became a subset of {diff, prDescription, fullFile} compliant.
 // The stale-grandfather gate (below) therefore FORCES removing those entries in
 // this same change — leaving them would fail CI as "stale (compliant)".
 //
-// Shrink history of this set (36 → 8), for reviewers diffing against an older
+// Shrink history of this set (36 → 2), for reviewers diffing against an older
 // base:
 //   - a-1, 14 adr-only skills → removed by #1607 (adr made redundant, diff-centric).
 //   - c-tier, 4 skills (pre-mortem, logic-torturing, assumption-resolution-trace,
 //     independent-review-synthesis) → un-recommended by #1610.
-//   - THIS PR (#1606), 10 fullFile-compliant skills → removed here:
+//   - #1609, 10 fullFile-compliant skills → removed once `fullFile` was supplied:
 //     cross-file-leakage, fix-scope-integrity, impact-evidence-coverage,
 //     refactor-claim-audit, security-privacy-design, self-contradiction,
 //     type-driven-design, typescript-nullcheck, typescript-strict, war-game.
+//   - #1606 Wave 2 (a-2/a-4), 6 skills → removed here after re-measuring against
+//     the now-supplied {diff, prDescription, fullFile} set: dropping the redundant
+//     `adr` alone made them subsets. a-2: api-versioning-compat, data-model-db-design,
+//     integration-contracts, openapi-contract (→ [diff, fullFile]),
+//     architecture-traceability (→ [diff]; cross-doc drift check degrades to the
+//     within-diff/coordinated-change scope — the drift-acknowledgment meta-check and
+//     related-file consistency survive). a-4: multitenancy-isolation (→ [fullFile];
+//     the `fullFile` supply, not a Gate→diff rewrite, is what makes it fire — its
+//     sibling security-privacy-design already landed the same way in #1609).
 //
-// Note: cross-file-leakage / refactor-claim-audit / security-privacy-design
-// ideally want REPO-WIDE (unchanged-file) content, which the coarse `fullFile`
-// token cannot distinguish from changed-file content; they now select and lean
-// on the repo-wide symbol-usage context collectRepoContext also supplies. Their
-// diff-centric redesign vs repo-wide supply remains follow-up (#1606 groups
-// b / a-4).
+// Remaining (b-tier): coverage-gap / test-existence need the REPO-WIDE test tree
+// (existing, unchanged tests) which the coarse `fullFile` token — changed-file
+// content only — cannot supply; a wider RIVER_AVAILABLE_CONTEXTS / runner change
+// is the follow-up before they can leave this set.
 
 function hasSection(text, patterns) {
   return patterns.some((re) => re.test(text));

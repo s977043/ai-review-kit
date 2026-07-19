@@ -21,7 +21,6 @@ tags:
 severity: major
 inputContext:
   - fullFile
-  - adr
 outputKind:
   - findings
   - actions
