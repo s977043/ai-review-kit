@@ -16,7 +16,10 @@ import { SkillDispatcher } from '../../core/skill-dispatcher.mjs';
  * @returns {Promise<number>} process exit code.
  */
 export async function runSkillsCommand(parsed, targetPath) {
-  if (parsed.command === 'skills' && parsed.skillsSubcommand === 'resolve') {
+  // The command is guaranteed to be `skills` by the dispatch in cli.mjs main(),
+  // so the branches below key on the skills subcommand only (no redundant
+  // `parsed.command === 'skills'` re-check).
+  if (parsed.skillsSubcommand === 'resolve') {
     // Deterministic resolution: which skills would run for the given
     // path(s) and phase. No git, no LLM — pure metadata routing, so
     // agents and CI can introspect skill selection cheaply (#1045).
@@ -65,44 +68,43 @@ export async function runSkillsCommand(parsed, targetPath) {
     return 0;
   }
 
-  if (parsed.command === 'skills' && parsed.skillsSubcommand) {
+  if (parsed.skillsSubcommand) {
     const { runSkillsSubcommand } = await import('../../lib/agent-skill-bridge.mjs');
     return runSkillsSubcommand(parsed);
   }
 
-  if (parsed.command === 'skills') {
-    const repoRoot = await ensureGitRepo(targetPath);
-    const defaultBranch = await detectDefaultBranch(repoRoot);
-    const mergeBase = await findMergeBase(repoRoot, defaultBranch);
-    const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
+  // Default `skills` run (no subcommand): Skill-based reviewer over the diff.
+  const repoRoot = await ensureGitRepo(targetPath);
+  const defaultBranch = await detectDefaultBranch(repoRoot);
+  const mergeBase = await findMergeBase(repoRoot, defaultBranch);
+  const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
 
-    const dispatcher = new SkillDispatcher(repoRoot);
+  const dispatcher = new SkillDispatcher(repoRoot);
 
-    const getFileDiff = async (targetFile) => {
-      const fileData = repoDiff.files.find((f) => f.path === targetFile);
-      if (!fileData) return '';
-      return renderDiffText([fileData]);
-    };
+  const getFileDiff = async (targetFile) => {
+    const fileData = repoDiff.files.find((f) => f.path === targetFile);
+    if (!fileData) return '';
+    return renderDiffText([fileData]);
+  };
 
-    console.log(`River Review (Skills) - Target: ${targetPath}`);
-    const results = await dispatcher.run(
-      repoDiff.changedFiles,
-      getFileDiff,
-      parsed.phase,
-      parsed.dryRun,
-      parsed.debug
-    );
+  console.log(`River Review (Skills) - Target: ${targetPath}`);
+  const results = await dispatcher.run(
+    repoDiff.changedFiles,
+    getFileDiff,
+    parsed.phase,
+    parsed.dryRun,
+    parsed.debug
+  );
 
-    if (parsed.output === 'markdown') {
-      console.log(`## Review Results\n`);
-      for (const res of results) {
-        console.log(`### ${res.file} (Skill: ${res.skill})`);
-        console.log(res.review);
-        console.log('\n---');
-      }
-    } else {
-      console.log(JSON.stringify(results, null, 2));
+  if (parsed.output === 'markdown') {
+    console.log(`## Review Results\n`);
+    for (const res of results) {
+      console.log(`### ${res.file} (Skill: ${res.skill})`);
+      console.log(res.review);
+      console.log('\n---');
     }
-    return 0;
+  } else {
+    console.log(JSON.stringify(results, null, 2));
   }
+  return 0;
 }
