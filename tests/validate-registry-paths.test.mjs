@@ -148,8 +148,8 @@ test('validateRegistryPaths is independent of process.cwd()', async () => {
   );
 });
 
-// loadSkillRegistry error paths — the shared read/parse helper is a single point
-// consumed by validateRegistryPaths / validateRecommendedEvalCoverage /
+// loadRegistry error paths — the shared read+parse helper (runners/core/skill-loader.mjs)
+// is a single point consumed by validateRegistryPaths / validateRecommendedEvalCoverage /
 // validateNamingCollisions. Pin that both failure phases surface as a false
 // return plus the phase-specific "Failed to read"/"Failed to parse" message.
 
