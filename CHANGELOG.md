@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.57.0](https://github.com/s977043/river-review/compare/v1.56.2...v1.57.0) (2026-07-19)
+
+
+### Features
+
+* **skills:** 知識反映と振る舞い維持をレビューする2スキルを追加する ([#1579](https://github.com/s977043/river-review/issues/1579)) ([c55a357](https://github.com/s977043/river-review/commit/c55a35713a7572c150913b5acdce214a51c0e021)), closes [#1573](https://github.com/s977043/river-review/issues/1573)
+
+
+### Bug Fixes
+
+* **deps:** bump js-yaml to patched versions for DoS advisory ([#1578](https://github.com/s977043/river-review/issues/1578)) ([ab4a4ab](https://github.com/s977043/river-review/commit/ab4a4aba01ee471ff4e9e59d808516f0ea00fda5))
+* **schema:** zod InputContextEnum を JSON Schema の inputContext enum と一致させる ([#1576](https://github.com/s977043/river-review/issues/1576)) ([1a1db19](https://github.com/s977043/river-review/commit/1a1db19278700c334c8693c9a160201b19aced11)), closes [#1564](https://github.com/s977043/river-review/issues/1564)
+
 ## [1.56.2](https://github.com/s977043/river-review/compare/v1.56.1...v1.56.2) (2026-07-19)
 
 
