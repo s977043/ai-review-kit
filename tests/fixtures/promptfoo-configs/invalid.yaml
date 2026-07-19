@@ -1,0 +1,7 @@
+prompts:
+  - 'You are a reviewer. Assess the input for quality.'
+providers:
+  - id: openai:gpt-4o-mini
+tests:
+  - vars:
+      input: 'sample text with an issue'
