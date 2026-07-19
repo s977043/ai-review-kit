@@ -43,3 +43,19 @@ jobs:
           RIVER_OPENAI_BASE_URL: https://models.github.ai/inference/chat/completions # CI レビュー経路が読む endpoint（review-engine.mjs）
           RIVER_OPENAI_MODEL: openai/gpt-4o-mini # 実 API 呼び出しモデル ID（GitHub Models カタログ形式）
           OPENAI_MODEL: gpt-4o-mini # max_cost の見積単価を実モデルに一致させる（見積器既定 gpt-4-turbo のままだと大型PRを誤abortするため必須の結合。prefix無しで併設）
+      # #1600: the CLI auto-saves a run record (findings + calibration debug —
+      # verifierStats/verifierAllRejected/findingFormat.recommendedGaps) to
+      # .river/runs/*.json under GITHUB_ACTIONS, but nothing uploaded it as a
+      # CI artifact, so calibration data was unobservable outside the runner.
+      # if: always() — a NO_GO/rejected run is exactly when this debug data is
+      # most useful. Short retention: this is calibration telemetry, not an
+      # audit record (see docs/development/pipeline-params-checklist.md
+      # trust-boundary note in result-store.mjs for why it is not tamper-evident).
+      - name: Upload review run debug JSON
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: river-review-run-${{ github.event.pull_request.number || 'dispatch' }}-${{ github.run_id }}
+          path: .river/runs/*.json
+          if-no-files-found: warn
+          retention-days: 7

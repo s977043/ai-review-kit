@@ -104,6 +104,30 @@ describe('result-store', () => {
       assert.equal(rec.findings.length, 1);
       assert.equal(rec.findings[0].ruleId, 'null-safety');
     });
+
+    // #1600: the calibration debug telemetry (verifierStats,
+    // verifierAllRejected, findingFormat.recommendedGaps) was computed on
+    // review-engine's `debug` object but never reached the persisted run
+    // record, making it unobservable outside process memory.
+    it('persists reviewDebug as debug when present', () => {
+      const rec = buildRunRecord(
+        makeResult({
+          reviewDebug: {
+            verifierStats: { total: 3, verified: 1, rejected: 2 },
+            verifierAllRejected: false,
+            findingFormat: { ok: true, recommendedGaps: 1 },
+          },
+        })
+      );
+      assert.deepEqual(rec.debug.verifierStats, { total: 3, verified: 1, rejected: 2 });
+      assert.equal(rec.debug.verifierAllRejected, false);
+      assert.equal(rec.debug.findingFormat.recommendedGaps, 1);
+    });
+
+    it('omits debug when reviewDebug is absent', () => {
+      const rec = buildRunRecord(makeResult());
+      assert.ok(!('debug' in rec));
+    });
   });
 
   describe('saveRunRecord / loadRunRecord', () => {
