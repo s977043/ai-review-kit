@@ -7,8 +7,8 @@ import { z } from 'zod';
 
 // Enums
 export const PhaseEnum = z.enum(['upstream', 'midstream', 'downstream']);
-export const StreamCategoryEnum = z.enum(['core', 'upstream', 'midstream', 'downstream']);
-export const SeverityEnum = z.enum(['info', 'minor', 'major', 'critical']);
+const StreamCategoryEnum = z.enum(['core', 'upstream', 'midstream', 'downstream']);
+const SeverityEnum = z.enum(['info', 'minor', 'major', 'critical']);
 // Keep in sync with schemas/skill.schema.json $defs.inputContext.enum.
 // The enum-parity canary in tests/skill-schema-parity.test.mjs asserts they match.
 export const InputContextEnum = z.enum([
@@ -23,7 +23,7 @@ export const InputContextEnum = z.enum([
   'findingsPool',
   'prDescription',
 ]);
-export const OutputKindEnum = z.enum([
+const OutputKindEnum = z.enum([
   'findings',
   'summary',
   'actions',

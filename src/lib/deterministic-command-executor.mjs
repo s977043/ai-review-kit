@@ -53,7 +53,7 @@ export const DETERMINISTIC_UNRUNNABLE = 'DETERMINISTIC_UNRUNNABLE';
 
 /** Default DoS limits (§3.6). Host-overridable via the `limits` argument. */
 export const DEFAULT_TIMEOUT_MS = 60000;
-export const DEFAULT_MAX_BUFFER = 1 << 20; // 1 MiB
+const DEFAULT_MAX_BUFFER = 1 << 20; // 1 MiB
 
 /**
  * Run `execFile` and resolve with a normalized `{ error, stdout, stderr }`

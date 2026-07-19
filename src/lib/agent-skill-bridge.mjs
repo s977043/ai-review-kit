@@ -55,7 +55,7 @@ export function sanitizeSkillId(id) {
   return cleaned || 'unnamed-skill';
 }
 
-export class AgentSkillBridgeError extends Error {
+class AgentSkillBridgeError extends Error {
   constructor(message, details = undefined) {
     super(message);
     this.name = 'AgentSkillBridgeError';
@@ -438,7 +438,7 @@ export async function exportSkillToAgentFormat(skill, outputDir, options = {}) {
   return { path: skillMdPath };
 }
 
-export async function exportAllSkills(projectRoot, options = {}) {
+async function exportAllSkills(projectRoot, options = {}) {
   const { outputDir, includeAssets = false } = options;
   const dest = outputDir ?? path.join(projectRoot, '.agents', 'skills');
   const skills = await loadSkills({

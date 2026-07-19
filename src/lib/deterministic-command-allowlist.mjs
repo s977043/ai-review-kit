@@ -31,7 +31,7 @@ export const DETERMINISTIC_UNRUNNABLE = 'DETERMINISTIC_UNRUNNABLE';
  * path, because these are designed to run arbitrary code via their arguments
  * and the danger-flag denylist (B) can never be made complete for them.
  */
-export const INTERPRETER_DENYLIST = Object.freeze([
+const INTERPRETER_DENYLIST = Object.freeze([
   'npm',
   'npx',
   'pnpm',
@@ -67,7 +67,7 @@ export const INTERPRETER_DENYLIST = Object.freeze([
  * rejects the entry: these tokens inline-eval code, force-load
  * scripts/modules, delegate to a sub-command/shell, or inject config.
  */
-export const DANGER_FLAG_DENYLIST = Object.freeze([
+const DANGER_FLAG_DENYLIST = Object.freeze([
   // inline eval
   '-e',
   '--eval',

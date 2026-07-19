@@ -16,9 +16,9 @@
 // package with its own build).
 
 const LLM_RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
-export const LLM_MAX_ATTEMPTS = 3; // 1 try + 2 retries
-export const LLM_RETRY_BASE_MS = 500;
-export const LLM_TIMEOUT_MS = 15000;
+const LLM_MAX_ATTEMPTS = 3; // 1 try + 2 retries
+const LLM_RETRY_BASE_MS = 500;
+const LLM_TIMEOUT_MS = 15000;
 // Cap Retry-After-driven waits so a pathological header (e.g. 3600s) cannot
 // stall the pipeline. Mirrors MAX_RETRY_DELAY_MS in src/ai/factory.mjs.
 export const LLM_MAX_BACKOFF_MS = 30_000;
