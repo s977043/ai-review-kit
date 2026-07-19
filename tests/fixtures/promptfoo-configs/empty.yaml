@@ -1,0 +1,2 @@
+# Comment-only file — YAML.parse() returns null for this, which previously
+# crashed validateConfig with a TypeError on `doc.prompts` / `doc.tests`.

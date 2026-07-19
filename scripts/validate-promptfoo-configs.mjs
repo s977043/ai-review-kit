@@ -38,8 +38,15 @@ export function validateConfig(configPath) {
     return [`YAML parse error: ${err.message}`];
   }
 
+  // YAML.parse returns null for empty/comment-only input. Normalize to an
+  // object so the checks below report structural errors instead of
+  // throwing a TypeError on `doc.prompts` / `doc.tests`.
+  if (doc === null || typeof doc !== 'object') {
+    doc = {};
+  }
+
   for (const key of ['prompts', 'providers', 'tests']) {
-    if (!Array.isArray(doc?.[key]) || doc[key].length === 0) {
+    if (!Array.isArray(doc[key]) || doc[key].length === 0) {
       errors.push(`Missing or empty required array: ${key}`);
     }
   }
