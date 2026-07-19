@@ -60,7 +60,6 @@
     "eval:all": "node scripts/evaluate-all.mjs",
     "check:bilingual": "node scripts/check-bilingual-pairs.mjs",
     "check:doc-placement": "node scripts/check-doc-placement.mjs",
-    "check:docs": "npm run check:bilingual && npm run check:doc-placement",
     "build:action": "ncc build runners/github-action/src/index.mjs -o runners/github-action/dist --source-map --license licenses.txt && node scripts/normalize-dist.mjs",
     "codex:local": "CODEX_HOME=\"$(git rev-parse --show-toplevel)/.codex\" codex -C \"$(git rev-parse --show-toplevel)\"",
     "codex:exec": "CODEX_HOME=\"$(git rev-parse --show-toplevel)/.codex\" codex exec -C \"$(git rev-parse --show-toplevel)\"",
