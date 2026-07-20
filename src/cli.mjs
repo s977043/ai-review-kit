@@ -19,6 +19,7 @@ import { runFeedbackCommand } from './cli/commands/feedback.mjs';
 import { runSuppressionCommand } from './cli/commands/suppression.mjs';
 import { runDoctorCommand } from './cli/commands/doctor.mjs';
 import { runRunCommand } from './cli/commands/run.mjs';
+import { runPromoteCommand } from './cli/commands/promote.mjs';
 import {
   printHintLines,
   printExplain,
@@ -42,6 +43,12 @@ Commands:
   suppression add       Create a Riverbed Memory suppression entry
                         (--fingerprint --feedback --rationale [--scope]
                          [--severity] [--files] [--expires] [--pr])
+  promote list          List promotion_candidate entries (Judgment Promotion Loop Phase 2)
+  promote approve <id>  Approve a candidate (promotionStatus -> approved)
+  promote reject <id>   Reject a candidate (promotionStatus -> archived)
+  promote template [<id>] Emit PR scaffold(s) for approved candidate(s) (text only)
+                        (--approver <name> --reason <text> --index <path>
+                         --include-inactive; --output json for machine output)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -143,6 +150,13 @@ function parseArgs(argv) {
     suppressionFiles: null,
     suppressionExpiresAt: null,
     suppressionPrNumber: null,
+    // promote subcommand fields (#1622 / #1568-B)
+    promoteSubcommand: null,
+    promoteId: null,
+    promoteApprover: null,
+    promoteReason: null,
+    promoteIndex: null,
+    promoteIncludeInactive: false,
     // skills subcommand fields
     skillsSubcommand: null,
     resolvePaths: null,
@@ -176,7 +190,8 @@ function parseArgs(argv) {
         arg === 'skills' ||
         arg === 'runs' ||
         arg === 'suppression' ||
-        arg === 'feedback')
+        arg === 'feedback' ||
+        arg === 'promote')
     ) {
       parsed.command = arg;
       // Check for skills subcommands (import/export/list)
@@ -199,10 +214,21 @@ function parseArgs(argv) {
         parsed.suppressionSubcommand = args.shift(); // add (only one for now)
       } else if (arg === 'feedback' && args[0] && !args[0].startsWith('-')) {
         parsed.feedbackSubcommand = args.shift(); // add (only one for now)
+      } else if (arg === 'promote' && args[0] && !args[0].startsWith('-')) {
+        parsed.promoteSubcommand = args.shift(); // list | approve | reject | template
+        // approve/reject/template take an optional positional candidate id.
+        if (
+          ['approve', 'reject', 'template'].includes(parsed.promoteSubcommand) &&
+          args[0] &&
+          !args[0].startsWith('-')
+        ) {
+          parsed.promoteId = args.shift();
+        }
       } else if (
         arg !== 'runs' &&
         arg !== 'suppression' &&
         arg !== 'feedback' &&
+        arg !== 'promote' &&
         args[0] &&
         !args[0].startsWith('-')
       ) {
@@ -311,6 +337,30 @@ function parseArgs(argv) {
           break;
         }
         parsed.feedbackReversedBy = value;
+        continue;
+      }
+    }
+    if (parsed.command === 'promote') {
+      if (arg === '--approver') {
+        parsed.promoteApprover = args.shift() ?? null;
+        continue;
+      }
+      if (arg === '--reason') {
+        parsed.promoteReason = args.shift() ?? null;
+        continue;
+      }
+      if (arg === '--index') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --index option requires a path.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteIndex = value;
+        continue;
+      }
+      if (arg === '--include-inactive') {
+        parsed.promoteIncludeInactive = true;
         continue;
       }
     }
@@ -700,9 +750,17 @@ async function main(argv = process.argv.slice(2)) {
     process.env.RIVER_OFFLINE = '1';
   }
   if (
-    !['run', 'doctor', 'eval', 'skills', 'runs', 'suppression', 'feedback', 'review'].includes(
-      parsed.command
-    )
+    ![
+      'run',
+      'doctor',
+      'eval',
+      'skills',
+      'runs',
+      'suppression',
+      'feedback',
+      'review',
+      'promote',
+    ].includes(parsed.command)
   ) {
     console.error(`Unknown command: ${parsed.command}`);
     printHelp();
@@ -736,6 +794,13 @@ async function main(argv = process.argv.slice(2)) {
 
     if (parsed.command === 'feedback') {
       return await runFeedbackCommand(parsed, targetPath);
+    }
+
+    // `return await` (not bare `return`) so a rejected handler promise is caught
+    // by this outer try/catch for GitRepoNotFoundError etc. (adversarial review
+    // BLOCKER lesson, PR #1592).
+    if (parsed.command === 'promote') {
+      return await runPromoteCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'runs') {

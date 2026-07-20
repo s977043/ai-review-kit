@@ -1,0 +1,298 @@
+// Judgment Promotion Loop Phase 2 (#1568-B / #1622): approval transition +
+// PR-scaffold generation over promotion_candidate Riverbed entries.
+
+import assert from 'node:assert/strict';
+import test, { describe } from 'node:test';
+
+import {
+  applyPromotionDecision,
+  decidePromotion,
+  listPromotionCandidates,
+  isSecuritySensitive,
+  buildPrScaffold,
+  DECISION_STATUS,
+} from '../src/lib/promotion.mjs';
+import { buildPromotionCandidateEntry } from '../scripts/feedback-rule-candidates.mjs';
+import { loadMemory, appendEntry } from '../src/lib/riverbed-memory.mjs';
+import { createTempMemory } from './helpers/memory.mjs';
+import { compileRiverbedIndexValidator } from './helpers/schema-validator.mjs';
+
+const validate = compileRiverbedIndexValidator();
+const wrapIndex = (entries) => ({ version: '1', entries });
+const now = new Date('2026-07-20T00:00:00.000Z');
+const decidedNow = new Date('2026-07-21T09:00:00.000Z');
+
+const makeCandidate = (skillId, feedbackType, group) =>
+  buildPromotionCandidateEntry({ skillId, feedbackType, group, now });
+
+const fp = (pr) => ({ pr, findingFingerprint: null, feedbackType: 'false_positive' });
+
+describe('applyPromotionDecision (pure transition)', () => {
+  test('candidate -> approved records auditable approval', () => {
+    const entry = makeCandidate('repository-layer-boundary', 'false_positive', [fp(1), fp(2)]);
+    const { changed } = applyPromotionDecision(entry, {
+      decision: 'approved',
+      approver: 'alice',
+      reason: 'recurred twice',
+      now: decidedNow,
+    });
+    assert.equal(changed, true);
+    assert.equal(entry.context.promotionCandidate.promotionStatus, 'approved');
+    assert.equal(entry.status, 'active');
+    assert.deepEqual(entry.context.approval, {
+      decision: 'approved',
+      approver: 'alice',
+      decidedAt: '2026-07-21T09:00:00.000Z',
+      reason: 'recurred twice',
+    });
+    assert.equal(entry.metadata.updatedAt, '2026-07-21T09:00:00.000Z');
+  });
+
+  test('candidate -> rejected maps to archived (no rejected enum value)', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    applyPromotionDecision(entry, { decision: 'rejected', approver: 'bob', now: decidedNow });
+    assert.equal(DECISION_STATUS.rejected, 'archived');
+    assert.equal(entry.context.promotionCandidate.promotionStatus, 'archived');
+    assert.equal(entry.status, 'archived');
+    assert.equal(entry.context.approval.decision, 'rejected');
+  });
+
+  test('re-deciding with the same decision is idempotent (no-op)', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    applyPromotionDecision(entry, { decision: 'approved', approver: 'alice', now: decidedNow });
+    const later = new Date('2026-08-01T00:00:00.000Z');
+    const { changed } = applyPromotionDecision(entry, {
+      decision: 'approved',
+      approver: 'carol',
+      now: later,
+    });
+    assert.equal(changed, false);
+    // Approver/timestamp of the original decision are preserved.
+    assert.equal(entry.context.approval.approver, 'alice');
+    assert.equal(entry.context.approval.decidedAt, '2026-07-21T09:00:00.000Z');
+  });
+
+  test('rejects an unknown decision and a missing approver', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    assert.throws(
+      () => applyPromotionDecision(entry, { decision: 'maybe', approver: 'a' }),
+      /Invalid decision/
+    );
+    assert.throws(
+      () => applyPromotionDecision(entry, { decision: 'approved', approver: '' }),
+      /approver is required/
+    );
+  });
+
+  test('entry stays schema-valid after approval and after rejection', () => {
+    const approved = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    applyPromotionDecision(approved, { decision: 'approved', approver: 'alice', now: decidedNow });
+    assert.equal(validate(wrapIndex([approved])), true, JSON.stringify(validate.errors, null, 2));
+
+    const rejected = makeCandidate('skill-b', 'false_positive', [fp(1), fp(2)]);
+    applyPromotionDecision(rejected, { decision: 'rejected', approver: 'bob', now: decidedNow });
+    assert.equal(validate(wrapIndex([rejected])), true, JSON.stringify(validate.errors, null, 2));
+  });
+});
+
+describe('decidePromotion (persisting wrapper)', () => {
+  test('persists the transition to the index', () => {
+    const { cleanup, indexPath } = createTempMemory({ layout: 'flat', prefix: 'rr-promote-' });
+    try {
+      const entry = makeCandidate('repository-layer-boundary', 'false_positive', [fp(1), fp(2)]);
+      appendEntry(indexPath, entry);
+      const { changed } = decidePromotion({
+        indexPath,
+        id: entry.id,
+        decision: 'approved',
+        approver: 'alice',
+        now: decidedNow,
+      });
+      assert.equal(changed, true);
+      const reloaded = loadMemory(indexPath).entries.find((e) => e.id === entry.id);
+      assert.equal(reloaded.context.promotionCandidate.promotionStatus, 'approved');
+      assert.equal(reloaded.context.approval.approver, 'alice');
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('a second identical decision does not rewrite the record', () => {
+    const { cleanup, indexPath } = createTempMemory({ layout: 'flat', prefix: 'rr-promote-' });
+    try {
+      const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+      appendEntry(indexPath, entry);
+      decidePromotion({
+        indexPath,
+        id: entry.id,
+        decision: 'approved',
+        approver: 'alice',
+        now: decidedNow,
+      });
+      const second = decidePromotion({
+        indexPath,
+        id: entry.id,
+        decision: 'approved',
+        approver: 'bob',
+        now: new Date('2026-09-01T00:00:00.000Z'),
+      });
+      assert.equal(second.changed, false);
+      const reloaded = loadMemory(indexPath).entries.find((e) => e.id === entry.id);
+      assert.equal(reloaded.context.approval.approver, 'alice');
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('throws for an unknown id', () => {
+    const { cleanup, indexPath } = createTempMemory({ layout: 'flat', prefix: 'rr-promote-' });
+    try {
+      assert.throws(
+        () => decidePromotion({ indexPath, id: 'nope', decision: 'approved', approver: 'a' }),
+        /No promotion_candidate entry/
+      );
+    } finally {
+      cleanup();
+    }
+  });
+});
+
+describe('listPromotionCandidates', () => {
+  test('returns only active promotion_candidate entries by default', () => {
+    const a = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    const b = makeCandidate('skill-b', 'false_positive', [fp(1), fp(2)]);
+    applyPromotionDecision(b, { decision: 'rejected', approver: 'bob', now: decidedNow });
+    const other = {
+      id: 'r1',
+      type: 'review',
+      content: 'x',
+      metadata: { createdAt: now.toISOString(), author: 't' },
+    };
+    const index = wrapIndex([a, b, other]);
+    assert.deepEqual(
+      listPromotionCandidates(index).map((e) => e.id),
+      [a.id]
+    );
+    assert.equal(listPromotionCandidates(index, { includeInactive: true }).length, 2);
+  });
+});
+
+describe('isSecuritySensitive', () => {
+  test('flags security/compliance signals in skill/clusterKey', () => {
+    assert.equal(
+      isSecuritySensitive(makeCandidate('secret-scanner', 'missed_issue', [fp(1), fp(2)])),
+      true
+    );
+    assert.equal(
+      isSecuritySensitive(makeCandidate('auth-guard', 'false_positive', [fp(1), fp(2)])),
+      true
+    );
+    assert.equal(
+      isSecuritySensitive(
+        makeCandidate('repository-layer-boundary', 'false_positive', [fp(1), fp(2)])
+      ),
+      false
+    );
+  });
+});
+
+describe('buildPrScaffold', () => {
+  const approve = (entry) =>
+    applyPromotionDecision(entry, {
+      decision: 'approved',
+      approver: 'alice',
+      reason: 'r',
+      now: decidedNow,
+    });
+
+  test('is not eligible until approved', () => {
+    const entry = makeCandidate('repository-layer-boundary', 'false_positive', [fp(1), fp(2)]);
+    const s = buildPrScaffold(entry);
+    assert.equal(s.eligible, false);
+    assert.match(s.note, /not approved/);
+    assert.equal(s.branchName, null);
+  });
+
+  test('rejected candidates are not eligible', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    applyPromotionDecision(entry, { decision: 'rejected', approver: 'bob', now: decidedNow });
+    assert.equal(buildPrScaffold(entry).eligible, false);
+  });
+
+  test('each proposedTarget.kind produces a branch, title and paths', () => {
+    const cases = [
+      {
+        skillId: 'repository-layer-boundary',
+        feedbackType: 'false_positive',
+        kind: 'fixture',
+        branch: /^promote\/fixture\//,
+      },
+      {
+        skillId: 'skill-x',
+        feedbackType: 'missed_issue',
+        kind: 'fixture',
+        branch: /^promote\/fixture\//,
+      },
+      {
+        skillId: 'skill-x',
+        feedbackType: 'accepted_risk',
+        kind: 'rule',
+        branch: /^promote\/rule\//,
+      },
+      {
+        skillId: 'skill-x',
+        feedbackType: 'not_actionable',
+        kind: 'skill',
+        branch: /^promote\/skill\//,
+      },
+      { skillId: 'skill-x', feedbackType: 'unclear', kind: 'skill', branch: /^promote\/skill\// },
+      {
+        skillId: 'skill-x',
+        feedbackType: 'duplicate',
+        kind: 'routing',
+        branch: /^promote\/routing\//,
+      },
+      {
+        skillId: 'skill-x',
+        feedbackType: 'out_of_scope',
+        kind: 'riverbed',
+        branch: /^promote\/riverbed\//,
+      },
+    ];
+    for (const c of cases) {
+      const entry = makeCandidate(c.skillId, c.feedbackType, [fp(1), fp(2)]);
+      approve(entry);
+      const s = buildPrScaffold(entry);
+      assert.equal(s.eligible, true, `${c.kind} should be eligible`);
+      assert.equal(s.requiresPlanGate, false, `${c.kind} is not security-sensitive`);
+      assert.equal(s.kind, c.kind);
+      assert.match(s.branchName, c.branch);
+      assert.ok(s.prTitle && s.prTitle.length > 0);
+      assert.ok(s.targetPaths.length > 0);
+      assert.match(s.prBody, /## Approval/);
+      assert.match(s.prBody, /approver: alice/);
+    }
+  });
+
+  test('security/compliance kind delegates to PlanGate instead of a merge scaffold', () => {
+    const entry = makeCandidate('secret-scanner', 'missed_issue', [fp(1), fp(2)]);
+    approve(entry);
+    const s = buildPrScaffold(entry);
+    assert.equal(s.eligible, true);
+    assert.equal(s.requiresPlanGate, true);
+    assert.match(s.branchName, /^promote\/plangate\//);
+    assert.match(s.prBody, /PlanGate/);
+    assert.match(s.note, /PlanGate approval required/);
+  });
+
+  test('human_judgment kind yields no mergeable scaffold', () => {
+    // A feedbackType with no decision-tree mapping falls back to human_judgment.
+    const entry = makeCandidate('skill-x', 'some_unmapped_type', [fp(1), fp(2)]);
+    approve(entry);
+    const s = buildPrScaffold(entry);
+    assert.equal(s.kind, 'human_judgment');
+    assert.equal(s.eligible, true);
+    assert.equal(s.branchName, null);
+    assert.match(s.note, /human_judgment/);
+  });
+});
