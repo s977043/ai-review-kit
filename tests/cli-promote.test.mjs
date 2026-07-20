@@ -119,6 +119,31 @@ describe('river promote approve / reject', () => {
     assert.equal(entry.context.approval.decision, 'rejected');
   });
 
+  test('rejecting a previously-approved candidate warns and flags orphaned scaffold', async (t) => {
+    const { cleanup, indexPath, fixtureId } = seed();
+    t.after(cleanup);
+    await runCliInProcess(
+      ['promote', 'approve', fixtureId, '--index', indexPath, '--approver', 'alice'],
+      {
+        env: { RIVER_NOW: '2026-07-21T09:00:00.000Z' },
+      }
+    );
+    const res = await runCliInProcess(
+      ['promote', 'reject', fixtureId, '--index', indexPath, '--approver', 'bob'],
+      { env: { RIVER_NOW: '2026-07-22T00:00:00.000Z' } }
+    );
+    assert.equal(res.code, 0, res.stderr);
+    assert.match(res.stderr, /overriding to rejected/);
+    assert.match(res.stdout, /PR scaffold previously generated .* is now invalid/);
+    // The full audit trail is retained.
+    const entry = loadMemory(indexPath).entries.find((e) => e.id === fixtureId);
+    assert.equal(entry.context.approvalHistory.length, 2);
+    assert.deepEqual(
+      entry.context.approvalHistory.map((h) => h.decision),
+      ['approved', 'rejected']
+    );
+  });
+
   test('approve without an id exits 1', async (t) => {
     const { cleanup, indexPath } = seed();
     t.after(cleanup);
@@ -195,5 +220,20 @@ describe('river promote (routing)', () => {
     const res = await runCliInProcess(['promote', 'bogus', '--index', indexPath]);
     assert.equal(res.code, 1);
     assert.match(res.stderr, /usage: river promote/);
+  });
+
+  test('--approver without a value does not swallow the next flag', async (t) => {
+    const { cleanup, indexPath } = seed();
+    t.after(cleanup);
+    // `--approver --index <path>` must not consume `--index` as the approver.
+    const res = await runCliInProcess([
+      'promote',
+      'approve',
+      'x',
+      '--approver',
+      '--index',
+      indexPath,
+    ]);
+    assert.match(res.stderr, /--approver option requires a value/);
   });
 });

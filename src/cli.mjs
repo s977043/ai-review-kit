@@ -342,11 +342,23 @@ function parseArgs(argv) {
     }
     if (parsed.command === 'promote') {
       if (arg === '--approver') {
-        parsed.promoteApprover = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --approver option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteApprover = value;
         continue;
       }
       if (arg === '--reason') {
-        parsed.promoteReason = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --reason option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteReason = value;
         continue;
       }
       if (arg === '--index') {

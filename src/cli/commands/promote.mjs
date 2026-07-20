@@ -93,7 +93,7 @@ export async function runPromoteCommand(parsed, targetPath) {
   const sub = parsed.promoteSubcommand;
   if (!['list', 'approve', 'reject', 'template'].includes(sub)) {
     console.error(
-      'Error: usage: river promote <list|approve <id>|reject <id>|template [<id>]> [--approver <name>] [--reason <text>] [--index <path>] [--json] [--include-inactive].'
+      'Error: usage: river promote <list|approve <id>|reject <id>|template [<id>]> [--approver <name>] [--reason <text>] [--index <path>] [--output json] [--include-inactive].'
     );
     return 1;
   }
@@ -126,7 +126,11 @@ export async function runPromoteCommand(parsed, targetPath) {
     }
     const decision = sub === 'approve' ? 'approved' : 'rejected';
     const approver =
-      parsed.promoteApprover || process.env.RIVER_APPROVER || process.env.USER || 'unknown';
+      parsed.promoteApprover ||
+      process.env.RIVER_APPROVER ||
+      process.env.USER ||
+      process.env.USERNAME || // Windows
+      'unknown';
     let result;
     try {
       result = decidePromotion({
@@ -146,10 +150,20 @@ export async function runPromoteCommand(parsed, targetPath) {
       console.log(`Candidate ${result.entry.id} already ${decision} (no change).`);
       return 0;
     }
+    if (result.warning) {
+      console.warn(`Warning: ${result.warning}`);
+    }
     console.log(`Candidate ${result.entry.id} ${decision}.`);
     console.log(`  promotionStatus: ${pc.promotionStatus}`);
     console.log(`  approver: ${approver}`);
     console.log(`  decidedAt: ${result.entry.context.approval.decidedAt}`);
+    // Rejecting a candidate that was previously approved invalidates any PR
+    // scaffold already generated from it; make the orphaning explicit.
+    if (decision === 'rejected' && result.previousDecision === 'approved') {
+      console.log(
+        '  note: any PR scaffold previously generated for this candidate is now invalid (regenerate after a fresh approval).'
+      );
+    }
     console.log(`  written to: ${indexPath}`);
     return 0;
   }

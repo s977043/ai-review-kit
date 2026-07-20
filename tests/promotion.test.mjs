@@ -178,21 +178,88 @@ describe('listPromotionCandidates', () => {
 });
 
 describe('isSecuritySensitive', () => {
+  const sensitive = (skillId) =>
+    isSecuritySensitive(makeCandidate(skillId, 'false_positive', [fp(1), fp(2)]));
+
   test('flags security/compliance signals in skill/clusterKey', () => {
     assert.equal(
       isSecuritySensitive(makeCandidate('secret-scanner', 'missed_issue', [fp(1), fp(2)])),
       true
     );
-    assert.equal(
-      isSecuritySensitive(makeCandidate('auth-guard', 'false_positive', [fp(1), fp(2)])),
-      true
+    assert.equal(sensitive('auth-guard'), true);
+    assert.equal(sensitive('repository-layer-boundary'), false);
+  });
+
+  // Canary: plural / derivational forms MUST be caught. A stem that only matched
+  // when followed by a word boundary silently skipped these (the warning-1 bug).
+  test('canary: plurals and derivations are caught (warning-1 regression guard)', () => {
+    for (const skillId of [
+      'authentication-review',
+      'authorization-check',
+      'secrets-detector',
+      'credentials-scanner',
+      'vulnerability-audit',
+      'cryptography-review',
+      'injection-guard',
+      'compliance-gate',
+    ]) {
+      assert.equal(sensitive(skillId), true, `${skillId} should be security-sensitive`);
+    }
+  });
+
+  // Canary: benign words whose embedded stem must NOT over-match. `oauth-flow`
+  // contains "auth" but preceded by a letter, so it stays out (no over-detection).
+  test('canary: embedded / benign stems do not over-match', () => {
+    for (const skillId of [
+      'oauth-flow-review',
+      'repository-layer-boundary',
+      'readability-check',
+      'markdown-linter',
+    ]) {
+      assert.equal(sensitive(skillId), false, `${skillId} should NOT be security-sensitive`);
+    }
+  });
+});
+
+describe('approval audit trail', () => {
+  test('approve -> reject -> approve keeps every decision in approvalHistory', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    const r1 = applyPromotionDecision(entry, {
+      decision: 'approved',
+      approver: 'alice',
+      now: decidedNow,
+    });
+    assert.equal(r1.warning, null);
+    assert.equal(r1.previousDecision, null);
+    const r2 = applyPromotionDecision(entry, {
+      decision: 'rejected',
+      approver: 'bob',
+      now: new Date('2026-07-22T00:00:00.000Z'),
+    });
+    assert.equal(r2.previousDecision, 'approved');
+    assert.match(r2.warning, /overriding to rejected/);
+    const r3 = applyPromotionDecision(entry, {
+      decision: 'approved',
+      approver: 'carol',
+      now: new Date('2026-07-23T00:00:00.000Z'),
+    });
+    assert.equal(r3.previousDecision, 'rejected');
+    assert.equal(entry.context.approvalHistory.length, 3);
+    assert.deepEqual(
+      entry.context.approvalHistory.map((h) => `${h.decision}:${h.approver}`),
+      ['approved:alice', 'rejected:bob', 'approved:carol']
     );
-    assert.equal(
-      isSecuritySensitive(
-        makeCandidate('repository-layer-boundary', 'false_positive', [fp(1), fp(2)])
-      ),
-      false
-    );
+    // context.approval points at the latest decision.
+    assert.equal(entry.context.approval.approver, 'carol');
+    assert.equal(entry.context.promotionCandidate.promotionStatus, 'approved');
+    assert.equal(validate(wrapIndex([entry])), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  test('idempotent same-decision re-apply does not grow the history', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    applyPromotionDecision(entry, { decision: 'approved', approver: 'alice', now: decidedNow });
+    applyPromotionDecision(entry, { decision: 'approved', approver: 'bob', now: decidedNow });
+    assert.equal(entry.context.approvalHistory.length, 1);
   });
 });
 
@@ -217,6 +284,18 @@ describe('buildPrScaffold', () => {
     const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
     applyPromotionDecision(entry, { decision: 'rejected', approver: 'bob', now: decidedNow });
     assert.equal(buildPrScaffold(entry).eligible, false);
+  });
+
+  test('proposedTarget.id is slugified into paths (no traversal leakage)', () => {
+    const entry = makeCandidate('skill-x', 'false_positive', [fp(1), fp(2)]);
+    // Simulate a malicious / unsanitised candidate id.
+    entry.context.promotionCandidate.proposedTarget = { kind: 'fixture', id: '../../etc/passwd' };
+    approve(entry);
+    const s = buildPrScaffold(entry);
+    for (const p of s.targetPaths) {
+      assert.ok(!p.includes('..'), `path must not contain traversal: ${p}`);
+      assert.match(p, /skills\/\*\*\/fixtures\/etc-passwd\.md/);
+    }
   });
 
   test('each proposedTarget.kind produces a branch, title and paths', () => {
