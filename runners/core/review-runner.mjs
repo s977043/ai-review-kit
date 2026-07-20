@@ -3,6 +3,7 @@ import { loadSkills } from './skill-loader.mjs';
 import { planSkills, summarizeSkill } from '../../src/lib/skill-planner.mjs';
 import { inferImpactTags } from '../../src/lib/impact-scope.mjs';
 import { classifyChangedFiles } from '../../src/lib/file-classifier.mjs';
+import { inferPhase } from '../../src/lib/phase-inference.mjs';
 import { analyzeTestImpact } from '../../src/lib/test-impact.mjs';
 import { normalizePlannerMode } from '../../src/lib/planner-utils.mjs';
 import { HEURISTIC_SKILL_IDS } from '../../src/lib/heuristic-review.mjs';
@@ -269,6 +270,11 @@ export async function buildExecutionPlan(options) {
   });
   const impactTags = inferImpactTags(changedFiles, { diffText });
   const fileTypes = classifyChangedFiles(changedFiles);
+  // #1565 Stage 1 (observe): deterministically infer a phase from fileTypes and
+  // record it on the snapshot for measurement only. `applied: false` documents
+  // that the inferred phase does NOT drive selection — the actual `phase` is
+  // unchanged. Applying it (Stage 2, `--phase auto`) is a separate change.
+  const inferredPhase = { ...inferPhase(fileTypes), applied: false };
   const riskAssessment = riskMap ? evaluateRisk(riskMap, changedFiles) : null;
   // #1255: surface test-impact signal (riskLevel high = app changed, no tests)
   // on the plan so downstream planners/consumers can route test skills. This
@@ -301,7 +307,14 @@ export async function buildExecutionPlan(options) {
       executionOrder: [],
       estimatedCost: { tokens: estimateTokens(diffText ?? ''), source: 'token-estimator' },
       contextLift: computeContextLift(skills, []),
-      snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
+      snapshot: {
+        fileTypes,
+        relatedADRs: [],
+        reviewMode: null,
+        riskAssessment,
+        testImpact,
+        inferredPhase,
+      },
     };
   }
   const relatedADRs = findRelatedADRs(repoRoot ?? process.cwd(), {
@@ -358,7 +371,7 @@ export async function buildExecutionPlan(options) {
       // #878 A2-3-runners: carry-over context for --plan replay execution.
       // Consumers should propagate this to `artifact.debug.execution.snapshot`
       // per docs/development/a2-3-replay-execution-design.md.
-      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
+      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact, inferredPhase },
     };
   }
 
@@ -377,7 +390,7 @@ export async function buildExecutionPlan(options) {
     executionOrder: deriveExecutionOrder(ordered),
     estimatedCost: { tokens: estimateTokens(diffText ?? ''), source: 'token-estimator' },
     contextLift: computeContextLift(skills, ordered),
-    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
+    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact, inferredPhase },
   };
 }
 
