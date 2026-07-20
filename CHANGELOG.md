@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.61.0](https://github.com/s977043/river-review/compare/v1.60.0...v1.61.0) (2026-07-20)
+
+
+### Features
+
+* **cli:** promotion_candidate の承認 CLI と PR 雛形生成 (Phase 2, [#1568](https://github.com/s977043/river-review/issues/1568)-B) ([#1629](https://github.com/s977043/river-review/issues/1629)) ([c3ddd01](https://github.com/s977043/river-review/commit/c3ddd01dc2589a0f0fd3ac4730533e7389cd6029))
+
 ## [1.60.0](https://github.com/s977043/river-review/compare/v1.59.1...v1.60.0) (2026-07-20)
 
 
