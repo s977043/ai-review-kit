@@ -204,7 +204,7 @@
     {
       "id": "coverage-gap",
       "path": "skills/downstream/coverage-gap",
-      "checksum": "sha256:549f0d7729fb199e85be1ea1d500e16ffe528aa4201d78738a17b610d5bceea6",
+      "checksum": "sha256:187bf4e78b2355dfa2ba617a87e5864417e54f40f126d2513e0d4dcade8baf8c",
       "files": 1
     },
     {
@@ -690,7 +690,7 @@
     {
       "id": "test-existence",
       "path": "skills/downstream/test-existence",
-      "checksum": "sha256:05a61e8ffb58effbf4c5c831101418b776d1da7710b09dab0e5a644a0db31808",
+      "checksum": "sha256:5faa5866c0af701bdbba5decb13d2eb4889bb0f651f3b2f18902c7ebf0908e3e",
       "files": 1
     },
     {

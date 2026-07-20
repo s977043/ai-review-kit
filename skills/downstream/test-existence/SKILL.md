@@ -18,6 +18,10 @@ modelHint: balanced
 dependencies: [test_runner, coverage_report]
 ---
 
+## 既定 CI レビューでは発火しない / Not triggered on the default CI review path
+
+このスキルは repo 全体の既存テスト木（変更されていないファイルを含む）を要するため、既定 runner の供給コンテキスト（`RUNNER_SUPPLIED_CONTEXTS = ['diff', 'prDescription', 'fullFile']`、`scripts/validate-skills.mjs`）では発火しない。`RIVER_AVAILABLE_CONTEXTS` を拡張して `tests`（repo-wide test tree）を供給する構成でのみ有効になる（`GRANDFATHERED_UNSUPPLIED_CONTEXT` に登録済み、#1606）。
+
 ## Pattern declaration
 
 Primary pattern: Reviewer
