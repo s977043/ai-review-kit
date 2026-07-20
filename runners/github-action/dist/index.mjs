@@ -40067,7 +40067,7 @@ function preprocess(fn, schema) {
 
 /***/ }),
 
-/***/ 7050:
+/***/ 1073:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -40273,6 +40273,94 @@ function inferImpactTags(changedFiles, options = {}) {
 
 // EXTERNAL MODULE: ./src/lib/file-classifier.mjs
 var file_classifier = __nccwpck_require__(4673);
+;// CONCATENATED MODULE: ./src/lib/phase-inference.mjs
+// Phase inference (#1565) — deterministic, side-effect-free.
+//
+// Infers a review phase (upstream / midstream / downstream) from the file-type
+// classification produced by `classifyChangedFiles()` in file-classifier.mjs.
+//
+// Stage 1 (observe) scope: this result is recorded on the execution plan
+// snapshot (`snapshot.inferredPhase`) for measurement only. It MUST NOT change
+// the actual phase selection, skill selection, or gate decisions. Applying the
+// inferred phase (Stage 2, `--phase auto`) is a separate change.
+//
+// Rules (priority order, conservative — fail-safe to `midstream` matches the
+// current default behavior so observe mode never diverges):
+//
+//   1. docs present and no app/test/schema/migration changes  -> upstream
+//   2. tests present and no app changes                        -> downstream
+//   3. app changes present                                     -> midstream
+//   4. anything else (config/infra/schema/migration/unknown
+//      only, undecidable mix, empty)                           -> midstream (fail-safe)
+
+const DEFAULT_PHASE = 'midstream';
+
+/**
+ * @typedef {object} InferredPhase
+ * @property {'upstream'|'midstream'|'downstream'} phase - Inferred phase.
+ * @property {'high'|'low'} confidence - `high` when a rule matched positively;
+ *   `low` for the fail-safe default (no rule matched).
+ * @property {string} reason - Human-readable justification, e.g. `docs-only diff (3 files)`.
+ */
+
+/**
+ * Infer a review phase from the output of `classifyChangedFiles()`.
+ *
+ * Deterministic pure function: same input always yields the same output, no
+ * side effects, no I/O, no LLM. Only reads array lengths from `fileTypes`.
+ *
+ * @param {{ config?: string[], schema?: string[], migration?: string[], app?: string[], test?: string[], infra?: string[], docs?: string[], unknown?: string[] }} fileTypes
+ *   File-type buckets as returned by `classifyChangedFiles()`. Missing keys are
+ *   treated as empty.
+ * @returns {InferredPhase}
+ */
+function inferPhase(fileTypes) {
+  const ft = fileTypes ?? {};
+  const count = (key) => (Array.isArray(ft[key]) ? ft[key].length : 0);
+
+  const app = count('app');
+  const test = count('test');
+  const docs = count('docs');
+  const schema = count('schema');
+  const migration = count('migration');
+
+  // Rule 1: docs-only diff (no code-ish changes) -> upstream (design/ADR PRs).
+  if (docs > 0 && app === 0 && test === 0 && schema === 0 && migration === 0) {
+    return {
+      phase: 'upstream',
+      confidence: 'high',
+      reason: `docs-only diff (${docs} file${docs === 1 ? '' : 's'})`,
+    };
+  }
+
+  // Rule 2: tests present and no app changes -> downstream (test/QA PRs).
+  if (test > 0 && app === 0) {
+    return {
+      phase: 'downstream',
+      confidence: 'high',
+      reason: `test-only diff (${test} file${test === 1 ? '' : 's'})`,
+    };
+  }
+
+  // Rule 3: app changes present -> midstream (implementation PRs).
+  if (app > 0) {
+    return {
+      phase: 'midstream',
+      confidence: 'high',
+      reason: `app diff (${app} file${app === 1 ? '' : 's'})`,
+    };
+  }
+
+  // Rule 4: fail-safe. Undecidable mix / config / infra / schema / migration /
+  // unknown only / empty -> keep the current default, prefer no change over a
+  // misroute.
+  return {
+    phase: DEFAULT_PHASE,
+    confidence: 'low',
+    reason: 'no confident phase signal; fail-safe to midstream',
+  };
+}
+
 ;// CONCATENATED MODULE: ./src/lib/test-impact.mjs
 
 
@@ -40425,6 +40513,7 @@ var diff_processor = __nccwpck_require__(861);
 // EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
 var review_plan_generator = __nccwpck_require__(8069);
 ;// CONCATENATED MODULE: ./runners/core/review-runner.mjs
+
 
 
 
@@ -40696,6 +40785,11 @@ async function buildExecutionPlan(options) {
   });
   const impactTags = inferImpactTags(changedFiles, { diffText });
   const fileTypes = (0,file_classifier/* classifyChangedFiles */.q)(changedFiles);
+  // #1565 Stage 1 (observe): deterministically infer a phase from fileTypes and
+  // record it on the snapshot for measurement only. `applied: false` documents
+  // that the inferred phase does NOT drive selection — the actual `phase` is
+  // unchanged. Applying it (Stage 2, `--phase auto`) is a separate change.
+  const inferredPhase = { ...inferPhase(fileTypes), applied: false };
   const riskAssessment = riskMap ? (0,risk_map/* evaluateRisk */.lm)(riskMap, changedFiles) : null;
   // #1255: surface test-impact signal (riskLevel high = app changed, no tests)
   // on the plan so downstream planners/consumers can route test skills. This
@@ -40728,7 +40822,14 @@ async function buildExecutionPlan(options) {
       executionOrder: [],
       estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
       contextLift: computeContextLift(skills, []),
-      snapshot: { fileTypes, relatedADRs: [], reviewMode: null, riskAssessment, testImpact },
+      snapshot: {
+        fileTypes,
+        relatedADRs: [],
+        reviewMode: null,
+        riskAssessment,
+        testImpact,
+        inferredPhase,
+      },
     };
   }
   const relatedADRs = findRelatedADRs(repoRoot ?? process.cwd(), {
@@ -40785,7 +40886,7 @@ async function buildExecutionPlan(options) {
       // #878 A2-3-runners: carry-over context for --plan replay execution.
       // Consumers should propagate this to `artifact.debug.execution.snapshot`
       // per docs/development/a2-3-replay-execution-design.md.
-      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
+      snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact, inferredPhase },
     };
   }
 
@@ -40804,7 +40905,7 @@ async function buildExecutionPlan(options) {
     executionOrder: deriveExecutionOrder(ordered),
     estimatedCost: { tokens: (0,token_estimator/* estimateTokens */.bP)(diffText ?? ''), source: 'token-estimator' },
     contextLift: computeContextLift(skills, ordered),
-    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact },
+    snapshot: { fileTypes, relatedADRs, reviewMode, riskAssessment, testImpact, inferredPhase },
   };
 }
 
@@ -45930,7 +46031,7 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 /* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_11__ = __nccwpck_require__(9946);
 /* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1535);
 /* harmony import */ var _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(4807);
-/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(7050);
+/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(1073);
 /* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(2294);
 /* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(9746);
 /* harmony import */ var _review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(8069);
@@ -63489,7 +63590,7 @@ async function runSkillsCommand(parsed, targetPath) {
       console.error('Error: `river skills resolve` requires at least one --path <file>.');
       return 1;
     }
-    const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 7050));
+    const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 1073));
     const plan = await buildExecutionPlan({
       phase: parsed.phase,
       changedFiles: paths,
@@ -64737,8 +64838,8 @@ function createOpenAIPlanner(options = {}) {
   };
 }
 
-// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
-var review_runner = __nccwpck_require__(7050);
+// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 5 modules
+var review_runner = __nccwpck_require__(1073);
 // EXTERNAL MODULE: ./src/lib/riverbed-memory.mjs
 var riverbed_memory = __nccwpck_require__(4216);
 ;// CONCATENATED MODULE: ./src/lib/memory-context.mjs
