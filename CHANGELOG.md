@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.60.0](https://github.com/s977043/river-review/compare/v1.59.1...v1.60.0) (2026-07-20)
+
+
+### Features
+
+* **cli:** observe-mode phase inference recorded on plan snapshot ([#1626](https://github.com/s977043/river-review/issues/1626)) ([e2e7efd](https://github.com/s977043/river-review/commit/e2e7efd86c6070fca43963ac6d438f182bad97f9)), closes [#1565](https://github.com/s977043/river-review/issues/1565)
+* **riverbed:** add promotion_candidate schema and structured候補生成 (Phase 1) ([#1627](https://github.com/s977043/river-review/issues/1627)) ([174a458](https://github.com/s977043/river-review/commit/174a458a0fc2a7144c043873e21a6c742dd766d4)), closes [#1621](https://github.com/s977043/river-review/issues/1621)
+
 ## [1.59.1](https://github.com/s977043/river-review/compare/v1.59.0...v1.59.1) (2026-07-19)
 
 
