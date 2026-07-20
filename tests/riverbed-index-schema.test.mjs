@@ -5,8 +5,20 @@ import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
 
 import { loadMemory, appendEntry, supersede, expireEntries } from '../src/lib/riverbed-memory.mjs';
+import {
+  buildPromotionCandidateEntry,
+  buildPromotionCandidates,
+} from '../scripts/feedback-rule-candidates.mjs';
 import { createTempMemory, makeMemoryEntry } from './helpers/memory.mjs';
 import { compileRiverbedIndexValidator } from './helpers/schema-validator.mjs';
+
+const wrapIndex = (entries) => ({ version: '1', entries });
+const fpEntry = (fingerprint, pr) => ({
+  skillId: 'repository-layer-boundary',
+  feedbackType: 'false_positive',
+  findingFingerprint: fingerprint,
+  pr,
+});
 
 // Compiled once at module scope (ajv compile is expensive, schemas are
 // static). strict mode stays on so future schema typos surface here; the
@@ -78,5 +90,98 @@ describe('riverbed-index.schema.json', () => {
 
   test('extra top-level property is rejected', () => {
     assert.equal(validate({ version: '1', entries: [], unexpected: true }), false);
+  });
+});
+
+// #1568-A / #1621: promotion_candidate additive type + structured contract.
+describe('riverbed-entry.schema.json: promotion_candidate (#1621)', () => {
+  const now = new Date('2026-07-20T00:00:00.000Z');
+
+  test('a built promotion_candidate entry conforms to schema (auditable fields on JSON)', () => {
+    const entry = buildPromotionCandidateEntry({
+      skillId: 'repository-layer-boundary',
+      feedbackType: 'false_positive',
+      group: [fpEntry('0a1b2c3d4e5f6071', 123), fpEntry(null, 146)],
+      now,
+    });
+    assert.equal(validate(wrapIndex([entry])), true, JSON.stringify(validate.errors, null, 2));
+    const pc = entry.context.promotionCandidate;
+    // Auditable contract fields are present on the persisted JSON.
+    for (const field of ['rationale', 'scope', 'exceptions', 'evidence', 'proposedTarget']) {
+      assert.ok(pc[field] !== undefined, `missing ${field}`);
+    }
+    assert.equal(entry.type, 'promotion_candidate');
+    assert.equal(entry.expiresAt, '2026-10-18T00:00:00.000Z'); // now + 90 days
+    assert.equal(pc.promotionStatus, 'candidate');
+    // findingFingerprint is nullable in Phase 1.
+    assert.equal(pc.evidence[1].findingFingerprint, null);
+  });
+
+  test('missing context.promotionCandidate is rejected for promotion_candidate type', () => {
+    const bad = {
+      id: 'RR-PC-x',
+      type: 'promotion_candidate',
+      content: 'x',
+      status: 'active',
+      expiresAt: '2026-10-18T00:00:00.000Z',
+      context: {},
+      metadata: { createdAt: now.toISOString(), author: 'test' },
+    };
+    assert.equal(validate(wrapIndex([bad])), false);
+  });
+
+  test('missing expiresAt is rejected for promotion_candidate type', () => {
+    const entry = buildPromotionCandidateEntry({
+      skillId: 'skill-a',
+      feedbackType: 'false_positive',
+      group: [fpEntry(null, 1), fpEntry(null, 2)],
+      now,
+    });
+    delete entry.expiresAt;
+    assert.equal(validate(wrapIndex([entry])), false);
+  });
+
+  test('invalid promotionStatus value is rejected', () => {
+    const entry = buildPromotionCandidateEntry({
+      skillId: 'skill-a',
+      feedbackType: 'false_positive',
+      group: [fpEntry(null, 1), fpEntry(null, 2)],
+      now,
+    });
+    entry.context.promotionCandidate.promotionStatus = 'bogus';
+    assert.equal(validate(wrapIndex([entry])), false);
+  });
+
+  test('malformed findingFingerprint (not 16 hex) is rejected', () => {
+    const entry = buildPromotionCandidateEntry({
+      skillId: 'skill-a',
+      feedbackType: 'false_positive',
+      group: [fpEntry(null, 1), fpEntry(null, 2)],
+      now,
+    });
+    entry.context.promotionCandidate.evidence[0].findingFingerprint = 'ZZZ';
+    assert.equal(validate(wrapIndex([entry])), false);
+  });
+
+  test('existing entry types remain valid (additive change is non-breaking)', () => {
+    const entries = [makeMemoryEntry({ type: 'review' }), makeMemoryEntry({ type: 'decision' })];
+    assert.equal(validate(wrapIndex(entries)), true, JSON.stringify(validate.errors, null, 2));
+  });
+
+  test('buildPromotionCandidates entries append into a Riverbed index that conforms to schema', () => {
+    const { cleanup, indexPath } = createTempMemory({ layout: 'flat', prefix: 'rr-pc-' });
+    try {
+      const built = buildPromotionCandidates(
+        [fpEntry('0a1b2c3d4e5f6071', 1), fpEntry(null, 2), fpEntry(null, 3)],
+        { now }
+      );
+      assert.equal(built.length, 1);
+      for (const entry of built) appendEntry(indexPath, entry);
+      const mem = loadMemory(indexPath);
+      assert.equal(validate(mem), true, JSON.stringify(validate.errors, null, 2));
+      assert.equal(mem.entries[0].context.promotionCandidate.recurrenceCount, 3);
+    } finally {
+      cleanup();
+    }
   });
 });

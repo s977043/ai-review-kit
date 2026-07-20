@@ -15,8 +15,140 @@
         "decision",
         "eval_result",
         "suppression",
-        "resurface"
+        "resurface",
+        "promotion_candidate"
       ]
+    },
+    "promotionCandidate": {
+      "type": "object",
+      "description": "Judgment Promotion Loop Phase 1 candidate contract (#1568-A / #1621). Stored under context.promotionCandidate when type is promotion_candidate. Generation-only: adoption/approval into shared assets happens in a separate human-reviewed PR (#1568-B).",
+      "required": [
+        "recurrenceCount",
+        "clusterKey",
+        "evidence",
+        "rationale",
+        "proposedTarget",
+        "scope",
+        "exceptions",
+        "requiresHumanApproval",
+        "promotionStatus"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "recurrenceCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many recurring feedback entries backed this candidate."
+        },
+        "detector": {
+          "type": "string",
+          "description": "Which primitive detected the recurrence (e.g. feedback-rule-candidates)."
+        },
+        "clusterKey": {
+          "type": "string",
+          "description": "Group key the candidate was clustered on. Phase 1: (skillId, feedbackType) joined by '::'."
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Traceable source references for the recurring judgment.",
+          "items": {
+            "type": "object",
+            "required": ["feedbackType"],
+            "additionalProperties": false,
+            "properties": {
+              "pr": {
+                "type": ["integer", "null"],
+                "description": "Source PR number, or null when unknown."
+              },
+              "findingFingerprint": {
+                "anyOf": [{ "type": "null" }, { "type": "string", "pattern": "^[0-9a-f]{16}$" }],
+                "description": "16-hex finding fingerprint (feedback.mjs contract). Nullable in Phase 1 (#1568 decision 2)."
+              },
+              "feedbackType": {
+                "type": "string",
+                "description": "The feedbackType of the source entry."
+              }
+            }
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this recurring judgment is a promotion candidate (auditable basis)."
+        },
+        "proposedTarget": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "description": "Recommended promotion destination from the classification decision tree.",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "linter",
+                "test",
+                "fixture",
+                "skill",
+                "rule",
+                "routing",
+                "riverbed",
+                "docs",
+                "human_judgment"
+              ],
+              "description": "Promotion destination category."
+            },
+            "id": {
+              "type": ["string", "null"],
+              "description": "Optional target identifier (fixture id, skill id, rule file, etc.)."
+            }
+          }
+        },
+        "scope": {
+          "type": "object",
+          "required": ["paths"],
+          "additionalProperties": false,
+          "description": "Application scope guarding against over-broad promotion.",
+          "properties": {
+            "paths": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Glob paths the promoted judgment should apply to. Empty until a human narrows it."
+            }
+          }
+        },
+        "exceptions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Exception conditions (paths/cases) excluded from the promoted judgment."
+        },
+        "requiresHumanApproval": {
+          "type": "boolean",
+          "description": "Whether promotion into a shared asset needs human approval. Phase 1: always true."
+        },
+        "autoActions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Automated actions already taken without human approval (e.g. detect-recurrence)."
+        },
+        "promotionStatus": {
+          "type": "string",
+          "enum": [
+            "candidate",
+            "pending",
+            "approved",
+            "active",
+            "needs_review",
+            "superseded",
+            "archived"
+          ],
+          "description": "Approval/lifecycle state of the candidate itself (distinct from the entry-level status). Initial: candidate."
+        },
+        "supersedesReason": {
+          "type": ["string", "null"],
+          "description": "Reason this candidate supersedes a prior one, when applicable."
+        }
+      }
     },
     "phase": {
       "type": "string",
@@ -118,5 +250,26 @@
       "format": "date-time",
       "description": "Optional expiration timestamp."
     }
-  }
+  },
+  "allOf": [
+    {
+      "$comment": "promotion_candidate entries carry a structured, auditable candidate under context.promotionCandidate and a required expiresAt (default 90 days, injected at build time). This conditional keeps all other entry types unchanged (#1568-A / #1621).",
+      "if": {
+        "required": ["type"],
+        "properties": { "type": { "const": "promotion_candidate" } }
+      },
+      "then": {
+        "required": ["context", "expiresAt"],
+        "properties": {
+          "context": {
+            "type": "object",
+            "required": ["promotionCandidate"],
+            "properties": {
+              "promotionCandidate": { "$ref": "#/$defs/promotionCandidate" }
+            }
+          }
+        }
+      }
+    }
+  ]
 }
