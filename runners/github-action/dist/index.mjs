@@ -47031,6 +47031,7 @@ function aggregateRiskLevel(fileRisks, fallback = 'comment_only') {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   D4: () => (/* binding */ appendEntry),
+/* harmony export */   W8: () => (/* binding */ updateEntry),
 /* harmony export */   ab: () => (/* binding */ loadMemory),
 /* harmony export */   qU: () => (/* binding */ queryMemory)
 /* harmony export */ });
@@ -47086,6 +47087,29 @@ function appendEntry(indexPath, entry) {
     node_fs__WEBPACK_IMPORTED_MODULE_0__.mkdirSync(dir, { recursive: true });
   }
   node_fs__WEBPACK_IMPORTED_MODULE_0__.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
+}
+
+/**
+ * Load the index, apply a mutator to the entry with the given id, and persist.
+ * The mutator receives the live entry object and mutates it in place (return
+ * value is ignored). Kept deliberately small and generic so callers own the
+ * transition semantics (e.g. promotion approval) while the load/write plumbing
+ * and JSON formatting stay identical to appendEntry/supersede.
+ *
+ * @param {string} indexPath - Path to the index.json file
+ * @param {string} id - id of the entry to update
+ * @param {(entry: object) => void} mutate - in-place mutator
+ * @returns {object} the updated entry
+ */
+function updateEntry(indexPath, id, mutate) {
+  const index = loadMemory(indexPath);
+  const entry = index.entries.find((e) => e.id === id);
+  if (!entry) {
+    throw new Error(`Entry not found: ${id}`);
+  }
+  mutate(entry);
+  node_fs__WEBPACK_IMPORTED_MODULE_0__.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
+  return entry;
 }
 
 /**
@@ -66902,7 +66926,608 @@ Dependencies: ${
   return 0;
 }
 
+;// CONCATENATED MODULE: ./src/lib/promotion.mjs
+// Judgment Promotion Loop Phase 2 (#1568-B / #1622): approval transition and
+// PR-scaffold generation for promotion_candidate Riverbed entries.
+//
+// Phase 1 (#1621) generates promotion_candidate entries (generation only). This
+// module adds the *human* approval step and turns approved candidates into PR
+// scaffolds (text only — no files are changed here; a human or a follow-up
+// applies them). Generation and adoption stay separated: nothing in this module
+// creates candidates.
+//
+// promotionStatus enum (schema): candidate, pending, approved, active,
+// needs_review, superseded, archived. Phase 2 maps the two human decisions onto
+// existing enum values (no schema change):
+//   approve -> promotionStatus: 'approved'
+//   reject  -> promotionStatus: 'archived'   (no 'rejected' enum value exists;
+//              the rejection is recorded via context.approval.decision)
+//
+// #1568 decision 5: security/compliance promotions are delegated to PlanGate.
+// The proposedTarget.kind enum has no dedicated security kind, so sensitivity is
+// detected deterministically from the candidate's skill / clusterKey signals.
+
+
+
+const PROMOTION_ENTRY_TYPE = 'promotion_candidate';
+
+/** Human decisions and the promotionStatus they map onto. */
+const DECISION_STATUS = Object.freeze({
+  approved: 'approved',
+  rejected: 'archived',
+});
+
+const VALID_DECISIONS = Object.freeze(['approved', 'rejected']);
+
+// Deterministic substring signals that flag a candidate as security/compliance
+// sensitive. Matched against the lowercased skillId + clusterKey.
+const SECURITY_SIGNALS = Object.freeze([
+  'security',
+  'secret',
+  'credential',
+  'auth',
+  'authn',
+  'authz',
+  'compliance',
+  'vuln',
+  'injection',
+  'xss',
+  'csrf',
+  'crypto',
+  'privacy',
+  'pii',
+]);
+
+// Compiled once at module scope (building the regex is not free and the signals
+// are static). Prefix match after a word boundary: the stem must start a word
+// (preceded by start-of-string or a non-letter) but any suffix may follow, so
+// plurals and derivations are caught — secrets, credentials, vulnerability,
+// cryptography, authentication, authorization — while embedded stems are NOT
+// (the "auth" inside "oauth" is preceded by a letter, so oauth-flow stays out).
+const SECURITY_RE = new RegExp(`(^|[^a-z])(${SECURITY_SIGNALS.join('|')})`);
+
+/** Slugify a value into an id-safe fragment. */
+function slugify(value) {
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Slugify proposedTarget.id for interpolation into file-path / branch templates.
+ * Untrusted candidate ids (e.g. `../../etc/passwd`) are neutralised the same way
+ * as clusterKey in branch names, so no path traversal leaks into the scaffold.
+ *
+ * @param {object} pc - a promotionCandidate body
+ * @param {string} fallback - placeholder when no id is set
+ */
+function safeTargetId(pc, fallback) {
+  const id = pc?.proposedTarget?.id;
+  return id ? slugify(id) : fallback;
+}
+
+/**
+ * Read the promotionCandidate body from an entry, or null when absent.
+ * @param {object} entry
+ */
+function getPromotionCandidate(entry) {
+  return entry?.context?.promotionCandidate ?? null;
+}
+
+/**
+ * List promotion_candidate entries from a loaded index. Only active entries are
+ * returned unless includeInactive is set (rejected candidates are archived).
+ *
+ * @param {{ entries: object[] }} index
+ * @param {{ includeInactive?: boolean }} [options]
+ * @returns {object[]}
+ */
+function listPromotionCandidates(index, { includeInactive = false } = {}) {
+  const entries = index?.entries ?? [];
+  return entries.filter((entry) => {
+    if (entry?.type !== PROMOTION_ENTRY_TYPE) return false;
+    if (!includeInactive && (entry.status ?? 'active') !== 'active') return false;
+    return true;
+  });
+}
+
+/**
+ * Whether a candidate is security/compliance sensitive and must be routed
+ * through PlanGate for approval (#1568 decision 5).
+ *
+ * @param {object} entry - a promotion_candidate entry
+ * @returns {boolean}
+ */
+function isSecuritySensitive(entry) {
+  const pc = getPromotionCandidate(entry);
+  const tags = (entry?.metadata?.tags ?? []).join(' ');
+  const haystack = `${tags} ${pc?.clusterKey ?? ''}`.toLowerCase();
+  return SECURITY_RE.test(haystack);
+}
+
+/**
+ * Pure approval transition. Mutates and returns the entry (in place). Every
+ * decision is appended to `context.approvalHistory` (an audit trail that is
+ * never overwritten) and `context.approval` points at the latest record.
+ *
+ * Re-deciding with the SAME decision is a no-op (idempotent). Re-deciding with a
+ * DIFFERENT decision is allowed (an override) but surfaces a `warning` so the
+ * change of mind is visible to the caller; the prior decisions stay in history.
+ *
+ * @param {object} entry - a promotion_candidate entry
+ * @param {{ decision: 'approved'|'rejected', approver: string, reason?: string|null, now?: Date }} opts
+ * @returns {{ changed: boolean, entry: object, warning: string|null, previousDecision: string|null }}
+ */
+function applyPromotionDecision(
+  entry,
+  { decision, approver, reason = null, now = new Date() }
+) {
+  if (!VALID_DECISIONS.includes(decision)) {
+    throw new Error(
+      `Invalid decision: ${decision} (expected one of ${VALID_DECISIONS.join(', ')}).`
+    );
+  }
+  if (!approver) {
+    throw new Error('approver is required to record an auditable approval decision.');
+  }
+  const pc = getPromotionCandidate(entry);
+  if (!pc) {
+    throw new Error(
+      `Entry ${entry?.id} is not a promotion_candidate (missing context.promotionCandidate).`
+    );
+  }
+  const previousDecision = entry.context?.approval?.decision ?? null;
+  // Idempotent: re-deciding with the same decision leaves the record unchanged.
+  if (previousDecision === decision) {
+    return { changed: false, entry, warning: null, previousDecision };
+  }
+  const decidedAt = now.toISOString();
+  const record = { decision, approver, decidedAt, reason: reason ?? null };
+  pc.promotionStatus = DECISION_STATUS[decision];
+  // Append-only audit trail; context.approval always points at the latest record.
+  entry.context.approvalHistory = entry.context.approvalHistory ?? [];
+  entry.context.approvalHistory.push(record);
+  entry.context.approval = record;
+  entry.status = decision === 'rejected' ? 'archived' : 'active';
+  entry.metadata = entry.metadata ?? {};
+  entry.metadata.updatedAt = decidedAt;
+  const warning = previousDecision
+    ? `candidate ${entry.id} was already ${previousDecision}; overriding to ${decision} (prior decisions kept in approvalHistory).`
+    : null;
+  return { changed: true, entry, warning, previousDecision };
+}
+
+/**
+ * I/O wrapper: load the index, apply the approval decision to entry `id`, and
+ * persist. Returns the changed flag and the updated entry.
+ *
+ * @param {{ indexPath: string, id: string, decision: 'approved'|'rejected', approver: string, reason?: string|null, now?: Date }} opts
+ * @returns {{ changed: boolean, entry: object, warning: string|null, previousDecision: string|null }}
+ */
+function decidePromotion({
+  indexPath,
+  id,
+  decision,
+  approver,
+  reason = null,
+  now = new Date(),
+}) {
+  const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
+  const target = listPromotionCandidates(index, { includeInactive: true }).find((e) => e.id === id);
+  if (!target) {
+    throw new Error(`No promotion_candidate entry with id: ${id}`);
+  }
+  // Apply the transition exactly once, inside the persist mutator. updateEntry
+  // rewrites the index; on an idempotent no-op the bytes are unchanged.
+  let result;
+  const entry = (0,riverbed_memory/* updateEntry */.W8)(indexPath, id, (live) => {
+    result = applyPromotionDecision(live, { decision, approver, reason, now });
+  });
+  return { ...result, entry };
+}
+
+// Per-kind PR scaffold shape. `paths(pc)` yields the changed-file path templates;
+// `title(clusterKey)` builds the conventional-commit PR title.
+const KIND_TEMPLATE = Object.freeze({
+  fixture: {
+    branchPrefix: 'promote/fixture',
+    title: (k) => `test(fixture): codify ${k} as a guard fixture`,
+    paths: (pc) => [`skills/**/fixtures/${safeTargetId(pc, '<fixture-id>')}.md`],
+  },
+  test: {
+    branchPrefix: 'promote/test',
+    title: (k) => `test: add regression coverage for ${k}`,
+    paths: () => ['tests/<area>.test.mjs'],
+  },
+  skill: {
+    branchPrefix: 'promote/skill',
+    title: (k) => `docs(skill): refine ${k} skill contract`,
+    paths: (pc) => [`skills/**/${safeTargetId(pc, '<skill-id>')}/SKILL.md`],
+  },
+  rule: {
+    branchPrefix: 'promote/rule',
+    title: (k) => `chore(rules): promote ${k} to project rules`,
+    paths: () => ['.river/rules.md'],
+  },
+  routing: {
+    branchPrefix: 'promote/routing',
+    title: (k) => `fix(routing): clarify owner skill for ${k}`,
+    paths: () => ['skills/registry.yaml'],
+  },
+  riverbed: {
+    branchPrefix: 'promote/riverbed',
+    title: (k) => `chore(riverbed): record ${k} as durable memory`,
+    paths: () => ['.river/memory/index.json'],
+  },
+  docs: {
+    branchPrefix: 'promote/docs',
+    title: (k) => `docs: document ${k}`,
+    paths: () => ['docs/<area>.md'],
+  },
+  linter: {
+    branchPrefix: 'promote/linter',
+    title: (k) => `feat(linter): add deterministic check for ${k}`,
+    paths: () => ['scripts/<linter>.mjs'],
+  },
+});
+
+function renderBody({ pc, entry, kind, targetPaths }) {
+  const evidence = (pc.evidence ?? []).map((e) => {
+    const pr = e.pr ? `#${e.pr}` : '(pr unknown)';
+    const fp = e.findingFingerprint ? ` fingerprint=${e.findingFingerprint}` : '';
+    return `- ${pr} (${e.feedbackType})${fp}`;
+  });
+  const approval = entry.context?.approval;
+  const lines = [
+    `## Summary`,
+    ``,
+    `Promote the recurring judgment \`${pc.clusterKey}\` (recurrence: ${pc.recurrenceCount}) into a versioned asset.`,
+    ``,
+    `Rationale: ${pc.rationale}`,
+    ``,
+    `## Proposed target`,
+    ``,
+    `- kind: ${kind}`,
+    `- id: ${pc.proposedTarget?.id ?? '(none)'}`,
+    `- changed-file templates:`,
+    ...targetPaths.map((p) => `  - \`${p}\``),
+    ``,
+    `## Scope`,
+    ``,
+    pc.scope?.paths?.length
+      ? pc.scope.paths.map((p) => `- \`${p}\``).join('\n')
+      : '- (none yet — narrow the scope before merging)',
+    ``,
+    `## Exceptions`,
+    ``,
+    pc.exceptions?.length ? pc.exceptions.map((e) => `- ${e}`).join('\n') : '- (none)',
+    ``,
+    `## Evidence`,
+    ``,
+    ...(evidence.length ? evidence : ['- (no source PRs recorded)']),
+    ``,
+    `## Approval`,
+    ``,
+    `- decision: ${approval?.decision ?? '(pending)'}`,
+    `- approver: ${approval?.approver ?? '(unknown)'}`,
+    `- decidedAt: ${approval?.decidedAt ?? '(unknown)'}`,
+    ...(approval?.reason ? [`- reason: ${approval.reason}`] : []),
+    ``,
+    `## Checklist`,
+    ``,
+    `- [ ] Narrow \`scope.paths\` to the minimal set`,
+    `- [ ] Fill in the actual change for the target above`,
+    `- [ ] Confirm the recurrence is still valid`,
+    ``,
+    `_Generated by \`river promote template\` (candidate ${entry.id}). No files were changed._`,
+  ];
+  return lines.join('\n');
+}
+
+function renderPlanGateBody({ pc, entry }) {
+  return [
+    `## PlanGate delegation required`,
+    ``,
+    `Candidate \`${pc.clusterKey}\` (recurrence: ${pc.recurrenceCount}) is security/compliance`,
+    `sensitive. Per #1568 decision 5, its promotion approval is delegated to PlanGate`,
+    `rather than approved through the normal PR scaffold.`,
+    ``,
+    `Do not open a direct merge PR from this template. Route the promotion through`,
+    `PlanGate's approval flow, then apply the resulting change.`,
+    ``,
+    `- proposedTarget.kind: ${pc.proposedTarget?.kind ?? '(unknown)'}`,
+    `- rationale: ${pc.rationale}`,
+    ``,
+    `_Generated by \`river promote template\` (candidate ${entry.id})._`,
+  ].join('\n');
+}
+
+/**
+ * Build a PR scaffold for an approved promotion_candidate entry. Returns a
+ * text-only description (branch name, PR title, PR body, changed-file path
+ * templates). No files are changed.
+ *
+ * Rules:
+ *  - Only approved candidates are eligible (`eligible: false` otherwise).
+ *  - Security/compliance-sensitive candidates set `requiresPlanGate: true` and
+ *    emit a delegation notice instead of a mergeable scaffold (#1568 decision 5).
+ *  - `human_judgment` kind produces no mergeable scaffold (needs a person).
+ *
+ * @param {object} entry - a promotion_candidate entry
+ * @returns {{
+ *   id: string, clusterKey: string, kind: string, eligible: boolean,
+ *   requiresPlanGate: boolean, branchName: string|null, prTitle: string|null,
+ *   prBody: string|null, targetPaths: string[], note: string|null,
+ * }}
+ */
+function buildPrScaffold(entry) {
+  const pc = getPromotionCandidate(entry);
+  if (!pc) {
+    throw new Error(`Entry ${entry?.id} is not a promotion_candidate.`);
+  }
+  const kind = pc.proposedTarget?.kind ?? 'human_judgment';
+  const clusterKey = pc.clusterKey;
+  const base = {
+    id: entry.id,
+    clusterKey,
+    kind,
+    eligible: false,
+    requiresPlanGate: false,
+    branchName: null,
+    prTitle: null,
+    prBody: null,
+    targetPaths: [],
+    note: null,
+  };
+
+  if (pc.promotionStatus !== 'approved') {
+    return {
+      ...base,
+      note: `not approved (promotionStatus=${pc.promotionStatus}); approve it first`,
+    };
+  }
+
+  if (isSecuritySensitive(entry)) {
+    return {
+      ...base,
+      eligible: true,
+      requiresPlanGate: true,
+      branchName: `promote/plangate/${slugify(clusterKey)}`,
+      prTitle: `chore(plangate): route ${clusterKey} promotion through PlanGate`,
+      prBody: renderPlanGateBody({ pc, entry }),
+      note: 'security/compliance promotion — PlanGate approval required (#1568 decision 5)',
+    };
+  }
+
+  if (kind === 'human_judgment') {
+    return {
+      ...base,
+      eligible: true,
+      note: 'kind=human_judgment: no mergeable asset — decide and act manually',
+    };
+  }
+
+  const template = KIND_TEMPLATE[kind];
+  if (!template) {
+    return {
+      ...base,
+      eligible: true,
+      note: `unknown proposedTarget.kind=${kind}; no scaffold template`,
+    };
+  }
+
+  const targetPaths = template.paths(pc);
+  return {
+    ...base,
+    eligible: true,
+    branchName: `${template.branchPrefix}/${slugify(clusterKey)}`,
+    prTitle: template.title(clusterKey),
+    prBody: renderBody({ pc, entry, kind, targetPaths }),
+    targetPaths,
+  };
+}
+
+;// CONCATENATED MODULE: ./src/cli/commands/promote.mjs
+// `river promote` subcommand handler (Judgment Promotion Loop Phase 2,
+// #1568-B / #1622).
+//
+// Turns Phase 1 promotion_candidate entries into human-approved, PR-ready
+// scaffolds. Generation (Phase 1) and approval (this command) stay separated:
+// `promote` never creates candidates — it only lists, decides on, and scaffolds
+// existing ones.
+//
+// Subcommands:
+//   river promote list                 List promotion candidates
+//   river promote approve <id>         Approve a candidate (promotionStatus -> approved)
+//   river promote reject  <id>         Reject a candidate  (promotionStatus -> archived)
+//   river promote template [<id>]      Emit PR scaffold(s) for approved candidate(s)
+//
+// The approval decision records who/when (context.approval) for auditability.
+// `now` is injected via RIVER_NOW (ISO string) so tests can pin it.
+
+
+
+
+
+
+/** Resolve `now` from RIVER_NOW (external injection) or fall back to real time. */
+function resolveNow() {
+  const raw = external_node_process_namespaceObject.env.RIVER_NOW;
+  if (!raw) return new Date();
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`RIVER_NOW is not a valid date: ${raw}`);
+  }
+  return parsed;
+}
+
+/** Resolve the Riverbed index path: explicit --index, else the repo's .river/memory. */
+async function resolveIndexPath(parsed, targetPath) {
+  if (parsed.promoteIndex) {
+    return external_node_path_.resolve(external_node_process_namespaceObject.cwd(), parsed.promoteIndex);
+  }
+  const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
+  return external_node_path_.resolve(repoRoot, '.river', 'memory', 'index.json');
+}
+
+function printCandidate(entry) {
+  const pc = getPromotionCandidate(entry);
+  console.log(`- ${entry.id}`);
+  console.log(`    clusterKey:       ${pc.clusterKey}`);
+  console.log(`    recurrenceCount:  ${pc.recurrenceCount}`);
+  console.log(`    promotionStatus:  ${pc.promotionStatus}`);
+  console.log(
+    `    proposedTarget:   ${pc.proposedTarget?.kind}${pc.proposedTarget?.id ? ` (${pc.proposedTarget.id})` : ''}`
+  );
+  console.log(
+    `    scope.paths:      ${pc.scope?.paths?.length ? pc.scope.paths.join(', ') : '(none)'}`
+  );
+  console.log(`    expiresAt:        ${entry.expiresAt ?? '(none)'}`);
+  console.log(`    rationale:        ${pc.rationale}`);
+}
+
+function printScaffold(scaffold) {
+  console.log(`# ${scaffold.id} (${scaffold.clusterKey})`);
+  if (!scaffold.eligible) {
+    console.log(`  skipped: ${scaffold.note}`);
+    return;
+  }
+  if (scaffold.requiresPlanGate) {
+    console.log(`  PlanGate: ${scaffold.note}`);
+  } else if (scaffold.note) {
+    console.log(`  note: ${scaffold.note}`);
+  }
+  if (scaffold.branchName) console.log(`  branch: ${scaffold.branchName}`);
+  if (scaffold.prTitle) console.log(`  title:  ${scaffold.prTitle}`);
+  if (scaffold.targetPaths.length) console.log(`  paths:  ${scaffold.targetPaths.join(', ')}`);
+  if (scaffold.prBody) {
+    console.log('  --- body ---');
+    for (const line of scaffold.prBody.split('\n')) console.log(`  ${line}`);
+    console.log('  --- end body ---');
+  }
+}
+
+/**
+ * Handle the `promote` command.
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @param {string} targetPath - resolved repo target path.
+ * @returns {Promise<number>} process exit code.
+ */
+async function runPromoteCommand(parsed, targetPath) {
+  const sub = parsed.promoteSubcommand;
+  if (!['list', 'approve', 'reject', 'template'].includes(sub)) {
+    console.error(
+      'Error: usage: river promote <list|approve <id>|reject <id>|template [<id>]> [--approver <name>] [--reason <text>] [--index <path>] [--output json] [--include-inactive].'
+    );
+    return 1;
+  }
+
+  const indexPath = await resolveIndexPath(parsed, targetPath);
+  const now = resolveNow();
+
+  if (sub === 'list') {
+    const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
+    const candidates = listPromotionCandidates(index, {
+      includeInactive: Boolean(parsed.promoteIncludeInactive),
+    });
+    if (parsed.output === 'json') {
+      console.log(JSON.stringify({ count: candidates.length, candidates }, null, 2));
+      return 0;
+    }
+    if (!candidates.length) {
+      console.log('No promotion candidates found.');
+      return 0;
+    }
+    console.log(`Promotion candidates (${candidates.length}):\n`);
+    for (const entry of candidates) printCandidate(entry);
+    return 0;
+  }
+
+  if (sub === 'approve' || sub === 'reject') {
+    if (!parsed.promoteId) {
+      console.error(`Error: river promote ${sub} requires a candidate <id>.`);
+      return 1;
+    }
+    const decision = sub === 'approve' ? 'approved' : 'rejected';
+    const approver =
+      parsed.promoteApprover ||
+      external_node_process_namespaceObject.env.RIVER_APPROVER ||
+      external_node_process_namespaceObject.env.USER ||
+      external_node_process_namespaceObject.env.USERNAME || // Windows
+      'unknown';
+    let result;
+    try {
+      result = decidePromotion({
+        indexPath,
+        id: parsed.promoteId,
+        decision,
+        approver,
+        reason: parsed.promoteReason ?? null,
+        now,
+      });
+    } catch (err) {
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
+    const pc = getPromotionCandidate(result.entry);
+    if (!result.changed) {
+      console.log(`Candidate ${result.entry.id} already ${decision} (no change).`);
+      return 0;
+    }
+    if (result.warning) {
+      console.warn(`Warning: ${result.warning}`);
+    }
+    console.log(`Candidate ${result.entry.id} ${decision}.`);
+    console.log(`  promotionStatus: ${pc.promotionStatus}`);
+    console.log(`  approver: ${approver}`);
+    console.log(`  decidedAt: ${result.entry.context.approval.decidedAt}`);
+    // Rejecting a candidate that was previously approved invalidates any PR
+    // scaffold already generated from it; make the orphaning explicit.
+    if (decision === 'rejected' && result.previousDecision === 'approved') {
+      console.log(
+        '  note: any PR scaffold previously generated for this candidate is now invalid (regenerate after a fresh approval).'
+      );
+    }
+    console.log(`  written to: ${indexPath}`);
+    return 0;
+  }
+
+  // template
+  const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
+  let entries;
+  if (parsed.promoteId) {
+    const entry = listPromotionCandidates(index, { includeInactive: true }).find(
+      (e) => e.id === parsed.promoteId
+    );
+    if (!entry) {
+      console.error(`Error: No promotion_candidate entry with id: ${parsed.promoteId}`);
+      return 1;
+    }
+    entries = [entry];
+  } else {
+    // Only approved candidates get scaffolds; rejected (archived) ones are excluded.
+    entries = listPromotionCandidates(index).filter(
+      (e) => getPromotionCandidate(e)?.promotionStatus === 'approved'
+    );
+  }
+
+  const scaffolds = entries.map((e) => buildPrScaffold(e));
+  if (parsed.output === 'json') {
+    console.log(JSON.stringify({ count: scaffolds.length, scaffolds }, null, 2));
+    return 0;
+  }
+  if (!scaffolds.length) {
+    console.log('No approved promotion candidates to scaffold.');
+    return 0;
+  }
+  for (const scaffold of scaffolds) printScaffold(scaffold);
+  return 0;
+}
+
 ;// CONCATENATED MODULE: ./src/cli.mjs
+
 
 
 
@@ -66941,6 +67566,12 @@ Commands:
   suppression add       Create a Riverbed Memory suppression entry
                         (--fingerprint --feedback --rationale [--scope]
                          [--severity] [--files] [--expires] [--pr])
+  promote list          List promotion_candidate entries (Judgment Promotion Loop Phase 2)
+  promote approve <id>  Approve a candidate (promotionStatus -> approved)
+  promote reject <id>   Reject a candidate (promotionStatus -> archived)
+  promote template [<id>] Emit PR scaffold(s) for approved candidate(s) (text only)
+                        (--approver <name> --reason <text> --index <path>
+                         --include-inactive; --output json for machine output)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -67042,6 +67673,13 @@ function parseArgs(argv) {
     suppressionFiles: null,
     suppressionExpiresAt: null,
     suppressionPrNumber: null,
+    // promote subcommand fields (#1622 / #1568-B)
+    promoteSubcommand: null,
+    promoteId: null,
+    promoteApprover: null,
+    promoteReason: null,
+    promoteIndex: null,
+    promoteIncludeInactive: false,
     // skills subcommand fields
     skillsSubcommand: null,
     resolvePaths: null,
@@ -67075,7 +67713,8 @@ function parseArgs(argv) {
         arg === 'skills' ||
         arg === 'runs' ||
         arg === 'suppression' ||
-        arg === 'feedback')
+        arg === 'feedback' ||
+        arg === 'promote')
     ) {
       parsed.command = arg;
       // Check for skills subcommands (import/export/list)
@@ -67098,10 +67737,21 @@ function parseArgs(argv) {
         parsed.suppressionSubcommand = args.shift(); // add (only one for now)
       } else if (arg === 'feedback' && args[0] && !args[0].startsWith('-')) {
         parsed.feedbackSubcommand = args.shift(); // add (only one for now)
+      } else if (arg === 'promote' && args[0] && !args[0].startsWith('-')) {
+        parsed.promoteSubcommand = args.shift(); // list | approve | reject | template
+        // approve/reject/template take an optional positional candidate id.
+        if (
+          ['approve', 'reject', 'template'].includes(parsed.promoteSubcommand) &&
+          args[0] &&
+          !args[0].startsWith('-')
+        ) {
+          parsed.promoteId = args.shift();
+        }
       } else if (
         arg !== 'runs' &&
         arg !== 'suppression' &&
         arg !== 'feedback' &&
+        arg !== 'promote' &&
         args[0] &&
         !args[0].startsWith('-')
       ) {
@@ -67210,6 +67860,42 @@ function parseArgs(argv) {
           break;
         }
         parsed.feedbackReversedBy = value;
+        continue;
+      }
+    }
+    if (parsed.command === 'promote') {
+      if (arg === '--approver') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --approver option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteApprover = value;
+        continue;
+      }
+      if (arg === '--reason') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --reason option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteReason = value;
+        continue;
+      }
+      if (arg === '--index') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --index option requires a path.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteIndex = value;
+        continue;
+      }
+      if (arg === '--include-inactive') {
+        parsed.promoteIncludeInactive = true;
         continue;
       }
     }
@@ -67599,9 +68285,17 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
     external_node_process_namespaceObject.env.RIVER_OFFLINE = '1';
   }
   if (
-    !['run', 'doctor', 'eval', 'skills', 'runs', 'suppression', 'feedback', 'review'].includes(
-      parsed.command
-    )
+    ![
+      'run',
+      'doctor',
+      'eval',
+      'skills',
+      'runs',
+      'suppression',
+      'feedback',
+      'review',
+      'promote',
+    ].includes(parsed.command)
   ) {
     console.error(`Unknown command: ${parsed.command}`);
     printHelp();
@@ -67635,6 +68329,13 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
 
     if (parsed.command === 'feedback') {
       return await runFeedbackCommand(parsed, targetPath);
+    }
+
+    // `return await` (not bare `return`) so a rejected handler promise is caught
+    // by this outer try/catch for GitRepoNotFoundError etc. (adversarial review
+    // BLOCKER lesson, PR #1592).
+    if (parsed.command === 'promote') {
+      return await runPromoteCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'runs') {

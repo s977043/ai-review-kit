@@ -50,6 +50,29 @@ export function appendEntry(indexPath, entry) {
 }
 
 /**
+ * Load the index, apply a mutator to the entry with the given id, and persist.
+ * The mutator receives the live entry object and mutates it in place (return
+ * value is ignored). Kept deliberately small and generic so callers own the
+ * transition semantics (e.g. promotion approval) while the load/write plumbing
+ * and JSON formatting stay identical to appendEntry/supersede.
+ *
+ * @param {string} indexPath - Path to the index.json file
+ * @param {string} id - id of the entry to update
+ * @param {(entry: object) => void} mutate - in-place mutator
+ * @returns {object} the updated entry
+ */
+export function updateEntry(indexPath, id, mutate) {
+  const index = loadMemory(indexPath);
+  const entry = index.entries.find((e) => e.id === id);
+  if (!entry) {
+    throw new Error(`Entry not found: ${id}`);
+  }
+  mutate(entry);
+  fs.writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n');
+  return entry;
+}
+
+/**
  * Query memory entries by filter criteria.
  * All filter fields are optional; entries must match ALL provided criteria.
  * By default, only active entries are returned.
