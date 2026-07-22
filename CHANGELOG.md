@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.61.1](https://github.com/s977043/river-review/compare/v1.61.0...v1.61.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* **deps:** bump brace-expansion to 5.0.7 for GHSA advisory (alert [#103](https://github.com/s977043/river-review/issues/103)) ([#1632](https://github.com/s977043/river-review/issues/1632)) ([56818ba](https://github.com/s977043/river-review/commit/56818ba146019f15f00da448ff5bdbcbf8520e36))
+
 ## [1.61.0](https://github.com/s977043/river-review/compare/v1.60.0...v1.61.0) (2026-07-20)
 
 
