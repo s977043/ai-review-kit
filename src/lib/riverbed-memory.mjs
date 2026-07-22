@@ -116,21 +116,30 @@ export function supersede(indexPath, oldId, newId) {
 }
 
 /**
- * Archive entries whose expiresAt timestamp has passed.
+ * Whether an entry's expiresAt timestamp has passed relative to `now`. Shared by
+ * expireEntries and the Phase 3 promotion retire lifecycle so the expiry rule
+ * (`expiresAt <= now`) is defined once.
+ *
+ * @param {{ expiresAt?: string }} entry
+ * @param {Date} now
+ * @returns {boolean}
+ */
+export function isExpired(entry, now) {
+  return Boolean(entry?.expiresAt) && new Date(entry.expiresAt).getTime() <= now.getTime();
+}
+
+/**
+ * Archive active entries whose expiresAt timestamp has passed.
  *
  * @param {string} indexPath - Path to the index.json file
+ * @param {{ now?: Date }} [opts] - injectable clock (defaults to real time)
  * @returns {number} Number of entries archived
  */
-export function expireEntries(indexPath) {
+export function expireEntries(indexPath, { now = new Date() } = {}) {
   const index = loadMemory(indexPath);
-  const now = new Date();
   let count = 0;
   for (const entry of index.entries) {
-    if (
-      entry.expiresAt &&
-      new Date(entry.expiresAt) <= now &&
-      (entry.status ?? 'active') === 'active'
-    ) {
+    if (isExpired(entry, now) && (entry.status ?? 'active') === 'active') {
       entry.status = 'archived';
       count++;
     }
