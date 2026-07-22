@@ -1,7 +1,7 @@
 ---
 id: 'invisible-unicode-injection'
 name: 'Invisible Unicode Injection Scan 不可視 Unicode コード注入検出'
-description: '差分に追加されたソースコードへ混入した不可視・危険な Unicode 文字（ゼロ幅文字・異体字セレクター・双方向制御文字・変則空白）を検出する。GlassWorm 型サプライチェーン攻撃や Trojan Source（CVE-2021-42574）でコードを不可視化する手口を、決定論的な静的解析として捕捉し、canary テストで誤検出の再発を防ぐ'
+description: '差分に追加されたソースコードへ混入した不可視・危険な Unicode 文字（タグ文字・異体字セレクター・ゼロ幅文字・双方向制御/マーク・変則空白）を検出する。GlassWorm 型サプライチェーン攻撃・ASCII smuggling・Trojan Source（CVE-2021-42574）でコードを不可視化する手口を、決定論的な静的解析（列挙した code point 集合に限定）として捕捉し、canary テストで誤検出の再発を防ぐ'
 version: 0.1.0
 category: midstream
 phase: midstream
@@ -37,17 +37,21 @@ Why: 不可視・危険な Unicode 文字の混入は、文字コード（code p
 
 ## 検出カテゴリ
 
-- **双方向制御文字（Bidi control）**: U+202A–202E / U+2066–2069。表示上のコード順序を実行順序とすり替える（Trojan Source）。
-- **不可視・ゼロ幅文字**: ゼロ幅スペース（U+200B）・WORD JOINER（U+2060）・ソフトハイフン（U+00AD）・MONGOLIAN VOWEL SEPARATOR（U+180E）・非先頭 BOM（U+FEFF）。
-- **異体字セレクター（Variation Selector）**: U+FE00–FE0F。GlassWorm がペイロードを不可視に符号化する手口。絵文字の見た目切り替えとして正当な単独利用（絵文字直後の 1 個・キーキャップ）は除外する。
+検出対象は以下に**列挙した code point 集合に限定**する（Unicode の不可視文字を網羅するものではない）。
+
+- **タグ文字（Tag characters）**: U+E0000–E007F。GlassWorm 実物・ASCII smuggling・LLM プロンプトインジェクションの主要ベクタ。絵文字タグシーケンス（地域旗など、絵文字ベースに付随する正当な利用）は除外する。
+- **双方向制御・マーク（Bidi control/mark）**: U+202A–202E / U+2066–2069（制御）と U+061C / U+200E / U+200F（マーク）。表示上のコード順序を実行順序とすり替える（Trojan Source / CVE-2021-42574）。
+- **異体字セレクター（Variation Selector）**: U+FE00–FE0F（BMP）と U+E0100–E01EF（補助面 VS17+）。GlassWorm がペイロードを不可視に符号化する手口。絵文字の見た目切り替えとして正当な単独利用（絵文字直後の 1 個・キーキャップ）は除外する。
+- **不可視・ゼロ幅文字**: ゼロ幅スペース（U+200B）・WORD JOINER（U+2060）・ソフトハイフン（U+00AD）・MONGOLIAN VOWEL SEPARATOR（U+180E）・COMBINING GRAPHEME JOINER（U+034F）・不可視数学演算子（U+2061–2064）・ハングルフィラー（U+115F/U+1160/U+3164）・BRAILLE PATTERN BLANK（U+2800）・インターリニア注釈（U+FFF9–FFFB）・非先頭 BOM（U+FEFF）。
 - **ゼロ幅接合子（ZWJ/ZWNJ）**: U+200C / U+200D。絵文字シーケンス内の正当な接合は除外し、識別子・キーワード中の裸の接合子のみ対象とする。
 - **変則空白（Confusable whitespace）**: NBSP（U+00A0）・U+2000–200A・U+202F・U+205F・全角空白（U+3000）等。文字列リテラル・コメント外に現れた場合のみ対象とする。
 
 ## Non-goals / 扱わないこと
 
 - 依存パッケージ内部（`node_modules` 等）の不可視文字検出（別途 CI / SCA の領域）。
-- 基本多言語面（BMP）外の補助面（supplementary planes）の異体字セレクター拡張（U+E0100–E01EF 等）への対応。
-- ドキュメント（`.md` / `.txt` 等）中のゼロ幅・絵文字利用。正当な装飾・組版が多く、本スキルはソースコードに限定する。
+- ドキュメント（`.md` / `.txt` 等）中のゼロ幅・絵文字利用。正当な装飾・組版が多く、本スキルはソースコードに限定する。**既知の受容リスク**: README 等のコードフェンスへの注入は現状すり抜ける（#1602 の教訓）。
+- 上記に列挙していない Unicode 不可視文字の網羅。列挙集合の外は現状スコープ外とする。
+- CJK 漢字の異体字シーケンス（IVS, U+E0100+ を非絵文字ベースに付与する正当な用途）はコードでは稀なため、補助面 VS を一律検出する副作用として誤検出しうる（**受容リスク**）。
 - 機密情報（API キー・トークン）の検出（`secret-credential-scan` の領域）。SQLi / XSS 等（`security-basic` の領域）。
 
 ## Pre-execution Gate / 実行前ゲート

@@ -1102,3 +1102,55 @@ test('invisible-unicode canary: quiet when the skill is not selected', () => {
   const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
   assert.deepEqual(comments, []);
 });
+
+// ---- Invisible / dangerous Unicode: expanded coverage (#1642 adversarial) ----
+// Tag characters (ASCII smuggling / prompt injection), VS supplement, bidi
+// marks, and additional zero-width formats. Payloads via String.fromCodePoint.
+
+test('invisible-unicode: flags tag characters (U+E0000-E007F, ASCII smuggling)', () => {
+  // The primary GlassWorm / prompt-injection vector: invisible tag chars
+  // attached to an ASCII base.
+  const kinds = invisibleUnicodeKinds(`const cmd = ${CP(0xe0041, 0xe0042)}spawn();`);
+  assert.ok(kinds.includes('invisible-unicode'), `got ${JSON.stringify(kinds)}`);
+});
+
+test('invisible-unicode: flags a bare CANCEL TAG (U+E007F)', () => {
+  assert.ok(invisibleUnicodeKinds(`const y = 1;${CP(0xe007f)}`).includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags a supplementary variation selector (U+E0100, VS17)', () => {
+  assert.ok(invisibleUnicodeKinds(`const z${CP(0xe0100)} = load();`).includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags bidi marks LRM/RLM/ALM (U+200E/200F/061C)', () => {
+  assert.ok(invisibleUnicodeKinds(`const a = ${CP(0x200e)}1;`).includes('bidi-control'));
+  assert.ok(invisibleUnicodeKinds(`const b = ${CP(0x200f)}2;`).includes('bidi-control'));
+  assert.ok(invisibleUnicodeKinds(`const c = ${CP(0x061c)}3;`).includes('bidi-control'));
+});
+
+test('invisible-unicode: flags additional invisible formats (math op / braille / filler / CGJ / interlinear)', () => {
+  assert.ok(invisibleUnicodeKinds(`const m = a${CP(0x2062)}b;`).includes('invisible-unicode'));
+  assert.ok(invisibleUnicodeKinds(`const q =${CP(0x2800)}1;`).includes('invisible-unicode'));
+  assert.ok(invisibleUnicodeKinds(`const h${CP(0x3164)} = 1;`).includes('invisible-unicode'));
+  assert.ok(invisibleUnicodeKinds(`const c${CP(0x034f)}d = 1;`).includes('invisible-unicode'));
+  assert.ok(invisibleUnicodeKinds(`const i = ${CP(0xfff9)}x;`).includes('invisible-unicode'));
+});
+
+test('invisible-unicode canary: an emoji subdivision-flag tag sequence is not flagged', () => {
+  // Scotland flag: base pictographic + tag chars + CANCEL TAG — a legitimate
+  // emoji tag sequence anchored to a pictographic base.
+  const scotland = CP(
+    0x1f3f4,
+    0xe0067,
+    0xe0062,
+    0xe0073,
+    0xe0063,
+    0xe0074,
+    0xe006c,
+    0xe0061,
+    0xe006e,
+    0xe0064,
+    0xe007f
+  );
+  assert.deepEqual(invisibleUnicodeKinds(`const flag = "${scotland}";`), []);
+});

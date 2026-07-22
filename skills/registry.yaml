@@ -117,7 +117,7 @@ skills:
     tags: [unicode, supply-chain, midstream]
     severity: major
     recommended: false
-    description: 'Detects invisible or deceptive Unicode (zero-width, variation selectors, bidirectional controls, confusable whitespace) newly added to source code — the GlassWorm supply-chain and Trojan Source (CVE-2021-42574) code-hiding vectors, guarded deterministically with canary tests'
+    description: 'Detects invisible or deceptive Unicode (tag characters, variation selectors incl. supplement, zero-width, bidirectional controls/marks, confusable whitespace) newly added to source code — the GlassWorm supply-chain, ASCII-smuggling, and Trojan Source (CVE-2021-42574) code-hiding vectors, guarded deterministically with canary tests over an enumerated code-point set'
     exclude:
       - '**/package-lock.json'
       - '**/pnpm-lock.yaml'

@@ -1386,8 +1386,9 @@ without source usage.`
 ### `invisible-unicode-injection`
 
 - 名前: `Invisible Unicode Injection Scan 不可視 Unicode コード注入検出`
-- 概要: `差分に追加されたソースコードへ混入した不可視・危険な Unicode 文字（ゼロ幅文字・異体字セレクター・双方向制御文字・変則空白）を検出する。GlassWorm 型サプライチェーン攻撃や Trojan
-Source（CVE-2021-42574）でコードを不可視化する手口を、決定論的な静的解析として捕捉し、canary テストで誤検出の再発を防ぐ`
+- 概要: `差分に追加されたソースコードへ混入した不可視・危険な Unicode 文字（タグ文字・異体字セレクター・ゼロ幅文字・双方向制御/マーク・変則空白）を検出する。GlassWorm 型サプライチェーン攻撃・ASCII
+smuggling・Trojan Source（CVE-2021-42574）でコードを不可視化する手口を、決定論的な静的解析（列挙した code point 集合に限定）として捕捉し、canary
+テストで誤検出の再発を防ぐ`
 - 対象:
   - `**/*`
 - 重要度: major
