@@ -49,6 +49,12 @@ Commands:
   promote template [<id>] Emit PR scaffold(s) for approved candidate(s) (text only)
                         (--approver <name> --reason <text> --index <path>
                          --include-inactive; --output json for machine output)
+  promote retire        Retire promotion candidates: archive on expiresAt and
+                        sync promotionStatus to the retired entry status (Phase 3)
+  promote review-effectiveness [<id>]
+                        Review post-activation feedback; flag needs_review when
+                        false-positive/reversal signals reach --threshold
+                        (--threshold <n> --feedback-root <path> --index <path>)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -157,6 +163,8 @@ function parseArgs(argv) {
     promoteReason: null,
     promoteIndex: null,
     promoteIncludeInactive: false,
+    promoteThreshold: null,
+    promoteFeedbackRoot: null,
     // skills subcommand fields
     skillsSubcommand: null,
     resolvePaths: null,
@@ -215,10 +223,12 @@ function parseArgs(argv) {
       } else if (arg === 'feedback' && args[0] && !args[0].startsWith('-')) {
         parsed.feedbackSubcommand = args.shift(); // add (only one for now)
       } else if (arg === 'promote' && args[0] && !args[0].startsWith('-')) {
-        parsed.promoteSubcommand = args.shift(); // list | approve | reject | template
-        // approve/reject/template take an optional positional candidate id.
+        parsed.promoteSubcommand = args.shift(); // list | approve | reject | template | retire | review-effectiveness
+        // approve/reject/template/review-effectiveness take an optional positional candidate id.
         if (
-          ['approve', 'reject', 'template'].includes(parsed.promoteSubcommand) &&
+          ['approve', 'reject', 'template', 'review-effectiveness'].includes(
+            parsed.promoteSubcommand
+          ) &&
           args[0] &&
           !args[0].startsWith('-')
         ) {
@@ -373,6 +383,27 @@ function parseArgs(argv) {
       }
       if (arg === '--include-inactive') {
         parsed.promoteIncludeInactive = true;
+        continue;
+      }
+      if (arg === '--threshold') {
+        const value = args.shift();
+        const n = parseInt(value ?? '', 10);
+        if (!value || value.startsWith('-') || Number.isNaN(n) || n < 1) {
+          console.error('Error: --threshold option requires a positive integer.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteThreshold = n;
+        continue;
+      }
+      if (arg === '--feedback-root') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --feedback-root option requires a path.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteFeedbackRoot = value;
         continue;
       }
     }

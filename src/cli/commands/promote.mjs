@@ -11,6 +11,8 @@
 //   river promote approve <id>         Approve a candidate (promotionStatus -> approved)
 //   river promote reject  <id>         Reject a candidate  (promotionStatus -> archived)
 //   river promote template [<id>]      Emit PR scaffold(s) for approved candidate(s)
+//   river promote retire               Archive expired candidates + sync promotionStatus (Phase 3)
+//   river promote review-effectiveness Flag needs_review on negative post-activation feedback (Phase 3)
 //
 // The approval decision records who/when (context.approval) for auditability.
 // `now` is injected via RIVER_NOW (ISO string) so tests can pin it.
@@ -18,11 +20,15 @@ import path from 'node:path';
 import process from 'node:process';
 import { ensureGitRepo } from '../../lib/git.mjs';
 import { loadMemory } from '../../lib/riverbed-memory.mjs';
+import { listFeedbackEntries } from '../../lib/feedback.mjs';
 import {
   listPromotionCandidates,
   decidePromotion,
   buildPrScaffold,
   getPromotionCandidate,
+  retirePromotions,
+  reviewPromotionEffectiveness,
+  DEFAULT_EFFECTIVENESS_THRESHOLD,
 } from '../../lib/promotion.mjs';
 
 /** Resolve `now` from RIVER_NOW (external injection) or fall back to real time. */
@@ -91,9 +97,9 @@ function printScaffold(scaffold) {
  */
 export async function runPromoteCommand(parsed, targetPath) {
   const sub = parsed.promoteSubcommand;
-  if (!['list', 'approve', 'reject', 'template'].includes(sub)) {
+  if (!['list', 'approve', 'reject', 'template', 'retire', 'review-effectiveness'].includes(sub)) {
     console.error(
-      'Error: usage: river promote <list|approve <id>|reject <id>|template [<id>]> [--approver <name>] [--reason <text>] [--index <path>] [--output json] [--include-inactive].'
+      'Error: usage: river promote <list|approve <id>|reject <id>|template [<id>]|retire|review-effectiveness [<id>]> [--approver <name>] [--reason <text>] [--index <path>] [--threshold <n>] [--feedback-root <path>] [--output json] [--include-inactive].'
     );
     return 1;
   }
@@ -165,6 +171,74 @@ export async function runPromoteCommand(parsed, targetPath) {
       );
     }
     console.log(`  written to: ${indexPath}`);
+    return 0;
+  }
+
+  if (sub === 'retire') {
+    const out = retirePromotions({ indexPath, now });
+    if (parsed.output === 'json') {
+      console.log(JSON.stringify(out, null, 2));
+      return 0;
+    }
+    if (!out.count) {
+      console.log('No promotion candidates to retire.');
+      return 0;
+    }
+    console.log(`Retired ${out.count} promotion candidate(s):`);
+    for (const r of out.results) {
+      const parts = [];
+      if (r.willExpire) parts.push('expired (entry archived)');
+      if (r.statusSync) parts.push(`promotionStatus ${r.statusSync.from} -> ${r.statusSync.to}`);
+      console.log(`- ${r.id}: ${parts.join('; ')}`);
+    }
+    console.log(`  written to: ${indexPath}`);
+    return 0;
+  }
+
+  if (sub === 'review-effectiveness') {
+    const feedbackRoot = parsed.promoteFeedbackRoot
+      ? path.resolve(process.cwd(), parsed.promoteFeedbackRoot)
+      : await ensureGitRepo(targetPath);
+    const feedbackEntries = await listFeedbackEntries({
+      repoRoot: feedbackRoot,
+      warn: (msg) => console.warn(msg),
+    });
+    const threshold = parsed.promoteThreshold ?? DEFAULT_EFFECTIVENESS_THRESHOLD;
+    let out;
+    try {
+      out = reviewPromotionEffectiveness({
+        indexPath,
+        feedbackEntries,
+        now,
+        threshold,
+        reviewer: parsed.promoteApprover ?? null,
+        id: parsed.promoteId ?? null,
+      });
+    } catch (err) {
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
+    if (parsed.output === 'json') {
+      console.log(JSON.stringify({ threshold, ...out }, null, 2));
+      return 0;
+    }
+    if (!out.count) {
+      console.log('No promotion candidates to review.');
+      return 0;
+    }
+    console.log(`Reviewed ${out.count} promotion candidate(s) (threshold ${threshold}):`);
+    for (const r of out.results) {
+      const m = r.metrics;
+      const summary = `negative=${m.negativeCount} (falsePositive=${m.falsePositiveCount}, reversal=${m.reversalCount}), related=${m.related}`;
+      if (r.changed) {
+        console.log(`- ${r.id}: FLAGGED needs_review — ${summary}`);
+      } else if (!r.eligible) {
+        console.log(`- ${r.id}: skipped — ${r.note}`);
+      } else {
+        console.log(`- ${r.id}: retained — ${summary}`);
+      }
+    }
+    if (out.flagged) console.log(`  written to: ${indexPath}`);
     return 0;
   }
 

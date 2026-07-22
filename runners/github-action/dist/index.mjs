@@ -42996,6 +42996,271 @@ function extractDiffMeta(diff) {
 
 /***/ }),
 
+/***/ 7638:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   FeedbackError: () => (/* binding */ FeedbackError),
+/* harmony export */   appendFeedbackEntry: () => (/* binding */ appendFeedbackEntry),
+/* harmony export */   buildFeedbackEntry: () => (/* binding */ buildFeedbackEntry),
+/* harmony export */   buildFeedbackScaffold: () => (/* binding */ buildFeedbackScaffold),
+/* harmony export */   qN: () => (/* binding */ listFeedbackEntries)
+/* harmony export */ });
+/* unused harmony exports FEEDBACK_TYPES, FEEDBACK_TRIGGERS, feedbackFilePath */
+/* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9896);
+/* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6928);
+// Feedback capture for the skill improvement loop (L1/L2 in
+// docs/development/skill-improvement-loop-design.md).
+//
+// Entries are appended to .river/feedback/<YYYY-MM>.jsonl with a stable
+// schema so the conversion table in
+// skills/agent-skills/river-review/references/FEEDBACK_TO_FIXTURE.md (SSoT)
+// can be executed mechanically by `npm run feedback:apply`.
+
+
+
+// Taxonomy from references/FEEDBACK.md — keep in sync with the SSoT.
+const FEEDBACK_TYPES = [
+  'accepted',
+  'false_positive',
+  'missed_issue',
+  'not_actionable',
+  'duplicate',
+  'accepted_risk',
+  'unclear',
+  // `out_of_scope`: finding is valid but out of the reviewed change's scope
+  // (skip-scope). Added as an 8th disposition rather than a separate `decision`
+  // axis so a finding keeps a single mutually-exclusive classification (see
+  // FEEDBACK.md "Feedback types"). Maps to a "no repository change" scaffold.
+  'out_of_scope',
+];
+
+// Trigger conditions from references/IMPROVEMENT_LOOP.md.
+const FEEDBACK_TRIGGERS = [
+  'pr-comment',
+  'self-review',
+  'eval-regression',
+  'retrospective',
+  'fix-pr',
+];
+
+class FeedbackError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'FeedbackError';
+  }
+}
+
+/**
+ * Build and validate a feedback entry.
+ *
+ * The `reviewer`, `model`, and `reversedBy` fields are optional and
+ * backward-compatible: when omitted they are not written to the entry at all,
+ * so historical readers and existing JSONL keep their exact shape.
+ *
+ * @param {{
+ *   feedbackType: string,
+ *   skillId: string,
+ *   trigger?: string,
+ *   findingFingerprint?: string|null,
+ *   evidence?: string|null,
+ *   pr?: number|null,
+ *   reviewer?: string|null,
+ *   model?: string|null,
+ *   reversedBy?: string|null,
+ *   now?: Date,
+ * }} input
+ */
+function buildFeedbackEntry({
+  feedbackType,
+  skillId,
+  trigger = 'pr-comment',
+  findingFingerprint = null,
+  evidence = null,
+  pr = null,
+  reviewer = null,
+  model = null,
+  reversedBy = null,
+  now = new Date(),
+}) {
+  if (!FEEDBACK_TYPES.includes(feedbackType)) {
+    throw new FeedbackError(
+      `Invalid feedbackType "${feedbackType}". Expected one of: ${FEEDBACK_TYPES.join(', ')}.`
+    );
+  }
+  if (!FEEDBACK_TRIGGERS.includes(trigger)) {
+    throw new FeedbackError(
+      `Invalid trigger "${trigger}". Expected one of: ${FEEDBACK_TRIGGERS.join(', ')}.`
+    );
+  }
+  if (typeof skillId !== 'string' || !skillId.trim()) {
+    throw new FeedbackError('skillId is required.');
+  }
+  if (findingFingerprint != null && !/^[0-9a-f]{16}$/.test(findingFingerprint)) {
+    throw new FeedbackError('findingFingerprint must be 16 lowercase hex chars when provided.');
+  }
+  const reviewerId = normalizeOptionalString(reviewer, 'reviewer');
+  const modelId = normalizeOptionalString(model, 'model');
+  const reversedByRef = normalizeOptionalString(reversedBy, 'reversedBy');
+  const entry = {
+    timestamp: now.toISOString(),
+    trigger,
+    feedbackType,
+    skillId: skillId.trim(),
+    findingFingerprint,
+    evidence: evidence?.trim() || null,
+    pr: Number.isInteger(pr) && pr > 0 ? pr : null,
+  };
+  // Optional fields are only attached when present so existing entries and
+  // readers keep their exact shape (backward compatibility).
+  if (reviewerId) entry.reviewer = reviewerId;
+  if (modelId) entry.model = modelId;
+  if (reversedByRef) entry.reversedBy = reversedByRef;
+  return entry;
+}
+
+/**
+ * Normalize an optional free-form string field: null/empty → null (field is
+ * omitted by the caller), non-empty → trimmed. A non-string, non-null value is
+ * a programming error and is rejected.
+ */
+function normalizeOptionalString(value, fieldName) {
+  if (value == null) return null;
+  if (typeof value !== 'string') {
+    throw new FeedbackError(`${fieldName} must be a string when provided.`);
+  }
+  return value.trim() || null;
+}
+
+function feedbackFilePath(repoRoot, timestamp) {
+  const month = String(timestamp).slice(0, 7); // YYYY-MM
+  return path__WEBPACK_IMPORTED_MODULE_1__.join(repoRoot, '.river', 'feedback', `${month}.jsonl`);
+}
+
+/**
+ * Append one entry to the monthly JSONL file (creates directories as needed).
+ *
+ * @returns {Promise<string>} the file path written to
+ */
+async function appendFeedbackEntry(entry, { repoRoot }) {
+  const filePath = feedbackFilePath(repoRoot, entry.timestamp);
+  await fs__WEBPACK_IMPORTED_MODULE_0__.promises.mkdir(path__WEBPACK_IMPORTED_MODULE_1__.dirname(filePath), { recursive: true });
+  await fs__WEBPACK_IMPORTED_MODULE_0__.promises.appendFile(filePath, JSON.stringify(entry) + '\n', 'utf8');
+  return filePath;
+}
+
+/**
+ * Read feedback entries. Invalid JSON lines are skipped with a warning so a
+ * single corrupt line never blocks the loop.
+ *
+ * @param {{ repoRoot: string, month?: string|null, warn?: (msg: string) => void }} options
+ */
+async function listFeedbackEntries({ repoRoot, month = null, warn = () => {} }) {
+  const dir = path__WEBPACK_IMPORTED_MODULE_1__.join(repoRoot, '.river', 'feedback');
+  let files;
+  try {
+    files = (await fs__WEBPACK_IMPORTED_MODULE_0__.promises.readdir(dir)).filter((f) => f.endsWith('.jsonl')).sort();
+  } catch {
+    return [];
+  }
+  if (month) files = files.filter((f) => f === `${month}.jsonl`);
+  const entries = [];
+  for (const file of files) {
+    let raw;
+    try {
+      raw = await fs__WEBPACK_IMPORTED_MODULE_0__.promises.readFile(path__WEBPACK_IMPORTED_MODULE_1__.join(dir, file), 'utf8');
+    } catch (err) {
+      warn(`⚠️  ${file}: unreadable, skipped (${err.message})`);
+      continue;
+    }
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        entries.push(JSON.parse(line));
+      } catch {
+        warn(`⚠️  ${file}: skipped invalid JSONL line`);
+      }
+    }
+  }
+  return entries;
+}
+
+/**
+ * Execute the FEEDBACK_TO_FIXTURE.md conversion table for one entry:
+ * return the repository action scaffold. Automation stops at scaffold
+ * generation — applying it is a human decision in PR review
+ * (skill-improvement-loop-design.md §6 non-goals).
+ *
+ * @returns {{ action: string, verify: string[], fixtureStub?: { suggestedPath: string, content: string }, command?: string, note?: string }}
+ */
+function buildFeedbackScaffold(entry) {
+  const { feedbackType, skillId, evidence, findingFingerprint } = entry;
+  const evidenceLine = evidence ? `\n<!-- evidence: ${evidence} -->\n` : '\n';
+  switch (feedbackType) {
+    case 'false_positive':
+      return {
+        action: 'guard fixture (should-not-detect)',
+        verify: ['npm run eval:fixtures', 'npm run eval:repo-context'],
+        fixtureStub: {
+          suggestedPath: `tests/fixtures/review-eval/${skillId}-guard.md`,
+          content:
+            `# Guard fixture for ${skillId}\n${evidenceLine}\n` +
+            '```diff\n# TODO: paste the diff that was falsely flagged\n```\n\nexpectNoFindings: true\n',
+        },
+      };
+    case 'missed_issue':
+      return {
+        action: 'happy-path fixture (should-detect)',
+        verify: [
+          'npm run eval:fixtures',
+          'npm run eval:repo-context',
+          'npm run planner:eval:dataset',
+        ],
+        fixtureStub: {
+          suggestedPath: `tests/fixtures/review-eval/${skillId}-happy.md`,
+          content:
+            `# Happy-path fixture for ${skillId}\n${evidenceLine}\n` +
+            '```diff\n# TODO: paste the diff that should have been flagged\n```\n\nmustIncludeToken: TODO\n',
+        },
+      };
+    case 'accepted_risk':
+      return {
+        action: 'suppression entry (rationale required)',
+        verify: ['npm run skills:validate', 'npm run eval:regression'],
+        command: `river suppression add --fingerprint ${findingFingerprint ?? '<16-hex>'} --feedback accepted_risk --rationale "${(evidence ?? '<why this risk is accepted>').replaceAll('"', '\\"')}"`,
+      };
+    case 'not_actionable':
+    case 'unclear':
+      return {
+        action: 'SKILL.md output/wording improvement proposal',
+        verify: ['npm run skills:validate'],
+        note: `Review the output contract and wording of ${skillId}. Evidence: ${evidence ?? '(none)'}`,
+      };
+    case 'duplicate':
+      return {
+        action: 'routing update proposal',
+        verify: ['npm run planner:eval:dataset', 'npm run skills:validate'],
+        note: `Clarify the owner skill for findings currently duplicated with ${skillId}. Evidence: ${evidence ?? '(none)'}`,
+      };
+    case 'out_of_scope':
+      return {
+        action:
+          'no repository change (finding valid but out of PR scope; consider a follow-up issue)',
+        verify: ['npm run skills:validate'],
+        note: `Finding is valid but out of scope for the reviewed change. Evidence: ${evidence ?? '(none)'}`,
+      };
+    case 'accepted':
+    default:
+      return {
+        action: 'no change (optionally add a positive fixture)',
+        verify: ['npm run eval:fixtures'],
+      };
+  }
+}
+
+
+/***/ }),
+
 /***/ 4673:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -63926,7 +64191,7 @@ async function runFeedbackCommand(parsed, targetPath) {
     return 1;
   }
   const { buildFeedbackEntry, appendFeedbackEntry, buildFeedbackScaffold, FeedbackError } =
-    await __nccwpck_require__.e(/* import() */ 638).then(__nccwpck_require__.bind(__nccwpck_require__, 7638));
+    await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 7638));
   const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
   let entry;
   try {
@@ -66953,6 +67218,8 @@ Dependencies: ${
   return 0;
 }
 
+// EXTERNAL MODULE: ./src/lib/feedback.mjs
+var feedback = __nccwpck_require__(7638);
 ;// CONCATENATED MODULE: ./src/lib/promotion.mjs
 // Judgment Promotion Loop Phase 2 (#1568-B / #1622): approval transition and
 // PR-scaffold generation for promotion_candidate Riverbed entries.
@@ -67152,6 +67419,313 @@ function decidePromotion({
     result = applyPromotionDecision(live, { decision, approver, reason, now });
   });
   return { ...result, entry };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 (#1568-C / #1623): Retire lifecycle
+//
+// Two deterministic, human-triggered CLI operations over promoted candidates:
+//   1. retire              — sync promotionStatus to a retired entry-level status
+//                            (archived on expiresAt, superseded via supersede()).
+//   2. review-effectiveness — count post-activation negative feedback (false
+//                            positives + reversals) and, on threshold breach,
+//                            transition promotionStatus to needs_review.
+//
+// `now` and `threshold` are always injectable (never Date.now() / hard-coded) so
+// the transitions are deterministic under test.
+// ---------------------------------------------------------------------------
+
+/**
+ * Default negative-feedback count that flips a promoted candidate to
+ * needs_review. Overridable per call (test injection / CLI --threshold).
+ */
+const DEFAULT_EFFECTIVENESS_THRESHOLD = 2;
+
+/**
+ * promotionStatus values that mean the judgment has been promoted and is in
+ * effect, hence eligible for an effectiveness review. `approved` is Phase 2's
+ * accept state; `active` is reserved for a judgment that has been applied.
+ */
+const IN_EFFECT_PROMOTION_STATUSES = Object.freeze(['approved', 'active']);
+
+// promotionStatus values that are already terminal — never downgraded or
+// overwritten by the retire sync once reached.
+const TERMINAL_PROMOTION_STATUSES = Object.freeze(['superseded', 'archived']);
+
+// Retired entry-level status → the promotionStatus it should be synced to.
+const ENTRY_STATUS_TO_PROMOTION = Object.freeze({
+  archived: 'archived',
+  superseded: 'superseded',
+});
+
+/**
+ * Derive the source skillId from a clusterKey. Phase 1 clusterKeys are
+ * `skillId::feedbackType`; a key without `::` is treated as the skillId itself.
+ *
+ * @param {string} clusterKey
+ * @returns {string|null}
+ */
+function skillIdFromClusterKey(clusterKey) {
+  const value = String(clusterKey ?? '');
+  const sep = value.indexOf('::');
+  const skillId = sep === -1 ? value : value.slice(0, sep);
+  return skillId || null;
+}
+
+/**
+ * Whether a feedback entry is a negative effectiveness signal for a promoted
+ * judgment: a false positive, or a reversal (a prior disposition overturned,
+ * recorded via `reversedBy`).
+ *
+ * @param {{ feedbackType?: string, reversedBy?: string }} fb
+ * @returns {boolean}
+ */
+function isNegativeFeedback(fb) {
+  if (!fb) return false;
+  return fb.feedbackType === 'false_positive' || Boolean(fb.reversedBy);
+}
+
+/**
+ * Plan (without mutating) the retire transition for a promotion_candidate entry.
+ * `willExpire` is true when an active entry's expiresAt has passed; `statusSync`
+ * is the promotionStatus change implied by the (possibly post-expiry) entry
+ * status. Idempotent: once synced, `willChange` is false.
+ *
+ * @param {object} entry
+ * @param {{ now?: Date }} [opts]
+ * @returns {{ willChange: boolean, willExpire: boolean, statusSync: {from: string, to: string}|null }}
+ */
+function planPromotionRetire(entry, { now = new Date() } = {}) {
+  const pc = getPromotionCandidate(entry);
+  if (!pc) return { willChange: false, willExpire: false, statusSync: null };
+  const entryStatus = entry.status ?? 'active';
+  const expired = Boolean(entry.expiresAt) && new Date(entry.expiresAt).getTime() <= now.getTime();
+  const willExpire = expired && entryStatus === 'active';
+  const nextEntryStatus = willExpire ? 'archived' : entryStatus;
+  const target = ENTRY_STATUS_TO_PROMOTION[nextEntryStatus] ?? null;
+  const needsSync =
+    target != null &&
+    pc.promotionStatus !== target &&
+    !TERMINAL_PROMOTION_STATUSES.includes(pc.promotionStatus);
+  const statusSync = needsSync ? { from: pc.promotionStatus, to: target } : null;
+  return { willChange: willExpire || needsSync, willExpire, statusSync };
+}
+
+/**
+ * Apply the retire transition in place. Archives an entry whose expiresAt has
+ * passed (mirrors expireEntries but with an injectable `now`) and syncs the
+ * candidate promotionStatus to the retired entry-level status. Every transition
+ * is appended to `context.lifecycleHistory` (append-only audit trail, shaped
+ * like the approvalHistory records).
+ *
+ * @param {object} entry - a promotion_candidate entry
+ * @param {{ now?: Date }} [opts]
+ * @returns {{ changed: boolean, entry: object, willExpire: boolean, statusSync: {from,to}|null, record: object|null }}
+ */
+function applyPromotionRetire(entry, { now = new Date() } = {}) {
+  const plan = planPromotionRetire(entry, { now });
+  if (!plan.willChange) {
+    return { changed: false, entry, willExpire: false, statusSync: null, record: null };
+  }
+  const pc = getPromotionCandidate(entry);
+  const retiredAt = now.toISOString();
+  const changes = [];
+  if (plan.willExpire) {
+    entry.status = 'archived';
+    changes.push('expired');
+  }
+  if (plan.statusSync) {
+    pc.promotionStatus = plan.statusSync.to;
+    changes.push(`promotionStatus:${plan.statusSync.from}->${plan.statusSync.to}`);
+  }
+  const record = {
+    event: 'retire',
+    retiredAt,
+    entryStatus: entry.status,
+    promotionStatus: pc.promotionStatus,
+    reason: plan.willExpire ? 'expiresAt reached' : 'promotionStatus sync',
+    changes,
+  };
+  entry.context.lifecycleHistory = entry.context.lifecycleHistory ?? [];
+  entry.context.lifecycleHistory.push(record);
+  entry.metadata = entry.metadata ?? {};
+  entry.metadata.updatedAt = retiredAt;
+  return { changed: true, entry, willExpire: plan.willExpire, statusSync: plan.statusSync, record };
+}
+
+/**
+ * I/O wrapper: load the index, retire every promotion_candidate whose lifecycle
+ * needs it (expiry archive + promotionStatus sync), and persist. Idempotent — a
+ * second run finds nothing to change.
+ *
+ * @param {{ indexPath: string, now?: Date }} opts
+ * @returns {{ count: number, results: Array<{ id: string, willExpire: boolean, statusSync: object|null }> }}
+ */
+function retirePromotions({ indexPath, now = new Date() }) {
+  const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
+  const results = [];
+  for (const entry of listPromotionCandidates(index, { includeInactive: true })) {
+    if (!planPromotionRetire(entry, { now }).willChange) continue;
+    let applied;
+    (0,riverbed_memory/* updateEntry */.W8)(indexPath, entry.id, (live) => {
+      applied = applyPromotionRetire(live, { now });
+    });
+    results.push({ id: entry.id, willExpire: applied.willExpire, statusSync: applied.statusSync });
+  }
+  return { count: results.length, results };
+}
+
+/**
+ * Deterministically measure the post-activation effectiveness of a promoted
+ * candidate against a feedback set. Only feedback that (a) belongs to the same
+ * skill (the clusterKey's skillId) and (b) is strictly newer than `since`
+ * counts. Reversal and false-positive components are surfaced separately so
+ * #1545 (Reviewer Lens Effectiveness) can consume them; `negativeCount` is the
+ * distinct count of entries that are a negative signal (used for the threshold).
+ *
+ * @param {object} entry - a promotion_candidate entry
+ * @param {Array<object>} feedbackEntries - feedback records (feedback.mjs shape)
+ * @param {{ since?: string|null }} [opts] - ISO activation timestamp cutoff
+ * @returns {{ skillId: string|null, since: string|null, related: number, falsePositiveCount: number, reversalCount: number, negativeCount: number }}
+ */
+function computeEffectivenessMetrics(entry, feedbackEntries, { since = null } = {}) {
+  const pc = getPromotionCandidate(entry);
+  const skillId = skillIdFromClusterKey(pc?.clusterKey);
+  const sinceMs = since ? new Date(since).getTime() : null;
+  let related = 0;
+  let falsePositiveCount = 0;
+  let reversalCount = 0;
+  let negativeCount = 0;
+  for (const fb of feedbackEntries ?? []) {
+    if (skillId && fb?.skillId !== skillId) continue;
+    if (sinceMs != null) {
+      const ts = new Date(fb?.timestamp ?? 0).getTime();
+      if (!(ts > sinceMs)) continue; // strictly after activation
+    }
+    related++;
+    if (fb.feedbackType === 'false_positive') falsePositiveCount++;
+    if (fb.reversedBy) reversalCount++;
+    if (isNegativeFeedback(fb)) negativeCount++;
+  }
+  return {
+    skillId,
+    since: since ?? null,
+    related,
+    falsePositiveCount,
+    reversalCount,
+    negativeCount,
+  };
+}
+
+/**
+ * Review a promoted candidate's effectiveness. When negative signals reach the
+ * threshold the candidate transitions to needs_review; the metrics and decision
+ * are appended to `context.effectivenessHistory` (append-only) and
+ * `context.effectiveness` points at the latest record.
+ *
+ * Idempotent: only an in-effect candidate (approved/active) is reviewed, and a
+ * breach flips it out of that set, so a second run is a no-op. Non-breach
+ * (retained) reviews do not mutate the entry — the metrics are surfaced only in
+ * the return value, so repeated runs never grow the history. Per #1545 the
+ * metrics are surfaced, not fed back into any judgment.
+ *
+ * @param {object} entry - a promotion_candidate entry
+ * @param {Array<object>} feedbackEntries
+ * @param {{ now?: Date, threshold?: number, reviewer?: string|null }} [opts]
+ * @returns {{ changed: boolean, eligible: boolean, breached: boolean, metrics: object, record: object|null, note: string|null }}
+ */
+function applyEffectivenessReview(
+  entry,
+  feedbackEntries,
+  { now = new Date(), threshold = DEFAULT_EFFECTIVENESS_THRESHOLD, reviewer = null } = {}
+) {
+  const pc = getPromotionCandidate(entry);
+  if (!pc) {
+    throw new Error(`Entry ${entry?.id} is not a promotion_candidate.`);
+  }
+  const metrics = computeEffectivenessMetrics(entry, feedbackEntries, {
+    since: entry.context?.approval?.decidedAt ?? null,
+  });
+  if (!IN_EFFECT_PROMOTION_STATUSES.includes(pc.promotionStatus)) {
+    return {
+      changed: false,
+      eligible: false,
+      breached: false,
+      metrics,
+      record: null,
+      note: `not in effect (promotionStatus=${pc.promotionStatus}); only ${IN_EFFECT_PROMOTION_STATUSES.join('/')} are reviewed`,
+    };
+  }
+  const breached = metrics.negativeCount >= threshold;
+  const reviewedAt = now.toISOString();
+  const record = {
+    reviewedAt,
+    threshold,
+    reviewer: reviewer ?? null,
+    from: pc.promotionStatus,
+    decision: breached ? 'needs_review' : 'retained',
+    metrics,
+  };
+  if (!breached) {
+    return { changed: false, eligible: true, breached: false, metrics, record, note: null };
+  }
+  pc.promotionStatus = 'needs_review';
+  entry.context.effectivenessHistory = entry.context.effectivenessHistory ?? [];
+  entry.context.effectivenessHistory.push(record);
+  entry.context.effectiveness = record;
+  entry.metadata = entry.metadata ?? {};
+  entry.metadata.updatedAt = reviewedAt;
+  return { changed: true, eligible: true, breached: true, metrics, record, note: null };
+}
+
+/**
+ * I/O wrapper: load the index, review promoted candidates against a feedback
+ * set, and persist any that flip to needs_review. When `id` is given only that
+ * candidate is reviewed. Idempotent (see applyEffectivenessReview).
+ *
+ * @param {{ indexPath: string, feedbackEntries: Array<object>, now?: Date, threshold?: number, reviewer?: string|null, id?: string|null }} opts
+ * @returns {{ count: number, flagged: number, results: Array<{ id: string, changed: boolean, breached: boolean, eligible: boolean, metrics: object, note: string|null }> }}
+ */
+function reviewPromotionEffectiveness({
+  indexPath,
+  feedbackEntries,
+  now = new Date(),
+  threshold = DEFAULT_EFFECTIVENESS_THRESHOLD,
+  reviewer = null,
+  id = null,
+}) {
+  const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
+  const all = listPromotionCandidates(index, { includeInactive: true });
+  const targets = id ? all.filter((e) => e.id === id) : all;
+  if (id && !targets.length) {
+    throw new Error(`No promotion_candidate entry with id: ${id}`);
+  }
+  const results = [];
+  let flagged = 0;
+  for (const entry of targets) {
+    // Preview on a clone so we only persist entries that actually transition
+    // (keeps the write idempotent — unchanged bytes are never rewritten).
+    const preview = applyEffectivenessReview(structuredClone(entry), feedbackEntries, {
+      now,
+      threshold,
+      reviewer,
+    });
+    if (preview.changed) {
+      (0,riverbed_memory/* updateEntry */.W8)(indexPath, entry.id, (live) =>
+        applyEffectivenessReview(live, feedbackEntries, { now, threshold, reviewer })
+      );
+      flagged++;
+    }
+    results.push({
+      id: entry.id,
+      changed: preview.changed,
+      breached: preview.breached,
+      eligible: preview.eligible,
+      metrics: preview.metrics,
+      note: preview.note,
+    });
+  }
+  return { count: results.length, flagged, results };
 }
 
 // Per-kind PR scaffold shape. `paths(pc)` yields the changed-file path templates;
@@ -67369,9 +67943,12 @@ function buildPrScaffold(entry) {
 //   river promote approve <id>         Approve a candidate (promotionStatus -> approved)
 //   river promote reject  <id>         Reject a candidate  (promotionStatus -> archived)
 //   river promote template [<id>]      Emit PR scaffold(s) for approved candidate(s)
+//   river promote retire               Archive expired candidates + sync promotionStatus (Phase 3)
+//   river promote review-effectiveness Flag needs_review on negative post-activation feedback (Phase 3)
 //
 // The approval decision records who/when (context.approval) for auditability.
 // `now` is injected via RIVER_NOW (ISO string) so tests can pin it.
+
 
 
 
@@ -67444,9 +68021,9 @@ function printScaffold(scaffold) {
  */
 async function runPromoteCommand(parsed, targetPath) {
   const sub = parsed.promoteSubcommand;
-  if (!['list', 'approve', 'reject', 'template'].includes(sub)) {
+  if (!['list', 'approve', 'reject', 'template', 'retire', 'review-effectiveness'].includes(sub)) {
     console.error(
-      'Error: usage: river promote <list|approve <id>|reject <id>|template [<id>]> [--approver <name>] [--reason <text>] [--index <path>] [--output json] [--include-inactive].'
+      'Error: usage: river promote <list|approve <id>|reject <id>|template [<id>]|retire|review-effectiveness [<id>]> [--approver <name>] [--reason <text>] [--index <path>] [--threshold <n>] [--feedback-root <path>] [--output json] [--include-inactive].'
     );
     return 1;
   }
@@ -67518,6 +68095,74 @@ async function runPromoteCommand(parsed, targetPath) {
       );
     }
     console.log(`  written to: ${indexPath}`);
+    return 0;
+  }
+
+  if (sub === 'retire') {
+    const out = retirePromotions({ indexPath, now });
+    if (parsed.output === 'json') {
+      console.log(JSON.stringify(out, null, 2));
+      return 0;
+    }
+    if (!out.count) {
+      console.log('No promotion candidates to retire.');
+      return 0;
+    }
+    console.log(`Retired ${out.count} promotion candidate(s):`);
+    for (const r of out.results) {
+      const parts = [];
+      if (r.willExpire) parts.push('expired (entry archived)');
+      if (r.statusSync) parts.push(`promotionStatus ${r.statusSync.from} -> ${r.statusSync.to}`);
+      console.log(`- ${r.id}: ${parts.join('; ')}`);
+    }
+    console.log(`  written to: ${indexPath}`);
+    return 0;
+  }
+
+  if (sub === 'review-effectiveness') {
+    const feedbackRoot = parsed.promoteFeedbackRoot
+      ? external_node_path_.resolve(external_node_process_namespaceObject.cwd(), parsed.promoteFeedbackRoot)
+      : await (0,git/* ensureGitRepo */.NC)(targetPath);
+    const feedbackEntries = await (0,feedback/* listFeedbackEntries */.qN)({
+      repoRoot: feedbackRoot,
+      warn: (msg) => console.warn(msg),
+    });
+    const threshold = parsed.promoteThreshold ?? DEFAULT_EFFECTIVENESS_THRESHOLD;
+    let out;
+    try {
+      out = reviewPromotionEffectiveness({
+        indexPath,
+        feedbackEntries,
+        now,
+        threshold,
+        reviewer: parsed.promoteApprover ?? null,
+        id: parsed.promoteId ?? null,
+      });
+    } catch (err) {
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
+    if (parsed.output === 'json') {
+      console.log(JSON.stringify({ threshold, ...out }, null, 2));
+      return 0;
+    }
+    if (!out.count) {
+      console.log('No promotion candidates to review.');
+      return 0;
+    }
+    console.log(`Reviewed ${out.count} promotion candidate(s) (threshold ${threshold}):`);
+    for (const r of out.results) {
+      const m = r.metrics;
+      const summary = `negative=${m.negativeCount} (falsePositive=${m.falsePositiveCount}, reversal=${m.reversalCount}), related=${m.related}`;
+      if (r.changed) {
+        console.log(`- ${r.id}: FLAGGED needs_review — ${summary}`);
+      } else if (!r.eligible) {
+        console.log(`- ${r.id}: skipped — ${r.note}`);
+      } else {
+        console.log(`- ${r.id}: retained — ${summary}`);
+      }
+    }
+    if (out.flagged) console.log(`  written to: ${indexPath}`);
     return 0;
   }
 
@@ -67599,6 +68244,12 @@ Commands:
   promote template [<id>] Emit PR scaffold(s) for approved candidate(s) (text only)
                         (--approver <name> --reason <text> --index <path>
                          --include-inactive; --output json for machine output)
+  promote retire        Retire promotion candidates: archive on expiresAt and
+                        sync promotionStatus to the retired entry status (Phase 3)
+  promote review-effectiveness [<id>]
+                        Review post-activation feedback; flag needs_review when
+                        false-positive/reversal signals reach --threshold
+                        (--threshold <n> --feedback-root <path> --index <path>)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -67707,6 +68358,8 @@ function parseArgs(argv) {
     promoteReason: null,
     promoteIndex: null,
     promoteIncludeInactive: false,
+    promoteThreshold: null,
+    promoteFeedbackRoot: null,
     // skills subcommand fields
     skillsSubcommand: null,
     resolvePaths: null,
@@ -67765,10 +68418,12 @@ function parseArgs(argv) {
       } else if (arg === 'feedback' && args[0] && !args[0].startsWith('-')) {
         parsed.feedbackSubcommand = args.shift(); // add (only one for now)
       } else if (arg === 'promote' && args[0] && !args[0].startsWith('-')) {
-        parsed.promoteSubcommand = args.shift(); // list | approve | reject | template
-        // approve/reject/template take an optional positional candidate id.
+        parsed.promoteSubcommand = args.shift(); // list | approve | reject | template | retire | review-effectiveness
+        // approve/reject/template/review-effectiveness take an optional positional candidate id.
         if (
-          ['approve', 'reject', 'template'].includes(parsed.promoteSubcommand) &&
+          ['approve', 'reject', 'template', 'review-effectiveness'].includes(
+            parsed.promoteSubcommand
+          ) &&
           args[0] &&
           !args[0].startsWith('-')
         ) {
@@ -67923,6 +68578,27 @@ function parseArgs(argv) {
       }
       if (arg === '--include-inactive') {
         parsed.promoteIncludeInactive = true;
+        continue;
+      }
+      if (arg === '--threshold') {
+        const value = args.shift();
+        const n = parseInt(value ?? '', 10);
+        if (!value || value.startsWith('-') || Number.isNaN(n) || n < 1) {
+          console.error('Error: --threshold option requires a positive integer.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteThreshold = n;
+        continue;
+      }
+      if (arg === '--feedback-root') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --feedback-root option requires a path.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteFeedbackRoot = value;
         continue;
       }
     }

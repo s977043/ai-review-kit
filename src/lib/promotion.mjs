@@ -198,6 +198,313 @@ export function decidePromotion({
   return { ...result, entry };
 }
 
+// ---------------------------------------------------------------------------
+// Phase 3 (#1568-C / #1623): Retire lifecycle
+//
+// Two deterministic, human-triggered CLI operations over promoted candidates:
+//   1. retire              — sync promotionStatus to a retired entry-level status
+//                            (archived on expiresAt, superseded via supersede()).
+//   2. review-effectiveness — count post-activation negative feedback (false
+//                            positives + reversals) and, on threshold breach,
+//                            transition promotionStatus to needs_review.
+//
+// `now` and `threshold` are always injectable (never Date.now() / hard-coded) so
+// the transitions are deterministic under test.
+// ---------------------------------------------------------------------------
+
+/**
+ * Default negative-feedback count that flips a promoted candidate to
+ * needs_review. Overridable per call (test injection / CLI --threshold).
+ */
+export const DEFAULT_EFFECTIVENESS_THRESHOLD = 2;
+
+/**
+ * promotionStatus values that mean the judgment has been promoted and is in
+ * effect, hence eligible for an effectiveness review. `approved` is Phase 2's
+ * accept state; `active` is reserved for a judgment that has been applied.
+ */
+export const IN_EFFECT_PROMOTION_STATUSES = Object.freeze(['approved', 'active']);
+
+// promotionStatus values that are already terminal — never downgraded or
+// overwritten by the retire sync once reached.
+const TERMINAL_PROMOTION_STATUSES = Object.freeze(['superseded', 'archived']);
+
+// Retired entry-level status → the promotionStatus it should be synced to.
+const ENTRY_STATUS_TO_PROMOTION = Object.freeze({
+  archived: 'archived',
+  superseded: 'superseded',
+});
+
+/**
+ * Derive the source skillId from a clusterKey. Phase 1 clusterKeys are
+ * `skillId::feedbackType`; a key without `::` is treated as the skillId itself.
+ *
+ * @param {string} clusterKey
+ * @returns {string|null}
+ */
+export function skillIdFromClusterKey(clusterKey) {
+  const value = String(clusterKey ?? '');
+  const sep = value.indexOf('::');
+  const skillId = sep === -1 ? value : value.slice(0, sep);
+  return skillId || null;
+}
+
+/**
+ * Whether a feedback entry is a negative effectiveness signal for a promoted
+ * judgment: a false positive, or a reversal (a prior disposition overturned,
+ * recorded via `reversedBy`).
+ *
+ * @param {{ feedbackType?: string, reversedBy?: string }} fb
+ * @returns {boolean}
+ */
+export function isNegativeFeedback(fb) {
+  if (!fb) return false;
+  return fb.feedbackType === 'false_positive' || Boolean(fb.reversedBy);
+}
+
+/**
+ * Plan (without mutating) the retire transition for a promotion_candidate entry.
+ * `willExpire` is true when an active entry's expiresAt has passed; `statusSync`
+ * is the promotionStatus change implied by the (possibly post-expiry) entry
+ * status. Idempotent: once synced, `willChange` is false.
+ *
+ * @param {object} entry
+ * @param {{ now?: Date }} [opts]
+ * @returns {{ willChange: boolean, willExpire: boolean, statusSync: {from: string, to: string}|null }}
+ */
+export function planPromotionRetire(entry, { now = new Date() } = {}) {
+  const pc = getPromotionCandidate(entry);
+  if (!pc) return { willChange: false, willExpire: false, statusSync: null };
+  const entryStatus = entry.status ?? 'active';
+  const expired = Boolean(entry.expiresAt) && new Date(entry.expiresAt).getTime() <= now.getTime();
+  const willExpire = expired && entryStatus === 'active';
+  const nextEntryStatus = willExpire ? 'archived' : entryStatus;
+  const target = ENTRY_STATUS_TO_PROMOTION[nextEntryStatus] ?? null;
+  const needsSync =
+    target != null &&
+    pc.promotionStatus !== target &&
+    !TERMINAL_PROMOTION_STATUSES.includes(pc.promotionStatus);
+  const statusSync = needsSync ? { from: pc.promotionStatus, to: target } : null;
+  return { willChange: willExpire || needsSync, willExpire, statusSync };
+}
+
+/**
+ * Apply the retire transition in place. Archives an entry whose expiresAt has
+ * passed (mirrors expireEntries but with an injectable `now`) and syncs the
+ * candidate promotionStatus to the retired entry-level status. Every transition
+ * is appended to `context.lifecycleHistory` (append-only audit trail, shaped
+ * like the approvalHistory records).
+ *
+ * @param {object} entry - a promotion_candidate entry
+ * @param {{ now?: Date }} [opts]
+ * @returns {{ changed: boolean, entry: object, willExpire: boolean, statusSync: {from,to}|null, record: object|null }}
+ */
+export function applyPromotionRetire(entry, { now = new Date() } = {}) {
+  const plan = planPromotionRetire(entry, { now });
+  if (!plan.willChange) {
+    return { changed: false, entry, willExpire: false, statusSync: null, record: null };
+  }
+  const pc = getPromotionCandidate(entry);
+  const retiredAt = now.toISOString();
+  const changes = [];
+  if (plan.willExpire) {
+    entry.status = 'archived';
+    changes.push('expired');
+  }
+  if (plan.statusSync) {
+    pc.promotionStatus = plan.statusSync.to;
+    changes.push(`promotionStatus:${plan.statusSync.from}->${plan.statusSync.to}`);
+  }
+  const record = {
+    event: 'retire',
+    retiredAt,
+    entryStatus: entry.status,
+    promotionStatus: pc.promotionStatus,
+    reason: plan.willExpire ? 'expiresAt reached' : 'promotionStatus sync',
+    changes,
+  };
+  entry.context.lifecycleHistory = entry.context.lifecycleHistory ?? [];
+  entry.context.lifecycleHistory.push(record);
+  entry.metadata = entry.metadata ?? {};
+  entry.metadata.updatedAt = retiredAt;
+  return { changed: true, entry, willExpire: plan.willExpire, statusSync: plan.statusSync, record };
+}
+
+/**
+ * I/O wrapper: load the index, retire every promotion_candidate whose lifecycle
+ * needs it (expiry archive + promotionStatus sync), and persist. Idempotent — a
+ * second run finds nothing to change.
+ *
+ * @param {{ indexPath: string, now?: Date }} opts
+ * @returns {{ count: number, results: Array<{ id: string, willExpire: boolean, statusSync: object|null }> }}
+ */
+export function retirePromotions({ indexPath, now = new Date() }) {
+  const index = loadMemory(indexPath);
+  const results = [];
+  for (const entry of listPromotionCandidates(index, { includeInactive: true })) {
+    if (!planPromotionRetire(entry, { now }).willChange) continue;
+    let applied;
+    updateEntry(indexPath, entry.id, (live) => {
+      applied = applyPromotionRetire(live, { now });
+    });
+    results.push({ id: entry.id, willExpire: applied.willExpire, statusSync: applied.statusSync });
+  }
+  return { count: results.length, results };
+}
+
+/**
+ * Deterministically measure the post-activation effectiveness of a promoted
+ * candidate against a feedback set. Only feedback that (a) belongs to the same
+ * skill (the clusterKey's skillId) and (b) is strictly newer than `since`
+ * counts. Reversal and false-positive components are surfaced separately so
+ * #1545 (Reviewer Lens Effectiveness) can consume them; `negativeCount` is the
+ * distinct count of entries that are a negative signal (used for the threshold).
+ *
+ * @param {object} entry - a promotion_candidate entry
+ * @param {Array<object>} feedbackEntries - feedback records (feedback.mjs shape)
+ * @param {{ since?: string|null }} [opts] - ISO activation timestamp cutoff
+ * @returns {{ skillId: string|null, since: string|null, related: number, falsePositiveCount: number, reversalCount: number, negativeCount: number }}
+ */
+export function computeEffectivenessMetrics(entry, feedbackEntries, { since = null } = {}) {
+  const pc = getPromotionCandidate(entry);
+  const skillId = skillIdFromClusterKey(pc?.clusterKey);
+  const sinceMs = since ? new Date(since).getTime() : null;
+  let related = 0;
+  let falsePositiveCount = 0;
+  let reversalCount = 0;
+  let negativeCount = 0;
+  for (const fb of feedbackEntries ?? []) {
+    if (skillId && fb?.skillId !== skillId) continue;
+    if (sinceMs != null) {
+      const ts = new Date(fb?.timestamp ?? 0).getTime();
+      if (!(ts > sinceMs)) continue; // strictly after activation
+    }
+    related++;
+    if (fb.feedbackType === 'false_positive') falsePositiveCount++;
+    if (fb.reversedBy) reversalCount++;
+    if (isNegativeFeedback(fb)) negativeCount++;
+  }
+  return {
+    skillId,
+    since: since ?? null,
+    related,
+    falsePositiveCount,
+    reversalCount,
+    negativeCount,
+  };
+}
+
+/**
+ * Review a promoted candidate's effectiveness. When negative signals reach the
+ * threshold the candidate transitions to needs_review; the metrics and decision
+ * are appended to `context.effectivenessHistory` (append-only) and
+ * `context.effectiveness` points at the latest record.
+ *
+ * Idempotent: only an in-effect candidate (approved/active) is reviewed, and a
+ * breach flips it out of that set, so a second run is a no-op. Non-breach
+ * (retained) reviews do not mutate the entry — the metrics are surfaced only in
+ * the return value, so repeated runs never grow the history. Per #1545 the
+ * metrics are surfaced, not fed back into any judgment.
+ *
+ * @param {object} entry - a promotion_candidate entry
+ * @param {Array<object>} feedbackEntries
+ * @param {{ now?: Date, threshold?: number, reviewer?: string|null }} [opts]
+ * @returns {{ changed: boolean, eligible: boolean, breached: boolean, metrics: object, record: object|null, note: string|null }}
+ */
+export function applyEffectivenessReview(
+  entry,
+  feedbackEntries,
+  { now = new Date(), threshold = DEFAULT_EFFECTIVENESS_THRESHOLD, reviewer = null } = {}
+) {
+  const pc = getPromotionCandidate(entry);
+  if (!pc) {
+    throw new Error(`Entry ${entry?.id} is not a promotion_candidate.`);
+  }
+  const metrics = computeEffectivenessMetrics(entry, feedbackEntries, {
+    since: entry.context?.approval?.decidedAt ?? null,
+  });
+  if (!IN_EFFECT_PROMOTION_STATUSES.includes(pc.promotionStatus)) {
+    return {
+      changed: false,
+      eligible: false,
+      breached: false,
+      metrics,
+      record: null,
+      note: `not in effect (promotionStatus=${pc.promotionStatus}); only ${IN_EFFECT_PROMOTION_STATUSES.join('/')} are reviewed`,
+    };
+  }
+  const breached = metrics.negativeCount >= threshold;
+  const reviewedAt = now.toISOString();
+  const record = {
+    reviewedAt,
+    threshold,
+    reviewer: reviewer ?? null,
+    from: pc.promotionStatus,
+    decision: breached ? 'needs_review' : 'retained',
+    metrics,
+  };
+  if (!breached) {
+    return { changed: false, eligible: true, breached: false, metrics, record, note: null };
+  }
+  pc.promotionStatus = 'needs_review';
+  entry.context.effectivenessHistory = entry.context.effectivenessHistory ?? [];
+  entry.context.effectivenessHistory.push(record);
+  entry.context.effectiveness = record;
+  entry.metadata = entry.metadata ?? {};
+  entry.metadata.updatedAt = reviewedAt;
+  return { changed: true, eligible: true, breached: true, metrics, record, note: null };
+}
+
+/**
+ * I/O wrapper: load the index, review promoted candidates against a feedback
+ * set, and persist any that flip to needs_review. When `id` is given only that
+ * candidate is reviewed. Idempotent (see applyEffectivenessReview).
+ *
+ * @param {{ indexPath: string, feedbackEntries: Array<object>, now?: Date, threshold?: number, reviewer?: string|null, id?: string|null }} opts
+ * @returns {{ count: number, flagged: number, results: Array<{ id: string, changed: boolean, breached: boolean, eligible: boolean, metrics: object, note: string|null }> }}
+ */
+export function reviewPromotionEffectiveness({
+  indexPath,
+  feedbackEntries,
+  now = new Date(),
+  threshold = DEFAULT_EFFECTIVENESS_THRESHOLD,
+  reviewer = null,
+  id = null,
+}) {
+  const index = loadMemory(indexPath);
+  const all = listPromotionCandidates(index, { includeInactive: true });
+  const targets = id ? all.filter((e) => e.id === id) : all;
+  if (id && !targets.length) {
+    throw new Error(`No promotion_candidate entry with id: ${id}`);
+  }
+  const results = [];
+  let flagged = 0;
+  for (const entry of targets) {
+    // Preview on a clone so we only persist entries that actually transition
+    // (keeps the write idempotent — unchanged bytes are never rewritten).
+    const preview = applyEffectivenessReview(structuredClone(entry), feedbackEntries, {
+      now,
+      threshold,
+      reviewer,
+    });
+    if (preview.changed) {
+      updateEntry(indexPath, entry.id, (live) =>
+        applyEffectivenessReview(live, feedbackEntries, { now, threshold, reviewer })
+      );
+      flagged++;
+    }
+    results.push({
+      id: entry.id,
+      changed: preview.changed,
+      breached: preview.breached,
+      eligible: preview.eligible,
+      metrics: preview.metrics,
+      note: preview.note,
+    });
+  }
+  return { count: results.length, flagged, results };
+}
+
 // Per-kind PR scaffold shape. `paths(pc)` yields the changed-file path templates;
 // `title(clusterKey)` builds the conventional-commit PR title.
 const KIND_TEMPLATE = Object.freeze({
