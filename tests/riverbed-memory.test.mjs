@@ -8,6 +8,7 @@ import {
   queryMemory,
   supersede,
   expireEntries,
+  isExpired,
 } from '../src/lib/riverbed-memory.mjs';
 import { createTempMemory, makeMemoryEntry as makeEntry } from './helpers/memory.mjs';
 
@@ -185,6 +186,29 @@ test('expireEntries: archives expired entries', () => {
     const mem = loadMemory(indexPath);
     assert.equal(mem.entries.find((e) => e.id === 'expired').status, 'archived');
     assert.equal(mem.entries.find((e) => e.id === 'valid').status, undefined);
+  } finally {
+    cleanup();
+  }
+});
+
+test('isExpired: shared expiry predicate (expiresAt <= now)', () => {
+  const at = new Date('2026-07-20T00:00:00.000Z');
+  assert.equal(isExpired({ expiresAt: at.toISOString() }, at), true); // boundary: equal
+  assert.equal(isExpired({ expiresAt: at.toISOString() }, new Date(at.getTime() - 1)), false);
+  assert.equal(isExpired({ expiresAt: at.toISOString() }, new Date(at.getTime() + 1)), true);
+  assert.equal(isExpired({}, at), false); // no expiresAt
+});
+
+test('expireEntries: honors an injected now', () => {
+  const { cleanup, indexPath } = tmpIndex();
+  try {
+    const expiresAt = '2026-07-20T00:00:00.000Z';
+    appendEntry(indexPath, makeEntry({ id: 'e', expiresAt }));
+    // Before expiry: nothing archived.
+    assert.equal(expireEntries(indexPath, { now: new Date('2026-07-19T00:00:00.000Z') }), 0);
+    // After expiry: archived.
+    assert.equal(expireEntries(indexPath, { now: new Date('2026-07-21T00:00:00.000Z') }), 1);
+    assert.equal(loadMemory(indexPath).entries.find((e) => e.id === 'e').status, 'archived');
   } finally {
     cleanup();
   }

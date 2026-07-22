@@ -38,8 +38,14 @@ const approve = (entry, decidedAt) =>
   });
 
 // A feedback entry (feedback.mjs shape) for a given skill / type / time.
-const feedback = ({ skillId, feedbackType = 'accepted', timestamp, reversedBy }) => {
-  const e = { timestamp, trigger: 'pr-comment', feedbackType, skillId, findingFingerprint: null };
+const feedback = ({
+  skillId,
+  feedbackType = 'accepted',
+  timestamp,
+  reversedBy,
+  findingFingerprint = null,
+}) => {
+  const e = { timestamp, trigger: 'pr-comment', feedbackType, skillId, findingFingerprint };
   if (reversedBy) e.reversedBy = reversedBy;
   return e;
 };
@@ -160,10 +166,29 @@ describe('effectiveness helpers', () => {
     assert.equal(skillIdFromClusterKey(null), null);
   });
 
-  test('isNegativeFeedback: false_positive or reversal', () => {
-    assert.equal(isNegativeFeedback({ feedbackType: 'false_positive' }), true);
-    assert.equal(isNegativeFeedback({ feedbackType: 'accepted', reversedBy: 'x' }), true);
-    assert.equal(isNegativeFeedback({ feedbackType: 'accepted' }), false);
+  test('isNegativeFeedback: cluster-scoped recurrence or skill-scoped reversal', () => {
+    // Recurrence: only feedback of the cluster's own feedbackType counts.
+    assert.equal(
+      isNegativeFeedback({ feedbackType: 'missed_issue' }, { clusterFeedbackType: 'missed_issue' }),
+      true
+    );
+    // A different feedbackType for the same skill is NOT a recurrence signal.
+    assert.equal(
+      isNegativeFeedback(
+        { feedbackType: 'false_positive' },
+        { clusterFeedbackType: 'missed_issue' }
+      ),
+      false
+    );
+    // Reversal crosses feedbackType boundaries (skill-scoped).
+    assert.equal(
+      isNegativeFeedback(
+        { feedbackType: 'accepted', reversedBy: 'x' },
+        { clusterFeedbackType: 'missed_issue' }
+      ),
+      true
+    );
+    assert.equal(isNegativeFeedback({ feedbackType: 'accepted' }, {}), false);
     assert.equal(isNegativeFeedback(null), false);
   });
 
@@ -203,9 +228,106 @@ describe('effectiveness helpers', () => {
       since: '2026-07-21T00:00:00.000Z',
     });
     assert.equal(m.skillId, 'skill-a');
+    assert.equal(m.feedbackType, 'false_positive');
     assert.equal(m.related, 3);
-    assert.equal(m.falsePositiveCount, 1);
+    assert.equal(m.clusterRecurrenceCount, 1);
     assert.equal(m.reversalCount, 1);
+    assert.equal(m.negativeCount, 2);
+  });
+
+  // warning-1 probe: a candidate clustered on skill-x::missed_issue must NOT be
+  // flagged by unrelated false_positive feedback on the same skill.
+  test('recurrence is cluster-scoped: off-cluster feedbackType is not negative', () => {
+    const entry = makeCandidate('skill-x', 'missed_issue', [
+      { pr: 1, findingFingerprint: null, feedbackType: 'missed_issue' },
+      { pr: 2, findingFingerprint: null, feedbackType: 'missed_issue' },
+    ]);
+    const offCluster = [
+      feedback({
+        skillId: 'skill-x',
+        feedbackType: 'false_positive',
+        timestamp: '2026-07-25T00:00:00.000Z',
+      }),
+      feedback({
+        skillId: 'skill-x',
+        feedbackType: 'false_positive',
+        timestamp: '2026-07-26T00:00:00.000Z',
+      }),
+    ];
+    const m = computeEffectivenessMetrics(entry, offCluster, { since: '2026-07-21T00:00:00.000Z' });
+    assert.equal(m.feedbackType, 'missed_issue');
+    assert.equal(m.related, 2); // same skill, after cutoff
+    assert.equal(m.clusterRecurrenceCount, 0); // different feedbackType
+    assert.equal(m.negativeCount, 0); // not over-detected
+  });
+
+  // warning-1: on-cluster recurrence IS counted.
+  test('recurrence is cluster-scoped: on-cluster feedbackType counts', () => {
+    const entry = makeCandidate('skill-x', 'missed_issue', [
+      { pr: 1, findingFingerprint: null, feedbackType: 'missed_issue' },
+      { pr: 2, findingFingerprint: null, feedbackType: 'missed_issue' },
+    ]);
+    const onCluster = [
+      feedback({
+        skillId: 'skill-x',
+        feedbackType: 'missed_issue',
+        timestamp: '2026-07-25T00:00:00.000Z',
+      }),
+      feedback({
+        skillId: 'skill-x',
+        feedbackType: 'missed_issue',
+        timestamp: '2026-07-26T00:00:00.000Z',
+      }),
+    ];
+    const m = computeEffectivenessMetrics(entry, onCluster, { since: '2026-07-21T00:00:00.000Z' });
+    assert.equal(m.clusterRecurrenceCount, 2);
+    assert.equal(m.negativeCount, 2);
+  });
+
+  // warning-2 probe: findingFingerprint dedup — same fingerprint x2 = 1 distinct.
+  test('negativeCount deduplicates by findingFingerprint (same fp x2 = 1)', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    const dupFingerprint = [
+      feedback({
+        skillId: 'skill-a',
+        feedbackType: 'false_positive',
+        timestamp: '2026-07-25T00:00:00.000Z',
+        findingFingerprint: 'abcdef0123456789',
+      }),
+      feedback({
+        skillId: 'skill-a',
+        feedbackType: 'false_positive',
+        timestamp: '2026-07-26T00:00:00.000Z',
+        findingFingerprint: 'abcdef0123456789',
+      }),
+    ];
+    const m = computeEffectivenessMetrics(entry, dupFingerprint, {
+      since: '2026-07-21T00:00:00.000Z',
+    });
+    assert.equal(m.clusterRecurrenceCount, 2); // raw component tally is not deduped
+    assert.equal(m.negativeCount, 1); // distinct finding
+  });
+
+  // warning-2: null fingerprints fall back to per-entry counting (null x2 = 2).
+  test('null findingFingerprint negatives count per entry (null x2 = 2)', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    const nullFingerprints = [
+      feedback({
+        skillId: 'skill-a',
+        feedbackType: 'false_positive',
+        timestamp: '2026-07-25T00:00:00.000Z',
+        findingFingerprint: null,
+      }),
+      feedback({
+        skillId: 'skill-a',
+        feedbackType: 'false_positive',
+        timestamp: '2026-07-26T00:00:00.000Z',
+        findingFingerprint: null,
+      }),
+    ];
+    const m = computeEffectivenessMetrics(entry, nullFingerprints, {
+      since: '2026-07-21T00:00:00.000Z',
+    });
     assert.equal(m.negativeCount, 2);
   });
 });
@@ -315,6 +437,70 @@ describe('applyEffectivenessReview', () => {
     });
     assert.equal(res.metrics.negativeCount, 0);
     assert.equal(res.breached, false);
+  });
+});
+
+// warning-3: needs_review is not a dead end — re-approving revives the candidate.
+describe('needs_review -> approve revival (applyPromotionDecision)', () => {
+  const decidedAt = '2026-07-21T00:00:00.000Z';
+  const twoNegatives = [
+    feedback({
+      skillId: 'skill-a',
+      feedbackType: 'false_positive',
+      timestamp: '2026-07-25T00:00:00.000Z',
+    }),
+    feedback({
+      skillId: 'skill-a',
+      feedbackType: 'false_positive',
+      timestamp: '2026-07-26T00:00:00.000Z',
+    }),
+  ];
+
+  test('re-approving a needs_review candidate returns it to approved and resets the cutoff', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    approve(entry, decidedAt);
+    // An effectiveness review flags it (approval.decision stays 'approved').
+    applyEffectivenessReview(entry, twoNegatives, { now: new Date('2026-07-30T00:00:00.000Z') });
+    assert.equal(entry.context.promotionCandidate.promotionStatus, 'needs_review');
+    assert.equal(entry.context.approval.decision, 'approved');
+
+    // Re-approve at a later time: NOT a silent no-op despite decision === 'approved'.
+    const revivedAt = '2026-08-10T00:00:00.000Z';
+    const res = applyPromotionDecision(entry, {
+      decision: 'approved',
+      approver: 'carol',
+      reason: 'recurrence resolved',
+      now: new Date(revivedAt),
+    });
+    assert.equal(res.changed, true);
+    assert.equal(res.warning, null); // same decision, not an override
+    assert.equal(entry.context.promotionCandidate.promotionStatus, 'approved'); // back in effect
+    // A fresh approval record is appended and becomes the new cutoff baseline.
+    assert.equal(entry.context.approvalHistory.length, 2);
+    assert.equal(entry.context.approval.approver, 'carol');
+    assert.equal(entry.context.approval.decidedAt, revivedAt);
+
+    // The reset cutoff excludes the pre-revival feedback, so a re-review retains it.
+    const afterRevive = applyEffectivenessReview(entry, twoNegatives, {
+      now: new Date('2026-08-15T00:00:00.000Z'),
+      threshold: 2,
+    });
+    assert.equal(afterRevive.eligible, true);
+    assert.equal(afterRevive.breached, false); // old feedback is before the new decidedAt
+    assert.equal(afterRevive.metrics.negativeCount, 0);
+  });
+
+  test('genuine idempotent re-approve (still approved) remains a no-op', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    approve(entry, decidedAt);
+    const res = applyPromotionDecision(entry, {
+      decision: 'approved',
+      approver: 'bob',
+      now: new Date('2026-08-01T00:00:00.000Z'),
+    });
+    assert.equal(res.changed, false);
+    assert.equal(entry.context.approvalHistory.length, 1);
+    assert.equal(entry.context.approval.approver, 'alice');
   });
 });
 

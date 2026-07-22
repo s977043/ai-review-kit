@@ -175,7 +175,13 @@ export async function runPromoteCommand(parsed, targetPath) {
   }
 
   if (sub === 'retire') {
-    const out = retirePromotions({ indexPath, now });
+    let out;
+    try {
+      out = retirePromotions({ indexPath, now });
+    } catch (err) {
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
     if (parsed.output === 'json') {
       console.log(JSON.stringify(out, null, 2));
       return 0;
@@ -229,7 +235,7 @@ export async function runPromoteCommand(parsed, targetPath) {
     console.log(`Reviewed ${out.count} promotion candidate(s) (threshold ${threshold}):`);
     for (const r of out.results) {
       const m = r.metrics;
-      const summary = `negative=${m.negativeCount} (falsePositive=${m.falsePositiveCount}, reversal=${m.reversalCount}), related=${m.related}`;
+      const summary = `negative=${m.negativeCount} (clusterRecurrence=${m.clusterRecurrenceCount}, reversal=${m.reversalCount}), related=${m.related}`;
       if (r.changed) {
         console.log(`- ${r.id}: FLAGGED needs_review — ${summary}`);
       } else if (!r.eligible) {

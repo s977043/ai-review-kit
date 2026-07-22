@@ -47324,6 +47324,7 @@ function aggregateRiskLevel(fileRisks, fallback = 'comment_only') {
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   D4: () => (/* binding */ appendEntry),
 /* harmony export */   W8: () => (/* binding */ updateEntry),
+/* harmony export */   _d: () => (/* binding */ isExpired),
 /* harmony export */   ab: () => (/* binding */ loadMemory),
 /* harmony export */   qU: () => (/* binding */ queryMemory)
 /* harmony export */ });
@@ -47448,21 +47449,30 @@ function supersede(indexPath, oldId, newId) {
 }
 
 /**
- * Archive entries whose expiresAt timestamp has passed.
+ * Whether an entry's expiresAt timestamp has passed relative to `now`. Shared by
+ * expireEntries and the Phase 3 promotion retire lifecycle so the expiry rule
+ * (`expiresAt <= now`) is defined once.
+ *
+ * @param {{ expiresAt?: string }} entry
+ * @param {Date} now
+ * @returns {boolean}
+ */
+function isExpired(entry, now) {
+  return Boolean(entry?.expiresAt) && new Date(entry.expiresAt).getTime() <= now.getTime();
+}
+
+/**
+ * Archive active entries whose expiresAt timestamp has passed.
  *
  * @param {string} indexPath - Path to the index.json file
+ * @param {{ now?: Date }} [opts] - injectable clock (defaults to real time)
  * @returns {number} Number of entries archived
  */
-function expireEntries(indexPath) {
+function expireEntries(indexPath, { now = new Date() } = {}) {
   const index = loadMemory(indexPath);
-  const now = new Date();
   let count = 0;
   for (const entry of index.entries) {
-    if (
-      entry.expiresAt &&
-      new Date(entry.expiresAt) <= now &&
-      (entry.status ?? 'active') === 'active'
-    ) {
+    if (isExpired(entry, now) && (entry.status ?? 'active') === 'active') {
       entry.status = 'archived';
       count++;
     }
@@ -67345,9 +67355,14 @@ function isSecuritySensitive(entry) {
  * decision is appended to `context.approvalHistory` (an audit trail that is
  * never overwritten) and `context.approval` points at the latest record.
  *
- * Re-deciding with the SAME decision is a no-op (idempotent). Re-deciding with a
- * DIFFERENT decision is allowed (an override) but surfaces a `warning` so the
- * change of mind is visible to the caller; the prior decisions stay in history.
+ * Re-deciding with the SAME decision is a no-op (idempotent) ONLY when the
+ * resulting promotionStatus already holds. A candidate that an effectiveness
+ * review flipped to needs_review still has `approval.decision === 'approved'`,
+ * so re-approving it is NOT a no-op: it transitions promotionStatus back to
+ * `approved` (in effect again), appends a fresh approval record, and thereby
+ * resets the effectiveness cutoff (`since`) to the new decidedAt. Re-deciding
+ * with a DIFFERENT decision is an override and surfaces a `warning`; the prior
+ * decisions always stay in approvalHistory.
  *
  * @param {object} entry - a promotion_candidate entry
  * @param {{ decision: 'approved'|'rejected', approver: string, reason?: string|null, now?: Date }} opts
@@ -67372,13 +67387,17 @@ function applyPromotionDecision(
     );
   }
   const previousDecision = entry.context?.approval?.decision ?? null;
-  // Idempotent: re-deciding with the same decision leaves the record unchanged.
-  if (previousDecision === decision) {
+  const targetStatus = DECISION_STATUS[decision];
+  // Idempotent only when BOTH the last decision AND the resulting promotionStatus
+  // already hold. This lets a needs_review candidate (last decision 'approved'
+  // but promotionStatus flipped by an effectiveness review) be re-approved back
+  // into effect instead of silently no-op'ing.
+  if (previousDecision === decision && pc.promotionStatus === targetStatus) {
     return { changed: false, entry, warning: null, previousDecision };
   }
   const decidedAt = now.toISOString();
   const record = { decision, approver, decidedAt, reason: reason ?? null };
-  pc.promotionStatus = DECISION_STATUS[decision];
+  pc.promotionStatus = targetStatus;
   // Append-only audit trail; context.approval always points at the latest record.
   entry.context.approvalHistory = entry.context.approvalHistory ?? [];
   entry.context.approvalHistory.push(record);
@@ -67386,9 +67405,10 @@ function applyPromotionDecision(
   entry.status = decision === 'rejected' ? 'archived' : 'active';
   entry.metadata = entry.metadata ?? {};
   entry.metadata.updatedAt = decidedAt;
-  const warning = previousDecision
-    ? `candidate ${entry.id} was already ${previousDecision}; overriding to ${decision} (prior decisions kept in approvalHistory).`
-    : null;
+  const warning =
+    previousDecision && previousDecision !== decision
+      ? `candidate ${entry.id} was already ${previousDecision}; overriding to ${decision} (prior decisions kept in approvalHistory).`
+      : null;
   return { changed: true, entry, warning, previousDecision };
 }
 
@@ -67427,9 +67447,10 @@ function decidePromotion({
 // Two deterministic, human-triggered CLI operations over promoted candidates:
 //   1. retire              — sync promotionStatus to a retired entry-level status
 //                            (archived on expiresAt, superseded via supersede()).
-//   2. review-effectiveness — count post-activation negative feedback (false
-//                            positives + reversals) and, on threshold breach,
-//                            transition promotionStatus to needs_review.
+//   2. review-effectiveness — count post-activation negative feedback
+//                            (cluster-scoped recurrence + skill-scoped reversals,
+//                            deduplicated by findingFingerprint) and, on
+//                            threshold breach, transition to needs_review.
 //
 // `now` and `threshold` are always injectable (never Date.now() / hard-coded) so
 // the transitions are deterministic under test.
@@ -67473,16 +67494,41 @@ function skillIdFromClusterKey(clusterKey) {
 }
 
 /**
+ * Derive the feedbackType from a clusterKey (`skillId::feedbackType`). A key
+ * without `::` has no feedbackType component. This is the class the candidate was
+ * clustered on, and defines which recurring feedback degrades it.
+ *
+ * @param {string} clusterKey
+ * @returns {string|null}
+ */
+function feedbackTypeFromClusterKey(clusterKey) {
+  const value = String(clusterKey ?? '');
+  const sep = value.indexOf('::');
+  if (sep === -1) return null;
+  const feedbackType = value.slice(sep + 2);
+  return feedbackType || null;
+}
+
+/**
  * Whether a feedback entry is a negative effectiveness signal for a promoted
- * judgment: a false positive, or a reversal (a prior disposition overturned,
- * recorded via `reversedBy`).
+ * judgment. Two scopes, by design:
+ *  - **Cluster-scoped recurrence**: feedback of the candidate's own feedbackType
+ *    (`clusterFeedbackType`). A candidate promoted for `skill::missed_issue` is
+ *    only degraded by recurring `missed_issue`, not by an unrelated
+ *    `false_positive` on the same skill (that would be over-detection).
+ *  - **Skill-scoped reversal**: any `reversedBy` feedback for the skill. A
+ *    reversal means a prior disposition was overturned, which invalidates the
+ *    promoted judgment regardless of which feedbackType it was filed under, so
+ *    reversals deliberately cross feedbackType boundaries.
  *
  * @param {{ feedbackType?: string, reversedBy?: string }} fb
+ * @param {{ clusterFeedbackType?: string|null }} [opts]
  * @returns {boolean}
  */
-function isNegativeFeedback(fb) {
+function isNegativeFeedback(fb, { clusterFeedbackType = null } = {}) {
   if (!fb) return false;
-  return fb.feedbackType === 'false_positive' || Boolean(fb.reversedBy);
+  const isRecurrence = clusterFeedbackType != null && fb.feedbackType === clusterFeedbackType;
+  return isRecurrence || Boolean(fb.reversedBy);
 }
 
 /**
@@ -67499,8 +67545,9 @@ function planPromotionRetire(entry, { now = new Date() } = {}) {
   const pc = getPromotionCandidate(entry);
   if (!pc) return { willChange: false, willExpire: false, statusSync: null };
   const entryStatus = entry.status ?? 'active';
-  const expired = Boolean(entry.expiresAt) && new Date(entry.expiresAt).getTime() <= now.getTime();
-  const willExpire = expired && entryStatus === 'active';
+  // Shares the expiry rule with expireEntries (isExpired) so the `expiresAt <= now`
+  // boundary is defined once.
+  const willExpire = (0,riverbed_memory/* isExpired */._d)(entry, now) && entryStatus === 'active';
   const nextEntryStatus = willExpire ? 'archived' : entryStatus;
   const target = ENTRY_STATUS_TO_PROMOTION[nextEntryStatus] ?? null;
   const needsSync =
@@ -67577,41 +67624,58 @@ function retirePromotions({ indexPath, now = new Date() }) {
 
 /**
  * Deterministically measure the post-activation effectiveness of a promoted
- * candidate against a feedback set. Only feedback that (a) belongs to the same
- * skill (the clusterKey's skillId) and (b) is strictly newer than `since`
- * counts. Reversal and false-positive components are surfaced separately so
- * #1545 (Reviewer Lens Effectiveness) can consume them; `negativeCount` is the
- * distinct count of entries that are a negative signal (used for the threshold).
+ * candidate against a feedback set. Feedback must (a) belong to the same skill
+ * (the clusterKey's skillId) and (b) be strictly newer than `since`. A negative
+ * signal is a cluster-scoped recurrence (feedback of the candidate's own
+ * feedbackType) or a skill-scoped reversal — see isNegativeFeedback for the
+ * scope rationale.
+ *
+ * `negativeCount` is DEDUPLICATED by findingFingerprint: multiple feedback rows
+ * that share one fingerprint count as a single distinct finding, so a single
+ * re-litigated finding cannot inflate the threshold. Rows with a null fingerprint
+ * (Phase 1 allows null, #1568 decision 2) fall back to per-entry counting.
+ * `clusterRecurrenceCount` and `reversalCount` are the raw (non-deduplicated)
+ * component tallies surfaced for #1545 (Reviewer Lens Effectiveness).
  *
  * @param {object} entry - a promotion_candidate entry
  * @param {Array<object>} feedbackEntries - feedback records (feedback.mjs shape)
  * @param {{ since?: string|null }} [opts] - ISO activation timestamp cutoff
- * @returns {{ skillId: string|null, since: string|null, related: number, falsePositiveCount: number, reversalCount: number, negativeCount: number }}
+ * @returns {{ skillId: string|null, feedbackType: string|null, since: string|null, related: number, clusterRecurrenceCount: number, reversalCount: number, negativeCount: number }}
  */
 function computeEffectivenessMetrics(entry, feedbackEntries, { since = null } = {}) {
   const pc = getPromotionCandidate(entry);
   const skillId = skillIdFromClusterKey(pc?.clusterKey);
+  const feedbackType = feedbackTypeFromClusterKey(pc?.clusterKey);
   const sinceMs = since ? new Date(since).getTime() : null;
   let related = 0;
-  let falsePositiveCount = 0;
+  let clusterRecurrenceCount = 0;
   let reversalCount = 0;
-  let negativeCount = 0;
+  // Distinct-negative accounting: a finding counts once regardless of how many
+  // feedback rows share its fingerprint; null-fingerprint rows count per entry.
+  const seenFingerprints = new Set();
+  let nullFingerprintNegatives = 0;
   for (const fb of feedbackEntries ?? []) {
-    if (skillId && fb?.skillId !== skillId) continue;
+    if (skillId && fb?.skillId !== skillId) continue; // skill scope
     if (sinceMs != null) {
       const ts = new Date(fb?.timestamp ?? 0).getTime();
       if (!(ts > sinceMs)) continue; // strictly after activation
     }
     related++;
-    if (fb.feedbackType === 'false_positive') falsePositiveCount++;
+    if (feedbackType != null && fb.feedbackType === feedbackType) clusterRecurrenceCount++;
     if (fb.reversedBy) reversalCount++;
-    if (isNegativeFeedback(fb)) negativeCount++;
+    if (isNegativeFeedback(fb, { clusterFeedbackType: feedbackType })) {
+      const fingerprint = fb.findingFingerprint ?? null;
+      if (fingerprint) seenFingerprints.add(fingerprint);
+      else nullFingerprintNegatives++;
+    }
   }
+  const negativeCount = seenFingerprints.size + nullFingerprintNegatives;
   return {
     skillId,
+    feedbackType,
     since: since ?? null,
     related,
-    falsePositiveCount,
+    clusterRecurrenceCount,
     reversalCount,
     negativeCount,
   };
@@ -68099,7 +68163,13 @@ async function runPromoteCommand(parsed, targetPath) {
   }
 
   if (sub === 'retire') {
-    const out = retirePromotions({ indexPath, now });
+    let out;
+    try {
+      out = retirePromotions({ indexPath, now });
+    } catch (err) {
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
     if (parsed.output === 'json') {
       console.log(JSON.stringify(out, null, 2));
       return 0;
@@ -68153,7 +68223,7 @@ async function runPromoteCommand(parsed, targetPath) {
     console.log(`Reviewed ${out.count} promotion candidate(s) (threshold ${threshold}):`);
     for (const r of out.results) {
       const m = r.metrics;
-      const summary = `negative=${m.negativeCount} (falsePositive=${m.falsePositiveCount}, reversal=${m.reversalCount}), related=${m.related}`;
+      const summary = `negative=${m.negativeCount} (clusterRecurrence=${m.clusterRecurrenceCount}, reversal=${m.reversalCount}), related=${m.related}`;
       if (r.changed) {
         console.log(`- ${r.id}: FLAGGED needs_review — ${summary}`);
       } else if (!r.eligible) {
