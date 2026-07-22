@@ -108,6 +108,26 @@ skills:
       - '**/*.map'
       - '**/*.snap'
 
+  - id: invisible-unicode-injection
+    version: '0.1.0'
+    name: 'Invisible Unicode Injection Scan 不可視 Unicode コード注入検出'
+    path: skills/midstream/invisible-unicode-injection/SKILL.md
+    category: midstream
+    phase: midstream
+    tags: [unicode, supply-chain, midstream]
+    severity: major
+    recommended: false
+    description: 'Detects invisible or deceptive Unicode (zero-width, variation selectors, bidirectional controls, confusable whitespace) newly added to source code — the GlassWorm supply-chain and Trojan Source (CVE-2021-42574) code-hiding vectors, guarded deterministically with canary tests'
+    exclude:
+      - '**/package-lock.json'
+      - '**/pnpm-lock.yaml'
+      - '**/yarn.lock'
+      - '**/*.lock'
+      - 'dist/**'
+      - '**/*.min.*'
+      - '**/*.map'
+      - '**/*.snap'
+
   - id: doc-hygiene
     version: '0.1.0'
     name: 'Documentation Hygiene ドキュメント衛生'
