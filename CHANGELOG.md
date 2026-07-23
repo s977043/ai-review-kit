@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.62.0](https://github.com/s977043/river-review/compare/v1.61.1...v1.62.0) (2026-07-23)
+
+
+### Features
+
+* **review:** 不可視 Unicode コード注入（GlassWorm型）検出を追加する ([#1642](https://github.com/s977043/river-review/issues/1642)) ([8792a4f](https://github.com/s977043/river-review/commit/8792a4fd402661b9a174fe95914a120945a23f70)), closes [#1631](https://github.com/s977043/river-review/issues/1631)
+* **riverbed:** promotion_candidate の Retire lifecycle 自動遷移 (Phase 3, [#1568](https://github.com/s977043/river-review/issues/1568)-C) ([#1641](https://github.com/s977043/river-review/issues/1641)) ([9373ef0](https://github.com/s977043/river-review/commit/9373ef09f8e255fa3ec99eede669cbc4e9334c8c))
+
 ## [1.61.1](https://github.com/s977043/river-review/compare/v1.61.0...v1.61.1) (2026-07-22)
 
 
