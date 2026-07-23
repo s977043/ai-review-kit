@@ -158,6 +158,40 @@ const HEURISTIC_REGISTRY = [
     },
   },
   {
+    skillId: 'invisible-unicode-injection',
+    detect: findInvisibleUnicode,
+    findings: {
+      'bidi-control': {
+        finding: '双方向テキスト制御文字（Bidi control/mark）がコードに混入している',
+        evidence:
+          'U+061C / U+200E / U+200F / U+202A–202E / U+2066–2069 のいずれかが追加行に含まれる（Trojan Source / CVE-2021-42574）',
+        impact: '表示上のコード順序と実際の実行順序が食い違い、悪意あるロジックを不可視化できる',
+        fix: '該当文字を削除する。方向制御が本当に必要な場合は用途をレビューで明示し、コードでは使わない',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+      'invisible-unicode': {
+        finding: '不可視 Unicode 文字（ゼロ幅/異体字セレクター/タグ文字等）がコードに混入している',
+        evidence:
+          'タグ文字（U+E0000–E007F）・異体字セレクター（U+FE00–FE0F / U+E0100–E01EF）・ゼロ幅文字（U+200B/2060）・非先頭 BOM（U+FEFF）・ソフトハイフン（U+00AD）・不可視数学演算子（U+2061–2064）等（列挙集合に限定）が追加行に含まれる（GlassWorm 型のコード不可視化・ASCII smuggling）',
+        impact:
+          '目視できないコードが混入し、サプライチェーン経由で任意コード実行やレビュー回避につながる',
+        fix: '該当の不可視文字を削除する。意図した装飾（絵文字）でない限りコードに不可視文字を残さない',
+        severity: 'blocker',
+        confidence: 'high',
+      },
+      'confusable-whitespace': {
+        finding: '通常の空白に紛れる変則空白（NBSP 等）がコードに混入している',
+        evidence:
+          '文字列リテラル・コメント外に U+00A0 / U+2000–200A / U+3000 等の非 ASCII 空白が追加されている',
+        impact: '見た目は空白だが解析・実行に影響し、貼り付けミスや難読化の温床になる',
+        fix: '通常の半角スペースへ置き換える。全角空白等が必要なら文字列リテラル内に限定する',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+    },
+  },
+  {
     skillId: 'logging-observability',
     detect: findSilentCatch,
     findings: {
@@ -1033,6 +1067,246 @@ function findClosureScopeRetention({ diff }) {
 
     comments.push({ file: filePath, line: assignLine, kind: 'closure-scope-retention' });
     if (comments.length >= MAX_CLOSURE_RETENTION_COMMENTS) return comments;
+  }
+  return comments;
+}
+
+// ---- Invisible / dangerous Unicode injection (GlassWorm-type, #1631) ----
+// Detects non-rendering or deceptive Unicode characters newly added to source
+// CODE lines. This is the vector behind 2026's "GlassWorm" supply-chain
+// campaign (variation selectors / zero-width characters hiding executable
+// payloads) and Trojan Source / CVE-2021-42574 (bidirectional-control
+// reordering). Deterministic and canary-guarded (see #1070 responsibility
+// split). Documentation (.md) legitimately uses zero-width joiners for emoji
+// sequences and is out of scope, so detection is restricted to source-code
+// extensions. Character classes are expressed as NUMERIC code points (not raw
+// characters or \u escapes) so this detector file stays pure ASCII and never
+// self-triggers.
+
+// Bidirectional control characters (Trojan Source / CVE-2021-42574). Near-zero
+// false positive in source code: U+202A..U+202E (LRE/RLE/PDF/LRO/RLO) and
+// U+2066..U+2069 (LRI/RLI/FSI/PDI).
+const BIDI_CONTROL_RANGES = [
+  [0x202a, 0x202e],
+  [0x2066, 0x2069],
+];
+// Bidirectional marks: ARABIC LETTER MARK (U+061C), LEFT-TO-RIGHT MARK
+// (U+200E), RIGHT-TO-LEFT MARK (U+200F). Part of the CVE-2021-42574 detection
+// set — invisible and abusable for display/execution reordering.
+const BIDI_MARK_CPS = new Set([0x061c, 0x200e, 0x200f]);
+
+// Zero-width / invisible format characters that have no legitimate use in code.
+// Enumerated set (detection is limited to these code points, not exhaustive of
+// all Unicode invisibles): ZERO WIDTH SPACE (U+200B), WORD JOINER (U+2060),
+// SOFT HYPHEN (U+00AD), MONGOLIAN VOWEL SEPARATOR (U+180E), COMBINING GRAPHEME
+// JOINER (U+034F), invisible math operators (U+2061..U+2064), HANGUL FILLERS
+// (U+115F/U+1160/U+3164), BRAILLE PATTERN BLANK (U+2800), interlinear
+// annotation anchors (U+FFF9..U+FFFB).
+const INVISIBLE_FORMAT_CPS = new Set([
+  0x200b, 0x2060, 0x00ad, 0x180e, 0x034f, 0x2061, 0x2062, 0x2063, 0x2064, 0x115f, 0x1160, 0x3164,
+  0x2800, 0xfff9, 0xfffa, 0xfffb,
+]);
+
+// Confusable / unusual whitespace masquerading as an ASCII space: NBSP
+// (U+00A0), OGHAM SPACE MARK (U+1680), EN..HAIR spaces (U+2000..U+200A),
+// NARROW NO-BREAK (U+202F), MEDIUM MATH SPACE (U+205F), IDEOGRAPHIC SPACE
+// (U+3000).
+const CONFUSABLE_WS_CPS = new Set([0x00a0, 0x1680, 0x202f, 0x205f, 0x3000]);
+const CONFUSABLE_WS_RANGE = [0x2000, 0x200a];
+
+const ZWNJ = 0x200c;
+const ZWJ = 0x200d;
+const BOM = 0xfeff;
+const VS_LOW = 0xfe00;
+const VS_HIGH = 0xfe0f;
+const KEYCAP = 0x20e3;
+// Variation selectors supplement (VS17..VS256). Same GlassWorm data-hiding
+// vector as the BMP selectors, on the supplementary plane.
+const VS_SUP_LOW = 0xe0100;
+const VS_SUP_HIGH = 0xe01ef;
+// Tag characters (U+E0000..U+E007F). The primary GlassWorm / ASCII-smuggling
+// and LLM prompt-injection vector. Legitimate only as an emoji tag sequence
+// (subdivision flags: a pictographic base + tag chars + U+E007F CANCEL TAG).
+const TAG_LOW = 0xe0000;
+const TAG_HIGH = 0xe007f;
+
+// Built from an ASCII source string, so no raw character appears in this file.
+const EXTENDED_PICTOGRAPHIC_RE = new RegExp('\\p{Extended_Pictographic}', 'u');
+
+function cpInRanges(cp, ranges) {
+  for (const [lo, hi] of ranges) {
+    if (cp >= lo && cp <= hi) return true;
+  }
+  return false;
+}
+
+function isConfusableWhitespaceCp(cp) {
+  return (
+    CONFUSABLE_WS_CPS.has(cp) || (cp >= CONFUSABLE_WS_RANGE[0] && cp <= CONFUSABLE_WS_RANGE[1])
+  );
+}
+
+// A ZWJ/ZWNJ or variation selector next to one of these is a legitimate emoji
+// sequence, not injection: an Extended_Pictographic code point, a ZWJ, a
+// variation selector, or the combining enclosing keycap.
+function isEmojiAdjacentChar(ch) {
+  if (!ch) return false;
+  const cp = ch.codePointAt(0);
+  if (cp === ZWJ || (cp >= VS_LOW && cp <= VS_HIGH) || (cp >= VS_SUP_LOW && cp <= VS_SUP_HIGH))
+    return true;
+  if (cp === KEYCAP) return true;
+  return EXTENDED_PICTOGRAPHIC_RE.test(ch);
+}
+
+/**
+ * Classify the dangerous Unicode present on a single (added) code line.
+ * Returns a Set of kinds among 'bidi-control' | 'invisible-unicode' |
+ * 'confusable-whitespace'. Conservative by construction (emoji sequences,
+ * leading BOM, and in-string confusable whitespace are treated as legitimate).
+ * @param {string} line
+ * @returns {Set<string>}
+ */
+function detectInvisibleUnicodeKinds(line) {
+  const kinds = new Set();
+  const cps = Array.from(String(line));
+
+  for (let idx = 0; idx < cps.length; idx += 1) {
+    const ch = cps[idx];
+    const cp = ch.codePointAt(0);
+    const prev = cps[idx - 1] ?? '';
+    const next = cps[idx + 1] ?? '';
+
+    if (cpInRanges(cp, BIDI_CONTROL_RANGES) || BIDI_MARK_CPS.has(cp)) {
+      kinds.add('bidi-control');
+      continue;
+    }
+
+    if (INVISIBLE_FORMAT_CPS.has(cp)) {
+      kinds.add('invisible-unicode');
+      continue;
+    }
+
+    // Non-leading BOM / ZERO WIDTH NO-BREAK SPACE. A leading BOM at column 0 is
+    // legitimate; anywhere else it is an invisible injection.
+    if (cp === BOM) {
+      if (idx > 0) kinds.add('invisible-unicode');
+      continue;
+    }
+
+    // Bare ZERO WIDTH (NON-)JOINER: legitimate only inside an emoji sequence.
+    if (cp === ZWJ || cp === ZWNJ) {
+      if (!(isEmojiAdjacentChar(prev) || isEmojiAdjacentChar(next))) {
+        kinds.add('invisible-unicode');
+      }
+      continue;
+    }
+
+    // Tag characters (U+E0000..U+E007F): the primary ASCII-smuggling /
+    // prompt-injection vector. Legitimate only as an emoji tag sequence, whose
+    // tag run is anchored to an Extended_Pictographic base (e.g. subdivision
+    // flags). A tag run NOT anchored to a pictographic base is an injection.
+    if (cp >= TAG_LOW && cp <= TAG_HIGH) {
+      let j = idx - 1;
+      while (j >= 0) {
+        const pcp = cps[j].codePointAt(0);
+        if (pcp >= TAG_LOW && pcp <= TAG_HIGH) {
+          j -= 1;
+          continue;
+        }
+        break;
+      }
+      const anchor = j >= 0 ? cps[j] : '';
+      if (!(anchor && EXTENDED_PICTOGRAPHIC_RE.test(anchor))) {
+        kinds.add('invisible-unicode');
+      }
+      continue;
+    }
+
+    // Variation selectors — BMP (U+FE00..FE0F) and supplement (U+E0100..E01EF).
+    // A single selector right after a pictographic base is legitimate emoji
+    // presentation; a chained run of selectors, or a selector on a
+    // non-pictographic base, is data-hiding.
+    const isVsBmp = cp >= VS_LOW && cp <= VS_HIGH;
+    const isVsSup = cp >= VS_SUP_LOW && cp <= VS_SUP_HIGH;
+    if (isVsBmp || isVsSup) {
+      const nextCp = next ? next.codePointAt(0) : -1;
+      const nextIsVs =
+        (nextCp >= VS_LOW && nextCp <= VS_HIGH) || (nextCp >= VS_SUP_LOW && nextCp <= VS_SUP_HIGH);
+      const prevIsPictographic = prev && EXTENDED_PICTOGRAPHIC_RE.test(prev);
+      // A single selector after a pictographic base (emoji presentation) or one
+      // immediately followed by a combining enclosing keycap (e.g. "1<FE0F><20E3>")
+      // is legitimate. A chained run of selectors, or a selector on a plain
+      // non-pictographic base, is data-hiding.
+      const legitimatePresentation = prevIsPictographic || nextCp === KEYCAP;
+      if (nextIsVs || !legitimatePresentation) {
+        kinds.add('invisible-unicode');
+      }
+    }
+  }
+
+  // Confusable whitespace, but only OUTSIDE string literals and comment lines
+  // (i18n text legitimately uses NBSP inside strings).
+  const trimmed = String(line).trim();
+  const isCommentLine =
+    trimmed.startsWith('//') ||
+    trimmed.startsWith('*') ||
+    trimmed.startsWith('/*') ||
+    trimmed.startsWith('#');
+  if (!isCommentLine) {
+    let inStr = null;
+    for (let idx = 0; idx < cps.length; idx += 1) {
+      const ch = cps[idx];
+      if (inStr) {
+        if (ch === inStr && cps[idx - 1] !== '\\') inStr = null;
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === '`') {
+        inStr = ch;
+        continue;
+      }
+      if (isConfusableWhitespaceCp(ch.codePointAt(0))) {
+        kinds.add('confusable-whitespace');
+        break;
+      }
+    }
+  }
+
+  return kinds;
+}
+
+// Source-code file extensions. Documentation (.md, .txt) is intentionally
+// excluded: it legitimately carries emoji ZWJ sequences and typographic spaces
+// (#1631 out-of-scope). Config/markup text that can carry executable intent
+// (yaml/json/toml/shell) is included.
+function looksLikeSourceCodeFile(filePath) {
+  const normalized = String(filePath).replaceAll('\\', '/');
+  return /\.(ts|tsx|js|jsx|mjs|cjs|py|rb|go|rs|java|kt|kts|php|c|h|cc|cpp|hpp|cs|swift|scala|sh|bash|zsh|lua|pl|sql|vue|svelte|yml|yaml|json|toml)$/.test(
+    normalized
+  );
+}
+
+function findInvisibleUnicode({ diff }) {
+  const MAX_INVISIBLE_UNICODE_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    if (!looksLikeSourceCodeFile(filePath)) continue;
+    const normalized = String(filePath).replaceAll('\\', '/');
+    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
+    for (const { line, text } of iterateAddedLines(file)) {
+      const kinds = detectInvisibleUnicodeKinds(text);
+      // One finding per line, highest severity first.
+      let kind = null;
+      if (kinds.has('bidi-control')) kind = 'bidi-control';
+      else if (kinds.has('invisible-unicode')) kind = 'invisible-unicode';
+      else if (kinds.has('confusable-whitespace')) kind = 'confusable-whitespace';
+      if (!kind) continue;
+      comments.push({ file: filePath, line, kind });
+      if (comments.length >= MAX_INVISIBLE_UNICODE_COMMENTS) return comments;
+    }
   }
   return comments;
 }

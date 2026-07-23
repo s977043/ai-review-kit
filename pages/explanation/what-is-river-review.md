@@ -49,7 +49,7 @@ River Review は人のレビューを置き換えるものではありません�
 River Review のスキルは、River Review 自身が LLM を呼ぶための設定ではなく、**AI のレビュー能力を強化する capability pack（スキル / エージェント定義）**です。実行のされ方は 3 通りあり、**LLM キーが必要かどうかは「実行面」ではなくこのモデルで決まります**。
 
 1. **AI エージェント駆動（主）** — Claude Code / Cursor / Codex などのエージェントがスキル（`skills/agent-skills/`）やサブエージェント（`agents/river-review.md`）を読み込み、**自身のモデルでレビューを実行する**。エージェント自体が LLM なので、**River Review 用の LLM キーは不要**。`/review-local`、サブエージェント委譲、Agent Skills のロードなどがこれにあたる。
-2. **機械的チェック（heuristic / モデル不要）** — 正規表現などで決定論的に判定できる観点は、**LLM・API キーなしで動作する**。対応観点（セキュリティ系）は、secret 直書き / `eval`・XSS / TLS 検証無効化 / 弱いハッシュ / コマンドインジェクション / GitHub Actions のリスク。品質・テスト系は、例外の握り潰し / `debugger` 残し / マージコンフリクト / 型チェック抑制 / テスト欠落 / フォーカス・無効化テスト / caller special-case の積み上がり / closure による大きな scope の保持。担当は security / logging / typescript / test / simplify 系の 7 スキルで、機械的に判定できる観点は今後さらに拡張できる。
+2. **機械的チェック（heuristic / モデル不要）** — 正規表現などで決定論的に判定できる観点は、**LLM・API キーなしで動作する**。対応観点（セキュリティ系）は、secret 直書き / `eval`・XSS / TLS 検証無効化 / 弱いハッシュ / コマンドインジェクション / GitHub Actions のリスク / 不可視 Unicode 注入（GlassWorm・Trojan Source 型）。品質・テスト系は、例外の握り潰し / `debugger` 残し / マージコンフリクト / 型チェック抑制 / テスト欠落 / フォーカス・無効化テスト / caller special-case の積み上がり / closure による大きな scope の保持。担当は security / logging / typescript / test / simplify 系の 8 スキルで、機械的に判定できる観点は今後さらに拡張できる。
 3. **ヘッドレス LLM（GitHub Action / standalone `river run`）** — 対話エージェントがいない環境では、River Review が**自前で LLM を呼んで**スキルを実行する。**この経路だけ LLM キー**（`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_API_KEY` のいずれか）が必要になる（機械的チェック (2) はキー無しでも動く）。
 
 > まとめ: 通常の AI 駆動開発ではエージェントがスキルを適用するため **LLM キーは不要**です。LLM キーが要るのは **GitHub Action / standalone CLI のヘッドレス実行**で、かつ機械的チェック以外のスキルを動かす場合だけです。

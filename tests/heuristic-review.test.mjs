@@ -932,6 +932,7 @@ test('registry derives HEURISTIC_SKILL_IDS from SKILL_HEURISTIC_MAP keys', () =>
     'altitude-generalization',
     'closure-scope-retention',
     'coverage-gap',
+    'invisible-unicode-injection',
     'logging-observability',
     'security-basic',
     'test-existence',
@@ -980,4 +981,176 @@ test('buildHeuristicComments emits only kinds known to the presentation registry
   for (const c of comments) {
     assert.ok(HEURISTIC_KIND_PRESENTATIONS.has(c.kind), `kind ${c.kind} has a presentation`);
   }
+});
+
+// ---- Invisible / dangerous Unicode injection (GlassWorm-type, #1631) ----
+// Payloads are built with String.fromCodePoint so this test file stays pure
+// ASCII on disk (no raw invisible bytes for tooling to mangle). The detector is
+// deterministic; these positive + negative (canary) cases pin its behavior so a
+// once-fixed false positive cannot silently regress (.claude/rules/review-core
+// #1070).
+const IU_PLAN = { selected: [{ metadata: { id: 'invisible-unicode-injection' } }] };
+
+function invisibleUnicodeKinds(addedLine, file = 'src/payload.ts') {
+  const diffText =
+    `diff --git a/${file} b/${file}\n` +
+    `--- a/${file}\n+++ b/${file}\n` +
+    `@@ -1,1 +1,2 @@\n const a = 1;\n+${addedLine}\n`;
+  const parsed = parseUnifiedDiff(diffText);
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan: IU_PLAN });
+  return comments.map((c) => c.kind);
+}
+
+const CP = (...codes) => String.fromCodePoint(...codes);
+
+test('invisible-unicode: flags bidirectional control (Trojan Source) in code', () => {
+  // U+202E RIGHT-TO-LEFT OVERRIDE reorders the visible source (CVE-2021-42574).
+  const kinds = invisibleUnicodeKinds(`const isAdmin = ${CP(0x202e)}false; // safe`);
+  assert.ok(kinds.includes('bidi-control'), `expected bidi-control, got ${JSON.stringify(kinds)}`);
+});
+
+test('invisible-unicode: flags isolate control chars (U+2066-2069)', () => {
+  const kinds = invisibleUnicodeKinds(`return ${CP(0x2066)}user${CP(0x2069)};`);
+  assert.ok(kinds.includes('bidi-control'));
+});
+
+test('invisible-unicode: flags zero-width chars hidden in an identifier', () => {
+  // Zero-width space splits a token so two identifiers look identical.
+  const kinds = invisibleUnicodeKinds(`const ad${CP(0x200b)}min = grantAccess();`);
+  assert.ok(kinds.includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags a word joiner (U+2060)', () => {
+  assert.ok(invisibleUnicodeKinds(`let a${CP(0x2060)}b = 1;`).includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags a variation selector on a non-emoji base (GlassWorm)', () => {
+  // GlassWorm encodes payload bytes into invisible variation selectors attached
+  // to ordinary characters.
+  const kinds = invisibleUnicodeKinds(`const x${CP(0xfe0f)} = loadPlugin();`);
+  assert.ok(kinds.includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags a chained run of variation selectors', () => {
+  const kinds = invisibleUnicodeKinds(`const q = "A${CP(0xfe00, 0xfe01, 0xfe02)}";`);
+  assert.ok(kinds.includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags a non-leading BOM / zero-width no-break space', () => {
+  const kinds = invisibleUnicodeKinds(`const a = 1;${CP(0xfeff)}const b = 2;`);
+  assert.ok(kinds.includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags a bare zero-width joiner in an identifier', () => {
+  assert.ok(invisibleUnicodeKinds(`let x${CP(0x200d)}y = 1;`).includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags confusable whitespace (NBSP) outside a string', () => {
+  const kinds = invisibleUnicodeKinds(`const${CP(0x00a0)}y = compute();`);
+  assert.ok(kinds.includes('confusable-whitespace'));
+});
+
+test('invisible-unicode: flags ideographic space (U+3000) outside a string', () => {
+  assert.ok(invisibleUnicodeKinds(`if (a)${CP(0x3000)}return;`).includes('confusable-whitespace'));
+});
+
+// ---- Canary: known-legitimate patterns that must NOT be flagged ----
+
+test('invisible-unicode canary: emoji ZWJ family sequence in a string is not flagged', () => {
+  // man+ZWJ+woman: the ZWJ is a legitimate emoji joiner.
+  const kinds = invisibleUnicodeKinds(`const label = "${CP(0x1f468, 0x200d, 0x1f469)}";`);
+  assert.deepEqual(kinds, []);
+});
+
+test('invisible-unicode canary: emoji with VS16 (heart) in a string is not flagged', () => {
+  const kinds = invisibleUnicodeKinds(`const heart = "${CP(0x2764, 0xfe0f)}";`);
+  assert.deepEqual(kinds, []);
+});
+
+test('invisible-unicode canary: keycap sequence is not flagged', () => {
+  const kinds = invisibleUnicodeKinds(`const one = "${CP(0x31, 0xfe0f, 0x20e3)}";`);
+  assert.deepEqual(kinds, []);
+});
+
+test('invisible-unicode canary: NBSP inside a string literal (i18n) is not flagged', () => {
+  const kinds = invisibleUnicodeKinds(`const s = "caf${CP(0x00a0)}e au lait";`);
+  assert.deepEqual(kinds, []);
+});
+
+test('invisible-unicode canary: a leading BOM only is not flagged', () => {
+  const kinds = invisibleUnicodeKinds(`${CP(0xfeff)}import fs from 'node:fs';`);
+  assert.deepEqual(kinds, []);
+});
+
+test('invisible-unicode canary: plain ASCII code is not flagged', () => {
+  assert.deepEqual(invisibleUnicodeKinds('const total = a + b;'), []);
+});
+
+test('invisible-unicode canary: documentation files (.md) are out of scope', () => {
+  // Docs legitimately use zero-width joiners / emoji; a zero-width char here
+  // must not fire (issue #1631 restricts scope to source code).
+  const kinds = invisibleUnicodeKinds(`text with a ${CP(0x200b)} zero width`, 'docs/guide.md');
+  assert.deepEqual(kinds, []);
+});
+
+test('invisible-unicode canary: quiet when the skill is not selected', () => {
+  const diffText =
+    'diff --git a/src/x.ts b/src/x.ts\n--- a/src/x.ts\n+++ b/src/x.ts\n' +
+    `@@ -1,1 +1,2 @@\n const a = 1;\n+const ad${CP(0x200b)}min = 1;\n`;
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'typescript-strict' } }] };
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+  assert.deepEqual(comments, []);
+});
+
+// ---- Invisible / dangerous Unicode: expanded coverage (#1642 adversarial) ----
+// Tag characters (ASCII smuggling / prompt injection), VS supplement, bidi
+// marks, and additional zero-width formats. Payloads via String.fromCodePoint.
+
+test('invisible-unicode: flags tag characters (U+E0000-E007F, ASCII smuggling)', () => {
+  // The primary GlassWorm / prompt-injection vector: invisible tag chars
+  // attached to an ASCII base.
+  const kinds = invisibleUnicodeKinds(`const cmd = ${CP(0xe0041, 0xe0042)}spawn();`);
+  assert.ok(kinds.includes('invisible-unicode'), `got ${JSON.stringify(kinds)}`);
+});
+
+test('invisible-unicode: flags a bare CANCEL TAG (U+E007F)', () => {
+  assert.ok(invisibleUnicodeKinds(`const y = 1;${CP(0xe007f)}`).includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags a supplementary variation selector (U+E0100, VS17)', () => {
+  assert.ok(invisibleUnicodeKinds(`const z${CP(0xe0100)} = load();`).includes('invisible-unicode'));
+});
+
+test('invisible-unicode: flags bidi marks LRM/RLM/ALM (U+200E/200F/061C)', () => {
+  assert.ok(invisibleUnicodeKinds(`const a = ${CP(0x200e)}1;`).includes('bidi-control'));
+  assert.ok(invisibleUnicodeKinds(`const b = ${CP(0x200f)}2;`).includes('bidi-control'));
+  assert.ok(invisibleUnicodeKinds(`const c = ${CP(0x061c)}3;`).includes('bidi-control'));
+});
+
+test('invisible-unicode: flags additional invisible formats (math op / braille / filler / CGJ / interlinear)', () => {
+  assert.ok(invisibleUnicodeKinds(`const m = a${CP(0x2062)}b;`).includes('invisible-unicode'));
+  assert.ok(invisibleUnicodeKinds(`const q =${CP(0x2800)}1;`).includes('invisible-unicode'));
+  assert.ok(invisibleUnicodeKinds(`const h${CP(0x3164)} = 1;`).includes('invisible-unicode'));
+  assert.ok(invisibleUnicodeKinds(`const c${CP(0x034f)}d = 1;`).includes('invisible-unicode'));
+  assert.ok(invisibleUnicodeKinds(`const i = ${CP(0xfff9)}x;`).includes('invisible-unicode'));
+});
+
+test('invisible-unicode canary: an emoji subdivision-flag tag sequence is not flagged', () => {
+  // Scotland flag: base pictographic + tag chars + CANCEL TAG — a legitimate
+  // emoji tag sequence anchored to a pictographic base.
+  const scotland = CP(
+    0x1f3f4,
+    0xe0067,
+    0xe0062,
+    0xe0073,
+    0xe0063,
+    0xe0074,
+    0xe006c,
+    0xe0061,
+    0xe006e,
+    0xe0064,
+    0xe007f
+  );
+  assert.deepEqual(invisibleUnicodeKinds(`const flag = "${scotland}";`), []);
 });

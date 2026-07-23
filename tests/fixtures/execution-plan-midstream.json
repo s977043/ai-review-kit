@@ -141,6 +141,13 @@
       "dependencies": []
     },
     {
+      "id": "invisible-unicode-injection",
+      "phase": "midstream",
+      "modelHint": "cheap",
+      "outputKind": ["findings", "actions"],
+      "dependencies": ["code_search"]
+    },
+    {
       "id": "knowledge-to-code-alignment",
       "phase": "midstream",
       "modelHint": "high-accuracy",

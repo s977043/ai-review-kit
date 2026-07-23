@@ -33,7 +33,7 @@ drift.`
 - 重要度: major
 - タグ: architecture / adr / decision / upstream
 - 依存関係: adr_lookup / repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -49,7 +49,7 @@ drift.`
 - 重要度: major
 - タグ: api / design / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -75,7 +75,7 @@ migration guidance.`
 - 重要度: major
 - タグ: api / compatibility / versioning / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / fullFile / adr
+- 適用条件: phase=upstream, inputContext=diff / fullFile
 
 チェック項目の例:
 
@@ -98,7 +98,7 @@ avoid tight coupling.`
 - 重要度: major
 - タグ: architecture / boundaries / dependencies / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -149,7 +149,7 @@ mitigation plans.`
 - 重要度: major
 - タグ: architecture / risk / assumptions / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -173,7 +173,7 @@ explicitly managed.`
 - 重要度: major
 - タグ: architecture / adr / traceability / upstream
 - 依存関係: adr_lookup / repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -194,7 +194,7 @@ explicitly managed.`
 - 重要度: minor
 - タグ: architecture / validation / verification / slo / upstream
 - 依存関係: adr_lookup / repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -216,7 +216,7 @@ trade-offs for critical services.`
 - 重要度: major
 - タグ: availability / resilience / sre / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -284,7 +284,7 @@ risks for critical paths.`
 - 重要度: major
 - タグ: architecture / performance / capacity / cost / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -461,7 +461,7 @@ drift and incidents.`
 - 重要度: major
 - タグ: architecture / dataflow / state / ownership / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -528,7 +528,7 @@ replay/backfill strategy.`
 - 重要度: major
 - タグ: architecture / events / messaging / reliability / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -548,7 +548,7 @@ replay/backfill strategy.`
 - 重要度: major
 - タグ: architecture / dependencies / vendor / risk / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -566,7 +566,7 @@ replay/backfill strategy.`
 - 重要度: major
 - タグ: reliability / observability / api / design / upstream
 - 依存関係: repo_metadata / tracing
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -591,7 +591,7 @@ rollout/rollback expectations.`
 - 重要度: major
 - タグ: integration / contract / api / events / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / fullFile / adr
+- 適用条件: phase=upstream, inputContext=diff / fullFile
 
 チェック項目の例:
 
@@ -613,7 +613,7 @@ compatibility considerations.`
 - 重要度: major
 - タグ: migration / rollout / rollback / release / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -633,7 +633,7 @@ compatibility considerations.`
 - 重要度: major
 - タグ: multitenancy / isolation / security / architecture / upstream
 - 依存関係: code_search
-- 適用条件: phase=upstream, inputContext=fullFile / adr
+- 適用条件: phase=upstream, inputContext=fullFile
 
 チェック項目の例:
 
@@ -653,7 +653,7 @@ compatibility.`
 - 重要度: major
 - タグ: api / openapi / contract / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / fullFile / adr
+- 適用条件: phase=upstream, inputContext=diff / fullFile
 
 チェック項目の例:
 
@@ -676,7 +676,7 @@ handling expectations.`
 - 重要度: major
 - タグ: reliability / sre / operability / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -926,7 +926,7 @@ across services.`
 - 重要度: critical
 - タグ: architecture / security / authz / trust-boundary / upstream
 - 依存関係: repo_metadata
-- 適用条件: phase=upstream, inputContext=diff / adr
+- 適用条件: phase=upstream, inputContext=diff
 
 チェック項目の例:
 
@@ -1040,6 +1040,26 @@ Efficiency）や配線断点（e2e-wiring）ではなく、「await を忘れて
 - タグ: async / await / promise / race-condition / correctness / midstream
 - 依存関係: code_search
 - 適用条件: phase=midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / questions
+
+### `behavior-structure-separation`
+
+- 名前: `Behavior-Structure Separation 振る舞い変更と構造変更の分離・外部挙動維持`
+- 概要: `リファクタリング（構造変更）と機能変更（behavior change）が同一 diff に混在していないかを識別し、structural change に対する external behavior
+preservation の証拠（テスト・型・静的解析）が揃っているかを diff-time で確認する。証拠不足のときは Characterization Test 追加を促すか question とする。DTO/公開
+API の破壊的変更検出は api-compatibility、完了主張の反証や抽出リファクタの性能特性退行は refactor-claim-audit、新知識の命名・責務・境界への反映は
+knowledge-to-code-alignment、投機的抽象化・スコープ逸脱は altitude-generalization / fix-scope-integrity へ委譲する`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `app/**/*.{ts,tsx,js,jsx,mjs}`
+  - `lib/**/*.{ts,tsx,js,jsx,mjs}`
+- 重要度: minor
+- タグ: behavior-preservation / refactoring / characterization-test / structural-change / safety-net / midstream
+- 依存関係: code_search / test_runner
+- 適用条件: phase=midstream, inputContext=diff
 
 チェック項目の例:
 
@@ -1362,6 +1382,45 @@ without source usage.`
 チェック項目の例:
 
 - findings / summary / actions
+
+### `invisible-unicode-injection`
+
+- 名前: `Invisible Unicode Injection Scan 不可視 Unicode コード注入検出`
+- 概要: `差分に追加されたソースコードへ混入した不可視・危険な Unicode 文字（タグ文字・異体字セレクター・ゼロ幅文字・双方向制御/マーク・変則空白）を検出する。GlassWorm 型サプライチェーン攻撃・ASCII
+smuggling・Trojan Source（CVE-2021-42574）でコードを不可視化する手口を、決定論的な静的解析（列挙した code point 集合に限定）として捕捉し、canary
+テストで誤検出の再発を防ぐ`
+- 対象:
+  - `**/*`
+- 重要度: major
+- タグ: unicode / supply-chain / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / actions
+
+### `knowledge-to-code-alignment`
+
+- 名前: `Knowledge-to-Code Alignment 新知識のコード反映・設計知識の保全`
+- 概要: `リファクタリングを「更新されたチームの理解と、コードが表現する過去の理解の差分同期」と捉え、今回得た新知識（要求・ドメイン知識・制約）が naming と responsibility
+へ反映されているか、boundary が現在の understanding を表現しているか、diff の削除行やコメントに現れる過去の design history と constraint を失っていないかを
+diff-time で確認する。Knowledge Delta の signal は diff（追加/削除された hunk・コメント・ADR 参照）を一次情報とし、PR 本文が供給されるときは補助に用い、不確実なら
+question に留める。ドメイン用語の一貫性は ubiquitous-language-naming、集約/コンテキスト境界の設計判断は bounded-context-language、投機的抽象化・caller
+special-case は altitude-generalization、スコープ逸脱/前提破壊は fix-scope-integrity、振る舞い変更と構造変更の分離は
+behavior-structure-separation、完了主張の反証は refactor-claim-audit へ委譲する`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `app/**/*.{ts,tsx,js,jsx,mjs}`
+  - `lib/**/*.{ts,tsx,js,jsx,mjs}`
+- 重要度: minor
+- タグ: knowledge-to-code / knowledge-delta / refactoring / naming / responsibility / design-history / midstream
+- 依存関係: code_search / adr_lookup
+- 適用条件: phase=midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
 
 ### `laravel-eloquent-nplus1`
 
