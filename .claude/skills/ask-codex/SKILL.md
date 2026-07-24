@@ -36,10 +36,13 @@ files itself — reference paths in the prompt instead of pasting large files.
      `runners/core/review-runner.mjs`),
    - the specific questions to answer, numbered,
    - a request to be concise and to state a clear conclusion.
-2. **Run Codex** with a generous timeout (design reviews can take minutes):
+2. **Run Codex** with a generous timeout (design reviews can take minutes).
+   Set the timeout on the Bash tool call itself (e.g. `timeout: 600000` ms) —
+   do **not** prefix the command with `timeout 600`: macOS ships no GNU
+   `timeout` binary, so that prefix fails with `command not found`.
 
    ```bash
-   timeout 600 npm run codex:exec -- "<prompt>"
+   npm run codex:exec -- "<prompt>"
    ```
 
 3. **Handle authentication failure.** If the output contains
@@ -47,7 +50,9 @@ files itself — reference paths in the prompt instead of pasting large files.
    authenticated. Do **not** retry blindly. Tell the user to authenticate
    themselves in this session (these are interactive / secret-bearing and you
    cannot run them for them):
-   - `! codex login`, or
+   - `! CODEX_HOME="$(git rev-parse --show-toplevel)/.codex" codex login`
+     (the `CODEX_HOME` prefix is required — a bare `codex login` writes
+     credentials to `~/.codex` and the project-local config keeps failing), or
    - set `OPENAI_API_KEY` in the environment (warn that pasting a key into chat
      leaves it in history; prefer env/keychain).
      Then offer to re-run once authenticated.
