@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Review Evolution Cycle Shadow Aggregate Schema",
+  "description": "Read-only aggregate over completed review runs and captured feedback (#1574 P1). Emitted by `river evolve aggregate`. The artifact is an observation only: it never mutates Skills, rules, Riverbed, the gate, or a PR. Trust levels and the acceptance gate follow contract 1 of docs/development/1574-p0-design-contract.md.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "mode",
+    "readOnly",
+    "policyVersion",
+    "collectorVersion",
+    "inputs",
+    "evidence",
+    "join",
+    "clusters",
+    "candidate"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "evidenceSource": {
+      "type": "string",
+      "description": "Contract 1 evidence provenance. `local` is the run store inside the reviewed repository and is never trusted on its own.",
+      "enum": ["local", "CI", "protected-branch", "human"]
+    },
+    "trustLevel": {
+      "type": "string",
+      "description": "Fail-safe trust classification: anything not positively trusted is `untrusted`.",
+      "enum": ["trusted", "untrusted"]
+    },
+    "runEvidence": {
+      "type": "object",
+      "description": "Contract 1 provenance record for one saved run.",
+      "required": [
+        "review_run_id",
+        "evidence_source",
+        "source_commit_sha",
+        "artifact_sha256",
+        "collector_version",
+        "trusted_by",
+        "generated_by_candidate",
+        "trust_level"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "review_run_id": {
+          "type": ["string", "null"],
+          "description": "Canonical review run id (contract 2)."
+        },
+        "evidence_source": { "$ref": "#/$defs/evidenceSource" },
+        "source_commit_sha": { "type": ["string", "null"] },
+        "artifact_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "collector_version": { "type": "string" },
+        "trusted_by": { "type": ["string", "null"] },
+        "generated_by_candidate": { "type": "boolean" },
+        "trust_level": { "$ref": "#/$defs/trustLevel" }
+      }
+    },
+    "feedbackRef": {
+      "type": "object",
+      "required": ["review_run_id", "timestamp", "feedbackType", "findingFingerprint", "pr"],
+      "additionalProperties": false,
+      "properties": {
+        "review_run_id": { "type": ["string", "null"] },
+        "timestamp": { "type": ["string", "null"] },
+        "feedbackType": { "type": ["string", "null"] },
+        "findingFingerprint": { "type": ["string", "null"], "pattern": "^[0-9a-f]{16}$" },
+        "pr": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "subCluster": {
+      "type": "object",
+      "description": "Contract 5 stage 2: a recurring class split into a cause hypothesis by fingerprint / category / scope. `failureMode` stays null in P1 because its vocabulary is decided after shadow observation.",
+      "required": [
+        "subClusterKey",
+        "fingerprint",
+        "category",
+        "scope",
+        "failureMode",
+        "count",
+        "experimentEligible",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "subClusterKey": { "type": "string" },
+        "fingerprint": { "type": ["string", "null"], "pattern": "^[0-9a-f]{16}$" },
+        "category": { "type": ["string", "null"] },
+        "scope": { "type": ["string", "null"] },
+        "failureMode": { "type": ["string", "null"] },
+        "count": { "type": "integer", "minimum": 1 },
+        "experimentEligible": {
+          "type": "boolean",
+          "description": "False when the sub-cluster has no finding fingerprint. Such sub-clusters are displayed but must never feed an automatic experiment or promotion (contract 5)."
+        },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/feedbackRef" } }
+      }
+    },
+    "cluster": {
+      "type": "object",
+      "description": "Contract 5 stage 1: recurrence detection on (skillId, feedbackType).",
+      "required": ["clusterKey", "skillId", "feedbackType", "count", "subClusters"],
+      "additionalProperties": false,
+      "properties": {
+        "clusterKey": { "type": "string", "pattern": "^.+::.+$" },
+        "skillId": { "type": "string" },
+        "feedbackType": { "type": "string" },
+        "count": { "type": "integer", "minimum": 1 },
+        "subClusters": { "type": "array", "items": { "$ref": "#/$defs/subCluster" } }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "description": "ReviewImprovementCandidate in shadow mode. One candidate = one hypothesis; P1 records the observation and leaves the hypothesis and every write to a human.",
+      "required": [
+        "schemaVersion",
+        "candidateId",
+        "policyVersion",
+        "createdAt",
+        "mode",
+        "status",
+        "clusterKey",
+        "subClusterKey",
+        "skillId",
+        "feedbackType",
+        "observedPattern",
+        "causeHypothesis",
+        "targetSurface",
+        "candidateType",
+        "failureMode",
+        "recurrenceCount",
+        "subClusterCount",
+        "sourceReviewRunIds",
+        "sourceFeedbackRefs",
+        "evidence",
+        "trust",
+        "experimentEligible",
+        "requiresHumanApproval",
+        "autoActions",
+        "writeEffects"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "type": "integer", "const": 1 },
+        "candidateId": {
+          "type": "string",
+          "pattern": "^RR-IC-[0-9a-f]{12}$",
+          "description": "Content-addressed id derived from the normalized evidence set, cluster keys, and policy version — never from the generation date (contract 4)."
+        },
+        "policyVersion": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "mode": { "type": "string", "const": "shadow" },
+        "status": { "type": "string", "const": "observed" },
+        "clusterKey": { "type": "string" },
+        "subClusterKey": { "type": "string" },
+        "skillId": { "type": "string" },
+        "feedbackType": { "type": "string" },
+        "observedPattern": { "type": "string" },
+        "causeHypothesis": { "type": ["string", "null"] },
+        "targetSurface": {
+          "type": ["string", "null"],
+          "enum": [
+            "routing",
+            "context",
+            "judgment",
+            "reviewer",
+            "memory",
+            "evaluation",
+            "execution",
+            null
+          ]
+        },
+        "candidateType": {
+          "type": "string",
+          "enum": ["experiment_candidate", "observation_only"]
+        },
+        "failureMode": { "type": ["string", "null"] },
+        "recurrenceCount": { "type": "integer", "minimum": 1 },
+        "subClusterCount": { "type": "integer", "minimum": 1 },
+        "sourceReviewRunIds": { "type": "array", "items": { "type": "string" } },
+        "sourceFeedbackRefs": { "type": "array", "items": { "$ref": "#/$defs/feedbackRef" } },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/runEvidence" } },
+        "trust": {
+          "type": "object",
+          "required": [
+            "trustedEvidenceCount",
+            "untrustedEvidenceCount",
+            "unjoinedEvidenceCount",
+            "canaryEligible",
+            "reasons"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "trustedEvidenceCount": { "type": "integer", "minimum": 0 },
+            "untrustedEvidenceCount": { "type": "integer", "minimum": 0 },
+            "unjoinedEvidenceCount": { "type": "integer", "minimum": 0 },
+            "canaryEligible": {
+              "type": "boolean",
+              "const": false,
+              "description": "Acceptance gate (contract 1). Always false in P1: candidate adoption requires trusted evidence produced outside the candidate's own write scope, which lands in P2 and later."
+            },
+            "reasons": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "experimentEligible": { "type": "boolean" },
+        "requiresHumanApproval": { "type": "boolean", "const": true },
+        "autoActions": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["observe"] }
+        },
+        "writeEffects": {
+          "type": "array",
+          "maxItems": 0,
+          "description": "Machine-checkable assertion that the shadow aggregate performs no writes."
+        }
+      }
+    }
+  },
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "mode": { "type": "string", "const": "shadow" },
+    "readOnly": { "type": "boolean", "const": true },
+    "policyVersion": { "type": "string" },
+    "collectorVersion": { "type": "string" },
+    "inputs": {
+      "type": "object",
+      "required": ["runCount", "feedbackCount", "minRecurrence", "month"],
+      "additionalProperties": false,
+      "properties": {
+        "runCount": { "type": "integer", "minimum": 0 },
+        "feedbackCount": { "type": "integer", "minimum": 0 },
+        "minRecurrence": { "type": "integer", "minimum": 1 },
+        "month": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}$" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["runs", "trustedRunCount", "untrustedRunCount"],
+      "additionalProperties": false,
+      "properties": {
+        "runs": { "type": "array", "items": { "$ref": "#/$defs/runEvidence" } },
+        "trustedRunCount": { "type": "integer", "minimum": 0 },
+        "untrustedRunCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "join": {
+      "type": "object",
+      "description": "Contract 2 propagation coverage: how much feedback can be traced back to a saved run through the canonical review_run_id.",
+      "required": ["joinedFeedbackCount", "unjoinedFeedbackCount", "runIdsWithEvidence"],
+      "additionalProperties": false,
+      "properties": {
+        "joinedFeedbackCount": { "type": "integer", "minimum": 0 },
+        "unjoinedFeedbackCount": { "type": "integer", "minimum": 0 },
+        "runIdsWithEvidence": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "clusters": { "type": "array", "items": { "$ref": "#/$defs/cluster" } },
+    "candidate": {
+      "oneOf": [{ "$ref": "#/$defs/candidate" }, { "type": "null" }]
+    }
+  }
+}

@@ -43004,7 +43004,7 @@ function extractDiffMeta(diff) {
 /* harmony export */   appendFeedbackEntry: () => (/* binding */ appendFeedbackEntry),
 /* harmony export */   buildFeedbackEntry: () => (/* binding */ buildFeedbackEntry),
 /* harmony export */   buildFeedbackScaffold: () => (/* binding */ buildFeedbackScaffold),
-/* harmony export */   qN: () => (/* binding */ listFeedbackEntries)
+/* harmony export */   listFeedbackEntries: () => (/* binding */ listFeedbackEntries)
 /* harmony export */ });
 /* unused harmony exports FEEDBACK_TYPES, FEEDBACK_TRIGGERS, feedbackFilePath */
 /* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9896);
@@ -68467,7 +68467,7 @@ async function runPromoteCommand(parsed, targetPath) {
     const feedbackRoot = parsed.promoteFeedbackRoot
       ? external_node_path_.resolve(external_node_process_namespaceObject.cwd(), parsed.promoteFeedbackRoot)
       : await (0,git/* ensureGitRepo */.NC)(targetPath);
-    const feedbackEntries = await (0,feedback/* listFeedbackEntries */.qN)({
+    const feedbackEntries = await (0,feedback.listFeedbackEntries)({
       repoRoot: feedbackRoot,
       warn: (msg) => console.warn(msg),
     });
@@ -68542,7 +68542,66 @@ async function runPromoteCommand(parsed, targetPath) {
   return 0;
 }
 
+;// CONCATENATED MODULE: ./src/cli/commands/evolve.mjs
+// `river evolve` subcommand handler (#1574 P1 Shadow aggregate).
+//
+// Stable CLI surface (契約4) for the read-only outer loop:
+//
+//   river evolve aggregate [<path>] [--min <n>] [--month YYYY-MM] [--output json|text]
+//
+// The command only READS `.river/runs/` and `.river/feedback/*.jsonl` and
+// prints the aggregate to stdout. It intentionally has no `--out` / `--promote`
+// style option: writing into Riverbed, Skills, rules, or the gate is P3/P4
+// work and belongs to #1568's promotion lifecycle, so P1 offers no code path
+// that could mutate a repository surface at all. Redirect stdout if you need
+// the candidate JSON on disk.
+
+/**
+ * Handle the `evolve` command (aggregate).
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @param {string} targetPath - resolved repo target path.
+ * @returns {Promise<number>} process exit code.
+ */
+async function runEvolveCommand(parsed, targetPath) {
+  const subcommand = parsed.evolveSubcommand ?? 'aggregate';
+  if (subcommand !== 'aggregate') {
+    console.error(`Unknown evolve subcommand: ${subcommand}. Use: aggregate`);
+    return 1;
+  }
+
+  const { resolveStoreDir, loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+  const { listFeedbackEntries } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 7638));
+  const { buildShadowAggregate, formatShadowAggregateMarkdown, DEFAULT_MIN_RECURRENCE } =
+    await __nccwpck_require__.e(/* import() */ 29).then(__nccwpck_require__.bind(__nccwpck_require__, 4029));
+
+  const storeDir = resolveStoreDir(targetPath);
+  const runRecords = await loadAllRunRecords(storeDir);
+  const feedbackEntries = await listFeedbackEntries({
+    repoRoot: targetPath,
+    month: parsed.evolveMonth ?? null,
+    warn: (message) => console.warn(message),
+  });
+
+  const aggregate = buildShadowAggregate({
+    runRecords,
+    feedbackEntries,
+    minRecurrence: parsed.evolveMin ?? DEFAULT_MIN_RECURRENCE,
+    month: parsed.evolveMonth ?? null,
+    now: new Date(),
+  });
+
+  if (parsed.output === 'json') {
+    console.log(JSON.stringify(aggregate, null, 2));
+  } else {
+    console.log(formatShadowAggregateMarkdown(aggregate));
+  }
+  // Always exit 0: this is an observation, not a gate (#1574 P1 is shadow-only).
+  return 0;
+}
+
 ;// CONCATENATED MODULE: ./src/cli.mjs
+
 
 
 
@@ -68594,6 +68653,11 @@ Commands:
                         Review post-activation feedback; flag needs_review when
                         false-positive/reversal signals reach --threshold
                         (--threshold <n> --feedback-root <path> --index <path>)
+  evolve aggregate <path>
+                        Read-only shadow aggregate over saved runs + feedback
+                        (#1574 P1). Prints evidence provenance, two-stage
+                        clusters, and at most one shadow candidate. Writes
+                        nothing (--min <n> --month YYYY-MM; --output json)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -68646,6 +68710,9 @@ Commands:
 function parseArgs(argv) {
   const args = [...argv];
   const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
+  // #1574 P1: only `aggregate` exists. Matching against a known set (rather
+  // than "first non-flag token") keeps `river evolve <path>` working.
+  const EVOLVE_SUBCOMMANDS = new Set(['aggregate']);
   const parsed = {
     command: null,
     target: '.',
@@ -68704,6 +68771,10 @@ function parseArgs(argv) {
     promoteIncludeInactive: false,
     promoteThreshold: null,
     promoteFeedbackRoot: null,
+    // evolve subcommand fields (#1574 P1 Shadow aggregate)
+    evolveSubcommand: null,
+    evolveMin: null,
+    evolveMonth: null,
     // skills subcommand fields
     skillsSubcommand: null,
     resolvePaths: null,
@@ -68738,12 +68809,20 @@ function parseArgs(argv) {
         arg === 'runs' ||
         arg === 'suppression' ||
         arg === 'feedback' ||
+        arg === 'evolve' ||
         arg === 'promote')
     ) {
       parsed.command = arg;
       // Check for skills subcommands (import/export/list)
       if (arg === 'skills' && args[0] && SKILLS_SUBCOMMANDS.has(args[0])) {
         parsed.skillsSubcommand = args.shift();
+      } else if (arg === 'evolve') {
+        if (args[0] && EVOLVE_SUBCOMMANDS.has(args[0])) {
+          parsed.evolveSubcommand = args.shift();
+        }
+        if (args[0] && !args[0].startsWith('-')) {
+          parsed.target = args.shift();
+        }
       } else if (arg === 'runs' && args[0] && !args[0].startsWith('-')) {
         parsed.runsSubcommand = args.shift(); // list | diff | summary | digest
         // diff takes two or more positional run IDs
@@ -68943,6 +69022,29 @@ function parseArgs(argv) {
           break;
         }
         parsed.promoteFeedbackRoot = value;
+        continue;
+      }
+    }
+    if (parsed.command === 'evolve') {
+      if (arg === '--min') {
+        const value = args.shift();
+        const n = parseInt(value ?? '', 10);
+        if (!value || value.startsWith('-') || Number.isNaN(n) || n < 1) {
+          console.error('Error: --min option requires a positive integer.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.evolveMin = n;
+        continue;
+      }
+      if (arg === '--month') {
+        const value = args.shift();
+        if (!value || !/^\d{4}-\d{2}$/.test(value)) {
+          console.error('Error: --month option requires a YYYY-MM value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.evolveMonth = value;
         continue;
       }
     }
@@ -69342,6 +69444,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
       'feedback',
       'review',
       'promote',
+      'evolve',
     ].includes(parsed.command)
   ) {
     console.error(`Unknown command: ${parsed.command}`);
@@ -69387,6 +69490,12 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
 
     if (parsed.command === 'runs') {
       return await runRunsCommand(parsed, targetPath);
+    }
+
+    // `return await` so a rejected handler promise reaches this outer
+    // try/catch (same reason as the promote/runs handlers above).
+    if (parsed.command === 'evolve') {
+      return await runEvolveCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'eval') {

@@ -20,6 +20,7 @@ import { runSuppressionCommand } from './cli/commands/suppression.mjs';
 import { runDoctorCommand } from './cli/commands/doctor.mjs';
 import { runRunCommand } from './cli/commands/run.mjs';
 import { runPromoteCommand } from './cli/commands/promote.mjs';
+import { runEvolveCommand } from './cli/commands/evolve.mjs';
 import {
   printHintLines,
   printExplain,
@@ -55,6 +56,11 @@ Commands:
                         Review post-activation feedback; flag needs_review when
                         false-positive/reversal signals reach --threshold
                         (--threshold <n> --feedback-root <path> --index <path>)
+  evolve aggregate <path>
+                        Read-only shadow aggregate over saved runs + feedback
+                        (#1574 P1). Prints evidence provenance, two-stage
+                        clusters, and at most one shadow candidate. Writes
+                        nothing (--min <n> --month YYYY-MM; --output json)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -107,6 +113,9 @@ Commands:
 function parseArgs(argv) {
   const args = [...argv];
   const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
+  // #1574 P1: only `aggregate` exists. Matching against a known set (rather
+  // than "first non-flag token") keeps `river evolve <path>` working.
+  const EVOLVE_SUBCOMMANDS = new Set(['aggregate']);
   const parsed = {
     command: null,
     target: '.',
@@ -165,6 +174,10 @@ function parseArgs(argv) {
     promoteIncludeInactive: false,
     promoteThreshold: null,
     promoteFeedbackRoot: null,
+    // evolve subcommand fields (#1574 P1 Shadow aggregate)
+    evolveSubcommand: null,
+    evolveMin: null,
+    evolveMonth: null,
     // skills subcommand fields
     skillsSubcommand: null,
     resolvePaths: null,
@@ -199,12 +212,20 @@ function parseArgs(argv) {
         arg === 'runs' ||
         arg === 'suppression' ||
         arg === 'feedback' ||
+        arg === 'evolve' ||
         arg === 'promote')
     ) {
       parsed.command = arg;
       // Check for skills subcommands (import/export/list)
       if (arg === 'skills' && args[0] && SKILLS_SUBCOMMANDS.has(args[0])) {
         parsed.skillsSubcommand = args.shift();
+      } else if (arg === 'evolve') {
+        if (args[0] && EVOLVE_SUBCOMMANDS.has(args[0])) {
+          parsed.evolveSubcommand = args.shift();
+        }
+        if (args[0] && !args[0].startsWith('-')) {
+          parsed.target = args.shift();
+        }
       } else if (arg === 'runs' && args[0] && !args[0].startsWith('-')) {
         parsed.runsSubcommand = args.shift(); // list | diff | summary | digest
         // diff takes two or more positional run IDs
@@ -404,6 +425,29 @@ function parseArgs(argv) {
           break;
         }
         parsed.promoteFeedbackRoot = value;
+        continue;
+      }
+    }
+    if (parsed.command === 'evolve') {
+      if (arg === '--min') {
+        const value = args.shift();
+        const n = parseInt(value ?? '', 10);
+        if (!value || value.startsWith('-') || Number.isNaN(n) || n < 1) {
+          console.error('Error: --min option requires a positive integer.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.evolveMin = n;
+        continue;
+      }
+      if (arg === '--month') {
+        const value = args.shift();
+        if (!value || !/^\d{4}-\d{2}$/.test(value)) {
+          console.error('Error: --month option requires a YYYY-MM value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.evolveMonth = value;
         continue;
       }
     }
@@ -803,6 +847,7 @@ async function main(argv = process.argv.slice(2)) {
       'feedback',
       'review',
       'promote',
+      'evolve',
     ].includes(parsed.command)
   ) {
     console.error(`Unknown command: ${parsed.command}`);
@@ -848,6 +893,12 @@ async function main(argv = process.argv.slice(2)) {
 
     if (parsed.command === 'runs') {
       return await runRunsCommand(parsed, targetPath);
+    }
+
+    // `return await` so a rejected handler promise reaches this outer
+    // try/catch (same reason as the promote/runs handlers above).
+    if (parsed.command === 'evolve') {
+      return await runEvolveCommand(parsed, targetPath);
     }
 
     if (parsed.command === 'eval') {
