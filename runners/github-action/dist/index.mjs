@@ -43001,12 +43001,13 @@ function extractDiffMeta(diff) {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   FeedbackError: () => (/* binding */ FeedbackError),
+/* harmony export */   U1: () => (/* binding */ FEEDBACK_TYPES),
 /* harmony export */   appendFeedbackEntry: () => (/* binding */ appendFeedbackEntry),
 /* harmony export */   buildFeedbackEntry: () => (/* binding */ buildFeedbackEntry),
 /* harmony export */   buildFeedbackScaffold: () => (/* binding */ buildFeedbackScaffold),
 /* harmony export */   qN: () => (/* binding */ listFeedbackEntries)
 /* harmony export */ });
-/* unused harmony exports FEEDBACK_TYPES, FEEDBACK_TRIGGERS, feedbackFilePath */
+/* unused harmony exports FEEDBACK_TRIGGERS, feedbackFilePath */
 /* harmony import */ var fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9896);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6928);
 // Feedback capture for the skill improvement loop (L1/L2 in
@@ -68287,6 +68288,7 @@ function buildPrScaffold(entry) {
 
 
 
+
 // Default candidate lifetime (#1568 decision 6: expiresAt default 90 days,
 // overridable). The "now" used to derive expiresAt is always injected so tests
 // can pin it — no hardcoded Date.now() in the builders below.
@@ -68302,6 +68304,11 @@ const DEFAULT_MIN_RECURRENCE = 2;
 // deliberately kept out of the hash (#1624 design §1.3).
 const CANDIDATE_POLICY_VERSION = '1';
 
+// Policy versions this build knows how to derive a candidate for. An arbitrary
+// --policy-version would otherwise let the same evidence mint unlimited
+// candidates, since the version participates in the content hash.
+const KNOWN_POLICY_VERSIONS = Object.freeze(['1']);
+
 // Length (hex chars) of the content hash kept in the candidate id.
 const CONTENT_ID_HASH_LENGTH = 12;
 
@@ -68312,8 +68319,17 @@ const SUGGESTED_ACTION = {
   unclear: 'SKILL.md の文言・出力例を改善する',
   duplicate: 'routing（owner skill）を明確化する',
   accepted_risk: '繰り返し許容しているリスクをプロジェクトルール（.river/rules.md）へ昇格する',
+  // `out_of_scope` also has a proposedTarget (riverbed) in proposedTargetFor();
+  // keeping it out of this table let the two disagree, so it is listed here
+  // explicitly rather than falling through to the generic action.
+  out_of_scope: 'スコープ外として扱った判断を Riverbed Memory に記録する',
   accepted: null,
 };
+
+// Cluster feedback types this generator understands. Anything else (typically a
+// --cluster-key typo) would silently become a human_judgment candidate and
+// linger in the index, so it is rejected up front.
+const KNOWN_CLUSTER_FEEDBACK_TYPES = Object.freeze(Object.keys(SUGGESTED_ACTION));
 
 /**
  * Internal: group feedback entries into recurring (skillId, feedbackType)
@@ -68581,23 +68597,72 @@ class PromotionProposalError extends Error {
 function normalizeEvidence(entries) {
   let fingerprintless = false;
   const normalized = entries.map((entry) => {
-    const fingerprint = entry.findingFingerprint ?? null;
+    // Unicode normalization keeps visually identical strings from producing two
+    // different hashes (NFC vs NFD input files).
+    const fingerprint = nfc(entry.findingFingerprint ?? null);
     const pr = Number.isInteger(entry.pr) && entry.pr > 0 ? entry.pr : null;
     if (fingerprint === null) {
       fingerprintless = true;
       return {
-        feedbackType: entry.feedbackType,
+        feedbackType: nfc(entry.feedbackType),
         findingFingerprint: null,
         pr,
-        timestamp: entry.timestamp ?? null,
+        timestamp: nfc(entry.timestamp ?? null),
       };
     }
-    return { feedbackType: entry.feedbackType, findingFingerprint: fingerprint, pr };
+    return { feedbackType: nfc(entry.feedbackType), findingFingerprint: fingerprint, pr };
   });
   const unique = new Map();
   for (const item of normalized) unique.set(JSON.stringify(item), item);
   const evidence = [...unique.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  return { evidence: evidence.map(([, item]) => item), fingerprintless };
+  return {
+    evidence: evidence.map(([, item]) => item),
+    fingerprintless,
+    // How many input rows collapsed into an existing evidence item. Callers use
+    // this both for the recurrence check (duplicated rows must not satisfy the
+    // minimum) and to warn that the input was not the selection it looked like.
+    duplicatesRemoved: normalized.length - unique.size,
+  };
+}
+
+/** NFC-normalize a string; pass through null/undefined and non-strings. */
+function nfc(value) {
+  return typeof value === 'string' ? value.normalize('NFC') : (value ?? null);
+}
+
+/**
+ * Validate one feedback entry against the capture contract in feedback.mjs
+ * (`buildFeedbackEntry`). `--input` is caller-supplied data, so an unvalidated
+ * entry would flow straight into the Riverbed index and break
+ * schemas/riverbed-entry.schema.json invariants (e.g. the 16-hex
+ * findingFingerprint pattern).
+ *
+ * @param {object} entry
+ * @returns {string|null} error message, or null when the entry is valid
+ */
+function validateFeedbackEntryShape(entry) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+    return 'entry must be a JSON object.';
+  }
+  if (typeof entry.skillId !== 'string' || !entry.skillId.trim()) {
+    return 'skillId must be a non-empty string.';
+  }
+  if (!feedback/* FEEDBACK_TYPES */.U1.includes(entry.feedbackType)) {
+    return `feedbackType "${entry.feedbackType}" is not one of: ${feedback/* FEEDBACK_TYPES */.U1.join(', ')}.`;
+  }
+  if (
+    entry.findingFingerprint != null &&
+    !(
+      typeof entry.findingFingerprint === 'string' &&
+      /^[0-9a-f]{16}$/.test(entry.findingFingerprint)
+    )
+  ) {
+    return 'findingFingerprint must be 16 lowercase hex chars or null.';
+  }
+  if (entry.pr != null && !(Number.isInteger(entry.pr) && entry.pr > 0)) {
+    return 'pr must be a positive integer or null.';
+  }
+  return null;
 }
 
 /**
@@ -68629,7 +68694,9 @@ function computeCandidateContentHash({
 
 /** Split `skillId::feedbackType` and reject malformed cluster keys. */
 function parseClusterKey(clusterKey) {
-  const parts = String(clusterKey ?? '').split('::');
+  const parts = String(clusterKey ?? '')
+    .normalize('NFC')
+    .split('::');
   if (parts.length !== 2 || !parts[0].trim() || !parts[1].trim()) {
     throw new PromotionProposalError(
       `--cluster-key must be "<skillId>::<feedbackType>" (got: ${clusterKey ?? '(none)'}).`
@@ -68670,9 +68737,25 @@ function buildProposedCandidate({
       'feedbackType "accepted" is a positive signal and is never a promotion candidate.'
     );
   }
+  if (!KNOWN_CLUSTER_FEEDBACK_TYPES.includes(feedbackType)) {
+    throw new PromotionProposalError(
+      `--cluster-key feedbackType "${feedbackType}" is unknown. Expected one of: ${KNOWN_CLUSTER_FEEDBACK_TYPES.filter((t) => t !== 'accepted').join(', ')}.`
+    );
+  }
+  if (!KNOWN_POLICY_VERSIONS.includes(String(policyVersion))) {
+    throw new PromotionProposalError(
+      `--policy-version "${policyVersion}" is unknown. Expected one of: ${KNOWN_POLICY_VERSIONS.join(', ')}.`
+    );
+  }
   if (!Array.isArray(entries) || entries.length === 0) {
     throw new PromotionProposalError('--input contained no feedback entries.');
   }
+  entries.forEach((entry, i) => {
+    const problem = validateFeedbackEntryShape(entry);
+    if (problem) {
+      throw new PromotionProposalError(`--input entry #${i + 1} is invalid: ${problem}`);
+    }
+  });
   const mismatched = entries.filter(
     (e) => `${e?.skillId}::${e?.feedbackType}` !== `${skillId}::${feedbackType}`
   );
@@ -68686,13 +68769,20 @@ function buildProposedCandidate({
       `--input contains ${mismatched.length} entr${mismatched.length === 1 ? 'y' : 'ies'} outside --cluster-key ${clusterKey} (e.g. ${sample}). Filter the input instead of relying on implicit filtering.`
     );
   }
-  if (entries.length < min) {
+  // The deduplicated evidence set is the single source of truth for the
+  // recurrence check, the recurrenceCount and the content hash. Counting raw
+  // input rows here would let the same evidence, duplicated across two lines,
+  // satisfy the minimum while hashing as one item.
+  const { evidence, fingerprintless, duplicatesRemoved } = normalizeEvidence(entries);
+  if (evidence.length < min) {
+    const dupNote = duplicatesRemoved
+      ? ` (${entries.length} input rows, ${duplicatesRemoved} duplicate${duplicatesRemoved === 1 ? '' : 's'} removed)`
+      : '';
     throw new PromotionProposalError(
-      `--input has ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} for ${clusterKey}, below the minimum recurrence of ${min}.`
+      `--input has ${evidence.length} unique evidence item${evidence.length === 1 ? '' : 's'}${dupNote} for ${clusterKey}, below the minimum recurrence of ${min}.`
     );
   }
 
-  const { evidence, fingerprintless } = normalizeEvidence(entries);
   const { contentHash, candidateId } = computeCandidateContentHash({
     clusterKey: `${skillId}::${feedbackType}`,
     evidence,
@@ -68701,20 +68791,27 @@ function buildProposedCandidate({
   const entry = buildPromotionCandidateEntry({
     skillId,
     feedbackType,
-    group: entries,
+    // Deduplicated evidence, so recurrenceCount and the stored evidence array
+    // match what the hash was computed over.
+    group: evidence,
     now,
     expiresInDays,
     id: candidateId,
   });
+  // Persist the hash inputs so a later reader can re-derive and verify the id
+  // instead of trusting it (the id itself is a 12-hex truncation).
+  entry.context.promotionCandidate.contentHash = contentHash;
+  entry.context.promotionCandidate.policyVersion = policyVersion;
   return {
     entry,
     candidateId,
     contentHash,
     clusterKey: `${skillId}::${feedbackType}`,
     policyVersion,
+    evidenceCount: evidence.length,
+    duplicatesRemoved,
     // Contract 5: evidence without a fingerprint stays Shadow-only (no
-    // automatic experiment / promotion). Surfaced in the output only; the
-    // entry shape is unchanged (schema stays additive-free).
+    // automatic experiment / promotion). Surfaced in the output only.
     shadowOnly: fingerprintless,
   };
 }
@@ -68767,21 +68864,59 @@ function proposePromotionCandidate({
     min,
   });
   const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
-  const existingEntry = index.entries.find((e) => e.id === built.candidateId) ?? null;
+  const existingEntry =
+    index.entries.find((e) => e.id === built.candidateId && e.type === 'promotion_candidate') ??
+    null;
+  let convergenceNote = null;
+  if (existingEntry) {
+    const storedCandidate = existingEntry.context?.promotionCandidate ?? {};
+    const storedHash = storedCandidate.contentHash ?? null;
+    if (storedHash && storedHash !== built.contentHash) {
+      // Same 12-hex id, different full hash: a truncation collision. Writing or
+      // silently reusing either side would corrupt the audit trail.
+      throw new PromotionProposalError(
+        `Candidate id ${built.candidateId} already exists with a different contentHash ` +
+          `(stored ${storedHash}, computed ${built.contentHash}). Refusing to converge on a colliding id.`
+      );
+    }
+    const storedCount = storedCandidate.recurrenceCount ?? null;
+    if (storedCount !== null && storedCount !== built.evidenceCount) {
+      // Hash equality means the evidence set matched, so a differing count can
+      // only come from an entry written by another code path. Say so instead of
+      // silently discarding the freshly built entry.
+      convergenceNote = `input had ${built.evidenceCount} evidence, stored has ${storedCount} — not updated`;
+    } else if (!storedHash) {
+      convergenceNote = 'stored entry predates contentHash persistence — not updated';
+    }
+  }
   const existing = existingEntry
     ? {
         candidateId: existingEntry.id,
         promotionStatus: existingEntry.context?.promotionCandidate?.promotionStatus ?? null,
         status: existingEntry.status ?? null,
+        contentHash: existingEntry.context?.promotionCandidate?.contentHash ?? null,
+        recurrenceCount: existingEntry.context?.promotionCandidate?.recurrenceCount ?? null,
       }
     : null;
   const wouldCreate = !existingEntry;
   let created = false;
   if (wouldCreate && !dryRun) {
-    (0,riverbed_memory/* appendEntry */.D4)(indexPath, built.entry);
+    try {
+      (0,riverbed_memory/* appendEntry */.D4)(indexPath, built.entry);
+    } catch (err) {
+      // Reachable when an entry of another type already owns this id: the
+      // lookup above is type-filtered, appendEntry's uniqueness check is not.
+      throw new PromotionProposalError(
+        `Cannot write candidate ${built.candidateId} to ${indexPath}: ${err.message}`
+      );
+    }
     created = true;
   }
   return {
+    // `created` is true only when this call wrote the entry; `wouldCreate`
+    // reports whether the candidate was absent (so --dry-run can distinguish
+    // "nothing written because it exists" from "nothing written because of
+    // --dry-run").
     created,
     wouldCreate,
     dryRun,
@@ -68790,6 +68925,9 @@ function proposePromotionCandidate({
     clusterKey: built.clusterKey,
     policyVersion: built.policyVersion,
     shadowOnly: built.shadowOnly,
+    evidenceCount: built.evidenceCount,
+    duplicatesRemoved: built.duplicatesRemoved,
+    convergenceNote,
     entry: existingEntry ?? built.entry,
     existing,
   };
@@ -68816,13 +68954,23 @@ async function readFeedbackJsonl(inputPath) {
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i].trim();
     if (!line) continue;
+    let parsedLine;
     try {
-      entries.push(JSON.parse(line));
+      parsedLine = JSON.parse(line);
     } catch (err) {
       throw new PromotionProposalError(
         `Invalid JSONL in ${inputPath} at line ${i + 1}: ${err.message}`
       );
     }
+    // Schema violations are rejected here, not filtered: an entry that reaches
+    // the index must satisfy schemas/riverbed-entry.schema.json.
+    const problem = validateFeedbackEntryShape(parsedLine);
+    if (problem) {
+      throw new PromotionProposalError(
+        `Invalid feedback entry in ${inputPath} at line ${i + 1}: ${problem}`
+      );
+    }
+    entries.push(parsedLine);
   }
   return entries;
 }
@@ -68962,15 +69110,27 @@ async function runPromoteCommand(parsed, targetPath) {
         indexPath,
         now,
         policyVersion: parsed.promotePolicyVersion ?? undefined,
+        min: parsed.promoteThreshold ?? undefined,
         dryRun: Boolean(parsed.dryRun),
       });
     } catch (err) {
-      // Usage errors (bad cluster key, mismatched input, unreadable file) and
-      // I/O errors share exit code 1, matching the rest of `promote`. The
+      // Contract violations (bad cluster key, mismatched or malformed input,
+      // unreadable file) map to exit 1, matching the rest of `promote`. The
       // script's "candidates found -> exit 2" signal is deliberately not
       // carried over: propose is a generation API, not a detection API.
+      // Anything else (unexpected runtime / git errors) is rethrown so the
+      // CLI's outer handler can attach its Hints.
+      if (!(err instanceof PromotionProposalError)) throw err;
       console.error(`Error: ${err.message}`);
       return 1;
+    }
+    if (result.duplicatesRemoved) {
+      console.warn(
+        `Warning: --input contained ${result.duplicatesRemoved} duplicate evidence row(s); ${result.evidenceCount} unique item(s) were used.`
+      );
+    }
+    if (result.convergenceNote) {
+      console.warn(`Warning: converged (${result.convergenceNote}).`);
     }
     if (parsed.output === 'json') {
       console.log(JSON.stringify(result, null, 2));
@@ -69222,7 +69382,11 @@ Commands:
                         content hash of (evidence, cluster, policy version), so
                         re-running with the same evidence is idempotent.
                         (--input <jsonl> --cluster-key <skillId::feedbackType>
-                         [--policy-version <v>] [--index <path>] [--dry-run])
+                         [--policy-version <v>] [--threshold <n>] [--index <path>]
+                         [--dry-run])
+                        Not safe to run in parallel against the same --index:
+                        the index is rewritten read-modify-write, so concurrent
+                        proposes can lose one another's entry. Serialize calls.
   promote list          List promotion_candidate entries (Judgment Promotion Loop Phase 2)
   promote approve <id>  Approve a candidate (promotionStatus -> approved)
   promote reject <id>   Reject a candidate (promotionStatus -> archived)

@@ -129,17 +129,21 @@ describe('river promote propose', () => {
     assert.deepEqual(loadMemory(indexPath).entries, []);
   });
 
-  test('a different policy version yields a different candidate id', async (t) => {
+  test('an explicit known --policy-version is accepted', async (t) => {
     const { cleanup, indexPath, inputPath } = seed();
     t.after(cleanup);
     const base = await runCliInProcess(proposeArgs(indexPath, inputPath, ['--dry-run']), { env });
-    const bumped = await runCliInProcess(
-      proposeArgs(indexPath, inputPath, ['--dry-run', '--policy-version', '2']),
+    const explicit = await runCliInProcess(
+      proposeArgs(indexPath, inputPath, [
+        '--dry-run',
+        '--policy-version',
+        CANDIDATE_POLICY_VERSION,
+      ]),
       { env }
     );
     assert.equal(base.code, 0, base.stderr);
-    assert.equal(bumped.code, 0, bumped.stderr);
-    assert.notEqual(JSON.parse(base.stdout).candidateId, JSON.parse(bumped.stdout).candidateId);
+    assert.equal(explicit.code, 0, explicit.stderr);
+    assert.equal(JSON.parse(base.stdout).candidateId, JSON.parse(explicit.stdout).candidateId);
   });
 
   test('fingerprint-less evidence is marked shadow-only', async (t) => {
@@ -215,6 +219,200 @@ describe('river promote propose validation', () => {
   });
 });
 
+describe('river promote propose input validation (schema invariants)', () => {
+  test('a schema-violating findingFingerprint is rejected with a line number', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed([
+      feedback(1, 'a'.repeat(16)),
+      { ...feedback(2), findingFingerprint: 'NOT-A-HEX' },
+    ]);
+    t.after(cleanup);
+    const res = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    assert.equal(res.code, 1);
+    assert.match(
+      res.stderr,
+      /at line 2: findingFingerprint must be 16 lowercase hex chars or null/
+    );
+    assert.deepEqual(loadMemory(indexPath).entries, []);
+  });
+
+  test('an unknown feedbackType in the input is rejected', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed([
+      feedback(1, 'a'.repeat(16)),
+      { ...feedback(2, 'b'.repeat(16)), feedbackType: 'made_up' },
+    ]);
+    t.after(cleanup);
+    const res = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /at line 2: feedbackType "made_up" is not one of/);
+  });
+
+  test('a non-integer pr and an empty skillId are rejected', async (t) => {
+    const badPr = seed([
+      feedback(1, 'a'.repeat(16)),
+      { ...feedback(2, 'b'.repeat(16)), pr: 'two' },
+    ]);
+    const badSkill = seed([
+      feedback(1, 'a'.repeat(16)),
+      { ...feedback(2, 'b'.repeat(16)), skillId: '  ' },
+    ]);
+    t.after(badPr.cleanup);
+    t.after(badSkill.cleanup);
+    const a = await runCliInProcess(proposeArgs(badPr.indexPath, badPr.inputPath), { env });
+    const b = await runCliInProcess(proposeArgs(badSkill.indexPath, badSkill.inputPath), { env });
+    assert.equal(a.code, 1);
+    assert.match(a.stderr, /pr must be a positive integer or null/);
+    assert.equal(b.code, 1);
+    assert.match(b.stderr, /skillId must be a non-empty string/);
+  });
+
+  test('an unknown feedbackType in --cluster-key is rejected', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed();
+    t.after(cleanup);
+    const res = await runCliInProcess(
+      [
+        'promote',
+        'propose',
+        '--input',
+        inputPath,
+        '--cluster-key',
+        'repository-layer-boundary::flase_positive',
+        '--index',
+        indexPath,
+      ],
+      { env }
+    );
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /feedbackType "flase_positive" is unknown/);
+    assert.deepEqual(loadMemory(indexPath).entries, []);
+  });
+
+  test('an unknown --policy-version is rejected (no unbounded candidate minting)', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed();
+    t.after(cleanup);
+    const res = await runCliInProcess(
+      proposeArgs(indexPath, inputPath, ['--policy-version', '99']),
+      { env }
+    );
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /--policy-version "99" is unknown/);
+    assert.deepEqual(loadMemory(indexPath).entries, []);
+  });
+});
+
+describe('river promote propose recurrence counting', () => {
+  test('duplicated evidence rows do not satisfy the minimum recurrence', async (t) => {
+    const duplicated = feedback(1, 'a'.repeat(16));
+    const { cleanup, indexPath, inputPath } = seed([duplicated, { ...duplicated }]);
+    t.after(cleanup);
+    const res = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /1 unique evidence item \(2 input rows, 1 duplicate removed\)/);
+    assert.deepEqual(loadMemory(indexPath).entries, []);
+  });
+
+  test('recurrenceCount and stored evidence use the deduplicated set', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed([
+      feedback(1, 'a'.repeat(16)),
+      feedback(1, 'a'.repeat(16)),
+      feedback(2, 'b'.repeat(16)),
+    ]);
+    t.after(cleanup);
+    const res = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    assert.equal(res.code, 0, res.stderr);
+    const out = JSON.parse(res.stdout);
+    assert.equal(out.evidenceCount, 2);
+    assert.equal(out.duplicatesRemoved, 1);
+    assert.equal(out.entry.context.promotionCandidate.recurrenceCount, 2);
+    assert.equal(out.entry.context.promotionCandidate.evidence.length, 2);
+    assert.match(res.stderr, /1 duplicate evidence row/);
+  });
+
+  test('--threshold overrides the minimum recurrence instead of being ignored', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed();
+    t.after(cleanup);
+    const res = await runCliInProcess(proposeArgs(indexPath, inputPath, ['--threshold', '3']), {
+      env,
+    });
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /below the minimum recurrence of 3/);
+    assert.deepEqual(loadMemory(indexPath).entries, []);
+  });
+});
+
+describe('river promote propose convergence audit', () => {
+  test('contentHash and policyVersion are persisted on the entry', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed();
+    t.after(cleanup);
+    const res = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    assert.equal(res.code, 0, res.stderr);
+    const stored = loadMemory(indexPath).entries[0].context.promotionCandidate;
+    assert.equal(stored.contentHash, JSON.parse(res.stdout).contentHash);
+    assert.equal(stored.policyVersion, CANDIDATE_POLICY_VERSION);
+    assert.equal(`RR-PC-${stored.contentHash.slice(0, 12)}`, loadMemory(indexPath).entries[0].id);
+  });
+
+  test('a stored entry with a colliding id but different contentHash is fatal', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed();
+    t.after(cleanup);
+    const first = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    assert.equal(first.code, 0, first.stderr);
+    // Simulate a 12-hex truncation collision: same id, different full hash.
+    const index = loadMemory(indexPath);
+    index.entries[0].context.promotionCandidate.contentHash = 'f'.repeat(64);
+    writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n', 'utf8');
+    const second = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    assert.equal(second.code, 1);
+    assert.match(second.stderr, /already exists with a different contentHash/);
+    assert.equal(loadMemory(indexPath).entries.length, 1);
+  });
+
+  test('converging on an entry with a differing recurrenceCount is reported', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed();
+    t.after(cleanup);
+    const first = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    assert.equal(first.code, 0, first.stderr);
+    const index = loadMemory(indexPath);
+    index.entries[0].context.promotionCandidate.recurrenceCount = 5;
+    writeFileSync(indexPath, JSON.stringify(index, null, 2) + '\n', 'utf8');
+    const second = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    assert.equal(second.code, 0, second.stderr);
+    assert.match(second.stderr, /input had 2 evidence, stored has 5 — not updated/);
+    assert.equal(JSON.parse(second.stdout).created, false);
+  });
+
+  test('an unrelated entry sharing the id is not treated as the candidate', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed();
+    t.after(cleanup);
+    const dry = await runCliInProcess(proposeArgs(indexPath, inputPath, ['--dry-run']), { env });
+    const candidateId = JSON.parse(dry.stdout).candidateId;
+    writeFileSync(
+      indexPath,
+      JSON.stringify(
+        {
+          version: '1',
+          entries: [
+            {
+              id: candidateId,
+              type: 'suppression',
+              content: 'unrelated',
+              status: 'active',
+              metadata: { createdAt: NOW, author: 'test' },
+            },
+          ],
+        },
+        null,
+        2
+      ) + '\n',
+      'utf8'
+    );
+    const res = await runCliInProcess(proposeArgs(indexPath, inputPath), { env });
+    // The id matches but the type does not, so propose still creates the
+    // candidate (and appendEntry surfaces the real id clash as an error).
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /Cannot write candidate .*Duplicate entry ID/);
+  });
+});
+
 describe('candidate content hash', () => {
   test('normalizeEvidence sorts, deduplicates and flags missing fingerprints', () => {
     const withFp = normalizeEvidence([feedback(2, 'b'.repeat(16)), feedback(1, 'a'.repeat(16))]);
@@ -250,5 +448,20 @@ describe('candidate content hash', () => {
     const second = computeCandidateContentHash({ clusterKey: CLUSTER, evidence });
     assert.equal(first.contentHash, second.contentHash);
     assert.equal(first.candidateId, `RR-PC-${first.contentHash.slice(0, 12)}`);
+    // policyVersion participates in the hash (the CLI restricts which versions
+    // may be requested, but the derivation itself is version-sensitive).
+    assert.notEqual(
+      first.contentHash,
+      computeCandidateContentHash({ clusterKey: CLUSTER, evidence, policyVersion: '2' }).contentHash
+    );
+  });
+
+  test('NFC and NFD spellings of the same evidence hash identically', () => {
+    const nfd = ENTRIES.map((e) => ({ ...e, timestamp: e.timestamp.normalize('NFD') }));
+    assert.equal(
+      buildProposedCandidate({ entries: ENTRIES, clusterKey: CLUSTER, now: new Date(NOW) })
+        .candidateId,
+      buildProposedCandidate({ entries: nfd, clusterKey: CLUSTER, now: new Date(NOW) }).candidateId
+    );
   });
 });

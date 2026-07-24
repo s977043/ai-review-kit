@@ -36,7 +36,11 @@ import {
   reviewPromotionEffectiveness,
   DEFAULT_EFFECTIVENESS_THRESHOLD,
 } from '../../lib/promotion.mjs';
-import { proposePromotionCandidate, readFeedbackJsonl } from '../../lib/promotion-candidates.mjs';
+import {
+  PromotionProposalError,
+  proposePromotionCandidate,
+  readFeedbackJsonl,
+} from '../../lib/promotion-candidates.mjs';
 
 /** Resolve `now` from RIVER_NOW (external injection) or fall back to real time. */
 function resolveNow() {
@@ -140,15 +144,27 @@ export async function runPromoteCommand(parsed, targetPath) {
         indexPath,
         now,
         policyVersion: parsed.promotePolicyVersion ?? undefined,
+        min: parsed.promoteThreshold ?? undefined,
         dryRun: Boolean(parsed.dryRun),
       });
     } catch (err) {
-      // Usage errors (bad cluster key, mismatched input, unreadable file) and
-      // I/O errors share exit code 1, matching the rest of `promote`. The
+      // Contract violations (bad cluster key, mismatched or malformed input,
+      // unreadable file) map to exit 1, matching the rest of `promote`. The
       // script's "candidates found -> exit 2" signal is deliberately not
       // carried over: propose is a generation API, not a detection API.
+      // Anything else (unexpected runtime / git errors) is rethrown so the
+      // CLI's outer handler can attach its Hints.
+      if (!(err instanceof PromotionProposalError)) throw err;
       console.error(`Error: ${err.message}`);
       return 1;
+    }
+    if (result.duplicatesRemoved) {
+      console.warn(
+        `Warning: --input contained ${result.duplicatesRemoved} duplicate evidence row(s); ${result.evidenceCount} unique item(s) were used.`
+      );
+    }
+    if (result.convergenceNote) {
+      console.warn(`Warning: converged (${result.convergenceNote}).`);
     }
     if (parsed.output === 'json') {
       console.log(JSON.stringify(result, null, 2));

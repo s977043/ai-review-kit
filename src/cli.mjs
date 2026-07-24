@@ -48,7 +48,11 @@ Commands:
                         content hash of (evidence, cluster, policy version), so
                         re-running with the same evidence is idempotent.
                         (--input <jsonl> --cluster-key <skillId::feedbackType>
-                         [--policy-version <v>] [--index <path>] [--dry-run])
+                         [--policy-version <v>] [--threshold <n>] [--index <path>]
+                         [--dry-run])
+                        Not safe to run in parallel against the same --index:
+                        the index is rewritten read-modify-write, so concurrent
+                        proposes can lose one another's entry. Serialize calls.
   promote list          List promotion_candidate entries (Judgment Promotion Loop Phase 2)
   promote approve <id>  Approve a candidate (promotionStatus -> approved)
   promote reject <id>   Reject a candidate (promotionStatus -> archived)

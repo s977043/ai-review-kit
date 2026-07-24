@@ -139,6 +139,12 @@ Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利
 - candidate ID は `RR-PC-<sha256(clusterKey, 正規化 evidence, policyVersion) の先頭12桁>` とし、policyVersion の初期値は `1` である。
 - exit code は既存 promote に揃えて成功 0 / usage・I/O エラー 1 とし、script の「候補ありで exit 2」は持ち込まない。
 - `--input` のエントリが `--cluster-key` と一致しない場合は暗黙 filter せずエラーにする。
+- `--input` の各行は feedback 捕捉契約（`src/lib/feedback.mjs`）で検証し、違反行は行番号付きでエラーにする。
+- 再発件数の判定・`recurrenceCount`・content hash は、いずれも正規化・重複除去した evidence 集合を単一の真実として用いる。
+- `contentHash` と `policyVersion` を `context.promotionCandidate` へ保存し、収束時は保存値と再計算値を突合する。不一致（12桁 ID の衝突）は fatal とする。
+- `--policy-version` は既知値の allowlist で検証し、`--cluster-key` の feedbackType も既知語彙に限定する。
+- 出力の `created` は「この実行が実際に書き込んだか」を表し、`wouldCreate` は「候補が未存在だったか」を表す。`--dry-run` では `created` は常に false である。
+- 同一 index への並列実行は非対応とする。index は read-modify-write で書き換えるため、呼び出しは直列化する。
 
 #### 未決事項
 

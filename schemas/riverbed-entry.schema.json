@@ -48,6 +48,15 @@
           "type": "string",
           "description": "Group key the candidate was clustered on. Phase 1: (skillId, feedbackType) joined by '::'."
         },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Full sha256 over the canonical (clusterKey, normalized evidence, policyVersion) triple the candidate id was derived from (#1574 P0 contract 4). Present on candidates created by `river promote propose`; absent on legacy date-based candidates."
+        },
+        "policyVersion": {
+          "type": "string",
+          "description": "Version of the rationale / proposedTarget derivation policy that produced this candidate; participates in contentHash."
+        },
         "evidence": {
           "type": "array",
           "minItems": 1,
