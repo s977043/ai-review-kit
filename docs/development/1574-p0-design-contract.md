@@ -24,7 +24,7 @@ Issue #1568 の Phase 1〜3 は実装済みで、v1.62.0 としてリリース�
 
 | 既存機構                              | 実装（file:line）                                                                   | #1574 での扱い                                                     |
 | ------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 候補生成（#1568-A / #1627）           | `scripts/feedback-rule-candidates.mjs:133-222`（`buildPromotionCandidateEntry`）    | 生成契約を拡張して利用（契約4・5）                                 |
+| 候補生成（#1568-A / #1627）           | `src/lib/promotion-candidates.mjs`（`buildPromotionCandidateEntry`）                | 生成契約を拡張して利用（契約4・5）                                 |
 | 承認 CLI / PR 雛形（#1568-B / #1629） | `src/cli/commands/promote.mjs:98-281`、`src/lib/promotion.mjs:138-209`              | 最終採否時に呼び出す（再実装しない）                               |
 | Retire / 効果測定（#1568-C / #1641）  | `src/lib/promotion.mjs:211-560`（retire / `reviewPromotionEffectiveness`）          | effectiveness / needs_review / expiry / supersede / archive は委譲 |
 | Riverbed 永続化                       | `src/lib/riverbed-memory.mjs:30-116`（`appendEntry` / `updateEntry` / `supersede`） | エントリ形式を共有する                                             |
@@ -131,9 +131,24 @@ Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利
 - 同一証拠からの再実行は同一 candidate へ収束させる（冪等）。
 - 本契約は #1624（#1568-D: interface B 起動契約、Phase 4）の前提となる。#1624 側の設計は本契約の CLI I/O と candidate ID を参照して行う。
 
+#### 実装状況（#1624）
+
+`river promote propose` として実装済みです。実装で確定した内容は次のとおりです。
+
+- 候補生成のコアは `src/lib/promotion-candidates.mjs` へ移設し、`scripts/feedback-rule-candidates.mjs` は検知 CLI と再 export のみの薄い wrapper とする。
+- candidate ID は `RR-PC-<sha256(clusterKey, 正規化 evidence, policyVersion) の先頭12桁>` とし、policyVersion の初期値は `1` である。
+- exit code は既存 promote に揃えて成功 0 / usage・I/O エラー 1 とし、script の「候補ありで exit 2」は持ち込まない。
+- `--input` のエントリが `--cluster-key` と一致しない場合は暗黙 filter せずエラーにする。
+- `--input` の各行は feedback 捕捉契約（`src/lib/feedback.mjs`）で検証し、違反行は行番号付きでエラーにする。
+- 再発件数の判定・`recurrenceCount`・content hash は、いずれも正規化・重複除去した evidence 集合を単一の真実として用いる。
+- `contentHash` と `policyVersion` を `context.promotionCandidate` へ保存し、収束時は保存値と再計算値を突合する。不一致（12桁 ID の衝突）は fatal とする。
+- `--policy-version` は既知値の allowlist で検証し、`--cluster-key` の feedbackType も既知語彙に限定する。
+- 出力の `created` は「この実行が実際に書き込んだか」を表し、`wouldCreate` は「候補が未存在だったか」を表す。`--dry-run` では `created` は常に false である。
+- 同一 index への並列実行は非対応とする。index は read-modify-write で書き換えるため、呼び出しは直列化する。
+
 #### 未決事項
 
-- 既存の日付ベース ID からの移行方法（併記期間または一括置換）は P1 実装時に決める。
+- 既存の日付ベース ID からの移行方法は「新規のみ content hash・既存 ID は書き換えない併記」とした。`scripts/feedback-rule-candidates.mjs --promote` の削除時期は次の minor で判断する。
 
 ### 契約5: Two-stage clustering
 
