@@ -24,6 +24,25 @@ export async function runEvolveCommand(parsed, targetPath) {
     console.error(`Unknown evolve subcommand: ${subcommand}. Use: aggregate`);
     return 1;
   }
+  if (parsed.evolveUnknownOption) {
+    console.error(
+      `Unknown option for evolve: ${parsed.evolveUnknownOption}. Use: --min <n> --month YYYY-MM --output text|json`
+    );
+    return 1;
+  }
+  if (parsed.evolveExtraArgs?.length) {
+    console.error(
+      `Unexpected argument(s) for evolve aggregate: ${parsed.evolveExtraArgs.join(', ')}`
+    );
+    return 1;
+  }
+  // The aggregate has no yaml/html renderer; accepting the flag and silently
+  // emitting text would misreport the format to a downstream consumer.
+  const output = parsed.output ?? 'text';
+  if (output !== 'text' && output !== 'json') {
+    console.error(`Unsupported --output for evolve aggregate: ${output}. Use: text | json`);
+    return 1;
+  }
 
   const { resolveStoreDir, loadAllRunRecords } = await import('../../lib/result-store.mjs');
   const { listFeedbackEntries } = await import('../../lib/feedback.mjs');
@@ -46,7 +65,7 @@ export async function runEvolveCommand(parsed, targetPath) {
     now: new Date(),
   });
 
-  if (parsed.output === 'json') {
+  if (output === 'json') {
     console.log(JSON.stringify(aggregate, null, 2));
   } else {
     console.log(formatShadowAggregateMarkdown(aggregate));

@@ -113,29 +113,52 @@ describe('shadow-aggregate 契約1: evidence provenance', () => {
     assert.match(evidence.artifact_sha256, /^[0-9a-f]{64}$/);
   });
 
-  test('CI evidence with a verifier is trusted', () => {
+  test('a forged CI provenance cannot mint trusted evidence', () => {
+    // The run store is writable by the agent under review, so this record can
+    // be fabricated wholesale. P1 must not honour the claim.
     const evidence = buildRunEvidence(
       runRecord({
         runId: 'run-1',
         provenance: { evidenceSource: 'CI', trustedBy: 'github-actions', sourceCommitSha: 'abc' },
       })
     );
-    assert.equal(evidence.trust_level, 'trusted');
+    assert.equal(evidence.trust_level, 'untrusted');
+    assert.equal(evidence.provenance_verified, false);
+    // The claim itself is still recorded so a human can inspect it.
+    assert.equal(evidence.evidence_source, 'CI');
+    assert.equal(evidence.trusted_by, 'github-actions');
     assert.equal(evidence.source_commit_sha, 'abc');
   });
 
-  test('evidence produced by the candidate itself is never trusted', () => {
-    const evidence = buildRunEvidence(
+  test('no provenance combination reaches trusted', () => {
+    for (const provenance of [
+      { evidenceSource: 'protected-branch', trustedBy: 'main' },
+      { evidenceSource: 'human', trustedBy: 'reviewer' },
+      { evidenceSource: 'CI', trustedBy: 'ci', generatedByCandidate: true },
+    ]) {
+      assert.equal(
+        buildRunEvidence(runRecord({ runId: 'r', provenance })).trust_level,
+        'untrusted'
+      );
+    }
+    assert.equal(evidenceTrustLevel({ evidence_source: 'CI', trusted_by: 'ci' }), 'untrusted');
+  });
+
+  test('a forged run cannot raise trustedRunCount above 0', () => {
+    const runRecords = [
       runRecord({
         runId: 'run-1',
-        provenance: {
-          evidenceSource: 'CI',
-          trustedBy: 'github-actions',
-          generatedByCandidate: true,
-        },
-      })
-    );
-    assert.equal(evidence.trust_level, 'untrusted');
+        provenance: { evidenceSource: 'CI', trustedBy: 'github-actions' },
+        findings: [finding(FP_A)],
+      }),
+    ];
+    const aggregate = buildShadowAggregate({
+      runRecords,
+      feedbackEntries: scenario().feedbackEntries,
+      now: NOW,
+    });
+    assert.equal(aggregate.evidence.trustedRunCount, 0);
+    assert.equal(aggregate.candidate.trust.trustedEvidenceCount, 0);
   });
 
   test('an unknown evidence_source falls back to untrusted', () => {
@@ -228,6 +251,152 @@ describe('shadow-aggregate 契約5: two-stage clustering', () => {
     assert.deepEqual(aggregate.clusters, []);
     assert.equal(aggregate.candidate, null);
   });
+
+  test('stage 1 keeps untrimmed skillId exactly as #1568-A does', () => {
+    const entries = [
+      feedback({ skillId: ' padded-skill ', pr: 1 }),
+      feedback({ skillId: ' padded-skill ', pr: 2 }),
+    ];
+    const clusters = buildClusters(entries, { minRecurrence: 2 });
+    const legacy = findRuleCandidates(entries, { min: 2 });
+    assert.deepEqual(
+      clusters.map((c) => c.clusterKey),
+      legacy.map((c) => `${c.skillId}::${c.feedbackType}`)
+    );
+    assert.equal(clusters[0].clusterKey, ' padded-skill ::false_positive');
+  });
+
+  test('repeated rows of ONE finding are not recurrence evidence', () => {
+    // 4 feedback rows, same fingerprint, same run, same PR: one re-litigated
+    // finding, not four occurrences (cf. src/lib/promotion.mjs deduplication).
+    const feedbackEntries = [1, 2, 3, 4].map((i) =>
+      feedback({ pr: 7, timestamp: `2026-07-2${i}T00:00:00.000Z` })
+    );
+    const runRecords = [runRecord({ runId: 'run-1', findings: [finding(FP_A)] })];
+    const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
+    const [cluster] = aggregate.clusters;
+    assert.equal(cluster.count, 4);
+    assert.equal(cluster.distinctFindingCount, 1);
+    assert.equal(cluster.distinctPrCount, 1);
+    const [sub] = cluster.subClusters;
+    assert.equal(sub.distinctOccurrenceCount, 1);
+    assert.equal(sub.experimentEligible, false);
+    assert.equal(aggregate.candidate.candidateType, 'observation_only');
+    assert.ok(
+      aggregate.candidate.trust.reasons.some((r) => r.includes('distinct な occurrence')),
+      JSON.stringify(aggregate.candidate.trust.reasons)
+    );
+  });
+
+  test('distinct occurrences across runs and PRs stay experiment-eligible', () => {
+    const aggregate = buildShadowAggregate({ ...scenario(), now: NOW });
+    const sub = aggregate.clusters[0].subClusters.find((s) => s.fingerprint === FP_A);
+    assert.equal(sub.distinctOccurrenceCount, 2);
+    assert.equal(sub.distinctRunCount, 2);
+    assert.equal(sub.distinctPrCount, 2);
+    assert.equal(sub.experimentEligible, true);
+  });
+});
+
+describe('shadow-aggregate 実データ形状での退行（W3）', () => {
+  // Today no producer writes review_run_id, provenance, or finding.category.
+  // The aggregate must degrade visibly instead of pretending to have evidence.
+  const todaysRun = {
+    runId: '2026-07-25T00-00-00-000Z-abc123',
+    timestamp: '2026-07-25T00:00:00.000Z',
+    reviewedTarget: '/repo',
+    phase: 'midstream',
+    reviewMode: 'medium',
+    findings: [
+      { fingerprint: FP_A, file: 'src/a.mjs', ruleId: 'secret-scanner', severity: 'major' },
+    ],
+    finalSummary: { findingsCount: 1 },
+  };
+  const todaysFeedback = (pr) => ({
+    timestamp: `2026-07-2${pr}T00:00:00.000Z`,
+    trigger: 'pr-comment',
+    feedbackType: 'false_positive',
+    skillId: 'secret-scanner',
+    findingFingerprint: FP_A,
+    evidence: null,
+    pr,
+  });
+
+  test('joins to nothing and carries no run evidence', () => {
+    const aggregate = buildShadowAggregate({
+      runRecords: [todaysRun],
+      feedbackEntries: [todaysFeedback(1), todaysFeedback(2)],
+      now: NOW,
+    });
+    assert.equal(aggregate.join.joinedFeedbackCount, 0);
+    assert.equal(aggregate.join.unjoinedFeedbackCount, 2);
+    assert.deepEqual(aggregate.candidate.evidence, []);
+    assert.deepEqual(aggregate.candidate.sourceReviewRunIds, []);
+    assert.equal(aggregate.candidate.trust.unjoinedEvidenceCount, 2);
+  });
+
+  test('category falls back to finding.ruleId, and PRs still separate occurrences', () => {
+    const aggregate = buildShadowAggregate({
+      runRecords: [todaysRun],
+      feedbackEntries: [todaysFeedback(1), todaysFeedback(2)],
+      now: NOW,
+    });
+    const [sub] = aggregate.clusters[0].subClusters;
+    assert.equal(sub.category, 'secret-scanner');
+    assert.equal(sub.scope, 'src/a.mjs');
+    assert.equal(sub.distinctOccurrenceCount, 2);
+    assert.equal(sub.experimentEligible, true);
+  });
+
+  test('the degenerate artifact is still schema-valid', () => {
+    const aggregate = buildShadowAggregate({
+      runRecords: [todaysRun],
+      feedbackEntries: [todaysFeedback(1), todaysFeedback(2)],
+      now: NOW,
+    });
+    assert.equal(
+      validateAggregate(aggregate),
+      true,
+      JSON.stringify(validateAggregate.errors, null, 2)
+    );
+  });
+});
+
+describe('shadow-aggregate duplicate review_run_id（W4）', () => {
+  const dup = (findings, timestamp) => ({
+    runId: 'run-dup',
+    timestamp,
+    reviewedTarget: '/repo',
+    phase: 'midstream',
+    findings,
+  });
+
+  test('duplicate ids resolve deterministically regardless of input order', () => {
+    const a = dup([finding(FP_A)], '2026-07-20T00:00:00.000Z');
+    const b = dup([finding(FP_B, { file: 'src/b.mjs' })], '2026-07-20T00:00:00.000Z');
+    const feedbackEntries = [
+      feedback({ runId: 'run-dup', pr: 1 }),
+      feedback({ runId: 'run-dup', pr: 2 }),
+    ];
+    const forward = buildShadowAggregate({ runRecords: [a, b], feedbackEntries, now: NOW });
+    const reversed = buildShadowAggregate({ runRecords: [b, a], feedbackEntries, now: NOW });
+    assert.equal(JSON.stringify(forward), JSON.stringify(reversed));
+    assert.deepEqual(forward.join.duplicateReviewRunIds, ['run-dup']);
+    assert.equal(forward.evidence.untrustedRunCount, 2);
+  });
+
+  test('findings of same-timestamp runs index deterministically', () => {
+    const a = dup([finding(FP_A, { file: 'src/a.mjs' })], '2026-07-20T00:00:00.000Z');
+    const b = { ...dup([finding(FP_A, { file: 'src/z.mjs' })], '2026-07-20T00:00:00.000Z') };
+    b.runId = 'run-other';
+    const feedbackEntries = [
+      feedback({ runId: 'run-dup', pr: 1 }),
+      feedback({ pr: 2, runId: null }),
+    ];
+    const forward = buildShadowAggregate({ runRecords: [a, b], feedbackEntries, now: NOW });
+    const reversed = buildShadowAggregate({ runRecords: [b, a], feedbackEntries, now: NOW });
+    assert.equal(JSON.stringify(forward), JSON.stringify(reversed));
+  });
 });
 
 describe('shadow-aggregate 契約4: content-addressed candidate id', () => {
@@ -282,20 +451,17 @@ describe('shadow-aggregate candidate', () => {
     assert.deepEqual(aggregate.candidate.sourceReviewRunIds, ['run-1', 'run-2']);
   });
 
-  test('trust counters distinguish trusted CI evidence from local evidence', () => {
+  test('every run counts as untrusted regardless of the claimed source', () => {
     const aggregate = buildShadowAggregate({ ...scenario(), now: NOW });
-    assert.equal(aggregate.evidence.trustedRunCount, 1);
-    assert.equal(aggregate.evidence.untrustedRunCount, 1);
-    assert.equal(aggregate.candidate.trust.trustedEvidenceCount, 1);
-    assert.equal(aggregate.candidate.trust.untrustedEvidenceCount, 1);
+    assert.equal(aggregate.evidence.trustedRunCount, 0);
+    assert.equal(aggregate.evidence.untrustedRunCount, 2);
+    assert.equal(aggregate.candidate.trust.trustedEvidenceCount, 0);
+    assert.equal(aggregate.candidate.trust.untrustedEvidenceCount, 2);
   });
 
-  test('a candidate with only untrusted evidence records the reason', () => {
-    const { feedbackEntries } = scenario();
-    const runRecords = [runRecord({ runId: 'run-1', findings: [finding(FP_A)] })];
-    const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
-    assert.equal(aggregate.candidate.trust.trustedEvidenceCount, 0);
-    assert.ok(aggregate.candidate.trust.reasons.some((r) => r.includes('trusted evidence')));
+  test('the candidate states why nothing can be trusted', () => {
+    const aggregate = buildShadowAggregate({ ...scenario(), now: NOW });
+    assert.ok(aggregate.candidate.trust.reasons.some((r) => r.includes('untrusted')));
   });
 });
 
@@ -451,5 +617,58 @@ describe('river evolve aggregate (CLI)', () => {
     t.after(cleanup);
     const code = await runEvolveCommand({ evolveSubcommand: 'canary' }, root);
     assert.equal(code, 1);
+  });
+
+  test('a mistyped subcommand exits 1 instead of reporting an empty aggregate', async () => {
+    const res = await runCliInProcess(['evolve', 'agregate', '--output', 'json']);
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /Unknown evolve subcommand: agregate/);
+    assert.equal(res.stdout, '');
+  });
+
+  test('a surplus positional argument exits 1', async (t) => {
+    const { root, cleanup } = seedRepo();
+    t.after(cleanup);
+    const res = await runCliInProcess(['evolve', 'aggregate', root, 'extra']);
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /Unexpected argument/);
+  });
+
+  test('an unknown option exits 1', async (t) => {
+    const { root, cleanup } = seedRepo();
+    t.after(cleanup);
+    const res = await runCliInProcess(['evolve', 'aggregate', root, '--promote']);
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /Unknown option for evolve: --promote/);
+  });
+
+  test('--output yaml / html are rejected rather than silently rendered as text', async (t) => {
+    const { root, cleanup } = seedRepo();
+    t.after(cleanup);
+    for (const mode of ['yaml', 'html']) {
+      const res = await runCliInProcess(['evolve', 'aggregate', root, '--output', mode]);
+      assert.equal(res.code, 1, mode);
+      assert.match(res.stderr, /Unsupported --output/);
+    }
+  });
+
+  test('--month scopes runs as well as feedback', async (t) => {
+    const { root, cleanup } = seedRepo();
+    t.after(cleanup);
+    const res = await runCliInProcess([
+      'evolve',
+      'aggregate',
+      root,
+      '--month',
+      '2026-06',
+      '--output',
+      'json',
+    ]);
+    assert.equal(res.code, 0, res.stderr);
+    const parsed = JSON.parse(res.stdout);
+    // The seeded runs are all from 2026-07, so a 2026-06 report has none.
+    assert.equal(parsed.inputs.runCount, 0);
+    assert.equal(parsed.inputs.feedbackCount, 0);
+    assert.equal(parsed.candidate, null);
   });
 });

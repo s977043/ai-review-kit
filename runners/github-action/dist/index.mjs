@@ -68569,6 +68569,25 @@ async function runEvolveCommand(parsed, targetPath) {
     console.error(`Unknown evolve subcommand: ${subcommand}. Use: aggregate`);
     return 1;
   }
+  if (parsed.evolveUnknownOption) {
+    console.error(
+      `Unknown option for evolve: ${parsed.evolveUnknownOption}. Use: --min <n> --month YYYY-MM --output text|json`
+    );
+    return 1;
+  }
+  if (parsed.evolveExtraArgs?.length) {
+    console.error(
+      `Unexpected argument(s) for evolve aggregate: ${parsed.evolveExtraArgs.join(', ')}`
+    );
+    return 1;
+  }
+  // The aggregate has no yaml/html renderer; accepting the flag and silently
+  // emitting text would misreport the format to a downstream consumer.
+  const output = parsed.output ?? 'text';
+  if (output !== 'text' && output !== 'json') {
+    console.error(`Unsupported --output for evolve aggregate: ${output}. Use: text | json`);
+    return 1;
+  }
 
   const { resolveStoreDir, loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
   const { listFeedbackEntries } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 7638));
@@ -68591,7 +68610,7 @@ async function runEvolveCommand(parsed, targetPath) {
     now: new Date(),
   });
 
-  if (parsed.output === 'json') {
+  if (output === 'json') {
     console.log(JSON.stringify(aggregate, null, 2));
   } else {
     console.log(formatShadowAggregateMarkdown(aggregate));
@@ -68713,6 +68732,9 @@ function parseArgs(argv) {
   // #1574 P1: only `aggregate` exists. Matching against a known set (rather
   // than "first non-flag token") keeps `river evolve <path>` working.
   const EVOLVE_SUBCOMMANDS = new Set(['aggregate']);
+  // Global options the shared parser below handles for `evolve`. Anything else
+  // starting with `-` is rejected rather than silently ignored.
+  const EVOLVE_SHARED_OPTIONS = new Set(['--output', '-h', '--help', '--debug']);
   const parsed = {
     command: null,
     target: '.',
@@ -68775,6 +68797,8 @@ function parseArgs(argv) {
     evolveSubcommand: null,
     evolveMin: null,
     evolveMonth: null,
+    evolveExtraArgs: [],
+    evolveUnknownOption: null,
     // skills subcommand fields
     skillsSubcommand: null,
     resolvePaths: null,
@@ -68821,7 +68845,19 @@ function parseArgs(argv) {
           parsed.evolveSubcommand = args.shift();
         }
         if (args[0] && !args[0].startsWith('-')) {
-          parsed.target = args.shift();
+          const token = args.shift();
+          // A mistyped subcommand (`agregate`) must not be swallowed as a path
+          // and reported as an empty, successful aggregate. Anything that is
+          // neither a known subcommand nor an existing path is an error.
+          if (!parsed.evolveSubcommand && !(0,external_node_fs_.existsSync)(token)) {
+            parsed.evolveSubcommand = token; // handler rejects it with exit 1
+          } else {
+            parsed.target = token;
+          }
+        }
+        // Surplus positionals are a usage error, never silently discarded.
+        while (args[0] && !args[0].startsWith('-')) {
+          parsed.evolveExtraArgs.push(args.shift());
         }
       } else if (arg === 'runs' && args[0] && !args[0].startsWith('-')) {
         parsed.runsSubcommand = args.shift(); // list | diff | summary | digest
@@ -69046,6 +69082,12 @@ function parseArgs(argv) {
         }
         parsed.evolveMonth = value;
         continue;
+      }
+      // Options that are not evolve's own and not handled by the shared parser
+      // below must fail loudly instead of being ignored.
+      if (arg.startsWith('-') && !EVOLVE_SHARED_OPTIONS.has(arg)) {
+        parsed.evolveUnknownOption = arg;
+        break;
       }
     }
     if (!parsed.command && arg === 'eval') {

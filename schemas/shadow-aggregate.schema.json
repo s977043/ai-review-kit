@@ -20,17 +20,17 @@
   "$defs": {
     "evidenceSource": {
       "type": "string",
-      "description": "Contract 1 evidence provenance. `local` is the run store inside the reviewed repository and is never trusted on its own.",
+      "description": "Contract 1 evidence provenance, as CLAIMED by the run record. The record lives in `.river/runs/` inside the reviewed repository and is writable by the agent under review, so this value is self-reported and unverified — it never raises trust in P1.",
       "enum": ["local", "CI", "protected-branch", "human"]
     },
     "trustLevel": {
       "type": "string",
-      "description": "Fail-safe trust classification: anything not positively trusted is `untrusted`.",
-      "enum": ["trusted", "untrusted"]
+      "description": "P1 emits `untrusted` for every record: provenance is self-reported and there is no verification mechanism yet. The promotion path (verified `trusted_by`) is a contract 1 未決事項 handled in P2.",
+      "const": "untrusted"
     },
     "runEvidence": {
       "type": "object",
-      "description": "Contract 1 provenance record for one saved run.",
+      "description": "Contract 1 provenance record for one saved run. Every field is self-reported by the reviewed repository and unverified.",
       "required": [
         "review_run_id",
         "evidence_source",
@@ -39,20 +39,33 @@
         "collector_version",
         "trusted_by",
         "generated_by_candidate",
+        "provenance_verified",
         "trust_level"
       ],
       "additionalProperties": false,
       "properties": {
         "review_run_id": {
           "type": ["string", "null"],
-          "description": "Canonical review run id (contract 2)."
+          "description": "Canonical review run id (contract 2). Self-reported: two records can claim the same id, which is reported via join.duplicateReviewRunIds."
         },
         "evidence_source": { "$ref": "#/$defs/evidenceSource" },
         "source_commit_sha": { "type": ["string", "null"] },
-        "artifact_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "artifact_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SELF-DIGEST of the same record it is stored on. Detects accidental drift between copies; it does NOT prove authenticity, because whoever can edit the record can recompute it."
+        },
         "collector_version": { "type": "string" },
-        "trusted_by": { "type": ["string", "null"] },
+        "trusted_by": {
+          "type": ["string", "null"],
+          "description": "Claimed verifier. Unverified in P1 and therefore not a trust input."
+        },
         "generated_by_candidate": { "type": "boolean" },
+        "provenance_verified": {
+          "type": "boolean",
+          "const": false,
+          "description": "Always false in P1: no verification mechanism for the claimed provenance exists yet."
+        },
         "trust_level": { "$ref": "#/$defs/trustLevel" }
       }
     },
@@ -78,6 +91,10 @@
         "scope",
         "failureMode",
         "count",
+        "distinctFindingCount",
+        "distinctPrCount",
+        "distinctRunCount",
+        "distinctOccurrenceCount",
         "experimentEligible",
         "evidence"
       ],
@@ -85,13 +102,28 @@
       "properties": {
         "subClusterKey": { "type": "string" },
         "fingerprint": { "type": ["string", "null"], "pattern": "^[0-9a-f]{16}$" },
-        "category": { "type": ["string", "null"] },
+        "category": {
+          "type": ["string", "null"],
+          "description": "finding.category, falling back to finding.ruleId (the emitting skill id). Null when the fingerprint resolves to no saved finding."
+        },
         "scope": { "type": ["string", "null"] },
         "failureMode": { "type": ["string", "null"] },
-        "count": { "type": "integer", "minimum": 1 },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Raw feedback row count. Not recurrence evidence on its own — several rows can describe one re-litigated finding."
+        },
+        "distinctFindingCount": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "distinctPrCount": { "type": "integer", "minimum": 0 },
+        "distinctRunCount": { "type": "integer", "minimum": 0 },
+        "distinctOccurrenceCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Distinct (review_run_id, pr) pairs. Rows attributable to neither are excluded."
+        },
         "experimentEligible": {
           "type": "boolean",
-          "description": "False when the sub-cluster has no finding fingerprint. Such sub-clusters are displayed but must never feed an automatic experiment or promotion (contract 5)."
+          "description": "True only when the sub-cluster has a finding fingerprint AND at least minRecurrence distinct occurrences. Everything else is displayed but must never feed an automatic experiment or promotion (contract 5)."
         },
         "evidence": { "type": "array", "items": { "$ref": "#/$defs/feedbackRef" } }
       }
@@ -99,13 +131,23 @@
     "cluster": {
       "type": "object",
       "description": "Contract 5 stage 1: recurrence detection on (skillId, feedbackType).",
-      "required": ["clusterKey", "skillId", "feedbackType", "count", "subClusters"],
+      "required": [
+        "clusterKey",
+        "skillId",
+        "feedbackType",
+        "count",
+        "distinctFindingCount",
+        "distinctPrCount",
+        "subClusters"
+      ],
       "additionalProperties": false,
       "properties": {
         "clusterKey": { "type": "string", "pattern": "^.+::.+$" },
         "skillId": { "type": "string" },
         "feedbackType": { "type": "string" },
-        "count": { "type": "integer", "minimum": 1 },
+        "count": { "type": "integer", "minimum": 1, "description": "Raw feedback row count." },
+        "distinctFindingCount": { "type": "integer", "minimum": 0 },
+        "distinctPrCount": { "type": "integer", "minimum": 0 },
         "subClusters": { "type": "array", "items": { "$ref": "#/$defs/subCluster" } }
       }
     },
@@ -130,6 +172,10 @@
         "failureMode",
         "recurrenceCount",
         "subClusterCount",
+        "distinctFindingCount",
+        "distinctPrCount",
+        "distinctRunCount",
+        "distinctOccurrenceCount",
         "sourceReviewRunIds",
         "sourceFeedbackRefs",
         "evidence",
@@ -177,6 +223,10 @@
         "failureMode": { "type": ["string", "null"] },
         "recurrenceCount": { "type": "integer", "minimum": 1 },
         "subClusterCount": { "type": "integer", "minimum": 1 },
+        "distinctFindingCount": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "distinctPrCount": { "type": "integer", "minimum": 0 },
+        "distinctRunCount": { "type": "integer", "minimum": 0 },
+        "distinctOccurrenceCount": { "type": "integer", "minimum": 0 },
         "sourceReviewRunIds": { "type": "array", "items": { "type": "string" } },
         "sourceFeedbackRefs": { "type": "array", "items": { "$ref": "#/$defs/feedbackRef" } },
         "evidence": { "type": "array", "items": { "$ref": "#/$defs/runEvidence" } },
@@ -191,7 +241,11 @@
           ],
           "additionalProperties": false,
           "properties": {
-            "trustedEvidenceCount": { "type": "integer", "minimum": 0 },
+            "trustedEvidenceCount": {
+              "type": "integer",
+              "const": 0,
+              "description": "Always 0 in P1 — no evidence path can reach `trusted` (see trustLevel)."
+            },
             "untrustedEvidenceCount": { "type": "integer", "minimum": 0 },
             "unjoinedEvidenceCount": { "type": "integer", "minimum": 0 },
             "canaryEligible": {
@@ -240,19 +294,33 @@
       "additionalProperties": false,
       "properties": {
         "runs": { "type": "array", "items": { "$ref": "#/$defs/runEvidence" } },
-        "trustedRunCount": { "type": "integer", "minimum": 0 },
+        "trustedRunCount": {
+          "type": "integer",
+          "const": 0,
+          "description": "Always 0 in P1 — see trustLevel."
+        },
         "untrustedRunCount": { "type": "integer", "minimum": 0 }
       }
     },
     "join": {
       "type": "object",
       "description": "Contract 2 propagation coverage: how much feedback can be traced back to a saved run through the canonical review_run_id.",
-      "required": ["joinedFeedbackCount", "unjoinedFeedbackCount", "runIdsWithEvidence"],
+      "required": [
+        "joinedFeedbackCount",
+        "unjoinedFeedbackCount",
+        "runIdsWithEvidence",
+        "duplicateReviewRunIds"
+      ],
       "additionalProperties": false,
       "properties": {
         "joinedFeedbackCount": { "type": "integer", "minimum": 0 },
         "unjoinedFeedbackCount": { "type": "integer", "minimum": 0 },
-        "runIdsWithEvidence": { "type": "array", "items": { "type": "string" } }
+        "runIdsWithEvidence": { "type": "array", "items": { "type": "string" } },
+        "duplicateReviewRunIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "review_run_id values claimed by more than one saved run. The record with the lowest artifact_sha256 is used; the collision is surfaced for human investigation."
+        }
       }
     },
     "clusters": { "type": "array", "items": { "$ref": "#/$defs/cluster" } },

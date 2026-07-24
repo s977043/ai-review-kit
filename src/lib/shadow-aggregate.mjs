@@ -30,11 +30,18 @@ export const COLLECTOR_VERSION = 'river-shadow-aggregate/1';
 export const EVIDENCE_SOURCES = ['local', 'CI', 'protected-branch', 'human'];
 
 /**
- * Sources that MAY carry trusted evidence. `local` is excluded: the run store
- * lives inside the reviewed repository and is writable by the agent under
- * review (result-store.mjs trust-boundary note).
+ * The only trust level P1 can emit.
+ *
+ * Every provenance field this module reads comes from `.river/runs/*.json`,
+ * which lives INSIDE the reviewed repository and is writable by the agent
+ * under review (result-store.mjs:34-43 trust-boundary note). A record can
+ * therefore claim `evidence_source: 'CI'` and `trusted_by: 'github-actions'`
+ * with no verification whatsoever, so honouring that claim would let a forged
+ * file mint trusted evidence. P1 closes the promotion path entirely: the
+ * verification mechanism for `trusted_by` (CI attestation / signed record) is
+ * an explicit 契約1 未決事項 and lands in P2.
  */
-export const TRUSTED_EVIDENCE_SOURCES = new Set(['CI', 'protected-branch', 'human']);
+export const P1_TRUST_LEVEL = 'untrusted';
 
 /** Recurrence threshold for stage-1 clustering (契約5), same default as #1568-A. */
 export const DEFAULT_MIN_RECURRENCE = 2;
@@ -141,32 +148,32 @@ export function deriveFeedbackReviewRunId(entry) {
 // ---------------------------------------------------------------------------
 
 /**
- * Classify an evidence record as `trusted` / `untrusted`.
+ * Trust level of an evidence record — always `untrusted` in P1.
  *
- * Fail-safe: anything that is not positively trusted is `untrusted`. Evidence
- * produced by the candidate itself is never trusted (`generated_by_candidate`).
+ * The argument is accepted (and ignored) so the signature stays stable for P2,
+ * where a verified `trusted_by` may promote a record. Until that verification
+ * exists, no field combination can raise the level: see P1_TRUST_LEVEL.
  *
- * @param {{ evidence_source?: string, trusted_by?: string|null, generated_by_candidate?: boolean }} evidence
- * @returns {'trusted'|'untrusted'}
+ * @param {object} [_evidence] self-reported provenance (unverified)
+ * @returns {'untrusted'}
  */
-export function evidenceTrustLevel(evidence) {
-  if (!evidence) return 'untrusted';
-  if (evidence.generated_by_candidate === true) return 'untrusted';
-  if (!TRUSTED_EVIDENCE_SOURCES.has(evidence.evidence_source)) return 'untrusted';
-  if (!nonEmptyString(evidence.trusted_by)) return 'untrusted';
-  return 'trusted';
+export function evidenceTrustLevel(_evidence) {
+  return P1_TRUST_LEVEL;
 }
 
 /**
  * Build the 契約1 provenance record for one saved run.
  *
- * Provenance fields are read from an optional `record.provenance` block so
- * existing run records stay valid; anything missing degrades to the least
- * trusted interpretation (`local` / null / untrusted) rather than being
- * optimistically inferred from the aggregating process's environment.
+ * Every field here is SELF-REPORTED by the reviewed repository: `provenance`
+ * is read from the run record itself, which the agent under review can write.
+ * The record is reproduced as claimed (so a human can inspect it), but it is
+ * never used to raise trust — `provenance_verified` is a constant `false` and
+ * `trust_level` a constant `untrusted` (see P1_TRUST_LEVEL).
  *
- * `artifact_sha256` digests the canonical JSON of the whole record, so it is
- * reproducible from the data itself (independent of file formatting).
+ * `artifact_sha256` is a SELF-DIGEST: it hashes the canonical JSON of the same
+ * record it is stored on. It detects accidental drift between copies of one
+ * record; it does NOT prove the record is authentic, because whoever can edit
+ * the record can recompute the digest.
  *
  * @param {object} record saved run record
  * @param {{ collectorVersion?: string }} [options]
@@ -178,6 +185,7 @@ export function buildRunEvidence(record, { collectorVersion = COLLECTOR_VERSION 
     : 'local';
   const evidence = {
     review_run_id: deriveReviewRunId(record),
+    // Claimed source. Recorded for observation only — never a trust input.
     evidence_source: source,
     source_commit_sha:
       nonEmptyString(provenance.sourceCommitSha) ?? nonEmptyString(record?.commitSha),
@@ -185,6 +193,7 @@ export function buildRunEvidence(record, { collectorVersion = COLLECTOR_VERSION 
     collector_version: collectorVersion,
     trusted_by: nonEmptyString(provenance.trustedBy),
     generated_by_candidate: provenance.generatedByCandidate === true,
+    provenance_verified: false,
   };
   return { ...evidence, trust_level: evidenceTrustLevel(evidence) };
 }
@@ -203,8 +212,12 @@ export function buildRunEvidence(record, { collectorVersion = COLLECTOR_VERSION 
  */
 function indexFindingsByFingerprint(runRecords) {
   const index = new Map();
-  const ordered = [...runRecords].sort((a, b) =>
-    compareStrings(a?.timestamp ?? '', b?.timestamp ?? '')
+  // Two-key sort: records sharing a timestamp (or missing one) must still have
+  // a total order, otherwise "last run wins" depends on directory read order.
+  const ordered = [...runRecords].sort(
+    (a, b) =>
+      compareStrings(a?.timestamp ?? '', b?.timestamp ?? '') ||
+      compareStrings(deriveReviewRunId(a), deriveReviewRunId(b))
   );
   for (const record of ordered) {
     const reviewRunId = deriveReviewRunId(record);
@@ -212,7 +225,10 @@ function indexFindingsByFingerprint(runRecords) {
       const fingerprint = nonEmptyString(finding?.fingerprint);
       if (!fingerprint) continue;
       index.set(fingerprint, {
-        category: nonEmptyString(finding?.category) ?? nonEmptyString(finding?.skillId),
+        // `category` is not part of the current finding shape; `ruleId` (set to
+        // the emitting skill id by review-engine / local-runner) is what real
+        // findings carry today, so it is the working fallback.
+        category: nonEmptyString(finding?.category) ?? nonEmptyString(finding?.ruleId),
         scope: nonEmptyString(finding?.file),
         review_run_id: reviewRunId,
       });
@@ -240,8 +256,12 @@ function subClusterKeyOf({ fingerprint, category, scope }) {
  * vocabulary until it has been *observed* in P1, so inventing one here would
  * pre-empt the contract.
  *
- * Sub-clusters without a fingerprint stay visible (`experimentEligible: false`)
- * but must never feed an automatic experiment or promotion.
+ * Eligibility is decided on DISTINCT occurrences, not on row count: several
+ * feedback rows sharing one fingerprint are one re-litigated finding, not
+ * recurrence (the same defence `reviewPromotionEffectiveness` already applies
+ * in src/lib/promotion.mjs). Sub-clusters without a fingerprint, or without
+ * `minRecurrence` distinct (run, PR) occurrences, stay visible but carry
+ * `experimentEligible: false` and must never feed an experiment or promotion.
  *
  * @param {object[]} feedbackEntries
  * @param {{ minRecurrence?: number, findingIndex?: Map<string, object> }} [options]
@@ -252,8 +272,11 @@ export function buildClusters(
 ) {
   const stage1 = new Map();
   for (const entry of feedbackEntries ?? []) {
-    const skillId = nonEmptyString(entry?.skillId);
-    const feedbackType = nonEmptyString(entry?.feedbackType);
+    // Key components are used RAW (not trimmed) so the stage-1 clusterKey is
+    // byte-identical to #1568-A's (scripts/feedback-rule-candidates.mjs), which
+    // is the SSoT for this key. Blank values are skipped as unusable.
+    const skillId = nonEmptyString(entry?.skillId) ? entry.skillId : null;
+    const feedbackType = nonEmptyString(entry?.feedbackType) ? entry.feedbackType : null;
     if (!skillId || !feedbackType) continue;
     // `accepted` is a positive signal — never an improvement candidate.
     if (feedbackType === 'accepted') continue;
@@ -288,22 +311,51 @@ export function buildClusters(
       stage2.get(key).evidence.push(buildFeedbackRef(entry));
     }
     const subClusters = [...stage2.values()]
-      .map((sub) => ({
-        ...sub,
-        count: sub.evidence.length,
-        experimentEligible: sub.fingerprint != null,
-        evidence: sortFeedbackRefs(sub.evidence),
-      }))
+      .map((sub) => {
+        const distinctOccurrenceCount = distinctCount(sub.evidence.map(occurrenceKey));
+        return {
+          ...sub,
+          count: sub.evidence.length,
+          // A fingerprint identifies ONE finding, so this is 1 (or 0 when the
+          // sub-cluster has no fingerprint) by construction — surfaced so the
+          // gap against the raw `count` is visible in the artifact.
+          distinctFindingCount: sub.fingerprint == null ? 0 : 1,
+          distinctPrCount: distinctCount(sub.evidence.map((ref) => ref.pr)),
+          distinctRunCount: distinctCount(sub.evidence.map((ref) => ref.review_run_id)),
+          distinctOccurrenceCount,
+          experimentEligible: sub.fingerprint != null && distinctOccurrenceCount >= minRecurrence,
+          evidence: sortFeedbackRefs(sub.evidence),
+        };
+      })
       .sort((a, b) => b.count - a.count || compareStrings(a.subClusterKey, b.subClusterKey));
     clusters.push({
       clusterKey,
       skillId,
       feedbackType,
+      // Raw row count. Compare against the distinct counters before treating it
+      // as recurrence evidence.
       count: entries.length,
+      distinctFindingCount: distinctCount(entries.map((e) => e.findingFingerprint)),
+      distinctPrCount: distinctCount(entries.map((e) => e.pr)),
       subClusters,
     });
   }
   return clusters.sort((a, b) => b.count - a.count || compareStrings(a.clusterKey, b.clusterKey));
+}
+
+/** Count distinct non-null / non-empty values. */
+function distinctCount(values) {
+  return new Set(values.filter((v) => v != null && v !== '')).size;
+}
+
+/**
+ * Identify the occurrence a feedback row belongs to. Rows that carry neither a
+ * run nor a PR cannot be attributed and return null, so they never count as
+ * independent recurrence evidence.
+ */
+function occurrenceKey(ref) {
+  if (ref.review_run_id == null && ref.pr == null) return null;
+  return `${ref.review_run_id ?? ''}#${ref.pr ?? ''}`;
 }
 
 function buildFeedbackRef(entry) {
@@ -345,15 +397,18 @@ export function computeCandidateId({ policyVersion, clusterKey, subClusterKey, e
     policyVersion,
     clusterKey,
     subClusterKey,
+    // Each ref is serialized as canonical JSON rather than joined with a
+    // separator: a delimiter join is ambiguous as soon as a field can contain
+    // the delimiter, which would let two different evidence sets collide.
     evidence: [...(evidence ?? [])]
       .map((ref) =>
-        [
-          ref.review_run_id ?? '',
-          ref.findingFingerprint ?? '',
-          ref.feedbackType ?? '',
-          ref.timestamp ?? '',
-          ref.pr ?? '',
-        ].join('#')
+        canonicalJson({
+          review_run_id: ref.review_run_id ?? null,
+          findingFingerprint: ref.findingFingerprint ?? null,
+          feedbackType: ref.feedbackType ?? null,
+          timestamp: ref.timestamp ?? null,
+          pr: ref.pr ?? null,
+        })
       )
       .sort(compareStrings),
   };
@@ -412,11 +467,15 @@ function buildShadowCandidate({ cluster, sub, evidenceByRunId, now, policyVersio
   const trustedEvidenceCount = runEvidence.filter((e) => e.trust_level === 'trusted').length;
   const reasons = [];
   if (!sub.experimentEligible) {
-    reasons.push('finding fingerprint がないため自動実験・昇格の対象にしない（契約5）');
+    reasons.push(
+      sub.fingerprint == null
+        ? 'finding fingerprint がないため自動実験・昇格の対象にしない（契約5）'
+        : `distinct な occurrence が ${sub.distinctOccurrenceCount} 件しかなく反復証拠として不足（契約5）`
+    );
   }
-  if (trustedEvidenceCount === 0) {
-    reasons.push('trusted evidence（CI / protected-branch / human）が 0 件（契約1）');
-  }
+  reasons.push(
+    'saved run の provenance は被レビュー側が書き換え可能で未検証のため、すべて untrusted 扱い（契約1）'
+  );
   reasons.push('P1 は shadow 観測のみで canary へ進まない（実装順 P3 以降）');
 
   return {
@@ -444,8 +503,13 @@ function buildShadowCandidate({ cluster, sub, evidenceByRunId, now, policyVersio
     targetSurface: TARGET_SURFACE_BY_FEEDBACK_TYPE[cluster.feedbackType] ?? null,
     candidateType: sub.experimentEligible ? 'experiment_candidate' : 'observation_only',
     failureMode: sub.failureMode,
+    // Raw row counts. `distinct*` below is what recurrence judgements must use.
     recurrenceCount: cluster.count,
     subClusterCount: sub.count,
+    distinctFindingCount: sub.distinctFindingCount,
+    distinctPrCount: sub.distinctPrCount,
+    distinctRunCount: sub.distinctRunCount,
+    distinctOccurrenceCount: sub.distinctOccurrenceCount,
     sourceReviewRunIds,
     sourceFeedbackRefs: evidence,
     evidence: runEvidence,
@@ -490,18 +554,44 @@ export function buildShadowAggregate({
   policyVersion = SHADOW_AGGREGATE_POLICY_VERSION,
   collectorVersion = COLLECTOR_VERSION,
 } = {}) {
-  const runEvidence = runRecords
+  // `--month` scopes BOTH sides of the aggregate. Filtering only the feedback
+  // would silently mix a whole run history into a one-month report.
+  const scopedRuns = month
+    ? runRecords.filter((record) => String(record?.timestamp ?? '').slice(0, 7) === month)
+    : [...runRecords];
+  const scopedFeedback = month
+    ? (feedbackEntries ?? []).filter(
+        (entry) => String(entry?.timestamp ?? '').slice(0, 7) === month
+      )
+    : [...(feedbackEntries ?? [])];
+
+  const runEvidence = scopedRuns
     .map((record) => buildRunEvidence(record, { collectorVersion }))
-    .sort((a, b) => compareStrings(a.review_run_id, b.review_run_id));
-  const evidenceByRunId = new Map(
-    runEvidence.filter((e) => e.review_run_id).map((e) => [e.review_run_id, e])
-  );
+    .sort(
+      (a, b) =>
+        compareStrings(a.review_run_id, b.review_run_id) ||
+        compareStrings(a.artifact_sha256, b.artifact_sha256)
+    );
+  // Two records can claim the same review_run_id (the id is self-reported and
+  // the store is writable). Resolve deterministically — lowest artifact_sha256
+  // wins — instead of letting directory read order decide, and surface the
+  // collision so a human can investigate.
+  const evidenceByRunId = new Map();
+  const duplicateReviewRunIds = new Set();
+  for (const evidence of runEvidence) {
+    if (!evidence.review_run_id) continue;
+    if (evidenceByRunId.has(evidence.review_run_id)) {
+      duplicateReviewRunIds.add(evidence.review_run_id);
+      continue; // first wins; runEvidence is already sorted by (id, sha256)
+    }
+    evidenceByRunId.set(evidence.review_run_id, evidence);
+  }
   const trustedRunCount = runEvidence.filter((e) => e.trust_level === 'trusted').length;
 
-  const findingIndex = indexFindingsByFingerprint(runRecords);
-  const clusters = buildClusters(feedbackEntries, { minRecurrence, findingIndex });
+  const findingIndex = indexFindingsByFingerprint(scopedRuns);
+  const clusters = buildClusters(scopedFeedback, { minRecurrence, findingIndex });
 
-  const joinedFeedbackCount = (feedbackEntries ?? []).filter((entry) => {
+  const joinedFeedbackCount = scopedFeedback.filter((entry) => {
     const id = deriveFeedbackReviewRunId(entry);
     return id != null && evidenceByRunId.has(id);
   }).length;
@@ -519,8 +609,9 @@ export function buildShadowAggregate({
     policyVersion,
     collectorVersion,
     inputs: {
-      runCount: runRecords.length,
-      feedbackCount: (feedbackEntries ?? []).length,
+      // Counts are POST-`--month` scoping (see scopedRuns / scopedFeedback).
+      runCount: scopedRuns.length,
+      feedbackCount: scopedFeedback.length,
       minRecurrence,
       month,
     },
@@ -533,8 +624,9 @@ export function buildShadowAggregate({
       // 契約2 propagation coverage: how much feedback can already be traced
       // back to a saved run through the canonical review_run_id.
       joinedFeedbackCount,
-      unjoinedFeedbackCount: (feedbackEntries ?? []).length - joinedFeedbackCount,
+      unjoinedFeedbackCount: scopedFeedback.length - joinedFeedbackCount,
       runIdsWithEvidence: [...evidenceByRunId.keys()].sort(compareStrings),
+      duplicateReviewRunIds: [...duplicateReviewRunIds].sort(compareStrings),
     },
     clusters,
     candidate,
@@ -550,24 +642,39 @@ export function formatShadowAggregateMarkdown(aggregate) {
   lines.push(`|---|---|`);
   lines.push(`| Generated at | ${aggregate.generatedAt} |`);
   lines.push(`| Policy version | ${aggregate.policyVersion} |`);
+  lines.push(`| Month scope | ${aggregate.inputs.month ?? '(all)'} |`);
   lines.push(`| Runs | ${aggregate.inputs.runCount} |`);
   lines.push(
-    `| Trusted / untrusted evidence | ${aggregate.evidence.trustedRunCount} / ${aggregate.evidence.untrustedRunCount} |`
+    `| Untrusted evidence | ${aggregate.evidence.untrustedRunCount} / ${aggregate.evidence.runs.length}（P1 は全件 untrusted） |`
   );
   lines.push(`| Feedback entries | ${aggregate.inputs.feedbackCount} |`);
   lines.push(
     `| Feedback joined to a run | ${aggregate.join.joinedFeedbackCount} / ${aggregate.inputs.feedbackCount} |`
   );
+  lines.push(`| Duplicate review_run_id | ${aggregate.join.duplicateReviewRunIds.length} |`);
   lines.push(`| Recurring clusters | ${aggregate.clusters.length} |`);
   lines.push('');
+
+  if (aggregate.join.duplicateReviewRunIds.length) {
+    lines.push(
+      `⚠️ 同一 review_run_id を名乗る run が複数あります: ${aggregate.join.duplicateReviewRunIds
+        .map((id) => `\`${id}\``)
+        .join(', ')}`
+    );
+    lines.push('');
+  }
 
   if (aggregate.clusters.length) {
     lines.push('### Clusters (stage 1 → stage 2)');
     for (const cluster of aggregate.clusters) {
-      lines.push(`- \`${cluster.clusterKey}\`: ${cluster.count} 件`);
+      lines.push(
+        `- \`${cluster.clusterKey}\`: ${cluster.count} 件（distinct finding ${cluster.distinctFindingCount} / distinct PR ${cluster.distinctPrCount}）`
+      );
       for (const sub of cluster.subClusters) {
         const eligible = sub.experimentEligible ? 'experiment-eligible' : 'observation-only';
-        lines.push(`  - \`${sub.subClusterKey}\`: ${sub.count} 件 (${eligible})`);
+        lines.push(
+          `  - \`${sub.subClusterKey}\`: ${sub.count} 件 / distinct occurrence ${sub.distinctOccurrenceCount} (${eligible})`
+        );
       }
     }
     lines.push('');

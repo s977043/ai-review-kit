@@ -53,16 +53,16 @@ river evolve aggregate <path> [--min <n>] [--month YYYY-MM] [--output json]
 ```
 
 - `--min`: stage1 の反復しきい値である（既定 2、#1568-A と同値）
-- `--month`: 対象の feedback ファイルを `YYYY-MM` に限定する
-- `--output json`: 機械可読な集約 JSON を出力する（既定は Markdown）
+- `--month`: run と feedback の両方を `YYYY-MM` に限定する（片側だけ絞ると集計期間がずれるため）
+- `--output json`: 機械可読な集約 JSON を出力する（既定は Markdown）。`yaml` / `html` は未対応で reject する
 
-exit code は常に 0 です。P1 の出力は gate ではなく観測であるため、しきい値超過で失敗させません。
+正常終了時の exit code は 0 です。P1 の出力は gate ではなく観測であるため、しきい値超過では失敗させません。ただし使い方の誤り（不明なサブコマンド・余剰引数・不明オプション・未対応の `--output`）は exit 1 で明示的に失敗します。`river evolve agregate` のような typo を path として黙って受け取り、空の成功結果を返すことはありません。
 
 ## 5. 設計契約との対応
 
 | 契約                            | P1 での実装                                                                              | 実装箇所                                  |
 | ------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------- |
-| 契約1 evidence provenance       | run ごとに 7 フィールドを付与し、trusted / untrusted を fail-safe に判定する             | `buildRunEvidence` / `evidenceTrustLevel` |
+| 契約1 evidence provenance       | run ごとに provenance を記録しつつ、trust level は常に `untrusted` に固定する            | `buildRunEvidence` / `evidenceTrustLevel` |
 | 契約2 canonical `review_run_id` | optional field を read 側で解決し、突合できた feedback 件数を報告する                    | `deriveReviewRunId` / `join`              |
 | 契約3 Experiment Manifest       | P2 の範囲。P1 では実装しない                                                             | —                                         |
 | 契約4 stable CLI / content ID   | `river evolve aggregate` を stable CLI とし、ID を証拠集合の content hash から生成する   | `computeCandidateId`                      |
@@ -71,26 +71,49 @@ exit code は常に 0 です。P1 の出力は gate ではなく観測である�
 
 補足:
 
-- `evidence_source` が未記録の run は `local` として扱い、trust level は `untrusted` に倒す
-- candidate 自身が生成した証拠（`generated_by_candidate: true`）は trusted に昇格しない
+- `evidence_source` が未記録の run は `local` として扱う
 - fingerprint を持たない sub-cluster は表示だけ許可し、`experimentEligible: false` を立てる
+- 同じ fingerprint の feedback が複数行あっても 1 件の finding とみなす。`experimentEligible` は distinct な (run, PR) の件数で判定する
 - stage2 の `failureMode` は `null` 固定である。語彙は P1 の観測後に確定する契約のため、先取りしない
 - candidate の `trust.canaryEligible` は P1 では常に `false` である
 
-## 6. read-only の担保
+## 6. trust boundary（P1 では全件 untrusted）
+
+集約が読む provenance は、すべて `.river/runs/*.json` の自己申告です。この保存先は被レビュー側の書き込み権限下にあり（`src/lib/result-store.mjs` の trust-boundary note）、`evidence_source: CI` や `trusted_by: github-actions` を検証なしに名乗れます。したがって P1 は次を固定します。
+
+- `trust_level` は入力によらず常に `untrusted` である（`evidenceTrustLevel` は他の値を返さない）
+- `provenance_verified` は常に `false` である
+- `evidence.trustedRunCount` と `candidate.trust.trustedEvidenceCount` は常に 0 で、schema が `const: 0` で機械的に検証する
+- `artifact_sha256` は同じレコードの self-digest である。コピー間の不一致は検出できるが、レコードを書き換えられる主体は digest も再計算できるため、真正性の証明にはならない
+- 同一 `review_run_id` を名乗る run が複数あり得るため、`artifact_sha256` 昇順で先勝ちに固定し、衝突は `join.duplicateReviewRunIds` に出力する
+
+`trusted_by` の署名・検証方式（CI attestation または人手承認記録）は契約1 の未決事項であり、P2 で確定します。trusted への昇格経路は、その検証機構が実装されるまで開けません。
+
+## 7. 現時点の実データでの退行
+
+canonical `review_run_id` と provenance の生産者は、まだリポジトリ内に存在しません。`buildFeedbackEntry` は `review_run_id` を書かず、`buildRunRecord` は `provenance` を書かず、finding は `category` を持ちません。そのため今日の実データに対しては次のように退行します。
+
+- `join.joinedFeedbackCount` は 0 になり、candidate の `evidence` は空配列になる
+- stage2 の `category` は `finding.ruleId`（発行元 skill id）へフォールバックする
+- 反復の識別は PR 番号だけが担う
+
+この状態は想定内で、テストでも「今日の実データ形状」として固定しています。値が埋まるのは契約2 の伝播（P1 以降で各生産者へ optional field を追加する作業）が進んでからです。
+
+## 8. read-only の担保
 
 - `src/lib/shadow-aggregate.mjs` は `node:crypto` 以外を import せず、fs へ触れない
 - CLI は書き込み系 option を提供しない
 - candidate は `writeEffects: []` を宣言し、schema が `maxItems: 0` で検証する
 - テストは対象リポジトリのファイル一覧・内容・mtime を実行前後で比較し、変化がないことを確認する
 
-## 7. 次フェーズへの申し送り
+## 9. 次フェーズへの申し送り
 
-- 未決事項の `trusted_by` の署名・検証方式は P2 で確定する（契約1）
+- `trusted_by` の署名・検証方式は P2 で確定する（契約1）。それまで trusted 経路は閉じたままにする
+- canonical `review_run_id` を saved run / feedback / Riverbed / eval ledger の各生産者へ伝播させる（契約2）
 - stage2 の failure mode 語彙は、本コマンドの出力を数サイクル観測してから決める（契約5）
 - profile の単位（reviewMode か、対象リポジトリ×phase の組か）は P2 で受入基準を決めるときに確定する（契約6）
 
-## 8. 参照
+## 10. 参照
 
 - `docs/development/1574-p0-design-contract.md`: P0 設計契約 6 点
 - issue #1574: Review Evolution Cycle Epic
