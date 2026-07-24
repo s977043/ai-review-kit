@@ -61,14 +61,14 @@ river evolve aggregate <path> [--min <n>] [--month YYYY-MM] [--output json]
 
 ## 5. 設計契約との対応
 
-| 契約                            | P1 での実装                                                                              | 実装箇所                                     |
-| ------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------- |
-| 契約1 evidence provenance       | run ごとに provenance を記録しつつ、trust level は常に `untrusted` に固定する            | `buildRunEvidence` / `evidenceTrustLevel`    |
-| 契約2 canonical `review_run_id` | optional field を read 側で解決し、突合できた feedback 件数を報告する                    | `deriveReviewRunId` / `join`                 |
-| 契約3 Experiment Manifest       | P2 の範囲。P1 では実装しない                                                             | —                                            |
-| 契約4 stable CLI / content ID   | `river evolve aggregate` を stable CLI とし、ID 導出は #1624 の実装へ一本化する          | `computeCandidateId`（#1624 の薄い adapter） |
-| 契約5 two-stage clustering      | stage1 は `(skillId, feedbackType)`、stage2 は fingerprint / category / scope で分割する | `buildClusters`                              |
-| 契約6 profile 別受入基準        | P2 の範囲。P1 では実装しない                                                             | —                                            |
+| 契約                            | P1 での実装                                                                                 | 実装箇所                                     |
+| ------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 契約1 evidence provenance       | run ごとに provenance を記録しつつ、trust level は常に `untrusted` に固定する               | `buildRunEvidence` / `evidenceTrustLevel`    |
+| 契約2 canonical `review_run_id` | optional field を read 側で解決し、突合できた feedback 件数を報告する                       | `deriveReviewRunId` / `join`                 |
+| 契約3 Experiment Manifest       | P2 の範囲。P1 では実装しない                                                                | —                                            |
+| 契約4 stable CLI / content ID   | `river evolve aggregate` を stable CLI とし、ID 導出は #1624 の実装へ一本化する             | `computeCandidateId`（#1624 の薄い adapter） |
+| 契約5 two-stage clustering      | stage1 は `(skillId, feedbackType)`、stage2 は fingerprint / category / filePath で分割する | `buildClusters`                              |
+| 契約6 profile 別受入基準        | P2 の範囲。P1 では実装しない                                                                | —                                            |
 
 補足:
 
@@ -77,6 +77,23 @@ river evolve aggregate <path> [--min <n>] [--month YYYY-MM] [--output json]
 - 同じ fingerprint の feedback が複数行あっても 1 件の finding とみなす。`experimentEligible` は distinct な (run, PR) の件数で判定する
 - stage2 の `failureMode` は `null` 固定である。語彙は P1 の観測後に確定する契約のため、先取りしない
 - candidate の `trust.canaryEligible` は P1 では常に `false` である
+- stage2 の第3軸は `filePath`（`finding.file`）である。#1648 で finding へ追加した `scope`（in-diff / pre-existing）とは別物のため、名前を分けている。`finding.scope` を集計軸へ取り込むかは今後の検討事項である
+
+### shadow から propose への接続（収束の運用契約）
+
+観測した candidate を永続化するときは、cluster 全体の JSONL ではなく **candidate の `sourceFeedbackRefs`** を `river promote propose --input` へ流します。stage2 のサブクラスタは evidence 集合が互いに異なるため、cluster 全体を流すとサブクラスタのどれとも一致しない第3の ID が生まれるためです。
+
+```bash
+river evolve aggregate . --output json \
+  | jq -c '.candidate.sourceFeedbackRefs[]' > candidate-feedback.jsonl
+river promote propose \
+  --input candidate-feedback.jsonl \
+  --cluster-key "$(river evolve aggregate . --output json | jq -r .candidate.clusterKey)" \
+  --index .river/memory/index.json
+```
+
+- `sourceFeedbackRefs` の各要素は propose の入力契約（`validateFeedbackEntryShape`）を満たす形にしてある。`skillId` を含むのはこのためで、hash 入力ではないため candidate ID は変わらない
+- 同一 evidence 集合からは、shadow 観測と propose 永続化が同一の `RR-PC-` ID へ収束する
 
 ### candidate ID の一本化（契約4）
 

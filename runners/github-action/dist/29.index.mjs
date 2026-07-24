@@ -10,7 +10,7 @@ export const modules = {
 /* harmony export */   buildShadowAggregate: () => (/* binding */ buildShadowAggregate),
 /* harmony export */   formatShadowAggregateMarkdown: () => (/* binding */ formatShadowAggregateMarkdown)
 /* harmony export */ });
-/* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, EVIDENCE_SOURCES, P1_TRUST_LEVEL, canonicalJson, deriveReviewRunId, deriveFeedbackReviewRunId, evidenceTrustLevel, buildRunEvidence, buildClusters, computeCandidateId */
+/* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, EVIDENCE_SOURCES, P1_TRUST_LEVEL, deriveReviewRunId, deriveFeedbackReviewRunId, evidenceTrustLevel, buildRunEvidence, buildClusters, computeCandidateId */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7598);
 /* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3077);
 // Shadow aggregate (#1574 P1) — read-only multi-run aggregation.
@@ -31,6 +31,10 @@ export const modules = {
 //   契約5 two-stage clustering → buildClusters (stage 1 / stage 2)
 
 
+
+
+// Re-exported so the aggregate's own hashing helpers keep one implementation
+// with the candidate id derivation (#1624).
 
 
 const SHADOW_AGGREGATE_SCHEMA_VERSION = 1;
@@ -93,24 +97,6 @@ const OBSERVED_PATTERN_BY_FEEDBACK_TYPE = {
 // ---------------------------------------------------------------------------
 // Deterministic helpers
 // ---------------------------------------------------------------------------
-
-/** Recursively sort object keys so JSON.stringify is order-independent. */
-function canonicalize(value) {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.keys(value)
-        .sort()
-        .map((key) => [key, canonicalize(value[key])])
-    );
-  }
-  return value;
-}
-
-/** Canonical (key-sorted) JSON serialization used for every content hash. */
-function canonicalJson(value) {
-  return JSON.stringify(canonicalize(value ?? null));
-}
 
 function sha256Hex(input) {
   return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(input).digest('hex');
@@ -208,7 +194,7 @@ function buildRunEvidence(record, { collectorVersion = COLLECTOR_VERSION } = {})
     evidence_source: source,
     source_commit_sha:
       nonEmptyString(provenance.sourceCommitSha) ?? nonEmptyString(record?.commitSha),
-    artifact_sha256: sha256Hex(canonicalJson(record)),
+    artifact_sha256: sha256Hex((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(record)),
     collector_version: collectorVersion,
     trusted_by: nonEmptyString(provenance.trustedBy),
     generated_by_candidate: provenance.generatedByCandidate === true,
@@ -223,11 +209,17 @@ function buildRunEvidence(record, { collectorVersion = COLLECTOR_VERSION } = {})
 
 /**
  * Index findings of all runs by fingerprint so stage-2 clustering can attach
- * category / scope to a feedback entry. Later runs win for the same
+ * category / filePath to a feedback entry. Later runs win for the same
  * fingerprint (same convention as diffRunHistory).
  *
+ * NOTE: `finding.scope` (the in-diff / pre-existing classification added in
+ * #1648) is deliberately NOT read here. The stage-2 axis below is the file the
+ * finding was reported on, which is why it is called `filePath` — reusing the
+ * name `scope` for it made two unrelated meanings collide. Whether the #1648
+ * scope should become an additional clustering axis is left to a later phase.
+ *
  * @param {object[]} runRecords
- * @returns {Map<string, { category: string|null, scope: string|null, review_run_id: string|null }>}
+ * @returns {Map<string, { category: string|null, filePath: string|null, review_run_id: string|null }>}
  */
 function indexFindingsByFingerprint(runRecords) {
   const index = new Map();
@@ -248,7 +240,7 @@ function indexFindingsByFingerprint(runRecords) {
         // the emitting skill id by review-engine / local-runner) is what real
         // findings carry today, so it is the working fallback.
         category: nonEmptyString(finding?.category) ?? nonEmptyString(finding?.ruleId),
-        scope: nonEmptyString(finding?.file),
+        filePath: nonEmptyString(finding?.file),
         review_run_id: reviewRunId,
       });
     }
@@ -256,11 +248,17 @@ function indexFindingsByFingerprint(runRecords) {
   return index;
 }
 
-/** Stage-2 sub-cluster key. `failureMode` is intentionally absent (see below). */
-function subClusterKeyOf({ fingerprint, category, scope }) {
-  return [fingerprint ?? 'no-fingerprint', category ?? 'no-category', scope ?? 'no-scope'].join(
-    '::'
-  );
+/**
+ * Stage-2 sub-cluster key. `failureMode` is intentionally absent (see below).
+ * The third component is the finding's FILE PATH (see indexFindingsByFingerprint),
+ * not the #1648 `finding.scope` classification.
+ */
+function subClusterKeyOf({ fingerprint, category, filePath }) {
+  return [
+    fingerprint ?? 'no-fingerprint',
+    category ?? 'no-category',
+    filePath ?? 'no-file-path',
+  ].join('::');
 }
 
 /**
@@ -269,7 +267,7 @@ function subClusterKeyOf({ fingerprint, category, scope }) {
  * - Stage 1 detects recurrence on `(skillId, feedbackType)` — byte-identical
  *   key format to #1568-A's clusterKey, so both loops group the same way.
  * - Stage 2 splits a recurring class into cause hypotheses by
- *   fingerprint / category / scope.
+ *   fingerprint / category / filePath.
  *
  * `failureMode` is emitted as `null` on purpose: 契約5 defers the failure-mode
  * vocabulary until it has been *observed* in P1, so inventing one here would
@@ -314,7 +312,7 @@ function buildClusters(
       const shape = {
         fingerprint,
         category: finding?.category ?? null,
-        scope: finding?.scope ?? null,
+        filePath: finding?.filePath ?? null,
       };
       const key = subClusterKeyOf(shape);
       if (!stage2.has(key)) {
@@ -377,10 +375,22 @@ function occurrenceKey(ref) {
   return `${ref.review_run_id ?? ''}#${ref.pr ?? ''}`;
 }
 
+/**
+ * Project one feedback row into the reference stored on a sub-cluster.
+ *
+ * `skillId` is included so `candidate.sourceFeedbackRefs` is directly usable as
+ * the `--input` of `river promote propose`: that command validates every input
+ * row with `validateFeedbackEntryShape`, which requires a non-empty skillId,
+ * and rejects rows whose `skillId::feedbackType` does not match `--cluster-key`.
+ * Without it the shadow → propose hand-off had no working path at all.
+ * It is not a hash input (normalizeEvidence ignores it), so the candidate id is
+ * unchanged.
+ */
 function buildFeedbackRef(entry) {
   return {
     review_run_id: deriveFeedbackReviewRunId(entry),
     timestamp: nonEmptyString(entry?.timestamp),
+    skillId: nonEmptyString(entry?.skillId),
     feedbackType: nonEmptyString(entry?.feedbackType),
     findingFingerprint: nonEmptyString(entry?.findingFingerprint),
     pr: Number.isInteger(entry?.pr) && entry.pr > 0 ? entry.pr : null,

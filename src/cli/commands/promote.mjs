@@ -108,6 +108,14 @@ function printScaffold(scaffold) {
  */
 export async function runPromoteCommand(parsed, targetPath) {
   const sub = parsed.promoteSubcommand;
+  // A mistyped option must never be silently ignored: `--dry-rnu` would
+  // otherwise leave dryRun false and let `propose` write the index for real.
+  if (parsed.promoteUnknownOption) {
+    console.error(
+      `Error: unknown option for promote: ${parsed.promoteUnknownOption}. Use: --input --cluster-key --policy-version --approver --reason --index --threshold --feedback-root --include-inactive --output --dry-run`
+    );
+    return 1;
+  }
   if (
     ![
       'propose',

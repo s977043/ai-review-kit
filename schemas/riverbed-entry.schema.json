@@ -77,6 +77,10 @@
               "feedbackType": {
                 "type": "string",
                 "description": "The feedbackType of the source entry."
+              },
+              "timestamp": {
+                "type": ["string", "null"],
+                "description": "ISO timestamp of the source feedback entry. Present only on fingerprintless evidence, where it is what keeps two otherwise identical rows apart and therefore participates in contentHash (#1574 P0 contract 4). Stored so contentHash can be re-derived from the persisted evidence array."
               }
             }
           }

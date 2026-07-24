@@ -45879,6 +45879,7 @@ function normalizePlannerMode(mode, { defaultMode = 'off' } = {}) {
 /* harmony export */   J1: () => (/* binding */ proposePromotionCandidate),
 /* harmony export */   _I: () => (/* binding */ readFeedbackJsonl),
 /* harmony export */   d: () => (/* binding */ KNOWN_POLICY_VERSIONS),
+/* harmony export */   dj: () => (/* binding */ canonicalJson),
 /* harmony export */   e1: () => (/* binding */ CANDIDATE_POLICY_VERSION),
 /* harmony export */   vf: () => (/* binding */ normalizeEvidence),
 /* harmony export */   wk: () => (/* binding */ PromotionProposalError),
@@ -45932,6 +45933,39 @@ const KNOWN_POLICY_VERSIONS = Object.freeze(['1']);
 
 // Length (hex chars) of the content hash kept in the candidate id.
 const CONTENT_ID_HASH_LENGTH = 12;
+
+// Upper bound / character set for skillId in --input entries. A skillId flows
+// into the clusterKey, the candidate title and the Riverbed tags, so an
+// unbounded or control-character-carrying value would corrupt those surfaces.
+const MAX_SKILL_ID_LENGTH = 200;
+const SKILL_ID_PATTERN = /^[\w.\-/:]+$/;
+
+/** Recursively sort object keys so JSON.stringify is order-independent. */
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalize(value[key])])
+    );
+  }
+  return value;
+}
+
+/**
+ * Canonical (key-sorted) JSON serialization used for every content hash.
+ *
+ * Key order must not change a hash: the same evidence set rebuilt by another
+ * code path (or read back from a stored candidate) has to re-derive the same
+ * contentHash, and JSON.stringify preserves insertion order by default.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+function canonicalJson(value) {
+  return JSON.stringify(canonicalize(value ?? null));
+}
 
 const SUGGESTED_ACTION = {
   false_positive: 'guard fixture を追加し、skill の False-positive guards を強化する',
@@ -46224,6 +46258,15 @@ function normalizeEvidence(entries) {
     const pr = Number.isInteger(entry.pr) && entry.pr > 0 ? entry.pr : null;
     if (fingerprint === null) {
       fingerprintless = true;
+      // Without a fingerprint the timestamp is a hash input, so a non-string
+      // value (an object, a Date, a number) would either serialize by key order
+      // or lose precision and make the id non-deterministic. Reject instead.
+      if (entry.timestamp != null && typeof entry.timestamp !== 'string') {
+        throw new PromotionProposalError(
+          'evidence without findingFingerprint must carry a string timestamp ' +
+            `(got ${typeof entry.timestamp}); it participates in the content hash.`
+        );
+      }
       return {
         feedbackType: nfc(entry.feedbackType),
         findingFingerprint: null,
@@ -46234,7 +46277,9 @@ function normalizeEvidence(entries) {
     return { feedbackType: nfc(entry.feedbackType), findingFingerprint: fingerprint, pr };
   });
   const unique = new Map();
-  for (const item of normalized) unique.set(JSON.stringify(item), item);
+  // canonicalJson (not JSON.stringify) so the dedup key — and therefore the
+  // sort order of the hashed evidence array — never depends on key order.
+  for (const item of normalized) unique.set(canonicalJson(item), item);
   const evidence = [...unique.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   return {
     evidence: evidence.map(([, item]) => item),
@@ -46267,6 +46312,15 @@ function validateFeedbackEntryShape(entry) {
   }
   if (typeof entry.skillId !== 'string' || !entry.skillId.trim()) {
     return 'skillId must be a non-empty string.';
+  }
+  if (entry.skillId.length > MAX_SKILL_ID_LENGTH) {
+    return `skillId must be at most ${MAX_SKILL_ID_LENGTH} characters (got ${entry.skillId.length}).`;
+  }
+  if (!SKILL_ID_PATTERN.test(entry.skillId)) {
+    // Control characters and separators would leak into the clusterKey, the
+    // candidate title and the Riverbed tags, where they are neither escaped
+    // nor round-trippable.
+    return 'skillId must contain only letters, digits, underscore, dot, hyphen, slash, or colon.';
   }
   if (!_feedback_mjs__WEBPACK_IMPORTED_MODULE_3__/* .FEEDBACK_TYPES */ .U1.includes(entry.feedbackType)) {
     return `feedbackType "${entry.feedbackType}" is not one of: ${_feedback_mjs__WEBPACK_IMPORTED_MODULE_3__/* .FEEDBACK_TYPES */ .U1.join(', ')}.`;
@@ -46301,10 +46355,10 @@ function computeCandidateContentHash({
   evidence,
   policyVersion = CANDIDATE_POLICY_VERSION,
 }) {
-  // Key order is fixed by construction (no JSON.stringify replacer needed):
-  // clusterKey -> evidence -> policyVersion, with each evidence element already
-  // normalized by normalizeEvidence().
-  const canonical = JSON.stringify({ clusterKey, evidence, policyVersion });
+  // Key-sorted serialization, so the hash is re-derivable from any object that
+  // holds the same data regardless of how its keys were inserted — including
+  // the evidence array read back from a stored candidate entry.
+  const canonical = canonicalJson({ clusterKey, evidence, policyVersion });
   const contentHash = (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(canonical).digest('hex');
   return {
     contentHash,
@@ -46419,6 +46473,12 @@ function buildProposedCandidate({
     expiresInDays,
     id: candidateId,
   });
+  // Store the EXACT evidence array the hash was computed over. buildPromotionCandidate
+  // re-projects its `group` into `{ pr, findingFingerprint, feedbackType }`, which drops
+  // the `timestamp` that fingerprintless evidence hashes on (and, for fingerprintless
+  // input, collapses distinct rows into duplicates that contradict recurrenceCount).
+  // Re-deriving contentHash from the stored entry then always mismatched.
+  entry.context.promotionCandidate.evidence = evidence;
   // Persist the hash inputs so a later reader can re-derive and verify the id
   // instead of trusting it (the id itself is a 12-hex truncation).
   entry.context.promotionCandidate.contentHash = contentHash;
@@ -69197,6 +69257,14 @@ function printScaffold(scaffold) {
  */
 async function runPromoteCommand(parsed, targetPath) {
   const sub = parsed.promoteSubcommand;
+  // A mistyped option must never be silently ignored: `--dry-rnu` would
+  // otherwise leave dryRun false and let `propose` write the index for real.
+  if (parsed.promoteUnknownOption) {
+    console.error(
+      `Error: unknown option for promote: ${parsed.promoteUnknownOption}. Use: --input --cluster-key --policy-version --approver --reason --index --threshold --feedback-root --include-inactive --output --dry-run`
+    );
+    return 1;
+  }
   if (
     ![
       'propose',
@@ -69663,6 +69731,10 @@ function parseArgs(argv) {
   // Global options the shared parser below handles for `evolve`. Anything else
   // starting with `-` is rejected rather than silently ignored.
   const EVOLVE_SHARED_OPTIONS = new Set(['--output', '-h', '--help', '--debug']);
+  // Same treatment for `promote`: a typo such as `--dry-rnu` must not fall
+  // through to the shared parser and be ignored, because `propose` then writes
+  // the index for real while the caller believes it asked for a dry run.
+  const PROMOTE_SHARED_OPTIONS = new Set(['--output', '--dry-run', '-h', '--help', '--debug']);
   const parsed = {
     command: null,
     target: '.',
@@ -69725,6 +69797,7 @@ function parseArgs(argv) {
     promoteInput: null,
     promoteClusterKey: null,
     promotePolicyVersion: null,
+    promoteUnknownOption: null,
     // evolve subcommand fields (#1574 P1 Shadow aggregate)
     evolveSubcommand: null,
     evolveMin: null,
@@ -69973,13 +70046,14 @@ function parseArgs(argv) {
       }
       if (arg === '--threshold') {
         const value = args.shift();
-        const n = parseInt(value ?? '', 10);
-        if (!value || value.startsWith('-') || Number.isNaN(n) || n < 1) {
+        // Strict parse: parseInt('2garbage') is 2, so a typo would silently
+        // become a different threshold than the one that was typed.
+        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
           console.error('Error: --threshold option requires a positive integer.');
           parsed.command = 'help';
           break;
         }
-        parsed.promoteThreshold = n;
+        parsed.promoteThreshold = Number.parseInt(value, 10);
         continue;
       }
       if (arg === '--feedback-root') {
@@ -70022,17 +70096,24 @@ function parseArgs(argv) {
         parsed.promotePolicyVersion = value;
         continue;
       }
+      // Options that are neither promote's own nor handled by the shared parser
+      // must fail loudly instead of being ignored (a mistyped `--dry-rnu` would
+      // otherwise write the Riverbed index for real).
+      if (arg.startsWith('-') && !PROMOTE_SHARED_OPTIONS.has(arg)) {
+        parsed.promoteUnknownOption = arg;
+        break;
+      }
     }
     if (parsed.command === 'evolve') {
       if (arg === '--min') {
         const value = args.shift();
-        const n = parseInt(value ?? '', 10);
-        if (!value || value.startsWith('-') || Number.isNaN(n) || n < 1) {
+        // Strict parse, same reason as promote's --threshold above.
+        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
           console.error('Error: --min option requires a positive integer.');
           parsed.command = 'help';
           break;
         }
-        parsed.evolveMin = n;
+        parsed.evolveMin = Number.parseInt(value, 10);
         continue;
       }
       if (arg === '--month') {
