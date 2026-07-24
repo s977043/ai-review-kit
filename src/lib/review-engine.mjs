@@ -619,17 +619,23 @@ export async function generateReview({
 
   // #1644: observability for the scope determination. `mismatch` counts
   // findings whose LLM self-report disagreed with the machine determination
-  // (the machine verdict wins); a rising count signals prompt drift.
-  debug.scopeStats = verifierResults.reduce(
-    (acc, r) => {
-      acc[r.verification.scope] = (acc[r.verification.scope] ?? 0) + 1;
-      acc.bySource[r.verification.scopeSource] =
-        (acc.bySource[r.verification.scopeSource] ?? 0) + 1;
-      if (r.verification.scopeMismatch) acc.mismatch += 1;
-      return acc;
-    },
-    { 'in-diff': 0, 'pre-existing': 0, mismatch: 0, bySource: {} }
-  );
+  // (the machine verdict wins); a rising count signals prompt drift. Unlike
+  // verifierStats — which intentionally keeps describing the primary (possibly
+  // wholly rejected) batch — scopeStats must describe the set that actually
+  // carries `scope` into the findings, so it is recomputed from the last
+  // verifier pass whenever the fallback branch below re-runs the verifier.
+  const summarizeScope = (results) =>
+    results.reduce(
+      (acc, r) => {
+        acc[r.verification.scope] = (acc[r.verification.scope] ?? 0) + 1;
+        acc.bySource[r.verification.scopeSource] =
+          (acc.bySource[r.verification.scopeSource] ?? 0) + 1;
+        if (r.verification.scopeMismatch) acc.mismatch += 1;
+        return acc;
+      },
+      { 'in-diff': 0, 'pre-existing': 0, mismatch: 0, bySource: {} }
+    );
+  debug.scopeStats = summarizeScope(verifierResults);
 
   // Fail-safe: mirror the format-validation fallback for a wholesale verifier
   // rejection. Inline-only findings (Severity:/Confidence: present but
@@ -661,9 +667,9 @@ export async function generateReview({
     // verifier invariant (heuristic/fallback findings use the full labeled
     // format and pass). verifierStats above intentionally keeps describing the
     // rejected LLM batch.
-    verified = runVerifier(comments)
-      .filter((r) => r.verification.verified)
-      .map(withScope);
+    const fallbackResults = runVerifier(comments);
+    verified = fallbackResults.filter((r) => r.verification.verified).map(withScope);
+    debug.scopeStats = summarizeScope(fallbackResults);
   }
 
   // Replace comments with verified-only set

@@ -70,7 +70,9 @@
 | `suggestion` | `string`        | No   | 修正や後続アクションのヒント。                                 |
 | `scope`      | `string`        | No   | 指摘が差分の追加行に由来するか。`in-diff` / `pre-existing`。   |
 
-> `scope` は additive なメタデータです（#1644 Phase 1）。verifier がパース済み差分の追加行と finding の行番号を突き合わせて決定論的に判定し、判定できない場合のみレビュアーの自己申告（`Scope:` ラベル）を採用します。未指定・不明値は fail-safe として `in-diff` として扱い、指摘を目立たない側へ降格させません。severity やゲート判定を上書きしてはいけません。
+> `scope` は additive なメタデータです（#1644 Phase 1）。verifier がパース済み差分の追加行と finding の行範囲を突き合わせて決定論的に判定し、判定できない場合のみレビュアーの自己申告（`Scope:` ラベル）を採用します。追加行のみが `in-diff` であり、unified diff の context 行は `pre-existing` として扱います（行の許容幅は 0）。未指定・不明値は fail-safe の `in-diff` とし、指摘を目立たない側へ降格させません。severity やゲート判定を上書きしてはいけません。
+>
+> Phase 1 で `scope` を出力するのは JSON 形式（`output.schema.json` が規定する成果物）のみです。YAML / HTML 形式および PR コメントへの反映は Phase 2 で扱います。
 
 ## 禁止事項
 

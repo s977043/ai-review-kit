@@ -235,6 +235,25 @@ test('parseFindingMessage extracts an optional Scope label without disturbing ot
   assert.equal(withoutScope.confidence, 'high');
 });
 
+test('parseFindingMessage does not truncate content on a prose "Scope:" occurrence', () => {
+  // Back-compat guard (#1644 review W3): OAuth / IAM scopes appear verbatim in
+  // real review text, and treating "Scope:" as a structural label would cut the
+  // Evidence and Fix captures short.
+  const parsed = parseFindingMessage(
+    'Finding: token is over-privileged Evidence: the OAuth Scope: admin:org is granted in src/app.mjs Impact: 影響 Fix: narrow the requested Scope: read:org only Severity: warning Confidence: high'
+  );
+  assert.equal(parsed.evidence[0], 'the OAuth Scope: admin:org is granted in src/app.mjs');
+  assert.equal(parsed.suggestion, 'narrow the requested Scope: read:org only');
+  assert.equal(parsed.scope, null, 'prose occurrence is not a self-report');
+});
+
+test('parseFindingMessage ignores an out-of-vocabulary Scope value', () => {
+  const parsed = parseFindingMessage(
+    'Finding: 問題 Evidence: 根拠 Fix: 直す Severity: warning Confidence: high Scope: unknown'
+  );
+  assert.equal(parsed.scope, null);
+});
+
 test('generateReview assigns a scope to every finding (fail-safe in-diff)', async () => {
   const diffText = fs.readFileSync(
     'tests/fixtures/planner-dataset/diffs/midstream-security-hardcoded-token.diff',

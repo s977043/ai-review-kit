@@ -15,7 +15,9 @@ import {
 // Module-scope regexes to avoid re-creation per call
 const RE_EVIDENCE = /Evidence:\s*(\S.{4,})/;
 const RE_SEVERITY = /Severity:\s*(\w+)/;
-const RE_SCOPE = /Scope:\s*([\w-]+)/;
+// Value-constrained so that prose containing the word "Scope:" (OAuth / IAM
+// scopes are common in review text) cannot be mistaken for a self-report.
+const RE_SCOPE = /(?:^|\s)Scope:\s*(in[-_ ]?diff|pre[-_ ]?existing)\b/i;
 const RE_ACTIONABLE = /(?:Fix|Suggestion):\s*(.{10,})/;
 const RE_FILE_REF = /[\w/-]+(?:\.[\w]+)+/g;
 
@@ -138,15 +140,24 @@ function checkFilePhaseCoherent(finding, fileTypes) {
 
 /**
  * Tolerance (in lines) when matching a finding line against the diff's added
- * lines. Mirrors the ±2 window used by findingsOverlap in
- * reviewer-orchestrator.mjs, absorbing off-by-a-line LLM line numbers.
+ * lines.
+ *
+ * Deliberately 0: `addedLines` is ground truth for "this diff changed this
+ * line", and a unified diff surrounds every hunk with context lines (-U3 by
+ * default). Any non-zero window bleeds into those context lines and reports
+ * unchanged code as `in-diff`, which breaks the adopted contract that context
+ * lines are `pre-existing`. Do not widen this without re-deriving the contract
+ * (a widened window is measurable: see tests/verifier.test.mjs, which asserts
+ * context-line scope against real parseUnifiedDiff output).
  */
-const SCOPE_LINE_TOLERANCE = 2;
+const SCOPE_LINE_TOLERANCE = 0;
 
 /**
  * Locate the parsed-diff entry for a finding's file.
- * Accepts an exact path match first, then a suffix match so that findings
- * reported with a repo-relative path still match a prefixed diff path.
+ * Accepts an exact path match first, then an unambiguous suffix match so that
+ * findings reported with a repo-relative path still match a prefixed diff path.
+ * An ambiguous suffix match (2+ candidates) returns null so that the caller
+ * fails safe rather than guessing a file.
  * @param {string} file
  * @param {Array<{ path?: string, newPath?: string, addedLines?: number[] }>} diffFiles
  * @returns {{ path?: string, newPath?: string, addedLines?: number[] } | null}
@@ -157,25 +168,25 @@ function findDiffFileEntry(file, diffFiles) {
   const candidates = (entry) => [entry?.path, entry?.newPath].filter(Boolean).map(String);
   const exact = diffFiles.find((entry) => candidates(entry).includes(target));
   if (exact) return exact;
-  return (
-    diffFiles.find((entry) =>
-      candidates(entry).some((p) => p.endsWith(`/${target}`) || target.endsWith(`/${p}`))
-    ) ?? null
+  const suffixMatches = diffFiles.filter((entry) =>
+    candidates(entry).some((p) => p.endsWith(`/${target}`) || target.endsWith(`/${p}`))
   );
+  return suffixMatches.length === 1 ? suffixMatches[0] : null;
 }
 
 /**
- * Machine determination of a finding's scope by matching its line against the
- * added lines of the parsed diff (#1644 Phase 1, option B).
+ * Machine determination of a finding's scope by matching its line range against
+ * the added lines of the parsed diff (#1644 Phase 1, option B).
  *
  * Returns `null` when the diff cannot decide (no parsed diff, file not present
- * in the diff, or the finding carries no line number). Callers fall back to the
- * LLM self-report and then to the fail-safe default.
+ * or ambiguous in the diff, or the finding carries no usable line number).
+ * Callers fall back to the LLM self-report and then to the fail-safe default.
  *
  * Context lines (unified ±3) are deliberately treated as `pre-existing`: they
- * are not changed lines.
+ * are not changed lines. A range finding (`lineEnd`) is `in-diff` when the
+ * range intersects any added line.
  *
- * @param {{ file?: string, line?: number|null, lineStart?: number|null }} finding
+ * @param {{ file?: string, line?: number|null, lineStart?: number|null, lineEnd?: number|null }} finding
  * @param {Array<object>|null|undefined} diffFiles parsed diff files (diff-processor parseUnifiedDiff)
  * @returns {'in-diff'|'pre-existing'|null}
  */
@@ -184,13 +195,18 @@ export function determineScopeFromDiff(finding, diffFiles) {
   const entry = findDiffFileEntry(finding?.file, diffFiles);
   if (!entry) return null;
 
-  const line = finding?.line ?? finding?.lineStart ?? null;
-  if (typeof line !== 'number' || !Number.isFinite(line)) return null;
+  const isUsableLine = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 1;
+
+  const start = finding?.line ?? finding?.lineStart ?? null;
+  if (!isUsableLine(start)) return null;
+  const end = isUsableLine(finding?.lineEnd) && finding.lineEnd >= start ? finding.lineEnd : start;
 
   const addedLines = Array.isArray(entry.addedLines) ? entry.addedLines : [];
   if (addedLines.length === 0) return null;
 
-  const isAdded = addedLines.some((added) => Math.abs(added - line) <= SCOPE_LINE_TOLERANCE);
+  const lower = start - SCOPE_LINE_TOLERANCE;
+  const upper = end + SCOPE_LINE_TOLERANCE;
+  const isAdded = addedLines.some((added) => added >= lower && added <= upper);
   return isAdded ? 'in-diff' : 'pre-existing';
 }
 
@@ -204,6 +220,10 @@ export function determineScopeFromDiff(finding, diffFiles) {
  */
 export function resolveFindingScope({ finding, diffFiles }) {
   const machineScope = determineScopeFromDiff(finding, diffFiles);
+  // Value-constrained match: only an in-vocabulary token counts as a
+  // self-report. An out-of-vocabulary label (`Scope: unknown`) must NOT be
+  // normalized into `in-diff`, or it would both fabricate a self-report and
+  // produce a spurious scopeMismatch against the machine verdict.
   const selfReportMatch = RE_SCOPE.exec(String(finding?.message ?? ''));
   const selfReported = selfReportMatch ? normalizeScope(selfReportMatch[1]) : null;
 

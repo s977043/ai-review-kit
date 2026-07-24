@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { verifyFinding } from '../src/lib/verifier.mjs';
+import fs from 'node:fs';
+
+import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
+import { determineScopeFromDiff, verifyFinding } from '../src/lib/verifier.mjs';
 
 test('verifyFinding: passes for well-formed finding', () => {
   const result = verifyFinding({
@@ -325,14 +328,130 @@ test('verifyFinding: scope is pre-existing when the line is outside the added li
   assert.equal(result.scopeSource, 'machine');
 });
 
-test('verifyFinding: scope tolerates a two-line offset from the added lines', () => {
+test('verifyFinding: scope does not widen beyond the added lines (tolerance 0)', () => {
+  for (const line of [9, 13, 14]) {
+    const result = verifyFinding({
+      finding: { file: 'src/app.mjs', line, message: SCOPE_MESSAGE },
+      diff: SCOPE_DIFF,
+      skill: { metadata: {} },
+      diffFiles: SCOPE_DIFF_FILES,
+    });
+    assert.equal(result.scope, 'pre-existing', `line ${line} must not be in-diff`);
+  }
+});
+
+test('determineScopeFromDiff: real parseUnifiedDiff context lines are pre-existing', () => {
+  // Regression guard for the tolerance widening (#1644 review B1): hand-written
+  // addedLines cannot expose it, because a unified diff always surrounds a hunk
+  // with context lines. Drive the assertion from real parser output instead.
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/midstream-security-hardcoded-token.diff',
+    'utf8'
+  );
+  const { files } = parseUnifiedDiff(diffText);
+  const entry = files.find((f) => f.path === 'src/config/auth.ts');
+  assert.ok(entry, 'fixture file is present in the parsed diff');
+  assert.ok(entry.addedLines.length > 0, 'fixture has added lines');
+
+  const addedSet = new Set(entry.addedLines);
+  const firstAdded = Math.min(...entry.addedLines);
+  const contextLines = [];
+  for (let line = 1; line < firstAdded; line += 1) {
+    if (!addedSet.has(line)) contextLines.push(line);
+  }
+  assert.ok(contextLines.length > 0, 'fixture has context lines before the first added line');
+
+  for (const line of contextLines) {
+    assert.equal(
+      determineScopeFromDiff({ file: 'src/config/auth.ts', line }, files),
+      'pre-existing',
+      `context line ${line} must be pre-existing`
+    );
+  }
+  for (const line of entry.addedLines) {
+    assert.equal(
+      determineScopeFromDiff({ file: 'src/config/auth.ts', line }, files),
+      'in-diff',
+      `added line ${line} must be in-diff`
+    );
+  }
+});
+
+test('determineScopeFromDiff: non-positive or non-finite lines are undetermined (W2)', () => {
+  for (const line of [0, -5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.equal(
+      determineScopeFromDiff({ file: 'src/app.mjs', line }, SCOPE_DIFF_FILES),
+      null,
+      `line ${line} must not be decided by the diff`
+    );
+  }
   const result = verifyFinding({
-    finding: { file: 'src/app.mjs', line: 14, message: SCOPE_MESSAGE },
+    finding: { file: 'src/app.mjs', line: 0, message: SCOPE_MESSAGE },
     diff: SCOPE_DIFF,
     skill: { metadata: {} },
     diffFiles: SCOPE_DIFF_FILES,
   });
+  assert.equal(result.scope, 'in-diff', 'fails safe rather than demoting to pre-existing');
+  assert.equal(result.scopeSource, 'default');
+});
+
+test('determineScopeFromDiff: an ambiguous suffix match is undetermined (W4)', () => {
+  const ambiguous = [
+    { path: 'packages/a/src/app.mjs', addedLines: [10] },
+    { path: 'packages/b/src/app.mjs', addedLines: [99] },
+  ];
+  assert.equal(determineScopeFromDiff({ file: 'src/app.mjs', line: 10 }, ambiguous), null);
+
+  const unique = [
+    { path: 'packages/a/src/app.mjs', addedLines: [10] },
+    { path: 'packages/b/src/other.mjs', addedLines: [99] },
+  ];
+  assert.equal(determineScopeFromDiff({ file: 'src/app.mjs', line: 10 }, unique), 'in-diff');
+});
+
+test('determineScopeFromDiff: a range finding intersecting added lines is in-diff (N6)', () => {
+  const files = [{ path: 'src/app.mjs', addedLines: [20, 21] }];
+  assert.equal(
+    determineScopeFromDiff({ file: 'src/app.mjs', lineStart: 15, lineEnd: 25 }, files),
+    'in-diff'
+  );
+  assert.equal(
+    determineScopeFromDiff({ file: 'src/app.mjs', lineStart: 30, lineEnd: 40 }, files),
+    'pre-existing'
+  );
+  assert.equal(
+    determineScopeFromDiff({ file: 'src/app.mjs', lineStart: 30, lineEnd: 10 }, files),
+    'pre-existing',
+    'an inverted range degrades to the start line'
+  );
+});
+
+test('verifyFinding: an out-of-vocabulary Scope label is not a self-report (N7)', () => {
+  const result = verifyFinding({
+    finding: { file: 'src/app.mjs', message: `${SCOPE_MESSAGE}\nScope: unknown` },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(result.scopeSelfReported, null);
+  assert.equal(result.scopeSource, 'default');
   assert.equal(result.scope, 'in-diff');
+  assert.equal(result.scopeMismatch, false, 'no spurious mismatch from a normalized fake report');
+});
+
+test('verifyFinding: prose containing "Scope:" is not read as a self-report (W3)', () => {
+  const result = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      message:
+        'Finding: token is over-privileged Evidence: the OAuth Scope: admin:org is granted in src/app.mjs Severity: warning Confidence: high Fix: narrow the requested scope to read:org only',
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(result.scopeSelfReported, null);
+  assert.equal(result.scopeSource, 'default');
 });
 
 test('verifyFinding: scope falls back to the self-reported label when the diff cannot decide', () => {

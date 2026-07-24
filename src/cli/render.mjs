@@ -505,6 +505,10 @@ export function formatJsonOutput(result, phase) {
       ...(f.lineEnd && f.lineEnd !== f.lineStart ? { lineEnd: f.lineEnd } : {}),
       ...(f.suggestion ? { suggestion: f.suggestion } : {}),
       ...(f.consensusLevel ? { consensusLevel: f.consensusLevel } : {}),
+      // #1644 Phase 1: the JSON output is the artifact governed by
+      // output.schema.json, so `scope` must reach it for the schema field to be
+      // observable at all. yaml/html surfaces stay unchanged (Phase 2).
+      ...(f.scope ? { scope: f.scope } : {}),
       ...(f.reviewerRole ? { reviewerRole: f.reviewerRole } : {}),
     };
   });
