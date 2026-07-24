@@ -10,12 +10,45 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getOutputSchemaValidator } from '../src/cli/render.mjs';
+import { formatJsonOutput, getOutputSchemaValidator } from '../src/cli/render.mjs';
 
 describe('getOutputSchemaValidator', () => {
   it('loads schemas/output.schema.json and returns a compiled validator', () => {
     const validate = getOutputSchemaValidator();
     assert.notStrictEqual(validate, null, 'expected output.schema.json to load successfully');
     assert.strictEqual(typeof validate, 'function');
+  });
+});
+
+// #1644 Phase 1: the JSON artifact is what output.schema.json governs, so a
+// schema field that never reaches formatJsonOutput would be unobservable.
+describe('formatJsonOutput scope propagation', () => {
+  const baseFinding = {
+    id: 'rr-1',
+    ruleId: 'security-basic',
+    title: 'token',
+    message: 'Finding: token Evidence: x Severity: warning Confidence: high Fix: rotate the token',
+    severity: 'major',
+    confidence: 'high',
+    status: 'open',
+    evidence: ['x'],
+    file: 'src/app.mjs',
+    lineStart: 3,
+    lineEnd: 3,
+  };
+
+  it('emits scope on the issue when the finding carries one', () => {
+    const out = formatJsonOutput(
+      { findings: [{ ...baseFinding, scope: 'pre-existing' }] },
+      'midstream'
+    );
+    assert.strictEqual(out.issues[0].scope, 'pre-existing');
+    const validate = getOutputSchemaValidator();
+    assert.ok(validate(out), JSON.stringify(validate.errors));
+  });
+
+  it('omits scope when the finding has none (back-compat)', () => {
+    const out = formatJsonOutput({ findings: [baseFinding] }, 'midstream');
+    assert.ok(!('scope' in out.issues[0]));
   });
 });

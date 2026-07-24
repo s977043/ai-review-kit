@@ -157,6 +157,8 @@
       "required": [
         "schemaVersion",
         "candidateId",
+        "contentHash",
+        "uniqueEvidenceCount",
         "policyVersion",
         "createdAt",
         "mode",
@@ -190,8 +192,18 @@
         "schemaVersion": { "type": "integer", "const": 1 },
         "candidateId": {
           "type": "string",
-          "pattern": "^RR-IC-[0-9a-f]{12}$",
-          "description": "Content-addressed id derived from the normalized evidence set, cluster keys, and policy version — never from the generation date (contract 4)."
+          "pattern": "^RR-PC-[0-9a-f]{12}$",
+          "description": "Content-addressed id from src/lib/promotion-candidates.mjs (contract 4): sha256 over { clusterKey, normalized evidence, policyVersion }, never the generation date. Identical to the id `river promote propose` mints for the same evidence, so shadow observation and persisted candidate converge."
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Full hash behind candidateId, so a reader can re-derive and verify the 12-hex truncation."
+        },
+        "uniqueEvidenceCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Evidence items after deduplication / NFC normalization — the set the hash was computed over."
         },
         "policyVersion": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },

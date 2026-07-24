@@ -39,12 +39,13 @@ P1 は、完了済みの review run と feedback を **読み取り専用**で�
 
 ## 3. ファイル配置
 
-| ファイル                               | 役割                                                    |
-| -------------------------------------- | ------------------------------------------------------- |
-| `src/lib/shadow-aggregate.mjs`         | 集約ロジック本体。I/O を持たない純関数群                |
-| `src/cli/commands/evolve.mjs`          | `river evolve aggregate` のハンドラ。読み出しと出力のみ |
-| `schemas/shadow-aggregate.schema.json` | 出力アーティファクトと candidate の JSON Schema         |
-| `tests/shadow-aggregate.test.mjs`      | 契約準拠・決定性・read-only のテスト                    |
+| ファイル                               | 役割                                                          |
+| -------------------------------------- | ------------------------------------------------------------- |
+| `src/lib/shadow-aggregate.mjs`         | 集約ロジック本体。I/O を持たない純関数群                      |
+| `src/lib/promotion-candidates.mjs`     | candidate ID 導出の SSoT（#1624）。本機能は再実装せず利用する |
+| `src/cli/commands/evolve.mjs`          | `river evolve aggregate` のハンドラ。読み出しと出力のみ       |
+| `schemas/shadow-aggregate.schema.json` | 出力アーティファクトと candidate の JSON Schema               |
+| `tests/shadow-aggregate.test.mjs`      | 契約準拠・決定性・read-only のテスト                          |
 
 ## 4. CLI
 
@@ -60,14 +61,14 @@ river evolve aggregate <path> [--min <n>] [--month YYYY-MM] [--output json]
 
 ## 5. 設計契約との対応
 
-| 契約                            | P1 での実装                                                                              | 実装箇所                                  |
-| ------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------- |
-| 契約1 evidence provenance       | run ごとに provenance を記録しつつ、trust level は常に `untrusted` に固定する            | `buildRunEvidence` / `evidenceTrustLevel` |
-| 契約2 canonical `review_run_id` | optional field を read 側で解決し、突合できた feedback 件数を報告する                    | `deriveReviewRunId` / `join`              |
-| 契約3 Experiment Manifest       | P2 の範囲。P1 では実装しない                                                             | —                                         |
-| 契約4 stable CLI / content ID   | `river evolve aggregate` を stable CLI とし、ID を証拠集合の content hash から生成する   | `computeCandidateId`                      |
-| 契約5 two-stage clustering      | stage1 は `(skillId, feedbackType)`、stage2 は fingerprint / category / scope で分割する | `buildClusters`                           |
-| 契約6 profile 別受入基準        | P2 の範囲。P1 では実装しない                                                             | —                                         |
+| 契約                            | P1 での実装                                                                              | 実装箇所                                     |
+| ------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 契約1 evidence provenance       | run ごとに provenance を記録しつつ、trust level は常に `untrusted` に固定する            | `buildRunEvidence` / `evidenceTrustLevel`    |
+| 契約2 canonical `review_run_id` | optional field を read 側で解決し、突合できた feedback 件数を報告する                    | `deriveReviewRunId` / `join`                 |
+| 契約3 Experiment Manifest       | P2 の範囲。P1 では実装しない                                                             | —                                            |
+| 契約4 stable CLI / content ID   | `river evolve aggregate` を stable CLI とし、ID 導出は #1624 の実装へ一本化する          | `computeCandidateId`（#1624 の薄い adapter） |
+| 契約5 two-stage clustering      | stage1 は `(skillId, feedbackType)`、stage2 は fingerprint / category / scope で分割する | `buildClusters`                              |
+| 契約6 profile 別受入基準        | P2 の範囲。P1 では実装しない                                                             | —                                            |
 
 補足:
 
@@ -76,6 +77,16 @@ river evolve aggregate <path> [--min <n>] [--month YYYY-MM] [--output json]
 - 同じ fingerprint の feedback が複数行あっても 1 件の finding とみなす。`experimentEligible` は distinct な (run, PR) の件数で判定する
 - stage2 の `failureMode` は `null` 固定である。語彙は P1 の観測後に確定する契約のため、先取りしない
 - candidate の `trust.canaryEligible` は P1 では常に `false` である
+
+### candidate ID の一本化（契約4）
+
+candidate ID は `src/lib/promotion-candidates.mjs` の `normalizeEvidence` と `computeCandidateContentHash` をそのまま使います。shadow 側で別の hash を持つと、同じ証拠から生まれた観測と `river promote propose` の永続化が別 ID になり、同一 candidate だと判定できなくなるためです。
+
+- hash 入力は `{ clusterKey, 正規化した evidence, policyVersion }` の 3 つだけである
+- `subClusterKey` / `review_run_id` / 生成日時は hash に入れない（出力メタデータとしては保持する）
+- prefix は `RR-PC-` で、`river promote propose` が採番する ID と同一である
+- evidence は上流実装が NFC 正規化と重複排除を行う。`uniqueEvidenceCount` はその結果の件数である
+- policy version は `CANDIDATE_POLICY_VERSION`（`'1'`）で共有する。未知の値は reject する
 
 ## 6. trust boundary（P1 では全件 untrusted）
 
@@ -101,7 +112,7 @@ canonical `review_run_id` と provenance の生産者は、まだリポジトリ
 
 ## 8. read-only の担保
 
-- `src/lib/shadow-aggregate.mjs` は `node:crypto` 以外を import せず、fs へ触れない
+- `src/lib/shadow-aggregate.mjs` 自体は fs / network を呼ばない。外部依存は `node:crypto` と、`promotion-candidates.mjs` の純粋な hash ヘルパー 2 つだけである
 - CLI は書き込み系 option を提供しない
 - candidate は `writeEffects: []` を宣言し、schema が `maxItems: 0` で検証する
 - テストは対象リポジトリのファイル一覧・内容・mtime を実行前後で比較し、変化がないことを確認する

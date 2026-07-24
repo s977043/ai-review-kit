@@ -32,7 +32,11 @@ import {
   formatShadowAggregateMarkdown,
   SHADOW_AGGREGATE_POLICY_VERSION,
 } from '../src/lib/shadow-aggregate.mjs';
-import { findRuleCandidates } from '../scripts/feedback-rule-candidates.mjs';
+import {
+  buildProposedCandidate,
+  findRuleCandidates,
+  CANDIDATE_POLICY_VERSION,
+} from '../src/lib/promotion-candidates.mjs';
 import { compileSchemaFile } from './helpers/schema-validator.mjs';
 import { runCliInProcess } from './helpers/cli.mjs';
 import { runEvolveCommand } from '../src/cli/commands/evolve.mjs';
@@ -405,10 +409,10 @@ describe('shadow-aggregate 契約4: content-addressed candidate id', () => {
       { review_run_id: 'run-1', findingFingerprint: FP_A, feedbackType: 'false_positive', pr: 1 },
       { review_run_id: 'run-2', findingFingerprint: FP_A, feedbackType: 'false_positive', pr: 2 },
     ];
-    const base = { policyVersion: 'p', clusterKey: 'k', subClusterKey: 's' };
+    const base = { clusterKey: 'secret-scanner::false_positive' };
     assert.equal(
-      computeCandidateId({ ...base, evidence: refs }),
-      computeCandidateId({ ...base, evidence: [...refs].reverse() })
+      computeCandidateId({ ...base, evidence: refs }).candidateId,
+      computeCandidateId({ ...base, evidence: [...refs].reverse() }).candidateId
     );
   });
 
@@ -418,14 +422,50 @@ describe('shadow-aggregate 契約4: content-addressed candidate id', () => {
     const late = buildShadowAggregate({ ...input, now: new Date('2026-12-31T00:00:00.000Z') });
     assert.equal(early.candidate.candidateId, late.candidate.candidateId);
     assert.notEqual(early.candidate.createdAt, late.candidate.createdAt);
-    assert.match(early.candidate.candidateId, /^RR-IC-[0-9a-f]{12}$/);
+    assert.match(early.candidate.candidateId, /^RR-PC-[0-9a-f]{12}$/);
+    assert.match(early.candidate.contentHash, /^[0-9a-f]{64}$/);
   });
 
-  test('a different policy version yields a different id', () => {
-    const input = scenario();
-    const a = buildShadowAggregate({ ...input, now: NOW });
-    const b = buildShadowAggregate({ ...input, now: NOW, policyVersion: 'shadow-aggregate/next' });
-    assert.notEqual(a.candidate.candidateId, b.candidate.candidateId);
+  test('the shadow id equals the id `river promote propose` would mint (B1)', () => {
+    // Same evidence must yield ONE candidate identity across the shadow
+    // observation and the persisted promotion candidate.
+    const feedbackEntries = [feedback({ pr: 1 }), feedback({ pr: 2, runId: 'run-2' })];
+    const runRecords = [runRecord({ runId: 'run-1', findings: [finding(FP_A)] })];
+    const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
+    const proposed = buildProposedCandidate({
+      entries: feedbackEntries,
+      clusterKey: 'secret-scanner::false_positive',
+      now: NOW,
+    });
+    assert.equal(aggregate.candidate.candidateId, proposed.candidateId);
+    assert.equal(aggregate.candidate.contentHash, proposed.contentHash);
+    assert.equal(aggregate.candidate.uniqueEvidenceCount, proposed.evidenceCount);
+  });
+
+  test('the policy version is the shared one and unknown versions are rejected', () => {
+    assert.equal(SHADOW_AGGREGATE_POLICY_VERSION, CANDIDATE_POLICY_VERSION);
+    const aggregate = buildShadowAggregate({ ...scenario(), now: NOW });
+    assert.equal(aggregate.candidate.policyVersion, CANDIDATE_POLICY_VERSION);
+    assert.throws(
+      () => buildShadowAggregate({ ...scenario(), now: NOW, policyVersion: 'shadow/next' }),
+      /Unknown policyVersion/
+    );
+  });
+
+  test('duplicate evidence rows collapse before hashing', () => {
+    const ref = {
+      review_run_id: 'run-1',
+      findingFingerprint: FP_A,
+      feedbackType: 'false_positive',
+      pr: 1,
+    };
+    const once = computeCandidateId({ clusterKey: 'k::false_positive', evidence: [ref] });
+    const twice = computeCandidateId({
+      clusterKey: 'k::false_positive',
+      evidence: [ref, { ...ref }],
+    });
+    assert.equal(once.candidateId, twice.candidateId);
+    assert.equal(twice.evidenceCount, 1);
   });
 });
 

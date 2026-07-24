@@ -10,6 +10,7 @@ import {
   parseFindingMessage,
   normalizeSeverity,
   severityToPriority,
+  normalizeScope,
   SEVERITY_RANK,
 } from '../src/lib/finding-factory.mjs';
 
@@ -204,4 +205,68 @@ test('generateReview uses labeled format for heuristic findings', async () => {
   assert.match(result.comments[0].message, /Severity: blocker/);
   assert.match(result.comments[0].message, /Confidence: high/);
   assert.equal(result.debug.findingFormat.ok, true);
+});
+
+// #1644 Phase 1: scope vocabulary
+test('normalizeScope maps known values and fails safe to in-diff', () => {
+  assert.equal(normalizeScope('in-diff'), 'in-diff');
+  assert.equal(normalizeScope('pre-existing'), 'pre-existing');
+  assert.equal(normalizeScope('PRE-EXISTING '), 'pre-existing');
+  assert.equal(normalizeScope('preexisting'), 'pre-existing');
+  assert.equal(normalizeScope('out-of-diff'), 'in-diff', 'unknown value fails safe');
+  assert.equal(normalizeScope(undefined), 'in-diff');
+  assert.equal(normalizeScope(null), 'in-diff');
+  assert.equal(normalizeScope(''), 'in-diff');
+});
+
+test('parseFindingMessage extracts an optional Scope label without disturbing other labels', () => {
+  const withScope = parseFindingMessage(
+    'Finding: 問題 Evidence: 根拠 Impact: 影響 Fix: 直す Severity: warning Confidence: high Scope: pre-existing'
+  );
+  assert.equal(withScope.scope, 'pre-existing');
+  assert.equal(withScope.severity, 'warning');
+  assert.equal(withScope.confidence, 'high');
+  assert.equal(withScope.suggestion, '直す');
+
+  const withoutScope = parseFindingMessage(
+    'Finding: 問題 Evidence: 根拠 Impact: 影響 Fix: 直す Severity: warning Confidence: high'
+  );
+  assert.equal(withoutScope.scope, null);
+  assert.equal(withoutScope.confidence, 'high');
+});
+
+test('parseFindingMessage does not truncate content on a prose "Scope:" occurrence', () => {
+  // Back-compat guard (#1644 review W3): OAuth / IAM scopes appear verbatim in
+  // real review text, and treating "Scope:" as a structural label would cut the
+  // Evidence and Fix captures short.
+  const parsed = parseFindingMessage(
+    'Finding: token is over-privileged Evidence: the OAuth Scope: admin:org is granted in src/app.mjs Impact: 影響 Fix: narrow the requested Scope: read:org only Severity: warning Confidence: high'
+  );
+  assert.equal(parsed.evidence[0], 'the OAuth Scope: admin:org is granted in src/app.mjs');
+  assert.equal(parsed.suggestion, 'narrow the requested Scope: read:org only');
+  assert.equal(parsed.scope, null, 'prose occurrence is not a self-report');
+});
+
+test('parseFindingMessage ignores an out-of-vocabulary Scope value', () => {
+  const parsed = parseFindingMessage(
+    'Finding: 問題 Evidence: 根拠 Fix: 直す Severity: warning Confidence: high Scope: unknown'
+  );
+  assert.equal(parsed.scope, null);
+});
+
+test('generateReview assigns a scope to every finding (fail-safe in-diff)', async () => {
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/midstream-security-hardcoded-token.diff',
+    'utf8'
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const diff = { diffText, files: parsed.files, changedFiles: parsed.files.map((f) => f.path) };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }], skipped: [] };
+
+  const result = await generateReview({ diff, plan, phase: 'midstream', dryRun: true });
+  assert.ok(result.findings.length > 0);
+  for (const f of result.findings) {
+    assert.ok(['in-diff', 'pre-existing'].includes(f.scope), `unexpected scope: ${f.scope}`);
+  }
+  assert.equal(typeof result.debug.scopeStats.mismatch, 'number');
 });

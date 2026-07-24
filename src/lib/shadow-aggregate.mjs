@@ -16,12 +16,21 @@
 //   契約5 two-stage clustering → buildClusters (stage 1 / stage 2)
 import { createHash } from 'node:crypto';
 
+import {
+  CANDIDATE_POLICY_VERSION,
+  KNOWN_POLICY_VERSIONS,
+  computeCandidateContentHash,
+  normalizeEvidence,
+} from './promotion-candidates.mjs';
+
 export const SHADOW_AGGREGATE_SCHEMA_VERSION = 1;
 
-// Policy version participates in the candidate content hash (契約4): changing
-// the aggregation policy must produce a different candidate ID for the same
-// evidence set.
-export const SHADOW_AGGREGATE_POLICY_VERSION = 'shadow-aggregate/p1';
+// The candidate id derivation is NOT owned here: it is the one in
+// src/lib/promotion-candidates.mjs (#1624 / 契約4), so that the shadow
+// observation and `river promote propose` converge on the SAME id for the same
+// evidence. That also fixes the policy version to CANDIDATE_POLICY_VERSION —
+// the shadow aggregate does not get a hash namespace of its own.
+export const SHADOW_AGGREGATE_POLICY_VERSION = CANDIDATE_POLICY_VERSION;
 
 // Collector identity recorded in every evidence record (契約1).
 export const COLLECTOR_VERSION = 'river-shadow-aggregate/1';
@@ -383,36 +392,42 @@ function sortFeedbackRefs(refs) {
 // ---------------------------------------------------------------------------
 
 /**
- * Compute the content-addressed candidate ID.
+ * Compute the content-addressed candidate ID for a sub-cluster.
  *
- * Hashed inputs are the normalized evidence set, the two cluster keys, and the
- * policy version — deliberately NOT the generation date (契約4): re-running the
- * aggregate over the same evidence converges on the same candidate.
+ * This is a thin adapter over the #1624 derivation
+ * (`normalizeEvidence` + `computeCandidateContentHash`), NOT a second
+ * implementation: the shadow observation and `river promote propose` must mint
+ * the SAME `RR-PC-<12 hex>` id from the same evidence, otherwise the loop
+ * cannot tell that it is looking at one candidate.
  *
- * @param {{ policyVersion: string, clusterKey: string, subClusterKey: string, evidence: object[] }} input
- * @returns {string} `RR-IC-<12 hex>`
+ * Consequences of reusing that contract:
+ * - hash inputs are `{ clusterKey, normalized evidence, policyVersion }` only;
+ * - `subClusterKey`, `review_run_id` and the generation date are NOT hashed
+ *   (two sub-clusters of one cluster already differ by their evidence sets);
+ * - evidence is deduplicated and NFC-normalized upstream.
+ *
+ * @param {{ policyVersion?: string, clusterKey: string, evidence: object[] }} input
+ * @returns {{ candidateId: string, contentHash: string, evidenceCount: number }}
  */
-export function computeCandidateId({ policyVersion, clusterKey, subClusterKey, evidence }) {
-  const normalized = {
-    policyVersion,
+export function computeCandidateId({
+  policyVersion = CANDIDATE_POLICY_VERSION,
+  clusterKey,
+  evidence,
+}) {
+  if (!KNOWN_POLICY_VERSIONS.includes(String(policyVersion))) {
+    // An arbitrary policy version would let one evidence set mint unlimited
+    // ids — the same guard buildProposedCandidate applies.
+    throw new Error(
+      `Unknown policyVersion "${policyVersion}". Expected one of: ${KNOWN_POLICY_VERSIONS.join(', ')}.`
+    );
+  }
+  const { evidence: normalized } = normalizeEvidence(evidence ?? []);
+  const { candidateId, contentHash } = computeCandidateContentHash({
     clusterKey,
-    subClusterKey,
-    // Each ref is serialized as canonical JSON rather than joined with a
-    // separator: a delimiter join is ambiguous as soon as a field can contain
-    // the delimiter, which would let two different evidence sets collide.
-    evidence: [...(evidence ?? [])]
-      .map((ref) =>
-        canonicalJson({
-          review_run_id: ref.review_run_id ?? null,
-          findingFingerprint: ref.findingFingerprint ?? null,
-          feedbackType: ref.feedbackType ?? null,
-          timestamp: ref.timestamp ?? null,
-          pr: ref.pr ?? null,
-        })
-      )
-      .sort(compareStrings),
-  };
-  return `RR-IC-${sha256Hex(canonicalJson(normalized)).slice(0, 12)}`;
+    evidence: normalized,
+    policyVersion,
+  });
+  return { candidateId, contentHash, evidenceCount: normalized.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -478,14 +493,19 @@ function buildShadowCandidate({ cluster, sub, evidenceByRunId, now, policyVersio
   );
   reasons.push('P1 は shadow 観測のみで canary へ進まない（実装順 P3 以降）');
 
+  const { candidateId, contentHash, evidenceCount } = computeCandidateId({
+    policyVersion,
+    clusterKey: cluster.clusterKey,
+    evidence,
+  });
+
   return {
     schemaVersion: SHADOW_AGGREGATE_SCHEMA_VERSION,
-    candidateId: computeCandidateId({
-      policyVersion,
-      clusterKey: cluster.clusterKey,
-      subClusterKey: sub.subClusterKey,
-      evidence,
-    }),
+    candidateId,
+    // Persisted so a reader can re-derive and verify the 12-hex id instead of
+    // trusting it (same rationale as promotion-candidates.mjs).
+    contentHash,
+    uniqueEvidenceCount: evidenceCount,
     policyVersion,
     createdAt: now.toISOString(),
     mode: 'shadow',
