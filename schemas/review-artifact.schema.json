@@ -421,6 +421,11 @@
           "type": "string",
           "description": "Optional fix or follow-up hint."
         },
+        "scope": {
+          "type": "string",
+          "enum": ["in-diff", "pre-existing"],
+          "description": "Whether the finding is introduced by this diff's added lines ('in-diff') or lives in a changed file but outside the added lines ('pre-existing'). Additive/optional metadata (#1644 Phase 1): derived deterministically by the verifier from the parsed diff, falling back to the reviewer's self-report. Absent or unknown MUST be read as 'in-diff' (fail-safe: never demote). Display-only — MUST NOT override severity or gate decisions."
+        },
         "sourceKind": {
           "type": "string",
           "description": "Provenance kind for synthesis layers (e.g. Independent Review Synthesis). Optional; absent for findings produced by core skills.",

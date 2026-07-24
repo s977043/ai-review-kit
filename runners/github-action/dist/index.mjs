@@ -43377,17 +43377,19 @@ function isApp(file) {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   J9: () => (/* binding */ DEFAULT_FINDING_SCOPE),
 /* harmony export */   UB: () => (/* binding */ parseFindingMessage),
 /* harmony export */   Yo: () => (/* binding */ computeFingerprint),
 /* harmony export */   ZY: () => (/* binding */ classifyFindings),
 /* harmony export */   f3: () => (/* binding */ SEVERITY_RANK),
 /* harmony export */   ic: () => (/* binding */ annotateFingerprints),
+/* harmony export */   kn: () => (/* binding */ normalizeScope),
 /* harmony export */   lv: () => (/* binding */ normalizeSeverity),
 /* harmony export */   nG: () => (/* binding */ severityToPriority),
 /* harmony export */   xv: () => (/* binding */ validateFindingMessage),
 /* harmony export */   yv: () => (/* binding */ formatFindingMessage)
 /* harmony export */ });
-/* unused harmony export SUPPRESS_REASONS */
+/* unused harmony exports FINDING_SCOPES, SUPPRESS_REASONS */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
 /* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9946);
 
@@ -43399,6 +43401,21 @@ function isApp(file) {
 
 const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
 const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
+
+/**
+ * Scope vocabulary for a finding (#1644 Phase 1).
+ * - `in-diff`: introduced or changed by the added lines of this diff
+ * - `pre-existing`: inside a changed file but outside the added lines
+ * @see docs/review/output-format.md
+ */
+const FINDING_SCOPES = /** @type {const} */ ((/* unused pure expression or super */ null && (['in-diff', 'pre-existing'])));
+
+/**
+ * Fail-safe default scope. Unknown/absent scope MUST NOT demote a finding,
+ * so the default is the non-demoting value (`in-diff`), mirroring the
+ * "unknown severity → major" fail-safe direction of normalizeSeverity.
+ */
+const DEFAULT_FINDING_SCOPE = /** @type {const} */ ('in-diff');
 
 /**
  * Canonical severity ranking for the output schema vocabulary
@@ -43461,14 +43478,28 @@ const LABEL_NAMES = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confid
 const LABEL_ALTERNATION = LABEL_NAMES.join('|');
 
 /**
+ * Self-reported scope label (#1644). Deliberately NOT a bare member of
+ * LABEL_NAMES: an unconstrained `Scope:` in the label alternation would let any
+ * prose occurrence (OAuth / IAM scopes appear verbatim in real review text)
+ * terminate the preceding Evidence/Fix capture and silently truncate it. The
+ * value is therefore constrained to the known vocabulary — both when extracting
+ * the label and when using it as a capture terminator.
+ */
+const SCOPE_VALUE_PATTERN = 'in[-_ ]?diff|pre[-_ ]?existing';
+const RE_SCOPE_LABEL = new RegExp(`(?:^|\\s)Scope:\\s*(${SCOPE_VALUE_PATTERN})\\b`, 'i');
+
+/**
  * Parse a labeled finding message string into structured fields.
  * @param {string} message
- * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null }}
+ * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null, scope: string|null }}
  */
 function parseFindingMessage(message) {
   const text = String(message ?? '');
+  // A genuine (value-constrained) Scope label also terminates a capture, so a
+  // trailing self-report is not absorbed into the preceding field.
+  const terminator = `\\s+(?:${LABEL_ALTERNATION}):|\\s+Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b|$`;
   const get = (label) => {
-    const re = new RegExp(`${label}:\\s*([^]*?)(?=\\s+(?:${LABEL_ALTERNATION}):|$)`, 'm');
+    const re = new RegExp(`${label}:\\s*([^]*?)(?=${terminator})`, 'm');
     return (text.match(re)?.[1] ?? '').trim();
   };
   const evidenceText = get('Evidence');
@@ -43479,7 +43510,37 @@ function parseFindingMessage(message) {
     suggestion: get('Fix'),
     severity: get('Severity') || null,
     confidence: get('Confidence') || null,
+    // Optional LLM self-report (#1644). Machine determination in verifier.mjs
+    // takes precedence; this is only the fallback when the diff cannot decide.
+    // Null when the label is absent or carries an out-of-vocabulary value.
+    scope: RE_SCOPE_LABEL.exec(text)?.[1] ?? null,
   };
+}
+
+/**
+ * Normalize a finding scope value to the output schema vocabulary.
+ * Unknown / absent values fail safe to `in-diff` so that an undetermined
+ * scope never demotes a finding.
+ * @param {string|null|undefined} rawScope
+ * @returns {'in-diff'|'pre-existing'}
+ */
+function normalizeScope(rawScope) {
+  // Collapse the separator variants the Scope label accepts (`in diff`,
+  // `pre_existing`, …) onto the canonical hyphenated vocabulary.
+  const canonical = String(rawScope ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, '-');
+  switch (canonical) {
+    case 'pre-existing':
+    case 'preexisting':
+      return 'pre-existing';
+    case 'in-diff':
+    case 'indiff':
+      return 'in-diff';
+    default:
+      return DEFAULT_FINDING_SCOPE;
+  }
 }
 
 /**
@@ -46812,6 +46873,7 @@ ${buildLanguageInstruction(language)}
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
 - Every finding MUST carry "Severity:" and "Confidence:". It MUST also carry "Evidence:" (>=5 chars) and "Fix:" (>=10 chars) — findings without them are discarded during verification. "Finding:" and "Impact:" are recommended.
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
+- Optionally add "Scope: in-diff" (the added lines introduce the problem) or "Scope: pre-existing" (the problem is in a changed file but outside the added lines). Verification re-derives scope from the diff and overrides this label when it can.
 - Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block at src/app.ts drops err Impact: failures are masked Fix: rethrow or log err with context Severity: warning Confidence: high
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
@@ -47179,11 +47241,23 @@ async function generateReview({
   const runVerifier = (cmts) =>
     cmts.map((comment) => ({
       comment,
-      verification: verifyFinding({ finding: comment, diff: diff.diffText, skill, fileTypes }),
+      verification: verifyFinding({
+        finding: comment,
+        diff: diff.diffText,
+        skill,
+        fileTypes,
+        // #1644: parsed diff files carry addedLines, enabling the verifier's
+        // machine determination of finding scope (in-diff / pre-existing).
+        diffFiles: diff.files,
+      }),
     }));
 
+  // #1644: carry the verifier's scope verdict on the comment so the findings
+  // built below can adopt it. Metadata only — display and gating are unchanged.
+  const withScope = (r) => ({ ...r.comment, scope: r.verification.scope });
+
   const verifierResults = runVerifier(comments);
-  let verified = verifierResults.filter((r) => r.verification.verified).map((r) => r.comment);
+  let verified = verifierResults.filter((r) => r.verification.verified).map(withScope);
   const rejected = verifierResults.filter((r) => !r.verification.verified);
 
   // debug.verifierStats/verifierRejected describe the verifier pass over the
@@ -47199,6 +47273,26 @@ async function generateReview({
     verified: verified.length,
     rejected: rejected.length,
   };
+
+  // #1644: observability for the scope determination. `mismatch` counts
+  // findings whose LLM self-report disagreed with the machine determination
+  // (the machine verdict wins); a rising count signals prompt drift. Unlike
+  // verifierStats — which intentionally keeps describing the primary (possibly
+  // wholly rejected) batch — scopeStats must describe the set that actually
+  // carries `scope` into the findings, so it is recomputed from the last
+  // verifier pass whenever the fallback branch below re-runs the verifier.
+  const summarizeScope = (results) =>
+    results.reduce(
+      (acc, r) => {
+        acc[r.verification.scope] = (acc[r.verification.scope] ?? 0) + 1;
+        acc.bySource[r.verification.scopeSource] =
+          (acc.bySource[r.verification.scopeSource] ?? 0) + 1;
+        if (r.verification.scopeMismatch) acc.mismatch += 1;
+        return acc;
+      },
+      { 'in-diff': 0, 'pre-existing': 0, mismatch: 0, bySource: {} }
+    );
+  debug.scopeStats = summarizeScope(verifierResults);
 
   // Fail-safe: mirror the format-validation fallback for a wholesale verifier
   // rejection. Inline-only findings (Severity:/Confidence: present but
@@ -47230,9 +47324,9 @@ async function generateReview({
     // verifier invariant (heuristic/fallback findings use the full labeled
     // format and pass). verifierStats above intentionally keeps describing the
     // rejected LLM batch.
-    verified = runVerifier(comments)
-      .filter((r) => r.verification.verified)
-      .map((r) => r.comment);
+    const fallbackResults = runVerifier(comments);
+    verified = fallbackResults.filter((r) => r.verification.verified).map(withScope);
+    debug.scopeStats = summarizeScope(fallbackResults);
   }
 
   // Replace comments with verified-only set
@@ -47293,6 +47387,9 @@ async function generateReview({
       status: /** @type {'open'} */ ('open'),
       evidence: parsed.evidence,
       suggestion: parsed.suggestion || null,
+      // #1644 Phase 1: verifier verdict (machine determination, falling back to
+      // the LLM self-report and then to the fail-safe default `in-diff`).
+      scope: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeScope */ .kn)(c.scope ?? parsed.scope),
     };
   });
 
@@ -66981,6 +67078,10 @@ function formatJsonOutput(result, phase) {
       ...(f.lineEnd && f.lineEnd !== f.lineStart ? { lineEnd: f.lineEnd } : {}),
       ...(f.suggestion ? { suggestion: f.suggestion } : {}),
       ...(f.consensusLevel ? { consensusLevel: f.consensusLevel } : {}),
+      // #1644 Phase 1: the JSON output is the artifact governed by
+      // output.schema.json, so `scope` must reach it for the schema field to be
+      // observable at all. yaml/html surfaces stay unchanged (Phase 2).
+      ...(f.scope ? { scope: f.scope } : {}),
       ...(f.reviewerRole ? { reviewerRole: f.reviewerRole } : {}),
     };
   });
