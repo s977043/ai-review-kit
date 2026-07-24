@@ -9,6 +9,21 @@ const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
 const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
 
 /**
+ * Scope vocabulary for a finding (#1644 Phase 1).
+ * - `in-diff`: introduced or changed by the added lines of this diff
+ * - `pre-existing`: inside a changed file but outside the added lines
+ * @see docs/review/output-format.md
+ */
+export const FINDING_SCOPES = /** @type {const} */ (['in-diff', 'pre-existing']);
+
+/**
+ * Fail-safe default scope. Unknown/absent scope MUST NOT demote a finding,
+ * so the default is the non-demoting value (`in-diff`), mirroring the
+ * "unknown severity → major" fail-safe direction of normalizeSeverity.
+ */
+export const DEFAULT_FINDING_SCOPE = /** @type {const} */ ('in-diff');
+
+/**
  * Canonical severity ranking for the output schema vocabulary
  * (ascending: higher number = more severe). Single source of truth for every
  * module that needs to compare or sort severities.
@@ -69,14 +84,28 @@ const LABEL_NAMES = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confid
 const LABEL_ALTERNATION = LABEL_NAMES.join('|');
 
 /**
+ * Self-reported scope label (#1644). Deliberately NOT a bare member of
+ * LABEL_NAMES: an unconstrained `Scope:` in the label alternation would let any
+ * prose occurrence (OAuth / IAM scopes appear verbatim in real review text)
+ * terminate the preceding Evidence/Fix capture and silently truncate it. The
+ * value is therefore constrained to the known vocabulary — both when extracting
+ * the label and when using it as a capture terminator.
+ */
+const SCOPE_VALUE_PATTERN = 'in[-_ ]?diff|pre[-_ ]?existing';
+const RE_SCOPE_LABEL = new RegExp(`(?:^|\\s)Scope:\\s*(${SCOPE_VALUE_PATTERN})\\b`, 'i');
+
+/**
  * Parse a labeled finding message string into structured fields.
  * @param {string} message
- * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null }}
+ * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null, scope: string|null }}
  */
 export function parseFindingMessage(message) {
   const text = String(message ?? '');
+  // A genuine (value-constrained) Scope label also terminates a capture, so a
+  // trailing self-report is not absorbed into the preceding field.
+  const terminator = `\\s+(?:${LABEL_ALTERNATION}):|\\s+Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b|$`;
   const get = (label) => {
-    const re = new RegExp(`${label}:\\s*([^]*?)(?=\\s+(?:${LABEL_ALTERNATION}):|$)`, 'm');
+    const re = new RegExp(`${label}:\\s*([^]*?)(?=${terminator})`, 'm');
     return (text.match(re)?.[1] ?? '').trim();
   };
   const evidenceText = get('Evidence');
@@ -87,7 +116,37 @@ export function parseFindingMessage(message) {
     suggestion: get('Fix'),
     severity: get('Severity') || null,
     confidence: get('Confidence') || null,
+    // Optional LLM self-report (#1644). Machine determination in verifier.mjs
+    // takes precedence; this is only the fallback when the diff cannot decide.
+    // Null when the label is absent or carries an out-of-vocabulary value.
+    scope: RE_SCOPE_LABEL.exec(text)?.[1] ?? null,
   };
+}
+
+/**
+ * Normalize a finding scope value to the output schema vocabulary.
+ * Unknown / absent values fail safe to `in-diff` so that an undetermined
+ * scope never demotes a finding.
+ * @param {string|null|undefined} rawScope
+ * @returns {'in-diff'|'pre-existing'}
+ */
+export function normalizeScope(rawScope) {
+  // Collapse the separator variants the Scope label accepts (`in diff`,
+  // `pre_existing`, …) onto the canonical hyphenated vocabulary.
+  const canonical = String(rawScope ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, '-');
+  switch (canonical) {
+    case 'pre-existing':
+    case 'preexisting':
+      return 'pre-existing';
+    case 'in-diff':
+    case 'indiff':
+      return 'in-diff';
+    default:
+      return DEFAULT_FINDING_SCOPE;
+  }
 }
 
 /**
