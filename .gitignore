@@ -54,6 +54,13 @@ CLAUDE.local.md
 .codex/logs_*.sqlite-*
 .codex/state_*.sqlite-*
 .codex/installation_id
+# Codex login artifacts (`codex login` with CODEX_HOME=.codex): auth.json holds
+# the OAuth token and must never be committed
+.codex/auth.json
+.codex/cache/
+.codex/log/
+.codex/models_cache.json
+.codex/plugins/
 .lycheecache
 .worktrees/
 .vale/Microsoft
