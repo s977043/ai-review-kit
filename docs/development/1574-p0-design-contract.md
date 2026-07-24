@@ -1,0 +1,205 @@
+# Review Evolution Cycle P0 設計契約（#1574）
+
+> Status: Design contract（P0・実装未着手）。本ドキュメントは #1574 Epic の P0 フェーズ成果物です。
+> Source: issue #1574 の 2026-07-24 採否コメント（条件付きGO、issue comment ID 5064856987）。
+> 実装 PR は本契約を DoD として参照し、P1 Shadow aggregate から段階導入します。
+
+## 1. 目的とスコープ
+
+Review Evolution Cycle（#1574）は、複数の完了 run から改善投資先を選定し、統制された実験で採否を判断する外側の制御ループです。採否コメントの決定に従い、実装前に固定すべき設計契約6点を本ドキュメントで文書化します。
+
+Issue #1574 の責務は次に限定する。
+
+- multi-run から改善投資先を選定する
+- 1 candidate = 1 hypothesis の実験を編成する
+- baseline / candidate の統制された paired evaluation を実行する
+- shadow canary を観測する
+- 最終採否時は #1568 の CLI を呼び、結果への参照を記録する
+
+実装順は P0（本契約）→ P1 Shadow aggregate → P2 Historical paired replay → P3 Shadow canary → P4 Limited canary です。Shadow mode 着手は GO、paired replay は P0 完了後に GO、自動 canary と自動 Keep/Rollback は保留と決定されています。
+
+## 2. #1568 Judgment Promotion Loop との責務境界
+
+Issue #1568 の Phase 1〜3 は実装済みで、v1.62.0 としてリリース済みです。#1574 は次の既存機構を再実装しません。
+
+| 既存機構                              | 実装（file:line）                                                                   | #1574 での扱い                                                     |
+| ------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 候補生成（#1568-A / #1627）           | `scripts/feedback-rule-candidates.mjs:133-222`（`buildPromotionCandidateEntry`）    | 生成契約を拡張して利用（契約4・5）                                 |
+| 承認 CLI / PR 雛形（#1568-B / #1629） | `src/cli/commands/promote.mjs:98-281`、`src/lib/promotion.mjs:138-209`              | 最終採否時に呼び出す（再実装しない）                               |
+| Retire / 効果測定（#1568-C / #1641）  | `src/lib/promotion.mjs:211-560`（retire / `reviewPromotionEffectiveness`）          | effectiveness / needs_review / expiry / supersede / archive は委譲 |
+| Riverbed 永続化                       | `src/lib/riverbed-memory.mjs:30-116`（`appendEntry` / `updateEntry` / `supersede`） | エントリ形式を共有する                                             |
+
+Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利用し、#1574 側での重複実装を禁止します。
+
+## 3. 設計契約
+
+### 契約1: Evidence provenance / trust boundary
+
+#### 既存実装の現状
+
+- saved run は `.river/runs/`（`src/lib/result-store.mjs:6`）に置かれ、被レビューリポジトリの内側にある。
+- `src/lib/result-store.mjs:34-43` の trust-boundary note は、run store が被レビューエージェントの書き込み権限下にあり、tamper-evident な証拠ではないと明記している。
+- `buildRunRecord`（`src/lib/result-store.mjs:44-80`）が保持するのは runId / timestamp / phase / findings 等で、証拠の出所や検証者を示すフィールドはない。
+- GitHub Actions 上では run が自動保存される（`src/cli/commands/run.mjs:151-159`、`RIVER_AUTO_SAVE=false` で opt-out）。
+
+#### 固定する契約内容
+
+- local saved run は canary 採用の根拠として単独利用しない。
+- Candidate / Experiment には最低限、次のフィールドを保持する。
+  - `evidence_source`: `local` / `CI` / `protected-branch` / `human`
+  - `source_commit_sha`
+  - `artifact_sha256`
+  - `collector_version`
+  - `trusted_by`
+  - `generated_by_candidate: false`
+- baseline は protected main または信頼済み CI artifact から取得する。
+- Shadow mode では local evidence を許容するが、candidate 採用には candidate の変更権限外で実行した verifier の trusted evidence を必須とする。
+- trust level は schema と採用 gate の両方に定義する（DoD 1項目め）。
+
+#### 未決事項
+
+- `trusted_by` の署名・検証方式（CI attestation または人手承認記録）は P2 実装時に確定する。
+
+### 契約2: Canonical `review_run_id`
+
+#### 既存実装の現状
+
+- runId は timestamp + ランダム短ハッシュで生成され（`src/lib/result-store.mjs:20-25`）、run record 内に閉じている。
+- feedback エントリ（`src/lib/feedback.mjs`）は `.river/feedback/<YYYY-MM>.jsonl` に保存されるが、run への参照を持たない。
+- promotion_candidate の evidence は `pr` と nullable な `findingFingerprint` のみで（`scripts/feedback-rule-candidates.mjs:145-150`）、run へ辿れない。
+- eval ledger（`artifacts/evals/results.jsonl`、`scripts/compare-eval-ledger.mjs:25`）も run との結合キーを持たない。
+
+#### 固定する契約内容
+
+- canonical な `review_run_id` を定義する。結合対象は Review Artifact、saved run、feedback、Riverbed entry、evaluation ledger、ReviewImprovementCandidate、ReviewExperimentResult の7箇所である。
+- 後方互換のため、まず optional フィールドとして追加し、上記7箇所へ順に伝播させる。
+- これにより selected skill、finding、feedback、usage/cost/latency、reversal を同一 run へ追跡できる状態を作る（DoD 2項目め）。
+
+#### 未決事項
+
+- 既存 runId（`src/lib/result-store.mjs:21-25` の形式）を canonical ID としてそのまま採用するか、別名レイヤを挟むかは P1 で決める。
+
+### 契約3: Immutable Experiment Manifest
+
+#### 既存実装の現状
+
+- `scripts/compare-eval-ledger.mjs:1-18` は ledger 末尾エントリの差分比較プリミティブで、KPI 後退時に exit code 1 を返す。
+- ledger 比較だけでは baseline / candidate の実行条件が統制されず、paired experiment とは言えない。
+
+#### 固定する契約内容
+
+- 実験ごとに immutable な Experiment Manifest を作成し、次を固定する。
+  - baseline / candidate の commit SHA
+  - dataset manifest / hash / held-out set hash
+  - evaluator / collector version
+  - provider / model / temperature
+  - Skill Registry commit
+  - trial ID / trial count
+  - activation evidence
+  - environment / config snapshot
+  - metrics denominator
+  - terminal reason
+- 評価は deterministic check → semantic/rubric verification → adversarial review の順で実行する。
+- LLM の PASS で決定論的 FAIL を上書きしない（`.claude/rules/review-core.md` の責務分界と同方向）。
+- paired replay は ledger 比較と区別し、activation / held-out / independent verifier を伴う（DoD 3・4項目め）。
+
+#### 未決事項
+
+- Manifest の保存先（`.river/experiments/` または CI artifact）は trust boundary（契約1）の結論に依存するため P2 で確定する。
+
+### 契約4: Stable CLI / content-addressed candidate ID
+
+#### 既存実装の現状
+
+- `river promote` は list / approve / reject / template / retire / review-effectiveness を持つ（`src/cli/commands/promote.mjs:9-15`）。
+- 候補生成は `scripts/feedback-rule-candidates.mjs` の内部 script で、stable CLI としての I/O 契約は未定義である。
+- candidate ID は `RR-PC-<日付>-<clusterKey slug>` の日付ベースである（`scripts/feedback-rule-candidates.mjs:208`）。同一証拠でも実行日が異なると別 ID になる。
+
+#### 固定する契約内容
+
+- 内部 script への直接依存ではなく、stable CLI の入出力を定義する。例:
+
+  ```bash
+  river promote propose \
+    --input candidate-feedback.jsonl \
+    --cluster-key skill::feedbackType \
+    --index .river/memory/index.json \
+    --output json
+  ```
+
+- candidate ID は日付ではなく、正規化した evidence 集合・cluster・policy version の content hash から生成する。
+- 同一証拠からの再実行は同一 candidate へ収束させる（冪等）。
+- 本契約は #1624（#1568-D: interface B 起動契約、Phase 4）の前提となる。#1624 側の設計は本契約の CLI I/O と candidate ID を参照して行う。
+
+#### 未決事項
+
+- 既存の日付ベース ID からの移行方法（併記期間または一括置換）は P1 実装時に決める。
+
+### 契約5: Two-stage clustering
+
+#### 既存実装の現状
+
+- clusterKey は `skillId::feedbackType` の1段階である（`scripts/feedback-rule-candidates.mjs:144`）。
+- `findingFingerprint` は Phase 1 で nullable であり（`scripts/feedback-rule-candidates.mjs:147-148`）、値がある場合は16桁 hex に検証される（`src/lib/feedback.mjs:88-89`）。
+- 効果測定の重複排除は fingerprint 単位で行われている（`src/lib/promotion.mjs:400-405`）。
+
+#### 固定する契約内容
+
+- 第1段階: `(skillId, feedbackType)` で反復検知する（現行 clusterKey を維持）。
+- 第2段階: fingerprint / category / scope / failure mode で実験 candidate へ分割する。
+- fingerprint がない候補は Shadow 表示までは許可し、自動実験・昇格の対象にはしない。
+- cluster を反復検知と原因仮説へ二段階分割できることを DoD とする（DoD 6項目め）。
+
+#### 未決事項
+
+- 第2段階の failure mode 分類語彙は P1 の Shadow aggregate で観測してから確定する。
+
+### 契約6: Profile-specific acceptance
+
+#### 既存実装の現状
+
+- run record には `reviewMode`（default `medium`）が保存される（`src/lib/result-store.mjs:55`）。
+- レビューモードルータは `light` / `standard` / `team` / `human-required` を定義している（`src/lib/review-mode-router.mjs:5`）。
+- profile ごとの受入基準（precision / recall / cost / reversal のしきい値）は未定義である。
+
+#### 固定する契約内容
+
+- 「代表10件」は smoke test の最低条件とし、統計的十分性を示す固定値として扱わない。
+- review profile ごとに precision / recall / cost / reversal の基準、必要サンプル数、critical regression の定義を決める。
+- critical regression 0 は P2 paired replay の必須条件とする。
+- profile 別の評価基準とサンプル数の決定方法を持つことを DoD とする（DoD 7項目め）。
+
+#### 未決事項
+
+- profile の単位を reviewMode とするか、対象リポジトリ×phase の組とするかは P1 で決める。
+
+## 4. DoD 9項目とフェーズ対応
+
+採否コメントの追加 DoD を再掲し、P0（本ドキュメント）で満たすものと後続フェーズのものを区別します。
+
+| #   | DoD                                                                                      | P0 での扱い         | 充足フェーズ |
+| --- | ---------------------------------------------------------------------------------------- | ------------------- | ------------ |
+| 1   | evidence provenance / trust level が schema と採用 gate に定義されている                 | 契約1で内容を固定   | P1〜P2 実装  |
+| 2   | canonical `review_run_id` で run → finding → feedback → experiment を追跡できる          | 契約2で内容を固定   | P1 実装      |
+| 3   | immutable Experiment Manifest が定義されている                                           | 契約3で内容を固定   | P2 実装      |
+| 4   | paired replay を ledger 比較と区別し activation / held-out / independent verifier を実装 | 契約3で内容を固定   | P2 実装      |
+| 5   | stable CLI I/O と content-addressed candidate ID が定義されている                        | 契約4で内容を固定   | P1 実装      |
+| 6   | cluster を反復検知と原因仮説へ二段階分割できる                                           | 契約5で内容を固定   | P1〜P2 実装  |
+| 7   | profile 別の評価基準とサンプル数の決定方法がある                                         | 契約6で内容を固定   | P2 実装      |
+| 8   | Shadow mode の観測結果を人間が確認してから canary へ進む                                 | 運用条件として明記  | P3 運用      |
+| 9   | #1574 が #1568-C の Retire lifecycle を重複実装していない                                | §2 の責務境界で固定 | 全フェーズ   |
+
+P0 の完了条件は、6契約すべての「固定する契約内容」が本ドキュメントで確定し、レビューを通過することです。schema・CLI・実装の変更は P0 に含めません。
+
+## 5. 未決事項（横断）
+
+- Codex 外部レビュー（2026-07-24）の指摘として、候補名を `ImprovementOpportunity` へ改名する案が未決事項として残っている。
+- 各契約の「未決事項」に記載した項目は、対応フェーズの実装 PR で確定し、本ドキュメントへ反映する。
+
+## 6. 参照
+
+- issue #1574（Epic）: Review Evolution Cycle 設計
+- issue #1574 採否コメント（2026-07-24、comment ID 5064856987）: 条件付きGO・6契約・実装順・追加 DoD の一次ソース
+- issue #1624（#1568-D）: interface B 起動契約（Phase 4）— 契約4を前提とする
+- `docs/development/skill-improvement-loop-design.md`: feedback ループの既存設計
+- `docs/development/1401-deterministic-command-execution-design.md` §1: ADR-003 を含む trust boundary の既存整理
