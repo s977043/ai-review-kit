@@ -6,7 +6,13 @@
 // `promote` never creates candidates — it only lists, decides on, and scaffolds
 // existing ones.
 //
+// The one exception is `propose` (#1624 / #1574 P0 contract 4): the stable
+// generation entry point that turns an explicit feedback selection into a
+// content-addressed candidate. It stays a pure, deterministic converter —
+// deciding *whether* a cluster deserves promotion remains the caller's job.
+//
 // Subcommands:
+//   river promote propose              Create/converge on a candidate from --input JSONL
 //   river promote list                 List promotion candidates
 //   river promote approve <id>         Approve a candidate (promotionStatus -> approved)
 //   river promote reject  <id>         Reject a candidate  (promotionStatus -> archived)
@@ -30,6 +36,7 @@ import {
   reviewPromotionEffectiveness,
   DEFAULT_EFFECTIVENESS_THRESHOLD,
 } from '../../lib/promotion.mjs';
+import { proposePromotionCandidate, readFeedbackJsonl } from '../../lib/promotion-candidates.mjs';
 
 /** Resolve `now` from RIVER_NOW (external injection) or fall back to real time. */
 function resolveNow() {
@@ -97,15 +104,83 @@ function printScaffold(scaffold) {
  */
 export async function runPromoteCommand(parsed, targetPath) {
   const sub = parsed.promoteSubcommand;
-  if (!['list', 'approve', 'reject', 'template', 'retire', 'review-effectiveness'].includes(sub)) {
+  if (
+    ![
+      'propose',
+      'list',
+      'approve',
+      'reject',
+      'template',
+      'retire',
+      'review-effectiveness',
+    ].includes(sub)
+  ) {
     console.error(
-      'Error: usage: river promote <list|approve <id>|reject <id>|template [<id>]|retire|review-effectiveness [<id>]> [--approver <name>] [--reason <text>] [--index <path>] [--threshold <n>] [--feedback-root <path>] [--output json] [--include-inactive].'
+      'Error: usage: river promote <propose|list|approve <id>|reject <id>|template [<id>]|retire|review-effectiveness [<id>]> [--input <jsonl>] [--cluster-key <skillId::feedbackType>] [--policy-version <v>] [--approver <name>] [--reason <text>] [--index <path>] [--threshold <n>] [--feedback-root <path>] [--output json] [--include-inactive] [--dry-run].'
     );
     return 1;
   }
 
   const indexPath = await resolveIndexPath(parsed, targetPath);
   const now = resolveNow();
+
+  if (sub === 'propose') {
+    if (!parsed.promoteInput || !parsed.promoteClusterKey) {
+      console.error(
+        'Error: river promote propose requires --input <jsonl> and --cluster-key <skillId::feedbackType>.'
+      );
+      return 1;
+    }
+    let result;
+    try {
+      const entries = await readFeedbackJsonl(path.resolve(process.cwd(), parsed.promoteInput));
+      result = proposePromotionCandidate({
+        entries,
+        clusterKey: parsed.promoteClusterKey,
+        indexPath,
+        now,
+        policyVersion: parsed.promotePolicyVersion ?? undefined,
+        dryRun: Boolean(parsed.dryRun),
+      });
+    } catch (err) {
+      // Usage errors (bad cluster key, mismatched input, unreadable file) and
+      // I/O errors share exit code 1, matching the rest of `promote`. The
+      // script's "candidates found -> exit 2" signal is deliberately not
+      // carried over: propose is a generation API, not a detection API.
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
+    if (parsed.output === 'json') {
+      console.log(JSON.stringify(result, null, 2));
+      return 0;
+    }
+    if (result.created) {
+      console.log(`Created promotion candidate ${result.candidateId}.`);
+    } else if (result.dryRun) {
+      console.log(
+        result.wouldCreate
+          ? `[dry-run] Would create promotion candidate ${result.candidateId} (nothing written).`
+          : `[dry-run] Promotion candidate ${result.candidateId} already exists (nothing written).`
+      );
+    } else {
+      console.log(
+        `Promotion candidate ${result.candidateId} already exists (converged, no change).`
+      );
+    }
+    console.log(`  clusterKey:      ${result.clusterKey}`);
+    console.log(`  contentHash:     ${result.contentHash}`);
+    console.log(`  policyVersion:   ${result.policyVersion}`);
+    if (result.shadowOnly) {
+      console.log(
+        '  note: evidence without findingFingerprint — shadow-only (no automatic experiment).'
+      );
+    }
+    if (result.existing) {
+      console.log(`  promotionStatus: ${result.existing.promotionStatus ?? '(unknown)'}`);
+    }
+    if (result.created) console.log(`  written to: ${indexPath}`);
+    return 0;
+  }
 
   if (sub === 'list') {
     const index = loadMemory(indexPath);

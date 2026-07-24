@@ -43,6 +43,12 @@ Commands:
   suppression add       Create a Riverbed Memory suppression entry
                         (--fingerprint --feedback --rationale [--scope]
                          [--severity] [--files] [--expires] [--pr])
+  promote propose       Create (or converge on) one promotion candidate from an
+                        explicit feedback JSONL selection. The candidate id is a
+                        content hash of (evidence, cluster, policy version), so
+                        re-running with the same evidence is idempotent.
+                        (--input <jsonl> --cluster-key <skillId::feedbackType>
+                         [--policy-version <v>] [--index <path>] [--dry-run])
   promote list          List promotion_candidate entries (Judgment Promotion Loop Phase 2)
   promote approve <id>  Approve a candidate (promotionStatus -> approved)
   promote reject <id>   Reject a candidate (promotionStatus -> archived)
@@ -165,6 +171,10 @@ function parseArgs(argv) {
     promoteIncludeInactive: false,
     promoteThreshold: null,
     promoteFeedbackRoot: null,
+    // promote propose fields (#1624 / #1574 P0 contract 4)
+    promoteInput: null,
+    promoteClusterKey: null,
+    promotePolicyVersion: null,
     // skills subcommand fields
     skillsSubcommand: null,
     resolvePaths: null,
@@ -223,7 +233,7 @@ function parseArgs(argv) {
       } else if (arg === 'feedback' && args[0] && !args[0].startsWith('-')) {
         parsed.feedbackSubcommand = args.shift(); // add (only one for now)
       } else if (arg === 'promote' && args[0] && !args[0].startsWith('-')) {
-        parsed.promoteSubcommand = args.shift(); // list | approve | reject | template | retire | review-effectiveness
+        parsed.promoteSubcommand = args.shift(); // propose | list | approve | reject | template | retire | review-effectiveness
         // approve/reject/template/review-effectiveness take an optional positional candidate id.
         if (
           ['approve', 'reject', 'template', 'review-effectiveness'].includes(
@@ -404,6 +414,36 @@ function parseArgs(argv) {
           break;
         }
         parsed.promoteFeedbackRoot = value;
+        continue;
+      }
+      if (arg === '--input') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --input option requires a JSONL path.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteInput = value;
+        continue;
+      }
+      if (arg === '--cluster-key') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --cluster-key option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteClusterKey = value;
+        continue;
+      }
+      if (arg === '--policy-version') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --policy-version option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promotePolicyVersion = value;
         continue;
       }
     }

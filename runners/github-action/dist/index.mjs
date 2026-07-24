@@ -53456,7 +53456,7 @@ const createPathTagFunction = (pathEncoder = encodeURIPath) => function path(sta
 /**
  * URI-encodes path params and ensures no unsafe /./ or /../ path segments are introduced.
  */
-const src_path = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+const path_path = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
 //# sourceMappingURL=path.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/completions/messages.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -53482,7 +53482,7 @@ class Messages extends APIResource {
      * ```
      */
     list(completionID, query = {}, options) {
-        return this._client.getAPIList(src_path `/chat/completions/${completionID}/messages`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path_path `/chat/completions/${completionID}/messages`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
     }
 }
 //# sourceMappingURL=messages.mjs.map
@@ -55261,7 +55261,7 @@ class Completions extends APIResource {
      * ```
      */
     retrieve(completionID, options) {
-        return this._client.get(src_path `/chat/completions/${completionID}`, {
+        return this._client.get(path_path `/chat/completions/${completionID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -55280,7 +55280,7 @@ class Completions extends APIResource {
      * ```
      */
     update(completionID, body, options) {
-        return this._client.post(src_path `/chat/completions/${completionID}`, {
+        return this._client.post(path_path `/chat/completions/${completionID}`, {
             body,
             ...options,
             __security: { bearerAuth: true },
@@ -55316,7 +55316,7 @@ class Completions extends APIResource {
      * ```
      */
     delete(completionID, options) {
-        return this._client.delete(src_path `/chat/completions/${completionID}`, {
+        return this._client.delete(path_path `/chat/completions/${completionID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -55412,7 +55412,7 @@ class AdminAPIKeys extends APIResource {
      * ```
      */
     retrieve(keyID, options) {
-        return this._client.get(src_path `/organization/admin_api_keys/${keyID}`, {
+        return this._client.get(path_path `/organization/admin_api_keys/${keyID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -55447,7 +55447,7 @@ class AdminAPIKeys extends APIResource {
      * ```
      */
     delete(keyID, options) {
-        return this._client.delete(src_path `/organization/admin_api_keys/${keyID}`, {
+        return this._client.delete(path_path `/organization/admin_api_keys/${keyID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -55523,7 +55523,7 @@ class Certificates extends APIResource {
      * ```
      */
     retrieve(certificateID, query = {}, options) {
-        return this._client.get(src_path `/organization/certificates/${certificateID}`, {
+        return this._client.get(path_path `/organization/certificates/${certificateID}`, {
             query,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -55541,7 +55541,7 @@ class Certificates extends APIResource {
      * ```
      */
     update(certificateID, body, options) {
-        return this._client.post(src_path `/organization/certificates/${certificateID}`, {
+        return this._client.post(path_path `/organization/certificates/${certificateID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -55575,7 +55575,7 @@ class Certificates extends APIResource {
      * ```
      */
     delete(certificateID, options) {
-        return this._client.delete(src_path `/organization/certificates/${certificateID}`, {
+        return this._client.delete(path_path `/organization/certificates/${certificateID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -55700,7 +55700,7 @@ class Invites extends APIResource {
      * ```
      */
     retrieve(inviteID, options) {
-        return this._client.get(src_path `/organization/invites/${inviteID}`, {
+        return this._client.get(path_path `/organization/invites/${inviteID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -55735,7 +55735,7 @@ class Invites extends APIResource {
      * ```
      */
     delete(inviteID, options) {
-        return this._client.delete(src_path `/organization/invites/${inviteID}`, {
+        return this._client.delete(path_path `/organization/invites/${inviteID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -55777,7 +55777,7 @@ class Roles extends APIResource {
      * ```
      */
     retrieve(roleID, options) {
-        return this._client.get(src_path `/organization/roles/${roleID}`, {
+        return this._client.get(path_path `/organization/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -55793,7 +55793,7 @@ class Roles extends APIResource {
      * ```
      */
     update(roleID, body, options) {
-        return this._client.post(src_path `/organization/roles/${roleID}`, {
+        return this._client.post(path_path `/organization/roles/${roleID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -55828,7 +55828,7 @@ class Roles extends APIResource {
      * ```
      */
     delete(roleID, options) {
-        return this._client.delete(src_path `/organization/roles/${roleID}`, {
+        return this._client.delete(path_path `/organization/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -55877,7 +55877,7 @@ class SpendAlerts extends APIResource {
      * ```
      */
     retrieve(alertID, options) {
-        return this._client.get(src_path `/organization/spend_alerts/${alertID}`, {
+        return this._client.get(path_path `/organization/spend_alerts/${alertID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -55903,7 +55903,7 @@ class SpendAlerts extends APIResource {
      * ```
      */
     update(alertID, body, options) {
-        return this._client.post(src_path `/organization/spend_alerts/${alertID}`, {
+        return this._client.post(path_path `/organization/spend_alerts/${alertID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -55935,7 +55935,7 @@ class SpendAlerts extends APIResource {
      * ```
      */
     delete(alertID, options) {
-        return this._client.delete(src_path `/organization/spend_alerts/${alertID}`, {
+        return this._client.delete(path_path `/organization/spend_alerts/${alertID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56165,7 +56165,7 @@ class roles_Roles extends APIResource {
      * ```
      */
     create(groupID, body, options) {
-        return this._client.post(src_path `/organization/groups/${groupID}/roles`, {
+        return this._client.post(path_path `/organization/groups/${groupID}/roles`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56185,7 +56185,7 @@ class roles_Roles extends APIResource {
      */
     retrieve(roleID, params, options) {
         const { group_id } = params;
-        return this._client.get(src_path `/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path_path `/organization/groups/${group_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56204,7 +56204,7 @@ class roles_Roles extends APIResource {
      * ```
      */
     list(groupID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/groups/${groupID}/roles`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/groups/${groupID}/roles`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Unassigns an organization role from a group within the organization.
@@ -56220,7 +56220,7 @@ class roles_Roles extends APIResource {
      */
     delete(roleID, params, options) {
         const { group_id } = params;
-        return this._client.delete(src_path `/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path_path `/organization/groups/${group_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56246,7 +56246,7 @@ class Users extends APIResource {
      * ```
      */
     create(groupID, body, options) {
-        return this._client.post(src_path `/organization/groups/${groupID}/users`, {
+        return this._client.post(path_path `/organization/groups/${groupID}/users`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56266,7 +56266,7 @@ class Users extends APIResource {
      */
     retrieve(userID, params, options) {
         const { group_id } = params;
-        return this._client.get(src_path `/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.get(path_path `/organization/groups/${group_id}/users/${userID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56285,7 +56285,7 @@ class Users extends APIResource {
      * ```
      */
     list(groupID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/groups/${groupID}/users`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/groups/${groupID}/users`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Removes a user from a group.
@@ -56301,7 +56301,7 @@ class Users extends APIResource {
      */
     delete(userID, params, options) {
         const { group_id } = params;
-        return this._client.delete(src_path `/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.delete(path_path `/organization/groups/${group_id}/users/${userID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56352,7 +56352,7 @@ class Groups extends APIResource {
      * ```
      */
     retrieve(groupID, options) {
-        return this._client.get(src_path `/organization/groups/${groupID}`, {
+        return this._client.get(path_path `/organization/groups/${groupID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56369,7 +56369,7 @@ class Groups extends APIResource {
      * ```
      */
     update(groupID, body, options) {
-        return this._client.post(src_path `/organization/groups/${groupID}`, {
+        return this._client.post(path_path `/organization/groups/${groupID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56404,7 +56404,7 @@ class Groups extends APIResource {
      * ```
      */
     delete(groupID, options) {
-        return this._client.delete(src_path `/organization/groups/${groupID}`, {
+        return this._client.delete(path_path `/organization/groups/${groupID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56433,7 +56433,7 @@ class APIKeys extends APIResource {
      */
     retrieve(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.get(src_path `/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.get(path_path `/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56452,7 +56452,7 @@ class APIKeys extends APIResource {
      * ```
      */
     list(projectID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/api_keys`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/projects/${projectID}/api_keys`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Deletes an API key from the project.
@@ -56471,7 +56471,7 @@ class APIKeys extends APIResource {
      */
     delete(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.delete(src_path `/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.delete(path_path `/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56498,7 +56498,7 @@ class certificates_Certificates extends APIResource {
      * ```
      */
     list(projectID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/certificates`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/projects/${projectID}/certificates`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Activate certificates at the project level.
@@ -56517,7 +56517,7 @@ class certificates_Certificates extends APIResource {
      * ```
      */
     activate(projectID, body, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/certificates/activate`, (Page), { body, method: 'post', ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/projects/${projectID}/certificates/activate`, (Page), { body, method: 'post', ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Deactivate certificates at the project level. You can atomically and
@@ -56535,7 +56535,7 @@ class certificates_Certificates extends APIResource {
      * ```
      */
     deactivate(projectID, body, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/certificates/deactivate`, (Page), { body, method: 'post', ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/projects/${projectID}/certificates/deactivate`, (Page), { body, method: 'post', ...options, __security: { adminAPIKeyAuth: true } });
     }
 }
 //# sourceMappingURL=certificates.mjs.map
@@ -56556,7 +56556,7 @@ class data_retention_DataRetention extends APIResource {
      * ```
      */
     retrieve(projectID, options) {
-        return this._client.get(src_path `/organization/projects/${projectID}/data_retention`, {
+        return this._client.get(path_path `/organization/projects/${projectID}/data_retention`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56574,7 +56574,7 @@ class data_retention_DataRetention extends APIResource {
      * ```
      */
     update(projectID, body, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}/data_retention`, {
+        return this._client.post(path_path `/organization/projects/${projectID}/data_retention`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56599,7 +56599,7 @@ class HostedToolPermissions extends APIResource {
      * ```
      */
     retrieve(projectID, options) {
-        return this._client.get(src_path `/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.get(path_path `/organization/projects/${projectID}/hosted_tool_permissions`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56616,7 +56616,7 @@ class HostedToolPermissions extends APIResource {
      * ```
      */
     update(projectID, body, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.post(path_path `/organization/projects/${projectID}/hosted_tool_permissions`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56641,7 +56641,7 @@ class ModelPermissions extends APIResource {
      * ```
      */
     retrieve(projectID, options) {
-        return this._client.get(src_path `/organization/projects/${projectID}/model_permissions`, {
+        return this._client.get(path_path `/organization/projects/${projectID}/model_permissions`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56659,7 +56659,7 @@ class ModelPermissions extends APIResource {
      * ```
      */
     update(projectID, body, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}/model_permissions`, {
+        return this._client.post(path_path `/organization/projects/${projectID}/model_permissions`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56677,7 +56677,7 @@ class ModelPermissions extends APIResource {
      * ```
      */
     delete(projectID, options) {
-        return this._client.delete(src_path `/organization/projects/${projectID}/model_permissions`, {
+        return this._client.delete(path_path `/organization/projects/${projectID}/model_permissions`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56704,7 +56704,7 @@ class RateLimits extends APIResource {
      * ```
      */
     listRateLimits(projectID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/rate_limits`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/projects/${projectID}/rate_limits`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Updates a project rate limit.
@@ -56720,7 +56720,7 @@ class RateLimits extends APIResource {
      */
     updateRateLimit(rateLimitID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(src_path `/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
+        return this._client.post(path_path `/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56747,7 +56747,7 @@ class projects_roles_Roles extends APIResource {
      * ```
      */
     create(projectID, body, options) {
-        return this._client.post(src_path `/projects/${projectID}/roles`, {
+        return this._client.post(path_path `/projects/${projectID}/roles`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56767,7 +56767,7 @@ class projects_roles_Roles extends APIResource {
      */
     retrieve(roleID, params, options) {
         const { project_id } = params;
-        return this._client.get(src_path `/projects/${project_id}/roles/${roleID}`, {
+        return this._client.get(path_path `/projects/${project_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56786,7 +56786,7 @@ class projects_roles_Roles extends APIResource {
      */
     update(roleID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(src_path `/projects/${project_id}/roles/${roleID}`, {
+        return this._client.post(path_path `/projects/${project_id}/roles/${roleID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56806,7 +56806,7 @@ class projects_roles_Roles extends APIResource {
      * ```
      */
     list(projectID, query = {}, options) {
-        return this._client.getAPIList(src_path `/projects/${projectID}/roles`, (NextCursorPage), {
+        return this._client.getAPIList(path_path `/projects/${projectID}/roles`, (NextCursorPage), {
             query,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56826,7 +56826,7 @@ class projects_roles_Roles extends APIResource {
      */
     delete(roleID, params, options) {
         const { project_id } = params;
-        return this._client.delete(src_path `/projects/${project_id}/roles/${roleID}`, {
+        return this._client.delete(path_path `/projects/${project_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56860,7 +56860,7 @@ class spend_alerts_SpendAlerts extends APIResource {
      * ```
      */
     create(projectID, body, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}/spend_alerts`, {
+        return this._client.post(path_path `/organization/projects/${projectID}/spend_alerts`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56880,7 +56880,7 @@ class spend_alerts_SpendAlerts extends APIResource {
      */
     retrieve(alertID, params, options) {
         const { project_id } = params;
-        return this._client.get(src_path `/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.get(path_path `/organization/projects/${project_id}/spend_alerts/${alertID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56908,7 +56908,7 @@ class spend_alerts_SpendAlerts extends APIResource {
      */
     update(alertID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(src_path `/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.post(path_path `/organization/projects/${project_id}/spend_alerts/${alertID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56928,7 +56928,7 @@ class spend_alerts_SpendAlerts extends APIResource {
      * ```
      */
     list(projectID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/spend_alerts`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/projects/${projectID}/spend_alerts`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Deletes a project spend alert.
@@ -56944,7 +56944,7 @@ class spend_alerts_SpendAlerts extends APIResource {
      */
     delete(alertID, params, options) {
         const { project_id } = params;
-        return this._client.delete(src_path `/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.delete(path_path `/organization/projects/${project_id}/spend_alerts/${alertID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -56971,7 +56971,7 @@ class groups_roles_Roles extends APIResource {
      */
     create(groupID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(src_path `/projects/${project_id}/groups/${groupID}/roles`, {
+        return this._client.post(path_path `/projects/${project_id}/groups/${groupID}/roles`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -56991,7 +56991,7 @@ class groups_roles_Roles extends APIResource {
      */
     retrieve(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.get(src_path `/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path_path `/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57012,7 +57012,7 @@ class groups_roles_Roles extends APIResource {
      */
     list(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(src_path `/projects/${project_id}/groups/${groupID}/roles`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/projects/${project_id}/groups/${groupID}/roles`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Unassigns a project role from a group within a project.
@@ -57028,7 +57028,7 @@ class groups_roles_Roles extends APIResource {
      */
     delete(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.delete(src_path `/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path_path `/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57060,7 +57060,7 @@ class groups_Groups extends APIResource {
      * ```
      */
     create(projectID, body, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}/groups`, {
+        return this._client.post(path_path `/organization/projects/${projectID}/groups`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -57080,7 +57080,7 @@ class groups_Groups extends APIResource {
      */
     retrieve(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.get(src_path `/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.get(path_path `/organization/projects/${project_id}/groups/${groupID}`, {
             query,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -57100,7 +57100,7 @@ class groups_Groups extends APIResource {
      * ```
      */
     list(projectID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/groups`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/projects/${projectID}/groups`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Revokes a group's access to a project.
@@ -57116,7 +57116,7 @@ class groups_Groups extends APIResource {
      */
     delete(groupID, params, options) {
         const { project_id } = params;
-        return this._client.delete(src_path `/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.delete(path_path `/organization/projects/${project_id}/groups/${groupID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57143,7 +57143,7 @@ class api_keys_APIKeys extends APIResource {
      */
     create(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
     }
 }
 //# sourceMappingURL=api-keys.mjs.map
@@ -57173,7 +57173,7 @@ class ServiceAccounts extends APIResource {
      * ```
      */
     create(projectID, body, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}/service_accounts`, {
+        return this._client.post(path_path `/organization/projects/${projectID}/service_accounts`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -57193,7 +57193,7 @@ class ServiceAccounts extends APIResource {
      */
     retrieve(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.get(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+        return this._client.get(path_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57212,7 +57212,7 @@ class ServiceAccounts extends APIResource {
      */
     update(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Returns a list of service accounts in the project.
@@ -57228,7 +57228,7 @@ class ServiceAccounts extends APIResource {
      * ```
      */
     list(projectID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/service_accounts`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/projects/${projectID}/service_accounts`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Deletes a service account from the project.
@@ -57247,7 +57247,7 @@ class ServiceAccounts extends APIResource {
      */
     delete(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.delete(src_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path_path `/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
     }
 }
 ServiceAccounts.APIKeys = api_keys_APIKeys;
@@ -57272,7 +57272,7 @@ class users_roles_Roles extends APIResource {
      */
     create(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(src_path `/projects/${project_id}/users/${userID}/roles`, {
+        return this._client.post(path_path `/projects/${project_id}/users/${userID}/roles`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -57292,7 +57292,7 @@ class users_roles_Roles extends APIResource {
      */
     retrieve(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.get(src_path `/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path_path `/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57313,7 +57313,7 @@ class users_roles_Roles extends APIResource {
      */
     list(userID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(src_path `/projects/${project_id}/users/${userID}/roles`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/projects/${project_id}/users/${userID}/roles`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Unassigns a project role from a user within a project.
@@ -57329,7 +57329,7 @@ class users_roles_Roles extends APIResource {
      */
     delete(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.delete(src_path `/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path_path `/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57362,7 +57362,7 @@ class users_Users extends APIResource {
      * ```
      */
     create(projectID, body, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}/users`, {
+        return this._client.post(path_path `/organization/projects/${projectID}/users`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -57382,7 +57382,7 @@ class users_Users extends APIResource {
      */
     retrieve(userID, params, options) {
         const { project_id } = params;
-        return this._client.get(src_path `/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.get(path_path `/organization/projects/${project_id}/users/${userID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57401,7 +57401,7 @@ class users_Users extends APIResource {
      */
     update(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(src_path `/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.post(path_path `/organization/projects/${project_id}/users/${userID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -57421,7 +57421,7 @@ class users_Users extends APIResource {
      * ```
      */
     list(projectID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/projects/${projectID}/users`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/projects/${projectID}/users`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Deletes a user from the project.
@@ -57440,7 +57440,7 @@ class users_Users extends APIResource {
      */
     delete(userID, params, options) {
         const { project_id } = params;
-        return this._client.delete(src_path `/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.delete(path_path `/organization/projects/${project_id}/users/${userID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57521,7 +57521,7 @@ class Projects extends APIResource {
      * ```
      */
     retrieve(projectID, options) {
-        return this._client.get(src_path `/organization/projects/${projectID}`, {
+        return this._client.get(path_path `/organization/projects/${projectID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57538,7 +57538,7 @@ class Projects extends APIResource {
      * ```
      */
     update(projectID, body, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}`, {
+        return this._client.post(path_path `/organization/projects/${projectID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -57575,7 +57575,7 @@ class Projects extends APIResource {
      * ```
      */
     archive(projectID, options) {
-        return this._client.post(src_path `/organization/projects/${projectID}/archive`, {
+        return this._client.post(path_path `/organization/projects/${projectID}/archive`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57612,7 +57612,7 @@ class organization_users_roles_Roles extends APIResource {
      * ```
      */
     create(userID, body, options) {
-        return this._client.post(src_path `/organization/users/${userID}/roles`, {
+        return this._client.post(path_path `/organization/users/${userID}/roles`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -57632,7 +57632,7 @@ class organization_users_roles_Roles extends APIResource {
      */
     retrieve(roleID, params, options) {
         const { user_id } = params;
-        return this._client.get(src_path `/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path_path `/organization/users/${user_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57651,7 +57651,7 @@ class organization_users_roles_Roles extends APIResource {
      * ```
      */
     list(userID, query = {}, options) {
-        return this._client.getAPIList(src_path `/organization/users/${userID}/roles`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/organization/users/${userID}/roles`, (NextCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * Unassigns an organization role from a user within the organization.
@@ -57667,7 +57667,7 @@ class organization_users_roles_Roles extends APIResource {
      */
     delete(roleID, params, options) {
         const { user_id } = params;
-        return this._client.delete(src_path `/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path_path `/organization/users/${user_id}/roles/${roleID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57696,7 +57696,7 @@ class users_users_Users extends APIResource {
      * ```
      */
     retrieve(userID, options) {
-        return this._client.get(src_path `/organization/users/${userID}`, {
+        return this._client.get(path_path `/organization/users/${userID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57711,7 +57711,7 @@ class users_users_Users extends APIResource {
      * ```
      */
     update(userID, body, options) {
-        return this._client.post(src_path `/organization/users/${userID}`, {
+        return this._client.post(path_path `/organization/users/${userID}`, {
             body,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -57746,7 +57746,7 @@ class users_users_Users extends APIResource {
      * ```
      */
     delete(userID, options) {
-        return this._client.delete(src_path `/organization/users/${userID}`, {
+        return this._client.delete(path_path `/organization/users/${userID}`, {
             ...options,
             __security: { adminAPIKeyAuth: true },
         });
@@ -57928,7 +57928,7 @@ class Batches extends APIResource {
      * Retrieves a batch.
      */
     retrieve(batchID, options) {
-        return this._client.get(src_path `/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path_path `/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * List your organization's batches.
@@ -57946,7 +57946,7 @@ class Batches extends APIResource {
      * (if any) available in the output file.
      */
     cancel(batchID, options) {
-        return this._client.post(src_path `/batches/${batchID}/cancel`, {
+        return this._client.post(path_path `/batches/${batchID}/cancel`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -57982,7 +57982,7 @@ class Assistants extends APIResource {
      * @deprecated
      */
     retrieve(assistantID, options) {
-        return this._client.get(src_path `/assistants/${assistantID}`, {
+        return this._client.get(path_path `/assistants/${assistantID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -57994,7 +57994,7 @@ class Assistants extends APIResource {
      * @deprecated
      */
     update(assistantID, body, options) {
-        return this._client.post(src_path `/assistants/${assistantID}`, {
+        return this._client.post(path_path `/assistants/${assistantID}`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -58020,7 +58020,7 @@ class Assistants extends APIResource {
      * @deprecated
      */
     delete(assistantID, options) {
-        return this._client.delete(src_path `/assistants/${assistantID}`, {
+        return this._client.delete(path_path `/assistants/${assistantID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -58146,7 +58146,7 @@ class sessions_Sessions extends APIResource {
      * ```
      */
     cancel(sessionID, options) {
-        return this._client.post(src_path `/chatkit/sessions/${sessionID}/cancel`, {
+        return this._client.post(path_path `/chatkit/sessions/${sessionID}/cancel`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'chatkit_beta=v1' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -58171,7 +58171,7 @@ class Threads extends APIResource {
      * ```
      */
     retrieve(threadID, options) {
-        return this._client.get(src_path `/chatkit/threads/${threadID}`, {
+        return this._client.get(path_path `/chatkit/threads/${threadID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'chatkit_beta=v1' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -58207,7 +58207,7 @@ class Threads extends APIResource {
      * ```
      */
     delete(threadID, options) {
-        return this._client.delete(src_path `/chatkit/threads/${threadID}`, {
+        return this._client.delete(path_path `/chatkit/threads/${threadID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'chatkit_beta=v1' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -58227,7 +58227,7 @@ class Threads extends APIResource {
      * ```
      */
     listItems(threadID, query = {}, options) {
-        return this._client.getAPIList(src_path `/chatkit/threads/${threadID}/items`, (ConversationCursorPage), {
+        return this._client.getAPIList(path_path `/chatkit/threads/${threadID}/items`, (ConversationCursorPage), {
             query,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'chatkit_beta=v1' }, options?.headers]),
@@ -58275,7 +58275,7 @@ class InputItems extends APIResource {
      */
     list(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(src_path `/responses/${responseID}/input_items?beta=true`, (CursorPage), {
+        return this._client.getAPIList(path_path `/responses/${responseID}/input_items?beta=true`, (CursorPage), {
             query,
             ...options,
             headers: buildHeaders([
@@ -58348,7 +58348,7 @@ class Responses extends APIResource {
     }
     retrieve(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.get(src_path `/responses/${responseID}?beta=true`, {
+        return this._client.get(path_path `/responses/${responseID}?beta=true`, {
             query,
             ...options,
             headers: buildHeaders([
@@ -58371,7 +58371,7 @@ class Responses extends APIResource {
      */
     delete(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(src_path `/responses/${responseID}?beta=true`, {
+        return this._client.delete(path_path `/responses/${responseID}?beta=true`, {
             ...options,
             headers: buildHeaders([
                 { Accept: '*/*', ...(betas?.toString() != null ? { 'openai-beta': betas?.toString() } : undefined) },
@@ -58394,7 +58394,7 @@ class Responses extends APIResource {
      */
     cancel(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(src_path `/responses/${responseID}/cancel?beta=true`, {
+        return this._client.post(path_path `/responses/${responseID}/cancel?beta=true`, {
             ...options,
             headers: buildHeaders([
                 { ...(betas?.toString() != null ? { 'openai-beta': betas?.toString() } : undefined) },
@@ -58453,7 +58453,7 @@ class messages_Messages extends APIResource {
      * @deprecated The Assistants API is deprecated in favor of the Responses API
      */
     create(threadID, body, options) {
-        return this._client.post(src_path `/threads/${threadID}/messages`, {
+        return this._client.post(path_path `/threads/${threadID}/messages`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -58467,7 +58467,7 @@ class messages_Messages extends APIResource {
      */
     retrieve(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.get(src_path `/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.get(path_path `/threads/${thread_id}/messages/${messageID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -58480,7 +58480,7 @@ class messages_Messages extends APIResource {
      */
     update(messageID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(src_path `/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.post(path_path `/threads/${thread_id}/messages/${messageID}`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -58493,7 +58493,7 @@ class messages_Messages extends APIResource {
      * @deprecated The Assistants API is deprecated in favor of the Responses API
      */
     list(threadID, query = {}, options) {
-        return this._client.getAPIList(src_path `/threads/${threadID}/messages`, (CursorPage), {
+        return this._client.getAPIList(path_path `/threads/${threadID}/messages`, (CursorPage), {
             query,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -58507,7 +58507,7 @@ class messages_Messages extends APIResource {
      */
     delete(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.delete(src_path `/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.delete(path_path `/threads/${thread_id}/messages/${messageID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -58534,7 +58534,7 @@ class Steps extends APIResource {
      */
     retrieve(stepID, params, options) {
         const { thread_id, run_id, ...query } = params;
-        return this._client.get(src_path `/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
+        return this._client.get(path_path `/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
             query,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -58548,7 +58548,7 @@ class Steps extends APIResource {
      */
     list(runID, params, options) {
         const { thread_id, ...query } = params;
-        return this._client.getAPIList(src_path `/threads/${thread_id}/runs/${runID}/steps`, (CursorPage), {
+        return this._client.getAPIList(path_path `/threads/${thread_id}/runs/${runID}/steps`, (CursorPage), {
             query,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -59195,7 +59195,7 @@ class Runs extends APIResource {
     }
     create(threadID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(src_path `/threads/${threadID}/runs`, {
+        return this._client.post(path_path `/threads/${threadID}/runs`, {
             query: { include },
             body,
             ...options,
@@ -59212,7 +59212,7 @@ class Runs extends APIResource {
      */
     retrieve(runID, params, options) {
         const { thread_id } = params;
-        return this._client.get(src_path `/threads/${thread_id}/runs/${runID}`, {
+        return this._client.get(path_path `/threads/${thread_id}/runs/${runID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -59225,7 +59225,7 @@ class Runs extends APIResource {
      */
     update(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(src_path `/threads/${thread_id}/runs/${runID}`, {
+        return this._client.post(path_path `/threads/${thread_id}/runs/${runID}`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -59238,7 +59238,7 @@ class Runs extends APIResource {
      * @deprecated The Assistants API is deprecated in favor of the Responses API
      */
     list(threadID, query = {}, options) {
-        return this._client.getAPIList(src_path `/threads/${threadID}/runs`, (CursorPage), {
+        return this._client.getAPIList(path_path `/threads/${threadID}/runs`, (CursorPage), {
             query,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -59252,7 +59252,7 @@ class Runs extends APIResource {
      */
     cancel(runID, params, options) {
         const { thread_id } = params;
-        return this._client.post(src_path `/threads/${thread_id}/runs/${runID}/cancel`, {
+        return this._client.post(path_path `/threads/${thread_id}/runs/${runID}/cancel`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -59332,7 +59332,7 @@ class Runs extends APIResource {
     }
     submitToolOutputs(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(src_path `/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
+        return this._client.post(path_path `/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -59401,7 +59401,7 @@ class threads_Threads extends APIResource {
      * @deprecated The Assistants API is deprecated in favor of the Responses API
      */
     retrieve(threadID, options) {
-        return this._client.get(src_path `/threads/${threadID}`, {
+        return this._client.get(path_path `/threads/${threadID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -59413,7 +59413,7 @@ class threads_Threads extends APIResource {
      * @deprecated The Assistants API is deprecated in favor of the Responses API
      */
     update(threadID, body, options) {
-        return this._client.post(src_path `/threads/${threadID}`, {
+        return this._client.post(path_path `/threads/${threadID}`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -59426,7 +59426,7 @@ class threads_Threads extends APIResource {
      * @deprecated The Assistants API is deprecated in favor of the Responses API
      */
     delete(threadID, options) {
-        return this._client.delete(src_path `/threads/${threadID}`, {
+        return this._client.delete(path_path `/threads/${threadID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -59518,7 +59518,7 @@ class Content extends APIResource {
      */
     retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(src_path `/containers/${container_id}/files/${fileID}/content`, {
+        return this._client.get(path_path `/containers/${container_id}/files/${fileID}/content`, {
             ...options,
             headers: buildHeaders([{ Accept: 'application/binary' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -59548,14 +59548,14 @@ class Files extends APIResource {
      * a JSON request with a file ID.
      */
     create(containerID, body, options) {
-        return this._client.post(src_path `/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path_path `/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
     }
     /**
      * Retrieve Container File
      */
     retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(src_path `/containers/${container_id}/files/${fileID}`, {
+        return this._client.get(path_path `/containers/${container_id}/files/${fileID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -59564,7 +59564,7 @@ class Files extends APIResource {
      * List Container files
      */
     list(containerID, query = {}, options) {
-        return this._client.getAPIList(src_path `/containers/${containerID}/files`, (CursorPage), {
+        return this._client.getAPIList(path_path `/containers/${containerID}/files`, (CursorPage), {
             query,
             ...options,
             __security: { bearerAuth: true },
@@ -59575,7 +59575,7 @@ class Files extends APIResource {
      */
     delete(fileID, params, options) {
         const { container_id } = params;
-        return this._client.delete(src_path `/containers/${container_id}/files/${fileID}`, {
+        return this._client.delete(path_path `/containers/${container_id}/files/${fileID}`, {
             ...options,
             headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -59607,7 +59607,7 @@ class Containers extends APIResource {
      * Retrieve Container
      */
     retrieve(containerID, options) {
-        return this._client.get(src_path `/containers/${containerID}`, {
+        return this._client.get(path_path `/containers/${containerID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -59626,7 +59626,7 @@ class Containers extends APIResource {
      * Delete Container
      */
     delete(containerID, options) {
-        return this._client.delete(src_path `/containers/${containerID}`, {
+        return this._client.delete(path_path `/containers/${containerID}`, {
             ...options,
             headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -59649,7 +59649,7 @@ class Items extends APIResource {
      */
     create(conversationID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(src_path `/conversations/${conversationID}/items`, {
+        return this._client.post(path_path `/conversations/${conversationID}/items`, {
             query: { include },
             body,
             ...options,
@@ -59661,7 +59661,7 @@ class Items extends APIResource {
      */
     retrieve(itemID, params, options) {
         const { conversation_id, ...query } = params;
-        return this._client.get(src_path `/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.get(path_path `/conversations/${conversation_id}/items/${itemID}`, {
             query,
             ...options,
             __security: { bearerAuth: true },
@@ -59671,14 +59671,14 @@ class Items extends APIResource {
      * List all items for a conversation with the given ID.
      */
     list(conversationID, query = {}, options) {
-        return this._client.getAPIList(src_path `/conversations/${conversationID}/items`, (ConversationCursorPage), { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path_path `/conversations/${conversationID}/items`, (ConversationCursorPage), { query, ...options, __security: { bearerAuth: true } });
     }
     /**
      * Delete an item from a conversation with the given IDs.
      */
     delete(itemID, params, options) {
         const { conversation_id } = params;
-        return this._client.delete(src_path `/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.delete(path_path `/conversations/${conversation_id}/items/${itemID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -59709,7 +59709,7 @@ class Conversations extends APIResource {
      * Get a conversation
      */
     retrieve(conversationID, options) {
-        return this._client.get(src_path `/conversations/${conversationID}`, {
+        return this._client.get(path_path `/conversations/${conversationID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -59718,7 +59718,7 @@ class Conversations extends APIResource {
      * Update a conversation
      */
     update(conversationID, body, options) {
-        return this._client.post(src_path `/conversations/${conversationID}`, {
+        return this._client.post(path_path `/conversations/${conversationID}`, {
             body,
             ...options,
             __security: { bearerAuth: true },
@@ -59728,7 +59728,7 @@ class Conversations extends APIResource {
      * Delete a conversation. Items in the conversation will not be deleted.
      */
     delete(conversationID, options) {
-        return this._client.delete(src_path `/conversations/${conversationID}`, {
+        return this._client.delete(path_path `/conversations/${conversationID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -59807,7 +59807,7 @@ class OutputItems extends APIResource {
      */
     retrieve(outputItemID, params, options) {
         const { eval_id, run_id } = params;
-        return this._client.get(src_path `/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
+        return this._client.get(path_path `/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -59817,7 +59817,7 @@ class OutputItems extends APIResource {
      */
     list(runID, params, options) {
         const { eval_id, ...query } = params;
-        return this._client.getAPIList(src_path `/evals/${eval_id}/runs/${runID}/output_items`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path_path `/evals/${eval_id}/runs/${runID}/output_items`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
     }
 }
 //# sourceMappingURL=output-items.mjs.map
@@ -59842,7 +59842,7 @@ class runs_Runs extends APIResource {
      * schema specified in the config of the evaluation.
      */
     create(evalID, body, options) {
-        return this._client.post(src_path `/evals/${evalID}/runs`, {
+        return this._client.post(path_path `/evals/${evalID}/runs`, {
             body,
             ...options,
             __security: { bearerAuth: true },
@@ -59853,7 +59853,7 @@ class runs_Runs extends APIResource {
      */
     retrieve(runID, params, options) {
         const { eval_id } = params;
-        return this._client.get(src_path `/evals/${eval_id}/runs/${runID}`, {
+        return this._client.get(path_path `/evals/${eval_id}/runs/${runID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -59862,7 +59862,7 @@ class runs_Runs extends APIResource {
      * Get a list of runs for an evaluation.
      */
     list(evalID, query = {}, options) {
-        return this._client.getAPIList(src_path `/evals/${evalID}/runs`, (CursorPage), {
+        return this._client.getAPIList(path_path `/evals/${evalID}/runs`, (CursorPage), {
             query,
             ...options,
             __security: { bearerAuth: true },
@@ -59873,7 +59873,7 @@ class runs_Runs extends APIResource {
      */
     delete(runID, params, options) {
         const { eval_id } = params;
-        return this._client.delete(src_path `/evals/${eval_id}/runs/${runID}`, {
+        return this._client.delete(path_path `/evals/${eval_id}/runs/${runID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -59883,7 +59883,7 @@ class runs_Runs extends APIResource {
      */
     cancel(runID, params, options) {
         const { eval_id } = params;
-        return this._client.post(src_path `/evals/${eval_id}/runs/${runID}`, {
+        return this._client.post(path_path `/evals/${eval_id}/runs/${runID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -59921,13 +59921,13 @@ class Evals extends APIResource {
      * Get an evaluation by ID.
      */
     retrieve(evalID, options) {
-        return this._client.get(src_path `/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path_path `/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * Update certain properties of an evaluation.
      */
     update(evalID, body, options) {
-        return this._client.post(src_path `/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
+        return this._client.post(path_path `/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
     }
     /**
      * List evaluations for a project.
@@ -59943,7 +59943,7 @@ class Evals extends APIResource {
      * Delete an evaluation.
      */
     delete(evalID, options) {
-        return this._client.delete(src_path `/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path_path `/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
     }
 }
 Evals.Runs = runs_Runs;
@@ -59997,7 +59997,7 @@ class files_Files extends APIResource {
      * Returns information about a specific file.
      */
     retrieve(fileID, options) {
-        return this._client.get(src_path `/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path_path `/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * Returns a list of files.
@@ -60013,13 +60013,13 @@ class files_Files extends APIResource {
      * Delete a file and remove it from all vector stores.
      */
     delete(fileID, options) {
-        return this._client.delete(src_path `/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path_path `/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * Returns the contents of the specified file.
      */
     content(fileID, options) {
-        return this._client.get(src_path `/files/${fileID}/content`, {
+        return this._client.get(path_path `/files/${fileID}/content`, {
             ...options,
             headers: buildHeaders([{ Accept: 'application/binary' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -60149,7 +60149,7 @@ class Permissions extends APIResource {
      * ```
      */
     create(fineTunedModelCheckpoint, body, options) {
-        return this._client.getAPIList(src_path `/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, (Page), { body, method: 'post', ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, (Page), { body, method: 'post', ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -60160,7 +60160,7 @@ class Permissions extends APIResource {
      * @deprecated Retrieve is deprecated. Please swap to the paginated list method instead.
      */
     retrieve(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.get(src_path `/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
+        return this._client.get(path_path `/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
             query,
             ...options,
             __security: { adminAPIKeyAuth: true },
@@ -60183,7 +60183,7 @@ class Permissions extends APIResource {
      * ```
      */
     list(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.getAPIList(src_path `/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path_path `/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, (ConversationCursorPage), { query, ...options, __security: { adminAPIKeyAuth: true } });
     }
     /**
      * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -60205,7 +60205,7 @@ class Permissions extends APIResource {
      */
     delete(permissionID, params, options) {
         const { fine_tuned_model_checkpoint } = params;
-        return this._client.delete(src_path `/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path_path `/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
     }
 }
 //# sourceMappingURL=permissions.mjs.map
@@ -60245,7 +60245,7 @@ class checkpoints_Checkpoints extends APIResource {
      * ```
      */
     list(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(src_path `/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path_path `/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
     }
 }
 //# sourceMappingURL=checkpoints.mjs.map
@@ -60297,7 +60297,7 @@ class Jobs extends APIResource {
      * ```
      */
     retrieve(fineTuningJobID, options) {
-        return this._client.get(src_path `/fine_tuning/jobs/${fineTuningJobID}`, {
+        return this._client.get(path_path `/fine_tuning/jobs/${fineTuningJobID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -60331,7 +60331,7 @@ class Jobs extends APIResource {
      * ```
      */
     cancel(fineTuningJobID, options) {
-        return this._client.post(src_path `/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
+        return this._client.post(path_path `/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -60350,7 +60350,7 @@ class Jobs extends APIResource {
      * ```
      */
     listEvents(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(src_path `/fine_tuning/jobs/${fineTuningJobID}/events`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path_path `/fine_tuning/jobs/${fineTuningJobID}/events`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
     }
     /**
      * Pause a fine-tune job.
@@ -60363,7 +60363,7 @@ class Jobs extends APIResource {
      * ```
      */
     pause(fineTuningJobID, options) {
-        return this._client.post(src_path `/fine_tuning/jobs/${fineTuningJobID}/pause`, {
+        return this._client.post(path_path `/fine_tuning/jobs/${fineTuningJobID}/pause`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -60379,7 +60379,7 @@ class Jobs extends APIResource {
      * ```
      */
     resume(fineTuningJobID, options) {
-        return this._client.post(src_path `/fine_tuning/jobs/${fineTuningJobID}/resume`, {
+        return this._client.post(path_path `/fine_tuning/jobs/${fineTuningJobID}/resume`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -60479,7 +60479,7 @@ class Models extends APIResource {
      * the owner and permissioning.
      */
     retrieve(model, options) {
-        return this._client.get(src_path `/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path_path `/models/${model}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * Lists the currently available models, and provides basic information about each
@@ -60493,7 +60493,7 @@ class Models extends APIResource {
      * delete a model.
      */
     delete(model, options) {
-        return this._client.delete(src_path `/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path_path `/models/${model}`, { ...options, __security: { bearerAuth: true } });
     }
 }
 //# sourceMappingURL=models.mjs.map
@@ -60531,7 +60531,7 @@ class Calls extends APIResource {
      * ```
      */
     accept(callID, body, options) {
-        return this._client.post(src_path `/realtime/calls/${callID}/accept`, {
+        return this._client.post(path_path `/realtime/calls/${callID}/accept`, {
             body,
             ...options,
             headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
@@ -60547,7 +60547,7 @@ class Calls extends APIResource {
      * ```
      */
     hangup(callID, options) {
-        return this._client.post(src_path `/realtime/calls/${callID}/hangup`, {
+        return this._client.post(path_path `/realtime/calls/${callID}/hangup`, {
             ...options,
             headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -60564,7 +60564,7 @@ class Calls extends APIResource {
      * ```
      */
     refer(callID, body, options) {
-        return this._client.post(src_path `/realtime/calls/${callID}/refer`, {
+        return this._client.post(path_path `/realtime/calls/${callID}/refer`, {
             body,
             ...options,
             headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
@@ -60580,7 +60580,7 @@ class Calls extends APIResource {
      * ```
      */
     reject(callID, body = {}, options) {
-        return this._client.post(src_path `/realtime/calls/${callID}/reject`, {
+        return this._client.post(path_path `/realtime/calls/${callID}/reject`, {
             body,
             ...options,
             headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
@@ -61430,7 +61430,7 @@ class input_items_InputItems extends APIResource {
      * ```
      */
     list(responseID, query = {}, options) {
-        return this._client.getAPIList(src_path `/responses/${responseID}/input_items`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path_path `/responses/${responseID}/input_items`, (CursorPage), { query, ...options, __security: { bearerAuth: true } });
     }
 }
 //# sourceMappingURL=input-items.mjs.map
@@ -61489,7 +61489,7 @@ class responses_Responses extends APIResource {
         });
     }
     retrieve(responseID, query = {}, options) {
-        return this._client.get(src_path `/responses/${responseID}`, {
+        return this._client.get(path_path `/responses/${responseID}`, {
             query,
             ...options,
             stream: query?.stream ?? false,
@@ -61512,7 +61512,7 @@ class responses_Responses extends APIResource {
      * ```
      */
     delete(responseID, options) {
-        return this._client.delete(src_path `/responses/${responseID}`, {
+        return this._client.delete(path_path `/responses/${responseID}`, {
             ...options,
             headers: buildHeaders([{ Accept: '*/*' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -61542,7 +61542,7 @@ class responses_Responses extends APIResource {
      * ```
      */
     cancel(responseID, options) {
-        return this._client.post(src_path `/responses/${responseID}/cancel`, {
+        return this._client.post(path_path `/responses/${responseID}/cancel`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -61579,7 +61579,7 @@ class content_Content extends APIResource {
      * Download a skill zip bundle by its ID.
      */
     retrieve(skillID, options) {
-        return this._client.get(src_path `/skills/${skillID}/content`, {
+        return this._client.get(path_path `/skills/${skillID}/content`, {
             ...options,
             headers: buildHeaders([{ Accept: 'application/binary' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -61599,7 +61599,7 @@ class versions_content_Content extends APIResource {
      */
     retrieve(version, params, options) {
         const { skill_id } = params;
-        return this._client.get(src_path `/skills/${skill_id}/versions/${version}/content`, {
+        return this._client.get(path_path `/skills/${skill_id}/versions/${version}/content`, {
             ...options,
             headers: buildHeaders([{ Accept: 'application/binary' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -61625,14 +61625,14 @@ class Versions extends APIResource {
      * Create a new immutable skill version.
      */
     create(skillID, body = {}, options) {
-        return this._client.post(src_path `/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path_path `/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
     }
     /**
      * Get a specific skill version.
      */
     retrieve(version, params, options) {
         const { skill_id } = params;
-        return this._client.get(src_path `/skills/${skill_id}/versions/${version}`, {
+        return this._client.get(path_path `/skills/${skill_id}/versions/${version}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -61641,7 +61641,7 @@ class Versions extends APIResource {
      * List skill versions for a skill.
      */
     list(skillID, query = {}, options) {
-        return this._client.getAPIList(src_path `/skills/${skillID}/versions`, (CursorPage), {
+        return this._client.getAPIList(path_path `/skills/${skillID}/versions`, (CursorPage), {
             query,
             ...options,
             __security: { bearerAuth: true },
@@ -61652,7 +61652,7 @@ class Versions extends APIResource {
      */
     delete(version, params, options) {
         const { skill_id } = params;
-        return this._client.delete(src_path `/skills/${skill_id}/versions/${version}`, {
+        return this._client.delete(path_path `/skills/${skill_id}/versions/${version}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -61686,13 +61686,13 @@ class Skills extends APIResource {
      * Get a skill by its ID.
      */
     retrieve(skillID, options) {
-        return this._client.get(src_path `/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path_path `/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * Update the default version pointer for a skill.
      */
     update(skillID, body, options) {
-        return this._client.post(src_path `/skills/${skillID}`, {
+        return this._client.post(path_path `/skills/${skillID}`, {
             body,
             ...options,
             __security: { bearerAuth: true },
@@ -61712,7 +61712,7 @@ class Skills extends APIResource {
      * Delete a skill by its ID.
      */
     delete(skillID, options) {
-        return this._client.delete(src_path `/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path_path `/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
     }
 }
 Skills.Content = content_Content;
@@ -61741,7 +61741,7 @@ class Parts extends APIResource {
      * [complete the Upload](https://platform.openai.com/docs/api-reference/uploads/complete).
      */
     create(uploadID, body, options) {
-        return this._client.post(src_path `/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path_path `/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
     }
 }
 //# sourceMappingURL=parts.mjs.map
@@ -61791,7 +61791,7 @@ class Uploads extends APIResource {
      * Returns the Upload object with status `cancelled`.
      */
     cancel(uploadID, options) {
-        return this._client.post(src_path `/uploads/${uploadID}/cancel`, {
+        return this._client.post(path_path `/uploads/${uploadID}/cancel`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -61814,7 +61814,7 @@ class Uploads extends APIResource {
      * object.
      */
     complete(uploadID, body, options) {
-        return this._client.post(src_path `/uploads/${uploadID}/complete`, {
+        return this._client.post(path_path `/uploads/${uploadID}/complete`, {
             body,
             ...options,
             __security: { bearerAuth: true },
@@ -61859,7 +61859,7 @@ class FileBatches extends APIResource {
      * Create a vector store file batch.
      */
     create(vectorStoreID, body, options) {
-        return this._client.post(src_path `/vector_stores/${vectorStoreID}/file_batches`, {
+        return this._client.post(path_path `/vector_stores/${vectorStoreID}/file_batches`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -61871,7 +61871,7 @@ class FileBatches extends APIResource {
      */
     retrieve(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(src_path `/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
+        return this._client.get(path_path `/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -61883,7 +61883,7 @@ class FileBatches extends APIResource {
      */
     cancel(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.post(src_path `/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
+        return this._client.post(path_path `/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -61901,7 +61901,7 @@ class FileBatches extends APIResource {
      */
     listFiles(batchID, params, options) {
         const { vector_store_id, ...query } = params;
-        return this._client.getAPIList(src_path `/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, (CursorPage), {
+        return this._client.getAPIList(path_path `/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, (CursorPage), {
             query,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -61998,7 +61998,7 @@ class vector_stores_files_Files extends APIResource {
      * [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object).
      */
     create(vectorStoreID, body, options) {
-        return this._client.post(src_path `/vector_stores/${vectorStoreID}/files`, {
+        return this._client.post(path_path `/vector_stores/${vectorStoreID}/files`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -62010,7 +62010,7 @@ class vector_stores_files_Files extends APIResource {
      */
     retrieve(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(src_path `/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.get(path_path `/vector_stores/${vector_store_id}/files/${fileID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -62021,7 +62021,7 @@ class vector_stores_files_Files extends APIResource {
      */
     update(fileID, params, options) {
         const { vector_store_id, ...body } = params;
-        return this._client.post(src_path `/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.post(path_path `/vector_stores/${vector_store_id}/files/${fileID}`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -62032,7 +62032,7 @@ class vector_stores_files_Files extends APIResource {
      * Returns a list of vector store files.
      */
     list(vectorStoreID, query = {}, options) {
-        return this._client.getAPIList(src_path `/vector_stores/${vectorStoreID}/files`, (CursorPage), {
+        return this._client.getAPIList(path_path `/vector_stores/${vectorStoreID}/files`, (CursorPage), {
             query,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -62047,7 +62047,7 @@ class vector_stores_files_Files extends APIResource {
      */
     delete(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.delete(src_path `/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.delete(path_path `/vector_stores/${vector_store_id}/files/${fileID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -62124,7 +62124,7 @@ class vector_stores_files_Files extends APIResource {
      */
     content(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.getAPIList(src_path `/vector_stores/${vector_store_id}/files/${fileID}/content`, (Page), {
+        return this._client.getAPIList(path_path `/vector_stores/${vector_store_id}/files/${fileID}/content`, (Page), {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -62163,7 +62163,7 @@ class VectorStores extends APIResource {
      * Retrieves a vector store.
      */
     retrieve(vectorStoreID, options) {
-        return this._client.get(src_path `/vector_stores/${vectorStoreID}`, {
+        return this._client.get(path_path `/vector_stores/${vectorStoreID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -62173,7 +62173,7 @@ class VectorStores extends APIResource {
      * Modifies a vector store.
      */
     update(vectorStoreID, body, options) {
-        return this._client.post(src_path `/vector_stores/${vectorStoreID}`, {
+        return this._client.post(path_path `/vector_stores/${vectorStoreID}`, {
             body,
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
@@ -62195,7 +62195,7 @@ class VectorStores extends APIResource {
      * Delete a vector store.
      */
     delete(vectorStoreID, options) {
-        return this._client.delete(src_path `/vector_stores/${vectorStoreID}`, {
+        return this._client.delete(path_path `/vector_stores/${vectorStoreID}`, {
             ...options,
             headers: buildHeaders([{ 'OpenAI-Beta': 'assistants=v2' }, options?.headers]),
             __security: { bearerAuth: true },
@@ -62206,7 +62206,7 @@ class VectorStores extends APIResource {
      * filter.
      */
     search(vectorStoreID, body, options) {
-        return this._client.getAPIList(src_path `/vector_stores/${vectorStoreID}/search`, (Page), {
+        return this._client.getAPIList(path_path `/vector_stores/${vectorStoreID}/search`, (Page), {
             body,
             method: 'post',
             ...options,
@@ -62236,7 +62236,7 @@ class Videos extends APIResource {
      * Fetch the latest metadata for a generated video.
      */
     retrieve(videoID, options) {
-        return this._client.get(src_path `/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path_path `/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * List recently generated videos for the current project.
@@ -62252,7 +62252,7 @@ class Videos extends APIResource {
      * Permanently delete a completed or failed video and its stored assets.
      */
     delete(videoID, options) {
-        return this._client.delete(src_path `/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path_path `/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * Create a character from an uploaded video.
@@ -62266,7 +62266,7 @@ class Videos extends APIResource {
      * Streams the rendered video content for the specified video job.
      */
     downloadContent(videoID, query = {}, options) {
-        return this._client.get(src_path `/videos/${videoID}/content`, {
+        return this._client.get(path_path `/videos/${videoID}/content`, {
             query,
             ...options,
             headers: buildHeaders([{ Accept: 'application/binary' }, options?.headers]),
@@ -62291,7 +62291,7 @@ class Videos extends APIResource {
      * Fetch a character.
      */
     getCharacter(characterID, options) {
-        return this._client.get(src_path `/videos/characters/${characterID}`, {
+        return this._client.get(path_path `/videos/characters/${characterID}`, {
             ...options,
             __security: { bearerAuth: true },
         });
@@ -62300,7 +62300,7 @@ class Videos extends APIResource {
      * Create a remix of a completed video using a refreshed prompt.
      */
     remix(videoID, body, options) {
-        return this._client.post(src_path `/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path_path `/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
     }
 }
 //# sourceMappingURL=videos.mjs.map
@@ -68267,6 +68267,566 @@ function buildPrScaffold(entry) {
   };
 }
 
+;// CONCATENATED MODULE: ./src/lib/promotion-candidates.mjs
+// Promotion-candidate generation (Judgment Promotion Loop Phase 1, #1568-A)
+// moved in-repo from scripts/feedback-rule-candidates.mjs so the generation
+// contract has a stable, importable home under src/lib (#1624 / #1574 P0
+// contract 4). The script keeps its detection CLI and now imports these
+// builders instead of owning them.
+//
+// Two ID schemes live here:
+//   - the legacy date-based id `RR-PC-<YYYY-MM-DD>-<clusterKey slug>` used by
+//     `scripts/feedback-rule-candidates.mjs --promote` (kept so existing
+//     entries and their approval history stay addressable), and
+//   - the content-addressed id `RR-PC-<sha256(evidence|cluster|policy)[0:12]>`
+//     used by `river promote propose` (#1574 P0 contract 4): re-running with
+//     the same evidence converges on the same candidate.
+
+
+
+
+
+
+// Default candidate lifetime (#1568 decision 6: expiresAt default 90 days,
+// overridable). The "now" used to derive expiresAt is always injected so tests
+// can pin it — no hardcoded Date.now() in the builders below.
+const DEFAULT_EXPIRY_DAYS = 90;
+
+// Minimum recurrence for a cluster to be a candidate (#1568-A).
+const DEFAULT_MIN_RECURRENCE = 2;
+
+// Version of the derivation policy that turns a (skillId, feedbackType)
+// cluster into a rationale / proposedTarget — i.e. the SUGGESTED_ACTION table
+// plus proposedTargetFor() below. It participates in the content hash so a
+// policy change yields a new candidate id, while rationale wording itself is
+// deliberately kept out of the hash (#1624 design §1.3).
+const CANDIDATE_POLICY_VERSION = '1';
+
+// Length (hex chars) of the content hash kept in the candidate id.
+const CONTENT_ID_HASH_LENGTH = 12;
+
+const SUGGESTED_ACTION = {
+  false_positive: 'guard fixture を追加し、skill の False-positive guards を強化する',
+  missed_issue: 'happy-path fixture を追加し、skill の Rule / Heuristics を拡張する',
+  not_actionable: 'SKILL.md の出力契約（Fix の具体性）を見直す',
+  unclear: 'SKILL.md の文言・出力例を改善する',
+  duplicate: 'routing（owner skill）を明確化する',
+  accepted_risk: '繰り返し許容しているリスクをプロジェクトルール（.river/rules.md）へ昇格する',
+  accepted: null,
+};
+
+/**
+ * Internal: group feedback entries into recurring (skillId, feedbackType)
+ * classes with count >= min. `accepted` is a positive signal and never a
+ * candidate. Shared by both findRuleCandidates() and the promotionCandidate
+ * builders so the clusterKey stays exactly `(skillId, feedbackType)`
+ * (#1568 decision 3).
+ *
+ * @param {Array<{skillId?: string, feedbackType?: string, pr?: number}>} entries
+ * @param {number} min
+ * @returns {Array<{ skillId: string, feedbackType: string, group: object[] }>}
+ */
+function groupRecurringFeedback(entries, min) {
+  const groups = new Map();
+  for (const entry of entries) {
+    if (!entry?.skillId || !entry?.feedbackType) continue;
+    if (entry.feedbackType === 'accepted') continue; // positive signal, nothing to codify
+    const key = `${entry.skillId}::${entry.feedbackType}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(entry);
+  }
+  const result = [];
+  for (const [key, group] of groups) {
+    if (group.length < min) continue;
+    const [skillId, feedbackType] = key.split('::');
+    result.push({ skillId, feedbackType, group });
+  }
+  return result;
+}
+
+/**
+ * Pure grouping: (skillId, feedbackType) classes with count >= min.
+ *
+ * @param {Array<{skillId?: string, feedbackType?: string, pr?: number}>} entries
+ * @param {{ min?: number }} [options]
+ */
+function findRuleCandidates(entries, { min = DEFAULT_MIN_RECURRENCE } = {}) {
+  const candidates = groupRecurringFeedback(entries, min).map(
+    ({ skillId, feedbackType, group }) => ({
+      skillId,
+      feedbackType,
+      count: group.length,
+      prs: [...new Set(group.map((e) => e.pr).filter(Boolean))].sort((a, b) => a - b),
+      suggestedAction: SUGGESTED_ACTION[feedbackType] ?? '改善フローで対応先を判断する',
+    })
+  );
+  candidates.sort((a, b) => b.count - a.count);
+  return candidates;
+}
+
+// Classification decision tree (design §3) reduced to a deterministic
+// feedbackType -> promotion target map for Phase 1. Values are proposals only;
+// human approval routes them into shared assets (#1568-B).
+function proposedTargetFor(skillId, feedbackType) {
+  switch (feedbackType) {
+    case 'false_positive':
+      return { kind: 'fixture', id: `${skillId}-guard` };
+    case 'missed_issue':
+      return { kind: 'fixture', id: `${skillId}-happy` };
+    case 'accepted_risk':
+      return { kind: 'rule', id: '.river/rules.md' };
+    case 'not_actionable':
+    case 'unclear':
+      return { kind: 'skill', id: skillId };
+    case 'duplicate':
+      return { kind: 'routing', id: skillId };
+    case 'out_of_scope':
+      return { kind: 'riverbed', id: null };
+    default:
+      return { kind: 'human_judgment', id: null };
+  }
+}
+
+/** Slugify a clusterKey into an id-safe fragment. */
+function promotion_candidates_slugify(value) {
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Build the structured promotionCandidate contract body (design §2) for one
+ * recurring class. Stored under context.promotionCandidate of a
+ * `promotion_candidate` Riverbed entry. Auditable fields (rationale / scope /
+ * exceptions / evidence) are populated here; scope/exceptions default to empty
+ * so a human narrows them at approval time (generation vs. adoption stay
+ * separated — this does not perform the approval transition).
+ *
+ * @param {{
+ *   skillId: string,
+ *   feedbackType: string,
+ *   group: Array<{ pr?: number|null, findingFingerprint?: string|null, feedbackType: string }>,
+ *   scope?: { paths: string[] },
+ *   exceptions?: string[],
+ * }} input
+ */
+function buildPromotionCandidate({
+  skillId,
+  feedbackType,
+  group,
+  scope = { paths: [] },
+  exceptions = [],
+}) {
+  const count = group.length;
+  return {
+    recurrenceCount: count,
+    detector: 'feedback-rule-candidates',
+    clusterKey: `${skillId}::${feedbackType}`,
+    evidence: group.map((e) => ({
+      pr: Number.isInteger(e.pr) && e.pr > 0 ? e.pr : null,
+      // findingFingerprint is nullable in Phase 1 (#1568 decision 2).
+      findingFingerprint: e.findingFingerprint ?? null,
+      feedbackType: e.feedbackType,
+    })),
+    rationale: `${skillId} の ${feedbackType} が ${count} 件再発したため昇格候補として検出。${
+      SUGGESTED_ACTION[feedbackType] ?? '改善フローで対応先を判断する'
+    }`,
+    proposedTarget: proposedTargetFor(skillId, feedbackType),
+    scope,
+    exceptions,
+    requiresHumanApproval: true,
+    autoActions: ['detect-recurrence'],
+    promotionStatus: 'candidate',
+    supersedesReason: null,
+  };
+}
+
+/**
+ * Wrap a promotionCandidate body into a full Riverbed entry conforming to
+ * schemas/riverbed-entry.schema.json (type: promotion_candidate). The entry
+ * lifecycle `status` stays `active` (the record is live); the candidate's own
+ * approval state lives in context.promotionCandidate.promotionStatus.
+ *
+ * `now` is injected (never Date.now()) so expiresAt (default now + 90 days) is
+ * deterministic under test. `expiresInDays` overrides the default (#1568
+ * decision 6).
+ *
+ * @param {{
+ *   skillId: string,
+ *   feedbackType: string,
+ *   group: object[],
+ *   now?: Date,
+ *   expiresInDays?: number,
+ *   scope?: { paths: string[] },
+ *   exceptions?: string[],
+ *   id?: string,
+ *   author?: string,
+ * }} input
+ */
+function buildPromotionCandidateEntry({
+  skillId,
+  feedbackType,
+  group,
+  now = new Date(),
+  expiresInDays = DEFAULT_EXPIRY_DAYS,
+  scope,
+  exceptions,
+  id,
+  author = 'river-review',
+}) {
+  const promotionCandidate = buildPromotionCandidate({
+    skillId,
+    feedbackType,
+    group,
+    scope,
+    exceptions,
+  });
+  const createdAt = now.toISOString();
+  const expiresAt = new Date(now.getTime() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
+  const clusterKey = promotionCandidate.clusterKey;
+  return {
+    id: id ?? `RR-PC-${createdAt.slice(0, 10)}-${promotion_candidates_slugify(clusterKey)}`,
+    type: 'promotion_candidate',
+    title: `Promotion candidate: ${clusterKey}`,
+    content: promotionCandidate.rationale,
+    status: 'active',
+    expiresAt,
+    context: { promotionCandidate },
+    metadata: {
+      createdAt,
+      author,
+      tags: ['promotion-candidate', skillId, feedbackType],
+      summary: `${skillId} × ${feedbackType} が ${group.length} 件再発`,
+    },
+  };
+}
+
+/**
+ * Build promotion_candidate Riverbed entries for every recurring class in the
+ * feedback set (count >= min). Detection reuses the same grouping as
+ * findRuleCandidates so the clusterKey is unchanged; each entry carries the
+ * full auditable contract. Sorted by recurrenceCount descending.
+ *
+ * @param {object[]} entries
+ * @param {{ min?: number, now?: Date, expiresInDays?: number }} [options]
+ * @returns {object[]} Riverbed entries (schema: promotion_candidate)
+ */
+function buildPromotionCandidates(
+  entries,
+  { min = DEFAULT_MIN_RECURRENCE, now = new Date(), expiresInDays = DEFAULT_EXPIRY_DAYS } = {}
+) {
+  return groupRecurringFeedback(entries, min)
+    .map(({ skillId, feedbackType, group }) =>
+      buildPromotionCandidateEntry({ skillId, feedbackType, group, now, expiresInDays })
+    )
+    .sort(
+      (a, b) =>
+        b.context.promotionCandidate.recurrenceCount - a.context.promotionCandidate.recurrenceCount
+    );
+}
+
+/**
+ * Build the structured artifact payload written by `--out`.
+ *
+ * Minimal shape: metadata plus the same per-candidate fields already used by
+ * `--json` stdout (`{skillId, feedbackType, count, prs, suggestedAction}`), so
+ * a future CI artifact / improvement-flow consumer has one contract to read
+ * regardless of which output mode produced it.
+ *
+ * @param {{ entriesCount: number, min: number, candidates: ReturnType<typeof findRuleCandidates>, now?: Date }} options
+ */
+function buildCandidatesArtifact({ entriesCount, min, candidates, now = new Date() }) {
+  return {
+    generatedAt: now.toISOString(),
+    threshold: min,
+    entries: entriesCount,
+    candidates,
+  };
+}
+
+/**
+ * Write the artifact payload to `outPath` as pretty-printed JSON, creating
+ * parent directories as needed. Pure I/O helper kept separate from
+ * `buildCandidatesArtifact` so tests can validate the JSON shape without
+ * touching the filesystem.
+ *
+ * @param {string} outPath
+ * @param {ReturnType<typeof buildCandidatesArtifact>} payload
+ */
+async function writeCandidatesArtifact(outPath, payload) {
+  await fs.mkdir(path.dirname(outPath), { recursive: true });
+  await fs.writeFile(outPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+}
+
+class PromotionProposalError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'PromotionProposalError';
+  }
+}
+
+/**
+ * Normalize the evidence set that feeds the content hash (#1624 design §1.3).
+ *
+ * Each feedback entry becomes `{ feedbackType, findingFingerprint, pr }`, plus
+ * `timestamp` when the fingerprint is absent — without a fingerprint two
+ * entries from the same PR and type are otherwise indistinguishable, so the
+ * timestamp keeps them apart. Elements are deduplicated and sorted so evidence
+ * ordering in the input file never changes the resulting id.
+ *
+ * @param {object[]} entries
+ * @returns {{ evidence: object[], fingerprintless: boolean }}
+ */
+function normalizeEvidence(entries) {
+  let fingerprintless = false;
+  const normalized = entries.map((entry) => {
+    const fingerprint = entry.findingFingerprint ?? null;
+    const pr = Number.isInteger(entry.pr) && entry.pr > 0 ? entry.pr : null;
+    if (fingerprint === null) {
+      fingerprintless = true;
+      return {
+        feedbackType: entry.feedbackType,
+        findingFingerprint: null,
+        pr,
+        timestamp: entry.timestamp ?? null,
+      };
+    }
+    return { feedbackType: entry.feedbackType, findingFingerprint: fingerprint, pr };
+  });
+  const unique = new Map();
+  for (const item of normalized) unique.set(JSON.stringify(item), item);
+  const evidence = [...unique.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return { evidence: evidence.map(([, item]) => item), fingerprintless };
+}
+
+/**
+ * Compute the content-addressed candidate id: sha256 over the canonical
+ * `{ clusterKey, evidence, policyVersion }` triple fixed by #1574 P0 contract 4.
+ * Timestamps of the run, rationale wording and proposedTarget are deliberately
+ * excluded (they are derived from policyVersion), so the same evidence always
+ * converges on the same candidate.
+ *
+ * @param {{ clusterKey: string, evidence: object[], policyVersion?: string }} input
+ * @returns {{ contentHash: string, candidateId: string, canonical: string }}
+ */
+function computeCandidateContentHash({
+  clusterKey,
+  evidence,
+  policyVersion = CANDIDATE_POLICY_VERSION,
+}) {
+  // Key order is fixed by construction (no JSON.stringify replacer needed):
+  // clusterKey -> evidence -> policyVersion, with each evidence element already
+  // normalized by normalizeEvidence().
+  const canonical = JSON.stringify({ clusterKey, evidence, policyVersion });
+  const contentHash = (0,external_node_crypto_.createHash)('sha256').update(canonical).digest('hex');
+  return {
+    contentHash,
+    candidateId: `RR-PC-${contentHash.slice(0, CONTENT_ID_HASH_LENGTH)}`,
+    canonical,
+  };
+}
+
+/** Split `skillId::feedbackType` and reject malformed cluster keys. */
+function parseClusterKey(clusterKey) {
+  const parts = String(clusterKey ?? '').split('::');
+  if (parts.length !== 2 || !parts[0].trim() || !parts[1].trim()) {
+    throw new PromotionProposalError(
+      `--cluster-key must be "<skillId>::<feedbackType>" (got: ${clusterKey ?? '(none)'}).`
+    );
+  }
+  return { skillId: parts[0].trim(), feedbackType: parts[1].trim() };
+}
+
+/**
+ * Build the content-addressed promotion_candidate entry for one cluster.
+ *
+ * Validation is deliberately mechanical (the "is this worth promoting?"
+ * judgment stays with the caller, #1624 design §2): every input entry must
+ * belong to `clusterKey`, `accepted` is never promotable, and the cluster must
+ * reach `min` recurrences.
+ *
+ * @param {{
+ *   entries: object[],
+ *   clusterKey: string,
+ *   now?: Date,
+ *   expiresInDays?: number,
+ *   policyVersion?: string,
+ *   min?: number,
+ * }} input
+ * @returns {{ entry: object, candidateId: string, contentHash: string, clusterKey: string, policyVersion: string, shadowOnly: boolean }}
+ */
+function buildProposedCandidate({
+  entries,
+  clusterKey,
+  now = new Date(),
+  expiresInDays = DEFAULT_EXPIRY_DAYS,
+  policyVersion = CANDIDATE_POLICY_VERSION,
+  min = DEFAULT_MIN_RECURRENCE,
+}) {
+  const { skillId, feedbackType } = parseClusterKey(clusterKey);
+  if (feedbackType === 'accepted') {
+    throw new PromotionProposalError(
+      'feedbackType "accepted" is a positive signal and is never a promotion candidate.'
+    );
+  }
+  if (!Array.isArray(entries) || entries.length === 0) {
+    throw new PromotionProposalError('--input contained no feedback entries.');
+  }
+  const mismatched = entries.filter(
+    (e) => `${e?.skillId}::${e?.feedbackType}` !== `${skillId}::${feedbackType}`
+  );
+  if (mismatched.length) {
+    // Filtering silently would hide a caller-side selection bug (#1624 §1.1).
+    const sample = mismatched
+      .slice(0, 3)
+      .map((e) => `${e?.skillId ?? '(none)'}::${e?.feedbackType ?? '(none)'}`)
+      .join(', ');
+    throw new PromotionProposalError(
+      `--input contains ${mismatched.length} entr${mismatched.length === 1 ? 'y' : 'ies'} outside --cluster-key ${clusterKey} (e.g. ${sample}). Filter the input instead of relying on implicit filtering.`
+    );
+  }
+  if (entries.length < min) {
+    throw new PromotionProposalError(
+      `--input has ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} for ${clusterKey}, below the minimum recurrence of ${min}.`
+    );
+  }
+
+  const { evidence, fingerprintless } = normalizeEvidence(entries);
+  const { contentHash, candidateId } = computeCandidateContentHash({
+    clusterKey: `${skillId}::${feedbackType}`,
+    evidence,
+    policyVersion,
+  });
+  const entry = buildPromotionCandidateEntry({
+    skillId,
+    feedbackType,
+    group: entries,
+    now,
+    expiresInDays,
+    id: candidateId,
+  });
+  return {
+    entry,
+    candidateId,
+    contentHash,
+    clusterKey: `${skillId}::${feedbackType}`,
+    policyVersion,
+    // Contract 5: evidence without a fingerprint stays Shadow-only (no
+    // automatic experiment / promotion). Surfaced in the output only; the
+    // entry shape is unchanged (schema stays additive-free).
+    shadowOnly: fingerprintless,
+  };
+}
+
+/**
+ * Propose one promotion candidate into a Riverbed index (`river promote
+ * propose`). Idempotent by construction: the candidate id is the content hash,
+ * so a re-run with the same evidence detects the existing entry and reports
+ * convergence instead of appending a duplicate.
+ *
+ * @param {{
+ *   entries: object[],
+ *   clusterKey: string,
+ *   indexPath: string,
+ *   now?: Date,
+ *   expiresInDays?: number,
+ *   policyVersion?: string,
+ *   min?: number,
+ *   dryRun?: boolean,
+ * }} input
+ * @returns {{
+ *   created: boolean,
+ *   wouldCreate: boolean,
+ *   dryRun: boolean,
+ *   candidateId: string,
+ *   contentHash: string,
+ *   clusterKey: string,
+ *   policyVersion: string,
+ *   shadowOnly: boolean,
+ *   entry: object,
+ *   existing: null | { candidateId: string, promotionStatus: string|null, status: string|null },
+ * }}
+ */
+function proposePromotionCandidate({
+  entries,
+  clusterKey,
+  indexPath,
+  now = new Date(),
+  expiresInDays = DEFAULT_EXPIRY_DAYS,
+  policyVersion = CANDIDATE_POLICY_VERSION,
+  min = DEFAULT_MIN_RECURRENCE,
+  dryRun = false,
+}) {
+  const built = buildProposedCandidate({
+    entries,
+    clusterKey,
+    now,
+    expiresInDays,
+    policyVersion,
+    min,
+  });
+  const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
+  const existingEntry = index.entries.find((e) => e.id === built.candidateId) ?? null;
+  const existing = existingEntry
+    ? {
+        candidateId: existingEntry.id,
+        promotionStatus: existingEntry.context?.promotionCandidate?.promotionStatus ?? null,
+        status: existingEntry.status ?? null,
+      }
+    : null;
+  const wouldCreate = !existingEntry;
+  let created = false;
+  if (wouldCreate && !dryRun) {
+    (0,riverbed_memory/* appendEntry */.D4)(indexPath, built.entry);
+    created = true;
+  }
+  return {
+    created,
+    wouldCreate,
+    dryRun,
+    candidateId: built.candidateId,
+    contentHash: built.contentHash,
+    clusterKey: built.clusterKey,
+    policyVersion: built.policyVersion,
+    shadowOnly: built.shadowOnly,
+    entry: existingEntry ?? built.entry,
+    existing,
+  };
+}
+
+/**
+ * Read feedback entries from an explicit JSONL file (`--input`). Unlike
+ * listFeedbackEntries() this takes the exact selection made by the caller
+ * (#1574 Detect) rather than scanning the repository, and a malformed line is
+ * fatal — silently skipping evidence would change the content hash.
+ *
+ * @param {string} inputPath
+ * @returns {Promise<object[]>}
+ */
+async function readFeedbackJsonl(inputPath) {
+  let raw;
+  try {
+    raw = await external_node_fs_.promises.readFile(inputPath, 'utf8');
+  } catch (err) {
+    throw new PromotionProposalError(`Cannot read --input ${inputPath}: ${err.message}`);
+  }
+  const entries = [];
+  const lines = raw.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    try {
+      entries.push(JSON.parse(line));
+    } catch (err) {
+      throw new PromotionProposalError(
+        `Invalid JSONL in ${inputPath} at line ${i + 1}: ${err.message}`
+      );
+    }
+  }
+  return entries;
+}
+
 ;// CONCATENATED MODULE: ./src/cli/commands/promote.mjs
 // `river promote` subcommand handler (Judgment Promotion Loop Phase 2,
 // #1568-B / #1622).
@@ -68276,7 +68836,13 @@ function buildPrScaffold(entry) {
 // `promote` never creates candidates — it only lists, decides on, and scaffolds
 // existing ones.
 //
+// The one exception is `propose` (#1624 / #1574 P0 contract 4): the stable
+// generation entry point that turns an explicit feedback selection into a
+// content-addressed candidate. It stays a pure, deterministic converter —
+// deciding *whether* a cluster deserves promotion remains the caller's job.
+//
 // Subcommands:
+//   river promote propose              Create/converge on a candidate from --input JSONL
 //   river promote list                 List promotion candidates
 //   river promote approve <id>         Approve a candidate (promotionStatus -> approved)
 //   river promote reject  <id>         Reject a candidate  (promotionStatus -> archived)
@@ -68286,6 +68852,7 @@ function buildPrScaffold(entry) {
 //
 // The approval decision records who/when (context.approval) for auditability.
 // `now` is injected via RIVER_NOW (ISO string) so tests can pin it.
+
 
 
 
@@ -68359,15 +68926,83 @@ function printScaffold(scaffold) {
  */
 async function runPromoteCommand(parsed, targetPath) {
   const sub = parsed.promoteSubcommand;
-  if (!['list', 'approve', 'reject', 'template', 'retire', 'review-effectiveness'].includes(sub)) {
+  if (
+    ![
+      'propose',
+      'list',
+      'approve',
+      'reject',
+      'template',
+      'retire',
+      'review-effectiveness',
+    ].includes(sub)
+  ) {
     console.error(
-      'Error: usage: river promote <list|approve <id>|reject <id>|template [<id>]|retire|review-effectiveness [<id>]> [--approver <name>] [--reason <text>] [--index <path>] [--threshold <n>] [--feedback-root <path>] [--output json] [--include-inactive].'
+      'Error: usage: river promote <propose|list|approve <id>|reject <id>|template [<id>]|retire|review-effectiveness [<id>]> [--input <jsonl>] [--cluster-key <skillId::feedbackType>] [--policy-version <v>] [--approver <name>] [--reason <text>] [--index <path>] [--threshold <n>] [--feedback-root <path>] [--output json] [--include-inactive] [--dry-run].'
     );
     return 1;
   }
 
   const indexPath = await resolveIndexPath(parsed, targetPath);
   const now = resolveNow();
+
+  if (sub === 'propose') {
+    if (!parsed.promoteInput || !parsed.promoteClusterKey) {
+      console.error(
+        'Error: river promote propose requires --input <jsonl> and --cluster-key <skillId::feedbackType>.'
+      );
+      return 1;
+    }
+    let result;
+    try {
+      const entries = await readFeedbackJsonl(external_node_path_.resolve(external_node_process_namespaceObject.cwd(), parsed.promoteInput));
+      result = proposePromotionCandidate({
+        entries,
+        clusterKey: parsed.promoteClusterKey,
+        indexPath,
+        now,
+        policyVersion: parsed.promotePolicyVersion ?? undefined,
+        dryRun: Boolean(parsed.dryRun),
+      });
+    } catch (err) {
+      // Usage errors (bad cluster key, mismatched input, unreadable file) and
+      // I/O errors share exit code 1, matching the rest of `promote`. The
+      // script's "candidates found -> exit 2" signal is deliberately not
+      // carried over: propose is a generation API, not a detection API.
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
+    if (parsed.output === 'json') {
+      console.log(JSON.stringify(result, null, 2));
+      return 0;
+    }
+    if (result.created) {
+      console.log(`Created promotion candidate ${result.candidateId}.`);
+    } else if (result.dryRun) {
+      console.log(
+        result.wouldCreate
+          ? `[dry-run] Would create promotion candidate ${result.candidateId} (nothing written).`
+          : `[dry-run] Promotion candidate ${result.candidateId} already exists (nothing written).`
+      );
+    } else {
+      console.log(
+        `Promotion candidate ${result.candidateId} already exists (converged, no change).`
+      );
+    }
+    console.log(`  clusterKey:      ${result.clusterKey}`);
+    console.log(`  contentHash:     ${result.contentHash}`);
+    console.log(`  policyVersion:   ${result.policyVersion}`);
+    if (result.shadowOnly) {
+      console.log(
+        '  note: evidence without findingFingerprint — shadow-only (no automatic experiment).'
+      );
+    }
+    if (result.existing) {
+      console.log(`  promotionStatus: ${result.existing.promotionStatus ?? '(unknown)'}`);
+    }
+    if (result.created) console.log(`  written to: ${indexPath}`);
+    return 0;
+  }
 
   if (sub === 'list') {
     const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
@@ -68582,6 +69217,12 @@ Commands:
   suppression add       Create a Riverbed Memory suppression entry
                         (--fingerprint --feedback --rationale [--scope]
                          [--severity] [--files] [--expires] [--pr])
+  promote propose       Create (or converge on) one promotion candidate from an
+                        explicit feedback JSONL selection. The candidate id is a
+                        content hash of (evidence, cluster, policy version), so
+                        re-running with the same evidence is idempotent.
+                        (--input <jsonl> --cluster-key <skillId::feedbackType>
+                         [--policy-version <v>] [--index <path>] [--dry-run])
   promote list          List promotion_candidate entries (Judgment Promotion Loop Phase 2)
   promote approve <id>  Approve a candidate (promotionStatus -> approved)
   promote reject <id>   Reject a candidate (promotionStatus -> archived)
@@ -68704,6 +69345,10 @@ function parseArgs(argv) {
     promoteIncludeInactive: false,
     promoteThreshold: null,
     promoteFeedbackRoot: null,
+    // promote propose fields (#1624 / #1574 P0 contract 4)
+    promoteInput: null,
+    promoteClusterKey: null,
+    promotePolicyVersion: null,
     // skills subcommand fields
     skillsSubcommand: null,
     resolvePaths: null,
@@ -68762,7 +69407,7 @@ function parseArgs(argv) {
       } else if (arg === 'feedback' && args[0] && !args[0].startsWith('-')) {
         parsed.feedbackSubcommand = args.shift(); // add (only one for now)
       } else if (arg === 'promote' && args[0] && !args[0].startsWith('-')) {
-        parsed.promoteSubcommand = args.shift(); // list | approve | reject | template | retire | review-effectiveness
+        parsed.promoteSubcommand = args.shift(); // propose | list | approve | reject | template | retire | review-effectiveness
         // approve/reject/template/review-effectiveness take an optional positional candidate id.
         if (
           ['approve', 'reject', 'template', 'review-effectiveness'].includes(
@@ -68943,6 +69588,36 @@ function parseArgs(argv) {
           break;
         }
         parsed.promoteFeedbackRoot = value;
+        continue;
+      }
+      if (arg === '--input') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --input option requires a JSONL path.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteInput = value;
+        continue;
+      }
+      if (arg === '--cluster-key') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --cluster-key option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promoteClusterKey = value;
+        continue;
+      }
+      if (arg === '--policy-version') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --policy-version option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.promotePolicyVersion = value;
         continue;
       }
     }
