@@ -146,6 +146,15 @@ Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利
 - 出力の `created` は「この実行が実際に書き込んだか」を表し、`wouldCreate` は「候補が未存在だったか」を表す。`--dry-run` では `created` は常に false である。
 - 同一 index への並列実行は非対応とする。index は read-modify-write で書き換えるため、呼び出しは直列化する。
 
+#### 実装状況（#1574 P1 shadow aggregate）
+
+`river evolve aggregate`（P1）も同じ ID 体系を使います。shadow 側で独自 hash を持つと、観測した candidate と `river promote propose` が永続化した candidate が別 ID になり、同一性を判定できなくなるためです。
+
+- shadow aggregate は ID 導出を再実装せず、`normalizeEvidence` と `computeCandidateContentHash` をそのまま呼ぶ。
+- hash 入力は `{ clusterKey, 正規化 evidence, policyVersion }` に揃え、shadow 固有の `subClusterKey` や生成日時は hash に入れない（出力メタデータとしては保持する）。
+- prefix は `RR-PC-` に統一し、同一証拠からは shadow 出力と propose 永続化が同一 ID へ収束する。
+- policy version は `CANDIDATE_POLICY_VERSION`（`1`）を共有し、未知の値は shadow 側でも reject する。
+
 #### 未決事項
 
 - 既存の日付ベース ID からの移行方法は「新規のみ content hash・既存 ID は書き換えない併記」とした。`scripts/feedback-rule-candidates.mjs --promote` の削除時期は次の minor で判断する。
