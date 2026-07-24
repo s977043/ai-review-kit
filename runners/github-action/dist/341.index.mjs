@@ -8,6 +8,7 @@ export const modules = {
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   verifyFinding: () => (/* binding */ verifyFinding)
 /* harmony export */ });
+/* unused harmony exports determineScopeFromDiff, resolveFindingScope */
 /* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(1535);
 /**
  * Verify individual review findings before emission.
@@ -21,6 +22,7 @@ export const modules = {
 // Module-scope regexes to avoid re-creation per call
 const RE_EVIDENCE = /Evidence:\s*(\S.{4,})/;
 const RE_SEVERITY = /Severity:\s*(\w+)/;
+const RE_SCOPE = /Scope:\s*([\w-]+)/;
 const RE_ACTIONABLE = /(?:Fix|Suggestion):\s*(.{10,})/;
 const RE_FILE_REF = /[\w/-]+(?:\.[\w]+)+/g;
 
@@ -142,10 +144,95 @@ function checkFilePhaseCoherent(finding, fileTypes) {
 }
 
 /**
- * @param {{ finding: object, diff: string, skill: object, fileTypes?: object }} params
- * @returns {{ verified: boolean, reasons: string[], checks: object }}
+ * Tolerance (in lines) when matching a finding line against the diff's added
+ * lines. Mirrors the ±2 window used by findingsOverlap in
+ * reviewer-orchestrator.mjs, absorbing off-by-a-line LLM line numbers.
  */
-function verifyFinding({ finding, diff, skill, fileTypes }) {
+const SCOPE_LINE_TOLERANCE = 2;
+
+/**
+ * Locate the parsed-diff entry for a finding's file.
+ * Accepts an exact path match first, then a suffix match so that findings
+ * reported with a repo-relative path still match a prefixed diff path.
+ * @param {string} file
+ * @param {Array<{ path?: string, newPath?: string, addedLines?: number[] }>} diffFiles
+ * @returns {{ path?: string, newPath?: string, addedLines?: number[] } | null}
+ */
+function findDiffFileEntry(file, diffFiles) {
+  const target = String(file ?? '');
+  if (!target) return null;
+  const candidates = (entry) => [entry?.path, entry?.newPath].filter(Boolean).map(String);
+  const exact = diffFiles.find((entry) => candidates(entry).includes(target));
+  if (exact) return exact;
+  return (
+    diffFiles.find((entry) =>
+      candidates(entry).some((p) => p.endsWith(`/${target}`) || target.endsWith(`/${p}`))
+    ) ?? null
+  );
+}
+
+/**
+ * Machine determination of a finding's scope by matching its line against the
+ * added lines of the parsed diff (#1644 Phase 1, option B).
+ *
+ * Returns `null` when the diff cannot decide (no parsed diff, file not present
+ * in the diff, or the finding carries no line number). Callers fall back to the
+ * LLM self-report and then to the fail-safe default.
+ *
+ * Context lines (unified ±3) are deliberately treated as `pre-existing`: they
+ * are not changed lines.
+ *
+ * @param {{ file?: string, line?: number|null, lineStart?: number|null }} finding
+ * @param {Array<object>|null|undefined} diffFiles parsed diff files (diff-processor parseUnifiedDiff)
+ * @returns {'in-diff'|'pre-existing'|null}
+ */
+function determineScopeFromDiff(finding, diffFiles) {
+  if (!Array.isArray(diffFiles) || diffFiles.length === 0) return null;
+  const entry = findDiffFileEntry(finding?.file, diffFiles);
+  if (!entry) return null;
+
+  const line = finding?.line ?? finding?.lineStart ?? null;
+  if (typeof line !== 'number' || !Number.isFinite(line)) return null;
+
+  const addedLines = Array.isArray(entry.addedLines) ? entry.addedLines : [];
+  if (addedLines.length === 0) return null;
+
+  const isAdded = addedLines.some((added) => Math.abs(added - line) <= SCOPE_LINE_TOLERANCE);
+  return isAdded ? 'in-diff' : 'pre-existing';
+}
+
+/**
+ * Resolve the final scope of a finding by combining the machine determination
+ * with the optional LLM self-report (`Scope:` label), per the adopted hybrid
+ * (option C): machine wins, self-report fills the gap, default is fail-safe.
+ *
+ * @param {{ finding: object, diffFiles?: Array<object>|null }} params
+ * @returns {{ scope: 'in-diff'|'pre-existing', source: 'machine'|'self-reported'|'default', selfReported: 'in-diff'|'pre-existing'|null, mismatch: boolean }}
+ */
+function resolveFindingScope({ finding, diffFiles }) {
+  const machineScope = determineScopeFromDiff(finding, diffFiles);
+  const selfReportMatch = RE_SCOPE.exec(String(finding?.message ?? ''));
+  const selfReported = selfReportMatch ? (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .normalizeScope */ .kn)(selfReportMatch[1]) : null;
+
+  if (machineScope) {
+    return {
+      scope: machineScope,
+      source: 'machine',
+      selfReported,
+      mismatch: selfReported !== null && selfReported !== machineScope,
+    };
+  }
+  if (selfReported) {
+    return { scope: selfReported, source: 'self-reported', selfReported, mismatch: false };
+  }
+  return { scope: _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .DEFAULT_FINDING_SCOPE */ .J9, source: 'default', selfReported: null, mismatch: false };
+}
+
+/**
+ * @param {{ finding: object, diff: string, skill: object, fileTypes?: object, diffFiles?: Array<object>|null }} params
+ * @returns {{ verified: boolean, reasons: string[], checks: object, scope: 'in-diff'|'pre-existing', scopeSource: string, scopeSelfReported: string|null, scopeMismatch: boolean }}
+ */
+function verifyFinding({ finding, diff, skill, fileTypes, diffFiles }) {
   const checks = {
     evidenceExists: checkEvidenceExists(finding),
     evidenceInDiff: checkEvidenceInDiff(finding, diff),
@@ -168,10 +255,18 @@ function verifyFinding({ finding, diff, skill, fileTypes }) {
     reasons.push('Severity exceeds skill severity without justification');
   if (!checks.suggestionActionable) reasons.push('Fix/suggestion is missing or too brief');
 
+  // Scope is metadata only (#1644 Phase 1): it never contributes a rejection
+  // reason and never changes `verified`.
+  const scopeResult = resolveFindingScope({ finding, diffFiles });
+
   return {
     verified: reasons.length === 0,
     reasons,
     checks,
+    scope: scopeResult.scope,
+    scopeSource: scopeResult.source,
+    scopeSelfReported: scopeResult.selfReported,
+    scopeMismatch: scopeResult.mismatch,
   };
 }
 

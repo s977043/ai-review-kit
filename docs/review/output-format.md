@@ -68,6 +68,9 @@
 | `evidence`   | `array<string>` | No   | 指摘を支持する証拠スニペットの配列。                           |
 | `reviewer`   | `string`        | No   | 指摘を生成したスキル / エージェントの識別子。                  |
 | `suggestion` | `string`        | No   | 修正や後続アクションのヒント。                                 |
+| `scope`      | `string`        | No   | 指摘が差分の追加行に由来するか。`in-diff` / `pre-existing`。   |
+
+> `scope` は additive なメタデータです（#1644 Phase 1）。verifier がパース済み差分の追加行と finding の行番号を突き合わせて決定論的に判定し、判定できない場合のみレビュアーの自己申告（`Scope:` ラベル）を採用します。未指定・不明値は fail-safe として `in-diff` として扱い、指摘を目立たない側へ降格させません。severity やゲート判定を上書きしてはいけません。
 
 ## 禁止事項
 

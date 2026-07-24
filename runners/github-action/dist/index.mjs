@@ -43377,17 +43377,19 @@ function isApp(file) {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   J9: () => (/* binding */ DEFAULT_FINDING_SCOPE),
 /* harmony export */   UB: () => (/* binding */ parseFindingMessage),
 /* harmony export */   Yo: () => (/* binding */ computeFingerprint),
 /* harmony export */   ZY: () => (/* binding */ classifyFindings),
 /* harmony export */   f3: () => (/* binding */ SEVERITY_RANK),
 /* harmony export */   ic: () => (/* binding */ annotateFingerprints),
+/* harmony export */   kn: () => (/* binding */ normalizeScope),
 /* harmony export */   lv: () => (/* binding */ normalizeSeverity),
 /* harmony export */   nG: () => (/* binding */ severityToPriority),
 /* harmony export */   xv: () => (/* binding */ validateFindingMessage),
 /* harmony export */   yv: () => (/* binding */ formatFindingMessage)
 /* harmony export */ });
-/* unused harmony export SUPPRESS_REASONS */
+/* unused harmony exports FINDING_SCOPES, SUPPRESS_REASONS */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
 /* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9946);
 
@@ -43399,6 +43401,21 @@ function isApp(file) {
 
 const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
 const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
+
+/**
+ * Scope vocabulary for a finding (#1644 Phase 1).
+ * - `in-diff`: introduced or changed by the added lines of this diff
+ * - `pre-existing`: inside a changed file but outside the added lines
+ * @see docs/review/output-format.md
+ */
+const FINDING_SCOPES = /** @type {const} */ ((/* unused pure expression or super */ null && (['in-diff', 'pre-existing'])));
+
+/**
+ * Fail-safe default scope. Unknown/absent scope MUST NOT demote a finding,
+ * so the default is the non-demoting value (`in-diff`), mirroring the
+ * "unknown severity → major" fail-safe direction of normalizeSeverity.
+ */
+const DEFAULT_FINDING_SCOPE = /** @type {const} */ ('in-diff');
 
 /**
  * Canonical severity ranking for the output schema vocabulary
@@ -43457,13 +43474,13 @@ function formatFindingMessage({ finding, evidence, impact, fix, severity, confid
   ].join(' ');
 }
 
-const LABEL_NAMES = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confidence'];
+const LABEL_NAMES = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confidence', 'Scope'];
 const LABEL_ALTERNATION = LABEL_NAMES.join('|');
 
 /**
  * Parse a labeled finding message string into structured fields.
  * @param {string} message
- * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null }}
+ * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null, scope: string|null }}
  */
 function parseFindingMessage(message) {
   const text = String(message ?? '');
@@ -43479,7 +43496,36 @@ function parseFindingMessage(message) {
     suggestion: get('Fix'),
     severity: get('Severity') || null,
     confidence: get('Confidence') || null,
+    // Optional LLM self-report (#1644). Machine determination in verifier.mjs
+    // takes precedence; this is only the fallback when the diff cannot decide.
+    scope: get('Scope') || null,
   };
+}
+
+/**
+ * Normalize a finding scope value to the output schema vocabulary.
+ * Unknown / absent values fail safe to `in-diff` so that an undetermined
+ * scope never demotes a finding.
+ * @param {string|null|undefined} rawScope
+ * @returns {'in-diff'|'pre-existing'}
+ */
+function normalizeScope(rawScope) {
+  switch (
+    String(rawScope ?? '')
+      .toLowerCase()
+      .trim()
+  ) {
+    case 'pre-existing':
+    case 'preexisting':
+    case 'pre_existing':
+      return 'pre-existing';
+    case 'in-diff':
+    case 'indiff':
+    case 'in_diff':
+      return 'in-diff';
+    default:
+      return DEFAULT_FINDING_SCOPE;
+  }
 }
 
 /**
@@ -46812,6 +46858,7 @@ ${buildLanguageInstruction(language)}
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
 - Every finding MUST carry "Severity:" and "Confidence:". It MUST also carry "Evidence:" (>=5 chars) and "Fix:" (>=10 chars) — findings without them are discarded during verification. "Finding:" and "Impact:" are recommended.
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
+- Optionally add "Scope: in-diff" (the added lines introduce the problem) or "Scope: pre-existing" (the problem is in a changed file but outside the added lines). Verification re-derives scope from the diff and overrides this label when it can.
 - Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block at src/app.ts drops err Impact: failures are masked Fix: rethrow or log err with context Severity: warning Confidence: high
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
@@ -47179,11 +47226,23 @@ async function generateReview({
   const runVerifier = (cmts) =>
     cmts.map((comment) => ({
       comment,
-      verification: verifyFinding({ finding: comment, diff: diff.diffText, skill, fileTypes }),
+      verification: verifyFinding({
+        finding: comment,
+        diff: diff.diffText,
+        skill,
+        fileTypes,
+        // #1644: parsed diff files carry addedLines, enabling the verifier's
+        // machine determination of finding scope (in-diff / pre-existing).
+        diffFiles: diff.files,
+      }),
     }));
 
+  // #1644: carry the verifier's scope verdict on the comment so the findings
+  // built below can adopt it. Metadata only — display and gating are unchanged.
+  const withScope = (r) => ({ ...r.comment, scope: r.verification.scope });
+
   const verifierResults = runVerifier(comments);
-  let verified = verifierResults.filter((r) => r.verification.verified).map((r) => r.comment);
+  let verified = verifierResults.filter((r) => r.verification.verified).map(withScope);
   const rejected = verifierResults.filter((r) => !r.verification.verified);
 
   // debug.verifierStats/verifierRejected describe the verifier pass over the
@@ -47199,6 +47258,20 @@ async function generateReview({
     verified: verified.length,
     rejected: rejected.length,
   };
+
+  // #1644: observability for the scope determination. `mismatch` counts
+  // findings whose LLM self-report disagreed with the machine determination
+  // (the machine verdict wins); a rising count signals prompt drift.
+  debug.scopeStats = verifierResults.reduce(
+    (acc, r) => {
+      acc[r.verification.scope] = (acc[r.verification.scope] ?? 0) + 1;
+      acc.bySource[r.verification.scopeSource] =
+        (acc.bySource[r.verification.scopeSource] ?? 0) + 1;
+      if (r.verification.scopeMismatch) acc.mismatch += 1;
+      return acc;
+    },
+    { 'in-diff': 0, 'pre-existing': 0, mismatch: 0, bySource: {} }
+  );
 
   // Fail-safe: mirror the format-validation fallback for a wholesale verifier
   // rejection. Inline-only findings (Severity:/Confidence: present but
@@ -47232,7 +47305,7 @@ async function generateReview({
     // rejected LLM batch.
     verified = runVerifier(comments)
       .filter((r) => r.verification.verified)
-      .map((r) => r.comment);
+      .map(withScope);
   }
 
   // Replace comments with verified-only set
@@ -47293,6 +47366,9 @@ async function generateReview({
       status: /** @type {'open'} */ ('open'),
       evidence: parsed.evidence,
       suggestion: parsed.suggestion || null,
+      // #1644 Phase 1: verifier verdict (machine determination, falling back to
+      // the LLM self-report and then to the fail-safe default `in-diff`).
+      scope: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeScope */ .kn)(c.scope ?? parsed.scope),
     };
   });
 

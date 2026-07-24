@@ -291,3 +291,104 @@ test('verifyFinding: filePhaseCoherent lenient when fileTypes not provided', () 
   });
   assert.equal(result.checks.filePhaseCoherent, true);
 });
+
+// ---------------------------------------------------------------------------
+// #1644 Phase 1: finding scope (in-diff / pre-existing)
+// ---------------------------------------------------------------------------
+
+const SCOPE_MESSAGE =
+  'Finding: issue\nEvidence: src/app.mjs drops the error\nSeverity: warning\nConfidence: high\nFix: Rethrow the error with context added';
+
+const SCOPE_DIFF = 'diff --git a/src/app.mjs\n+throw err';
+const SCOPE_DIFF_FILES = [{ path: 'src/app.mjs', addedLines: [10, 11, 12] }];
+
+test('verifyFinding: scope is in-diff when the finding line is an added line', () => {
+  const result = verifyFinding({
+    finding: { file: 'src/app.mjs', line: 11, message: SCOPE_MESSAGE },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(result.scope, 'in-diff');
+  assert.equal(result.scopeSource, 'machine');
+  assert.equal(result.verified, true);
+});
+
+test('verifyFinding: scope is pre-existing when the line is outside the added lines', () => {
+  const result = verifyFinding({
+    finding: { file: 'src/app.mjs', line: 80, message: SCOPE_MESSAGE },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(result.scope, 'pre-existing');
+  assert.equal(result.scopeSource, 'machine');
+});
+
+test('verifyFinding: scope tolerates a two-line offset from the added lines', () => {
+  const result = verifyFinding({
+    finding: { file: 'src/app.mjs', line: 14, message: SCOPE_MESSAGE },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(result.scope, 'in-diff');
+});
+
+test('verifyFinding: scope falls back to the self-reported label when the diff cannot decide', () => {
+  const result = verifyFinding({
+    finding: { file: 'src/app.mjs', message: `${SCOPE_MESSAGE}\nScope: pre-existing` },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(result.scope, 'pre-existing');
+  assert.equal(result.scopeSource, 'self-reported');
+});
+
+test('verifyFinding: machine determination overrides a conflicting self-report', () => {
+  const result = verifyFinding({
+    finding: { file: 'src/app.mjs', line: 11, message: `${SCOPE_MESSAGE}\nScope: pre-existing` },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(result.scope, 'in-diff');
+  assert.equal(result.scopeSource, 'machine');
+  assert.equal(result.scopeSelfReported, 'pre-existing');
+  assert.equal(result.scopeMismatch, true);
+});
+
+test('verifyFinding: scope fails safe to in-diff without diffFiles or self-report', () => {
+  const result = verifyFinding({
+    finding: { file: 'src/app.mjs', line: 11, message: SCOPE_MESSAGE },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+  });
+  assert.equal(result.scope, 'in-diff');
+  assert.equal(result.scopeSource, 'default');
+  assert.equal(result.scopeMismatch, false);
+});
+
+test('verifyFinding: scope fails safe to in-diff when the file is absent from the diff', () => {
+  const result = verifyFinding({
+    finding: { file: 'src/other.mjs', line: 11, message: SCOPE_MESSAGE },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(result.scope, 'in-diff');
+  assert.equal(result.scopeSource, 'default');
+});
+
+test('verifyFinding: scope never affects the verified verdict', () => {
+  const result = verifyFinding({
+    finding: { file: 'src/app.mjs', line: 80, message: SCOPE_MESSAGE },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(result.scope, 'pre-existing');
+  assert.equal(result.verified, true);
+  assert.equal(result.reasons.length, 0);
+});

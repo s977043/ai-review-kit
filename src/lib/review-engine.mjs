@@ -6,6 +6,7 @@ import {
   validateFindingMessage,
   parseFindingMessage,
   normalizeSeverity,
+  normalizeScope,
 } from './finding-factory.mjs';
 import { defaultConfig } from '../config/default.mjs';
 import { summarizeSkill } from '../../runners/core/review-runner.mjs';
@@ -215,6 +216,7 @@ ${buildLanguageInstruction(language)}
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
 - Every finding MUST carry "Severity:" and "Confidence:". It MUST also carry "Evidence:" (>=5 chars) and "Fix:" (>=10 chars) — findings without them are discarded during verification. "Finding:" and "Impact:" are recommended.
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
+- Optionally add "Scope: in-diff" (the added lines introduce the problem) or "Scope: pre-existing" (the problem is in a changed file but outside the added lines). Verification re-derives scope from the diff and overrides this label when it can.
 - Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block at src/app.ts drops err Impact: failures are masked Fix: rethrow or log err with context Severity: warning Confidence: high
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
@@ -582,11 +584,23 @@ export async function generateReview({
   const runVerifier = (cmts) =>
     cmts.map((comment) => ({
       comment,
-      verification: verifyFinding({ finding: comment, diff: diff.diffText, skill, fileTypes }),
+      verification: verifyFinding({
+        finding: comment,
+        diff: diff.diffText,
+        skill,
+        fileTypes,
+        // #1644: parsed diff files carry addedLines, enabling the verifier's
+        // machine determination of finding scope (in-diff / pre-existing).
+        diffFiles: diff.files,
+      }),
     }));
 
+  // #1644: carry the verifier's scope verdict on the comment so the findings
+  // built below can adopt it. Metadata only — display and gating are unchanged.
+  const withScope = (r) => ({ ...r.comment, scope: r.verification.scope });
+
   const verifierResults = runVerifier(comments);
-  let verified = verifierResults.filter((r) => r.verification.verified).map((r) => r.comment);
+  let verified = verifierResults.filter((r) => r.verification.verified).map(withScope);
   const rejected = verifierResults.filter((r) => !r.verification.verified);
 
   // debug.verifierStats/verifierRejected describe the verifier pass over the
@@ -602,6 +616,20 @@ export async function generateReview({
     verified: verified.length,
     rejected: rejected.length,
   };
+
+  // #1644: observability for the scope determination. `mismatch` counts
+  // findings whose LLM self-report disagreed with the machine determination
+  // (the machine verdict wins); a rising count signals prompt drift.
+  debug.scopeStats = verifierResults.reduce(
+    (acc, r) => {
+      acc[r.verification.scope] = (acc[r.verification.scope] ?? 0) + 1;
+      acc.bySource[r.verification.scopeSource] =
+        (acc.bySource[r.verification.scopeSource] ?? 0) + 1;
+      if (r.verification.scopeMismatch) acc.mismatch += 1;
+      return acc;
+    },
+    { 'in-diff': 0, 'pre-existing': 0, mismatch: 0, bySource: {} }
+  );
 
   // Fail-safe: mirror the format-validation fallback for a wholesale verifier
   // rejection. Inline-only findings (Severity:/Confidence: present but
@@ -635,7 +663,7 @@ export async function generateReview({
     // rejected LLM batch.
     verified = runVerifier(comments)
       .filter((r) => r.verification.verified)
-      .map((r) => r.comment);
+      .map(withScope);
   }
 
   // Replace comments with verified-only set
@@ -696,6 +724,9 @@ export async function generateReview({
       status: /** @type {'open'} */ ('open'),
       evidence: parsed.evidence,
       suggestion: parsed.suggestion || null,
+      // #1644 Phase 1: verifier verdict (machine determination, falling back to
+      // the LLM self-report and then to the fail-safe default `in-diff`).
+      scope: normalizeScope(c.scope ?? parsed.scope),
     };
   });
 

@@ -9,6 +9,21 @@ const FINDING_SEVERITIES = /** @type {const} */ (['blocker', 'warning', 'nit']);
 const FINDING_CONFIDENCE = /** @type {const} */ (['high', 'medium', 'low']);
 
 /**
+ * Scope vocabulary for a finding (#1644 Phase 1).
+ * - `in-diff`: introduced or changed by the added lines of this diff
+ * - `pre-existing`: inside a changed file but outside the added lines
+ * @see docs/review/output-format.md
+ */
+export const FINDING_SCOPES = /** @type {const} */ (['in-diff', 'pre-existing']);
+
+/**
+ * Fail-safe default scope. Unknown/absent scope MUST NOT demote a finding,
+ * so the default is the non-demoting value (`in-diff`), mirroring the
+ * "unknown severity → major" fail-safe direction of normalizeSeverity.
+ */
+export const DEFAULT_FINDING_SCOPE = /** @type {const} */ ('in-diff');
+
+/**
  * Canonical severity ranking for the output schema vocabulary
  * (ascending: higher number = more severe). Single source of truth for every
  * module that needs to compare or sort severities.
@@ -65,13 +80,13 @@ export function formatFindingMessage({ finding, evidence, impact, fix, severity,
   ].join(' ');
 }
 
-const LABEL_NAMES = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confidence'];
+const LABEL_NAMES = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confidence', 'Scope'];
 const LABEL_ALTERNATION = LABEL_NAMES.join('|');
 
 /**
  * Parse a labeled finding message string into structured fields.
  * @param {string} message
- * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null }}
+ * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null, scope: string|null }}
  */
 export function parseFindingMessage(message) {
   const text = String(message ?? '');
@@ -87,7 +102,36 @@ export function parseFindingMessage(message) {
     suggestion: get('Fix'),
     severity: get('Severity') || null,
     confidence: get('Confidence') || null,
+    // Optional LLM self-report (#1644). Machine determination in verifier.mjs
+    // takes precedence; this is only the fallback when the diff cannot decide.
+    scope: get('Scope') || null,
   };
+}
+
+/**
+ * Normalize a finding scope value to the output schema vocabulary.
+ * Unknown / absent values fail safe to `in-diff` so that an undetermined
+ * scope never demotes a finding.
+ * @param {string|null|undefined} rawScope
+ * @returns {'in-diff'|'pre-existing'}
+ */
+export function normalizeScope(rawScope) {
+  switch (
+    String(rawScope ?? '')
+      .toLowerCase()
+      .trim()
+  ) {
+    case 'pre-existing':
+    case 'preexisting':
+    case 'pre_existing':
+      return 'pre-existing';
+    case 'in-diff':
+    case 'indiff':
+    case 'in_diff':
+      return 'in-diff';
+    default:
+      return DEFAULT_FINDING_SCOPE;
+  }
 }
 
 /**
