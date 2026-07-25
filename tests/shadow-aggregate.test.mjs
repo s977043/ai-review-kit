@@ -227,7 +227,7 @@ describe('shadow-aggregate 契約5: two-stage clustering', () => {
     assert.deepEqual(clusters, []);
   });
 
-  test('stage 2 splits a class by fingerprint / category / scope', () => {
+  test('stage 2 splits a class by fingerprint / category / filePath', () => {
     const aggregate = buildShadowAggregate({ ...scenario(), now: NOW });
     assert.equal(aggregate.clusters.length, 1);
     const [cluster] = aggregate.clusters;
@@ -237,7 +237,7 @@ describe('shadow-aggregate 契約5: two-stage clustering', () => {
     const fingerprinted = cluster.subClusters.find((s) => s.fingerprint === FP_A);
     assert.equal(fingerprinted.count, 2);
     assert.equal(fingerprinted.category, 'security');
-    assert.equal(fingerprinted.scope, 'src/a.mjs');
+    assert.equal(fingerprinted.filePath, 'src/a.mjs');
     assert.equal(fingerprinted.experimentEligible, true);
     // 契約5 未決事項: the failure-mode vocabulary is decided after observation.
     assert.equal(fingerprinted.failureMode, null);
@@ -347,7 +347,7 @@ describe('shadow-aggregate 実データ形状での退行（W3）', () => {
     });
     const [sub] = aggregate.clusters[0].subClusters;
     assert.equal(sub.category, 'secret-scanner');
-    assert.equal(sub.scope, 'src/a.mjs');
+    assert.equal(sub.filePath, 'src/a.mjs');
     assert.equal(sub.distinctOccurrenceCount, 2);
     assert.equal(sub.experimentEligible, true);
   });
@@ -440,6 +440,59 @@ describe('shadow-aggregate 契約4: content-addressed candidate id', () => {
     assert.equal(aggregate.candidate.candidateId, proposed.candidateId);
     assert.equal(aggregate.candidate.contentHash, proposed.contentHash);
     assert.equal(aggregate.candidate.uniqueEvidenceCount, proposed.evidenceCount);
+  });
+
+  test('each sub-cluster of a split class converges with propose (B1, 2 fingerprints)', () => {
+    // Two fingerprints inside ONE (skillId, feedbackType) class: stage 2 splits
+    // it into two sub-clusters. Feeding a sub-cluster's sourceFeedbackRefs into
+    // `river promote propose` must mint that sub-cluster's id — the whole
+    // cluster's JSONL would produce a third, different id.
+    const feedbackEntries = [
+      feedback({ pr: 1, fingerprint: FP_A }),
+      feedback({ pr: 2, fingerprint: FP_A, runId: 'run-2' }),
+      feedback({ pr: 3, fingerprint: FP_B }),
+      feedback({ pr: 4, fingerprint: FP_B, runId: 'run-2' }),
+    ];
+    const runRecords = [
+      runRecord({ runId: 'run-1', findings: [finding(FP_A)] }),
+      runRecord({
+        runId: 'run-2',
+        timestamp: '2026-07-22T00:00:00.000Z',
+        findings: [finding(FP_B, { file: 'src/b.mjs', category: 'testing' })],
+      }),
+    ];
+    const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
+    const [cluster] = aggregate.clusters;
+    assert.equal(cluster.subClusters.length, 2);
+
+    const idsFromPropose = new Set();
+    for (const sub of cluster.subClusters) {
+      // The refs are accepted as-is by propose's input contract (this throws if
+      // skillId is missing or the row falls outside the cluster key).
+      const proposed = buildProposedCandidate({
+        entries: sub.evidence,
+        clusterKey: cluster.clusterKey,
+        now: NOW,
+      });
+      assert.equal(
+        proposed.candidateId,
+        computeCandidateId({ clusterKey: cluster.clusterKey, evidence: sub.evidence }).candidateId
+      );
+      idsFromPropose.add(proposed.candidateId);
+    }
+    // Two distinct sub-clusters must not collapse onto one candidate id.
+    assert.equal(idsFromPropose.size, 2);
+
+    // The candidate the aggregate selected converges with propose over its own
+    // sourceFeedbackRefs.
+    const selected = buildProposedCandidate({
+      entries: aggregate.candidate.sourceFeedbackRefs,
+      clusterKey: aggregate.candidate.clusterKey,
+      now: NOW,
+    });
+    assert.equal(selected.candidateId, aggregate.candidate.candidateId);
+    assert.equal(selected.contentHash, aggregate.candidate.contentHash);
+    assert.ok(idsFromPropose.has(aggregate.candidate.candidateId));
   });
 
   test('the policy version is the shared one and unknown versions are rejected', () => {

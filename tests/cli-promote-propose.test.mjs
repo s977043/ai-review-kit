@@ -265,6 +265,37 @@ describe('river promote propose input validation (schema invariants)', () => {
     assert.match(b.stderr, /skillId must be a non-empty string/);
   });
 
+  test('an over-long or control-character skillId is rejected', async (t) => {
+    const tooLong = seed([
+      feedback(1, 'a'.repeat(16)),
+      { ...feedback(2, 'b'.repeat(16)), skillId: 'x'.repeat(201) },
+    ]);
+    const control = seed([
+      feedback(1, 'a'.repeat(16)),
+      { ...feedback(2, 'b'.repeat(16)), skillId: 'skill id' },
+    ]);
+    t.after(tooLong.cleanup);
+    t.after(control.cleanup);
+    const a = await runCliInProcess(proposeArgs(tooLong.indexPath, tooLong.inputPath), { env });
+    const b = await runCliInProcess(proposeArgs(control.indexPath, control.inputPath), { env });
+    assert.equal(a.code, 1);
+    assert.match(a.stderr, /skillId must be at most 200 characters/);
+    assert.equal(b.code, 1);
+    assert.match(b.stderr, /skillId must contain only letters/);
+    assert.deepEqual(loadMemory(tooLong.indexPath).entries, []);
+    assert.deepEqual(loadMemory(control.indexPath).entries, []);
+  });
+
+  test('an unknown option is rejected instead of silently ignored', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed();
+    t.after(cleanup);
+    // A typo of --dry-run must not fall through and write the index for real.
+    const res = await runCliInProcess(proposeArgs(indexPath, inputPath, ['--dry-rnu']), { env });
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /unknown option for promote: --dry-rnu/);
+    assert.deepEqual(loadMemory(indexPath).entries, []);
+  });
+
   test('an unknown feedbackType in --cluster-key is rejected', async (t) => {
     const { cleanup, indexPath, inputPath } = seed();
     t.after(cleanup);
@@ -325,6 +356,23 @@ describe('river promote propose recurrence counting', () => {
     assert.equal(out.entry.context.promotionCandidate.recurrenceCount, 2);
     assert.equal(out.entry.context.promotionCandidate.evidence.length, 2);
     assert.match(res.stderr, /1 duplicate evidence row/);
+  });
+
+  test('a non-numeric --threshold suffix is rejected, not silently truncated', async (t) => {
+    const { cleanup, indexPath, inputPath } = seed();
+    t.after(cleanup);
+    // parseInt('2garbage') === 2, which would silently apply a threshold the
+    // caller never typed.
+    const res = await runCliInProcess(
+      proposeArgs(indexPath, inputPath, ['--threshold', '2garbage']),
+      {
+        env,
+      }
+    );
+    // Invalid flag values route to help with an explanatory stderr line, the
+    // same behavior as --approver/--reason (see cli-promote-retire.test.mjs).
+    assert.match(res.stderr, /--threshold option requires a positive integer/);
+    assert.deepEqual(loadMemory(indexPath).entries, []);
   });
 
   test('--threshold overrides the minimum recurrence instead of being ignored', async (t) => {
@@ -462,6 +510,70 @@ describe('candidate content hash', () => {
       buildProposedCandidate({ entries: ENTRIES, clusterKey: CLUSTER, now: new Date(NOW) })
         .candidateId,
       buildProposedCandidate({ entries: nfd, clusterKey: CLUSTER, now: new Date(NOW) }).candidateId
+    );
+  });
+
+  test('the hash does not depend on key insertion order (canonical JSON)', () => {
+    const { evidence } = normalizeEvidence(ENTRIES);
+    // Same data, keys inserted in reverse order.
+    const shuffled = evidence.map((item) => Object.fromEntries(Object.entries(item).reverse()));
+    assert.equal(
+      computeCandidateContentHash({ clusterKey: CLUSTER, evidence }).contentHash,
+      computeCandidateContentHash({ clusterKey: CLUSTER, evidence: shuffled }).contentHash
+    );
+  });
+});
+
+describe('candidate contentHash round-trip (re-derivable from the stored entry)', () => {
+  /** Re-derive the hash from what the entry actually persists. */
+  const rederive = (built) =>
+    computeCandidateContentHash({
+      clusterKey: built.clusterKey,
+      evidence: built.entry.context.promotionCandidate.evidence,
+      policyVersion: built.entry.context.promotionCandidate.policyVersion,
+    });
+
+  test('fingerprinted evidence: stored evidence re-derives the same contentHash', () => {
+    const built = buildProposedCandidate({
+      entries: ENTRIES,
+      clusterKey: CLUSTER,
+      now: new Date(NOW),
+    });
+    const again = rederive(built);
+    assert.equal(again.contentHash, built.contentHash);
+    assert.equal(again.candidateId, built.candidateId);
+    assert.equal(again.candidateId, built.entry.id);
+  });
+
+  test('fingerprintless evidence: timestamps survive so the hash still re-derives', () => {
+    const entries = [feedback(1), feedback(2)];
+    const built = buildProposedCandidate({
+      entries,
+      clusterKey: CLUSTER,
+      now: new Date(NOW),
+    });
+    const stored = built.entry.context.promotionCandidate;
+    assert.equal(built.shadowOnly, true);
+    // Two rows must stay two: without the timestamp they would collapse into a
+    // single duplicate and contradict recurrenceCount.
+    assert.equal(stored.evidence.length, 2);
+    assert.equal(stored.recurrenceCount, 2);
+    assert.deepEqual(
+      stored.evidence.map((e) => e.timestamp),
+      entries.map((e) => e.timestamp).sort()
+    );
+    assert.equal(rederive(built).contentHash, built.contentHash);
+  });
+
+  test('a non-string timestamp on fingerprintless evidence is rejected', () => {
+    assert.throws(
+      () =>
+        buildProposedCandidate({
+          entries: [feedback(1), { ...feedback(2), timestamp: { year: 2026 } }],
+          clusterKey: CLUSTER,
+          now: new Date(NOW),
+        }),
+      /must carry a string timestamp/
     );
   });
 });

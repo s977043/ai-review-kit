@@ -41,6 +41,39 @@ export const KNOWN_POLICY_VERSIONS = Object.freeze(['1']);
 // Length (hex chars) of the content hash kept in the candidate id.
 const CONTENT_ID_HASH_LENGTH = 12;
 
+// Upper bound / character set for skillId in --input entries. A skillId flows
+// into the clusterKey, the candidate title and the Riverbed tags, so an
+// unbounded or control-character-carrying value would corrupt those surfaces.
+const MAX_SKILL_ID_LENGTH = 200;
+const SKILL_ID_PATTERN = /^[\w.\-/:]+$/;
+
+/** Recursively sort object keys so JSON.stringify is order-independent. */
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalize(value[key])])
+    );
+  }
+  return value;
+}
+
+/**
+ * Canonical (key-sorted) JSON serialization used for every content hash.
+ *
+ * Key order must not change a hash: the same evidence set rebuilt by another
+ * code path (or read back from a stored candidate) has to re-derive the same
+ * contentHash, and JSON.stringify preserves insertion order by default.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function canonicalJson(value) {
+  return JSON.stringify(canonicalize(value ?? null));
+}
+
 export const SUGGESTED_ACTION = {
   false_positive: 'guard fixture を追加し、skill の False-positive guards を強化する',
   missed_issue: 'happy-path fixture を追加し、skill の Rule / Heuristics を拡張する',
@@ -332,6 +365,15 @@ export function normalizeEvidence(entries) {
     const pr = Number.isInteger(entry.pr) && entry.pr > 0 ? entry.pr : null;
     if (fingerprint === null) {
       fingerprintless = true;
+      // Without a fingerprint the timestamp is a hash input, so a non-string
+      // value (an object, a Date, a number) would either serialize by key order
+      // or lose precision and make the id non-deterministic. Reject instead.
+      if (entry.timestamp != null && typeof entry.timestamp !== 'string') {
+        throw new PromotionProposalError(
+          'evidence without findingFingerprint must carry a string timestamp ' +
+            `(got ${typeof entry.timestamp}); it participates in the content hash.`
+        );
+      }
       return {
         feedbackType: nfc(entry.feedbackType),
         findingFingerprint: null,
@@ -342,7 +384,9 @@ export function normalizeEvidence(entries) {
     return { feedbackType: nfc(entry.feedbackType), findingFingerprint: fingerprint, pr };
   });
   const unique = new Map();
-  for (const item of normalized) unique.set(JSON.stringify(item), item);
+  // canonicalJson (not JSON.stringify) so the dedup key — and therefore the
+  // sort order of the hashed evidence array — never depends on key order.
+  for (const item of normalized) unique.set(canonicalJson(item), item);
   const evidence = [...unique.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   return {
     evidence: evidence.map(([, item]) => item),
@@ -375,6 +419,15 @@ export function validateFeedbackEntryShape(entry) {
   }
   if (typeof entry.skillId !== 'string' || !entry.skillId.trim()) {
     return 'skillId must be a non-empty string.';
+  }
+  if (entry.skillId.length > MAX_SKILL_ID_LENGTH) {
+    return `skillId must be at most ${MAX_SKILL_ID_LENGTH} characters (got ${entry.skillId.length}).`;
+  }
+  if (!SKILL_ID_PATTERN.test(entry.skillId)) {
+    // Control characters and separators would leak into the clusterKey, the
+    // candidate title and the Riverbed tags, where they are neither escaped
+    // nor round-trippable.
+    return 'skillId must contain only letters, digits, underscore, dot, hyphen, slash, or colon.';
   }
   if (!FEEDBACK_TYPES.includes(entry.feedbackType)) {
     return `feedbackType "${entry.feedbackType}" is not one of: ${FEEDBACK_TYPES.join(', ')}.`;
@@ -409,10 +462,10 @@ export function computeCandidateContentHash({
   evidence,
   policyVersion = CANDIDATE_POLICY_VERSION,
 }) {
-  // Key order is fixed by construction (no JSON.stringify replacer needed):
-  // clusterKey -> evidence -> policyVersion, with each evidence element already
-  // normalized by normalizeEvidence().
-  const canonical = JSON.stringify({ clusterKey, evidence, policyVersion });
+  // Key-sorted serialization, so the hash is re-derivable from any object that
+  // holds the same data regardless of how its keys were inserted — including
+  // the evidence array read back from a stored candidate entry.
+  const canonical = canonicalJson({ clusterKey, evidence, policyVersion });
   const contentHash = createHash('sha256').update(canonical).digest('hex');
   return {
     contentHash,
@@ -527,6 +580,12 @@ export function buildProposedCandidate({
     expiresInDays,
     id: candidateId,
   });
+  // Store the EXACT evidence array the hash was computed over. buildPromotionCandidate
+  // re-projects its `group` into `{ pr, findingFingerprint, feedbackType }`, which drops
+  // the `timestamp` that fingerprintless evidence hashes on (and, for fingerprintless
+  // input, collapses distinct rows into duplicates that contradict recurrenceCount).
+  // Re-deriving contentHash from the stored entry then always mismatched.
+  entry.context.promotionCandidate.evidence = evidence;
   // Persist the hash inputs so a later reader can re-derive and verify the id
   // instead of trusting it (the id itself is a 12-hex truncation).
   entry.context.promotionCandidate.contentHash = contentHash;

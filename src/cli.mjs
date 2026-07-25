@@ -136,6 +136,10 @@ function parseArgs(argv) {
   // Global options the shared parser below handles for `evolve`. Anything else
   // starting with `-` is rejected rather than silently ignored.
   const EVOLVE_SHARED_OPTIONS = new Set(['--output', '-h', '--help', '--debug']);
+  // Same treatment for `promote`: a typo such as `--dry-rnu` must not fall
+  // through to the shared parser and be ignored, because `propose` then writes
+  // the index for real while the caller believes it asked for a dry run.
+  const PROMOTE_SHARED_OPTIONS = new Set(['--output', '--dry-run', '-h', '--help', '--debug']);
   const parsed = {
     command: null,
     target: '.',
@@ -198,6 +202,7 @@ function parseArgs(argv) {
     promoteInput: null,
     promoteClusterKey: null,
     promotePolicyVersion: null,
+    promoteUnknownOption: null,
     // evolve subcommand fields (#1574 P1 Shadow aggregate)
     evolveSubcommand: null,
     evolveMin: null,
@@ -446,13 +451,14 @@ function parseArgs(argv) {
       }
       if (arg === '--threshold') {
         const value = args.shift();
-        const n = parseInt(value ?? '', 10);
-        if (!value || value.startsWith('-') || Number.isNaN(n) || n < 1) {
+        // Strict parse: parseInt('2garbage') is 2, so a typo would silently
+        // become a different threshold than the one that was typed.
+        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
           console.error('Error: --threshold option requires a positive integer.');
           parsed.command = 'help';
           break;
         }
-        parsed.promoteThreshold = n;
+        parsed.promoteThreshold = Number.parseInt(value, 10);
         continue;
       }
       if (arg === '--feedback-root') {
@@ -495,17 +501,24 @@ function parseArgs(argv) {
         parsed.promotePolicyVersion = value;
         continue;
       }
+      // Options that are neither promote's own nor handled by the shared parser
+      // must fail loudly instead of being ignored (a mistyped `--dry-rnu` would
+      // otherwise write the Riverbed index for real).
+      if (arg.startsWith('-') && !PROMOTE_SHARED_OPTIONS.has(arg)) {
+        parsed.promoteUnknownOption = arg;
+        break;
+      }
     }
     if (parsed.command === 'evolve') {
       if (arg === '--min') {
         const value = args.shift();
-        const n = parseInt(value ?? '', 10);
-        if (!value || value.startsWith('-') || Number.isNaN(n) || n < 1) {
+        // Strict parse, same reason as promote's --threshold above.
+        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
           console.error('Error: --min option requires a positive integer.');
           parsed.command = 'help';
           break;
         }
-        parsed.evolveMin = n;
+        parsed.evolveMin = Number.parseInt(value, 10);
         continue;
       }
       if (arg === '--month') {

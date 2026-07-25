@@ -154,6 +154,9 @@ Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利
 - hash 入力は `{ clusterKey, 正規化 evidence, policyVersion }` に揃え、shadow 固有の `subClusterKey` や生成日時は hash に入れない（出力メタデータとしては保持する）。
 - prefix は `RR-PC-` に統一し、同一証拠からは shadow 出力と propose 永続化が同一 ID へ収束する。
 - policy version は `CANDIDATE_POLICY_VERSION`（`1`）を共有し、未知の値は shadow 側でも reject する。
+- shadow から propose へ渡すのは cluster 全体の JSONL ではなく、candidate の `sourceFeedbackRefs`（stage2 サブクラスタ単位の evidence）とする。cluster 全体を渡すと、どのサブクラスタとも一致しない別 ID になるためである。
+- `sourceFeedbackRefs` の各要素は propose の入力契約（`validateFeedbackEntryShape`）を満たす形にする。`skillId` はそのために含めるフィールドで、hash 入力ではないため candidate ID には影響しない。
+- content hash はキーソートした canonical JSON 上で計算し、保存する `evidence` は hash 対象と同一の配列とする。保存値から contentHash を再導出できることを round-trip テストで担保する。
 
 #### 未決事項
 
