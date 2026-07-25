@@ -21,6 +21,10 @@ import {
   KNOWN_POLICY_VERSIONS,
   canonicalJson,
   computeCandidateContentHash,
+  // Trim + NFC in ONE place (see promotion-candidates.mjs): this module and
+  // paired-replay.mjs feed the same hashes, so a local copy that only trimmed
+  // would diverge on NFD input.
+  nonEmptyNfcString as nonEmptyString,
   normalizeEvidence,
 } from './promotion-candidates.mjs';
 
@@ -91,10 +95,6 @@ const OBSERVED_PATTERN_BY_FEEDBACK_TYPE = {
 
 function sha256Hex(input) {
   return createHash('sha256').update(input).digest('hex');
-}
-
-function nonEmptyString(value) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function compareStrings(a, b) {

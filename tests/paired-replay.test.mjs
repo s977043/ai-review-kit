@@ -36,6 +36,7 @@ import {
   verifyExperimentManifest,
 } from '../src/lib/paired-replay.mjs';
 import { computeCandidateId } from '../src/lib/shadow-aggregate.mjs';
+import { buildProposedCandidate } from '../src/lib/promotion-candidates.mjs';
 import { compileSchemaFile } from './helpers/schema-validator.mjs';
 import { runCliInProcess } from './helpers/cli.mjs';
 
@@ -331,6 +332,115 @@ describe('paired-replay 契約4: content-addressed candidate id', () => {
     }
   });
 
+  test('replay と propose は同じ evidence から同じ candidateId を採番する', () => {
+    // Cross-path guard, not a self-consistency check: comparing the manifest
+    // only against computeCandidateId would have kept passing while propose
+    // minted a different id from the same input.
+    const proposed = buildProposedCandidate({
+      entries: evidence,
+      clusterKey: 'secret-scanner::false_positive',
+      now: NOW,
+    });
+    const { manifest } = buildExperimentManifest(
+      spec({
+        improvementCandidate: {
+          clusterKey: 'secret-scanner::false_positive',
+          sourceFeedbackRefs: evidence,
+        },
+      }),
+      { now: NOW }
+    );
+    assert.equal(manifest.improvementCandidate.candidateId, proposed.candidateId);
+    assert.equal(manifest.improvementCandidate.contentHash, proposed.contentHash);
+  });
+
+  test('clusterKey の空白は propose と同じ位置で正規化される', () => {
+    // Regression guard: replay trimmed the WHOLE string while propose trims
+    // each `::` component, so "secret-scanner ::false_positive" produced two
+    // different ids for one candidate.
+    const spaced = 'secret-scanner ::false_positive';
+    const proposed = buildProposedCandidate({ entries: evidence, clusterKey: spaced, now: NOW });
+    const { manifest } = buildExperimentManifest(
+      spec({ improvementCandidate: { clusterKey: spaced, sourceFeedbackRefs: evidence } }),
+      { now: NOW }
+    );
+    assert.equal(manifest.improvementCandidate.clusterKey, 'secret-scanner::false_positive');
+    assert.equal(manifest.improvementCandidate.candidateId, proposed.candidateId);
+  });
+
+  test('`::` を持たない clusterKey は propose と同様に拒否される', () => {
+    // Previously accepted here, minting an experiment id for a candidate
+    // `river promote propose` is structurally unable to create.
+    assert.throws(
+      () =>
+        buildExperimentManifest(
+          spec({
+            improvementCandidate: { clusterKey: 'not-a-cluster-key', sourceFeedbackRefs: evidence },
+          }),
+          { now: NOW }
+        ),
+      (err) =>
+        err instanceof PairedReplayError &&
+        /improvementCandidate.clusterKey must be/.test(err.message)
+    );
+    assert.throws(
+      () =>
+        buildProposedCandidate({ entries: evidence, clusterKey: 'not-a-cluster-key', now: NOW }),
+      /must be "<skillId>::<feedbackType>"/
+    );
+  });
+
+  test('NFD の非 ASCII clusterKey は propose も replay も受け付けない', () => {
+    // NFC normalization is shared, but a non-ASCII skillId fails the feedback
+    // entry contract on BOTH paths — so an experiment cannot mint an id for a
+    // cluster propose could never persist.
+    const nfdKey = `${'ガ-skill'.normalize('NFD')}::false_positive`;
+    const nfdEvidence = evidence.map((e) => ({ ...e, skillId: 'ガ-skill' }));
+    assert.throws(
+      () =>
+        buildExperimentManifest(
+          spec({ improvementCandidate: { clusterKey: nfdKey, sourceFeedbackRefs: nfdEvidence } }),
+          { now: NOW }
+        ),
+      PairedReplayError
+    );
+    assert.throws(
+      () => buildProposedCandidate({ entries: nfdEvidence, clusterKey: nfdKey, now: NOW }),
+      /skillId must contain only/
+    );
+  });
+
+  test('propose が拒否する evidence 行は replay でも拒否される', () => {
+    const badFingerprint = evidence.map((e) => ({ ...e, findingFingerprint: 'not-hex' }));
+    assert.throws(
+      () =>
+        buildExperimentManifest(
+          spec({
+            improvementCandidate: {
+              clusterKey: 'secret-scanner::false_positive',
+              sourceFeedbackRefs: badFingerprint,
+            },
+          }),
+          { now: NOW }
+        ),
+      /findingFingerprint must be 16 lowercase hex chars/
+    );
+    // cluster 外の行も同様（propose の --input 検証と同じ規律）。
+    assert.throws(
+      () =>
+        buildExperimentManifest(
+          spec({
+            improvementCandidate: {
+              clusterKey: 'secret-scanner::false_positive',
+              sourceFeedbackRefs: [evidence[0], { ...evidence[1], skillId: 'other-skill' }],
+            },
+          }),
+          { now: NOW }
+        ),
+      /is outside improvementCandidate.clusterKey/
+    );
+  });
+
   test('a claimed candidate id its evidence does not produce is rejected', () => {
     assert.throws(
       () =>
@@ -570,6 +680,15 @@ describe('paired-replay: case pairing and determinism', () => {
     assert.equal(result.metrics.overall.unchangedFindingCount, 2);
     assert.equal(result.metrics.heldOut.unchangedFindingCount, 1);
   });
+
+  test('case 件数の呼び名は pairedCaseCount ひとつだけ', () => {
+    // `caseCount` was always equal to `pairedCaseCount` but was not declarable
+    // as a criterion, so two names for one number invited a profile to declare
+    // the one the evaluator ignores.
+    const result = buildPairedReplay(spec(), { now: NOW });
+    assert.equal(Object.hasOwn(result.metrics.overall, 'caseCount'), false);
+    assert.equal(Object.hasOwn(result.metrics.heldOut, 'caseCount'), false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -615,19 +734,29 @@ describe('paired-replay 契約6: profile-specific acceptance', () => {
     });
   });
 
-  test('契約6 の floor より厳しい宣言は有効に残る', () => {
-    const stricter = spec();
-    stricter.acceptance.profiles[0].criteria.push({
+  test('負の threshold 宣言も 0 でクランプされ、充足不能な必須基準にならない', () => {
+    // Regression guard: `Math.min(acc, threshold)` from 0 let `threshold: -3`
+    // become the floor, producing a required `criticalRegressionCount lte -3`
+    // that no run can ever satisfy. Counts have no value below 0, so "stricter
+    // than 0" does not exist.
+    const negative = spec({ dataset: { heldOutCaseKeys: [] } });
+    negative.acceptance.profiles[0].criteria.push({
       metric: 'criticalRegressionCount',
       comparator: 'lte',
-      threshold: -1,
+      threshold: -3,
     });
-    const { manifest } = buildExperimentManifest(stricter, { now: NOW });
-    const criterion = manifest.acceptance.profiles[0].criteria.find(
+    const result = buildPairedReplay(negative, { now: NOW });
+    const criterion = result.manifest.acceptance.profiles[0].criteria.find(
       (c) => c.metric === 'criticalRegressionCount'
     );
-    assert.equal(criterion.threshold, -1);
+    assert.equal(criterion.threshold, 0);
     assert.equal(criterion.required, true);
+    assert.equal(criterion.source, 'contract-6');
+    assert.equal(
+      result.acceptance.evaluations[0].criteria.find((c) => c.metric === 'criticalRegressionCount')
+        .satisfied,
+      true
+    );
   });
 
   test('契約6 の floor を緩めた宣言でも regression があれば充足しない', () => {

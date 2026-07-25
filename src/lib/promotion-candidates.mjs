@@ -410,6 +410,23 @@ export function nfc(value) {
 }
 
 /**
+ * Trim and NFC-normalize a string; blank or non-string values become null.
+ *
+ * Exported as the ONE implementation every downstream reader shares
+ * (`shadow-aggregate.mjs`, `paired-replay.mjs`). Two near-identical local copies
+ * — one trimming only, one trimming and normalizing — silently disagreed on
+ * NFD input, which is a latent id-divergence the moment they feed the same
+ * hash.
+ *
+ * @param {unknown} value
+ * @returns {string|null}
+ */
+export function nonEmptyNfcString(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  return nfc(value.trim());
+}
+
+/**
  * Validate one feedback entry against the capture contract in feedback.mjs
  * (`buildFeedbackEntry`). `--input` is caller-supplied data, so an unvalidated
  * entry would flow straight into the Riverbed index and break
@@ -480,17 +497,32 @@ export function computeCandidateContentHash({
   };
 }
 
-/** Split `skillId::feedbackType` and reject malformed cluster keys. */
-function parseClusterKey(clusterKey) {
+/**
+ * Split `skillId::feedbackType`, normalize both components, and reject
+ * malformed cluster keys.
+ *
+ * SSoT for cluster-key normalization: NFC over the whole string, split on
+ * `::`, then trim EACH component and rejoin. A consumer that only trims the
+ * whole string (`" a ::b "` → `"a ::b"`) hashes a different clusterKey than
+ * this function produces, so the same evidence mints two different candidate
+ * ids. Exported for exactly that reason — do not re-implement it.
+ *
+ * @param {string} clusterKey
+ * @param {{ label?: string }} [options] label used in the error message
+ * @returns {{ skillId: string, feedbackType: string, clusterKey: string }}
+ */
+export function normalizeClusterKey(clusterKey, { label = '--cluster-key' } = {}) {
   const parts = String(clusterKey ?? '')
     .normalize('NFC')
     .split('::');
   if (parts.length !== 2 || !parts[0].trim() || !parts[1].trim()) {
     throw new PromotionProposalError(
-      `--cluster-key must be "<skillId>::<feedbackType>" (got: ${clusterKey ?? '(none)'}).`
+      `${label} must be "<skillId>::<feedbackType>" (got: ${clusterKey ?? '(none)'}).`
     );
   }
-  return { skillId: parts[0].trim(), feedbackType: parts[1].trim() };
+  const skillId = parts[0].trim();
+  const feedbackType = parts[1].trim();
+  return { skillId, feedbackType, clusterKey: `${skillId}::${feedbackType}` };
 }
 
 /**
@@ -519,7 +551,7 @@ export function buildProposedCandidate({
   policyVersion = CANDIDATE_POLICY_VERSION,
   min = DEFAULT_MIN_RECURRENCE,
 }) {
-  const { skillId, feedbackType } = parseClusterKey(clusterKey);
+  const { skillId, feedbackType } = normalizeClusterKey(clusterKey);
   if (feedbackType === 'accepted') {
     throw new PromotionProposalError(
       'feedbackType "accepted" is a positive signal and is never a promotion candidate.'

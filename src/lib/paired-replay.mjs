@@ -28,9 +28,19 @@ import {
   CANDIDATE_POLICY_VERSION,
   KNOWN_POLICY_VERSIONS,
   canonicalJson,
-  nfc,
+  // Shared helpers, never re-implemented here: `nonEmptyNfcString` is the one
+  // trim+NFC normalization every content-addressed surface uses, and
+  // `normalizeClusterKey` is the SSoT `propose` derives its candidate id with.
+  nonEmptyNfcString as nonEmptyString,
+  normalizeClusterKey,
+  validateFeedbackEntryShape,
 } from './promotion-candidates.mjs';
-import { buildRunEvidence, computeCandidateId, evidenceTrustLevel } from './shadow-aggregate.mjs';
+import {
+  buildRunEvidence,
+  computeCandidateId,
+  deriveReviewRunId,
+  evidenceTrustLevel,
+} from './shadow-aggregate.mjs';
 
 // Re-exported, not re-implemented: P2 keeps P1's trust classification verbatim.
 // 契約1 の未決事項（`trusted_by` の署名・検証方式）は P2 でも解決していないため、
@@ -118,15 +128,6 @@ function sha256Hex(input) {
   return createHash('sha256').update(input).digest('hex');
 }
 
-function nonEmptyString(value) {
-  if (typeof value !== 'string' || !value.trim()) return null;
-  // NFC via the same helper the candidate-id derivation uses
-  // (promotion-candidates.mjs): normalizing on one side of the loop only would
-  // make visually identical case keys, fingerprints and profile names compare
-  // as different values here while converging there.
-  return nfc(value.trim());
-}
-
 function compareStrings(a, b) {
   const left = a ?? '';
   const right = b ?? '';
@@ -170,14 +171,6 @@ export function deriveCaseKey(record) {
   const mergeBase = nonEmptyString(record?.mergeBase);
   if (!target && !mergeBase) return null;
   return `${target ?? ''}@${mergeBase ?? ''}`;
-}
-
-function runIdOf(record) {
-  return (
-    nonEmptyString(record?.review_run_id) ??
-    nonEmptyString(record?.reviewRunId) ??
-    nonEmptyString(record?.runId)
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -281,7 +274,7 @@ function normalizeSide(side, label, { collectorVersion }) {
       temperature: normalizeTemperature(side.temperature, `${label}.temperature`),
       configId: nonEmptyString(side.configId),
       runCount: runs.length,
-      reviewRunIds: [...new Set(runs.map(runIdOf).filter(Boolean))].sort(compareStrings),
+      reviewRunIds: [...new Set(runs.map(deriveReviewRunId).filter(Boolean))].sort(compareStrings),
       caseKeys,
       unkeyedRunCount: runs.filter((record) => deriveCaseKey(record) == null).length,
       evidence,
@@ -343,7 +336,15 @@ function normalizeProfiles(acceptance) {
     // The contract floor always wins; a declaration on the same metric is
     // folded into it and can only lower the threshold (i.e. be stricter).
     const declaredCritical = declared.filter((c) => c.metric === 'criticalRegressionCount');
-    const floorThreshold = declaredCritical.reduce((acc, c) => Math.min(acc, c.threshold), 0);
+    // Clamped at 0 in BOTH directions: a declaration can only be stricter, and
+    // "stricter than 0" does not exist for a count. Without the lower clamp a
+    // `threshold: -3` declaration became the floor and produced a required
+    // criterion (`criticalRegressionCount lte -3`) that no run can ever
+    // satisfy — the doc said 0 でクランプ, the code did not.
+    const floorThreshold = Math.max(
+      declaredCritical.reduce((acc, c) => Math.min(acc, c.threshold), 0),
+      0
+    );
     const criteria = [
       {
         metric: 'criticalRegressionCount',
@@ -380,14 +381,42 @@ function normalizeImprovementCandidate(spec, policyVersion) {
   const candidate = spec?.improvementCandidate;
   if (candidate == null) return null;
   requireObject(candidate, 'improvementCandidate');
-  const clusterKey = requireString(candidate.clusterKey, 'improvementCandidate.clusterKey');
+  requireString(candidate.clusterKey, 'improvementCandidate.clusterKey');
+  // Normalized by the SAME function `river promote propose` uses. Normalizing
+  // only the whole string here (trim + NFC) made `"skill ::false_positive"`
+  // hash as `"skill ::false_positive"` on this side and as
+  // `"skill::false_positive"` on the propose side, so one candidate got two
+  // ids; a key without `::` was accepted here while propose cannot produce one
+  // at all.
+  let cluster;
+  try {
+    cluster = normalizeClusterKey(candidate.clusterKey, {
+      label: 'improvementCandidate.clusterKey',
+    });
+  } catch (err) {
+    throw new PairedReplayError(err.message);
+  }
+  const clusterKey = cluster.clusterKey;
   const evidence = candidate.sourceFeedbackRefs ?? candidate.evidence;
   if (!Array.isArray(evidence) || evidence.length === 0) {
     throw new PairedReplayError(
       'improvementCandidate.sourceFeedbackRefs must be a non-empty array (the evidence the candidate id is derived from).'
     );
   }
-  evidence.forEach((ref, i) => requireObject(ref, `improvementCandidate.sourceFeedbackRefs[${i}]`));
+  // Same validation `river promote propose` applies to its `--input`: an
+  // experiment must not mint an id from material propose would refuse, or the
+  // experiment refers to a candidate that can never be persisted.
+  evidence.forEach((ref, i) => {
+    const label = `improvementCandidate.sourceFeedbackRefs[${i}]`;
+    requireObject(ref, label);
+    const problem = validateFeedbackEntryShape(ref);
+    if (problem) throw new PairedReplayError(`${label} is invalid: ${problem}`);
+    if (`${ref.skillId}::${ref.feedbackType}` !== clusterKey) {
+      throw new PairedReplayError(
+        `${label} (${ref.skillId}::${ref.feedbackType}) is outside improvementCandidate.clusterKey ${clusterKey}.`
+      );
+    }
+  });
   const candidatePolicyVersion = String(candidate.policyVersion ?? policyVersion);
   if (!KNOWN_POLICY_VERSIONS.includes(candidatePolicyVersion)) {
     // Checked here (not only inside computeCandidateId) so the failure is a
@@ -765,7 +794,10 @@ function findingsOf(records) {
 
 function emptyMetrics(denominator, { datasetCaseCount = 0, unpairedCaseCount = 0 } = {}) {
   return {
-    caseCount: 0,
+    // NOTE: there is deliberately no `caseCount` here. It was always equal to
+    // `pairedCaseCount` while only the latter is declarable as a criterion
+    // (SUPPORTED_ACCEPTANCE_METRICS), so two names for one number invited a
+    // profile to declare the one the evaluator ignores.
     sampleSize: 0,
     unchangedFindingCount: 0,
     changedFindingCount: 0,
@@ -787,7 +819,6 @@ function emptyMetrics(denominator, { datasetCaseCount = 0, unpairedCaseCount = 0
 function accumulateMetrics(cases, denominator, dataset) {
   const metrics = emptyMetrics(denominator, dataset);
   for (const entry of cases) {
-    metrics.caseCount += 1;
     metrics.pairedCaseCount += 1;
     metrics.unchangedFindingCount += entry.counts.unchanged;
     metrics.changedFindingCount += entry.counts.changed;
@@ -936,8 +967,12 @@ export function buildPairedReplay(spec, { now = new Date(), manifest: providedMa
     return {
       caseKey,
       heldOut: heldOut.has(caseKey),
-      baselineRunIds: [...new Set(baseRuns.map(runIdOf).filter(Boolean))].sort(compareStrings),
-      candidateRunIds: [...new Set(candRuns.map(runIdOf).filter(Boolean))].sort(compareStrings),
+      baselineRunIds: [...new Set(baseRuns.map(deriveReviewRunId).filter(Boolean))].sort(
+        compareStrings
+      ),
+      candidateRunIds: [...new Set(candRuns.map(deriveReviewRunId).filter(Boolean))].sort(
+        compareStrings
+      ),
       counts: diff.counts,
       criticalRegressions: diff.criticalRegressions,
       criticalAdditions: diff.criticalAdditions,
