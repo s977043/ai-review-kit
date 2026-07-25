@@ -50,6 +50,59 @@ River Review が認識する入力アーティファクトは以下の通りで�
 - **サイズ目安**: 1 ファイルあたり 100KB 以下を推奨。上限を超える場合 River Review は差分最適化（要約・トリム）を適用する場合がある。
 - **欠損時**: 該当 artifact を参照する skill はその観点をスキップし、`skippedSkills` にその旨を記録する。
 - **PlanGate #810 連携（任意）**: PlanGate #810（Unknown Discovery）は assumption / unknown ledger（Assumptions・Known Unknowns・Blocking Unknowns 等の節）を出力する。River Review はこれを専用 artifact を新設せず `plan` artifact 内の追加セクションとして受け取る。欠損時の挙動は本節の「欠損時」と同一であり、PlanGate への依存は必須にしない。
+- **`reviewSignals`（任意）**: レビュアー自動選択用の構造化シグナル。Markdown 本文ではなくレビュープランオブジェクトのフィールドとして供給する。詳細は次節を参照。
+
+### `reviewSignals`（レビュープラン付随の任意シグナル）
+
+`reviewSignals` は `--reviewers auto` のロール自動選択へ追加のヒントを与える任意の入力です。`plan.md` の Markdown 本文ではなく、**レビュープランオブジェクトのフィールド**として供給します（実装上の読み取り位置は `context.plan.reviewSignals`）。語彙は River Review 側で定義し、特定の上流ワークフローの形式には依存しません。
+
+- **形式**: JSON オブジェクト。`stage` 文字列と、真偽値をとる signal キー群からなる。
+- **供給チャネル**: プログラム的な埋め込み（`runLocalReview({ context })` へ渡すレビュープラン）。CLI フラグや専用ファイルとしては未公開である。
+- **producer**: 本リポジトリ内に producer が存在せず、値の供給は host 側の責務である。PlanGate もその供給者の一例にすぎず、River Review は consumer として読むだけである。
+- **欠損時**: 欠損が既定の状態である。`--reviewers auto` はファイル種別とリスク評価だけでロールを選び、`reviewSignals` 導入前と同じ挙動になる。
+
+#### `stage` 語彙
+
+| `stage`        | 追加されるロール               |
+| -------------- | ------------------------------ |
+| `requirements` | （追加なし）                   |
+| `plan`         | `security-scanner`, `test-gap` |
+| `design`       | `frontend-reviewer`            |
+| `exec`         | `security-scanner`             |
+| `verify`       | `test-gap`                     |
+| `release`      | `security-scanner`             |
+
+未知の `stage` 値は無視され、ロールは追加されません。
+
+#### signal キー一覧
+
+| signal キー            | 追加されるロール    |
+| ---------------------- | ------------------- |
+| `touchesAuth`          | `security-scanner`  |
+| `changesPermissions`   | `security-scanner`  |
+| `handlesSensitiveData` | `security-scanner`  |
+| `databaseMigration`    | `security-scanner`  |
+| `breakingChange`       | `security-scanner`  |
+| `changesUi`            | `frontend-reviewer` |
+| `changesUserFlow`      | `frontend-reviewer` |
+| `deploymentChange`     | `ci-cd-reviewer`    |
+
+- 値が truthy のキーのみ評価される。未知のキーは無視される。
+- `changesPublicApi` / `changesCliInterface` / `changesInstallation` は devex Lens に相当し、専任ロールが不在なため意図的にどのロールへも写像しない。
+- signal はロールを**追加するだけ**であり、既定で常に選ばれる `bug-hunter` を含め、既存の選択結果を減らさない。
+- Lens との対応関係は [Reviewer Lens Taxonomy](../explanation/reviewer-lens-taxonomy.md) を参照してください。
+
+供給例:
+
+```json
+{
+  "reviewSignals": {
+    "stage": "exec",
+    "touchesAuth": true,
+    "changesUi": true
+  }
+}
+```
 
 ### `review-self` / `review-external`
 
@@ -194,6 +247,7 @@ River Review は以下の順でアーティファクトを解決します。
 - PlanGate 固有のディレクトリ構成（例: `plangate/<phase>/` 等）をデフォルトパスとして固定化すること。
 - PlanGate の内部コマンドや実行モデルに依存する artifact 名の採用。
 - PlanGate のバージョンと River Review の skill バージョンを同期させる前提。
+- PlanGate 固有のシグナル形式を `reviewSignals` の契約として採用すること。`stage` 語彙と signal キーは River Review 側が定義し、PlanGate は供給者の一例として扱う。
 
 これにより、PlanGate 以外のワークフローや手作業で生成した artifact でも River Review を利用可能にします。
 
