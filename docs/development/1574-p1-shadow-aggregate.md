@@ -115,7 +115,7 @@ candidate ID は `src/lib/promotion-candidates.mjs` の `normalizeEvidence` と 
 - `artifact_sha256` は同じレコードの self-digest である。コピー間の不一致は検出できるが、レコードを書き換えられる主体は digest も再計算できるため、真正性の証明にはならない
 - 同一 `review_run_id` を名乗る run が複数あり得るため、`artifact_sha256` 昇順で先勝ちに固定し、衝突は `join.duplicateReviewRunIds` に出力する
 
-`trusted_by` の署名・検証方式（CI attestation または人手承認記録）は契約1 の未決事項であり、P2 で確定します。trusted への昇格経路は、その検証機構が実装されるまで開けません。
+`trusted_by` の署名・検証方式（CI attestation または人手承認記録）は契約1 の未決事項であり、P2 でも確定していません。確定は P3 以降です（出典: `docs/development/1574-p0-design-contract.md`）。trusted への昇格経路は、その検証機構が実装されるまで開けません。
 
 ## 7. 現時点の実データでの退行
 
@@ -136,10 +136,10 @@ canonical `review_run_id` と provenance の生産者は、まだリポジトリ
 
 ## 9. 次フェーズへの申し送り
 
-- `trusted_by` の署名・検証方式は P2 で確定する（契約1）。それまで trusted 経路は閉じたままにする
+- `trusted_by` の署名・検証方式は P3 以降で確定する（契約1・P2 でも未確定。出典: `docs/development/1574-p0-design-contract.md`）。それまで trusted 経路は閉じたままにする
 - canonical `review_run_id` を saved run / feedback / Riverbed / eval ledger の各生産者へ伝播させる（契約2）
 - stage2 の failure mode 語彙は、本コマンドの出力を数サイクル観測してから決める（契約5）
-- profile の単位（reviewMode か、対象リポジトリ×phase の組か）は P2 で受入基準を決めるときに確定する（契約6）
+- profile の単位（reviewMode か、対象リポジトリ×phase の組か）は P3 以降で確定する（契約6）。P2 は profile 名だけを必須にし、単位は未決のまま残した。`river evolve replay` の出力を数サイクル観測してから決める（出典: `docs/development/1574-p0-design-contract.md`）
 
 ## 10. 参照
 

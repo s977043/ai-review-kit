@@ -45884,15 +45884,17 @@ function normalizePlannerMode(mode, { defaultMode = 'off' } = {}) {
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   J1: () => (/* binding */ proposePromotionCandidate),
 /* harmony export */   _I: () => (/* binding */ readFeedbackJsonl),
-/* harmony export */   aX: () => (/* binding */ nfc),
+/* harmony export */   bS: () => (/* binding */ nonEmptyNfcString),
 /* harmony export */   d: () => (/* binding */ KNOWN_POLICY_VERSIONS),
 /* harmony export */   dj: () => (/* binding */ canonicalJson),
 /* harmony export */   e1: () => (/* binding */ CANDIDATE_POLICY_VERSION),
+/* harmony export */   jR: () => (/* binding */ validateFeedbackEntryShape),
 /* harmony export */   vf: () => (/* binding */ normalizeEvidence),
 /* harmony export */   wk: () => (/* binding */ PromotionProposalError),
+/* harmony export */   xG: () => (/* binding */ normalizeClusterKey),
 /* harmony export */   yI: () => (/* binding */ computeCandidateContentHash)
 /* harmony export */ });
-/* unused harmony exports DEFAULT_EXPIRY_DAYS, DEFAULT_MIN_RECURRENCE, SUGGESTED_ACTION, findRuleCandidates, buildPromotionCandidate, buildPromotionCandidateEntry, buildPromotionCandidates, buildCandidatesArtifact, writeCandidatesArtifact, validateFeedbackEntryShape, buildProposedCandidate */
+/* unused harmony exports DEFAULT_EXPIRY_DAYS, DEFAULT_MIN_RECURRENCE, SUGGESTED_ACTION, findRuleCandidates, buildPromotionCandidate, buildPromotionCandidateEntry, buildPromotionCandidates, buildCandidatesArtifact, writeCandidatesArtifact, nfc, buildProposedCandidate */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(3024);
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(6760);
@@ -46310,6 +46312,23 @@ function nfc(value) {
 }
 
 /**
+ * Trim and NFC-normalize a string; blank or non-string values become null.
+ *
+ * Exported as the ONE implementation every downstream reader shares
+ * (`shadow-aggregate.mjs`, `paired-replay.mjs`). Two near-identical local copies
+ * — one trimming only, one trimming and normalizing — silently disagreed on
+ * NFD input, which is a latent id-divergence the moment they feed the same
+ * hash.
+ *
+ * @param {unknown} value
+ * @returns {string|null}
+ */
+function nonEmptyNfcString(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  return nfc(value.trim());
+}
+
+/**
  * Validate one feedback entry against the capture contract in feedback.mjs
  * (`buildFeedbackEntry`). `--input` is caller-supplied data, so an unvalidated
  * entry would flow straight into the Riverbed index and break
@@ -46380,17 +46399,32 @@ function computeCandidateContentHash({
   };
 }
 
-/** Split `skillId::feedbackType` and reject malformed cluster keys. */
-function parseClusterKey(clusterKey) {
+/**
+ * Split `skillId::feedbackType`, normalize both components, and reject
+ * malformed cluster keys.
+ *
+ * SSoT for cluster-key normalization: NFC over the whole string, split on
+ * `::`, then trim EACH component and rejoin. A consumer that only trims the
+ * whole string (`" a ::b "` → `"a ::b"`) hashes a different clusterKey than
+ * this function produces, so the same evidence mints two different candidate
+ * ids. Exported for exactly that reason — do not re-implement it.
+ *
+ * @param {string} clusterKey
+ * @param {{ label?: string }} [options] label used in the error message
+ * @returns {{ skillId: string, feedbackType: string, clusterKey: string }}
+ */
+function normalizeClusterKey(clusterKey, { label = '--cluster-key' } = {}) {
   const parts = String(clusterKey ?? '')
     .normalize('NFC')
     .split('::');
   if (parts.length !== 2 || !parts[0].trim() || !parts[1].trim()) {
     throw new PromotionProposalError(
-      `--cluster-key must be "<skillId>::<feedbackType>" (got: ${clusterKey ?? '(none)'}).`
+      `${label} must be "<skillId>::<feedbackType>" (got: ${clusterKey ?? '(none)'}).`
     );
   }
-  return { skillId: parts[0].trim(), feedbackType: parts[1].trim() };
+  const skillId = parts[0].trim();
+  const feedbackType = parts[1].trim();
+  return { skillId, feedbackType, clusterKey: `${skillId}::${feedbackType}` };
 }
 
 /**
@@ -46419,7 +46453,7 @@ function buildProposedCandidate({
   policyVersion = CANDIDATE_POLICY_VERSION,
   min = DEFAULT_MIN_RECURRENCE,
 }) {
-  const { skillId, feedbackType } = parseClusterKey(clusterKey);
+  const { skillId, feedbackType } = normalizeClusterKey(clusterKey);
   if (feedbackType === 'accepted') {
     throw new PromotionProposalError(
       'feedbackType "accepted" is a positive signal and is never a promotion candidate.'

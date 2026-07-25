@@ -129,15 +129,6 @@ function sha256Hex(input) {
   return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(input).digest('hex');
 }
 
-function nonEmptyString(value) {
-  if (typeof value !== 'string' || !value.trim()) return null;
-  // NFC via the same helper the candidate-id derivation uses
-  // (promotion-candidates.mjs): normalizing on one side of the loop only would
-  // make visually identical case keys, fingerprints and profile names compare
-  // as different values here while converging there.
-  return (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nfc */ .aX)(value.trim());
-}
-
 function compareStrings(a, b) {
   const left = a ?? '';
   const right = b ?? '';
@@ -145,7 +136,7 @@ function compareStrings(a, b) {
 }
 
 function severityOf(finding) {
-  const raw = nonEmptyString(finding?.severity);
+  const raw = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.severity);
   return raw && raw in SEVERITY_RANK ? raw : FALLBACK_SEVERITY;
 }
 
@@ -175,20 +166,12 @@ function severityRank(severity) {
  * @returns {string|null}
  */
 function deriveCaseKey(record) {
-  const explicit = nonEmptyString(record?.caseId);
+  const explicit = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.caseId);
   if (explicit) return explicit;
-  const target = nonEmptyString(record?.reviewedTarget);
-  const mergeBase = nonEmptyString(record?.mergeBase);
+  const target = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.reviewedTarget);
+  const mergeBase = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.mergeBase);
   if (!target && !mergeBase) return null;
   return `${target ?? ''}@${mergeBase ?? ''}`;
-}
-
-function runIdOf(record) {
-  return (
-    nonEmptyString(record?.review_run_id) ??
-    nonEmptyString(record?.reviewRunId) ??
-    nonEmptyString(record?.runId)
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -239,7 +222,7 @@ function requireObject(value, label) {
 }
 
 function requireString(value, label) {
-  const str = nonEmptyString(value);
+  const str = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(value);
   if (!str) throw new PairedReplayError(`${label} must be a non-empty string.`);
   return str;
 }
@@ -252,7 +235,7 @@ function requireString(value, label) {
  * believes it declared cases.
  */
 function normalizeDenominator(value) {
-  const denominator = nonEmptyString(value) ?? 'paired-finding';
+  const denominator = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(value) ?? 'paired-finding';
   if (!METRIC_DENOMINATORS.includes(denominator)) {
     throw new PairedReplayError(
       `metrics.denominator "${denominator}" is unknown. Expected one of: ${METRIC_DENOMINATORS.join(', ')}.`
@@ -286,13 +269,13 @@ function normalizeSide(side, label, { collectorVersion }) {
   return {
     manifest: {
       commitSha: requireString(side.commitSha, `${label}.commitSha`),
-      skillRegistryCommit: nonEmptyString(side.skillRegistryCommit),
-      provider: nonEmptyString(side.provider),
-      model: nonEmptyString(side.model),
+      skillRegistryCommit: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.skillRegistryCommit),
+      provider: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.provider),
+      model: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.model),
       temperature: normalizeTemperature(side.temperature, `${label}.temperature`),
-      configId: nonEmptyString(side.configId),
+      configId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.configId),
       runCount: runs.length,
-      reviewRunIds: [...new Set(runs.map(runIdOf).filter(Boolean))].sort(compareStrings),
+      reviewRunIds: [...new Set(runs.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(compareStrings),
       caseKeys,
       unkeyedRunCount: runs.filter((record) => deriveCaseKey(record) == null).length,
       evidence,
@@ -304,7 +287,7 @@ function normalizeSide(side, label, { collectorVersion }) {
 function normalizeCriterion(criterion, profileLabel, index) {
   requireObject(criterion, `${profileLabel}.criteria[${index}]`);
   const metric = requireString(criterion.metric, `${profileLabel}.criteria[${index}].metric`);
-  const comparator = nonEmptyString(criterion.comparator) ?? 'lte';
+  const comparator = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(criterion.comparator) ?? 'lte';
   if (!ACCEPTANCE_COMPARATORS.includes(comparator)) {
     throw new PairedReplayError(
       `${profileLabel}.criteria[${index}].comparator "${comparator}" is unknown. Expected one of: ${ACCEPTANCE_COMPARATORS.join(', ')}.`
@@ -354,7 +337,15 @@ function normalizeProfiles(acceptance) {
     // The contract floor always wins; a declaration on the same metric is
     // folded into it and can only lower the threshold (i.e. be stricter).
     const declaredCritical = declared.filter((c) => c.metric === 'criticalRegressionCount');
-    const floorThreshold = declaredCritical.reduce((acc, c) => Math.min(acc, c.threshold), 0);
+    // Clamped at 0 in BOTH directions: a declaration can only be stricter, and
+    // "stricter than 0" does not exist for a count. Without the lower clamp a
+    // `threshold: -3` declaration became the floor and produced a required
+    // criterion (`criticalRegressionCount lte -3`) that no run can ever
+    // satisfy — the doc said 0 でクランプ, the code did not.
+    const floorThreshold = Math.max(
+      declaredCritical.reduce((acc, c) => Math.min(acc, c.threshold), 0),
+      0
+    );
     const criteria = [
       {
         metric: 'criticalRegressionCount',
@@ -391,14 +382,42 @@ function normalizeImprovementCandidate(spec, policyVersion) {
   const candidate = spec?.improvementCandidate;
   if (candidate == null) return null;
   requireObject(candidate, 'improvementCandidate');
-  const clusterKey = requireString(candidate.clusterKey, 'improvementCandidate.clusterKey');
+  requireString(candidate.clusterKey, 'improvementCandidate.clusterKey');
+  // Normalized by the SAME function `river promote propose` uses. Normalizing
+  // only the whole string here (trim + NFC) made `"skill ::false_positive"`
+  // hash as `"skill ::false_positive"` on this side and as
+  // `"skill::false_positive"` on the propose side, so one candidate got two
+  // ids; a key without `::` was accepted here while propose cannot produce one
+  // at all.
+  let cluster;
+  try {
+    cluster = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeClusterKey */ .xG)(candidate.clusterKey, {
+      label: 'improvementCandidate.clusterKey',
+    });
+  } catch (err) {
+    throw new PairedReplayError(err.message);
+  }
+  const clusterKey = cluster.clusterKey;
   const evidence = candidate.sourceFeedbackRefs ?? candidate.evidence;
   if (!Array.isArray(evidence) || evidence.length === 0) {
     throw new PairedReplayError(
       'improvementCandidate.sourceFeedbackRefs must be a non-empty array (the evidence the candidate id is derived from).'
     );
   }
-  evidence.forEach((ref, i) => requireObject(ref, `improvementCandidate.sourceFeedbackRefs[${i}]`));
+  // Same validation `river promote propose` applies to its `--input`: an
+  // experiment must not mint an id from material propose would refuse, or the
+  // experiment refers to a candidate that can never be persisted.
+  evidence.forEach((ref, i) => {
+    const label = `improvementCandidate.sourceFeedbackRefs[${i}]`;
+    requireObject(ref, label);
+    const problem = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFeedbackEntryShape */ .jR)(ref);
+    if (problem) throw new PairedReplayError(`${label} is invalid: ${problem}`);
+    if (`${ref.skillId}::${ref.feedbackType}` !== clusterKey) {
+      throw new PairedReplayError(
+        `${label} (${ref.skillId}::${ref.feedbackType}) is outside improvementCandidate.clusterKey ${clusterKey}.`
+      );
+    }
+  });
   const candidatePolicyVersion = String(candidate.policyVersion ?? policyVersion);
   if (!_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .KNOWN_POLICY_VERSIONS */ .d.includes(candidatePolicyVersion)) {
     // Checked here (not only inside computeCandidateId) so the failure is a
@@ -423,7 +442,7 @@ function normalizeImprovementCandidate(spec, policyVersion) {
     // escape as an unhandled exception.
     throw new PairedReplayError(`improvementCandidate evidence is invalid: ${err.message}`);
   }
-  const claimed = nonEmptyString(candidate.candidateId);
+  const claimed = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(candidate.candidateId);
   if (claimed && claimed !== derived.candidateId) {
     // A manifest that pins a candidate id which its own evidence does not
     // produce would make the whole experiment unattributable.
@@ -437,7 +456,7 @@ function normalizeImprovementCandidate(spec, policyVersion) {
     uniqueEvidenceCount: derived.evidenceCount,
     clusterKey,
     policyVersion: candidatePolicyVersion,
-    hypothesis: nonEmptyString(candidate.hypothesis) ?? nonEmptyString(spec?.hypothesis),
+    hypothesis: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(candidate.hypothesis) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec?.hypothesis),
   };
 }
 
@@ -468,7 +487,7 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
     );
   }
   const collectorVersion =
-    nonEmptyString(spec.evaluator?.collectorVersion) ?? PAIRED_REPLAY_COLLECTOR_VERSION;
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.evaluator?.collectorVersion) ?? PAIRED_REPLAY_COLLECTOR_VERSION;
   const baseline = normalizeSide(spec.baseline, 'baseline', { collectorVersion });
   const candidate = normalizeSide(spec.candidate, 'candidate', { collectorVersion });
 
@@ -480,7 +499,7 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
     throw new PairedReplayError('dataset.heldOutCaseKeys must be an array of case keys.');
   }
   const heldOutCaseKeys = [
-    ...new Set((heldOutDeclared ?? []).map((k) => nonEmptyString(k)).filter(Boolean)),
+    ...new Set((heldOutDeclared ?? []).map((k) => (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(k)).filter(Boolean)),
   ].sort(compareStrings);
   // Validated against the INTERSECTION, not the union: a key present on only
   // one side passes a union check but produces zero paired cases, so every
@@ -509,7 +528,7 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
     schemaVersion: PAIRED_REPLAY_SCHEMA_VERSION,
     kind: 'experiment-manifest',
     policyVersion,
-    hypothesis: nonEmptyString(spec.hypothesis),
+    hypothesis: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.hypothesis),
     improvementCandidate: normalizeImprovementCandidate(spec, policyVersion),
     baseline: baseline.manifest,
     candidate: candidate.manifest,
@@ -531,11 +550,11 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
     },
     evaluator: {
       evaluatorVersion:
-        nonEmptyString(spec.evaluator?.evaluatorVersion) ?? PAIRED_REPLAY_EVALUATOR_VERSION,
+        (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.evaluator?.evaluatorVersion) ?? PAIRED_REPLAY_EVALUATOR_VERSION,
       collectorVersion,
     },
     trials: {
-      trialId: nonEmptyString(spec.trials?.trialId),
+      trialId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.trials?.trialId),
       trialCount,
     },
     verifier: {
@@ -543,11 +562,11 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
       // claim is recorded and `verified` stays false — see the trust block on
       // the result.
       independent: spec.verifier?.independent === true,
-      verifierId: nonEmptyString(spec.verifier?.verifierId),
-      runBy: nonEmptyString(spec.verifier?.runBy),
+      verifierId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.verifier?.verifierId),
+      runBy: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.verifier?.runBy),
     },
     activation: {
-      expectedSignal: nonEmptyString(spec.activation?.expectedSignal),
+      expectedSignal: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.activation?.expectedSignal),
       declaredEvidence: Array.isArray(spec.activation?.declaredEvidence)
         ? [...spec.activation.declaredEvidence].map((e) => String(e)).sort(compareStrings)
         : [],
@@ -618,11 +637,11 @@ function verifyExperimentManifest(manifest) {
 
 function projectFinding(finding) {
   return {
-    fingerprint: nonEmptyString(finding?.fingerprint),
+    fingerprint: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.fingerprint),
     severity: severityOf(finding),
-    file: nonEmptyString(finding?.file),
-    ruleId: nonEmptyString(finding?.ruleId),
-    title: nonEmptyString(finding?.title),
+    file: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.file),
+    ruleId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.ruleId),
+    title: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.title),
   };
 }
 
@@ -776,7 +795,10 @@ function findingsOf(records) {
 
 function emptyMetrics(denominator, { datasetCaseCount = 0, unpairedCaseCount = 0 } = {}) {
   return {
-    caseCount: 0,
+    // NOTE: there is deliberately no `caseCount` here. It was always equal to
+    // `pairedCaseCount` while only the latter is declarable as a criterion
+    // (SUPPORTED_ACCEPTANCE_METRICS), so two names for one number invited a
+    // profile to declare the one the evaluator ignores.
     sampleSize: 0,
     unchangedFindingCount: 0,
     changedFindingCount: 0,
@@ -798,7 +820,6 @@ function emptyMetrics(denominator, { datasetCaseCount = 0, unpairedCaseCount = 0
 function accumulateMetrics(cases, denominator, dataset) {
   const metrics = emptyMetrics(denominator, dataset);
   for (const entry of cases) {
-    metrics.caseCount += 1;
     metrics.pairedCaseCount += 1;
     metrics.unchangedFindingCount += entry.counts.unchanged;
     metrics.changedFindingCount += entry.counts.changed;
@@ -947,8 +968,12 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
     return {
       caseKey,
       heldOut: heldOut.has(caseKey),
-      baselineRunIds: [...new Set(baseRuns.map(runIdOf).filter(Boolean))].sort(compareStrings),
-      candidateRunIds: [...new Set(candRuns.map(runIdOf).filter(Boolean))].sort(compareStrings),
+      baselineRunIds: [...new Set(baseRuns.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(
+        compareStrings
+      ),
+      candidateRunIds: [...new Set(candRuns.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(
+        compareStrings
+      ),
       counts: diff.counts,
       criticalRegressions: diff.criticalRegressions,
       criticalAdditions: diff.criticalAdditions,

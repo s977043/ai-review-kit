@@ -7,12 +7,13 @@ export const modules = {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   DEFAULT_MIN_RECURRENCE: () => (/* binding */ DEFAULT_MIN_RECURRENCE),
+/* harmony export */   Kh: () => (/* binding */ deriveReviewRunId),
 /* harmony export */   L5: () => (/* binding */ buildRunEvidence),
 /* harmony export */   Mc: () => (/* binding */ computeCandidateId),
 /* harmony export */   buildShadowAggregate: () => (/* binding */ buildShadowAggregate),
 /* harmony export */   formatShadowAggregateMarkdown: () => (/* binding */ formatShadowAggregateMarkdown)
 /* harmony export */ });
-/* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, EVIDENCE_SOURCES, P1_TRUST_LEVEL, deriveReviewRunId, deriveFeedbackReviewRunId, evidenceTrustLevel, buildClusters */
+/* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, EVIDENCE_SOURCES, P1_TRUST_LEVEL, deriveFeedbackReviewRunId, evidenceTrustLevel, buildClusters */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7598);
 /* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3077);
 // Shadow aggregate (#1574 P1) — read-only multi-run aggregation.
@@ -104,10 +105,6 @@ function sha256Hex(input) {
   return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(input).digest('hex');
 }
 
-function nonEmptyString(value) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function compareStrings(a, b) {
   const left = a ?? '';
   const right = b ?? '';
@@ -130,9 +127,9 @@ function compareStrings(a, b) {
  */
 function deriveReviewRunId(record) {
   return (
-    nonEmptyString(record?.review_run_id) ??
-    nonEmptyString(record?.reviewRunId) ??
-    nonEmptyString(record?.runId)
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.review_run_id) ??
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.reviewRunId) ??
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.runId)
   );
 }
 
@@ -147,7 +144,7 @@ function deriveReviewRunId(record) {
  * @returns {string|null}
  */
 function deriveFeedbackReviewRunId(entry) {
-  return nonEmptyString(entry?.review_run_id) ?? nonEmptyString(entry?.reviewRunId);
+  return (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.review_run_id) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.reviewRunId);
 }
 
 // ---------------------------------------------------------------------------
@@ -195,10 +192,10 @@ function buildRunEvidence(record, { collectorVersion = COLLECTOR_VERSION } = {})
     // Claimed source. Recorded for observation only — never a trust input.
     evidence_source: source,
     source_commit_sha:
-      nonEmptyString(provenance.sourceCommitSha) ?? nonEmptyString(record?.commitSha),
+      (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(provenance.sourceCommitSha) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.commitSha),
     artifact_sha256: sha256Hex((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(record)),
     collector_version: collectorVersion,
-    trusted_by: nonEmptyString(provenance.trustedBy),
+    trusted_by: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(provenance.trustedBy),
     generated_by_candidate: provenance.generatedByCandidate === true,
     provenance_verified: false,
   };
@@ -235,14 +232,14 @@ function indexFindingsByFingerprint(runRecords) {
   for (const record of ordered) {
     const reviewRunId = deriveReviewRunId(record);
     for (const finding of record?.findings ?? []) {
-      const fingerprint = nonEmptyString(finding?.fingerprint);
+      const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.fingerprint);
       if (!fingerprint) continue;
       index.set(fingerprint, {
         // `category` is not part of the current finding shape; `ruleId` (set to
         // the emitting skill id by review-engine / local-runner) is what real
         // findings carry today, so it is the working fallback.
-        category: nonEmptyString(finding?.category) ?? nonEmptyString(finding?.ruleId),
-        filePath: nonEmptyString(finding?.file),
+        category: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.category) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.ruleId),
+        filePath: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.file),
         review_run_id: reviewRunId,
       });
     }
@@ -294,8 +291,8 @@ function buildClusters(
     // Key components are used RAW (not trimmed) so the stage-1 clusterKey is
     // byte-identical to #1568-A's (scripts/feedback-rule-candidates.mjs), which
     // is the SSoT for this key. Blank values are skipped as unusable.
-    const skillId = nonEmptyString(entry?.skillId) ? entry.skillId : null;
-    const feedbackType = nonEmptyString(entry?.feedbackType) ? entry.feedbackType : null;
+    const skillId = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.skillId) ? entry.skillId : null;
+    const feedbackType = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.feedbackType) ? entry.feedbackType : null;
     if (!skillId || !feedbackType) continue;
     // `accepted` is a positive signal — never an improvement candidate.
     if (feedbackType === 'accepted') continue;
@@ -309,7 +306,7 @@ function buildClusters(
     if (entries.length < minRecurrence) continue;
     const stage2 = new Map();
     for (const entry of entries) {
-      const fingerprint = nonEmptyString(entry?.findingFingerprint);
+      const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint);
       const finding = fingerprint ? (findingIndex.get(fingerprint) ?? null) : null;
       const shape = {
         fingerprint,
@@ -391,10 +388,10 @@ function occurrenceKey(ref) {
 function buildFeedbackRef(entry) {
   return {
     review_run_id: deriveFeedbackReviewRunId(entry),
-    timestamp: nonEmptyString(entry?.timestamp),
-    skillId: nonEmptyString(entry?.skillId),
-    feedbackType: nonEmptyString(entry?.feedbackType),
-    findingFingerprint: nonEmptyString(entry?.findingFingerprint),
+    timestamp: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.timestamp),
+    skillId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.skillId),
+    feedbackType: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.feedbackType),
+    findingFingerprint: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint),
     pr: Number.isInteger(entry?.pr) && entry.pr > 0 ? entry.pr : null,
   };
 }

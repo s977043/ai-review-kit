@@ -72,13 +72,16 @@ river evolve replay --spec <file> [--expect-manifest <id|hash>] [--output json|t
 
 exit code は次のとおりです。受入基準を満たさない場合でも 0 で終了します。P2 は gate ではなく観測であり、判断は人間が行うためです。
 
-| 状況                                             | exit code |
-| ------------------------------------------------ | --------- |
-| 正常終了（受入基準の充足・不充足を問わない）     | 0         |
-| spec の読み出し失敗・検証エラー                  | 1         |
-| manifest の改変検知・別実験の manifest           | 1         |
-| `--expect-manifest` の不一致                     | 1         |
-| 使い方の誤り（オプション誤用・未対応の出力形式） | 1         |
+| 状況                                                                  | exit code |
+| --------------------------------------------------------------------- | --------- |
+| 正常終了（受入基準の充足・不充足を問わない）                          | 0         |
+| spec の読み出し失敗・検証エラー                                       | 1         |
+| manifest の改変検知・別実験の manifest                                | 1         |
+| `--expect-manifest` の不一致                                          | 1         |
+| `--spec` の未指定・未知のオプション・余分な位置引数・未対応の出力形式 | 1         |
+| オプションの値欠落（例: `--spec` の後に値がない）                     | 0（help） |
+
+最後の行はリポジトリ既存の慣習です。値を伴うオプションで値が欠落した場合、パーサは `command = 'help'` へ落として `main()` が help を表示し 0 で終了します。`--min` / `--month` / `river promote propose --cluster-key` も同じ挙動です。値欠落を全コマンド横断で exit 1 に統一するかどうかは、本 PR のスコープ外として別途扱います。
 
 `--min` と `--month` は aggregate 側のオプションであり、replay では reject します。replay の対象データは manifest が固定するため、後から絞り込めてはいけないからです。
 
@@ -137,6 +140,8 @@ P2 が出せる値は `success`（1 件以上の case を対にできた）と `
 - `pairing.unpairedCases` に片側だけの case key を出力する
 - `pairing.datasetCaseCount` と `pairing.pairedCaseCount` を併記する
 - `metrics.*.unpairedCaseCount` を集計し、acceptance criterion の metric としても宣言できる
+- case 件数の呼び名は `pairedCaseCount` に一本化する。criterion として宣言できない別名を併記すると、評価器が無視する metric を宣言してしまう
+- run ID の解決は P1 の `deriveReviewRunId`（契約2）を import して使う。同一実装を二重に持つと、片方だけが変わったときに気づけない
 - 欠落があれば `pairing.warnings` に警告を立て、Markdown の Dataset coverage 節へ必ず出力する
 
 ### critical regression の定義
@@ -160,8 +165,17 @@ profile ごとに metric・comparator・しきい値・required を宣言しま�
 契約6 は「critical regression 0 を P2 の必須条件」と定めています。したがって SSoT は契約であり、spec の宣言ではありません。`criticalRegressionCount` の宣言は次のように扱います。
 
 - floor（`lte 0` / `required: true` / `source: 'contract-6'`）を常に注入する
-- 宣言側は**より厳しくする方向にだけ**有効とし、threshold は 0 でクランプする
+- 宣言側は**より厳しくする方向にだけ**有効とし、threshold は 0 でクランプする。件数に 0 未満の値はないため、結果として floor は常に `lte 0` になる
+- 負の threshold（例: `-3`）も 0 へクランプする。クランプしないと「充足不能な必須基準」が生成され、どの実験も必須条件を満たせなくなる
 - `required: false` の宣言は無視する。必須条件を宣言側から外せてはならないためである
+
+## 8.1 improvementCandidate の入力検証（契約4）
+
+experiment spec が `improvementCandidate` を宣言する場合、candidate ID は `river promote propose` と同一の導出へ渡します。同一の証拠から同一の ID が採番されなければ、実験と昇格候補が同じものだと判定できないためです。そのため入力側の正規化と検証も propose と共有します。
+
+- `clusterKey` は `promotion-candidates.mjs` の `normalizeClusterKey` で正規化する。NFC 化してから `::` で分割し、**成分ごとに** trim して再結合する。全体を trim するだけだと、`"skill ::false_positive"` が propose 側と replay 側で別の ID になる
+- `::` を持たない `clusterKey` は `PairedReplayError` として exit 1 にする。propose が構造上生成できない ID を実験側だけが採番してはならない
+- `sourceFeedbackRefs` の各行は propose の `--input` と同じ `validateFeedbackEntryShape` を通し、`clusterKey` と一致しない行も拒否する。propose が拒否する材料から実験 ID を採番させないためである
 
 ### 自動適用しないことの担保
 

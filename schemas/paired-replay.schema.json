@@ -27,7 +27,7 @@
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "runEvidence": {
       "type": "object",
-      "description": "Contract 1 provenance record for one saved run, produced by the P1 builder (src/lib/shadow-aggregate.mjs). Every field is self-reported by the reviewed repository and unverified.",
+      "description": "Contract 1 provenance record for one saved run, produced by the P1 builder (src/lib/shadow-aggregate.mjs). Every field is self-reported by the reviewed repository and unverified. DRIFT WATCH: this $defs block and the identically named one in schemas/shadow-aggregate.schema.json describe the output of the SAME producer (buildRunEvidence). Cross-file $ref is unavailable (neither schema declares an $id), so a change to one MUST be applied to the other in the same PR.",
       "required": [
         "review_run_id",
         "evidence_source",
@@ -237,7 +237,6 @@
     "metrics": {
       "type": "object",
       "required": [
-        "caseCount",
         "sampleSize",
         "unchangedFindingCount",
         "changedFindingCount",
@@ -253,7 +252,6 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "caseCount": { "type": "integer", "minimum": 0 },
         "sampleSize": { "type": "integer", "minimum": 0 },
         "unchangedFindingCount": { "type": "integer", "minimum": 0 },
         "changedFindingCount": { "type": "integer", "minimum": 0 },
