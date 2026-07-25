@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.64.0](https://github.com/s977043/river-review/compare/v1.63.0...v1.64.0) (2026-07-25)
+
+
+### Features
+
+* **evolve:** paired replay と immutable Experiment Manifest を追加する ([#1574](https://github.com/s977043/river-review/issues/1574) P2) ([#1656](https://github.com/s977043/river-review/issues/1656)) ([0993f63](https://github.com/s977043/river-review/commit/0993f6372d1612deb9dcaf6165a90ae579ae1b85))
+
+
+### Bug Fixes
+
+* **evolve:** paired replay の clusterKey 正規化を propose と共有し range レビュー指摘を修正する ([#1658](https://github.com/s977043/river-review/issues/1658)) ([28963f5](https://github.com/s977043/river-review/commit/28963f5b973ba2924a045ea0554bdfa3d839be32)), closes [#1574](https://github.com/s977043/river-review/issues/1574)
+
 ## [1.63.0](https://github.com/s977043/river-review/compare/v1.62.0...v1.63.0) (2026-07-25)
 
 
