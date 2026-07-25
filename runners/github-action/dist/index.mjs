@@ -45884,6 +45884,7 @@ function normalizePlannerMode(mode, { defaultMode = 'off' } = {}) {
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   J1: () => (/* binding */ proposePromotionCandidate),
 /* harmony export */   _I: () => (/* binding */ readFeedbackJsonl),
+/* harmony export */   aX: () => (/* binding */ nfc),
 /* harmony export */   d: () => (/* binding */ KNOWN_POLICY_VERSIONS),
 /* harmony export */   dj: () => (/* binding */ canonicalJson),
 /* harmony export */   e1: () => (/* binding */ CANDIDATE_POLICY_VERSION),
@@ -46297,7 +46298,13 @@ function normalizeEvidence(entries) {
   };
 }
 
-/** NFC-normalize a string; pass through null/undefined and non-strings. */
+/**
+ * NFC-normalize a string; pass through null/undefined and non-strings.
+ *
+ * Exported so every content-addressed surface normalizes identically: a
+ * consumer that skips it (or rolls its own) makes visually identical strings
+ * hash — or compare — differently on one side of the loop only.
+ */
 function nfc(value) {
   return typeof value === 'string' ? value.normalize('NFC') : (value ?? null);
 }
@@ -69535,21 +69542,23 @@ async function runPromoteCommand(parsed, targetPath) {
 }
 
 ;// CONCATENATED MODULE: ./src/cli/commands/evolve.mjs
-// `river evolve` subcommand handler (#1574 P1 Shadow aggregate).
+// `river evolve` subcommand handler (#1574 P1 Shadow aggregate / P2 Paired replay).
 //
 // Stable CLI surface (契約4) for the read-only outer loop:
 //
 //   river evolve aggregate [<path>] [--min <n>] [--month YYYY-MM] [--output json|text]
+//   river evolve replay --spec <file> [--expect-manifest <id|key>] [--output json|text]
 //
-// The command only READS `.river/runs/` and `.river/feedback/*.jsonl` and
-// prints the aggregate to stdout. It intentionally has no `--out` / `--promote`
-// style option: writing into Riverbed, Skills, rules, or the gate is P3/P4
-// work and belongs to #1568's promotion lifecycle, so P1 offers no code path
-// that could mutate a repository surface at all. Redirect stdout if you need
-// the candidate JSON on disk.
+// Both subcommands only READ. `aggregate` reads `.river/runs/` and
+// `.river/feedback/*.jsonl`; `replay` reads a single experiment spec file that
+// already contains the baseline and candidate runs. Neither has an `--out` /
+// `--promote` style option: writing into Riverbed, Skills, rules, or the gate
+// belongs to #1568's promotion lifecycle, and re-running a review belongs to
+// `river run` — so no code path here can mutate a repository or spend an API
+// call. Redirect stdout if you need the JSON on disk.
 
 /**
- * Handle the `evolve` command (aggregate).
+ * Handle the `evolve` command (aggregate | replay).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
  * @param {string} targetPath - resolved repo target path.
@@ -69557,27 +69566,46 @@ async function runPromoteCommand(parsed, targetPath) {
  */
 async function runEvolveCommand(parsed, targetPath) {
   const subcommand = parsed.evolveSubcommand ?? 'aggregate';
-  if (subcommand !== 'aggregate') {
-    console.error(`Unknown evolve subcommand: ${subcommand}. Use: aggregate`);
+  if (subcommand !== 'aggregate' && subcommand !== 'replay') {
+    console.error(`Unknown evolve subcommand: ${subcommand}. Use: aggregate | replay`);
     return 1;
   }
   if (parsed.evolveUnknownOption) {
     console.error(
-      `Unknown option for evolve: ${parsed.evolveUnknownOption}. Use: --min <n> --month YYYY-MM --output text|json`
+      `Unknown option for evolve: ${parsed.evolveUnknownOption}. Use: --min <n> --month YYYY-MM --spec <file> --expect-manifest <id> --output text|json`
     );
     return 1;
   }
   if (parsed.evolveExtraArgs?.length) {
     console.error(
-      `Unexpected argument(s) for evolve aggregate: ${parsed.evolveExtraArgs.join(', ')}`
+      `Unexpected argument(s) for evolve ${subcommand}: ${parsed.evolveExtraArgs.join(', ')}`
     );
     return 1;
   }
-  // The aggregate has no yaml/html renderer; accepting the flag and silently
+  // Neither subcommand has a yaml/html renderer; accepting the flag and silently
   // emitting text would misreport the format to a downstream consumer.
   const output = parsed.output ?? 'text';
   if (output !== 'text' && output !== 'json') {
-    console.error(`Unsupported --output for evolve aggregate: ${output}. Use: text | json`);
+    console.error(`Unsupported --output for evolve ${subcommand}: ${output}. Use: text | json`);
+    return 1;
+  }
+
+  if (subcommand === 'replay') {
+    return runReplay(parsed, output);
+  }
+  return runAggregate(parsed, targetPath, output);
+}
+
+async function runAggregate(parsed, targetPath, output) {
+  // `--spec` / `--expect-manifest` belong to `replay`. Accepting them silently
+  // here would look like the aggregate honoured an experiment definition.
+  const misplaced = ['--spec', '--expect-manifest'].filter(
+    (flag) => (flag === '--spec' ? parsed.evolveSpec : parsed.evolveExpectManifest) != null
+  );
+  if (misplaced.length) {
+    console.error(
+      `${misplaced.join(', ')} is only valid for \`river evolve replay\`, not for aggregate.`
+    );
     return 1;
   }
 
@@ -69608,6 +69636,90 @@ async function runEvolveCommand(parsed, targetPath) {
     console.log(formatShadowAggregateMarkdown(aggregate));
   }
   // Always exit 0: this is an observation, not a gate (#1574 P1 is shadow-only).
+  return 0;
+}
+
+async function runReplay(parsed, output) {
+  if (!parsed.evolveSpec) {
+    console.error(
+      'Error: `river evolve replay` requires --spec <file> (the experiment specification).'
+    );
+    return 1;
+  }
+  if (parsed.evolveMin != null || parsed.evolveMonth != null) {
+    // These scope the aggregate's inputs; the replay's dataset is fixed by the
+    // manifest, so honouring them would silently change the pinned dataset.
+    console.error('Error: --min / --month are aggregate options and are not valid for replay.');
+    return 1;
+  }
+
+  const { readFile } = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
+  const { buildPairedReplay, formatPairedReplayMarkdown, PairedReplayError } =
+    await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(80)]).then(__nccwpck_require__.bind(__nccwpck_require__, 3080));
+
+  let spec;
+  try {
+    spec = JSON.parse(await readFile(parsed.evolveSpec, 'utf8'));
+  } catch (err) {
+    console.error(`Error: cannot read --spec ${parsed.evolveSpec}: ${err.message}`);
+    return 1;
+  }
+  // Checked before any property access: a file containing `null` or `[]` would
+  // otherwise throw a raw TypeError on `spec.manifest` instead of a usage error.
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
+    console.error(`Error: --spec ${parsed.evolveSpec} must contain a JSON object.`);
+    return 1;
+  }
+
+  let result;
+  try {
+    result = buildPairedReplay(spec, {
+      now: new Date(),
+      manifest: spec.manifest ?? undefined,
+    });
+  } catch (err) {
+    if (err instanceof PairedReplayError) {
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
+    throw err;
+  }
+
+  // A tampered or stale manifest invalidates the comparison, so it fails loudly
+  // instead of printing a report that looks authoritative.
+  if (!result.manifestVerification.verified) {
+    console.error(
+      `Error: Experiment Manifest verification failed: ${result.manifestVerification.mismatches.join('; ')}`
+    );
+    return 1;
+  }
+  if (!result.manifestVerification.experimentKeyMatchesInputs) {
+    console.error(
+      `Error: the supplied manifest describes a different experiment (recomputed experimentKey ${result.manifestVerification.recomputedExperimentKey}).`
+    );
+    return 1;
+  }
+  if (parsed.evolveExpectManifest) {
+    const expected = parsed.evolveExpectManifest;
+    const matches =
+      expected === result.manifest.manifestId ||
+      expected === result.manifest.experimentKey ||
+      expected === result.manifest.manifestHash;
+    if (!matches) {
+      console.error(
+        `Error: --expect-manifest ${expected} does not match this experiment (manifestId ${result.manifest.manifestId}).`
+      );
+      return 1;
+    }
+  }
+
+  if (output === 'json') {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(formatPairedReplayMarkdown(result));
+  }
+  // Exit 0 even when the acceptance criteria are not met: P2 reports material
+  // for a human judgement and is explicitly not a gate (自動 canary は保留).
   return 0;
 }
 
@@ -69679,6 +69791,13 @@ Commands:
                         (#1574 P1). Prints evidence provenance, two-stage
                         clusters, and at most one shadow candidate. Writes
                         nothing (--min <n> --month YYYY-MM; --output json)
+  evolve replay         Read-only paired replay of an experiment spec
+                        (#1574 P2). Pins an immutable Experiment Manifest,
+                        pairs baseline vs candidate findings, and reports the
+                        delta against the declared per-profile acceptance
+                        criteria. Never re-runs a review and never decides
+                        adoption (--spec <file> --expect-manifest <id>;
+                        --output json)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -69731,9 +69850,9 @@ Commands:
 function parseArgs(argv) {
   const args = [...argv];
   const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
-  // #1574 P1: only `aggregate` exists. Matching against a known set (rather
+  // #1574 P1 `aggregate` / P2 `replay`. Matching against a known set (rather
   // than "first non-flag token") keeps `river evolve <path>` working.
-  const EVOLVE_SUBCOMMANDS = new Set(['aggregate']);
+  const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay']);
   // Global options the shared parser below handles for `evolve`. Anything else
   // starting with `-` is rejected rather than silently ignored.
   const EVOLVE_SHARED_OPTIONS = new Set(['--output', '-h', '--help', '--debug']);
@@ -69804,10 +69923,12 @@ function parseArgs(argv) {
     promoteClusterKey: null,
     promotePolicyVersion: null,
     promoteUnknownOption: null,
-    // evolve subcommand fields (#1574 P1 Shadow aggregate)
+    // evolve subcommand fields (#1574 P1 Shadow aggregate / P2 Paired replay)
     evolveSubcommand: null,
     evolveMin: null,
     evolveMonth: null,
+    evolveSpec: null,
+    evolveExpectManifest: null,
     evolveExtraArgs: [],
     evolveUnknownOption: null,
     // skills subcommand fields
@@ -69855,7 +69976,10 @@ function parseArgs(argv) {
         if (args[0] && EVOLVE_SUBCOMMANDS.has(args[0])) {
           parsed.evolveSubcommand = args.shift();
         }
-        if (args[0] && !args[0].startsWith('-')) {
+        // `replay` takes NO positional: its dataset comes from --spec. Letting
+        // the first token become `parsed.target` would make the command accept
+        // and silently ignore it (`river evolve replay ./typo.json --spec x`).
+        if (parsed.evolveSubcommand !== 'replay' && args[0] && !args[0].startsWith('-')) {
           const token = args.shift();
           // A mistyped subcommand (`agregate`) must not be swallowed as a path
           // and reported as an empty, successful aggregate. Anything that is
@@ -70130,6 +70254,26 @@ function parseArgs(argv) {
           break;
         }
         parsed.evolveMonth = value;
+        continue;
+      }
+      if (arg === '--spec') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --spec option requires a file path.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.evolveSpec = value;
+        continue;
+      }
+      if (arg === '--expect-manifest') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --expect-manifest option requires a manifest id or hash.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.evolveExpectManifest = value;
         continue;
       }
       // Options that are not evolve's own and not handled by the shared parser

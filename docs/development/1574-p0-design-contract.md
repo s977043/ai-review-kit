@@ -58,7 +58,7 @@ Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利
 
 #### 未決事項
 
-- `trusted_by` の署名・検証方式（CI attestation または人手承認記録）は P2 実装時に確定する。
+- `trusted_by` の署名・検証方式（CI attestation または人手承認記録）は P2 でも確定していない。P1 と P2 はどちらも `trust_level` を `untrusted` に固定しており、trusted への昇格経路は検証機構の実装まで閉じたままとする。
 
 ### 契約2: Canonical `review_run_id`
 
@@ -103,9 +103,19 @@ Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利
 - LLM の PASS で決定論的 FAIL を上書きしない（`.claude/rules/review-core.md` の責務分界と同方向）。
 - paired replay は ledger 比較と区別し、activation / held-out / independent verifier を伴う（DoD 3・4項目め）。
 
+#### 実装状況（#1574 P2 paired replay）
+
+`river evolve replay` として実装しました。詳細は `docs/development/1574-p2-paired-replay.md` を参照してください。実装で確定した内容は次のとおりです。
+
+- manifest の不変性は content hash で担保する。`experimentKey` は実験条件のみ、`manifestHash` は `createdAt` と導出 ID を含めた全体を対象とする。
+- `manifestId` は `RR-EXP-<experimentKey の先頭12桁>` とし、candidate の `RR-PC-` と名前空間を分ける。
+- terminal reason は manifest に語彙（`terminalReasonVocabulary`）だけを固定し、観測値は結果アーティファクト側に持つ。結果を manifest へ書き戻すと不変性が壊れるためである。
+- manifest の保存先は固定しない。CLI は spec ファイルの中に前回の manifest を同梱できる形とし、標準出力以外へは書き込まない。保存は呼び出し側の責務とする。
+- 評価順序のうち P2 が担うのは deterministic check のみである。semantic / rubric verification と adversarial review は後続フェーズの担当とする。
+
 #### 未決事項
 
-- Manifest の保存先（`.river/experiments/` または CI artifact）は trust boundary（契約1）の結論に依存するため P2 で確定する。
+- 独立 verifier の実体（candidate の変更権限外で走る実行主体）は P3 以降で確定する。P2 は自己申告を記録するだけで、`independentVerifierVerified` は常に false である。
 
 ### 契約4: Stable CLI / content-addressed candidate ID
 
@@ -196,25 +206,39 @@ Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利
 - critical regression 0 は P2 paired replay の必須条件とする。
 - profile 別の評価基準とサンプル数の決定方法を持つことを DoD とする（DoD 7項目め）。
 
+#### 実装状況（#1574 P2 paired replay）
+
+profile 別受入基準の宣言と評価を `river evolve replay` で実装しました。
+
+- profile は manifest の `acceptance.profiles` として宣言する。名前だけを必須とし、単位（reviewMode か、対象リポジトリ×phase の組か）は運用観測の後に決める。
+- critical regression 0 は契約が定める floor として全 profile へ無条件に注入し、`source: 'contract-6'` として区別できるようにする。宣言側はより厳しくする方向にだけ有効とし、`threshold` を 0 でクランプし、`required: false` を無視する。必須条件を宣言側から外せてはならないためである。
+- held-out に宣言できるのは両側に存在する case key だけとする。片側だけの key は評価対象が空集合になり、全 metric が 0 で必須条件を満たしたように見えるためである。
+- 評価対象の paired case が 0 件なら、全 criterion を `evaluable: false` / `satisfied: null` として報告する。
+- `minSampleSize` の単位は `metrics.denominator`（`paired-finding` / `paired-case`）で決まる。語彙は閉じており、集計単位が実際に切り替わる。
+- `minSampleSize` は未宣言なら `null` を報告する。既定値を置くと「代表10件」が統計的十分性として読まれてしまうためである。
+- held-out 集合の宣言があれば、受入評価は held-out 側で行う。candidate の導出に使った case での評価は自己確認になる。
+- precision / recall / cost / reversal は paired replay の入力から観測できないため、`evaluable: false` と `satisfied: null` を返す。黙って充足扱いにはしない。
+- しきい値の自動適用は行わない。`decision` は常に null、`applied` と `autoPromotion` は常に false である。
+
 #### 未決事項
 
-- profile の単位を reviewMode とするか、対象リポジトリ×phase の組とするかは P1 で決める。
+- profile の語彙と必要サンプル数の決定方法は、`river evolve replay` の出力を数サイクル観測してから確定する。
 
 ## 4. DoD 9項目とフェーズ対応
 
 採否コメントの追加 DoD を再掲し、P0（本ドキュメント）で満たすものと後続フェーズのものを区別します。
 
-| #   | DoD                                                                                      | P0 での扱い         | 充足フェーズ |
-| --- | ---------------------------------------------------------------------------------------- | ------------------- | ------------ |
-| 1   | evidence provenance / trust level が schema と採用 gate に定義されている                 | 契約1で内容を固定   | P1〜P2 実装  |
-| 2   | canonical `review_run_id` で run → finding → feedback → experiment を追跡できる          | 契約2で内容を固定   | P1 実装      |
-| 3   | immutable Experiment Manifest が定義されている                                           | 契約3で内容を固定   | P2 実装      |
-| 4   | paired replay を ledger 比較と区別し activation / held-out / independent verifier を実装 | 契約3で内容を固定   | P2 実装      |
-| 5   | stable CLI I/O と content-addressed candidate ID が定義されている                        | 契約4で内容を固定   | P1 実装      |
-| 6   | cluster を反復検知と原因仮説へ二段階分割できる                                           | 契約5で内容を固定   | P1〜P2 実装  |
-| 7   | profile 別の評価基準とサンプル数の決定方法がある                                         | 契約6で内容を固定   | P2 実装      |
-| 8   | Shadow mode の観測結果を人間が確認してから canary へ進む                                 | 運用条件として明記  | P3 運用      |
-| 9   | #1574 が #1568-C の Retire lifecycle を重複実装していない                                | §2 の責務境界で固定 | 全フェーズ   |
+| #   | DoD                                                                                      | P0 での扱い         | 充足フェーズ                                      |
+| --- | ---------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------- |
+| 1   | evidence provenance / trust level が schema と採用 gate に定義されている                 | 契約1で内容を固定   | P1〜P2 実装                                       |
+| 2   | canonical `review_run_id` で run → finding → feedback → experiment を追跡できる          | 契約2で内容を固定   | P1 実装                                           |
+| 3   | immutable Experiment Manifest が定義されている                                           | 契約3で内容を固定   | P2 実装済み                                       |
+| 4   | paired replay を ledger 比較と区別し activation / held-out / independent verifier を実装 | 契約3で内容を固定   | P2 実装済み（独立 verifier は自己申告の記録まで） |
+| 5   | stable CLI I/O と content-addressed candidate ID が定義されている                        | 契約4で内容を固定   | P1 実装                                           |
+| 6   | cluster を反復検知と原因仮説へ二段階分割できる                                           | 契約5で内容を固定   | P1〜P2 実装                                       |
+| 7   | profile 別の評価基準とサンプル数の決定方法がある                                         | 契約6で内容を固定   | P2 実装済み                                       |
+| 8   | Shadow mode の観測結果を人間が確認してから canary へ進む                                 | 運用条件として明記  | P3 運用                                           |
+| 9   | #1574 が #1568-C の Retire lifecycle を重複実装していない                                | §2 の責務境界で固定 | 全フェーズ                                        |
 
 P0 の完了条件は、6契約すべての「固定する契約内容」が本ドキュメントで確定し、レビューを通過することです。schema・CLI・実装の変更は P0 に含めません。
 
