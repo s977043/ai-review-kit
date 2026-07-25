@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.63.0](https://github.com/s977043/river-review/compare/v1.62.0...v1.63.0) (2026-07-25)
+
+
+### Features
+
+* **evolve:** [#1574](https://github.com/s977043/river-review/issues/1574) P1 の read-only shadow aggregate を追加する ([#1650](https://github.com/s977043/river-review/issues/1650)) ([93b1aaa](https://github.com/s977043/river-review/commit/93b1aaa1156dc7de85d7f95d5a974abe4fbfd49b))
+* **promote:** river promote propose を追加し candidate ID を content hash 化する ([#1649](https://github.com/s977043/river-review/issues/1649)) ([0d02114](https://github.com/s977043/river-review/commit/0d02114bfed1240930a75f9eb9044e0412633022))
+* **review:** finding に scope（in-diff / pre-existing）を additive に追加する ([#1648](https://github.com/s977043/river-review/issues/1648)) ([bda11e7](https://github.com/s977043/river-review/commit/bda11e7a0d903f059381b48ea3b4b99670570774))
+
+
+### Bug Fixes
+
+* **evolve:** [#1574](https://github.com/s977043/river-review/issues/1574) range レビュー指摘に対応する（hash 再導出・shadow→propose 接続・命名・CLI 堅牢性） ([#1652](https://github.com/s977043/river-review/issues/1652)) ([7c08e12](https://github.com/s977043/river-review/commit/7c08e1282055e259ab3e1c5a0eaed4a3680ff385))
+
 ## [1.62.0](https://github.com/s977043/river-review/compare/v1.61.1...v1.62.0) (2026-07-23)
 
 
