@@ -126,9 +126,18 @@ P2 が出せる値は `success`（1 件以上の case を対にできた）と `
 
 比較対象は severity だけです。指摘文の言い回しは実行ごとに揺れるため、変化として扱うとノイズを signal として報告してしまいます。未知の severity は `.claude/rules/review-core.md` の fail-safe に合わせて `major` として読みます。
 
+同一 fingerprint の finding が片側に複数ある場合は 1 件へ畳みます。このとき severity は**最大値**を採用します。先勝ちにすると勝者を決めるのが実質 file 名になり、`minor` の重複が `critical` を隠して regression が消えるためです。severity が食い違った重複の件数は `severityConflictsBaseline` / `severityConflictsCandidate` として別に報告します。
+
 ### run と run の対応付け（case key）
 
-「同一の入力」の識別子として case key を使います。導出順は `caseId` → `<reviewedTarget>@<mergeBase>` です。どちらも解決できない run は対にしません。配列の位置で対にすると、無関係な 2 つのレビューを比較して差分を candidate のせいにしてしまうためです。片側にしか存在しない case は `pairing.unpairedCases` に出力します。
+「同一の入力」の識別子として case key を使います。導出順は `caseId` → `<reviewedTarget>@<mergeBase>` です。どちらも解決できない run は対にしません。配列の位置で対にすると、無関係な 2 つのレビューを比較して差分を candidate のせいにしてしまうためです。
+
+対にできなかった case は、材料の欠落として必ず可視化します。「3 case 中 1 case だけを比較した」結果を「dataset について regression なし」と読ませないためです。
+
+- `pairing.unpairedCases` に片側だけの case key を出力する
+- `pairing.datasetCaseCount` と `pairing.pairedCaseCount` を併記する
+- `metrics.*.unpairedCaseCount` を集計し、acceptance criterion の metric としても宣言できる
+- 欠落があれば `pairing.warnings` に警告を立て、Markdown の Dataset coverage 節へ必ず出力する
 
 ### critical regression の定義
 
@@ -138,10 +147,21 @@ P2 が出せる値は `success`（1 件以上の case を対にできた）と `
 
 profile ごとに metric・comparator・しきい値・required を宣言します。profile の単位（reviewMode か、対象リポジトリ×phase の組か）は契約6 の未決事項のままとし、名前だけを必須にしました。運用で数サイクル観測してから語彙を決めます。
 
-- critical regression 0 は必須条件のため、宣言がない profile へは自動で criterion を差し込む。差し込んだものは `source: 'contract-6'` として区別できる
+- critical regression 0 は契約が定める floor のため、全 profile へ無条件に注入する。`source: 'contract-6'` として区別できる
 - `minSampleSize` は宣言がなければ `null` を報告する。「代表10件」は smoke test の最低条件であり、既定値を置くと「満たした」と読まれてしまう
+- `minSampleSize` の単位は `metrics.denominator`（`paired-finding` / `paired-case`）で決まる。語彙を閉じたのは、ラベルだけ変えて集計単位が変わらないと誤読を招くためである
 - held-out 集合が宣言されていれば、受入評価は held-out 側で行う。candidate の導出に使った case で評価すると自己確認になるためである
+- held-out に宣言できるのは**両側に存在する case key**だけとする。片側だけの key を許すと評価対象が空集合になり、全 metric が 0 で「必須条件を満たした」ように見える
+- 評価対象の paired case が 0 件なら、全 criterion を `evaluable: false` と `satisfied: null` にする。空集合での vacuous pass を防ぐためである
 - paired replay の入力から観測できない metric（precision / recall / cost / reversal）は `evaluable: false` と `satisfied: null` を返す。黙って充足扱いにはしない
+
+### critical regression floor は宣言で緩められない
+
+契約6 は「critical regression 0 を P2 の必須条件」と定めています。したがって SSoT は契約であり、spec の宣言ではありません。`criticalRegressionCount` の宣言は次のように扱います。
+
+- floor（`lte 0` / `required: true` / `source: 'contract-6'`）を常に注入する
+- 宣言側は**より厳しくする方向にだけ**有効とし、threshold は 0 でクランプする
+- `required: false` の宣言は無視する。必須条件を宣言側から外せてはならないためである
 
 ### 自動適用しないことの担保
 

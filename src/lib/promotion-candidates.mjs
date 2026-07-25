@@ -398,8 +398,14 @@ export function normalizeEvidence(entries) {
   };
 }
 
-/** NFC-normalize a string; pass through null/undefined and non-strings. */
-function nfc(value) {
+/**
+ * NFC-normalize a string; pass through null/undefined and non-strings.
+ *
+ * Exported so every content-addressed surface normalizes identically: a
+ * consumer that skips it (or rolls its own) makes visually identical strings
+ * hash — or compare — differently on one side of the loop only.
+ */
+export function nfc(value) {
   return typeof value === 'string' ? value.normalize('NFC') : (value ?? null);
 }
 

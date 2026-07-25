@@ -10,7 +10,7 @@ export const modules = {
 /* harmony export */   buildPairedReplay: () => (/* binding */ buildPairedReplay),
 /* harmony export */   formatPairedReplayMarkdown: () => (/* binding */ formatPairedReplayMarkdown)
 /* harmony export */ });
-/* unused harmony exports PAIRED_REPLAY_SCHEMA_VERSION, PAIRED_REPLAY_COLLECTOR_VERSION, PAIRED_REPLAY_EVALUATOR_VERSION, MANIFEST_ID_PREFIX, TERMINAL_REASONS, SUPPORTED_ACCEPTANCE_METRICS, ACCEPTANCE_COMPARATORS, deriveCaseKey, buildExperimentManifest, verifyExperimentManifest, pairFindings, evaluateAcceptance */
+/* unused harmony exports PAIRED_REPLAY_SCHEMA_VERSION, PAIRED_REPLAY_COLLECTOR_VERSION, PAIRED_REPLAY_EVALUATOR_VERSION, MANIFEST_ID_PREFIX, TERMINAL_REASONS, SUPPORTED_ACCEPTANCE_METRICS, METRIC_DENOMINATORS, ACCEPTANCE_COMPARATORS, deriveCaseKey, buildExperimentManifest, verifyExperimentManifest, pairFindings, evaluateAcceptance */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7598);
 /* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3077);
 /* harmony import */ var _shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(4029);
@@ -87,8 +87,21 @@ const SUPPORTED_ACCEPTANCE_METRICS = Object.freeze([
   'unchangedFindingCount',
   'unpairableFindingCount',
   'pairedCaseCount',
+  // Cases the dataset declared that could NOT be compared (one side is
+  // missing). Declarable so a profile can refuse a replay that silently lost
+  // part of its dataset.
+  'unpairedCaseCount',
   'sampleSize',
 ]);
+
+/**
+ * Unit the acceptance `sampleSize` is counted in (契約6 の必要サンプル数).
+ *
+ * A free-form label would let "at least 3" be read as cases while it counted
+ * findings (or the other way round), so the vocabulary is closed and the
+ * aggregation actually switches on it.
+ */
+const METRIC_DENOMINATORS = Object.freeze(['paired-finding', 'paired-case']);
 
 /** Comparators an acceptance criterion can use. */
 const ACCEPTANCE_COMPARATORS = Object.freeze(['lte', 'lt', 'gte', 'gt', 'eq']);
@@ -117,7 +130,12 @@ function sha256Hex(input) {
 }
 
 function nonEmptyString(value) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
+  if (typeof value !== 'string' || !value.trim()) return null;
+  // NFC via the same helper the candidate-id derivation uses
+  // (promotion-candidates.mjs): normalizing on one side of the loop only would
+  // make visually identical case keys, fingerprints and profile names compare
+  // as different values here while converging there.
+  return (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nfc */ .aX)(value.trim());
 }
 
 function compareStrings(a, b) {
@@ -226,6 +244,23 @@ function requireString(value, label) {
   return str;
 }
 
+/**
+ * Validate the metrics denominator (W5).
+ *
+ * The value is not a label: `sampleSize` is aggregated in this unit, so an
+ * unknown string would silently keep counting findings while the reader
+ * believes it declared cases.
+ */
+function normalizeDenominator(value) {
+  const denominator = nonEmptyString(value) ?? 'paired-finding';
+  if (!METRIC_DENOMINATORS.includes(denominator)) {
+    throw new PairedReplayError(
+      `metrics.denominator "${denominator}" is unknown. Expected one of: ${METRIC_DENOMINATORS.join(', ')}.`
+    );
+  }
+  return denominator;
+}
+
 function normalizeTemperature(value, label) {
   if (value == null) return null;
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -294,11 +329,14 @@ function normalizeCriterion(criterion, profileLabel, index) {
  * Normalize the acceptance profiles (契約6).
  *
  * The profile unit is left to the caller (reviewMode, repo×phase, …): 契約6
- * leaves it 未決 and P2 only requires that a profile has a name. What P2 DOES
- * enforce is the one criterion the contract makes mandatory — critical
- * regression 0 — which is injected into every declared profile when the caller
- * did not write it, and marked `source: 'contract-6'` so the artifact shows it
- * was not caller-supplied.
+ * leaves it 未決 and P2 only requires that a profile has a name.
+ *
+ * The CONTRACT is the SSoT for critical regression, not the declaration: 契約6
+ * fixes "critical regression 0 は P2 paired replay の必須条件", so the floor is
+ * injected into every profile unconditionally and a declaration can only make
+ * it STRICTER. `threshold: 5` or `required: false` would otherwise let the spec
+ * author opt out of the one condition the contract makes mandatory, which is
+ * exactly the failure mode a declarative gate must not have.
  */
 function normalizeProfiles(acceptance) {
   const profiles = acceptance?.profiles;
@@ -313,19 +351,20 @@ function normalizeProfiles(acceptance) {
     const declared = Array.isArray(profile.criteria)
       ? profile.criteria.map((c, j) => normalizeCriterion(c, label, j))
       : [];
-    const hasCriticalRegression = declared.some((c) => c.metric === 'criticalRegressionCount');
-    const criteria = hasCriticalRegression
-      ? declared
-      : [
-          {
-            metric: 'criticalRegressionCount',
-            comparator: 'lte',
-            threshold: 0,
-            required: true,
-            source: 'contract-6',
-          },
-          ...declared,
-        ];
+    // The contract floor always wins; a declaration on the same metric is
+    // folded into it and can only lower the threshold (i.e. be stricter).
+    const declaredCritical = declared.filter((c) => c.metric === 'criticalRegressionCount');
+    const floorThreshold = declaredCritical.reduce((acc, c) => Math.min(acc, c.threshold), 0);
+    const criteria = [
+      {
+        metric: 'criticalRegressionCount',
+        comparator: 'lte',
+        threshold: floorThreshold,
+        required: true,
+        source: 'contract-6',
+      },
+      ...declared.filter((c) => c.metric !== 'criticalRegressionCount'),
+    ];
     const minSampleSize = profile.minSampleSize ?? null;
     if (minSampleSize != null && !(Number.isInteger(minSampleSize) && minSampleSize >= 0)) {
       throw new PairedReplayError(`${label}.minSampleSize must be a non-negative integer or null.`);
@@ -359,14 +398,31 @@ function normalizeImprovementCandidate(spec, policyVersion) {
       'improvementCandidate.sourceFeedbackRefs must be a non-empty array (the evidence the candidate id is derived from).'
     );
   }
+  evidence.forEach((ref, i) => requireObject(ref, `improvementCandidate.sourceFeedbackRefs[${i}]`));
+  const candidatePolicyVersion = String(candidate.policyVersion ?? policyVersion);
+  if (!_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .KNOWN_POLICY_VERSIONS */ .d.includes(candidatePolicyVersion)) {
+    // Checked here (not only inside computeCandidateId) so the failure is a
+    // PairedReplayError the CLI reports as a usage error rather than a stack.
+    throw new PairedReplayError(
+      `improvementCandidate.policyVersion "${candidatePolicyVersion}" is unknown. Expected one of: ${_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .KNOWN_POLICY_VERSIONS */ .d.join(', ')}.`
+    );
+  }
   // The id is NOT re-invented here: it comes from the #1624 derivation via P1's
   // adapter, so the experiment refers to the same candidate the shadow
   // aggregate observed and `river promote propose` persists.
-  const derived = (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .computeCandidateId */ .Mc)({
-    policyVersion: candidate.policyVersion ?? policyVersion,
-    clusterKey,
-    evidence,
-  });
+  let derived;
+  try {
+    derived = (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .computeCandidateId */ .Mc)({
+      policyVersion: candidatePolicyVersion,
+      clusterKey,
+      evidence,
+    });
+  } catch (err) {
+    // Upstream throws plain Errors / PromotionProposalError; the CLI's usage
+    // contract is PairedReplayError, so a malformed evidence row must not
+    // escape as an unhandled exception.
+    throw new PairedReplayError(`improvementCandidate evidence is invalid: ${err.message}`);
+  }
   const claimed = nonEmptyString(candidate.candidateId);
   if (claimed && claimed !== derived.candidateId) {
     // A manifest that pins a candidate id which its own evidence does not
@@ -380,7 +436,7 @@ function normalizeImprovementCandidate(spec, policyVersion) {
     contentHash: derived.contentHash,
     uniqueEvidenceCount: derived.evidenceCount,
     clusterKey,
-    policyVersion: String(candidate.policyVersion ?? policyVersion),
+    policyVersion: candidatePolicyVersion,
     hypothesis: nonEmptyString(candidate.hypothesis) ?? nonEmptyString(spec?.hypothesis),
   };
 }
@@ -426,12 +482,21 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
   const heldOutCaseKeys = [
     ...new Set((heldOutDeclared ?? []).map((k) => nonEmptyString(k)).filter(Boolean)),
   ].sort(compareStrings);
-  const unknownHeldOut = heldOutCaseKeys.filter((key) => !caseKeys.includes(key));
+  // Validated against the INTERSECTION, not the union: a key present on only
+  // one side passes a union check but produces zero paired cases, so every
+  // acceptance metric would be 0 and the mandatory conditions would look
+  // satisfied on an empty set (a vacuous pass).
+  const pairableCaseKeys = baseline.manifest.caseKeys.filter((key) =>
+    candidate.manifest.caseKeys.includes(key)
+  );
+  const unknownHeldOut = heldOutCaseKeys.filter((key) => !pairableCaseKeys.includes(key));
   if (unknownHeldOut.length) {
-    // A held-out key that matches no case would silently evaluate acceptance on
-    // an empty set and look like a pass.
+    const oneSided = unknownHeldOut.filter((key) => caseKeys.includes(key));
+    const detail = oneSided.length
+      ? ` (${oneSided.slice(0, 3).join(', ')} exist on only one side, so they can never be paired)`
+      : '';
     throw new PairedReplayError(
-      `dataset.heldOutCaseKeys contains ${unknownHeldOut.length} key(s) that no run belongs to: ${unknownHeldOut.slice(0, 3).join(', ')}.`
+      `dataset.heldOutCaseKeys contains ${unknownHeldOut.length} key(s) that no PAIRED case covers: ${unknownHeldOut.slice(0, 3).join(', ')}${detail}.`
     );
   }
 
@@ -489,7 +554,7 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
     },
     environment: spec.environment == null ? {} : requireObject(spec.environment, 'environment'),
     metrics: {
-      denominator: nonEmptyString(spec.metrics?.denominator) ?? 'paired-finding',
+      denominator: normalizeDenominator(spec.metrics?.denominator),
     },
     // The OBSERVED terminal reason lives on the result, not here: writing an
     // outcome into the manifest would break its immutability.
@@ -576,19 +641,30 @@ function indexSide(findings) {
     .sort((a, b) => compareStrings((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(a), (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(b)));
   const byFingerprint = new Map();
   let duplicatesRemoved = 0;
+  let severityConflicts = 0;
   const withFingerprint = projected
     .filter((f) => f.fingerprint != null)
     // Sorted before insertion so "first wins" is a property of the DATA, not of
     // the order the findings happened to be listed in.
     .sort((a, b) => compareStrings((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(a), (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(b)));
   for (const finding of withFingerprint) {
-    if (byFingerprint.has(finding.fingerprint)) {
-      duplicatesRemoved += 1;
+    const existing = byFingerprint.get(finding.fingerprint);
+    if (!existing) {
+      byFingerprint.set(finding.fingerprint, finding);
       continue;
     }
-    byFingerprint.set(finding.fingerprint, finding);
+    duplicatesRemoved += 1;
+    if (existing.severity === finding.severity) continue;
+    severityConflicts += 1;
+    // Fail-safe on severity, the same rule the unknown-severity fallback
+    // applies: the winner of a duplicate is decided by canonical-JSON order,
+    // which is effectively the FILE name — letting a `minor` duplicate hide a
+    // `critical` one would erase a regression. Other fields keep first-wins.
+    if (severityRank(finding.severity) > severityRank(existing.severity)) {
+      byFingerprint.set(finding.fingerprint, { ...existing, severity: finding.severity });
+    }
   }
-  return { byFingerprint, unpairable, duplicatesRemoved };
+  return { byFingerprint, unpairable, duplicatesRemoved, severityConflicts };
 }
 
 /**
@@ -642,6 +718,10 @@ function pairFindings(baselineFindings, candidateFindings) {
     unpairableCandidate: cand.unpairable.length,
     duplicatesRemovedBaseline: base.duplicatesRemoved,
     duplicatesRemovedCandidate: cand.duplicatesRemoved,
+    // Duplicates that disagreed on severity. Surfaced separately because the
+    // collapse used the highest severity and a reader should know it happened.
+    severityConflictsBaseline: base.severityConflicts,
+    severityConflictsCandidate: cand.severityConflicts,
   };
 
   // Regression = the candidate LOST or DOWNGRADED a critical baseline finding.
@@ -694,7 +774,7 @@ function findingsOf(records) {
   return records.flatMap((record) => record?.findings ?? []);
 }
 
-function emptyMetrics(denominator) {
+function emptyMetrics(denominator, { datasetCaseCount = 0, unpairedCaseCount = 0 } = {}) {
   return {
     caseCount: 0,
     sampleSize: 0,
@@ -706,12 +786,17 @@ function emptyMetrics(denominator) {
     criticalAdditionCount: 0,
     unpairableFindingCount: 0,
     pairedCaseCount: 0,
+    // Dataset-wide, identical in every scope: a case the manifest declared but
+    // that could not be compared is a hole in the material regardless of which
+    // subset acceptance is judged on.
+    datasetCaseCount,
+    unpairedCaseCount,
     denominator,
   };
 }
 
-function accumulateMetrics(cases, denominator) {
-  const metrics = emptyMetrics(denominator);
+function accumulateMetrics(cases, denominator, dataset) {
+  const metrics = emptyMetrics(denominator, dataset);
   for (const entry of cases) {
     metrics.caseCount += 1;
     metrics.pairedCaseCount += 1;
@@ -724,11 +809,16 @@ function accumulateMetrics(cases, denominator) {
     metrics.unpairableFindingCount +=
       entry.counts.unpairableBaseline + entry.counts.unpairableCandidate;
   }
+  // The unit actually switches on the declared denominator (W5): a profile that
+  // declared "at least 3 paired cases" must not be satisfied by 3 findings
+  // found in a single case.
   metrics.sampleSize =
-    metrics.unchangedFindingCount +
-    metrics.changedFindingCount +
-    metrics.removedFindingCount +
-    metrics.addedFindingCount;
+    denominator === 'paired-case'
+      ? metrics.pairedCaseCount
+      : metrics.unchangedFindingCount +
+        metrics.changedFindingCount +
+        metrics.removedFindingCount +
+        metrics.addedFindingCount;
   return metrics;
 }
 
@@ -767,21 +857,32 @@ function compare(observed, comparator, threshold) {
  * reported as `evaluable: false` with `satisfied: null` instead of being
  * silently treated as satisfied.
  *
+ * A scope with ZERO paired cases evaluates NOTHING: every metric would read 0
+ * and each `lte` criterion would report satisfied on an empty set. That vacuous
+ * pass is the most dangerous output this module could produce, so such a scope
+ * marks every criterion `evaluable: false` / `satisfied: null` instead.
+ *
  * @param {{ profiles: object[], metrics: object, evaluatedOn: string }} input
  */
 function evaluateAcceptance({ profiles, metrics, evaluatedOn }) {
+  const scopeEvaluable = (metrics.pairedCaseCount ?? 0) > 0;
   return profiles.map((profile) => {
     const criteria = profile.criteria.map((criterion) => {
-      const evaluable = SUPPORTED_ACCEPTANCE_METRICS.includes(criterion.metric);
+      const metricSupported = SUPPORTED_ACCEPTANCE_METRICS.includes(criterion.metric);
+      const evaluable = metricSupported && scopeEvaluable;
       const observed = evaluable ? (metrics[criterion.metric] ?? 0) : null;
+      let note = null;
+      if (!metricSupported) {
+        note = `metric "${criterion.metric}" は paired replay の入力からは観測できない（precision / recall / cost はラベル付き評価が必要）`;
+      } else if (!scopeEvaluable) {
+        note = `評価対象（${evaluatedOn}）の paired case が 0 件のため観測できない。0 件を充足と読むと空集合での vacuous pass になる`;
+      }
       return {
         ...criterion,
         observed,
         evaluable,
         satisfied: evaluable ? compare(observed, criterion.comparator, criterion.threshold) : null,
-        note: evaluable
-          ? null
-          : `metric "${criterion.metric}" は paired replay の入力からは観測できない（precision / recall / cost はラベル付き評価が必要）`,
+        note,
       };
     });
     const failed = criteria.filter((c) => c.satisfied === false);
@@ -794,7 +895,9 @@ function evaluateAcceptance({ profiles, metrics, evaluatedOn }) {
       // null (未宣言) is reported as null, not as a pass: 契約6 は必要サンプル数の
       // 決定方法を持つことを求めており、既定値で満たしたことにはできない。
       sampleSizeSatisfied:
-        profile.minSampleSize == null ? null : metrics.sampleSize >= profile.minSampleSize,
+        profile.minSampleSize == null || !scopeEvaluable
+          ? null
+          : metrics.sampleSize >= profile.minSampleSize,
       criteria,
       criteriaMet: criteria.filter((c) => c.satisfied === true).length,
       criteriaFailed: failed.length,
@@ -854,14 +957,49 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
     };
   });
 
+  const baselineOnly = [...baseline.byCase.keys()]
+    .filter((k) => !candidate.byCase.has(k))
+    .sort(compareStrings);
+  const candidateOnly = [...candidate.byCase.keys()]
+    .filter((k) => !baseline.byCase.has(k))
+    .sort(compareStrings);
+  const datasetCaseCount = built.manifest.dataset.caseCount;
+  const dataset = {
+    datasetCaseCount,
+    unpairedCaseCount: baselineOnly.length + candidateOnly.length,
+  };
+
   const denominator = built.manifest.metrics.denominator;
-  const overall = accumulateMetrics(cases, denominator);
+  const overall = accumulateMetrics(cases, denominator, dataset);
   const heldOutCases = cases.filter((c) => c.heldOut);
-  const heldOutMetrics = heldOut.size ? accumulateMetrics(heldOutCases, denominator) : null;
+  const heldOutMetrics = heldOut.size
+    ? accumulateMetrics(heldOutCases, denominator, dataset)
+    : null;
   // Acceptance is judged on the held-out set when one is declared: evaluating
   // on the same cases the candidate was derived from would be self-confirming.
   const evaluatedOn = heldOutMetrics ? 'heldOut' : 'overall';
   const acceptanceMetrics = heldOutMetrics ?? overall;
+  const acceptanceEvaluable = acceptanceMetrics.pairedCaseCount > 0;
+
+  // A dataset case that lost one side never reaches the diff, so it must be
+  // stated explicitly: "no regression" over 1 of 3 cases is not the same claim
+  // as "no regression" over the dataset.
+  const pairingWarnings = [];
+  if (overall.pairedCaseCount < datasetCaseCount) {
+    pairingWarnings.push(
+      `dataset の ${datasetCaseCount} case のうち対にできたのは ${overall.pairedCaseCount} case のみ。残りは片側の run が欠けており比較していない`
+    );
+  }
+  if (baseline.unkeyed.length || candidate.unkeyed.length) {
+    pairingWarnings.push(
+      `case key を導出できない run が baseline ${baseline.unkeyed.length} 件 / candidate ${candidate.unkeyed.length} 件あり、比較対象から外れている`
+    );
+  }
+  if (!acceptanceEvaluable) {
+    pairingWarnings.push(
+      `受入評価の対象（${evaluatedOn}）に paired case が 0 件のため、全 criterion を観測不可として扱う`
+    );
+  }
 
   const profiles = built.manifest.acceptance.profiles;
   const evaluations = evaluateAcceptance({
@@ -935,18 +1073,14 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
     },
     pairing: {
       cases,
-      unpairedCases: {
-        baselineOnly: [...baseline.byCase.keys()]
-          .filter((k) => !candidate.byCase.has(k))
-          .sort(compareStrings),
-        candidateOnly: [...candidate.byCase.keys()]
-          .filter((k) => !baseline.byCase.has(k))
-          .sort(compareStrings),
-      },
+      datasetCaseCount,
+      pairedCaseCount: overall.pairedCaseCount,
+      unpairedCases: { baselineOnly, candidateOnly },
       unkeyedRunCount: {
         baseline: baseline.unkeyed.length,
         candidate: candidate.unkeyed.length,
       },
+      warnings: pairingWarnings,
     },
     metrics: {
       overall,
@@ -963,11 +1097,20 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
     acceptance: {
       declaredProfileCount: profiles.length,
       evaluatedOn,
+      // False when the evaluated scope has no paired case: every criterion is
+      // then reported as unobserved rather than satisfied (no vacuous pass).
+      evaluable: acceptanceEvaluable,
       evaluations,
       contract6: {
-        criticalRegressionCount: acceptanceMetrics.criticalRegressionCount,
-        criticalRegressionZero: acceptanceMetrics.criticalRegressionCount === 0,
-        note: 'critical regression 0 は P2 の必須条件（契約6）。ここでは観測値を報告するだけで、採否の自動適用は行わない。',
+        criticalRegressionCount: acceptanceEvaluable
+          ? acceptanceMetrics.criticalRegressionCount
+          : null,
+        // null, not true: with no paired case there is no evidence either way.
+        criticalRegressionZero: acceptanceEvaluable
+          ? acceptanceMetrics.criticalRegressionCount === 0
+          : null,
+        overallCriticalRegressionCount: overall.criticalRegressionCount,
+        note: 'critical regression 0 は P2 の必須条件（契約6）。宣言でしきい値を緩められない floor として常に評価するが、採否の自動適用は行わない。',
       },
       // NON-GOALS, asserted in the artifact so a downstream consumer cannot
       // mistake this report for a verdict.
@@ -997,6 +1140,16 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
 }
 
 /**
+ * Render a tri-state satisfaction flag. `null` (not observable) MUST NOT look
+ * like `false` (observed and failed) — or like a pass.
+ */
+function tick(value) {
+  if (value === true) return '✔';
+  if (value === false) return '✘';
+  return '—(観測不可)';
+}
+
+/**
  * Render the paired replay result as Markdown for human review (`--output text`).
  */
 function formatPairedReplayMarkdown(result) {
@@ -1009,7 +1162,10 @@ function formatPairedReplayMarkdown(result) {
     `| Manifest verified | ${result.manifestVerification.verified ? 'yes' : 'NO (改変検出)'} |`
   );
   lines.push(`| Generated at | ${result.generatedAt} |`);
-  lines.push(`| Paired cases | ${m.pairedCaseCount} |`);
+  lines.push(
+    `| Paired cases | ${m.pairedCaseCount} / ${result.pairing.datasetCaseCount} (dataset) |`
+  );
+  lines.push(`| Unpaired cases | ${m.unpairedCaseCount} |`);
   lines.push(`| Held-out cases | ${result.manifest.dataset.heldOutCaseKeys.length} |`);
   lines.push(`| Sample size (${m.denominator}) | ${m.sampleSize} |`);
   lines.push(`| Unchanged / Changed | ${m.unchangedFindingCount} / ${m.changedFindingCount} |`);
@@ -1025,6 +1181,24 @@ function formatPairedReplayMarkdown(result) {
     for (const mismatch of result.manifestVerification.mismatches) lines.push(`  - ${mismatch}`);
     lines.push('');
   }
+
+  // Always rendered, including the "nothing was lost" case: the reader must be
+  // able to tell "0 case dropped" from "the report did not say".
+  lines.push('### Dataset coverage');
+  lines.push(
+    `- paired ${result.pairing.pairedCaseCount} / dataset ${result.pairing.datasetCaseCount} case`
+  );
+  lines.push(
+    `- baseline only: ${result.pairing.unpairedCases.baselineOnly.length ? result.pairing.unpairedCases.baselineOnly.map((k) => `\`${k}\``).join(', ') : 'なし'}`
+  );
+  lines.push(
+    `- candidate only: ${result.pairing.unpairedCases.candidateOnly.length ? result.pairing.unpairedCases.candidateOnly.map((k) => `\`${k}\``).join(', ') : 'なし'}`
+  );
+  lines.push(
+    `- case key を導出できない run: baseline ${result.pairing.unkeyedRunCount.baseline} / candidate ${result.pairing.unkeyedRunCount.candidate}`
+  );
+  for (const warning of result.pairing.warnings) lines.push(`- ⚠️ ${warning}`);
+  lines.push('');
 
   if (result.activationCheck.reasons.length) {
     lines.push('### Activation');
@@ -1046,21 +1220,23 @@ function formatPairedReplayMarkdown(result) {
   }
 
   lines.push('### Acceptance (契約6・観測のみ)');
-  lines.push(`- evaluatedOn: ${result.acceptance.evaluatedOn}`);
   lines.push(
-    `- critical regression: ${result.acceptance.contract6.criticalRegressionCount}（0 が必須条件）`
+    `- evaluatedOn: ${result.acceptance.evaluatedOn}${result.acceptance.evaluable ? '' : '（対象 case 0 件のため評価不可）'}`
+  );
+  lines.push(
+    `- critical regression: ${tick(result.acceptance.contract6.criticalRegressionZero)} ${result.acceptance.contract6.criticalRegressionCount ?? '(観測不可)'}（0 が必須条件・全体では ${result.acceptance.contract6.overallCriticalRegressionCount}）`
   );
   if (result.acceptance.evaluations.length === 0) {
     lines.push(`- ${result.acceptance.note}`);
   }
   for (const evaluation of result.acceptance.evaluations) {
     lines.push(
-      `- profile \`${evaluation.profile}\`: met ${evaluation.criteriaMet} / failed ${evaluation.criteriaFailed} / unevaluable ${evaluation.criteriaUnevaluable}`
+      `- profile \`${evaluation.profile}\`: allRequiredSatisfied ${tick(evaluation.allRequiredSatisfied)} / sampleSize ${evaluation.sampleSize}${evaluation.minSampleSize == null ? '（minSampleSize 未宣言）' : ` >= ${evaluation.minSampleSize} ${tick(evaluation.sampleSizeSatisfied)}`} / met ${evaluation.criteriaMet} / failed ${evaluation.criteriaFailed} / unevaluable ${evaluation.criteriaUnevaluable}`
     );
     for (const criterion of evaluation.criteria) {
       const observed = criterion.evaluable ? criterion.observed : '(観測不可)';
       lines.push(
-        `  - ${criterion.metric} ${criterion.comparator} ${criterion.threshold} → ${observed}${criterion.source === 'contract-6' ? '（契約6 で自動付与）' : ''}`
+        `  - ${tick(criterion.satisfied)} ${criterion.metric} ${criterion.comparator} ${criterion.threshold} → ${observed}${criterion.source === 'contract-6' ? '（契約6 の floor・宣言では緩められない）' : ''}`
       );
     }
   }

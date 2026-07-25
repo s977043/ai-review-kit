@@ -219,6 +219,18 @@ describe('paired-replay 契約3: immutable Experiment Manifest', () => {
     );
   });
 
+  test('a held-out key present on only ONE side is rejected (vacuous pass guard)', () => {
+    // Regression guard: validating against the UNION let a one-sided key pass,
+    // and the held-out scope then had zero paired cases — every metric read 0
+    // and the mandatory criteria looked satisfied on an empty set.
+    const oneSided = spec({ dataset: { heldOutCaseKeys: ['case-2'] } });
+    oneSided.candidate.runs = [oneSided.candidate.runs[0]]; // drops case-2 from the candidate
+    assert.throws(
+      () => buildExperimentManifest(oneSided, { now: NOW }),
+      /exist on only one side, so they can never be paired/
+    );
+  });
+
   test('a side without runs, or without a commit SHA, is rejected', () => {
     const noRuns = spec();
     noRuns.candidate.runs = [];
@@ -281,6 +293,42 @@ describe('paired-replay 契約4: content-addressed candidate id', () => {
       forward.improvementCandidate.candidateId,
       reversed.improvementCandidate.candidateId
     );
+  });
+
+  test('an unknown candidate policyVersion is a usage error, not a stack trace', () => {
+    assert.throws(
+      () =>
+        buildExperimentManifest(
+          spec({
+            improvementCandidate: {
+              clusterKey: 'secret-scanner::false_positive',
+              policyVersion: '99',
+              sourceFeedbackRefs: evidence,
+            },
+          }),
+          { now: NOW }
+        ),
+      (err) =>
+        err instanceof PairedReplayError && /improvementCandidate.policyVersion/.test(err.message)
+    );
+  });
+
+  test('a malformed evidence row surfaces as a PairedReplayError', () => {
+    for (const refs of [[null], ['not-an-object'], [{ feedbackType: 'x', timestamp: 42 }]]) {
+      assert.throws(
+        () =>
+          buildExperimentManifest(
+            spec({
+              improvementCandidate: {
+                clusterKey: 'secret-scanner::false_positive',
+                sourceFeedbackRefs: refs,
+              },
+            }),
+            { now: NOW }
+          ),
+        PairedReplayError
+      );
+    }
   });
 
   test('a claimed candidate id its evidence does not produce is rejected', () => {
@@ -376,6 +424,22 @@ describe('paired-replay: paired finding diff', () => {
     const diff = pairFindings([finding(FP_A), finding(FP_A)], [finding(FP_A)]);
     assert.equal(diff.counts.unchanged, 1);
     assert.equal(diff.counts.duplicatesRemovedBaseline, 1);
+    assert.equal(diff.counts.severityConflictsBaseline, 0);
+  });
+
+  test('a duplicate fingerprint collapses to the HIGHEST severity, not to the first row', () => {
+    // Regression guard: the winner was decided by canonical-JSON order, i.e. by
+    // the file name, so a `minor` duplicate could hide a `critical` regression.
+    const diff = pairFindings(
+      [
+        finding(FP_A, { severity: 'minor', file: 'aaa.mjs' }),
+        finding(FP_A, { severity: 'critical', file: 'zzz.mjs' }),
+      ],
+      []
+    );
+    assert.equal(diff.pairs[0].baseline.severity, 'critical');
+    assert.deepEqual(diff.criticalRegressions, [FP_A]);
+    assert.equal(diff.counts.severityConflictsBaseline, 1);
   });
 });
 
@@ -427,12 +491,63 @@ describe('paired-replay: case pairing and determinism', () => {
   });
 
   test('a case present on only one side is reported, never paired', () => {
-    const lopsided = spec();
+    const lopsided = spec({ dataset: { heldOutCaseKeys: [] } });
     lopsided.candidate.runs = [lopsided.candidate.runs[0]];
     const result = buildPairedReplay(lopsided, { now: NOW });
     assert.deepEqual(result.pairing.unpairedCases.baselineOnly, ['case-2']);
     assert.deepEqual(result.pairing.unpairedCases.candidateOnly, []);
     assert.equal(result.metrics.overall.pairedCaseCount, 1);
+  });
+
+  test('a dropped candidate run is visible in the artifact AND in the Markdown', () => {
+    // Regression guard: the case simply vanished from the report, so "no
+    // regression over 1 of 3 cases" read as "no regression over the dataset".
+    const lopsided = spec({ dataset: { heldOutCaseKeys: [] } });
+    lopsided.candidate.runs = [lopsided.candidate.runs[0]];
+    const result = buildPairedReplay(lopsided, { now: NOW });
+    assert.equal(result.pairing.datasetCaseCount, 2);
+    assert.equal(result.pairing.pairedCaseCount, 1);
+    assert.equal(result.metrics.overall.unpairedCaseCount, 1);
+    assert.equal(result.metrics.overall.datasetCaseCount, 2);
+    assert.ok(result.pairing.warnings.some((w) => w.includes('対にできたのは 1 case')));
+
+    const text = formatPairedReplayMarkdown(result);
+    assert.match(text, /Dataset coverage/);
+    assert.match(text, /paired 1 \/ dataset 2 case/);
+    assert.match(text, /baseline only: `case-2`/);
+    assert.match(text, /⚠️ dataset の 2 case のうち/);
+  });
+
+  test('unpairedCaseCount is declarable as an acceptance criterion', () => {
+    const strict = spec({ dataset: { heldOutCaseKeys: [] } });
+    strict.acceptance.profiles[0].criteria = [
+      { metric: 'unpairedCaseCount', comparator: 'lte', threshold: 0 },
+    ];
+    strict.candidate.runs = [strict.candidate.runs[0]];
+    const result = buildPairedReplay(strict, { now: NOW });
+    const criterion = result.acceptance.evaluations[0].criteria.find(
+      (c) => c.metric === 'unpairedCaseCount'
+    );
+    assert.equal(criterion.observed, 1);
+    assert.equal(criterion.satisfied, false);
+  });
+
+  test('an unpairable dataset evaluates nothing instead of passing vacuously', () => {
+    const unkeyed = spec({ dataset: { heldOutCaseKeys: [] } });
+    unkeyed.baseline.runs = [{ runId: 'x', caseId: 'only-base', findings: [] }];
+    unkeyed.candidate.runs = [{ runId: 'y', caseId: 'only-cand', findings: [] }];
+    const result = buildPairedReplay(unkeyed, { now: NOW });
+    assert.equal(result.acceptance.evaluable, false);
+    assert.equal(result.acceptance.contract6.criticalRegressionCount, null);
+    assert.equal(result.acceptance.contract6.criticalRegressionZero, null);
+    const evaluation = result.acceptance.evaluations[0];
+    assert.equal(
+      evaluation.criteria.every((c) => c.satisfied === null),
+      true
+    );
+    assert.equal(evaluation.allRequiredSatisfied, false);
+    assert.equal(evaluation.sampleSizeSatisfied, null);
+    assert.match(evaluation.criteria[0].note, /vacuous pass/);
   });
 
   test('runs without a derivable case key are counted, not paired', () => {
@@ -476,20 +591,59 @@ describe('paired-replay 契約6: profile-specific acceptance', () => {
     });
   });
 
-  test('a declared critical-regression criterion is not overwritten', () => {
-    const declared = spec();
-    declared.acceptance.profiles[0].criteria.push({
+  test('契約6 の floor は宣言で緩められない: threshold は 0 にクランプされる', () => {
+    // The contract is the SSoT: 「critical regression 0 は P2 の必須条件」.
+    // A spec author declaring `threshold: 5` must not be able to opt out.
+    const loosened = spec();
+    loosened.acceptance.profiles[0].criteria.push({
       metric: 'criticalRegressionCount',
       comparator: 'lte',
-      threshold: 2,
+      threshold: 5,
+      required: false,
     });
-    const { manifest } = buildExperimentManifest(declared, { now: NOW });
+    const { manifest } = buildExperimentManifest(loosened, { now: NOW });
     const criteria = manifest.acceptance.profiles[0].criteria.filter(
       (c) => c.metric === 'criticalRegressionCount'
     );
     assert.equal(criteria.length, 1);
-    assert.equal(criteria[0].source, 'declared');
-    assert.equal(criteria[0].threshold, 2);
+    assert.deepEqual(criteria[0], {
+      metric: 'criticalRegressionCount',
+      comparator: 'lte',
+      threshold: 0,
+      required: true,
+      source: 'contract-6',
+    });
+  });
+
+  test('契約6 の floor より厳しい宣言は有効に残る', () => {
+    const stricter = spec();
+    stricter.acceptance.profiles[0].criteria.push({
+      metric: 'criticalRegressionCount',
+      comparator: 'lte',
+      threshold: -1,
+    });
+    const { manifest } = buildExperimentManifest(stricter, { now: NOW });
+    const criterion = manifest.acceptance.profiles[0].criteria.find(
+      (c) => c.metric === 'criticalRegressionCount'
+    );
+    assert.equal(criterion.threshold, -1);
+    assert.equal(criterion.required, true);
+  });
+
+  test('契約6 の floor を緩めた宣言でも regression があれば充足しない', () => {
+    const loosened = spec({ dataset: { heldOutCaseKeys: [] } });
+    loosened.acceptance.profiles[0].criteria = [
+      { metric: 'criticalRegressionCount', comparator: 'lte', threshold: 5, required: false },
+    ];
+    loosened.candidate.runs[0].findings = [finding(FP_D)]; // drops the critical FP_A
+    const result = buildPairedReplay(loosened, { now: NOW });
+    const evaluation = result.acceptance.evaluations[0];
+    assert.equal(result.metrics.overall.criticalRegressionCount, 1);
+    assert.equal(
+      evaluation.criteria.find((c) => c.metric === 'criticalRegressionCount').satisfied,
+      false
+    );
+    assert.equal(evaluation.allRequiredSatisfied, false);
   });
 
   test('acceptance is evaluated on the held-out set when one is declared', () => {
@@ -570,6 +724,34 @@ describe('paired-replay 契約6: profile-specific acceptance', () => {
     assert.match(criterion.note, /観測できない/);
     assert.equal(evaluations[0].criteriaUnevaluable, 1);
     assert.equal(evaluations[0].allRequiredSatisfied, false);
+  });
+
+  test('minSampleSize は denominator の単位で数える（paired-case）', () => {
+    // Regression guard: `denominator` was a free-form label while sampleSize
+    // always counted findings, so "at least 3 paired cases" passed on 1 case.
+    const byCase = spec({ dataset: { heldOutCaseKeys: [] } });
+    byCase.metrics = { denominator: 'paired-case' };
+    byCase.acceptance.profiles[0].minSampleSize = 3;
+    const result = buildPairedReplay(byCase, { now: NOW });
+    assert.equal(result.metrics.overall.denominator, 'paired-case');
+    assert.equal(result.metrics.overall.sampleSize, 2); // 2 paired cases, not 4 findings
+    assert.equal(result.acceptance.evaluations[0].sampleSizeSatisfied, false);
+  });
+
+  test('paired-finding は finding 件数で数える', () => {
+    const byFinding = spec({ dataset: { heldOutCaseKeys: [] } });
+    byFinding.acceptance.profiles[0].minSampleSize = 3;
+    const result = buildPairedReplay(byFinding, { now: NOW });
+    assert.equal(result.metrics.overall.denominator, 'paired-finding');
+    assert.equal(result.metrics.overall.sampleSize, 4);
+    assert.equal(result.acceptance.evaluations[0].sampleSizeSatisfied, true);
+  });
+
+  test('an unknown denominator is rejected instead of silently counting findings', () => {
+    assert.throws(
+      () => buildExperimentManifest(spec({ metrics: { denominator: 'per-run' } }), { now: NOW }),
+      /metrics.denominator "per-run" is unknown/
+    );
   });
 
   test('an undeclared minSampleSize is reported as null, not as satisfied', () => {
@@ -722,6 +904,33 @@ describe('paired-replay: artifact', () => {
     assert.match(text, /decision は常に null/);
     assert.match(text, /Critical regressions \| 0/);
   });
+
+  test('the Markdown distinguishes satisfied / failed / unobservable criteria', () => {
+    const mixed = spec({ dataset: { heldOutCaseKeys: [] } });
+    mixed.acceptance.profiles[0].criteria = [
+      { metric: 'addedFindingCount', comparator: 'lte', threshold: -1 }, // fails
+      { metric: 'precision', comparator: 'gte', threshold: 0.9 }, // unobservable
+    ];
+    const text = formatPairedReplayMarkdown(buildPairedReplay(mixed, { now: NOW }));
+    assert.match(text, /✔ criticalRegressionCount lte 0/);
+    assert.match(text, /✘ addedFindingCount lte -1/);
+    assert.match(text, /—\(観測不可\) precision gte 0\.9/);
+    assert.match(text, /allRequiredSatisfied ✘/);
+    assert.match(text, /契約6 の floor・宣言では緩められない/);
+  });
+
+  test('case key と profile 名は NFC 正規化して扱う', () => {
+    // NFD "ガ" (か + combining dakuten) must resolve to the same case as NFC.
+    const nfd = spec({ dataset: { heldOutCaseKeys: [] } });
+    const nfcKey = 'ガ-case';
+    const nfdKey = 'ガ-case'.normalize('NFD');
+    nfd.baseline.runs = [runRecord({ runId: 'b', caseId: nfcKey, findings: [finding(FP_A)] })];
+    nfd.candidate.runs = [runRecord({ runId: 'c', caseId: nfdKey, findings: [finding(FP_A)] })];
+    const result = buildPairedReplay(nfd, { now: NOW });
+    assert.equal(result.pairing.pairedCaseCount, 1);
+    assert.deepEqual(result.pairing.unpairedCases.baselineOnly, []);
+    assert.equal(result.pairing.cases[0].caseKey, nfcKey);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -852,6 +1061,27 @@ describe('river evolve replay (CLI)', () => {
     const res = await runCliInProcess(['evolve', 'replay']);
     assert.equal(res.code, 1);
     assert.match(res.stderr, /requires --spec/);
+  });
+
+  test('a positional argument is rejected instead of being silently ignored', async (t) => {
+    const { root, specPath, cleanup } = seedSpec();
+    t.after(cleanup);
+    // `replay` has no positional: the path used to be swallowed as the (unused)
+    // target and the command still exited 0.
+    const res = await runCliInProcess(['evolve', 'replay', root, '--spec', specPath]);
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /Unexpected argument/);
+  });
+
+  test('a spec file that is not a JSON object exits 1 with a usage error', async (t) => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'rr-replay-null-'));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const specPath = path.join(root, 'null.json');
+    writeFileSync(specPath, 'null', 'utf8');
+    const res = await runCliInProcess(['evolve', 'replay', '--spec', specPath]);
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /must contain a JSON object/);
+    assert.doesNotMatch(res.stderr, /Cannot read properties/);
   });
 
   test('aggregate options are rejected for replay and vice versa', async (t) => {

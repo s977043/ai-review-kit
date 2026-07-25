@@ -120,6 +120,12 @@ async function runReplay(parsed, output) {
     console.error(`Error: cannot read --spec ${parsed.evolveSpec}: ${err.message}`);
     return 1;
   }
+  // Checked before any property access: a file containing `null` or `[]` would
+  // otherwise throw a raw TypeError on `spec.manifest` instead of a usage error.
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
+    console.error(`Error: --spec ${parsed.evolveSpec} must contain a JSON object.`);
+    return 1;
+  }
 
   let result;
   try {

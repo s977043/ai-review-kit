@@ -211,7 +211,10 @@ Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利
 profile 別受入基準の宣言と評価を `river evolve replay` で実装しました。
 
 - profile は manifest の `acceptance.profiles` として宣言する。名前だけを必須とし、単位（reviewMode か、対象リポジトリ×phase の組か）は運用観測の後に決める。
-- critical regression 0 は必須条件のため、宣言のない profile へ自動で criterion を差し込み、`source: 'contract-6'` として区別できるようにする。
+- critical regression 0 は契約が定める floor として全 profile へ無条件に注入し、`source: 'contract-6'` として区別できるようにする。宣言側はより厳しくする方向にだけ有効とし、`threshold` を 0 でクランプし、`required: false` を無視する。必須条件を宣言側から外せてはならないためである。
+- held-out に宣言できるのは両側に存在する case key だけとする。片側だけの key は評価対象が空集合になり、全 metric が 0 で必須条件を満たしたように見えるためである。
+- 評価対象の paired case が 0 件なら、全 criterion を `evaluable: false` / `satisfied: null` として報告する。
+- `minSampleSize` の単位は `metrics.denominator`（`paired-finding` / `paired-case`）で決まる。語彙は閉じており、集計単位が実際に切り替わる。
 - `minSampleSize` は未宣言なら `null` を報告する。既定値を置くと「代表10件」が統計的十分性として読まれてしまうためである。
 - held-out 集合の宣言があれば、受入評価は held-out 側で行う。candidate の導出に使った case での評価は自己確認になる。
 - precision / recall / cost / reversal は paired replay の入力から観測できないため、`evaluable: false` と `satisfied: null` を返す。黙って充足扱いにはしない。

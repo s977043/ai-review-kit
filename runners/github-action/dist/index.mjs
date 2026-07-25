@@ -45884,6 +45884,7 @@ function normalizePlannerMode(mode, { defaultMode = 'off' } = {}) {
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   J1: () => (/* binding */ proposePromotionCandidate),
 /* harmony export */   _I: () => (/* binding */ readFeedbackJsonl),
+/* harmony export */   aX: () => (/* binding */ nfc),
 /* harmony export */   d: () => (/* binding */ KNOWN_POLICY_VERSIONS),
 /* harmony export */   dj: () => (/* binding */ canonicalJson),
 /* harmony export */   e1: () => (/* binding */ CANDIDATE_POLICY_VERSION),
@@ -46297,7 +46298,13 @@ function normalizeEvidence(entries) {
   };
 }
 
-/** NFC-normalize a string; pass through null/undefined and non-strings. */
+/**
+ * NFC-normalize a string; pass through null/undefined and non-strings.
+ *
+ * Exported so every content-addressed surface normalizes identically: a
+ * consumer that skips it (or rolls its own) makes visually identical strings
+ * hash — or compare — differently on one side of the loop only.
+ */
 function nfc(value) {
   return typeof value === 'string' ? value.normalize('NFC') : (value ?? null);
 }
@@ -69657,6 +69664,12 @@ async function runReplay(parsed, output) {
     console.error(`Error: cannot read --spec ${parsed.evolveSpec}: ${err.message}`);
     return 1;
   }
+  // Checked before any property access: a file containing `null` or `[]` would
+  // otherwise throw a raw TypeError on `spec.manifest` instead of a usage error.
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
+    console.error(`Error: --spec ${parsed.evolveSpec} must contain a JSON object.`);
+    return 1;
+  }
 
   let result;
   try {
@@ -69963,7 +69976,10 @@ function parseArgs(argv) {
         if (args[0] && EVOLVE_SUBCOMMANDS.has(args[0])) {
           parsed.evolveSubcommand = args.shift();
         }
-        if (args[0] && !args[0].startsWith('-')) {
+        // `replay` takes NO positional: its dataset comes from --spec. Letting
+        // the first token become `parsed.target` would make the command accept
+        // and silently ignore it (`river evolve replay ./typo.json --spec x`).
+        if (parsed.evolveSubcommand !== 'replay' && args[0] && !args[0].startsWith('-')) {
           const token = args.shift();
           // A mistyped subcommand (`agregate`) must not be swallowed as a path
           // and reported as an empty, successful aggregate. Anything that is

@@ -208,7 +208,9 @@
         "unpairableBaseline",
         "unpairableCandidate",
         "duplicatesRemovedBaseline",
-        "duplicatesRemovedCandidate"
+        "duplicatesRemovedCandidate",
+        "severityConflictsBaseline",
+        "severityConflictsCandidate"
       ],
       "additionalProperties": false,
       "properties": {
@@ -223,7 +225,13 @@
         },
         "unpairableCandidate": { "type": "integer", "minimum": 0 },
         "duplicatesRemovedBaseline": { "type": "integer", "minimum": 0 },
-        "duplicatesRemovedCandidate": { "type": "integer", "minimum": 0 }
+        "duplicatesRemovedCandidate": { "type": "integer", "minimum": 0 },
+        "severityConflictsBaseline": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Duplicate fingerprints on this side that disagreed on severity. The collapse keeps the HIGHEST severity (fail-safe), so a `minor` duplicate can never hide a `critical` regression."
+        },
+        "severityConflictsCandidate": { "type": "integer", "minimum": 0 }
       }
     },
     "metrics": {
@@ -239,6 +247,8 @@
         "criticalAdditionCount",
         "unpairableFindingCount",
         "pairedCaseCount",
+        "datasetCaseCount",
+        "unpairedCaseCount",
         "denominator"
       ],
       "additionalProperties": false,
@@ -261,7 +271,21 @@
         },
         "unpairableFindingCount": { "type": "integer", "minimum": 0 },
         "pairedCaseCount": { "type": "integer", "minimum": 0 },
-        "denominator": { "type": "string" }
+        "datasetCaseCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Cases the manifest pinned. Dataset-wide, identical in every scope."
+        },
+        "unpairedCaseCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Dataset cases that could not be compared because one side is missing. Dataset-wide: a hole in the material regardless of which subset acceptance is judged on."
+        },
+        "denominator": {
+          "type": "string",
+          "enum": ["paired-finding", "paired-case"],
+          "description": "Unit `sampleSize` is counted in. A closed vocabulary because the aggregation actually switches on it: 'at least 3' must not mean findings while the reader declared cases."
+        }
       }
     }
   },
@@ -398,7 +422,9 @@
           "type": "object",
           "required": ["denominator"],
           "additionalProperties": false,
-          "properties": { "denominator": { "type": "string" } }
+          "properties": {
+            "denominator": { "type": "string", "enum": ["paired-finding", "paired-case"] }
+          }
         },
         "terminalReasonVocabulary": {
           "type": "array",
@@ -447,7 +473,14 @@
     },
     "pairing": {
       "type": "object",
-      "required": ["cases", "unpairedCases", "unkeyedRunCount"],
+      "required": [
+        "cases",
+        "datasetCaseCount",
+        "pairedCaseCount",
+        "unpairedCases",
+        "unkeyedRunCount",
+        "warnings"
+      ],
       "additionalProperties": false,
       "properties": {
         "cases": {
@@ -492,6 +525,13 @@
               }
             }
           }
+        },
+        "datasetCaseCount": { "type": "integer", "minimum": 0 },
+        "pairedCaseCount": { "type": "integer", "minimum": 0 },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Gaps in the material a human must see before reading the diff as a claim about the dataset (cases dropped because one side is missing, runs without a case key, an unevaluable acceptance scope)."
         },
         "unpairedCases": {
           "type": "object",
@@ -552,6 +592,7 @@
       "required": [
         "declaredProfileCount",
         "evaluatedOn",
+        "evaluable",
         "evaluations",
         "contract6",
         "decision",
@@ -567,6 +608,10 @@
           "type": "string",
           "enum": ["heldOut", "overall"],
           "description": "Acceptance is judged on the held-out set when one is declared: evaluating on the cases the candidate was derived from would be self-confirming."
+        },
+        "evaluable": {
+          "type": "boolean",
+          "description": "False when the evaluated scope contains no paired case. Every criterion is then reported unobserved (satisfied: null) instead of trivially satisfied on an empty set."
         },
         "evaluations": {
           "type": "array",
@@ -606,11 +651,25 @@
         },
         "contract6": {
           "type": "object",
-          "required": ["criticalRegressionCount", "criticalRegressionZero", "note"],
+          "required": [
+            "criticalRegressionCount",
+            "criticalRegressionZero",
+            "overallCriticalRegressionCount",
+            "note"
+          ],
           "additionalProperties": false,
           "properties": {
-            "criticalRegressionCount": { "type": "integer", "minimum": 0 },
-            "criticalRegressionZero": { "type": "boolean" },
+            "criticalRegressionCount": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "description": "Observed on the evaluated scope, or null when that scope has no paired case (no evidence either way)."
+            },
+            "criticalRegressionZero": { "type": ["boolean", "null"] },
+            "overallCriticalRegressionCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Always reported over every paired case, so a held-out scope cannot hide a regression seen elsewhere in the dataset."
+            },
             "note": { "type": "string" }
           }
         },
