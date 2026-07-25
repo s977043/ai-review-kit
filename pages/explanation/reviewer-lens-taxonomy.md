@@ -32,29 +32,37 @@ Lens は 3 つ目のテキソノミーではありません。上記 2 者を評
 
 ## 写像表 / Mapping Table
 
-各 Lens を、既存のルーターとロールへ写像します。充足度は Issue #1545 のカバレッジ分析（Covered / Partial / Gap）に対応します。
+各 Lens を、既存のルーター・review team ロール・`skills/registry.yaml` の registry skill へ写像します。
 
-| Lens         | 主な問い                                   | 実装領域別ルーター                 | review team ロール            | 充足度  |
-| ------------ | ------------------------------------------ | ---------------------------------- | ----------------------------- | ------- |
-| engineering  | 設計・保守性・既存構造・拡張性は妥当か     | `river-review-code`                | `bug-hunter`                  | Covered |
-| security     | 認証・権限・入力・データ保護に問題はないか | `river-review-security`            | `security-scanner`            | Covered |
-| qa           | 受入条件・境界値・異常系・回帰を検証したか | `river-review-testing`             | `test-gap`                    | Covered |
-| design       | UX・視認性・操作性・a11y に問題はないか    | `river-review-frontend`            | `frontend-reviewer`           | Covered |
-| architecture | 境界・依存・データフロー・契約を壊さないか | `river-review-architecture`        | （専任ロールなし）            | Partial |
-| operability  | 監視・障害対応・設定・デプロイは安全か     | `river-review-performance`（部分） | `ci-cd-reviewer`（部分）      | Partial |
-| devex        | API・CLI・導入・デバッグ体験を損なわないか | `river-review-docs`（部分）        | （専任ロールなし）            | Partial |
-| release      | migration・互換性・rollback は安全か       | （専任ルーターなし）               | `dependency-reviewer`（部分） | Partial |
-| product      | 要求・利用価値・事業ルールに適合するか     | （専任ルーターなし）               | （専任ロールなし）            | Gap     |
+| Lens         | 主な問い                                   | 実装領域別ルーター                 | review team ロール            | registry skill（代表例）                                                              | 充足度  |
+| ------------ | ------------------------------------------ | ---------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------- | ------- |
+| engineering  | 設計・保守性・既存構造・拡張性は妥当か     | `river-review-code`                | `bug-hunter`                  | `existing-pattern-conformance` / `async-correctness` / `nullability-contract`         | Covered |
+| security     | 認証・権限・入力・データ保護に問題はないか | `river-review-security`            | `security-scanner`            | `security-basic` / `secret-credential-scan` / `trust-boundaries-authz`                | Covered |
+| qa           | 受入条件・境界値・異常系・回帰を検証したか | `river-review-testing`             | `test-gap`                    | `test-existence` / `coverage-gap` / `flaky-test`                                      | Covered |
+| design       | UX・視認性・操作性・a11y に問題はないか    | `river-review-frontend`            | `frontend-reviewer`           | `design-system-component-reuse` / `design-token-enforcement` / `a11y-accessible-name` | Covered |
+| architecture | 境界・依存・データフロー・契約を壊さないか | `river-review-architecture`        | （専任ロールなし）            | `architecture-boundaries` / `architecture-traceability` / `data-flow-state-ownership` | Covered |
+| operability  | 監視・障害対応・設定・デプロイは安全か     | `river-review-performance`（部分） | `ci-cd-reviewer`（部分）      | `operability-slo` / `failure-modes-observability` / `availability-architecture`       | Covered |
+| devex        | API・CLI・導入・デバッグ体験を損なわないか | `river-review-docs`（部分）        | （専任ロールなし）            | `api-design` / `openapi-contract` / `api-compatibility` / `doc-hygiene`               | Covered |
+| release      | migration・互換性・rollback は安全か       | （専任ルーターなし）               | `dependency-reviewer`（部分） | `migration-rollout-rollback` / `migration-safety` / `api-versioning-compat`           | Covered |
+| product      | 要求・利用価値・事業ルールに適合するか     | （専任ルーターなし）               | （専任ロールなし）            | （該当なし）                                                                          | Gap     |
 
 充足度の読み方は次のとおりです。
 
-- Covered — ルーターとロールの双方が写像先を持つ。
-- Partial — 一方のみ、または部分的にしか写像先を持たない。
-- Gap — 専任の写像先がなく、必要になった時点で追加を検討する。
+- Covered — ルーター・ロール・registry skill のいずれかの組み合わせで、評価目的を満たす写像先が存在する。
+- Gap — どの写像先も存在せず、必要になった時点で追加を検討する。
+
+:::info[充足度は registry skill 込みで再計算済み（#1545 Phase 1.5 / U2）]
+本表の初版は 7 ルーターと 6 ロールだけを写像先として数えており、`skills/registry.yaml` の registry skill を勘定に入れていませんでした。そのため operability / release / devex / architecture が実態より低い Partial と表示され、「Gap が多いので Lens を増やすべきだ」という誤った投資判断を誘発する状態にありました。再計算後の真の Gap は product の 1 件のみです。専任ロールが不在でも registry skill が評価目的を満たすなら Covered と読みます。
+:::
 
 ## Gap の扱い / Handling Gaps
 
-Gap と Partial の Lens（product / architecture の専任ロール / privacy / accessibility / release）は、真のギャップが運用で観測された場合にのみ registry skill として追加します。先回りしてレビュアーを増やすことはしません。product / design のようにコード外の成果物を必要とする Lens は、[artifact 入力契約](../reference/artifact-input-contract.md)経由で成果物を受け取ります。
+Gap の Lens（現時点では product のみ）は、真のギャップが運用で観測された場合にのみ registry skill として追加します。先回りしてレビュアーを増やすことはしません。product / design のようにコード外の成果物を必要とする Lens は、[artifact 入力契約](../reference/artifact-input-contract.md)経由で成果物を受け取ります。
+
+## 設計決定 / Design Decisions
+
+- Lens 単位の有効性集計（Issue #1545 Phase 3）では、`lens` を feedback entry の保存フィールドにしない。集計時に `skillId` から本文書の写像表経由で導出する。
+- 理由は、保存すると Issue #1574 契約4（content-addressed candidate ID）の冪等性と契約5（clusterKey 互換）が写像表の改訂で壊れるためである。
 
 ## PlanGate との境界 / Boundary with PlanGate
 

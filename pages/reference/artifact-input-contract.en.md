@@ -49,6 +49,59 @@ The input artifacts recognized by River Review are listed below. See "Legend" at
 - **Format**: UTF-8 Markdown. Heading structure and bullets are unconstrained.
 - **Size guideline**: 100 KB or less per file recommended. Beyond that, River Review may apply diff optimization (summarization / trimming).
 - **When absent**: Skills referencing the artifact skip their observation and record it in `skippedSkills`.
+- **`reviewSignals` (optional)**: Structured signals for automatic reviewer selection, supplied as a field on the review plan object rather than in the Markdown body. See the next section.
+
+### `reviewSignals` (optional signals carried on the review plan)
+
+`reviewSignals` is an optional input that gives extra hints to reviewer role auto-selection under `--reviewers auto`. It is supplied as a **field on the review plan object**, not in the Markdown body of `plan.md` (the implementation reads it at `context.plan.reviewSignals`). River Review owns the vocabulary; it is not tied to the format of any particular upstream workflow.
+
+- **Format**: JSON object with a `stage` string and a set of boolean signal keys.
+- **Supply channel**: Programmatic embedding — the review plan passed to `runLocalReview({ context })`. It is not exposed as a CLI flag or a dedicated file.
+- **Producer**: No producer exists in this repository; supplying the value is the host's responsibility. PlanGate is only one possible supplier, and River Review acts purely as a consumer.
+- **When absent**: Absence is the default. `--reviewers auto` selects roles from file types and risk assessment alone, behaving exactly as it did before `reviewSignals` existed.
+
+#### `stage` vocabulary
+
+| `stage`        | Roles added                    |
+| -------------- | ------------------------------ |
+| `requirements` | (none)                         |
+| `plan`         | `security-scanner`, `test-gap` |
+| `design`       | `frontend-reviewer`            |
+| `exec`         | `security-scanner`             |
+| `verify`       | `test-gap`                     |
+| `release`      | `security-scanner`             |
+
+An unknown `stage` value is ignored and adds no role.
+
+#### Signal keys
+
+| Signal key             | Role added          |
+| ---------------------- | ------------------- |
+| `touchesAuth`          | `security-scanner`  |
+| `changesPermissions`   | `security-scanner`  |
+| `handlesSensitiveData` | `security-scanner`  |
+| `databaseMigration`    | `security-scanner`  |
+| `breakingChange`       | `security-scanner`  |
+| `changesUi`            | `frontend-reviewer` |
+| `changesUserFlow`      | `frontend-reviewer` |
+| `deploymentChange`     | `ci-cd-reviewer`    |
+
+- Only truthy keys are evaluated; unknown keys are ignored.
+- `changesPublicApi` / `changesCliInterface` / `changesInstallation` correspond to the devex Lens and deliberately map to no role, because no dedicated role exists for it.
+- Signals only **add** roles. They never remove anything from the existing selection, including the always-on `bug-hunter`.
+- For the Lens correspondence, see [Reviewer Lens Taxonomy](../explanation/reviewer-lens-taxonomy.en.md).
+
+Example:
+
+```json
+{
+  "reviewSignals": {
+    "stage": "exec",
+    "touchesAuth": true,
+    "changesUi": true
+  }
+}
+```
 
 ### `review-self` / `review-external`
 
@@ -194,6 +247,7 @@ This contract treats PlanGate as **one of several possible producers** and delib
 - Hard-coding PlanGate-specific directory layouts (e.g. `plangate/<phase>/`) as default paths.
 - Adopting artifact names tied to PlanGate-internal commands or execution models.
 - Assuming PlanGate versions and River Review skill versions are co-released.
+- Adopting a PlanGate-specific signal format as the `reviewSignals` contract. The `stage` vocabulary and signal keys are defined by River Review; PlanGate is treated as one possible supplier.
 
 This keeps River Review usable for workflows other than PlanGate or for artifacts generated manually.
 

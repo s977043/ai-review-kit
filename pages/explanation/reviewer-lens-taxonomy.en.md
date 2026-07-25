@@ -32,29 +32,37 @@ A Lens is not a third taxonomy. It is a reading that maps those two onto evaluat
 
 ## Mapping Table
 
-Each Lens maps onto the existing routers and roles. The coverage column corresponds to the Issue #1545 coverage analysis (Covered / Partial / Gap).
+Each Lens maps onto the existing routers, review team roles, and the registry skills in `skills/registry.yaml`.
 
-| Lens         | Core question                                             | Implementation-area router           | Review team role                | Coverage |
-| ------------ | --------------------------------------------------------- | ------------------------------------ | ------------------------------- | -------- |
-| engineering  | Are design, maintainability, and extensibility sound?     | `river-review-code`                  | `bug-hunter`                    | Covered  |
-| security     | Are authn, authz, input, and data protection safe?        | `river-review-security`              | `security-scanner`              | Covered  |
-| qa           | Are acceptance criteria, edges, and regressions covered?  | `river-review-testing`               | `test-gap`                      | Covered  |
-| design       | Are UX, legibility, usability, and a11y sound?            | `river-review-frontend`              | `frontend-reviewer`             | Covered  |
-| architecture | Do boundaries, deps, dataflow, and contracts hold?        | `river-review-architecture`          | (no dedicated role)             | Partial  |
-| operability  | Are monitoring, incident response, config, deploy safe?   | `river-review-performance` (partial) | `ci-cd-reviewer` (partial)      | Partial  |
-| devex        | Does it avoid harming API, CLI, setup, and debugging?     | `river-review-docs` (partial)        | (no dedicated role)             | Partial  |
-| release      | Are migration, compatibility, and rollback safe?          | (no dedicated router)                | `dependency-reviewer` (partial) | Partial  |
-| product      | Does it fit requirements, user value, and business rules? | (no dedicated router)                | (no dedicated role)             | Gap      |
+| Lens         | Core question                                             | Implementation-area router           | Review team role                | Registry skills (examples)                                                            | Coverage |
+| ------------ | --------------------------------------------------------- | ------------------------------------ | ------------------------------- | ------------------------------------------------------------------------------------- | -------- |
+| engineering  | Are design, maintainability, and extensibility sound?     | `river-review-code`                  | `bug-hunter`                    | `existing-pattern-conformance` / `async-correctness` / `nullability-contract`         | Covered  |
+| security     | Are authn, authz, input, and data protection safe?        | `river-review-security`              | `security-scanner`              | `security-basic` / `secret-credential-scan` / `trust-boundaries-authz`                | Covered  |
+| qa           | Are acceptance criteria, edges, and regressions covered?  | `river-review-testing`               | `test-gap`                      | `test-existence` / `coverage-gap` / `flaky-test`                                      | Covered  |
+| design       | Are UX, legibility, usability, and a11y sound?            | `river-review-frontend`              | `frontend-reviewer`             | `design-system-component-reuse` / `design-token-enforcement` / `a11y-accessible-name` | Covered  |
+| architecture | Do boundaries, deps, dataflow, and contracts hold?        | `river-review-architecture`          | (no dedicated role)             | `architecture-boundaries` / `architecture-traceability` / `data-flow-state-ownership` | Covered  |
+| operability  | Are monitoring, incident response, config, deploy safe?   | `river-review-performance` (partial) | `ci-cd-reviewer` (partial)      | `operability-slo` / `failure-modes-observability` / `availability-architecture`       | Covered  |
+| devex        | Does it avoid harming API, CLI, setup, and debugging?     | `river-review-docs` (partial)        | (no dedicated role)             | `api-design` / `openapi-contract` / `api-compatibility` / `doc-hygiene`               | Covered  |
+| release      | Are migration, compatibility, and rollback safe?          | (no dedicated router)                | `dependency-reviewer` (partial) | `migration-rollout-rollback` / `migration-safety` / `api-versioning-compat`           | Covered  |
+| product      | Does it fit requirements, user value, and business rules? | (no dedicated router)                | (no dedicated role)             | (none)                                                                                | Gap      |
 
 Read the coverage column as follows.
 
-- Covered — both a router and a role have a mapping target.
-- Partial — only one side, or only a partial target, exists.
-- Gap — no dedicated target exists; consider adding one when the need arises.
+- Covered — some combination of router, role, and registry skills provides a mapping target for the evaluation purpose.
+- Gap — no mapping target exists; consider adding one when the need arises.
+
+:::info[Coverage recomputed with registry skills included (#1545 Phase 1.5 / U2)]
+The first version of this table counted only the seven routers and six roles, ignoring the registry skills in `skills/registry.yaml`. As a result operability, release, devex, and architecture were shown as Partial even though they were covered, which invites the wrong investment decision — "there are many Gaps, so add more Lenses." After the recomputation the only true Gap is product. A Lens counts as Covered when registry skills satisfy its evaluation purpose, even with no dedicated role.
+:::
 
 ## Handling Gaps
 
-The Gap and Partial Lenses (product, the dedicated architecture role, privacy, accessibility, release) are added as registry skills only when a real gap is observed in practice. Reviewers are not grown ahead of that signal. Lenses that need out-of-code artifacts, such as product or design, receive those artifacts through the [artifact input contract](../reference/artifact-input-contract.en.md).
+Gap Lenses (currently product only) are added as registry skills only when a real gap is observed in practice. Reviewers are not grown ahead of that signal. Lenses that need out-of-code artifacts, such as product or design, receive those artifacts through the [artifact input contract](../reference/artifact-input-contract.en.md).
+
+## Design Decisions
+
+- For per-Lens effectiveness aggregation (Issue #1545 Phase 3), `lens` is not stored as a field on a feedback entry. It is derived at aggregation time from `skillId` through the mapping table in this document.
+- Storing it would break the idempotency of Issue #1574 contract 4 (content-addressed candidate ID) and the clusterKey compatibility of contract 5 whenever the mapping table is revised.
 
 ## Boundary with PlanGate
 
