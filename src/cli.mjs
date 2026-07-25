@@ -78,6 +78,13 @@ Commands:
                         (#1574 P1). Prints evidence provenance, two-stage
                         clusters, and at most one shadow candidate. Writes
                         nothing (--min <n> --month YYYY-MM; --output json)
+  evolve replay         Read-only paired replay of an experiment spec
+                        (#1574 P2). Pins an immutable Experiment Manifest,
+                        pairs baseline vs candidate findings, and reports the
+                        delta against the declared per-profile acceptance
+                        criteria. Never re-runs a review and never decides
+                        adoption (--spec <file> --expect-manifest <id>;
+                        --output json)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -130,9 +137,9 @@ Commands:
 function parseArgs(argv) {
   const args = [...argv];
   const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
-  // #1574 P1: only `aggregate` exists. Matching against a known set (rather
+  // #1574 P1 `aggregate` / P2 `replay`. Matching against a known set (rather
   // than "first non-flag token") keeps `river evolve <path>` working.
-  const EVOLVE_SUBCOMMANDS = new Set(['aggregate']);
+  const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay']);
   // Global options the shared parser below handles for `evolve`. Anything else
   // starting with `-` is rejected rather than silently ignored.
   const EVOLVE_SHARED_OPTIONS = new Set(['--output', '-h', '--help', '--debug']);
@@ -203,10 +210,12 @@ function parseArgs(argv) {
     promoteClusterKey: null,
     promotePolicyVersion: null,
     promoteUnknownOption: null,
-    // evolve subcommand fields (#1574 P1 Shadow aggregate)
+    // evolve subcommand fields (#1574 P1 Shadow aggregate / P2 Paired replay)
     evolveSubcommand: null,
     evolveMin: null,
     evolveMonth: null,
+    evolveSpec: null,
+    evolveExpectManifest: null,
     evolveExtraArgs: [],
     evolveUnknownOption: null,
     // skills subcommand fields
@@ -529,6 +538,26 @@ function parseArgs(argv) {
           break;
         }
         parsed.evolveMonth = value;
+        continue;
+      }
+      if (arg === '--spec') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --spec option requires a file path.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.evolveSpec = value;
+        continue;
+      }
+      if (arg === '--expect-manifest') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --expect-manifest option requires a manifest id or hash.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.evolveExpectManifest = value;
         continue;
       }
       // Options that are not evolve's own and not handled by the shared parser

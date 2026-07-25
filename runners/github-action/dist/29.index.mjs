@@ -7,10 +7,12 @@ export const modules = {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   DEFAULT_MIN_RECURRENCE: () => (/* binding */ DEFAULT_MIN_RECURRENCE),
+/* harmony export */   L5: () => (/* binding */ buildRunEvidence),
+/* harmony export */   Mc: () => (/* binding */ computeCandidateId),
 /* harmony export */   buildShadowAggregate: () => (/* binding */ buildShadowAggregate),
 /* harmony export */   formatShadowAggregateMarkdown: () => (/* binding */ formatShadowAggregateMarkdown)
 /* harmony export */ });
-/* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, EVIDENCE_SOURCES, P1_TRUST_LEVEL, deriveReviewRunId, deriveFeedbackReviewRunId, evidenceTrustLevel, buildRunEvidence, buildClusters, computeCandidateId */
+/* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, EVIDENCE_SOURCES, P1_TRUST_LEVEL, deriveReviewRunId, deriveFeedbackReviewRunId, evidenceTrustLevel, buildClusters */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7598);
 /* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3077);
 // Shadow aggregate (#1574 P1) — read-only multi-run aggregation.
