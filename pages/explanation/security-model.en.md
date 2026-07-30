@@ -42,6 +42,17 @@ The diff is untrusted input placed into the prompt. That is the prompt-injection
 - Secret redaction runs on both the input and the output.
 - No dynamic code execution or deserialization happens, so an RCE-style "malicious payload" does not apply.
 
+## Where the review criteria come from
+
+The review criteria themselves live in the same repository as the diff. [`loadProjectRules`](https://github.com/s977043/river-review/blob/main/src/lib/rules.mjs) reads `.river/rules.md` and `.river/rules.d/*.md` straight from the working tree.
+
+- **Rules trust boundary**: `.river/rules.md` and `.river/rules.d/*.md` sit inside the reviewed agent's write authority. The loaded text is passed into the prompt as trusted policy.
+- **No provenance mechanism**: there is no pin to a base ref, no blob SHA record of the loaded rules, no schema validation, and no floor of criteria that a PR cannot weaken.
+- **Consequence on the Action path**: the GitHub Action uses the rules in the working tree it checked out, so a change that weakens `.river/rules.md` inside a PR takes effect on that same PR's review criteria immediately.
+- **The worst case stays bounded**: the Action defaults to `dry_run: true` (report-only) and has no approve or auto-merge path. The impact stays at "a human reads a lenient comment produced under weakened criteria".
+
+Rules are an input with no tamper evidence; pinning their provenance (a base pin, recording the blob SHA) is the caller / CI's responsibility. The immediate harm is small, but leaving this trust boundary undocumented is itself the risk. The same kind of statement is written for the runs store in the [loop convergence contract](../reference/loop-convergence-contract.en.md).
+
 ## Common misconceptions
 
 - **"Large change → run all skills" is not code execution.** It means applying all review lenses (test coverage, naming, flakiness, and so on); no privileged operation or shell is involved.
