@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.65.0](https://github.com/s977043/river-review/compare/v1.64.0...v1.65.0) (2026-07-30)
+
+
+### Features
+
+* **skills:** review-criteria-integrity 観点でレビュー基準の自己弱体化を検出する ([#1674](https://github.com/s977043/river-review/issues/1674)) ([a1ce3ff](https://github.com/s977043/river-review/commit/a1ce3ff42db407fcf47ca83341532305787f0dfc)), closes [#1669](https://github.com/s977043/river-review/issues/1669)
+
 ## [1.64.0](https://github.com/s977043/river-review/compare/v1.63.0...v1.64.0) (2026-07-25)
 
 
