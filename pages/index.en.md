@@ -20,3 +20,9 @@ Docs live under `pages/` and are served at `/docs`. Diátaxis is expressed via d
 - `guides/quickstart.md` / `guides/quickstart.en.md`
 - `reference/skill-schema-reference.md` / `reference/skill-schema-reference.en.md`
 - `explanation/riverbed-memory.md` / `explanation/riverbed-memory.en.md`
+
+## Understand the concept
+
+- [Concept: turning review into an organizational judgment asset](./explanation/concept.en.md) — the problems, the core model, the review targets, the responsibility boundary, and the non-goals.
+- [Welcome to River Review](./explanation/intro.en.md) — a short introduction for first-time readers.
+- [What is River Review](./explanation/what-is-river-review.en.md) — a product overview covering features, usage, and the execution model.

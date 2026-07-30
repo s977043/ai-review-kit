@@ -2,7 +2,7 @@
 id: security-model
 title: River Review のセキュリティモデル
 sidebar_label: セキュリティモデル
-description: River Review 自身がなぜ設計上安全かをまとめます。スキルは実行コードではなく、レビューは読み取り専用で、出力はコメントのみ、最終判断は人間が持ちます。
+description: River Review 自身がなぜ設計上安全かをまとめます。スキルは実行コードではなく、レビューは読み取り専用で、出力はコメントのみ、承認やマージの経路を持ちません。
 keywords:
   - security model
   - AIコードレビュー 安全性
@@ -23,7 +23,7 @@ River Review のスキルは、フロントマターとプロンプト本文か�
 
 レビューの出力は `<file>:<line>: <message>` 形式の指摘です。形式に合わない出力は破棄され、フォールバックは決定論的なヒューリスティックに限られます。River Review はコードを変更せず、指摘と判定を材料として提示するだけです。
 
-## 最終判断は人間が持つ（human-in-the-loop）
+## 承認とマージの経路を持たない
 
 - GitHub Action は既定で `dry_run: true` である。
 - PR への投稿はコメント（`COMMENT`）のみで、承認や自動マージの経路は存在しない。

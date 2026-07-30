@@ -25,6 +25,12 @@ River Review のドキュメントは、日本語を基本言語として提供�
 - `reference/skill-schema-reference.md` / `reference/skill-schema-reference.en.md`
 - `explanation/riverbed-memory.md` / `explanation/riverbed-memory.en.md`
 
+## コンセプトを知る
+
+- [コンセプト（レビューを、組織の判断資産へ）](./explanation/concept.md) — 課題認識、コアモデル、レビュー対象、責任境界、目指さないものをまとめたコンセプトの解説。
+- [River Review へようこそ](./explanation/intro.md) — はじめての方向けの短い導入。
+- [River Review とは](./explanation/what-is-river-review.md) — 機能・利用方法・実行モデルを含むプロダクト概要。
+
 ## はじめる
 
 - [River Review をはじめる](/tutorials/getting-started)
