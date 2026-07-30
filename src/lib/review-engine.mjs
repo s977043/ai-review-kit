@@ -733,6 +733,11 @@ export async function generateReview({
       // #1644 Phase 1: verifier verdict (machine determination, falling back to
       // the LLM self-report and then to the fail-safe default `in-diff`).
       scope: normalizeScope(c.scope ?? parsed.scope),
+      // #1666 (#1545 Phase 2): traceability refs, self-reported by the filling
+      // skills. Null when the reviewer supplied no label — the artifact IDs are
+      // never invented here, so a missing artifact stays missing.
+      criterionRefs: parsed.criterionRefs,
+      artifactRefs: parsed.artifactRefs,
     };
   });
 

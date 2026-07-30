@@ -253,13 +253,23 @@ function resolveFindingScope({ finding, diffFiles }) {
  * @returns {{ verified: boolean, reasons: string[], checks: object, scope: 'in-diff'|'pre-existing', scopeSource: string, scopeSelfReported: string|null, scopeMismatch: boolean }}
  */
 function verifyFinding({ finding, diff, skill, fileTypes, diffFiles }) {
+  // #1666: traceability refs are additive metadata and MUST NOT move the
+  // `verified` decision in either direction. RE_EVIDENCE / RE_ACTIONABLE are
+  // deliberately greedy to end-of-line, so a trailing `ArtifactRefs:
+  // plan.md#AC-4` would otherwise be read as an evidence file reference — and
+  // the referenced artifact is by design not in the diff, which rejected the
+  // finding. Run every message-based check against the pre-#1666 message.
+  const findingForChecks =
+    typeof finding?.message === 'string'
+      ? { ...finding, message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .stripTraceabilityRefs */ ["in"])(finding.message) }
+      : finding;
   const checks = {
-    evidenceExists: checkEvidenceExists(finding),
-    evidenceInDiff: checkEvidenceInDiff(finding, diff),
+    evidenceExists: checkEvidenceExists(findingForChecks),
+    evidenceInDiff: checkEvidenceInDiff(findingForChecks, diff),
     phaseCoherent: checkPhaseCoherent(finding, skill),
     filePhaseCoherent: checkFilePhaseCoherent(finding, fileTypes),
-    severityJustified: checkSeverityJustified(finding, skill),
-    suggestionActionable: checkSuggestionActionable(finding),
+    severityJustified: checkSeverityJustified(findingForChecks, skill),
+    suggestionActionable: checkSuggestionActionable(findingForChecks),
   };
 
   const reasons = [];

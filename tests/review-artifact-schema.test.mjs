@@ -136,6 +136,38 @@ describe('review-artifact.schema.json', () => {
     assert.equal(ok, true, JSON.stringify(validate.errors));
   });
 
+  describe('traceability refs (#1666 / #1545 Phase 2 — additive)', () => {
+    test('finding without criterionRefs / artifactRefs stays valid (backward compat)', () => {
+      const ok = validate(minimalArtifact({ findings: [validFinding()] }));
+      assert.equal(ok, true, JSON.stringify(validate.errors));
+    });
+
+    test('accepts criterion and artifact ref arrays', () => {
+      const ok = validate(
+        minimalArtifact({
+          findings: [
+            validFinding({
+              criterionRefs: ['AC-4', 'TC-7'],
+              artifactRefs: ['plan.md#AC-4', 'todo.md#TASK-3'],
+            }),
+          ],
+        })
+      );
+      assert.equal(ok, true, JSON.stringify(validate.errors));
+    });
+
+    test('rejects a non-array or empty-string ref value', () => {
+      assert.equal(
+        validate(minimalArtifact({ findings: [validFinding({ criterionRefs: 'AC-4' })] })),
+        false
+      );
+      assert.equal(
+        validate(minimalArtifact({ findings: [validFinding({ artifactRefs: [''] })] })),
+        false
+      );
+    });
+  });
+
   describe('synthesis fields (#911 Phase 2 — additive)', () => {
     test('finding without sourceKind / agreement / validatedStatus stays valid (backward compat)', () => {
       const ok = validate(minimalArtifact({ findings: [validFinding()] }));

@@ -270,3 +270,160 @@ test('generateReview assigns a scope to every finding (fail-safe in-diff)', asyn
   }
   assert.equal(typeof result.debug.scopeStats.mismatch, 'number');
 });
+
+// ---------------------------------------------------------------------------
+// #1666 (#1545 Phase 2): criterionRefs / artifactRefs traceability labels
+// ---------------------------------------------------------------------------
+
+test('parseFindingMessage extracts CriterionRefs / ArtifactRefs without disturbing other labels', () => {
+  const parsed = parseFindingMessage(
+    'Finding: 問題 Evidence: 根拠 Impact: 影響 Fix: 直す Severity: warning Confidence: high CriterionRefs: AC-4, TC-7 ArtifactRefs: plan.md#AC-4, todo.md#TASK-3'
+  );
+  assert.deepEqual(parsed.criterionRefs, ['AC-4', 'TC-7']);
+  assert.deepEqual(parsed.artifactRefs, ['plan.md#AC-4', 'todo.md#TASK-3']);
+  assert.equal(parsed.severity, 'warning');
+  assert.equal(parsed.confidence, 'high');
+  assert.equal(parsed.suggestion, '直す');
+  assert.equal(parsed.evidence[0], '根拠');
+});
+
+test('parseFindingMessage keeps refs out of a preceding capture regardless of label order', () => {
+  // Reversal boundary: the refs labels may appear before Severity/Confidence,
+  // in either order, and must terminate the Fix capture rather than be
+  // swallowed by it.
+  const parsed = parseFindingMessage(
+    'Finding: 問題 Evidence: 根拠 Fix: 直す ArtifactRefs: plan.md#AC-4 CriterionRefs: AC-4 Severity: warning Confidence: high'
+  );
+  assert.equal(parsed.suggestion, '直す');
+  assert.deepEqual(parsed.criterionRefs, ['AC-4']);
+  assert.deepEqual(parsed.artifactRefs, ['plan.md#AC-4']);
+  assert.equal(parsed.severity, 'warning');
+});
+
+test('parseFindingMessage returns null refs for an existing unlabeled message (back-compat)', () => {
+  const msg = formatFindingMessage({
+    finding: 'トークンが平文',
+    evidence: 'SECRET_TOKEN = "abc"',
+    impact: '情報漏洩',
+    fix: '環境変数に移す',
+    severity: 'blocker',
+    confidence: 'high',
+  });
+  const parsed = parseFindingMessage(msg);
+  assert.equal(parsed.criterionRefs, null);
+  assert.equal(parsed.artifactRefs, null);
+  // Every pre-existing field is byte-identical to the pre-#1666 behavior.
+  assert.equal(parsed.title, 'トークンが平文');
+  assert.deepEqual(parsed.evidence, ['SECRET_TOKEN = "abc"']);
+  assert.equal(parsed.impact, '情報漏洩');
+  assert.equal(parsed.suggestion, '環境変数に移す');
+  assert.equal(parsed.severity, 'blocker');
+  assert.equal(parsed.confidence, 'high');
+});
+
+test('parseFindingMessage does not truncate content on a prose refs mention (#1648 W3 regression)', () => {
+  // The #1648 W3 lesson: a bare label in LABEL_ALTERNATION truncates any message
+  // whose prose contains the same word. Refs values are free-form, so the guard
+  // is shape-based (whitespace-free comma-separated tokens) plus case-sensitive
+  // label matching (the lowerCamel schema field name is not a label).
+  const japaneseProse = parseFindingMessage(
+    'Finding: 参照が無い Evidence: finding に CriterionRefs: を付けていない Impact: 追跡不能 Fix: docs に ArtifactRefs: の説明を足す Severity: warning Confidence: high'
+  );
+  assert.equal(japaneseProse.evidence[0], 'finding に CriterionRefs: を付けていない');
+  assert.equal(japaneseProse.suggestion, 'docs に ArtifactRefs: の説明を足す');
+  assert.equal(japaneseProse.criterionRefs, null, 'prose occurrence is not a self-report');
+  assert.equal(japaneseProse.artifactRefs, null);
+
+  const lowerCamelProse = parseFindingMessage(
+    'Finding: 命名 Evidence: the schema field criterionRefs: AC-4 is quoted here Fix: rename artifactRefs: plan.md#AC-4 in the doc Severity: warning Confidence: high'
+  );
+  assert.equal(lowerCamelProse.evidence[0], 'the schema field criterionRefs: AC-4 is quoted here');
+  assert.equal(lowerCamelProse.suggestion, 'rename artifactRefs: plan.md#AC-4 in the doc');
+  assert.equal(lowerCamelProse.criterionRefs, null, 'the label is case-sensitive');
+  assert.equal(lowerCamelProse.artifactRefs, null);
+
+  const englishProse = parseFindingMessage(
+    'Finding: x Evidence: the plan lists CriterionRefs for every task Fix: add CriterionRefs to the template Severity: warning Confidence: high'
+  );
+  assert.equal(englishProse.evidence[0], 'the plan lists CriterionRefs for every task');
+  assert.equal(englishProse.suggestion, 'add CriterionRefs to the template');
+  assert.equal(englishProse.criterionRefs, null, 'a colon-less mention is not a label');
+});
+
+test('parseFindingMessage handles empty, reserved-word and oversized refs boundaries', () => {
+  // Empty value: the label is present but carries no token.
+  const empty = parseFindingMessage(
+    'Finding: 問題 Evidence: 根拠 Fix: 直す CriterionRefs: Severity: warning Confidence: high'
+  );
+  assert.equal(empty.criterionRefs, null, 'an empty list is null, never []');
+  assert.equal(empty.severity, 'warning', 'the following label is not swallowed');
+
+  // A stray trailing comma must not let the list consume the next label.
+  const trailingComma = parseFindingMessage(
+    'Finding: 問題 Evidence: 根拠 Fix: 直す CriterionRefs: AC-4, Severity: warning Confidence: high'
+  );
+  assert.deepEqual(trailingComma.criterionRefs, ['AC-4']);
+  assert.equal(trailingComma.severity, 'warning');
+  assert.equal(trailingComma.confidence, 'high');
+
+  // Oversized value: many refs and a long single token stay intact and linear.
+  const manyRefs = Array.from({ length: 200 }, (_, i) => `AC-${i + 1}`);
+  const longToken = `plan.md#${'a'.repeat(2000)}`;
+  const started = Date.now();
+  const oversized = parseFindingMessage(
+    `Finding: 問題 Evidence: 根拠 Fix: 直す CriterionRefs: ${manyRefs.join(', ')} ArtifactRefs: ${longToken} Severity: warning Confidence: high`
+  );
+  assert.equal(oversized.criterionRefs.length, 200);
+  assert.equal(oversized.criterionRefs[199], 'AC-200');
+  assert.deepEqual(oversized.artifactRefs, [longToken]);
+  assert.equal(oversized.severity, 'warning');
+  assert.ok(Date.now() - started < 2000, 'parsing must not degrade on long ref lists');
+});
+
+test('generateReview carries CriterionRefs / ArtifactRefs from the message onto the finding', async () => {
+  const diffText = fs.readFileSync(
+    'tests/fixtures/planner-dataset/diffs/midstream-security-hardcoded-token.diff',
+    'utf8'
+  );
+  const parsedDiff = parseUnifiedDiff(diffText);
+  const diff = {
+    diffText,
+    files: parsedDiff.files,
+    changedFiles: parsedDiff.files.map((f) => f.path),
+  };
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }], skipped: [] };
+  const targetFile = parsedDiff.files[0].path;
+  const rawLlmText = [
+    `${targetFile}:3: Finding: token is hardcoded Evidence: a literal token is added Impact: leak risk Fix: move the token to an environment variable Severity: warning Confidence: high CriterionRefs: AC-4, TC-7 ArtifactRefs: plan.md#AC-4`,
+    `${targetFile}:4: Finding: no rotation path Evidence: no rotation helper is added Impact: stale credential Fix: document the rotation procedure Severity: nit Confidence: medium`,
+  ].join('\n');
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: rawLlmText } }] }),
+  });
+  try {
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: 'midstream',
+      dryRun: false,
+      includeFallback: false,
+      apiKey: 'test-key',
+    });
+    assert.equal(result.debug.llmUsed, true);
+    const withRefs = result.findings.find((f) => f.criterionRefs);
+    assert.ok(withRefs, 'the labeled finding must survive to the findings array');
+    assert.deepEqual(withRefs.criterionRefs, ['AC-4', 'TC-7']);
+    assert.deepEqual(withRefs.artifactRefs, ['plan.md#AC-4']);
+    // A finding without the labels keeps null — the refs are never invented.
+    const withoutRefs = result.findings.find((f) => f.criterionRefs === null);
+    assert.ok(withoutRefs, 'unlabeled findings stay unlabeled');
+    assert.equal(withoutRefs.artifactRefs, null);
+    // Non-interference: the refs never take part in the verified decision.
+    assert.equal(result.debug.verifierStats.rejected, 0);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

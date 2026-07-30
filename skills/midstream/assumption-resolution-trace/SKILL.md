@@ -110,7 +110,23 @@ Why: plan の assumption と diff の突合は artifact 参照による決定論
   evidence_missing: <解消の証拠が diff・PR 本文・テストに無いこと>(探索した検索語: `<grep pattern>`)
   Severity: blocker | warning | nit（較正基準に従う）
   resolution: <実装で確認 / PR 本文へ解消根拠 / open question を明示繰り越し>（merge 前必須 / merge 後観測で足りる を明記）
+  CriterionRefs: <AC / テストケース ID のカンマ区切り>（判明している場合のみ）
+  ArtifactRefs: <artifact アンカーのカンマ区切り>（判明している場合のみ）
 ```
+
+### トレーサビリティ ref の付記（#1666 / #1545 Phase 2）
+
+plan artifact 由来の受け入れ条件 ID・テストケース ID・見出しアンカーが**判明している場合のみ**、finding に次のラベルを付ける。
+
+- `CriterionRefs:` — その finding が紐づく受け入れ条件 / テストケースの ID（例: `AC-4, TC-7`）。
+- `ArtifactRefs:` — その finding が紐づく artifact のアンカー（例: `plan.md#assumptions-3, todo.md#TASK-3`）。
+
+制約は次のとおり。
+
+- **ID を捏造しない**。artifact に実在する見出し・ID をそのまま転記する。採番や正規化は行わない（名前空間は River Review が所有しない）。
+- **artifact が欠損しているときは付けない**。Pre-execution Gate の既存挙動（全評価 / 部分評価 / skip）は変えない。部分評価では PR 本文へ inline された項目だけを対象とする。
+- 値は**空白を含まないトークンのカンマ区切り**にする。空白を含む散文はラベルとして認識されない。
+- 付記は additive なメタデータであり、severity・`verified` 判定・ゲート判定には影響しない。
 
 ## Good / Bad Examples
 
@@ -122,6 +138,7 @@ src/lib/rate-limit.mjs:12: [Assumption 未解消] plan の「上流 API は 429 
   evidence_missing: 429 を受けた際の後処理・その前提を確認したテストが diff・repo に無い（検索語: `429` を src/ と tests/ に grep）
   Severity: warning
   resolution: 429 応答の処理経路を実装で確認するか、前提を検証した契約テストを追加する。merge 前に解消証拠を残すべき
+  ArtifactRefs: plan.md#assumptions-3
 ```
 
 ### Bad

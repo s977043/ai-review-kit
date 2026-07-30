@@ -509,6 +509,12 @@ export function formatJsonOutput(result, phase) {
       // output.schema.json, so `scope` must reach it for the schema field to be
       // observable at all. yaml/html surfaces stay unchanged (Phase 2).
       ...(f.scope ? { scope: f.scope } : {}),
+      // #1666 (#1545 Phase 2): same reachability rule as `scope` — a schema
+      // field that stops at the finding object is an unreachable spec. Guard on
+      // `.length` (not truthiness) so an empty array is omitted rather than
+      // serialized as `[]`. yaml/html surfaces stay unchanged (out of Phase 2).
+      ...(f.criterionRefs?.length ? { criterionRefs: f.criterionRefs } : {}),
+      ...(f.artifactRefs?.length ? { artifactRefs: f.artifactRefs } : {}),
       ...(f.reviewerRole ? { reviewerRole: f.reviewerRole } : {}),
     };
   });

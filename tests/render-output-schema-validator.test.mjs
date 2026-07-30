@@ -52,3 +52,61 @@ describe('formatJsonOutput scope propagation', () => {
     assert.ok(!('scope' in out.issues[0]));
   });
 });
+
+// #1666 (#1545 Phase 2): same reachability contract as scope — the traceability
+// refs must reach the JSON artifact, and must stay absent when unset so every
+// pre-#1666 output still validates unchanged.
+describe('formatJsonOutput traceability refs propagation', () => {
+  const baseFinding = {
+    id: 'rr-1',
+    ruleId: 'requirements-acceptance',
+    title: 'acceptance criterion is untestable',
+    message:
+      'Finding: AC-4 is untestable Evidence: x Severity: warning Confidence: high Fix: define the observable outcome',
+    severity: 'major',
+    confidence: 'high',
+    status: 'open',
+    evidence: ['x'],
+    file: 'docs/prd.md',
+    lineStart: 42,
+    lineEnd: 42,
+  };
+
+  it('emits criterionRefs / artifactRefs and still validates against the schema', () => {
+    const out = formatJsonOutput(
+      {
+        findings: [
+          {
+            ...baseFinding,
+            criterionRefs: ['AC-4', 'TC-7'],
+            artifactRefs: ['plan.md#AC-4', 'todo.md#TASK-3'],
+          },
+        ],
+      },
+      'upstream'
+    );
+    assert.deepStrictEqual(out.issues[0].criterionRefs, ['AC-4', 'TC-7']);
+    assert.deepStrictEqual(out.issues[0].artifactRefs, ['plan.md#AC-4', 'todo.md#TASK-3']);
+    const validate = getOutputSchemaValidator();
+    assert.ok(validate(out), JSON.stringify(validate.errors));
+  });
+
+  it('omits both fields when the finding has none (back-compat)', () => {
+    const out = formatJsonOutput({ findings: [baseFinding] }, 'upstream');
+    assert.ok(!('criterionRefs' in out.issues[0]));
+    assert.ok(!('artifactRefs' in out.issues[0]));
+    const validate = getOutputSchemaValidator();
+    assert.ok(validate(out), JSON.stringify(validate.errors));
+  });
+
+  it('omits both fields for null and empty-array values', () => {
+    const out = formatJsonOutput(
+      { findings: [{ ...baseFinding, criterionRefs: null, artifactRefs: [] }] },
+      'upstream'
+    );
+    assert.ok(!('criterionRefs' in out.issues[0]), 'null must not be serialized');
+    assert.ok(!('artifactRefs' in out.issues[0]), 'an empty array must not be serialized');
+    const validate = getOutputSchemaValidator();
+    assert.ok(validate(out), JSON.stringify(validate.errors));
+  });
+});

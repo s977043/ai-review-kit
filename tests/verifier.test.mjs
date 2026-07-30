@@ -511,3 +511,61 @@ test('verifyFinding: scope never affects the verified verdict', () => {
   assert.equal(result.verified, true);
   assert.equal(result.reasons.length, 0);
 });
+
+// ---------------------------------------------------------------------------
+// #1666 (#1545 Phase 2): traceability refs must not move the verified verdict
+// ---------------------------------------------------------------------------
+
+test('verifyFinding: ArtifactRefs anchors are not read as evidence file references', () => {
+  // Regression guard: RE_EVIDENCE runs greedily to end-of-line, so an artifact
+  // anchor (`plan.md#AC-4` — by design NOT in the diff) tripped
+  // checkEvidenceInDiff and rejected an otherwise-valid finding.
+  const withRefs = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message: `${SCOPE_MESSAGE} CriterionRefs: AC-4, TC-7 ArtifactRefs: plan.md#AC-4, todo.md#TASK-3`,
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(withRefs.verified, true, withRefs.reasons.join('; '));
+  assert.equal(withRefs.checks.evidenceInDiff, true);
+});
+
+test('verifyFinding: refs change no check outcome versus the same message without them', () => {
+  const call = (message) =>
+    verifyFinding({
+      finding: { file: 'src/app.mjs', line: 11, message },
+      diff: SCOPE_DIFF,
+      skill: { metadata: {} },
+      diffFiles: SCOPE_DIFF_FILES,
+    });
+  const without = call(SCOPE_MESSAGE);
+  const withRefs = call(`${SCOPE_MESSAGE} CriterionRefs: AC-4 ArtifactRefs: plan.md#AC-4`);
+  assert.deepEqual(withRefs.checks, without.checks);
+  assert.equal(withRefs.verified, without.verified);
+  assert.deepEqual(withRefs.reasons, without.reasons);
+  assert.equal(withRefs.scope, without.scope);
+});
+
+test('verifyFinding: refs cannot pad a too-short Evidence / Fix into passing', () => {
+  // The mirror direction of the same non-interference contract: because the
+  // greedy checks read to end-of-line, appended refs would otherwise satisfy
+  // the minimum-length requirements on their own.
+  const rejected = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message:
+        'Finding: issue\nSeverity: warning\nConfidence: high\nFix: short CriterionRefs: AC-4',
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(rejected.verified, false);
+  assert.ok(rejected.reasons.includes('No evidence provided in finding'));
+  assert.ok(rejected.reasons.includes('Fix/suggestion is missing or too brief'));
+});

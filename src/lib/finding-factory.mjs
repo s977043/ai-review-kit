@@ -95,15 +95,89 @@ const SCOPE_VALUE_PATTERN = 'in[-_ ]?diff|pre[-_ ]?existing';
 const RE_SCOPE_LABEL = new RegExp(`(?:^|\\s)Scope:\\s*(${SCOPE_VALUE_PATTERN})\\b`, 'i');
 
 /**
+ * Traceability ref labels (#1666 / #1545 Phase 2). Same containment problem as
+ * the Scope label — an unconstrained `CriterionRefs:` in LABEL_ALTERNATION would
+ * let any prose occurrence terminate the preceding Evidence/Fix capture and
+ * silently truncate it — but refs are free-form identifiers, so a closed value
+ * vocabulary is not available. The value is constrained by SHAPE instead:
+ *
+ * - a ref token is whitespace-free (`AC-4`, `TC-7`, `plan.md#AC-4`), so prose —
+ *   which always continues with spaces — cannot satisfy the label;
+ * - a list is comma-separated, so an adjacent label (` Severity: warning`) ends
+ *   it rather than being swallowed;
+ * - a token that is itself a reserved label followed by `:` is rejected, so a
+ *   stray trailing comma cannot consume the next label;
+ * - matching is case-SENSITIVE, so the lowerCamel schema field name
+ *   (`criterionRefs`) quoted inside review prose is not read as a label.
+ *
+ * River Review does not own these identifiers: they are copied verbatim from
+ * the upstream artifact and never minted, validated, or renamed here.
+ */
+const REF_LABEL_NAMES = /** @type {const} */ (['CriterionRefs', 'ArtifactRefs']);
+const REF_LABEL_ALTERNATION = REF_LABEL_NAMES.join('|');
+const RESERVED_LABEL_ALTERNATION = [...LABEL_NAMES, 'Scope', ...REF_LABEL_NAMES].join('|');
+const REF_TOKEN_PATTERN = `(?!(?:${RESERVED_LABEL_ALTERNATION}):)[A-Za-z0-9][\\w.#/-]*`;
+const REF_LIST_PATTERN = `${REF_TOKEN_PATTERN}(?:[ \\t]*,[ \\t]*${REF_TOKEN_PATTERN})*`;
+const RE_REF_LABELS = Object.fromEntries(
+  REF_LABEL_NAMES.map((label) => [
+    label,
+    new RegExp(`(?:^|\\s)${label}:[ \\t]*(${REF_LIST_PATTERN})`),
+  ])
+);
+
+/**
+ * Every traceability-ref segment in a message, for removal. Global flag, so the
+ * regex is instantiated per call (a shared `g` regex carries `lastIndex`).
+ */
+const RE_REF_SEGMENTS_SOURCE = `(?:^|\\s)(?:${REF_LABEL_ALTERNATION}):[ \\t]*${REF_LIST_PATTERN}`;
+
+/**
+ * Remove the traceability-ref segments from a finding message.
+ *
+ * Consumers that scan the message body with deliberately greedy regexes — the
+ * verifier's evidence and actionability checks read to end-of-line — MUST call
+ * this first. Refs are additive metadata (#1666) and must not shift any
+ * decision: an `ArtifactRefs: plan.md#AC-4` anchor is otherwise indistinguishable
+ * from an evidence file reference, and the artifact is by design not in the diff.
+ * @param {string|null|undefined} message
+ * @returns {string} the message as it read before the refs labels existed
+ */
+export function stripTraceabilityRefs(message) {
+  return String(message ?? '').replace(new RegExp(RE_REF_SEGMENTS_SOURCE, 'g'), '');
+}
+
+/**
+ * Extract one traceability ref label into a string array.
+ * @param {string} text
+ * @param {typeof REF_LABEL_NAMES[number]} label
+ * @returns {string[]|null} null when the label is absent or carries no token,
+ *   so the field is omitted downstream instead of emitted as an empty array.
+ */
+function extractRefs(text, label) {
+  const raw = RE_REF_LABELS[label].exec(text)?.[1];
+  if (!raw) return null;
+  const refs = raw
+    .split(',')
+    .map((ref) => ref.trim())
+    .filter((ref) => ref.length > 0);
+  return refs.length > 0 ? refs : null;
+}
+
+/**
  * Parse a labeled finding message string into structured fields.
  * @param {string} message
- * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null, scope: string|null }}
+ * @returns {{ title: string, evidence: string[], impact: string, suggestion: string, severity: string|null, confidence: string|null, scope: string|null, criterionRefs: string[]|null, artifactRefs: string[]|null }}
  */
 export function parseFindingMessage(message) {
   const text = String(message ?? '');
-  // A genuine (value-constrained) Scope label also terminates a capture, so a
-  // trailing self-report is not absorbed into the preceding field.
-  const terminator = `\\s+(?:${LABEL_ALTERNATION}):|\\s+Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b|$`;
+  // A genuine (value-constrained) Scope or refs label also terminates a capture,
+  // so a trailing self-report is not absorbed into the preceding field.
+  const terminator = [
+    `\\s+(?:${LABEL_ALTERNATION}):`,
+    `\\s+Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b`,
+    `\\s+(?:${REF_LABEL_ALTERNATION}):[ \\t]*(?:${REF_TOKEN_PATTERN})`,
+    '$',
+  ].join('|');
   const get = (label) => {
     const re = new RegExp(`${label}:\\s*([^]*?)(?=${terminator})`, 'm');
     return (text.match(re)?.[1] ?? '').trim();
@@ -120,6 +194,10 @@ export function parseFindingMessage(message) {
     // takes precedence; this is only the fallback when the diff cannot decide.
     // Null when the label is absent or carries an out-of-vocabulary value.
     scope: RE_SCOPE_LABEL.exec(text)?.[1] ?? null,
+    // Optional traceability refs (#1666). Purely additive metadata: they never
+    // reach the verifier's `verified` decision or any gate.
+    criterionRefs: extractRefs(text, 'CriterionRefs'),
+    artifactRefs: extractRefs(text, 'ArtifactRefs'),
   };
 }
 
