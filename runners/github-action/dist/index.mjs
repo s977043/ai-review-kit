@@ -52121,7 +52121,7 @@ const src_safeJSON = (text) => {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //# sourceMappingURL=sleep.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/version.mjs
-const VERSION = '6.48.0'; // x-release-please-version
+const VERSION = '6.49.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -54942,6 +54942,48 @@ function normalizeToolCallIds(chatCompletion) {
         }
     }
 }
+/**
+ * Parsed completions contain response-only and helper-only fields. Keep those
+ * on runner.messages for callers, but only replay valid request fields.
+ */
+function toRequestMessage(message) {
+    if (!isAssistantMessage(message))
+        return message;
+    const requestMessage = { role: 'assistant' };
+    if (message.audio != null)
+        requestMessage.audio = { id: message.audio.id };
+    if (message.content !== undefined)
+        requestMessage.content = message.content;
+    if (message.function_call != null)
+        requestMessage.function_call = message.function_call;
+    if (message.name !== undefined)
+        requestMessage.name = message.name;
+    if (message.refusal != null)
+        requestMessage.refusal = message.refusal;
+    if (message.tool_calls !== undefined) {
+        requestMessage.tool_calls = message.tool_calls.map((toolCall) => {
+            if (toolCall.type === 'custom') {
+                return {
+                    id: toolCall.id,
+                    type: toolCall.type,
+                    custom: {
+                        input: toolCall.custom.input,
+                        name: toolCall.custom.name,
+                    },
+                };
+            }
+            return {
+                id: toolCall.id,
+                type: toolCall.type,
+                function: {
+                    arguments: toolCall.function.arguments,
+                    name: toolCall.function.name,
+                },
+            };
+        });
+    }
+    return requestMessage;
+}
 class AbstractChatCompletionRunner extends EventStream {
     constructor() {
         super(...arguments);
@@ -55143,7 +55185,7 @@ class AbstractChatCompletionRunner extends EventStream {
                 ...restParams,
                 tool_choice,
                 tools,
-                messages: [...this.messages],
+                messages: this.messages.map(toRequestMessage),
             }, options);
             const message = chatCompletion.choices[0]?.message;
             if (!message) {
@@ -55519,7 +55561,7 @@ const partialParse = (input) => parseJSON(input, Allow.ALL ^ Allow.NUM);
 
 //# sourceMappingURL=streaming.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/ChatCompletionStream.mjs
-var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_endRequest, _ChatCompletionStream_getAutoParseableResponseFormat, _ChatCompletionStream_accumulateChatCompletion;
+var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_audioDoneChoiceIndexes, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_endRequest, _ChatCompletionStream_getAutoParseableResponseFormat, _ChatCompletionStream_accumulateChatCompletion;
 
 
 
@@ -55561,9 +55603,11 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         super();
         _ChatCompletionStream_instances.add(this);
         _ChatCompletionStream_params.set(this, void 0);
+        _ChatCompletionStream_audioDoneChoiceIndexes.set(this, void 0);
         _ChatCompletionStream_choiceEventStates.set(this, void 0);
         _ChatCompletionStream_currentChatCompletionSnapshot.set(this, void 0);
         __classPrivateFieldSet(this, _ChatCompletionStream_params, params, "f");
+        __classPrivateFieldSet(this, _ChatCompletionStream_audioDoneChoiceIndexes, new Set(), "f");
         __classPrivateFieldSet(this, _ChatCompletionStream_choiceEventStates, [], "f");
     }
     get currentChatCompletionSnapshot() {
@@ -55644,9 +55688,10 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         }
         throw new error_OpenAIError(`request ended without sending any chunks`);
     }
-    [(_ChatCompletionStream_params = new WeakMap(), _ChatCompletionStream_choiceEventStates = new WeakMap(), _ChatCompletionStream_currentChatCompletionSnapshot = new WeakMap(), _ChatCompletionStream_instances = new WeakSet(), _ChatCompletionStream_beginRequest = function _ChatCompletionStream_beginRequest() {
+    [(_ChatCompletionStream_params = new WeakMap(), _ChatCompletionStream_audioDoneChoiceIndexes = new WeakMap(), _ChatCompletionStream_choiceEventStates = new WeakMap(), _ChatCompletionStream_currentChatCompletionSnapshot = new WeakMap(), _ChatCompletionStream_instances = new WeakSet(), _ChatCompletionStream_beginRequest = function _ChatCompletionStream_beginRequest() {
         if (this.ended)
             return;
+        __classPrivateFieldSet(this, _ChatCompletionStream_audioDoneChoiceIndexes, new Set(), "f");
         __classPrivateFieldSet(this, _ChatCompletionStream_currentChatCompletionSnapshot, undefined, "f");
     }, _ChatCompletionStream_getChoiceEventState = function _ChatCompletionStream_getChoiceEventState(choice) {
         let state = __classPrivateFieldGet(this, _ChatCompletionStream_choiceEventStates, "f")[choice.index];
@@ -55794,9 +55839,11 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         if (!snapshot) {
             throw new error_OpenAIError(`request ended without sending any chunks`);
         }
+        const audioDoneChoiceIndexes = __classPrivateFieldGet(this, _ChatCompletionStream_audioDoneChoiceIndexes, "f");
+        __classPrivateFieldSet(this, _ChatCompletionStream_audioDoneChoiceIndexes, new Set(), "f");
         __classPrivateFieldSet(this, _ChatCompletionStream_currentChatCompletionSnapshot, undefined, "f");
         __classPrivateFieldSet(this, _ChatCompletionStream_choiceEventStates, [], "f");
-        return finalizeChatCompletion(snapshot, __classPrivateFieldGet(this, _ChatCompletionStream_params, "f"));
+        return finalizeChatCompletion(snapshot, __classPrivateFieldGet(this, _ChatCompletionStream_params, "f"), audioDoneChoiceIndexes);
     }, _ChatCompletionStream_getAutoParseableResponseFormat = function _ChatCompletionStream_getAutoParseableResponseFormat() {
         const responseFormat = __classPrivateFieldGet(this, _ChatCompletionStream_params, "f")?.response_format;
         if (isAutoParsableResponseFormat(responseFormat)) {
@@ -55804,7 +55851,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         }
         return null;
     }, _ChatCompletionStream_accumulateChatCompletion = function _ChatCompletionStream_accumulateChatCompletion(chunk) {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e;
         let snapshot = __classPrivateFieldGet(this, _ChatCompletionStream_currentChatCompletionSnapshot, "f");
         const { choices, ...rest } = chunk;
         if (!snapshot) {
@@ -55853,14 +55900,39 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
             Object.assign(choice, other);
             if (!delta)
                 continue; // Shouldn't happen; just in case.
-            const { content, refusal, function_call, role, tool_calls, ...rest } = delta;
+            __classPrivateFieldGet(this, _ChatCompletionStream_audioDoneChoiceIndexes, "f").delete(index);
+            const { audio, content, refusal, function_call, role, tool_calls, ...rest } = delta;
             assertIsEmpty(rest);
             Object.assign(choice.message, rest);
+            if (audio?.expires_at != null &&
+                audio.id == null &&
+                audio.data == null &&
+                audio.transcript == null &&
+                content == null &&
+                refusal == null &&
+                function_call == null &&
+                role == null &&
+                tool_calls == null &&
+                Object.keys(rest).length === 0) {
+                __classPrivateFieldGet(this, _ChatCompletionStream_audioDoneChoiceIndexes, "f").add(index);
+            }
             if (refusal) {
                 choice.message.refusal = (choice.message.refusal || '') + refusal;
             }
             if (role)
                 choice.message.role = role;
+            if (audio) {
+                const audioSnapshot = ((_c = choice.message).audio ?? (_c.audio = {}));
+                if (audio.id != null)
+                    audioSnapshot.id = audio.id;
+                if (audio.data != null)
+                    audioSnapshot.data = (audioSnapshot.data ?? '') + audio.data;
+                if (audio.transcript != null) {
+                    audioSnapshot.transcript = (audioSnapshot.transcript ?? '') + audio.transcript;
+                }
+                if (audio.expires_at != null)
+                    audioSnapshot.expires_at = audio.expires_at;
+            }
             if (function_call) {
                 if (!choice.message.function_call) {
                     choice.message.function_call = function_call;
@@ -55869,7 +55941,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
                     if (function_call.name)
                         choice.message.function_call.name = function_call.name;
                     if (function_call.arguments) {
-                        (_c = choice.message.function_call).arguments ?? (_c.arguments = '');
+                        (_d = choice.message.function_call).arguments ?? (_d.arguments = '');
                         choice.message.function_call.arguments += function_call.arguments;
                     }
                 }
@@ -55885,7 +55957,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
                 if (!choice.message.tool_calls)
                     choice.message.tool_calls = [];
                 for (const { index, id, type, function: fn, ...rest } of tool_calls) {
-                    const tool_call = ((_d = choice.message.tool_calls)[index] ?? (_d[index] = {}));
+                    const tool_call = ((_e = choice.message.tool_calls)[index] ?? (_e[index] = {}));
                     Object.assign(tool_call, rest);
                     if (id)
                         tool_call.id = id;
@@ -55961,16 +56033,20 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         return stream.toReadableStream();
     }
 }
-function finalizeChatCompletion(snapshot, params) {
+function finalizeChatCompletion(snapshot, params, audioDoneChoiceIndexes) {
     const { id, choices, created, model, system_fingerprint, ...rest } = snapshot;
     const completion = {
         ...rest,
         id,
         choices: choices.map(({ message, finish_reason, index, logprobs, ...choiceRest }) => {
-            if (!finish_reason) {
+            const { content = null, function_call, tool_calls, audio, ...messageRest } = message;
+            // Audio streams can end with an expires_at-only chunk after the
+            // generated audio, without a separate finish_reason.
+            const finishReason = finish_reason ?? (audioDoneChoiceIndexes.has(index) && isCompleteAudio(audio) ? 'stop' : null);
+            if (!finishReason) {
                 throw new error_OpenAIError(`missing finish_reason for choice ${index}`);
             }
-            const { content = null, function_call, tool_calls, ...messageRest } = message;
+            const audioResponse = audio ? { audio: audio } : {};
             const role = message.role; // this is what we expect; in theory it could be different which would make our types a slight lie but would be fine.
             if (!role) {
                 throw new error_OpenAIError(`missing role for choice ${index}`);
@@ -55986,12 +56062,13 @@ function finalizeChatCompletion(snapshot, params) {
                 return {
                     ...choiceRest,
                     message: {
+                        ...audioResponse,
                         content,
                         function_call: { arguments: args, name },
                         role,
                         refusal: message.refusal ?? null,
                     },
-                    finish_reason,
+                    finish_reason: finishReason,
                     index,
                     logprobs,
                 };
@@ -56000,10 +56077,11 @@ function finalizeChatCompletion(snapshot, params) {
                 return {
                     ...choiceRest,
                     index,
-                    finish_reason,
+                    finish_reason: finishReason,
                     logprobs,
                     message: {
                         ...messageRest,
+                        ...audioResponse,
                         role,
                         content,
                         refusal: message.refusal ?? null,
@@ -56031,8 +56109,8 @@ function finalizeChatCompletion(snapshot, params) {
             }
             return {
                 ...choiceRest,
-                message: { ...messageRest, content, role, refusal: message.refusal ?? null },
-                finish_reason,
+                message: { ...messageRest, ...audioResponse, content, role, refusal: message.refusal ?? null },
+                finish_reason: finishReason,
                 index,
                 logprobs,
             };
@@ -56043,6 +56121,9 @@ function finalizeChatCompletion(snapshot, params) {
         ...(system_fingerprint ? { system_fingerprint } : {}),
     };
     return maybeParseChatCompletion(completion, params);
+}
+function isCompleteAudio(audio) {
+    return audio?.id != null && audio.data != null && audio.transcript != null && audio.expires_at != null;
 }
 function str(x) {
     return JSON.stringify(x);
@@ -56874,6 +56955,62 @@ class SpendAlerts extends APIResource {
     }
 }
 //# sourceMappingURL=spend-alerts.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/spend-limit.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+class SpendLimit extends APIResource {
+    /**
+     * Get the organization's hard spend limit.
+     *
+     * @example
+     * ```ts
+     * const organizationSpendLimit =
+     *   await client.admin.organization.spendLimit.retrieve();
+     * ```
+     */
+    retrieve(options) {
+        return this._client.get('/organization/spend_limit', {
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+    /**
+     * Create or replace the organization's hard spend limit.
+     *
+     * @example
+     * ```ts
+     * const organizationSpendLimit =
+     *   await client.admin.organization.spendLimit.update({
+     *     currency: 'USD',
+     *     interval: 'month',
+     *     threshold_amount: 1,
+     *   });
+     * ```
+     */
+    update(body, options) {
+        return this._client.post('/organization/spend_limit', {
+            body,
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+    /**
+     * Delete the organization's hard spend limit.
+     *
+     * @example
+     * ```ts
+     * const organizationSpendLimitDeleted =
+     *   await client.admin.organization.spendLimit.delete();
+     * ```
+     */
+    delete(options) {
+        return this._client.delete('/organization/spend_limit', {
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+}
+//# sourceMappingURL=spend-limit.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/usage.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -57883,6 +58020,70 @@ class spend_alerts_SpendAlerts extends APIResource {
     }
 }
 //# sourceMappingURL=spend-alerts.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+class spend_limit_SpendLimit extends APIResource {
+    /**
+     * Get a project's hard spend limit.
+     *
+     * @example
+     * ```ts
+     * const projectSpendLimit =
+     *   await client.admin.organization.projects.spendLimit.retrieve(
+     *     'proj_123',
+     *   );
+     * ```
+     */
+    retrieve(projectID, options) {
+        return this._client.get(src_path `/organization/projects/${projectID}/spend_limit`, {
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+    /**
+     * Create or replace a project's hard spend limit.
+     *
+     * @example
+     * ```ts
+     * const projectSpendLimit =
+     *   await client.admin.organization.projects.spendLimit.update(
+     *     'proj_123',
+     *     {
+     *       currency: 'USD',
+     *       interval: 'month',
+     *       threshold_amount: 1,
+     *     },
+     *   );
+     * ```
+     */
+    update(projectID, body, options) {
+        return this._client.post(src_path `/organization/projects/${projectID}/spend_limit`, {
+            body,
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+    /**
+     * Delete a project's hard spend limit.
+     *
+     * @example
+     * ```ts
+     * const projectSpendLimitDeleted =
+     *   await client.admin.organization.projects.spendLimit.delete(
+     *     'proj_123',
+     *   );
+     * ```
+     */
+    delete(projectID, options) {
+        return this._client.delete(src_path `/organization/projects/${projectID}/spend_limit`, {
+            ...options,
+            __security: { adminAPIKeyAuth: true },
+        });
+    }
+}
+//# sourceMappingURL=spend-limit.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -58407,6 +58608,8 @@ users_Users.Roles = users_roles_Roles;
 
 
 
+
+
 class Projects extends APIResource {
     constructor() {
         super(...arguments);
@@ -58419,6 +58622,7 @@ class Projects extends APIResource {
         this.groups = new groups_Groups(this._client);
         this.roles = new projects_roles_Roles(this._client);
         this.dataRetention = new data_retention_DataRetention(this._client);
+        this.spendLimit = new spend_limit_SpendLimit(this._client);
         this.spendAlerts = new spend_alerts_SpendAlerts(this._client);
         this.certificates = new certificates_Certificates(this._client);
     }
@@ -58522,6 +58726,7 @@ Projects.HostedToolPermissions = HostedToolPermissions;
 Projects.Groups = groups_Groups;
 Projects.Roles = projects_roles_Roles;
 Projects.DataRetention = data_retention_DataRetention;
+Projects.SpendLimit = spend_limit_SpendLimit;
 Projects.SpendAlerts = spend_alerts_SpendAlerts;
 Projects.Certificates = certificates_Certificates;
 //# sourceMappingURL=projects.mjs.map
@@ -58711,6 +58916,8 @@ users_users_Users.Roles = organization_users_roles_Roles;
 
 
 
+
+
 class Organization extends APIResource {
     constructor() {
         super(...arguments);
@@ -58722,6 +58929,7 @@ class Organization extends APIResource {
         this.groups = new Groups(this._client);
         this.roles = new Roles(this._client);
         this.dataRetention = new DataRetention(this._client);
+        this.spendLimit = new SpendLimit(this._client);
         this.spendAlerts = new SpendAlerts(this._client);
         this.certificates = new Certificates(this._client);
         this.projects = new Projects(this._client);
@@ -58735,6 +58943,7 @@ Organization.Users = users_users_Users;
 Organization.Groups = Groups;
 Organization.Roles = Roles;
 Organization.DataRetention = DataRetention;
+Organization.SpendLimit = SpendLimit;
 Organization.SpendAlerts = SpendAlerts;
 Organization.Certificates = Certificates;
 Organization.Projects = Projects;
@@ -61614,10 +61823,7 @@ function parseResponse(response, params) {
     const shouldParse = !response.status || response.status === 'completed';
     const output = response.output.map((item) => {
         if (item.type === 'function_call') {
-            return {
-                ...item,
-                parsed_arguments: shouldParse ? ResponsesParser_parseToolCall(params, item) : null,
-            };
+            return shouldParse ? ResponsesParser_parseToolCall(params, item) : { ...item, parsed_arguments: null };
         }
         if (item.type === 'message') {
             const content = item.content.map((content) => {
@@ -61672,7 +61878,8 @@ function ResponsesParser_hasAutoParseableInput(params) {
     if (isAutoParsableResponseFormat(params.text?.format)) {
         return true;
     }
-    return false;
+    return (Array.isArray(params.tools) &&
+        params.tools.some((tool) => ResponsesParser_isAutoParsableTool(tool) || (tool.type === 'function' && tool.strict === true)));
 }
 function makeParseableResponseTool(tool, { parser, callback, }) {
     const obj = { ...tool };
@@ -64250,7 +64457,11 @@ class AzureOpenAI extends OpenAI {
             if (!endpoint) {
                 throw new error_OpenAIError('Must provide one of the `baseURL` or `endpoint` arguments, or the `AZURE_OPENAI_ENDPOINT` environment variable');
             }
-            baseURL = `${endpoint}/openai`;
+            let endpointEnd = endpoint.length;
+            while (endpointEnd > 0 && endpoint[endpointEnd - 1] === '/') {
+                endpointEnd--;
+            }
+            baseURL = `${endpoint.slice(0, endpointEnd)}/openai`;
         }
         else {
             if (endpoint) {
