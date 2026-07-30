@@ -13,8 +13,13 @@ import {
   FEEDBACK_TYPES,
   FEEDBACK_TRIGGERS,
 } from '../src/lib/feedback.mjs';
+// The run-id resolvers are imported (never re-derived) so the producer is
+// checked against the SAME code path `river evolve aggregate` uses (#1673).
+import { deriveFeedbackReviewRunId, deriveReviewRunId } from '../src/lib/shadow-aggregate.mjs';
 import { applyFeedback } from '../scripts/apply-feedback.mjs';
 import { createTempDirAsync } from './helpers/temp-dir.mjs';
+import { createTempGitRepo } from './helpers/temp-repo.mjs';
+import { runCliInProcess } from './helpers/cli.mjs';
 
 const NOW = new Date('2026-06-10T03:00:00Z');
 
@@ -211,4 +216,94 @@ test('reversedBy linkage survives append-only JSONL round-trip', async () => {
   assert.ok(!('reversedBy' in entries[0]), 'original is untouched');
   assert.equal(entries[1].feedbackType, 'accepted');
   assert.equal(entries[1].reversedBy, 'a1b2c3d4e5f60718');
+});
+
+// --- #1673 (#1574 P1 producer): optional reviewRunId -> `review_run_id` ---
+
+test('reviewRunId is written as the snake_case review_run_id join key', () => {
+  const entry = buildFeedbackEntry(entryInput({ reviewRunId: '2026-07-25T00-00-00-000Z-abc123' }));
+  assert.equal(entry.review_run_id, '2026-07-25T00-00-00-000Z-abc123');
+  // camelCase would silently be a second, unresolved key: deriveFeedbackReviewRunId
+  // reads review_run_id first, and shadow-aggregate.schema.json requires that name.
+  assert.ok(!('reviewRunId' in entry), 'the camelCase input name is not persisted');
+  // The value is resolvable by the real consumer, not just by this test.
+  assert.equal(deriveFeedbackReviewRunId(entry), '2026-07-25T00-00-00-000Z-abc123');
+});
+
+test('omitting reviewRunId leaves the entry byte-identical to the pre-#1673 shape', () => {
+  const entry = buildFeedbackEntry(entryInput());
+  assert.ok(!('review_run_id' in entry), 'no key is added when the option is omitted');
+  // Byte-level, not just deepEqual: the JSONL line appended to
+  // .river/feedback/<YYYY-MM>.jsonl must be unchanged for existing callers.
+  assert.equal(
+    JSON.stringify(entry),
+    '{"timestamp":"2026-06-10T03:00:00.000Z","trigger":"pr-comment",' +
+      '"feedbackType":"false_positive","skillId":"typescript-strict",' +
+      '"findingFingerprint":"a1b2c3d4e5f60718",' +
+      '"evidence":"strict 設定済みの tsconfig を誤検出","pr":1100}'
+  );
+  // A legacy entry stays unjoined: there is deliberately no fallback here.
+  assert.equal(deriveFeedbackReviewRunId(entry), null);
+});
+
+test('reviewRunId normalizes like the other optional strings', () => {
+  assert.ok(!('review_run_id' in buildFeedbackEntry(entryInput({ reviewRunId: '   ' }))));
+  assert.ok(!('review_run_id' in buildFeedbackEntry(entryInput({ reviewRunId: '' }))));
+  assert.equal(buildFeedbackEntry(entryInput({ reviewRunId: ' run-1 ' })).review_run_id, 'run-1');
+  assert.throws(() => buildFeedbackEntry(entryInput({ reviewRunId: 42 })), FeedbackError);
+});
+
+test('review_run_id survives the JSONL round-trip and resolves to the run record id', async () => {
+  const repoRoot = await createTempDirAsync({ prefix: 'feedback-run-id-' });
+  const runId = '2026-06-10T03-00-00-000Z-deadbe';
+  await appendFeedbackEntry(buildFeedbackEntry(entryInput({ reviewRunId: runId })), { repoRoot });
+
+  const [entry] = await listFeedbackEntries({ repoRoot });
+  // Cross-check against the EXISTING resolvers on both sides of the join
+  // instead of re-deriving the id here (CLAUDE.md "Import the SSoT").
+  assert.equal(deriveFeedbackReviewRunId(entry), deriveReviewRunId({ runId }));
+});
+
+test('`river feedback add --run-id` writes review_run_id into the JSONL', async (t) => {
+  const { dir, cleanup } = await createTempGitRepo({ prefix: 'feedback-cli-run-id-' });
+  t.after(cleanup);
+  const runId = '2026-07-25T00-00-00-000Z-abc123';
+  const res = await runCliInProcess(
+    [
+      'feedback',
+      'add',
+      '--type',
+      'false_positive',
+      '--skill',
+      'secret-scanner',
+      '--fingerprint',
+      'a1b2c3d4e5f60718',
+      '--pr',
+      '1673',
+      '--run-id',
+      runId,
+    ],
+    { cwd: dir }
+  );
+  assert.equal(res.code, 0, res.stderr);
+  const written = /written to: (.+)/.exec(res.stdout)?.[1];
+  assert.ok(written, `no target path in stdout: ${res.stdout}`);
+  const [line] = (await fs.readFile(written.trim(), 'utf8')).trim().split('\n');
+  const entry = JSON.parse(line);
+  assert.equal(entry.review_run_id, runId);
+  assert.equal(deriveFeedbackReviewRunId(entry), runId);
+});
+
+test('`river feedback add` without --run-id writes no review_run_id key', async (t) => {
+  const { dir, cleanup } = await createTempGitRepo({ prefix: 'feedback-cli-no-run-id-' });
+  t.after(cleanup);
+  const res = await runCliInProcess(
+    ['feedback', 'add', '--type', 'accepted', '--skill', 'secret-scanner'],
+    { cwd: dir }
+  );
+  assert.equal(res.code, 0, res.stderr);
+  const written = /written to: (.+)/.exec(res.stdout)?.[1];
+  assert.ok(written, `no target path in stdout: ${res.stdout}`);
+  const [line] = (await fs.readFile(written.trim(), 'utf8')).trim().split('\n');
+  assert.ok(!('review_run_id' in JSON.parse(line)), 'legacy CLI invocations are unchanged');
 });

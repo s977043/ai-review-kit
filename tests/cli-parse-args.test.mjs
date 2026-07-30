@@ -583,3 +583,46 @@ test('parseArgs: feedback --reviewer does not consume a following flag as its va
   assert.equal(parsed.command, 'help', 'next flag is not eaten as the value');
   assert.equal(parsed.feedbackReviewer, null);
 });
+
+// --- #1673: feedback add --run-id (#1574 P1 producer) ---
+
+test('parseArgs: feedback add parses --run-id', () => {
+  const parsed = parseArgs([
+    'feedback',
+    'add',
+    '--type',
+    'false_positive',
+    '--skill',
+    'secret-scanner',
+    '--run-id',
+    '2026-07-25T00-00-00-000Z-abc123',
+  ]);
+  assert.equal(parsed.command, 'feedback');
+  assert.equal(parsed.feedbackSubcommand, 'add');
+  assert.equal(parsed.feedbackRunId, '2026-07-25T00-00-00-000Z-abc123');
+});
+
+test('parseArgs: feedback --run-id defaults to null and requires a value', () => {
+  assert.equal(
+    parseArgs(['feedback', 'add', '--type', 'accepted', '--skill', 's']).feedbackRunId,
+    null
+  );
+  const missing = parseArgs(['feedback', 'add', '--type', 'accepted', '--skill', 's', '--run-id']);
+  assert.equal(missing.command, 'help', '--run-id without a value falls back to help');
+});
+
+test('parseArgs: feedback --run-id does not consume a following flag as its value', () => {
+  const parsed = parseArgs([
+    'feedback',
+    'add',
+    '--type',
+    'accepted',
+    '--skill',
+    's',
+    '--run-id',
+    '--reviewer',
+    'gemini',
+  ]);
+  assert.equal(parsed.command, 'help', 'next flag is not eaten as the value');
+  assert.equal(parsed.feedbackRunId, null);
+});

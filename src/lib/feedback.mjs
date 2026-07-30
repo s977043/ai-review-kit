@@ -43,9 +43,9 @@ export class FeedbackError extends Error {
 /**
  * Build and validate a feedback entry.
  *
- * The `reviewer`, `model`, and `reversedBy` fields are optional and
- * backward-compatible: when omitted they are not written to the entry at all,
- * so historical readers and existing JSONL keep their exact shape.
+ * The `reviewer`, `model`, `reversedBy`, and `reviewRunId` fields are optional
+ * and backward-compatible: when omitted they are not written to the entry at
+ * all, so historical readers and existing JSONL keep their exact shape.
  *
  * @param {{
  *   feedbackType: string,
@@ -57,6 +57,7 @@ export class FeedbackError extends Error {
  *   reviewer?: string|null,
  *   model?: string|null,
  *   reversedBy?: string|null,
+ *   reviewRunId?: string|null,
  *   now?: Date,
  * }} input
  */
@@ -70,6 +71,7 @@ export function buildFeedbackEntry({
   reviewer = null,
   model = null,
   reversedBy = null,
+  reviewRunId = null,
   now = new Date(),
 }) {
   if (!FEEDBACK_TYPES.includes(feedbackType)) {
@@ -91,6 +93,7 @@ export function buildFeedbackEntry({
   const reviewerId = normalizeOptionalString(reviewer, 'reviewer');
   const modelId = normalizeOptionalString(model, 'model');
   const reversedByRef = normalizeOptionalString(reversedBy, 'reversedBy');
+  const reviewRunIdRef = normalizeOptionalString(reviewRunId, 'reviewRunId');
   const entry = {
     timestamp: now.toISOString(),
     trigger,
@@ -105,6 +108,22 @@ export function buildFeedbackEntry({
   if (reviewerId) entry.reviewer = reviewerId;
   if (modelId) entry.model = modelId;
   if (reversedByRef) entry.reversedBy = reversedByRef;
+  // snake_case is deliberate and NOT a typo among the camelCase fields above:
+  // `review_run_id` is the canonical key `deriveFeedbackReviewRunId`
+  // (src/lib/shadow-aggregate.mjs, 契約2) resolves first, and the name
+  // schemas/shadow-aggregate.schema.json requires. This is the ONLY producer of
+  // that key, so `river evolve aggregate` can join feedback back to the saved
+  // run it came from (#1673 / #1574 P1).
+  //
+  // Normalization: reuses this module's existing `normalizeOptionalString`
+  // (trim only) rather than importing `nonEmptyNfcString` from
+  // promotion-candidates.mjs, which already imports FEEDBACK_TYPES from here —
+  // importing back would make src/lib/feedback.mjs cyclic. The join is
+  // unaffected: BOTH sides are resolved at read time through
+  // `deriveFeedbackReviewRunId` / `deriveReviewRunId`, which apply
+  // `nonEmptyNfcString` symmetrically, so a producer-side NFC pass cannot
+  // change the outcome. No third normalization is introduced here.
+  if (reviewRunIdRef) entry.review_run_id = reviewRunIdRef;
   return entry;
 }
 

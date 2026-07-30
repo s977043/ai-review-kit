@@ -187,6 +187,7 @@ function parseArgs(argv) {
     feedbackReviewer: null,
     feedbackModel: null,
     feedbackReversedBy: null,
+    feedbackRunId: null,
     suppressionFingerprint: null,
     suppressionFindingId: null,
     suppressionFeedbackType: null,
@@ -423,6 +424,22 @@ function parseArgs(argv) {
           break;
         }
         parsed.feedbackReversedBy = value;
+        continue;
+      }
+      // #1673: the run this feedback refers to. Strict parse (same shape as
+      // --reviewer above): a silently-swallowed value would write an entry
+      // that never joins in `river evolve aggregate`, and the miss is only
+      // visible much later as joinedFeedbackCount staying at 0. Only an
+      // explicit id is accepted — resolving "the latest run" implicitly would
+      // attach evidence to an unrelated run.
+      if (arg === '--run-id') {
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --run-id option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackRunId = value;
         continue;
       }
     }
