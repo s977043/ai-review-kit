@@ -36,6 +36,8 @@ Why: 自動化可能なレビュー指摘を検出しCI/lint委譲を提案す�
 
 外部実証: [「コードレビュー指摘300件を3ヶ月分類したら効いていたのは2種類だけだった」](https://zenn.dev/kenimo49/articles/code-review-300-comments-2-effective-categories)（井本 賢, 2026-07-04）は、実際に効果があった指摘は Bug/Spec 系のみだったと報告する。Style/Naming/Refactor/Arch 系は効果が低く自動化・前倒しに適するという結果は、本スキルの方針を裏付ける一次データとして参照できる。
 
+外部実証（続報）: [「AIレビューのブロックを100PRで測ったら、70PRはno-verifyで通り抜けていた」](https://zenn.dev/kenimo49/articles/ai-review-block-100pr-70-noverify-3month)（井本 賢, 2026-07-23）は、100 PR の実測で pre-commit hook のブロックのうち 70% が `--no-verify` で回避されていたと報告します。強制ゲートの守備範囲を「壊れて動かないコード」（構文エラー・smoke test 失敗）へ絞り、lint / 型 / スタイルの判定を AI レビュー側へ移した結果、実修正率は 30% から 61% へ改善したという結果も、同じ方針を裏付けます。
+
 ## Non-goals / 扱わないこと
 
 - 自動化できない判断（設計方針、セキュリティ上のトレードオフ、仕様の解釈）への言及。
