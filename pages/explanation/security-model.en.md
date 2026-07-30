@@ -2,7 +2,7 @@
 id: security-model-en
 title: River Review's security model
 sidebar_label: Security model
-description: Why River Review itself is safe by design. Skills are not executable code, reviews are read-only, output is comment-only, and humans keep the final decision.
+description: Why River Review itself is safe by design. Skills are not executable code, reviews are read-only, output is comment-only, and there is no approve or merge path.
 keywords:
   - security model
   - AI code review safety
@@ -23,7 +23,7 @@ A River Review skill is a Markdown file — frontmatter plus a prompt body. Ther
 
 Review output is a set of `<file>:<line>: <message>` findings. Output that does not match the format is dropped, and the fallback is limited to deterministic heuristics. River Review does not change code; it only surfaces findings and a verdict as decision material.
 
-## Humans keep the final decision (human-in-the-loop)
+## No approve or merge path
 
 - The GitHub Action defaults to `dry_run: true`.
 - It posts to the PR as a `COMMENT` only — there is no approve or auto-merge path.
