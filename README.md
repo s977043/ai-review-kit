@@ -1,5 +1,6 @@
 # River Review
 
+**レビューを、組織の判断資産へ。**
 **Review Judgment as Code for AI-assisted development.**
 **AI支援開発のための Review Judgment as Code。レビュー判断を repo-owned skill としてコード化します。**
 
@@ -13,7 +14,7 @@
 
 日本語版READMEです。[English README is available here.](./README.en.md)
 
-River Review は、レビュー基準を **versioned / repo-owned な skill** として扱う OSS フレームワークです。plan / diff / tests / JUnit / 既存レビュー結果といった SDLC のアーティファクトをまたいで実行できます。
+River Review は、レビュー基準を **versioned / repo-owned な skill** として扱う OSS フレームワークです。plan / diff / tests / JUnit / 既存レビュー結果といった SDLC のアーティファクトをまたいで実行できます。いま提供しているのは、チームのレビュー判断を運用する **Review Judgment Platform**（チーム所有の監査レイヤー）です。コンセプトの全体像は [コンセプト](https://river-review.the3396.com/explanation/concept/) にまとめています。
 
 AI 支援開発（Claude Code / Codex / Cursor 等）でコードは速く書けるようになりました。一方で、**レビュー判断は依然としてチームのもの**として、明示的・再現可能・所有可能に保つ必要があります。
 
@@ -95,6 +96,7 @@ River Review には、レビューに特化した 3 つの実行形態があり�
 | W チェック（二重レビュー）を使う           | [W チェックガイド](pages/guides/w-check.md)                                                       |
 | AI エージェントから使う                    | [エージェント連携ガイド](pages/guides/agent-workflow.md)                                          |
 | リポジトリ全体を踏まえたレビュー           | [リポジトリ全体レビューガイド](pages/guides/repo-wide-review.md)                                  |
+| コンセプトを理解する                       | [コンセプト解説](https://river-review.the3396.com/explanation/concept/)                           |
 | 設計思想を理解する                         | [アーキテクチャ解説](https://river-review.the3396.com/explanation/river-architecture/)            |
 
 開発手順は [docs/runbook/dev.md](docs/runbook/dev.md) を参照してください。ライセンスは [本ファイル末尾](#ライセンス) に記載しています。

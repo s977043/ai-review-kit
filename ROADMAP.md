@@ -2,11 +2,15 @@
 
 ## Vision
 
-単なる自動レビューツールではなく、開発組織の品質基準をコード化・運用・監査する「Review OS」へ進化させる。
+レビューを、組織の判断資産へ。
 
-AI が人間の可読量を超えるコードを生成できる時代において、River Review は生成コードの全行確認ではなく、信頼できるソフトウェアを生む開発フロー全体をレビュー対象にする。
+現在の River Review は、チームのレビュー判断を versioned / repo-owned な Skill として運用する **Review Judgment Platform**（チーム所有の監査レイヤー）に位置づける。長期の拡張方向として、レビュー以外の判断職務へ広げる **Engineering Judgment Infrastructure** を置く。ただしこれは将来の到達点であり、現在の看板として使わない。
+
+AI が人間の可読量を超えるコードを生成できる時代において、River Review は生成コードの全行確認ではなく、信頼できるソフトウェアを生む開発フロー全体をレビュー対象にする。Artifact Review の姿勢を、次のフレーズで表す。
 
 > Review the Flow, Not Just the Code.
+
+語彙は Tagline / Core Mechanism / Current Product / Long-term Direction の 4 層に分ける。定義の SSoT は [コンセプト](https://river-review.the3396.com/explanation/concept/) にある。
 
 ## Strategy
 

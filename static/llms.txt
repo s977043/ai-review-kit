@@ -1,8 +1,8 @@
 # River Review
 
-> River Review is an open-source "Review Judgment as Code" framework: a capability pack / Skill Registry that runs a team's review criteria as versioned, repo-owned skills across plans, diffs, tests, and prior reviews — keeping a human in the loop rather than auto-merging.
+> River Review turns review into an organizational judgment asset. It is an open-source "Review Judgment as Code" framework: a capability pack / Skill Registry that runs a team's review criteria as versioned, repo-owned skills across plans, diffs, tests, and prior reviews — keeping a human in the loop rather than auto-merging.
 
-River Review versions your team's review know-how as repo-owned SKILL.md files (validated by `schemas/skill.schema.json`) and runs them across upstream (requirements / design / plan), midstream (diff / plan-conformance / tests), and downstream (report) SDLC gates. It is distributed as a Claude Code / Codex plugin and as a GitHub Action for headless CI review; npm distribution is intentionally out of scope. Its differentiators are repo-owned skills (review judgment travels with the code), perspective-based reviewer roles, and findings that are verified against the actual diff. The pipeline augments human reviewers — focusing them on high-risk judgment instead of replacing them (human-in-the-loop, no auto-merge).
+River Review versions your team's review know-how as repo-owned SKILL.md files (validated by `schemas/skill.schema.json`) and runs them across upstream (requirements / design / plan), midstream (diff / plan-conformance / tests), and downstream (report) SDLC gates. It is distributed as a Claude Code / Codex plugin and as a GitHub Action for headless CI review; npm distribution is intentionally out of scope. Its differentiators are repo-owned skills (review judgment travels with the code), perspective-based reviewer roles, and findings that are verified against the actual diff. The pipeline augments human reviewers — focusing them on high-risk judgment instead of replacing them (human-in-the-loop, no auto-merge). What ships today is a Review Judgment Platform, i.e. a team-owned audit layer; "Engineering Judgment Infrastructure" names a long-term direction and is not a description of the current product.
 
 ## Docs
 
@@ -10,6 +10,7 @@ River Review versions your team's review know-how as repo-owned SKILL.md files (
 
 ## Explanation
 
+- [コンセプト (Concept)](https://river-review.the3396.com/explanation/concept/): The concept SSoT — tagline, Review Judgment as Code as the core mechanism, Review Judgment Platform as what ships today, the nine Artifact types in scope, and the non-goals.
 - [River Review へようこそ (Introduction)](https://river-review.the3396.com/explanation/intro/): Positioning — an OSS framework that versions team review judgment as skills and runs them at each SDLC gate.
 - [River Review とは (What is River Review)](https://river-review.the3396.com/explanation/what-is-river-review/): Core concept — Context-Engineering-driven, Skill-Registry-centric review across requirements/design/plan/diff/report with the capability-pack execution model.
 - [River Review のアーキテクチャ (Architecture)](https://river-review.the3396.com/explanation/river-architecture/): Upstream/midstream/downstream context-engineering architecture (metadata → loader → planner → runner) plus the Riverbed Memory layer.

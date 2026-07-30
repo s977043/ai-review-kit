@@ -2,7 +2,7 @@ cff-version: 1.2.0
 title: River Review
 message: 'If you use River Review, please cite it using the metadata in this file.'
 type: software
-abstract: 'River Review is an open-source "Review Judgment as Code" framework for AI-assisted code review. Teams codify their review standards as versioned, repo-owned SKILL.md skills and run them across plans, diffs, tests, JUnit, and prior review artifacts, keeping humans in the loop rather than auto-merging.'
+abstract: 'River Review turns review into an organizational judgment asset. It is an open-source "Review Judgment as Code" framework for AI-assisted code review: teams codify their review standards as versioned, repo-owned SKILL.md skills and run them across plans, diffs, tests, JUnit, and prior review artifacts, keeping humans in the loop rather than auto-merging.'
 authors:
   - name: 'River Review maintainers'
 repository-code: 'https://github.com/s977043/river-review'
