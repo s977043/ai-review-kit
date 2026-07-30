@@ -42,6 +42,17 @@ River Review のスキルは、フロントマターとプロンプト本文か�
 - 入力と出力の両方でシークレットを秘匿化（redaction）する。
 - 動的なコード実行・デシリアライズを行わないため、RCE 型の「悪意あるペイロード」は成立しない。
 
+## レビュー基準の出所
+
+レビュー基準そのものも、差分と同じリポジトリに置かれます。[`loadProjectRules`](https://github.com/s977043/river-review/blob/main/src/lib/rules.mjs) が `.river/rules.md` と `.river/rules.d/*.md` を working tree からそのまま読み込みます。
+
+- **rules の信頼境界**: `.river/rules.md` および `.river/rules.d/*.md` は被レビューエージェントの書込権限内にある。読み込んだテキストは信頼された policy としてプロンプトへ渡される。
+- **出所を固定する機構は無い**: base ref への pin・読み込んだ rules の blob SHA 記録・schema 検証・PR 側から削減できない最低基準は、いずれも存在しない。
+- **Action 経路での帰結**: GitHub Action はチェックアウトした working tree の rules を使うため、PR 内で `.river/rules.md` を弱めた変更は、その PR 自身のレビュー基準に即時反映される。
+- **最悪ケースの限定**: Action は既定で `dry_run: true`（report-only）であり、承認や自動マージの経路を持たない。影響は「弱い基準で出た甘いコメントを人間が読む」までに留まる。
+
+rules は改竄検知性のない入力です。出所の固定（base への pin・blob SHA の記録）は caller / CI の責務となります。即時の実害は小さいものの、この信頼境界が明文化されていないこと自体がリスクです。同種の記述は [ループ収束契約](../reference/loop-convergence-contract.md) の runs store についても置かれています。
+
 ## よくある誤解
 
 - **「大規模変更 → 全スキル実行」はコード実行ではない**。これは全レビュー観点（テスト網羅性・命名・フレーキー等）を適用する、という意味である。特権操作やシェル実行を伴わない。
