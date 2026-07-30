@@ -626,3 +626,60 @@ test('parseArgs: feedback --run-id does not consume a following flag as its valu
   assert.equal(parsed.command, 'help', 'next flag is not eaten as the value');
   assert.equal(parsed.feedbackRunId, null);
 });
+
+// The two silent-miss paths: both exited 0 and wrote an entry with no
+// review_run_id, so the loss only showed up later as joinedFeedbackCount 0.
+
+test('parseArgs: feedback --run-id=<id> is accepted, not silently dropped', () => {
+  const parsed = parseArgs([
+    'feedback',
+    'add',
+    '--type',
+    'false_positive',
+    '--skill',
+    'secret-scanner',
+    '--run-id=2026-07-25T00-00-00-000Z-abc123',
+  ]);
+  assert.equal(parsed.command, 'feedback', 'the equals form does not fall through to help');
+  assert.equal(parsed.feedbackRunId, '2026-07-25T00-00-00-000Z-abc123');
+});
+
+test('parseArgs: feedback --run-id rejects a whitespace-only value instead of nulling it', () => {
+  for (const value of ['   ', '\t', '']) {
+    const parsed = parseArgs([
+      'feedback',
+      'add',
+      '--type',
+      'accepted',
+      '--skill',
+      's',
+      '--run-id',
+      value,
+    ]);
+    assert.equal(parsed.command, 'help', `--run-id ${JSON.stringify(value)} falls back to help`);
+    assert.equal(parsed.feedbackRunId, null);
+  }
+});
+
+test('parseArgs: feedback --run-id= with a blank or missing value falls back to help', () => {
+  for (const arg of ['--run-id=', '--run-id=   ']) {
+    const parsed = parseArgs(['feedback', 'add', '--type', 'accepted', '--skill', 's', arg]);
+    assert.equal(parsed.command, 'help', `${arg} falls back to help`);
+    assert.equal(parsed.feedbackRunId, null);
+  }
+});
+
+test('parseArgs: the equals form stays scoped to --run-id (other options unchanged)', () => {
+  // --reviewer=gemini is NOT supported: it must keep falling through to the
+  // shared parser exactly as before this change.
+  const parsed = parseArgs([
+    'feedback',
+    'add',
+    '--type',
+    'accepted',
+    '--skill',
+    's',
+    '--reviewer=gemini',
+  ]);
+  assert.equal(parsed.feedbackReviewer, null, '--reviewer= keeps its pre-existing behaviour');
+});

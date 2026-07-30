@@ -307,3 +307,45 @@ test('`river feedback add` without --run-id writes no review_run_id key', async 
   const [line] = (await fs.readFile(written.trim(), 'utf8')).trim().split('\n');
   assert.ok(!('review_run_id' in JSON.parse(line)), 'legacy CLI invocations are unchanged');
 });
+
+test('`river feedback add --run-id=<id>` writes the id instead of dropping it', async (t) => {
+  const { dir, cleanup } = await createTempGitRepo({ prefix: 'feedback-cli-run-id-eq-' });
+  t.after(cleanup);
+  const runId = '2026-07-25T00-00-00-000Z-abc123';
+  const res = await runCliInProcess(
+    [
+      'feedback',
+      'add',
+      '--type',
+      'false_positive',
+      '--skill',
+      'secret-scanner',
+      `--run-id=${runId}`,
+    ],
+    { cwd: dir }
+  );
+  assert.equal(res.code, 0, res.stderr);
+  const written = /written to: (.+)/.exec(res.stdout)?.[1];
+  assert.ok(written, `no target path in stdout: ${res.stdout}`);
+  const [line] = (await fs.readFile(written.trim(), 'utf8')).trim().split('\n');
+  // The regression: this used to exit 0 having written an entry with no
+  // review_run_id at all, which only surfaced as joinedFeedbackCount 0.
+  assert.equal(JSON.parse(line).review_run_id, runId);
+});
+
+test('`river feedback add --run-id "   "` reports an error and writes nothing', async (t) => {
+  const { dir, cleanup } = await createTempGitRepo({ prefix: 'feedback-cli-run-id-blank-' });
+  t.after(cleanup);
+  const res = await runCliInProcess(
+    ['feedback', 'add', '--type', 'accepted', '--skill', 'secret-scanner', '--run-id', '   '],
+    { cwd: dir }
+  );
+  // Same shape as the sibling options (--reviewer etc.): the error goes to
+  // stderr and the run falls back to the help path rather than proceeding.
+  assert.match(res.stderr, /--run-id option requires a value/);
+  assert.doesNotMatch(res.stdout, /Feedback recorded/);
+  // The regression this pins: a whitespace-only id used to pass the truthiness
+  // check, get nulled by normalizeOptionalString, and append an entry with no
+  // review_run_id. Nothing may be written at all now.
+  await assert.rejects(() => fs.readdir(path.join(dir, '.river', 'feedback')));
+});

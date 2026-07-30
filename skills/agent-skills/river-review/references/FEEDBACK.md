@@ -36,7 +36,10 @@ ad hoc な prompt 修正で済ませず、**fixture / suppression / reference / 
 `review_run_id` の運用ルール:
 
 - 渡す値は `river run --save` が stderr へ出力する `Run saved: <runId>` の `<runId>` である
+- 指定形式はスペース区切り（`--run-id <id>`）とイコール形式（`--run-id=<id>`）の両方を受け付ける
+- 空文字と空白のみの値は拒否される。黙って `review_run_id` 無しの entry が書かれる事故を防ぐためである
 - 省略時に「直近の run」へ暗黙解決する動作は持たない。無関係な run へ誤って紐づいた場合、その誤りが証拠に混ざるためである
+- 反復判定の occurrence キー `(review_run_id, pr)` に参加する。同一 PR への再 run に feedback を付けた場合、反復 1 回分として数えられる
 
 ## Mapping rules / 振り分けルール
 

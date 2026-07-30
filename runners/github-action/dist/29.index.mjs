@@ -279,6 +279,16 @@ function subClusterKeyOf({ fingerprint, category, filePath }) {
  * `minRecurrence` distinct (run, PR) occurrences, stay visible but carry
  * `experimentEligible: false` and must never feed an experiment or promotion.
  *
+ * What "distinct" means widened once a producer for `review_run_id` existed
+ * (#1673). The occurrence key is `(review_run_id, pr)`, so with `--run-id`
+ * populated two feedback rows on the SAME PR but different saved runs are two
+ * occurrences, not one re-litigation. That is intended: a finding that comes
+ * back after a revise is exactly the recurrence the Judgment Promotion Loop
+ * is looking for. Before the producer existed such rows collapsed onto the PR
+ * alone, so the same data can flip `experimentEligible` false -> true when
+ * `--run-id` starts being passed. P1/P2 stay observation-only, so nothing is
+ * promoted automatically off the back of that.
+ *
  * @param {object[]} feedbackEntries
  * @param {{ minRecurrence?: number, findingIndex?: Map<string, object> }} [options]
  */
@@ -368,6 +378,12 @@ function distinctCount(values) {
  * Identify the occurrence a feedback row belongs to. Rows that carry neither a
  * run nor a PR cannot be attributed and return null, so they never count as
  * independent recurrence evidence.
+ *
+ * Both halves of the key participate, so once `river feedback add --run-id`
+ * populates `review_run_id` (#1673) a row with a run but no PR IS attributable
+ * and does count, and two rows on one PR from two runs are two occurrences.
+ * Intended — see the recurrence note on `buildClusters`. The behaviour here is
+ * unchanged; only the data reaching it is richer.
  */
 function occurrenceKey(ref) {
   if (ref.review_run_id == null && ref.pr == null) return null;
@@ -555,7 +571,15 @@ function buildShadowCandidate({ cluster, sub, evidenceByRunId, now, policyVersio
     trust: {
       trustedEvidenceCount,
       untrustedEvidenceCount: runEvidence.length - trustedEvidenceCount,
-      unjoinedEvidenceCount: evidence.filter((ref) => !ref.review_run_id).length,
+      // "Cannot be traced to a saved run" — which is a missing id OR an id
+      // that resolves to no evidence record. Counting only the missing ones
+      // under-reports the moment a producer exists (#1673): a typo'd or
+      // pruned `--run-id` would be silently counted as joined here while
+      // `join.unjoinedFeedbackCount` counts it as unjoined, so the two
+      // numbers in one artifact contradicted each other.
+      unjoinedEvidenceCount: evidence.filter(
+        (ref) => !ref.review_run_id || !evidenceByRunId.has(ref.review_run_id)
+      ).length,
       canaryEligible: false,
       reasons,
     },
