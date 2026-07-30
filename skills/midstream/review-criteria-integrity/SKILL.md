@@ -1,7 +1,7 @@
 ---
 id: 'review-criteria-integrity'
 name: 'Review Criteria Integrity レビュー基準・品質ゲートの自己弱体化検出'
-description: '差分が「その差分自身を審査するレビュー基準・品質ゲート」を弱めていないかを diff-time で検出する。Check 1 レビュールールの削除・弱体化（.river/rules.md / .river/rules.d/*）、Check 2 実行時コンフィグの閾値・ゲート緩和（.river-review.{json,yaml,yml} の review.severity 引き下げ / exclude 拡大 / memory.suppressionEnabled 無効化 / selection.skills.exclude 追加）、Check 3 suppression entry の新規追加、Check 4 lint・静的解析設定からのルール削除や無効化、Check 5 branch protection・required check の緩和、の 5 Check を対象とし、これらが機能変更と同一 PR に混在し、かつ意図の宣言が無い場合に指摘する。report-only。workflow の permissions / action pin は gha-workflow-security、既存 suppression entry の使い分けは suppression-feedback、設定ファイルの一般的妥当性は config-json、.only / .skip / @ts-ignore / @ts-nocheck は heuristic-review.mjs の決定論検出器へ委譲する'
+description: '差分が「その差分自身を審査するレビュー基準・品質ゲート」を弱めていないかを diff-time で検出する。Check 1 レビュールールの削除・弱体化（.river/rules.md / .river/rules.d/*）、Check 2 実行時コンフィグの閾値・ゲート緩和（.river-review.{json,yaml,yml} の review.severity 引き下げ / exclude 拡大 / memory.suppressionEnabled 無効化 / selection.skills.exclude 追加）、Check 3 suppression entry の新規追加、Check 4 lint・静的解析設定からのルール削除や無効化、Check 5 branch protection・required check の緩和、の 5 Check を対象とし、これらが機能変更と同一 PR に混在し、かつ意図の宣言が無い場合に指摘する。report-only。workflow の permissions / action pin は gha-workflow-security、既存 suppression entry の使い分けは suppression-feedback、設定ファイルの一般的妥当性は config-json、.only / .skip / @ts-ignore / @ts-nocheck は heuristic-review.mjs の決定論検出器、リファクタと機能追加の混在は behavior-structure-separation へ委譲する'
 version: 0.1.0
 category: midstream
 phase: midstream
@@ -52,7 +52,7 @@ Why: 基準の弱体化はパターンとして拾えるが、「弱体化かど
 
 ## Goal / 目的
 
-レビュー基準・品質ゲートは被レビュー側の書込権限内にあり、PR で弱めた変更はその PR 自身の審査に即時反映される。この構造的リスクを diff-time の観点として可視化する。
+レビュー基準・品質ゲートは被レビューエージェントの書込権限内にあり、PR 内で `.river/rules.md` を弱めた変更は、その PR 自身のレビュー基準に即時反映される（`pages/explanation/security-model.md` §「レビュー基準の出所」）。この信頼境界を diff-time の観点として可視化する。
 
 次の 5 Check のいずれかに該当する変更が、**機能変更と同一 PR に混在**し、かつ**意図の宣言が無い**場合に指摘する。
 
@@ -72,6 +72,7 @@ report-only（ADR-005）。finding / question のみを出力し、自動修正�
 - **決定論検出器がカバー済みの抑制**: `.only` / `.skip` / `xit` / `xdescribe` / `@ts-ignore` / `@ts-nocheck` は `src/lib/heuristic-review.mjs` の決定論検出器が既に検出する。本 skill はこれらを**重複指摘しない**（`.claude/rules/review-core.md` §「カスタム静的解析の False-positive 責務分界（#1070）」）。
 - **AI レビュー結果の扱いそのもの**: レビュー自動化の境界（AI の指摘をどこまで自動適用するか）は `review-automation-boundary` が担う。本 skill は基準の変更差分のみを見る。
 - **スコープ逸脱一般**: 指摘対応ループの scope creep / premise break は `fix-scope-integrity` が担う。本 skill は**混在の対象が「レビュー基準・品質ゲート」である場合**に限定する。
+- **振る舞い変更と構造変更の混在**: リファクタ（構造変更）と機能追加（振る舞い変更）が同一 diff に混在していないかは `behavior-structure-separation` が担う。本 skill が扱う混在は**「レビュー基準・品質ゲートを弱める変更」と機能変更の組み合わせ**に限る。したがって、リファクタと機能追加が混ざっているだけで基準・ゲートに触れていないケースは本 skill の対象外であり、指摘しない。
 - **rules の出所固定の実装**: blob SHA 記録・base pin・provenance 記録は skill の責務ではなく、config schema と run record の設計課題である（#1669 スライス3）。
 
 ## Pre-execution Gate / 実行前ゲート
@@ -175,6 +176,8 @@ report-only（ADR-005）。finding / question のみを出力し、自動修正�
 - `skills/midstream/suppression-feedback/SKILL.md` — suppression entry の使い分け（委譲先）
 - `skills/midstream/config-json/SKILL.md` — 設定ファイルの一般的妥当性（委譲先）
 - `skills/midstream/fix-scope-integrity/SKILL.md` — 指摘対応ループのスコープ逸脱（隣接）
+- `skills/midstream/behavior-structure-separation/SKILL.md` — 振る舞い変更と構造変更の混在（委譲先）
+- `pages/explanation/security-model.md` §「レビュー基準の出所」 — rules の信頼境界（SSoT・#1669 スライス1）
 - `src/lib/heuristic-review.mjs` — `.only` / `.skip` / `@ts-ignore` / `@ts-nocheck` の決定論検出器（重複指摘しない境界）
 - `src/lib/rules.mjs` — `.river/rules.md` と `.river/rules.d/*` の読み込み実装
 - `pages/reference/config-schema.md` — `.river-review.json` の項目とデフォルト

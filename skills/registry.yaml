@@ -812,7 +812,7 @@ skills:
       ]
     severity: major
     recommended: true
-    description: '差分が「その差分自身を審査するレビュー基準・品質ゲート」を弱めていないかを diff-time で検出する。対象は Check 1 .river/rules.md・rules.d の基準削除、Check 2 .river-review.{json,yaml,yml} の閾値・ゲート緩和、Check 3 suppression entry の新規追加、Check 4 lint・静的解析設定のルール削除、Check 5 branch protection・required check の緩和の 5 つで、機能変更と同一 PR に混在し意図の宣言が無い場合に指摘する。workflow の permissions / action pin は gha-workflow-security、suppression entry の使い分けは suppression-feedback、設定ファイルの一般的妥当性は config-json、.only / .skip / @ts-ignore は heuristic-review.mjs の決定論検出器へ委譲する'
+    description: '差分が「その差分自身を審査するレビュー基準・品質ゲート」を弱めていないかを diff-time で検出する。対象は Check 1 .river/rules.md・rules.d の基準削除、Check 2 .river-review.{json,yaml,yml} の閾値・ゲート緩和、Check 3 suppression entry の新規追加、Check 4 lint・静的解析設定のルール削除、Check 5 branch protection・required check の緩和の 5 つで、機能変更と同一 PR に混在し意図の宣言が無い場合に指摘する。workflow の permissions / action pin は gha-workflow-security、suppression entry の使い分けは suppression-feedback、設定ファイルの一般的妥当性は config-json、.only / .skip / @ts-ignore は heuristic-review.mjs の決定論検出器、リファクタと機能追加の混在は behavior-structure-separation へ委譲する'
 
   - id: knowledge-to-code-alignment
     version: '0.1.0'
