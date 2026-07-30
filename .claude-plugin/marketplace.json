@@ -5,12 +5,12 @@
     "name": "river-review maintainers",
     "url": "https://github.com/s977043/river-review"
   },
-  "description": "Marketplace distributing River Review, the capability pack that strengthens AI review for Claude Code and Codex.",
+  "description": "Marketplace distributing River Review: Review Judgment as Code for AI-assisted development, delivered as a capability pack for Claude Code and Codex.",
   "plugins": [
     {
       "name": "river-review",
       "source": "./",
-      "description": "Capability pack that strengthens AI review: a Skill Registry of versioned, repo-owned review skills, driven by a review agent that runs perspective-based reviewer roles and verifies findings.",
+      "description": "Turn review into an organizational judgment asset. Review Judgment as Code for AI-assisted development: a Skill Registry of versioned, repo-owned review skills, driven by a review agent that runs perspective-based reviewer roles and verifies findings.",
       "author": {
         "name": "river-review maintainers",
         "url": "https://github.com/s977043/river-review"

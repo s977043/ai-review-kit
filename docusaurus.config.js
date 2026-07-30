@@ -32,13 +32,13 @@ const structuredData = {
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Cross-platform',
   description:
-    "River Review is an open-source 'Review Judgment as Code' framework for AI-assisted code review: teams codify their review standards as versioned, repo-owned skills and run them across plans, diffs, tests, JUnit, and prior review artifacts. Human-in-the-loop, not auto-merge.",
+    "River Review turns review into an organizational judgment asset. It is an open-source 'Review Judgment as Code' framework for AI-assisted code review: teams codify their review standards as versioned, repo-owned skills and run them across plans, diffs, tests, JUnit, and prior review artifacts. Human-in-the-loop, not auto-merge.",
   url: 'https://river-review.the3396.com/',
   codeRepository: 'https://github.com/s977043/river-review',
   license: 'https://opensource.org/licenses/MIT',
   isAccessibleForFree: true,
   keywords:
-    'AI code review, code review, review judgment as code, skill registry, human-in-the-loop, GitHub Action, Claude Code plugin',
+    'AI code review, code review, review judgment as code, review judgment platform, team-owned audit layer, skill registry, human-in-the-loop, GitHub Action, Claude Code plugin',
   offers: { '@type': 'Offer', price: 0, priceCurrency: 'USD' },
   author: {
     '@type': 'Organization',
@@ -49,6 +49,9 @@ const structuredData = {
 
 module.exports = {
   title: 'River Review',
+  // Tagline (Concept 4-layer vocabulary). The Core Mechanism wording
+  // ("Review Judgment as Code") stays in the schema.org description above.
+  tagline: 'レビューを、組織の判断資産へ。',
   url: siteUrl,
   baseUrl: baseUrl,
   organizationName,

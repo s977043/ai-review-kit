@@ -1,5 +1,6 @@
 # River Review
 
+**Turn review into an organizational judgment asset.**
 **Review Judgment as Code for AI-assisted development.**
 **Codify your team's review judgment as repo-owned skills and run them as automated PR gates.**
 
@@ -14,7 +15,7 @@
 English edition. The primary Japanese README lives in `README.md`.
 [日本語の README はここ](./README.md)—the Japanese copy is the source of truth; English may lag.
 
-River Review is an OSS framework for turning review standards into versioned, repo-owned skills that can run across plans, diffs, tests, JUnit, and prior review artifacts.
+River Review is an OSS framework for turning review standards into versioned, repo-owned skills that can run across plans, diffs, tests, JUnit, and prior review artifacts. What ships today is a **Review Judgment Platform** — a team-owned audit layer for your review criteria. The full picture is on the [Concept page](https://river-review.the3396.com/explanation/concept-en/).
 
 It is built for teams using AI-assisted development (Claude Code, Codex, Cursor, and similar), where implementation can be generated quickly but **review judgment still needs to stay explicit, repeatable, and owned by the team**.
 
@@ -93,6 +94,7 @@ The shortest no-install path is the bundled plugin: add the marketplace and ask 
 | Use W-check (double review)             | [W-check guide](pages/guides/w-check.en.md)                                             |
 | Use from an AI agent                    | [Agent workflow guide](pages/guides/agent-workflow.en.md)                               |
 | Repo-wide aware review                  | [Repo-wide review guide](pages/guides/repo-wide-review.en.md)                           |
+| Understand the concept                  | [Concept page](https://river-review.the3396.com/explanation/concept-en/)                |
 | Understand the design                   | [Architecture docs](https://river-review.the3396.com/explanation/river-architecture/)   |
 
 See [docs/runbook/dev.md](docs/runbook/dev.md) for the development runbook. License details are at the [bottom of this file](#license).

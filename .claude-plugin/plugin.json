@@ -3,7 +3,7 @@
   "name": "river-review",
   "displayName": "River Review",
   "version": "1.65.0",
-  "description": "Capability pack that strengthens AI review for Claude Code: your team's review criteria as versioned, repo-owned skills (a Skill Registry), driven by a review agent that runs perspective-based reviewer roles (code, security, performance, architecture, testing, adversarial) and verifies findings against the diff so humans keep the high-risk judgment.",
+  "description": "Turn review into an organizational judgment asset. Review Judgment as Code for AI-assisted development, delivered as a capability pack for Claude Code: your team's review criteria as versioned, repo-owned skills (a Skill Registry), driven by a review agent that runs perspective-based reviewer roles (code, security, performance, architecture, testing, adversarial) and verifies findings against the diff so humans keep the high-risk judgment.",
   "author": {
     "name": "river-review maintainers",
     "url": "https://github.com/s977043/river-review"
