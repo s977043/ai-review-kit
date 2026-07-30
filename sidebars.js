@@ -76,6 +76,7 @@ module.exports = {
       label: '解説',
       items: [
         'explanation/intro',
+        'explanation/concept',
         'explanation/what-is-river-review',
         'explanation/river-architecture',
         'explanation/design-philosophy',
