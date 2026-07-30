@@ -5,6 +5,8 @@ title: River Review へようこそ
 
 River Review (RR) は、**チームのレビュー判断を skill として明示化・バージョン管理し、SDLC の各ゲートで実行する OSS フレームワーク**です。
 
+このページは、はじめての方向けの短い導入です。課題認識・コアモデル・責任境界・目指さないものを含むコンセプトの全体像は [コンセプト](./concept.md) にまとめています。
+
 River Review は、PR の差分だけを見るツールではありません。AI 支援開発で発生する **要件・設計・計画・差分・レポート** をレビュー対象として扱い、作業に入る前から完了後まで、チームの判断基準を一貫して適用します。
 
 基盤となる考え方は変わりません。チームの暗黙知を versioned / repo-owned な **Skill（Skill Registry）** へ落とし込み、共有資産として再利用します。River Review はこの基盤を、次の 3 つの主軸として提供します。
@@ -38,4 +40,4 @@ River Review は、PR の差分だけを見るツールではありません。A
 - **How-to**: GitHub Actions 連携やトレーシングなどの実践ガイド
 - **Reference**: スキーマや設定のリファレンス
 
-まずは [River Review とは](./what-is-river-review.md) でコンセプトを把握してください。レビュー対象の整理は [レビュー対象と使いどころ](./review-scope.md) にまとめています。River Review が「人間のレビューを置き換えない」という立ち位置については [Human Judgment Focus](./human-judgment-focus.md) を参照してください。コンセプト全体の SSoT は repo root の [`docs/vision.md`](https://github.com/s977043/river-review/blob/main/docs/vision.md) です。
+次に読むページは目的によって分かれます。コンセプトの全体像は [コンセプト](./concept.md)、機能・利用方法・実行モデルは [River Review とは](./what-is-river-review.md) を参照してください。レビュー対象の整理は [レビュー対象と使いどころ](./review-scope.md) にまとめています。人間監督を崖・丘・原っぱの 3 階層で配分する考え方は [Human Judgment Focus](./human-judgment-focus.md) が扱います。コンセプトの内部 SSoT は repo root の [`docs/vision.md`](https://github.com/s977043/river-review/blob/main/docs/vision.md) です。

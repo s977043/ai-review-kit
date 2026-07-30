@@ -29,6 +29,8 @@ The conceptual breakdown below remains valid; note that some targets do not map 
 | Diff         | Post-execution | Whether the implementation is consistent with requirements / design / plan           | PR diff, changed files, test diff               |
 | Report       | Post-execution | Whether rationale, verification results, open items, and evidence remain             | Final report, review results, verification logs |
 
+These five categories group the nine Artifact types listed in [Concept](./concept.en.md) into an introductory granularity. The mapping to the nine types lives on the concept page.
+
 ## Pre-execution review
 
 The goal of pre-execution review is to reduce ambiguity and risk before an AI agent or developer starts work.

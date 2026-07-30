@@ -27,19 +27,21 @@ The goal of River Review is not to **replace** human judgment, but to **focus** 
 | What River Review reduces          | Indiscriminate human sync / shallow diff-only review / reviewer-specific tacit knowledge / re-reading context from zero     |
 | What River Review does not replace | Final accountability / design decisions / business validity / critical security judgment / approval of irreversible changes |
 
-River Review is a mechanism for increasing the evidence available for a decision — not for delegating responsibility. Final approval and accountability always rest with the human reviewer.
+River Review is a mechanism for increasing the evidence available for a decision — not for delegating responsibility. How much human supervision applies is not uniform: it is allocated across three risk tiers — cliff, hill, and field.
 
-## Risk-based review allocation
+## Review allocation by risk tier
 
-Weight your review effort according to the risk of the change. Lean low-risk changes onto River Review skills, and apply heavier human judgment as risk increases.
+Weight your review effort across three tiers according to the risk of the change. The lower the risk, the more you lean on River Review skills; the higher the risk, the heavier the human supervision. The SSoT for the tier definitions is the "Direction of travel: risk-tiered human supervision" section of [Design Philosophy](./design-philosophy.en.md).
 
-| Risk   | Lean onto River Review                                                                   | Humans focus on                         |
-| ------ | ---------------------------------------------------------------------------------------- | --------------------------------------- |
-| Low    | lint / format / naming / docs / simple refactors                                         | Exceptions only                         |
-| Medium | plan-diff conformance / tests / migration policy / API contract                          | Design intent, blast radius             |
-| High   | detection of auth / payment / personal data / security boundary / irreversible migration | Final judgment and accountable approval |
+| Risk tier                  | Lean onto River Review                                                                   | Human supervision                                                      |
+| -------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Cliff (ESCALATE)           | detection of auth / payment / personal data / security boundary / irreversible migration | Human approval is mandatory; escalate whenever anything is unclear     |
+| Hill (GO_WITH_OBSERVATION) | plan-diff conformance / tests / migration policy / API contract                          | Time-boxed observation, plus a check of design intent and blast radius |
+| Field (GO)                 | lint / format / naming / docs / simple refactors                                         | Autonomous convergence, audited after the fact via run-record / digest |
 
-In high-risk areas, River Review handles detection and presents the evidence; the final "pass / block" decision is made by humans.
+The common Low / Medium / High risk wording maps onto field / hill / cliff respectively.
+
+For changes on the cliff, River Review goes as far as detection and presenting the evidence. The final "pass / block" decision is made by humans.
 
 ## Use cases
 
@@ -48,7 +50,7 @@ River Review reduces repetitive review synchronization and lets human reviewers 
 - **Plan Review** — detect dangerous gaps in requirements, design, and plan before implementation
 - **Diff Review** — confirm the implementation diff is consistent with the plan, design, and test policy
 - **Test Review** — confirm tests are sufficient against the spec and the risks
-- **Review Comment Review** — re-examine whether existing AI or human review comments are valid (see [W-check](../guides/w-check.md))
+- **Review Comment Review** — re-examine whether existing AI or human review comments are valid (see [W-check](../guides/w-check.en.md))
 
 ## Do not over-trust AI review
 
@@ -62,7 +64,8 @@ Avoid merging based solely on AI review results in these risk areas. River Revie
 
 ## Related pages
 
-- [What is River Review](./what-is-river-review.md) — the overall concept
-- [Design Philosophy](./design-philosophy.md) — the design thinking in detail
-- [Review scope and use cases](./review-scope.md) — the breakdown of review targets
-- [W-check (double review) guide](../guides/w-check.md) — re-examining existing review results
+- [Concept](./concept.en.md) — the overall picture: problems, core model, responsibility boundary
+- [What is River Review](./what-is-river-review.en.md) — features, usage, and the execution model
+- [Design Philosophy](./design-philosophy.en.md) — the design thinking, including risk-tiered human supervision
+- [Review scope and use cases](./review-scope.en.md) — the breakdown of review targets
+- [W-check (double review) guide](../guides/w-check.en.md) — re-examining existing review results

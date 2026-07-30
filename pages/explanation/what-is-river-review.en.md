@@ -3,15 +3,29 @@ id: what-is-river-review-en
 title: What is River Review
 ---
 
-River Review is a **Context Engineering-driven, Skill Registry-centric code review framework** — a flow-based agent that carries review perspectives along [three phases (Upstream, Midstream, Downstream)](./upstream-midstream-downstream.md) as reusable **Agent Skills**.
+River Review is an **OSS framework that runs a team's own review judgment across requirements, design, plan, diff, and report**.
 
-By defining team-specific judgment criteria and procedures as version-controlled **Agent Skills**, it makes review findings reproducible while keeping operating costs in check. River Review is built around three core ideas:
+This page covers features, usage, and the execution model. The overall concept — the problems, the core model, and the responsibility boundary — is collected in [Concept](./concept.en.md).
+
+A typical AI review tool treats the PR diff as its main input. River Review does not stop there: it also reviews the requirements, design, and plan that come before an AI agent starts implementing, and stays consistent through the diff, tests, and completion report afterwards.
+
+This approach is also called _Context Engineering_ — designing how the context needed for a review judgment is structured and handed to an LLM. By defining team-specific judgment criteria and procedures as version-controlled **Agent Skills**, it makes review findings reproducible while keeping operating costs in check. River Review is built around three core ideas:
 
 - **Capability pack**: a bundle of skills / agent definitions that strengthens an AI's review ability.
 - **Skill Registry**: a way to share team judgment criteria as versioned, repo-owned Skills.
 - **Review agent and review team**: a dedicated review agent plus a review team that runs perspective-based reviewers in parallel.
 
 Turning tacit knowledge into versioned, repo-owned Skills as a shared asset stays unchanged. The third axis defines who runs that asset and how.
+
+## In one sentence
+
+River Review is a framework for reviewing **the flow of development itself, not only the code**.
+
+- Requirements: are the purpose, success conditions, and scope clear?
+- Design: is it consistent with the existing architecture and constraints?
+- Plan: are the work breakdown, risks, and verification policy in place?
+- Diff: does the implementation deviate from the requirements, design, or plan?
+- Report: does it retain the rationale, verification results, and open items?
 
 ## Purpose
 
@@ -22,6 +36,10 @@ Turning tacit knowledge into versioned, repo-owned Skills as a shared asset stay
 ## Positioning
 
 River Review does not replace human reviewers. By handling skill-based checks to reduce oversights, it allows humans to focus on intent and team-specific judgments.
+
+Its role also differs from PlanGate: River Review **reviews**, while PlanGate **blocks / passes**.
+
+The responsibility split across the four actors — River Review, humans, AI implementation agents, and PlanGate / the caller — is collected in [Concept](./concept.en.md). How human supervision is allocated across the cliff, hill, and field tiers is covered by [Human Judgment Focus](./human-judgment-focus.en.md).
 
 ## Execution model (who runs the review)
 
@@ -57,3 +75,5 @@ This contract and its reference implementation are defined in the [loop converge
 - **Upstream**: Check requirements, design, and ADRs to reduce downstream risks.
 - **Midstream**: Review code and PRs, ensuring alignment between design intent and implementation diffs.
 - **Downstream**: Check tests, QA, and release readiness to prevent regression and quality degradation.
+
+For details, see [Review scope and use cases](./review-scope.en.md) and [Upstream, midstream, downstream](./upstream-midstream-downstream.en.md).
