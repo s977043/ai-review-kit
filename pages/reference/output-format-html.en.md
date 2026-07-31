@@ -30,20 +30,22 @@ Unsupported --output for evolve aggregate: html. Use: text | json
 
 ## CLI
 
+River Review is not published to npm, so the CLI is run inside the repository with `npm run river -- ...`.
+
 ```bash
-npx river run . --output html
+npm run river -- run . --output html
 ```
 
-`river run` writes its run header (a few lines starting with `River Review (local)`) to **stdout** before the HTML body. Unlike `markdown` / `json` / `yaml`, that header is not redirected to stderr, so a plain shell redirect puts those lines ahead of `<!DOCTYPE html>`. Strip everything before the doctype when you need a clean HTML file:
+Stdout carries the `npm run` banner lines and the `river run` header (a few lines starting with `River Review (local)`) before the HTML body. For `markdown` / `json` / `yaml` that header goes to stderr, but for `html` it stays on stdout. Strip everything before the doctype when you need a clean HTML file:
 
 ```bash
-npx river run . --output html | sed -n '/<!DOCTYPE html>/,$p' > review-report.html
+npm run river -- run . --output html | sed -n '/<!DOCTYPE html>/,$p' > review-report.html
 ```
 
 The loop dashboard is generated from two or more stored run records (`.river/runs/`). Oscillation detection needs three or more run ids; with exactly two the oscillation timeline is empty.
 
 ```bash
-npx river runs diff <run-id-1> <run-id-2> --output html > loop-dashboard.html
+npm run river -- runs diff <run-id-1> <run-id-2> --output html | sed -n '/<!DOCTYPE html>/,$p' > loop-dashboard.html
 ```
 
 ## GitHub Action

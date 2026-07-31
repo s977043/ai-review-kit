@@ -30,20 +30,22 @@ Unsupported --output for evolve aggregate: html. Use: text | json
 
 ## CLI
 
+River Review は npm パッケージを公開していません。CLI はリポジトリ内で `npm run river -- ...` として実行します。
+
 ```bash
-npx river run . --output html
+npm run river -- run . --output html
 ```
 
-`river run` は HTML 本文の前に実行ヘッダー（`River Review (local)` で始まる数行）を標準出力へ書きます。`markdown` / `json` / `yaml` と異なりヘッダーが標準エラーへ回らないため、単純にリダイレクトするとヘッダー行が `<!DOCTYPE html>` より前に混ざります。純粋な HTML ファイルが必要な場合は、`<!DOCTYPE html>` 以降だけを取り出してください。
+標準出力には、`npm run` のバナー行と `river run` 実行ヘッダー（`River Review (local)` から始まる数行）が HTML 本文より前に出ます。`markdown` / `json` / `yaml` では実行ヘッダーを標準エラーへ回しますが、`html` は標準出力のままです。純粋な HTML ファイルが必要な場合は、`<!DOCTYPE html>` 以降だけを取り出してください。
 
 ```bash
-npx river run . --output html | sed -n '/<!DOCTYPE html>/,$p' > review-report.html
+npm run river -- run . --output html | sed -n '/<!DOCTYPE html>/,$p' > review-report.html
 ```
 
 Loop Dashboard は保存済みの実行記録（`.river/runs/`）を 2 件以上指定して生成します。run ID を 3 件以上渡すと振動検知が働き、Oscillation timeline に推移が描画されます（2 件の場合は空になります）。
 
 ```bash
-npx river runs diff <run-id-1> <run-id-2> --output html > loop-dashboard.html
+npm run river -- runs diff <run-id-1> <run-id-2> --output html | sed -n '/<!DOCTYPE html>/,$p' > loop-dashboard.html
 ```
 
 ## GitHub Action
