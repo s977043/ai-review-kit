@@ -682,10 +682,19 @@ describe('river run - GitHub Actions supervision wiring (#1372 C1/M1)', () => {
 // river run --save - 契約1 provenance (#1574 producer Slice 2 / #1715)
 // -----------------------------------------------------------------------------
 describe('river run --save - run record provenance', () => {
+  // `evidenceSource` is decided by GITHUB_ACTIONS, which this suite itself runs
+  // under. Both cases therefore pin the variable explicitly — `undefined` makes
+  // runCliInProcess delete it — instead of inheriting the ambient CI value and
+  // asserting `local` where the runner correctly reports `CI`.
+  // GITHUB_STEP_SUMMARY is cleared for the same reason: leaving CI's real path
+  // in place would append this test's digest to the job summary.
   async function saveAndReadRecord(t, { env } = {}) {
     const { dir, cleanup } = await createRepoWithSilentCatchChange();
     t.after(cleanup);
-    const result = await runCliInProcess(['run', '.', '--dry-run', '--save'], { cwd: dir, env });
+    const result = await runCliInProcess(['run', '.', '--dry-run', '--save'], {
+      cwd: dir,
+      env: { GITHUB_STEP_SUMMARY: undefined, ...env },
+    });
     assert.strictEqual(result.code, 0, result.stderr);
     const runId = /Run saved: (\S+)/.exec(result.stderr)?.[1];
     assert.ok(runId, `no runId in stderr: ${result.stderr}`);
@@ -695,7 +704,7 @@ describe('river run --save - run record provenance', () => {
   }
 
   test('records the reviewed HEAD commit and a local source claim', async (t) => {
-    const { record, head } = await saveAndReadRecord(t);
+    const { record, head } = await saveAndReadRecord(t, { env: { GITHUB_ACTIONS: undefined } });
     assert.strictEqual(record.commitSha, head);
     assert.deepStrictEqual(record.provenance, {
       evidenceSource: 'local',
