@@ -68,10 +68,14 @@ export async function runRunCommand(parsed, targetPath) {
       ? estimator.estimateFromDiff(context.diff, context.plan?.selected ?? [])
       : null;
 
-  const logRunHeader =
-    parsed.output === 'markdown' || parsed.output === 'json' || parsed.output === 'yaml'
-      ? console.error
-      : console.log;
+  // #1695: any --output other than `text` makes stdout a machine-consumed
+  // artifact (markdown comment body / JSON / YAML / a full HTML document), so
+  // the human-facing run header must go to stderr. This is deliberately an
+  // inverted check rather than an allow-list of structured formats: the
+  // previous enumeration (`markdown || json || yaml`) silently leaked the
+  // header onto stdout every time a new format was added — `html` shipped
+  // that way and broke `--output html > report.html` at the DOCTYPE.
+  const logRunHeader = parsed.output !== 'text' ? console.error : console.log;
   logRunHeader(`River Review (local)
 Phase: ${parsed.phase}
 Repo: ${context.repoRoot}
@@ -243,12 +247,11 @@ Dependencies: ${
   }
 
   if (parsed.debug) {
-    if (
-      parsed.output === 'markdown' ||
-      parsed.output === 'json' ||
-      parsed.output === 'yaml' ||
-      parsed.output === 'html'
-    ) {
+    // #1695: same inverted check as logRunHeader above. The previous
+    // enumeration already covered every structured format, so this is
+    // behavior-identical — it just removes the second place a newly added
+    // --output value would silently fall through to stdout.
+    if (parsed.output !== 'text') {
       console.error('\nDebug info (not included in output):');
       printDebugInfo(result, { log: console.error });
     } else {
