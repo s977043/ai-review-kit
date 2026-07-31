@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.67.0](https://github.com/s977043/river-review/compare/v1.66.1...v1.67.0) (2026-07-31)
+
+
+### Features
+
+* **review:** finding 確定前に指摘行周辺の設計意図コメントを確認する ([#1697](https://github.com/s977043/river-review/issues/1697)) ([288f39f](https://github.com/s977043/river-review/commit/288f39fdde1d1a16f6555abf0ea704643935dfc4))
+* **review:** 並列ロールレビューに進捗出力とロール単位タイムアウトを追加する ([#1696](https://github.com/s977043/river-review/issues/1696)) ([1389ae6](https://github.com/s977043/river-review/commit/1389ae606e55b589d7a2ad3b60dc2746ad866e4b))
+* **skills:** テストのアサーション有効性（常に PASS する検証）を検出する skill を追加する ([#1698](https://github.com/s977043/river-review/issues/1698)) ([c2b270a](https://github.com/s977043/river-review/commit/c2b270af602c68b6ef3a10e5ffbcf84b710d34ca)), closes [#1684](https://github.com/s977043/river-review/issues/1684)
+
 ## [1.66.1](https://github.com/s977043/river-review/compare/v1.66.0...v1.66.1) (2026-07-31)
 
 
