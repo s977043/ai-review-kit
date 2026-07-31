@@ -187,6 +187,7 @@ function parseArgs(argv) {
     feedbackReviewer: null,
     feedbackModel: null,
     feedbackReversedBy: null,
+    feedbackRunId: null,
     suppressionFingerprint: null,
     suppressionFindingId: null,
     suppressionFeedbackType: null,
@@ -423,6 +424,30 @@ function parseArgs(argv) {
           break;
         }
         parsed.feedbackReversedBy = value;
+        continue;
+      }
+      // #1673: the run this feedback refers to. Only an explicit id is
+      // accepted — resolving "the latest run" implicitly would attach evidence
+      // to an unrelated run.
+      //
+      // Two silent-miss paths this parse deliberately closes, both of which
+      // exited 0 while writing an entry with no `review_run_id` (so the loss
+      // only surfaced much later as joinedFeedbackCount staying at 0):
+      //   1. `--run-id=<id>`: the token never equals '--run-id', so an
+      //      equals-form value fell through and was dropped.
+      //   2. `--run-id "   "`: whitespace passes a truthiness check, then
+      //      normalizeOptionalString() nulls it out downstream.
+      // The `=` form is scoped to THIS option on purpose; extending it to
+      // --reviewer / --model / --reversed-by would change their behaviour and
+      // is out of scope here.
+      if (arg === '--run-id' || arg.startsWith('--run-id=')) {
+        const value = arg.startsWith('--run-id=') ? arg.slice('--run-id='.length) : args.shift();
+        if (!value || !value.trim() || value.startsWith('-')) {
+          console.error('Error: --run-id option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackRunId = value;
         continue;
       }
     }

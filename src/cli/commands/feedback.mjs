@@ -16,7 +16,7 @@ import { ensureGitRepo } from '../../lib/git.mjs';
 export async function runFeedbackCommand(parsed, targetPath) {
   if (parsed.feedbackSubcommand !== 'add') {
     console.error(
-      'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr --reviewer --model --reversed-by).'
+      'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr --reviewer --model --reversed-by --run-id).'
     );
     return 1;
   }
@@ -35,6 +35,10 @@ export async function runFeedbackCommand(parsed, targetPath) {
       reviewer: parsed.feedbackReviewer,
       model: parsed.feedbackModel,
       reversedBy: parsed.feedbackReversedBy,
+      // #1673: `--run-id <id>` from `river run --save` ("Run saved: <runId>").
+      // Written as `review_run_id` so `river evolve aggregate` can join this
+      // entry back to that run (契約2).
+      reviewRunId: parsed.feedbackRunId,
     });
   } catch (err) {
     if (err instanceof FeedbackError) {
