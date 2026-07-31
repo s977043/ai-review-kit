@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.68.0](https://github.com/s977043/river-review/compare/v1.67.1...v1.68.0) (2026-07-31)
+
+
+### Features
+
+* **output:** レビュー結果の人間向けサマリーを先頭に固定し段階的に開示する ([#1716](https://github.com/s977043/river-review/issues/1716)) ([ad651c0](https://github.com/s977043/river-review/commit/ad651c01e039941069e86ab580f178a996ac24c8))
+* **runs:** run record に commitSha と provenance を書き証拠をコミットに紐づける ([#1718](https://github.com/s977043/river-review/issues/1718)) ([f7638e8](https://github.com/s977043/river-review/commit/f7638e8be32c6c27950f78df0173df717b4d0aa5))
+
+
+### Bug Fixes
+
+* **cli:** skills のバナー/進捗行と --baseline サマリを stderr へ回す ([#1711](https://github.com/s977043/river-review/issues/1711)) ([5632a0a](https://github.com/s977043/river-review/commit/5632a0a141e125048dca0ef1a53443159bc0eb8a)), closes [#1705](https://github.com/s977043/river-review/issues/1705) [#1706](https://github.com/s977043/river-review/issues/1706)
+
 ## [1.67.1](https://github.com/s977043/river-review/compare/v1.67.0...v1.67.1) (2026-07-31)
 
 
