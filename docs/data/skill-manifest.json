@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Deterministic skill manifest for drift detection by selective adopters. Compare the checksum of your copied skill against this list to notice upstream changes. Regenerate with: npm run skills:manifest",
-  "skillCount": 127,
+  "skillCount": 128,
   "skills": [
     {
       "id": "a11y-accessible-name",
@@ -654,7 +654,7 @@
     {
       "id": "river-review-testing",
       "path": "skills/agent-skills/river-review-testing",
-      "checksum": "sha256:3eef2a548e8e5e45d3989a4683097155e1c90c2f7de1cf878ca5ef602f59ae69",
+      "checksum": "sha256:7766843391660016e43071218d4c036663e7876ae3d7a7824ee8f47e8b11758d",
       "files": 2
     },
     {
@@ -698,6 +698,12 @@
       "path": "skills/midstream/tailwind-class-hygiene",
       "checksum": "sha256:fdd43409e2236b24467ce219685236cf02e18f0df405bc81f32fe63959880504",
       "files": 4
+    },
+    {
+      "id": "test-assertion-effectiveness",
+      "path": "skills/downstream/test-assertion-effectiveness",
+      "checksum": "sha256:6acf580cfade4ff661c07d166e4f5602113948785a53481c94436ac7d7f088d8",
+      "files": 7
     },
     {
       "id": "test-existence",
