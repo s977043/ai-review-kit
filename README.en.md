@@ -229,7 +229,7 @@ Pin to a release tag such as `@v1.14.0` for stability. Alternatively, use the fl
 
 <!-- x-release-please-start-version -->
 
-Latest release: [v1.66.0](https://github.com/s977043/river-review/releases/latest)
+Latest release: [v1.66.1](https://github.com/s977043/river-review/releases/latest)
 
 <!-- x-release-please-end -->
 
@@ -405,6 +405,20 @@ Operating assumptions:
 5. Context/dependency control: set `RIVER_AVAILABLE_CONTEXTS=diff,tests` or `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` to skip skills whose requirements are unmet (with reasons) during selection (dependency checks are skipped when unset).
 6. To specify directly on the CLI: override the env vars with the `--context diff,fullFile` or `--dependency code_search,test_runner` flags (comma-separated).
 7. Dependency stubs: set `RIVER_DEPENDENCY_STUBS=1` to treat known dependencies (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`) as available and prevent skipping. Use this when you only want to inspect the plan in an environment where implementations are not yet ready.
+
+### Output formats (`--output`)
+
+The CLI `--output` flag and the GitHub Action `output_format` input accept the formats below. The CLI defaults to `text`; the action defaults to `markdown`.
+
+| Format     | Contents                                                                                                 |
+| ---------- | -------------------------------------------------------------------------------------------------------- |
+| `text`     | Plain text for the terminal (CLI default)                                                                |
+| `markdown` | Report for a PR comment (GitHub Action default)                                                          |
+| `json`     | Machine-readable findings, used for inline comments and scripting                                        |
+| `yaml`     | Structured YAML with scores and verdict → [YAML output format](pages/reference/output-format-yaml.en.md) |
+| `html`     | Self-contained HTML report → [HTML output format](pages/reference/output-format-html.en.md)              |
+
+`html` is rendered only by `river run` (review report) and `river runs diff` (loop dashboard). `river review plan|exec` rejects it with exit 3, `river evolve` rejects it with exit 1, and every other command ignores the flag.
 
 ### CLI runner interface (runners/cli)
 

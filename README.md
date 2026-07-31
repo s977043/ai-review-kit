@@ -238,7 +238,7 @@ jobs:
 
 <!-- x-release-please-start-version -->
 
-最新リリース: [v1.66.0](https://github.com/s977043/river-review/releases/latest)
+最新リリース: [v1.66.1](https://github.com/s977043/river-review/releases/latest)
 
 <!-- x-release-please-end -->
 
@@ -519,6 +519,20 @@ npm run codex:exec -- "review this branch"
 5. コンテキスト/依存の制御: `RIVER_AVAILABLE_CONTEXTS=diff,tests` や `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` を設定すると、スキル選択時に要求を満たさないものを理由付きでスキップできます（未設定の場合は依存チェックをスキップ）。
 6. CLI で直接指定する場合: `--context diff,fullFile` や `--dependency code_search,test_runner` フラグで環境変数を上書きできます（逗号区切り）。
 7. 依存のスタブ有効化: `RIVER_DEPENDENCY_STUBS=1` を指定すると、既知の依存（`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`）を「利用可能」とみなしてスキップを防ぎます。実装準備中の環境でプランだけ確認したいときに使用してください。
+
+### 出力形式（`--output`）
+
+CLI の `--output` と GitHub Action の `output_format` は次の形式を受け付けます。既定値は CLI が `text`、Action が `markdown` です。
+
+| 形式       | 内容                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| `text`     | 端末向けのプレーンテキスト（CLI の既定）                                                    |
+| `markdown` | PR コメント向けのレポート（GitHub Action の既定）                                           |
+| `json`     | 機械可読な findings。inline comment やスクリプト連携で使う                                  |
+| `yaml`     | 構造化 YAML とスコア・判定 → [YAML 出力フォーマット](pages/reference/output-format-yaml.md) |
+| `html`     | 自己完結型の HTML レポート → [HTML 出力フォーマット](pages/reference/output-format-html.md) |
+
+`html` を実際に描画するのは `river run`（レビューレポート）と `river runs diff`（Loop Dashboard）です。`river review plan|exec` は exit 3、`river evolve` は exit 1 で `html` を拒否し、それ以外のコマンドは指定を無視します。
 
 ### CLI Runnerインターフェイス（runners/cli）
 

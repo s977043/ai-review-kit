@@ -8,8 +8,10 @@ River Review は `--output yaml` / `output_format: yaml` で構造化 YAML + 人
 
 ## CLI
 
+River Review は npm パッケージを公開しません。CLI はリポジトリ内で `npm run river -- ...` として実行します。
+
 ```bash
-npx river run . --output yaml
+npm run river -- run . --output yaml
 ```
 
 ## GitHub Action
