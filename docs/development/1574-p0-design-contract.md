@@ -75,9 +75,18 @@ Keep / Rollback / Retire の最終処理は P4 でも #1568 の lifecycle を利
 - 後方互換のため、まず optional フィールドとして追加し、上記7箇所へ順に伝播させる。
 - これにより selected skill、finding、feedback、usage/cost/latency、reversal を同一 run へ追跡できる状態を作る（DoD 2項目め）。
 
+#### 実装状況（#1574 P1 / #1681）
+
+read 側の解決は P1 の `river evolve aggregate` で、書き手の生産者は v1.66.0（#1681）で実装しました。詳細は `docs/development/1574-p1-shadow-aggregate.md` を参照してください。
+
+- 既存 runId をそのまま canonical ID として採用し、別名レイヤは挟まない。run record は `deriveReviewRunId` が `review_run_id` → `reviewRunId` → `runId` の順に解決する。
+- feedback 側の生産者は `river feedback add --run-id <id>` である。省略時に直近 run へ暗黙解決する動作は持たせない。誤った run へ紐づいた証拠が混ざるためである。
+- 7箇所のうち生産者が存在するのは saved run（既存 `runId` の流用）と feedback（#1681）である。Review Artifact / Riverbed entry / evaluation ledger は未着手である。
+- ReviewImprovementCandidate と ReviewExperimentResult は、集約時に evidence 側の値から導出する（`sourceReviewRunIds` / `reviewRunIds`）。永続化側の生産者ではない。
+
 #### 未決事項
 
-- 既存 runId（`src/lib/result-store.mjs:21-25` の形式）を canonical ID としてそのまま採用するか、別名レイヤを挟むかは P1 で決める。
+- Review Artifact / Riverbed entry / evaluation ledger への伝播時期は、後続フェーズで決める。
 
 ### 契約3: Immutable Experiment Manifest
 
