@@ -52,7 +52,9 @@ export const EVIDENCE_SOURCES = ['local', 'CI', 'protected-branch', 'human'];
  *
  * Every provenance field this module reads comes from `.river/runs/*.json`,
  * which lives INSIDE the reviewed repository and is writable by the agent
- * under review (result-store.mjs:34-43 trust-boundary note). A record can
+ * under review (see the trust-boundary note on `buildRunRecord` in
+ * result-store.mjs — referenced by symbol, not by line, because line numbers
+ * here went stale the first time that file grew). A record can
  * therefore claim `evidence_source: 'CI'` and `trusted_by: 'github-actions'`
  * with no verification whatsoever, so honouring that claim would let a forged
  * file mint trusted evidence. P1 closes the promotion path entirely: the

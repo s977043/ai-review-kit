@@ -11,9 +11,10 @@ export const modules = {
 /* harmony export */   L5: () => (/* binding */ buildRunEvidence),
 /* harmony export */   Mc: () => (/* binding */ computeCandidateId),
 /* harmony export */   buildShadowAggregate: () => (/* binding */ buildShadowAggregate),
-/* harmony export */   formatShadowAggregateMarkdown: () => (/* binding */ formatShadowAggregateMarkdown)
+/* harmony export */   formatShadowAggregateMarkdown: () => (/* binding */ formatShadowAggregateMarkdown),
+/* harmony export */   lY: () => (/* binding */ EVIDENCE_SOURCES)
 /* harmony export */ });
-/* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, EVIDENCE_SOURCES, P1_TRUST_LEVEL, deriveFeedbackReviewRunId, evidenceTrustLevel, buildClusters */
+/* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, P1_TRUST_LEVEL, deriveFeedbackReviewRunId, evidenceTrustLevel, buildClusters */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7598);
 /* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3077);
 // Shadow aggregate (#1574 P1) — read-only multi-run aggregation.
@@ -60,7 +61,9 @@ const EVIDENCE_SOURCES = ['local', 'CI', 'protected-branch', 'human'];
  *
  * Every provenance field this module reads comes from `.river/runs/*.json`,
  * which lives INSIDE the reviewed repository and is writable by the agent
- * under review (result-store.mjs:34-43 trust-boundary note). A record can
+ * under review (see the trust-boundary note on `buildRunRecord` in
+ * result-store.mjs — referenced by symbol, not by line, because line numbers
+ * here went stale the first time that file grew). A record can
  * therefore claim `evidence_source: 'CI'` and `trusted_by: 'github-actions'`
  * with no verification whatsoever, so honouring that claim would let a forged
  * file mint trusted evidence. P1 closes the promotion path entirely: the

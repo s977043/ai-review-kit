@@ -8,6 +8,8 @@ import {
   ensureGitRepo,
   detectDefaultBranch,
   findMergeBase,
+  getHeadSha,
+  isWorkingTreeDirty,
   listChangedFiles,
   diffWithContext,
   collectAddedLineHints,
@@ -108,6 +110,91 @@ describe('findMergeBase', () => {
     const base = await findMergeBase(dir, 'nonexistent-branch');
     const head = (await runGit(['rev-parse', 'HEAD'], dir)).stdout.trim();
     assert.equal(base, head);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getHeadSha (#1715)
+// ---------------------------------------------------------------------------
+
+describe('getHeadSha', () => {
+  test('returns the HEAD commit sha', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      initialFiles: { 'a.txt': 'initial\n' },
+    });
+    t.after(cleanup);
+
+    const sha = await getHeadSha(dir);
+    const head = (await runGit(['rev-parse', 'HEAD'], dir)).stdout.trim();
+    assert.equal(sha, head);
+    // 40 hex for SHA-1, 64 for a SHA-256 repository. The producer does not
+    // constrain the length, so neither does this (#1715 N3).
+    assert.match(sha, /^[0-9a-f]{40}$|^[0-9a-f]{64}$/);
+  });
+
+  test('returns null for a non-repo directory instead of throwing', async (t) => {
+    const dir = createTempDir({ prefix: 'git-head-no-repo-' });
+    t.after(() => cleanupTempDir(dir));
+    assert.equal(await getHeadSha(dir), null);
+  });
+
+  test('returns null when HEAD is unborn (git init before the first commit)', async (t) => {
+    const dir = createTempDir({ prefix: 'git-head-unborn-' });
+    t.after(() => cleanupTempDir(dir));
+    await runGit(['init', '-b', 'main'], dir);
+    assert.equal(await getHeadSha(dir), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isWorkingTreeDirty (#1715 W1)
+// ---------------------------------------------------------------------------
+
+describe('isWorkingTreeDirty', () => {
+  test('returns false when the worktree matches HEAD', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      initialFiles: { 'a.txt': 'initial\n' },
+    });
+    t.after(cleanup);
+    assert.equal(await isWorkingTreeDirty(dir), false);
+  });
+
+  test('returns true for an unstaged modification', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      initialFiles: { 'a.txt': 'initial\n' },
+      changedFiles: { 'a.txt': 'modified\n' },
+    });
+    t.after(cleanup);
+    assert.equal(await isWorkingTreeDirty(dir), true);
+  });
+
+  test('returns true for a staged-but-uncommitted change', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      initialFiles: { 'a.txt': 'initial\n' },
+      changedFiles: { 'a.txt': 'modified\n' },
+    });
+    t.after(cleanup);
+    await runGit(['add', '.'], dir);
+    assert.equal(await isWorkingTreeDirty(dir), true);
+  });
+
+  test('returns true for an untracked file', async (t) => {
+    // Untracked files reach the review through collectRepoDiff once staged, and
+    // `--porcelain` is what makes them visible here; `diff-index` would not.
+    const { dir, cleanup } = await createTempGitRepo({
+      initialFiles: { 'a.txt': 'initial\n' },
+    });
+    t.after(cleanup);
+    writeFileSync(join(dir, 'new.txt'), 'brand new\n');
+    assert.equal(await isWorkingTreeDirty(dir), true);
+  });
+
+  test('returns null (not false) for a non-repo directory', async (t) => {
+    // Reporting "clean" for a tree that was never inspected would be the one
+    // wrong answer — a consumer would read the sha as reproducible.
+    const dir = createTempDir({ prefix: 'git-dirty-no-repo-' });
+    t.after(() => cleanupTempDir(dir));
+    assert.equal(await isWorkingTreeDirty(dir), null);
   });
 });
 

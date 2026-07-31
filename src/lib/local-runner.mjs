@@ -6,7 +6,13 @@ import { hasSelection, resolveSelectionSkillIds } from './selection.mjs';
 import { collectRepoDiff, renderDiffText } from './diff-processor.mjs';
 import { generateReview } from './review-engine.mjs';
 import { runReviewerOrchestration } from './reviewer-orchestrator.mjs';
-import { detectDefaultBranch, ensureGitRepo, findMergeBase } from './git.mjs';
+import {
+  detectDefaultBranch,
+  ensureGitRepo,
+  findMergeBase,
+  getHeadSha,
+  isWorkingTreeDirty,
+} from './git.mjs';
 import { createOpenAIPlanner } from './openai-planner.mjs';
 import { normalizePlannerMode, PHASES } from './planner-utils.mjs';
 import { buildExecutionPlan } from '../../runners/core/review-runner.mjs';
@@ -148,6 +154,22 @@ async function collectLocalContext({
   // auto-detected default branch. Falls back to detection when unset.
   const defaultBranch = baseRef ?? (await detectDefaultBranch(repoRoot));
   const mergeBase = await findMergeBase(repoRoot, defaultBranch);
+  // #1715 (#1574 producer Slice 2): the HEAD the review was taken against, plus
+  // whether the working tree had changes HEAD does not carry.
+  //
+  // `commitSha` is NOT "the commit containing the reviewed code". `collectRepoDiff`
+  // below diffs the WORKING TREE against `mergeBase`, so whenever the tree is
+  // dirty — the normal case for a local `river run` — the reviewed lines live
+  // only in the working tree and HEAD's tree does not reproduce them. `dirty`
+  // is what lets a consumer tell those two situations apart; without it the two
+  // are indistinguishable in the saved record (#1715 W1).
+  //
+  // Both are resolved once here and re-emitted by every exported entry point
+  // below — a result that drops them makes the provenance null for that path
+  // only. Null when the target has no HEAD / status cannot be read; the record
+  // then omits the field rather than guessing.
+  const commitSha = await getHeadSha(repoRoot);
+  const dirty = await isWorkingTreeDirty(repoRoot);
   const rawDiff = await collectRepoDiff(repoRoot, mergeBase, { contextLines });
   const diff = applyFileExclusions(rawDiff, config.exclude?.files ?? []);
   const reviewFiles = diff.filesForReview?.map((file) => file.path) ?? diff.changedFiles;
@@ -182,6 +204,8 @@ async function collectLocalContext({
     riskMap,
     defaultBranch,
     mergeBase,
+    commitSha,
+    dirty,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -230,6 +254,8 @@ export async function planLocalReview({
     riskMap,
     defaultBranch,
     mergeBase,
+    commitSha,
+    dirty,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -274,6 +300,8 @@ export async function planLocalReview({
       repoRoot,
       defaultBranch,
       mergeBase,
+      commitSha,
+      dirty,
       projectRules,
       availableContexts: contexts,
       availableDependencies: dependencies,
@@ -291,6 +319,8 @@ export async function planLocalReview({
       repoRoot,
       defaultBranch,
       mergeBase,
+      commitSha,
+      dirty,
       projectRules,
       diff,
       availableContexts: contexts,
@@ -350,6 +380,8 @@ export async function planLocalReview({
     repoRoot,
     defaultBranch,
     mergeBase,
+    commitSha,
+    dirty,
     changedFiles: reviewFiles,
     plan: augmentedPlan,
     diff,
@@ -406,6 +438,8 @@ export async function runLocalReview({
       repoRoot: context.repoRoot,
       defaultBranch: context.defaultBranch,
       mergeBase: context.mergeBase,
+      commitSha: context.commitSha ?? null,
+      dirty: context.dirty ?? null,
       config: context.config,
       configPath: context.configPath,
       configSource: context.configSource,
@@ -421,6 +455,8 @@ export async function runLocalReview({
       repoRoot: context.repoRoot,
       defaultBranch: context.defaultBranch,
       mergeBase: context.mergeBase,
+      commitSha: context.commitSha ?? null,
+      dirty: context.dirty ?? null,
       availableContexts: context.availableContexts,
       availableDependencies: context.availableDependencies,
       config: context.config,
@@ -543,6 +579,13 @@ export async function runLocalReview({
     repoRoot: path.resolve(context.repoRoot),
     defaultBranch: context.defaultBranch,
     mergeBase: context.mergeBase,
+    // #1715: consumed by buildRunRecord (src/lib/result-store.mjs) for the
+    // saved record's 契約1 provenance. `commitSha` names the HEAD this review
+    // was taken against — NOT necessarily a commit containing the reviewed
+    // lines, since the diff above came from the working tree. `dirty` is what
+    // says which of the two it was.
+    commitSha: context.commitSha ?? null,
+    dirty: context.dirty ?? null,
     changedFiles: context.changedFiles,
     plan: context.plan,
     reviewMode: context.plan?.reviewMode ?? 'medium',
@@ -616,6 +659,8 @@ export async function doctorLocalReview({
     projectRules,
     defaultBranch,
     mergeBase,
+    commitSha,
+    dirty,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -643,6 +688,8 @@ export async function doctorLocalReview({
     repoRoot,
     defaultBranch,
     mergeBase,
+    commitSha,
+    dirty,
     skillsCount: skills.length,
     projectRules,
     changedFiles: reviewFiles,

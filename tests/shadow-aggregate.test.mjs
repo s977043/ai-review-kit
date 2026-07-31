@@ -44,11 +44,16 @@ import { runEvolveCommand } from '../src/cli/commands/evolve.mjs';
 // through the SAME functions `river run --save` / `river feedback add` use,
 // rather than through hand-built record literals.
 import {
+  buildRunProvenance,
   buildRunRecord,
   loadAllRunRecords,
   resolveStoreDir,
   saveRunRecord,
 } from '../src/lib/result-store.mjs';
+// #1715: the provenance producers. `getHeadSha` is the same resolver
+// src/lib/local-runner.mjs uses, so the sha asserted below is a real commit.
+import { getHeadSha } from '../src/lib/git.mjs';
+import { createTempGitRepo } from './helpers/temp-repo.mjs';
 import {
   appendFeedbackEntry,
   buildFeedbackEntry,
@@ -909,6 +914,144 @@ describe('shadow-aggregate producer による 契約2 join 成立（#1673）', (
       true,
       JSON.stringify(validateAggregate.errors, null, 2)
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #1715 producer Slice 2: run record provenance ties evidence to a commit.
+//
+// Same discipline as the #1673 block above: the record travels the EXISTING
+// production path — buildRunProvenance -> buildRunRecord -> saveRunRecord ->
+// loadAllRunRecords -> buildShadowAggregate — and the sha it carries is a real
+// `git rev-parse HEAD` taken from a temp repo through `getHeadSha`, the same
+// resolver src/lib/local-runner.mjs calls. Asserting that buildRunEvidence can
+// read a hand-written `provenance` literal would be self-consistent and would
+// pass even if the producer never wrote one.
+// ---------------------------------------------------------------------------
+
+async function seedRepoWithProvenance({ env }) {
+  const { dir, cleanup } = await createTempGitRepo({
+    prefix: 'rr-provenance-',
+    initialFiles: { 'src/a.mjs': 'export const a = 1;\n' },
+  });
+  const headSha = await getHeadSha(dir);
+  // Two runs of the same commit, so the finding clears the recurrence
+  // threshold and a candidate (with evidence) is actually produced.
+  const runIds = [];
+  for (let i = 0; i < 2; i += 1) {
+    const record = buildRunRecord(
+      {
+        repoRoot: dir,
+        changedFiles: ['src/a.mjs'],
+        commitSha: headSha,
+        findings: [
+          { fingerprint: FP_A, file: 'src/a.mjs', ruleId: 'secret-scanner', severity: 'major' },
+        ],
+      },
+      { phase: 'midstream', provenance: buildRunProvenance({ commitSha: headSha, env }) }
+    );
+    await saveRunRecord(record);
+    runIds.push(record.runId);
+  }
+  assert.notEqual(runIds[0], runIds[1], 'the two saved runs must have distinct ids');
+
+  for (const [i, runId] of runIds.entries()) {
+    const entry = buildFeedbackEntry({
+      feedbackType: 'false_positive',
+      skillId: 'secret-scanner',
+      findingFingerprint: FP_A,
+      pr: i + 1,
+      now: NOW,
+      reviewRunId: runId,
+    });
+    await appendFeedbackEntry(entry, { repoRoot: dir });
+  }
+
+  const runRecords = await loadAllRunRecords(resolveStoreDir(dir));
+  const feedbackEntries = await listFeedbackEntries({ repoRoot: dir });
+  const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
+  return { headSha, aggregate, cleanup };
+}
+
+describe('shadow-aggregate 実データの source_commit_sha 充足（#1715）', () => {
+  test('source_commit_sha is the real HEAD sha, not null', async (t) => {
+    const { headSha, aggregate, cleanup } = await seedRepoWithProvenance({ env: {} });
+    t.after(cleanup);
+
+    // 40 hex for SHA-1, 64 for a SHA-256 repository. Neither the record nor the
+    // aggregate schema constrains the length today (#1715 N3).
+    assert.match(headSha, /^[0-9a-f]{40}$|^[0-9a-f]{64}$/);
+    assert.equal(aggregate.evidence.runs.length, 2);
+    for (const evidence of aggregate.evidence.runs) {
+      assert.equal(evidence.source_commit_sha, headSha);
+      assert.equal(evidence.evidence_source, 'local');
+    }
+    // The candidate reaches the same evidence through the 契約2 join.
+    assert.equal(aggregate.candidate.evidence.length, 2);
+    for (const evidence of aggregate.candidate.evidence) {
+      assert.equal(evidence.source_commit_sha, headSha);
+    }
+  });
+
+  test('GITHUB_ACTIONS=true is recorded as the CI source claim', async (t) => {
+    const { headSha, aggregate, cleanup } = await seedRepoWithProvenance({
+      env: { GITHUB_ACTIONS: 'true' },
+    });
+    t.after(cleanup);
+
+    for (const evidence of aggregate.evidence.runs) {
+      assert.equal(evidence.evidence_source, 'CI');
+      assert.equal(evidence.source_commit_sha, headSha);
+    }
+  });
+
+  test('provenance promotes nothing: the three trust indicators stay pinned', async (t) => {
+    // The producer runs INSIDE the reviewed repository, so `evidence_source:
+    // CI` is a self-report with no attestation behind it. #1650 B2: a feature
+    // addition must not relax a defense won in review.
+    const { aggregate, cleanup } = await seedRepoWithProvenance({
+      env: { GITHUB_ACTIONS: 'true' },
+    });
+    t.after(cleanup);
+
+    assert.equal(aggregate.evidence.trustedRunCount, 0);
+    assert.equal(aggregate.candidate.trust.trustedEvidenceCount, 0);
+    for (const evidence of aggregate.evidence.runs) {
+      assert.equal(evidence.trust_level, 'untrusted');
+      assert.equal(evidence.provenance_verified, false);
+      assert.equal(evidence.trusted_by, null);
+    }
+  });
+
+  test('the aggregate carrying provenance is still schema-valid', async (t) => {
+    const { aggregate, cleanup } = await seedRepoWithProvenance({
+      env: { GITHUB_ACTIONS: 'true' },
+    });
+    t.after(cleanup);
+    assert.equal(
+      validateAggregate(aggregate),
+      true,
+      JSON.stringify(validateAggregate.errors, null, 2)
+    );
+  });
+
+  test('a record saved without provenance still aggregates (pre-#1715 shape)', async (t) => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'rr-legacy-provenance-'));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const record = buildRunRecord(
+      { repoRoot: root, changedFiles: ['src/a.mjs'], findings: [] },
+      { phase: 'midstream' }
+    );
+    assert.equal('commitSha' in record, false);
+    assert.equal('provenance' in record, false);
+    await saveRunRecord(record);
+
+    const runRecords = await loadAllRunRecords(resolveStoreDir(root));
+    const aggregate = buildShadowAggregate({ runRecords, feedbackEntries: [], now: NOW });
+    const [evidence] = aggregate.evidence.runs;
+    assert.equal(evidence.source_commit_sha, null);
+    assert.equal(evidence.evidence_source, 'local');
+    assert.equal(evidence.trust_level, 'untrusted');
   });
 });
 
