@@ -5,7 +5,7 @@
 **Codify your team's review judgment as repo-owned skills and run them as automated PR gates.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-review.the3396.com/explanation/intro/)
+[![Documentation](https://img.shields.io/badge/docs-available-blue)](https://river-review.the3396.com/explanation/intro-en/)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13339/badge)](https://www.bestpractices.dev/projects/13339)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/s977043/river-review/badge)](https://securityscorecards.dev/viewer/?uri=github.com/s977043/river-review)
 [![Listed on awesome-codex-plugins](https://img.shields.io/badge/awesome--codex--plugins-listed-brightgreen)](https://github.com/hashgraph-online/awesome-codex-plugins/tree/main/plugins/s977043/river-review)
@@ -26,7 +26,7 @@ River Review helps you answer questions like:
 - Does this PR violate the team's migration, security, accessibility, or dependency policy?
 - Did the implementation agent ignore feedback from a previous review?
 
-> River Review does not replace human review with AI. By executing your team's review criteria as versioned skills, it lets human reviewers focus on the high-risk judgment that truly needs them ([Human Judgment Focus](https://river-review.the3396.com/explanation/human-judgment-focus/)).
+> River Review does not replace human review with AI. By executing your team's review criteria as versioned skills, it lets human reviewers focus on the high-risk judgment that truly needs them ([Human Judgment Focus](https://river-review.the3396.com/explanation/human-judgment-focus-en/)).
 
 ⭐ If this helps your team's review workflow in AI-assisted development, please [Star the repo](https://github.com/s977043/river-review). It keeps you posted on updates and helps other teams with the same problem find River Review.
 
@@ -83,19 +83,19 @@ The shortest no-install path is the bundled plugin: add the marketplace and ask 
 
 > **Two distribution channels: the bundled plugin (Claude Code / Codex) and GitHub Actions.** River Review is not published to npm (project policy). Contributors can run the CLI inside the repo with `npm run river -- ...` (to try it locally: `npm run river -- run . --dry-run`). The CLI is kept because it is also the GitHub Action's execution engine.
 
-| Goal                                    | Destination                                                                             |
-| --------------------------------------- | --------------------------------------------------------------------------------------- |
-| Try it in 5 minutes                     | [Quick start (GitHub Actions)](#quick-start-github-actions)                             |
-| Install as a Claude Code / Codex plugin | [Installing the plugin](#installing-the-river-review-plugin)                            |
-| Add to an existing repo                 | [Setup guide](https://river-review.the3396.com/guides/github-actions/)                  |
-| Start with a bundled Skill Pack         | [Using Skill Packs](pages/guides/use-skill-packs.en.md)                                 |
-| Create your first skill                 | [Skill tutorial](https://river-review.the3396.com/tutorials/creating-your-first-skill/) |
-| Estimate run cost                       | [Cost estimation guide](pages/guides/cost-estimation.en.md)                             |
-| Use W-check (double review)             | [W-check guide](pages/guides/w-check.en.md)                                             |
-| Use from an AI agent                    | [Agent workflow guide](pages/guides/agent-workflow.en.md)                               |
-| Repo-wide aware review                  | [Repo-wide review guide](pages/guides/repo-wide-review.en.md)                           |
-| Understand the concept                  | [Concept page](https://river-review.the3396.com/explanation/concept-en/)                |
-| Understand the design                   | [Architecture docs](https://river-review.the3396.com/explanation/river-architecture/)   |
+| Goal                                    | Destination                                                                                |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Try it in 5 minutes                     | [Quick start (GitHub Actions)](#quick-start-github-actions)                                |
+| Install as a Claude Code / Codex plugin | [Installing the plugin](#installing-the-river-review-plugin)                               |
+| Add to an existing repo                 | [Setup guide](https://river-review.the3396.com/guides/github-actions.en/)                  |
+| Start with a bundled Skill Pack         | [Using Skill Packs](pages/guides/use-skill-packs.en.md)                                    |
+| Create your first skill                 | [Skill tutorial](https://river-review.the3396.com/tutorials/creating-your-first-skill.en/) |
+| Estimate run cost                       | [Cost estimation guide](pages/guides/cost-estimation.en.md)                                |
+| Use W-check (double review)             | [W-check guide](pages/guides/w-check.en.md)                                                |
+| Use from an AI agent                    | [Agent workflow guide](pages/guides/agent-workflow.en.md)                                  |
+| Repo-wide aware review                  | [Repo-wide review guide](pages/guides/repo-wide-review.en.md)                              |
+| Understand the concept                  | [Concept page](https://river-review.the3396.com/explanation/concept-en/)                   |
+| Understand the design                   | [Architecture docs](https://river-review.the3396.com/explanation/river-architecture.en/)   |
 
 See [docs/runbook/dev.md](docs/runbook/dev.md) for the development runbook. License details are at the [bottom of this file](#license).
 

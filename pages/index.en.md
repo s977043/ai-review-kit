@@ -26,3 +26,16 @@ Docs live under `pages/` and are served at `/docs`. Diátaxis is expressed via d
 - [Concept: turning review into an organizational judgment asset](./explanation/concept.en.md) — the problems, the core model, the review targets, the responsibility boundary, and the non-goals.
 - [Welcome to River Review](./explanation/intro.en.md) — a short introduction for first-time readers.
 - [What is River Review](./explanation/what-is-river-review.en.md) — a product overview covering features, usage, and the execution model.
+
+## Get started
+
+- [Getting started with River Review](/tutorials/getting-started.en)
+- [Quickstart](/guides/quickstart.en)
+
+## Advanced usage
+
+- [W-check (double review)](/guides/w-check.en) — feed review results from other AI or human reviewers back in for re-verification, and check whether each finding is real.
+- [Repo-wide review](/guides/repo-wide-review.en) — how to adopt and tune a review that reads repository context around the changed files, not just the PR diff.
+- [Cost estimation and optimization](/guides/cost-estimation.en) — estimating monthly cost with `--estimate` and `--max-cost`, then validating the estimate against measured usage.
+- [Agent workflow (`--reviewers auto`)](/guides/agent-workflow.en) — choosing between the entry points that call River Review from an AI agent (CLI, sub-agent, `/review-local`).
+- [Independent review synthesis](/guides/use-independent-review-synthesis.en) — the synthesis pattern that merges several AI and human review results to support a merge decision.
