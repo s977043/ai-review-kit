@@ -15,6 +15,24 @@ import {
   getOutputSchemaValidator,
   printMarkdownReport,
 } from '../src/cli/render.mjs';
+import { mergeFindings } from '../src/lib/reviewer-orchestrator.mjs';
+import { synthesizeTeamLeadReport } from '../src/lib/team-lead-synthesizer.mjs';
+
+/**
+ * Run `fn` with console.error captured. validateOutputArtifact reports schema
+ * violations to stderr and never throws, so the only way to assert "no schema
+ * warning" is to watch that channel.
+ */
+function captureStderr(fn) {
+  const lines = [];
+  const originalError = console.error;
+  console.error = (...args) => lines.push(args.map(String).join(' '));
+  try {
+    return { value: fn(), lines };
+  } finally {
+    console.error = originalError;
+  }
+}
 
 describe('getOutputSchemaValidator', () => {
   it('loads schemas/output.schema.json and returns a compiled validator', () => {
@@ -212,9 +230,146 @@ describe('formatJsonOutput timedOutRoles (#1689)', () => {
       },
       'midstream'
     );
-    // teamLeadReport is deliberately absent here: it is an undeclared property
-    // that already trips this validator (pre-existing, out of scope for #1689).
     const validate = getOutputSchemaValidator();
     assert.ok(validate(out), JSON.stringify(validate.errors));
+  });
+});
+
+// #1700: every `--reviewers` run printed `Warning: JSON output does not conform
+// to schemas/output.schema.json` because formatJsonOutput emits three
+// properties the schema never declared (teamLeadReport at the top level,
+// consensusLevel and reviewerRole on each issue) while the schema is
+// additionalProperties: false. The validator only warns, so the violation was
+// permanent stderr noise rather than a failure. The report is built through the
+// production path (mergeFindings -> synthesizeTeamLeadReport) instead of being
+// hand-written, so the schema is pinned to what the synthesizer really emits.
+describe('formatJsonOutput teamLeadReport (#1700)', () => {
+  function makeRawFinding(overrides) {
+    return {
+      ruleId: 'security-basic',
+      file: 'src/app.mjs',
+      lineStart: 12,
+      lineEnd: 12,
+      title: 'token is read straight from the environment',
+      message:
+        'Finding: token is read straight from the environment Evidence: const token = process.env.SECRET Impact: leaks on log Severity: warning Confidence: high Fix: read it through the config loader',
+      severity: 'warning',
+      confidence: 'high',
+      status: 'open',
+      evidence: ['const token = process.env.SECRET'],
+      suggestion: 'read it through the config loader',
+      scope: 'in-diff',
+      criterionRefs: null,
+      artifactRefs: null,
+      chunkLabel: null,
+      ...overrides,
+    };
+  }
+
+  /** Mirrors runReviewerOrchestration: merge across roles, then assign stable ids. */
+  function buildReviewerRunResult() {
+    const merged = mergeFindings([
+      makeRawFinding({ reviewerRole: 'bug-hunter' }),
+      // Same file and line: mergeFindings clusters it, so this finding ends up
+      // with agreement.length 2 -> consensusLevel 'multi'.
+      makeRawFinding({ reviewerRole: 'security-scanner' }),
+      makeRawFinding({
+        reviewerRole: 'bug-hunter',
+        ruleId: 'logic-guard',
+        file: 'src/parse.mjs',
+        lineStart: 40,
+        lineEnd: 41,
+        title: 'missing guard clause',
+        message:
+          'Finding: missing guard clause Evidence: rows[0] is read before the length check Impact: throws on empty input Severity: nit Confidence: medium Fix: return early when rows is empty',
+        severity: 'nit',
+        confidence: 'medium',
+        evidence: ['rows[0] is read before the length check'],
+        suggestion: 'return early when rows is empty',
+        scope: 'pre-existing',
+        criterionRefs: ['AC-4'],
+        artifactRefs: ['plan.md#AC-4'],
+      }),
+    ]).map((f, i) => ({ ...f, id: `rr-${i + 1}` }));
+
+    const reviewerResults = [
+      { role: 'bug-hunter', label: 'Bug Hunter', status: 'fulfilled', timedOut: false },
+      { role: 'security-scanner', label: 'Security Scanner', status: 'fulfilled', timedOut: false },
+    ];
+
+    return {
+      status: 'ok',
+      dryRun: false,
+      findings: merged,
+      changedFiles: ['src/app.mjs', 'src/parse.mjs'],
+      plan: {},
+      config: {},
+      reviewerResults,
+      teamLeadReport: synthesizeTeamLeadReport({ findings: merged, reviewerResults }),
+    };
+  }
+
+  it('emits no schema warning for a --reviewers run', () => {
+    const { value: out, lines } = captureStderr(() =>
+      formatJsonOutput(buildReviewerRunResult(), 'midstream')
+    );
+    assert.deepStrictEqual(lines, [], `expected no stderr output, got:\n${lines.join('\n')}`);
+    const validate = getOutputSchemaValidator();
+    assert.ok(validate(out), JSON.stringify(validate.errors));
+  });
+
+  it('carries the fields whose absence would make the no-warning assertion vacuous', () => {
+    const out = formatJsonOutput(buildReviewerRunResult(), 'midstream');
+    assert.deepStrictEqual(Object.keys(out.teamLeadReport).sort(), [
+      'blindSpots',
+      'consensusSummary',
+      'top3Findings',
+    ]);
+    assert.strictEqual(out.teamLeadReport.top3Findings[0].consensusLevel, 'multi');
+    assert.deepStrictEqual(out.teamLeadReport.consensusSummary, {
+      consensus: 0,
+      multi: 1,
+      single: 1,
+      total: 2,
+    });
+    // The four roles that did not run must surface as blind spots.
+    assert.deepStrictEqual(
+      out.teamLeadReport.blindSpots.map((b) => b.role),
+      ['test-gap', 'dependency-reviewer', 'frontend-reviewer', 'ci-cd-reviewer']
+    );
+    // The other two properties #1700 had to declare live on the issues.
+    assert.strictEqual(out.issues[0].consensusLevel, 'multi');
+    assert.strictEqual(out.issues[0].reviewerRole, 'bug-hunter');
+  });
+
+  it('still warns when the report grows an undeclared field', () => {
+    const result = buildReviewerRunResult();
+    const { lines } = captureStderr(() =>
+      formatJsonOutput(
+        {
+          ...result,
+          teamLeadReport: { ...result.teamLeadReport, executiveSummary: 'looks fine to me' },
+        },
+        'midstream'
+      )
+    );
+    assert.strictEqual(lines.length, 1, `expected exactly one warning, got:\n${lines.join('\n')}`);
+    assert.match(lines[0], /does not conform to schemas\/output\.schema\.json/);
+    assert.match(lines[0], /executiveSummary/);
+  });
+
+  it('omits teamLeadReport entirely for a single-reviewer run (back-compat)', () => {
+    // local-runner.mjs sets `teamLeadReport: review.teamLeadReport ?? null`, so
+    // the non-orchestrated path reaches the formatter with an explicit null.
+    for (const teamLeadReport of [null, undefined]) {
+      const { value: out, lines } = captureStderr(() =>
+        formatJsonOutput(
+          { status: 'ok', dryRun: false, findings: [], plan: {}, config: {}, teamLeadReport },
+          'midstream'
+        )
+      );
+      assert.ok(!('teamLeadReport' in out), `absent for teamLeadReport=${teamLeadReport}`);
+      assert.deepStrictEqual(lines, []);
+    }
   });
 });
