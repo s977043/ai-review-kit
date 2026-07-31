@@ -58,7 +58,7 @@ River Review は OSS として成長中であり、内部実装は変更され�
 - `--explain`: 採用された skill / gate / config tier を人間可読で出す（stderr）
 - `--estimate`: コスト見積もりのみ（レビューは実行しない）
 - `--max-cost <usd>`: 見積もりが上限を超える場合に中断する
-- `--output <text|markdown|json|yaml|html>`: 出力形式（GitHub Actions は `markdown` を使用、`yaml` は [YAML 出力](./output-format-yaml.md) を参照、`html` は自己完結型 HTML レポート）
+- `--output <text|markdown|json|yaml|html>`: 出力形式（GitHub Actions は `markdown` を使用、`yaml` は [YAML 出力](./output-format-yaml.md) を参照、`html` は自己完結型 HTML レポートで [HTML 出力](./output-format-html.md) を参照）
 - `--context <list>`: 利用可能なコンテキスト（例: `diff,fullFile`）
 - `--dependency <list>`: 利用可能な依存（例: `code_search,test_runner`）
 - `--baseline <path>`: 過去のレビュー JSON（findings 配列）と比較して回帰を表示する

@@ -406,6 +406,20 @@ Operating assumptions:
 6. To specify directly on the CLI: override the env vars with the `--context diff,fullFile` or `--dependency code_search,test_runner` flags (comma-separated).
 7. Dependency stubs: set `RIVER_DEPENDENCY_STUBS=1` to treat known dependencies (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`) as available and prevent skipping. Use this when you only want to inspect the plan in an environment where implementations are not yet ready.
 
+### Output formats (`--output`)
+
+The CLI `--output` flag and the GitHub Action `output_format` input accept the formats below. The CLI defaults to `text`; the action defaults to `markdown`.
+
+| Format     | Contents                                                                                                 |
+| ---------- | -------------------------------------------------------------------------------------------------------- |
+| `text`     | Plain text for the terminal (CLI default)                                                                |
+| `markdown` | Report for a PR comment (GitHub Action default)                                                          |
+| `json`     | Machine-readable findings, used for inline comments and scripting                                        |
+| `yaml`     | Structured YAML with scores and verdict → [YAML output format](pages/reference/output-format-yaml.en.md) |
+| `html`     | Self-contained HTML report → [HTML output format](pages/reference/output-format-html.en.md)              |
+
+`html` is rendered only by `river run` (review report) and `river runs diff` (loop dashboard). `river review plan|exec` rejects it with exit 3, `river evolve` rejects it with exit 1, and every other command ignores the flag.
+
 ### CLI runner interface (runners/cli)
 
 The new CLI interface gives direct access to core runner features:
