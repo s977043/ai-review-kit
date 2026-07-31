@@ -134,6 +134,8 @@ The JSON passed to `--baseline` accepts either form:
 
 The output is the same `## Regression Review Summary` format as `runs diff`. If the comparison fails, `Warning: --baseline comparison failed: ...` is printed and the review itself continues.
 
+Which stream the summary goes to depends on `--output` (#1706): stdout for the default `text`, stderr for `markdown` / `json` / `yaml` / `html`. So `river run . --baseline base.json --output json > result.json` still writes a valid JSON file.
+
 ### Creating a baseline file
 
 If you save a result with `--output json`, you can reuse it directly as a baseline.

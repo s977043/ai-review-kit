@@ -10,13 +10,14 @@ River Review emits a self-contained HTML report when you pass `--output html` (C
 
 The CLI accepts `text|markdown|json|yaml|html` for `--output` globally, but only a few commands actually render `html`.
 
-| Command                                                                                                            | `--output html`  | Produces                                                          |
-| ------------------------------------------------------------------------------------------------------------------ | ---------------- | ----------------------------------------------------------------- |
-| `river run <path>`                                                                                                 | Supported        | Review report (decision banner, score, findings, risk assessment) |
-| `river runs diff <id1> <id2> [<id3>...]`                                                                           | Supported        | Loop dashboard (loop signal, churn, oscillation timeline)         |
-| `river review plan` / `river review exec`                                                                          | Rejected, exit 3 | Use `json` or `markdown`                                          |
-| `river evolve aggregate` / `river evolve replay`                                                                   | Rejected, exit 1 | Use `text` or `json`                                              |
-| Everything else (`river review route`, `river runs list`, `river runs digest`, `river promote`, `river skills`, …) | Ignored          | Falls back to that command's default output                       |
+| Command                                                                                            | `--output html`  | Produces                                                          |
+| -------------------------------------------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------- |
+| `river run <path>`                                                                                 | Supported        | Review report (decision banner, score, findings, risk assessment) |
+| `river runs diff <id1> <id2> [<id3>...]`                                                           | Supported        | Loop dashboard (loop signal, churn, oscillation timeline)         |
+| `river review plan` / `river review exec`                                                          | Rejected, exit 3 | Use `json` or `markdown`                                          |
+| `river evolve aggregate` / `river evolve replay`                                                   | Rejected, exit 1 | Use `text` or `json`                                              |
+| `river skills <path>`                                                                              | Rejected, exit 1 | Use `text`, `markdown`, or `json`                                 |
+| Everything else (`river review route`, `river runs list`, `river runs digest`, `river promote`, …) | Ignored          | Falls back to that command's default output                       |
 
 The rejecting commands print:
 
@@ -26,7 +27,12 @@ Error: Unsupported output format "html" for river review. Expected: json | markd
 
 $ river evolve aggregate --output html
 Unsupported --output for evolve aggregate: html. Use: text | json
+
+$ river skills . --output html
+Unsupported --output for skills: html. Use: text | markdown | json
 ```
+
+`river skills` used to accept `yaml` and `html` and return JSON regardless (#1705). Rejecting them is the fix for that declaration mismatch, so a caller that passed `yaml` to get JSON must pass `json` instead.
 
 ## CLI
 

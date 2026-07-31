@@ -103,6 +103,8 @@ river runs summary
 
 Pass a previous review JSON to `--baseline <path>` to print a regression summary (new / fixed findings) before the normal output. The JSON may be a raw `findings` array, or an object with a `findings` (or `issues`) key — e.g. the output of `river run . --output json`.
 
+Which stream the summary goes to depends on `--output` (#1706). The default `text` keeps it on stdout; `markdown` / `json` / `yaml` / `html` send it to stderr so that redirecting the structured output never mixes the summary into it.
+
 ```bash
 # 1. Save a baseline review as JSON
 river run . --output json > baseline.json

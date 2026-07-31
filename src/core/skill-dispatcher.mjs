@@ -26,8 +26,17 @@ function shouldExclude(filePath, patterns = []) {
 }
 
 export class SkillDispatcher {
-  constructor(repoRoot) {
+  /**
+   * @param {string} repoRoot - repository root the dispatcher reviews.
+   * @param {{ log?: (...args: unknown[]) => void }} [options]
+   *   `log` receives every progress / diagnostic line the dispatcher emits.
+   *   #1705: when the caller renders a machine-readable artifact on stdout
+   *   (`--output json` etc.) it injects `console.error` so the artifact stays
+   *   parseable. Defaults to `console.log`, i.e. the historical behavior.
+   */
+  constructor(repoRoot, options = {}) {
     this.repoRoot = repoRoot;
+    this.log = options.log ?? console.log;
   }
 
   async run(changedFiles, getFileDiff, phase = 'midstream', dryRun = false, debug = false) {
@@ -43,7 +52,7 @@ export class SkillDispatcher {
     }));
     if (skills.length === 0) {
       // Fallback: load skills from local directory if not in config
-      console.log('Loading skills from local directory...');
+      this.log('Loading skills from local directory...');
       const loaded = await loadSkills({ skillsDir: path.join(this.repoRoot, 'skills') });
       skills = loaded.map((s) => ({
         ...s.metadata,
@@ -51,10 +60,10 @@ export class SkillDispatcher {
         files: s.metadata.files || s.metadata.applyTo || [], // Normalize files
       }));
     }
-    console.log(`Loaded ${skills.length} skills. Filtering by phase: ${phase}`);
+    this.log(`Loaded ${skills.length} skills. Filtering by phase: ${phase}`);
 
     if (skills.length === 0) {
-      console.log('No skills configured or found in skills/ directory.');
+      this.log('No skills configured or found in skills/ directory.');
       return results;
     }
 
@@ -62,7 +71,7 @@ export class SkillDispatcher {
     const reviewFiles = changedFiles.filter((file) => !shouldExclude(file, excludePatterns));
 
     if (!reviewFiles.length) {
-      console.log('No files to review after applying exclude patterns.');
+      this.log('No files to review after applying exclude patterns.');
       return results;
     }
 
@@ -86,16 +95,14 @@ export class SkillDispatcher {
           const excluded = phaseMatched.filter((skill) =>
             (skill.exclude ?? []).some((pattern) => minimatch(file, pattern, { dot: true }))
           );
-          console.log(
+          this.log(
             `Skipping ${file}: matched files ${fileMatched.length}/${skills.length}, phase ok ${phaseMatched.length}/${fileMatched.length}, excluded ${excluded.length}.`
           );
         }
         continue;
       }
 
-      console.log(
-        `Analyzing ${file} with skills: ${applicableSkills.map((s) => s.name).join(', ')}`
-      );
+      this.log(`Analyzing ${file} with skills: ${applicableSkills.map((s) => s.name).join(', ')}`);
 
       // 2. Execute skills in parallel
       const diff = await getFileDiff(file); // Dependency injection for file reading (once per file)
@@ -106,13 +113,13 @@ export class SkillDispatcher {
           const systemPrompt = buildSystemPrompt(skill, language);
 
           if (debug) {
-            console.log(
+            this.log(
               `\n--- System Prompt Debug (${skill.name}) ---\n${systemPrompt}\n-----------------------------------\n`
             );
           }
 
           if (dryRun) {
-            console.log(`  -> Invoking (dry-run) ${modelName} for skill "${skill.name}"...`);
+            this.log(`  -> Invoking (dry-run) ${modelName} for skill "${skill.name}"...`);
             return {
               file,
               skill: skill.name,
@@ -121,7 +128,7 @@ export class SkillDispatcher {
           }
 
           if (!llmEnabled) {
-            console.log(`  -> Skipped (no API key) skill "${skill.name}"...`);
+            this.log(`  -> Skipped (no API key) skill "${skill.name}"...`);
             return {
               file,
               skill: skill.name,
@@ -135,7 +142,7 @@ export class SkillDispatcher {
             maxTokens: skill.maxTokens,
             disableCache: skill.disableCache,
           });
-          console.log(`  -> Invoking ${modelName} for skill "${skill.name}"...`);
+          this.log(`  -> Invoking ${modelName} for skill "${skill.name}"...`);
           const review = await client.generateReview(systemPrompt, diff);
 
           const result = {
