@@ -105,13 +105,11 @@ Why: plan の assumption と diff の突合は artifact 参照による決定論
 ```text
 (assumption-resolution-trace):1: [要約] 未解消のまま残る前提は〈1文〉
 
-<file>:<line>: [Assumption 未解消] <タイトル>
+<file>:<line>: [Assumption 未解消] <タイトル> CriterionRefs: <ID のカンマ区切り> ArtifactRefs: <アンカーのカンマ区切り>
   plan 前提: 「<plan からの引用>」(<plan の該当箇所>)
   evidence_missing: <解消の証拠が diff・PR 本文・テストに無いこと>(探索した検索語: `<grep pattern>`)
   Severity: blocker | warning | nit（較正基準に従う）
   resolution: <実装で確認 / PR 本文へ解消根拠 / open question を明示繰り越し>（merge 前必須 / merge 後観測で足りる を明記）
-  CriterionRefs: <AC / テストケース ID のカンマ区切り>（判明している場合のみ）
-  ArtifactRefs: <artifact アンカーのカンマ区切り>（判明している場合のみ）
 ```
 
 ### トレーサビリティ ref の付記（#1666 / #1545 Phase 2）
@@ -123,9 +121,13 @@ plan artifact 由来の受け入れ条件 ID・テストケース ID・見出し
 
 制約は次のとおり。
 
+- **`<file>:<line>:` と同じ行の末尾に置く**。取り込みは行単位で行われ、2 行目以降に書いたラベルは finding へ届かない。
 - **ID を捏造しない**。artifact に実在する見出し・ID をそのまま転記する。採番や正規化は行わない（名前空間は River Review が所有しない）。
 - **artifact が欠損しているときは付けない**。Pre-execution Gate の既存挙動（全評価 / 部分評価 / skip）は変えない。部分評価では PR 本文へ inline された項目だけを対象とする。
-- 値は**空白を含まないトークンのカンマ区切り**にする。空白を含む散文はラベルとして認識されない。
+- 値は**空白を含まないトークン**にし、区切りは `,` または `、` を使う。空白区切りの 2 個目以降は取り込まれない。
+- **アンカー付きで書く**（`plan.md#assumptions-3`）。`#` の無い裸のファイルパスは Evidence のファイル参照と区別できず、差分照合の対象に残る（fail-safe）。
+- ラベル名は大文字小文字を区別する。`criterionRefs:` のような lowerCamel 表記はラベルとして扱われない。
+- 散文の中でラベル名に言及するときは `` `CriterionRefs:` `` のようにバッククォートで囲む。囲まないと構造ラベルとして解釈される。
 - 付記は additive なメタデータであり、severity・`verified` 判定・ゲート判定には影響しない。
 
 ## Good / Bad Examples
@@ -133,12 +135,11 @@ plan artifact 由来の受け入れ条件 ID・テストケース ID・見出し
 ### Good
 
 ```text
-src/lib/rate-limit.mjs:12: [Assumption 未解消] plan の「上流 API は 429 を返す」前提の解消証拠が無い
+src/lib/rate-limit.mjs:12: [Assumption 未解消] plan の「上流 API は 429 を返す」前提の解消証拠が無い ArtifactRefs: plan.md#assumptions-3
   plan 前提: 「上流 API はレート超過時に HTTP 429 を返すと仮定する」(plan.md #assumptions-3)
   evidence_missing: 429 を受けた際の後処理・その前提を確認したテストが diff・repo に無い（検索語: `429` を src/ と tests/ に grep）
   Severity: warning
   resolution: 429 応答の処理経路を実装で確認するか、前提を検証した契約テストを追加する。merge 前に解消証拠を残すべき
-  ArtifactRefs: plan.md#assumptions-3
 ```
 
 ### Bad

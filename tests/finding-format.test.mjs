@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
-import { generateReview } from '../src/lib/review-engine.mjs';
+import { buildPrompt, generateReview, parseLineComments } from '../src/lib/review-engine.mjs';
 import {
   formatFindingMessage,
   validateFindingMessage,
@@ -11,6 +11,9 @@ import {
   normalizeSeverity,
   severityToPriority,
   normalizeScope,
+  extractRefFieldSpans,
+  stripTraceabilityRefs,
+  RESERVED_FINDING_LABELS,
   SEVERITY_RANK,
 } from '../src/lib/finding-factory.mjs';
 
@@ -426,4 +429,176 @@ test('generateReview carries CriterionRefs / ArtifactRefs from the message onto 
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+// ---------------------------------------------------------------------------
+// #1666 adversarial-review follow-up (F1, F3–F5, F7–F8)
+// ---------------------------------------------------------------------------
+
+test('buildPrompt instructs the model on the refs labels and forbids inventing IDs (F1)', () => {
+  // Producer coverage: SKILL.md bodies never reach the model (buildSkillSummary
+  // emits id/phase/severity only), so without a prompt line the schema field is
+  // unreachable on the LLM path. The anti-fabrication clause is part of the
+  // contract — River Review does not own the ID namespace.
+  const { prompt } = buildPrompt({
+    diffText: 'diff --git a/src/app.mjs b/src/app.mjs\n+const a = 1;\n',
+    diffFiles: [{ path: 'src/app.mjs', addedLines: [1], hunks: [] }],
+    plan: { selected: [], skipped: [] },
+    phase: 'midstream',
+  });
+  assert.match(prompt, /"CriterionRefs: AC-4, TC-7"/);
+  assert.match(prompt, /"ArtifactRefs: plan\.md#AC-4, todo\.md#TASK-3"/);
+  assert.match(prompt, /appear verbatim in an artifact supplied above/);
+  assert.match(prompt, /omit the label entirely — never invent, guess, abbreviate, or renumber/);
+});
+
+test('RESERVED_FINDING_LABELS is the shared label set and includes the Fix alias (F3)', () => {
+  // `Suggestion` is accepted by the verifier's actionability check but was
+  // missing from the reserved set, so `CriterionRefs: AC-4, Suggestion: …`
+  // swallowed the suggestion and emitted "Suggestion" as a ref value.
+  for (const label of [
+    'Finding',
+    'Evidence',
+    'Impact',
+    'Fix',
+    'Severity',
+    'Confidence',
+    'Suggestion',
+    'Scope',
+    'CriterionRefs',
+    'ArtifactRefs',
+  ]) {
+    assert.ok(RESERVED_FINDING_LABELS.includes(label), `${label} must be reserved`);
+  }
+
+  const parsed = parseFindingMessage(
+    'Finding: x Evidence: root cause here CriterionRefs: AC-4, Suggestion: do the fix properly Severity: warning Confidence: high'
+  );
+  assert.deepEqual(parsed.criterionRefs, ['AC-4'], 'a reserved label is never a ref value');
+  assert.match(
+    stripTraceabilityRefs(
+      'Finding: x Evidence: e CriterionRefs: AC-4, Suggestion: do the fix properly Severity: warning'
+    ),
+    /Suggestion: do the fix properly/,
+    'stripping must not consume the following label'
+  );
+});
+
+test('parseFindingMessage accepts the lenient label and value shapes (F4/F5)', () => {
+  const cases = [
+    // [label, message, expected artifactRefs]
+    ['full-width colon', 'Fix: 直す ArtifactRefs：plan.md#AC-4', ['plan.md#AC-4']],
+    [
+      'japanese comma separator',
+      'Fix: 直す ArtifactRefs: plan.md#AC-4、todo.md#TASK-3',
+      ['plan.md#AC-4', 'todo.md#TASK-3'],
+    ],
+    ['relative path', 'Fix: 直す ArtifactRefs: ./docs/plan.md#AC-4', ['./docs/plan.md#AC-4']],
+    ['backticked value', 'Fix: 直す ArtifactRefs: `plan.md#AC-4`', ['plan.md#AC-4']],
+    ['no space after colon', 'Fix: 直す ArtifactRefs:plan.md#AC-4', ['plan.md#AC-4']],
+  ];
+  for (const [label, message, expected] of cases) {
+    assert.deepEqual(parseFindingMessage(message).artifactRefs, expected, label);
+  }
+
+  // F5: a Japanese full stop directly before the label — the shape the filling
+  // skills actually emit. The stop stays with the preceding field.
+  const afterFullStop = parseFindingMessage(
+    'Finding: x Evidence: e Fix: 環境変数へ移す。CriterionRefs: AC-4 Severity: warning Confidence: high'
+  );
+  assert.deepEqual(afterFullStop.criterionRefs, ['AC-4']);
+  assert.equal(afterFullStop.suggestion, '環境変数へ移す。');
+
+  // The exact example line requirements-acceptance/SKILL.md tells the reviewer
+  // to emit must parse.
+  const skillExample = parseFindingMessage(
+    'docs/prd.md:42: [severity=major] AC-4 の期待結果がテスト不能。追記案: Then の観測点を数値で定義。CriterionRefs: AC-4 ArtifactRefs: docs/prd.md#AC-4'
+  );
+  assert.deepEqual(skillExample.criterionRefs, ['AC-4']);
+  assert.deepEqual(skillExample.artifactRefs, ['docs/prd.md#AC-4']);
+
+  // A trailing refs label must not bleed into Confidence any more.
+  const trailing = parseFindingMessage(
+    'Finding: x Evidence: e Fix: move to env var Severity: warning Confidence: high CriterionRefs：AC-4'
+  );
+  assert.equal(trailing.confidence, 'high');
+  assert.deepEqual(trailing.criterionRefs, ['AC-4']);
+});
+
+test('parseFindingMessage rejects a URL ref value but still ends the preceding field (F9)', () => {
+  // A URL truncates at the scheme colon, so it is not a supported ref shape.
+  // It must be dropped, not glued onto the Fix text.
+  const parsed = parseFindingMessage(
+    'Finding: x Evidence: e Fix: fix it properly ArtifactRefs: https://example.com/plan#AC-4 Severity: warning Confidence: high'
+  );
+  assert.equal(parsed.artifactRefs, null);
+  assert.equal(parsed.suggestion, 'fix it properly');
+  assert.equal(parsed.confidence, 'high');
+});
+
+test('parseFindingMessage merges every occurrence of a refs label and dedupes (F8)', () => {
+  const parsed = parseFindingMessage(
+    'Finding: x Evidence: e Fix: fix it properly CriterionRefs: AC-1 CriterionRefs: AC-2, AC-1 Severity: warning Confidence: high'
+  );
+  assert.deepEqual(parsed.criterionRefs, ['AC-1', 'AC-2'], 'later labels are not dropped');
+});
+
+test('a well-formed refs label inside English prose is treated as a label (F7 tradeoff)', () => {
+  // In-band labelling has no escape character, so a reviewer writing the exact
+  // label form inside prose gets it parsed. This is the accepted cost, pinned
+  // here so a future change is a deliberate one. Backticks are the workaround:
+  // they are not a valid label prefix.
+  const bare = parseFindingMessage(
+    'Finding: x Evidence: e Impact: i Fix: add CriterionRefs: AC-4 to every finding Severity: warning Confidence: high'
+  );
+  assert.deepEqual(bare.criterionRefs, ['AC-4'], 'documented: prose in the label form is a label');
+  assert.equal(bare.suggestion, 'add');
+
+  const backticked = parseFindingMessage(
+    'Finding: x Evidence: e Impact: i Fix: add `CriterionRefs:` AC-4 to every finding Severity: warning Confidence: high'
+  );
+  assert.equal(backticked.criterionRefs, null, 'a backticked mention is not a label');
+  assert.equal(backticked.suggestion, 'add `CriterionRefs:` AC-4 to every finding');
+});
+
+test('the SKILL.md output templates survive line-based parsing (F6)', () => {
+  // Findings are ingested one line at a time, so a refs label on a continuation
+  // line is discarded before it ever reaches parseFindingMessage. Both filling
+  // skills now put the labels at the end of the `<file>:<line>:` line; this
+  // pins that so the templates cannot silently drift back.
+  const assumptionTrace = [
+    'src/lib/rate-limit.mjs:12: [Assumption 未解消] plan の「上流 API は 429 を返す」前提の解消証拠が無い ArtifactRefs: plan.md#assumptions-3',
+    '  plan 前提: 「上流 API はレート超過時に HTTP 429 を返すと仮定する」(plan.md #assumptions-3)',
+    '  Severity: warning',
+  ].join('\n');
+  const [traceComment] = parseLineComments(assumptionTrace) ?? [];
+  assert.ok(traceComment, 'the anchor line must be ingested');
+  assert.deepEqual(parseFindingMessage(traceComment.message).artifactRefs, [
+    'plan.md#assumptions-3',
+  ]);
+
+  const requirements =
+    'docs/prd.md:42: [severity=major] AC-4 の期待結果がテスト不能。追記案: Then の観測点を数値で定義。CriterionRefs: AC-4 ArtifactRefs: docs/prd.md#AC-4';
+  const [requirementsComment] = parseLineComments(requirements) ?? [];
+  assert.ok(requirementsComment);
+  const requirementsParsed = parseFindingMessage(requirementsComment.message);
+  assert.deepEqual(requirementsParsed.criterionRefs, ['AC-4']);
+  assert.deepEqual(requirementsParsed.artifactRefs, ['docs/prd.md#AC-4']);
+});
+
+test('extractRefFieldSpans covers the whole refs field, not just the parsed list (F2 input)', () => {
+  // Wider than the extraction grammar on purpose: a space-separated list is not
+  // parsed into values, but it must still not destroy the finding downstream.
+  assert.deepEqual(
+    extractRefFieldSpans(
+      'Finding: x Evidence: e ArtifactRefs: plan.md#AC-4 todo.md#TASK-3 Severity: warning'
+    ),
+    ['plan.md#AC-4 todo.md#TASK-3']
+  );
+  assert.deepEqual(extractRefFieldSpans('Finding: x Evidence: no refs here'), []);
+  assert.deepEqual(
+    extractRefFieldSpans('Fix: docs に ArtifactRefs: の説明を足す Severity: warning'),
+    [],
+    'a label with no value opens no span'
+  );
 });

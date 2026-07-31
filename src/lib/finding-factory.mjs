@@ -95,50 +95,122 @@ const SCOPE_VALUE_PATTERN = 'in[-_ ]?diff|pre[-_ ]?existing';
 const RE_SCOPE_LABEL = new RegExp(`(?:^|\\s)Scope:\\s*(${SCOPE_VALUE_PATTERN})\\b`, 'i');
 
 /**
- * Traceability ref labels (#1666 / #1545 Phase 2). Same containment problem as
- * the Scope label — an unconstrained `CriterionRefs:` in LABEL_ALTERNATION would
- * let any prose occurrence terminate the preceding Evidence/Fix capture and
- * silently truncate it — but refs are free-form identifiers, so a closed value
- * vocabulary is not available. The value is constrained by SHAPE instead:
+ * Traceability ref labels (#1666 / #1545 Phase 2).
+ * @see docs/review/output-format.md
+ */
+export const REF_LABEL_NAMES = /** @type {const} */ (['CriterionRefs', 'ArtifactRefs']);
+const REF_LABEL_ALTERNATION = REF_LABEL_NAMES.join('|');
+
+/**
+ * Single source of truth for every label a finding message may carry.
+ *
+ * Any consumer that needs to know "this word followed by a colon is structural,
+ * not content" MUST import this instead of re-listing the labels. `Suggestion`
+ * is an accepted alias of `Fix` in the verifier's actionability check, but it
+ * was missing from the reserved set, so `CriterionRefs: AC-4, Suggestion: …`
+ * swallowed the suggestion and emitted `"Suggestion"` as a ref value.
+ */
+export const RESERVED_FINDING_LABELS = /** @type {const} */ ([
+  ...LABEL_NAMES,
+  'Suggestion',
+  'Scope',
+  ...REF_LABEL_NAMES,
+]);
+const RESERVED_LABEL_ALTERNATION = RESERVED_FINDING_LABELS.join('|');
+
+/**
+ * Grammar of the traceability-ref labels. Same containment problem as the Scope
+ * label — an unconstrained `CriterionRefs:` in LABEL_ALTERNATION would let any
+ * prose occurrence terminate the preceding Evidence/Fix capture and silently
+ * truncate it — but refs are free-form identifiers, so a closed value vocabulary
+ * is not available. The value is constrained by SHAPE instead:
  *
  * - a ref token is whitespace-free (`AC-4`, `TC-7`, `plan.md#AC-4`), so prose —
  *   which always continues with spaces — cannot satisfy the label;
- * - a list is comma-separated, so an adjacent label (` Severity: warning`) ends
- *   it rather than being swallowed;
- * - a token that is itself a reserved label followed by `:` is rejected, so a
- *   stray trailing comma cannot consume the next label;
+ * - a list is separated by `,` or `、`, so an adjacent label (` Severity: warning`)
+ *   ends it rather than being swallowed;
+ * - a token that is itself a reserved label followed by a colon is rejected, so
+ *   a stray trailing comma cannot consume the next label;
+ * - a `https://…` value is rejected: it truncates at the scheme colon, so URLs
+ *   are not a supported ref shape (write the repo-relative anchor instead);
  * - matching is case-SENSITIVE, so the lowerCamel schema field name
  *   (`criterionRefs`) quoted inside review prose is not read as a label.
+ *
+ * LABEL_PREFIX is a zero-width negative lookbehind rather than a consuming
+ * `(?:^|\s)`: the label may follow Japanese punctuation (`…直す。CriterionRefs:`
+ * is what the filling skills actually emit), and stripping a segment must not
+ * eat the punctuation that preceded it. A backtick is deliberately NOT a valid
+ * prefix — docs and SKILL.md wrap label mentions in backticks precisely so that
+ * prose about a label never becomes a label.
  *
  * River Review does not own these identifiers: they are copied verbatim from
  * the upstream artifact and never minted, validated, or renamed here.
  */
-const REF_LABEL_NAMES = /** @type {const} */ (['CriterionRefs', 'ArtifactRefs']);
-const REF_LABEL_ALTERNATION = REF_LABEL_NAMES.join('|');
-const RESERVED_LABEL_ALTERNATION = [...LABEL_NAMES, 'Scope', ...REF_LABEL_NAMES].join('|');
-const REF_TOKEN_PATTERN = `(?!(?:${RESERVED_LABEL_ALTERNATION}):)[A-Za-z0-9][\\w.#/-]*`;
-const REF_LIST_PATTERN = `${REF_TOKEN_PATTERN}(?:[ \\t]*,[ \\t]*${REF_TOKEN_PATTERN})*`;
+const LABEL_PREFIX = '(?<![^\\s。、（）「」])';
+const REF_COLON = '[:：]';
+const REF_SEPARATOR = '[ \\t]*[,、][ \\t]*';
+const REF_TOKEN_BODY = `(?!(?:${RESERVED_LABEL_ALTERNATION})${REF_COLON})(?!https?:\\/\\/)(?:\\.{1,2}\\/)?[A-Za-z0-9][\\w.#/-]*`;
+// Markdown-quoted values (`` `plan.md#AC-4` ``) are accepted and unwrapped.
+const REF_TOKEN_PATTERN = `\`?${REF_TOKEN_BODY}\`?`;
+const REF_LIST_PATTERN = `${REF_TOKEN_PATTERN}(?:${REF_SEPARATOR}${REF_TOKEN_PATTERN})*`;
+const REF_LABEL_HEAD = `${LABEL_PREFIX}(?:${REF_LABEL_ALTERNATION})${REF_COLON}[ \\t]*`;
+// A refs label is structural as soon as it is followed by something that looks
+// like a value — including a URL, which is NOT a supported ref shape. Otherwise
+// `Fix: … ArtifactRefs: https://…` would leave the unsupported value glued to
+// the Fix text instead of merely being dropped.
+const REF_VALUE_START = `(?:${REF_TOKEN_PATTERN}|https?:\\/\\/\\S)`;
+
+/**
+ * Terminator alternation shared by every field capture. A Scope or refs label
+ * ends a capture only when it carries a well-formed value, so prose mentioning
+ * the label word does not truncate the preceding field.
+ */
+const FIELD_TERMINATOR = [
+  `\\s+(?:${LABEL_ALTERNATION}):`,
+  `\\s+Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b`,
+  `${REF_LABEL_HEAD}${REF_VALUE_START}`,
+  '$',
+].join('|');
+
 const RE_REF_LABELS = Object.fromEntries(
   REF_LABEL_NAMES.map((label) => [
     label,
-    new RegExp(`(?:^|\\s)${label}:[ \\t]*(${REF_LIST_PATTERN})`),
+    new RegExp(`${LABEL_PREFIX}${label}${REF_COLON}[ \\t]*(${REF_LIST_PATTERN})`, 'g'),
   ])
 );
 
+/** Every traceability-ref segment in a message, for removal. */
+const RE_REF_SEGMENTS_SOURCE = `${REF_LABEL_HEAD}${REF_LIST_PATTERN}`;
+
 /**
- * Every traceability-ref segment in a message, for removal. Global flag, so the
- * regex is instantiated per call (a shared `g` regex carries `lastIndex`).
+ * The full field text of every traceability-ref label — from the label to the
+ * next recognized label — not just the strictly-parsed value list.
+ *
+ * The verifier uses this to decide which file references in a message are
+ * artifact citations rather than evidence claims. It is deliberately wider than
+ * the extraction grammar so that a shape we do not parse (a space-separated
+ * list, a URL) still does not destroy the whole finding.
+ * @param {string|null|undefined} message
+ * @returns {string[]}
  */
-const RE_REF_SEGMENTS_SOURCE = `(?:^|\\s)(?:${REF_LABEL_ALTERNATION}):[ \\t]*${REF_LIST_PATTERN}`;
+export function extractRefFieldSpans(message) {
+  const re = new RegExp(
+    `${REF_LABEL_HEAD}(?=${REF_VALUE_START})([^]*?)(?=${FIELD_TERMINATOR})`,
+    'g'
+  );
+  return [...String(message ?? '').matchAll(re)].map((m) => m[1]);
+}
 
 /**
  * Remove the traceability-ref segments from a finding message.
  *
- * Consumers that scan the message body with deliberately greedy regexes — the
- * verifier's evidence and actionability checks read to end-of-line — MUST call
- * this first. Refs are additive metadata (#1666) and must not shift any
- * decision: an `ArtifactRefs: plan.md#AC-4` anchor is otherwise indistinguishable
- * from an evidence file reference, and the artifact is by design not in the diff.
+ * Consumers that measure the message body with deliberately greedy regexes —
+ * the verifier's minimum-length checks on Evidence and Fix read to end-of-line —
+ * MUST call this first, so appended refs cannot pad a too-short field into
+ * passing. Removal only ever makes those checks stricter, so it cannot be used
+ * to smuggle content past them. Checks that scan for file references must NOT
+ * use this (deleting text would let a hallucinated path escape) — see
+ * `extractRefFieldSpans`.
  * @param {string|null|undefined} message
  * @returns {string} the message as it read before the refs labels existed
  */
@@ -147,19 +219,25 @@ export function stripTraceabilityRefs(message) {
 }
 
 /**
- * Extract one traceability ref label into a string array.
+ * Extract one traceability ref label into a string array. Every occurrence of
+ * the label is merged (a model that repeats `CriterionRefs:` must not have the
+ * later ones silently dropped) and duplicates are removed, order preserved.
  * @param {string} text
  * @param {typeof REF_LABEL_NAMES[number]} label
  * @returns {string[]|null} null when the label is absent or carries no token,
  *   so the field is omitted downstream instead of emitted as an empty array.
  */
 function extractRefs(text, label) {
-  const raw = RE_REF_LABELS[label].exec(text)?.[1];
-  if (!raw) return null;
-  const refs = raw
-    .split(',')
-    .map((ref) => ref.trim())
-    .filter((ref) => ref.length > 0);
+  const refs = [];
+  for (const match of text.matchAll(RE_REF_LABELS[label])) {
+    for (const raw of match[1].split(/[,、]/)) {
+      const ref = raw
+        .trim()
+        .replace(/^`+|`+$/g, '')
+        .trim();
+      if (ref.length > 0 && !refs.includes(ref)) refs.push(ref);
+    }
+  }
   return refs.length > 0 ? refs : null;
 }
 
@@ -170,16 +248,8 @@ function extractRefs(text, label) {
  */
 export function parseFindingMessage(message) {
   const text = String(message ?? '');
-  // A genuine (value-constrained) Scope or refs label also terminates a capture,
-  // so a trailing self-report is not absorbed into the preceding field.
-  const terminator = [
-    `\\s+(?:${LABEL_ALTERNATION}):`,
-    `\\s+Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b`,
-    `\\s+(?:${REF_LABEL_ALTERNATION}):[ \\t]*(?:${REF_TOKEN_PATTERN})`,
-    '$',
-  ].join('|');
   const get = (label) => {
-    const re = new RegExp(`${label}:\\s*([^]*?)(?=${terminator})`, 'm');
+    const re = new RegExp(`${label}:\\s*([^]*?)(?=${FIELD_TERMINATOR})`, 'm');
     return (text.match(re)?.[1] ?? '').trim();
   };
   const evidenceText = get('Evidence');

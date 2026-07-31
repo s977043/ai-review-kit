@@ -80,7 +80,13 @@
 >
 > ID の名前空間を River Review は所有しません。上流 artifact の見出しや ID をそのまま文字列で保持し、採番も検証も行いません。artifact が欠損している場合はフィールドごと省略します（Pre-execution Gate の既存挙動を維持）。
 >
-> 充填の主担当は `skills/midstream/assumption-resolution-trace` と `skills/upstream/requirements-acceptance` です。値は finding メッセージの `CriterionRefs:` / `ArtifactRefs:` ラベルから抽出します。ラベル値は空白を含まないトークンのカンマ区切りに限定し、散文中の同名表記を誤って拾わないようにしています。
+> 充填の主担当は `skills/midstream/assumption-resolution-trace` と `skills/upstream/requirements-acceptance` です。汎用レビュープロンプトにも任意ラベルとして指示があります。値は finding メッセージの `CriterionRefs:` / `ArtifactRefs:` ラベルから抽出します。
+>
+> ラベルの記法は次のとおりです。値は空白を含まないトークンとし、区切りは `,` または `、` を使います。コロンは半角と全角のどちらでも構いません。ラベル名は大文字小文字を区別するため、`criterionRefs:` のような lowerCamel 表記はラベルとして扱いません。`https://` で始まる値も対象外です。値はバッククォートで囲んでも構いません（囲みは外して取り込みます）。
+>
+> 散文の中でラベル名に言及するときは `` `CriterionRefs:` `` のようにバッククォートで囲んでください。バッククォートはラベルの前置文字に含めていないため、囲めば構造ラベルとして解釈されません。囲まずに正規形で書くと、その位置でラベルとして解釈されます。
+>
+> ファイル参照との関係は fail-safe に倒しています。verifier は Evidence 中のファイル参照が差分に存在するかを確認しますが、ref フィールド内でアンカー（`plan.md#AC-4`）付きに書かれた参照だけを対象から除きます。`#` の無い裸のパスは Evidence の主張と区別できないため、ref ラベルを付けても差分照合の対象に残ります。
 >
 > これらを出力するのは JSON 形式（`output.schema.json` が規定する成果物）のみです。YAML / HTML 形式および PR コメントへの反映は対象外とします。severity やゲート判定を上書きしてはいけません。
 

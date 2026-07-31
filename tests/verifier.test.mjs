@@ -550,6 +550,79 @@ test('verifyFinding: refs change no check outcome versus the same message withou
   assert.equal(withRefs.scope, without.scope);
 });
 
+test('verifyFinding: a refs label cannot launder a hallucinated evidence path (F2)', () => {
+  // Attack A2/A3: the first implementation ran checkEvidenceInDiff on a
+  // ref-STRIPPED message, so moving a fake file reference behind a refs label
+  // deleted it from the text and the check passed. The file-reference check now
+  // reads the raw message and subtracts only anchored artifact citations.
+  const baseline = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message:
+        'Finding: issue Evidence: the secret is in src/fake.mjs line 3 Impact: leak Fix: move it to an environment variable Severity: warning Confidence: high',
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(baseline.verified, false, 'control: a fake path is rejected');
+
+  const hiddenInEvidence = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message:
+        'Finding: issue Evidence: the secret is in ArtifactRefs: src/fake.mjs and it leaks badly Impact: leak Fix: move it to an environment variable Severity: warning Confidence: high',
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(hiddenInEvidence.verified, false, 'A2: a bare path in a refs field stays checkable');
+  assert.equal(hiddenInEvidence.checks.evidenceInDiff, false);
+
+  const movedToTrailingList = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message:
+        'Finding: issue Evidence: the secret leaks here badly CriterionRefs: src/fake.mjs Impact: leak Fix: move it to an environment variable Severity: warning Confidence: high',
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(movedToTrailingList.verified, false, 'A3: same, via a trailing list');
+});
+
+test('verifyFinding: anchored artifact citations are exempt, including unparsed shapes (F2)', () => {
+  const call = (message) =>
+    verifyFinding({
+      finding: { file: 'src/app.mjs', line: 11, message },
+      diff: SCOPE_DIFF,
+      skill: { metadata: {} },
+      diffFiles: SCOPE_DIFF_FILES,
+    });
+  // `plan.md` is not in the diff; the anchor marks it as an artifact citation.
+  assert.equal(call(`${SCOPE_MESSAGE} ArtifactRefs: plan.md#AC-4`).verified, true);
+  // The span is wider than the parsed list, so a space-separated second value
+  // does not drop the finding even though it is not captured as a ref value.
+  assert.equal(
+    call(`${SCOPE_MESSAGE} ArtifactRefs: plan.md#AC-4 todo.md#TASK-3`).verified,
+    true,
+    'an unparsed shape must not be fail-open on content, nor destroy the finding'
+  );
+  // An anchored path OUTSIDE any refs field keeps the pre-#1666 behavior.
+  assert.equal(
+    call(
+      'Finding: issue\nEvidence: see plan.md#AC-4 for the rule\nSeverity: warning\nConfidence: high\nFix: Rethrow the error with context added'
+    ).verified,
+    false,
+    'the exemption is scoped to refs fields — prose citations are unchanged'
+  );
+});
+
 test('verifyFinding: refs cannot pad a too-short Evidence / Fix into passing', () => {
   // The mirror direction of the same non-interference contract: because the
   // greedy checks read to end-of-line, appended refs would otherwise satisfy

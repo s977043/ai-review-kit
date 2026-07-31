@@ -10,7 +10,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { formatJsonOutput, getOutputSchemaValidator } from '../src/cli/render.mjs';
+import {
+  formatJsonOutput,
+  getOutputSchemaValidator,
+  printMarkdownReport,
+} from '../src/cli/render.mjs';
 
 describe('getOutputSchemaValidator', () => {
   it('loads schemas/output.schema.json and returns a compiled validator', () => {
@@ -106,6 +110,52 @@ describe('formatJsonOutput traceability refs propagation', () => {
     );
     assert.ok(!('criterionRefs' in out.issues[0]), 'null must not be serialized');
     assert.ok(!('artifactRefs' in out.issues[0]), 'an empty array must not be serialized');
+    const validate = getOutputSchemaValidator();
+    assert.ok(validate(out), JSON.stringify(validate.errors));
+  });
+
+  it('breaks the reserved labels onto their own markdown bullet (F10)', () => {
+    // The local label list in formatMessageForMarkdown had drifted from the
+    // parser's: Suggestion, Scope and the refs labels ran into the field before
+    // them. It now imports the shared RESERVED_FINDING_LABELS set.
+    const lines = [];
+    const originalLog = console.log;
+    console.log = (line) => lines.push(String(line));
+    try {
+      printMarkdownReport(
+        {
+          comments: [
+            {
+              file: 'src/app.mjs',
+              line: 3,
+              message:
+                'Finding: x Evidence: y Suggestion: rotate it Scope: in-diff CriterionRefs: AC-4 ArtifactRefs: plan.md#AC-4 Severity: warning Confidence: high',
+            },
+          ],
+          plan: { selected: [], skipped: [] },
+          changedFiles: ['src/app.mjs'],
+          tokenEstimate: 10,
+        },
+        'midstream'
+      );
+    } finally {
+      console.log = originalLog;
+    }
+    const output = lines.join('\n');
+    for (const label of ['Suggestion', 'Scope', 'CriterionRefs', 'ArtifactRefs']) {
+      assert.ok(output.includes(`- **${label}:**`), `${label} should get its own bullet`);
+    }
+  });
+
+  it('omits a non-array refs value instead of emitting it (F11)', () => {
+    // A truthy `.length` on a string slipped past the first guard and emitted
+    // `criterionRefs: "AC-4"`, which the schema rejects.
+    const out = formatJsonOutput(
+      { findings: [{ ...baseFinding, criterionRefs: 'AC-4', artifactRefs: { a: 1 } }] },
+      'upstream'
+    );
+    assert.ok(!('criterionRefs' in out.issues[0]), 'a string must not be serialized');
+    assert.ok(!('artifactRefs' in out.issues[0]), 'an object must not be serialized');
     const validate = getOutputSchemaValidator();
     assert.ok(validate(out), JSON.stringify(validate.errors));
   });

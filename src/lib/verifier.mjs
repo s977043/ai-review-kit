@@ -7,6 +7,7 @@
 
 import {
   DEFAULT_FINDING_SCOPE,
+  extractRefFieldSpans,
   normalizeScope,
   normalizeSeverity,
   stripTraceabilityRefs,
@@ -21,6 +22,9 @@ const RE_SEVERITY = /Severity:\s*(\w+)/;
 const RE_SCOPE = /(?:^|\s)Scope:\s*(in[-_ ]?diff|pre[-_ ]?existing)\b/i;
 const RE_ACTIONABLE = /(?:Fix|Suggestion):\s*(.{10,})/;
 const RE_FILE_REF = /[\w/-]+(?:\.[\w]+)+/g;
+// Same shape as RE_FILE_REF but only where an anchor fragment follows
+// (`plan.md#AC-4`). Used to exempt artifact citations from the diff check.
+const RE_ANCHORED_FILE_REF = /[\w/-]+(?:\.[\w]+)+(?=#)/g;
 
 /**
  * Check that the finding message contains "Evidence:" followed by
@@ -105,8 +109,25 @@ function checkEvidenceInDiff(finding, diffText) {
   const fileRefs = evidenceText.match(RE_FILE_REF);
   if (!fileRefs || fileRefs.length === 0) return true;
 
+  // #1666: subtract, never delete. Running this check on a ref-stripped message
+  // let a reviewer launder a hallucinated evidence path by labelling it
+  // (`Evidence: the secret is in ArtifactRefs: src/fake.mjs …` deleted the path
+  // and the check then passed). Instead, keep the raw text and exempt only the
+  // file references that are unambiguously artifact citations: those written
+  // WITH an anchor fragment (`plan.md#AC-4`) inside a refs field. Such an
+  // artifact is by design absent from the diff. A BARE path inside a refs field
+  // stays checkable — it is indistinguishable from an evidence claim, so it
+  // fails closed.
+  const exempt = new Set(
+    extractRefFieldSpans(text).flatMap((span) => span.match(RE_ANCHORED_FILE_REF) ?? [])
+  );
+  const checkable = exempt.size === 0 ? fileRefs : fileRefs.filter((ref) => !exempt.has(ref));
+  // Nothing left to verify reads the same as "the evidence cites no file" —
+  // lenient, matching the early return above.
+  if (checkable.length === 0) return true;
+
   const diff = String(diffText ?? '');
-  return fileRefs.some((ref) => diff.includes(ref));
+  return checkable.some((ref) => diff.includes(ref));
 }
 
 /**
@@ -249,21 +270,23 @@ export function resolveFindingScope({ finding, diffFiles }) {
 export function verifyFinding({ finding, diff, skill, fileTypes, diffFiles }) {
   // #1666: traceability refs are additive metadata and MUST NOT move the
   // `verified` decision in either direction. RE_EVIDENCE / RE_ACTIONABLE are
-  // deliberately greedy to end-of-line, so a trailing `ArtifactRefs:
-  // plan.md#AC-4` would otherwise be read as an evidence file reference — and
-  // the referenced artifact is by design not in the diff, which rejected the
-  // finding. Run every message-based check against the pre-#1666 message.
-  const findingForChecks =
+  // deliberately greedy to end-of-line, so appended refs would otherwise satisfy
+  // the minimum-length requirements on Evidence and Fix on their own. The
+  // LENGTH checks therefore run against the ref-stripped message — removal only
+  // makes them stricter. `checkEvidenceInDiff` is deliberately excluded: it
+  // scans for file references, where deleting text is a bypass rather than a
+  // safeguard, so it takes the raw message and subtracts instead.
+  const findingForLengthChecks =
     typeof finding?.message === 'string'
       ? { ...finding, message: stripTraceabilityRefs(finding.message) }
       : finding;
   const checks = {
-    evidenceExists: checkEvidenceExists(findingForChecks),
-    evidenceInDiff: checkEvidenceInDiff(findingForChecks, diff),
+    evidenceExists: checkEvidenceExists(findingForLengthChecks),
+    evidenceInDiff: checkEvidenceInDiff(finding, diff),
     phaseCoherent: checkPhaseCoherent(finding, skill),
     filePhaseCoherent: checkFilePhaseCoherent(finding, fileTypes),
-    severityJustified: checkSeverityJustified(findingForChecks, skill),
-    suggestionActionable: checkSuggestionActionable(findingForChecks),
+    severityJustified: checkSeverityJustified(findingForLengthChecks, skill),
+    suggestionActionable: checkSuggestionActionable(findingForLengthChecks),
   };
 
   const reasons = [];
