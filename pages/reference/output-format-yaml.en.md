@@ -8,8 +8,10 @@ River Review emits a structured YAML block plus a human-readable summary when yo
 
 ## CLI
 
+River Review is not published to npm (project policy). Run the CLI inside the repository with `npm run river -- ...`.
+
 ```bash
-npx river run . --output yaml
+npm run river -- run . --output yaml
 ```
 
 ## GitHub Action
