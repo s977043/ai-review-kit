@@ -70282,13 +70282,21 @@ Commands:
   skills import         Import Agent Skills (SKILL.md) into River Review
   skills export         Export River Review skills to Agent Skills format
   skills list           List all skills (RR and Agent Skills)
+  skills resolve        Show which skills apply to the given --path files
   doctor <path>         Check setup and print hints for common issues
   review plan           Resolve upstream artifacts and emit a Review Artifact
                         (Phase 3 slice: --plan-only only)
+  review exec           Run the review and emit a Review Artifact with findings
+                        (--dry-run: plan only; --plan <file>: replay an existing plan)
+  review route          Recommend a review mode (light|standard|team|human-required)
+                        for the current diff (--format json|markdown; --base <ref>)
   eval                  Run review fixtures evaluation (must_include checks)
   suppression add       Create a Riverbed Memory suppression entry
                         (--fingerprint --feedback --rationale [--scope]
                          [--severity] [--files] [--expires] [--pr])
+  feedback add          Record a review feedback entry (.river/feedback/)
+                        (--type --skill [--trigger] [--fingerprint] [--evidence]
+                         [--pr] [--reviewer] [--model] [--reversed-by] [--run-id])
   promote propose       Create (or converge on) one promotion candidate from an
                         explicit feedback JSONL selection. The candidate id is a
                         content hash of (evidence, cluster, policy version), so
