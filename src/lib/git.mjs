@@ -72,6 +72,26 @@ export async function findMergeBase(cwd, baseRef) {
   return runGit(['rev-parse', 'HEAD'], { cwd });
 }
 
+/**
+ * Resolve the HEAD commit sha of a repository.
+ *
+ * Same `rev-parse HEAD` call `findMergeBase` already falls back to, exported so
+ * the run record can name the commit a review observed (#1715 / 契約1
+ * provenance). `mergeBase` is the comparison base, not the reviewed commit, so
+ * it cannot stand in for this.
+ *
+ * Fail-soft on purpose: returns null instead of throwing when `cwd` is not a
+ * git repository or HEAD is unborn (a fresh `git init` before the first
+ * commit). The sha is optional provenance and a review must never fail because
+ * the commit identity could not be resolved.
+ *
+ * @param {string} cwd
+ * @returns {Promise<string|null>} 40-hex sha, or null when unavailable
+ */
+export async function getHeadSha(cwd) {
+  return runGit(['rev-parse', 'HEAD'], { cwd }).catch(() => null);
+}
+
 export async function listChangedFiles(cwd, baseRef) {
   const stdout = await runGit(['diff', '--name-only', baseRef], { cwd });
   return stdout

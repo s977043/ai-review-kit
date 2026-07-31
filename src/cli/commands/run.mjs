@@ -160,13 +160,17 @@ Dependencies: ${
     process.env.GITHUB_ACTIONS === 'true' && process.env.RIVER_AUTO_SAVE !== 'false';
   if ((parsed.save || isGithubActions) && result.status === 'ok') {
     try {
-      const { buildRunRecord, saveRunRecord, resolveStoreDir } =
+      const { buildRunProvenance, buildRunRecord, saveRunRecord, resolveStoreDir } =
         await import('../../lib/result-store.mjs');
       const { decision: runDecision, gate: runGate } = deriveRunGate(result);
       const record = buildRunRecord(result, {
         phase: parsed.phase,
         gate: runGate,
         decision: runDecision,
+        // #1715 (#1574 producer Slice 2): attach the 契約1 provenance so
+        // `river evolve aggregate` can tie this evidence to a commit. Purely
+        // observational — it raises no trust, see buildRunProvenance.
+        provenance: buildRunProvenance({ commitSha: result.commitSha }),
       });
       // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
       const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });

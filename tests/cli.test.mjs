@@ -15,7 +15,7 @@
 // tests/helpers/ に統合済み。
 
 import assert from 'node:assert';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test, { describe } from 'node:test';
 
@@ -675,5 +675,44 @@ describe('river run - GitHub Actions supervision wiring (#1372 C1/M1)', () => {
     });
     assert.strictEqual(result.code, 0, result.stderr);
     assert.ok(!/Run saved:/.test(result.stderr), 'opt-out must skip the save');
+  });
+});
+
+// -----------------------------------------------------------------------------
+// river run --save - 契約1 provenance (#1574 producer Slice 2 / #1715)
+// -----------------------------------------------------------------------------
+describe('river run --save - run record provenance', () => {
+  async function saveAndReadRecord(t, { env } = {}) {
+    const { dir, cleanup } = await createRepoWithSilentCatchChange();
+    t.after(cleanup);
+    const result = await runCliInProcess(['run', '.', '--dry-run', '--save'], { cwd: dir, env });
+    assert.strictEqual(result.code, 0, result.stderr);
+    const runId = /Run saved: (\S+)/.exec(result.stderr)?.[1];
+    assert.ok(runId, `no runId in stderr: ${result.stderr}`);
+    const record = JSON.parse(readFileSync(join(dir, '.river', 'runs', `${runId}.json`), 'utf8'));
+    const head = (await runGit(['rev-parse', 'HEAD'], dir)).stdout.trim();
+    return { record, head };
+  }
+
+  test('records the reviewed HEAD commit and a local source claim', async (t) => {
+    const { record, head } = await saveAndReadRecord(t);
+    assert.strictEqual(record.commitSha, head);
+    assert.deepStrictEqual(record.provenance, {
+      evidenceSource: 'local',
+      sourceCommitSha: head,
+      trustedBy: null,
+      generatedByCandidate: false,
+    });
+    // mergeBase is the comparison base and stays a separate field.
+    assert.ok('mergeBase' in record);
+  });
+
+  test('claims the CI source under GITHUB_ACTIONS without claiming trust', async (t) => {
+    const { record, head } = await saveAndReadRecord(t, { env: { GITHUB_ACTIONS: 'true' } });
+    assert.strictEqual(record.provenance.evidenceSource, 'CI');
+    assert.strictEqual(record.provenance.sourceCommitSha, head);
+    // Running in CI is not attestation: the record is still self-reported by a
+    // process inside the reviewed repo, so trustedBy stays null (契約1).
+    assert.strictEqual(record.provenance.trustedBy, null);
   });
 });

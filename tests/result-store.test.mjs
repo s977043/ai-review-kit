@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
+  buildRunProvenance,
   buildRunRecord,
   saveRunRecord,
   listRunRecords,
@@ -12,6 +13,14 @@ import {
   formatDashboard,
   resolveStoreDir,
 } from '../src/lib/result-store.mjs';
+// #1715: the consumer of the fields this module produces. Imported so the
+// producer assertions are cross-checked against the existing read path instead
+// of against a second copy of the same expectations.
+import {
+  buildRunEvidence,
+  EVIDENCE_SOURCES,
+  evidenceTrustLevel,
+} from '../src/lib/shadow-aggregate.mjs';
 
 function makeResult(overrides = {}) {
   return {
@@ -268,5 +277,167 @@ describe('buildRunRecord — gate audit trail (S3)', () => {
     const rec = buildRunRecord(makeResult());
     assert.equal('gate' in rec, false);
     assert.equal('decision' in rec, false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #1574 producer Slice 2 (#1715) — commitSha / provenance
+//
+// The consumer side (`buildRunEvidence` in src/lib/shadow-aggregate.mjs) is
+// imported here on purpose: asserting only the shape this module writes would
+// be self-consistent and would still pass if the two halves disagreed on the
+// key names (`provenance.sourceCommitSha` vs `commitSha`, camelCase vs
+// snake_case). Every assertion below therefore reads the value back through
+// the function `river evolve aggregate` actually calls.
+// ---------------------------------------------------------------------------
+describe('buildRunRecord — commitSha / provenance (#1715)', () => {
+  const SHA = '0123456789abcdef0123456789abcdef01234567';
+
+  it('writes commitSha when the runner resolved one', () => {
+    const rec = buildRunRecord(makeResult({ commitSha: SHA }));
+    assert.equal(rec.commitSha, SHA);
+  });
+
+  it('omits commitSha entirely when the runner could not resolve one', () => {
+    for (const commitSha of [null, undefined, '', '   ']) {
+      const rec = buildRunRecord(makeResult({ commitSha }));
+      assert.equal('commitSha' in rec, false, `commitSha=${JSON.stringify(commitSha)}`);
+    }
+  });
+
+  it('writes the provenance block when supplied', () => {
+    const rec = buildRunRecord(makeResult({ commitSha: SHA }), {
+      provenance: buildRunProvenance({ commitSha: SHA, env: {} }),
+    });
+    assert.deepEqual(rec.provenance, {
+      evidenceSource: 'local',
+      sourceCommitSha: SHA,
+      trustedBy: null,
+      generatedByCandidate: false,
+    });
+  });
+
+  it('omits provenance when not supplied (backward compatible)', () => {
+    const rec = buildRunRecord(makeResult({ commitSha: SHA }));
+    assert.equal('provenance' in rec, false);
+  });
+
+  it('drops a provenance block whose evidenceSource is outside the 契約1 vocabulary', () => {
+    // buildRunEvidence silently rewrites an unknown source to 'local'. Writing
+    // the unknown claim to disk would leave a record that reads differently
+    // from what it says, so the producer refuses to persist it at all —
+    // `commitSha` still carries the SHA through the documented fallback.
+    const rec = buildRunRecord(makeResult({ commitSha: SHA }), {
+      provenance: { evidenceSource: 'trusted-ci', sourceCommitSha: SHA, trustedBy: null },
+    });
+    assert.equal('provenance' in rec, false);
+    assert.equal(rec.commitSha, SHA);
+  });
+
+  it('pins trustedBy to null even when a caller asks for a value', () => {
+    const rec = buildRunRecord(makeResult({ commitSha: SHA }), {
+      provenance: {
+        evidenceSource: 'CI',
+        sourceCommitSha: SHA,
+        trustedBy: 'github-actions',
+        generatedByCandidate: true,
+      },
+    });
+    assert.equal(rec.provenance.trustedBy, null);
+    // generatedByCandidate is caller data (not a trust claim) and passes through.
+    assert.equal(rec.provenance.generatedByCandidate, true);
+  });
+
+  it('keeps a record built from a pre-#1715 result byte-identical', () => {
+    // The exact key set of the legacy record, enumerated so an accidentally
+    // unconditional `commitSha: null` / `provenance: {...}` fails here.
+    const rec = buildRunRecord(makeResult(), { runId: 'legacy-run' });
+    assert.deepEqual(rec, {
+      runId: 'legacy-run',
+      timestamp: rec.timestamp,
+      reviewedTarget: path.join(os.tmpdir(), 'test-repo'),
+      phase: 'midstream',
+      reviewMode: 'medium',
+      mergeBase: 'abc123',
+      defaultBranch: 'main',
+      changedFiles: ['src/foo.mjs'],
+      findings: rec.findings,
+      suppressedFindings: rec.suppressedFindings,
+      finalSummary: rec.finalSummary,
+    });
+  });
+});
+
+describe('buildRunProvenance — evidence source resolution (#1715)', () => {
+  const SHA = 'fedcba9876543210fedcba9876543210fedcba98';
+
+  it('claims CI only under GITHUB_ACTIONS=true', () => {
+    assert.equal(
+      buildRunProvenance({ commitSha: SHA, env: { GITHUB_ACTIONS: 'true' } }).evidenceSource,
+      'CI'
+    );
+  });
+
+  it('claims local otherwise', () => {
+    for (const env of [{}, { GITHUB_ACTIONS: 'false' }, { GITHUB_ACTIONS: '1' }]) {
+      assert.equal(buildRunProvenance({ commitSha: SHA, env }).evidenceSource, 'local');
+    }
+  });
+
+  it('only ever emits a source the 契約1 vocabulary declares', () => {
+    for (const env of [{ GITHUB_ACTIONS: 'true' }, {}]) {
+      assert.ok(EVIDENCE_SOURCES.includes(buildRunProvenance({ env }).evidenceSource));
+    }
+  });
+
+  it('never self-reports trust', () => {
+    const p = buildRunProvenance({ commitSha: SHA, env: { GITHUB_ACTIONS: 'true' } });
+    assert.equal(p.trustedBy, null);
+    assert.equal(p.generatedByCandidate, false);
+  });
+
+  it('carries a missing sha as null rather than an empty string', () => {
+    assert.equal(buildRunProvenance({ commitSha: null, env: {} }).sourceCommitSha, null);
+    assert.equal(buildRunProvenance({ env: {} }).sourceCommitSha, null);
+  });
+});
+
+describe('buildRunRecord → buildRunEvidence — the consumer reads what we write (#1715)', () => {
+  const SHA = 'aaaabbbbccccddddeeeeffff0000111122223333';
+
+  it('resolves source_commit_sha from the provenance block', () => {
+    const rec = buildRunRecord(makeResult({ commitSha: SHA }), {
+      provenance: buildRunProvenance({ commitSha: SHA, env: { GITHUB_ACTIONS: 'true' } }),
+    });
+    const evidence = buildRunEvidence(rec);
+    assert.equal(evidence.source_commit_sha, SHA);
+    assert.equal(evidence.evidence_source, 'CI');
+  });
+
+  it('falls back to the top-level commitSha when provenance was dropped', () => {
+    const rec = buildRunRecord(makeResult({ commitSha: SHA }));
+    assert.equal(buildRunEvidence(rec).source_commit_sha, SHA);
+  });
+
+  it('leaves source_commit_sha null for a pre-#1715 record', () => {
+    assert.equal(buildRunEvidence(buildRunRecord(makeResult())).source_commit_sha, null);
+  });
+
+  it('writing provenance promotes nothing: the three trust indicators are unchanged', () => {
+    // #1650 B2 lesson: a producer adds a self-report, never verifiability.
+    // `.river/runs/` is writable by the agent under review, so a record can
+    // claim `evidence_source: CI` with no attestation at all.
+    const withProvenance = buildRunEvidence(
+      buildRunRecord(makeResult({ commitSha: SHA }), {
+        provenance: buildRunProvenance({ commitSha: SHA, env: { GITHUB_ACTIONS: 'true' } }),
+      })
+    );
+    const legacy = buildRunEvidence(buildRunRecord(makeResult()));
+    for (const evidence of [withProvenance, legacy]) {
+      assert.equal(evidence.trust_level, 'untrusted');
+      assert.equal(evidence.provenance_verified, false);
+      assert.equal(evidence.trusted_by, null);
+    }
+    assert.equal(evidenceTrustLevel(withProvenance), evidenceTrustLevel(legacy));
   });
 });

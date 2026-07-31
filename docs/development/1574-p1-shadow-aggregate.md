@@ -119,7 +119,7 @@ candidate ID は `src/lib/promotion-candidates.mjs` の `normalizeEvidence` と 
 
 ## 7. 現時点の実データでの充足と退行
 
-canonical `review_run_id` の生産者は v1.66.0（#1681）で実装しました。`river feedback add --run-id <id>` が feedback へ `review_run_id` を書きます。run record 側では `deriveReviewRunId` が既存の `runId` を canonical 値として解決するため、両者の突合が成立します。一方、provenance の生産者は未実装のままです。`buildRunRecord` は `provenance` と `commitSha` のどちらも書きません。finding も `category` を持ちません。
+canonical `review_run_id` の生産者は v1.66.0（#1681）で実装しました。`river feedback add --run-id <id>` が feedback へ `review_run_id` を書きます。run record 側では `deriveReviewRunId` が既存の `runId` を canonical 値として解決するため、両者の突合が成立します。契約1 provenance の生産者も #1715 で実装しました。`buildRunRecord` が `commitSha` と `provenance` を書きます。finding の `category` だけは未実装で残っています。
 
 充足済み（v1.66.0 以降）:
 
@@ -127,13 +127,20 @@ canonical `review_run_id` の生産者は v1.66.0（#1681）で実装しまし�
 - occurrence キーは `(review_run_id, pr)` であり、run 単位で反復を数えられる。同一 PR への再 run に付けた feedback は別 occurrence になる
 - 上記は `tests/shadow-aggregate.test.mjs` の producer 経路テストが join 2 件 / unjoined 0 件として固定している
 
-未充足（契約1 provenance 側の残作業）:
+充足済み（#1715 以降）:
 
-- `buildRunRecord` が `provenance` を書かないため、`evidence_source` は `local` へフォールバックする
-- run record が `commitSha` を持たないため、`source_commit_sha` は常に `null` である
+- `river run --save` が保存した record は HEAD のコミット sha を `commitSha` に持ち、`source_commit_sha` が実値になる
+- `evidence_source` は実行環境の自己申告である。`GITHUB_ACTIONS=true` のとき `CI`、それ以外で `local` になる
+- `trusted_by` は null に固定する。CI 実行を検証済み attestation とみなさないためである
+- `trust_level` と `provenance_verified` は provenance を書いても変わらない。値は `untrusted` と `false` のままである
+- provenance を持たない旧 record は従来どおり読める。値が無い record では `commitSha` と `provenance` のキー自体を書かない
+- 上記は `tests/shadow-aggregate.test.mjs` の producer 経路テストが実 sha と trust 3 指標で固定している
+
+未充足（残作業）:
+
 - finding が `category` を持たないため、stage2 の `category` は `finding.ruleId`（発行元 skill id）へフォールバックする
 
-P1 実装の時点では `review_run_id` の生産者も存在せず、join が常に 0 でした。テストは旧形状と現形状の両方を固定しています。provenance 側の値は、契約1 の生産者を実装してから埋まります。
+P1 実装の時点では `review_run_id` の生産者も存在せず、join が常に 0 でした。テストは旧形状と現形状の両方を固定しています。
 
 ## 8. read-only の担保
 

@@ -6,6 +6,7 @@ export const modules = {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   buildRunProvenance: () => (/* binding */ buildRunProvenance),
 /* harmony export */   buildRunRecord: () => (/* binding */ buildRunRecord),
 /* harmony export */   computeDashboard: () => (/* binding */ computeDashboard),
 /* harmony export */   formatDashboard: () => (/* binding */ formatDashboard),
@@ -19,8 +20,16 @@ export const modules = {
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(6760);
 /* harmony import */ var node_os__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(8161);
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(7598);
+/* harmony import */ var _shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(4029);
+/* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(3077);
 
 
+
+
+// #1715: the 契約1 vocabulary and the string normalizer are imported, never
+// re-declared. `EVIDENCE_SOURCES` is owned by the consumer that reads the field
+// back (`buildRunEvidence`), and `nonEmptyNfcString` is the one trim/NFC
+// implementation the aggregate and the candidate hashes already share.
 
 
 
@@ -46,10 +55,81 @@ function generateRunId() {
 }
 
 /**
+ * Pick one member of the 契約1 evidence-source vocabulary.
+ *
+ * The vocabulary lives in `EVIDENCE_SOURCES` (src/lib/shadow-aggregate.mjs) and
+ * is imported rather than re-listed, so a source this producer names but the
+ * consumer no longer knows fails loudly here instead of being silently rewritten
+ * to `local` inside `buildRunEvidence`.
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+function assertEvidenceSource(name) {
+  if (!_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_4__/* .EVIDENCE_SOURCES */ .lY.includes(name)) {
+    throw new Error(
+      `Unknown evidence source "${name}". 契約1 vocabulary: ${_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_4__/* .EVIDENCE_SOURCES */ .lY.join(', ')}`
+    );
+  }
+  return name;
+}
+
+/**
+ * Build the 契約1 `provenance` block for a run record (#1715).
+ *
+ * Everything here is SELF-REPORTED: the producer runs inside the reviewed
+ * repository (see the trust-boundary note below), so writing this block adds an
+ * observation, never verifiability. `river evolve aggregate` reproduces the
+ * claim while pinning `provenance_verified: false` and `trust_level:
+ * 'untrusted'` — recording an unverified claim as unverified is the point.
+ *
+ * `trustedBy` is fixed at null and takes no input. `'github-actions'` would be
+ * an attestation this process cannot make, and the verification mechanism for
+ * `trusted_by` (CI attestation / signed record) is still an open 契約1 item.
+ * `evidenceSource: 'CI'` likewise says only WHERE the run happened — a repo
+ * under review can set GITHUB_ACTIONS itself.
+ *
+ * @param {{ commitSha?: string|null, env?: Record<string, string|undefined> }} [options]
+ * @returns {{ evidenceSource: string, sourceCommitSha: string|null, trustedBy: null, generatedByCandidate: boolean }}
+ */
+function buildRunProvenance({ commitSha = null, env = process.env } = {}) {
+  return {
+    evidenceSource:
+      env?.GITHUB_ACTIONS === 'true' ? assertEvidenceSource('CI') : assertEvidenceSource('local'),
+    sourceCommitSha: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_5__/* .nonEmptyNfcString */ .bS)(commitSha),
+    trustedBy: null,
+    generatedByCandidate: false,
+  };
+}
+
+/**
+ * Normalize a caller-supplied provenance block before it is persisted.
+ *
+ * Returns null — i.e. the record simply omits `provenance` — when the block is
+ * absent or names a source outside the 契約1 vocabulary. Persisting an unknown
+ * source would leave a record that reads differently from what it says, since
+ * `buildRunEvidence` rewrites unknown sources to `local`; the top-level
+ * `commitSha` still carries the sha through the documented fallback.
+ *
+ * `trustedBy` is re-pinned to null here as well, so no call site can widen the
+ * trust boundary by passing a value through.
+ */
+function normalizeProvenance(provenance) {
+  if (!provenance || typeof provenance !== 'object') return null;
+  if (!_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_4__/* .EVIDENCE_SOURCES */ .lY.includes(provenance.evidenceSource)) return null;
+  return {
+    evidenceSource: provenance.evidenceSource,
+    sourceCommitSha: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_5__/* .nonEmptyNfcString */ .bS)(provenance.sourceCommitSha),
+    trustedBy: null,
+    generatedByCandidate: provenance.generatedByCandidate === true,
+  };
+}
+
+/**
  * Build a ReviewRun record from a runLocalReview result.
  *
  * @param {object} result — return value of runLocalReview
- * @param {{ phase?: string, runId?: string }} [opts]
+ * @param {{ phase?: string, runId?: string, gate?: object, decision?: string, provenance?: object }} [opts]
  * @returns {object} run record ready for persistence
  */
 /**
@@ -62,11 +142,13 @@ function generateRunId() {
  * `override` field is host-attested and always rendered as UNVERIFIED by
  * `river runs digest`.
  */
-function buildRunRecord(result, { phase, runId, gate, decision } = {}) {
+function buildRunRecord(result, { phase, runId, gate, decision, provenance } = {}) {
   const id = runId ?? generateRunId();
   const findings = result.findings ?? [];
   const suppressed = result.classified?.suppressed ?? [];
   const overview = result.classified?.overview ?? [];
+  const commitSha = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_5__/* .nonEmptyNfcString */ .bS)(result.commitSha);
+  const provenanceBlock = normalizeProvenance(provenance);
 
   return {
     runId: id,
@@ -76,6 +158,13 @@ function buildRunRecord(result, { phase, runId, gate, decision } = {}) {
     reviewMode: result.reviewMode ?? result.plan?.reviewMode ?? 'medium',
     mergeBase: result.mergeBase ?? null,
     defaultBranch: result.defaultBranch ?? null,
+    // #1715 (契約1): the commit this review observed, and the self-reported
+    // provenance around it. Both use the same conditional spread as gate /
+    // decision below, so a record produced without them is byte-identical to
+    // one produced before this field existed and `buildRunEvidence` keeps
+    // reading pre-#1715 records unchanged (`record?.provenance ?? {}`).
+    ...(commitSha ? { commitSha } : {}),
+    ...(provenanceBlock ? { provenance: provenanceBlock } : {}),
     changedFiles: result.changedFiles ?? [],
     // Epic #1347 S3: persist the same gate/decision the consumer saw so the
     // digest can aggregate them (see trust-boundary note above).

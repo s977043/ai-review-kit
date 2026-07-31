@@ -6,7 +6,7 @@ import { hasSelection, resolveSelectionSkillIds } from './selection.mjs';
 import { collectRepoDiff, renderDiffText } from './diff-processor.mjs';
 import { generateReview } from './review-engine.mjs';
 import { runReviewerOrchestration } from './reviewer-orchestrator.mjs';
-import { detectDefaultBranch, ensureGitRepo, findMergeBase } from './git.mjs';
+import { detectDefaultBranch, ensureGitRepo, findMergeBase, getHeadSha } from './git.mjs';
 import { createOpenAIPlanner } from './openai-planner.mjs';
 import { normalizePlannerMode, PHASES } from './planner-utils.mjs';
 import { buildExecutionPlan } from '../../runners/core/review-runner.mjs';
@@ -148,6 +148,12 @@ async function collectLocalContext({
   // auto-detected default branch. Falls back to detection when unset.
   const defaultBranch = baseRef ?? (await detectDefaultBranch(repoRoot));
   const mergeBase = await findMergeBase(repoRoot, defaultBranch);
+  // #1715 (#1574 producer Slice 2): the commit the review actually observed.
+  // `mergeBase` is the comparison base, so provenance needs its own field.
+  // Resolved once here and re-emitted by every exported entry point below —
+  // a result that drops it makes `source_commit_sha` null for that path only.
+  // Null when the target has no HEAD; the record then omits the field.
+  const commitSha = await getHeadSha(repoRoot);
   const rawDiff = await collectRepoDiff(repoRoot, mergeBase, { contextLines });
   const diff = applyFileExclusions(rawDiff, config.exclude?.files ?? []);
   const reviewFiles = diff.filesForReview?.map((file) => file.path) ?? diff.changedFiles;
@@ -182,6 +188,7 @@ async function collectLocalContext({
     riskMap,
     defaultBranch,
     mergeBase,
+    commitSha,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -230,6 +237,7 @@ export async function planLocalReview({
     riskMap,
     defaultBranch,
     mergeBase,
+    commitSha,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -274,6 +282,7 @@ export async function planLocalReview({
       repoRoot,
       defaultBranch,
       mergeBase,
+      commitSha,
       projectRules,
       availableContexts: contexts,
       availableDependencies: dependencies,
@@ -291,6 +300,7 @@ export async function planLocalReview({
       repoRoot,
       defaultBranch,
       mergeBase,
+      commitSha,
       projectRules,
       diff,
       availableContexts: contexts,
@@ -350,6 +360,7 @@ export async function planLocalReview({
     repoRoot,
     defaultBranch,
     mergeBase,
+    commitSha,
     changedFiles: reviewFiles,
     plan: augmentedPlan,
     diff,
@@ -406,6 +417,7 @@ export async function runLocalReview({
       repoRoot: context.repoRoot,
       defaultBranch: context.defaultBranch,
       mergeBase: context.mergeBase,
+      commitSha: context.commitSha ?? null,
       config: context.config,
       configPath: context.configPath,
       configSource: context.configSource,
@@ -421,6 +433,7 @@ export async function runLocalReview({
       repoRoot: context.repoRoot,
       defaultBranch: context.defaultBranch,
       mergeBase: context.mergeBase,
+      commitSha: context.commitSha ?? null,
       availableContexts: context.availableContexts,
       availableDependencies: context.availableDependencies,
       config: context.config,
@@ -543,6 +556,9 @@ export async function runLocalReview({
     repoRoot: path.resolve(context.repoRoot),
     defaultBranch: context.defaultBranch,
     mergeBase: context.mergeBase,
+    // #1715: consumed by buildRunRecord (src/lib/result-store.mjs) to name the
+    // reviewed commit in the saved record's 契約1 provenance.
+    commitSha: context.commitSha ?? null,
     changedFiles: context.changedFiles,
     plan: context.plan,
     reviewMode: context.plan?.reviewMode ?? 'medium',
@@ -616,6 +632,7 @@ export async function doctorLocalReview({
     projectRules,
     defaultBranch,
     mergeBase,
+    commitSha,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -643,6 +660,7 @@ export async function doctorLocalReview({
     repoRoot,
     defaultBranch,
     mergeBase,
+    commitSha,
     skillsCount: skills.length,
     projectRules,
     changedFiles: reviewFiles,

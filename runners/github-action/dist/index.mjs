@@ -44418,6 +44418,7 @@ function deriveGateDecision({
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   AC: () => (/* binding */ listChangedFiles),
+/* harmony export */   JA: () => (/* binding */ getHeadSha),
 /* harmony export */   LL: () => (/* binding */ diffWithContext),
 /* harmony export */   NC: () => (/* binding */ ensureGitRepo),
 /* harmony export */   Rd: () => (/* binding */ detectDefaultBranch),
@@ -44500,6 +44501,26 @@ async function findMergeBase(cwd, baseRef) {
   }
   // fallback to current HEAD to keep diff calculations deterministic
   return runGit(['rev-parse', 'HEAD'], { cwd });
+}
+
+/**
+ * Resolve the HEAD commit sha of a repository.
+ *
+ * Same `rev-parse HEAD` call `findMergeBase` already falls back to, exported so
+ * the run record can name the commit a review observed (#1715 / 契約1
+ * provenance). `mergeBase` is the comparison base, not the reviewed commit, so
+ * it cannot stand in for this.
+ *
+ * Fail-soft on purpose: returns null instead of throwing when `cwd` is not a
+ * git repository or HEAD is unborn (a fresh `git init` before the first
+ * commit). The sha is optional provenance and a review must never fail because
+ * the commit identity could not be resolved.
+ *
+ * @param {string} cwd
+ * @returns {Promise<string|null>} 40-hex sha, or null when unavailable
+ */
+async function getHeadSha(cwd) {
+  return runGit(['rev-parse', 'HEAD'], { cwd }).catch(() => null);
 }
 
 async function listChangedFiles(cwd, baseRef) {
@@ -65799,7 +65820,7 @@ var loop_signal = __nccwpck_require__(4702);
  */
 async function runRunsCommand(parsed, targetPath) {
   const { resolveStoreDir, listRunRecords, loadRunRecord, computeDashboard, formatDashboard } =
-    await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+    await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
   const storeDir = resolveStoreDir(targetPath);
 
   if (!parsed.runsSubcommand || parsed.runsSubcommand === 'list') {
@@ -65913,7 +65934,7 @@ async function runRunsCommand(parsed, targetPath) {
   }
 
   if (parsed.runsSubcommand === 'digest') {
-    const { loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+    const { loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
     const fullRuns = await loadAllRunRecords(storeDir);
     if (!fullRuns.length) {
       console.log('No stored runs found in ' + storeDir);
@@ -67674,6 +67695,12 @@ async function collectLocalContext({
   // auto-detected default branch. Falls back to detection when unset.
   const defaultBranch = baseRef ?? (await (0,git/* detectDefaultBranch */.Rd)(repoRoot));
   const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
+  // #1715 (#1574 producer Slice 2): the commit the review actually observed.
+  // `mergeBase` is the comparison base, so provenance needs its own field.
+  // Resolved once here and re-emitted by every exported entry point below —
+  // a result that drops it makes `source_commit_sha` null for that path only.
+  // Null when the target has no HEAD; the record then omits the field.
+  const commitSha = await (0,git/* getHeadSha */.JA)(repoRoot);
   const rawDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase, { contextLines });
   const diff = applyFileExclusions(rawDiff, config.exclude?.files ?? []);
   const reviewFiles = diff.filesForReview?.map((file) => file.path) ?? diff.changedFiles;
@@ -67708,6 +67735,7 @@ async function collectLocalContext({
     riskMap,
     defaultBranch,
     mergeBase,
+    commitSha,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -67749,6 +67777,7 @@ async function planLocalReview({
     riskMap,
     defaultBranch,
     mergeBase,
+    commitSha,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -67793,6 +67822,7 @@ async function planLocalReview({
       repoRoot,
       defaultBranch,
       mergeBase,
+      commitSha,
       projectRules,
       availableContexts: contexts,
       availableDependencies: dependencies,
@@ -67810,6 +67840,7 @@ async function planLocalReview({
       repoRoot,
       defaultBranch,
       mergeBase,
+      commitSha,
       projectRules,
       diff,
       availableContexts: contexts,
@@ -67869,6 +67900,7 @@ async function planLocalReview({
     repoRoot,
     defaultBranch,
     mergeBase,
+    commitSha,
     changedFiles: reviewFiles,
     plan: augmentedPlan,
     diff,
@@ -67925,6 +67957,7 @@ async function runLocalReview({
       repoRoot: context.repoRoot,
       defaultBranch: context.defaultBranch,
       mergeBase: context.mergeBase,
+      commitSha: context.commitSha ?? null,
       config: context.config,
       configPath: context.configPath,
       configSource: context.configSource,
@@ -67940,6 +67973,7 @@ async function runLocalReview({
       repoRoot: context.repoRoot,
       defaultBranch: context.defaultBranch,
       mergeBase: context.mergeBase,
+      commitSha: context.commitSha ?? null,
       availableContexts: context.availableContexts,
       availableDependencies: context.availableDependencies,
       config: context.config,
@@ -68062,6 +68096,9 @@ async function runLocalReview({
     repoRoot: external_node_path_.resolve(context.repoRoot),
     defaultBranch: context.defaultBranch,
     mergeBase: context.mergeBase,
+    // #1715: consumed by buildRunRecord (src/lib/result-store.mjs) to name the
+    // reviewed commit in the saved record's 契約1 provenance.
+    commitSha: context.commitSha ?? null,
     changedFiles: context.changedFiles,
     plan: context.plan,
     reviewMode: context.plan?.reviewMode ?? 'medium',
@@ -68135,6 +68172,7 @@ async function doctorLocalReview({
     projectRules,
     defaultBranch,
     mergeBase,
+    commitSha,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -68162,6 +68200,7 @@ async function doctorLocalReview({
     repoRoot,
     defaultBranch,
     mergeBase,
+    commitSha,
     skillsCount: skills.length,
     projectRules,
     changedFiles: reviewFiles,
@@ -69238,13 +69277,17 @@ Dependencies: ${
     external_node_process_namespaceObject.env.GITHUB_ACTIONS === 'true' && external_node_process_namespaceObject.env.RIVER_AUTO_SAVE !== 'false';
   if ((parsed.save || isGithubActions) && result.status === 'ok') {
     try {
-      const { buildRunRecord, saveRunRecord, resolveStoreDir } =
-        await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+      const { buildRunProvenance, buildRunRecord, saveRunRecord, resolveStoreDir } =
+        await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
       const { decision: runDecision, gate: runGate } = deriveRunGate(result);
       const record = buildRunRecord(result, {
         phase: parsed.phase,
         gate: runGate,
         decision: runDecision,
+        // #1715 (#1574 producer Slice 2): attach the 契約1 provenance so
+        // `river evolve aggregate` can tie this evidence to a commit. Purely
+        // observational — it raises no trust, see buildRunProvenance.
+        provenance: buildRunProvenance({ commitSha: result.commitSha }),
       });
       // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
       const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });
@@ -69262,7 +69305,7 @@ Dependencies: ${
       // C1 (#1372 review): the digest needs FULL records — the light
       // listRunRecords metadata has no gate/findings and silently produced
       // an empty digest here.
-      const { loadAllRunRecords, resolveStoreDir } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+      const { loadAllRunRecords, resolveStoreDir } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
       const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
       const records = await loadAllRunRecords(resolveStoreDir(targetPath));
       const digest = buildRunsDigest(records, { now: () => new Date() });
@@ -70571,7 +70614,7 @@ async function runAggregate(parsed, targetPath, output) {
     return 1;
   }
 
-  const { resolveStoreDir, loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+  const { resolveStoreDir, loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
   const { listFeedbackEntries } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 7638));
   const { buildShadowAggregate, formatShadowAggregateMarkdown, DEFAULT_MIN_RECURRENCE } =
     await __nccwpck_require__.e(/* import() */ 29).then(__nccwpck_require__.bind(__nccwpck_require__, 4029));

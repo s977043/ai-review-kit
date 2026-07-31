@@ -8,6 +8,7 @@ import {
   ensureGitRepo,
   detectDefaultBranch,
   findMergeBase,
+  getHeadSha,
   listChangedFiles,
   diffWithContext,
   collectAddedLineHints,
@@ -108,6 +109,37 @@ describe('findMergeBase', () => {
     const base = await findMergeBase(dir, 'nonexistent-branch');
     const head = (await runGit(['rev-parse', 'HEAD'], dir)).stdout.trim();
     assert.equal(base, head);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getHeadSha (#1715)
+// ---------------------------------------------------------------------------
+
+describe('getHeadSha', () => {
+  test('returns the HEAD commit sha', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      initialFiles: { 'a.txt': 'initial\n' },
+    });
+    t.after(cleanup);
+
+    const sha = await getHeadSha(dir);
+    const head = (await runGit(['rev-parse', 'HEAD'], dir)).stdout.trim();
+    assert.equal(sha, head);
+    assert.match(sha, /^[0-9a-f]{40}$/);
+  });
+
+  test('returns null for a non-repo directory instead of throwing', async (t) => {
+    const dir = createTempDir({ prefix: 'git-head-no-repo-' });
+    t.after(() => cleanupTempDir(dir));
+    assert.equal(await getHeadSha(dir), null);
+  });
+
+  test('returns null when HEAD is unborn (git init before the first commit)', async (t) => {
+    const dir = createTempDir({ prefix: 'git-head-unborn-' });
+    t.after(() => cleanupTempDir(dir));
+    await runGit(['init', '-b', 'main'], dir);
+    assert.equal(await getHeadSha(dir), null);
   });
 });
 
