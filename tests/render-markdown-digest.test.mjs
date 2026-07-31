@@ -133,16 +133,29 @@ function commentFor(finding) {
   };
 }
 
-function makeResult({ findings = [], suppressed = [], plan, teamLeadReport = null } = {}) {
+function makeResult({
+  findings = [],
+  comments,
+  suppressed = [],
+  plan,
+  teamLeadReport = null,
+} = {}) {
   return {
     findings,
-    comments: findings.map(commentFor),
+    // `comments` を明示指定できるのは F1 の再現用。実行時は findings と
+    // comments が別集合になりうる（--reviewers の dedup / 抑制の fingerprint 照合）。
+    comments: comments ?? findings.map(commentFor),
     classified: suppressed.length ? { suppressed } : undefined,
     plan: plan ?? { selected: [], skipped: [] },
     changedFiles: ['src/app.js'],
     tokenEstimate: 42,
     teamLeadReport,
   };
+}
+
+/** ヘッドライン行（`**判定: ...`）を取り出す。 */
+function headlineOf(markdown) {
+  return markdown.split('\n').find((line) => line.startsWith('**判定: ')) ?? '';
 }
 
 // -----------------------------------------------------------------------------
@@ -249,29 +262,34 @@ describe('#1713 Slice 1: markdown headline and progressive disclosure', () => {
     }
   });
 
-  it('reports the suppressed count once (headline) and its reasons once (details)', () => {
+  it('reports the suppressed count only in the priority summary, never in the headline', () => {
     const suppressed = [
       { suppressReason: 'insufficient_evidence' },
       { suppressReason: 'insufficient_evidence' },
     ];
     const markdown = renderMarkdown(makeResult({ findings: [makeFinding()], suppressed }));
 
-    assert.strictEqual(countOccurrences(markdown, '抑制 2 件'), 1);
+    // F5: suppressed findings are NOT displayed, so their count must not sit
+    // next to the counts of what is — it read as "2 of these are hidden".
+    assert.doesNotMatch(headlineOf(markdown), /抑制/);
     assert.strictEqual(countOccurrences(markdown, '抑制済み: 2 件'), 1);
     // 旧実装の重複表示（末尾の blockquote）は消えている。
     assert.doesNotMatch(markdown, /件の指摘を抑制しました/);
   });
 
-  it('cannot be broken out of a <details> block by finding text', () => {
+  it('cannot be restructured by <details> markup in a finding message', () => {
     const finding = makeFinding({
       severity: 'minor',
-      message: 'Finding: </details> injected Severity: nit Confidence: high',
+      // F2: 閉じタグだけでなく開始タグも無害化する。開始タグは以降の節を
+      // depth 2 に沈め、文書末で未閉のまま残す（=以降が畳まれて消える）。
+      message:
+        'Finding: </details> and <details><summary>pwn</summary> injected Severity: nit Confidence: high',
     });
     const markdown = renderMarkdown(makeResult({ findings: [finding] }));
 
-    // `<` はエンティティ化されるので閉じタグとして解釈されない。文字列自体は
-    // 消さず、読み手には `</details>` のまま見える。
-    assert.match(collapsedBody(markdown), /&lt;\/details> injected/);
+    // `<` はエンティティ化されるので閉じタグ・開始タグとして解釈されない。
+    // 文字列自体は削らず全文が残る。
+    assert.match(collapsedBody(markdown), /&lt;\/details> and &lt;details>&lt;summary>pwn/);
     assert.strictEqual(
       countOccurrences(markdown, '\n</details>'),
       countOccurrences(markdown, '<details>'),
@@ -279,15 +297,186 @@ describe('#1713 Slice 1: markdown headline and progressive disclosure', () => {
     );
   });
 
-  it('treats a comment with no matching finding as major (fail-safe: stays expanded)', () => {
-    const result = makeResult();
-    result.comments = [
-      { skillId: 'orphan', file: 'src/x.js', line: 1, message: 'Finding: orphan' },
+  it('cannot be restructured by <details> markup in the expanded section or a file path', () => {
+    // F2: 展開側（要対応節）と top3 ポインタ行の file はどちらも
+    // wrapInDetails を通らないため、無害化はテキスト境界で行う必要がある。
+    const finding = makeFinding({
+      severity: 'critical',
+      message: 'Finding: <details>expanded pwn</details> Severity: blocker Confidence: high',
+    });
+    const markdown = renderMarkdown(
+      makeResult({
+        findings: [finding],
+        teamLeadReport: {
+          top3Findings: [
+            {
+              id: 'rr-9',
+              severity: 'major',
+              title: 'pointer',
+              // code span はバッククォートで閉じられるため安全な容れ物ではない。
+              file: 'src/`<details>`evil.js',
+              lineStart: 2,
+              consensusLevel: 'single',
+            },
+          ],
+          blindSpots: [],
+          consensusSummary: { consensus: 0, multi: 0, single: 1, total: 1 },
+        },
+      })
+    );
+
+    assert.match(expandedBody(markdown), /&lt;details>expanded pwn&lt;\/details>/);
+    assert.match(markdown, /&lt;details>`evil\.js/);
+    assert.strictEqual(
+      countOccurrences(markdown, '\n</details>'),
+      countOccurrences(markdown, '<details>'),
+      'details tags must stay balanced'
+    );
+  });
+
+  it('orders the 要対応 body by severity, not by skill id (F4)', () => {
+    const findings = [
+      // skillId 昇順では aaa-skill(major) が先に来るが、severity 降順では
+      // zzz-skill(critical) が先でなければ見出しの内訳と本文が食い違う。
+      makeFinding({ id: 'rr-1', ruleId: 'aaa-skill', severity: 'major', title: 'メジャー' }),
+      makeFinding({
+        id: 'rr-2',
+        ruleId: 'zzz-skill',
+        severity: 'critical',
+        file: 'src/b.js',
+        title: 'クリティカル',
+      }),
     ];
+    const markdown = renderMarkdown(makeResult({ findings }));
+    const body = expandedBody(markdown);
+
+    assert.match(body, /### 要対応 \(2 件: 🔴 1 \/ 🟠 1\)/);
+    assert.ok(
+      body.indexOf('zzz\\-skill') < body.indexOf('aaa\\-skill'),
+      'the critical group must render above the major group'
+    );
+  });
+
+  it('normalizes a severity outside the four-word vocabulary instead of dropping it (F7)', () => {
+    // 内部語彙（blocker）がそのまま届いても内訳が空にならないこと。
+    const findings = [makeFinding({ severity: 'blocker' })];
+    const markdown = renderMarkdown(makeResult({ findings }));
+
+    assert.match(headlineOf(markdown), /🔴 1（計 1 件）/);
+    assert.doesNotMatch(headlineOf(markdown), /· *（計/, 'the breakdown must not be empty');
+    assert.match(expandedBody(markdown), /### 要対応 \(1 件: 🔴 1\)/);
+  });
+
+  it('does not print the risk-map file list twice when リスク評価 already listed it (F6)', () => {
+    const plan = {
+      selected: [],
+      skipped: [],
+      riskAssessment: {
+        aggregateAction: 'require_human_review',
+        humanReviewFiles: ['src/api/orders.ts'],
+        escalatedFiles: [],
+      },
+      riskMap: { require_human_review: ['src/api/orders.ts'] },
+    };
+    const markdown = renderMarkdown(makeResult({ plan }));
+
+    assert.match(markdown, /\*\*人間レビュー必須\*\*/);
+    assert.doesNotMatch(markdown, /Human review required/);
+    assert.strictEqual(countOccurrences(markdown, 'src/api/orders\\.ts'), 1);
+  });
+
+  it('treats a comment with no matching finding as major (fail-safe: stays expanded)', () => {
+    const result = makeResult({
+      comments: [{ skillId: 'orphan', file: 'src/x.js', line: 1, message: 'Finding: orphan' }],
+    });
     const markdown = renderMarkdown(result);
 
     assert.match(expandedBody(markdown), /### 要対応 \(1 件: 🟠 1\)/);
     assert.match(expandedBody(markdown), /src\/x\.js:1/);
+    // F1: 旧実装はここで `findings: []` を根拠に ✅ を出し、直下の 要対応 節と
+    // 矛盾していた。ヘッドラインも 要対応 節と同じ集合から導出される。
+    assert.doesNotMatch(markdown, /✅/);
+    assert.match(headlineOf(markdown), /🟠 1（計 1 件）/);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// F1: ヘッドライン / ✅ / 優先度サマリー / 節見出しは同じ「描画対象集合」から導く
+// -----------------------------------------------------------------------------
+
+describe('#1713 F1: the headline describes exactly what is rendered below it', () => {
+  /** ✅ の安全宣言と 要対応 節は、どんな入力でも共存してはならない。 */
+  function assertNoContradiction(markdown, label) {
+    const hasSafe = markdown.includes('✅ マージ前に対応が必要な指摘はありません');
+    const hasAction = /### 要対応/.test(markdown);
+    assert.ok(
+      !(hasSafe && hasAction),
+      `${label}: "✅ no findings" must never sit above a 要対応 section\n${markdown.slice(0, 400)}`
+    );
+  }
+
+  it('does not claim "no findings" when --reviewers dedup left comments unmatched', () => {
+    // 再現 1: reviewer orchestration では mergeFindings が findings を dedup する
+    // 一方 allComments は連結のみ。findings 側にだけ消えた指摘が comments に残る。
+    const markdown = renderMarkdown(
+      makeResult({
+        findings: [],
+        comments: [
+          {
+            skillId: 'trust-boundaries-authz',
+            file: 'src/api/orders.ts',
+            line: 42,
+            message: 'Finding: 認可チェックが無い Severity: blocker Confidence: high',
+          },
+        ],
+      })
+    );
+
+    assertNoContradiction(markdown, 'reviewers dedup');
+    assert.match(markdown, /### 要対応 \(1 件: 🟠 1\)/);
+    assert.match(headlineOf(markdown), /🟠 1（計 1 件）/);
+  });
+
+  it('counts every rendered comment when suppression removed only the finding', () => {
+    // 再現 2: 抑制は fingerprint 一致でしか comment を落とさないため、
+    // findings 1 件 / comments 2 件という食い違いが起きる。
+    const kept = makeFinding({ id: 'rr-1', severity: 'minor' });
+    const markdown = renderMarkdown(
+      makeResult({
+        findings: [kept],
+        comments: [
+          commentFor(kept),
+          {
+            skillId: 'trust-boundaries-authz',
+            file: 'src/api/orders.ts',
+            line: 42,
+            message: 'Finding: 認可チェックが無い Severity: blocker Confidence: high',
+          },
+        ],
+        suppressed: [{ suppressReason: 'insufficient_evidence' }],
+      })
+    );
+
+    assertNoContradiction(markdown, 'suppression');
+    // 旧実装は findings 由来で「🟡 1（計 1 件）」と表示し、直下に 要対応 1 件を出していた。
+    assert.match(headlineOf(markdown), /🟠 1 \/ 🟡 1（計 2 件）/);
+    assert.match(markdown, /### 要対応 \(1 件: 🟠 1\)/);
+    assert.match(markdown, /<summary>軽微・参考の指摘 \(1 件: 🟡 1\)<\/summary>/);
+    // 優先度サマリーも同じ集合から導く。
+    assert.match(markdown, /<summary>優先度サマリー \(P1 0 \/ P2 1 \/ P3 1 \/ P4 0\)<\/summary>/);
+  });
+
+  it('keeps the ✅ line only when nothing at all is rendered', () => {
+    const empty = renderMarkdown(makeResult());
+    assert.match(empty, /✅ マージ前に対応が必要な指摘はありません/);
+    assert.doesNotMatch(empty, /### 要対応/);
+
+    const minorOnly = renderMarkdown(
+      makeResult({ findings: [makeFinding({ severity: 'minor' })] })
+    );
+    assert.match(minorOnly, /✅ マージ前必須（P1 \/ P2）の指摘はありません/);
+    assert.doesNotMatch(minorOnly, /✅ マージ前に対応が必要な指摘はありません/);
+    assertNoContradiction(minorOnly, 'minor only');
   });
 });
 

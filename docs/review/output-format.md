@@ -52,6 +52,8 @@
 - `<summary>` には必ず件数を書く。`<summary>` の直後には空行を置く（GitHub が中の markdown を描画する条件）
 - 重要度ラベルと finding フィールドは変更しない。段階的開示は表示だけの変更であり、severity・`decision`・`gate` を書き換えない
 - `--output json` / `yaml` / `html` の成果物は影響を受けない
+- ヘッドラインの件数・内訳と、✅ の安全宣言・各節の見出しは**同一の描画対象集合**から導く。判定とスコアは canonical な gate 側（`deriveRunGate` / `scoreReview`）に残す
+- 上記は**描画側**の規約である。finding 本文には `<details>` などの生 HTML を書かない（描画側でエスケープされ、折りたたみにはならない）
 
 ## 重要度ラベル
 
