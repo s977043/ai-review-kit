@@ -39,6 +39,26 @@ JSON 出力の `autoSelectedRoles` フィールドで選択されたロールを
 
 複数のロール（`auto` を含む）でレビューする場合、大きな diff は自動的にチャンクに分割され、ロール × チャンクで並列実行されます。各実行から得られた findings は、最終 ID を割り当てる前にチャンク・ロール間で重複排除されます（実装: `src/lib/reviewer-orchestrator.mjs` の `splitDiffIntoChunks` / `deduplicateFindings`）。このため、同一箇所の重複指摘は 1 件に統合されます。
 
+### 進捗出力とロール単位タイムアウト
+
+並列ロール実行では、ロールの開始・完了・失敗を 1 行ずつ **stderr** に出力します。成果物は stdout に出るため、進捗行が JSON / YAML / Markdown を汚すことはありません。`--quiet` を付けると進捗行だけを抑止します。
+
+```text
+Reviewer bug-hunter: start
+Reviewer security-scanner: start
+Reviewer bug-hunter: done in 6.2s (3 findings)
+Reviewer security-scanner: timeout after 120.0s (other roles continue)
+Reviewers: 1/2 succeeded, 1 failed (1 timed out), 120.0s total
+```
+
+ロール単位のタイムアウトは既定で無効（無制限）です。有効化するには環境変数 `RIVER_REVIEWER_TIMEOUT`（ミリ秒）または `.river-review.json` の `review.reviewers.timeoutMs` を指定します。優先順位は env が config より上です。
+
+タイムアウトは fail-soft であり、上限に達したロールを失敗として記録したうえで、残りのロールの findings で処理を続行します。全体を中断しません。打ち切りの事実は JSON 出力にも残るため、CI からは「指摘 0 件」と「ロールが返らなかった」を区別できます。
+
+- `reviewerResults[].timedOut`: 当該ロールが上限に達したかどうか
+- `reviewerResults[].durationMs`: 当該ロールの所要ミリ秒
+- `debug.timeoutMs` / `debug.timedOutReviewers` / `debug.durationMs`: 適用した上限値、打ち切ったロール数、実行全体の所要ミリ秒
+
 ## コマンド
 
 - Agents: `npm run agents:validate` (または `node scripts/validate-agents.mjs`)

@@ -8,10 +8,28 @@ export const modelConfigSchema = z.object({
   maxTokens: z.number().int().positive().optional(),
 });
 
+// --- #1689: parallel reviewer-role orchestration knobs ---
+//
+// Companion to src/lib/reviewer-orchestrator.mjs. Nested under `review` (rather
+// than a new top-level section) so the loader's known-key list keeps accepting
+// it without an "Unknown config keys ignored" warning.
+//
+// `timeoutMs` is the per-role wall-clock budget. Omitted = no timeout (the
+// default; the orchestrator waits for every role, as before #1689). The env var
+// `RIVER_REVIEWER_TIMEOUT` overrides it. `progress` (default true) toggles the
+// per-role stderr progress lines; the CLI `--quiet` flag always wins over it.
+export const reviewerOrchestrationConfigSchema = z
+  .object({
+    timeoutMs: z.number().int().positive().max(3_600_000).optional(),
+    progress: z.boolean().optional(),
+  })
+  .strict();
+
 export const reviewConfigSchema = z.object({
   language: z.enum(['ja', 'en']).optional(),
   severity: z.enum(['strict', 'normal', 'relaxed']).optional(),
   additionalInstructions: z.array(z.string().min(1)).optional(),
+  reviewers: reviewerOrchestrationConfigSchema.optional(),
   // Extra spec/ADR directories (relative to repo root) scanned when linking
   // changed files to related design docs. Merged with the built-in defaults.
   specDirs: z.array(z.string().min(1)).optional(),

@@ -82,6 +82,22 @@ describe('reviewConfigSchema', () => {
   test('rejects empty strings in additionalInstructions', () => {
     assert.ok(!reviewConfigSchema.safeParse({ additionalInstructions: [''] }).success);
   });
+
+  // #1689: reviewer orchestration knobs. z.object strips unknown keys, so the
+  // round-trip assertion is what proves the key actually reaches the runtime.
+  test('keeps review.reviewers.timeoutMs / progress after validation', () => {
+    const result = reviewConfigSchema.safeParse({
+      reviewers: { timeoutMs: 120000, progress: false },
+    });
+    assert.ok(result.success);
+    assert.deepEqual(result.data.reviewers, { timeoutMs: 120000, progress: false });
+  });
+
+  test('rejects a non-positive or unknown reviewers key', () => {
+    assert.ok(!reviewConfigSchema.safeParse({ reviewers: { timeoutMs: 0 } }).success);
+    assert.ok(!reviewConfigSchema.safeParse({ reviewers: { timeoutMs: -1 } }).success);
+    assert.ok(!reviewConfigSchema.safeParse({ reviewers: { unknownKey: 1 } }).success);
+  });
 });
 
 describe('excludeConfigSchema', () => {

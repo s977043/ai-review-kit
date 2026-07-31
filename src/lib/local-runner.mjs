@@ -381,6 +381,9 @@ export async function runLocalReview({
   baseRef = null,
   skillIds = null,
   manualReviewMode = null,
+  // #1689: `--quiet` suppresses the reviewer-orchestration progress lines on
+  // stderr. It never affects the artifact written to stdout.
+  quiet = false,
 } = {}) {
   const context =
     providedContext ??
@@ -462,7 +465,7 @@ export async function runLocalReview({
   };
 
   const review = reviewers?.length
-    ? await runReviewerOrchestration({ ...reviewArgs, reviewers })
+    ? await runReviewerOrchestration({ ...reviewArgs, reviewers, quiet })
     : await generateReview(reviewArgs);
 
   // #687 PR-C: gate findings by Riverbed Memory suppressions.
