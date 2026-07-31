@@ -612,8 +612,8 @@
     {
       "id": "river-review",
       "path": "skills/agent-skills/river-review",
-      "checksum": "sha256:84dc2ea01aa68c3c146c6b10c25bd9a9e5f57444d469be123e5ccf33f25627ee",
-      "files": 6
+      "checksum": "sha256:9fe52f0ce82b329cfad498f523a29e7295254b6578d403690f1dc2f495515fdd",
+      "files": 10
     },
     {
       "id": "river-review-architecture",
