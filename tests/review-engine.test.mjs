@@ -569,6 +569,47 @@ test('buildPrompt switches language based on config', () => {
   assert.match(prompt, /Write the <message> in English/);
 });
 
+// --- #1685: design-intent comments adjacent to the cited line ---
+//
+// VERIFICATION.md self-check 7 covers the agent-driven path, but SKILL.md and
+// reference bodies never reach the model on the CLI path (buildSkillSummary
+// emits id/phase/severity only, see the #1666 F1 test in finding-format).
+// Without a prompt line the rule is unreachable for `river run`, so the
+// instruction is asserted here rather than inferred from the reference doc.
+test('buildPrompt tells the model to read adjacent intent comments before flagging (#1685)', () => {
+  const { prompt } = buildPrompt({
+    diffText,
+    diffFiles: diff.files,
+    plan,
+    phase: 'midstream',
+  });
+  assert.match(prompt, /read the comments and docblocks adjacent to it in the diff/);
+  // Both branches must survive: drop/downgrade when intent is stated ...
+  assert.match(prompt, /drop the finding or lower its severity/);
+  assert.match(prompt, /never repeat a suggestion the comment already answers/);
+  // ... and keep the finding when the comment does not match the code, so a
+  // comment cannot be used to suppress a real issue (#1685 Non-goals).
+  assert.match(prompt, /A comment that contradicts the code it documents is still a finding/);
+});
+
+test('buildPrompt keeps the intent-comment instruction independent of language (#1685)', () => {
+  // The instruction block is English on both paths; only <message> switches.
+  for (const language of ['ja', 'en']) {
+    const { prompt } = buildPrompt({
+      diffText,
+      diffFiles: diff.files,
+      plan,
+      phase: 'midstream',
+      config: { review: { language } },
+    });
+    assert.match(
+      prompt,
+      /read the comments and docblocks adjacent to it in the diff/,
+      `language=${language}`
+    );
+  }
+});
+
 // --- #1597: output-stage filter for findings on generated (dist) paths ---
 //
 // #1570 excluded dist/ paths from the LLM-facing diff only. The heuristic

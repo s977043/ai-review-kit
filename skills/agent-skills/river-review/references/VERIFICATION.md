@@ -46,6 +46,27 @@ River Review が出した finding を確定させる前に、必ずこのチェ�
 - `review-core` ルールに従い、PR の目的と差分に紐づかない一般論の助言は reject。
 - 「将来的に〜」「他のリポジトリでは〜」は finding ではなく `actions` / follow-up へ切り出す。
 
+### 7. 近傍の設計意図コメントを確認済み
+
+Evidence が `file:line` を指す以上、その周辺コメントは読める位置にある。読まずに指摘すると、レビュイーが反証コストを負う。
+
+- 指摘行の直前・直後、同一 hunk 内の文脈行、対象関数・クラスの docblock を読み、**設計意図が明記されていないか**を確認する。
+- 意図が明記されていた場合の扱い:
+  - コメントが指摘内容を解消している → finding を取り下げる。
+  - 意図を踏まえてもなお問題が残る → severity を下げ、finding 本文に **「コメントに記載の意図（要約）」と「それでもなお問題と考える理由」** を書く。反証なしに同じ提案を繰り返さない。
+- **コメントを無条件に信用しない**。コメントの記述と実装が矛盾する場合は、その矛盾自体を finding にする（severity は下げない）。
+- コメントが存在しても、意図ではなく処理の言い換え（`// ユーザーを取得する` 等）にとどまる場合は、意図の明記とみなさない。
+
+#### 意図の置き場所 / コメントか `.river/rules.md` か
+
+同種の誤検出が繰り返される場合は、被レビュー側リポジトリの `.river/rules.md` への追記を `actions` として提案する（[IMPROVEMENT_LOOP.md](./IMPROVEMENT_LOOP.md) の suppression / reference 還元へつなぐ）。判断基準は次のとおり。
+
+| 意図の性質                                                  | 置き場所          |
+| ----------------------------------------------------------- | ----------------- |
+| その 1 箇所だけに効く局所的な判断（この関数だけ opt-in 等） | コード側コメント  |
+| リポジトリ横断で繰り返し適用される規約・設計方針            | `.river/rules.md` |
+| 同じ指摘が 2 回以上出た（コメントだけでは止まらなかった）   | `.river/rules.md` |
+
 ## Reject conditions / 却下条件
 
 以下に該当する finding は出力しない。
@@ -58,6 +79,8 @@ River Review が出した finding を確定させる前に、必ずこのチェ�
 | critical なのに confidence low         | severity を major / info に下げる |
 | 同一 file:line で別 severity の重複    | 上位 severity に統合              |
 | PR 目的と無関係（チケット範囲外）      | 出力しない or follow-up issue へ  |
+| 近傍コメントの意図が指摘内容を解消済み | 出力しない                        |
+| 近傍コメントの意図に触れない再提案     | severity を下げ、反証を明記する   |
 
 ## 自己点検フロー / Self-check flow
 
@@ -71,7 +94,11 @@ for each candidate_finding:
   4. severity calibrated against confidence? → no → adjust
   5. duplicate of earlier finding? → yes → merge
   6. tied to diff?   → no  → reject (general advice)
-emit only findings that survived all six checks
+  7. intent stated in an adjacent comment?
+       → resolved by the comment      → reject
+       → still a problem              → downgrade + rebut the stated intent
+       → comment contradicts the code → keep (the contradiction is the finding)
+emit only findings that survived all seven checks
 ```
 
 ## 関連リソース
@@ -81,3 +108,4 @@ emit only findings that survived all six checks
 - 内部ルール: `.claude/rules/review-core.md`
 - フィードバック取り扱い: [FEEDBACK.md](./FEEDBACK.md)
 - 改善ループ: [IMPROVEMENT_LOOP.md](./IMPROVEMENT_LOOP.md)
+- self-check 7 の canary: `../fixtures/01-intent-comment-resolves-finding.md`、`../fixtures/02-intent-comment-downgrade-with-rebuttal.md`、`../fixtures/03-comment-contradicts-implementation.md`
