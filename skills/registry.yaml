@@ -667,6 +667,26 @@ skills:
     recommended: false
     description: '変更差分から重要なテスト観点と欠落を洗い出し、優先度付きでテストケース案を提示する'
 
+  - id: test-assertion-effectiveness
+    version: '0.1.0'
+    name: 'Test Assertion Effectiveness 常に PASS するテストの検出'
+    path: skills/downstream/test-assertion-effectiveness/SKILL.md
+    category: downstream
+    phase: downstream
+    tags:
+      [
+        tests,
+        assertion,
+        assertion-effectiveness,
+        vacuous-test,
+        always-passing,
+        test-quality,
+        downstream,
+      ]
+    severity: major
+    recommended: false
+    description: 'テストは存在するがアサーションが実質何も検証しておらず、実装が壊れても落ちない（常に PASS する）構造を diff-time で検出する。対象は Check 1 missing assertion アサーション不在、Check 2 tautological assertion 恒真・SUT 非依存、Check 3 nonexistent expected literal 期待文字列が対象ファイルに実在しない、Check 4 stale expected value 出力変更への追従漏れ、Check 5 unscoped expectation スコープ不足、Check 6 swallowed failure 失敗の握り潰しの 6 つ。テストの有無は test-existence、未テスト経路の量は coverage-gap、非決定性は flaky-test、命名は test-naming、JS / TS の un-awaited resolves / rejects は vitest-mock-isolation、tdd-ledger artifact ベースの証跡検証は plangate-tdd-evidence、.only / .skip / @ts-ignore と空の catch は heuristic-review.mjs の決定論検出器へ委譲する'
+
   # Adversarial Review Skills (Cognitive Bias Countermeasures)
   - id: pre-mortem
     version: '0.1.0'
