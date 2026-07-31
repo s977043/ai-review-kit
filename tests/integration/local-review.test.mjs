@@ -100,6 +100,35 @@ test('--reviewers writes role progress to stderr, never to stdout', async (t) =>
   );
 });
 
+// #1700: the JSON artifact of a --reviewers run carries teamLeadReport plus
+// per-issue consensusLevel / reviewerRole. None of the three were declared in
+// schemas/output.schema.json, which is additionalProperties: false, so every
+// role-orchestrated run printed a schema warning to stderr. validateOutputArtifact
+// only warns, so no exit code or unit test caught it — this pins the symptom at
+// the CLI boundary where it was observed.
+test('--reviewers JSON output validates against output.schema.json', async (t) => {
+  const { dir, cleanup } = await setupRepoWithDiff();
+  t.after(cleanup);
+
+  const result = await runCliInProcess(
+    ['run', '.', '--dry-run', '--reviewers', 'bug-hunter,security-scanner', '--output', 'json'],
+    { cwd: dir }
+  );
+
+  assert.strictEqual(result.code, 0, result.stderr);
+  assert.doesNotMatch(
+    result.stderr,
+    /does not conform to schemas\/output\.schema\.json/,
+    `--reviewers output must validate; got:\n${result.stderr}`
+  );
+  // Guard against a vacuous pass: the run really did emit the fields that used
+  // to trip the validator.
+  const parsed = JSON.parse(result.stdout.slice(result.stdout.indexOf('{')));
+  assert.ok(parsed.teamLeadReport, 'a --reviewers run must emit teamLeadReport');
+  assert.ok(Array.isArray(parsed.teamLeadReport.blindSpots));
+  assert.ok(parsed.issues.every((i) => typeof i.reviewerRole === 'string'));
+});
+
 // #1689: --quiet was parsed by cli.mjs but consumed by nothing. This asserts the
 // whole chain, not just resolveReviewerProgressEnabled().
 test('--quiet suppresses the reviewer progress lines end to end', async (t) => {
