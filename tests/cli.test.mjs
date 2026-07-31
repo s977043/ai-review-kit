@@ -154,7 +154,13 @@ describe('river run - markdown output', () => {
     assert.strictEqual(result.code, 0, result.stderr);
     assert.match(result.stdout, /^<!-- river-review -->/);
     assert.match(result.stdout, /## River Review/);
-    assert.match(result.stdout, /### 指摘/);
+    // #1713: 判定・件数・スコアは本文先頭の 1 行に固定される（旧: 末尾の「### 指摘」節）。
+    assert.match(
+      result.stdout,
+      /\*\*判定: [\w-]+\*\* · .* · スコア \d+\/100 · フェーズ `midstream`/
+    );
+    // 指摘は severity で 2 分割される。dry-run の nit は minor なので折りたたみ側。
+    assert.match(result.stdout, /<summary>軽微・参考の指摘 \(\d+ 件: /);
     // skill id はサニタイズでハイフンがエスケープされる
     assert.match(result.stdout, /#### 🔍 logging\\-observability/);
     assert.doesNotMatch(result.stdout, /--- diff preview ---/);
