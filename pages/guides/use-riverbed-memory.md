@@ -103,6 +103,8 @@ river runs summary
 
 `--baseline <path>` に過去のレビュー JSON を渡すと、通常の出力の前に回帰サマリ（new / fixed findings）を表示します。JSON は `findings` 配列そのもの、または `findings`（あるいは `issues`）キーを持つオブジェクト（例: `river run . --output json` の出力）のいずれでも受け付けます。
 
+回帰サマリの出力先は `--output` によって変わります（#1706）。既定の `text` では標準出力へ、`markdown` / `json` / `yaml` / `html` では標準エラーへ出ます。構造化出力をリダイレクトしてもサマリが混入しない、という保証のためです。
+
 ```bash
 # 1. 基準となるレビューを JSON で保存する
 river run . --output json > baseline.json

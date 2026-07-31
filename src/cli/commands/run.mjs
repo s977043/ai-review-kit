@@ -208,7 +208,15 @@ Dependencies: ${
         : (baselineFindings.findings ?? baselineFindings.issues ?? []);
       const diff = diffReviews(prevFindings, result.findings ?? []);
       const regSummary = formatRegressionSummary(diff);
-      console.log(regSummary);
+      // #1706: the summary is a Markdown block printed BEFORE the structured
+      // output, so on stdout it corrupts every machine-readable format —
+      // `--output html --baseline > report.html` put text ahead of the
+      // doctype, and json / yaml became unparseable. Same inverted check as
+      // the run header (#1695/#1703): `text` keeps it on stdout, every other
+      // format sends it to stderr where the run header already goes.
+      // This is a deliberate behavior change for markdown / json / yaml.
+      const logRegressionSummary = parsed.output !== 'text' ? console.error : console.log;
+      logRegressionSummary(regSummary);
     } catch (err) {
       console.error(`Warning: --baseline comparison failed: ${err.message}`);
     }

@@ -9,6 +9,14 @@ import { collectRepoDiff, renderDiffText } from '../../lib/diff-processor.mjs';
 import { SkillDispatcher } from '../../core/skill-dispatcher.mjs';
 
 /**
+ * `--output` values the default `skills` run can actually render (#1705).
+ * `yaml` / `html` have no renderer here; accepting them and emitting JSON
+ * misreports the format to a downstream consumer, so they are rejected.
+ * Insertion order is the order used in the error message.
+ */
+const SUPPORTED_OUTPUTS = new Set(['text', 'markdown', 'json']);
+
+/**
  * Handle the `skills` command (resolve | import/export/list | default run).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -74,12 +82,32 @@ export async function runSkillsCommand(parsed, targetPath) {
   }
 
   // Default `skills` run (no subcommand): Skill-based reviewer over the diff.
+  //
+  // #1705: `--output` is validated CLI-wide against text|markdown|json|yaml|html,
+  // but this command only renders text / markdown / json. The previous `else`
+  // branch swallowed yaml and html and returned JSON, so the CLI answered a
+  // format it was never asked for. Reject the unrenderable formats up front
+  // (evolve precedent, #1652) instead of falling back silently; the check runs
+  // before any git or LLM work so the failure is immediate.
+  if (!SUPPORTED_OUTPUTS.has(parsed.output)) {
+    console.error(
+      `Unsupported --output for skills: ${parsed.output}. Use: ${[...SUPPORTED_OUTPUTS].join(' | ')}`
+    );
+    return 1;
+  }
+
+  // #1695 / #1703: any --output other than `text` makes stdout a
+  // machine-consumed artifact, so the banner and the dispatcher's progress
+  // lines must go to stderr. Same inverted check as `river run` — an allow-list
+  // of structured formats is what leaked the header there in the first place.
+  const logProgress = parsed.output !== 'text' ? console.error : console.log;
+
   const repoRoot = await ensureGitRepo(targetPath);
   const defaultBranch = await detectDefaultBranch(repoRoot);
   const mergeBase = await findMergeBase(repoRoot, defaultBranch);
   const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
 
-  const dispatcher = new SkillDispatcher(repoRoot);
+  const dispatcher = new SkillDispatcher(repoRoot, { log: logProgress });
 
   const getFileDiff = async (targetFile) => {
     const fileData = repoDiff.files.find((f) => f.path === targetFile);
@@ -87,7 +115,7 @@ export async function runSkillsCommand(parsed, targetPath) {
     return renderDiffText([fileData]);
   };
 
-  console.log(`River Review (Skills) - Target: ${targetPath}`);
+  logProgress(`River Review (Skills) - Target: ${targetPath}`);
   const results = await dispatcher.run(
     repoDiff.changedFiles,
     getFileDiff,
@@ -103,8 +131,34 @@ export async function runSkillsCommand(parsed, targetPath) {
       console.log(res.review);
       console.log('\n---');
     }
-  } else {
+  } else if (parsed.output === 'json') {
     console.log(JSON.stringify(results, null, 2));
+  } else {
+    printSkillsTextReport(results);
   }
   return 0;
+}
+
+/**
+ * Render the skill review results as plain text.
+ *
+ * #1705: `text` is the CLI-wide default for `--output`, so it cannot be
+ * rejected the way yaml / html are — it has to be rendered. Previously it fell
+ * into the JSON branch, which made the documented default format a lie (and
+ * made the default output unusable as JSON anyway, since the banner and
+ * progress lines shared the stream).
+ *
+ * @param {Array<{file?: string, skill?: string, review?: string, error?: string}>} results
+ * @returns {void}
+ */
+function printSkillsTextReport(results) {
+  if (!results.length) {
+    console.log('Review Results (0)');
+    return;
+  }
+  console.log(`Review Results (${results.length})`);
+  for (const res of results) {
+    console.log(`\n--- ${res.file} (Skill: ${res.skill}) ---`);
+    console.log(res.error ? `[Error] ${res.error}` : res.review);
+  }
 }

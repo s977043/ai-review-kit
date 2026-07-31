@@ -65454,8 +65454,17 @@ function shouldExclude(filePath, patterns = []) {
 }
 
 class SkillDispatcher {
-  constructor(repoRoot) {
+  /**
+   * @param {string} repoRoot - repository root the dispatcher reviews.
+   * @param {{ log?: (...args: unknown[]) => void }} [options]
+   *   `log` receives every progress / diagnostic line the dispatcher emits.
+   *   #1705: when the caller renders a machine-readable artifact on stdout
+   *   (`--output json` etc.) it injects `console.error` so the artifact stays
+   *   parseable. Defaults to `console.log`, i.e. the historical behavior.
+   */
+  constructor(repoRoot, options = {}) {
     this.repoRoot = repoRoot;
+    this.log = options.log ?? console.log;
   }
 
   async run(changedFiles, getFileDiff, phase = 'midstream', dryRun = false, debug = false) {
@@ -65471,7 +65480,7 @@ class SkillDispatcher {
     }));
     if (skills.length === 0) {
       // Fallback: load skills from local directory if not in config
-      console.log('Loading skills from local directory...');
+      this.log('Loading skills from local directory...');
       const loaded = await (0,skill_cache/* loadSkillsCached */.$b)({ skillsDir: external_node_path_.join(this.repoRoot, 'skills') });
       skills = loaded.map((s) => ({
         ...s.metadata,
@@ -65479,10 +65488,10 @@ class SkillDispatcher {
         files: s.metadata.files || s.metadata.applyTo || [], // Normalize files
       }));
     }
-    console.log(`Loaded ${skills.length} skills. Filtering by phase: ${phase}`);
+    this.log(`Loaded ${skills.length} skills. Filtering by phase: ${phase}`);
 
     if (skills.length === 0) {
-      console.log('No skills configured or found in skills/ directory.');
+      this.log('No skills configured or found in skills/ directory.');
       return results;
     }
 
@@ -65490,7 +65499,7 @@ class SkillDispatcher {
     const reviewFiles = changedFiles.filter((file) => !shouldExclude(file, excludePatterns));
 
     if (!reviewFiles.length) {
-      console.log('No files to review after applying exclude patterns.');
+      this.log('No files to review after applying exclude patterns.');
       return results;
     }
 
@@ -65514,16 +65523,14 @@ class SkillDispatcher {
           const excluded = phaseMatched.filter((skill) =>
             (skill.exclude ?? []).some((pattern) => (0,esm/* minimatch */.xF)(file, pattern, { dot: true }))
           );
-          console.log(
+          this.log(
             `Skipping ${file}: matched files ${fileMatched.length}/${skills.length}, phase ok ${phaseMatched.length}/${fileMatched.length}, excluded ${excluded.length}.`
           );
         }
         continue;
       }
 
-      console.log(
-        `Analyzing ${file} with skills: ${applicableSkills.map((s) => s.name).join(', ')}`
-      );
+      this.log(`Analyzing ${file} with skills: ${applicableSkills.map((s) => s.name).join(', ')}`);
 
       // 2. Execute skills in parallel
       const diff = await getFileDiff(file); // Dependency injection for file reading (once per file)
@@ -65534,13 +65541,13 @@ class SkillDispatcher {
           const systemPrompt = buildSystemPrompt(skill, language);
 
           if (debug) {
-            console.log(
+            this.log(
               `\n--- System Prompt Debug (${skill.name}) ---\n${systemPrompt}\n-----------------------------------\n`
             );
           }
 
           if (dryRun) {
-            console.log(`  -> Invoking (dry-run) ${modelName} for skill "${skill.name}"...`);
+            this.log(`  -> Invoking (dry-run) ${modelName} for skill "${skill.name}"...`);
             return {
               file,
               skill: skill.name,
@@ -65549,7 +65556,7 @@ class SkillDispatcher {
           }
 
           if (!llmEnabled) {
-            console.log(`  -> Skipped (no API key) skill "${skill.name}"...`);
+            this.log(`  -> Skipped (no API key) skill "${skill.name}"...`);
             return {
               file,
               skill: skill.name,
@@ -65563,7 +65570,7 @@ class SkillDispatcher {
             maxTokens: skill.maxTokens,
             disableCache: skill.disableCache,
           });
-          console.log(`  -> Invoking ${modelName} for skill "${skill.name}"...`);
+          this.log(`  -> Invoking ${modelName} for skill "${skill.name}"...`);
           const review = await client.generateReview(systemPrompt, diff);
 
           const result = {
@@ -65616,6 +65623,14 @@ class SkillDispatcher {
 
 
 
+
+/**
+ * `--output` values the default `skills` run can actually render (#1705).
+ * `yaml` / `html` have no renderer here; accepting them and emitting JSON
+ * misreports the format to a downstream consumer, so they are rejected.
+ * Insertion order is the order used in the error message.
+ */
+const SUPPORTED_OUTPUTS = new Set(['text', 'markdown', 'json']);
 
 /**
  * Handle the `skills` command (resolve | import/export/list | default run).
@@ -65683,12 +65698,32 @@ async function runSkillsCommand(parsed, targetPath) {
   }
 
   // Default `skills` run (no subcommand): Skill-based reviewer over the diff.
+  //
+  // #1705: `--output` is validated CLI-wide against text|markdown|json|yaml|html,
+  // but this command only renders text / markdown / json. The previous `else`
+  // branch swallowed yaml and html and returned JSON, so the CLI answered a
+  // format it was never asked for. Reject the unrenderable formats up front
+  // (evolve precedent, #1652) instead of falling back silently; the check runs
+  // before any git or LLM work so the failure is immediate.
+  if (!SUPPORTED_OUTPUTS.has(parsed.output)) {
+    console.error(
+      `Unsupported --output for skills: ${parsed.output}. Use: ${[...SUPPORTED_OUTPUTS].join(' | ')}`
+    );
+    return 1;
+  }
+
+  // #1695 / #1703: any --output other than `text` makes stdout a
+  // machine-consumed artifact, so the banner and the dispatcher's progress
+  // lines must go to stderr. Same inverted check as `river run` — an allow-list
+  // of structured formats is what leaked the header there in the first place.
+  const logProgress = parsed.output !== 'text' ? console.error : console.log;
+
   const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
   const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
   const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
   const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
 
-  const dispatcher = new SkillDispatcher(repoRoot);
+  const dispatcher = new SkillDispatcher(repoRoot, { log: logProgress });
 
   const getFileDiff = async (targetFile) => {
     const fileData = repoDiff.files.find((f) => f.path === targetFile);
@@ -65696,7 +65731,7 @@ async function runSkillsCommand(parsed, targetPath) {
     return (0,diff_processor/* renderDiffText */.pQ)([fileData]);
   };
 
-  console.log(`River Review (Skills) - Target: ${targetPath}`);
+  logProgress(`River Review (Skills) - Target: ${targetPath}`);
   const results = await dispatcher.run(
     repoDiff.changedFiles,
     getFileDiff,
@@ -65712,10 +65747,36 @@ async function runSkillsCommand(parsed, targetPath) {
       console.log(res.review);
       console.log('\n---');
     }
-  } else {
+  } else if (parsed.output === 'json') {
     console.log(JSON.stringify(results, null, 2));
+  } else {
+    printSkillsTextReport(results);
   }
   return 0;
+}
+
+/**
+ * Render the skill review results as plain text.
+ *
+ * #1705: `text` is the CLI-wide default for `--output`, so it cannot be
+ * rejected the way yaml / html are — it has to be rendered. Previously it fell
+ * into the JSON branch, which made the documented default format a lie (and
+ * made the default output unusable as JSON anyway, since the banner and
+ * progress lines shared the stream).
+ *
+ * @param {Array<{file?: string, skill?: string, review?: string, error?: string}>} results
+ * @returns {void}
+ */
+function printSkillsTextReport(results) {
+  if (!results.length) {
+    console.log('Review Results (0)');
+    return;
+  }
+  console.log(`Review Results (${results.length})`);
+  for (const res of results) {
+    console.log(`\n--- ${res.file} (Skill: ${res.skill}) ---`);
+    console.log(res.error ? `[Error] ${res.error}` : res.review);
+  }
 }
 
 // EXTERNAL MODULE: ./src/lib/loop-signal.mjs
@@ -69532,7 +69593,15 @@ Dependencies: ${
         : (baselineFindings.findings ?? baselineFindings.issues ?? []);
       const diff = diffReviews(prevFindings, result.findings ?? []);
       const regSummary = formatRegressionSummary(diff);
-      console.log(regSummary);
+      // #1706: the summary is a Markdown block printed BEFORE the structured
+      // output, so on stdout it corrupts every machine-readable format —
+      // `--output html --baseline > report.html` put text ahead of the
+      // doctype, and json / yaml became unparseable. Same inverted check as
+      // the run header (#1695/#1703): `text` keeps it on stdout, every other
+      // format sends it to stderr where the run header already goes.
+      // This is a deliberate behavior change for markdown / json / yaml.
+      const logRegressionSummary = parsed.output !== 'text' ? console.error : console.log;
+      logRegressionSummary(regSummary);
     } catch (err) {
       console.error(`Warning: --baseline comparison failed: ${err.message}`);
     }
