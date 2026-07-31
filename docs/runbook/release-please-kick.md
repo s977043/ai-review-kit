@@ -6,6 +6,18 @@ The release-please PR is BLOCKED because required status checks were not
 registered on the auto-generated branch (a common consequence of strict
 branch protection on freshly created refs).
 
+## Before you start: confirm the procedure is current
+
+This runbook and `.claude/commands/release-kick.md` are revised often. A local
+`main` that trails `origin` silently hands you a pre-revision copy. Check the
+freshness of the procedure itself before any diagnosis below. Fetch `origin`,
+diff both files against `origin/main`, and re-read them if either differs.
+Step 0 of `.claude/commands/release-kick.md` holds the executable form.
+
+Observed in the v1.67.1 run: the local checkout was 24 commits behind. The
+pre-#1702 revision of the procedure was therefore the one actually read, even
+though #1702 had merged 16 minutes before the kick.
+
 ## First: diagnose BEHIND vs pure BLOCKED
 
 A release PR can be behind `main` and BLOCKED at the same time, and which one it

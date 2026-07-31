@@ -1,7 +1,7 @@
 ---
 description: release-please のリリース PR を BLOCKED 解除 → CI green 確認 → マージ → リリース公開検証まで一貫実行する（v1.44.0〜v1.53.0 の11リリースで実証済みの型）
 argument-hint: '<release PR number>'
-allowed-tools: Bash(gh api user:*), Bash(gh auth switch:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(gh run list:*), Bash(gh release view:*), Bash(git ls-remote:*), Bash(scripts/release-please-kick.sh:*), Bash(bash scripts/release-please-kick.sh:*)
+allowed-tools: Bash(gh api user:*), Bash(gh auth switch:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(gh run list:*), Bash(gh release view:*), Bash(git ls-remote:*), Bash(git fetch:*), Bash(git diff:*), Bash(scripts/release-please-kick.sh:*), Bash(bash scripts/release-please-kick.sh:*)
 ---
 
 release PR #$ARGUMENTS を、BLOCKED 解除からマージ・リリース公開の検証まで一貫して実行する。
@@ -9,6 +9,17 @@ release PR #$ARGUMENTS を、BLOCKED 解除からマージ・リリース公開�
 release-please が生成するリリース PR の head は `GITHUB_TOKEN` push であるため、通常は `mergeStateStatus: BLOCKED`（"N of N required checks are expected"）になる（CLAUDE.md「`N of N required checks are expected` = bot/GITHUB_TOKEN push」ガード参照）。この BLOCKED の原因・`RELEASE_KICK_PAT` のセットアップ・`workflow_dispatch` 経由の代替手順は `docs/runbook/release-please-kick.md` が SSoT。本コマンドはそれを前提に、実際にマージして公開を確認するまでの実行手順を1コマンド化したもの。矛盾があれば runbook を正とし、本コマンドを修正する。
 
 ## 手順
+
+### Step 0. 手順書の鮮度確認
+
+```bash
+git fetch origin
+git diff --quiet HEAD origin/main -- .claude/commands/release-kick.md docs/runbook/release-please-kick.md || echo "手順書が古い: origin/main 版を読み直すこと"
+```
+
+ローカル main が origin より遅れていると、改訂前の手順書を読んだまま実走することになる。上のメッセージが出たら `git pull` で追いついてから、本コマンドと runbook を読み直す。差分がなければ何も出力されない。
+
+v1.67.1 の実走では、ローカルが 24 コミット遅れていた。その結果、#1702 による改訂前の版を読み込んだまま実走している。#1702 のマージ時刻はキックの 16 分前だった。
 
 ### Step 1. gh アカウント確認
 
@@ -72,18 +83,29 @@ gh run list --limit 5 --json databaseId,status,conclusion,headBranch,workflowNam
 
 Monitor ツールは使わず、1つの Bash 呼び出し内で sleep しながらポーリングする。**ポーリング用の変数名に `status` を使わない**（zsh の読み取り専用変数と衝突し代入が失敗する）。
 
+終了条件は「必須チェックが全件 `pass`」かつ「`fail` バケットが 0 件」の 2 つとする。`pending` の総数を終了条件にしてはならない（理由は下記）。
+
 ```bash
-for i in $(seq 1 8); do
-  pendingCount=$(gh pr checks $ARGUMENTS --json name,bucket --jq '[.[] | select(.bucket=="pending")] | length')
-  echo "iteration $i: pending=$pendingCount"
-  [ "$pendingCount" = "0" ] && break
-  sleep 14
+requiredTotal=$(gh api "repos/:owner/:repo/branches/main/protection/required_status_checks" --jq '.checks | length')
+[ "$requiredTotal" -gt 0 ] 2>/dev/null || { echo "必須チェック数を取得できない。Step 1 の gh アカウント確認へ戻る"; exit 1; }
+for i in $(seq 1 15); do
+  requiredPass=$(gh pr checks $ARGUMENTS --required --json bucket --jq '[.[] | select(.bucket=="pass")] | length')
+  failCount=$(gh pr checks $ARGUMENTS --json bucket --jq '[.[] | select(.bucket=="fail")] | length')
+  echo "iteration $i: requiredPass=$requiredPass/$requiredTotal fail=$failCount"
+  [ "$failCount" != "0" ] && break
+  [ "$requiredPass" = "$requiredTotal" ] && break
+  sleep 15
 done
 gh pr checks $ARGUMENTS --json name,bucket --jq '.[] | select(.bucket != "skipping")'
 ```
 
-- 8 回（約 2 分弱）で `pending` が解消しない場合はループを打ち切り、実出力を提示したうえで待機を継続するか判断を仰ぐ
-- `fail` バケットが出た場合は直ちに報告し、原因調査へ切り替える（本コマンドはマージ前提の手順であり、CI 失敗の修正は別タスク）
+- 母数の `requiredTotal` は branch protection から取る。`gh pr checks --required` の件数を母数にすると、まだ報告されていない必須チェックが母数から抜け落ちるため、早期に green と誤判定する
+- `requiredTotal` の数値ガードは省略しない。branch protection の参照には admin 権限が要るので、gh アカウントが無言で切り替わると 404 になり、`requiredTotal` にエラー JSON が入ってループが空回りする（本手順の検証中に実際に発生した）
+- `pending` の総数は単調減少しない。キック直後はワークフローが順次キューされるので、いったん減ってから増える。v1.67.1 実走の推移は 7→5→4→**9**→8→6→3→2 であり、旧条件（`pending == 0`）は一度も成立せず 8 周の上限に達した
+- `pending` の総数には必須外のコンテキストが多数含まれる。v1.67.1 実走時点の release PR には 24 コンテキストが付き、必須はうち 6 件のみだった（残りは Vercel / Link Check / CodeQL / PlanGate Review など）。必須外の完了はマージ条件ではない
+- 早期 break しない場合、ループは最長で約 4 分半（15 周 × sleep 15 秒 + API 応答）を要する。Bash ツールの timeout に 360000（ミリ秒）以上を指定して実行し、既定の 120000 のまま走らせない
+- 15 回で終了条件を満たさない場合はループを打ち切り、実出力を提示したうえで待機を継続するか判断を仰ぐ。v1.67.1 実走では run 作成 05:36:45Z から最終必須チェック完了 05:39:40Z まで約 3 分を要しており、旧設定の 8 回（約 2 分弱）では足りない
+- `fail` バケットが出たらループを抜け、直ちに報告して原因調査へ切り替える（本コマンドはマージ前提の手順であり、CI 失敗の修正は別タスク）。必須外の `fail` でも一度ループを抜けて報告し、マージ可否は人間が判断する
 
 ### Step 7. マージ
 
