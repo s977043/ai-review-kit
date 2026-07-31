@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.67.1](https://github.com/s977043/river-review/compare/v1.67.0...v1.67.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* **cli:** --output html で実行ヘッダーを stderr へ回す ([#1703](https://github.com/s977043/river-review/issues/1703)) ([c9d5217](https://github.com/s977043/river-review/commit/c9d521764e6de814d2b61c792bca9fab52334ef6)), closes [#1695](https://github.com/s977043/river-review/issues/1695)
+* **schema:** teamLeadReport と consensusLevel / reviewerRole を output.schema.json に宣言する ([#1704](https://github.com/s977043/river-review/issues/1704)) ([f61de97](https://github.com/s977043/river-review/commit/f61de97c9f94a767e809567af1ef0633af53ea82)), closes [#1700](https://github.com/s977043/river-review/issues/1700)
+
 ## [1.67.0](https://github.com/s977043/river-review/compare/v1.66.1...v1.67.0) (2026-07-31)
 
 
