@@ -43061,9 +43061,9 @@ class FeedbackError extends Error {
 /**
  * Build and validate a feedback entry.
  *
- * The `reviewer`, `model`, and `reversedBy` fields are optional and
- * backward-compatible: when omitted they are not written to the entry at all,
- * so historical readers and existing JSONL keep their exact shape.
+ * The `reviewer`, `model`, `reversedBy`, and `reviewRunId` fields are optional
+ * and backward-compatible: when omitted they are not written to the entry at
+ * all, so historical readers and existing JSONL keep their exact shape.
  *
  * @param {{
  *   feedbackType: string,
@@ -43075,6 +43075,7 @@ class FeedbackError extends Error {
  *   reviewer?: string|null,
  *   model?: string|null,
  *   reversedBy?: string|null,
+ *   reviewRunId?: string|null,
  *   now?: Date,
  * }} input
  */
@@ -43088,6 +43089,7 @@ function buildFeedbackEntry({
   reviewer = null,
   model = null,
   reversedBy = null,
+  reviewRunId = null,
   now = new Date(),
 }) {
   if (!FEEDBACK_TYPES.includes(feedbackType)) {
@@ -43109,6 +43111,7 @@ function buildFeedbackEntry({
   const reviewerId = normalizeOptionalString(reviewer, 'reviewer');
   const modelId = normalizeOptionalString(model, 'model');
   const reversedByRef = normalizeOptionalString(reversedBy, 'reversedBy');
+  const reviewRunIdRef = normalizeOptionalString(reviewRunId, 'reviewRunId');
   const entry = {
     timestamp: now.toISOString(),
     trigger,
@@ -43123,6 +43126,22 @@ function buildFeedbackEntry({
   if (reviewerId) entry.reviewer = reviewerId;
   if (modelId) entry.model = modelId;
   if (reversedByRef) entry.reversedBy = reversedByRef;
+  // snake_case is deliberate and NOT a typo among the camelCase fields above:
+  // `review_run_id` is the canonical key `deriveFeedbackReviewRunId`
+  // (src/lib/shadow-aggregate.mjs, 契約2) resolves first, and the name
+  // schemas/shadow-aggregate.schema.json requires. This is the ONLY producer of
+  // that key, so `river evolve aggregate` can join feedback back to the saved
+  // run it came from (#1673 / #1574 P1).
+  //
+  // Normalization: reuses this module's existing `normalizeOptionalString`
+  // (trim only) rather than importing `nonEmptyNfcString` from
+  // promotion-candidates.mjs, which already imports FEEDBACK_TYPES from here —
+  // importing back would make src/lib/feedback.mjs cyclic. The join is
+  // unaffected: BOTH sides are resolved at read time through
+  // `deriveFeedbackReviewRunId` / `deriveReviewRunId`, which apply
+  // `nonEmptyNfcString` symmetrically, so a producer-side NFC pass cannot
+  // change the outcome. No third normalization is introduced here.
+  if (reviewRunIdRef) entry.review_run_id = reviewRunIdRef;
   return entry;
 }
 
@@ -65778,7 +65797,7 @@ async function runEvalCommand(parsed) {
 async function runFeedbackCommand(parsed, targetPath) {
   if (parsed.feedbackSubcommand !== 'add') {
     console.error(
-      'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr --reviewer --model --reversed-by).'
+      'Error: only `river feedback add` is supported (need: --type --skill; optional: --trigger --fingerprint --evidence --pr --reviewer --model --reversed-by --run-id).'
     );
     return 1;
   }
@@ -65797,6 +65816,10 @@ async function runFeedbackCommand(parsed, targetPath) {
       reviewer: parsed.feedbackReviewer,
       model: parsed.feedbackModel,
       reversedBy: parsed.feedbackReversedBy,
+      // #1673: `--run-id <id>` from `river run --save` ("Run saved: <runId>").
+      // Written as `review_run_id` so `river evolve aggregate` can join this
+      // entry back to that run (契約2).
+      reviewRunId: parsed.feedbackRunId,
     });
   } catch (err) {
     if (err instanceof FeedbackError) {
@@ -70324,6 +70347,7 @@ function parseArgs(argv) {
     feedbackReviewer: null,
     feedbackModel: null,
     feedbackReversedBy: null,
+    feedbackRunId: null,
     suppressionFingerprint: null,
     suppressionFindingId: null,
     suppressionFeedbackType: null,
@@ -70560,6 +70584,30 @@ function parseArgs(argv) {
           break;
         }
         parsed.feedbackReversedBy = value;
+        continue;
+      }
+      // #1673: the run this feedback refers to. Only an explicit id is
+      // accepted — resolving "the latest run" implicitly would attach evidence
+      // to an unrelated run.
+      //
+      // Two silent-miss paths this parse deliberately closes, both of which
+      // exited 0 while writing an entry with no `review_run_id` (so the loss
+      // only surfaced much later as joinedFeedbackCount staying at 0):
+      //   1. `--run-id=<id>`: the token never equals '--run-id', so an
+      //      equals-form value fell through and was dropped.
+      //   2. `--run-id "   "`: whitespace passes a truthiness check, then
+      //      normalizeOptionalString() nulls it out downstream.
+      // The `=` form is scoped to THIS option on purpose; extending it to
+      // --reviewer / --model / --reversed-by would change their behaviour and
+      // is out of scope here.
+      if (arg === '--run-id' || arg.startsWith('--run-id=')) {
+        const value = arg.startsWith('--run-id=') ? arg.slice('--run-id='.length) : args.shift();
+        if (!value || !value.trim() || value.startsWith('-')) {
+          console.error('Error: --run-id option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackRunId = value;
         continue;
       }
     }

@@ -40,6 +40,20 @@ import {
 import { compileSchemaFile } from './helpers/schema-validator.mjs';
 import { runCliInProcess } from './helpers/cli.mjs';
 import { runEvolveCommand } from '../src/cli/commands/evolve.mjs';
+// #1673: the producers under test. Imported so the join assertion below runs
+// through the SAME functions `river run --save` / `river feedback add` use,
+// rather than through hand-built record literals.
+import {
+  buildRunRecord,
+  loadAllRunRecords,
+  resolveStoreDir,
+  saveRunRecord,
+} from '../src/lib/result-store.mjs';
+import {
+  appendFeedbackEntry,
+  buildFeedbackEntry,
+  listFeedbackEntries,
+} from '../src/lib/feedback.mjs';
 
 const NOW = new Date('2026-07-25T00:00:00.000Z');
 const FP_A = 'a1b2c3d4e5f60718';
@@ -763,5 +777,239 @@ describe('river evolve aggregate (CLI)', () => {
     assert.equal(parsed.inputs.runCount, 0);
     assert.equal(parsed.inputs.feedbackCount, 0);
     assert.equal(parsed.candidate, null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #1673 producer: `river feedback add --run-id` closes the 契約2 join.
+//
+// The W3 block above stays as-is: it is now the regression test for feedback
+// written BEFORE this producer existed (no review_run_id at all). This block is
+// the same shape with the producer in the loop.
+//
+// Every artifact below is produced by the EXISTING production path —
+// buildRunRecord -> saveRunRecord -> loadAllRunRecords for runs, and
+// buildFeedbackEntry -> appendFeedbackEntry -> listFeedbackEntries for feedback
+// — before buildShadowAggregate reads it back off disk. Asserting only that
+// `deriveFeedbackReviewRunId` can read what `buildFeedbackEntry` just wrote
+// would be self-consistent and would pass even if the two halves disagreed.
+// ---------------------------------------------------------------------------
+
+async function seedRepoViaProducers({ withRunId }) {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'rr-producer-'));
+  const runIds = [];
+  for (let i = 0; i < 2; i += 1) {
+    const record = buildRunRecord(
+      {
+        repoRoot: root,
+        changedFiles: ['src/a.mjs'],
+        findings: [
+          { fingerprint: FP_A, file: 'src/a.mjs', ruleId: 'secret-scanner', severity: 'major' },
+        ],
+      },
+      { phase: 'midstream' }
+    );
+    await saveRunRecord(record);
+    runIds.push(record.runId);
+  }
+  // generateRunId() is timestamp + random suffix; a collision would silently
+  // turn this into a one-run scenario, so fail loudly instead.
+  assert.notEqual(runIds[0], runIds[1], 'the two saved runs must have distinct ids');
+
+  for (const [i, runId] of runIds.entries()) {
+    const entry = buildFeedbackEntry({
+      feedbackType: 'false_positive',
+      skillId: 'secret-scanner',
+      findingFingerprint: FP_A,
+      pr: i + 1,
+      now: NOW,
+      ...(withRunId ? { reviewRunId: runId } : {}),
+    });
+    await appendFeedbackEntry(entry, { repoRoot: root });
+  }
+
+  const runRecords = await loadAllRunRecords(resolveStoreDir(root));
+  const feedbackEntries = await listFeedbackEntries({ repoRoot: root });
+  const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
+  return {
+    root,
+    runIds,
+    aggregate,
+    cleanup: () => rmSync(root, { recursive: true, force: true }),
+  };
+}
+
+describe('shadow-aggregate producer による 契約2 join 成立（#1673）', () => {
+  test('feedback written with --run-id joins the saved runs it came from', async (t) => {
+    const { runIds, aggregate, cleanup } = await seedRepoViaProducers({ withRunId: true });
+    t.after(cleanup);
+
+    assert.equal(aggregate.inputs.runCount, 2);
+    assert.equal(aggregate.inputs.feedbackCount, 2);
+    assert.ok(aggregate.join.joinedFeedbackCount > 0, 'the join is no longer degenerate');
+    assert.equal(aggregate.join.joinedFeedbackCount, 2);
+    assert.equal(aggregate.join.unjoinedFeedbackCount, 0);
+    assert.deepEqual(aggregate.join.runIdsWithEvidence, [...runIds].sort());
+    assert.deepEqual(aggregate.join.duplicateReviewRunIds, []);
+
+    // The candidate now carries the run evidence W3 asserts is empty today.
+    assert.deepEqual(aggregate.candidate.sourceReviewRunIds, [...runIds].sort());
+    assert.equal(aggregate.candidate.evidence.length, 2);
+    assert.equal(aggregate.candidate.trust.unjoinedEvidenceCount, 0);
+  });
+
+  test('the same repo without --run-id still degrades to zero joins', async (t) => {
+    const { aggregate, cleanup } = await seedRepoViaProducers({ withRunId: false });
+    t.after(cleanup);
+
+    assert.equal(aggregate.join.joinedFeedbackCount, 0);
+    assert.equal(aggregate.join.unjoinedFeedbackCount, 2);
+    assert.deepEqual(aggregate.candidate.evidence, []);
+    assert.deepEqual(aggregate.candidate.sourceReviewRunIds, []);
+  });
+
+  test('the candidate id is unchanged by review_run_id (it is not a hash input)', async (t) => {
+    const joined = await seedRepoViaProducers({ withRunId: true });
+    t.after(joined.cleanup);
+    const legacy = await seedRepoViaProducers({ withRunId: false });
+    t.after(legacy.cleanup);
+
+    // normalizeEvidence projects evidence to {feedbackType, findingFingerprint,
+    // pr}; adding review_run_id must not mint a second identity for evidence a
+    // human already reviewed under the old id.
+    assert.equal(joined.aggregate.candidate.candidateId, legacy.aggregate.candidate.candidateId);
+    assert.equal(joined.aggregate.candidate.contentHash, legacy.aggregate.candidate.contentHash);
+    assert.equal(
+      joined.aggregate.candidate.uniqueEvidenceCount,
+      legacy.aggregate.candidate.uniqueEvidenceCount
+    );
+  });
+
+  test('the trust boundary is unchanged: nothing is promoted by joining', async (t) => {
+    const { aggregate, cleanup } = await seedRepoViaProducers({ withRunId: true });
+    t.after(cleanup);
+
+    // A producer only adds a self-report; it adds no verifiability (契約1).
+    assert.equal(aggregate.evidence.trustedRunCount, 0);
+    assert.equal(aggregate.evidence.untrustedRunCount, 2);
+    assert.equal(aggregate.candidate.trust.trustedEvidenceCount, 0);
+    assert.equal(aggregate.candidate.trust.untrustedEvidenceCount, 2);
+    assert.equal(aggregate.candidate.trust.canaryEligible, false);
+    for (const evidence of aggregate.evidence.runs) {
+      assert.equal(evidence.trust_level, 'untrusted');
+      assert.equal(evidence.provenance_verified, false);
+    }
+  });
+
+  test('the joined aggregate is still schema-valid', async (t) => {
+    const { aggregate, cleanup } = await seedRepoViaProducers({ withRunId: true });
+    t.after(cleanup);
+    assert.equal(
+      validateAggregate(aggregate),
+      true,
+      JSON.stringify(validateAggregate.errors, null, 2)
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #1673: `--run-id` widens what counts as a distinct occurrence, because the
+// occurrence key is `(review_run_id, pr)`. These two cases are the INTENDED
+// semantics, pinned so a later change cannot revert them silently: a finding
+// that comes back on a second run is the recurrence the Judgment Promotion
+// Loop is looking for, and P1/P2 stay observation-only so nothing is promoted
+// automatically off the back of it.
+// ---------------------------------------------------------------------------
+
+describe('shadow-aggregate `--run-id` による occurrence 判定の意図的な拡張（#1673）', () => {
+  test('intended: two runs on the SAME pr are two occurrences, not one re-litigation', () => {
+    const runRecords = [
+      runRecord({ runId: 'run-1', findings: [finding(FP_A)] }),
+      runRecord({
+        runId: 'run-2',
+        timestamp: '2026-07-22T00:00:00.000Z',
+        findings: [finding(FP_A)],
+      }),
+    ];
+    // Same PR, same fingerprint — only the run differs (a re-run after revise).
+    const feedbackEntries = [
+      feedback({ pr: 7, runId: 'run-1' }),
+      feedback({ pr: 7, runId: 'run-2', timestamp: '2026-07-22T00:00:00.000Z' }),
+    ];
+    const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
+    const [sub] = aggregate.clusters[0].subClusters;
+    assert.equal(sub.distinctPrCount, 1, 'still a single PR');
+    assert.equal(sub.distinctRunCount, 2);
+    assert.equal(sub.distinctOccurrenceCount, 2, 'the run makes these two occurrences');
+    assert.equal(sub.experimentEligible, true);
+
+    // Without --run-id the same rows collapse onto the PR and stay ineligible.
+    const legacy = buildShadowAggregate({
+      runRecords,
+      feedbackEntries: feedbackEntries.map(({ review_run_id: _drop, ...rest }) => rest),
+      now: NOW,
+    });
+    assert.equal(legacy.clusters[0].subClusters[0].distinctOccurrenceCount, 1);
+    assert.equal(legacy.clusters[0].subClusters[0].experimentEligible, false);
+  });
+
+  test('intended: rows with a run but no pr are attributable and do count', () => {
+    const runRecords = [
+      runRecord({ runId: 'run-1', findings: [finding(FP_A)] }),
+      runRecord({
+        runId: 'run-2',
+        timestamp: '2026-07-22T00:00:00.000Z',
+        findings: [finding(FP_A)],
+      }),
+    ];
+    const feedbackEntries = [
+      feedback({ pr: null, runId: 'run-1' }),
+      feedback({ pr: null, runId: 'run-2', timestamp: '2026-07-22T00:00:00.000Z' }),
+    ];
+    const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
+    const [sub] = aggregate.clusters[0].subClusters;
+    assert.equal(sub.distinctPrCount, 0);
+    assert.equal(sub.distinctOccurrenceCount, 2, 'the run alone attributes the row');
+    assert.equal(sub.experimentEligible, true);
+
+    // Neither a run nor a PR remains unattributable, as before.
+    const orphan = buildShadowAggregate({
+      runRecords,
+      feedbackEntries: feedbackEntries.map(({ review_run_id: _drop, ...rest }) => rest),
+      now: NOW,
+    });
+    assert.equal(orphan.clusters[0].subClusters[0].distinctOccurrenceCount, 0);
+    assert.equal(orphan.clusters[0].subClusters[0].experimentEligible, false);
+  });
+});
+
+describe('shadow-aggregate 未解決 run id の trust カウンタ整合（#1673 W4）', () => {
+  test('an unresolvable run id counts as unjoined in BOTH join and trust', () => {
+    const runRecords = [runRecord({ runId: 'run-1', findings: [finding(FP_A)] })];
+    const feedbackEntries = [
+      feedback({ pr: 1, runId: 'run-1' }),
+      // A typo'd / pruned run id: present, but no saved run resolves it.
+      feedback({ pr: 2, runId: 'run-typo', timestamp: '2026-07-22T00:00:00.000Z' }),
+    ];
+    const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
+
+    assert.equal(aggregate.join.joinedFeedbackCount, 1);
+    assert.equal(aggregate.join.unjoinedFeedbackCount, 1);
+    // The two numbers describe the same rows and must not contradict:
+    // counting only "no id at all" reported 0 here while join reported 1.
+    assert.equal(aggregate.candidate.trust.unjoinedEvidenceCount, 1);
+    assert.equal(aggregate.candidate.sourceReviewRunIds.length, 2, 'the id is still surfaced');
+    assert.equal(aggregate.candidate.evidence.length, 1, 'but only one resolves to evidence');
+  });
+
+  test('a missing run id is still counted as unjoined (unchanged)', () => {
+    const runRecords = [runRecord({ runId: 'run-1', findings: [finding(FP_A)] })];
+    const feedbackEntries = [
+      feedback({ pr: 1, runId: 'run-1' }),
+      feedback({ pr: 2, runId: null, timestamp: '2026-07-22T00:00:00.000Z' }),
+    ];
+    const aggregate = buildShadowAggregate({ runRecords, feedbackEntries, now: NOW });
+    assert.equal(aggregate.join.unjoinedFeedbackCount, 1);
+    assert.equal(aggregate.candidate.trust.unjoinedEvidenceCount, 1);
   });
 });
