@@ -70707,6 +70707,7 @@ Skills Subcommand Options:
   --loose               (import) Accept minimal name/description, auto-fill missing fields
   --source <type>       (list) Filter: rr|agent|all (default: all)
   --include-assets      (export) Copy references/ scripts/ prompt/ alongside SKILL.md
+  --path <file>         (resolve) File to resolve skills for; repeatable, at least one required
   --dry-run             (import) Validate without writing files
 
 Options:
@@ -70718,6 +70719,9 @@ Options:
   --estimate        Print cost estimate only (no review)
   --max-cost <usd>  Abort if estimated cost exceeds this USD amount
   --output <mode>   Output format: text|markdown|json|yaml|html. Default: text
+  --format <mode>   (review) Output format for review plan|exec|route: text|markdown|json. Takes
+                    precedence over --output; plan|exec reject a conflicting explicit pair.
+                    Default: json (text is parsed but not implemented for review yet)
   --context list    Comma-separated available contexts (e.g. diff,fullFile,tests). Overrides RIVER_AVAILABLE_CONTEXTS
   --dependency list Comma-separated available dependencies (e.g. code_search,test_runner). Overrides RIVER_AVAILABLE_DEPENDENCIES
   --reviewers list  Comma-separated reviewer roles for parallel orchestration (e.g. bug-hunter,security-scanner,test-gap).

@@ -369,6 +369,43 @@ describe('river skills subcommands', () => {
 });
 
 // -----------------------------------------------------------------------------
+// river --help - option definition coverage (#1701)
+// -----------------------------------------------------------------------------
+
+describe('river --help - option definition coverage', () => {
+  // Extract a named help block (e.g. "Options:") up to the next blank line.
+  // The heading must start a line, otherwise "Options:" also matches inside
+  // "Skills Subcommand Options:".
+  const blockOf = (help, heading) => {
+    const start = help.indexOf(`\n${heading}\n`);
+    assert.notStrictEqual(start, -1, `help is missing the "${heading}" block`);
+    const body = help.slice(start + heading.length + 2);
+    const end = body.indexOf('\n\n');
+    return end === -1 ? body : body.slice(0, end);
+  };
+
+  test('--format is defined in Options with its accepted values', async () => {
+    const result = await runCliInProcess(['--help']);
+    assert.strictEqual(result.code, 0, `stderr: ${result.stderr}`);
+    const options = blockOf(result.stdout, 'Options:');
+    // Referenced from the `review route` command entry, so it must also be
+    // defined here — see #1701 (the `review route` entry alone left the flag
+    // undefined for `review plan` / `review exec`).
+    assert.match(options, /^ {2}--format <mode>/m);
+    assert.match(options, /text\|markdown\|json/);
+  });
+
+  test('--path is defined in Skills Subcommand Options', async () => {
+    const result = await runCliInProcess(['--help']);
+    assert.strictEqual(result.code, 0, `stderr: ${result.stderr}`);
+    const skillsOptions = blockOf(result.stdout, 'Skills Subcommand Options:');
+    // `skills resolve` requires at least one --path, and the Commands entry
+    // references it, so the flag needs a definition line too (#1701).
+    assert.match(skillsOptions, /^ {2}--path <file>/m);
+  });
+});
+
+// -----------------------------------------------------------------------------
 // river run - JSON output schema conformance (#1154)
 // -----------------------------------------------------------------------------
 
