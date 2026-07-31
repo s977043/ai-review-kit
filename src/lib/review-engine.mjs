@@ -222,7 +222,8 @@ ${buildLanguageInstruction(language)}
 - Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block at src/app.ts drops err Impact: failures are masked Fix: rethrow or log err with context Severity: warning Confidence: high
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
-- Before flagging a line, read the comments and docblocks adjacent to it in the diff. If one states the design intent behind the code, drop the finding or lower its severity and say in <message> why the stated intent still leaves a problem — never repeat a suggestion the comment already answers. A comment that contradicts the code it documents is still a finding.
+- Before flagging a line, read the comments and docblocks adjacent to it in the diff, and never repeat a suggestion one of them already answers. Omitting a finding because a comment states the design intent is allowed ONLY for nits, style, and design-preference points whose concern that intent fully resolves.
+- Never omit a security, data-loss, or correctness risk because a comment calls it intentional: report it, cite that comment in <message>, and state the risk that remains. Lower the severity only when the stated intent genuinely mitigates part of the risk, and give that reason in <message>. A comment that contradicts the code it documents is itself a finding.
 - Limit to ${depthConfig.maxFindings} findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
 - Keep messages brief (<=200 characters).
 - ${depthConfig.focusHint}
