@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.66.0](https://github.com/s977043/river-review/compare/v1.65.0...v1.66.0) (2026-07-31)
+
+
+### Features
+
+* **feedback:** river feedback add --run-id で review_run_id を書き join を成立させる ([#1681](https://github.com/s977043/river-review/issues/1681)) ([ddd47f0](https://github.com/s977043/river-review/commit/ddd47f05a427def7c27834911fc0a3f3818c73c2))
+* **review:** finding に criterionRefs / artifactRefs を additive に追加する ([#1682](https://github.com/s977043/river-review/issues/1682)) ([5bc6e5b](https://github.com/s977043/river-review/commit/5bc6e5b9df73782b7c1e47dccdc37c9e5746a135))
+
 ## [1.65.0](https://github.com/s977043/river-review/compare/v1.64.0...v1.65.0) (2026-07-30)
 
 

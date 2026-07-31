@@ -238,7 +238,7 @@ jobs:
 
 <!-- x-release-please-start-version -->
 
-最新リリース: [v1.65.0](https://github.com/s977043/river-review/releases/latest)
+最新リリース: [v1.66.0](https://github.com/s977043/river-review/releases/latest)
 
 <!-- x-release-please-end -->
 
