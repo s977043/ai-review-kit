@@ -117,15 +117,23 @@ candidate ID は `src/lib/promotion-candidates.mjs` の `normalizeEvidence` と 
 
 `trusted_by` の署名・検証方式（CI attestation または人手承認記録）は契約1 の未決事項であり、P2 でも確定していません。確定は P3 以降です（出典: `docs/development/1574-p0-design-contract.md`）。trusted への昇格経路は、その検証機構が実装されるまで開けません。
 
-## 7. 現時点の実データでの退行
+## 7. 現時点の実データでの充足と退行
 
-canonical `review_run_id` と provenance の生産者は、まだリポジトリ内に存在しません。`buildFeedbackEntry` は `review_run_id` を書かず、`buildRunRecord` は `provenance` を書かず、finding は `category` を持ちません。そのため今日の実データに対しては次のように退行します。
+canonical `review_run_id` の生産者は v1.66.0（#1681）で実装しました。`river feedback add --run-id <id>` が feedback へ `review_run_id` を書きます。run record 側では `deriveReviewRunId` が既存の `runId` を canonical 値として解決するため、両者の突合が成立します。一方、provenance の生産者は未実装のままです。`buildRunRecord` は `provenance` と `commitSha` のどちらも書きません。finding も `category` を持ちません。
 
-- `join.joinedFeedbackCount` は 0 になり、candidate の `evidence` は空配列になる
-- stage2 の `category` は `finding.ruleId`（発行元 skill id）へフォールバックする
-- 反復の識別は PR 番号だけが担う
+充足済み（v1.66.0 以降）:
 
-この状態は想定内で、テストでも「今日の実データ形状」として固定しています。値が埋まるのは契約2 の伝播（P1 以降で各生産者へ optional field を追加する作業）が進んでからです。
+- `--run-id` を付けた feedback は `join.joinedFeedbackCount` に数えられ、candidate の `evidence` も埋まる
+- occurrence キーは `(review_run_id, pr)` であり、run 単位で反復を数えられる。同一 PR への再 run に付けた feedback は別 occurrence になる
+- 上記は `tests/shadow-aggregate.test.mjs` の producer 経路テストが join 2 件 / unjoined 0 件として固定している
+
+未充足（契約1 provenance 側の残作業）:
+
+- `buildRunRecord` が `provenance` を書かないため、`evidence_source` は `local` へフォールバックする
+- run record が `commitSha` を持たないため、`source_commit_sha` は常に `null` である
+- finding が `category` を持たないため、stage2 の `category` は `finding.ruleId`（発行元 skill id）へフォールバックする
+
+P1 実装の時点では `review_run_id` の生産者も存在せず、join が常に 0 でした。テストは旧形状と現形状の両方を固定しています。provenance 側の値は、契約1 の生産者を実装してから埋まります。
 
 ## 8. read-only の担保
 
@@ -137,7 +145,7 @@ canonical `review_run_id` と provenance の生産者は、まだリポジトリ
 ## 9. 次フェーズへの申し送り
 
 - `trusted_by` の署名・検証方式は P3 以降で確定する（契約1・P2 でも未確定。出典: `docs/development/1574-p0-design-contract.md`）。それまで trusted 経路は閉じたままにする
-- canonical `review_run_id` を saved run / feedback / Riverbed / eval ledger の各生産者へ伝播させる（契約2）
+- canonical `review_run_id` の伝播は feedback（#1681）で成立した。Riverbed entry と eval ledger への伝播は未着手である（契約2）
 - stage2 の failure mode 語彙は、本コマンドの出力を数サイクル観測してから決める（契約5）
 - profile の単位（reviewMode か、対象リポジトリ×phase の組か）は P3 以降で確定する（契約6）。P2 は profile 名だけを必須にし、単位は未決のまま残した。`river evolve replay` の出力を数サイクル観測してから決める（出典: `docs/development/1574-p0-design-contract.md`）
 
