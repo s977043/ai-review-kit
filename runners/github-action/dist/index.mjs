@@ -41958,21 +41958,32 @@ const modelConfigSchema = schemas/* object */.Ik({
 // than a new top-level section) so the loader's known-key list keeps accepting
 // it without an "Unknown config keys ignored" warning.
 //
-// `timeoutMs` is the per-role wall-clock budget. Omitted = no timeout (the
-// default; the orchestrator waits for every role, as before #1689). The env var
-// `RIVER_REVIEWER_TIMEOUT` overrides it. `progress` (default true) toggles the
-// per-role stderr progress lines; the CLI `--quiet` flag always wins over it.
-const reviewerOrchestrationConfigSchema = schemas/* object */.Ik({
-    timeoutMs: schemas/* number */.ai().int().positive().max(3_600_000).optional(),
-    progress: schemas/* boolean */.zM().optional(),
-  })
-  .strict();
+// Named `orchestrator`, NOT `reviewers`: the CLI already exposes a `--reviewers
+// <list>` flag, so a user writing `review: { reviewers: [bug-hunter] }` in
+// `.river-review.json` is entirely plausible. An object schema on that key would
+// reject the array and fail the whole run on config load; under a different name
+// the stray key is simply stripped as an unknown key, exactly as before #1689.
+//
+// `timeoutMs` is the per-role wall-clock budget, capped at
+// REVIEWER_TIMEOUT_MAX_MS (1 h) — beyond ~2^31 ms setTimeout clamps to 1 ms and
+// would fail every role. Omitted = no timeout (the default; the orchestrator
+// waits for every role, as before #1689). The env var `RIVER_REVIEWER_TIMEOUT`
+// overrides it. `progress` (default true) toggles the per-role stderr progress
+// lines; the CLI `--quiet` flag always wins over it.
+//
+// Not `.strict()`: every other section here (model / review / context / …) uses
+// the zod default of stripping unknown keys, and a strict sub-schema would make
+// a future key a hard load error on older versions.
+const reviewerOrchestratorConfigSchema = schemas/* object */.Ik({
+  timeoutMs: schemas/* number */.ai().int().positive().max(3_600_000).optional(),
+  progress: schemas/* boolean */.zM().optional(),
+});
 
 const reviewConfigSchema = schemas/* object */.Ik({
   language: schemas/* enum */.k5(['ja', 'en']).optional(),
   severity: schemas/* enum */.k5(['strict', 'normal', 'relaxed']).optional(),
   additionalInstructions: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
-  reviewers: reviewerOrchestrationConfigSchema.optional(),
+  orchestrator: reviewerOrchestratorConfigSchema.optional(),
   // Extra spec/ADR directories (relative to repo root) scanned when linking
   // changed files to related design docs. Merged with the built-in defaults.
   specDirs: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
@@ -42295,6 +42306,24 @@ function mergeConfig(base, override) {
   return result;
 }
 
+/**
+ * Render a ZodError as `path: message; path: message`.
+ *
+ * The issue list lives on `error.issues`. The former `error.errors` alias was
+ * removed in zod 4, so reading it yielded `undefined` and the `.map()` threw a
+ * TypeError — which the surrounding catch converted into the generic
+ * 「設定ファイルの読み込みに失敗しました」, hiding the very validation detail this
+ * message exists to show (#1689 review W1b).
+ *
+ * @param {import('zod').ZodError} error
+ * @returns {string}
+ */
+function formatZodIssues(error) {
+  const issues = error?.issues ?? [];
+  if (!Array.isArray(issues) || issues.length === 0) return String(error?.message ?? 'unknown');
+  return issues.map((issue) => `${(issue.path ?? []).join('.')}: ${issue.message}`).join('; ');
+}
+
 class ConfigLoaderError extends Error {
   constructor(message, options = {}) {
     super(message, options);
@@ -42404,11 +42433,8 @@ class ConfigLoader {
       if (isNewSchema) {
         const validated = ConfigSchema.safeParse(parsed);
         if (!validated.success) {
-          const detail = validated.error.errors
-            .map((err) => `${err.path.join('.')}: ${err.message}`)
-            .join('; ');
           throw new ConfigLoaderError(
-            `設定ファイルの形式が正しくありません (Skill Schema): ${detail}`,
+            `設定ファイルの形式が正しくありません (Skill Schema): ${formatZodIssues(validated.error)}`,
             { path: configPath }
           );
         }
@@ -42430,11 +42456,8 @@ class ConfigLoader {
       // Fallback to old schema
       const validated = riverReviewerConfigSchema.safeParse(parsed);
       if (!validated.success) {
-        const detail = validated.error.errors
-          .map((err) => `${err.path.join('.')}: ${err.message}`)
-          .join('; ');
         throw new ConfigLoaderError(
-          `設定ファイルの形式が正しくありません (Legacy Schema): ${detail}`,
+          `設定ファイルの形式が正しくありません (Legacy Schema): ${formatZodIssues(validated.error)}`,
           { path: configPath }
         );
       }
@@ -66132,6 +66155,20 @@ function detectBlindSpots(executedRoles) {
 }
 
 /**
+ * 観点がカバーされたと言えるロールだけを「実行済み」とみなす（#1689 review W5）。
+ *
+ * 打ち切られた（`timedOut`）ロールと失敗した（`status: 'rejected'`）ロールを
+ * 実行済みに数えると、そのロールが blindSpots から消え「GO かつ死角なし」という
+ * 二重の誤報になる。判定は除外条件で書く: `status` を持たない呼び出し元
+ * （既存テストや旧 reviewerResults）は従来どおり実行済みとして扱う。
+ */
+function isRoleCovered(entry) {
+  if (entry == null) return false;
+  if (entry.timedOut === true) return false;
+  return entry.status !== 'rejected';
+}
+
+/**
  * consensusLevel の件数を集計して返す。
  * @returns {{ consensus: number, multi: number, single: number, total: number }}
  */
@@ -66152,7 +66189,7 @@ function buildConsensusSummary(findings) {
  * @returns {{ top3Findings: object[], blindSpots: object[], consensusSummary: object }}
  */
 function synthesizeTeamLeadReport({ findings = [], reviewerResults = [] }) {
-  const executedRoles = reviewerResults.map((r) => r.role);
+  const executedRoles = reviewerResults.filter(isRoleCovered).map((r) => r.role);
   const sorted = sortFindingsByPriority(findings);
   return {
     top3Findings: sorted.slice(0, 3),
@@ -66235,20 +66272,37 @@ const SPLIT_LINE_THRESHOLD = 500;
 // every downstream parser. Same split as src/cli/commands/review.mjs.
 //
 // The per-role timeout is DISABLED by default (unlimited), preserving the
-// pre-#1689 behavior exactly. Opt in via `RIVER_REVIEWER_TIMEOUT` (milliseconds)
-// or `review.reviewers.timeoutMs` in `.river-review.{json,yaml}`. It is
+// pre-#1689 behavior exactly — the default wait time does not change; only
+// observability improves. Opt in via `RIVER_REVIEWER_TIMEOUT` (milliseconds) or
+// `review.orchestrator.timeoutMs` in `.river-review.{json,yaml}`. It is
 // fail-soft: a role that exceeds the limit is recorded as a failed role and the
 // run continues with the other roles' findings — the existing partial-result
 // path (`Promise.allSettled` + `reviewerResults`) carries it, so merging
-// (connected components) and verification are untouched.
+// (connected components) and verification are untouched. A run where NO role
+// survived is NOT clean: src/lib/run-gate.mjs reads `reviewerResults` and
+// withholds the GO / auto-approve outcome (rule 6b NOT_EXECUTED).
 //
 // Scope note: the timeout ABANDONS a slow role rather than cancelling its LLM
 // call — generateReview() takes no AbortSignal. The HTTP layer already has its
-// own budget (LLM_TIMEOUT_MS + bounded retries in llm-pipeline.mjs); this limit
-// bounds the ORCHESTRATION wait, which is what #1689 asks for.
+// own budget (LLM_TIMEOUT_MS + bounded retries in llm-pipeline.mjs), so the
+// abandoned request keeps the process alive for up to that budget after the
+// timeout line is printed. This limit bounds the ORCHESTRATION wait, which is
+// what #1689 asks for; true cancellation needs an AbortSignal through
+// generateReview() and is deliberately out of scope.
 
 /** Env var carrying the per-role timeout in milliseconds (mirrors RIVER_PLANNER_TIMEOUT). */
 const REVIEWER_TIMEOUT_ENV = 'RIVER_REVIEWER_TIMEOUT';
+
+/**
+ * Upper bound for the per-role timeout (1 hour). Mirrors the `.max()` in
+ * `reviewerOrchestratorConfigSchema` so env and config agree.
+ *
+ * Above ~2^31-1 ms `setTimeout` overflows a 32-bit signed int and Node CLAMPS
+ * the delay to 1 ms (emitting TimeoutOverflowWarning). Without this bound
+ * `RIVER_REVIEWER_TIMEOUT=2147483648` silently timed out EVERY role after 1 ms,
+ * producing a zero-finding "clean" run.
+ */
+const REVIEWER_TIMEOUT_MAX_MS = 3_600_000;
 
 /** Error thrown when a reviewer role exceeds the per-role timeout. */
 class ReviewerTimeoutError extends Error {
@@ -66262,25 +66316,47 @@ class ReviewerTimeoutError extends Error {
   }
 }
 
+/** A usable per-role timeout: a positive integer no larger than the 1-hour cap. */
+function isUsableTimeoutMs(value) {
+  return Number.isInteger(value) && value > 0 && value <= REVIEWER_TIMEOUT_MAX_MS;
+}
+
 /**
  * Resolve the effective per-role timeout in milliseconds.
  *
- * Precedence (first positive finite value wins):
- *   explicit `timeoutMs` argument > `RIVER_REVIEWER_TIMEOUT` > `config.review.reviewers.timeoutMs`
+ * Precedence (first USABLE value wins):
+ *   explicit `timeoutMs` argument > `RIVER_REVIEWER_TIMEOUT` > `config.review.orchestrator.timeoutMs`
  *
- * A missing / non-numeric / non-positive value is treated as "not specified" and
- * falls through to the next source; when no source supplies one the result is
- * `null`, meaning NO timeout (unlimited — the default and the pre-#1689 behavior).
+ * A value that is missing, non-numeric, fractional, non-positive, or above
+ * `REVIEWER_TIMEOUT_MAX_MS` is REJECTED: it emits one warning line on stderr and
+ * the resolution falls through to the next source. When no source supplies a
+ * usable value the result is `null`, meaning NO timeout (unlimited — the default
+ * and the pre-#1689 behavior). Rejecting rather than clamping is deliberate:
+ * clamping an out-of-range value to the cap would silently impose a limit the
+ * operator never asked for, and Node's own 32-bit clamp turns an overly large
+ * value into a 1 ms limit that fails every role.
  *
- * @param {{ timeoutMs?: number, config?: object, env?: NodeJS.ProcessEnv }} [params]
+ * @param {{ timeoutMs?: number, config?: object, env?: NodeJS.ProcessEnv, warn?: (line: string) => void }} [params]
  * @returns {number | null}
  */
-function resolveReviewerTimeoutMs({ timeoutMs, config, env = process.env } = {}) {
-  const candidates = [timeoutMs, env?.[REVIEWER_TIMEOUT_ENV], config?.review?.reviewers?.timeoutMs];
-  for (const raw of candidates) {
+function resolveReviewerTimeoutMs({
+  timeoutMs,
+  config,
+  env = process.env,
+  warn = (line) => console.error(line),
+} = {}) {
+  const candidates = [
+    { source: 'reviewer timeout argument', raw: timeoutMs },
+    { source: REVIEWER_TIMEOUT_ENV, raw: env?.[REVIEWER_TIMEOUT_ENV] },
+    { source: 'review.orchestrator.timeoutMs', raw: config?.review?.orchestrator?.timeoutMs },
+  ];
+  for (const { source, raw } of candidates) {
     if (raw === undefined || raw === null || raw === '') continue;
     const value = Number(raw);
-    if (Number.isFinite(value) && value > 0) return value;
+    if (isUsableTimeoutMs(value)) return value;
+    warn(
+      `Warning: ${source}=${raw} is not a positive integer of at most ${REVIEWER_TIMEOUT_MAX_MS} ms; ignoring it (per-role timeout stays disabled unless another source supplies one).`
+    );
   }
   return null;
 }
@@ -66289,15 +66365,15 @@ function resolveReviewerTimeoutMs({ timeoutMs, config, env = process.env } = {})
  * Resolve whether per-role progress lines are emitted.
  *
  * Precedence: `quiet` (CLI `--quiet`, always wins) > explicit `progress` argument
- * > `config.review.reviewers.progress` > enabled.
+ * > `config.review.orchestrator.progress` > enabled.
  *
  * @param {{ quiet?: boolean, progress?: boolean, config?: object }} [params]
  * @returns {boolean}
  */
 function resolveReviewerProgressEnabled({ quiet = false, progress, config } = {}) {
-  if (quiet === true) return false;
+  if (quiet) return false;
   if (typeof progress === 'boolean') return progress;
-  const fromConfig = config?.review?.reviewers?.progress;
+  const fromConfig = config?.review?.orchestrator?.progress;
   if (typeof fromConfig === 'boolean') return fromConfig;
   return true;
 }
@@ -66329,8 +66405,20 @@ function withReviewerTimeout(promise, timeoutMs, makeError) {
   return Promise.race([settled, timeout]);
 }
 
-/** Human-readable elapsed time for a progress line (e.g. `2.4s`). */
+/**
+ * Monotonic clock for elapsed measurements. `performance.now()` is immune to
+ * wall-clock jumps (NTP steps, DST) that can make a `Date.now()` delta negative.
+ */
+function nowMs() {
+  return performance.now();
+}
+
+/**
+ * Human-readable elapsed time for a progress line. Sub-100 ms durations render
+ * as whole milliseconds because `0.0s` reads as "no measurement taken".
+ */
 function formatElapsed(ms) {
+  if (ms < 100) return `${Math.round(ms)}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
@@ -66716,12 +66804,15 @@ async function runReviewerOrchestration({
   signals,
   // #1689: observability knobs. `quiet` comes from the CLI `--quiet` flag;
   // `timeoutMs` / `progress` are explicit overrides above env and config.
-  // `progressSink` and `generateReviewImpl` are injection points for tests
-  // (same `*Impl` convention as llm-pipeline.mjs / deterministic-command-*).
+  // `env` is injectable so a stray RIVER_REVIEWER_TIMEOUT in the developer's
+  // shell cannot change test outcomes. `progressSink` and `generateReviewImpl`
+  // are injection points for tests (same `*Impl` convention as
+  // llm-pipeline.mjs / deterministic-command-orchestrator.mjs).
   quiet = false,
   timeoutMs,
   progress,
   progressSink,
+  env = process.env,
   generateReviewImpl = review_engine/* generateReview */.G1,
 } = {}) {
   const {
@@ -66757,13 +66848,15 @@ async function runReviewerOrchestration({
   };
 
   // #1689: resolve observability settings once per run.
-  const effectiveTimeoutMs = resolveReviewerTimeoutMs({ timeoutMs, config });
-  const progressEnabled = resolveReviewerProgressEnabled({ quiet, progress, config });
   // stderr ONLY — never process.stdout, which carries the review artifact.
   const emit =
     typeof progressSink === 'function'
       ? (line) => progressSink(line)
       : (line) => console.error(line);
+  // An invalid-timeout warning must surface even under --quiet: silently
+  // ignoring a misconfigured limit is exactly the failure #1689's review found.
+  const effectiveTimeoutMs = resolveReviewerTimeoutMs({ timeoutMs, config, env, warn: emit });
+  const progressEnabled = resolveReviewerProgressEnabled({ quiet, progress, config });
   const logProgress = progressEnabled ? emit : () => {};
 
   // One descriptor per unit of work (role × chunk). Keeping the descriptors
@@ -66778,13 +66871,13 @@ async function runReviewerOrchestration({
   const chunkSuffix = (chunkIdx) =>
     chunked ? ` [chunk ${chunkIdx + 1}/${diffsToProcess.length}]` : '';
 
-  const orchestrationStartedAt = Date.now();
+  const orchestrationStartedAt = nowMs();
 
   // Fan out: each role × each diff chunk runs in parallel
   const tasks = taskDescriptors.map(({ roleName, chunkDiff, chunkIdx }, taskIdx) => {
     const role = REVIEWER_ROLES[roleName];
     const roleRules = [role.focusInstructions, projectRules].filter(Boolean).join('\n\n');
-    const taskStartedAt = Date.now();
+    const taskStartedAt = nowMs();
     logProgress(`Reviewer ${roleName}: start${chunkSuffix(chunkIdx)}`);
     const run = generateReviewImpl({
       ...generateArgs,
@@ -66802,7 +66895,7 @@ async function runReviewerOrchestration({
       () => new ReviewerTimeoutError(roleName, effectiveTimeoutMs)
     ).then(
       (value) => {
-        const durationMs = Date.now() - taskStartedAt;
+        const durationMs = Math.round(nowMs() - taskStartedAt);
         taskOutcomes[taskIdx].durationMs = durationMs;
         logProgress(
           `Reviewer ${roleName}: done in ${formatElapsed(durationMs)} (${value.findings?.length ?? 0} findings)${chunkSuffix(chunkIdx)}`
@@ -66810,12 +66903,12 @@ async function runReviewerOrchestration({
         return value;
       },
       (err) => {
-        const durationMs = Date.now() - taskStartedAt;
+        const durationMs = Math.round(nowMs() - taskStartedAt);
         taskOutcomes[taskIdx].durationMs = durationMs;
         taskOutcomes[taskIdx].timedOut = err?.timedOut === true;
         logProgress(
           err?.timedOut === true
-            ? `Reviewer ${roleName}: timeout after ${formatElapsed(durationMs)} (other roles continue)${chunkSuffix(chunkIdx)}`
+            ? `Reviewer ${roleName}: timeout after ${formatElapsed(durationMs)} (other chunks/roles continue)${chunkSuffix(chunkIdx)}`
             : `Reviewer ${roleName}: failed after ${formatElapsed(durationMs)} (${err?.message ?? 'unknown error'})${chunkSuffix(chunkIdx)}`
         );
         throw err;
@@ -66825,7 +66918,7 @@ async function runReviewerOrchestration({
 
   // Run each role in parallel; partial failure is tolerated
   const settled = await Promise.allSettled(tasks);
-  const orchestrationDurationMs = Date.now() - orchestrationStartedAt;
+  const orchestrationDurationMs = Math.round(nowMs() - orchestrationStartedAt);
 
   const succeeded = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
   const failed = settled.filter((r) => r.status === 'rejected');
@@ -66874,13 +66967,18 @@ async function runReviewerOrchestration({
     };
   });
 
-  const timedOutReviewers = reviewerResults.filter((r) => r.timedOut).length;
+  // #1689 W4: counted in ROLES (not role×chunk tasks) so this agrees with the
+  // "N/M roles succeeded" figure. A role whose surviving chunks produced
+  // findings stays `fulfilled` yet still appears here, so the timed-out roles
+  // are listed by name rather than folded into the failure count — "0 failed
+  // (1 timed out)" read as a contradiction.
+  const timedOutRoles = reviewerResults.filter((r) => r.timedOut).map((r) => r.role);
   const failedRoleCount = reviewerResults.filter((r) => r.status === 'rejected').length;
   const succeededRoleCount = reviewerResults.length - failedRoleCount;
   logProgress(
-    `Reviewers: ${succeededRoleCount}/${reviewerResults.length} succeeded, ${failedRoleCount} failed` +
-      (timedOutReviewers > 0 ? ` (${timedOutReviewers} timed out)` : '') +
-      `, ${formatElapsed(orchestrationDurationMs)} total`
+    `Reviewers: ${succeededRoleCount}/${reviewerResults.length} roles succeeded, ${failedRoleCount} failed, ` +
+      `${formatElapsed(orchestrationDurationMs)} total` +
+      (timedOutRoles.length > 0 ? ` (timed out: ${timedOutRoles.join(', ')})` : '')
   );
 
   const teamLeadReport = synthesizeTeamLeadReport({
@@ -66911,8 +67009,10 @@ async function runReviewerOrchestration({
       // #1689: the timeout is also recorded in the machine-readable result, not
       // only on stderr, so a CI consumer can tell "no findings" apart from
       // "the role never returned". `timeoutMs` is null when disabled (default).
+      // Reachable from the CLI as `reviewDebug` in the run record and as the
+      // top-level `timedOutRoles` field of the JSON output (src/cli/render.mjs).
       timeoutMs: effectiveTimeoutMs,
-      timedOutReviewers,
+      timedOutRoles,
       durationMs: orchestrationDurationMs,
     },
   };
@@ -68036,6 +68136,28 @@ var gate_decision = __nccwpck_require__(2773);
 
 
 /**
+ * True when reviewer-role orchestration ran but NOT ONE role produced a result
+ * (every role failed or was cut off by the per-role timeout) — #1689 review B2.
+ *
+ * The orchestrator is fail-soft by design: a slow role is dropped and the run
+ * continues on the survivors. With zero survivors there are no survivors to
+ * continue on, so the run has an empty findings list for the same reason a
+ * crashed reviewer would — "the review did not happen", not "the diff is
+ * clean". Scoring cannot tell those apart (both are `findings: []`), so the
+ * distinction has to come from `reviewerResults`.
+ *
+ * Returns false when orchestration did not run at all (`--reviewers` absent →
+ * null/empty), leaving the single-reviewer path's behavior untouched.
+ *
+ * @param {Array<{status?: string}>|null|undefined} reviewerResults
+ * @returns {boolean}
+ */
+function noReviewerRoleSucceeded(reviewerResults) {
+  if (!Array.isArray(reviewerResults) || reviewerResults.length === 0) return false;
+  return !reviewerResults.some((r) => r?.status === 'fulfilled');
+}
+
+/**
  * Derive `{ decision, gate }` for a runLocalReview result. Both fields are
  * undefined on derivation failure (same fail-soft contract as
  * finalizeArtifact — the caller's output must never break on scoring).
@@ -68049,12 +68171,24 @@ function deriveRunGate(result) {
   if (result == null || typeof result !== 'object') {
     return { decision: undefined, gate: undefined };
   }
+  // #1689 review B2: an all-roles-failed run must not score as a clean review.
+  // Computed once and applied to BOTH outputs — the verdict a human reads and
+  // the gate a bot obeys have to agree, or one of them becomes a bypass.
+  const reviewerRolesAllFailed = noReviewerRoleSucceeded(result.reviewerResults);
+
   let decision;
-  try {
-    decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
-  } catch {
-    if (typeof result.decision === 'string' && result.decision.length > 0) {
-      decision = result.decision;
+  if (reviewerRolesAllFailed) {
+    // Zero executed reviewers over zero findings is a vacuous perfect score.
+    // Force the conservative verdict instead of letting scoreReview() call it
+    // `auto-approve`.
+    decision = 'human-review-required';
+  } else {
+    try {
+      decision = (0,engine/* resolveVerdict */.Cq)(result.decision, (0,engine/* scoreReview */.lS)(result.findings ?? []).verdict);
+    } catch {
+      if (typeof result.decision === 'string' && result.decision.length > 0) {
+        decision = result.decision;
+      }
     }
   }
 
@@ -68072,7 +68206,11 @@ function deriveRunGate(result) {
         (f) => f != null && (f.severity === 'critical' || f.severity === 'major')
       ).length,
       changedFiles: result.changedFiles ?? [],
-      reviewExecuted: result.status === 'ok' && result.dryRun !== true,
+      // #1689 review B2: reuse the existing rule 6b (`NOT_EXECUTED` → NO_GO)
+      // cliff rather than inventing a second "review did not happen" concept —
+      // a run where every reviewer role failed or timed out did not execute a
+      // review, whatever the process exit status said.
+      reviewExecuted: result.status === 'ok' && result.dryRun !== true && !reviewerRolesAllFailed,
       artifactStatus: result.status ?? null,
       riskMapPresent: riskAssessment != null,
       riskMapDigest: null,
@@ -68648,11 +68786,21 @@ function formatJsonOutput(result, phase) {
   // and the JSON output always carry the same gate.
   const { decision, gate } = deriveRunGate(result);
 
+  // #1689 review B3: reviewer roles cut off by the per-role timeout were only
+  // observable in-process (`reviewerResults` / `debug`), both of which this
+  // formatter drops — so from the CLI a timed-out role was indistinguishable
+  // from a role that found nothing. Emit the role names at the top level, and
+  // only when non-empty so an untouched run keeps its exact previous shape.
+  const timedOutRoles = (result.reviewerResults ?? [])
+    .filter((r) => r?.timedOut === true)
+    .map((r) => r.role);
+
   const artifact = {
     issues,
     summary,
     ...(decision !== undefined ? { decision } : {}),
     ...(gate ? { gate } : {}),
+    ...(timedOutRoles.length > 0 ? { timedOutRoles } : {}),
     ...(result.teamLeadReport ? { teamLeadReport: result.teamLeadReport } : {}),
   };
   validateOutputArtifact(artifact);

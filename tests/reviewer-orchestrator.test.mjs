@@ -48,6 +48,7 @@ const {
   resolveReviewerProgressEnabled,
   ReviewerTimeoutError,
   REVIEWER_TIMEOUT_ENV,
+  REVIEWER_TIMEOUT_MAX_MS,
 } = await (() => {
   // We can't easily mock ESM imports in node:test without a loader.
   // Instead, import the real module and test its observable behaviour.
@@ -935,6 +936,9 @@ function isRole(projectRules, roleName) {
 
 describe('runReviewerOrchestration progress and per-role timeout (#1689)', () => {
   const roles = ['bug-hunter', 'security-scanner'];
+  // Every orchestration test passes an explicit `env` so a RIVER_REVIEWER_TIMEOUT
+  // left in the developer's shell cannot change the outcome (#1689 review N4).
+  const noEnv = {};
 
   it('times out the slow role only and keeps the other roles findings', async () => {
     const lines = [];
@@ -943,6 +947,7 @@ describe('runReviewerOrchestration progress and per-role timeout (#1689)', () =>
       dryRun: true,
       reviewers: roles,
       timeoutMs: 20,
+      env: noEnv,
       progressSink: (line) => lines.push(line),
       // security-scanner never settles; bug-hunter returns immediately.
       generateReviewImpl: ({ projectRules }) =>
@@ -964,7 +969,7 @@ describe('runReviewerOrchestration progress and per-role timeout (#1689)', () =>
 
     // The timeout is recorded in the machine-readable result, not only on stderr.
     assert.equal(result.debug.timeoutMs, 20);
-    assert.equal(result.debug.timedOutReviewers, 1);
+    assert.deepEqual(result.debug.timedOutRoles, ['security-scanner']);
     assert.equal(result.debug.failedReviewers, 1);
     assert.equal(result.debug.succeededReviewers, 1);
     assert.equal(typeof result.debug.durationMs, 'number');
@@ -973,7 +978,8 @@ describe('runReviewerOrchestration progress and per-role timeout (#1689)', () =>
     const output = lines.join('\n');
     assert.match(output, /Reviewer security-scanner: timeout after/);
     assert.match(output, /Reviewer bug-hunter: done in .* \(1 findings\)/);
-    assert.match(output, /Reviewers: 1\/2 succeeded, 1 failed \(1 timed out\)/);
+    assert.match(output, /Reviewers: 1\/2 roles succeeded, 1 failed/);
+    assert.match(output, /\(timed out: security-scanner\)/);
   });
 
   it('does not abort a slow role when no timeout is configured (default)', async () => {
@@ -982,6 +988,7 @@ describe('runReviewerOrchestration progress and per-role timeout (#1689)', () =>
       dryRun: true,
       reviewers: roles,
       progress: false,
+      env: noEnv,
       // Slower than any timeout used above, yet must still be awaited to completion.
       generateReviewImpl: ({ projectRules }) =>
         new Promise((resolve) =>
@@ -993,13 +1000,100 @@ describe('runReviewerOrchestration progress and per-role timeout (#1689)', () =>
     });
 
     assert.equal(result.debug.timeoutMs, null, 'timeout must be disabled by default');
-    assert.equal(result.debug.timedOutReviewers, 0);
+    assert.deepEqual(result.debug.timedOutRoles, []);
     assert.equal(result.debug.failedReviewers, 0);
     assert.equal(result.findings.length, 2, 'both roles must contribute findings');
     for (const r of result.reviewerResults) {
       assert.equal(r.status, 'fulfilled');
       assert.equal(r.timedOut, false);
     }
+  });
+
+  // #1689 review B1: 2^31 ms overflows setTimeout's 32-bit delay and Node
+  // CLAMPS it to 1 ms, so an over-large limit used to time out every role
+  // instantly and hand back a zero-finding "clean" run.
+  for (const bad of ['2147483648', '0.5', '1e10', '-1', 'abc']) {
+    it(`ignores the out-of-range env timeout ${bad} with a warning`, async () => {
+      const lines = [];
+      const result = await runReviewerOrchestration({
+        diff: makeDiff(),
+        dryRun: true,
+        reviewers: ['bug-hunter'],
+        env: { [REVIEWER_TIMEOUT_ENV]: bad },
+        progressSink: (line) => lines.push(line),
+        generateReviewImpl: () => Promise.resolve(makeRoleResult('src/foo.mjs')),
+      });
+      assert.equal(result.debug.timeoutMs, null, `${bad} must not become an active timeout`);
+      assert.deepEqual(result.debug.timedOutRoles, [], `${bad} must not cut any role off`);
+      assert.equal(result.findings.length, 1, 'the role must still produce its findings');
+      const warnings = lines.filter((l) => l.startsWith('Warning:'));
+      assert.equal(warnings.length, 1, 'exactly one warning line');
+      assert.match(warnings[0], new RegExp(`${REVIEWER_TIMEOUT_ENV}=`));
+      assert.match(warnings[0], /positive integer of at most 3600000 ms/);
+    });
+  }
+
+  // env → orchestrator wiring: a VALID env value must actually take effect.
+  it('applies a valid RIVER_REVIEWER_TIMEOUT from the injected env', async () => {
+    const result = await runReviewerOrchestration({
+      diff: makeDiff(),
+      dryRun: true,
+      reviewers: ['bug-hunter'],
+      env: { [REVIEWER_TIMEOUT_ENV]: '20' },
+      progress: false,
+      generateReviewImpl: () => new Promise(() => {}),
+    });
+    assert.equal(result.debug.timeoutMs, 20);
+    assert.deepEqual(result.debug.timedOutRoles, ['bug-hunter']);
+  });
+
+  // config → orchestrator wiring for both knobs.
+  it('applies review.orchestrator.timeoutMs and progress from config', async () => {
+    const lines = [];
+    const result = await runReviewerOrchestration({
+      diff: makeDiff(),
+      dryRun: true,
+      reviewers: ['bug-hunter'],
+      env: noEnv,
+      config: { review: { orchestrator: { timeoutMs: 20, progress: false } } },
+      progressSink: (line) => lines.push(line),
+      generateReviewImpl: () => new Promise(() => {}),
+    });
+    assert.equal(result.debug.timeoutMs, 20);
+    assert.deepEqual(result.debug.timedOutRoles, ['bug-hunter']);
+    assert.deepEqual(lines, [], 'config progress:false must silence the progress lines');
+  });
+
+  // Chunked fan-out: one chunk of a role times out, the other survives. The
+  // role stays 'fulfilled' (its findings are kept) while still being flagged.
+  it('keeps a role fulfilled when only one of its chunks times out', async () => {
+    // 12 files across two directories exceeds SPLIT_FILE_THRESHOLD, so
+    // splitDiffIntoChunks produces more than one chunk.
+    const files = Array.from({ length: 12 }, (_, i) => ({
+      path: `${i < 6 ? 'alpha' : 'beta'}/f${i}.mjs`,
+      hunks: [{ lines: ['+a'] }],
+    }));
+    const diff = { diffText: 'd', files, filesForReview: files };
+    let call = 0;
+    const result = await runReviewerOrchestration({
+      diff,
+      dryRun: true,
+      reviewers: ['bug-hunter'],
+      timeoutMs: 20,
+      env: noEnv,
+      progress: false,
+      // First chunk hangs, later chunks return.
+      generateReviewImpl: () =>
+        call++ === 0 ? new Promise(() => {}) : Promise.resolve(makeRoleResult('alpha/f1.mjs')),
+    });
+
+    assert.ok(result.chunked, 'the diff must actually be chunked for this test to mean anything');
+    assert.ok(result.chunkCount > 1);
+    const role = result.reviewerResults[0];
+    assert.equal(role.status, 'fulfilled', 'surviving chunks keep the role fulfilled');
+    assert.equal(role.timedOut, true, 'the cut-off chunk must still be recorded');
+    assert.deepEqual(result.debug.timedOutRoles, ['bug-hunter']);
+    assert.ok(result.findings.length > 0, 'the surviving chunk findings must be kept');
   });
 
   it('writes progress to stderr only, never to stdout', async () => {
@@ -1042,10 +1136,28 @@ describe('runReviewerOrchestration progress and per-role timeout (#1689)', () =>
       dryRun: true,
       reviewers: ['bug-hunter'],
       quiet: true,
+      env: noEnv,
       progressSink: (line) => lines.push(line),
       generateReviewImpl: () => Promise.resolve(makeRoleResult('src/foo.mjs')),
     });
     assert.deepEqual(lines, [], '--quiet must silence every progress line');
+  });
+
+  // A misconfigured limit is a correctness problem, not chatter: --quiet must
+  // not hide it, or the operator never learns their timeout is inert.
+  it('still warns about an invalid timeout under quiet', async () => {
+    const lines = [];
+    await runReviewerOrchestration({
+      diff: makeDiff(),
+      dryRun: true,
+      reviewers: ['bug-hunter'],
+      quiet: true,
+      env: { [REVIEWER_TIMEOUT_ENV]: '2147483648' },
+      progressSink: (line) => lines.push(line),
+      generateReviewImpl: () => Promise.resolve(makeRoleResult('src/foo.mjs')),
+    });
+    assert.equal(lines.length, 1, 'only the warning, no progress lines');
+    assert.match(lines[0], /^Warning: RIVER_REVIEWER_TIMEOUT=2147483648/);
   });
 
   it('propagates a real role failure unchanged (not reported as a timeout)', async () => {
@@ -1055,12 +1167,13 @@ describe('runReviewerOrchestration progress and per-role timeout (#1689)', () =>
       reviewers: ['bug-hunter'],
       timeoutMs: 1000,
       progress: false,
+      env: noEnv,
       generateReviewImpl: () => Promise.reject(new Error('boom')),
     });
     assert.equal(result.reviewerResults[0].status, 'rejected');
     assert.equal(result.reviewerResults[0].timedOut, false);
     assert.equal(result.reviewerResults[0].error, 'boom');
-    assert.equal(result.debug.timedOutReviewers, 0);
+    assert.deepEqual(result.debug.timedOutRoles, []);
   });
 });
 
@@ -1070,26 +1183,60 @@ describe('resolveReviewerTimeoutMs (#1689)', () => {
     assert.equal(resolveReviewerTimeoutMs({ config: {}, env: {} }), null);
   });
 
-  it('reads the config path review.reviewers.timeoutMs', () => {
-    const config = { review: { reviewers: { timeoutMs: 5000 } } };
+  it('reads the config path review.orchestrator.timeoutMs', () => {
+    const config = { review: { orchestrator: { timeoutMs: 5000 } } };
     assert.equal(resolveReviewerTimeoutMs({ config, env: {} }), 5000);
   });
 
   it('lets the env var override config, and the explicit argument override both', () => {
-    const config = { review: { reviewers: { timeoutMs: 5000 } } };
+    const config = { review: { orchestrator: { timeoutMs: 5000 } } };
     const env = { [REVIEWER_TIMEOUT_ENV]: '1500' };
     assert.equal(resolveReviewerTimeoutMs({ config, env }), 1500);
     assert.equal(resolveReviewerTimeoutMs({ timeoutMs: 250, config, env }), 250);
   });
 
-  it('ignores non-numeric and non-positive values and falls through', () => {
-    const config = { review: { reviewers: { timeoutMs: 5000 } } };
+  it('ignores unusable values, warns once each, and falls through', () => {
+    const config = { review: { orchestrator: { timeoutMs: 5000 } } };
+    const warned = [];
+    const warn = (line) => warned.push(line);
+    for (const bad of ['abc', '0', '-1', '0.5', '2147483648', '1e10', String(3_600_001)]) {
+      warned.length = 0;
+      assert.equal(
+        resolveReviewerTimeoutMs({ config, env: { [REVIEWER_TIMEOUT_ENV]: bad }, warn }),
+        5000,
+        `${bad} must fall through to the config value`
+      );
+      assert.equal(warned.length, 1, `${bad} must emit exactly one warning`);
+    }
+    // With no other source the result is "unlimited", never a clamped value.
+    warned.length = 0;
     assert.equal(
-      resolveReviewerTimeoutMs({ config, env: { [REVIEWER_TIMEOUT_ENV]: 'abc' } }),
-      5000
+      resolveReviewerTimeoutMs({ env: { [REVIEWER_TIMEOUT_ENV]: '2147483648' }, warn }),
+      null
     );
-    assert.equal(resolveReviewerTimeoutMs({ config, env: { [REVIEWER_TIMEOUT_ENV]: '0' } }), 5000);
-    assert.equal(resolveReviewerTimeoutMs({ env: { [REVIEWER_TIMEOUT_ENV]: '-1' } }), null);
+    assert.equal(warned.length, 1);
+  });
+
+  it('accepts the boundary value and rejects one past it', () => {
+    const warn = () => {};
+    assert.equal(
+      resolveReviewerTimeoutMs({ env: { [REVIEWER_TIMEOUT_ENV]: '3600000' }, warn }),
+      3_600_000
+    );
+    assert.equal(
+      resolveReviewerTimeoutMs({ env: { [REVIEWER_TIMEOUT_ENV]: '3600001' }, warn }),
+      null
+    );
+    assert.equal(REVIEWER_TIMEOUT_MAX_MS, 3_600_000);
+  });
+
+  it('rejects an unusable explicit argument too, not just env', () => {
+    const warned = [];
+    assert.equal(
+      resolveReviewerTimeoutMs({ timeoutMs: 2147483648, env: {}, warn: (l) => warned.push(l) }),
+      null
+    );
+    assert.equal(warned.length, 1);
   });
 });
 
@@ -1101,7 +1248,7 @@ describe('resolveReviewerProgressEnabled (#1689)', () => {
 
   it('is disabled by config, by the explicit argument, and always by quiet', () => {
     assert.equal(
-      resolveReviewerProgressEnabled({ config: { review: { reviewers: { progress: false } } } }),
+      resolveReviewerProgressEnabled({ config: { review: { orchestrator: { progress: false } } } }),
       false
     );
     assert.equal(resolveReviewerProgressEnabled({ progress: false }), false);
@@ -1109,7 +1256,7 @@ describe('resolveReviewerProgressEnabled (#1689)', () => {
       resolveReviewerProgressEnabled({
         quiet: true,
         progress: true,
-        config: { review: { reviewers: { progress: true } } },
+        config: { review: { orchestrator: { progress: true } } },
       }),
       false,
       'quiet must win over every other source'

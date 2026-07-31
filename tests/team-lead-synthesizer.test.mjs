@@ -70,6 +70,28 @@ describe('synthesizeTeamLeadReport', () => {
     assert.deepEqual(blindSpots, []);
   });
 
+  // #1689 review W5: 打ち切られた / 失敗したロールを「実行済み」に数えると
+  // blindSpots から消え、「死角なし」という二つ目の誤報になる。
+  test('timedOut / rejected なロールは blindSpots に残る', () => {
+    const reviewerResults = [
+      { role: 'bug-hunter', status: 'rejected', timedOut: true },
+      { role: 'security-scanner', status: 'rejected', timedOut: false },
+      { role: 'test-gap', status: 'fulfilled', timedOut: false },
+    ];
+    const { blindSpots } = synthesizeTeamLeadReport({ findings: [], reviewerResults });
+    const roles = blindSpots.map((b) => b.role);
+    assert.ok(roles.includes('bug-hunter'), '打ち切られたロールは死角として残る');
+    assert.ok(roles.includes('security-scanner'), '失敗したロールも死角として残る');
+    assert.ok(!roles.includes('test-gap'), '成功したロールは死角に含めない');
+  });
+
+  test('chunk 一部だけ打ち切られた fulfilled ロールも blindSpots に残る', () => {
+    // 生存 chunk の findings は残るが、その観点は完全にはカバーされていない。
+    const reviewerResults = [{ role: 'bug-hunter', status: 'fulfilled', timedOut: true }];
+    const { blindSpots } = synthesizeTeamLeadReport({ findings: [], reviewerResults });
+    assert.ok(blindSpots.some((b) => b.role === 'bug-hunter'));
+  });
+
   // TC-05: consensusSummary が consensus/multi/single の件数を正確に集計する
   test('consensusSummary aggregates counts correctly', () => {
     const findings = [

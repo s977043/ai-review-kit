@@ -160,3 +160,61 @@ describe('formatJsonOutput traceability refs propagation', () => {
     assert.ok(validate(out), JSON.stringify(validate.errors));
   });
 });
+
+// #1689 review B3: the per-role timeout was recorded only on objects this
+// formatter drops (`reviewerResults` / `debug`), so from the CLI a role that
+// never returned looked exactly like a role that found nothing. The docs
+// claimed the opposite — this pins the claim to the artifact.
+describe('formatJsonOutput timedOutRoles (#1689)', () => {
+  const baseResult = {
+    status: 'ok',
+    dryRun: false,
+    findings: [],
+    changedFiles: ['src/app.mjs'],
+    plan: {},
+    config: {},
+  };
+
+  it('emits the timed-out role names at the top level', () => {
+    const out = formatJsonOutput(
+      {
+        ...baseResult,
+        reviewerResults: [
+          { role: 'bug-hunter', status: 'fulfilled', timedOut: false },
+          { role: 'security-scanner', status: 'rejected', timedOut: true },
+        ],
+      },
+      'midstream'
+    );
+    assert.deepEqual(out.timedOutRoles, ['security-scanner']);
+  });
+
+  it('omits the key entirely when no role timed out', () => {
+    for (const reviewerResults of [
+      null,
+      undefined,
+      [],
+      [{ role: 'bug-hunter', status: 'fulfilled', timedOut: false }],
+    ]) {
+      const out = formatJsonOutput({ ...baseResult, reviewerResults }, 'midstream');
+      assert.ok(
+        !('timedOutRoles' in out),
+        `absent for reviewerResults=${JSON.stringify(reviewerResults)}`
+      );
+    }
+  });
+
+  it('the emitted artifact conforms to output.schema.json', () => {
+    const out = formatJsonOutput(
+      {
+        ...baseResult,
+        reviewerResults: [{ role: 'bug-hunter', status: 'rejected', timedOut: true }],
+      },
+      'midstream'
+    );
+    // teamLeadReport is deliberately absent here: it is an undeclared property
+    // that already trips this validator (pre-existing, out of scope for #1689).
+    const validate = getOutputSchemaValidator();
+    assert.ok(validate(out), JSON.stringify(validate.errors));
+  });
+});

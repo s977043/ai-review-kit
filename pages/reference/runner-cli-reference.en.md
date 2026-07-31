@@ -36,23 +36,39 @@ When reviewing with multiple roles (including `auto`), large diffs are automatic
 
 ### Progress output and per-role timeout
 
-Parallel role execution prints one line per role start, completion, and failure to **stderr**. The deliverable goes to stdout, so progress lines never corrupt the JSON / YAML / Markdown artifact. `--quiet` suppresses the progress lines only.
+Parallel role execution prints one line per role start, completion, and failure to **stderr**. The deliverable goes to stdout, so progress lines never corrupt the JSON / YAML / Markdown artifact.
 
 ```text
 Reviewer bug-hunter: start
 Reviewer security-scanner: start
 Reviewer bug-hunter: done in 6.2s (3 findings)
-Reviewer security-scanner: timeout after 120.0s (other roles continue)
-Reviewers: 1/2 succeeded, 1 failed (1 timed out), 120.0s total
+Reviewer security-scanner: timeout after 120.0s (other chunks/roles continue)
+Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scanner)
 ```
 
-The per-role timeout is disabled (unlimited) by default. Enable it with the `RIVER_REVIEWER_TIMEOUT` environment variable (milliseconds) or with `review.reviewers.timeoutMs` in `.river-review.json`; the environment variable wins over the config file.
+The related flag and environment variable:
 
-The timeout is fail-soft: the role that hits the limit is recorded as a failed role and the run continues with the other roles' findings — the whole run is never aborted. The cutoff is also recorded in the JSON output, so CI can tell "no findings" apart from "the role never returned".
+| Name                     | Kind   | Default                              | Description                                                                                                                                                                            |
+| ------------------------ | ------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--quiet`                | flag   | `false`                              | Suppresses the role progress lines above only. It does not affect the other logs `river run` writes (the run header, `Run saved:`, and so on)                                          |
+| `RIVER_REVIEWER_TIMEOUT` | env    | unset                                | Per-role budget in milliseconds. Only integers in `1`–`3600000` are accepted; out-of-range or non-integer values are ignored with a warning. Wins over `review.orchestrator.timeoutMs` |
+| `review.orchestrator.*`  | config | `timeoutMs` unset / `progress: true` | The equivalent settings in `.river-review.json`. See [Config / Schema Overview](./config-schema.md)                                                                                    |
 
-- `reviewerResults[].timedOut`: whether this role hit the limit
-- `reviewerResults[].durationMs`: elapsed milliseconds for this role
-- `debug.timeoutMs` / `debug.timedOutReviewers` / `debug.durationMs`: the applied limit, the number of roles cut off, and the total elapsed milliseconds
+The per-role timeout is disabled (unlimited) by default. **Leaving it unset does not change how long a run waits** — only observability improves; cutting a role off happens solely when a limit is configured.
+
+The timeout is fail-soft: the role that hits the limit is recorded as a failed role and the run continues with the other roles' findings — the whole run is never aborted. **When no role at all succeeds the run counts as "review not executed"**, so the gate never returns GO (`decision` becomes `human-review-required` and `--gate` exits non-zero).
+
+A cutoff is observable from:
+
+| Surface                                   | Where it appears                                                                                                |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `--output json`                           | top-level `timedOutRoles` (names of the roles cut off; the key is absent when none were)                        |
+| run record (`--save` / automatic CI save) | `reviewDebug.timeoutMs` / `reviewDebug.timedOutRoles` / `reviewDebug.durationMs`                                |
+| library callers                           | `reviewerResults[].timedOut` / `reviewerResults[].durationMs`, plus the same `debug.*` fields as the run record |
+
+`--output yaml` and `--output html` do not carry the cutoff information. Use the JSON output for machine-readable decisions.
+
+> **Note**: the timeout only bounds the orchestration-layer wait; it does not cancel the in-flight LLM call. The abandoned request keeps running until the budget in `src/lib/llm-pipeline.mjs` is exhausted (15 s per attempt plus bounded retries — roughly 45 s), so the process stays alive for that long after the `timeout` line is printed. True cancellation requires threading an `AbortSignal` through `generateReview()` and is out of scope for this change.
 
 ## Commands
 

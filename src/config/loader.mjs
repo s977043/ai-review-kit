@@ -31,6 +31,24 @@ export function mergeConfig(base, override) {
   return result;
 }
 
+/**
+ * Render a ZodError as `path: message; path: message`.
+ *
+ * The issue list lives on `error.issues`. The former `error.errors` alias was
+ * removed in zod 4, so reading it yielded `undefined` and the `.map()` threw a
+ * TypeError — which the surrounding catch converted into the generic
+ * 「設定ファイルの読み込みに失敗しました」, hiding the very validation detail this
+ * message exists to show (#1689 review W1b).
+ *
+ * @param {import('zod').ZodError} error
+ * @returns {string}
+ */
+function formatZodIssues(error) {
+  const issues = error?.issues ?? [];
+  if (!Array.isArray(issues) || issues.length === 0) return String(error?.message ?? 'unknown');
+  return issues.map((issue) => `${(issue.path ?? []).join('.')}: ${issue.message}`).join('; ');
+}
+
 export class ConfigLoaderError extends Error {
   constructor(message, options = {}) {
     super(message, options);
@@ -140,11 +158,8 @@ export class ConfigLoader {
       if (isNewSchema) {
         const validated = ConfigSchema.safeParse(parsed);
         if (!validated.success) {
-          const detail = validated.error.errors
-            .map((err) => `${err.path.join('.')}: ${err.message}`)
-            .join('; ');
           throw new ConfigLoaderError(
-            `設定ファイルの形式が正しくありません (Skill Schema): ${detail}`,
+            `設定ファイルの形式が正しくありません (Skill Schema): ${formatZodIssues(validated.error)}`,
             { path: configPath }
           );
         }
@@ -166,11 +181,8 @@ export class ConfigLoader {
       // Fallback to old schema
       const validated = riverReviewerConfigSchema.safeParse(parsed);
       if (!validated.success) {
-        const detail = validated.error.errors
-          .map((err) => `${err.path.join('.')}: ${err.message}`)
-          .join('; ');
         throw new ConfigLoaderError(
-          `設定ファイルの形式が正しくありません (Legacy Schema): ${detail}`,
+          `設定ファイルの形式が正しくありません (Legacy Schema): ${formatZodIssues(validated.error)}`,
           { path: configPath }
         );
       }

@@ -18,8 +18,8 @@
   - `specDirs`: 変更ファイルと関連する設計文書をリンクする際に追加で走査する spec/ADR ディレクトリ（リポジトリ相対パスの配列）。組み込みの既定（`docs/adr` / `pages/explanation` / `specs`）にマージされる。
   - `walkthrough`: `true` で、レビュー出力に変更ファイルごとの walkthrough（要約・リスク・推奨読み順）セクションを追加するようプロンプトに依頼する（既定 `false`）。
   - `agentHandoff`: `true` で、blocking 指摘を別 AI エージェントが修正できる provider 非依存の Agent Handoff セクション（目的/対象/制約/手順/テスト/完了条件）を出力するようプロンプトに依頼する（既定 `false`）。
-  - `reviewers`（[#1689](https://github.com/s977043/river-review/issues/1689)）: `--reviewers` による並列ロール実行の観測設定。
-    - `timeoutMs`: ロール 1 件あたりの上限ミリ秒（`1`〜`3600000`）。既定は未設定＝無制限であり、全ロールの完了を待つ。超過したロールは失敗として記録され、残りのロールの findings で処理を続行する（fail-soft）。環境変数 `RIVER_REVIEWER_TIMEOUT` が本項目より優先される。
+  - `orchestrator`（[#1689](https://github.com/s977043/river-review/issues/1689)）: `--reviewers` による並列ロール実行の観測設定。CLI フラグ `--reviewers`（ロール名の配列）と紛れないよう、キー名を `reviewers` ではなく `orchestrator` にしている。
+    - `timeoutMs`: ロール 1 件あたりの上限ミリ秒（`1`〜`3600000` の整数）。既定は未設定＝無制限であり、全ロールの完了を待つ。超過したロールは失敗として記録され、残りのロールの findings で処理を続行する（fail-soft）。環境変数 `RIVER_REVIEWER_TIMEOUT` が本項目より優先される。範囲外・非整数の値は警告を出して無視する（`setTimeout` の 32bit クランプにより、上限超過の値は 1ms 扱いとなって全ロールを即座に打ち切ってしまうため）。
     - `progress`: `false` でロール単位の進捗行を抑止する（既定 `true`）。進捗は stderr のみへ出力し、stdout の成果物は汚さない。CLI の `--quiet` は本項目より優先される。
 - `exclude`
   - `files`: 変更差分から除外する glob パターン。

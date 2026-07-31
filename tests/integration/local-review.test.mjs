@@ -78,3 +78,55 @@ test('fails clearly when project rules cannot be read', async (t) => {
   assert.notStrictEqual(result.code, 0);
   assert.match(result.stderr, /Failed to read project rules/);
 });
+
+// #1689: the reviewer-orchestration progress lines, exercised through the real
+// CLI so the run.mjs -> local-runner -> orchestrator wiring is covered (the unit
+// tests can only reach the orchestrator directly).
+test('--reviewers writes role progress to stderr, never to stdout', async (t) => {
+  const { dir, cleanup } = await setupRepoWithDiff();
+  t.after(cleanup);
+
+  const result = await runCliInProcess(
+    ['run', '.', '--dry-run', '--reviewers', 'bug-hunter,security-scanner', '--output', 'json'],
+    { cwd: dir }
+  );
+
+  assert.strictEqual(result.code, 0, result.stderr);
+  assert.match(result.stderr, /Reviewer bug-hunter: start/);
+  assert.match(result.stderr, /Reviewers: \d+\/2 roles succeeded/);
+  assert.ok(
+    !result.stdout.includes('Reviewer bug-hunter'),
+    'progress must not reach stdout, which carries the artifact'
+  );
+});
+
+// #1689: --quiet was parsed by cli.mjs but consumed by nothing. This asserts the
+// whole chain, not just resolveReviewerProgressEnabled().
+test('--quiet suppresses the reviewer progress lines end to end', async (t) => {
+  const { dir, cleanup } = await setupRepoWithDiff();
+  t.after(cleanup);
+
+  const result = await runCliInProcess(
+    [
+      'run',
+      '.',
+      '--dry-run',
+      '--reviewers',
+      'bug-hunter,security-scanner',
+      '--output',
+      'json',
+      '--quiet',
+    ],
+    { cwd: dir }
+  );
+
+  assert.strictEqual(result.code, 0, result.stderr);
+  assert.ok(
+    !result.stderr.includes('Reviewer bug-hunter'),
+    `--quiet must silence the per-role lines; got: ${result.stderr}`
+  );
+  assert.ok(
+    !result.stderr.includes('roles succeeded'),
+    '--quiet must silence the summary line too'
+  );
+});
