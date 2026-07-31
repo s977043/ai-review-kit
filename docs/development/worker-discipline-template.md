@@ -57,7 +57,7 @@ commitlint の subject-case ルールにより、大文字始まりの subject�
 
 ### Monitor 禁止・sleep 自力ポーリング
 
-ワーカーセッションでの Monitor ツール利用は停止・ハングの原因になることが観測されている。CI やマージ待ちなど時間のかかる確認は、1つの Bash 呼び出し内で `sleep` を挟んだ for ループとして自力ポーリングする。ポーリング変数名に `status` を使うと zsh の読み取り専用変数と衝突し代入が失敗するため、別名（例: `pendingCount` / `ciState`）を使う。詳細: `.claude/commands/release-kick.md` の Step 5 に実装例がある。
+ワーカーセッションでの Monitor ツール利用は停止・ハングの原因になることが観測されている。CI やマージ待ちなど時間のかかる確認は、1つの Bash 呼び出し内で `sleep` を挟んだ for ループとして自力ポーリングする。ポーリング変数名に `status` を使うと zsh の読み取り専用変数と衝突し代入が失敗するため、別名（例: `pendingCount` / `ciState`）を使う。詳細: `.claude/commands/release-kick.md` の Step 6 に実装例がある。
 
 ### 検証は実出力 + exit code
 

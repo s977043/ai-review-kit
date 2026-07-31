@@ -33,19 +33,21 @@ Unsupported --output for evolve aggregate: html. Use: text | json
 River Review is not published to npm, so the CLI is run inside the repository with `npm run river -- ...`.
 
 ```bash
-npm run river -- run . --output html
+npm run --silent river -- run . --output html > review-report.html
 ```
 
-Stdout carries the `npm run` banner lines and the `river run` header (a few lines starting with `River Review (local)`) before the HTML body. For `markdown` / `json` / `yaml` that header goes to stderr, but for `html` it stays on stdout. Strip everything before the doctype when you need a clean HTML file:
+The `river run` header (a few lines starting with `River Review (local)`) goes to stderr for every format other than `text` (#1695). Stdout for `html` starts at `<!DOCTYPE html>` and ends at `</html>`, so redirecting it yields a valid HTML file directly.
+
+`--silent` is needed only to suppress the `npm run` banner (`> river-review@x.y.z river`). npm writes that banner to stdout itself and River Review cannot control it. Invoking the CLI directly needs no flag:
 
 ```bash
-npm run river -- run . --output html | sed -n '/<!DOCTYPE html>/,$p' > review-report.html
+./src/cli.mjs run . --output html > review-report.html
 ```
 
-The loop dashboard is generated from two or more stored run records (`.river/runs/`). Oscillation detection needs three or more run ids; with exactly two the oscillation timeline is empty.
+The loop dashboard is generated from two or more stored run records (`.river/runs/`). Oscillation detection needs three or more run ids; with exactly two the oscillation timeline is empty. Its stdout is likewise HTML only.
 
 ```bash
-npm run river -- runs diff <run-id-1> <run-id-2> --output html | sed -n '/<!DOCTYPE html>/,$p' > loop-dashboard.html
+npm run --silent river -- runs diff <run-id-1> <run-id-2> --output html > loop-dashboard.html
 ```
 
 ## GitHub Action
