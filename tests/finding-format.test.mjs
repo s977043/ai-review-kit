@@ -602,3 +602,30 @@ test('extractRefFieldSpans covers the whole refs field, not just the parsed list
     'a label with no value opens no span'
   );
 });
+
+test('field capture stays linear on a long whitespace run', () => {
+  // The shared terminator used `\s+` behind a lazy `[^]*?`, so a message padded
+  // with whitespace and no following label re-scanned the whole run at every
+  // position — 1.06 s at 20k spaces on origin/main. extractRefFieldSpans put
+  // that scan on the verifier's per-finding path, so the terminator now matches
+  // only the single whitespace character before a label (equivalent, because
+  // every consumer trims). Both call sites are pinned here.
+  const padded = (n) => `Finding: x Evidence: e${' '.repeat(n)}`;
+  const paddedSpan = (n) => `Finding: x Evidence: e ArtifactRefs: plan.md#AC-4${' '.repeat(n)}`;
+  const elapsed = (fn) => {
+    const started = process.hrtime.bigint();
+    fn();
+    return Number(process.hrtime.bigint() - started) / 1e6;
+  };
+  // 20k spaces measured at ~0.2 ms after the fix; 100 ms is a wide guard that
+  // still fails loudly on a return to quadratic behavior.
+  assert.ok(elapsed(() => parseFindingMessage(padded(20000))) < 100, 'parseFindingMessage');
+  assert.ok(elapsed(() => extractRefFieldSpans(paddedSpan(20000))) < 100, 'extractRefFieldSpans');
+  // Equivalence: trimming makes the narrower terminator indistinguishable.
+  assert.equal(parseFindingMessage(padded(50)).evidence[0], 'e');
+  assert.equal(
+    parseFindingMessage('Finding: x Evidence: e     Severity: warning').evidence[0],
+    'e',
+    'multiple spaces before a label still trim away'
+  );
+});

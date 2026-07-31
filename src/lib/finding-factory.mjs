@@ -164,10 +164,17 @@ const REF_VALUE_START = `(?:${REF_TOKEN_PATTERN}|https?:\\/\\/\\S)`;
  * Terminator alternation shared by every field capture. A Scope or refs label
  * ends a capture only when it carries a well-formed value, so prose mentioning
  * the label word does not truncate the preceding field.
+ *
+ * The leading whitespace matcher is a single `\s`, not `\s+`: the terminator is
+ * always used inside a lookahead behind a lazy `[^]*?`, so an unbounded `\s+`
+ * re-scans the whole whitespace run at every position the lazy quantifier steps
+ * to — quadratic on a message padded with spaces (measured: 1.2 s at 20k
+ * spaces). Matching only the whitespace character immediately before the label
+ * is equivalent, because every consumer trims the captured field.
  */
 const FIELD_TERMINATOR = [
-  `\\s+(?:${LABEL_ALTERNATION}):`,
-  `\\s+Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b`,
+  `\\s(?:${LABEL_ALTERNATION}):`,
+  `\\sScope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b`,
   `${REF_LABEL_HEAD}${REF_VALUE_START}`,
   '$',
 ].join('|');
