@@ -47969,7 +47969,6 @@ ${buildLanguageInstruction(language)}
 - Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block at src/app.ts drops err Impact: failures are masked Fix: rethrow or log err with context Severity: warning Confidence: high
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
-- Before flagging a line, read the comments and docblocks adjacent to it in the diff. If one states the design intent behind the code, drop the finding or lower its severity and say in <message> why the stated intent still leaves a problem — never repeat a suggestion the comment already answers. A comment that contradicts the code it documents is still a finding.
 - Limit to ${depthConfig.maxFindings} findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
 - Keep messages brief (<=200 characters).
 - ${depthConfig.focusHint}
@@ -70283,13 +70282,21 @@ Commands:
   skills import         Import Agent Skills (SKILL.md) into River Review
   skills export         Export River Review skills to Agent Skills format
   skills list           List all skills (RR and Agent Skills)
+  skills resolve        Show which skills apply to the given --path files
   doctor <path>         Check setup and print hints for common issues
   review plan           Resolve upstream artifacts and emit a Review Artifact
                         (Phase 3 slice: --plan-only only)
+  review exec           Run the review and emit a Review Artifact with findings
+                        (--dry-run: plan only; --plan <file>: replay an existing plan)
+  review route          Recommend a review mode (light|standard|team|human-required)
+                        for the current diff (--format json|markdown; --base <ref>)
   eval                  Run review fixtures evaluation (must_include checks)
   suppression add       Create a Riverbed Memory suppression entry
                         (--fingerprint --feedback --rationale [--scope]
                          [--severity] [--files] [--expires] [--pr])
+  feedback add          Record a review feedback entry (.river/feedback/)
+                        (--type --skill [--trigger] [--fingerprint] [--evidence]
+                         [--pr] [--reviewer] [--model] [--reversed-by] [--run-id])
   promote propose       Create (or converge on) one promotion candidate from an
                         explicit feedback JSONL selection. The candidate id is a
                         content hash of (evidence, cluster, policy version), so

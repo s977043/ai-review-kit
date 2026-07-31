@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.66.1](https://github.com/s977043/river-review/compare/v1.66.0...v1.66.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* **deps:** brace-expansion を修正版に更新して DoS アラート ([#119](https://github.com/s977043/river-review/issues/119)) を解消する ([#1691](https://github.com/s977043/river-review/issues/1691)) ([b5ddd9e](https://github.com/s977043/river-review/commit/b5ddd9ed350e57d5c47259be1ced98ffc3f8fda4))
+
 ## [1.66.0](https://github.com/s977043/river-review/compare/v1.65.0...v1.66.0) (2026-07-31)
 
 
