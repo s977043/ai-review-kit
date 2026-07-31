@@ -1,14 +1,20 @@
-// #1574 producer Slice 2 (#1715): `commitSha` on every local-runner result.
+// #1574 producer Slice 2 (#1715): `commitSha` + `dirty` on every local-runner
+// result.
 //
-// `mergeBase` is the COMPARISON base, not the reviewed commit, so provenance
-// needs the HEAD sha as its own field. local-runner builds it once in
-// collectLocalContext and every exported entry point re-emits it, which is the
-// same call-site coverage problem docs/development/pipeline-params-checklist.md
-// describes: a result object that silently loses the field on one branch makes
-// `source_commit_sha` null for that path only, and nothing else notices.
+// `mergeBase` is the COMPARISON base, so provenance needs the HEAD sha as its
+// own field — but the sha alone is not enough. The runner diffs the WORKING
+// TREE, so on a dirty tree the reviewed lines are absent from HEAD's tree, and
+// a record holding only `commitSha` cannot say which case it was. `dirty`
+// closes that gap (#1715 W1).
 //
-// The eight return sites that carry the git identity trio
-// (defaultBranch / mergeBase / commitSha) are pinned below, one test each:
+// local-runner builds both once in collectLocalContext and every exported entry
+// point re-emits them, which is the same call-site coverage problem
+// docs/development/pipeline-params-checklist.md describes: a result object that
+// silently loses a field on one branch makes the provenance wrong for that path
+// only, and nothing else notices.
+//
+// The eight return sites that carry the git identity fields
+// (defaultBranch / mergeBase / commitSha / dirty) are pinned below, one test each:
 //
 //   src/lib/local-runner.mjs collectLocalContext  — the single producer
 //   src/lib/local-runner.mjs planLocalReview      — skipped-by-label / no-changes / ok
@@ -24,10 +30,14 @@ import { join } from 'node:path';
 import test, { describe } from 'node:test';
 
 import { doctorLocalReview, planLocalReview, runLocalReview } from '../src/lib/local-runner.mjs';
-import { getHeadSha } from '../src/lib/git.mjs';
+import { getHeadSha, isWorkingTreeDirty } from '../src/lib/git.mjs';
 import { createTempGitRepo, runGit } from './helpers/temp-repo.mjs';
 
-const SHA_RE = /^[0-9a-f]{40}$/;
+// 40 hex for SHA-1, 64 for a SHA-256 repository (`git init --object-format=sha256`).
+// Pinning 40 only would fail on such a repo even though the producer is correct;
+// the record itself does not constrain the length (#1715 N3 — adding a `pattern`
+// to the two aggregate schemas is deliberately out of this PR's scope).
+const SHA_RE = /^[0-9a-f]{40}$|^[0-9a-f]{64}$/;
 
 /** Repo with a staged change, so the review has something to look at. */
 async function repoWithChange(t) {
@@ -51,6 +61,17 @@ async function repoWithoutChange(t) {
   return dir;
 }
 
+/** Repo with an unstaged edit, so only `git status --porcelain` sees it. */
+async function repoWithUnstagedChange(t) {
+  const { dir, cleanup } = await createTempGitRepo({
+    prefix: 'river-commitsha-unstaged-',
+    initialFiles: { 'src/app.js': 'export const value = 1;\n' },
+    changedFiles: { 'src/app.js': 'export const value = 2;\n' },
+  });
+  t.after(cleanup);
+  return dir;
+}
+
 async function withPrLabels(labels, fn) {
   const prev = process.env.RIVER_PR_LABELS;
   process.env.RIVER_PR_LABELS = labels;
@@ -65,14 +86,23 @@ async function withPrLabels(labels, fn) {
 async function assertCarriesHeadSha(result, dir) {
   const head = await getHeadSha(dir);
   assert.match(head, SHA_RE);
+  // NOTE — asserting `commitSha === HEAD` is the point, not an oversight, even
+  // though these fixtures stage a change that HEAD's tree does NOT contain.
+  // `commitSha` records the baseline the review ran against; the reviewed lines
+  // come from the working tree. That gap is exactly what `dirty` below exists
+  // to make visible, so this assertion pins the intended semantics rather than
+  // "HEAD contains the reviewed code" (#1715 W1).
   assert.equal(result.commitSha, head, `status=${result.status} lost commitSha`);
+  // Every path must carry the dirty flag too — a path that drops it silently
+  // loses the only signal distinguishing a reproducible sha from a stale one.
+  assert.equal(typeof result.dirty, 'boolean', `status=${result.status} lost dirty`);
   // The HEAD sha must not be confused with the comparison base: on a repo with
   // a single commit they happen to be equal, so this only asserts the field is
   // populated independently, not that the two always differ.
   assert.equal(typeof result.mergeBase, 'string');
 }
 
-describe('local-runner commitSha propagation (#1715)', () => {
+describe('local-runner commitSha / dirty propagation (#1715)', () => {
   test('planLocalReview status=ok carries the HEAD sha', async (t) => {
     const dir = await repoWithChange(t);
     const context = await planLocalReview({ cwd: dir, dryRun: true });
@@ -136,11 +166,31 @@ describe('local-runner commitSha propagation (#1715)', () => {
     await assertCarriesHeadSha(result, dir);
   });
 
-  test('a runner result from a non-git target does not fabricate a sha', async (t) => {
-    // getHeadSha is fail-soft: ensureGitRepo rejects before the runner returns,
-    // so the only observable contract is that the resolver itself never throws
-    // and never invents a value the record could persist.
+  test('a dirty working tree is reported as dirty, a clean one as clean', async (t) => {
+    // The staged fixture and the unstaged fixture are both dirty: HEAD's tree
+    // reproduces neither. Only the untouched repo is clean.
+    const staged = await repoWithChange(t);
+    const unstaged = await repoWithUnstagedChange(t);
+    const clean = await repoWithoutChange(t);
+
+    assert.equal((await planLocalReview({ cwd: staged, dryRun: true })).dirty, true);
+    assert.equal((await planLocalReview({ cwd: unstaged, dryRun: true })).dirty, true);
+    assert.equal((await planLocalReview({ cwd: clean, dryRun: true })).dirty, false);
+
+    // Same answer straight from the resolver, so the runner is not massaging it.
+    assert.equal(await isWorkingTreeDirty(staged), true);
+    assert.equal(await isWorkingTreeDirty(unstaged), true);
+    assert.equal(await isWorkingTreeDirty(clean), false);
+  });
+
+  test('a runner result from a non-git target does not fabricate a sha or a clean tree', async (t) => {
+    // getHeadSha / isWorkingTreeDirty are fail-soft: ensureGitRepo rejects
+    // before the runner returns, so the only observable contract is that the
+    // resolvers never throw and never invent a value the record could persist.
+    // `dirty` in particular must be null, not false — reporting "clean" for a
+    // tree that was never inspected is the one wrong answer.
     const dir = await repoWithChange(t);
     assert.equal(await getHeadSha(join(dir, 'does-not-exist')), null);
+    assert.equal(await isWorkingTreeDirty(join(dir, 'does-not-exist')), null);
   });
 });

@@ -307,14 +307,39 @@ describe('buildRunRecord — commitSha / provenance (#1715)', () => {
 
   it('writes the provenance block when supplied', () => {
     const rec = buildRunRecord(makeResult({ commitSha: SHA }), {
-      provenance: buildRunProvenance({ commitSha: SHA, env: {} }),
+      provenance: buildRunProvenance({ commitSha: SHA, dirty: false, env: {} }),
     });
     assert.deepEqual(rec.provenance, {
       evidenceSource: 'local',
       sourceCommitSha: SHA,
+      dirty: false,
       trustedBy: null,
       generatedByCandidate: false,
     });
+  });
+
+  it('records dirty so a working-tree review is distinguishable from a clean one', () => {
+    // Without this the two are identical on disk, and `sourceCommitSha` reads
+    // as reproducible in both cases even though HEAD's tree only reproduces the
+    // clean one (#1715 W1).
+    const clean = buildRunRecord(makeResult({ commitSha: SHA }), {
+      provenance: buildRunProvenance({ commitSha: SHA, dirty: false, env: {} }),
+    });
+    const dirty = buildRunRecord(makeResult({ commitSha: SHA }), {
+      provenance: buildRunProvenance({ commitSha: SHA, dirty: true, env: {} }),
+    });
+    assert.equal(clean.provenance.dirty, false);
+    assert.equal(dirty.provenance.dirty, true);
+    assert.notDeepEqual(clean.provenance, dirty.provenance);
+  });
+
+  it('carries an undeterminable dirty state as null rather than clean', () => {
+    for (const dirty of [null, undefined, 'yes', 1]) {
+      const rec = buildRunRecord(makeResult({ commitSha: SHA }), {
+        provenance: buildRunProvenance({ commitSha: SHA, dirty, env: {} }),
+      });
+      assert.equal(rec.provenance.dirty, null, `dirty=${JSON.stringify(dirty)}`);
+    }
   });
 
   it('omits provenance when not supplied (backward compatible)', () => {
@@ -322,16 +347,43 @@ describe('buildRunRecord — commitSha / provenance (#1715)', () => {
     assert.equal('provenance' in rec, false);
   });
 
-  it('drops a provenance block whose evidenceSource is outside the 契約1 vocabulary', () => {
+  it('drops a provenance block whose evidenceSource is outside the 契約1 vocabulary, loudly', () => {
     // buildRunEvidence silently rewrites an unknown source to 'local'. Writing
     // the unknown claim to disk would leave a record that reads differently
     // from what it says, so the producer refuses to persist it at all —
     // `commitSha` still carries the SHA through the documented fallback.
-    const rec = buildRunRecord(makeResult({ commitSha: SHA }), {
-      provenance: { evidenceSource: 'trusted-ci', sourceCommitSha: SHA, trustedBy: null },
-    });
+    //
+    // The warning is part of the contract (#1715 W3): a silent drop makes "no
+    // producer wrote provenance" and "provenance was rejected" identical to
+    // anyone auditing the stored record afterwards.
+    const warnings = [];
+    const originalWarn = console.warn;
+    console.warn = (...args) => warnings.push(args.join(' '));
+    let rec;
+    try {
+      rec = buildRunRecord(makeResult({ commitSha: SHA }), {
+        provenance: { evidenceSource: 'trusted-ci', sourceCommitSha: SHA, trustedBy: null },
+      });
+    } finally {
+      console.warn = originalWarn;
+    }
     assert.equal('provenance' in rec, false);
     assert.equal(rec.commitSha, SHA);
+    assert.equal(warnings.length, 1);
+    // The rejected value must appear, otherwise the warning cannot be acted on.
+    assert.match(warnings[0], /trusted-ci/);
+  });
+
+  it('does not warn when provenance is simply absent', () => {
+    const warnings = [];
+    const originalWarn = console.warn;
+    console.warn = (...args) => warnings.push(args.join(' '));
+    try {
+      buildRunRecord(makeResult({ commitSha: SHA }));
+    } finally {
+      console.warn = originalWarn;
+    }
+    assert.deepEqual(warnings, []);
   });
 
   it('pins trustedBy to null even when a caller asks for a value', () => {
@@ -348,9 +400,15 @@ describe('buildRunRecord — commitSha / provenance (#1715)', () => {
     assert.equal(rec.provenance.generatedByCandidate, true);
   });
 
-  it('keeps a record built from a pre-#1715 result byte-identical', () => {
+  it('keeps the key set and values of a record built from a pre-#1715 result', () => {
     // The exact key set of the legacy record, enumerated so an accidentally
     // unconditional `commitSha: null` / `provenance: {...}` fails here.
+    //
+    // NOTE — this is key-set-and-value equality, NOT byte equality: deepEqual
+    // ignores key ORDER, so a reordering that changes the serialized bytes (and
+    // therefore `artifact_sha256`, which hashes canonical JSON) would still
+    // pass. Canonical JSON sorts keys, so ordering does not affect the digest
+    // in practice, but the assertion should not be read as proving bytes.
     const rec = buildRunRecord(makeResult(), { runId: 'legacy-run' });
     assert.deepEqual(rec, {
       runId: 'legacy-run',

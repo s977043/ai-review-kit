@@ -44424,7 +44424,8 @@ function deriveGateDecision({
 /* harmony export */   Rd: () => (/* binding */ detectDefaultBranch),
 /* harmony export */   XS: () => (/* binding */ GitError),
 /* harmony export */   fe: () => (/* binding */ findMergeBase),
-/* harmony export */   kG: () => (/* binding */ GitRepoNotFoundError)
+/* harmony export */   kG: () => (/* binding */ GitRepoNotFoundError),
+/* harmony export */   mM: () => (/* binding */ isWorkingTreeDirty)
 /* harmony export */ });
 /* unused harmony export collectAddedLineHints */
 /* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1421);
@@ -44507,9 +44508,16 @@ async function findMergeBase(cwd, baseRef) {
  * Resolve the HEAD commit sha of a repository.
  *
  * Same `rev-parse HEAD` call `findMergeBase` already falls back to, exported so
- * the run record can name the commit a review observed (#1715 / 契約1
- * provenance). `mergeBase` is the comparison base, not the reviewed commit, so
- * it cannot stand in for this.
+ * the run record can name the commit a review was taken AGAINST (#1715 / 契約1
+ * provenance). `mergeBase` is the comparison base, so it cannot stand in for
+ * this.
+ *
+ * IMPORTANT — this is NOT "the commit containing the reviewed code". The local
+ * runner diffs the WORKING TREE against `mergeBase`, so on a dirty tree (the
+ * normal case for `river run` during development) the reviewed lines exist only
+ * in the working tree and are absent from HEAD's tree. The sha identifies the
+ * baseline the reviewed change sat on top of; pair it with
+ * `isWorkingTreeDirty` to know whether HEAD alone reproduces what was reviewed.
  *
  * Fail-soft on purpose: returns null instead of throwing when `cwd` is not a
  * git repository or HEAD is unborn (a fresh `git init` before the first
@@ -44521,6 +44529,30 @@ async function findMergeBase(cwd, baseRef) {
  */
 async function getHeadSha(cwd) {
   return runGit(['rev-parse', 'HEAD'], { cwd }).catch(() => null);
+}
+
+/**
+ * Report whether the working tree carries changes HEAD does not have.
+ *
+ * Without this, a record holding only `commitSha` cannot distinguish "the
+ * review read exactly HEAD's tree" from "the review read HEAD plus uncommitted
+ * edits" — and the second is the default case locally. A consumer that treats
+ * `source_commit_sha` as reproducible needs to see the difference (#1715 W1).
+ *
+ * `--porcelain` covers staged, unstaged, and untracked changes, which is
+ * exactly the set `collectRepoDiff` can pick up beyond HEAD.
+ *
+ * Fail-soft, and tri-state on purpose: null means "could not determine" (not a
+ * git repo, git unavailable). Collapsing that to `false` would report a clean
+ * tree that was never observed.
+ *
+ * @param {string} cwd
+ * @returns {Promise<boolean|null>} true when dirty, false when clean, null when unknown
+ */
+async function isWorkingTreeDirty(cwd) {
+  const status = await runGit(['status', '--porcelain'], { cwd }).catch(() => null);
+  if (status === null) return null;
+  return status.length > 0;
 }
 
 async function listChangedFiles(cwd, baseRef) {
@@ -67695,12 +67727,22 @@ async function collectLocalContext({
   // auto-detected default branch. Falls back to detection when unset.
   const defaultBranch = baseRef ?? (await (0,git/* detectDefaultBranch */.Rd)(repoRoot));
   const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
-  // #1715 (#1574 producer Slice 2): the commit the review actually observed.
-  // `mergeBase` is the comparison base, so provenance needs its own field.
-  // Resolved once here and re-emitted by every exported entry point below —
-  // a result that drops it makes `source_commit_sha` null for that path only.
-  // Null when the target has no HEAD; the record then omits the field.
+  // #1715 (#1574 producer Slice 2): the HEAD the review was taken against, plus
+  // whether the working tree had changes HEAD does not carry.
+  //
+  // `commitSha` is NOT "the commit containing the reviewed code". `collectRepoDiff`
+  // below diffs the WORKING TREE against `mergeBase`, so whenever the tree is
+  // dirty — the normal case for a local `river run` — the reviewed lines live
+  // only in the working tree and HEAD's tree does not reproduce them. `dirty`
+  // is what lets a consumer tell those two situations apart; without it the two
+  // are indistinguishable in the saved record (#1715 W1).
+  //
+  // Both are resolved once here and re-emitted by every exported entry point
+  // below — a result that drops them makes the provenance null for that path
+  // only. Null when the target has no HEAD / status cannot be read; the record
+  // then omits the field rather than guessing.
   const commitSha = await (0,git/* getHeadSha */.JA)(repoRoot);
+  const dirty = await (0,git/* isWorkingTreeDirty */.mM)(repoRoot);
   const rawDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase, { contextLines });
   const diff = applyFileExclusions(rawDiff, config.exclude?.files ?? []);
   const reviewFiles = diff.filesForReview?.map((file) => file.path) ?? diff.changedFiles;
@@ -67736,6 +67778,7 @@ async function collectLocalContext({
     defaultBranch,
     mergeBase,
     commitSha,
+    dirty,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -67778,6 +67821,7 @@ async function planLocalReview({
     defaultBranch,
     mergeBase,
     commitSha,
+    dirty,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -67823,6 +67867,7 @@ async function planLocalReview({
       defaultBranch,
       mergeBase,
       commitSha,
+      dirty,
       projectRules,
       availableContexts: contexts,
       availableDependencies: dependencies,
@@ -67841,6 +67886,7 @@ async function planLocalReview({
       defaultBranch,
       mergeBase,
       commitSha,
+      dirty,
       projectRules,
       diff,
       availableContexts: contexts,
@@ -67901,6 +67947,7 @@ async function planLocalReview({
     defaultBranch,
     mergeBase,
     commitSha,
+    dirty,
     changedFiles: reviewFiles,
     plan: augmentedPlan,
     diff,
@@ -67958,6 +68005,7 @@ async function runLocalReview({
       defaultBranch: context.defaultBranch,
       mergeBase: context.mergeBase,
       commitSha: context.commitSha ?? null,
+      dirty: context.dirty ?? null,
       config: context.config,
       configPath: context.configPath,
       configSource: context.configSource,
@@ -67974,6 +68022,7 @@ async function runLocalReview({
       defaultBranch: context.defaultBranch,
       mergeBase: context.mergeBase,
       commitSha: context.commitSha ?? null,
+      dirty: context.dirty ?? null,
       availableContexts: context.availableContexts,
       availableDependencies: context.availableDependencies,
       config: context.config,
@@ -68096,9 +68145,13 @@ async function runLocalReview({
     repoRoot: external_node_path_.resolve(context.repoRoot),
     defaultBranch: context.defaultBranch,
     mergeBase: context.mergeBase,
-    // #1715: consumed by buildRunRecord (src/lib/result-store.mjs) to name the
-    // reviewed commit in the saved record's 契約1 provenance.
+    // #1715: consumed by buildRunRecord (src/lib/result-store.mjs) for the
+    // saved record's 契約1 provenance. `commitSha` names the HEAD this review
+    // was taken against — NOT necessarily a commit containing the reviewed
+    // lines, since the diff above came from the working tree. `dirty` is what
+    // says which of the two it was.
     commitSha: context.commitSha ?? null,
+    dirty: context.dirty ?? null,
     changedFiles: context.changedFiles,
     plan: context.plan,
     reviewMode: context.plan?.reviewMode ?? 'medium',
@@ -68173,6 +68226,7 @@ async function doctorLocalReview({
     defaultBranch,
     mergeBase,
     commitSha,
+    dirty,
     diff,
     reviewFiles,
     availableContexts: contexts,
@@ -68201,6 +68255,7 @@ async function doctorLocalReview({
     defaultBranch,
     mergeBase,
     commitSha,
+    dirty,
     skillsCount: skills.length,
     projectRules,
     changedFiles: reviewFiles,
@@ -69671,8 +69726,13 @@ Dependencies: ${
         decision: runDecision,
         // #1715 (#1574 producer Slice 2): attach the 契約1 provenance so
         // `river evolve aggregate` can tie this evidence to a commit. Purely
-        // observational — it raises no trust, see buildRunProvenance.
-        provenance: buildRunProvenance({ commitSha: result.commitSha }),
+        // observational — it raises no trust, see buildRunProvenance. `dirty`
+        // travels with the sha because a local run normally reviews the working
+        // tree, so the sha alone does not identify the reviewed code.
+        provenance: buildRunProvenance({
+          commitSha: result.commitSha,
+          dirty: result.dirty,
+        }),
       });
       // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
       const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });

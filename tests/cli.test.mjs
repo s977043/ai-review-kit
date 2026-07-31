@@ -694,9 +694,17 @@ describe('river run --save - run record provenance', () => {
   // asserting `local` where the runner correctly reports `CI`.
   // GITHUB_STEP_SUMMARY is cleared for the same reason: leaving CI's real path
   // in place would append this test's digest to the job summary.
-  async function saveAndReadRecord(t, { env } = {}) {
+  async function saveAndReadRecord(t, { env, commitFirst = false } = {}) {
     const { dir, cleanup } = await createRepoWithSilentCatchChange();
     t.after(cleanup);
+    if (commitFirst) {
+      // Commit the change so the review reads a tree HEAD actually contains.
+      // It has to land on a BRANCH off main: committing on main itself would
+      // move the merge base onto the change and leave nothing to review.
+      await runGit(['checkout', '-b', 'feature'], dir);
+      await runGit(['add', '.'], dir);
+      await runGit(['commit', '-m', 'commit the change under review'], dir);
+    }
     const result = await runCliInProcess(['run', '.', '--dry-run', '--save'], {
       cwd: dir,
       env: { GITHUB_STEP_SUMMARY: undefined, ...env },
@@ -709,17 +717,31 @@ describe('river run --save - run record provenance', () => {
     return { record, head };
   }
 
-  test('records the reviewed HEAD commit and a local source claim', async (t) => {
+  test('records the HEAD it ran against and flags the working-tree review', async (t) => {
+    // The default fixture leaves the change UNCOMMITTED, which is the normal
+    // shape of a local `river run`: the reviewed lines exist only in the working
+    // tree, so `commitSha` names the baseline and `dirty: true` is what says
+    // HEAD alone does not reproduce what was reviewed (#1715 W1).
     const { record, head } = await saveAndReadRecord(t, { env: { GITHUB_ACTIONS: undefined } });
     assert.strictEqual(record.commitSha, head);
     assert.deepStrictEqual(record.provenance, {
       evidenceSource: 'local',
       sourceCommitSha: head,
+      dirty: true,
       trustedBy: null,
       generatedByCandidate: false,
     });
     // mergeBase is the comparison base and stays a separate field.
     assert.ok('mergeBase' in record);
+  });
+
+  test('flags a committed tree as clean, so the sha is reproducible', async (t) => {
+    const { record, head } = await saveAndReadRecord(t, {
+      env: { GITHUB_ACTIONS: undefined },
+      commitFirst: true,
+    });
+    assert.strictEqual(record.commitSha, head);
+    assert.strictEqual(record.provenance.dirty, false);
   });
 
   test('claims the CI source under GITHUB_ACTIONS without claiming trust', async (t) => {

@@ -129,16 +129,24 @@ canonical `review_run_id` の生産者は v1.66.0（#1681）で実装しまし�
 
 充足済み（#1715 以降）:
 
-- `river run --save` が保存した record は HEAD のコミット sha を `commitSha` に持ち、`source_commit_sha` が実値になる
+- `river run --save` が保存した record は `commitSha` を持ち、`source_commit_sha` が実値になる
 - `evidence_source` は実行環境の自己申告である。`GITHUB_ACTIONS=true` のとき `CI`、それ以外で `local` になる
 - `trusted_by` は null に固定する。CI 実行を検証済み attestation とみなさないためである
 - `trust_level` と `provenance_verified` は provenance を書いても変わらない。値は `untrusted` と `false` のままである
 - provenance を持たない旧 record は従来どおり読める。値が無い record では `commitSha` と `provenance` のキー自体を書かない
 - 上記は `tests/shadow-aggregate.test.mjs` の producer 経路テストが実 sha と trust 3 指標で固定している
 
+`commitSha` の意味論には注意が必要です。ローカルの `river run` は**作業ツリー**と merge base を比較するため、未コミットの変更をレビューした場合、レビュー対象の行は HEAD のツリーに存在しません。`commitSha` は「レビューが乗っていたベースライン」であって「レビュー対象コードを含むコミット」ではありません。ローカルでは dirty が既定の状態です。
+
+- `provenance.dirty` が両者を区別する。`git status --porcelain` が非空なら `true`、空なら `false` になる
+- 判定不能のときは `null` である。観測していないツリーを clean と報告しないためである
+- `source_commit_sha` を再現可能な参照として扱えるのは `dirty` が `false` のときだけである
+- `dirty` は run record にだけ書く。aggregate の `runEvidence` は `additionalProperties: false` であり、公開には 2 スキーマの同時更新が要るため後続 slice へ回した
+
 未充足（残作業）:
 
 - finding が `category` を持たないため、stage2 の `category` は `finding.ruleId`（発行元 skill id）へフォールバックする
+- `dirty` は aggregate の evidence へ出ない。`river evolve aggregate` からは run record を直接読まないと分からない
 
 P1 実装の時点では `review_run_id` の生産者も存在せず、join が常に 0 でした。テストは旧形状と現形状の両方を固定しています。
 

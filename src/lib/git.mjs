@@ -76,9 +76,16 @@ export async function findMergeBase(cwd, baseRef) {
  * Resolve the HEAD commit sha of a repository.
  *
  * Same `rev-parse HEAD` call `findMergeBase` already falls back to, exported so
- * the run record can name the commit a review observed (#1715 / 契約1
- * provenance). `mergeBase` is the comparison base, not the reviewed commit, so
- * it cannot stand in for this.
+ * the run record can name the commit a review was taken AGAINST (#1715 / 契約1
+ * provenance). `mergeBase` is the comparison base, so it cannot stand in for
+ * this.
+ *
+ * IMPORTANT — this is NOT "the commit containing the reviewed code". The local
+ * runner diffs the WORKING TREE against `mergeBase`, so on a dirty tree (the
+ * normal case for `river run` during development) the reviewed lines exist only
+ * in the working tree and are absent from HEAD's tree. The sha identifies the
+ * baseline the reviewed change sat on top of; pair it with
+ * `isWorkingTreeDirty` to know whether HEAD alone reproduces what was reviewed.
  *
  * Fail-soft on purpose: returns null instead of throwing when `cwd` is not a
  * git repository or HEAD is unborn (a fresh `git init` before the first
@@ -90,6 +97,30 @@ export async function findMergeBase(cwd, baseRef) {
  */
 export async function getHeadSha(cwd) {
   return runGit(['rev-parse', 'HEAD'], { cwd }).catch(() => null);
+}
+
+/**
+ * Report whether the working tree carries changes HEAD does not have.
+ *
+ * Without this, a record holding only `commitSha` cannot distinguish "the
+ * review read exactly HEAD's tree" from "the review read HEAD plus uncommitted
+ * edits" — and the second is the default case locally. A consumer that treats
+ * `source_commit_sha` as reproducible needs to see the difference (#1715 W1).
+ *
+ * `--porcelain` covers staged, unstaged, and untracked changes, which is
+ * exactly the set `collectRepoDiff` can pick up beyond HEAD.
+ *
+ * Fail-soft, and tri-state on purpose: null means "could not determine" (not a
+ * git repo, git unavailable). Collapsing that to `false` would report a clean
+ * tree that was never observed.
+ *
+ * @param {string} cwd
+ * @returns {Promise<boolean|null>} true when dirty, false when clean, null when unknown
+ */
+export async function isWorkingTreeDirty(cwd) {
+  const status = await runGit(['status', '--porcelain'], { cwd }).catch(() => null);
+  if (status === null) return null;
+  return status.length > 0;
 }
 
 export async function listChangedFiles(cwd, baseRef) {

@@ -978,7 +978,9 @@ describe('shadow-aggregate 実データの source_commit_sha 充足（#1715）',
     const { headSha, aggregate, cleanup } = await seedRepoWithProvenance({ env: {} });
     t.after(cleanup);
 
-    assert.match(headSha, /^[0-9a-f]{40}$/);
+    // 40 hex for SHA-1, 64 for a SHA-256 repository. Neither the record nor the
+    // aggregate schema constrains the length today (#1715 N3).
+    assert.match(headSha, /^[0-9a-f]{40}$|^[0-9a-f]{64}$/);
     assert.equal(aggregate.evidence.runs.length, 2);
     for (const evidence of aggregate.evidence.runs) {
       assert.equal(evidence.source_commit_sha, headSha);

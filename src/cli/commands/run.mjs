@@ -169,8 +169,13 @@ Dependencies: ${
         decision: runDecision,
         // #1715 (#1574 producer Slice 2): attach the 契約1 provenance so
         // `river evolve aggregate` can tie this evidence to a commit. Purely
-        // observational — it raises no trust, see buildRunProvenance.
-        provenance: buildRunProvenance({ commitSha: result.commitSha }),
+        // observational — it raises no trust, see buildRunProvenance. `dirty`
+        // travels with the sha because a local run normally reviews the working
+        // tree, so the sha alone does not identify the reviewed code.
+        provenance: buildRunProvenance({
+          commitSha: result.commitSha,
+          dirty: result.dirty,
+        }),
       });
       // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
       const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });
