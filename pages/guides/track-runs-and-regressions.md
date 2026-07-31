@@ -136,6 +136,8 @@ river run . --baseline ./baseline-findings.json
 
 出力は `runs diff` と同じ `## Regression Review Summary` 形式です。比較に失敗した場合は `Warning: --baseline comparison failed: ...` が出力され、レビュー自体は継続します。
 
+回帰サマリの出力先は `--output` で変わります（#1706）。既定の `text` なら標準出力、`markdown` / `json` / `yaml` / `html` なら標準エラーです。`river run . --baseline base.json --output json > result.json` のようにリダイレクトしても、`result.json` は妥当な JSON のままになります。
+
 ### baseline ファイルの作り方
 
 `--output json` で実行結果を保存しておけば、そのまま baseline として再利用できます。

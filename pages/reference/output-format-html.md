@@ -10,13 +10,14 @@ River Review は `--output html` / `output_format: html` で自己完結型の H
 
 `--output` が受理する値は CLI 共通で `text|markdown|json|yaml|html` です。ただし `html` を実際に描画するコマンドは限られます。
 
-| コマンド                                                                                                     | `--output html` | 生成物                                                       |
-| ------------------------------------------------------------------------------------------------------------ | --------------- | ------------------------------------------------------------ |
-| `river run <path>`                                                                                           | 対応            | レビューレポート（判定バナー・スコア・指摘一覧・リスク評価） |
-| `river runs diff <id1> <id2> [<id3>...]`                                                                     | 対応            | Loop Dashboard（loop signal・churn・振動タイムライン）       |
-| `river review plan` / `river review exec`                                                                    | 拒否（exit 3）  | `json` または `markdown` を指定する                          |
-| `river evolve aggregate` / `river evolve replay`                                                             | 拒否（exit 1）  | `text` または `json` を指定する                              |
-| 上記以外（`river review route`・`river runs list`・`river runs digest`・`river promote`・`river skills` 等） | 無視            | コマンドごとの既定の出力へフォールバックする                 |
+| コマンド                                                                                     | `--output html` | 生成物                                                       |
+| -------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------ |
+| `river run <path>`                                                                           | 対応            | レビューレポート（判定バナー・スコア・指摘一覧・リスク評価） |
+| `river runs diff <id1> <id2> [<id3>...]`                                                     | 対応            | Loop Dashboard（loop signal・churn・振動タイムライン）       |
+| `river review plan` / `river review exec`                                                    | 拒否（exit 3）  | `json` または `markdown` を指定する                          |
+| `river evolve aggregate` / `river evolve replay`                                             | 拒否（exit 1）  | `text` または `json` を指定する                              |
+| `river skills <path>`                                                                        | 拒否（exit 1）  | `text` / `markdown` / `json` のいずれかを指定する            |
+| 上記以外（`river review route`・`river runs list`・`river runs digest`・`river promote` 等） | 無視            | コマンドごとの既定の出力へフォールバックする                 |
 
 拒否されるコマンドのメッセージは次のとおりです。
 
@@ -26,7 +27,12 @@ Error: Unsupported output format "html" for river review. Expected: json | markd
 
 $ river evolve aggregate --output html
 Unsupported --output for evolve aggregate: html. Use: text | json
+
+$ river skills . --output html
+Unsupported --output for skills: html. Use: text | markdown | json
 ```
+
+`river skills` は以前 `yaml` / `html` を受理しながら中身を JSON で返していました（#1705）。宣言と実挙動の不一致を解消するために拒否へ変更したので、JSON が欲しい呼び出し側は `--output json` を指定してください。
 
 ## CLI
 
