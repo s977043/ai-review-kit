@@ -135,6 +135,9 @@ Dependencies: ${
     baseRef: parsed.base,
     skillIds,
     manualReviewMode,
+    // #1689: propagate --quiet so the reviewer-orchestration progress lines can
+    // be silenced in CI. Previously parsed but never consumed.
+    quiet: parsed.quiet,
   });
 
   if (parsed.explain) {

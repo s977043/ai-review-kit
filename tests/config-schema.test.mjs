@@ -82,6 +82,47 @@ describe('reviewConfigSchema', () => {
   test('rejects empty strings in additionalInstructions', () => {
     assert.ok(!reviewConfigSchema.safeParse({ additionalInstructions: [''] }).success);
   });
+
+  // #1689: reviewer orchestration knobs. z.object strips unknown keys, so the
+  // round-trip assertion is what proves the key actually reaches the runtime.
+  test('keeps review.orchestrator.timeoutMs / progress after validation', () => {
+    const result = reviewConfigSchema.safeParse({
+      orchestrator: { timeoutMs: 120000, progress: false },
+    });
+    assert.ok(result.success);
+    assert.deepEqual(result.data.orchestrator, { timeoutMs: 120000, progress: false });
+  });
+
+  test('rejects a non-positive or over-cap orchestrator timeout', () => {
+    assert.ok(!reviewConfigSchema.safeParse({ orchestrator: { timeoutMs: 0 } }).success);
+    assert.ok(!reviewConfigSchema.safeParse({ orchestrator: { timeoutMs: -1 } }).success);
+    assert.ok(!reviewConfigSchema.safeParse({ orchestrator: { timeoutMs: 0.5 } }).success);
+    // 2^31 would overflow setTimeout's 32-bit delay and clamp to 1 ms.
+    assert.ok(!reviewConfigSchema.safeParse({ orchestrator: { timeoutMs: 2147483648 } }).success);
+    assert.ok(reviewConfigSchema.safeParse({ orchestrator: { timeoutMs: 3600000 } }).success);
+  });
+
+  // #1689 review W1a: `--reviewers` is an existing CLI flag taking a list of
+  // role names, so a user writing the same key in config is plausible. It must
+  // be ignored like any other unknown key, never fail the whole run.
+  test('a legacy review.reviewers array is stripped, not a validation error', () => {
+    const result = reviewConfigSchema.safeParse({
+      language: 'ja',
+      reviewers: ['bug-hunter', 'security-scanner'],
+    });
+    assert.ok(result.success, 'an array under review.reviewers must not fail validation');
+    assert.equal(result.data.reviewers, undefined, 'the unknown key is stripped');
+    assert.equal(result.data.language, 'ja', 'the rest of the section survives');
+  });
+
+  // The orchestrator sub-schema is intentionally non-strict, matching every
+  // other section here: a key added by a newer version must not hard-fail an
+  // older one on config load.
+  test('an unknown key inside orchestrator is stripped, not rejected', () => {
+    const result = reviewConfigSchema.safeParse({ orchestrator: { futureKey: 1, progress: true } });
+    assert.ok(result.success);
+    assert.deepEqual(result.data.orchestrator, { progress: true });
+  });
 });
 
 describe('excludeConfigSchema', () => {

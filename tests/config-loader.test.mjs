@@ -51,6 +51,88 @@ test('一部のみ上書きした設定をマージできる', async () => {
   });
 });
 
+// #1689 review W1b: 検証エラーの詳細は `error.issues` から組み立てる。zod 4 で
+// 削除された `error.errors` を読んでいたため TypeError となり、周囲の catch が
+// 汎用の「読み込みに失敗しました」へ握り潰していた。
+test('検証エラーのメッセージに zod issue の内容が含まれる (Legacy Schema)', async () => {
+  await withTempDir(async (dir) => {
+    const configPath = path.join(dir, '.river-review.json');
+    await fs.writeFile(configPath, JSON.stringify({ review: { language: 'fr' } }), 'utf8');
+
+    const loader = new ConfigLoader();
+    await assert.rejects(
+      () => loader.load(dir),
+      (err) => {
+        assert.ok(err instanceof ConfigLoaderError, `expected ConfigLoaderError, got ${err?.name}`);
+        assert.match(err.message, /Legacy Schema/);
+        assert.match(err.message, /review\.language/, 'the offending path must appear');
+        assert.ok(
+          !/読み込みに失敗しました/.test(err.message),
+          'must not degrade into the generic read-failure message'
+        );
+        return true;
+      }
+    );
+  });
+});
+
+test('検証エラーのメッセージに zod issue の内容が含まれる (Skill Schema)', async () => {
+  await withTempDir(async (dir) => {
+    const configPath = path.join(dir, '.river-review.json');
+    // `version` present → the loader takes the skill-schema branch.
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({ version: '1.0', review: { severity: 'harsh' } }),
+      'utf8'
+    );
+
+    const loader = new ConfigLoader();
+    await assert.rejects(
+      () => loader.load(dir),
+      (err) => {
+        assert.ok(err instanceof ConfigLoaderError);
+        assert.match(err.message, /Skill Schema/);
+        assert.match(err.message, /review\.severity/);
+        return true;
+      }
+    );
+  });
+});
+
+// #1689 review W1a: `review.reviewers` は CLI の --reviewers と同名なので、
+// 配列を書かれても従来どおり無害に無視されること（run 全体を落とさないこと）。
+test('review.reviewers に配列を書いても読み込みは成功する', async () => {
+  await withTempDir(async (dir) => {
+    const configPath = path.join(dir, '.river-review.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({ review: { language: 'ja', reviewers: ['bug-hunter'] } }),
+      'utf8'
+    );
+
+    const loader = new ConfigLoader();
+    const result = await loader.load(dir);
+    assert.equal(result.source, 'file');
+    assert.equal(result.config.review.language, 'ja');
+    assert.equal(result.config.review.reviewers, undefined, '未知キーとして除去される');
+  });
+});
+
+test('review.orchestrator の設定はマージ後も保持される', async () => {
+  await withTempDir(async (dir) => {
+    const configPath = path.join(dir, '.river-review.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({ review: { orchestrator: { timeoutMs: 120000, progress: false } } }),
+      'utf8'
+    );
+
+    const loader = new ConfigLoader();
+    const result = await loader.load(dir);
+    assert.deepEqual(result.config.review.orchestrator, { timeoutMs: 120000, progress: false });
+  });
+});
+
 test('YAML 形式の設定ファイルも読み込める', async () => {
   await withTempDir(async (dir) => {
     const configPath = path.join(dir, '.river-review.yaml');

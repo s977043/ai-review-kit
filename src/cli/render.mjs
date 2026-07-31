@@ -551,11 +551,21 @@ export function formatJsonOutput(result, phase) {
   // and the JSON output always carry the same gate.
   const { decision, gate } = deriveRunGate(result);
 
+  // #1689 review B3: reviewer roles cut off by the per-role timeout were only
+  // observable in-process (`reviewerResults` / `debug`), both of which this
+  // formatter drops — so from the CLI a timed-out role was indistinguishable
+  // from a role that found nothing. Emit the role names at the top level, and
+  // only when non-empty so an untouched run keeps its exact previous shape.
+  const timedOutRoles = (result.reviewerResults ?? [])
+    .filter((r) => r?.timedOut === true)
+    .map((r) => r.role);
+
   const artifact = {
     issues,
     summary,
     ...(decision !== undefined ? { decision } : {}),
     ...(gate ? { gate } : {}),
+    ...(timedOutRoles.length > 0 ? { timedOutRoles } : {}),
     ...(result.teamLeadReport ? { teamLeadReport: result.teamLeadReport } : {}),
   };
   validateOutputArtifact(artifact);

@@ -29,6 +29,20 @@ function detectBlindSpots(executedRoles) {
 }
 
 /**
+ * 観点がカバーされたと言えるロールだけを「実行済み」とみなす（#1689 review W5）。
+ *
+ * 打ち切られた（`timedOut`）ロールと失敗した（`status: 'rejected'`）ロールを
+ * 実行済みに数えると、そのロールが blindSpots から消え「GO かつ死角なし」という
+ * 二重の誤報になる。判定は除外条件で書く: `status` を持たない呼び出し元
+ * （既存テストや旧 reviewerResults）は従来どおり実行済みとして扱う。
+ */
+function isRoleCovered(entry) {
+  if (entry == null) return false;
+  if (entry.timedOut === true) return false;
+  return entry.status !== 'rejected';
+}
+
+/**
  * consensusLevel の件数を集計して返す。
  * @returns {{ consensus: number, multi: number, single: number, total: number }}
  */
@@ -49,7 +63,7 @@ function buildConsensusSummary(findings) {
  * @returns {{ top3Findings: object[], blindSpots: object[], consensusSummary: object }}
  */
 export function synthesizeTeamLeadReport({ findings = [], reviewerResults = [] }) {
-  const executedRoles = reviewerResults.map((r) => r.role);
+  const executedRoles = reviewerResults.filter(isRoleCovered).map((r) => r.role);
   const sorted = sortFindingsByPriority(findings);
   return {
     top3Findings: sorted.slice(0, 3),

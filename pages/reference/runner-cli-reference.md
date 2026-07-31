@@ -39,6 +39,42 @@ JSON 出力の `autoSelectedRoles` フィールドで選択されたロールを
 
 複数のロール（`auto` を含む）でレビューする場合、大きな diff は自動的にチャンクに分割され、ロール × チャンクで並列実行されます。各実行から得られた findings は、最終 ID を割り当てる前にチャンク・ロール間で重複排除されます（実装: `src/lib/reviewer-orchestrator.mjs` の `splitDiffIntoChunks` / `deduplicateFindings`）。このため、同一箇所の重複指摘は 1 件に統合されます。
 
+### 進捗出力とロール単位タイムアウト
+
+並列ロール実行では、ロールの開始・完了・失敗を 1 行ずつ **stderr** に出力します。成果物は stdout に出るため、進捗行が JSON / YAML / Markdown を汚すことはありません。
+
+```text
+Reviewer bug-hunter: start
+Reviewer security-scanner: start
+Reviewer bug-hunter: done in 6.2s (3 findings)
+Reviewer security-scanner: timeout after 120.0s (other chunks/roles continue)
+Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scanner)
+```
+
+関連するフラグと環境変数は次のとおりです。
+
+| 名前                     | 種別   | 既定値                                | 説明                                                                                                                                           |
+| ------------------------ | ------ | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--quiet`                | flag   | `false`                               | 上記のロール進捗行だけを抑止する。`river run` が出す他のログ（実行ヘッダーや `Run saved:` など）には作用しない                                 |
+| `RIVER_REVIEWER_TIMEOUT` | env    | 未設定                                | ロール 1 件あたりの上限ミリ秒。`1`〜`3600000` の整数のみ受理し、範囲外・非整数は警告のうえ無視する（`review.orchestrator.timeoutMs` より優先） |
+| `review.orchestrator.*`  | config | `timeoutMs` 未設定 / `progress: true` | `.river-review.json` 側の同等設定。詳細は [コンフィグ / スキーマ概要](./config-schema.md) を参照                                               |
+
+ロール単位のタイムアウトは既定で無効（無制限）です。**既定のままなら待ち時間は従来と変わりません**。この PR で変わるのは観測性だけであり、上限を明示的に設定した場合にのみ打ち切りが働きます。
+
+タイムアウトは fail-soft であり、上限に達したロールを失敗として記録したうえで、残りのロールの findings で処理を続行します。全体を中断しません。**成功ロールが 1 件も無い場合は「レビュー未実行」として扱い**、gate は GO になりません（`decision` は `human-review-required`、`--gate` の終了コードは 0 以外）。
+
+打ち切りの事実は次の場所から観測できます。
+
+| 経路                                 | 見える場所                                                                                                |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `--output json`                      | top-level の `timedOutRoles`（打ち切られたロール名の配列。1 件も無ければキー自体が出ない）                |
+| run record（`--save` / CI 自動保存） | `reviewDebug.timeoutMs` / `reviewDebug.timedOutRoles` / `reviewDebug.durationMs`                          |
+| ライブラリとして呼ぶ場合             | `reviewerResults[].timedOut` / `reviewerResults[].durationMs`、および `debug.*`（上記 run record と同じ） |
+
+`--output yaml` と `--output html` には打ち切り情報を載せていません。機械可読な判定には JSON 出力を使ってください。
+
+> **注意**: タイムアウトはオーケストレーション層の待ち時間を打ち切るだけであり、進行中の LLM 呼び出しを cancel しません。放置されたリクエストは `src/lib/llm-pipeline.mjs` 側の上限（1 回 15 秒 + 上限付きリトライ、最大およそ 45 秒）が尽きるまで走り続けるため、`timeout` 行を出した後もプロセスはその間だけ生存します。真のキャンセルには `generateReview()` への `AbortSignal` 導入が必要であり、本 PR のスコープ外です。
+
 ## コマンド
 
 - Agents: `npm run agents:validate` (または `node scripts/validate-agents.mjs`)

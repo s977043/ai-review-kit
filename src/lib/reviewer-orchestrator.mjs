@@ -64,6 +64,163 @@ export const DEFAULT_REVIEWERS = ['bug-hunter', 'security-scanner'];
 const SPLIT_FILE_THRESHOLD = 10;
 const SPLIT_LINE_THRESHOLD = 500;
 
+// --- #1689: orchestration-layer observability (progress) and per-role timeout ---
+//
+// Progress goes to STDERR ONLY. stdout carries the deliverable (JSON / YAML /
+// Markdown / HTML), so a progress line on stdout would corrupt the artifact for
+// every downstream parser. Same split as src/cli/commands/review.mjs.
+//
+// The per-role timeout is DISABLED by default (unlimited), preserving the
+// pre-#1689 behavior exactly — the default wait time does not change; only
+// observability improves. Opt in via `RIVER_REVIEWER_TIMEOUT` (milliseconds) or
+// `review.orchestrator.timeoutMs` in `.river-review.{json,yaml}`. It is
+// fail-soft: a role that exceeds the limit is recorded as a failed role and the
+// run continues with the other roles' findings — the existing partial-result
+// path (`Promise.allSettled` + `reviewerResults`) carries it, so merging
+// (connected components) and verification are untouched. A run where NO role
+// survived is NOT clean: src/lib/run-gate.mjs reads `reviewerResults` and
+// withholds the GO / auto-approve outcome (rule 6b NOT_EXECUTED).
+//
+// Scope note: the timeout ABANDONS a slow role rather than cancelling its LLM
+// call — generateReview() takes no AbortSignal. The HTTP layer already has its
+// own budget (LLM_TIMEOUT_MS + bounded retries in llm-pipeline.mjs), so the
+// abandoned request keeps the process alive for up to that budget after the
+// timeout line is printed. This limit bounds the ORCHESTRATION wait, which is
+// what #1689 asks for; true cancellation needs an AbortSignal through
+// generateReview() and is deliberately out of scope.
+
+/** Env var carrying the per-role timeout in milliseconds (mirrors RIVER_PLANNER_TIMEOUT). */
+export const REVIEWER_TIMEOUT_ENV = 'RIVER_REVIEWER_TIMEOUT';
+
+/**
+ * Upper bound for the per-role timeout (1 hour). Mirrors the `.max()` in
+ * `reviewerOrchestratorConfigSchema` so env and config agree.
+ *
+ * Above ~2^31-1 ms `setTimeout` overflows a 32-bit signed int and Node CLAMPS
+ * the delay to 1 ms (emitting TimeoutOverflowWarning). Without this bound
+ * `RIVER_REVIEWER_TIMEOUT=2147483648` silently timed out EVERY role after 1 ms,
+ * producing a zero-finding "clean" run.
+ */
+export const REVIEWER_TIMEOUT_MAX_MS = 3_600_000;
+
+/** Error thrown when a reviewer role exceeds the per-role timeout. */
+export class ReviewerTimeoutError extends Error {
+  constructor(role, timeoutMs) {
+    super(`Reviewer role "${role}" timed out after ${timeoutMs}ms`);
+    this.name = 'ReviewerTimeoutError';
+    this.role = role;
+    this.timeoutMs = timeoutMs;
+    /** Marker read by the orchestrator to distinguish a timeout from a real failure. */
+    this.timedOut = true;
+  }
+}
+
+/** A usable per-role timeout: a positive integer no larger than the 1-hour cap. */
+function isUsableTimeoutMs(value) {
+  return Number.isInteger(value) && value > 0 && value <= REVIEWER_TIMEOUT_MAX_MS;
+}
+
+/**
+ * Resolve the effective per-role timeout in milliseconds.
+ *
+ * Precedence (first USABLE value wins):
+ *   explicit `timeoutMs` argument > `RIVER_REVIEWER_TIMEOUT` > `config.review.orchestrator.timeoutMs`
+ *
+ * A value that is missing, non-numeric, fractional, non-positive, or above
+ * `REVIEWER_TIMEOUT_MAX_MS` is REJECTED: it emits one warning line on stderr and
+ * the resolution falls through to the next source. When no source supplies a
+ * usable value the result is `null`, meaning NO timeout (unlimited — the default
+ * and the pre-#1689 behavior). Rejecting rather than clamping is deliberate:
+ * clamping an out-of-range value to the cap would silently impose a limit the
+ * operator never asked for, and Node's own 32-bit clamp turns an overly large
+ * value into a 1 ms limit that fails every role.
+ *
+ * @param {{ timeoutMs?: number, config?: object, env?: NodeJS.ProcessEnv, warn?: (line: string) => void }} [params]
+ * @returns {number | null}
+ */
+export function resolveReviewerTimeoutMs({
+  timeoutMs,
+  config,
+  env = process.env,
+  warn = (line) => console.error(line),
+} = {}) {
+  const candidates = [
+    { source: 'reviewer timeout argument', raw: timeoutMs },
+    { source: REVIEWER_TIMEOUT_ENV, raw: env?.[REVIEWER_TIMEOUT_ENV] },
+    { source: 'review.orchestrator.timeoutMs', raw: config?.review?.orchestrator?.timeoutMs },
+  ];
+  for (const { source, raw } of candidates) {
+    if (raw === undefined || raw === null || raw === '') continue;
+    const value = Number(raw);
+    if (isUsableTimeoutMs(value)) return value;
+    warn(
+      `Warning: ${source}=${raw} is not a positive integer of at most ${REVIEWER_TIMEOUT_MAX_MS} ms; ignoring it (per-role timeout stays disabled unless another source supplies one).`
+    );
+  }
+  return null;
+}
+
+/**
+ * Resolve whether per-role progress lines are emitted.
+ *
+ * Precedence: `quiet` (CLI `--quiet`, always wins) > explicit `progress` argument
+ * > `config.review.orchestrator.progress` > enabled.
+ *
+ * @param {{ quiet?: boolean, progress?: boolean, config?: object }} [params]
+ * @returns {boolean}
+ */
+export function resolveReviewerProgressEnabled({ quiet = false, progress, config } = {}) {
+  if (quiet) return false;
+  if (typeof progress === 'boolean') return progress;
+  const fromConfig = config?.review?.orchestrator?.progress;
+  if (typeof fromConfig === 'boolean') return fromConfig;
+  return true;
+}
+
+/**
+ * Reject with `makeError()` when `promise` has not settled within `timeoutMs`.
+ * A non-positive / non-finite `timeoutMs` returns the promise untouched, so the
+ * no-timeout path adds neither a timer nor an extra promise hop.
+ *
+ * Both branches of the race attach handlers to `promise`, so a late rejection
+ * after a timeout is already handled and never surfaces as an unhandled rejection.
+ */
+function withReviewerTimeout(promise, timeoutMs, makeError) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return promise;
+  let timer = null;
+  const timeout = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => reject(makeError()), timeoutMs);
+  });
+  const settled = promise.then(
+    (value) => {
+      clearTimeout(timer);
+      return value;
+    },
+    (err) => {
+      clearTimeout(timer);
+      throw err;
+    }
+  );
+  return Promise.race([settled, timeout]);
+}
+
+/**
+ * Monotonic clock for elapsed measurements. `performance.now()` is immune to
+ * wall-clock jumps (NTP steps, DST) that can make a `Date.now()` delta negative.
+ */
+function nowMs() {
+  return performance.now();
+}
+
+/**
+ * Human-readable elapsed time for a progress line. Sub-100 ms durations render
+ * as whole milliseconds because `0.0s` reads as "no measurement taken".
+ */
+function formatElapsed(ms) {
+  if (ms < 100) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 export function resolveReviewerRoles(reviewers, { fileTypes, riskAssessment, signals } = {}) {
   // 'auto' keyword: derive roles from diff content
   if (reviewers?.length === 1 && reviewers[0] === 'auto') {
@@ -444,6 +601,18 @@ export async function runReviewerOrchestration({
   reviewers,
   prBody,
   signals,
+  // #1689: observability knobs. `quiet` comes from the CLI `--quiet` flag;
+  // `timeoutMs` / `progress` are explicit overrides above env and config.
+  // `env` is injectable so a stray RIVER_REVIEWER_TIMEOUT in the developer's
+  // shell cannot change test outcomes. `progressSink` and `generateReviewImpl`
+  // are injection points for tests (same `*Impl` convention as
+  // llm-pipeline.mjs / deterministic-command-orchestrator.mjs).
+  quiet = false,
+  timeoutMs,
+  progress,
+  progressSink,
+  env = process.env,
+  generateReviewImpl = generateReview,
 } = {}) {
   const {
     valid: roles,
@@ -477,24 +646,78 @@ export async function runReviewerOrchestration({
     prBody,
   };
 
-  // Fan out: each role × each diff chunk runs in parallel
-  const tasks = roles.flatMap((roleName) =>
-    diffsToProcess.map((chunkDiff, chunkIdx) => {
-      const role = REVIEWER_ROLES[roleName];
-      const roleRules = [role.focusInstructions, projectRules].filter(Boolean).join('\n\n');
-      return generateReview({ ...generateArgs, diff: chunkDiff, projectRules: roleRules }).then(
-        (result) => ({
-          ...result,
-          reviewerRole: roleName,
-          chunkIdx: chunked ? chunkIdx : null,
-          chunkLabel: chunked ? (chunkDiff._chunkLabel ?? `chunk-${chunkIdx}`) : null,
-        })
-      );
-    })
+  // #1689: resolve observability settings once per run.
+  // stderr ONLY — never process.stdout, which carries the review artifact.
+  const emit =
+    typeof progressSink === 'function'
+      ? (line) => progressSink(line)
+      : (line) => console.error(line);
+  // An invalid-timeout warning must surface even under --quiet: silently
+  // ignoring a misconfigured limit is exactly the failure #1689's review found.
+  const effectiveTimeoutMs = resolveReviewerTimeoutMs({ timeoutMs, config, env, warn: emit });
+  const progressEnabled = resolveReviewerProgressEnabled({ quiet, progress, config });
+  const logProgress = progressEnabled ? emit : () => {};
+
+  // One descriptor per unit of work (role × chunk). Keeping the descriptors
+  // alongside the promises lets the per-role summary index into `settled`
+  // directly instead of recomputing the role-per-task mapping.
+  const taskDescriptors = roles.flatMap((roleName) =>
+    diffsToProcess.map((chunkDiff, chunkIdx) => ({ roleName, chunkDiff, chunkIdx }))
   );
+  /** Per-task outcome, filled in by the progress handlers before allSettled resolves. */
+  const taskOutcomes = taskDescriptors.map(() => ({ durationMs: null, timedOut: false }));
+
+  const chunkSuffix = (chunkIdx) =>
+    chunked ? ` [chunk ${chunkIdx + 1}/${diffsToProcess.length}]` : '';
+
+  const orchestrationStartedAt = nowMs();
+
+  // Fan out: each role × each diff chunk runs in parallel
+  const tasks = taskDescriptors.map(({ roleName, chunkDiff, chunkIdx }, taskIdx) => {
+    const role = REVIEWER_ROLES[roleName];
+    const roleRules = [role.focusInstructions, projectRules].filter(Boolean).join('\n\n');
+    const taskStartedAt = nowMs();
+    logProgress(`Reviewer ${roleName}: start${chunkSuffix(chunkIdx)}`);
+    const run = generateReviewImpl({
+      ...generateArgs,
+      diff: chunkDiff,
+      projectRules: roleRules,
+    }).then((result) => ({
+      ...result,
+      reviewerRole: roleName,
+      chunkIdx: chunked ? chunkIdx : null,
+      chunkLabel: chunked ? (chunkDiff._chunkLabel ?? `chunk-${chunkIdx}`) : null,
+    }));
+    return withReviewerTimeout(
+      run,
+      effectiveTimeoutMs,
+      () => new ReviewerTimeoutError(roleName, effectiveTimeoutMs)
+    ).then(
+      (value) => {
+        const durationMs = Math.round(nowMs() - taskStartedAt);
+        taskOutcomes[taskIdx].durationMs = durationMs;
+        logProgress(
+          `Reviewer ${roleName}: done in ${formatElapsed(durationMs)} (${value.findings?.length ?? 0} findings)${chunkSuffix(chunkIdx)}`
+        );
+        return value;
+      },
+      (err) => {
+        const durationMs = Math.round(nowMs() - taskStartedAt);
+        taskOutcomes[taskIdx].durationMs = durationMs;
+        taskOutcomes[taskIdx].timedOut = err?.timedOut === true;
+        logProgress(
+          err?.timedOut === true
+            ? `Reviewer ${roleName}: timeout after ${formatElapsed(durationMs)} (other chunks/roles continue)${chunkSuffix(chunkIdx)}`
+            : `Reviewer ${roleName}: failed after ${formatElapsed(durationMs)} (${err?.message ?? 'unknown error'})${chunkSuffix(chunkIdx)}`
+        );
+        throw err;
+      }
+    );
+  });
 
   // Run each role in parallel; partial failure is tolerated
   const settled = await Promise.allSettled(tasks);
+  const orchestrationDurationMs = Math.round(nowMs() - orchestrationStartedAt);
 
   const succeeded = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
   const failed = settled.filter((r) => r.status === 'rejected');
@@ -516,10 +739,15 @@ export async function runReviewerOrchestration({
 
   // Summarise per-role results (aggregate across chunks)
   const reviewerResults = roles.map((name) => {
-    const roleSettled = settled.filter(
-      (_, i) => tasks[i] && roles.flatMap((r) => diffsToProcess.map(() => r))[i] === name
-    );
+    const roleIndices = taskDescriptors
+      .map((d, i) => (d.roleName === name ? i : -1))
+      .filter((i) => i >= 0);
+    const roleSettled = roleIndices.map((i) => settled[i]);
     const roleSucceeded = roleSettled.filter((r) => r.status === 'fulfilled');
+    const roleOutcomes = roleIndices.map((i) => taskOutcomes[i]);
+    const roleDurations = roleOutcomes
+      .map((o) => o.durationMs)
+      .filter((d) => typeof d === 'number');
     return {
       role: name,
       label: REVIEWER_ROLES[name].label,
@@ -528,10 +756,29 @@ export async function runReviewerOrchestration({
       chunksRun: chunked ? diffsToProcess.length : null,
       // #1545 P1: why this role was auto-selected (only present in auto mode).
       selectionReasons: autoSelection ? (autoSelection.reasons[name] ?? []) : null,
+      // #1689: true when at least one unit of work for this role hit the
+      // per-role timeout. With chunking the role can still be 'fulfilled' —
+      // the surviving chunks' findings are kept (fail-soft).
+      timedOut: roleOutcomes.some((o) => o.timedOut),
+      durationMs: roleDurations.length ? Math.max(...roleDurations) : null,
       error:
         roleSucceeded.length === 0 ? String(roleSettled[0]?.reason?.message ?? 'unknown') : null,
     };
   });
+
+  // #1689 W4: counted in ROLES (not role×chunk tasks) so this agrees with the
+  // "N/M roles succeeded" figure. A role whose surviving chunks produced
+  // findings stays `fulfilled` yet still appears here, so the timed-out roles
+  // are listed by name rather than folded into the failure count — "0 failed
+  // (1 timed out)" read as a contradiction.
+  const timedOutRoles = reviewerResults.filter((r) => r.timedOut).map((r) => r.role);
+  const failedRoleCount = reviewerResults.filter((r) => r.status === 'rejected').length;
+  const succeededRoleCount = reviewerResults.length - failedRoleCount;
+  logProgress(
+    `Reviewers: ${succeededRoleCount}/${reviewerResults.length} roles succeeded, ${failedRoleCount} failed, ` +
+      `${formatElapsed(orchestrationDurationMs)} total` +
+      (timedOutRoles.length > 0 ? ` (timed out: ${timedOutRoles.join(', ')})` : '')
+  );
 
   const teamLeadReport = synthesizeTeamLeadReport({
     findings: allFindings,
@@ -558,6 +805,14 @@ export async function runReviewerOrchestration({
       succeededReviewers: succeeded.length,
       failedReviewers: failed.length,
       deduplicatedCount: rawFindings.length - allFindings.length,
+      // #1689: the timeout is also recorded in the machine-readable result, not
+      // only on stderr, so a CI consumer can tell "no findings" apart from
+      // "the role never returned". `timeoutMs` is null when disabled (default).
+      // Reachable from the CLI as `reviewDebug` in the run record and as the
+      // top-level `timedOutRoles` field of the JSON output (src/cli/render.mjs).
+      timeoutMs: effectiveTimeoutMs,
+      timedOutRoles,
+      durationMs: orchestrationDurationMs,
     },
   };
 }

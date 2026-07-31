@@ -8,10 +8,38 @@ export const modelConfigSchema = z.object({
   maxTokens: z.number().int().positive().optional(),
 });
 
+// --- #1689: parallel reviewer-role orchestration knobs ---
+//
+// Companion to src/lib/reviewer-orchestrator.mjs. Nested under `review` (rather
+// than a new top-level section) so the loader's known-key list keeps accepting
+// it without an "Unknown config keys ignored" warning.
+//
+// Named `orchestrator`, NOT `reviewers`: the CLI already exposes a `--reviewers
+// <list>` flag, so a user writing `review: { reviewers: [bug-hunter] }` in
+// `.river-review.json` is entirely plausible. An object schema on that key would
+// reject the array and fail the whole run on config load; under a different name
+// the stray key is simply stripped as an unknown key, exactly as before #1689.
+//
+// `timeoutMs` is the per-role wall-clock budget, capped at
+// REVIEWER_TIMEOUT_MAX_MS (1 h) — beyond ~2^31 ms setTimeout clamps to 1 ms and
+// would fail every role. Omitted = no timeout (the default; the orchestrator
+// waits for every role, as before #1689). The env var `RIVER_REVIEWER_TIMEOUT`
+// overrides it. `progress` (default true) toggles the per-role stderr progress
+// lines; the CLI `--quiet` flag always wins over it.
+//
+// Not `.strict()`: every other section here (model / review / context / …) uses
+// the zod default of stripping unknown keys, and a strict sub-schema would make
+// a future key a hard load error on older versions.
+export const reviewerOrchestratorConfigSchema = z.object({
+  timeoutMs: z.number().int().positive().max(3_600_000).optional(),
+  progress: z.boolean().optional(),
+});
+
 export const reviewConfigSchema = z.object({
   language: z.enum(['ja', 'en']).optional(),
   severity: z.enum(['strict', 'normal', 'relaxed']).optional(),
   additionalInstructions: z.array(z.string().min(1)).optional(),
+  orchestrator: reviewerOrchestratorConfigSchema.optional(),
   // Extra spec/ADR directories (relative to repo root) scanned when linking
   // changed files to related design docs. Merged with the built-in defaults.
   specDirs: z.array(z.string().min(1)).optional(),
