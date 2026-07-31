@@ -68256,6 +68256,30 @@ const MAX_RAW_LLM_OUTPUT_PREVIEW_LENGTH = 1500;
 const MAX_DIFF_PREVIEW_LINES = 200;
 const COMMENT_MARKER = '<!-- river-review -->';
 
+/**
+ * #1713: severity vocabulary for the human-facing markdown digest.
+ *
+ * The label set and their ordering are NOT redefined here — they are derived
+ * from `SEVERITY_RANK` (the severity SSoT in finding-factory), so this module
+ * cannot drift into a second ordering. Only the emoji are local.
+ *
+ * The same emoji mapping also exists in
+ * `runners/github-action/post-inline-comments.cjs`, which is a standalone
+ * `actions/github-script` runner: it is CommonJS, is not bundled by
+ * `npm run build:action`, and cannot import ESM from `src/`. Sharing one
+ * constant across that boundary is a separate change (see #1713 follow-ups).
+ */
+const SEVERITY_EMOJI = { critical: '🔴', major: '🟠', minor: '🟡', info: 'ℹ️' };
+const SEVERITY_ORDER = Object.keys(finding_factory/* SEVERITY_RANK */.f3).sort(
+  (a, b) => finding_factory/* SEVERITY_RANK */.f3[b] - finding_factory/* SEVERITY_RANK */.f3[a]
+);
+/**
+ * Progressive-disclosure boundary: `major` and above (= P1 / P2 via
+ * `severityToPriority`) stay expanded; `minor` / `info` are folded into a
+ * `<details>` block. Nothing is dropped or truncated — folding is not hiding.
+ */
+const EXPAND_FROM_RANK = finding_factory/* SEVERITY_RANK */.f3.major;
+
 function printHintLines(lines = []) {
   const hints = lines.filter(Boolean);
   if (!hints.length) return;
@@ -68373,20 +68397,168 @@ function formatCommentsMarkdown(comments) {
     .join('\n\n');
 }
 
-function formatPlanMarkdown(plan) {
-  const summary = formatPlan(plan);
+/**
+ * #1713: neutralize closing tags that would let free-form finding text escape
+ * the `<details>` block it is folded into. The text is preserved verbatim as
+ * escaped literals — nothing is deleted or truncated.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function neutralizeDetailsClosers(text) {
+  return String(text).replace(/<\/(details|summary)\b/gi, '&lt;/$1');
+}
+
+/**
+ * #1713: wrap a body in a collapsible `<details>` block.
+ *
+ * The blank line after `</summary>` is load-bearing: GitHub only renders the
+ * markdown inside a details block when it is separated from the summary by an
+ * empty line. `summary` must always carry a count so the reader can decide
+ * whether to expand without expanding.
+ *
+ * @param {string} summary summary label, including a count
+ * @param {string} body full markdown body (never truncated)
+ * @returns {string}
+ */
+function wrapInDetails(summary, body) {
+  return `<details>\n<summary>${summary}</summary>\n\n${neutralizeDetailsClosers(body)}\n\n</details>\n`;
+}
+
+/**
+ * #1713: `**🔴 1 / 🟠 3**`-style breakdown, highest severity first. Severities
+ * with a zero count are omitted so a clean run does not print four zeroes.
+ *
+ * @param {Record<string, number>} countsBySeverity
+ * @returns {string}
+ */
+function formatSeverityBreakdown(countsBySeverity) {
+  return SEVERITY_ORDER.filter((severity) => (countsBySeverity[severity] ?? 0) > 0)
+    .map((severity) => `${SEVERITY_EMOJI[severity]} ${countsBySeverity[severity]}`)
+    .join(' / ');
+}
+
+function countFindingsBySeverity(findings) {
+  const counts = {};
+  for (const finding of findings ?? []) {
+    const severity = finding?.severity;
+    counts[severity] = (counts[severity] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/**
+ * #1713: comments carry no severity of their own — the structured findings do.
+ * `review-engine.mjs` builds `findings` from `comments` 1:1 and then re-sorts
+ * the findings, so the two lists cannot be zipped by index; the join has to be
+ * by content. Suppression filters both lists together (local-runner.mjs), so a
+ * rendered comment normally has a matching finding.
+ */
+function commentSeverityKey({ ruleId, file, line, message }) {
+  return [ruleId || 'unknown', file ?? '', line ?? '', message ?? ''].join('\u0000');
+}
+
+function buildCommentSeverityIndex(findings) {
+  const index = new Map();
+  for (const finding of findings ?? []) {
+    const key = commentSeverityKey({
+      ruleId: finding.ruleId,
+      file: finding.file,
+      line: finding.lineStart,
+      message: finding.message,
+    });
+    if (!index.has(key)) index.set(key, finding.severity);
+  }
+  return index;
+}
+
+function severityOfComment(comment, index) {
+  const key = commentSeverityKey({
+    ruleId: comment.skillId,
+    file: comment.file,
+    line: comment.line ?? null,
+    message: comment.message,
+  });
+  // Fail-safe: an unmatched comment is treated as `major` so it stays expanded
+  // — the same direction as normalizeSeverity's unknown → major.
+  return index.get(key) ?? 'major';
+}
+
+/**
+ * #1713 Slice 1: split findings at the `major` boundary. `critical` / `major`
+ * render expanded under 要対応; `minor` / `info` are folded into a `<details>`
+ * block that keeps their full text.
+ *
+ * @param {object} result runLocalReview result
+ * @returns {{ sections: string[], expandedCount: number, collapsedCount: number }}
+ */
+function formatFindingsSectionsMarkdown(result) {
+  const index = buildCommentSeverityIndex(result.findings);
+  const expanded = [];
+  const collapsed = [];
+  const expandedCounts = {};
+  const collapsedCounts = {};
+
+  for (const comment of result.comments ?? []) {
+    const severity = severityOfComment(comment, index);
+    if ((finding_factory/* SEVERITY_RANK */.f3[severity] ?? EXPAND_FROM_RANK) >= EXPAND_FROM_RANK) {
+      expanded.push(comment);
+      expandedCounts[severity] = (expandedCounts[severity] ?? 0) + 1;
+    } else {
+      collapsed.push(comment);
+      collapsedCounts[severity] = (collapsedCounts[severity] ?? 0) + 1;
+    }
+  }
+
+  const sections = [];
+  if (expanded.length) {
+    sections.push(
+      `### 要対応 (${expanded.length} 件: ${formatSeverityBreakdown(expandedCounts)})\n\n${formatCommentsMarkdown(expanded)}\n`
+    );
+  }
+  if (collapsed.length) {
+    sections.push(
+      wrapInDetails(
+        `軽微・参考の指摘 (${collapsed.length} 件: ${formatSeverityBreakdown(collapsedCounts)})`,
+        formatCommentsMarkdown(collapsed)
+      )
+    );
+  }
+  return { sections, expandedCount: expanded.length, collapsedCount: collapsed.length };
+}
+
+/**
+ * #1713 Slice 1: the selected / skipped skill listing, folded into the
+ * execution `<details>` block instead of being printed at full height.
+ */
+function formatPlanBodyMarkdown(summary) {
   const selected = summary.selected.length
     ? summary.selected.map((id) => `- \`${id}\``).join('\n')
     : '- _none_';
-
-  if (!summary.skipped.length) {
-    return `### 選択されたスキル (${summary.selected.length})\n${selected}\n`;
+  const lines = [`**選択されたスキル (${summary.selected.length})**`, '', selected];
+  if (summary.skipped.length) {
+    lines.push(
+      '',
+      `**スキップされたスキル (${summary.skipped.length})**`,
+      '',
+      summary.skipped.map((item) => `- \`${item.id}\`: ${item.reasons.join('; ')}`).join('\n')
+    );
   }
+  return lines.join('\n');
+}
 
-  const skippedLines = summary.skipped
-    .map((item) => `- \`${item.id}\`: ${item.reasons.join('; ')}`)
-    .join('\n');
-  return `### 選択されたスキル (${summary.selected.length})\n${selected}\n\n<details>\n<summary>スキップされたスキル (${summary.skipped.length})</summary>\n\n${skippedLines}\n\n</details>\n`;
+/**
+ * #1713 Slice 1: LLM / planner / impact-tag / skill-selection execution log,
+ * collapsed behind one summary line. This is the review *log*, not the review
+ * *result*, so it must not sit above the verdict.
+ */
+function formatExecutionDetailsMarkdown(result) {
+  const summary = formatPlan(result.plan);
+  const body = `${formatDebugSummaryMarkdown(result)}\n\n${formatPlanBodyMarkdown(summary)}`;
+  return wrapInDetails(
+    `レビュー実行の内訳（選択 ${summary.selected.length} / スキップ ${summary.skipped.length}）`,
+    body
+  );
 }
 
 function formatDebugSummaryMarkdown(result) {
@@ -68479,39 +68651,175 @@ function printMarkdownReport(result, phase) {
     );
     return;
   }
+  // #1713 Slice 1: the JSON artifact is built exactly once. It carries the
+  // canonical decision AND emits the schema-validation warning on stderr, so a
+  // second call would both recompute and duplicate that warning.
+  const artifact = formatJsonOutput(result, phase);
+  const score = (0,engine/* scoreReview */.lS)(artifact.issues ?? []);
+  // formatJsonOutput already resolved the canonical verdict; reuse it so the
+  // Markdown headline and score section cannot drift from JSON/YAML/HTML
+  // (#1170 F3).
+  score.verdict = (0,engine/* resolveVerdict */.Cq)(artifact.decision, score.verdict);
+
+  const { sections: findingSections, expandedCount } = formatFindingsSectionsMarkdown(result);
+
   const header = `${COMMENT_MARKER}
 ## River Review
 
-- フェーズ: \`${phase}\`
-${formatDebugSummaryMarkdown(result)}
+${formatHeadlineMarkdown(result, phase, score)}
 `;
-  const planSection = formatPlanMarkdown(result.plan);
+  const noBlockerNote = formatNoBlockerNoteMarkdown(result.findings ?? [], expandedCount);
   const riskSection = formatRiskSummaryMarkdown(result.plan);
+  const humanReviewSection = formatHumanReviewFilesMarkdown(result);
+  const teamLeadSection = formatTeamLeadReportMarkdown(result.teamLeadReport);
   const prioritySummary = formatPrioritySummaryMarkdown(result);
-  const scoreSection = formatScoreSectionMarkdown(result, phase);
-  const findings = `### 指摘\n${formatCommentsMarkdown(result.comments)}\n`;
-  const suppressedSummary = formatSuppressedSummaryMarkdown(result.classified);
+  const scoreSection = formatScoreSectionMarkdown(score);
+  const executionSection = formatExecutionDetailsMarkdown(result);
   console.log(
-    [header, planSection, riskSection, prioritySummary, scoreSection, findings, suppressedSummary]
+    [
+      header,
+      noBlockerNote,
+      riskSection,
+      humanReviewSection,
+      teamLeadSection,
+      ...findingSections,
+      prioritySummary,
+      scoreSection,
+      executionSection,
+    ]
       .filter(Boolean)
       .join('\n')
   );
 }
 
-function formatSuppressedSummaryMarkdown(classified) {
-  if (!classified?.suppressed?.length) return null;
-  const counts = {};
-  for (const f of classified.suppressed) {
-    counts[f.suppressReason] = (counts[f.suppressReason] ?? 0) + 1;
+/**
+ * #1713 Slice 1: the one-line human-facing headline pinned to the top of the
+ * report — verdict, severity breakdown, score, phase. Every value it prints is
+ * already computed elsewhere (deriveRunGate via formatJsonOutput, scoreReview,
+ * the finding set); this only lays them out. It never changes a verdict.
+ *
+ * @param {object} result runLocalReview result
+ * @param {string} phase
+ * @param {{ overall: number, verdict: string }} score resolved score
+ * @returns {string}
+ */
+function formatHeadlineMarkdown(result, phase, score) {
+  const findings = result.findings ?? [];
+  const suppressed = result.classified?.suppressed?.length ?? 0;
+
+  let findingsPart;
+  if (findings.length === 0) {
+    findingsPart = suppressed > 0 ? `指摘 0 件（抑制 ${suppressed} 件）` : '指摘 0 件';
+  } else {
+    const breakdown = formatSeverityBreakdown(countFindingsBySeverity(findings));
+    const suppressedNote = suppressed > 0 ? `、抑制 ${suppressed} 件` : '';
+    findingsPart = `${breakdown}（計 ${findings.length} 件${suppressedNote}）`;
   }
-  const top = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([r, n]) => `${r}(${n})`)
-    .join(', ');
-  return `> _${classified.suppressed.length} 件の指摘を抑制しました (主な理由: ${top})_\n`;
+
+  return [
+    `**判定: ${score.verdict}**`,
+    findingsPart,
+    `スコア ${score.overall}/100`,
+    `フェーズ \`${phase}\``,
+  ].join(' · ');
 }
 
+/**
+ * #1713 Slice 1: the "nothing blocks the merge" line. Returned only when the
+ * 要対応 section would otherwise be absent, so the reader never has to infer
+ * "no section" from a missing heading.
+ */
+function formatNoBlockerNoteMarkdown(findings, expandedCount) {
+  if (findings.length === 0) return '✅ マージ前に対応が必要な指摘はありません。\n';
+  if (expandedCount === 0) {
+    return '✅ マージ前必須（P1 / P2）の指摘はありません。軽微・参考の指摘のみです。\n';
+  }
+  return null;
+}
+
+/**
+ * #1713 Slice 1: files the risk map flagged as human-review-required. Split out
+ * of 優先度サマリー so it stays visible when that section is folded — it is a
+ * gate-relevant signal, not part of the count breakdown.
+ */
+function formatHumanReviewFilesMarkdown(result) {
+  const humanReviewFiles = result.plan?.riskMap?.require_human_review ?? [];
+  if (!humanReviewFiles.length) return null;
+  return [
+    '> **Human review required**',
+    ...humanReviewFiles.map((f) => `> - ${sanitizeForMarkdown(f)}`),
+    '',
+  ].join('\n');
+}
+
+/**
+ * #1713 Slice 2: render the deterministic Tech Lead digest in markdown.
+ *
+ * Ported from `formatSummaryFromJson` in
+ * `runners/github-action/post-inline-comments.cjs`, whose rendering only ever
+ * reached the inline-comment surface that the `inline_comments` input gates off
+ * by default. `teamLeadReport` is null on a single-reviewer run (`--reviewers`
+ * absent), in which case every section here is omitted and the output is
+ * byte-identical to the Slice 1 output.
+ *
+ * Overlap rule with 要対応: `top3Findings` is a POINTER list — one line per
+ * finding (severity emoji + consensus badge + title + location). The full text
+ * (Finding / Evidence / Impact / Fix) is rendered exactly once, in 要対応 or in
+ * the collapsed 軽微・参考 block, and is never repeated here.
+ *
+ * Display-only: it must not override severity, `decision`, or `gate`.
+ */
+function formatTeamLeadReportMarkdown(teamLeadReport) {
+  if (!teamLeadReport) return null;
+  const lines = [];
+
+  const top3 = teamLeadReport.top3Findings ?? [];
+  if (top3.length > 0) {
+    lines.push(`### 優先確認の指摘 (${top3.length} 件)`, '');
+    for (const finding of top3) {
+      const emoji = SEVERITY_EMOJI[finding.severity] ?? '🔵';
+      const badge = formatConsensusBadge(finding.consensusLevel);
+      const location = finding.file
+        ? ` (\`${finding.file}${finding.lineStart ? `:${finding.lineStart}` : ''}\`)`
+        : '';
+      lines.push(`- ${emoji}${badge} **${sanitizeForMarkdown(finding.title)}**${location}`);
+    }
+    lines.push('');
+  }
+
+  const consensus = teamLeadReport.consensusSummary;
+  if (consensus && consensus.total > 0) {
+    lines.push(
+      `_合意度: ★★★ 合意 ${consensus.consensus} / ★★ 複数 ${consensus.multi} / ★ 単独 ${consensus.single}（計 ${consensus.total} 件）_`,
+      ''
+    );
+  }
+
+  const blindSpots = teamLeadReport.blindSpots ?? [];
+  if (blindSpots.length > 0) {
+    const labels = blindSpots.map((b) => sanitizeForMarkdown(b.label)).join(', ');
+    lines.push(`_未実行のレビュー観点 (${blindSpots.length}): ${labels}_`, '');
+  }
+
+  return lines.length ? lines.join('\n') : null;
+}
+
+function formatConsensusBadge(consensusLevel) {
+  if (consensusLevel === 'consensus') return ' ★★★';
+  if (consensusLevel === 'multi') return ' ★★';
+  return '';
+}
+
+/**
+ * #1713 Slice 1: the P1〜P4 count table, folded into a `<details>` block whose
+ * summary already carries every count. The headline shows the same numbers in
+ * severity vocabulary; this keeps the priority vocabulary available without
+ * spending four visible lines on it.
+ *
+ * The suppression count is reported ONCE — in the headline. Its per-reason
+ * breakdown stays here, which is what the removed standalone blockquote (the
+ * duplicate at the bottom of the report) used to carry.
+ */
 function formatPrioritySummaryMarkdown(result) {
   const findings = result.findings ?? [];
   const counts = { P1: 0, P2: 0, P3: 0, P4: 0 };
@@ -68520,7 +68828,7 @@ function formatPrioritySummaryMarkdown(result) {
     counts[p]++;
   }
 
-  const lines = ['### 優先度サマリー\n'];
+  const lines = [];
 
   if (counts.P1 > 0) {
     lines.push(`> **P1 (マージ前必須修正): ${counts.P1} 件**\n`);
@@ -68530,8 +68838,7 @@ function formatPrioritySummaryMarkdown(result) {
     `- P1 (must fix before merge): ${counts.P1} 件`,
     `- P2 (should fix or waive): ${counts.P2} 件`,
     `- P3 (recommended improvement): ${counts.P3} 件`,
-    `- P4 (informational): ${counts.P4} 件`,
-    ''
+    `- P4 (informational): ${counts.P4} 件`
   );
 
   const suppressed = result.classified?.suppressed ?? [];
@@ -68545,27 +68852,28 @@ function formatPrioritySummaryMarkdown(result) {
       .slice(0, 3)
       .map(([r, n]) => `${r}(${n})`)
       .join(', ');
-    lines.push(`- 抑制済み: ${suppressed.length} 件 (主な理由: ${topReasons})`, '');
+    lines.push(`- 抑制済み: ${suppressed.length} 件 (主な理由: ${topReasons})`);
   }
 
-  const humanReviewFiles = result.plan?.riskMap?.require_human_review ?? [];
-  if (humanReviewFiles.length > 0) {
-    lines.push('> **Human review required**');
-    for (const f of humanReviewFiles) lines.push(`> - ${sanitizeForMarkdown(f)}`);
-    lines.push('');
-  }
-
-  return lines.join('\n');
+  return wrapInDetails(
+    `優先度サマリー (P1 ${counts.P1} / P2 ${counts.P2} / P3 ${counts.P3} / P4 ${counts.P4})`,
+    lines.join('\n')
+  );
 }
 
-function formatScoreSectionMarkdown(result, phase) {
-  const artifact = formatJsonOutput(result, phase);
-  const score = (0,engine/* scoreReview */.lS)(artifact.issues ?? []);
-  // formatJsonOutput already resolved the canonical verdict; reuse it so the
-  // Markdown score section cannot drift from JSON/YAML/HTML (#1170 F3).
-  score.verdict = (0,engine/* resolveVerdict */.Cq)(artifact.decision, score.verdict);
-  const lines = ['### スコア (参考値)'];
-  lines.push('');
+/**
+ * #1713 Slice 1: the per-axis score breakdown, folded into a `<details>` block.
+ * The overall score and the verdict are already in the headline; the five axis
+ * lines and the "reference value" caveat are the part a reader opens on demand.
+ *
+ * Takes the already-resolved score (printMarkdownReport builds the JSON
+ * artifact once) instead of recomputing it.
+ *
+ * @param {{ overall: number, verdict: string, axes: Record<string, number> }} score
+ * @returns {string}
+ */
+function formatScoreSectionMarkdown(score) {
+  const lines = [];
   lines.push(`結果(スコア): **${score.overall}/100**`);
   lines.push(`判定: **${score.verdict}**`);
   lines.push('');
@@ -68577,8 +68885,7 @@ function formatScoreSectionMarkdown(result, phase) {
   lines.push(
     '> スコアは severity と axis から決定論的に算出された **参考値** (`derived: true`)。HITL レビューと併用してください。'
   );
-  lines.push('');
-  return lines.join('\n');
+  return wrapInDetails(`スコア内訳 (${score.overall}/100)`, lines.join('\n'));
 }
 
 /**

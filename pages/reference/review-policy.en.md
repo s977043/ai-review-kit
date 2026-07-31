@@ -67,6 +67,18 @@ To strengthen the basis for judgment, add the following when useful. All are opt
 - **Unverified / Residual Risk**: Assumptions the review could not verify, behavior it could not observe, and concerns that remain — stated for the report as a whole, separately from findings, so the limits of the judgment stay traceable.
   - **Unknown Coverage (residual Unknowns / evidence_missing / resolution)**: A sub-structure of the residual-risk section that lays out the Unknowns remaining at review time in a structured form. Each Unknown carries category, severity, blocking, evidence_missing (the evidence not yet gathered), and resolution (how to close it). It separates risks that were checked and accepted from risks left unverified, and it associates resolved Unknowns with evidence. The mapping to a verdict follows the table in [loop-convergence-contract.md](./loop-convergence-contract.md) and introduces no new vocabulary.
 
+### 2.5 Ordering and Progressive Disclosure
+
+Order the output so a reader can decide "is there anything to fix before merging?" from the very first line. Put the verdict, the per-severity counts, and the score at the top; push the review execution log below them.
+
+- **Summary pinned to the top**: the verdict, per-severity counts, score, and phase belong on the first line of the body.
+- **Severity-driven disclosure**: Critical and Major stay expanded; Minor and Info are collapsed.
+- **Collapsing is not omitting**: a collapsed section keeps the full text of every finding — no summarizing, deleting, or truncating.
+- **Counts in the heading**: every collapsed section states its count, so the reader can judge the volume without expanding it.
+- **Execution log last**: selected skills, skip reasons, and the score breakdown are execution records; collapse them and place them after the result.
+
+The severity labels stay Critical / Major / Minor / Info — progressive disclosure adds no new vocabulary. A presentation change must never rewrite a finding's severity or the auto-approval decision.
+
 ## 3. Prohibited Actions
 
 AI reviewers must avoid the following:
