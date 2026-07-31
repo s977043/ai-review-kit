@@ -19,15 +19,40 @@ gh api user --jq .login | grep -q s977043 || gh auth switch -u s977043
 PreToolUse hook (`gh-account-guard.sh`) が defense-in-depth で効くが、セッション開始時の確認は省略しない。
 `s977043` は本リポジトリのメンテナアカウント（CLAUDE.md「Verify gh active account before write ops」ガードと同一の値で、そちらが SSoT）。フォーク運用時は自分のアカウントに読み替える。
 
-### Step 2. PR 状態の確認
+### Step 2. PR 状態の確認と BEHIND 判定
 
 ```bash
 gh pr view $ARGUMENTS --json state,mergeStateStatus,headRefOid
+releaseBranch=$(gh pr view $ARGUMENTS --json headRefName --jq .headRefName)
+gh api "repos/:owner/:repo/compare/main...$releaseBranch" --jq '{status, ahead_by, behind_by}'
 ```
 
-`mergeStateStatus: BLOCKED` は release-please PR の通常挙動。`CLEAN` なら Step 3〜4 をスキップして Step 5 へ進む。
+`mergeStateStatus: BLOCKED` は release-please PR の通常挙動。`CLEAN` なら Step 3〜5 をスキップして Step 6 へ進む。
 
-### Step 3. release-please-kick の実行
+BLOCKED の場合は `behind_by` の値で次に打つ手が変わる。`mergeable_state` は単一の値しか返さず BEHIND と BLOCKED の複合状態を見分けられないため、compare の `behind_by` で判定する。
+
+| `behind_by` | 状態             | 次に進む Step           | 空コミット kick       |
+| ----------- | ---------------- | ----------------------- | --------------------- |
+| `> 0`       | BEHIND + BLOCKED | Step 3（update-branch） | CI が実発火すれば不要 |
+| `0`         | 純 BLOCKED       | Step 4（kick）          | 必要                  |
+
+分岐の根拠と実証ケースは `docs/runbook/release-please-kick.md`（SSoT）を参照。
+
+### Step 3. BEHIND の場合: update-branch を先に実行
+
+`behind_by > 0` のときだけ実行する。
+
+```bash
+gh api "repos/:owner/:repo/pulls/$ARGUMENTS/update-branch" -X PUT
+```
+
+update-branch が作るマージコミットは自アカウントのトークンで push されるため、bot トークンの no-recursion 制約を受けない。実ユーザー push として全ワークフローが発火するので、Step 4 の空コミット kick は飛ばして Step 5 へ進む。実発火すれば空コミット1本と CI 1周を節約できる。
+
+Step 5 で `action_required` のまま止まっていた場合だけ Step 4 に戻る。`behind_by == 0` の状態で実行すると 422 が返るため、そのときは Step 4 が正。
+
+### Step 4. release-please-kick の実行
+
+`behind_by == 0`（純 BLOCKED）のとき、または Step 3 の update-branch 後も CI が発火しなかったときに実行する。
 
 ```bash
 bash scripts/release-please-kick.sh
@@ -35,7 +60,7 @@ bash scripts/release-please-kick.sh
 
 空コミットで新しい head を作り、`pull_request: synchronize` を実ユーザー相当のトークンで発火させる。ブランチ名を省略すると open な release PR を自動検出する。詳細・`RELEASE_KICK_PAT` 未設定時のエラー・`workflow_dispatch` 経由の代替は runbook 参照。
 
-### Step 4. 新 head の CI 実発火確認
+### Step 5. 新 head の CI 実発火確認
 
 ```bash
 gh run list --limit 5 --json databaseId,status,conclusion,headBranch,workflowName
@@ -43,7 +68,7 @@ gh run list --limit 5 --json databaseId,status,conclusion,headBranch,workflowNam
 
 新 head の run が `action_required` のまま止まっていないか（＝実発火しているか）を確認する。`action_required` のままなら `RELEASE_KICK_PAT` 未設定などが疑われる。runbook のトラブルシュートへ。
 
-### Step 5. CI green までポーリング
+### Step 6. CI green までポーリング
 
 Monitor ツールは使わず、1つの Bash 呼び出し内で sleep しながらポーリングする。**ポーリング用の変数名に `status` を使わない**（zsh の読み取り専用変数と衝突し代入が失敗する）。
 
@@ -60,27 +85,15 @@ gh pr checks $ARGUMENTS --json name,bucket --jq '.[] | select(.bucket != "skippi
 - 8 回（約 2 分弱）で `pending` が解消しない場合はループを打ち切り、実出力を提示したうえで待機を継続するか判断を仰ぐ
 - `fail` バケットが出た場合は直ちに報告し、原因調査へ切り替える（本コマンドはマージ前提の手順であり、CI 失敗の修正は別タスク）
 
-### Step 6. BEHIND の場合
-
-```bash
-gh api "repos/:owner/:repo/pulls/$ARGUMENTS" --jq '{mergeable_state}'
-```
-
-`behind` なら:
-
-```bash
-gh api "repos/:owner/:repo/pulls/$ARGUMENTS/update-branch" -X PUT
-```
-
-update-branch で CI が再実行されるため Step 5 のポーリングをやり直す。
-
 ### Step 7. マージ
 
-`mergeStateStatus: CLEAN` かつ Step 5 の CI が green になったら:
+`mergeStateStatus: CLEAN` かつ Step 6 の CI が green になったら:
 
 ```bash
 gh pr merge $ARGUMENTS --squash --delete-branch
 ```
+
+ポーリング中に main が進んで再び BEHIND になった場合は、Step 3 の update-branch を実行してから Step 6 のポーリングをやり直す。
 
 ### Step 8. 検証
 
@@ -97,5 +110,5 @@ gh pr merge $ARGUMENTS --squash --delete-branch
 
 ## 参照
 
-- `docs/runbook/release-please-kick.md`（SSoT: BLOCKED の原因、`RELEASE_KICK_PAT` セットアップ、`workflow_dispatch` 代替手順）
+- `docs/runbook/release-please-kick.md`（SSoT: BLOCKED の原因、BEHIND と純 BLOCKED の判定、`RELEASE_KICK_PAT` セットアップ、`workflow_dispatch` 代替手順）
 - CLAUDE.md「`N of N required checks are expected` = bot/GITHUB_TOKEN push」ガード
