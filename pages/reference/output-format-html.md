@@ -33,19 +33,21 @@ Unsupported --output for evolve aggregate: html. Use: text | json
 River Review は npm パッケージを公開していません。CLI はリポジトリ内で `npm run river -- ...` として実行します。
 
 ```bash
-npm run river -- run . --output html
+npm run --silent river -- run . --output html > review-report.html
 ```
 
-標準出力には、`npm run` のバナー行と `river run` 実行ヘッダー（`River Review (local)` から始まる数行）が HTML 本文より前に出ます。`markdown` / `json` / `yaml` では実行ヘッダーを標準エラーへ回しますが、`html` は標準出力のままです。純粋な HTML ファイルが必要な場合は、`<!DOCTYPE html>` 以降だけを取り出してください。
+`river run` 実行ヘッダー（`River Review (local)` から始まる数行）は `text` 以外のすべての形式で標準エラーへ回ります（#1695）。`html` の標準出力は `<!DOCTYPE html>` で始まり `</html>` で終わるため、リダイレクトすればそのまま妥当な HTML ファイルになります。
+
+`--silent` は `npm run` 自身のバナー行（`> river-review@x.y.z river`）を抑止するために必要です。バナーは npm が標準出力へ書くもので、River Review 側では制御できません。CLI を直接起動する場合は不要です。
 
 ```bash
-npm run river -- run . --output html | sed -n '/<!DOCTYPE html>/,$p' > review-report.html
+./src/cli.mjs run . --output html > review-report.html
 ```
 
-Loop Dashboard は保存済みの実行記録（`.river/runs/`）を 2 件以上指定して生成します。run ID を 3 件以上渡すと振動検知が働き、Oscillation timeline に推移が描画されます（2 件の場合は空になります）。
+Loop Dashboard は保存済みの実行記録（`.river/runs/`）を 2 件以上指定して生成します。run ID を 3 件以上渡すと振動検知が働き、Oscillation timeline に推移が描画されます（2 件の場合は空になります）。こちらも標準出力は HTML のみです。
 
 ```bash
-npm run river -- runs diff <run-id-1> <run-id-2> --output html | sed -n '/<!DOCTYPE html>/,$p' > loop-dashboard.html
+npm run --silent river -- runs diff <run-id-1> <run-id-2> --output html > loop-dashboard.html
 ```
 
 ## GitHub Action
