@@ -90,7 +90,7 @@
     {
       "id": "assumption-resolution-trace",
       "path": "skills/midstream/assumption-resolution-trace",
-      "checksum": "sha256:00fa4fc80aef184a97bbce46836f2a7934986322025071fc9a2b6de111a0de22",
+      "checksum": "sha256:d3813c3191543485dc3f75c53ae21b095c010d3177a26cb62d1fcdb539b8f7b8",
       "files": 3
     },
     {
@@ -564,7 +564,7 @@
     {
       "id": "requirements-acceptance",
       "path": "skills/upstream/requirements-acceptance",
-      "checksum": "sha256:cc21628cffc1a672a059cfe11bc25eb3be341a733daa6611a1173fc216c7e527",
+      "checksum": "sha256:be6e1c281b93e7df2cd5757f4401931ac4e2a3720094204371c7b96ee527129c",
       "files": 1
     },
     {

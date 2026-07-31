@@ -54,8 +54,13 @@ test('generateReview redacts secrets in debug.promptPreview and returned prompt 
     phase: 'midstream',
     dryRun: true,
     includeFallback: false,
-    // Inject a leaked token through `additionalInstructions`. After PR-D
-    // both promptPreview and the returned prompt must mask it.
+    // Two channels on purpose. `additionalInstructions` renders near the end of
+    // the prompt, past the 2000-char promptPreview window, so asserting the
+    // preview through that channel alone silently depended on the instruction
+    // list staying short (it broke when #1666 added two lines). `projectRules`
+    // renders near the top, which pins the preview assertion to the redaction
+    // invariant instead of to a byte offset.
+    projectRules: 'Never commit a token such as ' + ghpat,
     config: {
       review: {
         additionalInstructions: ['Do not leak the token: ' + ghpat],
@@ -67,6 +72,11 @@ test('generateReview redacts secrets in debug.promptPreview and returned prompt 
   assert.equal(/ghp_[A-Za-z0-9]{36,}/.test(result.debug.promptPreview), false);
   assert.match(result.prompt, /<REDACTED:githubToken>/);
   assert.equal(/ghp_[A-Za-z0-9]{36,}/.test(result.prompt), false);
+  // The late channel must be masked too — the preview window would not see it.
+  assert.ok(
+    result.prompt.includes('Do not leak the token: <REDACTED:githubToken>'),
+    'additionalInstructions past the preview window are still redacted'
+  );
 });
 
 // T64 follow-up (gemini security-high): debug.rawLlmOutput must go through the

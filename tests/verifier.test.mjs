@@ -511,3 +511,134 @@ test('verifyFinding: scope never affects the verified verdict', () => {
   assert.equal(result.verified, true);
   assert.equal(result.reasons.length, 0);
 });
+
+// ---------------------------------------------------------------------------
+// #1666 (#1545 Phase 2): traceability refs must not move the verified verdict
+// ---------------------------------------------------------------------------
+
+test('verifyFinding: ArtifactRefs anchors are not read as evidence file references', () => {
+  // Regression guard: RE_EVIDENCE runs greedily to end-of-line, so an artifact
+  // anchor (`plan.md#AC-4` — by design NOT in the diff) tripped
+  // checkEvidenceInDiff and rejected an otherwise-valid finding.
+  const withRefs = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message: `${SCOPE_MESSAGE} CriterionRefs: AC-4, TC-7 ArtifactRefs: plan.md#AC-4, todo.md#TASK-3`,
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(withRefs.verified, true, withRefs.reasons.join('; '));
+  assert.equal(withRefs.checks.evidenceInDiff, true);
+});
+
+test('verifyFinding: refs change no check outcome versus the same message without them', () => {
+  const call = (message) =>
+    verifyFinding({
+      finding: { file: 'src/app.mjs', line: 11, message },
+      diff: SCOPE_DIFF,
+      skill: { metadata: {} },
+      diffFiles: SCOPE_DIFF_FILES,
+    });
+  const without = call(SCOPE_MESSAGE);
+  const withRefs = call(`${SCOPE_MESSAGE} CriterionRefs: AC-4 ArtifactRefs: plan.md#AC-4`);
+  assert.deepEqual(withRefs.checks, without.checks);
+  assert.equal(withRefs.verified, without.verified);
+  assert.deepEqual(withRefs.reasons, without.reasons);
+  assert.equal(withRefs.scope, without.scope);
+});
+
+test('verifyFinding: a refs label cannot launder a hallucinated evidence path (F2)', () => {
+  // Attack A2/A3: the first implementation ran checkEvidenceInDiff on a
+  // ref-STRIPPED message, so moving a fake file reference behind a refs label
+  // deleted it from the text and the check passed. The file-reference check now
+  // reads the raw message and subtracts only anchored artifact citations.
+  const baseline = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message:
+        'Finding: issue Evidence: the secret is in src/fake.mjs line 3 Impact: leak Fix: move it to an environment variable Severity: warning Confidence: high',
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(baseline.verified, false, 'control: a fake path is rejected');
+
+  const hiddenInEvidence = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message:
+        'Finding: issue Evidence: the secret is in ArtifactRefs: src/fake.mjs and it leaks badly Impact: leak Fix: move it to an environment variable Severity: warning Confidence: high',
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(hiddenInEvidence.verified, false, 'A2: a bare path in a refs field stays checkable');
+  assert.equal(hiddenInEvidence.checks.evidenceInDiff, false);
+
+  const movedToTrailingList = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message:
+        'Finding: issue Evidence: the secret leaks here badly CriterionRefs: src/fake.mjs Impact: leak Fix: move it to an environment variable Severity: warning Confidence: high',
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(movedToTrailingList.verified, false, 'A3: same, via a trailing list');
+});
+
+test('verifyFinding: anchored artifact citations are exempt, including unparsed shapes (F2)', () => {
+  const call = (message) =>
+    verifyFinding({
+      finding: { file: 'src/app.mjs', line: 11, message },
+      diff: SCOPE_DIFF,
+      skill: { metadata: {} },
+      diffFiles: SCOPE_DIFF_FILES,
+    });
+  // `plan.md` is not in the diff; the anchor marks it as an artifact citation.
+  assert.equal(call(`${SCOPE_MESSAGE} ArtifactRefs: plan.md#AC-4`).verified, true);
+  // The span is wider than the parsed list, so a space-separated second value
+  // does not drop the finding even though it is not captured as a ref value.
+  assert.equal(
+    call(`${SCOPE_MESSAGE} ArtifactRefs: plan.md#AC-4 todo.md#TASK-3`).verified,
+    true,
+    'an unparsed shape must not be fail-open on content, nor destroy the finding'
+  );
+  // An anchored path OUTSIDE any refs field keeps the pre-#1666 behavior.
+  assert.equal(
+    call(
+      'Finding: issue\nEvidence: see plan.md#AC-4 for the rule\nSeverity: warning\nConfidence: high\nFix: Rethrow the error with context added'
+    ).verified,
+    false,
+    'the exemption is scoped to refs fields — prose citations are unchanged'
+  );
+});
+
+test('verifyFinding: refs cannot pad a too-short Evidence / Fix into passing', () => {
+  // The mirror direction of the same non-interference contract: because the
+  // greedy checks read to end-of-line, appended refs would otherwise satisfy
+  // the minimum-length requirements on their own.
+  const rejected = verifyFinding({
+    finding: {
+      file: 'src/app.mjs',
+      line: 11,
+      message:
+        'Finding: issue\nSeverity: warning\nConfidence: high\nFix: short CriterionRefs: AC-4',
+    },
+    diff: SCOPE_DIFF,
+    skill: { metadata: {} },
+    diffFiles: SCOPE_DIFF_FILES,
+  });
+  assert.equal(rejected.verified, false);
+  assert.ok(rejected.reasons.includes('No evidence provided in finding'));
+  assert.ok(rejected.reasons.includes('Fix/suggestion is missing or too brief'));
+});

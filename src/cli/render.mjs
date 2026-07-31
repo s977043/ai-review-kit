@@ -7,7 +7,7 @@
 // handlers. Behavior, messages, and exit codes are unchanged; only the enclosing
 // module and the relative import depth differ from the original inline code.
 import { readFileSync } from 'node:fs';
-import { severityToPriority } from '../lib/finding-factory.mjs';
+import { RESERVED_FINDING_LABELS, severityToPriority } from '../lib/finding-factory.mjs';
 import { resolveVerdict, scoreReview } from '../lib/scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from '../lib/scoring/rubric.mjs';
 import { deriveRunGate } from '../lib/run-gate.mjs';
@@ -76,7 +76,10 @@ export function printComments(comments) {
 }
 
 function formatMessageForMarkdown(message) {
-  const labels = ['Finding', 'Evidence', 'Impact', 'Fix', 'Severity', 'Confidence'];
+  // #1666: import the label set instead of re-listing it here. The local copy
+  // had drifted — `Suggestion`, `Scope`, and the traceability refs were never
+  // broken onto their own bullet, so they ran into the preceding field.
+  const labels = RESERVED_FINDING_LABELS;
   let result = message;
   for (const label of labels) {
     result = result.replace(new RegExp(`\\s*${label}:`, 'g'), `\n  - **${label}:**`);
@@ -509,6 +512,17 @@ export function formatJsonOutput(result, phase) {
       // output.schema.json, so `scope` must reach it for the schema field to be
       // observable at all. yaml/html surfaces stay unchanged (Phase 2).
       ...(f.scope ? { scope: f.scope } : {}),
+      // #1666 (#1545 Phase 2): same reachability rule as `scope` — a schema
+      // field that stops at the finding object is an unreachable spec. Guard on
+      // Array.isArray + length (not truthiness) so neither an empty array nor a
+      // non-array value reaches the JSON artifact, where the schema requires an
+      // array. yaml/html surfaces stay unchanged (out of Phase 2).
+      ...(Array.isArray(f.criterionRefs) && f.criterionRefs.length > 0
+        ? { criterionRefs: f.criterionRefs }
+        : {}),
+      ...(Array.isArray(f.artifactRefs) && f.artifactRefs.length > 0
+        ? { artifactRefs: f.artifactRefs }
+        : {}),
       ...(f.reviewerRole ? { reviewerRole: f.reviewerRole } : {}),
     };
   });

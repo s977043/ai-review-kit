@@ -52,27 +52,43 @@
 
 各指摘（finding）が持つフィールドの一覧。`id`・`ruleId`・`title`・`message`・`severity`・`phase`・`file` は必須。
 
-| フィールド   | 型              | 必須 | 説明                                                           |
-| ------------ | --------------- | ---- | -------------------------------------------------------------- |
-| `id`         | `string`        | Yes  | ランスコープ内のユニークな識別子。                             |
-| `ruleId`     | `string`        | Yes  | 指摘を生成したルール / スキルの識別子。                        |
-| `title`      | `string`        | Yes  | 指摘の短いタイトル。                                           |
-| `message`    | `string`        | Yes  | 問題の詳細説明。                                               |
-| `severity`   | `string`        | Yes  | 重要度。`critical` / `major` / `minor` / `info`。              |
-| `phase`      | `string`        | Yes  | SDLC フェーズ。`upstream` / `midstream` / `downstream`。       |
-| `file`       | `string`        | Yes  | 対象ファイルパス。                                             |
-| `line`       | `integer`       | No   | 指摘に関連する開始行番号。                                     |
-| `lineEnd`    | `integer`       | No   | マルチライン指摘の終了行番号。                                 |
-| `confidence` | `string`        | No   | 指摘の信頼度。`high` / `medium` / `low`。                      |
-| `status`     | `string`        | No   | ライフサイクルステータス。`open` / `suppressed` / `verified`。 |
-| `evidence`   | `array<string>` | No   | 指摘を支持する証拠スニペットの配列。                           |
-| `reviewer`   | `string`        | No   | 指摘を生成したスキル / エージェントの識別子。                  |
-| `suggestion` | `string`        | No   | 修正や後続アクションのヒント。                                 |
-| `scope`      | `string`        | No   | 指摘が差分の追加行に由来するか。`in-diff` / `pre-existing`。   |
+| フィールド      | 型              | 必須 | 説明                                                                     |
+| --------------- | --------------- | ---- | ------------------------------------------------------------------------ |
+| `id`            | `string`        | Yes  | ランスコープ内のユニークな識別子。                                       |
+| `ruleId`        | `string`        | Yes  | 指摘を生成したルール / スキルの識別子。                                  |
+| `title`         | `string`        | Yes  | 指摘の短いタイトル。                                                     |
+| `message`       | `string`        | Yes  | 問題の詳細説明。                                                         |
+| `severity`      | `string`        | Yes  | 重要度。`critical` / `major` / `minor` / `info`。                        |
+| `phase`         | `string`        | Yes  | SDLC フェーズ。`upstream` / `midstream` / `downstream`。                 |
+| `file`          | `string`        | Yes  | 対象ファイルパス。                                                       |
+| `line`          | `integer`       | No   | 指摘に関連する開始行番号。                                               |
+| `lineEnd`       | `integer`       | No   | マルチライン指摘の終了行番号。                                           |
+| `confidence`    | `string`        | No   | 指摘の信頼度。`high` / `medium` / `low`。                                |
+| `status`        | `string`        | No   | ライフサイクルステータス。`open` / `suppressed` / `verified`。           |
+| `evidence`      | `array<string>` | No   | 指摘を支持する証拠スニペットの配列。                                     |
+| `reviewer`      | `string`        | No   | 指摘を生成したスキル / エージェントの識別子。                            |
+| `suggestion`    | `string`        | No   | 修正や後続アクションのヒント。                                           |
+| `scope`         | `string`        | No   | 指摘が差分の追加行に由来するか。`in-diff` / `pre-existing`。             |
+| `criterionRefs` | `array<string>` | No   | 指摘が紐づく受け入れ条件 / テストケースの識別子。例: `AC-4`、`TC-7`。    |
+| `artifactRefs`  | `array<string>` | No   | 指摘が紐づく artifact のアンカー。例: `plan.md#AC-4`、`todo.md#TASK-3`。 |
 
 > `scope` は additive なメタデータです（#1644 Phase 1）。verifier がパース済み差分の追加行と finding の行範囲を突き合わせて決定論的に判定し、判定できない場合のみレビュアーの自己申告（`Scope:` ラベル）を採用します。追加行のみが `in-diff` であり、unified diff の context 行は `pre-existing` として扱います（行の許容幅は 0）。未指定・不明値は fail-safe の `in-diff` とし、指摘を目立たない側へ降格させません。severity やゲート判定を上書きしてはいけません。
 >
 > Phase 1 で `scope` を出力するのは JSON 形式（`output.schema.json` が規定する成果物）のみです。YAML / HTML 形式および PR コメントへの反映は Phase 2 で扱います。
+>
+> `criterionRefs` / `artifactRefs` は additive なトレーサビリティ用メタデータです（#1666 / #1545 Phase 2）。`Specification → AC → Task → Diff → Test/JUnit → Finding` のうち `Test/AC → Finding` の逆参照を成立させます。
+>
+> ID の名前空間を River Review は所有しません。上流 artifact の見出しや ID をそのまま文字列で保持し、採番も検証も行いません。artifact が欠損している場合はフィールドごと省略します（Pre-execution Gate の既存挙動を維持）。
+>
+> 充填の主担当は `skills/midstream/assumption-resolution-trace` と `skills/upstream/requirements-acceptance` です。汎用レビュープロンプトにも任意ラベルとして指示があります。値は finding メッセージの `CriterionRefs:` / `ArtifactRefs:` ラベルから抽出します。
+>
+> ラベルの記法は次のとおりです。値は空白を含まないトークンとし、区切りは `,` または `、` を使います。コロンは半角と全角のどちらでも構いません。ラベル名は大文字小文字を区別するため、`criterionRefs:` のような lowerCamel 表記はラベルとして扱いません。`https://` で始まる値も対象外です。値はバッククォートで囲んでも構いません（囲みは外して取り込みます）。
+>
+> 散文の中でラベル名に言及するときは `` `CriterionRefs:` `` のようにバッククォートで囲んでください。バッククォートはラベルの前置文字に含めていないため、囲めば構造ラベルとして解釈されません。囲まずに正規形で書くと、その位置でラベルとして解釈されます。
+>
+> ファイル参照との関係は fail-safe に倒しています。verifier は Evidence 中のファイル参照が差分に存在するかを確認しますが、ref フィールド内でアンカー（`plan.md#AC-4`）付きに書かれた参照だけを対象から除きます。`#` の無い裸のパスは Evidence の主張と区別できないため、ref ラベルを付けても差分照合の対象に残ります。
+>
+> これらを出力するのは JSON 形式（`output.schema.json` が規定する成果物）のみです。YAML / HTML 形式および PR コメントへの反映は対象外とします。severity やゲート判定を上書きしてはいけません。
 
 ## 禁止事項
 

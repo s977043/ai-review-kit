@@ -108,6 +108,16 @@
           "enum": ["in-diff", "pre-existing"],
           "description": "Whether the finding is introduced by this diff's added lines ('in-diff') or lives in a changed file but outside the added lines ('pre-existing'). Additive/optional metadata (#1644 Phase 1): derived deterministically by the verifier from the parsed diff, falling back to the reviewer's self-report. Absent or unknown MUST be read as 'in-diff' (fail-safe: never demote). Display-only — MUST NOT override severity or gate decisions."
         },
+        "criterionRefs": {
+          "type": "array",
+          "description": "Optional acceptance-criterion / test-case identifiers this finding is tied to (e.g. AC-4, TC-7). Additive/optional traceability metadata (#1666, #1545 Phase 2) closing the Test/AC -> Finding back-reference. River Review does not own this ID namespace: the values are copied verbatim from the upstream artifact and are neither minted nor validated here. Absent when the artifact is missing. Display-only — MUST NOT override severity or gate decisions.",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "artifactRefs": {
+          "type": "array",
+          "description": "Optional artifact anchors this finding is tied to (e.g. plan.md#AC-4, todo.md#TASK-3). Additive/optional traceability metadata (#1666, #1545 Phase 2). River Review does not own this ID namespace: the values are copied verbatim from the upstream artifact and are neither minted nor validated here. Absent when the artifact is missing. Display-only — MUST NOT override severity or gate decisions.",
+          "items": { "type": "string", "minLength": 1 }
+        },
         "actionability": {
           "type": "number",
           "minimum": 0,

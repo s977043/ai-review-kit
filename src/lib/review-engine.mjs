@@ -217,6 +217,8 @@ ${buildLanguageInstruction(language)}
 - Every finding MUST carry "Severity:" and "Confidence:". It MUST also carry "Evidence:" (>=5 chars) and "Fix:" (>=10 chars) — findings without them are discarded during verification. "Finding:" and "Impact:" are recommended.
 - Use Severity: blocker|warning|nit and Confidence: high|medium|low.
 - Optionally add "Scope: in-diff" (the added lines introduce the problem) or "Scope: pre-existing" (the problem is in a changed file but outside the added lines). Verification re-derives scope from the diff and overrides this label when it can.
+- Optionally add "CriterionRefs: AC-4, TC-7" (acceptance-criterion or test-case identifiers) and/or "ArtifactRefs: plan.md#AC-4, todo.md#TASK-3" (artifact anchors) to link the finding back to the requirement it verifies. Separate values with a comma; a value must not contain spaces.
+- Use ONLY identifiers that appear verbatim in an artifact supplied above (plan / requirements / PR description). If no such artifact was supplied, or you are not certain of the exact identifier, omit the label entirely — never invent, guess, abbreviate, or renumber an ID.
 - Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block at src/app.ts drops err Impact: failures are masked Fix: rethrow or log err with context Severity: warning Confidence: high
 - Focus on correctness, safety, and maintainability risks in the changed code.
 - Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
@@ -733,6 +735,11 @@ export async function generateReview({
       // #1644 Phase 1: verifier verdict (machine determination, falling back to
       // the LLM self-report and then to the fail-safe default `in-diff`).
       scope: normalizeScope(c.scope ?? parsed.scope),
+      // #1666 (#1545 Phase 2): traceability refs, self-reported by the filling
+      // skills. Null when the reviewer supplied no label — the artifact IDs are
+      // never invented here, so a missing artifact stays missing.
+      criterionRefs: parsed.criterionRefs,
+      artifactRefs: parsed.artifactRefs,
     };
   });
 
