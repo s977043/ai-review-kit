@@ -71546,29 +71546,86 @@ function parseArgs(argv) {
       }
     }
     if (parsed.command === 'feedback') {
+      // #1717: every option below takes a value, and `args.shift() ?? null`
+      // guarded none of them. A missing value consumed the FOLLOWING flag as
+      // this option's value (so `--pr --evidence x` lost both at once), and a
+      // value that failed validation was dropped in silence while the entry was
+      // still written. Each option now rejects a missing value / a following
+      // flag up front with the same `!value || value.startsWith('-')` guard the
+      // --reviewer / --model / --run-id options below already use. The
+      // option-error convention itself (stderr message + help) is unchanged;
+      // unifying its exit code is #1709.
       if (arg === '--type') {
-        parsed.feedbackType = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --type option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackType = value;
         continue;
       }
       if (arg === '--skill') {
-        parsed.feedbackSkillId = args.shift() ?? null;
+        const value = args.shift();
+        // `--skill --pr 123` used to record skillId:"--pr": a flag is a
+        // non-empty string, so buildFeedbackEntry's "skillId is required."
+        // check accepted it and wrote the entry.
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --skill option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackSkillId = value;
         continue;
       }
       if (arg === '--trigger') {
-        parsed.feedbackTrigger = args.shift() ?? null;
+        const value = args.shift();
+        // A trailing `--trigger` used to null the field, which the handler maps
+        // back to undefined — so the entry was written with the DEFAULT trigger
+        // instead of the one the caller meant to set.
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --trigger option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackTrigger = value;
         continue;
       }
       if (arg === '--fingerprint') {
-        parsed.feedbackFingerprint = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --fingerprint option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackFingerprint = value;
         continue;
       }
       if (arg === '--evidence') {
-        parsed.feedbackEvidence = args.shift() ?? null;
+        const value = args.shift();
+        // `--evidence --pr 123` used to record evidence:"--pr" and drop the pr.
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --evidence option requires a value.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackEvidence = value;
         continue;
       }
       if (arg === '--pr') {
-        const v = parseInt(args.shift() ?? '', 10);
-        if (!Number.isNaN(v) && v > 0) parsed.feedbackPrNumber = v;
+        const value = args.shift();
+        // Strict parse, same shape as --threshold (#1658): parseInt('12abc') is
+        // 12 and parseInt('1.5') is 1, so a typo silently recorded a DIFFERENT
+        // pr than the one that was typed, while 'abc' / 0 / -5 / a following
+        // flag all became pr:null on an entry that was still written (exit 0).
+        // `pr` is one half of the occurrence key (review_run_id, pr), so a null
+        // or wrong value skews the repetition denominator downstream (#1717).
+        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+          console.error('Error: --pr option requires a positive integer.');
+          parsed.command = 'help';
+          break;
+        }
+        parsed.feedbackPrNumber = Number.parseInt(value, 10);
         continue;
       }
       if (arg === '--reviewer') {
