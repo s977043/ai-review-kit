@@ -683,3 +683,110 @@ test('parseArgs: the equals form stays scoped to --run-id (other options unchang
   ]);
   assert.equal(parsed.feedbackReviewer, null, '--reviewer= keeps its pre-existing behaviour');
 });
+
+// --- #1717: feedback add --pr strict parse + value guards on the siblings ---
+
+test('parseArgs: feedback add parses --pr as a number', () => {
+  const parsed = parseArgs([
+    'feedback',
+    'add',
+    '--type',
+    'false_positive',
+    '--skill',
+    'secret-scanner',
+    '--pr',
+    '123',
+  ]);
+  assert.equal(parsed.command, 'feedback');
+  assert.equal(parsed.feedbackPrNumber, 123);
+});
+
+test('parseArgs: feedback --pr accepts only positive integers', () => {
+  // 'abc' / '0' / '-5' / '' used to be dropped in silence (pr:null on an entry
+  // that was still written), and parseInt kept the numeric prefix of '1.5' and
+  // '12abc', recording a pr that was never typed.
+  for (const value of ['abc', '0', '-5', '1.5', '12abc', '', '   ', '+7', '0x10', '1e3']) {
+    const parsed = parseArgs([
+      'feedback',
+      'add',
+      '--type',
+      'accepted',
+      '--skill',
+      's',
+      '--pr',
+      value,
+    ]);
+    assert.equal(parsed.command, 'help', `--pr ${JSON.stringify(value)} falls back to help`);
+    assert.equal(parsed.feedbackPrNumber, null);
+  }
+});
+
+test('parseArgs: feedback --pr requires a value and does not eat the next flag', () => {
+  const missing = parseArgs(['feedback', 'add', '--type', 'accepted', '--skill', 's', '--pr']);
+  assert.equal(missing.command, 'help', '--pr without a value falls back to help');
+  assert.equal(missing.feedbackPrNumber, null);
+
+  const eaten = parseArgs([
+    'feedback',
+    'add',
+    '--type',
+    'accepted',
+    '--skill',
+    's',
+    '--pr',
+    '--evidence',
+    'x',
+  ]);
+  assert.equal(eaten.command, 'help', 'the following flag is not consumed as the value');
+  assert.equal(eaten.feedbackPrNumber, null);
+  assert.equal(eaten.feedbackEvidence, null, '--evidence is not swallowed by --pr');
+});
+
+test('parseArgs: every feedback add option requires a value', () => {
+  for (const flag of ['--type', '--skill', '--trigger', '--fingerprint', '--evidence', '--pr']) {
+    const parsed = parseArgs(['feedback', 'add', flag]);
+    assert.equal(parsed.command, 'help', `${flag} without a value falls back to help`);
+  }
+});
+
+test('parseArgs: feedback add options do not consume a following flag as their value', () => {
+  const fields = {
+    '--type': 'feedbackType',
+    '--skill': 'feedbackSkillId',
+    '--trigger': 'feedbackTrigger',
+    '--fingerprint': 'feedbackFingerprint',
+    '--evidence': 'feedbackEvidence',
+  };
+  for (const [flag, field] of Object.entries(fields)) {
+    const parsed = parseArgs(['feedback', 'add', flag, '--pr', '123']);
+    assert.equal(parsed.command, 'help', `${flag} does not eat --pr`);
+    assert.equal(parsed[field], null);
+    assert.equal(parsed.feedbackPrNumber, null, `${flag} does not drop the following --pr either`);
+  }
+});
+
+test('parseArgs: valid feedback add options are unchanged', () => {
+  const parsed = parseArgs([
+    'feedback',
+    'add',
+    '--type',
+    'false_positive',
+    '--skill',
+    'secret-scanner',
+    '--trigger',
+    'self-review',
+    '--fingerprint',
+    'a1b2c3d4e5f60718',
+    '--evidence',
+    'test fixture already covers this path',
+    '--pr',
+    '1717',
+  ]);
+  assert.equal(parsed.command, 'feedback');
+  assert.equal(parsed.feedbackType, 'false_positive');
+  assert.equal(parsed.feedbackSkillId, 'secret-scanner');
+  assert.equal(parsed.feedbackTrigger, 'self-review');
+  assert.equal(parsed.feedbackFingerprint, 'a1b2c3d4e5f60718');
+  assert.equal(parsed.feedbackEvidence, 'test fixture already covers this path');
+  assert.equal(parsed.feedbackPrNumber, 1717);
+});

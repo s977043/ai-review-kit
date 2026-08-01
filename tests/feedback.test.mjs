@@ -349,3 +349,100 @@ test('`river feedback add --run-id "   "` reports an error and writes nothing', 
   // review_run_id. Nothing may be written at all now.
   await assert.rejects(() => fs.readdir(path.join(dir, '.river', 'feedback')));
 });
+
+// --- #1717: `feedback add` validates option values before writing anything ---
+//
+// The regression these pin: an invalid `--pr` value was dropped in silence and
+// the entry was STILL written with pr:null (exit 0), while parseInt quietly
+// kept the numeric prefix of `1.5` / `12abc` and recorded a DIFFERENT pr than
+// the one that was typed. `pr` is one half of the occurrence key
+// (review_run_id, pr), so a null or wrong value skews the repetition
+// denominator `river evolve aggregate` computes. A missing value additionally
+// consumed the FOLLOWING flag as its own value, so `--pr --evidence x` lost
+// both options at once. Same class as #1681 (--run-id) / #1658 (--threshold).
+
+const FEEDBACK_ADD_BASE = ['feedback', 'add', '--type', 'accepted', '--skill', 'secret-scanner'];
+
+const assertNothingWritten = (dir, label) =>
+  assert.rejects(() => fs.readdir(path.join(dir, '.river', 'feedback')), undefined, label);
+
+test('`river feedback add --pr` rejects every non positive-integer value', async (t) => {
+  const { dir, cleanup } = await createTempGitRepo({ prefix: 'feedback-cli-pr-invalid-' });
+  t.after(cleanup);
+  const rejected = [
+    ['abc', 'non-numeric'],
+    ['0', 'zero'],
+    ['-5', 'negative'],
+    ['1.5', 'decimal — parseInt used to keep the 1'],
+    ['12abc', 'numeric prefix — parseInt used to keep the 12'],
+    ['', 'empty string'],
+    ['   ', 'whitespace only'],
+  ];
+  for (const [value, label] of rejected) {
+    const res = await runCliInProcess([...FEEDBACK_ADD_BASE, '--pr', value], { cwd: dir });
+    assert.match(res.stderr, /--pr option requires a positive integer/, label);
+    assert.doesNotMatch(res.stdout, /Feedback recorded/, label);
+    await assertNothingWritten(dir, label);
+  }
+});
+
+test('`river feedback add --pr` with no value writes nothing and keeps the next flag', async (t) => {
+  const { dir, cleanup } = await createTempGitRepo({ prefix: 'feedback-cli-pr-missing-' });
+  t.after(cleanup);
+  for (const argv of [
+    [...FEEDBACK_ADD_BASE, '--pr'],
+    [...FEEDBACK_ADD_BASE, '--pr', '--evidence', 'duplicate of an earlier finding'],
+  ]) {
+    const label = argv.join(' ');
+    const res = await runCliInProcess(argv, { cwd: dir });
+    assert.match(res.stderr, /--pr option requires a positive integer/, label);
+    assert.doesNotMatch(res.stdout, /Feedback recorded/, label);
+    await assertNothingWritten(dir, label);
+  }
+});
+
+test('`river feedback add --pr 123` still records the number', async (t) => {
+  const { dir, cleanup } = await createTempGitRepo({ prefix: 'feedback-cli-pr-valid-' });
+  t.after(cleanup);
+  const res = await runCliInProcess([...FEEDBACK_ADD_BASE, '--pr', '123'], { cwd: dir });
+  assert.equal(res.code, 0, res.stderr);
+  const written = /written to: (.+)/.exec(res.stdout)?.[1];
+  assert.ok(written, `no target path in stdout: ${res.stdout}`);
+  const [line] = (await fs.readFile(written.trim(), 'utf8')).trim().split('\n');
+  assert.equal(JSON.parse(line).pr, 123);
+});
+
+test('`river feedback add` never records a following flag as an option value', async (t) => {
+  const { dir, cleanup } = await createTempGitRepo({ prefix: 'feedback-cli-flag-eating-' });
+  t.after(cleanup);
+  // Each of these used to write an entry: `--evidence --pr 123` recorded
+  // evidence:"--pr" and lost the pr, `--skill --pr 123` recorded skillId:"--pr",
+  // and a trailing `--trigger` / `--fingerprint` silently fell back to the
+  // default trigger / a null fingerprint.
+  const cases = [
+    [
+      ['feedback', 'add', '--type', 'accepted', '--skill', 's', '--evidence', '--pr', '123'],
+      /--evidence option requires a value/,
+    ],
+    [
+      ['feedback', 'add', '--type', 'accepted', '--skill', '--pr', '123'],
+      /--skill option requires a value/,
+    ],
+    [
+      ['feedback', 'add', '--type', 'accepted', '--skill', 's', '--trigger'],
+      /--trigger option requires a value/,
+    ],
+    [
+      ['feedback', 'add', '--type', 'accepted', '--skill', 's', '--fingerprint'],
+      /--fingerprint option requires a value/,
+    ],
+    [['feedback', 'add', '--skill', 's', '--type'], /--type option requires a value/],
+  ];
+  for (const [argv, expected] of cases) {
+    const label = argv.join(' ');
+    const res = await runCliInProcess(argv, { cwd: dir });
+    assert.match(res.stderr, expected, label);
+    assert.doesNotMatch(res.stdout, /Feedback recorded/, label);
+    await assertNothingWritten(dir, label);
+  }
+});
