@@ -1009,6 +1009,166 @@ describe('paired-replay 契約1: evidence trust', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 契約3 x 契約1: the declared commit SHA must match the collected evidence (#1719)
+// ---------------------------------------------------------------------------
+
+/** Attach the #1715 / #1718 provenance block to a run record. */
+function withProvenance(record, { sourceCommitSha = null, dirty = null } = {}) {
+  return {
+    ...record,
+    ...(sourceCommitSha == null ? {} : { commitSha: sourceCommitSha }),
+    provenance: {
+      evidenceSource: 'local',
+      sourceCommitSha,
+      dirty,
+      trustedBy: null,
+      generatedByCandidate: false,
+    },
+  };
+}
+
+describe('paired-replay #1719: declared commitSha vs evidence source_commit_sha', () => {
+  test('a contradicting source_commit_sha refuses the experiment (issue の再現シナリオ)', () => {
+    const contradiction = spec();
+    contradiction.baseline.commitSha = '1111111111111111111111111111111111111111';
+    contradiction.baseline.runs = contradiction.baseline.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: '9999999999999999999999999999999999999999' })
+    );
+    assert.throws(
+      () => buildPairedReplay(contradiction, { now: NOW }),
+      (err) =>
+        err instanceof PairedReplayError &&
+        /baseline\.commitSha 1111111111111111111111111111111111111111 contradicts the source_commit_sha/.test(
+          err.message
+        ) &&
+        err.message.includes('9999999999999999999999999999999999999999')
+    );
+  });
+
+  test('the candidate side is checked with the same rule', () => {
+    const contradiction = spec();
+    contradiction.candidate.runs = contradiction.candidate.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: 'someone-elses-commit' })
+    );
+    assert.throws(
+      () => buildPairedReplay(contradiction, { now: NOW }),
+      /candidate\.commitSha cand-commit contradicts/
+    );
+  });
+
+  test('the record-level commitSha fallback is checked too, not only provenance', () => {
+    // buildRunEvidence falls back to `record.commitSha` when the provenance
+    // block carries none, so the fallback must not be a way around the check.
+    const fallback = spec();
+    fallback.baseline.runs = fallback.baseline.runs.map((r) => ({ ...r, commitSha: 'other' }));
+    assert.throws(
+      () => buildPairedReplay(fallback, { now: NOW }),
+      /baseline\.commitSha base-commit contradicts/
+    );
+  });
+
+  test('a matching source_commit_sha is accepted and corroborates the activation check', () => {
+    const consistent = spec();
+    consistent.baseline.runs = consistent.baseline.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: 'base-commit', dirty: false })
+    );
+    consistent.candidate.runs = consistent.candidate.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: 'cand-commit', dirty: false })
+    );
+    const result = buildPairedReplay(consistent, { now: NOW });
+    assert.deepEqual(result.manifest.baseline.provenance, {
+      sourceCommitShaUnknownRunCount: 0,
+      dirtyRunCount: 0,
+      dirtyUnknownRunCount: 0,
+    });
+    assert.equal(result.activationCheck.commitShaCorroborated, true);
+    assert.equal(result.activationCheck.dirtyRunCount, 0);
+    assert.deepEqual(result.activationCheck.reasons, []);
+    assert.equal(validateReplay(result), true, JSON.stringify(validateReplay.errors, null, 2));
+  });
+
+  test('a record without source_commit_sha is 未取得, not a mismatch (旧 record 互換)', () => {
+    // The default fixture predates #1715: no provenance block at all.
+    const result = buildPairedReplay(spec(), { now: NOW });
+    assert.equal(result.manifest.baseline.provenance.sourceCommitShaUnknownRunCount, 2);
+    assert.equal(result.manifest.baseline.provenance.dirtyUnknownRunCount, 2);
+    assert.equal(result.activationCheck.commitShaCorroborated, false);
+    assert.ok(
+      result.activationCheck.reasons.some((r) => r.includes('source_commit_sha がなく')),
+      JSON.stringify(result.activationCheck.reasons)
+    );
+    // The uncorroborated commit is reported, not turned into a failed
+    // activation: the other identifiers have no evidence counterpart either.
+    assert.equal(result.activationCheck.verified, true);
+  });
+
+  test('a dirty run is recorded and warned about, and does not relax the check', () => {
+    const dirty = spec();
+    dirty.baseline.runs = dirty.baseline.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: 'base-commit', dirty: true })
+    );
+    dirty.candidate.runs = [
+      withProvenance(dirty.candidate.runs[0], { sourceCommitSha: 'cand-commit', dirty: true }),
+      withProvenance(dirty.candidate.runs[1], { sourceCommitSha: 'cand-commit', dirty: false }),
+    ];
+    const result = buildPairedReplay(dirty, { now: NOW });
+    assert.equal(result.manifest.baseline.provenance.dirtyRunCount, 2);
+    assert.equal(result.manifest.candidate.provenance.dirtyRunCount, 1);
+    assert.equal(result.manifest.candidate.provenance.dirtyUnknownRunCount, 0);
+    assert.equal(result.activationCheck.dirtyRunCount, 3);
+    assert.ok(
+      result.activationCheck.reasons.some((r) => r.includes('dirty な working tree')),
+      JSON.stringify(result.activationCheck.reasons)
+    );
+    assert.match(formatPairedReplayMarkdown(result), /dirty な working tree/);
+    assert.equal(validateReplay(result), true, JSON.stringify(validateReplay.errors, null, 2));
+
+    // dirty は判定を緩める理由にならない: 同じ run が矛盾した sha を持てば拒否する。
+    const dirtyAndContradicting = spec();
+    dirtyAndContradicting.baseline.runs = dirtyAndContradicting.baseline.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: 'a-different-head', dirty: true })
+    );
+    assert.throws(
+      () => buildPairedReplay(dirtyAndContradicting, { now: NOW }),
+      /baseline\.commitSha base-commit contradicts/
+    );
+  });
+
+  test('the provenance summary is pinned by the manifest and stays deterministic', () => {
+    const build = () => {
+      const s = spec();
+      s.baseline.runs = s.baseline.runs.map((r) =>
+        withProvenance(r, { sourceCommitSha: 'base-commit', dirty: true })
+      );
+      return s;
+    };
+    const a = buildExperimentManifest(build(), { now: NOW }).manifest;
+    const b = buildExperimentManifest(build(), { now: LATER }).manifest;
+    // Same run records -> same experimentKey: the summary is derived from the
+    // very records the dataset hash already covers, so it adds no new input.
+    assert.equal(a.experimentKey, b.experimentKey);
+    assert.equal(a.baseline.provenance.dirtyRunCount, 2);
+    // Pinned as a condition: editing it out is a detectable tamper (契約3).
+    const strippedBaseline = { ...a.baseline };
+    delete strippedBaseline.provenance;
+    assert.equal(verifyExperimentManifest({ ...a, baseline: strippedBaseline }).verified, false);
+  });
+
+  test('the CLI reports the contradiction as a usage error instead of a report', async (t) => {
+    const contradiction = spec();
+    contradiction.baseline.runs = contradiction.baseline.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: '9999999999999999999999999999999999999999' })
+    );
+    const { specPath, cleanup } = seedSpec(contradiction);
+    t.after(cleanup);
+    const res = await runCliInProcess(['evolve', 'replay', '--spec', specPath, '--output', 'json']);
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /contradicts the source_commit_sha/);
+    assert.equal(res.stdout, '');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Artifact shape
 // ---------------------------------------------------------------------------
 

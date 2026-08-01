@@ -99,6 +99,7 @@ manifest は契約3 が列挙する条件をすべて固定します。固定す
 - 環境スナップショット
 - metrics の分母
 - terminal reason の語彙
+- 各 side の証拠 provenance の要約（`provenance`・#1719）
 
 不変性は 2 つの digest で担保します。
 
@@ -106,6 +107,31 @@ manifest は契約3 が列挙する条件をすべて固定します。固定す
 - `manifestHash`: `createdAt` と導出 ID を含めた全体の hash である。保存済み文書のどのフィールドを書き換えても検出できる
 
 `manifestId` は `RR-EXP-<experimentKey の先頭12桁>` です。candidate の `RR-PC-` とは名前空間を分けています。
+
+### 宣言した commitSha と evidence の突合（#1719）
+
+manifest が宣言する `baseline.commitSha` / `candidate.commitSha` は、その side が集めた run evidence の `source_commit_sha` と突合します。矛盾を検出した場合は `PairedReplayError` として実験を成立させません。契約3 は実験条件の不変性を担保する仕組みであり、宣言と証拠が別物である manifest は digest だけなら正しく検証できてしまうため、下流からは検出できないからです。
+
+突合の規則は次のとおりです。
+
+- 宣言と異なる `source_commit_sha` を持つ run が 1 件でもあれば拒否する。エラーメッセージには実値を最大 3 件まで載せる
+- `source_commit_sha` を持たない run は「未取得」として扱い、矛盾とはみなさない。#1715 以前の run レコードは provenance を持たないため、欠落を不一致と読むと既存データセットをすべて拒否することになる
+- `record.commitSha` へのフォールバック（`buildRunEvidence`）も同じ突合の対象にする。フォールバックだけ検査から外すと迂回路になる
+- `provenance.dirty`（#1718）は判定を緩める根拠にしない。dirty な run の `commitSha` はレビュー対象の変更を含まない HEAD を指すため、宣言と一致していても意味論的には弱い。件数の記録と警告で扱う
+
+各 side は、証拠が裏付けられなかった範囲を `provenance` として固定します。
+
+| フィールド                       | 意味                                              |
+| -------------------------------- | ------------------------------------------------- |
+| `sourceCommitShaUnknownRunCount` | `source_commit_sha` を持たない run の件数である   |
+| `dirtyRunCount`                  | dirty な working tree で収集した run の件数である |
+| `dirtyUnknownRunCount`           | dirty フラグそのものを持たない run の件数である   |
+
+#### hash 入力の扱い
+
+上記 3 件のカウントは `experimentKey` と `manifestHash` の入力に含めます。いずれも `artifact_sha256` の材料と同じ run レコードから決まる派生値であり、実行のたびに揺れる観測値ではないためです。同一の run レコードからは常に同一の `experimentKey` が導出されるという性質は保たれます。
+
+一方で、v1.68.0 までの版が作成した manifest とは `experimentKey` の値が変わります。保存済み manifest 自体は自らの conditions から digest を再計算するため `verifyExperimentManifest` は通りますが、同じ spec を再実行すると `experimentKeyMatchesInputs` が false になります。P2 は出荷直後で保存済み実験の実データがないため、`schemaVersion` は 1 のまま据え置きました。
 
 ### terminal reason を manifest に書かない理由
 
@@ -199,8 +225,12 @@ paired replay を ledger 比較と区別する要素として、activation を�
 - `configurationDiffers`: baseline と candidate の構成識別子（commit / provider / model / temperature / Skill Registry commit）が異なるか
 - `observedDifference`: 突合結果に差分があるか
 - `verified`: 上記 2 つがともに真であるか
+- `commitShaCorroborated`: 両側とも `source_commit_sha` を持つ run が 1 件以上あるか（#1719）
+- `dirtyRunCount`: 両側を合わせた dirty run の件数（#1718 W1）
 
 構成が同一の replay を「regression なし」と読むと、candidate についての証拠がないのに安全だと誤読します。そのため未発火の場合は理由付きで報告します。
+
+`commitShaCorroborated` と `dirtyRunCount` は報告専用であり、`verified` の判定式には入れていません。理由は 2 点あります。宣言と証拠が矛盾する場合は manifest の生成時点ですでに拒否しており、activation まで到達するのは「未取得のため裏付けが取れない」状態だけだからです。provider / model / temperature / Skill Registry commit には証拠側の対応物がそもそもなく、commit だけへ裏付けを要求すると非対称な判定になるからでもあります。裏付けのない構成差と dirty run は、`activationCheck.reasons` と Markdown の Activation 節へ理由として出力します。
 
 ## 11. 次フェーズへの申し送り
 

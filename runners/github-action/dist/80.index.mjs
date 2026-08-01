@@ -252,6 +252,62 @@ function normalizeTemperature(value, label) {
   return value;
 }
 
+/**
+ * Cross-check the commit SHA one side DECLARES against the one its own run
+ * evidence reports, and summarize what the evidence could not corroborate
+ * (#1719).
+ *
+ * Fail-closed on a contradiction: 契約3 pins the experiment CONDITIONS, so a
+ * manifest that declares `baseline.commitSha = X` while every artifact it
+ * hashes was produced at `Y` describes an experiment that never happened. Such
+ * a manifest is internally consistent (its digests verify) and therefore
+ * undetectable downstream, which is exactly why the contradiction has to be
+ * refused at build time instead of reported as a warning.
+ *
+ * A run whose evidence has NO `source_commit_sha` is "未取得", not a
+ * contradiction: run records written before #1715 populated the provenance
+ * block carry none, and treating the absence as a mismatch would reject every
+ * pre-existing dataset.
+ *
+ * `dirty` (#1718) is NOT folded into the equality check. A dirty run's
+ * `commitSha` is the HEAD the review was taken against, so it usually MATCHES
+ * the declaration while the reviewed lines live only in the working tree and
+ * are absent from that commit. The counts are recorded so the weakness is
+ * visible; loosening the check because a run is dirty would go the wrong way
+ * (#1682 F2 / #1697).
+ *
+ * Every count is derived from the same run records that already feed
+ * `artifact_sha256`, so pinning them in the manifest keeps it a pure function
+ * of its inputs: the same records always produce the same experimentKey.
+ *
+ * @param {string} label side label used in error messages
+ * @param {string} declared the side's declared commit SHA
+ * @param {object[]} evidence 契約1 evidence records for this side
+ * @param {object[]} runs the saved run records themselves
+ * @returns {{ sourceCommitShaUnknownRunCount: number, dirtyRunCount: number, dirtyUnknownRunCount: number }}
+ */
+function checkSideCommitSha(label, declared, evidence, runs) {
+  const observed = [
+    ...new Set(evidence.map((e) => e.source_commit_sha).filter((sha) => sha != null)),
+  ].sort(compareStrings);
+  const contradicting = observed.filter((sha) => sha !== declared);
+  if (contradicting.length) {
+    throw new PairedReplayError(
+      `${label}.commitSha ${declared} contradicts the source_commit_sha recorded on its own run evidence (${contradicting.slice(0, 3).join(', ')}). ` +
+        'The manifest would pin an experiment condition the evidence does not support (契約3), so the experiment is refused. ' +
+        `Declare the commit the runs were actually taken at, or re-collect ${label}.runs at ${declared}.`
+    );
+  }
+  const dirtyFlags = runs.map((record) => record?.provenance?.dirty);
+  return {
+    sourceCommitShaUnknownRunCount: evidence.filter((e) => e.source_commit_sha == null).length,
+    dirtyRunCount: dirtyFlags.filter((flag) => flag === true).length,
+    // `null` (unknown) is counted apart from `false` (observed clean): a record
+    // that never recorded the flag must not read as a clean working tree.
+    dirtyUnknownRunCount: dirtyFlags.filter((flag) => typeof flag !== 'boolean').length,
+  };
+}
+
 function normalizeSide(side, label, { collectorVersion }) {
   requireObject(side, label);
   const runs = Array.isArray(side.runs) ? side.runs : null;
@@ -266,9 +322,10 @@ function normalizeSide(side, label, { collectorVersion }) {
         compareStrings(a.artifact_sha256, b.artifact_sha256)
     );
   const caseKeys = [...new Set(runs.map(deriveCaseKey).filter(Boolean))].sort(compareStrings);
+  const commitSha = requireString(side.commitSha, `${label}.commitSha`);
   return {
     manifest: {
-      commitSha: requireString(side.commitSha, `${label}.commitSha`),
+      commitSha,
       skillRegistryCommit: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.skillRegistryCommit),
       provider: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.provider),
       model: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.model),
@@ -278,6 +335,7 @@ function normalizeSide(side, label, { collectorVersion }) {
       reviewRunIds: [...new Set(runs.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(compareStrings),
       caseKeys,
       unkeyedRunCount: runs.filter((record) => deriveCaseKey(record) == null).length,
+      provenance: checkSideCommitSha(label, commitSha, evidence, runs),
       evidence,
     },
     runs,
@@ -467,7 +525,9 @@ function normalizeImprovementCandidate(spec, policyVersion) {
  * commit SHA, dataset hash and held-out hash, evaluator and collector version,
  * provider / model / temperature, Skill Registry commit, trial id and count,
  * activation evidence, environment snapshot, metrics denominator and the
- * terminal-reason vocabulary.
+ * terminal-reason vocabulary. Each side also pins the provenance summary of its
+ * own evidence (`provenance`, #1719) — the declared commit SHA is cross-checked
+ * against `source_commit_sha` and a contradiction refuses the experiment.
  *
  * Immutability is content-addressed, not enforced by file permissions: the
  * caller stores the manifest as-is, and any later reader re-derives
@@ -1056,6 +1116,16 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
     });
   const observedDifference =
     overall.changedFindingCount + overall.removedFindingCount + overall.addedFindingCount > 0;
+  // Does the evidence back the commit SHAs the activation check reads? A
+  // contradiction can no longer reach this point (normalizeSide refuses it), so
+  // what is left to report is the UNVERIFIED case: a side whose runs carry no
+  // `source_commit_sha` at all leaves its declared commit uncorroborated.
+  const baselineProvenance = built.manifest.baseline.provenance;
+  const candidateProvenance = built.manifest.candidate.provenance;
+  const commitShaCorroborated =
+    built.manifest.baseline.runCount > baselineProvenance.sourceCommitShaUnknownRunCount &&
+    built.manifest.candidate.runCount > candidateProvenance.sourceCommitShaUnknownRunCount;
+  const dirtyRunCount = baselineProvenance.dirtyRunCount + candidateProvenance.dirtyRunCount;
   const activationReasons = [];
   if (!configurationDiffers) {
     activationReasons.push(
@@ -1064,6 +1134,16 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
   }
   if (!observedDifference) {
     activationReasons.push('paired diff に差分がなく、変更経路が発火した証跡を観測できない');
+  }
+  if (configurationDiffers && !commitShaCorroborated) {
+    activationReasons.push(
+      'run evidence に source_commit_sha がなく、構成差のうち commit SHA の部分は宣言のみで裏付けがない'
+    );
+  }
+  if (dirtyRunCount > 0) {
+    activationReasons.push(
+      `dirty な working tree で収集した run が baseline ${baselineProvenance.dirtyRunCount} 件 / candidate ${candidateProvenance.dirtyRunCount} 件あり、その commitSha はレビュー対象の変更を含まないベースラインを指す（#1718 W1）`
+    );
   }
 
   const allEvidence = [...built.manifest.baseline.evidence, ...built.manifest.candidate.evidence];
@@ -1114,7 +1194,15 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
     activationCheck: {
       configurationDiffers,
       observedDifference,
+      // Unchanged definition (#1719): `commitShaCorroborated` is REPORTED, not
+      // folded into `verified`. The other four identifiers (provider / model /
+      // temperature / Skill Registry commit) have no evidence counterpart at
+      // all, so demanding corroboration for the commit alone would be an
+      // arbitrary asymmetry — the contradiction case, which is the one that can
+      // mislead, is already refused at manifest build time.
       verified: configurationDiffers && observedDifference,
+      commitShaCorroborated,
+      dirtyRunCount,
       expectedSignal: built.manifest.activation.expectedSignal,
       declaredEvidence: built.manifest.activation.declaredEvidence,
       reasons: activationReasons,
