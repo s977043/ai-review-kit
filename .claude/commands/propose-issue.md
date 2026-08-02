@@ -18,6 +18,7 @@ Issue 「$ARGUMENTS」を作成する前に、既存実装の有無を確認し�
 3. **Git 履歴確認**: `git log --all --oneline | grep -i "<keyword>"` で関連コミット（複数単語対応のためクォート）
 4. **マージ済み PR 確認**: `gh pr list --state merged --search <keyword>`
 5. **既存 Issue 確認**: `gh issue list --state all --search <keyword>`
+6. **本文の裏取り**: 本文に書く数値・引用・前提は一次ソース（実ファイル・実コマンド出力・API 応答・原典）で裏取りし、参照したソースを本文へ明記する
 
 ## 判定
 

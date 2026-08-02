@@ -20,6 +20,11 @@
   worktree で作業する場合は最初に `npm ci` を実行すること（lockfile 由来の依存不整合を防ぐ）。
 - `git commit` / `git push` で `--no-verify` を使わないこと。lint-staged が manifest 再生成・textlint を担っており、
   スキップすると CI で初めて失敗が露見する。
+- 履歴を書き換える・破棄する操作は行わないこと。禁止対象は `git push --force`（`-f` も同じ）、
+  `git push --force-with-lease`、`git reset --hard`、`git stash drop` のすべて。
+  `--force-with-lease` は「安全な force」ではなく、ここでは force 禁止の例外にならない。
+  push が reject される等で rebase や force push が必要に見えた場合は、自分で判断せず作業を止めて
+  オーガナイザーに報告すること（リモートに追随するだけなら `git pull --rebase` で解消してよい）。
 - commit subject は小文字または日本語で始めること（commitlint の subject-case ルールに抵触するため大文字始まりは reject される）。
   例: `fix: ...` / `feat: ...` / `docs: ...`（日本語 subject も可）。
 - Monitor ツールは使用しないこと。CI やポーリング待ちが必要な場合は、1つの Bash 呼び出し内で
@@ -50,6 +55,10 @@
 ### `--no-verify` 禁止
 
 lint-staged が pre-commit で manifest 再生成・`textlint --no-cache` を担っており、`--no-verify` でスキップすると CI の Lint job で初めて失敗が露見し、修正コストがワーカー委託後まで持ち越される。CLAUDE.md の repo rules 全般でも `--no-verify` は明示的な合意なしに使わない方針。
+
+### force 系操作の禁止
+
+`--force-with-lease` は名前から「安全な force」と解釈されやすい。しかし lease が保証するのは「リモートの ref が自分の知る値から動いていないこと」だけであり、自分自身が壊した履歴をそのまま上書きする事故は防げない。AGENTS.md Safety の destructive commands 禁止（`git reset --hard` / `git push --force` 等）はワーカーにも適用される。ただし `--force-with-lease` が含まれるかは字面から読み取れないため、テンプレート側で明示的に列挙し、例外解釈の余地を消す。ワーカーは並行 PR やマージ順序の全体像を持たないため、force が必要に見える状況はエスカレーション対象とし、判断はオーガナイザーへ寄せる。
 
 ### commit subject の大小文字
 
