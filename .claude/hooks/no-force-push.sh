@@ -166,7 +166,8 @@ cat >&2 <<EOF
   command: ${EXCERPT}
   AGENTS.md Safety bans rewriting already-pushed branch history
   (git push --force / -f / --force-with-lease) and discarding work
-  (git reset --hard, git stash drop). --force-with-lease is not an exception.
+  (git reset --hard, git stash drop, git stash clear).
+  --force-with-lease is not an exception.
   Instead: take the remote in with 'git merge origin/<branch>' or
   'git merge --ff-only origin/<branch>', then push a fast-forward.
   If history still looks like it must be rewritten, do not work around this

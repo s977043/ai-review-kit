@@ -41,6 +41,9 @@ const BLOCKED = [
   'git push origin feat/x --force-with-lease',
   'git push --force-with-lease=refs/heads/feat/x origin feat/x',
   'git push -fu origin feat/x',
+  // --force-if-includes が実際に force を成立させるのは --force-with-lease と
+  // 併用したときだけで、その組み合わせは lease 側で捕捉される。
+  'git push --force-with-lease --force-if-includes origin feat/x',
   // git のグローバルオプション経由
   'git -C /repo push --force origin feat/x',
   'git --git-dir=/repo/.git push origin feat/x --force',
@@ -71,6 +74,11 @@ const ALLOWED = [
   'git push --set-upstream origin feat/x',
   'git push --follow-tags origin main',
   'git push origin HEAD',
+  // 単体の --force-if-includes は force ではない。git help push:
+  // 「If the option is passed without specifying --force-with-lease, ... it is a "no-op".」
+  // force が成立する --force-with-lease との併用は BLOCKED 側で捕捉している。
+  'git push --force-if-includes origin feat/x',
+  'git push --no-force-with-lease origin feat/x',
   // fetch の --force は破壊操作ではない（release-please.yml が実際に使う）
   'git fetch --tags --force',
   'git fetch -f',
@@ -139,6 +147,19 @@ test('block message names the command, the alternative, and the source', () => {
   assert.match(r.stderr, /AGENTS\.md Safety/);
   assert.match(r.stderr, /merge --ff-only/);
   assert.match(r.stderr, /escalate/);
+});
+
+test('block message enumerates every blocked family', () => {
+  const stderr = runHook('git push --force origin feat/x').stderr;
+  for (const family of [
+    'git push --force',
+    '--force-with-lease',
+    'git reset --hard',
+    'git stash drop',
+    'git stash clear',
+  ]) {
+    assert.ok(stderr.includes(family), `message should name ${family}`);
+  }
 });
 
 test('passing commands produce no stderr noise', () => {
