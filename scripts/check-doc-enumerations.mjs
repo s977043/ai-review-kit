@@ -206,11 +206,20 @@ export const DOC_ENUMERATION_SPECS = [
   },
 ];
 
+// 除外判定は素の `key in ignoreKeys` ではなく Object.hasOwn を使う。`in` は
+// Object.prototype を辿るため、toString / constructor / valueOf / hasOwnProperty /
+// __proto__ などの名前が **理由の登録なしに黙って除外扱い**となり、
+// 「理由なしの黙殺を作らない」という resolveIgnoreKeys の保証をキー名次第で迂回できてしまう
+// （= CI が通っているのに検証されていない状態を作る）。`in` に戻さないこと。
+function isIgnoredKey(ignoreKeys, key) {
+  return Object.hasOwn(ignoreKeys, key);
+}
+
 /** 件数系の差分。 */
 function diffCounts(spec, declared, measured, ignoreKeys) {
   const errors = [];
   for (const [key, actual] of measured) {
-    if (key in ignoreKeys) continue;
+    if (isIgnoredKey(ignoreKeys, key)) continue;
     if (!declared.has(key)) {
       errors.push(
         `${spec.doc} [${spec.id}]: "${key}" の件数宣言が見つからない（マーカー: ${spec.marker}）`
@@ -225,7 +234,7 @@ function diffCounts(spec, declared, measured, ignoreKeys) {
     }
   }
   for (const key of declared.keys()) {
-    if (key in ignoreKeys) continue;
+    if (isIgnoredKey(ignoreKeys, key)) continue;
     if (!measured.has(key)) {
       errors.push(`${spec.doc} [${spec.id}]: "${key}" を宣言しているが実測対象に存在しない`);
     }
@@ -236,7 +245,7 @@ function diffCounts(spec, declared, measured, ignoreKeys) {
 /** 名前集合の差分。 */
 function diffNames(spec, declared, measured, ignoreKeys) {
   const errors = [];
-  const isIgnored = (name) => name in ignoreKeys;
+  const isIgnored = (name) => isIgnoredKey(ignoreKeys, name);
   const declaredNames = [...declared].filter((name) => !isIgnored(name));
   const measuredNames = [...measured].filter((name) => !isIgnored(name));
   const declaredSet = new Set(declaredNames);

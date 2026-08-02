@@ -176,6 +176,45 @@ test('checkDocEnumerations rejects an ignore directive without a reason', async 
   assert.match(errors[0], /理由が無い/);
 });
 
+test('checkDocEnumerations does not silently ignore Object.prototype key names', async () => {
+  // 回帰: 除外判定に素の `in` を使うと、ignoreKeys を宣言していなくても
+  // toString / constructor 等が prototype 経由で「除外済み」と判定され、
+  // 理由の登録なしに検証が空振りしていた。
+  const namesSpec = {
+    id: 'proto-key-names',
+    doc: 'docs/example.md',
+    summary: 'コマンド表',
+    marker: '表',
+    kind: 'names',
+    declare: () => new Set(),
+    measure: async () => new Set(['toString', 'constructor']),
+  };
+  const namesResult = await checkDocEnumerations({
+    specs: [namesSpec],
+    readDoc: async () => '',
+  });
+  assert.equal(namesResult.errors.length, 2);
+  assert.ok(namesResult.errors.some((e) => e.includes('"toString"')));
+  assert.ok(namesResult.errors.some((e) => e.includes('"constructor"')));
+
+  const countsSpec = {
+    id: 'proto-key-counts',
+    doc: 'docs/example.md',
+    summary: '件数',
+    marker: '行',
+    kind: 'counts',
+    declare: () => new Map([['valueOf', 1]]),
+    measure: async () => new Map([['toString', 2]]),
+  };
+  const countsResult = await checkDocEnumerations({
+    specs: [countsSpec],
+    readDoc: async () => '',
+  });
+  assert.equal(countsResult.errors.length, 2);
+  assert.ok(countsResult.errors.some((e) => e.includes('"toString"')));
+  assert.ok(countsResult.errors.some((e) => e.includes('"valueOf"')));
+});
+
 test('checkDocEnumerations supports per-key ignores declared in the spec table', async () => {
   const spec = {
     id: 'partial-ignore',
