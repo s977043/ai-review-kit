@@ -1,5 +1,72 @@
 # Claude Hooks
 
+## no-force-push.sh
+
+PreToolUse hook (matcher: `Bash`) that blocks destructive git commands.
+
+### Purpose
+
+AGENTS.md § Safety bans commands that rewrite already-pushed branch history
+(`git push --force` / `-f` / `--force-with-lease`) or discard work
+(`git reset --hard`, `git stash drop`). That ban is prose in four places
+(AGENTS.md Safety, CLAUDE.md, `docs/development/worker-discipline-template.md`,
+and the commands) and still slipped through once each in #1656 and #1720.
+This hook makes it deterministic.
+
+`permissions.deny` was not used: its prefix matching lets
+`git push origin branch --force` through, while a hook sees the whole command
+string and is argument-order independent.
+
+### What it blocks
+
+| Blocked                                                         | Not blocked                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `git push` with `--force` / `-f` / `--force-with-lease[=<ref>]` | `git fetch --tags --force`, `git fetch -f` (used by `.github/workflows/release-please.yml`) |
+| `git reset --hard`                                              | `git tag -f` (tag retarget; out of the AGENTS.md scope)                                     |
+| `git stash drop`, `git stash clear`                             | `git clean`, `git checkout -- <path>`, `git restore` (prose discipline only, per #1730)     |
+
+Argument order does not matter: `git push --force origin x` and
+`git push origin x --force` are both blocked, as are `git -C /repo push --force`
+and compound commands (`… && git push --force …`).
+
+### How it works
+
+1. Reads the PreToolUse stdin JSON and extracts `.tool_input.command`.
+2. Fast-path exit 0 for anything that cannot be a destructive git command.
+3. Sanitizes the command string before matching: heredoc bodies are dropped,
+   line continuations are joined, and quoted segments are replaced by a space.
+   So `grep -rn -- "--force-with-lease" .` and
+   `echo "do not use git push --force"` stay allowed — a false positive would
+   stall documentation work on this repo. A quoted segment that is itself only
+   a force flag (`git push "--force"`) is kept.
+4. Matches POSIX ERE patterns scoped to a single command segment
+   (`[^;&|]*`), so `git push origin x && git fetch --tags --force` passes.
+5. On a match, exits 2 with a stderr message naming the blocked command, the
+   non-destructive alternative (`git merge` / `git merge --ff-only` then a
+   fast-forward push), the source (AGENTS.md Safety), and the instruction to
+   escalate rather than work around the hook.
+
+Ambiguous input is allowed: a false positive stalls all development, a miss
+costs one incident.
+
+### Known limitation
+
+Quoted text is treated as data, so an interpreter form such as
+`bash -c "git push --force"` is not detected. The hook is defense-in-depth;
+AGENTS.md § Safety remains the SSoT for the ban.
+
+### Setup
+
+```bash
+chmod +x .claude/hooks/no-force-push.sh
+```
+
+### Tests
+
+`tests/no-force-push-hook.test.mjs` spawns the script with real PreToolUse JSON
+payloads on stdin and asserts the exit code for every blocked and allowed
+command: `node --test tests/no-force-push-hook.test.mjs`
+
 ## gh-account-guard.sh
 
 PreToolUse hook (matcher: `Bash`) that verifies the active `gh` CLI account
