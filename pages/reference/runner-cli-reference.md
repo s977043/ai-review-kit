@@ -92,7 +92,9 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 | `2`    | `--warn-on` の警告しきい値超過                                                            |
 | `3`    | `--gate` の ESCALATE 判定、および `review` サブコマンド側で検出する設定エラー             |
 
-引数エラー（usage error）は #1709 で exit 1 + stderr 要約に統一され、help 全文を stdout へ出力しなくなりました。help 全文の stdout 出力と exit 0 の組み合わせは、明示的な `--help` と引数なし起動だけが維持します。
+引数エラー（usage error）のうち、不明コマンドと大半のオプション値の欠落・不正値は #1709（Slice 2）で exit 1 + stderr 要約に統一され、help 全文を stdout へ出力しなくなりました。help 全文の stdout 出力と exit 0 の組み合わせは、明示的な `--help` と引数なし起動だけが維持します。
+
+ただし統一は完了形ではありません。未知オプション・余剰 positional・一部のオプション値欠落や不正値の経路（例: `--from` / `--cases` の値欠落）は、#1709 Slice 3 が入るまでは従来どおり **exit 0 のまま黙って無視されます**。そのため、オプションの typo を `$?` だけで検知するスクリプトは現時点では成立しません。exit 1 を当てにできるのは上記の統一済み範囲（不明コマンド・大半の値欠落/不正値）に限られます。
 
 ### `river review` / `river eval`（`runners/cli`）
 

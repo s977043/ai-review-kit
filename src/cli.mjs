@@ -155,7 +155,7 @@ const COMMAND_USAGE = {
   doctor: 'river doctor <path> [options]',
   skills: 'river skills <path> | river skills <import|export|list|resolve> [options]',
   runs: 'river runs <list|diff|summary|digest> [options]',
-  review: 'river review <plan|exec|route> [options]',
+  review: 'river review <plan|exec|verify|route> [options]',
   eval: 'river eval [--cases <path>] [--verbose]',
   feedback: 'river feedback add --type <type> --skill <id> [options]',
   suppression:
