@@ -141,4 +141,5 @@ done
 - 「順序は適当で大丈夫」と断定してはならない
 - `gh pr list` / `gh pr view` の GraphQL 結果のみで state を信頼してはならない (必ず `gh api repos/.../pulls/{N}` で裏取り)
 - strict mode 環境で N 本 PR を「1 本ずつ更新して CI を待つ」ことで済ませない（N 倍の CI 待ちが発生する）
-- push 済みブランチを rebase して force push（`--force-with-lease` / `--force-if-includes` を含む）で上書きしてはならない（AGENTS.md Safety。取り込みは update-branch か `git merge`）
+- push 済みブランチを rebase して force push（`--force` / `-f` / `--force-with-lease`）で上書きしてはならない（AGENTS.md Safety。取り込みは update-branch か `git merge`）
+  - `--force-if-includes` は force フラグではない。`--force-with-lease` の検査を強める安全側の修飾子である。単体では push の挙動を変えない。`git help push` に「If the option is passed without specifying `--force-with-lease` ... it is a "no-op".」とある。AGENTS.md Safety の禁止列挙にも含まれない

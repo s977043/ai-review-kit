@@ -29,6 +29,19 @@ Argument order does not matter: `git push --force origin x` and
 `git push origin x --force` are both blocked, as are `git -C /repo push --force`
 and compound commands (`… && git push --force …`).
 
+### Scope
+
+This hook only sees an agent's `Bash` tool calls. It never runs on GitHub
+Actions, so it does not touch `.github/workflows/release-please.yml`'s
+force-update of the moving major tag — AGENTS.md § Safety scopes that
+exemption to the workflow, and the same command typed by an agent stays
+blocked. That is the SSoT's intent, not a gap.
+
+`--force-if-includes` is not blocked. Per `git help push`, "If the option is
+passed without specifying `--force-with-lease` … it is a 'no-op'." It tightens
+`--force-with-lease` rather than forcing on its own, and the combination that
+does force is caught by the `--force-with-lease` rule.
+
 ### How it works
 
 1. Reads the PreToolUse stdin JSON and extracts `.tool_input.command`.
