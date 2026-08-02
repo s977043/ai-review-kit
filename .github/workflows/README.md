@@ -140,7 +140,7 @@ JSON
 ## 共通の約束事
 
 - Node をセットアップするのは 27 本中 15 本で、うち 12 本は `./.github/actions/setup-node-deps`（composite action）を使う
-- ただし composite の既定は `.nvmrc` ではなくリテラル `22.x` である（`.nvmrc` は `22.22.2`）。ncc の出力が Node メジャーで変わるため、dist 再ビルド系だけは `actions/setup-node` へ `node-version-file: '.nvmrc'` を渡して厳密に合わせる。該当は `auto-rebuild-action-dist.yml` と `test.yml`（`dist-check` / `engine-install`）、`promptfoo-eval.yml` の 3 本である
+- ただし composite の既定は `.nvmrc` ではなくリテラル `22.x` である（`.nvmrc` は `22.22.2`）。ncc の出力が Node メジャーで変わるため、dist を再ビルドする `auto-rebuild-action-dist.yml` と `test.yml`（`dist-check` / `engine-install`）だけは `node-version-file: '.nvmrc'` を厳密に指定する。composite を使わない `promptfoo-eval.yml` も同じ指定である
 - サードパーティ action は commit SHA でピン留めする。現状 `scorecard.yml` の `ossf/scorecard-action@v2.4.4` だけがタグ参照である
 - `permissions:` は 27 本すべてが top-level で宣言している。読み取りだけで済むものには `read-all` か `contents: read` を置き、書き込みが要るジョブにだけスコープを足す。`auto-milestone.yml` は `issues: write` のみを与える最小例である
 - 共有状態（ref・デプロイ・Issue・外部リソース）に触れるワークフローには `concurrency:` グループを設定する。読み取り専用のジョブでは省略してよい。現状 27 本中 26 本が設定済みで、例外は `hol-plugin-scanner.yml` の 1 本である
