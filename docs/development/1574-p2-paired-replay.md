@@ -108,30 +108,48 @@ manifest は契約3 が列挙する条件をすべて固定します。固定す
 
 `manifestId` は `RR-EXP-<experimentKey の先頭12桁>` です。candidate の `RR-PC-` とは名前空間を分けています。
 
-### 宣言した commitSha と evidence の突合（#1719）
+### evidence が内部で一貫しているかの検査（#1719）
 
-manifest が宣言する `baseline.commitSha` / `candidate.commitSha` は、その side が集めた run evidence の `source_commit_sha` と突合します。矛盾を検出した場合は `PairedReplayError` として実験を成立させません。契約3 は実験条件の不変性を担保する仕組みであり、宣言と証拠が別物である manifest は digest だけなら正しく検証できてしまうため、下流からは検出できないからです。
+同一 case に属する run の `source_commit_sha` が食い違う場合、`PairedReplayError` として実験を成立させません。1 つの case の run は「同じ入力を 1 つの構成でレビューした反復」であり、レビュー対象コミットが割れているなら、その case へ集約した finding は別のコードから生まれた観測値だからです。
 
-突合の規則は次のとおりです。
+#### side.commitSha とは突合しない
 
-- 宣言と異なる `source_commit_sha` を持つ run が 1 件でもあれば拒否する。エラーメッセージには実値を最大 3 件まで載せる
-- `source_commit_sha` を持たない run は「未取得」として扱い、矛盾とはみなさない。#1715 以前の run レコードは provenance を持たないため、欠落を不一致と読むと既存データセットをすべて拒否することになる
-- `record.commitSha` へのフォールバック（`buildRunEvidence`）も同じ突合の対象にする。フォールバックだけ検査から外すと迂回路になる
-- `provenance.dirty`（#1718）は判定を緩める根拠にしない。dirty な run の `commitSha` はレビュー対象の変更を含まない HEAD を指すため、宣言と一致していても意味論的には弱い。件数の記録と警告で扱う
+`side.commitSha` と `source_commit_sha` は名前空間が異なります。両者の等値を要求してはいけません。
 
-各 side は、証拠が裏付けられなかった範囲を `provenance` として固定します。
+| 値                             | 意味                                                                          | baseline と candidate の関係                 |
+| ------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------- |
+| `side.commitSha`               | 構成識別子である。`configurationDiffers` が provider / model と並べて比較する | **異なる**ことが前提である                   |
+| `evidence[].source_commit_sha` | レビュー対象リポジトリの HEAD である（`getHeadSha`）                          | 同一 case なら**同じ値**になるのが自然である |
 
-| フィールド                       | 意味                                              |
-| -------------------------------- | ------------------------------------------------- |
-| `sourceCommitShaUnknownRunCount` | `source_commit_sha` を持たない run の件数である   |
-| `dirtyRunCount`                  | dirty な working tree で収集した run の件数である |
-| `dirtyUnknownRunCount`           | dirty フラグそのものを持たない run の件数である   |
+等値を要求すると、実データでは「常に拒否される」か「両側へ同じ sha を宣言して commit 次元を殺す」かの二択になります。したがって突合の対象は**証拠どうし**であり、宣言ではありません。
+
+#### 検査の規則
+
+- 検査の単位は **(side, case)** である。side 全体ではない。dataset は異なる時期・異なるリポジトリの case を含みうるため、side 全体で一意を求めると実データをほぼ全て拒否する
+- case key を導出できない run は対象外である。case の同一性がない run には「同じ入力」という主張自体が存在しない
+- `source_commit_sha` を持たない run は「未取得」として扱う。#1715 以前の run レコードは provenance を持たないため、欠落を不一致と読むと既存データセットを拒否してしまう
+- 比較は小文字化して行い、短縮 sha は 7 桁以上の hex prefix であれば同一コミットとみなす。hex でない値は完全一致のみで比較する
+- 違反は baseline と candidate をまとめて 1 回の例外で報告し、原因となった `review_run_id` をメッセージへ載せる
+- `provenance.dirty`（#1718）は判定を緩める根拠にしない。dirty な run の sha はレビュー対象の変更を含まない HEAD を指すため、周囲と一致していても意味論的には弱い。件数の記録と警告で扱う
+
+#### manifest が固定する派生値
+
+各 side は、自らの証拠から導いた要約を `provenance` として固定します。宣言値ではなく**証拠からの派生値**です。
+
+| フィールド                       | 意味                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `sourceCommitSha`                | side の run が合意しているレビュー対象コミットである。複数 case で割れる場合と全件未取得の場合は null になる |
+| `sourceCommitShaUnknownRunCount` | `source_commit_sha` を持たない run の件数である                                                              |
+| `dirtyRunCount`                  | dirty な working tree で収集した run の件数である                                                            |
+| `dirtyUnknownRunCount`           | dirty フラグそのものを持たない run の件数である                                                              |
 
 #### hash 入力の扱い
 
-上記 3 件のカウントは `experimentKey` と `manifestHash` の入力に含めます。いずれも `artifact_sha256` の材料と同じ run レコードから決まる派生値であり、実行のたびに揺れる観測値ではないためです。同一の run レコードからは常に同一の `experimentKey` が導出されるという性質は保たれます。
+`provenance` は `experimentKey` と `manifestHash` の入力に含めます。いずれも `artifact_sha256` の材料と同じ run レコードから決まる派生値であり、実行のたびに揺れる観測値ではないためです。同一の run レコードからは常に同一の `experimentKey` が導出されるという性質は保たれます。
 
-一方で、v1.68.0 までの版が作成した manifest とは `experimentKey` の値が変わります。保存済み manifest 自体は自らの conditions から digest を再計算するため `verifyExperimentManifest` は通りますが、同じ spec を再実行すると `experimentKeyMatchesInputs` が false になります。P2 は出荷直後で保存済み実験の実データがないため、`schemaVersion` は 1 のまま据え置きました。
+ただし digest の**値そのもの**は、v1.68.0 までの版が作成した manifest と一致しません。保存済み manifest は自らの conditions から digest を再計算するため `verifyExperimentManifest` は通りますが、同じ spec を再実行すると `experimentKeyMatchesInputs` が false になります。CLI はこの分岐で「v1.68.0 以前の manifest は再生成が必要」というヒントを併記します。
+
+schema 側では `provenance` を **optional** として追加しました。同じ `schemaVersion` のまま required 集合を非互換に変えると、以前の版が出力した artifact が invalid になってしまうためです。`schemaVersion` は 1 のまま据え置きます。
 
 ### terminal reason を manifest に書かない理由
 
@@ -225,12 +243,17 @@ paired replay を ledger 比較と区別する要素として、activation を�
 - `configurationDiffers`: baseline と candidate の構成識別子（commit / provider / model / temperature / Skill Registry commit）が異なるか
 - `observedDifference`: 突合結果に差分があるか
 - `verified`: 上記 2 つがともに真であるか
-- `commitShaCorroborated`: 両側とも `source_commit_sha` を持つ run が 1 件以上あるか（#1719）
-- `dirtyRunCount`: 両側を合わせた dirty run の件数（#1718 W1）
+- `sourceCommitShaCoverage`: 両側合計で、レビュー対象コミットを名指しできる run が何件あるか（`runCount` / `knownRunCount` / `unknownRunCount`・#1719）
 
 構成が同一の replay を「regression なし」と読むと、candidate についての証拠がないのに安全だと誤読します。そのため未発火の場合は理由付きで報告します。
 
-`commitShaCorroborated` と `dirtyRunCount` は報告専用であり、`verified` の判定式には入れていません。理由は 2 点あります。宣言と証拠が矛盾する場合は manifest の生成時点ですでに拒否しており、activation まで到達するのは「未取得のため裏付けが取れない」状態だけだからです。provider / model / temperature / Skill Registry commit には証拠側の対応物がそもそもなく、commit だけへ裏付けを要求すると非対称な判定になるからでもあります。裏付けのない構成差と dirty run は、`activationCheck.reasons` と Markdown の Activation 節へ理由として出力します。
+`sourceCommitShaCoverage` は報告専用であり、`verified` の判定式には入れていません。「どのコードをレビューしたのか名指しできる」という性質と、「構成が異なった」という事実は別の問いだからです。証拠の欠落は次の 3 つを `activationCheck.reasons`（および Markdown の Activation 節）へ必ず出力し、沈黙させません。
+
+- `source_commit_sha` を持たない run が存在する場合（#1715 以前の記録）
+- dirty な working tree で収集した run が存在する場合（#1718 W1）
+- dirty フラグ自体を持たない run が存在する場合（unknown を clean と同じ扱いにしない）
+
+per-side の内訳は `manifest.<side>.provenance` にあります。両側合計を持つのは activation 側だけであり、同名フィールドの二重管理は避けています。
 
 ## 11. 次フェーズへの申し送り
 

@@ -71147,6 +71147,14 @@ async function runReplay(parsed, output) {
     console.error(
       `Error: the supplied manifest describes a different experiment (recomputed experimentKey ${result.manifestVerification.recomputedExperimentKey}).`
     );
+    // A manifest created before the evidence provenance summary was pinned
+    // (#1719, v1.68.0 and earlier) hashes a smaller condition set, so it lands
+    // here even though its own digests verify. Without this hint the only
+    // reading left is "wrong file", and the fix — rebuild the manifest — is not
+    // discoverable.
+    console.error(
+      'Hint: manifests created by v1.68.0 or earlier do not pin manifest.<side>.provenance (#1719); their experimentKey no longer matches this spec. Rebuild the manifest from the spec.'
+    );
     return 1;
   }
   if (parsed.evolveExpectManifest) {

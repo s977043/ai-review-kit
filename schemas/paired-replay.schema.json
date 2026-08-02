@@ -73,7 +73,6 @@
         "reviewRunIds",
         "caseKeys",
         "unkeyedRunCount",
-        "provenance",
         "evidence"
       ],
       "additionalProperties": false,
@@ -94,19 +93,28 @@
         },
         "provenance": {
           "type": "object",
-          "description": "What the side's own evidence could NOT corroborate about its declared commitSha (#1719). A contradiction never appears here: a source_commit_sha that differs from commitSha refuses the experiment at build time (契約3). Every count is derived from the same run records that feed artifact_sha256, so it adds no new input to the manifest digests.",
-          "required": ["sourceCommitShaUnknownRunCount", "dirtyRunCount", "dirtyUnknownRunCount"],
+          "description": "Summary DERIVED from this side's own run evidence — never from the declaration (#1719). `sourceCommitSha` is the reviewed repository's HEAD as reported by the runs, a different namespace from the sibling `commitSha`, which is a configuration identifier that baseline and candidate are expected to differ on. OPTIONAL: manifests created before this field existed stay valid under the same schemaVersion. Adding the block does change the digest VALUES of newly built manifests, but not their determinism — every count comes from the same run records that already feed artifact_sha256, so identical records still produce an identical experimentKey.",
+          "required": [
+            "sourceCommitSha",
+            "sourceCommitShaUnknownRunCount",
+            "dirtyRunCount",
+            "dirtyUnknownRunCount"
+          ],
           "additionalProperties": false,
           "properties": {
+            "sourceCommitSha": {
+              "type": ["string", "null"],
+              "description": "The single reviewed commit this side's runs agree on, lowercased (an abbreviated sha resolves to the longest form it prefixes). Null when the runs report none, or when the side legitimately spans several commits — a dataset whose cases were collected at different times. Runs of the SAME case that disagree are refused at build time instead."
+            },
             "sourceCommitShaUnknownRunCount": {
               "type": "integer",
               "minimum": 0,
-              "description": "Runs with no source_commit_sha (records written before #1715). Treated as 未取得, not as a mismatch — but the cross-check is vacuous for them."
+              "description": "Runs with no source_commit_sha (records written before #1715). Treated as 未取得, not as a contradiction — but the consistency check is vacuous for them, so the count is surfaced as an activation reason."
             },
             "dirtyRunCount": {
               "type": "integer",
               "minimum": 0,
-              "description": "Runs collected from a dirty working tree (#1718). Their commitSha is the HEAD the review was taken against, so it can match the declaration while the reviewed lines exist only in the working tree."
+              "description": "Runs collected from a dirty working tree (#1718). Their source_commit_sha is the HEAD the review sat on top of, so it can agree with its neighbours while the reviewed lines exist only in the working tree."
             },
             "dirtyUnknownRunCount": {
               "type": "integer",
@@ -594,8 +602,6 @@
         "configurationDiffers",
         "observedDifference",
         "verified",
-        "commitShaCorroborated",
-        "dirtyRunCount",
         "expectedSignal",
         "declaredEvidence",
         "reasons"
@@ -605,14 +611,24 @@
         "configurationDiffers": { "type": "boolean" },
         "observedDifference": { "type": "boolean" },
         "verified": { "type": "boolean" },
-        "commitShaCorroborated": {
-          "type": "boolean",
-          "description": "True when BOTH sides have at least one run whose evidence reports a source_commit_sha (#1719). Reported, never folded into `verified`: a contradicting sha already refuses the experiment, and the other configuration identifiers have no evidence counterpart either."
-        },
-        "dirtyRunCount": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Runs of both sides collected from a dirty working tree (#1718 W1). Their commitSha points at a baseline that does not contain the reviewed change, so the configuration difference is weaker than the manifest suggests."
+        "sourceCommitShaCoverage": {
+          "type": "object",
+          "description": "How many runs across BOTH sides can name the code they reviewed (#1719). Reported, never folded into `verified`: naming the reviewed code is a different question from whether the configuration differed. OPTIONAL so results produced before this field existed stay valid under the same schemaVersion. Per-side counts live on manifest.<side>.provenance.",
+          "required": ["runCount", "knownRunCount", "unknownRunCount"],
+          "additionalProperties": false,
+          "properties": {
+            "runCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Denominator: runs of both sides combined."
+            },
+            "knownRunCount": { "type": "integer", "minimum": 0 },
+            "unknownRunCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Runs reporting no source_commit_sha. Non-zero always adds an activation reason, so the gap is never silent."
+            }
+          }
         },
         "expectedSignal": { "type": ["string", "null"] },
         "declaredEvidence": { "type": "array", "items": { "type": "string" } },

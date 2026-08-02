@@ -252,60 +252,148 @@ function normalizeTemperature(value, label) {
   return value;
 }
 
+// A source commit sha is compared case-insensitively, and an abbreviated sha is
+// accepted as the same commit as the full one it prefixes. `git rev-parse HEAD`
+// writes 40-hex lowercase, but a record can be hand-written or copied from an
+// abbreviated `git log` line, and treating `A1B2C3D` and its 40-hex form as two
+// different commits would refuse an experiment that is in fact consistent.
+const SHA_HEX_PATTERN = /^[0-9a-f]{7,40}$/;
+
 /**
- * Cross-check the commit SHA one side DECLARES against the one its own run
- * evidence reports, and summarize what the evidence could not corroborate
- * (#1719).
+ * Resolve the distinct observed source commit shas of one group of runs into a
+ * single commit, or report the group as mixed.
  *
- * Fail-closed on a contradiction: 契約3 pins the experiment CONDITIONS, so a
- * manifest that declares `baseline.commitSha = X` while every artifact it
- * hashes was produced at `Y` describes an experiment that never happened. Such
- * a manifest is internally consistent (its digests verify) and therefore
- * undetectable downstream, which is exactly why the contradiction has to be
- * refused at build time instead of reported as a warning.
+ * Equivalence is prefix-based on purpose: the longest value is taken as the
+ * representative and every other value must be that value, or a hex prefix of
+ * it at least 7 characters long (the abbreviation git itself considers
+ * unambiguous). Values that are not hex (a placeholder, a tag name) only match
+ * by exact equality, so a typo is still reported as mixed rather than silently
+ * absorbed.
  *
- * A run whose evidence has NO `source_commit_sha` is "未取得", not a
- * contradiction: run records written before #1715 populated the provenance
- * block carry none, and treating the absence as a mismatch would reject every
- * pre-existing dataset.
+ * @param {string[]} lowercased distinct, non-null, already lowercased shas
+ * @returns {{ sha: string|null, mixed: boolean }}
+ */
+function resolveObservedSha(lowercased) {
+  if (lowercased.length === 0) return { sha: null, mixed: false };
+  const ordered = [...lowercased].sort((a, b) => b.length - a.length || compareStrings(a, b));
+  const longest = ordered[0];
+  const consistent = ordered.every(
+    (sha) =>
+      sha === longest ||
+      (SHA_HEX_PATTERN.test(sha) && SHA_HEX_PATTERN.test(longest) && longest.startsWith(sha))
+  );
+  return consistent ? { sha: longest, mixed: false } : { sha: null, mixed: true };
+}
+
+function lowercaseSha(sha) {
+  return typeof sha === 'string' ? sha.toLowerCase() : null;
+}
+
+/**
+ * Summarize what one side's own evidence says about the commit its runs were
+ * taken at, and collect the internal contradictions (#1719).
  *
- * `dirty` (#1718) is NOT folded into the equality check. A dirty run's
- * `commitSha` is the HEAD the review was taken against, so it usually MATCHES
- * the declaration while the reviewed lines live only in the working tree and
- * are absent from that commit. The counts are recorded so the weakness is
- * visible; loosening the check because a run is dirty would go the wrong way
- * (#1682 F2 / #1697).
+ * This is deliberately NOT a check against `side.commitSha`. The two values
+ * live in different namespaces: `source_commit_sha` is the HEAD of the REVIEWED
+ * repository (`getHeadSha`, so the same case yields the same sha on both
+ * sides), while `side.commitSha` is a CONFIGURATION identifier that
+ * `configurationDiffers` compares alongside provider / model / temperature and
+ * is expected to differ between baseline and candidate. Requiring them to be
+ * equal would either refuse every real dataset or force both sides to declare
+ * one sha, which kills the commit dimension of the activation check.
  *
- * Every count is derived from the same run records that already feed
- * `artifact_sha256`, so pinning them in the manifest keeps it a pure function
- * of its inputs: the same records always produce the same experimentKey.
+ * What the contract does require is that the evidence be internally coherent:
+ * the runs of ONE case under ONE configuration are repeats of the same input,
+ * so they must report the same reviewed commit. A mixture means the findings
+ * being pooled came from different code, and the case's diff is then not a
+ * property of the configuration.
+ *
+ * The check is per (side, case), NOT per side: a dataset legitimately spans
+ * cases collected at different times and repositories, so requiring one sha
+ * across the whole side would reject essentially every real `.river/runs`
+ * dataset. Runs whose case key cannot be derived are excluded — without a case
+ * identity there is no "same input" claim to violate.
+ *
+ * A run with NO `source_commit_sha` is 未取得, not a contradiction: records
+ * written before #1715 carry none, and reading the absence as a mismatch would
+ * reject every pre-existing dataset.
+ *
+ * `dirty` (#1718) never relaxes anything here. A dirty run's sha is the HEAD
+ * the review sat on top of, so it can agree with its neighbours while the
+ * reviewed lines exist only in a working tree. The counts are recorded so the
+ * weakness is visible (#1682 F2 / #1697).
  *
  * @param {string} label side label used in error messages
- * @param {string} declared the side's declared commit SHA
- * @param {object[]} evidence 契約1 evidence records for this side
- * @param {object[]} runs the saved run records themselves
- * @returns {{ sourceCommitShaUnknownRunCount: number, dirtyRunCount: number, dirtyUnknownRunCount: number }}
+ * @param {object[]} runs the saved run records
+ * @param {object[]} evidence 契約1 evidence records, in the same order as `runs`
+ * @returns {{ provenance: object, violations: object[] }}
  */
-function checkSideCommitSha(label, declared, evidence, runs) {
-  const observed = [
-    ...new Set(evidence.map((e) => e.source_commit_sha).filter((sha) => sha != null)),
-  ].sort(compareStrings);
-  const contradicting = observed.filter((sha) => sha !== declared);
-  if (contradicting.length) {
-    throw new PairedReplayError(
-      `${label}.commitSha ${declared} contradicts the source_commit_sha recorded on its own run evidence (${contradicting.slice(0, 3).join(', ')}). ` +
-        'The manifest would pin an experiment condition the evidence does not support (契約3), so the experiment is refused. ' +
-        `Declare the commit the runs were actually taken at, or re-collect ${label}.runs at ${declared}.`
-    );
+function summarizeSideProvenance(label, runs, evidence) {
+  const byCase = new Map();
+  runs.forEach((record, index) => {
+    const caseKey = deriveCaseKey(record);
+    if (caseKey == null) return;
+    const sha = lowercaseSha(evidence[index].source_commit_sha);
+    if (sha == null) return;
+    if (!byCase.has(caseKey)) byCase.set(caseKey, new Map());
+    const shas = byCase.get(caseKey);
+    if (!shas.has(sha)) shas.set(sha, []);
+    shas.get(sha).push(evidence[index].review_run_id ?? '(run id 未取得)');
+  });
+  const violations = [];
+  for (const caseKey of [...byCase.keys()].sort(compareStrings)) {
+    const shas = byCase.get(caseKey);
+    if (!resolveObservedSha([...shas.keys()]).mixed) continue;
+    violations.push({
+      side: label,
+      caseKey,
+      // Sorted so the message is byte-identical for the same input.
+      observed: [...shas.entries()]
+        .sort(([a], [b]) => compareStrings(a, b))
+        .map(([sha, runIds]) => ({ sha, runIds: [...runIds].sort(compareStrings) })),
+    });
   }
+  const allShas = [
+    ...new Set(evidence.map((e) => lowercaseSha(e.source_commit_sha)).filter((sha) => sha != null)),
+  ];
   const dirtyFlags = runs.map((record) => record?.provenance?.dirty);
   return {
-    sourceCommitShaUnknownRunCount: evidence.filter((e) => e.source_commit_sha == null).length,
-    dirtyRunCount: dirtyFlags.filter((flag) => flag === true).length,
-    // `null` (unknown) is counted apart from `false` (observed clean): a record
-    // that never recorded the flag must not read as a clean working tree.
-    dirtyUnknownRunCount: dirtyFlags.filter((flag) => typeof flag !== 'boolean').length,
+    provenance: {
+      // DERIVED from the evidence, never the declaration: null when the runs
+      // span several commits (a multi-case dataset) or report none at all.
+      sourceCommitSha: resolveObservedSha(allShas).sha,
+      sourceCommitShaUnknownRunCount: evidence.filter((e) => e.source_commit_sha == null).length,
+      dirtyRunCount: dirtyFlags.filter((flag) => flag === true).length,
+      // `null` (unknown) is counted apart from `false` (observed clean): a record
+      // that never recorded the flag must not read as a clean working tree.
+      dirtyUnknownRunCount: dirtyFlags.filter((flag) => typeof flag !== 'boolean').length,
+    },
+    violations,
   };
+}
+
+/**
+ * Render every internal source-commit contradiction as ONE error, so a caller
+ * fixing a dataset sees all of them instead of one per attempt.
+ */
+function formatSourceShaViolations(violations) {
+  const detail = violations
+    .slice(0, 3)
+    .map(
+      (v) =>
+        `${v.side} case "${v.caseKey}": ` +
+        v.observed
+          .slice(0, 4)
+          .map(({ sha, runIds }) => `${sha} (run ${runIds.slice(0, 3).join(', ')})`)
+          .join(' vs ')
+    )
+    .join('; ');
+  const more = violations.length > 3 ? ` (+${violations.length - 3} more)` : '';
+  return (
+    `Runs of the same case under one configuration report several source_commit_sha values: ${detail}${more}. ` +
+    'The findings pooled for that case were produced from different code, so the experiment is refused (契約3 / #1719). ' +
+    'Re-collect the runs at one commit, or give the differing runs distinct caseId values.'
+  );
 }
 
 function normalizeSide(side, label, { collectorVersion }) {
@@ -314,18 +402,19 @@ function normalizeSide(side, label, { collectorVersion }) {
   if (!runs || runs.length === 0) {
     throw new PairedReplayError(`${label}.runs must be a non-empty array of saved run records.`);
   }
-  const evidence = runs
-    .map((record) => (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .buildRunEvidence */ .L5)(record, { collectorVersion }))
-    .sort(
-      (a, b) =>
-        compareStrings(a.review_run_id, b.review_run_id) ||
-        compareStrings(a.artifact_sha256, b.artifact_sha256)
-    );
+  // Kept in input order for the per-run cross-check below; the manifest gets a
+  // sorted copy so the pinned conditions stay independent of input order.
+  const evidenceByRun = runs.map((record) => (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .buildRunEvidence */ .L5)(record, { collectorVersion }));
+  const evidence = [...evidenceByRun].sort(
+    (a, b) =>
+      compareStrings(a.review_run_id, b.review_run_id) ||
+      compareStrings(a.artifact_sha256, b.artifact_sha256)
+  );
   const caseKeys = [...new Set(runs.map(deriveCaseKey).filter(Boolean))].sort(compareStrings);
-  const commitSha = requireString(side.commitSha, `${label}.commitSha`);
+  const summary = summarizeSideProvenance(label, runs, evidenceByRun);
   return {
     manifest: {
-      commitSha,
+      commitSha: requireString(side.commitSha, `${label}.commitSha`),
       skillRegistryCommit: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.skillRegistryCommit),
       provider: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.provider),
       model: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.model),
@@ -335,10 +424,11 @@ function normalizeSide(side, label, { collectorVersion }) {
       reviewRunIds: [...new Set(runs.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(compareStrings),
       caseKeys,
       unkeyedRunCount: runs.filter((record) => deriveCaseKey(record) == null).length,
-      provenance: checkSideCommitSha(label, commitSha, evidence, runs),
+      provenance: summary.provenance,
       evidence,
     },
     runs,
+    violations: summary.violations,
   };
 }
 
@@ -525,9 +615,9 @@ function normalizeImprovementCandidate(spec, policyVersion) {
  * commit SHA, dataset hash and held-out hash, evaluator and collector version,
  * provider / model / temperature, Skill Registry commit, trial id and count,
  * activation evidence, environment snapshot, metrics denominator and the
- * terminal-reason vocabulary. Each side also pins the provenance summary of its
- * own evidence (`provenance`, #1719) — the declared commit SHA is cross-checked
- * against `source_commit_sha` and a contradiction refuses the experiment.
+ * terminal-reason vocabulary. Each side also pins the provenance summary DERIVED
+ * from its own evidence (`provenance`, #1719); runs of one case that disagree
+ * about the reviewed commit refuse the experiment.
  *
  * Immutability is content-addressed, not enforced by file permissions: the
  * caller stores the manifest as-is, and any later reader re-derives
@@ -550,6 +640,12 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
     (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.evaluator?.collectorVersion) ?? PAIRED_REPLAY_COLLECTOR_VERSION;
   const baseline = normalizeSide(spec.baseline, 'baseline', { collectorVersion });
   const candidate = normalizeSide(spec.candidate, 'candidate', { collectorVersion });
+  // Both sides are reported in ONE error: fixing a dataset one message at a
+  // time costs a full re-run per contradiction.
+  const sourceShaViolations = [...baseline.violations, ...candidate.violations];
+  if (sourceShaViolations.length) {
+    throw new PairedReplayError(formatSourceShaViolations(sourceShaViolations));
+  }
 
   const caseKeys = [
     ...new Set([...baseline.manifest.caseKeys, ...candidate.manifest.caseKeys]),
@@ -1116,16 +1212,21 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
     });
   const observedDifference =
     overall.changedFindingCount + overall.removedFindingCount + overall.addedFindingCount > 0;
-  // Does the evidence back the commit SHAs the activation check reads? A
-  // contradiction can no longer reach this point (normalizeSide refuses it), so
-  // what is left to report is the UNVERIFIED case: a side whose runs carry no
-  // `source_commit_sha` at all leaves its declared commit uncorroborated.
+  // How much of the dataset can actually say WHICH code was reviewed (#1719)?
+  // Silence here is what hid the problem before: a side made entirely of
+  // pre-#1715 records reports nothing at all about its reviewed commits, and a
+  // reader has no way to tell that from a fully provenanced dataset.
   const baselineProvenance = built.manifest.baseline.provenance;
   const candidateProvenance = built.manifest.candidate.provenance;
-  const commitShaCorroborated =
-    built.manifest.baseline.runCount > baselineProvenance.sourceCommitShaUnknownRunCount &&
-    built.manifest.candidate.runCount > candidateProvenance.sourceCommitShaUnknownRunCount;
-  const dirtyRunCount = baselineProvenance.dirtyRunCount + candidateProvenance.dirtyRunCount;
+  const totalRunCount = built.manifest.baseline.runCount + built.manifest.candidate.runCount;
+  const unknownShaRunCount =
+    baselineProvenance.sourceCommitShaUnknownRunCount +
+    candidateProvenance.sourceCommitShaUnknownRunCount;
+  const sourceCommitShaCoverage = {
+    runCount: totalRunCount,
+    knownRunCount: totalRunCount - unknownShaRunCount,
+    unknownRunCount: unknownShaRunCount,
+  };
   const activationReasons = [];
   if (!configurationDiffers) {
     activationReasons.push(
@@ -1135,14 +1236,19 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
   if (!observedDifference) {
     activationReasons.push('paired diff に差分がなく、変更経路が発火した証跡を観測できない');
   }
-  if (configurationDiffers && !commitShaCorroborated) {
+  if (unknownShaRunCount > 0) {
     activationReasons.push(
-      'run evidence に source_commit_sha がなく、構成差のうち commit SHA の部分は宣言のみで裏付けがない'
+      `source_commit_sha を持たない run が baseline ${baselineProvenance.sourceCommitShaUnknownRunCount} 件 / candidate ${candidateProvenance.sourceCommitShaUnknownRunCount} 件あり、どのコードをレビューした結果か追跡できない（#1715 以前の記録）`
     );
   }
-  if (dirtyRunCount > 0) {
+  if (baselineProvenance.dirtyRunCount + candidateProvenance.dirtyRunCount > 0) {
     activationReasons.push(
-      `dirty な working tree で収集した run が baseline ${baselineProvenance.dirtyRunCount} 件 / candidate ${candidateProvenance.dirtyRunCount} 件あり、その commitSha はレビュー対象の変更を含まないベースラインを指す（#1718 W1）`
+      `dirty な working tree で収集した run が baseline ${baselineProvenance.dirtyRunCount} 件 / candidate ${candidateProvenance.dirtyRunCount} 件あり、その source_commit_sha はレビュー対象の変更を含まないベースラインを指す（#1718 W1）`
+    );
+  }
+  if (baselineProvenance.dirtyUnknownRunCount + candidateProvenance.dirtyUnknownRunCount > 0) {
+    activationReasons.push(
+      `dirty フラグを持たない run が baseline ${baselineProvenance.dirtyUnknownRunCount} 件 / candidate ${candidateProvenance.dirtyUnknownRunCount} 件あり、working tree が clean だったとは断定できない`
     );
   }
 
@@ -1194,15 +1300,13 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
     activationCheck: {
       configurationDiffers,
       observedDifference,
-      // Unchanged definition (#1719): `commitShaCorroborated` is REPORTED, not
-      // folded into `verified`. The other four identifiers (provider / model /
-      // temperature / Skill Registry commit) have no evidence counterpart at
-      // all, so demanding corroboration for the commit alone would be an
-      // arbitrary asymmetry — the contradiction case, which is the one that can
-      // mislead, is already refused at manifest build time.
+      // Unchanged definition (#1719). `sourceCommitShaCoverage` is REPORTED,
+      // never folded into `verified`: it measures the evidence's ability to name
+      // the reviewed code, which is a different question from whether the
+      // CONFIGURATION differed. The provenance gaps it counts are surfaced as
+      // reasons so they cannot pass unnoticed.
       verified: configurationDiffers && observedDifference,
-      commitShaCorroborated,
-      dirtyRunCount,
+      sourceCommitShaCoverage,
       expectedSignal: built.manifest.activation.expectedSignal,
       declaredEvidence: built.manifest.activation.declaredEvidence,
       reasons: activationReasons,
