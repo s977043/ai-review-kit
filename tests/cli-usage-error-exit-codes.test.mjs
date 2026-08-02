@@ -132,7 +132,11 @@ const CASES = [
     contract: 'C2',
   },
   {
-    // 共有パーサではなくハンドラ層（review-plan.mjs）が検出する唯一の C4 値。
+    // C4 は本表に 2 件ある。こちらは共有パーサではなくハンドラ層
+    // （src/lib/review-plan.mjs の resolveReviewOutputFormat）が検出するもの。
+    // もう 1 件は下の `review route` / unknown-subcommand（`river review bogus`）で、
+    // そちらは src/cli/commands/review.mjs のサブコマンド dispatch が検出しており、
+    // 検出箇所が異なる。
     surface: 'review plan',
     kind: 'invalid-value',
     argv: ['review', 'plan', '--plan-only', '--output', 'html'],
@@ -197,6 +201,9 @@ const CASES = [
     contract: 'C1',
   },
   {
+    // C4 の 2 件目。src/cli/commands/review.mjs のサブコマンド dispatch が返す。
+    // 1 件目は上の `review plan` / invalid-value（`--output html`）で、そちらは
+    // src/lib/review-plan.mjs が検出する。
     surface: 'review route',
     kind: 'unknown-subcommand',
     argv: ['review', 'bogus'],
@@ -537,7 +544,9 @@ const CONTROL_CASES = [
   },
 ];
 
-const caseKey = (c) => `${c.surface}|${c.kind}|${c.argv.join(' ')}`;
+// argv 要素には空白のみの値（`--run-id "   "`）が含まれるため、区切り文字連結だと
+// 別ケースと衝突しうる。JSON 表現なら文字列配列に対して単射なので一意性が保たれる。
+const caseKey = (c) => `${c.surface}|${c.kind}|${JSON.stringify(c.argv)}`;
 const caseTitle = (c) =>
   `${c.surface} / ${c.kind} / \`river ${c.argv.join(' ')}\` -> ${c.contract} (${CONTRACTS[c.contract].label})`;
 
