@@ -20,11 +20,12 @@
   worktree で作業する場合は最初に `npm ci` を実行すること（lockfile 由来の依存不整合を防ぐ）。
 - `git commit` / `git push` で `--no-verify` を使わないこと。lint-staged が manifest 再生成・textlint を担っており、
   スキップすると CI で初めて失敗が露見する。
-- 履歴を書き換える・破棄する操作は行わないこと。禁止対象は `git push --force`（`-f` も同じ）、
-  `git push --force-with-lease`、`git reset --hard`、`git stash drop` のすべて。
-  `--force-with-lease` は「安全な force」ではなく、ここでは force 禁止の例外にならない。
-  push が reject される等で rebase や force push が必要に見えた場合は、自分で判断せず作業を止めて
-  オーガナイザーに報告すること（リモートに追随するだけなら `git pull --rebase` で解消してよい）。
+- push 済みのリモート履歴を強制的に上書きする操作、および作業を破棄する操作は行わないこと。
+  禁止対象は `git push --force`（`-f` も同じ）、`git push --force-with-lease`、`git reset --hard`、
+  `git stash drop` のすべて。`--force-with-lease` は「安全な force」ではなく、force 禁止の例外にならない。
+  自分のブランチのリモート更新に追随するだけなら `git pull --rebase` を使ってよい（force push が不要な範囲に限る）。
+  push が reject される等で force push が必要に見えた場合は、自分で判断せず作業を止めて
+  オーガナイザーに報告すること。
 - commit subject は小文字または日本語で始めること（commitlint の subject-case ルールに抵触するため大文字始まりは reject される）。
   例: `fix: ...` / `feat: ...` / `docs: ...`（日本語 subject も可）。
 - Monitor ツールは使用しないこと。CI やポーリング待ちが必要な場合は、1つの Bash 呼び出し内で
