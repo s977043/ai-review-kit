@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.68.1](https://github.com/s977043/river-review/compare/v1.68.0...v1.68.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **cli:** feedback add のオプション値を parse 時に検証する ([#1721](https://github.com/s977043/river-review/issues/1721)) ([26ad58c](https://github.com/s977043/river-review/commit/26ad58c9e6a99c0b4959d8a1bc89b9516f323146)), closes [#1717](https://github.com/s977043/river-review/issues/1717)
+* **evolve:** paired replay の evidence 内部で source_commit_sha の一貫性を検査する ([#1720](https://github.com/s977043/river-review/issues/1720)) ([2e1192c](https://github.com/s977043/river-review/commit/2e1192c36173207961c52523be397cb379bed585))
+
 ## [1.68.0](https://github.com/s977043/river-review/compare/v1.67.1...v1.68.0) (2026-07-31)
 
 
