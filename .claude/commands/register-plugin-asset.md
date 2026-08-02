@@ -1,7 +1,7 @@
 ---
 description: 新しい配布 command / agent / agent-skill を plugin manifest に登録し、検証シーケンスまで実行する
 argument-hint: '[command|agent|skill] <name>'
-allowed-tools: Bash(npm run plugin:validate:*), Bash(npm run plugin:sync), Bash(npm run plugin:sync:*), Bash(npm run agent-skills:validate:*), Bash(npm run meta:validate:*), Bash(ls:*), Bash(git status:*), Bash(git diff:*), Read, Edit
+allowed-tools: Bash(npm run plugin:validate:*), Bash(npm run plugin:sync), Bash(npm run plugin:sync:*), Bash(npm run agent-skills:validate:*), Bash(npm run check:doc-enum:*), Bash(npm run meta:validate:*), Bash(ls:*), Bash(git status:*), Bash(git diff:*), Read, Edit
 ---
 
 新しい配布アセット（command / agent / agent-skill）を plugin manifest に登録し、検証まで通す。手順の SSoT は `docs/development/plugin-asset-registration-checklist.md` にあり、本コマンドはその実行手順の具体化のみを担う。$ARGUMENTS で種別と名前を受け取る（省略時は `git status` の差分から種別を推定する）。
@@ -22,7 +22,7 @@ git status --short
 
 `.claude-plugin/plugin.json` の `commands[]` に `"./commands/<name>.md"` を追加する（`README.md` は登録しない）。`.codex-plugin/plugin.json` に commands フィールドはないため対応不要。
 
-- CLAUDE.md「Custom Commands」表と `commands/README.md` が列挙形式なら説明を追記する
+- CLAUDE.md「Custom Commands」表と `commands/README.md` に説明を追記する（`npm run check:doc-enum` が両表と `commands/*.md` の一致を機械検証するため、条件付きではなく必須）
 
 ### agent（`agents/<name>.md`）
 
@@ -53,11 +53,13 @@ manifest に新しい「フィールド」を足した／値を変えた場合�
 npm run plugin:validate
 npm run plugin:sync:check
 npm run agent-skills:validate   # agent-skill を触った場合のみ
+npm run check:doc-enum
 npm run meta:validate
 ```
 
 - 全て pass を確認する。fail は該当項目を修正してから再実行する
 - `plugin:validate` が「参照パス不在」で落ちる＝登録漏れ or パス誤り。`plugin:sync:check` の drift＝同期フィールドの手編集を疑う
+- `check:doc-enum` が落ちる＝`commands/README.md` か CLAUDE.md「Custom Commands」表への追記漏れ（`meta:validate` からも実行されるため CI で必ず止まる）
 
 ## 判定
 

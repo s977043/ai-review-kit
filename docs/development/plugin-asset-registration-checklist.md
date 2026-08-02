@@ -30,8 +30,9 @@
 
 - [ ] `.claude-plugin/plugin.json` の `commands[]` に `"./commands/<name>.md"` を追加した（`README.md` は登録しない）
 - [ ] `.codex-plugin/plugin.json` には commands フィールドがない（対応不要）
-- [ ] CLAUDE.md「Custom Commands」表と `commands/README.md` に説明を追記した（列挙している場合）
+- [ ] CLAUDE.md「Custom Commands」表と `commands/README.md` に説明を追記した
 - [ ] `npm run plugin:validate` が pass する
+- [ ] `npm run check:doc-enum` が pass する（上記 2 つの表と `commands/*.md` の一致を機械検証する。詳細は [doc-enumeration-checks.md](./doc-enumeration-checks.md)）
 
 ### 新しい配布 agent（`agents/<name>.md`）を追加した場合
 

@@ -40,8 +40,11 @@ function normalizeRef(ref) {
 /**
  * List top-level `*.md` files (not recursing into subdirectories) under a
  * repo-relative directory. Returns basenames (e.g. "pr.md"). Missing dir → [].
+ *
+ * Exported so scripts/check-doc-enumerations.mjs reuses this listing instead of
+ * re-deriving it (CLAUDE.md "Import the SSoT, never re-derive it").
  */
-async function listMarkdownFiles(dir) {
+export async function listMarkdownFiles(dir) {
   try {
     const entries = await fs.readdir(path.join(ROOT, dir), { withFileTypes: true });
     return entries.filter((e) => e.isFile() && e.name.endsWith('.md')).map((e) => e.name);
