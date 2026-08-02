@@ -51,9 +51,11 @@ const BLOCKED = [
   'git stash drop',
   'git stash drop stash@{0}',
   'git stash clear',
-  // 複合コマンドの後段に紛れているケース
+  // 複合コマンドの後段や制御構文の中に紛れているケース
   'git add -A && git commit -m "wip" && git push --force origin feat/x',
   'npm test; git reset --hard origin/main',
+  'if [ -n "$CI" ]; then git push --force origin feat/x; fi',
+  'git   push   origin   feat/x   --force',
   // 引用符で囲まれた force フラグ単体は「データ」ではなく引数
   'git push "--force" origin feat/x',
   // 行継続・複数行
@@ -81,6 +83,12 @@ const ALLOWED = [
   'git checkout -- src/foo.mjs',
   'git restore src/foo.mjs',
   'git restore --staged src/foo.mjs',
+  // 禁止対象の「隣」にあるが AGENTS.md Safety の対象外のもの。
+  // 将来パターンを広げすぎたときの回帰検知として固定する。
+  'git checkout -f main',
+  'git branch -f tmp origin/main',
+  'git rebase origin/main',
+  'git commit --amend --no-edit',
   // reset の非 --hard 形
   'git reset HEAD~1',
   'git reset --soft HEAD~1',
