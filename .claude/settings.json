@@ -54,6 +54,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": ".claude/hooks/no-force-push.sh"
+          },
+          {
+            "type": "command",
             "command": ".claude/hooks/gh-account-guard.sh"
           }
         ]
