@@ -107,7 +107,7 @@ git log --format= --name-only --since=6.months | sort | uniq -c | sort -rn | hea
 
 ## Branch Protection Strict Mode 対応
 
-マージ先ブランチが `strict: true`（ブランチが常に最新 main と同期している必要がある）の場合、PR を順番にマージするたびに残りの PR が stale になり、rebase → CI 待ち → merge → rebase... のループに陥る。N 本の PR があると CI 待ち時間が N 倍になる。
+マージ先ブランチが `strict: true`（ブランチが常に最新 main と同期している必要がある）の場合、PR を順番にマージするたびに残りの PR が stale になり、更新 → CI 待ち → merge → 更新... のループに陥る。N 本の PR があると CI 待ち時間が N 倍になる。
 
 **最初に確認する:**
 
@@ -118,21 +118,18 @@ gh api repos/OWNER/REPO/branches/main/protection --jq .required_status_checks.st
 
 **推奨戦略（N 本の独立 deps PR を一括処理する場合）:**
 
-1. **可能なら 1 つの PR に統合する** — `package.json` が重複する deps 系 PR は 1 ブランチにまとめると rebase ループが発生しない
-2. **統合できない場合: 同一 SHA ベース一括 rebase** — マージ開始前に全ての残ブランチを現在の `origin/main` SHA に同時 rebase して push する。これで各 PR が並列に CI を実行する。マージするたびに次ブランチを rebase する（1 回ずつで済む）
-3. **lock-file-only 衝突の解消** — `gh api .../pulls/N/update-branch` が 422 を返す場合: 新 PR を作らず、ブランチをローカルで checkout して `npm install --package-lock-only` → commit → force push する。新 PR 作成は CI 履歴・レビューコメントの消失を招く
+1. **可能なら 1 つの PR に統合する** — `package.json` が重複する deps 系 PR は 1 ブランチにまとめると更新ループが発生しない
+2. **統合できない場合: 同一 SHA への一括 update-branch** — マージ開始前に全ての残ブランチを現在の `origin/main` SHA へ同時に更新する。これで各 PR が並列に CI を実行する。マージするたびに次ブランチを更新する（1 回ずつで済む）
+3. **lock-file-only 衝突の解消** — `gh api .../pulls/N/update-branch` が 422 を返す場合: 新 PR を作らず、ブランチをローカルで checkout して `git merge origin/main` → `npm install --package-lock-only` でロックファイルを再生成 → merge commit → 通常の `git push` で解消する。push は fast-forward になるため force は不要。update-branch 自体が base を head へ merge する API なので、ローカル merge は API が自動解決できなかった分を引き継ぐだけである。rebase は force push を要求するので使わない。新 PR 作成は CI 履歴・レビューコメントの消失を招く
 
-**同一 SHA 一括 rebase の例（独立 PR のみ — ファイル共有・スタック無し）:**
+**同一 SHA 一括更新の例（独立 PR のみ — ファイル共有・スタック無し）:**
 
 ```bash
-# 残ブランチを一度に全部 rebase してから push（コンフリクト時は即中断）
+# 残 PR を一度に全部 update-branch する（force push は使わない）
 set -e
-for branch in feat/pr-a feat/pr-b feat/pr-c; do
-  git checkout "$branch"
-  git rebase origin/main || { git rebase --abort; exit 1; }
-  git push origin "$branch" --force-with-lease --force-if-includes
+for pr in 101 102 103; do
+  gh api --method PUT "repos/OWNER/REPO/pulls/$pr/update-branch"
 done
-git checkout main
 # その後 CI が通ったものから順次 merge
 ```
 
@@ -143,4 +140,5 @@ git checkout main
 - Hot file の複数 PR 同時マージを推奨してはならない
 - 「順序は適当で大丈夫」と断定してはならない
 - `gh pr list` / `gh pr view` の GraphQL 結果のみで state を信頼してはならない (必ず `gh api repos/.../pulls/{N}` で裏取り)
-- strict mode 環境で N 本 PR を「1 本ずつ rebase して CI を待つ」ことで済ませない（N 倍の CI 待ちが発生する）
+- strict mode 環境で N 本 PR を「1 本ずつ更新して CI を待つ」ことで済ませない（N 倍の CI 待ちが発生する）
+- push 済みブランチを rebase して force push（`--force-with-lease` / `--force-if-includes` を含む）で上書きしてはならない（AGENTS.md Safety。取り込みは update-branch か `git merge`）

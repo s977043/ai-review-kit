@@ -42,7 +42,7 @@ Use **npm**.
 
 - Do not read or commit `.env*`, `secrets/`, `*.pem`, or `*.key`.
 - Do not make direct network calls (curl, wget, fetch) from scripts or code. Allowed CLI tools like `gh` are exempt.
-- Do not use destructive commands (`rm -rf`, `git reset --hard`, `git push --force`, etc.).
+- Do not use destructive commands (`rm -rf`, `git reset --hard`, `git push --force` / `-f`, `git push --force-with-lease`, etc.). `--force-with-lease` is not a safe-force exception, and no role or workflow is exempt: take the remote in with `git merge` / `git merge --ff-only` and push a fast-forward instead. If history still looks like it must be rewritten, stop and escalate.
 - Do not hand-edit `package-lock.json`.
 - Do not push directly to `main` or to already-merged PR branches. If fixes are needed after merge, create a new branch and new PR.
 - Do not omit timeout and exception handling in code that calls external APIs.
