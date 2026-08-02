@@ -18,6 +18,7 @@
 //   - 意図的に概数で書きたい箇所は 2 通りで除外できる（いずれも理由が必須）。
 //       1. doc 側インラインコメント `<!-- doc-enum:ignore <specId> -- <理由> -->`（spec 全体を除外）
 //       2. spec テーブル側の `ignoreKeys: { '<key>': '<理由>' }`（キー単位で除外）
+//     どちらも理由が空ならエラーとし、理由なしの黙殺を作れないようにしている。
 //
 // 運用手順は docs/development/doc-enumeration-checks.md を参照。
 
@@ -141,7 +142,7 @@ async function listCommandFiles(relDir) {
  *   kind      … 'counts'（キー→数値）か 'names'（名前の集合）
  *   declare   … doc 本文から宣言値を取り出す純関数。マーカー消失時は 'names' なら null を返す
  *   measure   … 実測値を返す async 関数
- *   ignoreKeys… キー単位の除外（値は理由。理由なしの除外は書けない）
+ *   ignoreKeys… キー単位の除外（値は理由。空の理由はエラーになり、除外として採用されない）
  */
 export const DOC_ENUMERATION_SPECS = [
   {
@@ -258,6 +259,32 @@ function diffNames(spec, declared, measured, ignoreKeys) {
   return errors;
 }
 
+/**
+ * spec テーブル側の `ignoreKeys` を検証し、理由が書かれたものだけを除外として採用する。
+ * doc 側の `doc-enum:ignore` と同じ「理由必須」を spec 側にも課すためのガード。
+ * 理由が空のエントリは**除外として採用しない**ので、そのキーは通常どおり比較され、
+ * 検証が黙って空振りすることがない。
+ *
+ * @param {{ doc: string, id: string }} spec
+ * @param {Record<string, unknown> | undefined} ignoreKeys
+ * @returns {{ accepted: Record<string, string>, errors: string[] }}
+ */
+export function resolveIgnoreKeys(spec, ignoreKeys) {
+  const accepted = {};
+  const errors = [];
+  for (const [key, reason] of Object.entries(ignoreKeys ?? {})) {
+    if (typeof reason === 'string' && reason.trim() !== '') {
+      accepted[key] = reason;
+      continue;
+    }
+    errors.push(
+      `${spec.doc} [${spec.id}]: ignoreKeys["${key}"] に理由が無い — ` +
+        `除外理由を空でない文字列で書く（理由なしの除外は許可しない）`
+    );
+  }
+  return { accepted, errors };
+}
+
 /** 既定の doc リーダー。テストからは差し替えて注入できるようにしておく。 */
 async function readDocFromDisk(docPath) {
   return fs.readFile(path.join(ROOT, docPath), 'utf8');
@@ -318,7 +345,11 @@ export async function checkDocEnumerations({
     }
 
     checked += 1;
-    const ignoreKeys = spec.ignoreKeys ?? {};
+    const { accepted: ignoreKeys, errors: ignoreKeyErrors } = resolveIgnoreKeys(
+      spec,
+      spec.ignoreKeys
+    );
+    errors.push(...ignoreKeyErrors);
     errors.push(
       ...(spec.kind === 'counts'
         ? diffCounts(spec, declared, measured, ignoreKeys)

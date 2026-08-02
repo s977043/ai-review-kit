@@ -7,6 +7,7 @@ import {
   parseIgnoreDirectives,
   parseMarkdownTableColumn,
   parseSkillStreamCounts,
+  resolveIgnoreKeys,
   unwrapCodeSpan,
 } from '../scripts/check-doc-enumerations.mjs';
 
@@ -192,6 +193,48 @@ test('checkDocEnumerations supports per-key ignores declared in the spec table',
   });
   assert.deepEqual(errors, []);
   assert.equal(checked, 1);
+});
+
+test('resolveIgnoreKeys accepts only entries carrying a non-empty reason', () => {
+  const spec = { doc: 'docs/example.md', id: 'spec' };
+  const { accepted, errors } = resolveIgnoreKeys(spec, {
+    ok: '理由あり',
+    empty: '',
+    blank: '   ',
+    wrongType: true,
+  });
+  assert.deepEqual(accepted, { ok: '理由あり' });
+  assert.equal(errors.length, 3);
+  for (const key of ['empty', 'blank', 'wrongType']) {
+    assert.ok(
+      errors.some((e) => e.includes(`ignoreKeys["${key}"]`)),
+      `missing error for ${key}`
+    );
+  }
+});
+
+test('resolveIgnoreKeys tolerates a missing ignoreKeys field', () => {
+  const { accepted, errors } = resolveIgnoreKeys({ doc: 'd', id: 'i' }, undefined);
+  assert.deepEqual(accepted, {});
+  assert.deepEqual(errors, []);
+});
+
+test('checkDocEnumerations rejects a reason-less ignoreKeys entry and still compares the key', async () => {
+  const spec = {
+    id: 'reasonless-ignore-key',
+    doc: 'docs/example.md',
+    summary: 'コマンド表',
+    marker: '表',
+    kind: 'names',
+    declare: () => new Set(['a.md']),
+    measure: async () => new Set(['a.md', 'experimental.md']),
+    ignoreKeys: { 'experimental.md': '' },
+  };
+  const { errors } = await checkDocEnumerations({ specs: [spec], readDoc: async () => '' });
+  assert.equal(errors.length, 2);
+  assert.ok(errors.some((e) => e.includes('ignoreKeys["experimental.md"] に理由が無い')));
+  // 理由なしの除外は採用されないため、そのキーは通常どおり drift として報告される。
+  assert.ok(errors.some((e) => e.includes('"experimental.md"') && e.includes('載っていない')));
 });
 
 test('checkDocEnumerations reports an unreadable document instead of throwing', async () => {
