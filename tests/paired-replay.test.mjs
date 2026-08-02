@@ -967,7 +967,16 @@ describe('paired-replay: degenerate inputs', () => {
     assert.equal(result.activationCheck.configurationDiffers, false);
     assert.equal(result.activationCheck.observedDifference, false);
     assert.equal(result.activationCheck.verified, false);
-    assert.equal(result.activationCheck.reasons.length, 2);
+    // Both activation reasons are stated, alongside the provenance gaps this
+    // fixture also has (#1719 W2 / W3: no gap may pass in silence).
+    assert.ok(
+      result.activationCheck.reasons.some((r) => r.includes('変更経路が存在しない')),
+      JSON.stringify(result.activationCheck.reasons)
+    );
+    assert.ok(
+      result.activationCheck.reasons.some((r) => r.includes('paired diff に差分がなく')),
+      JSON.stringify(result.activationCheck.reasons)
+    );
   });
 
   test('a real difference in a differing configuration counts as activated', () => {
@@ -1005,6 +1014,304 @@ describe('paired-replay 契約1: evidence trust', () => {
     assert.equal(result.verification.independentVerifierVerified, false);
     assert.equal(result.verification.canaryEligible, false);
     assert.ok(result.verification.reasons.some((r) => r.includes('未決事項')));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 契約3 x 契約1: the evidence must agree with itself about the reviewed commit
+// (#1719). NOT a check against side.commitSha — that is a configuration
+// identifier baseline and candidate are expected to differ on, while
+// source_commit_sha is the reviewed repository's HEAD.
+// ---------------------------------------------------------------------------
+
+/** Attach the #1715 / #1718 provenance block to a run record. */
+function withProvenance(record, { sourceCommitSha = null, dirty = null } = {}) {
+  return {
+    ...record,
+    ...(sourceCommitSha == null ? {} : { commitSha: sourceCommitSha }),
+    provenance: {
+      evidenceSource: 'local',
+      sourceCommitSha,
+      dirty,
+      trustedBy: null,
+      generatedByCandidate: false,
+    },
+  };
+}
+
+const SHA_A = '1111111111111111111111111111111111111111';
+const SHA_B = '9999999999999999999999999999999999999999';
+
+describe('paired-replay #1719: source_commit_sha internal consistency', () => {
+  test('runs of one case reporting different commits refuse the experiment', () => {
+    // The #1719 reproduction, re-expressed in the namespace that actually
+    // carries the contradiction: two runs of case-1 that reviewed different
+    // code are pooled into one case.
+    const mixed = spec({ dataset: { heldOutCaseKeys: [] } });
+    mixed.baseline.runs = [
+      withProvenance(runRecord({ runId: 'b1', caseId: 'case-1', findings: [finding(FP_A)] }), {
+        sourceCommitSha: SHA_A,
+      }),
+      withProvenance(runRecord({ runId: 'b2', caseId: 'case-1', findings: [finding(FP_B)] }), {
+        sourceCommitSha: SHA_B,
+      }),
+    ];
+    assert.throws(
+      () => buildPairedReplay(mixed, { now: NOW }),
+      (err) =>
+        err instanceof PairedReplayError &&
+        /report several source_commit_sha values/.test(err.message) &&
+        err.message.includes('baseline case "case-1"') &&
+        // N3: the offending runs are named, so the dataset can be fixed.
+        err.message.includes('run b1') &&
+        err.message.includes('run b2')
+    );
+  });
+
+  test('a side declaring a different commitSha than its evidence is NOT an error', () => {
+    // `commitSha` is a configuration identifier (compared by
+    // configurationDiffers alongside provider / model / temperature); the
+    // evidence sha is the reviewed repository HEAD, identical on both sides for
+    // the same case. Requiring equality would refuse every real dataset.
+    const real = spec({ dataset: { heldOutCaseKeys: [] } });
+    real.baseline.runs = real.baseline.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: SHA_A, dirty: false })
+    );
+    real.candidate.runs = real.candidate.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: SHA_A, dirty: false })
+    );
+    const result = buildPairedReplay(real, { now: NOW });
+    assert.equal(result.manifest.baseline.commitSha, 'base-commit');
+    assert.equal(result.manifest.candidate.commitSha, 'cand-commit');
+    assert.equal(result.manifest.baseline.provenance.sourceCommitSha, SHA_A);
+    assert.equal(result.manifest.candidate.provenance.sourceCommitSha, SHA_A);
+    // The commit dimension of the activation check stays alive.
+    assert.equal(result.activationCheck.configurationDiffers, true);
+    assert.deepEqual(result.activationCheck.sourceCommitShaCoverage, {
+      runCount: 4,
+      knownRunCount: 4,
+      unknownRunCount: 0,
+    });
+    assert.deepEqual(result.activationCheck.reasons, []);
+    assert.equal(validateReplay(result), true, JSON.stringify(validateReplay.errors, null, 2));
+  });
+
+  test('different cases of one side may report different commits', () => {
+    // A real `.river/runs` dataset accumulates cases over time, so per-side
+    // uniqueness would reject it. Per-case consistency is what the contract
+    // needs, and the side-level derived sha becomes null.
+    const perCase = spec({ dataset: { heldOutCaseKeys: [] } });
+    perCase.baseline.runs = [
+      withProvenance(perCase.baseline.runs[0], { sourceCommitSha: SHA_A }),
+      withProvenance(perCase.baseline.runs[1], { sourceCommitSha: SHA_B }),
+    ];
+    const result = buildPairedReplay(perCase, { now: NOW });
+    assert.equal(result.manifest.baseline.provenance.sourceCommitSha, null);
+    assert.equal(result.manifest.baseline.provenance.sourceCommitShaUnknownRunCount, 0);
+  });
+
+  test('an abbreviated sha resolves to the full one it prefixes (W4 normalization)', () => {
+    const abbreviated = spec({ dataset: { heldOutCaseKeys: [] } });
+    abbreviated.baseline.runs = [
+      withProvenance(runRecord({ runId: 'b1', caseId: 'case-1', findings: [finding(FP_A)] }), {
+        sourceCommitSha: SHA_A.slice(0, 7).toUpperCase(),
+      }),
+      withProvenance(runRecord({ runId: 'b2', caseId: 'case-1', findings: [finding(FP_B)] }), {
+        sourceCommitSha: SHA_A,
+      }),
+    ];
+    const result = buildPairedReplay(abbreviated, { now: NOW });
+    // Longest (most specific) representation wins, lowercased.
+    assert.equal(result.manifest.baseline.provenance.sourceCommitSha, SHA_A);
+
+    // A 6-char prefix is below git's unambiguous floor and is NOT absorbed.
+    const tooShort = spec({ dataset: { heldOutCaseKeys: [] } });
+    tooShort.baseline.runs = [
+      withProvenance(runRecord({ runId: 'b1', caseId: 'case-1', findings: [finding(FP_A)] }), {
+        sourceCommitSha: SHA_A.slice(0, 6),
+      }),
+      withProvenance(runRecord({ runId: 'b2', caseId: 'case-1', findings: [finding(FP_B)] }), {
+        sourceCommitSha: SHA_A,
+      }),
+    ];
+    assert.throws(
+      () => buildPairedReplay(tooShort, { now: NOW }),
+      /report several source_commit_sha values/
+    );
+  });
+
+  test('both sides are reported in a single error (N2)', () => {
+    const both = spec({ dataset: { heldOutCaseKeys: [] } });
+    both.baseline.runs = [
+      withProvenance(runRecord({ runId: 'b1', caseId: 'case-1', findings: [] }), {
+        sourceCommitSha: SHA_A,
+      }),
+      withProvenance(runRecord({ runId: 'b2', caseId: 'case-1', findings: [] }), {
+        sourceCommitSha: SHA_B,
+      }),
+    ];
+    both.candidate.runs = [
+      withProvenance(runRecord({ runId: 'c1', caseId: 'case-1', findings: [] }), {
+        sourceCommitSha: SHA_A,
+      }),
+      withProvenance(runRecord({ runId: 'c2', caseId: 'case-1', findings: [] }), {
+        sourceCommitSha: SHA_B,
+      }),
+    ];
+    let message = '';
+    try {
+      buildPairedReplay(both, { now: NOW });
+    } catch (err) {
+      message = err.message;
+    }
+    assert.ok(message.includes('baseline case "case-1"'), message);
+    assert.ok(message.includes('candidate case "case-1"'), message);
+  });
+
+  test('runs without a case key are not subject to the check', () => {
+    // No case identity means no "same input" claim to violate; they are already
+    // excluded from pairing.
+    const unkeyed = spec({ dataset: { heldOutCaseKeys: [] } });
+    const strip = (r) => {
+      const copy = { ...r };
+      delete copy.caseId;
+      delete copy.reviewedTarget;
+      delete copy.mergeBase;
+      return copy;
+    };
+    unkeyed.baseline.runs = [
+      withProvenance(strip(unkeyed.baseline.runs[0]), { sourceCommitSha: SHA_A }),
+      withProvenance(strip(unkeyed.baseline.runs[1]), { sourceCommitSha: SHA_B }),
+    ];
+    const result = buildPairedReplay(unkeyed, { now: NOW });
+    assert.equal(result.manifest.baseline.unkeyedRunCount, 2);
+  });
+
+  test('a record without source_commit_sha is 未取得 and is surfaced, not silent', () => {
+    // The default fixture predates #1715: no provenance block at all.
+    const result = buildPairedReplay(spec(), { now: NOW });
+    assert.equal(result.manifest.baseline.provenance.sourceCommitSha, null);
+    assert.equal(result.manifest.baseline.provenance.sourceCommitShaUnknownRunCount, 2);
+    assert.equal(result.manifest.baseline.provenance.dirtyUnknownRunCount, 2);
+    assert.deepEqual(result.activationCheck.sourceCommitShaCoverage, {
+      runCount: 4,
+      knownRunCount: 0,
+      unknownRunCount: 4,
+    });
+    // W2 / W3: neither gap may pass in silence.
+    assert.ok(
+      result.activationCheck.reasons.some((r) => r.includes('source_commit_sha を持たない run')),
+      JSON.stringify(result.activationCheck.reasons)
+    );
+    assert.ok(
+      result.activationCheck.reasons.some((r) => r.includes('dirty フラグを持たない run')),
+      JSON.stringify(result.activationCheck.reasons)
+    );
+    assert.equal(result.activationCheck.verified, true);
+  });
+
+  test('a dirty run is recorded and warned about, and does not relax the check', () => {
+    const dirty = spec();
+    dirty.baseline.runs = dirty.baseline.runs.map((r) =>
+      withProvenance(r, { sourceCommitSha: SHA_A, dirty: true })
+    );
+    dirty.candidate.runs = [
+      withProvenance(dirty.candidate.runs[0], { sourceCommitSha: SHA_A, dirty: true }),
+      withProvenance(dirty.candidate.runs[1], { sourceCommitSha: SHA_A, dirty: false }),
+    ];
+    const result = buildPairedReplay(dirty, { now: NOW });
+    assert.equal(result.manifest.baseline.provenance.dirtyRunCount, 2);
+    assert.equal(result.manifest.candidate.provenance.dirtyRunCount, 1);
+    assert.equal(result.manifest.candidate.provenance.dirtyUnknownRunCount, 0);
+    assert.ok(
+      result.activationCheck.reasons.some((r) => r.includes('dirty な working tree')),
+      JSON.stringify(result.activationCheck.reasons)
+    );
+    assert.match(formatPairedReplayMarkdown(result), /dirty な working tree/);
+    assert.equal(validateReplay(result), true, JSON.stringify(validateReplay.errors, null, 2));
+
+    // dirty は判定を緩める理由にならない: 同一 case で commit が割れれば拒否する。
+    const dirtyAndMixed = spec({ dataset: { heldOutCaseKeys: [] } });
+    dirtyAndMixed.baseline.runs = [
+      withProvenance(runRecord({ runId: 'b1', caseId: 'case-1', findings: [] }), {
+        sourceCommitSha: SHA_A,
+        dirty: true,
+      }),
+      withProvenance(runRecord({ runId: 'b2', caseId: 'case-1', findings: [] }), {
+        sourceCommitSha: SHA_B,
+        dirty: true,
+      }),
+    ];
+    assert.throws(
+      () => buildPairedReplay(dirtyAndMixed, { now: NOW }),
+      /report several source_commit_sha values/
+    );
+  });
+
+  test('the provenance summary is pinned by the manifest and stays deterministic', () => {
+    const build = () => {
+      const s = spec();
+      s.baseline.runs = s.baseline.runs.map((r) =>
+        withProvenance(r, { sourceCommitSha: SHA_A, dirty: true })
+      );
+      return s;
+    };
+    const a = buildExperimentManifest(build(), { now: NOW }).manifest;
+    const b = buildExperimentManifest(build(), { now: LATER }).manifest;
+    // Same run records -> same experimentKey: the summary is derived from the
+    // very records the dataset hash already covers, so it adds no new input.
+    assert.equal(a.experimentKey, b.experimentKey);
+    assert.equal(a.baseline.provenance.dirtyRunCount, 2);
+    // Pinned as a condition: editing it out is a detectable tamper (契約3).
+    const strippedBaseline = { ...a.baseline };
+    delete strippedBaseline.provenance;
+    assert.equal(verifyExperimentManifest({ ...a, baseline: strippedBaseline }).verified, false);
+  });
+
+  test('a manifest without the provenance block stays schema-valid (W1)', () => {
+    // v1.68.0 and earlier pinned no provenance. The field is additive under the
+    // same schemaVersion, so an artifact produced then must still validate.
+    const result = buildPairedReplay(spec(), { now: NOW });
+    delete result.manifest.baseline.provenance;
+    delete result.manifest.candidate.provenance;
+    delete result.activationCheck.sourceCommitShaCoverage;
+    assert.equal(result.schemaVersion, 1);
+    assert.equal(validateReplay(result), true, JSON.stringify(validateReplay.errors, null, 2));
+  });
+
+  test('the CLI reports the inconsistency as a usage error instead of a report', async (t) => {
+    const mixed = spec({ dataset: { heldOutCaseKeys: [] } });
+    mixed.baseline.runs = [
+      withProvenance(runRecord({ runId: 'b1', caseId: 'case-1', findings: [] }), {
+        sourceCommitSha: SHA_A,
+      }),
+      withProvenance(runRecord({ runId: 'b2', caseId: 'case-1', findings: [] }), {
+        sourceCommitSha: SHA_B,
+      }),
+    ];
+    const { specPath, cleanup } = seedSpec(mixed);
+    t.after(cleanup);
+    const res = await runCliInProcess(['evolve', 'replay', '--spec', specPath, '--output', 'json']);
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /report several source_commit_sha values/);
+    assert.equal(res.stdout, '');
+  });
+
+  test('an experimentKey mismatch names the provenance change as a cause (W1)', async (t) => {
+    // A manifest built before `provenance` existed hashes a smaller condition
+    // set, so it lands in the "different experiment" branch even though its own
+    // digests verify. Simulated here with a manifest of another experiment: the
+    // reader must be told that rebuilding is the fix, not only "wrong file".
+    const withOther = spec();
+    withOther.manifest = buildExperimentManifest(spec({ hypothesis: '別の仮説' }), {
+      now: NOW,
+    }).manifest;
+    const { specPath, cleanup } = seedSpec(withOther);
+    t.after(cleanup);
+    const res = await runCliInProcess(['evolve', 'replay', '--spec', specPath]);
+    assert.equal(res.code, 1);
+    assert.match(res.stderr, /different experiment/);
+    assert.match(res.stderr, /v1\.68\.0 or earlier do not pin manifest\.<side>\.provenance/);
   });
 });
 

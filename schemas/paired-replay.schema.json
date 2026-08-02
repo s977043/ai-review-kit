@@ -91,6 +91,38 @@
           "minimum": 0,
           "description": "Runs whose case key could not be derived. They are never paired — pairing them by position would compare unrelated reviews."
         },
+        "provenance": {
+          "type": "object",
+          "description": "Summary DERIVED from this side's own run evidence — never from the declaration (#1719). `sourceCommitSha` is the reviewed repository's HEAD as reported by the runs, a different namespace from the sibling `commitSha`, which is a configuration identifier that baseline and candidate are expected to differ on. OPTIONAL: manifests created before this field existed stay valid under the same schemaVersion. Adding the block does change the digest VALUES of newly built manifests, but not their determinism — every count comes from the same run records that already feed artifact_sha256, so identical records still produce an identical experimentKey.",
+          "required": [
+            "sourceCommitSha",
+            "sourceCommitShaUnknownRunCount",
+            "dirtyRunCount",
+            "dirtyUnknownRunCount"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "sourceCommitSha": {
+              "type": ["string", "null"],
+              "description": "The single reviewed commit this side's runs agree on, lowercased (an abbreviated sha resolves to the longest form it prefixes). Null when the runs report none, or when the side legitimately spans several commits — a dataset whose cases were collected at different times. Runs of the SAME case that disagree are refused at build time instead."
+            },
+            "sourceCommitShaUnknownRunCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Runs with no source_commit_sha (records written before #1715). Treated as 未取得, not as a contradiction — but the consistency check is vacuous for them, so the count is surfaced as an activation reason."
+            },
+            "dirtyRunCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Runs collected from a dirty working tree (#1718). Their source_commit_sha is the HEAD the review sat on top of, so it can agree with its neighbours while the reviewed lines exist only in the working tree."
+            },
+            "dirtyUnknownRunCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Runs that recorded no dirty flag. Counted apart from the observed-clean ones so unknown never reads as clean."
+            }
+          }
+        },
         "evidence": { "type": "array", "items": { "$ref": "#/$defs/runEvidence" } }
       }
     },
@@ -579,6 +611,25 @@
         "configurationDiffers": { "type": "boolean" },
         "observedDifference": { "type": "boolean" },
         "verified": { "type": "boolean" },
+        "sourceCommitShaCoverage": {
+          "type": "object",
+          "description": "How many runs across BOTH sides can name the code they reviewed (#1719). Reported, never folded into `verified`: naming the reviewed code is a different question from whether the configuration differed. OPTIONAL so results produced before this field existed stay valid under the same schemaVersion. Per-side counts live on manifest.<side>.provenance.",
+          "required": ["runCount", "knownRunCount", "unknownRunCount"],
+          "additionalProperties": false,
+          "properties": {
+            "runCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Denominator: runs of both sides combined."
+            },
+            "knownRunCount": { "type": "integer", "minimum": 0 },
+            "unknownRunCount": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Runs reporting no source_commit_sha. Non-zero always adds an activation reason, so the gap is never silent."
+            }
+          }
+        },
         "expectedSignal": { "type": ["string", "null"] },
         "declaredEvidence": { "type": "array", "items": { "type": "string" } },
         "reasons": { "type": "array", "items": { "type": "string" } }
