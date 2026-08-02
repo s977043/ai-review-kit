@@ -146,6 +146,47 @@ Commands:
 `);
 }
 
+// #1709 Slice 2: one-line usage summaries per command, printed to stderr on a
+// usage error instead of the full help text. The full help used to go to
+// stdout on every option error, which polluted redirected artifacts (e.g.
+// runners/github-action redirects stdout into the review JSON file).
+const COMMAND_USAGE = {
+  run: 'river run <path> [options]',
+  doctor: 'river doctor <path> [options]',
+  skills: 'river skills <path> | river skills <import|export|list|resolve> [options]',
+  runs: 'river runs <list|diff|summary|digest> [options]',
+  review: 'river review <plan|exec|verify|route> [options]',
+  eval: 'river eval [--cases <path>] [--verbose]',
+  feedback: 'river feedback add --type <type> --skill <id> [options]',
+  suppression:
+    'river suppression add --fingerprint <fp> --feedback <type> --rationale <text> [options]',
+  promote:
+    'river promote <propose|list|approve|reject|template|retire|review-effectiveness> [options]',
+  evolve: 'river evolve <aggregate|replay> [options]',
+};
+
+const GENERIC_USAGE = 'river <command> <path> [options]';
+
+function printUsageHint(command) {
+  console.error(`Usage: ${COMMAND_USAGE[command] ?? GENERIC_USAGE}`);
+  console.error('Run `river --help` for the full option list.');
+}
+
+/**
+ * #1709 Slice 2 — central usage-error contract.
+ *
+ * Every option/command parse error funnels through here. The call site has
+ * already written its `Error: ...` line to stderr; this helper appends a
+ * one-line usage summary plus a pointer to the full help (both stderr) and
+ * marks the parse result so `main()` exits 1 WITHOUT printing the full help
+ * to stdout. Explicit `-h`/`--help` (and bare `river`) keep the old
+ * contract: full help on stdout, exit 0.
+ */
+function usageError(parsed) {
+  printUsageHint(parsed.command);
+  parsed.usageError = true;
+}
+
 function parseArgs(argv) {
   const args = [...argv];
   const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
@@ -161,6 +202,9 @@ function parseArgs(argv) {
   const PROMOTE_SHARED_OPTIONS = new Set(['--output', '--dry-run', '-h', '--help', '--debug']);
   const parsed = {
     command: null,
+    // #1709 Slice 2: set (via usageError) when an option/command parse error
+    // was already reported to stderr; main() then exits 1 without help.
+    usageError: false,
     target: '.',
     fixturesCasesPath: null,
     verbose: false,
@@ -396,7 +440,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --type option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackType = value;
@@ -409,7 +453,7 @@ function parseArgs(argv) {
         // check accepted it and wrote the entry.
         if (!value || value.startsWith('-')) {
           console.error('Error: --skill option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackSkillId = value;
@@ -422,7 +466,7 @@ function parseArgs(argv) {
         // instead of the one the caller meant to set.
         if (!value || value.startsWith('-')) {
           console.error('Error: --trigger option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackTrigger = value;
@@ -432,7 +476,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --fingerprint option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackFingerprint = value;
@@ -443,7 +487,7 @@ function parseArgs(argv) {
         // `--evidence --pr 123` used to record evidence:"--pr" and drop the pr.
         if (!value || value.startsWith('-')) {
           console.error('Error: --evidence option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackEvidence = value;
@@ -459,7 +503,7 @@ function parseArgs(argv) {
         // or wrong value skews the repetition denominator downstream (#1717).
         if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
           console.error('Error: --pr option requires a positive integer.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackPrNumber = Number.parseInt(value, 10);
@@ -469,7 +513,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --reviewer option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackReviewer = value;
@@ -479,7 +523,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --model option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackModel = value;
@@ -489,7 +533,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --reversed-by option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackReversedBy = value;
@@ -513,7 +557,7 @@ function parseArgs(argv) {
         const value = arg.startsWith('--run-id=') ? arg.slice('--run-id='.length) : args.shift();
         if (!value || !value.trim() || value.startsWith('-')) {
           console.error('Error: --run-id option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.feedbackRunId = value;
@@ -525,7 +569,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --approver option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.promoteApprover = value;
@@ -535,7 +579,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --reason option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.promoteReason = value;
@@ -545,7 +589,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --index option requires a path.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.promoteIndex = value;
@@ -561,7 +605,7 @@ function parseArgs(argv) {
         // become a different threshold than the one that was typed.
         if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
           console.error('Error: --threshold option requires a positive integer.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.promoteThreshold = Number.parseInt(value, 10);
@@ -571,7 +615,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --feedback-root option requires a path.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.promoteFeedbackRoot = value;
@@ -581,7 +625,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --input option requires a JSONL path.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.promoteInput = value;
@@ -591,7 +635,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --cluster-key option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.promoteClusterKey = value;
@@ -601,7 +645,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --policy-version option requires a value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.promotePolicyVersion = value;
@@ -621,7 +665,7 @@ function parseArgs(argv) {
         // Strict parse, same reason as promote's --threshold above.
         if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
           console.error('Error: --min option requires a positive integer.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.evolveMin = Number.parseInt(value, 10);
@@ -631,7 +675,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || !/^\d{4}-\d{2}$/.test(value)) {
           console.error('Error: --month option requires a YYYY-MM value.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.evolveMonth = value;
@@ -641,7 +685,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --spec option requires a file path.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.evolveSpec = value;
@@ -651,7 +695,7 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --expect-manifest option requires a manifest id or hash.');
-          parsed.command = 'help';
+          usageError(parsed);
           break;
         }
         parsed.evolveExpectManifest = value;
@@ -679,6 +723,15 @@ function parseArgs(argv) {
       }
       continue;
     }
+    // #1709 Slice 2 (B1): an unknown leading token used to fall through
+    // silently, leaving `parsed.command` null — so main() printed the full
+    // help and exited 0, and its `Unknown command:` branch was unreachable
+    // dead code. Record the token as the command so that branch actually
+    // fires (exit 1, error on stderr).
+    if (!parsed.command && !arg.startsWith('-')) {
+      parsed.command = arg;
+      break;
+    }
     if (arg === '--plan-only') {
       parsed.planOnly = true;
       continue;
@@ -690,7 +743,7 @@ function parseArgs(argv) {
         console.error(
           `Error: ${arg} must be one of: info, minor, major, critical (got "${value ?? ''}").`
         );
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       if (arg === '--fail-on') parsed.failOn = sev;
@@ -713,7 +766,7 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
         console.error('Error: --plan option requires a path.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.planFile = value;
@@ -723,7 +776,7 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
         console.error('Error: --output-file option requires a path.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.outputFile = value;
@@ -733,7 +786,7 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
         console.error('Error: --summary-file option requires a path.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.summaryFile = value;
@@ -747,7 +800,7 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
         console.error('Error: --artifacts-dir option requires a path.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.artifactsDir = value;
@@ -758,7 +811,7 @@ function parseArgs(argv) {
       const eq = value ? value.indexOf('=') : -1;
       if (!value || value.startsWith('-') || eq <= 0) {
         console.error('Error: --artifact requires <id>=<path> (e.g. --artifact plan=./plan.md).');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.cliArtifacts[value.slice(0, eq)] = value.slice(eq + 1);
@@ -776,7 +829,7 @@ function parseArgs(argv) {
         console.error(
           'Error: --ensemble requires a directory path (e.g. --ensemble ./.river/reviews).'
         );
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       if (parsed.cliArtifacts['review-external']) {
@@ -793,12 +846,12 @@ function parseArgs(argv) {
           .sort();
       } catch (err) {
         console.error(`Error: --ensemble cannot read directory ${value}: ${err.message}`);
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       if (files.length === 0) {
         console.error(`Error: --ensemble found no *.md files in ${value}.`);
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       const merged = files
@@ -819,7 +872,7 @@ function parseArgs(argv) {
     if (arg === '--phase') {
       if (!args[0] || args[0].startsWith('-')) {
         console.error('Error: --phase option requires a value.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.phase = args.shift();
@@ -837,7 +890,7 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
         console.error('Error: --planner option requires a value.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       const mode = value.toLowerCase();
@@ -845,7 +898,7 @@ function parseArgs(argv) {
         console.error(
           `Error: --planner must be one of: ${PLANNER_MODES.join(', ')} (got "${value}").`
         );
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.plannerMode = mode;
@@ -872,7 +925,7 @@ function parseArgs(argv) {
       parsed.maxCost = value ? Number.parseFloat(value) : null;
       if (!Number.isFinite(parsed.maxCost) || parsed.maxCost < 0) {
         console.error('Error: --max-cost requires a non-negative numeric value.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       continue;
@@ -881,7 +934,7 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
         console.error('Error: --output option requires a value.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       const mode = value.toLowerCase();
@@ -889,7 +942,7 @@ function parseArgs(argv) {
         console.error(
           `Error: --output must be one of: text, markdown, json, yaml, html (got "${value}").`
         );
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.output = mode;
@@ -900,13 +953,13 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
         console.error('Error: --format option requires a value.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       const mode = value.toLowerCase();
       if (!['text', 'markdown', 'json'].includes(mode)) {
         console.error(`Error: --format must be one of: text, markdown, json (got "${value}").`);
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.format = mode;
@@ -927,7 +980,7 @@ function parseArgs(argv) {
         console.error(
           'Error: --reviewers option requires a value (e.g. bug-hunter,security-scanner).'
         );
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.reviewers = parseList(value);
@@ -937,7 +990,7 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
         console.error('Error: --baseline option requires a file path.');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.baseline = value;
@@ -947,7 +1000,7 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
         console.error('Error: --base option requires a branch or ref (e.g. --base main).');
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.base = value;
@@ -959,7 +1012,7 @@ function parseArgs(argv) {
         console.error(
           'Error: --skill-set option requires a name (e.g. --skill-set comprehensive).'
         );
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.skillSet = value;
@@ -970,7 +1023,7 @@ function parseArgs(argv) {
       const valid = Object.keys(DEPTH_TO_REVIEW_MODE);
       if (!value || !valid.includes(value)) {
         console.error(`Error: --depth must be one of: ${valid.join(', ')} (got "${value ?? ''}").`);
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.depth = value;
@@ -1001,7 +1054,7 @@ function parseArgs(argv) {
       const value = args.shift();
       if (!value || !['rr', 'agent', 'all'].includes(value)) {
         console.error(`Error: --source must be one of: rr, agent, all (got "${value}").`);
-        parsed.command = 'help';
+        usageError(parsed);
         break;
       }
       parsed.listSource = value;
@@ -1022,6 +1075,12 @@ function parseArgs(argv) {
 
 async function main(argv = process.argv.slice(2)) {
   const parsed = parseArgs(argv);
+  // #1709 Slice 2: parseArgs already reported the usage error to stderr
+  // (Error line + usage hint). Exit 1 without printing the full help to
+  // stdout — usage errors must not pollute redirected stdout artifacts.
+  if (parsed.usageError) {
+    return 1;
+  }
   if (parsed.command === 'help' || !parsed.command) {
     printHelp();
     return 0;
@@ -1063,8 +1122,11 @@ async function main(argv = process.argv.slice(2)) {
       'evolve',
     ].includes(parsed.command)
   ) {
+    // Reachable since #1709 Slice 2: parseArgs records an unknown leading
+    // token as the command instead of silently leaving it null (which used
+    // to print the full help and exit 0).
     console.error(`Unknown command: ${parsed.command}`);
-    printHelp();
+    printUsageHint(parsed.command);
     return 1;
   }
 

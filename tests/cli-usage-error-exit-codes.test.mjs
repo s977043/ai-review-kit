@@ -1,58 +1,52 @@
 // tests/cli-usage-error-exit-codes.test.mjs
 //
-// #1709 Slice 1 — オプションエラーの exit code を「現状のまま」機械固定する canary。
+// #1709 Slice 1 で「現状のまま」機械固定した canary に、Slice 2（C2 -> exit 1）
+// を反映したもの。
 //
 // ============================================================================
-// ★ この表は「望ましい姿」ではない。2026-08-02 時点の実態の pin である。
+// ★ この表は Slice 2 適用後の実態の pin である（Slice 3 は未適用）。
 // ============================================================================
 //
 // #1709 は「オプションエラーの exit code がコマンドごとにバラバラで、多くが
-// exit 0 のまま成功扱いになる」という問題を扱う。実測すると、現状は「exit 0 か
-// 1 か」ではなく 4 つの契約に分裂している（11 コマンド面 × 5 エラー種別 = 78
-// ケース、うち 57 件 = 73% が exit 0）。本ファイルはその 78 ケースをそのまま
-// 期待値として固定する。
+// exit 0 のまま成功扱いになる」という問題を扱う。Slice 1 時点の実測では 4 つの
+// 契約に分裂していた（11 コマンド面 × 5 エラー種別 = 78 ケース、うち 57 件 =
+// 73% が exit 0）。Slice 2 で C2（exit 0 + help 全文 stdout、34 件）を
+// 「exit 1 + stderr 要約（Error 行 + usage 1 行 + full help への誘導）」へ
+// 統一した（src/cli.mjs の usageError()）。
 //
-// したがって **ここに書かれた期待値の大半は、修正されるべき挙動である**。
-// #1709 の後続スライスで期待値は意図的に書き換わる:
+// 残る修正対象は C1（23 件、exit 0 のまま黙って無視）:
 //
-//   - Slice 2: C2（34 件）を exit 1 + stderr 要約へ
-//   - Slice 3: C1（23 件）を exit 1 へ
+//   - Slice 3: C1（23 件）を exit 1 へ（未知オプション・余剰 positional の拒否）
 //
 // canary の役割は「正しさの主張」ではなく「変更の全量可視化」にある。
 // 後続スライスでは *この表の差分 = 挙動変更の全量* という不変条件を保つこと。
 // 期待値を書き換えるときは、必ず EXPECTED_CONTRACT_COUNTS も併せて更新する。
 //
 // ---------------------------------------------------------------------------
-// #1721 直後の一時的な後退を pin していることに注意
+// #1721 で C2 に寄っていた 3 セルについて
 // ---------------------------------------------------------------------------
-// #1721（feedback add のオプション値を parse 時に検証する）が本 canary の作成中に
-// main へ入り、下の 3 セルが動いた。いずれも「entry を書かない・stderr にエラーを
-// 出す」方向では改善だが、**exit code の観点では C2（exit 0 + help）に寄った**:
-//
-//   - `feedback add --type`（値欠落）              C3 exit 1 -> C2 exit 0
-//   - `feedback add ... --pr`（値欠落）            C1 exit 0 -> C2 exit 0
-//   - `feedback add ... --pr abc`（不正値）        C1 exit 0 -> C2 exit 0
-//
-// つまり 1 件は exit 1 -> exit 0 の後退である。#1709 Slice 2 で C2 を一括 exit 1 に
-// する際、この 3 セルもまとめて exit 1 に戻る想定。ここで pin しているのは
-// 「#1721 直後の過渡状態」であって、到達点ではない。
+// #1721（feedback add のオプション値を parse 時に検証する）で
+// `feedback add --type`（値欠落）/ `--pr`（値欠落）/ `--pr abc`（不正値）の
+// 3 セルが C2（exit 0 + help）に寄っていた（うち 1 件は exit 1 -> 0 の後退）。
+// Slice 2 の一括統一で、この 3 セルも他の C2 と一緒に exit 1（C3）へ移った。
 //
 // なお #1721 が塞いだ入力パターンのうち、この 78 ケースに現れるのは上記 3 件で、
 // 残り（`--skill` 欠落 / `--trigger --pr` / `--fingerprint --pr` / `--fingerprint ""`）は
 // 本マトリクスの 5 エラー種別の組み合わせ外なので tests/cli-parse-args.test.mjs 側で
 // 担保されている。
 //
-// 観測された 4 契約（`contract` フィールドの値）:
+// 4 契約（`contract` フィールドの値）。C2 は Slice 2 で usage error からは
+// 消滅し、正規の help 表示（`--help` / 引数なし）だけが対照群に残る:
 //
 //   | クラス | exit | help 全文が stdout | 内容                                       |
 //   | ------ | ---- | ------------------ | ------------------------------------------ |
 //   | C1     | 0    | no                 | メッセージすら出ず黙って無視。処理は続行   |
-//   | C2     | 0    | yes                | help 全文を stdout、エラーを stderr へ     |
-//   | C3     | 1    | no                 | stderr にエラー（#1652/#1682/#1696 の規約）|
+//   | C2     | 0    | yes                | help 全文を stdout（正規の help 表示のみ） |
+//   | C3     | 1    | no                 | stderr にエラー（#1709 Slice 2 で統一）    |
 //   | C4     | 3    | no                 | stderr にエラー（review 系のハンドラ検出） |
 //
 // 判定は (exit code, help 全文が stdout に出たか) の 2 軸だけで機械的に行う。
-// stderr の文言は S2 で全面的に書き換わる前提なので、あえて固定しない。
+// stderr の文言（Error 行 + usage 要約）はここでは固定しない。
 //
 // 実行環境（決定論のための前提）:
 //   隔離した一時 git repo を cwd にする。`skills/` と
@@ -85,7 +79,7 @@ const CONTRACTS = {
  * 契約ごとの件数。表を編集したら必ずここも更新する
  * （= 挙動変更の総量をレビューで一目で見えるようにするための第 2 の錠）。
  */
-const EXPECTED_CONTRACT_COUNTS = { C1: 23, C2: 34, C3: 19, C4: 2 };
+const EXPECTED_CONTRACT_COUNTS = { C1: 23, C2: 0, C3: 53, C4: 2 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -97,17 +91,17 @@ const NONEXISTENT_PATH = '<nonexistent-path>';
  */
 const CASES = [
   // ---- river run ----
-  { surface: 'run', kind: 'value-missing', argv: ['run', '.', '--base'], contract: 'C2' },
-  { surface: 'run', kind: 'value-missing', argv: ['run', '.', '--max-cost'], contract: 'C2' },
+  { surface: 'run', kind: 'value-missing', argv: ['run', '.', '--base'], contract: 'C3' },
+  { surface: 'run', kind: 'value-missing', argv: ['run', '.', '--max-cost'], contract: 'C3' },
   { surface: 'run', kind: 'value-missing', argv: ['run', '.', '--from'], contract: 'C1' },
-  { surface: 'run', kind: 'invalid-value', argv: ['run', '.', '--depth', 'bogus'], contract: 'C2' },
+  { surface: 'run', kind: 'invalid-value', argv: ['run', '.', '--depth', 'bogus'], contract: 'C3' },
   {
     surface: 'run',
     kind: 'invalid-value',
     argv: ['run', '.', '--output', 'bogus'],
-    contract: 'C2',
+    contract: 'C3',
   },
-  { surface: 'run', kind: 'invalid-value', argv: ['run', '.', '--max-cost', '-1'], contract: 'C2' },
+  { surface: 'run', kind: 'invalid-value', argv: ['run', '.', '--max-cost', '-1'], contract: 'C3' },
   { surface: 'run', kind: 'unknown-option', argv: ['run', '.', '--nope'], contract: 'C1' },
   { surface: 'run', kind: 'unknown-option', argv: ['run', '.', '--dry-runn'], contract: 'C1' },
   { surface: 'run', kind: 'surplus-positional', argv: ['run', '.', 'extra'], contract: 'C1' },
@@ -117,19 +111,19 @@ const CASES = [
     surface: 'review plan',
     kind: 'value-missing',
     argv: ['review', 'plan', '--plan-only', '--output-file'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'review plan',
     kind: 'value-missing',
     argv: ['review', 'plan', '--plan-only', '--artifacts-dir'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'review plan',
     kind: 'invalid-value',
     argv: ['review', 'plan', '--plan-only', '--output', 'bogus'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     // C4 は本表に 2 件ある。こちらは共有パーサではなくハンドラ層
@@ -160,13 +154,13 @@ const CASES = [
     surface: 'review exec',
     kind: 'value-missing',
     argv: ['review', 'exec', '--dry-run', '--output-file'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'review exec',
     kind: 'invalid-value',
     argv: ['review', 'exec', '--dry-run', '--output', 'bogus'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'review exec',
@@ -186,13 +180,13 @@ const CASES = [
     surface: 'review route',
     kind: 'value-missing',
     argv: ['review', 'route', '--format'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'review route',
     kind: 'invalid-value',
     argv: ['review', 'route', '--format', 'bogus'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'review route',
@@ -221,7 +215,7 @@ const CASES = [
     surface: 'skills',
     kind: 'value-missing',
     argv: ['skills', 'list', '--source'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'skills',
@@ -239,7 +233,7 @@ const CASES = [
     surface: 'skills',
     kind: 'invalid-value',
     argv: ['skills', 'list', '--source', 'bogus'],
-    contract: 'C2',
+    contract: 'C3',
   },
   { surface: 'skills', kind: 'unknown-option', argv: ['skills', 'list', '--nope'], contract: 'C1' },
   {
@@ -258,49 +252,49 @@ const CASES = [
   },
 
   // ---- river runs ----
-  { surface: 'runs', kind: 'value-missing', argv: ['runs', 'list', '--output'], contract: 'C2' },
+  { surface: 'runs', kind: 'value-missing', argv: ['runs', 'list', '--output'], contract: 'C3' },
   {
     surface: 'runs',
     kind: 'invalid-value',
     argv: ['runs', 'list', '--output', 'bogus'],
-    contract: 'C2',
+    contract: 'C3',
   },
   { surface: 'runs', kind: 'unknown-option', argv: ['runs', 'list', '--nope'], contract: 'C1' },
   { surface: 'runs', kind: 'unknown-subcommand', argv: ['runs', 'bogus'], contract: 'C3' },
   { surface: 'runs', kind: 'surplus-positional', argv: ['runs', 'list', 'extra'], contract: 'C1' },
 
   // ---- river feedback ----
-  // 同一コマンド・同一エラー種別の中で 2 契約に割れている面。#1709 が「世代間の
-  // 非対称」として書いた問題が、実際にはコマンド内部の非対称でもあることの実例。
+  // Slice 1 時点は同一コマンド・同一エラー種別の中で 2 契約に割れている面だった
+  // （#1709 が「世代間の非対称」として書いた問題が、実際にはコマンド内部の
+  // 非対称でもあることの実例）。Slice 2 で value-missing / invalid-value は
+  // C3 に揃った。
   {
-    // #1721 で exit 1 -> exit 0 に後退したセル（検証が parse 層に前倒しされ、
-    // 下流 buildFeedbackEntry の exit 1 ではなく help フォールバックに乗った）。
-    // Slice 2 で exit 1 に戻す対象。
+    // #1721 で exit 1 -> exit 0 に後退していたセル。Slice 2 で exit 1 に戻った。
     surface: 'feedback',
     kind: 'value-missing',
     argv: ['feedback', 'add', '--type'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'feedback',
     kind: 'value-missing',
     argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 's', '--run-id'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'feedback',
     kind: 'value-missing',
     argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 's', '--reviewer'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     // #1709 調査時点では C1（無言 + entry 書き込み、--pr が null に落ちる = B2）。
-    // #1721 が parse 層で弾くようになり、entry は書かれず C2 に移動した。
-    // exit code は依然 0 のままなので Slice 2 の対象。
+    // #1721 が parse 層で弾くようになり entry は書かれなくなり（C2）、
+    // Slice 2 で exit 1（C3）になった。
     surface: 'feedback',
     kind: 'value-missing',
     argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 's', '--pr'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'feedback',
@@ -312,15 +306,15 @@ const CASES = [
     surface: 'feedback',
     kind: 'invalid-value',
     argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 's', '--run-id', '   '],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     // 同じく B2。#1721 前は --pr abc が黙って捨てられ entry が書き込まれていた。
-    // #1721 で entry 書き込みは止まったが exit code は 0 のまま（C1 -> C2）。
+    // #1721 で entry 書き込みが止まり（C1 -> C2）、Slice 2 で exit 1（C3）になった。
     surface: 'feedback',
     kind: 'invalid-value',
     argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 's', '--pr', 'abc'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'feedback',
@@ -346,31 +340,31 @@ const CASES = [
     surface: 'promote',
     kind: 'value-missing',
     argv: ['promote', 'propose', '--input'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'promote',
     kind: 'value-missing',
     argv: ['promote', 'propose', '--cluster-key'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'promote',
     kind: 'value-missing',
     argv: ['promote', 'approve', 'id1', '--approver'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'promote',
     kind: 'invalid-value',
     argv: ['promote', 'retire', '--threshold', '0'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'promote',
     kind: 'invalid-value',
     argv: ['promote', 'list', '--output', 'bogus'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     // #1709 Slice 1 で明示的に追加が求められていた promoteUnknownOption のケース。
@@ -392,31 +386,31 @@ const CASES = [
     surface: 'evolve',
     kind: 'value-missing',
     argv: ['evolve', 'aggregate', '--min'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'evolve',
     kind: 'value-missing',
     argv: ['evolve', 'replay', '--spec'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'evolve',
     kind: 'value-missing',
     argv: ['evolve', 'aggregate', '--month'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'evolve',
     kind: 'invalid-value',
     argv: ['evolve', 'aggregate', '--min', '0'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'evolve',
     kind: 'invalid-value',
     argv: ['evolve', 'aggregate', '--month', '2026-13-01'],
-    contract: 'C2',
+    contract: 'C3',
   },
   {
     surface: 'evolve',
@@ -439,9 +433,9 @@ const CASES = [
   },
 
   // ---- river suppression ----
-  // 5 種別すべてが C3 になる唯一の面。ただし必須オプション検証がハンドラ層に
-  // 寄っている副産物であって、未知オプション自体を検出しているわけではない
-  // （`suppression add --nope` の stderr は "--fingerprint is required"）。
+  // Slice 1 時点で 5 種別すべてが C3 だった唯一の面。ただし必須オプション検証が
+  // ハンドラ層に寄っている副産物であって、未知オプション自体を検出している
+  // わけではない（`suppression add --nope` の stderr は "--fingerprint is required"）。
   {
     surface: 'suppression',
     kind: 'value-missing',
@@ -497,12 +491,12 @@ const CASES = [
   },
 
   // ---- river doctor ----
-  { surface: 'doctor', kind: 'value-missing', argv: ['doctor', '.', '--output'], contract: 'C2' },
+  { surface: 'doctor', kind: 'value-missing', argv: ['doctor', '.', '--output'], contract: 'C3' },
   {
     surface: 'doctor',
     kind: 'invalid-value',
     argv: ['doctor', '.', '--output', 'bogus'],
-    contract: 'C2',
+    contract: 'C3',
   },
   { surface: 'doctor', kind: 'unknown-option', argv: ['doctor', '.', '--nope'], contract: 'C1' },
   { surface: 'doctor', kind: 'surplus-positional', argv: ['doctor', '.', 'extra'], contract: 'C1' },
@@ -529,8 +523,9 @@ const CASES = [
  * 対照群。usage error ではないが、同じ 2 軸で挙動が決まるため一緒に固定する。
  * `--help` の exit 0 + stdout は .github/workflows/test.yml の `--help > /dev/null`
  * ガードが依存する不変条件で、S2/S3 でも変えてはならない。
- * 一方 `river bogus` の C2 は、`Unknown command:` 分岐（src/cli.mjs）が到達不能な
- * dead code であることの症状（調査の B1）で、S2 で是正される想定。
+ * `river bogus` は Slice 1 時点では C2（`Unknown command:` 分岐が到達不能な
+ * dead code である症状 = 調査の B1）だったが、Slice 2 で parse 層が未知
+ * コマンドを捕捉するようになり C3（exit 1 + stderr）が到達点になった。
  */
 const CONTROL_CASES = [
   { surface: '(control)', kind: 'help-flag', argv: ['--help'], contract: 'C2', invariant: true },
@@ -539,8 +534,8 @@ const CONTROL_CASES = [
     surface: '(control)',
     kind: 'unknown-command',
     argv: ['bogus'],
-    contract: 'C2',
-    invariant: false,
+    contract: 'C3',
+    invariant: true,
   },
 ];
 
@@ -623,7 +618,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     }
   });
 
-  test('the contract distribution is C1:23 / C2:34 / C3:19 / C4:2 (57 of 78 exit 0)', () => {
+  test('the contract distribution is C1:23 / C2:0 / C3:53 / C4:2 (23 of 78 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -632,7 +627,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
       '契約ごとの件数が変わった。挙動変更の総量として意図したものか確認し、この期待値も更新すること'
     );
     const exitZero = counts.C1 + counts.C2;
-    assert.equal(exitZero, 57, 'usage error のうち exit 0 で成功扱いになる件数');
+    assert.equal(
+      exitZero,
+      23,
+      'usage error のうち exit 0 で成功扱いになる件数（残る Slice 3 対象）'
+    );
   });
 
   // ---------------------------------------------------------------------------

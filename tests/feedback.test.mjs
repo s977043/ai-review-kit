@@ -341,7 +341,8 @@ test('`river feedback add --run-id "   "` reports an error and writes nothing', 
     { cwd: dir }
   );
   // Same shape as the sibling options (--reviewer etc.): the error goes to
-  // stderr and the run falls back to the help path rather than proceeding.
+  // stderr and the run stops as a usage error (#1709 Slice 2: exit 1).
+  assert.equal(res.code, 1);
   assert.match(res.stderr, /--run-id option requires a value/);
   assert.doesNotMatch(res.stdout, /Feedback recorded/);
   // The regression this pins: a whitespace-only id used to pass the truthiness

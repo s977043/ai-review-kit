@@ -57,7 +57,7 @@ river evolve aggregate <path> [--min <n>] [--month YYYY-MM] [--output json]
 - `--month`: run と feedback の両方を `YYYY-MM` に限定する（片側だけ絞ると集計期間がずれるため）
 - `--output json`: 機械可読な集約 JSON を出力する（既定は Markdown）。`yaml` / `html` は未対応で reject する
 
-正常終了時の exit code は 0 です。P1 の出力は gate ではなく観測であるため、しきい値超過では失敗させません。ただし使い方の誤り（不明なサブコマンド・余剰引数・不明オプション・未対応の `--output`）は exit 1 で明示的に失敗します。`river evolve agregate` のような typo を path として黙って受け取り、空の成功結果を返すことはありません。
+正常終了時の exit code は 0 です。P1 の出力は gate ではなく観測であるため、しきい値超過では失敗させません。ただし使い方の誤り（不明なサブコマンド・余剰引数・不明オプション・オプションの値欠落・未対応の `--output`）は exit 1 で明示的に失敗します（値欠落は #1709 Slice 2 で統一）。`river evolve agregate` のような typo を path として黙って受け取り、空の成功結果を返すことはありません。
 
 ## 5. 設計契約との対応
 
