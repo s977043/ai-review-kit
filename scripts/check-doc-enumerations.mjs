@@ -143,6 +143,14 @@ async function listCommandFiles(relDir) {
   return files.filter((file) => file !== 'README.md');
 }
 
+/** repo-relative なディレクトリ直下の workflow ファイル名（*.yml / *.yaml）を返す。 */
+async function listWorkflowFiles(relDir) {
+  const entries = await fs.readdir(path.join(ROOT, relDir), { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && /\.ya?ml$/.test(entry.name))
+    .map((entry) => entry.name);
+}
+
 /**
  * 宣言的な spec テーブル。ドキュメントの列挙・件数と実体の対応をここに 1 行で登録する。
  *
@@ -215,6 +223,21 @@ export const DOC_ENUMERATION_SPECS = [
       const repoDev = await listCommandFiles('.claude/commands');
       return new Set([...distributed, ...repoDev].map((file) => `/${file.replace(/\.md$/, '')}`));
     },
+  },
+  {
+    // #1725 で新設した workflow 入口 README（#1728 で登録）。README は本数（27 本）も
+    // 書いているが、counts は「1 本消して 1 本足す」を素通りさせるため names だけを
+    // 登録する。counts の spec を重ねて足さないこと。
+    id: 'workflows-readme-table',
+    doc: '.github/workflows/README.md',
+    summary: 'ワークフロー一覧表のファイル列',
+    marker: '`ファイル | ワークフロー名 | ...` 表',
+    kind: 'names',
+    declare: (text) => {
+      const column = parseMarkdownTableColumn(text, 'ファイル');
+      return column && new Set(column.map(unwrapCodeSpan));
+    },
+    measure: async () => new Set(await listWorkflowFiles('.github/workflows')),
   },
 ];
 
