@@ -14,6 +14,8 @@ npm ci
 
 CI ではこれらの手順を `.github/actions/setup-node-deps` (composite action) に集約しており、`actions/setup-node@v6` + `npm ci --prefer-offline` を一括で実行する。
 
+CI ワークフローの一覧、branch protection の必須チェックがどのジョブに対応するか、新しいワークフローを追加する手順は [.github/workflows/README.md](../../.github/workflows/README.md) にまとまっている。
+
 ## 日常の検証コマンド
 
 ```bash
