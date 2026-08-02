@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.70.0](https://github.com/s977043/river-review/compare/v1.69.0...v1.70.0) (2026-08-02)
+
+
+### Features
+
+* **hooks:** force 系の破壊的 git コマンドを PreToolUse フックで阻止する ([#1733](https://github.com/s977043/river-review/issues/1733)) ([a9d9749](https://github.com/s977043/river-review/commit/a9d9749f8bd1ce5b6d1e7e82847a0c48e0b2c8db))
+* **scripts:** .github/workflows/README.md のワークフロー一覧を doc-enum spec に登録する ([#1732](https://github.com/s977043/river-review/issues/1732)) ([2aee6be](https://github.com/s977043/river-review/commit/2aee6beefff05334f0ecb5e118b982ecce79eab0)), closes [#1728](https://github.com/s977043/river-review/issues/1728)
+
 ## [1.69.0](https://github.com/s977043/river-review/compare/v1.68.1...v1.69.0) (2026-08-02)
 
 
