@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.71.0](https://github.com/s977043/river-review/compare/v1.70.0...v1.71.0) (2026-08-02)
+
+
+### Features
+
+* **cli:** usage error の exit code を exit 1 + stderr 要約に統一する（[#1709](https://github.com/s977043/river-review/issues/1709) Slice 2） ([#1735](https://github.com/s977043/river-review/issues/1735)) ([17b1212](https://github.com/s977043/river-review/commit/17b121290f267c005df0a063793dcb3203af88de))
+* **scripts:** 公開ページの sidebar 到達性契約を機械検証する check-sidebar-reachability を追加する ([#1736](https://github.com/s977043/river-review/issues/1736)) ([7c87727](https://github.com/s977043/river-review/commit/7c8772705578ce8fc9bbd15a25047b9ec9b9bd07))
+
 ## [1.70.0](https://github.com/s977043/river-review/compare/v1.69.0...v1.70.0) (2026-08-02)
 
 
