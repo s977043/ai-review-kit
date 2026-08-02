@@ -497,6 +497,40 @@ test('claude-md-command-table spec fails when a real row is removed from CLAUDE.
   assert.match(errors[0], /実体に "\/merge-check" があるが .* に載っていない/);
 });
 
+test('workflows-readme-table spec fails when a real row is removed from .github/workflows/README.md', async () => {
+  const spec = realSpec('workflows-readme-table');
+  const realText = await readRepoFile('.github/workflows/README.md');
+  const mutated = realText.replace(/^\|\s*`test\.yml`.*\r?\n/m, '');
+  assert.notEqual(mutated, realText, 'fixture precondition: the `test.yml` row must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /実体に "test\.yml" があるが .* に載っていない/);
+});
+
+test('workflows-readme-table spec fails when a phantom row is added to .github/workflows/README.md', async () => {
+  const spec = realSpec('workflows-readme-table');
+  const realText = await readRepoFile('.github/workflows/README.md');
+  // 「1 本消して 1 本足す」の「足す」側。実体の無い行が表に残ると落ちることを確かめる。
+  const mutated = realText.replace(
+    /^(\|\s*`test\.yml`.*\r?\n)/m,
+    '| `phantom-workflow.yml` | Phantom | - | - | - |\n$1'
+  );
+  assert.notEqual(mutated, realText, 'fixture precondition: the `test.yml` row must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /"phantom-workflow\.yml" を挙げているが実体に存在しない/);
+});
+
 test('skills-stream-counts spec fails when a real count is altered in docs/skills-structure.md', async () => {
   const spec = realSpec('skills-stream-counts');
   const realText = await readRepoFile('docs/skills-structure.md');
