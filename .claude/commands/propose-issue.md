@@ -1,7 +1,7 @@
 ---
-description: Issue 提案前にコードベースを調査し、既存実装の有無を確認する
+description: Issue 提案前にコードベースを調査して既存実装の有無を確認し、本文の数値・引用・前提を一次ソースで裏取りする
 argument-hint: '<issue title or description>'
-allowed-tools: Bash(rg:*), Bash(git log:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh issue list:*), Bash(gh issue view:*)
+allowed-tools: Bash(rg:*), Bash(git log:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh api:*), Read
 ---
 
 Issue 「$ARGUMENTS」を作成する前に、既存実装の有無を確認してください。
@@ -18,6 +18,7 @@ Issue 「$ARGUMENTS」を作成する前に、既存実装の有無を確認し�
 3. **Git 履歴確認**: `git log --all --oneline | grep -i "<keyword>"` で関連コミット（複数単語対応のためクォート）
 4. **マージ済み PR 確認**: `gh pr list --state merged --search <keyword>`
 5. **既存 Issue 確認**: `gh issue list --state all --search <keyword>`
+6. **一次ソースの裏取り**: 本文へ書く予定の数値・引用・前提を、記憶や過去の要約ではなく一次ソース（実ファイル・実コマンド出力・`gh api` の応答・原典）で確認する
 
 ## 判定
 
@@ -33,10 +34,11 @@ Issue 「$ARGUMENTS」を作成する前に、既存実装の有無を確認し�
 
 ### C. 完全に未実装
 
-Issue 作成の根拠となる調査結果を報告し、ユーザーの承認後に Issue を作成。
+Issue 作成の根拠となる調査結果を報告し、ユーザーの承認後に Issue を作成。本文を書くときは、手順 6 で確認した一次ソースを該当箇所に併記する（`file:line`・実行したコマンド・URL のいずれか）。裏取りの痕跡が本文に残っていれば、後から検算できる。
 
 ## 禁止事項
 
 - 調査を省略して Issue を作成してはならない
 - `src/lib/`, `schemas/`, `scripts/` のいずれかの探索を省略してはならない
 - 「多分ない」という推測で Issue を作成してはならない
+- 記憶や過去の要約にある数値は、出典を取り直さずに引き写してはならない

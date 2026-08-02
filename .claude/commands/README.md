@@ -4,7 +4,7 @@ Repo-development slash commands (NOT part of the distributed plugin surface).
 
 | Command                  | File                       | Purpose                                                                                     |
 | ------------------------ | -------------------------- | ------------------------------------------------------------------------------------------- |
-| `/propose-issue`         | `propose-issue.md`         | Research codebase before creating an issue                                                  |
+| `/propose-issue`         | `propose-issue.md`         | Research codebase before creating an issue, then fact-check the issue body's claims         |
 | `/plan-merge-order`      | `plan-merge-order.md`      | Plan merge order for multiple PRs to minimize rebase cost                                   |
 | `/preflight`             | `preflight.md`             | Verify tasks are not obsolete or in parallel before work                                    |
 | `/verify-agent-report`   | `verify-agent-report.md`   | Verify agent completion reports against real branches, PRs, and commits                     |

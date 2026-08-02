@@ -39,14 +39,15 @@ River Review の運用で同じミスを繰り返し、そのたびに「次回�
 
 学びをどの形で固定化するかを決める:
 
-| 形                                 | 使いどき                                                           | 例                                               |
-| ---------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------ |
-| CLAUDE.md の AI Misoperation Guard | リポジトリ固有の行動ルール（全セッションに適用）                   | "Commit before branch switches"                  |
-| `.claude/commands/*.md`            | 繰り返し実行する手順で、step-by-step のガイドが必要                | `/propose-issue`, `/plan-merge-order`            |
-| `docs/development/*.md`            | コードベース固有のリファレンス / チェックリスト                    | `pipeline-params-checklist.md`, このドキュメント |
-| Auto-memory (`feedback_*.md`)      | リポジトリ非依存で cross-session な習慣（git/editor の reflex 等） | `feedback_git_wip_commit.md`                     |
+| 形                                 | 使いどき                                                           | 例                                                                                                           |
+| ---------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| CLAUDE.md の AI Misoperation Guard | リポジトリ固有の行動ルール（全セッションに適用）                   | "Commit before branch switches"                                                                              |
+| `.claude/commands/*.md`            | 繰り返し実行する手順で、step-by-step のガイドが必要                | `/propose-issue`, `/plan-merge-order`                                                                        |
+| `docs/development/*.md`            | コードベース固有のリファレンス / チェックリスト                    | `pipeline-params-checklist.md`, このドキュメント                                                             |
+| Auto-memory (`feedback_*.md`)      | リポジトリ非依存で cross-session な習慣（git/editor の reflex 等） | `feedback_git_wip_commit.md`                                                                                 |
+| `scripts/*.mjs` + 必須 CI チェック | 宣言と実体の一致を決定論で検証できるもの（件数・列挙・参照の整合） | `scripts/check-doc-enumerations.mjs`（`npm run meta:validate` 経由で必須チェック `Meta consistency` に接続） |
 
-迷ったら「mechanical に実行できるか」で判断する。実行手順なら command、判断を要する行動原則なら guard、call site リストなら docs。
+まず「mechanical に検証できるか」を確認する。決定論で検証できるなら、手順ではなく検証を書く（script + 必須 CI チェック）。散文のチェックリストは守られない前提で設計する。機械検証されている参照はほとんど壊れないが、CI 非対象の人手の列挙は実測でずれていた（実測値・分母・測定コマンドは [doc-enumeration-checks.md](./doc-enumeration-checks.md) が SSoT。ここに数値を複製しない）。検証へ落とせない場合だけ「mechanical に実行できるか」で分類する。実行手順なら command、判断を要する行動原則なら guard、call site リストなら docs。一部だけ決定論で検証できる場合は、検証できる部分を script + CI に切り出したうえで、残余を guard / command に落とす（どちらか一方に寄せない）。
 
 ### Step 3: ドラフト作成
 

@@ -4,14 +4,63 @@
 
 ## なぜ script なのか
 
-2026-08-02 のドキュメント監査で、次の非対称が観測されました。
+機械が検証している参照と、CI 非対象の人手の列挙とでは、陳腐化の起き方が違います。以下は 2026-08-02 時点の実測値です。**率だけでなく分子と分母を併記し、再実行できるコマンドを添えてあります。** 数値を更新するときは、同じコマンドを実行して出力から転記してください。
 
-- 機械が検証している参照（相対リンク 1123 件・npm script 340 件）の乖離率は 0.18% である
-- CI 非対象の「列挙・件数・構成」主張は、20 件サンプルのうち 18 件（90%）が陳腐化していた
+### 機械検証されている参照: 864 件中 0 件
 
-実例として `docs/skills-structure.md` は upstream 46 / midstream 26 / downstream 9 と書いていましたが、実測は 49 / 60 / 8 でした（midstream は 2.3 倍の乖離）。
+lychee が検証している相対 `.md` リンクの実測です。`.github/workflows/link-check.yml` は markdown を変更した PR と週次スケジュールで走り、壊れたリンクがあればジョブが落ちます。
 
-チェックリストでは止まらないことも実証済みです。`plugin-asset-registration-checklist.md` には「`commands/README.md` も更新する」という項目が以前からありましたが、`commands/README.md` の表は 37〜41 日ものあいだ更新されませんでした。そこで [improvement-flow.md](./improvement-flow.md) の「mechanical に実行できるか」という基準に従い、script と CI に倒しています。
+```bash
+total=0; broken=0
+while IFS= read -r src; do
+  while IFS= read -r link; do
+    [ -z "$link" ] && continue
+    total=$((total + 1))
+    [ -e "$(dirname "$src")/${link%%#*}" ] || { broken=$((broken + 1)); echo "BROKEN: $src -> $link"; }
+  done < <(grep -oE '\]\([^)#:]+\.md' "$src" | sed 's/^](//' | grep -v '^/')
+done < <(git ls-files '*.md' | grep -v -e '^CHANGELOG.md$' -e '^pages/index.md$' -e '^pages/index.en.md$')
+echo "broken=$broken total=$total"
+# 出力: broken=0 total=864
+```
+
+除外している 3 ファイルは `.lychee.toml` の `exclude_path` に対応します。
+
+### 機械検証がなかった列挙: spec 化した 4 件のうち 2 件
+
+PR #1726 で本 script に spec を 4 件登録した時点の、宣言側と実体の突き合わせ結果です。ずれていた 2 件は同じ PR で実測値へ直しました（`git diff d984caec^ d984caec -- <対象>` で確認できます）。
+
+| spec の宣言側                           | 当時の宣言                                   | 実体                    | 判定 |
+| --------------------------------------- | -------------------------------------------- | ----------------------- | ---- |
+| `docs/skills-structure.md` のツリー件数 | upstream 46 / midstream 26 / downstream 9    | 49 / 60 / 8             | ずれ |
+| `commands/README.md` の表               | 5 行（`review-team` と `setup-team` が欠落） | `commands/*.md` は 7 件 | ずれ |
+| `.claude/commands/README.md` の表       | 7 行                                         | 一致                    | 一致 |
+| `CLAUDE.md` の `Custom Commands` 表     | 14 行                                        | 一致                    | 一致 |
+
+表の外にも陳腐化がありました。`.claude/commands/README.md` の散文は配布コマンドを 5 件だけ挙げており（`review-team` / `setup-team` が欠落）、同じ PR で「一覧は `commands/README.md` が正」という参照へ置き換えています。機械検証の対象は表であって散文ではないため、散文で列挙しないほうが安全です。
+
+### チェックリストでは止まらなかった
+
+`plugin-asset-registration-checklist.md` には作成時（2026-07-08, #1442）から「CLAUDE.md『Custom Commands』表と `commands/README.md` に説明を追記した」という項目がありました。それでも `commands/README.md` の行は次のとおり放置されました。
+
+| コマンド追加                      | 行が入った日      | 欠落期間 |
+| --------------------------------- | ----------------- | -------- |
+| `setup-team` (2026-06-22, #1251)  | 2026-08-02, #1726 | 41 日    |
+| `review-team` (2026-06-26, #1309) | 2026-08-02, #1726 | 37 日    |
+
+このうちチェックリストが存在していたのは末尾の 25 日間です。項目があっても止まらなかったため、[improvement-flow.md](./improvement-flow.md) の「mechanical に検証できるか」という基準に従い、script と CI に倒しています。
+
+### 「参照」を一括りにしないこと
+
+同じ「参照」でも、対象が近い場所にあるものは自然に直ります。`npm run <script>` の散文参照 500 件を root の `package.json` と突き合わせると 6 件が未定義でしたが、内訳は設計文書中の仮想例が 4 件、fixture が 1 件、サブパッケージ側で定義されている `clean` が 1 件で、実質の陳腐化は 0 件でした。したがって「参照全体の乖離率」という単一の率は意味を持ちません。母集団ごとに分子と分母を出してください。
+
+```bash
+git ls-files -z '*.md' | xargs -0 rg --no-filename --no-line-number -o -r '$1' \
+  'npm run (?:-s |--silent )?([a-z][a-z0-9:_-]*[a-z0-9])' | sort > /tmp/rr-refs.txt
+node -p "Object.keys(require('./package.json').scripts).join('\n')" | sort > /tmp/rr-defined.txt
+comm -23 <(sort -u /tmp/rr-refs.txt) /tmp/rr-defined.txt > /tmp/rr-undef.txt
+wc -l < /tmp/rr-refs.txt                        # 分母: 500
+grep -cxF -f /tmp/rr-undef.txt /tmp/rr-refs.txt # 分子: 6
+```
 
 ## 何を検証しているか
 
