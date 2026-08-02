@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.69.0](https://github.com/s977043/river-review/compare/v1.68.1...v1.69.0) (2026-08-02)
+
+
+### Features
+
+* **scripts:** ドキュメントの列挙・件数を機械検証する check-doc-enumerations を追加する ([#1726](https://github.com/s977043/river-review/issues/1726)) ([d984cae](https://github.com/s977043/river-review/commit/d984caec85eb20d2a36f5832053f737ff8107794))
+
 ## [1.68.1](https://github.com/s977043/river-review/compare/v1.68.0...v1.68.1) (2026-08-02)
 
 
