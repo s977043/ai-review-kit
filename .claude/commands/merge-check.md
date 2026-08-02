@@ -70,7 +70,7 @@ gh api "repos/:owner/:repo/pulls/$ARGUMENTS" --jq '{mergeable_state}'
 ```
 
 - `behind` なら `gh api "repos/:owner/:repo/pulls/$ARGUMENTS/update-branch" -X PUT` で更新する。**CI が再実行されるため Step 1 からやり直す**
-- update-branch の 422 (lock-file conflict) は新 PR を作らず、`npm install --package-lock-only` → force-push で解消する（`/plan-merge-order` の strict mode 節を参照）
+- update-branch の 422 (lock-file conflict) は新 PR を作らず、ローカルで `git merge origin/main` → `npm install --package-lock-only` → merge commit → 通常 push（fast-forward なので force 不要）で解消する（`/plan-merge-order` の strict mode 節を参照）
 
 ## 判定
 
