@@ -1,14 +1,11 @@
 #!/usr/bin/env node
 // ドキュメントが書いている「列挙・件数」主張を実体と機械照合するチェッカー。
 //
-// 背景（2026-08-02 の 4 体系ドキュメント監査）:
-//   機械が検証している参照（相対リンク 1123 件 / npm script 340 件）の乖離率は 0.18% で健全だった。
-//   一方 CI 非対象の「列挙・件数・構成」主張は 20 件サンプルで 18/20（90%）が陳腐化していた。
-//   例: docs/skills-structure.md が upstream 46 / midstream 26 / downstream 9 と書いていたが、
-//   実測は 49 / 60 / 8 だった（midstream は 2.3 倍の乖離）。
-//   docs 側のチェックリストでは止まらないことも実証済みで、
-//   plugin-asset-registration-checklist.md の「commands/README.md も更新」項目は 37〜41 日守られなかった。
-//   docs/development/improvement-flow.md の「mechanical に実行できるか」基準に従い、script + CI に倒す。
+// 背景:
+//   機械が検証している参照はほとんど壊れない一方、CI 非対象の「列挙・件数・構成」主張は実体とずれ、
+//   docs 側のチェックリストでも止まらなかった。実測値（分子・分母）と測定コマンドは
+//   docs/development/doc-enumeration-checks.md が SSoT なので、ここには数値を複製しない。
+//   docs/development/improvement-flow.md の「mechanical に検証できるか」基準に従い、script + CI に倒す。
 //
 // 設計方針:
 //   - 誤検出でメイン開発を止めないことを最優先とする。曖昧な対象は登録しない（後から足せる）。

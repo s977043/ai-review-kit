@@ -22,10 +22,12 @@
   スキップすると CI で初めて失敗が露見する。
 - push 済みのリモート履歴を強制的に上書きする操作、および作業を破棄する操作は行わないこと。
   禁止対象は `git push --force`（`-f` も同じ）、`git push --force-with-lease`、`git reset --hard`、
-  `git stash drop` のすべて。`--force-with-lease` は「安全な force」ではなく、force 禁止の例外にならない。
-  自分のブランチのリモート更新に追随するだけなら `git pull --rebase` を使ってよい（force push が不要な範囲に限る）。
-  push が reject される等で force push が必要に見えた場合は、自分で判断せず作業を止めて
-  オーガナイザーに報告すること。
+  `git stash drop`、`git checkout -- <path>`、`git restore <path>`、`git clean -fd` を含む（これらに限らない）。
+  `--force-with-lease` は「安全な force」ではなく、force 禁止の例外にならない。
+  リモートの更新を取り込むときは `git fetch origin` のあと `git merge --ff-only origin/<自分のブランチ名>` を使うこと
+  （`git pull --rebase` は使わない。`git switch -c <branch> origin/main` で作ったブランチは upstream が origin/main のため、
+  push 済みコミットが main の上に書き換えられ、次の push が reject されて force push が必要な状態に追い込まれる）。
+  それでも履歴の書き換えが必要に見えた場合は、自分で判断せず作業を止めてオーガナイザーに報告すること。
 - commit subject は小文字または日本語で始めること（commitlint の subject-case ルールに抵触するため大文字始まりは reject される）。
   例: `fix: ...` / `feat: ...` / `docs: ...`（日本語 subject も可）。
 - Monitor ツールは使用しないこと。CI やポーリング待ちが必要な場合は、1つの Bash 呼び出し内で
@@ -59,7 +61,9 @@ lint-staged が pre-commit で manifest 再生成・`textlint --no-cache` を担
 
 ### force 系操作の禁止
 
-`--force-with-lease` は名前から「安全な force」と解釈されやすい。しかし lease が保証するのは「リモートの ref が自分の知る値から動いていないこと」だけであり、自分自身が壊した履歴をそのまま上書きする事故は防げない。AGENTS.md Safety の destructive commands 禁止（`git reset --hard` / `git push --force` 等）はワーカーにも適用される。ただし `--force-with-lease` が含まれるかは字面から読み取れないため、テンプレート側で明示的に列挙し、例外解釈の余地を消す。ワーカーは並行 PR やマージ順序の全体像を持たないため、force が必要に見える状況はエスカレーション対象とし、判断はオーガナイザーへ寄せる。
+`--force-with-lease` は名前から「安全な force」と解釈されやすい。しかし lease が保証するのは「リモートの ref が自分の知る値から動いていないこと」だけであり、自分自身が壊した履歴をそのまま上書きする事故は防げない。AGENTS.md Safety の destructive commands 禁止（`git reset --hard` / `git push --force` 等）はワーカーにも適用される。ただし `--force-with-lease` が含まれるかは字面から読み取れないため、テンプレート側で明示的に列挙し、例外解釈の余地を消す。列挙は網羅ではなく例示なので「これらに限らない」と添えている。破棄系（`git checkout -- <path>` / `git restore` / `git clean -fd`）も挙げるのは、本リポジトリで作業ファイルを 2 回失った実績があるため（improvement-flow.md の背景を参照）。
+
+取り込み手順に `git pull --rebase` を挙げないのも意図的。`git switch -c <branch> origin/main` で作ったブランチは upstream が origin/main になる。そのため `git pull --rebase` は main へのリベースとして働き、push 済みコミットを書き換えて次の push を non-fast-forward で reject させる。結果として、同じ規律が禁じている force push が必要な位置にワーカーを追い込む。CLAUDE.md「`N of N required checks are expected`」ガードが同じ状況へ規定している `git merge --ff-only origin/<branch>` に揃え、非破壊の取り込み手段を 1 つに統一する。ワーカーは並行 PR やマージ順序の全体像を持たないため、履歴の書き換えが要りそうな状況はエスカレーション対象とし、判断はオーガナイザーへ寄せる。
 
 ### commit subject の大小文字
 
@@ -91,7 +95,8 @@ PR 番号 / head SHA / CI 結果（実出力）/ 変更ファイル一覧が揃�
 
 ## 関連
 
-- CLAUDE.md—AI Misoperation Guards（本テンプレートの各項目の一次情報）
+- CLAUDE.md—AI Misoperation Guards（本テンプレートの多くの項目の一次情報）
+- AGENTS.md—Safety（destructive commands 禁止の一次情報。force 系項目はこちらが出典）
 - `.claude/hooks/gh-account-guard.sh`—gh アカウント guard の実装
 - `.claude/commands/verify-agent-report.md`—オーガナイザー側の完了報告裏取り手順
 - `.claude/commands/release-kick.md`—sleep ポーリングの実装例
