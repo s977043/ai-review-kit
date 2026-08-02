@@ -79,9 +79,9 @@ exit code は次のとおりです。受入基準を満たさない場合でも 
 | manifest の改変検知・別実験の manifest                                | 1         |
 | `--expect-manifest` の不一致                                          | 1         |
 | `--spec` の未指定・未知のオプション・余分な位置引数・未対応の出力形式 | 1         |
-| オプションの値欠落（例: `--spec` の後に値がない）                     | 0（help） |
+| オプションの値欠落（例: `--spec` の後に値がない）                     | 1         |
 
-最後の行はリポジトリ既存の慣習です。値を伴うオプションで値が欠落した場合、パーサは `command = 'help'` へ落として `main()` が help を表示し 0 で終了します。`--min` / `--month` / `river promote propose --cluster-key` も同じ挙動です。値欠落を全コマンド横断で exit 1 に統一するかどうかは、本 PR のスコープ外として別途扱います。
+最後の行は、当初「help を表示して exit 0」というリポジトリ既存の慣習に従っていましたが、#1709 Slice 2 で全コマンド横断の usage error 契約に統一されました。値を伴うオプションで値が欠落した場合、パーサは stderr にエラーと usage 要約を出し、`main()` は help 全文を stdout へ出さずに exit 1 で終了します。`--min` / `--month` / `river promote propose --cluster-key` も同じ挙動です。
 
 `--min` と `--month` は aggregate 側のオプションであり、replay では reject します。replay の対象データは manifest が固定するため、後から絞り込めてはいけないからです。
 

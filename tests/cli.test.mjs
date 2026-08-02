@@ -229,8 +229,10 @@ describe('river run - guards & error paths', () => {
     t.after(cleanup);
 
     const result = await runCliInProcess(['run', '.', '--max-cost', '-1'], { cwd: dir });
-    assert.strictEqual(result.code, 0);
+    // #1709 Slice 2: usage error は exit 1 + stderr 要約（help 全文は stdout に出さない）
+    assert.strictEqual(result.code, 1);
     assert.match(result.stderr, /requires a non-negative numeric value/i);
+    assert.doesNotMatch(result.stdout, /Usage: river <command>/);
   });
 
   test('skips markdown-only changes after optimization', async (t) => {

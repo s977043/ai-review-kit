@@ -9,11 +9,12 @@ test('runCliAsSubprocess: help flag exits 0 and prints usage', async () => {
   assert.match(result.stdout, /Usage: river/);
 });
 
-test('runCliAsSubprocess: unknown command prints help', async () => {
+test('runCliAsSubprocess: unknown command exits 1 with an error on stderr', async () => {
   const result = await runCliAsSubprocess(['no-such-command']);
-  // CLI は未知のコマンドでも help を出して 0 で終了する既存挙動
-  assert.equal(result.code, 0);
-  assert.match(result.stdout, /Usage: river/);
+  // #1709 Slice 2: 未知コマンドは exit 1 + stderr 要約（help 全文は stdout に出さない）
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Unknown command: no-such-command/);
+  assert.doesNotMatch(result.stdout, /Usage: river/);
 });
 
 test('runCliAsSubprocess: passes through env variables', async () => {

@@ -154,9 +154,9 @@ test('parseArgs: --phase downstream', () => {
   assert.equal(parsed.phase, 'downstream');
 });
 
-test('parseArgs: --phase without value falls back to help', () => {
+test('parseArgs: --phase without value raises a usage error (#1709 S2)', () => {
   const parsed = parseArgs(['run', '.', '--phase']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: --planner order', () => {
@@ -164,9 +164,9 @@ test('parseArgs: --planner order', () => {
   assert.equal(parsed.plannerMode, 'order');
 });
 
-test('parseArgs: --planner invalid value falls back to help', () => {
+test('parseArgs: --planner invalid value raises a usage error (#1709 S2)', () => {
   const parsed = parseArgs(['run', '.', '--planner', 'bogus']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: --output markdown', () => {
@@ -174,9 +174,9 @@ test('parseArgs: --output markdown', () => {
   assert.equal(parsed.output, 'markdown');
 });
 
-test('parseArgs: --output invalid value falls back to help', () => {
+test('parseArgs: --output invalid value raises a usage error (#1709 S2)', () => {
   const parsed = parseArgs(['run', '.', '--output', 'xml']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: --max-cost accepts positive decimal', () => {
@@ -186,12 +186,12 @@ test('parseArgs: --max-cost accepts positive decimal', () => {
 
 test('parseArgs: --max-cost rejects negative value', () => {
   const parsed = parseArgs(['run', '.', '--max-cost', '-1']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: --max-cost rejects non-numeric value', () => {
   const parsed = parseArgs(['run', '.', '--max-cost', 'free']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: --context comma list', () => {
@@ -219,9 +219,9 @@ test('parseArgs: --base defaults to null when unset', () => {
   assert.equal(parsed.base, null);
 });
 
-test('parseArgs: --base without value falls back to help', () => {
+test('parseArgs: --base without value raises a usage error (#1709 S2)', () => {
   const parsed = parseArgs(['run', '.', '--base']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: --skill-set captures the set name', () => {
@@ -234,9 +234,9 @@ test('parseArgs: --skill-set defaults to null when unset', () => {
   assert.equal(parsed.skillSet, null);
 });
 
-test('parseArgs: --skill-set without value falls back to help', () => {
+test('parseArgs: --skill-set without value raises a usage error (#1709 S2)', () => {
   const parsed = parseArgs(['run', '.', '--skill-set']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: --fail-on / --warn-on capture severities; --advisory-only sets flag', () => {
@@ -275,7 +275,7 @@ test('parseArgs: --offline and --rules-only set offline; defaults false (#1071)'
 
 test('parseArgs: --fail-on rejects an unknown severity', () => {
   const parsed = parseArgs(['review', 'exec', '--fail-on', 'nope']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: --depth accepts a valid level', () => {
@@ -290,7 +290,7 @@ test('parseArgs: --depth defaults to null when unset', () => {
 
 test('parseArgs: --depth rejects an unknown level', () => {
   const parsed = parseArgs(['run', '.', '--depth', 'nope']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 // -----------------------------------------------------------------------------
@@ -312,9 +312,9 @@ test('parseArgs: --source rr', () => {
   assert.equal(parsed.listSource, 'rr');
 });
 
-test('parseArgs: --source invalid value falls back to help', () => {
+test('parseArgs: --source invalid value raises a usage error (#1709 S2)', () => {
   const parsed = parseArgs(['skills', 'list', '--source', 'wrong']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 // -----------------------------------------------------------------------------
@@ -324,11 +324,13 @@ test('parseArgs: --source invalid value falls back to help', () => {
 test('parseArgs: -h triggers help command', () => {
   const parsed = parseArgs(['-h']);
   assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, false, 'explicit help is not a usage error');
 });
 
 test('parseArgs: --help triggers help command', () => {
   const parsed = parseArgs(['--help']);
   assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, false, 'explicit help is not a usage error');
 });
 
 // -----------------------------------------------------------------------------
@@ -447,7 +449,7 @@ test('parseArgs: review plan with --summary-file and --quiet', () => {
 
 test('parseArgs: --summary-file requires a value', () => {
   const parsed = parseArgs(['review', 'plan', '--summary-file']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: review plan defaults (no summary, not quiet)', () => {
@@ -472,12 +474,12 @@ test('parseArgs: --output sets outputExplicit; --format sets format/formatExplic
 
 test('parseArgs: --format rejects unknown value', () => {
   const parsed = parseArgs(['review', 'plan', '--format', 'yaml']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: --format requires a value', () => {
   const parsed = parseArgs(['review', 'plan', '--format']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 // --- #802 Phase 3 PR-3: exec/verify parser contract ---
@@ -519,7 +521,7 @@ test('parseArgs: review verify accepts --plan and review artifacts', () => {
 
 test('parseArgs: --plan requires a value', () => {
   const parsed = parseArgs(['review', 'exec', '--plan']);
-  assert.equal(parsed.command, 'help');
+  assert.equal(parsed.usageError, true);
 });
 
 test('parseArgs: planFile defaults to null', () => {
@@ -564,7 +566,11 @@ test('parseArgs: feedback add parses --reviewer/--model/--reversed-by values', (
 test('parseArgs: feedback --reviewer/--model/--reversed-by require a value', () => {
   for (const flag of ['--reviewer', '--model', '--reversed-by']) {
     const parsed = parseArgs(['feedback', 'add', '--type', 'accepted', '--skill', 's', flag]);
-    assert.equal(parsed.command, 'help', `${flag} without a value falls back to help`);
+    assert.equal(
+      parsed.usageError,
+      true,
+      `${flag} without a value raises a usage error (#1709 S2)`
+    );
   }
 });
 
@@ -580,7 +586,7 @@ test('parseArgs: feedback --reviewer does not consume a following flag as its va
     '--model',
     'gpt-5',
   ]);
-  assert.equal(parsed.command, 'help', 'next flag is not eaten as the value');
+  assert.equal(parsed.usageError, true, 'next flag is not eaten as the value');
   assert.equal(parsed.feedbackReviewer, null);
 });
 
@@ -608,7 +614,11 @@ test('parseArgs: feedback --run-id defaults to null and requires a value', () =>
     null
   );
   const missing = parseArgs(['feedback', 'add', '--type', 'accepted', '--skill', 's', '--run-id']);
-  assert.equal(missing.command, 'help', '--run-id without a value falls back to help');
+  assert.equal(
+    missing.usageError,
+    true,
+    '--run-id without a value raises a usage error (#1709 S2)'
+  );
 });
 
 test('parseArgs: feedback --run-id does not consume a following flag as its value', () => {
@@ -623,7 +633,7 @@ test('parseArgs: feedback --run-id does not consume a following flag as its valu
     '--reviewer',
     'gemini',
   ]);
-  assert.equal(parsed.command, 'help', 'next flag is not eaten as the value');
+  assert.equal(parsed.usageError, true, 'next flag is not eaten as the value');
   assert.equal(parsed.feedbackRunId, null);
 });
 
@@ -656,15 +666,19 @@ test('parseArgs: feedback --run-id rejects a whitespace-only value instead of nu
       '--run-id',
       value,
     ]);
-    assert.equal(parsed.command, 'help', `--run-id ${JSON.stringify(value)} falls back to help`);
+    assert.equal(
+      parsed.usageError,
+      true,
+      `--run-id ${JSON.stringify(value)} raises a usage error (#1709 S2)`
+    );
     assert.equal(parsed.feedbackRunId, null);
   }
 });
 
-test('parseArgs: feedback --run-id= with a blank or missing value falls back to help', () => {
+test('parseArgs: feedback --run-id= with a blank or missing value raises a usage error (#1709 S2)', () => {
   for (const arg of ['--run-id=', '--run-id=   ']) {
     const parsed = parseArgs(['feedback', 'add', '--type', 'accepted', '--skill', 's', arg]);
-    assert.equal(parsed.command, 'help', `${arg} falls back to help`);
+    assert.equal(parsed.usageError, true, `${arg} raises a usage error (#1709 S2)`);
     assert.equal(parsed.feedbackRunId, null);
   }
 });
@@ -716,14 +730,18 @@ test('parseArgs: feedback --pr accepts only positive integers', () => {
       '--pr',
       value,
     ]);
-    assert.equal(parsed.command, 'help', `--pr ${JSON.stringify(value)} falls back to help`);
+    assert.equal(
+      parsed.usageError,
+      true,
+      `--pr ${JSON.stringify(value)} raises a usage error (#1709 S2)`
+    );
     assert.equal(parsed.feedbackPrNumber, null);
   }
 });
 
 test('parseArgs: feedback --pr requires a value and does not eat the next flag', () => {
   const missing = parseArgs(['feedback', 'add', '--type', 'accepted', '--skill', 's', '--pr']);
-  assert.equal(missing.command, 'help', '--pr without a value falls back to help');
+  assert.equal(missing.usageError, true, '--pr without a value raises a usage error (#1709 S2)');
   assert.equal(missing.feedbackPrNumber, null);
 
   const eaten = parseArgs([
@@ -737,7 +755,7 @@ test('parseArgs: feedback --pr requires a value and does not eat the next flag',
     '--evidence',
     'x',
   ]);
-  assert.equal(eaten.command, 'help', 'the following flag is not consumed as the value');
+  assert.equal(eaten.usageError, true, 'the following flag is not consumed as the value');
   assert.equal(eaten.feedbackPrNumber, null);
   assert.equal(eaten.feedbackEvidence, null, '--evidence is not swallowed by --pr');
 });
@@ -745,7 +763,11 @@ test('parseArgs: feedback --pr requires a value and does not eat the next flag',
 test('parseArgs: every feedback add option requires a value', () => {
   for (const flag of ['--type', '--skill', '--trigger', '--fingerprint', '--evidence', '--pr']) {
     const parsed = parseArgs(['feedback', 'add', flag]);
-    assert.equal(parsed.command, 'help', `${flag} without a value falls back to help`);
+    assert.equal(
+      parsed.usageError,
+      true,
+      `${flag} without a value raises a usage error (#1709 S2)`
+    );
   }
 });
 
@@ -759,7 +781,7 @@ test('parseArgs: feedback add options do not consume a following flag as their v
   };
   for (const [flag, field] of Object.entries(fields)) {
     const parsed = parseArgs(['feedback', 'add', flag, '--pr', '123']);
-    assert.equal(parsed.command, 'help', `${flag} does not eat --pr`);
+    assert.equal(parsed.usageError, true, `${flag} does not eat --pr`);
     assert.equal(parsed[field], null);
     assert.equal(parsed.feedbackPrNumber, null, `${flag} does not drop the following --pr either`);
   }

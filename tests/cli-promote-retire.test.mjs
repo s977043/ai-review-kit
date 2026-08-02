@@ -182,8 +182,9 @@ describe('river promote review-effectiveness', () => {
       ],
       { env: { RIVER_NOW: '2026-07-30T00:00:00.000Z' } }
     );
-    // Invalid flag values route to help (exit 0) with an explanatory stderr line,
-    // matching the existing --approver/--reason validation behavior.
+    // Invalid flag values are a usage error (#1709 Slice 2: exit 1 + stderr
+    // summary), matching the existing --approver/--reason validation behavior.
+    assert.equal(res.code, 1);
     assert.match(res.stderr, /--threshold option requires a positive integer/);
   });
 });
