@@ -144,5 +144,6 @@ false positive でメイン開発を止めないことを最優先とします�
 - `scripts/check-doc-enumerations.mjs`—spec テーブル本体と検証エンジン
 - `tests/check-doc-enumerations.test.mjs`—パーサーと除外機構の回帰テスト
 - `scripts/validate-plugin-manifest.mjs`—plugin manifest 側の列挙検証（`Meta consistency` で併走）
+- [`sidebar-reachability-check.md`](./sidebar-reachability-check.md)—公開ページの sidebar 到達性検証（`meta:validate` で併走、#1727）
 - [`improvement-flow.md`](./improvement-flow.md)—再発防止策を script と CI に倒す判断基準
 - [`plugin-asset-registration-checklist.md`](./plugin-asset-registration-checklist.md)—コマンド追加時の登録手順
