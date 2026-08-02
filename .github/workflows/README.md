@@ -139,10 +139,11 @@ JSON
 
 ## 共通の約束事
 
-- Node のバージョンは `.nvmrc` が SSoT である。ワークフローからは `./.github/actions/setup-node-deps`（composite action）を使うか、`actions/setup-node` に `node-version-file: '.nvmrc'` を渡す
+- Node をセットアップするのは 27 本中 15 本で、うち 12 本は `./.github/actions/setup-node-deps`（composite action）を使う
+- ただし composite の既定は `.nvmrc` ではなくリテラル `22.x` である（`.nvmrc` は `22.22.2`）。ncc の出力が Node メジャーで変わるため、dist 再ビルド系だけは `actions/setup-node` へ `node-version-file: '.nvmrc'` を渡して厳密に合わせる。該当は `auto-rebuild-action-dist.yml` と `test.yml`（`dist-check` / `engine-install`）、`promptfoo-eval.yml` の 3 本である
 - サードパーティ action は commit SHA でピン留めする。現状 `scorecard.yml` の `ossf/scorecard-action@v2.4.4` だけがタグ参照である
-- `permissions:` は最小権限で宣言する。既定は `contents: read` か `read-all` とし、必要なジョブにだけ書き込み権限を足す
-- `concurrency:` グループを設定する。同時実行が共有状態（ref・デプロイ・Issue）で競合しないかを確認する
+- `permissions:` は 27 本すべてが top-level で宣言している。読み取りだけで済むものには `read-all` か `contents: read` を置き、書き込みが要るジョブにだけスコープを足す。`auto-milestone.yml` は `issues: write` のみを与える最小例である
+- 共有状態（ref・デプロイ・Issue・外部リソース）に触れるワークフローには `concurrency:` グループを設定する。読み取り専用のジョブでは省略してよい。現状 27 本中 26 本が設定済みで、例外は `hol-plugin-scanner.yml` の 1 本である
 - `GITHUB_TOKEN` による push は下流の `pull_request` ワークフローを再発火させない（GitHub の再帰防止仕様）。dist 再ビルドや release-please のキックでこの制約に当たった場合の脱出手順は [CLAUDE.md](../../CLAUDE.md) の「`N of N required checks are expected` = bot/`GITHUB_TOKEN` push」を参照する
 - ワークフローや CI 自動化をマージする前のレビュー観点（並行実行・既定値の結合・部分失敗）は [AGENTS.md](../../AGENTS.md) の「Code-gen review」に従う
 
