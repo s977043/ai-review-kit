@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
   DOC_ENUMERATION_SPECS,
+  NOTHING_CHECKED_ERROR,
   checkDocEnumerations,
   parseIgnoreDirectives,
   parseMarkdownTableColumn,
@@ -10,6 +13,43 @@ import {
   resolveIgnoreKeys,
   unwrapCodeSpan,
 } from '../scripts/check-doc-enumerations.mjs';
+
+const REPO_ROOT = path.resolve(import.meta.dirname, '..');
+
+/**
+ * 実ドキュメントを読む（改変して readDoc に注入するため）。
+ *
+ * doc-enum:ignore は取り除く。実 doc に緊急回避の ignore が入っている状態でも、
+ * ここでの「drift を本当に検出できるか」の検証は成立しなければならない
+ * （ignore が入った途端に Unit tests が落ちると、MUST1 と同じ罠を再生産する）。
+ */
+async function readRepoFile(relPath) {
+  const text = await fs.readFile(path.join(REPO_ROOT, relPath), 'utf8');
+  return text.replace(/<!--\s*doc-enum:ignore[^]*?-->\r?\n?/g, '');
+}
+
+/** 登録済み spec を id で引く。 */
+function realSpec(id) {
+  const spec = DOC_ENUMERATION_SPECS.find((s) => s.id === id);
+  assert.ok(spec, `registered spec not found: ${id}`);
+  return spec;
+}
+
+/**
+ * 常に成功する詰め物 spec。検証対象 spec が 1 件だけ落ちるケースで
+ * NOTHING_CHECKED_ERROR が混ざらないようにするために足す。
+ */
+function passingSpec(id = 'filler-spec') {
+  return {
+    id,
+    doc: 'docs/example.md',
+    summary: 'ダミー',
+    marker: 'ダミー',
+    kind: 'names',
+    declare: () => new Set(['x']),
+    measure: async () => new Set(['x']),
+  };
+}
 
 test('parseMarkdownTableColumn reads the named column of the first matching table', () => {
   const text = [
@@ -126,8 +166,11 @@ test('checkDocEnumerations fails when the declaration marker disappears', async 
     declare: () => null,
     measure: async () => new Set(['a.md']),
   };
-  const { errors, checked } = await checkDocEnumerations({ specs: [spec] });
-  assert.equal(checked, 0);
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec, passingSpec()],
+    readDoc: async () => '',
+  });
+  assert.equal(checked, 1);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /マーカー/);
 });
@@ -144,17 +187,17 @@ test('checkDocEnumerations honours a doc-side ignore directive with a reason', a
   };
 
   const withoutIgnore = await checkDocEnumerations({
-    specs: [spec],
+    specs: [spec, passingSpec()],
     readDoc: async () => 'no directive here',
   });
   assert.equal(withoutIgnore.errors.length, 1);
 
   const withIgnore = await checkDocEnumerations({
-    specs: [spec],
+    specs: [spec, passingSpec()],
     readDoc: async () => '<!-- doc-enum:ignore ignorable-spec -- 概数で十分なため -->',
   });
   assert.deepEqual(withIgnore.errors, []);
-  assert.equal(withIgnore.checked, 0);
+  assert.equal(withIgnore.checked, 1);
   assert.deepEqual(withIgnore.skipped, ['docs/example.md [ignorable-spec]: 概数で十分なため']);
 });
 
@@ -169,11 +212,118 @@ test('checkDocEnumerations rejects an ignore directive without a reason', async 
     measure: async () => new Set(),
   };
   const { errors } = await checkDocEnumerations({
-    specs: [spec],
+    specs: [spec, passingSpec()],
     readDoc: async () => '<!-- doc-enum:ignore ignorable-spec -->',
   });
   assert.equal(errors.length, 1);
   assert.match(errors[0], /理由が無い/);
+});
+
+test('checkDocEnumerations refuses to report OK when nothing was checked', async () => {
+  // 緊急回避の doc-enum:ignore で全 spec が落ちると「落ちないが何も守っていない」
+  // 状態になる。exit 0 で素通りさせず、最後の防波堤としてエラーにする。
+  const specs = [
+    { ...passingSpec('a-spec'), doc: 'docs/a.md' },
+    { ...passingSpec('b-spec'), doc: 'docs/b.md' },
+  ];
+  const allIgnored = await checkDocEnumerations({
+    specs,
+    readDoc: async () =>
+      '<!-- doc-enum:ignore a-spec -- 理由A -->\n<!-- doc-enum:ignore b-spec -- 理由B -->',
+  });
+  assert.equal(allIgnored.checked, 0);
+  assert.equal(allIgnored.skipped.length, 2);
+  assert.ok(allIgnored.errors.includes(NOTHING_CHECKED_ERROR));
+
+  // 1 件でも検証していれば発火しない（= 誤検出時に ignore で逃げる道は塞がない）。
+  const partiallyIgnored = await checkDocEnumerations({
+    specs,
+    readDoc: async () => '<!-- doc-enum:ignore a-spec -- 理由A -->',
+  });
+  assert.equal(partiallyIgnored.checked, 1);
+  assert.deepEqual(partiallyIgnored.errors, []);
+
+  // spec が 0 件のときは発火しない（呼び出し側の都合であって異常ではない）。
+  const noSpecs = await checkDocEnumerations({ specs: [], readDoc: async () => '' });
+  assert.deepEqual(noSpecs.errors, []);
+});
+
+test('checkDocEnumerations rejects an unknown kind instead of falling through to diffNames', async () => {
+  const spec = {
+    id: 'typo-kind',
+    doc: 'docs/example.md',
+    summary: 'ダミー',
+    marker: 'ダミー',
+    kind: 'count', // typo: 正しくは 'counts'
+    declare: () => new Map([['a', 1]]),
+    measure: async () => new Map([['a', 2]]),
+  };
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec, passingSpec()],
+    readDoc: async () => '',
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /kind "count" は未知/);
+});
+
+test('checkDocEnumerations contains a throwing declare instead of aborting every spec', async () => {
+  const throwing = {
+    id: 'throwing-declare',
+    doc: 'docs/example.md',
+    summary: 'ダミー',
+    marker: 'ダミー',
+    kind: 'names',
+    declare: () => {
+      throw new Error('宣言が壊れている');
+    },
+    measure: async () => new Set(),
+  };
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [throwing, passingSpec()],
+    readDoc: async () => '',
+  });
+  // 後続 spec が巻き添えで落ちない = checked が進んでいる。
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /宣言の解析に失敗した \(宣言が壊れている\)/);
+});
+
+test('checkDocEnumerations reports an expired ignoreKeys entry', async () => {
+  const spec = {
+    id: 'expired-ignore',
+    doc: 'docs/example.md',
+    summary: 'コマンド表',
+    marker: '表',
+    kind: 'names',
+    declare: () => new Set(['a.md']),
+    measure: async () => new Set(['a.md']),
+    ignoreKeys: { 'removed.md': 'かつて除外していた' },
+  };
+  const { errors } = await checkDocEnumerations({ specs: [spec], readDoc: async () => '' });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /ignoreKeys\["removed\.md"\] は宣言にも実体にも存在しない/);
+});
+
+test('parseSkillStreamCounts throws when a stream count is declared twice', () => {
+  const text = [
+    '├── upstream/      # 49 スキル',
+    '└── upstream/      # 12 スキル（別のツリー）',
+  ].join('\n');
+  assert.throws(() => parseSkillStreamCounts(text), /"upstream" の件数宣言が重複している/);
+});
+
+test('checkDocEnumerations surfaces a duplicate stream-count declaration as an error', async () => {
+  const spec = realSpec('skills-stream-counts');
+  const realText = await readRepoFile('docs/skills-structure.md');
+  // 2 本目のツリー（従来形式）に件数コメントが付いた状況を再現する。
+  const mutated = `${realText}\n\`\`\`text\n├── midstream/     # 3 スキル\n\`\`\`\n`;
+  const { errors } = await checkDocEnumerations({
+    specs: [spec, passingSpec()],
+    readDoc: async (doc) => (doc === spec.doc ? mutated : ''),
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /宣言の解析に失敗した .*"midstream" の件数宣言が重複している/);
 });
 
 test('checkDocEnumerations does not silently ignore Object.prototype key names', async () => {
@@ -286,9 +436,11 @@ test('checkDocEnumerations reports an unreadable document instead of throwing', 
     declare: () => new Set(),
     measure: async () => new Set(),
   };
-  const { errors } = await checkDocEnumerations({ specs: [spec] });
-  assert.equal(errors.length, 1);
-  assert.match(errors[0], /ドキュメントを読めない/);
+  const { errors, checked } = await checkDocEnumerations({ specs: [spec] });
+  assert.equal(checked, 0);
+  assert.ok(errors.some((e) => /ドキュメントを読めない/.test(e)));
+  // 1 件も検証できていないので、防波堤も同時に鳴る。
+  assert.ok(errors.includes(NOTHING_CHECKED_ERROR));
 });
 
 test('every registered spec declares the fields the engine needs', () => {
@@ -305,8 +457,74 @@ test('every registered spec declares the fields the engine needs', () => {
   }
 });
 
+// --- 登録済み spec を実 doc の改変版に当てる（自己整合なテストにしないため） ---
+//
+// 失敗系を全部インラインの偽 spec で書くと、登録 spec の declare が実 doc の
+// 「別の表」を掴んでいても集合がたまたま一致すればテストは通ってしまう
+// （CLAUDE.md「Import the SSoT, never re-derive it」に記録された #1656 と同じ構図）。
+// ここでは production の spec.declare / spec.measure をそのまま通し、
+// 実ファイルの内容を 1 箇所だけ壊して「本当に落ちる」ことを確かめる。
+
+test('distributed-commands-table spec fails when a real row is removed from commands/README.md', async () => {
+  const spec = realSpec('distributed-commands-table');
+  const realText = await readRepoFile('commands/README.md');
+  // 行ごと（改行込みで）落とす。空行を残すと表がそこで終わったと解釈され、
+  // 以降の行も丸ごと欠落扱いになってしまう。
+  const mutated = realText.replace(/^\|\s*`\/pr`.*\r?\n/m, '');
+  assert.notEqual(mutated, realText, 'fixture precondition: the `/pr` row must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /実体に "pr\.md" があるが .* に載っていない/);
+});
+
+test('claude-md-command-table spec fails when a real row is removed from CLAUDE.md', async () => {
+  const spec = realSpec('claude-md-command-table');
+  const realText = await readRepoFile('CLAUDE.md');
+  const mutated = realText.replace(/^\|\s*`\/merge-check`.*\r?\n/m, '');
+  assert.notEqual(mutated, realText, 'fixture precondition: the `/merge-check` row must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /実体に "\/merge-check" があるが .* に載っていない/);
+});
+
+test('skills-stream-counts spec fails when a real count is altered in docs/skills-structure.md', async () => {
+  const spec = realSpec('skills-stream-counts');
+  const realText = await readRepoFile('docs/skills-structure.md');
+  const mutated = realText.replace(/([├└]──\s*upstream\/\s*#\s*)\d+(\s*スキル)/, '$1999$2');
+  assert.notEqual(mutated, realText, 'fixture precondition: the upstream count line must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /"upstream" は 999 と書かれているが実測は \d+/);
+});
+
 test('checkDocEnumerations passes on the current repo state', async () => {
-  const { errors, checked } = await checkDocEnumerations();
+  const { errors, checked, skipped } = await checkDocEnumerations();
   assert.deepEqual(errors, [], `Expected no errors but got: ${errors.join(', ')}`);
-  assert.equal(checked, DOC_ENUMERATION_SPECS.length);
+  // checked だけを spec 数と比べると、doc-enum:ignore を 1 件入れた瞬間に
+  // このテストが落ち、Meta consistency の代わりに Unit tests が PR を止めてしまう。
+  // ignore は「誤検出でメイン開発を止めない」ための唯一の逃げ道なので、
+  // skipped を足した合計で不変条件を書く。
+  assert.equal(checked + skipped.length, DOC_ENUMERATION_SPECS.length);
+  for (const note of skipped) {
+    assert.match(
+      note,
+      /^\S.*\[[a-z0-9-]+\]: \S/,
+      `ignored spec must carry a reason: ${JSON.stringify(note)}`
+    );
+  }
 });

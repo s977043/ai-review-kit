@@ -19,6 +19,8 @@
 //       1. doc 側インラインコメント `<!-- doc-enum:ignore <specId> -- <理由> -->`（spec 全体を除外）
 //       2. spec テーブル側の `ignoreKeys: { '<key>': '<理由>' }`（キー単位で除外）
 //     どちらも理由が空ならエラーとし、理由なしの黙殺を作れないようにしている。
+//     ただし全 spec が ignore されて検証ゼロになった場合は OK にせずエラーとする
+//     （NOTHING_CHECKED_ERROR）。「落ちない script」は目的ではない。
 //
 // 運用手順は docs/development/doc-enumeration-checks.md を参照。
 
@@ -107,14 +109,27 @@ export function unwrapCodeSpan(cell) {
  * docs/skills-structure.md のツリー内コメント（`├── upstream/  # 46 スキル`）から
  * stream ごとの件数宣言を拾う。
  *
+ * 同一 stream の件数宣言が 2 回以上あると throw する。この doc には
+ * `upstream/ midstream/ downstream/` を含むツリーが複数あり、単純な last-wins に
+ * すると 2 本目に件数が付いた瞬間、読者が最初に見る 1 本目のツリーが
+ * いくら古くても検証を通ってしまうため（どちらが正か機械には決められない）。
+ *
  * @param {string} text
  * @returns {Map<string, number>}
+ * @throws {Error} 同一 stream の件数宣言が重複している場合
  */
 export function parseSkillStreamCounts(text) {
   const counts = new Map();
   const pattern = /[├└]──\s*(upstream|midstream|downstream)\/\s*#\s*(\d+)\s*スキル/g;
   for (const match of String(text ?? '').matchAll(pattern)) {
-    counts.set(match[1], Number(match[2]));
+    const stream = match[1];
+    if (counts.has(stream)) {
+      throw new Error(
+        `"${stream}" の件数宣言が重複している（${counts.get(stream)} と ${match[2]}） — ` +
+          '件数を書くツリーは 1 本に絞り、他のツリーからは件数コメントを外すこと'
+      );
+    }
+    counts.set(stream, Number(match[2]));
   }
   return counts;
 }
@@ -294,6 +309,22 @@ export function resolveIgnoreKeys(spec, ignoreKeys) {
   return { accepted, errors };
 }
 
+/**
+ * 1 件も検証しないまま OK を返さないための最後の防波堤。
+ * 全 spec が ignore / マーカー欠落 / 読み取り失敗で脱落すると、
+ * 「落ちないが何も守っていない」= 検証が空振りしている状態になる。
+ * 本 script は「空振りする方が落ちるより危険」を設計方針にしているため、
+ * これは OK ではなくエラーとして扱う。
+ */
+export const NOTHING_CHECKED_ERROR =
+  '1 件も検証していない（全 spec が ignore またはスキップされた） — ' +
+  'doc-enum:ignore を外すか spec を修正すること。検証ゼロで OK にはしない';
+
+/** `Map` でも `Set` でもキー（名前）の配列を返す。 */
+function keysOf(value) {
+  return value instanceof Map ? [...value.keys()] : [...value];
+}
+
 /** 既定の doc リーダー。テストからは差し替えて注入できるようにしておく。 */
 async function readDocFromDisk(docPath) {
   return fs.readFile(path.join(ROOT, docPath), 'utf8');
@@ -336,6 +367,14 @@ export async function checkDocEnumerations({
       continue;
     }
 
+    // kind の typo（'count' 等）は黙って diffNames に落ちるので、ここで弾く。
+    if (spec.kind !== 'counts' && spec.kind !== 'names') {
+      errors.push(
+        `${spec.doc} [${spec.id}]: kind "${spec.kind}" は未知 — 'counts' か 'names' を指定する`
+      );
+      continue;
+    }
+
     let measured;
     try {
       measured = await spec.measure();
@@ -344,7 +383,15 @@ export async function checkDocEnumerations({
       continue;
     }
 
-    const declared = spec.declare(text);
+    // declare も measure と同じく包む。1 つの spec の throw で全 spec が
+    // 中断すると、どの spec が原因か分からなくなるため。
+    let declared;
+    try {
+      declared = spec.declare(text);
+    } catch (err) {
+      errors.push(`${spec.doc} [${spec.id}]: 宣言の解析に失敗した (${err.message})`);
+      continue;
+    }
     if (declared === null || declared === undefined) {
       errors.push(
         `${spec.doc} [${spec.id}]: 宣言側のマーカー（${spec.marker}）が見つからない — ` +
@@ -359,11 +406,29 @@ export async function checkDocEnumerations({
       spec.ignoreKeys
     );
     errors.push(...ignoreKeyErrors);
+
+    // 期限切れ除外の検知。除外キーは declared / measured の両方向をマスクするため、
+    // 実体にも宣言にも無いキーの除外が残ると、そのファイルが将来復活しても
+    // 永久に検査されない。
+    const universe = new Set([...keysOf(declared), ...keysOf(measured)]);
+    for (const key of Object.keys(ignoreKeys)) {
+      if (!universe.has(key)) {
+        errors.push(
+          `${spec.doc} [${spec.id}]: ignoreKeys["${key}"] は宣言にも実体にも存在しない — ` +
+            `期限切れの除外なので削除する（残すと復活時に検査されない）`
+        );
+      }
+    }
+
     errors.push(
       ...(spec.kind === 'counts'
         ? diffCounts(spec, declared, measured, ignoreKeys)
         : diffNames(spec, declared, measured, ignoreKeys))
     );
+  }
+
+  if (specs.length > 0 && checked === 0) {
+    errors.push(NOTHING_CHECKED_ERROR);
   }
 
   return { errors, skipped, checked };
