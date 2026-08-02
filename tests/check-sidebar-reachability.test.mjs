@@ -132,6 +132,12 @@ test('a reason-less allowlist entry is rejected and the page still reported', as
   const { errors } = await checkSidebarReachability({ allowlist });
   assert.equal(errors.length, 2);
   assert.ok(errors.some((e) => e.includes('ignoreKeys["guides/faq"] に理由が無い')));
+  // resolveIgnoreKeys 再利用のメッセージに、修正対象が SIDEBAR_ALLOWLIST だと分かる注記が付く。
+  assert.ok(
+    errors.some((e) =>
+      e.includes('（修正対象: scripts/check-sidebar-reachability.mjs の SIDEBAR_ALLOWLIST）')
+    )
+  );
   // 理由なしの除外は採用されないため、そのページは通常どおり未掲載として報告される。
   assert.ok(errors.some((e) => e.includes('pages/guides/faq.md')));
 });

@@ -253,7 +253,13 @@ export async function checkSidebarReachability({
     { doc: SIDEBARS_FILE, id: 'sidebar-reachability' },
     allowlist
   );
-  errors.push(...allowlistErrors);
+  // resolveIgnoreKeys のメッセージは `ignoreKeys["..."]` 形式のため、修正対象が
+  // 本ファイルの SIDEBAR_ALLOWLIST だと分かる注記を添える（検証ロジックは変えない）。
+  errors.push(
+    ...allowlistErrors.map(
+      (err) => `${err}（修正対象: scripts/check-sidebar-reachability.mjs の SIDEBAR_ALLOWLIST）`
+    )
+  );
 
   let reachable = 0;
   let allowlisted = 0;
