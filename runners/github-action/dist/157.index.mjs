@@ -42,8 +42,8 @@ var external_node_readline_ = __webpack_require__(481);
 var error = __webpack_require__(5064);
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/ToolError.mjs
 var ToolError = __webpack_require__(7618);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 83 modules
-var sdk = __webpack_require__(7938);
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 84 modules
+var sdk = __webpack_require__(5176);
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils.mjs + 1 modules
 var utils = __webpack_require__(2534);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/transform-json-schema.mjs
