@@ -87,7 +87,9 @@ git commit -m "chore(action): rebuild github-action dist"
 > - 差分が `runners/github-action/dist/` を含む（手編集・ビルドし忘れ・`.nvmrc` と違う Node でのビルドを捕捉する）
 > - 差分が `dist/` を含まず、src commit timestamp が dist より新しい（リビルド忘れを捕捉する）
 >
-> `dist/` を含む差分を必ず検証するのは、timestamp 比較だけでは同一コミットが src と `dist/` を同時に変更したときに `src_ts == dist_ts` が成立し、検証がすり抜けたため（#1749）。`dist/` に差分が無い変更（docs のみなど）は従来どおり timestamp 判定だけで即 pass する。
+> `dist/` を含む差分を必ず検証するのは、timestamp 比較だけでは同一コミットが src と `dist/` を同時に変更したときに `src_ts == dist_ts` が成立し、検証がすり抜けたため（#1749）。`dist/` に差分が無い変更の判定は従来と変わらない。docs のみの変更でも、main の tip が `package-lock.json` などを触った直後は src 側 commit のほうが dist より新しく、従来どおり rebuild 検証に回る（実例: #1752 の `Action dist freshness` は 50 秒かけてフル rebuild 経路を通った）。
+>
+> byte 比較は `git status --porcelain -- runners/github-action/dist/` で行う。ncc は lazy chunk を番号（`dist/<n>.index.mjs`）で命名するため、依存の変更でコミットに存在しない新規 chunk が生成される。この新規ファイルは untracked であり、`git diff` では検出できない。
 
 ## トラブルシューティング
 
