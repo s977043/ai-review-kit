@@ -116,40 +116,108 @@ export function supersede(indexPath, oldId, newId) {
 }
 
 /**
+ * Whether `entry.expiresAt` is present but cannot be parsed as a timestamp.
+ * The single definition of "unparseable" — consumers that must branch on it (to
+ * warn, or to refuse a destructive transition) call this instead of re-deriving
+ * the `new Date(...)` parse.
+ *
+ * @param {{ expiresAt?: string }} entry
+ * @returns {boolean}
+ */
+export function hasUnparseableExpiresAt(entry) {
+  if (!entry?.expiresAt) return false;
+  return Number.isNaN(new Date(entry.expiresAt).getTime());
+}
+
+/**
  * Whether an entry's expiresAt timestamp has passed relative to `now`. Shared by
  * expireEntries, the Phase 3 promotion retire lifecycle and the suppression
  * lifecycle (isSuppressionExpired) so the expiry rule (`expiresAt <= now`) is
  * defined once.
  *
- * Fail-safe on a malformed timestamp: a value `Date` cannot parse counts as
- * EXPIRED. Comparing NaN would answer `false` for every operator, which is the
- * dangerous direction — an entry whose expiresAt is unparseable (e.g. the
- * `--expires notadate` values that reached disk before #1746 was fixed) would
- * otherwise stay in effect forever.
+ * An unparseable timestamp has no single safe answer, so the caller must declare
+ * one through `onUnparseable` (#1756). Comparing NaN is never among the choices:
+ * it answers `false` for every operator, which hides the malformed value instead
+ * of deciding about it.
+ *
+ * - `'expired'` — for READ-SIDE effect gating, where "expired" means the entry
+ *   stops taking effect. `isSuppressionExpired` uses it: a suppression whose
+ *   expiresAt is unparseable (e.g. the `--expires notadate` values that reached
+ *   disk before #1746 was fixed) must not keep hiding findings forever.
+ * - `'not-expired'` — for WRITE-SIDE lifecycle transitions that archive an
+ *   entry. Archiving discards a promotion_candidate, and an unparseable string
+ *   is no evidence that the deadline passed, so those call sites leave the entry
+ *   alone and warn instead — which keeps the malformed value visible.
+ *
+ * The option is REQUIRED, with no default. A default would let a future
+ * write-side call site omit it and silently inherit the read-side direction,
+ * which is exactly how #1756 happened; omitting it now throws instead. Nothing
+ * outside this repository deep-imports this module (`package.json` is
+ * `"private": true` with no `main` / `exports` / `files`, no workflow publishes
+ * to npm, and the plugin manifests do not ship `src/lib`), so there is no
+ * external caller for a default to keep compatible.
  *
  * @param {{ expiresAt?: string }} entry
  * @param {Date} now
+ * @param {{ onUnparseable: 'expired'|'not-expired' }} opts - required
  * @returns {boolean}
  */
-export function isExpired(entry, now) {
+export function isExpired(entry, now, { onUnparseable } = {}) {
+  if (onUnparseable !== 'expired' && onUnparseable !== 'not-expired') {
+    // Fail fast rather than fall back: neither an omission nor a typo may
+    // silently hand a write-side caller the destructive direction.
+    throw new TypeError(
+      `isExpired: onUnparseable is required and must be 'expired' or 'not-expired' (got ${JSON.stringify(onUnparseable)}).`
+    );
+  }
   if (!entry?.expiresAt) return false;
   const timestamp = new Date(entry.expiresAt).getTime();
-  if (Number.isNaN(timestamp)) return true;
+  if (Number.isNaN(timestamp)) return onUnparseable === 'expired';
   return timestamp <= now.getTime();
 }
 
 /**
  * Archive active entries whose expiresAt timestamp has passed.
  *
+ * Archiving is a write-side transition (for a promotion_candidate it amounts to
+ * a discard), so an entry whose expiresAt cannot be parsed stays untouched and
+ * is reported through `warn` — never archived on the strength of a string that
+ * proves nothing about the deadline (#1756).
+ *
+ * Only an ACTIVE entry with an unparseable expiresAt is warned about: it is the
+ * one this function would otherwise have archived. A already-archived or
+ * superseded entry was never a candidate for the transition, so reporting it as
+ * "left as-is instead of archived" would be the same kind of untrue statement
+ * this change exists to remove.
+ *
  * @param {string} indexPath - Path to the index.json file
- * @param {{ now?: Date }} [opts] - injectable clock (defaults to real time)
+ * @param {{ now?: Date, warn?: (msg: string) => void }} [opts] - injectable clock
+ *   (defaults to real time) and warning sink (defaults to console.warn)
  * @returns {number} Number of entries archived
  */
-export function expireEntries(indexPath, { now = new Date() } = {}) {
+export function expireEntries(
+  indexPath,
+  { now = new Date(), warn = (msg) => console.warn(msg) } = {}
+) {
   const index = loadMemory(indexPath);
   let count = 0;
   for (const entry of index.entries) {
-    if (isExpired(entry, now) && (entry.status ?? 'active') === 'active') {
+    if (hasUnparseableExpiresAt(entry)) {
+      if ((entry.status ?? 'active') === 'active') {
+        warn(
+          `Warning: entry ${entry.id} has an unparseable expiresAt (${JSON.stringify(entry.expiresAt)}); left as-is instead of archived.`
+        );
+      }
+      continue;
+    }
+    // The guard above already returned for every unparseable value, so
+    // `onUnparseable` cannot be reached from here. It is stated anyway because
+    // the option is required, and stating the write-side direction keeps this
+    // call site consistent with planPromotionRetire.
+    if (
+      isExpired(entry, now, { onUnparseable: 'not-expired' }) &&
+      (entry.status ?? 'active') === 'active'
+    ) {
       entry.status = 'archived';
       count++;
     }

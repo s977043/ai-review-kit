@@ -126,6 +126,68 @@ describe('planPromotionRetire / applyPromotionRetire', () => {
     assert.equal(planPromotionRetire(other, { now }).willChange, false);
     assert.equal(applyPromotionRetire(other, { now }).changed, false);
   });
+
+  // #1756: archiving a candidate discards it, so an expiresAt that Date cannot
+  // parse must not trigger it, and the append-only trail must not record an
+  // expiry that never happened.
+  test('unparseable expiresAt: no archive, no lifecycle record, flagged instead', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    approve(entry, '2026-07-21T00:00:00.000Z');
+    entry.expiresAt = 'notadate'; // hand-edited / external writer
+    const after = new Date('2026-10-20T00:00:00.000Z');
+
+    const plan = planPromotionRetire(entry, { now: after });
+    assert.equal(plan.unparseableExpiresAt, true);
+    assert.equal(plan.willExpire, false);
+    assert.equal(plan.willChange, false);
+    assert.equal(plan.statusSync, null);
+
+    const res = applyPromotionRetire(entry, { now: after });
+    assert.equal(res.changed, false);
+    assert.equal(res.unparseableExpiresAt, true);
+    assert.equal(entry.status, 'active');
+    assert.equal(entry.context.promotionCandidate.promotionStatus, 'approved');
+    assert.equal(entry.context.lifecycleHistory, undefined);
+  });
+
+  test('unparseable expiresAt on a superseded entry: syncs without claiming expiry', () => {
+    const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    approve(entry, '2026-07-21T00:00:00.000Z');
+    entry.expiresAt = 'notadate';
+    entry.status = 'superseded';
+    entry.supersededBy = 'RR-PC-new';
+    const res = applyPromotionRetire(entry, { now: new Date('2026-10-20T00:00:00.000Z') });
+    assert.equal(res.changed, true);
+    assert.equal(res.willExpire, false);
+    // Not flagged: expiry never applied to a superseded entry, so there was no
+    // archive to skip and nothing truthful to warn about.
+    assert.equal(res.unparseableExpiresAt, false);
+    assert.equal(entry.status, 'superseded');
+    // The audit reason states what actually happened, never "expiresAt reached".
+    assert.equal(entry.context.lifecycleHistory[0].reason, 'promotionStatus sync');
+  });
+
+  // #1756 follow-up: the flag drives a user-facing warning that says the expiry
+  // archive was "skipped". That is only true for an entry the expiry applies to.
+  test('unparseableExpiresAt is flagged for ACTIVE entries only', () => {
+    const at = new Date('2026-10-20T00:00:00.000Z');
+    const statuses = { active: true, archived: false, superseded: false };
+    for (const [entryStatus, expected] of Object.entries(statuses)) {
+      const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+      entry.expiresAt = 'notadate';
+      entry.status = entryStatus;
+      assert.equal(
+        planPromotionRetire(entry, { now: at }).unparseableExpiresAt,
+        expected,
+        `status=${entryStatus}`
+      );
+    }
+    // status omitted entirely defaults to active, so it is flagged.
+    const noStatus = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+    noStatus.expiresAt = 'notadate';
+    delete noStatus.status;
+    assert.equal(planPromotionRetire(noStatus, { now: at }).unparseableExpiresAt, true);
+  });
 });
 
 describe('retirePromotions (persisting wrapper)', () => {
@@ -152,6 +214,84 @@ describe('retirePromotions (persisting wrapper)', () => {
 
       // Second run is a no-op.
       assert.equal(retirePromotions({ indexPath, now: after }).count, 0);
+      assert.deepEqual(out.warnings, []);
+    } finally {
+      cleanup();
+    }
+  });
+
+  // #1756 regression: the reproduction from the issue — a hand-edited index
+  // whose candidate carries expiresAt "notadate". Before the fix this archived
+  // the candidate and wrote `reason: "expiresAt reached"` into the audit trail.
+  test('unparseable expiresAt is reported, not archived', () => {
+    const { cleanup, indexPath } = createTempMemory({ layout: 'flat', prefix: 'rr-retire-bad-' });
+    try {
+      const entry = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+      entry.expiresAt = 'notadate';
+      appendEntry(indexPath, entry);
+
+      const out = retirePromotions({ indexPath, now: new Date('2026-10-20T00:00:00.000Z') });
+      assert.equal(out.count, 0);
+      assert.equal(out.warnings.length, 1);
+      assert.match(out.warnings[0], /notadate/);
+
+      const reloaded = loadMemory(indexPath).entries.find((e) => e.id === entry.id);
+      assert.equal(reloaded.status, 'active');
+      assert.equal(reloaded.context.promotionCandidate.promotionStatus, 'candidate');
+      assert.equal(reloaded.context.lifecycleHistory, undefined);
+      // The advice has to be executable: propose is idempotent on the content
+      // hash, so "re-issue the candidate" would not repair anything.
+      assert.doesNotMatch(out.warnings[0], /re-issue/);
+    } finally {
+      cleanup();
+    }
+  });
+
+  // #1756 follow-up: only a candidate the expiry would have archived belongs in
+  // warnings, and repeated runs must not accumulate untrue ones.
+  test('warnings cover ACTIVE candidates only and stay stable across runs', () => {
+    const { cleanup, indexPath } = createTempMemory({ layout: 'flat', prefix: 'rr-retire-mix-' });
+    try {
+      const active = makeCandidate('skill-a', 'false_positive', [fp(1), fp(2)]);
+      active.id = 'cand-active-bad';
+      active.expiresAt = 'notadate';
+
+      const archived = makeCandidate('skill-b', 'missed_issue', [fp(3), fp(4)]);
+      archived.id = 'cand-archived-bad';
+      archived.expiresAt = 'notadate';
+      archived.status = 'archived';
+      archived.context.promotionCandidate.promotionStatus = 'archived';
+
+      const superseded = makeCandidate('skill-c', 'false_positive', [fp(5), fp(6)]);
+      superseded.id = 'cand-superseded-bad';
+      superseded.expiresAt = 'notadate';
+      superseded.status = 'superseded';
+
+      appendEntry(indexPath, active);
+      appendEntry(indexPath, archived);
+      appendEntry(indexPath, superseded);
+
+      const at = new Date('2026-10-20T00:00:00.000Z');
+      const first = retirePromotions({ indexPath, now: at });
+      // The superseded candidate still syncs its promotionStatus (a real change).
+      assert.equal(first.count, 1);
+      assert.deepEqual(
+        first.results.map((r) => r.id),
+        ['cand-superseded-bad']
+      );
+      assert.equal(first.warnings.length, 1);
+      assert.match(first.warnings[0], /cand-active-bad/);
+
+      // Second run: no changes left, and the same single warning — not a
+      // growing stream of claims about entries that were never skipped.
+      const second = retirePromotions({ indexPath, now: at });
+      assert.equal(second.count, 0);
+      assert.deepEqual(second.warnings, first.warnings);
+
+      const reloaded = loadMemory(indexPath).entries;
+      assert.equal(reloaded.find((e) => e.id === 'cand-active-bad').status, 'active');
+      assert.equal(reloaded.find((e) => e.id === 'cand-archived-bad').status, 'archived');
+      assert.equal(reloaded.find((e) => e.id === 'cand-superseded-bad').status, 'superseded');
     } finally {
       cleanup();
     }
