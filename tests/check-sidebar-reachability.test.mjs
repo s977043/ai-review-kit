@@ -103,11 +103,14 @@ test('a real page dropped from the sidebar is reported as unreachable', async ()
 
 test('removing a real allowlist entry makes the check fail', async () => {
   const allowlist = { ...SIDEBAR_ALLOWLIST };
-  assert.ok('guides/faq' in allowlist, 'fixture precondition: guides/faq is allowlisted');
-  delete allowlist['guides/faq'];
+  assert.ok(
+    'guides/skill-planner' in allowlist,
+    'fixture precondition: guides/skill-planner is allowlisted'
+  );
+  delete allowlist['guides/skill-planner'];
   const { errors } = await checkSidebarReachability({ allowlist });
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /pages\/guides\/faq\.md \(doc ID "guides\/faq"\) が/);
+  assert.match(errors[0], /pages\/guides\/skill-planner\.md \(doc ID "guides\/skill-planner"\) が/);
 });
 
 test('an allowlist entry for a page already in the sidebar is reported as expired', async () => {
@@ -128,10 +131,10 @@ test('an allowlist entry for a nonexistent page is reported as expired', async (
 });
 
 test('a reason-less allowlist entry is rejected and the page still reported', async () => {
-  const allowlist = { ...SIDEBAR_ALLOWLIST, 'guides/faq': '' };
+  const allowlist = { ...SIDEBAR_ALLOWLIST, 'guides/skill-planner': '' };
   const { errors } = await checkSidebarReachability({ allowlist });
   assert.equal(errors.length, 2);
-  assert.ok(errors.some((e) => e.includes('ignoreKeys["guides/faq"] に理由が無い')));
+  assert.ok(errors.some((e) => e.includes('ignoreKeys["guides/skill-planner"] に理由が無い')));
   // resolveIgnoreKeys 再利用のメッセージに、修正対象が SIDEBAR_ALLOWLIST だと分かる注記が付く。
   assert.ok(
     errors.some((e) =>
@@ -139,7 +142,7 @@ test('a reason-less allowlist entry is rejected and the page still reported', as
     )
   );
   // 理由なしの除外は採用されないため、そのページは通常どおり未掲載として報告される。
-  assert.ok(errors.some((e) => e.includes('pages/guides/faq.md')));
+  assert.ok(errors.some((e) => e.includes('pages/guides/skill-planner.md')));
 });
 
 test('a sidebar entry without a matching Japanese page is reported', async () => {

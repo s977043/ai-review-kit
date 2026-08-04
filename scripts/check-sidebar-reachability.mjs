@@ -47,61 +47,50 @@ const SIDEBARS_FILE = 'sidebars.js';
  * 意図的に sidebar へ載せないページの allowlist（doc ID → 理由）。
  * 理由は必須。空文字・文字列以外はエラーとして扱われ、除外として採用されない。
  *
- * 初回登録（#1727 PR A）: 現状の未掲載ページを全件、暫定理由付きで登録した。
- * 「載せるべきなのに載っていない」か「意図的に載せない」かの仕分けと sidebar への
- * 追加は PR B のスコープであり、仕分け後にこの allowlist から削除するか、
- * 恒久的な理由へ書き換える。
+ * #1727 PR B で仕分け済み: 「載せるべき」ページは sidebars.js へ追加して本 allowlist
+ * から削除した。ここに残るのは「意図的に載せない」ページで、理由を個別に確定している。
+ * 「要再検討:」で始まるエントリは、記載した条件が変わったタイミングで掲載可否を
+ * 見直す（無条件の恒久除外ではない）。
  */
-const PENDING = 'PR B（#1727）で仕分け予定の暫定登録。掲載可否の判断はまだしていない';
 export const SIDEBAR_ALLOWLIST = {
-  'explanation/embedding-code-index-research': PENDING,
-  'explanation/progressive-disclosure': PENDING,
-  'explanation/reviewer-lens-taxonomy': PENDING,
-  'explanation/skill-lifecycle': PENDING,
-  'explanation/skills': PENDING,
-  'guides/add-new-skill': PENDING,
-  'guides/adopter-playbook': PENDING,
-  'guides/agent-skills-codex-cli': PENDING,
-  'guides/agent-workflow': PENDING,
-  'guides/ai-agent-playbook': PENDING,
-  'guides/choose-skills': PENDING,
-  'guides/cost-estimation': PENDING,
-  'guides/faq': PENDING,
-  'guides/figma-to-code': PENDING,
-  'guides/governance/issue-labels': PENDING,
-  'guides/governance/skill-policy': PENDING,
-  'guides/manage-skills-cli': PENDING,
-  'guides/planner-eval-dataset': PENDING,
-  'guides/planner-evaluation': PENDING,
-  'guides/pr-review-agent-skills': PENDING,
-  'guides/repo-wide-review': PENDING,
-  'guides/representative-skills': PENDING,
-  'guides/skill-planner': PENDING,
-  'guides/track-runs-and-regressions': PENDING,
-  'guides/two-stage-review-gate': PENDING,
-  'guides/use-independent-review-synthesis': PENDING,
-  'guides/use-skill-packs': PENDING,
-  'guides/w-check': PENDING,
-  'guides/write-a-skill': PENDING,
-  'reference/artifact-input-contract': PENDING,
-  'reference/cli-gc-spec': PENDING,
-  'reference/cli-review-exec-spec': PENDING,
-  'reference/cli-review-plan-spec': PENDING,
-  'reference/cli-review-verify-spec': PENDING,
-  'reference/eval-keep-discard-policy': PENDING,
-  'reference/evaluation-fixture-format': PENDING,
-  'reference/evaluation-rubric': PENDING,
-  'reference/loop-convergence-contract': PENDING,
-  'reference/output-format-html': PENDING,
-  'reference/output-format-yaml': PENDING,
-  'reference/plangate-cli-roadmap': PENDING,
-  'reference/review-artifact': PENDING,
-  'reference/review-output-example': PENDING,
-  'reference/review-policy': PENDING,
-  'reference/riverbed-storage': PENDING,
-  'reference/skill-metadata': PENDING,
-  'reference/skills-catalog': PENDING,
-  'reference/stable-interfaces': PENDING,
+  'explanation/embedding-code-index-research':
+    '調査記録（research note）。embedding index の導入は見送り中で、Issue #691 / Epic #650 の判断記録として直リンク参照が主目的',
+  'guides/figma-to-code':
+    '要再検討: Figma 連携という特定ワークフロー向けの補助ガイド。関連 midstream スキルの拡充時にガイドカテゴリへの掲載を判断する',
+  'guides/governance/issue-labels':
+    '要再検討: 内容が guides/governance/issue-management（掲載済み）とほぼ重複する簡約版。統合するか独立ページとして残すか判断するまで未掲載',
+  'guides/planner-eval-dataset':
+    'リポジトリ開発者向けのオフライン評価データセット解説（tests/fixtures/planner-dataset/ の説明）。導入者向けナビゲーションには載せない',
+  'guides/planner-evaluation':
+    'リポジトリ開発者向けの Planner 評価・最適化ミニガイド。導入者向けナビゲーションには載せない',
+  'guides/pr-review-agent-skills':
+    '外部 Agent Skills の取り込み候補を評価するキュレーションメモ。恒常的な導入ガイドではないため未掲載',
+  'guides/skill-planner':
+    'src/lib/review-runner.mjs へ planner 関数を差し込む開発者向け実装メモ。導入者向けナビゲーションには載せない',
+  'guides/use-independent-review-synthesis':
+    '要再検討: Phase 1（community / recommended: false）の skill ガイド。Phase 2 の artifact contract 拡張時に掲載を再検討する',
+  'reference/artifact-input-contract':
+    '要再検討: PlanGate 連携 CLI の spec 文書。#802 の安定化ロードマップ進行中のため、安定化後に掲載を再検討する',
+  'reference/cli-gc-spec':
+    '要再検討: PlanGate 連携 CLI ファミリの spec 文書。#802 の安定化ロードマップ進行中のため、安定化後に掲載を再検討する',
+  'reference/cli-review-exec-spec':
+    '要再検討: PlanGate 連携 CLI の spec 文書。#802 の安定化ロードマップ進行中のため、安定化後に掲載を再検討する',
+  'reference/cli-review-plan-spec':
+    '要再検討: PlanGate 連携 CLI の spec 文書。#802 の安定化ロードマップ進行中のため、安定化後に掲載を再検討する',
+  'reference/cli-review-verify-spec':
+    '要再検討: PlanGate 連携 CLI の spec 文書。#802 の安定化ロードマップ進行中のため、安定化後に掲載を再検討する',
+  'reference/eval-keep-discard-policy':
+    'リポジトリ開発の評価ベース採否ポリシー（skill / planner 変更の内部運用）。導入者向けナビゲーションには載せない',
+  'reference/evaluation-fixture-format':
+    'リポジトリ開発者向けの評価フィクスチャ仕様。導入者向けナビゲーションには載せない',
+  'reference/evaluation-rubric':
+    '要再検討: 仕様のみでランタイム統合が未着手の評価ルーブリック。統合実装が入ったら掲載を再検討する',
+  'reference/plangate-cli-roadmap':
+    '要再検討: PlanGate 連携 CLI の安定化ロードマップ（#802）。作業文書の性格が強く、安定化完了時に掲載可否ごと見直す',
+  'reference/riverbed-storage':
+    '内部ストレージ設計ノート。利用者向けは explanation/riverbed-memory と guides/use-riverbed-memory（いずれも掲載済み）で到達できる',
+  'reference/skill-metadata':
+    'Issue #68 時点の設計メモ。現行の利用者向けリファレンスは reference/skill-schema-reference と reference/metadata-fields（掲載済み）',
 };
 
 /**
