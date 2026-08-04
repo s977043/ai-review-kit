@@ -583,7 +583,49 @@ const CONTROL_CASES = [
     contract: 'C3',
     invariant: true,
   },
+  // 自由記述オプションは `-` 始まりの値を受理する（誤拒否ガード）。strict parse は
+  // 「値らしきトークンを弾く」ものではないという境界を、実行レベルで固定する。
+  // この 2 ケースは正常系なのでエントリを書き込む。副作用ゼロの不変条件は
+  // usage error 側（CASES）の掃引だけを対象にしているのはそのため。
+  {
+    surface: '(control)',
+    kind: 'free-text-leading-dash',
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      'abcdef0123456789',
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      '-1 は誤検知',
+    ],
+    contract: 'C1',
+    invariant: true,
+  },
+  {
+    surface: '(control)',
+    kind: 'free-text-leading-dash',
+    argv: [
+      'feedback',
+      'add',
+      '--type',
+      'false_positive',
+      '--skill',
+      's',
+      '--evidence',
+      '-1 は誤検知',
+    ],
+    contract: 'C1',
+    invariant: true,
+  },
 ];
+
+/**
+ * 対照群の契約ごとの件数。CASES の EXPECTED_CONTRACT_COUNTS と同じ役割の
+ * 「第 2 の錠」で、対照群を足し引きしたら必ずここも更新する。
+ */
+const EXPECTED_CONTROL_CONTRACT_COUNTS = { C1: 2, C2: 2, C3: 1, C4: 0 };
 
 // argv 要素には空白のみの値（`--run-id "   "`）が含まれるため、区切り文字連結だと
 // 別ケースと衝突しうる。JSON 表現なら文字列配列に対して単射なので一意性が保たれる。
@@ -598,6 +640,8 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   let cleanupRepo = null;
   /** @type {string | null} */
   let repoDir = null;
+  /** usage error 掃引（CASES）だけを終えた時点で `.river` が生まれたか。 */
+  let riverExistsAfterErrorSweep = null;
 
   before(async () => {
     const { dir, cleanup } = await createTempGitRepo({
@@ -615,26 +659,35 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     repoDir = dir;
 
     const nonexistent = join(dir, 'no-such-cases.json');
-    for (const testCase of [...CASES, ...CONTROL_CASES]) {
-      const argv = testCase.argv.map((arg) => (arg === NONEXISTENT_PATH ? nonexistent : arg));
-      // runCliInProcess は process.env / process.cwd をプロセス全体で差し替えるため、
-      // Promise.all で並行実行してはならない（tests/helpers/README.md 参照）。
-      const result = await runCliInProcess(argv, {
-        cwd: dir,
-        env: {
-          RIVER_OFFLINE: '1',
-          ANTHROPIC_API_KEY: '',
-          OPENAI_API_KEY: '',
-          NO_COLOR: '1',
-          RIVER_PHASE: undefined,
-          RIVER_PLANNER_MODE: undefined,
-        },
-      });
-      observed.set(caseKey(testCase), {
-        code: result.code,
-        helpOnStdout: result.stdout.includes(HELP_MARKER),
-      });
-    }
+    const sweep = async (cases) => {
+      for (const testCase of cases) {
+        const argv = testCase.argv.map((arg) => (arg === NONEXISTENT_PATH ? nonexistent : arg));
+        // runCliInProcess は process.env / process.cwd をプロセス全体で差し替えるため、
+        // Promise.all で並行実行してはならない（tests/helpers/README.md 参照）。
+        const result = await runCliInProcess(argv, {
+          cwd: dir,
+          env: {
+            RIVER_OFFLINE: '1',
+            ANTHROPIC_API_KEY: '',
+            OPENAI_API_KEY: '',
+            NO_COLOR: '1',
+            RIVER_PHASE: undefined,
+            RIVER_PLANNER_MODE: undefined,
+          },
+        });
+        observed.set(caseKey(testCase), {
+          code: result.code,
+          helpOnStdout: result.stdout.includes(HELP_MARKER),
+        });
+      }
+    };
+
+    // usage error（CASES）を先に掃引し、その時点の `.river` 有無を記録する。
+    // 対照群には正常系（エントリを書き込む free-text ケース）が含まれるため、
+    // 副作用ゼロの判定はこの順序でしか成立しない。
+    await sweep(CASES);
+    riverExistsAfterErrorSweep = existsSync(join(dir, '.river'));
+    await sweep(CONTROL_CASES);
   });
 
   after(async () => {
@@ -734,9 +787,30 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     // 掃引後に .river が存在しないことで「検証前の副作用ゼロ」を機械固定する。
     assert.ok(repoDir, 'before フックが temp repo を記録していない');
     assert.equal(
-      existsSync(join(repoDir, '.river')),
+      riverExistsAfterErrorSweep,
       false,
       'usage error の掃引が .river 配下へ書き込んだ（検証前の副作用が復活している）'
+    );
+  });
+
+  test('the control-case distribution is C1:2 / C2:2 / C3:1 / C4:0', () => {
+    const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
+    for (const testCase of CONTROL_CASES) counts[testCase.contract] += 1;
+    assert.deepEqual(
+      counts,
+      EXPECTED_CONTROL_CONTRACT_COUNTS,
+      '対照群の件数が変わった。意図した変更か確認し、この期待値も更新すること'
+    );
+  });
+
+  test('a free-text option value starting with `-` is accepted and written', () => {
+    // 誤拒否の再発検知。exit 0 だけでなく、実際にエントリが書かれたことまで見る
+    // （parse で受理しても handler 手前で落ちていたら意味がないため）。
+    assert.ok(repoDir, 'before フックが temp repo を記録していない');
+    assert.equal(
+      existsSync(join(repoDir, '.river')),
+      true,
+      '自由記述の値を受理する正常系がエントリを書き込んでいない'
     );
   });
 });
@@ -946,4 +1020,104 @@ describe('#1709 Slice 3: legitimate flag combinations are not rejected by strict
       assert.deepEqual(parsed.evolveExtraArgs, []);
     });
   }
+});
+
+// -----------------------------------------------------------------------------
+// 自由記述オプションの `-` 始まり値（#1709 Slice 3 のレビュー指摘 minor-3）
+// -----------------------------------------------------------------------------
+//
+// 自由記述の値を取るオプションは `--rationale` / `--evidence` / `--reason` の 3 つ。
+// パス・列挙値・ID・数値のオプション（`--input` / `--scope` / `--pr` など）は
+// 従来の厳しいガード（`-` 始まりを値欠落とみなす）を維持する。
+describe('#1709 Slice 3: free-text options accept a leading dash', () => {
+  const FREE_TEXT_CASES = [
+    {
+      label: 'suppression --rationale',
+      argv: [
+        'suppression',
+        'add',
+        '--fingerprint',
+        'abcdef0123456789',
+        '--feedback',
+        'false_positive',
+        '--rationale',
+        '-1 は誤検知',
+      ],
+      field: 'suppressionRationale',
+    },
+    {
+      label: 'feedback --evidence',
+      argv: [
+        'feedback',
+        'add',
+        '--type',
+        'false_positive',
+        '--skill',
+        's',
+        '--evidence',
+        '-1 は誤検知',
+      ],
+      field: 'feedbackEvidence',
+    },
+    {
+      label: 'promote --reason',
+      argv: ['promote', 'approve', 'id1', '--approver', 'me', '--reason', '-1 件は誤検知だった'],
+      field: 'promoteReason',
+    },
+  ];
+
+  for (const freeTextCase of FREE_TEXT_CASES) {
+    test(`${freeTextCase.label} accepts a value starting with '-'`, () => {
+      const parsed = parseArgs(freeTextCase.argv);
+      assert.equal(parsed.usageError, false, '正当な自由記述の値を誤って拒否した');
+      assert.equal(parsed[freeTextCase.field], freeTextCase.argv.at(-1));
+    });
+
+    test(`${freeTextCase.label} still rejects a truly missing value`, () => {
+      const parsed = parseArgs(freeTextCase.argv.slice(0, -1));
+      assert.equal(parsed.usageError, true, '値欠落（次トークンなし）は従来どおり usage error');
+      assert.equal(parsed[freeTextCase.field], null);
+    });
+
+    test(`${freeTextCase.label} does not swallow a following known flag (#1717)`, () => {
+      // 緩和しても塞ぎ続けるべき失敗: `--evidence --pr 123` が
+      // evidence:"--pr" を記録して pr を落とす（#1717）。
+      const argv = [...freeTextCase.argv.slice(0, -1), '--debug'];
+      const parsed = parseArgs(argv);
+      assert.equal(parsed.usageError, true, '認識済みフラグを値として飲み込んだ');
+      assert.equal(parsed[freeTextCase.field], null);
+    });
+  }
+
+  test('path / enum / id options keep the strict leading-dash guard', () => {
+    const strictCases = [
+      { argv: ['promote', 'propose', '--input', '-notapath'], field: 'promoteInput' },
+      { argv: ['run', '.', '--base', '-notaref'], field: 'base' },
+      { argv: ['evolve', 'replay', '--spec', '-notafile'], field: 'evolveSpec' },
+      {
+        argv: [
+          'suppression',
+          'add',
+          '--fingerprint',
+          'abcdef0123456789',
+          '--feedback',
+          'false_positive',
+          '--rationale',
+          'r',
+          '--severity',
+          '-minor',
+        ],
+        field: 'suppressionSeverity',
+      },
+    ];
+    for (const strictCase of strictCases) {
+      const parsed = parseArgs(strictCase.argv);
+      assert.equal(
+        parsed.usageError,
+        true,
+        `${strictCase.argv.join(' ')} は厳しいガードを維持するはず`
+      );
+      assert.equal(parsed[strictCase.field], null);
+    }
+  });
 });

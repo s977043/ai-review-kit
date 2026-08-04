@@ -71620,6 +71620,117 @@ function usageError(parsed) {
   parsed.usageError = true;
 }
 
+/**
+ * Every option token `parseArgs` recognizes, used only by
+ * `takeFreeTextValue()` below. Keep in sync when adding an option.
+ */
+const KNOWN_OPTION_TOKENS = new Set([
+  // suppression
+  '--fingerprint',
+  '--finding',
+  '--feedback',
+  '--scope',
+  '--rationale',
+  '--severity',
+  '--files',
+  '--expires',
+  '--pr',
+  // skills resolve
+  '--path',
+  // feedback
+  '--type',
+  '--skill',
+  '--trigger',
+  '--evidence',
+  '--reviewer',
+  '--model',
+  '--reversed-by',
+  '--run-id',
+  // promote
+  '--approver',
+  '--reason',
+  '--index',
+  '--include-inactive',
+  '--threshold',
+  '--feedback-root',
+  '--input',
+  '--cluster-key',
+  '--policy-version',
+  // evolve
+  '--min',
+  '--month',
+  '--spec',
+  '--expect-manifest',
+  // shared / review
+  '--plan-only',
+  '--fail-on',
+  '--warn-on',
+  '--advisory-only',
+  '--gate',
+  '--offline',
+  '--rules-only',
+  '--plan',
+  '--output-file',
+  '--summary-file',
+  '--quiet',
+  '--artifacts-dir',
+  '--artifact',
+  '--ensemble',
+  '--phase',
+  '--cases',
+  '--verbose',
+  '--planner',
+  '--dry-run',
+  '--debug',
+  '--explain',
+  '--estimate',
+  '--max-cost',
+  '--output',
+  '--format',
+  '--context',
+  '--dependency',
+  '--reviewers',
+  '--baseline',
+  '--base',
+  '--skill-set',
+  '--depth',
+  '--save',
+  '--from',
+  '--to',
+  '--strict',
+  '--loose',
+  '--source',
+  '--include-assets',
+  '-h',
+  '--help',
+]);
+
+/**
+ * Value reader for options whose value is FREE TEXT a human writes
+ * (`--rationale`, `--evidence`, `--reason`).
+ *
+ * The `!value || value.startsWith('-')` guard the other options use is correct
+ * for paths, enums, ids and numbers, but it rejects legitimate prose: a
+ * rationale such as `"-1 は誤検知"` was reported back as
+ * "--rationale option requires a value", which is both a false rejection and a
+ * misleading message. Free-text options therefore accept a leading `-`.
+ *
+ * The failure case that must STAY blocked is #1717: `--evidence --pr 123`
+ * silently recorded `evidence: "--pr"` and dropped the pr. So "missing value"
+ * here means "no next token, or the next token is an option this parser
+ * recognizes" — prose is accepted, a real flag is not swallowed.
+ *
+ * @param {string[]} args - remaining argv (not consumed when the value is missing).
+ * @returns {{ value: string } | { missing: true }}
+ */
+function takeFreeTextValue(args) {
+  const next = args[0];
+  if (next === undefined || KNOWN_OPTION_TOKENS.has(next) || next.startsWith('--run-id=')) {
+    return { missing: true };
+  }
+  return { value: args.shift() };
+}
+
 function parseArgs(argv) {
   const args = [...argv];
   const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
@@ -71860,13 +71971,14 @@ function parseArgs(argv) {
         continue;
       }
       if (arg === '--rationale') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
+        // Free text (`--rationale "-1 は誤検知"` must be accepted).
+        const taken = takeFreeTextValue(args);
+        if (taken.missing) {
           console.error('Error: --rationale option requires a value.');
           usageError(parsed);
           break;
         }
-        parsed.suppressionRationale = value;
+        parsed.suppressionRationale = taken.value;
         continue;
       }
       if (arg === '--severity') {
@@ -71978,14 +72090,16 @@ function parseArgs(argv) {
         continue;
       }
       if (arg === '--evidence') {
-        const value = args.shift();
-        // `--evidence --pr 123` used to record evidence:"--pr" and drop the pr.
-        if (!value || value.startsWith('-')) {
+        // Free text. `--evidence --pr 123` (recording evidence:"--pr" and
+        // dropping the pr, #1717) stays blocked because takeFreeTextValue
+        // treats a recognized option token as a missing value.
+        const taken = takeFreeTextValue(args);
+        if (taken.missing) {
           console.error('Error: --evidence option requires a value.');
           usageError(parsed);
           break;
         }
-        parsed.feedbackEvidence = value;
+        parsed.feedbackEvidence = taken.value;
         continue;
       }
       if (arg === '--pr') {
@@ -72071,13 +72185,14 @@ function parseArgs(argv) {
         continue;
       }
       if (arg === '--reason') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
+        // Free text (approval / rejection prose written by a human).
+        const taken = takeFreeTextValue(args);
+        if (taken.missing) {
           console.error('Error: --reason option requires a value.');
           usageError(parsed);
           break;
         }
-        parsed.promoteReason = value;
+        parsed.promoteReason = taken.value;
         continue;
       }
       if (arg === '--index') {

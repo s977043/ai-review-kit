@@ -124,15 +124,17 @@ The mapping between internal severity tokens (`blocker` / `warning` / `nit`) and
 
 ## Exit Codes
 
-| Exit | Meaning                                                                                                                         |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `0`  | Success. `status` is `ok` / `no-changes` / `skipped-by-label`, with no fail/warn findings.                                      |
-| `1`  | Failure. Reached `--fail-on` threshold (unless `--advisory-only`), required artifact missing, plan/exec error, or `--max-cost`. |
-| `2`  | Warn-only. `--warn-on` threshold reached but `--fail-on` not met.                                                               |
-| `3`  | Configuration error. Argument validation failed, config could not be loaded, etc.                                               |
+| Exit | Meaning                                                                                                                                                                                          |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `0`  | Success. `status` is `ok` / `no-changes` / `skipped-by-label`, with no fail/warn findings.                                                                                                       |
+| `1`  | Failure. Reached `--fail-on` threshold (unless `--advisory-only`), required artifact missing, plan/exec error, or `--max-cost`.                                                                  |
+| `2`  | Warn-only. `--warn-on` threshold reached but `--fail-on` not met.                                                                                                                                |
+| `3`  | Configuration error detected by the handler layer (unsupported `--output` value, `--output` / `--format` disagreement, config load failure, etc.). Parse-layer argument errors are NOT included. |
 
 When `--advisory-only` is set, fail/warn judgement is disabled and only internal errors (missing artifacts, execution errors) yield non-zero exit.
 
+> Argument errors (#1709): argument errors detected in the parse layer (unknown options, surplus positionals, missing or invalid option values) exit `1`. Exit `3` is limited to configuration errors detected by the handler layer after the shared parser has accepted the arguments.
+>
 > Current implementation (#976): the gate is **opt-in** — exit `1` / `2` are returned only when `--fail-on` / `--warn-on` / `--advisory-only` is explicitly passed. With none of them, success stays exit `0` (non-breaking for existing callers / the plangate-review workflow). When a flag is given, defaults are `--fail-on critical` / `--warn-on major`. The judgement is based on the maximum `findings[].severity` in the artifact.
 
 ## CI / Downstream Integration
@@ -146,7 +148,7 @@ When `--advisory-only` is set, fail/warn judgement is disabled and only internal
 
 - The set of `--artifact` IDs grows together with the Artifact Input Contract.
 - Adding flags is a minor bump; removing flags or changing their meaning / default value is a major bump.
-- Exit codes (`0` / `1` / `2` / `3`) are part of the **stable contract** and require a major bump to change.
+- Exit codes (`0` / `1` / `2` / `3`) are part of the **stable contract** and require a major bump to change. Note that #1709 changed the granularity by detection layer (parse layer → `1`, handler-layer configuration errors → `3`); it shipped as a minor because the CLI is Beta under [Stable Interfaces](./stable-interfaces.en.md).
 - Breaking changes in JSON output follow the versioning rules of [Review Artifact](./review-artifact.en.md).
 
 ## See Also

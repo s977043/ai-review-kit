@@ -96,6 +96,8 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 
 この統一により、オプションの typo や引数ミスは `$?` の exit 1 として検知できます。usage error のときにデータ書き込み（feedback / suppression のエントリ追加など）が先行することはありません。
 
+オプションの値は**スペース区切り**で渡します。`--output=json` のような `=` 連結形式は受理せず、未知オプションとして exit 1 になります（互換のため `--run-id=<id>` だけは例外的に受理します）。なお `--artifact plan=./plan.md` のように、**値の内部**に `=` を含む形式は有効です。
+
 ### `river review` / `river eval`（`runners/cli`）
 
 `runners/cli` のコマンドは現時点ではすべてのエラーをコード `1` に集約します。コード `3` は発生しません。
