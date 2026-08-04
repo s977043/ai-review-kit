@@ -14,7 +14,7 @@
 | `Unit tests (22.x)`       | `test.yml`（`CI`） | `test`             | `node --test`（`--experimental-test-isolation=none`）とカバレッジの Codecov アップロード |
 | `Skill schema validation` | `test.yml`（`CI`） | `skill-validation` | skill / promptfoo / agent-skill / 参照 / manifest / registry の 6 検証                   |
 | `Meta consistency`        | `test.yml`（`CI`） | `meta-check`       | `npm run meta:validate` と `npm run plugin:validate`                                     |
-| `Action dist freshness`   | `test.yml`（`CI`） | `dist-check`       | `runners/github-action/dist/` の鮮度判定と、必要な場合のみ再ビルドしてのバイト比較       |
+| `Action dist freshness`   | `test.yml`（`CI`） | `dist-check`       | `runners/github-action/dist/` を触る変更と鮮度判定で古い変更を再ビルドしてバイト比較     |
 | `Integration (CLI)`       | `test.yml`（`CI`） | `integration-test` | `tests/integration/local-review.test.mjs`                                                |
 
 間違えやすい点が 3 つあります。
