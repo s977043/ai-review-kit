@@ -11,7 +11,7 @@ Riverbed Memory is a lightweight storage system for leveraging past decisions an
 
 - `index.json`: A single file that holds the entries array and a version field. It conforms to `schemas/riverbed-index.schema.json`, and each entry conforms to `schemas/riverbed-entry.schema.json`.
 
-Disk I/O goes through functions like `loadMemory` / `appendEntry` / `queryMemory` / `supersede` / `expireEntries`. When the file does not exist, a stateless fallback returns `{ entries: [], version: "1" }`. `expireEntries` transitions entries whose `expiresAt` has passed into `status: archived`. When `expiresAt` cannot be parsed as a timestamp, the entry is left as-is and only a warning is emitted — archiving is a write that amounts to a discard, and an unparseable string is no evidence that the deadline passed.
+Disk I/O goes through functions like `loadMemory` / `appendEntry` / `queryMemory` / `supersede` / `expireEntries`. When the file does not exist, a stateless fallback returns `{ entries: [], version: "1" }`. `expireEntries` transitions entries whose `expiresAt` has passed into `status: archived`. When `expiresAt` cannot be parsed as a timestamp, the entry is left as-is and only a warning is emitted, because an unparseable string is no evidence that the deadline passed. This matters most for `promotion_candidate` entries, where `archived` is an irreversible terminal state and archiving therefore amounts to discarding the candidate.
 
 ## Entry Specification (Excerpt)
 

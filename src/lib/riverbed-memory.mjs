@@ -135,31 +135,39 @@ export function hasUnparseableExpiresAt(entry) {
  * lifecycle (isSuppressionExpired) so the expiry rule (`expiresAt <= now`) is
  * defined once.
  *
- * An unparseable timestamp has no single safe answer, so the caller declares one
- * through `onUnparseable` (#1756). Comparing NaN is never among the choices: it
- * answers `false` for every operator, which hides the malformed value instead of
- * deciding about it.
+ * An unparseable timestamp has no single safe answer, so the caller must declare
+ * one through `onUnparseable` (#1756). Comparing NaN is never among the choices:
+ * it answers `false` for every operator, which hides the malformed value instead
+ * of deciding about it.
  *
- * - `'expired'` (default) — for READ-SIDE effect gating, where "expired" means
- *   the entry stops taking effect. `isSuppressionExpired` uses it: a suppression
- *   whose expiresAt is unparseable (e.g. the `--expires notadate` values that
- *   reached disk before #1746 was fixed) must not keep hiding findings forever.
+ * - `'expired'` — for READ-SIDE effect gating, where "expired" means the entry
+ *   stops taking effect. `isSuppressionExpired` uses it: a suppression whose
+ *   expiresAt is unparseable (e.g. the `--expires notadate` values that reached
+ *   disk before #1746 was fixed) must not keep hiding findings forever.
  * - `'not-expired'` — for WRITE-SIDE lifecycle transitions that archive an
  *   entry. Archiving discards a promotion_candidate, and an unparseable string
  *   is no evidence that the deadline passed, so those call sites leave the entry
  *   alone and warn instead — which keeps the malformed value visible.
  *
+ * The option is REQUIRED, with no default. A default would let a future
+ * write-side call site omit it and silently inherit the read-side direction,
+ * which is exactly how #1756 happened; omitting it now throws instead. Nothing
+ * outside this repository deep-imports this module (`package.json` is
+ * `"private": true` with no `main` / `exports` / `files`, no workflow publishes
+ * to npm, and the plugin manifests do not ship `src/lib`), so there is no
+ * external caller for a default to keep compatible.
+ *
  * @param {{ expiresAt?: string }} entry
  * @param {Date} now
- * @param {{ onUnparseable?: 'expired'|'not-expired' }} [opts]
+ * @param {{ onUnparseable: 'expired'|'not-expired' }} opts - required
  * @returns {boolean}
  */
-export function isExpired(entry, now, { onUnparseable = 'expired' } = {}) {
+export function isExpired(entry, now, { onUnparseable } = {}) {
   if (onUnparseable !== 'expired' && onUnparseable !== 'not-expired') {
-    // Fail fast rather than fall back: a typo must not silently hand a
-    // write-side caller the destructive direction.
+    // Fail fast rather than fall back: neither an omission nor a typo may
+    // silently hand a write-side caller the destructive direction.
     throw new TypeError(
-      `isExpired: onUnparseable must be 'expired' or 'not-expired' (got ${JSON.stringify(onUnparseable)}).`
+      `isExpired: onUnparseable is required and must be 'expired' or 'not-expired' (got ${JSON.stringify(onUnparseable)}).`
     );
   }
   if (!entry?.expiresAt) return false;
@@ -176,6 +184,12 @@ export function isExpired(entry, now, { onUnparseable = 'expired' } = {}) {
  * is reported through `warn` — never archived on the strength of a string that
  * proves nothing about the deadline (#1756).
  *
+ * Only an ACTIVE entry with an unparseable expiresAt is warned about: it is the
+ * one this function would otherwise have archived. A already-archived or
+ * superseded entry was never a candidate for the transition, so reporting it as
+ * "left as-is instead of archived" would be the same kind of untrue statement
+ * this change exists to remove.
+ *
  * @param {string} indexPath - Path to the index.json file
  * @param {{ now?: Date, warn?: (msg: string) => void }} [opts] - injectable clock
  *   (defaults to real time) and warning sink (defaults to console.warn)
@@ -189,11 +203,17 @@ export function expireEntries(
   let count = 0;
   for (const entry of index.entries) {
     if (hasUnparseableExpiresAt(entry)) {
-      warn(
-        `Warning: entry ${entry.id} has an unparseable expiresAt (${JSON.stringify(entry.expiresAt)}); left as-is instead of archived.`
-      );
+      if ((entry.status ?? 'active') === 'active') {
+        warn(
+          `Warning: entry ${entry.id} has an unparseable expiresAt (${JSON.stringify(entry.expiresAt)}); left as-is instead of archived.`
+        );
+      }
       continue;
     }
+    // The guard above already returned for every unparseable value, so
+    // `onUnparseable` cannot be reached from here. It is stated anyway because
+    // the option is required, and stating the write-side direction keeps this
+    // call site consistent with planPromotionRetire.
     if (
       isExpired(entry, now, { onUnparseable: 'not-expired' }) &&
       (entry.status ?? 'active') === 'active'

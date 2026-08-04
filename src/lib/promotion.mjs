@@ -304,9 +304,12 @@ export function isNegativeFeedback(fb, { clusterFeedbackType = null } = {}) {
  * is the promotionStatus change implied by the (possibly post-expiry) entry
  * status. Idempotent: once synced, `willChange` is false.
  *
- * `unparseableExpiresAt` reports an expiresAt that `Date` cannot parse. Retiring
- * archives the entry, which for a candidate is a discard, so such a value never
- * expires it (#1756) — the caller surfaces the flag as a warning instead.
+ * `unparseableExpiresAt` reports an ACTIVE entry whose expiresAt `Date` cannot
+ * parse — the one case where retiring would otherwise have archived it, which
+ * for a candidate is a discard (#1756). The caller surfaces the flag as a
+ * warning. A non-active entry is excluded on purpose: expiry never applied to
+ * it, so calling it "skipped" would be as untrue as the `expiresAt reached`
+ * audit reason this change removes.
  *
  * @param {object} entry
  * @param {{ now?: Date }} [opts]
@@ -322,7 +325,7 @@ export function planPromotionRetire(entry, { now = new Date() } = {}) {
   // boundary is defined once. onUnparseable is 'not-expired' because archiving a
   // candidate discards it: an unparseable expiresAt is a data defect to report,
   // not a deadline that passed.
-  const unparseableExpiresAt = hasUnparseableExpiresAt(entry);
+  const unparseableExpiresAt = hasUnparseableExpiresAt(entry) && entryStatus === 'active';
   const willExpire =
     isExpired(entry, now, { onUnparseable: 'not-expired' }) && entryStatus === 'active';
   const nextEntryStatus = willExpire ? 'archived' : entryStatus;
@@ -400,9 +403,11 @@ export function applyPromotionRetire(entry, { now = new Date() } = {}) {
  * needs it (expiry archive + promotionStatus sync), and persist. Idempotent — a
  * second run finds nothing to change.
  *
- * `warnings` lists candidates whose expiresAt cannot be parsed. Those are left
- * un-archived on purpose (#1756), and the warning is what keeps the skip from
- * being silent — the value has to be repaired by whoever wrote it.
+ * `warnings` lists ACTIVE candidates whose expiresAt cannot be parsed — the ones
+ * an expiry would otherwise have archived. They are left alone on purpose
+ * (#1756), and the warning is what keeps that skip from being silent. Candidates
+ * that were already archived or superseded are not listed: expiry did not apply
+ * to them, so calling them skipped would be inaccurate.
  *
  * @param {{ indexPath: string, now?: Date }} opts
  * @returns {{ count: number, results: Array<{ id: string, willExpire: boolean, statusSync: object|null }>, warnings: string[] }}
@@ -415,7 +420,11 @@ export function retirePromotions({ indexPath, now = new Date() }) {
     const plan = planPromotionRetire(entry, { now });
     if (plan.unparseableExpiresAt) {
       warnings.push(
-        `${entry.id}: expiresAt ${JSON.stringify(entry.expiresAt)} is not a parseable timestamp; the expiry archive was skipped (repair the value or re-issue the candidate).`
+        // No "re-issue the candidate" advice: proposePromotionCandidate is
+        // idempotent on the content-hash id (promotion-candidates.mjs:674-731),
+        // so a re-run converges on this same entry and never rewrites its
+        // expiresAt. Repairing the stored value is the only available action.
+        `${entry.id}: expiresAt ${JSON.stringify(entry.expiresAt)} is not a parseable timestamp; the expiry archive was skipped. Repair the value in the index — re-running \`promote propose\` converges on the existing id and leaves expiresAt untouched.`
       );
     }
     if (!plan.willChange) continue;
