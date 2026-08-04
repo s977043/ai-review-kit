@@ -61,6 +61,7 @@ The following are the inconsistencies across specs and the recommended unificati
 
 - Current: `plan` uses `0`/`1`/`2`/`3` (`2`=warnings only, `3`=config error); `exec`/`verify` use `0`/`1`/`2` (`2`=config error).
 - Recommendation: **unify to 4 values (`0`/`1`/`2`/`3`)**. `2`=warnings only, `3`=config error. `exec`/`verify` currently use `2`=config error, but as long as CI treats `!= 0` as failure, backward compatibility is preserved (and it is not incompatible with the minimal `0`/`1` contract in [Stable Interfaces](./stable-interfaces.en.md)). Making `plan`'s `--warn-on`/`advisory` distinction common across all 3 subcommands unifies the gating logic.
+  - **Superseded (#1709, settled 2026-08)**: the part of "`3`=config error" that covered argument errors is superseded. Argument errors detected in the parse layer (unknown options, surplus positionals, missing or invalid values) are unified to `1` across every command, and `3` is limited to handler-layer configuration errors and the `--gate` ESCALATE decision.
 
 ### 3. Artifact config schema
 

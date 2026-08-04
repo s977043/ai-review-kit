@@ -124,15 +124,17 @@ severity の内部語彙（`blocker` / `warning` / `nit`）と JSON スキーマ
 
 ## 終了コード
 
-| Exit | 意味                                                                                                                         |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `0`  | 成功。`status` が `ok` / `no-changes` / `skipped-by-label` で、かつ fail / warn 判定なし。                                   |
-| `1`  | 失敗。`--fail-on` 閾値到達（`--advisory-only` 未指定時）、必須 artifact 欠損、計画/実行エラー、`--max-cost` 超過、いずれか。 |
-| `2`  | 警告のみ。`--warn-on` 閾値に達したが `--fail-on` には届かない finding が存在する。                                           |
-| `3`  | 設定エラー。引数バリデーション失敗、設定ファイル読み込み失敗など。                                                           |
+| Exit | 意味                                                                                                                                                                          |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0`  | 成功。`status` が `ok` / `no-changes` / `skipped-by-label` で、かつ fail / warn 判定なし。                                                                                    |
+| `1`  | 失敗。`--fail-on` 閾値到達（`--advisory-only` 未指定時）、必須 artifact 欠損、計画/実行エラー、`--max-cost` 超過、いずれか。                                                  |
+| `2`  | 警告のみ。`--warn-on` 閾値に達したが `--fail-on` には届かない finding が存在する。                                                                                            |
+| `3`  | 設定エラー。ハンドラ層で検出する設定エラー（未対応の `--output` 値、`--output` と `--format` の不一致、設定ファイル読み込み失敗など）。parse 層の引数エラーはここに含まない。 |
 
 `--advisory-only` を指定した場合、`fail` / `warn` 判定は無効化され、内部エラー（artifact 欠損・実行エラー）以外は常に exit `0`。
 
+> 引数エラーの扱い（#1709）: parse 層が検出する引数エラー（未知オプション・余剰 positional・オプション値の欠落や不正値）は exit `1` です。exit `3` は、共有パーサを通過したあとにハンドラ層が検出する設定エラーに限られます。
+>
 > 実装現況（#976）: gate 判定は **opt-in** で、`--fail-on` / `--warn-on` / `--advisory-only` のいずれかを明示したときのみ exit `1` / `2` を返す。いずれも未指定なら従来どおり成功時 exit `0`（既存呼び出し・plangate-review workflow は非破壊）。フラグを与えたときの既定値は `--fail-on critical` / `--warn-on major`。判定は artifact の `findings[].severity` の最大値に基づく。
 
 ## CI / 後続システムとの接続
@@ -146,7 +148,7 @@ severity の内部語彙（`blocker` / `warning` / `nit`）と JSON スキーマ
 
 - `--artifact` で渡せる ID 集合は Artifact Input Contract に従い拡張される。
 - フラグ追加は minor、フラグの削除・意味変更・既定値変更は major bump とする。
-- exit code の意味（`0` / `1` / `2` / `3`）は **Stable Contract** として扱い、変更には major bump を要する。
+- exit code の意味（`0` / `1` / `2` / `3`）は **Stable Contract** として扱い、変更には major bump を要する。ただし #1709 で、引数エラーの検出層による粒度が変わった（parse 層は `1`、ハンドラ層の設定エラーは `3`）。この変更は CLI が Beta である [Stable Interfaces](./stable-interfaces.md) の扱いに従い minor で入っている。
 - JSON 出力スキーマの破壊的変更は [Review Artifact](./review-artifact.md) のバージョニングに従う。
 
 ## 関連ドキュメント

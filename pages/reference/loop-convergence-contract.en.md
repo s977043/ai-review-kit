@@ -124,7 +124,7 @@ When `oscillated` is non-empty, the caller escalates immediately. Detection is b
 
 The table below covers `river run`. The `river review` family uses a separate contract (includes exit 3) and is out of scope for this page.
 
-Exit codes other than 0 are only produced when `--fail-on` / `--warn-on` is specified. **Without `--fail-on`, River Review always exits 0.**
+Findings-based exit codes are non-zero only when `--fail-on` / `--warn-on` is specified. **Without `--fail-on`, a successful run always exits 0 regardless of findings.** Usage errors (unknown options, missing values, etc.) and runtime errors exit 1 regardless of `--fail-on` (#1709).
 
 | Exit code | Condition                                                                | Description                            |
 | --------- | ------------------------------------------------------------------------ | -------------------------------------- |

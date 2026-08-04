@@ -33,6 +33,8 @@
 
 「同じ名前で別物」なサブコマンド (`eval`) があるため、ドキュメントでは必ずどちらの CLI かを明示する。
 
+`npm install` で PATH に入る `river` は **メイン CLI (`src/cli.mjs`)** である (`package.json` の `bin`)。Runner CLI は公開されない (`runners/cli/package.json` が `private: true`) ため、`node runners/cli/bin/river <subcommand>` として起動するか `npm link runners/cli` でリンクする。したがって上表の Runner CLI 列のコマンド (`river eval --all` など) を PATH の `river` にそのまま渡すと、メイン CLI 側の未知オプションとして exit 1 になる (#1709)。
+
 ## どちらを使うべきか
 
 - **GitHub Action / 本番ローカル実行 / リリース前検証**: メイン CLI (`river run` / `river skills` / `river doctor`)。`runners/github-action` も内部でこれを呼ぶ。

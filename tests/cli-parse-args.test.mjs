@@ -409,21 +409,42 @@ test('parseArgs: suppression add defaults scope to file', () => {
   assert.equal(parsed.suppressionScope, 'file');
 });
 
-test('parseArgs: suppression add silently drops non-positive --pr', () => {
-  // Non-positive values are silently dropped (suppressionPrNumber stays null).
+test('parseArgs: suppression add rejects a non-positive or non-integer --pr (#1709 S3)', () => {
+  // Before Slice 3 these were silently dropped (suppressionPrNumber stayed
+  // null) while the entry was still written with exit 0.
+  for (const bad of ['0', '-5', 'abc', '1.5']) {
+    const parsed = parseArgs([
+      'suppression',
+      'add',
+      '--fingerprint',
+      'c'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--pr',
+      bad,
+    ]);
+    assert.equal(parsed.usageError, true, `--pr ${bad} should raise a usage error`);
+    assert.equal(parsed.suppressionPrNumber, null);
+  }
+});
+
+test('parseArgs: suppression add --scope requires a value (#1709 S3)', () => {
+  // A trailing --scope used to fall back to the default 'file' in silence,
+  // and the entry was still written with exit 0.
   const parsed = parseArgs([
     'suppression',
     'add',
     '--fingerprint',
-    'c'.repeat(16),
+    'd'.repeat(16),
     '--feedback',
     'false_positive',
     '--rationale',
     'r',
-    '--pr',
-    '0',
+    '--scope',
   ]);
-  assert.equal(parsed.suppressionPrNumber, null);
+  assert.equal(parsed.usageError, true);
 });
 
 // --- #802 Phase 3: review plan flags ---

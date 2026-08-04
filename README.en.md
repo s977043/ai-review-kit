@@ -424,6 +424,8 @@ The CLI `--output` flag and the GitHub Action `output_format` input accept the f
 
 The new CLI interface gives direct access to core runner features:
 
+> **Note**: the commands in this section belong to the `runners/cli` CLI. The `river` that `npm install` puts on your PATH (`bin` in `package.json`) is the **main CLI (`src/cli.mjs`), which is a different program**, so run these as `node runners/cli/bin/river <subcommand>` or link them first with `npm link runners/cli`. The main CLI's `river eval` evaluates review fixtures and does not accept `--all` (since #1709 it exits 1 as an unknown option). To evaluate all skills with the main CLI, use `npm run eval:all` (`scripts/evaluate-all.mjs`).
+
 - `river review [files...]` — review files (execution plan generation and skill selection)
 - `river eval <skill>` — validate and evaluate a skill definition
 - `river eval --all` — evaluate all skills

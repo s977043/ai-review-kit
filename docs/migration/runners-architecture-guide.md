@@ -234,6 +234,8 @@ function evaluateSkill(skill, options) {
 
 The CLI runner (`runners/cli/`) provides a modern command-line interface for River Review.
 
+> **Which `river` is this?** Every `river ...` example in this section is the **CLI runner**, not the `river` that `npm install` puts on your PATH (that one is the main CLI, `src/cli.mjs`, per `bin` in the root `package.json`). `runners/cli/package.json` is `private: true`, so run these as `node runners/cli/bin/river <subcommand>` or link them with `npm link runners/cli`. The two CLIs share subcommand names but not their flags—for example the main CLI's `river eval` evaluates review fixtures (`--cases <path>`) and rejects `--all` with exit 1 since #1709, while all-skill evaluation on the main CLI side is `npm run eval:all` (`scripts/evaluate-all.mjs`). See [CLI-architecture.md](../CLI-architecture.md) for the full mapping.
+
 ### Available Commands
 
 #### `river review`
@@ -275,17 +277,17 @@ river review --verbose
 
 #### `river eval`
 
-Evaluate and validate skill definitions:
+Evaluate and validate skill definitions (CLI runner only—`--all` is not a main-CLI flag):
 
 ```bash
 # Evaluate a specific skill
-river eval skills/security-basic/skill.yaml
+node runners/cli/bin/river eval skills/midstream/security-basic/SKILL.md
 
 # Evaluate all skills
-river eval --all
+node runners/cli/bin/river eval --all
 
 # Verbose output
-river eval --all --verbose
+node runners/cli/bin/river eval --all --verbose
 ```
 
 #### `river create skill`
