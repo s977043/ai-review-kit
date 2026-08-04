@@ -78,7 +78,7 @@ river run . --base main --fail-on critical --warn-on major --output markdown \
   --output-file ./review.md
 ```
 
-- **exit code**: `--fail-on` / `--warn-on` を指定した場合のみ 0 以外になる。`0`=pass / `1`=fail（`--fail-on` 以上）/ `2`=warn（`--warn-on` 以上かつ `--fail-on` 未満）。**`--fail-on` を省略すると findings があっても常に exit 0**（機械判断には `summary.issueCountBySeverity` を直接読む方式が確実）。**エージェントは exit code で分岐**（fail なら修正へ戻る、pass なら PR 続行）。
+- **exit code**: findings の判定は `--fail-on` / `--warn-on` を指定した場合のみ 0 以外になる。`0`=pass / `1`=fail（`--fail-on` 以上）/ `2`=warn（`--warn-on` 以上かつ `--fail-on` 未満）。**`--fail-on` を省略すると findings があっても正常終了は exit 0**（機械判断には `summary.issueCountBySeverity` を直接読む方式が確実）。usage error（未知オプション・値欠落など）と実行エラーは指定と無関係に exit 1（#1709）。**エージェントは exit code で分岐**（fail なら修正へ戻る、pass なら PR 続行）。
 - `--output markdown` の結果を PR コメントへ投稿（人間レビュアー向け）。機械判断は exit code、人間提示は markdown、と使い分ける。
 - `--advisory-only` を付けると指摘は出すが常に exit 0（観測モード）。
 

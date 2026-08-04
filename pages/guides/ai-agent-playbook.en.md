@@ -79,7 +79,7 @@ river run . --base main --fail-on critical --warn-on major --output markdown \
   --output-file ./review.md
 ```
 
-- **exit code**: non-zero only when `--fail-on` / `--warn-on` is specified. `0`=pass / `1`=fail (≥ `--fail-on`) / `2`=warn (≥ `--warn-on` but < `--fail-on`). **Without `--fail-on`, River Review always exits 0 regardless of findings** — for machine decisions, reading `summary.issueCountBySeverity` directly is more reliable. **The agent branches on the exit code** (fail → back to fixing, pass → continue the PR).
+- **exit code**: findings-based codes are non-zero only when `--fail-on` / `--warn-on` is specified. `0`=pass / `1`=fail (≥ `--fail-on`) / `2`=warn (≥ `--warn-on` but < `--fail-on`). **Without `--fail-on`, a successful run always exits 0 regardless of findings** — for machine decisions, reading `summary.issueCountBySeverity` directly is more reliable. Usage errors (unknown options, missing values, etc.) and runtime errors exit 1 regardless of these flags (#1709). **The agent branches on the exit code** (fail → back to fixing, pass → continue the PR).
 - Post the `--output markdown` result as a PR comment (for human reviewers). Use exit code for machine decisions, markdown for human presentation.
 - `--advisory-only` reports findings but always exits 0 (observation mode).
 

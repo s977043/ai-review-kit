@@ -71551,41 +71551,103 @@ function parseArgs(argv) {
       continue;
     }
     if (parsed.command === 'suppression') {
+      // #1709 Slice 3: every option below takes a value, and none of the
+      // `args.shift() ?? <default>` forms guarded it. A trailing `--scope`
+      // silently fell back to 'file' and a `--pr abc` was silently dropped —
+      // in both cases the suppression entry was still WRITTEN with exit 0
+      // (holes found by the Slice 2 adversarial review; pinned in the canary).
+      // Same guard shape as the feedback options below (#1717).
       if (arg === '--fingerprint') {
-        parsed.suppressionFingerprint = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --fingerprint option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionFingerprint = value;
         continue;
       }
       if (arg === '--finding') {
-        parsed.suppressionFindingId = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --finding option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionFindingId = value;
         continue;
       }
       if (arg === '--feedback') {
-        parsed.suppressionFeedbackType = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --feedback option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionFeedbackType = value;
         continue;
       }
       if (arg === '--scope') {
-        parsed.suppressionScope = args.shift() ?? 'file';
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --scope option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionScope = value;
         continue;
       }
       if (arg === '--rationale') {
-        parsed.suppressionRationale = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --rationale option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionRationale = value;
         continue;
       }
       if (arg === '--severity') {
-        parsed.suppressionSeverity = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --severity option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionSeverity = value;
         continue;
       }
       if (arg === '--files') {
-        parsed.suppressionFiles = (0,utils/* parseList */.E1)(args.shift() ?? '');
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --files option requires a comma-separated list.');
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionFiles = (0,utils/* parseList */.E1)(value);
         continue;
       }
       if (arg === '--expires') {
-        parsed.suppressionExpiresAt = args.shift() ?? null;
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --expires option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionExpiresAt = value;
         continue;
       }
       if (arg === '--pr') {
-        const v = parseInt(args.shift() ?? '', 10);
-        if (!Number.isNaN(v) && v > 0) parsed.suppressionPrNumber = v;
+        const value = args.shift();
+        // Strict parse, same shape as the feedback --pr below: parseInt('abc')
+        // used to become NaN and be dropped in silence while the entry was
+        // still written with exit 0.
+        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+          console.error('Error: --pr option requires a positive integer.');
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionPrNumber = Number.parseInt(value, 10);
         continue;
       }
     }
@@ -72050,7 +72112,15 @@ function parseArgs(argv) {
       continue;
     }
     if (arg === '--cases') {
-      parsed.fixturesCasesPath = args.shift() ?? null;
+      const value = args.shift();
+      // #1709 Slice 3 (B3): a trailing `--cases` used to null the field, so
+      // eval silently fell back to the DEFAULT fixtures and printed [PASS].
+      if (!value || value.startsWith('-')) {
+        console.error('Error: --cases option requires a path.');
+        usageError(parsed);
+        break;
+      }
+      parsed.fixturesCasesPath = value;
       continue;
     }
     if (arg === '--verbose') {
@@ -72138,11 +72208,25 @@ function parseArgs(argv) {
       continue;
     }
     if (arg === '--context') {
-      parsed.availableContexts = (0,utils/* parseList */.E1)(args.shift());
+      const value = args.shift();
+      // #1709 Slice 3: a trailing `--context` used to become parseList(undefined)
+      // = [] in silence (same for --dependency below).
+      if (!value || value.startsWith('-')) {
+        console.error('Error: --context option requires a comma-separated list.');
+        usageError(parsed);
+        break;
+      }
+      parsed.availableContexts = (0,utils/* parseList */.E1)(value);
       continue;
     }
     if (arg === '--dependency') {
-      parsed.availableDependencies = (0,utils/* parseList */.E1)(args.shift());
+      const value = args.shift();
+      if (!value || value.startsWith('-')) {
+        console.error('Error: --dependency option requires a comma-separated list.');
+        usageError(parsed);
+        break;
+      }
+      parsed.availableDependencies = (0,utils/* parseList */.E1)(value);
       continue;
     }
     if (arg === '--reviewers') {
@@ -72206,11 +72290,25 @@ function parseArgs(argv) {
     }
     // Skills subcommand options
     if (arg === '--from') {
-      parsed.fromPath = args.shift() ?? null;
+      const value = args.shift();
+      // #1709 Slice 3: a trailing `--from` / `--to` used to null the field in
+      // silence, so `skills import --from` ran against the default instead.
+      if (!value || value.startsWith('-')) {
+        console.error('Error: --from option requires a path.');
+        usageError(parsed);
+        break;
+      }
+      parsed.fromPath = value;
       continue;
     }
     if (arg === '--to') {
-      parsed.toPath = args.shift() ?? null;
+      const value = args.shift();
+      if (!value || value.startsWith('-')) {
+        console.error('Error: --to option requires a path.');
+        usageError(parsed);
+        break;
+      }
+      parsed.toPath = value;
       continue;
     }
     if (arg === '--strict') {
@@ -72239,6 +72337,19 @@ function parseArgs(argv) {
       parsed.command = 'help';
       break;
     }
+    // #1709 Slice 3: strict parse. A token that reaches this point matched no
+    // rule above. It used to be ignored in silence (exit 0), so a typo like
+    // `--dry-runn` ran the command as if the flag had not been given, and a
+    // surplus positional was dropped without a trace. Note: promote / evolve
+    // detect their own unknown options above (promoteUnknownOption /
+    // evolveUnknownOption) and keep their handler-level messages.
+    if (arg.startsWith('-')) {
+      console.error(`Error: unknown option ${arg}.`);
+    } else {
+      console.error(`Error: unexpected argument "${arg}".`);
+    }
+    usageError(parsed);
+    break;
   }
 
   return parsed;

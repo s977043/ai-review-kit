@@ -124,7 +124,7 @@ river runs diff <id1> <id2> <id3>
 
 以下は `river run` の exit code 契約です。`river review` 系コマンドは別契約（exit 3 あり）であり、このページのスコープ外です。
 
-exit code は `--fail-on` / `--warn-on` を指定した場合のみ 0 以外になります。**`--fail-on` を指定しない場合、River Review は常に exit 0 を返します。**
+findings に基づく exit code は `--fail-on` / `--warn-on` を指定した場合のみ 0 以外になります。**`--fail-on` を指定しない場合、findings があっても正常終了は exit 0 です。** なお usage error（未知オプション・値欠落など）と実行エラーは、`--fail-on` の指定と無関係に exit 1 へ統一済みです（#1709）。
 
 | exit code | 条件                                                                     | 説明                                     |
 | --------- | ------------------------------------------------------------------------ | ---------------------------------------- |
