@@ -71284,7 +71284,7 @@ Options:
   --estimate        Print cost estimate only (no review)
   --max-cost <usd>  Abort if estimated cost exceeds this USD amount
   --output <mode>   Output format: text|markdown|json|yaml|html. Default: text
-  --format <mode>   (review) Output format for review plan|exec|route: text|markdown|json. Takes
+  --format <mode>   (review) Output format for review plan|exec|verify|route: text|markdown|json. Takes
                     precedence over --output; plan|exec reject a conflicting explicit pair.
                     Default: json (text is parsed but not implemented for review yet)
   --context list    Comma-separated available contexts (e.g. diff,fullFile,tests). Overrides RIVER_AVAILABLE_CONTEXTS
