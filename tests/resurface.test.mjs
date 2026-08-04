@@ -72,6 +72,22 @@ test('shouldResurface returns false for expired suppression', () => {
   assert.equal(shouldResurface(s, ['src/auth.ts']), false);
 });
 
+// #1746 W2 の読み取り側 fail-safe（suppression.test.mjs と同じ理由）。
+// parse 不能な expiresAt は文字列比較では永久に「未失効」だった。
+test('shouldResurface treats an unparseable expiresAt as expired', () => {
+  const s = makeSuppression({
+    context: { active: true, scope: 'file', expiresAt: 'notadate' },
+  });
+  assert.equal(shouldResurface(s, ['src/auth.ts']), false);
+});
+
+test('shouldResurface keeps a valid future expiresAt active', () => {
+  const s = makeSuppression({
+    context: { active: true, scope: 'file', expiresAt: '2099-01-01T00:00:00Z' },
+  });
+  assert.equal(shouldResurface(s, ['src/auth.ts']), true);
+});
+
 test('shouldResurface returns true for global scope', () => {
   const s = makeSuppression({ context: { active: true, scope: 'global' } });
   assert.equal(shouldResurface(s, ['any/file.ts']), true);

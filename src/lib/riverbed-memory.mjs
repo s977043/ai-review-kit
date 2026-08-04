@@ -117,15 +117,25 @@ export function supersede(indexPath, oldId, newId) {
 
 /**
  * Whether an entry's expiresAt timestamp has passed relative to `now`. Shared by
- * expireEntries and the Phase 3 promotion retire lifecycle so the expiry rule
- * (`expiresAt <= now`) is defined once.
+ * expireEntries, the Phase 3 promotion retire lifecycle and the suppression
+ * lifecycle (isSuppressionExpired) so the expiry rule (`expiresAt <= now`) is
+ * defined once.
+ *
+ * Fail-safe on a malformed timestamp: a value `Date` cannot parse counts as
+ * EXPIRED. Comparing NaN would answer `false` for every operator, which is the
+ * dangerous direction — an entry whose expiresAt is unparseable (e.g. the
+ * `--expires notadate` values that reached disk before #1746 was fixed) would
+ * otherwise stay in effect forever.
  *
  * @param {{ expiresAt?: string }} entry
  * @param {Date} now
  * @returns {boolean}
  */
 export function isExpired(entry, now) {
-  return Boolean(entry?.expiresAt) && new Date(entry.expiresAt).getTime() <= now.getTime();
+  if (!entry?.expiresAt) return false;
+  const timestamp = new Date(entry.expiresAt).getTime();
+  if (Number.isNaN(timestamp)) return true;
+  return timestamp <= now.getTime();
 }
 
 /**
