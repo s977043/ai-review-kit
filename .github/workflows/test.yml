@@ -187,7 +187,15 @@ jobs:
           # false positives that block PRs whose change is not part of the
           # shipped bundle.
           npm run build:action
-          if git diff --quiet -- runners/github-action/dist/; then
+
+          # Compare with `git status --porcelain`, not `git diff`. ncc names
+          # its lazy chunks by number (dist/<n>.index.mjs), and a dependency
+          # change can make it emit a chunk the commit does not contain. Such
+          # a file is UNTRACKED after the rebuild, and `git diff` does not
+          # report untracked files — the job would pass on a bundle that is
+          # missing a chunk it needs at runtime.
+          rebuild_diff=$(git status --porcelain -- runners/github-action/dist/)
+          if [ -z "$rebuild_diff" ]; then
             src_date=$(git log -1 --format=%ci -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json')
             dist_date=$(git log -1 --format=%ci -- 'runners/github-action/dist/')
             echo "dist/ rebuild produced no changes; bundle is genuinely fresh (dist commit: ${dist_date}, src commit: ${src_date})."
@@ -199,8 +207,8 @@ jobs:
           echo "::error::dist/ does not match a build of the current sources (src commit: ${src_date}, dist commit: ${dist_date}); the rebuild produced byte-level changes. Run 'npm run build:action' with the Node version in .nvmrc and commit the result."
           echo "Recent src changes:"
           git log -3 --oneline -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json'
-          echo "Rebuild diff (file list):"
-          git diff --name-only -- runners/github-action/dist/
+          echo "Rebuild diff (git status --porcelain; '??' = a chunk the commit is missing):"
+          printf '%s\n' "$rebuild_diff"
           exit 1
 
   integration-test:
