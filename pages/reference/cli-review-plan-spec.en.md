@@ -148,7 +148,8 @@ When `--advisory-only` is set, fail/warn judgement is disabled and only internal
 
 - The set of `--artifact` IDs grows together with the Artifact Input Contract.
 - Adding flags is a minor bump; removing flags or changing their meaning / default value is a major bump.
-- Exit codes (`0` / `1` / `2` / `3`) are part of the **stable contract** and require a major bump to change. Note that #1709 changed the granularity by detection layer (parse layer → `1`, handler-layer configuration errors → `3`); it shipped as a minor because the CLI is Beta under [Stable Interfaces](./stable-interfaces.en.md).
+- Gate-decision exit codes (`0` / `1` / `2` / `3`) are part of the **stable contract** and require a major bump to change.
+- Usage-error exit codes (failure to interpret arguments) are not part of the stable contract; they follow the Beta label of the CLI surface as a whole. #1709 changed the granularity by detection layer (parse layer → `1`, handler-layer configuration errors → `3`) and shipped as a minor. The split by purpose is defined in "Exit Code Stability" in [Stable Interfaces](./stable-interfaces.en.md), which is the SSoT.
 - Breaking changes in JSON output follow the versioning rules of [Review Artifact](./review-artifact.en.md).
 
 ## See Also

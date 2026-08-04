@@ -179,7 +179,8 @@ CI から安定して判定できるよう、終了コードを以下の通り�
 ## 安定性と互換性
 
 - 安定性ラベルは **Beta**（参考: [Stable Interfaces](./stable-interfaces.md)）。
-- フラグ追加は minor、フラグの削除・意味変更・既定値変更・終了コード意味変更・`status` 値の意味変更は **major** bump とする。
+- フラグ追加は minor、フラグの削除・意味変更・既定値変更・上表の終了コードの意味変更・`status` 値の意味変更は **major** bump とする。
+- usage error（引数の解釈失敗）の終了コードは上表の対象外とし、CLI サーフェス全体の Beta ラベルに従う。用途別の裁定は [Stable Interfaces](./stable-interfaces.md) の「終了コードの安定性」が SSoT。
 - JSON 出力スキーマの破壊的変更は [Review Artifact](./review-artifact.md) のバージョニングに従う。
 
 ## 関連ドキュメント
