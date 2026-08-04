@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.72.3](https://github.com/s977043/river-review/compare/v1.72.2...v1.72.3) (2026-08-04)
+
+
+### Bug Fixes
+
+* **ci:** dist のバイト比較を untracked chunk まで見るようにし docs の断定を外す ([#1774](https://github.com/s977043/river-review/issues/1774)) ([0c27ff8](https://github.com/s977043/river-review/commit/0c27ff84c4a4251e2351131e938e8c255c544be0))
+* **ci:** dist を触る変更で Action dist freshness の検証をスキップさせない ([#1773](https://github.com/s977043/river-review/issues/1773)) ([3066646](https://github.com/s977043/river-review/commit/306664669818dd33f4d6ae68b0b934436ddc8381)), closes [#1749](https://github.com/s977043/river-review/issues/1749)
+* **cli:** review のサブコマンド後置を解決し POSIX `--` 終端を復旧する ([#1761](https://github.com/s977043/river-review/issues/1761)) ([ddca181](https://github.com/s977043/river-review/commit/ddca18105dd65a8a81530c814f3852d2e68d7123)), closes [#1755](https://github.com/s977043/river-review/issues/1755) [#1759](https://github.com/s977043/river-review/issues/1759)
+* **cli:** 敵対的レビューの major 5 件 / minor 2 件 / W-4 に対応する ([#1769](https://github.com/s977043/river-review/issues/1769)) ([0f1799c](https://github.com/s977043/river-review/commit/0f1799ceb5b02f31cf8fe7ddef5200c31c37b652)), closes [#1755](https://github.com/s977043/river-review/issues/1755) [#1759](https://github.com/s977043/river-review/issues/1759)
+* **memory:** isExpired の unparseable 時の向きを呼び出し元が選べるようにする ([#1762](https://github.com/s977043/river-review/issues/1762)) ([c35008f](https://github.com/s977043/river-review/commit/c35008f6e63eed2d08fc1e87cff3c447cf9cdc09))
+* **scripts:** suppression-analytics の失効判定を isSuppressionExpired に委譲する ([#1772](https://github.com/s977043/river-review/issues/1772)) ([ce74e8a](https://github.com/s977043/river-review/commit/ce74e8ad616a1c6c80a463d1bafbc33bbb0fd301)), closes [#1764](https://github.com/s977043/river-review/issues/1764)
+
 ## [1.72.2](https://github.com/s977043/river-review/compare/v1.72.1...v1.72.2) (2026-08-04)
 
 
