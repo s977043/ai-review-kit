@@ -55,6 +55,21 @@
 // いた（v1.71.1 では exit 0）。`--` 以降を positional path として読むようにし、
 // パスを取る 5 面すべての `-- <path>` 形を VALID_CASES へ pin した。
 //
+// ---------------------------------------------------------------------------
+// #1766 で追加した 3 ケース（87 -> 90）と VALID_CASES の 2 件
+// ---------------------------------------------------------------------------
+// #1759 A1（`--` 終端）の敵対的レビューが挙げた blocker。`--` の後ろのトークンを
+// 無条件に path として読んでいたため、`river evolve -- replay` が `replay` を
+// path として飲み込み、既定の `aggregate` を exit 0 で実行していた（打鍵ミスの
+// `river evolve -- agregate` も同じ）。エラーですらなく、打鍵した操作と違う操作が
+// 成功していた。`river review -- plan` は exit 1 だったが、`plan` を
+// 「サブコマンドではない」と言った直後に選択肢として列挙する自己矛盾した文言を
+// 返していた。いずれも表に 1 行も無かったことが見逃しの直接原因なので pin する。
+//
+// 併せて、末尾の裸 `--` が書き込み系コマンドで exit 0 になる形を VALID_CASES へ
+// 追加した（`--` の後ろにトークンが無い＝POSIX 的に no-op という境界の pin）。
+// Slice 3 時点の `--` ケース 6 件はすべて read 系のみだった。
+//
 // canary の役割は「正しさの主張」ではなく「変更の全量可視化」にある。
 // 今後の変更でも *この表の差分 = 挙動変更の全量* という不変条件を保つこと。
 // 期待値を書き換えるときは、必ず EXPECTED_CONTRACT_COUNTS も併せて更新する。
@@ -120,15 +135,16 @@ const CONTRACTS = {
  * 契約ごとの件数。表を編集したら必ずここも更新する
  * （= 挙動変更の総量をレビューで一目で見えるようにするための第 2 の錠）。
  */
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 86, C4: 1 };
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 89, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
 
 /**
- * 87 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
+ * 90 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
  * suppression の穴 2 件 + #1746 回帰 hotfix で pin した値検証の穴 5 件
- * + #1755 で pin した review のサブコマンド欠落・未知 2 件）。
+ * + #1755 で pin した review のサブコマンド欠落・未知 2 件
+ * + #1766 で pin した `--` 後置のサブコマンド語 3 件）。
  * kind は #1709 のエラー種別 5 分類:
  *   value-missing / invalid-value / unknown-option / unknown-subcommand / surplus-positional
  */
@@ -274,6 +290,16 @@ const CASES = [
     surface: 'review',
     kind: 'unknown-subcommand',
     argv: ['review', '--plan-only'],
+    contract: 'C3',
+  },
+  {
+    // #1766 blocker 2: exit code は当時から C3 だったが、文言が
+    // 「`plan` はサブコマンドではない（plan | exec | verify | route）」という
+    // 自己矛盾だった。exit code は据え置き、文言は cli-parse-args.test.mjs の
+    // `no river review usage error contradicts itself` が pin する。
+    surface: 'review',
+    kind: 'unknown-subcommand',
+    argv: ['review', '--', 'plan'],
     contract: 'C3',
   },
 
@@ -496,6 +522,22 @@ const CASES = [
     surface: 'evolve',
     kind: 'surplus-positional',
     argv: ['evolve', 'aggregate', '.', 'extra'],
+    contract: 'C3',
+  },
+  {
+    // #1766 blocker 1: `replay` を path として飲み込み、既定の `aggregate` を
+    // exit 0 で実行していた。打鍵した操作と違う操作が成功する形。
+    surface: 'evolve',
+    kind: 'unknown-subcommand',
+    argv: ['evolve', '--', 'replay'],
+    contract: 'C3',
+  },
+  {
+    // 同 blocker の打鍵ミス版。`agregate` は語彙外だが実在パスでもないので、
+    // eager 分岐（`river evolve agregate` = exit 1）と揃える。
+    surface: 'evolve',
+    kind: 'unknown-subcommand',
+    argv: ['evolve', '--', 'agregate'],
     contract: 'C3',
   },
 
@@ -835,11 +877,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 87 usage-error cases and every row is unique', () => {
+  test('the matrix pins 90 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      87,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件'
+      90,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1766 の `--` 後置サブコマンド 3 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -861,7 +903,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     }
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:86 / C4:1 (0 of 87 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:89 / C4:1 (0 of 90 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -918,7 +960,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // ---------------------------------------------------------------------------
 
   test('no usage-error case leaves a write side effect (.river must not exist)', () => {
-    // 表の 87 ケースはすべて usage error であり、Slice 3 の原則は「データ
+    // 表の 90 ケースはすべて usage error であり、Slice 3 の原則は「データ
     // 書き込みは全入力検証後に行う」。suppression の穴 2 件は Slice 3 まで、
     // #1746 W2 の `--severity BOGUS` / `--expires notadate` は v1.72.0 まで、
     // exit 0 のまま .river/memory/index.json へエントリを書き込んでいた。
@@ -1260,6 +1302,31 @@ const VALID_CASES = [
     command: 'run',
     target: '--dry-run',
     expect: { dryRun: false },
+  },
+  {
+    // 末尾の裸 `--`（後続トークン無し）は POSIX 的に no-op であり、書き込み系
+    // コマンドでも usage error にしない。#1759 A1 で pin した `--` ケース 6 件は
+    // すべて read 系（パスを取る面）だったため、この形は 1 行も表に無かった。
+    // fuzz で 218 形状ある「末尾 `--` が usage error を書き込みに変える」パターン
+    // （#1766 のレビュー指摘）の代表として、feedback / suppression の 2 形を pin する。
+    argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 's1', '--'],
+    command: 'feedback',
+    expect: { feedbackType: 'false_positive', feedbackSkillId: 's1' },
+  },
+  {
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      'a'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--',
+    ],
+    command: 'suppression',
+    expect: { suppressionFeedbackType: 'false_positive' },
   },
 
   { argv: ['run', '--dry-run', '.'], command: 'run', target: '.' },

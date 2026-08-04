@@ -90,11 +90,17 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 | `0`    | 正常終了                                                                                  |
 | `1`    | 実行エラー・スキーマエラー・引数エラー（不明コマンド / オプション値の欠落・不正値を含む） |
 | `2`    | `--warn-on` の警告しきい値超過                                                            |
-| `3`    | `--gate` の ESCALATE 判定、および `review` サブコマンド側で検出する設定エラー             |
+| `3`    | `--gate` の ESCALATE 判定、未実装（#802 Phase 3）、`review` 側で検出する設定エラー        |
 
 引数エラー（usage error）の exit code は #1709 で exit 1 + stderr 要約へ統一されました。不明コマンドとオプション値の欠落・不正値は Slice 2 で統一済みです。未知オプション・余剰 positional・残っていた値欠落経路（例: `--from` / `--cases`）も Slice 3 で統一されました。help 全文の stdout 出力と exit 0 の組み合わせは、明示的な `--help` と引数なし起動だけが維持します。
 
-`river review` のサブコマンド欠落・未知サブコマンドも #1755 で exit 1 へ移しました。exit 3 に残るのは `--gate` の ESCALATE 判定と、`review` ハンドラが検出する設定エラー（`--output html` など）だけです。
+`river review` のサブコマンド欠落・未知サブコマンドも #1755 で exit 1 へ移しました。exit 3 に残るのは次の 3 分類です。
+
+- `--gate` の ESCALATE 判定
+- 未実装（#802 Phase 3）: `river review verify` は引数と出力の契約だけを受理し、verify skill 実行と artifact 読み込みを未実装として exit 3 を返す。`--output text` も同じく未実装で exit 3 となる
+- 設定エラー: `review` ハンドラが検出する未対応の出力形式（`--output html`）、および `--output` と `--format` の不一致
+
+「未実装は exit 3」という仕様は [river review exec 仕様](./cli-review-exec-spec.md) と [river review verify 仕様](./cli-review-verify-spec.md) を SSoT とします。exit 3 は過渡的なコードであり、実装が完了した分類から exit 0 / 1 / 2 へ吸収されます。
 
 この統一により、オプション名の typo・余剰 positional・値の欠落は `$?` の exit 1 として検知できます。**値の妥当性**は、次のオプションについて parse 層で検証します。
 
@@ -125,7 +131,9 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 `review` のサブコマンド（`plan` / `exec` / `verify` / `route`）も、オプションの前後どちらにも書けます。`river review plan --plan-only` と `river review --plan-only plan` は同じ意味です。サブコマンドを打ち忘れた場合と、語彙に無いトークンを渡した場合は exit 1 になります。
 
-POSIX の `--` 終端も使えます。`--` の後ろに置いたトークンは、オプションやサブコマンド名ではなく、すべて対象パスとして読みます。`river run -- .` は `river run .` と同じ意味です。`river run -- --dry-run` は `--dry-run` という名前のパスを指定した扱いになるため、`--dry-run` フラグは有効になりません。
+POSIX の `--` 終端も使えます。`--` の後ろに置いたトークンは、オプションではなく対象パスとして読みます。`river run -- .` は `river run .` と同じ意味です。`river run -- --dry-run` は `--dry-run` という名前のパスを指定した扱いになるため、`--dry-run` フラグは有効になりません。
+
+ただしサブコマンドが未確定のまま `--` の後ろへサブコマンド語を置いた形は、exit 1 の usage error です（#1766）。`river evolve -- replay` や `river review -- plan` が該当します。パスとして読むと打鍵した操作とは別の操作が exit 0 で走るため、サブコマンドは `--` の前に書いてください。サブコマンドが確定していれば曖昧さは無いので、`river evolve aggregate -- replay` のようにサブコマンドと同名のパスも渡せます。
 
 上記以外の面（`skills list` / `runs list` / `promote list` / `eval` など）は末尾のパスを受け取らず、余剰 positional として exit 1 になります。なお `runs diff <id1> <id2> [<id3>...]` や `promote approve <id>` のように、非オプションのトークンを仕様として複数受け取るサブコマンドは別扱いです。
 

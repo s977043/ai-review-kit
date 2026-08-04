@@ -71735,6 +71735,53 @@ function acceptsPositionalPath(parsed) {
 }
 
 /**
+ * The subcommand vocabulary of a command, or `null` when it has none.
+ *
+ * Consulted by the `--` terminator block so that a subcommand word written
+ * after the terminator is reported instead of being silently re-read as a path
+ * (#1766).
+ *
+ * @param {string | null} command
+ * @returns {Set<string> | null}
+ */
+function subcommandVocabularyFor(command) {
+  switch (command) {
+    case 'review':
+      return REVIEW_SUBCOMMANDS;
+    case 'evolve':
+      return EVOLVE_SUBCOMMANDS;
+    case 'skills':
+      return SKILLS_SUBCOMMANDS;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Whether `parsed` has already resolved its subcommand.
+ *
+ * Once it has, a token after `--` is unambiguously a path: a directory that
+ * happens to be named `replay` stays reachable as
+ * `river evolve aggregate -- replay`. Only the UNRESOLVED case is ambiguous,
+ * and that is the one the terminator block rejects.
+ *
+ * @param {object} parsed
+ * @returns {boolean}
+ */
+function hasResolvedSubcommand(parsed) {
+  switch (parsed.command) {
+    case 'review':
+      return parsed.reviewSubcommand !== null;
+    case 'evolve':
+      return parsed.evolveSubcommand !== null;
+    case 'skills':
+      return parsed.skillsSubcommand !== null;
+    default:
+      return false;
+  }
+}
+
+/**
  * Consume `token` as the positional `<path>` and as nothing else.
  *
  * This is the reading that applies after the POSIX `--` terminator, where a
@@ -72034,8 +72081,49 @@ function parseArgs(argv) {
     // same (`evolve` would otherwise report it as its own unknown option).
     if (arg === '--') {
       let terminatorError = false;
+      // The vocabulary of the command as it stands when `--` is read. Captured
+      // once: the loop below never resolves a subcommand, so it cannot change.
+      const vocabulary = subcommandVocabularyFor(parsed.command);
+      const subcommandResolved = hasResolvedSubcommand(parsed);
       while (args.length) {
         const positional = args.shift();
+        // #1766: `river evolve -- replay` read `replay` as the path and ran
+        // `aggregate` — exit 0 for a DIFFERENT operation than the one typed.
+        // `river review -- plan` exited 1, but with a self-contradictory
+        // message that called `plan` "not a subcommand" and then listed it as
+        // one. A subcommand word whose subcommand slot is still empty is a
+        // misplaced subcommand, not a path; say so and exit 1 on every surface.
+        // Once the slot IS filled the token is unambiguous, so a directory
+        // named after a subcommand stays reachable via
+        // `river evolve aggregate -- replay`.
+        if (!subcommandResolved && vocabulary?.has(positional)) {
+          console.error(
+            `Error: "${positional}" is a river ${parsed.command} subcommand, but every token` +
+              ' after `--` is read as a path. Write the subcommand before the `--`' +
+              ` (\`river ${parsed.command} ${positional} ...\`).`
+          );
+          usageError(parsed);
+          terminatorError = true;
+          break;
+        }
+        // Mirror the eager branch for `evolve` (see takeTrailingPositional):
+        // a token that is neither a known subcommand nor an existing path is a
+        // mistyped subcommand. Without this, `river evolve -- agregate` also
+        // ran `aggregate` with exit 0, while `river evolve agregate` exits 1.
+        if (
+          parsed.command === 'evolve' &&
+          !subcommandResolved &&
+          !parsed.targetConsumed &&
+          !(0,external_node_fs_.existsSync)(positional)
+        ) {
+          console.error(
+            `Error: "${positional}" is not a river evolve subcommand (aggregate | replay)` +
+              ' and does not exist as a path.'
+          );
+          usageError(parsed);
+          terminatorError = true;
+          break;
+        }
         if (!takePositionalPath(parsed, positional)) {
           console.error(`Error: unexpected argument "${positional}".`);
           usageError(parsed);
@@ -73022,6 +73110,14 @@ function parseArgs(argv) {
     !parsed.usageError &&
     !REVIEW_SUBCOMMANDS.has(parsed.reviewSubcommand)
   ) {
+    // `got` is never a REVIEW_SUBCOMMANDS member: the three routes that can set
+    // `target` resolve a vocabulary word as the subcommand first (the eager
+    // branch and takeTrailingPositional) or reject it (the `--` block above,
+    // #1766). Message text that names `got` and then lists the vocabulary is
+    // therefore self-consistent — `river review -- plan` used to reach here and
+    // print `"plan" is not a river review subcommand (plan | ...)`. Pinned by
+    // `no river review usage error contradicts itself` in
+    // tests/cli-parse-args.test.mjs; keep that test passing when this changes.
     const got = parsed.reviewSubcommand ?? (parsed.targetConsumed ? parsed.target : null);
     console.error(
       (got === null

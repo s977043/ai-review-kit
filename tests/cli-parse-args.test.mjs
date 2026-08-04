@@ -864,3 +864,96 @@ test('parseArgs --phase rejects a value normalizePhase would silently default', 
   assert.equal(parsed.usageError, true);
   assert.equal(normalizePhase('BOGUS'), 'midstream');
 });
+
+// ---------------------------------------------------------------------------
+// #1766: `--` の後ろに置いたサブコマンド語
+// ---------------------------------------------------------------------------
+// blocker 1: `river evolve -- replay` が `replay` を path として飲み込み、
+// 既定の `aggregate` を exit 0 で実行していた（打鍵した操作と違う操作が成功）。
+// blocker 2: `river review -- plan` は exit 1 だったが、`plan` を「サブコマンド
+// ではない」と言った直後に選択肢として `plan` を列挙する自己矛盾した文言だった。
+// exit code は canary（tests/cli-usage-error-exit-codes.test.mjs）が pin する。
+// ここでは「文言が自己矛盾しないこと」と「サブコマンド確定後は path として読む」
+// 境界を pin する。
+
+/**
+ * `parseArgs` を呼び、その間に stderr へ出た行を集めて返す。
+ *
+ * @param {string[]} argv
+ * @returns {{ parsed: object, stderr: string }}
+ */
+function parseArgsCapturingStderr(argv) {
+  const lines = [];
+  const original = console.error;
+  console.error = (...args) => lines.push(args.join(' '));
+  try {
+    return { parsed: parseArgs(argv), stderr: lines.join('\n') };
+  } finally {
+    console.error = original;
+  }
+}
+
+const TERMINATOR_SUBCOMMAND_CASES = [
+  { command: 'review', subcommands: ['plan', 'exec', 'verify', 'route'] },
+  { command: 'evolve', subcommands: ['aggregate', 'replay'] },
+  { command: 'skills', subcommands: ['import', 'export', 'list', 'resolve'] },
+];
+
+for (const { command, subcommands } of TERMINATOR_SUBCOMMAND_CASES) {
+  for (const subcommand of subcommands) {
+    test(`parseArgs: river ${command} -- ${subcommand} is a usage error, not a path (#1766)`, () => {
+      const { parsed, stderr } = parseArgsCapturingStderr([command, '--', subcommand]);
+      assert.equal(parsed.usageError, true, 'サブコマンド語が path として飲み込まれている');
+      assert.equal(parsed.targetConsumed, false, 'サブコマンド語を target にしてはならない');
+      assert.match(stderr, /Write the subcommand before the `--`/);
+      assert.ok(
+        !stderr.includes(`"${subcommand}" is not a river`),
+        `「${subcommand} はサブコマンドではない」と言いながら選択肢に列挙する自己矛盾: ${stderr}`
+      );
+    });
+  }
+}
+
+test('no river review usage error contradicts itself (#1766)', () => {
+  // `"<X>" is not a river review subcommand (plan | exec | verify | route)` の
+  // <X> が語彙内に現れたら自己矛盾。到達しうる入力形をまとめて掃引する。
+  const argvForms = (token) => [
+    ['review', '--', token],
+    ['review', token],
+    ['review', '--plan-only', token],
+    ['review', '.', token, '--plan-only'],
+    ['review', '--', '.', token],
+  ];
+  for (const token of ['plan', 'exec', 'verify', 'route']) {
+    for (const argv of argvForms(token)) {
+      const { stderr } = parseArgsCapturingStderr(argv);
+      assert.ok(
+        !stderr.includes(`"${token}" is not a river review subcommand`),
+        `river ${argv.join(' ')} の文言が自己矛盾している: ${stderr}`
+      );
+    }
+  }
+});
+
+test('parseArgs: a resolved subcommand keeps `-- <path>` readable (#1766)', () => {
+  // サブコマンドが確定していれば `--` の後ろは曖昧でないので、サブコマンドと
+  // 同名のディレクトリもパスとして渡せる（POSIX の `--` の存在理由）。
+  const evolve = parseArgs(['evolve', 'aggregate', '--', 'replay']);
+  assert.equal(evolve.usageError, false);
+  assert.equal(evolve.target, 'replay');
+
+  const review = parseArgs(['review', 'plan', '--plan-only', '--', 'exec']);
+  assert.equal(review.usageError, false);
+  assert.equal(review.target, 'exec');
+  assert.equal(review.reviewSubcommand, 'plan');
+});
+
+test('parseArgs: river evolve -- <nonexistent> matches the eager branch (#1766)', () => {
+  // `river evolve agregate` は exit 1（未知サブコマンド）。`--` を挟んだだけで
+  // exit 0 の aggregate になるのが blocker 1 の打鍵ミス版だった。
+  const eager = parseArgs(['evolve', 'agregate']);
+  assert.equal(eager.evolveSubcommand, 'agregate', 'eager 分岐はハンドラへ委譲して exit 1');
+  const terminated = parseArgs(['evolve', '--', 'agregate']);
+  assert.equal(terminated.usageError, true);
+  assert.equal(terminated.targetConsumed, false);
+});
