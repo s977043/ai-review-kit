@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.72.1](https://github.com/s977043/river-review/compare/v1.72.0...v1.72.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* **cli:** v1.72.0 の回帰 3 件（パス後置の拒否・値検証欠落・doc の過大表明）を修正する ([#1753](https://github.com/s977043/river-review/issues/1753)) ([aaaa6a2](https://github.com/s977043/river-review/commit/aaaa6a254c1327edd59b828ba566e2334ba02bbb))
+
 ## [1.72.0](https://github.com/s977043/river-review/compare/v1.71.1...v1.72.0) (2026-08-04)
 
 
