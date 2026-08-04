@@ -20,31 +20,50 @@ gh pr checks $ARGUMENTS --json name,bucket --jq '.[] | select(.bucket != "skippi
 - `pending` が残る場合はマージせず、完了まで待ってから再実行する
 - `fail` がある場合はマージ不可。pre-existing の main 失敗でも本 PR を直接マージせず、先に main を green に戻す（governance.md § 1 参照）
 
-### Step 2. レビュアー line comments の全件列挙と disposition 確認
+### Step 2. レビュアーコメントの全件列挙と disposition 確認
+
+**2 つのエンドポイントを両方実行する。** `pulls/<N>/comments` は line comments（差分の行に紐づくレビューコメント）しか返さず、PR 本体に投稿された通常コメント（issue comment）は `issues/<N>/comments` からしか取得できない。
 
 ```bash
 gh api --paginate "repos/:owner/:repo/pulls/$ARGUMENTS/comments?per_page=100" \
   --jq '.[] | {id, in_reply_to_id, user: .user.login, path, line, commit: .commit_id, body}'
 ```
 
-- `--paginate` は必須である（デフォルトは 1 ページ 30 件で打ち切られ、多コメント PR で見落としが発生する）
+```bash
+gh api --paginate "repos/:owner/:repo/issues/$ARGUMENTS/comments?per_page=100" \
+  --jq '.[] | {id, user: .user.login, created_at, body}'
+```
+
+- `--paginate` は両方で必須である（デフォルトは 1 ページ 30 件で打ち切られ、多コメント PR で見落としが発生する）
 - `per_page=100` は URL クエリに直接埋め込む（`-F per_page=100` は verb が POST になり HTTP 422 が返る）
+- `--jq` に `.user.login` を含めるのは必須である。issue comments には `gemini-code-assist[bot]` / `vercel[bot]` / `github-actions[bot]` の定型コメントが混ざるため、投稿者で bot の定型と人間レビュアーの指摘を切り分ける
 - 列挙した各コメントについて disposition を 1 つずつ確定する:
   1. 追従コミットで適用済み
-  2. 不適用（同スレッドに reply で理由を明記済み、または bot 自身が resolved 宣言済み）
+  2. 不適用（reply で理由を明記済み、または bot 自身が resolved 宣言済み）
   3. follow-up Issue で追跡（Issue 番号を reply に明記）
 - disposition 未確定のコメントが 1 件でも残る場合はマージ中止。詳細は governance.md § 「レビュアーコメントの扱い」を参照
 
-### Step 3. review state の確認
+### Step 3. マージ阻止ラベルの確認
+
+```bash
+gh pr view $ARGUMENTS --json labels --jq '[.labels[].name]'
+```
+
+- `blocked` など、マージ阻止を意図したラベルが 1 つでも付いていればマージ中止である
+- レビュアーと PR オーサーが同一アカウントの場合、GitHub の formal review（Request changes）を使えない。この体制ではラベルと通常コメントが唯一のマージ阻止手段であり、ラベルは Request changes と同等の重みを持つ
+- 阻止ラベルを外すのは指摘した側である。マージする側が対応完了を自己判断して外してはならない
+
+### Step 4. review state の確認
 
 ```bash
 gh pr view $ARGUMENTS --json reviews,reviewDecision --jq '{reviewDecision, reviews: [.reviews[] | {author: .author.login, state}]}'
 ```
 
 - `gemini-code-assist[bot]` / `Copilot` は非同期で review を投稿するため、PR 作成直後は review 未着の可能性がある。着弾を待ってから Step 2 を再実行する
-- review state はレビュー単位のサマリであり、これ単体でマージ可否を判断してはならない（`reviewDecision` が空でも line comments が存在し得る）
+- review state はレビュー単位のサマリであり、これ単体でマージ可否を判断してはならない（`reviewDecision` が空でもコメントが存在し得る）
+- レビュアーと PR オーサーが同一アカウントの場合、`reviewDecision` は常に空になる。Step 2 と Step 3 の結果で判断する
 
-### Step 4. dist freshness の確認（該当 PR のみ）
+### Step 5. dist freshness の確認（該当 PR のみ）
 
 ```bash
 gh pr diff $ARGUMENTS --name-only | grep '^runners/github-action/src/' || echo "not applicable"
@@ -54,14 +73,14 @@ gh pr diff $ARGUMENTS --name-only | grep '^runners/github-action/src/' || echo "
 - 該当する場合、`.nvmrc` の Node バージョンで `npm run build:action` 済みであることを確認する。Step 1 で `Action dist freshness` チェックが green ならビルド済みとみなしてスキップ可
 - 失敗時のトラブルシュートは `docs/development/dist-check-rebuild-guide.md` を参照
 
-### Step 5. 複数 PR 並行時の追加確認
+### Step 6. 複数 PR 並行時の追加確認
 
 複数 PR を連続マージする作業の一部としてこのコマンドを実行している場合:
 
 - `/preflight <PR numbers>` で対象 PR が obsolete / 並行作業中でないことを先に検証する
 - `/plan-merge-order <PR numbers>` でマージ順序を事前計画する（本 PR がその順序の先頭であることを確認する）
 
-### Step 6. strict mode の注意
+### Step 7. strict mode の注意
 
 branch protection が `strict: true` の場合（このリポジトリの main は該当）、PR が最新 main よりも遅れているとマージできない。
 
@@ -76,9 +95,9 @@ gh api "repos/:owner/:repo/pulls/$ARGUMENTS" --jq '{mergeable_state}'
 
 ### A. MERGE_OK
 
-条件: Step 1〜4 が全て pass（Step 4 は該当時のみ）、Step 5〜6 の該当事項なし。
+条件: Step 1〜5 が全て pass（Step 5 は該当時のみ）、Step 6〜7 の該当事項なし。
 
-対応: 各 Step の確認結果（CI チェック数 / コメント件数と disposition / review state）を添えて報告し、`gh pr merge` に進んでよい。
+対応: 各 Step の確認結果（CI チェック数 / 2 エンドポイントのコメント件数と disposition / ラベル一覧 / review state）を添えて報告し、`gh pr merge` に進んでよい。
 
 ### B. BLOCKED
 
@@ -90,10 +109,12 @@ gh api "repos/:owner/:repo/pulls/$ARGUMENTS" --jq '{mergeable_state}'
 
 - Step を省略したまま MERGE_OK と判定してはならない
 - `--paginate` なしの列挙結果で「コメントなし」と判定してはならない
-- review state（`reviewDecision`）のみで line comments の確認を省略してはならない
+- `pulls/<N>/comments` だけ、または `issues/<N>/comments` だけの列挙結果で「指摘なし」と判定してはならない
+- review state（`reviewDecision`）のみでコメントの確認を省略してはならない
 - disposition 未確定のコメントを残したまま `gh pr merge` に進んではならない
+- 阻止ラベルが付いたまま `gh pr merge` に進んではならない。マージする側がラベルを外して進めることも禁止である
 - 本コマンドの手順と governance.md が食い違う場合、governance.md を正としてこちらを修正する
 
 ## なぜこのスキルが必要か
 
-マージ前チェックリスト（CI green / line comments の全件 disposition / preflight / dist Node 整合）は `docs/governance.md` に SSoT として整備されたが、完全手動運用のため実行漏れが起きやすい。特に line comments は CI を失敗させないため見落とされ、`--paginate` 忘れによる部分列挙も観測されている。`/preflight` / `/verify-agent-report` と同様に、**実行可能な決定論チェックリストとして 1 コマンド化**することで、マージのたびに確実に全項目を通す。
+マージ前チェックリスト（CI green / コメントの全件 disposition / 阻止ラベル / preflight / dist Node 整合）は `docs/governance.md` に SSoT として整備されたが、完全手動運用のため実行漏れが起きやすい。レビュアーコメントは CI を失敗させないため見落とされ、`--paginate` 忘れによる部分列挙も観測されている。2026-08-04 には PR #1746 で `pulls/<N>/comments` のみを列挙して 0 件だったため「指摘なし」と判定し、`issues/<N>/comments` にあった指摘 3 件と `blocked` ラベルを見落としてマージ、v1.72.0 で回帰をリリースした。`/preflight` / `/verify-agent-report` と同様に、**実行可能な決定論チェックリストとして 1 コマンド化**することで、マージのたびに確実に全項目を通す。
