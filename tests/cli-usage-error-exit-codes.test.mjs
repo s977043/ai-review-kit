@@ -40,7 +40,7 @@
 //   - B1: 列挙値オプションの大小無視を壊さないこと（VALID_CASES へ）
 //
 // ---------------------------------------------------------------------------
-// #1755 / #1759 A1 で追加した 2 ケース（85 -> 87）と C4 -> C3 の 1 件
+// #1755 / #1759 A1 で追加した 17 ケース（85 -> 102）と C4 -> C3 の 1 件
 // ---------------------------------------------------------------------------
 // #1755: `river review --gate exec` のようにサブコマンドをフラグの後ろへ置くと、
 // そのトークンがパスとして飲まれて「サブコマンド無し」となり exit 3 = ESCALATE を
@@ -48,12 +48,37 @@
 // usage error（サブコマンド欠落 / 未知サブコマンド）は parse 層で exit 1 にした。
 // これに伴い `river review bogus` が C4 -> C3 へ移り、C4 は
 // `review plan --plan-only --output html`（ハンドラ層の設定エラー）1 件になる。
-// 併せて、フラグ後置形が正しく解決されることと正しい順序が壊れていないことを
-// VALID_CASES へ pin した（#1746 W1 と同じ「表に無い形は検出できない」ため）。
 //
 // #1759 A1: POSIX の `--` 終端が `Error: unknown option --.` で exit 1 になって
-// いた（v1.71.1 では exit 0）。`--` 以降を positional path として読むようにし、
-// パスを取る 5 面すべての `-- <path>` 形を VALID_CASES へ pin した。
+// いた（v1.71.1 では exit 0）。`--` 以降を positional path として読むようにした。
+//
+// **末尾の裸 `--`（後ろにトークンが無い形）は、全コマンド面で no-op として受理
+// される。** パスを取らない面（`runs` / `promote` / `eval`）でも、書き込みを伴う面
+// （`feedback add` / `suppression add`）でも同じで、BEFORE はいずれも
+// `Error: unknown option --.` の exit 1 だった。したがって
+// `feedback add --type X --skill Y --` のように、**BEFORE では usage error だった
+// 形が AFTER では書き込みまで完了する**組み合わせが多数生じる。実測では、末尾の
+// `--` を外した同一 argv と書き込み内容は同一であり、`--` が書き込みの中身を変える
+// ことはない。書き込み系の代表 2 形を VALID_CASES に、`--` の後ろへオプション風
+// トークンや余剰トークンを置いた形（書き込み前に落ちるべき形）を CASES に pin した。
+//
+// なお「任意の argv の末尾に `--` を足した形」は組み合わせ爆発するため、表には
+// **コマンド面（サブコマンド）ごとに代表 1 形以上**を入れる方針で pin してある。
+// 個別の argv ではなく上記のルール（末尾の裸 `--` = no-op）が不変条件である。
+//
+// ★ その帰結として、下の `no usage-error case leaves a write side effect` は
+//   **この領域を構造的に検出できない**。あの不変条件は CASES（= usage error）の
+//   掃引だけを対象にしており、usage error でなくなった形は定義上その掃引から
+//   外れるためである。`--` を含む形の書き込み有無は、canary ではなく上記の
+//   VALID_CASES の pin と PR #1761 の実測表で担保している。
+//
+// pin の範囲は「BEFORE(v1.72.2) と AFTER で exit code が変わる形の全量」で決めた。
+// 109 形を両実装で機械掃引して差分を取り、変化した 37 形（サブコマンド語と同名の
+// ディレクトリが cwd にある場合は 39 形）すべてを、exit code に応じて
+// CASES / VALID_CASES / 対照群のいずれかへ収めている。掃引スクリプトの入力は
+// 本ファイルの内容と同じ形の一覧で、変化の内訳は PR #1761 の本文に表として残した。
+// #1746 W1 も #1753 B1 も「その書き方が表に無かった」ことが検出漏れの原因なので、
+// 部分的な pin では同じ入口を開けたままにすることになる。
 //
 // canary の役割は「正しさの主張」ではなく「変更の全量可視化」にある。
 // 今後の変更でも *この表の差分 = 挙動変更の全量* という不変条件を保つこと。
@@ -93,7 +118,7 @@
 //   契約ではなく環境の欠落を pin してしまうため（実測で 5 セルが動いた）。
 //   この 2 つを用意した状態が、実 repo で観測される契約と一致する。
 //
-// 実装コスト: 92 回（CASES 87 + 対照群 5）の CLI 起動を before フックで
+// 実装コスト: 110 回（CASES 102 + 対照群 8）の CLI 起動を before フックで
 // 1 回だけ掃引し、各 test は
 // その結果を参照するだけにしてある（in-process 実行で全掃引 ~2.5 秒）。
 
@@ -120,13 +145,13 @@ const CONTRACTS = {
  * 契約ごとの件数。表を編集したら必ずここも更新する
  * （= 挙動変更の総量をレビューで一目で見えるようにするための第 2 の錠）。
  */
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 86, C4: 1 };
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 101, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
 
 /**
- * 87 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
+ * 102 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
  * suppression の穴 2 件 + #1746 回帰 hotfix で pin した値検証の穴 5 件
  * + #1755 で pin した review のサブコマンド欠落・未知 2 件）。
  * kind は #1709 のエラー種別 5 分類:
@@ -260,6 +285,9 @@ const CASES = [
   },
 
   // ---- river review（サブコマンド欠落・フラグ後置の未知サブコマンド）----
+  // 以下 6 行はいずれも BEFORE（v1.72.2）が exit 3 だった形。#1755 の趣旨は
+  // 「引数の打鍵ミスを ESCALATE(3) と読ませない」ことなので、6 形すべてを
+  // 明示的に pin する。
   {
     // #1755 の残余ケース。フラグの後ろに置いたトークンが既知サブコマンドでない
     // ときは、パスとして飲み込んだうえで「サブコマンド無し」として exit 3 を
@@ -274,6 +302,116 @@ const CASES = [
     surface: 'review',
     kind: 'unknown-subcommand',
     argv: ['review', '--plan-only'],
+    contract: 'C3',
+  },
+  { surface: 'review', kind: 'unknown-subcommand', argv: ['review'], contract: 'C3' },
+  {
+    // 旧実装は `.` をサブコマンドとして記録して「未知サブコマンド」と報告していた。
+    surface: 'review',
+    kind: 'unknown-subcommand',
+    argv: ['review', '.'],
+    contract: 'C3',
+  },
+  {
+    surface: 'review',
+    kind: 'unknown-subcommand',
+    argv: ['review', '.', '--plan-only'],
+    contract: 'C3',
+  },
+  {
+    surface: 'review',
+    kind: 'unknown-subcommand',
+    argv: ['review', '--plan-only', '.'],
+    contract: 'C3',
+  },
+
+  // ---- POSIX `--` 終端（#1759 A1 で導入した経路の usage error 側）----
+  // `--` 以降は「パス」としか読まないため、パスとして成立しない入力はここで
+  // 全部 exit 1 になる。正常系（exit 0）側は下の VALID_CASES で pin する。
+  {
+    // `--` の後ろのトークンは存在するパスでなければならない。この検証が無いと
+    // `evolve aggregate -- nosuchdir` が「データ 0 件の正常な集計」として
+    // exit 0 になり、打鍵ミスと区別できなかった（#1746 W2 と同型の穴）。
+    surface: 'run',
+    kind: 'invalid-value',
+    argv: ['run', '--', NONEXISTENT_PATH],
+    contract: 'C3',
+  },
+  {
+    surface: 'evolve',
+    kind: 'invalid-value',
+    argv: ['evolve', 'aggregate', '--', NONEXISTENT_PATH],
+    contract: 'C3',
+  },
+  {
+    // `--` の後ろはオプションとして解釈しない。`--dry-run` はパス名として読まれ、
+    // そのパスが無いので exit 1 になる（フラグとしては有効にならない）。
+    // フラグ化していないことの直接証明は下の `--` 意味論テストが担う。
+    surface: 'run',
+    kind: 'invalid-value',
+    argv: ['run', '--', '--dry-run'],
+    contract: 'C3',
+  },
+  {
+    // `--` の後ろでも「2 つ目以降の非オプション」は余剰 positional のまま。
+    surface: 'run',
+    kind: 'surplus-positional',
+    argv: ['run', '--', '.', 'extra'],
+    contract: 'C3',
+  },
+  {
+    // パスを取らない面（`runs`）では `-- <path>` 自体が余剰 positional。
+    surface: 'runs',
+    kind: 'surplus-positional',
+    argv: ['runs', '--', '.'],
+    contract: 'C3',
+  },
+  {
+    // `--` の後ろのサブコマンド語はサブコマンドにならない。この一時 repo には
+    // `./list` が無いのでパスとしても成立せず exit 1。cwd に同名ディレクトリが
+    // ある場合はパスとして解決され exit 0 になる（POSIX 準拠の帰結）。
+    surface: 'skills',
+    kind: 'invalid-value',
+    argv: ['skills', '--', 'list'],
+    contract: 'C3',
+  },
+  {
+    // 同上。`./aggregate` が無いので exit 1。
+    surface: 'evolve',
+    kind: 'invalid-value',
+    argv: ['evolve', '--', 'aggregate'],
+    contract: 'C3',
+  },
+  {
+    // `--` で明示したパスは「サブコマンドではない」と叱らない。`.` は実在する
+    // のでパスとして受理され、残る欠落（サブコマンド無し）だけを報告する。
+    surface: 'review',
+    kind: 'unknown-subcommand',
+    argv: ['review', '--', '.'],
+    contract: 'C3',
+  },
+  {
+    // 書き込み系の面で塞ぎ続けるべき失敗 (1): `--` の後ろのオプション風トークンを
+    // オプションとして通してはならない。`feedback` はパスを取らないので、
+    // `--type` は余剰 positional として弾かれ、エントリは書かれない。
+    surface: 'feedback',
+    kind: 'surplus-positional',
+    argv: ['feedback', 'add', '--', '--type', 'false_positive', '--skill', 's'],
+    contract: 'C3',
+  },
+  {
+    // 同 (2): `--` の後ろの余剰トークンも従来どおり弾く（書き込み前に落ちる）。
+    surface: 'feedback',
+    kind: 'surplus-positional',
+    argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 's', '--', 'extra'],
+    contract: 'C3',
+  },
+  {
+    // 同上。`./plan` が無いので「パスが存在しない」として落ちる。`plan` を
+    // 「サブコマンドではない」と報告してはならない（語彙に含まれるため矛盾する）。
+    surface: 'review',
+    kind: 'invalid-value',
+    argv: ['review', '--', 'plan'],
     contract: 'C3',
   },
 
@@ -756,13 +894,39 @@ const CONTROL_CASES = [
     contract: 'C1',
     invariant: true,
   },
+  // `--` を通したことで初めて到達可能になった「未実装」経路（#1759 A1）。
+  // usage error ではないので CASES ではなく対照群に置く。BEFORE はいずれも
+  // `Error: unknown option --.` の exit 1 で、`--` が通るようになった結果、
+  // その面が元から持っていた exit 3（Phase 3 未実装）が表に出た。
+  // **本 PR で exit 3 が増えるのはこの 3 形だけ**である。
+  {
+    surface: '(control)',
+    kind: 'not-implemented',
+    argv: ['review', 'plan', '--'],
+    contract: 'C4',
+    invariant: true,
+  },
+  {
+    surface: '(control)',
+    kind: 'not-implemented',
+    argv: ['review', 'plan', '--', '.'],
+    contract: 'C4',
+    invariant: true,
+  },
+  {
+    surface: '(control)',
+    kind: 'not-implemented',
+    argv: ['review', 'verify', '--'],
+    contract: 'C4',
+    invariant: true,
+  },
 ];
 
 /**
  * 対照群の契約ごとの件数。CASES の EXPECTED_CONTRACT_COUNTS と同じ役割の
  * 「第 2 の錠」で、対照群を足し引きしたら必ずここも更新する。
  */
-const EXPECTED_CONTROL_CONTRACT_COUNTS = { C1: 2, C2: 2, C3: 1, C4: 0 };
+const EXPECTED_CONTROL_CONTRACT_COUNTS = { C1: 2, C2: 2, C3: 1, C4: 3 };
 
 // argv 要素には空白のみの値（`--run-id "   "`）が含まれるため、区切り文字連結だと
 // 別ケースと衝突しうる。JSON 表現なら文字列配列に対して単射なので一意性が保たれる。
@@ -835,10 +999,10 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 87 usage-error cases and every row is unique', () => {
+  test('the matrix pins 102 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      87,
+      102,
       '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件'
     );
     const keys = new Set(CASES.map(caseKey));
@@ -861,7 +1025,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     }
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:86 / C4:1 (0 of 87 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:101 / C4:1 (0 of 102 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -878,7 +1042,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   });
 
   // ---------------------------------------------------------------------------
-  // 87 ケースの本体
+  // 102 ケースの本体
   // ---------------------------------------------------------------------------
 
   for (const testCase of CASES) {
@@ -917,8 +1081,14 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // 副作用ゼロの不変条件（#1709 Slice 3）
   // ---------------------------------------------------------------------------
 
+  // ★ 適用範囲の限界（#1759 A1 で生じた）: この不変条件は CASES の掃引だけを
+  //   見ているため、「usage error でなくなった形」は定義上その外に出る。末尾の
+  //   裸 `--` は全面で no-op として受理されるようになったので、
+  //   `feedback add --type X --skill Y --` のように BEFORE は exit 1 で
+  //   書き込みも起きなかった形が、AFTER では書き込みまで完了する。この領域は
+  //   本テストでは検出できない（前文の該当節を参照）。
   test('no usage-error case leaves a write side effect (.river must not exist)', () => {
-    // 表の 87 ケースはすべて usage error であり、Slice 3 の原則は「データ
+    // 表の 102 ケースはすべて usage error であり、Slice 3 の原則は「データ
     // 書き込みは全入力検証後に行う」。suppression の穴 2 件は Slice 3 まで、
     // #1746 W2 の `--severity BOGUS` / `--expires notadate` は v1.72.0 まで、
     // exit 0 のまま .river/memory/index.json へエントリを書き込んでいた。
@@ -931,7 +1101,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     );
   });
 
-  test('the control-case distribution is C1:2 / C2:2 / C3:1 / C4:0', () => {
+  test('the control-case distribution is C1:2 / C2:2 / C3:1 / C4:3', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CONTROL_CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -1207,6 +1377,32 @@ const VALID_CASES = [
   // 逆方向の回帰（正しい順序が壊れる）を検出できないため。
   { argv: ['review', '--gate', 'exec'], command: 'review', expect: { reviewSubcommand: 'exec' } },
   {
+    argv: ['review', '.', 'route'],
+    command: 'review',
+    target: '.',
+    expect: { reviewSubcommand: 'route' },
+  },
+  {
+    argv: ['review', '--plan-only', 'plan', '.'],
+    command: 'review',
+    target: '.',
+    expect: { reviewSubcommand: 'plan' },
+  },
+  {
+    argv: ['review', '--plan-only', '.', 'plan'],
+    command: 'review',
+    target: '.',
+    expect: { reviewSubcommand: 'plan' },
+  },
+  {
+    // サブコマンド解決後の 2 つ目の非オプションはパスになる（`review plan
+    // --plan-only extra` が v1.72.2 でも exit 0 だったのと同じ扱い）。
+    argv: ['review', '--plan-only', 'plan', 'extra'],
+    command: 'review',
+    target: 'extra',
+    expect: { reviewSubcommand: 'plan' },
+  },
+  {
     argv: ['review', '--format', 'json', 'route'],
     command: 'review',
     expect: { reviewSubcommand: 'route' },
@@ -1247,20 +1443,64 @@ const VALID_CASES = [
   { argv: ['doctor', '--', '.'], command: 'doctor', target: '.' },
   { argv: ['skills', '--', '.'], command: 'skills', target: '.' },
   { argv: ['evolve', 'aggregate', '--', '.'], command: 'evolve', target: '.' },
+  { argv: ['evolve', '--', '.'], command: 'evolve', target: '.' },
   {
     argv: ['review', 'plan', '--plan-only', '--', '.'],
     command: 'review',
     target: '.',
     expect: { reviewSubcommand: 'plan' },
   },
+  // 裸の `--`（後ろにトークンが無い形）は POSIX どおり無害な no-op。BEFORE は
+  // どの面でも `Error: unknown option --.` で exit 1 だった。パスを取らない面
+  // （`runs` / `promote` / `eval`）とコマンド未指定でも同じく通る。
+  { argv: ['run', '--'], command: 'run', target: '.' },
+  { argv: ['run', '.', '--'], command: 'run', target: '.' },
+  { argv: ['doctor', '--'], command: 'doctor', target: '.' },
+  { argv: ['doctor', '.', '--'], command: 'doctor', target: '.' },
+  { argv: ['skills', '--'], command: 'skills', target: '.' },
+  { argv: ['skills', '.', '--'], command: 'skills', target: '.' },
+  { argv: ['skills', 'list', '--'], command: 'skills' },
+  { argv: ['skills', 'import', '--from', './x', '--'], command: 'skills' },
+  { argv: ['skills', 'export', '--to', './y', '--'], command: 'skills' },
+  { argv: ['skills', 'resolve', '--path', 'a.js', '--'], command: 'skills' },
+  { argv: ['review', 'route', '--'], command: 'review', expect: { reviewSubcommand: 'route' } },
   {
-    // `--` の後ろのオプション風トークンはオプションとして解釈しない。
-    // `--dry-run` はパスになり、`dryRun` は false のままになる。
-    argv: ['run', '--', '--dry-run'],
-    command: 'run',
-    target: '--dry-run',
-    expect: { dryRun: false },
+    argv: ['review', 'exec', '--dry-run', '--'],
+    command: 'review',
+    expect: { reviewSubcommand: 'exec' },
   },
+  { argv: ['runs', '--'], command: 'runs' },
+  { argv: ['runs', 'list', '--'], command: 'runs' },
+  { argv: ['evolve', '--'], command: 'evolve' },
+  { argv: ['evolve', 'aggregate', '--'], command: 'evolve' },
+  { argv: ['promote', 'list', '--'], command: 'promote' },
+  { argv: ['eval', '--'], command: 'eval' },
+  // 書き込み系の面も同じく受理する。BEFORE は exit 1 で書き込みも起きなかったので、
+  // この 2 形は「usage error だったものが書き込みを伴う正常系になる」変化を持つ。
+  // 実測では、末尾の `--` を外した同一 argv と書き込み内容は同じ（`.river` 配下
+  // 1 ファイル）で、`--` が書き込み内容を変えることはない。
+  {
+    argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 's', '--'],
+    command: 'feedback',
+    expect: { feedbackType: 'false_positive' },
+  },
+  {
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      'a'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--',
+    ],
+    command: 'suppression',
+    expect: { suppressionRationale: 'r' },
+  },
+  // コマンド未指定 + 裸の `--` は help 表示（`river` 単体と同じ exit 0）。
+  { argv: ['--'], command: null },
 
   { argv: ['run', '--dry-run', '.'], command: 'run', target: '.' },
   {
@@ -1293,6 +1533,37 @@ describe('#1709 Slice 3: legitimate flag combinations are not rejected by strict
       assert.deepEqual(parsed.evolveExtraArgs, []);
     });
   }
+});
+
+// -----------------------------------------------------------------------------
+// POSIX `--` 終端の意味論（#1759 A1）
+// -----------------------------------------------------------------------------
+//
+// VALID_CASES / CASES は exit code と usageError しか見ないため、「`--` の後ろの
+// `--dry-run` がフラグとして有効になっていない」ことの直接証明にはならない
+// （どちらの実装でも exit 1 になりうる）。ここで parse 結果のフィールドまで見る。
+describe('#1759 A1: `--` ends option parsing', () => {
+  test('a flag-looking token after `--` is not activated as a flag', () => {
+    const parsed = parseArgs(['run', '--', '--dry-run']);
+    assert.equal(parsed.dryRun, false, '`--` の後ろの --dry-run がフラグとして有効になった');
+    // パスとして読んだ結果、実在しないので usage error になる（CASES 側で pin 済み）。
+    assert.equal(parsed.usageError, true);
+  });
+
+  test('a bare trailing `--` is a no-op and does not consume the path', () => {
+    const parsed = parseArgs(['run', '.', '--']);
+    assert.equal(parsed.usageError, false);
+    assert.equal(parsed.target, '.');
+    assert.equal(parsed.dryRun, false);
+  });
+
+  test('`--` does not turn a subcommand word into a subcommand', () => {
+    // `./plan` はこのリポジトリに存在しないため usage error になり、
+    // reviewSubcommand は null のまま（パスとしてしか読まない証拠）。
+    const parsed = parseArgs(['review', '--', 'plan']);
+    assert.equal(parsed.usageError, true);
+    assert.equal(parsed.reviewSubcommand, null);
+  });
 });
 
 // -----------------------------------------------------------------------------
