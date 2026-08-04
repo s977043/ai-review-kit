@@ -22,7 +22,7 @@
 // エントリ書き込みまで発生）を表へ追加して pin した（78 -> 80 ケース）。
 //
 // ---------------------------------------------------------------------------
-// v1.72.0（#1746）の回帰 hotfix で追加した 3 ケース（80 -> 83）
+// v1.72.0（#1746）の回帰 hotfix で追加した 5 ケース（80 -> 85）
 // ---------------------------------------------------------------------------
 // Slice 3 の敵対的レビュー W2 が挙げた「値を取るのに値検証が無い」オプション
 // 3 件（`--severity` / `--expires` / `--phase`）を invalid-value として pin した。
@@ -33,6 +33,11 @@
 // 併せて W1（`<コマンド> <フラグ> <パス>` が exit 1 になる後方互換の回帰）を
 // VALID_CASES 側へ pin した。Slice 3 時点の VALID_CASES 28 行はすべてパス先行
 // だったため、この回帰を 1 行も検出できなかった。
+//
+// その hotfix 自身への敵対的レビュー（#1753）で 2 件を追加した:
+//   - M2: `--expires` の検証が schema (`format: date-time`) より緩く、
+//     `2027` / `March 5, 2027` を受理していた（invalid-value 2 件を CASES へ）
+//   - B1: 列挙値オプションの大小無視を壊さないこと（VALID_CASES へ）
 //
 // canary の役割は「正しさの主張」ではなく「変更の全量可視化」にある。
 // 今後の変更でも *この表の差分 = 挙動変更の全量* という不変条件を保つこと。
@@ -72,7 +77,7 @@
 //   契約ではなく環境の欠落を pin してしまうため（実測で 5 セルが動いた）。
 //   この 2 つを用意した状態が、実 repo で観測される契約と一致する。
 //
-// 実装コスト: 88 回（CASES 83 + 対照群 5）の CLI 起動を before フックで
+// 実装コスト: 90 回（CASES 85 + 対照群 5）の CLI 起動を before フックで
 // 1 回だけ掃引し、各 test は
 // その結果を参照するだけにしてある（in-process 実行で全掃引 ~2.5 秒）。
 
@@ -99,14 +104,14 @@ const CONTRACTS = {
  * 契約ごとの件数。表を編集したら必ずここも更新する
  * （= 挙動変更の総量をレビューで一目で見えるようにするための第 2 の錠）。
  */
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 81, C4: 2 };
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 83, C4: 2 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
 
 /**
- * 83 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
- * suppression の穴 2 件 + #1746 回帰 hotfix で pin した値検証の穴 3 件）。
+ * 85 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
+ * suppression の穴 2 件 + #1746 回帰 hotfix で pin した値検証の穴 5 件）。
  * kind は #1709 のエラー種別 5 分類:
  *   value-missing / invalid-value / unknown-option / unknown-subcommand / surplus-positional
  */
@@ -579,6 +584,43 @@ const CASES = [
     contract: 'C3',
   },
   {
+    // #1753 の敵対的レビュー M2: `Date.parse` ベースの検証は緩すぎて
+    // `2027` / `March 5, 2027` を受理し、schema (`format: date-time`) が拒否する
+    // 値を書き込んでいた。RFC 3339 の date / date-time だけを受理する。
+    surface: 'suppression',
+    kind: 'invalid-value',
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      '0123456789abcdef',
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--expires',
+      '2027',
+    ],
+    contract: 'C3',
+  },
+  {
+    surface: 'suppression',
+    kind: 'invalid-value',
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      '0123456789abcdef',
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--expires',
+      'March 5, 2027',
+    ],
+    contract: 'C3',
+  },
+  {
     surface: 'suppression',
     kind: 'unknown-option',
     argv: ['suppression', 'add', '--nope'],
@@ -760,11 +802,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 83 usage-error cases and every row is unique', () => {
+  test('the matrix pins 85 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      83,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件'
+      85,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -786,7 +828,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     }
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:81 / C4:2 (0 of 83 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:83 / C4:2 (0 of 85 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -803,7 +845,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   });
 
   // ---------------------------------------------------------------------------
-  // 83 ケースの本体
+  // 85 ケースの本体
   // ---------------------------------------------------------------------------
 
   for (const testCase of CASES) {
@@ -843,7 +885,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // ---------------------------------------------------------------------------
 
   test('no usage-error case leaves a write side effect (.river must not exist)', () => {
-    // 表の 83 ケースはすべて usage error であり、Slice 3 の原則は「データ
+    // 表の 85 ケースはすべて usage error であり、Slice 3 の原則は「データ
     // 書き込みは全入力検証後に行う」。suppression の穴 2 件は Slice 3 まで、
     // #1746 W2 の `--severity BOGUS` / `--expires notadate` は v1.72.0 まで、
     // exit 0 のまま .river/memory/index.json へエントリを書き込んでいた。
@@ -1078,6 +1120,51 @@ const VALID_CASES = [
   // 1 行も検出できなかった。パスを取るコマンド面すべてについてフラグ先行形を
   // 固定する。`target` も併せて見るのは、「usage error にならなかった」だけでは
   // パスが正しく target になったことの証拠にならないため。
+  // ---------------------------------------------------------------------------
+  // 列挙値オプションの大小無視（#1753 の敵対的レビュー B1）
+  // ---------------------------------------------------------------------------
+  // `--phase Upstream` は v1.72.0 まで exit 0 で、`normalizePhase`
+  // (src/lib/local-runner.mjs) が小文字化して upstream として正しく機能していた。
+  // #1753 の初版が大小区別の検証を入れて誤拒否したのが B1 で、canary にも既存
+  // テストにも大文字入力のケースが無かったことが見逃した原因。同じ語彙を扱う
+  // `--fail-on` / `--warn-on` が大小無視である以上、`--severity` も揃える。
+  { argv: ['run', '.', '--phase', 'Upstream'], command: 'run', expect: { phase: 'upstream' } },
+  { argv: ['run', '.', '--phase', 'UPSTREAM'], command: 'run', expect: { phase: 'upstream' } },
+  { argv: ['run', '.', '--fail-on', 'CRITICAL'], command: 'run', expect: { failOn: 'critical' } },
+  {
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      'a'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--severity',
+      'Critical',
+    ],
+    command: 'suppression',
+    expect: { suppressionSeverity: 'critical' },
+  },
+  {
+    // RFC 3339 date-time はそのまま（ミリ秒付き ISO へ正規化される）。
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      'a'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--expires',
+      '2027-01-01T00:00:00Z',
+    ],
+    command: 'suppression',
+    expect: { suppressionExpiresAt: '2027-01-01T00:00:00.000Z' },
+  },
+
   { argv: ['run', '--dry-run', '.'], command: 'run', target: '.' },
   {
     // 値を取るオプションの値（`main`）を positional と誤認しないこと。
@@ -1099,6 +1186,9 @@ describe('#1709 Slice 3: legitimate flag combinations are not rejected by strict
       assert.equal(parsed.command, validCase.command);
       if (validCase.target !== undefined) {
         assert.equal(parsed.target, validCase.target, 'パスが target として解釈されていない');
+      }
+      for (const [field, want] of Object.entries(validCase.expect ?? {})) {
+        assert.equal(parsed[field], want, `${field} の正規化結果が期待と違う`);
       }
       // promote / evolve はハンドラ委譲フィールド経由で拒否するため併せて確認。
       assert.equal(parsed.promoteUnknownOption, null);

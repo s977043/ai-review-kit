@@ -10,6 +10,8 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { parseArgs, isLlmlessEmptyReview } from '../src/cli.mjs';
+import { PHASES } from '../src/lib/planner-utils.mjs';
+import { normalizePhase } from '../src/lib/local-runner.mjs';
 
 test('isLlmlessEmptyReview: true when LLM key missing and no findings (#1067)', () => {
   assert.equal(
@@ -832,4 +834,33 @@ test('parseArgs: valid feedback add options are unchanged', () => {
   assert.equal(parsed.feedbackFingerprint, 'a1b2c3d4e5f60718');
   assert.equal(parsed.feedbackEvidence, 'test fixture already covers this path');
   assert.equal(parsed.feedbackPrNumber, 1717);
+});
+
+// ---------------------------------------------------------------------------
+// #1753 B1: `--phase` の大小無視は normalizePhase の契約と一致していること
+// ---------------------------------------------------------------------------
+// #1746 の hotfix 初版が `--phase Upstream` を誤拒否した（v1.72.0 では exit 0）。
+// parse 層の検証を自己整合で確かめても意味がないので、実際に phase を消費する
+// production の経路（src/lib/local-runner.mjs の normalizePhase。大小無視は
+// tests/local-runner-internals.test.mjs が pin 済み）と突き合わせる。
+test('parseArgs --phase agrees with normalizePhase for every case variant', () => {
+  for (const phase of PHASES) {
+    for (const variant of [phase, phase.toUpperCase(), phase[0].toUpperCase() + phase.slice(1)]) {
+      const parsed = parseArgs(['run', '.', '--phase', variant]);
+      assert.equal(parsed.usageError, false, `--phase ${variant} を誤拒否した`);
+      assert.equal(
+        parsed.phase,
+        normalizePhase(variant),
+        `--phase ${variant} の正規化が normalizePhase と一致しない`
+      );
+    }
+  }
+});
+
+test('parseArgs --phase rejects a value normalizePhase would silently default', () => {
+  // normalizePhase は不正値を midstream に落とす。parse 層はそこを拒否する側に
+  // 立つ（黙って別 phase をレビューさせない）ので、契約が分かれるのはここだけ。
+  const parsed = parseArgs(['run', '.', '--phase', 'BOGUS']);
+  assert.equal(parsed.usageError, true);
+  assert.equal(normalizePhase('BOGUS'), 'midstream');
 });

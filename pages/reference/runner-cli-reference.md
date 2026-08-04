@@ -102,6 +102,8 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 
 usage error のときにデータ書き込み（feedback / suppression のエントリ追加など）が先行することはありません。
 
+`--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
+
 ただし値の検証は全オプションには及びません。次の 3 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
 
 - 存在しないパスを `--baseline` に渡した場合（回帰比較が黙って行われない）
@@ -110,7 +112,16 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 オプションの値は**スペース区切り**で渡します。`--output=json` のような `=` 連結形式は受理せず、未知オプションとして exit 1 になります（互換のため `--run-id=<id>` だけは例外的に受理します）。なお `--artifact plan=./plan.md` のように、**値の内部**に `=` を含む形式は有効です。
 
-対象パスの位置はオプションの前後どちらでもかまいません。`river run . --dry-run` と `river run --dry-run .` は同じ意味です。ただし非オプションのトークンを 2 つ以上渡すと、2 つ目以降は余剰 positional として exit 1 になります。
+対象パスの位置をオプションの前後どちらにも書けるのは、次の面だけです。
+
+- `run` / `doctor`
+- `skills`（サブコマンドを付けない形）
+- `review`（`plan` / `exec` / `verify` / `route`）
+- `evolve aggregate`（`evolve replay` は入力を `--spec` から取るため対象外）
+
+この範囲では `river run . --dry-run` と `river run --dry-run .` が同じ意味になります。非オプションのトークンを 2 つ以上渡した場合、2 つ目以降は余剰 positional として exit 1 です。
+
+上記以外の面（`skills list` / `runs list` / `promote list` / `eval` など）は末尾のパスを受け取らず、余剰 positional として exit 1 になります。なお `runs diff <id1> <id2> [<id3>...]` や `promote approve <id>` のように、非オプションのトークンを仕様として複数受け取るサブコマンドは別扱いです。
 
 ### `river review` / `river eval`（`runners/cli`）
 
