@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.72.0](https://github.com/s977043/river-review/compare/v1.71.1...v1.72.0) (2026-08-04)
+
+
+### Features
+
+* **cli:** usage error の C1 経路を strict parse で exit 1 に統一する（[#1709](https://github.com/s977043/river-review/issues/1709) Slice 3） ([#1746](https://github.com/s977043/river-review/issues/1746)) ([2983502](https://github.com/s977043/river-review/commit/29835029863ef4cc6ff64c0fe413a344c801cd8b))
+
 ## [1.71.1](https://github.com/s977043/river-review/compare/v1.71.0...v1.71.1) (2026-08-04)
 
 
