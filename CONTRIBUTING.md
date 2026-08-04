@@ -78,8 +78,8 @@ chore: eslint を v9 にアップグレード
 - **レビュー開始の目安**: 提出から 7 日以内にメンテナーが確認します（返答がない場合はコメントで催促してください）。
 - **マージに必要な承認**: メンテナー 1 名以上の Approve が必要です。
 - **CI ゲート**: 以下の必須チェックがすべて green にならないとマージできません。
-  - Lint（`npm run lint` = Prettier フォーマットチェック / dash チェック / markdownlint / textlint）
-  - Unit tests (20.x) / Unit tests (22.x)
+  - Lint（`npm run lint` = Prettier フォーマットチェック / dash チェック / code hygiene / markdownlint / textlint）
+  - Unit tests (22.x)
   - Skill schema validation
   - Meta consistency
   - Action dist freshness
