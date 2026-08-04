@@ -46,11 +46,13 @@ gh pr checks <N> --json name,bucket --jq '.[] | select(.bucket != "skipping")'
 main ブランチには GitHub branch protection rule により以下の Required status check が設定されています（#483 で導入）。これらが `pass` でない限りマージできません。
 
 - `Lint`
-- `Unit tests (20.x)` / `Unit tests (22.x)`
+- `Unit tests (22.x)`
 - `Skill schema validation`
 - `Meta consistency`
 - `Action dist freshness`
 - `Integration (CLI)`
+
+> **この一覧の正は下記「現在の設定の確認」コマンドの出力です。** ドキュメント側は実設定に追随する必要があり、CI のテストマトリクス leg を追加・削除・改名した際は CLAUDE.md「CI matrix leg ↔ branch-protection required-check sync」ガードに従って branch protection を先に更新し、本一覧も同じ PR で揃えてください。実際に `Unit tests (20.x)` の記載が実設定から外れたまま残っていたことがあります。
 
 `strict: true` で PR が最新 main にリベース済みであることが求められ、`enforce_admins: true` のためメンテナも bypass できません。`allow_force_pushes: false` / `allow_deletions: false` により main への force push / 削除も不可です。
 
