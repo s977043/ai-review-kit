@@ -49244,15 +49244,25 @@ function supersede(indexPath, oldId, newId) {
 
 /**
  * Whether an entry's expiresAt timestamp has passed relative to `now`. Shared by
- * expireEntries and the Phase 3 promotion retire lifecycle so the expiry rule
- * (`expiresAt <= now`) is defined once.
+ * expireEntries, the Phase 3 promotion retire lifecycle and the suppression
+ * lifecycle (isSuppressionExpired) so the expiry rule (`expiresAt <= now`) is
+ * defined once.
+ *
+ * Fail-safe on a malformed timestamp: a value `Date` cannot parse counts as
+ * EXPIRED. Comparing NaN would answer `false` for every operator, which is the
+ * dangerous direction — an entry whose expiresAt is unparseable (e.g. the
+ * `--expires notadate` values that reached disk before #1746 was fixed) would
+ * otherwise stay in effect forever.
  *
  * @param {{ expiresAt?: string }} entry
  * @param {Date} now
  * @returns {boolean}
  */
 function isExpired(entry, now) {
-  return Boolean(entry?.expiresAt) && new Date(entry.expiresAt).getTime() <= now.getTime();
+  if (!entry?.expiresAt) return false;
+  const timestamp = new Date(entry.expiresAt).getTime();
+  if (Number.isNaN(timestamp)) return true;
+  return timestamp <= now.getTime();
 }
 
 /**
@@ -50605,6 +50615,8 @@ var risk_map = __nccwpck_require__(572);
 var utils = __nccwpck_require__(9746);
 // EXTERNAL MODULE: ./src/lib/planner-utils.mjs
 var planner_utils = __nccwpck_require__(1013);
+// EXTERNAL MODULE: ./src/lib/finding-factory.mjs
+var finding_factory = __nccwpck_require__(1535);
 // EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
 var review_plan_generator = __nccwpck_require__(8069);
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
@@ -66499,8 +66511,6 @@ async function resolveSelectionSkillIds(
 
 // EXTERNAL MODULE: ./src/lib/review-engine.mjs
 var review_engine = __nccwpck_require__(2022);
-// EXTERNAL MODULE: ./src/lib/finding-factory.mjs
-var finding_factory = __nccwpck_require__(1535);
 ;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
 
 
@@ -71468,6 +71478,7 @@ async function runReplay(parsed, output) {
 
 
 
+
 function printHelp() {
   console.log(`Usage: river <command> <path> [options]
 
@@ -71621,6 +71632,62 @@ function usageError(parsed) {
 }
 
 /**
+ * Severity vocabulary accepted by `suppression add --severity`.
+ *
+ * Derived from `SEVERITY_RANK` (src/lib/finding-factory.mjs), the declared
+ * single source of truth for the output-schema severity vocabulary, rather
+ * than re-listing the values here. It matches the `severity` enum of
+ * `schemas/suppression-context.schema.json`, which validates the `context`
+ * this option ends up writing.
+ */
+const SUPPRESSION_SEVERITIES = Object.keys(finding_factory/* SEVERITY_RANK */.f3);
+
+/**
+ * Commands that accept a single positional `<path>` argument.
+ *
+ * `parseArgs` consumes that path eagerly when it directly follows the command
+ * token (`river run . --dry-run`). Before this table existed, a path written
+ * AFTER a flag (`river run --dry-run .`, the POSIX-conventional order) reached
+ * the Slice 3 strict-parse catch-all and was rejected as a surplus positional
+ * (regression introduced in #1746 / v1.72.0). `takeTrailingPositional` below
+ * lets the FIRST such token become the target instead; the second one is still
+ * a surplus positional and still exits 1.
+ *
+ * @param {object} parsed
+ * @param {string} token
+ * @returns {boolean} true when the token was consumed as the target
+ */
+function takeTrailingPositional(parsed, token) {
+  if (parsed.targetConsumed) return false;
+  switch (parsed.command) {
+    case 'run':
+    case 'doctor':
+    case 'review':
+      break;
+    case 'skills':
+      // `skills import|export|list|resolve` take options, not a path.
+      if (parsed.skillsSubcommand) return false;
+      break;
+    case 'evolve':
+      // `replay` takes NO positional (its dataset comes from --spec).
+      if (parsed.evolveSubcommand === 'replay') return false;
+      // Mirror the eager branch: a token that is neither a known subcommand nor
+      // an existing path is a mistyped subcommand, not a path, and the handler
+      // must reject it (`river evolve --output json agregate`).
+      if (!parsed.evolveSubcommand && !(0,external_node_fs_.existsSync)(token)) {
+        parsed.evolveSubcommand = token;
+        return true;
+      }
+      break;
+    default:
+      return false;
+  }
+  parsed.target = token;
+  parsed.targetConsumed = true;
+  return true;
+}
+
+/**
  * Every option token `parseArgs` recognizes, used only by
  * `takeFreeTextValue()` below. Keep in sync when adding an option.
  */
@@ -71750,6 +71817,10 @@ function parseArgs(argv) {
     // was already reported to stderr; main() then exits 1 without help.
     usageError: false,
     target: '.',
+    // Whether a positional <path> has already been taken. Distinguishes
+    // "target is still the default `.`" from "target was explicitly given",
+    // which `target` alone cannot express. See takeTrailingPositional.
+    targetConsumed: false,
     fixturesCasesPath: null,
     verbose: false,
     phase: external_node_process_namespaceObject.env.RIVER_PHASE || 'midstream',
@@ -71876,6 +71947,7 @@ function parseArgs(argv) {
             parsed.evolveSubcommand = token; // handler rejects it with exit 1
           } else {
             parsed.target = token;
+            parsed.targetConsumed = true;
           }
         }
         // Surplus positionals are a usage error, never silently discarded.
@@ -71920,6 +71992,7 @@ function parseArgs(argv) {
         !args[0].startsWith('-')
       ) {
         parsed.target = args.shift();
+        parsed.targetConsumed = true;
       }
       continue;
     }
@@ -71988,6 +72061,18 @@ function parseArgs(argv) {
           usageError(parsed);
           break;
         }
+        // #1746 follow-up: Slice 3 guarded the MISSING value but not an invalid
+        // one, so `--severity BOGUS` exited 0 and persisted
+        // `context.severity: "BOGUS"` — a value the suppression-context schema
+        // rejects and which suppression-apply's SEVERITY_RANK lookup reads as
+        // undefined.
+        if (!SUPPRESSION_SEVERITIES.includes(value)) {
+          console.error(
+            `Error: --severity must be one of: ${SUPPRESSION_SEVERITIES.join(', ')} (got "${value}").`
+          );
+          usageError(parsed);
+          break;
+        }
         parsed.suppressionSeverity = value;
         continue;
       }
@@ -72005,6 +72090,17 @@ function parseArgs(argv) {
         const value = args.shift();
         if (!value || value.startsWith('-')) {
           console.error('Error: --expires option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        // #1746 follow-up: `--expires notadate` used to be persisted verbatim as
+        // `context.expiresAt`. The expiry check compares that string against the
+        // current ISO timestamp, and an unparseable value never compares as
+        // past — the suppression would never expire. Accept only what
+        // `Date.parse` understands (the write side stores the string as given,
+        // so `2027-01-01` stays valid, as pinned in the canary VALID_CASES).
+        if (Number.isNaN(Date.parse(value))) {
+          console.error(`Error: --expires must be an ISO 8601 date or date-time (got "${value}").`);
           usageError(parsed);
           break;
         }
@@ -72330,6 +72426,7 @@ function parseArgs(argv) {
       // Consume optional positional target path (e.g., `river review route .`)
       if (args[0] && !args[0].startsWith('-')) {
         parsed.target = args.shift();
+        parsed.targetConsumed = true;
       }
       continue;
     }
@@ -72485,7 +72582,17 @@ function parseArgs(argv) {
         usageError(parsed);
         break;
       }
-      parsed.phase = args.shift();
+      const value = args.shift();
+      // #1746 follow-up: an invalid phase used to exit 0 and fall back to the
+      // default (`midstream`) downstream in normalizePhase, so the run silently
+      // reviewed a different phase than the one that was typed. PHASES is the
+      // shared vocabulary in src/lib/planner-utils.mjs.
+      if (!planner_utils/* PHASES */.ZG.includes(value)) {
+        console.error(`Error: --phase must be one of: ${planner_utils/* PHASES */.ZG.join(', ')} (got "${value}").`);
+        usageError(parsed);
+        break;
+      }
+      parsed.phase = value;
       continue;
     }
     if (arg === '--cases') {
@@ -72720,6 +72827,14 @@ function parseArgs(argv) {
     // surplus positional was dropped without a trace. Note: promote / evolve
     // detect their own unknown options above (promoteUnknownOption /
     // evolveUnknownOption) and keep their handler-level messages.
+    // ...with one exception: `<command> <flags> <path>` is the POSIX-conventional
+    // order and used to work. Slice 3's catch-all rejected it as a surplus
+    // positional (v1.72.0 regression). The FIRST non-option token of a
+    // path-taking command is the path wherever it appears; the SECOND one is
+    // still surplus and still exits 1.
+    if (!arg.startsWith('-') && takeTrailingPositional(parsed, arg)) {
+      continue;
+    }
     if (arg.startsWith('-')) {
       console.error(`Error: unknown option ${arg}.`);
     } else {

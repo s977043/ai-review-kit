@@ -7,6 +7,7 @@ import {
   createSuppression,
   revokeSuppression,
   findActiveSuppressions,
+  isSuppressionExpired,
 } from '../src/lib/suppression.mjs';
 import { loadMemory } from '../src/lib/riverbed-memory.mjs';
 import { createTempMemory } from './helpers/memory.mjs';
@@ -156,6 +157,54 @@ test('findActiveSuppressions excludes expired suppressions', () => {
   };
   const result = findActiveSuppressions(index, ['src/auth.ts']);
   assert.equal(result.length, 0);
+});
+
+// #1746 W2 の読み取り側 fail-safe。`suppression add --expires notadate` は
+// v1.72.0 まで exit 0 のまま context.expiresAt: "notadate" を永続化していた。
+// 旧実装の失効判定は文字列比較（`expiresAt < new Date().toISOString()`）で、
+// "notadate" は "2026-..." より辞書順で後ろに来るため常に「未失効」になり、
+// 永久に失効しない suppression になっていた。既に書き込まれてしまった
+// index.json を救うため、parse 不能な値は失効扱いに倒す。
+test('findActiveSuppressions treats an unparseable expiresAt as expired (index.json fixture)', () => {
+  const { indexPath, cleanup } = createTempMemory({
+    layout: 'nested',
+    prefix: 'river-supp-expiry-',
+    entries: [
+      {
+        id: 's-bogus-expiry',
+        type: 'suppression',
+        content: 'ok',
+        metadata: {
+          createdAt: '2026-01-01T00:00:00Z',
+          author: 't',
+          relatedFiles: ['src/auth.ts'],
+        },
+        context: { active: true, scope: 'file', expiresAt: 'notadate' },
+      },
+    ],
+  });
+  try {
+    const index = loadMemory(indexPath);
+    assert.equal(index.entries[0].context.expiresAt, 'notadate', 'fixture の前提が壊れている');
+    assert.deepEqual(findActiveSuppressions(index, ['src/auth.ts']), []);
+  } finally {
+    cleanup();
+  }
+});
+
+test('isSuppressionExpired fails safe on malformed values and keeps valid ones', () => {
+  const at = (expiresAt) => ({ context: { expiresAt } });
+  const now = new Date('2026-08-04T00:00:00Z');
+  // parse 不能 -> 失効扱い（fail-safe）
+  assert.equal(isSuppressionExpired(at('notadate'), now), true);
+  assert.equal(isSuppressionExpired(at('2026-13-45'), now), true);
+  // 正当な値は従来どおり
+  assert.equal(isSuppressionExpired(at('2025-01-01T00:00:00Z'), now), true);
+  assert.equal(isSuppressionExpired(at('2099-01-01T00:00:00Z'), now), false);
+  assert.equal(isSuppressionExpired(at('2027-01-01'), now), false);
+  // expiresAt 自体が無ければ失効しない
+  assert.equal(isSuppressionExpired(at(undefined), now), false);
+  assert.equal(isSuppressionExpired({}, now), false);
 });
 
 test('findActiveSuppressions matches subsystem scope', () => {
