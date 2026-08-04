@@ -104,30 +104,63 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-      # Timestamp judgement needs only git, so it runs BEFORE Node setup /
-      # npm ci. In the common case (dist newer than bundled sources) the job
-      # finishes here and skips the ~1-minute install entirely.
-      - name: Judge dist freshness by commit timestamps
+      # The judgement needs only git, so it runs BEFORE Node setup / npm ci.
+      # When the change under review does not touch dist/ and the timestamps
+      # say dist is newer than the bundled sources, the job finishes here and
+      # skips the ~30-second install + build entirely.
+      - name: Judge whether dist needs rebuild verification
         id: judge
+        env:
+          # Base revision of the change under review. For pull_request this is
+          # the base branch tip the PR was opened against; for push it is the
+          # previous tip of the pushed branch. Empty for workflow_dispatch.
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
         run: |
           src_ts=$(git log -1 --format=%ct -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json')
           dist_ts=$(git log -1 --format=%ct -- 'runners/github-action/dist/')
-
-          if [ -z "$src_ts" ]; then
-            echo "No bundled-source commits in history; skipping dist staleness check."
-            echo "needs_rebuild=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
 
           if [ -z "$dist_ts" ]; then
             echo "::error::runners/github-action/dist/ has never been committed. Run 'npm run build:action' and commit."
             exit 1
           fi
 
+          # Gate 1: does the change under review modify dist/ itself?
+          #
+          # The timestamp comparison below can only tell whether dist was
+          # committed after the bundled sources. It cannot tell whether that
+          # dist was actually produced by `npm run build:action`. The normal
+          # way to ship a dist change — edit src, run build:action, commit both
+          # in one commit — makes src_ts equal dist_ts, which used to satisfy
+          # the skip condition and bypassed verification entirely (#1749). Any
+          # change that touches dist/ is therefore always verified by rebuild.
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            echo "Base revision is unavailable (BASE_SHA='${BASE_SHA}'); verifying by rebuild (fail-safe)."
+            echo "needs_rebuild=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -n "$(git diff --name-only "$BASE_SHA" HEAD -- 'runners/github-action/dist/')" ]; then
+            echo "This change modifies runners/github-action/dist/; rebuild verification is mandatory."
+            echo "Changed dist files:"
+            git diff --name-only "$BASE_SHA" HEAD -- 'runners/github-action/dist/'
+            echo "needs_rebuild=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Gate 2: dist/ is untouched by this change, so the committed bundle
+          # is one that already passed this job. Only a bundled-source change
+          # landing without a matching rebuild can make it stale, and that is
+          # exactly what the timestamp comparison detects.
+          if [ -z "$src_ts" ]; then
+            echo "No bundled-source commits in history; skipping dist staleness check."
+            echo "needs_rebuild=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           if [ "$src_ts" -le "$dist_ts" ]; then
             src_date=$(git log -1 --format=%ci -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json')
             dist_date=$(git log -1 --format=%ci -- 'runners/github-action/dist/')
-            echo "dist/ is current (dist: ${dist_date}, src: ${src_date})"
+            echo "dist/ is untouched by this change and is current (dist: ${dist_date}, src: ${src_date})"
             echo "needs_rebuild=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -144,9 +177,9 @@ jobs:
       - name: Rebuild and verify dist bytes
         if: steps.judge.outputs.needs_rebuild == 'true'
         run: |
-          # Timestamp says dist is stale, but the src or dependency change
-          # might not affect the vendored bundle (e.g., a sibling helper the
-          # action runner does not load, or a dep that ncc does not bundle).
+          # The judge only decided that verification is warranted; the change
+          # might still not affect the vendored bundle (e.g., a sibling helper
+          # the action runner does not load, or a dep that ncc does not bundle).
           # package-lock.json is watched because ncc vendors production deps
           # into dist/, so a dependency bump can change the bundle without any
           # src/ change (see #1057). Rebuild and compare bytes before failing —
@@ -163,7 +196,7 @@ jobs:
 
           src_date=$(git log -1 --format=%ci -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json')
           dist_date=$(git log -1 --format=%ci -- 'runners/github-action/dist/')
-          echo "::error::dist/ is stale. Source last changed at ${src_date} but dist last rebuilt at ${dist_date}, and rebuild produced byte-level changes. Run 'npm run build:action' and commit."
+          echo "::error::dist/ does not match a build of the current sources (src commit: ${src_date}, dist commit: ${dist_date}); the rebuild produced byte-level changes. Run 'npm run build:action' with the Node version in .nvmrc and commit the result."
           echo "Recent src changes:"
           git log -3 --oneline -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json'
           echo "Rebuild diff (file list):"

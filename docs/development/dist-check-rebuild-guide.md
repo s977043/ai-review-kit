@@ -82,7 +82,12 @@ git commit -m "chore(action): rebuild github-action dist"
 - `runners/github-action/src/index.mjs` から import される `src/**` のモジュール
 - `package.json` / `package-lock.json` の ncc 依存 (`@vercel/ncc` 自体の bump、または bundle 対象に入る dependency の bump)
 
-> CI の `Action dist freshness` job は src commit timestamp が dist より新しい場合に **追加で `npm run build:action` を実行して byte 差分を確認**する。再 build しても dist に diff が出ないなら、その src 変更は bundle に含まれていない sibling と判断され、ローカル commit なしでも pass する（false positive 回避）。逆に diff が出た場合は依然として rebuild commit が必要。
+> CI の `Action dist freshness` job は、次のいずれかに当てはまる変更に対して **`npm run build:action` を実行して byte 差分を確認**する。再 build しても dist に diff が出ないなら、その変更は bundle に影響していないと判断され、ローカル commit なしでも pass する（false positive 回避）。逆に diff が出た場合は rebuild commit が必要。
+>
+> - 差分が `runners/github-action/dist/` を含む（手編集・ビルドし忘れ・`.nvmrc` と違う Node でのビルドを捕捉する）
+> - 差分が `dist/` を含まず、src commit timestamp が dist より新しい（リビルド忘れを捕捉する）
+>
+> `dist/` を含む差分を必ず検証するのは、timestamp 比較だけでは同一コミットが src と `dist/` を同時に変更したときに `src_ts == dist_ts` が成立し、検証がすり抜けたため（#1749）。`dist/` に差分が無い変更（docs のみなど）は従来どおり timestamp 判定だけで即 pass する。
 
 ## トラブルシューティング
 
