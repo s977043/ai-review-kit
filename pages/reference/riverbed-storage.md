@@ -11,7 +11,7 @@ Riverbed Memory は、過去の判断やパターンを LLM レビューに活�
 
 - `index.json`: エントリ配列とバージョンを保持する単一ファイル。`schemas/riverbed-index.schema.json` に準拠し、各エントリは `schemas/riverbed-entry.schema.json` に準拠する。
 
-ディスク I/O は `loadMemory` / `appendEntry` / `queryMemory` / `supersede` / `expireEntries` などの関数を通じて行う。ファイルが存在しない場合は `{ entries: [], version: "1" }` を返す stateless fallback が効く。`expireEntries` は `expiresAt` が過ぎたエントリの `status` を `archived` に遷移させる。
+ディスク I/O は `loadMemory` / `appendEntry` / `queryMemory` / `supersede` / `expireEntries` などの関数を通じて行う。ファイルが存在しない場合は `{ entries: [], version: "1" }` を返す stateless fallback が効く。`expireEntries` は `expiresAt` が過ぎたエントリの `status` を `archived` に遷移させる。`expiresAt` が日時として解釈できない値のときは、アーカイブせず警告のみ出力する（アーカイブは破棄に等しい書き込みであり、解釈できない文字列は期限到達の根拠にならないため）。
 
 ## エントリ仕様（抜粋）
 

@@ -285,6 +285,12 @@ export async function runPromoteCommand(parsed, targetPath) {
       console.log(JSON.stringify(out, null, 2));
       return 0;
     }
+    // Candidates skipped because expiresAt is unparseable (#1756). Printed
+    // before the outcome so the skip is never silent, including on the
+    // "nothing to retire" path.
+    for (const warning of out.warnings) {
+      console.warn(`Warning: ${warning}`);
+    }
     if (!out.count) {
       console.log('No promotion candidates to retire.');
       return 0;

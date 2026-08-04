@@ -18,7 +18,7 @@
 // The proposedTarget.kind enum has no dedicated security kind, so sensitivity is
 // detected deterministically from the candidate's skill / clusterKey signals.
 
-import { loadMemory, updateEntry, isExpired } from './riverbed-memory.mjs';
+import { loadMemory, updateEntry, isExpired, hasUnparseableExpiresAt } from './riverbed-memory.mjs';
 
 export const PROMOTION_ENTRY_TYPE = 'promotion_candidate';
 
@@ -304,17 +304,27 @@ export function isNegativeFeedback(fb, { clusterFeedbackType = null } = {}) {
  * is the promotionStatus change implied by the (possibly post-expiry) entry
  * status. Idempotent: once synced, `willChange` is false.
  *
+ * `unparseableExpiresAt` reports an expiresAt that `Date` cannot parse. Retiring
+ * archives the entry, which for a candidate is a discard, so such a value never
+ * expires it (#1756) — the caller surfaces the flag as a warning instead.
+ *
  * @param {object} entry
  * @param {{ now?: Date }} [opts]
- * @returns {{ willChange: boolean, willExpire: boolean, statusSync: {from: string, to: string}|null }}
+ * @returns {{ willChange: boolean, willExpire: boolean, statusSync: {from: string, to: string}|null, unparseableExpiresAt: boolean }}
  */
 export function planPromotionRetire(entry, { now = new Date() } = {}) {
   const pc = getPromotionCandidate(entry);
-  if (!pc) return { willChange: false, willExpire: false, statusSync: null };
+  if (!pc) {
+    return { willChange: false, willExpire: false, statusSync: null, unparseableExpiresAt: false };
+  }
   const entryStatus = entry.status ?? 'active';
   // Shares the expiry rule with expireEntries (isExpired) so the `expiresAt <= now`
-  // boundary is defined once.
-  const willExpire = isExpired(entry, now) && entryStatus === 'active';
+  // boundary is defined once. onUnparseable is 'not-expired' because archiving a
+  // candidate discards it: an unparseable expiresAt is a data defect to report,
+  // not a deadline that passed.
+  const unparseableExpiresAt = hasUnparseableExpiresAt(entry);
+  const willExpire =
+    isExpired(entry, now, { onUnparseable: 'not-expired' }) && entryStatus === 'active';
   const nextEntryStatus = willExpire ? 'archived' : entryStatus;
   const target = ENTRY_STATUS_TO_PROMOTION[nextEntryStatus] ?? null;
   const needsSync =
@@ -322,7 +332,7 @@ export function planPromotionRetire(entry, { now = new Date() } = {}) {
     pc.promotionStatus !== target &&
     !TERMINAL_PROMOTION_STATUSES.includes(pc.promotionStatus);
   const statusSync = needsSync ? { from: pc.promotionStatus, to: target } : null;
-  return { willChange: willExpire || needsSync, willExpire, statusSync };
+  return { willChange: willExpire || needsSync, willExpire, statusSync, unparseableExpiresAt };
 }
 
 /**
@@ -332,14 +342,25 @@ export function planPromotionRetire(entry, { now = new Date() } = {}) {
  * is appended to `context.lifecycleHistory` (append-only audit trail, shaped
  * like the approvalHistory records).
  *
+ * The `expiresAt reached` reason is therefore only ever written for a timestamp
+ * that really did pass: an unparseable expiresAt never sets `willExpire`, so the
+ * append-only trail cannot record an expiry that did not happen (#1756).
+ *
  * @param {object} entry - a promotion_candidate entry
  * @param {{ now?: Date }} [opts]
- * @returns {{ changed: boolean, entry: object, willExpire: boolean, statusSync: {from,to}|null, record: object|null }}
+ * @returns {{ changed: boolean, entry: object, willExpire: boolean, statusSync: {from,to}|null, record: object|null, unparseableExpiresAt: boolean }}
  */
 export function applyPromotionRetire(entry, { now = new Date() } = {}) {
   const plan = planPromotionRetire(entry, { now });
   if (!plan.willChange) {
-    return { changed: false, entry, willExpire: false, statusSync: null, record: null };
+    return {
+      changed: false,
+      entry,
+      willExpire: false,
+      statusSync: null,
+      record: null,
+      unparseableExpiresAt: plan.unparseableExpiresAt,
+    };
   }
   const pc = getPromotionCandidate(entry);
   const retiredAt = now.toISOString();
@@ -364,7 +385,14 @@ export function applyPromotionRetire(entry, { now = new Date() } = {}) {
   entry.context.lifecycleHistory.push(record);
   entry.metadata = entry.metadata ?? {};
   entry.metadata.updatedAt = retiredAt;
-  return { changed: true, entry, willExpire: plan.willExpire, statusSync: plan.statusSync, record };
+  return {
+    changed: true,
+    entry,
+    willExpire: plan.willExpire,
+    statusSync: plan.statusSync,
+    record,
+    unparseableExpiresAt: plan.unparseableExpiresAt,
+  };
 }
 
 /**
@@ -372,21 +400,32 @@ export function applyPromotionRetire(entry, { now = new Date() } = {}) {
  * needs it (expiry archive + promotionStatus sync), and persist. Idempotent — a
  * second run finds nothing to change.
  *
+ * `warnings` lists candidates whose expiresAt cannot be parsed. Those are left
+ * un-archived on purpose (#1756), and the warning is what keeps the skip from
+ * being silent — the value has to be repaired by whoever wrote it.
+ *
  * @param {{ indexPath: string, now?: Date }} opts
- * @returns {{ count: number, results: Array<{ id: string, willExpire: boolean, statusSync: object|null }> }}
+ * @returns {{ count: number, results: Array<{ id: string, willExpire: boolean, statusSync: object|null }>, warnings: string[] }}
  */
 export function retirePromotions({ indexPath, now = new Date() }) {
   const index = loadMemory(indexPath);
   const results = [];
+  const warnings = [];
   for (const entry of listPromotionCandidates(index, { includeInactive: true })) {
-    if (!planPromotionRetire(entry, { now }).willChange) continue;
+    const plan = planPromotionRetire(entry, { now });
+    if (plan.unparseableExpiresAt) {
+      warnings.push(
+        `${entry.id}: expiresAt ${JSON.stringify(entry.expiresAt)} is not a parseable timestamp; the expiry archive was skipped (repair the value or re-issue the candidate).`
+      );
+    }
+    if (!plan.willChange) continue;
     let applied;
     updateEntry(indexPath, entry.id, (live) => {
       applied = applyPromotionRetire(live, { now });
     });
     results.push({ id: entry.id, willExpire: applied.willExpire, statusSync: applied.statusSync });
   }
-  return { count: results.length, results };
+  return { count: results.length, results, warnings };
 }
 
 /**

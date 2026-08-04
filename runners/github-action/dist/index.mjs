@@ -49120,6 +49120,7 @@ function aggregateRiskLevel(fileRisks, fallback = 'comment_only') {
 /* harmony export */   W8: () => (/* binding */ updateEntry),
 /* harmony export */   _d: () => (/* binding */ isExpired),
 /* harmony export */   ab: () => (/* binding */ loadMemory),
+/* harmony export */   kp: () => (/* binding */ hasUnparseableExpiresAt),
 /* harmony export */   qU: () => (/* binding */ queryMemory)
 /* harmony export */ });
 /* unused harmony exports supersede, expireEntries */
@@ -49243,40 +49244,88 @@ function supersede(indexPath, oldId, newId) {
 }
 
 /**
+ * Whether `entry.expiresAt` is present but cannot be parsed as a timestamp.
+ * The single definition of "unparseable" — consumers that must branch on it (to
+ * warn, or to refuse a destructive transition) call this instead of re-deriving
+ * the `new Date(...)` parse.
+ *
+ * @param {{ expiresAt?: string }} entry
+ * @returns {boolean}
+ */
+function hasUnparseableExpiresAt(entry) {
+  if (!entry?.expiresAt) return false;
+  return Number.isNaN(new Date(entry.expiresAt).getTime());
+}
+
+/**
  * Whether an entry's expiresAt timestamp has passed relative to `now`. Shared by
  * expireEntries, the Phase 3 promotion retire lifecycle and the suppression
  * lifecycle (isSuppressionExpired) so the expiry rule (`expiresAt <= now`) is
  * defined once.
  *
- * Fail-safe on a malformed timestamp: a value `Date` cannot parse counts as
- * EXPIRED. Comparing NaN would answer `false` for every operator, which is the
- * dangerous direction — an entry whose expiresAt is unparseable (e.g. the
- * `--expires notadate` values that reached disk before #1746 was fixed) would
- * otherwise stay in effect forever.
+ * An unparseable timestamp has no single safe answer, so the caller declares one
+ * through `onUnparseable` (#1756). Comparing NaN is never among the choices: it
+ * answers `false` for every operator, which hides the malformed value instead of
+ * deciding about it.
+ *
+ * - `'expired'` (default) — for READ-SIDE effect gating, where "expired" means
+ *   the entry stops taking effect. `isSuppressionExpired` uses it: a suppression
+ *   whose expiresAt is unparseable (e.g. the `--expires notadate` values that
+ *   reached disk before #1746 was fixed) must not keep hiding findings forever.
+ * - `'not-expired'` — for WRITE-SIDE lifecycle transitions that archive an
+ *   entry. Archiving discards a promotion_candidate, and an unparseable string
+ *   is no evidence that the deadline passed, so those call sites leave the entry
+ *   alone and warn instead — which keeps the malformed value visible.
  *
  * @param {{ expiresAt?: string }} entry
  * @param {Date} now
+ * @param {{ onUnparseable?: 'expired'|'not-expired' }} [opts]
  * @returns {boolean}
  */
-function isExpired(entry, now) {
+function isExpired(entry, now, { onUnparseable = 'expired' } = {}) {
+  if (onUnparseable !== 'expired' && onUnparseable !== 'not-expired') {
+    // Fail fast rather than fall back: a typo must not silently hand a
+    // write-side caller the destructive direction.
+    throw new TypeError(
+      `isExpired: onUnparseable must be 'expired' or 'not-expired' (got ${JSON.stringify(onUnparseable)}).`
+    );
+  }
   if (!entry?.expiresAt) return false;
   const timestamp = new Date(entry.expiresAt).getTime();
-  if (Number.isNaN(timestamp)) return true;
+  if (Number.isNaN(timestamp)) return onUnparseable === 'expired';
   return timestamp <= now.getTime();
 }
 
 /**
  * Archive active entries whose expiresAt timestamp has passed.
  *
+ * Archiving is a write-side transition (for a promotion_candidate it amounts to
+ * a discard), so an entry whose expiresAt cannot be parsed stays untouched and
+ * is reported through `warn` — never archived on the strength of a string that
+ * proves nothing about the deadline (#1756).
+ *
  * @param {string} indexPath - Path to the index.json file
- * @param {{ now?: Date }} [opts] - injectable clock (defaults to real time)
+ * @param {{ now?: Date, warn?: (msg: string) => void }} [opts] - injectable clock
+ *   (defaults to real time) and warning sink (defaults to console.warn)
  * @returns {number} Number of entries archived
  */
-function expireEntries(indexPath, { now = new Date() } = {}) {
+function expireEntries(
+  indexPath,
+  { now = new Date(), warn = (msg) => console.warn(msg) } = {}
+) {
   const index = loadMemory(indexPath);
   let count = 0;
   for (const entry of index.entries) {
-    if (isExpired(entry, now) && (entry.status ?? 'active') === 'active') {
+    if (hasUnparseableExpiresAt(entry)) {
+      warn(
+        `Warning: entry ${entry.id} has an unparseable expiresAt (${JSON.stringify(entry.expiresAt)}); left as-is instead of archived.`
+      );
+      continue;
+    }
+    if (
+      isExpired(entry, now, { onUnparseable: 'not-expired' }) &&
+      (entry.status ?? 'active') === 'active'
+    ) {
       entry.status = 'archived';
       count++;
     }
@@ -70435,17 +70484,27 @@ function isNegativeFeedback(fb, { clusterFeedbackType = null } = {}) {
  * is the promotionStatus change implied by the (possibly post-expiry) entry
  * status. Idempotent: once synced, `willChange` is false.
  *
+ * `unparseableExpiresAt` reports an expiresAt that `Date` cannot parse. Retiring
+ * archives the entry, which for a candidate is a discard, so such a value never
+ * expires it (#1756) — the caller surfaces the flag as a warning instead.
+ *
  * @param {object} entry
  * @param {{ now?: Date }} [opts]
- * @returns {{ willChange: boolean, willExpire: boolean, statusSync: {from: string, to: string}|null }}
+ * @returns {{ willChange: boolean, willExpire: boolean, statusSync: {from: string, to: string}|null, unparseableExpiresAt: boolean }}
  */
 function planPromotionRetire(entry, { now = new Date() } = {}) {
   const pc = getPromotionCandidate(entry);
-  if (!pc) return { willChange: false, willExpire: false, statusSync: null };
+  if (!pc) {
+    return { willChange: false, willExpire: false, statusSync: null, unparseableExpiresAt: false };
+  }
   const entryStatus = entry.status ?? 'active';
   // Shares the expiry rule with expireEntries (isExpired) so the `expiresAt <= now`
-  // boundary is defined once.
-  const willExpire = (0,riverbed_memory/* isExpired */._d)(entry, now) && entryStatus === 'active';
+  // boundary is defined once. onUnparseable is 'not-expired' because archiving a
+  // candidate discards it: an unparseable expiresAt is a data defect to report,
+  // not a deadline that passed.
+  const unparseableExpiresAt = (0,riverbed_memory/* hasUnparseableExpiresAt */.kp)(entry);
+  const willExpire =
+    (0,riverbed_memory/* isExpired */._d)(entry, now, { onUnparseable: 'not-expired' }) && entryStatus === 'active';
   const nextEntryStatus = willExpire ? 'archived' : entryStatus;
   const target = ENTRY_STATUS_TO_PROMOTION[nextEntryStatus] ?? null;
   const needsSync =
@@ -70453,7 +70512,7 @@ function planPromotionRetire(entry, { now = new Date() } = {}) {
     pc.promotionStatus !== target &&
     !TERMINAL_PROMOTION_STATUSES.includes(pc.promotionStatus);
   const statusSync = needsSync ? { from: pc.promotionStatus, to: target } : null;
-  return { willChange: willExpire || needsSync, willExpire, statusSync };
+  return { willChange: willExpire || needsSync, willExpire, statusSync, unparseableExpiresAt };
 }
 
 /**
@@ -70463,14 +70522,25 @@ function planPromotionRetire(entry, { now = new Date() } = {}) {
  * is appended to `context.lifecycleHistory` (append-only audit trail, shaped
  * like the approvalHistory records).
  *
+ * The `expiresAt reached` reason is therefore only ever written for a timestamp
+ * that really did pass: an unparseable expiresAt never sets `willExpire`, so the
+ * append-only trail cannot record an expiry that did not happen (#1756).
+ *
  * @param {object} entry - a promotion_candidate entry
  * @param {{ now?: Date }} [opts]
- * @returns {{ changed: boolean, entry: object, willExpire: boolean, statusSync: {from,to}|null, record: object|null }}
+ * @returns {{ changed: boolean, entry: object, willExpire: boolean, statusSync: {from,to}|null, record: object|null, unparseableExpiresAt: boolean }}
  */
 function applyPromotionRetire(entry, { now = new Date() } = {}) {
   const plan = planPromotionRetire(entry, { now });
   if (!plan.willChange) {
-    return { changed: false, entry, willExpire: false, statusSync: null, record: null };
+    return {
+      changed: false,
+      entry,
+      willExpire: false,
+      statusSync: null,
+      record: null,
+      unparseableExpiresAt: plan.unparseableExpiresAt,
+    };
   }
   const pc = getPromotionCandidate(entry);
   const retiredAt = now.toISOString();
@@ -70495,7 +70565,14 @@ function applyPromotionRetire(entry, { now = new Date() } = {}) {
   entry.context.lifecycleHistory.push(record);
   entry.metadata = entry.metadata ?? {};
   entry.metadata.updatedAt = retiredAt;
-  return { changed: true, entry, willExpire: plan.willExpire, statusSync: plan.statusSync, record };
+  return {
+    changed: true,
+    entry,
+    willExpire: plan.willExpire,
+    statusSync: plan.statusSync,
+    record,
+    unparseableExpiresAt: plan.unparseableExpiresAt,
+  };
 }
 
 /**
@@ -70503,21 +70580,32 @@ function applyPromotionRetire(entry, { now = new Date() } = {}) {
  * needs it (expiry archive + promotionStatus sync), and persist. Idempotent — a
  * second run finds nothing to change.
  *
+ * `warnings` lists candidates whose expiresAt cannot be parsed. Those are left
+ * un-archived on purpose (#1756), and the warning is what keeps the skip from
+ * being silent — the value has to be repaired by whoever wrote it.
+ *
  * @param {{ indexPath: string, now?: Date }} opts
- * @returns {{ count: number, results: Array<{ id: string, willExpire: boolean, statusSync: object|null }> }}
+ * @returns {{ count: number, results: Array<{ id: string, willExpire: boolean, statusSync: object|null }>, warnings: string[] }}
  */
 function retirePromotions({ indexPath, now = new Date() }) {
   const index = (0,riverbed_memory/* loadMemory */.ab)(indexPath);
   const results = [];
+  const warnings = [];
   for (const entry of listPromotionCandidates(index, { includeInactive: true })) {
-    if (!planPromotionRetire(entry, { now }).willChange) continue;
+    const plan = planPromotionRetire(entry, { now });
+    if (plan.unparseableExpiresAt) {
+      warnings.push(
+        `${entry.id}: expiresAt ${JSON.stringify(entry.expiresAt)} is not a parseable timestamp; the expiry archive was skipped (repair the value or re-issue the candidate).`
+      );
+    }
+    if (!plan.willChange) continue;
     let applied;
     (0,riverbed_memory/* updateEntry */.W8)(indexPath, entry.id, (live) => {
       applied = applyPromotionRetire(live, { now });
     });
     results.push({ id: entry.id, willExpire: applied.willExpire, statusSync: applied.statusSync });
   }
-  return { count: results.length, results };
+  return { count: results.length, results, warnings };
 }
 
 /**
@@ -71168,6 +71256,12 @@ async function runPromoteCommand(parsed, targetPath) {
     if (parsed.output === 'json') {
       console.log(JSON.stringify(out, null, 2));
       return 0;
+    }
+    // Candidates skipped because expiresAt is unparseable (#1756). Printed
+    // before the outcome so the skip is never silent, including on the
+    // "nothing to retire" path.
+    for (const warning of out.warnings) {
+      console.warn(`Warning: ${warning}`);
     }
     if (!out.count) {
       console.log('No promotion candidates to retire.');

@@ -9,6 +9,7 @@ import {
   supersede,
   expireEntries,
   isExpired,
+  hasUnparseableExpiresAt,
 } from '../src/lib/riverbed-memory.mjs';
 import { createTempMemory, makeMemoryEntry as makeEntry } from './helpers/memory.mjs';
 
@@ -197,6 +198,59 @@ test('isExpired: shared expiry predicate (expiresAt <= now)', () => {
   assert.equal(isExpired({ expiresAt: at.toISOString() }, new Date(at.getTime() - 1)), false);
   assert.equal(isExpired({ expiresAt: at.toISOString() }, new Date(at.getTime() + 1)), true);
   assert.equal(isExpired({}, at), false); // no expiresAt
+});
+
+// #1756: the answer for an unparseable expiresAt belongs to the caller, because
+// "expired" means "stops taking effect" on the read side and "gets archived"
+// (a discard, for a promotion_candidate) on the write side.
+test('isExpired: onUnparseable selects the direction for a malformed timestamp', () => {
+  const now = new Date('2026-07-20T00:00:00.000Z');
+  const bad = { expiresAt: 'notadate' };
+  assert.equal(isExpired(bad, now), true); // default = read-side fail-safe
+  assert.equal(isExpired(bad, now, { onUnparseable: 'expired' }), true);
+  assert.equal(isExpired(bad, now, { onUnparseable: 'not-expired' }), false);
+  // Parseable values are unaffected by the option, in both directions.
+  const past = { expiresAt: '2026-07-19T00:00:00.000Z' };
+  const future = { expiresAt: '2026-07-21T00:00:00.000Z' };
+  const tz = { expiresAt: '2026-07-20T00:00:00+09:00' }; // = 2026-07-19T15:00Z, already past
+  for (const onUnparseable of ['expired', 'not-expired']) {
+    assert.equal(isExpired(past, now, { onUnparseable }), true);
+    assert.equal(isExpired(future, now, { onUnparseable }), false);
+    assert.equal(isExpired(tz, now, { onUnparseable }), true);
+    assert.equal(isExpired({}, now, { onUnparseable }), false);
+  }
+  // An unknown policy throws instead of falling back to a direction.
+  assert.throws(() => isExpired(bad, now, { onUnparseable: 'not_expired' }), TypeError);
+});
+
+test('hasUnparseableExpiresAt: present but unparseable only', () => {
+  assert.equal(hasUnparseableExpiresAt({ expiresAt: 'notadate' }), true);
+  assert.equal(hasUnparseableExpiresAt({ expiresAt: '2026-13-45' }), true);
+  assert.equal(hasUnparseableExpiresAt({ expiresAt: '2026-07-20T00:00:00.000Z' }), false);
+  assert.equal(hasUnparseableExpiresAt({}), false);
+  assert.equal(hasUnparseableExpiresAt(undefined), false);
+});
+
+// #1756: archiving is a write-side transition, so a value that proves nothing
+// about the deadline must not trigger it — and the skip must not be silent.
+test('expireEntries: leaves an unparseable expiresAt alone and warns', () => {
+  const { cleanup, indexPath } = tmpIndex();
+  try {
+    const past = new Date(Date.now() - 86400000).toISOString();
+    appendEntry(indexPath, makeEntry({ id: 'malformed', expiresAt: 'notadate' }));
+    appendEntry(indexPath, makeEntry({ id: 'really-expired', expiresAt: past }));
+    const warnings = [];
+    const count = expireEntries(indexPath, { warn: (msg) => warnings.push(msg) });
+    assert.equal(count, 1);
+    const mem = loadMemory(indexPath);
+    assert.equal(mem.entries.find((e) => e.id === 'malformed').status, undefined);
+    assert.equal(mem.entries.find((e) => e.id === 'really-expired').status, 'archived');
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /malformed/);
+    assert.match(warnings[0], /notadate/);
+  } finally {
+    cleanup();
+  }
 });
 
 test('expireEntries: honors an injected now', () => {
