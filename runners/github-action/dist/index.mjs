@@ -71692,20 +71692,17 @@ function parseExpiresAt(value) {
 }
 
 /**
- * Subcommand vocabularies, kept at module scope so that BOTH the eager branch
- * inside `parseArgs` and `takeTrailingPositional` below consult the same set.
+ * `river review` subcommands (#802 Phase 3), at module scope because BOTH the
+ * eager branch inside `parseArgs` and `takeTrailingPositional` below need it:
+ * `review` had no vocabulary at all, so a subcommand written after the options
+ * was swallowed as the path (#1755).
  *
- * `SKILLS_SUBCOMMANDS` / `EVOLVE_SUBCOMMANDS` used to be `const`s local to
- * `parseArgs`, which is why `takeTrailingPositional` could only approximate the
- * eager branch's decision with `existsSync` (recorded as #1759 B1). `review`
- * had no vocabulary at all, so a subcommand written after the options was
- * swallowed as the path (#1755).
+ * `SKILLS_SUBCOMMANDS` / `EVOLVE_SUBCOMMANDS` deliberately stay local to
+ * `parseArgs`. Hoisting them would be a no-op here — `takeTrailingPositional`
+ * does not consult them, and `evolve` keeps approximating the eager branch's
+ * decision with `existsSync`. That approximation is #1759 B1, which this change
+ * does NOT fix and does not claim to.
  */
-const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
-// #1574 P1 `aggregate` / P2 `replay`. Matching against a known set (rather
-// than "first non-flag token") keeps `river evolve <path>` working.
-const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay']);
-// #802 Phase 3 subcommands of `river review`.
 const REVIEW_SUBCOMMANDS = new Set(['plan', 'exec', 'verify', 'route']);
 
 /**
@@ -71910,8 +71907,15 @@ function takeFreeTextValue(args) {
 
 function parseArgs(argv) {
   const args = [...argv];
-  // SKILLS_SUBCOMMANDS / EVOLVE_SUBCOMMANDS / REVIEW_SUBCOMMANDS are at module
-  // scope so takeTrailingPositional() shares them (see their declaration).
+  const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
+  // #1574 P1 `aggregate` / P2 `replay`. Matching against a known set (rather
+  // than "first non-flag token") keeps `river evolve <path>` working.
+  const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay']);
+  // Whether a positional path was taken from AFTER a POSIX `--` terminator.
+  // Only used to phrase the `review` usage error correctly (see below): a token
+  // the caller explicitly declared to be a path must not be reported as "not a
+  // subcommand".
+  let terminatorTookPositional = false;
   // Global options the shared parser below handles for `evolve`. Anything else
   // starting with `-` is rejected rather than silently ignored.
   const EVOLVE_SHARED_OPTIONS = new Set(['--output', '-h', '--help', '--debug']);
@@ -72036,12 +72040,29 @@ function parseArgs(argv) {
       let terminatorError = false;
       while (args.length) {
         const positional = args.shift();
-        if (!takePositionalPath(parsed, positional)) {
+        if (parsed.targetConsumed || !acceptsPositionalPath(parsed)) {
           console.error(`Error: unexpected argument "${positional}".`);
           usageError(parsed);
           terminatorError = true;
           break;
         }
+        // The token is a path by construction, so it must BE one. Without this
+        // check `river evolve aggregate -- nosuchdir` exited 0 with an empty
+        // aggregate: `--` bypasses the eager branch's "a non-existent,
+        // non-subcommand token is a mistyped subcommand" rejection, turning a
+        // mistyped path into a silent empty result. #1746 W2 already treated
+        // "exit 0 while silently falling back" as a regression.
+        if (!(0,external_node_fs_.existsSync)(positional)) {
+          console.error(
+            `Error: "${positional}" does not exist ` +
+              '(every token after `--` is read as a path, never as an option or a subcommand).'
+          );
+          usageError(parsed);
+          terminatorError = true;
+          break;
+        }
+        takePositionalPath(parsed, positional);
+        terminatorTookPositional = true;
       }
       if (terminatorError) break;
       continue;
@@ -73022,7 +73043,13 @@ function parseArgs(argv) {
     !parsed.usageError &&
     !REVIEW_SUBCOMMANDS.has(parsed.reviewSubcommand)
   ) {
-    const got = parsed.reviewSubcommand ?? (parsed.targetConsumed ? parsed.target : null);
+    // A path taken from after `--` is NOT a candidate subcommand: the caller
+    // declared it to be a path. Reporting it as one produced the contradiction
+    // `river review -- plan` -> `"plan" is not a river review subcommand
+    // (plan | exec | verify | route)`.
+    const got =
+      parsed.reviewSubcommand ??
+      (parsed.targetConsumed && !terminatorTookPositional ? parsed.target : null);
     console.error(
       (got === null
         ? 'Error: river review requires a subcommand (plan | exec | verify | route).'
