@@ -47,61 +47,35 @@ const SIDEBARS_FILE = 'sidebars.js';
  * 意図的に sidebar へ載せないページの allowlist（doc ID → 理由）。
  * 理由は必須。空文字・文字列以外はエラーとして扱われ、除外として採用されない。
  *
- * 初回登録（#1727 PR A）: 現状の未掲載ページを全件、暫定理由付きで登録した。
- * 「載せるべきなのに載っていない」か「意図的に載せない」かの仕分けと sidebar への
- * 追加は PR B のスコープであり、仕分け後にこの allowlist から削除するか、
- * 恒久的な理由へ書き換える。
+ * 仕分け済み（#1727 PR B）: PR A で暫定登録した 48 本を 1 本ずつ読み、37 本を
+ * sidebar へ移し、残る 11 本をここに残した。残す基準は「調査・設計の記録」
+ * 「他の掲載ページに置き換わった重複」「本リポジトリ限定の開発者向け手順」の
+ * いずれかであること。各エントリの理由には、なぜ載せないのかと、利用者向けの
+ * 正となる掲載ページを書く。新規に追加するときも同じ粒度で書く。
  */
-const PENDING = 'PR B（#1727）で仕分け予定の暫定登録。掲載可否の判断はまだしていない';
 export const SIDEBAR_ALLOWLIST = {
-  'explanation/embedding-code-index-research': PENDING,
-  'explanation/progressive-disclosure': PENDING,
-  'explanation/reviewer-lens-taxonomy': PENDING,
-  'explanation/skill-lifecycle': PENDING,
-  'explanation/skills': PENDING,
-  'guides/add-new-skill': PENDING,
-  'guides/adopter-playbook': PENDING,
-  'guides/agent-skills-codex-cli': PENDING,
-  'guides/agent-workflow': PENDING,
-  'guides/ai-agent-playbook': PENDING,
-  'guides/choose-skills': PENDING,
-  'guides/cost-estimation': PENDING,
-  'guides/faq': PENDING,
-  'guides/figma-to-code': PENDING,
-  'guides/governance/issue-labels': PENDING,
-  'guides/governance/skill-policy': PENDING,
-  'guides/manage-skills-cli': PENDING,
-  'guides/planner-eval-dataset': PENDING,
-  'guides/planner-evaluation': PENDING,
-  'guides/pr-review-agent-skills': PENDING,
-  'guides/repo-wide-review': PENDING,
-  'guides/representative-skills': PENDING,
-  'guides/skill-planner': PENDING,
-  'guides/track-runs-and-regressions': PENDING,
-  'guides/two-stage-review-gate': PENDING,
-  'guides/use-independent-review-synthesis': PENDING,
-  'guides/use-skill-packs': PENDING,
-  'guides/w-check': PENDING,
-  'guides/write-a-skill': PENDING,
-  'reference/artifact-input-contract': PENDING,
-  'reference/cli-gc-spec': PENDING,
-  'reference/cli-review-exec-spec': PENDING,
-  'reference/cli-review-plan-spec': PENDING,
-  'reference/cli-review-verify-spec': PENDING,
-  'reference/eval-keep-discard-policy': PENDING,
-  'reference/evaluation-fixture-format': PENDING,
-  'reference/evaluation-rubric': PENDING,
-  'reference/loop-convergence-contract': PENDING,
-  'reference/output-format-html': PENDING,
-  'reference/output-format-yaml': PENDING,
-  'reference/plangate-cli-roadmap': PENDING,
-  'reference/review-artifact': PENDING,
-  'reference/review-output-example': PENDING,
-  'reference/review-policy': PENDING,
-  'reference/riverbed-storage': PENDING,
-  'reference/skill-metadata': PENDING,
-  'reference/skills-catalog': PENDING,
-  'reference/stable-interfaces': PENDING,
+  'explanation/embedding-code-index-research':
+    'embedding-based code index を採用するかの調査記録（#691）。本文が「実装は当面見送り」と宣言する未採用案の記録であり、repo-wide なコンテキスト収集の利用者向け正本は guides/repo-wide-review と explanation/river-architecture が担う',
+  'guides/governance/issue-labels':
+    'Issue テンプレートとラベル一覧だけを扱う部分集合。sidebar 掲載済みの guides/governance/issue-management が同じテンプレート・type/優先度ラベルに加えて Milestone と依存関係まで含む正本であり、2 本を並べると読者がどちらに従うか判断できない',
+  'guides/planner-eval-dataset':
+    '本リポジトリの tests/fixtures/planner-dataset/ と npm run planner:eval:dataset を対象にした planner 回帰評価の開発者向け手順。導入側リポジトリでは再現できず、利用者向けのスキル選択の説明は guides/choose-skills と guides/debug-skill-routing が正本',
+  'guides/planner-evaluation':
+    'npm run planner:eval のメトリクス定義と実行手順。planner を改造する開発者向けで README から辿れる。利用者向けのスキル選択の入口は guides/choose-skills が正本',
+  'guides/pr-review-agent-skills':
+    '外部公開されている Agent Skills を取り込むか評価するための調査メモで、外部リポジトリのスナップショット。同梱スキルの一覧という利用者向けの正本は reference/skills-catalog',
+  'guides/skill-planner':
+    'src/lib/review-runner.mjs の planner 差し込み口へ LLM を接続するコード例。この JS API は reference/stable-interfaces が定義する安定契約（CLI / action.yml / skill schema / PR コメント marker）に含まれず、sidebar へ載せると未保証の内部 API を公開契約に見せてしまう',
+  'reference/eval-keep-discard-policy':
+    '本リポジトリの skill / planner 変更を採否判断するメンテナ向けポリシーで、docs/eval/ の ledger 運用と対になる。評価結果の公開面は sidebar 掲載済みの reference/detector-evaluation-report が担い、そこから本ページへリンクしている',
+  'reference/evaluation-fixture-format':
+    '本リポジトリの tests/fixtures/review-eval/cases.json と scripts/evaluate-review-fixtures.mjs を前提にした内部評価の入力仕様。入口は sidebar 掲載済みの reference/detector-evaluation-report からのリンクで足りる',
+  'reference/evaluation-rubric':
+    '多次元スコアリングの仕様。本文が「ランタイム統合は別途追跡中」と宣言しており、未実装の指標を利用者向けリファレンスとして提示すると誤解を招く。実装済みの評価結果は reference/detector-evaluation-report が正本',
+  'reference/plangate-cli-roadmap':
+    '#802 の契約ドリフト棚卸しと安定化フェーズ計画。現時点の契約ではなく将来計画の記録であり、利用者が従う契約は reference/stable-interfaces と「CLI 仕様」カテゴリの 3 spec が正本',
+  'reference/skill-metadata':
+    'Issue #68 のメタデータ設計記録。同じフィールド定義は sidebar 掲載済みの reference/skill-schema・reference/skill-schema-reference・reference/metadata-fields が現行版として扱い、実装上の正本は schemas/skill.schema.json',
 };
 
 /**
