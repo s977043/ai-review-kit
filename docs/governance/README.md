@@ -19,8 +19,8 @@ EOS 5-layer ([`docs/ai/eos-overview.md`](../ai/eos-overview.md)) の **Governanc
 
 PR / merge / release の承認ルールは [`docs/governance.md`](../governance.md) に集約されている。要点:
 
-- main は branch protection 下、必須 status checks: Lint / Unit tests (20.x, 22.x) / Skill schema validation / Meta consistency / Action dist freshness / Integration (CLI)
-- merge 前 checklist: CI 緑 / line-level comments 確認 / preflight / `.nvmrc` 一致 dist rebuild
+- main は branch protection 下、必須 status checks: Lint / Unit tests (22.x) / Skill schema validation / Meta consistency / Action dist freshness / Integration (CLI)
+- merge 前 checklist: CI 緑 / line comments と issue comments の両方を確認 / マージ阻止ラベル確認 / preflight / `.nvmrc` 一致 dist rebuild
 - 詳細: [`docs/governance.md`](../governance.md) § "PR レビューとマージ"
 
 ## Skill PR checklist
