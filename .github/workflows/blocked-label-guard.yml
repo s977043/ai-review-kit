@@ -1,0 +1,83 @@
+name: Blocked Label Guard
+
+# マージ阻止ラベル（`blocked` 等）が付いた PR のマージを機械的に止めるガード。
+# 2026-08-04 に #1746 と #1761 の 2 回、`blocked` ラベルと未解決の指摘を付けたままの
+# PR がマージされた。1 回目の対策として docs/governance.md に確認手順を足したが、
+# その約 5 時間後に 2 回目が起きている。人が読む手順ではマージ操作を止められないため、
+# ラベルの有無を CI の成否として表現する。
+#
+# labeled / unlabeled だけでなく opened / reopened / synchronize でも走らせる。
+# ラベル付与後に push された場合、labeled イベントだけでは古い成功結果が
+# 最新コミットに対する判定として残らないため、再評価の機会を確保する。
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+# 既定の GITHUB_TOKEN 権限はこのリポジトリでは write（`gh api
+# repos/s977043/river-review/actions/permissions/workflow` で確認）。
+# 判定に必要なのは event payload の labels だけで API 呼び出しもしないため、
+# top-level で最小権限まで絞る。
+permissions:
+  contents: read
+
+concurrency:
+  group: blocked-label-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  blocked-label-guard:
+    name: Blocked label guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check merge-blocking labels
+        env:
+          # 阻止ラベルの定義箇所はここ 1 つ。増やすときはカンマ区切りで足す
+          # （例: 'blocked,do-not-merge'）。比較は前後空白除去 + 小文字化で行う。
+          BLOCKING_LABELS: 'blocked'
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          matched="$(jq -rn \
+            --argjson labels "$PR_LABELS" \
+            --arg blocking "$BLOCKING_LABELS" '
+              ($blocking
+                | split(",")
+                | map(ascii_downcase | gsub("^\\s+|\\s+$"; ""))
+                | map(select(length > 0))) as $block
+              | $labels
+              | map(ascii_downcase | gsub("^\\s+|\\s+$"; ""))
+              | map(select(IN($block[])))
+              | unique
+              | join(", ")
+            ')"
+
+          if [ -z "$matched" ]; then
+            echo "マージ阻止ラベルは付いていません（監視対象: ${BLOCKING_LABELS}）。"
+            {
+              echo "### Blocked label guard: pass"
+              echo
+              echo "PR #${PR_NUMBER} にマージ阻止ラベル（\`${BLOCKING_LABELS}\`）は付いていません。"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "### Blocked label guard: fail"
+            echo
+            echo "PR #${PR_NUMBER} にマージ阻止ラベルが付いています: \`${matched}\`"
+            echo
+            echo "このチェックは、未解決の指摘を抱えた PR がラベルを見落とされてマージされる事故"
+            echo "（#1746 / #1761）の再発防止です。ラベルが付いている間はマージできません。"
+            echo
+            echo "**ラベルを外すのは指摘した側です。** マージする側が自分で外してはいけません"
+            echo "（docs/governance.md「PR レビューとマージ」を参照）。"
+            echo "指摘へ対応したら、対応内容を PR にコメントしてラベル除去を依頼してください。"
+            echo "ラベルが外れると、このチェックは次のイベントで自動的に再評価されます。"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error title=Merge blocked by label::PR #${PR_NUMBER} にマージ阻止ラベル (${matched}) が付いています。ラベルを外すのは指摘した側です（docs/governance.md）。マージする側が外してはいけません。"
+          exit 1
