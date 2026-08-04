@@ -174,12 +174,19 @@ function matchesScopeFiles(scope, relatedFiles, changedFiles) {
  * fail safe to expired, which deactivates the suppression rather than
  * suppressing findings forever.
  *
+ * `onUnparseable: 'expired'` is passed explicitly, not left to the default: this
+ * is the read-side consumer for which "expired" only stops an effect, so the
+ * fail-safe direction stays the safe one. The write-side consumers (#1756) ask
+ * for the opposite, and no call site should depend on which one the default is.
+ *
  * @param {{ context?: { expiresAt?: string } }} suppression
  * @param {Date} [now]
  * @returns {boolean}
  */
 function isSuppressionExpired(suppression, now = new Date()) {
-  return isExpired({ expiresAt: suppression?.context?.expiresAt }, now);
+  return isExpired({ expiresAt: suppression?.context?.expiresAt }, now, {
+    onUnparseable: 'expired',
+  });
 }
 
 /**
