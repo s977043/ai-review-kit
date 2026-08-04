@@ -118,13 +118,18 @@ export async function runReviewCommand(parsed) {
   // At this point, the verify/route branches above have already returned, so the
   // remaining valid subcommands are `plan` and `exec` (in any of its
   // exec dry-run / replay / deferred forms). Anything else is unknown.
+  //
+  // Unreachable from the CLI since #1755: parseArgs rejects a missing or
+  // unknown subcommand itself, so that it exits 1 like every other usage error
+  // rather than 3 (= the `--gate` ESCALATE code). Kept as a guard for
+  // programmatic callers, and aligned on exit 1 for the same reason.
   if (parsed.reviewSubcommand !== 'plan' && parsed.reviewSubcommand !== 'exec') {
     console.error(
       parsed.reviewSubcommand
-        ? `river review ${parsed.reviewSubcommand} is not a known subcommand. Use: plan | exec | verify | route`
-        : 'Usage: river review plan --plan-only'
+        ? `Error: "${parsed.reviewSubcommand}" is not a river review subcommand (plan | exec | verify | route).`
+        : 'Error: river review requires a subcommand (plan | exec | verify | route).'
     );
-    return 3;
+    return 1;
   }
   try {
     const { runReviewPlan, runReviewExecReplay, ReviewPlanError, resolveReviewOutputFormat } =

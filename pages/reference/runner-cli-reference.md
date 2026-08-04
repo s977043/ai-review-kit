@@ -94,6 +94,8 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 
 引数エラー（usage error）の exit code は #1709 で exit 1 + stderr 要約へ統一されました。不明コマンドとオプション値の欠落・不正値は Slice 2 で統一済みです。未知オプション・余剰 positional・残っていた値欠落経路（例: `--from` / `--cases`）も Slice 3 で統一されました。help 全文の stdout 出力と exit 0 の組み合わせは、明示的な `--help` と引数なし起動だけが維持します。
 
+`river review` のサブコマンド欠落・未知サブコマンドも #1755 で exit 1 へ移しました。exit 3 に残るのは `--gate` の ESCALATE 判定と、`review` ハンドラが検出する設定エラー（`--output html` など）だけです。
+
 この統一により、オプション名の typo・余剰 positional・値の欠落は `$?` の exit 1 として検知できます。**値の妥当性**は、次のオプションについて parse 層で検証します。
 
 - 列挙値: `--phase` / `--severity` / `--planner` / `--depth` / `--output` / `--format` / `--fail-on` / `--warn-on` / `--source`
@@ -120,6 +122,10 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 - `evolve aggregate`（`evolve replay` は入力を `--spec` から取るため対象外）
 
 この範囲では `river run . --dry-run` と `river run --dry-run .` が同じ意味になります。非オプションのトークンを 2 つ以上渡した場合、2 つ目以降は余剰 positional として exit 1 です。
+
+`review` のサブコマンド（`plan` / `exec` / `verify` / `route`）も、オプションの前後どちらにも書けます。`river review plan --plan-only` と `river review --plan-only plan` は同じ意味です。サブコマンドを打ち忘れた場合と、語彙に無いトークンを渡した場合は exit 1 になります。
+
+POSIX の `--` 終端も使えます。`--` の後ろに置いたトークンは、オプションやサブコマンド名ではなく、すべて対象パスとして読みます。`river run -- .` は `river run .` と同じ意味です。`river run -- --dry-run` は `--dry-run` という名前のパスを指定した扱いになるため、`--dry-run` フラグは有効になりません。
 
 上記以外の面（`skills list` / `runs list` / `promote list` / `eval` など）は末尾のパスを受け取らず、余剰 positional として exit 1 になります。なお `runs diff <id1> <id2> [<id3>...]` や `promote approve <id>` のように、非オプションのトークンを仕様として複数受け取るサブコマンドは別扱いです。
 
