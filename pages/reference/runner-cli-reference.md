@@ -94,9 +94,34 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 
 引数エラー（usage error）の exit code は #1709 で exit 1 + stderr 要約へ統一されました。不明コマンドとオプション値の欠落・不正値は Slice 2 で統一済みです。未知オプション・余剰 positional・残っていた値欠落経路（例: `--from` / `--cases`）も Slice 3 で統一されました。help 全文の stdout 出力と exit 0 の組み合わせは、明示的な `--help` と引数なし起動だけが維持します。
 
-この統一により、オプションの typo や引数ミスは `$?` の exit 1 として検知できます。usage error のときにデータ書き込み（feedback / suppression のエントリ追加など）が先行することはありません。
+この統一により、オプション名の typo・余剰 positional・値の欠落は `$?` の exit 1 として検知できます。**値の妥当性**は、次のオプションについて parse 層で検証します。
+
+- 列挙値: `--phase` / `--severity` / `--planner` / `--depth` / `--output` / `--format` / `--fail-on` / `--warn-on` / `--source`
+- 数値: `--pr` / `--threshold` / `--min` / `--max-cost`
+- 日付: `--expires` / `--month`
+
+usage error のときにデータ書き込み（feedback / suppression のエントリ追加など）が先行することはありません。
+
+`--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
+
+ただし値の検証は全オプションには及びません。次の 3 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
+
+- 存在しないパスを `--baseline` に渡した場合（回帰比較が黙って行われない）
+- 未知の語彙を `--context` / `--dependency` に渡した場合
+- 不正値を環境変数 `RIVER_PHASE` に渡した場合（既定の `midstream` へ黙ってフォールバックする。CLI の `--phase` は exit 1）
 
 オプションの値は**スペース区切り**で渡します。`--output=json` のような `=` 連結形式は受理せず、未知オプションとして exit 1 になります（互換のため `--run-id=<id>` だけは例外的に受理します）。なお `--artifact plan=./plan.md` のように、**値の内部**に `=` を含む形式は有効です。
+
+対象パスの位置をオプションの前後どちらにも書けるのは、次の面だけです。
+
+- `run` / `doctor`
+- `skills`（サブコマンドを付けない形）
+- `review`（`plan` / `exec` / `verify` / `route`）
+- `evolve aggregate`（`evolve replay` は入力を `--spec` から取るため対象外）
+
+この範囲では `river run . --dry-run` と `river run --dry-run .` が同じ意味になります。非オプションのトークンを 2 つ以上渡した場合、2 つ目以降は余剰 positional として exit 1 です。
+
+上記以外の面（`skills list` / `runs list` / `promote list` / `eval` など）は末尾のパスを受け取らず、余剰 positional として exit 1 になります。なお `runs diff <id1> <id2> [<id3>...]` や `promote approve <id>` のように、非オプションのトークンを仕様として複数受け取るサブコマンドは別扱いです。
 
 ### `river review` / `river eval`（`runners/cli`）
 

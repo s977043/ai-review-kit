@@ -1,4 +1,9 @@
-import { findActiveSuppressions, matchesScopeFiles, inferSubsystem } from './suppression.mjs';
+import {
+  findActiveSuppressions,
+  isSuppressionExpired,
+  matchesScopeFiles,
+  inferSubsystem,
+} from './suppression.mjs';
 
 /**
  * Check for findings that should be resurfaced based on active suppressions.
@@ -30,8 +35,10 @@ export function checkForResurfacingFindings({ memoryContext, changedFiles }) {
 export function shouldResurface(suppression, changedFiles) {
   if (!suppression?.context?.active) return false;
 
-  const expiresAt = suppression.context?.expiresAt;
-  if (expiresAt && expiresAt < new Date().toISOString()) return false;
+  // Same lexical-comparison hazard as findActiveSuppressions: an unparseable
+  // expiresAt used to compare as "not yet expired" forever. isSuppressionExpired
+  // is the shared rule and fails safe to expired.
+  if (isSuppressionExpired(suppression)) return false;
 
   const related = suppression.metadata?.relatedFiles ?? [];
   const scope = suppression.context?.scope || 'file';

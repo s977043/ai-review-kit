@@ -120,13 +120,20 @@ describe('river review plan --plan-only — CLI E2E (#802 Phase 3)', () => {
     assert.ok(a2.debug.resolvedArtifacts.todo.path.endsWith('todo.md'));
   });
 
-  test('invalid --phase exits 3', async (t) => {
+  // #1746 W2 の hotfix で `--phase` は parse 層で検証するようになった。以前は
+  // parse を素通りしてハンドラ (buildReviewPlan の VALID_PHASES) が exit 3 の
+  // 設定エラーとして返していたが、`run` / `skills` では同じ不正値が exit 0 で
+  // 既定 (midstream) へ黙って落ちるという非対称があった。#1709 の
+  // 「usage error は exit 1」契約へ揃える。
+  // ハンドラ側の検証は死にコードにならない: `RIVER_PHASE` 由来の phase と
+  // ライブラリ経由の buildReviewPlan 呼び出しは parse 層を通らない。
+  test('invalid --phase exits 1 as a usage error', async (t) => {
     const dir = setupRepo(t);
     const result = await runCliInProcess(['review', 'plan', '--plan-only', '--phase', 'bogus'], {
       cwd: dir,
     });
-    assert.equal(result.code, 3);
-    assert.match(result.stderr, /Invalid --phase/);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /--phase must be one of/);
   });
 
   test('missing --plan-only exits 3', async (t) => {

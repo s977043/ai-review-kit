@@ -16,7 +16,8 @@ import { SkillLoaderError } from '../runners/core/skill-loader.mjs';
 import { ProjectRulesError } from './lib/rules.mjs';
 import { RiskMapError } from './lib/risk-map.mjs';
 import { parseList } from './lib/utils.mjs';
-import { PLANNER_MODES } from './lib/planner-utils.mjs';
+import { PLANNER_MODES, PHASES } from './lib/planner-utils.mjs';
+import { SEVERITY_RANK } from './lib/finding-factory.mjs';
 import { DEPTH_TO_REVIEW_MODE } from './lib/review-plan-generator.mjs';
 import { runReviewCommand } from './cli/commands/review.mjs';
 import { runSkillsCommand } from './cli/commands/skills.mjs';
@@ -188,6 +189,106 @@ function usageError(parsed) {
 }
 
 /**
+ * Severity vocabulary accepted by `suppression add --severity`.
+ *
+ * Derived from `SEVERITY_RANK` (src/lib/finding-factory.mjs), the declared
+ * single source of truth for the output-schema severity vocabulary, rather
+ * than re-listing the values here. It matches the `severity` enum of
+ * `schemas/suppression-context.schema.json`, which validates the `context`
+ * this option ends up writing.
+ */
+const SUPPRESSION_SEVERITIES = Object.keys(SEVERITY_RANK);
+
+/** RFC 3339 `full-date` (`2027-01-01`). */
+const RFC3339_DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** RFC 3339 `date-time` (`2027-01-01T00:00:00Z`, `...+09:00`, optional fraction). */
+const RFC3339_DATE_TIME = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(\.\d+)?([Zz]|[+-]\d{2}:\d{2})$/;
+
+/**
+ * Validate `--expires` and normalize it to the `date-time` form that
+ * `schemas/suppression-context.schema.json` declares for `context.expiresAt`.
+ *
+ * Shape is checked with the two RFC 3339 patterns above rather than with
+ * `Date.parse` alone, because `Date.parse` also accepts `2027` and
+ * `March 5, 2027` — values `createSuppression` would then store verbatim and
+ * the schema would reject.
+ *
+ * The calendar day is then checked by round-tripping through `Date.UTC`,
+ * because `Date.parse` does NOT reject an impossible day: it rolls
+ * `2027-02-30` over to 2027-03-02 (measured on Node 22.22.2). Silently
+ * expiring on a different day than the one that was typed is the same class of
+ * bug as the rest of this fix, so an overflowing day is rejected.
+ *
+ * A date-only input is read as UTC midnight, matching how `new Date()` already
+ * interprets the date-only ISO form.
+ *
+ * @param {string} value
+ * @returns {string | null} normalized ISO date-time, or null when invalid
+ */
+function parseExpiresAt(value) {
+  if (!RFC3339_DATE.test(value) && !RFC3339_DATE_TIME.test(value)) return null;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (
+    probe.getUTCFullYear() !== year ||
+    probe.getUTCMonth() !== month - 1 ||
+    probe.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return null;
+  return new Date(timestamp).toISOString();
+}
+
+/**
+ * Commands that accept a single positional `<path>` argument.
+ *
+ * `parseArgs` consumes that path eagerly when it directly follows the command
+ * token (`river run . --dry-run`). Before this table existed, a path written
+ * AFTER a flag (`river run --dry-run .`, the POSIX-conventional order) reached
+ * the Slice 3 strict-parse catch-all and was rejected as a surplus positional
+ * (regression introduced in #1746 / v1.72.0). `takeTrailingPositional` below
+ * lets the FIRST such token become the target instead; the second one is still
+ * a surplus positional and still exits 1.
+ *
+ * @param {object} parsed
+ * @param {string} token
+ * @returns {boolean} true when the token was consumed as the target
+ */
+function takeTrailingPositional(parsed, token) {
+  if (parsed.targetConsumed) return false;
+  switch (parsed.command) {
+    case 'run':
+    case 'doctor':
+    case 'review':
+      break;
+    case 'skills':
+      // `skills import|export|list|resolve` take options, not a path.
+      if (parsed.skillsSubcommand) return false;
+      break;
+    case 'evolve':
+      // `replay` takes NO positional (its dataset comes from --spec).
+      if (parsed.evolveSubcommand === 'replay') return false;
+      // Mirror the eager branch: a token that is neither a known subcommand nor
+      // an existing path is a mistyped subcommand, not a path, and the handler
+      // must reject it (`river evolve --output json agregate`).
+      if (!parsed.evolveSubcommand && !existsSync(token)) {
+        parsed.evolveSubcommand = token;
+        return true;
+      }
+      break;
+    default:
+      return false;
+  }
+  parsed.target = token;
+  parsed.targetConsumed = true;
+  return true;
+}
+
+/**
  * Every option token `parseArgs` recognizes, used only by
  * `takeFreeTextValue()` below. Keep in sync when adding an option.
  */
@@ -317,6 +418,10 @@ function parseArgs(argv) {
     // was already reported to stderr; main() then exits 1 without help.
     usageError: false,
     target: '.',
+    // Whether a positional <path> has already been taken. Distinguishes
+    // "target is still the default `.`" from "target was explicitly given",
+    // which `target` alone cannot express. See takeTrailingPositional.
+    targetConsumed: false,
     fixturesCasesPath: null,
     verbose: false,
     phase: process.env.RIVER_PHASE || 'midstream',
@@ -443,6 +548,7 @@ function parseArgs(argv) {
             parsed.evolveSubcommand = token; // handler rejects it with exit 1
           } else {
             parsed.target = token;
+            parsed.targetConsumed = true;
           }
         }
         // Surplus positionals are a usage error, never silently discarded.
@@ -487,6 +593,7 @@ function parseArgs(argv) {
         !args[0].startsWith('-')
       ) {
         parsed.target = args.shift();
+        parsed.targetConsumed = true;
       }
       continue;
     }
@@ -555,7 +662,27 @@ function parseArgs(argv) {
           usageError(parsed);
           break;
         }
-        parsed.suppressionSeverity = value;
+        // #1746 follow-up: Slice 3 guarded the MISSING value but not an invalid
+        // one, so `--severity BOGUS` exited 0 and persisted
+        // `context.severity: "BOGUS"` — a value the suppression-context schema
+        // rejects and which suppression-apply's SEVERITY_RANK lookup reads as
+        // undefined.
+        //
+        // Case-insensitive, storing the lowercased value: `--fail-on` /
+        // `--warn-on` take the SAME vocabulary and already lowercase before
+        // comparing, so rejecting `--severity Critical` while accepting
+        // `--fail-on CRITICAL` would be an asymmetry between two options that
+        // mean the same thing. The schema enum is lowercase, so the stored
+        // value must be too.
+        const severity = value.toLowerCase();
+        if (!SUPPRESSION_SEVERITIES.includes(severity)) {
+          console.error(
+            `Error: --severity must be one of: ${SUPPRESSION_SEVERITIES.join(', ')} (got "${value}").`
+          );
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionSeverity = severity;
         continue;
       }
       if (arg === '--files') {
@@ -575,7 +702,30 @@ function parseArgs(argv) {
           usageError(parsed);
           break;
         }
-        parsed.suppressionExpiresAt = value;
+        // #1746 follow-up: `--expires notadate` used to be persisted verbatim as
+        // `context.expiresAt`. The expiry check compares that string against the
+        // current ISO timestamp, and an unparseable value never compares as
+        // past — the suppression would never expire.
+        //
+        // A bare `Date.parse` guard is too loose to be the fix: it also accepts
+        // `2027`, `March 5, 2027` and `2027-01-01`, and `createSuppression`
+        // stores the string verbatim, so those land in `context.expiresAt`,
+        // which schemas/suppression-context.schema.json declares as
+        // `format: date-time`. Accept only the two RFC 3339 shapes below and
+        // NORMALIZE to the same form the rest of the codebase writes
+        // (`new Date(...).toISOString()`, as in promotion-candidates.mjs), so a
+        // date-only input stays convenient AND schema-valid. Date-only inputs
+        // are read as UTC midnight — that is what `new Date('2027-01-01')`
+        // already does for the date-only ISO form.
+        const expires = parseExpiresAt(value);
+        if (!expires) {
+          console.error(
+            `Error: --expires must be an RFC 3339 date (YYYY-MM-DD) or date-time (e.g. 2027-01-01T00:00:00Z) (got "${value}").`
+          );
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionExpiresAt = expires;
         continue;
       }
       if (arg === '--pr') {
@@ -897,6 +1047,7 @@ function parseArgs(argv) {
       // Consume optional positional target path (e.g., `river review route .`)
       if (args[0] && !args[0].startsWith('-')) {
         parsed.target = args.shift();
+        parsed.targetConsumed = true;
       }
       continue;
     }
@@ -1052,7 +1203,28 @@ function parseArgs(argv) {
         usageError(parsed);
         break;
       }
-      parsed.phase = args.shift();
+      const value = args.shift();
+      // #1746 follow-up: an invalid phase used to exit 0 and fall back to the
+      // default (`midstream`) downstream in normalizePhase, so the run silently
+      // reviewed a different phase than the one that was typed. PHASES is the
+      // shared vocabulary in src/lib/planner-utils.mjs.
+      //
+      // Case-insensitive, and the lowercased value is what gets stored. That is
+      // `normalizePhase`'s (src/lib/local-runner.mjs) semantics, pinned by
+      // tests/local-runner-internals.test.mjs "normalizes case" — so
+      // `--phase Upstream` really did run as `upstream` and MUST keep working.
+      // `normalizePhase` itself cannot be the validator here: its contract is to
+      // fall back to `midstream` for anything invalid, which is exactly the
+      // silent fallback this guard removes. It also matches the shape the
+      // sibling enum options in this parser already use (--planner / --output /
+      // --format / --fail-on all lowercase before comparing).
+      const phase = value.toLowerCase();
+      if (!PHASES.includes(phase)) {
+        console.error(`Error: --phase must be one of: ${PHASES.join(', ')} (got "${value}").`);
+        usageError(parsed);
+        break;
+      }
+      parsed.phase = phase;
       continue;
     }
     if (arg === '--cases') {
@@ -1287,6 +1459,14 @@ function parseArgs(argv) {
     // surplus positional was dropped without a trace. Note: promote / evolve
     // detect their own unknown options above (promoteUnknownOption /
     // evolveUnknownOption) and keep their handler-level messages.
+    // ...with one exception: `<command> <flags> <path>` is the POSIX-conventional
+    // order and used to work. Slice 3's catch-all rejected it as a surplus
+    // positional (v1.72.0 regression). The FIRST non-option token of a
+    // path-taking command is the path wherever it appears; the SECOND one is
+    // still surplus and still exits 1.
+    if (!arg.startsWith('-') && takeTrailingPositional(parsed, arg)) {
+      continue;
+    }
     if (arg.startsWith('-')) {
       console.error(`Error: unknown option ${arg}.`);
     } else {

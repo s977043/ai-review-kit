@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { appendEntry, loadMemory, queryMemory } from './riverbed-memory.mjs';
+import { appendEntry, isExpired, loadMemory, queryMemory } from './riverbed-memory.mjs';
 
 /**
  * Create a stable content hash from a finding's key fields.
@@ -150,6 +150,26 @@ export function matchesScopeFiles(scope, relatedFiles, changedFiles) {
 }
 
 /**
+ * Whether a suppression entry's `context.expiresAt` has passed.
+ *
+ * Delegates to riverbed-memory's `isExpired`, the single definition of the
+ * expiry rule, instead of comparing the raw string. The former
+ * `context.expiresAt < new Date().toISOString()` comparison was a LEXICAL one:
+ * a value that is not an ISO timestamp (`"notadate"`, persisted by
+ * `suppression add --expires notadate` before #1746 was fixed) sorted after
+ * every real timestamp, so such an entry never expired. Malformed values now
+ * fail safe to expired, which deactivates the suppression rather than
+ * suppressing findings forever.
+ *
+ * @param {{ context?: { expiresAt?: string } }} suppression
+ * @param {Date} [now]
+ * @returns {boolean}
+ */
+export function isSuppressionExpired(suppression, now = new Date()) {
+  return isExpired({ expiresAt: suppression?.context?.expiresAt }, now);
+}
+
+/**
  * Find active suppressions that overlap with the given file paths.
  * Filters out expired and revoked suppressions.
  * @param {{ entries: object[] }} index - Loaded memory index
@@ -168,12 +188,12 @@ export function findActiveSuppressions(index, filePaths) {
       .filter(Boolean)
   );
 
-  const now = new Date().toISOString();
+  const now = new Date();
 
   return suppressions.filter((s) => {
     if (!s.context?.active) return false;
     if (revocations.has(s.id)) return false;
-    if (s.context?.expiresAt && s.context.expiresAt < now) return false;
+    if (isSuppressionExpired(s, now)) return false;
 
     const related = s.metadata?.relatedFiles ?? [];
     const scope = s.context?.scope || 'file';
