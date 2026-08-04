@@ -276,7 +276,7 @@
     {
       "id": "existing-pattern-conformance",
       "path": "skills/midstream/existing-pattern-conformance",
-      "checksum": "sha256:a412ca74c6edf238a444fbebb9effad65e0167cceae2721f04e403365d4b40d2",
+      "checksum": "sha256:60b1e638ab99e654a7c56ba6733156f7cf3fa6bd73e1f6f5a59872398b24b103",
       "files": 3
     },
     {
@@ -348,7 +348,7 @@
     {
       "id": "independent-review-synthesis",
       "path": "skills/midstream/independent-review-synthesis",
-      "checksum": "sha256:9c0f2bbdc2a8c49fc89112a424868bce4946ee6d883f2d44f4bbbdee3b6d94eb",
+      "checksum": "sha256:dbfd173fc6d0e62046595b54a8c1e5b9665058609cc6ba4acff7c42fc8d954d2",
       "files": 9
     },
     {
