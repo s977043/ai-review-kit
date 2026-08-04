@@ -12575,7 +12575,12 @@ function normalize (uri, options) {
  */
 function resolve (baseURI, relativeURI, options) {
   const schemelessOptions = options ? Object.assign({ scheme: 'null' }, options) : { scheme: 'null' }
-  const resolved = resolveComponent(parse(baseURI, schemelessOptions), parse(relativeURI, schemelessOptions), schemelessOptions, true)
+  const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions)
+  const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions)
+  if (baseMalformed || relativeMalformed) {
+    throw new Error(baseParsed.error || relativeParsed.error || 'URI is malformed.')
+  }
+  const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true)
   schemelessOptions.skipEscape = true
   return serialize(resolved, schemelessOptions)
 }
@@ -12755,6 +12760,15 @@ const URI_PARSE = /^(?:([^#/:?]+):)?(?:\/\/((?:([^#/?@]*)@)?(\[[^#/?\]]+\]|[^#/:
 // with or without a scheme prefix, for the literal-backslash rejection below.
 const AUTHORITY_PREFIX = /^(?:[^#/:?]+:)?\/\/([^/?#]*)/
 
+// Captures the leading authority-introducer region after an optional scheme: a
+// run of forward slashes, backslashes, and the characters the WHATWG URL parser
+// removes before parsing (TAB U+0009, LF U+000A, CR U+000D). A valid introducer
+// is exactly "//". Node treats "\" as "/" on special schemes and strips those
+// characters first, so forms like "\\", "/\", "\/", "/<TAB>/", or a leading
+// "<TAB>//" reach an authority in Node while fast-uri's URI_PARSE folds them into
+// the path group (host confusion / SSRF / redirect bypass).
+const AUTHORITY_INTRODUCER_REGION = /^(?:[^#/:?]+:)?([/\\\t\n\r]*)/
+
 /**
  * @param {import('./types/index').URIComponent} parsed
  * @param {RegExpMatchArray} matches
@@ -12812,6 +12826,28 @@ function parseWithStatus (uri, opts) {
   if (authorityMatch !== null && authorityMatch[1].indexOf('\\') !== -1) {
     parsed.error = 'URI authority must not contain a literal backslash.'
     malformedAuthorityOrPort = true
+  }
+
+  // Reject a malformed or whitespace-smuggled authority introducer. fast-uri
+  // only recognizes a literal "//"; anything else in the leading separator run
+  // (a backslash, or a "//" that appears only after removing the TAB/LF/CR that
+  // Node strips) means the authority fast-uri parses differs from the one Node's
+  // URL resolves. Reject rather than rewrite, mirroring the literal-backslash
+  // guard above. Percent-encoded forms (%5C, %09) are untouched, valid data.
+  const introducerMatch = uri.match(AUTHORITY_INTRODUCER_REGION)
+  if (introducerMatch !== null) {
+    const region = introducerMatch[1]
+    const normalizedRegion = region.replace(/[\t\n\r]/g, '')
+    // Two or more leading separators introduce an authority.
+    if (normalizedRegion.length >= 2) {
+      if (normalizedRegion.slice(0, 2) !== '//') {
+        parsed.error = parsed.error || 'URI authority must not contain a literal backslash.'
+        malformedAuthorityOrPort = true
+      } else if (region.length !== normalizedRegion.length) {
+        parsed.error = parsed.error || 'URI authority introducer must not contain whitespace.'
+        malformedAuthorityOrPort = true
+      }
+    }
   }
 
   const matches = uri.match(URI_PARSE)
@@ -52673,7 +52709,7 @@ const src_safeJSON = (text) => {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //# sourceMappingURL=sleep.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/version.mjs
-const VERSION = '6.49.0'; // x-release-please-version
+const VERSION = '7.3.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -54496,7 +54532,7 @@ const checkFileSupport = () => {
         const isOldNode = typeof process?.versions?.node === 'string' && parseInt(process.versions.node.split('.')) < 20;
         throw new Error('`File` is not defined as a global, which is required for file uploads.' +
             (isOldNode ?
-                " Update to Node 20 LTS or newer, or set `globalThis.File` to `import('node:buffer').File`."
+                " Update to a supported Node.js LTS release, or set `globalThis.File` to `import('node:buffer').File`."
                 : ''));
     }
 };
@@ -54552,9 +54588,15 @@ function supportsFormData(fetchObject) {
         return cached;
     const promise = (async () => {
         try {
-            const FetchResponse = ('Response' in fetch ?
-                fetch.Response
-                : (await fetch('data:,')).constructor);
+            let FetchResponse;
+            if ('Response' in fetch) {
+                FetchResponse = fetch.Response;
+            }
+            else {
+                const response = await fetch('data:,');
+                await response.arrayBuffer();
+                FetchResponse = response.constructor;
+            }
             const data = new FormData();
             if (data.toString() === (await new FetchResponse(data).text())) {
                 return false;
@@ -61328,6 +61370,27 @@ class Containers extends APIResource {
 }
 Containers.Files = Files;
 //# sourceMappingURL=containers.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/resources/content-provenance-checks.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+class ContentProvenanceChecks extends APIResource {
+    /**
+     * Check whether an image or audio file contains known OpenAI provenance signals.
+     * [Learn more about content provenance](/api/docs/guides/content-provenance).
+     *
+     * If `not_detected`, it means the tool did not find supported signals in the
+     * uploaded file. The content could still have been generated by OpenAI if the
+     * metadata was stripped or has evidence of tampering, the watermark was degraded,
+     * it comes from a legacy generation model, or it was created before provenance
+     * signals were available. Content could also still be AI-generated by another
+     * company's model, which the tool currently does not detect.
+     */
+    create(body, options) {
+        return this._client.post('/content_provenance_checks', multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+    }
+}
+//# sourceMappingURL=content-provenance-checks.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/conversations/items.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -64127,6 +64190,7 @@ _Webhooks_instances = new WeakSet(), _Webhooks_validateSecret = function _Webhoo
 
 
 
+
 //# sourceMappingURL=index.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/provider.mjs
 /**
@@ -64164,6 +64228,7 @@ function configureProvider(provider) {
 ;// CONCATENATED MODULE: ./node_modules/openai/client.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _OpenAI_instances, client_a, _OpenAI_encoder, _OpenAI_baseURLOverridden;
+
 
 
 
@@ -64253,6 +64318,7 @@ class OpenAI {
          * Given a prompt and/or an input image, the model will generate a new image.
          */
         this.images = new Images(this);
+        this.contentProvenanceChecks = new ContentProvenanceChecks(this);
         this.audio = new Audio(this);
         /**
          * Given text and/or image inputs, classifies if those inputs are potentially harmful.
@@ -64926,6 +64992,7 @@ OpenAI.Chat = Chat;
 OpenAI.Embeddings = Embeddings;
 OpenAI.Files = files_Files;
 OpenAI.Images = Images;
+OpenAI.ContentProvenanceChecks = ContentProvenanceChecks;
 OpenAI.Audio = Audio;
 OpenAI.Moderations = Moderations;
 OpenAI.Models = Models;

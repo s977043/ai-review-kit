@@ -1,6 +1,6 @@
 {
   "name": "river-review",
-  "version": "1.71.0",
+  "version": "1.71.1",
   "private": true,
   "workspaces": [
     "runners/node-api",
@@ -97,7 +97,7 @@
     "gray-matter": "^4.0.3",
     "js-yaml": "^5.2.2",
     "minimatch": "^10.2.6",
-    "openai": "^6.49.0",
+    "openai": "^7.3.0",
     "ora": "^9.4.1",
     "zod": "^4.4.3"
   },
