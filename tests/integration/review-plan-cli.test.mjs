@@ -15,7 +15,7 @@
 // (技術的負債: --output-file 非依存の stdout 捕捉は別 slice で扱う。)
 
 import assert from 'node:assert/strict';
-import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test, { describe } from 'node:test';
@@ -382,11 +382,33 @@ describe('river review plan --plan-only — CLI E2E (#802 Phase 3)', () => {
     });
   }
 
-  test('unknown review subcommand → exit 3 with guidance', async (t) => {
+  // #1755: an unknown or missing subcommand is a usage error (exit 1), not the
+  // exit 3 this project reserves for the `--gate` ESCALATE decision. The
+  // message names the vocabulary and states that the subcommand may be written
+  // on either side of the options.
+  test('unknown review subcommand → exit 1 with guidance', async (t) => {
     const dir = setupRepo(t);
     const r = await runCliInProcess(['review', 'bogus'], { cwd: dir });
-    assert.equal(r.code, 3);
-    assert.match(r.stderr, /not a known subcommand/);
+    assert.equal(r.code, 1);
+    assert.match(r.stderr, /is not a river review subcommand/);
+    assert.match(r.stderr, /before or after the options/);
+  });
+
+  test('missing review subcommand → exit 1 with guidance', async (t) => {
+    const dir = setupRepo(t);
+    const r = await runCliInProcess(['review', '--plan-only'], { cwd: dir });
+    assert.equal(r.code, 1);
+    assert.match(r.stderr, /requires a subcommand/);
+  });
+
+  test('review subcommand written after the options is resolved (#1755)', async (t) => {
+    const dir = setupRepo(t);
+    const out = join(dir, 'flag-first.json');
+    const r = await runCliInProcess(['review', '--plan-only', '--output-file', out, 'plan'], {
+      cwd: dir,
+    });
+    assert.equal(r.code, 0);
+    assert.equal(existsSync(out), true);
   });
 
   // --- #802 Phase 3: review exec --dry-run foundation ---

@@ -39,6 +39,22 @@
 //     `2027` / `March 5, 2027` を受理していた（invalid-value 2 件を CASES へ）
 //   - B1: 列挙値オプションの大小無視を壊さないこと（VALID_CASES へ）
 //
+// ---------------------------------------------------------------------------
+// #1755 / #1759 A1 で追加した 2 ケース（85 -> 87）と C4 -> C3 の 1 件
+// ---------------------------------------------------------------------------
+// #1755: `river review --gate exec` のようにサブコマンドをフラグの後ろへ置くと、
+// そのトークンがパスとして飲まれて「サブコマンド無し」となり exit 3 = ESCALATE を
+// 返していた。パス側で拾わずサブコマンドとして解決するようにし、残る本当の
+// usage error（サブコマンド欠落 / 未知サブコマンド）は parse 層で exit 1 にした。
+// これに伴い `river review bogus` が C4 -> C3 へ移り、C4 は
+// `review plan --plan-only --output html`（ハンドラ層の設定エラー）1 件になる。
+// 併せて、フラグ後置形が正しく解決されることと正しい順序が壊れていないことを
+// VALID_CASES へ pin した（#1746 W1 と同じ「表に無い形は検出できない」ため）。
+//
+// #1759 A1: POSIX の `--` 終端が `Error: unknown option --.` で exit 1 になって
+// いた（v1.71.1 では exit 0）。`--` 以降を positional path として読むようにし、
+// パスを取る 5 面すべての `-- <path>` 形を VALID_CASES へ pin した。
+//
 // canary の役割は「正しさの主張」ではなく「変更の全量可視化」にある。
 // 今後の変更でも *この表の差分 = 挙動変更の全量* という不変条件を保つこと。
 // 期待値を書き換えるときは、必ず EXPECTED_CONTRACT_COUNTS も併せて更新する。
@@ -77,7 +93,7 @@
 //   契約ではなく環境の欠落を pin してしまうため（実測で 5 セルが動いた）。
 //   この 2 つを用意した状態が、実 repo で観測される契約と一致する。
 //
-// 実装コスト: 90 回（CASES 85 + 対照群 5）の CLI 起動を before フックで
+// 実装コスト: 92 回（CASES 87 + 対照群 5）の CLI 起動を before フックで
 // 1 回だけ掃引し、各 test は
 // その結果を参照するだけにしてある（in-process 実行で全掃引 ~2.5 秒）。
 
@@ -104,14 +120,15 @@ const CONTRACTS = {
  * 契約ごとの件数。表を編集したら必ずここも更新する
  * （= 挙動変更の総量をレビューで一目で見えるようにするための第 2 の錠）。
  */
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 83, C4: 2 };
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 86, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
 
 /**
- * 85 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
- * suppression の穴 2 件 + #1746 回帰 hotfix で pin した値検証の穴 5 件）。
+ * 87 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
+ * suppression の穴 2 件 + #1746 回帰 hotfix で pin した値検証の穴 5 件
+ * + #1755 で pin した review のサブコマンド欠落・未知 2 件）。
  * kind は #1709 のエラー種別 5 分類:
  *   value-missing / invalid-value / unknown-option / unknown-subcommand / surplus-positional
  */
@@ -160,11 +177,10 @@ const CASES = [
     contract: 'C3',
   },
   {
-    // C4 は本表に 2 件ある。こちらは共有パーサではなくハンドラ層
-    // （src/lib/review-plan.mjs の resolveReviewOutputFormat）が検出するもの。
-    // もう 1 件は下の `review route` / unknown-subcommand（`river review bogus`）で、
-    // そちらは src/cli/commands/review.mjs のサブコマンド dispatch が検出しており、
-    // 検出箇所が異なる。
+    // #1755 以降、C4 は本表でこの 1 件だけ。ハンドラ層
+    // （src/lib/review-plan.mjs の resolveReviewOutputFormat）が検出する設定
+    // エラーであり、引数の打鍵ミスではない。かつては `river review bogus` も
+    // C4 だったが、あれは usage error なので exit 1（C3）へ移した。
     surface: 'review plan',
     kind: 'invalid-value',
     argv: ['review', 'plan', '--plan-only', '--output', 'html'],
@@ -229,18 +245,35 @@ const CASES = [
     contract: 'C3',
   },
   {
-    // C4 の 2 件目。src/cli/commands/review.mjs のサブコマンド dispatch が返す。
-    // 1 件目は上の `review plan` / invalid-value（`--output html`）で、そちらは
-    // src/lib/review-plan.mjs が検出する。
+    // #1755 で C4 -> C3。未知サブコマンドは usage error であり、exit 3 が意味する
+    // ESCALATE ではない。検出も parseArgs 側へ移した。
     surface: 'review route',
     kind: 'unknown-subcommand',
     argv: ['review', 'bogus'],
-    contract: 'C4',
+    contract: 'C3',
   },
   {
     surface: 'review route',
     kind: 'surplus-positional',
     argv: ['review', 'route', '.', 'extra'],
+    contract: 'C3',
+  },
+
+  // ---- river review（サブコマンド欠落・フラグ後置の未知サブコマンド）----
+  {
+    // #1755 の残余ケース。フラグの後ろに置いたトークンが既知サブコマンドでない
+    // ときは、パスとして飲み込んだうえで「サブコマンド無し」として exit 3 を
+    // 返していた。exit 1 + 順序に言及するメッセージへ変更した。
+    surface: 'review',
+    kind: 'unknown-subcommand',
+    argv: ['review', '--plan-only', 'bogus'],
+    contract: 'C3',
+  },
+  {
+    // サブコマンドを打ち忘れた形。旧: exit 3 + `Usage: river review plan --plan-only`。
+    surface: 'review',
+    kind: 'unknown-subcommand',
+    argv: ['review', '--plan-only'],
     contract: 'C3',
   },
 
@@ -802,11 +835,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 85 usage-error cases and every row is unique', () => {
+  test('the matrix pins 87 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      85,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件'
+      87,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -828,7 +861,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     }
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:83 / C4:2 (0 of 85 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:86 / C4:1 (0 of 87 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -845,7 +878,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   });
 
   // ---------------------------------------------------------------------------
-  // 85 ケースの本体
+  // 87 ケースの本体
   // ---------------------------------------------------------------------------
 
   for (const testCase of CASES) {
@@ -885,7 +918,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // ---------------------------------------------------------------------------
 
   test('no usage-error case leaves a write side effect (.river must not exist)', () => {
-    // 表の 85 ケースはすべて usage error であり、Slice 3 の原則は「データ
+    // 表の 87 ケースはすべて usage error であり、Slice 3 の原則は「データ
     // 書き込みは全入力検証後に行う」。suppression の穴 2 件は Slice 3 まで、
     // #1746 W2 の `--severity BOGUS` / `--expires notadate` は v1.72.0 まで、
     // exit 0 のまま .river/memory/index.json へエントリを書き込んでいた。
@@ -1163,6 +1196,70 @@ const VALID_CASES = [
     ],
     command: 'suppression',
     expect: { suppressionExpiresAt: '2027-01-01T00:00:00.000Z' },
+  },
+
+  // ---------------------------------------------------------------------------
+  // `river review <フラグ> <サブコマンド>`（#1755 を pin する）
+  // ---------------------------------------------------------------------------
+  // v1.72.1 まで、この 3 形はサブコマンド語がパスとして飲まれて exit 3
+  // （= --gate の ESCALATE と同じコード）になっていた。正しい順序（下の 3 行）は
+  // 影響を受けなかったため、両方を並べて pin する。フラグ後置形だけを足すと、
+  // 逆方向の回帰（正しい順序が壊れる）を検出できないため。
+  { argv: ['review', '--gate', 'exec'], command: 'review', expect: { reviewSubcommand: 'exec' } },
+  {
+    argv: ['review', '--format', 'json', 'route'],
+    command: 'review',
+    expect: { reviewSubcommand: 'route' },
+  },
+  {
+    argv: ['review', '--plan-only', 'plan'],
+    command: 'review',
+    expect: { reviewSubcommand: 'plan' },
+  },
+  { argv: ['review', 'exec', '--gate'], command: 'review', expect: { reviewSubcommand: 'exec' } },
+  {
+    argv: ['review', 'route', '--format', 'json'],
+    command: 'review',
+    expect: { reviewSubcommand: 'route' },
+  },
+  {
+    argv: ['review', 'plan', '--plan-only'],
+    command: 'review',
+    expect: { reviewSubcommand: 'plan' },
+  },
+  {
+    // サブコマンドはパスの後ろでも解決する（`review . plan`）。旧実装は `.` を
+    // サブコマンドとして記録していた。
+    argv: ['review', '.', 'plan', '--plan-only'],
+    command: 'review',
+    target: '.',
+    expect: { reviewSubcommand: 'plan' },
+  },
+
+  // ---------------------------------------------------------------------------
+  // POSIX の `--` 終端（#1759 A1 を pin する）
+  // ---------------------------------------------------------------------------
+  // v1.71.1 では通っていた `river run -- .` が、Slice 3 の strict parse 以降
+  // `Error: unknown option --.` で exit 1 になっていた。パスを取る 5 面すべてを
+  // 固定する。`--` の後ろはオプション風トークンでもパスとして読む（それが `--`
+  // の存在理由）ことも併せて pin する。
+  { argv: ['run', '--', '.'], command: 'run', target: '.' },
+  { argv: ['doctor', '--', '.'], command: 'doctor', target: '.' },
+  { argv: ['skills', '--', '.'], command: 'skills', target: '.' },
+  { argv: ['evolve', 'aggregate', '--', '.'], command: 'evolve', target: '.' },
+  {
+    argv: ['review', 'plan', '--plan-only', '--', '.'],
+    command: 'review',
+    target: '.',
+    expect: { reviewSubcommand: 'plan' },
+  },
+  {
+    // `--` の後ろのオプション風トークンはオプションとして解釈しない。
+    // `--dry-run` はパスになり、`dryRun` は false のままになる。
+    argv: ['run', '--', '--dry-run'],
+    command: 'run',
+    target: '--dry-run',
+    expect: { dryRun: false },
   },
 
   { argv: ['run', '--dry-run', '.'], command: 'run', target: '.' },
