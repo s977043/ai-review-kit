@@ -14,6 +14,8 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 
+import { isSuppressionExpired } from '../src/lib/suppression.mjs';
+
 import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -24,11 +26,25 @@ export const THRESHOLDS = {
   staleHighSeverityDays: 14,
 };
 
+/**
+ * Whether a memory entry is a suppression that is still in effect at `now`.
+ *
+ * The expiry decision is delegated to `isSuppressionExpired`
+ * (`src/lib/suppression.mjs`), the single definition of the rule that the
+ * review path (`findActiveSuppressions`) also uses. This script previously
+ * compared `new Date(expiresAt).getTime() <= now.getTime()` itself, which
+ * answered `false` for an unparseable value (`NaN <= now` is `false`) and so
+ * counted an entry as ACTIVE that the review path treats as expired — the
+ * report and the actual review behaviour disagreed (#1764).
+ *
+ * @param {object} entry Riverbed Memory entry
+ * @param {Date} now
+ * @returns {boolean}
+ */
 function isActiveSuppression(entry, now) {
   if (entry?.type !== 'suppression') return false;
   if (entry?.context?.active === false) return false;
-  const expiresAt = entry?.context?.expiresAt;
-  if (expiresAt && new Date(expiresAt).getTime() <= now.getTime()) return false;
+  if (isSuppressionExpired(entry, now)) return false;
   return true;
 }
 
