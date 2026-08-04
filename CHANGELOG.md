@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.71.1](https://github.com/s977043/river-review/compare/v1.71.0...v1.71.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* **deps:** セキュリティアラート 5 件を lockfile 更新で解消する ([#1747](https://github.com/s977043/river-review/issues/1747)) ([4e58fa5](https://github.com/s977043/river-review/commit/4e58fa5ef93a9f66e74efc10934a7159581b9593))
+
 ## [1.71.0](https://github.com/s977043/river-review/compare/v1.70.0...v1.71.0) (2026-08-02)
 
 
