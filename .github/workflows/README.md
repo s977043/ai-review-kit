@@ -1,6 +1,6 @@
 # GitHub Actions ワークフロー
 
-`.github/workflows/` にある 27 本のワークフローの入口ドキュメントです。「どのワークフローが何をするのか」「どれが必須チェックなのか」「新しく 1 本追加するときに何をすべきか」をここから辿れます。
+`.github/workflows/` にある 28 本のワークフローの入口ドキュメントです。「どのワークフローが何をするのか」「どれが必須チェックなのか」「新しく 1 本追加するときに何をすべきか」をここから辿れます。
 
 各行の内容は実際の YAML の `on:` とジョブ定義から転記しています。ワークフローを追加・削除・改名したときは、この README も同じ PR で更新してください。
 
@@ -45,7 +45,7 @@ gh api repos/s977043/river-review/rulesets/<id> --jq '[.rules[].type]'
 
 必須チェックは classic branch protection 側にのみ定義されています。ruleset「Main Branch Protection」が持つルールは `deletion` と `non_fast_forward` の 2 つだけで、`required_status_checks` は含みません（2026-08-02 時点）。
 
-## ワークフロー一覧（27 本）
+## ワークフロー一覧（28 本）
 
 ファイル名の昇順です。「必須」列の `-` は branch protection の必須チェックではないことを示します。
 
@@ -54,6 +54,7 @@ gh api repos/s977043/river-review/rulesets/<id> --jq '[.rules[].type]'
 | `auto-fix-dashes.yml`          | Auto Fix Dashes                   | `schedule`（`0 3 * * 6` = 毎週土 03:00 UTC）                                                                                         | `npm run fix:dashes` でダッシュ前後の空白を正規化し、差分があれば PR を自動作成する                    | -          |
 | `auto-milestone.yml`           | Auto-assign milestone from labels | `issues`（opened / labeled / reopened）                                                                                              | `m1-public` などのラベルから対応するマイルストーンを Issue に自動設定する                              | -          |
 | `auto-rebuild-action-dist.yml` | Auto Rebuild Action Dist          | `pull_request`（`runners/github-action/src/**` / `runners/core/**` / `src/**` / `package-lock.json`）                                | 同一リポジトリの PR で `dist/` が古ければ再ビルドし、PR ブランチへ push する                           | -          |
+| `blocked-label-guard.yml`      | Blocked Label Guard               | `pull_request`（opened / reopened / synchronize / labeled / unlabeled）                                                              | `blocked` などマージ阻止ラベルが付いた PR でジョブを落とし、マージを機械的に止める                     | -          |
 | `build.yml`                    | Build Docusaurus Site             | `pull_request`（`pages/**` / `docs/**` / `docusaurus.config.js` / `sidebars.js` / `package.json` / `package-lock.json`）             | ドキュメントサイトが `npm run build` でビルドできることを確認する                                      | -          |
 | `codeql.yml`                   | CodeQL                            | `push`（main）/ `pull_request`（main）/ `schedule`（`30 2 * * 1` = 毎週月 02:30 UTC）                                                | JavaScript の静的セキュリティ解析を実行する                                                            | -          |
 | `deploy.yml`                   | Deploy to GitHub Pages            | `push`（main）/ `workflow_dispatch`                                                                                                  | Docusaurus をビルドして GitHub Pages へデプロイする                                                    | -          |
@@ -139,11 +140,11 @@ JSON
 
 ## 共通の約束事
 
-- Node をセットアップするのは 27 本中 15 本で、うち 12 本は `./.github/actions/setup-node-deps`（composite action）を使う
+- Node をセットアップするのは 28 本中 15 本で、うち 12 本は `./.github/actions/setup-node-deps`（composite action）を使う
 - ただし composite の既定は `.nvmrc` ではなくリテラル `22.x` である（`.nvmrc` は `22.22.2`）。ncc の出力が Node メジャーで変わるため、dist を再ビルドする `auto-rebuild-action-dist.yml` と `test.yml`（`dist-check` / `engine-install`）だけは `node-version-file: '.nvmrc'` を厳密に指定する。composite を使わない `promptfoo-eval.yml` も同じ指定である
 - サードパーティ action は commit SHA でピン留めする。現状 `scorecard.yml` の `ossf/scorecard-action@v2.4.4` だけがタグ参照である
-- `permissions:` は 27 本すべてが top-level で宣言している。読み取りだけで済むものには `read-all` か `contents: read` を置き、書き込みが要るジョブにだけスコープを足す。`auto-milestone.yml` は `issues: write` のみを与える最小例である
-- 共有状態（ref・デプロイ・Issue・外部リソース）に触れるワークフローには `concurrency:` グループを設定する。読み取り専用のジョブでは省略してよい。現状 27 本中 26 本が設定済みで、例外は `hol-plugin-scanner.yml` の 1 本である
+- `permissions:` は 28 本すべてが top-level で宣言している。読み取りだけで済むものには `read-all` か `contents: read` を置き、書き込みが要るジョブにだけスコープを足す。`auto-milestone.yml` は `issues: write` のみを与える最小例である
+- 共有状態（ref・デプロイ・Issue・外部リソース）に触れるワークフローには `concurrency:` グループを設定する。読み取り専用のジョブでは省略してよい。現状 28 本中 27 本が設定済みで、例外は `hol-plugin-scanner.yml` の 1 本である
 - `GITHUB_TOKEN` による push は下流の `pull_request` ワークフローを再発火させない（GitHub の再帰防止仕様）。dist 再ビルドや release-please のキックでこの制約に当たった場合の脱出手順は [CLAUDE.md](../../CLAUDE.md) の「`N of N required checks are expected` = bot/`GITHUB_TOKEN` push」を参照する
 - ワークフローや CI 自動化をマージする前のレビュー観点（並行実行・既定値の結合・部分失敗）は [AGENTS.md](../../AGENTS.md) の「Code-gen review」に従う
 
