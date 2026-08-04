@@ -244,48 +244,106 @@ function parseExpiresAt(value) {
 }
 
 /**
- * Commands that accept a single positional `<path>` argument.
+ * `river review` subcommands (#802 Phase 3), at module scope because BOTH the
+ * eager branch inside `parseArgs` and `takeTrailingPositional` below need it:
+ * `review` had no vocabulary at all, so a subcommand written after the options
+ * was swallowed as the path (#1755).
  *
- * `parseArgs` consumes that path eagerly when it directly follows the command
- * token (`river run . --dry-run`). Before this table existed, a path written
- * AFTER a flag (`river run --dry-run .`, the POSIX-conventional order) reached
- * the Slice 3 strict-parse catch-all and was rejected as a surplus positional
- * (regression introduced in #1746 / v1.72.0). `takeTrailingPositional` below
- * lets the FIRST such token become the target instead; the second one is still
- * a surplus positional and still exits 1.
+ * `SKILLS_SUBCOMMANDS` / `EVOLVE_SUBCOMMANDS` deliberately stay local to
+ * `parseArgs`. Hoisting them would be a no-op here — `takeTrailingPositional`
+ * does not consult them, and `evolve` keeps approximating the eager branch's
+ * decision with `existsSync`. That approximation is #1759 B1, which this change
+ * does NOT fix and does not claim to.
+ */
+const REVIEW_SUBCOMMANDS = new Set(['plan', 'exec', 'verify', 'route']);
+
+/**
+ * Whether `parsed.command` still accepts a positional `<path>`.
+ *
+ * The five path-taking surfaces are `run` / `doctor` / `review` /
+ * `skills` (without a subcommand) / `evolve` (except `replay`).
+ *
+ * @param {object} parsed
+ * @returns {boolean}
+ */
+function acceptsPositionalPath(parsed) {
+  switch (parsed.command) {
+    case 'run':
+    case 'doctor':
+    case 'review':
+      return true;
+    case 'skills':
+      // `skills import|export|list|resolve` take options, not a path.
+      return !parsed.skillsSubcommand;
+    case 'evolve':
+      // `replay` takes NO positional (its dataset comes from --spec).
+      return parsed.evolveSubcommand !== 'replay';
+    default:
+      return false;
+  }
+}
+
+/**
+ * Consume `token` as the positional `<path>` and as nothing else.
+ *
+ * This is the reading that applies after the POSIX `--` terminator, where a
+ * token must never be re-read as an option or as a subcommand word even when it
+ * looks like one.
  *
  * @param {object} parsed
  * @param {string} token
  * @returns {boolean} true when the token was consumed as the target
  */
-function takeTrailingPositional(parsed, token) {
-  if (parsed.targetConsumed) return false;
-  switch (parsed.command) {
-    case 'run':
-    case 'doctor':
-    case 'review':
-      break;
-    case 'skills':
-      // `skills import|export|list|resolve` take options, not a path.
-      if (parsed.skillsSubcommand) return false;
-      break;
-    case 'evolve':
-      // `replay` takes NO positional (its dataset comes from --spec).
-      if (parsed.evolveSubcommand === 'replay') return false;
-      // Mirror the eager branch: a token that is neither a known subcommand nor
-      // an existing path is a mistyped subcommand, not a path, and the handler
-      // must reject it (`river evolve --output json agregate`).
-      if (!parsed.evolveSubcommand && !existsSync(token)) {
-        parsed.evolveSubcommand = token;
-        return true;
-      }
-      break;
-    default:
-      return false;
-  }
+function takePositionalPath(parsed, token) {
+  if (parsed.targetConsumed || !acceptsPositionalPath(parsed)) return false;
   parsed.target = token;
   parsed.targetConsumed = true;
   return true;
+}
+
+/**
+ * Read a non-option token that reached the strict-parse catch-all.
+ *
+ * `parseArgs` consumes the path eagerly when it directly follows the command
+ * token (`river run . --dry-run`). Before this helper existed, a path written
+ * AFTER a flag (`river run --dry-run .`, the POSIX-conventional order) reached
+ * the Slice 3 strict-parse catch-all and was rejected as a surplus positional
+ * (regression introduced in #1746 / v1.72.0). The FIRST such token becomes the
+ * target instead; the second one is still a surplus positional and still
+ * exits 1.
+ *
+ * A subcommand word is resolved before the path, so that the same token means
+ * the same thing wherever it is written.
+ *
+ * @param {object} parsed
+ * @param {string} token
+ * @returns {boolean} true when the token was consumed
+ */
+function takeTrailingPositional(parsed, token) {
+  // #1755: `river review --gate exec` swallowed `exec` as the path, leaving the
+  // handler with no subcommand — which it reported with exit 3, the code this
+  // project reserves for the `--gate` ESCALATE decision. Checked before the
+  // `targetConsumed` guard inside takePositionalPath so that a subcommand
+  // written after the path (`river review . plan`) resolves as well.
+  if (parsed.command === 'review' && !parsed.reviewSubcommand && REVIEW_SUBCOMMANDS.has(token)) {
+    parsed.reviewSubcommand = token;
+    return true;
+  }
+  // Mirror the eager branch: for `evolve`, a token that is neither a known
+  // subcommand nor an existing path is a mistyped subcommand, not a path, and
+  // the handler must reject it (`river evolve --output json agregate`).
+  // `!parsed.evolveSubcommand` also covers the `replay` exclusion, because
+  // `replay` is itself a subcommand value.
+  if (
+    parsed.command === 'evolve' &&
+    !parsed.targetConsumed &&
+    !parsed.evolveSubcommand &&
+    !existsSync(token)
+  ) {
+    parsed.evolveSubcommand = token;
+    return true;
+  }
+  return takePositionalPath(parsed, token);
 }
 
 /**
@@ -405,6 +463,11 @@ function parseArgs(argv) {
   // #1574 P1 `aggregate` / P2 `replay`. Matching against a known set (rather
   // than "first non-flag token") keeps `river evolve <path>` working.
   const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay']);
+  // Whether a positional path was taken from AFTER a POSIX `--` terminator.
+  // Only used to phrase the `review` usage error correctly (see below): a token
+  // the caller explicitly declared to be a path must not be reported as "not a
+  // subcommand".
+  let terminatorTookPositional = false;
   // Global options the shared parser below handles for `evolve`. Anything else
   // starting with `-` is rejected rather than silently ignored.
   const EVOLVE_SHARED_OPTIONS = new Set(['--output', '-h', '--help', '--debug']);
@@ -517,6 +580,45 @@ function parseArgs(argv) {
 
   while (args.length) {
     const arg = args.shift();
+    // POSIX end-of-options terminator (#1759 A1). Every token after `--` is a
+    // positional path: never an option (so a path that literally starts with a
+    // dash can be passed) and never a subcommand word. `river run -- .` exited
+    // 0 up to v1.71.1 and started failing with `Error: unknown option --.` when
+    // the Slice 3 strict parse landed in v1.72.0, because `--` matched no rule
+    // and fell through to the catch-all. Handled here, ahead of the
+    // command-specific blocks, so that all five path-taking surfaces behave the
+    // same (`evolve` would otherwise report it as its own unknown option).
+    if (arg === '--') {
+      let terminatorError = false;
+      while (args.length) {
+        const positional = args.shift();
+        if (parsed.targetConsumed || !acceptsPositionalPath(parsed)) {
+          console.error(`Error: unexpected argument "${positional}".`);
+          usageError(parsed);
+          terminatorError = true;
+          break;
+        }
+        // The token is a path by construction, so it must BE one. Without this
+        // check `river evolve aggregate -- nosuchdir` exited 0 with an empty
+        // aggregate: `--` bypasses the eager branch's "a non-existent,
+        // non-subcommand token is a mistyped subcommand" rejection, turning a
+        // mistyped path into a silent empty result. #1746 W2 already treated
+        // "exit 0 while silently falling back" as a regression.
+        if (!existsSync(positional)) {
+          console.error(
+            `Error: "${positional}" does not exist ` +
+              '(every token after `--` is read as a path, never as an option or a subcommand).'
+          );
+          usageError(parsed);
+          terminatorError = true;
+          break;
+        }
+        takePositionalPath(parsed, positional);
+        terminatorTookPositional = true;
+      }
+      if (terminatorError) break;
+      continue;
+    }
     if (
       !parsed.command &&
       (arg === 'run' ||
@@ -1041,8 +1143,14 @@ function parseArgs(argv) {
     }
     if (!parsed.command && arg === 'review') {
       parsed.command = 'review';
-      if (args[0] && !args[0].startsWith('-')) {
-        parsed.reviewSubcommand = args.shift(); // plan | exec | verify
+      // Only a KNOWN subcommand is taken here (#1755). Any non-flag token used
+      // to be recorded as the subcommand, so `river review . --plan-only`
+      // reported `.` as an unknown subcommand instead of reading it as the
+      // path. A token that is not in the vocabulary falls through to the
+      // positional path below, and a subcommand written after the options is
+      // still resolved by takeTrailingPositional().
+      if (args[0] && REVIEW_SUBCOMMANDS.has(args[0])) {
+        parsed.reviewSubcommand = args.shift(); // plan | exec | verify | route
       }
       // Consume optional positional target path (e.g., `river review route .`)
       if (args[0] && !args[0].startsWith('-')) {
@@ -1474,6 +1582,34 @@ function parseArgs(argv) {
     }
     usageError(parsed);
     break;
+  }
+
+  // `review` needs one of plan | exec | verify | route. The handler reported
+  // both the missing and the unknown case with exit 3 — the code this project
+  // reserves for the `--gate` ESCALATE decision and for handler-level
+  // configuration errors — so an argument-order typo read as "a human must
+  // look at this" (#1755). Detected here instead, which makes it exit 1 like
+  // every other usage error (#1709 contract).
+  if (
+    parsed.command === 'review' &&
+    !parsed.usageError &&
+    !REVIEW_SUBCOMMANDS.has(parsed.reviewSubcommand)
+  ) {
+    // A path taken from after `--` is NOT a candidate subcommand: the caller
+    // declared it to be a path. Reporting it as one produced the contradiction
+    // `river review -- plan` -> `"plan" is not a river review subcommand
+    // (plan | exec | verify | route)`.
+    const got =
+      parsed.reviewSubcommand ??
+      (parsed.targetConsumed && !terminatorTookPositional ? parsed.target : null);
+    console.error(
+      (got === null
+        ? 'Error: river review requires a subcommand (plan | exec | verify | route).'
+        : `Error: "${got}" is not a river review subcommand (plan | exec | verify | route).`) +
+        ' The subcommand may be written before or after the options —' +
+        ' `river review plan --plan-only` and `river review --plan-only plan` are both accepted.'
+    );
+    usageError(parsed);
   }
 
   return parsed;
