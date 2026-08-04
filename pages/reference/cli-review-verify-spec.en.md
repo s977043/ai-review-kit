@@ -179,7 +179,8 @@ Syntax errors for `--artifact` / `--phase` / `--planner` (unknown values, invali
 ## Stability and compatibility
 
 - Stability: **Beta** (see [Stable Interfaces](./stable-interfaces.en.md)).
-- Flag additions are minor; flag removal, semantic changes, default changes, exit-code meaning changes, and `status` value meaning changes are **major** bumps.
+- Flag additions are minor; flag removal, semantic changes, default changes, meaning changes to the exit codes in the table above, and `status` value meaning changes are **major** bumps.
+- Usage-error exit codes (failure to interpret arguments) are outside that table and follow the Beta label of the CLI surface as a whole. The split by purpose is defined in "Exit Code Stability" in [Stable Interfaces](./stable-interfaces.en.md), which is the SSoT.
 - Breaking JSON output changes follow [Review Artifact](./review-artifact.en.md) versioning.
 
 ## See Also

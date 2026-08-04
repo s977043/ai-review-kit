@@ -4,7 +4,7 @@ title: 安定インターフェース（CLI / GitHub Actions）
 
 River Review は OSS として成長中であり、内部実装は変更される可能性があります。一方で、利用者が安心して導入できるように **安定した契約（stable contract）** を定義します。
 
-破壊的変更（breaking change）は原則として **major version bump** が必要です。
+破壊的変更（breaking change）は原則として **major version bump** が必要です。ただし何を破壊的変更と見なすかは、後述のコンポーネント安定性ラベルと Stable Contract の列挙で決まります。Beta のサーフェスなら、Stable Contract に載っていない要素の変更は minor 以下で入ります。
 
 ## 安定した契約（Stable Contract）
 
@@ -12,8 +12,11 @@ River Review は OSS として成長中であり、内部実装は変更され�
 
 - スキル定義（`schemas/skill.schema.json`）と、その意味論（severity/confidence など）
 - GitHub Actions（`runners/github-action/action.yml`）のinputs / outputsと動作
-- CLI（`river` / `river-review`）のコマンド/オプションと終了コード
+- CLI（`river` / `river-review`）のコマンド/オプション
+- CLI の gate 判定用の終了コード（`--fail-on` / `--warn-on` / `--gate` が返す `0` / `1` / `2` / `3`）
 - PR コメントの idempotent 更新方式（marker）
+
+終了コードは用途で粒度を分けています。CI がゲート結果として読む上記の値だけを Stable Contract に含めます。usage error（引数の解釈失敗）の終了コードは含めず、CLI サーフェス全体のラベルである Beta に従います。裁定の根拠は後述の「終了コードの安定性」にあります。
 
 ## コンポーネント安定性ラベル
 
@@ -25,14 +28,14 @@ River Review は OSS として成長中であり、内部実装は変更され�
 | **Beta**         | マイナーバージョンで API が変わる可能性がある。非推奨化は事前通知 |
 | **Experimental** | 予告なく変更・削除される可能性がある。評価目的での利用を推奨      |
 
-| サーフェス                                 | ラベル       | 備考                                                                 |
-| ------------------------------------------ | ------------ | -------------------------------------------------------------------- |
-| GitHub Action                              | Beta         | v0.x のため breaking changes の可能性あり                            |
-| CLI (`river` コマンド)                     | Beta         | 下記の安定インターフェースは維持                                     |
-| Skill Schema (`schemas/skill.schema.json`) | Beta         | CI バリデーション済み、フィールド拡張の可能性あり                    |
-| Node API (`runners/node-api/`)             | Experimental | `private: true`、npm 未公開                                          |
-| Agent Skills bridge                        | Experimental | v0.9.0 で追加、成熟途上                                              |
-| Riverbed Memory                            | Experimental | 設計フェーズ — 安定化は未定。利用前に最新の Issue を確認してください |
+| サーフェス                                 | ラベル       | 備考                                                                  |
+| ------------------------------------------ | ------------ | --------------------------------------------------------------------- |
+| GitHub Action                              | Beta         | v0.x のため breaking changes の可能性あり                             |
+| CLI (`river` コマンド)                     | Beta         | サーフェス全体は Beta。Stable Contract に列挙した要素のみ Stable 扱い |
+| Skill Schema (`schemas/skill.schema.json`) | Beta         | CI バリデーション済み、フィールド拡張の可能性あり                     |
+| Node API (`runners/node-api/`)             | Experimental | `private: true`、npm 未公開                                           |
+| Agent Skills bridge                        | Experimental | v0.9.0 で追加、成熟途上                                               |
+| Riverbed Memory                            | Experimental | 設計フェーズ — 安定化は未定。利用前に最新の Issue を確認してください  |
 
 ## CLI（`river`）リファレンス（最小）
 
@@ -80,6 +83,19 @@ severity の rank（低→高）: `info`=0 / `minor`=1 / `major`=2 / `critical`=
 
 自己修正ループでの停止条件・発散ガード・振動検知を含む詳細な利用契約は [ループ収束コントラクト](./loop-convergence-contract.md) を参照してください。
 
+### 終了コードの安定性
+
+終了コードは用途で 2 段階に分けて宣言します。
+
+| 用途                                                                           | ラベル | 変更に必要な bump                              |
+| ------------------------------------------------------------------------------ | ------ | ---------------------------------------------- |
+| gate 判定（`--fail-on` / `--warn-on` / `--gate` が返す `0` / `1` / `2` / `3`） | Stable | major                                          |
+| usage error（引数の解釈失敗）                                                  | Beta   | CLI サーフェス全体のラベルに従う（minor で可） |
+
+gate 判定用の終了コードは CI のジョブ成否へ直結します。閾値の意味が黙って変わると、利用者は失敗を検知できません。そのため Stable Contract に含めます。変更には major version bump が必要です。なお `--gate` の `3` は ESCALATE（人間の承認が必要）を表します。`river review` 系では、ハンドラ層の設定エラーにも `3` を割り当てています（[`river review plan` 仕様](./cli-review-plan-spec.md)）。
+
+usage error の終了コードはレビュー結果を含みません。表すのは「引数が受理されなかった」ことだけです。誤用の検出漏れを塞ぐたびに検出層と粒度が動きます。そのため CLI サーフェス全体の Beta ラベルへ従わせます。実例として #1709 では、引数エラーを exit 0 から exit 1 へ横断統一しました。粒度はさらに、parse 層の `1` とハンドラ層の設定エラーの `3` へ整理されています。この一連の変更は v1.71.0（#1735）と v1.72.0（#1746）という minor リリースで入りました。
+
 ## GitHub Actions（`river-review`）リファレンス（最小）
 
 ### inputs（安定）
@@ -110,8 +126,13 @@ severity の rank（低→高）: `info`=0 / `minor`=1 / `major`=2 / `critical`=
 次を変更する場合は、破壊的変更として major version bump を必要とします。
 
 - `river` CLI のオプション名/意味の変更・削除
+- gate 判定用の終了コード（`--fail-on` / `--warn-on` / `--gate` が返す `0` / `1` / `2` / `3`）の意味変更
 - Action inputs / outputs の変更・削除
 - スキルスキーマの必須フィールド変更、既存フィールドの意味変更
+
+次は破壊的変更として扱いません。minor もしくは patch のリリースで入ります。
+
+- usage error（引数の解釈失敗）の終了コードの変更（CLI サーフェス全体の Beta ラベルに従う）
 
 Action は安定動作のため、`@main` ではなく **リリースタグへピン留め**することを推奨します（例: `@v1.22.0`）。
 

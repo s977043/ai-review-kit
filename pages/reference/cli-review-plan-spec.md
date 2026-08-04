@@ -148,7 +148,8 @@ severity の内部語彙（`blocker` / `warning` / `nit`）と JSON スキーマ
 
 - `--artifact` で渡せる ID 集合は Artifact Input Contract に従い拡張される。
 - フラグ追加は minor、フラグの削除・意味変更・既定値変更は major bump とする。
-- exit code の意味（`0` / `1` / `2` / `3`）は **Stable Contract** として扱い、変更には major bump を要する。ただし #1709 で、引数エラーの検出層による粒度が変わった（parse 層は `1`、ハンドラ層の設定エラーは `3`）。この変更は CLI が Beta である [Stable Interfaces](./stable-interfaces.md) の扱いに従い minor で入っている。
+- gate 判定の exit code の意味（`0` / `1` / `2` / `3`）は **Stable Contract** として扱い、変更には major bump を要する。
+- usage error（引数の解釈失敗）の exit code は Stable Contract に含めない。CLI サーフェス全体の Beta ラベルに従う。#1709 では引数エラーの検出層による粒度が変わった（parse 層は `1`、ハンドラ層の設定エラーは `3`）が、この変更は minor で入っている。用途別の裁定は [Stable Interfaces](./stable-interfaces.md) の「終了コードの安定性」が SSoT。
 - JSON 出力スキーマの破壊的変更は [Review Artifact](./review-artifact.md) のバージョニングに従う。
 
 ## 関連ドキュメント
