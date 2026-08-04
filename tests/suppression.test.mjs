@@ -10,6 +10,7 @@ import {
   isSuppressionExpired,
 } from '../src/lib/suppression.mjs';
 import { loadMemory } from '../src/lib/riverbed-memory.mjs';
+import { parseArgs } from '../src/cli.mjs';
 import { createTempMemory } from './helpers/memory.mjs';
 import { compileSuppressionContextValidator } from './helpers/schema-validator.mjs';
 
@@ -320,6 +321,64 @@ test('createSuppression context payload validates against suppression-context.sc
   } finally {
     cleanup();
   }
+});
+
+// #1753 M2: `--expires` の parse 層検証は schema (`expiresAt` は
+// `format: date-time`) より緩く、`2027-01-01` をそのまま書き込んで schema 違反
+// データを作っていた。parse 層で正規化するようになったので、CLI から入った値が
+// 実際の書き込み経路 (createSuppression) を通ったあとで schema を満たすことを、
+// 自己整合ではなく production の経路そのもので確認する。
+test('an --expires value parsed by the CLI validates against the schema after createSuppression', () => {
+  const cliCases = [
+    { input: '2027-01-01', normalized: '2027-01-01T00:00:00.000Z' },
+    { input: '2027-01-01T00:00:00Z', normalized: '2027-01-01T00:00:00.000Z' },
+    { input: '2027-01-01T00:00:00+09:00', normalized: '2026-12-31T15:00:00.000Z' },
+  ];
+  for (const cliCase of cliCases) {
+    const parsed = parseArgs([
+      'suppression',
+      'add',
+      '--fingerprint',
+      'd'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--severity',
+      'Critical',
+      '--expires',
+      cliCase.input,
+    ]);
+    assert.equal(parsed.usageError, false, `${cliCase.input} が誤って拒否された`);
+    assert.equal(parsed.suppressionExpiresAt, cliCase.normalized);
+    assert.equal(parsed.suppressionSeverity, 'critical', '大小無視の正規化が効いていない');
+
+    const { cleanup, indexPath } = tmpIndex();
+    try {
+      const entry = createSuppression({
+        indexPath,
+        filePaths: ['src/auth.ts'],
+        rationale: parsed.suppressionRationale,
+        fingerprint: parsed.suppressionFingerprint,
+        feedbackType: parsed.suppressionFeedbackType,
+        severity: parsed.suppressionSeverity,
+        expiresAt: parsed.suppressionExpiresAt,
+      });
+      assert.equal(entry.context.expiresAt, cliCase.normalized);
+      const ok = validateSuppressionContext(entry.context);
+      assert.ok(ok, `${cliCase.input}: ${JSON.stringify(validateSuppressionContext.errors)}`);
+    } finally {
+      cleanup();
+    }
+  }
+});
+
+test('the schema rejects the pre-#1753 date-only expiresAt (why normalization is required)', () => {
+  // 反証を明示的に固定する: 正規化しなければ schema を通らない。
+  assert.equal(
+    validateSuppressionContext({ scope: 'file', active: true, expiresAt: '2027-01-01' }),
+    false
+  );
 });
 
 test('suppression-context schema rejects an invalid feedbackType', () => {
