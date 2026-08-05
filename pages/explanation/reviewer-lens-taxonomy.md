@@ -59,7 +59,7 @@ Lens は 3 つ目のテキソノミーではありません。上記 2 者を評
 
 rationale（根拠追跡性）は、写像表の 1 行ではなく**既存 Lens を横断する読み替え**として扱います（Issue #1783 Phase 0 の案 C）。How をコード、What をテスト、Why を Issue / Plan / PR、Why not をコメント / ADR へ配置する原則を、engineering / qa / architecture / product の各 Lens に重ねて適用します。
 
-独立した review gate は追加しません。finding 分類 13 コード・severity ガイド・除外規則は、リポジトリ内の `docs/review/rationale-traceability.md` が正本です。この Lens も他の Lens と同じく doc レベルの語彙であり、スキーマの enum やレジストリ ID へ昇格させません。
+独立した review gate は追加しません。finding 分類 13 コードの一覧と写像先は、リポジトリ内の `docs/review/rationale-traceability.md` に一元化しています。severity の語彙は `.claude/rules/review-core.md`、レビュー方針は `pages/reference/review-policy.md` が引き続き正本であり、同ドキュメントはその派生物として写像を書くにとどまります。この Lens も他の Lens と同じく doc レベルの語彙であり、スキーマの enum やレジストリ ID へ昇格させません。
 
 ## Gap の扱い / Handling Gaps
 

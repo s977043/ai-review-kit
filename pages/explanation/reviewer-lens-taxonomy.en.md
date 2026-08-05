@@ -59,7 +59,7 @@ The first version of this table counted only the seven routers and six roles, ig
 
 rationale (rationale traceability) is not a row in the mapping table. It is a **reading that cuts across the existing Lenses** (option C from Issue #1783 Phase 0). The placement principle — How in the code, What in the tests, Why in the Issue / Plan / PR, Why not in comments / ADRs — is layered on top of the engineering, qa, architecture, and product Lenses.
 
-No separate review gate is added. The 13 finding codes, the severity guide, and the exclusion rules live in `docs/review/rationale-traceability.md` in the repository, which is their SSoT. Like every other Lens, this one stays a doc-level vocabulary and is not promoted to a schema enum or a registry ID.
+No separate review gate is added. The list of 13 finding codes and their mapping targets is consolidated in `docs/review/rationale-traceability.md` in the repository (Japanese only; there is no English edition under `docs/`). The severity vocabulary remains owned by `.claude/rules/review-core.md` and the review policy by `pages/reference/review-policy.md`; that document is a derivative that only records the mapping. Like every other Lens, this one stays a doc-level vocabulary and is not promoted to a schema enum or a registry ID.
 
 ## Handling Gaps
 
