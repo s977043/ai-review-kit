@@ -111,11 +111,39 @@ jobs:
       - name: Judge whether dist needs rebuild verification
         id: judge
         env:
-          # Base revision of the change under review. For pull_request this is
-          # the base branch tip the PR was opened against; for push it is the
-          # previous tip of the pushed branch. Empty for workflow_dispatch.
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+          # Base recorded in the event payload. Frozen when the event fired, so
+          # it is only a fallback for pull_request (see the resolution below).
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          # Previous tip of the pushed branch. Empty for workflow_dispatch.
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
         run: |
+          # Base revision of the change under review.
+          #
+          # For pull_request, actions/checkout checks out refs/pull/N/merge,
+          # which GitHub RECOMPUTES against the current base branch tip. The
+          # payload's pull_request.base.sha is frozen at event time, so the two
+          # drift apart whenever an old run is replayed with `gh run rerun`,
+          # and the diff below then reports files the change never touched
+          # (#1775: a docs-only PR was told it modifies dist/). The merge
+          # commit's first parent IS the base that was actually merged into the
+          # tree being inspected, so it always matches the checked-out tree.
+          # fetch-depth: 0 above guarantees both parents are present.
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            # Only a real merge commit has a second parent; if HEAD is not one
+            # (checkout overridden, unexpected ref), HEAD^1 would be the head
+            # branch's previous commit and would UNDER-report the change, so
+            # fall back to the payload base instead of trusting it.
+            if [ -n "$(git rev-parse --verify --quiet 'HEAD^2' || true)" ]; then
+              BASE_SHA="$(git rev-parse --verify --quiet 'HEAD^1' || true)"
+            else
+              echo "HEAD is not the pull request merge commit; falling back to the event payload base."
+              BASE_SHA="$PR_BASE_SHA"
+            fi
+          else
+            BASE_SHA="$PUSH_BEFORE_SHA"
+          fi
+
           src_ts=$(git log -1 --format=%ct -- 'runners/github-action/src/' 'runners/core/' 'src/' 'package-lock.json')
           dist_ts=$(git log -1 --format=%ct -- 'runners/github-action/dist/')
 
