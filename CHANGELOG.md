@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.72.4](https://github.com/s977043/river-review/compare/v1.72.3...v1.72.4) (2026-08-05)
+
+
+### Bug Fixes
+
+* **ci:** dist-check の base を PR マージコミットの第 1 親から解決する ([#1776](https://github.com/s977043/river-review/issues/1776)) ([1002efa](https://github.com/s977043/river-review/commit/1002efae09e77cdbd2d1792144e7582ea6e28cc4)), closes [#1775](https://github.com/s977043/river-review/issues/1775)
+* **memory:** expiresAt の妥当性定義を CLI と共有する SSoT に統一する ([#1777](https://github.com/s977043/river-review/issues/1777)) ([d201a4c](https://github.com/s977043/river-review/commit/d201a4c9f43dcc83251fe205c83ec12ef38412ad)), closes [#1768](https://github.com/s977043/river-review/issues/1768)
+
 ## [1.72.3](https://github.com/s977043/river-review/compare/v1.72.2...v1.72.3) (2026-08-04)
 
 

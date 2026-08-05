@@ -29,7 +29,21 @@ const validateSuppressionContext = compileSuppressionContextValidator();
 
 // `Date.parse` が「読めてしまう」ために分裂が生じていた値と、RFC 3339 の正常値。
 // `2027-02-30` は存在しない日で、`Date` は 2027-03-02 に繰り上げる。
-const REJECTED = ['0', '2026', '2026-08-04 10:00', 'notadate', '2027-02-30'];
+//
+// 末尾 2 つ（offset 省略・秒省略）は、v1.72.0–v1.72.1 の `--expires` ゲート
+// （`if (Number.isNaN(Date.parse(value)))` のみ、値は verbatim 保存）が通した
+// legacy 形のうち最も現実的なもの。`toISOString().slice(0, 19)` の切り出しや
+// 多くのツールの既定表記がこの形になるため、`2027` や `March 5, 2027` より
+// 実データに現れやすい。
+const REJECTED = [
+  '0',
+  '2026',
+  '2026-08-04 10:00',
+  'notadate',
+  '2027-02-30',
+  '2027-01-01T00:00:00', // offset 省略
+  '2027-01-01T00:00Z', // 秒省略
+];
 const ACCEPTED = ['2027-01-01', '2027-01-01T00:00:00Z', '2027-01-01T00:00:00+09:00'];
 
 /** CLI の実経路で `--expires <value>` が受理されるか。 */
