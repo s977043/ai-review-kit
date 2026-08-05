@@ -55,6 +55,12 @@ Lens は 3 つ目のテキソノミーではありません。上記 2 者を評
 本表の初版は 7 ルーターと 6 ロールだけを写像先として数えており、`skills/registry.yaml` の registry skill を勘定に入れていませんでした。そのため operability / release / devex / architecture が実態より低い Partial と表示され、「Gap が多いので Lens を増やすべきだ」という誤った投資判断を誘発する状態にありました。再計算後の真の Gap は product の 1 件のみです。専任ロールが不在でも registry skill が評価目的を満たすなら Covered と読みます。
 :::
 
+## 横断 Lens: rationale / Cross-Cutting Lens
+
+rationale（根拠追跡性）は、写像表の 1 行ではなく**既存 Lens を横断する読み替え**として扱います（Issue #1783 Phase 0 の案 C）。How をコード、What をテスト、Why を Issue / Plan / PR、Why not をコメント / ADR へ配置する原則を、engineering / qa / architecture / product の各 Lens に重ねて適用します。
+
+独立した review gate は追加しません。finding 分類 13 コード・severity ガイド・除外規則は、リポジトリ内の `docs/review/rationale-traceability.md` が正本です。この Lens も他の Lens と同じく doc レベルの語彙であり、スキーマの enum やレジストリ ID へ昇格させません。
+
 ## Gap の扱い / Handling Gaps
 
 Gap の Lens（現時点では product のみ）は、真のギャップが運用で観測された場合にのみ registry skill として追加します。先回りしてレビュアーを増やすことはしません。product / design のようにコード外の成果物を必要とする Lens は、[artifact 入力契約](../reference/artifact-input-contract.md)経由で成果物を受け取ります。

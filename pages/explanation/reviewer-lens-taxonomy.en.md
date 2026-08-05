@@ -55,6 +55,12 @@ Read the coverage column as follows.
 The first version of this table counted only the seven routers and six roles, ignoring the registry skills in `skills/registry.yaml`. As a result operability, release, devex, and architecture were shown as Partial even though they were covered, which invites the wrong investment decision — "there are many Gaps, so add more Lenses." After the recomputation the only true Gap is product. A Lens counts as Covered when registry skills satisfy its evaluation purpose, even with no dedicated role.
 :::
 
+## Cross-Cutting Lens: rationale
+
+rationale (rationale traceability) is not a row in the mapping table. It is a **reading that cuts across the existing Lenses** (option C from Issue #1783 Phase 0). The placement principle — How in the code, What in the tests, Why in the Issue / Plan / PR, Why not in comments / ADRs — is layered on top of the engineering, qa, architecture, and product Lenses.
+
+No separate review gate is added. The 13 finding codes, the severity guide, and the exclusion rules live in `docs/review/rationale-traceability.md` in the repository, which is their SSoT. Like every other Lens, this one stays a doc-level vocabulary and is not promoted to a schema enum or a registry ID.
+
 ## Handling Gaps
 
 Gap Lenses (currently product only) are added as registry skills only when a real gap is observed in practice. Reviewers are not grown ahead of that signal. Lenses that need out-of-code artifacts, such as product or design, receive those artifacts through the [artifact input contract](../reference/artifact-input-contract.en.md).
