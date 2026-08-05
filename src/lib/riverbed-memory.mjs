@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { expiresAtTimestamp } from './expires-at.mjs';
 
 /**
  * Load the Riverbed Memory index from disk.
@@ -116,17 +117,25 @@ export function supersede(indexPath, oldId, newId) {
 }
 
 /**
- * Whether `entry.expiresAt` is present but cannot be parsed as a timestamp.
+ * Whether `entry.expiresAt` is present but is not a valid `expiresAt` value.
  * The single definition of "unparseable" — consumers that must branch on it (to
  * warn, or to refuse a destructive transition) call this instead of re-deriving
- * the `new Date(...)` parse.
+ * the parse.
+ *
+ * Validity is `parseExpiresAt` (src/lib/expires-at.mjs), the same definition the
+ * CLI's `--expires` applies, rather than the raw `new Date(...)` this used to
+ * do. `Date` accepts `"0"`, `"2026"` and `"2026-08-04 10:00"` — values the
+ * schema rejects and the CLI exits 1 on — and silently reads them as an instant
+ * nobody wrote (#1768). Such a value is now reported here as unparseable, which
+ * routes it to each caller's declared `onUnparseable` direction instead of
+ * passing it off as a deadline.
  *
  * @param {{ expiresAt?: string }} entry
  * @returns {boolean}
  */
 export function hasUnparseableExpiresAt(entry) {
   if (!entry?.expiresAt) return false;
-  return Number.isNaN(new Date(entry.expiresAt).getTime());
+  return Number.isNaN(expiresAtTimestamp(entry.expiresAt));
 }
 
 /**
@@ -171,7 +180,11 @@ export function isExpired(entry, now, { onUnparseable } = {}) {
     );
   }
   if (!entry?.expiresAt) return false;
-  const timestamp = new Date(entry.expiresAt).getTime();
+  // Same validity definition as hasUnparseableExpiresAt / the CLI's --expires
+  // (src/lib/expires-at.mjs, #1768). The two must agree: a value one of them
+  // calls unparseable and the other reads as an instant is exactly the split
+  // that let `expiresAt reached` be recorded for a schema-invalid string.
+  const timestamp = expiresAtTimestamp(entry.expiresAt);
   if (Number.isNaN(timestamp)) return onUnparseable === 'expired';
   return timestamp <= now.getTime();
 }

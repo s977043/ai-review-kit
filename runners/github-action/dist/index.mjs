@@ -43351,6 +43351,102 @@ function extractDiffMeta(diff) {
 
 /***/ }),
 
+/***/ 5009:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   L: () => (/* binding */ parseExpiresAt),
+/* harmony export */   w: () => (/* binding */ expiresAtTimestamp)
+/* harmony export */ });
+/**
+ * The single definition of what a valid `expiresAt` value is (#1768).
+ *
+ * Before this module the answer was given in three places that disagreed:
+ *
+ * | 定義      | 場所                                            | 基準                                  |
+ * | --------- | ----------------------------------------------- | ------------------------------------- |
+ * | schema    | `schemas/suppression-context.schema.json`       | `format: date-time` (RFC 3339)        |
+ * | CLI       | `parseExpiresAt` in `src/cli.mjs` (#1757)       | RFC 3339 `full-date` / `date-time`    |
+ * | library   | `hasUnparseableExpiresAt` (#1762)               | `Date.parse` is not NaN               |
+ *
+ * `Date.parse` accepts `"0"`, `"2026"` and `"2026-08-04 10:00"`, so the library
+ * treated as a valid deadline three values the schema rejects and the CLI exits
+ * 1 on. Each of them is then read at a time nobody wrote: `new Date('2026')` is
+ * 2026-01-01T00:00:00Z and `new Date('0')` is 2000-01-01T00:00:00Z. An entry
+ * could therefore be archived, and `expiresAt reached` written to its
+ * append-only audit trail, on the strength of a string the schema forbids.
+ *
+ * Every consumer now goes through `parseExpiresAt` below. The accepted set is
+ * unchanged from the CLI's (#1757): this module was moved out of `src/cli.mjs`,
+ * not rewritten, so `--expires` keeps exactly the public contract it had.
+ */
+
+/** RFC 3339 `full-date` (`2027-01-01`). */
+const RFC3339_DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** RFC 3339 `date-time` (`2027-01-01T00:00:00Z`, `...+09:00`, optional fraction). */
+const RFC3339_DATE_TIME = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(\.\d+)?([Zz]|[+-]\d{2}:\d{2})$/;
+
+/**
+ * Validate an `expiresAt` value and normalize it to the `date-time` form that
+ * `schemas/suppression-context.schema.json` declares for `context.expiresAt`.
+ *
+ * Shape is checked with the two RFC 3339 patterns above rather than with
+ * `Date.parse` alone, because `Date.parse` also accepts `2027` and
+ * `March 5, 2027` — values `createSuppression` would then store verbatim and
+ * the schema would reject.
+ *
+ * The calendar day is then checked by round-tripping through `Date.UTC`,
+ * because `Date.parse` does NOT reject an impossible day: it rolls
+ * `2027-02-30` over to 2027-03-02 (measured on Node 22.22.2). Silently
+ * expiring on a different day than the one that was typed is the same class of
+ * bug as the rest of this fix, so an overflowing day is rejected.
+ *
+ * A date-only input is read as UTC midnight, matching how `new Date()` already
+ * interprets the date-only ISO form.
+ *
+ * @param {string} value
+ * @returns {string | null} normalized ISO date-time, or null when invalid
+ */
+function parseExpiresAt(value) {
+  if (typeof value !== 'string') return null;
+  if (!RFC3339_DATE.test(value) && !RFC3339_DATE_TIME.test(value)) return null;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (
+    probe.getUTCFullYear() !== year ||
+    probe.getUTCMonth() !== month - 1 ||
+    probe.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return null;
+  return new Date(timestamp).toISOString();
+}
+
+/**
+ * The instant an `expiresAt` value denotes, or `NaN` when the value is not a
+ * valid `expiresAt` at all.
+ *
+ * Read-side counterpart of `parseExpiresAt` for callers that need to COMPARE a
+ * deadline rather than store it. Returning `NaN` (rather than throwing or
+ * returning null) keeps the shape `Date.parse` had, so the caller still decides
+ * what an invalid value means — `isExpired`'s `onUnparseable` contract (#1756)
+ * is unchanged by this module.
+ *
+ * @param {string} value
+ * @returns {number} epoch milliseconds, or NaN
+ */
+function expiresAtTimestamp(value) {
+  const normalized = parseExpiresAt(value);
+  return normalized === null ? Number.NaN : Date.parse(normalized);
+}
+
+
+/***/ }),
+
 /***/ 7638:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -49126,6 +49222,8 @@ function aggregateRiskLevel(fileRisks, fallback = 'comment_only') {
 /* unused harmony exports supersede, expireEntries */
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3024);
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
+/* harmony import */ var _expires_at_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(5009);
+
 
 
 
@@ -49244,17 +49342,25 @@ function supersede(indexPath, oldId, newId) {
 }
 
 /**
- * Whether `entry.expiresAt` is present but cannot be parsed as a timestamp.
+ * Whether `entry.expiresAt` is present but is not a valid `expiresAt` value.
  * The single definition of "unparseable" — consumers that must branch on it (to
  * warn, or to refuse a destructive transition) call this instead of re-deriving
- * the `new Date(...)` parse.
+ * the parse.
+ *
+ * Validity is `parseExpiresAt` (src/lib/expires-at.mjs), the same definition the
+ * CLI's `--expires` applies, rather than the raw `new Date(...)` this used to
+ * do. `Date` accepts `"0"`, `"2026"` and `"2026-08-04 10:00"` — values the
+ * schema rejects and the CLI exits 1 on — and silently reads them as an instant
+ * nobody wrote (#1768). Such a value is now reported here as unparseable, which
+ * routes it to each caller's declared `onUnparseable` direction instead of
+ * passing it off as a deadline.
  *
  * @param {{ expiresAt?: string }} entry
  * @returns {boolean}
  */
 function hasUnparseableExpiresAt(entry) {
   if (!entry?.expiresAt) return false;
-  return Number.isNaN(new Date(entry.expiresAt).getTime());
+  return Number.isNaN((0,_expires_at_mjs__WEBPACK_IMPORTED_MODULE_2__/* .expiresAtTimestamp */ .w)(entry.expiresAt));
 }
 
 /**
@@ -49299,7 +49405,11 @@ function isExpired(entry, now, { onUnparseable } = {}) {
     );
   }
   if (!entry?.expiresAt) return false;
-  const timestamp = new Date(entry.expiresAt).getTime();
+  // Same validity definition as hasUnparseableExpiresAt / the CLI's --expires
+  // (src/lib/expires-at.mjs, #1768). The two must agree: a value one of them
+  // calls unparseable and the other reads as an instant is exactly the split
+  // that let `expiresAt reached` be recorded for a schema-invalid string.
+  const timestamp = (0,_expires_at_mjs__WEBPACK_IMPORTED_MODULE_2__/* .expiresAtTimestamp */ .w)(entry.expiresAt);
   if (Number.isNaN(timestamp)) return onUnparseable === 'expired';
   return timestamp <= now.getTime();
 }
@@ -50688,6 +50798,8 @@ var planner_utils = __nccwpck_require__(1013);
 var finding_factory = __nccwpck_require__(1535);
 // EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
 var review_plan_generator = __nccwpck_require__(8069);
+// EXTERNAL MODULE: ./src/lib/expires-at.mjs
+var expires_at = __nccwpck_require__(5009);
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
 var diff_processor = __nccwpck_require__(861);
 ;// CONCATENATED MODULE: ./src/cli/commands/review.mjs
@@ -71595,6 +71707,11 @@ async function runReplay(parsed, output) {
 
 
 
+// #1768: `parseExpiresAt` lived here and defined "a valid --expires" for the CLI
+// alone, while riverbed-memory decided the same question with a bare `Date`.
+// It now lives in src/lib/expires-at.mjs so the CLI and the library share one
+// definition; the accepted set of `--expires` values is unchanged.
+
 
 
 
@@ -71769,50 +71886,6 @@ function usageError(parsed) {
  * this option ends up writing.
  */
 const SUPPRESSION_SEVERITIES = Object.keys(finding_factory/* SEVERITY_RANK */.f3);
-
-/** RFC 3339 `full-date` (`2027-01-01`). */
-const RFC3339_DATE = /^\d{4}-\d{2}-\d{2}$/;
-/** RFC 3339 `date-time` (`2027-01-01T00:00:00Z`, `...+09:00`, optional fraction). */
-const RFC3339_DATE_TIME = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(\.\d+)?([Zz]|[+-]\d{2}:\d{2})$/;
-
-/**
- * Validate `--expires` and normalize it to the `date-time` form that
- * `schemas/suppression-context.schema.json` declares for `context.expiresAt`.
- *
- * Shape is checked with the two RFC 3339 patterns above rather than with
- * `Date.parse` alone, because `Date.parse` also accepts `2027` and
- * `March 5, 2027` — values `createSuppression` would then store verbatim and
- * the schema would reject.
- *
- * The calendar day is then checked by round-tripping through `Date.UTC`,
- * because `Date.parse` does NOT reject an impossible day: it rolls
- * `2027-02-30` over to 2027-03-02 (measured on Node 22.22.2). Silently
- * expiring on a different day than the one that was typed is the same class of
- * bug as the rest of this fix, so an overflowing day is rejected.
- *
- * A date-only input is read as UTC midnight, matching how `new Date()` already
- * interprets the date-only ISO form.
- *
- * @param {string} value
- * @returns {string | null} normalized ISO date-time, or null when invalid
- */
-function parseExpiresAt(value) {
-  if (!RFC3339_DATE.test(value) && !RFC3339_DATE_TIME.test(value)) return null;
-  const year = Number(value.slice(0, 4));
-  const month = Number(value.slice(5, 7));
-  const day = Number(value.slice(8, 10));
-  const probe = new Date(Date.UTC(year, month - 1, day));
-  if (
-    probe.getUTCFullYear() !== year ||
-    probe.getUTCMonth() !== month - 1 ||
-    probe.getUTCDate() !== day
-  ) {
-    return null;
-  }
-  const timestamp = Date.parse(value);
-  if (Number.isNaN(timestamp)) return null;
-  return new Date(timestamp).toISOString();
-}
 
 /**
  * `river review` subcommands (#802 Phase 3), at module scope because BOTH the
@@ -72390,7 +72463,7 @@ function parseArgs(argv) {
         // date-only input stays convenient AND schema-valid. Date-only inputs
         // are read as UTC midnight — that is what `new Date('2027-01-01')`
         // already does for the date-only ISO form.
-        const expires = parseExpiresAt(value);
+        const expires = (0,expires_at/* parseExpiresAt */.L)(value);
         if (!expires) {
           console.error(
             `Error: --expires must be an RFC 3339 date (YYYY-MM-DD) or date-time (e.g. 2027-01-01T00:00:00Z) (got "${value}").`
