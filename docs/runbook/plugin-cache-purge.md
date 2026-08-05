@@ -63,7 +63,44 @@ git -C ~/.claude/plugins/marketplaces/<marketplace> fetch origin
 git -C ~/.claude/plugins/marketplaces/<marketplace> status -sb
 ```
 
-`status -sb` の出力に `behind N` が含まれていれば、clone が stale です。実例として、river-review-marketplace の clone が 92 コミット遅れ、`v1.43.0` のまま更新が止まっていたケースが確認されています。
+`status -sb` の出力に `behind N` が含まれていれば、clone が stale です。実例として、river-review-marketplace の clone が 92 コミット遅れ、`v1.43.0` のまま更新が止まっていたケースが確認されています。2026-08-05 には同じ clone が 81 コミット遅れで再発しました。
+
+### 根本原因: 第三者 marketplace は背景自動更新の対象外
+
+第三者が公開する marketplace は、`autoUpdate` を明示しない限り背景自動更新の対象になりません。そのため clone は取得した時点のまま据え置かれ、放置するほど遅れが広がります。
+
+Claude Code 2.1.222 のバイナリには、次の判定ロジックが含まれています（`strings <binary> | tr ';' '\n' | grep "autoUpdate??"` で確認）。
+
+```js
+function Sze(e, t, r) {
+  if (r !== void 0) return r;
+  let n = e.toLowerCase();
+  return t.autoUpdate ?? (SZn.has(n) && !jpg.has(n));
+}
+```
+
+`autoUpdate` を明示しない場合、公式 marketplace 集合に含まれるかどうかで可否を決めます。第三者 marketplace はこの集合に入らないため `false` と評価され、背景で `git pull` を一度も実行しません。
+
+同じバイナリの schema 定義にも、次の説明文字列が存在します（`strings` で確認）。
+
+```text
+Whether to automatically update this marketplace and its installed plugins on startup
+ISO 8601 timestamp of last marketplace refresh
+```
+
+なお上記は 2026-08-05 時点、Claude Code 2.1.222 での観測結果です。実装は将来変わりえます。公式ドキュメントは [Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces) を参照してください。
+
+#### 否定済みの仮説
+
+同じ調査を繰り返さないよう、検証で否定された仮説も残します。
+
+| 仮説                              | 判定 | 根拠                                                                               |
+| --------------------------------- | ---- | ---------------------------------------------------------------------------------- |
+| clone がタイムアウトしている      | 否定 | shallow clone の実測は 2.3 秒（上限 120 秒 / `CLAUDE_CODE_PLUGIN_GIT_TIMEOUT_MS`） |
+| private repo の認証に失敗している | 否定 | 対象は public repo である                                                          |
+| shallow clone が pull を阻害する  | 否定 | 遅れた状態を再現し、credential helper を無効化した同条件で fast-forward が成功した |
+
+切り分けの教訓も残します。当初は「自動更新を止める設定」があるはずだと考え、探しても見つからず行き詰まりました。正しくは「有効化する設定が無い」ことでした。既定が無効な機能では、抑止側の記述はそもそも存在しません。
 
 ### 復旧
 
@@ -74,6 +111,23 @@ git -C ~/.claude/plugins/marketplaces/<marketplace> pull --ff-only origin main
 ```
 
 その後もう一度 `/plugin update <plugin>@<marketplace>` を実行すると、新しいバージョンが cache に展開され、`installed_plugins.json` の記録も更新されます。
+
+### 恒久対処: `autoUpdate` を有効化する
+
+上記の `git pull --ff-only` は手動対処です。再発を止めるには、`~/.claude/settings.json` の `extraKnownMarketplaces` にある各エントリへ `autoUpdate` を追加します。
+
+```json
+"river-review-marketplace": {
+  "source": { "source": "github", "repo": "s977043/river-review" },
+  "autoUpdate": true
+}
+```
+
+運用上の注意は次の 3 点です。
+
+- 設定が効くのは次回起動から。`startBackgroundHousekeeping()` から 1 回だけ呼ばれ、0〜600,000 ms（最大 10 分）のランダム遅延後に走る。常駐セッションでは定期実行されない
+- `lastUpdated` は Claude Code が refresh した時刻であり、手動 `git pull` では更新されない。値が動かないという事実は、自動更新の未実行を示す証拠として使える
+- 即時性が要るときは `/plugin marketplace update <name>` を使う。手動トリガーは背景自動更新と別経路である
 
 ### 確認
 
@@ -120,6 +174,7 @@ marketplace クローン（`~/.claude/plugins/marketplaces/river-review-marketpl
 - [ ] growth-core など他プラグインに同名 skill がないか（同名なら prefix 必須）。
 - [ ] purge 後に Claude Code を再起動したか。
 - [ ] marketplace クローンを誤って削除していないか。
+- [ ] `~/.claude/settings.json` の該当 marketplace エントリに `autoUpdate: true` があるか。
 
 ## 関連
 
