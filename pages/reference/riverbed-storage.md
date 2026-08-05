@@ -13,6 +13,8 @@ Riverbed Memory は、過去の判断やパターンを LLM レビューに活�
 
 ディスク I/O は `loadMemory` / `appendEntry` / `queryMemory` / `supersede` / `expireEntries` などの関数を通じて行う。ファイルが存在しない場合は `{ entries: [], version: "1" }` を返す stateless fallback が効く。`expireEntries` は `expiresAt` が過ぎたエントリの `status` を `archived` に遷移させる。`expiresAt` が日時として解釈できない値のときは、アーカイブせず警告のみ出力する（解釈できない文字列は期限到達の根拠にならないため）。とくに `promotion_candidate` では `archived` が不可逆な終端状態であり、アーカイブが候補の破棄に等しくなる。
 
+`expiresAt` が妥当かどうかの定義は `src/lib/expires-at.mjs` の `parseExpiresAt` 一箇所に置き、CLI の `--expires` が受理する値の集合と一致させる。RFC 3339 の `YYYY-MM-DD` と date-time だけを受理し、存在しない暦日（`2027-02-30` など）は拒否する。`Date` が読めてしまう `2026` や `2026-08-04 10:00` はここでは無効になり、期限の根拠として扱わない。
+
 ## エントリ仕様（抜粋）
 
 - `id`: 一意な文字列（例: `adr-001`, `pattern-react-query`）

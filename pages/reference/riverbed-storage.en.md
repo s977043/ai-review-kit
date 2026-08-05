@@ -13,6 +13,8 @@ Riverbed Memory is a lightweight storage system for leveraging past decisions an
 
 Disk I/O goes through functions like `loadMemory` / `appendEntry` / `queryMemory` / `supersede` / `expireEntries`. When the file does not exist, a stateless fallback returns `{ entries: [], version: "1" }`. `expireEntries` transitions entries whose `expiresAt` has passed into `status: archived`. When `expiresAt` cannot be parsed as a timestamp, the entry is left as-is and only a warning is emitted, because an unparseable string is no evidence that the deadline passed. This matters most for `promotion_candidate` entries, where `archived` is an irreversible terminal state and archiving therefore amounts to discarding the candidate.
 
+What counts as a valid `expiresAt` is defined in exactly one place, `parseExpiresAt` in `src/lib/expires-at.mjs`, and it is the same set of values the CLI's `--expires` accepts: RFC 3339 `YYYY-MM-DD` and date-time only, with impossible calendar days (such as `2027-02-30`) rejected. Values `Date` happens to read, such as `2026` or `2026-08-04 10:00`, are invalid here and are never treated as evidence that a deadline passed.
+
 ## Entry Specification (Excerpt)
 
 - `id`: Unique string (e.g., `adr-001`, `pattern-react-query`)
