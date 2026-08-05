@@ -80,7 +80,7 @@
 - `WHY_MISSING`: `assumption-resolution-trace` は plan 欠損時に発火しない（`SKILL.md:47` Non-goals）。`WHY_MISSING` が問題になるのは plan が無い変更であり、空振りする。同 `:43` により既定 CI でも自動発火しない。
 - `WHY_NOT_MISSING`: `altitude-generalization` の Non-goals `SKILL.md:48`「差分に証拠のない主張は出さない」と正面衝突する。
 - `RATIONALE_CONTRADICTED`: `self-contradiction` の Gate（`SKILL.md:42`）は差分内の宣言的フレーズを必須とし、成果物をまたぐ理由の矛盾は通らない。
-- `RATIONALE_DUPLICATED`: 「正本」の概念自体は repo に存在する（`docs` / `pages` / `skills` / `.claude` に 13 箇所。測定コマンド: `grep -ro "正本" docs pages skills .claude | wc -l`）。無いのは**機械判定できる正本の同定手段**だけであり、Phase 2 で新しい正本概念を定義する必要はない。
+- `RATIONALE_DUPLICATED`: 「正本」の概念自体は repo に存在する（`docs` / `pages` / `skills` / `.claude` の 5 ファイル・7 箇所。測定コマンド: `git grep -o "正本" -- docs pages skills .claude | wc -l`、本 PR を除く main 時点。`grep -r` は `.claude/worktrees/` 配下の作業コピーを重複計上するため使わない）。無いのは**機械判定できる正本の同定手段**だけであり、Phase 2 で新しい正本概念を定義する必要はない。
 - `RATIONALE_INPUT_MISSING`: `skippedSkills` は skill id 粒度の配列で、プランナーが実行**前**に構築する（`src/lib/review-plan.mjs:733-736`）。「実行中の skill がこの finding code の入力だけ欠いた」を追記する経路がない。
 - `HOW_MISPLACED_IN_COMMENT` / `WHY_NOT_STALE` / `COMMENT_RESTATES_CODE`: コード内コメントを対象物とする資産が repo に存在しない（#1783 Phase 0 の全 skill 検索で 0 hit）。
 
