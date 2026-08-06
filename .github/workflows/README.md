@@ -6,16 +6,17 @@
 
 ## 必須チェック（branch protection）
 
-`main` の branch protection が要求する必須チェックは 6 件で、**すべて `test.yml`（ワークフロー名 `CI`）のジョブ**です。ほかのワークフローは 1 本も必須チェックになっていません。
+`main` の branch protection が要求する必須チェックは 7 件です。うち 6 件は `test.yml`（ワークフロー名 `CI`）のジョブで、残る 1 件が `blocked-label-guard.yml` の `Blocked label guard` です。
 
-| 必須チェック名 (context)  | ワークフロー       | ジョブキー         | 実行内容                                                                                 |
-| ------------------------- | ------------------ | ------------------ | ---------------------------------------------------------------------------------------- |
-| `Lint`                    | `test.yml`（`CI`） | `lint`             | `npm run lint`                                                                           |
-| `Unit tests (22.x)`       | `test.yml`（`CI`） | `test`             | `node --test`（`--experimental-test-isolation=none`）とカバレッジの Codecov アップロード |
-| `Skill schema validation` | `test.yml`（`CI`） | `skill-validation` | skill / promptfoo / agent-skill / 参照 / manifest / registry の 6 検証                   |
-| `Meta consistency`        | `test.yml`（`CI`） | `meta-check`       | `npm run meta:validate` と `npm run plugin:validate`                                     |
-| `Action dist freshness`   | `test.yml`（`CI`） | `dist-check`       | `dist/` を触る変更、および鮮度判定で古いと出た変更を再ビルドしてバイト比較               |
-| `Integration (CLI)`       | `test.yml`（`CI`） | `integration-test` | `tests/integration/local-review.test.mjs`                                                |
+| 必須チェック名 (context)  | ワークフロー                                       | ジョブキー            | 実行内容                                                                                 |
+| ------------------------- | -------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
+| `Lint`                    | `test.yml`（`CI`）                                 | `lint`                | `npm run lint`                                                                           |
+| `Unit tests (22.x)`       | `test.yml`（`CI`）                                 | `test`                | `node --test`（`--experimental-test-isolation=none`）とカバレッジの Codecov アップロード |
+| `Skill schema validation` | `test.yml`（`CI`）                                 | `skill-validation`    | skill / promptfoo / agent-skill / 参照 / manifest / registry の 6 検証                   |
+| `Meta consistency`        | `test.yml`（`CI`）                                 | `meta-check`          | `npm run meta:validate` と `npm run plugin:validate`                                     |
+| `Action dist freshness`   | `test.yml`（`CI`）                                 | `dist-check`          | `dist/` を触る変更、および鮮度判定で古いと出た変更を再ビルドしてバイト比較               |
+| `Integration (CLI)`       | `test.yml`（`CI`）                                 | `integration-test`    | `tests/integration/local-review.test.mjs`                                                |
+| `Blocked label guard`     | `blocked-label-guard.yml`（`Blocked Label Guard`） | `blocked-label-guard` | `blocked` などマージ阻止ラベルの有無を event payload から判定する                        |
 
 間違えやすい点が 3 つあります。
 
@@ -54,7 +55,7 @@ gh api repos/s977043/river-review/rulesets/<id> --jq '[.rules[].type]'
 | `auto-fix-dashes.yml`          | Auto Fix Dashes                   | `schedule`（`0 3 * * 6` = 毎週土 03:00 UTC）                                                                                         | `npm run fix:dashes` でダッシュ前後の空白を正規化し、差分があれば PR を自動作成する                    | -          |
 | `auto-milestone.yml`           | Auto-assign milestone from labels | `issues`（opened / labeled / reopened）                                                                                              | `m1-public` などのラベルから対応するマイルストーンを Issue に自動設定する                              | -          |
 | `auto-rebuild-action-dist.yml` | Auto Rebuild Action Dist          | `pull_request`（`runners/github-action/src/**` / `runners/core/**` / `src/**` / `package-lock.json`）                                | 同一リポジトリの PR で `dist/` が古ければ再ビルドし、PR ブランチへ push する                           | -          |
-| `blocked-label-guard.yml`      | Blocked Label Guard               | `pull_request`（opened / reopened / synchronize / labeled / unlabeled）                                                              | `blocked` などマージ阻止ラベルが付いた PR でジョブを落とし、マージを機械的に止める                     | -          |
+| `blocked-label-guard.yml`      | Blocked Label Guard               | `pull_request`（opened / reopened / synchronize / labeled / unlabeled）                                                              | `blocked` などマージ阻止ラベルが付いた PR でジョブを落とし、マージを機械的に止める                     | 1 件       |
 | `build.yml`                    | Build Docusaurus Site             | `pull_request`（`pages/**` / `docs/**` / `docusaurus.config.js` / `sidebars.js` / `package.json` / `package-lock.json`）             | ドキュメントサイトが `npm run build` でビルドできることを確認する                                      | -          |
 | `codeql.yml`                   | CodeQL                            | `push`（main）/ `pull_request`（main）/ `schedule`（`30 2 * * 1` = 毎週月 02:30 UTC）                                                | JavaScript の静的セキュリティ解析を実行する                                                            | -          |
 | `deploy.yml`                   | Deploy to GitHub Pages            | `push`（main）/ `workflow_dispatch`                                                                                                  | Docusaurus をビルドして GitHub Pages へデプロイする                                                    | -          |
@@ -99,7 +100,7 @@ gh api repos/s977043/river-review/rulesets/<id> --jq '[.rules[].type]'
 - advisory な指摘のみを目的とし、失敗させる意図がない（例: `river-review.yml`）
 - fork からの PR で権限不足により動作しない
 
-いま必須チェックが `test.yml` の 6 ジョブに集中しているのは、この基準を満たすのが `test.yml` のジョブだけだからです。
+必須チェック 7 件のうち 6 件が `test.yml` に集中しているのは、この基準を満たすジョブが `test.yml` に固まっているからです。例外の `Blocked label guard` は `paths:` フィルタを持たず、event payload だけで決定論的に判定するため基準を満たします。
 
 ### 2. 必須チェックにしない場合
 
@@ -130,7 +131,7 @@ gh api -X PATCH repos/s977043/river-review/branches/main/protection/required_sta
 JSON
 ```
 
-`app_id` は GitHub Actions のアプリ ID（現状 `15368`）です。この配列は全置換なので、既存の 6 件を省略すると必須チェックから外れてしまいます。手順 2 で取得した配列へ追記する形が安全です。
+`app_id` は GitHub Actions のアプリ ID（現状 `15368`）です。この配列は全置換なので、既存の 7 件を省略すると必須チェックから外れてしまいます。手順 2 で取得した配列へ追記する形が安全です。
 
 一方、**既存の必須チェックの名前を変える場合（matrix leg の増減・改名・ジョブ名の変更）は逆で、branch protection を先に更新します**。この順序と背景は [CLAUDE.md](../../CLAUDE.md) の AI Misoperation Guards「CI matrix leg ↔ branch-protection required-check sync」が SSoT です。ここでは重複させないので、必ずそちらを読んでください。
 
@@ -144,7 +145,8 @@ JSON
 - ただし composite の既定は `.nvmrc` ではなくリテラル `22.x` である（`.nvmrc` は `22.22.2`）。ncc の出力が Node メジャーで変わるため、dist を再ビルドする `auto-rebuild-action-dist.yml` と `test.yml`（`dist-check` / `engine-install`）だけは `node-version-file: '.nvmrc'` を厳密に指定する。composite を使わない `promptfoo-eval.yml` も同じ指定である
 - サードパーティ action は commit SHA でピン留めする。現状 `scorecard.yml` の `ossf/scorecard-action@v2.4.4` だけがタグ参照である
 - `permissions:` は 28 本すべてが top-level で宣言している。読み取りだけで済むものには `read-all` か `contents: read` を置き、書き込みが要るジョブにだけスコープを足す。`auto-milestone.yml` は `issues: write` のみを与える最小例である
-- 共有状態（ref・デプロイ・Issue・外部リソース）に触れるワークフローには `concurrency:` グループを設定する。読み取り専用のジョブでは省略してよい。現状 28 本中 27 本が設定済みで、例外は `hol-plugin-scanner.yml` の 1 本である
+- 共有状態（ref・デプロイ・Issue・外部リソース）に触れるワークフローには `concurrency:` グループを設定する。読み取り専用のジョブでは省略してよい。現状 28 本中 26 本が設定済みで、例外は `hol-plugin-scanner.yml` と `blocked-label-guard.yml` の 2 本である
+- **必須チェックのワークフローには `concurrency:` を設定しない。** グループ内で cancel された run は `cancelled` の check-run を残し、pass でも fail でもない結論として必須チェックの判定を止める。`cancel-in-progress: false` にしても避けられない。グループ内に pending の run がある状態で新しい run が queue に入ると、既存の pending が cancel されて新しい run が置き換わる仕様のためである（[workflow-syntax#concurrency](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency)）。`blocked-label-guard.yml` はこの事故（#1778）を受けて `concurrency:` を外している
 - `GITHUB_TOKEN` による push は下流の `pull_request` ワークフローを再発火させない（GitHub の再帰防止仕様）。dist 再ビルドや release-please のキックでこの制約に当たった場合の脱出手順は [CLAUDE.md](../../CLAUDE.md) の「`N of N required checks are expected` = bot/`GITHUB_TOKEN` push」を参照する
 - ワークフローや CI 自動化をマージする前のレビュー観点（並行実行・既定値の結合・部分失敗）は [AGENTS.md](../../AGENTS.md) の「Code-gen review」に従う
 
