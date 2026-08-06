@@ -19,6 +19,11 @@
  * 配列順は `buildHeuristicComments` の出力順序（golden/fixtures が pin）と一致させる。
  */
 
+// 生成物パスの判定は diff-processor の `isGeneratedArtifactPath` を唯一の実装として
+// 参照する（再実装しない）。同関数は finding 出力段の抑制述語でもあり、検出段でも
+// 同じ定義を使うことで「どこまでを生成物とみなすか」の二重定義を避ける。
+import { isGeneratedArtifactPath } from './diff-processor.mjs';
+
 // test-existence / coverage-gap は同一の 3 検出器を共有する。プレゼンテーションは
 // 一度だけ定義して両スキルのエントリから参照し、二重定義を避ける。
 const MISSING_TESTS_FINDING = {
@@ -309,6 +314,21 @@ const HEURISTIC_REGISTRY = [
     skipIfSkill: 'test-existence',
     detect: findDisabledTests,
     findings: { 'disabled-test': DISABLED_TEST_FINDING },
+  },
+  {
+    skillId: 'knowledge-to-code-alignment',
+    detect: findTemporaryWithoutExit,
+    findings: {
+      'temporary-without-exit': {
+        finding: '一時対応コメントに撤去条件が書かれていない',
+        evidence:
+          'TODO / FIXME / HACK / WORKAROUND / 暫定 等のコメントが追加されたが、同じコメント塊に Issue 参照・URL・期日/バージョン・条件節のいずれも無い',
+        impact: 'いつ外せるか誰も判断できず、一時対応がそのまま恒久化して設計を固定する',
+        fix: 'Issue 番号・期日・解消条件のいずれかをコメントへ書き足すか、その場で恒久対応する',
+        severity: 'warning',
+        confidence: 'medium',
+      },
+    },
   },
 ];
 
@@ -1308,6 +1328,121 @@ function findInvisibleUnicode({ diff }) {
       if (comments.length >= MAX_INVISIBLE_UNICODE_COMMENTS) return comments;
     }
   }
+  return comments;
+}
+
+// ---- TEMPORARY_WITHOUT_EXIT (#1783 Phase 2) ----
+// 一時対応（TODO / FIXME / HACK / WORKAROUND / 暫定 …）を示すコメントのうち、
+// 「いつ・何が起きたら消せるか」= 撤去条件が書かれていないものを検出する。
+// Taxonomy と severity の定義は docs/review/rationale-traceability.md（§2 / §7）
+// が SSoT で、本検出器はその決定論チェック側の実装にあたる。
+//
+// 撤去条件は次のいずれか 1 つで充足とみなす（充足の証拠を広く取る FP-first 設計）。
+//   1. Issue / チケット参照（`#123` / `GH-123` / `ABC-123`）
+//   2. URL（Issue・PR・上流バグ票へのリンク）
+//   3. 期日 / バージョン（`2026-09-01` / `2026年9月` / `v2.1.0`）
+//   4. 条件節（`until` / `once` / `when` / `after` / `〜たら` / `〜まで` / `次第` …）
+// 探索範囲は「マーカー行を含む連続コメント塊」であり、撤去条件が次行に折り返して
+// いても、既存の（context 行の）コメント塊に書かれていても発火しない。
+//
+// マーカーの ASCII 語は大文字表記に限定する。`workaround` のような小文字の散文的
+// 言及（`// workaround for the Safari layout bug` 等）は一時対応の宣言とは限らず、
+// 拾うと warning の誤検出になるため、意図的に取りこぼす（FN 側へ倒す）。
+// 同じ理由で「一時的」「とりあえず」は対象外とする（`// 一時的にバッファへ退避する`
+// のように、恒久的な実装の説明として日常的に使われるため）。
+const TEMPORARY_MARKER_RE =
+  /\b(?:TODO|FIXME|HACK|WORKAROUND|TEMPORARY)\b|暫定|一時対応|ワークアラウンド/;
+
+const EXIT_CRITERIA_RES = [
+  /#\d+\b/, // Issue / PR 番号
+  /\bGH-\d+\b/i, // GH-123
+  /\b[A-Z][A-Z0-9]{1,9}-\d+\b/, // JIRA 風のチケット ID
+  /https?:\/\/\S/, // Issue / 上流バグ票へのリンク
+  /\b20\d{2}[-/.]\d{1,2}(?:[-/.]\d{1,2})?\b/, // 2026-09-01 / 2026/9
+  /20\d{2}\s*年\s*\d{1,2}\s*月/,
+  /\bv?\d+\.\d+(?:\.\d+)?\b/, // バージョン
+  /\b(?:until|once|when|after|as soon as|pending|blocked on|revisit)\b/i,
+  /たら|まで|次第|以降|解消|解決|修正され|リリースされ|対応され|移行後|廃止後|撤去条件/,
+];
+
+// vendored / 取り込み物。生成物（`dist/`）の判定は diff-processor の
+// `isGeneratedArtifactPath` に委ね、ここでは重複させない。
+const VENDORED_PATH_RE = /(?:^|\/)(?:node_modules|vendor|third_party|generated|__generated__)\//;
+
+/**
+ * 行からコメント部分だけを取り出す。コメントでなければ空文字を返す。
+ * 行末コメントは quote-aware な `stripTrailingLineComment` を使って切り出すため、
+ * 文字列リテラル内の `//`（例: `const u = 'http://x'; // TODO`）で誤判定しない。
+ * @param {string} rawLine
+ * @returns {string}
+ */
+function commentTextOf(rawLine) {
+  const text = String(rawLine);
+  const trimmed = text.trim();
+  if (
+    trimmed.startsWith('//') ||
+    trimmed.startsWith('*') ||
+    trimmed.startsWith('/*') ||
+    trimmed.startsWith('#') ||
+    trimmed.startsWith('<!--')
+  ) {
+    return trimmed;
+  }
+  const code = stripTrailingLineComment(text);
+  if (code.length < text.length) return text.slice(code.length).trim();
+  return '';
+}
+
+function findTemporaryWithoutExit({ diff }) {
+  const MAX_TEMPORARY_WITHOUT_EXIT_COMMENTS = 3;
+  const comments = [];
+  const files = ensureArray(diff?.files);
+
+  for (const file of files) {
+    const filePath = file?.path;
+    if (!filePath || filePath === '/dev/null') continue;
+    if (looksLikeTestFile(filePath)) continue;
+    if (!looksLikeSourceCodeFile(filePath)) continue;
+    if (isGeneratedArtifactPath(filePath)) continue;
+    const normalized = String(filePath).replaceAll('\\', '/');
+    // fixture / scaffold テンプレート配下は、未実装マーカーのひな型を placeholder として
+    // 持つのが正常な状態なので対象外にする。リポジトリ全体へ本検出器をかけた実測で、
+    // 唯一の誤検出源が `scripts/templates/skill/eval/promptfoo.yaml` の埋め込み diff
+    // サンプルだった（#1783 Phase 2）。
+    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
+    if (/(?:^|\/)templates\//.test(normalized)) continue;
+    if (VENDORED_PATH_RE.test(normalized)) continue;
+
+    for (const hunk of ensureArray(file?.hunks)) {
+      // 削除行を除いた「新しいファイルの姿」を hunk 単位で並べる。撤去条件が
+      // 既存行（context）に書かれている場合も充足として扱うため context を残す。
+      const rows = [...iterateSingleHunkLines(hunk)].filter((row) => row.type !== 'del');
+      const commentTexts = rows.map((row) => commentTextOf(row.text));
+
+      for (let i = 0; i < rows.length; i += 1) {
+        if (rows[i].type !== 'add') continue;
+        if (!commentTexts[i] || !TEMPORARY_MARKER_RE.test(commentTexts[i])) continue;
+
+        // 連続するコメント行を 1 つの塊として扱う。
+        let start = i;
+        while (start > 0 && commentTexts[start - 1]) start -= 1;
+        let end = i;
+        while (end < rows.length - 1 && commentTexts[end + 1]) end += 1;
+        const block = commentTexts.slice(start, end + 1).join('\n');
+
+        if (EXIT_CRITERIA_RES.some((re) => re.test(block))) {
+          i = end;
+          continue;
+        }
+
+        comments.push({ file: filePath, line: rows[i].line, kind: 'temporary-without-exit' });
+        if (comments.length >= MAX_TEMPORARY_WITHOUT_EXIT_COMMENTS) return comments;
+        // 同じコメント塊に複数のマーカーが並んでも 1 件に留める。
+        i = end;
+      }
+    }
+  }
+
   return comments;
 }
 
