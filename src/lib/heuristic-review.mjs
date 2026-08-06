@@ -1338,12 +1338,23 @@ function findInvisibleUnicode({ diff }) {
 // が SSoT で、本検出器はその決定論チェック側の実装にあたる。
 //
 // 撤去条件は次のいずれか 1 つで充足とみなす（充足の証拠を広く取る FP-first 設計）。
-//   1. Issue / チケット参照（`#123` / `GH-123` / `ABC-123`）
+//   1. Issue / チケット参照（`#123` / `GH-123` / `ABC-123` / `see issue 1234`）
 //   2. URL（Issue・PR・上流バグ票へのリンク）
-//   3. 期日 / バージョン（`2026-09-01` / `2026年9月` / `v2.1.0`）
-//   4. 条件節（`until` / `once` / `when` / `after` / `〜たら` / `〜まで` / `次第` …）
-// 探索範囲は「マーカー行を含む連続コメント塊」であり、撤去条件が次行に折り返して
-// いても、既存の（context 行の）コメント塊に書かれていても発火しない。
+//   3. 期日 / バージョン（`2026-09-01` / `2026年9月` / `2026Q3` / `v2.1.0`）
+//   4. 条件節（`until` / `once` / `when` / `after` / `unless` / `if` / `next release` /
+//      `〜たら` / `〜まで` / `次第` / `〜後に` / `来月` …）
+// 探索範囲は「マーカー行を含むコメント塊」であり、撤去条件が次行に折り返していても、
+// ブロックコメント（`/* … */`）や HTML コメントの継続行にあっても、空行を挟んだ次の
+// コメント行にあっても、既存の（context 行の）コメント塊にあっても発火しない。
+//
+// 実効範囲: 本検出器は配線先スキル `knowledge-to-code-alignment` が plan に選ばれた
+// ときだけ動く。同スキルの applyTo は `src|app|lib/**/*.{ts,tsx,js,jsx,mjs}` なので、
+// **その範囲の JS / TS 差分を含む PR でのみ発火する**。検出器側の拡張子判定
+// （`TEMPORARY_SCOPE_EXT_RE`）も宣言と実効を一致させるため同じ 5 拡張子へ揃えてある。
+// `.py` / `.sh` / `.yml` 等を対象にしたい場合は applyTo と検出器の双方を広げる必要が
+// あり、別 issue とする（#1783 Phase 2 のスコープ外）。共有ヘルパー
+// `looksLikeSourceCodeFile` は applyTo が `**/*` の invisible-unicode-injection と共用
+// なので、そちらは絞らない。
 //
 // マーカーの ASCII 語は大文字表記に限定する。`workaround` のような小文字の散文的
 // 言及（`// workaround for the Safari layout bug` 等）は一時対応の宣言とは限らず、
@@ -1353,44 +1364,141 @@ function findInvisibleUnicode({ diff }) {
 const TEMPORARY_MARKER_RE =
   /\b(?:TODO|FIXME|HACK|WORKAROUND|TEMPORARY)\b|暫定|一時対応|ワークアラウンド/;
 
+// 配線先スキルの applyTo と同じ 5 拡張子。宣言（検出器）と実効（plan 選択）を
+// 一致させるための定数で、広げるときは SKILL.md の applyTo と同時に変える。
+const TEMPORARY_SCOPE_EXT_RE = /\.(?:ts|tsx|js|jsx|mjs)$/;
+
+// 撤去条件の候補。過剰抑制（本来指摘すべきものを見逃す方向）は意図的に許容している:
+// 例えば `\b[A-Z][A-Z0-9]{1,9}-\d+\b` は `UTF-8` / `SHA-1` / `RFC-3339` にも一致し、
+// `\bv?\d+\.\d+\b` は `0.5 threshold` のような任意の小数にも一致する。誤って発火する
+// （撤去条件が書いてあるのに指摘する）ほうが実害が大きいため、FP-first でこの緩さを
+// 選んでいる。厳格化するときは negative canary を先に増やすこと。
 const EXIT_CRITERIA_RES = [
   /#\d+\b/, // Issue / PR 番号
   /\bGH-\d+\b/i, // GH-123
-  /\b[A-Z][A-Z0-9]{1,9}-\d+\b/, // JIRA 風のチケット ID
+  /\b[A-Z][A-Z0-9]{1,9}-\d+\b/, // JIRA 風のチケット ID（UTF-8 等にも一致する。上記参照）
+  /\b(?:issues?|tickets?)\s*[#:]?\s*\d+/i, // `#` の無い `see issue 1234`
   /https?:\/\/\S/, // Issue / 上流バグ票へのリンク
   /\b20\d{2}[-/.]\d{1,2}(?:[-/.]\d{1,2})?\b/, // 2026-09-01 / 2026/9
   /20\d{2}\s*年\s*\d{1,2}\s*月/,
-  /\bv?\d+\.\d+(?:\.\d+)?\b/, // バージョン
-  /\b(?:until|once|when|after|as soon as|pending|blocked on|revisit)\b/i,
-  /たら|まで|次第|以降|解消|解決|修正され|リリースされ|対応され|移行後|廃止後|撤去条件/,
+  /(?:^|[^A-Za-z])Q[1-4]\b/, // 2026Q3 / Q3（`\b` は 6Q 間に立たないため境界を自前で書く）
+  /\bv?\d+\.\d+(?:\.\d+)?\b/, // バージョン（任意の小数にも一致する。上記参照）
+  /\b(?:until|once|when|after|unless|if|as soon as|as of|pending|blocked on|blocked by|revisit|next release|next major|next version)\b/i,
+  /たら|まで|次第|以降|後に|後は|解消|解決|修正され|リリースされ|対応され|移行後|廃止後|撤去条件|来月|来週|次のリリース/,
 ];
 
 // vendored / 取り込み物。生成物（`dist/`）の判定は diff-processor の
 // `isGeneratedArtifactPath` に委ね、ここでは重複させない。
 const VENDORED_PATH_RE = /(?:^|\/)(?:node_modules|vendor|third_party|generated|__generated__)\//;
 
-/**
- * 行からコメント部分だけを取り出す。コメントでなければ空文字を返す。
- * 行末コメントは quote-aware な `stripTrailingLineComment` を使って切り出すため、
- * 文字列リテラル内の `//`（例: `const u = 'http://x'; // TODO`）で誤判定しない。
- * @param {string} rawLine
- * @returns {string}
- */
-function commentTextOf(rawLine) {
-  const text = String(rawLine);
-  const trimmed = text.trim();
-  if (
-    trimmed.startsWith('//') ||
-    trimmed.startsWith('*') ||
-    trimmed.startsWith('/*') ||
-    trimmed.startsWith('#') ||
-    trimmed.startsWith('<!--')
-  ) {
-    return trimmed;
+function countUnescapedBackticks(text) {
+  let count = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === '\\') {
+      i += 1;
+      continue;
+    }
+    if (text[i] === '`') count += 1;
   }
-  const code = stripTrailingLineComment(text);
-  if (code.length < text.length) return text.slice(code.length).trim();
-  return '';
+  return count;
+}
+
+/**
+ * hunk の行を上から走査し、各行のコメント本文と「コメント塊として連結してよいか」
+ * （`joinable`）を返す。行頭 prefix だけを見る素朴な判定では、ブロックコメント
+ * （`/* … *\/`）や HTML コメントの継続行が prefix を持たないときに塊が切れ、そこに
+ * 書かれた撤去条件を読み落として誤検出になる。そのため開いたブロックの状態を持ち回る。
+ * 併せてテンプレートリテラルの内側も追跡し、擬似コードとして文字列に埋め込まれた
+ * コメント（`const stub = \`\n  // ...\n\`;`）を対象から外す。
+ * 行末コメントの切り出しは quote-aware な `stripTrailingLineComment` を使うので、
+ * 文字列リテラル内の `//`（例: `const u = 'http://x'; // TODO`）で誤判定しない。
+ * @param {Array<{text?: string}>} rows
+ * @returns {Array<{comment: string, joinable: boolean}>}
+ */
+function scanCommentTexts(rows) {
+  const scanned = [];
+  let openBlock = null; // 'block' | 'html' | null
+  let inTemplate = false;
+
+  for (const row of rows) {
+    const text = String(row?.text ?? '');
+
+    if (openBlock) {
+      const terminator = openBlock === 'block' ? '*/' : '-->';
+      const idx = text.indexOf(terminator);
+      if (idx === -1) {
+        scanned.push({ comment: text.trim(), joinable: true });
+        continue;
+      }
+      openBlock = null;
+      scanned.push({ comment: text.slice(0, idx).trim(), joinable: true });
+      continue;
+    }
+
+    if (inTemplate) {
+      if (countUnescapedBackticks(text) % 2 === 1) inTemplate = false;
+      scanned.push({ comment: '', joinable: false });
+      continue;
+    }
+
+    const trimmed = text.trim();
+    if (trimmed.startsWith('//') || trimmed.startsWith('*')) {
+      scanned.push({ comment: trimmed, joinable: true });
+      continue;
+    }
+    if (trimmed.startsWith('/*')) {
+      if (!trimmed.includes('*/')) openBlock = 'block';
+      scanned.push({ comment: trimmed, joinable: true });
+      continue;
+    }
+    if (trimmed.startsWith('<!--')) {
+      if (!trimmed.includes('-->')) openBlock = 'html';
+      scanned.push({ comment: trimmed, joinable: true });
+      continue;
+    }
+
+    // コード行。行末コメントは「その行だけの単位」であり、隣の行末コメントとは
+    // 連結しない（無関係なコメント同士がつながって過剰抑制になるのを防ぐ）。
+    const code = stripTrailingLineComment(text);
+    const trailing = code.length < text.length ? text.slice(code.length).trim() : '';
+    const blockIdx = code.indexOf('/*');
+    if (blockIdx !== -1 && code.indexOf('*/', blockIdx + 2) === -1) {
+      openBlock = 'block';
+      scanned.push({ comment: code.slice(blockIdx).trim(), joinable: true });
+      continue;
+    }
+    if (countUnescapedBackticks(code) % 2 === 1) inTemplate = true;
+    scanned.push({ comment: trailing, joinable: false });
+  }
+
+  return scanned;
+}
+
+/**
+ * マーカー行 `index` を含むコメント塊の行番号一覧を返す。連結対象は full-line の
+ * コメント（`joinable`）だけで、間に挟まる空行は透過する。
+ */
+function commentBlockIndexes(scanned, rows, index) {
+  const indexes = [index];
+  const isBlank = (i) => String(rows[i]?.text ?? '').trim() === '';
+
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (scanned[i].joinable && scanned[i].comment) {
+      indexes.unshift(i);
+      continue;
+    }
+    if (isBlank(i)) continue;
+    break;
+  }
+  for (let i = index + 1; i < rows.length; i += 1) {
+    if (scanned[i].joinable && scanned[i].comment) {
+      indexes.push(i);
+      continue;
+    }
+    if (isBlank(i)) continue;
+    break;
+  }
+  return indexes;
 }
 
 function findTemporaryWithoutExit({ diff }) {
@@ -1402,43 +1510,35 @@ function findTemporaryWithoutExit({ diff }) {
     const filePath = file?.path;
     if (!filePath || filePath === '/dev/null') continue;
     if (looksLikeTestFile(filePath)) continue;
-    if (!looksLikeSourceCodeFile(filePath)) continue;
-    if (isGeneratedArtifactPath(filePath)) continue;
     const normalized = String(filePath).replaceAll('\\', '/');
-    // fixture / scaffold テンプレート配下は、未実装マーカーのひな型を placeholder として
-    // 持つのが正常な状態なので対象外にする。リポジトリ全体へ本検出器をかけた実測で、
-    // 唯一の誤検出源が `scripts/templates/skill/eval/promptfoo.yaml` の埋め込み diff
-    // サンプルだった（#1783 Phase 2）。
+    if (!TEMPORARY_SCOPE_EXT_RE.test(normalized)) continue;
+    if (isGeneratedArtifactPath(filePath)) continue;
     if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
-    if (/(?:^|\/)templates\//.test(normalized)) continue;
     if (VENDORED_PATH_RE.test(normalized)) continue;
 
     for (const hunk of ensureArray(file?.hunks)) {
       // 削除行を除いた「新しいファイルの姿」を hunk 単位で並べる。撤去条件が
       // 既存行（context）に書かれている場合も充足として扱うため context を残す。
       const rows = [...iterateSingleHunkLines(hunk)].filter((row) => row.type !== 'del');
-      const commentTexts = rows.map((row) => commentTextOf(row.text));
+      const scanned = scanCommentTexts(rows);
 
       for (let i = 0; i < rows.length; i += 1) {
         if (rows[i].type !== 'add') continue;
-        if (!commentTexts[i] || !TEMPORARY_MARKER_RE.test(commentTexts[i])) continue;
+        if (!scanned[i].comment || !TEMPORARY_MARKER_RE.test(scanned[i].comment)) continue;
 
-        // 連続するコメント行を 1 つの塊として扱う。
-        let start = i;
-        while (start > 0 && commentTexts[start - 1]) start -= 1;
-        let end = i;
-        while (end < rows.length - 1 && commentTexts[end + 1]) end += 1;
-        const block = commentTexts.slice(start, end + 1).join('\n');
+        const indexes = commentBlockIndexes(scanned, rows, i);
+        const block = indexes.map((j) => scanned[j].comment).join('\n');
+        const last = indexes[indexes.length - 1];
 
         if (EXIT_CRITERIA_RES.some((re) => re.test(block))) {
-          i = end;
+          i = last;
           continue;
         }
 
         comments.push({ file: filePath, line: rows[i].line, kind: 'temporary-without-exit' });
         if (comments.length >= MAX_TEMPORARY_WITHOUT_EXIT_COMMENTS) return comments;
         // 同じコメント塊に複数のマーカーが並んでも 1 件に留める。
-        i = end;
+        i = last;
       }
     }
   }

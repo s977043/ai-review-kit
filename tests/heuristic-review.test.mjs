@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
+import { buildExecutionPlan } from '../runners/core/review-runner.mjs';
 import {
   buildHeuristicComments,
   SKILL_HEURISTIC_MAP,
@@ -1195,11 +1196,41 @@ test('temporary-without-exit: flags a Japanese 暫定対応 comment', () => {
   assert.equal(temporaryComments(['// 暫定対応: レスポンスをそのまま返す']).length, 1);
 });
 
-test('temporary-without-exit: flags a `#` comment in a script file', () => {
-  const comments = temporaryComments(['# HACK: PYTHONPATH を書き換えて回避する'], {
-    file: 'scripts/build.py',
+test('temporary-without-exit: fires on the real plan path (skill selection + detector)', async () => {
+  // 手組みプランではなく、本番の skill 選択（`buildExecutionPlan`）を通した経路で
+  // 発火することを固定する。配線先スキルの applyTo は `src|app|lib/**` の JS/TS な
+  // ので、この経路を通らないファイル（`scripts/**` や `.py`）は実効範囲外になる。
+  const diffText =
+    'diff --git a/src/lib/service.mjs b/src/lib/service.mjs\n' +
+    '--- a/src/lib/service.mjs\n+++ b/src/lib/service.mjs\n' +
+    '@@ -1,0 +1,1 @@\n+// HACK: 上流の型が壊れているので any で通す\n';
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/lib/service.mjs'],
+    availableContexts: ['diff'],
+    diffText,
+    dryRun: false,
+    llmEnabled: false, // no-key 経路（決定論チェックのみ）
   });
-  assert.equal(comments.length, 1);
+  const selectedIds = plan.selected.map((s) => s.metadata?.id ?? s.id);
+  assert.ok(
+    selectedIds.includes('knowledge-to-code-alignment'),
+    `owning skill must be selected, got ${JSON.stringify(selectedIds)}`
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+  assert.ok(
+    comments.some((c) => c.kind === 'temporary-without-exit'),
+    `expected a temporary-without-exit finding, got ${JSON.stringify(comments)}`
+  );
+});
+
+test('temporary-without-exit: scans a production templates/ directory (no blanket exclusion)', () => {
+  // `src/templates/**` は本番のテンプレート描画コードであり、除外対象ではない。
+  assert.equal(
+    temporaryComments(['// TODO: 旧レンダラを消す'], { file: 'src/templates/render.mjs' }).length,
+    1
+  );
 });
 
 test('temporary-without-exit: a URL inside a string literal is not mistaken for the comment', () => {
@@ -1236,6 +1267,63 @@ test('temporary-without-exit canary: the exit criterion may sit on the next comm
   );
 });
 
+test('temporary-without-exit canary: a block-comment continuation line is part of the block', () => {
+  // 継続行が `*` prefix を持たない書き方。行頭 prefix だけを見る判定では塊が切れ、
+  // 撤去条件を読み落として誤検出になっていた（E1）。
+  assert.deepEqual(temporaryComments(['/* TODO: この分岐を消す', '   until #987 lands */']), []);
+  // JSDoc 形式（`*` 継続）も同様に塊として読む。
+  assert.deepEqual(
+    temporaryComments([
+      '/**',
+      ' * FIXME: 旧経路の互換を残す',
+      ' * remove once #55 is merged',
+      ' */',
+    ]),
+    []
+  );
+});
+
+test('temporary-without-exit canary: an HTML-comment continuation line is part of the block', () => {
+  // E4。検出器が `<!--` を開始 prefix に採用している以上、継続行も読む必要がある。
+  assert.deepEqual(
+    temporaryComments(['<!-- TODO: replace markup', '     once #55 is merged -->']),
+    []
+  );
+});
+
+test('temporary-without-exit canary: a blank line does not split the comment block', () => {
+  assert.deepEqual(
+    temporaryComments(['// TODO: 旧経路を削除する', '', '// remove once #12 lands']),
+    []
+  );
+});
+
+test('temporary-without-exit canary: broader conditional and reference forms count', () => {
+  // 「撤去条件を明示している」のに発火していた 7 形（major-3）。
+  assert.deepEqual(temporaryComments(['// TODO: Remove unless the vendor keeps the old API.']), []);
+  assert.deepEqual(temporaryComments(['// TODO: Delete if upstream lands the fix.']), []);
+  assert.deepEqual(temporaryComments(['// TODO: drop this, see issue 1234 in the tracker']), []);
+  assert.deepEqual(temporaryComments(['// FIXME: temporary; remove in the next release']), []);
+  assert.deepEqual(temporaryComments(['// TODO: remove by 2026Q3']), []);
+  assert.deepEqual(temporaryComments(['// TODO: 来月の棚卸しで消す']), []);
+  assert.deepEqual(temporaryComments(['// 暫定: 新スキーマ移行が終わった後に削除する']), []);
+});
+
+test('temporary-without-exit canary: pseudo-code inside a template literal is not a comment', () => {
+  assert.deepEqual(temporaryComments(['const stub = `', '  // TODO: implement', '`;']), []);
+});
+
+test('temporary-without-exit: an unrelated trailing comment on the next line does not suppress', () => {
+  // 行末コメントは「その行だけの単位」。隣の行末コメントを塊に連結すると、無関係な
+  // 撤去条件（`valid until 2027-01-01`）が抑制根拠になってしまう（m6）。
+  const comments = temporaryComments([
+    'foo(); // TODO: ここを直す',
+    'bar(); // valid until 2027-01-01',
+  ]);
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].line, 1);
+});
+
 test('temporary-without-exit canary: an existing comment block already carries the criterion', () => {
   // 撤去条件は差分の外（context 行）にあり、追加行はその塊の続き。
   assert.deepEqual(
@@ -1248,6 +1336,20 @@ test('temporary-without-exit canary: an existing comment block already carries t
 
 test('temporary-without-exit canary: a marker inside a string literal is not a comment', () => {
   assert.deepEqual(temporaryComments(["const label = 'TODO';"]), []);
+  // main に実在する形（`src/lib/feedback.mjs:216` の eval テンプレート文字列）。
+  assert.deepEqual(
+    temporaryComments(["const tpl = '```diff\\n# TODO: paste the diff\\n```';"]),
+    []
+  );
+});
+
+test('temporary-without-exit canary: ordinary descriptive comments are never flagged', () => {
+  // マーカー集合を広げすぎると通常のコメントが全部指摘対象になる。マーカー側の
+  // 変異（always-match）で確実に落ちるよう、撤去条件を含まない普通のコメントを固定する。
+  assert.deepEqual(temporaryComments(['// 入力を NFC へ正規化する']), []);
+  assert.deepEqual(temporaryComments(['// Normalize the payload before hashing.']), []);
+  assert.deepEqual(temporaryComments(['const v = 1; // 呼び出し側の期待に合わせる']), []);
+  assert.deepEqual(temporaryComments(['/**', ' * Build the review plan.', ' */']), []);
 });
 
 test('temporary-without-exit canary: lowercase prose mentions are out of scope', () => {
@@ -1267,13 +1369,10 @@ test('temporary-without-exit canary: test / docs / generated / vendored paths ar
     temporaryComments(['// TODO: 直す'], { file: 'src/lib/fixtures/sample.ts' }),
     []
   );
-  // scaffold テンプレートの placeholder（実測で唯一の誤検出源だったパス）。
-  assert.deepEqual(
-    temporaryComments(['        +  // TODO: implement'], {
-      file: 'scripts/templates/skill/eval/promptfoo.yaml',
-    }),
-    []
-  );
+  // 実効範囲外の拡張子（配線先スキルの applyTo が JS/TS のみ）。
+  assert.deepEqual(temporaryComments(['# HACK: 直す'], { file: 'scripts/build.py' }), []);
+  assert.deepEqual(temporaryComments(['  # TODO: 直す'], { file: '.github/workflows/ci.yml' }), []);
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'src/legacy.cjs' }), []);
 });
 
 test('temporary-without-exit canary: an unchanged (context) TODO is not flagged', () => {
