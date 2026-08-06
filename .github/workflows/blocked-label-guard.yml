@@ -21,9 +21,19 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: blocked-label-guard-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+# concurrency は意図的に設定しない。
+# このジョブは event payload の labels を読んで終了するだけで、API 呼び出しも
+# 共有状態への書き込みも無いため、同一 PR で並行実行しても害が無い。実行時間も
+# 実測で 5〜15 秒（成功 30 件、中央値 7 秒）と短く、重複コストは無視できる。
+#
+# 逆に concurrency を設定すると `cancelled` の check-run が残り、必須チェックとして
+# マージを止める（#1778）。これは `cancel-in-progress: false` でも避けられない。
+# GitHub の仕様では、グループ内に pending の run がある状態で新しい run が queue に
+# 入ると「既存の pending は cancel され、新しい run が置き換わる」ためである
+# （https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency）。
+# つまり cancel されるタイミングが in-progress から pending へ移るだけで、
+# `cancelled` の check-run が残る事象そのものは消えない。
+# 必須チェックである以上、pass / fail 以外の結論を一切生じさせないことが要件になる。
 
 jobs:
   blocked-label-guard:
