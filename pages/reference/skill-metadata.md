@@ -67,12 +67,7 @@ type OutputKind = 'findings' | 'summary' | 'actions' | 'tests' | 'metrics' | 'qu
 type ModelHint = 'cheap' | 'balanced' | 'high-accuracy';
 
 type Dependency =
-  | 'code_search'
-  | 'test_runner'
-  | 'adr_lookup'
-  | 'repo_metadata'
-  | 'coverage_report'
-  | 'tracing';
+  'code_search' | 'test_runner' | 'adr_lookup' | 'repo_metadata' | 'coverage_report' | 'tracing';
 
 export interface SkillMetadata {
   id: string;

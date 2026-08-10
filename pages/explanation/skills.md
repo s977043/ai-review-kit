@@ -400,9 +400,9 @@ fixtures/
 コスト/精度のバランスを選択します。
 
 ```yaml
-modelHint: cheap          # 高速な構文チェック、スタイルガイド
-modelHint: balanced       # 標準的なコードレビュー
-modelHint: high-accuracy  # セキュリティ監査、アーキテクチャレビュー
+modelHint: cheap # 高速な構文チェック、スタイルガイド
+modelHint: balanced # 標準的なコードレビュー
+modelHint: high-accuracy # セキュリティ監査、アーキテクチャレビュー
 ```
 
 cheapスキルが最初に実行され（高速フィードバック）、high-accuracyが最後に実行されます（徹底的な分析）。
