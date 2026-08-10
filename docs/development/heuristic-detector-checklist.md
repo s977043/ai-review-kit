@@ -36,18 +36,22 @@
 
 - [ ] **テストファイル / fixture を除外**すべきか判断する（`looksLikeTestFile(filePath)` と `/fixtures/` + `/__fixtures__/` チェック）。セキュリティ系・debug 系は通常テストファイルを除外する。
 - [ ] 1 検出器あたりの件数上限を設ける（既存の多くは `MAX_*_COMMENTS = 3`。例外: `findSilentCatch` はハードコードの `>= 3`）。
+- [ ] **実効範囲は最小 diff と混在 diff の 2 通りで測る**。skill 選択は「diff が applyTo に 1 件でも該当するか」で PR 単位に決まる。一方、選択後の `buildHeuristicComments` は diff 中の全ファイルを検出器へ渡す。対象外ファイル単独の diff で `skill=not selected` を確認しても、同じ PR に対象内ファイルが混ざれば発火する。
 - [ ] **全体出力は `buildHeuristicComments` 末尾で `.slice(0, 8)` に bounded** である点を意識する。高頻度に発火する検出器を足すと、既存検出器が 8 枠を食い合って starve する。発火頻度が高い検出器は上限を低めにするか、配線順序を検討する。
 
 ## 5. severity / confidence の較正
 
 - [ ] レジストリエントリの `findings[kind]` に finding / evidence / impact / fix / severity / confidence を埋める（`review-engine.mjs` に case を足す必要はない。メッセージ生成はレジストリから導出される）。
 - [ ] severity は内部語彙（blocker / warning / nit）。確実な危険は `blocker`、レビュー喚起レベルは `warning`、任意保留があり得るものは `nit`（例: `.skip` は意図的な保留がありうるため nit）。confidence は regex の確度に合わせる。
+- [ ] **同じ `HEURISTIC_REGISTRY` 内の同系統 kind と severity を並べて確認する**。`warning` は出力 `major` に写り `run-gate.mjs` の `blockingFindings` に計上されて gate を NO_GO へ倒しうるため、姉妹検出器が `nit` で揃っている系統に `warning` を 1 件だけ混ぜない。
 
 ## 6. 配線
 
 - [ ] `heuristic-review.mjs` の `HEURISTIC_REGISTRY` に 1 エントリ（`{ skillId, detect, findings }`）を追加する。配列順が `buildHeuristicComments` の出力順序（golden/fixtures が pin）になるため、既存スキルのブロック内の適切な位置に挿入する。
 - [ ] 1 つの検出関数が複数 kind を emit する場合（例: `findGitHubActionsIssues`）は `findings` に複数 kind を列挙する。複数スキルが同一検出器を共有する場合（例: `test-existence` / `coverage-gap`）は presentation を const に切り出して参照し、二重定義を避ける。上位スキル優先で重複実行を避けたい場合は `skipIfSkill` を使う。
-- [ ] 新スキルを heuristic 化する場合は、そのスキルの `applyTo` が対象ファイルに一致することを確認する（`SKILL.md` の `applyTo` を読む）。
+- [ ] 新スキルを heuristic 化する場合は、そのスキルの `applyTo`（`SKILL.md`）を読むだけで終わらせない。次の 2 つを同じ PR で行う。
+  - [ ] **検出器側にも applyTo と同じディレクトリ条件を実装する**。拡張子だけを見る述語は、applyTo 外のディレクトリ（`scripts/` / リポジトリ直下の config / `tools/` / `migrations/`）で発火する。`temporary-without-exit` の `TEMPORARY_SCOPE_PATH_RE` が実装例。
+  - [ ] **その一致を機械検証で pin する**。`tests/heuristic-review.test.mjs` の drift guard canary （`detector scope stays in sync with the skill applyTo`）と同じ型を足す。期待値をハードコードせず、`parseSkillFile` で `SKILL.md` の applyTo を読み、本番と同じ `minimatch(file, pattern, { dot: true })` で導出する。片側だけ変えると落ちる。
 
 ## 7. テスト（positive と negative の両方）
 

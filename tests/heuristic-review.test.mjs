@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { minimatch } from 'minimatch';
+
 import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
+import { parseSkillFile } from '../runners/core/skill-loader.mjs';
 import { buildExecutionPlan } from '../runners/core/review-runner.mjs';
 import {
   buildHeuristicComments,
@@ -1469,4 +1472,78 @@ test('temporary-without-exit: is capped at 3 findings', () => {
     '// TODO: d',
   ]);
   assert.equal(comments.length, 3);
+});
+
+// ---- 宣言（SKILL.md の applyTo）と実効（検出器のスコープ述語）のドリフト検知 ----
+//
+// 以下は「将来 applyTo を変えたときに検出器のスコープがドリフトしたら CI が落ちる」ことを
+// 目的にした canary であり、期待値をハードコードしない点が上の canary 群と違う。期待値は
+// 配線先スキルの `SKILL.md` から読んだ applyTo と `minimatch` から**その場で導出**する。
+//
+// 書き方の型（スコープ正規表現を持つ検出器が増えたら同じ形を足す）:
+//   1. 配線先スキルの frontmatter を `parseSkillFile`（`runners/core/skill-loader.mjs`）で読む。
+//      YAML を自前でパースしない（CLAUDE.md「Import the SSoT, never re-derive it」）。
+//   2. glob 判定は本番の skill 選択（`runners/core/review-runner.mjs:79-83`）と同じ
+//      `minimatch(file, pattern, { dot: true })` を使う。マッチャを再実装しない。
+//   3. サンプルパス表を用意し、各パスの期待発火を glob 側から導出して、検出器の実挙動と突き合わせる。
+//      サンプルには**スコープ以外の除外規則**（test / fixture / vendored / examples）に
+//      掛かるパスを入れない。掛かると glob 由来の期待と一致しなくなり、この canary が
+//      スコープ以外の理由で落ちる。
+//
+// 現時点でスコープ正規表現を持つ検出器は `temporary-without-exit` のみ:
+//   grep -nE "^const [A-Z_]*(SCOPE|PATH|EXT)[A-Z_]*_RE" src/lib/heuristic-review.mjs
+const TWE_SKILL_PATH = 'skills/midstream/knowledge-to-code-alignment/SKILL.md';
+
+// スコープ以外の除外規則に掛からないサンプルパス。in / out は宣言せず glob から導出する。
+const TWE_SCOPE_SAMPLE_PATHS = [
+  'src/a.ts',
+  'src/nested/deep/a.tsx',
+  'src/a.js',
+  'src/a.jsx',
+  'src/a.mjs',
+  'app/routes/a.tsx',
+  'lib/deep/nest/a.mjs',
+  'scripts/build.mjs',
+  'eslint.config.mjs',
+  'tools/gen.ts',
+  'migrations/001.js',
+  'packages/web/src/a.ts',
+  'src/a.py',
+  'src/a.sh',
+  'src/a.cjs',
+  'src/a.yml',
+];
+
+test('temporary-without-exit canary: detector scope stays in sync with the skill applyTo (drift guard)', async () => {
+  const { metadata } = await parseSkillFile(TWE_SKILL_PATH);
+  const globs = metadata.applyTo ?? [];
+  assert.ok(
+    Array.isArray(globs) && globs.length > 0,
+    `${TWE_SKILL_PATH} must declare a non-empty applyTo, got ${JSON.stringify(globs)}`
+  );
+
+  // サンプル表が applyTo の両側（マッチする / しない）を覆っていることを先に固定する。
+  // 片側しか無い表は、スコープが全開・全閉へドリフトしても落ちない。
+  const inScope = TWE_SCOPE_SAMPLE_PATHS.filter((file) =>
+    globs.some((pattern) => minimatch(file, pattern, { dot: true }))
+  );
+  assert.ok(inScope.length > 0, 'sample paths must cover at least one in-applyTo path');
+  assert.ok(
+    inScope.length < TWE_SCOPE_SAMPLE_PATHS.length,
+    'sample paths must cover at least one out-of-applyTo path'
+  );
+
+  for (const file of TWE_SCOPE_SAMPLE_PATHS) {
+    const expected = globs.some((pattern) => minimatch(file, pattern, { dot: true }));
+    const fired = temporaryComments(['// TODO: 直す'], { file }).some(
+      (c) => c.kind === 'temporary-without-exit'
+    );
+    assert.equal(
+      fired,
+      expected,
+      `scope drift for ${file}: applyTo(${JSON.stringify(globs)}) says ${expected}, ` +
+        `detector says ${fired}. Update TEMPORARY_SCOPE_PATH_RE in src/lib/heuristic-review.mjs ` +
+        `and the applyTo in ${TWE_SKILL_PATH} together.`
+    );
+  }
 });
