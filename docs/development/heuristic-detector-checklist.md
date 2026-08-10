@@ -36,14 +36,15 @@
 
 - [ ] **テストファイル / fixture を除外**すべきか判断する（`looksLikeTestFile(filePath)` と `/fixtures/` + `/__fixtures__/` チェック）。セキュリティ系・debug 系は通常テストファイルを除外する。
 - [ ] 1 検出器あたりの件数上限を設ける（既存の多くは `MAX_*_COMMENTS = 3`。例外: `findSilentCatch` はハードコードの `>= 3`）。
-- [ ] **実効範囲は最小 diff と混在 diff の 2 通りで測る**。skill 選択は「diff が applyTo に 1 件でも該当するか」で PR 単位に決まる。一方、選択後の `buildHeuristicComments` は diff 中の全ファイルを検出器へ渡す。対象外ファイル単独の diff で `skill=not selected` を確認しても、同じ PR に対象内ファイルが混ざれば発火する。
+- [ ] **実効範囲は最小 diff と混在 diff の 2 通りで測る**。skill 選択は「diff が applyTo に 1 件でも該当するか」で PR 単位に決まる。一方、選択後の `buildHeuristicComments` は diff 中の全ファイルを検出器へ渡す。対象外ファイル単独の diff で `skill=not selected` を確認しても、同じ PR に対象内ファイルが混ざれば発火する。合格条件は「混在 diff（対象内 1 ファイル + 対象外 1 ファイル）で対象外ファイルが発火しないこと」であり、確認は §6 の drift guard canary で代替してよい。
 - [ ] **全体出力は `buildHeuristicComments` 末尾で `.slice(0, 8)` に bounded** である点を意識する。高頻度に発火する検出器を足すと、既存検出器が 8 枠を食い合って starve する。発火頻度が高い検出器は上限を低めにするか、配線順序を検討する。
 
 ## 5. severity / confidence の較正
 
 - [ ] レジストリエントリの `findings[kind]` に finding / evidence / impact / fix / severity / confidence を埋める（`review-engine.mjs` に case を足す必要はない。メッセージ生成はレジストリから導出される）。
 - [ ] severity は内部語彙（blocker / warning / nit）。確実な危険は `blocker`、レビュー喚起レベルは `warning`、任意保留があり得るものは `nit`（例: `.skip` は意図的な保留がありうるため nit）。confidence は regex の確度に合わせる。
-- [ ] **同じ `HEURISTIC_REGISTRY` 内の同系統 kind と severity を並べて確認する**。`warning` は出力 `major` に写り `run-gate.mjs` の `blockingFindings` に計上されて gate を NO_GO へ倒しうるため、姉妹検出器が `nit` で揃っている系統に `warning` を 1 件だけ混ぜない。
+- [ ] **同じ `HEURISTIC_REGISTRY` 内の同系統 kind と severity を並べて確認する**。ここでの「同系統」はレジストリ上の機械的な同値類（skillId が同じ、等）ではなく、**指摘の性質が同じもの**を指す。具体例は [`retrospectives/2026-08-09-10.md`](./retrospectives/2026-08-09-10.md) の「severity の不整合」表を参照する。そこに並ぶ 4 件（`silent-catch` / `ts-suppression` / `caller-special-case` / `temporary-without-exit`）は skillId こそ異なるものの、いずれも「動くが後で困る書き方」を指摘する系統である。`warning` は出力 `major` に写り `run-gate.mjs` の `blockingFindings` に計上されて gate を NO_GO へ倒しうるため、姉妹検出器が `nit` で揃っている系統に `warning` を 1 件だけ混ぜない。
+- [ ] 選んだ severity の**理由をレジストリエントリのコメントとして残す**。散文チェックリスト側に理由を書くと二重管理になるため、SSoT は実装コメントに置く（実例: `src/lib/heuristic-review.mjs` の `temporary-without-exit` エントリにある `severity: 'nit'` 直前のコメント）。
 
 ## 6. 配線
 
@@ -51,7 +52,8 @@
 - [ ] 1 つの検出関数が複数 kind を emit する場合（例: `findGitHubActionsIssues`）は `findings` に複数 kind を列挙する。複数スキルが同一検出器を共有する場合（例: `test-existence` / `coverage-gap`）は presentation を const に切り出して参照し、二重定義を避ける。上位スキル優先で重複実行を避けたい場合は `skipIfSkill` を使う。
 - [ ] 新スキルを heuristic 化する場合は、そのスキルの `applyTo`（`SKILL.md`）を読むだけで終わらせない。次の 2 つを同じ PR で行う。
   - [ ] **検出器側にも applyTo と同じディレクトリ条件を実装する**。拡張子だけを見る述語は、applyTo 外のディレクトリ（`scripts/` / リポジトリ直下の config / `tools/` / `migrations/`）で発火する。`temporary-without-exit` の `TEMPORARY_SCOPE_PATH_RE` が実装例。
-  - [ ] **その一致を機械検証で pin する**。`tests/heuristic-review.test.mjs` の drift guard canary （`detector scope stays in sync with the skill applyTo`）と同じ型を足す。期待値をハードコードせず、`parseSkillFile` で `SKILL.md` の applyTo を読み、本番と同じ `minimatch(file, pattern, { dot: true })` で導出する。片側だけ変えると落ちる。
+  - [ ] **その一致を機械検証で pin する**。`tests/heuristic-review.test.mjs` の drift guard canary （`detector scope stays in sync with the skill applyTo`）と同じ型を足す。期待値をハードコードせず、`parseSkillFile` で `SKILL.md` の applyTo を読み、本番と同じ `minimatch(file, pattern, { dot: true })` で導出する。サンプルパス表を置く型なので、**全 glob が 1 件以上のサンプルで覆われていること**を assert する行を必ず含める。これが無いと、表に無いディレクトリが applyTo へ足される向き（宣言だけが広がる向き）で緑のまま通る。既存 glob の拡張子だけを増やした場合はこの assert でも捕まらないため、拡張子を触るときはサンプル表へ 1 行足す。
+- [ ] 検出器のスコープは**スコープ正規表現の定数**（`TEMPORARY_SCOPE_PATH_RE`）だけでなく**述語関数**（`looksLikeGitHubWorkflowFile` / `looksLikeSourceCodeFile`）でも表現される。`grep -nE "^const [A-Z_]*(SCOPE|PATH|EXT)[A-Z_]*_RE"` は前者しか拾わないため、`grep -n "^function looksLike.*File"` も併せて見る。後者の乖離は既に本番に存在する（`findGitHubActionsIssues` × `security-basic`。#1797 で追跡）。
 
 ## 7. テスト（positive と negative の両方）
 
@@ -67,6 +69,8 @@
 ## 関連
 
 - `src/lib/heuristic-review.mjs`—検出器本体・`HEURISTIC_REGISTRY`（配線と kind→presentation の SSoT）・`stripTrailingLineComment` ヘルパー
+- `tests/heuristic-review.test.mjs`—検出器のテスト全般と、applyTo と検出器スコープの drift guard canary（§6）
+- `runners/core/skill-loader.mjs`—`parseSkillFile`（`SKILL.md` frontmatter の applyTo をパースする SSoT）
 - `src/lib/review-engine.mjs`—`normalizeHeuristicComments`（レジストリの `HEURISTIC_KIND_PRESENTATIONS` を参照して finding メッセージを生成）
 - `docs/development/skill-severity-rubric.md`—severity 較正
 - `docs/development/dist-check-rebuild-guide.md`—dist 再ビルド手順

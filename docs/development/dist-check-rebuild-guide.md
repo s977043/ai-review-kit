@@ -62,11 +62,12 @@ nvm/volta/asdf いずれも使っていない場合、`node -v` で version を�
 ### 2. 依存を解決して rebuild
 
 ```bash
-npm ci
+git merge origin/main   # conflict 解消などで merge を挟む場合はここで実行
+npm ci                  # merge の後に必ず実行（先に実行すると旧依存で bundle される）
 npm run build:action
 ```
 
-conflict 解消などで `git merge origin/main` を挟む場合は、merge が `package-lock.json` を更新します。そのため **merge の後に `npm ci` をやり直してから** rebuild してください。先に `npm ci` すると旧依存のまま bundle され、差分が出ないまま stale な dist が残ります。
+merge を挟む場合、`package-lock.json` が更新されることがあります（main 側が lock を変えていた場合）。更新されたのに `node_modules` が merge 前のままだと、旧依存で bundle され、差分が出ないまま stale な dist が残ります。そのため **merge の後に `npm ci` をやり直してから** rebuild してください。
 
 ### 3. 差分を確認して commit
 

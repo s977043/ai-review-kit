@@ -1489,12 +1489,31 @@ test('temporary-without-exit: is capped at 3 findings', () => {
 //      サンプルには**スコープ以外の除外規則**（test / fixture / vendored / examples）に
 //      掛かるパスを入れない。掛かると glob 由来の期待と一致しなくなり、この canary が
 //      スコープ以外の理由で落ちる。
+//   4. サンプル表が applyTo の全 glob を 1 件以上覆っていることを assert する。これが無いと
+//      表に無いディレクトリが applyTo へ足されたとき（宣言だけが広がる向き）に緑のまま通る。
 //
-// 現時点でスコープ正規表現を持つ検出器は `temporary-without-exit` のみ:
-//   grep -nE "^const [A-Z_]*(SCOPE|PATH|EXT)[A-Z_]*_RE" src/lib/heuristic-review.mjs
+// 残余（この canary でも捕まらない範囲）: 既存 glob の**拡張子だけ**を増やした場合
+// （`{ts,tsx,js,jsx,mjs}` へ `cts` を足す等）は、その拡張子のサンプルパスが表に無ければ
+// 検出されない。glob の brace 展開まで列挙する assert は入れていないため、拡張子を触る
+// ときはサンプル表へ 1 行足すこと。
+//
+// 検出器のスコープは 2 通りの書き方で表現される。上の grep が拾うのは前者だけである:
+//   - スコープ正規表現の定数（`TEMPORARY_SCOPE_PATH_RE` /
+//     `grep -nE "^const [A-Z_]*(SCOPE|PATH|EXT)[A-Z_]*_RE" src/lib/heuristic-review.mjs`）
+//   - 述語関数（`looksLikeGitHubWorkflowFile` / `looksLikeSourceCodeFile` など
+//     `grep -n "^function looksLike.*File" src/lib/heuristic-review.mjs`）
+// 後者にも宣言／実効の乖離は既にある。`findGitHubActionsIssues`
+// （`src/lib/heuristic-review.mjs:641-643` の `looksLikeGitHubWorkflowFile`）は
+// `.github/workflows/**.yml` に限定するが、配線先 `security-basic` の applyTo
+// （`skills/midstream/security-basic/SKILL.md:9`）はワークフロー YAML に一致しない。
+// 是正は #1797 で追跡している。
 const TWE_SKILL_PATH = 'skills/midstream/knowledge-to-code-alignment/SKILL.md';
 
 // スコープ以外の除外規則に掛からないサンプルパス。in / out は宣言せず glob から導出する。
+// 既存のハードコード canary（`directory scope follows the applyTo prefixes`、#1788 で追加）
+// が使う 8 パスをすべて含む。あちらは導出前の pin として意図的に併存させている。applyTo と
+// 検出器を同時に広げた場合、この導出テストは緑のままだがハードコード側が落ち、意図した
+// 拡張であることの明示的な確認を強制する。
 const TWE_SCOPE_SAMPLE_PATHS = [
   'src/a.ts',
   'src/nested/deep/a.tsx',
@@ -1532,6 +1551,17 @@ test('temporary-without-exit canary: detector scope stays in sync with the skill
     inScope.length < TWE_SCOPE_SAMPLE_PATHS.length,
     'sample paths must cover at least one out-of-applyTo path'
   );
+
+  // さらに、**全 glob** が 1 件以上のサンプルで覆われていることを要求する。上の 2 本だけでは
+  // 表に無いディレクトリ（`server/**` 等）が applyTo へ足されても緑のまま通ってしまい、
+  // 宣言だけが広がる向きのドリフトを見逃す。
+  for (const pattern of globs) {
+    assert.ok(
+      TWE_SCOPE_SAMPLE_PATHS.some((file) => minimatch(file, pattern, { dot: true })),
+      `sample paths must cover applyTo pattern ${pattern}: add a matching path to ` +
+        'TWE_SCOPE_SAMPLE_PATHS so the drift guard can observe this glob'
+    );
+  }
 
   for (const file of TWE_SCOPE_SAMPLE_PATHS) {
     const expected = globs.some((pattern) => minimatch(file, pattern, { dot: true }));
