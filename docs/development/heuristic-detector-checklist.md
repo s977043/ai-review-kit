@@ -36,7 +36,7 @@
 
 - [ ] **テストファイル / fixture を除外**すべきか判断する（`looksLikeTestFile(filePath)` と `/fixtures/` + `/__fixtures__/` チェック）。セキュリティ系・debug 系は通常テストファイルを除外する。
 - [ ] 1 検出器あたりの件数上限を設ける（既存の多くは `MAX_*_COMMENTS = 3`。例外: `findSilentCatch` はハードコードの `>= 3`）。
-- [ ] **実効範囲は最小 diff と混在 diff の 2 通りで測る**。skill 選択は「diff が applyTo に 1 件でも該当するか」で PR 単位に決まる。一方、選択後の `buildHeuristicComments` は diff 中の全ファイルを検出器へ渡す。対象外ファイル単独の diff で `skill=not selected` を確認しても、同じ PR に対象内ファイルが混ざれば発火する。合格条件は「混在 diff（対象内 1 ファイル + 対象外 1 ファイル）で対象外ファイルが発火しないこと」であり、確認は §6 の drift guard canary で代替してよい。
+- [ ] **実効範囲は最小 diff と混在 diff の 2 通りで測る**。skill 選択は「diff が applyTo に 1 件でも該当するか」で PR 単位に決まる。一方、選択後の `buildHeuristicComments` は diff 中の全ファイルを検出器へ渡す。対象外ファイル単独の diff で `skill=not selected` を確認しても、同じ PR に対象内ファイルが混ざれば発火する。合格条件は「混在 diff（対象内 1 ファイル + 対象外 1 ファイル）で対象外ファイルが発火しないこと」。この条件そのものを検証する既存テストは `tests/heuristic-review.test.mjs:1232` にある。テスト名は `temporary-without-exit: stays quiet for scripts/** on the real plan path`。3 ファイル混在の diff を `buildExecutionPlan` へ通し、発火 0 を assert している。新しい検出器ではこれと同じ型を足す。簡易な確認は §6 の drift guard canary で代替してよいが、canary は `temporaryComments` を 1 ファイルずつ直接呼ぶ形なので plan 経路は通らない。
 - [ ] **全体出力は `buildHeuristicComments` 末尾で `.slice(0, 8)` に bounded** である点を意識する。高頻度に発火する検出器を足すと、既存検出器が 8 枠を食い合って starve する。発火頻度が高い検出器は上限を低めにするか、配線順序を検討する。
 
 ## 5. severity / confidence の較正
@@ -69,7 +69,7 @@
 ## 関連
 
 - `src/lib/heuristic-review.mjs`—検出器本体・`HEURISTIC_REGISTRY`（配線と kind→presentation の SSoT）・`stripTrailingLineComment` ヘルパー
-- `tests/heuristic-review.test.mjs`—検出器のテスト全般と、applyTo と検出器スコープの drift guard canary（§6）
+- `tests/heuristic-review.test.mjs`—検出器のテスト全般と、applyTo と検出器スコープの drift guard canary（§6）。混在 diff を `buildExecutionPlan` へ通す plan 経路テスト（`temporary-without-exit: stays quiet for scripts/** on the real plan path`、§4）も同ファイルにある
 - `runners/core/skill-loader.mjs`—`parseSkillFile`（`SKILL.md` frontmatter の applyTo をパースする SSoT）
 - `src/lib/review-engine.mjs`—`normalizeHeuristicComments`（レジストリの `HEURISTIC_KIND_PRESENTATIONS` を参照して finding メッセージを生成）
 - `docs/development/skill-severity-rubric.md`—severity 較正
