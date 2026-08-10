@@ -134,9 +134,7 @@ Good:
 
 ```ts
 type RequestState =
-  | { kind: 'loading' }
-  | { kind: 'error'; error: Error }
-  | { kind: 'success'; data: Data };
+  { kind: 'loading' } | { kind: 'error'; error: Error } | { kind: 'success'; data: Data };
 // 無効な状態が型で表現不可能
 ```
 

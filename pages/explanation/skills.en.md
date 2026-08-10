@@ -401,9 +401,9 @@ Use semantic versioning:
 Choose the right cost/accuracy balance:
 
 ```yaml
-modelHint: cheap          # Fast syntax checks, style guides
-modelHint: balanced       # Standard code review
-modelHint: high-accuracy  # Security audits, architecture review
+modelHint: cheap # Fast syntax checks, style guides
+modelHint: balanced # Standard code review
+modelHint: high-accuracy # Security audits, architecture review
 ```
 
 Cheap skills run first (fast feedback), high-accuracy last (thorough analysis).
