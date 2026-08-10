@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.72.5](https://github.com/s977043/river-review/compare/v1.72.4...v1.72.5) (2026-08-06)
+
+
+### Bug Fixes
+
+* **ci:** blocked-label-guard の concurrency を外し cancelled な check-run の残留を止める ([#1787](https://github.com/s977043/river-review/issues/1787)) ([4cdf573](https://github.com/s977043/river-review/commit/4cdf573abeebebc23c1b31cfcb21c6b572cbf3ce))
+
 ## [1.72.4](https://github.com/s977043/river-review/compare/v1.72.3...v1.72.4) (2026-08-05)
 
 
