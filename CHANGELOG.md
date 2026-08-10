@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.73.0](https://github.com/s977043/river-review/compare/v1.72.5...v1.73.0) (2026-08-10)
+
+
+### Features
+
+* **review:** 一時対応コメントの撤去条件欠落を検出する決定論検出器を追加する ([#1788](https://github.com/s977043/river-review/issues/1788)) ([41785b2](https://github.com/s977043/river-review/commit/41785b2af9c562ef2b45e49fda47d4b52d60c228)), closes [#1783](https://github.com/s977043/river-review/issues/1783)
+
 ## [1.72.5](https://github.com/s977043/river-review/compare/v1.72.4...v1.72.5) (2026-08-06)
 
 
