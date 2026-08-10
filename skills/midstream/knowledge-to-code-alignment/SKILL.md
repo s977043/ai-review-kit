@@ -78,6 +78,7 @@ report-only。finding/question のみを出力し、自動修正・自動マー�
 - **Knowledge Delta が discover できなければ question**: 新知識・過去の設計判断を diff・PR 本文・ADR・参照コードから特定できない場合は、finding ではなく question とする（false-positive-first）。
 - **指摘上限**: Check ごとに finding と question の合算で最大 3 件。保持優先順は findings（severity 降順）→ questions。
 - 決定論的に判定できる領域（構文・パターン）はカスタム静的解析側の責務（`.claude/rules/review-core.md` #1070）。本 skill は意味的判断に集中し、canary が守る領域を重複指摘しない。
+- **一時対応コメントの撤去条件**: `TODO` / `FIXME` / `HACK` / `WORKAROUND` / `暫定` を含むコメントに撤去条件（Issue 参照・URL・期日/バージョン・条件節）が無い状態は、`src/lib/heuristic-review.mjs` の決定論検出器 `temporary-without-exit`（finding-id `TEMPORARY_WITHOUT_EXIT`。定義は `docs/review/rationale-traceability.md`）が canary 付きで担う。本 skill は同じ観点を重複指摘しない。この検出器は本 skill の選択に相乗りするため、実効範囲は上の `applyTo`（`src` / `app` / `lib` 配下の `.ts` `.tsx` `.js` `.jsx` `.mjs`）を含む差分に限られる。検出器側もディレクトリ接頭辞と 5 拡張子の両方を同じ条件で判定しており（`scripts/` やリポジトリ直下の設定ファイルは対象外）、対象を広げるときは applyTo と検出器を同時に変える。
 
 ## Rule / ルール
 

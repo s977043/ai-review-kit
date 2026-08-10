@@ -58,21 +58,21 @@
 
 各指摘には、追跡しやすさのため次の **finding-id** を `[id=...]` として付与してよいものとします。付与は任意で、出力形式は従来どおり `<file>:<line>: <message>` を維持します。この方式は `skills/upstream/plangate-exec-conformance/SKILL.md` の finding-id 表に揃えており、新しい artifact やスキーマ列を要求しません。
 
-| finding-id                    | 意味                                     | 既定 severity     | 主な写像先                                                                                                 |
-| ----------------------------- | ---------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------- |
-| `HOW_UNCLEAR`                 | コードから How を理解しにくい            | nit / warning     | `river-review-code`（`inputContext: [diff, fullFile]` は既定供給セット内）                                 |
-| `HOW_MISPLACED_IN_COMMENT`    | 実装の説明をコメントへ逃がしている       | nit               | 現時点で担当資産なし（Phase 2 以降）                                                                       |
-| `WHAT_IMPLEMENTATION_COUPLED` | テストが実装詳細へ密結合                 | warning           | 現時点で担当資産なし（Phase 2 以降）                                                                       |
-| `WHAT_MISSING_BEHAVIOR`       | 必要な外部振る舞いが未固定               | warning           | `test-existence` / `coverage-gap`。**既定 CI 経路では発火しない**（`RIVER_AVAILABLE_CONTEXTS` 拡張時のみ） |
-| `WHY_MISSING`                 | 変更理由を追跡できない                   | warning           | 現時点で担当資産なし（Phase 2 以降）                                                                       |
-| `WHY_DIFF_MISMATCH`           | Why と差分が不一致                       | warning / blocker | `plangate-exec-conformance` の `design-deviation` ほか。**明示呼び出し時のみ**（`recommended: false`）     |
-| `WHY_NOT_MISSING`             | 非自明な代替案の不採用理由がない         | warning           | 現時点で担当資産なし（Phase 2 以降）                                                                       |
-| `WHY_NOT_STALE`               | 不採用理由・制約が古い                   | warning           | 現時点で担当資産なし（Phase 2 以降）                                                                       |
-| `RATIONALE_CONTRADICTED`      | 成果物の間で理由が矛盾                   | warning / blocker | 現時点で担当資産なし（Phase 2 以降）                                                                       |
-| `RATIONALE_DUPLICATED`        | 同じ説明が複数の正本を持つ               | nit               | 現時点で担当資産なし（Phase 2 以降）                                                                       |
-| `COMMENT_RESTATES_CODE`       | コメントがコードの逐語説明               | nit               | 現時点で担当資産なし（Phase 2 以降）                                                                       |
-| `TEMPORARY_WITHOUT_EXIT`      | 一時対応に撤去条件がない                 | warning           | Phase 2 で `heuristic-review.mjs` の決定論検出器へ                                                         |
-| `RATIONALE_INPUT_MISSING`     | 必要な入力成果物がレビューに渡っていない | （severity 省略） | 現時点で受け皿なし（Phase 2 以降）。既存の `skippedSkills` は代替にならない                                |
+| finding-id                    | 意味                                     | 既定 severity     | 主な写像先                                                                                                       |
+| ----------------------------- | ---------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `HOW_UNCLEAR`                 | コードから How を理解しにくい            | nit / warning     | `river-review-code`（`inputContext: [diff, fullFile]` は既定供給セット内）                                       |
+| `HOW_MISPLACED_IN_COMMENT`    | 実装の説明をコメントへ逃がしている       | nit               | 現時点で担当資産なし（Phase 2 以降）                                                                             |
+| `WHAT_IMPLEMENTATION_COUPLED` | テストが実装詳細へ密結合                 | warning           | 現時点で担当資産なし（Phase 2 以降）                                                                             |
+| `WHAT_MISSING_BEHAVIOR`       | 必要な外部振る舞いが未固定               | warning           | `test-existence` / `coverage-gap`。**既定 CI 経路では発火しない**（`RIVER_AVAILABLE_CONTEXTS` 拡張時のみ）       |
+| `WHY_MISSING`                 | 変更理由を追跡できない                   | warning           | 現時点で担当資産なし（Phase 2 以降）                                                                             |
+| `WHY_DIFF_MISMATCH`           | Why と差分が不一致                       | warning / blocker | `plangate-exec-conformance` の `design-deviation` ほか。**明示呼び出し時のみ**（`recommended: false`）           |
+| `WHY_NOT_MISSING`             | 非自明な代替案の不採用理由がない         | warning           | 現時点で担当資産なし（Phase 2 以降）                                                                             |
+| `WHY_NOT_STALE`               | 不採用理由・制約が古い                   | warning           | 現時点で担当資産なし（Phase 2 以降）                                                                             |
+| `RATIONALE_CONTRADICTED`      | 成果物の間で理由が矛盾                   | warning / blocker | 現時点で担当資産なし（Phase 2 以降）                                                                             |
+| `RATIONALE_DUPLICATED`        | 同じ説明が複数の正本を持つ               | nit               | 現時点で担当資産なし（Phase 2 以降）                                                                             |
+| `COMMENT_RESTATES_CODE`       | コメントがコードの逐語説明               | nit               | 現時点で担当資産なし（Phase 2 以降）                                                                             |
+| `TEMPORARY_WITHOUT_EXIT`      | 一時対応に撤去条件がない                 | nit               | `heuristic-review.mjs` の決定論検出器 `temporary-without-exit`（実装済み。`knowledge-to-code-alignment` へ配線） |
+| `RATIONALE_INPUT_MISSING`     | 必要な入力成果物がレビューに渡っていない | （severity 省略） | 現時点で受け皿なし（Phase 2 以降）。既存の `skippedSkills` は代替にならない                                      |
 
 「現時点で担当資産なし」と書いた 8 コードは、既存 skill の Gate や Non-goals が対象を明示的に外しているため、既存資産へ写像できません。根拠は次のとおりです。
 
@@ -91,9 +91,9 @@
 
 | 判定                                                             | 件数 | finding-id                                    |
 | ---------------------------------------------------------------- | ---- | --------------------------------------------- |
-| 既定 CI 経路で発火する担当資産あり                               | 1    | `HOW_UNCLEAR`                                 |
+| 既定 CI 経路で発火する担当資産あり                               | 2    | `HOW_UNCLEAR` / `TEMPORARY_WITHOUT_EXIT`      |
 | 条件付き（供給コンテキスト拡張時、または明示呼び出し時のみ）     | 2    | `WHAT_MISSING_BEHAVIOR` / `WHY_DIFF_MISMATCH` |
-| 担当資産なし（Phase 2 以降で新規 skill / 決定論検出器 / 受け皿） | 10   | 上記以外の 10 コード                          |
+| 担当資産なし（Phase 2 以降で新規 skill / 決定論検出器 / 受け皿） | 9    | 上記以外の 9 コード                           |
 
 Phase 0 の「完全 3 / 部分 7 / 未カバー 4」は SKILL.md 本文だけを見た判定であり、既定 runner の供給セットと各 skill の Gate を確認していないため過大評価でした。上表がその再集計です。
 
@@ -168,7 +168,7 @@ rationale 系の正本（`plan` ほか）が欠損しても、本 Lens 全体を
 | 決定論チェック | 一時対応コメントの撤去条件の有無（`TEMPORARY_WITHOUT_EXIT`）、generated / vendor パスの除外 |
 | 意味的レビュー | How の明瞭さ、What の固定対象、Why と差分の一致、Why not の要否、理由の stale・矛盾・重複   |
 
-決定論側は Phase 2 で `heuristic-review.mjs` へ実装し、誤検出は canary テストで回帰防止します。意味的レビューを単純な正規表現で強制しません。
+決定論側のうち `TEMPORARY_WITHOUT_EXIT` は `heuristic-review.mjs` の検出器 `temporary-without-exit` として実装済みで、誤検出は canary テストで回帰を防いでいます。実効範囲は配線先スキル `knowledge-to-code-alignment` の `applyTo`（`src` / `app` / `lib` 配下の `.ts` `.tsx` `.js` `.jsx` `.mjs`）に一致するファイルだけで、検出器側も同じディレクトリ条件と拡張子条件で絞っています。`scripts/` やリポジトリ直下の設定ファイルは対象外です。既定 severity は `nit`（出力スキーマの `minor`）とし、gate を止めません。意味的レビューを単純な正規表現で強制しません。
 
 ## 8. 責務境界
 

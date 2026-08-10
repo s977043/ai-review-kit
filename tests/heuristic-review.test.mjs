@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { parseUnifiedDiff } from '../src/lib/diff-processor.mjs';
+import { buildExecutionPlan } from '../runners/core/review-runner.mjs';
 import {
   buildHeuristicComments,
   SKILL_HEURISTIC_MAP,
@@ -933,6 +934,7 @@ test('registry derives HEURISTIC_SKILL_IDS from SKILL_HEURISTIC_MAP keys', () =>
     'closure-scope-retention',
     'coverage-gap',
     'invisible-unicode-injection',
+    'knowledge-to-code-alignment',
     'logging-observability',
     'security-basic',
     'test-existence',
@@ -1153,4 +1155,318 @@ test('invisible-unicode canary: an emoji subdivision-flag tag sequence is not fl
     0xe007f
   );
   assert.deepEqual(invisibleUnicodeKinds(`const flag = "${scotland}";`), []);
+});
+
+// ---- TEMPORARY_WITHOUT_EXIT (#1783 Phase 2) ----
+// 一時対応コメントのうち、撤去条件（Issue 参照 / URL / 期日・バージョン / 条件節）が
+// 無いものだけを検出する。撤去条件が書かれているコメントを落とすと実害のある誤検出に
+// なるため、negative 側を canary として固定する（#1070 の責務分界）。
+const TWE_PLAN = { selected: [{ metadata: { id: 'knowledge-to-code-alignment' } }] };
+
+function temporaryComments(addedLines, { file = 'src/service.ts', contextLines = [] } = {}) {
+  const body = [
+    ...contextLines.map((line) => ` ${line}`),
+    ...addedLines.map((line) => `+${line}`),
+  ].join('\n');
+  const oldCount = contextLines.length;
+  const newCount = contextLines.length + addedLines.length;
+  const diffText =
+    `diff --git a/${file} b/${file}\n--- a/${file}\n+++ b/${file}\n` +
+    `@@ -1,${oldCount} +1,${newCount} @@\n${body}\n`;
+  const parsed = parseUnifiedDiff(diffText);
+  return buildHeuristicComments({ diff: { files: parsed.files }, plan: TWE_PLAN });
+}
+
+test('temporary-without-exit: flags a bare TODO comment', () => {
+  const comments = temporaryComments(['// TODO: リトライ間隔を調整する']);
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].kind, 'temporary-without-exit');
+  assert.equal(comments[0].file, 'src/service.ts');
+  assert.equal(comments[0].line, 1);
+  assert.equal(comments[0].skillId, 'knowledge-to-code-alignment');
+});
+
+test('temporary-without-exit: flags a trailing FIXME comment', () => {
+  const comments = temporaryComments(['const v = compute(); // FIXME: 失敗時の経路が未実装']);
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].kind, 'temporary-without-exit');
+});
+
+test('temporary-without-exit: flags a Japanese 暫定対応 comment', () => {
+  assert.equal(temporaryComments(['// 暫定対応: レスポンスをそのまま返す']).length, 1);
+});
+
+test('temporary-without-exit: fires on the real plan path (skill selection + detector)', async () => {
+  // 手組みプランではなく、本番の skill 選択（`buildExecutionPlan`）を通した経路で
+  // 発火することを固定する。配線先スキルの applyTo は `src|app|lib/**` の JS/TS な
+  // ので、検出器もその範囲だけを走査する。`scripts/**` やリポジトリ直下のファイルは
+  // たとえ拡張子が一致していても実効範囲外（下の scripts/** 回帰テストで固定）。
+  const diffText =
+    'diff --git a/src/lib/service.mjs b/src/lib/service.mjs\n' +
+    '--- a/src/lib/service.mjs\n+++ b/src/lib/service.mjs\n' +
+    '@@ -1,0 +1,1 @@\n+// HACK: 上流の型が壊れているので any で通す\n';
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/lib/service.mjs'],
+    availableContexts: ['diff'],
+    diffText,
+    dryRun: false,
+    llmEnabled: false, // no-key 経路（決定論チェックのみ）
+  });
+  const selectedIds = plan.selected.map((s) => s.metadata?.id ?? s.id);
+  assert.ok(
+    selectedIds.includes('knowledge-to-code-alignment'),
+    `owning skill must be selected, got ${JSON.stringify(selectedIds)}`
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+  assert.ok(
+    comments.some((c) => c.kind === 'temporary-without-exit'),
+    `expected a temporary-without-exit finding, got ${JSON.stringify(comments)}`
+  );
+});
+
+test('temporary-without-exit: stays quiet for scripts/** on the real plan path', async () => {
+  // 配線先スキルの applyTo は `src|app|lib/**` なので、`src/**` の変更でスキルが
+  // plan に載っても、同じ PR に含まれる `scripts/**` や リポジトリ直下の JS の
+  // 一時対応コメントでは発火してはならない（#1788 major-1）。
+  const diffText =
+    'diff --git a/src/lib/service.mjs b/src/lib/service.mjs\n' +
+    '--- a/src/lib/service.mjs\n+++ b/src/lib/service.mjs\n' +
+    '@@ -1,0 +1,1 @@\n+const ok = true;\n' +
+    'diff --git a/scripts/check-refs.mjs b/scripts/check-refs.mjs\n' +
+    '--- a/scripts/check-refs.mjs\n+++ b/scripts/check-refs.mjs\n' +
+    '@@ -1,0 +1,1 @@\n+// TODO(follow-up PR): 参照チェックを広げる\n' +
+    'diff --git a/eslint.config.mjs b/eslint.config.mjs\n' +
+    '--- a/eslint.config.mjs\n+++ b/eslint.config.mjs\n' +
+    '@@ -1,0 +1,1 @@\n+// TODO: ルールを整理する\n';
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/lib/service.mjs', 'scripts/check-refs.mjs', 'eslint.config.mjs'],
+    availableContexts: ['diff'],
+    diffText,
+    dryRun: false,
+    llmEnabled: false,
+  });
+  const selectedIds = plan.selected.map((s) => s.metadata?.id ?? s.id);
+  assert.ok(
+    selectedIds.includes('knowledge-to-code-alignment'),
+    `owning skill must still be selected, got ${JSON.stringify(selectedIds)}`
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+  assert.deepEqual(
+    comments.filter((c) => c.kind === 'temporary-without-exit'),
+    [],
+    `out-of-applyTo paths must not fire, got ${JSON.stringify(comments)}`
+  );
+});
+
+test('temporary-without-exit canary: directory scope follows the applyTo prefixes', () => {
+  // applyTo 内（発火する）
+  assert.equal(temporaryComments(['// TODO: 直す'], { file: 'src/a.ts' }).length, 1);
+  assert.equal(temporaryComments(['// TODO: 直す'], { file: 'app/routes/a.tsx' }).length, 1);
+  assert.equal(temporaryComments(['// TODO: 直す'], { file: 'lib/deep/nest/a.mjs' }).length, 1);
+  // applyTo 外（発火しない）
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'scripts/build.mjs' }), []);
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'eslint.config.mjs' }), []);
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'tools/gen.ts' }), []);
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'migrations/001.js' }), []);
+  // `src` を末尾に含むだけのパスも対象外（接頭辞一致であること）。
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'packages/web/src/a.ts' }), []);
+});
+
+test('temporary-without-exit canary: example / sample template directories are excluded', () => {
+  // テンプレートの placeholder（利用者が埋める前提）には撤去条件が書かれない。
+  assert.deepEqual(
+    temporaryComments(['// TODO: Process new order'], { file: 'src/examples/o.ts' }),
+    []
+  );
+  assert.deepEqual(
+    temporaryComments(['// TODO: Process new order'], { file: 'src/example/o.ts' }),
+    []
+  );
+  assert.deepEqual(
+    temporaryComments(['// TODO: Process new order'], { file: 'src/samples/o.ts' }),
+    []
+  );
+});
+
+test('temporary-without-exit: scans a production templates/ directory (no blanket exclusion)', () => {
+  // `src/templates/**` は本番のテンプレート描画コードであり、除外対象ではない。
+  assert.equal(
+    temporaryComments(['// TODO: 旧レンダラを消す'], { file: 'src/templates/render.mjs' }).length,
+    1
+  );
+});
+
+test('temporary-without-exit: a URL inside a string literal is not mistaken for the comment', () => {
+  // quote-aware な行末コメント切り出しにより、コメント部分は `// TODO` だけになる。
+  // コード側の URL を撤去条件と数えると本物を取りこぼす（false negative）。
+  assert.equal(temporaryComments(["const u = 'http://example.com'; // TODO"]).length, 1);
+});
+
+test('temporary-without-exit canary: an Issue reference counts as an exit criterion', () => {
+  assert.deepEqual(temporaryComments(['// TODO(#1234): 新 API へ切り替える']), []);
+});
+
+test('temporary-without-exit canary: a conditional clause counts as an exit criterion', () => {
+  assert.deepEqual(temporaryComments(['// FIXME: upstream の修正がリリースされたら削除する']), []);
+  assert.deepEqual(temporaryComments(['// HACK: remove once the upstream patch ships']), []);
+});
+
+test('temporary-without-exit canary: a deadline or version counts as an exit criterion', () => {
+  assert.deepEqual(temporaryComments(['// TODO: 2026-09-01 までに恒久対応へ置き換える']), []);
+  assert.deepEqual(temporaryComments(['// WORKAROUND: v2.1.0 で入る API を待つ']), []);
+});
+
+test('temporary-without-exit canary: an upstream issue URL counts as an exit criterion', () => {
+  assert.deepEqual(
+    temporaryComments(['// WORKAROUND: https://github.com/nodejs/node/issues/1 の修正待ち']),
+    []
+  );
+});
+
+test('temporary-without-exit canary: the exit criterion may sit on the next comment line', () => {
+  assert.deepEqual(
+    temporaryComments(['// TODO: 旧経路を削除する', '// (blocked on the #987 migration)']),
+    []
+  );
+});
+
+test('temporary-without-exit canary: a block-comment continuation line is part of the block', () => {
+  // 継続行が `*` prefix を持たない書き方。行頭 prefix だけを見る判定では塊が切れ、
+  // 撤去条件を読み落として誤検出になっていた（E1）。
+  assert.deepEqual(temporaryComments(['/* TODO: この分岐を消す', '   until #987 lands */']), []);
+  // JSDoc 形式（`*` 継続）も同様に塊として読む。
+  assert.deepEqual(
+    temporaryComments([
+      '/**',
+      ' * FIXME: 旧経路の互換を残す',
+      ' * remove once #55 is merged',
+      ' */',
+    ]),
+    []
+  );
+});
+
+test('temporary-without-exit canary: an HTML-comment continuation line is part of the block', () => {
+  // E4。検出器が `<!--` を開始 prefix に採用している以上、継続行も読む必要がある。
+  assert.deepEqual(
+    temporaryComments(['<!-- TODO: replace markup', '     once #55 is merged -->']),
+    []
+  );
+});
+
+test('temporary-without-exit canary: a blank line does not split the comment block', () => {
+  assert.deepEqual(
+    temporaryComments(['// TODO: 旧経路を削除する', '', '// remove once #12 lands']),
+    []
+  );
+});
+
+test('temporary-without-exit canary: broader conditional and reference forms count', () => {
+  // 「撤去条件を明示している」のに発火していた 7 形（major-3）。
+  assert.deepEqual(temporaryComments(['// TODO: Remove unless the vendor keeps the old API.']), []);
+  assert.deepEqual(temporaryComments(['// TODO: Delete if upstream lands the fix.']), []);
+  assert.deepEqual(temporaryComments(['// TODO: drop this, see issue 1234 in the tracker']), []);
+  assert.deepEqual(temporaryComments(['// FIXME: temporary; remove in the next release']), []);
+  assert.deepEqual(temporaryComments(['// TODO: remove by 2026Q3']), []);
+  assert.deepEqual(temporaryComments(['// TODO: 来月の棚卸しで消す']), []);
+  assert.deepEqual(temporaryComments(['// 暫定: 新スキーマ移行が終わった後に削除する']), []);
+});
+
+test('temporary-without-exit canary: pseudo-code inside a template literal is not a comment', () => {
+  assert.deepEqual(temporaryComments(['const stub = `', '  // TODO: implement', '`;']), []);
+});
+
+test('temporary-without-exit: an unrelated trailing comment on the next line does not suppress', () => {
+  // 行末コメントは「その行だけの単位」。隣の行末コメントを塊に連結すると、無関係な
+  // 撤去条件（`valid until 2027-01-01`）が抑制根拠になってしまう（m6）。
+  const comments = temporaryComments([
+    'foo(); // TODO: ここを直す',
+    'bar(); // valid until 2027-01-01',
+  ]);
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].line, 1);
+});
+
+test('temporary-without-exit canary: an existing comment block already carries the criterion', () => {
+  // 撤去条件は差分の外（context 行）にあり、追加行はその塊の続き。
+  assert.deepEqual(
+    temporaryComments(['// TODO: ここも同じ理由で残す'], {
+      contextLines: ['// blocked on https://example.com/issues/12'],
+    }),
+    []
+  );
+});
+
+test('temporary-without-exit canary: a marker inside a string literal is not a comment', () => {
+  assert.deepEqual(temporaryComments(["const label = 'TODO';"]), []);
+  // main に実在する形（`src/lib/feedback.mjs:216` の eval テンプレート文字列）。
+  assert.deepEqual(
+    temporaryComments(["const tpl = '```diff\\n# TODO: paste the diff\\n```';"]),
+    []
+  );
+});
+
+test('temporary-without-exit canary: ordinary descriptive comments are never flagged', () => {
+  // マーカー集合を広げすぎると通常のコメントが全部指摘対象になる。マーカー側の
+  // 変異（always-match）で確実に落ちるよう、撤去条件を含まない普通のコメントを固定する。
+  assert.deepEqual(temporaryComments(['// 入力を NFC へ正規化する']), []);
+  assert.deepEqual(temporaryComments(['// Normalize the payload before hashing.']), []);
+  assert.deepEqual(temporaryComments(['const v = 1; // 呼び出し側の期待に合わせる']), []);
+  assert.deepEqual(temporaryComments(['/**', ' * Build the review plan.', ' */']), []);
+});
+
+test('temporary-without-exit canary: lowercase prose mentions are out of scope', () => {
+  assert.deepEqual(temporaryComments(['// workaround for the Safari layout bug']), []);
+  assert.deepEqual(temporaryComments(['// 一時的にバッファへ退避する']), []);
+});
+
+test('temporary-without-exit canary: test / docs / generated / vendored paths are excluded', () => {
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'tests/service.test.mjs' }), []);
+  assert.deepEqual(temporaryComments(['- TODO: 書く'], { file: 'docs/plan.md' }), []);
+  assert.deepEqual(
+    temporaryComments(['// TODO: 直す'], { file: 'runners/github-action/dist/index.mjs' }),
+    []
+  );
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'node_modules/x/index.js' }), []);
+  assert.deepEqual(
+    temporaryComments(['// TODO: 直す'], { file: 'src/lib/fixtures/sample.ts' }),
+    []
+  );
+  // 実効範囲外（配線先スキルの applyTo は `src|app|lib` 配下の JS/TS のみ）。
+  assert.deepEqual(temporaryComments(['# HACK: 直す'], { file: 'scripts/build.py' }), []);
+  assert.deepEqual(temporaryComments(['  # TODO: 直す'], { file: '.github/workflows/ci.yml' }), []);
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'src/legacy.cjs' }), []);
+});
+
+test('temporary-without-exit canary: an unchanged (context) TODO is not flagged', () => {
+  assert.deepEqual(
+    temporaryComments(['const v = 1;'], { contextLines: ['// TODO: 昔からある宿題'] }),
+    []
+  );
+});
+
+test('temporary-without-exit: is quiet when the owning skill is not selected', () => {
+  const diffText =
+    'diff --git a/src/service.ts b/src/service.ts\n--- a/src/service.ts\n+++ b/src/service.ts\n' +
+    '@@ -1,0 +1,1 @@\n+// TODO: 直す\n';
+  const parsed = parseUnifiedDiff(diffText);
+  const plan = { selected: [{ metadata: { id: 'security-basic' } }] };
+  assert.deepEqual(buildHeuristicComments({ diff: { files: parsed.files }, plan }), []);
+});
+
+test('temporary-without-exit: is capped at 3 findings', () => {
+  const comments = temporaryComments([
+    '// TODO: a',
+    'const a = 1;',
+    '// TODO: b',
+    'const b = 2;',
+    '// TODO: c',
+    'const c = 3;',
+    '// TODO: d',
+  ]);
+  assert.equal(comments.length, 3);
 });
