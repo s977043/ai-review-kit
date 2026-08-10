@@ -71,7 +71,7 @@
 | `RATIONALE_CONTRADICTED`      | 成果物の間で理由が矛盾                   | warning / blocker | 現時点で担当資産なし（Phase 2 以降）                                                                             |
 | `RATIONALE_DUPLICATED`        | 同じ説明が複数の正本を持つ               | nit               | 現時点で担当資産なし（Phase 2 以降）                                                                             |
 | `COMMENT_RESTATES_CODE`       | コメントがコードの逐語説明               | nit               | 現時点で担当資産なし（Phase 2 以降）                                                                             |
-| `TEMPORARY_WITHOUT_EXIT`      | 一時対応に撤去条件がない                 | warning           | `heuristic-review.mjs` の決定論検出器 `temporary-without-exit`（実装済み。`knowledge-to-code-alignment` へ配線） |
+| `TEMPORARY_WITHOUT_EXIT`      | 一時対応に撤去条件がない                 | nit               | `heuristic-review.mjs` の決定論検出器 `temporary-without-exit`（実装済み。`knowledge-to-code-alignment` へ配線） |
 | `RATIONALE_INPUT_MISSING`     | 必要な入力成果物がレビューに渡っていない | （severity 省略） | 現時点で受け皿なし（Phase 2 以降）。既存の `skippedSkills` は代替にならない                                      |
 
 「現時点で担当資産なし」と書いた 8 コードは、既存 skill の Gate や Non-goals が対象を明示的に外しているため、既存資産へ写像できません。根拠は次のとおりです。
@@ -168,7 +168,7 @@ rationale 系の正本（`plan` ほか）が欠損しても、本 Lens 全体を
 | 決定論チェック | 一時対応コメントの撤去条件の有無（`TEMPORARY_WITHOUT_EXIT`）、generated / vendor パスの除外 |
 | 意味的レビュー | How の明瞭さ、What の固定対象、Why と差分の一致、Why not の要否、理由の stale・矛盾・重複   |
 
-決定論側のうち `TEMPORARY_WITHOUT_EXIT` は `heuristic-review.mjs` の検出器 `temporary-without-exit` として実装済みで、誤検出は canary テストで回帰を防いでいます。実効範囲は配線先スキル `knowledge-to-code-alignment` の `applyTo`（`src` / `app` / `lib` 配下の `.ts` `.tsx` `.js` `.jsx` `.mjs`）を含む差分です。意味的レビューを単純な正規表現で強制しません。
+決定論側のうち `TEMPORARY_WITHOUT_EXIT` は `heuristic-review.mjs` の検出器 `temporary-without-exit` として実装済みで、誤検出は canary テストで回帰を防いでいます。実効範囲は配線先スキル `knowledge-to-code-alignment` の `applyTo`（`src` / `app` / `lib` 配下の `.ts` `.tsx` `.js` `.jsx` `.mjs`）に一致するファイルだけで、検出器側も同じディレクトリ条件と拡張子条件で絞っています。`scripts/` やリポジトリ直下の設定ファイルは対象外です。既定 severity は `nit`（出力スキーマの `minor`）とし、gate を止めません。意味的レビューを単純な正規表現で強制しません。
 
 ## 8. 責務境界
 

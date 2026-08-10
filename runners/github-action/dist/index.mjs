@@ -45254,7 +45254,12 @@ const HEURISTIC_REGISTRY = [
           'TODO / FIXME / HACK / WORKAROUND / 暫定 等のコメントが追加されたが、同じコメント塊に Issue 参照・URL・期日/バージョン・条件節のいずれも無い',
         impact: 'いつ外せるか誰も判断できず、一時対応がそのまま恒久化して設計を固定する',
         fix: 'Issue 番号・期日・解消条件のいずれかをコメントへ書き足すか、その場で恒久対応する',
-        severity: 'warning',
+        // nit（出力スキーマの minor）。同じレジストリの silent-catch /
+        // ts-suppression / caller-special-case と揃える。warning は
+        // finding-factory で major へ写り run-gate の blockingFindings に
+        // 計上されるため、一時対応コメントの書式不足で gate を NO_GO へ
+        // 倒してしまう。
+        severity: 'nit',
         confidence: 'medium',
       },
     },
@@ -46277,11 +46282,14 @@ function findInvisibleUnicode({ diff }) {
 // コメント行にあっても、既存の（context 行の）コメント塊にあっても発火しない。
 //
 // 実効範囲: 本検出器は配線先スキル `knowledge-to-code-alignment` が plan に選ばれた
-// ときだけ動く。同スキルの applyTo は `src|app|lib/**/*.{ts,tsx,js,jsx,mjs}` なので、
-// **その範囲の JS / TS 差分を含む PR でのみ発火する**。検出器側の拡張子判定
-// （`TEMPORARY_SCOPE_EXT_RE`）も宣言と実効を一致させるため同じ 5 拡張子へ揃えてある。
-// `.py` / `.sh` / `.yml` 等を対象にしたい場合は applyTo と検出器の双方を広げる必要が
-// あり、別 issue とする（#1783 Phase 2 のスコープ外）。共有ヘルパー
+// ときだけ動く。同スキルの applyTo（SKILL.md）は
+// `src/**/*.{ts,tsx,js,jsx,mjs}` / `app/**/…` / `lib/**/…` の 3 パターンなので、
+// 検出器も**リポジトリ直下の `src/` `app/` `lib/` 配下にある上記 5 拡張子のファイル
+// だけ**を走査する（`TEMPORARY_SCOPE_PATH_RE`）。`scripts/` やリポジトリ直下の
+// config、`tools/` / `migrations/` は applyTo の対象外なので、同じ PR で `src/**` が
+// 変わって plan に載っても検出器側では発火しない。
+// `.py` / `.sh` / `.yml` や別のディレクトリを対象にしたい場合は applyTo と検出器の
+// 双方を広げる必要があり、別 issue とする（#1783 Phase 2 のスコープ外）。共有ヘルパー
 // `looksLikeSourceCodeFile` は applyTo が `**/*` の invisible-unicode-injection と共用
 // なので、そちらは絞らない。
 //
@@ -46293,9 +46301,11 @@ function findInvisibleUnicode({ diff }) {
 const TEMPORARY_MARKER_RE =
   /\b(?:TODO|FIXME|HACK|WORKAROUND|TEMPORARY)\b|暫定|一時対応|ワークアラウンド/;
 
-// 配線先スキルの applyTo と同じ 5 拡張子。宣言（検出器）と実効（plan 選択）を
-// 一致させるための定数で、広げるときは SKILL.md の applyTo と同時に変える。
-const TEMPORARY_SCOPE_EXT_RE = /\.(?:ts|tsx|js|jsx|mjs)$/;
+// 配線先スキル `knowledge-to-code-alignment` の applyTo
+// （`src/**/*.{ts,tsx,js,jsx,mjs}` / `app/**/…` / `lib/**/…`）と同じ条件。
+// ディレクトリ接頭辞と拡張子の両方を見て、宣言（SKILL.md）と実効（検出器）を
+// 一致させる。広げるときは SKILL.md の applyTo と同時に変える。
+const TEMPORARY_SCOPE_PATH_RE = /^(?:src|app|lib)\/(?:.*\/)?[^/]+\.(?:ts|tsx|js|jsx|mjs)$/;
 
 // 撤去条件の候補。過剰抑制（本来指摘すべきものを見逃す方向）は意図的に許容している:
 // 例えば `\b[A-Z][A-Z0-9]{1,9}-\d+\b` は `UTF-8` / `SHA-1` / `RFC-3339` にも一致し、
@@ -46319,6 +46329,12 @@ const EXIT_CRITERIA_RES = [
 // vendored / 取り込み物。生成物（`dist/`）の判定は diff-processor の
 // `isGeneratedArtifactPath` に委ね、ここでは重複させない。
 const VENDORED_PATH_RE = /(?:^|\/)(?:node_modules|vendor|third_party|generated|__generated__)\//;
+
+// テストデータとテンプレート置き場。fixtures に加えて examples / samples を除外する:
+// これらの配下にあるのは利用者が埋める前提の placeholder（`// TODO: Process new order`
+// 等）で、撤去条件が書かれることは原理的にない。`src/templates/` を一律除外しない判断は
+// 既存テストで固定されており、ここでは変えない。
+const TEMPORARY_EXCLUDED_DIR_RE = /\/(?:fixtures|__fixtures__|examples|example|samples)\//;
 
 function countUnescapedBackticks(text) {
   let count = 0;
@@ -46440,9 +46456,9 @@ function findTemporaryWithoutExit({ diff }) {
     if (!filePath || filePath === '/dev/null') continue;
     if (looksLikeTestFile(filePath)) continue;
     const normalized = String(filePath).replaceAll('\\', '/');
-    if (!TEMPORARY_SCOPE_EXT_RE.test(normalized)) continue;
+    if (!TEMPORARY_SCOPE_PATH_RE.test(normalized)) continue;
     if ((0,_diff_processor_mjs__WEBPACK_IMPORTED_MODULE_0__/* .isGeneratedArtifactPath */ .vS)(filePath)) continue;
-    if (normalized.includes('/fixtures/') || normalized.includes('/__fixtures__/')) continue;
+    if (TEMPORARY_EXCLUDED_DIR_RE.test(normalized)) continue;
     if (VENDORED_PATH_RE.test(normalized)) continue;
 
     for (const hunk of ensureArray(file?.hunks)) {

@@ -1199,7 +1199,8 @@ test('temporary-without-exit: flags a Japanese 暫定対応 comment', () => {
 test('temporary-without-exit: fires on the real plan path (skill selection + detector)', async () => {
   // 手組みプランではなく、本番の skill 選択（`buildExecutionPlan`）を通した経路で
   // 発火することを固定する。配線先スキルの applyTo は `src|app|lib/**` の JS/TS な
-  // ので、この経路を通らないファイル（`scripts/**` や `.py`）は実効範囲外になる。
+  // ので、検出器もその範囲だけを走査する。`scripts/**` やリポジトリ直下のファイルは
+  // たとえ拡張子が一致していても実効範囲外（下の scripts/** 回帰テストで固定）。
   const diffText =
     'diff --git a/src/lib/service.mjs b/src/lib/service.mjs\n' +
     '--- a/src/lib/service.mjs\n+++ b/src/lib/service.mjs\n' +
@@ -1222,6 +1223,72 @@ test('temporary-without-exit: fires on the real plan path (skill selection + det
   assert.ok(
     comments.some((c) => c.kind === 'temporary-without-exit'),
     `expected a temporary-without-exit finding, got ${JSON.stringify(comments)}`
+  );
+});
+
+test('temporary-without-exit: stays quiet for scripts/** on the real plan path', async () => {
+  // 配線先スキルの applyTo は `src|app|lib/**` なので、`src/**` の変更でスキルが
+  // plan に載っても、同じ PR に含まれる `scripts/**` や リポジトリ直下の JS の
+  // 一時対応コメントでは発火してはならない（#1788 major-1）。
+  const diffText =
+    'diff --git a/src/lib/service.mjs b/src/lib/service.mjs\n' +
+    '--- a/src/lib/service.mjs\n+++ b/src/lib/service.mjs\n' +
+    '@@ -1,0 +1,1 @@\n+const ok = true;\n' +
+    'diff --git a/scripts/check-refs.mjs b/scripts/check-refs.mjs\n' +
+    '--- a/scripts/check-refs.mjs\n+++ b/scripts/check-refs.mjs\n' +
+    '@@ -1,0 +1,1 @@\n+// TODO(follow-up PR): 参照チェックを広げる\n' +
+    'diff --git a/eslint.config.mjs b/eslint.config.mjs\n' +
+    '--- a/eslint.config.mjs\n+++ b/eslint.config.mjs\n' +
+    '@@ -1,0 +1,1 @@\n+// TODO: ルールを整理する\n';
+  const plan = await buildExecutionPlan({
+    phase: 'midstream',
+    changedFiles: ['src/lib/service.mjs', 'scripts/check-refs.mjs', 'eslint.config.mjs'],
+    availableContexts: ['diff'],
+    diffText,
+    dryRun: false,
+    llmEnabled: false,
+  });
+  const selectedIds = plan.selected.map((s) => s.metadata?.id ?? s.id);
+  assert.ok(
+    selectedIds.includes('knowledge-to-code-alignment'),
+    `owning skill must still be selected, got ${JSON.stringify(selectedIds)}`
+  );
+  const parsed = parseUnifiedDiff(diffText);
+  const comments = buildHeuristicComments({ diff: { files: parsed.files }, plan });
+  assert.deepEqual(
+    comments.filter((c) => c.kind === 'temporary-without-exit'),
+    [],
+    `out-of-applyTo paths must not fire, got ${JSON.stringify(comments)}`
+  );
+});
+
+test('temporary-without-exit canary: directory scope follows the applyTo prefixes', () => {
+  // applyTo 内（発火する）
+  assert.equal(temporaryComments(['// TODO: 直す'], { file: 'src/a.ts' }).length, 1);
+  assert.equal(temporaryComments(['// TODO: 直す'], { file: 'app/routes/a.tsx' }).length, 1);
+  assert.equal(temporaryComments(['// TODO: 直す'], { file: 'lib/deep/nest/a.mjs' }).length, 1);
+  // applyTo 外（発火しない）
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'scripts/build.mjs' }), []);
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'eslint.config.mjs' }), []);
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'tools/gen.ts' }), []);
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'migrations/001.js' }), []);
+  // `src` を末尾に含むだけのパスも対象外（接頭辞一致であること）。
+  assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'packages/web/src/a.ts' }), []);
+});
+
+test('temporary-without-exit canary: example / sample template directories are excluded', () => {
+  // テンプレートの placeholder（利用者が埋める前提）には撤去条件が書かれない。
+  assert.deepEqual(
+    temporaryComments(['// TODO: Process new order'], { file: 'src/examples/o.ts' }),
+    []
+  );
+  assert.deepEqual(
+    temporaryComments(['// TODO: Process new order'], { file: 'src/example/o.ts' }),
+    []
+  );
+  assert.deepEqual(
+    temporaryComments(['// TODO: Process new order'], { file: 'src/samples/o.ts' }),
+    []
   );
 });
 
@@ -1369,7 +1436,7 @@ test('temporary-without-exit canary: test / docs / generated / vendored paths ar
     temporaryComments(['// TODO: 直す'], { file: 'src/lib/fixtures/sample.ts' }),
     []
   );
-  // 実効範囲外の拡張子（配線先スキルの applyTo が JS/TS のみ）。
+  // 実効範囲外（配線先スキルの applyTo は `src|app|lib` 配下の JS/TS のみ）。
   assert.deepEqual(temporaryComments(['# HACK: 直す'], { file: 'scripts/build.py' }), []);
   assert.deepEqual(temporaryComments(['  # TODO: 直す'], { file: '.github/workflows/ci.yml' }), []);
   assert.deepEqual(temporaryComments(['// TODO: 直す'], { file: 'src/legacy.cjs' }), []);
