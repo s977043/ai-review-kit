@@ -62,9 +62,12 @@ nvm/volta/asdf いずれも使っていない場合、`node -v` で version を�
 ### 2. 依存を解決して rebuild
 
 ```bash
-npm ci
+git merge origin/main   # conflict 解消などで merge を挟む場合はここで実行
+npm ci                  # merge の後に必ず実行（先に実行すると旧依存で bundle される）
 npm run build:action
 ```
+
+merge を挟む場合、`package-lock.json` が更新されることがあります（main 側が lock を変えていた場合）。更新されたのに `node_modules` が merge 前のままだと、旧依存で bundle され、差分が出ないまま stale な dist が残ります。そのため **merge の後に `npm ci` をやり直してから** rebuild してください。
 
 ### 3. 差分を確認して commit
 
@@ -93,11 +96,12 @@ git commit -m "chore(action): rebuild github-action dist"
 
 ## トラブルシューティング
 
-| 症状                                                                            | 原因                             | 対応                                             |
-| ------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------ |
-| ローカルで `git diff --quiet runners/github-action/dist/` は通るのに CI で fail | ローカル Node が `.nvmrc` と違う | `nvm use` で揃えて再 build                       |
-| rebuild しても差分が残り続ける                                                  | `node_modules` が stale          | `npm ci` で依存再解決後に `npm run build:action` |
-| `index.mjs.map` のみの大量差分                                                  | sourcemap の決定論性問題         | Node を `.nvmrc` に揃えれば通常解消              |
+| 症状                                                                            | 原因                                                                | 対応                                                                              |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| ローカルで `git diff --quiet runners/github-action/dist/` は通るのに CI で fail | ローカル Node が `.nvmrc` と違う                                    | `nvm use` で揃えて再 build                                                        |
+| rebuild しても差分が残り続ける                                                  | `node_modules` が stale                                             | `npm ci` で依存再解決後に `npm run build:action`                                  |
+| `index.mjs.map` のみの大量差分                                                  | sourcemap の決定論性問題                                            | Node を `.nvmrc` に揃えれば通常解消                                               |
+| merge 後に rebuild したのに dist に差分が出ない（stale なのに clean に見える）  | `git merge` で依存が更新されたのに `node_modules` が merge 前のまま | `git merge origin/main` の**後**に `npm ci` を実行してから `npm run build:action` |
 
 ## 関連
 
