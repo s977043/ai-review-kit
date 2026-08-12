@@ -5,8 +5,11 @@ import test from 'node:test';
 
 import {
   DOC_ENUMERATION_SPECS,
+  GUARD_LEDGER_PATH,
   NOTHING_CHECKED_ERROR,
   checkDocEnumerations,
+  parseGuardLedger,
+  parseGuardTitles,
   parseIgnoreDirectives,
   parseMarkdownTableColumn,
   parseSkillStreamCounts,
@@ -544,6 +547,163 @@ test('skills-stream-counts spec fails when a real count is altered in docs/skill
   assert.equal(checked, 1);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /"upstream" は 999 と書かれているが実測は \d+/);
+});
+
+// --- ガード台帳（docs/development/guard-ledger.yaml）との照合 ---
+
+test('parseGuardTitles reads only the AI Misoperation Guards section', () => {
+  const text = [
+    '## Decision Policy',
+    '',
+    '- **Proceed autonomously**: read-only exploration.',
+    '',
+    '## AI Misoperation Guards',
+    '',
+    '- **Read before referencing**: Do not cite file contents.',
+    '- **`N of N` = bot push**: Diagnose by the head.',
+    'not a bullet',
+    '',
+    '## Improvement Flow',
+    '',
+    '- **Should not be picked up**: trailing section.',
+  ].join('\n');
+
+  assert.deepEqual([...parseGuardTitles(text)], ['Read before referencing', '`N of N` = bot push']);
+});
+
+test('parseGuardTitles returns null when the section heading is gone', () => {
+  assert.equal(parseGuardTitles('## Something Else\n\n- **A**: b.'), null);
+});
+
+test('parseGuardTitles returns null when the section has no guard bullets', () => {
+  assert.equal(parseGuardTitles('## AI Misoperation Guards\n\nprose only\n'), null);
+});
+
+test('parseGuardTitles throws on a duplicated guard title', () => {
+  const text = ['## AI Misoperation Guards', '- **Dup**: one.', '- **Dup**: two.'].join('\n');
+  assert.throws(() => parseGuardTitles(text), /ガード見出し "Dup" が重複している/);
+});
+
+test('parseGuardLedger rejects malformed entries', () => {
+  const base = {
+    id: 'a-guard',
+    title: 'A guard',
+    mechanized: 'none',
+    verifiedBy: [],
+    addedAt: '2026-01-01',
+    reviewAfter: '2026-04-01',
+  };
+  const dump = (guards) => JSON.stringify({ guards }); // JSON は YAML の部分集合
+
+  assert.deepEqual(parseGuardLedger(dump([base])), [base]);
+
+  assert.throws(() => parseGuardLedger('[]'), /トップレベルに配列/);
+  assert.throws(() => parseGuardLedger(dump([{ ...base, id: 'Not Kebab' }])), /kebab-case/);
+  assert.throws(() => parseGuardLedger(dump([base, base])), /id "a-guard" が重複/);
+  assert.throws(
+    () => parseGuardLedger(dump([base, { ...base, id: 'b-guard' }])),
+    /title "A guard" が重複/
+  );
+  assert.throws(() => parseGuardLedger(dump([{ ...base, mechanized: 'yes' }])), /mechanized は/);
+  assert.throws(
+    () => parseGuardLedger(dump([{ ...base, verifiedBy: ['x'] }])),
+    /mechanized: none なのに verifiedBy がある/
+  );
+  assert.throws(
+    () => parseGuardLedger(dump([{ ...base, mechanized: 'full' }])),
+    /verifiedBy に所在を 1 件以上/
+  );
+  assert.throws(() => parseGuardLedger(dump([{ ...base, addedAt: '2026/01/01' }])), /addedAt は/);
+  assert.throws(() => parseGuardLedger(dump([{ ...base, reviewAfter: 'soon' }])), /reviewAfter は/);
+});
+
+test('the real ledger covers every guard and keeps reviewAfter on or after addedAt', async () => {
+  const entries = parseGuardLedger(await readRepoFile(GUARD_LEDGER_PATH));
+  const titles = parseGuardTitles(await readRepoFile('CLAUDE.md'));
+  assert.ok(titles && titles.size > 0);
+  assert.equal(entries.length, titles.size);
+  for (const entry of entries) {
+    if (entry.addedAt === 'unknown') continue;
+    assert.ok(
+      entry.reviewAfter >= entry.addedAt,
+      `${entry.id}: reviewAfter (${entry.reviewAfter}) は addedAt (${entry.addedAt}) 以降であること`
+    );
+  }
+});
+
+test('claude-md-guard-ledger spec fails when a guard is removed from CLAUDE.md', async () => {
+  const spec = realSpec('claude-md-guard-ledger');
+  const realText = await readRepoFile('CLAUDE.md');
+  const mutated = realText.replace(/^-\s+\*\*Doc-edit textlint\*\*:.*\r?\n/m, '');
+  assert.notEqual(mutated, realText, 'fixture precondition: the guard bullet must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /実体に "Doc-edit textlint" があるが .* に載っていない/);
+});
+
+test('claude-md-guard-ledger spec fails when a phantom guard is added to CLAUDE.md', async () => {
+  const spec = realSpec('claude-md-guard-ledger');
+  const realText = await readRepoFile('CLAUDE.md');
+  const mutated = realText.replace(
+    /^(-\s+\*\*Doc-edit textlint\*\*:)/m,
+    '- **Phantom guard**: not in the ledger.\n$1'
+  );
+  assert.notEqual(mutated, realText, 'fixture precondition: the guard bullet must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /"Phantom guard" を挙げているが実体に存在しない/);
+});
+
+test('claude-md-guard-ledger spec reports both directions when a guard is renamed', async () => {
+  const spec = realSpec('claude-md-guard-ledger');
+  const realText = await readRepoFile('CLAUDE.md');
+  const mutated = realText.replace(
+    /^-\s+\*\*Doc-edit textlint\*\*:/m,
+    '- **Doc-edit textlint (renamed)**:'
+  );
+  assert.notEqual(mutated, realText, 'fixture precondition: the guard bullet must exist');
+
+  const { errors } = await checkDocEnumerations({ specs: [spec], readDoc: async () => mutated });
+  assert.equal(errors.length, 2);
+  assert.ok(errors.some((e) => e.includes('"Doc-edit textlint"') && e.includes('載っていない')));
+  assert.ok(
+    errors.some(
+      (e) => e.includes('"Doc-edit textlint (renamed)"') && e.includes('実体に存在しない')
+    )
+  );
+});
+
+test('guard-ledger-verified-by spec fails when a declared path does not exist', async () => {
+  const spec = realSpec('guard-ledger-verified-by');
+  const realText = await readRepoFile(GUARD_LEDGER_PATH);
+  const mutated = realText.replace(
+    /^(\s+)- \.claude\/hooks\/gh-account-guard\.sh$/m,
+    '$1- .claude/hooks/does-not-exist.sh'
+  );
+  assert.notEqual(mutated, realText, 'fixture precondition: the verifiedBy entry must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  // 実在しないパスは measure（disk 走査）に現れないので「実体に存在しない」側で落ちる。
+  // 併せて、宣言から外れた実在パスが「載っていない」側で落ちる。
+  assert.ok(
+    errors.some(
+      (e) => e.includes('".claude/hooks/does-not-exist.sh"') && e.includes('実体に存在しない')
+    )
+  );
 });
 
 test('checkDocEnumerations passes on the current repo state', async () => {
