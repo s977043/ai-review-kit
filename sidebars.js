@@ -134,6 +134,7 @@ module.exports = {
       items: [
         'explanation/intro',
         'explanation/concept',
+        'explanation/judgment-placement',
         'explanation/what-is-river-review',
         'explanation/review-scope',
         'explanation/river-architecture',

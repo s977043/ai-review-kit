@@ -35,6 +35,8 @@ The vocabulary has four layers. Each layer has a different role, so keep them ap
 
 The core idea, **Review Judgment as Code**, means managing review perspectives, criteria, scope of responsibility, evidence, escalation conditions, and quality-evaluation methods in a form that can be reused, evaluated, and improved. Engineering Judgment Infrastructure names a future destination, so it is not used to describe what River Review ships today.
 
+**Judgment Placement** is not a fifth headline alongside these four layers. It is the principle that decides where the Core Mechanism executes, so it belongs to the Core Mechanism layer. Where Review Judgment as Code turns "what to judge" into an asset, Judgment Placement designs which evaluation layer — Deterministic, Heuristic, Agentic Review, or Human Judgment — each judgment is placed in (see [Judgment Placement](./judgment-placement.en.md)).
+
 ## Define judgment, execute it, remember it
 
 The core model of River Review has three layers.
@@ -144,6 +146,7 @@ The SSoT for this list is the internal document [`docs/vision.md`](https://githu
 - [Welcome to River Review](./intro.en.md) — a short introduction for first-time readers
 - [What is River Review](./what-is-river-review.en.md) — product overview including features, usage, and execution model
 - [Human Judgment Focus](./human-judgment-focus.en.md) — human supervision, risk tiers, and responsibility boundaries
+- [Judgment Placement](./judgment-placement.en.md) — the principle that decides which evaluation layer executes each review judgment
 - [Review scope and use cases](./review-scope.en.md) — Artifacts in scope and the phases where they are used
 - [Design philosophy](./design-philosophy.en.md) — design principles and risk-tiered human supervision
 - [AI review policy](../reference/review-policy.en.md) — the SSoT for review perspectives and output format
