@@ -33,6 +33,12 @@ import { isDirectRun } from './lib/is-direct-run.mjs';
 import { listMarkdownFiles } from './validate-plugin-manifest.mjs';
 // stream（phase）名の SSoT。
 import { PHASES } from '../src/lib/planner-utils.mjs';
+// パイプライン関数の call site 実測（#1827）。
+import {
+  PIPELINE_FUNCTION_GROUPS,
+  findCallSiteFiles,
+  parseChecklistPaths,
+} from './lib/pipeline-call-sites.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -271,6 +277,27 @@ async function listWorkflowFiles(relDir) {
     .map((entry) => entry.name);
 }
 
+/** パイプライン call site チェックリストの所在（#1827）。 */
+export const PIPELINE_CHECKLIST_DOC = 'docs/development/pipeline-params-checklist.md';
+
+/**
+ * call site 走査に現れない宣言 / パイプライン関数ではない同名関数の除外（理由必須）。
+ * グループ id -> { パス: 理由 }。
+ */
+const PIPELINE_IGNORE_KEYS = {
+  'generate-review': {
+    'src/ai/factory.mjs':
+      'AI クライアントの generateReview メソッドで、パイプライン関数とは別物（チェックリスト冒頭に明記）',
+    'tests/integration/local-review.test.mjs':
+      '統合テストは generateReview を直接呼ばず CLI 経由で叩くため走査に現れない。チェックリストでも「関連する場合」の注意書き',
+  },
+  'verify-finding': {},
+  'build-execution-plan': {
+    'runners/node-api/src/types.ts':
+      'ReviewOptions interface の型定義のみで buildExecutionPlan の識別子が現れないため走査対象外',
+  },
+};
+
 /**
  * 宣言的な spec テーブル。ドキュメントの列挙・件数と実体の対応をここに 1 行で登録する。
  *
@@ -395,6 +422,22 @@ export const DOC_ENUMERATION_SPECS = [
       return existing;
     },
   },
+  // パイプライン関数の call site チェックリスト（#1827）。
+  // CLAUDE.md「Propagate signatures」が参照する散文チェックリストは、call site が
+  // 新設されても追記されず陳腐化する。実体側の call site を走査して集合一致を要求し、
+  // 「チェックリストを見たのに載っていなかった」経路を塞ぐ。
+  // 個々のパラメータの転送有無は見ない（options オブジェクト 1 個で渡るため、
+  // どのキーが必須かを決定論では判定できない）。
+  ...PIPELINE_FUNCTION_GROUPS.map((group) => ({
+    id: `pipeline-callsites-${group.id}`,
+    doc: PIPELINE_CHECKLIST_DOC,
+    summary: `${group.names.join(' / ')} の call site チェックリスト`,
+    marker: `\`### 必須: \\\`${group.heading}\\\` …\` 節の \`- [ ] \\\`<path>\\\`\` 行`,
+    kind: 'names',
+    declare: (text) => parseChecklistPaths(text, group.heading),
+    measure: () => findCallSiteFiles(group.names),
+    ignoreKeys: PIPELINE_IGNORE_KEYS[group.id],
+  })),
 ];
 
 // 除外判定は素の `key in ignoreKeys` ではなく Object.hasOwn を使う。`in` は

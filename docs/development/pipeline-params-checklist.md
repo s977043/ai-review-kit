@@ -30,15 +30,42 @@
 ### 必須: `buildExecutionPlan` に新パラメータを追加した場合
 
 - [ ] `runners/core/review-runner.mjs`—options destructuring と返却オブジェクト（planner あり/なし両方）
+- [ ] `runners/core/review-runner.d.ts`—`BuildExecutionPlanOptions` の型宣言（`.mjs` の実装と対で更新する）
 - [ ] `src/lib/local-runner.mjs`—`planLocalReview` の2箇所（main path + collectLocalContext path）の `buildExecutionPlan` 呼び出し
 - [ ] `runners/node-api/src/types.ts`—`ReviewOptions` interface に新フィールドを追加（node-api 経由で `review()` に渡せるようにする）
 - [ ] `runners/node-api/src/index.ts`—TypeScript wrapper の 2 箇所の forward：(1) `buildExecutionPlan(options: {...})` ラッパー自体の型宣言と `coreBuildExecutionPlan` への引き渡し（`index.ts:205-225`）、(2) `review(options: ReviewOptions)` 関数内部の `buildExecutionPlan({...})` 呼び出し（`index.ts:266-275`）。どちらも明示的に destructure するため、新フィールドを追加しないとサイレントに drop される
 - [ ] `runners/cli/src/commands/review.mjs`—`reviewCommand` 内の `buildExecutionPlan` 呼び出し（`runners/cli/` 独立 CLI パッケージ）
+- [ ] `src/cli/commands/skills.mjs`—`skills plan` サブコマンド内の `buildExecutionPlan` 呼び出し
 - [ ] `src/lib/planner-dataset-eval.mjs`—planner dataset eval 用の `buildExecutionPlan` 呼び出し
 - [ ] `tests/review-runner.test.mjs`—`buildExecutionPlan` の主要ユニットテスト（order/prune/planner fallback/fileTypes/llmEnabled など）
 - [ ] `tests/review-runner.snapshot.test.mjs`—スナップショットテスト
+- [ ] `tests/review-runner-snapshot-field.test.mjs`—plan の snapshot フィールドの producer/consumer 突合テスト
+- [ ] `tests/review-runner-inferred-phase.test.mjs`—phase 推論経路のテスト
+- [ ] `tests/heuristic-review.test.mjs`—本番 plan 経路を通したヒューリスティック検出器のテスト
 - [ ] `tests/skill-routing-regression.test.mjs`—ADR/依存有無による routing 回帰テスト
 - [ ] plan 経由で下流関数に渡される場合は下流関数のチェックリストも確認
+
+## 機械検証（#1827）
+
+上のチェックリストが挙げるファイルと、リポジトリ内の実際の call site は
+`scripts/check-doc-enumerations.mjs` の spec `pipeline-callsites-*` が機械照合する。
+実測は `scripts/lib/pipeline-call-sites.mjs` が担当し、`src/` `runners/` `tests/` `scripts/`
+配下のソースを走査して、コメントと文字列リテラルを除いた素の呼び出し
+（`name(`。`client.generateReview(` のようなメソッド呼び出しは対象外）を持つファイルを数える。
+
+```bash
+npm run check:doc-enum   # 単体
+npm run meta:validate    # 必須チェック `Meta consistency` と同じ経路
+```
+
+このチェックが守るのは「チェックリストが実体と一致していること」であって、
+個々のパラメータが各 call site で転送されているかではない。
+呼び出しはすべて options オブジェクト 1 個で渡されるため、
+どのキーが必須かは決定論では判定できない。転送漏れ自体は引き続き上のチェックリストと
+producer/consumer 双方を assert するテスト（`tests/review-runner-snapshot-field.test.mjs` の型）で守る。
+
+走査に現れない宣言（型定義だけのファイルなど）と、パイプライン関数ではない同名関数は
+spec 側の `ignoreKeys` に理由付きで登録してある。理由が空の除外は登録できない。
 
 ## 確認方法
 
