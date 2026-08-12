@@ -15,11 +15,31 @@
 //   - findings of severity `major` or `critical` are kept unless the
 //     suppression's feedbackType is explicitly `accepted_risk`.
 //   - lower severities (`minor`, `info`) are auto-suppressed for any
-//     non-revoked, non-expired suppression that matches the fingerprint.
+//     non-expired suppression that matches the fingerprint.
 //   - the per-suppression `minSeverityToAutoSuppress` (added in PR-A)
 //     can RAISE the bar but never lower it; the global P1 guard wins.
+//
+// Expiry (#1802): a suppression whose `context.expiresAt` has passed no
+// longer suppresses anything. The expiry rule is NOT re-derived here — it
+// delegates to `isSuppressionExpired` (src/lib/suppression.mjs), the same
+// single definition `findActiveSuppressions` applies, so the review path
+// and the regression-eval / resurface paths cannot answer differently for
+// the same entry. An unparseable `expiresAt` fails safe to expired and is
+// reported through the `warn` sink (mirroring #1780/#1801 in
+// `findActiveSuppressions`) rather than dropped silently.
+//
+// Not evaluated here: revocation via `resurface` entries
+// (`collectRevokedSuppressionIds`). `revokeSuppression` never flips the
+// original's `context.active`, and the revoking entry is a separate memory
+// entry this function does not receive; matching by fingerprint only is the
+// pre-#1802 behavior, kept as-is.
 
 import { SEVERITY_RANK } from './finding-factory.mjs';
+import {
+  isSuppressionExpired,
+  hasUnparseableSuppressionExpiresAt,
+  formatUnparseableExpiresAtWarning,
+} from './suppression.mjs';
 
 const HIGH_SEVERITY = new Set(['major', 'critical']);
 
@@ -37,6 +57,11 @@ function severityOf(finding) {
  * @param {object} [opts]
  * @param {object} [opts.config]    Effective config; `config.memory.suppressionEnabled === false`
  *   bypasses suppression entirely (returns all findings as-is).
+ * @param {(msg: string) => void} [opts.warn]  Sink for the unparseable-expiresAt
+ *   warning (#1801). Injectable for tests, defaults to `console.warn` — the same
+ *   contract as `findActiveSuppressions`.
+ * @param {Date} [opts.now]         Reference instant for the expiry decision.
+ *   Injectable for tests, defaults to `new Date()`.
  * @returns {{ keptFindings: Array<object>, suppressedFindings: Array<object>, applied: Array<object> }}
  *   `applied` is the observability log. Each entry: `{ fingerprint, suppressionId,
  *   feedbackType, severity, action: 'suppressed' | 'skipped', reason? }`. Findings
@@ -67,6 +92,9 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
   const kept = [];
   const suppressed = [];
   const applied = [];
+  const warn = opts?.warn ?? ((m) => console.warn(m));
+  const now = opts?.now ?? new Date();
+  const warnedIds = new Set();
 
   for (const finding of list) {
     const fp = finding?.fingerprint;
@@ -79,6 +107,31 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
     const sev = severityOf(finding);
     const feedbackType = match.context?.feedbackType ?? null;
     const minSeverity = match.context?.minSeverityToAutoSuppress;
+
+    // Expiry gate (#1802): an expired suppression is not in force, whatever
+    // its other fields say. Evaluated BEFORE the severity gates so `applied`
+    // records the real reason the entry did nothing. `isSuppressionExpired`
+    // fails safe to expired on an unparseable deadline (#1746); that stop is
+    // made observable through `warn`, once per suppression, matching the
+    // findActiveSuppressions warning path (#1801).
+    if (isSuppressionExpired(match, now)) {
+      kept.push(finding);
+      applied.push({
+        fingerprint: fp,
+        suppressionId: match.id,
+        feedbackType,
+        severity: sev,
+        action: 'skipped',
+        reason: 'suppression-expired',
+      });
+      if (hasUnparseableSuppressionExpiresAt(match) && !warnedIds.has(match.id)) {
+        warnedIds.add(match.id);
+        warn(
+          formatUnparseableExpiresAtWarning({ id: match.id, expiresAt: match.context.expiresAt })
+        );
+      }
+      continue;
+    }
 
     // Per-suppression cap: `minSeverityToAutoSuppress` is the highest
     // severity this entry is allowed to auto-suppress. A finding above

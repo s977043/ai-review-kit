@@ -296,12 +296,11 @@ export function formatUnparseableExpiresAtWarning({ id, expiresAt }) {
  * Scope note: this function is NOT on the review path. Its only caller in the
  * repository is `regression-eval.mjs:110`; `resurface.mjs` imports the name but
  * never calls it. `runLocalReview` gates findings through `loadReviewMemory`
- * (`local-runner.mjs:469`) and `applySuppressions` (`local-runner.mjs:516`),
- * neither of which consults `expiresAt` at all. So this warning reaches
- * regression-eval and, through `findUnparseableSuppressionExpiries`,
- * `scripts/suppression-analytics.mjs` — it does NOT make the review path
- * report anything. Wiring expiry (and this warning) into the review path is
- * tracked separately in #1802.
+ * and `applySuppressions` (`suppression-apply.mjs`), which since #1802 applies
+ * the same `isSuppressionExpired` rule and mirrors this warning through its
+ * own `warn` sink. This warning here still reaches regression-eval and,
+ * through `findUnparseableSuppressionExpiries`,
+ * `scripts/suppression-analytics.mjs` only.
  *
  * @param {{ entries: object[] }} index - Loaded memory index
  * @param {string[]} filePaths
