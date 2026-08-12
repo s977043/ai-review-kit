@@ -94,8 +94,10 @@ On this repository the call currently returns nothing: no Actions secret is
 registered. The workflow route is therefore unavailable, and the script above is
 the procedure to use. The workflow last succeeded on 2026-05-25. Every run since
 then has failed at the `Verify downstream CI actually started` step for this
-reason. The workflow file is kept in place because it becomes usable the moment
-the secret is added.
+reason. The workflow is **deprecated** (refs #1800): it is in the first stage of
+a "deprecate → observe → delete" plan, and its name carries a `[DEPRECATED]`
+prefix. The file will be deleted after the observation period unless a
+maintainer registers the secret and re-adopts the workflow.
 
 ### Setup (one-time, only to enable the workflow route)
 
