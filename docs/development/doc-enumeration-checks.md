@@ -91,7 +91,25 @@ $ scripts/count-in-clean-tree.sh --ref origin/main -- bash -c 'find docs -name "
 # exit code: 0
 ```
 
-注意点は 2 つあります。第 1 に、コマンドは exec されるため、パイプやリダイレクトを使う場合は上の例のように `bash -c '...'` へ包みます。第 2 に、展開先は `.git` を持たない素のディレクトリなので、`git grep` を使うなら `--no-index` が要ります。3 番目の汚染源は本 script の対象外で、パーサを通すことで別途防ぎます。
+注意点は 3 つあります。第 1 に、コマンドは exec されるため、パイプやリダイレクトを使う場合は上の例のように `bash -c '...'` へ包みます。第 2 に、展開先は `.git` を持たない素のディレクトリなので、`git grep` を使うなら `--no-index` が要ります。3 番目の汚染源は本 script の対象外で、パーサを通すことで別途防ぎます。
+
+第 3 に、**パイプの終端が `wc` だと上流の失敗が exit 0 へ潰れます**。`wc` 自体は成功するため、コマンドが存在しなくても「0 件」という結果が返ります。誤った件数を防ぐために本 script を通しても、この形では失敗が 0 件として通過します。
+
+```console
+$ scripts/count-in-clean-tree.sh -- bash -c 'this-command-does-not-exist | wc -l'
+bash: this-command-does-not-exist: command not found
+       0
+# exit code: 0
+$ scripts/count-in-clean-tree.sh -- bash -c 'this-command-does-not-exist'
+bash: this-command-does-not-exist: command not found
+# exit code: 127
+```
+
+件数を数えるパイプには `set -o pipefail` を付けてください。
+
+```bash
+scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" | wc -l'
+```
 
 ## 何を検証しているか
 

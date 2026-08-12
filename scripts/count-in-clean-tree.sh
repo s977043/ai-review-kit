@@ -28,6 +28,12 @@
 # 展開先は .git を持たない素のディレクトリなので、`git grep` は `--no-index` を付ける
 # （付けないと `fatal: not a git repository` で終わる）。
 # 既定の ref は origin/main。終了コードは実行したコマンドのものをそのまま返す。
+#
+# ただしパイプの終端が `wc` の場合、上流が失敗しても `wc` は成功するため、全体は
+# exit 0 で「0 件」を返す。誤った件数を防ぐために本 script を通しても、この形では
+# 失敗が 0 件として通過する。件数を数えるパイプには `set -o pipefail` を付けること:
+#
+#   scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" | wc -l'
 
 set -euo pipefail
 
