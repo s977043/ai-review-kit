@@ -17,7 +17,7 @@ River Review v0.8.0 では、標準化されたレビュー体験を提供する
 
 ## 開発者向け: 新しいスキルの追加方法
 
-新しいスキルを追加する場合は、以下のテンプレートを使用してください：
+新しいスキルを追加する場合は、以下のテンプレートを使用してください:
 
 ```bash
 # テンプレートから新しいスキルを作成
@@ -30,7 +30,7 @@ cp -r templates/references/ skills/agent-skills/my-new-skill/references/
 
 ## 既存スキルの移行
 
-既存の `skills/*.md` ファイルは引き続き動作しますが、今後は `skills/agent-skills/` への移行を推奨します。移行手順は以下の通りです：
+既存の `skills/*.md` ファイルは引き続き動作しますが、今後は `skills/agent-skills/` への移行を推奨します。移行手順は以下の通りです:
 
 1. `skills/agent-skills/<skill-name>/` ディレクトリを作成
 2. 既存ファイルを `SKILL.md` にリネームして移動

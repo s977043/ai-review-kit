@@ -13,7 +13,7 @@ This directory is for internal use only.
 
 ## 用途 / Purpose
 
-このディレクトリは以下の用途に限定します：
+このディレクトリは以下の用途に限定します:
 
 - 設計メモ（ADRドラフト、アーキテクチャ検討ログなど）/ Design notes (ADR drafts, architecture exploration logs, etc.)
 - 実験ログ（新機能の試作、パフォーマンス測定など）/ Experiment logs (prototypes, performance measurements, etc.)

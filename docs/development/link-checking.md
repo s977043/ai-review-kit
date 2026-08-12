@@ -31,7 +31,7 @@ cargo install lychee
 ```
 
 **その他の方法:**
-[Lychee Installation Guide](https://github.com/lycheeverse/lychee#installation)を参照
+[Lychee Installation Guide](https://github.com/lycheeverse/lychee#installation)を参照してください。
 
 ### 使い方
 
@@ -204,9 +204,9 @@ git commit -m "chore: update lychee configuration"
 
 ### 1. 一時的に利用不可のリンク
 
-**問題:** 外部サイトがメンテナンス中など
+**問題:** 外部サイトがメンテナンス中などで一時的に到達できない。
 
-**解決策:** `.lychee.toml`の`exclude`に一時的に追加
+**解決策:** `.lychee.toml`の`exclude`に一時的に追加する。
 
 ```toml
 exclude = [
@@ -217,9 +217,9 @@ exclude = [
 
 ### 2. ボット検出でブロックされる
 
-**問題:** 一部のサイトがLycheeをブロック
+**問題:** 一部のサイトがLycheeをブロックしている。
 
-**解決策:** `.lychee.toml`の`user_agent`を変更、または`exclude`に追加
+**解決策:** `.lychee.toml`の`user_agent`を変更する、または`exclude`に追加する。
 
 ```toml
 user_agent = "Mozilla/5.0 (compatible; River-Reviewer-LinkChecker/1.0)"
@@ -229,7 +229,7 @@ user_agent = "Mozilla/5.0 (compatible; River-Reviewer-LinkChecker/1.0)"
 
 **問題:** 認証が必要なリンク（社内ドキュメントなど）
 
-**解決策:** `.lychee.toml`の`exclude`に追加
+**解決策:** `.lychee.toml`の`exclude`に追加する。
 
 ```toml
 exclude = [
@@ -240,7 +240,7 @@ exclude = [
 
 ### 4. 開発中のPRリンク
 
-**問題:** まだマージされていないPRへのリンクが404
+**問題:** まだマージされていないPRへのリンクが404になる。
 
 **解決策:**
 

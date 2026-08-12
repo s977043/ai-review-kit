@@ -4,7 +4,7 @@
 
 ## 概要
 
-River Review v0.1.2 から、スキルは「Skills as First-Class Assets」アーキテクチャに移行しています：
+River Review v0.1.2 から、スキルは「Skills as First-Class Assets」アーキテクチャに移行しています:
 
 - **Legacy 形式**: 単一の Markdown ファイル（YAML frontmatter + 本文）
 - **Registry 形式**: ディレクトリベース（skill.yaml + prompt files + fixtures + golden + eval）
@@ -20,7 +20,7 @@ River Review v0.1.2 から、スキルは「Skills as First-Class Assets」ア�
 
 ### 1. 対象スキルの選定
 
-移植するスキルを選びます。推奨基準：
+移植するスキルを選びます。推奨基準:
 
 - ✅ 代表的でよく使われるスキル
 - ✅ 評価しやすい（入力/出力が明確）
@@ -32,7 +32,7 @@ River Review v0.1.2 から、スキルは「Skills as First-Class Assets」ア�
 mkdir -p skills/{skill-id}/{prompt,fixtures,golden,eval}
 ```
 
-例：
+例:
 
 ```bash
 mkdir -p skills/security-basic/{prompt,fixtures,golden,eval}
@@ -108,7 +108,7 @@ Markdown 本文を `prompt/system.md` と `prompt/user.md` に分割します。
 
 #### prompt/system.md
 
-システムレベルの指示（スキルの目的、ルール、ヒューリスティクスなど）：
+システムレベルの指示（スキルの目的、ルール、ヒューリスティクスなど）:
 
 ```markdown
 # {Skill Name} - System Prompt
@@ -142,7 +142,7 @@ You are a {role} specializing in {domain}.
 
 #### prompt/user.md
 
-実行時の具体的な指示（タスク、入力、出力形式など）：
+実行時の具体的な指示（タスク、入力、出力形式など）:
 
 ```markdown
 # {Skill Name} - User Prompt
@@ -168,7 +168,7 @@ Review the provided code diff...
 
 ### 5. Fixtures の作成
 
-テストケースを `fixtures/` に作成します。最低2ケース：
+テストケースを `fixtures/` に作成します。最低2ケース:
 
 - **Happy path**: 典型的な使用例
 - **Edge case**: 境界条件や偽陽性回避
@@ -193,7 +193,7 @@ Review the provided code diff...
 
 ### 6. Golden の作成
 
-期待される出力を `golden/` に作成します。fixtures と1対1で対応：
+期待される出力を `golden/` に作成します。fixtures と1対1で対応:
 
 ```markdown
 # golden/01-{test-name}.md
@@ -208,7 +208,7 @@ Review the provided code diff...
 
 ### 7. Evaluation の設定
 
-`eval/promptfoo.yaml` を作成します：
+`eval/promptfoo.yaml` を作成します:
 
 ```yaml
 prompts:
@@ -242,7 +242,7 @@ outputPath: eval/results.json
 
 ### 8. README.md の作成
 
-スキルのドキュメントを作成します：
+スキルのドキュメントを作成します:
 
 ```markdown
 # {Skill Name}
@@ -284,7 +284,7 @@ outputPath: eval/results.json
 
 ### 9. Validation
 
-移植したスキルを検証します：
+移植したスキルを検証します:
 
 ```bash
 # skill.yaml の検証
@@ -306,7 +306,7 @@ gh pr create --title "feat: migrate {skill-name} to registry format" --body "...
 
 ## チェックリスト
 
-移植完了前に確認：
+移植完了前に確認:
 
 - [ ] skill.yaml が Zod スキーマに準拠している
 - [ ] prompt/system.md と prompt/user.md が作成されている
@@ -328,13 +328,13 @@ npm run validate:skill-yaml
 
 ### promptfoo が動かない
 
-1. promptfoo がインストールされているか確認：
+1. promptfoo がインストールされているか確認:
 
    ```bash
    npm install -g promptfoo
    ```
 
-2. API キーが設定されているか確認：
+2. API キーが設定されているか確認:
 
    ```bash
    export OPENAI_API_KEY=your-key
@@ -344,7 +344,7 @@ npm run validate:skill-yaml
 
 ## 参考スキル
 
-初めて移植する場合は、以下を参考にしてください：
+初めて移植する場合は、以下を参考にしてください:
 
 - `skills/security-basic/`: 最初の完全な移植例
 
@@ -390,7 +390,7 @@ A: 初回は2〜3時間、慣れれば30分程度です。
 
 ## まとめ
 
-スキルの移植により：
+スキルの移植により:
 
 - ✅ テスト駆動でスキルの品質を保証
 - ✅ promptfoo による自動評価
