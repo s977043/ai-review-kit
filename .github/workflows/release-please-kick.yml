@@ -1,5 +1,15 @@
-name: Release Please Kick
+name: '[DEPRECATED] Release Please Kick'
 
+# DEPRECATED (refs #1800): this workflow requires the `RELEASE_KICK_PAT`
+# Actions secret, which is not registered on this repository, so every run
+# fails at the loud-failure verification step (by design — see below).
+# `scripts/release-please-kick.sh` run from a local machine is the canonical
+# kick procedure (see docs/runbook/release-please-kick.md). This workflow is
+# in the first stage of a "deprecate → observe → delete" plan: triggers and
+# logic are intentionally left unchanged during the observation period, and
+# the file will be deleted afterwards unless the secret is registered and the
+# workflow is re-adopted.
+#
 # Manually advance the release-please branch by one empty commit when the
 # branch is BLOCKED (required status checks not registered on auto-generated
 # branches). Run via the GitHub UI: Actions → Release Please Kick → Run workflow.
