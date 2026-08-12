@@ -1356,6 +1356,9 @@ function findInvisibleUnicode({ diff }) {
 //   3. 期日 / バージョン（`2026-09-01` / `2026年9月` / `2026Q3` / `v2.1.0`）
 //   4. 条件節（`until` / `once` / `when` / `after` / `unless` / `if` / `next release` /
 //      `〜たら` / `〜まで` / `次第` / `〜後に` / `来月` …）
+//   5. 恒久宣言（`keep forever` / `by design` / `permanent` / 恒久 …）。撤去条件そのもの
+//      ではないが、「撤去しない」という意思表示であり、撤去条件を書き足す提案が
+//      噛み合わないため許容する（#1797 項目 2）。
 // 探索範囲は「マーカー行を含むコメント塊」であり、撤去条件が次行に折り返していても、
 // ブロックコメント（`/* … */`）や HTML コメントの継続行にあっても、空行を挟んだ次の
 // コメント行にあっても、既存の（context 行の）コメント塊にあっても発火しない。
@@ -1403,6 +1406,22 @@ const EXIT_CRITERIA_RES = [
   /\bv?\d+\.\d+(?:\.\d+)?\b/, // バージョン（任意の小数にも一致する。上記参照）
   /\b(?:until|once|when|after|unless|if|as soon as|as of|pending|blocked on|blocked by|revisit|next release|next major|next version)\b/i,
   /たら|まで|次第|以降|後に|後は|解消|解決|修正され|リリースされ|対応され|移行後|廃止後|撤去条件|来月|来週|次のリリース/,
+];
+
+// 恒久宣言（#1797 項目 2）。恒久的な `HACK:` 注記（`// HACK: required by the DOM spec,
+// keep forever`）に「撤去条件を書き足せ」と指摘しても噛み合わないため、撤去条件と
+// 同等の許容リストとして扱う。担当者記法（`TODO(alice):`）は恒久宣言ではないので
+// 引き続き指摘対象とする（同 issue のメンテナ決定）。
+// `by design` は `by design review` / `by design team` のような名詞複合の偶然の並びを
+// 除くため、直後に review / team / doc / spec / system が続く形を negative lookahead で
+// 外す。bare な `permanent` / 恒久 は `// TODO: permanent fix が要る` のような一時対応の
+// 説明文にも一致するが、EXIT_CRITERIA_RES と同じ FP-first の判断で過剰抑制側に倒す。
+// 厳格化するときは negative canary を先に増やすこと。
+const PERMANENT_DECLARATION_RES = [
+  /\bkeep(?:s|ing)?\s+(?:this\s+|it\s+)?forever\b/i,
+  /\bby[- ]design\b(?!\s+(?:reviews?|teams?|docs?|specs?|systems?)\b)/i,
+  /\bpermanent(?:ly)?\b/i,
+  /恒久/,
 ];
 
 // vendored / 取り込み物。生成物（`dist/`）の判定は diff-processor の
@@ -1554,7 +1573,10 @@ function findTemporaryWithoutExit({ diff }) {
         const block = indexes.map((j) => scanned[j].comment).join('\n');
         const last = indexes[indexes.length - 1];
 
-        if (EXIT_CRITERIA_RES.some((re) => re.test(block))) {
+        if (
+          EXIT_CRITERIA_RES.some((re) => re.test(block)) ||
+          PERMANENT_DECLARATION_RES.some((re) => re.test(block))
+        ) {
           i = last;
           continue;
         }
