@@ -70506,9 +70506,7 @@ function printFindingFingerprints(result, log) {
   for (const f of withFingerprints) {
     const line = f.lineStart ?? f.line;
     const where = `${f.file ?? '<unknown>'}${Number.isInteger(line) && line >= 1 ? `:${line}` : ''}`;
-    log(
-      `- v1 ${f.fingerprint} / v2 ${f.fingerprintV2 ?? '-'}  ${f.ruleId ?? 'unknown'}  ${where}`
-    );
+    log(`- v1 ${f.fingerprint} / v2 ${f.fingerprintV2 ?? '-'}  ${f.ruleId ?? 'unknown'}  ${where}`);
   }
   log('  (v2 は --fingerprint-algo v2 用。行に紐づくため、行がズレると抑制は外れる)');
 }
