@@ -143,7 +143,7 @@ goldenDir: string # golden ディレクトリ（デフォルト: "golden"）
 
 - **型**: `string[]`
 - **説明**: スキルが参照する入力コンテキスト
-- **許可値**: `"diff"`, `"fullFile"`, `"tests"`, `"adr"`, `"commitMessage"`, `"repoConfig"`
+- **許可値**: `"diff"` / `"fullFile"` / `"tests"` / `"adr"` / `"commitMessage"` / `"repoConfig"`
 - **デフォルト**: `["diff"]`
 - **例**: `["diff", "fullFile"]`
 
@@ -151,7 +151,7 @@ goldenDir: string # golden ディレクトリ（デフォルト: "golden"）
 
 - **型**: `string[]`
 - **説明**: スキルが生成する出力の種類
-- **許可値**: `"findings"`, `"summary"`, `"actions"`, `"tests"`, `"metrics"`, `"questions"`
+- **許可値**: `"findings"` / `"summary"` / `"actions"` / `"tests"` / `"metrics"` / `"questions"`
 - **デフォルト**: `["findings", "summary"]`
 - **例**: `["summary", "findings", "actions"]`
 
@@ -159,7 +159,7 @@ goldenDir: string # golden ディレクトリ（デフォルト: "golden"）
 
 - **型**: `string`
 - **説明**: 推奨されるモデルの種類
-- **許可値**: `"cheap"`, `"balanced"`, `"high-accuracy"`
+- **許可値**: `"cheap"` / `"balanced"` / `"high-accuracy"`
 - **デフォルト**: `"balanced"`
 - **例**: `"cheap"`
 
@@ -168,7 +168,7 @@ goldenDir: string # golden ディレクトリ（デフォルト: "golden"）
 - **型**: `string[]`
 - **説明**: スキルが依存する機能
 - **許可値**:
-  - `"code_search"`, `"test_runner"`, `"adr_lookup"`, `"repo_metadata"`, `"coverage_report"`, `"tracing"`
+  - `"code_search"` / `"test_runner"` / `"adr_lookup"` / `"repo_metadata"` / `"coverage_report"` / `"tracing"`
   - カスタム依存: `"custom:{name}"`
 - **デフォルト**: `[]`
 - **例**: `["adr_lookup", "repo_metadata"]`

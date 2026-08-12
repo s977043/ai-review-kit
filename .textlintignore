@@ -4,3 +4,28 @@
 # It embeds skill identifiers (tags, dependency ids) and verbatim descriptions,
 # which trip prose rules (prh, sentence-length); lint skills at the source level.
 pages/reference/skills-catalog.md
+
+# English-authored documents under docs/. They predate the `*.en.md` naming
+# convention, so the `**/*.en.md` rule above does not reach them. The Japanese
+# technical-writing preset produces only false positives here: rules such as
+# no-exclamation-question-mark and max-comma are language-agnostic in their
+# implementation and flag ordinary English questions and comma-separated lists.
+# Selection criterion: Japanese characters make up less than 5% of the file's
+# non-whitespace characters (#1786 stage 1).
+docs/architecture.md
+docs/deprecated.md
+docs/development/a2-3-replay-execution-design.md
+docs/development/cost-control-mode-design.md
+docs/development/execution-context-contract.md
+docs/development/npm-distribution-design.md
+docs/development/retrospectives/2026-05-25-28.md
+docs/development/review-gates-design.md
+docs/development/skill-applyto-scoping.md
+docs/migration/runners-architecture-guide.md
+docs/migration/runners-migration-guide.md
+docs/review/troubleshooting.md
+docs/roadmap/oss-discovery-roadmap.md
+docs/runbook/community-skill-eval.md
+docs/runbook/release-please-kick.md
+docs/runbook/release-smoke.md
+docs/use-cases/github-actions.md
