@@ -114,10 +114,12 @@ trap cleanup EXIT INT TERM
 echo "clean tree: ${WORKDIR} (removed on exit)" >&2
 # パイプ（`git archive | tar -x`）は使わない。git archive は tar の出力を blocking
 # factor 20（10240 バイト）へパディングするが、bsdtar は EOF マーカー（512 バイトの
-# ゼロブロック 2 つ）を読んだ時点で終了し、残りのパディングを読み捨てない。読み手が
-# 先に消えるので書き手の git archive が SIGPIPE を受け、`set -o pipefail` と
-# `set -e` の下ではスクリプト全体が exit 141 で落ちる（#1838）。中間ファイルを挟めば
-# パイプが無くなり、この経路自体が消える。
+# ゼロブロック 2 つ）を読んだ時点で終了でき、残りのパディングを読み捨てない。つまり
+# 読み手が先に消えうる構造があり、書き手が残りを書き終える前に読み手が抜けると
+# git archive が SIGPIPE を受け、`set -o pipefail` と `set -e` の下ではスクリプト
+# 全体が exit 141 で落ちる（#1838）。どちらが先かはスケジューリング次第で、負荷や
+# repo の構成によって顕在化する（本 repo では並列作業中に、テストが作る小さな repo
+# では毎回）。中間ファイルを挟めばパイプが無くなり、この競合自体が消える。
 git archive --format=tar -o "${ARCHIVE}" "${SHA}"
 tar -x -f "${ARCHIVE}" -C "${WORKDIR}"
 rm -f "${ARCHIVE}"
