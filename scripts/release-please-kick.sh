@@ -3,9 +3,17 @@
 # Use when the release-please PR is BLOCKED because required status checks were
 # not registered on the auto-generated branch.
 #
-# Preferred path: trigger .github/workflows/release-please-kick.yml from the
-# Actions UI. This script is a local fallback when network/credentials make the
-# workflow path inconvenient.
+# This script is the canonical kick procedure on this repository. It pushes the
+# empty commit with your own `gh` credentials, so the new head counts as a real
+# user push and re-fires `pull_request` workflows. It needs no repository secret.
+#
+# The .github/workflows/release-please-kick.yml route is DEPRECATED (refs #1800):
+# it requires the `RELEASE_KICK_PAT` Actions secret, which is not registered
+# here, so its own push cannot re-fire downstream CI and every run fails. Do not
+# reach for it as an equivalent alternative.
+#
+# SSoT for when to kick, BEHIND vs pure BLOCKED, and RELEASE_KICK_PAT setup:
+#   docs/runbook/release-please-kick.md
 #
 # Usage:
 #   scripts/release-please-kick.sh [branch]
