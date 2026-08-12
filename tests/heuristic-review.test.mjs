@@ -1577,3 +1577,96 @@ test('temporary-without-exit canary: detector scope stays in sync with the skill
     );
   }
 });
+
+// ---- looksLikeTestFile: e2e / cypress conventions (#1797 item 1) ----
+// 変更前の実測（main 30aca0b9）: `e2e/spec.ts` / `cypress/integration/login.ts` は
+// テスト扱いにならず、focused-test は [], hardcoded-secret は発火、
+// `src/e2e/spec.ts` の temporary-without-exit は発火だった。
+// この節はその挙動を「テスト扱いになる」側へ反転させたことを pin する。
+
+function singleLineDiff(file, line) {
+  const diffText =
+    `diff --git a/${file} b/${file}\n--- a/${file}\n+++ b/${file}\n` +
+    `@@ -1,0 +1,1 @@\n+${line}\n`;
+  return { files: parseUnifiedDiff(diffText).files };
+}
+
+function kindsFor(file, line, skillId) {
+  const plan = { selected: [{ metadata: { id: skillId } }] };
+  return buildHeuristicComments({ diff: singleLineDiff(file, line), plan }).map((c) => c.kind);
+}
+
+test('looksLikeTestFile (#1797): focused-test fires in e2e/ and cypress/ suites', () => {
+  // 変更前は [] だった（test ファイルのみ走査するため素通り）。
+  assert.deepEqual(kindsFor('e2e/spec.ts', "test.only('x', () => {});", 'test-existence'), [
+    'focused-test',
+  ]);
+  assert.deepEqual(
+    kindsFor('cypress/integration/login.ts', "it.only('x', () => {});", 'test-existence'),
+    ['focused-test']
+  );
+});
+
+test('looksLikeTestFile (#1797): disabled-test fires in a cypress/ suite', () => {
+  assert.deepEqual(
+    kindsFor('cypress/integration/login.ts', "it.skip('x', () => {});", 'test-existence'),
+    ['disabled-test']
+  );
+});
+
+test('looksLikeTestFile (#1797): hardcoded-secret skips e2e/ and cypress/ suites', () => {
+  // 変更前は hardcoded-secret が発火していた（トレードオフ: skip 系検出器の
+  // カバレッジは E2E スイート分だけ減る）。
+  assert.deepEqual(
+    kindsFor('e2e/spec.ts', "const serviceToken = 'DUMMY_TOKEN_123';", 'security-basic'),
+    []
+  );
+  assert.deepEqual(
+    kindsFor(
+      'cypress/integration/login.ts',
+      "const serviceToken = 'DUMMY_TOKEN_123';",
+      'security-basic'
+    ),
+    []
+  );
+});
+
+test('looksLikeTestFile (#1797): temporary-without-exit skips src/e2e/spec.ts', () => {
+  // 変更前は発火していた（TEMPORARY_SCOPE_PATH_RE の src/ 接頭辞内に e2e/ が来る形）。
+  assert.deepEqual(
+    kindsFor('src/e2e/spec.ts', '// TODO: リトライ間隔を調整する', 'knowledge-to-code-alignment'),
+    []
+  );
+});
+
+test('looksLikeTestFile (#1797): partial matches are not treated as test files', () => {
+  // `contest` / `protest` / `e2e-utils` のような部分一致はテスト扱いしない
+  // （境界条件 ^ または / を要求する）。
+  assert.deepEqual(
+    kindsFor('src/contest/auth.ts', "const serviceToken = 'DUMMY_TOKEN_123';", 'security-basic'),
+    ['hardcoded-secret']
+  );
+  assert.deepEqual(
+    kindsFor('src/protest.js', '// TODO: リトライ間隔を調整する', 'knowledge-to-code-alignment'),
+    ['temporary-without-exit']
+  );
+  assert.deepEqual(
+    kindsFor(
+      'src/e2e-utils/a.ts',
+      '// TODO: リトライ間隔を調整する',
+      'knowledge-to-code-alignment'
+    ),
+    ['temporary-without-exit']
+  );
+});
+
+test('looksLikeTestFile (#1797): separator-adjacent test./spec. filenames count as tests', () => {
+  // `e2e/spec.ts` と同型の「パス区切り直後の spec./test.」をルート直下でも pin する。
+  assert.deepEqual(kindsFor('spec.ts', "test.only('x', () => {});", 'test-existence'), [
+    'focused-test',
+  ]);
+  assert.deepEqual(
+    kindsFor('src/test.helpers.ts', "const serviceToken = 'DUMMY_TOKEN_123';", 'security-basic'),
+    []
+  );
+});

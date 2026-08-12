@@ -45513,6 +45513,14 @@ function looksLikeTestFile(filePath) {
     normalized.includes('/test/') ||
     normalized.includes('/tests/') ||
     normalized.includes('/__tests__/') ||
+    // E2E スイートのディレクトリ慣習（e2e/ / cypress/）。完全なパス片のみ
+    // 一致させ、`e2e-utils/` のような別名ディレクトリは巻き込まない（#1797）。
+    /(^|\/)(e2e|cypress)\//.test(normalized) ||
+    // パス区切り直後（またはパス先頭）から始まる `test.` / `spec.` ファイル名
+    // （`e2e/spec.ts` 等）。従来の /\.(test|spec)\./ は先行ドットを要求するため
+    // この形が素通りしていた（#1797）。`protest.js` / `src/contest/` のような
+    // 部分一致は境界条件（^ or /）で除外される。
+    /(^|\/)(test|spec)\./.test(normalized) ||
     /\.(test|spec)\./.test(normalized)
   );
 }
@@ -68655,7 +68663,9 @@ function applySuppressions(findings, memoryContext, opts = {}) {
       });
       if ((0,suppression/* hasUnparseableSuppressionExpiresAt */.vU)(match) && !warnedIds.has(match.id)) {
         warnedIds.add(match.id);
-        warn((0,suppression/* formatUnparseableExpiresAtWarning */.RL)({ id: match.id, expiresAt: match.context.expiresAt }));
+        warn(
+          (0,suppression/* formatUnparseableExpiresAtWarning */.RL)({ id: match.id, expiresAt: match.context.expiresAt })
+        );
       }
       continue;
     }
