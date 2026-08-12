@@ -12,8 +12,8 @@
     {
       "id": "adr-decision-quality",
       "path": "skills/upstream/adr-decision-quality",
-      "checksum": "sha256:3e4368ee41a4308d90d3f6906610e5b4b939541bedebfe94b0f9375de9216ede",
-      "files": 1
+      "checksum": "sha256:795a47c8d593036e45e655220e26da3105bef6fe2d007a7657b9bb1a82b2ce15",
+      "files": 3
     },
     {
       "id": "adversarial-review",
@@ -48,20 +48,20 @@
     {
       "id": "api-design",
       "path": "skills/upstream/api-design",
-      "checksum": "sha256:e678e924e737c249560905f37b2277c4c4100886d1546272e918f9a999e3354b",
-      "files": 1
+      "checksum": "sha256:12f25f1372f8760a3bf6ba809c2db2170956b86e284bf0e921edfe413c8cb74b",
+      "files": 3
     },
     {
       "id": "api-versioning-compat",
       "path": "skills/upstream/api-versioning-compat",
-      "checksum": "sha256:b2e25550008d613843191944db52890053de74ab115e4fb18bfb5bc3557e4fe5",
-      "files": 1
+      "checksum": "sha256:241033776b24dba6cc9fab9a66cdbfb34fcd70dc705321ba015529695be7a40b",
+      "files": 3
     },
     {
       "id": "architecture-boundaries",
       "path": "skills/upstream/architecture-boundaries",
-      "checksum": "sha256:9d95551a2e332b6739d85d1993178116a2338f177eafdd6b0ed4d7ef27191f96",
-      "files": 1
+      "checksum": "sha256:2d277665b0980236de226ec8e2e0dbcdb8540813830e77b6a1aed9c00195efee",
+      "files": 3
     },
     {
       "id": "architecture-diagrams",
@@ -288,8 +288,8 @@
     {
       "id": "failure-modes-observability",
       "path": "skills/upstream/failure-modes-observability",
-      "checksum": "sha256:e55618cc1a7592414df79fe1525b85ea2ee5e080b932e7f441b07899b0bfa916",
-      "files": 1
+      "checksum": "sha256:f4d18975c005588109510615d282c9d090f75acaded58f52753cd435c25d7d6d",
+      "files": 3
     },
     {
       "id": "firebase-security-rules",
