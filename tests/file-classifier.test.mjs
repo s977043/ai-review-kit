@@ -51,6 +51,23 @@ test('classifyChangedFiles: config patterns', () => {
   assert.equal(result.config.length, 5);
 });
 
+// #1804 follow-up: named textlint configs live outside the repo root and are not
+// dotfiles, and `.textlintignore` is not an `rc` file. Both must classify as config
+// so the review-criteria-integrity skill can see lint-rule weakening.
+test('classifyChangedFiles: textlint config and ignore files', () => {
+  const result = classifyChangedFiles([
+    'tools/textlint/docs.textlintrc.json',
+    '.textlintignore',
+    '.textlintrc.json',
+  ]);
+  assert.deepEqual(result.config, [
+    'tools/textlint/docs.textlintrc.json',
+    '.textlintignore',
+    '.textlintrc.json',
+  ]);
+  assert.deepEqual(result.unknown, []);
+});
+
 test('classifyChangedFiles: schema files', () => {
   const result = classifyChangedFiles([
     'schemas/eval-failure.schema.json',

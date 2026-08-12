@@ -13,6 +13,8 @@ applyTo:
   - '**/.eslintrc*'
   - 'eslint.config.{js,mjs,cjs,ts}'
   - '.textlintrc*'
+  - '**/*textlintrc*'
+  - '**/.textlintignore'
   - '.markdownlint*'
   - '**/tsconfig*.json'
   - '.github/workflows/**/*.{yml,yaml}'
