@@ -33,14 +33,6 @@ const GRANDFATHERED_WITHOUT_EVAL = new Set([
   'refactor-claim-audit',
   'cross-file-leakage',
   'e2e-wiring',
-  'architecture-risk-register',
-  'availability-architecture',
-  'capacity-cost-design',
-  'data-flow-state-ownership',
-  'migration-rollout-rollback',
-  'operability-slo',
-  'requirements-acceptance',
-  'trust-boundaries-authz',
 ]);
 
 // #1598: contexts the default runner path (`river run` → src/lib/local-runner.mjs
