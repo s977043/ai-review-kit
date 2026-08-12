@@ -62,6 +62,37 @@ wc -l < /tmp/rr-refs.txt                        # 分母: 500
 grep -cxF -f /tmp/rr-undef.txt /tmp/rr-refs.txt # 分子: 6
 ```
 
+## 作業ツリーを汚したまま数えない
+
+上の 2 例のように、doc へ書く件数を手で測るときは、測定するディレクトリが作業ツリーだと値が汚染されます。汚染源は 3 種類あります。
+
+| 汚染源                                   | 具体例                                                       | 既存の対処                       |
+| ---------------------------------------- | ------------------------------------------------------------ | -------------------------------- |
+| worktree の作業コピーを重複計上する      | `grep -r` が `.claude/worktrees/` 配下まで数える             | `git grep` を使う                |
+| 追跡外ファイルを数える                   | textlint が `.gitignore` 対象の `docs/Working/` まで走査する | `scripts/count-in-clean-tree.sh` |
+| 構造化データの集計を素の文字列比較で行う | YAML の引用符付きスカラーを剥がさずに `awk` で比較する       | パーサを通す（`node -e` / `yq`） |
+
+2 番目は `git grep` では防げません。自分でディレクトリを走査するツール（textlint、`find`、`wc`）は、git の追跡状態を見ないからです。実例として #1786 では 347 件と公開した値の真値が 317 件で、差分は `docs/Working/` の 14 ファイルの混入でした。
+
+`scripts/count-in-clean-tree.sh` は `git archive <ref> | tar -x` で一時ディレクトリへ clean tree を展開し、そこで任意のコマンドを実行します。展開されるのは ref が追跡しているファイルだけなので、1 番目と 2 番目の汚染源が構造的に消えます。一時ディレクトリは `trap` で必ず削除されます。
+
+```bash
+# 既定の ref は origin/main。--ref で上書きできる
+scripts/count-in-clean-tree.sh -- bash -c 'find docs -name "*.md" | wc -l'
+scripts/count-in-clean-tree.sh --ref HEAD -- npx textlint --no-cache 'docs/**/*.md'
+```
+
+出力は ref・解決した SHA・実行コマンド・結果・終了コードを 1 つの fenced block にまとめた、そのまま doc へ貼れる形になります。公開した数値の再現手段を読者へ残すため、件数を書くときはこのブロックごと貼ってください。
+
+```console
+# clean tree of origin/main @ e0c403914e570f6fd007cbe2f7648ec1994d3b54 (git archive; untracked/ignored files absent)
+$ scripts/count-in-clean-tree.sh --ref origin/main -- bash -c 'find docs -name "*.md" | wc -l'
+      81
+# exit code: 0
+```
+
+注意点は 2 つあります。第 1 に、コマンドは exec されるため、パイプやリダイレクトを使う場合は上の例のように `bash -c '...'` へ包みます。第 2 に、展開先は `.git` を持たない素のディレクトリなので、`git grep` を使うなら `--no-index` が要ります。3 番目の汚染源は本 script の対象外で、パーサを通すことで別途防ぎます。
+
 ## 何を検証しているか
 
 登録内容は `scripts/check-doc-enumerations.mjs` の `DOC_ENUMERATION_SPECS` が SSoT です。初期スコープ（#1726）は、誤検出でメイン開発を止めないことを優先し、決定論で判定できる 4 件に絞ってあります。#1728 で `.github/workflows/README.md` のワークフロー一覧（`workflows-readme-table`）を追加し、ガード台帳の照合 2 件（`claude-md-guard-ledger` / `guard-ledger-verified-by`）をあとから足しました。
@@ -147,6 +178,7 @@ false positive でメイン開発を止めないことを最優先とします�
 
 - `scripts/check-doc-enumerations.mjs`—spec テーブル本体と検証エンジン
 - `tests/check-doc-enumerations.test.mjs`—パーサーと除外機構の回帰テスト
+- `scripts/count-in-clean-tree.sh`—clean tree で件数を測るヘルパー（`tests/count-in-clean-tree.test.mjs` が回帰テスト）
 - [`guard-ledger.yaml`](./guard-ledger.yaml)—AI Misoperation Guards の台帳（`claude-md-guard-ledger` の実体側）
 - `scripts/validate-plugin-manifest.mjs`—plugin manifest 側の列挙検証（`Meta consistency` で併走）
 - [`sidebar-reachability-check.md`](./sidebar-reachability-check.md)—公開ページの sidebar 到達性検証（`meta:validate` で併走、#1727）
