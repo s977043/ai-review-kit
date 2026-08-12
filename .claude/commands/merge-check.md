@@ -1,7 +1,7 @@
 ---
 description: docs/governance.md の「マージ前チェックリスト」を PR 番号 1 つに対して実行し、MERGE_OK / BLOCKED を判定する
 argument-hint: '<PR number>'
-allowed-tools: Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh api:*), Bash(git fetch:*), Bash(git log:*), Bash(npm run check:comment-disposition:*)
+allowed-tools: Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr edit:*), Bash(gh issue view:*), Bash(gh api:*), Bash(git fetch:*), Bash(git log:*), Bash(npm run check:comment-disposition:*)
 ---
 
 マージ前チェック: PR #$ARGUMENTS が `gh pr merge` 可能な状態か、`docs/governance.md` § 「PR レビューとマージ」>「マージ前チェックリスト」(SSoT) の全項目を実コマンドで検証して判定する。
@@ -92,14 +92,55 @@ gh pr diff $ARGUMENTS --name-only | grep '^runners/github-action/src/' || echo "
 - 該当する場合、`.nvmrc` の Node バージョンで `npm run build:action` 済みであることを確認する。Step 1 で `Action dist freshness` チェックが green ならビルド済みとみなしてスキップ可
 - 失敗時のトラブルシュートは `docs/development/dist-check-rebuild-guide.md` を参照
 
-### Step 6. 複数 PR 並行時の追加確認
+### Step 6. PR 本文の closing keyword 確認
+
+squash merge では **PR 本文**の closing keyword（`closes` / `fixes` / `resolves` + issue 番号）が効き、マージと同時に該当 issue が close される。コミット本文に `refs #N` と書いてあっても、PR 本文が `closes #N` なら閉じる。
+
+```bash
+gh api "repos/:owner/:repo/pulls/$ARGUMENTS" --jq .body | grep -i 'closes\|fixes\|resolves'
+```
+
+grep はコードブロックや引用の中の言及も拾うため、ヒットしても実際に紐付いているとは限らない。ヒットした場合は、GitHub が実際に close 対象として解決した issue を確認する。
+
+```bash
+gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){closingIssuesReferences(first:20){nodes{number title state}}}}}' \
+  -F o=:owner -F r=:repo -F n=$ARGUMENTS --jq '.data.repository.pullRequest.closingIssuesReferences.nodes'
+```
+
+- `-F o=:owner` / `-F r=:repo` のプレースホルダは `gh api graphql` でも現在のリポジトリへ展開される（本 PR で #1830 に対して実行し、`[{"number":1827}]` が返ることを確認済み）
+- 空配列ならこの Step は pass。1 件以上返った場合は、下記の基準で **それぞれが「閉じてよい issue」か**を判定する
+
+#### 閉じてよい issue かの判定基準
+
+列挙するだけでは素通りする。返ってきた issue ごとに `gh issue view <issue番号>` で本文を読み、次の 3 点を確認する。**1 つでも該当すれば「閉じてはいけない issue」**である。
+
+1. **その PR のスコープが issue の全体をカバーしていない** — issue が要求する変更のうち、この PR に入っていないものがある
+2. **Epic / 追跡用 issue である** — 複数 PR にまたがる傘 issue、または他 issue を子として持つもの。この種は最後の子 PR がマージされたあとに人間が閉じる
+3. **本文に未完了のチェックボックス（`- [ ]`）または「残り」「follow-up」「後続」等の記述がある**
+
+判定が付かない場合は「閉じてはいけない」側に倒す。誤って開けたままにするのは後から閉じられるが、事故で閉じた issue は「判断して閉じた」記録との区別が付かなくなる。
+
+#### 閉じてはいけない issue がある場合
+
+マージの前に PR 本文を書き換え、closing keyword を非 closing の語（`refs`）へ変える。
+
+```bash
+gh pr edit $ARGUMENTS --body "$(gh api "repos/:owner/:repo/pulls/$ARGUMENTS" --jq .body | sed 's/closes \[#/refs [#/g')"
+```
+
+- 実際の本文の書式（`closes [#N](URL)` / `Closes #N` 等）を確認してから置換対象を決める。上の `sed` は release-please が生成する `closes [#N](...)` 形式に対する例である
+- 書き換え後、上記 GraphQL を再実行して `closingIssuesReferences` が空になったことを確認してからマージへ進む
+
+release-please が生成するリリース PR は、コミット本文が `refs #N` でも PR 本文では `closes [#N]` へ変換される。**リリース PR ではこの Step が必ず該当する**ため省略してはならない（`/release-kick` の Step 7 からも本 Step を参照している）。
+
+### Step 7. 複数 PR 並行時の追加確認
 
 複数 PR を連続マージする作業の一部としてこのコマンドを実行している場合:
 
 - `/preflight <PR numbers>` で対象 PR が obsolete / 並行作業中でないことを先に検証する
 - `/plan-merge-order <PR numbers>` でマージ順序を事前計画する（本 PR がその順序の先頭であることを確認する）
 
-### Step 7. strict mode の注意
+### Step 8. strict mode の注意
 
 branch protection が `strict: true` の場合（このリポジトリの main は該当）、PR が最新 main よりも遅れているとマージできない。
 
@@ -114,9 +155,9 @@ gh api "repos/:owner/:repo/pulls/$ARGUMENTS" --jq '{mergeable_state}'
 
 ### A. MERGE_OK
 
-条件: Step 1〜5 が全て pass（Step 5 は該当時のみ）、Step 6〜7 の該当事項なし。
+条件: Step 1〜6 が全て pass（Step 5 は該当時のみ）、Step 7〜8 の該当事項なし。
 
-対応: 各 Step の確認結果（CI チェック数 / 2 エンドポイントのコメント件数と disposition / ラベル一覧 / review state）を添えて報告し、`gh pr merge` に進んでよい。
+対応: 各 Step の確認結果（CI チェック数 / 2 エンドポイントのコメント件数と disposition / ラベル一覧 / review state / closing keyword で閉じる issue の一覧と可否判定）を添えて報告し、`gh pr merge` に進んでよい。
 
 ### B. BLOCKED
 
@@ -132,8 +173,11 @@ gh api "repos/:owner/:repo/pulls/$ARGUMENTS" --jq '{mergeable_state}'
 - review state（`reviewDecision`）のみでコメントの確認を省略してはならない
 - disposition 未確定のコメントを残したまま `gh pr merge` に進んではならない
 - 阻止ラベルが付いたまま `gh pr merge` に進んではならない。マージする側がラベルを外して進めることも禁止である
+- closing keyword が閉じる issue を確認しないまま `gh pr merge` に進んではならない。リリース PR でもこの Step を省略してはならない
 - 本コマンドの手順と governance.md が食い違う場合、governance.md を正としてこちらを修正する
 
 ## なぜこのスキルが必要か
 
 マージ前チェックリスト（CI green / コメントの全件 disposition / 阻止ラベル / preflight / dist Node 整合）は `docs/governance.md` に SSoT として整備されたが、完全手動運用のため実行漏れが起きやすい。レビュアーコメントは CI を失敗させないため見落とされ、`--paginate` 忘れによる部分列挙も観測されている。2026-08-04 には PR #1746 で `pulls/<N>/comments` のみを列挙して 0 件だったため「指摘なし」と判定し、`issues/<N>/comments` にあった指摘 3 件と `blocked` ラベルを見落としてマージ、v1.72.0 で回帰をリリースした。`/preflight` / `/verify-agent-report` と同様に、**実行可能な決定論チェックリストとして 1 コマンド化**することで、マージのたびに確実に全項目を通す。
+
+2026-08-12 には Issue #1827 が release PR #1830 のマージで自動 close された。閉じる判断は誰もしていない。コミット本文は `refs #1827` だったが、release-please が PR 本文を `closes [#1827]` としてレンダリングしていた。当時この確認手順はセッションを跨がない carry-over 台帳にしかなく、`/merge-check` にも `/release-kick` にも存在しなかった。Step 6 はこの再発防止である（`docs/development/retrospectives/2026-08-12.md` の O5 が SSoT）。

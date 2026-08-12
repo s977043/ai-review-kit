@@ -102,6 +102,21 @@ gh pr view <N> --json labels --jq '[.labels[].name]'
 
 `git commit` / `git push` / `git switch` / `gh pr merge` の直後は、出力されたブランチ名・コミットハッシュ・status 行を読み、意図したターゲットに作用したことを確認してから次のコマンドへ進んでください。曖昧な場合は `git status -sb` または `git rev-parse --abbrev-ref HEAD` で再確認します。
 
+#### 6. PR 本文の closing keyword 確認
+
+squash merge では **PR 本文**の closing keyword（`closes` / `fixes` / `resolves` + issue 番号）が効き、マージと同時に該当 issue が close されます。コミット本文が `refs #N` であっても、PR 本文が `closes #N` なら閉じます。
+
+```bash
+gh api "repos/:owner/:repo/pulls/<N>" --jq .body | grep -i 'closes\|fixes\|resolves'
+```
+
+- grep はコードブロックや引用の中の言及も拾うため、ヒットしても実際に紐付いているとは限りません。GraphQL の `closingIssuesReferences` で、GitHub が close 対象として解決した issue を確定させてください。
+- 該当する issue が「閉じてよいもの」かは、PR のスコープが issue 全体をカバーしているか / Epic・追跡用 issue でないか / 本文に未完了のチェックボックスや残作業の記述がないか、の 3 点で判定します。
+- 閉じてはいけない issue がある場合は、マージ前に `gh pr edit <N> --body` で `closes` を `refs` へ書き換えます。
+- 実行手順・判定基準・書き換えコマンドの詳細は `/merge-check` の Step 6（`.claude/commands/merge-check.md`）を参照してください。**リリース PR では必ず該当します。**
+
+> **経緯**: 2026-08-12、Issue #1827 が release PR #1830 のマージで自動 close されました。閉じる判断は誰もしていません。コミット本文は `refs #1827` でしたが、release-please は release PR の本文を `closes [#1827]` としてレンダリングします。当時この確認手順は `/merge-check` にも `/release-kick` にも存在せず、セッションを跨がない carry-over 台帳にしかありませんでした（`docs/development/retrospectives/2026-08-12.md` の O5）。
+
 ### レビュアーコメントの扱い
 
 CI の成否はレビュアーコメント（`Copilot` / `sentry[bot]` などの AI レビュアー、および人間レビュアー）をカバーしません。これらは CI を失敗させないため見落としやすい一方、実バグを指摘していることがあります。マージ前には本セクションの手順で必ず列挙・評価してください。

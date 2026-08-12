@@ -163,6 +163,10 @@ guards:
       呼ばれるだけであるため、実行しないという選択が依然として可能なこと。必須チェック化は
       「人間コメントが 1 件付いた瞬間に恒久的にマージ不能になる」誤停止を生み、improvement-flow.md の
       「止めるべきでないものを止めない」を満たせないため採らなかった。/preflight の実施も散文のまま残る。
+      2026-08-12 の再発として、release PR #1830 のマージで Issue #1827 が事故で close された
+      （retrospectives/2026-08-12.md の O5）。PR 本文の closing keyword 確認を /merge-check の Step 6 と
+      governance.md のチェックリスト 6 番へ追加し、/release-kick の Step 7 から参照させた。
+      これは手順の追加であって機械検証ではないため mechanized は partial のまま据え置く。
 
   - id: strict-mode-batch-merge
     title: Strict-mode batch merge

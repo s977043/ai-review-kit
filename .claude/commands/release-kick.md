@@ -1,7 +1,7 @@
 ---
 description: release-please のリリース PR を BLOCKED 解除 → CI green 確認 → マージ → リリース公開検証まで一貫実行する（v1.44.0〜v1.53.0 の11リリースで実証済みの型）
 argument-hint: '<release PR number>'
-allowed-tools: Bash(gh api user:*), Bash(gh auth switch:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(gh run list:*), Bash(gh release view:*), Bash(git ls-remote:*), Bash(git fetch:*), Bash(git diff:*), Bash(scripts/release-please-kick.sh:*), Bash(bash scripts/release-please-kick.sh:*)
+allowed-tools: Bash(gh api user:*), Bash(gh auth switch:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr merge:*), Bash(gh pr edit:*), Bash(gh issue view:*), Bash(gh api:*), Bash(gh run list:*), Bash(gh release view:*), Bash(git ls-remote:*), Bash(git fetch:*), Bash(git diff:*), Bash(scripts/release-please-kick.sh:*), Bash(bash scripts/release-please-kick.sh:*)
 ---
 
 release PR #$ARGUMENTS を、BLOCKED 解除からマージ・リリース公開の検証まで一貫して実行する。
@@ -109,7 +109,17 @@ gh pr checks $ARGUMENTS --json name,bucket --jq '.[] | select(.bucket != "skippi
 
 ### Step 7. マージ
 
-`mergeStateStatus: CLEAN` かつ Step 6 の CI が green になったら:
+`mergeStateStatus: CLEAN` かつ Step 6 の CI が green になったら、**マージの前に `/merge-check` の Step 6「PR 本文の closing keyword 確認」を実施する**。
+
+release-please は、コミット本文が `refs #N` であっても release PR の本文では `closes [#N](...)` としてレンダリングする。squash merge では PR 本文の closing keyword が効くため、リリース PR のマージは該当 issue を閉じる。**リリース PR ではこの確認が必ず該当する。**
+
+```bash
+gh api "repos/:owner/:repo/pulls/$ARGUMENTS" --jq .body | grep -i 'closes\|fixes\|resolves'
+```
+
+ヒットした場合の判定基準（スコープの全体カバー / Epic・追跡用 issue でないか / 未完了チェックボックスの有無）と、閉じてはいけない issue があった場合の `gh pr edit` による `closes` → `refs` 書き換え手順は `.claude/commands/merge-check.md` の Step 6 が SSoT である。
+
+確認が済んだらマージする。
 
 ```bash
 gh pr merge $ARGUMENTS --squash --delete-branch
@@ -132,5 +142,6 @@ gh pr merge $ARGUMENTS --squash --delete-branch
 
 ## 参照
 
+- `.claude/commands/merge-check.md` Step 6（SSoT: PR 本文の closing keyword 確認、閉じてよい issue かの判定基準、`closes` → `refs` の書き換え手順）
 - `docs/runbook/release-please-kick.md`（SSoT: BLOCKED の原因、BEHIND と純 BLOCKED の判定、`RELEASE_KICK_PAT` セットアップ、`workflow_dispatch` 版が deprecated である理由）
 - CLAUDE.md「`N of N required checks are expected` = bot/GITHUB_TOKEN push」ガード
