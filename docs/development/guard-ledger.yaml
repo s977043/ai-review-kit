@@ -37,7 +37,17 @@ guards:
     verifiedBy: []
     addedAt: '2026-04-08'
     reviewAfter: '2026-11-10'
-    notes: 初期 5 ガードの 1 件。CI 自体が主張を否定する経路はあるが、報告の真偽を直接検証する仕組みは無い。 2026-08-12 の退役判定は (c) 機械化の起票であり、reviewAfter を 90 日延長した。addedAt 以降の再発として、監査の看板数値 3 件が再現不能だった件（retrospectives/2026-07-24-08-02.md の 1 節）と、件数の実測を 3 者とも grep -r の worktree 重複で誤った件（同 2026-08-04-05.md の 5 節）がある。決定論スライスは scripts/check-doc-enumerations.mjs の spec 化の拡大。機械化 Issue は #1827。 その 1 件目として scripts/count-in-clean-tree.sh を追加し、作業ツリー由来の 2 汚染源（worktree の重複計上・追跡外ファイル）を計測手段の側から消した。 ただし違反時に落ちるチェックではなく計測ヘルパーであるため、mechanized は none のままとする（使い方は docs/development/doc-enumeration-checks.md）。
+    notes: >-
+      初期 5 ガードの 1 件。CI 自体が主張を否定する経路はあるが、報告の真偽を直接検証する仕組みは無い。
+      2026-08-12 の退役判定は (c) 機械化の起票であり、reviewAfter を 90 日延長した。addedAt
+      以降の再発として、監査の看板数値 3 件が再現不能だった件（retrospectives/2026-07-24-08-02.md の 1
+      節）と、件数の実測を 3 者とも grep -r の worktree 重複で誤った件（同 2026-08-04-05.md の 5
+      節）がある。決定論スライスは scripts/check-doc-enumerations.mjs の spec 化の拡大。機械化 Issue は
+      #1827。その 1 件目として scripts/count-in-clean-tree.sh を追加し、作業ツリー由来の 2
+      汚染源（worktree の重複計上・追跡外ファイル）を計測手段の側から消した。ただし違反時に落ちるチェックではなく計測ヘルパーであるため、mechanized
+      は none のままとする（使い方は docs/development/doc-enumeration-checks.md）。なお本エントリは
+      2026-08-12 まで 1 行のプレーンスカラーで書かれており、` #1827` 以降がコメント扱いで 211
+      文字失われていた。` #` を含む notes はブロックスカラーで書くこと。
 
   - id: no-silent-skips
     title: No silent skips
