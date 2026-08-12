@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.73.1](https://github.com/s977043/river-review/compare/v1.73.0...v1.73.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **lint:** 新 textlint config と .textlintignore を検出器と分類器の対象に含める ([#1806](https://github.com/s977043/river-review/issues/1806)) ([2d01158](https://github.com/s977043/river-review/commit/2d01158adecb3a6f8dd6cfe925a9d882522f55e3)), closes [#1786](https://github.com/s977043/river-review/issues/1786)
+* **suppression:** unparseable な context.expiresAt を警告経路に載せる ([#1801](https://github.com/s977043/river-review/issues/1801)) ([d2c13f4](https://github.com/s977043/river-review/commit/d2c13f495d02062b2ac4a4ff73868f53758280b2)), closes [#1780](https://github.com/s977043/river-review/issues/1780)
+
 ## [1.73.0](https://github.com/s977043/river-review/compare/v1.72.5...v1.73.0) (2026-08-10)
 
 
