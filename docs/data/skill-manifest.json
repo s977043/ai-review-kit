@@ -72,8 +72,8 @@
     {
       "id": "architecture-risk-register",
       "path": "skills/upstream/architecture-risk-register",
-      "checksum": "sha256:5dc77301b0c232722ec946bc44435d9b5a13b214a7e98cb1b892bc162f6a7140",
-      "files": 1
+      "checksum": "sha256:83d790949e808bfe4f7f1319e5a6efe1828fcc5a7bb59520d78de50a8da4fac6",
+      "files": 3
     },
     {
       "id": "architecture-traceability",
@@ -102,8 +102,8 @@
     {
       "id": "availability-architecture",
       "path": "skills/upstream/availability-architecture",
-      "checksum": "sha256:979eea3581bbcb7d1c59da6f11f83aec1a84d92d447155fc8b14976c699ef73f",
-      "files": 1
+      "checksum": "sha256:bfd91b96e51b7e51949fbbeb1357e8581fa2f4d2f43eb47a24f71162a4de5ffb",
+      "files": 3
     },
     {
       "id": "behavior-structure-separation",
@@ -126,8 +126,8 @@
     {
       "id": "capacity-cost-design",
       "path": "skills/upstream/capacity-cost-design",
-      "checksum": "sha256:3c2183bec2eaeb92152a87732eeb4f9e40c528b88a1f8943d057e598a8b46a65",
-      "files": 1
+      "checksum": "sha256:e09c13e14bde6ae2edca06de7f4e3f4f987a92a5ff3489da1bae6b52b994dd3d",
+      "files": 3
     },
     {
       "id": "change-communication",
@@ -216,8 +216,8 @@
     {
       "id": "data-flow-state-ownership",
       "path": "skills/upstream/data-flow-state-ownership",
-      "checksum": "sha256:fb99298f3f66e0e64613a01ca2e862d608a3280cfeaa5daa317edbcd643a9cf0",
-      "files": 1
+      "checksum": "sha256:ee73c1feb55c104f2274996e5ede3234afb0c1bc4a68d11f9505a0f8efe74ca8",
+      "files": 3
     },
     {
       "id": "data-model-db-design",
@@ -408,8 +408,8 @@
     {
       "id": "migration-rollout-rollback",
       "path": "skills/upstream/migration-rollout-rollback",
-      "checksum": "sha256:6d65c11517c542d053f79f050815a8a1ad796637857f79b0470f75646f964715",
-      "files": 1
+      "checksum": "sha256:82b7872451b0c45a35590fe5c025b6616bd1c3664d9599d3023755f715026e02",
+      "files": 3
     },
     {
       "id": "migration-safety",
@@ -480,8 +480,8 @@
     {
       "id": "operability-slo",
       "path": "skills/upstream/operability-slo",
-      "checksum": "sha256:b20d7548aed38362a111584a3300647fda4ddc404ca49d978d7f243b2f34d91e",
-      "files": 1
+      "checksum": "sha256:fc83f6fbc993346e6771aabb89bb2c58f99b6a555b827ff57f564996b823ebc4",
+      "files": 3
     },
     {
       "id": "plan-review-gate",
@@ -564,8 +564,8 @@
     {
       "id": "requirements-acceptance",
       "path": "skills/upstream/requirements-acceptance",
-      "checksum": "sha256:be6e1c281b93e7df2cd5757f4401931ac4e2a3720094204371c7b96ee527129c",
-      "files": 1
+      "checksum": "sha256:1d4f8e41421e8de123944b8a1e30244463e8acdcf11dc6073fac148db0323b47",
+      "files": 3
     },
     {
       "id": "review-automation-boundary",
@@ -726,8 +726,8 @@
     {
       "id": "trust-boundaries-authz",
       "path": "skills/upstream/trust-boundaries-authz",
-      "checksum": "sha256:3278b1bbad2636faedbf349b751d1b4f657ec3fb8b73052d7e635fb702c2ec81",
-      "files": 1
+      "checksum": "sha256:09ecab5132883b228f1d93879cb96703db77335f5c05d3b18ab1ac64a6bb826e",
+      "files": 3
     },
     {
       "id": "type-driven-design",
