@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.76.1](https://github.com/s977043/river-review/compare/v1.76.0...v1.76.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **scripts:** count-in-clean-tree.sh の SIGPIPE 失敗を中間ファイルで解消する ([#1839](https://github.com/s977043/river-review/issues/1839)) ([52c0556](https://github.com/s977043/river-review/commit/52c0556e3e3cdf7e1eb894da7cf4c1a5217b745a))
+
 ## [1.76.0](https://github.com/s977043/river-review/compare/v1.75.0...v1.76.0) (2026-08-12)
 
 
