@@ -6,6 +6,9 @@ const RE_MIGRATE = /(?:^|\/)migrate/;
 const RE_CONFIG_EXT = /\.config\.(?:[jt]sx?|mjs)$/;
 const RE_RC_FILE = /^\.[a-z]+rc(?:\.[a-z]+)?$/;
 const RE_TSCONFIG = /^tsconfig.*\.json$/;
+// Named textlint configs (e.g. `docs.textlintrc.json`) are not dotfiles, so
+// RE_RC_FILE does not reach them. Keep them classified as `config`.
+const RE_TEXTLINTRC = /(?:^|\.)textlintrc(?:\.[a-z]+)?$/;
 const RE_DOCKERFILE = /^Dockerfile/;
 const RE_DOCKER_COMPOSE = /^docker-compose/;
 
@@ -16,6 +19,7 @@ const CONFIG_NAMES = new Set([
   '.markdownlint.json',
   '.markdownlint-cli2.yaml',
   '.textlintrc.json',
+  '.textlintignore',
 ]);
 
 /**
@@ -78,6 +82,7 @@ function isConfig(file, basename) {
   if (RE_RC_FILE.test(basename)) return true;
   if (CONFIG_NAMES.has(basename) || basename.startsWith('.env')) return true;
   if (RE_TSCONFIG.test(basename)) return true;
+  if (RE_TEXTLINTRC.test(basename)) return true;
   return false;
 }
 
