@@ -1,5 +1,11 @@
 import crypto from 'node:crypto';
-import { appendEntry, isExpired, loadMemory, queryMemory } from './riverbed-memory.mjs';
+import {
+  appendEntry,
+  hasUnparseableExpiresAt,
+  isExpired,
+  loadMemory,
+  queryMemory,
+} from './riverbed-memory.mjs';
 
 /**
  * Create a stable content hash from a finding's key fields.
@@ -177,33 +183,159 @@ export function isSuppressionExpired(suppression, now = new Date()) {
 }
 
 /**
+ * Whether a suppression's `context.expiresAt` is present but is not a valid
+ * `expiresAt` value.
+ *
+ * The validity rule is NOT re-derived here: it delegates to
+ * `hasUnparseableExpiresAt` (riverbed-memory.mjs), which in turn delegates to
+ * `parseExpiresAt` (expires-at.mjs, the SSoT since #1777). The only thing this
+ * wrapper adds is the field the suppression data model actually uses.
+ * `createSuppression` writes the deadline to `context.expiresAt` and never to
+ * the top-level `entry.expiresAt`, which is why `expireEntries`' warning — it
+ * reads the top-level field — structurally cannot see a suppression's value
+ * (#1780).
+ *
+ * @param {{ context?: { expiresAt?: string } }} suppression
+ * @returns {boolean}
+ */
+export function hasUnparseableSuppressionExpiresAt(suppression) {
+  return hasUnparseableExpiresAt({ expiresAt: suppression?.context?.expiresAt });
+}
+
+/**
+ * The ids of suppressions revoked by a `resurface` entry.
+ *
+ * Revocation is append-only: `revokeSuppression` writes a separate entry and
+ * never flips the original's `context.active`, so `context.active === true` is
+ * NOT sufficient to decide that a suppression is still in force. Both consumers
+ * — `findActiveSuppressions` and `findUnparseableSuppressionExpiries` — go
+ * through this one function rather than each filtering `type: 'resurface'`
+ * themselves, so the two cannot answer differently for the same index.
+ *
+ * Equivalent to `queryMemory(index, { type: 'resurface', includeInactive: true })`
+ * followed by the `action === 'revoke'` filter: `includeInactive: true` applies
+ * no status filter, so a plain type filter over `index.entries` is the same set.
+ * Keeping revocations visible regardless of status is deliberate — a once
+ * revoked suppression must not reactivate when the revoking entry is superseded.
+ *
+ * @param {object[]} entries - all memory entries (not only suppressions)
+ * @returns {Set<string>}
+ */
+export function collectRevokedSuppressionIds(entries) {
+  const ids = new Set();
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    if (entry?.type !== 'resurface') continue;
+    if (entry?.context?.action !== 'revoke') continue;
+    if (entry?.context?.suppressionId) ids.add(entry.context.suppressionId);
+  }
+  return ids;
+}
+
+/**
+ * Suppressions whose `context.expiresAt` cannot be parsed, and which are
+ * therefore treated as expired by `isSuppressionExpired` (fail-safe, #1746).
+ *
+ * The fail-safe direction stays as it is: an unreadable deadline must not keep
+ * hiding findings forever. What this function exists for is the OTHER half —
+ * making the stop observable. Until #1780 a suppression written by the
+ * v1.72.0–v1.72.1 CLI (which accepted anything `Date.parse` liked, e.g.
+ * `2027-01-01T00:00:00` without an offset) simply stopped taking effect, with
+ * no error, no warning, and no visible change in `.river/memory/index.json`.
+ *
+ * Only entries that were still in force are reported, because the report tells
+ * the operator to repair a value. Two exclusions carry that:
+ * `context.active === false` (never suppressing anything), and revoked by a
+ * `resurface` entry (deliberately turned off, and `revokeSuppression` leaves
+ * `context.active` set to true, so `active` alone does not see it).
+ *
+ * The report carries the entry id and the offending value only. The rationale,
+ * related file paths and fingerprint are deliberately left out: the value is
+ * what has to be repaired, and a warning stream is not a place to widen the
+ * exposure of the surrounding record.
+ *
+ * @param {object[]} entries - memory entries; non-suppression entries are used
+ *   to resolve revocations and are otherwise ignored
+ * @returns {Array<{ id: string, expiresAt: string }>}
+ */
+export function findUnparseableSuppressionExpiries(entries) {
+  if (!Array.isArray(entries)) return [];
+  const revoked = collectRevokedSuppressionIds(entries);
+  return entries
+    .filter((s) => s?.type === 'suppression')
+    .filter((s) => s?.context?.active && !revoked.has(s.id))
+    .filter((s) => hasUnparseableSuppressionExpiresAt(s))
+    .map((s) => ({ id: s.id, expiresAt: s.context.expiresAt }));
+}
+
+/**
+ * The operator-facing sentence for one unparseable suppression deadline.
+ * Shared so the `findActiveSuppressions` warning and the
+ * `suppression-analytics` report state the same fact the same way.
+ *
+ * @param {{ id: string, expiresAt: string }} entry
+ * @returns {string}
+ */
+export function formatUnparseableExpiresAtWarning({ id, expiresAt }) {
+  return (
+    `Warning: suppression ${id} has an unparseable context.expiresAt (${JSON.stringify(expiresAt)}); ` +
+    'it is treated as expired and no longer suppresses findings. ' +
+    'Repair the value to an RFC 3339 date or date-time (e.g. "2027-01-01" or "2027-01-01T00:00:00Z").'
+  );
+}
+
+/**
  * Find active suppressions that overlap with the given file paths.
  * Filters out expired and revoked suppressions.
+ *
+ * A suppression dropped because its `context.expiresAt` cannot be parsed is
+ * reported through `warn` rather than dropped silently (#1780). The `warn` sink
+ * mirrors `expireEntries` (riverbed-memory.mjs): injectable for tests, defaults
+ * to `console.warn`. Only in-scope, non-revoked suppressions are warned about —
+ * the ones this function would otherwise have returned for these file paths.
+ *
+ * Scope note: this function is NOT on the review path. Its only caller in the
+ * repository is `regression-eval.mjs:110`; `resurface.mjs` imports the name but
+ * never calls it. `runLocalReview` gates findings through `loadReviewMemory`
+ * (`local-runner.mjs:469`) and `applySuppressions` (`local-runner.mjs:516`),
+ * neither of which consults `expiresAt` at all. So this warning reaches
+ * regression-eval and, through `findUnparseableSuppressionExpiries`,
+ * `scripts/suppression-analytics.mjs` — it does NOT make the review path
+ * report anything. Wiring expiry (and this warning) into the review path is
+ * tracked separately in #1802.
+ *
  * @param {{ entries: object[] }} index - Loaded memory index
  * @param {string[]} filePaths
+ * @param {{ warn?: (msg: string) => void }} [opts] - warning sink
  * @returns {object[]}
  */
-export function findActiveSuppressions(index, filePaths) {
+export function findActiveSuppressions(index, filePaths, { warn = (m) => console.warn(m) } = {}) {
   // includeInactive: true preserves pre-lifecycle behavior. Revocations via
   // resurface must survive supersession so that a once-revoked suppression
   // does not silently reactivate when the revoking entry is superseded.
   const suppressions = queryMemory(index, { type: 'suppression', includeInactive: true });
-  const revocations = new Set(
-    queryMemory(index, { type: 'resurface', includeInactive: true })
-      .filter((e) => e.context?.action === 'revoke')
-      .map((e) => e.context?.suppressionId)
-      .filter(Boolean)
-  );
+  const revocations = collectRevokedSuppressionIds(index?.entries ?? []);
 
   const now = new Date();
 
   return suppressions.filter((s) => {
     if (!s.context?.active) return false;
     if (revocations.has(s.id)) return false;
-    if (isSuppressionExpired(s, now)) return false;
 
     const related = s.metadata?.relatedFiles ?? [];
     const scope = s.context?.scope || 'file';
-    return matchesScopeFiles(scope, related, filePaths);
+    const inScope = matchesScopeFiles(scope, related, filePaths);
+
+    if (isSuppressionExpired(s, now)) {
+      // Scope is evaluated BEFORE the warning so an unparseable deadline on a
+      // suppression that does not cover this change set stays quiet: it was
+      // not going to suppress anything here, and reporting it on every review
+      // of every unrelated file would train operators to ignore the line.
+      if (inScope && hasUnparseableSuppressionExpiresAt(s)) {
+        warn(formatUnparseableExpiresAtWarning({ id: s.id, expiresAt: s.context.expiresAt }));
+      }
+      return false;
+    }
+
+    return inScope;
   });
 }

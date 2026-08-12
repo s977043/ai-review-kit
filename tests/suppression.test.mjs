@@ -7,6 +7,7 @@ import {
   createSuppression,
   revokeSuppression,
   findActiveSuppressions,
+  findUnparseableSuppressionExpiries,
   isSuppressionExpired,
 } from '../src/lib/suppression.mjs';
 import { loadMemory } from '../src/lib/riverbed-memory.mjs';
@@ -187,10 +188,127 @@ test('findActiveSuppressions treats an unparseable expiresAt as expired (index.j
   try {
     const index = loadMemory(indexPath);
     assert.equal(index.entries[0].context.expiresAt, 'notadate', 'fixture の前提が壊れている');
-    assert.deepEqual(findActiveSuppressions(index, ['src/auth.ts']), []);
+    const warnings = [];
+    assert.deepEqual(
+      findActiveSuppressions(index, ['src/auth.ts'], { warn: (m) => warnings.push(m) }),
+      []
+    );
+    // #1780: 失効させるだけでなく、その事実が運用者へ届くこと。
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /s-bogus-expiry/);
+    assert.match(warnings[0], /"notadate"/);
   } finally {
     cleanup();
   }
+});
+
+// #1780 回帰テーブル。v1.72.0–v1.72.1 の CLI は `Number.isNaN(Date.parse(value))`
+// だけを見て受理し、値を verbatim 保存していた（`git show v1.72.1:src/cli.mjs`）。
+// #1777 で妥当性定義が RFC 3339 の SSoT（src/lib/expires-at.mjs）へ寄った結果、
+// これらは unparseable = 失効扱いになる。方向は fail-safe なので変えないが、
+// 「無警告で抑制が止まる」ことだけは直す対象なので、警告の有無まで固定する。
+const LEGACY_UNPARSEABLE_EXPIRES_AT = [
+  '2027-01-01T00:00:00', // offset 無し（toISOString().slice(0,19) の形）
+  '2027-01-01T00:00Z', // 秒が無い
+  '2027/01/01', // スラッシュ区切り
+  '2027-01-01T09:00:00+0900', // basic format offset（`date -Iseconds` の形）
+];
+
+test('findActiveSuppressions warns for each legacy expiresAt form it expires (#1780)', () => {
+  const now = new Date('2026-08-12T00:00:00Z');
+  for (const expiresAt of LEGACY_UNPARSEABLE_EXPIRES_AT) {
+    // まず失効側の挙動（#1777 以降の前提）を固定する。
+    assert.equal(
+      isSuppressionExpired({ context: { expiresAt } }, now),
+      true,
+      `${expiresAt} は unparseable として失効扱いであること`
+    );
+
+    const index = {
+      entries: [
+        {
+          id: `s-legacy-${expiresAt}`,
+          type: 'suppression',
+          content: 'ok',
+          metadata: {
+            createdAt: '2026-01-01T00:00:00Z',
+            author: 't',
+            relatedFiles: ['src/auth.ts'],
+          },
+          context: { active: true, scope: 'file', expiresAt },
+        },
+      ],
+    };
+    const warnings = [];
+    const result = findActiveSuppressions(index, ['src/auth.ts'], {
+      warn: (m) => warnings.push(m),
+    });
+    assert.deepEqual(result, [], `${expiresAt} の suppression は適用されないこと`);
+    assert.equal(warnings.length, 1, `${expiresAt} で警告が 1 件出ること`);
+    // 部分文字列の包含で見る。値には `/` や `+` が含まれるため、正規表現へ
+    // 組み立てるとエスケープが必要になり、そのエスケープ自体が不完全な
+    // sanitization として検出される（CodeQL js/incomplete-sanitization）。
+    assert.ok(
+      warnings[0].includes(`s-legacy-${expiresAt}`),
+      `警告に entry id が含まれること: ${warnings[0]}`
+    );
+    assert.ok(
+      warnings[0].includes(`"${expiresAt}"`),
+      `警告に該当の値が含まれること: ${warnings[0]}`
+    );
+    assert.match(warnings[0], /unparseable context\.expiresAt/);
+  }
+});
+
+test('findActiveSuppressions stays quiet for a parseable deadline and for out-of-scope entries (#1780)', () => {
+  const entry = (id, expiresAt, file) => ({
+    id,
+    type: 'suppression',
+    content: 'ok',
+    metadata: { createdAt: '2026-01-01T00:00:00Z', author: 't', relatedFiles: [file] },
+    context: { active: true, scope: 'file', expiresAt },
+  });
+  const index = {
+    entries: [
+      // 正当な期限で普通に失効したもの: 警告の対象ではない。
+      entry('s-real-expiry', '2025-01-01T00:00:00Z', 'src/auth.ts'),
+      // 期限は読めないが、この変更セットを覆っていないもの。
+      entry('s-out-of-scope', '2027/01/01', 'src/billing.ts'),
+    ],
+  };
+  const warnings = [];
+  const result = findActiveSuppressions(index, ['src/auth.ts'], { warn: (m) => warnings.push(m) });
+  assert.deepEqual(result, []);
+  assert.deepEqual(warnings, []);
+});
+
+test('findUnparseableSuppressionExpiries reports only active entries (#1780)', () => {
+  const entries = [
+    {
+      id: 's-active-bad',
+      type: 'suppression',
+      context: { active: true, expiresAt: '2027-01-01T00:00:00' },
+    },
+    {
+      id: 's-inactive-bad',
+      type: 'suppression',
+      context: { active: false, expiresAt: '2027-01-01T00:00:00' },
+    },
+    { id: 's-good', type: 'suppression', context: { active: true, expiresAt: '2027-01-01' } },
+    { id: 's-none', type: 'suppression', context: { active: true } },
+    // revoke は append-only で、元 entry の context.active は true のまま残る。
+    // active だけを見ると「修復せよ」と報告してしまう（#1780 W2）。
+    {
+      id: 's-revoked-bad',
+      type: 'suppression',
+      context: { active: true, expiresAt: '2027-01-01T00:00:00' },
+    },
+    { id: 'r-1', type: 'resurface', context: { suppressionId: 's-revoked-bad', action: 'revoke' } },
+  ];
+  assert.deepEqual(findUnparseableSuppressionExpiries(entries), [
+    { id: 's-active-bad', expiresAt: '2027-01-01T00:00:00' },
+  ]);
+  assert.deepEqual(findUnparseableSuppressionExpiries(undefined), []);
 });
 
 test('isSuppressionExpired fails safe on malformed values and keeps valid ones', () => {
