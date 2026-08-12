@@ -51,6 +51,7 @@ main ブランチには GitHub branch protection rule により以下の Require
 - `Meta consistency`
 - `Action dist freshness`
 - `Integration (CLI)`
+- `Blocked label guard`
 
 > **この一覧の正は下記「現在の設定の確認」コマンドの出力です。** ドキュメント側は実設定に追随する必要があり、CI のテストマトリクス leg を追加・削除・改名した際は CLAUDE.md「CI matrix leg ↔ branch-protection required-check sync」ガードに従って branch protection を先に更新し、本一覧も同じ PR で揃えてください。実際に `Unit tests (20.x)` の記載が実設定から外れたまま残っていたことがあります。
 
@@ -68,6 +69,8 @@ gh api 'repos/:owner/:repo/branches/main/protection' --jq \
 #### 2. レビュアーコメントの確認
 
 CI green はレビュアーのコメント（`Copilot`, `sentry[bot]` などの AI レビュアー、および人間レビュアー）を覆いません。マージ前には次節「レビュアーコメントの扱い」の手順で **line comments と issue comments の両方**を列挙し、disposition を確定させてください。片方だけを列挙した結果で「指摘なし」と判定してはいけません。
+
+列挙の漏れは `npm run check:comment-disposition -- <N>`（`scripts/check-comment-disposition.mjs`）で機械的に消せます。両エンドポイントを paginate して `user.type` が `User` のコメントだけを全件出力し、1 件でもあれば exit 1 を返します。判定するのは「確認すべきコメントが存在するか」までで、各件を dispose 済みかどうかは本節の手順で人間が確定させてください。
 
 > **経緯**: 2026-08-04、PR #1746 で `pulls/<N>/comments` だけを列挙して 0 件だったため「disposition 対象なし」と判断してマージし、`issues/<N>/comments` にあった敵対的レビューの指摘 3 件と `blocked` ラベルを見落としました。結果として v1.72.0 で後方互換の回帰をリリースしています（[経緯コメント](https://github.com/s977043/river-review/pull/1746#issuecomment-5175260789)）。本項と次項 2.1 はこの再発防止です。
 

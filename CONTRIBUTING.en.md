@@ -76,6 +76,7 @@ chore: upgrade eslint to v9
   - Meta consistency
   - Action dist freshness
   - Integration (CLI)
+  - Blocked label guard
 - **When a PR may be closed without merge**: PRs with no author response for 30 days, changes out of scope, or work that duplicates an existing effort may be closed. We will always leave a comment explaining the reason before closing.
 
 ### ✅ Local checks (recommended)

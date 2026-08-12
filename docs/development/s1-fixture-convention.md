@@ -26,7 +26,7 @@ npm run eval:fixtures     # fixture の回帰実行
 
 ## 未整備 skill への横展開手順
 
-fixtures と eval のどちらも持たない skill へ、S1 を後追いで足すときの手順です。#1806 のパイロット 5 件（`api-design` / `failure-modes-observability` / `architecture-boundaries` / `api-versioning-compat` / `adr-decision-quality`）はこの順で作業しています。
+fixtures と eval のどちらも持たない skill へ、S1 を後追いで足すときの手順です。#1826 のパイロット 5 件（`api-design` / `failure-modes-observability` / `architecture-boundaries` / `api-versioning-compat` / `adr-decision-quality`）はこの順で作業しています。
 
 ### 1. 対象を数え、優先順を機械的に決める
 
