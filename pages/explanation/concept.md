@@ -35,6 +35,8 @@ AI によって「作る速度」は上がりました。一方で「何を信�
 
 中核思想である **Review Judgment as Code** は、レビュー観点・判断基準・責任範囲・Evidence・エスカレーション条件・品質評価方法を、再利用と評価と改善が可能な形で管理する考え方です。Engineering Judgment Infrastructure は将来の到達点を示す語であり、現在の River Review が提供している機能の説明としては使いません。
 
+**Judgment Placement** は、この 4 層に並ぶ 5 つめの看板ではありません。Core Mechanism をどこで実行するかを決める原則であり、Core Mechanism の層に属します。Review Judgment as Code は「何を判断するか」を資産化する考え方です。これに対し Judgment Placement は、個々の判断をどの評価層へ置くかを設計します。評価層は Deterministic / Heuristic / Agentic Review / Human Judgment の 4 つです（[Judgment Placement](./judgment-placement.md)）。
+
 ## 判断を定義し、実行し、記憶する
 
 River Review のコアモデルは 3 つの層で構成されます。
@@ -144,6 +146,7 @@ River Review は「レビューする」までを担当し、「止める / 通�
 - [River Review へようこそ](./intro.md) — はじめての方向けの短い導入
 - [River Review とは](./what-is-river-review.md) — 機能・利用方法・実行モデルを含むプロダクト概要
 - [Human Judgment Focus](./human-judgment-focus.md) — 人間監督・リスク階層・責任境界の詳細
+- [Judgment Placement](./judgment-placement.md) — レビュー判断をどの評価層で実行するかを決める原則
 - [レビュー対象と使いどころ](./review-scope.md) — 対象 Artifact と利用フェーズの整理
 - [設計哲学](./design-philosophy.md) — 設計原則とリスク階層型の人間監督
 - [AI レビュー標準ポリシー](../reference/review-policy.md) — レビュー観点と出力形式の SSoT

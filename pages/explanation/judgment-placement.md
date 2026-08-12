@@ -8,7 +8,7 @@ River Review は、レビューを PR 上の単一工程としてではなく、
 この設計原則を **Judgment Placement** と呼びます。
 
 > レビューの目的は、人間がすべてのコードを読むことではありません。  
-> 判断を、最も再現可能・安価・信頼できる層へ置き、人間には機械化できない責任ある判断を残すことです。
+> 判断を、最も再現可能・効率的・信頼できる層へ置き、人間には機械化できない責任ある判断を残すことです。
 
 Judgment Placement は、River Review の中核思想である [Review Judgment as Code](./concept.md) を、**どこで実行するか**という観点から補完します。
 
@@ -186,7 +186,9 @@ Judgment Placement の目的は Human Review をゼロにすることではあ�
 - 長期的なアーキテクチャ責任
 - 複数の妥当な選択肢から何を選ぶか
 
-リスク階層型の監督（崖 / 丘 / 原っぱ）については [Human Judgment Focus](./human-judgment-focus.md) を参照してください。
+Judgment Placement と、リスク階層型の監督（崖 / 丘 / 原っぱ）は直交する 2 軸です。前者は個々のレビュー判断を性質で分類し、どの評価層が実行するかを決めます。後者は変更そのもののリスクで分類し、人間監督の重さ（gateDecision）が決まります。2 軸が交わるのは Human Judgment と崖であり、Human Judgment へ配置した判断を含む変更は崖として扱い、人間承認を必須とします。逆に崖の変更でも、検出と判断材料の提示は Deterministic / Heuristic / Agentic Review が担います。
+
+リスク階層の詳細は [Human Judgment Focus](./human-judgment-focus.md) を参照してください。
 
 ## 判断基準
 

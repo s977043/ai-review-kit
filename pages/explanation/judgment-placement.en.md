@@ -186,7 +186,9 @@ It reallocates human attention away from repeatable mechanical checks and toward
 - long-term architecture responsibility
 - choosing between multiple valid alternatives
 
-See [Human Judgment Focus](./human-judgment-focus.en.md) for the cliff / hill / field supervision model.
+Judgment Placement and risk-tiered supervision (cliff / hill / field) are two orthogonal axes. The former classifies each individual review judgment by its nature and decides which evaluation layer executes it. The latter classifies the change itself by risk and decides how heavy human supervision is (the gateDecision). The two axes meet at Human Judgment and the cliff: a change that carries a judgment placed in Human Judgment is treated as a cliff and requires human approval. Conversely, even on a cliff change, detection and evidence still come from the Deterministic, Heuristic, and Agentic Review layers.
+
+See [Human Judgment Focus](./human-judgment-focus.en.md) for the cliff / hill / field supervision model in detail.
 
 ## Decision checklist for new review concerns
 
