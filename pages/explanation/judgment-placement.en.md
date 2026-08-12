@@ -51,12 +51,10 @@ Does it require responsibility or value judgment?
 Human Judgment
 ```
 
-| Layer | Primary role | Examples |
-| --- | --- | --- |
-| **Deterministic** | Facts that can be mechanically proven or checked | types / tests / schemas / dependency boundaries / architecture tests |
-| **Heuristic** | High-signal detection through explicit rules | temporary code / suspicious patterns / known smells |
-| **Agentic Review** | Decisions requiring semantic understanding across artifacts | plan-diff conformance, design intent, responsibility, semantic conflict |
-| **Human Judgment** | Decisions involving responsibility, values, or irreversibility | security boundaries, personal data, billing, irreversible migrations, business validity |
+- **Deterministic** — facts that can be mechanically proven or checked. Examples: types / tests / schemas / dependency boundaries / architecture tests
+- **Heuristic** — high-signal detection through explicit rules. Examples: temporary code / suspicious patterns / known smells
+- **Agentic Review** — decisions requiring semantic understanding across artifacts. Examples: plan-diff conformance, design intent, responsibility, semantic conflict
+- **Human Judgment** — decisions involving responsibility, values, or irreversibility. Examples: security boundaries, personal data, billing, irreversible migrations, business validity
 
 ### Principle: place correctly, not merely cheaply
 
