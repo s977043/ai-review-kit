@@ -18,6 +18,30 @@ At the same time, having a human synchronize the full context on every PR does n
 
 River Review lowers this burden while letting humans concentrate on high-risk judgment.
 
+## Reallocate human attention
+
+River Review does not try to reduce Human Judgment itself. It tries to reduce the amount of scarce human attention spent on decisions that can be handled reproducibly elsewhere.
+
+Judgments are placed according to the [Judgment Placement](./judgment-placement.en.md) principle.
+
+```text
+Mechanically provable
+  -> Deterministic
+
+Reliably detectable by explicit rules
+  -> Heuristic
+
+Requires semantic / contextual judgment
+  -> Agentic Review
+
+Requires responsibility / value / irreversibility judgment
+  -> Human Judgment
+```
+
+When Human or Agentic Review repeatedly catches the same issue, River Review should ask whether that judgment can be promoted into a test, checker, rule, or heuristic. Conversely, critical security or irreversible decisions are not moved to AI merely because some part of the workflow can be automated.
+
+The objective is not fewer human review minutes as a KPI. It is a **higher density of consequential human judgment**.
+
 ## What River Review reduces / does not replace
 
 The goal of River Review is not to **replace** human judgment, but to **focus** it on high-risk areas.
@@ -65,6 +89,7 @@ Avoid merging based solely on AI review results in these risk areas. River Revie
 ## Related pages
 
 - [Concept](./concept.en.md) — the overall picture: problems, core model, responsibility boundary
+- [Judgment Placement](./judgment-placement.en.md) — how judgments are placed across Deterministic / Heuristic / Agentic / Human layers
 - [What is River Review](./what-is-river-review.en.md) — features, usage, and the execution model
 - [Design Philosophy](./design-philosophy.en.md) — the design thinking, including risk-tiered human supervision
 - [Review scope and use cases](./review-scope.en.md) — the breakdown of review targets
