@@ -28,80 +28,80 @@ guards:
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-08'
-    reviewAfter: '2026-07-07'
-    notes: 初期 5 ガードの 1 件。ファイルを読んだかどうかは実行時の振る舞いであり、成果物からは判定できない。
+    reviewAfter: '2026-11-10'
+    notes: 初期 5 ガードの 1 件。ファイルを読んだかどうかは実行時の振る舞いであり、成果物からは判定できない。 2026-08-12 の退役判定は (c) 側の保留であり、reviewAfter を 90 日延長した。mechanized が none のため散文削除 (a) は選べず、発火実績を測る基盤が無いため (b) も選べない。引用前に読んだかどうかは成果物に痕跡が残らず、決定論スライスが見つかっていない。
 
   - id: run-before-claiming
     title: Run before claiming
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-08'
-    reviewAfter: '2026-07-07'
-    notes: 初期 5 ガードの 1 件。CI 自体が主張を否定する経路はあるが、報告の真偽を直接検証する仕組みは無い。
+    reviewAfter: '2026-11-10'
+    notes: 初期 5 ガードの 1 件。CI 自体が主張を否定する経路はあるが、報告の真偽を直接検証する仕組みは無い。 2026-08-12 の退役判定は (c) 機械化の起票であり、reviewAfter を 90 日延長した。addedAt 以降の再発として、監査の看板数値 3 件が再現不能だった件（retrospectives/2026-07-24-08-02.md の 1 節）と、件数の実測を 3 者とも grep -r の worktree 重複で誤った件（同 2026-08-04-05.md の 5 節）がある。決定論スライスは scripts/check-doc-enumerations.mjs の spec 化の拡大。Issue 番号は起票後に追記する。
 
   - id: no-silent-skips
     title: No silent skips
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-08'
-    reviewAfter: '2026-07-07'
-    notes: 初期 5 ガードの 1 件。報告からの省略は成果物に痕跡が残らない。
+    reviewAfter: '2026-11-10'
+    notes: 初期 5 ガードの 1 件。報告からの省略は成果物に痕跡が残らない。 2026-08-12 の退役判定は保留であり、reviewAfter を 90 日延長した。retrospectives/2026-05-25-28.md の addendum が「completed 報告 = 配線済みではない」事例を記録しているが、これは producer 側テストの欠落であり、本ガードが対象とする報告からの省略とは別クラスと判断した。報告からの省略は成果物に痕跡が残らない。
 
   - id: search-before-inventing
     title: Search before inventing
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-08'
-    reviewAfter: '2026-07-07'
-    notes: 初期 5 ガードの 1 件。「Import the SSoT」が同じ失敗の一部を具体化しているため、統合候補。
+    reviewAfter: '2026-11-10'
+    notes: 初期 5 ガードの 1 件。「Import the SSoT」が同じ失敗の一部を具体化しているため、統合候補。 2026-08-12 の退役判定は保留であり、reviewAfter を 90 日延長した。addedAt 以降の再発（#1650・#1656 の SSoT 再実装 2 波）は「Import the SSoT, never re-derive it」が具体化して受け持っており、そちらは partial かつ突合テストを持つ。両者の統合可否を次回の判定で扱う。mechanized が none のため今回の削除は不可。
 
   - id: diff-only-what-exists
     title: Diff only what exists
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-08'
-    reviewAfter: '2026-07-07'
-    notes: 初期 5 ガードの 1 件。.claude/rules/review-core.md が同趣旨をプロンプト規則として持つが、機械検証ではない。
+    reviewAfter: '2026-11-10'
+    notes: 初期 5 ガードの 1 件。.claude/rules/review-core.md が同趣旨をプロンプト規則として持つが、機械検証ではない。 2026-08-12 の退役判定は保留であり、reviewAfter を 90 日延長した。addedAt 以降の再発を retrospectives 配下から特定できなかった。.claude/rules/review-core.md が同趣旨をプロンプト規則として持つが機械検証ではなく、mechanized は none のままとする。
 
   - id: research-before-proposing
     title: Research before proposing
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-11'
-    reviewAfter: '2026-07-10'
-    notes: /propose-issue が手順を提供するのみ。Issue 本文の裏取り有無を機械判定する仕組みは無い。
+    reviewAfter: '2026-11-10'
+    notes: /propose-issue が手順を提供するのみ。Issue 本文の裏取り有無を機械判定する仕組みは無い。 2026-08-12 の退役判定は保留であり、reviewAfter を 90 日延長した。addedAt 以降の再発を retrospectives 配下から特定できなかった。Issue 本文の裏取りは CI の観測外であり、決定論スライスが見つかっていない。
 
   - id: propagate-signatures
     title: Propagate signatures
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-11'
-    reviewAfter: '2026-07-10'
-    notes: docs/development/pipeline-params-checklist.md は散文チェックリスト。call site の網羅を検証する script やテストは無い。
+    reviewAfter: '2026-11-10'
+    notes: docs/development/pipeline-params-checklist.md は散文チェックリスト。call site の網羅を検証する script やテストは無い。 2026-08-12 の退役判定は (c) 機械化の起票であり、reviewAfter を 90 日延長した。addedAt 以降の再発として、riskAssessment が buildExecutionPlan で計算されながら返却されず、consumer 側が undefined を受け取っていた件がある（retrospectives/2026-05-25-28.md の addendum、#933）。決定論スライスは producer と consumer の両側を assert するテスト形（review-runner-snapshot-field と同型）の常設化。Issue 番号は起票後に追記する。
 
   - id: plan-merge-order
     title: Plan merge order
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-11'
-    reviewAfter: '2026-07-10'
-    notes: /plan-merge-order は手順コマンド。実行したかどうかは検証されない。
+    reviewAfter: '2026-11-10'
+    notes: /plan-merge-order は手順コマンド。実行したかどうかは検証されない。 2026-08-12 の退役判定は保留であり、reviewAfter を 90 日延長した。addedAt 以降の再発を retrospectives 配下から特定できなかった。マージ順序の事前計画を実行したかどうかはリポジトリ状態に残らない。
 
   - id: commit-before-branch-switches
     title: Commit before branch switches
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-11'
-    reviewAfter: '2026-07-10'
-    notes: .claude/hooks/no-force-push.sh は force push を止めるが、switch 前の WIP commit は対象外。
+    reviewAfter: '2026-11-10'
+    notes: .claude/hooks/no-force-push.sh は force push を止めるが、switch 前の WIP commit は対象外。 2026-08-12 の退役判定は保留であり、reviewAfter を 90 日延長した。addedAt 以降に観測された switch 系の事故（worktree が握るブランチへの switch 失敗）は「Worktree-held branches refuse switch」が受け持っている。本ガード自体の再発は特定できなかった。
 
   - id: verify-git-output-before-chaining
     title: Verify git output before chaining
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-11'
-    reviewAfter: '2026-07-10'
-    notes: 出力を読んだかどうかは判定できない。
+    reviewAfter: '2026-11-10'
+    notes: 出力を読んだかどうかは判定できない。 2026-08-12 の退役判定は保留であり、reviewAfter を 90 日延長した。addedAt 以降の観測は、本ガードを拡張した「Worktree-held branches refuse switch」として既に独立している。出力を読んだかどうかは判定できず、決定論スライスが見つかっていない。
 
   - id: verify-gh-active-account
     title: Verify gh active account before write ops
@@ -120,24 +120,24 @@ guards:
       - .github/workflows/blocked-label-guard.yml
       - .github/workflows/test.yml
     addedAt: '2026-04-16'
-    reviewAfter: '2026-07-15'
-    notes: 阻止ラベルは必須チェック `Blocked label guard`、dist 鮮度は必須チェック `Action dist freshness` が守る。レビューコメントの disposition と /preflight は散文のまま。
+    reviewAfter: '2026-11-10'
+    notes: 阻止ラベルは必須チェック `Blocked label guard`、dist 鮮度は必須チェック `Action dist freshness` が守る。レビューコメントの disposition と /preflight は散文のまま。 2026-08-12 の退役判定は (c) 機械化の起票であり、reviewAfter を 90 日延長した。addedAt 以降の再発として、blocked ラベルの見落としが 2 件ある（#1746・#1761。retrospectives/2026-08-04-05.md の 1 節）。この面は#1770 が入れた必須チェック Blocked label guard で機械化済みだが、レビューコメントの disposition と /preflight は散文のまま残る。決定論スライスは未対応コメントの残存を検出する gate。Issue 番号は起票後に追記する。
 
   - id: strict-mode-batch-merge
     title: Strict-mode batch merge
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-27'
-    reviewAfter: '2026-07-26'
-    notes: マージ順序と update-branch の運用手順。CI からは観測できない。
+    reviewAfter: '2026-11-10'
+    notes: マージ順序と update-branch の運用手順。CI からは観測できない。 2026-08-12 の退役判定は保留であり、reviewAfter を 90 日延長した。addedAt 以降の再発を retrospectives 配下から特定できなかった。マージ順序と update-branch の運用手順は CI から観測できない。
 
   - id: dep-bump-peerdeps-check
     title: Dep bump peerDeps check
     mechanized: none
     verifiedBy: []
     addedAt: '2026-04-27'
-    reviewAfter: '2026-07-26'
-    notes: CI の npm ci は結果として ERESOLVE で落ちるが、それはガードの遵守ではなく違反の事後検出であり、判定は本ガードの対象外。
+    reviewAfter: '2026-11-10'
+    notes: CI の npm ci は結果として ERESOLVE で落ちるが、それはガードの遵守ではなく違反の事後検出であり、判定は本ガードの対象外。 2026-08-12 の退役判定は保留であり、reviewAfter を 90 日延長した。CI の npm ci による ERESOLVE は違反の事後検出であり、遵守の検証にはならない。着手前に peer dep を検査する決定論スライスが見つかっていない。
 
   - id: doc-edit-textlint
     title: Doc-edit textlint
