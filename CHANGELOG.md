@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.75.0](https://github.com/s977043/river-review/compare/v1.74.0...v1.75.0) (2026-08-12)
+
+
+### Features
+
+* **meta:** pipeline call site チェックリストを機械照合する ([#1831](https://github.com/s977043/river-review/issues/1831)) ([7584633](https://github.com/s977043/river-review/commit/7584633b6f527eb23c2e6cc2c6a1b2aba75dfa51)), closes [#1827](https://github.com/s977043/river-review/issues/1827)
+* **scripts:** clean tree で件数を計測する count-in-clean-tree.sh を追加 ([#1828](https://github.com/s977043/river-review/issues/1828)) ([12f97ea](https://github.com/s977043/river-review/commit/12f97eaa7a4a98450d1efacbd1783d145ee8c2c9))
+
 ## [1.74.0](https://github.com/s977043/river-review/compare/v1.73.2...v1.74.0) (2026-08-12)
 
 
