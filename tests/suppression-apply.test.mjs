@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { applySuppressions } from '../src/lib/suppression-apply.mjs';
+import {
+  findActiveSuppressions,
+  formatUnparseableExpiresAtWarning,
+} from '../src/lib/suppression.mjs';
 
 const FP_A = 'a'.repeat(16);
 const FP_B = 'b'.repeat(16);
@@ -230,6 +234,117 @@ test('applySuppressions handles a mix of matched, P1-guarded, and unmatched find
   const skipped = r.applied.find((a) => a.action === 'skipped');
   assert.equal(skipped.fingerprint, FP_B);
   assert.equal(skipped.reason, 'high-severity-requires-accepted-risk');
+});
+
+// --- Expiry (#1802) ---------------------------------------------------------
+//
+// Regression table pinning the three expiresAt forms the production review
+// path must distinguish, plus the unparseable form (#1746/#1780 fail-safe).
+// `now` is injected so the rows stay deterministic.
+
+const EXPIRY_NOW = new Date('2026-06-01T00:00:00Z');
+
+const EXPIRY_CASES = [
+  { name: 'expired expiresAt', expiresAt: '2026-01-01T00:00:00Z', suppresses: false },
+  { name: 'future expiresAt', expiresAt: '2027-01-01T00:00:00Z', suppresses: true },
+  { name: 'no expiresAt', expiresAt: undefined, suppresses: true },
+];
+
+for (const row of EXPIRY_CASES) {
+  test(`applySuppressions expiry table: ${row.name} → ${row.suppresses ? 'suppresses' : 'does not suppress'}`, () => {
+    const findings = [findingFor(FP_A, 'minor')];
+    const contextOverride = { feedbackType: 'false_positive' };
+    if (row.expiresAt !== undefined) contextOverride.expiresAt = row.expiresAt;
+    const memoryContext = { suppressions: [suppressionFor(FP_A, contextOverride)] };
+    const r = applySuppressions(findings, memoryContext, { now: EXPIRY_NOW, warn: () => {} });
+    if (row.suppresses) {
+      assert.equal(r.suppressedFindings.length, 1);
+      assert.equal(r.keptFindings.length, 0);
+      assert.equal(r.applied[0].action, 'suppressed');
+    } else {
+      assert.equal(r.suppressedFindings.length, 0);
+      assert.equal(r.keptFindings.length, 1);
+      assert.equal(r.applied.length, 1);
+      assert.equal(r.applied[0].action, 'skipped');
+      assert.equal(r.applied[0].reason, 'suppression-expired');
+    }
+  });
+}
+
+test('applySuppressions treats an unparseable expiresAt as expired and warns once (#1801 parity)', () => {
+  // Two findings matching the same suppression: the warning must fire once
+  // per suppression, not once per finding, matching findActiveSuppressions.
+  const findings = [
+    findingFor(FP_A, 'minor'),
+    findingFor(FP_A, 'info', { id: 'f-second-' + FP_A }),
+  ];
+  const suppression = suppressionFor(FP_A, {
+    feedbackType: 'false_positive',
+    expiresAt: 'notadate',
+  });
+  const warnings = [];
+  const r = applySuppressions(
+    findings,
+    { suppressions: [suppression] },
+    { now: EXPIRY_NOW, warn: (m) => warnings.push(m) }
+  );
+  assert.equal(r.suppressedFindings.length, 0);
+  assert.equal(r.keptFindings.length, 2);
+  assert.deepEqual(
+    r.applied.map((a) => a.reason),
+    ['suppression-expired', 'suppression-expired']
+  );
+  assert.deepEqual(warnings, [
+    formatUnparseableExpiresAtWarning({ id: suppression.id, expiresAt: 'notadate' }),
+  ]);
+});
+
+test('applySuppressions expiry verdict matches findActiveSuppressions for the same suppressions (#1802)', () => {
+  // Cross-check against the EXISTING production implementation of the active
+  // decision, not a re-derivation: for each suppression, whether
+  // findActiveSuppressions returns it must equal whether applySuppressions
+  // lets it suppress a matching low-severity finding. A self-consistent test
+  // (comparing applySuppressions against isSuppressionExpired only) would
+  // pass even if the two paths diverged — this one cannot.
+  const fingerprints = ['1'.repeat(16), '2'.repeat(16), '3'.repeat(16), '4'.repeat(16)];
+  const variants = [
+    { expiresAt: '2026-01-01T00:00:00Z' }, // expired
+    { expiresAt: '2027-01-01T00:00:00Z' }, // in force
+    {}, // no deadline
+    { expiresAt: 'notadate' }, // unparseable → fail-safe expired
+  ];
+  const suppressions = variants.map((v, i) => {
+    const s = suppressionFor(fingerprints[i], {
+      feedbackType: 'false_positive',
+      ...v,
+    });
+    // matchesScopeFiles requires non-empty relatedFiles even for the file
+    // scope match to fire; align them with the filePaths passed below so the
+    // scope dimension (which applySuppressions replaces with fingerprint
+    // matching) is neutralized and only the expiry verdict can differ.
+    s.metadata.relatedFiles = ['src/x.ts'];
+    return s;
+  });
+  const index = { entries: suppressions };
+
+  const activeIds = new Set(
+    findActiveSuppressions(index, ['src/x.ts'], { warn: () => {} }).map((s) => s.id)
+  );
+
+  for (const s of suppressions) {
+    const r = applySuppressions(
+      [findingFor(s.context.fingerprint, 'minor')],
+      { suppressions },
+      { warn: () => {} }
+    );
+    const suppressedByApply = r.suppressedFindings.length === 1;
+    assert.equal(
+      suppressedByApply,
+      activeIds.has(s.id),
+      `verdict mismatch for ${s.id} (expiresAt=${JSON.stringify(s.context.expiresAt)}): ` +
+        `findActiveSuppressions=${activeIds.has(s.id)} applySuppressions=${suppressedByApply}`
+    );
+  }
 });
 
 test('applySuppressions does not mutate the input arrays', () => {

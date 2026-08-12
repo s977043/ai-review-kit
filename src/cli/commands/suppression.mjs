@@ -62,6 +62,11 @@ export async function runSuppressionCommand(parsed, targetPath) {
     indexPath,
     findingId: parsed.suppressionFindingId,
     fingerprint: parsed.suppressionFingerprint,
+    // #1797: opt-in; parseArgs defaults this to 'v1' and rejects any value
+    // outside the schema enum, so createSuppression never sees an unknown algo.
+    ...(parsed.suppressionFingerprintAlgo
+      ? { fingerprintAlgo: parsed.suppressionFingerprintAlgo }
+      : {}),
     feedbackType: parsed.suppressionFeedbackType,
     scope: parsed.suppressionScope,
     rationale: parsed.suppressionRationale,
@@ -72,6 +77,7 @@ export async function runSuppressionCommand(parsed, targetPath) {
   });
   console.log('Suppression created: ' + entry.id);
   console.log('  fingerprint: ' + entry.context.fingerprint);
+  console.log('  fingerprintAlgo: ' + entry.context.fingerprintAlgo);
   console.log('  feedbackType: ' + entry.context.feedbackType);
   console.log('  scope: ' + entry.context.scope);
   if (entry.context.severity) console.log('  severity: ' + entry.context.severity);

@@ -16,8 +16,10 @@ import {
 export function checkForResurfacingFindings({ memoryContext, changedFiles }) {
   if (!memoryContext?.suppressions?.length || !changedFiles?.length) return [];
 
-  // Note: memoryContext.suppressions are already filtered by loadReviewMemory
-  // but we do additional scope-based matching here
+  // Note: loadReviewMemory filters only by phase / relatedFiles — it applies
+  // no expiry or active filtering (#1802). The active + expiry gates for
+  // resurfacing live in shouldResurface below, and the scope-based matching
+  // is also done there.
   return memoryContext.suppressions
     .filter((s) => shouldResurface(s, changedFiles))
     .map((s) => ({

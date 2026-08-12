@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.74.0](https://github.com/s977043/river-review/compare/v1.73.2...v1.74.0) (2026-08-12)
+
+
+### Features
+
+* **guards:** ガード台帳と退役工程を導入し必須チェックで機械保証する ([#1821](https://github.com/s977043/river-review/issues/1821)) ([ea2842a](https://github.com/s977043/river-review/commit/ea2842abc7581597d195f273ee667c898faec58d))
+* **suppression:** 行番号込みの fingerprint v2 を併存追加する ([#1817](https://github.com/s977043/river-review/issues/1817)) ([24fa70e](https://github.com/s977043/river-review/commit/24fa70ee2ee319d553f04f980dde107f5a7a5d5d))
+
+
+### Bug Fixes
+
+* **ci:** nightly-eval の KPI 台帳を run 間で永続化して回帰検知を発火させる ([#1820](https://github.com/s977043/river-review/issues/1820)) ([8a4fc72](https://github.com/s977043/river-review/commit/8a4fc729054d103afeaaedcac13fdcfac01cbe5c))
+
+## [1.73.2](https://github.com/s977043/river-review/compare/v1.73.1...v1.73.2) (2026-08-12)
+
+
+### Bug Fixes
+
+* **review:** looksLikeTestFile が e2e/ cypress/ 慣習のテストファイルを認識するようにする ([#1808](https://github.com/s977043/river-review/issues/1808)) ([4acee6d](https://github.com/s977043/river-review/commit/4acee6d2d53dccb33e122fb90ef65c901043e8f6)), closes [#1797](https://github.com/s977043/river-review/issues/1797)
+* **review:** 恒久宣言付きの一時対応コメントを temporary-without-exit の許容へ加える ([#1811](https://github.com/s977043/river-review/issues/1811)) ([37e368e](https://github.com/s977043/river-review/commit/37e368e9130cbbe970d89c0b1880e5dc053fc94f))
+* **suppression:** 本番レビュー経路で期限切れ suppression を無効化する ([#1810](https://github.com/s977043/river-review/issues/1810)) ([9378061](https://github.com/s977043/river-review/commit/937806160c60d1951cd07fabfb57fe2af545de23)), closes [#1802](https://github.com/s977043/river-review/issues/1802)
+
 ## [1.73.1](https://github.com/s977043/river-review/compare/v1.73.0...v1.73.1) (2026-08-12)
 
 

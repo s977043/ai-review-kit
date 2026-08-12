@@ -18,6 +18,15 @@ concurrency:
 permissions:
   contents: read
   issues: write
+  # Required to list/download the previous run's ledger artifact via `gh api`.
+  actions: read
+
+env:
+  # Stable artifact name that carries artifacts/evals/results.jsonl across runs.
+  # `artifacts/*` is gitignored, so the ledger has no other persistence path.
+  LEDGER_ARTIFACT: nightly-eval-ledger
+  # Keep only the most recent N entries so the ledger does not grow unbounded.
+  LEDGER_MAX_ENTRIES: '90'
 
 jobs:
   eval:
@@ -29,6 +38,61 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - uses: ./.github/actions/setup-node-deps
+
+      # The regression check needs at least 2 ledger entries. Without this step
+      # every run starts from an empty ledger and compare-eval-ledger.mjs exits
+      # early with "Insufficient ledger entries (only 1 entry)".
+      # actions/download-artifact can only read artifacts of the SAME run, so the
+      # previous run's artifact is fetched through the REST API with `gh` (no new
+      # third-party action, keeping the pinned-dependencies posture intact).
+      - name: Restore eval ledger from previous run
+        id: restore-ledger
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/evals
+          artifact_id=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${LEDGER_ARTIFACT}&per_page=10" \
+            --jq '[.artifacts[] | select(.expired == false)] | .[0].id // empty' || true)
+          if [ -z "$artifact_id" ]; then
+            echo "No previous '${LEDGER_ARTIFACT}' artifact found (first run, or all copies expired)."
+            echo "Ledger restored: 0 entries."
+            echo "restored=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > ledger.zip; then
+            echo "::warning::Failed to download ledger artifact ${artifact_id}; continuing with an empty ledger."
+            echo "Ledger restored: 0 entries."
+            echo "restored=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! unzip -o -q ledger.zip -d ledger-restore; then
+            echo "::warning::Failed to unzip ledger artifact ${artifact_id}; continuing with an empty ledger."
+            rm -rf ledger.zip ledger-restore
+            echo "Ledger restored: 0 entries."
+            echo "restored=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # upload-artifact strips the least common ancestor of the uploaded
+          # paths, so results.jsonl may sit at the zip root or under
+          # artifacts/evals/. Locate it instead of assuming a layout.
+          # `-print -quit` rather than `| head -1`: under `pipefail` an early pipe
+          # close can make find exit non-zero and abort the step.
+          src=$(find ledger-restore -type f -name results.jsonl -print -quit)
+          if [ -z "$src" ]; then
+            echo "::warning::Artifact ${artifact_id} contains no results.jsonl; continuing with an empty ledger."
+            rm -rf ledger.zip ledger-restore
+            echo "Ledger restored: 0 entries."
+            echo "restored=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          downloaded=$(grep -c '[^[:space:]]' "$src" || true)
+          tail -n "${LEDGER_MAX_ENTRIES}" "$src" > artifacts/evals/results.jsonl
+          rm -rf ledger.zip ledger-restore
+          kept=$(grep -c '[^[:space:]]' artifacts/evals/results.jsonl || true)
+          echo "Ledger restored: ${kept} entries (downloaded ${downloaded}, cap ${LEDGER_MAX_ENTRIES}) from artifact ${artifact_id}."
+          echo "restored=${kept}" >> "$GITHUB_OUTPUT"
 
       - name: Run unified evaluation
         env:
@@ -64,6 +128,12 @@ jobs:
           rc=$?
           set -e
           cat compare-output.txt
+          echo "Ledger entries restored before this run: ${{ steps.restore-ledger.outputs.restored }}"
+          if grep -q '^Insufficient ledger entries' compare-output.txt; then
+            echo "::warning::Ledger comparison did NOT run (insufficient entries). Ledger persistence across runs is not working."
+          else
+            echo "Ledger comparison ran against the previous entry."
+          fi
           if [ "$rc" -eq 0 ]; then
             echo "No KPI regression detected."
             exit 0
@@ -100,3 +170,15 @@ jobs:
             eval-output.json
             artifacts/evals/results.jsonl
           retention-days: 90
+
+      # Stable-named copy consumed by the "Restore eval ledger" step of the NEXT
+      # run. Uploaded separately from the per-run artifact above so the lookup by
+      # name stays unambiguous.
+      - name: Upload ledger for the next run
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ${{ env.LEDGER_ARTIFACT }}
+          path: artifacts/evals/results.jsonl
+          retention-days: 90
+          if-no-files-found: warn

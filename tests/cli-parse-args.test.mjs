@@ -5,6 +5,7 @@
 // 各テストは < 50ms で完走する想定。
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -863,4 +864,66 @@ test('parseArgs --phase rejects a value normalizePhase would silently default', 
   const parsed = parseArgs(['run', '.', '--phase', 'BOGUS']);
   assert.equal(parsed.usageError, true);
   assert.equal(normalizePhase('BOGUS'), 'midstream');
+});
+
+// ---------------------------------------------------------------------------
+// #1797: KNOWN_OPTION_TOKENS の網羅性
+// ---------------------------------------------------------------------------
+// `KNOWN_OPTION_TOKENS`（src/cli.mjs）は `takeFreeTextValue` が「次のトークンは
+// 散文か、それともフラグか」を判定する唯一の材料であり、#1717 が塞いだ契約
+// （`--evidence --pr 123` が evidence に "--pr" を書き込む）はこの Set の網羅性に
+// 依存している。登録漏れたオプションは、直前の自由記述オプションの値として
+// 黙って飲まれ、exit 0 のままエントリが書き込まれる。
+//
+// この Set にはそれを守るテストが 1 件も無く、実際 #1797 で追加した
+// `--fingerprint-algo` が初版で登録漏れしていた（`--rationale --fingerprint-algo`
+// が rationale に "--fingerprint-algo" を書き込む状態）。ここでは個別の
+// トークンではなく **集合一致** を pin する。parseArgs が `arg === '--xxx'` で
+// 比較しているトークンの集合と、Set の中身が完全に一致すること。
+//
+// 自己整合を避けるためソースを直接読む（Set は module-private で、export すると
+// 本番の API 面が増える）。抽出は 2 つの正規表現だけで行い、テスト側に
+// トークンの写しを持たない — 写しを持つと、次に増えるオプションで同じ
+// 「更新漏れ」が起きるだけになる。
+test('KNOWN_OPTION_TOKENS covers exactly the tokens parseArgs compares (#1797)', () => {
+  const source = readFileSync(new URL('../src/cli.mjs', import.meta.url), 'utf8');
+  const setStart = source.indexOf('const KNOWN_OPTION_TOKENS');
+  const setEnd = source.indexOf('function takeFreeTextValue');
+  assert.ok(setStart > 0 && setEnd > setStart, 'KNOWN_OPTION_TOKENS の定義が見つからない');
+  const declared = new Set(
+    [...source.slice(setStart, setEnd).matchAll(/'(--[a-z0-9-]+)'/g)].map((m) => m[1])
+  );
+  const compared = new Set([...source.matchAll(/arg === '(--[a-z0-9-]+)'/g)].map((m) => m[1]));
+
+  assert.ok(compared.size > 0, 'parseArgs のオプション比較を 1 件も抽出できていない');
+  const missing = [...compared].filter((t) => !declared.has(t)).sort();
+  const extra = [...declared].filter((t) => !compared.has(t)).sort();
+  assert.deepEqual(
+    missing,
+    [],
+    `parseArgs が解釈するのに KNOWN_OPTION_TOKENS に無いオプション: ${missing.join(' ')}`
+  );
+  assert.deepEqual(
+    extra,
+    [],
+    `KNOWN_OPTION_TOKENS にあるが parseArgs が解釈しないオプション: ${extra.join(' ')}`
+  );
+});
+
+// 集合一致だけでは「両方に足し忘れた」形は検出できないため、#1717 の失敗形
+// そのものも自由記述オプション × 新規オプションの組で pin する。
+test('free-text options never swallow --fingerprint-algo as their value (#1717 契約)', () => {
+  const parsed = parseArgs([
+    'suppression',
+    'add',
+    '--fingerprint',
+    'a'.repeat(16),
+    '--feedback',
+    'false_positive',
+    '--rationale',
+    '--fingerprint-algo',
+    'v2',
+  ]);
+  assert.equal(parsed.usageError, true, '--rationale が値欠落として落ちていない');
+  assert.notEqual(parsed.suppressionRationale, '--fingerprint-algo');
 });

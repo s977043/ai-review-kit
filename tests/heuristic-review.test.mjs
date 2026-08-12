@@ -1379,6 +1379,34 @@ test('temporary-without-exit canary: broader conditional and reference forms cou
   assert.deepEqual(temporaryComments(['// 暫定: 新スキーマ移行が終わった後に削除する']), []);
 });
 
+test('temporary-without-exit canary: a permanent declaration counts as an allowance (#1797)', () => {
+  // 恒久であることの宣言（keep forever / by design / permanent / 恒久系）は
+  // 「撤去しない」という意思表示であり、撤去条件を書き足す提案が噛み合わない。
+  assert.deepEqual(temporaryComments(['// HACK: required by the DOM spec, keep forever']), []);
+  assert.deepEqual(temporaryComments(['// HACK: keep this forever, the DOM spec requires it']), []);
+  assert.deepEqual(temporaryComments(['// HACK: this ordering is by design, do not reorder']), []);
+  assert.deepEqual(temporaryComments(['// WORKAROUND: permanent, upstream will not fix']), []);
+  assert.deepEqual(temporaryComments(['// HACK: permanently required for IME composition']), []);
+  assert.deepEqual(
+    temporaryComments(['// HACK: DOM 仕様上の制約に対する恒久対応として維持する']),
+    []
+  );
+  assert.deepEqual(temporaryComments(['// HACK: 恒久的にこの分岐を残す']), []);
+});
+
+test('temporary-without-exit: assignee-style TODO(name) still fires (#1797)', () => {
+  // 担当者名は撤去条件でも恒久宣言でもない（メンテナ決定）。TODO(owner) 記法を除外しない。
+  const comments = temporaryComments(['// TODO(alice): rename this']);
+  assert.equal(comments.length, 1);
+  assert.equal(comments[0].kind, 'temporary-without-exit');
+});
+
+test('temporary-without-exit: an incidental "by design" word sequence is not an allowance', () => {
+  // 「by design review」のような名詞複合の偶然の並びは恒久宣言ではない。
+  assert.equal(temporaryComments(['// TODO: get sign-off by design review']).length, 1);
+  assert.equal(temporaryComments(['// TODO: flagged by design team, fix the padding']).length, 1);
+});
+
 test('temporary-without-exit canary: pseudo-code inside a template literal is not a comment', () => {
   assert.deepEqual(temporaryComments(['const stub = `', '  // TODO: implement', '`;']), []);
 });

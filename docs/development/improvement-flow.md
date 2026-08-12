@@ -51,6 +51,8 @@ River Review の運用で同じミスを繰り返し、そのたびに「次回�
 
 まず「mechanical に検証できるか」を確認する。決定論で検証できるなら、手順ではなく検証を書く（script + 必須 CI チェック）。散文のチェックリストは守られない前提で設計する。機械検証されている参照はほとんど壊れないが、CI 非対象の人手の列挙は実測でずれていた（実測値・分母・測定コマンドは [doc-enumeration-checks.md](./doc-enumeration-checks.md) が SSoT。ここに数値を複製しない）。検証へ落とせない場合だけ「mechanical に実行できるか」で分類する。実行手順なら command、判断を要する行動原則なら guard、call site リストなら docs。一部だけ決定論で検証できる場合は、検証できる部分を script + CI に切り出したうえで、残余を guard / command に落とす（どちらか一方に寄せない）。
 
+CLAUDE.md の AI Misoperation Guard を新設する場合は、同じ PR で [`guard-ledger.yaml`](./guard-ledger.yaml) にもエントリを足します。台帳が SSoT であり、`mechanized` / `verifiedBy` / `addedAt` / `reviewAfter` をここで宣言することが、後述の Step 9（退役判定）の入力になります。台帳と CLAUDE.md がずれた状態は必須チェック `Meta consistency` が落とします。
+
 #### gate を作る対策
 
 対策がマージやリリースを止める gate である場合、上の基準に加えて次の 2 点を適用する。
@@ -107,13 +109,49 @@ River Review の運用で同じミスを繰り返し、そのたびに「次回�
 
 セッション間で持続させたい学びは `feedback_*.md` として auto-memory に保存し、`MEMORY.md` インデックスを更新する。
 
+### Step 9: 退役判定
+
+Step 1〜8 はすべて追加の手順です。追加だけを繰り返した結果、CLAUDE.md は 2026-04-11 の 4,085 バイトから 2026-08-12 の 25,977 バイトへ 6.4 倍に増え、AI Misoperation Guards は 28 件になりました。同じ期間に明示的な退役は 1 回（「Merge-time checks」が旧 4 ガードを吸収した例）しかありません。追加と退役の非対称は、この Step が無かったことに起因します。
+
+退役の対象は [`guard-ledger.yaml`](./guard-ledger.yaml) が管理します。台帳が SSoT であり、CLAUDE.md は `scripts/check-doc-enumerations.mjs` の spec `claude-md-guard-ledger` で台帳と照合される従属側です。台帳側を正にしているのは、CLAUDE.md の編集が「Always ask」に分類されており、正を CLAUDE.md に置くと退役の運用のたびに承認待ちがブロッカーになるためです。
+
+#### 発動条件と判断者
+
+- **発動条件**: 台帳の `reviewAfter`（既定は `addedAt` + 90 日）が到来していること。日付の到来だけが条件であり、ミスの再発や体感は条件に含めない
+- **判断者**: リポジトリのメンテナ（`s977043`）。判断は PR として提出し、通常のレビュー経路に載せる
+- **棚卸しの起点**: セッション開始時の sanity check、またはリリース直後。`reviewAfter` が今日以前のエントリを次のコマンドで列挙する
+
+```bash
+node -e "const y=require('js-yaml'),f=require('node:fs');const t=new Date().toISOString().slice(0,10);
+for(const g of y.load(f.readFileSync('docs/development/guard-ledger.yaml','utf8')).guards)
+  if(g.reviewAfter<=t)console.log(g.reviewAfter,g.mechanized,g.id);"
+```
+
+#### 3 択の判断
+
+`reviewAfter` が到来したガードは、次の 3 つのいずれかへ必ず分類します。「今回は保留」は選択肢に含めません。保留する場合も `reviewAfter` を新しい日付へ更新し、その理由を `notes` に書きます。
+
+| 判断                   | 条件                                                                    | 実行内容                                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| (a) 散文を削除する     | `mechanized: full`（違反が決定論のチェックで必ず失敗になる）            | CLAUDE.md の当該 bullet を削除し、台帳のエントリは `mechanized: full` のまま残す。台帳が退役後の記録を担う |
+| (b) ガードごと削除する | `addedAt` 以降に発火実績が無い（該当のミスが再発していない）            | CLAUDE.md の bullet と台帳のエントリを同じ PR で削除する。照合 spec があるため片方だけ消すと CI が落ちる   |
+| (c) 機械化を起票する   | `mechanized` が `full` でなく、`addedAt` 以降に同種のミスが再発している | 機械化の Issue を `/propose-issue` で起票し、`reviewAfter` を延長したうえで `notes` に Issue 番号を書く    |
+
+(a) で散文だけを削除するのは、機械検証が代替になっているためです。読む側の負荷を減らしても、違反はチェックが止めます。(b) の「発火実績が無い」は、振り返り記録（`docs/development/retrospectives/`）と `git log` で確認します。判断できないときは (c) を選び、確認そのものをタスクとして残します。
+
+#### 退役 PR の作法
+
+- 台帳と CLAUDE.md は必ず同じ PR で更新する（別 PR に分けると、先にマージされたほうで必須チェック `Meta consistency` が落ちる）
+- CLAUDE.md の「Improvement Flow」節はガード名を列挙しているため、削除したガード名をこの列挙からも外す
+- 削除したガードの根拠（発火実績の有無、機械化の所在）を PR 本文に書く。台帳の `notes` には結論だけを残す
+
 ## Dogfooding
 
 このフロー自体を Improvement Flow に従って改善する。
 
 - フロー適用後、**このドキュメント**に改善点がないか振り返る
 - 新しい incident class が見つかったら、このドキュメントに追記する
-- 過剰形式化の兆候（lint されない項目が増える、守られない rule が増える）が見えたら簡素化する
+- 過剰形式化の簡素化は「兆候が見えたら」ではなく Step 9 の `reviewAfter` を発動条件とする（兆候ベースの記述は発動条件も担当も定まらず、実績として機能しなかった）
 
 ## アンチパターン
 
@@ -142,3 +180,5 @@ River Review の運用で同じミスを繰り返し、そのたびに「次回�
 - `AGENTS.md`—全 agent 共通ルール（Safety, Edit Scope）
 - `.claude/commands/`—カスタムコマンド
 - `docs/development/pipeline-params-checklist.md`—具体的な checklist 例
+- [`guard-ledger.yaml`](./guard-ledger.yaml)—AI Misoperation Guards の台帳（Step 9 の SSoT）
+- [`doc-enumeration-checks.md`](./doc-enumeration-checks.md)—台帳と CLAUDE.md を照合する spec の登録先

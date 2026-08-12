@@ -45,7 +45,7 @@
     - `duplicate`: 別エントリの fingerprint への参照。`duplicateOfFingerprint` フィールドで参照先を示せる（schema 上は任意だが運用上は記録推奨）。`major` / `critical` は guard でブロックされる。
   - CLI: `river suppression add` で対話的に登録できる。
     - 必須フラグ: `--fingerprint <fp>` / `--feedback <type>` / `--rationale <text>`
-    - 任意フラグ: `--scope <pattern>` / `--severity <level>` / `--files <glob>` / `--expires <date>` / `--pr <num>`
+    - 任意フラグ: `--scope <pattern>` / `--severity <level>` / `--files <glob>` / `--expires <date>` / `--pr <num>` / `--fingerprint-algo <v1|v2>`
 - `context`（[#689](https://github.com/s977043/river-review/issues/689)）
   - `reviewMode`: `tiny` / `medium` / `large`。budget を省略すると `src/lib/context-presets.mjs` のプリセットを適用する。`budget` を明示するとプリセットより優先される。
   - `budget.maxTokens`: `256`〜`64000`。
@@ -151,6 +151,8 @@ Suppression entry added.
   scope       : src/auth/**
   severity    : major
 ```
+
+`--fingerprint-algo` は指摘の照合方式を選ぶオプションです。既定の `v1` は行番号を含まないため、同じファイル内で同種の指摘をまとめて抑制します。`v2` を指定すると行番号込みの照合になり、その行の指摘だけが抑制対象です。ただし行がズレた時点で v2 の抑制は外れます。行ズレに強い抑制が必要な場合は v1 のまま使ってください。
 
 ### バリデーションエラーの例
 

@@ -284,6 +284,32 @@ export function formatUnparseableExpiresAtWarning({ id, expiresAt }) {
 }
 
 /**
+ * The operator-facing sentence for one suppression whose
+ * `context.fingerprintAlgo` is not a value this version understands (#1797).
+ *
+ * Same shape and same reason as `formatUnparseableExpiresAtWarning`: the
+ * fail-safe direction (ignore the entry rather than gate findings under the
+ * wrong algorithm) is kept, but the stop is made observable. An entry written
+ * by a newer CLI, or hand-edited to a typo, otherwise just stops suppressing
+ * with no error and no visible change in `.river/memory/index.json` — the
+ * exact silence #1780 / #1801 removed for unparseable deadlines.
+ *
+ * Like that function, the message carries the entry id and the offending value
+ * only; the rationale, related files and fingerprint stay out of the warning
+ * stream.
+ *
+ * @param {{ id: string, fingerprintAlgo: unknown }} entry
+ * @returns {string}
+ */
+export function formatUnknownFingerprintAlgoWarning({ id, fingerprintAlgo }) {
+  return (
+    `Warning: suppression ${id} declares an unsupported context.fingerprintAlgo ` +
+    `(${JSON.stringify(fingerprintAlgo)}); it is ignored and no longer suppresses findings. ` +
+    'Repair the value to "v1" (line-independent) or "v2" (line-anchored).'
+  );
+}
+
+/**
  * Find active suppressions that overlap with the given file paths.
  * Filters out expired and revoked suppressions.
  *
@@ -296,12 +322,11 @@ export function formatUnparseableExpiresAtWarning({ id, expiresAt }) {
  * Scope note: this function is NOT on the review path. Its only caller in the
  * repository is `regression-eval.mjs:110`; `resurface.mjs` imports the name but
  * never calls it. `runLocalReview` gates findings through `loadReviewMemory`
- * (`local-runner.mjs:469`) and `applySuppressions` (`local-runner.mjs:516`),
- * neither of which consults `expiresAt` at all. So this warning reaches
- * regression-eval and, through `findUnparseableSuppressionExpiries`,
- * `scripts/suppression-analytics.mjs` — it does NOT make the review path
- * report anything. Wiring expiry (and this warning) into the review path is
- * tracked separately in #1802.
+ * and `applySuppressions` (`suppression-apply.mjs`), which since #1802 applies
+ * the same `isSuppressionExpired` rule and mirrors this warning through its
+ * own `warn` sink. This warning here still reaches regression-eval and,
+ * through `findUnparseableSuppressionExpiries`,
+ * `scripts/suppression-analytics.mjs` only.
  *
  * @param {{ entries: object[] }} index - Loaded memory index
  * @param {string[]} filePaths

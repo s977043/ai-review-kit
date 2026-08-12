@@ -771,6 +771,37 @@ export function printExplain(result, { log = console.error } = {}) {
   }
 }
 
+/**
+ * The per-finding fingerprints a caller needs in order to write a suppression
+ * (#1797). Both algorithms are printed because `river suppression add` takes
+ * one of them depending on `--fingerprint-algo`:
+ *
+ *   - `v1` (default): `finding.fingerprint` — no line, so the entry suppresses
+ *     every same-kind finding in the same file, and survives line drift.
+ *   - `v2`: `finding.fingerprintV2` — line-anchored, so only this occurrence is
+ *     suppressed, and the entry stops matching once the line shifts.
+ *
+ * Without this block the v2 value had no way of reaching the operator at all:
+ * `--fingerprint-algo v2` could only be fed a v1 hex, which produces an entry
+ * that matches nothing. `pages/guides/repo-wide-review.md` has stated that
+ * fingerprints are read off `--debug` since #687; until now they were not.
+ *
+ * Findings from artifacts produced before #1797 have no `fingerprintV2`; the
+ * column reads `-` rather than being silently omitted.
+ */
+function printFindingFingerprints(result, log) {
+  const findings = Array.isArray(result.findings) ? result.findings : [];
+  const withFingerprints = findings.filter((f) => f?.fingerprint);
+  if (withFingerprints.length === 0) return;
+  log('\nFinding fingerprints (for `river suppression add --fingerprint`):');
+  for (const f of withFingerprints) {
+    const line = f.lineStart ?? f.line;
+    const where = `${f.file ?? '<unknown>'}${Number.isInteger(line) && line >= 1 ? `:${line}` : ''}`;
+    log(`- v1 ${f.fingerprint} / v2 ${f.fingerprintV2 ?? '-'}  ${f.ruleId ?? 'unknown'}  ${where}`);
+  }
+  log('  (v2 は --fingerprint-algo v2 用。行に紐づくため、行がズレると抑制は外れる)');
+}
+
 export function printDebugInfo(result, { log = console.log } = {}) {
   const debug = result.reviewDebug ?? {};
   const rawTokens = result.rawTokenEstimate ?? result.tokenEstimate;
@@ -806,6 +837,7 @@ export function printDebugInfo(result, { log = console.log } = {}) {
     log,
     { leadingNewline: true }
   );
+  printFindingFingerprints(result, log);
   if (result.plan?.skipped?.length) {
     log('\nSkipped skills detail:');
     result.plan.skipped.forEach((item) => {
