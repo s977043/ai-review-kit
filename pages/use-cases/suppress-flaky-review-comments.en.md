@@ -44,8 +44,11 @@ There is no dedicated demo — the workflow runs through Riverbed Memory suppres
 river suppression add \
   --fingerprint <fp> \
   --feedback false_positive \
-  --rationale "one or two sentences on why this is a false positive"
+  --rationale "one or two sentences on why this is a false positive" \
+  --expires 2027-01-01
 ```
+
+`--expires` is optional. With it, the entry stops suppressing once that instant has passed and the finding shows up again; without it, the suppression has no expiry. Accepted values and the behaviour after expiry are described in [Repo-wide review](../guides/repo-wide-review.en.md), under "Giving a suppression an expiry".
 
 For the full storage flow into `.river/memory/index.json`, see [Use Riverbed Memory](../guides/use-riverbed-memory.en.md). For the design rationale, see [Riverbed Memory](../explanation/riverbed-memory.en.md).
 
