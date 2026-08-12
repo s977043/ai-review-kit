@@ -387,7 +387,7 @@ export const DOC_ENUMERATION_SPECS = [
     measure: async () => new Set(await listWorkflowFiles('.github/workflows')),
   },
   {
-    // ガード台帳（#1810）。CLAUDE.md の編集は「Always ask」なので、台帳側を SSoT にして
+    // ガード台帳（#1821）。CLAUDE.md の編集は「Always ask」なので、台帳側を SSoT にして
     // CLAUDE.md を従属側として照合する。ガードの追加・改名・削除のいずれでも、
     // 台帳と CLAUDE.md を同じ PR で更新しない限りこの spec が落ちる。
     id: 'claude-md-guard-ledger',

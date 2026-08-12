@@ -68,13 +68,13 @@ When a retrospective identifies a recurring mistake or missing guardrail, follow
 
 ## Tooling
 
-| Component         | Location                                         | Behavior                                                              |
-| ----------------- | ------------------------------------------------ | --------------------------------------------------------------------- |
-| Permissions       | `.claude/settings.json`                          | Defines allow/ask/deny command lists                                  |
-| Rules             | `.claude/rules/`                                 | Auto-loaded by glob pattern in frontmatter (e.g., `**/*`)             |
-| Hooks             | `.claude/hooks/format.sh`                        | PostToolUse: auto-runs prettier on all changed files (vs HEAD)        |
-| Sub-agent         | `agents/river-review.md`                         | Distributed plugin agent (top-level per #996); Read, Grep, Glob, Bash |
-| Worker discipline | `docs/development/worker-discipline-template.md` | Copy-paste discipline block for delegated worker prompts              |
+| Component         | Location                                               | Behavior                                                                                                                                                                                    |
+| ----------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Permissions       | `.claude/settings.json`                                | Defines allow/ask/deny command lists                                                                                                                                                        |
+| Rules             | `.claude/rules/`                                       | Auto-loaded by glob pattern in frontmatter (e.g., `**/*`)                                                                                                                                   |
+| Hooks             | `.claude/hooks/` ([README](./.claude/hooks/README.md)) | 3 hooks: `no-force-push.sh` and `gh-account-guard.sh` (PreToolUse, matcher `Bash`); `format.sh` (PostToolUse — prettier on `.tool_input.file_path`, falling back to `git diff` when absent) |
+| Sub-agent         | `agents/river-review.md`                               | Distributed plugin agent (top-level per #996); Read, Grep, Glob, Bash                                                                                                                       |
+| Worker discipline | `docs/development/worker-discipline-template.md`       | Copy-paste discipline block for delegated worker prompts                                                                                                                                    |
 
 ## Custom Commands
 

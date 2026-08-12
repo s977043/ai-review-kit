@@ -27,7 +27,7 @@ AI が人間の可読量を超えるコードを生成できる時代におい�
 - [x] River Review へのリブランディング（README/用語集/スキーマ説明）
 - [x] ディレクトリ整備：`skills/{upstream,midstream,downstream}`、`schemas/`、`docs/`、`assets/`
 - [x] スキルメタデータ JSON Schema (`schemas/skill.schema.json`)
-- [x] ブートストラップスクリプト（`scripts/setup_river_reviewer.sh`）とリファクタスクリプト（`scripts/rr_validate_skills.py`）
+- [x] ブートストラップスクリプト（`scripts/setup_river_review.sh`—#1824 で DEPRECATED。追跡ファイルを上書きするため実行しないこと。2026-11-12 以降に削除予定）とリファクタスクリプト（`scripts/rr_validate_skills.py`）
 - [x] 最小 GitHub Actions ワークフロー雛形 (`.github/workflows/river-review.yml`)
 - Exit Criteria: 達成（基本ドキュメントとスキーマ/スクリプトが揃い、新規スキル追加の足場がある）。
 

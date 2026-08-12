@@ -84,6 +84,7 @@ chore: eslint を v9 にアップグレード
   - Meta consistency
   - Action dist freshness
   - Integration (CLI)
+  - Blocked label guard
 - **PR がクローズされる条件（マージなし）**: 著者から 30 日以上応答がない場合、スコープ外の変更が含まれる場合、または既存の作業と重複する場合はクローズすることがあります。クローズ前には理由をコメントで通知します。
 
 ### ✅ ローカルでのチェック（推奨）

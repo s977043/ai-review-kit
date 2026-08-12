@@ -117,19 +117,24 @@ scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" 
 
 ## 何を検証しているか
 
-登録内容は `scripts/check-doc-enumerations.mjs` の `DOC_ENUMERATION_SPECS` が SSoT です。初期スコープ（#1726）は、誤検出でメイン開発を止めないことを優先し、決定論で判定できる 4 件に絞ってあります。#1728 で `.github/workflows/README.md` のワークフロー一覧（`workflows-readme-table`）を追加し、ガード台帳の照合 2 件（`claude-md-guard-ledger` / `guard-ledger-verified-by`）をあとから足しました。
+登録内容は `scripts/check-doc-enumerations.mjs` の `DOC_ENUMERATION_SPECS` が SSoT です。初期スコープ（#1726）は、誤検出でメイン開発を止めないことを優先し、決定論で判定できる 4 件に絞ってあります。#1728 で `.github/workflows/README.md` のワークフロー一覧（`workflows-readme-table`）を追加し、#1821 でガード台帳の照合 2 件（`claude-md-guard-ledger` / `guard-ledger-verified-by`）、#1831 でパイプライン関数の call site チェックリスト 3 件（`pipeline-callsites-*`）をあとから足しました。現在の登録は 10 件です（`npm run check:doc-enum` の出力にある `N spec(s) checked` が実測値）。
 
-| spec id                      | 対象ドキュメント                     | 宣言側                                             | 実体                                                       |
-| ---------------------------- | ------------------------------------ | -------------------------------------------------- | ---------------------------------------------------------- |
-| `skills-stream-counts`       | `docs/skills-structure.md`           | ツリー図の `# <n> スキル` コメント                 | `skills/<stream>/` の実ディレクトリ数                      |
-| `distributed-commands-table` | `commands/README.md`                 | コマンド表の `File` 列                             | `commands/*.md`（`README.md` を除く）                      |
-| `repo-dev-commands-table`    | `.claude/commands/README.md`         | コマンド表の `File` 列                             | `.claude/commands/*.md`（同上）                            |
-| `claude-md-command-table`    | `CLAUDE.md`                          | `Custom Commands` 表の `Command` 列                | 上記 2 ディレクトリのコマンド名の和集合                    |
-| `workflows-readme-table`     | `.github/workflows/README.md`        | ワークフロー一覧表の `ファイル` 列                 | `.github/workflows/` 直下の `*.yml` / `*.yaml`             |
-| `claude-md-guard-ledger`     | `CLAUDE.md`                          | `AI Misoperation Guards` 節の `- **<見出し>**:` 行 | [`guard-ledger.yaml`](./guard-ledger.yaml) の `title` 集合 |
-| `guard-ledger-verified-by`   | `docs/development/guard-ledger.yaml` | 各エントリの `verifiedBy` パス                     | 同じパスのうちディスク上に実在するもの                     |
+| spec id                                   | 対象ドキュメント                                                 | 宣言側                                             | 実体                                                       |
+| ----------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
+| `skills-stream-counts`                    | `docs/skills-structure.md`                                       | ツリー図の `# <n> スキル` コメント                 | `skills/<stream>/` の実ディレクトリ数                      |
+| `distributed-commands-table`              | `commands/README.md`                                             | コマンド表の `File` 列                             | `commands/*.md`（`README.md` を除く）                      |
+| `repo-dev-commands-table`                 | `.claude/commands/README.md`                                     | コマンド表の `File` 列                             | `.claude/commands/*.md`（同上）                            |
+| `claude-md-command-table`                 | `CLAUDE.md`                                                      | `Custom Commands` 表の `Command` 列                | 上記 2 ディレクトリのコマンド名の和集合                    |
+| `workflows-readme-table`                  | `.github/workflows/README.md`                                    | ワークフロー一覧表の `ファイル` 列                 | `.github/workflows/` 直下の `*.yml` / `*.yaml`             |
+| `claude-md-guard-ledger`                  | `CLAUDE.md`                                                      | `AI Misoperation Guards` 節の `- **<見出し>**:` 行 | [`guard-ledger.yaml`](./guard-ledger.yaml) の `title` 集合 |
+| `guard-ledger-verified-by`                | `docs/development/guard-ledger.yaml`                             | 各エントリの `verifiedBy` パス                     | 同じパスのうちディスク上に実在するもの                     |
+| `pipeline-callsites-generate-review`      | [`pipeline-params-checklist.md`](./pipeline-params-checklist.md) | `必須: generateReview` 節の `- [ ] <path>` 行      | `generateReview` / `buildPrompt` の call site ファイル     |
+| `pipeline-callsites-verify-finding`       | [`pipeline-params-checklist.md`](./pipeline-params-checklist.md) | `必須: verifyFinding` 節の `- [ ] <path>` 行       | `verifyFinding` の call site ファイル                      |
+| `pipeline-callsites-build-execution-plan` | [`pipeline-params-checklist.md`](./pipeline-params-checklist.md) | `必須: buildExecutionPlan` 節の `- [ ] <path>` 行  | `buildExecutionPlan` の call site ファイル                 |
 
 `claude-md-guard-ledger` は、宣言側と実体側の役割が他の spec と逆になります。CLAUDE.md の編集は「Always ask」に分類されるため、[`guard-ledger.yaml`](./guard-ledger.yaml) を SSoT（実体側）とし、CLAUDE.md を従属側（宣言側）として照合します。ガードの追加・改名・削除のいずれの経路でも、台帳と CLAUDE.md を同じ PR で更新しない限りこの spec が落ちます。`guard-ledger-verified-by` は台帳の `verifiedBy` が実在しないパスを指した時点で落とします。ただし「そのパスが必須チェックに載るジョブから実行されるか」までは見ていません（実行経路の追跡は静的解析が必要なため、follow-up）。
+
+`pipeline-callsites-*` の 3 件は、CLAUDE.md「Propagate signatures」が参照する散文チェックリストを実体側の call site 走査と突き合わせます。パイプライン関数の呼び出し元が増えてもチェックリストへ追記されない、という陳腐化を塞ぐのが目的です。個々のパラメータが転送されているかまでは見ません（options オブジェクト 1 個で渡るため、どのキーが必須かを決定論では判定できないからです）。走査に現れない宣言や同名の別関数は `ignoreKeys` で理由付きで除外しています（`scripts/check-doc-enumerations.mjs` の `PIPELINE_IGNORE_KEYS`）。
 
 `workflows-readme-table` は `kind: 'names'` だけを登録しています。README には「27 本」という本数の記述もありますが、names 比較は過不足の両方向を検出して件数の主張を包含するため、`kind: 'counts'` の spec は重ねて登録しません（「1 本消して 1 本足す」は counts では素通りします）。ワークフロー名・トリガー・目的・必須チェック該否の列は機械検証の対象外で、人手のままです（必須チェックの SSoT は branch protection API であり、CI からネットワークを叩かないため対象外とします）。
 

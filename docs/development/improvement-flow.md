@@ -115,7 +115,7 @@ CLAUDE.md の AI Misoperation Guard を新設する場合は、同じ PR で [`g
 
 ### Step 9: 退役判定
 
-Step 1〜8 はすべて追加の手順です。追加だけを繰り返した結果、CLAUDE.md は 2026-04-11 の 4,085 バイトから 2026-08-12 の 25,977 バイトへ 6.4 倍に増え、AI Misoperation Guards は 28 件になりました。同じ期間に明示的な退役は 1 回（「Merge-time checks」が旧 4 ガードを吸収した例）しかありません。追加と退役の非対称は、この Step が無かったことに起因します。
+Step 1〜8 はすべて追加の手順です。追加だけを繰り返した結果、CLAUDE.md は 2026-04-11 の 4,085 バイトから、#1821 適用前の 2026-08-12 時点で 25,977 バイトへ 6.4 倍に増え、AI Misoperation Guards は 28 件になりました（#1821 自身が +366 バイトを足しているため、同 PR 適用後は 26,343 バイト・6.45 倍にあたります）。同じ期間に明示的な退役は 1 回（「Merge-time checks」が旧 4 ガードを吸収した例）しかありません。追加と退役の非対称は、この Step が無かったことに起因します。
 
 退役の対象は [`guard-ledger.yaml`](./guard-ledger.yaml) が管理します。台帳が SSoT であり、CLAUDE.md は `scripts/check-doc-enumerations.mjs` の spec `claude-md-guard-ledger` で台帳と照合される従属側です。台帳側を正にしているのは、CLAUDE.md の編集が「Always ask」に分類されており、正を CLAUDE.md に置くと退役の運用のたびに承認待ちがブロッカーになるためです。
 
