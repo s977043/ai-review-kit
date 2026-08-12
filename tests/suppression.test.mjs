@@ -245,7 +245,17 @@ test('findActiveSuppressions warns for each legacy expiresAt form it expires (#1
     });
     assert.deepEqual(result, [], `${expiresAt} の suppression は適用されないこと`);
     assert.equal(warnings.length, 1, `${expiresAt} で警告が 1 件出ること`);
-    assert.match(warnings[0], new RegExp(`s-legacy-${expiresAt.replace(/[/+]/g, '\\$&')}`));
+    // 部分文字列の包含で見る。値には `/` や `+` が含まれるため、正規表現へ
+    // 組み立てるとエスケープが必要になり、そのエスケープ自体が不完全な
+    // sanitization として検出される（CodeQL js/incomplete-sanitization）。
+    assert.ok(
+      warnings[0].includes(`s-legacy-${expiresAt}`),
+      `警告に entry id が含まれること: ${warnings[0]}`
+    );
+    assert.ok(
+      warnings[0].includes(`"${expiresAt}"`),
+      `警告に該当の値が含まれること: ${warnings[0]}`
+    );
     assert.match(warnings[0], /unparseable context\.expiresAt/);
   }
 });
