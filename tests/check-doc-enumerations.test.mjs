@@ -7,6 +7,7 @@ import {
   DOC_ENUMERATION_SPECS,
   GUARD_LEDGER_PATH,
   NOTHING_CHECKED_ERROR,
+  PIPELINE_CHECKLIST_DOC,
   checkDocEnumerations,
   parseGuardLedger,
   parseGuardTitles,
@@ -16,6 +17,11 @@ import {
   resolveIgnoreKeys,
   unwrapCodeSpan,
 } from '../scripts/check-doc-enumerations.mjs';
+import {
+  hasBareCall,
+  parseChecklistPaths,
+  stripCommentsAndStrings,
+} from '../scripts/lib/pipeline-call-sites.mjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -704,6 +710,120 @@ test('guard-ledger-verified-by spec fails when a declared path does not exist', 
       (e) => e.includes('".claude/hooks/does-not-exist.sh"') && e.includes('実体に存在しない')
     )
   );
+});
+
+// --- パイプライン call site チェックリスト（#1827） ---
+
+test('stripCommentsAndStrings blanks a glob inside a line comment (heuristic-review regression)', () => {
+  // 素朴な `/\/\*[^]*?\*\//` はこの行コメント内のグロブをブロックコメント開始と読み、
+  // 直後の本物の呼び出しまで消していた。
+  const source = [
+    '// applyTo は `src|app|lib/**` の JS/TS',
+    'const plan = buildExecutionPlan({});',
+  ].join('\n');
+  const stripped = stripCommentsAndStrings(source);
+  assert.equal(hasBareCall(stripped, 'buildExecutionPlan'), true);
+});
+
+test('stripCommentsAndStrings blanks identifiers inside string literals (cli-review-plan regression)', () => {
+  const source = "test('forwards skillIds to buildExecutionPlan (--skill-set)', () => {});";
+  assert.equal(hasBareCall(stripCommentsAndStrings(source), 'buildExecutionPlan'), false);
+});
+
+test('stripCommentsAndStrings keeps a regex literal out of the comment state', () => {
+  const source = ['const re = /^-\\s+/;', 'generateReview({});'].join('\n');
+  assert.equal(hasBareCall(stripCommentsAndStrings(source), 'generateReview'), true);
+});
+
+test('hasBareCall ignores method calls and same-prefixed identifiers', () => {
+  assert.equal(hasBareCall('await client.generateReview(s, d);', 'generateReview'), false);
+  assert.equal(hasBareCall('buildExecutionPlanImpl(args);', 'buildExecutionPlan'), false);
+  assert.equal(hasBareCall('export async function generateReview({', 'generateReview'), true);
+});
+
+test('parseChecklistPaths returns null when the section heading is gone', () => {
+  assert.equal(parseChecklistPaths('# doc\n\n- [ ] `src/a.mjs`—x\n', 'buildExecutionPlan'), null);
+});
+
+test('parseChecklistPaths collects paths and skips non-path items', () => {
+  const text = [
+    '### 必須: `buildExecutionPlan` に新パラメータを追加した場合',
+    '',
+    '- [ ] `src/a.mjs`—説明',
+    '- [ ] `notAPath`—バッククォートだがパスではない',
+    '- [ ] plan 経由で下流関数に渡される場合は下流関数のチェックリストも確認',
+    '',
+    '## 次の節',
+    '',
+    '- [ ] `src/b.mjs`—別の節なので拾わない',
+  ].join('\n');
+  assert.deepEqual(parseChecklistPaths(text, 'buildExecutionPlan'), new Set(['src/a.mjs']));
+});
+
+test('pipeline-callsites spec fails when a call site row is removed from the checklist', async () => {
+  const spec = realSpec('pipeline-callsites-build-execution-plan');
+  const realText = await readRepoFile(PIPELINE_CHECKLIST_DOC);
+  const mutated = realText.replace(/^- \[ \] `src\/cli\/commands\/skills\.mjs`.*\n/m, '');
+  assert.notEqual(mutated, realText, 'fixture precondition: the checklist row must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /実体に "src\/cli\/commands\/skills\.mjs" があるが/);
+});
+
+test('pipeline-callsites spec fails when the checklist lists a call site that does not exist', async () => {
+  const spec = realSpec('pipeline-callsites-verify-finding');
+  const realText = await readRepoFile(PIPELINE_CHECKLIST_DOC);
+  const mutated = realText.replace(
+    /^(- \[ \] `src\/lib\/verifier\.mjs`)/m,
+    '- [ ] `src/lib/phantom-verifier.mjs`—存在しない call site\n$1'
+  );
+  assert.notEqual(mutated, realText, 'fixture precondition: the checklist row must exist');
+
+  const { errors } = await checkDocEnumerations({ specs: [spec], readDoc: async () => mutated });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /"src\/lib\/phantom-verifier\.mjs" を挙げているが実体に存在しない/);
+});
+
+test('pipeline-callsites spec reports both directions when a call site row is renamed', async () => {
+  const spec = realSpec('pipeline-callsites-generate-review');
+  const realText = await readRepoFile(PIPELINE_CHECKLIST_DOC);
+  const mutated = realText.replace(
+    /^- \[ \] `src\/lib\/review-engine\.mjs`/m,
+    '- [ ] `src/lib/review-engine-renamed.mjs`'
+  );
+  assert.notEqual(mutated, realText, 'fixture precondition: the checklist row must exist');
+
+  const { errors } = await checkDocEnumerations({ specs: [spec], readDoc: async () => mutated });
+  assert.equal(errors.length, 2);
+  assert.ok(
+    errors.some((e) => e.includes('"src/lib/review-engine.mjs"') && e.includes('載っていない'))
+  );
+  assert.ok(
+    errors.some(
+      (e) => e.includes('"src/lib/review-engine-renamed.mjs"') && e.includes('実体に存在しない')
+    )
+  );
+});
+
+test('pipeline-callsites spec fails when the checklist section heading disappears', async () => {
+  const spec = realSpec('pipeline-callsites-build-execution-plan');
+  const realText = await readRepoFile(PIPELINE_CHECKLIST_DOC);
+  const mutated = realText.replace(/^### 必須: `buildExecutionPlan`.*$/m, '### 必須: 実行計画');
+  assert.notEqual(mutated, realText, 'fixture precondition: the heading must exist');
+
+  // 宣言側が消えると checked が 0 になるので、詰め物 spec を足して
+  // NOTHING_CHECKED_ERROR が混ざらないようにする。
+  const { errors } = await checkDocEnumerations({
+    specs: [spec, passingSpec()],
+    readDoc: async (doc) => (doc === PIPELINE_CHECKLIST_DOC ? mutated : ''),
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /宣言側のマーカー/);
 });
 
 test('checkDocEnumerations passes on the current repo state', async () => {

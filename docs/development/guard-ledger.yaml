@@ -73,11 +73,25 @@ guards:
 
   - id: propagate-signatures
     title: Propagate signatures
-    mechanized: none
-    verifiedBy: []
+    mechanized: partial
+    verifiedBy:
+      - scripts/lib/pipeline-call-sites.mjs
+      - scripts/check-doc-enumerations.mjs
+      - tests/check-doc-enumerations.test.mjs
+      - docs/development/pipeline-params-checklist.md
     addedAt: '2026-04-11'
     reviewAfter: '2026-11-10'
-    notes: docs/development/pipeline-params-checklist.md は散文チェックリスト。call site の網羅を検証する script やテストは無い。 2026-08-12 の退役判定は (c) 機械化の起票であり、reviewAfter を 90 日延長した。addedAt 以降の再発として、riskAssessment が buildExecutionPlan で計算されながら返却されず、consumer 側が undefined を受け取っていた件がある（retrospectives/2026-05-25-28.md の addendum、#933）。決定論スライスは producer と consumer の両側を assert するテスト形（review-runner-snapshot-field と同型）の常設化。Issue 番号は起票後に追記する。
+    notes: >-
+      addedAt 以降の再発として、riskAssessment が buildExecutionPlan で計算されながら返却されず、consumer
+      側が undefined を受け取っていた件がある（retrospectives/2026-05-25-28.md の addendum、#933）。
+      #1827 で (c) 機械化のうち決定論スライスを実装した。check-doc-enumerations.mjs の spec
+      `pipeline-callsites-*` が pipeline-params-checklist.md の call site 一覧と実体の call site
+      走査を集合一致で照合し、必須チェック `Meta consistency` に載る。導入時点で src/cli/commands/skills.mjs
+      など 5 件の未記載 call site を検出し、チェックリストへ追記した。partial に留まる理由は、機械検証の対象が
+      「チェックリストが実体と一致していること」であり、個々のパラメータが各 call site で転送されているかは見ないため。
+      呼び出しはすべて options オブジェクト 1 個で渡され、どのキーが必須かが型に無く決定論では判定できない。
+      転送漏れ自体は引き続きチェックリストと producer/consumer 双方を assert するテスト形（review-runner-snapshot-field
+      と同型）で守る。full への到達には後者の常設化が必要。
 
   - id: plan-merge-order
     title: Plan merge order
