@@ -122,7 +122,7 @@ test('analytics and findActiveSuppressions agree on the same index', () => {
   ];
 
   const analytics = analyzeSuppressions(entries, { now: new Date() });
-  const reviewPath = findActiveSuppressions({ entries }, ['src/a.mjs']);
+  const reviewPath = findActiveSuppressions({ entries }, ['src/a.mjs'], { warn: () => {} });
 
   assert.equal(analytics.active, reviewPath.length);
   assert.deepEqual(reviewPath.map((e) => e.context.fingerprint).sort(), [
@@ -130,6 +130,50 @@ test('analytics and findActiveSuppressions agree on the same index', () => {
     'dddddddddddddddd',
     'eeeeeeeeeeeeeeee',
   ]);
+});
+
+// #1780: 「失効したこと」ではなく「期限が読めなくて失効したこと」を出す。
+// active カウントが減るだけでは、運用者は理由を観測できない。
+test('unparseable expiresAt entries are reported separately from the active count (#1780)', () => {
+  const legacyForms = [
+    '2027-01-01T00:00:00',
+    '2027-01-01T00:00Z',
+    '2027/01/01',
+    '2027-01-01T09:00:00+0900',
+  ];
+  const entries = legacyForms.map((expiresAt, i) =>
+    suppression({ fingerprint: `f${String(i).repeat(15)}`, sourcePR: i + 1, expiresAt })
+  );
+  // 正当な将来日と、正当に失効済みの値は報告対象に入らない。
+  entries.push(
+    suppression({ fingerprint: 'aaaaaaaaaaaaaaaa', sourcePR: 90, expiresAt: '2027-01-01' })
+  );
+  entries.push(
+    suppression({
+      fingerprint: 'bbbbbbbbbbbbbbbb',
+      sourcePR: 91,
+      expiresAt: '2026-01-01T00:00:00Z',
+    })
+  );
+
+  const result = analyzeSuppressions(entries, { now: NOW });
+  assert.equal(result.active, 1, '将来日の 1 件だけがアクティブ');
+  assert.deepEqual(
+    result.unparseableExpiresAt.map((e) => e.expiresAt),
+    legacyForms
+  );
+
+  const body = formatIssueBody(result);
+  assert.match(body, /期限が読めないため失効扱い/);
+  for (const form of legacyForms) assert.ok(body.includes(form), `${form} が本文に出ること`);
+});
+
+test('unparseableExpiresAt is empty when every deadline parses (#1780)', () => {
+  const result = analyzeSuppressions([suppression({ expiresAt: '2027-01-01T00:00:00Z' })], {
+    now: NOW,
+  });
+  assert.deepEqual(result.unparseableExpiresAt, []);
+  assert.doesNotMatch(formatIssueBody(result), /期限が読めないため失効扱い/);
 });
 
 test('formatIssueBody renders both signal sections with next action', () => {

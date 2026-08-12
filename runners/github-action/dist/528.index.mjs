@@ -8,7 +8,7 @@ export const modules = {
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   createSuppression: () => (/* binding */ createSuppression)
 /* harmony export */ });
-/* unused harmony exports hashFinding, inferSubsystem, revokeSuppression, matchesScopeFiles, isSuppressionExpired, findActiveSuppressions */
+/* unused harmony exports hashFinding, inferSubsystem, revokeSuppression, matchesScopeFiles, isSuppressionExpired, hasUnparseableSuppressionExpiresAt, findUnparseableSuppressionExpiries, formatUnparseableExpiresAtWarning, findActiveSuppressions */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7598);
 /* harmony import */ var _riverbed_memory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(4216);
 
@@ -190,13 +190,88 @@ function isSuppressionExpired(suppression, now = new Date()) {
 }
 
 /**
+ * Whether a suppression's `context.expiresAt` is present but is not a valid
+ * `expiresAt` value.
+ *
+ * The validity rule is NOT re-derived here: it delegates to
+ * `hasUnparseableExpiresAt` (riverbed-memory.mjs), which in turn delegates to
+ * `parseExpiresAt` (expires-at.mjs, the SSoT since #1777). The only thing this
+ * wrapper adds is the field the suppression data model actually uses.
+ * `createSuppression` writes the deadline to `context.expiresAt` and never to
+ * the top-level `entry.expiresAt`, which is why `expireEntries`' warning — it
+ * reads the top-level field — structurally cannot see a suppression's value
+ * (#1780).
+ *
+ * @param {{ context?: { expiresAt?: string } }} suppression
+ * @returns {boolean}
+ */
+function hasUnparseableSuppressionExpiresAt(suppression) {
+  return hasUnparseableExpiresAt({ expiresAt: suppression?.context?.expiresAt });
+}
+
+/**
+ * Suppressions whose `context.expiresAt` cannot be parsed, and which are
+ * therefore treated as expired by `isSuppressionExpired` (fail-safe, #1746).
+ *
+ * The fail-safe direction stays as it is: an unreadable deadline must not keep
+ * hiding findings forever. What this function exists for is the OTHER half —
+ * making the stop observable. Until #1780 a suppression written by the
+ * v1.72.0–v1.72.1 CLI (which accepted anything `Date.parse` liked, e.g.
+ * `2027-01-01T00:00:00` without an offset) simply stopped taking effect, with
+ * no error, no warning, and no visible change in `.river/memory/index.json`.
+ *
+ * Only entries the deactivation actually applies to are reported: an entry with
+ * `context.active === false` was not suppressing anything to begin with, so
+ * calling it "no longer suppresses" would be untrue in the same way
+ * `expireEntries` avoids for already-archived entries.
+ *
+ * The report carries the entry id and the offending value only. The rationale,
+ * related file paths and fingerprint are deliberately left out: the value is
+ * what has to be repaired, and a warning stream is not a place to widen the
+ * exposure of the surrounding record.
+ *
+ * @param {object[]} suppressions - suppression entries
+ * @returns {Array<{ id: string, expiresAt: string }>}
+ */
+function findUnparseableSuppressionExpiries(suppressions) {
+  if (!Array.isArray(suppressions)) return [];
+  return suppressions
+    .filter((s) => s?.context?.active && hasUnparseableSuppressionExpiresAt(s))
+    .map((s) => ({ id: s.id, expiresAt: s.context.expiresAt }));
+}
+
+/**
+ * The operator-facing sentence for one unparseable suppression deadline.
+ * Shared so the `findActiveSuppressions` warning and the
+ * `suppression-analytics` report state the same fact the same way.
+ *
+ * @param {{ id: string, expiresAt: string }} entry
+ * @returns {string}
+ */
+function formatUnparseableExpiresAtWarning({ id, expiresAt }) {
+  return (
+    `Warning: suppression ${id} has an unparseable context.expiresAt (${JSON.stringify(expiresAt)}); ` +
+    'it is treated as expired and no longer suppresses findings. ' +
+    'Repair the value to an RFC 3339 date or date-time (e.g. "2027-01-01" or "2027-01-01T00:00:00Z").'
+  );
+}
+
+/**
  * Find active suppressions that overlap with the given file paths.
  * Filters out expired and revoked suppressions.
+ *
+ * A suppression dropped because its `context.expiresAt` cannot be parsed is
+ * reported through `warn` rather than dropped silently (#1780). The `warn` sink
+ * mirrors `expireEntries` (riverbed-memory.mjs): injectable for tests, defaults
+ * to `console.warn`. Only in-scope, non-revoked suppressions are warned about —
+ * the ones that would otherwise have applied to this change set.
+ *
  * @param {{ entries: object[] }} index - Loaded memory index
  * @param {string[]} filePaths
+ * @param {{ warn?: (msg: string) => void }} [opts] - warning sink
  * @returns {object[]}
  */
-function findActiveSuppressions(index, filePaths) {
+function findActiveSuppressions(index, filePaths, { warn = (m) => console.warn(m) } = {}) {
   // includeInactive: true preserves pre-lifecycle behavior. Revocations via
   // resurface must survive supersession so that a once-revoked suppression
   // does not silently reactivate when the revoking entry is superseded.
@@ -213,11 +288,23 @@ function findActiveSuppressions(index, filePaths) {
   return suppressions.filter((s) => {
     if (!s.context?.active) return false;
     if (revocations.has(s.id)) return false;
-    if (isSuppressionExpired(s, now)) return false;
 
     const related = s.metadata?.relatedFiles ?? [];
     const scope = s.context?.scope || 'file';
-    return matchesScopeFiles(scope, related, filePaths);
+    const inScope = matchesScopeFiles(scope, related, filePaths);
+
+    if (isSuppressionExpired(s, now)) {
+      // Scope is evaluated BEFORE the warning so an unparseable deadline on a
+      // suppression that does not cover this change set stays quiet: it was
+      // not going to suppress anything here, and reporting it on every review
+      // of every unrelated file would train operators to ignore the line.
+      if (inScope && hasUnparseableSuppressionExpiresAt(s)) {
+        warn(formatUnparseableExpiresAtWarning({ id: s.id, expiresAt: s.context.expiresAt }));
+      }
+      return false;
+    }
+
+    return inScope;
   });
 }
 
