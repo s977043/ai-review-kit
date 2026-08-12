@@ -25,6 +25,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
+import * as yaml from 'js-yaml';
+
 import { isDirectRun } from './lib/is-direct-run.mjs';
 // 「トップレベルの *.md を列挙する」実装は validate-plugin-manifest.mjs が既に持つ。
 // 同じ概念を再実装せず import する（CLAUDE.md「Import the SSoT, never re-derive it」）。
@@ -129,6 +131,124 @@ export function parseSkillStreamCounts(text) {
     counts.set(stream, Number(match[2]));
   }
   return counts;
+}
+
+/** ガード台帳（SSoT）の位置。CLAUDE.md 側はここから照合される従属側。 */
+export const GUARD_LEDGER_PATH = 'docs/development/guard-ledger.yaml';
+
+/** 台帳が許す mechanized の語彙。 */
+const GUARD_MECHANIZED_LEVELS = new Set(['full', 'partial', 'none']);
+
+/** `YYYY-MM-DD` 形式の日付。 */
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * CLAUDE.md の「AI Misoperation Guards」節から `- **<見出し>**:` を拾う。
+ *
+ * 節を限定するのは、Decision Policy など他の節も `- **...**:` 形式の箇条書きを
+ * 持つため。節見出しが消えた場合は null を返し、マーカー消失としてエラーにする。
+ *
+ * @param {string} text
+ * @returns {Set<string> | null}
+ * @throws {Error} 同じ見出しが 2 回以上現れた場合（照合キーが一意でなくなるため）
+ */
+export function parseGuardTitles(text) {
+  const lines = String(text ?? '').split('\n');
+  const start = lines.findIndex((line) => /^##\s+AI Misoperation Guards\s*$/.test(line));
+  if (start < 0) return null;
+
+  const titles = new Set();
+  for (let i = start + 1; i < lines.length; i += 1) {
+    if (/^##\s/.test(lines[i])) break;
+    const match = /^-\s+\*\*(.+?)\*\*:\s/.exec(lines[i]);
+    if (!match) continue;
+    const title = match[1].trim();
+    if (titles.has(title)) {
+      throw new Error(
+        `ガード見出し "${title}" が重複している — 見出しは台帳との照合キーなので一意にすること`
+      );
+    }
+    titles.add(title);
+  }
+  return titles.size > 0 ? titles : null;
+}
+
+/**
+ * ガード台帳の YAML を読み、形式を検証したうえでエントリ配列を返す。
+ *
+ * 形式違反は throw する（呼び出し元の spec が「実測に失敗した」として報告する）。
+ * ここで緩く受けると、台帳が壊れたまま照合だけ通る＝検証が空振りする状態になる。
+ *
+ * @param {string} text
+ * @returns {{ id: string, title: string, mechanized: string, verifiedBy: string[], addedAt: string, reviewAfter: string }[]}
+ */
+export function parseGuardLedger(text) {
+  const doc = yaml.load(String(text ?? ''));
+  if (!doc || typeof doc !== 'object' || !Array.isArray(doc.guards)) {
+    throw new Error(`${GUARD_LEDGER_PATH}: トップレベルに配列 \`guards\` が無い`);
+  }
+
+  const ids = new Set();
+  const titles = new Set();
+  for (const [index, entry] of doc.guards.entries()) {
+    const where = `guards[${index}]`;
+    if (!entry || typeof entry !== 'object') {
+      throw new Error(`${where}: エントリがマップではない`);
+    }
+    if (typeof entry.id !== 'string' || !/^[a-z0-9-]+$/.test(entry.id)) {
+      throw new Error(
+        `${where}: id は kebab-case の文字列で書く（実際: ${JSON.stringify(entry.id)}）`
+      );
+    }
+    if (ids.has(entry.id)) throw new Error(`${where}: id "${entry.id}" が重複している`);
+    ids.add(entry.id);
+
+    if (typeof entry.title !== 'string' || entry.title.trim() === '') {
+      throw new Error(`${where} (${entry.id}): title が空`);
+    }
+    if (titles.has(entry.title)) {
+      throw new Error(`${where} (${entry.id}): title "${entry.title}" が重複している`);
+    }
+    titles.add(entry.title);
+
+    if (!GUARD_MECHANIZED_LEVELS.has(entry.mechanized)) {
+      throw new Error(
+        `${where} (${entry.id}): mechanized は full / partial / none のいずれか（実際: ${JSON.stringify(entry.mechanized)}）`
+      );
+    }
+    if (!Array.isArray(entry.verifiedBy) || entry.verifiedBy.some((p) => typeof p !== 'string')) {
+      throw new Error(`${where} (${entry.id}): verifiedBy は文字列の配列で書く`);
+    }
+    if (entry.mechanized === 'none' && entry.verifiedBy.length > 0) {
+      throw new Error(`${where} (${entry.id}): mechanized: none なのに verifiedBy がある`);
+    }
+    if (entry.mechanized !== 'none' && entry.verifiedBy.length === 0) {
+      throw new Error(
+        `${where} (${entry.id}): mechanized: ${entry.mechanized} なら verifiedBy に所在を 1 件以上書く`
+      );
+    }
+    if (entry.addedAt !== 'unknown' && !ISO_DATE_RE.test(String(entry.addedAt))) {
+      throw new Error(
+        `${where} (${entry.id}): addedAt は YYYY-MM-DD か 'unknown'（実際: ${JSON.stringify(entry.addedAt)}）`
+      );
+    }
+    if (!ISO_DATE_RE.test(String(entry.reviewAfter))) {
+      throw new Error(
+        `${where} (${entry.id}): reviewAfter は YYYY-MM-DD（実際: ${JSON.stringify(entry.reviewAfter)}）`
+      );
+    }
+  }
+  return doc.guards;
+}
+
+/** 台帳をディスクから読んで検証済みエントリを返す。 */
+async function loadGuardLedger() {
+  return parseGuardLedger(await fs.readFile(path.join(ROOT, GUARD_LEDGER_PATH), 'utf8'));
+}
+
+/** 台帳が挙げる verifiedBy パスの集合。 */
+function collectVerifiedByPaths(entries) {
+  return new Set(entries.flatMap((entry) => entry.verifiedBy));
 }
 
 /** repo-relative なディレクトリ直下のサブディレクトリ名を返す（存在しなければ throw）。 */
@@ -238,6 +358,42 @@ export const DOC_ENUMERATION_SPECS = [
       return column && new Set(column.map(unwrapCodeSpan));
     },
     measure: async () => new Set(await listWorkflowFiles('.github/workflows')),
+  },
+  {
+    // ガード台帳（#1810）。CLAUDE.md の編集は「Always ask」なので、台帳側を SSoT にして
+    // CLAUDE.md を従属側として照合する。ガードの追加・改名・削除のいずれでも、
+    // 台帳と CLAUDE.md を同じ PR で更新しない限りこの spec が落ちる。
+    id: 'claude-md-guard-ledger',
+    doc: 'CLAUDE.md',
+    summary: 'AI Misoperation Guards の見出し',
+    marker: '`## AI Misoperation Guards` 節の `- **<見出し>**:` 行',
+    kind: 'names',
+    declare: parseGuardTitles,
+    measure: async () => new Set((await loadGuardLedger()).map((entry) => entry.title)),
+  },
+  {
+    // 台帳の verifiedBy が実在しないパスを指した瞬間に落とす。
+    // 「必須チェックに載る job から実行されるか」までは見ていない（follow-up）。
+    id: 'guard-ledger-verified-by',
+    doc: GUARD_LEDGER_PATH,
+    summary: '台帳 verifiedBy が挙げるパス',
+    marker: '`verifiedBy:` の項目',
+    kind: 'names',
+    declare: (text) => collectVerifiedByPaths(parseGuardLedger(text)),
+    measure: async () => {
+      const declaredPaths = collectVerifiedByPaths(await loadGuardLedger());
+      const existing = new Set();
+      for (const rel of declaredPaths) {
+        if (
+          await fs.stat(path.join(ROOT, rel)).then(
+            () => true,
+            () => false
+          )
+        )
+          existing.add(rel);
+      }
+      return existing;
+    },
   },
 ];
 
