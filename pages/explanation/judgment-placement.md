@@ -51,12 +51,10 @@ Does it require responsibility or value judgment?
 Human Judgment
 ```
 
-| 層 | 主な役割 | 例 |
-| --- | --- | --- |
-| **Deterministic** | 機械的に証明・検査できる事実 | type / test / schema / dependency boundary / architecture test |
-| **Heuristic** | 明示ルールで高精度に兆候を検出 | temporary code / suspicious pattern / known smell |
-| **Agentic Review** | 複数 Artifact や意味理解が必要な判断 | Plan-Diff 整合、設計意図、責務、semantic conflict |
-| **Human Judgment** | 責任・価値・不可逆性を伴う最終判断 | security boundary、個人情報、課金、不可逆 migration、事業妥当性 |
+- **Deterministic** — 機械的に証明・検査できる事実。例: type / test / schema / dependency boundary / architecture test
+- **Heuristic** — 明示ルールで高精度に兆候を検出する。例: temporary code / suspicious pattern / known smell
+- **Agentic Review** — 複数 Artifact や意味理解が必要な判断。例: Plan-Diff 整合、設計意図、責務、semantic conflict
+- **Human Judgment** — 責任・価値・不可逆性を伴う最終判断。例: security boundary、個人情報、課金、不可逆 migration、事業妥当性
 
 ### 原則: 安くするのではなく、適切な層へ移す
 
