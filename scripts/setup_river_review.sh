@@ -1,5 +1,45 @@
 #!/usr/bin/env bash
+#
+# DEPRECATED (2026-08-12) — do not run this script.
+#
+# Why deprecated:
+#   - Zero references. `git grep -F 'setup_river_review.sh'` over the whole repo
+#     (excluding this file) returns no hits: no npm script, no workflow, no doc.
+#   - It is a one-shot bootstrap generator for an empty repository. Running it in
+#     the repository as it stands today is destructive rather than useful.
+#
+# DANGER — this script OVERWRITES tracked files with template stubs:
+#   - README.md                          (via write_readme)
+#   - docs/glossary.md
+#   - docs/skill-schema.md
+#   - schemas/skill.schema.json
+#   - .github/workflows/river-review.yml
+#   Each is written with `cat > ...`, so the current content is lost. The
+#   `--force` flag only widens what gets overwritten; omitting it does NOT make
+#   the README write safe.
+#
+# Retirement plan:
+#   Stage 1 (this change) — deprecate and keep the logic unchanged, so any
+#   unknown caller surfaces as a visible warning instead of a silent break.
+#   Stage 2 — delete the file on or after 2026-11-12 (90 days) if no caller
+#   appears. Deletion is intentionally NOT part of this change.
+#
 set -euo pipefail
+
+cat >&2 <<'EODEPRECATED'
+================================================================================
+  DEPRECATED: scripts/setup_river_review.sh
+
+  This script REWRITES README.md, docs/glossary.md, docs/skill-schema.md,
+  schemas/skill.schema.json and .github/workflows/river-review.yml with
+  bootstrap template stubs. Running it in this repository DESTROYS the
+  current content of those files.
+
+  It has no callers and is scheduled for deletion on or after 2026-11-12.
+  Press Ctrl-C now if you did not mean to run it.
+================================================================================
+EODEPRECATED
+sleep 10
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORCE=0
