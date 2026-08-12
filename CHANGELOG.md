@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.76.0](https://github.com/s977043/river-review/compare/v1.75.0...v1.76.0) (2026-08-12)
+
+
+### Features
+
+* **scripts:** レビューコメントの未 disposition 検出を機械化する ([#1833](https://github.com/s977043/river-review/issues/1833)) ([0c4facd](https://github.com/s977043/river-review/commit/0c4facd30a99e179e053fbd1ad9390be775aab65)), closes [#1827](https://github.com/s977043/river-review/issues/1827)
+
 ## [1.75.0](https://github.com/s977043/river-review/compare/v1.74.0...v1.75.0) (2026-08-12)
 
 
