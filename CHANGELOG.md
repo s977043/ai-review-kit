@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.74.0](https://github.com/s977043/river-review/compare/v1.73.2...v1.74.0) (2026-08-12)
+
+
+### Features
+
+* **guards:** ガード台帳と退役工程を導入し必須チェックで機械保証する ([#1821](https://github.com/s977043/river-review/issues/1821)) ([ea2842a](https://github.com/s977043/river-review/commit/ea2842abc7581597d195f273ee667c898faec58d))
+* **suppression:** 行番号込みの fingerprint v2 を併存追加する ([#1817](https://github.com/s977043/river-review/issues/1817)) ([24fa70e](https://github.com/s977043/river-review/commit/24fa70ee2ee319d553f04f980dde107f5a7a5d5d))
+
+
+### Bug Fixes
+
+* **ci:** nightly-eval の KPI 台帳を run 間で永続化して回帰検知を発火させる ([#1820](https://github.com/s977043/river-review/issues/1820)) ([8a4fc72](https://github.com/s977043/river-review/commit/8a4fc729054d103afeaaedcac13fdcfac01cbe5c))
+
 ## [1.73.2](https://github.com/s977043/river-review/compare/v1.73.1...v1.73.2) (2026-08-12)
 
 
