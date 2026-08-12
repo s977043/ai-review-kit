@@ -41,8 +41,11 @@ River Review は誤検出への対処を 2 つの層に分けています。決�
 river suppression add \
   --fingerprint <fp> \
   --feedback false_positive \
-  --rationale "なぜ誤検知と判断したかを 1〜2 文で残す"
+  --rationale "なぜ誤検知と判断したかを 1〜2 文で残す" \
+  --expires 2027-01-01
 ```
+
+`--expires` は任意です。付けると、その日時を過ぎた時点で抑制が外れ、finding が再び出ます。付けない場合は無期限になります。受け付ける値と期限切れ後の挙動は、[repo-wide review の導入とチューニング](../guides/repo-wide-review.md) の「抑制に期限を付ける」節にまとめています。
 
 登録後の挙動と保存手順は、[Riverbed Memory を使用する](../guides/use-riverbed-memory.md) にまとまっています。決定論的な検出器がどこまで誤検出を防ぐかは、[検出器の評価レポート](../reference/detector-evaluation-report.md) で確認できます。設計思想は [Riverbed Memory](../explanation/riverbed-memory.md) を参照してください。
 

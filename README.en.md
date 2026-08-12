@@ -249,7 +249,7 @@ Latest release: [v1.76.1](https://github.com/s977043/river-review/releases/lates
 
 ### Major features added in v0.21–v0.28
 
-- **Suppression memory** ([#687](https://github.com/s977043/river-review/issues/687)): use `river suppression add --fingerprint <fp> --feedback accepted_risk` to stop re-surfacing accepted-risk findings. Set `memory.suppressionEnabled: false` to bypass the gate temporarily.
+- **Suppression memory** ([#687](https://github.com/s977043/river-review/issues/687)): use `river suppression add --fingerprint <fp> --feedback accepted_risk` to stop re-surfacing accepted-risk findings. Set `memory.suppressionEnabled: false` to bypass the gate temporarily. Add `--expires` to make the entry stop suppressing after a given date, so the finding returns ([repo-wide review guide](pages/guides/repo-wide-review.en.md)).
 - **Secret redaction** ([#692](https://github.com/s977043/river-review/issues/692)): multi-stage redaction across repo-wide context and LLM prompts. Tune categories, allowlist, and denyFiles via `security.redact.*`.
 - **Context budget / ranking / reviewMode** ([#689](https://github.com/s977043/river-review/issues/689)): `context.budget` for token / char caps, `context.ranking.enabled` for proximity-based reordering, `context.reviewMode: tiny | medium | large` for preset budgets.
 - **Repo-wide eval suite** ([#688](https://github.com/s977043/river-review/issues/688)): `npm run eval:repo-context` reports detection rate, context lift, and false positive rate.
