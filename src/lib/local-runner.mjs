@@ -29,7 +29,11 @@ import {
   resolveAvailableDependencies as resolveAvailableDependenciesShared,
 } from './utils.mjs';
 import { resolveFullFileSupply } from './fullfile-supply.mjs';
-import { annotateFingerprints, computeFingerprint } from './finding-factory.mjs';
+import {
+  annotateFingerprints,
+  computeFingerprint,
+  computeFingerprintV2,
+} from './finding-factory.mjs';
 import { applySuppressions } from './suppression-apply.mjs';
 import { computeStrictBlock } from './deterministic-gate.mjs';
 import { runDeterministicExecGateIfEnabled } from './deterministic-exec-gate.mjs';
@@ -547,20 +551,37 @@ export async function runLocalReview({
   // point of the suppression. Match by fingerprint computed from the
   // comment's own fields so this stays robust if the 1:1 ordering ever
   // drifts.
-  const suppressedFingerprints = new Set(
-    suppressedFindings.map((f) => f.fingerprint).filter(Boolean)
+  // #1797: the comment filter mirrors the algorithm that gated each finding.
+  // A v1 suppression keeps the pre-#1797 behavior (every same-kind comment in
+  // the file goes); a v2 suppression drops only the comment anchored at the
+  // same line, otherwise the comment surface would still collapse the very
+  // occurrences v2 exists to keep apart.
+  const suppressedFingerprintsV1 = new Set(
+    suppressedFindings
+      .filter((f) => f.suppressionAlgo !== 'v2')
+      .map((f) => f.fingerprint)
+      .filter(Boolean)
+  );
+  const suppressedFingerprintsV2 = new Set(
+    suppressedFindings
+      .filter((f) => f.suppressionAlgo === 'v2')
+      .map((f) => f.fingerprintV2)
+      .filter(Boolean)
   );
   const reviewComments = review.comments ?? [];
   const keptComments =
-    suppressedFingerprints.size === 0
+    suppressedFingerprintsV1.size === 0 && suppressedFingerprintsV2.size === 0
       ? reviewComments
       : reviewComments.filter((c) => {
-          const fp = computeFingerprint({
+          const key = {
             ruleId: c.skillId || 'unknown',
             file: c.file,
             message: c.message,
-          });
-          return !suppressedFingerprints.has(fp);
+            line: c.line,
+          };
+          if (suppressedFingerprintsV1.has(computeFingerprint(key))) return false;
+          if (suppressedFingerprintsV2.has(computeFingerprintV2(key))) return false;
+          return true;
         });
 
   return {

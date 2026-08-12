@@ -61,7 +61,10 @@ Commands:
   eval                  Run review fixtures evaluation (must_include checks)
   suppression add       Create a Riverbed Memory suppression entry
                         (--fingerprint --feedback --rationale [--scope]
-                         [--severity] [--files] [--expires] [--pr])
+                         [--severity] [--files] [--expires] [--pr]
+                         [--fingerprint-algo v1|v2]; v2 = line-anchored,
+                         suppresses only the occurrence at that line but
+                         stops matching once the line shifts)
   feedback add          Record a review feedback entry (.river/feedback/)
                         (--type --skill [--trigger] [--fingerprint] [--evidence]
                          [--pr] [--reviewer] [--model] [--reversed-by] [--run-id])
@@ -203,6 +206,16 @@ function usageError(parsed) {
  * this option ends up writing.
  */
 const SUPPRESSION_SEVERITIES = Object.keys(SEVERITY_RANK);
+
+/**
+ * Fingerprint algorithms accepted by `suppression add --fingerprint-algo`
+ * (#1797). Mirrors the `fingerprintAlgo` enum of
+ * `schemas/suppression-context.schema.json`, which validates the `context`
+ * this option writes; the schema is the vocabulary SSoT and
+ * `tests/suppression-fingerprint-v2.test.mjs` pins the two together so this
+ * list cannot drift from it.
+ */
+const SUPPRESSION_FINGERPRINT_ALGOS = ['v1', 'v2'];
 
 /**
  * `river review` subcommands (#802 Phase 3), at module scope because BOTH the
@@ -485,6 +498,8 @@ function parseArgs(argv) {
     feedbackReversedBy: null,
     feedbackRunId: null,
     suppressionFingerprint: null,
+    // #1797: 'v1' (no line) stays the default so this option is opt-in.
+    suppressionFingerprintAlgo: 'v1',
     suppressionFindingId: null,
     suppressionFeedbackType: null,
     suppressionScope: 'file',
@@ -675,6 +690,31 @@ function parseArgs(argv) {
           break;
         }
         parsed.suppressionFingerprint = value;
+        continue;
+      }
+      if (arg === '--fingerprint-algo') {
+        // #1797: opt-in selector for the line-anchored fingerprint. The
+        // default stays 'v1' so existing workflows and every entry already in
+        // `.river/memory/index.json` keep their meaning. Validated here rather
+        // than in the handler for the same reason as --severity (#1746): an
+        // unrecognized algo would otherwise be persisted and then ignored by
+        // applySuppressions, i.e. a silently inert suppression written at
+        // exit 0. Vocabulary SSoT: schemas/suppression-context.schema.json
+        // `$defs.fingerprintAlgo.enum`.
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --fingerprint-algo option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        if (!SUPPRESSION_FINGERPRINT_ALGOS.includes(value)) {
+          console.error(
+            `Error: --fingerprint-algo must be one of: ${SUPPRESSION_FINGERPRINT_ALGOS.join(', ')} (got "${value}").`
+          );
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionFingerprintAlgo = value;
         continue;
       }
       if (arg === '--finding') {

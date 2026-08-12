@@ -28,6 +28,18 @@
 // reported through the `warn` sink (mirroring #1780/#1801 in
 // `findActiveSuppressions`) rather than dropped silently.
 //
+// Fingerprint algorithms (#1797): a suppression's `context.fingerprintAlgo`
+// selects which finding-side fingerprint it is matched against.
+//   - 'v1' (or absent, the pre-#1797 shape): matched against
+//     `finding.fingerprint` (computeFingerprint — no line, so one entry
+//     suppresses every same-kind finding in the same file).
+//   - 'v2': matched against `finding.fingerprintV2` (computeFingerprintV2 —
+//     line-anchored, so only the occurrence at that line is suppressed;
+//     the trade-off is that the suppression stops matching when the line
+//     shifts).
+//   - any other value: ignored (fail-safe — an unknown algorithm must not
+//     accidentally gate findings under v1 semantics).
+//
 // Not evaluated here: revocation via `resurface` entries
 // (`collectRevokedSuppressionIds`). `revokeSuppression` never flips the
 // original's `context.active`, and the revoking entry is a separate memory
@@ -78,16 +90,22 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
   if (!Array.isArray(suppressions) || suppressions.length === 0) return result;
   if (list.length === 0) return result;
 
-  // Index suppressions by canonical fingerprint. Entries that lack a
-  // fingerprint (pre-#687 PR-A) are intentionally ignored — they cannot
-  // gate findings safely without reintroducing the old hashFinding /
-  // computeFingerprint mismatch that PR-A documented as tech debt.
-  const byFingerprint = new Map();
+  // Index suppressions by canonical fingerprint, split by algorithm (#1797).
+  // Entries that lack a fingerprint (pre-#687 PR-A) are intentionally
+  // ignored — they cannot gate findings safely without reintroducing the old
+  // hashFinding / computeFingerprint mismatch that PR-A documented as tech
+  // debt. Entries with an unknown fingerprintAlgo are ignored for the same
+  // fail-safe reason.
+  const byFingerprintV1 = new Map();
+  const byFingerprintV2 = new Map();
   for (const s of suppressions) {
     const fp = s?.context?.fingerprint;
-    if (typeof fp === 'string' && fp.length === 16) byFingerprint.set(fp, s);
+    if (typeof fp !== 'string' || fp.length !== 16) continue;
+    const algo = s?.context?.fingerprintAlgo ?? 'v1';
+    if (algo === 'v1') byFingerprintV1.set(fp, s);
+    else if (algo === 'v2') byFingerprintV2.set(fp, s);
   }
-  if (byFingerprint.size === 0) return result;
+  if (byFingerprintV1.size === 0 && byFingerprintV2.size === 0) return result;
 
   const kept = [];
   const suppressed = [];
@@ -97,8 +115,16 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
   const warnedIds = new Set();
 
   for (const finding of list) {
-    const fp = finding?.fingerprint;
-    const match = fp ? byFingerprint.get(fp) : undefined;
+    // v2 (line-anchored) is consulted first: it is the more specific claim.
+    // When no v2 entry matches, fall back to v1. `fp` is the fingerprint the
+    // matching entry stores, so `applied` records the value that actually
+    // gated the finding (v2 hex for a v2 match).
+    const fpV2 = finding?.fingerprintV2;
+    const matchV2 = fpV2 ? byFingerprintV2.get(fpV2) : undefined;
+    const fpV1 = finding?.fingerprint;
+    const match = matchV2 ?? (fpV1 ? byFingerprintV1.get(fpV1) : undefined);
+    const fp = matchV2 ? fpV2 : fpV1;
+    const matchedAlgo = matchV2 ? 'v2' : 'v1';
     if (!match) {
       kept.push(finding);
       continue;
@@ -119,6 +145,7 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
       applied.push({
         fingerprint: fp,
         suppressionId: match.id,
+        fingerprintAlgo: matchedAlgo,
         feedbackType,
         severity: sev,
         action: 'skipped',
@@ -141,6 +168,7 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
       applied.push({
         fingerprint: fp,
         suppressionId: match.id,
+        fingerprintAlgo: matchedAlgo,
         feedbackType,
         severity: sev,
         action: 'skipped',
@@ -157,6 +185,7 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
       applied.push({
         fingerprint: fp,
         suppressionId: match.id,
+        fingerprintAlgo: matchedAlgo,
         feedbackType,
         severity: sev,
         action: 'skipped',
@@ -169,10 +198,16 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
       ...finding,
       status: 'suppressed',
       suppressionRef: match.id,
+      // Which algorithm gated this finding (#1797). Consumed by
+      // local-runner.mjs to filter the matching PR comment with the SAME
+      // granularity: a v2 (line-anchored) suppression must not drop every
+      // same-kind comment in the file.
+      suppressionAlgo: matchedAlgo,
     });
     applied.push({
       fingerprint: fp,
       suppressionId: match.id,
+      fingerprintAlgo: matchedAlgo,
       feedbackType,
       severity: sev,
       action: 'suppressed',
