@@ -118,7 +118,7 @@
 //   契約ではなく環境の欠落を pin してしまうため（実測で 5 セルが動いた）。
 //   この 2 つを用意した状態が、実 repo で観測される契約と一致する。
 //
-// 実装コスト: 110 回（CASES 102 + 対照群 8）の CLI 起動を before フックで
+// 実装コスト: 112 回（CASES 104 + 対照群 8）の CLI 起動を before フックで
 // 1 回だけ掃引し、各 test は
 // その結果を参照するだけにしてある（in-process 実行で全掃引 ~2.5 秒）。
 
@@ -145,13 +145,15 @@ const CONTRACTS = {
  * 契約ごとの件数。表を編集したら必ずここも更新する
  * （= 挙動変更の総量をレビューで一目で見えるようにするための第 2 の錠）。
  */
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 101, C4: 1 };
+// #1797 で suppression の `--fingerprint-algo`（値欠落 / 不正値）2 件を追加し
+// C3 が 101 -> 103 になった。
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 103, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
 
 /**
- * 102 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
+ * 104 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
  * suppression の穴 2 件 + #1746 回帰 hotfix で pin した値検証の穴 5 件
  * + #1755 で pin した review のサブコマンド欠落・未知 2 件）。
  * kind は #1709 のエラー種別 5 分類:
@@ -715,6 +717,46 @@ const CASES = [
     contract: 'C3',
   },
   {
+    // #1797: `--fingerprint-algo` は値を取る新規オプション。値欠落を既定値へ
+    // 黙って落とすと、利用者が v2 を指定したつもりで v1 のエントリが
+    // 書き込まれる（Slice 2 の `--scope` の穴と同型）ため、parse 層で落とす。
+    surface: 'suppression',
+    kind: 'value-missing',
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      '0123456789abcdef',
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--fingerprint-algo',
+    ],
+    contract: 'C3',
+  },
+  {
+    // #1797: 不正値も parse 層で落とす。schema の
+    // `$defs.fingerprintAlgo.enum` 外の値を書き込むと、applySuppressions が
+    // fail-safe で無視するため「何も抑制しない suppression」が exit 0 で
+    // 永続化される（`--severity BOGUS` と同型の穴）。
+    surface: 'suppression',
+    kind: 'invalid-value',
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      '0123456789abcdef',
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--fingerprint-algo',
+      'v9',
+    ],
+    contract: 'C3',
+  },
+  {
     // #1746 W2 (1): `--severity BOGUS` は exit 0 のまま
     // context.severity: "BOGUS" を永続化していた（suppression-context.schema.json
     // の severity enum が拒否する値）。
@@ -999,11 +1041,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 102 usage-error cases and every row is unique', () => {
+  test('the matrix pins 104 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      102,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件'
+      104,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1025,7 +1067,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     }
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:101 / C4:1 (0 of 102 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:103 / C4:1 (0 of 104 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -1042,7 +1084,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   });
 
   // ---------------------------------------------------------------------------
-  // 102 ケースの本体
+  // 104 ケースの本体
   // ---------------------------------------------------------------------------
 
   for (const testCase of CASES) {
@@ -1088,7 +1130,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   //   書き込みも起きなかった形が、AFTER では書き込みまで完了する。この領域は
   //   本テストでは検出できない（前文の該当節を参照）。
   test('no usage-error case leaves a write side effect (.river must not exist)', () => {
-    // 表の 102 ケースはすべて usage error であり、Slice 3 の原則は「データ
+    // 表の 104 ケースはすべて usage error であり、Slice 3 の原則は「データ
     // 書き込みは全入力検証後に行う」。suppression の穴 2 件は Slice 3 まで、
     // #1746 W2 の `--severity BOGUS` / `--expires notadate` は v1.72.0 まで、
     // exit 0 のまま .river/memory/index.json へエントリを書き込んでいた。
@@ -1268,6 +1310,25 @@ const VALID_CASES = [
     command: 'suppression',
   },
   {
+    // #1797: 行番号込みの fingerprint（v2）はオプトイン。既定の v1 を壊さずに
+    // 受理されること（= このオプションを足したことで既存の suppression add の
+    // 契約が変わっていないこと）を pin する。
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      'b'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'line-anchored suppression',
+      '--fingerprint-algo',
+      'v2',
+    ],
+    command: 'suppression',
+    expect: { suppressionFingerprintAlgo: 'v2' },
+  },
+  {
     argv: [
       'promote',
       'propose',
@@ -1349,6 +1410,25 @@ const VALID_CASES = [
     ],
     command: 'suppression',
     expect: { suppressionSeverity: 'critical' },
+  },
+  {
+    // #1797: 新規の列挙値オプションも同じ規約に乗せる。初版は大小区別で
+    // `--fingerprint-algo V2` を exit 1 にしており、`--severity Critical` は
+    // 通るのにこれだけ落ちるという非対称になっていた（B1 と同型）。
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      'a'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--fingerprint-algo',
+      'V2',
+    ],
+    command: 'suppression',
+    expect: { suppressionFingerprintAlgo: 'v2' },
   },
   {
     // RFC 3339 date-time はそのまま（ミリ秒付き ISO へ正規化される）。

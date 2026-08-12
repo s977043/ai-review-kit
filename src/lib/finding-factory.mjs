@@ -499,14 +499,12 @@ export function classifyFindings(findings, options = {}) {
 // ---------------------------------------------------------------------------
 
 /**
- * Stable fingerprint for a finding so that the same logical issue can be
- * matched across review runs even when IDs regenerate.
- *
- * Strategy: hash(ruleId + file + first-60-chars-of-message).
- * Intentionally omits lineStart/lineEnd because line numbers shift as code
- * changes, but the same logical finding should still be considered persisting.
+ * Shared normalized key base for both fingerprint algorithms:
+ * `ruleId::file::first-60-chars-of-normalized-message`. The v1 hash input is
+ * exactly this string; v2 appends a line segment to the SAME base so the two
+ * algorithms cannot drift on normalization or truncation rules (#1797).
  */
-export function computeFingerprint(finding) {
+function fingerprintKeyBase(finding) {
   const ruleId = String(finding.ruleId ?? 'unknown');
   const file = String(finding.file ?? '');
   const msgNorm = String(finding.message ?? finding.title ?? '')
@@ -514,13 +512,61 @@ export function computeFingerprint(finding) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 60);
-  const raw = `${ruleId}::${file}::${msgNorm}`;
+  return `${ruleId}::${file}::${msgNorm}`;
+}
+
+/**
+ * Stable fingerprint for a finding so that the same logical issue can be
+ * matched across review runs even when IDs regenerate.
+ *
+ * Strategy: hash(ruleId + file + first-60-chars-of-message).
+ * Intentionally omits lineStart/lineEnd because line numbers shift as code
+ * changes, but the same logical finding should still be considered persisting.
+ *
+ * This is the `v1` algorithm (`context.fingerprintAlgo` in
+ * schemas/suppression-context.schema.json). Its input MUST NOT change:
+ * review-differ.mjs and runs-digest.mjs use it for cross-run finding tracking,
+ * and every suppression already persisted in `.river/memory/index.json`
+ * stores a v1 value (#1797).
+ */
+export function computeFingerprint(finding) {
+  return createHash('sha256').update(fingerprintKeyBase(finding)).digest('hex').slice(0, 16);
+}
+
+/**
+ * Line-anchored fingerprint (`v2`, #1797). Same key base as v1 plus the
+ * finding's start line, so suppressing one occurrence of a kind does NOT
+ * suppress every same-kind finding in the same file (v1 collapses them
+ * because heuristic detector messages are static per kind).
+ *
+ * Known, deliberate trade-off: a v2 suppression stops matching when the
+ * finding's line shifts (any edit above it re-surfaces the finding). That is
+ * inherent to line anchoring; v1 remains the default for suppressions that
+ * should survive line drift.
+ *
+ * Line resolution mirrors the pipeline's dual field convention
+ * (`lineStart` internally, `line` on comments/issues — see
+ * src/lib/review-plan.mjs normalizeFindingForArtifact). A finding that is not
+ * line-anchored hashes with line 0, keeping the value stable and distinct
+ * from v1.
+ */
+export function computeFingerprintV2(finding) {
+  const lineStart = finding.lineStart ?? finding.line;
+  const line = Number.isInteger(lineStart) && lineStart >= 1 ? lineStart : 0;
+  const raw = `${fingerprintKeyBase(finding)}::L${line}`;
   return createHash('sha256').update(raw).digest('hex').slice(0, 16);
 }
 
 /**
- * Annotate findings with their fingerprint (non-mutating).
+ * Annotate findings with their fingerprints (non-mutating). `fingerprint`
+ * stays the v1 value (unchanged consumers: review-differ, runs-digest,
+ * existing suppressions); `fingerprintV2` is the line-anchored value used by
+ * applySuppressions for entries with `fingerprintAlgo: 'v2'` (#1797).
  */
 export function annotateFingerprints(findings) {
-  return findings.map((f) => ({ ...f, fingerprint: computeFingerprint(f) }));
+  return findings.map((f) => ({
+    ...f,
+    fingerprint: computeFingerprint(f),
+    fingerprintV2: computeFingerprintV2(f),
+  }));
 }

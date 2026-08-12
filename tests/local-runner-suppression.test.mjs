@@ -24,6 +24,7 @@ import test from 'node:test';
 
 import { applySuppressions } from '../src/lib/suppression-apply.mjs';
 import { computeFingerprint, annotateFingerprints } from '../src/lib/finding-factory.mjs';
+import { filterSuppressedComments } from '../src/lib/local-runner.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const localRunnerSource = readFileSync(
@@ -135,4 +136,82 @@ test('applySuppressions deterministic with computeFingerprint inputs', () => {
   // policy degrades into best-effort matching.
   const finding = { ruleId: 'r1', file: 'src/x.ts', message: 'leak detected' };
   assert.equal(computeFingerprint(finding), computeFingerprint(finding));
+});
+
+// ---------------------------------------------------------------------------
+// #1797: fingerprintAlgo v2（行アンカー）でのコメント絞り込み
+// ---------------------------------------------------------------------------
+// v2 の抑制はコメント側も同じ粒度で落とさなければ意味がない。逆に v1 の粒度で
+// 落とすと、v2 が区別するために存在している「同ファイル・同 kind の別の行」の
+// コメントまで消える。この分岐は runLocalReview の内部にあり未テストだったため、
+// filterSuppressedComments として切り出して直接 pin する。
+//
+// v2 の正しさは「comment 側の `c.line` と finding 側の `lineStart` が同じ行を
+// 指すこと」に依存している（review-engine.mjs が `lineStart: c.line ?? null` と
+// して finding を作る）。読めば整合しているが pin されていなかった前提なので、
+// ここで明示的に assert する。
+
+const v2Comments = [
+  { skillId: 'rule-x', file: 'src/x.ts', message: 'msg', line: 10 },
+  { skillId: 'rule-x', file: 'src/x.ts', message: 'msg', line: 200 },
+];
+
+/** review-engine.mjs が comment から finding を作る形の最小再現。 */
+const findingsFromComments = (comments) =>
+  annotateFingerprints(
+    comments.map((c) => ({
+      ruleId: c.skillId,
+      file: c.file,
+      message: c.message,
+      lineStart: c.line,
+      severity: 'minor',
+    }))
+  );
+
+test('#1797: comment の line と finding の lineStart は同じ v2 fingerprint を導く', () => {
+  const [finding] = findingsFromComments([v2Comments[0]]);
+  const [kept] = filterSuppressedComments(v2Comments.slice(0, 1), [
+    { ...finding, suppressionAlgo: 'v2' },
+  ]);
+  // 突合の形: 該当行のコメントは落ちる（kept が undefined になる）。
+  assert.equal(kept, undefined, 'comment 側の line から導いた v2 値が finding と一致していない');
+});
+
+test('#1797: v2 抑制は同ファイル・同 kind でも別の行のコメントを残す', () => {
+  const findings = findingsFromComments(v2Comments);
+  const suppressed = [{ ...findings[0], suppressionAlgo: 'v2' }];
+  const kept = filterSuppressedComments(v2Comments, suppressed);
+  assert.equal(kept.length, 1);
+  assert.equal(kept[0].line, 200);
+});
+
+test('#1797: v1 抑制は従来どおり同ファイル・同 kind のコメントを全部落とす', () => {
+  const findings = findingsFromComments(v2Comments);
+  const suppressed = [{ ...findings[0], suppressionAlgo: 'v1' }];
+  assert.deepEqual(filterSuppressedComments(v2Comments, suppressed), []);
+  // suppressionAlgo が無い（v2 以前の呼び出し元）場合も v1 として扱う。
+  const legacy = [{ ...findings[0] }];
+  delete legacy[0].suppressionAlgo;
+  assert.deepEqual(filterSuppressedComments(v2Comments, legacy), []);
+});
+
+test('#1797: 抑制が無ければコメントは素通りする（同一配列を返す）', () => {
+  assert.equal(filterSuppressedComments(v2Comments, []), v2Comments);
+});
+
+test('#1797: v1 と v2 の抑制が混在しても互いの粒度を壊さない', () => {
+  const comments = [
+    ...v2Comments,
+    { skillId: 'rule-y', file: 'src/x.ts', message: 'other', line: 5 },
+    { skillId: 'rule-y', file: 'src/x.ts', message: 'other', line: 300 },
+  ];
+  const findings = findingsFromComments(comments);
+  const kept = filterSuppressedComments(comments, [
+    { ...findings[0], suppressionAlgo: 'v2' }, // rule-x の 10 行目だけ
+    { ...findings[2], suppressionAlgo: 'v1' }, // rule-y は全部
+  ]);
+  assert.deepEqual(
+    kept.map((c) => [c.skillId, c.line]),
+    [['rule-x', 200]]
+  );
 });

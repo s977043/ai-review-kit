@@ -284,6 +284,32 @@ export function formatUnparseableExpiresAtWarning({ id, expiresAt }) {
 }
 
 /**
+ * The operator-facing sentence for one suppression whose
+ * `context.fingerprintAlgo` is not a value this version understands (#1797).
+ *
+ * Same shape and same reason as `formatUnparseableExpiresAtWarning`: the
+ * fail-safe direction (ignore the entry rather than gate findings under the
+ * wrong algorithm) is kept, but the stop is made observable. An entry written
+ * by a newer CLI, or hand-edited to a typo, otherwise just stops suppressing
+ * with no error and no visible change in `.river/memory/index.json` — the
+ * exact silence #1780 / #1801 removed for unparseable deadlines.
+ *
+ * Like that function, the message carries the entry id and the offending value
+ * only; the rationale, related files and fingerprint stay out of the warning
+ * stream.
+ *
+ * @param {{ id: string, fingerprintAlgo: unknown }} entry
+ * @returns {string}
+ */
+export function formatUnknownFingerprintAlgoWarning({ id, fingerprintAlgo }) {
+  return (
+    `Warning: suppression ${id} declares an unsupported context.fingerprintAlgo ` +
+    `(${JSON.stringify(fingerprintAlgo)}); it is ignored and no longer suppresses findings. ` +
+    'Repair the value to "v1" (line-independent) or "v2" (line-anchored).'
+  );
+}
+
+/**
  * Find active suppressions that overlap with the given file paths.
  * Filters out expired and revoked suppressions.
  *
