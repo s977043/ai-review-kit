@@ -38,7 +38,9 @@
 //     the trade-off is that the suppression stops matching when the line
 //     shifts).
 //   - any other value: ignored (fail-safe — an unknown algorithm must not
-//     accidentally gate findings under v1 semantics).
+//     accidentally gate findings under v1 semantics) AND reported through the
+//     `warn` sink, so a suppression that silently stopped working is visible
+//     the same way an unparseable `expiresAt` is (#1780/#1801).
 //
 // Not evaluated here: revocation via `resurface` entries
 // (`collectRevokedSuppressionIds`). `revokeSuppression` never flips the
@@ -51,6 +53,7 @@ import {
   isSuppressionExpired,
   hasUnparseableSuppressionExpiresAt,
   formatUnparseableExpiresAtWarning,
+  formatUnknownFingerprintAlgoWarning,
 } from './suppression.mjs';
 
 const HIGH_SEVERITY = new Set(['major', 'critical']);
@@ -69,9 +72,11 @@ function severityOf(finding) {
  * @param {object} [opts]
  * @param {object} [opts.config]    Effective config; `config.memory.suppressionEnabled === false`
  *   bypasses suppression entirely (returns all findings as-is).
- * @param {(msg: string) => void} [opts.warn]  Sink for the unparseable-expiresAt
- *   warning (#1801). Injectable for tests, defaults to `console.warn` — the same
- *   contract as `findActiveSuppressions`.
+ * @param {(msg: string) => void} [opts.warn]  Sink for the warnings this gate
+ *   emits: an unparseable `expiresAt` (#1801) and an unsupported
+ *   `fingerprintAlgo` (#1797). Both name a suppression that stopped taking
+ *   effect for a repairable reason. Injectable for tests, defaults to
+ *   `console.warn` — the same contract as `findActiveSuppressions`.
  * @param {Date} [opts.now]         Reference instant for the expiry decision.
  *   Injectable for tests, defaults to `new Date()`.
  * @returns {{ keptFindings: Array<object>, suppressedFindings: Array<object>, applied: Array<object> }}
@@ -96,6 +101,7 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
   // hashFinding / computeFingerprint mismatch that PR-A documented as tech
   // debt. Entries with an unknown fingerprintAlgo are ignored for the same
   // fail-safe reason.
+  const warn = opts?.warn ?? ((m) => console.warn(m));
   const byFingerprintV1 = new Map();
   const byFingerprintV2 = new Map();
   for (const s of suppressions) {
@@ -104,13 +110,17 @@ export function applySuppressions(findings, memoryContext, opts = {}) {
     const algo = s?.context?.fingerprintAlgo ?? 'v1';
     if (algo === 'v1') byFingerprintV1.set(fp, s);
     else if (algo === 'v2') byFingerprintV2.set(fp, s);
+    // The entry is otherwise usable (it carries a canonical fingerprint) and
+    // stops taking effect only because of the algo value. Report it through
+    // the same `warn` sink as the expiry stop (#1780/#1801) rather than
+    // dropping it in silence; the value is repairable.
+    else warn(formatUnknownFingerprintAlgoWarning({ id: s.id, fingerprintAlgo: algo }));
   }
   if (byFingerprintV1.size === 0 && byFingerprintV2.size === 0) return result;
 
   const kept = [];
   const suppressed = [];
   const applied = [];
-  const warn = opts?.warn ?? ((m) => console.warn(m));
   const now = opts?.now ?? new Date();
   const warnedIds = new Set();
 

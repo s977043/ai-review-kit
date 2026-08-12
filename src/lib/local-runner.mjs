@@ -401,6 +401,61 @@ export async function planLocalReview({
   };
 }
 
+/**
+ * Drop the PR comments whose findings were suppressed.
+ *
+ * Comments and findings are 1:1 in review-engine.mjs (`findings =
+ * comments.map(...)`). When a finding is suppressed, the corresponding comment
+ * must go too — otherwise the suppressed finding still surfaces verbatim in the
+ * review thread, defeating the point of the suppression. Matching is by a
+ * fingerprint recomputed from the comment's OWN fields, so it stays correct if
+ * the 1:1 ordering ever drifts.
+ *
+ * #1797: the filter mirrors the algorithm that gated each finding
+ * (`suppressionAlgo`, set by applySuppressions). A v1 suppression keeps the
+ * pre-#1797 behavior — every same-kind comment in the file goes. A v2
+ * suppression drops only the comment anchored at the same line; filtering those
+ * by v1 would collapse exactly the occurrences v2 exists to keep apart.
+ *
+ * The v2 path depends on the comment's `line` naming the same line as the
+ * finding's `lineStart` (review-engine.mjs sets `lineStart: c.line ?? null`
+ * from the comment). Extracted from `runLocalReview` so that dependency is
+ * testable without standing up the whole pipeline
+ * (tests/local-runner-suppression.test.mjs).
+ *
+ * @param {Array<object>} comments - `review.comments`
+ * @param {Array<object>} suppressedFindings - `applySuppressions().suppressedFindings`
+ * @returns {Array<object>} the comments to keep
+ */
+export function filterSuppressedComments(comments, suppressedFindings) {
+  const list = Array.isArray(comments) ? comments : [];
+  const suppressed = Array.isArray(suppressedFindings) ? suppressedFindings : [];
+  const suppressedV1 = new Set(
+    suppressed
+      .filter((f) => f?.suppressionAlgo !== 'v2')
+      .map((f) => f?.fingerprint)
+      .filter(Boolean)
+  );
+  const suppressedV2 = new Set(
+    suppressed
+      .filter((f) => f?.suppressionAlgo === 'v2')
+      .map((f) => f?.fingerprintV2)
+      .filter(Boolean)
+  );
+  if (suppressedV1.size === 0 && suppressedV2.size === 0) return list;
+  return list.filter((c) => {
+    const key = {
+      ruleId: c.skillId || 'unknown',
+      file: c.file,
+      message: c.message,
+      line: c.line,
+    };
+    if (suppressedV1.has(computeFingerprint(key))) return false;
+    if (suppressedV2.has(computeFingerprintV2(key))) return false;
+    return true;
+  });
+}
+
 export async function runLocalReview({
   cwd = process.cwd(),
   phase = 'midstream',
@@ -544,45 +599,8 @@ export async function runLocalReview({
   // strict_block gate — they are ORed so neither path can be a bypass.
   const strictBlock = findingStrictBlock || deterministicExecStrictBlock;
 
-  // Comments and findings are 1:1 in review-engine.mjs (`findings =
-  // comments.map(...)`). When a finding is suppressed, the corresponding
-  // PR comment must also be filtered — otherwise the suppressed finding
-  // still surfaces verbatim in the review thread, defeating the entire
-  // point of the suppression. Match by fingerprint computed from the
-  // comment's own fields so this stays robust if the 1:1 ordering ever
-  // drifts.
-  // #1797: the comment filter mirrors the algorithm that gated each finding.
-  // A v1 suppression keeps the pre-#1797 behavior (every same-kind comment in
-  // the file goes); a v2 suppression drops only the comment anchored at the
-  // same line, otherwise the comment surface would still collapse the very
-  // occurrences v2 exists to keep apart.
-  const suppressedFingerprintsV1 = new Set(
-    suppressedFindings
-      .filter((f) => f.suppressionAlgo !== 'v2')
-      .map((f) => f.fingerprint)
-      .filter(Boolean)
-  );
-  const suppressedFingerprintsV2 = new Set(
-    suppressedFindings
-      .filter((f) => f.suppressionAlgo === 'v2')
-      .map((f) => f.fingerprintV2)
-      .filter(Boolean)
-  );
   const reviewComments = review.comments ?? [];
-  const keptComments =
-    suppressedFingerprintsV1.size === 0 && suppressedFingerprintsV2.size === 0
-      ? reviewComments
-      : reviewComments.filter((c) => {
-          const key = {
-            ruleId: c.skillId || 'unknown',
-            file: c.file,
-            message: c.message,
-            line: c.line,
-          };
-          if (suppressedFingerprintsV1.has(computeFingerprint(key))) return false;
-          if (suppressedFingerprintsV2.has(computeFingerprintV2(key))) return false;
-          return true;
-        });
+  const keptComments = filterSuppressedComments(reviewComments, suppressedFindings);
 
   return {
     status: 'ok',

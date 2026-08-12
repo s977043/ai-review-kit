@@ -1412,6 +1412,25 @@ const VALID_CASES = [
     expect: { suppressionSeverity: 'critical' },
   },
   {
+    // #1797: 新規の列挙値オプションも同じ規約に乗せる。初版は大小区別で
+    // `--fingerprint-algo V2` を exit 1 にしており、`--severity Critical` は
+    // 通るのにこれだけ落ちるという非対称になっていた（B1 と同型）。
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      'a'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--fingerprint-algo',
+      'V2',
+    ],
+    command: 'suppression',
+    expect: { suppressionFingerprintAlgo: 'v2' },
+  },
+  {
     // RFC 3339 date-time はそのまま（ミリ秒付き ISO へ正規化される）。
     argv: [
       'suppression',

@@ -102,7 +102,7 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 
 この統一により、オプション名の typo・余剰 positional・値の欠落は `$?` の exit 1 として検知できます。**値の妥当性**は、次のオプションについて parse 層で検証します。
 
-- 列挙値: `--phase` / `--severity` / `--planner` / `--depth` / `--output` / `--format` / `--fail-on` / `--warn-on` / `--source`
+- 列挙値: `--phase` / `--severity` / `--planner` / `--depth` / `--output` / `--format` / `--fail-on` / `--warn-on` / `--source` / `--fingerprint-algo`
 - 数値: `--pr` / `--threshold` / `--min` / `--max-cost`
 - 日付: `--expires` / `--month`
 

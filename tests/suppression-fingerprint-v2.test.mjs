@@ -32,6 +32,7 @@ import {
   annotateFingerprints,
 } from '../src/lib/finding-factory.mjs';
 import { applySuppressions } from '../src/lib/suppression-apply.mjs';
+import { formatUnknownFingerprintAlgoWarning } from '../src/lib/suppression.mjs';
 import { parseArgs } from '../src/cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -217,12 +218,59 @@ test('未知の fingerprintAlgo は無視される（fail-safe: v1 として誤�
     fingerprint: findings[0].fingerprint,
     fingerprintAlgo: 'v9',
   });
-  const { keptFindings, suppressedFindings, applied } = applySuppressions(findings, {
-    suppressions: [suppression],
-  });
+  const warnings = [];
+  const { keptFindings, suppressedFindings, applied } = applySuppressions(
+    findings,
+    { suppressions: [suppression] },
+    { warn: (m) => warnings.push(m) }
+  );
   assert.equal(suppressedFindings.length, 0);
   assert.equal(keptFindings.length, 2);
   assert.equal(applied.length, 0);
+  // main では抑制されていたエントリが無言で失効するのを防ぐ（#1780/#1801 と同型）。
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /suppression-v9/);
+  assert.match(warnings[0], /fingerprintAlgo/);
+  assert.equal(
+    warnings[0],
+    formatUnknownFingerprintAlgoWarning({ id: 'suppression-v9', fingerprintAlgo: 'v9' })
+  );
+});
+
+test('空文字の fingerprintAlgo も未知として警告される（既定へ落とさない）', () => {
+  const findings = twoOccurrences();
+  const suppression = makeSuppression({
+    id: 'suppression-empty',
+    fingerprint: findings[0].fingerprint,
+    fingerprintAlgo: '',
+  });
+  // makeSuppression は falsy を書き込まないので、ここだけ直接立てる。
+  suppression.context.fingerprintAlgo = '';
+  const warnings = [];
+  const { suppressedFindings } = applySuppressions(
+    findings,
+    { suppressions: [suppression] },
+    { warn: (m) => warnings.push(m) }
+  );
+  assert.equal(suppressedFindings.length, 0);
+  assert.equal(warnings.length, 1);
+});
+
+test('既知の algo（v1 / v2 / 未指定）では警告を出さない', () => {
+  const findings = twoOccurrences();
+  for (const entry of [
+    makeSuppression({ id: 's1', fingerprint: findings[0].fingerprint }),
+    makeSuppression({ id: 's2', fingerprint: findings[0].fingerprint, fingerprintAlgo: 'v1' }),
+    makeSuppression({
+      id: 's3',
+      fingerprint: findings[0].fingerprintV2,
+      fingerprintAlgo: 'v2',
+    }),
+  ]) {
+    const warnings = [];
+    applySuppressions(findings, { suppressions: [entry] }, { warn: (m) => warnings.push(m) });
+    assert.deepEqual(warnings, [], `${entry.id} で不要な警告が出ている`);
+  }
 });
 
 test('v1 と v2 のエントリは併存でき、それぞれの粒度で適用される', () => {
@@ -295,6 +343,28 @@ test('CLI: --fingerprint-algo の既定は v1（オプトイン）', () => {
   assert.equal(parsed.suppressionFingerprintAlgo, 'v1');
 });
 
+test('CLI: --fingerprint-algo は大小を無視して受理し小文字で保存する', () => {
+  // 他の列挙値オプション（--severity / --phase / --fail-on / --warn-on）が
+  // すべて大小無視である以上、ここだけ区別すると v1.72.1 の `--phase Upstream`
+  // 誤拒否と同型の非対称になる。schema の enum は小文字なので保存値も小文字。
+  for (const variant of ['V2', 'v2', 'V1']) {
+    const parsed = parseArgs([
+      'suppression',
+      'add',
+      '--fingerprint',
+      'a'.repeat(16),
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'r',
+      '--fingerprint-algo',
+      variant,
+    ]);
+    assert.notEqual(parsed.usageError, true, `--fingerprint-algo ${variant} を誤拒否した`);
+    assert.equal(parsed.suppressionFingerprintAlgo, variant.toLowerCase());
+  }
+});
+
 test('CLI: --fingerprint-algo の不正値・値欠落は usage error になる', () => {
   const invalid = parseArgs([
     'suppression',
@@ -318,4 +388,55 @@ test('CLI: --fingerprint-algo の不正値・値欠落は usage error になる'
     '--fingerprint-algo',
   ]);
   assert.equal(missing.usageError, true);
+});
+
+// ---------------------------------------------------------------------------
+// v2 fingerprint の入手経路（--debug 出力）
+// ---------------------------------------------------------------------------
+// `--fingerprint-algo v2` を用意しても、利用者が v2 の 16-hex を入手できなければ
+// 「exit 0 で作られるが何も抑制しないエントリ」しか作れない。`--debug` は
+// pages/guides/repo-wide-review.md が #687 以来「fingerprint はここから拾う」と
+// 書いてきた経路なので、v1 と v2 の両方をここに出す。
+test('--debug 出力に finding の v1 / v2 fingerprint が両方出る', async () => {
+  const { printDebugInfo } = await import('../src/cli/render.mjs');
+  const findings = annotateFingerprints([
+    { ...V1_PIN.finding, lineStart: 10, severity: 'minor' },
+    { ...V1_PIN.finding, lineStart: 200, severity: 'minor' },
+  ]);
+  const lines = [];
+  printDebugInfo(
+    {
+      findings,
+      changedFiles: ['src/app.ts'],
+      diffText: '',
+      tokenEstimate: 0,
+      reviewDebug: {},
+    },
+    { log: (m) => lines.push(String(m)) }
+  );
+  const out = lines.join('\n');
+  for (const f of findings) {
+    assert.ok(
+      out.includes(f.fingerprint),
+      `v1 fingerprint ${f.fingerprint} が --debug に出ていない`
+    );
+    assert.ok(
+      out.includes(f.fingerprintV2),
+      `v2 fingerprint ${f.fingerprintV2} が --debug に出ていない`
+    );
+  }
+  // 行が分かる形で出す（同 kind が複数あるとき、どちらの行か判別できないと
+  // v2 の hex を選べない）。
+  assert.match(out, /src\/app\.ts:10/);
+  assert.match(out, /src\/app\.ts:200/);
+});
+
+test('--debug: fingerprint を持たない finding では節を出さない', async () => {
+  const { printDebugInfo } = await import('../src/cli/render.mjs');
+  const lines = [];
+  printDebugInfo(
+    { findings: [], changedFiles: [], diffText: '', tokenEstimate: 0, reviewDebug: {} },
+    { log: (m) => lines.push(String(m)) }
+  );
+  assert.ok(!lines.join('\n').includes('Finding fingerprints'));
 });

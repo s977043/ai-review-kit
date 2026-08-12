@@ -327,6 +327,7 @@ function takeTrailingPositional(parsed, token) {
 const KNOWN_OPTION_TOKENS = new Set([
   // suppression
   '--fingerprint',
+  '--fingerprint-algo',
   '--finding',
   '--feedback',
   '--scope',
@@ -707,14 +708,20 @@ function parseArgs(argv) {
           usageError(parsed);
           break;
         }
-        if (!SUPPRESSION_FINGERPRINT_ALGOS.includes(value)) {
+        // 大小無視で受理し、小文字化して保存する。`--severity` / `--phase` /
+        // `--fail-on` / `--warn-on` はいずれもこの形であり、ここだけ大小を
+        // 区別すると `--severity Critical` は通るのに `--fingerprint-algo V2`
+        // だけ exit 1 という非対称になる（v1.72.1 の `--phase Upstream`
+        // 誤拒否と同型の回帰）。schema の enum は小文字なので保存値も小文字。
+        const algo = value.toLowerCase();
+        if (!SUPPRESSION_FINGERPRINT_ALGOS.includes(algo)) {
           console.error(
             `Error: --fingerprint-algo must be one of: ${SUPPRESSION_FINGERPRINT_ALGOS.join(', ')} (got "${value}").`
           );
           usageError(parsed);
           break;
         }
-        parsed.suppressionFingerprintAlgo = value;
+        parsed.suppressionFingerprintAlgo = algo;
         continue;
       }
       if (arg === '--finding') {

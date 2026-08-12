@@ -292,7 +292,7 @@ A mechanism that accumulates feedback such as "this was a false positive" or "ac
 
 ### How it works
 
-- Each finding has a stable 16-hex fingerprint via `computeFingerprint(ruleId + file + normalized message)` (implementation: `src/lib/finding-factory.mjs`).
+- Each finding has a stable 16-hex fingerprint via `computeFingerprint(ruleId + file + normalized message)` (implementation: `src/lib/finding-factory.mjs`). A line-anchored `computeFingerprintV2` value is attached alongside it.
 - Writing a `type: 'suppression'` entry into Riverbed Memory with the fingerprint and feedbackType makes subsequent findings with the same fingerprint automatically excluded from `findings`.
 - The matching PR comment is also not posted (implementation: `src/lib/suppression-apply.mjs`, `src/lib/local-runner.mjs`).
 - **P1 guard**: findings whose severity is `major` / `critical` are auto-suppressed only when `feedbackType=accepted_risk`.
@@ -309,10 +309,15 @@ river suppression add \
   --scope <global|subsystem|file> \
   --severity <info|minor|major|critical> \
   --files src/auth.ts,src/login.ts \
-  --pr 123
+  --pr 123 \
+  --fingerprint-algo v1
 ```
 
-Pick the fingerprint from the `--debug` output or `reviewDebug.suppressionsApplied`. Strict `<16-hex>` checks and feedbackType enum checks run up front, so typos exit with code 1.
+Pick the fingerprint from the `Finding fingerprints` block of the `--debug` output, or from `reviewDebug.suppressionsApplied`. The `--debug` block lists both the v1 and the v2 16-hex per finding, with the line number, so you can take the value that matches the algorithm you intend to use. Strict `<16-hex>` checks and feedbackType enum checks run up front, so typos exit with code 1.
+
+### Suppression granularity (`--fingerprint-algo`)
+
+The default `v1` omits the line number: one entry suppresses every same-kind finding in the same file, and it keeps working when lines shift. `v2` includes the line, so only the finding at that line is suppressed — but the entry stops matching as soon as the line shifts. Take v2 values from the v2 column of the `--debug` output; feeding a v1 hex to `--fingerprint-algo v2` produces an entry that matches nothing.
 
 ### Temporarily disabling suppression via config
 
