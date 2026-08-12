@@ -247,6 +247,37 @@ cd skills/<phase>/<skillId>/eval
 promptfoo eval
 ```
 
-### CI ゲート
+### CI での位置づけ（マージゲートではない）
 
-`.github/workflows/skill-eval.yml` が `eval/promptfoo.yaml` を持つ全スキルを自動検出し、PR ごとに実行する。`continue-on-error: false` のため、失敗はマージをブロックする。
+`.github/workflows/skill-eval.yml`（ワークフロー名 `Skill Evaluation`）は `eval/promptfoo.yaml` のあるスキルを自動検出し、PR で起動します。ただしマージのゲートではありません。理由は 2 つあります。
+
+1. `Skill Evaluation` は main ブランチの必須ステータスチェックに含まれない（必須は下記 7 件）
+2. API キーを repo secret に登録していないため、アサーション実行 step は skip され、設定検証まで縮退する
+
+2 について、skip されるのは `Run evaluation` と `Check must_include assertions` です。残るのは `Validate config (no API keys)` であり、`promptfoo.yaml` の YAML 構文と参照ファイルの存在だけを確認します。`continue-on-error: false` が効くのはこの縮退後の step までです。
+
+必須ステータスチェックは `gh api repos/:owner/:repo/branches/main/protection --jq '.required_status_checks.checks[].context'` で取得できます。
+
+```text
+Lint
+Unit tests (22.x)
+Skill schema validation
+Meta consistency
+Action dist freshness
+Integration (CLI)
+Blocked label guard
+```
+
+LLM ベースの eval（promptfoo）は、API キーを持つ環境での手動・任意実行という位置づけです。手順は [`docs/runbook/community-skill-eval.md`](./runbook/community-skill-eval.md) を参照してください。
+
+### 実際のマージゲート
+
+スキル品質を機械的に守るのは、決定論的な検証です。必須チェック `Skill schema validation` から `npm run skills:validate`（`scripts/validate-skills.mjs`）が実行され、次を検証します。
+
+- recommended skill が `eval/` または `fixtures/` を持つこと（`GRANDFATHERED_WITHOUT_EVAL` の免除分は除く）
+- fixture へ埋め込んだ `<!-- expected: -->` ブロックと SKILL.md の Check 見出しが整合すること（fixture drift）
+- registry のパスと ID、pack 定義、命名衝突
+
+PR #1826 では upstream 5 スキルの免除を外しました。対象から `fixtures/` を削除すると、`npm run skills:validate` は exit 1 で失敗します。対象は `adr-decision-quality` / `api-design` / `api-versioning-compat` / `architecture-boundaries` / `failure-modes-observability` の 5 件です。
+
+まとめると、決定論的な検証がメインのゲートであり、LLM eval はオプションです。
