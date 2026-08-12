@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 作業ツリーの汚染を排除して件数を測る（refs #1827）。
 #
-# `git archive <ref> | tar -x` で一時ディレクトリへ clean tree を展開し、そこで
+# `git archive <ref>` を一時ファイルへ書き出し `tar -x -f` で一時ディレクトリへ clean tree を展開し、そこで
 # 任意のコマンドを実行して結果を返す。展開されるのは <ref> が追跡しているファイル
 # だけなので、次の 2 つの汚染源が構造的に消える:
 #
@@ -102,14 +102,25 @@ if ! SHA=$(git rev-parse --verify "${REF}^{commit}" 2>/dev/null); then
 fi
 
 TMPBASE="${TMPDIR:-/tmp}"
-WORKDIR=$(mktemp -d "${TMPBASE%/}/rr-clean-tree.XXXXXX")
+TMPROOT=$(mktemp -d "${TMPBASE%/}/rr-clean-tree.XXXXXX")
+WORKDIR="${TMPROOT}/tree"
+ARCHIVE="${TMPROOT}/archive.tar"
+mkdir "${WORKDIR}"
 cleanup() {
-  rm -rf "${WORKDIR}"
+  rm -rf "${TMPROOT}"
 }
 trap cleanup EXIT INT TERM
 
 echo "clean tree: ${WORKDIR} (removed on exit)" >&2
-git archive --format=tar "${SHA}" | tar -x -C "${WORKDIR}"
+# パイプ（`git archive | tar -x`）は使わない。git archive は tar の出力を blocking
+# factor 20（10240 バイト）へパディングするが、bsdtar は EOF マーカー（512 バイトの
+# ゼロブロック 2 つ）を読んだ時点で終了し、残りのパディングを読み捨てない。読み手が
+# 先に消えるので書き手の git archive が SIGPIPE を受け、`set -o pipefail` と
+# `set -e` の下ではスクリプト全体が exit 141 で落ちる（#1838）。中間ファイルを挟めば
+# パイプが無くなり、この経路自体が消える。
+git archive --format=tar -o "${ARCHIVE}" "${SHA}"
+tar -x -f "${ARCHIVE}" -C "${WORKDIR}"
+rm -f "${ARCHIVE}"
 
 # 表示用にコマンドを再クォートする（コピペしてそのまま再実行できる形にする）。
 # 安全な文字だけの引数は素のまま、それ以外は単一引用符で包む（%q の

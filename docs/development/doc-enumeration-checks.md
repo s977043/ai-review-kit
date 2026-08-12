@@ -74,7 +74,9 @@ grep -cxF -f /tmp/rr-undef.txt /tmp/rr-refs.txt # 分子: 6
 
 2 番目は `git grep` では防げません。自分でディレクトリを走査するツール（textlint、`find`、`wc`）は、git の追跡状態を見ないからです。実例として #1786 では 347 件と公開した値の真値が 317 件で、差分は `docs/Working/` の 14 ファイルの混入でした。
 
-`scripts/count-in-clean-tree.sh` は `git archive <ref> | tar -x` で一時ディレクトリへ clean tree を展開し、そこで任意のコマンドを実行します。展開されるのは ref が追跡しているファイルだけなので、1 番目と 2 番目の汚染源が構造的に消えます。一時ディレクトリは `trap` で必ず削除されます。
+`scripts/count-in-clean-tree.sh` は `git archive <ref>` を一時ファイルへ書き出し、`tar -x -f` で一時ディレクトリへ clean tree を展開し、そこで任意のコマンドを実行します。展開されるのは ref が追跡しているファイルだけなので、1 番目と 2 番目の汚染源が構造的に消えます。一時ディレクトリは `trap` で必ず削除されます。
+
+展開にパイプ（`git archive | tar -x`）を使わないのは意図的です。`git archive` は tar 出力を blocking factor 20（10240 バイト）へパディングしますが、bsdtar は EOF マーカーを読んだ時点で終了し、残りのパディングを読み捨てません。読み手が先に消えるため書き手が SIGPIPE を受け、`set -o pipefail` の下ではスクリプト全体が exit 141 で落ちていました（#1838。macOS で再現、CI の ubuntu では発現せず）。
 
 ```bash
 # 既定の ref は origin/main。--ref で上書きできる

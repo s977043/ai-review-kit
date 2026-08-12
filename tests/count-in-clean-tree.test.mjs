@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,8 +46,12 @@ function makeRepo(t) {
   return repo;
 }
 
-function runScript(repo, args) {
-  return spawnSync('bash', [SCRIPT, ...args], { cwd: repo, encoding: 'utf8' });
+function runScript(repo, args, env) {
+  return spawnSync('bash', [SCRIPT, ...args], {
+    cwd: repo,
+    encoding: 'utf8',
+    ...(env ? { env: { ...process.env, ...env } } : {}),
+  });
 }
 
 // FS 走査型ツールの代役。git を介さずディレクトリを歩いて MARKER を数える。
@@ -117,6 +121,68 @@ test('既定出力は ref と SHA とコマンドを含む貼り付け可能な�
   assert.ok(res.stdout.includes(MARKER), '実行コマンドが含まれること');
   // 実測値そのもの（tracked.md の 1 件）が出力に載る
   assert.match(res.stdout, /^1$/m);
+});
+
+// #1838 の回帰テスト。
+// `git archive | tar -x` の形だと、tar が入力を最後まで読まずに終了した瞬間に
+// git archive が SIGPIPE を受け、`set -euo pipefail` の下でスクリプト全体が
+// exit 141 で落ちる。macOS の bsdtar が実際にこれを起こす（tar の EOF マーカーを
+// 読んだ時点で終了し、git archive が付ける blocking factor 20 のパディングを
+// 読み捨てない）。CI は ubuntu-latest なのでこの経路を踏まず、#1828 の追加時は
+// 全テストが green のままこのバグを通した。
+//
+// 特定の tar 実装に依存せず pin するため、「入力を読み切らない tar」を PATH の
+// shim で再現する。パイプ経由（`-f` 無し）で呼ばれたら少しだけ読んで終了し、
+// ファイル経由（`-f`）なら本物の tar に委譲する。パイプを使う実装なら必ず
+// 141 で落ち、中間ファイルを使う実装なら影響を受けない。
+function makeEarlyExitTarShim(t) {
+  const realTar = spawnSync('sh', ['-c', 'command -v tar'], { encoding: 'utf8' }).stdout.trim();
+  assert.ok(realTar, 'tar が PATH に見つかること');
+
+  const bin = mkdtempSync(join(tmpdir(), 'rr-clean-tree-tarshim-'));
+  t.after(() => rmSync(bin, { recursive: true, force: true }));
+
+  const shim = join(bin, 'tar');
+  writeFileSync(
+    shim,
+    [
+      '#!/bin/sh',
+      '# -f 付き（ファイル入力）は本物の tar に委譲する。',
+      'for a in "$@"; do',
+      '  case "$a" in',
+      `    -f|--file|--file=*) exec ${realTar} "$@" ;;`,
+      '  esac',
+      'done',
+      '# stdin 入力: 入力を読み切らずに正常終了する読み手を再現する。',
+      'head -c 4096 >/dev/null 2>&1',
+      'exit 0',
+      '',
+    ].join('\n')
+  );
+  chmodSync(shim, 0o755);
+  return bin;
+}
+
+test('入力を読み切らない tar でも SIGPIPE で落ちない', (t) => {
+  const repo = makeRepo(t);
+  // パイプバッファ（macOS/Linux とも 64KiB 程度）を超える大きさにして、
+  // 読み手が先に消えたときに書き手が必ず SIGPIPE を受ける状況を作る。
+  writeFileSync(join(repo, 'big.txt'), 'a'.repeat(1024 * 1024));
+  git(repo, 'add', '-A');
+  git(repo, 'commit', '-q', '-m', 'big');
+
+  const bin = makeEarlyExitTarShim(t);
+  const res = runScript(repo, ['--ref', 'HEAD', '--raw', '--', 'ls'], {
+    PATH: `${bin}:${process.env.PATH}`,
+  });
+
+  assert.notEqual(res.status, 141, `SIGPIPE で落ちている: ${res.stderr}`);
+  assert.equal(res.status, 0, res.stderr);
+  // 展開自体も成立していること（shim が握り潰した空ツリーではないこと）。
+  assert.match(res.stdout, /^tracked\.md$/m);
+  assert.match(res.stdout, /^big\.txt$/m);
+  // 展開に使った中間 tar が clean tree に残っていないこと。
+  assert.doesNotMatch(res.stdout, /\.tar$/m);
 });
 
 test('解決できない ref はエラー終了する', (t) => {
