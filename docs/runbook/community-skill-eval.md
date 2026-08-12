@@ -46,20 +46,29 @@ daily schedule (04:00 JST) against all skills. Use this workflow to
 track regressions across the full skill set over time without manual
 intervention.
 
-### CI validation on skill changes (skill-eval.yml)
+### CI config check on skill changes (skill-eval.yml)—not a merge gate
 
 `.github/workflows/skill-eval.yml` triggers automatically on PR/push
-whenever skill eval, prompt, fixture, or golden files change. It
-validates that the modified skill still passes its eval assertions
-before merge.
+whenever skill eval, prompt, fixture, or golden files change. It does
+**not** gate merges: `Skill Evaluation` is not among main's required
+status checks, and because no API keys are registered as repo secrets,
+the `Run evaluation` and `Check must_include assertions` steps are
+skipped. What remains is `Validate config (no API keys)`, which checks
+`promptfoo.yaml` YAML syntax and the existence of referenced files.
+
+The deterministic merge gate for skills is `npm run skills:validate`
+(`scripts/validate-skills.mjs`), run by the required `Skill schema
+validation` check—it enforces eval/fixture coverage for recommended
+skills and fixture drift. See `docs/skills-structure.md`.
 
 ### When to use which path
 
-| Goal                                                          | Path                                                            |
-| ------------------------------------------------------------- | --------------------------------------------------------------- |
-| Generate or iterate on per-skill fixtures and promote goldens | promptfoo path (`run-promptfoo-eval.sh` / `promptfoo-eval.yml`) |
-| Continuous regression tracking across all skills              | `evaluate-all.mjs` / `nightly-eval.yml`                         |
-| CI validation when a skill's files change                     | `skill-eval.yml` (automatic)                                    |
+| Goal                                                            | Path                                                            |
+| --------------------------------------------------------------- | --------------------------------------------------------------- |
+| Generate or iterate on per-skill fixtures and promote goldens   | promptfoo path (`run-promptfoo-eval.sh` / `promptfoo-eval.yml`) |
+| Continuous regression tracking across all skills                | `evaluate-all.mjs` / `nightly-eval.yml`                         |
+| Eval-config sanity check when a skill's files change (advisory) | `skill-eval.yml` (automatic)                                    |
+| Merge gate for skill structure, eval coverage, fixture drift    | `npm run skills:validate` (`Skill schema validation`)           |
 
 ## Fallback: GitHub Actions workflow
 

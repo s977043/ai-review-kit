@@ -86,7 +86,13 @@ jobs:
     name: Evaluate ${{ matrix.skill }}
     needs: discover-skills
     if: needs.discover-skills.outputs.has_skills == 'true'
-    # Eval failures block PRs — skills with promptfoo.yaml fixtures are gated
+    # NOT a merge gate: "Skill Evaluation" is not among main's required status
+    # checks, and with no API keys in repo secrets the eval steps below are
+    # skipped — the job degrades to validating promptfoo.yaml syntax and the
+    # existence of referenced files. continue-on-error: false only makes that
+    # degraded validation fail loudly. The deterministic merge gate is
+    # `npm run skills:validate` via the required "Skill schema validation"
+    # check. See docs/skills-structure.md "CI での位置づけ".
     continue-on-error: false
     runs-on: ubuntu-latest
     timeout-minutes: 30
