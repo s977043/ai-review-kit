@@ -60,8 +60,10 @@ function isActiveSuppression(entry, now) {
  * because a real deadline passed. Without it the count simply drops and nothing
  * says why — the same silence the review path had. The detection itself is not
  * re-derived here; it comes from `findUnparseableSuppressionExpiries`
- * (src/lib/suppression.mjs), which shares the SSoT with the review path so this
- * report and the actual behaviour cannot disagree (the #1764 hazard).
+ * (src/lib/suppression.mjs), which shares its validity rule AND its revocation
+ * lookup with `findActiveSuppressions`, so the report and that path cannot
+ * disagree (the #1764 hazard). The full entry list is passed, not just the
+ * suppressions, because revocations live in separate `resurface` entries.
  *
  * @param {Array<object>} entries Riverbed Memory entries
  * @param {{ now?: Date, thresholds?: typeof THRESHOLDS }} [options]
@@ -69,9 +71,7 @@ function isActiveSuppression(entry, now) {
  */
 export function analyzeSuppressions(entries, { now = new Date(), thresholds = THRESHOLDS } = {}) {
   const active = entries.filter((e) => isActiveSuppression(e, now));
-  const unparseableExpiresAt = findUnparseableSuppressionExpiries(
-    entries.filter((e) => e?.type === 'suppression')
-  );
+  const unparseableExpiresAt = findUnparseableSuppressionExpiries(entries);
 
   const byFingerprint = new Map();
   for (const entry of active) {
@@ -143,12 +143,17 @@ export function formatIssueBody(result) {
       '### 期限が読めないため失効扱いになっている suppression',
       '',
       'RFC 3339 の日付 / 日時として解釈できない `context.expiresAt` を持つ entry です。fail-safe として失効（抑制が止まる）扱いになります。',
-      ''
+      '',
+      // インライン code span ではなく fenced block に置く。値は旧 CLI が verbatim
+      // 保存した任意の文字列で、バッククォートを含むと code span が壊れて issue
+      // 本文の残りを巻き込む。JSON.stringify で 1 行へ畳むと改行が \n になるため、
+      // 閉じフェンスと衝突する行を作れない（引用符が付くのでフェンスにならない）。
+      '```text'
     );
     for (const s of result.unparseableExpiresAt) {
-      lines.push(`- \`${s.id}\` — expiresAt: \`${s.expiresAt}\``);
+      lines.push(`${s.id}\texpiresAt: ${JSON.stringify(s.expiresAt)}`);
     }
-    lines.push('');
+    lines.push('```', '');
   }
   lines.push(
     '次のアクション: 該当 skill に対して skill-optimizer の診断を実行し、suppression の恒久化ではなく skill 本体の改善（fixture 追加・gate 修正）を検討してください。'
@@ -208,7 +213,14 @@ if (isDirectRun(import.meta.url)) {
     for (const s of result.unparseableExpiresAt) {
       console.warn(formatUnparseableExpiresAtWarning(s));
     }
-    if (result.repeatedFingerprints.length || result.staleHighSeverity.length) {
+    // unparseableExpiresAt もこの判定に含める。formatIssueBody へ節を足した以上、
+    // それだけが出ている実行でも本文生成へ誘導し、exit 2 で自動化から見えるように
+    // する（含めないと「新しい所見はあるのに exit 0 で誰も気づかない」が残る）。
+    if (
+      result.repeatedFingerprints.length ||
+      result.staleHighSeverity.length ||
+      result.unparseableExpiresAt.length
+    ) {
       console.log('\nRun with --issue-body to generate a diagnosis-request issue body.');
       process.exitCode = 2;
     }

@@ -296,6 +296,14 @@ test('findUnparseableSuppressionExpiries reports only active entries (#1780)', (
     },
     { id: 's-good', type: 'suppression', context: { active: true, expiresAt: '2027-01-01' } },
     { id: 's-none', type: 'suppression', context: { active: true } },
+    // revoke は append-only で、元 entry の context.active は true のまま残る。
+    // active だけを見ると「修復せよ」と報告してしまう（#1780 W2）。
+    {
+      id: 's-revoked-bad',
+      type: 'suppression',
+      context: { active: true, expiresAt: '2027-01-01T00:00:00' },
+    },
+    { id: 'r-1', type: 'resurface', context: { suppressionId: 's-revoked-bad', action: 'revoke' } },
   ];
   assert.deepEqual(findUnparseableSuppressionExpiries(entries), [
     { id: 's-active-bad', expiresAt: '2027-01-01T00:00:00' },

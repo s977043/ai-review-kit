@@ -176,6 +176,94 @@ test('unparseableExpiresAt is empty when every deadline parses (#1780)', () => {
   assert.doesNotMatch(formatIssueBody(result), /期限が読めないため失効扱い/);
 });
 
+test('issue body keeps a backtick-bearing expiresAt inside a fenced block (#1780)', () => {
+  // 値は旧 CLI が verbatim 保存した任意の文字列。バッククォートを含むと
+  // インライン code span が壊れ、issue 本文の残りを巻き込む。
+  const result = analyzeSuppressions([suppression({ expiresAt: '2027`01`01' })], { now: NOW });
+  const body = formatIssueBody(result);
+  assert.equal(result.unparseableExpiresAt.length, 1);
+  const lines = body.split('\n');
+  const open = lines.indexOf('```text');
+  const close = lines.indexOf('```', open + 1);
+  assert.ok(open >= 0 && close > open, 'fenced block が出ること');
+  const block = lines.slice(open + 1, close);
+  assert.ok(
+    block.some((l) => l.includes('"2027`01`01"')),
+    `値が fence の内側にあること: ${JSON.stringify(block)}`
+  );
+  // 次のアクション文は fence の外に残り、巻き込まれていない。
+  assert.ok(lines.slice(close + 1).some((l) => l.includes('skill-optimizer')));
+});
+
+// #1780 W3: 追加した診断を「自分自身の出力」ではなく既存の判定経路と突き合わせる。
+// analyzeSuppressions の期待値を analyzeSuppressions で作ると、両者が同じ誤りを
+// 共有していても緑になる。実際、revoke 済み entry の扱いのズレ（W2）はこの突合が
+// 無いあいだ検出されなかった。
+test('unparseableExpiresAt agrees with the warning ids findActiveSuppressions emits, revocations included (#1780)', () => {
+  const scoped = (id, expiresAt) => ({
+    id,
+    type: 'suppression',
+    createdAt: '2026-01-01T00:00:00Z',
+    metadata: { relatedFiles: ['src/a.mjs'] },
+    context: { active: true, scope: 'file', fingerprint: 'a1b2c3d4e5f60718', expiresAt },
+  });
+  const entries = [
+    scoped('s-legacy-noffset', '2027-01-01T00:00:00'),
+    scoped('s-legacy-slash', '2027/01/01'),
+    // revoke 済み: どちらの経路からも報告されてはならない。
+    scoped('s-revoked', '2027-01-01T09:00:00+0900'),
+    {
+      id: 'r-1',
+      type: 'resurface',
+      createdAt: '2026-01-02T00:00:00Z',
+      context: { suppressionId: 's-revoked', action: 'revoke' },
+    },
+    // 正当な将来日と、正当に失効済みの値。
+    scoped('s-future', '2099-01-01T00:00:00Z'),
+    scoped('s-past', '2000-01-01T00:00:00Z'),
+  ];
+
+  const warnings = [];
+  findActiveSuppressions({ entries }, ['src/a.mjs'], { warn: (m) => warnings.push(m) });
+  const warnedIds = entries
+    .filter((e) => e.type === 'suppression')
+    .map((e) => e.id)
+    .filter((id) => warnings.some((w) => w.includes(id)));
+
+  // findActiveSuppressions は壁時計を読むため now を渡せない。値は現実の時刻から
+  // 十分離してあるので、両経路の分類は一致する。
+  const analytics = analyzeSuppressions(entries, { now: new Date() });
+
+  assert.deepEqual(warnedIds, ['s-legacy-noffset', 's-legacy-slash']);
+  assert.deepEqual(
+    analytics.unparseableExpiresAt.map((e) => e.id),
+    warnedIds
+  );
+});
+
+test('the default warn sink writes to console.warn (#1780)', () => {
+  const entries = [
+    {
+      id: 's-default-sink',
+      type: 'suppression',
+      metadata: { relatedFiles: ['src/a.mjs'] },
+      context: { active: true, scope: 'file', expiresAt: '2027-01-01T00:00:00' },
+    },
+  ];
+  const original = console.warn;
+  const captured = [];
+  console.warn = (m) => captured.push(m);
+  try {
+    // 2 引数呼び出し（既定の sink）。呼び出し元が opts を渡さない現状の経路
+    // （regression-eval.mjs:110）と同じ形。
+    findActiveSuppressions({ entries }, ['src/a.mjs']);
+  } finally {
+    console.warn = original;
+  }
+  assert.equal(captured.length, 1);
+  assert.ok(captured[0].includes('s-default-sink'));
+});
+
 test('formatIssueBody renders both signal sections with next action', () => {
   const result = analyzeSuppressions(
     [
