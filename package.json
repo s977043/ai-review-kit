@@ -1,6 +1,6 @@
 {
   "name": "river-review",
-  "version": "1.74.0",
+  "version": "1.75.0",
   "private": true,
   "workspaces": [
     "runners/node-api",
@@ -56,6 +56,7 @@
     "eval:convergence": "node scripts/evaluate-convergence-efficiency.mjs",
     "eval:repo-context": "node scripts/evaluate-repo-wide-fixtures.mjs",
     "check:doc-enum": "node scripts/check-doc-enumerations.mjs",
+    "check:comment-disposition": "node scripts/check-comment-disposition.mjs",
     "check:sidebar-reachability": "node scripts/check-sidebar-reachability.mjs",
     "meta:validate": "node scripts/validate-meta-consistency.mjs && node scripts/check-doc-enumerations.mjs && node scripts/check-sidebar-reachability.mjs",
     "plugin:validate": "node scripts/validate-plugin-manifest.mjs",
