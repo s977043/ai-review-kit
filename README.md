@@ -401,7 +401,7 @@ GitHub Actions では:
 
 ### v0.21〜v0.28 で追加された主な機能
 
-- **Riverbed Memory による suppression**（[#687](https://github.com/s977043/river-review/issues/687)）: `river suppression add --fingerprint <fp> --feedback accepted_risk` で確定済み指摘の再表示を抑止する。`memory.suppressionEnabled: false` で gate を一時バイパス可能。
+- **Riverbed Memory による suppression**（[#687](https://github.com/s977043/river-review/issues/687)）: `river suppression add --fingerprint <fp> --feedback accepted_risk` で確定済み指摘の再表示を抑止する。`memory.suppressionEnabled: false` で gate を一時バイパス可能。`--expires` で期限を付けると、その日時以降は抑制が外れて指摘が再び出る（[repo-wide review ガイド](pages/guides/repo-wide-review.md)）。
 - **Secret redaction**（[#692](https://github.com/s977043/river-review/issues/692)）: repo-wide context と LLM プロンプトに対する多段階 redaction。`security.redact.*` でカテゴリ／allowlist／denyFiles を制御する。
 - **Context budget / ranking / reviewMode**（[#689](https://github.com/s977043/river-review/issues/689)）: `context.budget` で token／char 上限を制御。`context.ranking.enabled` で近接度ベースの並び替えを有効化。`context.reviewMode: tiny | medium | large` でプリセット budget を切替。
 - **Repo-wide eval suite**（[#688](https://github.com/s977043/river-review/issues/688)）: `npm run eval:repo-context` が detection / context lift / false positive の 3 指標を出力する。

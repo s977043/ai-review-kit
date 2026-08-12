@@ -310,6 +310,7 @@ river suppression add \
   --severity <info|minor|major|critical> \
   --files src/auth.ts,src/login.ts \
   --pr 123 \
+  --expires 2027-01-01 \
   --fingerprint-algo v1
 ```
 
@@ -318,6 +319,24 @@ Pick the fingerprint from the `Finding fingerprints` block of the `--debug` outp
 ### Suppression granularity (`--fingerprint-algo`)
 
 The default `v1` omits the line number: one entry suppresses every same-kind finding in the same file, and it keeps working when lines shift. `v2` includes the line, so only the finding at that line is suppressed — but the entry stops matching as soon as the line shifts. Take v2 values from the v2 column of the `--debug` output; feeding a v1 hex to `--fingerprint-algo v2` produces an entry that matches nothing.
+
+### Giving a suppression an expiry (`--expires`)
+
+A suppression created with `--expires` stops taking effect once the given instant has passed: the finding it was hiding shows up again on the next review. Omitting `--expires` means no expiry at all — the entry keeps suppressing until it is revoked.
+
+```bash
+river suppression add \
+  --fingerprint <16-hex> \
+  --feedback false_positive \
+  --rationale "<why suppress>" \
+  --expires 2027-01-01
+```
+
+The only accepted forms are an RFC 3339 date (`2027-01-01`) and an RFC 3339 date-time (`2027-01-01T00:00:00Z` / `2027-01-01T09:00:00+09:00`). A date-only input is read as UTC midnight and normalized to the date-time form on write (implementation: `src/lib/expires-at.mjs`). Anything else — `2027`, `March 5, 2027` — exits with code 1 and no entry is created.
+
+An expired entry is not deleted. The skip is recorded in `reviewDebug.suppressionsApplied` as `action: "skipped"` with `reason: "suppression-expired"` (implementation: `src/lib/suppression-apply.mjs`). To extend the suppression, add a new entry with a new expiry.
+
+If a stored `context.expiresAt` cannot be parsed, it fails safe to the same treatment as an expired one: the suppression does not apply, and a warning telling you to repair the value is written to stderr once.
 
 ### Temporarily disabling suppression via config
 

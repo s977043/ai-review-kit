@@ -310,6 +310,7 @@ river suppression add \
   --severity <info|minor|major|critical> \
   --files src/auth.ts,src/login.ts \
   --pr 123 \
+  --expires 2027-01-01 \
   --fingerprint-algo v1
 ```
 
@@ -318,6 +319,24 @@ fingerprint は `--debug` 出力の `Finding fingerprints` 節、または `revi
 ### 抑制の粒度（`--fingerprint-algo`）
 
 既定の `v1` は行番号を含みません。そのため同じファイル内で同種の指摘をまとめて抑制し、行がズレても効き続けます。`v2` を指定すると行番号込みの fingerprint になり、その行の指摘だけが対象です。ただし行がズレた時点で抑制は外れます。`v2` の値は `--debug` 出力の v2 列から取得してください（v1 の hex を `--fingerprint-algo v2` に渡すと、何も抑制しないエントリになります）。
+
+### 抑制に期限を付ける（`--expires`）
+
+期限付きの suppression は、`--expires` で指定した日時を過ぎると効かなくなります。抑制されていた finding は、次のレビューから再び出ます。`--expires` を省略した場合は無期限で、revoke するまで抑制が続きます。
+
+```bash
+river suppression add \
+  --fingerprint <16-hex> \
+  --feedback false_positive \
+  --rationale "<なぜ抑制するか>" \
+  --expires 2027-01-01
+```
+
+受け付ける形式は RFC 3339 の日付（`2027-01-01`）と日時（`2027-01-01T00:00:00Z` / `2027-01-01T09:00:00+09:00`）だけです。日付のみの入力は UTC 00:00 と解釈され、保存時に日時形式へ正規化されます（実装: `src/lib/expires-at.mjs`）。`2027` や `March 5, 2027` のようなそれ以外の値は exit 1 で弾かれ、エントリは作成されません。
+
+期限切れのエントリは削除されません。抑制がスキップされた事実は `reviewDebug.suppressionsApplied` に `action: "skipped"`、`reason: "suppression-expired"` として残ります（実装: `src/lib/suppression-apply.mjs`）。抑制を延長したい場合は、新しい期限で登録し直してください。
+
+保存済みの `context.expiresAt` が解釈できない値だった場合、fail-safe として期限切れと同じ扱いになります。抑制は効かず、修復を促す警告が標準エラー出力へ 1 回だけ出ます。
 
 ### config で抑制を一時無効化する
 
