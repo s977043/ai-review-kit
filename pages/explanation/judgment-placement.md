@@ -14,7 +14,7 @@ Judgment Placement は、River Review の中核思想である [Review Judgment 
 
 ## なぜ Judgment Placement が必要か
 
-AI によって実装速度が上がると、人間がすべての差分を同じ深さで読む運用はスケールしません。一方で、人間レビューを単純に減らすだけでは品質も責任も維持できません。
+AI によって実装速度が上がると、人間がすべての差分を同じ深さで読む運用はスケールしません。一方で、人間レビューを単純に減らすだけでは品質と責任を維持できません。
 
 必要なのは、「レビューをする / しない」という二択ではなく、レビューが担っていた責務を分解することです。
 
@@ -139,7 +139,7 @@ Finding / Evidence / Verdict
 
 ## Semantic Conflict と Agent Trajectory
 
-AI 並行開発では、最終 Diff だけでは判断材料が不足するケースがあります。
+AI 並行開発では、最終 Diff だけでは判断材料が不足します。
 
 River Review では Judgment Placement の拡張対象として、次を検討します。
 
