@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.73.2](https://github.com/s977043/river-review/compare/v1.73.1...v1.73.2) (2026-08-12)
+
+
+### Bug Fixes
+
+* **review:** looksLikeTestFile が e2e/ cypress/ 慣習のテストファイルを認識するようにする ([#1808](https://github.com/s977043/river-review/issues/1808)) ([4acee6d](https://github.com/s977043/river-review/commit/4acee6d2d53dccb33e122fb90ef65c901043e8f6)), closes [#1797](https://github.com/s977043/river-review/issues/1797)
+* **review:** 恒久宣言付きの一時対応コメントを temporary-without-exit の許容へ加える ([#1811](https://github.com/s977043/river-review/issues/1811)) ([37e368e](https://github.com/s977043/river-review/commit/37e368e9130cbbe970d89c0b1880e5dc053fc94f))
+* **suppression:** 本番レビュー経路で期限切れ suppression を無効化する ([#1810](https://github.com/s977043/river-review/issues/1810)) ([9378061](https://github.com/s977043/river-review/commit/937806160c60d1951cd07fabfb57fe2af545de23)), closes [#1802](https://github.com/s977043/river-review/issues/1802)
+
 ## [1.73.1](https://github.com/s977043/river-review/compare/v1.73.0...v1.73.1) (2026-08-12)
 
 
