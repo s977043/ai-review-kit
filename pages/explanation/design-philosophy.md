@@ -11,6 +11,34 @@ River Review は、チームの速度を落とすことなく、タイムリー�
 - **Evidence-based**: ガイダンスを、推奨事項を証明するコマンドやリンクに結びつける。
 - **Context-aware**: LLM に渡すコンテキストを体系的に設計する。スキル・差分・メモリの選択と段階的開示により、限られた Context Budget の中でレビュー品質を最大化する。
 
+## Judgment Placement：判断を最も適切な層へ置く
+
+River Review は、レビューを PR 上の単一工程ではなく、複数の評価層にまたがる判断システムとして扱います。
+
+新しいレビュー観点を追加するときは、最初から LLM に任せるのではなく、判断の性質に応じて次の順で配置先を検討します。
+
+1. compiler / test / linter / architecture checker など既存の決定論ツールで検査できるか
+2. trusted な rule / schema / command で決定論的に検査できるか
+3. heuristic detector で高精度に候補を絞れるか
+4. 複数 Artifact の意味理解が必要なら Agentic Review にする
+5. 責任・価値・不可逆性を伴うなら Human Judgment を残す
+
+```text
+Deterministic
+  ↓
+Heuristic
+  ↓
+Agentic Review
+  ↓
+Human Judgment
+```
+
+これは「常に上から下へ処理する」という実行順序ではなく、**判断をどの層が所有するかを決める設計順序**です。同等以上の安全性・説明可能性・保守性を維持できるなら、より再現可能な層へ判断を移します。
+
+Agentic Review や Human Review で同じ判断が繰り返され、その条件を安定して明文化できる場合は、test / checker / rule / heuristic へ promotion できないかを検討します。一方で、semantic judgment を単純な regex へ落としたり、人間の責任を AI verdict へ移したりはしません。
+
+詳細は [Judgment Placement](./judgment-placement.md) を参照してください。
+
 ## Non-Goals
 
 River Review は以下を目指していない:
