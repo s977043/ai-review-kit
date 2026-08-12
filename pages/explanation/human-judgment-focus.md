@@ -18,6 +18,30 @@ River Review は、**人間のレビューを AI で置き換えるためのツ�
 
 River Review は、この負荷を下げつつ、人間が高リスクな判断へ集中できる状態を作ります。
 
+## 人間の注意力を再配置する
+
+River Review が減らしたいのは Human Judgment そのものではなく、**人間でなくても再現可能に処理できる判断へ人間の注意力を使うこと**です。
+
+判断の配置は [Judgment Placement](./judgment-placement.md) の原則に従います。
+
+```text
+機械的に証明できる
+  -> Deterministic
+
+明示ルールで高精度に検出できる
+  -> Heuristic
+
+意味・文脈の判断が必要
+  -> Agentic Review
+
+責任・価値・不可逆性を伴う
+  -> Human Judgment
+```
+
+同じ指摘を Human / Agentic Review が繰り返す場合は、test / checker / rule / heuristic へ移せないかを検討します。逆に、重大なセキュリティ判断や不可逆変更の承認を、単に自動化可能だからという理由で AI に移しません。
+
+この原則により、人間のレビュー量を減らすこと自体ではなく、**人間が見るべき判断の密度を上げること**を目指します。
+
 ## River Review が削減するもの / 置き換えないもの
 
 River Review の目的は、人間の判断を**置き換える**ことではなく、人間の判断を高リスク領域に**集中させる**ことです。
@@ -65,6 +89,7 @@ River Review は判断材料を増やしますが、人間承認の完全な代�
 ## 関連ページ
 
 - [コンセプト](./concept.md) — 課題認識・コアモデル・責任境界の全体像
+- [Judgment Placement](./judgment-placement.md) — 判断を Deterministic / Heuristic / Agentic / Human へ配置する原則
 - [River Review とは](./what-is-river-review.md) — 機能・利用方法・実行モデルの概要
 - [設計哲学](./design-philosophy.md) — リスク階層型の人間監督を含む設計思想の詳細
 - [レビュー対象と使いどころ](./review-scope.md) — レビュー対象の整理
