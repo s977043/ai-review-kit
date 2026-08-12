@@ -11,6 +11,34 @@ River Review is built to deliver timely, phase-aware feedback without slowing te
 - **Evidence-based**: link guidance to commands or links that prove the recommendation.
 - **Context-aware**: systematically design the context passed to the LLM. Maximize review quality within a bounded context budget through skill selection, diff filtering, and progressive disclosure.
 
+## Judgment Placement: put each judgment in the right layer
+
+River Review treats review as a judgment system spanning multiple evaluation layers, not as one ceremony attached to a pull request.
+
+When a new review concern is introduced, do not send it to an LLM by default. Choose the layer according to the nature of the decision:
+
+1. Can an existing compiler, test, linter, or architecture checker evaluate it?
+2. Can a trusted rule, schema, or command evaluate it deterministically?
+3. Can a heuristic detector narrow it down with high precision?
+4. If semantic understanding across artifacts is required, use Agentic Review.
+5. If the decision involves responsibility, values, or irreversibility, preserve Human Judgment.
+
+```text
+Deterministic
+  ↓
+Heuristic
+  ↓
+Agentic Review
+  ↓
+Human Judgment
+```
+
+This is not a mandatory runtime order. It is a **design order for deciding which layer owns a judgment**. Move judgments toward more reproducible layers only when safety, explainability, and maintainability are preserved or improved.
+
+When the same Human or Agentic judgment repeats and its conditions become stable enough to express explicitly, consider promoting it into a test, checker, rule, or heuristic. Do not reduce semantic judgment to simplistic regexes, and do not move human accountability into an AI verdict.
+
+See [Judgment Placement](./judgment-placement.en.md) for the full principle.
+
 ## Non-Goals
 
 River Review does **not** aim to be:
