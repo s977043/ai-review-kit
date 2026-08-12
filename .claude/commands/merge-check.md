@@ -1,7 +1,7 @@
 ---
 description: docs/governance.md の「マージ前チェックリスト」を PR 番号 1 つに対して実行し、MERGE_OK / BLOCKED を判定する
 argument-hint: '<PR number>'
-allowed-tools: Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh api:*), Bash(git fetch:*), Bash(git log:*)
+allowed-tools: Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh api:*), Bash(git fetch:*), Bash(git log:*), Bash(npm run check:comment-disposition:*)
 ---
 
 マージ前チェック: PR #$ARGUMENTS が `gh pr merge` 可能な状態か、`docs/governance.md` § 「PR レビューとマージ」>「マージ前チェックリスト」(SSoT) の全項目を実コマンドで検証して判定する。
@@ -24,6 +24,19 @@ gh pr checks $ARGUMENTS --json name,bucket --jq '.[] | select(.bucket != "skippi
 
 **2 つのエンドポイントを両方実行する。** `pulls/<N>/comments` は line comments（差分の行に紐づくレビューコメント）しか返さず、PR 本体に投稿された通常コメント（issue comment）は `issues/<N>/comments` からしか取得できない。
 
+まず、列挙そのものはスクリプトで実行する。2 系統の `--paginate` 取得と bot の切り分けを決定論で行い、disposition の作業リストを出力する（refs #1827）。
+
+```bash
+npm run check:comment-disposition -- $ARGUMENTS
+```
+
+- 終了コード 0 = 人間由来のコメントなし（Step 2 は pass）、1 = 人間由来のコメントあり（出力された各件の disposition を確定するまで pass にしない）、2 = 使い方の誤りまたは `gh` の失敗
+- exit 1 は「マージ禁止」ではなく「確認せよ」を意味する。disposition 済みかどうかをスクリプトは判定しない（判定できないため。理由は下記「なぜスクリプトは disposition の完了まで見ないか」）
+- 人間 / bot の切り分けは GitHub API の `user.type`（`Bot` / `User`）で行い、bot 名の除外リストは持たない。ただし PAT で動く自動化は `user.type: "User"` を返すため、bot が人間として列挙されることがある。その場合は投稿者名で判断する
+- スクリプトが `gh` の失敗などで exit 2 になった場合は、下記の生コマンドへフォールバックする
+
+生コマンド（スクリプトが使えない場合、または本文全体を読みたい場合）:
+
 ```bash
 gh api --paginate "repos/:owner/:repo/pulls/$ARGUMENTS/comments?per_page=100" \
   --jq '.[] | {id, in_reply_to_id, user: .user.login, path, line, commit: .commit_id, body}'
@@ -42,6 +55,12 @@ gh api --paginate "repos/:owner/:repo/issues/$ARGUMENTS/comments?per_page=100" \
   2. 不適用（reply で理由を明記済み、または bot 自身が resolved 宣言済み）
   3. follow-up Issue で追跡（Issue 番号を reply に明記）
 - disposition 未確定のコメントが 1 件でも残る場合はマージ中止。詳細は governance.md § 「レビュアーコメントの扱い」を参照
+
+#### なぜスクリプトは disposition の完了まで見ないか
+
+スクリプトが担うのは「確認すべきコメントの全件列挙」までであり、各件が処理済みかは判定しない。返信や reaction の有無で処理済みと見なす方式は、「返信したが対応していない」を見逃し、逆に「返信不要な賛辞コメント」を未処理として誤検出する。`pulls/<N>/reviews` の `state`（`CHANGES_REQUESTED`）も、レビュアーと PR オーサーが同一アカウントの体制では formal review 自体が使えないため機能しない（Step 4 と governance.md § 2.1 を参照）。
+
+同じ理由でこのチェックは CI の必須チェックにしていない。人間のコメントが 1 件付いた時点で恒久的に落ちる gate になり、`docs/development/improvement-flow.md` が求める「止めるべきでないものを止めない」を満たせないためである。
 
 ### Step 3. マージ阻止ラベルの確認
 
