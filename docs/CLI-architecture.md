@@ -13,7 +13,7 @@
 
 ## なぜ並立しているのか
 
-- メイン CLI (`src/cli.mjs`) は GitHub Action 経由で `node ${GITHUB_ACTION_PATH}/dist/index.mjs run <repo>` の形で呼ばれる本番経路 (`runners/github-action/action.yml` L72)。`runners/github-action/dist/index.mjs` は `runners/github-action/src/index.mjs` (これが `src/cli.mjs` を import するシム) を ncc でバンドルした成果物。GitHub Action 入力 (`phase`, `dry_run`, `debug`, `--planner`, `--max-cost`, `--output`) との 1:1 対応が要件。
+- メイン CLI (`src/cli.mjs`) は GitHub Action 経由で `node ${GITHUB_ACTION_PATH}/dist/index.mjs run <repo>` の形で呼ばれる本番経路 (`runners/github-action/action.yml` L72)。`runners/github-action/dist/index.mjs` は `runners/github-action/src/index.mjs` (これが `src/cli.mjs` を import するシム) を ncc でバンドルした成果物。GitHub Action 入力 (`phase` / `dry_run` / `debug` / `--planner` / `--max-cost` / `--output`) との 1:1 対応が要件。
 - Runner CLI (`runners/cli/`) は v0.2 系で導入されたスキル開発者向けの新インターフェース (`review` / `eval` / `create`)。`commander` を採用し、`@inquirer/prompts` でインタラクティブに `create skill` などを提供。GitHub Action 経路には載せていない。
 
 両者は併用前提で、置き換え計画は無い (2026-04 時点)。

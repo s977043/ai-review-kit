@@ -437,8 +437,8 @@ NO_GO/ESCALATE）を厳守する。
   DoS 上限（1 MiB）は機密性チャネルを塞がない（secret は 1 MiB 未満）。→ command は symlink 非追跡、
   stdout を PR/findings に生出力せず判定は exit code のみ。
 - **[Med・新規] config autoload クラス**: §6.2 は `scripts` に限定するが、実際は cwd から自動ロード
-  される一切の設定（`.npmrc`, `tsconfig extends`, eslint plugin/parser, jest/vitest config, prettier
-  plugin, `.git/hooks`）が RCE 経路。`npx tsc`/`eslint` を許すと package.json を触らず RCE。
+  される一切の設定（`.npmrc` / `tsconfig extends` / eslint plugin/parser / jest/vitest config /
+  prettier plugin / `.git/hooks`）が RCE 経路。`npx tsc`/`eslint` を許すと package.json を触らず RCE。
 - **[Med・新規] base-pin の path 解決 TOCTOU / skill-id 同定**: PR head skill の `..`/symlink や id
   衝突で「PR head 定義を base 承認扱い」にする実装ミスパターン。canary は「値が base 由来か」は守るが
   path traversal 角度は別途固定が要る。
@@ -594,8 +594,9 @@ denylist は「コード/スクリプトを間接実行する、または config
 
 ##### (C) 素の interpreter 登録の拒否（schema/実装レベル）
 
-`command` の basename が interpreter denylist（`npm`, `npx`, `pnpm`, `yarn`, `node`, `deno`, `bun`,
-`bash`, `sh`, `zsh`, `python`, `python3`, `ruby`, `perl`, `make`, `env`, `xargs` 等）に一致する
+`command` の basename が interpreter denylist（`npm` / `npx` / `pnpm` / `yarn` / `node` / `deno` /
+`bun` / `bash` / `sh` / `zsh` / `python` / `python3` / `ruby` / `perl` / `make` / `env` / `xargs`
+等）に一致する
 エントリは、絶対パス指定であっても Phase 1 では `selfContained` を満たせないものとして拒否する。
 理由: これらは本質的に「引数で任意コードを走らせる」設計であり、(B) の denylist を完全化できない。
 

@@ -1,0 +1,25 @@
+{
+  "plugins": {},
+  "filters": {},
+  "rules": {
+    "preset-ja-technical-writing": {
+      "max-ten": {
+        "max": 3
+      },
+      "ja-no-mixed-period": {
+        "allowPeriodMarks": [":", "→", "…"]
+      },
+      "no-exclamation-question-mark": {
+        "allowFullWidthExclamation": true,
+        "allowFullWidthQuestion": true
+      },
+      "ja-no-redundant-expression": false,
+      "sentence-length": false,
+      "no-mix-dearu-desumasu": false,
+      "no-doubled-joshi": false,
+      "max-kanji-continuous-len": false,
+      "no-unmatched-pair": false,
+      "ja-no-weak-phrase": false
+    }
+  }
+}
