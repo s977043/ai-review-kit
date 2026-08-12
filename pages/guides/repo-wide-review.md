@@ -292,7 +292,7 @@ PR コメントの先頭サマリには P1 / P2 件数が強調表示されま�
 
 ### 仕組み
 
-- 各 finding は `computeFingerprint(ruleId + file + 正規化メッセージ)` で 16-hex の安定 fingerprint を持つ（実装: `src/lib/finding-factory.mjs`）
+- 各 finding は `computeFingerprint(ruleId + file + 正規化メッセージ)` で 16-hex の安定 fingerprint を持つ（実装: `src/lib/finding-factory.mjs`）。行番号込みの `computeFingerprintV2` も同時に付与される
 - Riverbed Memory に `type: 'suppression'` エントリとして fingerprint と feedbackType を書き込むと、次回以降同 fingerprint の指摘は自動的に `findings` から除外される
 - 対応する PR コメントも投稿されない（実装: `src/lib/suppression-apply.mjs`、`src/lib/local-runner.mjs`）
 - **P1 ガード**: severity が `major` / `critical` の指摘は `feedbackType=accepted_risk` のみ自動抑制を許可
@@ -309,10 +309,15 @@ river suppression add \
   --scope <global|subsystem|file> \
   --severity <info|minor|major|critical> \
   --files src/auth.ts,src/login.ts \
-  --pr 123
+  --pr 123 \
+  --fingerprint-algo v1
 ```
 
-fingerprint は `--debug` 出力または `reviewDebug.suppressionsApplied` から拾います。`<16-hex>` 厳密チェック・feedbackType enum チェックが事前に走るため、誤入力は exit 1 で弾かれます。
+fingerprint は `--debug` 出力の `Finding fingerprints` 節、または `reviewDebug.suppressionsApplied` から拾います。`--debug` は finding ごとに v1 と v2 の 16-hex を行番号付きで並べるため、使う側の algo に合う値をそこから選べます。`<16-hex>` 厳密チェック・feedbackType enum チェックが事前に走るため、誤入力は exit 1 で弾かれます。
+
+### 抑制の粒度（`--fingerprint-algo`）
+
+既定の `v1` は行番号を含みません。そのため同じファイル内で同種の指摘をまとめて抑制し、行がズレても効き続けます。`v2` を指定すると行番号込みの fingerprint になり、その行の指摘だけが対象です。ただし行がズレた時点で抑制は外れます。`v2` の値は `--debug` 出力の v2 列から取得してください（v1 の hex を `--fingerprint-algo v2` に渡すと、何も抑制しないエントリになります）。
 
 ### config で抑制を一時無効化する
 

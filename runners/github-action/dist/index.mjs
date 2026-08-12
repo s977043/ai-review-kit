@@ -43880,6 +43880,7 @@ function isApp(file) {
 /* harmony export */   ic: () => (/* binding */ annotateFingerprints),
 /* harmony export */   "in": () => (/* binding */ stripTraceabilityRefs),
 /* harmony export */   kn: () => (/* binding */ normalizeScope),
+/* harmony export */   ko: () => (/* binding */ computeFingerprintV2),
 /* harmony export */   lv: () => (/* binding */ normalizeSeverity),
 /* harmony export */   nG: () => (/* binding */ severityToPriority),
 /* harmony export */   xv: () => (/* binding */ validateFindingMessage),
@@ -44389,14 +44390,12 @@ function classifyFindings(findings, options = {}) {
 // ---------------------------------------------------------------------------
 
 /**
- * Stable fingerprint for a finding so that the same logical issue can be
- * matched across review runs even when IDs regenerate.
- *
- * Strategy: hash(ruleId + file + first-60-chars-of-message).
- * Intentionally omits lineStart/lineEnd because line numbers shift as code
- * changes, but the same logical finding should still be considered persisting.
+ * Shared normalized key base for both fingerprint algorithms:
+ * `ruleId::file::first-60-chars-of-normalized-message`. The v1 hash input is
+ * exactly this string; v2 appends a line segment to the SAME base so the two
+ * algorithms cannot drift on normalization or truncation rules (#1797).
  */
-function computeFingerprint(finding) {
+function fingerprintKeyBase(finding) {
   const ruleId = String(finding.ruleId ?? 'unknown');
   const file = String(finding.file ?? '');
   const msgNorm = String(finding.message ?? finding.title ?? '')
@@ -44404,15 +44403,63 @@ function computeFingerprint(finding) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 60);
-  const raw = `${ruleId}::${file}::${msgNorm}`;
+  return `${ruleId}::${file}::${msgNorm}`;
+}
+
+/**
+ * Stable fingerprint for a finding so that the same logical issue can be
+ * matched across review runs even when IDs regenerate.
+ *
+ * Strategy: hash(ruleId + file + first-60-chars-of-message).
+ * Intentionally omits lineStart/lineEnd because line numbers shift as code
+ * changes, but the same logical finding should still be considered persisting.
+ *
+ * This is the `v1` algorithm (`context.fingerprintAlgo` in
+ * schemas/suppression-context.schema.json). Its input MUST NOT change:
+ * review-differ.mjs and runs-digest.mjs use it for cross-run finding tracking,
+ * and every suppression already persisted in `.river/memory/index.json`
+ * stores a v1 value (#1797).
+ */
+function computeFingerprint(finding) {
+  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(fingerprintKeyBase(finding)).digest('hex').slice(0, 16);
+}
+
+/**
+ * Line-anchored fingerprint (`v2`, #1797). Same key base as v1 plus the
+ * finding's start line, so suppressing one occurrence of a kind does NOT
+ * suppress every same-kind finding in the same file (v1 collapses them
+ * because heuristic detector messages are static per kind).
+ *
+ * Known, deliberate trade-off: a v2 suppression stops matching when the
+ * finding's line shifts (any edit above it re-surfaces the finding). That is
+ * inherent to line anchoring; v1 remains the default for suppressions that
+ * should survive line drift.
+ *
+ * Line resolution mirrors the pipeline's dual field convention
+ * (`lineStart` internally, `line` on comments/issues — see
+ * src/lib/review-plan.mjs normalizeFindingForArtifact). A finding that is not
+ * line-anchored hashes with line 0, keeping the value stable and distinct
+ * from v1.
+ */
+function computeFingerprintV2(finding) {
+  const lineStart = finding.lineStart ?? finding.line;
+  const line = Number.isInteger(lineStart) && lineStart >= 1 ? lineStart : 0;
+  const raw = `${fingerprintKeyBase(finding)}::L${line}`;
   return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(raw).digest('hex').slice(0, 16);
 }
 
 /**
- * Annotate findings with their fingerprint (non-mutating).
+ * Annotate findings with their fingerprints (non-mutating). `fingerprint`
+ * stays the v1 value (unchanged consumers: review-differ, runs-digest,
+ * existing suppressions); `fingerprintV2` is the line-anchored value used by
+ * applySuppressions for entries with `fingerprintAlgo: 'v2'` (#1797).
  */
 function annotateFingerprints(findings) {
-  return findings.map((f) => ({ ...f, fingerprint: computeFingerprint(f) }));
+  return findings.map((f) => ({
+    ...f,
+    fingerprint: computeFingerprint(f),
+    fingerprintV2: computeFingerprintV2(f),
+  }));
 }
 
 
@@ -50478,6 +50525,7 @@ function shouldExcludeForContext(relPath, opts = {}) {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   Df: () => (/* binding */ formatUnknownFingerprintAlgoWarning),
 /* harmony export */   RL: () => (/* binding */ formatUnparseableExpiresAtWarning),
 /* harmony export */   createSuppression: () => (/* binding */ createSuppression),
 /* harmony export */   lq: () => (/* binding */ isSuppressionExpired),
@@ -50762,6 +50810,32 @@ function formatUnparseableExpiresAtWarning({ id, expiresAt }) {
     `Warning: suppression ${id} has an unparseable context.expiresAt (${JSON.stringify(expiresAt)}); ` +
     'it is treated as expired and no longer suppresses findings. ' +
     'Repair the value to an RFC 3339 date or date-time (e.g. "2027-01-01" or "2027-01-01T00:00:00Z").'
+  );
+}
+
+/**
+ * The operator-facing sentence for one suppression whose
+ * `context.fingerprintAlgo` is not a value this version understands (#1797).
+ *
+ * Same shape and same reason as `formatUnparseableExpiresAtWarning`: the
+ * fail-safe direction (ignore the entry rather than gate findings under the
+ * wrong algorithm) is kept, but the stop is made observable. An entry written
+ * by a newer CLI, or hand-edited to a typo, otherwise just stops suppressing
+ * with no error and no visible change in `.river/memory/index.json` — the
+ * exact silence #1780 / #1801 removed for unparseable deadlines.
+ *
+ * Like that function, the message carries the entry id and the offending value
+ * only; the rationale, related files and fingerprint stay out of the warning
+ * stream.
+ *
+ * @param {{ id: string, fingerprintAlgo: unknown }} entry
+ * @returns {string}
+ */
+function formatUnknownFingerprintAlgoWarning({ id, fingerprintAlgo }) {
+  return (
+    `Warning: suppression ${id} declares an unsupported context.fingerprintAlgo ` +
+    `(${JSON.stringify(fingerprintAlgo)}); it is ignored and no longer suppresses findings. ` +
+    'Repair the value to "v1" (line-independent) or "v2" (line-anchored).'
   );
 }
 
@@ -67250,6 +67324,11 @@ async function runSuppressionCommand(parsed, targetPath) {
     indexPath,
     findingId: parsed.suppressionFindingId,
     fingerprint: parsed.suppressionFingerprint,
+    // #1797: opt-in; parseArgs defaults this to 'v1' and rejects any value
+    // outside the schema enum, so createSuppression never sees an unknown algo.
+    ...(parsed.suppressionFingerprintAlgo
+      ? { fingerprintAlgo: parsed.suppressionFingerprintAlgo }
+      : {}),
     feedbackType: parsed.suppressionFeedbackType,
     scope: parsed.suppressionScope,
     rationale: parsed.suppressionRationale,
@@ -67260,6 +67339,7 @@ async function runSuppressionCommand(parsed, targetPath) {
   });
   console.log('Suppression created: ' + entry.id);
   console.log('  fingerprint: ' + entry.context.fingerprint);
+  console.log('  fingerprintAlgo: ' + entry.context.fingerprintAlgo);
   console.log('  feedbackType: ' + entry.context.feedbackType);
   console.log('  scope: ' + entry.context.scope);
   if (entry.context.severity) console.log('  severity: ' + entry.context.severity);
@@ -68591,6 +68671,20 @@ var suppression = __nccwpck_require__(3528);
 // reported through the `warn` sink (mirroring #1780/#1801 in
 // `findActiveSuppressions`) rather than dropped silently.
 //
+// Fingerprint algorithms (#1797): a suppression's `context.fingerprintAlgo`
+// selects which finding-side fingerprint it is matched against.
+//   - 'v1' (or absent, the pre-#1797 shape): matched against
+//     `finding.fingerprint` (computeFingerprint — no line, so one entry
+//     suppresses every same-kind finding in the same file).
+//   - 'v2': matched against `finding.fingerprintV2` (computeFingerprintV2 —
+//     line-anchored, so only the occurrence at that line is suppressed;
+//     the trade-off is that the suppression stops matching when the line
+//     shifts).
+//   - any other value: ignored (fail-safe — an unknown algorithm must not
+//     accidentally gate findings under v1 semantics) AND reported through the
+//     `warn` sink, so a suppression that silently stopped working is visible
+//     the same way an unparseable `expiresAt` is (#1780/#1801).
+//
 // Not evaluated here: revocation via `resurface` entries
 // (`collectRevokedSuppressionIds`). `revokeSuppression` never flips the
 // original's `context.active`, and the revoking entry is a separate memory
@@ -68616,9 +68710,11 @@ function severityOf(finding) {
  * @param {object} [opts]
  * @param {object} [opts.config]    Effective config; `config.memory.suppressionEnabled === false`
  *   bypasses suppression entirely (returns all findings as-is).
- * @param {(msg: string) => void} [opts.warn]  Sink for the unparseable-expiresAt
- *   warning (#1801). Injectable for tests, defaults to `console.warn` — the same
- *   contract as `findActiveSuppressions`.
+ * @param {(msg: string) => void} [opts.warn]  Sink for the warnings this gate
+ *   emits: an unparseable `expiresAt` (#1801) and an unsupported
+ *   `fingerprintAlgo` (#1797). Both name a suppression that stopped taking
+ *   effect for a repairable reason. Injectable for tests, defaults to
+ *   `console.warn` — the same contract as `findActiveSuppressions`.
  * @param {Date} [opts.now]         Reference instant for the expiry decision.
  *   Injectable for tests, defaults to `new Date()`.
  * @returns {{ keptFindings: Array<object>, suppressedFindings: Array<object>, applied: Array<object> }}
@@ -68637,27 +68733,46 @@ function applySuppressions(findings, memoryContext, opts = {}) {
   if (!Array.isArray(suppressions) || suppressions.length === 0) return result;
   if (list.length === 0) return result;
 
-  // Index suppressions by canonical fingerprint. Entries that lack a
-  // fingerprint (pre-#687 PR-A) are intentionally ignored — they cannot
-  // gate findings safely without reintroducing the old hashFinding /
-  // computeFingerprint mismatch that PR-A documented as tech debt.
-  const byFingerprint = new Map();
+  // Index suppressions by canonical fingerprint, split by algorithm (#1797).
+  // Entries that lack a fingerprint (pre-#687 PR-A) are intentionally
+  // ignored — they cannot gate findings safely without reintroducing the old
+  // hashFinding / computeFingerprint mismatch that PR-A documented as tech
+  // debt. Entries with an unknown fingerprintAlgo are ignored for the same
+  // fail-safe reason.
+  const warn = opts?.warn ?? ((m) => console.warn(m));
+  const byFingerprintV1 = new Map();
+  const byFingerprintV2 = new Map();
   for (const s of suppressions) {
     const fp = s?.context?.fingerprint;
-    if (typeof fp === 'string' && fp.length === 16) byFingerprint.set(fp, s);
+    if (typeof fp !== 'string' || fp.length !== 16) continue;
+    const algo = s?.context?.fingerprintAlgo ?? 'v1';
+    if (algo === 'v1') byFingerprintV1.set(fp, s);
+    else if (algo === 'v2') byFingerprintV2.set(fp, s);
+    // The entry is otherwise usable (it carries a canonical fingerprint) and
+    // stops taking effect only because of the algo value. Report it through
+    // the same `warn` sink as the expiry stop (#1780/#1801) rather than
+    // dropping it in silence; the value is repairable.
+    else warn((0,suppression/* formatUnknownFingerprintAlgoWarning */.Df)({ id: s.id, fingerprintAlgo: algo }));
   }
-  if (byFingerprint.size === 0) return result;
+  if (byFingerprintV1.size === 0 && byFingerprintV2.size === 0) return result;
 
   const kept = [];
   const suppressed = [];
   const applied = [];
-  const warn = opts?.warn ?? ((m) => console.warn(m));
   const now = opts?.now ?? new Date();
   const warnedIds = new Set();
 
   for (const finding of list) {
-    const fp = finding?.fingerprint;
-    const match = fp ? byFingerprint.get(fp) : undefined;
+    // v2 (line-anchored) is consulted first: it is the more specific claim.
+    // When no v2 entry matches, fall back to v1. `fp` is the fingerprint the
+    // matching entry stores, so `applied` records the value that actually
+    // gated the finding (v2 hex for a v2 match).
+    const fpV2 = finding?.fingerprintV2;
+    const matchV2 = fpV2 ? byFingerprintV2.get(fpV2) : undefined;
+    const fpV1 = finding?.fingerprint;
+    const match = matchV2 ?? (fpV1 ? byFingerprintV1.get(fpV1) : undefined);
+    const fp = matchV2 ? fpV2 : fpV1;
+    const matchedAlgo = matchV2 ? 'v2' : 'v1';
     if (!match) {
       kept.push(finding);
       continue;
@@ -68678,6 +68793,7 @@ function applySuppressions(findings, memoryContext, opts = {}) {
       applied.push({
         fingerprint: fp,
         suppressionId: match.id,
+        fingerprintAlgo: matchedAlgo,
         feedbackType,
         severity: sev,
         action: 'skipped',
@@ -68700,6 +68816,7 @@ function applySuppressions(findings, memoryContext, opts = {}) {
       applied.push({
         fingerprint: fp,
         suppressionId: match.id,
+        fingerprintAlgo: matchedAlgo,
         feedbackType,
         severity: sev,
         action: 'skipped',
@@ -68716,6 +68833,7 @@ function applySuppressions(findings, memoryContext, opts = {}) {
       applied.push({
         fingerprint: fp,
         suppressionId: match.id,
+        fingerprintAlgo: matchedAlgo,
         feedbackType,
         severity: sev,
         action: 'skipped',
@@ -68728,10 +68846,16 @@ function applySuppressions(findings, memoryContext, opts = {}) {
       ...finding,
       status: 'suppressed',
       suppressionRef: match.id,
+      // Which algorithm gated this finding (#1797). Consumed by
+      // local-runner.mjs to filter the matching PR comment with the SAME
+      // granularity: a v2 (line-anchored) suppression must not drop every
+      // same-kind comment in the file.
+      suppressionAlgo: matchedAlgo,
     });
     applied.push({
       fingerprint: fp,
       suppressionId: match.id,
+      fingerprintAlgo: matchedAlgo,
       feedbackType,
       severity: sev,
       action: 'suppressed',
@@ -69126,6 +69250,61 @@ async function planLocalReview({
   };
 }
 
+/**
+ * Drop the PR comments whose findings were suppressed.
+ *
+ * Comments and findings are 1:1 in review-engine.mjs (`findings =
+ * comments.map(...)`). When a finding is suppressed, the corresponding comment
+ * must go too — otherwise the suppressed finding still surfaces verbatim in the
+ * review thread, defeating the point of the suppression. Matching is by a
+ * fingerprint recomputed from the comment's OWN fields, so it stays correct if
+ * the 1:1 ordering ever drifts.
+ *
+ * #1797: the filter mirrors the algorithm that gated each finding
+ * (`suppressionAlgo`, set by applySuppressions). A v1 suppression keeps the
+ * pre-#1797 behavior — every same-kind comment in the file goes. A v2
+ * suppression drops only the comment anchored at the same line; filtering those
+ * by v1 would collapse exactly the occurrences v2 exists to keep apart.
+ *
+ * The v2 path depends on the comment's `line` naming the same line as the
+ * finding's `lineStart` (review-engine.mjs sets `lineStart: c.line ?? null`
+ * from the comment). Extracted from `runLocalReview` so that dependency is
+ * testable without standing up the whole pipeline
+ * (tests/local-runner-suppression.test.mjs).
+ *
+ * @param {Array<object>} comments - `review.comments`
+ * @param {Array<object>} suppressedFindings - `applySuppressions().suppressedFindings`
+ * @returns {Array<object>} the comments to keep
+ */
+function filterSuppressedComments(comments, suppressedFindings) {
+  const list = Array.isArray(comments) ? comments : [];
+  const suppressed = Array.isArray(suppressedFindings) ? suppressedFindings : [];
+  const suppressedV1 = new Set(
+    suppressed
+      .filter((f) => f?.suppressionAlgo !== 'v2')
+      .map((f) => f?.fingerprint)
+      .filter(Boolean)
+  );
+  const suppressedV2 = new Set(
+    suppressed
+      .filter((f) => f?.suppressionAlgo === 'v2')
+      .map((f) => f?.fingerprintV2)
+      .filter(Boolean)
+  );
+  if (suppressedV1.size === 0 && suppressedV2.size === 0) return list;
+  return list.filter((c) => {
+    const key = {
+      ruleId: c.skillId || 'unknown',
+      file: c.file,
+      message: c.message,
+      line: c.line,
+    };
+    if (suppressedV1.has((0,finding_factory/* computeFingerprint */.Yo)(key))) return false;
+    if (suppressedV2.has((0,finding_factory/* computeFingerprintV2 */.ko)(key))) return false;
+    return true;
+  });
+}
+
 async function runLocalReview({
   cwd = process.cwd(),
   phase = 'midstream',
@@ -69269,28 +69448,8 @@ async function runLocalReview({
   // strict_block gate — they are ORed so neither path can be a bypass.
   const strictBlock = findingStrictBlock || deterministicExecStrictBlock;
 
-  // Comments and findings are 1:1 in review-engine.mjs (`findings =
-  // comments.map(...)`). When a finding is suppressed, the corresponding
-  // PR comment must also be filtered — otherwise the suppressed finding
-  // still surfaces verbatim in the review thread, defeating the entire
-  // point of the suppression. Match by fingerprint computed from the
-  // comment's own fields so this stays robust if the 1:1 ordering ever
-  // drifts.
-  const suppressedFingerprints = new Set(
-    suppressedFindings.map((f) => f.fingerprint).filter(Boolean)
-  );
   const reviewComments = review.comments ?? [];
-  const keptComments =
-    suppressedFingerprints.size === 0
-      ? reviewComments
-      : reviewComments.filter((c) => {
-          const fp = (0,finding_factory/* computeFingerprint */.Yo)({
-            ruleId: c.skillId || 'unknown',
-            file: c.file,
-            message: c.message,
-          });
-          return !suppressedFingerprints.has(fp);
-        });
+  const keptComments = filterSuppressedComments(reviewComments, suppressedFindings);
 
   return {
     status: 'ok',
@@ -70321,6 +70480,37 @@ function printExplain(result, { log = console.error } = {}) {
   }
 }
 
+/**
+ * The per-finding fingerprints a caller needs in order to write a suppression
+ * (#1797). Both algorithms are printed because `river suppression add` takes
+ * one of them depending on `--fingerprint-algo`:
+ *
+ *   - `v1` (default): `finding.fingerprint` — no line, so the entry suppresses
+ *     every same-kind finding in the same file, and survives line drift.
+ *   - `v2`: `finding.fingerprintV2` — line-anchored, so only this occurrence is
+ *     suppressed, and the entry stops matching once the line shifts.
+ *
+ * Without this block the v2 value had no way of reaching the operator at all:
+ * `--fingerprint-algo v2` could only be fed a v1 hex, which produces an entry
+ * that matches nothing. `pages/guides/repo-wide-review.md` has stated that
+ * fingerprints are read off `--debug` since #687; until now they were not.
+ *
+ * Findings from artifacts produced before #1797 have no `fingerprintV2`; the
+ * column reads `-` rather than being silently omitted.
+ */
+function printFindingFingerprints(result, log) {
+  const findings = Array.isArray(result.findings) ? result.findings : [];
+  const withFingerprints = findings.filter((f) => f?.fingerprint);
+  if (withFingerprints.length === 0) return;
+  log('\nFinding fingerprints (for `river suppression add --fingerprint`):');
+  for (const f of withFingerprints) {
+    const line = f.lineStart ?? f.line;
+    const where = `${f.file ?? '<unknown>'}${Number.isInteger(line) && line >= 1 ? `:${line}` : ''}`;
+    log(`- v1 ${f.fingerprint} / v2 ${f.fingerprintV2 ?? '-'}  ${f.ruleId ?? 'unknown'}  ${where}`);
+  }
+  log('  (v2 は --fingerprint-algo v2 用。行に紐づくため、行がズレると抑制は外れる)');
+}
+
 function printDebugInfo(result, { log = console.log } = {}) {
   const debug = result.reviewDebug ?? {};
   const rawTokens = result.rawTokenEstimate ?? result.tokenEstimate;
@@ -70356,6 +70546,7 @@ function printDebugInfo(result, { log = console.log } = {}) {
     log,
     { leadingNewline: true }
   );
+  printFindingFingerprints(result, log);
   if (result.plan?.skipped?.length) {
     log('\nSkipped skills detail:');
     result.plan.skipped.forEach((item) => {
@@ -72449,7 +72640,10 @@ Commands:
   eval                  Run review fixtures evaluation (must_include checks)
   suppression add       Create a Riverbed Memory suppression entry
                         (--fingerprint --feedback --rationale [--scope]
-                         [--severity] [--files] [--expires] [--pr])
+                         [--severity] [--files] [--expires] [--pr]
+                         [--fingerprint-algo v1|v2]; v2 = line-anchored,
+                         suppresses only the occurrence at that line but
+                         stops matching once the line shifts)
   feedback add          Record a review feedback entry (.river/feedback/)
                         (--type --skill [--trigger] [--fingerprint] [--evidence]
                          [--pr] [--reviewer] [--model] [--reversed-by] [--run-id])
@@ -72593,6 +72787,16 @@ function usageError(parsed) {
 const SUPPRESSION_SEVERITIES = Object.keys(finding_factory/* SEVERITY_RANK */.f3);
 
 /**
+ * Fingerprint algorithms accepted by `suppression add --fingerprint-algo`
+ * (#1797). Mirrors the `fingerprintAlgo` enum of
+ * `schemas/suppression-context.schema.json`, which validates the `context`
+ * this option writes; the schema is the vocabulary SSoT and
+ * `tests/suppression-fingerprint-v2.test.mjs` pins the two together so this
+ * list cannot drift from it.
+ */
+const SUPPRESSION_FINGERPRINT_ALGOS = ['v1', 'v2'];
+
+/**
  * `river review` subcommands (#802 Phase 3), at module scope because BOTH the
  * eager branch inside `parseArgs` and `takeTrailingPositional` below need it:
  * `review` had no vocabulary at all, so a subcommand written after the options
@@ -72702,6 +72906,7 @@ function takeTrailingPositional(parsed, token) {
 const KNOWN_OPTION_TOKENS = new Set([
   // suppression
   '--fingerprint',
+  '--fingerprint-algo',
   '--finding',
   '--feedback',
   '--scope',
@@ -72873,6 +73078,8 @@ function parseArgs(argv) {
     feedbackReversedBy: null,
     feedbackRunId: null,
     suppressionFingerprint: null,
+    // #1797: 'v1' (no line) stays the default so this option is opt-in.
+    suppressionFingerprintAlgo: 'v1',
     suppressionFindingId: null,
     suppressionFeedbackType: null,
     suppressionScope: 'file',
@@ -73063,6 +73270,37 @@ function parseArgs(argv) {
           break;
         }
         parsed.suppressionFingerprint = value;
+        continue;
+      }
+      if (arg === '--fingerprint-algo') {
+        // #1797: opt-in selector for the line-anchored fingerprint. The
+        // default stays 'v1' so existing workflows and every entry already in
+        // `.river/memory/index.json` keep their meaning. Validated here rather
+        // than in the handler for the same reason as --severity (#1746): an
+        // unrecognized algo would otherwise be persisted and then ignored by
+        // applySuppressions, i.e. a silently inert suppression written at
+        // exit 0. Vocabulary SSoT: schemas/suppression-context.schema.json
+        // `$defs.fingerprintAlgo.enum`.
+        const value = args.shift();
+        if (!value || value.startsWith('-')) {
+          console.error('Error: --fingerprint-algo option requires a value.');
+          usageError(parsed);
+          break;
+        }
+        // 大小無視で受理し、小文字化して保存する。`--severity` / `--phase` /
+        // `--fail-on` / `--warn-on` はいずれもこの形であり、ここだけ大小を
+        // 区別すると `--severity Critical` は通るのに `--fingerprint-algo V2`
+        // だけ exit 1 という非対称になる（v1.72.1 の `--phase Upstream`
+        // 誤拒否と同型の回帰）。schema の enum は小文字なので保存値も小文字。
+        const algo = value.toLowerCase();
+        if (!SUPPRESSION_FINGERPRINT_ALGOS.includes(algo)) {
+          console.error(
+            `Error: --fingerprint-algo must be one of: ${SUPPRESSION_FINGERPRINT_ALGOS.join(', ')} (got "${value}").`
+          );
+          usageError(parsed);
+          break;
+        }
+        parsed.suppressionFingerprintAlgo = algo;
         continue;
       }
       if (arg === '--finding') {
