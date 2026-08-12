@@ -114,7 +114,7 @@ completes this setup.
 ### Running it once the secret exists
 
 1. Confirm the `RELEASE_KICK_PAT` secret is configured (above).
-2. Go to **Actions → Release Please Kick → Run workflow**.
+2. Go to **Actions → [DEPRECATED] Release Please Kick → Run workflow**.
 3. Leave `branch` blank—the workflow auto-detects the open release-please PR.
 4. The workflow also verifies a non-Vercel check started within 90s; if not, it fails loudly
    so the silent #906 failure mode cannot recur.
