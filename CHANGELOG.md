@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.77.0](https://github.com/s977043/river-review/compare/v1.76.2...v1.77.0) (2026-08-13)
+
+
+### Features
+
+* **skills:** fixtures 第 4 波で S1 免除リストを空にする ([#1850](https://github.com/s977043/river-review/issues/1850)) ([2cf4697](https://github.com/s977043/river-review/commit/2cf4697f8ebeb0d3a0004cfba01c4bbacb3c9148))
+
 ## [1.76.2](https://github.com/s977043/river-review/compare/v1.76.1...v1.76.2) (2026-08-13)
 
 
