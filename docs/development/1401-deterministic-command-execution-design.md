@@ -179,7 +179,7 @@ commands:
 ```
 
 **照合方法**: skill の `deterministicGate.{command,args}`（base 側から解決した値）を
-allowlist のエントリと**構造的完全一致**（command 文字列一致 かつ args 配列の要素ごと一致）で
+allowlist のエントリと**構造的な完全一致**（command 文字列一致 かつ args 配列の要素ごと一致）で
 突合する。一致しなければ実行しない。
 
 **却下した代替案**:
@@ -283,8 +283,8 @@ strict_block を回避」する余地を残す。ESCALATE（人間判断）が�
 | 総 command 実行数     | selected skill 数上限（既存の skill 上限に従う） | 上限で打ち切り                                          |
 | プロセスグループ kill | detached + 負 PID kill                           | timeout 時に子孫プロセスごと終了                        |
 
-- `execFile` の `timeout` + `maxBuffer` を第一の防御にする（`git.mjs` は既に `maxBuffer:
-200MB` を使うが、こちらは攻撃者制御なので**逆に小さく**する）。
+- `execFile` の `timeout` + `maxBuffer` を第一の防御にする
+  （`git.mjs` は既に `maxBuffer: 200MB` を使うが、こちらは攻撃者制御なので**逆に小さく**する）。
 - timeout kill は子プロセスだけでなく**プロセスグループ全体**を対象にする（fork した子孫が
   残るのを防ぐ）。`spawn` の `detached: true` + `process.kill(-pid)` を想定。**移植性の注意
   （gemini #1423）**: 負 PID によるプロセスグループ kill は POSIX 前提で、Windows では未対応。
@@ -758,8 +758,9 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
 
 #### 10.3.3 CI 側要件
 
-- inline findings / PR コメントを生成する step（action.yml の `Post inline review comments` /
-  `Post PR comment`、workflow の comment step）に、**command stdout を渡さない**ことを配線で保証する。
+- inline findings / PR コメントを生成する step
+  （action.yml の `Post inline review comments` / `Post PR comment`、workflow の comment step）に、
+  **command stdout を渡さない**ことを配線で保証する。
   command 実行結果は「exit code + 分類 + command id」の構造化データのみを River 本体へ返す。
 - デバッグ用 stdout アーティファクトを保存する場合は `actions/upload-artifact` で
   `retention-days` を短く設定し、PR コメント経路とは分離する。
@@ -817,8 +818,9 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
   cwd/env による autoload 無効化」で、素の interpreter と config 差込経路を機械判定で塞ぐ設計を確定。
   ただし `npm run`/`npx` 系は Phase 1 対象外（Phase 3 の第 2 段 pin 送り）とする**適用範囲の縮小**が
   前提。
-- **ブロッカー 2**: 「command 専用 clean cwd（`.git` 非露出・copy）+ `persist-credentials: false` +
-  `HOME`/`XDG_CONFIG_HOME` 空一時ディレクトリ」で on-disk 経路を塞ぐ設計を確定。CI 側は
+- **ブロッカー 2**:
+  「command 専用 clean cwd（`.git` 非露出・copy）+ `persist-credentials: false` + `HOME`/`XDG_CONFIG_HOME` 空一時ディレクトリ」
+  で on-disk 経路を塞ぐ設計を確定。CI 側は
   command 実行専用 checkout の分離が必須。
 - **ブロッカー 3**: 「clean cwd 構築時の symlink 非追跡コピー + exit code のみ判定 + stdout を
   露出面に載せず host 側隔離保存 + マスク」で exfil を塞ぐ設計を確定。1 MiB 上限は可用性専用と再定義。
@@ -1030,8 +1032,8 @@ executor は検証層 `matchCommand` の出力（valid entry）を入力とす�
 
 - [ ] executor が **valid entry のみ起動**する（起動前に `validateAllowlistEntry` を再評価。多層）。
 - [ ] clean cwd（`.git` 非含・symlink 非追跡 copy・再検査）を構築し、`try/finally` で必ず後始末。
-- [ ] env が SAFE*ENV allowlist のみ（`HOME`/`XDG_CONFIG_HOME` は空一時ディレクトリ、
-      `NODE_OPTIONS`/`*_TOKEN`/`AWS\*_`/`GITHUB\_\_` 非継承）。
+- [ ] env が SAFE*ENV allowlist のみ
+      （`HOME`/`XDG_CONFIG_HOME` は空一時ディレクトリ、`NODE_OPTIONS`/`*_TOKEN`/`AWS\*_`/`GITHUB\_\_` 非継承）。
 - [ ] `execFile`（shell 非経由）・timeout 60s・maxBuffer 1 MiB・detached + pgroup kill が効く。
 - [ ] status → reasonCode 写像（`fail`→`STRICT_BLOCK` OR 合流 / `unrunnable`→`DETERMINISTIC_UNRUNNABLE`）。
 - [ ] `deriveGateDecision` に rule 5c（`deterministicUnrunnable`→ESCALATE）を追加、合成順 5b>5c を固定、
@@ -1126,8 +1128,8 @@ steps:
   stdout を持たないため、finding 本文は「command id + exit code + 分類」から host が組み立てる
   （§10.3.2）。この合成 finding を既存 finding 配列にどう混ぜるか（ruleId の割当・重複排除）は
   review-engine 側で確定する。
-- **base pin の path 解決 TOCTOU / skill-id 同定**（§6.8 Med）: executor 入口の「entry が
-  `trustedTree` 由来」再確認を、`..`/symlink/id 衝突に耐える形で実装する具体手順は canary と
+- **base pin の path 解決 TOCTOU / skill-id 同定**（§6.8 Med）:
+  executor 入口の「entry が `trustedTree` 由来」再確認を、`..`/symlink/id 衝突に耐える形で実装する具体手順は canary と
   合わせて固定する。検証層は「値が base 由来か」を守るが path traversal 角度は executor 側で追加する。
 - **stdout マスクの完全性は主張しない**: host 側 secret マスク（§10.3.2）は既知パターンのみ。
   public repo のアーティファクト公開性（§10.4-9）と合わせ、Phase 1 は「露出面から外す」ことを
