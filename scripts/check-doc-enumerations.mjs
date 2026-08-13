@@ -139,6 +139,69 @@ export function parseSkillStreamCounts(text) {
   return counts;
 }
 
+/**
+ * README のインストール節「得られるもの / What you get」にある箇条書きから、
+ * ラベル行に並ぶコードスパンを名前集合として拾う。
+ *
+ * README は散文が多く表も無いため、`parseMarkdownTableColumn` は使えない。
+ * 代わりに (1) 節の目印行、(2) 箇条書きのラベル、(3) 名前の形の 3 点で対象を絞る。
+ * `pattern` に合わないコードスパン（例: 呼び出し方の説明にある
+ * `` `/river-review:<skill-name>` `` のようなプレースホルダ）は無視する。
+ *
+ * 目印行・ラベル行のいずれかが消えた場合は null を返し、マーカー消失として
+ * エラーにする（他の spec と同じく、すり抜けて空振りする方を危険とみなす）。
+ *
+ * @param {string} text
+ * @param {{ anchor: RegExp, label: RegExp, pattern: RegExp }} options
+ * @returns {Set<string> | null}
+ */
+export function parseSurfaceBulletNames(text, { anchor, label, pattern }) {
+  const lines = String(text ?? '').split('\n');
+  const start = lines.findIndex((line) => anchor.test(line));
+  if (start < 0) return null;
+
+  for (let i = start + 1; i < lines.length; i += 1) {
+    if (/^#{1,6}\s/.test(lines[i])) break; // 次の見出しで打ち切る
+    if (!label.test(lines[i])) continue;
+    const names = new Set();
+    for (const span of lines[i].matchAll(/`([^`]+)`/g)) {
+      const matched = pattern.exec(span[1].trim());
+      if (matched) names.add(matched[1]);
+    }
+    return names.size > 0 ? names : null;
+  }
+  return null;
+}
+
+/** README の配布サーフェス節を照合する spec を組み立てる。 */
+function readmeSurfaceSpec({ id, doc, summary, marker, anchor, label, pattern, measure }) {
+  return {
+    id,
+    doc,
+    summary,
+    marker,
+    kind: 'names',
+    declare: (text) => parseSurfaceBulletNames(text, { anchor, label, pattern }),
+    measure,
+  };
+}
+
+/** `/river-review:<name>` 形式のコマンド名。 */
+const PLUGIN_COMMAND_SPAN_RE = /^\/river-review:([a-z0-9-]+)$/;
+
+/** 素の agent-skill 名（`/river-review:<skill-name>` のプレースホルダは弾く）。 */
+const AGENT_SKILL_SPAN_RE = /^([a-z0-9-]+)$/;
+
+/** 配布コマンド名（拡張子なし）の実測。 */
+async function measureDistributedCommandNames() {
+  return new Set((await listCommandFiles('commands')).map((file) => file.replace(/\.md$/, '')));
+}
+
+/** 配布 agent-skill 名の実測。 */
+async function measureAgentSkillNames() {
+  return new Set(await listDirectories('skills/agent-skills'));
+}
+
 /** ガード台帳（SSoT）の位置。CLAUDE.md 側はここから照合される従属側。 */
 export const GUARD_LEDGER_PATH = 'docs/development/guard-ledger.yaml';
 
@@ -422,6 +485,51 @@ export const DOC_ENUMERATION_SPECS = [
       return existing;
     },
   },
+  // README のインストール節「得られるもの / What you get」（#1846）。
+  // 配布サーフェス（コマンド 7 件・agent-skill 11 件）の宣言はここにしか無く、
+  // check-doc-enumerations の spec にも validate-plugin-manifest の
+  // checkClaudeMdCommandParity（CLAUDE.md の散文 1 行だけを見る）にも載っていなかったため、
+  // コマンド 2 件・skill 3 件の欠落が検出されないまま残っていた。
+  readmeSurfaceSpec({
+    id: 'readme-ja-plugin-commands',
+    doc: 'README.md',
+    summary: '「得られるもの」のコマンド列挙',
+    marker: '`得られるもの` に続く `- コマンド:` の箇条書き',
+    anchor: /^得られるもの/,
+    label: /^-\s+コマンド\s*[:：]/,
+    pattern: PLUGIN_COMMAND_SPAN_RE,
+    measure: measureDistributedCommandNames,
+  }),
+  readmeSurfaceSpec({
+    id: 'readme-ja-plugin-skills',
+    doc: 'README.md',
+    summary: '「得られるもの」のスキル列挙',
+    marker: '`得られるもの` に続く `- スキル:` の箇条書き',
+    anchor: /^得られるもの/,
+    label: /^-\s+スキル\s*[:：]/,
+    pattern: AGENT_SKILL_SPAN_RE,
+    measure: measureAgentSkillNames,
+  }),
+  readmeSurfaceSpec({
+    id: 'readme-en-plugin-commands',
+    doc: 'README.en.md',
+    summary: 'the "What you get" command list',
+    marker: '`- Commands:` bullet under `What you get`',
+    anchor: /^What you get/,
+    label: /^-\s+Commands\s*:/,
+    pattern: PLUGIN_COMMAND_SPAN_RE,
+    measure: measureDistributedCommandNames,
+  }),
+  readmeSurfaceSpec({
+    id: 'readme-en-plugin-skills',
+    doc: 'README.en.md',
+    summary: 'the "What you get" skill list',
+    marker: '`- Skills:` bullet under `What you get`',
+    anchor: /^What you get/,
+    label: /^-\s+Skills\s*:/,
+    pattern: AGENT_SKILL_SPAN_RE,
+    measure: measureAgentSkillNames,
+  }),
   // パイプライン関数の call site チェックリスト（#1827）。
   // CLAUDE.md「Propagate signatures」が参照する散文チェックリストは、call site が
   // 新設されても追記されず陳腐化する。実体側の call site を走査して集合一致を要求し、

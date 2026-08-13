@@ -322,9 +322,9 @@ river-review ships as a Claude Code plugin from a same-repo marketplace.
 
 What you get (namespaced by plugin name):
 
-- Commands: `/river-review:review-local`, `/river-review:challenge`, `/river-review:skill`, `/river-review:check`, `/river-review:pr`
+- Commands: `/river-review:setup-team`, `/river-review:review-local`, `/river-review:review-team`, `/river-review:challenge`, `/river-review:skill`, `/river-review:check`, `/river-review:pr`
 - Agent: `river-review` (skill-routed code-review orchestrator)
-- Skills: the orchestrator plus `river-review-code`, `river-review-security`, `river-review-performance`, `river-review-architecture`, `river-review-testing`, `adversarial-review`, and `river-review-docs` — addressable as `/river-review:<skill-name>`
+- Skills: the orchestrator `river-review` plus `river-review-code`, `river-review-security`, `river-review-performance`, `river-review-architecture`, `river-review-testing`, `river-review-frontend`, `river-review-docs`, `adversarial-review`, `review-team`, and `unknown-coverage-review` — addressable as `/river-review:<skill-name>`
 
 Manage: `/plugin enable|disable|uninstall river-review@river-review-marketplace`.
 

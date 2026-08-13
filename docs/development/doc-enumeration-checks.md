@@ -117,7 +117,7 @@ scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" 
 
 ## 何を検証しているか
 
-登録内容は `scripts/check-doc-enumerations.mjs` の `DOC_ENUMERATION_SPECS` が SSoT です。初期スコープ（#1726）は、誤検出でメイン開発を止めないことを優先し、決定論で判定できる 4 件に絞ってあります。#1728 で `.github/workflows/README.md` のワークフロー一覧（`workflows-readme-table`）を追加し、#1821 でガード台帳の照合 2 件（`claude-md-guard-ledger` / `guard-ledger-verified-by`）、#1831 でパイプライン関数の call site チェックリスト 3 件（`pipeline-callsites-*`）をあとから足しました。現在の登録は 10 件です（`npm run check:doc-enum` の出力にある `N spec(s) checked` が実測値）。
+登録内容は `scripts/check-doc-enumerations.mjs` の `DOC_ENUMERATION_SPECS` が SSoT です。初期スコープ（#1726）は、誤検出でメイン開発を止めないことを優先し、決定論で判定できる 4 件に絞ってあります。#1728 で `.github/workflows/README.md` のワークフロー一覧（`workflows-readme-table`）を追加し、#1821 でガード台帳の照合 2 件（`claude-md-guard-ledger` / `guard-ledger-verified-by`）、#1831 でパイプライン関数の call site チェックリスト 3 件（`pipeline-callsites-*`）、#1846 で README の配布サーフェス 4 件（`readme-{ja,en}-plugin-{commands,skills}`）をあとから足しました。現在の登録は 14 件です（`npm run check:doc-enum` の出力にある `N spec(s) checked` が実測値）。
 
 | spec id                                   | 対象ドキュメント                                                 | 宣言側                                             | 実体                                                       |
 | ----------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
@@ -131,12 +131,18 @@ scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" 
 | `pipeline-callsites-generate-review`      | [`pipeline-params-checklist.md`](./pipeline-params-checklist.md) | `必須: generateReview` 節の `- [ ] <path>` 行      | `generateReview` / `buildPrompt` の call site ファイル     |
 | `pipeline-callsites-verify-finding`       | [`pipeline-params-checklist.md`](./pipeline-params-checklist.md) | `必須: verifyFinding` 節の `- [ ] <path>` 行       | `verifyFinding` の call site ファイル                      |
 | `pipeline-callsites-build-execution-plan` | [`pipeline-params-checklist.md`](./pipeline-params-checklist.md) | `必須: buildExecutionPlan` 節の `- [ ] <path>` 行  | `buildExecutionPlan` の call site ファイル                 |
+| `readme-ja-plugin-commands`               | `README.md`                                                      | 「得られるもの」の `- コマンド:` 箇条書き          | `commands/*.md`（`README.md` を除く）の basename           |
+| `readme-ja-plugin-skills`                 | `README.md`                                                      | 「得られるもの」の `- スキル:` 箇条書き            | `skills/agent-skills/` 直下のディレクトリ名                |
+| `readme-en-plugin-commands`               | `README.en.md`                                                   | 「What you get」の `- Commands:` 箇条書き          | 同上（`readme-ja-plugin-commands` と同じ実体）             |
+| `readme-en-plugin-skills`                 | `README.en.md`                                                   | 「What you get」の `- Skills:` 箇条書き            | 同上（`readme-ja-plugin-skills` と同じ実体）               |
 
 `claude-md-guard-ledger` は、宣言側と実体側の役割が他の spec と逆になります。CLAUDE.md の編集は「Always ask」に分類されるため、[`guard-ledger.yaml`](./guard-ledger.yaml) を SSoT（実体側）とし、CLAUDE.md を従属側（宣言側）として照合します。ガードの追加・改名・削除のいずれの経路でも、台帳と CLAUDE.md を同じ PR で更新しない限りこの spec が落ちます。`guard-ledger-verified-by` は台帳の `verifiedBy` が実在しないパスを指した時点で落とします。ただし「そのパスが必須チェックに載るジョブから実行されるか」までは見ていません（実行経路の追跡は静的解析が必要なため、follow-up）。
 
 `pipeline-callsites-*` の 3 件は、CLAUDE.md「Propagate signatures」が参照する散文チェックリストを実体側の call site 走査と突き合わせます。パイプライン関数の呼び出し元が増えてもチェックリストへ追記されない、という陳腐化を塞ぐのが目的です。個々のパラメータが転送されているかまでは見ません（options オブジェクト 1 個で渡るため、どのキーが必須かを決定論では判定できないからです）。走査に現れない宣言や同名の別関数は `ignoreKeys` で理由付きで除外しています（`scripts/check-doc-enumerations.mjs` の `PIPELINE_IGNORE_KEYS`）。
 
 `workflows-readme-table` は `kind: 'names'` だけを登録しています。README には「27 本」という本数の記述もありますが、names 比較は過不足の両方向を検出して件数の主張を包含するため、`kind: 'counts'` の spec は重ねて登録しません（「1 本消して 1 本足す」は counts では素通りします）。ワークフロー名・トリガー・目的・必須チェック該否の列は機械検証の対象外で、人手のままです（必須チェックの SSoT は branch protection API であり、CI からネットワークを叩かないため対象外とします）。
+
+`readme-*-plugin-*` の 4 件は、README のインストール節「得られるもの / What you get」が書く配布サーフェス（コマンドと agent-skill）を実体と突き合わせます。README は表を持たない散文なので、`parseSurfaceBulletNames` が「節の目印行 → 箇条書きのラベル → 名前の形」の 3 点で対象を絞ります。名前の形に合わないコードスパンは無視するため、呼び出し方の説明にある `/river-review:<skill-name>` のようなプレースホルダは列挙として数えません。目印行かラベル行が消えた場合はマーカー消失としてエラーになります。#1846 以前は、この列挙がどの機械検証にも載っておらず、コマンド 2 件（`setup-team` / `review-team`）と skill 3 件（`river-review-frontend` / `review-team` / `unknown-coverage-review`）の欠落が残っていました。
 
 既存チェックとの重複は避けています。`CLAUDE.md` の「Details: distributed commands (...)」という散文は、すでに機械検証の対象です。担当は `scripts/validate-plugin-manifest.mjs` の `checkClaudeMdCommandParity` であり、`.claude-plugin/plugin.json` の `commands[]` と突き合わせます。本 script が受け持つのは `Custom Commands` の**表**であって、散文ではありません。
 

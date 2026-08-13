@@ -14,6 +14,7 @@ import {
   parseIgnoreDirectives,
   parseMarkdownTableColumn,
   parseSkillStreamCounts,
+  parseSurfaceBulletNames,
   resolveIgnoreKeys,
   unwrapCodeSpan,
 } from '../scripts/check-doc-enumerations.mjs';
@@ -553,6 +554,161 @@ test('skills-stream-counts spec fails when a real count is altered in docs/skill
   assert.equal(checked, 1);
   assert.equal(errors.length, 1);
   assert.match(errors[0], /"upstream" は 999 と書かれているが実測は \d+/);
+});
+
+// --- README の配布サーフェス列挙（#1846） ---
+
+test('parseSurfaceBulletNames picks only the labelled bullet inside the anchored section', () => {
+  const text = [
+    '## Intro',
+    '',
+    '- コマンド: `/river-review:decoy`',
+    '',
+    '得られるもの（プラグイン名で名前空間化されます）:',
+    '',
+    '- コマンド: `/river-review:check` / `/river-review:pr`',
+    '- エージェント: `river-review`',
+    '',
+    '## Next',
+    '',
+    '- コマンド: `/river-review:after-heading`',
+  ].join('\n');
+
+  const names = parseSurfaceBulletNames(text, {
+    anchor: /^得られるもの/,
+    label: /^-\s+コマンド\s*[:：]/,
+    pattern: /^\/river-review:([a-z0-9-]+)$/,
+  });
+  assert.deepEqual([...names].sort(), ['check', 'pr']);
+});
+
+test('parseSurfaceBulletNames ignores code spans that do not match the name pattern', () => {
+  // `/river-review:<skill-name>` は呼び出し方の説明であって列挙の一部ではない。
+  const text = [
+    '得られるもの:',
+    '',
+    '- スキル: `river-review` / `adversarial-review`—`/river-review:<skill-name>` で呼び出せます',
+  ].join('\n');
+
+  const names = parseSurfaceBulletNames(text, {
+    anchor: /^得られるもの/,
+    label: /^-\s+スキル\s*[:：]/,
+    pattern: /^([a-z0-9-]+)$/,
+  });
+  assert.deepEqual([...names].sort(), ['adversarial-review', 'river-review']);
+});
+
+test('parseSurfaceBulletNames returns null when the anchor or the label is gone', () => {
+  const options = {
+    anchor: /^得られるもの/,
+    label: /^-\s+コマンド\s*[:：]/,
+    pattern: /^\/river-review:([a-z0-9-]+)$/,
+  };
+  assert.equal(
+    parseSurfaceBulletNames('## Other\n\n- コマンド: `/river-review:pr`', options),
+    null
+  );
+  assert.equal(
+    parseSurfaceBulletNames('得られるもの:\n\n- 何か: `/river-review:pr`', options),
+    null
+  );
+});
+
+// 以下は登録済み spec を実 README に対して通す（宣言と実体の両方向を確認する）。
+
+test('readme-ja-plugin-commands / readme-en-plugin-commands pass against the real READMEs', async () => {
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [realSpec('readme-ja-plugin-commands'), realSpec('readme-en-plugin-commands')],
+    readDoc: readRepoFile,
+  });
+  assert.deepEqual(errors, []);
+  assert.equal(checked, 2);
+});
+
+test('readme-ja-plugin-skills / readme-en-plugin-skills pass against the real READMEs', async () => {
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [realSpec('readme-ja-plugin-skills'), realSpec('readme-en-plugin-skills')],
+    readDoc: readRepoFile,
+  });
+  assert.deepEqual(errors, []);
+  assert.equal(checked, 2);
+});
+
+test('readme-ja-plugin-commands spec fails when a shipped command is dropped from README.md', async () => {
+  const spec = realSpec('readme-ja-plugin-commands');
+  const realText = await readRepoFile('README.md');
+  const mutated = realText.replace('`/river-review:review-team` / ', '');
+  assert.notEqual(mutated, realText, 'fixture precondition: the review-team entry must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /実体に "review-team" があるが .* に載っていない/);
+});
+
+test('readme-ja-plugin-commands spec fails when README.md lists a command that does not exist', async () => {
+  const spec = realSpec('readme-ja-plugin-commands');
+  const realText = await readRepoFile('README.md');
+  const mutated = realText.replace('- コマンド: ', '- コマンド: `/river-review:phantom` / ');
+  assert.notEqual(mutated, realText, 'fixture precondition: the command bullet must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /"phantom" を挙げているが実体に存在しない/);
+});
+
+test('readme-ja-plugin-commands spec fails on a rename that only touches README.md', async () => {
+  const spec = realSpec('readme-ja-plugin-commands');
+  const realText = await readRepoFile('README.md');
+  const mutated = realText.replace('/river-review:setup-team', '/river-review:setup-crew');
+  assert.notEqual(mutated, realText, 'fixture precondition: the setup-team entry must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  // 改名は「実体にあるのに載っていない」「載っているのに実体に無い」の両方向で落ちる。
+  assert.equal(errors.length, 2);
+  assert.match(errors.join('\n'), /実体に "setup-team" があるが/);
+  assert.match(errors.join('\n'), /"setup-crew" を挙げているが実体に存在しない/);
+});
+
+test('readme-en-plugin-skills spec fails when a shipped skill is dropped from README.en.md', async () => {
+  const spec = realSpec('readme-en-plugin-skills');
+  const realText = await readRepoFile('README.en.md');
+  const mutated = realText.replace('`river-review-frontend`, ', '');
+  assert.notEqual(mutated, realText, 'fixture precondition: the frontend skill entry must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /実体に "river-review-frontend" があるが/);
+});
+
+test('readme-ja-plugin-skills spec reports a missing marker instead of passing silently', async () => {
+  const spec = realSpec('readme-ja-plugin-skills');
+  const realText = await readRepoFile('README.md');
+  const mutated = realText.replace(/^- スキル: /m, '- 提供スキル一覧: ');
+  assert.notEqual(mutated, realText, 'fixture precondition: the skill bullet must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec, passingSpec()],
+    readDoc: async (doc) => (doc === 'README.md' ? mutated : realText),
+  });
+  assert.equal(checked, 1); // 詰め物 spec のぶんだけ
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /宣言側のマーカー（.*）が見つからない/);
 });
 
 // --- ガード台帳（docs/development/guard-ledger.yaml）との照合 ---
