@@ -2,6 +2,8 @@
 
 River Review に同梱されているスキル一覧です。フェーズ別に分類しています。
 
+複数のフェーズで動作するスキルは、実際に起動するフェーズすべてに掲載しています。そのため見出しの総数は同梱スキル数より多くなります。
+
 ## Skill Packs
 
 梱包済みレビューナレッジの配布単位です。`--skill-set <id>` で導入できます（詳細は [Skill Pack を使う](../guides/use-skill-packs.md) を参照）。
@@ -34,6 +36,50 @@ drift.`
 - タグ: architecture / adr / decision / upstream
 - 依存関係: adr_lookup / repo_metadata
 - 適用条件: phase=upstream, inputContext=diff
+
+チェック項目の例:
+
+- summary / findings / actions / questions
+
+### `adversarial-review`
+
+- 名前: `adversarial-review`
+- 概要: `敵対的分析手法を統合したレビューの entry skill。認知バイアス対策の3手法 （Pre-mortem / War Game / Logic Torturing）と、宣言・主張と実態の乖離を突く
+claim-vs-actual 検出3パターン（Self-Contradiction / Refactor-Claim Audit / Cross-File
+Leakage）へルーティングし、通常のレビューでは見えない設計の盲点・ 防御の穴・論理の弱点・宣言と実装のズレを可視化する。`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `docs/**/*design*.md`
+  - `docs/adr/**/*`
+  - `pages/**/*design*.md`
+- 重要度: major
+- タグ: adversarial / pre-mortem / war-game / logic-torturing / self-contradiction / refactor-claim / cross-file-leakage / claim-vs-actual / cognitive-bias / entry / routing
+- 依存関係: none
+- 適用条件: phase=upstream / midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / questions / actions
+
+### `ai-agent-review-readiness`
+
+- 名前: `AI Agent Review Readiness`
+- 概要: `Checks whether AI-assisted work defines review criteria; accessible context; explicit review loop; human
+judgment boundary; and feedback capture before delegating to an agent.`
+- 対象:
+  - `docs/**/*`
+  - `**/*plan*.md`
+  - `**/*task*.md`
+  - `**/*spec*.md`
+  - `**/*agent*.md`
+  - `**/*workflow*.md`
+  - `**/*pbi*.md`
+  - `**/*todo*.md`
+  - `.github/ISSUE_TEMPLATE/**/*.md`
+- 重要度: major
+- タグ: ai-agent / delegation / review-design / human-in-the-loop / upstream
+- 依存関係: none
+- 適用条件: phase=upstream / midstream, inputContext=diff / fullFile
 
 チェック項目の例:
 
@@ -467,6 +513,28 @@ drift and incidents.`
 
 - summary / findings / actions / questions
 
+### `data-model-db-design`
+
+- 名前: `Data Model & DB Design Review`
+- 概要: `Ensure data model/DB designs cover constraints; integrity; indexes; migrations; rollback; and operational
+impacts.`
+- 対象:
+  - `**/*schema*.{sql,prisma}`
+  - `**/*migrate*/**/*.sql`
+  - `**/*migration*/**/*.sql`
+  - `**/*ddl*.sql`
+  - `**/*erd*.{md,png,svg}`
+  - `docs/**/*db*.md`
+  - `docs/**/*schema*.md`
+- 重要度: major
+- タグ: database / schema / migration / upstream
+- 依存関係: repo_metadata
+- 適用条件: phase=upstream / midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- summary / findings / actions / questions
+
 ### `dr-multiregion`
 
 - 名前: `Disaster Recovery & Multi-Region Readiness`
@@ -597,6 +665,41 @@ rollout/rollback expectations.`
 
 - summary / findings / actions / questions
 
+### `laravel-migration-safety`
+
+- 名前: `Laravel Migration Safety Review`
+- 概要: `Reviews Laravel migrations for destructive operations; change() dropping modifiers; locking index creation on
+large tables (PostgreSQL); and asymmetric down().`
+- 対象:
+  - `database/migrations/**/*.php`
+- 重要度: major
+- タグ: laravel / migration / database / postgresql / safety / upstream
+- 依存関係: none
+- 適用条件: phase=upstream / midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
+
+### `logic-torturing`
+
+- 名前: `Logic Torturing 論理検証`
+- 概要: `変更に含まれる設計判断・実装選択の論理的整合性を徹底的に検証し、確証バイアスを排除して判断精度を高める`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `docs/**/*design*.md`
+  - `docs/adr/**/*`
+  - `pages/**/*design*.md`
+  - `pages/**/*architecture*.md`
+- 重要度: major
+- タグ: adversarial / logic-torturing / decision-quality / critical-thinking / midstream / cognitive-bias
+- 依存関係: code_search / repo_metadata
+- 適用条件: phase=upstream / midstream, inputContext=diff / fullFile / commitMessage / adr
+
+チェック項目の例:
+
+- findings / questions
+
 ### `migration-rollout-rollback`
 
 - 名前: `Migration, Rollout & Rollback Plan`
@@ -618,6 +721,25 @@ compatibility considerations.`
 チェック項目の例:
 
 - summary / findings / actions / questions
+
+### `migration-safety`
+
+- 名前: `Migration Safety Review (framework-agnostic)`
+- 概要: `スキーマ/データ移行の安全性を framework 非依存で審査する。破壊的スキーマ変更・ロック誘発・backfill・ロールバック可逆性・expand-contract の段階適用を、prisma / typeorm
+/ Rails / Django / Alembic / 生 SQL などに横断適用する。`
+- 対象:
+  - `**/migrations/**/*`
+  - `**/migrate/**/*`
+  - `prisma/schema.prisma`
+  - `db/**/*.sql`
+- 重要度: major
+- タグ: migration / database / schema / safety / rollback / upstream
+- 依存関係: code_search
+- 適用条件: phase=upstream / midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
 
 ### `multitenancy-isolation`
 
@@ -872,6 +994,40 @@ requirements.`
 
 - findings / summary
 
+### `review-team`
+
+- 名前: `review-team`
+- 概要: `6つの専門レビュアーロールを並列実行し、consensusLevel（複数ロールの合意度）と Tech Lead レポート（top3指摘・blindSpots・consensusSummary）で結果を統合する
+マルチエージェントレビュー entry skill。 Parallel multi-role review with consensus scoring (consensusLevel) and Tech Lead
+report. Use when a major release needs exhaustive multi-angle review; or when a single-perspective review is
+not enough and you want confidence that no reviewer angle was missed（重要リリース前の網羅レビュー・多視点の確証が 欲しいとき）。`
+- 対象:
+  - `**/*`
+- 重要度: major
+- タグ: entry / routing / multi-agent / parallel / consensus / team / orchestration
+- 依存関係: none
+- 適用条件: phase=upstream / midstream / downstream, inputContext=none
+
+チェック項目の例:
+
+- findings
+
+### `river-review`
+
+- 名前: `river-review`
+- 概要: `River Review のメインエントリポイント。 レビュー依頼の intent classification → 専門 skill 選択 → 実行 → finding verification → feedback
+classification → fixture / reference / suppression への還元までを束ねる improvement-loop orchestrator。`
+- 対象:
+  - `**/*`
+- 重要度: minor
+- タグ: entry / routing / orchestrator / improvement-loop
+- 依存関係: none
+- 適用条件: phase=upstream / midstream / downstream, inputContext=none
+
+チェック項目の例:
+
+- findings
+
 ### `river-review-architecture`
 
 - 名前: `river-review-architecture`
@@ -932,6 +1088,29 @@ across services.`
 
 - summary / findings / actions / questions
 
+### `unknown-coverage-review`
+
+- 名前: `unknown-coverage-review`
+- 概要: `完成した差分・PR・検証証拠に残る Unknown（未確認の前提・調査されていない影響・ 不足している証拠）を横断合成する evidence-sufficiency のメタ観点。個別 defect の 検出は既存
+skill へ委譲し、本 skill は「そのリスク種別を調査した証拠が残っているか」 の meta 評価のみを行う。finding verification 後の合成ステップとして report-only で
+実行し、残存 Unknown を output-format §4「Unverified / Residual Risk」の Unknown Coverage 下位構造へ、判定を既存 verdict
+語彙（GO/ESCALATE/NO_GO）へ写像する。 新しい語彙・schema は作らない。`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `runners/**/*.{ts,js,mjs}`
+  - `scripts/**/*.mjs`
+  - `**/migrations/**`
+  - `**/*.sql`
+  - `**/*.{yaml,yml,json,toml}`
+- 重要度: major
+- タグ: unknown-coverage / evidence-sufficiency / grill-for-unknowns / unknown-unknowns / map-territory / meta / synthesis
+- 依存関係: none
+- 適用条件: phase=upstream / midstream / downstream, inputContext=diff / fullFile / reviewSelf / reviewExternal
+
+チェック項目の例:
+
+- findings / questions / actions
+
 ## midstream
 
 ### `a11y-accessible-name`
@@ -951,6 +1130,26 @@ across services.`
 
 - findings / actions
 
+### `adversarial-review`
+
+- 名前: `adversarial-review`
+- 概要: `敵対的分析手法を統合したレビューの entry skill。認知バイアス対策の3手法 （Pre-mortem / War Game / Logic Torturing）と、宣言・主張と実態の乖離を突く
+claim-vs-actual 検出3パターン（Self-Contradiction / Refactor-Claim Audit / Cross-File
+Leakage）へルーティングし、通常のレビューでは見えない設計の盲点・ 防御の穴・論理の弱点・宣言と実装のズレを可視化する。`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `docs/**/*design*.md`
+  - `docs/adr/**/*`
+  - `pages/**/*design*.md`
+- 重要度: major
+- タグ: adversarial / pre-mortem / war-game / logic-torturing / self-contradiction / refactor-claim / cross-file-leakage / claim-vs-actual / cognitive-bias / entry / routing
+- 依存関係: none
+- 適用条件: phase=upstream / midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / questions / actions
+
 ### `agent-skill-bridge`
 
 - 名前: `Agent Skill Bridge Review`
@@ -969,6 +1168,30 @@ correctness.`
 チェック項目の例:
 
 - findings / actions
+
+### `ai-agent-review-readiness`
+
+- 名前: `AI Agent Review Readiness`
+- 概要: `Checks whether AI-assisted work defines review criteria; accessible context; explicit review loop; human
+judgment boundary; and feedback capture before delegating to an agent.`
+- 対象:
+  - `docs/**/*`
+  - `**/*plan*.md`
+  - `**/*task*.md`
+  - `**/*spec*.md`
+  - `**/*agent*.md`
+  - `**/*workflow*.md`
+  - `**/*pbi*.md`
+  - `**/*todo*.md`
+  - `.github/ISSUE_TEMPLATE/**/*.md`
+- 重要度: major
+- タグ: ai-agent / delegation / review-design / human-in-the-loop / upstream
+- 依存関係: none
+- 適用条件: phase=upstream / midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- summary / findings / actions / questions
 
 ### `altitude-generalization`
 
@@ -1137,6 +1360,28 @@ error）が定義・文書化されているかを確認し、状態設計の欠
 
 - findings / actions
 
+### `data-model-db-design`
+
+- 名前: `Data Model & DB Design Review`
+- 概要: `Ensure data model/DB designs cover constraints; integrity; indexes; migrations; rollback; and operational
+impacts.`
+- 対象:
+  - `**/*schema*.{sql,prisma}`
+  - `**/*migrate*/**/*.sql`
+  - `**/*migration*/**/*.sql`
+  - `**/*ddl*.sql`
+  - `**/*erd*.{md,png,svg}`
+  - `docs/**/*db*.md`
+  - `docs/**/*schema*.md`
+- 重要度: major
+- タグ: database / schema / migration / upstream
+- 依存関係: repo_metadata
+- 適用条件: phase=upstream / midstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- summary / findings / actions / questions
+
 ### `design-source-conformance`
 
 - 名前: `Design Source-of-Truth Conformance デザイン定義準拠`
@@ -1297,6 +1542,22 @@ diff-time で検出する。技術的正しさとスコープ整合性を別軸�
 
 - actions / questions / summary
 
+### `gha-workflow-security`
+
+- 名前: `GitHub Actions Workflow Security Review`
+- 概要: `Reviews GitHub Actions workflow diffs for script injection of untrusted input; pull_request_target with
+untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-party actions.`
+- 対象:
+  - `.github/workflows/**/*.{yml,yaml}`
+- 重要度: major
+- タグ: github-actions / security / ci / supply-chain / downstream
+- 依存関係: none
+- 適用条件: phase=midstream / downstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
+
 ### `hallucinated-reference`
 
 - 名前: `Hallucinated Reference 幻覚的参照の実在確認`
@@ -1456,6 +1717,22 @@ mutating controller actions in Laravel.`
 
 - findings / questions
 
+### `laravel-migration-safety`
+
+- 名前: `Laravel Migration Safety Review`
+- 概要: `Reviews Laravel migrations for destructive operations; change() dropping modifiers; locking index creation on
+large tables (PostgreSQL); and asymmetric down().`
+- 対象:
+  - `database/migrations/**/*.php`
+- 重要度: major
+- タグ: laravel / migration / database / postgresql / safety / upstream
+- 依存関係: none
+- 適用条件: phase=upstream / midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
+
 ### `loading-state`
 
 - 名前: `Loading State Transition Review`
@@ -1491,6 +1768,44 @@ mutating controller actions in Laravel.`
 チェック項目の例:
 
 - findings / actions
+
+### `logic-torturing`
+
+- 名前: `Logic Torturing 論理検証`
+- 概要: `変更に含まれる設計判断・実装選択の論理的整合性を徹底的に検証し、確証バイアスを排除して判断精度を高める`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `docs/**/*design*.md`
+  - `docs/adr/**/*`
+  - `pages/**/*design*.md`
+  - `pages/**/*architecture*.md`
+- 重要度: major
+- タグ: adversarial / logic-torturing / decision-quality / critical-thinking / midstream / cognitive-bias
+- 依存関係: code_search / repo_metadata
+- 適用条件: phase=upstream / midstream, inputContext=diff / fullFile / commitMessage / adr
+
+チェック項目の例:
+
+- findings / questions
+
+### `migration-safety`
+
+- 名前: `Migration Safety Review (framework-agnostic)`
+- 概要: `スキーマ/データ移行の安全性を framework 非依存で審査する。破壊的スキーマ変更・ロック誘発・backfill・ロールバック可逆性・expand-contract の段階適用を、prisma / typeorm
+/ Rails / Django / Alembic / 生 SQL などに横断適用する。`
+- 対象:
+  - `**/migrations/**/*`
+  - `**/migrate/**/*`
+  - `prisma/schema.prisma`
+  - `db/**/*.sql`
+- 重要度: major
+- タグ: migration / database / schema / safety / rollback / upstream
+- 依存関係: code_search
+- 適用条件: phase=upstream / midstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
 
 ### `modern-web-a11y-interactive`
 
@@ -1741,6 +2056,39 @@ and missing HydrateFallback in React Router v7 framework mode.`
 
 - findings / summary / questions
 
+### `review-criteria-integrity`
+
+- 名前: `Review Criteria Integrity レビュー基準・品質ゲートの自己弱体化検出`
+- 概要: `差分が「その差分自身を審査するレビュー基準・品質ゲート」を弱めていないかを diff-time で検出する。Check 1 レビュールールの削除・弱体化（.river/rules.md /
+.river/rules.d/*）、Check 2 実行時コンフィグの閾値・ゲート緩和（.river-review.{json; yaml; yml} の review.severity 引き下げ / exclude
+拡大 / memory.suppressionEnabled 無効化 / selection.skills.exclude 追加）、Check 3 suppression entry の新規追加、Check 4
+lint・静的解析設定からのルール削除や無効化、Check 5 branch protection・required check の緩和、の 5 Check を対象とし、これらが機能変更と同一 PR
+に混在し、かつ意図の宣言が無い場合に指摘する。report-only。workflow の permissions / action pin は gha-workflow-security、既存 suppression
+entry の使い分けは suppression-feedback、設定ファイルの一般的妥当性は config-json、.only / .skip / @ts-ignore / @ts-nocheck は
+heuristic-review.mjs の決定論検出器、リファクタと機能追加の混在は behavior-structure-separation へ委譲する`
+- 対象:
+  - `.river/rules.md`
+  - `.river/rules.d/**/*.md`
+  - `.river-review.{json,yaml,yml}`
+  - `.river/**/*.{json,yaml,yml}`
+  - `**/.eslintrc*`
+  - `eslint.config.{js,mjs,cjs,ts}`
+  - `.textlintrc*`
+  - `**/*textlintrc*`
+  - `**/.textlintignore`
+  - `.markdownlint*`
+  - `**/tsconfig*.json`
+  - `.github/workflows/**/*.{yml,yaml}`
+  - `.github/**/*.{yml,yaml,json}`
+- 重要度: major
+- タグ: review-criteria-integrity / review-definition / quality-gate / rules-provenance / self-weakening / suppression / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / prDescription / fullFile
+
+チェック項目の例:
+
+- findings / questions
+
 ### `review-policy-standard-midstream`
 
 - 名前: `Standard Review Policy for Midstream`
@@ -1762,6 +2110,40 @@ and missing HydrateFallback in React Router v7 framework mode.`
 チェック項目の例:
 
 - findings / summary / actions
+
+### `review-team`
+
+- 名前: `review-team`
+- 概要: `6つの専門レビュアーロールを並列実行し、consensusLevel（複数ロールの合意度）と Tech Lead レポート（top3指摘・blindSpots・consensusSummary）で結果を統合する
+マルチエージェントレビュー entry skill。 Parallel multi-role review with consensus scoring (consensusLevel) and Tech Lead
+report. Use when a major release needs exhaustive multi-angle review; or when a single-perspective review is
+not enough and you want confidence that no reviewer angle was missed（重要リリース前の網羅レビュー・多視点の確証が 欲しいとき）。`
+- 対象:
+  - `**/*`
+- 重要度: major
+- タグ: entry / routing / multi-agent / parallel / consensus / team / orchestration
+- 依存関係: none
+- 適用条件: phase=upstream / midstream / downstream, inputContext=none
+
+チェック項目の例:
+
+- findings
+
+### `river-review`
+
+- 名前: `river-review`
+- 概要: `River Review のメインエントリポイント。 レビュー依頼の intent classification → 専門 skill 選択 → 実行 → finding verification → feedback
+classification → fixture / reference / suppression への還元までを束ねる improvement-loop orchestrator。`
+- 対象:
+  - `**/*`
+- 重要度: minor
+- タグ: entry / routing / orchestrator / improvement-loop
+- 依存関係: none
+- 適用条件: phase=upstream / midstream / downstream, inputContext=none
+
+チェック項目の例:
+
+- findings
 
 ### `river-review-code`
 
@@ -2043,6 +2425,29 @@ under different names; or different concepts sharing a name).`
 
 - findings / questions
 
+### `unknown-coverage-review`
+
+- 名前: `unknown-coverage-review`
+- 概要: `完成した差分・PR・検証証拠に残る Unknown（未確認の前提・調査されていない影響・ 不足している証拠）を横断合成する evidence-sufficiency のメタ観点。個別 defect の 検出は既存
+skill へ委譲し、本 skill は「そのリスク種別を調査した証拠が残っているか」 の meta 評価のみを行う。finding verification 後の合成ステップとして report-only で
+実行し、残存 Unknown を output-format §4「Unverified / Residual Risk」の Unknown Coverage 下位構造へ、判定を既存 verdict
+語彙（GO/ESCALATE/NO_GO）へ写像する。 新しい語彙・schema は作らない。`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `runners/**/*.{ts,js,mjs}`
+  - `scripts/**/*.mjs`
+  - `**/migrations/**`
+  - `**/*.sql`
+  - `**/*.{yaml,yml,json,toml}`
+- 重要度: major
+- タグ: unknown-coverage / evidence-sufficiency / grill-for-unknowns / unknown-unknowns / map-territory / meta / synthesis
+- 依存関係: none
+- 適用条件: phase=upstream / midstream / downstream, inputContext=diff / fullFile / reviewSelf / reviewExternal
+
+チェック項目の例:
+
+- findings / questions / actions
+
 ### `vitest-mock-isolation`
 
 - 名前: `Vitest Mock Isolation Review`
@@ -2118,6 +2523,22 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 
 - findings / actions / summary
 
+### `gha-workflow-security`
+
+- 名前: `GitHub Actions Workflow Security Review`
+- 概要: `Reviews GitHub Actions workflow diffs for script injection of untrusted input; pull_request_target with
+untrusted checkout; over-broad GITHUB_TOKEN permissions; and unpinned third-party actions.`
+- 対象:
+  - `.github/workflows/**/*.{yml,yaml}`
+- 重要度: major
+- タグ: github-actions / security / ci / supply-chain / downstream
+- 依存関係: none
+- 適用条件: phase=midstream / downstream, inputContext=diff
+
+チェック項目の例:
+
+- findings / questions
+
 ### `review-policy-standard-downstream`
 
 - 名前: `Standard Review Policy for Downstream`
@@ -2140,6 +2561,40 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 
 - findings / summary / tests
 
+### `review-team`
+
+- 名前: `review-team`
+- 概要: `6つの専門レビュアーロールを並列実行し、consensusLevel（複数ロールの合意度）と Tech Lead レポート（top3指摘・blindSpots・consensusSummary）で結果を統合する
+マルチエージェントレビュー entry skill。 Parallel multi-role review with consensus scoring (consensusLevel) and Tech Lead
+report. Use when a major release needs exhaustive multi-angle review; or when a single-perspective review is
+not enough and you want confidence that no reviewer angle was missed（重要リリース前の網羅レビュー・多視点の確証が 欲しいとき）。`
+- 対象:
+  - `**/*`
+- 重要度: major
+- タグ: entry / routing / multi-agent / parallel / consensus / team / orchestration
+- 依存関係: none
+- 適用条件: phase=upstream / midstream / downstream, inputContext=none
+
+チェック項目の例:
+
+- findings
+
+### `river-review`
+
+- 名前: `river-review`
+- 概要: `River Review のメインエントリポイント。 レビュー依頼の intent classification → 専門 skill 選択 → 実行 → finding verification → feedback
+classification → fixture / reference / suppression への還元までを束ねる improvement-loop orchestrator。`
+- 対象:
+  - `**/*`
+- 重要度: minor
+- タグ: entry / routing / orchestrator / improvement-loop
+- 依存関係: none
+- 適用条件: phase=upstream / midstream / downstream, inputContext=none
+
+チェック項目の例:
+
+- findings
+
 ### `river-review-testing`
 
 - 名前: `river-review-testing`
@@ -2158,6 +2613,34 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 チェック項目の例:
 
 - findings / actions
+
+### `test-assertion-effectiveness`
+
+- 名前: `Test Assertion Effectiveness 常に PASS するテストの検出`
+- 概要: `テストは存在するがアサーションが実質何も検証しておらず、実装が壊れても落ちない（常に PASS する）構造を diff-time で検出する。Check 1 missing
+assertion（テスト本体にアサーションが無い）、Check 2 tautological assertion（定数同士・入力自身・mock の戻り値自身を assert し SUT に依存しない）、Check 3
+nonexistent expected literal（assertDontSee / assertNotContains 等の期待文字列が対象ファイルに実在しない）、Check 4 stale expected
+value（同一 diff で対象の出力が変わったのに期待値が据え置き）、Check 5 unscoped expectation（汎用的な属性・クラスを応答全体に対して assert
+し対象要素にスコープされていない）、Check 6 swallowed failure（例外の握り潰しや到達しない位置のアサーションで判定が成立しない）、の 6 Check を対象とする
+report-only。テストの有無は test-existence、未テスト経路の量は coverage-gap、非決定性は flaky-test、命名は test-naming、JS/TS の un-awaited
+resolves / rejects は vitest-mock-isolation、tdd-ledger artifact ベースの RED/GREEN 検証は plangate-tdd-evidence、.only
+/ .skip / xit / @ts-ignore と空の catch は heuristic-review.mjs の決定論検出器へ委譲する`
+- 対象:
+  - `**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs}`
+  - `**/*Test.php`
+  - `**/test_*.py`
+  - `**/*_test.{py,go,rb}`
+  - `tests/**/*`
+  - `test/**/*`
+  - `__tests__/**/*`
+- 重要度: major
+- タグ: tests / assertion / assertion-effectiveness / vacuous-test / always-passing / test-quality / downstream
+- 依存関係: code_search
+- 適用条件: phase=downstream, inputContext=diff / fullFile
+
+チェック項目の例:
+
+- findings / questions
 
 ### `test-existence`
 
@@ -2211,3 +2694,26 @@ config; un-awaited resolves/rejects assertions; and shared mutable module state 
 チェック項目の例:
 
 - tests / findings / questions / actions
+
+### `unknown-coverage-review`
+
+- 名前: `unknown-coverage-review`
+- 概要: `完成した差分・PR・検証証拠に残る Unknown（未確認の前提・調査されていない影響・ 不足している証拠）を横断合成する evidence-sufficiency のメタ観点。個別 defect の 検出は既存
+skill へ委譲し、本 skill は「そのリスク種別を調査した証拠が残っているか」 の meta 評価のみを行う。finding verification 後の合成ステップとして report-only で
+実行し、残存 Unknown を output-format §4「Unverified / Residual Risk」の Unknown Coverage 下位構造へ、判定を既存 verdict
+語彙（GO/ESCALATE/NO_GO）へ写像する。 新しい語彙・schema は作らない。`
+- 対象:
+  - `src/**/*.{ts,tsx,js,jsx,mjs}`
+  - `runners/**/*.{ts,js,mjs}`
+  - `scripts/**/*.mjs`
+  - `**/migrations/**`
+  - `**/*.sql`
+  - `**/*.{yaml,yml,json,toml}`
+- 重要度: major
+- タグ: unknown-coverage / evidence-sufficiency / grill-for-unknowns / unknown-unknowns / map-territory / meta / synthesis
+- 依存関係: none
+- 適用条件: phase=upstream / midstream / downstream, inputContext=diff / fullFile / reviewSelf / reviewExternal
+
+チェック項目の例:
+
+- findings / questions / actions
