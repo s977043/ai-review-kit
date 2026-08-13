@@ -51,7 +51,7 @@ A skill's `severity` is decided by the **worst case finding it is allowed to emi
 
 以下のいずれかを満たす:
 
-1. 検知対象が **議題提示**（「この PR では議論が必要かもしれない」）で、修正候補を断定できない
+1. 検知対象が **議題提示**（「この PR では議論が必要な可能性がある」）で、修正候補を断定できない
 2. **governance / process** 観点（"このディレクトリは team X の owner です" 等のリマインダ）
 3. 既存の **suppression / accepted_risk** が covering している既知ケースの acknowledgement
 
