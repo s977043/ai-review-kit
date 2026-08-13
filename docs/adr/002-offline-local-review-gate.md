@@ -30,7 +30,7 @@ river run . --base main --offline --fail-on critical --output json
 ## Non-Goals
 
 - AI レビューの置き換え（offline は**補完**。意味的レビューは AI 経路が担う）。
-- 新規の重量級静的解析エンジンの実装（既存ルール / canary / 静的観点の範囲に限定）。
+- 新規の重量級の静的解析エンジンの実装（既存ルール / canary / 静的観点の範囲に限定）。
 - Runner CLI (`runners/cli/`) 側への実装（本番経路のメイン CLI に閉じる）。
 
 ## Consequences
