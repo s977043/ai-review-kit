@@ -1,3 +1,7 @@
+---
+description: 'Index of the River Review distributed plugin commands (reference only; not a runnable command).'
+---
+
 # commands/ (distributed plugin commands)
 
 Slash commands shipped as part of the River Review plugin (referenced by `.claude-plugin/plugin.json`). Separated from repo-development commands (which stay in [`.claude/commands/`](../.claude/commands/)) per #996.
