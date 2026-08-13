@@ -186,8 +186,8 @@
     {
       "id": "component-variants-states",
       "path": "skills/midstream/component-variants-states",
-      "checksum": "sha256:0ed620e928d39e1621fdd964ebe611e2b7c967f178b3db3512722fe2a67c304f",
-      "files": 1
+      "checksum": "sha256:788d049e6f3b9adaa90c5670bbf8590439e3c8092dddce3b21c131af374c23ef",
+      "files": 3
     },
     {
       "id": "config-json",
@@ -204,14 +204,14 @@
     {
       "id": "coverage-gap",
       "path": "skills/downstream/coverage-gap",
-      "checksum": "sha256:187bf4e78b2355dfa2ba617a87e5864417e54f40f126d2513e0d4dcade8baf8c",
-      "files": 1
+      "checksum": "sha256:9cf8a4586926551b688004ab91f95b998d0affada6df02a586b1e0bbc08224ec",
+      "files": 3
     },
     {
       "id": "cross-file-leakage",
       "path": "skills/midstream/cross-file-leakage",
-      "checksum": "sha256:eb96f5c44528c24a0b47c8bc7a1903b6da03b661b5dc1c7f503e265fd8c39149",
-      "files": 1
+      "checksum": "sha256:7521b8113cf5215bd298e6027e07567c8ec9b23656ede909552bf8b8d851563f",
+      "files": 3
     },
     {
       "id": "data-flow-state-ownership",
@@ -228,8 +228,8 @@
     {
       "id": "design-source-conformance",
       "path": "skills/midstream/design-source-conformance",
-      "checksum": "sha256:07e7a51f0aca4d979521295d88fa8266d9be7bc4325c079e5ae0fe617d1c589b",
-      "files": 1
+      "checksum": "sha256:e8883daf40249f0373b867eb183e0b36c80f81d3652133cecc1d0582abd48a7d",
+      "files": 3
     },
     {
       "id": "design-system-component-reuse",
@@ -258,8 +258,8 @@
     {
       "id": "e2e-wiring",
       "path": "skills/midstream/e2e-wiring",
-      "checksum": "sha256:42deccf08c794e77ecbb3d27ccf867c1fcfdd1ad31f051dbd083faf2bf49d422",
-      "files": 1
+      "checksum": "sha256:4d52f1a2abd9582535d3de0408b44b74072e2651948239ea46fad9f288d1e71a",
+      "files": 3
     },
     {
       "id": "eval-driven-skill-design",
@@ -558,8 +558,8 @@
     {
       "id": "refactor-claim-audit",
       "path": "skills/midstream/refactor-claim-audit",
-      "checksum": "sha256:11be3ac3f45b51bba03913d3a6021be872e98072d7acb7f69a4f6870b1e172bb",
-      "files": 1
+      "checksum": "sha256:858b7419ef6485fa17e0d53b7bd549a59f61d4b879cf606b20eadb421e983110",
+      "files": 3
     },
     {
       "id": "requirements-acceptance",
@@ -570,8 +570,8 @@
     {
       "id": "review-automation-boundary",
       "path": "skills/midstream/review-automation-boundary",
-      "checksum": "sha256:11afcde93ef42ab3acdb2c27800c729f97eb886f2e4369a90ffcfb36288eedff",
-      "files": 1
+      "checksum": "sha256:3c8fdb10820cb61972782f2ac5a06cd635a56e64a29117d0921200582168e545",
+      "files": 3
     },
     {
       "id": "review-comment-triage",
@@ -678,8 +678,8 @@
     {
       "id": "self-contradiction",
       "path": "skills/midstream/self-contradiction",
-      "checksum": "sha256:b81deb72cf320a4296ba1349cd7667f668d5786c2f68f5ff1f88dad81e9dbdac",
-      "files": 1
+      "checksum": "sha256:586716e3aec2347fbd6c06e0e577c5dc29469e7230aba4e3439e1f2850e9ea83",
+      "files": 3
     },
     {
       "id": "supabase-rls-policy",
@@ -708,8 +708,8 @@
     {
       "id": "test-existence",
       "path": "skills/downstream/test-existence",
-      "checksum": "sha256:5faa5866c0af701bdbba5decb13d2eb4889bb0f651f3b2f18902c7ebf0908e3e",
-      "files": 1
+      "checksum": "sha256:335e17ad44873b1d3c333a9af46e362e1184ba588b95e478c869e8733e33452f",
+      "files": 3
     },
     {
       "id": "test-naming",
@@ -768,8 +768,8 @@
     {
       "id": "war-game",
       "path": "skills/midstream/war-game",
-      "checksum": "sha256:598e34fcbe84486f0c5766a914507d4ba7b9027641ec2583a24a4c627fed57b4",
-      "files": 1
+      "checksum": "sha256:e7e83e1a7fe48de28aa34c90dc42cc0ad2386b1fcea656fc6f19f856e803c14e",
+      "files": 3
     }
   ]
 }
