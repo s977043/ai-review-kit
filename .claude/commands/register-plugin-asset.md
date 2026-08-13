@@ -20,9 +20,9 @@ git status --short
 
 ### command（`commands/<name>.md`）
 
-`.claude-plugin/plugin.json` の `commands[]` に `"./commands/<name>.md"` を追加する（`README.md` は登録しない）。`.codex-plugin/plugin.json` に commands フィールドはないため対応不要。
+`.claude-plugin/plugin.json` の `commands[]` に `"./commands/<name>.md"` を追加する。`.codex-plugin/plugin.json` に commands フィールドはないため対応不要。`commands/` 直下にはコマンド本体以外（README 等）を置かない（公式 validator が全 `*.md` をコマンドとして走査するため）。
 
-- CLAUDE.md「Custom Commands」表と `commands/README.md` に説明を追記する（`npm run check:doc-enum` が両表と `commands/*.md` の一致を機械検証するため、条件付きではなく必須）
+- CLAUDE.md「Custom Commands」表と `docs/development/distributed-commands.md` に説明を追記する（`npm run check:doc-enum` が両表と `commands/*.md` の一致を機械検証するため、条件付きではなく必須）
 
 ### agent（`agents/<name>.md`）
 
@@ -59,7 +59,7 @@ npm run meta:validate
 
 - 全て pass を確認する。fail は該当項目を修正してから再実行する
 - `plugin:validate` が「参照パス不在」で落ちる＝登録漏れ or パス誤り。`plugin:sync:check` の drift＝同期フィールドの手編集を疑う
-- `check:doc-enum` が落ちる＝`commands/README.md` か CLAUDE.md「Custom Commands」表への追記漏れ（`meta:validate` からも実行されるため CI で必ず止まる）
+- `check:doc-enum` が落ちる＝`docs/development/distributed-commands.md` か CLAUDE.md「Custom Commands」表への追記漏れ（`meta:validate` からも実行されるため CI で必ず止まる）
 
 ## 判定
 

@@ -394,7 +394,7 @@ export const DOC_ENUMERATION_SPECS = [
   },
   {
     id: 'distributed-commands-table',
-    doc: 'commands/README.md',
+    doc: 'docs/development/distributed-commands.md',
     summary: '配布コマンド表の File 列',
     marker: '`Command | File | Purpose` 表',
     kind: 'names',

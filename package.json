@@ -61,6 +61,7 @@
     "check:sidebar-reachability": "node scripts/check-sidebar-reachability.mjs",
     "meta:validate": "node scripts/validate-meta-consistency.mjs && node scripts/check-doc-enumerations.mjs && node scripts/check-sidebar-reachability.mjs && node scripts/generate-skill-catalog.mjs --check",
     "plugin:validate": "node scripts/validate-plugin-manifest.mjs",
+    "plugin:validate:official": "node scripts/validate-plugin-official.mjs",
     "plugin:sync": "node scripts/sync-plugin-fields.mjs",
     "plugin:sync:check": "node scripts/sync-plugin-fields.mjs --check",
     "eval:all": "node scripts/evaluate-all.mjs",
