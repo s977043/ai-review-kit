@@ -21,19 +21,12 @@ import { isDirectRun } from './lib/is-direct-run.mjs';
 // #1231: 既存の eval 未整備 recommended skill。新規追加分はこの集合に足さず
 // eval を用意すること（recommended skill は eval/ または fixtures/ を持つこと
 // を validateRecommendedEvalCoverage() で前向きに強制する）。
-const GRANDFATHERED_WITHOUT_EVAL = new Set([
-  'review-automation-boundary',
-  'design-source-conformance',
-  'component-variants-states',
-  'test-existence',
-  'coverage-gap',
-  'war-game',
-  'logic-torturing',
-  'self-contradiction',
-  'refactor-claim-audit',
-  'cross-file-leakage',
-  'e2e-wiring',
-]);
+// 空集合を保つのが到達目標であり、S1 fixtures の横展開（docs/development/
+// s1-fixture-convention.md）によって現在は空になっている。定数と分岐は残す:
+// 既存 skill を新たに recommended: true へ切り替える移行局面で、fixtures が
+// 揃うまでの一時的な免除口として再び必要になりうるため（新規 skill は最初から
+// fixtures を用意すること）。
+const GRANDFATHERED_WITHOUT_EVAL = new Set([]);
 
 // #1598: contexts the default runner path (`river run` → src/lib/local-runner.mjs
 // `collectLocalContext`) declares as available for inputContext-based skill
