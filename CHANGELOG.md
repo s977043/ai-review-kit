@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.76.2](https://github.com/s977043/river-review/compare/v1.76.1...v1.76.2) (2026-08-13)
+
+
+### Bug Fixes
+
+* **docs:** 配布サーフェスの README 列挙を実測へ合わせ機械検証を足す ([#1847](https://github.com/s977043/river-review/issues/1847)) ([6bca5e2](https://github.com/s977043/river-review/commit/6bca5e2479c467917a8fc76ce9ef29ca4cfceccc))
+* **scripts:** 複数フェーズのスキルがカタログから無言で落ちる不具合を修正する ([#1846](https://github.com/s977043/river-review/issues/1846)) ([cfe0cdf](https://github.com/s977043/river-review/commit/cfe0cdfe304a71ac320ee1bfb36e1da08bc34a7e))
+
 ## [1.76.1](https://github.com/s977043/river-review/compare/v1.76.0...v1.76.1) (2026-08-12)
 
 
