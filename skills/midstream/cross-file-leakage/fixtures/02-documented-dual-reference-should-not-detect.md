@@ -16,14 +16,14 @@ diff --git a/src/config/read.mjs b/src/config/read.mjs
 new file mode 100644
 --- /dev/null
 +++ b/src/config/read.mjs
-@@ -0,0 +1,5 @@
+@@ -0,0 +1,3 @@
 +export async function readConfig(configPath) {
 +  return JSON.parse(await fs.readFile(configPath, 'utf8'));
 +}
 diff --git a/src/config/loader.mjs b/src/config/loader.mjs
 --- a/src/config/loader.mjs
 +++ b/src/config/loader.mjs
-@@ -1,7 +1,6 @@
+@@ -1,3 +1,2 @@
 -export async function readConfig(configPath) {
 -  return JSON.parse(await fs.readFile(configPath, 'utf8'));
 -}

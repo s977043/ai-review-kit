@@ -16,7 +16,7 @@ diff --git a/src/api/routes/invoices.mjs b/src/api/routes/invoices.mjs
 new file mode 100644
 --- /dev/null
 +++ b/src/api/routes/invoices.mjs
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,11 @@
 +import { Router } from 'express';
 +import { requireAuth } from '../middleware/require-auth.mjs';
 +import { findInvoice } from '../../db/invoices.mjs';

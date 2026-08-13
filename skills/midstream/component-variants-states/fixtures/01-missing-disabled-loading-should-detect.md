@@ -16,7 +16,7 @@ diff --git a/src/components/SubmitButton.tsx b/src/components/SubmitButton.tsx
 new file mode 100644
 --- /dev/null
 +++ b/src/components/SubmitButton.tsx
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,13 @@
 +type Props = {
 +  label: string;
 +  variant: 'primary' | 'secondary';

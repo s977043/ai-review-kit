@@ -14,7 +14,7 @@ in the following release. That is the False-positive guard 「意図的に途中
 diff --git a/src/review/run.mjs b/src/review/run.mjs
 --- a/src/review/run.mjs
 +++ b/src/review/run.mjs
-@@ -1,12 +1,26 @@
+@@ -1,7 +1,20 @@
  import { metricsStore } from '../metrics/store.mjs';
  import { flags } from '../config/flags.mjs';
 

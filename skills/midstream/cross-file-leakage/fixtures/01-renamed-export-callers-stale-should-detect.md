@@ -14,7 +14,7 @@ section's caller の列挙 → 残骸の判定 steps.
 diff --git a/src/config/loader.mjs b/src/config/loader.mjs
 --- a/src/config/loader.mjs
 +++ b/src/config/loader.mjs
-@@ -1,7 +1,7 @@
+@@ -1,3 +1,4 @@
 -export async function loadConfig(configPath) {
 -  return JSON.parse(await fs.readFile(configPath, 'utf8'));
 +export async function readConfig(configPath, { strict = false } = {}) {

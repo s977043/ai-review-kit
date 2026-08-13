@@ -16,7 +16,7 @@ diff --git a/src/api/create-invoice.ts b/src/api/create-invoice.ts
 new file mode 100644
 --- /dev/null
 +++ b/src/api/create-invoice.ts
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,10 @@
 +import { saveInvoice } from '../db/invoices';
 +
 +export async function createInvoice(req: Request): Promise<Response> {
@@ -31,7 +31,7 @@ diff --git a/src/api/create-invoice.test.ts b/src/api/create-invoice.test.ts
 new file mode 100644
 --- /dev/null
 +++ b/src/api/create-invoice.test.ts
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,12 @@
 +import { createInvoice } from './create-invoice';
 +
 +it('201 を返す', async () => {

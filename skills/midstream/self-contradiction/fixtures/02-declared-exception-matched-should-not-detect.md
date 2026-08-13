@@ -17,7 +17,7 @@ diff --git a/docs/contributing/examples.md b/docs/contributing/examples.md
 new file mode 100644
 --- /dev/null
 +++ b/docs/contributing/examples.md
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,22 @@
 +# Example conventions
 +
 +## Rules

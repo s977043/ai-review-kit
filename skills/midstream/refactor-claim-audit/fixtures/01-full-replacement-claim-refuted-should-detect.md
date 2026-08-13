@@ -20,7 +20,7 @@ refactor: formatDateLegacy を formatDate に全置換し、日付整形の分�
 diff --git a/src/report/summary.ts b/src/report/summary.ts
 --- a/src/report/summary.ts
 +++ b/src/report/summary.ts
-@@ -1,8 +1,8 @@
+@@ -1,5 +1,5 @@
 -import { formatDateLegacy } from '../date/legacy';
 +import { formatDate } from '../date/format';
 
@@ -31,7 +31,7 @@ diff --git a/src/report/summary.ts b/src/report/summary.ts
 diff --git a/src/report/export.ts b/src/report/export.ts
 --- a/src/report/export.ts
 +++ b/src/report/export.ts
-@@ -1,7 +1,7 @@
+@@ -1,5 +1,5 @@
  import { formatDateLegacy } from '../date/legacy';
 
  export function exportCsv(rows: Row[]) {
@@ -45,7 +45,7 @@ diff --git a/src/report/export.ts b/src/report/export.ts
 - A finding anchored at `src/report/export.ts:1` quoting the claim
   （「formatDateLegacy を formatDate に全置換」, 出典: commit message）and showing
   the residue with a reproducible search term (検索語: `formatDateLegacy`,
-  `src/report/export.ts:1,6`), so 「全置換」is unsupported.
+  `src/report/export.ts:1,4`), so 「全置換」is unsupported.
 - A finding on the `-60%` claim asking which case it measures — best / typical /
   worst — since no denominator is given; the Rule requires the case to be stated
   rather than the number to be re-measured.

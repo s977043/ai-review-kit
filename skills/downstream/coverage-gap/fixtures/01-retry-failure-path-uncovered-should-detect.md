@@ -21,7 +21,7 @@ diff --git a/src/http/fetch-with-retry.ts b/src/http/fetch-with-retry.ts
 new file mode 100644
 --- /dev/null
 +++ b/src/http/fetch-with-retry.ts
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,15 @@
 +export async function fetchWithRetry(url: string, attempts = 3, timeoutMs = 2000) {
 +  let lastError: unknown;
 +  for (let i = 0; i < attempts; i += 1) {

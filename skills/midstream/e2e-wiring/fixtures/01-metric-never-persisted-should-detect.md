@@ -14,7 +14,7 @@ store, and the `catch` swallows the error without notify / rethrow (silent skip)
 diff --git a/src/review/run.mjs b/src/review/run.mjs
 --- a/src/review/run.mjs
 +++ b/src/review/run.mjs
-@@ -1,12 +1,24 @@
+@@ -1,6 +1,13 @@
  import { metricsStore } from '../metrics/store.mjs';
 
  export async function runReview(session, input) {

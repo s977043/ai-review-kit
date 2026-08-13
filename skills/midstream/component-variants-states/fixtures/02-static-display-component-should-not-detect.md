@@ -16,7 +16,7 @@ diff --git a/src/components/StatusDot.tsx b/src/components/StatusDot.tsx
 new file mode 100644
 --- /dev/null
 +++ b/src/components/StatusDot.tsx
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,9 @@
 +type Props = { tone: 'ok' | 'warn' | 'error' };
 +
 +export function StatusDot({ tone }: Props) {

@@ -41,9 +41,11 @@ diff --git a/src/api/routes/invoices.mjs b/src/api/routes/invoices.mjs
   by the added rate limit — both mitigations are in the diff, so the guard applies.
 - Reporting "still might be insecure" without a concrete gap would be
   「根拠のない不安」, listed under the 不合格基準.
-- The 404-before-403 ordering is an information-disclosure nuance, not an
-  exploitable gap here (invoice ids are opaque UUIDs), and must not be inflated
-  into an attack scenario.
+- Any residual concern that depends on facts absent from the diff (how invoice
+  ids are generated, what the rate limiter keys on) must be raised as a Human
+  Handoff question, not asserted in either direction: the guard only recognises
+  mitigations 差分内に確認できる, and the same evidence rule forbids inventing a
+  mitigating premise the diff does not show.
 
 <!-- expected:
 findings: []

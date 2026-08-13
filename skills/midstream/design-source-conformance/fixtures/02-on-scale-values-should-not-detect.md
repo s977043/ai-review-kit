@@ -15,7 +15,7 @@ Every new value is a member of the defined scale (`spacing.3 = 12px`,
 diff --git a/src/components/PromoBanner.tsx b/src/components/PromoBanner.tsx
 --- a/src/components/PromoBanner.tsx
 +++ b/src/components/PromoBanner.tsx
-@@ -1,10 +1,10 @@
+@@ -1,12 +1,12 @@
  export function PromoBanner({ label }: { label: string }) {
    return (
      <div
@@ -42,11 +42,23 @@ theme: {
 }
 ```
 
+The CSS custom property the new code references is part of the same definition
+source — `rg -- "--brand-primary" src/styles/` returns:
+
+```css
+/* src/styles/tokens.css:4 — generated from tailwind.config.js theme.colors */
+:root {
+  --brand-primary: #2563eb;
+}
+```
+
 ## Expected Behavior
 
 - `findings: []`.
-- `12px` is `spacing.3` and `var(--brand-primary)` resolves to the defined
-  `brand.primary`, so neither value is off-scale.
+- `12px` is `spacing.3`, and `var(--brand-primary)` is defined at
+  `src/styles/tokens.css:4` as the same `#2563eb` the theme declares — the
+  correspondence is grep-reproducible in the fixture input, not assumed. Neither
+  value is off-scale.
 - Switching a literal hex to the token variable is a conformance improvement and
   must not be reported as a change worth reviewing.
 - No 生値ハードコード指摘 either — that belongs to `design-token-enforcement`
@@ -54,5 +66,5 @@ theme: {
 
 <!-- expected:
 findings: []
-reason: Pre-execution Gate は成立するが、新規値がいずれも定義済みスケール（spacing.3 = 12px / brand.primary）に含まれるため False-positive guard「定義済みスケールに含まれる値は指摘しない」に該当する
+reason: Pre-execution Gate は成立するが、新規値がいずれも定義済みスケール（spacing.3 = 12px / src/styles/tokens.css:4 の --brand-primary = brand.primary）に含まれるため False-positive guard「定義済みスケールに含まれる値は指摘しない」に該当する
 -->

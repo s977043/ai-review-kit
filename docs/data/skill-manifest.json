@@ -186,7 +186,7 @@
     {
       "id": "component-variants-states",
       "path": "skills/midstream/component-variants-states",
-      "checksum": "sha256:788d049e6f3b9adaa90c5670bbf8590439e3c8092dddce3b21c131af374c23ef",
+      "checksum": "sha256:4eec02dba3788321df086bff268b853b360b40bbc5171c2899c2cc778625cb33",
       "files": 3
     },
     {
@@ -204,13 +204,13 @@
     {
       "id": "coverage-gap",
       "path": "skills/downstream/coverage-gap",
-      "checksum": "sha256:9cf8a4586926551b688004ab91f95b998d0affada6df02a586b1e0bbc08224ec",
+      "checksum": "sha256:653cd6fcaf80d1ce79843626a6285f64bb15ad9e6f14bca82e99061950dee53c",
       "files": 3
     },
     {
       "id": "cross-file-leakage",
       "path": "skills/midstream/cross-file-leakage",
-      "checksum": "sha256:7521b8113cf5215bd298e6027e07567c8ec9b23656ede909552bf8b8d851563f",
+      "checksum": "sha256:3fd56432044a3bec6aeac1439955a7c4df4beb30f1905402a8a38c41868f3d23",
       "files": 3
     },
     {
@@ -228,7 +228,7 @@
     {
       "id": "design-source-conformance",
       "path": "skills/midstream/design-source-conformance",
-      "checksum": "sha256:e8883daf40249f0373b867eb183e0b36c80f81d3652133cecc1d0582abd48a7d",
+      "checksum": "sha256:5151cd656ea3a9d2718c553e92b45d798307ab94a15eef75de26f0241a3e4911",
       "files": 3
     },
     {
@@ -258,7 +258,7 @@
     {
       "id": "e2e-wiring",
       "path": "skills/midstream/e2e-wiring",
-      "checksum": "sha256:4d52f1a2abd9582535d3de0408b44b74072e2651948239ea46fad9f288d1e71a",
+      "checksum": "sha256:e3f13b214c9a63d0f12fee76d15f6fe5fe6b6c812b178292a3b2228c17cfe56b",
       "files": 3
     },
     {
@@ -558,7 +558,7 @@
     {
       "id": "refactor-claim-audit",
       "path": "skills/midstream/refactor-claim-audit",
-      "checksum": "sha256:858b7419ef6485fa17e0d53b7bd549a59f61d4b879cf606b20eadb421e983110",
+      "checksum": "sha256:a1bcd32c0d9d5099a4f71d67c57919279c83b4bd7b796d71fdb8520908115df4",
       "files": 3
     },
     {
@@ -570,7 +570,7 @@
     {
       "id": "review-automation-boundary",
       "path": "skills/midstream/review-automation-boundary",
-      "checksum": "sha256:3c8fdb10820cb61972782f2ac5a06cd635a56e64a29117d0921200582168e545",
+      "checksum": "sha256:579ae2d23362319e0156516f462d44b6bc1ce0fb733d17164259febb34edc36f",
       "files": 3
     },
     {
@@ -678,7 +678,7 @@
     {
       "id": "self-contradiction",
       "path": "skills/midstream/self-contradiction",
-      "checksum": "sha256:586716e3aec2347fbd6c06e0e577c5dc29469e7230aba4e3439e1f2850e9ea83",
+      "checksum": "sha256:4766deaf734f6fde74826f77960784cfd6e3f45c0e79fe729820f756175d6d47",
       "files": 3
     },
     {
@@ -708,7 +708,7 @@
     {
       "id": "test-existence",
       "path": "skills/downstream/test-existence",
-      "checksum": "sha256:335e17ad44873b1d3c333a9af46e362e1184ba588b95e478c869e8733e33452f",
+      "checksum": "sha256:fc8de0815e10a05c5bca236de01c1502dcca3ae788d953b2e303494108a97c03",
       "files": 3
     },
     {
@@ -768,7 +768,7 @@
     {
       "id": "war-game",
       "path": "skills/midstream/war-game",
-      "checksum": "sha256:e7e83e1a7fe48de28aa34c90dc42cc0ad2386b1fcea656fc6f19f856e803c14e",
+      "checksum": "sha256:99060a90553c9b89e0abbd5423ffe8c0418ec7e67251b4b47df01754a91039ba",
       "files": 3
     }
   ]

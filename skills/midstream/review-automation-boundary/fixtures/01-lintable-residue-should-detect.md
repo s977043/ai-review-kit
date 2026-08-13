@@ -16,7 +16,7 @@ human-review nits.
 diff --git a/src/checkout/apply-coupon.ts b/src/checkout/apply-coupon.ts
 --- a/src/checkout/apply-coupon.ts
 +++ b/src/checkout/apply-coupon.ts
-@@ -1,10 +1,17 @@
+@@ -1,9 +1,12 @@
  import { findCoupon } from './coupon-repository';
 +import { formatCurrency } from '../format/currency';
 
@@ -33,7 +33,7 @@ diff --git a/src/checkout/apply-coupon.ts b/src/checkout/apply-coupon.ts
 
 ## Expected Behavior
 
-- A finding on `src/checkout/apply-coupon.ts:5` for the residual `console.log`
+- A finding on `src/checkout/apply-coupon.ts:6` for the residual `console.log`
   calls, aggregated as one category with the count (2 箇所), proposing the
   ESLint `no-console` rule enforced in CI.
 - A finding on `src/checkout/apply-coupon.ts:2` for the unused
@@ -48,7 +48,7 @@ diff --git a/src/checkout/apply-coupon.ts b/src/checkout/apply-coupon.ts
 findings:
   - severity: minor
     reason: console.log のデバッグ出力が残存しており、ESLint no-console で機械的に強制できる（人間レビューの指摘対象にしない）
-    anchor: src/checkout/apply-coupon.ts:5
+    anchor: src/checkout/apply-coupon.ts:6
   - severity: minor
     reason: 未使用 import が残存しており、@typescript-eslint/no-unused-vars で機械的に検出できる
     anchor: src/checkout/apply-coupon.ts:2

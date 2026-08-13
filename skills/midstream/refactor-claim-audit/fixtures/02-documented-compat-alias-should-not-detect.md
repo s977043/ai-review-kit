@@ -22,7 +22,7 @@ refactor: 日付整形を formatDate へ置換（旧 API は 1 リリース分 a
 diff --git a/src/date/legacy.ts b/src/date/legacy.ts
 --- a/src/date/legacy.ts
 +++ b/src/date/legacy.ts
-@@ -1,12 +1,9 @@
+@@ -1,6 +1,6 @@
 -export function formatDateLegacy(at: Date): string {
 -  const y = at.getFullYear();
 -  const m = String(at.getMonth() + 1).padStart(2, '0');
@@ -38,7 +38,7 @@ diff --git a/src/date/legacy.ts b/src/date/legacy.ts
 diff --git a/src/report/summary.ts b/src/report/summary.ts
 --- a/src/report/summary.ts
 +++ b/src/report/summary.ts
-@@ -1,5 +1,5 @@
+@@ -1 +1 @@
 -import { formatDateLegacy } from '../date/legacy';
 +import { formatDate } from '../date/format';
 ```
