@@ -153,7 +153,7 @@ test('checkDocEnumerations reports a count mismatch', async () => {
 test('checkDocEnumerations reports both directions of a name-set drift', async () => {
   const spec = {
     id: 'name-spec',
-    doc: 'commands/README.md',
+    doc: 'docs/development/distributed-commands.md',
     summary: 'コマンド表',
     marker: '表',
     kind: 'names',
@@ -169,7 +169,7 @@ test('checkDocEnumerations reports both directions of a name-set drift', async (
 test('checkDocEnumerations fails when the declaration marker disappears', async () => {
   const spec = {
     id: 'missing-marker',
-    doc: 'commands/README.md',
+    doc: 'docs/development/distributed-commands.md',
     summary: 'コマンド表',
     marker: '`Command | File | Purpose` 表',
     kind: 'names',
@@ -475,9 +475,9 @@ test('every registered spec declares the fields the engine needs', () => {
 // ここでは production の spec.declare / spec.measure をそのまま通し、
 // 実ファイルの内容を 1 箇所だけ壊して「本当に落ちる」ことを確かめる。
 
-test('distributed-commands-table spec fails when a real row is removed from commands/README.md', async () => {
+test('distributed-commands-table spec fails when a real row is removed from the command doc', async () => {
   const spec = realSpec('distributed-commands-table');
-  const realText = await readRepoFile('commands/README.md');
+  const realText = await readRepoFile('docs/development/distributed-commands.md');
   // 行ごと（改行込みで）落とす。空行を残すと表がそこで終わったと解釈され、
   // 以降の行も丸ごと欠落扱いになってしまう。
   const mutated = realText.replace(/^\|\s*`\/pr`.*\r?\n/m, '');

@@ -38,6 +38,8 @@ PR #1726 で本 script に spec を 4 件登録した時点の、宣言側と実
 
 表の外にも陳腐化がありました。`.claude/commands/README.md` の散文は配布コマンドを 5 件だけ挙げており（`review-team` / `setup-team` が欠落）、同じ PR で「一覧は `commands/README.md` が正」という参照へ置き換えています。機械検証の対象は表であって散文ではないため、散文で列挙しないほうが安全です。
 
+> 上の 2 つの節は #1726 当時の記録です。配布コマンド表を載せていた `commands/README.md` は、その後 [`distributed-commands.md`](./distributed-commands.md) へ移設しました（公式 validator が `commands/` 直下の `*.md` をすべてコマンドとして走査するため）。`distributed-commands-table` spec の宣言側も同じ移設先を指しています。
+
 ### チェックリストでは止まらなかった
 
 `plugin-asset-registration-checklist.md` には作成時（2026-07-08, #1442）から「CLAUDE.md『Custom Commands』表と `commands/README.md` に説明を追記した」という項目がありました。それでも `commands/README.md` の行は次のとおり放置されました。
@@ -122,7 +124,7 @@ scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" 
 | spec id                                   | 対象ドキュメント                                                 | 宣言側                                             | 実体                                                       |
 | ----------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
 | `skills-stream-counts`                    | `docs/skills-structure.md`                                       | ツリー図の `# <n> スキル` コメント                 | `skills/<stream>/` の実ディレクトリ数                      |
-| `distributed-commands-table`              | `commands/README.md`                                             | コマンド表の `File` 列                             | `commands/*.md`（`README.md` を除く）                      |
+| `distributed-commands-table`              | [`distributed-commands.md`](./distributed-commands.md)           | コマンド表の `File` 列                             | `commands/*.md`（`README.md` を除く）                      |
 | `repo-dev-commands-table`                 | `.claude/commands/README.md`                                     | コマンド表の `File` 列                             | `.claude/commands/*.md`（同上）                            |
 | `claude-md-command-table`                 | `CLAUDE.md`                                                      | `Custom Commands` 表の `Command` 列                | 上記 2 ディレクトリのコマンド名の和集合                    |
 | `workflows-readme-table`                  | `.github/workflows/README.md`                                    | ワークフロー一覧表の `ファイル` 列                 | `.github/workflows/` 直下の `*.yml` / `*.yaml`             |

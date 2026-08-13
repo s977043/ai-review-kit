@@ -1,10 +1,6 @@
----
-description: 'Index of the River Review distributed plugin commands (reference only; not a runnable command).'
----
+# 配布プラグインコマンド一覧（`commands/`）
 
-# commands/ (distributed plugin commands)
-
-Slash commands shipped as part of the River Review plugin (referenced by `.claude-plugin/plugin.json`). Separated from repo-development commands (which stay in [`.claude/commands/`](../.claude/commands/)) per #996.
+River Review プラグインとして配布されるスラッシュコマンドの一覧です（`.claude-plugin/plugin.json` の `commands` が参照します）。リポジトリ開発専用のコマンドは [`.claude/commands/`](../../.claude/commands/) に残しています（#996）。
 
 | Command         | File              | Purpose                                                                                |
 | --------------- | ----------------- | -------------------------------------------------------------------------------------- |
@@ -17,3 +13,11 @@ Slash commands shipped as part of the River Review plugin (referenced by `.claud
 | `/setup-team`   | `setup-team.md`   | Set up River Review in a project (`.river/rules.md`, plugin install, integration mode) |
 
 > **整合性**: 配布対象コマンドの追加・変更時は `.claude-plugin/plugin.json` の `commands` と CLAUDE.md `Custom Commands` 表も更新すること。この表と `commands/*.md` の一致は `npm run check:doc-enum`（`meta:validate` 経由で CI 必須チェック）が機械検証する。
+
+## なぜ `commands/README.md` ではなくここに置くのか
+
+`commands/` はプラグインの配布サーフェスであり、`claude plugin validate` は `commands/` 直下の `*.md` を**すべてコマンドとして走査**する。README も例外ではないため、そこに置くと配布物に実行できない `/README` コマンドが混ざる（frontmatter を足しても走査対象からは外れない）。ドキュメントは配布サーフェスの外に置き、`commands/` には実際のコマンドだけを残すのが安全である。
+
+一方 [`.claude/commands/README.md`](../../.claude/commands/README.md) はリポジトリ開発専用ディレクトリの索引であり、配布されず validator の走査対象にもならないため、コマンドと同居したままで問題ない。
+
+配置先が `docs/development/` である理由は [DOCUMENTATION.md](../policy/DOCUMENTATION.md) のとおりで、この文書は公開サイト（`pages/`）向けではなく、メンテナ向けの開発リファレンスだからである。

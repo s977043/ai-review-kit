@@ -28,9 +28,10 @@
 
 ### 新しい配布 command（`commands/<name>.md`）を追加した場合
 
-- [ ] `.claude-plugin/plugin.json` の `commands[]` に `"./commands/<name>.md"` を追加した（`README.md` は登録しない）
+- [ ] `.claude-plugin/plugin.json` の `commands[]` に `"./commands/<name>.md"` を追加した
+- [ ] `commands/` 直下にコマンド本体以外のファイルを置いていない（公式 validator が全 `*.md` をコマンドとして走査するため、README 等はここに置かない）
 - [ ] `.codex-plugin/plugin.json` には commands フィールドがない（対応不要）
-- [ ] CLAUDE.md「Custom Commands」表と `commands/README.md` に説明を追記した
+- [ ] CLAUDE.md「Custom Commands」表と [`distributed-commands.md`](./distributed-commands.md) に説明を追記した
 - [ ] `npm run plugin:validate` が pass する
 - [ ] `npm run check:doc-enum` が pass する（上記 2 つの表と `commands/*.md` の一致を機械検証する。詳細は [doc-enumeration-checks.md](./doc-enumeration-checks.md)）
 
@@ -87,7 +88,7 @@ npm run meta:validate         # メタ整合
 | `Unknown field 'composerIcon'`                                  | Codex bundle 契約が必須とするフィールドで、`checkCrossManifestParity` が両 manifest の一致を強制する。Claude Code は無視するだけである |
 | `CLAUDE.md at the plugin root is not loaded as project context` | ルート `CLAUDE.md` はリポジトリ自身の agent instructions であり配布 context ではない。validator に除外機構が無い                       |
 
-`commands/*.md` は README も含めて公式 validator の検査対象になるため、`commands/README.md` には frontmatter（`description`）を置いてある。
+`commands/` 直下の `*.md` は README も含めて公式 validator にコマンドとして走査されるため、旧 `commands/README.md` は [`distributed-commands.md`](./distributed-commands.md) へ移設した。`commands/` にはコマンド本体だけを置く。
 
 ## 関連
 
