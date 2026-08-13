@@ -28,9 +28,10 @@
 
 ### 新しい配布 command（`commands/<name>.md`）を追加した場合
 
-- [ ] `.claude-plugin/plugin.json` の `commands[]` に `"./commands/<name>.md"` を追加した（`README.md` は登録しない）
+- [ ] `.claude-plugin/plugin.json` の `commands[]` に `"./commands/<name>.md"` を追加した
+- [ ] `commands/` 直下にコマンド本体以外のファイルを置いていない（公式 validator が全 `*.md` をコマンドとして走査するため、README 等はここに置かない）
 - [ ] `.codex-plugin/plugin.json` には commands フィールドがない（対応不要）
-- [ ] CLAUDE.md「Custom Commands」表と `commands/README.md` に説明を追記した
+- [ ] CLAUDE.md「Custom Commands」表と [`distributed-commands.md`](./distributed-commands.md) に説明を追記した
 - [ ] `npm run plugin:validate` が pass する
 - [ ] `npm run check:doc-enum` が pass する（上記 2 つの表と `commands/*.md` の一致を機械検証する。詳細は [doc-enumeration-checks.md](./doc-enumeration-checks.md)）
 
@@ -73,9 +74,26 @@ npm run meta:validate         # メタ整合
 
 いずれかが fail した場合はマージせず、該当項目を修正してから再実行します。
 
+## 公式 validator（`npm run plugin:validate:official`・ローカル専用）
+
+`npm run plugin:validate` はこのリポジトリ固有のルール（cross-manifest parity・逆ドリフト・version 同期）を見るもので、Claude Code 公式の manifest 契約は見ません。公式 validator は `claude plugin validate` であり、`scripts/validate-plugin-official.mjs` がこれを包んでいます。
+
+- 引数によって読む manifest が変わるため、ラッパーは 2 回実行する。ディレクトリ（`.`）を渡すと `marketplace.json` だけを検証し、`commands/` `agents/` とルート `CLAUDE.md` は `.claude-plugin/plugin.json` を明示したときにだけ到達する。
+- `--strict` は warning を失敗として扱う。本リポジトリが意図的に受容している warning は `ACCEPTED_WARNINGS`（`scripts/validate-plugin-official.mjs`）に理由付きで列挙し、ラッパーはそれ以外の findings でだけ fail する。新しい warning が増えたときに落ちる回帰ゲートである。
+- GitHub Actions runner に `claude` CLI は入っていないため、CI job には追加していない。CLI が無い環境では SKIP して exit 0 になるので、どこから呼んでも安全である。
+- 受容中の warning は次の 2 件である。
+
+| warning                                                         | 受容理由                                                                                                                               |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `Unknown field 'composerIcon'`                                  | Codex bundle 契約が必須とするフィールドで、`checkCrossManifestParity` が両 manifest の一致を強制する。Claude Code は無視するだけである |
+| `CLAUDE.md at the plugin root is not loaded as project context` | ルート `CLAUDE.md` はリポジトリ自身の agent instructions であり配布 context ではない。validator に除外機構が無い                       |
+
+`commands/` 直下の `*.md` は README も含めて公式 validator にコマンドとして走査されるため、旧 `commands/README.md` は [`distributed-commands.md`](./distributed-commands.md) へ移設した。`commands/` にはコマンド本体だけを置く。
+
 ## 関連
 
 - `scripts/validate-plugin-manifest.mjs`（`plugin:validate`）
+- `scripts/validate-plugin-official.mjs`（`plugin:validate:official`・公式 CLI ラッパー）
 - `scripts/sync-plugin-fields.mjs`（`plugin:sync` / `plugin:sync:check`）
 - CLAUDE.md「AI Misoperation Guards」>「Plugin bundle mirror」
 - `release-please-config.json` の `extra-files`（version bump は release-please が両 manifest へ反映）
