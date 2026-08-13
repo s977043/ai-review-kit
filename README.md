@@ -436,9 +436,9 @@ river-review は同一リポジトリ内のマーケットプレイスから Cla
 
 得られるもの（プラグイン名で名前空間化されます）:
 
-- コマンド: `/river-review:review-local` / `/river-review:challenge` / `/river-review:skill` / `/river-review:check` / `/river-review:pr`
+- コマンド: `/river-review:setup-team` / `/river-review:review-local` / `/river-review:review-team` / `/river-review:challenge` / `/river-review:skill` / `/river-review:check` / `/river-review:pr`
 - エージェント: `river-review`（スキルルーティング型のコードレビュー・オーケストレーター）
-- スキル: オーケストレーターに加えて `river-review-code` / `river-review-security` / `river-review-performance` / `river-review-architecture` / `river-review-testing` / `adversarial-review` / `river-review-docs`—`/river-review:<skill-name>` で呼び出せます
+- スキル: オーケストレーターの `river-review` に加えて `river-review-code` / `river-review-security` / `river-review-performance` / `river-review-architecture` / `river-review-testing` / `river-review-frontend` / `river-review-docs` / `adversarial-review` / `review-team` / `unknown-coverage-review`—`/river-review:<skill-name>` で呼び出せます
 
 管理: `/plugin enable|disable|uninstall river-review@river-review-marketplace`。
 
