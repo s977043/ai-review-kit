@@ -22,7 +22,7 @@ diff --git a/db/migrations/20260812_shipping_zones_contract.sql b/db/migrations/
 new file mode 100644
 --- /dev/null
 +++ b/db/migrations/20260812_shipping_zones_contract.sql
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,23 @@
 +-- Engine: PostgreSQL 16.
 +
 +-- up

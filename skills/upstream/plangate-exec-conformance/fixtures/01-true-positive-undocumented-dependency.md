@@ -67,7 +67,7 @@ new file mode 100644
 index 0000000..3333333
 --- /dev/null
 +++ b/src/services/cache.ts
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,16 @@
 +import { LRUCache } from 'lru-cache';
 +import Redis from 'ioredis';
 +

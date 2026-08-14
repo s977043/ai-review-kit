@@ -11,7 +11,7 @@ diff --git a/src/billing/charge.mjs b/src/billing/charge.mjs
 index 1111111..2222222 100644
 --- a/src/billing/charge.mjs
 +++ b/src/billing/charge.mjs
-@@ -8,6 +8,10 @@ export function calculateCharge(order, taxRate) {
+@@ -8,2 +8,5 @@ export function calculateCharge(order, taxRate) {
 +  if (order.amount < 0) {
 +    throw new RangeError('amount must be non-negative');
 +  }
@@ -21,7 +21,7 @@ diff --git a/tests/billing/charge.test.mjs b/tests/billing/charge.test.mjs
 index 3333333..4444444 100644
 --- a/tests/billing/charge.test.mjs
 +++ b/tests/billing/charge.test.mjs
-@@ -1,5 +1,29 @@
+@@ -1,2 +1,23 @@
  import { describe, it, expect, vi } from 'vitest';
  import { calculateCharge } from '../../src/billing/charge.mjs';
 +import { fetchTaxRate } from '../../src/billing/tax.mjs';

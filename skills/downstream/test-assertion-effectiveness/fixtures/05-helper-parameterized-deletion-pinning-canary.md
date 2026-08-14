@@ -11,7 +11,7 @@ diff --git a/tests/support/assertions.mjs b/tests/support/assertions.mjs
 index 1111111..2222222 100644
 --- a/tests/support/assertions.mjs
 +++ b/tests/support/assertions.mjs
-@@ -1,3 +1,9 @@
+@@ -1,0 +1,5 @@
 +export function assertChargeMatches(actual, expected) {
 +  expect(actual.total).toBe(expected.total);
 +  expect(actual.currency).toBe(expected.currency);
@@ -21,7 +21,7 @@ diff --git a/tests/billing/charge.test.mjs b/tests/billing/charge.test.mjs
 index 3333333..4444444 100644
 --- a/tests/billing/charge.test.mjs
 +++ b/tests/billing/charge.test.mjs
-@@ -1,6 +1,24 @@
+@@ -1,2 +1,20 @@
  import { describe, it, expect } from 'vitest';
  import { calculateCharge } from '../../src/billing/charge.mjs';
 +import { assertChargeMatches } from '../support/assertions.mjs';
@@ -46,7 +46,7 @@ diff --git a/tests/Feature/LegacyBannerTest.php b/tests/Feature/LegacyBannerTest
 index 5555555..6666666 100644
 --- a/tests/Feature/LegacyBannerTest.php
 +++ b/tests/Feature/LegacyBannerTest.php
-@@ -8,4 +8,13 @@ class LegacyBannerTest extends TestCase
+@@ -8,2 +8,10 @@ class LegacyBannerTest extends TestCase
      }
 +
 +    /** 撤去済みキャンペーンバナーが再掲載されないことを固定する回帰テスト（#1512 で撤去） */

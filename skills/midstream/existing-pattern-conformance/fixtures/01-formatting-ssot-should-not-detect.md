@@ -17,7 +17,7 @@ diff --git a/pages/reference/commands.md b/pages/reference/commands.md
 index abc1234..def5678 100644
 --- a/pages/reference/commands.md
 +++ b/pages/reference/commands.md
-@@ -3,3 +3,4 @@
+@@ -3,2 +3,3 @@
  | `/check` | 品質チェックを実行する |
  | `/pr`    | PR 説明の下書きを作る  |
 +| `/preflight` | 作業前に重複・陳腐化を確認する |

@@ -18,7 +18,7 @@ diff --git a/pages/guides/add-new-skill.md b/pages/guides/add-new-skill.md
 index abc1234..def5678 100644
 --- a/pages/guides/add-new-skill.md
 +++ b/pages/guides/add-new-skill.md
-@@ -10,3 +10,6 @@ スキル定義の雛形は次を参照してください。
+@@ -10,0 +10,3 @@ スキル定義の雛形は次を参照してください。
 +
 +雛形は [_template.md](https://github.com/s977043/river-review/blob/main/skills/_template.md) を参照します。
 +この変更の経緯は [#1463](https://github.com/s977043/river-review/issues/1463) を参照してください。

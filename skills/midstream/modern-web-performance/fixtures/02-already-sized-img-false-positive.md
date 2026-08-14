@@ -10,7 +10,7 @@ attributes guard applies and the image is correctly lazy-loaded.
 
 ```diff
 diff --git a/src/components/Thumb.tsx b/src/components/Thumb.tsx
-@@ -1,5 +1,5 @@
+@@ -1,3 +1,3 @@
  export function Thumb({ src, title }: Props) {
 -  return <img src={src} width="200" height="200" loading="lazy" decoding="async" />;
 +  return <img src={src} width="200" height="200" loading="lazy" decoding="async" alt={title} />;

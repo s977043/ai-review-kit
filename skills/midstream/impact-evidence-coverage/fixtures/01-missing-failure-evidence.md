@@ -11,7 +11,7 @@ diff --git a/src/lib/fetch-with-retry.mjs b/src/lib/fetch-with-retry.mjs
 index 1111111..2222222 100644
 --- a/src/lib/fetch-with-retry.mjs
 +++ b/src/lib/fetch-with-retry.mjs
-@@ -1,5 +1,17 @@
+@@ -1,3 +1,11 @@
  export async function fetchWithRetry(url, { attempts = 3 } = {}) {
 -  return fetch(url);
 +  let lastError;

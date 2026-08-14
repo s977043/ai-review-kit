@@ -11,7 +11,7 @@ diff --git a/src/services/session-service.ts b/src/services/session-service.ts
 index 1234567..abcdef0 100644
 --- a/src/services/session-service.ts
 +++ b/src/services/session-service.ts
-@@ -4,6 +4,22 @@ interface Session {
+@@ -4,5 +4,24 @@ interface Session {
    userId: string;
    token: string;
    expiresAt: number;

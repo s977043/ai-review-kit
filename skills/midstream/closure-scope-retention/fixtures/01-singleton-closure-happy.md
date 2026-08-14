@@ -12,7 +12,7 @@ new file mode 100644
 index 0000000..3333333
 --- /dev/null
 +++ b/src/lib/skill-cache.mjs
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,34 @@
 +import { readFile } from 'node:fs/promises';
 +import { parseAllDocuments } from 'yaml';
 +

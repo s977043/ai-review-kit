@@ -12,7 +12,7 @@ new file mode 100644
 index 0000000..abcdef0
 --- /dev/null
 +++ b/src/components/PaymentSummary.tsx
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,21 @@
 +import React from 'react';
 +import { formatDate } from '../utils/date';
 +import { formatCurrency } from '../utils/currency';

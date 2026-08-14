@@ -24,7 +24,7 @@ diff --git a/src/report/summary.ts b/src/report/summary.ts
 new file mode 100644
 --- /dev/null
 +++ b/src/report/summary.ts
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,6 @@
 +import { formatDateRange } from '../utils/date';
 +
 +export function buildSummaryHeader(start: Date, end: Date): string {

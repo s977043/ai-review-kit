@@ -25,7 +25,7 @@ diff --git a/pages/reference/loop-convergence-contract.md b/pages/reference/loop
 index abc1234..def5678 100644
 --- a/pages/reference/loop-convergence-contract.md
 +++ b/pages/reference/loop-convergence-contract.md
-@@ -40,3 +40,5 @@ verdict 写像は以下のとおりです。
+@@ -40,0 +40,3 @@ verdict 写像は以下のとおりです。
 +
 +Unknown Coverage の出力受け皿の詳細は
 +[docs/review/output-format.md](https://github.com/s977043/river-review/blob/main/docs/review/output-format.md) を参照してください。

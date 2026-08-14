@@ -11,7 +11,7 @@ framework swap, which is out of scope).
 
 ```diff
 diff --git a/src/components/SettingsDialog.tsx b/src/components/SettingsDialog.tsx
-@@ -5,7 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
+@@ -5,8 +5,8 @@ import * as Dialog from '@radix-ui/react-dialog';
 
  export function SettingsDialog() {
    return (

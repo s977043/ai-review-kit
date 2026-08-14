@@ -12,7 +12,7 @@ in the design system — the skill must NOT flag it as a reimplementation.
 diff --git a/src/components/ui/Button.tsx b/src/components/ui/Button.tsx
 --- a/src/components/ui/Button.tsx
 +++ b/src/components/ui/Button.tsx
-@@ -1,12 +1,20 @@
+@@ -1,15 +1,24 @@
  import React from 'react';
 
 -interface Props {

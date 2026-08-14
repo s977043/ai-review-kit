@@ -28,7 +28,7 @@ non-functional requirements. They are untouched by this diff.
 diff --git a/docs/product/member-bulk-import-requirements.md b/docs/product/member-bulk-import-requirements.md
 --- a/docs/product/member-bulk-import-requirements.md
 +++ b/docs/product/member-bulk-import-requirements.md
-@@ -40,6 +40,20 @@
+@@ -40,2 +40,19 @@
  ## 取り込み時の重複判定
 
 +本節で決めること: 同一メールアドレスの行が既存会員と衝突した場合の扱い。

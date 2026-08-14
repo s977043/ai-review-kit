@@ -11,7 +11,7 @@ diff --git a/vitest.config.ts b/vitest.config.ts
 index 1234567..89abcde 100644
 --- a/vitest.config.ts
 +++ b/vitest.config.ts
-@@ -1,5 +1,8 @@
+@@ -1,5 +1,7 @@
  import { defineConfig } from 'vitest/config';
 
  export default defineConfig({
@@ -24,7 +24,7 @@ diff --git a/src/user.test.ts b/src/user.test.ts
 index 1234567..89abcde 100644
 --- a/src/user.test.ts
 +++ b/src/user.test.ts
-@@ -1,3 +1,11 @@
+@@ -1,0 +1,10 @@
 +import { describe, it, expect, vi } from 'vitest';
 +import * as api from './api';
 +import { loadUser } from './user';

@@ -11,7 +11,7 @@ diff --git a/src/components/Divider.tsx b/src/components/Divider.tsx
 index 1234567..89abcde 100644
 --- a/src/components/Divider.tsx
 +++ b/src/components/Divider.tsx
-@@ -1,3 +1,9 @@
+@@ -1,0 +1,6 @@
 +export function Divider() {
 +  // 1px hairline border is intentional — no theme scale value maps to 0.5px
 +  return (
@@ -22,7 +22,7 @@ diff --git a/src/components/Hero.tsx b/src/components/Hero.tsx
 index 2234567..99abcde 100644
 --- a/src/components/Hero.tsx
 +++ b/src/components/Hero.tsx
-@@ -1,3 +1,4 @@
+@@ -1,0 +1,2 @@
 +// width below maps to theme.extend.width['hero'] in tailwind.config
 +export const heroClass = 'w-hero bg-brand';
 ```

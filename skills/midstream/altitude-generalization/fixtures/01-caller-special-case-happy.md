@@ -10,7 +10,7 @@ diff --git a/src/lib/finding-formatter.mjs b/src/lib/finding-formatter.mjs
 index 1111111..2222222 100644
 --- a/src/lib/finding-formatter.mjs
 +++ b/src/lib/finding-formatter.mjs
-@@ -40,6 +40,14 @@ export function formatFinding(finding, options = {}) {
+@@ -40,11 +40,19 @@ export function formatFinding(finding, options = {}) {
    // Shared formatter used by cli, markdown-exporter, github-annotator, and sarif-writer.
    let header = `${finding.file}:${finding.line}: ${finding.title}`;
 

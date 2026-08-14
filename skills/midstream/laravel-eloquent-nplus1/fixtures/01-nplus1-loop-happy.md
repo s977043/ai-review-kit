@@ -11,7 +11,7 @@ diff --git a/app/Http/Controllers/BookController.php b/app/Http/Controllers/Book
 index 1234567..89abcde 100644
 --- a/app/Http/Controllers/BookController.php
 +++ b/app/Http/Controllers/BookController.php
-@@ -1,4 +1,12 @@
+@@ -1,0 +1,8 @@
 +    public function index()
 +    {
 +        $books = Book::all();

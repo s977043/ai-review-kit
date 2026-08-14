@@ -11,7 +11,7 @@ diff --git a/resources/views/comparison/show.blade.php b/resources/views/compari
 index 1111111..2222222 100644
 --- a/resources/views/comparison/show.blade.php
 +++ b/resources/views/comparison/show.blade.php
-@@ -14,7 +14,10 @@
+@@ -14,3 +14,4 @@
 -  <a href="{{ route('comparison.download', $comparison) }}">
 -    <span>要件整理シート付き比較表をダウンロード</span>
 -  </a>
@@ -23,7 +23,7 @@ diff --git a/tests/Feature/ComparisonDownloadTest.php b/tests/Feature/Comparison
 index 3333333..4444444 100644
 --- a/tests/Feature/ComparisonDownloadTest.php
 +++ b/tests/Feature/ComparisonDownloadTest.php
-@@ -18,7 +18,23 @@ class ComparisonDownloadTest extends TestCase
+@@ -18,6 +18,17 @@ class ComparisonDownloadTest extends TestCase
      {
          $response = $this->actingAs($this->paidUser)->get('/comparison/1');
 
@@ -46,7 +46,7 @@ diff --git a/tests/ui/ComparisonCard.test.tsx b/tests/ui/ComparisonCard.test.tsx
 index 5555555..6666666 100644
 --- a/tests/ui/ComparisonCard.test.tsx
 +++ b/tests/ui/ComparisonCard.test.tsx
-@@ -4,6 +4,17 @@ import { ComparisonCard } from '../../src/ui/ComparisonCard';
+@@ -4,0 +4,12 @@ import { ComparisonCard } from '../../src/ui/ComparisonCard';
 +  it('matches the rendered markup', () => {
 +    const { container } = render(<ComparisonCard comparison={fixture} />);
 +    expect(container.firstChild).toMatchSnapshot();

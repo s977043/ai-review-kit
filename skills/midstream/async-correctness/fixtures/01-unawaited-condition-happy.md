@@ -21,7 +21,7 @@ diff --git a/src/jobs/runner.ts b/src/jobs/runner.ts
 new file mode 100644
 --- /dev/null
 +++ b/src/jobs/runner.ts
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,9 @@
 +import { isLocked, markDone, process } from './store';
 +
 +export async function runJob(id: string): Promise<void> {

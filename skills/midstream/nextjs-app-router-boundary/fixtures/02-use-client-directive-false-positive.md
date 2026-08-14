@@ -9,7 +9,7 @@ This is correct App Router usage — the skill must NOT flag it.
 
 ```diff
 diff --git a/app/dashboard/SearchBox.tsx b/app/dashboard/SearchBox.tsx
-@@ -1,5 +1,7 @@
+@@ -1,5 +1,8 @@
  'use client';
 
 +import { useState } from 'react';

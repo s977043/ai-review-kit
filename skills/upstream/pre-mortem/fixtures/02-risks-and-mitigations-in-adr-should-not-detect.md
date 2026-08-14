@@ -22,7 +22,7 @@ diff --git a/docs/adr/0042-order-read-cache.md b/docs/adr/0042-order-read-cache.
 new file mode 100644
 --- /dev/null
 +++ b/docs/adr/0042-order-read-cache.md
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,26 @@
 +# ADR-0042: Order read cache
 +
 +## Decision

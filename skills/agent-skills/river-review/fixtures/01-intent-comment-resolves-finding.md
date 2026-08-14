@@ -18,7 +18,7 @@ diff --git a/app/Services/CandidateScoring.php b/app/Services/CandidateScoring.p
 index 1111111..2222222 100644
 --- a/app/Services/CandidateScoring.php
 +++ b/app/Services/CandidateScoring.php
-@@ -18,6 +18,15 @@ class CandidateScoring
+@@ -18,2 +18,12 @@ class CandidateScoring
      }
 +
 +    // 候補の評価のみを行う（選定はしない。検証ボード表示用のため opt-in）。

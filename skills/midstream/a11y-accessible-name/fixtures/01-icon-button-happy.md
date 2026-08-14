@@ -9,7 +9,7 @@ The skill should flag missing accessible name and suggest `aria-label`.
 
 ```diff
 diff --git a/src/components/CloseButton.tsx b/src/components/CloseButton.tsx
-@@ -1,5 +1,5 @@
+@@ -1,3 +1,3 @@
  export function CloseButton({ onClose }: Props) {
 -  return <button onClick={onClose} aria-label="Close">{/* icon */}<XIcon /></button>;
 +  return <button onClick={onClose}><XIcon /></button>;

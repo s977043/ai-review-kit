@@ -11,7 +11,7 @@ diff --git a/app/routes/signup.tsx b/app/routes/signup.tsx
 index 1234567..89abcde 100644
 --- a/app/routes/signup.tsx
 +++ b/app/routes/signup.tsx
-@@ -1,4 +1,12 @@
+@@ -1,0 +1,9 @@
 +export async function action({ request }: Route.ActionArgs) {
 +  const form = await request.formData();
 +  const email = String(form.get('email'));

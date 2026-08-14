@@ -11,7 +11,7 @@ diff --git a/src/components/Header.tsx b/src/components/Header.tsx
 index abc1234..def5678 100644
 --- a/src/components/Header.tsx
 +++ b/src/components/Header.tsx
-@@ -5,5 +5,5 @@ export function Header() {
+@@ -5,2 +5,2 @@ export function Header() {
 -  return <h1>{t('header.title_old')}</h1>;
 +  return <h1>{t('header.title')}</h1>;
  }
@@ -19,7 +19,7 @@ diff --git a/src/i18n/en.json b/src/i18n/en.json
 index 1111111..2222222 100644
 --- a/src/i18n/en.json
 +++ b/src/i18n/en.json
-@@ -2,5 +2,5 @@ {
+@@ -2,4 +2,4 @@ {
    "header": {
 -    "title_old": "My App"
 +    "title": "My App"

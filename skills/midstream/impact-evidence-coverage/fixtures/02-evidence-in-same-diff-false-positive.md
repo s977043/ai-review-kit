@@ -11,7 +11,7 @@ diff --git a/src/lib/fetch-with-retry.mjs b/src/lib/fetch-with-retry.mjs
 index 1111111..2222222 100644
 --- a/src/lib/fetch-with-retry.mjs
 +++ b/src/lib/fetch-with-retry.mjs
-@@ -1,5 +1,17 @@
+@@ -1,3 +1,11 @@
  export async function fetchWithRetry(url, { attempts = 3 } = {}) {
 -  return fetch(url);
 +  let lastError;
@@ -29,7 +29,7 @@ new file mode 100644
 index 0000000..3333333
 --- /dev/null
 +++ b/tests/fetch-with-retry.test.mjs
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,21 @@
 +import assert from 'node:assert/strict';
 +import { test } from 'node:test';
 +import { fetchWithRetry } from '../src/lib/fetch-with-retry.mjs';

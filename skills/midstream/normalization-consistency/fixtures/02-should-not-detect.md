@@ -11,7 +11,7 @@ diff --git a/src/components/InvoiceList.tsx b/src/components/InvoiceList.tsx
 index abc1234..def5678 100644
 --- a/src/components/InvoiceList.tsx
 +++ b/src/components/InvoiceList.tsx
-@@ -1,4 +1,8 @@ import { format } from 'date-fns';
+@@ -1,0 +1,5 @@ import { format } from 'date-fns';
 +
 +export function InvoiceRow({ invoice }: Props) {
 +  const displayDate = format(invoice.issuedAt, 'yyyy/MM/dd');

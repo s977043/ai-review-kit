@@ -10,7 +10,7 @@ feature detection or fallback. The skill should suggest `@supports` or
 
 ```diff
 diff --git a/src/components/HelpTooltip.tsx b/src/components/HelpTooltip.tsx
-@@ -3,9 +3,9 @@ export function HelpTooltip({ id, children }: Props) {
+@@ -3,7 +3,7 @@ export function HelpTooltip({ id, children }: Props) {
    return (
      <>
        <button popovertarget={id}>?</button>

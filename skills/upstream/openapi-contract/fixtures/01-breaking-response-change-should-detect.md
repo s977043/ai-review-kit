@@ -24,7 +24,7 @@ the diff changes an API specification file.
 diff --git a/docs/openapi/orders.yaml b/docs/openapi/orders.yaml
 --- a/docs/openapi/orders.yaml
 +++ b/docs/openapi/orders.yaml
-@@ -1,6 +1,6 @@
+@@ -1,7 +1,7 @@
  openapi: 3.0.3
  info:
    title: Orders API
@@ -33,7 +33,7 @@ diff --git a/docs/openapi/orders.yaml b/docs/openapi/orders.yaml
  components:
    securitySchemes:
      bearerAuth: { type: http, scheme: bearer }
-@@ -20,12 +20,22 @@ paths:
+@@ -20,22 +20,34 @@ paths:
    /orders/{id}:
      get:
        security: [{ bearerAuth: [] }]

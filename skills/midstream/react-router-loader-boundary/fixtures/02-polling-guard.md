@@ -11,7 +11,7 @@ diff --git a/app/routes/live.tsx b/app/routes/live.tsx
 index 1234567..89abcde 100644
 --- a/app/routes/live.tsx
 +++ b/app/routes/live.tsx
-@@ -1,4 +1,14 @@
+@@ -1,0 +1,12 @@
 +import { useEffect } from 'react';
 +import type { Route } from './+types/live';
 +

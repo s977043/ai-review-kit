@@ -48,7 +48,7 @@ new file mode 100644
 index 0000000..4444444
 --- /dev/null
 +++ b/src/services/discount.ts
-@@ -0,0 +1,9 @@
+@@ -0,0 +1,6 @@
 +export function applyDiscount(price, code, now = new Date()) {
 +  if (code.expiresAt && now > new Date(code.expiresAt)) {
 +    throw new Error('discount code expired');
@@ -60,7 +60,7 @@ new file mode 100644
 index 0000000..5555555
 --- /dev/null
 +++ b/src/services/discount.test.ts
-@@ -0,0 +1,7 @@
+@@ -0,0 +1,5 @@
 +import { applyDiscount } from './discount';
 +
 +test('TC1: 有効なコードで価格が割引される', () => {

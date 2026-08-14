@@ -12,7 +12,7 @@ new file mode 100644
 index 0000000..abcdef0
 --- /dev/null
 +++ b/src/components/ProductDetail.tsx
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,16 @@
 +import React, { Suspense } from 'react';
 +import { ErrorBoundary } from 'react-error-boundary';
 +import { ProductDetailContent } from './ProductDetailContent';
@@ -34,7 +34,7 @@ new file mode 100644
 index 0000000..1234567
 --- /dev/null
 +++ b/src/components/ProductDetailContent.tsx
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,17 @@
 +import { useSuspenseQuery } from '@tanstack/react-query';
 +import { fetchProduct } from '../api/products';
 +

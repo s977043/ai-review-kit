@@ -28,7 +28,7 @@ bump; removals and type narrowing do.
 diff --git a/docs/openapi/orders.yaml b/docs/openapi/orders.yaml
 --- a/docs/openapi/orders.yaml
 +++ b/docs/openapi/orders.yaml
-@@ -20,10 +20,14 @@ paths:
+@@ -20,15 +20,24 @@ paths:
    /orders/{id}:
      get:
        security: [{ bearerAuth: [] }]

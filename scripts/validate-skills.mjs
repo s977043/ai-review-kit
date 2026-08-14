@@ -855,6 +855,332 @@ export async function validateFixtureDrift({
   return success;
 }
 
+// ---------------------------------------------------------------------------
+// Fixture diff-block structural validation (#1852)
+// ---------------------------------------------------------------------------
+
+/**
+ * Matches a fenced ```diff block. The backreference on the opening run of
+ * backticks keeps 4-backtick fences (used when the diff body itself contains a
+ * 3-backtick fence, e.g. skills/midstream/self-contradiction/fixtures/01-*.md)
+ * from terminating early.
+ */
+const RE_DIFF_FENCE = /^(`{3,})diff[ \t]*\r?\n([\s\S]*?)^\1[ \t]*$/gm;
+
+/** `@@ -oldStart[,oldCount] +newStart[,newCount] @@` unified-diff hunk header. */
+const RE_HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
+
+/** `+++ b/path` (or `+++ path`) new-side file header. */
+const RE_NEW_FILE_HEADER = /^\+\+\+ (?:b\/)?(\S+)/;
+
+/** `<file>:<line>` anchor, as emitted in fixture `<!-- expected: -->` blocks. */
+const RE_ANCHOR = /^(.*\S):(\d+)$/;
+
+/**
+ * Extract the bodies of every fenced ```diff block in a fixture file.
+ * Pure and exported for unit testing.
+ *
+ * @param {string} text - fixture file content
+ * @returns {string[]} raw diff bodies (fence lines excluded)
+ */
+export function extractDiffBlocks(text) {
+  return [...(text ?? '').matchAll(RE_DIFF_FENCE)].map((m) => m[2]);
+}
+
+/**
+ * Parse a unified-diff body and reconstruct the new-side (post-image) line
+ * numbering, so that an `<file>:<line>` anchor can be resolved deterministically.
+ * Pure and exported for unit testing.
+ *
+ * Reconstruction rules (standard unified diff):
+ * - a ` ` (context) line advances both sides;
+ * - a `+` line advances the new side only;
+ * - a `-` line advances the old side only;
+ * - a `\` line (`\ No newline at end of file`) advances neither.
+ *
+ * A completely empty line inside a hunk body is treated as a context line whose
+ * content is empty — that is how a trailing-whitespace-stripped context line
+ * appears in a markdown fixture. The trailing empty element produced by
+ * splitting on the final newline is dropped first so it is not miscounted.
+ *
+ * @param {string} diffText - body of one ```diff block
+ * @returns {{
+ *   files: Map<string, { lines: Map<number, string> }>,
+ *   hunks: Array<{
+ *     file: string|null, header: string,
+ *     oldStart: number, declaredOld: number, actualOld: number,
+ *     newStart: number, declaredNew: number, actualNew: number,
+ *   }>,
+ *   unknownPrefixLines: string[],
+ * }}
+ */
+export function parseUnifiedDiff(diffText) {
+  const files = new Map();
+  const hunks = [];
+  const unknownPrefixLines = [];
+  const lines = String(diffText ?? '').split('\n');
+  while (lines.length && lines[lines.length - 1] === '') lines.pop();
+
+  let currentFile = null;
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    const fileMatch = RE_NEW_FILE_HEADER.exec(line);
+    if (fileMatch) {
+      // `+++ /dev/null` marks a deletion: no new-side lines to reconstruct.
+      currentFile = fileMatch[1] === '/dev/null' ? null : fileMatch[1];
+      if (currentFile && !files.has(currentFile)) files.set(currentFile, { lines: new Map() });
+      i += 1;
+      continue;
+    }
+
+    const hunkMatch = RE_HUNK_HEADER.exec(line);
+    if (!hunkMatch) {
+      i += 1;
+      continue;
+    }
+
+    const oldStart = Number(hunkMatch[1]);
+    const declaredOld = hunkMatch[2] === undefined ? 1 : Number(hunkMatch[2]);
+    const newStart = Number(hunkMatch[3]);
+    const declaredNew = hunkMatch[4] === undefined ? 1 : Number(hunkMatch[4]);
+    let actualOld = 0;
+    let actualNew = 0;
+    let newLine = newStart;
+    i += 1;
+
+    while (i < lines.length) {
+      const body = lines[i];
+      if (
+        RE_HUNK_HEADER.test(body) ||
+        body.startsWith('diff --git ') ||
+        body.startsWith('--- ') ||
+        body.startsWith('+++ ')
+      ) {
+        break;
+      }
+      if (body.startsWith('\\')) {
+        i += 1;
+        continue;
+      }
+      if (body.startsWith('+')) {
+        actualNew += 1;
+        if (currentFile) files.get(currentFile).lines.set(newLine, body.slice(1));
+        newLine += 1;
+      } else if (body.startsWith('-')) {
+        actualOld += 1;
+      } else if (body.startsWith(' ') || body === '') {
+        actualOld += 1;
+        actualNew += 1;
+        if (currentFile) files.get(currentFile).lines.set(newLine, body.slice(1));
+        newLine += 1;
+      } else {
+        // Not a unified-diff body line. Record it and stop the hunk here rather
+        // than silently swallowing it into a wrong line count.
+        unknownPrefixLines.push(body);
+        break;
+      }
+      i += 1;
+    }
+
+    hunks.push({
+      file: currentFile,
+      header: line,
+      oldStart,
+      declaredOld,
+      actualOld,
+      newStart,
+      declaredNew,
+      actualNew,
+    });
+  }
+
+  return { files, hunks, unknownPrefixLines };
+}
+
+/**
+ * Merge every ```diff block of one fixture into a single new-side view.
+ * Pure and exported for unit testing.
+ *
+ * @param {string} text - fixture file content
+ * @returns {{
+ *   files: Map<string, { lines: Map<number, string> }>,
+ *   hunks: Array<object>,
+ *   unknownPrefixLines: string[],
+ * }}
+ */
+export function parseFixtureDiffs(text) {
+  const files = new Map();
+  const hunks = [];
+  const unknownPrefixLines = [];
+  for (const block of extractDiffBlocks(text)) {
+    const parsed = parseUnifiedDiff(block);
+    for (const [file, entry] of parsed.files) {
+      if (!files.has(file)) files.set(file, { lines: new Map() });
+      const target = files.get(file);
+      for (const [n, content] of entry.lines) target.lines.set(n, content);
+    }
+    hunks.push(...parsed.hunks);
+    unknownPrefixLines.push(...parsed.unknownPrefixLines);
+  }
+  return { files, hunks, unknownPrefixLines };
+}
+
+/**
+ * Collect the `<file>:<line>` anchors declared by a fixture's
+ * `<!-- expected: -->` blocks. Pure and exported for unit testing.
+ *
+ * Only `findings[].anchor` is read — the same field validateFixtureDrift()
+ * consumes. Anchors that are not in `<file>:<line>` form (e.g. the
+ * `(summary):1` pseudo-anchor) are skipped: they name no diff file, so no
+ * deterministic judgment is possible.
+ *
+ * @param {string} text - fixture file content
+ * @returns {Array<{ raw: string, file: string, line: number }>}
+ */
+export function extractFixtureAnchors(text) {
+  const anchors = [];
+  for (const block of extractExpectedBlocks(text)) {
+    let parsed;
+    try {
+      parsed = yaml.load(block);
+    } catch {
+      // Reported by validateFixtureDrift(); nothing to anchor-check here.
+      continue;
+    }
+    const findings = parsed?.findings;
+    if (!Array.isArray(findings)) continue;
+    for (const finding of findings) {
+      const raw = finding?.anchor;
+      if (typeof raw !== 'string') continue;
+      const match = RE_ANCHOR.exec(raw.trim());
+      if (!match) continue;
+      const file = match[1].trim();
+      if (file.startsWith('(')) continue; // `(summary):1` and friends
+      anchors.push({ raw: raw.trim(), file, line: Number(match[2]) });
+    }
+  }
+  return anchors;
+}
+
+/**
+ * Structural gate for the ```diff blocks embedded in skill fixtures (#1852).
+ * Everything here is deterministic and opt-in by structure — a fixture with no
+ * ```diff block, and a fixture whose expected blocks declare no `<file>:<line>`
+ * anchor (e.g. a negative fixture with `findings: []`), is untouched.
+ *
+ * Errors:
+ * - a hunk header's declared line counts must equal the hunk body's actual
+ *   counts, on the old side and the new side;
+ * - an anchor's file must appear as a `+++ b/<path>` header in one of the
+ *   fixture's diff blocks;
+ * - the anchored line must exist in the reconstructed new-side numbering and
+ *   must not be blank.
+ *
+ * Rationale (#1850 adversarial review): CI was fully green while anchors
+ * pointed at blank lines and hunk headers disagreed with their bodies, because
+ * validateFixtureDrift() only reads the expected block's YAML. These fixtures
+ * are never executed by eval:fixtures, so nothing else would ever catch it.
+ *
+ * @param {{ skillsDir?: string, repoRoot?: string }} [options]
+ * @returns {Promise<boolean>} false (→ exitCode 1) on any structural error.
+ */
+export async function validateFixtureDiffStructure({
+  skillsDir = defaultPaths.skillsDir,
+  repoRoot = defaultPaths.repoRoot,
+} = {}) {
+  let files = [];
+  try {
+    files = await listSkillFiles(skillsDir);
+  } catch (err) {
+    console.error(`❌ Failed to list skills: ${err.message}`);
+    return false;
+  }
+
+  let success = true;
+  let checkedFixtures = 0;
+  let checkedHunks = 0;
+  let checkedAnchors = 0;
+
+  for (const filePath of files) {
+    if (path.basename(filePath) !== 'SKILL.md') continue;
+
+    const fixturesDir = path.join(path.dirname(filePath), 'fixtures');
+    const fixtureNames = (await fs.readdir(fixturesDir).catch(() => [])).filter((f) =>
+      f.endsWith('.md')
+    );
+
+    for (const name of fixtureNames.sort()) {
+      const fixturePath = path.join(fixturesDir, name);
+      const fixtureRel = path.relative(repoRoot, fixturePath);
+      const content = await fs.readFile(fixturePath, 'utf8');
+      const { files: diffFiles, hunks, unknownPrefixLines } = parseFixtureDiffs(content);
+      if (!hunks.length && !diffFiles.size) continue;
+      checkedFixtures += 1;
+
+      for (const line of unknownPrefixLines) {
+        console.error(
+          `❌ ${fixtureRel}: unified-diff hunk body contains a line with no ` +
+            `' ' / '+' / '-' prefix: ${JSON.stringify(line)}`
+        );
+        success = false;
+      }
+
+      for (const hunk of hunks) {
+        checkedHunks += 1;
+        if (hunk.declaredOld === hunk.actualOld && hunk.declaredNew === hunk.actualNew) continue;
+        console.error(
+          `❌ ${fixtureRel}: hunk header "${hunk.header}" declares ` +
+            `old=${hunk.declaredOld}, new=${hunk.declaredNew} but the body has ` +
+            `old=${hunk.actualOld}, new=${hunk.actualNew} ` +
+            `(expected "@@ -${hunk.oldStart},${hunk.actualOld} +${hunk.newStart},${hunk.actualNew} @@")`
+        );
+        success = false;
+      }
+
+      for (const anchor of extractFixtureAnchors(content)) {
+        checkedAnchors += 1;
+        const entry = diffFiles.get(anchor.file);
+        if (!entry) {
+          console.error(
+            `❌ ${fixtureRel}: expected block anchors "${anchor.raw}" but no ` +
+              `"+++ b/${anchor.file}" appears in the fixture's diff blocks ` +
+              `(known: ${[...diffFiles.keys()].join(', ') || 'none'})`
+          );
+          success = false;
+          continue;
+        }
+        if (!entry.lines.has(anchor.line)) {
+          const covered = [...entry.lines.keys()].sort((a, b) => a - b);
+          console.error(
+            `❌ ${fixtureRel}: expected block anchors "${anchor.raw}" but line ` +
+              `${anchor.line} is not present on the new side of the diff ` +
+              `(reconstructed lines: ${covered[0] ?? '-'}..${covered[covered.length - 1] ?? '-'})`
+          );
+          success = false;
+          continue;
+        }
+        if (entry.lines.get(anchor.line).trim() === '') {
+          console.error(
+            `❌ ${fixtureRel}: expected block anchors "${anchor.raw}" but that ` +
+              `line is blank — anchor a line that carries the finding's evidence`
+          );
+          success = false;
+        }
+      }
+    }
+  }
+
+  if (success) {
+    console.log(
+      `✅ fixture diff structure: ${checkedHunks} hunk(s) and ${checkedAnchors} anchor(s) ` +
+        `across ${checkedFixtures} fixture(s) consistent`
+    );
+  }
+  return success;
+}
+
 /**
  * Detect hyphen-variant collisions across a labeled set of identifiers: two
  * DISTINCT labels that become equal after stripping hyphens (e.g. `foo-bar` vs
@@ -961,6 +1287,7 @@ if (isDirectRun(import.meta.url)) {
   const registryPathsOk = await validateRegistryPaths({ registry });
   const registryIdsOk = await validateRegistryIdMatch({ registry });
   const fixtureDriftOk = await validateFixtureDrift();
+  const fixtureDiffStructureOk = await validateFixtureDiffStructure();
   const namingCollisionsOk = await validateNamingCollisions({ registry });
   const ok =
     skillsOk &&
@@ -970,6 +1297,7 @@ if (isDirectRun(import.meta.url)) {
     registryPathsOk &&
     registryIdsOk &&
     fixtureDriftOk &&
+    fixtureDiffStructureOk &&
     namingCollisionsOk;
   if (!ok) {
     process.exitCode = 1;

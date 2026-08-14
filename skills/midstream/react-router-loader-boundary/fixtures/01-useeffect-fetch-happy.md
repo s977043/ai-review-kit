@@ -11,7 +11,7 @@ diff --git a/app/routes/dashboard.tsx b/app/routes/dashboard.tsx
 index 1234567..89abcde 100644
 --- a/app/routes/dashboard.tsx
 +++ b/app/routes/dashboard.tsx
-@@ -1,4 +1,15 @@
+@@ -1,0 +1,12 @@
 +import { useEffect, useState } from 'react';
 +
 +export default function Dashboard() {

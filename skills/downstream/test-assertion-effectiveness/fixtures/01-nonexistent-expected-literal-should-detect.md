@@ -11,7 +11,7 @@ diff --git a/resources/views/comparison/show.blade.php b/resources/views/compari
 index 1111111..2222222 100644
 --- a/resources/views/comparison/show.blade.php
 +++ b/resources/views/comparison/show.blade.php
-@@ -28,6 +28,11 @@
+@@ -28,3 +28,5 @@
    @if ($plan->allowsDownload())
      <a href="{{ route('comparison.download', $comparison) }}">比較表をダウンロード</a>
 +  @else
@@ -21,7 +21,7 @@ diff --git a/tests/Feature/ComparisonDownloadTest.php b/tests/Feature/Comparison
 index 3333333..4444444 100644
 --- a/tests/Feature/ComparisonDownloadTest.php
 +++ b/tests/Feature/ComparisonDownloadTest.php
-@@ -40,4 +40,12 @@ class ComparisonDownloadTest extends TestCase
+@@ -40,2 +40,11 @@ class ComparisonDownloadTest extends TestCase
      }
 +
 +    public function test_free_plan_cannot_download(): void

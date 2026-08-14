@@ -17,7 +17,7 @@ diff --git a/src/db/profile.ts b/src/db/profile.ts
 index 5555555..6666666 100644
 --- a/src/db/profile.ts
 +++ b/src/db/profile.ts
-@@ -8,6 +8,11 @@ import { db } from './client';
+@@ -8,0 +8,6 @@ import { db } from './client';
 +
 +// Callers must pass an already-validated `userId`; this helper never touches the DB
 +// directly, it only builds a cached view.

@@ -11,7 +11,7 @@ diff --git a/app/posts/actions.ts b/app/posts/actions.ts
 index 1234567..89abcde 100644
 --- a/app/posts/actions.ts
 +++ b/app/posts/actions.ts
-@@ -1,3 +1,14 @@
+@@ -1,0 +1,11 @@
 +'use server';
 +
 +import { db } from '@/lib/db';

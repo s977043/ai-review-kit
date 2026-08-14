@@ -32,7 +32,7 @@ diff --git a/docs/operations/reconciliation-local-tool.md b/docs/operations/reco
 new file mode 100644
 --- /dev/null
 +++ b/docs/operations/reconciliation-local-tool.md
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,14 @@
 +# Reconciliation diff viewer (local only)
 +
 +> スコープ: 開発者のローカル環境でのみ実行する調査補助ツール。本番・ステージングの

@@ -10,7 +10,7 @@ explicit key handlers + `tabIndex`.
 
 ```diff
 diff --git a/src/components/MenuItem.tsx b/src/components/MenuItem.tsx
-@@ -1,4 +1,7 @@
+@@ -1,3 +1,5 @@
  export function MenuItem({ label, onSelect }: Props) {
 -  return <button onClick={onSelect}>{label}</button>;
 +  return (

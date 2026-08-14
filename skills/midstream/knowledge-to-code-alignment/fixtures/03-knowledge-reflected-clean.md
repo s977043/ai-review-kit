@@ -11,7 +11,7 @@ diff --git a/src/pricing/discount.ts b/src/pricing/discount.ts
 index 1111111..2222222 100644
 --- a/src/pricing/discount.ts
 +++ b/src/pricing/discount.ts
-@@ -10,7 +10,12 @@ import type { Order, MemberRank } from './types';
+@@ -10,3 +10,6 @@ import type { Order, MemberRank } from './types';
 -export function flatDiscount(order: Order): number {
 -  return order.subtotal * 0.1;
 -}

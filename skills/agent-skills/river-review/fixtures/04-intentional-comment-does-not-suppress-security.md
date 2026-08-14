@@ -18,7 +18,7 @@ diff --git a/src/api/internal-metrics.ts b/src/api/internal-metrics.ts
 index 7777777..8888888 100644
 --- a/src/api/internal-metrics.ts
 +++ b/src/api/internal-metrics.ts
-@@ -14,6 +14,13 @@ import { router } from './router';
+@@ -14,0 +14,10 @@ import { router } from './router';
 +
 +// intentional: skip the auth check here for performance — this endpoint is
 +// hot and only reachable from inside the VPC.

@@ -11,7 +11,7 @@ diff --git a/firestore.rules b/firestore.rules
 index 1234567..89abcde 100644
 --- a/firestore.rules
 +++ b/firestore.rules
-@@ -1,4 +1,12 @@
+@@ -1,0 +1,10 @@
 +rules_version = '2';
 +service cloud.firestore {
 +  match /databases/{database}/documents {
@@ -26,7 +26,7 @@ diff --git a/src/firebase.ts b/src/firebase.ts
 index 1234567..89abcde 100644
 --- a/src/firebase.ts
 +++ b/src/firebase.ts
-@@ -1,3 +1,6 @@
+@@ -1,0 +1,5 @@
 +// Firebase の apiKey はクライアント公開が公式仕様（秘密情報ではない）
 +const firebaseConfig = {
 +  apiKey: 'AIzaSyClient-Public-Web-Api-Key',

@@ -11,7 +11,7 @@ diff --git a/.github/workflows/pr-comment.yml b/.github/workflows/pr-comment.yml
 index 1234567..89abcde 100644
 --- a/.github/workflows/pr-comment.yml
 +++ b/.github/workflows/pr-comment.yml
-@@ -1,5 +1,12 @@
+@@ -1,0 +1,7 @@
 +on: issue_comment
 +jobs:
 +  greet:

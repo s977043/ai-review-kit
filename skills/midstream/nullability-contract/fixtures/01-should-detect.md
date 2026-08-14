@@ -11,7 +11,7 @@ diff --git a/src/api/orders.ts b/src/api/orders.ts
 index abc1234..def5678 100644
 --- a/src/api/orders.ts
 +++ b/src/api/orders.ts
-@@ -5,6 +5,10 @@ export async function getOrderSummary(orderId: string) {
+@@ -5,3 +5,8 @@ export async function getOrderSummary(orderId: string) {
    const response = await fetch(`/api/orders/${orderId}`);
    const data = await response.json();
 +

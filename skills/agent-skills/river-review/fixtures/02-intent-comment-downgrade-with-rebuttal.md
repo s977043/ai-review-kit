@@ -18,7 +18,7 @@ diff --git a/src/api/checkout.ts b/src/api/checkout.ts
 index 3333333..4444444 100644
 --- a/src/api/checkout.ts
 +++ b/src/api/checkout.ts
-@@ -22,6 +22,12 @@ export async function checkout(cart: Cart): Promise<Receipt> {
+@@ -22,3 +22,11 @@ export async function checkout(cart: Cart): Promise<Receipt> {
    const receipt = await submitOrder(cart);
 +
 +  // Analytics must never break the request path, so failures are swallowed here.

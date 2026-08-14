@@ -9,7 +9,7 @@ should **not** flag this — the `aria-hidden` guard applies.
 
 ```diff
 diff --git a/src/components/Card.tsx b/src/components/Card.tsx
-@@ -3,7 +3,8 @@ export function Card({ title }: Props) {
+@@ -3,6 +3,7 @@ export function Card({ title }: Props) {
    return (
      <div className="card">
 +      <img src="/decoration.svg" alt="" aria-hidden="true" />

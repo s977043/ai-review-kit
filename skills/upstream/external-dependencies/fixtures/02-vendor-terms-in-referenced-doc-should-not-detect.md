@@ -30,7 +30,7 @@ migration plan (dual-write to the internal rate table before any switch).
 diff --git a/docs/design/tax-calculation.md b/docs/design/tax-calculation.md
 --- a/docs/design/tax-calculation.md
 +++ b/docs/design/tax-calculation.md
-@@ -3,8 +3,14 @@
+@@ -3,7 +3,14 @@
  ## Decision
 
  Checkout computes tax via TaxCloudPro. SLA, quota, rate limits, timeout, retry

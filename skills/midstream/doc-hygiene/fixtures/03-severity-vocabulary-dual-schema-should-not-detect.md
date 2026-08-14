@@ -26,7 +26,7 @@ new file mode 100644
 index 0000000..abc1234
 --- /dev/null
 +++ b/skills/midstream/impact-evidence-coverage/SKILL.md
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,14 @@
 +---
 +id: 'impact-evidence-coverage'
 +severity: major

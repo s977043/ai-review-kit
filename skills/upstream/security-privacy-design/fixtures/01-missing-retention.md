@@ -9,7 +9,7 @@ diff --git a/docs/design/user-profile-service.md b/docs/design/user-profile-serv
 index 1111111..2222222 100644
 --- a/docs/design/user-profile-service.md
 +++ b/docs/design/user-profile-service.md
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,58 @@
 +# ユーザープロファイルサービス設計書
 +
 +## 背景
@@ -68,6 +68,7 @@ index 1111111..2222222 100644
 +- 認証フローの詳細設計
 +- 他サービスとの連携設計
 +```
+````
 
 ## Expected Behavior
 
@@ -78,4 +79,3 @@ The skill should detect:
 3. Backup PII consideration missing (daily backups but no PII deletion handling)
 4. Data residency not specified (AWS region not mentioned)
 5. Audit log retention not defined (user_activity_logs but no retention period)
-````

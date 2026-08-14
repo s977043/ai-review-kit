@@ -11,7 +11,7 @@ diff --git a/firestore.rules b/firestore.rules
 index 1234567..89abcde 100644
 --- a/firestore.rules
 +++ b/firestore.rules
-@@ -1,4 +1,10 @@
+@@ -1,0 +1,8 @@
 +rules_version = '2';
 +service cloud.firestore {
 +  match /databases/{database}/documents {

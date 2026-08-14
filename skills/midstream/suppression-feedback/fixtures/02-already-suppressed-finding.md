@@ -11,7 +11,7 @@ diff --git a/src/lib/legacy-adapter.ts b/src/lib/legacy-adapter.ts
 index 1234567..89abcdef 100644
 --- a/src/lib/legacy-adapter.ts
 +++ b/src/lib/legacy-adapter.ts
-@@ -42,6 +42,7 @@ export function callLegacyService(payload: Payload): Promise<Result> {
+@@ -42,5 +42,6 @@ export function callLegacyService(payload: Payload): Promise<Result> {
    if (!payload?.userId) {
      throw new Error('missing userId');
    }

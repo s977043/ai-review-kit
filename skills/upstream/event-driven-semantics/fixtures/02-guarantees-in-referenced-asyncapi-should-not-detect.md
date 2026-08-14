@@ -27,7 +27,7 @@ with its reprocessing runbook.
 diff --git a/docs/design/wallet-events.md b/docs/design/wallet-events.md
 --- a/docs/design/wallet-events.md
 +++ b/docs/design/wallet-events.md
-@@ -8,6 +8,13 @@
+@@ -8,9 +8,15 @@
 
  Delivery guarantees, ordering, dedupe, schema evolution, replay and DLQ for
  this topic are defined in

@@ -6,13 +6,13 @@
     {
       "id": "a11y-accessible-name",
       "path": "skills/midstream/a11y-accessible-name",
-      "checksum": "sha256:25ec2bbc16dd98893a54bf1344be36e350c6495c7b2a9fbc8feeb13db6013f3e",
+      "checksum": "sha256:9fe48476ff9cc15fe58b9ad9910c4eb080e6e36613a80ab8ab10af7da4115750",
       "files": 9
     },
     {
       "id": "adr-decision-quality",
       "path": "skills/upstream/adr-decision-quality",
-      "checksum": "sha256:795a47c8d593036e45e655220e26da3105bef6fe2d007a7657b9bb1a82b2ce15",
+      "checksum": "sha256:43e54eeec365ca2e60ded231083a5679b670ac4e059908e62f322c6bbd3d9bf7",
       "files": 3
     },
     {
@@ -36,31 +36,31 @@
     {
       "id": "altitude-generalization",
       "path": "skills/midstream/altitude-generalization",
-      "checksum": "sha256:a0c36f752b3cdf102980a3dbe9a525e9ab42a9252b96aa08c460cacbb85a62cf",
+      "checksum": "sha256:1ba5bc5ced4acb15408a999392f0c287d2ef8ecca31b038712cb83451e5ca523",
       "files": 10
     },
     {
       "id": "api-compatibility",
       "path": "skills/midstream/api-compatibility",
-      "checksum": "sha256:9915ae63478f2c29997431ad41c1f0f9844ffabea850049150132a84d2f98440",
+      "checksum": "sha256:09471ed05c568480e0d1b0c9f92772e10ef4580b7d418485163649a2eb223a6f",
       "files": 5
     },
     {
       "id": "api-design",
       "path": "skills/upstream/api-design",
-      "checksum": "sha256:12f25f1372f8760a3bf6ba809c2db2170956b86e284bf0e921edfe413c8cb74b",
+      "checksum": "sha256:4c2931e8600f684b67cdb857878d4fee6844bc31ae784da18c129d50477846d9",
       "files": 3
     },
     {
       "id": "api-versioning-compat",
       "path": "skills/upstream/api-versioning-compat",
-      "checksum": "sha256:241033776b24dba6cc9fab9a66cdbfb34fcd70dc705321ba015529695be7a40b",
+      "checksum": "sha256:6794ce4eb1d25fa3c37315ce9064e7c7c9c3aa714e26db50f66cfd5152838634",
       "files": 3
     },
     {
       "id": "architecture-boundaries",
       "path": "skills/upstream/architecture-boundaries",
-      "checksum": "sha256:2d277665b0980236de226ec8e2e0dbcdb8540813830e77b6a1aed9c00195efee",
+      "checksum": "sha256:cd853a4260bd23f3e2d4c5ccc0abd27ce75d002dd5633635a86b0cfcb9de62c1",
       "files": 3
     },
     {
@@ -72,31 +72,31 @@
     {
       "id": "architecture-risk-register",
       "path": "skills/upstream/architecture-risk-register",
-      "checksum": "sha256:83d790949e808bfe4f7f1319e5a6efe1828fcc5a7bb59520d78de50a8da4fac6",
+      "checksum": "sha256:7f45cf88c477693eaeb490fbe34a5bf7a22b06280f8fe4c506897c5a9c4624a3",
       "files": 3
     },
     {
       "id": "architecture-traceability",
       "path": "skills/upstream/architecture-traceability",
-      "checksum": "sha256:b151063536c481c8fc0ae4360c43a44cd7c98342a1f335ad86202ab4e21156a1",
+      "checksum": "sha256:fb2d37e2e9580896dd075ebf20fc011887b81297a1f0172a2d0a6c2a6a0a1455",
       "files": 3
     },
     {
       "id": "architecture-validation-plan",
       "path": "skills/upstream/architecture-validation-plan",
-      "checksum": "sha256:f781576f81bfe108eec5e36a9025dd5fecaab5745a84dadf816fef90bc6e5f3b",
+      "checksum": "sha256:fa81dd1b4ef69c711b9932fea5d1da32420b121f6444a66b7046df9de229c3b1",
       "files": 9
     },
     {
       "id": "assumption-resolution-trace",
       "path": "skills/midstream/assumption-resolution-trace",
-      "checksum": "sha256:d3813c3191543485dc3f75c53ae21b095c010d3177a26cb62d1fcdb539b8f7b8",
+      "checksum": "sha256:70ea89a7d76a2906c6e15cc84a60ebd1d509e63610e282bbdc442db0bc82df36",
       "files": 3
     },
     {
       "id": "async-correctness",
       "path": "skills/midstream/async-correctness",
-      "checksum": "sha256:efeeb9ef33613f27d5e4efbb1a16595d84f74ff0aca711ba6ddcd5e93f53a11b",
+      "checksum": "sha256:3c05d7b721fff339d103e89cde93446d47cc051a23b70ca278a2a500059bb66b",
       "files": 3
     },
     {
@@ -108,7 +108,7 @@
     {
       "id": "behavior-structure-separation",
       "path": "skills/midstream/behavior-structure-separation",
-      "checksum": "sha256:436ee0c8bce446c41d6bdf5dcfe640fbad07de3332f2ea3bf7936b023e641717",
+      "checksum": "sha256:1545321ae0c44cef807d1688b9f6859e1916decc7b387ea7c512383333be5571",
       "files": 4
     },
     {
@@ -120,7 +120,7 @@
     {
       "id": "cache-strategy-consistency",
       "path": "skills/upstream/cache-strategy-consistency",
-      "checksum": "sha256:5f8f9ce9b52c172c0530b762d0cedea535695085cb1c52a292bb5a131937e888",
+      "checksum": "sha256:768de30b3acdedb875d41864b7594a6242016245161a1b405229ae839d5b11a9",
       "files": 9
     },
     {
@@ -138,7 +138,7 @@
     {
       "id": "closure-scope-retention",
       "path": "skills/midstream/closure-scope-retention",
-      "checksum": "sha256:5371b7f7078955a0db36d5302b53b8d00ef54c7fbe403fcaca2f5a7e3ac26cd6",
+      "checksum": "sha256:385645dd1bcd69e9e178e2c8c1bd3292b6c03bf25a85489d9f996a68cafa572f",
       "files": 10
     },
     {
@@ -216,13 +216,13 @@
     {
       "id": "data-flow-state-ownership",
       "path": "skills/upstream/data-flow-state-ownership",
-      "checksum": "sha256:ee73c1feb55c104f2274996e5ede3234afb0c1bc4a68d11f9505a0f8efe74ca8",
+      "checksum": "sha256:1248d658dc1d83ba307fabd85a185a6f56d17bd7608b0486f2570f41eeeb78c1",
       "files": 3
     },
     {
       "id": "data-model-db-design",
       "path": "skills/upstream/data-model-db-design",
-      "checksum": "sha256:c875fa7aed6c7fa9c8f075ccad57e9ecc9eeaac743bd20c65ad5cd9d3325c27c",
+      "checksum": "sha256:a5a9ec099d1d00c4fbbeeb6acf49fc0616715047524891fe983fa10af3584581",
       "files": 3
     },
     {
@@ -234,19 +234,19 @@
     {
       "id": "design-system-component-reuse",
       "path": "skills/midstream/design-system-component-reuse",
-      "checksum": "sha256:4171ab663d3ec59e974e6e62e0cfd156a2be7eec6d0c16826b8ffb821dff7c51",
+      "checksum": "sha256:5df97b3500053853736400d3fea0bf9c12f0f85ab7408ff603d0508404f05f7b",
       "files": 9
     },
     {
       "id": "design-token-enforcement",
       "path": "skills/midstream/design-token-enforcement",
-      "checksum": "sha256:b7d3d196e27162dba712e65f8865a4afcce823dfc38ba36ae9443408d7e65a11",
+      "checksum": "sha256:774efb0868b06e6fa55cab81f83c60d9f86f59da68b6a505f25c4e6ac7b6f764",
       "files": 9
     },
     {
       "id": "doc-hygiene",
       "path": "skills/midstream/doc-hygiene",
-      "checksum": "sha256:2011bdeb615a231c371663140bbd0bd19b422359770202754e62433212fc2189",
+      "checksum": "sha256:cce4f42fc8b70a8d3b5c579b30ac6813a77e179f65176a1384f1455b3c4e44eb",
       "files": 4
     },
     {
@@ -270,31 +270,31 @@
     {
       "id": "event-driven-semantics",
       "path": "skills/upstream/event-driven-semantics",
-      "checksum": "sha256:78959100575e00c6245d09d03eb7f7e2a2c0badca53cc9ff5b6753702451353c",
+      "checksum": "sha256:2fadbfcc3ddaaa095e157cd38616eeee2026ec243c2982b484dc27bc9b652aa0",
       "files": 3
     },
     {
       "id": "existing-pattern-conformance",
       "path": "skills/midstream/existing-pattern-conformance",
-      "checksum": "sha256:60b1e638ab99e654a7c56ba6733156f7cf3fa6bd73e1f6f5a59872398b24b103",
+      "checksum": "sha256:28d7583aa240137b2b526b907cfc75b67380bcbd0d7d5023515ba0dcddc6d014",
       "files": 3
     },
     {
       "id": "external-dependencies",
       "path": "skills/upstream/external-dependencies",
-      "checksum": "sha256:fedcb1a00d19fb7510ce1bed9a7180de0728f3d8051ac502f81e9f0969d9034e",
+      "checksum": "sha256:d44258aa74a9fc94b52ecde41ada1eb048c107dac2eb0d893ae0a50db8fa60f2",
       "files": 3
     },
     {
       "id": "failure-modes-observability",
       "path": "skills/upstream/failure-modes-observability",
-      "checksum": "sha256:f4d18975c005588109510615d282c9d090f75acaded58f52753cd435c25d7d6d",
+      "checksum": "sha256:4f377e963298b5611da3ed0fce653e834e8d1db4288b42bc99e581096092161c",
       "files": 3
     },
     {
       "id": "firebase-security-rules",
       "path": "skills/midstream/firebase-security-rules",
-      "checksum": "sha256:dd8f260481e1ab77b45d5842f26a1cf21ca23e678b363955d2a6369001af2d76",
+      "checksum": "sha256:38af51530475db3441090adc41f043c2a7f25a15d1fa91e08cab47193e88cca1",
       "files": 4
     },
     {
@@ -318,13 +318,13 @@
     {
       "id": "gha-workflow-security",
       "path": "skills/downstream/gha-workflow-security",
-      "checksum": "sha256:129fcd3e90b5ec41cd768fa6373e135ddb26625e76837fc1146cacd20af8bf8c",
+      "checksum": "sha256:c8fa1837654a619524b2ba291e374ac9aff567256fd48689b5027f17009ade08",
       "files": 4
     },
     {
       "id": "hallucinated-reference",
       "path": "skills/midstream/hallucinated-reference",
-      "checksum": "sha256:3af7f1364671db3066019c6ba0f868425e59a8004c5582685d2298719fa793b6",
+      "checksum": "sha256:a3488d8d9ac939cd576a5db40806c1ad84df0a027988388f9087869223a422ec",
       "files": 3
     },
     {
@@ -336,19 +336,19 @@
     {
       "id": "i18n-unused-key",
       "path": "skills/midstream/i18n-unused-key",
-      "checksum": "sha256:b4bc3f91e74311dc416dd5ab7e51d4e467156d412e829a888a4092974e96d186",
+      "checksum": "sha256:72728b065a3aae97a11df4db603443c698ce47cfa9a158dddb0e945c3b91d56d",
       "files": 5
     },
     {
       "id": "impact-evidence-coverage",
       "path": "skills/midstream/impact-evidence-coverage",
-      "checksum": "sha256:5572826fca5ec1a1f3ab7303fb3d5e0689eea07efd37be21e5404d2c00343f5e",
+      "checksum": "sha256:3e0e9f34edd111e38ea355fb1e33a89b29bdab9c2f423679b5360443660994bd",
       "files": 3
     },
     {
       "id": "independent-review-synthesis",
       "path": "skills/midstream/independent-review-synthesis",
-      "checksum": "sha256:dbfd173fc6d0e62046595b54a8c1e5b9665058609cc6ba4acff7c42fc8d954d2",
+      "checksum": "sha256:3e2190c1a3b35482c5bc99ef3f4c3c6f5a2bccfe198ecdc5a67f127e0a2a7dbd",
       "files": 9
     },
     {
@@ -366,37 +366,37 @@
     {
       "id": "knowledge-to-code-alignment",
       "path": "skills/midstream/knowledge-to-code-alignment",
-      "checksum": "sha256:6e814a0b099d5d95007151b19073b27055a79897a706909cdfbc2693e1e788af",
+      "checksum": "sha256:8c13f6142f21bb171a4a1548b40a6cbeb1e83793d210312f02655b0448f71873",
       "files": 4
     },
     {
       "id": "laravel-eloquent-nplus1",
       "path": "skills/midstream/laravel-eloquent-nplus1",
-      "checksum": "sha256:e9dfa13a71c6fb52222e9b6c237a08c564639a65e1b67e6c7728425f845781b1",
+      "checksum": "sha256:1e3b6039a9f19143e64c301f5b56d33dd3a8147db79972eb12d25dfd2008bd91",
       "files": 4
     },
     {
       "id": "laravel-mass-assignment",
       "path": "skills/midstream/laravel-mass-assignment",
-      "checksum": "sha256:f75e32ff6aa80c7d88bd914e9fd637817c7013d6794627e6f9f24b1e7f3d5bc6",
+      "checksum": "sha256:cfdfbc7135ca9802019ecc1d6cd1bd6d1f6a75a063bceeb3abb353440a5e6d8a",
       "files": 4
     },
     {
       "id": "laravel-migration-safety",
       "path": "skills/upstream/laravel-migration-safety",
-      "checksum": "sha256:1b5dbb830ff3f0a78b9cc46d238dc6027ec5ca336609ce4d2cfd7a66891d98c4",
+      "checksum": "sha256:2b92c3707aaf9aab2c44c88936de3d0b830c3c45add3c1e21b4cf849957ae590",
       "files": 4
     },
     {
       "id": "loading-state",
       "path": "skills/midstream/loading-state",
-      "checksum": "sha256:9ae03e7a415e0a502481ad0d0ba6f835ddbf58f74ef3dfd5ebe4355b8e1c4a2c",
+      "checksum": "sha256:a1029bd223ab319c23c60676926482878f7c271505d3fea2abfa817698cb06a2",
       "files": 5
     },
     {
       "id": "logging-observability",
       "path": "skills/midstream/logging-observability",
-      "checksum": "sha256:41cccd7a9a71431b4d79d51bdef6436871fe35ee137b92134aed9d30b712bb3f",
+      "checksum": "sha256:203387a265a356c4b44e68c8d1f63558d6558c983d51d38600c988a685d27429",
       "files": 18
     },
     {
@@ -408,37 +408,37 @@
     {
       "id": "migration-rollout-rollback",
       "path": "skills/upstream/migration-rollout-rollback",
-      "checksum": "sha256:82b7872451b0c45a35590fe5c025b6616bd1c3664d9599d3023755f715026e02",
+      "checksum": "sha256:f724f6ff9dc955faa951665e1bef65eed88e3a746145de3057ff7842118683e1",
       "files": 3
     },
     {
       "id": "migration-safety",
       "path": "skills/upstream/migration-safety",
-      "checksum": "sha256:cb13be4d97f5769caf7b20bf869541a40e867f7c9959c0e1cb46e9d3c6b3c961",
+      "checksum": "sha256:f11167b6bbc2c91a294970430e29a86b6ce7355f344bd7607a0c1141bb0aa370",
       "files": 3
     },
     {
       "id": "modern-web-a11y-interactive",
       "path": "skills/midstream/modern-web-a11y-interactive",
-      "checksum": "sha256:5d2e338dba80600b8f50ef4922e5bca6af2097778f60348740688340acc09c25",
+      "checksum": "sha256:2f0af16ae83ae5421b30423106e1f569c4c1d1ca5f64fa501ecaf27f127a12df",
       "files": 9
     },
     {
       "id": "modern-web-browser-compat",
       "path": "skills/midstream/modern-web-browser-compat",
-      "checksum": "sha256:98e9dd19e90a7f011e8ac680c903f35e99d5e6800011f7754fc1a2aeab4a3c95",
+      "checksum": "sha256:cfea908e05b007b1e879ed1e63d8ade557c019b30d4f008bb57f677abb749679",
       "files": 9
     },
     {
       "id": "modern-web-performance",
       "path": "skills/midstream/modern-web-performance",
-      "checksum": "sha256:2983b6bfba658200df07ef66f2f046567e76170d7bdad9d1e719a5b291baf1fa",
+      "checksum": "sha256:1403f1ce365f522d4311835cdc5b9c27a537ad2a01e7ee1a97b90ec8d56bf430",
       "files": 9
     },
     {
       "id": "modern-web-semantic",
       "path": "skills/midstream/modern-web-semantic",
-      "checksum": "sha256:db478a93d8f6be937acbffcbff6e55150284edd29c4d7acfcd98fa9ea1867f52",
+      "checksum": "sha256:faf548938677fea7ec195008514f4f07e30ec466745f2b2ec3e817013a7bf0a5",
       "files": 9
     },
     {
@@ -450,37 +450,37 @@
     {
       "id": "nextjs-app-router-boundary",
       "path": "skills/midstream/nextjs-app-router-boundary",
-      "checksum": "sha256:456f29701850742a5f22764a601a9a1ffc0b2dea0b7237bca06d863221250464",
+      "checksum": "sha256:102e5b043d6dd4f8e2ed66560218f537bb4e82e863955a0ada6331c2d609c943",
       "files": 9
     },
     {
       "id": "nextjs-server-action-security",
       "path": "skills/midstream/nextjs-server-action-security",
-      "checksum": "sha256:95aac7e47b6574ae70b9e4d1b1fc7af1681ea98be0748ab3095f7bdaa0ddf66c",
+      "checksum": "sha256:3e1a3b73d80ab8b5fd05c9e4d2ad6e8f503f08f4917416bf6279e948758ac807",
       "files": 4
     },
     {
       "id": "normalization-consistency",
       "path": "skills/midstream/normalization-consistency",
-      "checksum": "sha256:e42bce67d067337cea013d6f14aa1d0578f9bf41715c44b32298dd2cc66d84a7",
+      "checksum": "sha256:cded944fdfa6f889e8fbbd953581ac7e5ec5f171cf6ee1bb16acb96180849eb5",
       "files": 5
     },
     {
       "id": "nullability-contract",
       "path": "skills/midstream/nullability-contract",
-      "checksum": "sha256:e8934255f544914791c6a8e46bc28c9f7f2853a8ac6e896f6c075817b0058f8f",
+      "checksum": "sha256:3326a5b5a1b9683291616bdb97b589d89f6d3ca3288796e88875475841b3825c",
       "files": 7
     },
     {
       "id": "openapi-contract",
       "path": "skills/upstream/openapi-contract",
-      "checksum": "sha256:088081ac65c95216253e55306bc616c77ac7f61f815bb152181cea7291606c73",
+      "checksum": "sha256:bdade1a63ebc8b038915d4167f808b7639418730e61754eb0c1d09cb70402af7",
       "files": 3
     },
     {
       "id": "operability-slo",
       "path": "skills/upstream/operability-slo",
-      "checksum": "sha256:fc83f6fbc993346e6771aabb89bb2c58f99b6a555b827ff57f564996b823ebc4",
+      "checksum": "sha256:a86de8fd68a209d9fcb3d06a685f89035a174a9683b88f148a2c889c0a7e07b7",
       "files": 3
     },
     {
@@ -492,7 +492,7 @@
     {
       "id": "plangate-exec-conformance",
       "path": "skills/upstream/plangate-exec-conformance",
-      "checksum": "sha256:01cba7b7de7e71944252ecb2d87827994d181978ac5c5076bed3ad45a1f2975f",
+      "checksum": "sha256:ef14079adb5a5e39fdb3d46c73b2e3b610c78f5b442472074216fcbcdd4cd97f",
       "files": 14
     },
     {
@@ -540,19 +540,19 @@
     {
       "id": "pre-mortem",
       "path": "skills/upstream/pre-mortem",
-      "checksum": "sha256:a5b5bd8896f3d761e0acadafff3795ca9391515ba8997bdf75796cd5d55d8344",
+      "checksum": "sha256:f3ee434f6ed91db0dce720d899c4cf17e13b8a5e6a48493b0e7ded556ef92b7c",
       "files": 3
     },
     {
       "id": "react-router-action-contract",
       "path": "skills/midstream/react-router-action-contract",
-      "checksum": "sha256:cec8645007e80bb444223f68911bc3e2ae382780094f918b4854b464e42fd312",
+      "checksum": "sha256:e79c5aaa1f69dc239bfc1da889ad37e59dc4cc24738f2f79ec2a7283c9321873",
       "files": 4
     },
     {
       "id": "react-router-loader-boundary",
       "path": "skills/midstream/react-router-loader-boundary",
-      "checksum": "sha256:82ab8e124b31e88d795d1f0a82f171809e522484d0888db0111f9fb9394dcab2",
+      "checksum": "sha256:d4e73de4e47a65a1d9e9b80be06b8140557e04415008a100b4d1f0b9d6ca2d3c",
       "files": 4
     },
     {
@@ -564,7 +564,7 @@
     {
       "id": "requirements-acceptance",
       "path": "skills/upstream/requirements-acceptance",
-      "checksum": "sha256:1d4f8e41421e8de123944b8a1e30244463e8acdcf11dc6073fac148db0323b47",
+      "checksum": "sha256:d0ea2940bb1d5f0c4c584950c046e1d94b6f0945396d87bd94d4e40cf1d3f00c",
       "files": 3
     },
     {
@@ -582,7 +582,7 @@
     {
       "id": "review-criteria-integrity",
       "path": "skills/midstream/review-criteria-integrity",
-      "checksum": "sha256:2d608cb1080bd59bde0ed276a64adc0bec7b86232acc17a955093582f24433b9",
+      "checksum": "sha256:3b0bf99431b98fe8acefce6cb4d05e8aadc02d6d59e0912f94d54938bff09139",
       "files": 5
     },
     {
@@ -612,7 +612,7 @@
     {
       "id": "river-review",
       "path": "skills/agent-skills/river-review",
-      "checksum": "sha256:9fe52f0ce82b329cfad498f523a29e7295254b6578d403690f1dc2f495515fdd",
+      "checksum": "sha256:e4c733c949ae61cd6a3cfc955458fe9d52e6263ec2f0123357e3c25109a401d7",
       "files": 10
     },
     {
@@ -660,19 +660,19 @@
     {
       "id": "secret-credential-scan",
       "path": "skills/midstream/secret-credential-scan",
-      "checksum": "sha256:6d8f5ef3d44e77767808aa3e27442215ec9a3d9b3abb84222b8f3ef665d0fce8",
+      "checksum": "sha256:76a63b5713bd519e89cdf51b4ca98ee7bec49ba9728781f7636f0b60639d937d",
       "files": 10
     },
     {
       "id": "security-basic",
       "path": "skills/midstream/security-basic",
-      "checksum": "sha256:eab9674357e90d305c130bae747b0995ea05d8e4cdc6365823fd738b0b574db7",
+      "checksum": "sha256:9442d34e67f637296b18aecdbbf3f059c8647855f8b829b18567bfe7d7f53ba6",
       "files": 9
     },
     {
       "id": "security-privacy-design",
       "path": "skills/upstream/security-privacy-design",
-      "checksum": "sha256:a9705c254d8c58fc2287c999ae2e4bc9b8cde64227f0c6787f5cfcda5154f3b3",
+      "checksum": "sha256:3305480abdb220f6e2923c75c82274d05b1af87522d3c3d95bf07c8e3095ddaa",
       "files": 9
     },
     {
@@ -684,25 +684,25 @@
     {
       "id": "supabase-rls-policy",
       "path": "skills/midstream/supabase-rls-policy",
-      "checksum": "sha256:b7bd0da8665c3a0d87640f86bd1cd7debc440574ce40c73c76ebef3e495cca48",
+      "checksum": "sha256:78b75cb363342013ea31b41f4d9f2c92618fcbd02fb622dfc1741991013b52e8",
       "files": 4
     },
     {
       "id": "suppression-feedback",
       "path": "skills/midstream/suppression-feedback",
-      "checksum": "sha256:e8183852b301f380ea2d810c19706aa00a828e230c038c4bfa9489dac5354a2f",
+      "checksum": "sha256:0bb1123880b381128296df086f3dc21dd06773be0a0f3591cfc9fa54794944ba",
       "files": 10
     },
     {
       "id": "tailwind-class-hygiene",
       "path": "skills/midstream/tailwind-class-hygiene",
-      "checksum": "sha256:fdd43409e2236b24467ce219685236cf02e18f0df405bc81f32fe63959880504",
+      "checksum": "sha256:75477ed61c9fbf8413ac69250c539e3d19c7276bba764be6c0d01e1b3ad7241a",
       "files": 4
     },
     {
       "id": "test-assertion-effectiveness",
       "path": "skills/downstream/test-assertion-effectiveness",
-      "checksum": "sha256:6acf580cfade4ff661c07d166e4f5602113948785a53481c94436ac7d7f088d8",
+      "checksum": "sha256:04b49ccd0734aff73aa658b7a7a5702d58ffb1917e58a68cab75ad9b4709a474",
       "files": 7
     },
     {
@@ -726,25 +726,25 @@
     {
       "id": "trust-boundaries-authz",
       "path": "skills/upstream/trust-boundaries-authz",
-      "checksum": "sha256:09ecab5132883b228f1d93879cb96703db77335f5c05d3b18ab1ac64a6bb826e",
+      "checksum": "sha256:5c9696fd3e76e8365f50377237375fe5901cc749605fba1829814f78a4949dd7",
       "files": 3
     },
     {
       "id": "type-driven-design",
       "path": "skills/midstream/type-driven-design",
-      "checksum": "sha256:2372d4e53450239dc2bb981b402ae3aaf1abf42e2e86925038231524599c64a6",
+      "checksum": "sha256:f9fe5b77ea72a4d325a9c73d423c13cf2e92b0ccbbfd3d890612b907593e47f4",
       "files": 7
     },
     {
       "id": "typescript-nullcheck",
       "path": "skills/midstream/typescript-nullcheck",
-      "checksum": "sha256:93bb8009b128a23b237322c078b8f97a7868cd08b0a442f1a2d96475e58ee8a0",
+      "checksum": "sha256:a8dabf496753afb6ae6d079f3a87edbec9e8e893782112a1de33712cbe38c50b",
       "files": 7
     },
     {
       "id": "typescript-strict",
       "path": "skills/midstream/typescript-strict",
-      "checksum": "sha256:e39e0cad95645c791a66d583d4db9f07e13ef867ad65eb013e0b52980126ce30",
+      "checksum": "sha256:de42d210bbd7f46dd012b29169d11482e8561eabf06e4abf484ce58549f3cf5c",
       "files": 7
     },
     {
@@ -756,13 +756,13 @@
     {
       "id": "unknown-coverage-review",
       "path": "skills/agent-skills/unknown-coverage-review",
-      "checksum": "sha256:7a43c7896302491402a437c8da61bba7ec252fb89b7991822b7c42c473ab537d",
+      "checksum": "sha256:d0571b9aeaeff4d9b1376593843bc871b47e2b19456c470b37f71fdfec9503b1",
       "files": 5
     },
     {
       "id": "vitest-mock-isolation",
       "path": "skills/midstream/vitest-mock-isolation",
-      "checksum": "sha256:bc87dfbb360e96e3bdeba0e5f597c752e000f9153e706c67761c24d505184528",
+      "checksum": "sha256:fedee8b860b344421502289593f785566f858edbb8696658449e3f065d80c9b8",
       "files": 4
     },
     {

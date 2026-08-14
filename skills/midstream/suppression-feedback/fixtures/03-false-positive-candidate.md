@@ -11,7 +11,7 @@ diff --git a/tests/auth.test.ts b/tests/auth.test.ts
 index 1234567..89abcdef 100644
 --- a/tests/auth.test.ts
 +++ b/tests/auth.test.ts
-@@ -5,9 +5,11 @@ describe('Authentication', () => {
+@@ -5,10 +5,12 @@ describe('Authentication', () => {
    it('should authenticate user with valid credentials', async () => {
      const testUser = {
        email: 'test@example.com',

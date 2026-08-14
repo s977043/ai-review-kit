@@ -11,7 +11,7 @@ diff --git a/src/order/total.ts b/src/order/total.ts
 index 1111111..2222222 100644
 --- a/src/order/total.ts
 +++ b/src/order/total.ts
-@@ -18,9 +18,13 @@ export function summarize(order: Order): Summary {
+@@ -18,3 +18,7 @@ export function summarize(order: Order): Summary {
 -  const total = Math.floor(order.items.reduce((a, i) => a + i.price * i.qty, 0));
 -  return { total, count: order.items.length };
 +  return { total: calcTotal(order), count: order.items.length };

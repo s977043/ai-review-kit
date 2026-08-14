@@ -11,7 +11,7 @@ diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
 index 1234567..89abcde 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
-@@ -1,6 +1,14 @@
+@@ -1,0 +1,11 @@
 +on: pull_request
 +permissions:
 +  contents: read

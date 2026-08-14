@@ -11,7 +11,7 @@ diff --git a/src/components/OrderList.tsx b/src/components/OrderList.tsx
 index abc1234..def5678 100644
 --- a/src/components/OrderList.tsx
 +++ b/src/components/OrderList.tsx
-@@ -1,6 +1,10 @@ import { format } from 'date-fns';
+@@ -1,5 +1,6 @@ import { format } from 'date-fns';
 +import dayjs from 'dayjs';
 
  export function OrderRow({ order }: Props) {

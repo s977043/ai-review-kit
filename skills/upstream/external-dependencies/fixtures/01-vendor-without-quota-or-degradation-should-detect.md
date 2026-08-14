@@ -26,7 +26,7 @@ diff --git a/docs/design/tax-calculation.md b/docs/design/tax-calculation.md
 new file mode 100644
 --- /dev/null
 +++ b/docs/design/tax-calculation.md
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,15 @@
 +# Tax calculation
 +
 +## Decision
@@ -85,5 +85,5 @@ findings:
     anchor: docs/design/tax-calculation.md:10
   - severity: minor
     reason: 従量課金のコストを前提となる呼び出し量なしに「小さい」と断定しており、予算やアラート閾値を導出できない
-    anchor: docs/design/tax-calculation.md:14
+    anchor: docs/design/tax-calculation.md:15
 -->

@@ -23,7 +23,7 @@ diff --git a/src/i18n/en.json b/src/i18n/en.json
 index 1111111..2222222 100644
 --- a/src/i18n/en.json
 +++ b/src/i18n/en.json
-@@ -5,6 +5,7 @@ {
+@@ -5,4 +5,5 @@ {
      "title": "User Profile",
 -    "bio_label": "Bio"
 +    "bio_label": "Bio",

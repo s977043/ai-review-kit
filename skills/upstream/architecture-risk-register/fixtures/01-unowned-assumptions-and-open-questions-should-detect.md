@@ -23,7 +23,7 @@ the diff adds statements about assumptions, risks, and open decisions.
 diff --git a/docs/design/member-unification.md b/docs/design/member-unification.md
 --- a/docs/design/member-unification.md
 +++ b/docs/design/member-unification.md
-@@ -10,6 +10,16 @@
+@@ -10,2 +10,12 @@
  会員基盤を新サービスへ統合する。
 
 +## 前提とリスク

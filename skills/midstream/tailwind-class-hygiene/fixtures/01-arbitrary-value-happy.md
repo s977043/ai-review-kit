@@ -11,7 +11,7 @@ diff --git a/src/components/Card.tsx b/src/components/Card.tsx
 index 1234567..89abcde 100644
 --- a/src/components/Card.tsx
 +++ b/src/components/Card.tsx
-@@ -1,3 +1,8 @@
+@@ -1,0 +1,7 @@
 +export function Card() {
 +  return (
 +    <div className="w-[437px] px-2 px-4 mt-[13px] text-[#1a2b3c]">

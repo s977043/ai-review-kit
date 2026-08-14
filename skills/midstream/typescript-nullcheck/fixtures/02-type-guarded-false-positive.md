@@ -11,7 +11,7 @@ diff --git a/src/utils/config.ts b/src/utils/config.ts
 index 1234567..89abcdef 100644
 --- a/src/utils/config.ts
 +++ b/src/utils/config.ts
-@@ -12,6 +12,14 @@ interface Config {
+@@ -12,7 +12,14 @@ interface Config {
    apiUrl: string;
  }
 

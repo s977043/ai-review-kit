@@ -30,7 +30,7 @@ docs/architecture/risk-register.md (existing, unchanged) records for this design
 diff --git a/docs/design/member-unification.md b/docs/design/member-unification.md
 --- a/docs/design/member-unification.md
 +++ b/docs/design/member-unification.md
-@@ -10,6 +10,14 @@
+@@ -10,2 +10,10 @@
  会員基盤を新サービスへ統合する。
 
 +## 前提・リスク・未決

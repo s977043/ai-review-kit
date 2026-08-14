@@ -14,7 +14,7 @@ diff --git a/src/lib/notification-dispatch.mjs b/src/lib/notification-dispatch.m
 index 1111111..2222222 100644
 --- a/src/lib/notification-dispatch.mjs
 +++ b/src/lib/notification-dispatch.mjs
-@@ -12,6 +12,9 @@ export async function dispatchNotification(payload) {
+@@ -12,5 +12,8 @@ export async function dispatchNotification(payload) {
    const rawResponse = await callProvider(payload);
    const parsed = parseProviderResponse(rawResponse);
    const redacted = parsed.map((entry) => redactSecrets(entry));

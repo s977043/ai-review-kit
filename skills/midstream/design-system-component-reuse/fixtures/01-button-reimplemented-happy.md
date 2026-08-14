@@ -15,7 +15,7 @@ diff --git a/src/features/checkout/SubmitButton.tsx b/src/features/checkout/Subm
 new file mode 100644
 --- /dev/null
 +++ b/src/features/checkout/SubmitButton.tsx
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,19 @@
 +import React from 'react';
 +
 +interface Props {

@@ -11,7 +11,7 @@ diff --git a/src/api/parser.ts b/src/api/parser.ts
 index 1234567..89abcdef 100644
 --- a/src/api/parser.ts
 +++ b/src/api/parser.ts
-@@ -5,7 +5,11 @@ import { ApiResponse } from './types';
+@@ -5,5 +5,7 @@ import { ApiResponse } from './types';
  export function parseApiResponse(raw: unknown): ApiResponse {
    const data = JSON.parse(raw as string);
 

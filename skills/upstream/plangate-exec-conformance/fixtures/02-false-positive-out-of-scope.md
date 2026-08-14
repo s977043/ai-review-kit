@@ -58,7 +58,7 @@ diff --git a/src/routes/users.ts b/src/routes/users.ts
 index aaaaaaa..bbbbbbb 100644
 --- a/src/routes/users.ts
 +++ b/src/routes/users.ts
-@@ -10,6 +10,13 @@ router.get('/users/:id', async (req, res) => {
+@@ -10,4 +10,12 @@ router.get('/users/:id', async (req, res) => {
    res.json(user);
  });
 
@@ -76,7 +76,7 @@ new file mode 100644
 index 0000000..ccccccc
 --- /dev/null
 +++ b/src/services/user-search.ts
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,8 @@
 +import { db } from '../db.js';
 +
 +export async function searchUsersByPrefix(q: string, opts: { limit: number; offset: number }) {
@@ -90,7 +90,7 @@ new file mode 100644
 index 0000000..ddddddd
 --- /dev/null
 +++ b/tests/users-search.spec.ts
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,15 @@
 +import { describe, it, expect } from 'vitest';
 +import request from 'supertest';
 +import { app } from '../src/app.js';

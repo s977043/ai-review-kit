@@ -25,7 +25,7 @@ diff --git a/docs/product/member-bulk-import-prd.md b/docs/product/member-bulk-i
 new file mode 100644
 --- /dev/null
 +++ b/docs/product/member-bulk-import-prd.md
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,12 @@
 +# 会員一括取り込み
 +
 +## やること

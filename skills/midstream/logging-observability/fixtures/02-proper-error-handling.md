@@ -9,7 +9,7 @@ diff --git a/src/services/user.ts b/src/services/user.ts
 index 1111111..2222222 100644
 --- a/src/services/user.ts
 +++ b/src/services/user.ts
-@@ -10,0 +11,10 @@
+@@ -10,0 +11,9 @@
 +async function fetchUser(userId: string) {
 +  try {
 +    const response = await api.get(`/users/${userId}`);
