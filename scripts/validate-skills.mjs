@@ -870,11 +870,49 @@ const RE_DIFF_FENCE = /^(`{3,})diff[ \t]*\r?\n([\s\S]*?)^\1[ \t]*$/gm;
 /** `@@ -oldStart[,oldCount] +newStart[,newCount] @@` unified-diff hunk header. */
 const RE_HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
+/**
+ * Same shape as RE_HUNK_HEADER, global+multiline, for counting hunk headers in a
+ * whole fixture file. A header inside a diff body is never at line start (it
+ * would carry a ` `, `+` or `-` prefix), so this counts real headers only.
+ */
+const RE_HUNK_HEADER_LINE = /^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/gm;
+
+/**
+ * Count `@@ ... @@` hunk headers in raw text. Pure and exported for unit testing.
+ *
+ * @param {string} text
+ * @returns {number}
+ */
+export function countHunkHeaders(text) {
+  return [...String(text ?? '').matchAll(RE_HUNK_HEADER_LINE)].length;
+}
+
 /** `+++ b/path` (or `+++ path`) new-side file header. */
 const RE_NEW_FILE_HEADER = /^\+\+\+ (?:b\/)?(\S+)/;
 
 /** `<file>:<line>` anchor, as emitted in fixture `<!-- expected: -->` blocks. */
 const RE_ANCHOR = /^(.*\S):(\d+)$/;
+
+/**
+ * True when `lines[i]` opens a `--- old` / `+++ new` file-header PAIR.
+ *
+ * A bare `startsWith('--- ')` test is ambiguous: deleting a line that itself
+ * begins with `-- ` (an SQL or Lua comment — fixtures carry SQL, e.g.
+ * skills/upstream/data-model-db-design/fixtures/01-*.md) produces the diff line
+ * `--- foo`, which is a DELETION, not a header. Mistaking it for a header ends
+ * the hunk early and makes the gate report a wrong "expected" hunk header, so a
+ * maintainer following the message would break a correct fixture. Unified diff
+ * always emits the two headers adjacently, so requiring the pair disambiguates
+ * deterministically: a deleted `-- comment` is never followed by a `+++ ` line
+ * that starts a file section.
+ *
+ * @param {string[]} lines
+ * @param {number} i
+ * @returns {boolean}
+ */
+function isFileHeaderPairStart(lines, i) {
+  return lines[i].startsWith('--- ') && (lines[i + 1] ?? '').startsWith('+++ ');
+}
 
 /**
  * Extract the bodies of every fenced ```diff block in a fixture file.
@@ -952,11 +990,15 @@ export function parseUnifiedDiff(diffText) {
 
     while (i < lines.length) {
       const body = lines[i];
+      // `+++ ` ends the hunk only as the second half of a header pair; on its
+      // own it is an added line whose text starts with `++ ` (mirror of the
+      // `--- ` ambiguity documented on isFileHeaderPairStart).
+      const isPairedNewHeader = body.startsWith('+++ ') && (lines[i - 1] ?? '').startsWith('--- ');
       if (
         RE_HUNK_HEADER.test(body) ||
         body.startsWith('diff --git ') ||
-        body.startsWith('--- ') ||
-        body.startsWith('+++ ')
+        isFileHeaderPairStart(lines, i) ||
+        isPairedNewHeader
       ) {
         break;
       }
@@ -1083,8 +1125,17 @@ export function extractFixtureAnchors(text) {
  * validateFixtureDrift() only reads the expected block's YAML. These fixtures
  * are never executed by eval:fixtures, so nothing else would ever catch it.
  *
+ * The return value carries the coverage counters, not just the verdict: a gate
+ * that inspects NOTHING also returns `ok: true`, so "no error was printed" is
+ * not evidence that the gate ran. Every way this gate can lose its real input —
+ * a broken RE_DIFF_FENCE, a path filter, a renamed `fixtures/` directory, a
+ * changed `.md` filter — collapses the counters while leaving the verdict green.
+ * tests/validate-fixture-diff-structure.test.mjs asserts floors on them so that
+ * silent coverage loss fails the suite (#1854 review, major 1).
+ *
  * @param {{ skillsDir?: string, repoRoot?: string }} [options]
- * @returns {Promise<boolean>} false (→ exitCode 1) on any structural error.
+ * @returns {Promise<{ ok: boolean, checkedFixtures: number, checkedHunks: number,
+ *   checkedAnchors: number }>} `ok: false` (→ exitCode 1) on any structural error.
  */
 export async function validateFixtureDiffStructure({
   skillsDir = defaultPaths.skillsDir,
@@ -1095,7 +1146,7 @@ export async function validateFixtureDiffStructure({
     files = await listSkillFiles(skillsDir);
   } catch (err) {
     console.error(`❌ Failed to list skills: ${err.message}`);
-    return false;
+    return { ok: false, checkedFixtures: 0, checkedHunks: 0, checkedAnchors: 0 };
   }
 
   let success = true;
@@ -1116,6 +1167,25 @@ export async function validateFixtureDiffStructure({
       const fixtureRel = path.relative(repoRoot, fixturePath);
       const content = await fs.readFile(fixturePath, 'utf8');
       const { files: diffFiles, hunks, unknownPrefixLines } = parseFixtureDiffs(content);
+
+      // Unrecognized-notation guard (#1854 review, major 2 — partial). Every
+      // hunk header in the file must sit inside a fence this gate recognizes.
+      // A surplus means the fixture carries a diff written in a notation
+      // extractDiffBlocks() does not match (` ```Diff `, ` ```diff title="x" `,
+      // an indented fence, a bare ``` fence), and that diff would be skipped in
+      // silence — the same failure class this gate exists to close, one fixture
+      // at a time rather than repo-wide. Measured 0 surplus across all current
+      // fixtures, so this is forward-protective without grandfathering.
+      const headersInFile = countHunkHeaders(content);
+      if (headersInFile > hunks.length) {
+        console.error(
+          `❌ ${fixtureRel}: ${headersInFile} hunk header(s) in the file but only ` +
+            `${hunks.length} inside a recognized diff block — write the diff in a ` +
+            'plain ```diff fence at line start (no info string, lowercase) so it is checked'
+        );
+        success = false;
+      }
+
       if (!hunks.length && !diffFiles.size) continue;
       checkedFixtures += 1;
 
@@ -1178,7 +1248,7 @@ export async function validateFixtureDiffStructure({
         `across ${checkedFixtures} fixture(s) consistent`
     );
   }
-  return success;
+  return { ok: success, checkedFixtures, checkedHunks, checkedAnchors };
 }
 
 /**
@@ -1287,7 +1357,9 @@ if (isDirectRun(import.meta.url)) {
   const registryPathsOk = await validateRegistryPaths({ registry });
   const registryIdsOk = await validateRegistryIdMatch({ registry });
   const fixtureDriftOk = await validateFixtureDrift();
-  const fixtureDiffStructureOk = await validateFixtureDiffStructure();
+  // Destructure `.ok` explicitly: the function returns an object (coverage
+  // counters ride along), and an object is always truthy.
+  const { ok: fixtureDiffStructureOk } = await validateFixtureDiffStructure();
   const namingCollisionsOk = await validateNamingCollisions({ registry });
   const ok =
     skillsOk &&
