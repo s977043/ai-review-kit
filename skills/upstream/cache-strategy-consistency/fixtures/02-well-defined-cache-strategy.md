@@ -9,7 +9,7 @@ diff --git a/docs/architecture/product-service.md b/docs/architecture/product-se
 index 1111111..2222222 100644
 --- a/docs/architecture/product-service.md
 +++ b/docs/architecture/product-service.md
-@@ -30,0 +31,45 @@
+@@ -30,0 +31,37 @@
 +## Caching Architecture
 +
 +### Cache Layers

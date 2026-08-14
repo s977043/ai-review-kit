@@ -16,7 +16,7 @@ diff --git a/src/routes/user.ts b/src/routes/user.ts
 new file mode 100644
 --- /dev/null
 +++ b/src/routes/user.ts
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,19 @@
 +import { Router } from 'express';
 +
 +export const router = Router();

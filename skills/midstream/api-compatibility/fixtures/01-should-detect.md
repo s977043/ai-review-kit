@@ -11,7 +11,7 @@ diff --git a/src/types/api.ts b/src/types/api.ts
 index abc1234..def5678 100644
 --- a/src/types/api.ts
 +++ b/src/types/api.ts
-@@ -3,5 +3,6 @@ export interface CreateOrderRequest {
+@@ -3,3 +3,4 @@ export interface CreateOrderRequest {
    productId: string;
    quantity: number;
 +  warehouseId: string;

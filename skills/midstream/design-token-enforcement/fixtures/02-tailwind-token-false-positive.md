@@ -13,7 +13,7 @@ diff --git a/src/components/Card.tsx b/src/components/Card.tsx
 new file mode 100644
 --- /dev/null
 +++ b/src/components/Card.tsx
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,15 @@
 +import React from 'react';
 +
 +interface Props {

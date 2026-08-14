@@ -11,7 +11,7 @@ diff --git a/src/api/profile.ts b/src/api/profile.ts
 index abc1234..def5678 100644
 --- a/src/api/profile.ts
 +++ b/src/api/profile.ts
-@@ -5,6 +5,10 @@ export async function getUserProfile(userId: string) {
+@@ -5,3 +5,7 @@ export async function getUserProfile(userId: string) {
    const response = await fetch(`/api/users/${userId}`);
    const data: UserProfileResponse | null = await response.json();
 +

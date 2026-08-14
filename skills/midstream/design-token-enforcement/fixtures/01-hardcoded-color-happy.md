@@ -14,7 +14,7 @@ diff --git a/src/components/PrimaryButton.tsx b/src/components/PrimaryButton.tsx
 new file mode 100644
 --- /dev/null
 +++ b/src/components/PrimaryButton.tsx
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,17 @@
 +import React from 'react';
 +
 +interface Props {

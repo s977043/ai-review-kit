@@ -14,7 +14,7 @@ guard "自動生成された API 定義の更新のみで、設計意図に変�
 diff --git a/src/api/generated/client.ts b/src/api/generated/client.ts
 --- a/src/api/generated/client.ts
 +++ b/src/api/generated/client.ts
-@@ -1,6 +1,6 @@
+@@ -1,7 +1,7 @@
  /**
   * AUTO-GENERATED — do not edit by hand.
 - * generator: openapi-typescript 6.7.0

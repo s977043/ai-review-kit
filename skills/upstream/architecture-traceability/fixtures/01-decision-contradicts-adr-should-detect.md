@@ -37,7 +37,7 @@ docs/architecture/specs/ does not exist in the repository.
 diff --git a/docs/architecture/order-sync.md b/docs/architecture/order-sync.md
 --- a/docs/architecture/order-sync.md
 +++ b/docs/architecture/order-sync.md
-@@ -1,12 +1,14 @@
+@@ -1,13 +1,14 @@
  # Order Sync
 
 -Integration between Orders and Fulfilment is asynchronous, per

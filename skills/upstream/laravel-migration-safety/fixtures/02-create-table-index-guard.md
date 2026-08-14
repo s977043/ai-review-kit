@@ -11,7 +11,7 @@ diff --git a/database/migrations/2026_06_11_000001_create_tags.php b/database/mi
 index 1234567..89abcde 100644
 --- a/database/migrations/2026_06_11_000001_create_tags.php
 +++ b/database/migrations/2026_06_11_000001_create_tags.php
-@@ -1,4 +1,13 @@
+@@ -1,0 +1,9 @@
 +    public function up(): void
 +    {
 +        Schema::create('tags', function (Blueprint $table) {

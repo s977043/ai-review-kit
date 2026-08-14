@@ -11,7 +11,7 @@ diff --git a/src/external/github-client.ts b/src/external/github-client.ts
 index 1234567..89abcde 100644
 --- a/src/external/github-client.ts
 +++ b/src/external/github-client.ts
-@@ -1,3 +1,12 @@
+@@ -1,0 +1,10 @@
 +// Maps the raw GitHub REST response; field shapes are dictated by the API.
 +export interface GitHubIssueResponse {
 +  id: number;

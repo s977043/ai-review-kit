@@ -11,7 +11,7 @@ diff --git a/app/routes/post.tsx b/app/routes/post.tsx
 index 1234567..89abcde 100644
 --- a/app/routes/post.tsx
 +++ b/app/routes/post.tsx
-@@ -1,4 +1,11 @@
+@@ -1,0 +1,8 @@
 +import { data, redirect } from 'react-router';
 +
 +export async function action({ params }: Route.ActionArgs) {

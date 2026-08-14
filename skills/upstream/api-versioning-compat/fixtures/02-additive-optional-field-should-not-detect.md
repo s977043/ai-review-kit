@@ -25,7 +25,7 @@ diff --git a/openapi/orders-openapi.yaml b/openapi/orders-openapi.yaml
  components:
    schemas:
      Order:
-@@ -10,6 +10,10 @@ components:
+@@ -10,3 +10,7 @@ components:
        properties:
          id:
            type: string

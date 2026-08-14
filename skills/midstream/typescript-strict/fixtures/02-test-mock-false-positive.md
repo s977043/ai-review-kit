@@ -11,7 +11,7 @@ diff --git a/tests/user-service.test.ts b/tests/user-service.test.ts
 index 1234567..89abcdef 100644
 --- a/tests/user-service.test.ts
 +++ b/tests/user-service.test.ts
-@@ -8,6 +8,12 @@ describe('UserService', () => {
+@@ -8,6 +8,10 @@ describe('UserService', () => {
    let mockRepo: UserRepository;
 
    beforeEach(() => {

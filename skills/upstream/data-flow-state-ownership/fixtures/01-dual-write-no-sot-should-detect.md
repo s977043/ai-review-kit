@@ -24,7 +24,7 @@ the diff adds a cross-boundary write to shared state.
 diff --git a/docs/design/order-flow.md b/docs/design/order-flow.md
 --- a/docs/design/order-flow.md
 +++ b/docs/design/order-flow.md
-@@ -20,6 +20,13 @@
+@@ -20,2 +20,10 @@
  注文サービスが `orders.status` を更新する。
 
 +## 配送側からの反映

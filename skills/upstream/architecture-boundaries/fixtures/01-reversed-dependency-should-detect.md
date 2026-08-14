@@ -22,7 +22,7 @@ diff --git a/docs/architecture/notification.md b/docs/architecture/notification.
 new file mode 100644
 --- /dev/null
 +++ b/docs/architecture/notification.md
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,13 @@
 +# Notification
 +
 +> Layering rule (project-wide): Domain → Infrastructure. Never the reverse.

@@ -13,7 +13,7 @@ diff --git a/resources/views/comparison/show.blade.php b/resources/views/compari
 index 1111111..2222222 100644
 --- a/resources/views/comparison/show.blade.php
 +++ b/resources/views/comparison/show.blade.php
-@@ -14,7 +14,10 @@
+@@ -14,3 +14,4 @@
 -  <a href="{{ route('comparison.download', $comparison) }}">
 -    <span>要件整理シート付き比較表をダウンロード</span>
 -  </a>
@@ -25,7 +25,7 @@ diff --git a/tests/Feature/ComparisonDownloadTest.php b/tests/Feature/Comparison
 index 3333333..4444444 100644
 --- a/tests/Feature/ComparisonDownloadTest.php
 +++ b/tests/Feature/ComparisonDownloadTest.php
-@@ -18,6 +18,14 @@ class ComparisonDownloadTest extends TestCase
+@@ -18,6 +18,13 @@ class ComparisonDownloadTest extends TestCase
      {
          $response = $this->actingAs($this->paidUser)->get('/comparison/1');
 

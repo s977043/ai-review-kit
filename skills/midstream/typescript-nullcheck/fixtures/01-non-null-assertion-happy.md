@@ -11,7 +11,7 @@ diff --git a/src/services/user-service.ts b/src/services/user-service.ts
 index 1234567..89abcdef 100644
 --- a/src/services/user-service.ts
 +++ b/src/services/user-service.ts
-@@ -8,7 +8,7 @@ export async function getUserName(userId: string): Promise<string> {
+@@ -8,5 +8,5 @@ export async function getUserName(userId: string): Promise<string> {
    const response = await fetch(`/api/users/${userId}`);
    const data = await response.json();
 

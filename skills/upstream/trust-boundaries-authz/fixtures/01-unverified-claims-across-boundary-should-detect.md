@@ -26,7 +26,7 @@ link-only edit.
 diff --git a/docs/security/internal-api-security.md b/docs/security/internal-api-security.md
 --- a/docs/security/internal-api-security.md
 +++ b/docs/security/internal-api-security.md
-@@ -12,6 +12,14 @@
+@@ -12,2 +12,11 @@
  Gateway が外部リクエストを受ける。
 
 +## 内部サービス間の呼び出し
@@ -77,7 +77,7 @@ findings:
     anchor: docs/security/internal-api-security.md:19
   - severity: major
     reason: 認可の判定箇所（Gateway 集約か各サービス分散か）と Gateway/BFF/各サービスの責務分担が実装時送りになっており、設計として保証されていない
-    anchor: docs/security/internal-api-security.md:21
+    anchor: docs/security/internal-api-security.md:22
   - severity: major
     reason: 代表ユースケースの権限マトリクス（役割×操作×リソース）が無く、マルチテナントの越境防止の前提も書かれていない
     anchor: docs/security/internal-api-security.md:14

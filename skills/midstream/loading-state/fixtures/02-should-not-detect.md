@@ -11,7 +11,7 @@ diff --git a/src/components/ProductList.tsx b/src/components/ProductList.tsx
 index abc1234..def5678 100644
 --- a/src/components/ProductList.tsx
 +++ b/src/components/ProductList.tsx
-@@ -1,6 +1,18 @@ import { useQuery } from '@tanstack/react-query';
+@@ -1,0 +1,16 @@ import { useQuery } from '@tanstack/react-query';
 +
 +export function ProductList() {
 +  const { data, isLoading, isError, error } = useQuery({

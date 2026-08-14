@@ -11,7 +11,7 @@ diff --git a/src/parser/tokenize.ts b/src/parser/tokenize.ts
 index 1111111..2222222 100644
 --- a/src/parser/tokenize.ts
 +++ b/src/parser/tokenize.ts
-@@ -8,7 +8,11 @@ export function tokenize(src: string): Token[] {
+@@ -8,3 +8,6 @@ export function tokenize(src: string): Token[] {
 -  const raw = src.split(/\s+/).filter(Boolean);
 -  return raw.map((w) => ({ value: w, kind: detectKind(w) }));
 +  return splitTokens(src).map((w) => ({ value: w, kind: detectKind(w) }));
@@ -24,7 +24,7 @@ diff --git a/tests/parser/tokenize.test.ts b/tests/parser/tokenize.test.ts
 index 3333333..4444444 100644
 --- a/tests/parser/tokenize.test.ts
 +++ b/tests/parser/tokenize.test.ts
-@@ -1,4 +1,12 @@
+@@ -1,1 +1,9 @@
  import { tokenize } from '../../src/parser/tokenize';
 +
 +test('tokenize preserves external behavior after extraction', () => {

@@ -13,7 +13,7 @@ diff --git a/package-lock.json b/package-lock.json
 index 4444444..5555555 100644
 --- a/package-lock.json
 +++ b/package-lock.json
-@@ -120,6 +120,14 @@
+@@ -120,8 +120,8 @@
      "node_modules/minimatch": {
        "version": "9.0.5",
        "resolved": "https://registry.npmjs.org/minimatch/-/minimatch-9.0.5.tgz",
@@ -23,7 +23,7 @@ index 4444444..5555555 100644
          "brace-expansion": "^2.0.1"
        }
      },
-@@ -200,6 +208,9 @@
+@@ -200,0 +208,5 @@
 +    "node_modules/yaml": {
 +      "version": "2.6.0",
 +      "resolved": "https://registry.npmjs.org/yaml/-/yaml-2.6.0.tgz",

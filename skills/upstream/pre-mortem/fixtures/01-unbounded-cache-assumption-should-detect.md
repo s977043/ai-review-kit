@@ -24,7 +24,7 @@ diff --git a/docs/design/order-read-cache.md b/docs/design/order-read-cache.md
 new file mode 100644
 --- /dev/null
 +++ b/docs/design/order-read-cache.md
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,21 @@
 +# Order read cache
 +
 +## Decision
@@ -78,5 +78,5 @@ findings:
     anchor: docs/design/order-read-cache.md:12
   - severity: major
     reason: ヒット率・陳腐化の観測手段と無効化フラグが無く、障害検知もロールバックも再デプロイ待ちになる
-    anchor: docs/design/order-read-cache.md:18
+    anchor: docs/design/order-read-cache.md:21
 -->

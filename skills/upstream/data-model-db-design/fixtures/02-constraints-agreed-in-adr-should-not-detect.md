@@ -25,7 +25,7 @@ requirement for charge rows.
 diff --git a/db/schema/billing.sql b/db/schema/billing.sql
 --- a/db/schema/billing.sql
 +++ b/db/schema/billing.sql
-@@ -40,6 +40,22 @@ CREATE TABLE subscriptions (
+@@ -40,3 +40,22 @@ CREATE TABLE subscriptions (
    id BIGSERIAL PRIMARY KEY,
    status TEXT NOT NULL
  );

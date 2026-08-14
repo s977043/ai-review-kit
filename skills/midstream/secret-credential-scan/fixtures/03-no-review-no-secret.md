@@ -11,7 +11,7 @@ diff --git a/src/utils/format.ts b/src/utils/format.ts
 index 6666666..7777777 100644
 --- a/src/utils/format.ts
 +++ b/src/utils/format.ts
-@@ -1,5 +1,9 @@
+@@ -1,7 +1,11 @@
  export function toTitleCase(input: string): string {
    return input
      .toLowerCase()

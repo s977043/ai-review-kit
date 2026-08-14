@@ -81,15 +81,38 @@ negative fixture は `findings: []` と `reason` を書く。`findings: []` の 
 
 見出しを持たない skill（上記パイロット 5 件はすべてこの型）では `check:` を書かない。書かないことで description 列挙ゲートは発火せず、frontmatter を触らずに済む。frontmatter の `inputContext` / `dependencies` / `tags` を変更すると `tests/planner-dataset-eval.test.mjs` が落ちるため、fixtures 追加だけの PR では frontmatter を触らないこと。
 
+### 3-2. diff ブロックの記法と構造条件
+
+`anchor` の行番号は fixture 内の diff ブロックから機械的に解決されます。そのため入力 diff は unified diff として書き、`scripts/validate-skills.mjs` の `validateFixtureDiffStructure()` が認識できる記法に揃える必要があります。
+
+記法の要件は次のとおりである。
+
+- fence は行頭の ` ```diff ` とする。小文字であり、info string（` ```diff title="x" ` 等）を付けない。インデントした fence も認識されない
+- diff 本体に 3 バックティックの fence を含む場合は、外側を 4 バックティック（` ````diff `）にして閉じる。閉じ位置を間違えると後続の散文が diff 本体として読まれる
+- 新しい側のファイルは `+++ b/<path>` で宣言する。`anchor` のパスはこの宣言と完全一致させる
+- hunk は `@@ -<old開始>,<old行数> +<new開始>,<new行数> @@` とする
+
+上記に対して 4 つの機械条件がかかる。いずれも決定論で判定され、違反はエラーとなる。
+
+- hunk ヘッダの宣言行数が本体の実カウントと一致すること（old 側・new 側とも）。context 行は両側、`+` 行は new 側、`-` 行は old 側を進める
+- `anchor` のパスが、その fixture の diff ブロックのいずれかに `+++ b/<path>` として現れること
+- `anchor` の行番号が new 側の再構成結果に実在し、その行が空行でないこと
+- ファイル内の `@@` ヘッダ数が、認識された diff ブロック内のヘッダ数と一致すること（超過は未認識記法の混入を意味する）
+
+`findings: []` の negative fixture のように `anchor` を持たない fixture は、anchor 検査の対象外となる。`(summary):1` 形式の疑似 anchor も同様に対象外である。
+
 ### 4. 免除を外す
 
 対象 skill が `GRANDFATHERED_WITHOUT_EVAL` に載っている場合、fixtures を足したのと同じコミットでその id を集合から削除する。削除しないと、置かれた fixtures は機械的に検証されない状態のまま残る。
 
 ### 5. 実測で確認する
 
-`npm run skills:validate` の出力にある次の 2 行が、fixtures が実際に検証対象へ入ったことの証跡となる。作業前後の値を控えて差分を報告する。
+`npm run skills:validate` の出力にある次の 3 行が、fixtures が実際に検証対象へ入ったことの証跡となる。作業前後の値を控えて差分を報告する。
 
 - `recommended eval coverage: N/M ... (incl. K grandfathered)` の K が、外した件数だけ減る
 - `fixture drift: N skill(s) with expected blocks consistent` の N が、fixtures を足した skill 数だけ増える
+- `fixture diff structure: H hunk(s) and A anchor(s) across F fixture(s) consistent` の H / A / F が、足した diff ブロック・anchor・fixture の数だけ増える
 
 パイロットでは grandfathered が 30 から 25 へ、expected blocks を持つ skill が 8 から 13 へ動いている。
+
+3 行目の H / A / F は「ゲートが実際に何を見たか」を表す。緑であることと検査したことは別であり、記法の取り違えや走査範囲の変更があると、エラーを出さないまま 0 に落ちる。`tests/validate-fixture-diff-structure.test.mjs` の `COVERAGE_FLOORS` がこの 3 つに下限を設けており、走査範囲が黙って縮むとテストが落ちる。fixtures を大きく増減させたときは、この下限も同じ PR で見直すこと。

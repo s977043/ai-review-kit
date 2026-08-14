@@ -10,7 +10,7 @@ new file mode 100644
 index 0000000..3333333
 --- /dev/null
 +++ b/src/lib/severity-index.mjs
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,16 @@
 +import { readFile } from 'node:fs/promises';
 +import { parseAllDocuments } from 'yaml';
 +

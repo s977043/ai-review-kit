@@ -11,7 +11,7 @@ diff --git a/database/migrations/2026_06_11_000000_alter_votes.php b/database/mi
 index 1234567..89abcde 100644
 --- a/database/migrations/2026_06_11_000000_alter_votes.php
 +++ b/database/migrations/2026_06_11_000000_alter_votes.php
-@@ -1,4 +1,12 @@
+@@ -1,0 +1,7 @@
 +    public function up(): void
 +    {
 +        Schema::table('posts', function (Blueprint $table) {

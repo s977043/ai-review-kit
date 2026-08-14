@@ -15,7 +15,7 @@ diff --git a/docs/design/payment-capture.md b/docs/design/payment-capture.md
 new file mode 100644
 --- /dev/null
 +++ b/docs/design/payment-capture.md
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,15 @@
 +# Payment capture flow
 +
 +## Flow
@@ -55,7 +55,7 @@ findings:
     anchor: docs/design/payment-capture.md:6
   - severity: major
     reason: 成功時のレスポンスのみ定義され、4xx/5xx のエラー契約が欠落している
-    anchor: docs/design/payment-capture.md:10
+    anchor: docs/design/payment-capture.md:11
   - severity: major
     reason: 相関ID・メトリクス・SLO/アラートなど観測性の設計が含まれていない
     anchor: docs/design/payment-capture.md:1

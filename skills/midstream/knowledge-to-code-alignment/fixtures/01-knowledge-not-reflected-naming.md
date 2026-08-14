@@ -11,7 +11,7 @@ diff --git a/src/pricing/discount.ts b/src/pricing/discount.ts
 index 1111111..2222222 100644
 --- a/src/pricing/discount.ts
 +++ b/src/pricing/discount.ts
-@@ -14,6 +14,10 @@ export function flatDiscount(order: Order): number {
+@@ -14,3 +14,4 @@ export function flatDiscount(order: Order): number {
 -  // 一律 10% 割引
 -  return order.subtotal * 0.1;
 +  // 会員ランクに応じた割引（issue #1573）

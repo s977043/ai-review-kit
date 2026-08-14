@@ -9,7 +9,7 @@ diff --git a/docs/architecture/cache-layer-design.md b/docs/architecture/cache-l
 index 1111111..2222222 100644
 --- a/docs/architecture/cache-layer-design.md
 +++ b/docs/architecture/cache-layer-design.md
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,81 @@
 +# キャッシュレイヤー設計書
 +
 +## 背景

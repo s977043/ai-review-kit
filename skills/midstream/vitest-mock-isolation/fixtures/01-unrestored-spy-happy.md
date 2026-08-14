@@ -11,7 +11,7 @@ diff --git a/src/user.test.ts b/src/user.test.ts
 index 1234567..89abcde 100644
 --- a/src/user.test.ts
 +++ b/src/user.test.ts
-@@ -1,3 +1,16 @@
+@@ -1,0 +1,14 @@
 +import { describe, it, expect, vi } from 'vitest';
 +import * as api from './api';
 +import { loadUser, saveUser } from './user';

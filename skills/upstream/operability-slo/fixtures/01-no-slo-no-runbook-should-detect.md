@@ -25,7 +25,7 @@ diff --git a/docs/operations/nightly-reconciliation.md b/docs/operations/nightly
 new file mode 100644
 --- /dev/null
 +++ b/docs/operations/nightly-reconciliation.md
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,10 @@
 +# Nightly reconciliation
 +
 +毎晩 2:00 に決済プロバイダの明細を取り込み、社内の売上テーブルと突合する。
@@ -68,14 +68,14 @@ new file mode 100644
 findings:
   - severity: critical
     reason: 翌営業日の請求に使うジョブに Runbook の最小要素（症状・確認手順・復旧手順・エスカレーション先）が無く、責任者も決まっていない
-    anchor: docs/operations/nightly-reconciliation.md:9
+    anchor: docs/operations/nightly-reconciliation.md:8
   - severity: major
     reason: 重要フローの SLI/SLO が無く「だいたい朝までに終わる」が計測可能な形（完了期限・成功率定義・分母分子・除外条件・期間）になっていない
-    anchor: docs/operations/nightly-reconciliation.md:7
+    anchor: docs/operations/nightly-reconciliation.md:6
   - severity: major
     reason: アラート条件（閾値・継続時間・抑制条件）と当番の初動が無く、夜間の無言失敗を検知できない
-    anchor: docs/operations/nightly-reconciliation.md:9
+    anchor: docs/operations/nightly-reconciliation.md:8
   - severity: major
     reason: 外部決済プロバイダ障害時の責任範囲が定義されておらず、相関IDや主要属性のログ方針も無いため自他の障害を切り分けられない
-    anchor: docs/operations/nightly-reconciliation.md:11
+    anchor: docs/operations/nightly-reconciliation.md:10
 -->

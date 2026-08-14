@@ -12,7 +12,7 @@ new file mode 100644
 index 0000000..abcdef0
 --- /dev/null
 +++ b/src/components/UserList.tsx
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,22 @@
 +import React from 'react';
 +import { useQuery } from '@tanstack/react-query';
 +import { fetchUsers } from '../api/users';

@@ -30,7 +30,7 @@ schema and its versioning rule.
 diff --git a/docs/architecture/order-sync.md b/docs/architecture/order-sync.md
 --- a/docs/architecture/order-sync.md
 +++ b/docs/architecture/order-sync.md
-@@ -1,10 +1,13 @@
+@@ -1,12 +1,15 @@
  # Order Sync
 
 -Integration between Orders and Fulfilment is asynchronous.

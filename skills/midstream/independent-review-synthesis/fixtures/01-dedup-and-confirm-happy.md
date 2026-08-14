@@ -10,7 +10,7 @@ The synthesis layer should dedup them, keep both reviewer names in
 
 ```diff
 diff --git a/src/api/users.ts b/src/api/users.ts
-@@ -10,7 +10,7 @@ export async function getUserById(req: Request, res: Response) {
+@@ -10,4 +10,4 @@ export async function getUserById(req: Request, res: Response) {
    const { id } = req.params;
    try {
 -    const user = await db.query('SELECT * FROM users WHERE id = ?', [id]);

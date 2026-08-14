@@ -24,7 +24,7 @@ diff --git a/docs/design/payment-refund.md b/docs/design/payment-refund.md
 new file mode 100644
 --- /dev/null
 +++ b/docs/design/payment-refund.md
-@@ -0,0 +1,9 @@
+@@ -0,0 +1,10 @@
 +# Payment refund flow
 +
 +`POST /payments/{id}/refund` calls the PSP refund endpoint.

@@ -11,7 +11,7 @@ diff --git a/supabase/migrations/20260611_documents.sql b/supabase/migrations/20
 index 1234567..89abcde 100644
 --- a/supabase/migrations/20260611_documents.sql
 +++ b/supabase/migrations/20260611_documents.sql
-@@ -1,4 +1,12 @@
+@@ -1,0 +1,10 @@
 +create table public.documents (
 +  id uuid primary key default gen_random_uuid(),
 +  user_id uuid references auth.users,

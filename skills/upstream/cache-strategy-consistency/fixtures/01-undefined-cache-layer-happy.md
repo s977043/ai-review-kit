@@ -9,7 +9,7 @@ diff --git a/docs/architecture/user-service.md b/docs/architecture/user-service.
 index 1111111..2222222 100644
 --- a/docs/architecture/user-service.md
 +++ b/docs/architecture/user-service.md
-@@ -20,0 +21,15 @@
+@@ -20,0 +21,14 @@
 +## Performance Optimization
 +
 +### Caching Strategy

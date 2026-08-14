@@ -12,7 +12,7 @@ new file mode 100644
 index 0000000..abcdef0
 --- /dev/null
 +++ b/src/components/InvoiceDate.tsx
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,11 @@
 +import React from 'react';
 +
 +interface InvoiceDateProps {

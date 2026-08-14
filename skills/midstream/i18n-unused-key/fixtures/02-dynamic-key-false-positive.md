@@ -11,7 +11,7 @@ diff --git a/src/locales/en.json b/src/locales/en.json
 index 2345678..3456789 100644
 --- a/src/locales/en.json
 +++ b/src/locales/en.json
-@@ -5,6 +5,12 @@
+@@ -5,5 +5,11 @@
    "common": {
      "save": "Save",
      "cancel": "Cancel"
@@ -27,7 +27,7 @@ diff --git a/src/components/StatusBadge.tsx b/src/components/StatusBadge.tsx
 index abcdef0..1234567 100644
 --- a/src/components/StatusBadge.tsx
 +++ b/src/components/StatusBadge.tsx
-@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
+@@ -3,5 +3,6 @@ import { useTranslation } from 'react-i18next';
 
  export function StatusBadge({ status }: { status: string }) {
    const { t } = useTranslation();

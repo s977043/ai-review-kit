@@ -11,7 +11,7 @@ diff --git a/src/services/cache-service.ts b/src/services/cache-service.ts
 index 1234567..abcdef0 100644
 --- a/src/services/cache-service.ts
 +++ b/src/services/cache-service.ts
-@@ -8,10 +8,18 @@ export class CacheService {
+@@ -8,6 +8,15 @@ export class CacheService {
    private store = new Map<string, CachedItem>();
 
 -  get(key: string): CachedItem | undefined {

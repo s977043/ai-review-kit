@@ -11,7 +11,7 @@ diff --git a/src/import/csv.ts b/src/import/csv.ts
 index 1111111..2222222 100644
 --- a/src/import/csv.ts
 +++ b/src/import/csv.ts
-@@ -40,8 +40,6 @@ export function parseCsv(raw: string): Row[] {
+@@ -40,6 +40,2 @@ export function parseCsv(raw: string): Row[] {
 -  // 一部取引先の CSV は先頭 BOM 付き（ADR-012）。除去しないと 1 列目の parse が壊れる
 -  if (raw.charCodeAt(0) === 0xfeff) {
 -    raw = raw.slice(1);

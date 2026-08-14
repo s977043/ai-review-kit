@@ -11,7 +11,7 @@ diff --git a/app/Http/Controllers/UserController.php b/app/Http/Controllers/User
 index 1234567..89abcde 100644
 --- a/app/Http/Controllers/UserController.php
 +++ b/app/Http/Controllers/UserController.php
-@@ -1,4 +1,10 @@
+@@ -1,0 +1,5 @@
 +    public function update(Request $request, User $user)
 +    {
 +        $user->update($request->all());

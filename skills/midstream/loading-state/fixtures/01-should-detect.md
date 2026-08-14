@@ -11,7 +11,7 @@ diff --git a/src/components/UserList.tsx b/src/components/UserList.tsx
 index abc1234..def5678 100644
 --- a/src/components/UserList.tsx
 +++ b/src/components/UserList.tsx
-@@ -1,8 +1,16 @@ import { useQuery } from '@tanstack/react-query';
+@@ -1,0 +1,12 @@ import { useQuery } from '@tanstack/react-query';
 +
 +export function UserList() {
 +  const { data, isLoading } = useQuery({ queryKey: ['users'], queryFn: fetchUsers });

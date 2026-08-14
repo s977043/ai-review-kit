@@ -9,7 +9,7 @@ diff --git a/src/lib/finding-formatter.mjs b/src/lib/finding-formatter.mjs
 index 1111111..2222222 100644
 --- a/src/lib/finding-formatter.mjs
 +++ b/src/lib/finding-formatter.mjs
-@@ -40,6 +40,12 @@ export function formatFinding(finding, options = {}) {
+@@ -40,5 +40,10 @@ export function formatFinding(finding, options = {}) {
    // Shared formatter. `options.compact` is a documented public option any caller may set.
    let header = `${finding.file}:${finding.line}: ${finding.title}`;
 

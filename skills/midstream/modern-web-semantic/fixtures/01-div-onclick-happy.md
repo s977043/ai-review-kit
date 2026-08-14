@@ -9,7 +9,7 @@ The skill should suggest `<button>` and cite the focus/keyboard benefits.
 
 ```diff
 diff --git a/src/components/Toolbar.tsx b/src/components/Toolbar.tsx
-@@ -10,7 +10,9 @@ export function Toolbar({ onSave }: Props) {
+@@ -10,6 +10,8 @@ export function Toolbar({ onSave }: Props) {
    return (
      <div className="toolbar">
 -      <button onClick={onSave}>Save</button>

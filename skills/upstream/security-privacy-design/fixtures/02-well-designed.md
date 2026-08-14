@@ -9,7 +9,7 @@ diff --git a/docs/design/customer-data-platform.md b/docs/design/customer-data-p
 index 1111111..2222222 100644
 --- a/docs/design/customer-data-platform.md
 +++ b/docs/design/customer-data-platform.md
-@@ -0,0 +1,120 @@
+@@ -0,0 +1,113 @@
 +# 顧客データプラットフォーム設計書
 +
 +## 背景
@@ -123,6 +123,7 @@ index 1111111..2222222 100644
 +- 認可: RBAC (Admin, Analyst, Viewer)
 +- API: JWT トークン、有効期限1時間
 +```
+````
 
 ## Expected Behavior
 
@@ -135,4 +136,3 @@ The skill should NOT trigger findings as this design includes:
 5. Audit log design with events, retention, and access control
 6. Encryption requirements
 7. Access control design
-````

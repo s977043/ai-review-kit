@@ -26,7 +26,7 @@ diff --git a/src/components/Badge.tsx b/src/components/Badge.tsx
 new file mode 100644
 --- /dev/null
 +++ b/src/components/Badge.tsx
-@@ -0,0 +1,8 @@
+@@ -0,0 +1,6 @@
 +import React from 'react';
 +import { truncateLabel } from '../utils/text';
 +

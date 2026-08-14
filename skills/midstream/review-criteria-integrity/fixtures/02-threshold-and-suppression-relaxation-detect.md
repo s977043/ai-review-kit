@@ -21,7 +21,7 @@ diff --git a/.river/memory/index.json b/.river/memory/index.json
 index 3333333..4444444 100644
 --- a/.river/memory/index.json
 +++ b/.river/memory/index.json
-@@ -1,2 +1,11 @@
+@@ -1,2 +1,12 @@
  {
 +  "suppressions": [
 +    {

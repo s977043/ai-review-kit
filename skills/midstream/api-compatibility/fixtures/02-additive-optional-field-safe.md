@@ -11,7 +11,7 @@ diff --git a/src/types/user-profile.dto.ts b/src/types/user-profile.dto.ts
 index 1234567..abcdef0 100644
 --- a/src/types/user-profile.dto.ts
 +++ b/src/types/user-profile.dto.ts
-@@ -5,6 +5,8 @@ export interface UserProfileDto {
+@@ -5,4 +5,6 @@ export interface UserProfileDto {
    id: string;
    name: string;
    email: string;
@@ -22,7 +22,7 @@ diff --git a/src/api/users.ts b/src/api/users.ts
 index 2345678..3456789 100644
 --- a/src/api/users.ts
 +++ b/src/api/users.ts
-@@ -8,6 +8,12 @@ export async function getUserProfile(userId: string): Promise<UserProfileDto> {
+@@ -8,2 +8,6 @@ export async function getUserProfile(userId: string): Promise<UserProfileDto> {
    return response.json();
  }
 +
@@ -33,7 +33,7 @@ diff --git a/tests/api/users.test.ts b/tests/api/users.test.ts
 index 3456789..4567890 100644
 --- a/tests/api/users.test.ts
 +++ b/tests/api/users.test.ts
-@@ -15,6 +15,20 @@ describe('getUserProfile', () => {
+@@ -15,3 +15,16 @@ describe('getUserProfile', () => {
      expect(profile.name).toBe('Alice');
    });
 +

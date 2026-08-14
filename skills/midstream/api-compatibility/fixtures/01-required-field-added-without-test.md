@@ -11,7 +11,7 @@ diff --git a/src/types/create-order.dto.ts b/src/types/create-order.dto.ts
 index 1234567..abcdef0 100644
 --- a/src/types/create-order.dto.ts
 +++ b/src/types/create-order.dto.ts
-@@ -4,10 +4,11 @@ export interface CreateOrderDto {
+@@ -4,5 +4,6 @@ export interface CreateOrderDto {
    customerId: string;
    items: OrderItem[];
 -  shippingAddressId?: string;

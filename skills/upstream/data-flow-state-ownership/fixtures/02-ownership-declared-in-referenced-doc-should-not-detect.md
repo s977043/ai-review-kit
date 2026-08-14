@@ -26,7 +26,7 @@ write it directly.
 diff --git a/docs/design/order-flow.md b/docs/design/order-flow.md
 --- a/docs/design/order-flow.md
 +++ b/docs/design/order-flow.md
-@@ -20,6 +20,18 @@
+@@ -20,2 +20,15 @@
  注文サービスが `orders.status` を更新する。
 
 +## 配送側からの反映

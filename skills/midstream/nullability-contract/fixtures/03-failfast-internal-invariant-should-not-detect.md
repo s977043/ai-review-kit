@@ -18,7 +18,7 @@ diff --git a/src/core/skill-dispatcher.ts b/src/core/skill-dispatcher.ts
 index abc1234..def5678 100644
 --- a/src/core/skill-dispatcher.ts
 +++ b/src/core/skill-dispatcher.ts
-@@ -12,6 +12,10 @@ const SKILL_REGISTRY: Record<Kind, SkillEntry> = buildRegistry();
+@@ -12,0 +12,6 @@ const SKILL_REGISTRY: Record<Kind, SkillEntry> = buildRegistry();
 +
 +export function resolveEntry(kind: Kind): SkillEntry {
 +  const entry = SKILL_REGISTRY[kind];

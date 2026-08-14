@@ -11,7 +11,7 @@ diff --git a/app/Http/Controllers/UserController.php b/app/Http/Controllers/User
 index 1234567..89abcde 100644
 --- a/app/Http/Controllers/UserController.php
 +++ b/app/Http/Controllers/UserController.php
-@@ -1,4 +1,10 @@
+@@ -1,0 +1,6 @@
 +    // UpdateUserRequest::authorize() returns $this->user()->can('update', $this->route('user'))
 +    public function update(UpdateUserRequest $request, User $user)
 +    {

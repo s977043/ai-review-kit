@@ -11,7 +11,7 @@ diff --git a/src/parser/tokenize.ts b/src/parser/tokenize.ts
 index 1111111..2222222 100644
 --- a/src/parser/tokenize.ts
 +++ b/src/parser/tokenize.ts
-@@ -8,12 +8,20 @@ export function tokenize(src: string): Token[] {
+@@ -8,3 +8,10 @@ export function tokenize(src: string): Token[] {
 -  const raw = src.split(/\s+/).filter(Boolean);
 -  return raw.map((w) => ({ value: w, kind: detectKind(w) }));
 +  return classify(splitTokens(src));

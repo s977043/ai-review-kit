@@ -18,7 +18,7 @@ diff --git a/src/lib/resolve-entry.ts b/src/lib/resolve-entry.ts
 index abc1234..def5678 100644
 --- a/src/lib/resolve-entry.ts
 +++ b/src/lib/resolve-entry.ts
-@@ -3,5 +3,8 @@ import { realpathSync } from 'node:fs';
+@@ -3,3 +3,5 @@ import { realpathSync } from 'node:fs';
  export function resolveEntry(inputPath: string): string {
 -  return inputPath;
 +  // inputPath は argv 由来で存在保証がない（外部 IO 境界）

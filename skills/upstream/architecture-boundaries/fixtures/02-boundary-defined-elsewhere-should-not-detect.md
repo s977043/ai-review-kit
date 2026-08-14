@@ -25,7 +25,7 @@ diff --git a/docs/architecture/order-export.md b/docs/architecture/order-export.
 new file mode 100644
 --- /dev/null
 +++ b/docs/architecture/order-export.md
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,22 @@
 +# Order Export
 +
 +## Responsibility

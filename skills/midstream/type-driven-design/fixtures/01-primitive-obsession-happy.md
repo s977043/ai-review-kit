@@ -11,7 +11,7 @@ diff --git a/src/billing/transfer.ts b/src/billing/transfer.ts
 index 1234567..89abcde 100644
 --- a/src/billing/transfer.ts
 +++ b/src/billing/transfer.ts
-@@ -1,3 +1,15 @@
+@@ -1,0 +1,10 @@
 +export function transferFunds(fromAccountId: string, toAccountId: string, amount: number) {
 +  // ...
 +}

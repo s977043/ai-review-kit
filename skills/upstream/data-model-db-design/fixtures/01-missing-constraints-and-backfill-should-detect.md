@@ -26,7 +26,7 @@ diff adds table definitions, constraints, indexes, and migration statements.
 diff --git a/db/schema/billing.sql b/db/schema/billing.sql
 --- a/db/schema/billing.sql
 +++ b/db/schema/billing.sql
-@@ -40,6 +40,24 @@ CREATE TABLE subscriptions (
+@@ -40,3 +40,23 @@ CREATE TABLE subscriptions (
    id BIGSERIAL PRIMARY KEY,
    status TEXT NOT NULL
  );
@@ -79,10 +79,10 @@ diff --git a/db/schema/billing.sql b/db/schema/billing.sql
 findings:
   - severity: critical
     reason: 既存行のある invoices へ default 無しの NOT NULL 列を追加しており、backfill や段階移行（列追加 → backfill → 制約化）の計画が無い
-    anchor: db/schema/billing.sql:62
+    anchor: db/schema/billing.sql:61
   - severity: critical
     reason: DROP COLUMN legacy_amount が不可逆操作でありながらロールバック条件もデータ退避方針も示されていない
-    anchor: db/schema/billing.sql:63
+    anchor: db/schema/billing.sql:62
   - severity: major
     reason: subscription_id に外部キーと ON DELETE/UPDATE の指定が無く、同ファイルが宣言する 1 期間 1 行の業務ルールに対応するユニーク制約も無い
     anchor: db/schema/billing.sql:50
@@ -91,5 +91,5 @@ findings:
     anchor: db/schema/billing.sql:52
   - severity: minor
     reason: 追加インデックスが記載の代表クエリ（subscription_id, period_start）のアクセスパスに対応せず、毎回更新される低カーディナリティ列に張られている
-    anchor: db/schema/billing.sql:60
+    anchor: db/schema/billing.sql:59
 -->

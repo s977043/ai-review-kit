@@ -29,7 +29,7 @@ case id, timestamp, retained 1 year), and the permission matrix
 diff --git a/docs/security/internal-api-security.md b/docs/security/internal-api-security.md
 --- a/docs/security/internal-api-security.md
 +++ b/docs/security/internal-api-security.md
-@@ -12,6 +12,14 @@
+@@ -12,2 +12,13 @@
  Gateway が外部リクエストを受ける。
 
 +## 内部サービス間の呼び出し

@@ -14,7 +14,7 @@ The skill must NOT flag this as an await omission or floating promise.
 diff --git a/src/api/checkout.ts b/src/api/checkout.ts
 --- a/src/api/checkout.ts
 +++ b/src/api/checkout.ts
-@@ -10,6 +10,11 @@ export async function checkout(cart: Cart): Promise<Receipt> {
+@@ -10,3 +10,9 @@ export async function checkout(cart: Cart): Promise<Receipt> {
    const receipt = await submitOrder(cart);
 +
 +  // Analytics must not block or fail the checkout path (fire-and-forget).

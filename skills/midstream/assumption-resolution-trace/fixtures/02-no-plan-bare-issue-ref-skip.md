@@ -12,7 +12,7 @@ new file mode 100644
 index 0000000..4444444
 --- /dev/null
 +++ b/src/lib/rate-limit.mjs
-@@ -0,0 +1,8 @@
+@@ -0,0 +1,7 @@
 +export async function callUpstream(client, payload) {
 +  const res = await client.post('/ingest', payload);
 +  if (res.status >= 500) {

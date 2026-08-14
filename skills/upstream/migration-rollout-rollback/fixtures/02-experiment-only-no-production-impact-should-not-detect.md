@@ -20,7 +20,7 @@ paths hold at once and neither depends on the gate failing:
 diff --git a/docs/release/pricing-v2-rollout.md b/docs/release/pricing-v2-rollout.md
 --- a/docs/release/pricing-v2-rollout.md
 +++ b/docs/release/pricing-v2-rollout.md
-@@ -30,6 +30,15 @@
+@@ -30,6 +30,14 @@
  ステップ 3) 切替: canary 1% → 10% → 50% → 100%。各段階の完了条件は
  「価格差分アラート 0 件かつ p99 が基準比 +10ms 以内で 24 時間経過」。
  ロールバック条件: 価格差分アラートが 5 分継続、または決済失敗率 > 1%。

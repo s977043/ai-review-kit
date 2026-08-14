@@ -12,7 +12,7 @@ deleted file mode 100644
 index 1234567..0000000
 --- a/src/components/UserBadge.tsx
 +++ /dev/null
-@@ -1,12 +0,0 @@
+@@ -1,10 +0,0 @@
 -import { useTranslation } from 'react-i18next';
 -
 -export function UserBadge({ role }: { role: string }) {
@@ -27,7 +27,7 @@ diff --git a/src/locales/en.json b/src/locales/en.json
 index 2345678..3456789 100644
 --- a/src/locales/en.json
 +++ b/src/locales/en.json
-@@ -10,7 +10,7 @@
+@@ -10,5 +10,8 @@
    "userCard": {
      "title": "User",
      "subtitle": "Profile"

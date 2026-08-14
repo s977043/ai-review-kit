@@ -10,7 +10,7 @@ library-component guard applies.
 
 ```diff
 diff --git a/src/components/SettingsDialog.tsx b/src/components/SettingsDialog.tsx
-@@ -3,9 +3,10 @@ import * as Dialog from '@radix-ui/react-dialog';
+@@ -3,10 +3,11 @@ import * as Dialog from '@radix-ui/react-dialog';
  export function SettingsDialog() {
    return (
      <Dialog.Root>

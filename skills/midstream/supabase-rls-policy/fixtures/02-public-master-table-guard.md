@@ -11,7 +11,7 @@ diff --git a/supabase/migrations/20260611_countries.sql b/supabase/migrations/20
 index 1234567..89abcde 100644
 --- a/supabase/migrations/20260611_countries.sql
 +++ b/supabase/migrations/20260611_countries.sql
-@@ -1,4 +1,11 @@
+@@ -1,0 +1,9 @@
 +create table public.countries (
 +  code text primary key,
 +  name text not null
@@ -25,7 +25,7 @@ diff --git a/src/supabaseClient.ts b/src/supabaseClient.ts
 index 1234567..89abcde 100644
 --- a/src/supabaseClient.ts
 +++ b/src/supabaseClient.ts
-@@ -1,3 +1,6 @@
+@@ -1,0 +1,3 @@
 +// anon key のクライアント使用は公式仕様（service_role とは異なる）
 +const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 +export default supabase;

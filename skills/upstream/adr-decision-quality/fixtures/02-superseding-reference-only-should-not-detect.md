@@ -22,7 +22,7 @@ criteria, and dated Follow-ups with an owner.
 diff --git a/docs/adr/0031-order-events.md b/docs/adr/0031-order-events.md
 --- a/docs/adr/0031-order-events.md
 +++ b/docs/adr/0031-order-events.md
-@@ -1,6 +1,8 @@
+@@ -1,5 +1,8 @@
  # ADR-0031: Order event schema v1
 
 -Status: Accepted

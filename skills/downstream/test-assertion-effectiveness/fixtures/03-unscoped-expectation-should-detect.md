@@ -11,7 +11,7 @@ diff --git a/resources/views/articles/show.blade.php b/resources/views/articles/
 index 1111111..2222222 100644
 --- a/resources/views/articles/show.blade.php
 +++ b/resources/views/articles/show.blade.php
-@@ -22,7 +22,7 @@
+@@ -22,3 +22,3 @@
    @foreach ($article->externalLinks as $link)
 -    <a href="{{ $link->url }}" target="_blank">{{ $link->title }}</a>
 +    <a href="{{ $link->url }}" target="_blank" rel="nofollow noopener">{{ $link->title }}</a>
@@ -20,7 +20,7 @@ diff --git a/tests/Feature/ArticleExternalLinkTest.php b/tests/Feature/ArticleEx
 index 3333333..4444444 100644
 --- a/tests/Feature/ArticleExternalLinkTest.php
 +++ b/tests/Feature/ArticleExternalLinkTest.php
-@@ -12,4 +12,13 @@ class ArticleExternalLinkTest extends TestCase
+@@ -12,2 +12,11 @@ class ArticleExternalLinkTest extends TestCase
      }
 +
 +    public function test_external_links_are_nofollow(): void

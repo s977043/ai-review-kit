@@ -21,7 +21,7 @@ Checklist groups. The Pre-execution Gate is satisfied: the path matches
 diff --git a/openapi/orders-openapi.yaml b/openapi/orders-openapi.yaml
 --- a/openapi/orders-openapi.yaml
 +++ b/openapi/orders-openapi.yaml
-@@ -1,6 +1,6 @@
+@@ -1,7 +1,7 @@
  openapi: 3.0.3
  info:
    title: Orders API
@@ -30,7 +30,7 @@ diff --git a/openapi/orders-openapi.yaml b/openapi/orders-openapi.yaml
  paths:
    /orders:
      post:
-@@ -12,18 +12,18 @@ components:
+@@ -12,19 +12,20 @@ components:
      OrderCreate:
        type: object
        required:
