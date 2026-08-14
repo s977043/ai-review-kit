@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.78.0](https://github.com/s977043/river-review/compare/v1.77.0...v1.78.0) (2026-08-14)
+
+
+### Features
+
+* **skills:** fixture の diff 構造を検証するゲートを追加する ([#1854](https://github.com/s977043/river-review/issues/1854)) ([cac1916](https://github.com/s977043/river-review/commit/cac191604dec40de34c7df0158ac307cf4d6f61a))
+
 ## [1.77.0](https://github.com/s977043/river-review/compare/v1.76.2...v1.77.0) (2026-08-13)
 
 
