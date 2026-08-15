@@ -40426,108 +40426,24 @@ function preprocess(fn, schema) {
 
 /***/ }),
 
-/***/ 1073:
+/***/ 2821:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
 // EXPORTS
 __nccwpck_require__.d(__webpack_exports__, {
   buildExecutionPlan: () => (/* binding */ buildExecutionPlan),
-  Ay: () => (/* binding */ rankByModelHint),
-  P0: () => (/* reexport */ summarizeSkill)
+  Ay: () => (/* binding */ rankByModelHint)
 });
 
-// UNUSED EXPORTS: computeContextLift, deriveExecutionOrder, matchesPhase, selectSkills
+// UNUSED EXPORTS: computeContextLift, deriveExecutionOrder, matchesPhase, selectSkills, summarizeSkill
 
 // EXTERNAL MODULE: ./node_modules/minimatch/dist/esm/index.js + 7 modules
 var esm = __nccwpck_require__(9519);
 // EXTERNAL MODULE: ./runners/core/skill-loader.mjs + 1 modules
 var skill_loader = __nccwpck_require__(8478);
-;// CONCATENATED MODULE: ./src/lib/skill-planner.mjs
-
-
-/**
- * Summarize a skill's metadata for LLM consumption.
- * @param {import('../../runners/core/review-runner.mjs').SkillDefinition|import('../../runners/core/review-runner.mjs').SkillMetadata} skill
- */
-function summarizeSkill(skill) {
-  const meta = skill?.metadata ?? skill;
-  return {
-    id: meta.id,
-    name: meta.name,
-    description: meta.description,
-    phase: meta.phase,
-    applyTo: meta.applyTo ?? [],
-    inputContext: meta.inputContext ?? [],
-    outputKind: meta.outputKind ?? ['findings'],
-    modelHint: meta.modelHint ?? null,
-    dependencies: meta.dependencies ?? [],
-    tags: meta.tags ?? [],
-    severity: meta.severity ?? null,
-  };
-}
-
-/**
- * Plan skills using an LLM (or provided planner function). Falls back to deterministic ordering on error.
- * @param {Object} options
- * @param {Array} options.skills - candidate skills (already filtered)
- * @param {Object} options.context - review context (e.g., changedFiles/diff summary/prompt)
- * @param {Function} [options.llmPlan] - async function receiving {skills, context}, returning [{id, priority, reason}]
- * @param {boolean} [options.appendRemaining=true] - whether to append unreferenced skills in deterministic order
- * @returns {Promise<{planned: Array, reasons: Array, fallback: boolean}>}
- */
-async function planSkills({ skills, context, llmPlan, appendRemaining = true }) {
-  const summaries = skills.map(summarizeSkill);
-
-  if (!llmPlan) {
-    return {
-      planned: rankByModelHint(skills),
-      reasons: [],
-      fallback: false,
-    };
-  }
-
-  try {
-    const plan = await llmPlan({ skills: summaries, context });
-    if (!Array.isArray(plan)) {
-      throw new Error('planner returned non-array response');
-    }
-    const order = plan;
-    const byId = new Map(summaries.map((summary, idx) => [summary.id, skills[idx]]));
-    const planned = [];
-    const reasons = [];
-    let matchedCount = 0;
-
-    for (const entry of order) {
-      if (!entry?.id) continue;
-      const candidate = byId.get(entry.id);
-      if (candidate) {
-        planned.push(candidate);
-        matchedCount += 1;
-        if (entry.reason) reasons.push({ id: entry.id, reason: entry.reason });
-        byId.delete(entry.id);
-      }
-    }
-
-    if (appendRemaining) {
-      // append any not referenced by LLM in deterministic order
-      const remaining = rankByModelHint(Array.from(byId.values()));
-      planned.push(...remaining);
-    } else if (matchedCount === 0 && order.length > 0) {
-      // In prune mode, a non-empty plan that matches nothing is almost certainly invalid output.
-      throw new Error('planner returned no known skill ids');
-    }
-
-    return { planned, reasons, fallback: false };
-  } catch (err) {
-    return {
-      planned: rankByModelHint(skills),
-      reasons: [{ id: 'fallback', reason: `planner error: ${err.message}` }],
-      fallback: true,
-    };
-  }
-}
-
+// EXTERNAL MODULE: ./src/lib/skill-planner.mjs
+var skill_planner = __nccwpck_require__(5433);
 ;// CONCATENATED MODULE: ./src/lib/impact-scope.mjs
 function ensureArray(value) {
   if (!value) return [];
@@ -41212,7 +41128,7 @@ async function buildExecutionPlan(options) {
       impactTags,
       fileTypes,
     };
-    const { planned, reasons, fallback } = await planSkills({
+    const { planned, reasons, fallback } = await (0,skill_planner/* planSkills */.a)({
       skills: selection.selected,
       context,
       llmPlan: planner.plan ?? planner,
@@ -48508,51 +48424,68 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 
 /***/ }),
 
-/***/ 2022:
+/***/ 7786:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
-/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   G1: () => (/* binding */ generateReview)
-/* harmony export */ });
-/* unused harmony exports buildPrompt, parseLineComments */
-/* harmony import */ var _config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3833);
-/* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_11__ = __nccwpck_require__(9946);
-/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1535);
-/* harmony import */ var _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(4807);
-/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(1073);
-/* harmony import */ var _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(2294);
-/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_10__ = __nccwpck_require__(9746);
-/* harmony import */ var _review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__ = __nccwpck_require__(8069);
-/* harmony import */ var _repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__ = __nccwpck_require__(5597);
-/* harmony import */ var _secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__ = __nccwpck_require__(12);
-/* harmony import */ var _llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__ = __nccwpck_require__(7303);
-/* harmony import */ var _diff_processor_mjs__WEBPACK_IMPORTED_MODULE_9__ = __nccwpck_require__(861);
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  G1: () => (/* binding */ generateReview)
+});
+
+// UNUSED EXPORTS: buildPrompt, computeBackoffMs, isRetryableNetworkError, isRetryableStatus, parseLineComments
+
+// EXTERNAL MODULE: ./src/config/loader.mjs + 1 modules
+var loader = __nccwpck_require__(3833);
+// EXTERNAL MODULE: ./src/lib/scoring/breakdown.mjs
+var breakdown = __nccwpck_require__(9946);
+// EXTERNAL MODULE: ./src/lib/finding-factory.mjs
+var finding_factory = __nccwpck_require__(1535);
+// EXTERNAL MODULE: ./src/config/default.mjs
+var config_default = __nccwpck_require__(4807);
+// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
+var review_runner = __nccwpck_require__(2821);
+// EXTERNAL MODULE: ./src/lib/heuristic-review.mjs
+var heuristic_review = __nccwpck_require__(2294);
+// EXTERNAL MODULE: ./src/lib/utils.mjs
+var utils = __nccwpck_require__(9746);
+// EXTERNAL MODULE: ./src/lib/review-plan-generator.mjs
+var review_plan_generator = __nccwpck_require__(8069);
+// EXTERNAL MODULE: ./src/lib/repo-context.mjs + 2 modules
+var repo_context = __nccwpck_require__(5597);
+// EXTERNAL MODULE: ./src/lib/secret-redactor.mjs
+var secret_redactor = __nccwpck_require__(12);
+// EXTERNAL MODULE: ./src/lib/llm-pipeline.mjs
+var llm_pipeline = __nccwpck_require__(7303);
+// EXTERNAL MODULE: ./src/lib/diff-processor.mjs
+var diff_processor = __nccwpck_require__(861);
+// EXTERNAL MODULE: ./src/lib/skill-planner.mjs
+var skill_planner = __nccwpck_require__(5433);
+;// CONCATENATED MODULE: ./src/prompt/sections.mjs
+// Review prompt sections (#1859 の前段) — レビュー用プロンプトの「節」を組み立てる純関数群。
+//
+// 背景:
+//   これらはすべて review-engine.mjs の module-private 関数だった。ADR-006 の
+//   Prompt Compiler は同じ節を別の順序・別の system/user 配分で描画するため、
+//   節の生成規則を review-engine 側と compiler 側の 2 箇所へ複製することになる。
+//   レビュー契約の文面が二重管理になるのは CLAUDE.md「Import the SSoT, never
+//   re-derive it」が禁じる形なので、生成規則をこのモジュールへ集約し、双方が
+//   import する。
+//
+// このモジュールの契約:
+//   - 出力は buildPrompt が生成していた文字列と **バイト単位で同一**である。
+//     tests/prompt-sections.test.mjs が golden で pin している。
+//   - 副作用を持たない。I/O もプロセス状態の参照もしない。
+//   - レビュー判断（severity の意味、GO/NO-GO、スキル選択）はここに置かない。
+//     ここが持つのは「決まった判断をどう文字列にするか」だけである。
+//
+// 切り出していないもの:
+//   sanitizeSkillName / resolveOpenAIConfig は prompt の節ではなく、それぞれ
+//   fallback コメント生成と provider 設定解決に属するため review-engine に残す。
 
 
-
-
-
-
-
-
-
-
-
-
-
-const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
-const MAX_PROMPT_CHARS = 12000;
-const MAX_PROMPT_PREVIEW_CHARS = 2000;
-const NO_ISSUES_REGEX = /^NO_ISSUES/i;
-const LINE_COMMENT_REGEX = /^(.+?):(\d+):\s*(.+)$/;
-
-/**
- * スキル名のサニタイズ: Markdown インジェクション対策
- */
-function sanitizeSkillName(name) {
-  if (!name) return '';
-  return String(name).replace(/[\[\]`*_{}()#+\-.!|<>\n]/g, '');
-}
+/** PR 本文をプロンプトへ載せるときの上限。超過分は truncate する。 */
+const MAX_PR_BODY_CHARS = 4000;
 
 function buildSystemMessage(language) {
   return language === 'en'
@@ -48595,25 +48528,9 @@ function buildAdditionalSection(instructions, language) {
   return `\n${header}\n${formatNote}\n${body}\n`;
 }
 
-function resolveOpenAIConfig(options = {}, config = _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s) {
-  const provider = config.model?.provider ?? 'openai';
-  const modelName = options.model || ENV_DEFAULT_MODEL || config.model?.modelName;
-  return {
-    provider,
-    apiKey: options.apiKey || process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-    model: modelName,
-    endpoint:
-      options.endpoint ||
-      process.env.RIVER_OPENAI_BASE_URL ||
-      'https://api.openai.com/v1/chat/completions',
-    temperature: config.model?.temperature ?? 0,
-    maxTokens: config.model?.maxTokens ?? 600,
-  };
-}
-
 function buildSkillSummary(plan) {
   if (!plan?.selected?.length) return 'No skills selected; provide general review notes.';
-  const summaries = plan.selected.map((skill) => (0,_runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_3__/* .summarizeSkill */ .P0)(skill));
+  const summaries = plan.selected.map((skill) => (0,skill_planner/* summarizeSkill */.P)(skill));
   const top = summaries.slice(0, 6);
   const body = top
     .map(
@@ -48635,8 +48552,6 @@ function buildProjectRulesSection(rulesText) {
   if (!rulesText) return '';
   return `\n### Project-specific review rules\n\n以下は、このリポジトリ専用のレビューガイドラインです。必ず考慮してください。\n\n---\n${rulesText}\n---\n`;
 }
-
-const MAX_PR_BODY_CHARS = 4000;
 
 function buildPrDescriptionSection(prBody) {
   if (typeof prBody !== 'string' || !prBody.trim()) return '';
@@ -48695,40 +48610,27 @@ function buildRiskAssessmentSection(riskAssessment) {
   return lines.join('\n');
 }
 
-function buildPrompt({
-  diffText,
-  diffFiles,
-  plan,
-  phase,
-  projectRules,
-  riskAssessment,
-  memoryContext,
-  relatedADRs,
-  reviewMode,
-  repoContext,
-  prBody,
-  maxChars = MAX_PROMPT_CHARS,
-  config = _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s,
+/**
+ * findings の出力契約そのもの。severity 語彙・証跡の必須項目・件数上限・
+ * ID 捏造の禁止が、この 1 箇所に集まっている。
+ *
+ * Prompt Compiler の renderer はこの文字列を **そのまま** 使い、置き場所
+ * （system へ寄せるか user に残すか）だけを変える。文面を profile 側で
+ * 書き換えることは ADR-006 の不変条件が禁じている。
+ *
+ * @param {object} params
+ * @param {string} params.language      'ja' | 'en'
+ * @param {string} params.severity      'strict' | 'normal' | 'relaxed'
+ * @param {object} params.depthConfig   getReviewDepthConfig() の戻り値
+ * @param {string[]=} params.additionalInstructions
+ */
+function buildFindingContractSection({
+  language,
+  severity,
+  depthConfig,
+  additionalInstructions,
 }) {
-  const effectiveConfig = (0,_config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .mergeConfig */ .R2)(_config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s, config ?? {});
-  const reviewConfig = effectiveConfig.review ?? _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s.review;
-  const language = reviewConfig.language ?? _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s.review.language;
-  const severity = reviewConfig.severity ?? _config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s.review.severity;
-  const wantWalkthrough = reviewConfig.walkthrough ?? false;
-  const wantHandoff = reviewConfig.agentHandoff ?? false;
-  const truncated = diffText.length > maxChars;
-  const diffBody = truncated ? `${diffText.slice(0, maxChars)}\n...[truncated]` : diffText;
-  const depthConfig = (0,_review_plan_generator_mjs__WEBPACK_IMPORTED_MODULE_5__/* .getReviewDepthConfig */ .i3)(reviewMode ?? 'medium');
-  const prompt = `You are River Review, an AI code review agent.
-Phase: ${phase}
-
-Changed files:
-${buildFileSummary(diffFiles)}
-
-Relevant skills:
-${buildSkillSummary(plan)}
-
-${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${(0,_repo_context_mjs__WEBPACK_IMPORTED_MODULE_6__/* .buildRepoContextSection */ .lQ)(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}Review the unified git diff below and produce concise findings.
+  return `Review the unified git diff below and produce concise findings.
 ${buildLanguageInstruction(language)}
 - Output each finding on its own line using the format "<file>:<line>: <message>".
 - In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
@@ -48746,7 +48648,98 @@ ${buildLanguageInstruction(language)}
 - Keep messages brief (<=200 characters).
 - ${depthConfig.focusHint}
 ${buildSeverityInstruction(severity, language)}
-${buildAdditionalSection(reviewConfig.additionalInstructions, language)}
+${buildAdditionalSection(additionalInstructions, language)}`;
+}
+
+;// CONCATENATED MODULE: ./src/lib/review-engine.mjs
+
+
+
+
+
+
+
+
+
+
+
+
+// プロンプトの節生成は src/prompt/sections.mjs が SSoT。ADR-006 の Prompt
+// Compiler が同じ節を別配置で描画するため、文面の二重管理を避けて双方が
+// import する（生成結果はバイト単位で従来と同一。tests/prompt-sections.test.mjs）。
+
+
+const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
+const MAX_PROMPT_CHARS = 12000;
+const MAX_PROMPT_PREVIEW_CHARS = 2000;
+const NO_ISSUES_REGEX = /^NO_ISSUES/i;
+const LINE_COMMENT_REGEX = /^(.+?):(\d+):\s*(.+)$/;
+
+/**
+ * スキル名のサニタイズ: Markdown インジェクション対策
+ */
+function sanitizeSkillName(name) {
+  if (!name) return '';
+  return String(name).replace(/[\[\]`*_{}()#+\-.!|<>\n]/g, '');
+}
+
+function resolveOpenAIConfig(options = {}, config = config_default/* defaultConfig */.s) {
+  const provider = config.model?.provider ?? 'openai';
+  const modelName = options.model || ENV_DEFAULT_MODEL || config.model?.modelName;
+  return {
+    provider,
+    apiKey: options.apiKey || process.env.RIVER_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+    model: modelName,
+    endpoint:
+      options.endpoint ||
+      process.env.RIVER_OPENAI_BASE_URL ||
+      'https://api.openai.com/v1/chat/completions',
+    temperature: config.model?.temperature ?? 0,
+    maxTokens: config.model?.maxTokens ?? 600,
+  };
+}
+
+function buildPrompt({
+  diffText,
+  diffFiles,
+  plan,
+  phase,
+  projectRules,
+  riskAssessment,
+  memoryContext,
+  relatedADRs,
+  reviewMode,
+  repoContext,
+  prBody,
+  maxChars = MAX_PROMPT_CHARS,
+  config = config_default/* defaultConfig */.s,
+}) {
+  const effectiveConfig = (0,loader/* mergeConfig */.R2)(config_default/* defaultConfig */.s, config ?? {});
+  const reviewConfig = effectiveConfig.review ?? config_default/* defaultConfig */.s.review;
+  const language = reviewConfig.language ?? config_default/* defaultConfig */.s.review.language;
+  const severity = reviewConfig.severity ?? config_default/* defaultConfig */.s.review.severity;
+  const wantWalkthrough = reviewConfig.walkthrough ?? false;
+  const wantHandoff = reviewConfig.agentHandoff ?? false;
+  const truncated = diffText.length > maxChars;
+  const diffBody = truncated ? `${diffText.slice(0, maxChars)}\n...[truncated]` : diffText;
+  const depthConfig = (0,review_plan_generator/* getReviewDepthConfig */.i3)(reviewMode ?? 'medium');
+  const prompt = `You are River Review, an AI code review agent.
+Phase: ${phase}
+
+Changed files:
+${buildFileSummary(diffFiles)}
+
+Relevant skills:
+${buildSkillSummary(plan)}
+
+${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${(0,repo_context/* buildRepoContextSection */.lQ)(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}${buildFindingContractSection(
+    {
+      language,
+      severity,
+      depthConfig,
+      additionalInstructions: reviewConfig.additionalInstructions,
+    }
+  )}
 Diff:
 ${diffBody}`;
   return { prompt, truncated, language, severity };
@@ -48781,7 +48774,7 @@ function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
   // ヒューリスティック対応スキルは除外（ヒューリスティックで処理済み）
   const skills = allSkills.filter((skill) => {
     const skillId = skill.metadata?.id ?? skill.id;
-    return !_heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .HEURISTIC_SKILL_IDS */ .y2.includes(skillId);
+    return !heuristic_review/* HEURISTIC_SKILL_IDS */.y2.includes(skillId);
   });
 
   const firstFile = diff.files?.find((f) => f?.path && f.path !== '/dev/null') ?? null;
@@ -48790,7 +48783,7 @@ function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
       {
         file: '(no-files)',
         line: 1,
-        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
+        message: (0,finding_factory/* formatFindingMessage */.yv)({
           finding: 'レビュー対象ファイルが特定できない',
           evidence: '差分ファイルが空',
           impact: 'レビューの自動化ができない',
@@ -48818,7 +48811,7 @@ function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
       {
         file: firstFile.path,
         line,
-        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
+        message: (0,finding_factory/* formatFindingMessage */.yv)({
           finding: 'マッチするスキルがなく自動指摘を生成できなかった',
           evidence: evidenceBase,
           impact: '重要なリスクを見落とす可能性がある',
@@ -48839,7 +48832,7 @@ function buildFallbackComments(diff, plan, { llmSkipReason = null } = {}) {
       file: firstFile.path,
       line,
       skillId,
-      message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
+      message: (0,finding_factory/* formatFindingMessage */.yv)({
         finding: `スキル「${skillName}」の観点で自動指摘を生成できなかった`,
         evidence: evidenceBase,
         impact: 'このスキルが検出する問題を見落とす可能性がある',
@@ -48856,12 +48849,12 @@ function normalizeHeuristicComments(rawComments) {
     // kind → プレゼンテーションは heuristic-review.mjs の単一レジストリ
     // (HEURISTIC_KIND_PRESENTATIONS) から導出する。detector の追加はレジストリ
     // 1 箇所で完結し、ここに case を足す必要はない。
-    const preset = _heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .HEURISTIC_KIND_PRESENTATIONS */ .EF.get(c.kind);
+    const preset = heuristic_review/* HEURISTIC_KIND_PRESENTATIONS */.EF.get(c.kind);
     if (!preset) {
       return {
         file: c.file,
         line: c.line,
-        message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)({
+        message: (0,finding_factory/* formatFindingMessage */.yv)({
           finding: `想定外のヒューリスティック（kind=${String(c.kind ?? 'unknown')}）`,
           evidence: 'ヒューリスティック kind が未知',
           impact: 'レビュー結果が不安定になる可能性がある',
@@ -48875,7 +48868,7 @@ function normalizeHeuristicComments(rawComments) {
       file: c.file,
       line: c.line,
       skillId: c.skillId,
-      message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .formatFindingMessage */ .yv)(preset),
+      message: (0,finding_factory/* formatFindingMessage */.yv)(preset),
     };
   });
 }
@@ -48912,12 +48905,12 @@ async function generateReview({
   maxPromptChars = MAX_PROMPT_CHARS,
   config,
 }) {
-  const effectiveConfig = (0,_config_loader_mjs__WEBPACK_IMPORTED_MODULE_0__/* .mergeConfig */ .R2)(_config_default_mjs__WEBPACK_IMPORTED_MODULE_2__/* .defaultConfig */ .s, config ?? {});
+  const effectiveConfig = (0,loader/* mergeConfig */.R2)(config_default/* defaultConfig */.s, config ?? {});
   // LLM-facing view: strip non-reviewable build artifacts (dist bundles, source
   // maps) from BOTH the diff body and the "Changed files" summary. `diff` itself
   // stays raw so heuristics/fallback below keep seeing every changed file
   // (#1543/#1547).
-  const llmDiff = (0,_diff_processor_mjs__WEBPACK_IMPORTED_MODULE_9__/* .buildLlmDiffView */ .wT)(diff);
+  const llmDiff = (0,diff_processor/* buildLlmDiffView */.wT)(diff);
   const promptInfo = buildPrompt({
     diffText: llmDiff.diffText,
     diffFiles: llmDiff.files,
@@ -48943,7 +48936,7 @@ async function generateReview({
   // otherwise leave process memory (debug.promptPreview, returned
   // `prompt`, downstream artifact writes). The LLM call still uses the
   // original `promptInfo.prompt` because it must.
-  const safePrompt = (0,_secret_redactor_mjs__WEBPACK_IMPORTED_MODULE_7__/* .redactText */ .Rd)(promptInfo.prompt, {
+  const safePrompt = (0,secret_redactor/* redactText */.Rd)(promptInfo.prompt, {
     allowlist: effectiveConfig.security?.redact?.allowlist ?? [],
     ...(effectiveConfig.security?.redact?.entropyThreshold != null
       ? { entropyThreshold: effectiveConfig.security.redact.entropyThreshold }
@@ -48976,7 +48969,7 @@ async function generateReview({
 
   const skipReason = dryRun
     ? 'dry-run enabled'
-    : (0,_utils_mjs__WEBPACK_IMPORTED_MODULE_10__/* .isOfflineMode */ .hN)()
+    : (0,utils/* isOfflineMode */.hN)()
       ? 'offline (rules-only) mode enabled'
       : openAIConfig.provider !== 'openai'
         ? `provider ${openAIConfig.provider} is not supported yet`
@@ -48986,7 +48979,7 @@ async function generateReview({
 
   if (!skipReason) {
     try {
-      const output = await (0,_llm_pipeline_mjs__WEBPACK_IMPORTED_MODULE_8__/* .callChatCompletion */ .pQ)({
+      const output = await (0,llm_pipeline/* callChatCompletion */.pQ)({
         prompt: promptInfo.prompt,
         apiKey: openAIConfig.apiKey,
         model: openAIConfig.model,
@@ -49009,7 +49002,7 @@ async function generateReview({
           comments = redacted;
           debug.llmUsed = true;
         } else {
-          const checks = redacted.map((c) => (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFindingMessage */ .xv)(c.message));
+          const checks = redacted.map((c) => (0,finding_factory/* validateFindingMessage */.xv)(c.message));
           // T64 follow-up (#1529 E2E): a single truncated/malformed finding
           // (e.g. maxTokens cutoff dropping the trailing Severity:/Confidence:
           // labels) used to invalidate the whole batch and discard
@@ -49054,7 +49047,7 @@ async function generateReview({
   }
 
   if (!comments.length) {
-    const heuristic = (0,_heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .buildHeuristicComments */ .zq)({ diff, plan });
+    const heuristic = (0,heuristic_review/* buildHeuristicComments */.zq)({ diff, plan });
     debug.heuristicsUsed = true;
     if (heuristic.length) {
       comments = normalizeHeuristicComments(heuristic);
@@ -49077,7 +49070,7 @@ async function generateReview({
   const formatChecks = comments.map((c) => ({
     file: c.file,
     line: c.line,
-    ...(0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFindingMessage */ .xv)(c.message),
+    ...(0,finding_factory/* validateFindingMessage */.xv)(c.message),
   }));
   const invalidCount = formatChecks.filter((c) => !c.ok).length;
   debug.findingFormat = invalidCount
@@ -49169,7 +49162,7 @@ async function generateReview({
   // already heuristic is not reprocessed.
   if (verified.length === 0 && verifierResults.length > 0 && !debug.heuristicsUsed) {
     debug.verifierAllRejected = true;
-    const heuristic = (0,_heuristic_review_mjs__WEBPACK_IMPORTED_MODULE_4__/* .buildHeuristicComments */ .zq)({ diff, plan });
+    const heuristic = (0,heuristic_review/* buildHeuristicComments */.zq)({ diff, plan });
     if (heuristic.length) {
       comments = normalizeHeuristicComments(heuristic);
       debug.heuristicsUsed = true;
@@ -49214,7 +49207,7 @@ async function generateReview({
   const keptComments = [];
   const suppressedGeneratedPathComments = [];
   for (const c of comments) {
-    if ((0,_diff_processor_mjs__WEBPACK_IMPORTED_MODULE_9__/* .isGeneratedArtifactPath */ .vS)(c.file)) {
+    if ((0,diff_processor/* isGeneratedArtifactPath */.vS)(c.file)) {
       suppressedGeneratedPathComments.push(c);
     } else {
       keptComments.push(c);
@@ -49230,8 +49223,8 @@ async function generateReview({
 
   // Build structured findings from verified comments
   const findings = comments.map((c, i) => {
-    const parsed = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .parseFindingMessage */ .UB)(c.message);
-    const severity = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeSeverity */ .lv)(parsed.severity);
+    const parsed = (0,finding_factory/* parseFindingMessage */.UB)(c.message);
+    const severity = (0,finding_factory/* normalizeSeverity */.lv)(parsed.severity);
     // Confidence is guaranteed present+valid here (validateFindingMessage gates
     // it upstream), so the 'medium' branch is currently unreachable; it is kept
     // as a conservative default in case an unverified path ever reaches this.
@@ -49254,7 +49247,7 @@ async function generateReview({
       suggestion: parsed.suggestion || null,
       // #1644 Phase 1: verifier verdict (machine determination, falling back to
       // the LLM self-report and then to the fail-safe default `in-diff`).
-      scope: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeScope */ .kn)(c.scope ?? parsed.scope),
+      scope: (0,finding_factory/* normalizeScope */.kn)(c.scope ?? parsed.scope),
       // #1666 (#1545 Phase 2): traceability refs, self-reported by the filling
       // skills. Null when the reviewer supplied no label — the artifact IDs are
       // never invented here, so a missing artifact stays missing.
@@ -49264,12 +49257,12 @@ async function generateReview({
   });
 
   findings.sort((a, b) => {
-    const bA = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_11__/* .computeFindingBreakdown */ ._)(a);
-    const bB = (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_11__/* .computeFindingBreakdown */ ._)(b);
+    const bA = (0,breakdown/* computeFindingBreakdown */._)(a);
+    const bB = (0,breakdown/* computeFindingBreakdown */._)(b);
     return bB.composite - bA.composite;
   });
 
-  const classified = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__/* .classifyFindings */ .ZY)(findings, { reviewMode: reviewMode ?? 'medium' });
+  const classified = (0,finding_factory/* classifyFindings */.ZY)(findings, { reviewMode: reviewMode ?? 'medium' });
 
   return {
     comments,
@@ -50516,6 +50509,101 @@ function shouldExcludeForContext(relPath, opts = {}) {
     if ((0,minimatch__WEBPACK_IMPORTED_MODULE_0__/* .minimatch */ .xF)(relPath, g, matchOpts)) return true;
   }
   return false;
+}
+
+
+/***/ }),
+
+/***/ 5433:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   P: () => (/* binding */ summarizeSkill),
+/* harmony export */   a: () => (/* binding */ planSkills)
+/* harmony export */ });
+/* harmony import */ var _runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(2821);
+
+
+/**
+ * Summarize a skill's metadata for LLM consumption.
+ * @param {import('../../runners/core/review-runner.mjs').SkillDefinition|import('../../runners/core/review-runner.mjs').SkillMetadata} skill
+ */
+function summarizeSkill(skill) {
+  const meta = skill?.metadata ?? skill;
+  return {
+    id: meta.id,
+    name: meta.name,
+    description: meta.description,
+    phase: meta.phase,
+    applyTo: meta.applyTo ?? [],
+    inputContext: meta.inputContext ?? [],
+    outputKind: meta.outputKind ?? ['findings'],
+    modelHint: meta.modelHint ?? null,
+    dependencies: meta.dependencies ?? [],
+    tags: meta.tags ?? [],
+    severity: meta.severity ?? null,
+  };
+}
+
+/**
+ * Plan skills using an LLM (or provided planner function). Falls back to deterministic ordering on error.
+ * @param {Object} options
+ * @param {Array} options.skills - candidate skills (already filtered)
+ * @param {Object} options.context - review context (e.g., changedFiles/diff summary/prompt)
+ * @param {Function} [options.llmPlan] - async function receiving {skills, context}, returning [{id, priority, reason}]
+ * @param {boolean} [options.appendRemaining=true] - whether to append unreferenced skills in deterministic order
+ * @returns {Promise<{planned: Array, reasons: Array, fallback: boolean}>}
+ */
+async function planSkills({ skills, context, llmPlan, appendRemaining = true }) {
+  const summaries = skills.map(summarizeSkill);
+
+  if (!llmPlan) {
+    return {
+      planned: (0,_runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_0__/* .rankByModelHint */ .Ay)(skills),
+      reasons: [],
+      fallback: false,
+    };
+  }
+
+  try {
+    const plan = await llmPlan({ skills: summaries, context });
+    if (!Array.isArray(plan)) {
+      throw new Error('planner returned non-array response');
+    }
+    const order = plan;
+    const byId = new Map(summaries.map((summary, idx) => [summary.id, skills[idx]]));
+    const planned = [];
+    const reasons = [];
+    let matchedCount = 0;
+
+    for (const entry of order) {
+      if (!entry?.id) continue;
+      const candidate = byId.get(entry.id);
+      if (candidate) {
+        planned.push(candidate);
+        matchedCount += 1;
+        if (entry.reason) reasons.push({ id: entry.id, reason: entry.reason });
+        byId.delete(entry.id);
+      }
+    }
+
+    if (appendRemaining) {
+      // append any not referenced by LLM in deterministic order
+      const remaining = (0,_runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_0__/* .rankByModelHint */ .Ay)(Array.from(byId.values()));
+      planned.push(...remaining);
+    } else if (matchedCount === 0 && order.length > 0) {
+      // In prune mode, a non-empty plan that matches nothing is almost certainly invalid output.
+      throw new Error('planner returned no known skill ids');
+    }
+
+    return { planned, reasons, fallback: false };
+  } catch (err) {
+    return {
+      planned: (0,_runners_core_review_runner_mjs__WEBPACK_IMPORTED_MODULE_0__/* .rankByModelHint */ .Ay)(skills),
+      reasons: [{ id: 'fallback', reason: `planner error: ${err.message}` }],
+      fallback: true,
+    };
+  }
 }
 
 
@@ -66893,7 +66981,7 @@ async function runSkillsCommand(parsed, targetPath) {
       console.error('Error: `river skills resolve` requires at least one --path <file>.');
       return 1;
     }
-    const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 1073));
+    const { buildExecutionPlan } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 2821));
     const plan = await buildExecutionPlan({
       phase: parsed.phase,
       changedFiles: paths,
@@ -67429,8 +67517,8 @@ async function resolveSelectionSkillIds(
   });
 }
 
-// EXTERNAL MODULE: ./src/lib/review-engine.mjs
-var review_engine = __nccwpck_require__(2022);
+// EXTERNAL MODULE: ./src/lib/review-engine.mjs + 1 modules
+var review_engine = __nccwpck_require__(7786);
 ;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
 
 
@@ -68464,8 +68552,8 @@ function createOpenAIPlanner(options = {}) {
   };
 }
 
-// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 5 modules
-var review_runner = __nccwpck_require__(1073);
+// EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
+var review_runner = __nccwpck_require__(2821);
 // EXTERNAL MODULE: ./src/lib/riverbed-memory.mjs
 var riverbed_memory = __nccwpck_require__(4216);
 ;// CONCATENATED MODULE: ./src/lib/memory-context.mjs

@@ -21,6 +21,21 @@ import { buildRepoContextSection } from './repo-context.mjs';
 import { redactText } from './secret-redactor.mjs';
 import { callChatCompletion } from './llm-pipeline.mjs';
 import { buildLlmDiffView, isGeneratedArtifactPath } from './diff-processor.mjs';
+// プロンプトの節生成は src/prompt/sections.mjs が SSoT。ADR-006 の Prompt
+// Compiler が同じ節を別配置で描画するため、文面の二重管理を避けて双方が
+// import する（生成結果はバイト単位で従来と同一。tests/prompt-sections.test.mjs）。
+import {
+  buildADRContextSection,
+  buildFileSummary,
+  buildFindingContractSection,
+  buildHandoffSection,
+  buildPrDescriptionSection,
+  buildProjectRulesSection,
+  buildRiskAssessmentSection,
+  buildSkillSummary,
+  buildSystemMessage,
+  buildWalkthroughSection,
+} from '../prompt/sections.mjs';
 
 const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
 const MAX_PROMPT_CHARS = 12000;
@@ -34,47 +49,6 @@ const LINE_COMMENT_REGEX = /^(.+?):(\d+):\s*(.+)$/;
 function sanitizeSkillName(name) {
   if (!name) return '';
   return String(name).replace(/[\[\]`*_{}()#+\-.!|<>\n]/g, '');
-}
-
-function buildSystemMessage(language) {
-  return language === 'en'
-    ? 'You are River Review, an expert code review assistant. Respond in English. You excel at spotting risky changes and explaining them briefly.'
-    : 'You are River Review, an expert code review assistant. Respond in Japanese. You excel at spotting risky changes and explaining them briefly.';
-}
-
-function buildLanguageInstruction(language) {
-  return language === 'en'
-    ? '- Write the <message> in English.'
-    : '- <message>は日本語で記述すること。';
-}
-
-function buildSeverityInstruction(severity, language) {
-  const japanese = {
-    strict: '軽微な懸念も含めて網羅的に指摘する',
-    normal: '重要度と再現性のバランスを取り、主要なリスクを指摘する',
-    relaxed: '重大・致命的な問題に限定し、軽微な指摘は省く',
-  };
-  const english = {
-    strict: 'Capture even minor risks and style regressions',
-    normal: 'Balance breadth with impact; focus on notable risks',
-    relaxed: 'Limit findings to critical or high-impact issues; skip nits',
-  };
-  const map = language === 'en' ? english : japanese;
-  const label = language === 'en' ? 'Severity focus' : '厳格度';
-  return `- ${label} (${severity}): ${map[severity] ?? map.normal}`;
-}
-
-function buildAdditionalSection(instructions, language) {
-  if (!instructions?.length) return '';
-  const header = language === 'en' ? 'Additional instructions:' : '追加指示:';
-  // T64: additionalInstructions が単一行 "<file>:<line>: <message>" 形式と
-  // 競合し、LLM出力のパース失敗を招いていたため、適用範囲を明示する。
-  const formatNote =
-    language === 'en'
-      ? 'These additional instructions apply only to the content of each finding\'s <message>. Always keep the "<file>:<line>: <message>" line format above.'
-      : 'これらの追加指示は各 finding の <message> 内容にのみ適用してください。上記の「<file>:<line>: <message>」という行フォーマット自体は常に維持してください。';
-  const body = instructions.map((item) => `- ${item}`).join('\n');
-  return `\n${header}\n${formatNote}\n${body}\n`;
 }
 
 function resolveOpenAIConfig(options = {}, config = defaultConfig) {
@@ -91,90 +65,6 @@ function resolveOpenAIConfig(options = {}, config = defaultConfig) {
     temperature: config.model?.temperature ?? 0,
     maxTokens: config.model?.maxTokens ?? 600,
   };
-}
-
-function buildSkillSummary(plan) {
-  if (!plan?.selected?.length) return 'No skills selected; provide general review notes.';
-  const summaries = plan.selected.map((skill) => summarizeSkill(skill));
-  const top = summaries.slice(0, 6);
-  const body = top
-    .map(
-      (s) =>
-        `- ${s.id}: ${s.name} [phase=${s.phase}, severity=${s.severity ?? 'unknown'}, modelHint=${s.modelHint}]`
-    )
-    .join('\n');
-  const truncated =
-    summaries.length > top.length ? `\n...and ${summaries.length - top.length} more skills.` : '';
-  return `${body}${truncated}`;
-}
-
-function buildFileSummary(files = []) {
-  if (!files.length) return 'No files changed';
-  return files.map((file) => `- ${file.path} (hunks: ${file.hunks.length || 1})`).join('\n');
-}
-
-function buildProjectRulesSection(rulesText) {
-  if (!rulesText) return '';
-  return `\n### Project-specific review rules\n\n以下は、このリポジトリ専用のレビューガイドラインです。必ず考慮してください。\n\n---\n${rulesText}\n---\n`;
-}
-
-const MAX_PR_BODY_CHARS = 4000;
-
-function buildPrDescriptionSection(prBody) {
-  if (typeof prBody !== 'string' || !prBody.trim()) return '';
-  const body =
-    prBody.length > MAX_PR_BODY_CHARS
-      ? `${prBody.slice(0, MAX_PR_BODY_CHARS)}\n...[truncated]`
-      : prBody;
-  return `\n### PR Description\n\n以下はこの変更の PR 本文です。差分そのものに加えて、PR 本文がレビュー可能な状態かを確認してください。\n\n- Why（変更理由）と What（変更内容）が書かれているか\n- 本文の説明が差分と一致しているか（説明にあるが差分に無い／差分にあるが説明に無い）\n- 影響範囲が書かれているか\n- テスト方針・確認方法が書かれているか\n- 関連 Issue / 仕様 / 設計へのリンクがあるか\n\nPR 本文に関する指摘は、対象を \`PR-DESCRIPTION:0\` として出力してください。\n\n---\n${body}\n---\n`;
-}
-
-// Opt-in (review.walkthrough). Asks the model to prepend a per-file walkthrough
-// to its output so reviewers see what changed, the risk, and a reading order.
-function buildWalkthroughSection(enabled) {
-  if (!enabled) return '';
-  return `\n### File Walkthrough (output request)\n\nFindings の前に "## File Walkthrough" セクションを出力してください。変更ファイルごとに 1 行で:\n- 何がどう変わったか（要約）\n- 変更リスク（high/medium/low）\n- 読むべき順番（依存や影響の大きい順）\nを示してください。差分に無いファイルは含めないでください。\n`;
-}
-
-// Opt-in (review.agentHandoff). Asks the model to append provider-agnostic
-// fix instructions another AI agent can act on. Distinct from per-finding
-// `suggestion` (a human hint); this is an executable instruction set.
-function buildHandoffSection(enabled) {
-  if (!enabled) return '';
-  return `\n### Agent Handoff (output request)\n\nFindings の後に "## Agent Handoff" セクションを出力してください。blocking な指摘を別の AI エージェントが修正できるよう、特定のツール名・CLI 名を含めずに以下を記述してください:\n- 修正の目的\n- 対象ファイル\n- 制約（壊してはいけない挙動・後方互換）\n- 実装手順\n- テスト手順\n- 完了条件\n`;
-}
-
-function buildADRContextSection(relatedADRs) {
-  if (!relatedADRs?.length) return '';
-  const lines = ['\n### Related ADRs/Specs\n'];
-  for (const adr of relatedADRs.slice(0, 5)) {
-    lines.push(`- ${adr.title} (${adr.path}) — ${adr.matchReason}`);
-  }
-  lines.push('\nこれらの設計文書との整合性を考慮してレビューしてください。\n');
-  return lines.join('\n');
-}
-
-function sanitizePath(p) {
-  return String(p)
-    .replace(/[\n\r]/g, '')
-    .slice(0, 200);
-}
-
-function buildRiskAssessmentSection(riskAssessment) {
-  if (!riskAssessment) return '';
-  const { escalatedFiles, humanReviewFiles } = riskAssessment;
-  if (!escalatedFiles?.length && !humanReviewFiles?.length) return '';
-  const lines = ['\n### Risk Assessment\n'];
-  if (humanReviewFiles?.length) {
-    lines.push('以下のファイルは人間によるレビューが必須です:');
-    for (const f of humanReviewFiles) lines.push('- ' + sanitizePath(f) + ': require_human_review');
-  }
-  if (escalatedFiles?.length) {
-    lines.push('以下のファイルはエスカレーション対象です:');
-    for (const f of escalatedFiles) lines.push('- ' + sanitizePath(f) + ': escalate');
-  }
-  lines.push('これらのファイルには特に注意してレビューしてください。\n');
-  return lines.join('\n');
 }
 
 export function buildPrompt({
@@ -210,25 +100,14 @@ ${buildFileSummary(diffFiles)}
 Relevant skills:
 ${buildSkillSummary(plan)}
 
-${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${buildRepoContextSection(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}Review the unified git diff below and produce concise findings.
-${buildLanguageInstruction(language)}
-- Output each finding on its own line using the format "<file>:<line>: <message>".
-- In <message>, include short labels: "Finding:", "Evidence:", "Impact:", "Fix:", "Severity:", "Confidence:".
-- Every finding MUST carry "Severity:" and "Confidence:". It MUST also carry "Evidence:" (>=5 chars) and "Fix:" (>=10 chars) — findings without them are discarded during verification. "Finding:" and "Impact:" are recommended.
-- Use Severity: blocker|warning|nit and Confidence: high|medium|low.
-- Optionally add "Scope: in-diff" (the added lines introduce the problem) or "Scope: pre-existing" (the problem is in a changed file but outside the added lines). Verification re-derives scope from the diff and overrides this label when it can.
-- Optionally add "CriterionRefs: AC-4, TC-7" (acceptance-criterion or test-case identifiers) and/or "ArtifactRefs: plan.md#AC-4, todo.md#TASK-3" (artifact anchors) to link the finding back to the requirement it verifies. Separate values with a comma; a value must not contain spaces.
-- Use ONLY identifiers that appear verbatim in an artifact supplied above (plan / requirements / PR description). If no such artifact was supplied, or you are not certain of the exact identifier, omit the label entirely — never invent, guess, abbreviate, or renumber an ID.
-- Example finding line: src/app.ts:42: Finding: retry loop swallows errors Evidence: catch block at src/app.ts drops err Impact: failures are masked Fix: rethrow or log err with context Severity: warning Confidence: high
-- Focus on correctness, safety, and maintainability risks in the changed code.
-- Prefer commenting on changed lines; if a point depends on context not visible in the diff, set Confidence: low.
-- Before flagging a line, read the comments and docblocks adjacent to it in the diff, and never repeat a suggestion one of them already answers. Omitting a finding because a comment states the design intent is allowed ONLY for nits, style, and design-preference points whose concern that intent fully resolves.
-- Never omit a security, data-loss, or correctness risk because a comment calls it intentional: report it, cite that comment in <message>, and state the risk that remains. Lower the severity only when the stated intent genuinely mitigates part of the risk, and give that reason in <message>. A comment that contradicts the code it documents is itself a finding.
-- Limit to ${depthConfig.maxFindings} findings. If there are no issues worth mentioning, reply with "NO_ISSUES".
-- Keep messages brief (<=200 characters).
-- ${depthConfig.focusHint}
-${buildSeverityInstruction(severity, language)}
-${buildAdditionalSection(reviewConfig.additionalInstructions, language)}
+${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssessment)}${buildADRContextSection(relatedADRs)}${buildRepoContextSection(repoContext)}${buildPrDescriptionSection(prBody)}${buildWalkthroughSection(wantWalkthrough)}${buildHandoffSection(wantHandoff)}${buildFindingContractSection(
+    {
+      language,
+      severity,
+      depthConfig,
+      additionalInstructions: reviewConfig.additionalInstructions,
+    }
+  )}
 Diff:
 ${diffBody}`;
   return { prompt, truncated, language, severity };
