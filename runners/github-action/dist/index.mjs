@@ -42068,6 +42068,9 @@ const defaultConfig = Object.freeze({
     language: 'ja',
     severity: 'normal',
     additionalInstructions: [],
+    // ADR-006 / #1859: Prompt Compiler の既定は off。off のとき
+    // review-engine は compiled プロンプトを組まず、挙動は導入前と同一になる。
+    promptCompiler: { mode: 'off' },
   },
   exclude: {
     files: [],
@@ -42143,7 +42146,24 @@ const reviewerOrchestratorConfigSchema = schemas/* object */.Ik({
   progress: schemas/* boolean */.zM().optional(),
 });
 
+// --- ADR-006 / #1859: Prompt Compiler の実行モード ---
+//
+// `off` が既定であり、現行と完全に同一の挙動になる。`observe` は compiled
+// プロンプトを生成するが送信せず、計測値だけを debug へ残す。`active` は
+// compiled を送る想定だが #1859 では有効化しない（#1861 で配線する）。
+//
+// `shadow` という語を採らない理由は ADR-006 に記録がある。
+// src/lib/shadow-aggregate.mjs が「複数 Run の読み取り専用集約」の意味で
+// 既に使っており、二義になる。
+//
+// `.strict()` にしない。この節の他の schema と同じく未知キーは除去に留め、
+// 将来キーを足しても古い版で hard error にならないようにする。
+const promptCompilerConfigSchema = schemas/* object */.Ik({
+  mode: schemas/* enum */.k5(['off', 'observe', 'active']).optional(),
+});
+
 const reviewConfigSchema = schemas/* object */.Ik({
+  promptCompiler: promptCompilerConfigSchema.optional(),
   language: schemas/* enum */.k5(['ja', 'en']).optional(),
   severity: schemas/* enum */.k5(['strict', 'normal', 'relaxed']).optional(),
   additionalInstructions: schemas/* array */.YO(schemas/* string */.Yj().min(1)).optional(),
@@ -48424,7 +48444,7 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 
 /***/ }),
 
-/***/ 7786:
+/***/ 4405:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -48435,6 +48455,8 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // UNUSED EXPORTS: buildPrompt, computeBackoffMs, isRetryableNetworkError, isRetryableStatus, parseLineComments
 
+// EXTERNAL MODULE: external "node:crypto"
+var external_node_crypto_ = __nccwpck_require__(7598);
 // EXTERNAL MODULE: ./src/config/loader.mjs + 1 modules
 var loader = __nccwpck_require__(3833);
 // EXTERNAL MODULE: ./src/lib/scoring/breakdown.mjs
@@ -48651,7 +48673,342 @@ ${buildSeverityInstruction(severity, language)}
 ${buildAdditionalSection(additionalInstructions, language)}`;
 }
 
+;// CONCATENATED MODULE: ./src/prompt/renderers/shared.mjs
+// renderer 共通のブロック生成（ADR-006 / #1859）
+//
+// renderer が変えてよいのは「節の順序」と「system / user のどちらへ置くか」
+// だけである。節の文面は src/prompt/sections.mjs が唯一の出典であり、
+// ここはその戻り値を連結するだけで、文言を書き換えない。
+//
+// このモジュールを挟む理由は、generic と openai の 2 renderer が同じ
+// ブロックを別配置で使うためである。ブロック生成を各 renderer に複製すると、
+// 配置だけを変えたいのに文面が枝分かれし得る。
+
+
+
+
+/** モデルに与える役割宣言。language 以外の入力を取らない。 */
+function renderRoleMessage(ir) {
+  return buildSystemMessage(ir.outputContract.language);
+}
+
+/** レビュー対象の宣言。phase と変更ファイル、関連する観点の一覧。 */
+function renderSubjectBlock(ir) {
+  return `You are River Review, an AI code review agent.
+Phase: ${ir.subject.phase}
+
+Changed files:
+${buildFileSummary(ir.subject.changedFiles)}
+
+Relevant skills:
+${buildSkillSummary(ir.judgment.plan)}
+`;
+}
+
+/** 判断のために渡す証跡。順序は legacy の並びを保つ。 */
+function renderContextBlock(ir) {
+  const c = ir.context;
+  return [
+    buildProjectRulesSection(c.projectRules),
+    buildRiskAssessmentSection(c.riskAssessment),
+    buildADRContextSection(c.relatedADRs),
+    (0,repo_context/* buildRepoContextSection */.lQ)(c.repoContext),
+    buildPrDescriptionSection(c.prDescription),
+    buildWalkthroughSection(ir.constraints.walkthrough),
+    buildHandoffSection(ir.constraints.agentHandoff),
+  ].join('');
+}
+
+/**
+ * 出力契約。sections.mjs の戻り値をそのまま返す。
+ *
+ * depthConfig は IR の constraints から組む。ここで既定値を発明すると
+ * 判断側の値を renderer が決めることになるため、欠けていても補わない。
+ */
+function renderContractBlock(ir) {
+  return buildFindingContractSection({
+    language: ir.outputContract.language,
+    severity: ir.judgment.severity,
+    depthConfig: {
+      maxFindings: ir.constraints.maxFindings,
+      focusHint: ir.constraints.focusHint,
+    },
+    additionalInstructions: ir.constraints.additionalInstructions,
+  });
+}
+
+/** 差分本体。IR には既に上限適用後の本文が入っている。 */
+function renderDiffBlock(ir) {
+  return `Diff:
+${ir.context.diff}`;
+}
+
+;// CONCATENATED MODULE: ./src/prompt/renderers/generic.mjs
+// generic renderer（ADR-006 / #1859）
+//
+// 配置は legacy な組み立てと同じである。すべての節を user prompt に置き、
+// system message には役割宣言だけを置く。provider 固有の前提を持たない
+// モデルに対する既定の描画として使う。
+
+
+
+/**
+ * @param {object} ir buildReviewRequest の戻り値
+ * @returns {{systemMessage: string, prompt: string}}
+ */
+function renderGeneric(ir) {
+  const prompt = `${renderSubjectBlock(ir)}
+${renderContextBlock(ir)}${renderContractBlock(ir)}
+${renderDiffBlock(ir)}`;
+  return { systemMessage: renderRoleMessage(ir), prompt };
+}
+
+;// CONCATENATED MODULE: ./src/prompt/renderers/openai.mjs
+// OpenAI 互換 renderer（ADR-006 / #1859）
+//
+// generic との差は 1 点だけである。出力契約の節を system message 側へ寄せ、
+// user prompt には対象・文脈・差分を残す。文面は generic と同一であり、
+// 変わるのは置き場所だけである（tests/prompt-compiler.test.mjs が pin する）。
+
+
+
+/**
+ * @param {object} ir buildReviewRequest の戻り値
+ * @returns {{systemMessage: string, prompt: string}}
+ */
+function renderOpenAI(ir) {
+  const systemMessage = `${renderRoleMessage(ir)}
+
+${renderContractBlock(ir)}`;
+  const prompt = `${renderSubjectBlock(ir)}
+${renderContextBlock(ir)}
+${renderDiffBlock(ir)}`;
+  return { systemMessage, prompt };
+}
+
+;// CONCATENATED MODULE: ./src/prompt/compiler.mjs
+// Prompt Compiler（ADR-006 / #1859）
+//
+// Review Request IR と Model Profile から、送信可能な 2 本の文字列
+// （system message / user prompt）を作る。
+//
+// 責務の境界:
+//   - compiler は profile が指す renderer を呼ぶだけである。分岐条件を
+//     provider 名で持たない（それは profile-resolver.mjs の責務）。
+//   - 判断側の値（ADR-006「不変条件」の節）を読み替えない。IR に入っている
+//     値をそのまま renderer へ渡す。
+//   - 決定論である。同じ IR と同じ profile なら常に同じ 2 本を返す。
+
+
+
+
+/** compiled prompt の来歴に載せる compiler 自体のバージョン。 */
+const PROMPT_COMPILER_VERSION = '1';
+
+const RENDERERS = Object.freeze({
+  generic: renderGeneric,
+  openai: renderOpenAI,
+});
+
+/**
+ * @param {object} ir buildReviewRequest の戻り値
+ * @param {object} profile resolveProfile の戻り値
+ * @returns {{systemMessage: string, prompt: string}}
+ */
+function compileReviewPrompt(ir, profile) {
+  if (!ir || typeof ir !== 'object') {
+    throw new TypeError('compileReviewPrompt: ir is required');
+  }
+  const render = RENDERERS[profile?.rendererId];
+  if (!render) {
+    // profile-resolver は必ず既知の profile を返すため、ここへ来るのは
+    // profile を手で組んだ呼び出し側の誤りである。黙って generic へ
+    // 落とすと来歴が実際の描画と食い違うので、例外にする。
+    throw new Error(`compileReviewPrompt: unknown rendererId ${String(profile?.rendererId)}`);
+  }
+  return render(ir);
+}
+
+;// CONCATENATED MODULE: ./src/prompt/profiles/generic.mjs
+// Model Profile: generic（ADR-006 / #1859）
+//
+// profile が宣言してよいのは「そのモデルがどう受け取るか」だけである。
+// ADR-006「不変条件」の節が列挙する判断側の 4 種は、この階層に置かない。
+// tests/prompt-compiler-invariants.test.mjs が本ディレクトリのソースを
+// 走査して、判断側の語が現れないことを機械保証する。
+//
+// generic は既定の描画である。legacy な組み立てと同じ配置を採り、
+// system message には役割宣言だけを置く。
+
+const genericProfile = Object.freeze({
+  id: 'generic-review-v1',
+  version: '1',
+  // renderers/ のどの実装を使うか。文面ではなく配置だけを決める。
+  rendererId: 'generic',
+  capabilities: Object.freeze({
+    supportsSystemMessage: true,
+    // 出力契約を system 側へ寄せるか。generic は user 側へ残す。
+    outputContractInSystemMessage: false,
+  }),
+});
+
+;// CONCATENATED MODULE: ./src/prompt/profiles/openai.mjs
+// Model Profile: OpenAI 互換（ADR-006 / #1859）
+//
+// profile が宣言してよいのは「そのモデルがどう受け取るか」だけである。
+// ADR-006「不変条件」の節が列挙する判断側の 4 種は、この階層に置かない。
+// tests/prompt-compiler-invariants.test.mjs が本ディレクトリのソースを
+// 走査して、判断側の語が現れないことを機械保証する。
+//
+// generic との差は 1 点だけである。出力契約の節を system message 側へ寄せ、
+// user message には対象・文脈・差分を置く。文面そのものは共通で、
+// src/prompt/sections.mjs が唯一の出典である。
+
+const openaiProfile = Object.freeze({
+  id: 'openai-review-v1',
+  version: '1',
+  rendererId: 'openai',
+  capabilities: Object.freeze({
+    supportsSystemMessage: true,
+    outputContractInSystemMessage: true,
+  }),
+});
+
+;// CONCATENATED MODULE: ./src/prompt/profile-resolver.mjs
+// Model Profile の解決（ADR-006 / #1859）
+//
+// provider / model から profile を決める純関数。決定論であり、I/O も
+// プロセス状態の参照もしない。未知の入力は generic へ落とす（例外にしない）。
+//
+// profile を 2 本に限る理由は ADR-006「初回導入範囲」にある。レビュー実行経路
+// （src/lib/review-engine.mjs の skipReason 判定）が openai 以外を退避するため、
+// 他 provider の profile を今置いても到達不能なコードになる。
+// Anthropic / Google の追加は ADR-006「再参入条件」が成立してからとする。
+
+
+
+
+/** 解決可能な profile の一覧。id から引けるようにしておく。 */
+const PROFILES = Object.freeze({
+  [genericProfile.id]: genericProfile,
+  [openaiProfile.id]: openaiProfile,
+});
+
+/** 解決先が決まらないときの落とし先。 */
+const DEFAULT_PROFILE = genericProfile;
+
+function normalize(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : null;
+}
+
+/**
+ * provider / model から profile を決める。
+ *
+ * `model` は現時点で選択に影響しない。同一 provider 内でモデル別の描画を
+ * 分ける必要が出た時点でここが分岐点になるため、引数としては受け取る。
+ *
+ * @param {{provider?: string|null, model?: string|null}} [params]
+ * @returns {object} 凍結済みの profile
+ */
+function resolveProfile(params) {
+  const provider = normalize(params?.provider);
+  if (provider === 'openai') return openaiProfile;
+  return DEFAULT_PROFILE;
+}
+
+;// CONCATENATED MODULE: ./src/prompt/review-request.mjs
+// Review Request IR (#1859) — モデル非依存のレビュー依頼表現。
+//
+// ADR-006 の中核。「何を判断するか」を保持し、「選ばれたモデルへどう頼むか」は
+// 一切持たない。renderer / profile はこの IR を読むだけで、書き換えない。
+//
+// 位置づけ:
+//   internal contract であり、安定した公開 API ではない。外部へ出す必要が出た
+//   時点で version を上げて別途宣言する。今は buildPrompt の引数と compiler の
+//   間に挟まる中間表現に過ぎない。
+//
+// 不変条件（ADR-006）:
+//   judgment（skillIds / severity）と constraints は **判断側**の持ち物である。
+//   profile がこれらを書き換えられないよう、buildReviewRequest は凍結した
+//   オブジェクトを返す。tests/prompt-compiler-invariants.test.mjs が pin する。
+
+/** IR のバージョン。形を変えたら上げる。 */
+const REVIEW_REQUEST_IR_VERSION = '1';
+
+/** 凍結対象のネスト。浅い freeze では profile 側の書き換えを防げない。 */
+function deepFreeze(value) {
+  if (value === null || typeof value !== 'object') return value;
+  for (const key of Object.keys(value)) deepFreeze(value[key]);
+  return Object.freeze(value);
+}
+
+/**
+ * buildPrompt / generateReview が持っている情報から IR を組む純関数。
+ *
+ * 呼び出し側から渡された値をそのまま格納する。ここで既定値を発明しない
+ * （既定値の決定は config 層の責務であり、IR が独自に持つと二重管理になる）。
+ *
+ * @param {object} params
+ * @param {object} params.subject         phase / revision / changedFiles
+ * @param {object} params.judgment        skillIds / severity
+ * @param {object} params.context         diff / projectRules / adrs / repoContext / prDescription
+ * @param {object} params.constraints     maxFindings / evidenceRequired / …
+ * @param {object} params.outputContract  format / language
+ * @param {object} params.execution       provider / model / modelHint
+ * @returns {object} 凍結済みの IR
+ */
+function buildReviewRequest({
+  subject,
+  judgment,
+  context,
+  constraints,
+  outputContract,
+  execution,
+}) {
+  return deepFreeze({
+    version: REVIEW_REQUEST_IR_VERSION,
+    subject: {
+      phase: subject?.phase ?? null,
+      changedFiles: subject?.changedFiles ?? [],
+    },
+    judgment: {
+      skillIds: judgment?.skillIds ?? [],
+      severity: judgment?.severity ?? null,
+      plan: judgment?.plan ?? null,
+    },
+    context: {
+      diff: context?.diff ?? '',
+      diffTruncated: context?.diffTruncated ?? false,
+      projectRules: context?.projectRules ?? null,
+      relatedADRs: context?.relatedADRs ?? [],
+      riskAssessment: context?.riskAssessment ?? null,
+      repoContext: context?.repoContext ?? null,
+      prDescription: context?.prDescription ?? null,
+    },
+    constraints: {
+      maxFindings: constraints?.maxFindings ?? null,
+      focusHint: constraints?.focusHint ?? null,
+      walkthrough: constraints?.walkthrough ?? false,
+      agentHandoff: constraints?.agentHandoff ?? false,
+      additionalInstructions: constraints?.additionalInstructions ?? [],
+    },
+    outputContract: {
+      format: outputContract?.format ?? 'river-review-findings-v1',
+      language: outputContract?.language ?? null,
+    },
+    execution: {
+      provider: execution?.provider ?? null,
+      model: execution?.model ?? null,
+      modelHint: execution?.modelHint ?? null,
+    },
+  });
+}
+
+// EXTERNAL MODULE: ./src/lib/token-estimator.mjs
+var token_estimator = __nccwpck_require__(467);
 ;// CONCATENATED MODULE: ./src/lib/review-engine.mjs
+
+
 
 
 
@@ -48667,6 +49024,12 @@ ${buildAdditionalSection(additionalInstructions, language)}`;
 // プロンプトの節生成は src/prompt/sections.mjs が SSoT。ADR-006 の Prompt
 // Compiler が同じ節を別配置で描画するため、文面の二重管理を避けて双方が
 // import する（生成結果はバイト単位で従来と同一。tests/prompt-sections.test.mjs）。
+
+// ADR-006 / #1859: Prompt Compiler（observe モード）。既定 off では
+// 一切呼ばれない。import は静的に置くが、mode 判定の内側でしか実行しない。
+
+
+
 
 
 const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
@@ -48743,6 +49106,56 @@ ${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssess
 Diff:
 ${diffBody}`;
   return { prompt, truncated, language, severity };
+}
+
+// --- ADR-006 / #1859: Prompt Compiler の観測 ---
+
+/** debug へ載せる hash の長さ。理由は promptFingerprint の JSDoc を参照。 */
+const PROMPT_HASH_CHARS = 16;
+
+/**
+ * プロンプトの指紋。sha256 hex の先頭 16 文字だけを載せる。
+ *
+ * 全長 64 文字を持つ必要がない。この値の用途は「legacy と compiled が同じ
+ * 文字列か」「同条件の 2 run で同じ文字列を作れているか」の等値比較だけであり、
+ * 参照キーにも検索キーにもしない。artifact を人が読むときの見通しを優先して
+ * 切り詰める。原文そのものは載せない（ADR-006 の observe 不変条件）。
+ */
+function promptFingerprint(text) {
+  return (0,external_node_crypto_.createHash)('sha256')
+    .update(String(text), 'utf8')
+    .digest('hex')
+    .slice(0, PROMPT_HASH_CHARS);
+}
+
+/**
+ * observe モードの記録を組む。
+ *
+ * 記録するのは hash と推定長と profile の来歴だけである。原文（prompt 本体、
+ * diff 本文）は返り値に含めない。
+ *
+ * 推定長は src/lib/token-estimator.mjs の estimateTokens をそのまま使う。
+ * 独自の概算を置くと legacy 側の既存計測（context budget）と単位が食い違う。
+ *
+ * legacy 側は system message と user prompt を連結して数える。compiled 側は
+ * profile によって契約節の置き場所が system / user のどちらにもなるため、
+ * 片方だけを数えると比較が成立しない。
+ */
+function buildPromptCompilerObservation({ mode, profile, legacyText, compiledText }) {
+  return {
+    mode,
+    // #1859 では active を有効化しない。schema は値を受理するが、実際に
+    // provider へ送るのは常に legacy 側である。active の配線は #1861。
+    sentPrompt: 'legacy',
+    ...(mode === 'active' ? { activeNotEnabled: true } : {}),
+    compilerVersion: PROMPT_COMPILER_VERSION,
+    profileId: profile.id,
+    profileVersion: profile.version,
+    legacyPromptEstimate: (0,token_estimator/* estimateTokens */.bP)(legacyText),
+    compiledPromptEstimate: (0,token_estimator/* estimateTokens */.bP)(compiledText),
+    legacyPromptHash: promptFingerprint(legacyText),
+    compiledPromptHash: promptFingerprint(compiledText),
+  };
 }
 
 function parseLineComments(outputText) {
@@ -48966,6 +49379,67 @@ async function generateReview({
         }
       : null,
   };
+
+  // --- ADR-006 / #1859: Prompt Compiler（配線はこの 1 箇所だけ）---
+  //
+  // 既定は off。off のとき下のブロックは丸ごと実行されず、buildPrompt から
+  // 下流の挙動は導入前と 1 バイトも変わらない。
+  //
+  // observe / active のいずれでも、provider へ送るのは既存の
+  // promptInfo.prompt である。active を送信へ切り替える配線は #1861 で行う。
+  const promptCompilerMode = effectiveConfig.review?.promptCompiler?.mode ?? 'off';
+  if (promptCompilerMode !== 'off') {
+    // 差分本文の上限適用。buildPrompt（同ファイル）の同じ式を写している。
+    // buildPrompt 側は ADR-006 の実装方針により無改変で残すため共通化せず、
+    // 両者が一致していることを tests/prompt-compiler-observe.test.mjs が
+    // legacy prompt の末尾との突合で pin する。
+    const compiledDiffBody = promptInfo.truncated
+      ? `${llmDiff.diffText.slice(0, maxPromptChars)}\n...[truncated]`
+      : llmDiff.diffText;
+    const compiledDepthConfig = (0,review_plan_generator/* getReviewDepthConfig */.i3)(reviewMode ?? 'medium');
+    const ir = buildReviewRequest({
+      subject: { phase, changedFiles: llmDiff.files },
+      // 判断側の値は buildPrompt が解決したものをそのまま使う。ここで別経路
+      // から取り直すと legacy と compiled で判断の入力が分岐する。
+      judgment: {
+        skillIds: (plan?.selected ?? []).map((s) => s.metadata?.id ?? s.id),
+        severity: promptInfo.severity,
+        plan,
+      },
+      context: {
+        diff: compiledDiffBody,
+        diffTruncated: promptInfo.truncated,
+        projectRules,
+        relatedADRs,
+        riskAssessment,
+        repoContext,
+        prDescription: prBody,
+      },
+      constraints: {
+        maxFindings: compiledDepthConfig.maxFindings,
+        focusHint: compiledDepthConfig.focusHint,
+        walkthrough: effectiveConfig.review?.walkthrough ?? false,
+        agentHandoff: effectiveConfig.review?.agentHandoff ?? false,
+        additionalInstructions: effectiveConfig.review?.additionalInstructions,
+      },
+      outputContract: { language },
+      execution: { provider: openAIConfig.provider, model: openAIConfig.model },
+    });
+    const profile = resolveProfile({
+      provider: openAIConfig.provider,
+      model: openAIConfig.model,
+    });
+    const compiled = compileReviewPrompt(ir, profile);
+    debug.execution = {
+      ...(debug.execution ?? {}),
+      promptCompiler: buildPromptCompilerObservation({
+        mode: promptCompilerMode,
+        profile,
+        legacyText: `${buildSystemMessage(language)}\n${promptInfo.prompt}`,
+        compiledText: `${compiled.systemMessage}\n${compiled.prompt}`,
+      }),
+    };
+  }
 
   const skipReason = dryRun
     ? 'dry-run enabled'
@@ -67517,8 +67991,8 @@ async function resolveSelectionSkillIds(
   });
 }
 
-// EXTERNAL MODULE: ./src/lib/review-engine.mjs + 1 modules
-var review_engine = __nccwpck_require__(7786);
+// EXTERNAL MODULE: ./src/lib/review-engine.mjs + 9 modules
+var review_engine = __nccwpck_require__(4405);
 ;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
 
 

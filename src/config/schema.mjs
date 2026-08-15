@@ -35,7 +35,24 @@ export const reviewerOrchestratorConfigSchema = z.object({
   progress: z.boolean().optional(),
 });
 
+// --- ADR-006 / #1859: Prompt Compiler の実行モード ---
+//
+// `off` が既定であり、現行と完全に同一の挙動になる。`observe` は compiled
+// プロンプトを生成するが送信せず、計測値だけを debug へ残す。`active` は
+// compiled を送る想定だが #1859 では有効化しない（#1861 で配線する）。
+//
+// `shadow` という語を採らない理由は ADR-006 に記録がある。
+// src/lib/shadow-aggregate.mjs が「複数 Run の読み取り専用集約」の意味で
+// 既に使っており、二義になる。
+//
+// `.strict()` にしない。この節の他の schema と同じく未知キーは除去に留め、
+// 将来キーを足しても古い版で hard error にならないようにする。
+export const promptCompilerConfigSchema = z.object({
+  mode: z.enum(['off', 'observe', 'active']).optional(),
+});
+
 export const reviewConfigSchema = z.object({
+  promptCompiler: promptCompilerConfigSchema.optional(),
   language: z.enum(['ja', 'en']).optional(),
   severity: z.enum(['strict', 'normal', 'relaxed']).optional(),
   additionalInstructions: z.array(z.string().min(1)).optional(),
