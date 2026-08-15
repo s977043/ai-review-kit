@@ -894,6 +894,48 @@ const RE_NEW_FILE_HEADER = /^\+\+\+ (?:b\/)?(\S+)/;
 const RE_ANCHOR = /^(.*\S):(\d+)$/;
 
 /**
+ * Canonical spelling of a diff/anchor path (#1856,残件 3).
+ *
+ * `./docs/note.md` and `docs/note.md` name the same file, but a raw string
+ * compare against the `+++ b/docs/note.md` header misses, and the gate then
+ * reports "no `+++ b/./docs/note.md` appears in the fixture's diff blocks" —
+ * a message that sends the maintainer looking for a missing diff instead of a
+ * redundant `./`. Both sides of the comparison go through this function, so the
+ * two spellings resolve to one key.
+ *
+ * `path.posix` is used deliberately: fixture diffs are unified diffs, whose
+ * separator is `/` on every platform. `path.normalize` on Windows would rewrite
+ * them to `\` and break the comparison it is meant to fix.
+ *
+ * @param {string} p
+ * @returns {string}
+ */
+export function normalizeDiffPath(p) {
+  return path.posix.normalize(String(p ?? '')).replace(/^\.\//, '');
+}
+
+/**
+ * True when a ```diff block body carries at least one added/removed content
+ * line. `+++ ` / `--- ` file headers and the `\ No newline` marker are not
+ * content, and a block made of nothing else (e.g. the intentionally empty diff
+ * in skills/upstream/plangate-exec-conformance/fixtures/03-fallback-diff-empty.md)
+ * carries no line an anchor could point at.
+ *
+ * @param {string} blockText
+ * @returns {boolean}
+ */
+function hasDiffContentLines(blockText) {
+  return String(blockText ?? '')
+    .split('\n')
+    .some(
+      (line) =>
+        (line.startsWith('+') || line.startsWith('-')) &&
+        !line.startsWith('+++ ') &&
+        !line.startsWith('--- ')
+    );
+}
+
+/**
  * True when `lines[i]` opens a `--- old` / `+++ new` file-header PAIR.
  *
  * A bare `startsWith('--- ')` test is ambiguous: deleting a line that itself
@@ -967,7 +1009,7 @@ export function parseUnifiedDiff(diffText) {
     const fileMatch = RE_NEW_FILE_HEADER.exec(line);
     if (fileMatch) {
       // `+++ /dev/null` marks a deletion: no new-side lines to reconstruct.
-      currentFile = fileMatch[1] === '/dev/null' ? null : fileMatch[1];
+      currentFile = fileMatch[1] === '/dev/null' ? null : normalizeDiffPath(fileMatch[1]);
       if (currentFile && !files.has(currentFile)) files.set(currentFile, { lines: new Map() });
       i += 1;
       continue;
@@ -1045,19 +1087,39 @@ export function parseUnifiedDiff(diffText) {
  * Merge every ```diff block of one fixture into a single new-side view.
  * Pure and exported for unit testing.
  *
+ * Two structural defects are detected here rather than in parseUnifiedDiff,
+ * because both are properties of the fixture as a whole (#1856):
+ *
+ * - `headerlessBlocks`: a ```diff block that carries `+`/`-` content lines but
+ *   declares no `@@` header. Its new-side numbering cannot be reconstructed, so
+ *   every line it contributes is invisible to the anchor check — and the #1854
+ *   surplus-header guard cannot see it either, because that guard compares two
+ *   counts that are both 0 here.
+ * - `orderIssues`: two hunks of the same file whose new-side ranges overlap, or
+ *   that appear out of ascending order. The merge below is last-write-wins, so
+ *   an overlap silently replaces the earlier hunk's lines and an anchor into
+ *   the earlier hunk is then validated against the later hunk's text.
+ *
  * @param {string} text - fixture file content
  * @returns {{
  *   files: Map<string, { lines: Map<number, string> }>,
  *   hunks: Array<object>,
  *   unknownPrefixLines: string[],
+ *   headerlessBlocks: number[],
+ *   orderIssues: Array<{
+ *     file: string, previous: string, current: string, previousRange: string,
+ *   }>,
  * }}
  */
 export function parseFixtureDiffs(text) {
   const files = new Map();
   const hunks = [];
   const unknownPrefixLines = [];
-  for (const block of extractDiffBlocks(text)) {
+  const headerlessBlocks = [];
+  const blocks = extractDiffBlocks(text);
+  for (const [index, block] of blocks.entries()) {
     const parsed = parseUnifiedDiff(block);
+    if (parsed.hunks.length === 0 && hasDiffContentLines(block)) headerlessBlocks.push(index);
     for (const [file, entry] of parsed.files) {
       if (!files.has(file)) files.set(file, { lines: new Map() });
       const target = files.get(file);
@@ -1066,7 +1128,36 @@ export function parseFixtureDiffs(text) {
     hunks.push(...parsed.hunks);
     unknownPrefixLines.push(...parsed.unknownPrefixLines);
   }
-  return { files, hunks, unknownPrefixLines };
+
+  const orderIssues = [];
+  const seenByFile = new Map();
+  for (const hunk of hunks) {
+    if (!hunk.file) continue;
+    const previous = seenByFile.get(hunk.file);
+    if (previous) {
+      // Half-open new-side range. A pure-deletion hunk has actualNew === 0, so
+      // its range is empty and a following hunk starting at the same line is
+      // neither an overlap nor out of order.
+      //
+      // One comparison covers both defects the issue names. `newStart` going
+      // backwards always lands inside or before the preceding range, because
+      // that range starts at the preceding `newStart`; so "not ascending" is a
+      // strict subset of "overlaps", and a separate monotonicity branch would
+      // be unreachable.
+      const previousEnd = previous.newStart + previous.actualNew;
+      if (hunk.newStart < previousEnd) {
+        orderIssues.push({
+          file: hunk.file,
+          previous: previous.header,
+          current: hunk.header,
+          previousRange: `${previous.newStart}..${previousEnd - 1}`,
+        });
+      }
+    }
+    seenByFile.set(hunk.file, hunk);
+  }
+
+  return { files, hunks, unknownPrefixLines, headerlessBlocks, orderIssues };
 }
 
 /**
@@ -1074,9 +1165,13 @@ export function parseFixtureDiffs(text) {
  * `<!-- expected: -->` blocks. Pure and exported for unit testing.
  *
  * Only `findings[].anchor` is read — the same field validateFixtureDrift()
- * consumes. Anchors that are not in `<file>:<line>` form (e.g. the
- * `(summary):1` pseudo-anchor) are skipped: they name no diff file, so no
- * deterministic judgment is possible.
+ * consumes. Pseudo-anchors that name no file (`(summary):1` and friends, i.e.
+ * anything starting with `(`) are skipped: no deterministic judgment is
+ * possible for them. Anchors that name a file but are not in `<file>:<line>`
+ * form are NOT skipped — extractMalformedAnchors() reports them (#1856).
+ *
+ * The `file` field is returned in normalizeDiffPath() form so it compares
+ * directly against the keys parseFixtureDiffs() produces.
  *
  * @param {string} text - fixture file content
  * @returns {Array<{ raw: string, file: string, line: number }>}
@@ -1100,10 +1195,47 @@ export function extractFixtureAnchors(text) {
       if (!match) continue;
       const file = match[1].trim();
       if (file.startsWith('(')) continue; // `(summary):1` and friends
-      anchors.push({ raw: raw.trim(), file, line: Number(match[2]) });
+      anchors.push({ raw: raw.trim(), file: normalizeDiffPath(file), line: Number(match[2]) });
     }
   }
   return anchors;
+}
+
+/**
+ * Collect the `findings[].anchor` strings that name a file but are NOT in
+ * `<file>:<line>` form, so the gate can reject them instead of skipping them
+ * (#1856,残件 1). The motivating case is the range form `docs/note.md:1-5`:
+ * RE_ANCHOR does not match it, extractFixtureAnchors() drops it, and the
+ * finding is then never checked against the diff while CI stays green.
+ *
+ * Pseudo-anchors starting with `(` stay exempt — they intentionally name no
+ * file, and extractFixtureAnchors() skips them for the same reason.
+ *
+ * @param {string} text - fixture file content
+ * @returns {string[]} the offending raw anchor strings
+ */
+export function extractMalformedAnchors(text) {
+  const malformed = [];
+  for (const block of extractExpectedBlocks(text)) {
+    let parsed;
+    try {
+      parsed = yaml.load(block);
+    } catch {
+      // Reported by validateFixtureDrift(); nothing to anchor-check here.
+      continue;
+    }
+    const findings = parsed?.findings;
+    if (!Array.isArray(findings)) continue;
+    for (const finding of findings) {
+      const raw = finding?.anchor;
+      if (typeof raw !== 'string') continue;
+      const trimmed = raw.trim();
+      if (trimmed.startsWith('(')) continue;
+      if (RE_ANCHOR.test(trimmed)) continue;
+      malformed.push(trimmed);
+    }
+  }
+  return malformed;
 }
 
 /**
@@ -1116,9 +1248,16 @@ export function extractFixtureAnchors(text) {
  * - a hunk header's declared line counts must equal the hunk body's actual
  *   counts, on the old side and the new side;
  * - an anchor's file must appear as a `+++ b/<path>` header in one of the
- *   fixture's diff blocks;
+ *   fixture's diff blocks (compared after normalizeDiffPath(), so `./a` and `a`
+ *   are one path — #1856,残件 3);
  * - the anchored line must exist in the reconstructed new-side numbering and
- *   must not be blank.
+ *   must not be blank;
+ * - a ```diff block with `+`/`-` content lines must declare a `@@` hunk header
+ *   (#1856,残件 1 — the #1854 surplus check is blind here, both counts are 0);
+ * - an anchor that names a file must be in `<file>:<line>` form, not a range
+ *   like `docs/note.md:1-5` (#1856,残件 1);
+ * - two hunks of one file must not overlap on the new side, and must appear in
+ *   ascending new-side order (#1856,残件 2).
  *
  * Rationale (#1850 adversarial review): CI was fully green while anchors
  * pointed at blank lines and hunk headers disagreed with their bodies, because
@@ -1166,7 +1305,13 @@ export async function validateFixtureDiffStructure({
       const fixturePath = path.join(fixturesDir, name);
       const fixtureRel = path.relative(repoRoot, fixturePath);
       const content = await fs.readFile(fixturePath, 'utf8');
-      const { files: diffFiles, hunks, unknownPrefixLines } = parseFixtureDiffs(content);
+      const {
+        files: diffFiles,
+        hunks,
+        unknownPrefixLines,
+        headerlessBlocks,
+        orderIssues,
+      } = parseFixtureDiffs(content);
 
       // Unrecognized-notation guard (#1854 review, major 2 — partial). Every
       // hunk header in the file must sit inside a fence this gate recognizes.
@@ -1186,8 +1331,48 @@ export async function validateFixtureDiffStructure({
         success = false;
       }
 
+      // Headerless-notation guard (#1856,残件 1). The surplus-header check above
+      // compares two counts that are both 0 for a bare ± excerpt, so it cannot
+      // see this shape at all: the block is recognized, contains real changes,
+      // and contributes nothing the anchor check can resolve.
+      for (const index of headerlessBlocks) {
+        console.error(
+          `❌ ${fixtureRel}: \`\`\`diff block #${index + 1} has +/- lines but no ` +
+            '"@@ -a,b +c,d @@" hunk header — without it the new-side line numbers ' +
+            'cannot be reconstructed and the block is skipped by the anchor check'
+        );
+        success = false;
+      }
+
       if (!hunks.length && !diffFiles.size) continue;
       checkedFixtures += 1;
+
+      // Malformed-anchor guard (#1856,残件 1). `docs/note.md:1-5` names a file
+      // but is silently dropped by extractFixtureAnchors(), so the finding it
+      // belongs to is never validated against the diff. Kept below the skip
+      // above so the gate stays opt-in by structure: a fixture with no diff has
+      // nothing to resolve an anchor against in the first place.
+      for (const raw of extractMalformedAnchors(content)) {
+        console.error(
+          `❌ ${fixtureRel}: expected block anchor ${JSON.stringify(raw)} is not in ` +
+            '"<file>:<line>" form — a range or suffix makes the anchor unresolvable ' +
+            'and it would be skipped without this error'
+        );
+        success = false;
+      }
+
+      // Hunk-ordering guard (#1856,残件 2). Overlapping hunks make the merged
+      // new-side view last-write-wins, so an anchor into the earlier hunk is
+      // validated against the later hunk's text and passes for the wrong reason.
+      for (const issue of orderIssues) {
+        console.error(
+          `❌ ${fixtureRel}: hunk "${issue.current}" of ${issue.file} overlaps the ` +
+            `new-side range ${issue.previousRange} already covered by "${issue.previous}" — ` +
+            "the later hunk overwrites the earlier hunk's reconstructed lines, so an " +
+            'anchor into the earlier hunk resolves to the wrong text'
+        );
+        success = false;
+      }
 
       for (const line of unknownPrefixLines) {
         console.error(
