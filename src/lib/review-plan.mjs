@@ -394,6 +394,13 @@ export async function runReviewExecReplay({
       const rawFindings = Array.isArray(review?.findings) ? review.findings : [];
       artifact.findings = rawFindings.map((f, i) => normalizeFindingForArtifact(f, i, phase));
       executionTrace = {
+        // #1868: generateReview が debug.execution へ積んだ観測（ADR-006 の
+        // promptCompiler など）を先に展開してから、経路側の trace キーを重ねる。
+        // 展開しないと replay 経路だけ観測が欠測し、欠測は「差が無かった」と
+        // 区別できない。順序は「経路側が勝つ」で固定する。skillsExecuted 等は
+        // この経路が artifact 契約として持つ値であり、engine 側が将来同名キーを
+        // 足しても上書きされてはならない。
+        ...(review?.debug?.execution ?? {}),
         skillsExecuted: selectedSkills.length,
         findingsCount: artifact.findings.length,
         llmUsed: review?.debug?.llmUsed === true,
@@ -781,6 +788,10 @@ export async function runReviewPlan({
       if (execGate.strictBlock === true) gateStrictBlock = true;
       gateDeterministicUnrunnable = execGate.deterministicUnrunnable === true;
       executionTrace = {
+        // #1868: replay 経路（runReviewExecReplay）と同じ順序で engine 側の
+        // debug.execution 観測を引き継ぐ。2 経路で挙動を揃えないと、同じ設定でも
+        // 経路によって観測が残ったり消えたりする。
+        ...(review?.debug?.execution ?? {}),
         skillsExecuted: artifact.plan.selectedSkills.length,
         findingsCount: artifact.findings.length,
         llmUsed: review?.debug?.llmUsed === true,
