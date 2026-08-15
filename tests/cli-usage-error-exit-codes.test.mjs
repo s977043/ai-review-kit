@@ -118,7 +118,7 @@
 //   契約ではなく環境の欠落を pin してしまうため（実測で 5 セルが動いた）。
 //   この 2 つを用意した状態が、実 repo で観測される契約と一致する。
 //
-// 実装コスト: 112 回（CASES 104 + 対照群 8）の CLI 起動を before フックで
+// 実装コスト: 114 回（CASES 106 + 対照群 8）の CLI 起動を before フックで
 // 1 回だけ掃引し、各 test は
 // その結果を参照するだけにしてある（in-process 実行で全掃引 ~2.5 秒）。
 
@@ -147,13 +147,13 @@ const CONTRACTS = {
  */
 // #1797 で suppression の `--fingerprint-algo`（値欠落 / 不正値）2 件を追加し
 // C3 が 101 -> 103 になった。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 103, C4: 1 };
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 105, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
 
 /**
- * 104 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
+ * 106 ケースの canary テーブル（Slice 1 の実測 78 + Slice 3 で pin した
  * suppression の穴 2 件 + #1746 回帰 hotfix で pin した値検証の穴 5 件
  * + #1755 で pin した review のサブコマンド欠落・未知 2 件）。
  * kind は #1709 のエラー種別 5 分類:
@@ -638,6 +638,21 @@ const CASES = [
     argv: ['evolve', 'aggregate', '.', 'extra'],
     contract: 'C3',
   },
+  // #1860 で足した `evolve prompt-compare`。サブコマンドを増やすと
+  // strict parse の catch-all の効き方が面ごとに変わるため、aggregate と同じ
+  // 2 形（未知オプション / 余剰 positional）をこの面でも pin する。
+  {
+    surface: 'evolve',
+    kind: 'unknown-option',
+    argv: ['evolve', 'prompt-compare', '--nope'],
+    contract: 'C3',
+  },
+  {
+    surface: 'evolve',
+    kind: 'surplus-positional',
+    argv: ['evolve', 'prompt-compare', '.', 'extra'],
+    contract: 'C3',
+  },
 
   // ---- river suppression ----
   // Slice 1 時点で 5 種別すべてが C3 だった唯一の面。ただし当時は必須オプション
@@ -1041,11 +1056,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 104 usage-error cases and every row is unique', () => {
+  test('the matrix pins 106 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      104,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件'
+      106,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1067,7 +1082,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     }
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:103 / C4:1 (0 of 104 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:105 / C4:1 (0 of 106 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -1084,7 +1099,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   });
 
   // ---------------------------------------------------------------------------
-  // 104 ケースの本体
+  // 106 ケースの本体
   // ---------------------------------------------------------------------------
 
   for (const testCase of CASES) {
@@ -1130,7 +1145,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   //   書き込みも起きなかった形が、AFTER では書き込みまで完了する。この領域は
   //   本テストでは検出できない（前文の該当節を参照）。
   test('no usage-error case leaves a write side effect (.river must not exist)', () => {
-    // 表の 104 ケースはすべて usage error であり、Slice 3 の原則は「データ
+    // 表の 106 ケースはすべて usage error であり、Slice 3 の原則は「データ
     // 書き込みは全入力検証後に行う」。suppression の穴 2 件は Slice 3 まで、
     // #1746 W2 の `--severity BOGUS` / `--expires notadate` は v1.72.0 まで、
     // exit 0 のまま .river/memory/index.json へエントリを書き込んでいた。
@@ -1372,6 +1387,18 @@ const VALID_CASES = [
       'json',
     ],
     command: 'evolve',
+  },
+  // #1860: `prompt-compare` は aggregate と同じくパスを取る面である。パス先行と
+  // フラグ先行の両方を pin する（#1746 / v1.72.0 の回帰形をこの面でも塞ぐ）。
+  {
+    argv: ['evolve', 'prompt-compare', '.', '--output', 'json'],
+    command: 'evolve',
+    target: '.',
+  },
+  {
+    argv: ['evolve', 'prompt-compare', '--output', 'json', '.'],
+    command: 'evolve',
+    target: '.',
   },
   { argv: ['--help'], command: 'help' },
   { argv: ['-h'], command: 'help' },

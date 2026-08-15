@@ -4,17 +4,23 @@
 //
 //   river evolve aggregate [<path>] [--min <n>] [--month YYYY-MM] [--output json|text]
 //   river evolve replay --spec <file> [--expect-manifest <id|key>] [--output json|text]
+//   river evolve prompt-compare [<path>] [--output json|text]
 //
-// Both subcommands only READ. `aggregate` reads `.river/runs/` and
+// All three subcommands only READ. `aggregate` reads `.river/runs/` and
 // `.river/feedback/*.jsonl`; `replay` reads a single experiment spec file that
-// already contains the baseline and candidate runs. Neither has an `--out` /
-// `--promote` style option: writing into Riverbed, Skills, rules, or the gate
-// belongs to #1568's promotion lifecycle, and re-running a review belongs to
-// `river run` — so no code path here can mutate a repository or spend an API
-// call. Redirect stdout if you need the JSON on disk.
+// already contains the baseline and candidate runs; `prompt-compare` reads
+// `.river/runs/` and pairs the legacy prompt against the compiled prompt from
+// the observe-mode records those runs already carry (ADR-006 / #1860) — it
+// never sends the compiled prompt anywhere. None has an `--out` / `--promote`
+// style option: writing into Riverbed, Skills, rules, or the gate belongs to
+// #1568's promotion lifecycle, and re-running a review belongs to `river run` —
+// so no code path here can mutate a repository or spend an API call. Redirect
+// stdout if you need the JSON on disk.
+
+const SUBCOMMANDS = ['aggregate', 'replay', 'prompt-compare'];
 
 /**
- * Handle the `evolve` command (aggregate | replay).
+ * Handle the `evolve` command (aggregate | replay | prompt-compare).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
  * @param {string} targetPath - resolved repo target path.
@@ -22,8 +28,8 @@
  */
 export async function runEvolveCommand(parsed, targetPath) {
   const subcommand = parsed.evolveSubcommand ?? 'aggregate';
-  if (subcommand !== 'aggregate' && subcommand !== 'replay') {
-    console.error(`Unknown evolve subcommand: ${subcommand}. Use: aggregate | replay`);
+  if (!SUBCOMMANDS.includes(subcommand)) {
+    console.error(`Unknown evolve subcommand: ${subcommand}. Use: ${SUBCOMMANDS.join(' | ')}`);
     return 1;
   }
   if (parsed.evolveUnknownOption) {
@@ -49,7 +55,59 @@ export async function runEvolveCommand(parsed, targetPath) {
   if (subcommand === 'replay') {
     return runReplay(parsed, output);
   }
+  if (subcommand === 'prompt-compare') {
+    return runPromptCompare(parsed, targetPath, output);
+  }
   return runAggregate(parsed, targetPath, output);
+}
+
+/**
+ * `river evolve prompt-compare` — legacy と compiled の paired 比較（#1860）。
+ *
+ * 保存済み run の `debug.execution.promptCompiler` を読むだけである。
+ * レビューの再実行も compiled prompt の送信も行わない。
+ */
+async function runPromptCompare(parsed, targetPath, output) {
+  const misplaced = ['--spec', '--expect-manifest', '--min', '--month'].filter((flag) => {
+    if (flag === '--spec') return parsed.evolveSpec != null;
+    if (flag === '--expect-manifest') return parsed.evolveExpectManifest != null;
+    if (flag === '--min') return parsed.evolveMin != null;
+    return parsed.evolveMonth != null;
+  });
+  if (misplaced.length) {
+    console.error(
+      `${misplaced.join(', ')} is not valid for \`river evolve prompt-compare\` (its dataset is the saved runs under .river/runs).`
+    );
+    return 1;
+  }
+
+  const { resolveStoreDir, loadAllRunRecords } = await import('../../lib/result-store.mjs');
+  const { buildPromptComparison, formatPromptComparisonMarkdown, PromptComparisonError } =
+    await import('../../lib/prompt-compiler-paired.mjs');
+  const { PairedReplayError } = await import('../../lib/paired-replay.mjs');
+
+  const runRecords = await loadAllRunRecords(resolveStoreDir(targetPath));
+
+  let result;
+  try {
+    result = buildPromptComparison({ runRecords, now: new Date() });
+  } catch (err) {
+    // Both are usage-level: the dataset cannot support the comparison. The
+    // message says which condition failed, so exit 1 stays actionable.
+    if (err instanceof PromptComparisonError || err instanceof PairedReplayError) {
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
+    throw err;
+  }
+
+  if (output === 'json') {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(formatPromptComparisonMarkdown(result));
+  }
+  // Exit 0: this is an observation, never a gate (自動 canary は保留).
+  return 0;
 }
 
 async function runAggregate(parsed, targetPath, output) {
