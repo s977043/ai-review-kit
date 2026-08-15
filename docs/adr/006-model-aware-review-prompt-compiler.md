@@ -91,6 +91,56 @@ Review Request IR を挟み、モデル非依存の依頼内容と、モデル�
 
 理由は Context のとおり、レビュー実行経路が `openai` 以外を拒否するためです。いま 4 profile を用意しても、2 つは到達不能なコードになります。
 
+### 受入基準の二段構成
+
+受入基準は、送信前に測れるものと、LLM の応答を要するものへ明示的に分けます。
+
+分けない場合、採否条件の充足が `active` の前提となり、`active` の稼働がその充足の前提にもなります。この循環は #1861 で実際に着手を止めました。
+
+段の振り分けは散文の申し合わせではありません。出典は [`src/lib/prompt-compiler-paired.mjs`](../../src/lib/prompt-compiler-paired.mjs) の `ACCEPTANCE_COVERAGE`（`:66-125`）であり、全 9 行のうち `observable: true` の 1 行を段 1、`observable: false` の 8 行を段 2 とします。指標名も同配列の `metric` をそのまま使います。
+
+#### 段 1—送信前に測れる（`observe` で足りる）
+
+| Metric（`ACCEPTANCE_COVERAGE` の `metric`） | 観測経路                                                       |
+| ------------------------------------------- | -------------------------------------------------------------- |
+| `token（送信前のプロンプト推定長）`         | `observe` が legacy / compiled 双方の推定長を 1 run で記録する |
+
+段 1 の判定条件は次のとおりです。
+
+- `river evolve prompt-compare` が成功し、`promptMetrics` へ両側の推定長と差分が載ることである
+- 推定長が増えた場合、その増分を profile の描画差として説明できることである
+- 推定長が減った事実そのものは採用理由にならない（`promptMetrics.note` と同じ扱いである）
+
+2 番目を閾値にしない理由は実測にあります。[`docs/development/1860-prompt-compiler-paired.md`](../development/1860-prompt-compiler-paired.md) `:24-27` の観測では、`legacyPromptEstimate` 800 に対し `compiledPromptEstimate` は 801 でした。差分ゼロを機械的な合格線にすると、この程度の描画差でも段 1 を通せません。
+
+段 1 を満たした時点で、`active` を opt-in で有効化する作業へ進めるものとします。既定は `off` のままです。
+
+#### 段 2—LLM の応答を要する（`active` 稼働後に測る）
+
+| Metric（`ACCEPTANCE_COVERAGE` の `metric`） | 現時点で測れない理由                             |
+| ------------------------------------------- | ------------------------------------------------ |
+| `should-detect recall`                      | candidate 側の findings が存在しない             |
+| `should-not-detect precision`               | candidate 側の findings が存在しない             |
+| `parse 成功率`                              | compiled prompt に対する LLM 応答が無い          |
+| `Evidence / Fix の充足`                     | 充足度を数える対象が存在しない                   |
+| `invalid ArtifactRefs`                      | ArtifactRef の検査対象が存在しない               |
+| `duplicate findings`                        | 重複を数える対象が存在しない                     |
+| `critical 回帰`                             | 両側の run が同一のため差分 0 は未観測を意味する |
+| `latency / cost`                            | compiled prompt を送っておらず計測対象が無い     |
+
+段 2 を満たすまで、既定を `off` から動かしません。
+
+#### 段 2 を測るために揃えるもの
+
+段 2 は「いつか測る」ではなく、次の 4 つが揃った時点で測れます。
+
+1. provider の API キーが repo secret へ登録されていることである。これは代行できない人間作業であり、現時点で未完了である
+2. `active` が opt-in で配線され、`sentPrompt` が compiled の run を保存できることである
+3. 同一 fixture・同一モデル・同一 context で legacy 側の run が並存することである
+4. その 2 系統を受け取る比較経路が存在することである。現行の `river evolve prompt-compare` は `sentPrompt` が legacy でない run を拒否するため、active の run はこの導線では扱わない
+
+1 が未完了である間、段 2 の評価は開始できません。逆に 1 が済めば、残る 3 つは #1861 の実装範囲に収まります。
+
 ## Non-goals
 
 - 汎用のプロンプト最適化器
@@ -106,10 +156,12 @@ Review Request IR を挟み、モデル非依存の依頼内容と、モデル�
 ## Consequences
 
 - プロンプトの調整対象が profile に閉じるため、判断側へ波及しない
-- 採否は「プロンプトが短くなったか」ではなく、recall / precision / parse 成功率 / 証跡の充足 / critical 回帰ゼロで判定する
+- 採否は「プロンプトが短くなったか」ではなく、recall / precision / parse 成功率 / 証跡の充足 / critical 回帰ゼロで判定する。これらは前掲の段 2 にあたる
 - legacy と compiled の突合には、既存の Experiment Manifest（`src/lib/paired-replay.mjs`）を使う。突合と受入基準の評価は実装済みであり、追加で必要なのは同条件の run を 2 本産む導線だけである
 - `src/prompt/**` は `runners/github-action/src/index.mjs` から `src/cli.mjs` 経由で辿られるため dist にバンドルされる。実装 PR では `npm run build:action` による dist 再ビルドが必要である
-- `active` を既定にしません。既定は `off` のままとし、受入基準を満たした場合にのみ opt-in で有効化します
+- `active` を既定にしない。既定は `off` のままとし、段 2 を満たした場合にのみ既定への昇格を検討する
+- `active` の着手条件は「全 9 指標の充足」ではなく「段 1 の充足」へ変わる。#1861 は基準未充足を理由に止めず、opt-in の配線として着手できる
+- 二段に分けても順序は逆転しない。段 2 の評価は `active` の稼働後であり、既定 `off` の解除条件も段 2 のままである
 
 ### 再参入条件
 
