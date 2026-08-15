@@ -22,6 +22,8 @@ import {
   parseUnifiedDiff,
   parseFixtureDiffs,
   extractFixtureAnchors,
+  extractMalformedAnchors,
+  normalizeDiffPath,
 } from '../scripts/validate-skills.mjs';
 import { createTempDirAsync } from './helpers/temp-dir.mjs';
 
@@ -223,6 +225,199 @@ ${ANCHORED(3)}
   assert.ok(errors.some((e) => /2 hunk header\(s\) in the file but only 1 inside/.test(e)));
 });
 
+// --- #1856,残件 1: notation that carries no `@@` header at all --------------
+//
+// The #1854 surplus check compares countHunkHeaders() against the number of
+// hunks inside a recognized fence. When the diff has no `@@` at all, both sides
+// are 0 and the check is blind — the block is recognized, carries real changes,
+// and contributes nothing an anchor can resolve against.
+
+test('fails when a recognized diff block has +/- lines but no @@ header', async () => {
+  const body = ['+++ b/docs/note.md', '+# Note', '-old line'].join('\n');
+  const { ok, errors } = await runGate({ '01-no-hunk-header.md': FIXTURE(body, ANCHORED(1)) });
+  assert.equal(ok, false);
+  assert.ok(
+    errors.some((e) => /block #1 has \+\/- lines but no .*hunk header/.test(e)),
+    errors.join('\n')
+  );
+});
+
+test('fails on a bare +/- excerpt with neither a +++ header nor a @@ header', async () => {
+  const body = ['-const timeout = 30;', '+const timeout = undefined;'].join('\n');
+  const { ok, errors } = await runGate({
+    '01-bare-excerpt.md': FIXTURE(body, 'findings: []'),
+  });
+  assert.equal(ok, false);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /block #1 has \+\/- lines but no/);
+});
+
+// An intentionally empty ```diff block is a legitimate fixture shape — see
+// skills/upstream/plangate-exec-conformance/fixtures/03-fallback-diff-empty.md,
+// which feeds an empty diff to assert a NO_REVIEW verdict. The guard above must
+// not reach it, so the trigger is "+/- content lines present", not "no header".
+test('accepts an intentionally empty diff block (no +/- lines)', async () => {
+  const { ok, errors } = await runGate({ '01-empty-diff.md': FIXTURE('', 'findings: []') });
+  assert.equal(ok, true, errors.join('\n'));
+  assert.deepEqual(errors, []);
+});
+
+test('fails when an anchor uses the unresolvable range form path:1-5', async () => {
+  const yamlBlock = `findings:
+  - severity: major
+    reason: range anchors are silently dropped by RE_ANCHOR
+    anchor: docs/note.md:1-5`;
+  const { ok, errors } = await runGate({ '01-range-anchor.md': FIXTURE(DIFF_BODY, yamlBlock) });
+  assert.equal(ok, false);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /"docs\/note\.md:1-5" is not in "<file>:<line>" form/);
+});
+
+test('a pseudo-anchor with no line number stays exempt', async () => {
+  const yamlBlock = `findings:
+  - severity: major
+    reason: whole-diff observation
+    anchor: (summary)`;
+  const { ok, errors } = await runGate({ '01-pseudo-anchor.md': FIXTURE(DIFF_BODY, yamlBlock) });
+  assert.equal(ok, true, errors.join('\n'));
+  assert.deepEqual(errors, []);
+});
+
+test('extractMalformedAnchors reports only file-naming anchors of the wrong shape', () => {
+  const text = `<!-- expected:
+findings:
+  - anchor: src/a.ts:12
+  - anchor: (summary):1
+  - anchor: (summary)
+  - anchor: src/a.ts:3-9
+  - anchor: src/a.ts
+  - reason: no anchor at all
+-->`;
+  assert.deepEqual(extractMalformedAnchors(text), ['src/a.ts:3-9', 'src/a.ts']);
+});
+
+// --- #1856,残件 2: overlapping / out-of-order hunks --------------------------
+//
+// parseFixtureDiffs merges every block into one new-side view, last write wins.
+// Two hunks covering the same new-side line therefore leave only the later
+// hunk's text behind, and an anchor into the earlier hunk passes against
+// content it never named.
+
+const TWO_BLOCK_FIXTURE = (firstHeader, secondHeader) => `# Fixture
+
+\`\`\`diff
+--- a/docs/note.md
++++ b/docs/note.md
+${firstHeader}
++alpha
++beta
+\`\`\`
+
+\`\`\`diff
+--- a/docs/note.md
++++ b/docs/note.md
+${secondHeader}
++gamma
+\`\`\`
+
+<!-- expected:
+findings: []
+-->
+`;
+
+test('fails when two hunks of one file overlap on the new side', async () => {
+  const { ok, errors } = await runGate({
+    '01-overlap.md': TWO_BLOCK_FIXTURE('@@ -0,0 +1,2 @@', '@@ -0,0 +2,1 @@'),
+  });
+  assert.equal(ok, false);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /overlaps the new-side range 1\.\.2/);
+  assert.match(errors[0], /docs\/note\.md/);
+});
+
+// Non-ascending starts are the same defect seen from the other side: a hunk
+// that starts before the preceding one always lands inside the preceding
+// range, so the overlap comparison reports it.
+test('fails when a later hunk of one file starts before the preceding one', async () => {
+  const { ok, errors } = await runGate({
+    '01-descending.md': TWO_BLOCK_FIXTURE('@@ -0,0 +10,2 @@', '@@ -0,0 +3,1 @@'),
+  });
+  assert.equal(ok, false);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /overlaps the new-side range 10\.\.11/);
+});
+
+test('accepts ascending, non-overlapping hunks of one file across two blocks', async () => {
+  const { ok, errors } = await runGate({
+    '01-ascending.md': TWO_BLOCK_FIXTURE('@@ -0,0 +1,2 @@', '@@ -0,0 +9,1 @@'),
+  });
+  assert.equal(ok, true, errors.join('\n'));
+  assert.deepEqual(errors, []);
+});
+
+// A pure-deletion hunk contributes an empty new-side range, so the next hunk
+// may legitimately start at the same new-side line. Flagging that would be a
+// false positive on ordinary deletion diffs.
+test('accepts a pure-deletion hunk followed by a hunk at the same new-side line', () => {
+  const text = [
+    '```diff',
+    '+++ b/a.txt',
+    '@@ -4,2 +3,0 @@',
+    '-gone one',
+    '-gone two',
+    '@@ -8,1 +3,2 @@',
+    ' kept',
+    '+added',
+    '```',
+  ].join('\n');
+  assert.deepEqual(parseFixtureDiffs(text).orderIssues, []);
+});
+
+// --- #1856,残件 3: anchor path normalization ---------------------------------
+
+test('resolves an anchor written as ./path against a +++ b/path header', async () => {
+  const yamlBlock = `findings:
+  - severity: major
+    reason: dot-slash prefix must not read as a different file
+    anchor: ./docs/note.md:3`;
+  const { ok, errors } = await runGate({ '01-dot-slash.md': FIXTURE(DIFF_BODY, yamlBlock) });
+  assert.equal(ok, true, errors.join('\n'));
+  assert.deepEqual(errors, []);
+});
+
+// Proves the normalization resolved the file rather than skipping the anchor:
+// line 2 of the same file is blank, so the blank-line error must still fire.
+// The fixture name deliberately avoids the words the assertions match on —
+// every error line embeds the fixture path, so a name like `01-dot-slash-blank`
+// would satisfy /blank/ no matter which error was produced.
+test('a normalized anchor is still checked for the blank-line defect', async () => {
+  const yamlBlock = `findings:
+  - severity: major
+    reason: normalization must not turn into a skip
+    anchor: ./docs/note.md:2`;
+  const { ok, errors } = await runGate({ '01-dotted-empty.md': FIXTURE(DIFF_BODY, yamlBlock) });
+  assert.equal(ok, false);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /that line is blank/);
+});
+
+test('normalizeDiffPath strips ./ and collapses . and .. segments', () => {
+  assert.equal(normalizeDiffPath('./docs/note.md'), 'docs/note.md');
+  assert.equal(normalizeDiffPath('docs/./note.md'), 'docs/note.md');
+  assert.equal(normalizeDiffPath('docs/sub/../note.md'), 'docs/note.md');
+  assert.equal(normalizeDiffPath('docs/note.md'), 'docs/note.md');
+});
+
+test('extractFixtureAnchors returns the normalized file', () => {
+  const text = `<!-- expected:
+findings:
+  - anchor: ./docs/note.md:3
+-->`;
+  assert.deepEqual(extractFixtureAnchors(text), [
+    { raw: './docs/note.md:3', file: 'docs/note.md', line: 3 },
+  ]);
+});
+
 test('countHunkHeaders ignores headers carrying a diff-body prefix', () => {
   assert.equal(
     countHunkHeaders(
@@ -265,14 +460,19 @@ test('skips non-file:line anchors such as the (summary) pseudo-anchor', async ()
  * this gate can lose its real input — breaking RE_DIFF_FENCE, adding a path
  * filter, renaming the `fixtures/` directory, changing the `.md` filter —
  * leaves `ok: true` with the counters at 0. Measured on this commit:
- * 198 fixtures / 250 hunks / 100 anchors (`npm run skills:validate` prints the
+ * 200 fixtures / 258 hunks / 101 anchors (`npm run skills:validate` prints the
  * same three numbers). The floors sit ~20% below that, which
  *
  * - fails on every collapse mode above (all of them drive the counters to 0);
  * - fails if either large tier stops being scanned (midstream = 122 fixtures /
- *   155 hunks, upstream = 57 fixtures / 64 hunks / 83 anchors);
- * - leaves ~48 fixtures / 50 hunks / 20 anchors of headroom, so ordinary
+ *   155 hunks / 14 anchors, upstream = 59 fixtures / 72 hunks / 84 anchors);
+ * - leaves 50 fixtures / 58 hunks / 21 anchors of headroom, so ordinary
  *   fixture churn does not fail the suite for no reason.
+ *
+ * #1856: re-measured after #1875 added 2 fixtures. The values stay as they are —
+ * coverage grew, so the floors are further from the ceiling, and each property
+ * above still holds (dropping midstream leaves 78 fixtures < 150; dropping
+ * upstream leaves 141 fixtures < 150, 186 hunks < 200, 17 anchors < 80).
  *
  * RAISE these when coverage grows. Lowering one is only correct alongside a
  * deliberate, explained removal of fixtures — never to make a red suite green.
