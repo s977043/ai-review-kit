@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.81.0](https://github.com/s977043/river-review/compare/v1.80.0...v1.81.0) (2026-08-15)
+
+
+### Features
+
+* **skills:** plangate-plan-integrity に正規化順序欠陥の fixture を 1 対追加する ([#1875](https://github.com/s977043/river-review/issues/1875)) ([9ff338b](https://github.com/s977043/river-review/commit/9ff338bd7222ad551ed5039a6088b15129d83f59)), closes [#1869](https://github.com/s977043/river-review/issues/1869)
+
 ## [1.80.0](https://github.com/s977043/river-review/compare/v1.79.0...v1.80.0) (2026-08-15)
 
 
