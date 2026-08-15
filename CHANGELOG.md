@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.83.0](https://github.com/s977043/river-review/compare/v1.82.0...v1.83.0) (2026-08-15)
+
+
+### Features
+
+* **feedback:** 未一致 findingFingerprint を無言にせず報告する ([#1883](https://github.com/s977043/river-review/issues/1883)) ([4f42ed4](https://github.com/s977043/river-review/commit/4f42ed49cde18eefd9125ca1fe3812fc3d04191e)), closes [#1823](https://github.com/s977043/river-review/issues/1823)
+
 ## [1.82.0](https://github.com/s977043/river-review/compare/v1.81.0...v1.82.0) (2026-08-15)
 
 
