@@ -44,8 +44,20 @@ const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.git']);
  *     呼び出しとして拾われる（tests/cli-review-plan.test.mjs で誤検出として再現した）。
  * そのため文字列・テンプレート・コメントの状態を持つ 1 パスの走査にしている。
  *
- * 正規表現リテラルは状態として追跡しない。`/` の直後が `/` か `*` のときだけ
- * コメント開始とみなすため、`/^…/` 形の正規表現は誤ってコメント扱いされない。
+ * 正規表現リテラルは状態として追跡する。`/` の直後が `/` か `*` のときだけ
+ * コメント開始とみなすので `/^…/` がコメント扱いされることは無いが、それだけでは
+ * **リテラルの中身が code として読まれる**ため、引用符を含む正規表現が状態を壊す。
+ * 実際 `src/lib/review-engine.mjs` の
+ * `String(name).replace(/[\[\]\`*_{}()#+\-.!|<>\n]/g, '')` は、文字クラス内の
+ * バックティックでテンプレート状態へ入り、そこから次のバックティックまでの
+ * 実 call site を丸ごと落としていた（`buildPrompt(` の検出が 0 件になる）。
+ * 検出漏れは「チェックリストから行を消せ」という**逆向きの誤指示**として出るため、
+ * 誤検出より危険である。
+ *
+ * 正規表現かどうかは直前の意味のある文字で判定する。`)` `]` および識別子・数値の
+ * 直後の `/` は除算、それ以外は正規表現とみなす一般的なヒューリスティクスである。
+ * `a / b` のような除算を誤って正規表現と読むと、そこから次の `/` までを潰して
+ * しまうため、判定を緩める方向へは変更しないこと。
  *
  * 改行は保存する（行番号を保ちたい将来の用途のため）。
  *
@@ -55,8 +67,42 @@ const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.git']);
 export function stripCommentsAndStrings(source) {
   const text = String(source ?? '');
   const out = [];
-  /** @type {'code' | 'line' | 'block' | 'single' | 'double' | 'template'} */
+  /** @type {'code' | 'line' | 'block' | 'single' | 'double' | 'template' | 'regex'} */
   let state = 'code';
+  // 正規表現の文字クラス `[...]` の内側では `/` が終端にならない（`/[/]/` が実例）。
+  let inCharClass = false;
+  // 直前に出力した「意味のある」文字。正規表現か除算かの判定にのみ使う。
+  let lastSignificant = '';
+  // 直前の識別子。`return /x/` のように**キーワードの直後**へ正規表現が来る形を
+  // 除算と誤読しないために見る。誤読すると正規表現の中身が code として読まれ、
+  // 中の引用符が文字列状態を開始して後続の call site を落とす（本モジュールが
+  // 直したのと同じ事故が、キーワード経由で再発する）。
+  let lastWord = '';
+
+  /** 直後に正規表現リテラルが来うるキーワード。値を返す識別子とは区別する。 */
+  const REGEX_PRECEDING_KEYWORDS = new Set([
+    'return',
+    'throw',
+    'typeof',
+    'instanceof',
+    'in',
+    'of',
+    'new',
+    'delete',
+    'void',
+    'case',
+    'do',
+    'else',
+    'yield',
+    'await',
+  ]);
+
+  const startsRegex = () => {
+    if (lastSignificant === '') return true;
+    // 識別子・数値・`)`・`]` の直後は原則として値であり、続く `/` は除算。
+    if (!/[\w$)\]]/.test(lastSignificant)) return true;
+    return REGEX_PRECEDING_KEYWORDS.has(lastWord);
+  };
 
   for (let i = 0; i < text.length; i += 1) {
     const ch = text[i];
@@ -71,12 +117,39 @@ export function stripCommentsAndStrings(source) {
         state = 'block';
         out.push('  ');
         i += 1;
+      } else if (ch === '/' && startsRegex()) {
+        state = 'regex';
+        inCharClass = false;
+        out.push(' ');
       } else if (ch === "'" || ch === '"' || ch === '`') {
         state = ch === "'" ? 'single' : ch === '"' ? 'double' : 'template';
         out.push(' ');
       } else {
         out.push(ch);
       }
+      if (state === 'code' && !/\s/.test(ch)) {
+        lastSignificant = ch;
+        lastWord = /[\w$]/.test(ch) ? lastWord + ch : '';
+      }
+      continue;
+    }
+
+    if (state === 'regex') {
+      if (ch === '\\') {
+        out.push('  ');
+        i += 1;
+        continue;
+      }
+      if (ch === '[') inCharClass = true;
+      else if (ch === ']') inCharClass = false;
+      else if (ch === '/' && !inCharClass) {
+        state = 'code';
+        // リテラル終端。続く flags（`g` / `i` …）は識別子文字なので、
+        // 直後の `/` を除算と読ませるためにも値として扱う。
+        lastSignificant = ')';
+        lastWord = '';
+      }
+      out.push(ch === '\n' ? '\n' : ' ');
       continue;
     }
 
@@ -110,6 +183,10 @@ export function stripCommentsAndStrings(source) {
     const closer = state === 'single' ? "'" : state === 'double' ? '"' : '`';
     if (ch === closer) {
       state = 'code';
+      // 閉じた文字列は「値」である。直後の `/` は除算なので、正規表現の
+      // 開始と誤読しないよう値扱いの印を残す（`` `a` / 2 `` が実例）。
+      lastSignificant = ')';
+      lastWord = '';
       out.push(' ');
     } else {
       out.push(ch === '\n' ? '\n' : ' ');

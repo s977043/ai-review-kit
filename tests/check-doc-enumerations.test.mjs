@@ -891,6 +891,74 @@ test('stripCommentsAndStrings keeps a regex literal out of the comment state', (
   assert.equal(hasBareCall(stripCommentsAndStrings(source), 'generateReview'), true);
 });
 
+test('stripCommentsAndStrings survives a quote character inside a regex literal', () => {
+  // 実バグ: 正規表現の中身が code として読まれていたため、文字クラス内の
+  // バックティックでテンプレート状態へ入り、そこから次のバックティックまでの
+  // 本物の call site を丸ごと落としていた。src/lib/review-engine.mjs の
+  // sanitizeSkillName がその形で、buildPrompt( の検出が 0 件になっていた。
+  //
+  // 検出漏れは「チェックリストからこの行を消せ」という逆向きの誤指示として
+  // 出るため、誤検出より危険である。3 種の引用符すべてを pin する。
+  for (const quoted of ['`', "'", '"']) {
+    const source = [`const re = /[\\[\\]${quoted}*_{}()#+\\-.!|<>]/g;`, 'buildPrompt({});'].join(
+      '\n'
+    );
+    assert.equal(
+      hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'),
+      true,
+      `a ${quoted} inside a regex character class must not swallow the next call site`
+    );
+  }
+});
+
+test('stripCommentsAndStrings treats a slash inside a character class as literal', () => {
+  const source = ['const re = /[/]/;', 'buildPrompt({});'].join('\n');
+  assert.equal(hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'), true);
+});
+
+test('stripCommentsAndStrings treats a regex after a keyword as a regex, not division', () => {
+  // 判定を「直前の意味のある文字」だけで行うと、`return` `throw` `await` のように
+  // 識別子文字で終わるキーワードの直後の正規表現が除算と誤読される。すると中身が
+  // code として読まれ、引用符が文字列状態を開始して後続の call site を落とす
+  // ——本 PR が直したのと同じ事故がキーワード経由で再発する。自己レビューで検出した。
+  for (const keyword of ['return', 'throw', 'await', 'yield', 'case 1:', 'typeof']) {
+    const source = [`function f(x){ ${keyword} /['"]/.test(x); }`, 'buildPrompt({});'].join('\n');
+    assert.equal(
+      hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'),
+      true,
+      `a regex after "${keyword}" must not be read as division`
+    );
+  }
+});
+
+test('stripCommentsAndStrings still reads division after an identifier ending in a keyword', () => {
+  // キーワード判定は完全一致でなければならない。`returnValue / 2` を正規表現の
+  // 開始と読むと、そこから次の `/` までを潰して間の call site が消える。
+  const source = ['const returnValue = 10;', 'const q = returnValue / 2;', 'buildPrompt({});'].join(
+    '\n'
+  );
+  assert.equal(hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'), true);
+});
+
+test('stripCommentsAndStrings reads a division operator as division, not a regex', () => {
+  // 正規表現の判定を緩めると、除算の `/` から次の `/` までを潰してしまい、
+  // 間にある call site が消える。判定は直前の意味のある文字で行う。
+  const source = ['const ratio = (a) / b;', 'const other = c / d;', 'buildPrompt({});'].join('\n');
+  assert.equal(hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'), true);
+});
+
+test('stripCommentsAndStrings does not read a slash after a closing backtick as a regex', () => {
+  const source = ['const n = `a`.length / 2;', 'buildPrompt({});'].join('\n');
+  assert.equal(hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'), true);
+});
+
+test('the real review-engine module is still detected as a buildPrompt call site', async () => {
+  // 上のユニットは合成ソースなので、実ファイルでも成立することを別に確かめる。
+  // このアサートが落ちるときは、チェックリストの行を消すのではなく走査器を疑う。
+  const source = await fs.readFile(path.join(REPO_ROOT, 'src', 'lib', 'review-engine.mjs'), 'utf8');
+  assert.equal(hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'), true);
+});
+
 test('hasBareCall ignores method calls and same-prefixed identifiers', () => {
   assert.equal(hasBareCall('await client.generateReview(s, d);', 'generateReview'), false);
   assert.equal(hasBareCall('buildExecutionPlanImpl(args);', 'buildExecutionPlan'), false);
