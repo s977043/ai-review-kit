@@ -19,6 +19,7 @@
 - [ ] `tests/review-engine.test.mjs`—新パラメータ有無のテスト最低2件
 - [ ] `tests/review-eval.test.mjs`—既存の eval テスト
 - [ ] `tests/finding-format.test.mjs`—フォーマット検証テスト
+- [ ] `tests/prompt-sections.test.mjs`—節生成の SSoT（`src/prompt/sections.mjs`）と golden の突合
 - [ ] `tests/integration/local-review.test.mjs`—統合テスト（関連する場合）
 
 ### 必須: `verifyFinding` に新パラメータを追加した場合
