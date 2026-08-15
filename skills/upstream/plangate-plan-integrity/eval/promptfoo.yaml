@@ -54,6 +54,37 @@ tests:
       - type: contains
         value: 'plangate-plan-integrity'
 
+  # Test case 4: True positive — normalization step ordering defect + conflicting AC
+  - description: 'Detect normalization order defect and conflicting acceptance criteria'
+    vars:
+      diff: file://../fixtures/04-true-positive-normalization-order-conflict.md
+    assert:
+      - type: contains
+        value: 'plan.md'
+      - type: contains-any
+        value:
+          - '順序'
+          - '正規化'
+          - 'CONFIG.md'
+      - type: contains
+        value: 'severity=critical'
+
+  # Test case 5: Negative control — same gate passes, order fixed, AC disjoint
+  - description: 'No critical after the normalization order is fixed (gate still passes)'
+    vars:
+      diff: file://../fixtures/05-false-positive-normalization-order-fixed.md
+    assert:
+      - type: not-contains
+        value: 'severity=critical'
+      - type: not-contains
+        value: 'NO_REVIEW'
+      - type: contains-any
+        value:
+          - 'NO_ISSUES'
+          - '健全'
+          - '指摘対象外'
+          - '抑制'
+
 outputPath: ./output.json
 
 defaultTest:

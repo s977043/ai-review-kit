@@ -504,8 +504,8 @@
     {
       "id": "plangate-plan-integrity",
       "path": "skills/upstream/plangate-plan-integrity",
-      "checksum": "sha256:da3da706d5017a6ab6f7c66211f924956402213acd57a71e04266e6e381153e0",
-      "files": 10
+      "checksum": "sha256:1d3b3918cfb3e976d4eab3f364803f13884a081b97476dd7d13cf840f2fdad9c",
+      "files": 14
     },
     {
       "id": "plangate-rule-promotion",
