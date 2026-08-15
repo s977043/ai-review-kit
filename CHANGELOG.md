@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.80.0](https://github.com/s977043/river-review/compare/v1.79.0...v1.80.0) (2026-08-15)
+
+
+### Features
+
+* **eval:** legacy と compiled の paired 比較導線を足す ([#1873](https://github.com/s977043/river-review/issues/1873)) ([077a056](https://github.com/s977043/river-review/commit/077a056d2f056eb8e848844fa41e7fcfbca61fde)), closes [#1860](https://github.com/s977043/river-review/issues/1860) [#1858](https://github.com/s977043/river-review/issues/1858)
+
+
+### Bug Fixes
+
+* **review-plan:** replay / exec で engine の debug.execution 観測を引き継ぐ ([#1871](https://github.com/s977043/river-review/issues/1871)) ([5f3f0ec](https://github.com/s977043/river-review/commit/5f3f0ec3e6b390012058ec7e538ca73e41f03d28)), closes [#1868](https://github.com/s977043/river-review/issues/1868) [#1858](https://github.com/s977043/river-review/issues/1858)
+
 ## [1.79.0](https://github.com/s977043/river-review/compare/v1.78.1...v1.79.0) (2026-08-15)
 
 
