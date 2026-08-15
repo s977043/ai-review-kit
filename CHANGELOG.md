@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.82.0](https://github.com/s977043/river-review/compare/v1.81.0...v1.82.0) (2026-08-15)
+
+
+### Features
+
+* **prompt-compiler:** compiled prompt の opt-in active モードを配線する ([#1878](https://github.com/s977043/river-review/issues/1878)) ([10d8c5b](https://github.com/s977043/river-review/commit/10d8c5b6dca681bce8775ed709389c35855bc609)), closes [#1861](https://github.com/s977043/river-review/issues/1861) [#1858](https://github.com/s977043/river-review/issues/1858)
+* **skills:** fixture diff パーサの記法・構造カバレッジを広げる ([#1877](https://github.com/s977043/river-review/issues/1877)) ([a138037](https://github.com/s977043/river-review/commit/a138037ccd8e2aee187a4751288c177125057bec)), closes [#1856](https://github.com/s977043/river-review/issues/1856)
+
 ## [1.81.0](https://github.com/s977043/river-review/compare/v1.80.0...v1.81.0) (2026-08-15)
 
 
