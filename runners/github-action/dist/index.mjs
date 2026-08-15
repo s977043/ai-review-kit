@@ -72968,17 +72968,23 @@ async function runPromoteCommand(parsed, targetPath) {
 //
 //   river evolve aggregate [<path>] [--min <n>] [--month YYYY-MM] [--output json|text]
 //   river evolve replay --spec <file> [--expect-manifest <id|key>] [--output json|text]
+//   river evolve prompt-compare [<path>] [--output json|text]
 //
-// Both subcommands only READ. `aggregate` reads `.river/runs/` and
+// All three subcommands only READ. `aggregate` reads `.river/runs/` and
 // `.river/feedback/*.jsonl`; `replay` reads a single experiment spec file that
-// already contains the baseline and candidate runs. Neither has an `--out` /
-// `--promote` style option: writing into Riverbed, Skills, rules, or the gate
-// belongs to #1568's promotion lifecycle, and re-running a review belongs to
-// `river run` — so no code path here can mutate a repository or spend an API
-// call. Redirect stdout if you need the JSON on disk.
+// already contains the baseline and candidate runs; `prompt-compare` reads
+// `.river/runs/` and pairs the legacy prompt against the compiled prompt from
+// the observe-mode records those runs already carry (ADR-006 / #1860) — it
+// never sends the compiled prompt anywhere. None has an `--out` / `--promote`
+// style option: writing into Riverbed, Skills, rules, or the gate belongs to
+// #1568's promotion lifecycle, and re-running a review belongs to `river run` —
+// so no code path here can mutate a repository or spend an API call. Redirect
+// stdout if you need the JSON on disk.
+
+const SUBCOMMANDS = ['aggregate', 'replay', 'prompt-compare'];
 
 /**
- * Handle the `evolve` command (aggregate | replay).
+ * Handle the `evolve` command (aggregate | replay | prompt-compare).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
  * @param {string} targetPath - resolved repo target path.
@@ -72986,8 +72992,8 @@ async function runPromoteCommand(parsed, targetPath) {
  */
 async function runEvolveCommand(parsed, targetPath) {
   const subcommand = parsed.evolveSubcommand ?? 'aggregate';
-  if (subcommand !== 'aggregate' && subcommand !== 'replay') {
-    console.error(`Unknown evolve subcommand: ${subcommand}. Use: aggregate | replay`);
+  if (!SUBCOMMANDS.includes(subcommand)) {
+    console.error(`Unknown evolve subcommand: ${subcommand}. Use: ${SUBCOMMANDS.join(' | ')}`);
     return 1;
   }
   if (parsed.evolveUnknownOption) {
@@ -73013,7 +73019,59 @@ async function runEvolveCommand(parsed, targetPath) {
   if (subcommand === 'replay') {
     return runReplay(parsed, output);
   }
+  if (subcommand === 'prompt-compare') {
+    return runPromptCompare(parsed, targetPath, output);
+  }
   return runAggregate(parsed, targetPath, output);
+}
+
+/**
+ * `river evolve prompt-compare` — legacy と compiled の paired 比較（#1860）。
+ *
+ * 保存済み run の `debug.execution.promptCompiler` を読むだけである。
+ * レビューの再実行も compiled prompt の送信も行わない。
+ */
+async function runPromptCompare(parsed, targetPath, output) {
+  const misplaced = ['--spec', '--expect-manifest', '--min', '--month'].filter((flag) => {
+    if (flag === '--spec') return parsed.evolveSpec != null;
+    if (flag === '--expect-manifest') return parsed.evolveExpectManifest != null;
+    if (flag === '--min') return parsed.evolveMin != null;
+    return parsed.evolveMonth != null;
+  });
+  if (misplaced.length) {
+    console.error(
+      `${misplaced.join(', ')} is not valid for \`river evolve prompt-compare\` (its dataset is the saved runs under .river/runs).`
+    );
+    return 1;
+  }
+
+  const { resolveStoreDir, loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+  const { buildPromptComparison, formatPromptComparisonMarkdown, PromptComparisonError } =
+    await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(80), __nccwpck_require__.e(90)]).then(__nccwpck_require__.bind(__nccwpck_require__, 6709));
+  const { PairedReplayError } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(80)]).then(__nccwpck_require__.bind(__nccwpck_require__, 3080));
+
+  const runRecords = await loadAllRunRecords(resolveStoreDir(targetPath));
+
+  let result;
+  try {
+    result = buildPromptComparison({ runRecords, now: new Date() });
+  } catch (err) {
+    // Both are usage-level: the dataset cannot support the comparison. The
+    // message says which condition failed, so exit 1 stays actionable.
+    if (err instanceof PromptComparisonError || err instanceof PairedReplayError) {
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
+    throw err;
+  }
+
+  if (output === 'json') {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(formatPromptComparisonMarkdown(result));
+  }
+  // Exit 0: this is an observation, never a gate (自動 canary は保留).
+  return 0;
 }
 
 async function runAggregate(parsed, targetPath, output) {
@@ -73243,6 +73301,12 @@ Commands:
                         criteria. Never re-runs a review and never decides
                         adoption (--spec <file> --expect-manifest <id>;
                         --output json)
+  evolve prompt-compare <path>
+                        Read-only paired comparison of the legacy prompt vs the
+                        compiled prompt over saved observe-mode runs
+                        (ADR-006 / #1860). Feeds the same Experiment Manifest as
+                        evolve replay. Never re-runs a review and never sends
+                        the compiled prompt (--output json)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -73312,7 +73376,7 @@ const COMMAND_USAGE = {
     'river suppression add --fingerprint <fp> --feedback <type> --rationale <text> [options]',
   promote:
     'river promote <propose|list|approve|reject|template|retire|review-effectiveness> [options]',
-  evolve: 'river evolve <aggregate|replay> [options]',
+  evolve: 'river evolve <aggregate|replay|prompt-compare> [options]',
 };
 
 const GENERIC_USAGE = 'river <command> <path> [options]';
@@ -73578,7 +73642,7 @@ function parseArgs(argv) {
   const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
   // #1574 P1 `aggregate` / P2 `replay`. Matching against a known set (rather
   // than "first non-flag token") keeps `river evolve <path>` working.
-  const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay']);
+  const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay', 'prompt-compare']);
   // Whether a positional path was taken from AFTER a POSIX `--` terminator.
   // Only used to phrase the `review` usage error correctly (see below): a token
   // the caller explicitly declared to be a path must not be reported as "not a

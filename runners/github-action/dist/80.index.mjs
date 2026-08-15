@@ -7,10 +7,11 @@ export const modules = {
 
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   PairedReplayError: () => (/* binding */ PairedReplayError),
+/* harmony export */   XZ: () => (/* binding */ deriveCaseKey),
 /* harmony export */   buildPairedReplay: () => (/* binding */ buildPairedReplay),
 /* harmony export */   formatPairedReplayMarkdown: () => (/* binding */ formatPairedReplayMarkdown)
 /* harmony export */ });
-/* unused harmony exports PAIRED_REPLAY_SCHEMA_VERSION, PAIRED_REPLAY_COLLECTOR_VERSION, PAIRED_REPLAY_EVALUATOR_VERSION, MANIFEST_ID_PREFIX, TERMINAL_REASONS, SUPPORTED_ACCEPTANCE_METRICS, METRIC_DENOMINATORS, ACCEPTANCE_COMPARATORS, deriveCaseKey, buildExperimentManifest, verifyExperimentManifest, pairFindings, evaluateAcceptance */
+/* unused harmony exports PAIRED_REPLAY_SCHEMA_VERSION, PAIRED_REPLAY_COLLECTOR_VERSION, PAIRED_REPLAY_EVALUATOR_VERSION, MANIFEST_ID_PREFIX, TERMINAL_REASONS, SUPPORTED_ACCEPTANCE_METRICS, METRIC_DENOMINATORS, ACCEPTANCE_COMPARATORS, buildExperimentManifest, verifyExperimentManifest, pairFindings, evaluateAcceptance */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7598);
 /* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3077);
 /* harmony import */ var _shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(4029);
