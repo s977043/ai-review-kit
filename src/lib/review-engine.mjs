@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { mergeConfig } from '../config/loader.mjs';
 import { computeFindingBreakdown } from './scoring/breakdown.mjs';
 import {
@@ -36,6 +38,12 @@ import {
   buildSystemMessage,
   buildWalkthroughSection,
 } from '../prompt/sections.mjs';
+// ADR-006 / #1859: Prompt Compiler（observe モード）。既定 off では
+// 一切呼ばれない。import は静的に置くが、mode 判定の内側でしか実行しない。
+import { compileReviewPrompt, PROMPT_COMPILER_VERSION } from '../prompt/compiler.mjs';
+import { resolveProfile } from '../prompt/profile-resolver.mjs';
+import { buildReviewRequest } from '../prompt/review-request.mjs';
+import { estimateTokens } from './token-estimator.mjs';
 
 const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
 const MAX_PROMPT_CHARS = 12000;
@@ -111,6 +119,56 @@ ${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssess
 Diff:
 ${diffBody}`;
   return { prompt, truncated, language, severity };
+}
+
+// --- ADR-006 / #1859: Prompt Compiler の観測 ---
+
+/** debug へ載せる hash の長さ。理由は promptFingerprint の JSDoc を参照。 */
+const PROMPT_HASH_CHARS = 16;
+
+/**
+ * プロンプトの指紋。sha256 hex の先頭 16 文字だけを載せる。
+ *
+ * 全長 64 文字を持つ必要がない。この値の用途は「legacy と compiled が同じ
+ * 文字列か」「同条件の 2 run で同じ文字列を作れているか」の等値比較だけであり、
+ * 参照キーにも検索キーにもしない。artifact を人が読むときの見通しを優先して
+ * 切り詰める。原文そのものは載せない（ADR-006 の observe 不変条件）。
+ */
+function promptFingerprint(text) {
+  return createHash('sha256')
+    .update(String(text), 'utf8')
+    .digest('hex')
+    .slice(0, PROMPT_HASH_CHARS);
+}
+
+/**
+ * observe モードの記録を組む。
+ *
+ * 記録するのは hash と推定長と profile の来歴だけである。原文（prompt 本体、
+ * diff 本文）は返り値に含めない。
+ *
+ * 推定長は src/lib/token-estimator.mjs の estimateTokens をそのまま使う。
+ * 独自の概算を置くと legacy 側の既存計測（context budget）と単位が食い違う。
+ *
+ * legacy 側は system message と user prompt を連結して数える。compiled 側は
+ * profile によって契約節の置き場所が system / user のどちらにもなるため、
+ * 片方だけを数えると比較が成立しない。
+ */
+function buildPromptCompilerObservation({ mode, profile, legacyText, compiledText }) {
+  return {
+    mode,
+    // #1859 では active を有効化しない。schema は値を受理するが、実際に
+    // provider へ送るのは常に legacy 側である。active の配線は #1861。
+    sentPrompt: 'legacy',
+    ...(mode === 'active' ? { activeNotEnabled: true } : {}),
+    compilerVersion: PROMPT_COMPILER_VERSION,
+    profileId: profile.id,
+    profileVersion: profile.version,
+    legacyPromptEstimate: estimateTokens(legacyText),
+    compiledPromptEstimate: estimateTokens(compiledText),
+    legacyPromptHash: promptFingerprint(legacyText),
+    compiledPromptHash: promptFingerprint(compiledText),
+  };
 }
 
 export function parseLineComments(outputText) {
@@ -334,6 +392,67 @@ export async function generateReview({
         }
       : null,
   };
+
+  // --- ADR-006 / #1859: Prompt Compiler（配線はこの 1 箇所だけ）---
+  //
+  // 既定は off。off のとき下のブロックは丸ごと実行されず、buildPrompt から
+  // 下流の挙動は導入前と 1 バイトも変わらない。
+  //
+  // observe / active のいずれでも、provider へ送るのは既存の
+  // promptInfo.prompt である。active を送信へ切り替える配線は #1861 で行う。
+  const promptCompilerMode = effectiveConfig.review?.promptCompiler?.mode ?? 'off';
+  if (promptCompilerMode !== 'off') {
+    // 差分本文の上限適用。buildPrompt（同ファイル）の同じ式を写している。
+    // buildPrompt 側は ADR-006 の実装方針により無改変で残すため共通化せず、
+    // 両者が一致していることを tests/prompt-compiler-observe.test.mjs が
+    // legacy prompt の末尾との突合で pin する。
+    const compiledDiffBody = promptInfo.truncated
+      ? `${llmDiff.diffText.slice(0, maxPromptChars)}\n...[truncated]`
+      : llmDiff.diffText;
+    const compiledDepthConfig = getReviewDepthConfig(reviewMode ?? 'medium');
+    const ir = buildReviewRequest({
+      subject: { phase, changedFiles: llmDiff.files },
+      // 判断側の値は buildPrompt が解決したものをそのまま使う。ここで別経路
+      // から取り直すと legacy と compiled で判断の入力が分岐する。
+      judgment: {
+        skillIds: (plan?.selected ?? []).map((s) => s.metadata?.id ?? s.id),
+        severity: promptInfo.severity,
+        plan,
+      },
+      context: {
+        diff: compiledDiffBody,
+        diffTruncated: promptInfo.truncated,
+        projectRules,
+        relatedADRs,
+        riskAssessment,
+        repoContext,
+        prDescription: prBody,
+      },
+      constraints: {
+        maxFindings: compiledDepthConfig.maxFindings,
+        focusHint: compiledDepthConfig.focusHint,
+        walkthrough: effectiveConfig.review?.walkthrough ?? false,
+        agentHandoff: effectiveConfig.review?.agentHandoff ?? false,
+        additionalInstructions: effectiveConfig.review?.additionalInstructions,
+      },
+      outputContract: { language },
+      execution: { provider: openAIConfig.provider, model: openAIConfig.model },
+    });
+    const profile = resolveProfile({
+      provider: openAIConfig.provider,
+      model: openAIConfig.model,
+    });
+    const compiled = compileReviewPrompt(ir, profile);
+    debug.execution = {
+      ...(debug.execution ?? {}),
+      promptCompiler: buildPromptCompilerObservation({
+        mode: promptCompilerMode,
+        profile,
+        legacyText: `${buildSystemMessage(language)}\n${promptInfo.prompt}`,
+        compiledText: `${compiled.systemMessage}\n${compiled.prompt}`,
+      }),
+    };
+  }
 
   const skipReason = dryRun
     ? 'dry-run enabled'
