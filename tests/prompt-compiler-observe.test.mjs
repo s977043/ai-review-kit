@@ -104,6 +104,27 @@ test('schema は 3 値だけを受理し、shadow を拒否する', () => {
   assert.throws(() => reviewConfigSchema.parse({ promptCompiler: { mode: 'shadow' } }));
 });
 
+/** mode=off のとき debug が持つべきキーの完全集合。 */
+const OFF_DEBUG_KEYS = [
+  'fallbackIncluded',
+  'fileClassification',
+  'findingFormat',
+  'heuristicsCount',
+  'heuristicsUsed',
+  'llmModel',
+  'llmProvider',
+  'llmSkipped',
+  'llmUsed',
+  'promptPreview',
+  'promptTruncated',
+  'repoContext',
+  'reviewLanguage',
+  'reviewSeverity',
+  'scopeStats',
+  'verifierRejected',
+  'verifierStats',
+];
+
 test('mode=off（既定）では debug.execution.promptCompiler が付かない', async () => {
   const implicit = await generateReview(baseArgs({ dryRun: true }));
   assert.equal(implicit.debug.execution, undefined);
@@ -112,18 +133,33 @@ test('mode=off（既定）では debug.execution.promptCompiler が付かない'
     baseArgs({ dryRun: true, config: { review: { promptCompiler: { mode: 'off' } } } })
   );
   assert.equal(explicit.debug.execution, undefined);
+
+  // キー列挙で pin する。observe のガードの **外側** に debug を書き足す変更を
+  // 検出するため。debug は src/lib/result-store.mjs 経由で artifact へそのまま
+  // 永続化されるので、off の artifact が静かに変わると誰も気づかない。
+  assert.deepEqual(Object.keys(implicit.debug).sort(), OFF_DEBUG_KEYS);
+  assert.deepEqual(Object.keys(explicit.debug).sort(), OFF_DEBUG_KEYS);
 });
 
-test('mode=off と mode=observe で既存の返却値が一致する（挙動不変）', async () => {
+test('mode=off と mode=observe で、debug.execution 以外の戻り値が完全一致する', async () => {
   const off = await generateReview(baseArgs({ dryRun: true }));
   const observe = await generateReview(
     baseArgs({ dryRun: true, config: { review: { promptCompiler: { mode: 'observe' } } } })
   );
-  assert.equal(observe.prompt, off.prompt);
-  assert.equal(observe.debug.promptPreview, off.debug.promptPreview);
-  assert.equal(observe.debug.llmSkipped, off.debug.llmSkipped);
-  assert.deepEqual(observe.comments, off.comments);
-  assert.deepEqual(observe.findings, off.findings);
+
+  // 項目を列挙せず、戻り値まるごとを比べる。observe が足してよいのは
+  // debug.execution だけであり、それ以外の差はすべて挙動変化である。
+  const strip = (result) => {
+    const { debug, ...rest } = result;
+    const { execution, ...debugRest } = debug;
+    void execution;
+    return { ...rest, debug: debugRest };
+  };
+  assert.deepEqual(strip(observe), strip(off));
+
+  // 対照: off 側には execution が無く、observe 側にはある。
+  assert.equal(off.debug.execution, undefined);
+  assert.ok(observe.debug.execution.promptCompiler);
 });
 
 test('mode=observe は LLM 呼び出し回数を増やさず、送るのは legacy prompt のまま', async () => {
@@ -155,8 +191,24 @@ test('mode=observe は LLM 呼び出し回数を増やさず、送るのは lega
   const legacyText = `${systemMessage}\n${userMessage}`;
   const legacyHash = createHash('sha256').update(legacyText, 'utf8').digest('hex').slice(0, 16);
   assert.equal(observed.legacyPromptHash, legacyHash);
-  assert.notEqual(observed.compiledPromptHash, observed.legacyPromptHash);
   assert.equal(observed.sentPrompt, 'legacy');
+
+  // 上の hash 比較だけでは足りない。送信物と記録値のどちらも「実際に送られた
+  // もの」由来なので、送信物を compiled へ差し替えると期待値も一緒に動く。
+  // 送信物を legacy 側の独立な観測点（返却された prompt）と直接突き合わせ、
+  // さらに送信物が compiled と **一致しない** ことも見る。
+  assert.equal(userMessage, observeResult.value.prompt);
+  const sentHash = createHash('sha256')
+    .update(`${systemMessage}\n${userMessage}`, 'utf8')
+    .digest('hex')
+    .slice(0, 16);
+  // この assert に力があるのは compiled と legacy がバイト単位で違う profile の
+  // ときだけである。generic は legacy と同一描画なので、openai であることを先に
+  // 確かめる（provider=openai を config で固定してある）。
+  assert.equal(observed.profileId, 'openai-review-v1');
+  assert.notEqual(observed.compiledPromptHash, observed.legacyPromptHash);
+  assert.notEqual(sentHash, observed.compiledPromptHash);
+  assert.equal(sentHash, observed.legacyPromptHash);
 });
 
 test('mode=active は受理するが本 PR では有効化せず、legacy を送る（#1861）', async () => {
@@ -210,18 +262,36 @@ test('記録するのは hash と推定長と profile の来歴だけである',
   assert.match(observed.compiledPromptHash, /^[0-9a-f]{16}$/);
 });
 
-test('debug.execution に raw prompt / diff 本文が現れない', async () => {
+test('observe が debug のどこにも raw prompt / diff 本文を残さない', async () => {
   const result = await generateReview(
     baseArgs({ dryRun: true, config: { review: { promptCompiler: { mode: 'observe' } } } })
   );
-  const serialized = JSON.stringify(result.debug.execution);
+
+  // 検査対象は debug.execution ではなく **debug 全体** である。
+  // src/lib/result-store.mjs は「発生源で redact 済み」として debug をそのまま
+  // artifact へ永続化するため、execution の兄弟へ原文を書いても切り詰めも
+  // redact も掛からない。
+  //
+  // 既知の例外は debug.promptPreview だけである。これは #692 PR-D で
+  // redactText を通したうえで先頭 2000 字に切り詰めた preview であり、
+  // Prompt Compiler の導入より前から存在し、ADR-006 も「compiler 側の記録も
+  // この既存の扱いに揃える」と明記して新たな禁止を課していない。
+  const { promptPreview, ...debugWithoutKnownPreview } = result.debug;
+  assert.equal(typeof promptPreview, 'string');
+  const serialized = JSON.stringify(debugWithoutKnownPreview);
+
   // 目印が prompt には確かに載っていることを先に確認する（対照）。
   assert.ok(result.prompt.includes(DIFF_MARKER));
   assert.ok(result.prompt.includes(RULES_MARKER));
-  assert.equal(serialized.includes(DIFF_MARKER), false);
-  assert.equal(serialized.includes(RULES_MARKER), false);
-  assert.equal(serialized.includes('console.log'), false);
-  assert.equal(serialized.includes('You are River Review'), false);
+
+  for (const marker of [DIFF_MARKER, RULES_MARKER, 'console.log', 'You are River Review']) {
+    assert.equal(serialized.includes(marker), false, `debug leaked: ${marker}`);
+  }
+  // execution 単体でも同じことを見る（例外の除外に紛れないようにするため）。
+  const executionOnly = JSON.stringify(result.debug.execution);
+  for (const marker of [DIFF_MARKER, RULES_MARKER, 'console.log', 'You are River Review']) {
+    assert.equal(executionOnly.includes(marker), false, `debug.execution leaked: ${marker}`);
+  }
 });
 
 test('差分が上限を超えたとき、compiled 側の diff 本文は legacy と一致する', async () => {
