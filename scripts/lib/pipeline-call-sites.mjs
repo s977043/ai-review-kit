@@ -73,11 +73,35 @@ export function stripCommentsAndStrings(source) {
   let inCharClass = false;
   // 直前に出力した「意味のある」文字。正規表現か除算かの判定にのみ使う。
   let lastSignificant = '';
+  // 直前の識別子。`return /x/` のように**キーワードの直後**へ正規表現が来る形を
+  // 除算と誤読しないために見る。誤読すると正規表現の中身が code として読まれ、
+  // 中の引用符が文字列状態を開始して後続の call site を落とす（本モジュールが
+  // 直したのと同じ事故が、キーワード経由で再発する）。
+  let lastWord = '';
+
+  /** 直後に正規表現リテラルが来うるキーワード。値を返す識別子とは区別する。 */
+  const REGEX_PRECEDING_KEYWORDS = new Set([
+    'return',
+    'throw',
+    'typeof',
+    'instanceof',
+    'in',
+    'of',
+    'new',
+    'delete',
+    'void',
+    'case',
+    'do',
+    'else',
+    'yield',
+    'await',
+  ]);
 
   const startsRegex = () => {
     if (lastSignificant === '') return true;
-    // 識別子・数値・`)`・`]` の直後は値であり、続く `/` は除算。
-    return !/[\w$)\]]/.test(lastSignificant);
+    // 識別子・数値・`)`・`]` の直後は原則として値であり、続く `/` は除算。
+    if (!/[\w$)\]]/.test(lastSignificant)) return true;
+    return REGEX_PRECEDING_KEYWORDS.has(lastWord);
   };
 
   for (let i = 0; i < text.length; i += 1) {
@@ -103,7 +127,10 @@ export function stripCommentsAndStrings(source) {
       } else {
         out.push(ch);
       }
-      if (state === 'code' && !/\s/.test(ch)) lastSignificant = ch;
+      if (state === 'code' && !/\s/.test(ch)) {
+        lastSignificant = ch;
+        lastWord = /[\w$]/.test(ch) ? lastWord + ch : '';
+      }
       continue;
     }
 
@@ -120,6 +147,7 @@ export function stripCommentsAndStrings(source) {
         // リテラル終端。続く flags（`g` / `i` …）は識別子文字なので、
         // 直後の `/` を除算と読ませるためにも値として扱う。
         lastSignificant = ')';
+        lastWord = '';
       }
       out.push(ch === '\n' ? '\n' : ' ');
       continue;
@@ -158,6 +186,7 @@ export function stripCommentsAndStrings(source) {
       // 閉じた文字列は「値」である。直後の `/` は除算なので、正規表現の
       // 開始と誤読しないよう値扱いの印を残す（`` `a` / 2 `` が実例）。
       lastSignificant = ')';
+      lastWord = '';
       out.push(' ');
     } else {
       out.push(ch === '\n' ? '\n' : ' ');

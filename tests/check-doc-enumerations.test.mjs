@@ -916,6 +916,30 @@ test('stripCommentsAndStrings treats a slash inside a character class as literal
   assert.equal(hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'), true);
 });
 
+test('stripCommentsAndStrings treats a regex after a keyword as a regex, not division', () => {
+  // 判定を「直前の意味のある文字」だけで行うと、`return` `throw` `await` のように
+  // 識別子文字で終わるキーワードの直後の正規表現が除算と誤読される。すると中身が
+  // code として読まれ、引用符が文字列状態を開始して後続の call site を落とす
+  // ——本 PR が直したのと同じ事故がキーワード経由で再発する。自己レビューで検出した。
+  for (const keyword of ['return', 'throw', 'await', 'yield', 'case 1:', 'typeof']) {
+    const source = [`function f(x){ ${keyword} /['"]/.test(x); }`, 'buildPrompt({});'].join('\n');
+    assert.equal(
+      hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'),
+      true,
+      `a regex after "${keyword}" must not be read as division`
+    );
+  }
+});
+
+test('stripCommentsAndStrings still reads division after an identifier ending in a keyword', () => {
+  // キーワード判定は完全一致でなければならない。`returnValue / 2` を正規表現の
+  // 開始と読むと、そこから次の `/` までを潰して間の call site が消える。
+  const source = ['const returnValue = 10;', 'const q = returnValue / 2;', 'buildPrompt({});'].join(
+    '\n'
+  );
+  assert.equal(hasBareCall(stripCommentsAndStrings(source), 'buildPrompt'), true);
+});
+
 test('stripCommentsAndStrings reads a division operator as division, not a regex', () => {
   // 正規表現の判定を緩めると、除算の `/` から次の `/` までを潰してしまい、
   // 間にある call site が消える。判定は直前の意味のある文字で行う。
