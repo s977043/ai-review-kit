@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.78.1](https://github.com/s977043/river-review/compare/v1.78.0...v1.78.1) (2026-08-15)
+
+
+### Bug Fixes
+
+* **scripts:** call site 走査器が正規表現内の引用符で検出漏れする不具合を直す ([#1864](https://github.com/s977043/river-review/issues/1864)) ([72e5557](https://github.com/s977043/river-review/commit/72e5557cbef9f5e73d9470f578ddf4a20d1a4942))
+
 ## [1.78.0](https://github.com/s977043/river-review/compare/v1.77.0...v1.78.0) (2026-08-14)
 
 
