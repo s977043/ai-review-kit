@@ -211,28 +211,8 @@ test('mode=observe は LLM 呼び出し回数を増やさず、送るのは lega
   assert.equal(sentHash, observed.legacyPromptHash);
 });
 
-test('mode=active は受理するが本 PR では有効化せず、legacy を送る（#1861）', async () => {
-  const calls = await withCountedFetch(async (c) => {
-    const r = await generateReview(
-      baseArgs({
-        apiKey: 'test-key',
-        config: {
-          review: { promptCompiler: { mode: 'active' } },
-          model: { provider: 'openai', modelName: 'test-model' },
-        },
-      })
-    );
-    c.result = r;
-    return c;
-  });
-  const observed = calls.result.debug.execution.promptCompiler;
-  assert.equal(observed.mode, 'active');
-  assert.equal(observed.sentPrompt, 'legacy');
-  assert.equal(observed.activeNotEnabled, true);
-  const sent = JSON.parse(calls[0].body);
-  const userMessage = sent.messages.find((m) => m.role === 'user').content;
-  assert.equal(userMessage, calls.result.prompt);
-});
+// active の配線（compiled を実際に送る）は tests/prompt-compiler-active.test.mjs
+// が持つ。本ファイルは observe の不変条件だけを見る。
 
 test('記録するのは hash と推定長と profile の来歴だけである', async () => {
   const result = await generateReview(

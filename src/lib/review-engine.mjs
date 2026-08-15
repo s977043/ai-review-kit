@@ -142,10 +142,10 @@ function promptFingerprint(text) {
 }
 
 /**
- * observe モードの記録を組む。
+ * observe / active モードの記録を組む。
  *
  * 記録するのは hash と推定長と profile の来歴だけである。原文（prompt 本体、
- * diff 本文）は返り値に含めない。
+ * diff 本文）は返り値に含めない。これは active でも変わらない。
  *
  * 推定長は src/lib/token-estimator.mjs の estimateTokens をそのまま使う。
  * 独自の概算を置くと legacy 側の既存計測（context budget）と単位が食い違う。
@@ -157,10 +157,12 @@ function promptFingerprint(text) {
 function buildPromptCompilerObservation({ mode, profile, legacyText, compiledText }) {
   return {
     mode,
-    // #1859 では active を有効化しない。schema は値を受理するが、実際に
-    // provider へ送るのは常に legacy 側である。active の配線は #1861。
-    sentPrompt: 'legacy',
-    ...(mode === 'active' ? { activeNotEnabled: true } : {}),
+    // どちらのプロンプトを provider 向けに選んだかである（#1861）。mode から
+    // 決まり、実際に送信が起きたかどうかは表さない。dryRun / offline / API キー
+    // 未設定では呼び出し自体が起きないが、その事実は既存の debug.llmSkipped と
+    // debug.llmUsed が持つ。observe が dryRun でも 'legacy' を記録してきた
+    // 従来の意味づけをそのまま延長している。
+    sentPrompt: mode === 'active' ? 'compiled' : 'legacy',
     compilerVersion: PROMPT_COMPILER_VERSION,
     profileId: profile.id,
     profileVersion: profile.version,
@@ -393,14 +395,17 @@ export async function generateReview({
       : null,
   };
 
-  // --- ADR-006 / #1859: Prompt Compiler（配線はこの 1 箇所だけ）---
+  // --- ADR-006 / #1859 + #1861: Prompt Compiler（配線はこの 1 箇所だけ）---
   //
   // 既定は off。off のとき下のブロックは丸ごと実行されず、buildPrompt から
   // 下流の挙動は導入前と 1 バイトも変わらない。
   //
-  // observe / active のいずれでも、provider へ送るのは既存の
-  // promptInfo.prompt である。active を送信へ切り替える配線は #1861 で行う。
+  // observe は compiled を生成するだけで送らない。active（opt-in、既定では
+  // 選ばれない）だけが compiled を provider へ送る。既定を active へ動かす
+  // 条件は ADR-006 の段 2 であり、本配線はそれを変更しない。
   const promptCompilerMode = effectiveConfig.review?.promptCompiler?.mode ?? 'off';
+  // active のときだけ埋まる。null のままなら送信は legacy 側が担う。
+  let activeCompiledPrompt = null;
   if (promptCompilerMode !== 'off') {
     // 差分本文の上限適用。buildPrompt（同ファイル）の同じ式を写している。
     // buildPrompt 側は ADR-006 の実装方針により無改変で残すため共通化せず、
@@ -443,6 +448,9 @@ export async function generateReview({
       model: openAIConfig.model,
     });
     const compiled = compileReviewPrompt(ir, profile);
+    if (promptCompilerMode === 'active') {
+      activeCompiledPrompt = compiled;
+    }
     debug.execution = {
       ...(debug.execution ?? {}),
       promptCompiler: buildPromptCompilerObservation({
@@ -466,14 +474,18 @@ export async function generateReview({
 
   if (!skipReason) {
     try {
+      // #1861: active のときだけ compiled 側を送る。off / observe では
+      // activeCompiledPrompt が null のままなので、送信物は導入前と同一である。
       const output = await callChatCompletion({
-        prompt: promptInfo.prompt,
+        prompt: activeCompiledPrompt ? activeCompiledPrompt.prompt : promptInfo.prompt,
         apiKey: openAIConfig.apiKey,
         model: openAIConfig.model,
         endpoint: openAIConfig.endpoint,
         temperature: openAIConfig.temperature,
         maxTokens: openAIConfig.maxTokens,
-        systemMessage: buildSystemMessage(language),
+        systemMessage: activeCompiledPrompt
+          ? activeCompiledPrompt.systemMessage
+          : buildSystemMessage(language),
       });
       // T64 follow-up (gemini security-high): redact at storage time so the
       // raw LLM output never leaves process memory unmasked. Keeps the same

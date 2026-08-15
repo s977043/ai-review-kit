@@ -135,7 +135,7 @@ Review Request IR を挟み、モデル非依存の依頼内容と、モデル�
 段 2 は「いつか測る」ではなく、次の 4 つが揃った時点で測れます。
 
 1. provider の API キーが repo secret へ登録されていることである。これは代行できない人間作業であり、現時点で未完了である
-2. `active` が opt-in で配線され、`sentPrompt` が compiled の run を保存できることである
+2. `active` が opt-in で配線され、`sentPrompt` が compiled の run を保存できることである（#1861 で完了。既定は `off` のままである）
 3. 同一 fixture・同一モデル・同一 context で legacy 側の run が並存することである
 4. その 2 系統を受け取る比較経路が存在することである。現行の `river evolve prompt-compare` は `sentPrompt` が legacy でない run を拒否するため、active の run はこの導線では扱わない
 

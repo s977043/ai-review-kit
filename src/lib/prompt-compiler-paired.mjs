@@ -20,9 +20,10 @@
 //
 // 一方で compiled 側の **findings は存在しない**。observe は compiled prompt を
 // provider へ送らないためである（ADR-006 の observe 不変条件、および
-// `src/lib/review-engine.mjs` の `sentPrompt: 'legacy'`）。よって
-// recall / precision / parse 成功率 / Evidence 充足のような「LLM の応答」を
-// 要する受入基準は、`active` が配線される #1861 まで観測できない。
+// `src/lib/review-engine.mjs` が observe で記録する `sentPrompt: 'legacy'`）。
+// よって recall / precision / parse 成功率 / Evidence 充足のような
+// 「LLM の応答」を要する受入基準は、この導線では観測できない。#1861 で配線した
+// `active` の run は sentPrompt が `compiled` になり、下の受け入れ条件が弾く。
 //
 // この非対称を、測れたことにせず構造として表に出す:
 //   - プロンプト水準（指紋・推定長・profile 来歴）は `promptMetrics` に出す

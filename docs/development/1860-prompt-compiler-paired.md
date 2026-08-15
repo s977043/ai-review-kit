@@ -67,7 +67,7 @@ acceptance profile は宣言しません。findings 水準を観測できない�
 | token（送信前の推定長）     | 可   | observe が両側の推定長を 1 run で記録する         |
 | latency / cost              | 不可 | compiled を送っていない                           |
 
-観測不可の行はすべて #1861（active の配線）で解消します。
+観測不可の行は、`active` の run を突合できる経路が整った時点で解消します。`active` そのものは #1861 で配線済みですが、本導線は `sentPrompt` が legacy でない run を受け取らないため、その突合は別経路が担います。
 
 ## 5. ファイル配置
 
