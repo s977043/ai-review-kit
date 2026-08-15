@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.79.0](https://github.com/s977043/river-review/compare/v1.78.1...v1.79.0) (2026-08-15)
+
+
+### Features
+
+* **prompt:** モデル非依存の Prompt Compiler を observe モードで導入する ([#1867](https://github.com/s977043/river-review/issues/1867)) ([10aa7dc](https://github.com/s977043/river-review/commit/10aa7dc18f892e0c762575a0f978999f5e7a0fa9))
+
 ## [1.78.1](https://github.com/s977043/river-review/compare/v1.78.0...v1.78.1) (2026-08-15)
 
 
