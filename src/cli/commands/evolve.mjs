@@ -142,6 +142,10 @@ async function runAggregate(parsed, targetPath, output) {
     minRecurrence: parsed.evolveMin ?? DEFAULT_MIN_RECURRENCE,
     month: parsed.evolveMonth ?? null,
     now: new Date(),
+    // #1823 残件2: same sink shape as listFeedbackEntries above. The builder
+    // defaults it to a no-op to stay side-effect free, so the CLI is what makes
+    // an unmatched findingFingerprint audible.
+    warn: (message) => console.warn(message),
   });
 
   if (output === 'json') {

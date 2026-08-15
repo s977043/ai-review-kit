@@ -150,6 +150,15 @@ canonical `review_run_id` の生産者は v1.66.0（#1681）で実装しまし�
 
 P1 実装の時点では `review_run_id` の生産者も存在せず、join が常に 0 でした。テストは旧形状と現形状の両方を固定しています。
 
+### findingFingerprint の不一致（#1823）
+
+`findingFingerprint` が run 側のどの finding とも一致しない feedback 行は、落とされません。`no-category` / `no-file-path` のまま独自の stage2 sub-cluster を作り、条件が揃えば別 candidateId の candidate まで生成します。v1 と v2 は同じ 16-hex 空間にあり、`river review --debug` から v2 値を貼ると無言でこの状態になります。
+
+- 不一致は `join.unmatchedFindingFingerprints` に出力する。`join.unjoinedFeedbackCount`（契約2 の run id 突合）とは別の軸である
+- 保存済み finding の v2 値だと判定できた分は `join.v2FindingFingerprints` にも出力する。判定は `classifyFingerprintAlgo`（`src/lib/finding-factory.mjs`）が run record の `fingerprintV2` を引いて行う
+- `buildShadowAggregate` の `warn` sink は既定が no-op である。`river evolve aggregate` が `console.warn` を配線する
+- `river feedback add --fingerprint` も貼った時点で同じ警告を出す。ただし助言であり、行は必ず書かれ exit code も変わらない
+
 ## 8. read-only の担保
 
 - `src/lib/shadow-aggregate.mjs` 自体は fs / network を呼ばない。外部依存は `node:crypto` と、`promotion-candidates.mjs` の純粋な hash ヘルパー 2 つだけである

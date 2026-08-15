@@ -6,8 +6,10 @@
 //
 // Read-only by construction: this module performs no filesystem, network, or
 // process side effects at all — callers pass already-loaded records in and get
-// plain objects back. Canary, rollback, and automatic promotion are explicitly
-// out of scope (P3/P4, and the promotion lifecycle itself stays #1568-C's).
+// plain objects back. The `warn` option added in #1823 does not change that: it
+// defaults to a no-op, so the only sink is one the caller supplies. Canary,
+// rollback, and automatic promotion are explicitly out of scope (P3/P4, and the
+// promotion lifecycle itself stays #1568-C's).
 //
 // Design contract compliance (docs/development/1574-p0-design-contract.md):
 //   契約1 evidence provenance  → buildRunEvidence / evidenceTrustLevel
@@ -16,6 +18,10 @@
 //   契約5 two-stage clustering → buildClusters (stage 1 / stage 2)
 import { createHash } from 'node:crypto';
 
+import {
+  classifyFingerprintAlgo,
+  formatUnmatchedFeedbackFingerprintWarning,
+} from './finding-factory.mjs';
 import {
   CANDIDATE_POLICY_VERSION,
   KNOWN_POLICY_VERSIONS,
@@ -600,7 +606,16 @@ function buildShadowCandidate({ cluster, sub, evidenceByRunId, now, policyVersio
  *   month?: string|null,
  *   policyVersion?: string,
  *   collectorVersion?: string,
+ *   warn?: (msg: string) => void,
  * }} [options]
+ *
+ * `warn` is the sink for feedback fingerprints that join to no saved finding
+ * (#1823 残件2). It defaults to a NO-OP, not `console.warn`, so this module
+ * keeps the "no process side effects at all" property stated at the top of the
+ * file — the same contract as `listFeedbackEntries` (src/lib/feedback.mjs).
+ * The CLI wires it to `console.warn`; the same information is also recorded in
+ * `join.unmatchedFindingFingerprints`, so a caller that leaves the sink unwired
+ * still has it in the artifact.
  */
 export function buildShadowAggregate({
   runRecords = [],
@@ -610,6 +625,7 @@ export function buildShadowAggregate({
   month = null,
   policyVersion = SHADOW_AGGREGATE_POLICY_VERSION,
   collectorVersion = COLLECTOR_VERSION,
+  warn = () => {},
 } = {}) {
   // `--month` scopes BOTH sides of the aggregate. Filtering only the feedback
   // would silently mix a whole run history into a one-month report.
@@ -648,6 +664,37 @@ export function buildShadowAggregate({
   const findingIndex = indexFindingsByFingerprint(scopedRuns);
   const clusters = buildClusters(scopedFeedback, { minRecurrence, findingIndex });
 
+  // #1823 残件2: a `findingFingerprint` that joins to no saved finding is NOT
+  // dropped — it still forms its own stage-2 sub-cluster, just with
+  // `no-category` / `no-file-path`, and (with enough distinct occurrences) can
+  // still mint a candidate under a DIFFERENT candidateId than the same feedback
+  // recorded with the matching value. Nothing in the pre-#1823 output said so.
+  // The most common cause is a v2 hex copied out of `river review --debug`,
+  // which `classifyFingerprintAlgo` can name exactly because the saved records
+  // carry `fingerprintV2` next to `fingerprint`.
+  const scopedFindings = scopedRuns.flatMap((record) => record?.findings ?? []);
+  const unmatched = new Map(); // fingerprint -> 'v2' | null
+  for (const entry of scopedFeedback) {
+    const fingerprint = nonEmptyString(entry?.findingFingerprint);
+    if (!fingerprint || findingIndex.has(fingerprint)) continue;
+    if (unmatched.has(fingerprint)) continue;
+    const algo = classifyFingerprintAlgo(fingerprint, scopedFindings);
+    unmatched.set(fingerprint, algo === 'v2' ? 'v2' : null);
+  }
+  const unmatchedFindingFingerprints = [...unmatched.keys()].sort(compareStrings);
+  const v2FindingFingerprints = unmatchedFindingFingerprints.filter(
+    (fp) => unmatched.get(fp) === 'v2'
+  );
+  // Sorted first so the sink sees a deterministic order, matching the artifact.
+  for (const fingerprint of unmatchedFindingFingerprints) {
+    warn(
+      formatUnmatchedFeedbackFingerprintWarning({
+        fingerprint,
+        likelyAlgo: unmatched.get(fingerprint),
+      })
+    );
+  }
+
   const joinedFeedbackCount = scopedFeedback.filter((entry) => {
     const id = deriveFeedbackReviewRunId(entry);
     return id != null && evidenceByRunId.has(id);
@@ -684,6 +731,11 @@ export function buildShadowAggregate({
       unjoinedFeedbackCount: scopedFeedback.length - joinedFeedbackCount,
       runIdsWithEvidence: [...evidenceByRunId.keys()].sort(compareStrings),
       duplicateReviewRunIds: [...duplicateReviewRunIds].sort(compareStrings),
+      // #1823 残件2. Distinct from `unjoinedFeedbackCount`, which is the
+      // review_run_id join (契約2): a row can join on run id and still name a
+      // fingerprint no finding has.
+      unmatchedFindingFingerprints,
+      v2FindingFingerprints,
     },
     clusters,
     candidate,
@@ -709,6 +761,9 @@ export function formatShadowAggregateMarkdown(aggregate) {
     `| Feedback joined to a run | ${aggregate.join.joinedFeedbackCount} / ${aggregate.inputs.feedbackCount} |`
   );
   lines.push(`| Duplicate review_run_id | ${aggregate.join.duplicateReviewRunIds.length} |`);
+  lines.push(
+    `| Unmatched findingFingerprint | ${aggregate.join.unmatchedFindingFingerprints.length} |`
+  );
   lines.push(`| Recurring clusters | ${aggregate.clusters.length} |`);
   lines.push('');
 
@@ -718,6 +773,24 @@ export function formatShadowAggregateMarkdown(aggregate) {
         .map((id) => `\`${id}\``)
         .join(', ')}`
     );
+    lines.push('');
+  }
+
+  // #1823 残件2: an unmatched fingerprint still clusters, so it has to be
+  // called out here — the cluster list below looks perfectly healthy.
+  if (aggregate.join.unmatchedFindingFingerprints.length) {
+    const v2 = new Set(aggregate.join.v2FindingFingerprints);
+    lines.push(
+      '⚠️ どの run の finding にも一致しない findingFingerprint があります（独立した sub-cluster を作ります）:'
+    );
+    for (const fingerprint of aggregate.join.unmatchedFindingFingerprints) {
+      lines.push(
+        `- \`${fingerprint}\`` +
+          (v2.has(fingerprint)
+            ? '（保存済み finding の **v2**（行アンカー）値です。feedback の join は v1 で行うため一致しません）'
+            : '')
+      );
+    }
     lines.push('');
   }
 
