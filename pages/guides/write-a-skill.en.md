@@ -149,13 +149,51 @@ When adding/updating skills, leave the following in PR body:
 - `npm test`
 - Verification perspective for "False positive guards/Non-goals" (What not to say) if possible
 
+## Fixtures and the Evaluation Workflow
+
+Each skill can carry sibling directories `fixtures/` (sample input diffs) and `golden/` (expected outputs). Together they form the evaluation set that verifies the Minimum Acceptance Bar objectively.
+
+### Directory Structure
+
+```text
+skills/<phase>/<skill-id>/
+├── SKILL.md
+├── fixtures/
+│   ├── 01-true-positive-<description>.md   # Case that should be flagged
+│   └── 02-false-positive-<description>.md  # Case that should not be flagged
+├── golden/
+│   ├── 01-true-positive-<description>.md   # Expected output
+│   └── 02-false-positive-<description>.md  # Expected output (no finding)
+└── eval/
+    └── promptfoo.yaml                      # promptfoo config (optional)
+```
+
+- Name files `<numeric prefix>-<kind>-<description>.md` (e.g. `01-true-positive-undocumented-dependency.md`).
+- Keep the file names in `fixtures/` and `golden/` identical, since they are evaluated as pairs.
+- A `true-positive` case confirms that the skill returns at least one finding.
+- A `false-positive` case confirms that the skill returns no finding (or at least no unrelated finding).
+
+### Running the Evaluation
+
+```bash
+npm run eval:fixtures
+```
+
+You can also run promptfoo directly with `npx promptfoo eval`. For the full eval setup, see [repo-wide-review.en.md](./repo-wide-review.en.md).
+
+### Why Fixtures Matter
+
+Without fixtures, "does the skill really detect the diffs it should?" and "is the false-positive guard working?" can only be answered by hand. Verification of the Minimum Acceptance Bar (below) becomes reproducible only once fixtures exist.
+
+Fixtures are also mechanically enforced, not merely encouraged: `scripts/validate-skills.mjs` fails when a skill listed as `recommended: true` in `skills/registry.yaml` has neither an `eval/` nor a `fixtures/` directory next to its `SKILL.md`, and `npm run skills:validate` exits 1. The grandfathering set that used to exempt existing skills is now empty, so a new recommended skill must ship its assets from the start.
+
 ## Checklist for Adding/Changing Skills
 
 - [ ] Finding focused on 1 perspective
 - [ ] Evidence (File/Line, Diff fact) is clear
 - [ ] False positive guard (Suppression condition) exists
 - [ ] Non-goals (What not to handle) are written
-- [ ] Fixtures or minimal reproduction steps exist if possible
+- [ ] `fixtures/` and `golden/` carry true-positive / false-positive cases (required to verify the Minimum Acceptance Bar; mandatory for a `recommended: true` skill, which `npm run skills:validate` rejects without `eval/` or `fixtures/`)
 
 ## Minimum Acceptance Bar
 

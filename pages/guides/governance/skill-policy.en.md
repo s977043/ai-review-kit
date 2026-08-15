@@ -56,6 +56,31 @@ Treat the following as stable contract; major version bump required for breaking
 - Output format (e.g., `<file>:<line>: <message>` format or meaning of `NO_ISSUES`).
 - Semantics of `severity` / `confidence` (Interpretation expected by users).
 
+## Community → First-party Promotion (`recommended: true`)
+
+A skill placed under `community/` becomes a promotion candidate once it satisfies all of the conditions below.
+
+### Promotion Criteria
+
+1. **Fixture coverage**: `fixtures/` contains `.md` fixtures for both the happy path and a false-positive case (e.g. `01-icon-button-happy.md`, `02-decorative-img-false-positive.md`).
+2. **Golden output**: a matching `golden/<name>.md` exists for every fixture (prose golden output in `Finding:` / `Evidence:` form) and the eval assertions in `eval/promptfoo.yaml` pass.
+3. **False-positive guards / Non-goals**: the skill body states its silence conditions and the cases it does not handle.
+4. **Maintainer review**: at least one maintainer listed in `CODEOWNERS` has approved. Cross-review by several maintainers is preferable, but since `CODEOWNERS` currently has a single owner (`@s977043`) this is treated as a stretch goal.
+
+> For how to run the eval and generate goldens, see `docs/runbook/community-skill-eval.md`.
+
+### How to Request Promotion
+
+1. Once the conditions are met, prefix the PR title with `[promotion-request]`.
+2. State the following in the PR body.
+   - The list of fixtures (file paths and count)
+   - The eval output (for example the path check from `scripts/run-promptfoo-eval.sh`)
+   - The false-positive guards and Non-goals, as bullets
+3. Assign a reviewer from the maintainers listed in `CODEOWNERS`.
+4. After the maintainer approves, flip `recommended: false → true` for that skill in `skills/registry.yaml` and merge the PR.
+
+> **Expected timeline**: a PR that meets the conditions is usually reviewed within two weeks. If there is no response for a long stretch, ping the maintainers on an Issue.
+
 ## Deprecation Policy
 
 - Clean up unused or duplicate skills.

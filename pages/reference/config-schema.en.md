@@ -39,6 +39,15 @@ Place `.river-review.json` in the repository root to customize review model sett
   - `redact.entropyMinLength`: Default `24`. Minimum substring length the fallback detector considers.
 - `memory` ([#687](https://github.com/s977043/river-review/issues/687))
   - `suppressionEnabled`: `true` (default). Applies suppression entries from Riverbed Memory. Set to `false` to bypass the gate (emergency override).
+  - **`feedbackType` of a suppression entry** (`schemas/suppression-context.schema.json`):
+    - `accepted_risk`: a finding kept deliberately after weighing the risk. **The only value that passes the HIGH_SEVERITY guard** — automatic suppression of `major` / `critical` requires it (the HIGH_SEVERITY guard in `src/lib/suppression-apply.mjs`).
+    - `false_positive`: a misdetection. `major` / `critical` are blocked by the guard and are not suppressed automatically (they stay manual-handle); `minor` / `info` are suppressed automatically.
+    - `wont_fix`: a finding you decided not to fix. As with `false_positive`, `major` / `critical` are blocked by the guard.
+    - `not_relevant`: a finding with little bearing on the context of this PR or file. `major` / `critical` are blocked by the guard.
+    - `duplicate`: a reference to another entry's fingerprint. The `duplicateOfFingerprint` field can point at the referenced entry (optional in the schema, but recording it is the recommended practice). `major` / `critical` are blocked by the guard.
+  - CLI: register an entry interactively with `river suppression add`.
+    - Required flags: `--fingerprint <fp>` / `--feedback <type>` / `--rationale <text>`
+    - Optional flags: `--scope <pattern>` / `--severity <level>` / `--files <glob>` / `--expires <date>` / `--pr <num>` / `--fingerprint-algo <v1|v2>`
 - `context` ([#689](https://github.com/s977043/river-review/issues/689))
   - `reviewMode`: `tiny` / `medium` / `large`. When `budget` is omitted, the preset from `src/lib/context-presets.mjs` is applied. An explicit `budget` always wins.
   - `budget.maxTokens`: `256`–`64000`.
@@ -75,6 +84,87 @@ Place `.river-review.json` in the repository root to customize review model sett
   }
 }
 ```
+
+### Detailed Configuration Example
+
+A configuration example for the more involved sections — `security` / `memory` / `context`:
+
+```json
+{
+  "security": {
+    "redact": {
+      "enabled": true,
+      "extraPatterns": [
+        {
+          "id": "my-api-key",
+          "pattern": "MYAPP_[A-Z0-9]{32}",
+          "replacement": "[REDACTED_MYAPP_KEY]"
+        }
+      ],
+      "allowlist": ["test_token_placeholder"],
+      "denyFiles": ["config/secrets/**", "**/*.vault"],
+      "entropyThreshold": 4.5
+    }
+  },
+  "memory": {
+    "suppressionEnabled": true
+  },
+  "context": {
+    "reviewMode": "medium",
+    "budget": {
+      "maxTokens": 16000,
+      "perSectionCaps": {
+        "fullFile": 4000,
+        "tests": 2000,
+        "usages": 2000,
+        "config": 1000
+      }
+    },
+    "ranking": {
+      "enabled": true,
+      "weights": {
+        "pathProximity": 0.4,
+        "symbolUsage": 0.3,
+        "siblingTest": 0.2,
+        "commitRecency": 0.1
+      }
+    }
+  }
+}
+```
+
+An example invocation of `river suppression add`:
+
+```bash
+river suppression add \
+  --fingerprint abc123def456 \
+  --feedback accepted_risk \
+  --rationale "Intentional use of high-entropy token in test fixture" \
+  --scope "src/auth/**" \
+  --severity major
+```
+
+Expected output:
+
+```text
+Suppression entry added.
+  fingerprint : abc123def456
+  feedback    : accepted_risk
+  scope       : src/auth/**
+  severity    : major
+```
+
+`--fingerprint-algo` selects how a finding is matched. The default `v1` does not include the line number, so it suppresses findings of the same kind across the whole file. `v2` anchors the match to the line, so only the finding on that line is suppressed — but the suppression stops matching as soon as the line shifts. Stay on `v1` when you need a suppression that survives line movement.
+
+### Validation Error Examples
+
+When the Zod schema in `src/config/schema.mjs` rejects the config, errors like the following are printed.
+
+| Example error message                                                              | Cause and fix                                                                                       |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `Invalid enum value. Expected 'google' \| 'openai' \| 'anthropic', received 'xyz'` | `model.provider` is set to an unsupported value. Use one of `google` / `openai` / `anthropic`.      |
+| `Number must be less than or equal to 6` (`security.redact.entropyThreshold`)      | `entropyThreshold` must be within `3.0`–`6.0`. Change it to a value inside that range.              |
+| `Unrecognized key(s) in object: 'unknownKey'` (`security.redact`)                  | A key that does not exist in the schema was added. Check for a typo and remove the unnecessary key. |
 
 ### Operational Tips
 
