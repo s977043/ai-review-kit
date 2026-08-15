@@ -570,3 +570,54 @@ export function annotateFingerprints(findings) {
     fingerprintV2: computeFingerprintV2(f),
   }));
 }
+
+/**
+ * Decide which fingerprint algorithm a 16-hex value belongs to, by looking it
+ * up among findings that already carry BOTH annotations (#1823 残件2).
+ *
+ * v1 and v2 share one 16-hex space, so a value copied out of `river review
+ * --debug` is indistinguishable on sight. Every consumer that indexes findings
+ * by `finding.fingerprint` (shadow aggregation, `promote propose`) therefore
+ * fails to match a v2 value with no error of any kind. This classifier is what
+ * lets those consumers say WHICH mistake was made instead of staying silent:
+ * the run records already persist `fingerprintV2` alongside `fingerprint`
+ * (annotateFingerprints runs before the record is saved), so the algorithm can
+ * be inferred rather than declared by the caller.
+ *
+ * `v1` wins when a finding somehow carries the same value in both fields,
+ * because v1 is what the consumers index — reporting `v2` there would send the
+ * reader after a mismatch that does not exist.
+ *
+ * @param {string} fingerprint 16-hex value to classify.
+ * @param {Iterable<object>} findings Findings annotated by annotateFingerprints.
+ * @returns {'v1'|'v2'|null} null when the value matches no known finding.
+ */
+export function classifyFingerprintAlgo(fingerprint, findings) {
+  if (typeof fingerprint !== 'string' || fingerprint.length === 0) return null;
+  let sawV2 = false;
+  for (const finding of findings ?? []) {
+    if (finding?.fingerprint === fingerprint) return 'v1';
+    if (finding?.fingerprintV2 === fingerprint) sawV2 = true;
+  }
+  return sawV2 ? 'v2' : null;
+}
+
+/**
+ * Warning text for a `findingFingerprint` that joins to no saved finding
+ * (#1823 残件2). Exported so the emitting sites and their tests share ONE
+ * string, the same contract as `formatUnknownFingerprintAlgoWarning`
+ * (src/lib/suppression.mjs).
+ *
+ * @param {{ fingerprint: string, likelyAlgo: 'v2'|null }} entry
+ */
+export function formatUnmatchedFeedbackFingerprintWarning({ fingerprint, likelyAlgo }) {
+  const head = `Warning: findingFingerprint ${fingerprint} matches no finding in the saved runs under .river/runs/`;
+  if (likelyAlgo === 'v2') {
+    return (
+      `${head}; it is the v2 (line-anchored) fingerprint of a saved finding. ` +
+      'Feedback is joined on the v1 fingerprint, so this entry stays unjoined and clusters under its own key. ' +
+      'Re-record it with the v1 value from `river review --debug`.'
+    );
+  }
+  return `${head}. Check the value copied from \`river review --debug\`.`;
+}

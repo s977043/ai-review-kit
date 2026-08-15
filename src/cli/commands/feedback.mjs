@@ -7,6 +7,48 @@
 import { ensureGitRepo } from '../../lib/git.mjs';
 
 /**
+ * Warn when `--fingerprint` names a value no saved finding carries (#1823 残件2).
+ *
+ * Emitted HERE, before the row is appended, because this is the only moment the
+ * person who copied the value is present. Downstream the same mismatch is only
+ * visible from `river evolve aggregate`, days later, to whoever reads the
+ * aggregate — and it is not a drop: the row clusters under its own key and can
+ * mint a candidate with `no-category` / `no-file-path`.
+ *
+ * Advisory only. Any failure to read the run store (no `.river/runs/`, an
+ * unreadable record) is swallowed: the feedback row is the user's data and must
+ * be written regardless, so this must never change the exit code. It is also
+ * NOT a validity check — v1 and v2 share one hex space and a finding can be
+ * older than the retained runs, so an unmatched value can still be correct.
+ *
+ * @param {string|null} fingerprint
+ * @param {string} repoRoot
+ */
+async function warnWhenFingerprintMatchesNoFinding(fingerprint, repoRoot) {
+  if (!fingerprint) return;
+  try {
+    const { resolveStoreDir, loadAllRunRecords } = await import('../../lib/result-store.mjs');
+    const { classifyFingerprintAlgo, formatUnmatchedFeedbackFingerprintWarning } =
+      await import('../../lib/finding-factory.mjs');
+    const runRecords = await loadAllRunRecords(resolveStoreDir(repoRoot));
+    // No saved runs at all: nothing to compare against, so staying quiet is the
+    // only honest answer — warning here would fire on every first-ever run.
+    if (runRecords.length === 0) return;
+    const findings = runRecords.flatMap((record) => record?.findings ?? []);
+    const algo = classifyFingerprintAlgo(fingerprint, findings);
+    if (algo === 'v1') return;
+    console.warn(
+      formatUnmatchedFeedbackFingerprintWarning({
+        fingerprint,
+        likelyAlgo: algo === 'v2' ? 'v2' : null,
+      })
+    );
+  } catch {
+    // Advisory check only — see the note above.
+  }
+}
+
+/**
  * Handle the `feedback` command (feedback add).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -47,6 +89,7 @@ export async function runFeedbackCommand(parsed, targetPath) {
     }
     throw err;
   }
+  await warnWhenFingerprintMatchesNoFinding(entry.findingFingerprint, repoRoot);
   const filePath = await appendFeedbackEntry(entry, { repoRoot });
   const scaffold = buildFeedbackScaffold(entry);
   console.log('Feedback recorded: ' + entry.feedbackType + ' for ' + entry.skillId);

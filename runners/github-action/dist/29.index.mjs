@@ -16,7 +16,8 @@ export const modules = {
 /* harmony export */ });
 /* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, P1_TRUST_LEVEL, deriveFeedbackReviewRunId, evidenceTrustLevel, buildClusters */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7598);
-/* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3077);
+/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(1535);
+/* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(3077);
 // Shadow aggregate (#1574 P1) — read-only multi-run aggregation.
 //
 // Aggregates completed review runs (`.river/runs/`) and captured feedback
@@ -25,14 +26,17 @@ export const modules = {
 //
 // Read-only by construction: this module performs no filesystem, network, or
 // process side effects at all — callers pass already-loaded records in and get
-// plain objects back. Canary, rollback, and automatic promotion are explicitly
-// out of scope (P3/P4, and the promotion lifecycle itself stays #1568-C's).
+// plain objects back. The `warn` option added in #1823 does not change that: it
+// defaults to a no-op, so the only sink is one the caller supplies. Canary,
+// rollback, and automatic promotion are explicitly out of scope (P3/P4, and the
+// promotion lifecycle itself stays #1568-C's).
 //
 // Design contract compliance (docs/development/1574-p0-design-contract.md):
 //   契約1 evidence provenance  → buildRunEvidence / evidenceTrustLevel
 //   契約2 canonical run id     → deriveReviewRunId / deriveFeedbackReviewRunId
 //   契約4 content-addressed ID → computeCandidateId (date-independent)
 //   契約5 two-stage clustering → buildClusters (stage 1 / stage 2)
+
 
 
 
@@ -48,7 +52,7 @@ const SHADOW_AGGREGATE_SCHEMA_VERSION = 1;
 // observation and `river promote propose` converge on the SAME id for the same
 // evidence. That also fixes the policy version to CANDIDATE_POLICY_VERSION —
 // the shadow aggregate does not get a hash namespace of its own.
-const SHADOW_AGGREGATE_POLICY_VERSION = _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .CANDIDATE_POLICY_VERSION */ .e1;
+const SHADOW_AGGREGATE_POLICY_VERSION = _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .CANDIDATE_POLICY_VERSION */ .e1;
 
 // Collector identity recorded in every evidence record (契約1).
 const COLLECTOR_VERSION = 'river-shadow-aggregate/1';
@@ -130,9 +134,9 @@ function compareStrings(a, b) {
  */
 function deriveReviewRunId(record) {
   return (
-    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.review_run_id) ??
-    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.reviewRunId) ??
-    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.runId)
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(record?.review_run_id) ??
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(record?.reviewRunId) ??
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(record?.runId)
   );
 }
 
@@ -147,7 +151,7 @@ function deriveReviewRunId(record) {
  * @returns {string|null}
  */
 function deriveFeedbackReviewRunId(entry) {
-  return (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.review_run_id) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.reviewRunId);
+  return (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.review_run_id) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.reviewRunId);
 }
 
 // ---------------------------------------------------------------------------
@@ -195,10 +199,10 @@ function buildRunEvidence(record, { collectorVersion = COLLECTOR_VERSION } = {})
     // Claimed source. Recorded for observation only — never a trust input.
     evidence_source: source,
     source_commit_sha:
-      (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(provenance.sourceCommitSha) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.commitSha),
-    artifact_sha256: sha256Hex((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(record)),
+      (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(provenance.sourceCommitSha) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(record?.commitSha),
+    artifact_sha256: sha256Hex((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .canonicalJson */ .dj)(record)),
     collector_version: collectorVersion,
-    trusted_by: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(provenance.trustedBy),
+    trusted_by: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(provenance.trustedBy),
     generated_by_candidate: provenance.generatedByCandidate === true,
     provenance_verified: false,
   };
@@ -235,14 +239,14 @@ function indexFindingsByFingerprint(runRecords) {
   for (const record of ordered) {
     const reviewRunId = deriveReviewRunId(record);
     for (const finding of record?.findings ?? []) {
-      const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.fingerprint);
+      const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(finding?.fingerprint);
       if (!fingerprint) continue;
       index.set(fingerprint, {
         // `category` is not part of the current finding shape; `ruleId` (set to
         // the emitting skill id by review-engine / local-runner) is what real
         // findings carry today, so it is the working fallback.
-        category: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.category) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.ruleId),
-        filePath: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.file),
+        category: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(finding?.category) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(finding?.ruleId),
+        filePath: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(finding?.file),
         review_run_id: reviewRunId,
       });
     }
@@ -304,8 +308,8 @@ function buildClusters(
     // Key components are used RAW (not trimmed) so the stage-1 clusterKey is
     // byte-identical to #1568-A's (scripts/feedback-rule-candidates.mjs), which
     // is the SSoT for this key. Blank values are skipped as unusable.
-    const skillId = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.skillId) ? entry.skillId : null;
-    const feedbackType = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.feedbackType) ? entry.feedbackType : null;
+    const skillId = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.skillId) ? entry.skillId : null;
+    const feedbackType = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.feedbackType) ? entry.feedbackType : null;
     if (!skillId || !feedbackType) continue;
     // `accepted` is a positive signal — never an improvement candidate.
     if (feedbackType === 'accepted') continue;
@@ -319,7 +323,7 @@ function buildClusters(
     if (entries.length < minRecurrence) continue;
     const stage2 = new Map();
     for (const entry of entries) {
-      const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint);
+      const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint);
       const finding = fingerprint ? (findingIndex.get(fingerprint) ?? null) : null;
       const shape = {
         fingerprint,
@@ -407,10 +411,10 @@ function occurrenceKey(ref) {
 function buildFeedbackRef(entry) {
   return {
     review_run_id: deriveFeedbackReviewRunId(entry),
-    timestamp: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.timestamp),
-    skillId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.skillId),
-    feedbackType: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.feedbackType),
-    findingFingerprint: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint),
+    timestamp: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.timestamp),
+    skillId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.skillId),
+    feedbackType: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.feedbackType),
+    findingFingerprint: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint),
     pr: Number.isInteger(entry?.pr) && entry.pr > 0 ? entry.pr : null,
   };
 }
@@ -448,19 +452,19 @@ function sortFeedbackRefs(refs) {
  * @returns {{ candidateId: string, contentHash: string, evidenceCount: number }}
  */
 function computeCandidateId({
-  policyVersion = _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .CANDIDATE_POLICY_VERSION */ .e1,
+  policyVersion = _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .CANDIDATE_POLICY_VERSION */ .e1,
   clusterKey,
   evidence,
 }) {
-  if (!_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .KNOWN_POLICY_VERSIONS */ .d.includes(String(policyVersion))) {
+  if (!_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .KNOWN_POLICY_VERSIONS */ .d.includes(String(policyVersion))) {
     // An arbitrary policy version would let one evidence set mint unlimited
     // ids — the same guard buildProposedCandidate applies.
     throw new Error(
-      `Unknown policyVersion "${policyVersion}". Expected one of: ${_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .KNOWN_POLICY_VERSIONS */ .d.join(', ')}.`
+      `Unknown policyVersion "${policyVersion}". Expected one of: ${_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .KNOWN_POLICY_VERSIONS */ .d.join(', ')}.`
     );
   }
-  const { evidence: normalized } = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeEvidence */ .vf)(evidence ?? []);
-  const { candidateId, contentHash } = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeCandidateContentHash */ .yI)({
+  const { evidence: normalized } = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .normalizeEvidence */ .vf)(evidence ?? []);
+  const { candidateId, contentHash } = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .computeCandidateContentHash */ .yI)({
     clusterKey,
     evidence: normalized,
     policyVersion,
@@ -609,7 +613,16 @@ function buildShadowCandidate({ cluster, sub, evidenceByRunId, now, policyVersio
  *   month?: string|null,
  *   policyVersion?: string,
  *   collectorVersion?: string,
+ *   warn?: (msg: string) => void,
  * }} [options]
+ *
+ * `warn` is the sink for feedback fingerprints that join to no saved finding
+ * (#1823 残件2). It defaults to a NO-OP, not `console.warn`, so this module
+ * keeps the "no process side effects at all" property stated at the top of the
+ * file — the same contract as `listFeedbackEntries` (src/lib/feedback.mjs).
+ * The CLI wires it to `console.warn`; the same information is also recorded in
+ * `join.unmatchedFindingFingerprints`, so a caller that leaves the sink unwired
+ * still has it in the artifact.
  */
 function buildShadowAggregate({
   runRecords = [],
@@ -619,6 +632,7 @@ function buildShadowAggregate({
   month = null,
   policyVersion = SHADOW_AGGREGATE_POLICY_VERSION,
   collectorVersion = COLLECTOR_VERSION,
+  warn = () => {},
 } = {}) {
   // `--month` scopes BOTH sides of the aggregate. Filtering only the feedback
   // would silently mix a whole run history into a one-month report.
@@ -657,6 +671,37 @@ function buildShadowAggregate({
   const findingIndex = indexFindingsByFingerprint(scopedRuns);
   const clusters = buildClusters(scopedFeedback, { minRecurrence, findingIndex });
 
+  // #1823 残件2: a `findingFingerprint` that joins to no saved finding is NOT
+  // dropped — it still forms its own stage-2 sub-cluster, just with
+  // `no-category` / `no-file-path`, and (with enough distinct occurrences) can
+  // still mint a candidate under a DIFFERENT candidateId than the same feedback
+  // recorded with the matching value. Nothing in the pre-#1823 output said so.
+  // The most common cause is a v2 hex copied out of `river review --debug`,
+  // which `classifyFingerprintAlgo` can name exactly because the saved records
+  // carry `fingerprintV2` next to `fingerprint`.
+  const scopedFindings = scopedRuns.flatMap((record) => record?.findings ?? []);
+  const unmatched = new Map(); // fingerprint -> 'v2' | null
+  for (const entry of scopedFeedback) {
+    const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint);
+    if (!fingerprint || findingIndex.has(fingerprint)) continue;
+    if (unmatched.has(fingerprint)) continue;
+    const algo = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__.classifyFingerprintAlgo)(fingerprint, scopedFindings);
+    unmatched.set(fingerprint, algo === 'v2' ? 'v2' : null);
+  }
+  const unmatchedFindingFingerprints = [...unmatched.keys()].sort(compareStrings);
+  const v2FindingFingerprints = unmatchedFindingFingerprints.filter(
+    (fp) => unmatched.get(fp) === 'v2'
+  );
+  // Sorted first so the sink sees a deterministic order, matching the artifact.
+  for (const fingerprint of unmatchedFindingFingerprints) {
+    warn(
+      (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__.formatUnmatchedFeedbackFingerprintWarning)({
+        fingerprint,
+        likelyAlgo: unmatched.get(fingerprint),
+      })
+    );
+  }
+
   const joinedFeedbackCount = scopedFeedback.filter((entry) => {
     const id = deriveFeedbackReviewRunId(entry);
     return id != null && evidenceByRunId.has(id);
@@ -693,6 +738,11 @@ function buildShadowAggregate({
       unjoinedFeedbackCount: scopedFeedback.length - joinedFeedbackCount,
       runIdsWithEvidence: [...evidenceByRunId.keys()].sort(compareStrings),
       duplicateReviewRunIds: [...duplicateReviewRunIds].sort(compareStrings),
+      // #1823 残件2. Distinct from `unjoinedFeedbackCount`, which is the
+      // review_run_id join (契約2): a row can join on run id and still name a
+      // fingerprint no finding has.
+      unmatchedFindingFingerprints,
+      v2FindingFingerprints,
     },
     clusters,
     candidate,
@@ -718,6 +768,9 @@ function formatShadowAggregateMarkdown(aggregate) {
     `| Feedback joined to a run | ${aggregate.join.joinedFeedbackCount} / ${aggregate.inputs.feedbackCount} |`
   );
   lines.push(`| Duplicate review_run_id | ${aggregate.join.duplicateReviewRunIds.length} |`);
+  lines.push(
+    `| Unmatched findingFingerprint | ${aggregate.join.unmatchedFindingFingerprints.length} |`
+  );
   lines.push(`| Recurring clusters | ${aggregate.clusters.length} |`);
   lines.push('');
 
@@ -727,6 +780,24 @@ function formatShadowAggregateMarkdown(aggregate) {
         .map((id) => `\`${id}\``)
         .join(', ')}`
     );
+    lines.push('');
+  }
+
+  // #1823 残件2: an unmatched fingerprint still clusters, so it has to be
+  // called out here — the cluster list below looks perfectly healthy.
+  if (aggregate.join.unmatchedFindingFingerprints.length) {
+    const v2 = new Set(aggregate.join.v2FindingFingerprints);
+    lines.push(
+      '⚠️ どの run の finding にも一致しない findingFingerprint があります（独立した sub-cluster を作ります）:'
+    );
+    for (const fingerprint of aggregate.join.unmatchedFindingFingerprints) {
+      lines.push(
+        `- \`${fingerprint}\`` +
+          (v2.has(fingerprint)
+            ? '（保存済み finding の **v2**（行アンカー）値です。feedback の join は v1 で行うため一致しません）'
+            : '')
+      );
+    }
     lines.push('');
   }
 

@@ -43812,7 +43812,9 @@ function isApp(file) {
 /* harmony export */   UB: () => (/* binding */ parseFindingMessage),
 /* harmony export */   Yo: () => (/* binding */ computeFingerprint),
 /* harmony export */   ZY: () => (/* binding */ classifyFindings),
+/* harmony export */   classifyFingerprintAlgo: () => (/* binding */ classifyFingerprintAlgo),
 /* harmony export */   f3: () => (/* binding */ SEVERITY_RANK),
+/* harmony export */   formatUnmatchedFeedbackFingerprintWarning: () => (/* binding */ formatUnmatchedFeedbackFingerprintWarning),
 /* harmony export */   ic: () => (/* binding */ annotateFingerprints),
 /* harmony export */   "in": () => (/* binding */ stripTraceabilityRefs),
 /* harmony export */   kn: () => (/* binding */ normalizeScope),
@@ -44396,6 +44398,57 @@ function annotateFingerprints(findings) {
     fingerprint: computeFingerprint(f),
     fingerprintV2: computeFingerprintV2(f),
   }));
+}
+
+/**
+ * Decide which fingerprint algorithm a 16-hex value belongs to, by looking it
+ * up among findings that already carry BOTH annotations (#1823 残件2).
+ *
+ * v1 and v2 share one 16-hex space, so a value copied out of `river review
+ * --debug` is indistinguishable on sight. Every consumer that indexes findings
+ * by `finding.fingerprint` (shadow aggregation, `promote propose`) therefore
+ * fails to match a v2 value with no error of any kind. This classifier is what
+ * lets those consumers say WHICH mistake was made instead of staying silent:
+ * the run records already persist `fingerprintV2` alongside `fingerprint`
+ * (annotateFingerprints runs before the record is saved), so the algorithm can
+ * be inferred rather than declared by the caller.
+ *
+ * `v1` wins when a finding somehow carries the same value in both fields,
+ * because v1 is what the consumers index — reporting `v2` there would send the
+ * reader after a mismatch that does not exist.
+ *
+ * @param {string} fingerprint 16-hex value to classify.
+ * @param {Iterable<object>} findings Findings annotated by annotateFingerprints.
+ * @returns {'v1'|'v2'|null} null when the value matches no known finding.
+ */
+function classifyFingerprintAlgo(fingerprint, findings) {
+  if (typeof fingerprint !== 'string' || fingerprint.length === 0) return null;
+  let sawV2 = false;
+  for (const finding of findings ?? []) {
+    if (finding?.fingerprint === fingerprint) return 'v1';
+    if (finding?.fingerprintV2 === fingerprint) sawV2 = true;
+  }
+  return sawV2 ? 'v2' : null;
+}
+
+/**
+ * Warning text for a `findingFingerprint` that joins to no saved finding
+ * (#1823 残件2). Exported so the emitting sites and their tests share ONE
+ * string, the same contract as `formatUnknownFingerprintAlgoWarning`
+ * (src/lib/suppression.mjs).
+ *
+ * @param {{ fingerprint: string, likelyAlgo: 'v2'|null }} entry
+ */
+function formatUnmatchedFeedbackFingerprintWarning({ fingerprint, likelyAlgo }) {
+  const head = `Warning: findingFingerprint ${fingerprint} matches no finding in the saved runs under .river/runs/`;
+  if (likelyAlgo === 'v2') {
+    return (
+      `${head}; it is the v2 (line-anchored) fingerprint of a saved finding. ` +
+      'Feedback is joined on the v1 fingerprint, so this entry stays unjoined and clusters under its own key. ' +
+      'Re-record it with the v1 value from `river review --debug`.'
+    );
+  }
+  return `${head}. Check the value copied from \`river review --debug\`.`;
 }
 
 
@@ -67784,6 +67837,48 @@ async function runEvalCommand(parsed) {
 
 
 /**
+ * Warn when `--fingerprint` names a value no saved finding carries (#1823 残件2).
+ *
+ * Emitted HERE, before the row is appended, because this is the only moment the
+ * person who copied the value is present. Downstream the same mismatch is only
+ * visible from `river evolve aggregate`, days later, to whoever reads the
+ * aggregate — and it is not a drop: the row clusters under its own key and can
+ * mint a candidate with `no-category` / `no-file-path`.
+ *
+ * Advisory only. Any failure to read the run store (no `.river/runs/`, an
+ * unreadable record) is swallowed: the feedback row is the user's data and must
+ * be written regardless, so this must never change the exit code. It is also
+ * NOT a validity check — v1 and v2 share one hex space and a finding can be
+ * older than the retained runs, so an unmatched value can still be correct.
+ *
+ * @param {string|null} fingerprint
+ * @param {string} repoRoot
+ */
+async function warnWhenFingerprintMatchesNoFinding(fingerprint, repoRoot) {
+  if (!fingerprint) return;
+  try {
+    const { resolveStoreDir, loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+    const { classifyFingerprintAlgo, formatUnmatchedFeedbackFingerprintWarning } =
+      await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 1535));
+    const runRecords = await loadAllRunRecords(resolveStoreDir(repoRoot));
+    // No saved runs at all: nothing to compare against, so staying quiet is the
+    // only honest answer — warning here would fire on every first-ever run.
+    if (runRecords.length === 0) return;
+    const findings = runRecords.flatMap((record) => record?.findings ?? []);
+    const algo = classifyFingerprintAlgo(fingerprint, findings);
+    if (algo === 'v1') return;
+    console.warn(
+      formatUnmatchedFeedbackFingerprintWarning({
+        fingerprint,
+        likelyAlgo: algo === 'v2' ? 'v2' : null,
+      })
+    );
+  } catch {
+    // Advisory check only — see the note above.
+  }
+}
+
+/**
  * Handle the `feedback` command (feedback add).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -67824,6 +67919,7 @@ async function runFeedbackCommand(parsed, targetPath) {
     }
     throw err;
   }
+  await warnWhenFingerprintMatchesNoFinding(entry.findingFingerprint, repoRoot);
   const filePath = await appendFeedbackEntry(entry, { repoRoot });
   const scaffold = buildFeedbackScaffold(entry);
   console.log('Feedback recorded: ' + entry.feedbackType + ' for ' + entry.skillId);
@@ -73118,6 +73214,10 @@ async function runAggregate(parsed, targetPath, output) {
     minRecurrence: parsed.evolveMin ?? DEFAULT_MIN_RECURRENCE,
     month: parsed.evolveMonth ?? null,
     now: new Date(),
+    // #1823 残件2: same sink shape as listFeedbackEntries above. The builder
+    // defaults it to a no-op to stay side-effect free, so the CLI is what makes
+    // an unmatched findingFingerprint audible.
+    warn: (message) => console.warn(message),
   });
 
   if (output === 'json') {

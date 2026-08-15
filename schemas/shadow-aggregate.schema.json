@@ -336,7 +336,9 @@
         "joinedFeedbackCount",
         "unjoinedFeedbackCount",
         "runIdsWithEvidence",
-        "duplicateReviewRunIds"
+        "duplicateReviewRunIds",
+        "unmatchedFindingFingerprints",
+        "v2FindingFingerprints"
       ],
       "additionalProperties": false,
       "properties": {
@@ -347,6 +349,16 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "review_run_id values claimed by more than one saved run. The record with the lowest artifact_sha256 is used; the collision is surfaced for human investigation."
+        },
+        "unmatchedFindingFingerprints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Sorted, de-duplicated `findingFingerprint` values named by feedback rows that match no finding in any scoped run. Such a row is NOT dropped: it forms its own stage-2 sub-cluster with `no-category` / `no-file-path` and can still mint a candidate under a different candidateId, so the mismatch is reported rather than left silent (#1823)."
+        },
+        "v2FindingFingerprints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Subset of unmatchedFindingFingerprints identified as the v2 (line-anchored) fingerprint of a saved finding — i.e. a value copied from `river review --debug` while the join runs on v1. Classified by classifyFingerprintAlgo (src/lib/finding-factory.mjs) against the `fingerprintV2` the run records persist (#1823)."
         }
       }
     },
