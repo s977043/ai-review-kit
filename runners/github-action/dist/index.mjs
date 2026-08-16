@@ -14080,7 +14080,7 @@ const sleep = (ms, signal) => new Promise((resolve) => {
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/errors.mjs
 var errors = __nccwpck_require__(2533);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/version.mjs
-const VERSION = '0.115.0'; // x-release-please-version
+const VERSION = '0.116.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -20133,12 +20133,7 @@ class Batches extends APIResource {
  * Model-specific timeout constraints for non-streaming requests
  */
 const MODEL_NONSTREAMING_TOKENS = {
-    'claude-opus-4-20250514': 8192,
-    'claude-opus-4-0': 8192,
-    'claude-4-opus-20250514': 8192,
-    'anthropic.claude-opus-4-20250514-v1:0': 8192,
     'claude-opus-4@20250514': 8192,
-    'claude-opus-4-1-20250805': 8192,
     'anthropic.claude-opus-4-1-20250805-v1:0': 8192,
     'claude-opus-4-1@20250805': 8192,
 };
@@ -21640,28 +21635,7 @@ function referencedToolName(ref) {
 
 
 
-const DEPRECATED_MODELS = {
-    'claude-1.3': 'November 6th, 2024',
-    'claude-1.3-100k': 'November 6th, 2024',
-    'claude-instant-1.1': 'November 6th, 2024',
-    'claude-instant-1.1-100k': 'November 6th, 2024',
-    'claude-instant-1.2': 'November 6th, 2024',
-    'claude-3-sonnet-20240229': 'July 21st, 2025',
-    'claude-3-opus-20240229': 'January 5th, 2026',
-    'claude-2.1': 'July 21st, 2025',
-    'claude-2.0': 'July 21st, 2025',
-    'claude-3-7-sonnet-latest': 'February 19th, 2026',
-    'claude-3-7-sonnet-20250219': 'February 19th, 2026',
-    'claude-3-5-haiku-latest': 'February 19th, 2026',
-    'claude-3-5-haiku-20241022': 'February 19th, 2026',
-    'claude-opus-4-0': 'June 15th, 2026',
-    'claude-opus-4-20250514': 'June 15th, 2026',
-    'claude-sonnet-4-0': 'June 15th, 2026',
-    'claude-sonnet-4-20250514': 'June 15th, 2026',
-    'claude-opus-4-1': 'August 5th, 2026',
-    'claude-opus-4-1-20250805': 'August 5th, 2026',
-    'claude-mythos-preview': 'June 30th, 2026',
-};
+const DEPRECATED_MODELS = {};
 const MODELS_TO_WARN_WITH_THINKING_ENABLED = ['claude-mythos-preview', 'claude-opus-4-6'];
 class Messages extends APIResource {
     constructor() {
@@ -24205,28 +24179,7 @@ class messages_Messages extends APIResource {
         });
     }
 }
-const messages_DEPRECATED_MODELS = {
-    'claude-1.3': 'November 6th, 2024',
-    'claude-1.3-100k': 'November 6th, 2024',
-    'claude-instant-1.1': 'November 6th, 2024',
-    'claude-instant-1.1-100k': 'November 6th, 2024',
-    'claude-instant-1.2': 'November 6th, 2024',
-    'claude-3-sonnet-20240229': 'July 21st, 2025',
-    'claude-3-opus-20240229': 'January 5th, 2026',
-    'claude-2.1': 'July 21st, 2025',
-    'claude-2.0': 'July 21st, 2025',
-    'claude-3-7-sonnet-latest': 'February 19th, 2026',
-    'claude-3-7-sonnet-20250219': 'February 19th, 2026',
-    'claude-3-5-haiku-latest': 'February 19th, 2026',
-    'claude-3-5-haiku-20241022': 'February 19th, 2026',
-    'claude-opus-4-0': 'June 15th, 2026',
-    'claude-opus-4-20250514': 'June 15th, 2026',
-    'claude-sonnet-4-0': 'June 15th, 2026',
-    'claude-sonnet-4-20250514': 'June 15th, 2026',
-    'claude-opus-4-1': 'August 5th, 2026',
-    'claude-opus-4-1-20250805': 'August 5th, 2026',
-    'claude-mythos-preview': 'June 30th, 2026',
-};
+const messages_DEPRECATED_MODELS = {};
 const messages_MODELS_TO_WARN_WITH_THINKING_ENABLED = ['claude-mythos-preview', 'claude-opus-4-6'];
 messages_Messages.Batches = batches_Batches;
 //# sourceMappingURL=messages.mjs.map
@@ -24656,7 +24609,7 @@ class BaseAnthropic {
         return (0,utils_query/* stringifyQuery */._)(query);
     }
     getUserAgent() {
-        return `${this.constructor.name}/JS ${VERSION}`;
+        return `Anthropic/JS ${VERSION}`;
     }
     defaultIdempotencyKey() {
         return `stainless-node-retry-${uuid4()}`;
