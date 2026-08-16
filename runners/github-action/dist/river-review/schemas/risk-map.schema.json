@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Risk Map Schema",
+  "description": "Repository-level risk map for classifying file changes into review actions.",
+  "type": "object",
+  "required": ["rules"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "default": "1",
+      "description": "Schema version."
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/riskRule" },
+      "description": "Ordered list of risk rules. First match wins."
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "action": { "$ref": "#/$defs/riskAction" }
+      },
+      "default": { "action": "comment_only" },
+      "description": "Fallback action when no rules match."
+    }
+  },
+  "$defs": {
+    "riskAction": {
+      "type": "string",
+      "enum": ["comment_only", "escalate", "require_human_review"]
+    },
+    "riskRule": {
+      "type": "object",
+      "required": ["pattern", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Glob pattern to match against changed file paths."
+        },
+        "action": { "$ref": "#/$defs/riskAction" },
+        "reason": {
+          "type": "string",
+          "description": "Human-readable reason for this risk classification."
+        }
+      }
+    }
+  }
+}

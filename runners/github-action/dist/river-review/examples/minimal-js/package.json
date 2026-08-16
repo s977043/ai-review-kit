@@ -1,0 +1,8 @@
+{
+  "name": "river-review-example-minimal-js",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/add.test-example.js"
+  }
+}

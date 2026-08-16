@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Skill Loose Schema",
+  "description": "Minimal validation for Agent Skills SKILL.md frontmatter. Requires only name and description.",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Human-readable skill name",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the skill",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,18 @@
+{
+  "id": "adr-001",
+  "type": "adr",
+  "title": "Adopt React Query for data fetching",
+  "content": "We standardize on React Query for client-side data fetching to reduce duplicated caching logic.",
+  "metadata": {
+    "createdAt": "2024-10-01T10:00:00.000Z",
+    "author": "Tech Lead",
+    "phase": "upstream",
+    "tags": ["architecture", "fetching"],
+    "relatedFiles": ["src/app/providers.tsx"],
+    "links": ["https://example.com/adr/001"],
+    "summary": "Use React Query for client data fetching."
+  },
+  "context": {
+    "decision": "Replace custom hooks with React Query where feasible"
+  }
+}

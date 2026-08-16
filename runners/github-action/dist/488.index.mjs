@@ -238,8 +238,8 @@ function convertAgentSkillToRR(parsed, existingIds = new Set(), projectRoot) {
 // ---------------------------------------------------------------------------
 
 async function loadLooseSchema() {
-  const schemaPath = node_path__WEBPACK_IMPORTED_MODULE_1__.join(repoRoot, 'schemas', 'agent-skill-loose.schema.json');
-  return (0,_runners_core_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_6__/* .loadSchema */ .e$)(schemaPath);
+  const schemaPath = __webpack_require__.ab + "agent-skill-loose.schema.json";
+  return (0,_runners_core_skill_loader_mjs__WEBPACK_IMPORTED_MODULE_6__/* .loadSchema */ .e$)(__webpack_require__.ab + "agent-skill-loose.schema.json");
 }
 
 function createLooseValidator(schema) {
