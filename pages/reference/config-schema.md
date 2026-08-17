@@ -7,10 +7,12 @@
 ### サポート項目とデフォルト
 
 - `model`
-  - `provider`: `openai`（デフォルト）/ `google` / `anthropic`。`modelName` の prefix で実体クライアントが自動選択される（`gpt|o1` → OpenAI, `gemini` → Gemini, `claude` → Anthropic）。Anthropic 対応は [#804](https://github.com/s977043/river-review/issues/804) で追加。
-  - `modelName`: `gpt-4o-mini`（デフォルト）。例: `claude-sonnet-4-6`, `gemini-2.0-flash`。
+  - `provider`: `openai`（デフォルト）。スキーマは `google` / `anthropic` も受理する。ただしレビュー実行経路で実際に動く値は `openai` だけである（[#490](https://github.com/s977043/river-review/pull/490)）。
+    - レビュー実行経路（`river review` と GitHub Action）では、`src/lib/review-engine.mjs` の `resolveOpenAIConfig` が `model.provider` をそのまま採用する。`openai` 以外だと LLM 呼び出しに進まず、`provider <値> is not supported yet` という skip 理由が記録される。`modelName` の prefix からクライアントを自動選択する挙動は、この経路には存在しない。
+    - multi-provider クライアント（OpenAI / Gemini / Anthropic）が効くのは `river skills <path>` 経路だけである（`src/core/skill-dispatcher.mjs` → `src/ai/factory.mjs`）。同経路はモデル名を `model.provider` ではなく skill 側の `model` / `modelHint` から解決し、その prefix（`gpt|o1` → OpenAI, `gemini` → Gemini, `claude` → Anthropic）でクライアントを選ぶ。Anthropic 対応の追加は [#804](https://github.com/s977043/river-review/issues/804) である。
+  - `modelName`: `gpt-4o-mini`（デフォルト）。スキーマは `claude-sonnet-4-6` や `gemini-2.0-flash` のような prefix も受理する。ただしレビュー実行経路の可否を決めるのは `provider` であり、モデル名を差し替えても `provider` が `openai` でなければ skip される。
   - `temperature`: `0`
-  - `maxTokens`: `600`（OpenAI/Gemini 向け。Anthropic クライアントは内部で `max_tokens=4096` を固定使用する）
+  - `maxTokens`: `600`。レビュー実行経路の OpenAI 呼び出しへ渡る値である。`river skills` 経路の Anthropic クライアントはこのキーを参照せず、skill 側の `maxTokens` を使う。skill 側が未指定なら、モデル別の既定値（`claude-opus-4-7` と `claude-sonnet-4-6` は 8192、それ以外は 4096）になる。
 - `review`
   - `language`: `ja`（日本語）/`en`（英語）。プロンプトの本文と出力言語を切り替える。
   - `severity`: `normal`（デフォルト）/`strict`/`relaxed`
