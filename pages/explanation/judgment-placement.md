@@ -33,6 +33,8 @@ Judgment Placement では、判断の性質に応じて評価層を選びます�
 
 ## 4つの判断層
 
+4 層と判断ステップの定義は、本ページを SSoT とします。他ページでは要約とリンクにとどめます。
+
 ```text
 Can it be proven?
   ↓ yes
@@ -73,6 +75,8 @@ River Review はすでに Skill の `evaluationType` として次の評価層を
 - `deterministic`
 - `heuristic`
 - `agentic`
+
+各値の定義とスキーマ上の扱いは [スキルスキーマ概要](../reference/skill-schema.md) を参照してください。
 
 Judgment Placement は新しい並立エンジンを作るものではなく、既存の評価層と Human Judgment Focus を同じ設計原則で接続します。
 
@@ -219,3 +223,10 @@ River Review のレビュー判断は、すべて同じ実行方法を取る必�
 **Review Judgment as Code が「何を判断するか」を資産化する考え方なら、Judgment Placement は「その判断をどこで実行するか」を設計する原則です。**
 
 人間・AI・ルール・テストを競合させるのではなく、それぞれが最も得意な判断を担当させることで、AI 支援開発の速度が上がっても判断品質を維持できる状態を目指します。
+
+## 関連ページ
+
+- [コンセプト](./concept.md) — Review Judgment as Code と Core Mechanism の全体像
+- [Human Judgment Focus](./human-judgment-focus.md) — 人間監督・リスク階層・責任境界の詳細
+- [設計哲学](./design-philosophy.md) — 設計原則とリスク階層型の人間監督
+- [スキルスキーマ概要](../reference/skill-schema.md) — `evaluationType` を含むスキルメタデータのリファレンス

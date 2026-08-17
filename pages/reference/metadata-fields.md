@@ -18,4 +18,6 @@
 | `dependencies` | 必須ツール/リソース（例: `code_search`、`test_runner`、`adr_lookup`、`repo_metadata`、`coverage_report`、`tracing`、または `custom:*`）。                               |
 | `priority`     | プランナーなしで実行する際の順序ヒント（値が小さいほど優先）。                                                                                                          |
 
+`evaluationType`（`deterministic` / `heuristic` / `agentic`）と `deterministicGate` は、スキルを実行する評価層を宣言する任意フィールド。詳細は[スキルスキーマ概要](./skill-schema.md)を参照。
+
 メタデータは front matter で管理する。指示の実行前に解析できる状態を保ち、すべての必須フィールドは `/schemas/skill.schema.json` を使用したチェックに合格させる。

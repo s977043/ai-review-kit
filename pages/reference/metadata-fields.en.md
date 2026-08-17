@@ -18,4 +18,6 @@ Use these fields to keep skill metadata consistent and easy to route.
 | `dependencies` | Required tools/resources (for example `code_search`, `test_runner`, `adr_lookup`, `repo_metadata`, `coverage_report`, `tracing`, or `custom:*`).                                 |
 | `priority`     | Optional ordering hint (lower runs earlier) for deterministic execution when no planner is used.                                                                                 |
 
+`evaluationType` (`deterministic` / `heuristic` / `agentic`) and `deterministicGate` are optional fields that declare which evaluation layer runs the skill. See [Skill Schema](./skill-schema.en.md) for details.
+
 Keep metadata in front matter so it can be parsed before the instructions run. All required fields must pass checks using `/schemas/skill.schema.json`.
