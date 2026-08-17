@@ -22,7 +22,7 @@ River Review は、この負荷を下げつつ、人間が高リスクな判断�
 
 River Review が減らしたいのは Human Judgment そのものではなく、**人間でなくても再現可能に処理できる判断へ人間の注意力を使うこと**です。
 
-判断の配置は [Judgment Placement](./judgment-placement.md) の原則に従います。
+判断の配置は [Judgment Placement](./judgment-placement.md) の原則に従います。4 層の定義は同ページを SSoT とし、以下は要約です。
 
 ```text
 機械的に証明できる

@@ -18,6 +18,8 @@ River Review のスキルは、メタデータに YAML frontmatter を使用し�
 - `inputContext` (string[], optional): スキルが期待する必須入力。許可される値は `diff` | `fullFile` | `tests` | `adr` | `commitMessage` | `repoConfig` | `reviewSelf` | `reviewExternal` | `findingsPool` | `prDescription`。
 - `outputKind` (string[], optional, default `['findings']`): スキルによって生成される出力カテゴリ。許可される値は `findings` | `summary` | `actions` | `tests` | `metrics` | `questions` | `review-audit`。省略時は `findings` がデフォルトになる。
 - `modelHint` (string, optional): モデル選択のヒント。`cheap`/`balanced`/`high-accuracy` のいずれか。
+- `evaluationType` (string, optional): このスキルを実行する評価層。`deterministic` / `heuristic` / `agentic` のいずれか。`deterministic` は LLM を使わず外部コマンドで合否を決め、`heuristic` は純コードの detector が判定し、`agentic` は LLM が担当する。省略したスキルは従来どおりの挙動を保ち、レビュー計画の `executionOrder` はこの宣言から導出される。判断をどの層へ置くかの設計原則は [Judgment Placement](../explanation/judgment-placement.md) を参照。
+- `deterministicGate` (object, optional): `evaluationType` が `deterministic` のスキルが実行するコマンドの宣言。`command` (string, required) / `args` (string[]) / `selfContained` (boolean) / `failSeverity` (`strict_block` | `bypass_warning`、既定 `strict_block`) を持つ。`command` は repo 側のファイルが指定する任意コマンドであり、実行は信頼境界（host が承認した設定）の内側に限る。
 - `dependencies` (string[], optional): 必要なダウンストリームツール/リソース。例: `code_search` | `test_runner` | `adr_lookup` | `repo_metadata` | `coverage_report` | `tracing` | `custom:*`（拡張機能用）。
 
 \* `applyTo` は別名 `files` / `path_patterns` か、`trigger.files` で代替可能。

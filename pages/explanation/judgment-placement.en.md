@@ -33,6 +33,8 @@ Judgment Placement chooses an evaluation layer according to the nature of the de
 
 ## Four judgment layers
 
+This page is the SSoT for the four layers and the judgment steps below. Other pages keep a summary and a link instead of restating them.
+
 ```text
 Can it be proven?
   ↓ yes
@@ -73,6 +75,8 @@ River Review already supports the following Skill evaluation types:
 - `deterministic`
 - `heuristic`
 - `agentic`
+
+See [Skill Schema](../reference/skill-schema.en.md) for the definition of each value and how the schema treats it.
 
 Judgment Placement does not introduce a parallel execution engine. It connects those existing layers with Human Judgment Focus under one design principle.
 
@@ -219,3 +223,10 @@ River Review judgments do not all need the same execution mechanism.
 **If Review Judgment as Code defines what judgment should be owned and versioned, Judgment Placement defines where that judgment should execute.**
 
 The goal is not to make humans, agents, rules, and tests compete. It is to let each of them own the decisions they are best suited to make, so judgment quality can scale with AI-assisted development throughput.
+
+## Related pages
+
+- [Concept](./concept.en.md) — Review Judgment as Code and the Core Mechanism in full
+- [Human Judgment Focus](./human-judgment-focus.en.md) — human supervision, risk tiers, and responsibility boundaries
+- [Design Philosophy](./design-philosophy.en.md) — design principles and risk-tiered human supervision
+- [Skill Schema](../reference/skill-schema.en.md) — skill metadata reference, including `evaluationType`

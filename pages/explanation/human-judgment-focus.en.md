@@ -22,7 +22,7 @@ River Review lowers this burden while letting humans concentrate on high-risk ju
 
 River Review does not try to reduce Human Judgment itself. It tries to reduce the amount of scarce human attention spent on decisions that can be handled reproducibly elsewhere.
 
-Judgments are placed according to the [Judgment Placement](./judgment-placement.en.md) principle.
+Judgments are placed according to the [Judgment Placement](./judgment-placement.en.md) principle, which is the SSoT for the four layer definitions. The list below is a summary.
 
 ```text
 Mechanically provable
