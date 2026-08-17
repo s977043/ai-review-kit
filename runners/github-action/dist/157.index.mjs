@@ -11,6 +11,7 @@ __webpack_require__.r(__webpack_exports__);
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
   BashSession: () => (/* binding */ BashSession),
+  BashTimeoutError: () => (/* binding */ BashTimeoutError),
   betaAgentToolset20260401: () => (/* binding */ betaAgentToolset20260401),
   betaBashTool: () => (/* binding */ betaBashTool),
   betaEditTool: () => (/* binding */ betaEditTool),
@@ -672,6 +673,17 @@ const DEFAULT_MAX_FILE_BYTES = 256 * 1024;
 const GREP_OUTPUT_LIMIT = 100 * 1024;
 const GREP_MAX_LINE_LENGTH = 2000;
 const GLOB_RESULT_LIMIT = 200;
+/**
+ * A bash command exceeded its `timeoutMs`. Carries the timeout so a caller can
+ * tell it apart from an abort without matching on the message text.
+ */
+class BashTimeoutError extends error/* AnthropicError */.pJ {
+    constructor(timeoutMs) {
+        super(`bash command timed out after ${timeoutMs}ms`);
+        this.name = 'BashTimeoutError';
+        this.timeoutMs = timeoutMs;
+    }
+}
 const ANSI_RE = /\x1b\[[0-9;?]*[ -/]*[@-~]/g;
 const fsGlob = promises_.glob;
 function resolveMaxBytes(configured) {
@@ -796,9 +808,9 @@ class BashSession {
         }
         const timeoutMs = opts.timeoutMs ?? BASH_DEFAULT_TIMEOUT_MS;
         const signal = opts.signal;
-        if (signal?.aborted) {
-            throw new error/* AnthropicError */.pJ('bash command aborted');
-        }
+        // Reject with the signal's own reason, so a caller telling a user cancel
+        // apart from an `AbortSignal.timeout()` sees the platform's name intact.
+        signal?.throwIfAborted();
         (0,tslib/* __classPrivateFieldSet */.G)(this, _BashSession_buf, '', "f");
         (0,tslib/* __classPrivateFieldSet */.G)(this, _BashSession_truncated, false, "f");
         // Per-call nonce so a command that prints a fixed marker can't spoof the
@@ -822,12 +834,12 @@ class BashSession {
                 await Promise.race([
                     sentinelSeen,
                     new Promise((_, reject) => {
-                        timer = setTimeout(() => reject(new error/* AnthropicError */.pJ(`bash command timed out after ${timeoutMs}ms`)), timeoutMs);
+                        timer = setTimeout(() => reject(new BashTimeoutError(timeoutMs)), timeoutMs);
                     }),
                     new Promise((_, reject) => {
                         if (!signal)
                             return;
-                        onAbort = () => reject(new error/* AnthropicError */.pJ('bash command aborted'));
+                        onAbort = () => reject(signal.reason);
                         signal.addEventListener('abort', onAbort, { once: true });
                     }),
                 ]);
