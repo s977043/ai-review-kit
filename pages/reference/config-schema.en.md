@@ -7,10 +7,12 @@ Place `.river-review.json` in the repository root to customize review model sett
 ### Support Items and Defaults
 
 - `model`
-  - `provider`: `openai` (Default). The config schema also accepts `google` / `anthropic`, but the current review pipeline is OpenAI-only (see #490).
-  - `modelName`: `gpt-4o-mini` (Default)
+  - `provider`: `openai` (Default). The config schema also accepts `google` / `anthropic`, but the current review pipeline is OpenAI-only (see [#490](https://github.com/s977043/river-review/pull/490)).
+    - On the review path (`river review` and the GitHub Action), `resolveOpenAIConfig` in `src/lib/review-engine.mjs` uses `model.provider` as-is. Any other value stops the run before the LLM call and records the skip reason `provider <value> is not supported yet`. There is no `modelName`-prefix client auto-selection on this path.
+    - The multi-provider clients (OpenAI / Gemini / Anthropic) apply only to the `river skills <path>` route (`src/core/skill-dispatcher.mjs` → `src/ai/factory.mjs`). That route resolves the model name from each skill's own `model` / `modelHint` — not from `model.provider` — and picks the client by prefix (`gpt|o1` → OpenAI, `gemini` → Gemini, `claude` → Anthropic). Anthropic support was added in [#804](https://github.com/s977043/river-review/issues/804).
+  - `modelName`: `gpt-4o-mini` (Default). The schema also accepts prefixes such as `claude-sonnet-4-6` or `gemini-2.0-flash`, but `provider` is what decides whether the review path runs; changing the model name alone still skips unless `provider` is `openai`.
   - `temperature`: `0`
-  - `maxTokens`: `600`
+  - `maxTokens`: `600`. This is the value passed to the OpenAI call on the review path. The Anthropic client on the `river skills` route does not read this key; it uses the skill's own `maxTokens`, falling back to a per-model default (8192 for `claude-opus-4-7` and `claude-sonnet-4-6`, 4096 otherwise).
 - `review`
   - `language`: `ja` (Japanese) / `en` (English). Switches prompt body and output language.
   - `severity`: `normal` (Default) / `strict` / `relaxed`
