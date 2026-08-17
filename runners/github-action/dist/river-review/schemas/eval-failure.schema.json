@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Evaluation Failure Schema",
+  "type": "object",
+  "required": ["category", "caseRef", "description"],
+  "properties": {
+    "category": {
+      "type": "string",
+      "enum": [
+        "routing_miss",
+        "phase_miss",
+        "missing_context",
+        "missing_evidence",
+        "weak_explanation",
+        "false_positive",
+        "severity_mismatch",
+        "verify_gap",
+        "tool_gap"
+      ],
+      "description": "Failure category for systematic tracking."
+    },
+    "caseRef": {
+      "type": "string",
+      "description": "Reference to the test case (e.g., fixture name)."
+    },
+    "evalType": {
+      "type": "string",
+      "enum": ["fixtures", "planner", "regression"],
+      "description": "Which evaluation produced this failure."
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "minor", "major", "critical"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable failure description."
+    }
+  }
+}

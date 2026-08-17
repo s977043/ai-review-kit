@@ -1,0 +1,17 @@
+{
+  "description": "Optional auto-format hook for the river-review plugin. Runs the consumer project's prettier on changed files after Write/Edit; skips silently when prettier is not installed.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/plugin-format-hook.sh\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

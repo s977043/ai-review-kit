@@ -1,0 +1,322 @@
+[
+  {
+    "name": "memory-recall: query by type=wontfix returns matching entries",
+    "category": "memory_recall",
+    "memoryEntries": [
+      {
+        "id": "wf1",
+        "type": "wontfix",
+        "content": "Accepted verbose logging",
+        "metadata": { "createdAt": "2026-01-01T00:00:00Z", "author": "test" }
+      },
+      {
+        "id": "r1",
+        "type": "review",
+        "content": "Review result",
+        "metadata": { "createdAt": "2026-01-01T00:00:00Z", "author": "test" }
+      }
+    ],
+    "query": { "type": "wontfix" },
+    "expectedIds": ["wf1"]
+  },
+  {
+    "name": "memory-recall: query by tags filters correctly",
+    "category": "memory_recall",
+    "memoryEntries": [
+      {
+        "id": "p1",
+        "type": "pattern",
+        "content": "Auth pattern",
+        "metadata": {
+          "createdAt": "2026-01-01T00:00:00Z",
+          "author": "test",
+          "tags": ["security", "auth"]
+        }
+      },
+      {
+        "id": "p2",
+        "type": "pattern",
+        "content": "Perf pattern",
+        "metadata": { "createdAt": "2026-01-01T00:00:00Z", "author": "test", "tags": ["perf"] }
+      }
+    ],
+    "query": { "tags": ["security"] },
+    "expectedIds": ["p1"]
+  },
+  {
+    "name": "memory-recall: query by phase returns correct entries",
+    "category": "memory_recall",
+    "memoryEntries": [
+      {
+        "id": "u1",
+        "type": "pattern",
+        "content": "Upstream",
+        "metadata": { "createdAt": "2026-01-01T00:00:00Z", "author": "test", "phase": "upstream" }
+      },
+      {
+        "id": "m1",
+        "type": "pattern",
+        "content": "Midstream",
+        "metadata": { "createdAt": "2026-01-01T00:00:00Z", "author": "test", "phase": "midstream" }
+      }
+    ],
+    "query": { "phase": "midstream" },
+    "expectedIds": ["m1"]
+  },
+  {
+    "name": "suppression: active suppression matches by file path",
+    "category": "suppression",
+    "memoryEntries": [
+      {
+        "id": "s1",
+        "type": "suppression",
+        "content": "Accepted",
+        "metadata": {
+          "createdAt": "2026-01-01T00:00:00Z",
+          "author": "test",
+          "relatedFiles": ["src/auth.ts"]
+        },
+        "context": { "active": true, "scope": "file" }
+      }
+    ],
+    "changedFiles": ["src/auth.ts"],
+    "expectedSuppressionIds": ["s1"]
+  },
+  {
+    "name": "suppression: revoked suppression is excluded",
+    "category": "suppression",
+    "memoryEntries": [
+      {
+        "id": "s1",
+        "type": "suppression",
+        "content": "Accepted",
+        "metadata": {
+          "createdAt": "2026-01-01T00:00:00Z",
+          "author": "test",
+          "relatedFiles": ["src/auth.ts"]
+        },
+        "context": { "active": true, "scope": "file" }
+      },
+      {
+        "id": "rev1",
+        "type": "resurface",
+        "content": "Revoked",
+        "metadata": { "createdAt": "2026-01-02T00:00:00Z", "author": "test" },
+        "context": { "suppressionId": "s1", "action": "revoke" }
+      }
+    ],
+    "changedFiles": ["src/auth.ts"],
+    "expectedSuppressionIds": []
+  },
+  {
+    "name": "suppression: expired suppression is excluded",
+    "category": "suppression",
+    "memoryEntries": [
+      {
+        "id": "s1",
+        "type": "suppression",
+        "content": "Temporary",
+        "metadata": {
+          "createdAt": "2024-01-01T00:00:00Z",
+          "author": "test",
+          "relatedFiles": ["src/auth.ts"]
+        },
+        "context": { "active": true, "scope": "file", "expiresAt": "2025-01-01T00:00:00Z" }
+      }
+    ],
+    "changedFiles": ["src/auth.ts"],
+    "expectedSuppressionIds": []
+  },
+  {
+    "name": "suppression: subsystem scope matches related path",
+    "category": "suppression",
+    "memoryEntries": [
+      {
+        "id": "s1",
+        "type": "suppression",
+        "content": "Auth subsystem",
+        "metadata": {
+          "createdAt": "2026-01-01T00:00:00Z",
+          "author": "test",
+          "relatedFiles": ["src/auth/login.ts"]
+        },
+        "context": { "active": true, "scope": "subsystem" }
+      }
+    ],
+    "changedFiles": ["src/auth/oauth.ts"],
+    "expectedSuppressionIds": ["s1"]
+  },
+  {
+    "name": "resurfacing: file-scoped suppression resurfaces on same path",
+    "category": "resurfacing",
+    "suppression": {
+      "id": "s1",
+      "type": "suppression",
+      "title": "Suppress auth",
+      "content": "ok",
+      "metadata": {
+        "createdAt": "2026-01-01T00:00:00Z",
+        "author": "test",
+        "relatedFiles": ["src/auth.ts"]
+      },
+      "context": { "active": true, "scope": "file" }
+    },
+    "changedFiles": ["src/auth.ts"],
+    "expectedResurface": true
+  },
+  {
+    "name": "resurfacing: file-scoped suppression does not resurface on different path",
+    "category": "resurfacing",
+    "suppression": {
+      "id": "s1",
+      "type": "suppression",
+      "title": "Suppress auth",
+      "content": "ok",
+      "metadata": {
+        "createdAt": "2026-01-01T00:00:00Z",
+        "author": "test",
+        "relatedFiles": ["src/auth.ts"]
+      },
+      "context": { "active": true, "scope": "file" }
+    },
+    "changedFiles": ["src/billing.ts"],
+    "expectedResurface": false
+  },
+  {
+    "name": "resurfacing: inactive suppression does not resurface",
+    "category": "resurfacing",
+    "suppression": {
+      "id": "s1",
+      "type": "suppression",
+      "title": "Inactive",
+      "content": "ok",
+      "metadata": {
+        "createdAt": "2026-01-01T00:00:00Z",
+        "author": "test",
+        "relatedFiles": ["src/auth.ts"]
+      },
+      "context": { "active": false, "scope": "file" }
+    },
+    "changedFiles": ["src/auth.ts"],
+    "expectedResurface": false
+  },
+  {
+    "name": "risk-map: docs-only change is comment_only",
+    "category": "risk_map",
+    "riskMap": {
+      "version": "1",
+      "rules": [
+        { "pattern": "db/migrations/**", "action": "require_human_review" },
+        { "pattern": "src/auth/**", "action": "escalate" },
+        { "pattern": "docs/**", "action": "comment_only" }
+      ],
+      "defaults": { "action": "comment_only" }
+    },
+    "changedFiles": ["docs/guide.md", "docs/faq.md"],
+    "expectedAggregateAction": "comment_only",
+    "expectedEscalatedFiles": [],
+    "expectedHumanReviewFiles": []
+  },
+  {
+    "name": "risk-map: auth change triggers escalation",
+    "category": "risk_map",
+    "riskMap": {
+      "version": "1",
+      "rules": [
+        { "pattern": "db/migrations/**", "action": "require_human_review" },
+        { "pattern": "src/auth/**", "action": "escalate" },
+        { "pattern": "docs/**", "action": "comment_only" }
+      ],
+      "defaults": { "action": "comment_only" }
+    },
+    "changedFiles": ["src/auth/login.ts", "src/auth/session.ts"],
+    "expectedAggregateAction": "escalate",
+    "expectedEscalatedFiles": ["src/auth/login.ts", "src/auth/session.ts"],
+    "expectedHumanReviewFiles": []
+  },
+  {
+    "name": "risk-map: db migration requires human review",
+    "category": "risk_map",
+    "riskMap": {
+      "version": "1",
+      "rules": [
+        { "pattern": "db/migrations/**", "action": "require_human_review" },
+        { "pattern": "src/auth/**", "action": "escalate" }
+      ],
+      "defaults": { "action": "comment_only" }
+    },
+    "changedFiles": ["db/migrations/0042_add_column.sql"],
+    "expectedAggregateAction": "require_human_review",
+    "expectedEscalatedFiles": [],
+    "expectedHumanReviewFiles": ["db/migrations/0042_add_column.sql"]
+  },
+  {
+    "name": "risk-map: mixed files aggregate to highest risk",
+    "category": "risk_map",
+    "riskMap": {
+      "version": "1",
+      "rules": [
+        { "pattern": "db/migrations/**", "action": "require_human_review" },
+        { "pattern": "src/auth/**", "action": "escalate" },
+        { "pattern": "docs/**", "action": "comment_only" }
+      ],
+      "defaults": { "action": "comment_only" }
+    },
+    "changedFiles": ["docs/readme.md", "src/auth/login.ts", "db/migrations/001.sql"],
+    "expectedAggregateAction": "require_human_review",
+    "expectedEscalatedFiles": ["src/auth/login.ts"],
+    "expectedHumanReviewFiles": ["db/migrations/001.sql"]
+  },
+  {
+    "name": "risk-map: unmatched files fall back to defaults",
+    "category": "risk_map",
+    "riskMap": {
+      "version": "1",
+      "rules": [{ "pattern": "src/auth/**", "action": "escalate" }],
+      "defaults": { "action": "comment_only" }
+    },
+    "changedFiles": ["src/ui/button.tsx", "src/utils/format.ts"],
+    "expectedAggregateAction": "comment_only",
+    "expectedEscalatedFiles": [],
+    "expectedHumanReviewFiles": []
+  },
+  {
+    "name": "risk-map: empty file list returns default action",
+    "category": "risk_map",
+    "riskMap": {
+      "version": "1",
+      "rules": [{ "pattern": "src/auth/**", "action": "escalate" }],
+      "defaults": { "action": "comment_only" }
+    },
+    "changedFiles": [],
+    "expectedAggregateAction": "comment_only",
+    "expectedEscalatedFiles": [],
+    "expectedHumanReviewFiles": []
+  },
+  {
+    "name": "memory-fallback: missing memory returns empty results",
+    "category": "memory_fallback",
+    "memoryPath": "__nonexistent__/missing.json",
+    "expectedEntryCount": 0
+  },
+  {
+    "name": "memory-fallback: empty query returns all entries",
+    "category": "memory_fallback",
+    "memoryEntries": [
+      {
+        "id": "e1",
+        "type": "wontfix",
+        "content": "ok",
+        "metadata": { "createdAt": "2026-01-01T00:00:00Z", "author": "test" }
+      },
+      {
+        "id": "e2",
+        "type": "review",
+        "content": "ok",
+        "metadata": { "createdAt": "2026-01-01T00:00:00Z", "author": "test" }
+      }
+    ],
+    "query": {},
+    "expectedEntryCount": 2
+  }
+]

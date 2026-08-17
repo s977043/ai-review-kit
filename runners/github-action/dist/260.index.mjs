@@ -289,7 +289,7 @@ async function listRunRecords(storeDir) {
  */
 async function loadRunRecord(storeDir, runId) {
   const base = node_path__WEBPACK_IMPORTED_MODULE_1__.resolve(storeDir);
-  const resolved = node_path__WEBPACK_IMPORTED_MODULE_1__.resolve(base, `${runId}.json`);
+  const resolved = __webpack_require__.ab + "river-review/" + base + '/' + runId + '.json';
   if (!resolved.startsWith(base + node_path__WEBPACK_IMPORTED_MODULE_1__.sep) && resolved !== base) {
     throw new Error(`Invalid runId: path traversal detected`);
   }

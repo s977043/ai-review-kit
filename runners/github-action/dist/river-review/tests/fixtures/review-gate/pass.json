@@ -1,0 +1,16 @@
+{
+  "issues": [],
+  "summary": {
+    "issueCountBySeverity": {
+      "info": 0,
+      "minor": 0,
+      "major": 0,
+      "critical": 0
+    },
+    "issueCountByPhase": {
+      "upstream": 0,
+      "midstream": 0,
+      "downstream": 0
+    }
+  }
+}
