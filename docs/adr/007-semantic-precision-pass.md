@@ -35,7 +35,7 @@ Issue #1857 本文の Gap 図は `classifyFindings / dedupe` を Gate の上流�
 
 ### 現行の抑制理由と提案 reasonCode の対応
 
-`SUPPRESS_REASONS`（`src/lib/finding-factory.mjs:34-40`）は 5 値です。#1857 が提案した reasonCode 語彙との対応は次のとおりで、対応が付かない方向が両側にあります。
+`SUPPRESS_REASONS`（`src/lib/finding-factory.mjs:34-40`）は 5 値です。#1857 の提案した reasonCode 語彙との対応は次のとおりで、対応が付かない方向は両側にあります。
 
 | 提案 reasonCode             | 現行の対応物                                                        | 判定                             |
 | --------------------------- | ------------------------------------------------------------------- | -------------------------------- |
@@ -131,7 +131,7 @@ Precision Pass の障害が review bypass になってはならない、とい�
 
 第 3 の値を `advisory` と呼ぶ案は採りません。`advisory` は disposition の値としてすでに使う語であり、しかも `mode: advisory` は「すべての disposition を advisory へ降格する」ことを意味しません。`suppressed` の finding もこのモードでは出力に残るからです。同一機能の中で同じ語が 2 つの意味を持つことになり、ADR-006 が `shadow` を退けたのと同じ理由で退けます。`annotate` は「判定を注記として付けるが Gate は触らない」という挙動をそのまま表します。
 
-`observe` の意味は ADR-006 と揃えますが、不変条件のうち「追加の LLM 呼び出しを発生させない」は本 ADR では成り立ちません。Prompt Compiler の候補プロンプトは送信せずに生成できるのに対し、Judge の判定は呼び出さなければ得られないためです。共有するのは「emitted findings と Gate と verdict へ影響しない」という点であり、コスト面での無害さは共有しません。この差は `observe` を有効化する判断の前提として扱います。
+`observe` の意味は ADR-006 と揃えますが、不変条件のうち「追加の LLM 呼び出しを発生させない」は本 ADR では成り立ちません。Prompt Compiler の候補プロンプトは送信せずに生成できるのに対し、Judge の判定は呼び出さなければ得られないためです。共有するのは「emitted findings・Gate・verdict へ影響しない」という点であり、コスト面での無害さは共有しません。この差は `observe` を有効化する判断の前提として扱います。
 
 ### 出力の置き場所
 
@@ -167,7 +167,7 @@ feedback へ同じ値を複製保存しません。既存の `review_run_id` と
 
 ## Consequences
 
-- **Phase 0 のベースライン数値は、現時点の保存データからは計算できません。** 理由は 3 つあり、いずれも実測済みです。第一に LLM を通った finding が 0 件で、母数が fallback だけです。第二に run record 6 件のいずれにも `debug` が無く、`verifierStats` が保存されていません。第三に feedback と finding が join できず、precision と false-block と missed issue を原理的に算出できません。したがって Phase 0 の成果物は数値のベースラインではなく、指標定義と抽出コード、および母集団を作るための収集条件になります。
+- **Phase 0 のベースライン数値は、現時点の保存データからは計算できません。** 理由は 3 つあり、いずれも実測済みです。第一に LLM を通った finding が 0 件で、母数が fallback だけです。第二に run record 6 件のいずれにも `debug` が無く、`verifierStats` が保存されていません。第三に feedback と finding が join できず、precision・false-block・missed issue を原理的に算出できません。したがって Phase 0 の成果物は数値のベースラインではなく、指標定義と抽出コード、および母集団を作るための収集条件になります。
 - **token と cost は「新 DB を作らない」方針を維持できません。** 保存先の問題ではなく取得コードが無いためです。`src/lib/llm-pipeline.mjs:121` は `json.choices?.[0]?.message?.content` だけを返し、provider が返す `usage` を破棄します。この 2 指標を観測するには `usage` の保持と呼び出し側の変更が要り、これは挙動変更なしという Phase 0 の前提を厳密には破ります。なお `finalSummary.tokenEstimate` は provider の実トークンではありません。suppressed / gate / feedback の分布については、既存の run record と feedback JSONL の読み取りで足ります。
 - **`findings[]` へ `judgment` を足すには schema 変更が必須です。** [`schemas/review-artifact.schema.json`](../../schemas/review-artifact.schema.json) の `$defs.finding` は `additionalProperties: false` です（`:354`）。ADR-006 が使った `debug.execution` は `additionalProperties: true` でしたが、finding には同じ手が使えません。additive ではあるものの no-op ではなく、schema の更新を伴う PR が必要です。
 - 段 5 が Gate に効いていない以上、Judge を Gate へ接続する段では「これまで表示上抑制されていた finding が Gate に載る」方向の変化が起こり得ます。`active` の評価では、Judge の精度とは別に、この経路差そのものを回帰として観測します。

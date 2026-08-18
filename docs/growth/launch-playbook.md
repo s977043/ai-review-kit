@@ -42,7 +42,7 @@ GitHub の発見経路のうち **Trending は star velocity（単位時間あ�
 
 ### T+1〜T+2 日: 初期対応
 
-- Hacker News / Reddit / Discussions / Issues のすべての反応に **24〜48 時間以内**に返信する。「生きているプロジェクト」のシグナルは評価者の第一チェック項目である。
+- Hacker News / Reddit / Discussions / Issues のすべての反応へ **24〜48 時間以内**に返信する。「生きているプロジェクト」のシグナルは評価者の第一チェック項目である。
 - 指摘された不足（ドキュメント・デモの穴）は `good first issue` 化し、貢献導線に変える。
 
 ### T+3 日以降: 放送から対話へ
