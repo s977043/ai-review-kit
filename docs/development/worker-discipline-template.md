@@ -102,6 +102,15 @@
 
 「失敗するか」の検証は「常に失敗するか」の検証にならない。事象の再現は頻度の検証ではなく、1 回の再現から「常に」は導けない。頻度を報告や成果物へ書くなら、条件ごとに複数回測って「N 回中 M 回」の形にする。検証していない修飾語は落とすか実測値へ置き換え、委託プロンプトの頻度表現をそのまま成果物へ転記しない。
 
+同じ転記事故は頻度以外の属性でも起きる。委託文へ書く**件数・対象の実在・修正案の有効性**は、issue 本文に書いてあってもオーガナイザー側で数え直してから写す。issue 本文は起票時点の要約であって一次ソースではない。2026-08-18 のセッションでは、委託文が引いた issue の記述と実測が食い違う事例が 4 件出ている。
+
+- 「同ディレクトリの 3 ページが末尾に関連ページ節を持つ」→ 実際に持つのは `concept` と `human-judgment-focus` の 2 系統（ja / en 各 1 で 4 ファイル）で、`design-philosophy` には無い（#1829 / PR #1893）
+- reference 側の候補として 3 ページを列挙 → `pages/reference/` には `skill-metadata.md` を含む 4 ページが実在した（#1829 / PR #1893）
+- 「未マッチの findingFingerprint は `shadowOnly` に落ちるので安全側」→ `shadowOnly` が立つのは fingerprint を持たない行だけ（`src/lib/promotion-candidates.mjs:641`）。未マッチ行は落ちずに別 candidate を生成する（#1823 / PR #1883）
+- issue に書いた対応候補そのものが no-op → 代入先は同じ関数内で組まれた直後のオブジェクトであり、マージしても左辺に既存キーが無い（#1868 / PR #1871）
+
+4 件はいずれもワーカーの実測による訂正のほうが正しく、提出前の成果物へ反映されている。ワーカー側では、委託文が引いた issue の記述も一次ソース確認の対象に含める。
+
 ### gh アカウント guard
 
 `gh` の keyring には `s977043`（本リポジトリ用）と `kominem-unilabo`（別業務用）の2アカウントを登録している。アクティブアカウントはセッション中に無言で切り替わることがある（複数回観測済み）。PreToolUse hook（`.claude/hooks/gh-account-guard.sh`）は defense-in-depth として効く。ただし hook が効かない環境（ワーカーの worktree で `.claude/settings.json` の hook 設定が引き継がれない場合等）もあり得るため、プロンプト側にも明示する。詳細: CLAUDE.md「Verify gh active account before write ops」。
