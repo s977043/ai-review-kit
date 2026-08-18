@@ -74,6 +74,11 @@ function buildYamlBlock(artifact, findings, score) {
     for (const f of findings) {
       lines.push(`    - severity: ${f.severity ?? 'info'}`);
       lines.push(`      category: ${f.category ?? inferCategoryFromFinding(f)}`);
+      // #1644: mirror the JSON artifact's emission rule for `scope`
+      // (src/cli/render.mjs, `...(f.scope ? { scope: f.scope } : {})`) — emit
+      // the key only when the finding carries a value, so an artifact produced
+      // before the field existed does not gain a `scope: null` row here.
+      if (f.scope) lines.push(`      scope: ${f.scope}`);
       lines.push(`      file: "${escapeYamlString(f.file ?? '')}"`);
       if (f.line != null) lines.push(`      line: ${f.line}`);
       if (f.title) lines.push(`      title: "${escapeYamlString(f.title)}"`);

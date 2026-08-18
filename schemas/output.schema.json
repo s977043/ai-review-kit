@@ -156,7 +156,7 @@
         "top3Findings": {
           "type": "array",
           "maxItems": 3,
-          "description": "The highest-priority findings, ranked by consensusLevel then severity and capped at three (sortFindingsByPriority in src/lib/team-lead-synthesizer.mjs). Every entry is also present in `issues`; correlate by `id`.",
+          "description": "The highest-priority findings, ranked by consensusLevel then severity then scope, and capped at three (sortFindingsByPriority in src/lib/team-lead-synthesizer.mjs). consensusLevel still outranks severity; scope only orders findings that tie on both of the first two keys, placing `in-diff` before `pre-existing` (#1644). Every entry is also present in `issues`; correlate by `id`.",
           "items": { "$ref": "#/$defs/teamLeadFinding" }
         },
         "blindSpots": {

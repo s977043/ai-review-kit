@@ -50,7 +50,7 @@ JSON 出力（`teamLeadReport` / `issues`）をもとに以下の形式で報告
 
 ### 優先確認の指摘（top3）
 
-<consensusLevel → severity 順の上位3件。multi は ★★、consensus は ★★★ を付ける>
+<consensusLevel → severity → scope 順の上位3件。multi は ★★、consensus は ★★★ を付ける。scope は上位2キーが同値のときだけ in-diff を先に置く>
 
 ### 全指摘（severity 降順）
 
