@@ -68059,9 +68059,31 @@ var review_engine = __nccwpck_require__(4405);
 
 const CONSENSUS_LEVEL_ORDER = { consensus: 3, multi: 2, single: 1 };
 
+/** in-diff を上位に置くための順位。normalizeScope の語彙と 1:1 で対応する。 */
+const SCOPE_ORDER = { 'in-diff': 1, 'pre-existing': 0 };
+
 /**
- * consensusLevel → severity の順に findings をソートして返す。
+ * consensusLevel → severity → scope の順に findings をソートして返す。
  * 同値の場合は元の順序を維持（stable sort）。
+ *
+ * scope を第 3 キーに置く理由（#1644 残件5）:
+ *
+ * - scope を第 1 キーにすると、単一ロールの `in-diff` minor が
+ *   3 ロール合意の `pre-existing` critical を追い越して top3 の先頭に来る。
+ *   「この差分の外にある」ことは「重要でない」ことではないので、これは誤り。
+ * - 一方で第 3 キーは「効果が薄い置き場所」ではない。上位 2 キーの値域は
+ *   consensusLevel が 3 種・severity が 4 種しかなく、実運用では大半の
+ *   finding が `single` × `major` の 1 バケットに落ちる。top3 の打ち切りは
+ *   そのバケットの中で起きるので、そこを従来の入力順ではなく scope で
+ *   決めることが in-diff 優先の実効部分になる。
+ *   例: `single`/`major` が 4 件（うち in-diff 2 件）なら、従来は入力順で
+ *   pre-existing が top3 に入り得たが、この順序では in-diff の 2 件が必ず先に来る。
+ * - 加えて、第 3 キーであれば「consensusLevel が severity より優先する」という
+ *   既存の契約（schemas/output.schema.json の top3Findings）を変えない。
+ *   scope は同順位群の中の並びを決めるだけで、上位 2 キーの判定を覆さない。
+ *
+ * scope 欠損・語彙外の値は normalizeScope の fail-safe により `in-diff` 扱い、
+ * すなわち降格しない側に倒れる（finding-factory.mjs の DEFAULT_FINDING_SCOPE）。
  */
 function sortFindingsByPriority(findings) {
   return [...findings].sort((a, b) => {
@@ -68069,7 +68091,9 @@ function sortFindingsByPriority(findings) {
       (CONSENSUS_LEVEL_ORDER[b.consensusLevel] ?? 0) -
       (CONSENSUS_LEVEL_ORDER[a.consensusLevel] ?? 0);
     if (cl !== 0) return cl;
-    return (finding_factory/* SEVERITY_RANK */.f3[b.severity] ?? -1) - (finding_factory/* SEVERITY_RANK */.f3[a.severity] ?? -1);
+    const sev = (finding_factory/* SEVERITY_RANK */.f3[b.severity] ?? -1) - (finding_factory/* SEVERITY_RANK */.f3[a.severity] ?? -1);
+    if (sev !== 0) return sev;
+    return SCOPE_ORDER[(0,finding_factory/* normalizeScope */.kn)(b.scope)] - SCOPE_ORDER[(0,finding_factory/* normalizeScope */.kn)(a.scope)];
   });
 }
 
@@ -68564,6 +68588,32 @@ function maxSeverity(a, b) {
 }
 
 /**
+ * Composition rule for `scope` across a merge cluster (#1644 残件4).
+ *
+ * Same shape as `maxSeverity`: the cluster keeps the value that does NOT
+ * weaken the finding. For scope the non-weakening value is `in-diff`, because
+ * `finding-factory.mjs` declares (see DEFAULT_FINDING_SCOPE, :19-24):
+ *
+ *   "Fail-safe default scope. Unknown/absent scope MUST NOT demote a finding,
+ *    so the default is the non-demoting value (`in-diff`) […]"
+ *
+ * Without this, the cluster inherited the scope of `findings[indices[0]]`
+ * alone, so a `pre-existing` head silently demoted a co-clustered role's
+ * `in-diff` verdict — the exact demotion the fail-safe forbids.
+ *
+ * Every member is passed through `normalizeScope` (the SSoT normalizer), so a
+ * member that carries no scope, or an out-of-vocabulary one, counts as
+ * `in-diff` rather than being ignored: ignoring it would let an unclassified
+ * finding be demoted by a classified neighbour.
+ *
+ * @param {object[]} members findings of one cluster
+ * @returns {'in-diff'|'pre-existing'}
+ */
+function mergeScope(members) {
+  return members.some((m) => (0,finding_factory/* normalizeScope */.kn)(m?.scope) === 'in-diff') ? 'in-diff' : 'pre-existing';
+}
+
+/**
  * Predicate: returns true when two findings are considered duplicates.
  * Criteria: same file, line positions within ±2, and message edit-distance ≤ 10
  * (compared on the first 80 chars, lower-cased).
@@ -68594,6 +68644,8 @@ function findingsOverlap(a, b) {
  *   - severity = max of cluster (after normalization of blocker/warning/nit)
  *   - evidence = deduplicated union of all evidence arrays
  *   - agreement = array of all reviewerRole values in the cluster
+ *   - scope = `in-diff` when any member is in-diff, else `pre-existing`
+ *     (mergeScope; omitted when no member carried a scope)
  * Non-duplicate findings pass through unchanged, with agreement = [their reviewerRole] if set.
  */
 function mergeFindings(findings) {
@@ -68664,12 +68716,19 @@ function mergeFindings(findings) {
     }
 
     const mergedAgreement = [...agreementSet];
+    const members = indices.map((idx) => findings[idx]);
     return {
       ...canonical,
       severity: mergedSeverity,
       evidence: [...evidenceSet],
       agreement: mergedAgreement,
       consensusLevel: computeConsensusLevel(mergedAgreement),
+      // Only materialise `scope` when at least one member carried it. A cluster
+      // where nobody classified the scope stays without the field — schema
+      // readers already treat an absent scope as `in-diff`
+      // (schemas/output.schema.json, issues[].scope), so adding it there would
+      // change the payload without changing its meaning.
+      ...(members.some((m) => m?.scope !== undefined) ? { scope: mergeScope(members) } : {}),
     };
   });
 }

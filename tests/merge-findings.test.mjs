@@ -238,3 +238,84 @@ describe('mergeFindings — adversarial set (#1171 item5)', () => {
     });
   });
 });
+
+/**
+ * #1644 残件4: scope composition across a merge cluster.
+ *
+ * Before this, the cluster inherited `scope` from `findings[indices[0]]` alone,
+ * so a `pre-existing` head demoted a co-clustered `in-diff` verdict. The
+ * expectations below are derived from the fail-safe direction declared in
+ * src/lib/finding-factory.mjs:19-24 (DEFAULT_FINDING_SCOPE — "Unknown/absent
+ * scope MUST NOT demote a finding"), not from what the merge code does.
+ */
+describe('mergeFindings — scope composition (#1644)', () => {
+  /** Overlapping findings on one line, scopes supplied by the caller. */
+  const clusterWithScopes = (scopes) =>
+    scopes.map((scope, i) => ({
+      file: 'src/scope.mjs',
+      line: 42,
+      message: 'unvalidated input reaches the query builder',
+      severity: 'major',
+      reviewerRole: ['bug-hunter', 'security-scanner', 'test-gap'][i],
+      ...(scope === undefined ? {} : { scope }),
+    }));
+
+  test('a single in-diff member wins over pre-existing members', () => {
+    const merged = mergeFindings(clusterWithScopes(['pre-existing', 'in-diff', 'pre-existing']));
+    assert.equal(merged.length, 1, 'the three findings must form one cluster');
+    assert.equal(merged[0].scope, 'in-diff');
+  });
+
+  test('in-diff wins regardless of which cluster member is the head', () => {
+    // The result must not depend on input order, exactly as severity /
+    // evidence / agreement do not.
+    const headPreExisting = mergeFindings(clusterWithScopes(['pre-existing', 'in-diff']));
+    const headInDiff = mergeFindings(clusterWithScopes(['in-diff', 'pre-existing']));
+    assert.equal(headPreExisting[0].scope, 'in-diff');
+    assert.equal(headInDiff[0].scope, 'in-diff');
+  });
+
+  test('an all-pre-existing cluster stays pre-existing (no over-promotion)', () => {
+    const merged = mergeFindings(clusterWithScopes(['pre-existing', 'pre-existing']));
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].scope, 'pre-existing');
+  });
+
+  test('a member with no scope is read as in-diff, per the fail-safe default', () => {
+    // An unclassified finding must not be demoted, so it must not be dropped
+    // from the composition and let a classified neighbour decide alone.
+    const merged = mergeFindings(clusterWithScopes([undefined, 'pre-existing']));
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].scope, 'in-diff');
+  });
+
+  test('an out-of-vocabulary scope is read as in-diff, per the fail-safe default', () => {
+    const merged = mergeFindings(clusterWithScopes(['whole-repo', 'pre-existing']));
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].scope, 'in-diff');
+  });
+
+  test('a cluster where nobody declared a scope keeps the field absent', () => {
+    // Absent is already specified as "read as in-diff"
+    // (schemas/output.schema.json issues[].scope), so the merge must not
+    // invent a value nobody reported.
+    const merged = mergeFindings(clusterWithScopes([undefined, undefined]));
+    assert.equal(merged.length, 1);
+    assert.ok(!('scope' in merged[0]), 'scope must stay absent when no member carried it');
+  });
+
+  test('a non-clustered finding keeps its own scope untouched', () => {
+    const merged = mergeFindings([
+      {
+        file: 'src/solo.mjs',
+        line: 10,
+        message: 'dead branch',
+        severity: 'minor',
+        reviewerRole: 'bug-hunter',
+        scope: 'pre-existing',
+      },
+    ]);
+    assert.equal(merged.length, 1);
+    assert.equal(merged[0].scope, 'pre-existing');
+  });
+});
