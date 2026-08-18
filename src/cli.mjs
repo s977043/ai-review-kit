@@ -1812,7 +1812,18 @@ async function main(argv = process.argv.slice(2)) {
   }
 }
 
-export { parseArgs, main, isLlmlessEmptyReview, printExplain, validateOutputArtifact };
+export {
+  parseArgs,
+  main,
+  isLlmlessEmptyReview,
+  printExplain,
+  validateOutputArtifact,
+  // Exported for tests/cli-parse-args.test.mjs only. That test pins the
+  // membership of this set against a hand-written literal, and because the set
+  // is DERIVED from COMMAND_USAGE rather than written out, only the runtime
+  // value can be checked — reading the source cannot recover it.
+  EAGER_COMMANDS,
+};
 
 /**
  * この CLI が直接起動されたときのみ `main()` を実行する。

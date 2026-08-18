@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { parseArgs, isLlmlessEmptyReview } from '../src/cli.mjs';
+import { parseArgs, isLlmlessEmptyReview, EAGER_COMMANDS } from '../src/cli.mjs';
 import { PHASES } from '../src/lib/planner-utils.mjs';
 import { normalizePhase } from '../src/lib/local-runner.mjs';
 
@@ -926,4 +926,53 @@ test('free-text options never swallow --fingerprint-algo as their value (#1717 �
   ]);
   assert.equal(parsed.usageError, true, '--rationale が値欠落として落ちていない');
   assert.notEqual(parsed.suppressionRationale, '--fingerprint-algo');
+});
+
+// ---------------------------------------------------------------------------
+// EAGER_COMMANDS の集合 pin
+// ---------------------------------------------------------------------------
+//
+// `EAGER_COMMANDS`（src/cli.mjs）は `COMMAND_USAGE` のキーから `eval` / `review`
+// を除いて導出している。この形は許可リストではなく **除外リスト** であり、
+// 取りこぼしたときの失敗モードが「目に見える usage error」ではなく「黙った
+// 誤パース」になる。`COMMAND_USAGE` に新コマンドを足すと、専用ブランチを
+// 持つべきコマンドでも自動的に eager ブランチへ先に食われるためである。
+// `eval` と `review` がまさにその「専用ブランチを持つべきコマンド」であり、
+// 同じ形は将来もう一度出る。src/cli.mjs は黙った誤パースで released
+// regression を 2 件出している面（v1.72.0 / v1.72.1）なので、取りこぼしは
+// テストで loud にする。
+//
+// **`COMMAND_USAGE` にコマンドを足すときは、そのコマンドを eager ブランチに
+// 入れてよいか（専用ブランチが要らないか）を判断したうえで、下の EXPECTED も
+// 同じ PR で更新すること。** 判断せずに通せる状態にはしない。
+//
+// 期待値は手書きのリテラルであり、`COMMAND_USAGE` から導出していない。導出
+// した値と比べると両辺が一緒に動いて自己整合になり、キー追加を検出できなく
+// なる（tests/prompt-sections.test.mjs 冒頭の golden と同じ理由）。
+test('EAGER_COMMANDS is exactly the 8 commands the eager branch may consume', () => {
+  const EXPECTED = [
+    'doctor',
+    'evolve',
+    'feedback',
+    'promote',
+    'run',
+    'runs',
+    'skills',
+    'suppression',
+  ];
+  assert.deepEqual(
+    [...EAGER_COMMANDS].sort(),
+    EXPECTED,
+    'eager ブランチが受理するコマンドが変わった。COMMAND_USAGE に足したコマンドを eager にしてよいか判断し、意図どおりならこの期待値を更新すること'
+  );
+  // 除外側も明示する。この 2 つが EAGER_COMMANDS に入ると、それぞれの専用
+  // ブランチ（eval は positional を取らない / review は REVIEW_SUBCOMMANDS で
+  // 照合する）より先に eager ブランチが食う。
+  for (const excluded of ['eval', 'review']) {
+    assert.equal(
+      EAGER_COMMANDS.has(excluded),
+      false,
+      `${excluded} は専用ブランチを持つため eager ブランチに入れてはならない`
+    );
+  }
 });
