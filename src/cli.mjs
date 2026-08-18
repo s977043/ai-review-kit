@@ -543,6 +543,111 @@ function parseSkillsResolveOption(arg, args, parsed) {
 }
 
 /**
+ * `promote` options.
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parsePromoteOption(arg, args, parsed) {
+  if (arg === '--approver') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --approver option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteApprover = value;
+    return 'continue';
+  }
+  if (arg === '--reason') {
+    // Free text (approval / rejection prose written by a human).
+    const taken = takeFreeTextValue(args);
+    if (taken.missing) {
+      console.error('Error: --reason option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteReason = taken.value;
+    return 'continue';
+  }
+  if (arg === '--index') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --index option requires a path.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteIndex = value;
+    return 'continue';
+  }
+  if (arg === '--include-inactive') {
+    parsed.promoteIncludeInactive = true;
+    return 'continue';
+  }
+  if (arg === '--threshold') {
+    const value = args.shift();
+    // Strict parse: parseInt('2garbage') is 2, so a typo would silently
+    // become a different threshold than the one that was typed.
+    if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+      console.error('Error: --threshold option requires a positive integer.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteThreshold = Number.parseInt(value, 10);
+    return 'continue';
+  }
+  if (arg === '--feedback-root') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --feedback-root option requires a path.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteFeedbackRoot = value;
+    return 'continue';
+  }
+  if (arg === '--input') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --input option requires a JSONL path.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteInput = value;
+    return 'continue';
+  }
+  if (arg === '--cluster-key') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --cluster-key option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteClusterKey = value;
+    return 'continue';
+  }
+  if (arg === '--policy-version') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --policy-version option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promotePolicyVersion = value;
+    return 'continue';
+  }
+  // Options that are neither promote's own nor handled by the shared parser
+  // must fail loudly instead of being ignored (a mistyped `--dry-rnu` would
+  // otherwise write the Riverbed index for real).
+  if (arg.startsWith('-') && !PROMOTE_SHARED_OPTIONS.has(arg)) {
+    parsed.promoteUnknownOption = arg;
+    return 'break';
+  }
+  return null;
+}
+
+/**
  * `evolve` options.
  * @param {string} arg
  * @param {string[]} args
@@ -1136,100 +1241,9 @@ function parseArgs(argv) {
       }
     }
     if (parsed.command === 'promote') {
-      if (arg === '--approver') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --approver option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteApprover = value;
-        continue;
-      }
-      if (arg === '--reason') {
-        // Free text (approval / rejection prose written by a human).
-        const taken = takeFreeTextValue(args);
-        if (taken.missing) {
-          console.error('Error: --reason option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteReason = taken.value;
-        continue;
-      }
-      if (arg === '--index') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --index option requires a path.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteIndex = value;
-        continue;
-      }
-      if (arg === '--include-inactive') {
-        parsed.promoteIncludeInactive = true;
-        continue;
-      }
-      if (arg === '--threshold') {
-        const value = args.shift();
-        // Strict parse: parseInt('2garbage') is 2, so a typo would silently
-        // become a different threshold than the one that was typed.
-        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
-          console.error('Error: --threshold option requires a positive integer.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteThreshold = Number.parseInt(value, 10);
-        continue;
-      }
-      if (arg === '--feedback-root') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --feedback-root option requires a path.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteFeedbackRoot = value;
-        continue;
-      }
-      if (arg === '--input') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --input option requires a JSONL path.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteInput = value;
-        continue;
-      }
-      if (arg === '--cluster-key') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --cluster-key option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteClusterKey = value;
-        continue;
-      }
-      if (arg === '--policy-version') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --policy-version option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promotePolicyVersion = value;
-        continue;
-      }
-      // Options that are neither promote's own nor handled by the shared parser
-      // must fail loudly instead of being ignored (a mistyped `--dry-rnu` would
-      // otherwise write the Riverbed index for real).
-      if (arg.startsWith('-') && !PROMOTE_SHARED_OPTIONS.has(arg)) {
-        parsed.promoteUnknownOption = arg;
-        break;
-      }
+      const outcome = parsePromoteOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (parsed.command === 'evolve') {
       const outcome = parseEvolveOption(arg, args, parsed);
