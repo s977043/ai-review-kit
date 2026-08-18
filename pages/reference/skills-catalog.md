@@ -1434,6 +1434,42 @@ impacts.`
 
 - findings / actions
 
+### `detector-detection-power`
+
+- 名前: `Detector Detection Power 検査器の検出力の検証`
+- 概要: `検査器（linter / ガード / CI ゲート / バリデータ / フィルタ）そのものの検出力が差分で静かに落ちていないか、また新設した検査が実際に検出できることが実証されているかを diff-time
+で検出する。Check 1 unverified detection
+reduction（検査器の検出ロジック（正規表現・除外パターン・解決集合・allowlist・baseline）を変更して検出件数が減ったのに、減った 1
+件ずつが誤検出であった根拠が示されないまま「誤検出を潰した」「N → M 件に減少」と改善として主張している）、Check 2 unproven guard detection power（新しい検査ロジック・CI
+ゲート・バリデーションを追加・変更したのに、検出すべき入力を注入して検出されること／検出すべきでない入力で黙ることを示す変異注入の証跡が無く、「追加した」「CI が緑」を検出力の証拠として扱っている）、の 2 Check
+を対象とする report-only。テスト自身のアサーションが実質何も検証していない構造は
+test-assertion-effectiveness、レビュー基準・品質ゲートの明示的な弱体化（ルールの削除・閾値の引き下げ・suppression entry 追加・lint ルールの無効化）は
+review-criteria-integrity、リファクタ完了主張一般の検証は refactor-claim-audit、workflow の permissions と action pin は
+gha-workflow-security、設定ファイルの構文・型の妥当性は config-json へ委譲する`
+- 対象:
+  - `scripts/**/*.{mjs,cjs,js,ts,sh,py,rb}`
+  - `tools/**/*.{mjs,cjs,js,ts,sh,py,rb}`
+  - `.github/scripts/**/*.{mjs,cjs,js,ts,sh,py,rb}`
+  - `.github/workflows/**/*.{yml,yaml}`
+  - `**/*lint*.{mjs,cjs,js,ts,py,rb,sh}`
+  - `**/*guard*.{mjs,cjs,js,ts,py,rb,sh}`
+  - `**/*validat*.{mjs,cjs,js,ts,py,rb,sh}`
+  - `**/*check*.{mjs,cjs,js,ts,py,rb,sh}`
+  - `**/*detect*.{mjs,cjs,js,ts,py,rb,sh}`
+  - `**/*scan*.{mjs,cjs,js,ts,py,rb,sh}`
+  - `**/*audit*.{mjs,cjs,js,ts,py,rb,sh}`
+  - `**/*baseline*.{json,yaml,yml,txt}`
+  - `**/*allowlist*.{json,yaml,yml,txt}`
+  - `**/*ignorelist*.{json,yaml,yml,txt}`
+- 重要度: major
+- タグ: detector-quality / detection-power / guard / linter / ci-gate / validator / mutation-evidence / false-negative / midstream
+- 依存関係: code_search
+- 適用条件: phase=midstream, inputContext=diff / prDescription / fullFile
+
+チェック項目の例:
+
+- findings / questions
+
 ### `doc-hygiene`
 
 - 名前: `Documentation Hygiene ドキュメント衛生`
