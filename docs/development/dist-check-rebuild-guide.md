@@ -77,6 +77,34 @@ git add runners/github-action/dist/
 git commit -m "chore(action): rebuild github-action dist"
 ```
 
+## 作業ディレクトリ名の焼き込み（worktree での rebuild）
+
+ncc は relocate した asset を「ビルドルートの親」からの相対パスで解決します。その結果、bundle 内の asset 参照 `__webpack_require__.ab + "<ディレクトリ名>/"` と、生成される `dist/<ディレクトリ名>/` の両方に、ビルド時の作業ディレクトリ名が焼き込まれます。
+
+CI の checkout 先はリポジトリ名と同じ `river-review` です。agent worktree は `.claude/worktrees/agent-<id>/` に作られるため、そこで rebuild すると同一 src からでも CI と異なるバイト列になります（#1894 で実際に発生）。
+
+### 検出
+
+```bash
+git grep -n '__webpack_require__.ab + "' -- runners/github-action/dist
+find runners/github-action/dist -maxdepth 1 -type d
+```
+
+- 前者の出力に `river-review/` 以外のディレクトリ名が混じっていれば焼き込みである
+- 後者に `runners/github-action/dist/river-review` 以外のディレクトリが出た場合も原因は同じである
+
+### スクリプトが自動で行うこと
+
+`build:action` の第 2 段である `scripts/normalize-dist.mjs` が、rebuild のたびに次を実行します。
+
+- `package.json` の `name` を正規名とし、`__webpack_require__.ab` 直後の asset 参照だけを正規名へ書き換える
+- `dist/<作業ディレクトリ名>/` を `dist/<正規名>/` へ移す（正規名のディレクトリが既にある場合は統合する）
+- 作業ディレクトリ名が正規名と一致するときは何もしない（`river-review` という名前の checkout では no-op）
+
+### 手で直す場合
+
+上記と同じ 2 つの変換を適用します。`river-review` という文字列はパッケージ名・URL・vendored パスにも現れるので、一括置換は避けて `__webpack_require__.ab` 直後の該当箇所だけを書き換えてください。asset ディレクトリは `mv runners/github-action/dist/<作業ディレクトリ名> runners/github-action/dist/river-review` で移します。
+
 ## いつ rebuild が必要か
 
 以下のいずれかを触った場合:
@@ -102,6 +130,7 @@ git commit -m "chore(action): rebuild github-action dist"
 | rebuild しても差分が残り続ける                                                  | `node_modules` が stale                                             | `npm ci` で依存再解決後に `npm run build:action`                                  |
 | `index.mjs.map` のみの大量差分                                                  | sourcemap の決定論性問題                                            | Node を `.nvmrc` に揃えれば通常解消                                               |
 | merge 後に rebuild したのに dist に差分が出ない（stale なのに clean に見える）  | `git merge` で依存が更新されたのに `node_modules` が merge 前のまま | `git merge origin/main` の**後**に `npm ci` を実行してから `npm run build:action` |
+| dist に `river-review/` 以外のディレクトリ名が現れる                            | worktree など checkout 名が `river-review` でない場所で build した  | `npm run build:action` が自動で正規化する（詳細は本書の作業ディレクトリ名の節）   |
 
 ## 関連
 
