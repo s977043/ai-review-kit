@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.84.2](https://github.com/s977043/river-review/compare/v1.84.1...v1.84.2) (2026-08-18)
+
+
+### Bug Fixes
+
+* **result-store:** ncc の asset 誤変換で出荷 Action が run record を読めない不具合を直す ([#1902](https://github.com/s977043/river-review/issues/1902)) ([5107450](https://github.com/s977043/river-review/commit/51074501097c1e4193e250793337e5c7a121bebe)), closes [#1900](https://github.com/s977043/river-review/issues/1900)
+
 ## [1.84.1](https://github.com/s977043/river-review/compare/v1.84.0...v1.84.1) (2026-08-18)
 
 
