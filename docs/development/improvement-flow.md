@@ -119,16 +119,20 @@ Step 1〜8 はすべて追加の手順です。追加だけを繰り返した結
 
 退役の対象は [`guard-ledger.yaml`](./guard-ledger.yaml) が管理します。台帳が SSoT であり、CLAUDE.md は `scripts/check-doc-enumerations.mjs` の spec `claude-md-guard-ledger` で台帳と照合される従属側です。台帳側を正にしているのは、CLAUDE.md の編集が「Always ask」に分類されており、正を CLAUDE.md に置くと退役の運用のたびに承認待ちがブロッカーになるためです。
 
+台帳はガード（`guards:`）に加えて、ガード以外の期限付きの決定（`decisions:`）も扱います。deprecate した資産・観測中の workflow・暫定的な除外設定が対象で、いずれも同じ `reviewAfter` の棚卸しに載ります（#1843）。
+
 #### 発動条件と判断者
 
-- **発動条件**: 台帳の `reviewAfter`（既定は `addedAt` + 90 日）が到来していること。日付の到来だけが条件であり、ミスの再発や体感は条件に含めない
+- **発動条件**: 台帳の `reviewAfter`（ガードの既定は `addedAt` + 90 日）が到来していること。日付の到来だけが条件であり、ミスの再発や体感は条件に含めない
 - **判断者**: リポジトリのメンテナ（`s977043`）。判断は PR として提出し、通常のレビュー経路に載せる
-- **棚卸しの起点**: セッション開始時の sanity check、またはリリース直後。`reviewAfter` が今日以前のエントリを次のコマンドで列挙する
+- **棚卸しの起点**: セッション開始時の sanity check、またはリリース直後。`guards:` と `decisions:` の両方を次のコマンドで列挙する。対象は `reviewAfter` が今日以前のエントリと、`reviewAfter: undecided` のエントリである
 
 ```bash
 node -e "const y=require('js-yaml'),f=require('node:fs');const t=new Date().toISOString().slice(0,10);
-for(const g of y.load(f.readFileSync('docs/development/guard-ledger.yaml','utf8')).guards)
-  if(g.reviewAfter<=t)console.log(g.reviewAfter,g.mechanized,g.id);"
+const d=y.load(f.readFileSync('docs/development/guard-ledger.yaml','utf8'));
+for(const g of d.guards) if(g.reviewAfter<=t) console.log('guard',g.reviewAfter,g.mechanized,g.id);
+for(const e of d.decisions??[]) if(e.reviewAfter==='undecided'||e.reviewAfter<=t)
+  console.log('decision',e.reviewAfter,e.kind,e.id);"
 ```
 
 #### 3 択の判断
@@ -142,6 +146,18 @@ for(const g of y.load(f.readFileSync('docs/development/guard-ledger.yaml','utf8'
 | (c) 機械化を起票する   | `mechanized` が `full` でなく、`addedAt` 以降に同種のミスが再発している | 機械化の Issue を `/propose-issue` で起票し、`reviewAfter` を延長したうえで `notes` に Issue 番号を書く    |
 
 (a) で散文だけを削除するのは、機械検証が代替になっているためです。読む側の負荷を減らしても、違反はチェックが止めます。(b) の「発火実績が無い」は、振り返り記録（`docs/development/retrospectives/`）と `git log` で確認します。判断できないときは (c) を選び、確認そのものをタスクとして残します。
+
+#### 期限付きの決定（`decisions:`）の判断
+
+ガード以外の決定は、`reviewAfter` の到来時に次の 3 つのいずれかへ分類します。ガードの 3 択と同じく「今回は保留」は選べず、保留する場合も `reviewAfter` を新しい日付へ更新して理由を `notes` に書きます。
+
+| 判断           | 実行内容                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------- |
+| 予定どおり実行 | deprecate した資産を削除し、台帳のエントリも同じ PR で消す（`decision-ledger-target` が片方漏れを落とす） |
+| 撤回して再採用 | deprecation を取り消し、対象の DEPRECATED 表示を消したうえで台帳のエントリを消す                          |
+| 期日を延ばす   | `reviewAfter` を新しい日付へ更新し、延長の理由と観測内容を `notes` に書く                                 |
+
+`reviewAfter: undecided` のエントリは、この 3 択の前段として「期日を決める」ことが判断対象です。undecided のまま棚卸しを 2 回通したら、期日を決めるか対象を削除するかのどちらかを選びます。
 
 #### 退役 PR の作法
 

@@ -119,7 +119,7 @@ scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" 
 
 ## 何を検証しているか
 
-登録内容は `scripts/check-doc-enumerations.mjs` の `DOC_ENUMERATION_SPECS` が SSoT です。初期スコープ（#1726）は、誤検出でメイン開発を止めないことを優先し、決定論で判定できる 4 件に絞ってあります。#1728 で `.github/workflows/README.md` のワークフロー一覧（`workflows-readme-table`）を追加し、#1821 でガード台帳の照合 2 件（`claude-md-guard-ledger` / `guard-ledger-verified-by`）、#1831 でパイプライン関数の call site チェックリスト 3 件（`pipeline-callsites-*`）、#1846 で README の配布サーフェス 4 件（`readme-{ja,en}-plugin-{commands,skills}`）をあとから足しました。現在の登録は 14 件です（`npm run check:doc-enum` の出力にある `N spec(s) checked` が実測値）。
+登録内容は `scripts/check-doc-enumerations.mjs` の `DOC_ENUMERATION_SPECS` が SSoT です。初期スコープ（#1726）は、誤検出でメイン開発を止めないことを優先し、決定論で判定できる 4 件に絞ってあります。#1728 で `.github/workflows/README.md` のワークフロー一覧（`workflows-readme-table`）を追加し、#1821 でガード台帳の照合 2 件（`claude-md-guard-ledger` / `guard-ledger-verified-by`）、#1831 でパイプライン関数の call site チェックリスト 3 件（`pipeline-callsites-*`）、#1846 で README の配布サーフェス 4 件（`readme-{ja,en}-plugin-{commands,skills}`）、#1843 で台帳 `decisions:` の対象パス 1 件（`decision-ledger-target`）をあとから足しました。現在の登録は 15 件です（`npm run check:doc-enum` の出力にある `N spec(s) checked` が実測値）。
 
 | spec id                                   | 対象ドキュメント                                                 | 宣言側                                             | 実体                                                       |
 | ----------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
@@ -130,6 +130,7 @@ scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" 
 | `workflows-readme-table`                  | `.github/workflows/README.md`                                    | ワークフロー一覧表の `ファイル` 列                 | `.github/workflows/` 直下の `*.yml` / `*.yaml`             |
 | `claude-md-guard-ledger`                  | `CLAUDE.md`                                                      | `AI Misoperation Guards` 節の `- **<見出し>**:` 行 | [`guard-ledger.yaml`](./guard-ledger.yaml) の `title` 集合 |
 | `guard-ledger-verified-by`                | `docs/development/guard-ledger.yaml`                             | 各エントリの `verifiedBy` パス                     | 同じパスのうちディスク上に実在するもの                     |
+| `decision-ledger-target`                  | `docs/development/guard-ledger.yaml`                             | `decisions:` 各エントリの `target` パス            | 同じパスのうちディスク上に実在するもの                     |
 | `pipeline-callsites-generate-review`      | [`pipeline-params-checklist.md`](./pipeline-params-checklist.md) | `必須: generateReview` 節の `- [ ] <path>` 行      | `generateReview` / `buildPrompt` の call site ファイル     |
 | `pipeline-callsites-verify-finding`       | [`pipeline-params-checklist.md`](./pipeline-params-checklist.md) | `必須: verifyFinding` 節の `- [ ] <path>` 行       | `verifyFinding` の call site ファイル                      |
 | `pipeline-callsites-build-execution-plan` | [`pipeline-params-checklist.md`](./pipeline-params-checklist.md) | `必須: buildExecutionPlan` 節の `- [ ] <path>` 行  | `buildExecutionPlan` の call site ファイル                 |
@@ -139,6 +140,8 @@ scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" 
 | `readme-en-plugin-skills`                 | `README.en.md`                                                   | 「What you get」の `- Skills:` 箇条書き            | 同上（`readme-ja-plugin-skills` と同じ実体）               |
 
 `claude-md-guard-ledger` は、宣言側と実体側の役割が他の spec と逆になります。CLAUDE.md の編集は「Always ask」に分類されるため、[`guard-ledger.yaml`](./guard-ledger.yaml) を SSoT（実体側）とし、CLAUDE.md を従属側（宣言側）として照合します。ガードの追加・改名・削除のいずれの経路でも、台帳と CLAUDE.md を同じ PR で更新しない限りこの spec が落ちます。`guard-ledger-verified-by` は台帳の `verifiedBy` が実在しないパスを指した時点で落とします。ただし「そのパスが必須チェックに載るジョブから実行されるか」までは見ていません（実行経路の追跡は静的解析が必要なため、follow-up）。
+
+`decision-ledger-target` は、台帳の `decisions:`（ガード以外の期限付きの決定。#1843）が挙げる `target` の実在を見ます。deprecate した資産を削除したのにエントリが残る場合と、`target` のパスを打ち間違えた場合の両方で落ちます。`decisions:` が空、またはキーそのものが無い状態は正常として扱い、マーカー消失にはしません（決定がすべて片付いた状態を表すためです）。
 
 `pipeline-callsites-*` の 3 件は、CLAUDE.md「Propagate signatures」が参照する散文チェックリストを実体側の call site 走査と突き合わせます。パイプライン関数の呼び出し元が増えてもチェックリストへ追記されない、という陳腐化を塞ぐのが目的です。個々のパラメータが転送されているかまでは見ません（options オブジェクト 1 個で渡るため、どのキーが必須かを決定論では判定できないからです）。走査に現れない宣言や同名の別関数は `ignoreKeys` で理由付きで除外しています（`scripts/check-doc-enumerations.mjs` の `PIPELINE_IGNORE_KEYS`）。
 
