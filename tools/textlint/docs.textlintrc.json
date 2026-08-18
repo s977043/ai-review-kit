@@ -31,8 +31,8 @@
       // --- 一時無効（段階 2 で順次有効化する。既定 config では有効） ---
       // sentence-length は有効化時の閾値を既定 config と同じ max 150 にする（preset 既定の 100 ではない）
       "sentence-length": false,
-      "no-mix-dearu-desumasu": false,
-      "no-doubled-joshi": false
+      "no-mix-dearu-desumasu": false
+      // no-doubled-joshi は段階 2-b で有効化済み（#1786）。retrospectives は .textlintignore で除外している。
     },
     "prh": {
       "rulePaths": ["../prh-rules/index.yml"]

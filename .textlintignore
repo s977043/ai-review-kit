@@ -34,3 +34,9 @@ docs/runbook/community-skill-eval.md
 docs/runbook/release-please-kick.md
 docs/runbook/release-smoke.md
 docs/use-cases/github-actions.md
+
+# Retrospective records are point-in-time accounts of what happened in a past
+# session. Rewriting their prose to satisfy today's style rules would amount to
+# rewriting the record itself, so this directory is exempt from the docs
+# textlint pass rather than incrementally fixed (#1786 stage 2-b, user decision).
+docs/development/retrospectives/**

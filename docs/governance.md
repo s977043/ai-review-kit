@@ -88,7 +88,7 @@ gh pr view <N> --json labels --jq '[.labels[].name]'
 
 #### 3. multi-PR 作業の preflight
 
-複数 PR の連続マージ、main CI 失敗の修正 PR、`.github/workflows/*.yml` の `node-version` / action pin / `permissions` を変える PR など、書き込み系の handoff タスクに着手する前に `/preflight <keyword or PR numbers>` を実行し、対象タスクが既にマージ済み/obsolete/並行作業中ではないことを確認します。
+複数 PR の連続マージ、main CI 失敗の修正 PR、`.github/workflows/*.yml` の `node-version` / action pin / `permissions` を変える PR など、書き込み系の handoff タスクへ着手する前に `/preflight <keyword or PR numbers>` を実行し、対象タスクが既にマージ済み/obsolete/並行作業中ではないことを確認します。
 
 - `gh pr list` は GraphQL キャッシュの影響で recently merged な PR を `open` と返すことがあります。判定には `gh api repos/:owner/:repo/pulls/{N}` (REST) を併用してください。
 - 過去の累計で 1 セッション中に 4 件の重複 PR (#485, #489, #492, #496) を生んだ実績があります。
@@ -114,7 +114,7 @@ gh api "repos/:owner/:repo/pulls/<N>" --jq .body | grep -i 'closes\|fixes\|resol
 ```
 
 - grep はコードブロックや引用の中の言及も拾うため、ヒットしても実際に紐付いているとは限りません。GraphQL の `closingIssuesReferences` で、GitHub が close 対象として解決した issue を確定させてください。
-- 該当する issue が「閉じてよいもの」かは、PR のスコープが issue 全体をカバーしているか / Epic・追跡用 issue でないか / 本文に未完了のチェックボックスや残作業の記述がないか、の 3 点で判定します。
+- 該当する issue が「閉じてよいもの」かは、PR のスコープが issue 全体をカバーしている / Epic・追跡用 issue でない / 本文に未完了のチェックボックスや残作業の記述がない、の 3 点で判定します。
 - 閉じてはいけない issue がある場合は、マージ前に `gh pr edit <N> --body` で `closes` を `refs` へ書き換えます。
 - 実行手順・判定基準・書き換えコマンドの詳細は `/merge-check` の Step 6（`.claude/commands/merge-check.md`）を参照してください。**リリース PR では必ず該当します。**
 
@@ -146,13 +146,13 @@ GitHub の PR コメントは 2 つのエンドポイントに分かれて格納
 - `per_page=100` は URL クエリに直接埋め込みます。`-F per_page=100` を指定すると `gh api` の verb が POST に切り替わり HTTP 422 が返ります。
 - どちらの `--jq` にも `.user.login` を含めてください。issue comments には `gemini-code-assist[bot]` / `vercel[bot]` / `github-actions[bot]`（River Review 自身の結果通知や PlanGate Review を含む）の定型コメントが大量に混ざります。投稿者で bot の定型と人間レビュアーの指摘を切り分け、後者を disposition の対象とします。
 - 複数行に紐づくコメントは `line` が終端行、`start_line` が開始行です。
-- `line: null` は、後続コミットでアンカー行が消えたためコメントが outdated になっていることを示します。`commit` 値を `gh pr view <N> --json headRefOid` と突き合わせて判断してください。
+- `line: null` は、後続コミットでアンカー行の消失によりコメントが outdated になっていることを示します。`commit` 値を `gh pr view <N> --json headRefOid` と突き合わせて判断してください。
 - スレッド（reply 連鎖）は `in_reply_to_id` で再構成できます。issue comments には `in_reply_to_id` がなく、スレッド構造も持ちません。
 
 #### review summaries との違い
 
 - Bot の行単位の個別指摘は `pulls/<N>/comments`（line comments）に入ります。人間レビュアーが PR 全体に対して書くレビュー結果は `issues/<N>/comments` 側に入ります。
-- `gh pr view <N> --json reviews,reviewDecision` はレビュー単位のサマリのみで、bot の `body` は空になることが多く、`reviewDecision` が空でも個別指摘が存在する場合があります。
+- `gh pr view <N> --json reviews,reviewDecision` はレビュー単位のサマリのみで、bot の `body` は空になることが多く、`reviewDecision` が空であっても、個別の指摘は存在することもあります。
 - したがって review state 単体でマージ可否を判断してはいけません。`reviewDecision` はさらに、レビュアーと PR オーサーが同一アカウントの場合には常に空になります（GitHub が自分の PR への formal review を許可しないため）。この体制では 2.1 のラベル確認が review state の代役です。
 
 #### 各コメントの dispose

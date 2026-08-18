@@ -41,7 +41,7 @@ River Review に、production runtime の自己改変ではなく、review frame
 ### Negative
 
 - eval 運用コストが増える
-- fixture 整備が先に必要になる
+- fixture 整備が先に要る
 - 指標設計を誤ると局所最適化が起きる
 
 ## Rollout Plan
