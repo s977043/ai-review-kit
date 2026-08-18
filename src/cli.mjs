@@ -506,6 +506,42 @@ function takeFreeTextValue(args) {
   return { value: args.shift() };
 }
 
+/**
+ * Command-scoped option handlers extracted out of `parseArgs`' `while` loop.
+ *
+ * Each handler receives the token just shifted off (`arg`), the REMAINING argv
+ * (`args`, mutated in place when the handler consumes a value) and the result
+ * object (`parsed`, mutated in place). The return value names the statement the
+ * CALLER must run against the loop, because a `continue` / `break` inside a
+ * helper cannot reach the loop it was lifted out of:
+ *
+ *   'continue' – the token was this command's and is fully handled.
+ *   'break'    – a usage error was reported; stop parsing.
+ *   null       – not this command's token; fall through to the shared parser.
+ *
+ * The handlers are behaviour-identical to the inline blocks they replace; the
+ * guard that selects them (`parsed.command === '<cmd>'`) stays at the call site
+ * so the dispatch order remains readable in `parseArgs`.
+ * @typedef {'continue' | 'break' | null} OptionOutcome
+ */
+
+/**
+ * `skills resolve --path <p>` (repeatable).
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parseSkillsResolveOption(arg, args, parsed) {
+  if (arg === '--path') {
+    parsed.resolvePaths = parsed.resolvePaths ?? [];
+    const v = args.shift();
+    if (v) parsed.resolvePaths.push(v);
+    return 'continue';
+  }
+  return null;
+}
+
 function parseArgs(argv) {
   const args = [...argv];
   // Whether a positional path was taken from AFTER a POSIX `--` terminator.
@@ -897,12 +933,9 @@ function parseArgs(argv) {
       }
     }
     if (parsed.command === 'skills' && parsed.skillsSubcommand === 'resolve') {
-      if (arg === '--path') {
-        parsed.resolvePaths = parsed.resolvePaths ?? [];
-        const v = args.shift();
-        if (v) parsed.resolvePaths.push(v);
-        continue;
-      }
+      const outcome = parseSkillsResolveOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (parsed.command === 'feedback') {
       // #1717: every option below takes a value, and `args.shift() ?? null`
