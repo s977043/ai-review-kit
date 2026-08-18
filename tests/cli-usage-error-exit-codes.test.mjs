@@ -1082,6 +1082,19 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     }
   });
 
+  // 成功側にも同じ pin を置く。CASES（失敗側）だけが件数で守られていて
+  // VALID_CASES に assertion が無い状態が続いていたが、v1.72.0 の
+  // 「フラグ先行形を拒否」も v1.72.1 の「`--phase Upstream` を誤拒否」も
+  // 壊したのは**成功側**であり、守りが薄いのは逆だった。行を消すだけで
+  // 黙って保護が減るのを防ぐ。
+  test('the success-side table pins 83 legitimate argv forms', () => {
+    assert.equal(
+      VALID_CASES.length,
+      83,
+      'コマンド面ごとの正常形: run 12 / doctor 5 / skills 13 / runs 6 / review 19 / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 9 / help 2 / コマンド無し 1'
+    );
+  });
+
   test('the contract distribution is C1:0 / C2:0 / C3:105 / C4:1 (0 of 106 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;

@@ -203,15 +203,83 @@ function usageError(parsed) {
 }
 
 /**
- * Severity vocabulary accepted by `suppression add --severity`.
+ * Every command token the CLI accepts, derived from `COMMAND_USAGE` above so
+ * that the usage table and the accepted-command check cannot drift apart.
+ * `main()` uses it to decide whether `parsed.command` is a real command.
+ */
+const COMMAND_NAMES = Object.keys(COMMAND_USAGE);
+
+/**
+ * Commands consumed by the eager command branch at the top of `parseArgs`'
+ * loop, i.e. those whose subcommand word / positional path is read right after
+ * the command token. `eval` and `review` are excluded because each has its own
+ * branch further down the loop (`eval` takes nothing, `review` matches against
+ * `REVIEW_SUBCOMMANDS`).
+ */
+const EAGER_COMMANDS = new Set(
+  COMMAND_NAMES.filter((name) => name !== 'eval' && name !== 'review')
+);
+
+/**
+ * Eager-branch commands that take a subcommand word and never a positional
+ * path. The arms above the fall-through in the eager branch have already
+ * consumed their subcommand word, so the fall-through (which reads a
+ * positional `<path>`) must skip exactly these.
+ */
+const SUBCOMMAND_ONLY_COMMANDS = new Set(['runs', 'suppression', 'feedback', 'promote']);
+
+/**
+ * `skills` subcommands (`skills import|export|list|resolve` take options, not a
+ * positional path — see `acceptsPositionalPath`).
+ */
+const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
+
+/**
+ * `evolve` subcommands (#1574 P1 `aggregate` / P2 `replay`, ADR-006
+ * `prompt-compare`). Matching against a known set (rather than "first non-flag
+ * token") keeps `river evolve <path>` working.
+ */
+const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay', 'prompt-compare']);
+
+/**
+ * `promote` subcommands that take an optional positional candidate id.
+ */
+const PROMOTE_ID_SUBCOMMANDS = new Set(['approve', 'reject', 'template', 'review-effectiveness']);
+
+/**
+ * Global options the shared parser handles for `evolve`. Anything else starting
+ * with `-` is rejected rather than silently ignored.
+ */
+const EVOLVE_SHARED_OPTIONS = new Set(['--output', '-h', '--help', '--debug']);
+
+/**
+ * Same treatment for `promote`: a typo such as `--dry-rnu` must not fall
+ * through to the shared parser and be ignored, because `propose` then writes
+ * the index for real while the caller believes it asked for a dry run.
+ */
+const PROMOTE_SHARED_OPTIONS = new Set(['--output', '--dry-run', '-h', '--help', '--debug']);
+
+/**
+ * Severity vocabulary shared by `suppression add --severity` and the
+ * `--fail-on` / `--warn-on` gating options — all three take the same four
+ * values, so they read them from one table.
  *
  * Derived from `SEVERITY_RANK` (src/lib/finding-factory.mjs), the declared
  * single source of truth for the output-schema severity vocabulary, rather
  * than re-listing the values here. It matches the `severity` enum of
  * `schemas/suppression-context.schema.json`, which validates the `context`
- * this option ends up writing.
+ * `suppression add` ends up writing.
  */
-const SUPPRESSION_SEVERITIES = Object.keys(SEVERITY_RANK);
+const SEVERITY_VALUES = Object.keys(SEVERITY_RANK);
+
+/** Values accepted by `--output`. */
+const OUTPUT_MODES = ['text', 'markdown', 'json', 'yaml', 'html'];
+
+/** Values accepted by `--format` (review plan|exec|verify|route). */
+const REVIEW_FORMATS = ['text', 'markdown', 'json'];
+
+/** Values accepted by `skills list --source`. */
+const SKILLS_LIST_SOURCES = ['rr', 'agent', 'all'];
 
 /**
  * Fingerprint algorithms accepted by `suppression add --fingerprint-algo`
@@ -229,11 +297,11 @@ const SUPPRESSION_FINGERPRINT_ALGOS = ['v1', 'v2'];
  * `review` had no vocabulary at all, so a subcommand written after the options
  * was swallowed as the path (#1755).
  *
- * `SKILLS_SUBCOMMANDS` / `EVOLVE_SUBCOMMANDS` deliberately stay local to
- * `parseArgs`. Hoisting them would be a no-op here — `takeTrailingPositional`
- * does not consult them, and `evolve` keeps approximating the eager branch's
- * decision with `existsSync`. That approximation is #1759 B1, which this change
- * does NOT fix and does not claim to.
+ * `SKILLS_SUBCOMMANDS` / `EVOLVE_SUBCOMMANDS` sit alongside it above. Hoisting
+ * them out of `parseArgs` is a pure relocation: `takeTrailingPositional` still
+ * does not consult them, and `evolve` still approximates the eager branch's
+ * decision with `existsSync`. That approximation is #1759 B1, which this
+ * relocation does NOT fix and does not claim to.
  */
 const REVIEW_SUBCOMMANDS = new Set(['plan', 'exec', 'verify', 'route']);
 
@@ -440,22 +508,11 @@ function takeFreeTextValue(args) {
 
 function parseArgs(argv) {
   const args = [...argv];
-  const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
-  // #1574 P1 `aggregate` / P2 `replay`. Matching against a known set (rather
-  // than "first non-flag token") keeps `river evolve <path>` working.
-  const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay', 'prompt-compare']);
   // Whether a positional path was taken from AFTER a POSIX `--` terminator.
   // Only used to phrase the `review` usage error correctly (see below): a token
   // the caller explicitly declared to be a path must not be reported as "not a
   // subcommand".
   let terminatorTookPositional = false;
-  // Global options the shared parser below handles for `evolve`. Anything else
-  // starting with `-` is rejected rather than silently ignored.
-  const EVOLVE_SHARED_OPTIONS = new Set(['--output', '-h', '--help', '--debug']);
-  // Same treatment for `promote`: a typo such as `--dry-rnu` must not fall
-  // through to the shared parser and be ignored, because `propose` then writes
-  // the index for real while the caller believes it asked for a dry run.
-  const PROMOTE_SHARED_OPTIONS = new Set(['--output', '--dry-run', '-h', '--help', '--debug']);
   const parsed = {
     command: null,
     // #1709 Slice 2: set (via usageError) when an option/command parse error
@@ -602,17 +659,7 @@ function parseArgs(argv) {
       if (terminatorError) break;
       continue;
     }
-    if (
-      !parsed.command &&
-      (arg === 'run' ||
-        arg === 'doctor' ||
-        arg === 'skills' ||
-        arg === 'runs' ||
-        arg === 'suppression' ||
-        arg === 'feedback' ||
-        arg === 'evolve' ||
-        arg === 'promote')
-    ) {
+    if (!parsed.command && EAGER_COMMANDS.has(arg)) {
       parsed.command = arg;
       // Check for skills subcommands (import/export/list)
       if (arg === 'skills' && args[0] && SKILLS_SUBCOMMANDS.has(args[0])) {
@@ -661,22 +708,13 @@ function parseArgs(argv) {
         parsed.promoteSubcommand = args.shift(); // propose | list | approve | reject | template | retire | review-effectiveness
         // approve/reject/template/review-effectiveness take an optional positional candidate id.
         if (
-          ['approve', 'reject', 'template', 'review-effectiveness'].includes(
-            parsed.promoteSubcommand
-          ) &&
+          PROMOTE_ID_SUBCOMMANDS.has(parsed.promoteSubcommand) &&
           args[0] &&
           !args[0].startsWith('-')
         ) {
           parsed.promoteId = args.shift();
         }
-      } else if (
-        arg !== 'runs' &&
-        arg !== 'suppression' &&
-        arg !== 'feedback' &&
-        arg !== 'promote' &&
-        args[0] &&
-        !args[0].startsWith('-')
-      ) {
+      } else if (!SUBCOMMAND_ONLY_COMMANDS.has(arg) && args[0] && !args[0].startsWith('-')) {
         parsed.target = args.shift();
         parsed.targetConsumed = true;
       }
@@ -791,9 +829,9 @@ function parseArgs(argv) {
         // mean the same thing. The schema enum is lowercase, so the stored
         // value must be too.
         const severity = value.toLowerCase();
-        if (!SUPPRESSION_SEVERITIES.includes(severity)) {
+        if (!SEVERITY_VALUES.includes(severity)) {
           console.error(
-            `Error: --severity must be one of: ${SUPPRESSION_SEVERITIES.join(', ')} (got "${value}").`
+            `Error: --severity must be one of: ${SEVERITY_VALUES.join(', ')} (got "${value}").`
           );
           usageError(parsed);
           break;
@@ -1189,9 +1227,9 @@ function parseArgs(argv) {
     if (arg === '--fail-on' || arg === '--warn-on') {
       const value = args.shift();
       const sev = value ? value.toLowerCase() : '';
-      if (!['info', 'minor', 'major', 'critical'].includes(sev)) {
+      if (!SEVERITY_VALUES.includes(sev)) {
         console.error(
-          `Error: ${arg} must be one of: info, minor, major, critical (got "${value ?? ''}").`
+          `Error: ${arg} must be one of: ${SEVERITY_VALUES.join(', ')} (got "${value ?? ''}").`
         );
         usageError(parsed);
         break;
@@ -1417,9 +1455,9 @@ function parseArgs(argv) {
         break;
       }
       const mode = value.toLowerCase();
-      if (!['text', 'markdown', 'json', 'yaml', 'html'].includes(mode)) {
+      if (!OUTPUT_MODES.includes(mode)) {
         console.error(
-          `Error: --output must be one of: text, markdown, json, yaml, html (got "${value}").`
+          `Error: --output must be one of: ${OUTPUT_MODES.join(', ')} (got "${value}").`
         );
         usageError(parsed);
         break;
@@ -1436,8 +1474,10 @@ function parseArgs(argv) {
         break;
       }
       const mode = value.toLowerCase();
-      if (!['text', 'markdown', 'json'].includes(mode)) {
-        console.error(`Error: --format must be one of: text, markdown, json (got "${value}").`);
+      if (!REVIEW_FORMATS.includes(mode)) {
+        console.error(
+          `Error: --format must be one of: ${REVIEW_FORMATS.join(', ')} (got "${value}").`
+        );
         usageError(parsed);
         break;
       }
@@ -1559,8 +1599,10 @@ function parseArgs(argv) {
     }
     if (arg === '--source') {
       const value = args.shift();
-      if (!value || !['rr', 'agent', 'all'].includes(value)) {
-        console.error(`Error: --source must be one of: rr, agent, all (got "${value}").`);
+      if (!value || !SKILLS_LIST_SOURCES.includes(value)) {
+        console.error(
+          `Error: --source must be one of: ${SKILLS_LIST_SOURCES.join(', ')} (got "${value}").`
+        );
         usageError(parsed);
         break;
       }
@@ -1664,20 +1706,7 @@ async function main(argv = process.argv.slice(2)) {
   if (parsed.offline) {
     process.env.RIVER_OFFLINE = '1';
   }
-  if (
-    ![
-      'run',
-      'doctor',
-      'eval',
-      'skills',
-      'runs',
-      'suppression',
-      'feedback',
-      'review',
-      'promote',
-      'evolve',
-    ].includes(parsed.command)
-  ) {
+  if (!COMMAND_NAMES.includes(parsed.command)) {
     // Reachable since #1709 Slice 2: parseArgs records an unknown leading
     // token as the command instead of silently leaving it null (which used
     // to print the full help and exit 0).
@@ -1783,7 +1812,18 @@ async function main(argv = process.argv.slice(2)) {
   }
 }
 
-export { parseArgs, main, isLlmlessEmptyReview, printExplain, validateOutputArtifact };
+export {
+  parseArgs,
+  main,
+  isLlmlessEmptyReview,
+  printExplain,
+  validateOutputArtifact,
+  // Exported for tests/cli-parse-args.test.mjs only. That test pins the
+  // membership of this set against a hand-written literal, and because the set
+  // is DERIVED from COMMAND_USAGE rather than written out, only the runtime
+  // value can be checked — reading the source cannot recover it.
+  EAGER_COMMANDS,
+};
 
 /**
  * この CLI が直接起動されたときのみ `main()` を実行する。
