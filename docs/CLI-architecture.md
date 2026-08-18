@@ -51,7 +51,7 @@
 ## 既知の境界 / 注意点
 
 - ルートの `package.json#bin` がメイン CLI (`src/cli.mjs`) にしか登録されていないため、`npx river review …` は **Runner CLI ではなくメイン CLI** に解釈され、メイン CLI には `review` コマンドが無いので unknown command エラーになる。Runner CLI を呼ぶ場合は `node runners/cli/bin/river …` あるいは `runners/cli` 内で `npm exec river …` を使う。
-- GitHub Action は `runners/github-action/dist/` 配下のバンドル済み JS を実行するため、`runners/github-action/src/**` を変更したら `npm run build:action` で `dist/` を再生成しないと CI の "Action dist freshness" が落ちる (`docs/development/dist-check-rebuild-guide.md` 参照)。
+- GitHub Action は `runners/github-action/dist/` 配下のバンドル済み JavaScript を実行するため、`runners/github-action/src/**` を変更したら `npm run build:action` で `dist/` を再生成しないと CI の "Action dist freshness" が落ちる (`docs/development/dist-check-rebuild-guide.md` 参照)。
 - 両 CLI ともデフォルト `phase` は `midstream`。`RIVER_PHASE` / `RIVER_PLANNER_MODE` / `RIVER_AVAILABLE_CONTEXTS` / `RIVER_AVAILABLE_DEPENDENCIES` などの `RIVER_*` 環境変数はメイン CLI でのみ参照される (Runner CLI は対応する `--phase` / `--context` / `--dependency` オプションでの明示が必要)。
 - Runner CLI は `commander` の自動 help を使うため、メイン CLI の `printHelp()` (`src/cli.mjs`) と書式が揃っていない。両ヘルプを同期する責務は今のところ無い。
 
