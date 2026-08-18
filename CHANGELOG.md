@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.84.1](https://github.com/s977043/river-review/compare/v1.84.0...v1.84.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* **scripts:** dist に焼き込まれる作業ディレクトリ名を正規化する ([#1898](https://github.com/s977043/river-review/issues/1898)) ([b20a015](https://github.com/s977043/river-review/commit/b20a01573dd11360e12cfd377b9abfa0055e4506))
+
 ## [1.84.0](https://github.com/s977043/river-review/compare/v1.83.0...v1.84.0) (2026-08-18)
 
 
