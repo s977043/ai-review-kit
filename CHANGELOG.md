@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.84.0](https://github.com/s977043/river-review/compare/v1.83.0...v1.84.0) (2026-08-18)
+
+
+### Features
+
+* **meta:** guard 台帳を期限付きの決定全般へ広げる ([#1895](https://github.com/s977043/river-review/issues/1895)) ([b8dd84f](https://github.com/s977043/river-review/commit/b8dd84f33c7b0e8722c774fba2557f8a35149b20)), closes [#1843](https://github.com/s977043/river-review/issues/1843)
+
+
+### Bug Fixes
+
+* **review-team:** マージ時に scope を fail-safe 合成し in-diff を優先表示する ([#1894](https://github.com/s977043/river-review/issues/1894)) ([46701eb](https://github.com/s977043/river-review/commit/46701eb3ba43094c11af3d33c1f1dabc51ce9ce5)), closes [#1644](https://github.com/s977043/river-review/issues/1644)
+
 ## [1.83.0](https://github.com/s977043/river-review/compare/v1.82.0...v1.83.0) (2026-08-15)
 
 
