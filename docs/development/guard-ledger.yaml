@@ -1,4 +1,11 @@
-# CLAUDE.md「AI Misoperation Guards」の台帳（SSoT）。
+# 期限付きの決定の台帳（SSoT）。2 つのキーを持つ。
+#
+#   guards:    … CLAUDE.md「AI Misoperation Guards」の各ガード。CLAUDE.md はこの台帳の従属側
+#   decisions: … ガード以外の期限付きの決定（deprecate した資産・観測中の workflow・
+#                暫定的な除外設定など）。CLAUDE.md に対応する散文は持たない（#1843）
+#
+# どちらも `reviewAfter` で期日を管理する。棚卸しの起点・判断者・列挙コマンドは
+# docs/development/improvement-flow.md の Step 9 が SSoT。
 #
 # なぜ台帳側を SSoT にするか:
 #   CLAUDE.md の編集は「Always ask」に分類されており、退役の運用を回すたびに承認待ちが
@@ -7,7 +14,7 @@
 #   npm run meta:validate 経由で必須チェック `Meta consistency` に載る。
 #   verifiedBy のパス実在は spec `guard-ledger-verified-by` が同じ経路で検証する。
 #
-# フィールド:
+# guards: のフィールド:
 #   id          … kebab-case の安定キー。title を変えても id は変えない
 #   title       … CLAUDE.md の `- **<title>**:` と完全一致する文字列（照合キー）
 #   mechanized  … full    : 違反が決定論のチェックで必ず失敗になる
@@ -18,9 +25,22 @@
 #   reviewAfter … 退役判断の期日（既定は addedAt + 90 日）
 #   notes       … mechanized の判定根拠・残余リスク
 #
+# decisions: のフィールド:
+#   id          … kebab-case の安定キー。guards の id とも重複させない
+#   kind        … deprecation        : 削除予定の資産（script / workflow など）
+#                 observation        : 期間を区切って様子を見ている変更
+#                 temporary-exclusion: 暫定的な除外設定（ignore / allowlist など）
+#   target      … 決定の対象（repo 相対パス）。実在は spec `decision-ledger-target` が検証する
+#   decidedIn   … 決定した PR / Issue 番号（`#1824` 形式）
+#   decidedAt   … その PR がマージされた日
+#   reviewAfter … 判断の期日。まだ決められない場合のみ 'undecided'（notes に理由が必須）
+#   notes       … 期日の根拠・観測している内容・判断材料
+#
 # 退役の手順は docs/development/improvement-flow.md の Step 9 を参照。
 # 本ファイルからガードを消すときは CLAUDE.md の該当 bullet も同じ PR で消す
 # （片方だけ変えると `Meta consistency` が落ちる）。
+# decisions のエントリは target を削除・撤回した PR で同時に消す
+# （target が消えたまま残ると `decision-ledger-target` が落ちる）。
 
 guards:
   - id: read-before-referencing
@@ -304,3 +324,40 @@ guards:
     addedAt: '2026-08-05'
     reviewAfter: '2026-11-03'
     notes: src/cli.mjs の入力形式は EXPECTED_CONTRACT_COUNTS で pin されている。他のファイル・CI ジョブについては pin が無い。
+
+# ガード以外の期限付きの決定（#1843）。
+decisions:
+  - id: deprecate-close-issues-sh
+    kind: deprecation
+    target: scripts/close-issues.sh
+    decidedIn: '#1824'
+    decidedAt: '2026-08-12'
+    reviewAfter: '2026-11-12'
+    notes: >-
+      参照ゼロの orphan script。期日はスクリプト本体のコメント（scripts/close-issues.sh:14「段階 2 — 2026-11-12
+      （90 日後）以降に呼び出し元が現れなければ削除する」）が宣言している値をそのまま写した。期日到来時は呼び出し元が現れたかを
+      git grep で確認し、無ければ削除する。
+
+  - id: deprecate-setup-river-review-sh
+    kind: deprecation
+    target: scripts/setup_river_review.sh
+    decidedIn: '#1824'
+    decidedAt: '2026-08-12'
+    reviewAfter: '2026-11-12'
+    notes: >-
+      参照ゼロの orphan script。期日は本体コメント（scripts/setup_river_review.sh:24「Stage 2 — delete
+      the file on or after 2026-11-12 (90 days) if no caller」）の値。ROADMAP.md
+      にも DEPRECATED と削除予定日の記載があるため、削除時は同じ PR で ROADMAP.md の記述も消す。
+
+  - id: deprecate-release-please-kick-workflow
+    kind: deprecation
+    target: .github/workflows/release-please-kick.yml
+    decidedIn: '#1807'
+    decidedAt: '2026-08-12'
+    reviewAfter: undecided
+    notes: >-
+      RELEASE_KICK_PAT が未登録のため常に失敗する workflow を deprecate した（#1807。本体コメントは背景 Issue の
+      #1800 を参照している）。削除期日は #1807 でも本体コメントでも決まっていない。ここで新しい日付を発明せず undecided
+      とし、棚卸しで「期日を決める」判断そのものを対象にする。判断材料は secret を登録して再採用するか
+      （gh api repos/:owner/:repo/actions/secrets で確認）、ローカル実行の
+      scripts/release-please-kick.sh へ一本化して削除するかの二択。

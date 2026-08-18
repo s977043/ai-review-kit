@@ -31,7 +31,7 @@ If a check fails, show the failure output and proposed fix before applying.
 
 ## AI Misoperation Guards
 
-> The ledger `docs/development/guard-ledger.yaml` is the SSoT for this list — it records each guard's mechanization level, `verifiedBy` paths, and `reviewAfter` date, and the required check `Meta consistency` fails when the two drift. Add, rename, or remove a guard in the ledger and here in the same PR; retire per `docs/development/improvement-flow.md` Step 9.
+> The ledger `docs/development/guard-ledger.yaml` is the SSoT for this list under its `guards:` key — it records each guard's mechanization level, `verifiedBy` paths, and `reviewAfter` date, and the required check `Meta consistency` fails when the two drift. Add, rename, or remove a guard in the ledger and here in the same PR; retire per `docs/development/improvement-flow.md` Step 9. The same file also tracks timed decisions that are not guards under `decisions:` (deprecated assets, workflows under observation, temporary exclusions) — those have no bullet here, and `Meta consistency` checks only that each `target:` path still exists (#1843).
 
 - **Read before referencing**: Do not cite file contents, function names, or line numbers without first reading the file.
 - **Run before claiming**: Do not assert that tests pass or lint succeeds without running the command and showing output.

@@ -9,6 +9,8 @@ import {
   NOTHING_CHECKED_ERROR,
   PIPELINE_CHECKLIST_DOC,
   checkDocEnumerations,
+  filterExistingPaths,
+  parseDecisionLedger,
   parseGuardLedger,
   parseGuardTitles,
   parseIgnoreDirectives,
@@ -865,6 +867,103 @@ test('guard-ledger-verified-by spec fails when a declared path does not exist', 
     errors.some(
       (e) => e.includes('".claude/hooks/does-not-exist.sh"') && e.includes('実体に存在しない')
     )
+  );
+});
+
+// --- 期限付きの決定（台帳の decisions:、#1843） ---
+
+test('parseDecisionLedger tolerates a ledger without the decisions key', () => {
+  assert.deepEqual(parseDecisionLedger(JSON.stringify({ guards: [] })), []);
+  assert.throws(() => parseDecisionLedger('[]'), /トップレベルがマップではない/);
+  assert.throws(
+    () => parseDecisionLedger(JSON.stringify({ guards: [], decisions: {} })),
+    /`decisions` が配列ではない/
+  );
+});
+
+test('parseDecisionLedger rejects malformed entries', () => {
+  const base = {
+    id: 'a-decision',
+    kind: 'deprecation',
+    target: 'scripts/close-issues.sh',
+    decidedIn: '#1824',
+    decidedAt: '2026-08-12',
+    reviewAfter: '2026-11-12',
+  };
+  const dump = (decisions, guards = []) => JSON.stringify({ guards, decisions });
+
+  assert.deepEqual(parseDecisionLedger(dump([base])), [base]);
+
+  assert.throws(() => parseDecisionLedger(dump([{ ...base, id: 'Not Kebab' }])), /kebab-case/);
+  assert.throws(() => parseDecisionLedger(dump([base, base])), /id "a-decision" が重複/);
+  // guards と id 名前空間を共有する（棚卸しコマンドが id で突き合わせるため）。
+  assert.throws(
+    () => parseDecisionLedger(dump([base], [{ id: 'a-decision' }])),
+    /id "a-decision" が重複/
+  );
+  assert.throws(() => parseDecisionLedger(dump([{ ...base, kind: 'someday' }])), /kind は/);
+  assert.throws(() => parseDecisionLedger(dump([{ ...base, target: '  ' }])), /target に repo/);
+  assert.throws(() => parseDecisionLedger(dump([{ ...base, decidedIn: '1824' }])), /decidedIn は/);
+  assert.throws(
+    () => parseDecisionLedger(dump([{ ...base, decidedAt: '2026/08/12' }])),
+    /decidedAt は/
+  );
+  assert.throws(
+    () => parseDecisionLedger(dump([{ ...base, reviewAfter: 'soon' }])),
+    /reviewAfter は/
+  );
+  assert.throws(
+    () => parseDecisionLedger(dump([{ ...base, reviewAfter: '2026-08-11' }])),
+    /reviewAfter \(2026-08-11\) は decidedAt \(2026-08-12\) 以降/
+  );
+  // 期日未定は許すが、理由が無い undecided は追跡不能なので落とす。
+  assert.throws(
+    () => parseDecisionLedger(dump([{ ...base, reviewAfter: 'undecided' }])),
+    /notes に期日を決められない理由を書く/
+  );
+  assert.deepEqual(
+    parseDecisionLedger(dump([{ ...base, reviewAfter: 'undecided', notes: '期日未定の理由' }])),
+    [{ ...base, reviewAfter: 'undecided', notes: '期日未定の理由' }]
+  );
+});
+
+test('the real ledger keeps decisions out of the CLAUDE.md guard comparison', async () => {
+  const ledgerText = await readRepoFile(GUARD_LEDGER_PATH);
+  const decisions = parseDecisionLedger(ledgerText);
+  assert.ok(decisions.length > 0, '実台帳に decisions エントリがあること');
+
+  // decisions を足してもガード側の照合キー（title）は増えない。
+  const guardTitles = new Set(parseGuardLedger(ledgerText).map((entry) => entry.title));
+  for (const decision of decisions) {
+    assert.equal(guardTitles.has(decision.id), false);
+  }
+  assert.equal(guardTitles.size, parseGuardTitles(await readRepoFile('CLAUDE.md')).size);
+});
+
+test('filterExistingPaths drops a path that is not on disk', async () => {
+  const measured = await filterExistingPaths(
+    new Set(['scripts/close-issues.sh', 'scripts/does-not-exist.sh'])
+  );
+  assert.deepEqual([...measured], ['scripts/close-issues.sh']);
+});
+
+test('decision-ledger-target spec fails when a target path does not exist', async () => {
+  const spec = realSpec('decision-ledger-target');
+  const realText = await readRepoFile(GUARD_LEDGER_PATH);
+  const mutated = realText.replace(
+    /^(\s+)target: scripts\/close-issues\.sh$/m,
+    '$1target: scripts/does-not-exist.sh'
+  );
+  assert.notEqual(mutated, realText, 'fixture precondition: the target entry must exist');
+
+  const { errors, checked } = await checkDocEnumerations({
+    specs: [spec],
+    readDoc: async () => mutated,
+  });
+  assert.equal(checked, 1);
+  // 実在しないパスは measure（disk 走査）に現れないので「実体に存在しない」側で落ちる。
+  assert.ok(
+    errors.some((e) => e.includes('"scripts/does-not-exist.sh"') && e.includes('実体に存在しない'))
   );
 });
 

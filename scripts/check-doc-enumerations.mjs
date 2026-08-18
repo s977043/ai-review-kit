@@ -315,9 +315,123 @@ async function loadGuardLedger() {
   return parseGuardLedger(await fs.readFile(path.join(ROOT, GUARD_LEDGER_PATH), 'utf8'));
 }
 
+/** 台帳 `decisions:` が許す kind の語彙（#1843）。 */
+const DECISION_KINDS = new Set(['deprecation', 'observation', 'temporary-exclusion']);
+
+/** decidedIn は `#<Issue/PR 番号>` で書く。 */
+const DECIDED_IN_RE = /^#\d+$/;
+
+/**
+ * 台帳の `decisions:`（期限付きの決定）を読み、形式を検証してエントリ配列を返す。
+ *
+ * `guards:` とはキーを分けている。ガードは CLAUDE.md の見出しと 1:1 で照合される一方、
+ * 期限付きの決定は CLAUDE.md に対応する散文を持たないため、同じ配列に混ぜると
+ * spec `claude-md-guard-ledger` が「CLAUDE.md に無い」側で必ず落ちる。
+ * キーを分けることで、既存のガードエントリと照合ロジックはそのまま残る。
+ *
+ * `decisions:` が無い台帳は空配列を返す（キー自体は任意）。
+ *
+ * @param {string} text
+ * @returns {{ id: string, kind: string, target: string, decidedIn: string, decidedAt: string, reviewAfter: string, notes?: string }[]}
+ */
+export function parseDecisionLedger(text) {
+  const doc = yaml.load(String(text ?? ''));
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
+    throw new Error(`${GUARD_LEDGER_PATH}: トップレベルがマップではない`);
+  }
+  if (doc.decisions === undefined) return [];
+  if (!Array.isArray(doc.decisions)) {
+    throw new Error(`${GUARD_LEDGER_PATH}: \`decisions\` が配列ではない`);
+  }
+
+  // id はガードと同じ名前空間として扱う。両方を横断する棚卸しコマンドが
+  // id で結果を突き合わせるため、guards と decisions で重複させない。
+  const guardIds = new Set(Array.isArray(doc.guards) ? doc.guards.map((g) => g?.id) : []);
+  const ids = new Set();
+  for (const [index, entry] of doc.decisions.entries()) {
+    const where = `decisions[${index}]`;
+    if (!entry || typeof entry !== 'object') {
+      throw new Error(`${where}: エントリがマップではない`);
+    }
+    if (typeof entry.id !== 'string' || !/^[a-z0-9-]+$/.test(entry.id)) {
+      throw new Error(
+        `${where}: id は kebab-case の文字列で書く（実際: ${JSON.stringify(entry.id)}）`
+      );
+    }
+    if (ids.has(entry.id) || guardIds.has(entry.id)) {
+      throw new Error(`${where}: id "${entry.id}" が重複している`);
+    }
+    ids.add(entry.id);
+
+    if (!DECISION_KINDS.has(entry.kind)) {
+      throw new Error(
+        `${where} (${entry.id}): kind は ${[...DECISION_KINDS].join(' / ')} のいずれか（実際: ${JSON.stringify(entry.kind)}）`
+      );
+    }
+    if (typeof entry.target !== 'string' || entry.target.trim() === '') {
+      throw new Error(`${where} (${entry.id}): target に repo 相対パスを 1 件書く`);
+    }
+    if (typeof entry.decidedIn !== 'string' || !DECIDED_IN_RE.test(entry.decidedIn)) {
+      throw new Error(
+        `${where} (${entry.id}): decidedIn は "#<番号>"（実際: ${JSON.stringify(entry.decidedIn)}）`
+      );
+    }
+    if (!ISO_DATE_RE.test(String(entry.decidedAt))) {
+      throw new Error(
+        `${where} (${entry.id}): decidedAt は YYYY-MM-DD（実際: ${JSON.stringify(entry.decidedAt)}）`
+      );
+    }
+    // 期日が未定の決定を台帳から締め出すと、追跡手段が無い状態（#1843）に戻る。
+    // 'undecided' を許すかわりに、なぜ決められないかを notes に必ず書かせる。
+    if (entry.reviewAfter !== 'undecided' && !ISO_DATE_RE.test(String(entry.reviewAfter))) {
+      throw new Error(
+        `${where} (${entry.id}): reviewAfter は YYYY-MM-DD か 'undecided'（実際: ${JSON.stringify(entry.reviewAfter)}）`
+      );
+    }
+    if (
+      entry.reviewAfter === 'undecided' &&
+      (typeof entry.notes !== 'string' || entry.notes.trim() === '')
+    ) {
+      throw new Error(
+        `${where} (${entry.id}): reviewAfter: undecided なら notes に期日を決められない理由を書く`
+      );
+    }
+    if (entry.reviewAfter !== 'undecided' && entry.reviewAfter < entry.decidedAt) {
+      throw new Error(
+        `${where} (${entry.id}): reviewAfter (${entry.reviewAfter}) は decidedAt (${entry.decidedAt}) 以降であること`
+      );
+    }
+  }
+  return doc.decisions;
+}
+
+/** 台帳の `decisions:` をディスクから読んで検証済みエントリを返す。 */
+async function loadDecisionLedger() {
+  return parseDecisionLedger(await fs.readFile(path.join(ROOT, GUARD_LEDGER_PATH), 'utf8'));
+}
+
 /** 台帳が挙げる verifiedBy パスの集合。 */
 function collectVerifiedByPaths(entries) {
   return new Set(entries.flatMap((entry) => entry.verifiedBy));
+}
+
+/**
+ * repo 相対パスの集合のうち、実在するものだけを返す。
+ *
+ * 「宣言されたパスが実在するか」を見る spec（`guard-ledger-verified-by` /
+ * `decision-ledger-target`）の実測側。テストから直接叩けるよう export する
+ * （spec 経由では measure が実ディスクを読むため、実在しないパスを注入できない）。
+ */
+export async function filterExistingPaths(relPaths) {
+  const existing = new Set();
+  for (const rel of relPaths) {
+    const found = await fs.stat(path.join(ROOT, rel)).then(
+      () => true,
+      () => false
+    );
+    if (found) existing.add(rel);
+  }
+  return existing;
 }
 
 /** repo-relative なディレクトリ直下のサブディレクトリ名を返す（存在しなければ throw）。 */
@@ -470,20 +584,24 @@ export const DOC_ENUMERATION_SPECS = [
     marker: '`verifiedBy:` の項目',
     kind: 'names',
     declare: (text) => collectVerifiedByPaths(parseGuardLedger(text)),
-    measure: async () => {
-      const declaredPaths = collectVerifiedByPaths(await loadGuardLedger());
-      const existing = new Set();
-      for (const rel of declaredPaths) {
-        if (
-          await fs.stat(path.join(ROOT, rel)).then(
-            () => true,
-            () => false
-          )
-        )
-          existing.add(rel);
-      }
-      return existing;
-    },
+    measure: async () => filterExistingPaths(collectVerifiedByPaths(await loadGuardLedger())),
+  },
+  {
+    // 期限付きの決定（#1843）。deprecate した資産の削除期日は、これまで対象ファイル自身の
+    // コメントにしか無く、そのファイルを開く動機は「削除するとき」しか無かった。
+    // target の実在を照合することで、資産を消したのに台帳のエントリが残る／
+    // エントリのパスを打ち間違える、のどちらも `Meta consistency` で落ちる。
+    id: 'decision-ledger-target',
+    doc: GUARD_LEDGER_PATH,
+    summary: '台帳 decisions の target が指すパス',
+    marker: '`decisions:` の `target:` 行',
+    kind: 'names',
+    // 決定がすべて片付いて `decisions:` が空になる状態は正常なので、空集合を null（マーカー
+    // 消失）扱いにはしない。宣言側が台帳そのものであり、doc へ写した列挙ではないため、
+    // regex のすり抜けで検証が空振りする経路も無い。
+    declare: (text) => new Set(parseDecisionLedger(text).map((entry) => entry.target)),
+    measure: async () =>
+      filterExistingPaths(new Set((await loadDecisionLedger()).map((entry) => entry.target))),
   },
   // README のインストール節「得られるもの / What you get」（#1846）。
   // 配布サーフェス（コマンド 7 件・agent-skill 11 件）の宣言はここにしか無く、
