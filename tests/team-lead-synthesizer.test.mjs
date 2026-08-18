@@ -120,3 +120,74 @@ describe('synthesizeTeamLeadReport', () => {
     assert.equal(result.consensusSummary.single, 0);
   });
 });
+
+/**
+ * #1644 残件5: scope is the THIRD sort key (consensusLevel → severity → scope).
+ *
+ * These cases pin the chosen placement from both sides: what scope must decide
+ * (ties on the first two keys) and what it must NOT decide (anything the first
+ * two keys already settled). Reading only one side would leave "scope first"
+ * and "scope never" both passing.
+ */
+describe('sortFindingsByPriority — scope as the third key (#1644)', () => {
+  const top3 = (findings) =>
+    synthesizeTeamLeadReport({ findings, reviewerResults: [] }).top3Findings.map((f) => f.id);
+
+  test('within one consensusLevel/severity bucket, in-diff outranks pre-existing', () => {
+    // The realistic shape: reviewers rarely agree and severity is coarse, so
+    // the top3 cut happens inside a single single/major bucket. Input order
+    // deliberately puts the pre-existing findings first, so a passing result
+    // cannot come from the previous stable-sort-by-input-order behaviour.
+    const findings = [
+      { id: 'pre-1', severity: 'major', consensusLevel: 'single', scope: 'pre-existing' },
+      { id: 'pre-2', severity: 'major', consensusLevel: 'single', scope: 'pre-existing' },
+      { id: 'in-1', severity: 'major', consensusLevel: 'single', scope: 'in-diff' },
+      { id: 'in-2', severity: 'major', consensusLevel: 'single', scope: 'in-diff' },
+    ];
+    assert.deepEqual(top3(findings), ['in-1', 'in-2', 'pre-1']);
+  });
+
+  test('scope does NOT outrank severity', () => {
+    // Rejects "scope first": an in-diff nit must not displace a pre-existing
+    // critical. Being outside the added lines is not the same as unimportant.
+    const findings = [
+      { id: 'in-nit', severity: 'minor', consensusLevel: 'single', scope: 'in-diff' },
+      { id: 'pre-crit', severity: 'critical', consensusLevel: 'single', scope: 'pre-existing' },
+    ];
+    assert.deepEqual(top3(findings), ['pre-crit', 'in-nit']);
+  });
+
+  test('scope does NOT outrank consensusLevel', () => {
+    // The existing contract (schemas/output.schema.json top3Findings) ranks
+    // consensusLevel above severity; adding scope must not re-litigate it.
+    const findings = [
+      { id: 'in-single', severity: 'major', consensusLevel: 'single', scope: 'in-diff' },
+      {
+        id: 'pre-consensus',
+        severity: 'major',
+        consensusLevel: 'consensus',
+        scope: 'pre-existing',
+      },
+    ];
+    assert.deepEqual(top3(findings), ['pre-consensus', 'in-single']);
+  });
+
+  test('a finding with no scope ranks with in-diff, not below pre-existing', () => {
+    // finding-factory.mjs DEFAULT_FINDING_SCOPE: absent/unknown must not demote.
+    const findings = [
+      { id: 'pre', severity: 'major', consensusLevel: 'single', scope: 'pre-existing' },
+      { id: 'absent', severity: 'major', consensusLevel: 'single' },
+      { id: 'bogus', severity: 'major', consensusLevel: 'single', scope: 'whole-repo' },
+    ];
+    assert.deepEqual(top3(findings), ['absent', 'bogus', 'pre']);
+  });
+
+  test('findings equal on all three keys keep their input order', () => {
+    const findings = [
+      { id: 'b', severity: 'major', consensusLevel: 'single', scope: 'in-diff' },
+      { id: 'a', severity: 'major', consensusLevel: 'single', scope: 'in-diff' },
+      { id: 'c', severity: 'major', consensusLevel: 'single', scope: 'in-diff' },
+    ];
+    assert.deepEqual(top3(findings), ['b', 'a', 'c']);
+  });
+});

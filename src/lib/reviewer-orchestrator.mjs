@@ -1,5 +1,10 @@
 import { generateReview } from './review-engine.mjs';
-import { classifyFindings, normalizeSeverity, SEVERITY_RANK } from './finding-factory.mjs';
+import {
+  classifyFindings,
+  normalizeScope,
+  normalizeSeverity,
+  SEVERITY_RANK,
+} from './finding-factory.mjs';
 import { renderDiffText } from './diff-processor.mjs';
 import { synthesizeTeamLeadReport } from './team-lead-synthesizer.mjs';
 
@@ -433,6 +438,32 @@ function maxSeverity(a, b) {
 }
 
 /**
+ * Composition rule for `scope` across a merge cluster (#1644 残件4).
+ *
+ * Same shape as `maxSeverity`: the cluster keeps the value that does NOT
+ * weaken the finding. For scope the non-weakening value is `in-diff`, because
+ * `finding-factory.mjs` declares (see DEFAULT_FINDING_SCOPE, :19-24):
+ *
+ *   "Fail-safe default scope. Unknown/absent scope MUST NOT demote a finding,
+ *    so the default is the non-demoting value (`in-diff`) […]"
+ *
+ * Without this, the cluster inherited the scope of `findings[indices[0]]`
+ * alone, so a `pre-existing` head silently demoted a co-clustered role's
+ * `in-diff` verdict — the exact demotion the fail-safe forbids.
+ *
+ * Every member is passed through `normalizeScope` (the SSoT normalizer), so a
+ * member that carries no scope, or an out-of-vocabulary one, counts as
+ * `in-diff` rather than being ignored: ignoring it would let an unclassified
+ * finding be demoted by a classified neighbour.
+ *
+ * @param {object[]} members findings of one cluster
+ * @returns {'in-diff'|'pre-existing'}
+ */
+function mergeScope(members) {
+  return members.some((m) => normalizeScope(m?.scope) === 'in-diff') ? 'in-diff' : 'pre-existing';
+}
+
+/**
  * Predicate: returns true when two findings are considered duplicates.
  * Criteria: same file, line positions within ±2, and message edit-distance ≤ 10
  * (compared on the first 80 chars, lower-cased).
@@ -463,6 +494,8 @@ export function findingsOverlap(a, b) {
  *   - severity = max of cluster (after normalization of blocker/warning/nit)
  *   - evidence = deduplicated union of all evidence arrays
  *   - agreement = array of all reviewerRole values in the cluster
+ *   - scope = `in-diff` when any member is in-diff, else `pre-existing`
+ *     (mergeScope; omitted when no member carried a scope)
  * Non-duplicate findings pass through unchanged, with agreement = [their reviewerRole] if set.
  */
 export function mergeFindings(findings) {
@@ -533,12 +566,19 @@ export function mergeFindings(findings) {
     }
 
     const mergedAgreement = [...agreementSet];
+    const members = indices.map((idx) => findings[idx]);
     return {
       ...canonical,
       severity: mergedSeverity,
       evidence: [...evidenceSet],
       agreement: mergedAgreement,
       consensusLevel: computeConsensusLevel(mergedAgreement),
+      // Only materialise `scope` when at least one member carried it. A cluster
+      // where nobody classified the scope stays without the field — schema
+      // readers already treat an absent scope as `in-diff`
+      // (schemas/output.schema.json, issues[].scope), so adding it there would
+      // change the payload without changing its meaning.
+      ...(members.some((m) => m?.scope !== undefined) ? { scope: mergeScope(members) } : {}),
     };
   });
 }

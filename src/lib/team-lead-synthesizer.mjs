@@ -1,11 +1,33 @@
 import { REVIEWER_ROLES } from './reviewer-orchestrator.mjs';
-import { SEVERITY_RANK } from './finding-factory.mjs';
+import { normalizeScope, SEVERITY_RANK } from './finding-factory.mjs';
 
 const CONSENSUS_LEVEL_ORDER = { consensus: 3, multi: 2, single: 1 };
 
+/** in-diff を上位に置くための順位。normalizeScope の語彙と 1:1 で対応する。 */
+const SCOPE_ORDER = { 'in-diff': 1, 'pre-existing': 0 };
+
 /**
- * consensusLevel → severity の順に findings をソートして返す。
+ * consensusLevel → severity → scope の順に findings をソートして返す。
  * 同値の場合は元の順序を維持（stable sort）。
+ *
+ * scope を第 3 キーに置く理由（#1644 残件5）:
+ *
+ * - scope を第 1 キーにすると、単一ロールの `in-diff` minor が
+ *   3 ロール合意の `pre-existing` critical を追い越して top3 の先頭に来る。
+ *   「この差分の外にある」ことは「重要でない」ことではないので、これは誤り。
+ * - 一方で第 3 キーは「効果が薄い置き場所」ではない。上位 2 キーの値域は
+ *   consensusLevel が 3 種・severity が 4 種しかなく、実運用では大半の
+ *   finding が `single` × `major` の 1 バケットに落ちる。top3 の打ち切りは
+ *   そのバケットの中で起きるので、そこを従来の入力順ではなく scope で
+ *   決めることが in-diff 優先の実効部分になる。
+ *   例: `single`/`major` が 4 件（うち in-diff 2 件）なら、従来は入力順で
+ *   pre-existing が top3 に入り得たが、この順序では in-diff の 2 件が必ず先に来る。
+ * - 加えて、第 3 キーであれば「consensusLevel が severity より優先する」という
+ *   既存の契約（schemas/output.schema.json の top3Findings）を変えない。
+ *   scope は同順位群の中の並びを決めるだけで、上位 2 キーの判定を覆さない。
+ *
+ * scope 欠損・語彙外の値は normalizeScope の fail-safe により `in-diff` 扱い、
+ * すなわち降格しない側に倒れる（finding-factory.mjs の DEFAULT_FINDING_SCOPE）。
  */
 function sortFindingsByPriority(findings) {
   return [...findings].sort((a, b) => {
@@ -13,7 +35,9 @@ function sortFindingsByPriority(findings) {
       (CONSENSUS_LEVEL_ORDER[b.consensusLevel] ?? 0) -
       (CONSENSUS_LEVEL_ORDER[a.consensusLevel] ?? 0);
     if (cl !== 0) return cl;
-    return (SEVERITY_RANK[b.severity] ?? -1) - (SEVERITY_RANK[a.severity] ?? -1);
+    const sev = (SEVERITY_RANK[b.severity] ?? -1) - (SEVERITY_RANK[a.severity] ?? -1);
+    if (sev !== 0) return sev;
+    return SCOPE_ORDER[normalizeScope(b.scope)] - SCOPE_ORDER[normalizeScope(a.scope)];
   });
 }
 
