@@ -834,6 +834,36 @@ skills:
     recommended: true
     description: '差分が「その差分自身を審査するレビュー基準・品質ゲート」を弱めていないかを diff-time で検出する。対象は Check 1 .river/rules.md・rules.d の基準削除、Check 2 .river-review.{json,yaml,yml} の閾値・ゲート緩和、Check 3 suppression entry の新規追加、Check 4 lint・静的解析設定のルール削除、Check 5 branch protection・required check の緩和の 5 つで、機能変更と同一 PR に混在し意図の宣言が無い場合に指摘する。workflow の permissions / action pin は gha-workflow-security、suppression entry の使い分けは suppression-feedback、設定ファイルの一般的妥当性は config-json、.only / .skip / @ts-ignore は heuristic-review.mjs の決定論検出器、リファクタと機能追加の混在は behavior-structure-separation へ委譲する'
 
+  - id: detector-detection-power
+    version: '0.1.0'
+    name: 'Detector Detection Power 検査器の検出力の検証'
+    path: skills/midstream/detector-detection-power/SKILL.md
+    category: midstream
+    phase: midstream
+    tags:
+      [
+        detector-quality,
+        detection-power,
+        guard,
+        linter,
+        ci-gate,
+        validator,
+        mutation-evidence,
+        false-negative,
+        midstream,
+      ]
+    severity: major
+    recommended: true
+    description: '検査器（linter / ガード / CI ゲート / バリデータ / フィルタ）そのものの検出力が差分で静かに落ちていないか、また新設した検査が実際に検出できることが実証されているかを diff-time で検出する。Check 1 unverified detection reduction（検査器の検出ロジック（正規表現・除外パターン・解決集合・allowlist・baseline）を変更して検出件数が減ったのに、減った 1 件ずつが誤検出であった根拠が示されないまま「誤検出を潰した」「N → M 件に減少」と改善として主張している）、Check 2 unproven guard detection power（新しい検査ロジック・CI ゲート・バリデーションを追加・変更したのに、検出すべき入力を注入して検出されること／検出すべきでない入力で黙ることを示す変異注入の証跡が無く、「追加した」「CI が緑」を検出力の証拠として扱っている）、の 2 Check を対象とする report-only。テスト自身のアサーションが実質何も検証していない構造は test-assertion-effectiveness、レビュー基準・品質ゲートの明示的な弱体化（ルールの削除・閾値の引き下げ・suppression entry 追加・lint ルールの無効化）は review-criteria-integrity、リファクタ完了主張一般の検証は refactor-claim-audit、workflow の permissions と action pin は gha-workflow-security、設定ファイルの構文・型の妥当性は config-json へ委譲する'
+    exclude:
+      - '**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs}'
+      - 'tests/**/*'
+      - 'test/**/*'
+      - '__tests__/**/*'
+      - '**/*Test.php'
+      - '**/test_*.py'
+      - '**/*_test.{py,go,rb}'
+
   - id: knowledge-to-code-alignment
     version: '0.1.0'
     name: 'Knowledge-to-Code Alignment 新知識のコード反映・設計知識の保全'
