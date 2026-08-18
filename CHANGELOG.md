@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.85.1](https://github.com/s977043/river-review/compare/v1.85.0...v1.85.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* **cli:** runs diff がオプションを run ID として飲み込む問題を直す ([#1910](https://github.com/s977043/river-review/issues/1910)) ([77318d8](https://github.com/s977043/river-review/commit/77318d8b71dbdf28c05e11c5be7c0c4d9ea8e7e6))
+* **textlint:** docs/** の prh を有効化し語境界を厳格化する ([#1786](https://github.com/s977043/river-review/issues/1786) 段階2-a) ([#1907](https://github.com/s977043/river-review/issues/1907)) ([ee8fb1c](https://github.com/s977043/river-review/commit/ee8fb1ca00a310da663b3bd3f15b81dbc2348112))
+
 ## [1.85.0](https://github.com/s977043/river-review/compare/v1.84.2...v1.85.0) (2026-08-18)
 
 
