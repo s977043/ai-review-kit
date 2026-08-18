@@ -1083,6 +1083,11 @@ function parseArgs(argv) {
     fixturesCasesPath: null,
     verbose: false,
     phase: process.env.RIVER_PHASE || 'midstream',
+    // #1759 C2: set to true only by the --phase branch below, once its value
+    // has passed the PHASES check. Lets the post-loop RIVER_PHASE validation
+    // tell "an explicit, already-validated --phase" apart from "still the
+    // raw (possibly invalid) env-or-default value".
+    phaseExplicit: false,
     plannerMode: process.env.RIVER_PLANNER_MODE || 'off',
     dryRun: false,
     debug: false,
@@ -1500,6 +1505,10 @@ function parseArgs(argv) {
         break;
       }
       parsed.phase = phase;
+      // #1759 C2: marks that --phase already validated and set parsed.phase,
+      // so the post-loop RIVER_PHASE check below must not re-derive it from
+      // the (possibly invalid) env var and must not report a second error.
+      parsed.phaseExplicit = true;
       continue;
     }
     if (arg === '--cases') {
@@ -1781,6 +1790,29 @@ function parseArgs(argv) {
         ' `river review plan --plan-only` and `river review --plan-only plan` are both accepted.'
     );
     usageError(parsed);
+  }
+
+  // #1759 C2: RIVER_PHASE used to skip validation entirely and propagate an
+  // invalid value straight through to the printed phase with exit 0, unlike
+  // --phase which already validates against PHASES above. Reuse that same
+  // vocabulary and the same case-insensitive normalization here instead of
+  // writing a second check (CLAUDE.md "Import the SSoT, never re-derive it").
+  //
+  // Only runs when --phase did NOT already set and validate parsed.phase
+  // (parsed.phaseExplicit) and when RIVER_PHASE was actually set to a
+  // non-empty string — unset or empty must keep falling back to the default
+  // ('midstream'), matching the object-literal default above and --phase's
+  // own "not required" contract.
+  if (!parsed.usageError && !parsed.phaseExplicit && process.env.RIVER_PHASE) {
+    const envPhase = process.env.RIVER_PHASE.toLowerCase();
+    if (!PHASES.includes(envPhase)) {
+      console.error(
+        `Error: RIVER_PHASE must be one of: ${PHASES.join(', ')} (got "${process.env.RIVER_PHASE}").`
+      );
+      usageError(parsed);
+    } else {
+      parsed.phase = envPhase;
+    }
   }
 
   return parsed;

@@ -110,11 +110,12 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 
-ただし値の検証は全オプションには及びません。次の 3 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
+ただし値の検証は全オプションには及びません。次の 2 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
 
 - 存在しないパスを `--baseline` に渡した場合（回帰比較が黙って行われない）
 - 未知の語彙を `--context` / `--dependency` に渡した場合
-- 不正値を環境変数 `RIVER_PHASE` に渡した場合（既定の `midstream` へ黙ってフォールバックする。CLI の `--phase` は exit 1）
+
+環境変数 `RIVER_PHASE` は #1759 C2 で `--phase` と同じ語彙・同じ大小文字無視の検証を通るようになりました。不正値は `--phase` と同じ形の `Error: RIVER_PHASE must be one of: ...` を stderr へ出して exit 1 です。未設定・空文字は既定の `midstream` へフォールバックする挙動を維持します。
 
 オプションの値は**スペース区切り**で渡します。`--output=json` のような `=` 連結形式は受理せず、未知オプションとして exit 1 になります（互換のため `--run-id=<id>` だけは例外的に受理します）。なお `--artifact plan=./plan.md` のように、**値の内部**に `=` を含む形式は有効です。
 
