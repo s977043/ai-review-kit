@@ -542,6 +542,64 @@ function parseSkillsResolveOption(arg, args, parsed) {
   return null;
 }
 
+/**
+ * `evolve` options.
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parseEvolveOption(arg, args, parsed) {
+  if (arg === '--min') {
+    const value = args.shift();
+    // Strict parse, same reason as promote's --threshold above.
+    if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+      console.error('Error: --min option requires a positive integer.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.evolveMin = Number.parseInt(value, 10);
+    return 'continue';
+  }
+  if (arg === '--month') {
+    const value = args.shift();
+    if (!value || !/^\d{4}-\d{2}$/.test(value)) {
+      console.error('Error: --month option requires a YYYY-MM value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.evolveMonth = value;
+    return 'continue';
+  }
+  if (arg === '--spec') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --spec option requires a file path.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.evolveSpec = value;
+    return 'continue';
+  }
+  if (arg === '--expect-manifest') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --expect-manifest option requires a manifest id or hash.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.evolveExpectManifest = value;
+    return 'continue';
+  }
+  // Options that are not evolve's own and not handled by the shared parser
+  // below must fail loudly instead of being ignored.
+  if (arg.startsWith('-') && !EVOLVE_SHARED_OPTIONS.has(arg)) {
+    parsed.evolveUnknownOption = arg;
+    return 'break';
+  }
+  return null;
+}
+
 function parseArgs(argv) {
   const args = [...argv];
   // Whether a positional path was taken from AFTER a POSIX `--` terminator.
@@ -1174,53 +1232,9 @@ function parseArgs(argv) {
       }
     }
     if (parsed.command === 'evolve') {
-      if (arg === '--min') {
-        const value = args.shift();
-        // Strict parse, same reason as promote's --threshold above.
-        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
-          console.error('Error: --min option requires a positive integer.');
-          usageError(parsed);
-          break;
-        }
-        parsed.evolveMin = Number.parseInt(value, 10);
-        continue;
-      }
-      if (arg === '--month') {
-        const value = args.shift();
-        if (!value || !/^\d{4}-\d{2}$/.test(value)) {
-          console.error('Error: --month option requires a YYYY-MM value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.evolveMonth = value;
-        continue;
-      }
-      if (arg === '--spec') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --spec option requires a file path.');
-          usageError(parsed);
-          break;
-        }
-        parsed.evolveSpec = value;
-        continue;
-      }
-      if (arg === '--expect-manifest') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --expect-manifest option requires a manifest id or hash.');
-          usageError(parsed);
-          break;
-        }
-        parsed.evolveExpectManifest = value;
-        continue;
-      }
-      // Options that are not evolve's own and not handled by the shared parser
-      // below must fail loudly instead of being ignored.
-      if (arg.startsWith('-') && !EVOLVE_SHARED_OPTIONS.has(arg)) {
-        parsed.evolveUnknownOption = arg;
-        break;
-      }
+      const outcome = parseEvolveOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (!parsed.command && arg === 'eval') {
       parsed.command = 'eval';
