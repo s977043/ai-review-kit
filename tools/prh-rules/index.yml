@@ -3,12 +3,12 @@ rules:
   - expected: GitHub
     pattern:
       - /[Gg]ithub/
-      - /GITHUB/
+      - /(?<![A-Za-z0-9_.-])GITHUB(?![A-Za-z0-9_.-])/
   - expected: AI
-    pattern: /(?<![A-Za-z])[Aa][Ii](?![A-Za-z])/
+    pattern: /(?<![A-Za-z0-9_.-])[Aa][Ii](?![A-Za-z0-9_.-])/
   - expected: JavaScript
     pattern:
-      - /[Jj]ava[Ss]cript/
+      - /(?<![A-Za-z0-9_.-])[Jj]ava[Ss]cript(?![A-Za-z0-9_.-])/
       - /\bJS\b/
   - expected: VS Code
     pattern:
