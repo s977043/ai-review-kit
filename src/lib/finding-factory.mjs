@@ -436,14 +436,21 @@ function deduplicateWithinPR(findings) {
 }
 
 /**
+ * Stage 1 of the classification pipeline (#1857 Phase 1): the deterministic,
+ * cheap prefilter. It owns the four dispositions that need no semantic
+ * judgement — low confidence, insufficient evidence, style-only, and
+ * deterministic duplicate — and nothing else. Scoring, the overview cap and
+ * output ordering belong to {@link rankFindingsForOutput}; semantic
+ * adjudication belongs to {@link adjudicateFindings}.
+ *
+ * Suppressed entries are copies (`{ ...finding, suppressReason }`); the input
+ * findings are never mutated. `retained` holds the ORIGINAL objects.
+ *
  * @param {object[]} findings
- * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
- * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
+ * @returns {{ retained: object[], suppressed: object[] }}
+ * @see docs/adr/007-semantic-precision-pass.md
  */
-export function classifyFindings(findings, options = {}) {
-  const reviewMode = options.reviewMode ?? 'medium';
-  const maxOverview = reviewMode === 'tiny' ? 3 : reviewMode === 'large' ? 8 : 5;
-
+export function prefilterFindings(findings) {
   const suppressed = [];
   const active = [];
 
@@ -472,7 +479,52 @@ export function classifyFindings(findings, options = {}) {
     }
   }
 
-  const sorted = [...deduped].sort(
+  return { retained: deduped, suppressed };
+}
+
+/**
+ * Stage 2 of the classification pipeline (#1857 Phase 1): the seam where the
+ * Semantic Precision Pass (the Judge of ADR-007) will run.
+ *
+ * In Phase 1 this is deliberately the identity function — it retains every
+ * input finding and suppresses none — so that `classifyFindings` reproduces
+ * the pre-refactor result exactly. Phase 2 fills the body in; the contract
+ * that Phase 2 must keep is that a Judge failure returns every input finding
+ * in `retained` rather than an empty list (ADR-007 "Judge 失敗時は legacy
+ * findings をそのまま Gate へ渡す").
+ *
+ * @param {object[]} findings
+ * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [_options]
+ * @returns {{ retained: object[], suppressed: object[] }}
+ * @see docs/adr/007-semantic-precision-pass.md
+ */
+export function adjudicateFindings(findings, _options = {}) {
+  return { retained: [...findings], suppressed: [] };
+}
+
+/**
+ * Stage 3 of the classification pipeline (#1857 Phase 1): scoring, output
+ * ordering and the overview cap. Per ADR-007 the cap is a RANKING outcome, not
+ * a disposition — it is only reported through `suppressReason` here because
+ * Phase 1 keeps the emitted values byte-identical to the pre-refactor ones.
+ *
+ * The `overviewRuleIds` guard collapses a second finding that carries an
+ * already-shown non-`unknown` ruleId. Reached through `classifyFindings` that
+ * branch is unreachable, because `prefilterFindings` has already collapsed
+ * every duplicate ruleId; it is kept so the function is also correct when
+ * called on a set that was not prefiltered.
+ *
+ * @param {object[]} findings
+ * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
+ * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
+ * @see docs/adr/007-semantic-precision-pass.md
+ */
+export function rankFindingsForOutput(findings, options = {}) {
+  const reviewMode = options.reviewMode ?? 'medium';
+  const maxOverview = reviewMode === 'tiny' ? 3 : reviewMode === 'large' ? 8 : 5;
+
+  const suppressed = [];
+  const sorted = [...findings].sort(
     (a, b) => computeFindingBreakdown(b).composite - computeFindingBreakdown(a).composite
   );
 
@@ -492,6 +544,29 @@ export function classifyFindings(findings, options = {}) {
   }
 
   return { overview, inlineCandidates: [], suppressed };
+}
+
+/**
+ * Compatibility facade over the three stages above (#1857 Phase 1). With
+ * adjudication disabled — the only state Phase 1 ships — the return value is
+ * identical to the pre-split implementation, including the ORDER of
+ * `suppressed`: prefilter dispositions first (in input order, duplicates
+ * last), then adjudication, then the ranking overflow.
+ *
+ * @param {object[]} findings
+ * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
+ * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
+ */
+export function classifyFindings(findings, options = {}) {
+  const prefiltered = prefilterFindings(findings);
+  const adjudicated = adjudicateFindings(prefiltered.retained, options);
+  const ranked = rankFindingsForOutput(adjudicated.retained, options);
+
+  return {
+    overview: ranked.overview,
+    inlineCandidates: ranked.inlineCandidates,
+    suppressed: [...prefiltered.suppressed, ...adjudicated.suppressed, ...ranked.suppressed],
+  };
 }
 
 // ---------------------------------------------------------------------------
