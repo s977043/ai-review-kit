@@ -289,7 +289,22 @@ async function listRunRecords(storeDir) {
  */
 async function loadRunRecord(storeDir, runId) {
   const base = node_path__WEBPACK_IMPORTED_MODULE_1__.resolve(storeDir);
-  const resolved = __webpack_require__.ab + "river-review/" + base + '/' + runId + '.json';
+  // DO NOT inline `fileName` back into the path.resolve() call (#1900).
+  // ncc's asset relocator statically matches `path.resolve(x, <template or
+  // concat expression ending in a file extension>)` and rewrites the whole
+  // expression into an asset reference rooted at the bundle's asset base
+  // directory. That broke the shipped GitHub Action twice over: `resolved` no
+  // longer started with `base`, so the traversal guard below threw on EVERY
+  // call (independent of `runId`, swallowed by the `.catch(() => null)` in
+  // loadAllRunRecords — the job-summary digest silently reported 0 runs), and
+  // the relocator copied every *.json under the repo into
+  // runners/github-action/dist/. Binding the last argument to a variable first
+  // is enough to stop the rewrite while keeping path.resolve() semantics
+  // (absolute runIds still escape `base` and are caught by the guard).
+  // Verified against ncc 0.45.0; `path.join` would also avoid the rewrite but
+  // changes how absolute runIds are handled, weakening the guard.
+  const fileName = `${runId}.json`;
+  const resolved = node_path__WEBPACK_IMPORTED_MODULE_1__.resolve(base, fileName);
   if (!resolved.startsWith(base + node_path__WEBPACK_IMPORTED_MODULE_1__.sep) && resolved !== base) {
     throw new Error(`Invalid runId: path traversal detected`);
   }
