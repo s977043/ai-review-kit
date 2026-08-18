@@ -705,6 +705,155 @@ function parseEvolveOption(arg, args, parsed) {
   return null;
 }
 
+/**
+ * `feedback` options.
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parseFeedbackOption(arg, args, parsed) {
+  // #1717: every option below takes a value, and `args.shift() ?? null`
+  // guarded none of them. A missing value consumed the FOLLOWING flag as
+  // this option's value (so `--pr --evidence x` lost both at once), and a
+  // value that failed validation was dropped in silence while the entry was
+  // still written. Each option now rejects a missing value / a following
+  // flag up front with the same `!value || value.startsWith('-')` guard the
+  // --reviewer / --model / --run-id options below already use. The
+  // option-error convention itself (stderr message + help) is unchanged;
+  // unifying its exit code is #1709.
+  if (arg === '--type') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --type option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackType = value;
+    return 'continue';
+  }
+  if (arg === '--skill') {
+    const value = args.shift();
+    // `--skill --pr 123` used to record skillId:"--pr": a flag is a
+    // non-empty string, so buildFeedbackEntry's "skillId is required."
+    // check accepted it and wrote the entry.
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --skill option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackSkillId = value;
+    return 'continue';
+  }
+  if (arg === '--trigger') {
+    const value = args.shift();
+    // A trailing `--trigger` used to null the field, which the handler maps
+    // back to undefined — so the entry was written with the DEFAULT trigger
+    // instead of the one the caller meant to set.
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --trigger option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackTrigger = value;
+    return 'continue';
+  }
+  if (arg === '--fingerprint') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --fingerprint option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackFingerprint = value;
+    return 'continue';
+  }
+  if (arg === '--evidence') {
+    // Free text. `--evidence --pr 123` (recording evidence:"--pr" and
+    // dropping the pr, #1717) stays blocked because takeFreeTextValue
+    // treats a recognized option token as a missing value.
+    const taken = takeFreeTextValue(args);
+    if (taken.missing) {
+      console.error('Error: --evidence option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackEvidence = taken.value;
+    return 'continue';
+  }
+  if (arg === '--pr') {
+    const value = args.shift();
+    // Strict parse, same shape as --threshold (#1658): parseInt('12abc') is
+    // 12 and parseInt('1.5') is 1, so a typo silently recorded a DIFFERENT
+    // pr than the one that was typed, while 'abc' / 0 / -5 / a following
+    // flag all became pr:null on an entry that was still written (exit 0).
+    // `pr` is one half of the occurrence key (review_run_id, pr), so a null
+    // or wrong value skews the repetition denominator downstream (#1717).
+    if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+      console.error('Error: --pr option requires a positive integer.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackPrNumber = Number.parseInt(value, 10);
+    return 'continue';
+  }
+  if (arg === '--reviewer') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --reviewer option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackReviewer = value;
+    return 'continue';
+  }
+  if (arg === '--model') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --model option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackModel = value;
+    return 'continue';
+  }
+  if (arg === '--reversed-by') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --reversed-by option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackReversedBy = value;
+    return 'continue';
+  }
+  // #1673: the run this feedback refers to. Only an explicit id is
+  // accepted — resolving "the latest run" implicitly would attach evidence
+  // to an unrelated run.
+  //
+  // Two silent-miss paths this parse deliberately closes, both of which
+  // exited 0 while writing an entry with no `review_run_id` (so the loss
+  // only surfaced much later as joinedFeedbackCount staying at 0):
+  //   1. `--run-id=<id>`: the token never equals '--run-id', so an
+  //      equals-form value fell through and was dropped.
+  //   2. `--run-id "   "`: whitespace passes a truthiness check, then
+  //      normalizeOptionalString() nulls it out downstream.
+  // The `=` form is scoped to THIS option on purpose; extending it to
+  // --reviewer / --model / --reversed-by would change their behaviour and
+  // is out of scope here.
+  if (arg === '--run-id' || arg.startsWith('--run-id=')) {
+    const value = arg.startsWith('--run-id=') ? arg.slice('--run-id='.length) : args.shift();
+    if (!value || !value.trim() || value.startsWith('-')) {
+      console.error('Error: --run-id option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackRunId = value;
+    return 'continue';
+  }
+  return null;
+}
+
 function parseArgs(argv) {
   const args = [...argv];
   // Whether a positional path was taken from AFTER a POSIX `--` terminator.
@@ -1101,144 +1250,9 @@ function parseArgs(argv) {
       if (outcome === 'break') break;
     }
     if (parsed.command === 'feedback') {
-      // #1717: every option below takes a value, and `args.shift() ?? null`
-      // guarded none of them. A missing value consumed the FOLLOWING flag as
-      // this option's value (so `--pr --evidence x` lost both at once), and a
-      // value that failed validation was dropped in silence while the entry was
-      // still written. Each option now rejects a missing value / a following
-      // flag up front with the same `!value || value.startsWith('-')` guard the
-      // --reviewer / --model / --run-id options below already use. The
-      // option-error convention itself (stderr message + help) is unchanged;
-      // unifying its exit code is #1709.
-      if (arg === '--type') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --type option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackType = value;
-        continue;
-      }
-      if (arg === '--skill') {
-        const value = args.shift();
-        // `--skill --pr 123` used to record skillId:"--pr": a flag is a
-        // non-empty string, so buildFeedbackEntry's "skillId is required."
-        // check accepted it and wrote the entry.
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --skill option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackSkillId = value;
-        continue;
-      }
-      if (arg === '--trigger') {
-        const value = args.shift();
-        // A trailing `--trigger` used to null the field, which the handler maps
-        // back to undefined — so the entry was written with the DEFAULT trigger
-        // instead of the one the caller meant to set.
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --trigger option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackTrigger = value;
-        continue;
-      }
-      if (arg === '--fingerprint') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --fingerprint option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackFingerprint = value;
-        continue;
-      }
-      if (arg === '--evidence') {
-        // Free text. `--evidence --pr 123` (recording evidence:"--pr" and
-        // dropping the pr, #1717) stays blocked because takeFreeTextValue
-        // treats a recognized option token as a missing value.
-        const taken = takeFreeTextValue(args);
-        if (taken.missing) {
-          console.error('Error: --evidence option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackEvidence = taken.value;
-        continue;
-      }
-      if (arg === '--pr') {
-        const value = args.shift();
-        // Strict parse, same shape as --threshold (#1658): parseInt('12abc') is
-        // 12 and parseInt('1.5') is 1, so a typo silently recorded a DIFFERENT
-        // pr than the one that was typed, while 'abc' / 0 / -5 / a following
-        // flag all became pr:null on an entry that was still written (exit 0).
-        // `pr` is one half of the occurrence key (review_run_id, pr), so a null
-        // or wrong value skews the repetition denominator downstream (#1717).
-        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
-          console.error('Error: --pr option requires a positive integer.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackPrNumber = Number.parseInt(value, 10);
-        continue;
-      }
-      if (arg === '--reviewer') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --reviewer option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackReviewer = value;
-        continue;
-      }
-      if (arg === '--model') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --model option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackModel = value;
-        continue;
-      }
-      if (arg === '--reversed-by') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --reversed-by option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackReversedBy = value;
-        continue;
-      }
-      // #1673: the run this feedback refers to. Only an explicit id is
-      // accepted — resolving "the latest run" implicitly would attach evidence
-      // to an unrelated run.
-      //
-      // Two silent-miss paths this parse deliberately closes, both of which
-      // exited 0 while writing an entry with no `review_run_id` (so the loss
-      // only surfaced much later as joinedFeedbackCount staying at 0):
-      //   1. `--run-id=<id>`: the token never equals '--run-id', so an
-      //      equals-form value fell through and was dropped.
-      //   2. `--run-id "   "`: whitespace passes a truthiness check, then
-      //      normalizeOptionalString() nulls it out downstream.
-      // The `=` form is scoped to THIS option on purpose; extending it to
-      // --reviewer / --model / --reversed-by would change their behaviour and
-      // is out of scope here.
-      if (arg === '--run-id' || arg.startsWith('--run-id=')) {
-        const value = arg.startsWith('--run-id=') ? arg.slice('--run-id='.length) : args.shift();
-        if (!value || !value.trim() || value.startsWith('-')) {
-          console.error('Error: --run-id option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackRunId = value;
-        continue;
-      }
+      const outcome = parseFeedbackOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (parsed.command === 'promote') {
       const outcome = parsePromoteOption(arg, args, parsed);
