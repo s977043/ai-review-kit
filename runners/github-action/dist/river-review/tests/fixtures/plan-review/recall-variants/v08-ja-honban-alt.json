@@ -1,5 +1,0 @@
-{
-  "$comment": "Recall variant (S3 PR-A). NOT held-out: this file is readable by the agent under review, so the measured value is a reference number that can be overfit — see the suite header. should_trigger at the regex tier.",
-  "category": "live-env vocab (商用)",
-  "text": "商用環境へ設定を反映する手順を自動化する"
-}

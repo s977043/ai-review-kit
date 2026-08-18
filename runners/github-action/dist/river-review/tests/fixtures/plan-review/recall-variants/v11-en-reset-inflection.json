@@ -1,5 +1,0 @@
-{
-  "$comment": "Recall variant (S3 PR-A, from PR #1370 review m4). Inflected 'resets' must fire like the imperative form.",
-  "category": "reset-to-clean inflection (resets)",
-  "text": "The migration resets the database to a clean state"
-}
