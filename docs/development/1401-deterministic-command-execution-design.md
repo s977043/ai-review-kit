@@ -210,7 +210,7 @@ for (const k of SAFE_ENV_ALLOWLIST) {
 ```
 
 - **denylist ではなく allowlist**。`GITHUB_*` を除去する denylist 方式は新種の secret 変数名
-  （`VERCEL_TOKEN` 等）に追随できず fail-open になる。既定は空で、必要分だけ足す。
+  （`VERCEL_TOKEN` 等）へ追随できず fail-open になる。既定は空で、必要分だけ足す。
 - **`HOME` は実 `$HOME` をコピーしない**（ブロッカー 2 と整合）。`~/.aws` / `~/.npmrc` /
   `~/.git-credentials` 等の on-disk secret を子プロセスに晒さないため、空の一時ディレクトリを
   HOME として渡す。`NODE_OPTIONS`（`--require ./evil.js` 等の実行時コード注入）も allowlist に
@@ -345,9 +345,9 @@ deterministicGate: z
 
 - `args` は optional。既存 skill（`args` 無し）は schema 検証を通る（破壊的でない）。
 - **実行意味論**の後方互換は「受理するが実行しない」で担保する。`args` 未指定かつ `command` に
-  空白を含む（旧来の `"npm run lint"` 形式）skill は schema 上は valid だが、実行器が
+  空白を含む（旧来の `"npm run lint"` 形式）skill は schema としては valid だが、実行器が
   「argv 未移行」と判断して実行せず `DETERMINISTIC_UNRUNNABLE` を出す。これにより
-  「schema は通るのに危険な shell 分割実行にフォールバックする」事態を回避する。
+  「schema は通るのに危険な shell 分割実行へフォールバックする」事態を回避する。
 - parity canary（skill-schema-parity, #1399）と、`deterministicGate` を含む fixture の
   期待値更新を同一 PR で行う（CLAUDE.md「Skill-check fixture/description drift」ガード）。
 
@@ -446,7 +446,7 @@ NO_GO/ESCALATE）を厳守する。
   変えると `kill(-pid)` を回避。`actions/cache` の base scope を悪意 same-repo ブランチが汚染し得る。
 
 **env allowlist の追加注意**: `NODE_OPTIONS`（`--require ./evil.js`）等の実行時コード注入変数を
-allowlist に**絶対に含めない**。SAFE_ENV は `PATH`（可能なら base ツールチェーンに限定）・`LANG` 等の
+allowlist へは**絶対に含めない**。SAFE_ENV は `PATH`（可能なら base ツールチェーンに限定）・`LANG` 等の
 無害変数に限る。
 
 ## 7. 段階導入案
@@ -630,8 +630,8 @@ denylist は「コード/スクリプトを間接実行する、または config
 #### 10.1.4 CI 側要件
 
 - CI 追加要件は基本なし（allowlist は `.river/` 配下、base checkout から読む）。ただし
-  「絶対パスで参照するバイナリ（例 `actionlint`）が CI ランナーに存在すること」を利用者が保証する
-  必要がある。存在しなければ ENOENT → `DETERMINISTIC_UNRUNNABLE`（§3.5）に倒れ、fail-open しない。
+  「絶対パスで参照するバイナリ（例 `actionlint`）は CI ランナーに存在すること」を利用者が保証
+  しなければならない。存在しなければ ENOENT → `DETERMINISTIC_UNRUNNABLE`（§3.5）に倒れ、fail-open しない。
 
 #### 10.1.5 却下した代替案
 
@@ -690,7 +690,7 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
 有効化する構成では次を要求する。
 
 1. **command を走らせる checkout は `persist-credentials: false`**。既存の plan/exec/verify job の
-   checkout は River 本体を動かすためのもので token 永続化が要る場合があるが、**command 実行専用の
+   checkout は River 本体を動かすためのもので、token 永続化を要することがあるものの、**command 実行専用の
    checkout step を分離**し、そこは `persist-credentials: false` にする。
 2. `runners/github-action/action.yml` 側は、command 実行を有効化する入力
    （例 `deterministic_exec: 'false'` 既定、Phase 1 opt-in）を追加し、有効時に実行器へ
@@ -707,7 +707,7 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
 - **env スクラブだけで足りるとする**: `.git/config` / `~/.aws` は env 経由でないため塞げない。
   構造的迂回として敵対レビューが指摘済み。
 - **`persist-credentials: true` のまま `.git` を chmod で隠す**: 権限操作は取りこぼしやすく、
-  同一 runner の別 step が戻す可能性がある。cwd から `.git` を**物理的に含めない**方が堅い。
+  同一 runner の別 step が戻す可能性は残る。cwd から `.git` を**物理的に含めない**方が堅い。
 
 ### 10.3 ブロッカー 3: stdout / findings exfil の遮断
 
@@ -739,7 +739,7 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
 
 - gate 判定への入力は **exit code のみ**（§3.5 の分岐: 0=パス / 非ゼロ=違反 / spawn 失敗・timeout=
   unrunnable）。command の stdout/stderr 文字列を finding の `message` や PR コメント本文へ**転記しない**。
-- stdout/stderr は**捨てるのではなく、secret を載せない形で隔離保存**する。設計上の既定:
+- stdout/stderr は**捨てず、secret を載せない形で隔離保存**する。設計上の既定:
   - PR コメント・inline findings には **1 バイトも生出力しない**。
   - デバッグ用途には、`RUNNER_TEMP` 配下の**アーティファクトとして host 側のみに保存**し、
     PR には「command X が exit=N で違反」の**メタ情報のみ**を出す。アーティファクトは
@@ -1020,7 +1020,7 @@ executor は検証層 `matchCommand` の出力（valid entry）を入力とす�
 - **clean cwd / 空 HOME の生成主体**: `mkdtemp`・copy・base checkout の実ディレクトリ生成は
   composite action の bash step が行い、executor は「与えられたパスを使うだけ」にする
   （executor に checkout 権限を持たせない、§10.2.3）。
-- **stdout をコメント経路へ渡さない配線**: `Post inline review comments` / `Post PR comment` step へ
+- **stdout をコメント経路に渡さない配線**: `Post inline review comments` / `Post PR comment` step へ
   command stdout を渡さない。デバッグ stdout は `actions/upload-artifact`（短い `retention-days`）で
   隔離し、public repo ではアーティファクト保存を最小化/無効化する（§10.3.3 / §10.4-9）。
 

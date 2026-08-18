@@ -55,4 +55,4 @@ river run . --base main --offline --fail-on critical --output json
 
 ## 背景（提案の発端）
 
-PocketEitan の自律開発運用で、GitHub Actions の billing 制約により River Reviewer CI が長期間 systemic に失敗し、複数回のリリースを `--admin` マージで通した。OpenAI 不要のローカル判定があれば、その間も Auto-approve 基準の充足をローカルで実証できた。river-review #1071 の対応設計（実装はメンテナ判断・本 ADR は提案）。
+PocketEitan の自律開発運用で、GitHub Actions の billing 制約により River Reviewer CI が長期間 systemic に失敗し、複数回のリリースを `--admin` マージで通した。OpenAI 不要のローカル判定があれば、その間も Auto-approve 基準の充足をローカルで実証できた。river-review #1071 の対応設計（実装の可否はメンテナが判断・本 ADR は提案）。

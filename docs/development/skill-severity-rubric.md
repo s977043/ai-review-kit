@@ -51,7 +51,7 @@ A skill's `severity` is decided by the **worst case finding it is allowed to emi
 
 以下のいずれかを満たす:
 
-1. 検知対象が **議題提示**（「この PR では議論が必要な可能性がある」）で、修正候補を断定できない
+1. 検知対象は **議題提示**（「この PR には議論の余地がある」）で、修正候補を断定できない
 2. **governance / process** 観点（"このディレクトリは team X の owner です" 等のリマインダ）
 3. 既存の **suppression / accepted_risk** が covering している既知ケースの acknowledgement
 
@@ -96,7 +96,7 @@ A skill's `severity` is decided by the **worst case finding it is allowed to emi
 - 1 PR で **同時に 2 つ以上の skill の severity を上げ下げしない**（影響の切り分けが困難になる）
 - severity を変える PR は本書の該当節に明示的にリンクし、判断根拠を 3 行で書く
 - 変更前後で `npm run eval:all` の主要メトリクスを記録し、PR 本文に before / after を残す
-- **registry.yaml の同期を忘れない**: `skills/registry.yaml` にエントリがある skill は、SKILL.md の severity と registry の severity を同 PR 内で揃える。`registry.yaml` 自体は `loadSkills()` から無視される（`runners/core/skill-loader.mjs:59` の `ignoredFileNames` に含まれる）が、`skills/README.md` / `docs/skills-structure.md` / `docs/migration/skill-migration-guide.md` などの human-readable カタログから参照されるため、不揃いだと SKILL.md と registry の値が食い違うドキュメント矛盾が発生する。
+- **registry.yaml の同期を忘れない**: `skills/registry.yaml` にエントリがある skill は、SKILL.md の severity と registry の severity を同 PR 内で揃える。`registry.yaml` 自体は `loadSkills()` から無視される（`runners/core/skill-loader.mjs:59` の `ignoredFileNames` に含まれる）ものの、`skills/README.md` / `docs/skills-structure.md` / `docs/migration/skill-migration-guide.md` などの human-readable カタログから参照されるため、不揃いだと SKILL.md と registry の値の食い違いというドキュメント矛盾が生じる。
 
 ## 既往の再分類事例（learnings）
 
@@ -111,7 +111,7 @@ A skill's `severity` is decided by the **worst case finding it is allowed to emi
 
 1. **outputKind が `summary` / `questions` / `actions` のみの skill は minor 候補**: 直接の修正提案ではなく議論や次の一手の提示なので merge blocker にならない
 2. **「教育・案内」「formatting drift」のような soft 領域 skill が major のまま放置されているケースが多い**: 過去の severity 設計が "全 skill major" 寄りで、後続の「目立つ findings のみ出す」要件にズレている
-3. **registry.yaml の同期漏れが PR review で検出されることがある**: #781 では Copilot review が SKILL.md と registry.yaml の severity 不一致を検出した。将来も常に検出される保証はないため、severity を変える PR では **`grep -A 8 <skill-id> skills/registry.yaml` で registry エントリの有無を能動的に確認** することを推奨する（自動化されるまでの自衛策）。
+3. **registry.yaml の同期漏れは PR review で検出されることがある**: #781 では Copilot review が SKILL.md と registry.yaml の severity 不一致を検出した。将来も常に検出される保証はないため、severity を変える PR では **`grep -A 8 <skill-id> skills/registry.yaml` で registry エントリの有無を能動的に確認** することを推奨する（自動化されるまでの自衛策）。
 
 ### 再分類を避けるべきケース
 

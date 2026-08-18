@@ -21,7 +21,7 @@ River Review は一般的な AI レビュー bot ではなく、`Review Judgment
 タイトル案: `AIレビューを「プロンプト」ではなく「チーム資産」にするOSSを作った`
 
 1. **課題**: AI 支援開発でコードは速く書けるが、レビュー判断は暗黙知のまま属人化している。
-2. **既存 AI レビュー bot の限界**: diff だけを見る・判断がベンダー black box・知識が provider-owned。
+2. **既存 AI レビュー bot の限界**: diff だけを見る・判断はベンダー black box・知識が provider-owned。
 3. **River Review のアプローチ**: レビュー判断を repo-owned skill としてコード化し、plan / diff / tests / JUnit / 過去レビューをまたいで実行する。
 4. **動作イメージ**: [plan-conformance デモ](../../examples/plan-conformance-demo/README.md)で、plan に反した実装を検出する例を示す。
 5. **導入**: プラグイン / GitHub Actions の 2 チャネル（npm 非依存）。

@@ -59,7 +59,7 @@ oz-Skills EOS の各層が、river-review のどこに実装されているか�
 
 - river-review の Skills レイヤ frontmatter は **planner driven** で、 `applyTo` / `inputContext` / `dependencies` / `severity` 等 13+ keys を持つ。これは Agent Skills 標準（`name` / `description` / `license` の 3 keys）よりも厚い
 - しかし `skills/agent-skills/` 配下の Claude Code 互換 skill は **Agent Skills 標準互換性も意識** する（本 PR で `license: MIT` を追加）
-- 80+ の workflow skill は planner routing に依存するため標準形式に下げない。**Dual-mode**: workflow skills (planner-driven) + agent skills (Agent Skills 標準互換) で運用する
+- 80+ の workflow skill は planner routing に依存するため標準形式へ下げない。**Dual-mode**: workflow skills (planner-driven) + agent skills (Agent Skills 標準互換) で運用する
 
 ## ロードマップ
 

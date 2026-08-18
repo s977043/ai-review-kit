@@ -1,6 +1,6 @@
 # River Review: Governance Layer Index
 
-EOS 5-layer ([`docs/ai/eos-overview.md`](../ai/eos-overview.md)) の **Governance** layer 索引。river-review の運用ルール / ownership / approval / deprecation は既存 doc に分散しているため、本 index を起点に辿れるようにする。
+EOS 5-layer ([`docs/ai/eos-overview.md`](../ai/eos-overview.md)) の **Governance** layer 索引。river-review の運用ルール / ownership / approval / deprecation は既存 doc に分散しているため、本 index を起点として辿れるようにする。
 
 > 本 index は **既存 doc を移動しない**。記述の重複を避けるため、各セクションは「どこを読めばよいか」のポインタを提供する。
 

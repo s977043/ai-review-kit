@@ -128,7 +128,7 @@ PR タイトル: `Add River Review to PR & Code Review Bots`
 
 ### awesome-claude-code（hesreallyhim/awesome-claude-code）
 
-- **提出方法**: **GitHub issue フォームのみ**（[recommend-resource テンプレート](https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml)）。**PR は開かない・`gh` CLI は使わない**（CONTRIBUTING が明記、違反すると一時的な interaction 制限のリスク）。ボットがフォームを検証し、リンク先リポジトリの LICENSE を自動判定する（品質は人間が選別）。
+- **提出方法**: **GitHub issue フォームのみ**（[recommend-resource テンプレート](https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml)）。**PR を開かない・`gh` CLI も使わない**（CONTRIBUTING が明記、違反すると一時的な interaction 制限のリスク）。ボットがフォームを検証し、リンク先リポジトリの LICENSE を自動判定する（品質は人間が選別）。
 - 規約: 説明は宣伝でなく事実ベース（読者に呼びかけない）・1〜3 文・10〜500 文字・絵文字なし。README エントリは受理後に `generate_readme.py` が自動生成する。カテゴリは固定 16 択のドロップダウン。同カテゴリ内はアルファベット順。
 - 適合: **Good**（River Review は実際に Claude Code プラグイン）。
 - カテゴリ（推奨）: `Infrastructure & DevOps`（旧「Plugins / Subagents」等のセクションは廃止され話題別に再編済み）。
