@@ -110,11 +110,12 @@ No data write (adding a feedback or suppression entry, for instance) ever happen
 
 `--expires` accepts only the RFC 3339 `YYYY-MM-DD` form and the date-time form. A date-only input is read as UTC midnight and normalized to a date-time when stored, because `expiresAt` in `schemas/suppression-context.schema.json` is declared `format: date-time`.
 
-Value validation does not reach every option, though. The following three paths still exit 0, so `$?` alone does not catch them.
+Value validation does not reach every option, though. The following two paths still exit 0, so `$?` alone does not catch them.
 
 - Passing a non-existent path to `--baseline` (the regression comparison is silently skipped)
 - Passing unknown vocabulary to `--context` / `--dependency`
-- Passing an invalid value in the `RIVER_PHASE` environment variable (it silently falls back to the default `midstream`; the `--phase` CLI flag exits 1)
+
+The `RIVER_PHASE` environment variable now goes through the same vocabulary and the same case-insensitive validation as `--phase` (#1759 C2). An invalid value prints the same shape of error, `Error: RIVER_PHASE must be one of: ...`, to stderr and exits 1. Unset or empty still falls back to the default `midstream`.
 
 Option values are passed **separated by a space**. The `=`-joined form such as `--output=json` is not accepted and exits 1 as an unknown option (`--run-id=<id>` is the one legacy exception). A value that contains `=` **inside** it, as in `--artifact plan=./plan.md`, is valid.
 
