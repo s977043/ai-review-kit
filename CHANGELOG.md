@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.85.0](https://github.com/s977043/river-review/compare/v1.84.2...v1.85.0) (2026-08-18)
+
+
+### Features
+
+* **skills:** 検査器そのものの検出力を検証する detector-detection-power を追加 ([#1903](https://github.com/s977043/river-review/issues/1903)) ([52bbb54](https://github.com/s977043/river-review/commit/52bbb549f72473d550b8cb30c9f7056ad6496202))
+
 ## [1.84.2](https://github.com/s977043/river-review/compare/v1.84.1...v1.84.2) (2026-08-18)
 
 
