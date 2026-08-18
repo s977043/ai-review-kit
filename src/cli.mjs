@@ -854,6 +854,191 @@ function parseFeedbackOption(arg, args, parsed) {
   return null;
 }
 
+/**
+ * `suppression` options.
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parseSuppressionOption(arg, args, parsed) {
+  // #1709 Slice 3: every option below takes a value, and none of the
+  // `args.shift() ?? <default>` forms guarded it. A trailing `--scope`
+  // silently fell back to 'file' and a `--pr abc` was silently dropped —
+  // in both cases the suppression entry was still WRITTEN with exit 0
+  // (holes found by the Slice 2 adversarial review; pinned in the canary).
+  // Same guard shape as the feedback options below (#1717).
+  if (arg === '--fingerprint') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --fingerprint option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFingerprint = value;
+    return 'continue';
+  }
+  if (arg === '--fingerprint-algo') {
+    // #1797: opt-in selector for the line-anchored fingerprint. The
+    // default stays 'v1' so existing workflows and every entry already in
+    // `.river/memory/index.json` keep their meaning. Validated here rather
+    // than in the handler for the same reason as --severity (#1746): an
+    // unrecognized algo would otherwise be persisted and then ignored by
+    // applySuppressions, i.e. a silently inert suppression written at
+    // exit 0. Vocabulary SSoT: schemas/suppression-context.schema.json
+    // `$defs.fingerprintAlgo.enum`.
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --fingerprint-algo option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    // 大小無視で受理し、小文字化して保存する。`--severity` / `--phase` /
+    // `--fail-on` / `--warn-on` はいずれもこの形であり、ここだけ大小を
+    // 区別すると `--severity Critical` は通るのに `--fingerprint-algo V2`
+    // だけ exit 1 という非対称になる（v1.72.1 の `--phase Upstream`
+    // 誤拒否と同型の回帰）。schema の enum は小文字なので保存値も小文字。
+    const algo = value.toLowerCase();
+    if (!SUPPRESSION_FINGERPRINT_ALGOS.includes(algo)) {
+      console.error(
+        `Error: --fingerprint-algo must be one of: ${SUPPRESSION_FINGERPRINT_ALGOS.join(', ')} (got "${value}").`
+      );
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFingerprintAlgo = algo;
+    return 'continue';
+  }
+  if (arg === '--finding') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --finding option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFindingId = value;
+    return 'continue';
+  }
+  if (arg === '--feedback') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --feedback option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFeedbackType = value;
+    return 'continue';
+  }
+  if (arg === '--scope') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --scope option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionScope = value;
+    return 'continue';
+  }
+  if (arg === '--rationale') {
+    // Free text (`--rationale "-1 は誤検知"` must be accepted).
+    const taken = takeFreeTextValue(args);
+    if (taken.missing) {
+      console.error('Error: --rationale option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionRationale = taken.value;
+    return 'continue';
+  }
+  if (arg === '--severity') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --severity option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    // #1746 follow-up: Slice 3 guarded the MISSING value but not an invalid
+    // one, so `--severity BOGUS` exited 0 and persisted
+    // `context.severity: "BOGUS"` — a value the suppression-context schema
+    // rejects and which suppression-apply's SEVERITY_RANK lookup reads as
+    // undefined.
+    //
+    // Case-insensitive, storing the lowercased value: `--fail-on` /
+    // `--warn-on` take the SAME vocabulary and already lowercase before
+    // comparing, so rejecting `--severity Critical` while accepting
+    // `--fail-on CRITICAL` would be an asymmetry between two options that
+    // mean the same thing. The schema enum is lowercase, so the stored
+    // value must be too.
+    const severity = value.toLowerCase();
+    if (!SEVERITY_VALUES.includes(severity)) {
+      console.error(
+        `Error: --severity must be one of: ${SEVERITY_VALUES.join(', ')} (got "${value}").`
+      );
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionSeverity = severity;
+    return 'continue';
+  }
+  if (arg === '--files') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --files option requires a comma-separated list.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFiles = parseList(value);
+    return 'continue';
+  }
+  if (arg === '--expires') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --expires option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    // #1746 follow-up: `--expires notadate` used to be persisted verbatim as
+    // `context.expiresAt`. The expiry check compares that string against the
+    // current ISO timestamp, and an unparseable value never compares as
+    // past — the suppression would never expire.
+    //
+    // A bare `Date.parse` guard is too loose to be the fix: it also accepts
+    // `2027`, `March 5, 2027` and `2027-01-01`, and `createSuppression`
+    // stores the string verbatim, so those land in `context.expiresAt`,
+    // which schemas/suppression-context.schema.json declares as
+    // `format: date-time`. Accept only the two RFC 3339 shapes below and
+    // NORMALIZE to the same form the rest of the codebase writes
+    // (`new Date(...).toISOString()`, as in promotion-candidates.mjs), so a
+    // date-only input stays convenient AND schema-valid. Date-only inputs
+    // are read as UTC midnight — that is what `new Date('2027-01-01')`
+    // already does for the date-only ISO form.
+    const expires = parseExpiresAt(value);
+    if (!expires) {
+      console.error(
+        `Error: --expires must be an RFC 3339 date (YYYY-MM-DD) or date-time (e.g. 2027-01-01T00:00:00Z) (got "${value}").`
+      );
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionExpiresAt = expires;
+    return 'continue';
+  }
+  if (arg === '--pr') {
+    const value = args.shift();
+    // Strict parse, same shape as the feedback --pr below: parseInt('abc')
+    // used to become NaN and be dropped in silence while the entry was
+    // still written with exit 0.
+    if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+      console.error('Error: --pr option requires a positive integer.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionPrNumber = Number.parseInt(value, 10);
+    return 'continue';
+  }
+  return null;
+}
+
 function parseArgs(argv) {
   const args = [...argv];
   // Whether a positional path was taken from AFTER a POSIX `--` terminator.
@@ -1069,180 +1254,9 @@ function parseArgs(argv) {
       continue;
     }
     if (parsed.command === 'suppression') {
-      // #1709 Slice 3: every option below takes a value, and none of the
-      // `args.shift() ?? <default>` forms guarded it. A trailing `--scope`
-      // silently fell back to 'file' and a `--pr abc` was silently dropped —
-      // in both cases the suppression entry was still WRITTEN with exit 0
-      // (holes found by the Slice 2 adversarial review; pinned in the canary).
-      // Same guard shape as the feedback options below (#1717).
-      if (arg === '--fingerprint') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --fingerprint option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFingerprint = value;
-        continue;
-      }
-      if (arg === '--fingerprint-algo') {
-        // #1797: opt-in selector for the line-anchored fingerprint. The
-        // default stays 'v1' so existing workflows and every entry already in
-        // `.river/memory/index.json` keep their meaning. Validated here rather
-        // than in the handler for the same reason as --severity (#1746): an
-        // unrecognized algo would otherwise be persisted and then ignored by
-        // applySuppressions, i.e. a silently inert suppression written at
-        // exit 0. Vocabulary SSoT: schemas/suppression-context.schema.json
-        // `$defs.fingerprintAlgo.enum`.
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --fingerprint-algo option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        // 大小無視で受理し、小文字化して保存する。`--severity` / `--phase` /
-        // `--fail-on` / `--warn-on` はいずれもこの形であり、ここだけ大小を
-        // 区別すると `--severity Critical` は通るのに `--fingerprint-algo V2`
-        // だけ exit 1 という非対称になる（v1.72.1 の `--phase Upstream`
-        // 誤拒否と同型の回帰）。schema の enum は小文字なので保存値も小文字。
-        const algo = value.toLowerCase();
-        if (!SUPPRESSION_FINGERPRINT_ALGOS.includes(algo)) {
-          console.error(
-            `Error: --fingerprint-algo must be one of: ${SUPPRESSION_FINGERPRINT_ALGOS.join(', ')} (got "${value}").`
-          );
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFingerprintAlgo = algo;
-        continue;
-      }
-      if (arg === '--finding') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --finding option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFindingId = value;
-        continue;
-      }
-      if (arg === '--feedback') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --feedback option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFeedbackType = value;
-        continue;
-      }
-      if (arg === '--scope') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --scope option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionScope = value;
-        continue;
-      }
-      if (arg === '--rationale') {
-        // Free text (`--rationale "-1 は誤検知"` must be accepted).
-        const taken = takeFreeTextValue(args);
-        if (taken.missing) {
-          console.error('Error: --rationale option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionRationale = taken.value;
-        continue;
-      }
-      if (arg === '--severity') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --severity option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        // #1746 follow-up: Slice 3 guarded the MISSING value but not an invalid
-        // one, so `--severity BOGUS` exited 0 and persisted
-        // `context.severity: "BOGUS"` — a value the suppression-context schema
-        // rejects and which suppression-apply's SEVERITY_RANK lookup reads as
-        // undefined.
-        //
-        // Case-insensitive, storing the lowercased value: `--fail-on` /
-        // `--warn-on` take the SAME vocabulary and already lowercase before
-        // comparing, so rejecting `--severity Critical` while accepting
-        // `--fail-on CRITICAL` would be an asymmetry between two options that
-        // mean the same thing. The schema enum is lowercase, so the stored
-        // value must be too.
-        const severity = value.toLowerCase();
-        if (!SEVERITY_VALUES.includes(severity)) {
-          console.error(
-            `Error: --severity must be one of: ${SEVERITY_VALUES.join(', ')} (got "${value}").`
-          );
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionSeverity = severity;
-        continue;
-      }
-      if (arg === '--files') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --files option requires a comma-separated list.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFiles = parseList(value);
-        continue;
-      }
-      if (arg === '--expires') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --expires option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        // #1746 follow-up: `--expires notadate` used to be persisted verbatim as
-        // `context.expiresAt`. The expiry check compares that string against the
-        // current ISO timestamp, and an unparseable value never compares as
-        // past — the suppression would never expire.
-        //
-        // A bare `Date.parse` guard is too loose to be the fix: it also accepts
-        // `2027`, `March 5, 2027` and `2027-01-01`, and `createSuppression`
-        // stores the string verbatim, so those land in `context.expiresAt`,
-        // which schemas/suppression-context.schema.json declares as
-        // `format: date-time`. Accept only the two RFC 3339 shapes below and
-        // NORMALIZE to the same form the rest of the codebase writes
-        // (`new Date(...).toISOString()`, as in promotion-candidates.mjs), so a
-        // date-only input stays convenient AND schema-valid. Date-only inputs
-        // are read as UTC midnight — that is what `new Date('2027-01-01')`
-        // already does for the date-only ISO form.
-        const expires = parseExpiresAt(value);
-        if (!expires) {
-          console.error(
-            `Error: --expires must be an RFC 3339 date (YYYY-MM-DD) or date-time (e.g. 2027-01-01T00:00:00Z) (got "${value}").`
-          );
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionExpiresAt = expires;
-        continue;
-      }
-      if (arg === '--pr') {
-        const value = args.shift();
-        // Strict parse, same shape as the feedback --pr below: parseInt('abc')
-        // used to become NaN and be dropped in silence while the entry was
-        // still written with exit 0.
-        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
-          console.error('Error: --pr option requires a positive integer.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionPrNumber = Number.parseInt(value, 10);
-        continue;
-      }
+      const outcome = parseSuppressionOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (parsed.command === 'skills' && parsed.skillsSubcommand === 'resolve') {
       const outcome = parseSkillsResolveOption(arg, args, parsed);
