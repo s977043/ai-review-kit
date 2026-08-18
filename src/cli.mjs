@@ -706,6 +706,30 @@ function parseEvolveOption(arg, args, parsed) {
 }
 
 /**
+ * `runs` positional run-ID collector (#1759 B2).
+ *
+ * Only `runs diff` takes positionals (two or more run IDs), and they may
+ * appear before, after, or interleaved with options such as `--output json`.
+ * Every non-option token seen while `diff` is the active subcommand is a run
+ * ID; option tokens (`--output` and any future runs option) are left
+ * untouched here so the shared handlers below (or the final unknown-option
+ * catch-all) process them exactly as they do for every other command.
+ *
+ * @param {string} arg
+ * @param {string[]} args - unused; kept for signature parity with the other
+ *   `parse*Option` dispatchers (`parsePromoteOption` etc. all take this shape).
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parseRunsOption(arg, args, parsed) {
+  if (parsed.runsSubcommand !== 'diff' || arg.startsWith('-')) return null;
+  parsed.runsIds.push(arg);
+  if (parsed.runsId1 === null) parsed.runsId1 = arg;
+  else if (parsed.runsId2 === null) parsed.runsId2 = arg;
+  return 'continue';
+}
+
+/**
  * `feedback` options.
  * @param {string} arg
  * @param {string[]} args
@@ -1222,17 +1246,14 @@ function parseArgs(argv) {
         }
       } else if (arg === 'runs' && args[0] && !args[0].startsWith('-')) {
         parsed.runsSubcommand = args.shift(); // list | diff | summary | digest
-        // diff takes two or more positional run IDs
-        if (parsed.runsSubcommand === 'diff') {
-          parsed.runsId1 = args.shift() ?? null;
-          parsed.runsId2 = args.shift() ?? null;
-          // Collect any additional run IDs for multi-run oscillation detection
-          const extra = [];
-          while (args.length && !args[0].startsWith('-')) {
-            extra.push(args.shift());
-          }
-          parsed.runsIds = [parsed.runsId1, parsed.runsId2, ...extra].filter(Boolean);
-        }
+        // `diff` takes two or more positional run IDs, which may be written
+        // before, after, or interleaved with options (e.g. `--output json`).
+        // Collecting them eagerly here (as a fixed shift-two-then-scan) used to
+        // swallow a leading option as a run ID (#1759 B2): `runs diff --output
+        // json r1 r2` shifted "--output" into runsId1 and "json" into runsId2,
+        // then tried to open a run named "--output" and exited 1 with ENOENT.
+        // Collection now happens token-by-token below (near the promote/evolve
+        // dispatches), so options are left for the shared option handlers.
       } else if (arg === 'suppression' && args[0] && !args[0].startsWith('-')) {
         parsed.suppressionSubcommand = args.shift(); // add (only one for now)
       } else if (arg === 'feedback' && args[0] && !args[0].startsWith('-')) {
@@ -1275,6 +1296,11 @@ function parseArgs(argv) {
     }
     if (parsed.command === 'evolve') {
       const outcome = parseEvolveOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
+    }
+    if (parsed.command === 'runs') {
+      const outcome = parseRunsOption(arg, args, parsed);
       if (outcome === 'continue') continue;
       if (outcome === 'break') break;
     }
