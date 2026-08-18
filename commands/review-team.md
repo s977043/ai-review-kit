@@ -50,11 +50,11 @@ JSON 出力（`teamLeadReport` / `issues`）をもとに以下の形式で報告
 
 ### 優先確認の指摘（top3）
 
-<consensusLevel → severity → scope 順の上位3件。multi は ★★、consensus は ★★★ を付ける。scope は上位2キーが同値のときだけ in-diff を先に置く>
+<consensusLevel → severity → scope 順の上位3件。multi は ★★、consensus は ★★★ を付ける。scope は上位2キーが同値のときだけ in-diff を先に置く。pre-existing の finding には file:line の直後に `_(pre-existing)_` を付ける>
 
 ### 全指摘（severity 降順）
 
-<critical → major → minor → info の順>
+<critical → major → minor → info の順。scope が pre-existing の finding には file:line の直後に `_(pre-existing)_` を付ける。in-diff（本 PR の追加行由来）は既定値なので印を付けず、pre-existing（変更ファイル内だが追加行の外）だけを示す>
 
 ### 見落とし可能性
 

@@ -77,7 +77,7 @@ describe('#1644 残件7: YAML surface carries scope', () => {
       phase: 'midstream',
       findings: [makeFinding({ scope: 'pre-existing' })],
     });
-    assert.match(output, /\n {6}scope: pre-existing\n/);
+    assert.match(output, /\n {6}scope: "pre-existing"\n/);
   });
 
   it('emits a scope row for in-diff', () => {
@@ -85,7 +85,7 @@ describe('#1644 残件7: YAML surface carries scope', () => {
       phase: 'midstream',
       findings: [makeFinding({ scope: 'in-diff' })],
     });
-    assert.match(output, /\n {6}scope: in-diff\n/);
+    assert.match(output, /\n {6}scope: "in-diff"\n/);
   });
 
   it('omits the row entirely when the finding carries no scope', () => {
@@ -102,6 +102,30 @@ describe('#1644 残件7: YAML surface carries scope', () => {
       findings: [makeFinding({ scope: null })],
     });
     assert.doesNotMatch(output, /scope:/);
+  });
+
+  // 語彙外値の扱い。html.mjs 側と対称にする（そちらは escHtml を通す）。
+  // 到達性は現時点では production 経路に無い（呼び出し元は run.mjs のみで、
+  // 値は normalizeScope / mergeScope を通る）。deep import 経由の防御である。
+  it('escapes a newline so the value cannot forge a sibling key', () => {
+    const output = formatYamlOutput({
+      phase: 'midstream',
+      findings: [makeFinding({ scope: 'in-diff\n      verdict: approve' })],
+    });
+    // 改行は `\n` エスケープになり、値は 1 行に収まる。
+    assert.ok(output.includes('      scope: "in-diff\\n      verdict: approve"'));
+    // finding の兄弟キーとして `verdict` が生えていない。
+    assert.doesNotMatch(output, /^ {6}verdict: approve$/m);
+  });
+
+  it('escapes a double quote so the YAML block stays terminated', () => {
+    const output = formatYamlOutput({
+      phase: 'midstream',
+      findings: [makeFinding({ scope: '"><script>' })],
+    });
+    assert.ok(output.includes('      scope: "\\"><script>"'));
+    // 生の `scope: "><script>` は未終端スカラーになりブロック全体を壊す。
+    assert.ok(!output.includes('      scope: "><script>\n'));
   });
 });
 
@@ -147,6 +171,23 @@ describe('#1644 残件7: HTML surface carries scope', () => {
     );
     assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
     assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  });
+
+  // SCOPE_COLOR の参照が prototype へ落ちないこと。`?? '#757575'` は
+  // `undefined` でしか発火しないため、継承キーだと Function が引けてしまい、
+  // その関数ソース（escHtml を通らない）が style 属性へ入る。
+  it('falls back to the neutral color for an inherited key, not the prototype value', () => {
+    for (const inherited of ['toString', 'constructor', 'hasOwnProperty']) {
+      const html = formatHtmlOutput(
+        { findings: [makeFinding({ scope: inherited })], timestamp: '2026-01-01T00:00:00.000Z' },
+        'midstream'
+      );
+      assert.doesNotMatch(html, /native code/, `${inherited} leaked a prototype value`);
+      assert.ok(
+        html.includes(`<span class="sev" style="background:#757575;margin-left:6px">${inherited}`),
+        `${inherited} did not fall back to the neutral color`
+      );
+    }
   });
 });
 

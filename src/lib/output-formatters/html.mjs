@@ -198,8 +198,13 @@ export function formatHtmlOutput(result, phase) {
       // It reuses the existing `.sev` chip style rather than adding a rule to
       // INLINE_STYLE, so a scope-less result stays byte-identical to before
       // (pinned by tests/render-markdown-digest.test.mjs).
+      // `Object.hasOwn` rather than `?? '#757575'`: `??` only fires on
+      // `undefined`, so an inherited key (`toString`, `constructor`) resolves to
+      // a Function and puts its source text into the style attribute unescaped
+      // — measured, and the opposite of what SCOPE_COLOR's fallback promises.
+      const scopeColor = Object.hasOwn(SCOPE_COLOR, f.scope) ? SCOPE_COLOR[f.scope] : '#757575';
       const scopeChip = f.scope
-        ? `<span class="sev" style="background:${SCOPE_COLOR[f.scope] ?? '#757575'};margin-left:6px">${escHtml(f.scope)}</span>`
+        ? `<span class="sev" style="background:${scopeColor};margin-left:6px">${escHtml(f.scope)}</span>`
         : '';
       parts.push(
         `<td><span class="sev" style="background:${color}">${escHtml(sev)}</span>${scopeChip}</td>`

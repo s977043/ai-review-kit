@@ -92,7 +92,7 @@
 
 > `scope` は additive なメタデータです（#1644 Phase 1）。verifier がパース済み差分の追加行と finding の行範囲を突き合わせて決定論的に判定し、判定できない場合のみレビュアーの自己申告（`Scope:` ラベル）を採用します。追加行のみが `in-diff` であり、unified diff の context 行は `pre-existing` として扱います（行の許容幅は 0）。未指定・不明値は fail-safe の `in-diff` とし、指摘を目立たない側へ降格させません。severity やゲート判定を上書きしてはいけません。
 >
-> `scope` を出力する形式は JSON（`output.schema.json` が規定する成果物）・YAML・HTML の 3 つです。いずれも、finding が値を持つ場合にのみキーが現れます。欠損時に `null` や空文字は出しません。Markdown（`--output markdown`）だけは既定値の `in-diff` へ印を付けず、`pre-existing` のみ `_(pre-existing)_` と表示します（既定値は全 finding に付くため、印がノイズになります）。インライン PR コメントの pre-existing 折りたたみは別 PR（#1644 残件 6）が扱います。
+> `scope` を出力する形式は JSON（`output.schema.json` が規定する成果物）・YAML・HTML の 3 つです。いずれも、finding が値を持つ場合にのみキーが現れます。欠損時に `null` や空文字は出しません。Markdown（`--output markdown`）だけは既定値の `in-diff` へ印を付けず、`pre-existing` のみ `_(pre-existing)_` と表示します（既定値は全 finding に付くため、印がノイズになります）。スキル駆動の `/review-team` レポートテンプレート（`commands/review-team.md`）も同じ印を使います。インライン PR コメントの pre-existing 折りたたみは別 PR（#1644 残件 6）が扱います。
 >
 > `criterionRefs` / `artifactRefs` は additive なトレーサビリティ用メタデータです（#1666 / #1545 Phase 2）。`Specification → AC → Task → Diff → Test/JUnit → Finding` のうち `Test/AC → Finding` の逆参照を成立させます。
 >
