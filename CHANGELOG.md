@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.85.2](https://github.com/s977043/river-review/compare/v1.85.1...v1.85.2) (2026-08-18)
+
+
+### Bug Fixes
+
+* **cli:** RIVER_PHASE を --phase と同じ検証・語彙で受理する ([#1759](https://github.com/s977043/river-review/issues/1759) C2) ([#1911](https://github.com/s977043/river-review/issues/1911)) ([cf697ac](https://github.com/s977043/river-review/commit/cf697ac093db66c91ea36a28b2276a4aed533d5f))
+
 ## [1.85.1](https://github.com/s977043/river-review/compare/v1.85.0...v1.85.1) (2026-08-18)
 
 
