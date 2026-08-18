@@ -1087,11 +1087,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // 「フラグ先行形を拒否」も v1.72.1 の「`--phase Upstream` を誤拒否」も
   // 壊したのは**成功側**であり、守りが薄いのは逆だった。行を消すだけで
   // 黙って保護が減るのを防ぐ。
-  test('the success-side table pins 83 legitimate argv forms', () => {
+  test('the success-side table pins 84 legitimate argv forms', () => {
     assert.equal(
       VALID_CASES.length,
-      83,
-      'コマンド面ごとの正常形: run 12 / doctor 5 / skills 13 / runs 6 / review 19 / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 9 / help 2 / コマンド無し 1'
+      84,
+      'コマンド面ごとの正常形: run 12 / doctor 5 / skills 13 / runs 7 (#1759 B2 で1行追加) / review 19 / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 9 / help 2 / コマンド無し 1'
     );
   });
 
@@ -1259,6 +1259,15 @@ const VALID_CASES = [
   { argv: ['skills', 'resolve', '--path', 'a.js', '--path', 'b.js'], command: 'skills' },
   { argv: ['runs', 'list', '--output', 'json'], command: 'runs' },
   { argv: ['runs', 'diff', 'id1', 'id2', 'id3'], command: 'runs' },
+  {
+    // #1759 B2: `--output json` written BEFORE the run IDs used to be
+    // swallowed as runId1/runId2 ("--output" became a run ID, "json" the
+    // other), leaving `output` at its default `text`. Pin the option and the
+    // two run IDs resolving correctly regardless of order.
+    argv: ['runs', 'diff', '--output', 'json', 'r1', 'r2'],
+    command: 'runs',
+    expect: { runsId1: 'r1', runsId2: 'r2', output: 'json' },
+  },
   { argv: ['runs', 'summary'], command: 'runs' },
   { argv: ['runs', 'digest'], command: 'runs' },
   {
