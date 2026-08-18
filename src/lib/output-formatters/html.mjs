@@ -31,6 +31,16 @@ const SEVERITY_COLOR = {
   info: '#1565c0',
 };
 
+/**
+ * #1644: chip colors for the finding scope. Keys mirror FINDING_SCOPES in
+ * src/lib/finding-factory.mjs; an unknown value falls back to the neutral grey
+ * rather than being dropped, so the report never hides a value the artifact has.
+ */
+const SCOPE_COLOR = {
+  'in-diff': '#37474f',
+  'pre-existing': '#9e9e9e',
+};
+
 const DECISION_CONFIG = {
   'auto-approve': { bg: '#e8f5e9', border: '#2e7d32', icon: '✓', label: 'Auto Approve' },
   'human-review-recommended': {
@@ -181,7 +191,24 @@ export function formatHtmlOutput(result, phase) {
       const lineNum = f.lineStart ?? f.line;
       const fileRef = f.file ? (lineNum ? `${f.file}:${lineNum}` : f.file) : '';
       parts.push('<tr>');
-      parts.push(`<td><span class="sev" style="background:${color}">${escHtml(sev)}</span></td>`);
+      // #1644: the scope chip shares the severity cell so the column layout is
+      // unchanged, and it follows the JSON artifact's emission rule
+      // (src/cli/render.mjs, `...(f.scope ? { scope: f.scope } : {})`): rendered
+      // only when the finding carries a value, never as an empty placeholder.
+      // It reuses the existing `.sev` chip style rather than adding a rule to
+      // INLINE_STYLE, so a scope-less result stays byte-identical to before
+      // (pinned by tests/render-markdown-digest.test.mjs).
+      // `Object.hasOwn` rather than `?? '#757575'`: `??` only fires on
+      // `undefined`, so an inherited key (`toString`, `constructor`) resolves to
+      // a Function and puts its source text into the style attribute unescaped
+      // — measured, and the opposite of what SCOPE_COLOR's fallback promises.
+      const scopeColor = Object.hasOwn(SCOPE_COLOR, f.scope) ? SCOPE_COLOR[f.scope] : '#757575';
+      const scopeChip = f.scope
+        ? `<span class="sev" style="background:${scopeColor};margin-left:6px">${escHtml(f.scope)}</span>`
+        : '';
+      parts.push(
+        `<td><span class="sev" style="background:${color}">${escHtml(sev)}</span>${scopeChip}</td>`
+      );
       parts.push(`<td><code>${escHtml(fileRef)}</code></td>`);
       parts.push(`<td>${escHtml(f.title ?? '')}</td>`);
       parts.push(`<td><pre>${escHtml(f.message ?? '')}</pre></td>`);

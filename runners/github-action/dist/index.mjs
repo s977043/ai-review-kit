@@ -70599,11 +70599,30 @@ function sanitizeForMarkdown(text) {
     .replace(/\n/g, ' ');
 }
 
+/**
+ * #1644: markdown marks `pre-existing` only, unlike JSON / YAML / HTML which
+ * emit whichever value the finding carries.
+ *
+ * The asymmetry is deliberate. `in-diff` is both the default and the fail-safe
+ * for a missing or unknown value (DEFAULT_FINDING_SCOPE in
+ * src/lib/finding-factory.mjs), so every engine-produced finding carries a
+ * scope and marking both values would put a badge on every line of the PR
+ * comment while distinguishing nothing. The consumer need this issue describes
+ * is the opposite one: spotting the findings that should NOT drive changes in
+ * this PR. Marking only the non-default value serves that with no added noise.
+ * The structured surfaces keep both values because a machine reader cannot tell
+ * "absent because in-diff" from "absent because the producer predates the
+ * field".
+ */
+function formatScopeMarkerMarkdown(scope) {
+  return scope === 'pre-existing' ? ' _(pre-existing)_' : '';
+}
+
 function formatCommentLine(entry) {
   const comment = entry.comment ?? entry;
-  return `- \`${neutralizeDetailsMarkup(comment.file)}:${comment.line}\`${neutralizeDetailsMarkup(
-    formatMessageForMarkdown(comment.message)
-  )}`;
+  return `- \`${neutralizeDetailsMarkup(comment.file)}:${comment.line}\`${formatScopeMarkerMarkdown(
+    comment.scope
+  )}${neutralizeDetailsMarkup(formatMessageForMarkdown(comment.message))}`;
 }
 
 /**
@@ -71397,7 +71416,9 @@ function formatJsonOutput(result, phase) {
       ...(f.consensusLevel ? { consensusLevel: f.consensusLevel } : {}),
       // #1644 Phase 1: the JSON output is the artifact governed by
       // output.schema.json, so `scope` must reach it for the schema field to be
-      // observable at all. yaml/html surfaces stay unchanged (Phase 2).
+      // observable at all. This guard is the emission rule the yaml and html
+      // formatters now mirror (#1644 残件7): key present only when the finding
+      // carries a value.
       ...(f.scope ? { scope: f.scope } : {}),
       // #1666 (#1545 Phase 2): same reachability rule as `scope` — a schema
       // field that stops at the finding object is an unreachable spec. Guard on
