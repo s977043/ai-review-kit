@@ -506,6 +506,539 @@ function takeFreeTextValue(args) {
   return { value: args.shift() };
 }
 
+/**
+ * Command-scoped option handlers extracted out of `parseArgs`' `while` loop.
+ *
+ * Each handler receives the token just shifted off (`arg`), the REMAINING argv
+ * (`args`, mutated in place when the handler consumes a value) and the result
+ * object (`parsed`, mutated in place). The return value names the statement the
+ * CALLER must run against the loop, because a `continue` / `break` inside a
+ * helper cannot reach the loop it was lifted out of:
+ *
+ *   'continue' – the token was this command's and is fully handled.
+ *   'break'    – a usage error was reported; stop parsing.
+ *   null       – not this command's token; fall through to the shared parser.
+ *
+ * The handlers are behaviour-identical to the inline blocks they replace; the
+ * guard that selects them (`parsed.command === '<cmd>'`) stays at the call site
+ * so the dispatch order remains readable in `parseArgs`.
+ * @typedef {'continue' | 'break' | null} OptionOutcome
+ */
+
+/**
+ * `skills resolve --path <p>` (repeatable).
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parseSkillsResolveOption(arg, args, parsed) {
+  if (arg === '--path') {
+    parsed.resolvePaths = parsed.resolvePaths ?? [];
+    const v = args.shift();
+    if (v) parsed.resolvePaths.push(v);
+    return 'continue';
+  }
+  return null;
+}
+
+/**
+ * `promote` options.
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parsePromoteOption(arg, args, parsed) {
+  if (arg === '--approver') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --approver option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteApprover = value;
+    return 'continue';
+  }
+  if (arg === '--reason') {
+    // Free text (approval / rejection prose written by a human).
+    const taken = takeFreeTextValue(args);
+    if (taken.missing) {
+      console.error('Error: --reason option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteReason = taken.value;
+    return 'continue';
+  }
+  if (arg === '--index') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --index option requires a path.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteIndex = value;
+    return 'continue';
+  }
+  if (arg === '--include-inactive') {
+    parsed.promoteIncludeInactive = true;
+    return 'continue';
+  }
+  if (arg === '--threshold') {
+    const value = args.shift();
+    // Strict parse: parseInt('2garbage') is 2, so a typo would silently
+    // become a different threshold than the one that was typed.
+    if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+      console.error('Error: --threshold option requires a positive integer.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteThreshold = Number.parseInt(value, 10);
+    return 'continue';
+  }
+  if (arg === '--feedback-root') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --feedback-root option requires a path.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteFeedbackRoot = value;
+    return 'continue';
+  }
+  if (arg === '--input') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --input option requires a JSONL path.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteInput = value;
+    return 'continue';
+  }
+  if (arg === '--cluster-key') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --cluster-key option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promoteClusterKey = value;
+    return 'continue';
+  }
+  if (arg === '--policy-version') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --policy-version option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.promotePolicyVersion = value;
+    return 'continue';
+  }
+  // Options that are neither promote's own nor handled by the shared parser
+  // must fail loudly instead of being ignored (a mistyped `--dry-rnu` would
+  // otherwise write the Riverbed index for real).
+  if (arg.startsWith('-') && !PROMOTE_SHARED_OPTIONS.has(arg)) {
+    parsed.promoteUnknownOption = arg;
+    return 'break';
+  }
+  return null;
+}
+
+/**
+ * `evolve` options.
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parseEvolveOption(arg, args, parsed) {
+  if (arg === '--min') {
+    const value = args.shift();
+    // Strict parse, same reason as promote's --threshold above.
+    if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+      console.error('Error: --min option requires a positive integer.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.evolveMin = Number.parseInt(value, 10);
+    return 'continue';
+  }
+  if (arg === '--month') {
+    const value = args.shift();
+    if (!value || !/^\d{4}-\d{2}$/.test(value)) {
+      console.error('Error: --month option requires a YYYY-MM value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.evolveMonth = value;
+    return 'continue';
+  }
+  if (arg === '--spec') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --spec option requires a file path.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.evolveSpec = value;
+    return 'continue';
+  }
+  if (arg === '--expect-manifest') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --expect-manifest option requires a manifest id or hash.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.evolveExpectManifest = value;
+    return 'continue';
+  }
+  // Options that are not evolve's own and not handled by the shared parser
+  // below must fail loudly instead of being ignored.
+  if (arg.startsWith('-') && !EVOLVE_SHARED_OPTIONS.has(arg)) {
+    parsed.evolveUnknownOption = arg;
+    return 'break';
+  }
+  return null;
+}
+
+/**
+ * `feedback` options.
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parseFeedbackOption(arg, args, parsed) {
+  // #1717: every option below takes a value, and `args.shift() ?? null`
+  // guarded none of them. A missing value consumed the FOLLOWING flag as
+  // this option's value (so `--pr --evidence x` lost both at once), and a
+  // value that failed validation was dropped in silence while the entry was
+  // still written. Each option now rejects a missing value / a following
+  // flag up front with the same `!value || value.startsWith('-')` guard the
+  // --reviewer / --model / --run-id options below already use. The
+  // option-error convention itself (stderr message + help) is unchanged;
+  // unifying its exit code is #1709.
+  if (arg === '--type') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --type option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackType = value;
+    return 'continue';
+  }
+  if (arg === '--skill') {
+    const value = args.shift();
+    // `--skill --pr 123` used to record skillId:"--pr": a flag is a
+    // non-empty string, so buildFeedbackEntry's "skillId is required."
+    // check accepted it and wrote the entry.
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --skill option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackSkillId = value;
+    return 'continue';
+  }
+  if (arg === '--trigger') {
+    const value = args.shift();
+    // A trailing `--trigger` used to null the field, which the handler maps
+    // back to undefined — so the entry was written with the DEFAULT trigger
+    // instead of the one the caller meant to set.
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --trigger option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackTrigger = value;
+    return 'continue';
+  }
+  if (arg === '--fingerprint') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --fingerprint option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackFingerprint = value;
+    return 'continue';
+  }
+  if (arg === '--evidence') {
+    // Free text. `--evidence --pr 123` (recording evidence:"--pr" and
+    // dropping the pr, #1717) stays blocked because takeFreeTextValue
+    // treats a recognized option token as a missing value.
+    const taken = takeFreeTextValue(args);
+    if (taken.missing) {
+      console.error('Error: --evidence option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackEvidence = taken.value;
+    return 'continue';
+  }
+  if (arg === '--pr') {
+    const value = args.shift();
+    // Strict parse, same shape as --threshold (#1658): parseInt('12abc') is
+    // 12 and parseInt('1.5') is 1, so a typo silently recorded a DIFFERENT
+    // pr than the one that was typed, while 'abc' / 0 / -5 / a following
+    // flag all became pr:null on an entry that was still written (exit 0).
+    // `pr` is one half of the occurrence key (review_run_id, pr), so a null
+    // or wrong value skews the repetition denominator downstream (#1717).
+    if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+      console.error('Error: --pr option requires a positive integer.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackPrNumber = Number.parseInt(value, 10);
+    return 'continue';
+  }
+  if (arg === '--reviewer') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --reviewer option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackReviewer = value;
+    return 'continue';
+  }
+  if (arg === '--model') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --model option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackModel = value;
+    return 'continue';
+  }
+  if (arg === '--reversed-by') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --reversed-by option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackReversedBy = value;
+    return 'continue';
+  }
+  // #1673: the run this feedback refers to. Only an explicit id is
+  // accepted — resolving "the latest run" implicitly would attach evidence
+  // to an unrelated run.
+  //
+  // Two silent-miss paths this parse deliberately closes, both of which
+  // exited 0 while writing an entry with no `review_run_id` (so the loss
+  // only surfaced much later as joinedFeedbackCount staying at 0):
+  //   1. `--run-id=<id>`: the token never equals '--run-id', so an
+  //      equals-form value fell through and was dropped.
+  //   2. `--run-id "   "`: whitespace passes a truthiness check, then
+  //      normalizeOptionalString() nulls it out downstream.
+  // The `=` form is scoped to THIS option on purpose; extending it to
+  // --reviewer / --model / --reversed-by would change their behaviour and
+  // is out of scope here.
+  if (arg === '--run-id' || arg.startsWith('--run-id=')) {
+    const value = arg.startsWith('--run-id=') ? arg.slice('--run-id='.length) : args.shift();
+    if (!value || !value.trim() || value.startsWith('-')) {
+      console.error('Error: --run-id option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.feedbackRunId = value;
+    return 'continue';
+  }
+  return null;
+}
+
+/**
+ * `suppression` options.
+ * @param {string} arg
+ * @param {string[]} args
+ * @param {Record<string, any>} parsed
+ * @returns {OptionOutcome}
+ */
+function parseSuppressionOption(arg, args, parsed) {
+  // #1709 Slice 3: every option below takes a value, and none of the
+  // `args.shift() ?? <default>` forms guarded it. A trailing `--scope`
+  // silently fell back to 'file' and a `--pr abc` was silently dropped —
+  // in both cases the suppression entry was still WRITTEN with exit 0
+  // (holes found by the Slice 2 adversarial review; pinned in the canary).
+  // Same guard shape as the feedback options below (#1717).
+  if (arg === '--fingerprint') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --fingerprint option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFingerprint = value;
+    return 'continue';
+  }
+  if (arg === '--fingerprint-algo') {
+    // #1797: opt-in selector for the line-anchored fingerprint. The
+    // default stays 'v1' so existing workflows and every entry already in
+    // `.river/memory/index.json` keep their meaning. Validated here rather
+    // than in the handler for the same reason as --severity (#1746): an
+    // unrecognized algo would otherwise be persisted and then ignored by
+    // applySuppressions, i.e. a silently inert suppression written at
+    // exit 0. Vocabulary SSoT: schemas/suppression-context.schema.json
+    // `$defs.fingerprintAlgo.enum`.
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --fingerprint-algo option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    // 大小無視で受理し、小文字化して保存する。`--severity` / `--phase` /
+    // `--fail-on` / `--warn-on` はいずれもこの形であり、ここだけ大小を
+    // 区別すると `--severity Critical` は通るのに `--fingerprint-algo V2`
+    // だけ exit 1 という非対称になる（v1.72.1 の `--phase Upstream`
+    // 誤拒否と同型の回帰）。schema の enum は小文字なので保存値も小文字。
+    const algo = value.toLowerCase();
+    if (!SUPPRESSION_FINGERPRINT_ALGOS.includes(algo)) {
+      console.error(
+        `Error: --fingerprint-algo must be one of: ${SUPPRESSION_FINGERPRINT_ALGOS.join(', ')} (got "${value}").`
+      );
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFingerprintAlgo = algo;
+    return 'continue';
+  }
+  if (arg === '--finding') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --finding option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFindingId = value;
+    return 'continue';
+  }
+  if (arg === '--feedback') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --feedback option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFeedbackType = value;
+    return 'continue';
+  }
+  if (arg === '--scope') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --scope option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionScope = value;
+    return 'continue';
+  }
+  if (arg === '--rationale') {
+    // Free text (`--rationale "-1 は誤検知"` must be accepted).
+    const taken = takeFreeTextValue(args);
+    if (taken.missing) {
+      console.error('Error: --rationale option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionRationale = taken.value;
+    return 'continue';
+  }
+  if (arg === '--severity') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --severity option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    // #1746 follow-up: Slice 3 guarded the MISSING value but not an invalid
+    // one, so `--severity BOGUS` exited 0 and persisted
+    // `context.severity: "BOGUS"` — a value the suppression-context schema
+    // rejects and which suppression-apply's SEVERITY_RANK lookup reads as
+    // undefined.
+    //
+    // Case-insensitive, storing the lowercased value: `--fail-on` /
+    // `--warn-on` take the SAME vocabulary and already lowercase before
+    // comparing, so rejecting `--severity Critical` while accepting
+    // `--fail-on CRITICAL` would be an asymmetry between two options that
+    // mean the same thing. The schema enum is lowercase, so the stored
+    // value must be too.
+    const severity = value.toLowerCase();
+    if (!SEVERITY_VALUES.includes(severity)) {
+      console.error(
+        `Error: --severity must be one of: ${SEVERITY_VALUES.join(', ')} (got "${value}").`
+      );
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionSeverity = severity;
+    return 'continue';
+  }
+  if (arg === '--files') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --files option requires a comma-separated list.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionFiles = parseList(value);
+    return 'continue';
+  }
+  if (arg === '--expires') {
+    const value = args.shift();
+    if (!value || value.startsWith('-')) {
+      console.error('Error: --expires option requires a value.');
+      usageError(parsed);
+      return 'break';
+    }
+    // #1746 follow-up: `--expires notadate` used to be persisted verbatim as
+    // `context.expiresAt`. The expiry check compares that string against the
+    // current ISO timestamp, and an unparseable value never compares as
+    // past — the suppression would never expire.
+    //
+    // A bare `Date.parse` guard is too loose to be the fix: it also accepts
+    // `2027`, `March 5, 2027` and `2027-01-01`, and `createSuppression`
+    // stores the string verbatim, so those land in `context.expiresAt`,
+    // which schemas/suppression-context.schema.json declares as
+    // `format: date-time`. Accept only the two RFC 3339 shapes below and
+    // NORMALIZE to the same form the rest of the codebase writes
+    // (`new Date(...).toISOString()`, as in promotion-candidates.mjs), so a
+    // date-only input stays convenient AND schema-valid. Date-only inputs
+    // are read as UTC midnight — that is what `new Date('2027-01-01')`
+    // already does for the date-only ISO form.
+    const expires = parseExpiresAt(value);
+    if (!expires) {
+      console.error(
+        `Error: --expires must be an RFC 3339 date (YYYY-MM-DD) or date-time (e.g. 2027-01-01T00:00:00Z) (got "${value}").`
+      );
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionExpiresAt = expires;
+    return 'continue';
+  }
+  if (arg === '--pr') {
+    const value = args.shift();
+    // Strict parse, same shape as the feedback --pr below: parseInt('abc')
+    // used to become NaN and be dropped in silence while the entry was
+    // still written with exit 0.
+    if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+      console.error('Error: --pr option requires a positive integer.');
+      usageError(parsed);
+      return 'break';
+    }
+    parsed.suppressionPrNumber = Number.parseInt(value, 10);
+    return 'continue';
+  }
+  return null;
+}
+
 function parseArgs(argv) {
   const args = [...argv];
   // Whether a positional path was taken from AFTER a POSIX `--` terminator.
@@ -721,473 +1254,29 @@ function parseArgs(argv) {
       continue;
     }
     if (parsed.command === 'suppression') {
-      // #1709 Slice 3: every option below takes a value, and none of the
-      // `args.shift() ?? <default>` forms guarded it. A trailing `--scope`
-      // silently fell back to 'file' and a `--pr abc` was silently dropped —
-      // in both cases the suppression entry was still WRITTEN with exit 0
-      // (holes found by the Slice 2 adversarial review; pinned in the canary).
-      // Same guard shape as the feedback options below (#1717).
-      if (arg === '--fingerprint') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --fingerprint option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFingerprint = value;
-        continue;
-      }
-      if (arg === '--fingerprint-algo') {
-        // #1797: opt-in selector for the line-anchored fingerprint. The
-        // default stays 'v1' so existing workflows and every entry already in
-        // `.river/memory/index.json` keep their meaning. Validated here rather
-        // than in the handler for the same reason as --severity (#1746): an
-        // unrecognized algo would otherwise be persisted and then ignored by
-        // applySuppressions, i.e. a silently inert suppression written at
-        // exit 0. Vocabulary SSoT: schemas/suppression-context.schema.json
-        // `$defs.fingerprintAlgo.enum`.
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --fingerprint-algo option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        // 大小無視で受理し、小文字化して保存する。`--severity` / `--phase` /
-        // `--fail-on` / `--warn-on` はいずれもこの形であり、ここだけ大小を
-        // 区別すると `--severity Critical` は通るのに `--fingerprint-algo V2`
-        // だけ exit 1 という非対称になる（v1.72.1 の `--phase Upstream`
-        // 誤拒否と同型の回帰）。schema の enum は小文字なので保存値も小文字。
-        const algo = value.toLowerCase();
-        if (!SUPPRESSION_FINGERPRINT_ALGOS.includes(algo)) {
-          console.error(
-            `Error: --fingerprint-algo must be one of: ${SUPPRESSION_FINGERPRINT_ALGOS.join(', ')} (got "${value}").`
-          );
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFingerprintAlgo = algo;
-        continue;
-      }
-      if (arg === '--finding') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --finding option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFindingId = value;
-        continue;
-      }
-      if (arg === '--feedback') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --feedback option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFeedbackType = value;
-        continue;
-      }
-      if (arg === '--scope') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --scope option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionScope = value;
-        continue;
-      }
-      if (arg === '--rationale') {
-        // Free text (`--rationale "-1 は誤検知"` must be accepted).
-        const taken = takeFreeTextValue(args);
-        if (taken.missing) {
-          console.error('Error: --rationale option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionRationale = taken.value;
-        continue;
-      }
-      if (arg === '--severity') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --severity option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        // #1746 follow-up: Slice 3 guarded the MISSING value but not an invalid
-        // one, so `--severity BOGUS` exited 0 and persisted
-        // `context.severity: "BOGUS"` — a value the suppression-context schema
-        // rejects and which suppression-apply's SEVERITY_RANK lookup reads as
-        // undefined.
-        //
-        // Case-insensitive, storing the lowercased value: `--fail-on` /
-        // `--warn-on` take the SAME vocabulary and already lowercase before
-        // comparing, so rejecting `--severity Critical` while accepting
-        // `--fail-on CRITICAL` would be an asymmetry between two options that
-        // mean the same thing. The schema enum is lowercase, so the stored
-        // value must be too.
-        const severity = value.toLowerCase();
-        if (!SEVERITY_VALUES.includes(severity)) {
-          console.error(
-            `Error: --severity must be one of: ${SEVERITY_VALUES.join(', ')} (got "${value}").`
-          );
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionSeverity = severity;
-        continue;
-      }
-      if (arg === '--files') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --files option requires a comma-separated list.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionFiles = parseList(value);
-        continue;
-      }
-      if (arg === '--expires') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --expires option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        // #1746 follow-up: `--expires notadate` used to be persisted verbatim as
-        // `context.expiresAt`. The expiry check compares that string against the
-        // current ISO timestamp, and an unparseable value never compares as
-        // past — the suppression would never expire.
-        //
-        // A bare `Date.parse` guard is too loose to be the fix: it also accepts
-        // `2027`, `March 5, 2027` and `2027-01-01`, and `createSuppression`
-        // stores the string verbatim, so those land in `context.expiresAt`,
-        // which schemas/suppression-context.schema.json declares as
-        // `format: date-time`. Accept only the two RFC 3339 shapes below and
-        // NORMALIZE to the same form the rest of the codebase writes
-        // (`new Date(...).toISOString()`, as in promotion-candidates.mjs), so a
-        // date-only input stays convenient AND schema-valid. Date-only inputs
-        // are read as UTC midnight — that is what `new Date('2027-01-01')`
-        // already does for the date-only ISO form.
-        const expires = parseExpiresAt(value);
-        if (!expires) {
-          console.error(
-            `Error: --expires must be an RFC 3339 date (YYYY-MM-DD) or date-time (e.g. 2027-01-01T00:00:00Z) (got "${value}").`
-          );
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionExpiresAt = expires;
-        continue;
-      }
-      if (arg === '--pr') {
-        const value = args.shift();
-        // Strict parse, same shape as the feedback --pr below: parseInt('abc')
-        // used to become NaN and be dropped in silence while the entry was
-        // still written with exit 0.
-        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
-          console.error('Error: --pr option requires a positive integer.');
-          usageError(parsed);
-          break;
-        }
-        parsed.suppressionPrNumber = Number.parseInt(value, 10);
-        continue;
-      }
+      const outcome = parseSuppressionOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (parsed.command === 'skills' && parsed.skillsSubcommand === 'resolve') {
-      if (arg === '--path') {
-        parsed.resolvePaths = parsed.resolvePaths ?? [];
-        const v = args.shift();
-        if (v) parsed.resolvePaths.push(v);
-        continue;
-      }
+      const outcome = parseSkillsResolveOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (parsed.command === 'feedback') {
-      // #1717: every option below takes a value, and `args.shift() ?? null`
-      // guarded none of them. A missing value consumed the FOLLOWING flag as
-      // this option's value (so `--pr --evidence x` lost both at once), and a
-      // value that failed validation was dropped in silence while the entry was
-      // still written. Each option now rejects a missing value / a following
-      // flag up front with the same `!value || value.startsWith('-')` guard the
-      // --reviewer / --model / --run-id options below already use. The
-      // option-error convention itself (stderr message + help) is unchanged;
-      // unifying its exit code is #1709.
-      if (arg === '--type') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --type option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackType = value;
-        continue;
-      }
-      if (arg === '--skill') {
-        const value = args.shift();
-        // `--skill --pr 123` used to record skillId:"--pr": a flag is a
-        // non-empty string, so buildFeedbackEntry's "skillId is required."
-        // check accepted it and wrote the entry.
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --skill option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackSkillId = value;
-        continue;
-      }
-      if (arg === '--trigger') {
-        const value = args.shift();
-        // A trailing `--trigger` used to null the field, which the handler maps
-        // back to undefined — so the entry was written with the DEFAULT trigger
-        // instead of the one the caller meant to set.
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --trigger option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackTrigger = value;
-        continue;
-      }
-      if (arg === '--fingerprint') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --fingerprint option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackFingerprint = value;
-        continue;
-      }
-      if (arg === '--evidence') {
-        // Free text. `--evidence --pr 123` (recording evidence:"--pr" and
-        // dropping the pr, #1717) stays blocked because takeFreeTextValue
-        // treats a recognized option token as a missing value.
-        const taken = takeFreeTextValue(args);
-        if (taken.missing) {
-          console.error('Error: --evidence option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackEvidence = taken.value;
-        continue;
-      }
-      if (arg === '--pr') {
-        const value = args.shift();
-        // Strict parse, same shape as --threshold (#1658): parseInt('12abc') is
-        // 12 and parseInt('1.5') is 1, so a typo silently recorded a DIFFERENT
-        // pr than the one that was typed, while 'abc' / 0 / -5 / a following
-        // flag all became pr:null on an entry that was still written (exit 0).
-        // `pr` is one half of the occurrence key (review_run_id, pr), so a null
-        // or wrong value skews the repetition denominator downstream (#1717).
-        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
-          console.error('Error: --pr option requires a positive integer.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackPrNumber = Number.parseInt(value, 10);
-        continue;
-      }
-      if (arg === '--reviewer') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --reviewer option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackReviewer = value;
-        continue;
-      }
-      if (arg === '--model') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --model option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackModel = value;
-        continue;
-      }
-      if (arg === '--reversed-by') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --reversed-by option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackReversedBy = value;
-        continue;
-      }
-      // #1673: the run this feedback refers to. Only an explicit id is
-      // accepted — resolving "the latest run" implicitly would attach evidence
-      // to an unrelated run.
-      //
-      // Two silent-miss paths this parse deliberately closes, both of which
-      // exited 0 while writing an entry with no `review_run_id` (so the loss
-      // only surfaced much later as joinedFeedbackCount staying at 0):
-      //   1. `--run-id=<id>`: the token never equals '--run-id', so an
-      //      equals-form value fell through and was dropped.
-      //   2. `--run-id "   "`: whitespace passes a truthiness check, then
-      //      normalizeOptionalString() nulls it out downstream.
-      // The `=` form is scoped to THIS option on purpose; extending it to
-      // --reviewer / --model / --reversed-by would change their behaviour and
-      // is out of scope here.
-      if (arg === '--run-id' || arg.startsWith('--run-id=')) {
-        const value = arg.startsWith('--run-id=') ? arg.slice('--run-id='.length) : args.shift();
-        if (!value || !value.trim() || value.startsWith('-')) {
-          console.error('Error: --run-id option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.feedbackRunId = value;
-        continue;
-      }
+      const outcome = parseFeedbackOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (parsed.command === 'promote') {
-      if (arg === '--approver') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --approver option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteApprover = value;
-        continue;
-      }
-      if (arg === '--reason') {
-        // Free text (approval / rejection prose written by a human).
-        const taken = takeFreeTextValue(args);
-        if (taken.missing) {
-          console.error('Error: --reason option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteReason = taken.value;
-        continue;
-      }
-      if (arg === '--index') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --index option requires a path.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteIndex = value;
-        continue;
-      }
-      if (arg === '--include-inactive') {
-        parsed.promoteIncludeInactive = true;
-        continue;
-      }
-      if (arg === '--threshold') {
-        const value = args.shift();
-        // Strict parse: parseInt('2garbage') is 2, so a typo would silently
-        // become a different threshold than the one that was typed.
-        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
-          console.error('Error: --threshold option requires a positive integer.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteThreshold = Number.parseInt(value, 10);
-        continue;
-      }
-      if (arg === '--feedback-root') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --feedback-root option requires a path.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteFeedbackRoot = value;
-        continue;
-      }
-      if (arg === '--input') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --input option requires a JSONL path.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteInput = value;
-        continue;
-      }
-      if (arg === '--cluster-key') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --cluster-key option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promoteClusterKey = value;
-        continue;
-      }
-      if (arg === '--policy-version') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --policy-version option requires a value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.promotePolicyVersion = value;
-        continue;
-      }
-      // Options that are neither promote's own nor handled by the shared parser
-      // must fail loudly instead of being ignored (a mistyped `--dry-rnu` would
-      // otherwise write the Riverbed index for real).
-      if (arg.startsWith('-') && !PROMOTE_SHARED_OPTIONS.has(arg)) {
-        parsed.promoteUnknownOption = arg;
-        break;
-      }
+      const outcome = parsePromoteOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (parsed.command === 'evolve') {
-      if (arg === '--min') {
-        const value = args.shift();
-        // Strict parse, same reason as promote's --threshold above.
-        if (!value || !/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
-          console.error('Error: --min option requires a positive integer.');
-          usageError(parsed);
-          break;
-        }
-        parsed.evolveMin = Number.parseInt(value, 10);
-        continue;
-      }
-      if (arg === '--month') {
-        const value = args.shift();
-        if (!value || !/^\d{4}-\d{2}$/.test(value)) {
-          console.error('Error: --month option requires a YYYY-MM value.');
-          usageError(parsed);
-          break;
-        }
-        parsed.evolveMonth = value;
-        continue;
-      }
-      if (arg === '--spec') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --spec option requires a file path.');
-          usageError(parsed);
-          break;
-        }
-        parsed.evolveSpec = value;
-        continue;
-      }
-      if (arg === '--expect-manifest') {
-        const value = args.shift();
-        if (!value || value.startsWith('-')) {
-          console.error('Error: --expect-manifest option requires a manifest id or hash.');
-          usageError(parsed);
-          break;
-        }
-        parsed.evolveExpectManifest = value;
-        continue;
-      }
-      // Options that are not evolve's own and not handled by the shared parser
-      // below must fail loudly instead of being ignored.
-      if (arg.startsWith('-') && !EVOLVE_SHARED_OPTIONS.has(arg)) {
-        parsed.evolveUnknownOption = arg;
-        break;
-      }
+      const outcome = parseEvolveOption(arg, args, parsed);
+      if (outcome === 'continue') continue;
+      if (outcome === 'break') break;
     }
     if (!parsed.command && arg === 'eval') {
       parsed.command = 'eval';
