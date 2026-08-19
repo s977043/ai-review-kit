@@ -10,21 +10,21 @@
 
 ## 意思決定
 
-- 小さな変更は PR ベースで進め、レビューで合意します
-- 影響が大きい変更（破壊的変更、大規模リファクタ、方針変更）は Issue で事前に合意してから着手します
-- 現時点ではメンテナが 1 名のため、メンテナの判断をもって合意とします（将来メンテナが増えた場合は本方針を更新します）
+- 小さな変更は PR ベースで進め、レビューで合意する
+- 影響が大きい変更（破壊的変更、大規模リファクタ、方針変更）は Issue で事前に合意してから着手する
+- 現時点ではメンテナが 1 名のため、メンテナの判断をもって合意とする（将来メンテナが増えた場合は本方針を更新する）
 
 ## メンテナの追加・交代
 
-- 新しいメンテナは、継続的な貢献（複数回の PR、Issue トリアージ支援など）と、運用方針への理解を前提に検討します
+- 新しいメンテナは、継続的な貢献（複数回の PR、Issue トリアージ支援など）と、運用方針への理解を前提に検討する
 - メンテナの追加・交代は Issue で提案し、理由とスコープを明記してください
-- 長期間（目安: 数か月）メンテナ活動がない場合の扱いは、状況に応じて公開の議論で調整します
+- 長期間（目安: 数か月）メンテナ活動がない場合の扱いは、状況に応じて公開の議論で調整する
 
 ## PR レビューとマージ
 
 - 原則: CI がすべて成功していること
-- 外部コントリビューターからの PR は、メンテナによるレビュー（少なくとも 1 回の承認）後にマージします
-- メンテナによる変更でも、可能な限りセルフレビューを行い、レビュー観点を PR 本文に記載します
+- 外部コントリビューターからの PR は、メンテナによるレビュー（少なくとも 1 回の承認）後にマージする
+- メンテナによる変更でも、可能な限りセルフレビューを行い、レビュー観点を PR 本文に記載する
 
 ### マージ前チェックリスト
 
@@ -38,8 +38,8 @@ CLAUDE.md "AI Misoperation Guards" の運用ガードのうち、PR マージ判
 gh pr checks <N> --json name,bucket --jq '.[] | select(.bucket != "skipping")'
 ```
 
-- `SKIPPED` チェックは `bucket == "skipping"` で除外できます。
-- 必須チェック (`Lint`, `Unit tests` など) が pre-existing 失敗の場合も、本 PR を直接マージしてはいけません。`main` 向けの fix PR を先に出して main を green に戻し、その後本 PR をリベースしてマージします。
+- `SKIPPED` チェックは `bucket == "skipping"` で除外できる。
+- 必須チェック (`Lint`, `Unit tests` など) が pre-existing 失敗の場合も、本 PR を直接マージしてはいけない。`main` 向けの fix PR を先に出して main を green に戻し、その後本 PR をリベースしてマージする。
 
 #### 1.1 Branch protection の概要
 
@@ -82,16 +82,16 @@ CI green はレビュアーのコメント（`Copilot`, `sentry[bot]` などの 
 gh pr view <N> --json labels --jq '[.labels[].name]'
 ```
 
-- `blocked` など、マージ阻止を意図したラベルが 1 つでも付いている場合はマージ中止です。
-- 単独メンテナ体制では、レビュアーと PR オーサーが同一アカウントになります。GitHub では自分の PR に formal review（Request changes）を投げられないため、ラベルと通常コメントが唯一のマージ阻止手段です。ラベルは飾りではなく、Request changes の代替表明として扱ってください。
-- 阻止ラベルを外すのは指摘した側です。マージする側が対応完了を自己判断して外してはいけません。
+- `blocked` など、マージ阻止を意図したラベルが 1 つでも付いている場合はマージ中止である。
+- 単独メンテナ体制では、レビュアーと PR オーサーが同一アカウントになる。GitHub では自分の PR に formal review（Request changes）を投げられないため、ラベルと通常コメントが唯一のマージ阻止手段である。ラベルは飾りではなく、Request changes の代替表明として扱ってください。
+- 阻止ラベルを外すのは指摘した側である。マージする側が対応完了を自己判断して外してはいけない。
 
 #### 3. multi-PR 作業の preflight
 
 対象は、複数 PR の連続マージ、main CI 失敗の修正 PR、`.github/workflows/*.yml` の `node-version` / action pin / `permissions` を変える PR などです。これら書き込み系の handoff タスクへ着手する前に `/preflight <keyword or PR numbers>` を実行します。対象タスクが既にマージ済み/obsolete/並行作業中ではないことを確認します。
 
-- `gh pr list` は GraphQL キャッシュの影響で recently merged な PR を `open` と返すことがあります。判定には `gh api repos/:owner/:repo/pulls/{N}` (REST) を併用してください。
-- 過去の累計で 1 セッション中に 4 件の重複 PR (#485, #489, #492, #496) を生んだ実績があります。
+- `gh pr list` は GraphQL キャッシュの影響で recently merged な PR を `open` と返すことがある。判定には `gh api repos/:owner/:repo/pulls/{N}` (REST) を併用してください。
+- 過去の累計で 1 セッション中に 4 件の重複 PR (#485, #489, #492, #496) を生んだ実績がある。
 
 #### 4. dist 再ビルド時の Node バージョン整合
 
@@ -114,9 +114,9 @@ gh api "repos/:owner/:repo/pulls/<N>" --jq .body | grep -i 'closes\|fixes\|resol
 ```
 
 - grep はコードブロックや引用の中の言及も拾うため、ヒットしても実際に紐付いているとは限りません。GraphQL の `closingIssuesReferences` で、GitHub が close 対象として解決した issue を確定させてください。
-- 該当する issue が「閉じてよいもの」かは、PR のスコープが issue 全体をカバーしている / Epic・追跡用 issue でない / 本文に未完了のチェックボックスや残作業の記述がない、の 3 点で判定します。
-- 閉じてはいけない issue がある場合は、マージ前に `gh pr edit <N> --body` で `closes` を `refs` へ書き換えます。
-- 実行手順・判定基準・書き換えコマンドの詳細は `/merge-check` の Step 6（`.claude/commands/merge-check.md`）を参照してください。**リリース PR では必ず該当します。**
+- 該当する issue が「閉じてよいもの」かは、PR のスコープが issue 全体をカバーしている / Epic・追跡用 issue でない / 本文に未完了のチェックボックスや残作業の記述がない、の 3 点で判定する。
+- 閉じてはいけない issue がある場合は、マージ前に `gh pr edit <N> --body` で `closes` を `refs` へ書き換える。
+- 実行手順・判定基準・書き換えコマンドの詳細は `/merge-check` の Step 6（`.claude/commands/merge-check.md`）を参照してください。**リリース PR では必ず該当する。**
 
 > **経緯**: 2026-08-12、Issue #1827 が release PR #1830 のマージで自動 close されました。閉じる判断は誰もしていません。コミット本文は `refs #1827` でしたが、release-please は release PR の本文を `closes [#1827]` としてレンダリングします。当時この確認手順は `/merge-check` にも `/release-kick` にも存在せず、セッションを跨がない carry-over 台帳にしかありませんでした（`docs/development/retrospectives/2026-08-12.md` の O5）。
 
@@ -142,25 +142,25 @@ GitHub の PR コメントは 2 つのエンドポイントに分かれて格納
      --jq '.[] | {id, user: .user.login, created_at, body}'
    ```
 
-- `--paginate` は両方で必須です。デフォルトの 1 ページ目は 30 件で打ち切られるため、コメント数が多い PR では見落とします。
-- `per_page=100` は URL クエリに直接埋め込みます。`-F per_page=100` を指定すると `gh api` の verb が POST に切り替わり HTTP 422 が返ります。
-- どちらの `--jq` にも `.user.login` を含めてください。issue comments には `gemini-code-assist[bot]` / `vercel[bot]` / `github-actions[bot]`（River Review 自身の結果通知や PlanGate Review を含む）の定型コメントが大量に混ざります。投稿者で bot の定型と人間レビュアーの指摘を切り分け、後者を disposition の対象とします。
-- 複数行に紐づくコメントは `line` が終端行、`start_line` が開始行です。
-- `line: null` は、後続コミットでアンカー行の消失によりコメントが outdated になっていることを示します。`commit` 値を `gh pr view <N> --json headRefOid` と突き合わせて判断してください。
-- スレッド（reply 連鎖）は `in_reply_to_id` で再構成できます。issue comments には `in_reply_to_id` がなく、スレッド構造も持ちません。
+- `--paginate` は両方で必須である。デフォルトの 1 ページ目は 30 件で打ち切られるため、コメント数が多い PR では見落とす。
+- `per_page=100` は URL クエリに直接埋め込む。`-F per_page=100` を指定すると `gh api` の verb が POST に切り替わり HTTP 422 が返る。
+- どちらの `--jq` にも `.user.login` を含めてください。issue comments には `gemini-code-assist[bot]` / `vercel[bot]` / `github-actions[bot]`（River Review 自身の結果通知や PlanGate Review を含む）の定型コメントが大量に混ざる。投稿者で bot の定型と人間レビュアーの指摘を切り分け、後者を disposition の対象とする。
+- 複数行に紐づくコメントは `line` が終端行、`start_line` が開始行である。
+- `line: null` は、後続コミットでアンカー行の消失によりコメントが outdated になっていることを示す。`commit` 値を `gh pr view <N> --json headRefOid` と突き合わせて判断してください。
+- スレッド（reply 連鎖）は `in_reply_to_id` で再構成できる。issue comments には `in_reply_to_id` がなく、スレッド構造も持たない。
 
 #### review summaries との違い
 
-- Bot の行単位の個別指摘は `pulls/<N>/comments`（line comments）に入ります。人間レビュアーが PR 全体に対して書くレビュー結果は `issues/<N>/comments` 側に入ります。
-- `gh pr view <N> --json reviews,reviewDecision` はレビュー単位のサマリのみで、bot の `body` は空になることが多く、`reviewDecision` が空であっても、個別の指摘は存在することもあります。
-- したがって review state 単体でマージ可否を判断してはいけません。`reviewDecision` はさらに、レビュアーと PR オーサーが同一アカウントの場合には常に空になります（GitHub が自分の PR への formal review を許可しないため）。この体制では 2.1 のラベル確認が review state の代役です。
+- Bot の行単位の個別指摘は `pulls/<N>/comments`（line comments）に入る。人間レビュアーが PR 全体に対して書くレビュー結果は `issues/<N>/comments` 側に入る。
+- `gh pr view <N> --json reviews,reviewDecision` はレビュー単位のサマリのみで、bot の `body` は空になることが多く、`reviewDecision` が空であっても、個別の指摘は存在することもある。
+- したがって review state 単体でマージ可否を判断してはいけない。`reviewDecision` はさらに、レビュアーと PR オーサーが同一アカウントの場合には常に空になる（GitHub が自分の PR への formal review を許可しないため）。この体制では 2.1 のラベル確認が review state の代役である。
 
 #### 各コメントの dispose
 
 列挙したコメントはそれぞれ以下のいずれかで処理し、残件がない状態にしてからマージしてください。
 
 1. 追従コミットで対応する（推奨）。
-2. Bot 自身が follow-up で resolved を宣言している（例: sentry の `*Resolved in <sha>`）。Copilot は self-resolve しないため、Copilot の指摘は a か c で対応します。
+2. Bot 自身が follow-up で resolved を宣言している（例: sentry の `*Resolved in <sha>`）。Copilot は self-resolve しないため、Copilot の指摘は a か c で対応する。
 3. 同じスレッドに reply して理由を明記する。CLI では:
 
    ```bash
@@ -168,17 +168,17 @@ GitHub の PR コメントは 2 つのエンドポイントに分かれて格納
      -f body='<reply text>'
    ```
 
-   `-X POST` は必須です。デフォルト verb は GET で、これは既存 reply の _一覧取得_ になり、新規 reply 作成になりません。Web UI からの reply でも構いません。この replies エンドポイントは line comments 専用です。issue comment への回答は `gh pr comment <N> --body '<text>'` で PR 本体に投稿します。
+   `-X POST` は必須である。デフォルト verb は GET で、これは既存 reply の _一覧取得_ になり、新規 reply 作成にならない。Web UI からの reply でも構わない。この replies エンドポイントは line comments 専用である。issue comment への回答は `gh pr comment <N> --body '<text>'` で PR 本体に投稿する。
 
 #### 関連
 
-- River Review 利用者（レビュー対象側）から見た対応フローは `skills/midstream/gh-address-comments/SKILL.md` を参照してください。本セクションはリポジトリメンテナ視点のマージ前チェックリストです。
+- River Review 利用者（レビュー対象側）から見た対応フローは `skills/midstream/gh-address-comments/SKILL.md` を参照してください。本セクションはリポジトリメンテナ視点のマージ前チェックリストである。
 
 ## Breaking change の扱い
 
 - 破壊的変更を含む場合は、PR 本文で明示し、必要に応じて Issue へのリンクを付けてください
-- 互換性に影響する変更は `CHANGELOG.md` に記載し、リリースで周知します
-- バージョニングは SemVer を基本とします（v0 系では変更の性質に応じて運用します）
+- 互換性に影響する変更は `CHANGELOG.md` に記載し、リリースで周知する
+- バージョニングは SemVer を基本とする（v0 系では変更の性質に応じて運用する）
 
 ## Issue トリアージ（ラベル方針）
 

@@ -82,6 +82,6 @@ npm run agents:validate
 npm run skills:validate
 ```
 
-`runners/github-action/src/**` を変更した場合、または CI の "Action dist freshness" が失敗した場合は、再生成が必要である。`.nvmrc` の Node バージョンに揃えてから `npm run build:action` で `runners/github-action/dist/` を再生成する。詳細は `docs/development/dist-check-rebuild-guide.md` を参照。
+`runners/github-action/src/**` を変更した場合、または CI の "Action dist freshness" が失敗した場合は、再生成が必要です。`.nvmrc` の Node バージョンに揃えてから `npm run build:action` で `runners/github-action/dist/` を再生成する。詳細は `docs/development/dist-check-rebuild-guide.md` を参照。
 
 PR マージ前のチェックリスト（CI green / レビュアーコメント disposition / preflight など）は `docs/governance.md` § "PR レビューとマージ" にまとまっている。
