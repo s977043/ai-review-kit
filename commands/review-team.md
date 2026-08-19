@@ -39,6 +39,14 @@ CLI が存在しない、または失敗した場合は、スキル駆動のレ�
 
 ### Step 3: 結果を報告する
 
+用語（`skills/agent-skills/review-team/SKILL.md` の「Output Interpretation / 結果の読み方」が出典）:
+
+- `scope`: 指摘が本 PR の追加行に由来するかを示す finding のメタデータ。値は `in-diff` / `pre-existing` の 2 つ
+- `in-diff`: 本 PR が追加行で持ち込んだ問題。既定値であり fail-safe でもあるため、値が無い finding もこの扱いになる
+- `pre-existing`: 変更ファイル内だが追加行の外にある既存コードへの指摘。文脈参考として扱い、本 PR のスコープを超えた修正を招かないようにする
+- `consensusLevel`: 同じ finding を挙げたロール数のバケット。`consensus`（3 以上）/ `multi`（2）/ `single`（1 以下）
+- 並び順のキーは `consensusLevel` → `severity` → `scope` である。`consensusLevel` が `severity` に優先し、`severity` は同値のときだけ次のキーへ進む
+
 JSON 出力（`teamLeadReport` / `issues`）をもとに以下の形式で報告する。
 
 ```markdown
