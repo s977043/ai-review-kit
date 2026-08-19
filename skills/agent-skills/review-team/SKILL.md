@@ -78,7 +78,9 @@ Step 3: consensusLevel の付与（finding ごと）
 
 Step 4: Tech Lead レポートの生成（追加 LLM コストなし）
   top3Findings    : consensusLevel → severity → scope 順の上位3件
-                    （scope は上位2キーが同値のときだけ in-diff を先に置く）
+                    （consensusLevel が severity に優先する。severity は
+                      consensusLevel が同値のときだけ効き、scope は上位2キーが
+                      同値のときだけ in-diff を先に置く）
   blindSpots      : 今回実行されなかったロール一覧
   consensusSummary: consensus / multi / single の件数集計
 ```
