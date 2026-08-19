@@ -16,8 +16,8 @@ River Review プラグインとして配布されるスラッシュコマンド�
 
 ## なぜ `commands/README.md` ではなくここに置くのか
 
-`commands/` はプラグインの配布サーフェスであり、`claude plugin validate` は `commands/` 直下の `*.md` を**すべてコマンドとして走査**する。README も例外ではないため、そこに置くと配布物に実行できない `/README` コマンドが混ざる（frontmatter を足しても走査対象からは外れない）。ドキュメントは配布サーフェスの外に置き、`commands/` には実際のコマンドだけを残すのが安全である。
+`commands/` はプラグインの配布サーフェスであり、`claude plugin validate` は `commands/` 直下の `*.md` を**すべてコマンドとして走査**する。README も例外ではないため、そこに置くと配布物に実行できない `/README` コマンドが混ざる（frontmatter を足しても走査対象からは外れない）。ドキュメントは配布サーフェスの外に置き、`commands/` には実際のコマンドだけを残すのが安全です。
 
 一方 [`.claude/commands/README.md`](../../.claude/commands/README.md) はリポジトリ開発専用ディレクトリの索引であり、配布されず validator の走査対象にもならないため、コマンドと同居したままで問題ない。
 
-配置先が `docs/development/` である理由は [DOCUMENTATION.md](../policy/DOCUMENTATION.md) のとおりで、この文書は公開サイト（`pages/`）向けではなく、メンテナ向けの開発リファレンスだからである。
+配置先が `docs/development/` である理由は [DOCUMENTATION.md](../policy/DOCUMENTATION.md) のとおりで、この文書は公開サイト（`pages/`）向けではなく、メンテナ向けの開発リファレンスだからです。
