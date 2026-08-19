@@ -1,5 +1,35 @@
 const fs = require('fs');
 
+/**
+ * #1929: the SSoT for the self-reported `Scope:` label grammar, imported —
+ * not re-derived.
+ *
+ * This file is a standalone CommonJS `actions/github-script` runner, but
+ * `require()` of an ESM module is stable from Node 22.12 and this step runs on
+ * `actions/github-script@v8` (node24), so the ESM SSoT in `src/lib/` can be
+ * called directly instead of mirroring its regex here. `../..` is the same
+ * repo-root hop the action already depends on in production (`action.yml`
+ * sets `RIVER_REPO_ROOT: ${{ github.action_path }}/../..`, and the release
+ * tarball carries `src/lib/`).
+ *
+ * The load works without `node_modules` because `finding-factory.mjs` reaches
+ * only `node:crypto` and `./scoring/breakdown.mjs`. That property is not
+ * self-evident from here, so it is pinned by
+ * `tests/action-esm-require-canary.test.mjs` — an npm dependency or a
+ * top-level `await` anywhere in that graph would break this require on the
+ * user's runner while CI (which has `node_modules`) stayed green.
+ *
+ * RUNTIME PRECONDITION: the step that loads this file must stay on
+ * `actions/github-script@v8` or newer. The action's runtime is set by that
+ * version — v7 declares `using: node20` and v8 declares `using: node24` — and
+ * `require(ESM)` is only available from Node 22.12. **Downgrading the `uses:`
+ * pin in `action.yml` breaks this line on the user's runner while CI stays
+ * green.** The same canary above asserts the version, so a downgrade fails
+ * there first; if it did, this paragraph is why. Reverting the pin means
+ * reverting this require to a CommonJS implementation as well.
+ */
+const { stripSelfReportedScope } = require('../../src/lib/finding-factory.mjs');
+
 const COMMENT_MARKER = '<!-- river-reviewer -->';
 const SEVERITY_EMOJI = { critical: '🔴', major: '🟠', minor: '🟡', info: 'ℹ️' };
 const MAX_INLINE_BODY = 65000;
@@ -49,6 +79,31 @@ function formatScopeMarker(scope) {
   return scope === PRE_EXISTING_SCOPE ? ' _(pre-existing)_' : '';
 }
 
+/**
+ * #1929: the message body as this surface should show it.
+ *
+ * Same rule as `bodyForMarkdown` (src/cli/render.mjs) and the HTML formatter:
+ * once a finding carries a resolved `scope`, the verifier's verdict outranks
+ * the reviewer's self-reported `Scope:` label, and the summary already draws
+ * the resolved value (`formatScopeMarker`, the pre-existing `<details>`
+ * heading). Rendering both would put two opposite scopes on one finding.
+ *
+ * The `issue.scope ?` guard is deliberate and matches the two ESM surfaces: on
+ * a legacy artifact that predates the `scope` field the self-report is the
+ * only scope information there is, so stripping it would delete information
+ * rather than de-duplicate it. The Action summary is a display surface, not
+ * the audit copy — the raw JSON is echoed to the job log (`action.yml`'s
+ * `cat "${json_out}"`) and exported as the `json_path` output — so it follows
+ * the markdown/HTML rule rather than the YAML formatter's keep-verbatim rule.
+ *
+ * @param {object} issue
+ * @returns {string} body text, or an empty string when there is none
+ */
+function bodyMessage(issue) {
+  if (!issue?.message) return '';
+  return issue.scope ? stripSelfReportedScope(issue.message) : issue.message;
+}
+
 /** `file:line` rendered as inline code, or an empty string when unlocated. */
 function formatLocation(issue) {
   if (!issue.file) return '';
@@ -78,8 +133,9 @@ function formatFindingBody(
   const location = includeLocation ? formatLocation(issue) : '';
   const lines = [`${emoji} **[${issue.severity}]**${consensusBadge} ${issue.title}${location}`];
 
-  if (issue.message && issue.message !== issue.title) {
-    lines.push('', issue.message);
+  const message = bodyMessage(issue);
+  if (message && message !== issue.title) {
+    lines.push('', message);
   }
 
   if (Array.isArray(issue.evidence) && issue.evidence.length > 0) {
@@ -218,8 +274,9 @@ function formatSummaryFromJson(
     for (const issue of remainingIssues) {
       const emoji = SEVERITY_EMOJI[issue.severity] || '🔵';
       lines.push(`- ${emoji} **${issue.title}**${issue.file ? ` (${issue.file})` : ''}`);
-      if (issue.message && issue.message !== issue.title) {
-        lines.push(`  ${issue.message}`);
+      const message = bodyMessage(issue);
+      if (message && message !== issue.title) {
+        lines.push(`  ${message}`);
       }
     }
   }
