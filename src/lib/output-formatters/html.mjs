@@ -6,6 +6,7 @@
  * Data is derived from scoreReview (same engine as JSON/YAML formatters).
  */
 
+import { stripSelfReportedScope } from '../finding-factory.mjs';
 import { resolveVerdict, scoreReview } from '../scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from '../scoring/rubric.mjs';
 
@@ -211,7 +212,13 @@ export function formatHtmlOutput(result, phase) {
       );
       parts.push(`<td><code>${escHtml(fileRef)}</code></td>`);
       parts.push(`<td>${escHtml(f.title ?? '')}</td>`);
-      parts.push(`<td><pre>${escHtml(f.message ?? '')}</pre></td>`);
+      // #1915 A: same rule as the markdown renderer — when the chip above
+      // states a resolved scope, the reviewer's self-reported `Scope:` label is
+      // dropped from the body so one row cannot show two opposite scopes. A
+      // finding with no resolved scope keeps its self-report, which is then the
+      // only scope information the row has.
+      const message = f.scope ? stripSelfReportedScope(f.message) : (f.message ?? '');
+      parts.push(`<td><pre>${escHtml(message)}</pre></td>`);
       parts.push(`<td><pre>${escHtml(f.suggestion ?? '')}</pre></td>`);
       parts.push('</tr>');
     }

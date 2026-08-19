@@ -11,7 +11,7 @@ River Review の本番経路は GitHub Action からメイン CLI (`src/cli.mjs`
 - 自動レビューが空振りし（#1067）、PR の Auto-approve 判定（critical=0 / major=0）が生成されない。
 - やむを得ず管理者権限マージ（`--admin`）に頼る際、その正当性を示すローカルなエビデンスが残らない。
 
-一方で、既存 CLI には `--base <ref>`（差分）/ `--fail-on <sev>`（exit 1）/ `--warn-on <sev>`（exit 2）/ `--output json` の判定・gating 基盤が**すでに存在する**（`src/cli.mjs`）。不足しているのは「OpenAI を呼ばずに、決定論的に判定できる範囲だけでローカル実行する」モードである。
+一方で、既存 CLI には `--base <ref>`（差分）/ `--fail-on <sev>`（exit 1）/ `--warn-on <sev>`（exit 2）/ `--output json` の判定・gating 基盤が**すでに存在する**（`src/cli.mjs`）。不足しているのは「OpenAI を呼ばずに、決定論的に判定できる範囲だけでローカル実行する」モードです。
 
 ## Decision
 

@@ -8,7 +8,7 @@ This directory is for internal use only.
 
 - ❌ **外部リンク禁止** - このディレクトリ配下のファイルへ外部からリンクを張らないでください
 - ❌ **No External Links** - Do NOT link to files in this directory from external sources
-- 📌 **公開ドキュメントは `pages/` ディレクトリが正 (Single Source of Truth)** です
+- 📌 **公開ドキュメントは `pages/` ディレクトリが正 (Single Source of Truth)** である
 - 📌 **Official and public documentation lives under the `pages/` directory** and the published documentation site
 
 ## 用途 / Purpose

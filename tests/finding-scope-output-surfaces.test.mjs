@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import { formatYamlOutput } from '../src/lib/output-formatters/yaml.mjs';
 import { formatHtmlOutput } from '../src/lib/output-formatters/html.mjs';
 import { printMarkdownReport } from '../src/cli/render.mjs';
+import { stripSelfReportedScope } from '../src/lib/finding-factory.mjs';
 
 /** printMarkdownReport の stdout を文字列で受け取る。 */
 function renderMarkdown(result, phase = 'midstream') {
@@ -207,5 +208,127 @@ describe('#1644 残件7: Markdown marks pre-existing only', () => {
   it('adds no marker when the comment carries no scope', () => {
     const markdown = renderMarkdown(makeMarkdownResult());
     assert.doesNotMatch(markdown, /_\(pre-existing\)_/);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// #1915 A: 印と本文の自己申告 `Scope:` が同じ finding で矛盾しない
+//
+// `resolveFindingScope`（src/lib/verifier.mjs）は機械判定を自己申告より優先する。
+// 両者が食い違う状態は設計上ありうるものとして `debug.scopeStats.mismatch` に
+// 数えられている。したがって描画側は「解決済みの scope」だけを述べ、消費済みの
+// 自己申告ラベルは本文から落とす。scope が解決されていない finding では自己申告が
+// 唯一の scope 情報なので、そのまま残す。
+//
+// 期待値は実装から導かない。読み手が受け取るべき literal を直に書く。
+// -----------------------------------------------------------------------------
+
+/** 自己申告 `Scope: in-diff` を持つ本文。機械判定は `pre-existing` を返す想定。 */
+const MESSAGE_SELF_REPORTING_IN_DIFF = `${MESSAGE} Scope: in-diff`;
+
+describe('#1915 A: the self-reported Scope label never contradicts the resolved scope', () => {
+  it('markdown drops the self-report when the mark states pre-existing', () => {
+    const markdown = renderMarkdown(
+      makeMarkdownResult({ scope: 'pre-existing', message: MESSAGE_SELF_REPORTING_IN_DIFF })
+    );
+    assert.ok(
+      markdown.includes(
+        '- `src/app.js:5` _(pre-existing)_\n' +
+          '  - **Finding:** catch で例外が握りつぶされる\n' +
+          '  - **Evidence:** catch 内で return\n' +
+          '  - **Impact:** 障害調査が困難\n' +
+          '  - **Fix:** ログ+再throw\n' +
+          '  - **Severity:** warning\n' +
+          '  - **Confidence:** high'
+      ),
+      `bullet block did not match the expected literal:\n${markdown}`
+    );
+    assert.doesNotMatch(markdown, /\*\*Scope:\*\*/);
+  });
+
+  it('markdown drops a self-reported pre-existing when the resolved scope is in-diff', () => {
+    const markdown = renderMarkdown(
+      makeMarkdownResult({ scope: 'in-diff', message: `${MESSAGE} Scope: pre-existing` })
+    );
+    // 印は付かず（in-diff は既定値）、本文にも pre-existing は残らない。
+    assert.doesNotMatch(markdown, /pre-existing/);
+    assert.doesNotMatch(markdown, /\*\*Scope:\*\*/);
+  });
+
+  it('markdown keeps the self-report when the comment carries no resolved scope', () => {
+    const markdown = renderMarkdown(
+      makeMarkdownResult({ message: `${MESSAGE} Scope: pre-existing` })
+    );
+    assert.ok(
+      markdown.includes('  - **Scope:** pre-existing'),
+      `legacy self-report was dropped:\n${markdown}`
+    );
+  });
+
+  it('html drops the self-report from the body when the chip states the scope', () => {
+    const html = formatHtmlOutput(
+      {
+        findings: [makeFinding({ scope: 'pre-existing', message: MESSAGE_SELF_REPORTING_IN_DIFF })],
+        timestamp: '2026-01-01T00:00:00.000Z',
+      },
+      'midstream'
+    );
+    assert.match(
+      html,
+      /<span class="sev" style="background:#9e9e9e;margin-left:6px">pre-existing<\/span>/
+    );
+    assert.ok(
+      html.includes(
+        '<td><pre>Finding: catch で例外が握りつぶされる Evidence: catch 内で return ' +
+          'Impact: 障害調査が困難 Fix: ログ+再throw Severity: warning Confidence: high</pre></td>'
+      ),
+      `message cell did not match the expected literal:\n${html}`
+    );
+  });
+
+  it('html keeps the self-report when the finding carries no resolved scope', () => {
+    const html = formatHtmlOutput(
+      { findings: [makeFinding({ message: MESSAGE_SELF_REPORTING_IN_DIFF })] },
+      'midstream'
+    );
+    assert.ok(
+      html.includes('Confidence: high Scope: in-diff</pre>'),
+      `legacy self-report was dropped:\n${html}`
+    );
+  });
+
+  it('yaml keeps the raw self-report next to the resolved scope row (audit trail)', () => {
+    const output = formatYamlOutput({
+      phase: 'midstream',
+      findings: [makeFinding({ scope: 'pre-existing', message: MESSAGE_SELF_REPORTING_IN_DIFF })],
+    });
+    assert.match(output, /\n {6}scope: "pre-existing"\n/);
+    assert.ok(
+      output.includes('Confidence: high Scope: in-diff"'),
+      `the machine-readable surface must keep the raw reviewer text:\n${output}`
+    );
+  });
+});
+
+describe('#1915 A: stripSelfReportedScope only removes in-vocabulary labels', () => {
+  it('removes the label together with the space that preceded it', () => {
+    assert.strictEqual(
+      stripSelfReportedScope('Fix: ガードする Scope: pre-existing Confidence: high'),
+      'Fix: ガードする Confidence: high'
+    );
+  });
+
+  it('removes every occurrence, not just the first', () => {
+    assert.strictEqual(stripSelfReportedScope('a Scope: in-diff b Scope: pre-existing c'), 'a b c');
+  });
+
+  it('leaves prose that merely mentions a scope untouched', () => {
+    const prose = 'Fix: OAuth の Scope: admin を絞る。Scope: unknown も同様。';
+    assert.strictEqual(stripSelfReportedScope(prose), prose);
+  });
+
+  it('returns an empty string for a missing message instead of "undefined"', () => {
+    assert.strictEqual(stripSelfReportedScope(undefined), '');
+    assert.strictEqual(stripSelfReportedScope(null), '');
   });
 });
