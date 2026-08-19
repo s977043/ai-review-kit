@@ -1,5 +1,9 @@
 # Skill Metadata Specification (Issue #68 Design)
 
+> **This document records the design discussion for Issue #68. It is not the current specification.**
+> For the current field definitions, see [Skill Schema](./skill-schema.en.md) and [Metadata Fields](./metadata-fields.en.md). The implementation source of truth is `schemas/skill.schema.json`.
+> The tables and prose below are kept as they were written at that time. For example, the `dependencies` table lists only the six values from that discussion and omits the `custom:{name}` form implemented later.
+
 River Review skills hold metadata in YAML frontmatter, which loaders/runners use to select and execute them. This specification summarizes field definitions serving as the foundation for JSON Schema, TypeScript types, and runner implementation.
 
 ## 1. Purpose
