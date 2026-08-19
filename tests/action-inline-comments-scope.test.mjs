@@ -509,3 +509,123 @@ describe('#1644: hard truncation leaves a readable comment', () => {
     }
   });
 });
+
+// #1929: 自己申告 `Scope:` ラベルは Action サマリーからも落とす。
+//
+// 期待値は実装から導かない。`stripSelfReportedScope` を呼んで比較すると、
+// 呼び出しを外しても両辺が同じだけ変わって緑のままになる。ここでは公開経路
+// （postInlineComments）だけを呼び、出力を手書きの literal で固定する。
+//
+// ガードは `issue.scope ?` 付き（src/cli/render.mjs の `bodyForMarkdown` と
+// src/lib/output-formatters/html.mjs と同じ規則）。解決済み scope を持たない
+// レガシー artifact では自己申告が唯一の scope 情報なので残す。
+
+/** pre-existing の印と矛盾する自己申告を持つ finding。 */
+const PRE_EXISTING_SELF_REPORTS_IN_DIFF = {
+  id: 'rr-1929-pre',
+  title: 'legacy helper swallows exceptions',
+  message: 'The surrounding catch block returns silently. Scope: in-diff',
+  severity: 'critical',
+  file: 'src/app.js',
+  line: 3,
+  scope: 'pre-existing',
+};
+
+/** inline に出る finding。自己申告は解決済み scope と逆を主張している。 */
+const IN_DIFF_SELF_REPORTS_PRE_EXISTING = {
+  id: 'rr-1929-in',
+  title: 'null check missing on the new branch',
+  message: 'The added guard clause does not cover the empty-array case. Scope: pre-existing',
+  severity: 'major',
+  file: 'src/app.js',
+  line: 12,
+  scope: 'in-diff',
+};
+
+describe('#1929: the Action summary drops the self-reported Scope label', () => {
+  it('strips the label from the pre-existing <details> body', async () => {
+    const posted = await run(artifact([PRE_EXISTING_SELF_REPORTS_IN_DIFF]));
+
+    assert.ok(
+      posted.summaryBody.includes(
+        '🔴 **[critical]** legacy helper swallows exceptions `src/app.js:3`\n' +
+          '\n' +
+          'The surrounding catch block returns silently.'
+      ),
+      posted.summaryBody
+    );
+    assert.ok(!posted.summaryBody.includes('Scope: in-diff'), posted.summaryBody);
+    // 印そのものは残る（消したのは自己申告だけ）。
+    assert.ok(posted.summaryBody.includes('1 pre-existing finding'), posted.summaryBody);
+  });
+
+  it('strips the label from an inline review comment body', async () => {
+    const posted = await run(artifact([IN_DIFF_SELF_REPORTS_PRE_EXISTING]));
+
+    assert.deepEqual(
+      posted.batchComments.map((c) => c.body),
+      [
+        '🟠 **[major]** null check missing on the new branch\n' +
+          '\n' +
+          'The added guard clause does not cover the empty-array case.',
+      ]
+    );
+  });
+
+  it('strips the label from the "Findings not posted inline" list', async () => {
+    const unlocated = {
+      ...IN_DIFF_SELF_REPORTS_PRE_EXISTING,
+      id: 'rr-1929-unlocated',
+      line: undefined,
+    };
+    const posted = await run(artifact([unlocated]));
+
+    assert.ok(
+      posted.summaryBody.includes(
+        '- 🟠 **null check missing on the new branch** (src/app.js)\n' +
+          '  The added guard clause does not cover the empty-array case.'
+      ),
+      posted.summaryBody
+    );
+    assert.ok(!posted.summaryBody.includes('Scope: pre-existing'), posted.summaryBody);
+  });
+
+  it('keeps the label on a legacy finding that carries no resolved scope', async () => {
+    const legacy = {
+      id: 'rr-1929-legacy',
+      title: 'legacy artifact predates the scope field',
+      message: 'No resolved scope here. Scope: pre-existing',
+      severity: 'minor',
+      file: 'src/legacy.js',
+      line: 9,
+    };
+    const posted = await run(artifact([legacy]));
+
+    assert.deepEqual(
+      posted.batchComments.map((c) => c.body),
+      [
+        '🟡 **[minor]** legacy artifact predates the scope field\n' +
+          '\n' +
+          'No resolved scope here. Scope: pre-existing',
+      ]
+    );
+  });
+
+  it('omits the body when the label was the whole message', async () => {
+    const labelOnly = {
+      id: 'rr-1929-label-only',
+      title: 'title carries the finding',
+      message: 'Scope: in-diff',
+      severity: 'info',
+      file: 'src/app.js',
+      line: 4,
+      scope: 'in-diff',
+    };
+    const posted = await run(artifact([labelOnly]));
+
+    assert.deepEqual(
+      posted.batchComments.map((c) => c.body),
+      ['ℹ️ **[info]** title carries the finding']
+    );
+  });
+});
