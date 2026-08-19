@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.87.0](https://github.com/s977043/river-review/compare/v1.86.0...v1.87.0) (2026-08-19)
+
+
+### Features
+
+* **action:** pre-existing の finding を PR コメントで折りたたむ ([#1918](https://github.com/s977043/river-review/issues/1918)) ([9942bf8](https://github.com/s977043/river-review/commit/9942bf86075fe2bdca48d50ac1e6ad7eacadf3ba))
+
+
+### Bug Fixes
+
+* **docs:** no-mix-dearu-desumasu を有効化し textlint config を統合する ([#1786](https://github.com/s977043/river-review/issues/1786) 段階2-d) ([#1924](https://github.com/s977043/river-review/issues/1924)) ([1f976bf](https://github.com/s977043/river-review/commit/1f976bf496fe913ce2bb89a096ecf3d3249420be))
+* **docs:** sentence-length を docs textlint config で有効化する ([#1786](https://github.com/s977043/river-review/issues/1786) 段階2-c) ([#1919](https://github.com/s977043/river-review/issues/1919)) ([4c12d8d](https://github.com/s977043/river-review/commit/4c12d8d61c6661895f2763940ab8079e81fe79b5))
+
 ## [1.86.0](https://github.com/s977043/river-review/compare/v1.85.2...v1.86.0) (2026-08-18)
 
 

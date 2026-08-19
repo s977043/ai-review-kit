@@ -168,10 +168,10 @@ River Review は、単にコードをAIに読ませるツールではありま�
 
 ## フローのストーリー
 
-- **上流（設計）**: ADR を踏まえたチェックでコードのドリフトを防ぎ、アーキテクチャ判断との整合を保ちます。
-- **中流（実装）**: スタイルと保守性のガードレールで日々のコーディングを支援します。
-- **下流（テスト/QA）**: テスト指向のスキルがカバレッジ不足や失敗パスを浮かび上がらせます。
-- **フェーズ指向ルーティング**: `phase` とファイルメタデータを見て、開発段階に合ったスキルを選択します。
+- **上流（設計）**: ADR を踏まえたチェックでコードのドリフトを防ぎ、アーキテクチャ判断との整合を保つ。
+- **中流（実装）**: スタイルと保守性のガードレールで日々のコーディングを支援する。
+- **下流（テスト/QA）**: テスト指向のスキルがカバレッジ不足や失敗パスを浮かび上がらせる。
+- **フェーズ指向ルーティング**: `phase` とファイルメタデータを見て、開発段階に合ったスキルを選択する。
 
 ## ポジション: artifact-driven review agent
 
@@ -183,8 +183,8 @@ River Review は **artifact-driven review agent** です。外部から渡され
 
 - **設計レビュー**: `pbi-input` / `plan` を入力に、計画の整合性・網羅性を上流 skill で検査します（例: `skills/upstream/plangate-plan-integrity/`）。
 - **実装レビュー**: `plan` と `diff` を入力に、実装差分が計画と一致しているかを検査します（例: `skills/upstream/plangate-exec-conformance/`）。
-- **QA レビュー**: `test-cases` / `junit` / `coverage` を入力に、テストカバレッジや失敗パスの抜けを下流 skill で浮かび上がらせます。
-- **W チェック（二重レビュー）**: 既存の AI / 人間レビュー結果を `review-self` / `review-external` として渡し、レビューそのものを再点検します。
+- **QA レビュー**: `test-cases` / `junit` / `coverage` を入力に、テストカバレッジや失敗パスの抜けを下流 skill で浮かび上がらせる。
+- **W チェック（二重レビュー）**: 既存の AI / 人間レビュー結果を `review-self` / `review-external` として渡し、レビューそのものを再点検する。
 
 ### CLI 利用例
 
@@ -238,7 +238,7 @@ jobs:
 
 <!-- x-release-please-start-version -->
 
-最新リリース: [v1.86.0](https://github.com/s977043/river-review/releases/latest)
+最新リリース: [v1.87.0](https://github.com/s977043/river-review/releases/latest)
 
 <!-- x-release-please-end -->
 
@@ -436,9 +436,9 @@ river-review は同一リポジトリ内のマーケットプレイスから Cla
 
 得られるもの（プラグイン名で名前空間化されます）:
 
-- コマンド: `/river-review:setup-team` / `/river-review:review-local` / `/river-review:review-team` / `/river-review:challenge` が含まれます。加えて `/river-review:skill` / `/river-review:check` / `/river-review:pr` も使えます。
+- コマンド: `/river-review:setup-team` / `/river-review:review-local` / `/river-review:review-team` / `/river-review:challenge` が含まれる。加えて `/river-review:skill` / `/river-review:check` / `/river-review:pr` も使える。
 - エージェント: `river-review`（スキルルーティング型のコードレビュー・オーケストレーター）
-- スキル: オーケストレーターの `river-review` に加えて `river-review-code` / `river-review-security` / `river-review-performance` の各スキルが含まれます。さらに `river-review-architecture` / `river-review-testing` / `river-review-frontend` も含まれます。加えて `river-review-docs` / `adversarial-review` / `review-team` / `unknown-coverage-review` も含まれます。いずれも `/river-review:<skill-name>` で呼び出せます
+- スキル: オーケストレーターの `river-review` に加えて `river-review-code` / `river-review-security` / `river-review-performance` の各スキルが含まれる。さらに `river-review-architecture` / `river-review-testing` / `river-review-frontend` も含まれる。加えて `river-review-docs` / `adversarial-review` / `review-team` / `unknown-coverage-review` も含まれる。いずれも `/river-review:<skill-name>` で呼び出せる
 
 管理: `/plugin enable|disable|uninstall river-review@river-review-marketplace`。
 
@@ -482,9 +482,9 @@ Codex（および Cursor）の完全なセットアップは `templates/agent-wo
 
 ## AI エージェント運用
 
-- ルートの `AGENTS.md` が AI コーディングエージェント向けの SSOT です。
-- `AGENT_LEARNINGS.md` には、再利用できる確定済みの学びだけを追加します。
-- 秘密情報、個人情報、一時的なメモはどちらにも書きません。
+- ルートの `AGENTS.md` が AI コーディングエージェント向けの SSOT である。
+- `AGENT_LEARNINGS.md` には、再利用できる確定済みの学びだけを追加する。
+- 秘密情報、個人情報、一時的なメモはどちらにも書かない。
 
 ### Codex を project-local config で使う
 
@@ -504,9 +504,9 @@ npm run codex:exec -- "review this branch"
 
 運用上の前提:
 
-- project-local config は安全寄りの既定値だけを持ち、モデル選択や web search は CLI 引数で都度上書きします。
-- レビューや PR 準備の前には、少なくとも `npm run lint` と `npm test` を実行してください。
-- `src/` と `docs/` は要確認パスです。変更が必要な場合は、先に明示的な許可を取ってください。
+- project-local config は安全寄りの既定値だけを持ち、モデル選択や web search は CLI 引数で都度上書きする。
+- レビューや PR 準備の前には、少なくとも `npm run lint` と `npm test` を実行する。
+- `src/` と `docs/` は要確認パスである。変更が必要な場合は、先に明示的な許可を取る。
 
 ### ローカルレビュー実行（river run .）
 
@@ -516,9 +516,9 @@ npm run codex:exec -- "review this branch"
 2. `--debug` を付けるとマージベース、対象ファイル一覧、プロンプトのプレビュー、トークン見積もり、diff 抜粋を標準出力へ表示
 3. OpenAI の LLM を使う場合は `OPENAI_API_KEY`（または `RIVER_OPENAI_API_KEY`）を設定して `river run .` を実行。未設定時はスキルベースのヒューリスティックコメントでフォールバック
 4. `--dry-run` は外部 API を呼ばず標準出力のみ。`--phase upstream|midstream|downstream` でフェーズ指定も可能（デフォルトは `RIVER_PHASE` 環境変数または `midstream`）
-5. コンテキスト/依存の制御: `RIVER_AVAILABLE_CONTEXTS=diff,tests` や `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` を設定します。すると、スキル選択時に要求を満たさないものを理由付きでスキップできます（未設定の場合は依存チェックをスキップ）。
-6. CLI で直接指定する場合: `--context diff,fullFile` や `--dependency code_search,test_runner` フラグで環境変数を上書きできます（逗号区切り）。
-7. 依存のスタブ有効化: `RIVER_DEPENDENCY_STUBS=1` を指定すると、既知の依存（`code_search` / `test_runner` / `coverage_report` / `adr_lookup` / `repo_metadata` / `tracing`）を「利用可能」とみなします。これによりスキップを防ぎます。実装準備中の環境でプランだけ確認したいときに使用してください。
+5. コンテキスト/依存の制御: `RIVER_AVAILABLE_CONTEXTS=diff,tests` や `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` を設定する。すると、スキル選択時に要求を満たさないものを理由付きでスキップできる（未設定の場合は依存チェックをスキップ）。
+6. CLI で直接指定する場合: `--context diff,fullFile` や `--dependency code_search,test_runner` フラグで環境変数を上書きできる（カンマ区切り）。
+7. 依存のスタブ有効化: `RIVER_DEPENDENCY_STUBS=1` を指定すると、既知の依存（`code_search` / `test_runner` / `coverage_report` / `adr_lookup` / `repo_metadata` / `tracing`）を「利用可能」とみなす。これによりスキップを防ぐ。実装準備中の環境でプランだけ確認したいときに使用する。
 
 ### 出力形式（`--output`）
 
@@ -550,7 +550,7 @@ CLI の `--output` と GitHub Action の `output_format` は次の形式を受�
 ## Project-specific review rules
 
 - リポジトリルートに `.river/rules.md` を置くと、プロジェクト固有のレビューポリシーが LLM プロンプトへ自動注入されます（`river run .` と GitHub Actions の双方で有効）
-- ファイルが無い/空の場合は従来通り。読み込みエラー時のみ失敗します
+- ファイルが無い/空の場合は従来通り。読み込みエラー時のみ失敗する
 - 例（.river/rules.md）:
   - Next.js App Router を前提とし、`pages/` ディレクトリは使用しない
   - React サーバーコンポーネントを優先し、クライアントコンポーネントは必要な場合のみ使う
@@ -558,9 +558,9 @@ CLI の `--output` と GitHub Action の `output_format` は次の形式を受�
 
 ## Diff Optimization（差分最適化）
 
-- River Review は lockfile や Markdown、コメント・フォーマットのみの変更を自動で除外し、LLM に渡すトークン量を削減します
-- 大きな差分はハンク単位で圧縮し、必要な変更周辺のみを送信してコストとノイズを低減します
-- `river run . --debug` で最適化前後のトークン見積もりと削減率を確認できます
+- River Review は lockfile や Markdown、コメント・フォーマットのみの変更を自動で除外し、LLM に渡すトークン量を削減する
+- 大きな差分はハンク単位で圧縮し、必要な変更周辺のみを送信してコストとノイズを低減する
+- `river run . --debug` で最適化前後のトークン見積もりと削減率を確認できる
 
 ## スキルと拡張性
 
