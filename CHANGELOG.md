@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.86.0](https://github.com/s977043/river-review/compare/v1.85.2...v1.86.0) (2026-08-18)
+
+
+### Features
+
+* **output:** finding の scope を YAML / HTML / Markdown へ届ける ([#1914](https://github.com/s977043/river-review/issues/1914)) ([5fc53b7](https://github.com/s977043/river-review/commit/5fc53b7cf14ac630fd43a18369827ba91cc9083e)), closes [#1644](https://github.com/s977043/river-review/issues/1644)
+
+
+### Bug Fixes
+
+* **docs:** enable no-doubled-joshi in docs textlint config ([#1786](https://github.com/s977043/river-review/issues/1786) stage 2-b) ([#1916](https://github.com/s977043/river-review/issues/1916)) ([ad26d8a](https://github.com/s977043/river-review/commit/ad26d8a73c5c07d3f077218b1d25f4916aaa85d5))
+
 ## [1.85.2](https://github.com/s977043/river-review/compare/v1.85.1...v1.85.2) (2026-08-18)
 
 
