@@ -253,6 +253,32 @@ describe('resolveAvailableDependencies', () => {
     });
   });
 
+  // #1921: the stub list must cover BOTH branches of the schema's
+  // $defs.dependency anyOf — the closed enum and the open `^custom:.+`
+  // pattern. The pattern branch is represented by the wildcard sentinel
+  // `custom:*`; without it, `RIVER_DEPENDENCY_STUBS=1` was the only setting
+  // that could make a `custom:`-dependent skill be skipped. Values below are
+  // written out literally from schemas/skill.schema.json, not read from the
+  // implementation.
+  test('stub list covers the full enum branch plus the custom:* wildcard', () => {
+    withEnv({ RIVER_AVAILABLE_DEPENDENCIES: undefined, RIVER_DEPENDENCY_STUBS: '1' }, () => {
+      const result = resolveAvailableDependencies(null);
+      assert.deepEqual(
+        [...result].sort(),
+        [
+          'adr_lookup',
+          'code_search',
+          'coverage_report',
+          'custom:*',
+          'repo_metadata',
+          'test_runner',
+          'tracing',
+        ],
+        'RIVER_DEPENDENCY_STUBS must advertise every enum value and the custom:* wildcard'
+      );
+    });
+  });
+
   test('input takes precedence over env', () => {
     withEnv(
       { RIVER_AVAILABLE_DEPENDENCIES: 'code_search', RIVER_DEPENDENCY_STUBS: undefined },

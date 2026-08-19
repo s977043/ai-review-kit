@@ -25,6 +25,8 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
 import { SkillYamlSchema, InputContextEnum } from '../src/lib/skillYamlSchema.mjs';
+import { resolveAvailableDependencies } from '../src/lib/utils.mjs';
+import { selectSkills } from '../runners/core/review-runner.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const schema = JSON.parse(
@@ -225,6 +227,148 @@ describe('inputContext enum parity (zod vs JSON Schema $defs)', () => {
   test('no duplicate values in either enum', () => {
     assert.equal(new Set(schemaEnum).size, schemaEnum.length, 'JSON Schema enum has duplicates');
     assert.equal(new Set(zodEnum).size, zodEnum.length, 'zod enum has duplicates');
+  });
+});
+
+/**
+ * Dependency stub parity canary (#1921).
+ *
+ * `schemas/skill.schema.json` `$defs.dependency` is an `anyOf` of TWO branches:
+ * a closed enum and an open `^custom:.+` pattern. The stub set that
+ * `RIVER_DEPENDENCY_STUBS=1` advertises (`dependencyStubs` in
+ * `src/lib/utils.mjs`) is a hand-maintained third copy of that vocabulary, and
+ * it originally mirrored only the enum branch — so a skill declaring
+ * `custom:github` was skipped precisely when stubs were meant to prevent skips.
+ *
+ * This canary asserts, without loading the schema at runtime in production:
+ *   1. the schema still has exactly the two branches this design assumes;
+ *   2. the stub set covers the whole enum branch;
+ *   3. the pattern branch's treatment is pinned — represented by exactly one
+ *      wildcard sentinel, `custom:*`;
+ *   4. the sentinel expansion inside `missingDependencies()` accepts exactly
+ *      the strings the schema's own pattern accepts (cross-checked against a
+ *      regex compiled from the schema JSON, not from the implementation).
+ */
+describe('dependency stub parity (dependencyStubs vs JSON Schema $defs.dependency)', () => {
+  const branches = schema.$defs?.dependency?.anyOf;
+  const stubs = withStubEnv(() => resolveAvailableDependencies(null));
+
+  /** Run `fn` with RIVER_DEPENDENCY_STUBS=1 and no explicit dependency list. */
+  function withStubEnv(fn) {
+    const previousStubs = process.env.RIVER_DEPENDENCY_STUBS;
+    const previousList = process.env.RIVER_AVAILABLE_DEPENDENCIES;
+    try {
+      process.env.RIVER_DEPENDENCY_STUBS = '1';
+      delete process.env.RIVER_AVAILABLE_DEPENDENCIES;
+      return fn();
+    } finally {
+      if (previousStubs === undefined) delete process.env.RIVER_DEPENDENCY_STUBS;
+      else process.env.RIVER_DEPENDENCY_STUBS = previousStubs;
+      if (previousList === undefined) delete process.env.RIVER_AVAILABLE_DEPENDENCIES;
+      else process.env.RIVER_AVAILABLE_DEPENDENCIES = previousList;
+    }
+  }
+
+  test('schema still declares exactly one enum branch and one pattern branch', () => {
+    assert.ok(Array.isArray(branches), '$defs.dependency.anyOf must be an array');
+    assert.equal(branches.length, 2, 'a new anyOf branch needs a matching stub decision');
+    assert.ok(Array.isArray(branches[0]?.enum), 'branch 0 must be the closed enum');
+    assert.equal(typeof branches[1]?.pattern, 'string', 'branch 1 must be the open pattern');
+  });
+
+  test('stub set covers every value of the enum branch', () => {
+    const missing = branches[0].enum.filter((value) => !stubs.includes(value));
+    assert.deepEqual(missing, [], `dependencyStubs is missing enum values: ${missing.join(', ')}`);
+  });
+
+  test('pattern branch is represented by exactly one wildcard sentinel', () => {
+    const patternStubs = stubs.filter((value) => new RegExp(branches[1].pattern).test(value));
+    assert.deepEqual(
+      patternStubs,
+      ['custom:*'],
+      'the open pattern branch must be stubbed by the single sentinel `custom:*`'
+    );
+  });
+
+  /**
+   * `custom:*` is itself a legal DECLARED dependency — `^custom:.+` matches it,
+   * on both the ajv and the zod side. No skill declares it today (`grep -rn
+   * 'custom:\*' skills/` returns nothing), so this pins the chosen reading
+   * rather than a current behavior: the token means the same thing on both
+   * sides of the comparison, so a skill declaring it is satisfied exactly when
+   * blanket custom support is advertised — never by a specific `custom:` name.
+   */
+  test('a skill declaring custom:* is treated as a name, not as a second wildcard', () => {
+    const wildcardSkill = {
+      metadata: {
+        id: 'wildcard-declaring-skill',
+        phase: 'midstream',
+        applyTo: ['src/**'],
+        dependencies: ['custom:*'],
+      },
+    };
+    const select = (availableDependencies) =>
+      selectSkills([wildcardSkill], {
+        phase: 'midstream',
+        changedFiles: ['src/a.mjs'],
+        availableContexts: [],
+        availableDependencies,
+      }).selected.length === 1;
+
+    assert.equal(select(null), true, 'gating disabled: selected');
+    assert.equal(select(stubs), true, 'blanket support advertised: selected');
+    assert.equal(select(['custom:*']), true, 'blanket support requested explicitly: selected');
+    assert.equal(select([]), false, 'nothing available: skipped');
+    assert.equal(
+      select(['custom:github']),
+      false,
+      'one specific custom dependency must NOT satisfy a blanket custom:* requirement'
+    );
+
+    // Both validators must keep accepting the declaration itself.
+    const skill = { ...base, dependencies: ['custom:*'] };
+    assert.equal(ajvValidate(JSON.parse(JSON.stringify(skill))), true);
+    assert.equal(SkillYamlSchema.safeParse(skill).success, true);
+  });
+
+  test('the sentinel accepts exactly what the schema pattern accepts', () => {
+    const schemaPattern = new RegExp(branches[1].pattern);
+    // Hand-written probes; expectations come from the schema regex, and the
+    // observed side comes from the real selection path in review-runner.
+    const probes = [
+      'custom:github',
+      'custom:*',
+      'custom:a',
+      'custom: ',
+      'custom:',
+      'CUSTOM:github',
+      'notcustom:github',
+      'unknown_dependency',
+    ];
+    for (const dep of probes) {
+      const skill = {
+        metadata: {
+          id: `stub-probe-${dep}`,
+          phase: 'midstream',
+          applyTo: ['src/**'],
+          dependencies: [dep],
+        },
+      };
+      const { selected } = selectSkills([skill], {
+        phase: 'midstream',
+        changedFiles: ['src/a.mjs'],
+        availableContexts: [],
+        availableDependencies: stubs,
+      });
+      const accepted = selected.length === 1;
+      // Enum-branch names are stubbed outright, so only judge the pattern side.
+      const expected = branches[0].enum.includes(dep) || schemaPattern.test(dep);
+      assert.equal(
+        accepted,
+        expected,
+        `stub acceptance disagrees with schema for ${JSON.stringify(dep)}`
+      );
+    }
   });
 });
 

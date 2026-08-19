@@ -71,10 +71,12 @@ Prior to `v0.51.1`, `river review exec` never forwarded `availableDependencies` 
 
 1. Pass `--dependency code_search,test_runner` on the CLI when the runner actually provides those capabilities.
 2. Set `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` in the environment.
-3. Set `RIVER_DEPENDENCY_STUBS=1` to enable the default stub set (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`). Useful for local dry-run experiments where you only want to confirm a skill _would_ be selected.
+3. Set `RIVER_DEPENDENCY_STUBS=1` to enable the default stub set (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`, plus the `custom:*` wildcard covering any `custom:`-prefixed dependency). Useful for local dry-run experiments where you only want to confirm a skill _would_ be selected.
 4. Leave the skill skipped—`skippedSkills` is the correct outcome when the dependency is unavailable.
 
 The CLI's default is `null` (= dependency-based skipping disabled), preserving the legacy behaviour for callers that do not opt in.
+
+`custom:*` is a wildcard **on the availability side**: listing it (via `--dependency`, `RIVER_AVAILABLE_DEPENDENCIES`, or `RIVER_DEPENDENCY_STUBS=1`) satisfies every `custom:`-prefixed dependency a skill declares. A skill that declares `dependencies: ['custom:*']` is asking for blanket custom-extension support and is therefore satisfied only when `custom:*` itself is available—one specific name such as `custom:github` does not satisfy it ([#1921](https://github.com/s977043/river-review/issues/1921)).
 
 ---
 

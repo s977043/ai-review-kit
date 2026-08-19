@@ -90,13 +90,32 @@ function missingInputContexts(skill, availableContexts) {
   return meta.inputContext.filter((ctx) => !available.has(ctx));
 }
 
+/**
+ * Wildcard sentinel emitted by `dependencyStubs` (src/lib/utils.mjs) for the
+ * open branch of `schemas/skill.schema.json` `$defs.dependency`. The schema is
+ * an `anyOf` of a closed enum plus `{"pattern": "^custom:.+"}`; the pattern
+ * branch cannot be enumerated, so `RIVER_DEPENDENCY_STUBS=1` advertises this
+ * single token instead and it is expanded here. Keep the regex identical to
+ * that schema pattern (pinned by tests/skill-schema-parity.test.mjs, #1921).
+ *
+ * The token is expanded only on the AVAILABLE side. A skill that declares
+ * `dependencies: [custom:*]` (legal — the schema pattern matches the token) is
+ * therefore treated like any other name: satisfied iff `custom:*` is available,
+ * i.e. iff blanket custom support is advertised. Pinned in the same canary.
+ */
+const CUSTOM_DEPENDENCY_WILDCARD = 'custom:*';
+const CUSTOM_DEPENDENCY_PATTERN = /^custom:.+/;
+
 function missingDependencies(skill, availableDependencies) {
   const meta = getMeta(skill);
   const deps = ensureArray(meta.dependencies);
   if (!deps.length) return [];
   if (availableDependencies == null) return [];
   const available = new Set(ensureArray(availableDependencies));
-  return deps.filter((dep) => !available.has(dep));
+  const customWildcard = available.has(CUSTOM_DEPENDENCY_WILDCARD);
+  return deps.filter(
+    (dep) => !available.has(dep) && !(customWildcard && CUSTOM_DEPENDENCY_PATTERN.test(dep))
+  );
 }
 
 function evaluateSkill(skill, options) {
