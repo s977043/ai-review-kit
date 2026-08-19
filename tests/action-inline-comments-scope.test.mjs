@@ -373,6 +373,90 @@ describe('#1644: a zero severity count must not swallow the folded block', () =>
   });
 });
 
+// -----------------------------------------------------------------------------
+// #1915: 「指摘なし」の判定を counts でなく手元の finding 実体から行う
+//
+// #1644 が足した `preExistingIssues.length === 0` は、バケットが増えるたびに
+// 条件を 1 つ足す形だった。そして次のバケットを取りこぼしていた: `file` / `line`
+// を持たない in-diff finding は inline から意図的に外され（unlocatedIssues）、
+// 早期 return で summary からも消えていた。
+//
+// 期待値は手書きの literal で固定する。ここも公開経路（module.exports）だけを
+// 呼ぶ。
+// -----------------------------------------------------------------------------
+
+describe('#1915: the summary decides from the findings it holds, not from counts', () => {
+  const ZERO_COUNTS = { critical: 0, major: 0, minor: 0, info: 0 };
+
+  /** in-diff だが file / line を持たないため inline に出せない finding。 */
+  const UNLOCATED = {
+    id: 'rr-unlocated',
+    title: 'race between the two new writers',
+    message: 'Both new call sites write the cache without a lock.',
+    severity: 'major',
+    evidence: ['no lock around cache.set'],
+    suggestion: 'Serialize the writes behind the existing mutex.',
+    scope: 'in-diff',
+  };
+
+  it('keeps an unlocated in-diff finding when every severity count is zero', async () => {
+    const posted = await run({
+      issues: [UNLOCATED],
+      summary: { issueCountBySeverity: ZERO_COUNTS },
+    });
+
+    // inline には出ない（file / line が無いので出せない）。
+    assert.equal(posted.batchComments, null);
+    assert.deepEqual(posted.singleComments, []);
+    // だが summary からは消えない。
+    assert.ok(
+      !posted.summaryBody.includes('✅ No issues found.'),
+      `the finding was swallowed:\n${posted.summaryBody}`
+    );
+    assert.ok(posted.summaryBody.includes('### Findings not posted inline'));
+    assert.ok(posted.summaryBody.includes('race between the two new writers'));
+  });
+
+  it('keeps it when the artifact carries no summary key at all', async () => {
+    const posted = await run({ issues: [UNLOCATED] });
+
+    assert.ok(!posted.summaryBody.includes('✅ No issues found.'));
+    assert.ok(posted.summaryBody.includes('race between the two new writers'));
+  });
+
+  it('headlines the entity count when the artifact declares none', async () => {
+    const posted = await run({
+      issues: [UNLOCATED],
+      summary: { issueCountBySeverity: ZERO_COUNTS },
+    });
+
+    // 内訳が無いので severity の列挙は出さない。`— ` を垂らさない。
+    assert.ok(
+      posted.summaryBody.includes('**1 finding**\n'),
+      `headline did not match the expected literal:\n${posted.summaryBody}`
+    );
+    assert.ok(!posted.summaryBody.includes('**1 finding** —'));
+  });
+
+  it('still reports the clean result verbatim when there is genuinely nothing', async () => {
+    const posted = await run({ issues: [], summary: { issueCountBySeverity: ZERO_COUNTS } });
+
+    assert.equal(
+      posted.summaryBody,
+      '<!-- river-reviewer -->\n## River Reviewer\n\n✅ No issues found.'
+    );
+  });
+
+  it('keeps the artifact breakdown as the headline when the artifact declares one', async () => {
+    const posted = await run(artifact([IN_DIFF]));
+
+    assert.ok(
+      posted.summaryBody.includes('**1 finding** — 🟠 1 major'),
+      `headline did not match the expected literal:\n${posted.summaryBody}`
+    );
+  });
+});
+
 describe('#1644: hard truncation leaves a readable comment', () => {
   /** Enough compact pointer lines that even the compact rendering overflows. */
   function overflowing() {
