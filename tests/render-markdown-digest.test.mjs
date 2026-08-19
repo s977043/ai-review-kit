@@ -488,6 +488,13 @@ describe('#1713 Slice 1: machine-readable surfaces stay byte-identical', () => {
   // 固定入力に対する成果物のハッシュ。markdown の段階的開示は
   // json / yaml / html に一切影響してはならない（#1713 制約）。
   // 期待値は変更前（origin/main）のコードで実測して固定した。
+  //
+  // #1915 B: 入力は scope 無しの finding 1 件だけだったため、#1644 / #1915 A の
+  // scope 出力を 1 バイトも検知しなかった。additive な意図的変更として scope 付き
+  // finding を 1 件足し、3 本の pin 値を更新した。以後この pin が守る不変条件は
+  // 2 つある: scope 欠損時に何も出さない（rr-1）／scope がある finding では chip・
+  // YAML 行・JSON キーが出て、HTML 本文からは自己申告 `Scope:` が消える（rr-2）。
+  // JSON / YAML の `message` / `detail` は自己申告を保持する（監査証跡）。
   const FIXED_RESULT = {
     findings: [
       {
@@ -505,6 +512,29 @@ describe('#1713 Slice 1: machine-readable surfaces stay byte-identical', () => {
         evidence: ['catch 内で return'],
         suggestion: 'ログ+再throw',
       },
+      // #1915 B: the pin covered only scope-less findings, so every scope
+      // behaviour (#1644 の値出力・#1915 A の自己申告除去) was invisible to it.
+      // This second finding exercises both at once: it carries a resolved
+      // `pre-existing` scope AND a self-reported `Scope: in-diff` in its body,
+      // which is the mismatch state `debug.scopeStats.mismatch` counts. The
+      // first finding stays scope-less on purpose — the "emit nothing when the
+      // field is absent" contract is what the original pin protected.
+      {
+        id: 'rr-2',
+        ruleId: 'error-handling',
+        reviewer: 'error-handling',
+        file: 'src/legacy.js',
+        lineStart: 12,
+        lineEnd: 12,
+        title: '既存の握りつぶし',
+        message: 'Finding: 既存の握りつぶし Severity: nit Confidence: high Scope: in-diff',
+        severity: 'minor',
+        confidence: 'high',
+        status: 'open',
+        evidence: ['legacy catch'],
+        suggestion: 'ログを足す',
+        scope: 'pre-existing',
+      },
     ],
     plan: { selected: [], skipped: [] },
     changedFiles: ['src/app.js'],
@@ -520,7 +550,7 @@ describe('#1713 Slice 1: machine-readable surfaces stay byte-identical', () => {
     const json = JSON.stringify(formatJsonOutput(FIXED_RESULT, 'midstream'), null, 2);
     assert.strictEqual(
       sha256(json),
-      'b8dc4c3fd66d9b3c220eab7bcebbfd0e8eaea1556a35d002ab4199c69d418431',
+      'fdcc209be238c0823151776fbd2372662ab36fb12d4c39b0b70cb36e31f12f81',
       `JSON output changed (${Buffer.byteLength(json)} bytes). This surface is governed by schemas/output.schema.json — only update this pin for an intentional, additive schema change.\n${json}`
     );
   });
@@ -536,7 +566,7 @@ describe('#1713 Slice 1: machine-readable surfaces stay byte-identical', () => {
     });
     assert.strictEqual(
       sha256(yaml),
-      '837d8a65630c7b03ebf23cd6c35962b1aaf6f9d76e563d172a26dfb7510e2be7',
+      '6b9586181b48c1bb4615968c55fc21016d3d9b91847897c46701eed8f9ebb06e',
       `YAML output changed (${Buffer.byteLength(yaml)} bytes).\n${yaml}`
     );
   });
@@ -554,7 +584,7 @@ describe('#1713 Slice 1: machine-readable surfaces stay byte-identical', () => {
     );
     assert.strictEqual(
       sha256(html),
-      '673b6dfc163db241712b7e50c5bd5c6555229bd114f2dcbd2363eabd342525fd',
+      '19cd5d1fddedb0bc312b9cc91f5a8a23912d42777bf6c2258cbfe5d40d48e102',
       `HTML output changed (${Buffer.byteLength(html)} bytes).\n${html}`
     );
   });

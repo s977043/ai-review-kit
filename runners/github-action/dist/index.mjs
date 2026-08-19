@@ -43765,6 +43765,7 @@ function isApp(file) {
 /* harmony export */   UB: () => (/* binding */ parseFindingMessage),
 /* harmony export */   Yo: () => (/* binding */ computeFingerprint),
 /* harmony export */   ZY: () => (/* binding */ classifyFindings),
+/* harmony export */   _2: () => (/* binding */ stripSelfReportedScope),
 /* harmony export */   classifyFingerprintAlgo: () => (/* binding */ classifyFingerprintAlgo),
 /* harmony export */   f3: () => (/* binding */ SEVERITY_RANK),
 /* harmony export */   formatUnmatchedFeedbackFingerprintWarning: () => (/* binding */ formatUnmatchedFeedbackFingerprintWarning),
@@ -43874,7 +43875,33 @@ const LABEL_ALTERNATION = LABEL_NAMES.join('|');
  * the label and when using it as a capture terminator.
  */
 const SCOPE_VALUE_PATTERN = 'in[-_ ]?diff|pre[-_ ]?existing';
+const RE_SCOPE_LABEL_SOURCE = `(?:^|\\s)Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b`;
 const RE_SCOPE_LABEL = new RegExp(`(?:^|\\s)Scope:\\s*(${SCOPE_VALUE_PATTERN})\\b`, 'i');
+
+/**
+ * Remove the self-reported `Scope:` label from a finding message (#1915 A).
+ *
+ * The label is a prompt-protocol artifact, not reviewer content: it is consumed
+ * by `resolveFindingScope` (src/lib/verifier.mjs), where the machine
+ * determination from the parsed diff OUTRANKS it. Once a finding carries a
+ * resolved `scope` field, the two can disagree — that disagreement is a
+ * designed state, counted as `debug.scopeStats.mismatch` — and a surface that
+ * renders both puts two opposite scopes on one finding.
+ *
+ * Callers MUST only strip when the finding actually carries a resolved `scope`.
+ * On a legacy artifact that predates the field the self-report is the only
+ * scope information there is, so removing it would delete information rather
+ * than de-duplicate it.
+ *
+ * Same shape as `stripTraceabilityRefs`: the grammar is shared with the
+ * extraction regex above, so the strip can never target a different set of
+ * strings than the parse does.
+ * @param {string|null|undefined} message
+ * @returns {string} the message with every self-reported `Scope:` label removed
+ */
+function stripSelfReportedScope(message) {
+  return String(message ?? '').replace(new RegExp(RE_SCOPE_LABEL_SOURCE, 'gi'), '');
+}
 
 /**
  * Traceability ref labels (#1666 / #1545 Phase 2).
@@ -70618,11 +70645,26 @@ function formatScopeMarkerMarkdown(scope) {
   return scope === 'pre-existing' ? ' _(pre-existing)_' : '';
 }
 
+/**
+ * #1915 A: the resolved `scope` is the only scope this line may state.
+ *
+ * `comment.scope` is the verifier's verdict and the mark above is drawn from
+ * it, while `comment.message` still carries the reviewer's self-reported
+ * `Scope:` label — which the verifier is allowed to overrule. Rendering both
+ * put `_(pre-existing)_` and `**Scope:** in-diff` inside one bullet. The
+ * resolved value wins, so the self-report is dropped from the body; when the
+ * finding carries no resolved scope the self-report is the only scope
+ * information available and is left in place.
+ */
+function bodyForMarkdown(comment) {
+  return comment.scope ? (0,finding_factory/* stripSelfReportedScope */._2)(comment.message) : comment.message;
+}
+
 function formatCommentLine(entry) {
   const comment = entry.comment ?? entry;
   return `- \`${neutralizeDetailsMarkup(comment.file)}:${comment.line}\`${formatScopeMarkerMarkdown(
     comment.scope
-  )}${neutralizeDetailsMarkup(formatMessageForMarkdown(comment.message))}`;
+  )}${neutralizeDetailsMarkup(formatMessageForMarkdown(bodyForMarkdown(comment)))}`;
 }
 
 /**

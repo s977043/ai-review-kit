@@ -55,6 +55,13 @@
 - ヘッドラインの件数・内訳と、✅ の安全宣言・各節の見出しは**同一の描画対象集合**から導く。判定とスコアは canonical な gate 側（`deriveRunGate` / `scoreReview`）に残す
 - 上記は**描画側**の規約である。finding 本文には `<details>` などの生 HTML を書かない（描画側でエスケープされ、折りたたみにはならない）
 
+scope の印（#1644 / #1915）:
+
+- `scope` が `pre-existing` の finding は `file:line` の直後へ `_(pre-existing)_` を付ける。既定値である `in-diff` に印は付けない
+- 解決済みの `scope` を示した finding では、本文に残るレビュアー自己申告の `Scope:` ラベルを落とす。1 つの指摘へ逆向きの scope を 2 つ並べない
+- `scope` を持たない finding では自己申告が唯一の scope 情報なので、本文からは落とさない
+- どの出力形式が `scope` の値をどう出すかは「Finding フィールド」節の `scope` 注記を出典とする。この節が定めるのは `--output markdown` の描画だけである
+
 ## 重要度ラベル
 
 | ラベル   | 定義                                                         |
@@ -92,7 +99,9 @@
 
 > `scope` は additive なメタデータです（#1644 Phase 1）。verifier がパース済み差分の追加行と finding の行範囲を突き合わせて決定論的に判定し、判定できない場合のみレビュアーの自己申告（`Scope:` ラベル）を採用します。追加行のみが `in-diff` であり、unified diff の context 行は `pre-existing` として扱います（行の許容幅は 0）。未指定・不明値は fail-safe の `in-diff` とし、指摘を目立たない側へ降格させません。severity やゲート判定を上書きしてはいけません。
 >
-> `scope` を出力する形式は JSON（`output.schema.json` が規定する成果物）・YAML・HTML の 3 つです。いずれも、finding が値を持つ場合にのみキーが現れます。欠損時に `null` や空文字は出しません。Markdown（`--output markdown`）だけは既定値の `in-diff` へ印を付けず、`pre-existing` のみ `_(pre-existing)_` と表示します（既定値は全 finding に付くため、印がノイズになります）。スキル駆動の `/review-team` レポートテンプレート（`commands/review-team.md`）も同じ印を使います。GitHub Action のインライン PR コメント経路（`runners/github-action/post-inline-comments.cjs`）は、`pre-existing` の finding をインラインへ投稿しません（#1644 残件 6）。投稿しなかった finding は、サマリーコメントの `<details>` へ message・evidence・suggestion まで全文で残します。Tech Lead の優先確認リストには Markdown と同じ `_(pre-existing)_` の印を付けます。
+> `scope` を出力する形式は JSON（`output.schema.json` が規定する成果物）・YAML・HTML の 3 つです。いずれも、finding が値を持つ場合にのみキーが現れます。欠損時に `null` や空文字は出しません。Markdown（`--output markdown`）だけは既定値の `in-diff` へ印を付けず、`pre-existing` のみ `_(pre-existing)_` と表示します（既定値は全 finding に付くため、印がノイズになります）。スキル駆動の `/review-team` レポートテンプレート（`commands/review-team.md`）も同じ印を使います。GitHub Action のインライン PR コメント経路（`runners/github-action/post-inline-comments.cjs`）は、`pre-existing` の finding をインラインへ投稿しません（#1644 残件 6）。投稿しなかった finding は、サマリーコメントの `<details>` へ message・evidence・suggestion まで全文で残します。Tech Lead の優先確認リストには Markdown と同じ `_(pre-existing)_` の印を付けます。Markdown 側の描画規約そのもの（印の位置と自己申告ラベルの扱い）は §5 が出典です。
+>
+> 解決済みの `scope` を表示する Markdown と HTML では、finding 本文に残るレビュアー自己申告の `Scope:` ラベルを描画時に落とします（#1915）。`resolveFindingScope` は機械判定を自己申告より優先するため、両者が食い違う状態は設計上ありえます（`debug.scopeStats.mismatch` が計測）。1 つの指摘へ逆向きの scope を 2 つ並べないための描画側の措置です。JSON と YAML では生の本文を保ちます。機械可読な成果物では自己申告が監査証跡であり、`scope` キーと突き合わせれば読み手が食い違いを検出できるためです。
 >
 > `criterionRefs` / `artifactRefs` は additive なトレーサビリティ用メタデータです（#1666 / #1545 Phase 2）。`Specification → AC → Task → Diff → Test/JUnit → Finding` のうち `Test/AC → Finding` の逆参照を成立させます。
 >

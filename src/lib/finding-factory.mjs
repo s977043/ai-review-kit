@@ -92,7 +92,33 @@ const LABEL_ALTERNATION = LABEL_NAMES.join('|');
  * the label and when using it as a capture terminator.
  */
 const SCOPE_VALUE_PATTERN = 'in[-_ ]?diff|pre[-_ ]?existing';
+const RE_SCOPE_LABEL_SOURCE = `(?:^|\\s)Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b`;
 const RE_SCOPE_LABEL = new RegExp(`(?:^|\\s)Scope:\\s*(${SCOPE_VALUE_PATTERN})\\b`, 'i');
+
+/**
+ * Remove the self-reported `Scope:` label from a finding message (#1915 A).
+ *
+ * The label is a prompt-protocol artifact, not reviewer content: it is consumed
+ * by `resolveFindingScope` (src/lib/verifier.mjs), where the machine
+ * determination from the parsed diff OUTRANKS it. Once a finding carries a
+ * resolved `scope` field, the two can disagree — that disagreement is a
+ * designed state, counted as `debug.scopeStats.mismatch` — and a surface that
+ * renders both puts two opposite scopes on one finding.
+ *
+ * Callers MUST only strip when the finding actually carries a resolved `scope`.
+ * On a legacy artifact that predates the field the self-report is the only
+ * scope information there is, so removing it would delete information rather
+ * than de-duplicate it.
+ *
+ * Same shape as `stripTraceabilityRefs`: the grammar is shared with the
+ * extraction regex above, so the strip can never target a different set of
+ * strings than the parse does.
+ * @param {string|null|undefined} message
+ * @returns {string} the message with every self-reported `Scope:` label removed
+ */
+export function stripSelfReportedScope(message) {
+  return String(message ?? '').replace(new RegExp(RE_SCOPE_LABEL_SOURCE, 'gi'), '');
+}
 
 /**
  * Traceability ref labels (#1666 / #1545 Phase 2).
