@@ -40833,13 +40833,32 @@ function missingInputContexts(skill, availableContexts) {
   return meta.inputContext.filter((ctx) => !available.has(ctx));
 }
 
+/**
+ * Wildcard sentinel emitted by `dependencyStubs` (src/lib/utils.mjs) for the
+ * open branch of `schemas/skill.schema.json` `$defs.dependency`. The schema is
+ * an `anyOf` of a closed enum plus `{"pattern": "^custom:.+"}`; the pattern
+ * branch cannot be enumerated, so `RIVER_DEPENDENCY_STUBS=1` advertises this
+ * single token instead and it is expanded here. Keep the regex identical to
+ * that schema pattern (pinned by tests/skill-schema-parity.test.mjs, #1921).
+ *
+ * The token is expanded only on the AVAILABLE side. A skill that declares
+ * `dependencies: [custom:*]` (legal — the schema pattern matches the token) is
+ * therefore treated like any other name: satisfied iff `custom:*` is available,
+ * i.e. iff blanket custom support is advertised. Pinned in the same canary.
+ */
+const CUSTOM_DEPENDENCY_WILDCARD = 'custom:*';
+const CUSTOM_DEPENDENCY_PATTERN = /^custom:.+/;
+
 function missingDependencies(skill, availableDependencies) {
   const meta = getMeta(skill);
   const deps = review_runner_ensureArray(meta.dependencies);
   if (!deps.length) return [];
   if (availableDependencies == null) return [];
   const available = new Set(review_runner_ensureArray(availableDependencies));
-  return deps.filter((dep) => !available.has(dep));
+  const customWildcard = available.has(CUSTOM_DEPENDENCY_WILDCARD);
+  return deps.filter(
+    (dep) => !available.has(dep) && !(customWildcard && CUSTOM_DEPENDENCY_PATTERN.test(dep))
+  );
 }
 
 function evaluateSkill(skill, options) {
@@ -51789,7 +51808,27 @@ function resolveAvailableContexts(
 /**
  * Known dependency identifiers that `RIVER_DEPENDENCY_STUBS=1` should
  * mark as "available". Keep in sync with `schemas/skill.schema.json`
- * dependencies enum.
+ * `$defs.dependency`, which is an `anyOf` of TWO branches — cover both:
+ *
+ * 1. the closed enum branch, mirrored one-to-one below;
+ * 2. the open `^custom:.+` pattern branch, which cannot be enumerated and is
+ *    therefore represented by the single wildcard sentinel `custom:*`.
+ *
+ * The sentinel is interpreted by `missingDependencies()` in
+ * `runners/core/review-runner.mjs`; a plain `Set.has()` would never match it.
+ * Both branches are pinned by `tests/skill-schema-parity.test.mjs` (#1921).
+ *
+ * Note that `custom:*` is itself a legal dependency name — the schema pattern
+ * `^custom:.+` matches it, so a skill MAY declare `dependencies: [custom:*]`
+ * (none does today). That is not a collision but the natural reading of the
+ * same token on both sides: in the AVAILABLE list it means "every `custom:`
+ * dependency is provided", and as a DECLARED dependency it means "this skill
+ * needs blanket custom-extension support", which is satisfied exactly when
+ * blanket support is advertised. The token cannot be moved out of the string
+ * list: `availableDependencies` is a public `Dependency[]` option
+ * (`runners/node-api/src/types.ts`, `runners/core/review-runner.d.ts`) fed by
+ * the comma-separated `--dependency` flag and `RIVER_AVAILABLE_DEPENDENCIES`,
+ * so "all custom deps" has to be expressible as a string in that namespace.
  */
 const dependencyStubs = [
   'code_search',
@@ -51798,6 +51837,7 @@ const dependencyStubs = [
   'adr_lookup',
   'repo_metadata',
   'tracing',
+  'custom:*',
 ];
 
 /**

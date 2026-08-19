@@ -518,7 +518,7 @@ npm run codex:exec -- "review this branch"
 4. `--dry-run` は外部 API を呼ばず標準出力のみ。`--phase upstream|midstream|downstream` でフェーズ指定も可能（デフォルトは `RIVER_PHASE` 環境変数または `midstream`）
 5. コンテキスト/依存の制御: `RIVER_AVAILABLE_CONTEXTS=diff,tests` や `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` を設定する。すると、スキル選択時に要求を満たさないものを理由付きでスキップできる（未設定の場合は依存チェックをスキップ）。
 6. CLI で直接指定する場合: `--context diff,fullFile` や `--dependency code_search,test_runner` フラグで環境変数を上書きできる（カンマ区切り）。
-7. 依存のスタブ有効化: `RIVER_DEPENDENCY_STUBS=1` を指定すると、既知の依存（`code_search` / `test_runner` / `coverage_report` / `adr_lookup` / `repo_metadata` / `tracing`）を「利用可能」とみなす。これによりスキップを防ぐ。実装準備中の環境でプランだけ確認したいときに使用する。
+7. 依存のスタブ有効化: `RIVER_DEPENDENCY_STUBS=1` を指定すると、既知の依存（`code_search` / `test_runner` / `coverage_report` / `adr_lookup` / `repo_metadata` / `tracing`）を「利用可能」とみなす。`custom:` で始まる拡張依存も、ワイルドカード `custom:*` によりまとめて「利用可能」となる。これによりスキップを防ぐ。実装準備中の環境でプランだけ確認したいときに使用する。
 
 ### 出力形式（`--output`）
 

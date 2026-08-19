@@ -265,7 +265,7 @@ See [`pages/guides/repo-wide-review.md`](pages/guides/repo-wide-review.md) and [
 - Specify phase via `--phase upstream|midstream|downstream`; defaults to `RIVER_PHASE` env or `midstream`
 - Control contexts/dependencies (optional): set `RIVER_AVAILABLE_CONTEXTS=diff,tests` or `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` to skip skills that require unavailable inputs; if unset, dependency checks are bypassed for backward compatibility.
 - Override via CLI flags: `--context diff,fullFile` and `--dependency code_search,test_runner` override the env vars (comma-separated).
-- Enable stub dependencies: set `RIVER_DEPENDENCY_STUBS=1` to treat known dependencies (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`) as available so planning doesn’t skip them while provider implementations are being readied.
+- Enable stub dependencies: set `RIVER_DEPENDENCY_STUBS=1` to treat known dependencies (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`) and any extension dependency starting with `custom:` (`custom:*`) as available so planning doesn’t skip them while provider implementations are being readied.
 
 ## Skills
 
@@ -404,7 +404,7 @@ Operating assumptions:
 4. `--dry-run` calls no external API and only writes to stdout. Specify a phase with `--phase upstream|midstream|downstream` (defaults to the `RIVER_PHASE` env var or `midstream`).
 5. Context/dependency control: set `RIVER_AVAILABLE_CONTEXTS=diff,tests` or `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` to skip skills whose requirements are unmet (with reasons) during selection (dependency checks are skipped when unset).
 6. To specify directly on the CLI: override the env vars with the `--context diff,fullFile` or `--dependency code_search,test_runner` flags (comma-separated).
-7. Dependency stubs: set `RIVER_DEPENDENCY_STUBS=1` to treat known dependencies (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`) as available and prevent skipping. Use this when you only want to inspect the plan in an environment where implementations are not yet ready.
+7. Dependency stubs: set `RIVER_DEPENDENCY_STUBS=1` to treat known dependencies (`code_search`, `test_runner`, `coverage_report`, `adr_lookup`, `repo_metadata`, `tracing`) and any extension dependency starting with `custom:` (`custom:*`) as available and prevent skipping. Use this when you only want to inspect the plan in an environment where implementations are not yet ready.
 
 ### Output formats (`--output`)
 
