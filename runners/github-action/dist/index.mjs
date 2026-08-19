@@ -74086,7 +74086,15 @@ function parseEvolveOption(arg, args, parsed) {
   }
   if (arg === '--month') {
     const value = args.shift();
-    if (!value || !/^\d{4}-\d{2}$/.test(value)) {
+    // #1759 (C4): the literal YYYY-MM shape alone let `2026-13` / `2026-00`
+    // through, since /^\d{4}-\d{2}$/ does not know what a valid month is.
+    // Parse the MM segment and require it to be 01-12; the year segment is
+    // left unrestricted (4 digits) because aggregate data can legitimately
+    // exist for any calendar year and narrowing it would reject valid past
+    // or future months without a corresponding need.
+    const match = value && /^(\d{4})-(\d{2})$/.exec(value);
+    const monthNum = match ? Number.parseInt(match[2], 10) : NaN;
+    if (!match || monthNum < 1 || monthNum > 12) {
       console.error('Error: --month option requires a YYYY-MM value.');
       usageError(parsed);
       return 'break';
