@@ -48,7 +48,7 @@ River Review は一般的な AI レビュー bot ではなく、`Review Judgment
    ```text
    AIがコードを書く時代でも、レビュー判断はチームのもの。
    River Review はレビュー基準を repo-owned な skill としてコード化し、
-   plan / diff / tests をまたいでチーム基準で検査する OSS です。
+   plan / diff / tests をまたいでチーム基準で検査する OSS である。
    Review Judgment as Code → <repo URL>
    ```
 
@@ -57,7 +57,7 @@ River Review は一般的な AI レビュー bot ではなく、`Review Judgment
    ```text
    一般的な AI レビュー bot は diff を見るだけ。
    River Review は plan / diff / tests / JUnit / 過去レビューをまたいで、
-   チーム所有の監査レイヤーとして動きます。判断は repo の中に、versioned で。
+   チーム所有の監査レイヤーとして動く。判断は repo の中に、versioned で。
    <repo URL>
    ```
 

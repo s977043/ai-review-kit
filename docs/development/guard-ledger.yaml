@@ -210,9 +210,11 @@ guards:
     verifiedBy:
       - .lintstagedrc.json
       - .github/workflows/test.yml
+      - .textlintrc.json
+      - package.json
     addedAt: '2026-06-09'
     reviewAfter: '2026-09-07'
-    notes: pre-commit の lint-staged が pages/docs/README に textlint --no-cache を掛け、必須チェック `Lint` の npm run lint が同じ違反で落ちる。
+    notes: pre-commit の lint-staged が pages/docs/README に textlint --no-cache を掛け、必須チェック `Lint` の npm run lint が同じ違反で落ちる。2026-08-19（#1786 段階2-d）で docs/README 用の緩和 config（tools/textlint/docs.textlintrc.json）を廃止し、pages/docs/README を単一の .textlintrc.json（no-mix-dearu-desumasu / no-doubled-joshi / sentence-length max150 / prh のフルルール）に統合、npm run lint:text と lint-staged の両方が単一 config で全範囲を検査する。
 
   - id: doc-link-relativity
     title: Doc-link relativity (lychee)

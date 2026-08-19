@@ -2,7 +2,7 @@
 
 > **内部資料:** 設計思想の SSoT です。公開向けの導入は [`pages/explanation/intro.md`](../pages/explanation/intro.md)、公開向けのコンセプト解説は [`pages/explanation/concept.md`](../pages/explanation/concept.md)、運用ガイドは [`pages/guides/`](../pages/guides/) を参照してください。
 
-River Review は、**チームのレビュー判断を skill として明示化・バージョン管理し、SDLC の各ゲートで実行する基盤** である。
+River Review は、**チームのレビュー判断を skill として明示化・バージョン管理し、SDLC の各ゲートで実行する基盤** です。
 
 「AI に PR を読ませる SaaS」ではなく、「**レビュー職務を skill として定義・評価・運用するための基盤**」と位置付ける。AI 支援開発（Claude Code / Codex / Cursor 等）の普及により、コードは速く書けるようになった一方、判断基準は依然としてチームが所有しなければならない。River Review はその所有を実行可能にする。
 
