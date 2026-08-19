@@ -77,8 +77,10 @@ Order the output so a reader can decide "is there anything to fix before merging
 - **Collapsing is not omitting**: a collapsed section keeps the full text of every finding — no summarizing, deleting, or truncating.
 - **Counts in the heading**: every collapsed section states its count, so the reader can judge the volume without expanding it.
 - **Execution log last**: selected skills, skip reasons, and the score breakdown are execution records; collapse them and place them after the result.
+- **Mark what the diff did not introduce**: a finding that does not come from this PR's added lines (`pre-existing`) carries a mark right after its location reference. The default value, `in-diff`, is never marked.
+- **State the scope once**: on a marked finding, drop the reviewer's self-reported scope label from the body. One finding must never show two opposite scopes.
 
-The severity labels stay Critical / Major / Minor / Info — progressive disclosure adds no new vocabulary. A presentation change must never rewrite a finding's severity or the auto-approval decision.
+The severity labels stay Critical / Major / Minor / Info — progressive disclosure adds no new vocabulary. The scope mark is not a severity label, so it does not violate that constraint. A presentation change must never rewrite a finding's severity or the auto-approval decision.
 
 This section is a rule for the side that **renders** the report. Do not put raw HTML such as `<details>` inside an individual finding body: a collapsible block embedded in a finding collides with the section structure the renderer builds around it. The renderer escapes raw HTML for safety, so such markup is shown as literal text rather than becoming a collapsible block.
 

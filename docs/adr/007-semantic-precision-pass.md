@@ -91,16 +91,16 @@ Reviewer が発見し、Judge が判定する。この分業を v1 の不変条�
 
 語彙は列挙値に固定し、自由文の rationale を Gate の判定条件にしません。そのうえで、前掲の「逆向きの欠落 2 件」を次のように扱います。
 
-- **`low_confidence` は語彙へ追加する。ただし決定論の prefilter 専用コードとし、Judge には出させない。** confidence は Judge が判定する軸ではありません。Judge に出させると severity / confidence / disposition の分離が崩れます。既存の `SUPPRESS_REASONS.LOW_CONFIDENCE` を 1 対 1 で移送できる利点も残ります。`insufficient_evidence` へ寄せる案は採りません。証跡が短いことと確信度が低いことは別の事実であり、現行も別コードで区別しています。
-- **表示上限の超過には reasonCode を与えない。** これは disposition ではなく ranking の結果です。したがって `COVERED_BY_HIGHER_LEVEL` は Phase 1 で 2 つに割り、重複側だけを `duplicate` へ寄せ、上限側は `rankFindingsForOutput` の出力として表現します。
+- **`low_confidence` は語彙へ追加する。ただし決定論の prefilter 専用コードとし、Judge には出させない。** confidence は Judge が判定する軸ではない。Judge に出させると severity / confidence / disposition の分離が崩れる。既存の `SUPPRESS_REASONS.LOW_CONFIDENCE` を 1 対 1 で移送できる利点も残る。`insufficient_evidence` へ寄せる案は採らない。証跡が短いことと確信度が低いことは別の事実であり、現行も別コードで区別している。
+- **表示上限の超過には reasonCode を与えない。** これは disposition ではなく ranking の結果である。したがって `COVERED_BY_HIGHER_LEVEL` は Phase 1 で 2 つに割り、重複側だけを `duplicate` へ寄せ、上限側は `rankFindingsForOutput` の出力として表現する。
 
 各コードは、決定論の prefilter と Judge のどちらか一方だけが産出できるものとします。同じコードを両者が出せる状態にすると、監査時にどちらの層が落としたのかを追えなくなります。
 
 ### critical を LLM 単独で suppressed にしない
 
-- critical から `blocking` への判定は許可します。
-- critical から `advisory` への判定は許可しますが、human-review の対象として残します。
-- **critical から `suppressed` への判定を、Judge の出力だけを根拠に成立させません。**
+- critical から `blocking` への判定は許可する。
+- critical から `advisory` への判定は許可するが、human-review の対象として残す。
+- **critical から `suppressed` への判定を、Judge の出力だけを根拠に成立させない。**
 
 critical の抑制が成立するのは、次の監査可能な根拠がある場合に限ります。いずれも決定論で再現でき、Judge の応答が無くても同じ結論になるものです。
 
@@ -156,23 +156,23 @@ feedback へ同じ値を複製保存しません。既存の `review_run_id` と
 
 ## Non-goals
 
-- **Judge が新しい finding を発見すること。** 発見は Reviewer と Lens の責務であり、#1545 の範囲です。
-- **fingerprint 仕様への変更。** fingerprint v1 / v2、feedback matching、近接行コメントの統合は #1823 の責務であり、本 ADR は触れません。
-- **Review Artifact の version 変更。** `findings[]` への additive な追加にとどめ、v2 は導入しません。
+- **Judge が新しい finding を発見すること。** 発見は Reviewer と Lens の責務であり、#1545 の範囲である。
+- **fingerprint 仕様への変更。** fingerprint v1 / v2、feedback matching、近接行コメントの統合は #1823 の責務であり、本 ADR は触れない。
+- **Review Artifact の version 変更。** `findings[]` への additive な追加にとどめ、v2 は導入しない。
 - 新しい review framework 全体の追加。
 - Context Collector の再実装。
 - Reviewer と Lens の数を増やすこと。
-- multi-run の集約、paired replay、canary、keep / roll-back / retire。これらは #1574 の範囲であり、本 ADR は単一 run 内の Precision Pass に限ります。
+- multi-run の集約、paired replay、canary、keep / roll-back / retire。これらは #1574 の範囲であり、本 ADR は単一 run 内の Precision Pass に限る。
 - Lens 単位の effectiveness 指標の再実装（#1667）。
 
 ## Consequences
 
-- **Phase 0 のベースライン数値は、現時点の保存データからは計算できません。** 理由は 3 つあり、いずれも実測済みです。第一に LLM を通った finding が 0 件で、母数が fallback だけです。第二に run record 6 件のいずれにも `debug` が無く、`verifierStats` が保存されていません。第三に feedback と finding が join できず、precision・false-block・missed issue を原理的に算出できません。したがって Phase 0 の成果物は数値のベースラインではなく、指標定義と抽出コード、および母集団を作るための収集条件になります。
-- **token と cost は「新 DB を作らない」方針を維持できません。** 保存先の問題ではなく取得コードが無いためです。`src/lib/llm-pipeline.mjs:121` は `json.choices?.[0]?.message?.content` だけを返し、provider が返す `usage` を破棄します。この 2 指標を観測するには `usage` の保持と呼び出し側の変更が要り、これは挙動変更なしという Phase 0 の前提を厳密には破ります。なお `finalSummary.tokenEstimate` は provider の実トークンではありません。suppressed / gate / feedback の分布については、既存の run record と feedback JSONL の読み取りで足ります。
-- **`findings[]` へ `judgment` を足すには schema 変更が必須です。** [`schemas/review-artifact.schema.json`](../../schemas/review-artifact.schema.json) の `$defs.finding` は `additionalProperties: false` です（`:354`）。ADR-006 が使った `debug.execution` は `additionalProperties: true` でしたが、finding には同じ手が使えません。additive ではあるものの no-op ではなく、schema の更新を伴う PR が必要です。
-- 段 5 が Gate に効いていない以上、Judge を Gate へ接続する段では「これまで表示上抑制されていた finding が Gate に載る」方向の変化が起こり得ます。`active` の評価では、Judge の精度とは別に、この経路差そのものを回帰として観測します。
-- `low_confidence` を prefilter 専用コードとしたため、Judge の語彙と決定論の語彙は同じ列挙の部分集合になります。どちらの層が産出したのかを記録に残す必要があり、`judgment.judge` に加えて産出層を識別できる情報が要ります。
-- 既定を `off` から動かしません。`annotate` と `active` は opt-in です。
+- **Phase 0 のベースライン数値は、現時点の保存データからは計算できない。** 理由は 3 つあり、いずれも実測済みである。第一に LLM を通った finding が 0 件で、母数が fallback だけである。第二に run record 6 件のいずれにも `debug` が無く、`verifierStats` が保存されていない。第三に feedback と finding が join できず、precision・false-block・missed issue を原理的に算出できない。したがって Phase 0 の成果物は数値のベースラインではなく、指標定義と抽出コード、および母集団を作るための収集条件になる。
+- **token と cost は「新 DB を作らない」方針を維持できない。** 保存先の問題ではなく取得コードが無いためである。`src/lib/llm-pipeline.mjs:121` は `json.choices?.[0]?.message?.content` だけを返し、provider が返す `usage` を破棄する。この 2 指標を観測するには `usage` の保持と呼び出し側の変更が要り、これは挙動変更なしという Phase 0 の前提を厳密には破る。なお `finalSummary.tokenEstimate` は provider の実トークンではない。suppressed / gate / feedback の分布については、既存の run record と feedback JSONL の読み取りで足りる。
+- **`findings[]` へ `judgment` を足すには schema 変更が必須である。** [`schemas/review-artifact.schema.json`](../../schemas/review-artifact.schema.json) の `$defs.finding` は `additionalProperties: false` である（`:354`）。ADR-006 が使った `debug.execution` は `additionalProperties: true` だったが、finding には同じ手が使えない。additive ではあるものの no-op ではなく、schema の更新を伴う PR が必要である。
+- 段 5 が Gate に効いていない以上、Judge を Gate へ接続する段では「これまで表示上抑制されていた finding が Gate に載る」方向の変化が起こり得る。`active` の評価では、Judge の精度とは別に、この経路差そのものを回帰として観測する。
+- `low_confidence` を prefilter 専用コードとしたため、Judge の語彙と決定論の語彙は同じ列挙の部分集合になる。どちらの層が産出したのかを記録に残す必要があり、`judgment.judge` に加えて産出層を識別できる情報が要る。
+- 既定を `off` から動かさない。`annotate` と `active` は opt-in である。
 
 ### 着手条件と再参入条件
 
@@ -180,22 +180,22 @@ feedback へ同じ値を複製保存しません。既存の `review_run_id` と
 
 **`observe` を有効化する条件**
 
-1. provider の API キーが登録され、LLM を通った run を産めることです。**これは代行できない人間作業であり、現時点で未完了です。** この 1 点が未達である間、`observe` 以降のすべての評価は開始できません。
-2. run record に `debug` が保存される経路が確認できていることです。現状 6 件すべてに `debug` が無く、記録しても読めない状態です。
-3. `covered_by_higher_level_finding` が重複と表示上限に分離されていることです。分離前は suppressed の内訳を数えても 2 つの事象が混ざります。
+1. provider の API キーが登録され、LLM を通った run を産めることである。**これは代行できない人間作業であり、現時点で未完了である。** この 1 点が未達である間、`observe` 以降のすべての評価は開始できない。
+2. run record に `debug` が保存される経路が確認できていることである。現状 6 件すべてに `debug` が無く、記録しても読めない状態である。
+3. `covered_by_higher_level_finding` が重複と表示上限に分離されていることである。分離前は suppressed の内訳を数えても 2 つの事象が混ざる。
 
 **`annotate` へ進む条件**
 
-1. `schemas/review-artifact.schema.json` の `$defs.finding` へ `judgment` が追加され、既存 Artifact が引き続き検証を通ることです。
-2. `observe` の run で、Judge が `findings[N]` と同数の judgment を返したことを確認できることです。件数不一致と未知 ID の 2 つの失敗形が、fallback として記録されることを含みます。
-3. critical に対する `suppressed` が、決定論の 3 根拠を伴わない形で 1 件も出ていないことです。
+1. `schemas/review-artifact.schema.json` の `$defs.finding` へ `judgment` が追加され、既存 Artifact が引き続き検証を通ることである。
+2. `observe` の run で、Judge が `findings[N]` と同数の judgment を返したことを確認できることである。件数不一致と未知 ID の 2 つの失敗形が、fallback として記録されることを含む。
+3. critical に対する `suppressed` が、決定論の 3 根拠を伴わない形で 1 件も出ていないことである。
 
 **`active` へ進む条件**
 
-1. feedback と finding が join できることです。現状 43 件中 0 件であり、`--fingerprint` と run id の記録が運用として定着している必要があります。
-2. 1 が満たされたうえで、blocking precision と false-block rate を同一母集団で算出できることです。
-3. critical の false-negative が 0 であることを、`must-not-suppress` の fixture で機械的に確認できることです。
-4. fallback 率が測れており、Judge の失敗時に legacy findings が Gate へ渡ることを回帰テストで固定してあることです。
+1. feedback と finding が join できることである。現状 43 件中 0 件であり、`--fingerprint` と run id の記録が運用として定着している必要がある。
+2. 1 が満たされたうえで、blocking precision と false-block rate を同一母集団で算出できることである。
+3. critical の false-negative が 0 であることを、`must-not-suppress` の fixture で機械的に確認できることである。
+4. fallback 率が測れており、Judge の失敗時に legacy findings が Gate へ渡ることを回帰テストで固定してあることである。
 
 `active` を既定にすることは、上記を満たしたうえで別途検討します。本 ADR では決めません。
 

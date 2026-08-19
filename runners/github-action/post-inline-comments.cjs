@@ -155,26 +155,40 @@ function formatSummaryFromJson(
 
   const lines = [COMMENT_MARKER, '## River Reviewer', ''];
 
-  // #1644: the early return has to know about the folded block below it.
+  // #1915: the "nothing to report" decision is made from the findings this
+  // function was HANDED, not from the artifact's self-declared counts.
   //
   // `counts` is read from the artifact's own `summary.issueCountBySeverity`,
   // NOT derived from `issues`, so the two can disagree — a zero count next to a
-  // non-empty issue list, or a missing `summary` key entirely. Before this
-  // change a `pre-existing` finding in that state reached no surface at all:
-  // withheld from inline by design, and cut off from the folded block by this
-  // return. That is a regression against the pre-#1644 behaviour, where the
-  // same finding was still posted inline.
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  if (total === 0 && preExistingIssues.length === 0) {
+  // non-empty issue list, or a missing `summary` key entirely. #1644 widened the
+  // guard once (adding `preExistingIssues.length === 0`), but a count-first
+  // condition needs a new clause for every bucket that exists, and it silently
+  // lost the next one: an in-diff finding with no `file` / `line` is withheld
+  // from inline by design (`unlocatedIssues`) and was then cut off from the
+  // summary by this return, so it reached no surface at all.
+  //
+  // Every issue lands in exactly one of three buckets — posted inline,
+  // `remainingIssues` (unlocated + inline-failed), or `preExistingIssues` — so
+  // their sum IS the artifact's issue list as this function sees it. Deciding
+  // from that sum needs no further clause when a new bucket is introduced,
+  // because a new bucket must be carved out of one of these three.
+  const countedTotal = Object.values(counts).reduce((a, b) => a + b, 0);
+  const inDiffOnHand = inlinePostedCount + remainingIssues.length;
+  if (countedTotal === 0 && inDiffOnHand === 0 && preExistingIssues.length === 0) {
     lines.push('✅ No issues found.');
     return lines.join('\n');
   }
 
+  // The headline count still prefers the artifact's own severity breakdown —
+  // it is the only source that can describe findings this function never
+  // received. It falls back to the entity count so a missing or all-zero
+  // `summary` cannot headline a non-empty report with "0".
+  const total = countedTotal > 0 ? countedTotal : inDiffOnHand;
   if (total === 0) {
     // Do not claim "No issues found" above a block that lists findings. What
-    // is actually true in this state is narrower: the severity counts report
-    // nothing on the added lines, while pre-existing findings remain. The
-    // folded block's own summary line carries their count.
+    // is actually true in this state is narrower: nothing is reported on the
+    // added lines, while pre-existing findings remain. The folded block's own
+    // summary line carries their count.
     lines.push("✅ No findings on this diff's added lines.", '');
   } else {
     const countParts = [];
@@ -182,7 +196,13 @@ function formatSummaryFromJson(
     if (counts.major > 0) countParts.push(`🟠 ${counts.major} major`);
     if (counts.minor > 0) countParts.push(`🟡 ${counts.minor} minor`);
     if (counts.info > 0) countParts.push(`ℹ️ ${counts.info} info`);
-    lines.push(`**${total} finding${total === 1 ? '' : 's'}** — ${countParts.join(', ')}`);
+    // With an absent or all-zero `summary` there is no breakdown to show, and
+    // an empty `countParts` would leave a dangling `— `.
+    lines.push(
+      countParts.length > 0
+        ? `**${total} finding${total === 1 ? '' : 's'}** — ${countParts.join(', ')}`
+        : `**${total} finding${total === 1 ? '' : 's'}**`
+    );
     lines.push('');
   }
 

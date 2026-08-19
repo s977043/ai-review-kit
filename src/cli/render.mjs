@@ -12,6 +12,7 @@ import {
   RESERVED_FINDING_LABELS,
   SEVERITY_RANK,
   severityToPriority,
+  stripSelfReportedScope,
 } from '../lib/finding-factory.mjs';
 import { resolveVerdict, scoreReview } from '../lib/scoring/engine.mjs';
 import { AXES, AXIS_LABELS_JA } from '../lib/scoring/rubric.mjs';
@@ -153,11 +154,26 @@ function formatScopeMarkerMarkdown(scope) {
   return scope === 'pre-existing' ? ' _(pre-existing)_' : '';
 }
 
+/**
+ * #1915 A: the resolved `scope` is the only scope this line may state.
+ *
+ * `comment.scope` is the verifier's verdict and the mark above is drawn from
+ * it, while `comment.message` still carries the reviewer's self-reported
+ * `Scope:` label — which the verifier is allowed to overrule. Rendering both
+ * put `_(pre-existing)_` and `**Scope:** in-diff` inside one bullet. The
+ * resolved value wins, so the self-report is dropped from the body; when the
+ * finding carries no resolved scope the self-report is the only scope
+ * information available and is left in place.
+ */
+function bodyForMarkdown(comment) {
+  return comment.scope ? stripSelfReportedScope(comment.message) : comment.message;
+}
+
 function formatCommentLine(entry) {
   const comment = entry.comment ?? entry;
   return `- \`${neutralizeDetailsMarkup(comment.file)}:${comment.line}\`${formatScopeMarkerMarkdown(
     comment.scope
-  )}${neutralizeDetailsMarkup(formatMessageForMarkdown(comment.message))}`;
+  )}${neutralizeDetailsMarkup(formatMessageForMarkdown(bodyForMarkdown(comment)))}`;
 }
 
 /**
