@@ -43794,6 +43794,7 @@ function isApp(file) {
 /* harmony export */   ko: () => (/* binding */ computeFingerprintV2),
 /* harmony export */   lv: () => (/* binding */ normalizeSeverity),
 /* harmony export */   nG: () => (/* binding */ severityToPriority),
+/* harmony export */   vf: () => (/* binding */ matchSelfReportedScope),
 /* harmony export */   xv: () => (/* binding */ validateFindingMessage),
 /* harmony export */   yv: () => (/* binding */ formatFindingMessage)
 /* harmony export */ });
@@ -43896,6 +43897,32 @@ const LABEL_ALTERNATION = LABEL_NAMES.join('|');
 const SCOPE_VALUE_PATTERN = 'in[-_ ]?diff|pre[-_ ]?existing';
 const RE_SCOPE_LABEL_SOURCE = `(?:^|\\s)Scope:\\s*(?:${SCOPE_VALUE_PATTERN})\\b`;
 const RE_SCOPE_LABEL = new RegExp(`(?:^|\\s)Scope:\\s*(${SCOPE_VALUE_PATTERN})\\b`, 'i');
+
+/**
+ * Extract the self-reported `Scope:` label value from a message (#1644).
+ *
+ * The single reader of the label grammar: `parseFindingMessage` here and
+ * `resolveFindingScope` (src/lib/verifier.mjs) both go through this function,
+ * so `SCOPE_VALUE_PATTERN` stays the one place the vocabulary is written.
+ * The value is constrained to the known vocabulary so that prose containing
+ * the word "Scope:" (OAuth / IAM scopes are common in review text) cannot be
+ * mistaken for a self-report, and so that an out-of-vocabulary label
+ * (`Scope: unknown`) yields `null` rather than being normalized into a
+ * fabricated self-report.
+ *
+ * A function rather than an exported RegExp: sharing one regex object across
+ * modules would also share its `lastIndex`, so adding `g` or `y` later would
+ * silently make the match position depend on the previous caller. The regex
+ * stays module-private and stateless (`i` only) behind this boundary.
+ *
+ * @param {string|null|undefined} message
+ * @returns {string|null} the raw matched vocabulary token (not normalized —
+ *   pass it through `normalizeScope` for the canonical value), or `null` when
+ *   the message carries no in-vocabulary `Scope:` label
+ */
+function matchSelfReportedScope(message) {
+  return RE_SCOPE_LABEL.exec(String(message ?? ''))?.[1] ?? null;
+}
 
 /**
  * Remove the self-reported `Scope:` label from a finding message (#1915 A).
@@ -44098,7 +44125,7 @@ function parseFindingMessage(message) {
     // Optional LLM self-report (#1644). Machine determination in verifier.mjs
     // takes precedence; this is only the fallback when the diff cannot decide.
     // Null when the label is absent or carries an out-of-vocabulary value.
-    scope: RE_SCOPE_LABEL.exec(text)?.[1] ?? null,
+    scope: matchSelfReportedScope(text),
     // Optional traceability refs (#1666). Purely additive metadata: they never
     // reach the verifier's `verified` decision or any gate.
     criterionRefs: extractRefs(text, 'CriterionRefs'),
