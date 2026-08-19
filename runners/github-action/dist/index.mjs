@@ -73825,10 +73825,13 @@ const SUPPRESSION_FINGERPRINT_ALGOS = ['v1', 'v2'];
  * was swallowed as the path (#1755).
  *
  * `SKILLS_SUBCOMMANDS` / `EVOLVE_SUBCOMMANDS` sit alongside it above. Hoisting
- * them out of `parseArgs` is a pure relocation: `takeTrailingPositional` still
- * does not consult them, and `evolve` still approximates the eager branch's
- * decision with `existsSync`. That approximation is #1759 B1, which this
- * relocation does NOT fix and does not claim to.
+ * them out of `parseArgs` is a pure relocation: `takeTrailingPositional`
+ * already consulted `REVIEW_SUBCOMMANDS` before the hoist, but for `evolve`
+ * it only approximated the eager branch's decision with `existsSync` (#1759
+ * B1). `takeTrailingPositional` now checks `EVOLVE_SUBCOMMANDS` first, the
+ * same priority the eager branch uses, so `river evolve aggregate --min 2`
+ * and `river evolve --min 2 aggregate` agree even when a directory named
+ * `aggregate` exists in cwd.
  */
 const REVIEW_SUBCOMMANDS = new Set(['plan', 'exec', 'verify', 'route']);
 
@@ -73904,16 +73907,25 @@ function takeTrailingPositional(parsed, token) {
     parsed.reviewSubcommand = token;
     return true;
   }
-  // Mirror the eager branch: for `evolve`, a token that is neither a known
-  // subcommand nor an existing path is a mistyped subcommand, not a path, and
-  // the handler must reject it (`river evolve --output json agregate`).
-  // `!parsed.evolveSubcommand` also covers the `replay` exclusion, because
-  // `replay` is itself a subcommand value.
+  // Mirror the eager branch's priority: a token that matches known
+  // `EVOLVE_SUBCOMMANDS` vocabulary is ALWAYS the subcommand, even when a
+  // same-named directory exists in cwd (#1759 B1). Before this vocabulary
+  // check existed, this branch approximated the decision with `!existsSync`
+  // alone, so `river evolve --min 2 aggregate` disagreed with
+  // `river evolve aggregate --min 2` whenever an `aggregate` directory was
+  // present: the eager branch (which checks `EVOLVE_SUBCOMMANDS` first) read
+  // `aggregate` as the subcommand, but this branch read it as a path because
+  // `existsSync('aggregate')` was true — same tokens, different meaning,
+  // both exiting 0. Only when the token is NOT in the vocabulary does the
+  // `!existsSync` heuristic apply, to still reject a mistyped subcommand
+  // (`river evolve --output json agregate`) rather than swallow it as a
+  // path. `!parsed.evolveSubcommand` also covers the `replay` exclusion,
+  // because `replay` is itself a subcommand value.
   if (
     parsed.command === 'evolve' &&
     !parsed.targetConsumed &&
     !parsed.evolveSubcommand &&
-    !(0,external_node_fs_.existsSync)(token)
+    (EVOLVE_SUBCOMMANDS.has(token) || !(0,external_node_fs_.existsSync)(token))
   ) {
     parsed.evolveSubcommand = token;
     return true;

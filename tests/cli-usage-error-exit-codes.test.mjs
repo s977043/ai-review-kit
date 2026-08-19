@@ -1108,11 +1108,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // 「フラグ先行形を拒否」も v1.72.1 の「`--phase Upstream` を誤拒否」も
   // 壊したのは**成功側**であり、守りが薄いのは逆だった。行を消すだけで
   // 黙って保護が減るのを防ぐ。
-  test('the success-side table pins 86 legitimate argv forms', () => {
+  test('the success-side table pins 88 legitimate argv forms', () => {
     assert.equal(
       VALID_CASES.length,
-      86,
-      'コマンド面ごとの正常形: run 12 / doctor 5 / skills 13 / runs 7 (#1759 B2 で1行追加) / review 19 / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 11 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加) / help 2 / コマンド無し 1'
+      88,
+      'コマンド面ごとの正常形: run 12 / doctor 5 / skills 13 / runs 7 (#1759 B2 で1行追加) / review 19 / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 13 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加) / help 2 / コマンド無し 1'
     );
   });
 
@@ -1427,6 +1427,24 @@ const VALID_CASES = [
     // #1759 C4: upper boundary of a valid month (12) must keep succeeding.
     argv: ['evolve', 'aggregate', '.', '--month', '2026-12'],
     command: 'evolve',
+  },
+  {
+    // #1759 B1: subcommand-first and flag-first word order must resolve the
+    // SAME subcommand. This row and the next pin both orders resolving to
+    // 'aggregate' in this table's fixed cwd (no directory named `aggregate`
+    // exists there, so this alone cannot distinguish the fix from the BEFORE
+    // behavior — see tests/cli-evolve-subcommand-dir-collision.test.mjs for
+    // the cwd-collision form of this same regression, which the fixed cwd
+    // here cannot express).
+    argv: ['evolve', 'aggregate', '--min', '2'],
+    command: 'evolve',
+    expect: { evolveSubcommand: 'aggregate' },
+  },
+  {
+    // #1759 B1: flag-first order of the same argv as the row above.
+    argv: ['evolve', '--min', '2', 'aggregate'],
+    command: 'evolve',
+    expect: { evolveSubcommand: 'aggregate' },
   },
   {
     argv: [
