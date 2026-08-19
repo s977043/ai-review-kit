@@ -119,7 +119,7 @@ scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" 
 
 ## 何を検証しているか
 
-登録内容は `scripts/check-doc-enumerations.mjs` の `DOC_ENUMERATION_SPECS` が SSoT です。初期スコープ（#1726）は、誤検出でメイン開発を止めないことを優先し、決定論で判定できる 4 件に絞ってあります。#1728 で `.github/workflows/README.md` のワークフロー一覧（`workflows-readme-table`）を追加し、#1821 でガード台帳の照合 2 件（`claude-md-guard-ledger` / `guard-ledger-verified-by`）、#1831 でパイプライン関数の call site チェックリスト 3 件（`pipeline-callsites-*`）、#1846 で README の配布サーフェス 4 件（`readme-{ja,en}-plugin-{commands,skills}`）、#1843 で台帳 `decisions:` の対象パス 1 件（`decision-ledger-target`）をあとから足しました。現在の登録は 15 件です（`npm run check:doc-enum` の出力にある `N spec(s) checked` が実測値）。
+登録内容は `scripts/check-doc-enumerations.mjs` の `DOC_ENUMERATION_SPECS` が SSoT です。初期スコープ（#1726）は、誤検出でメイン開発を止めないことを優先し、決定論で判定できる 4 件に絞ってあります。#1728 で `.github/workflows/README.md` のワークフロー一覧（`workflows-readme-table`）を追加しました。#1821 でガード台帳の照合 2 件（`claude-md-guard-ledger` / `guard-ledger-verified-by`）を足しました。#1831 でパイプライン関数の call site チェックリスト 3 件（`pipeline-callsites-*`）を足しました。#1846 で README の配布サーフェス 4 件（`readme-{ja,en}-plugin-{commands,skills}`）を足しました。#1843 で台帳 `decisions:` の対象パス 1 件（`decision-ledger-target`）をあとから足しました。現在の登録は 15 件です（`npm run check:doc-enum` の出力にある `N spec(s) checked` が実測値）。
 
 | spec id                                   | 対象ドキュメント                                                 | 宣言側                                             | 実体                                                       |
 | ----------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |

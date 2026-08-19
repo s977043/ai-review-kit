@@ -1,6 +1,6 @@
 # 実装計画（Milestone v0.1 / v0.2 / v0.3 / v1.0）
 
-このドキュメントは、GitHub の Milestone（`v0.1.0 – Public Ready` / `v0.2.0 – Developer Experience` / `v0.3.0 – Smart Reviewer` / `v1.0.0 – Community Edition`）に **そのまま Issue を載せられる粒度（1〜2週間）**で、実装の一本道とバックログを固定します。
+このドキュメントは、GitHub の Milestone（`v0.1.0 – Public Ready` / `v0.2.0 – Developer Experience` / `v0.3.0 – Smart Reviewer` / `v1.0.0 – Community Edition`）を対象にします。実装の一本道とバックログを、**そのまま Issue を載せられる粒度（1〜2週間）**で固定します。
 
 ## 目的（勝ち筋）
 

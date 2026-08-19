@@ -377,9 +377,9 @@ GitHub Actions では:
 
 **Prompt caching（自動）**: skill の systemPrompt は Anthropic の 5 分 ephemeral cache を自動利用します。同じ skill で複数ファイルをレビューする際、2 回目以降の system トークンが大幅に割引（cache_read 単価は通常の 1/10）されます。グローバル無効化は `RIVER_ANTHROPIC_PROMPT_CACHE=0`、skill 単位無効化は `skill.disableCache: true` を使用します。
 
-**コスト計測（usage telemetry）**: `AIClientFactory.create(...)` が返す Anthropic / OpenAI クライアントは、`generateReview()` 完了後に `client.lastUsage` を `{ provider, model, inputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens }` 形式で公開します。`SkillDispatcher` の結果配列にも `usage` フィールドとして含まれるため、独自スクリプトでコスト集計や cache 効率の計測に利用できます。`RIVER_AI_RETRY_DEBUG=1` を設定すると 1 呼び出しごとに usage が標準出力にも記録されます。
+**コスト計測（usage telemetry）**: `AIClientFactory.create(...)` が返すクライアントは Anthropic / OpenAI のいずれかです。このクライアントは `generateReview()` の完了後に `client.lastUsage` として usage を公開します。形式は `{ provider, model, inputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens }` です。`SkillDispatcher` の結果配列にも `usage` フィールドとして含まれるため、独自スクリプトでコスト集計や cache 効率の計測に利用できます。`RIVER_AI_RETRY_DEBUG=1` を設定すると 1 呼び出しごとに usage が標準出力にも記録されます。
 
-**Disk への永続化（opt-in）**: `RIVER_USAGE_TELEMETRY=1` を設定すると、`SkillDispatcher` 実行完了時に `artifacts/usage/<YYYY-MM-DD>-<runId>.jsonl` へ 1 (file, skill) ペアにつき 1 行の JSONL を書き出します。各行は `{ timestamp, runId, commit, file, skill, provider, model, inputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens }` の安定スキーマで、外部のコスト分析ツールに直接食わせられます。永続化失敗はレビュー本体を止めません（警告のみ）。
+**Disk への永続化（opt-in）**: `RIVER_USAGE_TELEMETRY=1` を設定すると、`SkillDispatcher` の実行が完了するたびに書き出しが走ります。そのタイミングで `artifacts/usage/<YYYY-MM-DD>-<runId>.jsonl` へ 1 (file, skill) ペアにつき 1 行の JSONL を書き出します。各行は `{ timestamp, runId, commit, file, skill, provider, model, inputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens }` の安定スキーマです。そのため、外部のコスト分析ツールに直接食わせられます。永続化失敗はレビュー本体を止めません（警告のみ）。
 
 ### セキュリティ考慮事項
 
@@ -436,9 +436,9 @@ river-review は同一リポジトリ内のマーケットプレイスから Cla
 
 得られるもの（プラグイン名で名前空間化されます）:
 
-- コマンド: `/river-review:setup-team` / `/river-review:review-local` / `/river-review:review-team` / `/river-review:challenge` / `/river-review:skill` / `/river-review:check` / `/river-review:pr`
+- コマンド: `/river-review:setup-team` / `/river-review:review-local` / `/river-review:review-team` / `/river-review:challenge` が含まれます。加えて `/river-review:skill` / `/river-review:check` / `/river-review:pr` も使えます。
 - エージェント: `river-review`（スキルルーティング型のコードレビュー・オーケストレーター）
-- スキル: オーケストレーターの `river-review` に加えて `river-review-code` / `river-review-security` / `river-review-performance` / `river-review-architecture` / `river-review-testing` / `river-review-frontend` / `river-review-docs` / `adversarial-review` / `review-team` / `unknown-coverage-review`—`/river-review:<skill-name>` で呼び出せます
+- スキル: オーケストレーターの `river-review` に加えて `river-review-code` / `river-review-security` / `river-review-performance` の各スキルが含まれます。さらに `river-review-architecture` / `river-review-testing` / `river-review-frontend` も含まれます。加えて `river-review-docs` / `adversarial-review` / `review-team` / `unknown-coverage-review` も含まれます。いずれも `/river-review:<skill-name>` で呼び出せます
 
 管理: `/plugin enable|disable|uninstall river-review@river-review-marketplace`。
 
@@ -516,9 +516,9 @@ npm run codex:exec -- "review this branch"
 2. `--debug` を付けるとマージベース、対象ファイル一覧、プロンプトのプレビュー、トークン見積もり、diff 抜粋を標準出力へ表示
 3. OpenAI の LLM を使う場合は `OPENAI_API_KEY`（または `RIVER_OPENAI_API_KEY`）を設定して `river run .` を実行。未設定時はスキルベースのヒューリスティックコメントでフォールバック
 4. `--dry-run` は外部 API を呼ばず標準出力のみ。`--phase upstream|midstream|downstream` でフェーズ指定も可能（デフォルトは `RIVER_PHASE` 環境変数または `midstream`）
-5. コンテキスト/依存の制御: `RIVER_AVAILABLE_CONTEXTS=diff,tests` や `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` を設定すると、スキル選択時に要求を満たさないものを理由付きでスキップできます（未設定の場合は依存チェックをスキップ）。
+5. コンテキスト/依存の制御: `RIVER_AVAILABLE_CONTEXTS=diff,tests` や `RIVER_AVAILABLE_DEPENDENCIES=code_search,test_runner` を設定します。すると、スキル選択時に要求を満たさないものを理由付きでスキップできます（未設定の場合は依存チェックをスキップ）。
 6. CLI で直接指定する場合: `--context diff,fullFile` や `--dependency code_search,test_runner` フラグで環境変数を上書きできます（逗号区切り）。
-7. 依存のスタブ有効化: `RIVER_DEPENDENCY_STUBS=1` を指定すると、既知の依存（`code_search` / `test_runner` / `coverage_report` / `adr_lookup` / `repo_metadata` / `tracing`）を「利用可能」とみなしてスキップを防ぎます。実装準備中の環境でプランだけ確認したいときに使用してください。
+7. 依存のスタブ有効化: `RIVER_DEPENDENCY_STUBS=1` を指定すると、既知の依存（`code_search` / `test_runner` / `coverage_report` / `adr_lookup` / `repo_metadata` / `tracing`）を「利用可能」とみなします。これによりスキップを防ぎます。実装準備中の環境でプランだけ確認したいときに使用してください。
 
 ### 出力形式（`--output`）
 

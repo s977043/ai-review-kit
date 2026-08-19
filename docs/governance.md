@@ -88,14 +88,14 @@ gh pr view <N> --json labels --jq '[.labels[].name]'
 
 #### 3. multi-PR 作業の preflight
 
-複数 PR の連続マージ、main CI 失敗の修正 PR、`.github/workflows/*.yml` の `node-version` / action pin / `permissions` を変える PR など、書き込み系の handoff タスクへ着手する前に `/preflight <keyword or PR numbers>` を実行し、対象タスクが既にマージ済み/obsolete/並行作業中ではないことを確認します。
+対象は、複数 PR の連続マージ、main CI 失敗の修正 PR、`.github/workflows/*.yml` の `node-version` / action pin / `permissions` を変える PR などです。これら書き込み系の handoff タスクへ着手する前に `/preflight <keyword or PR numbers>` を実行します。対象タスクが既にマージ済み/obsolete/並行作業中ではないことを確認します。
 
 - `gh pr list` は GraphQL キャッシュの影響で recently merged な PR を `open` と返すことがあります。判定には `gh api repos/:owner/:repo/pulls/{N}` (REST) を併用してください。
 - 過去の累計で 1 セッション中に 4 件の重複 PR (#485, #489, #492, #496) を生んだ実績があります。
 
 #### 4. dist 再ビルド時の Node バージョン整合
 
-`runners/github-action/src/**` を変更した場合、または `Action dist freshness` CI が失敗した場合は、`runners/github-action/dist/` を `.nvmrc` (リポジトリ全体の SSoT) でピンされた Node バージョンで再ビルドしてください。
+`runners/github-action/src/**` を変更した場合、または `Action dist freshness` CI が失敗した場合は、再ビルドが必要です。`runners/github-action/dist/` を `.nvmrc` (リポジトリ全体の SSoT) でピンされた Node バージョンで再ビルドしてください。
 
 - `npm run build:action` は Node メジャーが異なると CI 再現性のあるアウトプットになりません。
 - 切り替え例: `nvm use` (`.nvmrc` を読む) または同等の version manager コマンド。
