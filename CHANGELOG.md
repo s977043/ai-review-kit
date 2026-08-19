@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.87.1](https://github.com/s977043/river-review/compare/v1.87.0...v1.87.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* **action:** サマリーの「指摘なし」判定を counts でなく finding 実体から行う ([#1927](https://github.com/s977043/river-review/issues/1927)) ([91a3583](https://github.com/s977043/river-review/commit/91a3583d7fdd3ef80a9d7d4a27fb268434bf2d85)), closes [#1915](https://github.com/s977043/river-review/issues/1915)
+* evolve aggregate --month の月として不正な値を拒否する ([#1759](https://github.com/s977043/river-review/issues/1759) C4) ([#1923](https://github.com/s977043/river-review/issues/1923)) ([2d8c337](https://github.com/s977043/river-review/commit/2d8c3371b149a78b11c14b3aafa0c22f1eac87a7))
+* **output:** 自己申告 Scope ラベルを解決済み scope の描画時に落とす ([#1925](https://github.com/s977043/river-review/issues/1925)) ([4dfc8e3](https://github.com/s977043/river-review/commit/4dfc8e32e6d60c86292b5f7085afcd1ab0f87181)), closes [#1915](https://github.com/s977043/river-review/issues/1915)
+* 依存スタブ有効時に custom: 依存がスキップされる問題を直す ([#1921](https://github.com/s977043/river-review/issues/1921)) ([#1931](https://github.com/s977043/river-review/issues/1931)) ([f925b97](https://github.com/s977043/river-review/commit/f925b9738b815a476ae1d9fc3a50b3623cc04556))
+
 ## [1.87.0](https://github.com/s977043/river-review/compare/v1.86.0...v1.87.0) (2026-08-19)
 
 
