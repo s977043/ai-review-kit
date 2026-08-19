@@ -100,7 +100,7 @@ C は phase 整合性こそ良いが Issue の中核を外すため、単独の�
 
 レビューの結果、**方針 B（testImpact を plan に公開するのみ）** を一次実装として採用した。
 
-- `runners/core/review-runner.mjs` の `buildExecutionPlan` で `analyzeTestImpact(changedFiles)` を呼び出し、結果を `testImpact` として 3 つの return 経路すべて（早期 return / planner あり / planner なし）に top-level + `snapshot` で公開した。`riskAssessment` と同じ公開パターンに揃えた。
+- `runners/core/review-runner.mjs` の `buildExecutionPlan` で `analyzeTestImpact(changedFiles)` を呼び出した。結果を `testImpact` として 3 つの return 経路すべて（早期 return / planner あり / planner なし）に top-level + `snapshot` で公開した。`riskAssessment` と同じ公開パターンに揃えた。
 - **入力シグネチャは不変**のため `pipeline-params-checklist.md` の入力パラメータ chain への追記は不要。出力フィールド追加だが、既存スナップショットテストは当該フィールドを全項目 assert していないため更新不要だった。
 - 強制注入（A）は行わないため、midstream dry-run への downstream スキル混入は発生しない（ブラスト半径は最小）。
 - 検証: `tests/review-runner.test.mjs` に high / low の 2 ケースを追加。`npm test`（全 1518 件）と `npm run lint` が green。

@@ -38,7 +38,7 @@
 - [ ] `runners/core/review-runner.d.ts`—`BuildExecutionPlanOptions` の型宣言（`.mjs` の実装と対で更新する）
 - [ ] `src/lib/local-runner.mjs`—`planLocalReview` の2箇所（main path + collectLocalContext path）の `buildExecutionPlan` 呼び出し
 - [ ] `runners/node-api/src/types.ts`—`ReviewOptions` interface へ新フィールドを追加し、node-api 経由で `review()` へ渡す
-- [ ] `runners/node-api/src/index.ts`—TypeScript wrapper の 2 箇所の forward：(1) `buildExecutionPlan(options: {...})` ラッパー自体の型宣言と `coreBuildExecutionPlan` への引き渡し（`index.ts:205-225`）、(2) `review(options: ReviewOptions)` 関数内部の `buildExecutionPlan({...})` 呼び出し（`index.ts:266-275`）。どちらも明示的に destructure するため、新フィールドを追加しないとサイレントに drop される
+- [ ] `runners/node-api/src/index.ts`—TypeScript wrapper の 2 箇所の forward。(1) `buildExecutionPlan(options: {...})` ラッパー自体の型宣言と `coreBuildExecutionPlan` への引き渡し（`index.ts:205-225`）。(2) `review(options: ReviewOptions)` 関数内部の `buildExecutionPlan({...})` 呼び出し（`index.ts:266-275`）。どちらも明示的に destructure するため、新フィールドを追加しないとサイレントに drop される
 - [ ] `runners/cli/src/commands/review.mjs`—`reviewCommand` 内の `buildExecutionPlan` 呼び出し（`runners/cli/` 独立 CLI パッケージ）
 - [ ] `src/cli/commands/skills.mjs`—`skills plan` サブコマンド内の `buildExecutionPlan` 呼び出し
 - [ ] `src/lib/planner-dataset-eval.mjs`—planner dataset eval 用の `buildExecutionPlan` 呼び出し
@@ -54,7 +54,7 @@
 
 上のチェックリストが挙げるファイルと、リポジトリ内の実際の call site は
 `scripts/check-doc-enumerations.mjs` の spec `pipeline-callsites-*` が機械照合する。
-実測は `scripts/lib/pipeline-call-sites.mjs` が担当し、`src/` `runners/` `tests/` `scripts/`
+実測は `scripts/lib/pipeline-call-sites.mjs` が担当する。`src/` `runners/` `tests/` `scripts/`
 配下のソースを走査して、コメントと文字列リテラルを除いた素の呼び出し
 （`name(`。`client.generateReview(` のようなメソッド呼び出しは対象外）を持つファイルを数える。
 
