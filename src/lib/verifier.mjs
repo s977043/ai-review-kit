@@ -8,6 +8,7 @@
 import {
   DEFAULT_FINDING_SCOPE,
   extractRefFieldSpans,
+  matchSelfReportedScope,
   normalizeScope,
   normalizeSeverity,
   stripTraceabilityRefs,
@@ -17,9 +18,11 @@ import {
 // Module-scope regexes to avoid re-creation per call
 const RE_EVIDENCE = /Evidence:\s*(\S.{4,})/;
 const RE_SEVERITY = /Severity:\s*(\w+)/;
-// Value-constrained so that prose containing the word "Scope:" (OAuth / IAM
-// scopes are common in review text) cannot be mistaken for a self-report.
-const RE_SCOPE = /(?:^|\s)Scope:\s*(in[-_ ]?diff|pre[-_ ]?existing)\b/i;
+// The `Scope:` label grammar lives in finding-factory.mjs
+// (`matchSelfReportedScope`): it is value-constrained so that prose containing
+// the word "Scope:" (OAuth / IAM scopes are common in review text) cannot be
+// mistaken for a self-report, and the strip performed on the output surfaces
+// (`stripSelfReportedScope`) must target exactly the labels read here.
 const RE_ACTIONABLE = /(?:Fix|Suggestion):\s*(.{10,})/;
 const RE_FILE_REF = /[\w/-]+(?:\.[\w]+)+/g;
 // Same shape as RE_FILE_REF but only where an anchor fragment follows
@@ -246,8 +249,8 @@ export function resolveFindingScope({ finding, diffFiles }) {
   // self-report. An out-of-vocabulary label (`Scope: unknown`) must NOT be
   // normalized into `in-diff`, or it would both fabricate a self-report and
   // produce a spurious scopeMismatch against the machine verdict.
-  const selfReportMatch = RE_SCOPE.exec(String(finding?.message ?? ''));
-  const selfReported = selfReportMatch ? normalizeScope(selfReportMatch[1]) : null;
+  const selfReportMatch = matchSelfReportedScope(finding?.message);
+  const selfReported = selfReportMatch === null ? null : normalizeScope(selfReportMatch);
 
   if (machineScope) {
     return {
