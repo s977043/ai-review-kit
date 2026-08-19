@@ -38,7 +38,7 @@ S4 では command 実行を descope した。strict_block ルーティングは�
   `failSeverity`（`strict_block` | `bypass_warning`, default `strict_block`）を宣言のみで定義する。
   同スキーマの `description` は明示的に「`command` is an arbitrary command specified by a repo-owned
   file—the agent under review can edit it」と TRUST BOUNDARY を警告している。
-- `src/lib/skillYamlSchema.mjs` の zod 側 `deterministicGate` も同形で `.strict()` 付き（#1399 の
+- `src/lib/skillYamlSchema.mjs` の zod 側 `deterministicGate` も同形で `.strict()` を付ける。（#1399 の
   skill-schema-parity canary が ajv 側 `additionalProperties: false` との整合を守る）。
 - `src/lib/gate-decision.mjs` の `deriveGateDecision` は純関数で、`strictBlock === true` を
   受け取ると rule 5b で無条件 `NO_GO`（reasonCode `STRICT_BLOCK`）に倒す。rule 0（`.river/**` 変更は
@@ -369,8 +369,8 @@ NO_GO/ESCALATE）を厳守する。
   §6 の未解決論点として実装時に確定する。
 - 入力側は `deriveGateDecision` に新パラメータ（例 `deterministicUnrunnable: boolean` と
   対象 skill id 群）を追加する。`computeGateInputsHash` の `FIELDS` へ追加する際は、
-  既存の `strictBlock` と同じく「真のときだけ canonical に足す」方式で pre-existing fixture の
-  hash churn を避ける（gate-decision.mjs の既存コメント参照）。
+  既存の `strictBlock` と同じ方式を使う。方式は「真のときだけ canonical に足す」で、pre-existing fixture の
+  hash churn を避けられる（gate-decision.mjs の既存コメント参照）。
 - パラメータ伝播は CLAUDE.md「Propagate signatures」/ `docs/development/pipeline-params-checklist.md`
   に従い、`deriveGateDecision` の全呼び出し箇所を洗う。
 
@@ -406,7 +406,7 @@ NO_GO/ESCALATE）を厳守する。
 7. **base に悪意ある command をマージさせる経路**: trusted-ref pin は「base は信頼できる」を
    前提にする。base 自体に悪意ある command を仕込む PR がマージされれば防御は無効。これは
    CODEOWNERS / required human review（`.river/**` と `skills/**` の deterministic 追加を
-   人間レビュー必須にする branch protection）で守る前提であり、本設計のスコープ外だが**前提条件
+   人間レビュー必須にする branch protection）で守る前提である。本設計のスコープ外だが**前提条件
    として明記が必須**。
 
 ### 6.8 敵対レビューが追加した攻撃面（実装前に潰す）
@@ -436,7 +436,7 @@ NO_GO/ESCALATE）を厳守する。
   出力し、それが capture され `pull-requests:write` の PR コメントへ載って外部露出する。env スクラブと
   DoS 上限（1 MiB）は機密性チャネルを塞がない（secret は 1 MiB 未満）。→ command は symlink 非追跡、
   stdout を PR/findings に生出力せず判定は exit code のみ。
-- **[Med・新規] config autoload クラス**: §6.2 は `scripts` に限定するが、実際は cwd から自動ロード
+- **[Med・新規] config autoload クラス**: §6.2 は `scripts` に限定する。だが実際は cwd から自動ロード
   される一切の設定（`.npmrc` / `tsconfig extends` / eslint plugin/parser / jest/vitest config /
   prettier plugin / `.git/hooks`）が RCE 経路。`npx tsc`/`eslint` を許すと package.json を触らず RCE。
 - **[Med・新規] base-pin の path 解決 TOCTOU / skill-id 同定**: PR head skill の `..`/symlink や id
@@ -544,8 +544,8 @@ ADR-003 の Non-Goals「既定を advisory から enforced へ勝手に変えな
 
 1. **入口の pin（既存機構 1・2 の徹底）**: 何を起動するか（argv）は base checkout から解決する。
 2. **入口の先の pin（本ブロッカーの新規部分）**: 起動した command が **PR head の設定・スクリプト・
-   `node_modules` を一切読まない**ことを、(a) argv 静的検査（危険フラグ拒否）、(b) 実行時の config
-   autoload 無効化（env / cwd / フラグ）、(c) 素の interpreter 登録の禁止、の 3 点で強制する。
+   `node_modules` を一切読まない**ことを強制する。強制の手段は (a) argv 静的検査（危険フラグ拒否）、(b) 実行時の config
+   autoload 無効化（env / cwd / フラグ）、(c) 素の interpreter 登録の禁止、の 3 点である。
 
 これにより「`npm run lint:ci` を allowlist したが `scripts.lint:ci` を `exit 0` に書換える」経路
 （保護資産 #3 の直接崩壊）を塞ぐ。ただし後述のとおり `npm run`/`npx` 系はこの規約を満たせないため
@@ -594,10 +594,10 @@ denylist は「コード/スクリプトを間接実行する、または config
 
 ##### (C) 素の interpreter 登録の拒否（schema/実装レベル）
 
-`command` の basename が interpreter denylist（`npm` / `npx` / `pnpm` / `yarn` / `node` / `deno` /
-`bun` / `bash` / `sh` / `zsh` / `python` / `python3` / `ruby` / `perl` / `make` / `env` / `xargs`
-等）に一致する
-エントリは、絶対パス指定であっても Phase 1 では `selfContained` を満たせないものとして拒否する。
+`command` の basename が interpreter denylist に一致するエントリがある。denylist は
+`npm` / `npx` / `pnpm` / `yarn` / `node` / `deno` / `bun` / `bash` / `sh` / `zsh` の 10 個である。
+加えて `python` / `python3` / `ruby` / `perl` / `make` / `env` / `xargs` の 7 個も denylist に含まれる。
+そのエントリは、絶対パス指定であっても Phase 1 では `selfContained` を満たせないものとして拒否する。
 理由: これらは本質的に「引数で任意コードを走らせる」設計であり、(B) の denylist を完全化できない。
 
 ##### (D) config autoload 無効化（実行時 env / cwd / フラグ）
@@ -698,7 +698,7 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
    これらの実ディレクトリ生成（`mktemp -d`・copy・base checkout）は composite action の bash step で
    行い、実行器は「与えられたパスを使うだけ」にする（実行器に checkout 権限を持たせない）。
 3. base checkout は `github.event.pull_request.base.sha` を明示 ref に取得する（§3.1）。fork PR では
-   secret 非注入・token read-only（§2.1 訂正）だが、same-repo ブランチ構成では上記 1・2 を満たさない
+   secret 非注入・token read-only である（§2.1 訂正）。だが same-repo ブランチ構成では上記 1・2 を満たさない
    限り on-disk token 窃取が成立するため、**dark-launch（advisory）段階でも 1・2 を先に満たす**
    （§7 Phase 1 前提条件）。
 
@@ -799,7 +799,7 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
    静的拒否を**完全に回避**できる。対策候補（実装時に確定）: `@` で始まる引数の静的拒否、`@file`
    構文をサポートする command の除外。denylist 単体を信頼しない多層防御の一部として扱う。
 9. **public repo の Actions アーティファクト公開性（gemini #1426, security）**: §10.3.2 (B) は stdout を
-   PR コメントに載せず `RUNNER_TEMP` アーティファクトへ隔離するが、**public repo では Actions
+   PR コメントに載せず `RUNNER_TEMP` アーティファクトへ隔離する。だが **public repo では Actions
    アーティファクトはフォーク PR 著者を含め誰でも DL 可能**。secret が stdout に漏れてアーティファクト化
    されれば取得され得る。アーティファクト隔離は「PR コメント露出」を防ぐだけで機密保護の完結ではない。
    → host 側の既知 secret マスク（§10.3.2）を**二重防御**として必須化し、public repo では
@@ -980,7 +980,7 @@ executor は検証層 `matchCommand` の出力（valid entry）を入力とす�
   ```
 
 - **合成順序の確定（§6.8-5 の論点）**: 同一 run で「skill A が違反（strictBlock=true）」かつ
-  「skill B が実行不能（deterministicUnrunnable=true）」のとき、**strictBlock（NO_GO）を優先**する
+  「skill B が実行不能（deterministicUnrunnable=true）」の状況を想定する。このとき、**strictBlock（NO_GO）を優先**する
   （5c より 5b が先）。理由: **違反はすでに確定した情報**であり、確定した block を「別 command が
   実行不能だから」という弱い情報で ESCALATE へ格上げするのは、攻撃者が「わざと別 skill を
   実行不能にして strict_block を人間承認フローへ逃がす」余地を生む。escalation cliffs（rule 0-4）は
@@ -1018,7 +1018,7 @@ executor は検証層 `matchCommand` の出力（valid entry）を入力とす�
   unrunnable 率を観測する（§7 Phase 1）。dark-launch でも §7 の 3 前提（自己完結 command 限定 /
   clean cwd + persist-credentials:false / stdout 非露出）を先に満たす。
 - **clean cwd / 空 HOME の生成主体**: `mkdtemp`・copy・base checkout の実ディレクトリ生成は
-  composite action の bash step が行い、executor は「与えられたパスを使うだけ」にする
+  composite action の bash step が行う。executor は「与えられたパスを使うだけ」にする
   （executor に checkout 権限を持たせない、§10.2.3）。
 - **stdout をコメント経路に渡さない配線**: `Post inline review comments` / `Post PR comment` step へ
   command stdout を渡さない。デバッグ stdout は `actions/upload-artifact`（短い `retention-days`）で
@@ -1047,12 +1047,12 @@ executor は検証層 `matchCommand` の出力（valid entry）を入力とす�
   interpreter / 危険フラグ / `@file` / 相対パス / `selfContained:false` を executor 入口でも
   弾く二重評価の一致を assert。
 - **env スクラブ実証**: 親に `GITHUB_TOKEN=secret` / `AWS_SECRET_ACCESS_KEY=…` を設定した状態で
-  「env をダンプする無害バイナリ」を起動し、子がそれらを**読めない**（空/未定義）こと、
+  「env をダンプする無害バイナリ」を起動する。子がそれらを**読めない**（空/未定義）こと、
   allowlist した `PATH` のみ渡ることを assert。
 - **on-disk token 到達不可**: clean cwd に `.git` が無いこと、`HOME` が空一時ディレクトリで
   `~/.aws` 等に到達できないことを、`cat $HOME/.aws/credentials` 相当が失敗することで実証。
 - **symlink exfil 遮断**: レビュー対象に `~/.aws/credentials` / `/proc/self/environ` への symlink を
-  仕込んだ fixture で、symlink が clean cwd に**コピーされない**こと・再検査で `symlink_rejected`
+  仕込んだ fixture を使う。この fixture で、symlink が clean cwd に**コピーされない**こと・再検査で `symlink_rejected`
   → `unrunnable` になることを assert。
 - **spawn error / timeout 分離**: ENOENT（存在しない絶対パス）→ `unrunnable`（ESCALATE）、
   `sleep 999` 相当（timeout）→ kill → `unrunnable`、`exit 1` → `fail`（NO_GO）を各々 assert。
@@ -1083,7 +1083,7 @@ executor をさらに小さく分け、各段を単独でテスト可能にす�
 2. **(b) execFile 起動（exit code 分類）**: (a) の出力を使って `execFile`（shell 非経由・timeout・
    maxBuffer・pgroup kill）で起動し、status（`pass`/`fail`/`unrunnable`）へ分類する。**gate には
    まだ接続しない**。spawn error/timeout 分離・DoS 上限・stdout 非返却をここで固定する。
-3. **(c) gate 接続**: `deriveGateDecision` に rule 5c（`deterministicUnrunnable`）を追加し、
+3. **(c) gate 接続**: `deriveGateDecision` に rule 5c（`deterministicUnrunnable`）を追加する。
    executor の `fail`/`unrunnable` を `strictBlock` OR / `deterministicUnrunnable` へ合流させる。
    合成順（5b>5c）・inputsHash・パラメータ伝播をこの段で確定する。
 4. **(d) CI 配線 + opt-in（実装済み）**: `action.yml` に opt-in の `deterministic_exec`（既定 OFF）と
@@ -1125,7 +1125,7 @@ steps:
   「変更ファイルのみ」か「（`.git` 除く）対象サブツリー」かを、対象 command の入力仕様に合わせて
   実装時に確定する（§10.4 補足のトレードオフ）。単一バイナリ構文チェッカーなら変更ファイルのみで足りる。
 - **`fail`（executor）と finding-based `strictBlock` の finding 表現**: executor の `fail` は
-  stdout を持たないため、finding 本文は「command id + exit code + 分類」から host が組み立てる
+  stdout を持たない。そのため、finding 本文は「command id + exit code + 分類」から host が組み立てる
   （§10.3.2）。この合成 finding を既存 finding 配列にどう混ぜるか（ruleId の割当・重複排除）は
   review-engine 側で確定する。
 - **base pin の path 解決 TOCTOU / skill-id 同定**（§6.8 Med）:

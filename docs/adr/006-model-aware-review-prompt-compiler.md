@@ -21,7 +21,7 @@ Accepted—レビュー用プロンプトの組み立てを「何を判断する
 
 ただしレビュー実行経路は `openai` 以外を受け付けません。`src/lib/review-engine.mjs:463-464` が `provider ... is not supported yet` として明示的に退避します。送信先も OpenAI 互換の chat completions エンドポイント 1 系統に固定されています。
 
-multi-provider のクライアント実装（`GeminiClient` / `OpenAIClient` / `AnthropicClient`）は [`src/ai/factory.mjs`](../../src/ai/factory.mjs) に存在しますが、これを使うのは `src/core/skill-dispatcher.mjs` だけであり、レビュー実行経路とは別系統です。[`src/lib/llm-pipeline.mjs`](../../src/lib/llm-pipeline.mjs) `:12-16` も、この factory を統合対象外として明示的に線を引いています。
+multi-provider のクライアント実装（`GeminiClient` / `OpenAIClient` / `AnthropicClient`）は [`src/ai/factory.mjs`](../../src/ai/factory.mjs) に存在します。ただし、これを使うのは `src/core/skill-dispatcher.mjs` だけであり、レビュー実行経路とは別系統です。[`src/lib/llm-pipeline.mjs`](../../src/lib/llm-pipeline.mjs) `:12-16` も、この factory を統合対象外として明示的に線を引いています。
 
 ### modelHint との関係
 

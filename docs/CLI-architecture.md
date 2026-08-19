@@ -45,14 +45,14 @@
 
 - メイン CLI のオプション仕様: `pages/reference/stable-interfaces.md` § "CLI (`river`) リファレンス（最小）"
 - Runner CLI のヘルプ: `runners/cli/README.md`
-- スキーマ検証コマンド (Python ランナー / `npm run *:validate`): `pages/reference/runner-cli-reference.md` (注: タイトルは「Runner CLI リファレンス」だが内容は本ドキュメントで言う「Runner CLI = `runners/cli/`」とは別物で、Python 製のスキーマ検証スクリプト群を扱う)
+- スキーマ検証コマンド (Python ランナー / `npm run *:validate`): `pages/reference/runner-cli-reference.md`。タイトルは「Runner CLI リファレンス」である。だが内容は本ドキュメントで言う「Runner CLI = `runners/cli/`」とは別物である。Python 製のスキーマ検証スクリプト群を扱う。
 - 新スキル作成手順: `pages/guides/add-new-skill.md`
 
 ## 既知の境界 / 注意点
 
-- ルートの `package.json#bin` がメイン CLI (`src/cli.mjs`) にしか登録されていないため、`npx river review …` は **Runner CLI ではなくメイン CLI** に解釈され、メイン CLI には `review` コマンドが無いので unknown command エラーになる。Runner CLI を呼ぶ場合は `node runners/cli/bin/river …` あるいは `runners/cli` 内で `npm exec river …` を使う。
-- GitHub Action は `runners/github-action/dist/` 配下のバンドル済み JavaScript を実行するため、`runners/github-action/src/**` を変更したら `npm run build:action` で `dist/` を再生成しないと CI の "Action dist freshness" が落ちる (`docs/development/dist-check-rebuild-guide.md` 参照)。
-- 両 CLI ともデフォルト `phase` は `midstream`。`RIVER_PHASE` / `RIVER_PLANNER_MODE` / `RIVER_AVAILABLE_CONTEXTS` / `RIVER_AVAILABLE_DEPENDENCIES` などの `RIVER_*` 環境変数はメイン CLI でのみ参照される (Runner CLI は対応する `--phase` / `--context` / `--dependency` オプションでの明示が必要)。
+- ルートの `package.json#bin` がメイン CLI (`src/cli.mjs`) にしか登録されていないため、`npx river review …` は **Runner CLI ではなくメイン CLI** に解釈される。メイン CLI には `review` コマンドが無いので unknown command エラーになる。Runner CLI を呼ぶ場合は `node runners/cli/bin/river …` あるいは `runners/cli` 内で `npm exec river …` を使う。
+- GitHub Action は `runners/github-action/dist/` 配下のバンドル済み JavaScript を実行する。そのため、`runners/github-action/src/**` を変更した場合は注意が必要である。`npm run build:action` で `dist/` を再生成しないと CI の "Action dist freshness" が落ちる (`docs/development/dist-check-rebuild-guide.md` 参照)。
+- 両 CLI ともデフォルト `phase` は `midstream`。`RIVER_PHASE` / `RIVER_PLANNER_MODE` / `RIVER_AVAILABLE_CONTEXTS` / `RIVER_AVAILABLE_DEPENDENCIES` などの `RIVER_*` 環境変数はメイン CLI でのみ参照される。Runner CLI は対応する `--phase` / `--context` / `--dependency` オプションでの明示が必要である。
 - Runner CLI は `commander` の自動 help を使うため、メイン CLI の `printHelp()` (`src/cli.mjs`) と書式が揃っていない。両ヘルプを同期する責務は今のところ無い。
 
 ## Thin adapter 原則（GitHub Action / 各エージェント連携）

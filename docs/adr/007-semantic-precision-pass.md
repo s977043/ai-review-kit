@@ -91,7 +91,7 @@ Reviewer が発見し、Judge が判定する。この分業を v1 の不変条�
 
 語彙は列挙値に固定し、自由文の rationale を Gate の判定条件にしません。そのうえで、前掲の「逆向きの欠落 2 件」を次のように扱います。
 
-- **`low_confidence` は語彙へ追加する。ただし決定論の prefilter 専用コードとし、Judge には出させない。** confidence は Judge が判定する軸ではなく、Judge に出させると severity / confidence / disposition の分離が崩れます。既存の `SUPPRESS_REASONS.LOW_CONFIDENCE` を 1 対 1 で移送できる利点も残ります。`insufficient_evidence` へ寄せる案は採りません。証跡が短いことと確信度が低いことは別の事実であり、現行も別コードで区別しています。
+- **`low_confidence` は語彙へ追加する。ただし決定論の prefilter 専用コードとし、Judge には出させない。** confidence は Judge が判定する軸ではありません。Judge に出させると severity / confidence / disposition の分離が崩れます。既存の `SUPPRESS_REASONS.LOW_CONFIDENCE` を 1 対 1 で移送できる利点も残ります。`insufficient_evidence` へ寄せる案は採りません。証跡が短いことと確信度が低いことは別の事実であり、現行も別コードで区別しています。
 - **表示上限の超過には reasonCode を与えない。** これは disposition ではなく ranking の結果です。したがって `COVERED_BY_HIGHER_LEVEL` は Phase 1 で 2 つに割り、重複側だけを `duplicate` へ寄せ、上限側は `rankFindingsForOutput` の出力として表現します。
 
 各コードは、決定論の prefilter と Judge のどちらか一方だけが産出できるものとします。同じコードを両者が出せる状態にすると、監査時にどちらの層が落としたのかを追えなくなります。
@@ -125,7 +125,7 @@ Precision Pass の障害が review bypass になってはならない、とい�
 | `annotate` | judgment を Review Artifact と表示へ出す。Gate の判定方式は現行のままである    |
 | `active`   | disposition を Gate の入力に用いる                                             |
 
-**`shadow` は採りません。** ADR-006（[`docs/adr/006-model-aware-review-prompt-compiler.md`](./006-model-aware-review-prompt-compiler.md)）が `src/lib/shadow-aggregate.mjs` との二義を理由に不採用としており、その決定は `src/config/schema.mjs:51` の `z.enum(['off', 'observe', 'active'])` に理由コメント付きで固定されています。`review.*.mode` という同じ名前空間で同じ語に別の意味を与えることになります。
+**`shadow` は採りません。** ADR-006（[`docs/adr/006-model-aware-review-prompt-compiler.md`](./006-model-aware-review-prompt-compiler.md)）が `src/lib/shadow-aggregate.mjs` との二義を理由に不採用としています。その決定は `src/config/schema.mjs:51` の `z.enum(['off', 'observe', 'active'])` に理由コメント付きで固定されています。`review.*.mode` という同じ名前空間で同じ語に別の意味を与えることになります。
 
 3 値ではなく 4 値にする理由は、#1857 の Phase 4 と Phase 5 が別の段だからです。judgment を出力に載せる段と、Gate の入力に使う段を 1 つの語で表せません。
 

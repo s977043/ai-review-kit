@@ -1,8 +1,8 @@
 # Skill Severity Rubric
 
-A skill's `severity` frontmatter declares the **maximum severity** the skill is allowed to emit, and is also the default for findings whose severity is not explicitly set in the prompt. The runner normalizes downstream values via `severityToPriority` (`src/lib/finding-factory.mjs`) into the P1〜P4 PR-comment display.
+A skill's `severity` frontmatter declares the **maximum severity** the skill is allowed to emit. It is also the default for findings whose severity is not explicitly set in the prompt. The runner normalizes downstream values via `severityToPriority` (`src/lib/finding-factory.mjs`) into the P1〜P4 PR-comment display.
 
-This document codifies objective criteria for choosing a skill's `severity`, so future authors classify consistently and existing skills can be re-audited against the rubric.
+This document codifies objective criteria for choosing a skill's `severity`. This lets future authors classify consistently, and lets existing skills be re-audited against the rubric.
 
 ## Severity values
 
@@ -96,7 +96,7 @@ A skill's `severity` is decided by the **worst case finding it is allowed to emi
 - 1 PR で **同時に 2 つ以上の skill の severity を上げ下げしない**（影響の切り分けが困難になる）
 - severity を変える PR は本書の該当節に明示的にリンクし、判断根拠を 3 行で書く
 - 変更前後で `npm run eval:all` の主要メトリクスを記録し、PR 本文に before / after を残す
-- **registry.yaml の同期を忘れない**: `skills/registry.yaml` にエントリがある skill は、SKILL.md の severity と registry の severity を同 PR 内で揃える。`registry.yaml` 自体は `loadSkills()` から無視される（`runners/core/skill-loader.mjs:59` の `ignoredFileNames` に含まれる）ものの、`skills/README.md` / `docs/skills-structure.md` / `docs/migration/skill-migration-guide.md` などの human-readable カタログから参照されるため、不揃いだと SKILL.md と registry の値の食い違いというドキュメント矛盾が生じる。
+- **registry.yaml の同期を忘れない**: `skills/registry.yaml` にエントリがある skill は、SKILL.md の severity と registry の severity を同 PR 内で揃える。`registry.yaml` 自体は `loadSkills()` から無視される（`runners/core/skill-loader.mjs:59` の `ignoredFileNames` に含まれる）。しかし `skills/README.md` / `docs/skills-structure.md` / `docs/migration/skill-migration-guide.md` などの human-readable カタログから参照される。そのため、不揃いだと SKILL.md と registry の値の食い違いというドキュメント矛盾が生じる。
 
 ## 既往の再分類事例（learnings）
 
