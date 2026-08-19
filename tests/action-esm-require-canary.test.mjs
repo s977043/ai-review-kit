@@ -109,4 +109,61 @@ describe('#1929 canary: the Action runner can require() the ESM SSoT without nod
     const mod = require(ENTRY);
     assert.equal(typeof mod.stripSelfReportedScope, 'function');
   });
+
+  // 上の 3 件は「グラフが require 可能か」を守るが、「**ランタイムが
+  // `require(ESM)` を許すか**」は守らない。`actions/github-script` の実行
+  // ランタイムは版で変わる（実測: v7 = `using: node20` / v8 = `using: node24`。
+  // `gh api 'repos/actions/github-script/contents/action.yml?ref=vN'`）。
+  // `require(ESM)` が安定したのは Node 22.12 以降なので、**@v7 へ下げる変更が
+  // 入ると canary は緑のまま利用者環境だけが壊れる**。
+  //
+  // コメントによる同期義務では足りないと判断して機械化した。理由は 2 つ。
+  //   1. 失敗が観測不能。canary も CI も緑で、壊れるのは利用者のランナーだけ。
+  //      本 PR が塞いでいるリスクとまったく同じ性質である。
+  //   2. このリポジトリでコメントの同期義務は実際に破れている。#1921 の
+  //      `dependencyStubs` は「Keep this list in sync with …」と書かれていたのに
+  //      `anyOf` の `^custom:.+` 枝を落とし、出荷済みスキル 1 本が計画から消えた。
+  const ACTION_YML = fileURLToPath(new URL('../runners/github-action/action.yml', import.meta.url));
+  const MIN_GITHUB_SCRIPT_MAJOR = 8;
+  const GITHUB_SCRIPT_USES_RE = /uses:\s*actions\/github-script@(\S+)/g;
+
+  it(`every actions/github-script reference is >= v${MIN_GITHUB_SCRIPT_MAJOR} (node24)`, () => {
+    const source = readFileSync(ACTION_YML, 'utf8');
+    GITHUB_SCRIPT_USES_RE.lastIndex = 0;
+    const refs = [...source.matchAll(GITHUB_SCRIPT_USES_RE)].map((m) => m[1]);
+
+    // 参照が 0 件だと以下のループが空回りして何も守らない。先に下限を固定する。
+    assert.ok(
+      refs.length >= 1,
+      'no actions/github-script reference found in runners/github-action/action.yml — ' +
+        'this canary would silently pass. Update it alongside the workflow change.'
+    );
+
+    // 参照は複数ある（現状 2 件）。1 つでも条件を満たさなければ落とす — 生の
+    // message を出す step がどちらに乗るかは将来変わりうるため。
+    const why =
+      `runners/github-action/post-inline-comments.cjs は ` +
+      `require('../../src/lib/finding-factory.mjs') で ESM の SSoT を直接呼ぶ。` +
+      `require(ESM) が使えるのは Node 22.12 以降で、actions/github-script は ` +
+      `v7 = node20 / v8 = node24。v${MIN_GITHUB_SCRIPT_MAJOR} 未満へ下げるなら、` +
+      `先に post-inline-comments.cjs の require を CJS 側の実装へ差し戻すこと。`;
+
+    for (const ref of refs) {
+      // タグ形式（`v8` / `v8.1.2`）のみを許す。SHA pin やブランチ名は、その
+      // ref がどのランタイムに解決されるかをこのテストから判定できないため
+      // skip ではなく fail にする。skip にすると canary が黙って空になり、
+      // 上で機械化した理由（観測不能な失敗）をそのまま作り直すことになる。
+      const major = /^v(\d+)(?:\.\d+)*$/.exec(ref)?.[1];
+      assert.ok(
+        major !== undefined,
+        `actions/github-script@${ref} is not a version tag, so its runtime cannot be ` +
+          `checked here. If the pin is intentional, record which runtime it resolves to ` +
+          `and update this canary. ${why}`
+      );
+      assert.ok(
+        Number(major) >= MIN_GITHUB_SCRIPT_MAJOR,
+        `actions/github-script@${ref} runs on a Node older than 22.12. ${why}`
+      );
+    }
+  });
 });

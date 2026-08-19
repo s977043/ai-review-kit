@@ -18,6 +18,15 @@ const fs = require('fs');
  * `tests/action-esm-require-canary.test.mjs` — an npm dependency or a
  * top-level `await` anywhere in that graph would break this require on the
  * user's runner while CI (which has `node_modules`) stayed green.
+ *
+ * RUNTIME PRECONDITION: the step that loads this file must stay on
+ * `actions/github-script@v8` or newer. The action's runtime is set by that
+ * version — v7 declares `using: node20` and v8 declares `using: node24` — and
+ * `require(ESM)` is only available from Node 22.12. **Downgrading the `uses:`
+ * pin in `action.yml` breaks this line on the user's runner while CI stays
+ * green.** The same canary above asserts the version, so a downgrade fails
+ * there first; if it did, this paragraph is why. Reverting the pin means
+ * reverting this require to a CommonJS implementation as well.
  */
 const { stripSelfReportedScope } = require('../../src/lib/finding-factory.mjs');
 
