@@ -163,7 +163,27 @@ describe('#1644: pre-existing findings never become inline review comments', () 
   });
 
   it('posts inline for null and out-of-vocabulary scope values', async () => {
-    for (const scope of [null, '', 'preexisting', 'PRE-EXISTING', 'unknown']) {
+    // The whitespace-padded and non-string entries pin the comparison as a
+    // strict `===` against the exact literal. Without them, relaxing the check
+    // to `String(scope ?? '').trim() === 'pre-existing'` or to
+    // `String(scope) === 'pre-existing'` passes every other case here — the
+    // casing entries alone do not catch either widening.
+    for (const scope of [
+      null,
+      '',
+      'preexisting',
+      'PRE-EXISTING',
+      'unknown',
+      ' pre-existing ',
+      'pre-existing\n',
+      '\tpre-existing',
+      0,
+      1,
+      true,
+      false,
+      ['pre-existing'],
+      { value: 'pre-existing' },
+    ]) {
       const posted = await run(artifact([{ ...PRE_EXISTING, scope }]));
       assert.equal(posted.batchComments.length, 1, `scope=${JSON.stringify(scope)} was demoted`);
       assert.ok(
@@ -304,5 +324,104 @@ describe('#1644: the Tech Lead pointer list marks pre-existing only', () => {
         .length - 1,
       2
     );
+  });
+});
+
+describe('#1644: a zero severity count must not swallow the folded block', () => {
+  // `summary.issueCountBySeverity` is read from the artifact, not derived from
+  // `issues`, so the two can disagree. Withholding pre-existing findings from
+  // inline made that disagreement lossy: the early return below the count line
+  // used to drop them from the summary too.
+  const ZERO_COUNTS = { critical: 0, major: 0, minor: 0, info: 0 };
+
+  it('keeps the pre-existing finding when every severity count is zero', async () => {
+    const posted = await run({
+      issues: [PRE_EXISTING],
+      summary: { issueCountBySeverity: ZERO_COUNTS },
+    });
+
+    assert.equal(posted.batchComments, null);
+    assert.ok(posted.summaryBody.includes('<details>'));
+    assert.ok(posted.summaryBody.includes('legacy helper swallows exceptions'));
+    assert.ok(posted.summaryBody.includes('**Evidence:** catch (e) { return null; }'));
+  });
+
+  it('keeps it when the artifact carries no summary key at all', async () => {
+    const posted = await run({ issues: [PRE_EXISTING] });
+
+    assert.ok(posted.summaryBody.includes('<details>'));
+    assert.ok(posted.summaryBody.includes('legacy helper swallows exceptions'));
+  });
+
+  it('does not claim "No issues found" above a block that lists findings', async () => {
+    const posted = await run({
+      issues: [PRE_EXISTING],
+      summary: { issueCountBySeverity: ZERO_COUNTS },
+    });
+
+    assert.ok(!posted.summaryBody.includes('✅ No issues found.'));
+    assert.ok(posted.summaryBody.includes("✅ No findings on this diff's added lines."));
+  });
+
+  it('still reports the clean result verbatim when nothing is pre-existing', async () => {
+    const posted = await run({ issues: [], summary: { issueCountBySeverity: ZERO_COUNTS } });
+
+    assert.equal(
+      posted.summaryBody,
+      '<!-- river-reviewer -->\n## River Reviewer\n\n✅ No issues found.'
+    );
+  });
+});
+
+describe('#1644: hard truncation leaves a readable comment', () => {
+  /** Enough compact pointer lines that even the compact rendering overflows. */
+  function overflowing() {
+    return Array.from({ length: 400 }, (_, i) => ({
+      ...PRE_EXISTING,
+      id: `rr-huge-${i}`,
+      line: i + 1,
+      title: `🔴 leak ${String(i).padStart(4, '0')} ${'T'.repeat(200)}`,
+      message: 'M'.repeat(3000),
+    }));
+  }
+
+  it('closes the details block so the truncation notice stays readable', async () => {
+    const posted = await run(artifact(overflowing()));
+    const body = posted.summaryBody;
+
+    assert.ok(body.length <= MAX_SUMMARY_BODY, `length was ${body.length}`);
+    assert.equal(body.split('<details>').length - 1, 1);
+    assert.equal(body.split('</details>').length - 1, 1);
+    assert.ok(
+      body.indexOf('_Summary truncated') > body.lastIndexOf('</details>'),
+      'the notice must sit outside the collapsed block'
+    );
+    assert.ok(body.endsWith('_Summary truncated to fit GitHub’s comment size limit._'));
+  });
+
+  it('never emits a lone surrogate from cutting mid-emoji', async () => {
+    // The cut offset is fixed, so one fixture only ever exercises one landing
+    // spot. Three properties make the sweep actually reach an emoji:
+    //   - titles are pure emoji, so half of all cut positions split a pair;
+    //   - only the FIRST title is padded, because padding all of them moves the
+    //     cut by a multiple of the finding count and never flips its parity;
+    //   - the location is one character and there is no line number, so the
+    //     non-emoji tail of a pointer line is short enough for the sweep to
+    //     step past it.
+    const lone = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+    for (let shift = 0; shift < 10; shift++) {
+      const issues = Array.from({ length: 400 }, (_, index) => ({
+        ...PRE_EXISTING,
+        id: `rr-emoji-${index}`,
+        file: 'f',
+        line: undefined,
+        title: `${index === 0 ? '.'.repeat(shift) : ''}${'🔴'.repeat(120)}`,
+      }));
+      const posted = await run(artifact(issues));
+
+      assert.ok(posted.summaryBody.endsWith('size limit._'), `shift=${shift} was not truncated`);
+      assert.ok(posted.summaryBody.length <= MAX_SUMMARY_BODY, `shift=${shift}`);
+      assert.ok(!lone.test(posted.summaryBody), `lone surrogate at shift=${shift}`);
+    }
   });
 });

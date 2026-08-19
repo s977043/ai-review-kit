@@ -7,6 +7,9 @@ const MAX_INLINE_BODY = 65000;
 // single comment, so the pre-existing block below has to fit inside the same
 // budget as everything else the summary already carries.
 const MAX_SUMMARY_BODY = 65000;
+// Appended by the hard-truncation fallback when the cut lands inside the
+// pre-existing `<details>` block, so the notice that follows stays outside it.
+const CLOSE_DETAILS = '\n\n</details>';
 
 /**
  * #1644: the scope value that this surface treats as "not this PR's work".
@@ -152,19 +155,36 @@ function formatSummaryFromJson(
 
   const lines = [COMMENT_MARKER, '## River Reviewer', ''];
 
+  // #1644: the early return has to know about the folded block below it.
+  //
+  // `counts` is read from the artifact's own `summary.issueCountBySeverity`,
+  // NOT derived from `issues`, so the two can disagree — a zero count next to a
+  // non-empty issue list, or a missing `summary` key entirely. Before this
+  // change a `pre-existing` finding in that state reached no surface at all:
+  // withheld from inline by design, and cut off from the folded block by this
+  // return. That is a regression against the pre-#1644 behaviour, where the
+  // same finding was still posted inline.
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  if (total === 0) {
+  if (total === 0 && preExistingIssues.length === 0) {
     lines.push('✅ No issues found.');
     return lines.join('\n');
   }
 
-  const countParts = [];
-  if (counts.critical > 0) countParts.push(`🔴 ${counts.critical} critical`);
-  if (counts.major > 0) countParts.push(`🟠 ${counts.major} major`);
-  if (counts.minor > 0) countParts.push(`🟡 ${counts.minor} minor`);
-  if (counts.info > 0) countParts.push(`ℹ️ ${counts.info} info`);
-  lines.push(`**${total} finding${total === 1 ? '' : 's'}** — ${countParts.join(', ')}`);
-  lines.push('');
+  if (total === 0) {
+    // Do not claim "No issues found" above a block that lists findings. What
+    // is actually true in this state is narrower: the severity counts report
+    // nothing on the added lines, while pre-existing findings remain. The
+    // folded block's own summary line carries their count.
+    lines.push("✅ No findings on this diff's added lines.", '');
+  } else {
+    const countParts = [];
+    if (counts.critical > 0) countParts.push(`🔴 ${counts.critical} critical`);
+    if (counts.major > 0) countParts.push(`🟠 ${counts.major} major`);
+    if (counts.minor > 0) countParts.push(`🟡 ${counts.minor} minor`);
+    if (counts.info > 0) countParts.push(`ℹ️ ${counts.info} info`);
+    lines.push(`**${total} finding${total === 1 ? '' : 's'}** — ${countParts.join(', ')}`);
+    lines.push('');
+  }
 
   if (inlinePostedCount > 0) {
     lines.push(
@@ -234,8 +254,27 @@ function buildSummaryBody(data, inlinePostedCount, remainingIssues, preExistingI
   );
   if (compact.length <= MAX_SUMMARY_BODY) return compact;
 
+  // A raw slice can cut the body open inside the `<details>` block, which
+  // swallows the truncation notice into the collapsed region — the reader would
+  // have to expand a block to learn that it is incomplete. Reserve room for the
+  // closing tag, then close and annotate.
   const notice = '\n\n_Summary truncated to fit GitHub’s comment size limit._';
-  return compact.slice(0, MAX_SUMMARY_BODY - notice.length) + notice;
+  const budget = MAX_SUMMARY_BODY - notice.length - CLOSE_DETAILS.length;
+  let cut = compact.slice(0, budget);
+
+  // `slice` counts UTF-16 units, so a cut can land between the two halves of an
+  // emoji and leave a lone surrogate. Only a trailing HIGH surrogate can be
+  // orphaned this way: a low surrogate at the end implies its high partner sits
+  // one unit earlier and was kept. Rounding back to the last newline instead
+  // would look tidier but can discard nearly the whole comment when one finding
+  // carries a title longer than the budget.
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+
+  // This formatter opens at most one `<details>` block (the pre-existing one),
+  // so presence-without-close is the whole condition.
+  const needsClose = cut.includes('<details>') && !cut.includes('</details>');
+  const closing = needsClose ? CLOSE_DETAILS : '';
+  return cut + closing + notice;
 }
 
 module.exports = async function postInlineComments({ github, context, core }) {
