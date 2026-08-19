@@ -9,7 +9,5 @@
   ],
   "skills/agent-skills/**/*.md": ["npm run agent-skills:validate"],
   "pages/**/*.md": ["npm run check:bilingual", "textlint --no-cache"],
-  "{docs/**/*.md,README.md,README.*.md}": [
-    "textlint --no-cache -c tools/textlint/docs.textlintrc.json"
-  ]
+  "{docs/**/*.md,README.md,README.*.md}": ["textlint --no-cache"]
 }

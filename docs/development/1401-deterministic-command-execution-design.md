@@ -32,7 +32,7 @@ S4 では command 実行を descope した。strict_block ルーティングは�
 （`src/lib/deterministic-gate.mjs` の `computeStrictBlock`）で実装済みであり、command を実際に
 子プロセスとして起動する機構は**まだ存在しない**。
 
-現状の到達点は次のとおりである。
+現状の到達点は次のとおりです。
 
 - `schemas/skill.schema.json` の `deterministicGate` は `command`（string, minLength 1）と
   `failSeverity`（`strict_block` | `bypass_warning`, default `strict_block`）を宣言のみで定義する。
@@ -48,13 +48,13 @@ S4 では command 実行を descope した。strict_block ルーティングは�
   `skills/**` の `deterministicGate.command` 実行を「広い攻撃面」として本 issue（#1401）に委ねている。
 
 つまり本設計の中心課題は、「**被レビュー PR 著者の書き込み権限下にある command 文字列を、
-CI の secret を守りながら決定論ゲートとして安全に実行する**」ことである。
+CI の secret を守りながら決定論ゲートとして安全に実行する**」ことです。
 
 ## 2. 脅威モデル
 
 ### 2.1 攻撃者の能力
 
-攻撃者は**被レビュー PR の著者**である。fork からの PR を含む。攻撃者は次を制御できる。
+攻撃者は**被レビュー PR の著者**です。fork からの PR を含む。攻撃者は次を制御できる。
 
 - `skills/**/SKILL.md`（および skill が読む付随ファイル）の内容全体。したがって
   `deterministicGate.command` / `args` の値、`evaluationType`、`failSeverity` を任意に書ける。
@@ -248,7 +248,7 @@ execFile にそのまま渡すと `"npm run lint"` という 1 つの実行フ�
 「**command を実行できなかった**（= 環境障害 / 設定不備）」を別 reasonCode に分離する。
 前者のみ strict_block（`NO_GO`）に倒し、後者は `ESCALATE` 寄り（人間へ）に倒す。
 
-理由は #1401 の敵対レビュー④で挙がった **NO_GO ストーム**の回避である。allowlist に載った
+理由は #1401 の敵対レビュー④で挙がった **NO_GO ストーム**の回避です。allowlist に載った
 command が CI の一時障害（ネットワーク断・依存未インストール・timeout）で実行不能になると、
 それを「違反」と解釈すれば**全 PR が一斉に NO_GO でブロック**される。実行不能は「判定できない」
 であり、fail-safe の方向は「人間に上げる（ESCALATE）」であって「機械的にブロック（NO_GO）」ではない。
@@ -595,7 +595,7 @@ denylist は「コード/スクリプトを間接実行する、または config
 ##### (C) 素の interpreter 登録の拒否（schema/実装レベル）
 
 `command` の basename が interpreter denylist に一致するエントリがある。denylist は
-`npm` / `npx` / `pnpm` / `yarn` / `node` / `deno` / `bun` / `bash` / `sh` / `zsh` の 10 個である。
+`npm` / `npx` / `pnpm` / `yarn` / `node` / `deno` / `bun` / `bash` / `sh` / `zsh` の 10 個です。
 加えて `python` / `python3` / `ruby` / `perl` / `make` / `env` / `xargs` の 7 個も denylist に含まれる。
 そのエントリは、絶対パス指定であっても Phase 1 では `selfContained` を満たせないものとして拒否する。
 理由: これらは本質的に「引数で任意コードを走らせる」設計であり、(B) の denylist を完全化できない。
@@ -829,7 +829,7 @@ command は「PR head そのもの」ではなく、**レビュー対象ファ�
 形になった。しかし §10.4 の残余（供給網・PATH・base 前提・fork 爆弾）は Phase 1 の緩和では潰れず、
 かつブロッカー 1 は「対象 command を config 非依存の自己完結チェッカーに絞る」という**適用範囲の
 大幅縮小**を代償にしている。したがって判定は **GO ではなく CONDITIONAL（据え置き）**。GO 相当に
-上げる条件は次の 3 点である。
+上げる条件は次の 3 点です。
 
 1. §10.1〜10.3 の各仕様に対する canary/敵対テスト（§8.2 に追記済みの観点 + 本節の
    symlink・clean cwd・interpreter 拒否・stdout 非露出）の実装計画が DoD に組み込まれること。

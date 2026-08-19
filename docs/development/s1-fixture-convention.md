@@ -85,7 +85,7 @@ negative fixture は `findings: []` と `reason` を書く。`findings: []` の 
 
 `anchor` の行番号は fixture 内の diff ブロックから機械的に解決されます。そのため入力 diff は unified diff として書き、`scripts/validate-skills.mjs` の `validateFixtureDiffStructure()` が認識できる記法に揃える必要があります。
 
-記法の要件は次のとおりである。
+記法の要件は次のとおりです。
 
 - fence は行頭の ` ```diff ` とする。小文字であり、info string（` ```diff title="x" ` 等）を付けない。インデントした fence も認識されない
 - diff 本体に 3 バックティックの fence を含む場合は、外側を 4 バックティック（` ````diff `）にして閉じる。閉じ位置を間違えると後続の散文が diff 本体として読まれる
@@ -99,7 +99,7 @@ negative fixture は `findings: []` と `reason` を書く。`findings: []` の 
 - `anchor` の行番号が new 側の再構成結果に実在し、その行が空行でないこと
 - ファイル内の `@@` ヘッダ数が、認識された diff ブロック内のヘッダ数と一致すること（超過は未認識記法の混入を意味する）
 
-`findings: []` の negative fixture のように `anchor` を持たない fixture は、anchor 検査の対象外となる。`(summary):1` 形式の疑似 anchor も同様に対象外である。
+`findings: []` の negative fixture のように `anchor` を持たない fixture は、anchor 検査の対象外となります。`(summary):1` 形式の疑似 anchor も同様に対象外です。
 
 ### 4. 免除を外す
 
