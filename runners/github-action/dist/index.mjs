@@ -73529,6 +73529,46 @@ function warnWhenTargetPathMissing(targetPath, rawTarget) {
 }
 
 /**
+ * Message that replaces prompt-compare's dataset error when the path is missing (#1947).
+ *
+ * Same class of bug as #1936, one path over: `prompt-compare` reported a
+ * mistyped path and a legitimately observation-free store with the identical
+ * `Prompt Compiler の観測を持つ run が 1 件も無い。` error, so the user could not
+ * tell which of the two had happened.
+ *
+ * Why this rewrites the error instead of calling `warnWhenTargetPathMissing`
+ * (the minimal change): `prompt-compare` exits 1, so a warning would leave TWO
+ * lines on stderr, and the second one — the dataset error — names the WRONG
+ * remedy ("turn on `review.promptCompiler.mode: observe` and re-run reviews")
+ * for a path that simply does not exist. Terminal output is read top to bottom,
+ * so that wrong remedy is the last thing left on screen. `aggregate` has no such
+ * conflict: it exits 0 and prints nothing else on stderr, which is why #1945's
+ * warning shape is right there and not here.
+ *
+ * Swallowing the original message is safe and bounded: `resolveStoreDir()` does
+ * not search upward (src/lib/result-store.mjs:22), so a non-existent path always
+ * yields zero run records, and with zero records the only reachable throw in
+ * `buildPromptComparison` is the observation-count one. No other diagnosis can
+ * be hidden by this branch.
+ *
+ * The condition matches #1945 exactly: "the path does not exist", never "the
+ * store is empty" — an observation-free store is the normal state before anyone
+ * has run in observe mode, and must stay on the original message. `existsSync`
+ * is not narrowed to directories for the same reason as #1945.
+ *
+ * @param {string} targetPath - resolved positional path.
+ * @param {string} rawTarget - the token as the user typed it.
+ * @returns {string|null} replacement message, or null to keep the original.
+ */
+function missingTargetPathError(targetPath, rawTarget) {
+  if ((0,external_node_fs_.existsSync)(targetPath)) return null;
+  return (
+    `Error: "${rawTarget}" does not exist, so this prompt-compare read an empty store ` +
+    'instead of the runs you meant. Check the path, or omit it to compare the runs in the current directory.'
+  );
+}
+
+/**
  * Handle the `evolve` command (aggregate | replay | prompt-compare).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -73604,7 +73644,11 @@ async function runPromptCompare(parsed, targetPath, output) {
     // Both are usage-level: the dataset cannot support the comparison. The
     // message says which condition failed, so exit 1 stays actionable.
     if (err instanceof PromptComparisonError || err instanceof PairedReplayError) {
-      console.error(`Error: ${err.message}`);
+      // #1947: a non-existent path gets the path diagnosis instead, because the
+      // dataset error's remedy does not apply to it. Exit code is unchanged.
+      console.error(
+        missingTargetPathError(targetPath, parsed.target ?? targetPath) ?? `Error: ${err.message}`
+      );
       return 1;
     }
     throw err;
