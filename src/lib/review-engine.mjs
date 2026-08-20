@@ -256,6 +256,154 @@ function redactSecrets(text) {
 }
 
 /**
+ * Verifier 段。generateReview（下）から抽出した（#1901 / #1905 と同じ型の第 2 段）。
+ *
+ * この 1 関数が担うのは次の 4 つで、抽出前と同じ順序・同じ条件で走る:
+ *   1. 品質チェック（verifyFinding）による filter
+ *   2. #1644 の scope 判定を comment へ載せる（`withScope`）
+ *   3. scope の集計（`summarizeScope`）
+ *   4. 全件棄却時の fail-safe（heuristic / fallback へ degrade して再検証）
+ *
+ * 置き場所について。src/prompt/compiler-stage.mjs（段 1）は独立 module にした
+ * が、この段は同じにできない。fail-safe が `buildHeuristicComments` の結果を
+ * `normalizeHeuristicComments` / `buildFallbackComments` で組み直す必要があり、
+ * 後者 2 つは本 module 内の private helper で、verifier 段より前の
+ * fallback（`if (!comments.length)`）とも共有している。新 module へ出すには
+ * それらを先に別 module へ移す必要があり、それは本段とは独立の変更になる。
+ * verifier.mjs へ足す案も採れない — verifier.mjs は finding-factory.mjs しか
+ * import しない per-finding の判定器であり、そこへ heuristic-review.mjs と本
+ * module の helper を持ち込むと review-engine ↔ verifier の循環 import になる。
+ * よって本段は module scope 関数として同一ファイルに置く。
+ *
+ * 副作用の扱い。段 1 は「純関数にして debug へは呼び出し側が書く」方針だが、
+ * この段は debug へ 7 個の key を 2 経路（通常経路と fail-safe）から条件付きで
+ * 書き、`scopeStats` に至っては 2 回代入する。そのまま返り値へ移すと
+ * generateReview 側に同じ条件分岐がもう一度並ぶ。代わりに「debug へ足すべき
+ * key を 1 個の patch object にまとめて返し、呼び出し側が Object.assign する」
+ * 形にした。段 1 の不変条件（この関数は debug を触らない）は保ったまま、
+ * key の挿入順（= JSON の並び順）も抽出前と同一になる。`scopeStats` の 2 回
+ * 目の代入は patch 内の同じ key の上書きで表現され、位置は動かない。
+ *
+ * @param {object} params
+ * @param {Array<object>} params.comments 検証対象（LLM / heuristic / fallback の一次集合）
+ * @param {{diffText: string, files?: Array<object>}} params.diff 生の差分（LLM 用に間引く前）
+ * @param {boolean} params.heuristicsUsed 一次集合が既に heuristic 由来か（fail-safe の抑止条件）
+ * @param {string|null|undefined} params.llmSkipped debug.llmSkipped
+ * @param {string|null|undefined} params.llmError debug.llmError
+ * @returns {Promise<{comments: Array<object>, debugPatch: object}>}
+ */
+async function runVerifierStage({
+  comments,
+  diff,
+  plan,
+  fileTypes,
+  includeFallback,
+  heuristicsUsed,
+  llmSkipped,
+  llmError,
+}) {
+  const { verifyFinding } = await import('./verifier.mjs');
+  const skill = plan?.selected?.[0] ?? {};
+  const runVerifier = (cmts) =>
+    cmts.map((comment) => ({
+      comment,
+      verification: verifyFinding({
+        finding: comment,
+        diff: diff.diffText,
+        skill,
+        fileTypes,
+        // #1644: parsed diff files carry addedLines, enabling the verifier's
+        // machine determination of finding scope (in-diff / pre-existing).
+        diffFiles: diff.files,
+      }),
+    }));
+
+  // #1644: carry the verifier's scope verdict on the comment so the findings
+  // built below can adopt it. Metadata only — display and gating are unchanged.
+  const withScope = (r) => ({ ...r.comment, scope: r.verification.scope });
+
+  const verifierResults = runVerifier(comments);
+  let verified = verifierResults.filter((r) => r.verification.verified).map(withScope);
+  const rejected = verifierResults.filter((r) => !r.verification.verified);
+
+  const debugPatch = {};
+  // debug.verifierStats/verifierRejected describe the verifier pass over the
+  // primary (LLM or first-pass heuristic) comment set — i.e. the signal for why
+  // a fallback did or did not fire. The finally-emitted set is result.findings.
+  debugPatch.verifierRejected = rejected.map((r) => ({
+    file: r.comment.file,
+    line: r.comment.line,
+    reasons: r.verification.reasons,
+  }));
+  debugPatch.verifierStats = {
+    total: comments.length,
+    verified: verified.length,
+    rejected: rejected.length,
+  };
+
+  // #1644: observability for the scope determination. `mismatch` counts
+  // findings whose LLM self-report disagreed with the machine determination
+  // (the machine verdict wins); a rising count signals prompt drift. Unlike
+  // verifierStats — which intentionally keeps describing the primary (possibly
+  // wholly rejected) batch — scopeStats must describe the set that actually
+  // carries `scope` into the findings, so it is recomputed from the last
+  // verifier pass whenever the fallback branch below re-runs the verifier.
+  const summarizeScope = (results) =>
+    results.reduce(
+      (acc, r) => {
+        acc[r.verification.scope] = (acc[r.verification.scope] ?? 0) + 1;
+        acc.bySource[r.verification.scopeSource] =
+          (acc.bySource[r.verification.scopeSource] ?? 0) + 1;
+        if (r.verification.scopeMismatch) acc.mismatch += 1;
+        return acc;
+      },
+      { 'in-diff': 0, 'pre-existing': 0, mismatch: 0, bySource: {} }
+    );
+  debugPatch.scopeStats = summarizeScope(verifierResults);
+
+  // Fail-safe: mirror the format-validation fallback for a wholesale verifier
+  // rejection. Inline-only findings (Severity:/Confidence: present but
+  // Evidence:/Fix: omitted) pass format validation yet fail the verifier; the
+  // heuristic fallback above only runs when the LLM produced *no* usable
+  // comments (verifier runs after it), so without this branch a fully-rejected
+  // LLM batch would emit an empty review. Degrade to the same safe heuristic/
+  // fallback path instead. Guard on `!heuristicsUsed` so a batch that was
+  // already heuristic is not reprocessed.
+  if (verified.length === 0 && verifierResults.length > 0 && !heuristicsUsed) {
+    debugPatch.verifierAllRejected = true;
+    // 抽出前は外側の `comments` を上書きしていたが、直後に verified で置き換え
+    // られるため観測されない。局所変数にして寿命を段の内側へ閉じている。
+    let degraded;
+    const heuristic = buildHeuristicComments({ diff, plan });
+    if (heuristic.length) {
+      degraded = normalizeHeuristicComments(heuristic);
+      debugPatch.heuristicsUsed = true;
+      debugPatch.heuristicsCount = heuristic.length;
+    } else {
+      const llmSkipReason = llmSkipped || llmError || null;
+      const isMissingKey = llmSkipReason && llmSkipReason.includes('not set');
+      degraded = isMissingKey
+        ? []
+        : includeFallback
+          ? buildFallbackComments(diff, plan, { llmSkipReason })
+          : [];
+      debugPatch.heuristicsCount = 0;
+      debugPatch.fallbackIncluded = includeFallback;
+    }
+    // Re-verify the fallback set so the emitted comments still satisfy the
+    // verifier invariant (heuristic/fallback findings use the full labeled
+    // format and pass). verifierStats above intentionally keeps describing the
+    // rejected LLM batch.
+    const fallbackResults = runVerifier(degraded);
+    verified = fallbackResults.filter((r) => r.verification.verified).map(withScope);
+    debugPatch.scopeStats = summarizeScope(fallbackResults);
+  }
+
+  // Verified-only set. 呼び出し側の `comments` はこれで置き換わる。
+  return { comments: verified, debugPatch };
+}
+
+/**
  * Generate review comments using LLM when configured, otherwise fall back to deterministic hints.
  */
 export async function generateReview({
@@ -501,102 +649,23 @@ export async function generateReview({
 
   debug.fileClassification = fileTypes ?? null;
 
-  // Verifier pass: filter findings that fail quality checks
-  const { verifyFinding } = await import('./verifier.mjs');
-  const skill = plan?.selected?.[0] ?? {};
-  const runVerifier = (cmts) =>
-    cmts.map((comment) => ({
-      comment,
-      verification: verifyFinding({
-        finding: comment,
-        diff: diff.diffText,
-        skill,
-        fileTypes,
-        // #1644: parsed diff files carry addedLines, enabling the verifier's
-        // machine determination of finding scope (in-diff / pre-existing).
-        diffFiles: diff.files,
-      }),
-    }));
-
-  // #1644: carry the verifier's scope verdict on the comment so the findings
-  // built below can adopt it. Metadata only — display and gating are unchanged.
-  const withScope = (r) => ({ ...r.comment, scope: r.verification.scope });
-
-  const verifierResults = runVerifier(comments);
-  let verified = verifierResults.filter((r) => r.verification.verified).map(withScope);
-  const rejected = verifierResults.filter((r) => !r.verification.verified);
-
-  // debug.verifierStats/verifierRejected describe the verifier pass over the
-  // primary (LLM or first-pass heuristic) comment set — i.e. the signal for why
-  // a fallback did or did not fire. The finally-emitted set is result.findings.
-  debug.verifierRejected = rejected.map((r) => ({
-    file: r.comment.file,
-    line: r.comment.line,
-    reasons: r.verification.reasons,
-  }));
-  debug.verifierStats = {
-    total: comments.length,
-    verified: verified.length,
-    rejected: rejected.length,
-  };
-
-  // #1644: observability for the scope determination. `mismatch` counts
-  // findings whose LLM self-report disagreed with the machine determination
-  // (the machine verdict wins); a rising count signals prompt drift. Unlike
-  // verifierStats — which intentionally keeps describing the primary (possibly
-  // wholly rejected) batch — scopeStats must describe the set that actually
-  // carries `scope` into the findings, so it is recomputed from the last
-  // verifier pass whenever the fallback branch below re-runs the verifier.
-  const summarizeScope = (results) =>
-    results.reduce(
-      (acc, r) => {
-        acc[r.verification.scope] = (acc[r.verification.scope] ?? 0) + 1;
-        acc.bySource[r.verification.scopeSource] =
-          (acc.bySource[r.verification.scopeSource] ?? 0) + 1;
-        if (r.verification.scopeMismatch) acc.mismatch += 1;
-        return acc;
-      },
-      { 'in-diff': 0, 'pre-existing': 0, mismatch: 0, bySource: {} }
-    );
-  debug.scopeStats = summarizeScope(verifierResults);
-
-  // Fail-safe: mirror the format-validation fallback for a wholesale verifier
-  // rejection. Inline-only findings (Severity:/Confidence: present but
-  // Evidence:/Fix: omitted) pass format validation yet fail the verifier; the
-  // heuristic fallback above only runs when the LLM produced *no* usable
-  // comments (verifier runs after it), so without this branch a fully-rejected
-  // LLM batch would emit an empty review. Degrade to the same safe heuristic/
-  // fallback path instead. Guard on `!debug.heuristicsUsed` so a batch that was
-  // already heuristic is not reprocessed.
-  if (verified.length === 0 && verifierResults.length > 0 && !debug.heuristicsUsed) {
-    debug.verifierAllRejected = true;
-    const heuristic = buildHeuristicComments({ diff, plan });
-    if (heuristic.length) {
-      comments = normalizeHeuristicComments(heuristic);
-      debug.heuristicsUsed = true;
-      debug.heuristicsCount = heuristic.length;
-    } else {
-      const llmSkipReason = debug.llmSkipped || debug.llmError || null;
-      const isMissingKey = llmSkipReason && llmSkipReason.includes('not set');
-      comments = isMissingKey
-        ? []
-        : includeFallback
-          ? buildFallbackComments(diff, plan, { llmSkipReason })
-          : [];
-      debug.heuristicsCount = 0;
-      debug.fallbackIncluded = includeFallback;
-    }
-    // Re-verify the fallback set so the emitted comments still satisfy the
-    // verifier invariant (heuristic/fallback findings use the full labeled
-    // format and pass). verifierStats above intentionally keeps describing the
-    // rejected LLM batch.
-    const fallbackResults = runVerifier(comments);
-    verified = fallbackResults.filter((r) => r.verification.verified).map(withScope);
-    debug.scopeStats = summarizeScope(fallbackResults);
-  }
-
+  // Verifier pass: filter findings that fail quality checks.
+  // 段の本体は runVerifierStage（同ファイル、上）にある。#1644 の scope 判定と
+  // 全件棄却時の fail-safe もその内側にある。debug への反映は patch の
+  // Object.assign 1 回だけで、key の挿入順は抽出前と同一である。
+  const verifierStage = await runVerifierStage({
+    comments,
+    diff,
+    plan,
+    fileTypes,
+    includeFallback,
+    heuristicsUsed: debug.heuristicsUsed,
+    llmSkipped: debug.llmSkipped,
+    llmError: debug.llmError,
+  });
+  Object.assign(debug, verifierStage.debugPatch);
   // Replace comments with verified-only set
-  comments = verified;
+  comments = verifierStage.comments;
 
   // #1597: Output-stage filter for findings that point at a machine-generated
   // build-artifact directory (a `dist/` path segment). #1570 excluded these
