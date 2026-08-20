@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.87.2](https://github.com/s977043/river-review/compare/v1.87.1...v1.87.2) (2026-08-20)
+
+
+### Bug Fixes
+
+* **action:** サマリーの自己申告 Scope ラベルを SSoT 経由で除去する ([#1937](https://github.com/s977043/river-review/issues/1937)) ([7b771c0](https://github.com/s977043/river-review/commit/7b771c0de57a598f5bc58fd51d637f763a12ca42)), closes [#1929](https://github.com/s977043/river-review/issues/1929)
+* evolve のサブコマンド語がディレクトリ名と衝突すると語順で意味が変わる問題を直す ([#1759](https://github.com/s977043/river-review/issues/1759) B1) ([#1932](https://github.com/s977043/river-review/issues/1932)) ([7fd4d60](https://github.com/s977043/river-review/commit/7fd4d6006495bc5026c30c0b04956f4487563b38))
+* **types:** inputContext / outputKind の TypeScript 宣言を schema に揃え parity canary を広げる ([#1941](https://github.com/s977043/river-review/issues/1941)) ([9279b47](https://github.com/s977043/river-review/commit/9279b47d87179e4b2873c650512a1611988bc7c7))
+
 ## [1.87.1](https://github.com/s977043/river-review/compare/v1.87.0...v1.87.1) (2026-08-19)
 
 
