@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSyncGuarded } from './helpers/spawn-guard.mjs';
 
 // .claude/hooks/no-force-push.sh (PreToolUse hook) を実プロセス実行で検証する。
 // 本物の PreToolUse ペイロードを stdin に流し、exit code だけで判定する
@@ -16,8 +16,11 @@ const HOOK = join(
   'no-force-push.sh'
 );
 
+// 子プロセスの起動は `spawnSyncGuarded` 経由に統一する（#1950）。素の spawnSync だと
+// hook が固まったときにテストごと固まり、さらに ppid=1 の孤児が残る。既定の
+// タイムアウトは 30 秒で、実測 40〜210ms／呼び出しに対して 100 倍以上の余裕がある。
 function runHook(command) {
-  const res = spawnSync('bash', [HOOK], {
+  const res = spawnSyncGuarded('bash', [HOOK], {
     input: JSON.stringify({
       session_id: 'test',
       hook_event_name: 'PreToolUse',
@@ -170,7 +173,7 @@ test('passing commands produce no stderr noise', () => {
 
 test('empty or malformed stdin payload passes', () => {
   for (const input of ['', '{not json', '{}', '{"tool_input":{}}']) {
-    const res = spawnSync('bash', [HOOK], { input, encoding: 'utf8' });
+    const res = spawnSyncGuarded('bash', [HOOK], { input, encoding: 'utf8' });
     assert.equal(res.status, 0, JSON.stringify(input));
   }
 });

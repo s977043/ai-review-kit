@@ -41,8 +41,13 @@ REF="origin/main"
 RAW=0
 
 usage() {
-  cat <<'EOF'
-Usage: scripts/count-in-clean-tree.sh [--ref <ref>] [--raw] [--] <command> [args...]
+  # 以下は #1950 まで `cat <<'EOF'` の heredoc だった。bash 5.3.15（homebrew）は
+  # 本体が 512 バイトを超える heredoc で決定論的に deadlock し、この本体は 518
+  # バイトなので `--help` と usage エラーがそのまま固まっていた。単一引用符の
+  # 複数行文字列を `printf` へ渡すと quoted heredoc と同じ「一切展開しない」
+  # 意味論のままバイト単位で同一の出力になり、しかもサイズ上限が無い。
+  # heredoc へ戻さないこと（#1950）。
+  printf '%s\n' 'Usage: scripts/count-in-clean-tree.sh [--ref <ref>] [--raw] [--] <command> [args...]
 
 Options:
   --ref <ref>   展開する git ref（既定: origin/main）
@@ -50,8 +55,7 @@ Options:
   -h, --help    このヘルプを表示する
 
 出力は既定で「そのまま doc へ貼れる」fenced block になる。ref・解決した SHA・
-実行コマンド・出力が 1 ブロックに収まるため、公開した数値の再現手段が残る。
-EOF
+実行コマンド・出力が 1 ブロックに収まるため、公開した数値の再現手段が残る。'
 }
 
 while [ $# -gt 0 ]; do

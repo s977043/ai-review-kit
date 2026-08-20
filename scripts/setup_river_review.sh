@@ -26,8 +26,12 @@
 #
 set -euo pipefail
 
-cat >&2 <<'EODEPRECATED'
-================================================================================
+# 以下は #1950 まで heredoc だった。bash 5.3.15（homebrew）は本体が 512 バイトを
+# 超える heredoc で決定論的に deadlock するため、この script は手で実行すると
+# 固まっていた。単一引用符の複数行文字列を printf へ渡すと quoted heredoc と
+# 同じ「一切展開しない」意味論のままバイト単位で同一の出力になり、サイズ上限も
+# 無い。heredoc へ戻さないこと（#1950）。
+printf '%s\n' '================================================================================
   DEPRECATED: scripts/setup_river_review.sh
 
   This script REWRITES README.md, docs/glossary.md, docs/skill-schema.md,
@@ -37,8 +41,7 @@ cat >&2 <<'EODEPRECATED'
 
   It has no callers and is scheduled for deletion on or after 2026-11-12.
   Press Ctrl-C now if you did not mean to run it.
-================================================================================
-EODEPRECATED
+================================================================================' >&2
 sleep 10
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -53,8 +56,8 @@ mkdir -p "$ROOT/scripts" "$ROOT/docs" "$ROOT/docs/tutorials" "$ROOT/docs/how-to"
   "$ROOT/.github/workflows"
 
 write_readme() {
-  cat <<'EORD' > "$ROOT/README.md"
-# River Review
+  # heredoc へ戻さないこと。理由は上の #1950 の注記を参照。
+  printf '%s\n' '# River Review
 
 ![River Review logo](assets/logo/river-review-logo.svg)
 
@@ -135,8 +138,7 @@ See `CONTRIBUTING.md` for guidance. Issues and PRs are welcome as we expand Rive
 
 - `LICENSE`: Apache-2.0 for repository scaffolding/config
 - `LICENSE-CODE`: MIT for code and scripts
-- `LICENSE-CONTENT`: CC BY 4.0 for docs and media
-EORD
+- `LICENSE-CONTENT`: CC BY 4.0 for docs and media' > "$ROOT/README.md"
 }
 
 if [[ ! -f "$ROOT/README.md" ]]; then
@@ -149,19 +151,18 @@ else
   echo "README.md exists; use --force to overwrite. Skipping README update."
 fi
 
-cat <<'EOG' > "$ROOT/docs/glossary.md"
-# River Review Glossary
+# heredoc へ戻さないこと。理由は上の #1950 の注記を参照。
+printf '%s\n' '# River Review Glossary
 
 - **Upstream**: requirements, design, and architecture phase (including ADRs) where early review prevents costly rework.
 - **Midstream**: implementation and pull request phase focused on code quality, security, and developer experience.
 - **Downstream**: test, QA, and release-prep phase to verify coverage, resilience, and regression protection.
 - **Skill**: a YAML frontmatter + Markdown unit of review guidance executed by River Review.
 - **Stream Router**: logic that selects and runs skills based on the requested phase and change context.
-- **Riverbed Memory (Future)**: persistent context layer for previous findings, ADR references, and WontFix decisions to keep reviews consistent over time.
-EOG
+- **Riverbed Memory (Future)**: persistent context layer for previous findings, ADR references, and WontFix decisions to keep reviews consistent over time.' > "$ROOT/docs/glossary.md"
 
-cat <<'EOS' > "$ROOT/docs/skill-schema.md"
-# Skill Schema
+# heredoc へ戻さないこと。理由は上の #1950 の注記を参照。
+printf '%s\n' '# Skill Schema
 
 River Review skills use YAML frontmatter for metadata and Markdown for guidance. The metadata fields are validated by `schemas/skill.schema.json`.
 
@@ -193,11 +194,10 @@ description: Flag midstream changes that risk latency regressions or heavy resou
 ---
 
 Ensure changed code paths avoid unnecessary synchronous I/O, unbounded concurrency, and repeated heavy computations. Recommend benchmarks when touching hot paths.
-```
-EOS
+```' > "$ROOT/docs/skill-schema.md"
 
-cat <<'EOJ' > "$ROOT/schemas/skill.schema.json"
-{
+# heredoc へ戻さないこと。理由は上の #1950 の注記を参照。
+printf '%s\n' '{
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "River Review Skill Metadata Schema",
   "type": "object",
@@ -239,9 +239,11 @@ cat <<'EOJ' > "$ROOT/schemas/skill.schema.json"
       "minLength": 1
     }
   }
-}
-EOJ
+}' > "$ROOT/schemas/skill.schema.json"
 
+# このファイルで唯一残した heredoc。本体が 364 バイトで #1950 の 512 バイト閾値を
+# 下回るため、そのままにしてある。行を足すときはバイト数を確認し、512 を超えるなら
+# 上の printf 形式へ寄せること（512 を超えた heredoc は bash 5.3.15 で固まる）。
 cat <<'EOW' > "$ROOT/.github/workflows/river-review.yml"
 name: River Review (placeholder)
 
