@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.87.3](https://github.com/s977043/river-review/compare/v1.87.2...v1.87.3) (2026-08-20)
+
+
+### Bug Fixes
+
+* **cli:** 存在しない対象を黙って受理する経路に警告を出す ([#1945](https://github.com/s977043/river-review/issues/1945)) ([ef9c3fd](https://github.com/s977043/river-review/commit/ef9c3fd806c7061ad9b87711f30ef2ddf4d58df9))
+
 ## [1.87.2](https://github.com/s977043/river-review/compare/v1.87.1...v1.87.2) (2026-08-20)
 
 
