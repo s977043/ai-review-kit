@@ -19,6 +19,7 @@
 - [ ] `tests/review-engine.test.mjs`—新パラメータ有無のテスト最低2件
 - [ ] `tests/review-eval.test.mjs`—既存の eval テスト
 - [ ] `tests/finding-format.test.mjs`—フォーマット検証テスト
+- [ ] `tests/finding-scope-propagation.test.mjs`—verifier の機械判定 scope が `findings[].scope` へ伝播することの回帰テスト（#1644）
 - [ ] `tests/prompt-sections.test.mjs`—節生成の SSoT（`src/prompt/sections.mjs`）と golden の突合
 - [ ] `tests/prompt-compiler.test.mjs`—Prompt Compiler の描画と `buildPrompt` 出力の突合（ADR-006）
 - [ ] `tests/prompt-compiler-observe.test.mjs`—`review.promptCompiler.mode` の observe 配線テスト（ADR-006）
