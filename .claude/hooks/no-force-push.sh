@@ -161,8 +161,15 @@ if ! printf '%s' "$SANITIZED" | grep -qE "$BLOCK_RE"; then
 fi
 
 EXCERPT="$(printf '%s' "$COMMAND" | tr '\n' ' ' | cut -c1-200)"
-cat >&2 <<EOF
-[no-force-push] BLOCKED: destructive git command.
+# The message below was a `cat >&2 <<EOF` heredoc until #1950. bash 5.3.15
+# (homebrew) deadlocks deterministically when a heredoc body exceeds 512 bytes;
+# this body is 564, so the guard hung at the exact moment it tried to BLOCK a
+# destructive command — the one path that must never fail. A quoted multi-line
+# string fed to `printf` reproduces the heredoc byte for byte (double quotes
+# keep `${EXCERPT}` expanding, and the body contains no other `$`, backtick,
+# backslash or `"`), and unlike a split heredoc it has no size ceiling at all.
+# Do NOT convert this back to a heredoc — see #1950.
+BLOCKED_MESSAGE="[no-force-push] BLOCKED: destructive git command.
   command: ${EXCERPT}
   AGENTS.md Safety bans rewriting already-pushed branch history
   (git push --force / -f / --force-with-lease) and discarding work
@@ -171,6 +178,6 @@ cat >&2 <<EOF
   Instead: take the remote in with 'git merge origin/<branch>' or
   'git merge --ff-only origin/<branch>', then push a fast-forward.
   If history still looks like it must be rewritten, do not work around this
-  hook — stop and escalate to the organizer / human.
-EOF
+  hook — stop and escalate to the organizer / human."
+printf '%s\n' "$BLOCKED_MESSAGE" >&2
 exit 2

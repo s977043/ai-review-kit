@@ -10,12 +10,21 @@
 
 ## 提供しているヘルパー
 
-| ファイル        | 主な API                                                                           |
-| --------------- | ---------------------------------------------------------------------------------- |
-| `temp-dir.mjs`  | `createTempDir()`, `cleanupTempDir()`, `withTempDir(fn)`                           |
-| `temp-repo.mjs` | `createTempGitRepo(opts)`, `createRepoWithSilentCatchChange()`, `runGit()`         |
-| `cli.mjs`       | `runCliAsSubprocess(argv, opts)`, `runCliInProcess(argv, opts)`                    |
-| `memory.mjs`    | `createTempMemory({ layout, entries })`, `makeMemoryEntry()`, `writeMemoryIndex()` |
+| ファイル          | 主な API                                                                           |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| `temp-dir.mjs`    | `createTempDir()`, `cleanupTempDir()`, `withTempDir(fn)`                           |
+| `temp-repo.mjs`   | `createTempGitRepo(opts)`, `createRepoWithSilentCatchChange()`, `runGit()`         |
+| `cli.mjs`         | `runCliAsSubprocess(argv, opts)`, `runCliInProcess(argv, opts)`                    |
+| `memory.mjs`      | `createTempMemory({ layout, entries })`, `makeMemoryEntry()`, `writeMemoryIndex()` |
+| `spawn-guard.mjs` | `spawnSyncGuarded(command, args, options)`, `SPAWN_TIMEOUT_MS`                     |
+
+## 子プロセスを起動するテスト
+
+`spawnSync` を直接呼ばず `spawnSyncGuarded` を使う。素の `spawnSync` は、子が固まると
+テストごと固まるうえ、`node --test` がランナーを終了させても子は kill されず ppid=1 の
+孤児として残る（#1950 で 5 時間以上生き残った孤児が 14 個観測された）。
+`spawnSyncGuarded` は既定 30 秒のタイムアウトに加え、子をプロセスグループのリーダーに
+してグループごと SIGKILL するため、子がさらに fork していても孫まで確実に消える。
 
 ## CLI ヘルパーの使い分け
 

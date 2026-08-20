@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSyncGuarded } from './helpers/spawn-guard.mjs';
 
 // scripts/count-in-clean-tree.sh を実プロセス実行で検証する（refs #1827）。
 // 使い捨ての git repo を作り、追跡済み / 追跡外 / .gitignore 対象の 3 種類を置いて、
@@ -18,8 +18,12 @@ const SCRIPT = join(
 
 const MARKER = 'CLEAN_TREE_MARKER';
 
+// 子プロセスの起動は `spawnSyncGuarded` 経由に統一する（#1950）。素の spawnSync だと
+// script が固まったときにテストごと固まり、さらに ppid=1 の孤児が残る。既定の
+// タイムアウトは 30 秒で、実測ではこのファイル全体が 3〜4 秒、最も遅い 1 呼び出しでも
+// 1 秒未満なので、遅いマシンでも偽陽性にならない。
 function git(cwd, ...args) {
-  const res = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  const res = spawnSyncGuarded('git', args, { cwd, encoding: 'utf8' });
   assert.equal(res.status, 0, `git ${args.join(' ')} failed: ${res.stderr}`);
   return res.stdout.trim();
 }
@@ -47,7 +51,7 @@ function makeRepo(t) {
 }
 
 function runScript(repo, args, env) {
-  return spawnSync('bash', [SCRIPT, ...args], {
+  return spawnSyncGuarded('bash', [SCRIPT, ...args], {
     cwd: repo,
     encoding: 'utf8',
     ...(env ? { env: { ...process.env, ...env } } : {}),
@@ -65,7 +69,7 @@ test('clean tree では追跡外ファイルが数えられない', (t) => {
   const repo = makeRepo(t);
 
   // 作業ツリーで直接走査すると、追跡外と .gitignore 対象まで数えてしまう。
-  const dirty = spawnSync(SCAN[0], SCAN.slice(1), { cwd: repo, encoding: 'utf8' });
+  const dirty = spawnSyncGuarded(SCAN[0], SCAN.slice(1), { cwd: repo, encoding: 'utf8' });
   assert.equal(dirty.status, 0, dirty.stderr);
   const dirtyFiles = dirty.stdout.trim().split(' ').filter(Boolean).sort();
   assert.deepEqual(dirtyFiles, ['./Working/draft.md', './tracked.md', './untracked.md']);
@@ -140,7 +144,9 @@ test('既定出力は ref と SHA とコマンドを含む貼り付け可能な�
 // ファイル経由（`-f`）なら本物の tar に委譲する。読み手が必ず先に抜けるので、
 // パイプを使う実装なら確定的に 141 で落ち、中間ファイルを使う実装なら影響を受けない。
 function makeEarlyExitTarShim(t) {
-  const realTar = spawnSync('sh', ['-c', 'command -v tar'], { encoding: 'utf8' }).stdout.trim();
+  const realTar = spawnSyncGuarded('sh', ['-c', 'command -v tar'], {
+    encoding: 'utf8',
+  }).stdout.trim();
   assert.ok(realTar, 'tar が PATH に見つかること');
 
   const bin = mkdtempSync(join(tmpdir(), 'rr-clean-tree-tarshim-'));
