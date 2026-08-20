@@ -4,7 +4,17 @@
 
 export type Phase = 'upstream' | 'midstream' | 'downstream';
 export type ModelHint = 'cheap' | 'balanced' | 'high-accuracy';
-export type InputContext = 'diff' | 'fullFile' | 'tests' | 'adr' | 'commitMessage' | 'repoConfig';
+export type InputContext =
+  | 'diff'
+  | 'fullFile'
+  | 'tests'
+  | 'adr'
+  | 'commitMessage'
+  | 'repoConfig'
+  | 'reviewSelf'
+  | 'reviewExternal'
+  | 'findingsPool'
+  | 'prDescription';
 export type Dependency =
   | 'code_search'
   | 'test_runner'
