@@ -2,7 +2,7 @@
 //
 // #1936: 存在しないパス・参照を黙って受理して空の結果を返す経路を warn で可視化する。
 //
-// 対象は 2 経路である。
+// 対象は 3 経路である。
 //
 //   1. `evolve aggregate <存在しないパス>` — `resolveStoreDir()` が
 //      `<存在しないパス>/.river/runs` を解決してしまうため、打鍵ミスが
@@ -10,6 +10,11 @@
 //   2. `run --baseline <path>` + 早期 return（`no-changes` / `skipped-by-label` /
 //      `--estimate`）— 比較ブロックへ到達しないので、`--baseline` を指定した事実ごと
 //      無言で消えていた。
+//   3. `evolve prompt-compare <存在しないパス>`（#1947）— 1 と同じ穴が 1 経路残っていた。
+//      こちらは exit 1 で終わるため、警告を足すと stderr が 2 行になり、2 行目の
+//      dataset エラーが「observe モードにして再実行せよ」という**誤った対処**を
+//      最後に残す。そこで警告ではなくエラー文言そのものを差し替える形を採った。
+//      exit code を変えない点・「存在しない」ときだけ反応する点は 1 と同じである。
 //
 // 採った形は #1883（`warnWhenFingerprintMatchesNoFinding`,
 // src/cli/commands/feedback.mjs:27）と同じである。すなわち stderr へ出し、exit code は
@@ -36,6 +41,9 @@ import { createTempGitRepo } from './helpers/temp-repo.mjs';
 
 const MISSING_TARGET_WARNING = 'does not exist, so this aggregate read an empty store';
 const BASELINE_UNUSED_WARNING = 'was not used';
+// #1947: prompt-compare 側は警告ではなくエラー文言の差し替えなので、別文字列で pin する。
+const MISSING_TARGET_ERROR = 'does not exist, so this prompt-compare read an empty store';
+const NO_OBSERVATION_ERROR = 'Prompt Compiler の観測を持つ run が 1 件も無い';
 
 function writeRunRecord(dir) {
   mkdirSync(join(dir, '.river', 'runs'), { recursive: true });
@@ -123,6 +131,57 @@ describe('#1936: evolve aggregate warns only when the positional path does not e
     const result = await runCliInProcess(['evolve', 'aggregate', './a.txt'], { cwd: dir });
     assert.equal(result.code, 0);
     assert.doesNotMatch(result.stderr, new RegExp(MISSING_TARGET_WARNING));
+  });
+});
+
+describe('#1947: evolve prompt-compare separates a missing path from a missing observation', () => {
+  let dir = null;
+
+  before(() => {
+    dir = createTempDir({ prefix: 'river-1947-prompt-compare-' });
+  });
+
+  after(() => {
+    cleanupTempDir(dir);
+  });
+
+  test('names the missing path instead of the dataset error, without changing the exit code', async () => {
+    const result = await runCliInProcess(['evolve', 'prompt-compare', 'no-such-dir'], { cwd: dir });
+    assert.equal(result.code, 1, 'exit code must stay 1 (unchanged by #1947)');
+    assert.match(result.stderr, new RegExp(MISSING_TARGET_ERROR));
+    assert.match(result.stderr, /no-such-dir/);
+    // ★ 差し替えである以上、誤った対処（observe モードにして再実行）が残っていないこと。
+    assert.doesNotMatch(result.stderr, new RegExp(NO_OBSERVATION_ERROR));
+  });
+
+  test('keeps the dataset error when the path exists but has no .river/ at all', async () => {
+    const result = await runCliInProcess(['evolve', 'prompt-compare', '.'], { cwd: dir });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, new RegExp(NO_OBSERVATION_ERROR));
+    assert.doesNotMatch(result.stderr, new RegExp(MISSING_TARGET_ERROR));
+  });
+
+  test('keeps the dataset error when no positional is given at all', async () => {
+    const result = await runCliInProcess(['evolve', 'prompt-compare'], { cwd: dir });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, new RegExp(NO_OBSERVATION_ERROR));
+    assert.doesNotMatch(result.stderr, new RegExp(MISSING_TARGET_ERROR));
+  });
+
+  test('keeps the dataset error when runs exist but carry no promptCompiler observation', async () => {
+    writeRunRecord(dir);
+    const result = await runCliInProcess(['evolve', 'prompt-compare', '.'], { cwd: dir });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, new RegExp(NO_OBSERVATION_ERROR));
+    assert.doesNotMatch(result.stderr, new RegExp(MISSING_TARGET_ERROR));
+  });
+
+  test('keeps the dataset error for an existing FILE path (existsSync is not narrowed)', async () => {
+    writeFileSync(join(dir, 'a.txt'), 'hello\n');
+    const result = await runCliInProcess(['evolve', 'prompt-compare', './a.txt'], { cwd: dir });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, new RegExp(NO_OBSERVATION_ERROR));
+    assert.doesNotMatch(result.stderr, new RegExp(MISSING_TARGET_ERROR));
   });
 });
 
