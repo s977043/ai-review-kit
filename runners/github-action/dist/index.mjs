@@ -71966,6 +71966,38 @@ Pricing last updated: ${this.lastUpdated}`;
 
 
 /**
+ * Warn when `--baseline` was given but the run returned before the comparison (#1936).
+ *
+ * The regression comparison lives at the very end of `runRunCommand`, so every
+ * early return above it drops `--baseline` on the floor: `no-changes` and
+ * `skipped-by-label` print their own one-liner and exit 0, and `--estimate`
+ * prints a cost table and exits 0. In all three the person asked for a
+ * comparison against a baseline and got a successful-looking run in which no
+ * comparison happened — with `no-changes` the worst case, because "No changes
+ * to review" reads as "compared, and nothing regressed".
+ *
+ * Advisory only: stderr, exit code untouched, and it fires ONLY when the flag
+ * was actually passed — same shape as `warnWhenFingerprintMatchesNoFinding`
+ * (src/cli/commands/feedback.mjs, #1823 残件2). Unlike the `evolve aggregate`
+ * warning it does not test the file for existence: what went wrong here is that
+ * the comparison never ran, which is true whether or not the baseline file is
+ * there. A baseline that exists but was never read is exactly as silent.
+ *
+ * The `--max-cost` overrun is deliberately NOT covered: it exits 1 with its own
+ * "Aborting." message, so nothing about it is silent.
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @param {string} reason - why the run ended before the comparison.
+ */
+function warnBaselineNotCompared(parsed, reason) {
+  if (!parsed.baseline) return;
+  console.warn(
+    `Warning: --baseline "${parsed.baseline}" was not used: ${reason}, ` +
+      'so no regression comparison ran.'
+  );
+}
+
+/**
  * Handle the default `run` command (local review against the git repo).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -72039,11 +72071,16 @@ Dependencies: ${
       ? context.matchedLabels.join(', ')
       : '(not specified)';
     console.log(`Review skipped: PR labels matched exclude patterns (${labels}).`);
+    warnBaselineNotCompared(parsed, 'the review was skipped by PR labels');
     return 0;
   }
 
   if (context.status === 'no-changes') {
     console.log(`No changes to review compared to ${context.defaultBranch}.`);
+    warnBaselineNotCompared(
+      parsed,
+      `there are no changes to review against ${context.defaultBranch}`
+    );
     return 0;
   }
 
@@ -72056,6 +72093,7 @@ Dependencies: ${
   }
 
   if (parsed.estimate) {
+    warnBaselineNotCompared(parsed, '--estimate only estimates cost and never runs the review');
     if (!estimatedCost) {
       console.log('Cost estimation skipped (no changes or skipped by label).');
       return 0;
@@ -73451,7 +73489,44 @@ async function runPromoteCommand(parsed, targetPath) {
 // so no code path here can mutate a repository or spend an API call. Redirect
 // stdout if you need the JSON on disk.
 
+
+
 const SUBCOMMANDS = ['aggregate', 'replay', 'prompt-compare'];
+
+/**
+ * Warn when the positional path handed to `aggregate` does not exist (#1936).
+ *
+ * `resolveStoreDir()` happily resolves `<nonexistent>/.river/runs`, so a
+ * mistyped path produced a well-formed report with `Runs | 0` and exit 0 —
+ * byte-identical to the legitimate "no runs saved yet" report. The two cases
+ * were indistinguishable from the output alone.
+ *
+ * The condition is deliberately "the path does not exist", NOT "the store is
+ * empty". An empty store is the normal state of a first-ever run, of a repo
+ * right after `setup-team`, and of a `--month` scope with no runs in it;
+ * warning there would fire on every one of them. Non-existence, by contrast,
+ * can only be a wrong path. This is the same carve-out
+ * `warnWhenFingerprintMatchesNoFinding` (src/cli/commands/feedback.mjs) makes
+ * for #1823 残件2: advisory on stderr, never a change of exit code, and silent
+ * when there is simply no data.
+ *
+ * `existsSync` is also what src/cli.mjs already uses for this decision in three
+ * places (the eager evolve branch, `takeTrailingPositional`, and the post-`--`
+ * positional loop); the gap was only the positional that follows an explicit
+ * subcommand word. Note that it returns true for a FILE too — narrowing to
+ * directories would reject `evolve aggregate ./some-file`, which is a separate
+ * (and unrequested) behavior change, so it is left alone.
+ *
+ * @param {string} targetPath - resolved positional path.
+ * @param {string} rawTarget - the token as the user typed it.
+ */
+function warnWhenTargetPathMissing(targetPath, rawTarget) {
+  if ((0,external_node_fs_.existsSync)(targetPath)) return;
+  console.warn(
+    `Warning: "${rawTarget}" does not exist, so this aggregate read an empty store ` +
+      'instead of the runs you meant. Check the path, or omit it to aggregate the current directory.'
+  );
+}
 
 /**
  * Handle the `evolve` command (aggregate | replay | prompt-compare).
@@ -73556,6 +73631,8 @@ async function runAggregate(parsed, targetPath, output) {
     );
     return 1;
   }
+
+  warnWhenTargetPathMissing(targetPath, parsed.target ?? targetPath);
 
   const { resolveStoreDir, loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
   const { listFeedbackEntries } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 7638));

@@ -17,7 +17,44 @@
 // so no code path here can mutate a repository or spend an API call. Redirect
 // stdout if you need the JSON on disk.
 
+import { existsSync } from 'node:fs';
+
 const SUBCOMMANDS = ['aggregate', 'replay', 'prompt-compare'];
+
+/**
+ * Warn when the positional path handed to `aggregate` does not exist (#1936).
+ *
+ * `resolveStoreDir()` happily resolves `<nonexistent>/.river/runs`, so a
+ * mistyped path produced a well-formed report with `Runs | 0` and exit 0 —
+ * byte-identical to the legitimate "no runs saved yet" report. The two cases
+ * were indistinguishable from the output alone.
+ *
+ * The condition is deliberately "the path does not exist", NOT "the store is
+ * empty". An empty store is the normal state of a first-ever run, of a repo
+ * right after `setup-team`, and of a `--month` scope with no runs in it;
+ * warning there would fire on every one of them. Non-existence, by contrast,
+ * can only be a wrong path. This is the same carve-out
+ * `warnWhenFingerprintMatchesNoFinding` (src/cli/commands/feedback.mjs) makes
+ * for #1823 残件2: advisory on stderr, never a change of exit code, and silent
+ * when there is simply no data.
+ *
+ * `existsSync` is also what src/cli.mjs already uses for this decision in three
+ * places (the eager evolve branch, `takeTrailingPositional`, and the post-`--`
+ * positional loop); the gap was only the positional that follows an explicit
+ * subcommand word. Note that it returns true for a FILE too — narrowing to
+ * directories would reject `evolve aggregate ./some-file`, which is a separate
+ * (and unrequested) behavior change, so it is left alone.
+ *
+ * @param {string} targetPath - resolved positional path.
+ * @param {string} rawTarget - the token as the user typed it.
+ */
+function warnWhenTargetPathMissing(targetPath, rawTarget) {
+  if (existsSync(targetPath)) return;
+  console.warn(
+    `Warning: "${rawTarget}" does not exist, so this aggregate read an empty store ` +
+      'instead of the runs you meant. Check the path, or omit it to aggregate the current directory.'
+  );
+}
 
 /**
  * Handle the `evolve` command (aggregate | replay | prompt-compare).
@@ -122,6 +159,8 @@ async function runAggregate(parsed, targetPath, output) {
     );
     return 1;
   }
+
+  warnWhenTargetPathMissing(targetPath, parsed.target ?? targetPath);
 
   const { resolveStoreDir, loadAllRunRecords } = await import('../../lib/result-store.mjs');
   const { listFeedbackEntries } = await import('../../lib/feedback.mjs');
