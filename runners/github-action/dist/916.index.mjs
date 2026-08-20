@@ -193,8 +193,8 @@ async function _fileExists(filePath, fsImpl) {
 var diff_processor = __webpack_require__(861);
 // EXTERNAL MODULE: ./runners/core/review-runner.mjs + 4 modules
 var review_runner = __webpack_require__(2821);
-// EXTERNAL MODULE: ./src/lib/review-engine.mjs + 9 modules
-var review_engine = __webpack_require__(4405);
+// EXTERNAL MODULE: ./src/lib/review-engine.mjs + 10 modules
+var review_engine = __webpack_require__(7988);
 // EXTERNAL MODULE: ./src/lib/risk-map.mjs + 1 modules
 var risk_map = __webpack_require__(572);
 // EXTERNAL MODULE: ./src/lib/planner-utils.mjs

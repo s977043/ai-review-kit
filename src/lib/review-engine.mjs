@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import { mergeConfig } from '../config/loader.mjs';
 import { computeFindingBreakdown } from './scoring/breakdown.mjs';
 import {
@@ -38,12 +36,9 @@ import {
   buildSystemMessage,
   buildWalkthroughSection,
 } from '../prompt/sections.mjs';
-// ADR-006 / #1859: Prompt Compiler（observe モード）。既定 off では
-// 一切呼ばれない。import は静的に置くが、mode 判定の内側でしか実行しない。
-import { compileReviewPrompt, PROMPT_COMPILER_VERSION } from '../prompt/compiler.mjs';
-import { resolveProfile } from '../prompt/profile-resolver.mjs';
-import { buildReviewRequest } from '../prompt/review-request.mjs';
-import { estimateTokens } from './token-estimator.mjs';
+// ADR-006 / #1859 + #1861: Prompt Compiler の配線段。既定 off では
+// runPromptCompilerStage が即 null を返し、compiler 側は一切呼ばれない。
+import { runPromptCompilerStage } from '../prompt/compiler-stage.mjs';
 
 const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
 const MAX_PROMPT_CHARS = 12000;
@@ -119,58 +114,6 @@ ${buildProjectRulesSection(projectRules)}${buildRiskAssessmentSection(riskAssess
 Diff:
 ${diffBody}`;
   return { prompt, truncated, language, severity };
-}
-
-// --- ADR-006 / #1859: Prompt Compiler の観測 ---
-
-/** debug へ載せる hash の長さ。理由は promptFingerprint の JSDoc を参照。 */
-const PROMPT_HASH_CHARS = 16;
-
-/**
- * プロンプトの指紋。sha256 hex の先頭 16 文字だけを載せる。
- *
- * 全長 64 文字を持つ必要がない。この値の用途は「legacy と compiled が同じ
- * 文字列か」「同条件の 2 run で同じ文字列を作れているか」の等値比較だけであり、
- * 参照キーにも検索キーにもしない。artifact を人が読むときの見通しを優先して
- * 切り詰める。原文そのものは載せない（ADR-006 の observe 不変条件）。
- */
-function promptFingerprint(text) {
-  return createHash('sha256')
-    .update(String(text), 'utf8')
-    .digest('hex')
-    .slice(0, PROMPT_HASH_CHARS);
-}
-
-/**
- * observe / active モードの記録を組む。
- *
- * 記録するのは hash と推定長と profile の来歴だけである。原文（prompt 本体、
- * diff 本文）は返り値に含めない。これは active でも変わらない。
- *
- * 推定長は src/lib/token-estimator.mjs の estimateTokens をそのまま使う。
- * 独自の概算を置くと legacy 側の既存計測（context budget）と単位が食い違う。
- *
- * legacy 側は system message と user prompt を連結して数える。compiled 側は
- * profile によって契約節の置き場所が system / user のどちらにもなるため、
- * 片方だけを数えると比較が成立しない。
- */
-function buildPromptCompilerObservation({ mode, profile, legacyText, compiledText }) {
-  return {
-    mode,
-    // どちらのプロンプトを provider 向けに選んだかである（#1861）。mode から
-    // 決まり、実際に送信が起きたかどうかは表さない。dryRun / offline / API キー
-    // 未設定では呼び出し自体が起きないが、その事実は既存の debug.llmSkipped と
-    // debug.llmUsed が持つ。observe が dryRun でも 'legacy' を記録してきた
-    // 従来の意味づけをそのまま延長している。
-    sentPrompt: mode === 'active' ? 'compiled' : 'legacy',
-    compilerVersion: PROMPT_COMPILER_VERSION,
-    profileId: profile.id,
-    profileVersion: profile.version,
-    legacyPromptEstimate: estimateTokens(legacyText),
-    compiledPromptEstimate: estimateTokens(compiledText),
-    legacyPromptHash: promptFingerprint(legacyText),
-    compiledPromptHash: promptFingerprint(compiledText),
-  };
 }
 
 export function parseLineComments(outputText) {
@@ -397,68 +340,34 @@ export async function generateReview({
 
   // --- ADR-006 / #1859 + #1861: Prompt Compiler（配線はこの 1 箇所だけ）---
   //
-  // 既定は off。off のとき下のブロックは丸ごと実行されず、buildPrompt から
-  // 下流の挙動は導入前と 1 バイトも変わらない。
+  // 段の本体は src/prompt/compiler-stage.mjs にある。既定は off で、そのとき
+  // runPromptCompilerStage は null を返し、buildPrompt から下流の挙動は導入前と
+  // 1 バイトも変わらない。
   //
   // observe は compiled を生成するだけで送らない。active（opt-in、既定では
-  // 選ばれない）だけが compiled を provider へ送る。既定を active へ動かす
-  // 条件は ADR-006 の段 2 であり、本配線はそれを変更しない。
-  const promptCompilerMode = effectiveConfig.review?.promptCompiler?.mode ?? 'off';
+  // 選ばれない）だけが activeCompiledPrompt を返し、それを provider へ送る。
+  const promptCompilerStage = runPromptCompilerStage({
+    reviewConfig: effectiveConfig.review,
+    phase,
+    plan,
+    llmDiff,
+    promptInfo,
+    maxPromptChars,
+    reviewMode,
+    projectRules,
+    relatedADRs,
+    riskAssessment,
+    repoContext,
+    prBody,
+    language,
+    openAIConfig,
+  });
   // active のときだけ埋まる。null のままなら送信は legacy 側が担う。
-  let activeCompiledPrompt = null;
-  if (promptCompilerMode !== 'off') {
-    // 差分本文の上限適用。buildPrompt（同ファイル）の同じ式を写している。
-    // buildPrompt 側は ADR-006 の実装方針により無改変で残すため共通化せず、
-    // 両者が一致していることを tests/prompt-compiler-observe.test.mjs が
-    // legacy prompt の末尾との突合で pin する。
-    const compiledDiffBody = promptInfo.truncated
-      ? `${llmDiff.diffText.slice(0, maxPromptChars)}\n...[truncated]`
-      : llmDiff.diffText;
-    const compiledDepthConfig = getReviewDepthConfig(reviewMode ?? 'medium');
-    const ir = buildReviewRequest({
-      subject: { phase, changedFiles: llmDiff.files },
-      // 判断側の値は buildPrompt が解決したものをそのまま使う。ここで別経路
-      // から取り直すと legacy と compiled で判断の入力が分岐する。
-      judgment: {
-        skillIds: (plan?.selected ?? []).map((s) => s.metadata?.id ?? s.id),
-        severity: promptInfo.severity,
-        plan,
-      },
-      context: {
-        diff: compiledDiffBody,
-        diffTruncated: promptInfo.truncated,
-        projectRules,
-        relatedADRs,
-        riskAssessment,
-        repoContext,
-        prDescription: prBody,
-      },
-      constraints: {
-        maxFindings: compiledDepthConfig.maxFindings,
-        focusHint: compiledDepthConfig.focusHint,
-        walkthrough: effectiveConfig.review?.walkthrough ?? false,
-        agentHandoff: effectiveConfig.review?.agentHandoff ?? false,
-        additionalInstructions: effectiveConfig.review?.additionalInstructions,
-      },
-      outputContract: { language },
-      execution: { provider: openAIConfig.provider, model: openAIConfig.model },
-    });
-    const profile = resolveProfile({
-      provider: openAIConfig.provider,
-      model: openAIConfig.model,
-    });
-    const compiled = compileReviewPrompt(ir, profile);
-    if (promptCompilerMode === 'active') {
-      activeCompiledPrompt = compiled;
-    }
+  const activeCompiledPrompt = promptCompilerStage?.activeCompiledPrompt ?? null;
+  if (promptCompilerStage) {
     debug.execution = {
       ...(debug.execution ?? {}),
-      promptCompiler: buildPromptCompilerObservation({
-        mode: promptCompilerMode,
-        profile,
-        legacyText: `${buildSystemMessage(language)}\n${promptInfo.prompt}`,
-        compiledText: `${compiled.systemMessage}\n${compiled.prompt}`,
-      }),
+      promptCompiler: promptCompilerStage.observation,
     };
   }
 
