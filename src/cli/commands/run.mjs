@@ -23,6 +23,38 @@ import {
 } from '../render.mjs';
 
 /**
+ * Warn when `--baseline` was given but the run returned before the comparison (#1936).
+ *
+ * The regression comparison lives at the very end of `runRunCommand`, so every
+ * early return above it drops `--baseline` on the floor: `no-changes` and
+ * `skipped-by-label` print their own one-liner and exit 0, and `--estimate`
+ * prints a cost table and exits 0. In all three the person asked for a
+ * comparison against a baseline and got a successful-looking run in which no
+ * comparison happened — with `no-changes` the worst case, because "No changes
+ * to review" reads as "compared, and nothing regressed".
+ *
+ * Advisory only: stderr, exit code untouched, and it fires ONLY when the flag
+ * was actually passed — same shape as `warnWhenFingerprintMatchesNoFinding`
+ * (src/cli/commands/feedback.mjs, #1823 残件2). Unlike the `evolve aggregate`
+ * warning it does not test the file for existence: what went wrong here is that
+ * the comparison never ran, which is true whether or not the baseline file is
+ * there. A baseline that exists but was never read is exactly as silent.
+ *
+ * The `--max-cost` overrun is deliberately NOT covered: it exits 1 with its own
+ * "Aborting." message, so nothing about it is silent.
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @param {string} reason - why the run ended before the comparison.
+ */
+function warnBaselineNotCompared(parsed, reason) {
+  if (!parsed.baseline) return;
+  console.warn(
+    `Warning: --baseline "${parsed.baseline}" was not used: ${reason}, ` +
+      'so no regression comparison ran.'
+  );
+}
+
+/**
  * Handle the default `run` command (local review against the git repo).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -96,11 +128,16 @@ Dependencies: ${
       ? context.matchedLabels.join(', ')
       : '(not specified)';
     console.log(`Review skipped: PR labels matched exclude patterns (${labels}).`);
+    warnBaselineNotCompared(parsed, 'the review was skipped by PR labels');
     return 0;
   }
 
   if (context.status === 'no-changes') {
     console.log(`No changes to review compared to ${context.defaultBranch}.`);
+    warnBaselineNotCompared(
+      parsed,
+      `there are no changes to review against ${context.defaultBranch}`
+    );
     return 0;
   }
 
@@ -113,6 +150,7 @@ Dependencies: ${
   }
 
   if (parsed.estimate) {
+    warnBaselineNotCompared(parsed, '--estimate only estimates cost and never runs the review');
     if (!estimatedCost) {
       console.log('Cost estimation skipped (no changes or skipped by label).');
       return 0;
