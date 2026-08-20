@@ -13,11 +13,11 @@ export type Severity = 'info' | 'minor' | 'major' | 'critical';
 /**
  * Input context types available for skill execution
  */
-export type InputContext = 'diff' | 'fullFile' | 'tests' | 'adr' | 'commitMessage' | 'repoConfig';
+export type InputContext = 'diff' | 'fullFile' | 'tests' | 'adr' | 'commitMessage' | 'repoConfig' | 'reviewSelf' | 'reviewExternal' | 'findingsPool' | 'prDescription';
 /**
  * Output kind that skills can produce
  */
-export type OutputKind = 'findings' | 'summary' | 'actions' | 'tests' | 'metrics' | 'questions';
+export type OutputKind = 'findings' | 'summary' | 'actions' | 'tests' | 'metrics' | 'questions' | 'review-audit';
 /**
  * Model hint for skill execution cost/accuracy tradeoff
  */
