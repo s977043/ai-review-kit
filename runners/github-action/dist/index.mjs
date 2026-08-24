@@ -13913,6 +13913,7 @@ class APIError extends AnthropicError {
         this.status = status;
         this.headers = headers;
         this.requestID = headers?.get('request-id');
+        this.workspaceID = headers?.get('anthropic-workspace-id');
         this.error = error;
         this.type = type ?? null;
     }
@@ -14021,7 +14022,7 @@ class InternalServerError extends APIError {
 
 /***/ }),
 
-/***/ 5176:
+/***/ 3545:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -14080,7 +14081,7 @@ const sleep = (ms, signal) => new Promise((resolve) => {
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/errors.mjs
 var errors = __nccwpck_require__(2533);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/version.mjs
-const VERSION = '0.116.0'; // x-release-please-version
+const VERSION = '0.120.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -14739,8 +14740,8 @@ class TokenCache {
 //# sourceMappingURL=token-cache.mjs.map
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
 var env = __nccwpck_require__(111);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils.mjs + 1 modules
-var utils = __nccwpck_require__(2534);
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils.mjs
+var utils = __nccwpck_require__(8223);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/core/credentials.mjs
 
 
@@ -15439,33 +15440,8 @@ function cachedExchangeProvider(exchange, credentialsPath, onCacheWriteError, on
     };
 }
 //# sourceMappingURL=credential-chain.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/bytes.mjs
-function concatBytes(buffers) {
-    let length = 0;
-    for (const buffer of buffers) {
-        length += buffer.length;
-    }
-    const output = new Uint8Array(length);
-    let index = 0;
-    for (const buffer of buffers) {
-        output.set(buffer, index);
-        index += buffer.length;
-    }
-    return output;
-}
-let encodeUTF8_;
-function encodeUTF8(str) {
-    let encoder;
-    return (encodeUTF8_ ??
-        ((encoder = new globalThis.TextEncoder()), (encodeUTF8_ = encoder.encode.bind(encoder))))(str);
-}
-let decodeUTF8_;
-function decodeUTF8(bytes) {
-    let decoder;
-    return (decodeUTF8_ ??
-        ((decoder = new globalThis.TextDecoder()), (decodeUTF8_ = decoder.decode.bind(decoder))))(bytes);
-}
-//# sourceMappingURL=bytes.mjs.map
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/bytes.mjs
+var utils_bytes = __nccwpck_require__(9083);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/decoders/line.mjs
 var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex;
 
@@ -15488,9 +15464,9 @@ class LineDecoder {
             return [];
         }
         const binaryChunk = chunk instanceof ArrayBuffer ? new Uint8Array(chunk)
-            : typeof chunk === 'string' ? encodeUTF8(chunk)
+            : typeof chunk === 'string' ? (0,utils_bytes/* encodeUTF8 */.YH)(chunk)
                 : chunk;
-        (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_buffer, concatBytes([(0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f"), binaryChunk]), "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_buffer, (0,utils_bytes/* concatBytes */.Id)([(0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f"), binaryChunk]), "f");
         const lines = [];
         let patternIndex;
         while ((patternIndex = findNewlineIndex((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f"), (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f"))) != null) {
@@ -15502,13 +15478,13 @@ class LineDecoder {
             // we got double \r or \rtext\n
             if ((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") != null &&
                 (patternIndex.index !== (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") + 1 || patternIndex.carriage)) {
-                lines.push(decodeUTF8((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(0, (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") - 1)));
+                lines.push((0,utils_bytes/* decodeUTF8 */.CE)((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(0, (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") - 1)));
                 (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_buffer, (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f")), "f");
                 (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_carriageReturnIndex, null, "f");
                 continue;
             }
             const endIndex = (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") !== null ? patternIndex.preceding - 1 : patternIndex.preceding;
-            const line = decodeUTF8((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(0, endIndex));
+            const line = (0,utils_bytes/* decodeUTF8 */.CE)((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(0, endIndex));
             lines.push(line);
             (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_buffer, (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(patternIndex.index), "f");
             (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_carriageReturnIndex, null, "f");
@@ -15803,7 +15779,7 @@ class streaming_Stream {
                     const { value, done } = await iter.next();
                     if (done)
                         return ctrl.close();
-                    const bytes = encodeUTF8(JSON.stringify(value) + '\n');
+                    const bytes = (0,utils_bytes/* encodeUTF8 */.YH)(JSON.stringify(value) + '\n');
                     ctrl.enqueue(bytes);
                 }
                 catch (err) {
@@ -15852,7 +15828,7 @@ async function* iterSSEChunks(iterator) {
             continue;
         }
         const binaryChunk = chunk instanceof ArrayBuffer ? new Uint8Array(chunk)
-            : typeof chunk === 'string' ? encodeUTF8(chunk)
+            : typeof chunk === 'string' ? (0,utils_bytes/* encodeUTF8 */.YH)(chunk)
                 : chunk;
         let newData = new Uint8Array(data.length + binaryChunk.length);
         newData.set(data);
@@ -15948,7 +15924,7 @@ async function defaultParseResponse(client, props) {
                 return undefined;
             }
             const json = await response.json();
-            return addRequestID(json, response);
+            return addResponseIDs(json, response);
         }
         const text = await response.text();
         return text;
@@ -15970,13 +15946,13 @@ async function defaultParseResponse(client, props) {
     }));
     return body;
 }
-function addRequestID(value, response) {
+function addResponseIDs(value, response) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
         return value;
     }
-    return Object.defineProperty(value, '_request_id', {
-        value: response.headers.get('request-id'),
-        enumerable: false,
+    return Object.defineProperties(value, {
+        _request_id: { value: response.headers.get('request-id'), enumerable: false },
+        _workspace_id: { value: response.headers.get('anthropic-workspace-id'), enumerable: false },
     });
 }
 //# sourceMappingURL=parse.mjs.map
@@ -16118,7 +16094,7 @@ async function parseMiddlewareResponse(response, options) {
             // if there is no content we can't do anything
             return undefined;
         }
-        return addRequestID(await response.clone().json(), response);
+        return addResponseIDs(await response.clone().json(), response);
     }
     return await response.clone().text();
 }
@@ -16172,7 +16148,7 @@ class APIPromise extends Promise {
         (0,tslib/* __classPrivateFieldSet */.G)(this, _APIPromise_client, client, "f");
     }
     _thenUnwrap(transform) {
-        return new APIPromise((0,tslib/* __classPrivateFieldGet */.g)(this, _APIPromise_client, "f"), this.responsePromise, async (client, props) => addRequestID(transform(await this.parseResponse(client, props), props), props.response));
+        return new APIPromise((0,tslib/* __classPrivateFieldGet */.g)(this, _APIPromise_client, "f"), this.responsePromise, async (client, props) => addResponseIDs(transform(await this.parseResponse(client, props), props), props.response));
     }
     /**
      * Gets the raw `Response` instance instead of parsing the response
@@ -16202,7 +16178,12 @@ class APIPromise extends Promise {
      */
     async withResponse() {
         const [data, response] = await Promise.all([this.parse(), this.asResponse()]);
-        return { data, response, request_id: response.headers.get('request-id') };
+        return {
+            data,
+            response,
+            request_id: response.headers.get('request-id'),
+            workspace_id: response.headers.get('anthropic-workspace-id'),
+        };
     }
     parse() {
         if (!this.parsedPromise) {
@@ -17305,7 +17286,7 @@ class Files extends APIResource {
      * @example
      * ```ts
      * // Automatically fetches more pages as needed.
-     * for await (const fileMetadata of client.beta.files.list()) {
+     * for await (const betaFileMetadata of client.beta.files.list()) {
      *   // ...
      * }
      * ```
@@ -17326,7 +17307,7 @@ class Files extends APIResource {
      *
      * @example
      * ```ts
-     * const deletedFile = await client.beta.files.delete(
+     * const betaDeletedFile = await client.beta.files.delete(
      *   'file_id',
      * );
      * ```
@@ -17373,7 +17354,7 @@ class Files extends APIResource {
      *
      * @example
      * ```ts
-     * const fileMetadata =
+     * const betaFileMetadata =
      *   await client.beta.files.retrieveMetadata('file_id');
      * ```
      */
@@ -17392,7 +17373,7 @@ class Files extends APIResource {
      *
      * @example
      * ```ts
-     * const fileMetadata = await client.beta.files.upload({
+     * const betaFileMetadata = await client.beta.files.upload({
      *   file: fs.createReadStream('path/to/file'),
      * });
      * ```
@@ -17490,7 +17471,7 @@ class UserProfiles extends APIResource {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17511,7 +17492,7 @@ class UserProfiles extends APIResource {
         return this._client.get(path `/v1/user_profiles/${userProfileID}?beta=true`, {
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17533,7 +17514,7 @@ class UserProfiles extends APIResource {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17555,7 +17536,7 @@ class UserProfiles extends APIResource {
             query,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17576,7 +17557,7 @@ class UserProfiles extends APIResource {
         return this._client.post(path `/v1/user_profiles/${userProfileID}/enrollment_url?beta=true`, {
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17655,7 +17636,7 @@ class Agents extends APIResource {
      * ```ts
      * const betaManagedAgentsAgent =
      *   await client.beta.agents.create({
-     *     model: 'claude-sonnet-4-6',
+     *     model: 'claude-opus-5',
      *     name: 'My First Agent',
      *   });
      * ```
@@ -17786,43 +17767,8 @@ function linkAbort(external, controller) {
     return () => external.removeEventListener('abort', onAbort);
 }
 //# sourceMappingURL=abort.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/backoff.mjs
-
-/** True when `e` is an {@link APIError} whose HTTP status equals `code`. */
-function isStatus(e, code) {
-    return e instanceof core_error/* APIError */.LG && e.status === code;
-}
-/** True when `e` is an {@link APIError} with a 4xx status. */
-function is4xx(e) {
-    return e instanceof core_error/* APIError */.LG && typeof e.status === 'number' && e.status >= 400 && e.status < 500;
-}
-/**
- * True for a 4xx that the core client's retry policy would *not* retry, i.e. a
- * permanent client error. 408 (request timeout), 409 (lock timeout) and 429
- * (rate limit) are retryable for the base client (`Anthropic.shouldRetry`), so
- * they are not treated as fatal here — keeping helper retry behaviour aligned
- * with the rest of the SDK.
- */
-function isFatal4xx(e) {
-    return is4xx(e) && !isStatus(e, 408) && !isStatus(e, 409) && !isStatus(e, 429);
-}
-/** Exponential backoff: `baseMs * 2 ** attempt`, clamped to `capMs`. */
-function backoff(attempt, baseMs, capMs) {
-    return Math.min(baseMs * 2 ** attempt, capMs);
-}
-/** Uniform random delay in the half-open interval `[lowMs, highMs)`. */
-function jitter(lowMs, highMs) {
-    return lowMs + Math.random() * (highMs - lowMs);
-}
-/**
- * Trim up to 25% off `ms` at random so a fleet of clients backing off after a
- * shared outage does not retry in lockstep — mirrors the jitter the core client
- * applies to its own retry timeout.
- */
-function applyJitter(ms) {
-    return ms * (1 - Math.random() * 0.25);
-}
-//# sourceMappingURL=backoff.mjs.map
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/backoff.mjs
+var utils_backoff = __nccwpck_require__(7594);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/helper-client.mjs
 
 
@@ -17880,7 +17826,7 @@ function copyClientForHelper(client, { authToken, helper }) {
 }
 //# sourceMappingURL=helper-client.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/environments/poller.mjs
-var _WorkPoller_runnerClient, _WorkPoller_consumed, _WorkPoller_controller, _WorkPoller_detachExternal, _WorkPoller_autoStop, _WorkPoller_drain, _WorkPoller_blockMs, _WorkPoller_reclaimOlderThanMs, _WorkPoller_requestOpts;
+var _WorkPoller_runnerClient, _WorkPoller_consumed, _WorkPoller_controller, _WorkPoller_detachExternal, _WorkPoller_autoStop, _WorkPoller_drain, _WorkPoller_blockMs, _WorkPoller_reclaimOlderThanMs, _WorkPoller_requestOpts, _IdleLog_log, _IdleLog_environmentId, _IdleLog_idleSince, _IdleLog_lastReport;
 
 
 
@@ -17895,10 +17841,17 @@ var _WorkPoller_runnerClient, _WorkPoller_consumed, _WorkPoller_controller, _Wor
 const POLL_BLOCK_MS = 999;
 const POLL_BACKOFF_BASE_MS = 1000;
 const POLL_BACKOFF_CAP_MS = 60000;
+const IDLE_REPORT_INTERVAL_MS = 300000;
 /**
  * Async-iterable that long-polls a self-hosted environment for work, ack's
  * each item, yields the {@link BetaSelfHostedWork} item, and posts `stop` after
  * the consumer's loop body returns (or when the consumer `break`s).
+ *
+ * A yielded item may carry a per-item `secret` payload (populated only by the
+ * poll response); the poller passes it through untouched — consumers such as
+ * {@link EnvironmentWorker} extract the sessions token it carries and prefer
+ * that over the environment key for the item's downstream calls. Treat it as
+ * opaque and never log it.
  *
  * @example
  * ```ts
@@ -17961,6 +17914,7 @@ class WorkPoller {
             component: 'work-poller',
             environment_id: this.environmentId,
         });
+        const idle = new IdleLog(log, this.environmentId);
         try {
             let attempt = 0;
             while (!(0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_controller, "f").signal.aborted) {
@@ -17979,13 +17933,13 @@ class WorkPoller {
                         return;
                     // A bad environment key / missing environment never recovers — surface
                     // it instead of spinning forever at the backoff cap.
-                    if (isFatal4xx(e)) {
+                    if ((0,utils_backoff/* isFatal4xx */.bs)(e)) {
                         log.error('poll failed permanently, stopping poller', { error: String(e) });
                         throw e;
                     }
                     // Jittered exponential backoff so a fleet of pollers doesn't retry in
                     // lockstep after a shared outage.
-                    const wait = applyJitter(poller_backoff(attempt));
+                    const wait = (0,utils_backoff/* applyJitter */.LX)(backoff(attempt));
                     log.warn('poll failed, backing off', { error: String(e), backoff_ms: wait });
                     attempt++;
                     await sleep(wait, (0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_controller, "f").signal);
@@ -17996,9 +17950,11 @@ class WorkPoller {
                     // Queue empty: either return now (drain) or wait and poll again.
                     if ((0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_drain, "f"))
                         return;
-                    await sleep(jitter(1000, 3000), (0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_controller, "f").signal);
+                    idle.onEmptyPoll();
+                    await sleep((0,utils_backoff/* jitter */.p$)(1000, 3000), (0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_controller, "f").signal);
                     continue;
                 }
+                idle.onClaim();
                 log.info('claimed work', {
                     component: 'work-poller',
                     environment_id: this.environmentId,
@@ -18024,7 +17980,7 @@ class WorkPoller {
                             await (0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_runnerClient, "f").beta.environments.work.stop(work.id, { environment_id: work.environment_id }, { headers: buildHeaders([(0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_requestOpts, "f")?.headers]) });
                         }
                         catch (e) {
-                            if (!isStatus(e, 409))
+                            if (!(0,utils_backoff/* isStatus */.zM)(e, 409))
                                 log.warn('stop failed', { work_id: work.id, error: String(e) });
                         }
                     }
@@ -18039,9 +17995,44 @@ class WorkPoller {
     }
 }
 /** Exponential poll backoff: 1s, 2s, 4s … clamped to a 60s cap. */
-function poller_backoff(attempt) {
-    return backoff(attempt, POLL_BACKOFF_BASE_MS, POLL_BACKOFF_CAP_MS);
+function backoff(attempt) {
+    return (0,utils_backoff/* backoff */.JN)(attempt, POLL_BACKOFF_BASE_MS, POLL_BACKOFF_CAP_MS);
 }
+/**
+ * Keeps an idle poll loop visible in the logs without an INFO line per poll:
+ * the first empty poll after start-up or after a claim logs at INFO and later
+ * ones at DEBUG, with an INFO reminder every `IDLE_REPORT_INTERVAL_MS` while
+ * the loop stays idle.
+ */
+class IdleLog {
+    constructor(log, environmentId) {
+        _IdleLog_log.set(this, void 0);
+        _IdleLog_environmentId.set(this, void 0);
+        _IdleLog_idleSince.set(this, void 0);
+        _IdleLog_lastReport.set(this, 0);
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_log, log, "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_environmentId, environmentId, "f");
+    }
+    onEmptyPoll() {
+        const now = Date.now();
+        const fields = { component: 'work-poller', environment_id: (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_environmentId, "f") };
+        if ((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_idleSince, "f") === undefined) {
+            (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_idleSince, (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_lastReport, now, "f"), "f");
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_log, "f").info('idle; polling for work', fields);
+        }
+        else if (now - (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_lastReport, "f") >= IDLE_REPORT_INTERVAL_MS) {
+            (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_lastReport, now, "f");
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_log, "f").info(`still polling; idle for ${Math.round((now - (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_idleSince, "f")) / 1000)}s`, fields);
+        }
+        else {
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_log, "f").debug('poll returned no work', fields);
+        }
+    }
+    onClaim() {
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_idleSince, undefined, "f");
+    }
+}
+_IdleLog_log = new WeakMap(), _IdleLog_environmentId = new WeakMap(), _IdleLog_idleSince = new WeakMap(), _IdleLog_lastReport = new WeakMap();
 function defaultWorkerId() {
     // The API documents the worker id as a *unique* identifier for Redis consumer
     // groups, so the fallback must be unique even when several pollers share a
@@ -18052,6 +18043,8 @@ function defaultWorkerId() {
     return host ? `${host}-${uuid4()}` : uuid4();
 }
 //# sourceMappingURL=poller.mjs.map
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/base64.mjs
+var base64 = __nccwpck_require__(1231);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/async-queue.mjs
 var _AsyncQueue_items, _AsyncQueue_waiters, _AsyncQueue_closed;
 
@@ -18129,28 +18122,19 @@ var ToolError = __nccwpck_require__(7618);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/BetaRunnableTool.mjs
 
 /**
- * Resolve the registry key for a tool — the name the model addresses it by.
- * MCP toolsets are keyed on `mcp_server_name`; every other tool on `name`.
- * Shared so the tool-name lookup is identical across `toolRunner()` surfaces.
+ * The name the model calls a tool by: `mcp_server_name` for MCP toolsets, `type` for nameless server
+ * toolsets (browser/computer), `name` for everything else.
  */
 function toolName(tool) {
-    return 'name' in tool ? tool.name : tool.mcp_server_name;
+    return ('name' in tool ? tool.name
+        : 'mcp_server_name' in tool ? tool.mcp_server_name
+            : tool.type);
 }
-/**
- * Format a thrown value into tool-result content: a {@link ToolError} carries
- * its own structured content, anything else becomes an `Error: <message>`
- * string. Shared so every `toolRunner()` surface reports tool failures the
- * same way to the model.
- */
+/** Tool-result content for a thrown value: a {@link ToolError}'s own content, otherwise `Error: <message>`. */
 function toolErrorContent(e) {
     return e instanceof ToolError/* ToolError */.v ? e.content : `Error: ${e instanceof Error ? e.message : String(e)}`;
 }
-/**
- * Run a {@link BetaRunnableTool} end-to-end: parse the raw input, invoke `run`,
- * and format any thrown value via {@link toolErrorContent}. Shared so the
- * parse → run → catch → format pipeline is identical across `toolRunner()`
- * surfaces.
- */
+/** Parse the input, run the tool, and turn anything thrown into an error result. */
 async function runRunnableTool(tool, rawInput, context) {
     try {
         const input = tool.parse ? tool.parse(rawInput) : rawInput;
@@ -18163,7 +18147,7 @@ async function runRunnableTool(tool, rawInput, context) {
 }
 //# sourceMappingURL=BetaRunnableTool.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/SessionToolRunner.mjs
-var _IdleClock_maxIdleMs, _IdleClock_onExpire, _IdleClock_blockers, _IdleClock_armPending, _IdleClock_timer, _SessionToolRunner_instances, _SessionToolRunner_consumed, _SessionToolRunner_controller, _SessionToolRunner_detachExternal, _SessionToolRunner_requestOpts, _SessionToolRunner_toolByName, _SessionToolRunner_logger, _SessionToolRunner_seen, _SessionToolRunner_answered, _SessionToolRunner_confirmationVerdicts, _SessionToolRunner_awaitingConfirmation, _SessionToolRunner_results, _SessionToolRunner_inFlightCount, _SessionToolRunner_onIdle, _SessionToolRunner_idleClock, _SessionToolRunner_requestOptions, _SessionToolRunner_streamLoop, _SessionToolRunner_reconcile, _SessionToolRunner_ingestHistory, _SessionToolRunner_handleStreamEvent, _SessionToolRunner_routeToolEvent, _SessionToolRunner_noteConfirmation, _SessionToolRunner_applyVerdict, _SessionToolRunner_surfaceCall, _SessionToolRunner_execute, _SessionToolRunner_sendResult, _SessionToolRunner_drain;
+var _IdleClock_maxIdleMs, _IdleClock_onExpire, _IdleClock_blockers, _IdleClock_armPending, _IdleClock_timer, _SessionToolRunner_instances, _SessionToolRunner_consumed, _SessionToolRunner_controller, _SessionToolRunner_detachExternal, _SessionToolRunner_requestOpts, _SessionToolRunner_toolByName, _SessionToolRunner_logger, _SessionToolRunner_seen, _SessionToolRunner_answered, _SessionToolRunner_confirmationVerdicts, _SessionToolRunner_awaitingConfirmation, _SessionToolRunner_results, _SessionToolRunner_inFlightCount, _SessionToolRunner_sendRetryWindowMs, _SessionToolRunner_onIdle, _SessionToolRunner_idleClock, _SessionToolRunner_requestOptions, _SessionToolRunner_streamLoop, _SessionToolRunner_reconcile, _SessionToolRunner_ingestHistory, _SessionToolRunner_handleStreamEvent, _SessionToolRunner_routeToolEvent, _SessionToolRunner_noteConfirmation, _SessionToolRunner_applyVerdict, _SessionToolRunner_surfaceCall, _SessionToolRunner_execute, _SessionToolRunner_sendResult, _SessionToolRunner_drain;
 
 
 
@@ -18180,7 +18164,16 @@ const STREAM_BACKOFF_START_MS = 500;
 const STREAM_BACKOFF_CAP_MS = 10000;
 const TOOL_TIMEOUT_MS = 120000;
 const DRAIN_TIMEOUT_MS = 30000;
-const SEND_RETRIES = 3;
+const SEND_BACKOFF_START_MS = 1000;
+const SEND_BACKOFF_CAP_MS = 30000;
+/**
+ * How long a transiently failing tool-result send keeps retrying when the
+ * runner is used on its own: the server's default work-item lease TTL.
+ * `EnvironmentWorker` overrides it with the live TTL from each lease heartbeat
+ * (`_setSendRetryWindow`), so a send is only abandoned once the lease can no
+ * longer be ours.
+ */
+const SEND_RETRY_WINDOW_MS = 5 * 60000;
 /** Default {@link SessionToolRunnerOptions.maxIdleMs}: 60 seconds. */
 const DEFAULT_MAX_IDLE_MS = 60000;
 /** Returns true if `ev` is a `session.status_idle` with `stop_reason` `end_turn`. */
@@ -18341,6 +18334,7 @@ class SessionToolRunner {
         _SessionToolRunner_awaitingConfirmation.set(this, new Map());
         _SessionToolRunner_results.set(this, new AsyncQueue());
         _SessionToolRunner_inFlightCount.set(this, 0);
+        _SessionToolRunner_sendRetryWindowMs.set(this, SEND_RETRY_WINDOW_MS);
         _SessionToolRunner_onIdle.set(this, null);
         _SessionToolRunner_idleClock.set(this, void 0);
         this.client = opts.client;
@@ -18369,7 +18363,15 @@ class SessionToolRunner {
     abort() {
         (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f").abort();
     }
-    async *[(_SessionToolRunner_consumed = new WeakMap(), _SessionToolRunner_controller = new WeakMap(), _SessionToolRunner_detachExternal = new WeakMap(), _SessionToolRunner_requestOpts = new WeakMap(), _SessionToolRunner_toolByName = new WeakMap(), _SessionToolRunner_logger = new WeakMap(), _SessionToolRunner_seen = new WeakMap(), _SessionToolRunner_answered = new WeakMap(), _SessionToolRunner_confirmationVerdicts = new WeakMap(), _SessionToolRunner_awaitingConfirmation = new WeakMap(), _SessionToolRunner_results = new WeakMap(), _SessionToolRunner_inFlightCount = new WeakMap(), _SessionToolRunner_onIdle = new WeakMap(), _SessionToolRunner_idleClock = new WeakMap(), _SessionToolRunner_instances = new WeakSet(), Symbol.asyncIterator)]() {
+    /**
+     * @internal
+     * `EnvironmentWorker` keeps this equal to the lease TTL each heartbeat
+     * reports; applies to a send already retrying.
+     */
+    _setSendRetryWindow(ms) {
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _SessionToolRunner_sendRetryWindowMs, ms, "f");
+    }
+    async *[(_SessionToolRunner_consumed = new WeakMap(), _SessionToolRunner_controller = new WeakMap(), _SessionToolRunner_detachExternal = new WeakMap(), _SessionToolRunner_requestOpts = new WeakMap(), _SessionToolRunner_toolByName = new WeakMap(), _SessionToolRunner_logger = new WeakMap(), _SessionToolRunner_seen = new WeakMap(), _SessionToolRunner_answered = new WeakMap(), _SessionToolRunner_confirmationVerdicts = new WeakMap(), _SessionToolRunner_awaitingConfirmation = new WeakMap(), _SessionToolRunner_results = new WeakMap(), _SessionToolRunner_inFlightCount = new WeakMap(), _SessionToolRunner_sendRetryWindowMs = new WeakMap(), _SessionToolRunner_onIdle = new WeakMap(), _SessionToolRunner_idleClock = new WeakMap(), _SessionToolRunner_instances = new WeakSet(), Symbol.asyncIterator)]() {
         if ((0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_consumed, "f")) {
             throw new core_error/* AnthropicError */.pJ('Cannot iterate over a consumed SessionToolRunner');
         }
@@ -18462,7 +18464,7 @@ async function _SessionToolRunner_streamLoop() {
             // An abort throws to unwind the caller (the iterator's `streamPromise`
             // `.catch`) rather than returning early and letting it carry on.
             ctrl.signal.throwIfAborted();
-            if (isFatal4xx(e)) {
+            if ((0,utils_backoff/* isFatal4xx */.bs)(e)) {
                 (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").error('permanent stream failure, shutting down', { error: String(e) });
                 ctrl.abort();
                 throw e;
@@ -18776,8 +18778,11 @@ async function _SessionToolRunner_execute(ev, confirmation) {
     }
 }, _SessionToolRunner_sendResult = async function _SessionToolRunner_sendResult(result, toolUseId) {
     const ctrl = (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f");
+    const start = Date.now();
     let lastErr;
-    for (let i = 0; i < SEND_RETRIES; i++) {
+    let attempt = 0;
+    while (true) {
+        attempt++;
         // An abort throws to unwind the caller rather than returning a
         // `posted: false` result the iterator would carry on past.
         ctrl.signal.throwIfAborted();
@@ -18790,16 +18795,24 @@ async function _SessionToolRunner_execute(ev, confirmation) {
             lastErr = e;
             // Only short-circuit on a permanent 4xx; 408/409/429 deserve the
             // remaining retries (aligned with the core client's retry policy).
-            if (isFatal4xx(e))
+            if ((0,utils_backoff/* isFatal4xx */.bs)(e))
                 break;
-            // Back off only *between* attempts — never after the final one, since
-            // there is no further try left to wait for.
-            if (i < SEND_RETRIES - 1)
-                await sleep((i + 1) * 1000, ctrl.signal);
+            const remainingMs = (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_sendRetryWindowMs, "f") - (Date.now() - start);
+            if (remainingMs <= 0)
+                break;
+            const waitMs = Math.min((0,utils_backoff/* applyJitter */.LX)((0,utils_backoff/* backoff */.JN)(attempt - 1, SEND_BACKOFF_START_MS, SEND_BACKOFF_CAP_MS)), remainingMs);
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").warn('tool result send failed; retrying', {
+                tool_use_id: toolUseId,
+                attempt,
+                backoff_ms: waitMs,
+                error: String(e),
+            });
+            await sleep(waitMs, ctrl.signal);
         }
     }
     (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").error('failed to send tool result', {
         tool_use_id: toolUseId,
+        attempts: attempt,
         error: String(lastErr),
     });
     return false;
@@ -18858,8 +18871,14 @@ function toSessionContent(content) {
     return out.length > 0 ? out : [{ type: 'text', text: '(no output)' }];
 }
 //# sourceMappingURL=SessionToolRunner.mjs.map
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/tools/agent-toolset/sync-interval.mjs
+var sync_interval = __nccwpck_require__(8264);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/environments/worker.mjs
-var _EnvironmentWorker_instances, _EnvironmentWorker_signal, _EnvironmentWorker_handleItem;
+var _EnvironmentWorker_instances, _EnvironmentWorker_signal, _EnvironmentWorker_handleItem, _Lease_ctrl, _Lease_endReason;
+
+
+
+
 
 
 
@@ -18872,7 +18891,44 @@ var _EnvironmentWorker_instances, _EnvironmentWorker_signal, _EnvironmentWorker_
 
 
 const HEARTBEAT_DEFAULT_MS = 30000;
+const HEARTBEAT_TTL_DEFAULT_MS = 90000;
 const NO_HEARTBEAT_SENTINEL = 'NO_HEARTBEAT';
+/** True when the session has at least one memory store attached. */
+function hasMemoryStore(session) {
+    return session.resources.some((r) => r.type === 'memory_store');
+}
+/**
+ * Extract the per-item sessions token from a work item's `secret` payload.
+ *
+ * The `secret` the poll response populates is not itself a credential: it is a
+ * URL-safe base64 JSON payload matching {@link BetaWorkSecret} — the
+ * `sessions_token` (the bearer for this item's work lifecycle and
+ * session-level calls) plus fields this worker does not consume. Returns the
+ * sessions token, or `null` (meaning: fall back to the environment key) when
+ * the payload is missing, doesn't decode, or carries no token. Never log the
+ * payload or anything extracted from it.
+ */
+function sessionsTokenFromSecret(secret) {
+    if (!secret)
+        return null;
+    let parsed;
+    try {
+        // The payload may arrive URL-safe and without base64 padding; normalize
+        // both before decoding.
+        const normalized = secret.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+        parsed = JSON.parse((0,utils_bytes/* decodeUTF8 */.CE)((0,base64/* fromBase64 */.E)(padded)));
+    }
+    catch {
+        return null;
+    }
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))
+        return null;
+    // The payload is untrusted input, so the token is still checked at runtime
+    // rather than trusted to match the schema.
+    const token = parsed.sessions_token;
+    return typeof token === 'string' && token !== '' ? token : null;
+}
 /**
  * The self-hosted environment runner, composed from the control-plane
  * {@link WorkPoller} and the per-session {@link SessionToolRunner}.
@@ -18880,10 +18936,18 @@ const NO_HEARTBEAT_SENTINEL = 'NO_HEARTBEAT';
  * For each claimed `session` work item it: builds the per-session
  * {@link AgentToolContext}, downloads the session agent's skills
  * (`setupSkills`), then runs a {@link SessionToolRunner} for the session
- * *while* heartbeating the work-item lease in parallel; on exit it force-stops
- * the work item, cleans up the downloaded skills, and loops to the next one. The
- * lease heartbeat reports `state === "stopping"` / a lost lease back into the run
- * by aborting the session runner.
+ * while heartbeating the work-item lease on the same event loop; on exit it
+ * force-stops the work item (unless the lease was lost, in which case the item
+ * is left to whoever holds it now), cleans up the downloaded skills, and loops
+ * to the next one. The lease heartbeat reports `state === "stopping"` / a lost
+ * lease back into the run by aborting the session runner.
+ *
+ * The `environmentKey` is the worker's standing credential. When a claimed
+ * work item carries a per-item `secret` (a short-lived payload the poll
+ * response may populate), the sessions token extracted from it is preferred
+ * over the environment key for that item's heartbeat / force-stop /
+ * skill-download / session calls; polling itself always uses the environment
+ * key, and items without a usable secret fall back to it entirely.
  *
  * Use {@link EnvironmentWorker.handleItem} if you already hold a claimed work
  * item (e.g. a `worker poll --on-work` script handed one to a fresh process) and
@@ -18908,14 +18972,26 @@ class EnvironmentWorker {
     constructor(opts) {
         _EnvironmentWorker_instances.add(this);
         _EnvironmentWorker_signal.set(this, void 0);
+        if (opts.unrestrictedPaths !== undefined) {
+            throw new core_error/* AnthropicError */.pJ('The `unrestrictedPaths` option you passed to EnvironmentWorker (or ' +
+                'client.beta.environments.work.worker()) is no longer supported. ' +
+                "The worker's file tools (read, write, edit, glob, grep) are now always confined to `workdir` " +
+                "plus the session's memory folders. Remove `unrestrictedPaths` from your options; to let the " +
+                'file tools reach any other directory, add it to `AgentToolContext.allowedRoots` from a ' +
+                '`tools` factory.');
+        }
         this.client = opts.client;
         this.environmentId = opts.environmentId;
         this.environmentKey = opts.environmentKey;
         this.tools = opts.tools;
         this.workdir = opts.workdir ?? process.cwd();
-        this.unrestrictedPaths = opts.unrestrictedPaths;
         this.maxFileBytes = opts.maxFileBytes;
         this.maxIdleMs = opts.maxIdleMs;
+        if (opts.memorySyncIntervalMs != null) {
+            (0,sync_interval/* checkMemorySyncInterval */.iT)(opts.memorySyncIntervalMs, 'memorySyncIntervalMs');
+        }
+        this.memorySyncIntervalMs = opts.memorySyncIntervalMs;
+        this.memorySyncDeletions = opts.memorySyncDeletions ?? 'enabled';
         this.workerId = opts.workerId;
         this.requestOptions = opts.requestOptions;
         (0,tslib/* __classPrivateFieldSet */.G)(this, _EnvironmentWorker_signal, opts.signal, "f");
@@ -18938,12 +19014,24 @@ class EnvironmentWorker {
             ...(this.workerId !== undefined ? { workerId: this.workerId } : {}),
             ...(externalSignal ? { signal: externalSignal } : {}),
             ...(this.requestOptions !== undefined ? { requestOptions: this.requestOptions } : {}),
-            // The per-item handler force-stops every work item on exit; let it be the
-            // single owner of `work.stop` rather than double-posting from the poller.
+            // The per-item handler stops or releases every work item on exit; let it
+            // be the single owner of `work.stop` rather than double-posting from the
+            // poller.
             autoStop: false,
         });
         for await (const work of poller) {
-            await (0,tslib/* __classPrivateFieldGet */.g)(this, _EnvironmentWorker_instances, "m", _EnvironmentWorker_handleItem).call(this, work, environmentKey, poller.signal);
+            try {
+                await (0,tslib/* __classPrivateFieldGet */.g)(this, _EnvironmentWorker_instances, "m", _EnvironmentWorker_handleItem).call(this, work, environmentKey, poller.signal);
+            }
+            catch (e) {
+                // One bad item fails that item, not the worker: the handler's teardown
+                // already stopped or released it, so the next poll claims the next
+                // item. A store directory left behind by a killed worker would
+                // otherwise crashloop this process forever.
+                if (poller.signal?.aborted)
+                    throw e;
+                (0,utils_log/* loggerFor */.WG)(this.client).error('work item failed', { work_id: work.id, error: String(e) });
+            }
         }
     }
     /**
@@ -18951,8 +19039,10 @@ class EnvironmentWorker {
      * per-session {@link AgentToolContext} (workdir from this worker's options),
      * download the session agent's skills (`setupSkills`), run a
      * {@link SessionToolRunner} for the session while heartbeating the work-item
-     * lease in parallel, and force-stop the work item on exit (whether the runner
-     * finishes normally, throws, or the heartbeat loop signals shutdown).
+     * lease, and force-stop the work item on exit (whether the runner finishes
+     * normally, throws, or the control plane signals shutdown). The one
+     * exception is a lost lease: the item then belongs to the queue or another
+     * worker and is left alone.
      *
      * Use this when something else does the claiming — e.g. a `worker poll
      * --on-work` script that hands an already-claimed item to a fresh process. The
@@ -18962,13 +19052,25 @@ class EnvironmentWorker {
      * option, then the worker's own `environmentKey`, then
      * `ANTHROPIC_ENVIRONMENT_KEY`. With no arguments inside that command it just
      * works. Throws a clear error naming the first of the four required values
-     * still missing after resolution.
+     * still missing after resolution. Throws `SessionMemoryError` when the
+     * session has memory stores attached but they cannot be mounted — the work
+     * item carried no sessions token (unless `memorySyncIntervalMs` turned
+     * memory off), or a store failed to download.
+     *
+     * `workSecret` is the work item's per-item `secret` payload from the poll
+     * response, falling back to `ANTHROPIC_WORK_SECRET`; unlike the others it is
+     * optional — when present, the sessions token extracted from it is preferred
+     * as the Bearer credential for this item's heartbeat / force-stop / session
+     * calls; when absent (or undecodable) those calls use the environment key.
      */
     async handleItem(opts) {
         const workId = opts?.workId ?? (0,env/* readEnv */.s)('ANTHROPIC_WORK_ID');
         const environmentId = opts?.environmentId ?? (0,env/* readEnv */.s)('ANTHROPIC_ENVIRONMENT_ID');
         const sessionId = opts?.sessionId ?? (0,env/* readEnv */.s)('ANTHROPIC_SESSION_ID');
         const environmentKey = opts?.environmentKey ?? this.environmentKey ?? (0,env/* readEnv */.s)('ANTHROPIC_ENVIRONMENT_KEY');
+        // `||` rather than `??` so an empty option still falls through to the env
+        // var and then to null (matching how `readEnv` treats empty values).
+        const workSecret = opts?.workSecret || (0,env/* readEnv */.s)('ANTHROPIC_WORK_SECRET') || null;
         if (!workId) {
             throw new core_error/* AnthropicError */.pJ('handleItem: workId is required — pass it or set ANTHROPIC_WORK_ID');
         }
@@ -18984,6 +19086,7 @@ class EnvironmentWorker {
         const work = {
             id: workId,
             environment_id: environmentId,
+            secret: workSecret,
             data: { type: 'session', id: sessionId },
         };
         await (0,tslib/* __classPrivateFieldGet */.g)(this, _EnvironmentWorker_instances, "m", _EnvironmentWorker_handleItem).call(this, work, environmentKey, opts?.signal ?? (0,tslib/* __classPrivateFieldGet */.g)(this, _EnvironmentWorker_signal, "f"));
@@ -18993,76 +19096,213 @@ _EnvironmentWorker_signal = new WeakMap(), _EnvironmentWorker_instances = new We
 /**
  * The per-item body shared by {@link EnvironmentWorker.run}'s poll loop and
  * {@link EnvironmentWorker.handleItem}: run a {@link SessionToolRunner} for the
- * work item's session while heartbeating its lease, force-stopping on exit.
- * Non-session work items are ignored.
+ * work item's session while heartbeating its lease, force-stopping on exit
+ * unless the lease was lost. Non-session work items are ignored.
+ *
+ * When the poll response carried a per-item `secret` (a short-lived payload
+ * scoped to this work item), the sessions token extracted from it is
+ * preferred over `environmentKey` as the Bearer credential for those
+ * per-item calls; a missing/undecodable secret falls back to
+ * `environmentKey` unchanged.
  */
 async function _EnvironmentWorker_handleItem(work, environmentKey, externalSignal) {
     const log = (0,utils_log/* loggerFor */.WG)(this.client);
+    // The per-item credential: the sessions token carried inside the work
+    // item's secret payload when the server issued one, otherwise the
+    // environment key. Never log this value.
+    const sessionsToken = sessionsTokenFromSecret(work.secret);
+    if (work.secret && sessionsToken === null) {
+        log.warn('work item carried a secret payload but no sessions token could be extracted; ' +
+            'falling back to the environment key', { work_id: work.id });
+    }
+    const itemCredential = sessionsToken ?? environmentKey;
     // Every per-session call — the SessionToolRunner event stream/list/send, the
-    // lease heartbeat, and the work force-stop — authenticates with the
-    // environment key. Scope a client to it once and thread that through.
-    // `copyClientForHelper` also clears the parent's `apiKey`, so the sub-client
-    // emits *only* the bearer credential on the wire (a plain
-    // `withOptions({authToken})` would leave `X-Api-Key` set as well).
+    // lease heartbeat, the skill download, and the work force-stop —
+    // authenticates with the per-item credential. Scope a client to it once and
+    // thread that through. `copyClientForHelper` also clears the parent's
+    // `apiKey`, so the sub-client emits *only* the bearer credential on the
+    // wire (a plain `withOptions({authToken})` would leave `X-Api-Key` set as
+    // well).
     const sessionClient = copyClientForHelper(this.client, {
-        authToken: environmentKey,
+        authToken: itemCredential,
         helper: 'environments-worker',
     });
     // The poller runs with `autoStop: false`, so the per-item handler is the
     // single owner of `work.stop` for every claimed item.
     const sessionId = work.data.id;
-    const ctx = {
-        workdir: this.workdir,
-        client: this.client,
-        sessionId,
-        ...(this.unrestrictedPaths !== undefined ? { unrestrictedPaths: this.unrestrictedPaths } : {}),
-        ...(this.maxFileBytes !== undefined ? { maxFileBytes: this.maxFileBytes } : {}),
-    };
-    // Lazily load the Node-only toolset module — see the import note at the top.
-    const agentToolset = await __nccwpck_require__.e(/* import() */ 157).then(__nccwpck_require__.bind(__nccwpck_require__, 4157));
-    let cleanupSkills = async () => { };
-    try {
-        cleanupSkills = await agentToolset.setupSkills(ctx);
-    }
-    catch (e) {
-        log.warn('skill setup failed', { session_id: sessionId, work_id: work.id, error: String(e) });
-    }
-    const tools = typeof this.tools === 'function' ?
-        this.tools(ctx)
-        : this.tools ?? agentToolset.betaAgentToolset20260401(ctx);
     // A per-session controller: aborts when the supplied signal aborts, when the
     // session runner finishes, or when the lease heartbeat says to stop.
     const ctrl = new AbortController();
     const detachExternal = linkAbort(externalSignal, ctrl);
-    const heartbeatPromise = heartbeatLoop(sessionClient, work, ctrl, log, this.requestOptions).catch((e) => {
+    const lease = new Lease(ctrl);
+    // Lazily load the Node-only toolset module — see the import note at the top.
+    const agentToolset = await __nccwpck_require__.e(/* import() */ 573).then(__nccwpck_require__.bind(__nccwpck_require__, 2573));
+    // Start the lease heartbeat BEFORE the session fetch and the skill /
+    // memory downloads: those can take longer than the lease TTL, and an
+    // unheartbeated lease lapsing mid-download would let another worker
+    // reclaim the item and serve the same session (split-brain).
+    //
+    // Each heartbeat reports the lease TTL the server is enforcing; it becomes
+    // the runner's tool-result send retry window so a send keeps retrying
+    // exactly as long as the lease could still be live. The runner is only
+    // built after the downloads, so hold the latest TTL until then.
+    let leaseTtlMs;
+    let runner;
+    const heartbeatPromise = heartbeatLoop(sessionClient, work, lease, log, this.requestOptions, (ttlMs) => {
+        leaseTtlMs = ttlMs;
+        runner?._setSendRetryWindow(ttlMs);
+    }).catch((e) => {
         if (!ctrl.signal.aborted)
             log.error('heartbeat loop failed', { work_id: work.id, error: String(e) });
         ctrl.abort();
     });
+    let cleanupSkills = async () => { };
+    let stores;
+    let cleanEnd = false;
     try {
-        const runner = new SessionToolRunner(sessionId, {
+        if (work.data.type !== 'session') {
+            log.debug('skipping non-session work item', { work_id: work.id, type: work.data.type });
+            return;
+        }
+        // One session fetch, shared by the skills download and the memory-store
+        // download — two fetches could disagree about the attached resources.
+        // A failed fetch fails the work item (the teardown below still stops
+        // or releases it).
+        const session = await sessionClient.beta.sessions.retrieve(sessionId);
+        // Only with the session in hand can we tell one that simply has no
+        // memory from one whose memory we cannot mount. Turning memory off
+        // with the interval knob is a deliberate opt-out and stays quiet.
+        if (sessionsToken === null && this.memorySyncIntervalMs !== null && hasMemoryStore(session)) {
+            throw new agentToolset.SessionMemoryError(`cannot mount the session's memories: the work item carried no sessions token ` +
+                `(work_id=${work.id}, session_id=${sessionId}); ` +
+                'the memory endpoints reject the environment key, so the poller must issue a per-item ' +
+                '`secret` carrying `sessions_token`, or set `memorySyncIntervalMs: null` to run without memory');
+        }
+        const ctx = {
+            workdir: this.workdir,
+            // The scoped sub-client, not the parent: the skill download
+            // `setupSkills` performs for this session rides the same per-item
+            // credential as every other per-item call.
+            client: sessionClient,
+            session,
+            ...(this.maxFileBytes !== undefined ? { maxFileBytes: this.maxFileBytes } : {}),
+        };
+        try {
+            cleanupSkills = await agentToolset.setupSkills(ctx);
+        }
+        catch (e) {
+            log.warn('skill setup failed', { session_id: sessionId, work_id: work.id, error: String(e) });
+        }
+        // Memory stores: the memory_stores endpoints accept the per-item sessions
+        // token but reject the environment key, so download and sync only run when
+        // the item carried a usable secret (and the interval is set).
+        // `sessionClient` is already scoped to that token then, so the memory
+        // calls ride the same sub-client. A store that cannot be materialised
+        // throws `SessionMemoryError` out of `download` and fails the item.
+        if (sessionsToken !== null && this.memorySyncIntervalMs !== null) {
+            stores = new agentToolset.SessionMemoryStores(sessionClient, {
+                workdir: this.workdir,
+                ...(this.memorySyncIntervalMs !== undefined ? { syncIntervalMs: this.memorySyncIntervalMs } : {}),
+                syncDeletions: this.memorySyncDeletions,
+            });
+            await stores.download(session);
+            // A store mounted outside the workdir must stay reachable by the file
+            // tools; read-only stores still refuse writes.
+            ctx.allowedRoots = stores.roots;
+            ctx.readOnlyRoots = stores.readOnlyRoots;
+        }
+        else {
+            log.debug('memory stores disabled for this item', { work_id: work.id });
+        }
+        const tools = typeof this.tools === 'function' ?
+            this.tools(ctx)
+            : this.tools ?? agentToolset.betaAgentToolset20260401(ctx);
+        runner = new SessionToolRunner(sessionId, {
             client: sessionClient,
             tools,
             ...(this.maxIdleMs !== undefined ? { maxIdleMs: this.maxIdleMs } : {}),
             ...(this.requestOptions !== undefined ? { requestOptions: this.requestOptions } : {}),
             signal: ctrl.signal,
         });
+        if (leaseTtlMs !== undefined)
+            runner._setSendRetryWindow(leaseTtlMs);
         for await (const _ of runner) {
             // Drive the runner to completion; per-call observability is not part
             // of this composition's surface — use `SessionToolRunner` directly
             // (via `client.beta.sessions.events.toolRunner`) if you want it.
+            if (stores)
+                await stores.syncIfDue();
         }
+        // Only a clean stream end earns the last full sync; it runs in the
+        // teardown below.
+        cleanEnd = !ctrl.signal.aborted;
     }
     finally {
-        ctrl.abort();
+        // The heartbeat keeps the lease alive until this teardown is done.
+        try {
+            // cleanupSkills first, so its failure cannot skip the memory flush.
+            await cleanupSkills().catch((e) => {
+                log.warn('skill cleanup failed', { session_id: sessionId, work_id: work.id, error: String(e) });
+            });
+        }
+        finally {
+            if (stores) {
+                const boundMs = agentToolset.MEMORY_FLUSH_TIMEOUT_MS;
+                if (cleanEnd) {
+                    const finishCutOff = await withTimeout(stores.finish(), boundMs);
+                    if (finishCutOff) {
+                        log.warn(`final memory sync cut off after ${boundMs}ms; the flush that follows still uploads changed files`, { session_id: sessionId, work_id: work.id });
+                    }
+                }
+                // Also after finish(): it swallows its own failures, and a
+                // clean flush is a no-op.
+                const flushBound = new AbortController();
+                const flushCutOff = await withTimeout(stores.flushWrites(flushBound.signal), boundMs);
+                if (flushCutOff) {
+                    flushBound.abort();
+                    log.warn(`memory flush cut off after ${boundMs}ms; changed files it had not uploaded yet are not saved`, { session_id: sessionId, work_id: work.id });
+                }
+                await stores.dispose().catch((e) => {
+                    log.warn('memory store cleanup failed', {
+                        session_id: sessionId,
+                        work_id: work.id,
+                        error: String(e),
+                    });
+                });
+            }
+        }
+        lease.finish('runner_done');
         detachExternal();
         await heartbeatPromise;
-        await cleanupSkills().catch((e) => {
-            log.warn('skill cleanup failed', { session_id: sessionId, work_id: work.id, error: String(e) });
-        });
-        await forceStop(sessionClient, work, log, this.requestOptions);
+        // Stop only an item this worker still holds — after a lost lease it
+        // belongs to the queue or another worker.
+        if (lease.lost) {
+            log.info('lease lost; released without stopping it', { session_id: sessionId, work_id: work.id });
+        }
+        else {
+            await forceStop(sessionClient, work, log, this.requestOptions);
+        }
     }
 };
+/**
+ * Resolve when `p` settles or `ms` elapses — `true` when `ms` elapsed
+ * first. A timed-out `p` keeps running — JS cannot cancel a promise.
+ */
+async function withTimeout(p, ms) {
+    let timer;
+    try {
+        return await Promise.race([
+            p.then(() => false, () => false),
+            new Promise((resolve) => {
+                timer = setTimeout(() => resolve(true), ms);
+            }),
+        ]);
+    }
+    finally {
+        if (timer !== undefined)
+            clearTimeout(timer);
+    }
+}
 /** Force-stop a claimed work item, swallowing the 409 that means it's already stopped. */
 async function forceStop(client, work, log, requestOptions) {
     try {
@@ -19073,51 +19313,127 @@ async function forceStop(client, work, log, requestOptions) {
         { ...requestOptions, headers: buildHeaders([requestOptions?.headers]) });
     }
     catch (e) {
-        if (!isStatus(e, 409)) {
+        if (!(0,utils_backoff/* isStatus */.zM)(e, 409)) {
             log.error('force-stop on exit failed', { work_id: work.id, error: String(e) });
         }
     }
 }
 /**
- * Keep the work-item lease alive while a session is being served. Aborts `ctrl`
- * when the control plane reports the work is `stopping`/`stopped`, when the
- * lease is no longer extended, or on a permanent heartbeat failure.
+ * This worker's view of one work-item lease: the per-item abort signal plus
+ * why heartbeating ended. The first recorded reason wins, so a run aborted
+ * *because* the lease was lost still reads as lost afterwards; an abort with
+ * no recorded reason (the external signal) is not lost.
  */
-async function heartbeatLoop(client, work, ctrl, logger, requestOptions) {
+class Lease {
+    constructor(ctrl) {
+        _Lease_ctrl.set(this, void 0);
+        _Lease_endReason.set(this, void 0);
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _Lease_ctrl, ctrl, "f");
+    }
+    get signal() {
+        return (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_ctrl, "f").signal;
+    }
+    finish(reason) {
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _Lease_endReason, (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_endReason, "f") ?? reason, "f");
+        (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_ctrl, "f").abort();
+    }
+    /** True once the item belongs to the queue or another worker. */
+    get lost() {
+        return (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_endReason, "f") === 'lease_lost' || (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_endReason, "f") === 'assumed_lost';
+    }
+}
+_Lease_ctrl = new WeakMap(), _Lease_endReason = new WeakMap();
+/** The server's view of the lease carried by a 412 heartbeat response, or empty if absent. */
+function serverLeaseState(e) {
+    let node = e instanceof core_error/* APIError */.LG ? e.error : undefined;
+    for (const key of ['error', 'details', 'current_state']) {
+        if (!(0,utils_values/* isObj */.sA)(node))
+            return {};
+        node = node[key];
+    }
+    return (0,utils_values/* isObj */.sA)(node) ? node : {};
+}
+/**
+ * Keep the work-item lease alive while a session is being served. Runs until
+ * `lease` ends, and ends it itself when the control plane reports the work is
+ * `stopping`/`stopped` or no longer extends the lease, when a heartbeat is
+ * rejected (a 412 means the lease already belongs to someone else), or when no
+ * heartbeat has succeeded for longer than the lease ttl (the lease is assumed
+ * lost, so two runners don't end up serving the same work). Each heartbeat
+ * call is cut off after the current beat interval so a hung request cannot
+ * outlive the lease it is meant to renew.
+ */
+async function heartbeatLoop(client, work, lease, logger, requestOptions, 
+/** Called with the server-reported lease TTL after every successful beat. */
+onLeaseTtl) {
     let intervalMs = HEARTBEAT_DEFAULT_MS;
+    let ttlMs = HEARTBEAT_TTL_DEFAULT_MS;
+    let lastSuccessMs = Date.now();
     let last = NO_HEARTBEAT_SENTINEL;
     const beat = async () => {
+        // Not the request `timeout` option: the core client retries timeouts, so
+        // it would not bound the call as a whole.
+        const beatCtrl = new AbortController();
+        const detach = linkAbort(lease.signal, beatCtrl);
+        const cutoff = setTimeout(() => beatCtrl.abort(), intervalMs);
         try {
-            const resp = await client.beta.environments.work.heartbeat(work.id, { environment_id: work.environment_id, expected_last_heartbeat: last }, { ...requestOptions, headers: buildHeaders([requestOptions?.headers]), signal: ctrl.signal });
+            const resp = await client.beta.environments.work.heartbeat(work.id, { environment_id: work.environment_id, expected_last_heartbeat: last }, { ...requestOptions, headers: buildHeaders([requestOptions?.headers]), signal: beatCtrl.signal });
+            lastSuccessMs = Date.now();
             last = resp.last_heartbeat;
             if (resp.ttl_seconds > 0) {
-                intervalMs = Math.max(1000, Math.min((resp.ttl_seconds * 1000) / 2, HEARTBEAT_DEFAULT_MS));
+                ttlMs = resp.ttl_seconds * 1000;
+                intervalMs = Math.max(1000, Math.min(ttlMs / 2, HEARTBEAT_DEFAULT_MS));
+                onLeaseTtl?.(ttlMs);
             }
             if (resp.state === 'stopping' || resp.state === 'stopped') {
                 logger.info('heartbeat signals shutdown', { work_id: work.id, state: resp.state });
-                ctrl.abort();
+                lease.finish('control_plane_stop');
             }
             if (!resp.lease_extended) {
                 logger.warn('lease not extended, shutting down', { work_id: work.id });
-                ctrl.abort();
+                lease.finish('control_plane_stop');
             }
         }
         catch (e) {
             // An abort throws to unwind the caller (the `heartbeatLoop(...).catch`
             // in `#handleItem`) rather than returning early.
-            ctrl.signal.throwIfAborted();
-            if (isFatal4xx(e)) {
+            lease.signal.throwIfAborted();
+            if ((0,utils_backoff/* isStatus */.zM)(e, 412)) {
+                const server = serverLeaseState(e);
+                logger.error('lease lost: heartbeat precondition failed', {
+                    work_id: work.id,
+                    server_state: server['state'],
+                    server_ttl_seconds: server['ttl_seconds'],
+                    server_last_heartbeat: server['last_heartbeat'],
+                });
+                lease.finish('lease_lost');
+                return;
+            }
+            if ((0,utils_backoff/* isFatal4xx */.bs)(e)) {
                 logger.error('permanent heartbeat failure', { work_id: work.id, error: String(e) });
-                ctrl.abort();
+                lease.finish('heartbeat_rejected');
                 throw e;
+            }
+            if (Date.now() - lastSuccessMs > ttlMs) {
+                logger.error('lease assumed lost: no successful heartbeat in ttl', {
+                    work_id: work.id,
+                    ttl_ms: ttlMs,
+                    error: String(e),
+                });
+                lease.finish('assumed_lost');
+                return;
             }
             logger.warn('transient heartbeat failure', { work_id: work.id, error: String(e) });
         }
+        finally {
+            clearTimeout(cutoff);
+            detach();
+        }
     };
     await beat();
-    while (!ctrl.signal.aborted) {
-        await sleep(intervalMs, ctrl.signal);
-        ctrl.signal.throwIfAborted();
+    while (!lease.signal.aborted) {
+        await sleep(intervalMs, lease.signal);
+        lease.signal.throwIfAborted();
         await beat();
     }
 }
@@ -19365,23 +19681,6 @@ class Work extends APIResource {
     poller(opts) {
         return new WorkPoller({ ...opts, client: this._client });
     }
-    /**
-     * The self-hosted environment runner: poll for work, and for each claimed
-     * session set up the workdir, download the agent's skills, run the tools while
-     * heartbeating the lease, and force-stop on exit.
-     *
-     * @example
-     * ```ts
-     * // Long-running daemon — poll, serve each session, loop:
-     * await client.beta.environments.work
-     *   .worker({ environmentId, environmentKey, workdir: '/workspace' })
-     *   .run();
-     *
-     * // Or service one already-claimed work item (e.g. inside a sandbox spawned
-     * // by `ant worker poll --on-work`) — handleItem() reads the ANTHROPIC_* env vars:
-     * await client.beta.environments.work.worker({ workdir: '/workspace' }).handleItem();
-     * ```
-     */
     worker(opts) {
         return new EnvironmentWorker({ ...opts, client: this._client });
     }
@@ -19954,7 +20253,7 @@ class Batches extends APIResource {
      *           messages: [
      *             { content: 'Hello, world', role: 'user' },
      *           ],
-     *           model: 'claude-opus-4-6',
+     *           model: 'claude-opus-5',
      *         },
      *       },
      *     ],
@@ -20486,7 +20785,7 @@ function withLazyInput(prev, jsonBuf) {
 }
 //# sourceMappingURL=message-stream-utils.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/BetaMessageStream.mjs
-var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _BetaMessageStream_params, _BetaMessageStream_connectedPromise, _BetaMessageStream_resolveConnectedPromise, _BetaMessageStream_rejectConnectedPromise, _BetaMessageStream_endPromise, _BetaMessageStream_resolveEndPromise, _BetaMessageStream_rejectEndPromise, _BetaMessageStream_listeners, _BetaMessageStream_ended, _BetaMessageStream_errored, _BetaMessageStream_aborted, _BetaMessageStream_catchingPromiseCreated, _BetaMessageStream_response, _BetaMessageStream_request_id, _BetaMessageStream_logger, _BetaMessageStream_getFinalMessage, _BetaMessageStream_getFinalText, _BetaMessageStream_handleError, _BetaMessageStream_beginRequest, _BetaMessageStream_addStreamEvent, _BetaMessageStream_endRequest, _BetaMessageStream_accumulateMessage, _BetaMessageStream_toolInputParseError;
+var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _BetaMessageStream_params, _BetaMessageStream_connectedPromise, _BetaMessageStream_resolveConnectedPromise, _BetaMessageStream_rejectConnectedPromise, _BetaMessageStream_endPromise, _BetaMessageStream_resolveEndPromise, _BetaMessageStream_rejectEndPromise, _BetaMessageStream_listeners, _BetaMessageStream_ended, _BetaMessageStream_errored, _BetaMessageStream_aborted, _BetaMessageStream_catchingPromiseCreated, _BetaMessageStream_response, _BetaMessageStream_request_id, _BetaMessageStream_workspace_id, _BetaMessageStream_logger, _BetaMessageStream_getFinalMessage, _BetaMessageStream_getFinalText, _BetaMessageStream_handleError, _BetaMessageStream_beginRequest, _BetaMessageStream_addStreamEvent, _BetaMessageStream_endRequest, _BetaMessageStream_accumulateMessage, _BetaMessageStream_toolInputParseError;
 
 
 
@@ -20518,6 +20817,7 @@ class BetaMessageStream {
         _BetaMessageStream_catchingPromiseCreated.set(this, false);
         _BetaMessageStream_response.set(this, void 0);
         _BetaMessageStream_request_id.set(this, void 0);
+        _BetaMessageStream_workspace_id.set(this, void 0);
         _BetaMessageStream_logger.set(this, void 0);
         _BetaMessageStream_handleError.set(this, (error) => {
             (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaMessageStream_errored, true, "f");
@@ -20562,6 +20862,9 @@ class BetaMessageStream {
     get request_id() {
         return (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_request_id, "f");
     }
+    get workspace_id() {
+        return (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_workspace_id, "f");
+    }
     /**
      * Returns the `MessageStream` data, the raw `Response` instance and the ID of the request,
      * returned vie the `request-id` header which is useful for debugging requests and resporting
@@ -20582,6 +20885,7 @@ class BetaMessageStream {
             data: this,
             response,
             request_id: response.headers.get('request-id'),
+            workspace_id: response.headers.get('anthropic-workspace-id'),
         };
     }
     /**
@@ -20654,6 +20958,7 @@ class BetaMessageStream {
             return;
         (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaMessageStream_response, response, "f");
         (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaMessageStream_request_id, response?.headers.get('request-id'), "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaMessageStream_workspace_id, response?.headers.get('anthropic-workspace-id'), "f");
         (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_resolveConnectedPromise, "f").call(this, response);
         this._emit('connect');
     }
@@ -20824,7 +21129,7 @@ class BetaMessageStream {
             }
         }
     }
-    [(_BetaMessageStream_currentMessageSnapshot = new WeakMap(), _BetaMessageStream_params = new WeakMap(), _BetaMessageStream_connectedPromise = new WeakMap(), _BetaMessageStream_resolveConnectedPromise = new WeakMap(), _BetaMessageStream_rejectConnectedPromise = new WeakMap(), _BetaMessageStream_endPromise = new WeakMap(), _BetaMessageStream_resolveEndPromise = new WeakMap(), _BetaMessageStream_rejectEndPromise = new WeakMap(), _BetaMessageStream_listeners = new WeakMap(), _BetaMessageStream_ended = new WeakMap(), _BetaMessageStream_errored = new WeakMap(), _BetaMessageStream_aborted = new WeakMap(), _BetaMessageStream_catchingPromiseCreated = new WeakMap(), _BetaMessageStream_response = new WeakMap(), _BetaMessageStream_request_id = new WeakMap(), _BetaMessageStream_logger = new WeakMap(), _BetaMessageStream_handleError = new WeakMap(), _BetaMessageStream_instances = new WeakSet(), _BetaMessageStream_getFinalMessage = function _BetaMessageStream_getFinalMessage() {
+    [(_BetaMessageStream_currentMessageSnapshot = new WeakMap(), _BetaMessageStream_params = new WeakMap(), _BetaMessageStream_connectedPromise = new WeakMap(), _BetaMessageStream_resolveConnectedPromise = new WeakMap(), _BetaMessageStream_rejectConnectedPromise = new WeakMap(), _BetaMessageStream_endPromise = new WeakMap(), _BetaMessageStream_resolveEndPromise = new WeakMap(), _BetaMessageStream_rejectEndPromise = new WeakMap(), _BetaMessageStream_listeners = new WeakMap(), _BetaMessageStream_ended = new WeakMap(), _BetaMessageStream_errored = new WeakMap(), _BetaMessageStream_aborted = new WeakMap(), _BetaMessageStream_catchingPromiseCreated = new WeakMap(), _BetaMessageStream_response = new WeakMap(), _BetaMessageStream_request_id = new WeakMap(), _BetaMessageStream_workspace_id = new WeakMap(), _BetaMessageStream_logger = new WeakMap(), _BetaMessageStream_handleError = new WeakMap(), _BetaMessageStream_instances = new WeakSet(), _BetaMessageStream_getFinalMessage = function _BetaMessageStream_getFinalMessage() {
         if (this.receivedMessages.length === 0) {
             throw new core_error/* AnthropicError */.pJ('stream ended without producing a Message with role=assistant');
         }
@@ -20945,14 +21250,18 @@ class BetaMessageStream {
             case 'message_stop':
                 return snapshot;
             case 'message_delta':
-                snapshot.container = event.delta.container;
                 snapshot.stop_reason = event.delta.stop_reason;
                 snapshot.stop_sequence = event.delta.stop_sequence;
-                if (event.delta.stop_details != null) {
-                    snapshot.stop_details = event.delta.stop_details;
-                }
+                snapshot.stop_details = event.delta.stop_details;
                 snapshot.usage.output_tokens = event.usage.output_tokens;
-                snapshot.context_management = event.context_management;
+                if (event.delta.container != null) {
+                    snapshot.container = event.delta.container;
+                }
+                if (event.context_management != null) {
+                    snapshot.context_management = event.context_management;
+                }
+                // The remaining usage counters are cumulative whole-message totals that are
+                // omitted when they don't apply, so overwrite when present and never add.
                 if (event.usage.input_tokens != null) {
                     snapshot.usage.input_tokens = event.usage.input_tokens;
                 }
@@ -20970,6 +21279,9 @@ class BetaMessageStream {
                 }
                 if (event.usage.fallback_credit != null) {
                     snapshot.usage.fallback_credit = event.usage.fallback_credit;
+                }
+                if (event.usage.output_tokens_details != null) {
+                    snapshot.usage.output_tokens_details = event.usage.output_tokens_details;
                 }
                 return snapshot;
             case 'content_block_start':
@@ -21322,6 +21634,17 @@ class BetaToolRunner {
                         if (!(0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_mutated, "f")) {
                             const message = await (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_message, "f");
                             (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.messages.push({ role: message.role, content: message.content });
+                            // Container-bound server tools reject a follow-up request that omits the container the
+                            // previous turn ran in, so carry its id forward unless the caller pinned one themselves.
+                            const { container } = (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params;
+                            if (message.container) {
+                                if (container == null) {
+                                    (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.container = message.container.id;
+                                }
+                                else if (typeof container === 'object' && container.id == null) {
+                                    (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.container = { ...container, id: message.container.id };
+                                }
+                            }
                             // Refusal-terminated turns are terminal: the refusal may have cut a tool_use off
                             // with partial input, so executing this turn's tools would fire side effects the
                             // model never confirmed — and once middleware strips the refusal turn, their
@@ -21508,7 +21831,9 @@ async function generateToolResponse(params, lastMessage = params.messages.at(-1)
     }
     const available = availableToolNames(params);
     const toolResults = await Promise.all(toolUseBlocks.map(async (toolUse) => {
-        const tool = params.tools.find((t) => ('name' in t ? t.name : t.mcp_server_name) === toolUse.name);
+        const tool = params.tools.find((t) => ('name' in t ? t.name
+            : 'mcp_server_name' in t ? t.mcp_server_name
+                : t.type) === toolUse.name);
         // A `tool_removal` is only a hint to the model, which may still emit a tool_use for a
         // withdrawn tool — treat those exactly like a tool that was never defined.
         if (!tool || !('run' in tool) || !available.has(toolUse.name)) {
@@ -21586,18 +21911,6 @@ function applyToolChange(block, available) {
         case 'tool_addition':
             applyToolReference(block, available);
             break;
-        case 'mid_conv_system':
-            // A `mid_conv_system` block's content is limited by the API schema to
-            // text / tool_addition / tool_removal, so we walk exactly one level — no recursion.
-            for (const inner of block.content) {
-                if (inner.type === 'tool_removal' || inner.type === 'tool_addition') {
-                    applyToolReference(inner, available);
-                }
-            }
-            break;
-        default:
-            // Other and unknown/newer block types leave the set untouched (forward compatibility).
-            break;
     }
 }
 function applyToolReference(block, available) {
@@ -21654,7 +21967,7 @@ class Messages extends APIResource {
             body.thinking.type === 'enabled') {
             console.warn(`Using Claude with ${body.model} and 'thinking.type=enabled' is deprecated. Use 'thinking.type=adaptive' instead which results in better model performance in our testing: https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking`);
         }
-        let timeout = this._client._options.timeout;
+        let timeout = options?.timeout ?? this._client._options.timeout;
         if (!body.stream && timeout == null) {
             const maxNonstreamingTokens = MODEL_NONSTREAMING_TOKENS[body.model] ?? undefined;
             timeout = this._client.calculateNonstreamingTimeout(body.max_tokens, maxNonstreamingTokens);
@@ -21722,7 +22035,7 @@ class Messages extends APIResource {
      * const betaMessageTokensCount =
      *   await client.beta.messages.countTokens({
      *     messages: [{ content: 'Hello, world', role: 'user' }],
-     *     model: 'claude-opus-4-6',
+     *     model: 'claude-opus-5',
      *   });
      * ```
      */
@@ -23247,6 +23560,55 @@ class Completions extends APIResource {
     }
 }
 //# sourceMappingURL=completions.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/files.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+class files_Files extends APIResource {
+    /**
+     * List Files
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/files', (PageCursor), { query, ...options });
+    }
+    /**
+     * Delete File
+     */
+    delete(fileID, options) {
+        return this._client.delete(path `/v1/files/${fileID}`, options);
+    }
+    /**
+     * Download File
+     */
+    download(fileID, options) {
+        return this._client.get(path `/v1/files/${fileID}/content`, {
+            ...options,
+            headers: buildHeaders([{ Accept: 'application/binary' }, options?.headers]),
+            __binaryResponse: true,
+        });
+    }
+    /**
+     * Get File Metadata
+     */
+    retrieveMetadata(fileID, options) {
+        return this._client.get(path `/v1/files/${fileID}`, options);
+    }
+    /**
+     * Upload File
+     */
+    upload(body, options) {
+        return this._client.post('/v1/files', multipartFormRequestOptions({
+            body,
+            ...options,
+            headers: buildHeaders([stainlessHelperHeaderFromFile(body.file), options?.headers]),
+        }, this._client));
+    }
+}
+//# sourceMappingURL=files.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/parser.mjs
 
 function parser_getOutputFormat(params) {
@@ -23311,7 +23673,7 @@ function parseOutputFormat(params, content) {
 }
 //# sourceMappingURL=parser.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs
-var _MessageStream_instances, _MessageStream_currentMessageSnapshot, _MessageStream_params, _MessageStream_connectedPromise, _MessageStream_resolveConnectedPromise, _MessageStream_rejectConnectedPromise, _MessageStream_endPromise, _MessageStream_resolveEndPromise, _MessageStream_rejectEndPromise, _MessageStream_listeners, _MessageStream_ended, _MessageStream_errored, _MessageStream_aborted, _MessageStream_catchingPromiseCreated, _MessageStream_response, _MessageStream_request_id, _MessageStream_logger, _MessageStream_getFinalMessage, _MessageStream_getFinalText, _MessageStream_handleError, _MessageStream_beginRequest, _MessageStream_addStreamEvent, _MessageStream_endRequest, _MessageStream_accumulateMessage;
+var _MessageStream_instances, _MessageStream_currentMessageSnapshot, _MessageStream_params, _MessageStream_connectedPromise, _MessageStream_resolveConnectedPromise, _MessageStream_rejectConnectedPromise, _MessageStream_endPromise, _MessageStream_resolveEndPromise, _MessageStream_rejectEndPromise, _MessageStream_listeners, _MessageStream_ended, _MessageStream_errored, _MessageStream_aborted, _MessageStream_catchingPromiseCreated, _MessageStream_response, _MessageStream_request_id, _MessageStream_workspace_id, _MessageStream_logger, _MessageStream_getFinalMessage, _MessageStream_getFinalText, _MessageStream_handleError, _MessageStream_beginRequest, _MessageStream_addStreamEvent, _MessageStream_endRequest, _MessageStream_accumulateMessage;
 
 
 
@@ -23343,6 +23705,7 @@ class MessageStream {
         _MessageStream_catchingPromiseCreated.set(this, false);
         _MessageStream_response.set(this, void 0);
         _MessageStream_request_id.set(this, void 0);
+        _MessageStream_workspace_id.set(this, void 0);
         _MessageStream_logger.set(this, void 0);
         _MessageStream_handleError.set(this, (error) => {
             (0,tslib/* __classPrivateFieldSet */.G)(this, _MessageStream_errored, true, "f");
@@ -23387,6 +23750,9 @@ class MessageStream {
     get request_id() {
         return (0,tslib/* __classPrivateFieldGet */.g)(this, _MessageStream_request_id, "f");
     }
+    get workspace_id() {
+        return (0,tslib/* __classPrivateFieldGet */.g)(this, _MessageStream_workspace_id, "f");
+    }
     /**
      * Returns the `MessageStream` data, the raw `Response` instance and the ID of the request,
      * returned vie the `request-id` header which is useful for debugging requests and resporting
@@ -23407,6 +23773,7 @@ class MessageStream {
             data: this,
             response,
             request_id: response.headers.get('request-id'),
+            workspace_id: response.headers.get('anthropic-workspace-id'),
         };
     }
     /**
@@ -23479,6 +23846,7 @@ class MessageStream {
             return;
         (0,tslib/* __classPrivateFieldSet */.G)(this, _MessageStream_response, response, "f");
         (0,tslib/* __classPrivateFieldSet */.G)(this, _MessageStream_request_id, response?.headers.get('request-id'), "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _MessageStream_workspace_id, response?.headers.get('anthropic-workspace-id'), "f");
         (0,tslib/* __classPrivateFieldGet */.g)(this, _MessageStream_resolveConnectedPromise, "f").call(this, response);
         this._emit('connect');
     }
@@ -23649,7 +24017,7 @@ class MessageStream {
             }
         }
     }
-    [(_MessageStream_currentMessageSnapshot = new WeakMap(), _MessageStream_params = new WeakMap(), _MessageStream_connectedPromise = new WeakMap(), _MessageStream_resolveConnectedPromise = new WeakMap(), _MessageStream_rejectConnectedPromise = new WeakMap(), _MessageStream_endPromise = new WeakMap(), _MessageStream_resolveEndPromise = new WeakMap(), _MessageStream_rejectEndPromise = new WeakMap(), _MessageStream_listeners = new WeakMap(), _MessageStream_ended = new WeakMap(), _MessageStream_errored = new WeakMap(), _MessageStream_aborted = new WeakMap(), _MessageStream_catchingPromiseCreated = new WeakMap(), _MessageStream_response = new WeakMap(), _MessageStream_request_id = new WeakMap(), _MessageStream_logger = new WeakMap(), _MessageStream_handleError = new WeakMap(), _MessageStream_instances = new WeakSet(), _MessageStream_getFinalMessage = function _MessageStream_getFinalMessage() {
+    [(_MessageStream_currentMessageSnapshot = new WeakMap(), _MessageStream_params = new WeakMap(), _MessageStream_connectedPromise = new WeakMap(), _MessageStream_resolveConnectedPromise = new WeakMap(), _MessageStream_rejectConnectedPromise = new WeakMap(), _MessageStream_endPromise = new WeakMap(), _MessageStream_resolveEndPromise = new WeakMap(), _MessageStream_rejectEndPromise = new WeakMap(), _MessageStream_listeners = new WeakMap(), _MessageStream_ended = new WeakMap(), _MessageStream_errored = new WeakMap(), _MessageStream_aborted = new WeakMap(), _MessageStream_catchingPromiseCreated = new WeakMap(), _MessageStream_response = new WeakMap(), _MessageStream_request_id = new WeakMap(), _MessageStream_workspace_id = new WeakMap(), _MessageStream_logger = new WeakMap(), _MessageStream_handleError = new WeakMap(), _MessageStream_instances = new WeakSet(), _MessageStream_getFinalMessage = function _MessageStream_getFinalMessage() {
         if (this.receivedMessages.length === 0) {
             throw new core_error/* AnthropicError */.pJ('stream ended without producing a Message with role=assistant');
         }
@@ -23758,11 +24126,13 @@ class MessageStream {
             case 'message_delta':
                 snapshot.stop_reason = event.delta.stop_reason;
                 snapshot.stop_sequence = event.delta.stop_sequence;
-                if (event.delta.stop_details != null) {
-                    snapshot.stop_details = event.delta.stop_details;
-                }
+                snapshot.stop_details = event.delta.stop_details;
                 snapshot.usage.output_tokens = event.usage.output_tokens;
-                // Update other usage fields if they exist in the event
+                if (event.delta.container != null) {
+                    snapshot.container = event.delta.container;
+                }
+                // The remaining usage counters are cumulative whole-message totals that are
+                // omitted when they don't apply, so overwrite when present and never add.
                 if (event.usage.input_tokens != null) {
                     snapshot.usage.input_tokens = event.usage.input_tokens;
                 }
@@ -23774,6 +24144,9 @@ class MessageStream {
                 }
                 if (event.usage.server_tool_use != null) {
                     snapshot.usage.server_tool_use = event.usage.server_tool_use;
+                }
+                if (event.usage.output_tokens_details != null) {
+                    snapshot.usage.output_tokens_details = event.usage.output_tokens_details;
                 }
                 return snapshot;
             case 'content_block_start':
@@ -23932,7 +24305,7 @@ class batches_Batches extends APIResource {
      *         messages: [
      *           { content: 'Hello, world', role: 'user' },
      *         ],
-     *         model: 'claude-opus-4-6',
+     *         model: 'claude-opus-5',
      *       },
      *     },
      *   ],
@@ -24085,7 +24458,7 @@ class messages_Messages extends APIResource {
             body.thinking.type === 'enabled') {
             console.warn(`Using Claude with ${body.model} and 'thinking.type=enabled' is deprecated. Use 'thinking.type=adaptive' instead which results in better model performance in our testing: https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking`);
         }
-        let timeout = this._client._options.timeout;
+        let timeout = options?.timeout ?? this._client._options.timeout;
         if (!body.stream && timeout == null) {
             const maxNonstreamingTokens = MODEL_NONSTREAMING_TOKENS[body.model] ?? undefined;
             timeout = this._client.calculateNonstreamingTimeout(body.max_tokens, maxNonstreamingTokens);
@@ -24163,7 +24536,7 @@ class messages_Messages extends APIResource {
      * const messageTokensCount =
      *   await client.messages.countTokens({
      *     messages: [{ content: 'Hello, world', role: 'user' }],
-     *     model: 'claude-opus-4-6',
+     *     model: 'claude-opus-5',
      *   });
      * ```
      */
@@ -24225,8 +24598,88 @@ class models_Models extends APIResource {
     }
 }
 //# sourceMappingURL=models.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/skills/versions.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class skills_versions_Versions extends APIResource {
+    /**
+     * Create Skill Version
+     */
+    create(skillID, body, options) {
+        return this._client.post(path `/v1/skills/${skillID}/versions`, multipartFormRequestOptions({ body, ...options }, this._client, false));
+    }
+    /**
+     * Get Skill Version
+     */
+    retrieve(version, params, options) {
+        const { skill_id } = params;
+        return this._client.get(path `/v1/skills/${skill_id}/versions/${version}`, options);
+    }
+    /**
+     * List Skill Versions
+     */
+    list(skillID, query = {}, options) {
+        return this._client.getAPIList(path `/v1/skills/${skillID}/versions`, (PageCursor), {
+            query,
+            ...options,
+        });
+    }
+    /**
+     * Delete Skill Version
+     */
+    delete(version, params, options) {
+        const { skill_id } = params;
+        return this._client.delete(path `/v1/skills/${skill_id}/versions/${version}`, options);
+    }
+}
+//# sourceMappingURL=versions.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/skills/skills.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+class skills_Skills extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.versions = new skills_versions_Versions(this._client);
+    }
+    /**
+     * Create Skill
+     */
+    create(body, options) {
+        return this._client.post('/v1/skills', multipartFormRequestOptions({ body, ...options }, this._client, false));
+    }
+    /**
+     * Get Skill
+     */
+    retrieve(skillID, options) {
+        return this._client.get(path `/v1/skills/${skillID}`, options);
+    }
+    /**
+     * List Skills
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/skills', (PageCursor), { query, ...options });
+    }
+    /**
+     * Delete Skill
+     */
+    delete(skillID, options) {
+        return this._client.delete(path `/v1/skills/${skillID}`, options);
+    }
+}
+skills_Skills.Versions = skills_versions_Versions;
+//# sourceMappingURL=skills.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
 
 
 
@@ -24236,6 +24689,8 @@ class models_Models extends APIResource {
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/client.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _BaseAnthropic_instances, _a, _BaseAnthropic_encoder, _BaseAnthropic_baseURLOverridden;
+
+
 
 
 
@@ -24807,7 +25262,7 @@ class BaseAnthropic {
             throw new core_error/* APIConnectionError */.xX({ cause: response });
         }
         const specialHeaders = [...response.headers.entries()]
-            .filter(([name]) => name === 'request-id')
+            .filter(([name]) => name === 'request-id' || name === 'anthropic-workspace-id')
             .map(([name, value]) => ', ' + name + ': ' + JSON.stringify(value))
             .join('');
         const responseInfo = `[${requestLogID}${retryLogStr}${specialHeaders}] ${req.method} ${url} ${response.ok ? 'succeeded' : 'failed'} with status ${response.status} in ${headersTime - startTime}ms`;
@@ -25154,12 +25609,16 @@ class Anthropic extends BaseAnthropic {
         this.completions = new Completions(this);
         this.messages = new messages_Messages(this);
         this.models = new models_Models(this);
+        this.files = new files_Files(this);
+        this.skills = new skills_Skills(this);
         this.beta = new Beta(this);
     }
 }
 Anthropic.Completions = Completions;
 Anthropic.Messages = messages_Messages;
 Anthropic.Models = models_Models;
+Anthropic.Files = files_Files;
+Anthropic.Skills = skills_Skills;
 Anthropic.Beta = Beta;
 //# sourceMappingURL=client.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/middleware.mjs
@@ -25999,22 +26458,88 @@ function __classPrivateFieldGet(receiver, state, kind, f) {
 
 /***/ }),
 
-/***/ 2534:
+/***/ 8223:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   sx: () => (/* reexport safe */ _utils_env_mjs__WEBPACK_IMPORTED_MODULE_2__.s)
+/* harmony export */ });
+/* harmony import */ var _utils_values_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9296);
+/* harmony import */ var _utils_base64_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1231);
+/* harmony import */ var _utils_env_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(111);
+/* harmony import */ var _utils_log_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(7412);
+/* harmony import */ var _utils_query_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(626);
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
-// EXPORTS
-__nccwpck_require__.d(__webpack_exports__, {
-  sx: () => (/* reexport */ env/* readEnv */.s)
-});
 
-// UNUSED EXPORTS: coerceBoolean, coerceFloat, coerceInteger, defaultLogLevel, defaultLogger, ensurePresent, formatRequestDetails, fromBase64, hasOwn, isAbsoluteURL, isArray, isEmptyObj, isObj, isReadonlyArray, loggerFor, maybeCoerceBoolean, maybeCoerceFloat, maybeCoerceInteger, maybeObj, parseLogLevel, pop, safeJSON, sleep, stringifyQuery, toBase64, uuid4, validatePositiveInteger
 
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
-var values = __nccwpck_require__(9296);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/core/error.mjs
-var error = __nccwpck_require__(5064);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/base64.mjs
+
+
+
+
+//# sourceMappingURL=utils.mjs.map
+
+/***/ }),
+
+/***/ 7594:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   JN: () => (/* binding */ backoff),
+/* harmony export */   LX: () => (/* binding */ applyJitter),
+/* harmony export */   bs: () => (/* binding */ isFatal4xx),
+/* harmony export */   p$: () => (/* binding */ jitter),
+/* harmony export */   zM: () => (/* binding */ isStatus)
+/* harmony export */ });
+/* unused harmony export is4xx */
+/* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5064);
+
+/** True when `e` is an {@link APIError} whose HTTP status equals `code`. */
+function isStatus(e, code) {
+    return e instanceof _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__/* .APIError */ .LG && e.status === code;
+}
+/** True when `e` is an {@link APIError} with a 4xx status. */
+function is4xx(e) {
+    return e instanceof _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__/* .APIError */ .LG && typeof e.status === 'number' && e.status >= 400 && e.status < 500;
+}
+/**
+ * True for a 4xx that the core client's retry policy would *not* retry, i.e. a
+ * permanent client error. 408 (request timeout), 409 (lock timeout) and 429
+ * (rate limit) are retryable for the base client (`Anthropic.shouldRetry`), so
+ * they are not treated as fatal here — keeping helper retry behaviour aligned
+ * with the rest of the SDK.
+ */
+function isFatal4xx(e) {
+    return is4xx(e) && !isStatus(e, 408) && !isStatus(e, 409) && !isStatus(e, 429);
+}
+/** Exponential backoff: `baseMs * 2 ** attempt`, clamped to `capMs`. */
+function backoff(attempt, baseMs, capMs) {
+    return Math.min(baseMs * 2 ** attempt, capMs);
+}
+/** Uniform random delay in the half-open interval `[lowMs, highMs)`. */
+function jitter(lowMs, highMs) {
+    return lowMs + Math.random() * (highMs - lowMs);
+}
+/**
+ * Trim up to 25% off `ms` at random so a fleet of clients backing off after a
+ * shared outage does not retry in lockstep — mirrors the jitter the core client
+ * applies to its own retry timeout.
+ */
+function applyJitter(ms) {
+    return ms * (1 - Math.random() * 0.25);
+}
+//# sourceMappingURL=backoff.mjs.map
+
+/***/ }),
+
+/***/ 1231:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   E: () => (/* binding */ fromBase64)
+/* harmony export */ });
+/* unused harmony export toBase64 */
+/* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5064);
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -26045,25 +26570,46 @@ const fromBase64 = (str) => {
         }
         return buf;
     }
-    throw new AnthropicError('Cannot decode base64 string; Expected `Buffer` or `atob` to be defined');
+    throw new _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AnthropicError */ .pJ('Cannot decode base64 string; Expected `Buffer` or `atob` to be defined');
 };
 //# sourceMappingURL=base64.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
-var env = __nccwpck_require__(111);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/log.mjs
-var log = __nccwpck_require__(7412);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/query.mjs + 3 modules
-var query = __nccwpck_require__(626);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
+/***/ }),
 
+/***/ 9083:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
-
-
-
-
-//# sourceMappingURL=utils.mjs.map
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   CE: () => (/* binding */ decodeUTF8),
+/* harmony export */   Id: () => (/* binding */ concatBytes),
+/* harmony export */   YH: () => (/* binding */ encodeUTF8)
+/* harmony export */ });
+function concatBytes(buffers) {
+    let length = 0;
+    for (const buffer of buffers) {
+        length += buffer.length;
+    }
+    const output = new Uint8Array(length);
+    let index = 0;
+    for (const buffer of buffers) {
+        output.set(buffer, index);
+        index += buffer.length;
+    }
+    return output;
+}
+let encodeUTF8_;
+function encodeUTF8(str) {
+    let encoder;
+    return (encodeUTF8_ ??
+        ((encoder = new globalThis.TextEncoder()), (encodeUTF8_ = encoder.encode.bind(encoder))))(str);
+}
+let decodeUTF8_;
+function decodeUTF8(bytes) {
+    let decoder;
+    return (decodeUTF8_ ??
+        ((decoder = new globalThis.TextDecoder()), (decodeUTF8_ = decoder.decode.bind(decoder))))(bytes);
+}
+//# sourceMappingURL=bytes.mjs.map
 
 /***/ }),
 
@@ -26772,10 +27318,11 @@ function stringifyQuery(query) {
 /* harmony export */   i8: () => (/* binding */ maybeObj),
 /* harmony export */   ml: () => (/* binding */ safeJSON),
 /* harmony export */   nt: () => (/* binding */ isAbsoluteURL),
+/* harmony export */   sA: () => (/* binding */ isObj),
 /* harmony export */   wQ: () => (/* binding */ validatePositiveInteger),
 /* harmony export */   ze: () => (/* binding */ isEmptyObj)
 /* harmony export */ });
-/* unused harmony exports isObj, ensurePresent, coerceInteger, coerceFloat, coerceBoolean, maybeCoerceInteger, maybeCoerceFloat, maybeCoerceBoolean, pop */
+/* unused harmony exports ensurePresent, coerceInteger, coerceFloat, coerceBoolean, maybeCoerceInteger, maybeCoerceFloat, maybeCoerceBoolean, pop */
 /* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5064);
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -26924,6 +27471,43 @@ class ToolError extends Error {
     }
 }
 //# sourceMappingURL=ToolError.mjs.map
+
+/***/ }),
+
+/***/ 8264:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   _3: () => (/* binding */ MIN_MEMORY_SYNC_INTERVAL_MS),
+/* harmony export */   hL: () => (/* binding */ DEFAULT_MEMORY_SYNC_INTERVAL_MS),
+/* harmony export */   iT: () => (/* binding */ checkMemorySyncInterval)
+/* harmony export */ });
+/* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5064);
+/**
+ * The memory sync cadence, split out of `memories.ts` so runtime-agnostic
+ * callers (the environment worker) can validate an interval up front without
+ * reaching into the Node-only toolset module.
+ */
+
+/**
+ * How often (milliseconds) the worker syncs the session's memory stores back
+ * while the session runs. Checked after each dispatched tool call.
+ */
+const DEFAULT_MEMORY_SYNC_INTERVAL_MS = 15000;
+/**
+ * The shortest sync interval accepted. Each sync lists every attached store,
+ * so anything tighter mostly spends requests rediscovering that nothing
+ * changed.
+ */
+const MIN_MEMORY_SYNC_INTERVAL_MS = 5000;
+/** Throw unless `ms` is a usable sync interval. `option` names it in the message. */
+function checkMemorySyncInterval(ms, option) {
+    if (!(ms >= MIN_MEMORY_SYNC_INTERVAL_MS)) {
+        throw new _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AnthropicError */ .pJ(`${option} must be at least ${MIN_MEMORY_SYNC_INTERVAL_MS}ms (got ${ms}); ` +
+            'to run without memory sync, pass `memorySyncIntervalMs: null` to the worker instead');
+    }
+}
+//# sourceMappingURL=sync-interval.mjs.map
 
 /***/ }),
 
@@ -53092,8 +53676,8 @@ var esm = __nccwpck_require__(9519);
 var loader = __nccwpck_require__(3833);
 // EXTERNAL MODULE: ./runners/core/skill-cache.mjs
 var skill_cache = __nccwpck_require__(7328);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 84 modules
-var sdk = __nccwpck_require__(5176);
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 85 modules
+var sdk = __nccwpck_require__(3545);
 ;// CONCATENATED MODULE: ./node_modules/@google/generative-ai/dist/index.mjs
 /**
  * Contains the list of OpenAPI data types
