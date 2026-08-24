@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.87.5](https://github.com/s977043/river-review/compare/v1.87.4...v1.87.5) (2026-08-24)
+
+
+### Bug Fixes
+
+* **cli:** --context の未知語彙を stderr で警告する ([#1759](https://github.com/s977043/river-review/issues/1759) C3) ([#1958](https://github.com/s977043/river-review/issues/1958)) ([375d769](https://github.com/s977043/river-review/commit/375d769a7cc8eb39249e73b546eae324e2c0a6cf))
+
 ## [1.87.4](https://github.com/s977043/river-review/compare/v1.87.3...v1.87.4) (2026-08-24)
 
 
