@@ -1,6 +1,6 @@
 {
   "name": "river-review",
-  "version": "1.87.3",
+  "version": "1.87.4",
   "private": true,
   "workspaces": [
     "runners/node-api",
@@ -87,7 +87,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
     "@google/generative-ai": "^0.24.1",
-    "@inquirer/prompts": "^8.5.2",
+    "@inquirer/prompts": "^8.6.0",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.79.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
@@ -121,7 +121,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "recharts": "^3.10.1",
-    "textlint": "^15.7.1",
+    "textlint": "^15.8.0",
     "textlint-rule-preset-ja-technical-writing": "^12.0.2",
     "textlint-rule-prh": "^6.1.0"
   },

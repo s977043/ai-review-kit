@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.87.4](https://github.com/s977043/river-review/compare/v1.87.3...v1.87.4) (2026-08-24)
+
+
+### Bug Fixes
+
+* **cli:** evolve prompt-compare で存在しないパスと観測ゼロを区別する ([#1948](https://github.com/s977043/river-review/issues/1948)) ([407d3e3](https://github.com/s977043/river-review/commit/407d3e3664fae9c1e2830547b16fafd8367cba33))
+* **scripts:** 512B 超の heredoc を排除しテストの孤児プロセスを止める ([#1951](https://github.com/s977043/river-review/issues/1951)) ([8ac5ef4](https://github.com/s977043/river-review/commit/8ac5ef428edd340a1d78b09e46df094de568bdc7)), closes [#1950](https://github.com/s977043/river-review/issues/1950)
+
 ## [1.87.3](https://github.com/s977043/river-review/compare/v1.87.2...v1.87.3) (2026-08-20)
 
 
