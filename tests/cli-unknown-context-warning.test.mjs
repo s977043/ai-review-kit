@@ -15,7 +15,15 @@
 //   2. 選択時の突合は `runners/core/review-runner.mjs:86-91`
 //      `missingInputContexts()` の `Set.has()` による完全一致である。
 // したがって enum 外の値はどのスキルの `inputContext` とも一致しえず、
-// 「渡しても効果が無い」ことが確定する。
+// 「どのスキルも eligible にできない」ことが確定する。
+//
+// ただし「効果が無い」とまでは言えない。`src/lib/local-runner.mjs:359` が
+// `availableContexts` を `buildExecutionPlan` へ渡し、
+// `runners/core/review-runner.mjs:352-358` が `planSkills` へ流し、
+// `src/lib/openai-planner.mjs:39-40,54` がその配列を LLM planner の prompt へ
+// そのまま埋め込む。`--planner order|prune` かつ API キーありなら、未知語彙は
+// 選択済みスキルの順序 / prune に影響しうる。警告文はこの差を踏まえて
+// 「eligible にできない」と述べるにとどめている（#1958 review, 修正 4）。
 //
 // このファイルを tests/cli-usage-error-exit-codes.test.mjs へ足さない理由:
 // あの表は argv ごとの **exit code 契約** を pin するものであり（同ファイル :75-85）、
@@ -37,7 +45,7 @@ import { after, before, describe, test } from 'node:test';
 import { runCliInProcess } from './helpers/cli.mjs';
 import { createTempGitRepo } from './helpers/temp-repo.mjs';
 
-const UNKNOWN_CONTEXT_WARNING = 'has no effect for unknown value';
+const UNKNOWN_CONTEXT_WARNING = 'outside the skill inputContext vocabulary';
 
 /**
  * 語彙の SSoT。テスト側で実装（src/cli.mjs）を参照すると自己整合になるため、
@@ -89,6 +97,35 @@ describe('#1759 C3: --context warns only for values outside the inputContext voc
     assert.equal(warningLines.length, 1, '未知語彙が複数あっても警告は 1 行に畳む');
     assert.match(warningLines[0], /junit/);
     assert.match(warningLines[0], /coverage/);
+  });
+
+  // #1958 review, nit 5: `--context` is last-wins (plain assignment in
+  // parseArgs), so the advisory must describe the list that survives, not each
+  // occurrence. Before the fix, `--context BOGUS1 --context BOGUS2` printed two
+  // lines and `--context BOGUS --context diff` warned about a value the run
+  // never uses.
+  test('repeated --context warns once, about the surviving list only', async () => {
+    const result = await run(['runs', 'list', '--context', 'BOGUS1', '--context', 'BOGUS2']);
+    assert.equal(result.code, 0);
+    const warningLines = result.stderr
+      .split('\n')
+      .filter((line) => line.includes(UNKNOWN_CONTEXT_WARNING));
+    assert.equal(warningLines.length, 1, '--context を 2 回書いても警告は 1 行');
+    assert.match(warningLines[0], /BOGUS2/);
+    assert.doesNotMatch(warningLines[0], /BOGUS1/, '上書きされて使われない値は報告しない');
+  });
+
+  test('stays quiet when a later --context overwrites an unknown earlier one', async () => {
+    const result = await run(['runs', 'list', '--context', 'BOGUS', '--context', 'diff']);
+    assert.equal(result.code, 0);
+    assert.doesNotMatch(result.stderr, new RegExp(UNKNOWN_CONTEXT_WARNING));
+  });
+
+  test('still warns when the LAST --context is the unknown one', async () => {
+    const result = await run(['runs', 'list', '--context', 'diff', '--context', 'BOGUS']);
+    assert.equal(result.code, 0);
+    assert.match(result.stderr, new RegExp(UNKNOWN_CONTEXT_WARNING));
+    assert.match(result.stderr, /BOGUS/);
   });
 
   test('stays quiet when --context is not passed at all', async () => {

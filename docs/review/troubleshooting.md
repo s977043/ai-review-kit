@@ -29,9 +29,9 @@ If that returns a non-empty list on `v0.50.0` or earlier, you hit this issue.
 
 Upgrade to `v0.51.0` or later. The plan layer now defaults `availableContexts` to `['diff']` whenever a diff artifact is resolved, so all skills with `inputContext: ['diff']` are selected without extra configuration.
 
-### CI environments with additional artifact contexts
+### Declaring which contexts are available
 
-A context name is only useful if some skill can declare it. The vocabulary is a closed enum defined in `schemas/skill.schema.json` (`$defs.inputContext`): `diff`, `fullFile`, `tests`, `adr`, `commitMessage`, `repoConfig`, `reviewSelf`, `reviewExternal`, `findingsPool`, `prDescription`. Matching is exact and case-sensitive, so a name outside that list can never make a skill eligible. Since [#1759](https://github.com/s977043/river-review/issues/1759) C3, `--context` prints a warning to stderr for such a value; the exit code is unchanged.
+Declare the artifacts this environment can supply so that skills gated on them are selected. There is no way to declare a context of your own: the vocabulary is a closed enum defined in `schemas/skill.schema.json` (`$defs.inputContext`)—`diff`, `fullFile`, `tests`, `adr`, `commitMessage`, `repoConfig`, `reviewSelf`, `reviewExternal`, `findingsPool`, `prDescription`—and a skill's `inputContext` is validated against it. Matching is exact and case-sensitive, so a name outside that list can never make a skill eligible. If your CI produces an artifact with no entry here, there is nothing to declare; the skill that would consume it does not exist yet.
 
 Set `RIVER_AVAILABLE_CONTEXTS` before invoking the CLI:
 
@@ -39,11 +39,15 @@ Set `RIVER_AVAILABLE_CONTEXTS` before invoking the CLI:
 RIVER_AVAILABLE_CONTEXTS=diff,tests,fullFile river review exec --phase midstream
 ```
 
+This path does **not** validate the names—a typo here is accepted silently and simply matches no skill.
+
 Or pass `--context` directly:
 
 ```bash
 river review exec --phase midstream --context diff,tests,fullFile
 ```
+
+Since [#1759](https://github.com/s977043/river-review/issues/1759) C3, `--context` (this flag only) prints a warning to stderr for a value outside the enum; the exit code is unchanged. The flag is last-wins rather than merged, so repeating it reports only the surviving list.
 
 The `'diff'` context is always retained when a diff artifact is resolved, so `--context tests` does not strip it.
 
