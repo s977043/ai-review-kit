@@ -13913,6 +13913,7 @@ class APIError extends AnthropicError {
         this.status = status;
         this.headers = headers;
         this.requestID = headers?.get('request-id');
+        this.workspaceID = headers?.get('anthropic-workspace-id');
         this.error = error;
         this.type = type ?? null;
     }
@@ -14021,7 +14022,7 @@ class InternalServerError extends APIError {
 
 /***/ }),
 
-/***/ 5176:
+/***/ 3545:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -14080,7 +14081,7 @@ const sleep = (ms, signal) => new Promise((resolve) => {
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/errors.mjs
 var errors = __nccwpck_require__(2533);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/version.mjs
-const VERSION = '0.116.0'; // x-release-please-version
+const VERSION = '0.120.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -14739,8 +14740,8 @@ class TokenCache {
 //# sourceMappingURL=token-cache.mjs.map
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
 var env = __nccwpck_require__(111);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils.mjs + 1 modules
-var utils = __nccwpck_require__(2534);
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils.mjs
+var utils = __nccwpck_require__(8223);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/core/credentials.mjs
 
 
@@ -15439,33 +15440,8 @@ function cachedExchangeProvider(exchange, credentialsPath, onCacheWriteError, on
     };
 }
 //# sourceMappingURL=credential-chain.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/bytes.mjs
-function concatBytes(buffers) {
-    let length = 0;
-    for (const buffer of buffers) {
-        length += buffer.length;
-    }
-    const output = new Uint8Array(length);
-    let index = 0;
-    for (const buffer of buffers) {
-        output.set(buffer, index);
-        index += buffer.length;
-    }
-    return output;
-}
-let encodeUTF8_;
-function encodeUTF8(str) {
-    let encoder;
-    return (encodeUTF8_ ??
-        ((encoder = new globalThis.TextEncoder()), (encodeUTF8_ = encoder.encode.bind(encoder))))(str);
-}
-let decodeUTF8_;
-function decodeUTF8(bytes) {
-    let decoder;
-    return (decodeUTF8_ ??
-        ((decoder = new globalThis.TextDecoder()), (decodeUTF8_ = decoder.decode.bind(decoder))))(bytes);
-}
-//# sourceMappingURL=bytes.mjs.map
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/bytes.mjs
+var utils_bytes = __nccwpck_require__(9083);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/decoders/line.mjs
 var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex;
 
@@ -15488,9 +15464,9 @@ class LineDecoder {
             return [];
         }
         const binaryChunk = chunk instanceof ArrayBuffer ? new Uint8Array(chunk)
-            : typeof chunk === 'string' ? encodeUTF8(chunk)
+            : typeof chunk === 'string' ? (0,utils_bytes/* encodeUTF8 */.YH)(chunk)
                 : chunk;
-        (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_buffer, concatBytes([(0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f"), binaryChunk]), "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_buffer, (0,utils_bytes/* concatBytes */.Id)([(0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f"), binaryChunk]), "f");
         const lines = [];
         let patternIndex;
         while ((patternIndex = findNewlineIndex((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f"), (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f"))) != null) {
@@ -15502,13 +15478,13 @@ class LineDecoder {
             // we got double \r or \rtext\n
             if ((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") != null &&
                 (patternIndex.index !== (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") + 1 || patternIndex.carriage)) {
-                lines.push(decodeUTF8((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(0, (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") - 1)));
+                lines.push((0,utils_bytes/* decodeUTF8 */.CE)((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(0, (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") - 1)));
                 (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_buffer, (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f")), "f");
                 (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_carriageReturnIndex, null, "f");
                 continue;
             }
             const endIndex = (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_carriageReturnIndex, "f") !== null ? patternIndex.preceding - 1 : patternIndex.preceding;
-            const line = decodeUTF8((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(0, endIndex));
+            const line = (0,utils_bytes/* decodeUTF8 */.CE)((0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(0, endIndex));
             lines.push(line);
             (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_buffer, (0,tslib/* __classPrivateFieldGet */.g)(this, _LineDecoder_buffer, "f").subarray(patternIndex.index), "f");
             (0,tslib/* __classPrivateFieldSet */.G)(this, _LineDecoder_carriageReturnIndex, null, "f");
@@ -15803,7 +15779,7 @@ class streaming_Stream {
                     const { value, done } = await iter.next();
                     if (done)
                         return ctrl.close();
-                    const bytes = encodeUTF8(JSON.stringify(value) + '\n');
+                    const bytes = (0,utils_bytes/* encodeUTF8 */.YH)(JSON.stringify(value) + '\n');
                     ctrl.enqueue(bytes);
                 }
                 catch (err) {
@@ -15852,7 +15828,7 @@ async function* iterSSEChunks(iterator) {
             continue;
         }
         const binaryChunk = chunk instanceof ArrayBuffer ? new Uint8Array(chunk)
-            : typeof chunk === 'string' ? encodeUTF8(chunk)
+            : typeof chunk === 'string' ? (0,utils_bytes/* encodeUTF8 */.YH)(chunk)
                 : chunk;
         let newData = new Uint8Array(data.length + binaryChunk.length);
         newData.set(data);
@@ -15948,7 +15924,7 @@ async function defaultParseResponse(client, props) {
                 return undefined;
             }
             const json = await response.json();
-            return addRequestID(json, response);
+            return addResponseIDs(json, response);
         }
         const text = await response.text();
         return text;
@@ -15970,13 +15946,13 @@ async function defaultParseResponse(client, props) {
     }));
     return body;
 }
-function addRequestID(value, response) {
+function addResponseIDs(value, response) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
         return value;
     }
-    return Object.defineProperty(value, '_request_id', {
-        value: response.headers.get('request-id'),
-        enumerable: false,
+    return Object.defineProperties(value, {
+        _request_id: { value: response.headers.get('request-id'), enumerable: false },
+        _workspace_id: { value: response.headers.get('anthropic-workspace-id'), enumerable: false },
     });
 }
 //# sourceMappingURL=parse.mjs.map
@@ -16118,7 +16094,7 @@ async function parseMiddlewareResponse(response, options) {
             // if there is no content we can't do anything
             return undefined;
         }
-        return addRequestID(await response.clone().json(), response);
+        return addResponseIDs(await response.clone().json(), response);
     }
     return await response.clone().text();
 }
@@ -16172,7 +16148,7 @@ class APIPromise extends Promise {
         (0,tslib/* __classPrivateFieldSet */.G)(this, _APIPromise_client, client, "f");
     }
     _thenUnwrap(transform) {
-        return new APIPromise((0,tslib/* __classPrivateFieldGet */.g)(this, _APIPromise_client, "f"), this.responsePromise, async (client, props) => addRequestID(transform(await this.parseResponse(client, props), props), props.response));
+        return new APIPromise((0,tslib/* __classPrivateFieldGet */.g)(this, _APIPromise_client, "f"), this.responsePromise, async (client, props) => addResponseIDs(transform(await this.parseResponse(client, props), props), props.response));
     }
     /**
      * Gets the raw `Response` instance instead of parsing the response
@@ -16202,7 +16178,12 @@ class APIPromise extends Promise {
      */
     async withResponse() {
         const [data, response] = await Promise.all([this.parse(), this.asResponse()]);
-        return { data, response, request_id: response.headers.get('request-id') };
+        return {
+            data,
+            response,
+            request_id: response.headers.get('request-id'),
+            workspace_id: response.headers.get('anthropic-workspace-id'),
+        };
     }
     parse() {
         if (!this.parsedPromise) {
@@ -17305,7 +17286,7 @@ class Files extends APIResource {
      * @example
      * ```ts
      * // Automatically fetches more pages as needed.
-     * for await (const fileMetadata of client.beta.files.list()) {
+     * for await (const betaFileMetadata of client.beta.files.list()) {
      *   // ...
      * }
      * ```
@@ -17326,7 +17307,7 @@ class Files extends APIResource {
      *
      * @example
      * ```ts
-     * const deletedFile = await client.beta.files.delete(
+     * const betaDeletedFile = await client.beta.files.delete(
      *   'file_id',
      * );
      * ```
@@ -17373,7 +17354,7 @@ class Files extends APIResource {
      *
      * @example
      * ```ts
-     * const fileMetadata =
+     * const betaFileMetadata =
      *   await client.beta.files.retrieveMetadata('file_id');
      * ```
      */
@@ -17392,7 +17373,7 @@ class Files extends APIResource {
      *
      * @example
      * ```ts
-     * const fileMetadata = await client.beta.files.upload({
+     * const betaFileMetadata = await client.beta.files.upload({
      *   file: fs.createReadStream('path/to/file'),
      * });
      * ```
@@ -17490,7 +17471,7 @@ class UserProfiles extends APIResource {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17511,7 +17492,7 @@ class UserProfiles extends APIResource {
         return this._client.get(path `/v1/user_profiles/${userProfileID}?beta=true`, {
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17533,7 +17514,7 @@ class UserProfiles extends APIResource {
             body,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17555,7 +17536,7 @@ class UserProfiles extends APIResource {
             query,
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17576,7 +17557,7 @@ class UserProfiles extends APIResource {
         return this._client.post(path `/v1/user_profiles/${userProfileID}/enrollment_url?beta=true`, {
             ...options,
             headers: buildHeaders([
-                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-03-24'].toString() },
+                { 'anthropic-beta': [...(betas ?? []), 'user-profiles-2026-08-18'].toString() },
                 options?.headers,
             ]),
         });
@@ -17655,7 +17636,7 @@ class Agents extends APIResource {
      * ```ts
      * const betaManagedAgentsAgent =
      *   await client.beta.agents.create({
-     *     model: 'claude-sonnet-4-6',
+     *     model: 'claude-opus-5',
      *     name: 'My First Agent',
      *   });
      * ```
@@ -17786,43 +17767,8 @@ function linkAbort(external, controller) {
     return () => external.removeEventListener('abort', onAbort);
 }
 //# sourceMappingURL=abort.mjs.map
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/backoff.mjs
-
-/** True when `e` is an {@link APIError} whose HTTP status equals `code`. */
-function isStatus(e, code) {
-    return e instanceof core_error/* APIError */.LG && e.status === code;
-}
-/** True when `e` is an {@link APIError} with a 4xx status. */
-function is4xx(e) {
-    return e instanceof core_error/* APIError */.LG && typeof e.status === 'number' && e.status >= 400 && e.status < 500;
-}
-/**
- * True for a 4xx that the core client's retry policy would *not* retry, i.e. a
- * permanent client error. 408 (request timeout), 409 (lock timeout) and 429
- * (rate limit) are retryable for the base client (`Anthropic.shouldRetry`), so
- * they are not treated as fatal here — keeping helper retry behaviour aligned
- * with the rest of the SDK.
- */
-function isFatal4xx(e) {
-    return is4xx(e) && !isStatus(e, 408) && !isStatus(e, 409) && !isStatus(e, 429);
-}
-/** Exponential backoff: `baseMs * 2 ** attempt`, clamped to `capMs`. */
-function backoff(attempt, baseMs, capMs) {
-    return Math.min(baseMs * 2 ** attempt, capMs);
-}
-/** Uniform random delay in the half-open interval `[lowMs, highMs)`. */
-function jitter(lowMs, highMs) {
-    return lowMs + Math.random() * (highMs - lowMs);
-}
-/**
- * Trim up to 25% off `ms` at random so a fleet of clients backing off after a
- * shared outage does not retry in lockstep — mirrors the jitter the core client
- * applies to its own retry timeout.
- */
-function applyJitter(ms) {
-    return ms * (1 - Math.random() * 0.25);
-}
-//# sourceMappingURL=backoff.mjs.map
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/backoff.mjs
+var utils_backoff = __nccwpck_require__(7594);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/helper-client.mjs
 
 
@@ -17880,7 +17826,7 @@ function copyClientForHelper(client, { authToken, helper }) {
 }
 //# sourceMappingURL=helper-client.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/environments/poller.mjs
-var _WorkPoller_runnerClient, _WorkPoller_consumed, _WorkPoller_controller, _WorkPoller_detachExternal, _WorkPoller_autoStop, _WorkPoller_drain, _WorkPoller_blockMs, _WorkPoller_reclaimOlderThanMs, _WorkPoller_requestOpts;
+var _WorkPoller_runnerClient, _WorkPoller_consumed, _WorkPoller_controller, _WorkPoller_detachExternal, _WorkPoller_autoStop, _WorkPoller_drain, _WorkPoller_blockMs, _WorkPoller_reclaimOlderThanMs, _WorkPoller_requestOpts, _IdleLog_log, _IdleLog_environmentId, _IdleLog_idleSince, _IdleLog_lastReport;
 
 
 
@@ -17895,10 +17841,17 @@ var _WorkPoller_runnerClient, _WorkPoller_consumed, _WorkPoller_controller, _Wor
 const POLL_BLOCK_MS = 999;
 const POLL_BACKOFF_BASE_MS = 1000;
 const POLL_BACKOFF_CAP_MS = 60000;
+const IDLE_REPORT_INTERVAL_MS = 300000;
 /**
  * Async-iterable that long-polls a self-hosted environment for work, ack's
  * each item, yields the {@link BetaSelfHostedWork} item, and posts `stop` after
  * the consumer's loop body returns (or when the consumer `break`s).
+ *
+ * A yielded item may carry a per-item `secret` payload (populated only by the
+ * poll response); the poller passes it through untouched — consumers such as
+ * {@link EnvironmentWorker} extract the sessions token it carries and prefer
+ * that over the environment key for the item's downstream calls. Treat it as
+ * opaque and never log it.
  *
  * @example
  * ```ts
@@ -17961,6 +17914,7 @@ class WorkPoller {
             component: 'work-poller',
             environment_id: this.environmentId,
         });
+        const idle = new IdleLog(log, this.environmentId);
         try {
             let attempt = 0;
             while (!(0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_controller, "f").signal.aborted) {
@@ -17979,13 +17933,13 @@ class WorkPoller {
                         return;
                     // A bad environment key / missing environment never recovers — surface
                     // it instead of spinning forever at the backoff cap.
-                    if (isFatal4xx(e)) {
+                    if ((0,utils_backoff/* isFatal4xx */.bs)(e)) {
                         log.error('poll failed permanently, stopping poller', { error: String(e) });
                         throw e;
                     }
                     // Jittered exponential backoff so a fleet of pollers doesn't retry in
                     // lockstep after a shared outage.
-                    const wait = applyJitter(poller_backoff(attempt));
+                    const wait = (0,utils_backoff/* applyJitter */.LX)(backoff(attempt));
                     log.warn('poll failed, backing off', { error: String(e), backoff_ms: wait });
                     attempt++;
                     await sleep(wait, (0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_controller, "f").signal);
@@ -17996,9 +17950,11 @@ class WorkPoller {
                     // Queue empty: either return now (drain) or wait and poll again.
                     if ((0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_drain, "f"))
                         return;
-                    await sleep(jitter(1000, 3000), (0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_controller, "f").signal);
+                    idle.onEmptyPoll();
+                    await sleep((0,utils_backoff/* jitter */.p$)(1000, 3000), (0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_controller, "f").signal);
                     continue;
                 }
+                idle.onClaim();
                 log.info('claimed work', {
                     component: 'work-poller',
                     environment_id: this.environmentId,
@@ -18024,7 +17980,7 @@ class WorkPoller {
                             await (0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_runnerClient, "f").beta.environments.work.stop(work.id, { environment_id: work.environment_id }, { headers: buildHeaders([(0,tslib/* __classPrivateFieldGet */.g)(this, _WorkPoller_requestOpts, "f")?.headers]) });
                         }
                         catch (e) {
-                            if (!isStatus(e, 409))
+                            if (!(0,utils_backoff/* isStatus */.zM)(e, 409))
                                 log.warn('stop failed', { work_id: work.id, error: String(e) });
                         }
                     }
@@ -18039,9 +17995,44 @@ class WorkPoller {
     }
 }
 /** Exponential poll backoff: 1s, 2s, 4s … clamped to a 60s cap. */
-function poller_backoff(attempt) {
-    return backoff(attempt, POLL_BACKOFF_BASE_MS, POLL_BACKOFF_CAP_MS);
+function backoff(attempt) {
+    return (0,utils_backoff/* backoff */.JN)(attempt, POLL_BACKOFF_BASE_MS, POLL_BACKOFF_CAP_MS);
 }
+/**
+ * Keeps an idle poll loop visible in the logs without an INFO line per poll:
+ * the first empty poll after start-up or after a claim logs at INFO and later
+ * ones at DEBUG, with an INFO reminder every `IDLE_REPORT_INTERVAL_MS` while
+ * the loop stays idle.
+ */
+class IdleLog {
+    constructor(log, environmentId) {
+        _IdleLog_log.set(this, void 0);
+        _IdleLog_environmentId.set(this, void 0);
+        _IdleLog_idleSince.set(this, void 0);
+        _IdleLog_lastReport.set(this, 0);
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_log, log, "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_environmentId, environmentId, "f");
+    }
+    onEmptyPoll() {
+        const now = Date.now();
+        const fields = { component: 'work-poller', environment_id: (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_environmentId, "f") };
+        if ((0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_idleSince, "f") === undefined) {
+            (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_idleSince, (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_lastReport, now, "f"), "f");
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_log, "f").info('idle; polling for work', fields);
+        }
+        else if (now - (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_lastReport, "f") >= IDLE_REPORT_INTERVAL_MS) {
+            (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_lastReport, now, "f");
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_log, "f").info(`still polling; idle for ${Math.round((now - (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_idleSince, "f")) / 1000)}s`, fields);
+        }
+        else {
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _IdleLog_log, "f").debug('poll returned no work', fields);
+        }
+    }
+    onClaim() {
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _IdleLog_idleSince, undefined, "f");
+    }
+}
+_IdleLog_log = new WeakMap(), _IdleLog_environmentId = new WeakMap(), _IdleLog_idleSince = new WeakMap(), _IdleLog_lastReport = new WeakMap();
 function defaultWorkerId() {
     // The API documents the worker id as a *unique* identifier for Redis consumer
     // groups, so the fallback must be unique even when several pollers share a
@@ -18052,6 +18043,8 @@ function defaultWorkerId() {
     return host ? `${host}-${uuid4()}` : uuid4();
 }
 //# sourceMappingURL=poller.mjs.map
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/base64.mjs
+var base64 = __nccwpck_require__(1231);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/async-queue.mjs
 var _AsyncQueue_items, _AsyncQueue_waiters, _AsyncQueue_closed;
 
@@ -18129,28 +18122,19 @@ var ToolError = __nccwpck_require__(7618);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/BetaRunnableTool.mjs
 
 /**
- * Resolve the registry key for a tool — the name the model addresses it by.
- * MCP toolsets are keyed on `mcp_server_name`; every other tool on `name`.
- * Shared so the tool-name lookup is identical across `toolRunner()` surfaces.
+ * The name the model calls a tool by: `mcp_server_name` for MCP toolsets, `type` for nameless server
+ * toolsets (browser/computer), `name` for everything else.
  */
 function toolName(tool) {
-    return 'name' in tool ? tool.name : tool.mcp_server_name;
+    return ('name' in tool ? tool.name
+        : 'mcp_server_name' in tool ? tool.mcp_server_name
+            : tool.type);
 }
-/**
- * Format a thrown value into tool-result content: a {@link ToolError} carries
- * its own structured content, anything else becomes an `Error: <message>`
- * string. Shared so every `toolRunner()` surface reports tool failures the
- * same way to the model.
- */
+/** Tool-result content for a thrown value: a {@link ToolError}'s own content, otherwise `Error: <message>`. */
 function toolErrorContent(e) {
     return e instanceof ToolError/* ToolError */.v ? e.content : `Error: ${e instanceof Error ? e.message : String(e)}`;
 }
-/**
- * Run a {@link BetaRunnableTool} end-to-end: parse the raw input, invoke `run`,
- * and format any thrown value via {@link toolErrorContent}. Shared so the
- * parse → run → catch → format pipeline is identical across `toolRunner()`
- * surfaces.
- */
+/** Parse the input, run the tool, and turn anything thrown into an error result. */
 async function runRunnableTool(tool, rawInput, context) {
     try {
         const input = tool.parse ? tool.parse(rawInput) : rawInput;
@@ -18163,7 +18147,7 @@ async function runRunnableTool(tool, rawInput, context) {
 }
 //# sourceMappingURL=BetaRunnableTool.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/SessionToolRunner.mjs
-var _IdleClock_maxIdleMs, _IdleClock_onExpire, _IdleClock_blockers, _IdleClock_armPending, _IdleClock_timer, _SessionToolRunner_instances, _SessionToolRunner_consumed, _SessionToolRunner_controller, _SessionToolRunner_detachExternal, _SessionToolRunner_requestOpts, _SessionToolRunner_toolByName, _SessionToolRunner_logger, _SessionToolRunner_seen, _SessionToolRunner_answered, _SessionToolRunner_confirmationVerdicts, _SessionToolRunner_awaitingConfirmation, _SessionToolRunner_results, _SessionToolRunner_inFlightCount, _SessionToolRunner_onIdle, _SessionToolRunner_idleClock, _SessionToolRunner_requestOptions, _SessionToolRunner_streamLoop, _SessionToolRunner_reconcile, _SessionToolRunner_ingestHistory, _SessionToolRunner_handleStreamEvent, _SessionToolRunner_routeToolEvent, _SessionToolRunner_noteConfirmation, _SessionToolRunner_applyVerdict, _SessionToolRunner_surfaceCall, _SessionToolRunner_execute, _SessionToolRunner_sendResult, _SessionToolRunner_drain;
+var _IdleClock_maxIdleMs, _IdleClock_onExpire, _IdleClock_blockers, _IdleClock_armPending, _IdleClock_timer, _SessionToolRunner_instances, _SessionToolRunner_consumed, _SessionToolRunner_controller, _SessionToolRunner_detachExternal, _SessionToolRunner_requestOpts, _SessionToolRunner_toolByName, _SessionToolRunner_logger, _SessionToolRunner_seen, _SessionToolRunner_answered, _SessionToolRunner_confirmationVerdicts, _SessionToolRunner_awaitingConfirmation, _SessionToolRunner_results, _SessionToolRunner_inFlightCount, _SessionToolRunner_sendRetryWindowMs, _SessionToolRunner_onIdle, _SessionToolRunner_idleClock, _SessionToolRunner_requestOptions, _SessionToolRunner_streamLoop, _SessionToolRunner_reconcile, _SessionToolRunner_ingestHistory, _SessionToolRunner_handleStreamEvent, _SessionToolRunner_routeToolEvent, _SessionToolRunner_noteConfirmation, _SessionToolRunner_applyVerdict, _SessionToolRunner_surfaceCall, _SessionToolRunner_execute, _SessionToolRunner_sendResult, _SessionToolRunner_drain;
 
 
 
@@ -18180,7 +18164,16 @@ const STREAM_BACKOFF_START_MS = 500;
 const STREAM_BACKOFF_CAP_MS = 10000;
 const TOOL_TIMEOUT_MS = 120000;
 const DRAIN_TIMEOUT_MS = 30000;
-const SEND_RETRIES = 3;
+const SEND_BACKOFF_START_MS = 1000;
+const SEND_BACKOFF_CAP_MS = 30000;
+/**
+ * How long a transiently failing tool-result send keeps retrying when the
+ * runner is used on its own: the server's default work-item lease TTL.
+ * `EnvironmentWorker` overrides it with the live TTL from each lease heartbeat
+ * (`_setSendRetryWindow`), so a send is only abandoned once the lease can no
+ * longer be ours.
+ */
+const SEND_RETRY_WINDOW_MS = 5 * 60000;
 /** Default {@link SessionToolRunnerOptions.maxIdleMs}: 60 seconds. */
 const DEFAULT_MAX_IDLE_MS = 60000;
 /** Returns true if `ev` is a `session.status_idle` with `stop_reason` `end_turn`. */
@@ -18341,6 +18334,7 @@ class SessionToolRunner {
         _SessionToolRunner_awaitingConfirmation.set(this, new Map());
         _SessionToolRunner_results.set(this, new AsyncQueue());
         _SessionToolRunner_inFlightCount.set(this, 0);
+        _SessionToolRunner_sendRetryWindowMs.set(this, SEND_RETRY_WINDOW_MS);
         _SessionToolRunner_onIdle.set(this, null);
         _SessionToolRunner_idleClock.set(this, void 0);
         this.client = opts.client;
@@ -18369,7 +18363,15 @@ class SessionToolRunner {
     abort() {
         (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f").abort();
     }
-    async *[(_SessionToolRunner_consumed = new WeakMap(), _SessionToolRunner_controller = new WeakMap(), _SessionToolRunner_detachExternal = new WeakMap(), _SessionToolRunner_requestOpts = new WeakMap(), _SessionToolRunner_toolByName = new WeakMap(), _SessionToolRunner_logger = new WeakMap(), _SessionToolRunner_seen = new WeakMap(), _SessionToolRunner_answered = new WeakMap(), _SessionToolRunner_confirmationVerdicts = new WeakMap(), _SessionToolRunner_awaitingConfirmation = new WeakMap(), _SessionToolRunner_results = new WeakMap(), _SessionToolRunner_inFlightCount = new WeakMap(), _SessionToolRunner_onIdle = new WeakMap(), _SessionToolRunner_idleClock = new WeakMap(), _SessionToolRunner_instances = new WeakSet(), Symbol.asyncIterator)]() {
+    /**
+     * @internal
+     * `EnvironmentWorker` keeps this equal to the lease TTL each heartbeat
+     * reports; applies to a send already retrying.
+     */
+    _setSendRetryWindow(ms) {
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _SessionToolRunner_sendRetryWindowMs, ms, "f");
+    }
+    async *[(_SessionToolRunner_consumed = new WeakMap(), _SessionToolRunner_controller = new WeakMap(), _SessionToolRunner_detachExternal = new WeakMap(), _SessionToolRunner_requestOpts = new WeakMap(), _SessionToolRunner_toolByName = new WeakMap(), _SessionToolRunner_logger = new WeakMap(), _SessionToolRunner_seen = new WeakMap(), _SessionToolRunner_answered = new WeakMap(), _SessionToolRunner_confirmationVerdicts = new WeakMap(), _SessionToolRunner_awaitingConfirmation = new WeakMap(), _SessionToolRunner_results = new WeakMap(), _SessionToolRunner_inFlightCount = new WeakMap(), _SessionToolRunner_sendRetryWindowMs = new WeakMap(), _SessionToolRunner_onIdle = new WeakMap(), _SessionToolRunner_idleClock = new WeakMap(), _SessionToolRunner_instances = new WeakSet(), Symbol.asyncIterator)]() {
         if ((0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_consumed, "f")) {
             throw new core_error/* AnthropicError */.pJ('Cannot iterate over a consumed SessionToolRunner');
         }
@@ -18462,7 +18464,7 @@ async function _SessionToolRunner_streamLoop() {
             // An abort throws to unwind the caller (the iterator's `streamPromise`
             // `.catch`) rather than returning early and letting it carry on.
             ctrl.signal.throwIfAborted();
-            if (isFatal4xx(e)) {
+            if ((0,utils_backoff/* isFatal4xx */.bs)(e)) {
                 (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").error('permanent stream failure, shutting down', { error: String(e) });
                 ctrl.abort();
                 throw e;
@@ -18776,8 +18778,11 @@ async function _SessionToolRunner_execute(ev, confirmation) {
     }
 }, _SessionToolRunner_sendResult = async function _SessionToolRunner_sendResult(result, toolUseId) {
     const ctrl = (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_controller, "f");
+    const start = Date.now();
     let lastErr;
-    for (let i = 0; i < SEND_RETRIES; i++) {
+    let attempt = 0;
+    while (true) {
+        attempt++;
         // An abort throws to unwind the caller rather than returning a
         // `posted: false` result the iterator would carry on past.
         ctrl.signal.throwIfAborted();
@@ -18790,16 +18795,24 @@ async function _SessionToolRunner_execute(ev, confirmation) {
             lastErr = e;
             // Only short-circuit on a permanent 4xx; 408/409/429 deserve the
             // remaining retries (aligned with the core client's retry policy).
-            if (isFatal4xx(e))
+            if ((0,utils_backoff/* isFatal4xx */.bs)(e))
                 break;
-            // Back off only *between* attempts — never after the final one, since
-            // there is no further try left to wait for.
-            if (i < SEND_RETRIES - 1)
-                await sleep((i + 1) * 1000, ctrl.signal);
+            const remainingMs = (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_sendRetryWindowMs, "f") - (Date.now() - start);
+            if (remainingMs <= 0)
+                break;
+            const waitMs = Math.min((0,utils_backoff/* applyJitter */.LX)((0,utils_backoff/* backoff */.JN)(attempt - 1, SEND_BACKOFF_START_MS, SEND_BACKOFF_CAP_MS)), remainingMs);
+            (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").warn('tool result send failed; retrying', {
+                tool_use_id: toolUseId,
+                attempt,
+                backoff_ms: waitMs,
+                error: String(e),
+            });
+            await sleep(waitMs, ctrl.signal);
         }
     }
     (0,tslib/* __classPrivateFieldGet */.g)(this, _SessionToolRunner_logger, "f").error('failed to send tool result', {
         tool_use_id: toolUseId,
+        attempts: attempt,
         error: String(lastErr),
     });
     return false;
@@ -18858,8 +18871,14 @@ function toSessionContent(content) {
     return out.length > 0 ? out : [{ type: 'text', text: '(no output)' }];
 }
 //# sourceMappingURL=SessionToolRunner.mjs.map
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/tools/agent-toolset/sync-interval.mjs
+var sync_interval = __nccwpck_require__(8264);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/environments/worker.mjs
-var _EnvironmentWorker_instances, _EnvironmentWorker_signal, _EnvironmentWorker_handleItem;
+var _EnvironmentWorker_instances, _EnvironmentWorker_signal, _EnvironmentWorker_handleItem, _Lease_ctrl, _Lease_endReason;
+
+
+
+
 
 
 
@@ -18872,7 +18891,44 @@ var _EnvironmentWorker_instances, _EnvironmentWorker_signal, _EnvironmentWorker_
 
 
 const HEARTBEAT_DEFAULT_MS = 30000;
+const HEARTBEAT_TTL_DEFAULT_MS = 90000;
 const NO_HEARTBEAT_SENTINEL = 'NO_HEARTBEAT';
+/** True when the session has at least one memory store attached. */
+function hasMemoryStore(session) {
+    return session.resources.some((r) => r.type === 'memory_store');
+}
+/**
+ * Extract the per-item sessions token from a work item's `secret` payload.
+ *
+ * The `secret` the poll response populates is not itself a credential: it is a
+ * URL-safe base64 JSON payload matching {@link BetaWorkSecret} — the
+ * `sessions_token` (the bearer for this item's work lifecycle and
+ * session-level calls) plus fields this worker does not consume. Returns the
+ * sessions token, or `null` (meaning: fall back to the environment key) when
+ * the payload is missing, doesn't decode, or carries no token. Never log the
+ * payload or anything extracted from it.
+ */
+function sessionsTokenFromSecret(secret) {
+    if (!secret)
+        return null;
+    let parsed;
+    try {
+        // The payload may arrive URL-safe and without base64 padding; normalize
+        // both before decoding.
+        const normalized = secret.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+        parsed = JSON.parse((0,utils_bytes/* decodeUTF8 */.CE)((0,base64/* fromBase64 */.E)(padded)));
+    }
+    catch {
+        return null;
+    }
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))
+        return null;
+    // The payload is untrusted input, so the token is still checked at runtime
+    // rather than trusted to match the schema.
+    const token = parsed.sessions_token;
+    return typeof token === 'string' && token !== '' ? token : null;
+}
 /**
  * The self-hosted environment runner, composed from the control-plane
  * {@link WorkPoller} and the per-session {@link SessionToolRunner}.
@@ -18880,10 +18936,18 @@ const NO_HEARTBEAT_SENTINEL = 'NO_HEARTBEAT';
  * For each claimed `session` work item it: builds the per-session
  * {@link AgentToolContext}, downloads the session agent's skills
  * (`setupSkills`), then runs a {@link SessionToolRunner} for the session
- * *while* heartbeating the work-item lease in parallel; on exit it force-stops
- * the work item, cleans up the downloaded skills, and loops to the next one. The
- * lease heartbeat reports `state === "stopping"` / a lost lease back into the run
- * by aborting the session runner.
+ * while heartbeating the work-item lease on the same event loop; on exit it
+ * force-stops the work item (unless the lease was lost, in which case the item
+ * is left to whoever holds it now), cleans up the downloaded skills, and loops
+ * to the next one. The lease heartbeat reports `state === "stopping"` / a lost
+ * lease back into the run by aborting the session runner.
+ *
+ * The `environmentKey` is the worker's standing credential. When a claimed
+ * work item carries a per-item `secret` (a short-lived payload the poll
+ * response may populate), the sessions token extracted from it is preferred
+ * over the environment key for that item's heartbeat / force-stop /
+ * skill-download / session calls; polling itself always uses the environment
+ * key, and items without a usable secret fall back to it entirely.
  *
  * Use {@link EnvironmentWorker.handleItem} if you already hold a claimed work
  * item (e.g. a `worker poll --on-work` script handed one to a fresh process) and
@@ -18908,14 +18972,26 @@ class EnvironmentWorker {
     constructor(opts) {
         _EnvironmentWorker_instances.add(this);
         _EnvironmentWorker_signal.set(this, void 0);
+        if (opts.unrestrictedPaths !== undefined) {
+            throw new core_error/* AnthropicError */.pJ('The `unrestrictedPaths` option you passed to EnvironmentWorker (or ' +
+                'client.beta.environments.work.worker()) is no longer supported. ' +
+                "The worker's file tools (read, write, edit, glob, grep) are now always confined to `workdir` " +
+                "plus the session's memory folders. Remove `unrestrictedPaths` from your options; to let the " +
+                'file tools reach any other directory, add it to `AgentToolContext.allowedRoots` from a ' +
+                '`tools` factory.');
+        }
         this.client = opts.client;
         this.environmentId = opts.environmentId;
         this.environmentKey = opts.environmentKey;
         this.tools = opts.tools;
         this.workdir = opts.workdir ?? process.cwd();
-        this.unrestrictedPaths = opts.unrestrictedPaths;
         this.maxFileBytes = opts.maxFileBytes;
         this.maxIdleMs = opts.maxIdleMs;
+        if (opts.memorySyncIntervalMs != null) {
+            (0,sync_interval/* checkMemorySyncInterval */.iT)(opts.memorySyncIntervalMs, 'memorySyncIntervalMs');
+        }
+        this.memorySyncIntervalMs = opts.memorySyncIntervalMs;
+        this.memorySyncDeletions = opts.memorySyncDeletions ?? 'enabled';
         this.workerId = opts.workerId;
         this.requestOptions = opts.requestOptions;
         (0,tslib/* __classPrivateFieldSet */.G)(this, _EnvironmentWorker_signal, opts.signal, "f");
@@ -18938,12 +19014,24 @@ class EnvironmentWorker {
             ...(this.workerId !== undefined ? { workerId: this.workerId } : {}),
             ...(externalSignal ? { signal: externalSignal } : {}),
             ...(this.requestOptions !== undefined ? { requestOptions: this.requestOptions } : {}),
-            // The per-item handler force-stops every work item on exit; let it be the
-            // single owner of `work.stop` rather than double-posting from the poller.
+            // The per-item handler stops or releases every work item on exit; let it
+            // be the single owner of `work.stop` rather than double-posting from the
+            // poller.
             autoStop: false,
         });
         for await (const work of poller) {
-            await (0,tslib/* __classPrivateFieldGet */.g)(this, _EnvironmentWorker_instances, "m", _EnvironmentWorker_handleItem).call(this, work, environmentKey, poller.signal);
+            try {
+                await (0,tslib/* __classPrivateFieldGet */.g)(this, _EnvironmentWorker_instances, "m", _EnvironmentWorker_handleItem).call(this, work, environmentKey, poller.signal);
+            }
+            catch (e) {
+                // One bad item fails that item, not the worker: the handler's teardown
+                // already stopped or released it, so the next poll claims the next
+                // item. A store directory left behind by a killed worker would
+                // otherwise crashloop this process forever.
+                if (poller.signal?.aborted)
+                    throw e;
+                (0,utils_log/* loggerFor */.WG)(this.client).error('work item failed', { work_id: work.id, error: String(e) });
+            }
         }
     }
     /**
@@ -18951,8 +19039,10 @@ class EnvironmentWorker {
      * per-session {@link AgentToolContext} (workdir from this worker's options),
      * download the session agent's skills (`setupSkills`), run a
      * {@link SessionToolRunner} for the session while heartbeating the work-item
-     * lease in parallel, and force-stop the work item on exit (whether the runner
-     * finishes normally, throws, or the heartbeat loop signals shutdown).
+     * lease, and force-stop the work item on exit (whether the runner finishes
+     * normally, throws, or the control plane signals shutdown). The one
+     * exception is a lost lease: the item then belongs to the queue or another
+     * worker and is left alone.
      *
      * Use this when something else does the claiming — e.g. a `worker poll
      * --on-work` script that hands an already-claimed item to a fresh process. The
@@ -18962,13 +19052,25 @@ class EnvironmentWorker {
      * option, then the worker's own `environmentKey`, then
      * `ANTHROPIC_ENVIRONMENT_KEY`. With no arguments inside that command it just
      * works. Throws a clear error naming the first of the four required values
-     * still missing after resolution.
+     * still missing after resolution. Throws `SessionMemoryError` when the
+     * session has memory stores attached but they cannot be mounted — the work
+     * item carried no sessions token (unless `memorySyncIntervalMs` turned
+     * memory off), or a store failed to download.
+     *
+     * `workSecret` is the work item's per-item `secret` payload from the poll
+     * response, falling back to `ANTHROPIC_WORK_SECRET`; unlike the others it is
+     * optional — when present, the sessions token extracted from it is preferred
+     * as the Bearer credential for this item's heartbeat / force-stop / session
+     * calls; when absent (or undecodable) those calls use the environment key.
      */
     async handleItem(opts) {
         const workId = opts?.workId ?? (0,env/* readEnv */.s)('ANTHROPIC_WORK_ID');
         const environmentId = opts?.environmentId ?? (0,env/* readEnv */.s)('ANTHROPIC_ENVIRONMENT_ID');
         const sessionId = opts?.sessionId ?? (0,env/* readEnv */.s)('ANTHROPIC_SESSION_ID');
         const environmentKey = opts?.environmentKey ?? this.environmentKey ?? (0,env/* readEnv */.s)('ANTHROPIC_ENVIRONMENT_KEY');
+        // `||` rather than `??` so an empty option still falls through to the env
+        // var and then to null (matching how `readEnv` treats empty values).
+        const workSecret = opts?.workSecret || (0,env/* readEnv */.s)('ANTHROPIC_WORK_SECRET') || null;
         if (!workId) {
             throw new core_error/* AnthropicError */.pJ('handleItem: workId is required — pass it or set ANTHROPIC_WORK_ID');
         }
@@ -18984,6 +19086,7 @@ class EnvironmentWorker {
         const work = {
             id: workId,
             environment_id: environmentId,
+            secret: workSecret,
             data: { type: 'session', id: sessionId },
         };
         await (0,tslib/* __classPrivateFieldGet */.g)(this, _EnvironmentWorker_instances, "m", _EnvironmentWorker_handleItem).call(this, work, environmentKey, opts?.signal ?? (0,tslib/* __classPrivateFieldGet */.g)(this, _EnvironmentWorker_signal, "f"));
@@ -18993,76 +19096,213 @@ _EnvironmentWorker_signal = new WeakMap(), _EnvironmentWorker_instances = new We
 /**
  * The per-item body shared by {@link EnvironmentWorker.run}'s poll loop and
  * {@link EnvironmentWorker.handleItem}: run a {@link SessionToolRunner} for the
- * work item's session while heartbeating its lease, force-stopping on exit.
- * Non-session work items are ignored.
+ * work item's session while heartbeating its lease, force-stopping on exit
+ * unless the lease was lost. Non-session work items are ignored.
+ *
+ * When the poll response carried a per-item `secret` (a short-lived payload
+ * scoped to this work item), the sessions token extracted from it is
+ * preferred over `environmentKey` as the Bearer credential for those
+ * per-item calls; a missing/undecodable secret falls back to
+ * `environmentKey` unchanged.
  */
 async function _EnvironmentWorker_handleItem(work, environmentKey, externalSignal) {
     const log = (0,utils_log/* loggerFor */.WG)(this.client);
+    // The per-item credential: the sessions token carried inside the work
+    // item's secret payload when the server issued one, otherwise the
+    // environment key. Never log this value.
+    const sessionsToken = sessionsTokenFromSecret(work.secret);
+    if (work.secret && sessionsToken === null) {
+        log.warn('work item carried a secret payload but no sessions token could be extracted; ' +
+            'falling back to the environment key', { work_id: work.id });
+    }
+    const itemCredential = sessionsToken ?? environmentKey;
     // Every per-session call — the SessionToolRunner event stream/list/send, the
-    // lease heartbeat, and the work force-stop — authenticates with the
-    // environment key. Scope a client to it once and thread that through.
-    // `copyClientForHelper` also clears the parent's `apiKey`, so the sub-client
-    // emits *only* the bearer credential on the wire (a plain
-    // `withOptions({authToken})` would leave `X-Api-Key` set as well).
+    // lease heartbeat, the skill download, and the work force-stop —
+    // authenticates with the per-item credential. Scope a client to it once and
+    // thread that through. `copyClientForHelper` also clears the parent's
+    // `apiKey`, so the sub-client emits *only* the bearer credential on the
+    // wire (a plain `withOptions({authToken})` would leave `X-Api-Key` set as
+    // well).
     const sessionClient = copyClientForHelper(this.client, {
-        authToken: environmentKey,
+        authToken: itemCredential,
         helper: 'environments-worker',
     });
     // The poller runs with `autoStop: false`, so the per-item handler is the
     // single owner of `work.stop` for every claimed item.
     const sessionId = work.data.id;
-    const ctx = {
-        workdir: this.workdir,
-        client: this.client,
-        sessionId,
-        ...(this.unrestrictedPaths !== undefined ? { unrestrictedPaths: this.unrestrictedPaths } : {}),
-        ...(this.maxFileBytes !== undefined ? { maxFileBytes: this.maxFileBytes } : {}),
-    };
-    // Lazily load the Node-only toolset module — see the import note at the top.
-    const agentToolset = await __nccwpck_require__.e(/* import() */ 157).then(__nccwpck_require__.bind(__nccwpck_require__, 4157));
-    let cleanupSkills = async () => { };
-    try {
-        cleanupSkills = await agentToolset.setupSkills(ctx);
-    }
-    catch (e) {
-        log.warn('skill setup failed', { session_id: sessionId, work_id: work.id, error: String(e) });
-    }
-    const tools = typeof this.tools === 'function' ?
-        this.tools(ctx)
-        : this.tools ?? agentToolset.betaAgentToolset20260401(ctx);
     // A per-session controller: aborts when the supplied signal aborts, when the
     // session runner finishes, or when the lease heartbeat says to stop.
     const ctrl = new AbortController();
     const detachExternal = linkAbort(externalSignal, ctrl);
-    const heartbeatPromise = heartbeatLoop(sessionClient, work, ctrl, log, this.requestOptions).catch((e) => {
+    const lease = new Lease(ctrl);
+    // Lazily load the Node-only toolset module — see the import note at the top.
+    const agentToolset = await __nccwpck_require__.e(/* import() */ 573).then(__nccwpck_require__.bind(__nccwpck_require__, 2573));
+    // Start the lease heartbeat BEFORE the session fetch and the skill /
+    // memory downloads: those can take longer than the lease TTL, and an
+    // unheartbeated lease lapsing mid-download would let another worker
+    // reclaim the item and serve the same session (split-brain).
+    //
+    // Each heartbeat reports the lease TTL the server is enforcing; it becomes
+    // the runner's tool-result send retry window so a send keeps retrying
+    // exactly as long as the lease could still be live. The runner is only
+    // built after the downloads, so hold the latest TTL until then.
+    let leaseTtlMs;
+    let runner;
+    const heartbeatPromise = heartbeatLoop(sessionClient, work, lease, log, this.requestOptions, (ttlMs) => {
+        leaseTtlMs = ttlMs;
+        runner?._setSendRetryWindow(ttlMs);
+    }).catch((e) => {
         if (!ctrl.signal.aborted)
             log.error('heartbeat loop failed', { work_id: work.id, error: String(e) });
         ctrl.abort();
     });
+    let cleanupSkills = async () => { };
+    let stores;
+    let cleanEnd = false;
     try {
-        const runner = new SessionToolRunner(sessionId, {
+        if (work.data.type !== 'session') {
+            log.debug('skipping non-session work item', { work_id: work.id, type: work.data.type });
+            return;
+        }
+        // One session fetch, shared by the skills download and the memory-store
+        // download — two fetches could disagree about the attached resources.
+        // A failed fetch fails the work item (the teardown below still stops
+        // or releases it).
+        const session = await sessionClient.beta.sessions.retrieve(sessionId);
+        // Only with the session in hand can we tell one that simply has no
+        // memory from one whose memory we cannot mount. Turning memory off
+        // with the interval knob is a deliberate opt-out and stays quiet.
+        if (sessionsToken === null && this.memorySyncIntervalMs !== null && hasMemoryStore(session)) {
+            throw new agentToolset.SessionMemoryError(`cannot mount the session's memories: the work item carried no sessions token ` +
+                `(work_id=${work.id}, session_id=${sessionId}); ` +
+                'the memory endpoints reject the environment key, so the poller must issue a per-item ' +
+                '`secret` carrying `sessions_token`, or set `memorySyncIntervalMs: null` to run without memory');
+        }
+        const ctx = {
+            workdir: this.workdir,
+            // The scoped sub-client, not the parent: the skill download
+            // `setupSkills` performs for this session rides the same per-item
+            // credential as every other per-item call.
+            client: sessionClient,
+            session,
+            ...(this.maxFileBytes !== undefined ? { maxFileBytes: this.maxFileBytes } : {}),
+        };
+        try {
+            cleanupSkills = await agentToolset.setupSkills(ctx);
+        }
+        catch (e) {
+            log.warn('skill setup failed', { session_id: sessionId, work_id: work.id, error: String(e) });
+        }
+        // Memory stores: the memory_stores endpoints accept the per-item sessions
+        // token but reject the environment key, so download and sync only run when
+        // the item carried a usable secret (and the interval is set).
+        // `sessionClient` is already scoped to that token then, so the memory
+        // calls ride the same sub-client. A store that cannot be materialised
+        // throws `SessionMemoryError` out of `download` and fails the item.
+        if (sessionsToken !== null && this.memorySyncIntervalMs !== null) {
+            stores = new agentToolset.SessionMemoryStores(sessionClient, {
+                workdir: this.workdir,
+                ...(this.memorySyncIntervalMs !== undefined ? { syncIntervalMs: this.memorySyncIntervalMs } : {}),
+                syncDeletions: this.memorySyncDeletions,
+            });
+            await stores.download(session);
+            // A store mounted outside the workdir must stay reachable by the file
+            // tools; read-only stores still refuse writes.
+            ctx.allowedRoots = stores.roots;
+            ctx.readOnlyRoots = stores.readOnlyRoots;
+        }
+        else {
+            log.debug('memory stores disabled for this item', { work_id: work.id });
+        }
+        const tools = typeof this.tools === 'function' ?
+            this.tools(ctx)
+            : this.tools ?? agentToolset.betaAgentToolset20260401(ctx);
+        runner = new SessionToolRunner(sessionId, {
             client: sessionClient,
             tools,
             ...(this.maxIdleMs !== undefined ? { maxIdleMs: this.maxIdleMs } : {}),
             ...(this.requestOptions !== undefined ? { requestOptions: this.requestOptions } : {}),
             signal: ctrl.signal,
         });
+        if (leaseTtlMs !== undefined)
+            runner._setSendRetryWindow(leaseTtlMs);
         for await (const _ of runner) {
             // Drive the runner to completion; per-call observability is not part
             // of this composition's surface — use `SessionToolRunner` directly
             // (via `client.beta.sessions.events.toolRunner`) if you want it.
+            if (stores)
+                await stores.syncIfDue();
         }
+        // Only a clean stream end earns the last full sync; it runs in the
+        // teardown below.
+        cleanEnd = !ctrl.signal.aborted;
     }
     finally {
-        ctrl.abort();
+        // The heartbeat keeps the lease alive until this teardown is done.
+        try {
+            // cleanupSkills first, so its failure cannot skip the memory flush.
+            await cleanupSkills().catch((e) => {
+                log.warn('skill cleanup failed', { session_id: sessionId, work_id: work.id, error: String(e) });
+            });
+        }
+        finally {
+            if (stores) {
+                const boundMs = agentToolset.MEMORY_FLUSH_TIMEOUT_MS;
+                if (cleanEnd) {
+                    const finishCutOff = await withTimeout(stores.finish(), boundMs);
+                    if (finishCutOff) {
+                        log.warn(`final memory sync cut off after ${boundMs}ms; the flush that follows still uploads changed files`, { session_id: sessionId, work_id: work.id });
+                    }
+                }
+                // Also after finish(): it swallows its own failures, and a
+                // clean flush is a no-op.
+                const flushBound = new AbortController();
+                const flushCutOff = await withTimeout(stores.flushWrites(flushBound.signal), boundMs);
+                if (flushCutOff) {
+                    flushBound.abort();
+                    log.warn(`memory flush cut off after ${boundMs}ms; changed files it had not uploaded yet are not saved`, { session_id: sessionId, work_id: work.id });
+                }
+                await stores.dispose().catch((e) => {
+                    log.warn('memory store cleanup failed', {
+                        session_id: sessionId,
+                        work_id: work.id,
+                        error: String(e),
+                    });
+                });
+            }
+        }
+        lease.finish('runner_done');
         detachExternal();
         await heartbeatPromise;
-        await cleanupSkills().catch((e) => {
-            log.warn('skill cleanup failed', { session_id: sessionId, work_id: work.id, error: String(e) });
-        });
-        await forceStop(sessionClient, work, log, this.requestOptions);
+        // Stop only an item this worker still holds — after a lost lease it
+        // belongs to the queue or another worker.
+        if (lease.lost) {
+            log.info('lease lost; released without stopping it', { session_id: sessionId, work_id: work.id });
+        }
+        else {
+            await forceStop(sessionClient, work, log, this.requestOptions);
+        }
     }
 };
+/**
+ * Resolve when `p` settles or `ms` elapses — `true` when `ms` elapsed
+ * first. A timed-out `p` keeps running — JS cannot cancel a promise.
+ */
+async function withTimeout(p, ms) {
+    let timer;
+    try {
+        return await Promise.race([
+            p.then(() => false, () => false),
+            new Promise((resolve) => {
+                timer = setTimeout(() => resolve(true), ms);
+            }),
+        ]);
+    }
+    finally {
+        if (timer !== undefined)
+            clearTimeout(timer);
+    }
+}
 /** Force-stop a claimed work item, swallowing the 409 that means it's already stopped. */
 async function forceStop(client, work, log, requestOptions) {
     try {
@@ -19073,51 +19313,127 @@ async function forceStop(client, work, log, requestOptions) {
         { ...requestOptions, headers: buildHeaders([requestOptions?.headers]) });
     }
     catch (e) {
-        if (!isStatus(e, 409)) {
+        if (!(0,utils_backoff/* isStatus */.zM)(e, 409)) {
             log.error('force-stop on exit failed', { work_id: work.id, error: String(e) });
         }
     }
 }
 /**
- * Keep the work-item lease alive while a session is being served. Aborts `ctrl`
- * when the control plane reports the work is `stopping`/`stopped`, when the
- * lease is no longer extended, or on a permanent heartbeat failure.
+ * This worker's view of one work-item lease: the per-item abort signal plus
+ * why heartbeating ended. The first recorded reason wins, so a run aborted
+ * *because* the lease was lost still reads as lost afterwards; an abort with
+ * no recorded reason (the external signal) is not lost.
  */
-async function heartbeatLoop(client, work, ctrl, logger, requestOptions) {
+class Lease {
+    constructor(ctrl) {
+        _Lease_ctrl.set(this, void 0);
+        _Lease_endReason.set(this, void 0);
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _Lease_ctrl, ctrl, "f");
+    }
+    get signal() {
+        return (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_ctrl, "f").signal;
+    }
+    finish(reason) {
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _Lease_endReason, (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_endReason, "f") ?? reason, "f");
+        (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_ctrl, "f").abort();
+    }
+    /** True once the item belongs to the queue or another worker. */
+    get lost() {
+        return (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_endReason, "f") === 'lease_lost' || (0,tslib/* __classPrivateFieldGet */.g)(this, _Lease_endReason, "f") === 'assumed_lost';
+    }
+}
+_Lease_ctrl = new WeakMap(), _Lease_endReason = new WeakMap();
+/** The server's view of the lease carried by a 412 heartbeat response, or empty if absent. */
+function serverLeaseState(e) {
+    let node = e instanceof core_error/* APIError */.LG ? e.error : undefined;
+    for (const key of ['error', 'details', 'current_state']) {
+        if (!(0,utils_values/* isObj */.sA)(node))
+            return {};
+        node = node[key];
+    }
+    return (0,utils_values/* isObj */.sA)(node) ? node : {};
+}
+/**
+ * Keep the work-item lease alive while a session is being served. Runs until
+ * `lease` ends, and ends it itself when the control plane reports the work is
+ * `stopping`/`stopped` or no longer extends the lease, when a heartbeat is
+ * rejected (a 412 means the lease already belongs to someone else), or when no
+ * heartbeat has succeeded for longer than the lease ttl (the lease is assumed
+ * lost, so two runners don't end up serving the same work). Each heartbeat
+ * call is cut off after the current beat interval so a hung request cannot
+ * outlive the lease it is meant to renew.
+ */
+async function heartbeatLoop(client, work, lease, logger, requestOptions, 
+/** Called with the server-reported lease TTL after every successful beat. */
+onLeaseTtl) {
     let intervalMs = HEARTBEAT_DEFAULT_MS;
+    let ttlMs = HEARTBEAT_TTL_DEFAULT_MS;
+    let lastSuccessMs = Date.now();
     let last = NO_HEARTBEAT_SENTINEL;
     const beat = async () => {
+        // Not the request `timeout` option: the core client retries timeouts, so
+        // it would not bound the call as a whole.
+        const beatCtrl = new AbortController();
+        const detach = linkAbort(lease.signal, beatCtrl);
+        const cutoff = setTimeout(() => beatCtrl.abort(), intervalMs);
         try {
-            const resp = await client.beta.environments.work.heartbeat(work.id, { environment_id: work.environment_id, expected_last_heartbeat: last }, { ...requestOptions, headers: buildHeaders([requestOptions?.headers]), signal: ctrl.signal });
+            const resp = await client.beta.environments.work.heartbeat(work.id, { environment_id: work.environment_id, expected_last_heartbeat: last }, { ...requestOptions, headers: buildHeaders([requestOptions?.headers]), signal: beatCtrl.signal });
+            lastSuccessMs = Date.now();
             last = resp.last_heartbeat;
             if (resp.ttl_seconds > 0) {
-                intervalMs = Math.max(1000, Math.min((resp.ttl_seconds * 1000) / 2, HEARTBEAT_DEFAULT_MS));
+                ttlMs = resp.ttl_seconds * 1000;
+                intervalMs = Math.max(1000, Math.min(ttlMs / 2, HEARTBEAT_DEFAULT_MS));
+                onLeaseTtl?.(ttlMs);
             }
             if (resp.state === 'stopping' || resp.state === 'stopped') {
                 logger.info('heartbeat signals shutdown', { work_id: work.id, state: resp.state });
-                ctrl.abort();
+                lease.finish('control_plane_stop');
             }
             if (!resp.lease_extended) {
                 logger.warn('lease not extended, shutting down', { work_id: work.id });
-                ctrl.abort();
+                lease.finish('control_plane_stop');
             }
         }
         catch (e) {
             // An abort throws to unwind the caller (the `heartbeatLoop(...).catch`
             // in `#handleItem`) rather than returning early.
-            ctrl.signal.throwIfAborted();
-            if (isFatal4xx(e)) {
+            lease.signal.throwIfAborted();
+            if ((0,utils_backoff/* isStatus */.zM)(e, 412)) {
+                const server = serverLeaseState(e);
+                logger.error('lease lost: heartbeat precondition failed', {
+                    work_id: work.id,
+                    server_state: server['state'],
+                    server_ttl_seconds: server['ttl_seconds'],
+                    server_last_heartbeat: server['last_heartbeat'],
+                });
+                lease.finish('lease_lost');
+                return;
+            }
+            if ((0,utils_backoff/* isFatal4xx */.bs)(e)) {
                 logger.error('permanent heartbeat failure', { work_id: work.id, error: String(e) });
-                ctrl.abort();
+                lease.finish('heartbeat_rejected');
                 throw e;
+            }
+            if (Date.now() - lastSuccessMs > ttlMs) {
+                logger.error('lease assumed lost: no successful heartbeat in ttl', {
+                    work_id: work.id,
+                    ttl_ms: ttlMs,
+                    error: String(e),
+                });
+                lease.finish('assumed_lost');
+                return;
             }
             logger.warn('transient heartbeat failure', { work_id: work.id, error: String(e) });
         }
+        finally {
+            clearTimeout(cutoff);
+            detach();
+        }
     };
     await beat();
-    while (!ctrl.signal.aborted) {
-        await sleep(intervalMs, ctrl.signal);
-        ctrl.signal.throwIfAborted();
+    while (!lease.signal.aborted) {
+        await sleep(intervalMs, lease.signal);
+        lease.signal.throwIfAborted();
         await beat();
     }
 }
@@ -19365,23 +19681,6 @@ class Work extends APIResource {
     poller(opts) {
         return new WorkPoller({ ...opts, client: this._client });
     }
-    /**
-     * The self-hosted environment runner: poll for work, and for each claimed
-     * session set up the workdir, download the agent's skills, run the tools while
-     * heartbeating the lease, and force-stop on exit.
-     *
-     * @example
-     * ```ts
-     * // Long-running daemon — poll, serve each session, loop:
-     * await client.beta.environments.work
-     *   .worker({ environmentId, environmentKey, workdir: '/workspace' })
-     *   .run();
-     *
-     * // Or service one already-claimed work item (e.g. inside a sandbox spawned
-     * // by `ant worker poll --on-work`) — handleItem() reads the ANTHROPIC_* env vars:
-     * await client.beta.environments.work.worker({ workdir: '/workspace' }).handleItem();
-     * ```
-     */
     worker(opts) {
         return new EnvironmentWorker({ ...opts, client: this._client });
     }
@@ -19954,7 +20253,7 @@ class Batches extends APIResource {
      *           messages: [
      *             { content: 'Hello, world', role: 'user' },
      *           ],
-     *           model: 'claude-opus-4-6',
+     *           model: 'claude-opus-5',
      *         },
      *       },
      *     ],
@@ -20486,7 +20785,7 @@ function withLazyInput(prev, jsonBuf) {
 }
 //# sourceMappingURL=message-stream-utils.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/BetaMessageStream.mjs
-var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _BetaMessageStream_params, _BetaMessageStream_connectedPromise, _BetaMessageStream_resolveConnectedPromise, _BetaMessageStream_rejectConnectedPromise, _BetaMessageStream_endPromise, _BetaMessageStream_resolveEndPromise, _BetaMessageStream_rejectEndPromise, _BetaMessageStream_listeners, _BetaMessageStream_ended, _BetaMessageStream_errored, _BetaMessageStream_aborted, _BetaMessageStream_catchingPromiseCreated, _BetaMessageStream_response, _BetaMessageStream_request_id, _BetaMessageStream_logger, _BetaMessageStream_getFinalMessage, _BetaMessageStream_getFinalText, _BetaMessageStream_handleError, _BetaMessageStream_beginRequest, _BetaMessageStream_addStreamEvent, _BetaMessageStream_endRequest, _BetaMessageStream_accumulateMessage, _BetaMessageStream_toolInputParseError;
+var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _BetaMessageStream_params, _BetaMessageStream_connectedPromise, _BetaMessageStream_resolveConnectedPromise, _BetaMessageStream_rejectConnectedPromise, _BetaMessageStream_endPromise, _BetaMessageStream_resolveEndPromise, _BetaMessageStream_rejectEndPromise, _BetaMessageStream_listeners, _BetaMessageStream_ended, _BetaMessageStream_errored, _BetaMessageStream_aborted, _BetaMessageStream_catchingPromiseCreated, _BetaMessageStream_response, _BetaMessageStream_request_id, _BetaMessageStream_workspace_id, _BetaMessageStream_logger, _BetaMessageStream_getFinalMessage, _BetaMessageStream_getFinalText, _BetaMessageStream_handleError, _BetaMessageStream_beginRequest, _BetaMessageStream_addStreamEvent, _BetaMessageStream_endRequest, _BetaMessageStream_accumulateMessage, _BetaMessageStream_toolInputParseError;
 
 
 
@@ -20518,6 +20817,7 @@ class BetaMessageStream {
         _BetaMessageStream_catchingPromiseCreated.set(this, false);
         _BetaMessageStream_response.set(this, void 0);
         _BetaMessageStream_request_id.set(this, void 0);
+        _BetaMessageStream_workspace_id.set(this, void 0);
         _BetaMessageStream_logger.set(this, void 0);
         _BetaMessageStream_handleError.set(this, (error) => {
             (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaMessageStream_errored, true, "f");
@@ -20562,6 +20862,9 @@ class BetaMessageStream {
     get request_id() {
         return (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_request_id, "f");
     }
+    get workspace_id() {
+        return (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_workspace_id, "f");
+    }
     /**
      * Returns the `MessageStream` data, the raw `Response` instance and the ID of the request,
      * returned vie the `request-id` header which is useful for debugging requests and resporting
@@ -20582,6 +20885,7 @@ class BetaMessageStream {
             data: this,
             response,
             request_id: response.headers.get('request-id'),
+            workspace_id: response.headers.get('anthropic-workspace-id'),
         };
     }
     /**
@@ -20654,6 +20958,7 @@ class BetaMessageStream {
             return;
         (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaMessageStream_response, response, "f");
         (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaMessageStream_request_id, response?.headers.get('request-id'), "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _BetaMessageStream_workspace_id, response?.headers.get('anthropic-workspace-id'), "f");
         (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaMessageStream_resolveConnectedPromise, "f").call(this, response);
         this._emit('connect');
     }
@@ -20824,7 +21129,7 @@ class BetaMessageStream {
             }
         }
     }
-    [(_BetaMessageStream_currentMessageSnapshot = new WeakMap(), _BetaMessageStream_params = new WeakMap(), _BetaMessageStream_connectedPromise = new WeakMap(), _BetaMessageStream_resolveConnectedPromise = new WeakMap(), _BetaMessageStream_rejectConnectedPromise = new WeakMap(), _BetaMessageStream_endPromise = new WeakMap(), _BetaMessageStream_resolveEndPromise = new WeakMap(), _BetaMessageStream_rejectEndPromise = new WeakMap(), _BetaMessageStream_listeners = new WeakMap(), _BetaMessageStream_ended = new WeakMap(), _BetaMessageStream_errored = new WeakMap(), _BetaMessageStream_aborted = new WeakMap(), _BetaMessageStream_catchingPromiseCreated = new WeakMap(), _BetaMessageStream_response = new WeakMap(), _BetaMessageStream_request_id = new WeakMap(), _BetaMessageStream_logger = new WeakMap(), _BetaMessageStream_handleError = new WeakMap(), _BetaMessageStream_instances = new WeakSet(), _BetaMessageStream_getFinalMessage = function _BetaMessageStream_getFinalMessage() {
+    [(_BetaMessageStream_currentMessageSnapshot = new WeakMap(), _BetaMessageStream_params = new WeakMap(), _BetaMessageStream_connectedPromise = new WeakMap(), _BetaMessageStream_resolveConnectedPromise = new WeakMap(), _BetaMessageStream_rejectConnectedPromise = new WeakMap(), _BetaMessageStream_endPromise = new WeakMap(), _BetaMessageStream_resolveEndPromise = new WeakMap(), _BetaMessageStream_rejectEndPromise = new WeakMap(), _BetaMessageStream_listeners = new WeakMap(), _BetaMessageStream_ended = new WeakMap(), _BetaMessageStream_errored = new WeakMap(), _BetaMessageStream_aborted = new WeakMap(), _BetaMessageStream_catchingPromiseCreated = new WeakMap(), _BetaMessageStream_response = new WeakMap(), _BetaMessageStream_request_id = new WeakMap(), _BetaMessageStream_workspace_id = new WeakMap(), _BetaMessageStream_logger = new WeakMap(), _BetaMessageStream_handleError = new WeakMap(), _BetaMessageStream_instances = new WeakSet(), _BetaMessageStream_getFinalMessage = function _BetaMessageStream_getFinalMessage() {
         if (this.receivedMessages.length === 0) {
             throw new core_error/* AnthropicError */.pJ('stream ended without producing a Message with role=assistant');
         }
@@ -20945,14 +21250,18 @@ class BetaMessageStream {
             case 'message_stop':
                 return snapshot;
             case 'message_delta':
-                snapshot.container = event.delta.container;
                 snapshot.stop_reason = event.delta.stop_reason;
                 snapshot.stop_sequence = event.delta.stop_sequence;
-                if (event.delta.stop_details != null) {
-                    snapshot.stop_details = event.delta.stop_details;
-                }
+                snapshot.stop_details = event.delta.stop_details;
                 snapshot.usage.output_tokens = event.usage.output_tokens;
-                snapshot.context_management = event.context_management;
+                if (event.delta.container != null) {
+                    snapshot.container = event.delta.container;
+                }
+                if (event.context_management != null) {
+                    snapshot.context_management = event.context_management;
+                }
+                // The remaining usage counters are cumulative whole-message totals that are
+                // omitted when they don't apply, so overwrite when present and never add.
                 if (event.usage.input_tokens != null) {
                     snapshot.usage.input_tokens = event.usage.input_tokens;
                 }
@@ -20970,6 +21279,9 @@ class BetaMessageStream {
                 }
                 if (event.usage.fallback_credit != null) {
                     snapshot.usage.fallback_credit = event.usage.fallback_credit;
+                }
+                if (event.usage.output_tokens_details != null) {
+                    snapshot.usage.output_tokens_details = event.usage.output_tokens_details;
                 }
                 return snapshot;
             case 'content_block_start':
@@ -21322,6 +21634,17 @@ class BetaToolRunner {
                         if (!(0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_mutated, "f")) {
                             const message = await (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_message, "f");
                             (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.messages.push({ role: message.role, content: message.content });
+                            // Container-bound server tools reject a follow-up request that omits the container the
+                            // previous turn ran in, so carry its id forward unless the caller pinned one themselves.
+                            const { container } = (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params;
+                            if (message.container) {
+                                if (container == null) {
+                                    (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.container = message.container.id;
+                                }
+                                else if (typeof container === 'object' && container.id == null) {
+                                    (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.container = { ...container, id: message.container.id };
+                                }
+                            }
                             // Refusal-terminated turns are terminal: the refusal may have cut a tool_use off
                             // with partial input, so executing this turn's tools would fire side effects the
                             // model never confirmed — and once middleware strips the refusal turn, their
@@ -21508,7 +21831,9 @@ async function generateToolResponse(params, lastMessage = params.messages.at(-1)
     }
     const available = availableToolNames(params);
     const toolResults = await Promise.all(toolUseBlocks.map(async (toolUse) => {
-        const tool = params.tools.find((t) => ('name' in t ? t.name : t.mcp_server_name) === toolUse.name);
+        const tool = params.tools.find((t) => ('name' in t ? t.name
+            : 'mcp_server_name' in t ? t.mcp_server_name
+                : t.type) === toolUse.name);
         // A `tool_removal` is only a hint to the model, which may still emit a tool_use for a
         // withdrawn tool — treat those exactly like a tool that was never defined.
         if (!tool || !('run' in tool) || !available.has(toolUse.name)) {
@@ -21586,18 +21911,6 @@ function applyToolChange(block, available) {
         case 'tool_addition':
             applyToolReference(block, available);
             break;
-        case 'mid_conv_system':
-            // A `mid_conv_system` block's content is limited by the API schema to
-            // text / tool_addition / tool_removal, so we walk exactly one level — no recursion.
-            for (const inner of block.content) {
-                if (inner.type === 'tool_removal' || inner.type === 'tool_addition') {
-                    applyToolReference(inner, available);
-                }
-            }
-            break;
-        default:
-            // Other and unknown/newer block types leave the set untouched (forward compatibility).
-            break;
     }
 }
 function applyToolReference(block, available) {
@@ -21654,7 +21967,7 @@ class Messages extends APIResource {
             body.thinking.type === 'enabled') {
             console.warn(`Using Claude with ${body.model} and 'thinking.type=enabled' is deprecated. Use 'thinking.type=adaptive' instead which results in better model performance in our testing: https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking`);
         }
-        let timeout = this._client._options.timeout;
+        let timeout = options?.timeout ?? this._client._options.timeout;
         if (!body.stream && timeout == null) {
             const maxNonstreamingTokens = MODEL_NONSTREAMING_TOKENS[body.model] ?? undefined;
             timeout = this._client.calculateNonstreamingTimeout(body.max_tokens, maxNonstreamingTokens);
@@ -21722,7 +22035,7 @@ class Messages extends APIResource {
      * const betaMessageTokensCount =
      *   await client.beta.messages.countTokens({
      *     messages: [{ content: 'Hello, world', role: 'user' }],
-     *     model: 'claude-opus-4-6',
+     *     model: 'claude-opus-5',
      *   });
      * ```
      */
@@ -23247,6 +23560,55 @@ class Completions extends APIResource {
     }
 }
 //# sourceMappingURL=completions.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/files.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+class files_Files extends APIResource {
+    /**
+     * List Files
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/files', (PageCursor), { query, ...options });
+    }
+    /**
+     * Delete File
+     */
+    delete(fileID, options) {
+        return this._client.delete(path `/v1/files/${fileID}`, options);
+    }
+    /**
+     * Download File
+     */
+    download(fileID, options) {
+        return this._client.get(path `/v1/files/${fileID}/content`, {
+            ...options,
+            headers: buildHeaders([{ Accept: 'application/binary' }, options?.headers]),
+            __binaryResponse: true,
+        });
+    }
+    /**
+     * Get File Metadata
+     */
+    retrieveMetadata(fileID, options) {
+        return this._client.get(path `/v1/files/${fileID}`, options);
+    }
+    /**
+     * Upload File
+     */
+    upload(body, options) {
+        return this._client.post('/v1/files', multipartFormRequestOptions({
+            body,
+            ...options,
+            headers: buildHeaders([stainlessHelperHeaderFromFile(body.file), options?.headers]),
+        }, this._client));
+    }
+}
+//# sourceMappingURL=files.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/parser.mjs
 
 function parser_getOutputFormat(params) {
@@ -23311,7 +23673,7 @@ function parseOutputFormat(params, content) {
 }
 //# sourceMappingURL=parser.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs
-var _MessageStream_instances, _MessageStream_currentMessageSnapshot, _MessageStream_params, _MessageStream_connectedPromise, _MessageStream_resolveConnectedPromise, _MessageStream_rejectConnectedPromise, _MessageStream_endPromise, _MessageStream_resolveEndPromise, _MessageStream_rejectEndPromise, _MessageStream_listeners, _MessageStream_ended, _MessageStream_errored, _MessageStream_aborted, _MessageStream_catchingPromiseCreated, _MessageStream_response, _MessageStream_request_id, _MessageStream_logger, _MessageStream_getFinalMessage, _MessageStream_getFinalText, _MessageStream_handleError, _MessageStream_beginRequest, _MessageStream_addStreamEvent, _MessageStream_endRequest, _MessageStream_accumulateMessage;
+var _MessageStream_instances, _MessageStream_currentMessageSnapshot, _MessageStream_params, _MessageStream_connectedPromise, _MessageStream_resolveConnectedPromise, _MessageStream_rejectConnectedPromise, _MessageStream_endPromise, _MessageStream_resolveEndPromise, _MessageStream_rejectEndPromise, _MessageStream_listeners, _MessageStream_ended, _MessageStream_errored, _MessageStream_aborted, _MessageStream_catchingPromiseCreated, _MessageStream_response, _MessageStream_request_id, _MessageStream_workspace_id, _MessageStream_logger, _MessageStream_getFinalMessage, _MessageStream_getFinalText, _MessageStream_handleError, _MessageStream_beginRequest, _MessageStream_addStreamEvent, _MessageStream_endRequest, _MessageStream_accumulateMessage;
 
 
 
@@ -23343,6 +23705,7 @@ class MessageStream {
         _MessageStream_catchingPromiseCreated.set(this, false);
         _MessageStream_response.set(this, void 0);
         _MessageStream_request_id.set(this, void 0);
+        _MessageStream_workspace_id.set(this, void 0);
         _MessageStream_logger.set(this, void 0);
         _MessageStream_handleError.set(this, (error) => {
             (0,tslib/* __classPrivateFieldSet */.G)(this, _MessageStream_errored, true, "f");
@@ -23387,6 +23750,9 @@ class MessageStream {
     get request_id() {
         return (0,tslib/* __classPrivateFieldGet */.g)(this, _MessageStream_request_id, "f");
     }
+    get workspace_id() {
+        return (0,tslib/* __classPrivateFieldGet */.g)(this, _MessageStream_workspace_id, "f");
+    }
     /**
      * Returns the `MessageStream` data, the raw `Response` instance and the ID of the request,
      * returned vie the `request-id` header which is useful for debugging requests and resporting
@@ -23407,6 +23773,7 @@ class MessageStream {
             data: this,
             response,
             request_id: response.headers.get('request-id'),
+            workspace_id: response.headers.get('anthropic-workspace-id'),
         };
     }
     /**
@@ -23479,6 +23846,7 @@ class MessageStream {
             return;
         (0,tslib/* __classPrivateFieldSet */.G)(this, _MessageStream_response, response, "f");
         (0,tslib/* __classPrivateFieldSet */.G)(this, _MessageStream_request_id, response?.headers.get('request-id'), "f");
+        (0,tslib/* __classPrivateFieldSet */.G)(this, _MessageStream_workspace_id, response?.headers.get('anthropic-workspace-id'), "f");
         (0,tslib/* __classPrivateFieldGet */.g)(this, _MessageStream_resolveConnectedPromise, "f").call(this, response);
         this._emit('connect');
     }
@@ -23649,7 +24017,7 @@ class MessageStream {
             }
         }
     }
-    [(_MessageStream_currentMessageSnapshot = new WeakMap(), _MessageStream_params = new WeakMap(), _MessageStream_connectedPromise = new WeakMap(), _MessageStream_resolveConnectedPromise = new WeakMap(), _MessageStream_rejectConnectedPromise = new WeakMap(), _MessageStream_endPromise = new WeakMap(), _MessageStream_resolveEndPromise = new WeakMap(), _MessageStream_rejectEndPromise = new WeakMap(), _MessageStream_listeners = new WeakMap(), _MessageStream_ended = new WeakMap(), _MessageStream_errored = new WeakMap(), _MessageStream_aborted = new WeakMap(), _MessageStream_catchingPromiseCreated = new WeakMap(), _MessageStream_response = new WeakMap(), _MessageStream_request_id = new WeakMap(), _MessageStream_logger = new WeakMap(), _MessageStream_handleError = new WeakMap(), _MessageStream_instances = new WeakSet(), _MessageStream_getFinalMessage = function _MessageStream_getFinalMessage() {
+    [(_MessageStream_currentMessageSnapshot = new WeakMap(), _MessageStream_params = new WeakMap(), _MessageStream_connectedPromise = new WeakMap(), _MessageStream_resolveConnectedPromise = new WeakMap(), _MessageStream_rejectConnectedPromise = new WeakMap(), _MessageStream_endPromise = new WeakMap(), _MessageStream_resolveEndPromise = new WeakMap(), _MessageStream_rejectEndPromise = new WeakMap(), _MessageStream_listeners = new WeakMap(), _MessageStream_ended = new WeakMap(), _MessageStream_errored = new WeakMap(), _MessageStream_aborted = new WeakMap(), _MessageStream_catchingPromiseCreated = new WeakMap(), _MessageStream_response = new WeakMap(), _MessageStream_request_id = new WeakMap(), _MessageStream_workspace_id = new WeakMap(), _MessageStream_logger = new WeakMap(), _MessageStream_handleError = new WeakMap(), _MessageStream_instances = new WeakSet(), _MessageStream_getFinalMessage = function _MessageStream_getFinalMessage() {
         if (this.receivedMessages.length === 0) {
             throw new core_error/* AnthropicError */.pJ('stream ended without producing a Message with role=assistant');
         }
@@ -23758,11 +24126,13 @@ class MessageStream {
             case 'message_delta':
                 snapshot.stop_reason = event.delta.stop_reason;
                 snapshot.stop_sequence = event.delta.stop_sequence;
-                if (event.delta.stop_details != null) {
-                    snapshot.stop_details = event.delta.stop_details;
-                }
+                snapshot.stop_details = event.delta.stop_details;
                 snapshot.usage.output_tokens = event.usage.output_tokens;
-                // Update other usage fields if they exist in the event
+                if (event.delta.container != null) {
+                    snapshot.container = event.delta.container;
+                }
+                // The remaining usage counters are cumulative whole-message totals that are
+                // omitted when they don't apply, so overwrite when present and never add.
                 if (event.usage.input_tokens != null) {
                     snapshot.usage.input_tokens = event.usage.input_tokens;
                 }
@@ -23774,6 +24144,9 @@ class MessageStream {
                 }
                 if (event.usage.server_tool_use != null) {
                     snapshot.usage.server_tool_use = event.usage.server_tool_use;
+                }
+                if (event.usage.output_tokens_details != null) {
+                    snapshot.usage.output_tokens_details = event.usage.output_tokens_details;
                 }
                 return snapshot;
             case 'content_block_start':
@@ -23932,7 +24305,7 @@ class batches_Batches extends APIResource {
      *         messages: [
      *           { content: 'Hello, world', role: 'user' },
      *         ],
-     *         model: 'claude-opus-4-6',
+     *         model: 'claude-opus-5',
      *       },
      *     },
      *   ],
@@ -24085,7 +24458,7 @@ class messages_Messages extends APIResource {
             body.thinking.type === 'enabled') {
             console.warn(`Using Claude with ${body.model} and 'thinking.type=enabled' is deprecated. Use 'thinking.type=adaptive' instead which results in better model performance in our testing: https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking`);
         }
-        let timeout = this._client._options.timeout;
+        let timeout = options?.timeout ?? this._client._options.timeout;
         if (!body.stream && timeout == null) {
             const maxNonstreamingTokens = MODEL_NONSTREAMING_TOKENS[body.model] ?? undefined;
             timeout = this._client.calculateNonstreamingTimeout(body.max_tokens, maxNonstreamingTokens);
@@ -24163,7 +24536,7 @@ class messages_Messages extends APIResource {
      * const messageTokensCount =
      *   await client.messages.countTokens({
      *     messages: [{ content: 'Hello, world', role: 'user' }],
-     *     model: 'claude-opus-4-6',
+     *     model: 'claude-opus-5',
      *   });
      * ```
      */
@@ -24225,8 +24598,88 @@ class models_Models extends APIResource {
     }
 }
 //# sourceMappingURL=models.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/skills/versions.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class skills_versions_Versions extends APIResource {
+    /**
+     * Create Skill Version
+     */
+    create(skillID, body, options) {
+        return this._client.post(path `/v1/skills/${skillID}/versions`, multipartFormRequestOptions({ body, ...options }, this._client, false));
+    }
+    /**
+     * Get Skill Version
+     */
+    retrieve(version, params, options) {
+        const { skill_id } = params;
+        return this._client.get(path `/v1/skills/${skill_id}/versions/${version}`, options);
+    }
+    /**
+     * List Skill Versions
+     */
+    list(skillID, query = {}, options) {
+        return this._client.getAPIList(path `/v1/skills/${skillID}/versions`, (PageCursor), {
+            query,
+            ...options,
+        });
+    }
+    /**
+     * Delete Skill Version
+     */
+    delete(version, params, options) {
+        const { skill_id } = params;
+        return this._client.delete(path `/v1/skills/${skill_id}/versions/${version}`, options);
+    }
+}
+//# sourceMappingURL=versions.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/skills/skills.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+class skills_Skills extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.versions = new skills_versions_Versions(this._client);
+    }
+    /**
+     * Create Skill
+     */
+    create(body, options) {
+        return this._client.post('/v1/skills', multipartFormRequestOptions({ body, ...options }, this._client, false));
+    }
+    /**
+     * Get Skill
+     */
+    retrieve(skillID, options) {
+        return this._client.get(path `/v1/skills/${skillID}`, options);
+    }
+    /**
+     * List Skills
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/skills', (PageCursor), { query, ...options });
+    }
+    /**
+     * Delete Skill
+     */
+    delete(skillID, options) {
+        return this._client.delete(path `/v1/skills/${skillID}`, options);
+    }
+}
+skills_Skills.Versions = skills_versions_Versions;
+//# sourceMappingURL=skills.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/index.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
 
 
 
@@ -24236,6 +24689,8 @@ class models_Models extends APIResource {
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/client.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _BaseAnthropic_instances, _a, _BaseAnthropic_encoder, _BaseAnthropic_baseURLOverridden;
+
+
 
 
 
@@ -24807,7 +25262,7 @@ class BaseAnthropic {
             throw new core_error/* APIConnectionError */.xX({ cause: response });
         }
         const specialHeaders = [...response.headers.entries()]
-            .filter(([name]) => name === 'request-id')
+            .filter(([name]) => name === 'request-id' || name === 'anthropic-workspace-id')
             .map(([name, value]) => ', ' + name + ': ' + JSON.stringify(value))
             .join('');
         const responseInfo = `[${requestLogID}${retryLogStr}${specialHeaders}] ${req.method} ${url} ${response.ok ? 'succeeded' : 'failed'} with status ${response.status} in ${headersTime - startTime}ms`;
@@ -25154,12 +25609,16 @@ class Anthropic extends BaseAnthropic {
         this.completions = new Completions(this);
         this.messages = new messages_Messages(this);
         this.models = new models_Models(this);
+        this.files = new files_Files(this);
+        this.skills = new skills_Skills(this);
         this.beta = new Beta(this);
     }
 }
 Anthropic.Completions = Completions;
 Anthropic.Messages = messages_Messages;
 Anthropic.Models = models_Models;
+Anthropic.Files = files_Files;
+Anthropic.Skills = skills_Skills;
 Anthropic.Beta = Beta;
 //# sourceMappingURL=client.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/middleware.mjs
@@ -25999,22 +26458,88 @@ function __classPrivateFieldGet(receiver, state, kind, f) {
 
 /***/ }),
 
-/***/ 2534:
+/***/ 8223:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   sx: () => (/* reexport safe */ _utils_env_mjs__WEBPACK_IMPORTED_MODULE_2__.s)
+/* harmony export */ });
+/* harmony import */ var _utils_values_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(9296);
+/* harmony import */ var _utils_base64_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1231);
+/* harmony import */ var _utils_env_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(111);
+/* harmony import */ var _utils_log_mjs__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(7412);
+/* harmony import */ var _utils_query_mjs__WEBPACK_IMPORTED_MODULE_4__ = __nccwpck_require__(626);
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
-// EXPORTS
-__nccwpck_require__.d(__webpack_exports__, {
-  sx: () => (/* reexport */ env/* readEnv */.s)
-});
 
-// UNUSED EXPORTS: coerceBoolean, coerceFloat, coerceInteger, defaultLogLevel, defaultLogger, ensurePresent, formatRequestDetails, fromBase64, hasOwn, isAbsoluteURL, isArray, isEmptyObj, isObj, isReadonlyArray, loggerFor, maybeCoerceBoolean, maybeCoerceFloat, maybeCoerceInteger, maybeObj, parseLogLevel, pop, safeJSON, sleep, stringifyQuery, toBase64, uuid4, validatePositiveInteger
 
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/values.mjs
-var values = __nccwpck_require__(9296);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/core/error.mjs
-var error = __nccwpck_require__(5064);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/base64.mjs
+
+
+
+
+//# sourceMappingURL=utils.mjs.map
+
+/***/ }),
+
+/***/ 7594:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   JN: () => (/* binding */ backoff),
+/* harmony export */   LX: () => (/* binding */ applyJitter),
+/* harmony export */   bs: () => (/* binding */ isFatal4xx),
+/* harmony export */   p$: () => (/* binding */ jitter),
+/* harmony export */   zM: () => (/* binding */ isStatus)
+/* harmony export */ });
+/* unused harmony export is4xx */
+/* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5064);
+
+/** True when `e` is an {@link APIError} whose HTTP status equals `code`. */
+function isStatus(e, code) {
+    return e instanceof _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__/* .APIError */ .LG && e.status === code;
+}
+/** True when `e` is an {@link APIError} with a 4xx status. */
+function is4xx(e) {
+    return e instanceof _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__/* .APIError */ .LG && typeof e.status === 'number' && e.status >= 400 && e.status < 500;
+}
+/**
+ * True for a 4xx that the core client's retry policy would *not* retry, i.e. a
+ * permanent client error. 408 (request timeout), 409 (lock timeout) and 429
+ * (rate limit) are retryable for the base client (`Anthropic.shouldRetry`), so
+ * they are not treated as fatal here — keeping helper retry behaviour aligned
+ * with the rest of the SDK.
+ */
+function isFatal4xx(e) {
+    return is4xx(e) && !isStatus(e, 408) && !isStatus(e, 409) && !isStatus(e, 429);
+}
+/** Exponential backoff: `baseMs * 2 ** attempt`, clamped to `capMs`. */
+function backoff(attempt, baseMs, capMs) {
+    return Math.min(baseMs * 2 ** attempt, capMs);
+}
+/** Uniform random delay in the half-open interval `[lowMs, highMs)`. */
+function jitter(lowMs, highMs) {
+    return lowMs + Math.random() * (highMs - lowMs);
+}
+/**
+ * Trim up to 25% off `ms` at random so a fleet of clients backing off after a
+ * shared outage does not retry in lockstep — mirrors the jitter the core client
+ * applies to its own retry timeout.
+ */
+function applyJitter(ms) {
+    return ms * (1 - Math.random() * 0.25);
+}
+//# sourceMappingURL=backoff.mjs.map
+
+/***/ }),
+
+/***/ 1231:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   E: () => (/* binding */ fromBase64)
+/* harmony export */ });
+/* unused harmony export toBase64 */
+/* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5064);
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
@@ -26045,25 +26570,46 @@ const fromBase64 = (str) => {
         }
         return buf;
     }
-    throw new AnthropicError('Cannot decode base64 string; Expected `Buffer` or `atob` to be defined');
+    throw new _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AnthropicError */ .pJ('Cannot decode base64 string; Expected `Buffer` or `atob` to be defined');
 };
 //# sourceMappingURL=base64.mjs.map
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/env.mjs
-var env = __nccwpck_require__(111);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/log.mjs
-var log = __nccwpck_require__(7412);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/query.mjs + 3 modules
-var query = __nccwpck_require__(626);
-;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
+/***/ }),
 
+/***/ 9083:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
-
-
-
-
-//# sourceMappingURL=utils.mjs.map
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   CE: () => (/* binding */ decodeUTF8),
+/* harmony export */   Id: () => (/* binding */ concatBytes),
+/* harmony export */   YH: () => (/* binding */ encodeUTF8)
+/* harmony export */ });
+function concatBytes(buffers) {
+    let length = 0;
+    for (const buffer of buffers) {
+        length += buffer.length;
+    }
+    const output = new Uint8Array(length);
+    let index = 0;
+    for (const buffer of buffers) {
+        output.set(buffer, index);
+        index += buffer.length;
+    }
+    return output;
+}
+let encodeUTF8_;
+function encodeUTF8(str) {
+    let encoder;
+    return (encodeUTF8_ ??
+        ((encoder = new globalThis.TextEncoder()), (encodeUTF8_ = encoder.encode.bind(encoder))))(str);
+}
+let decodeUTF8_;
+function decodeUTF8(bytes) {
+    let decoder;
+    return (decodeUTF8_ ??
+        ((decoder = new globalThis.TextDecoder()), (decodeUTF8_ = decoder.decode.bind(decoder))))(bytes);
+}
+//# sourceMappingURL=bytes.mjs.map
 
 /***/ }),
 
@@ -26772,10 +27318,11 @@ function stringifyQuery(query) {
 /* harmony export */   i8: () => (/* binding */ maybeObj),
 /* harmony export */   ml: () => (/* binding */ safeJSON),
 /* harmony export */   nt: () => (/* binding */ isAbsoluteURL),
+/* harmony export */   sA: () => (/* binding */ isObj),
 /* harmony export */   wQ: () => (/* binding */ validatePositiveInteger),
 /* harmony export */   ze: () => (/* binding */ isEmptyObj)
 /* harmony export */ });
-/* unused harmony exports isObj, ensurePresent, coerceInteger, coerceFloat, coerceBoolean, maybeCoerceInteger, maybeCoerceFloat, maybeCoerceBoolean, pop */
+/* unused harmony exports ensurePresent, coerceInteger, coerceFloat, coerceBoolean, maybeCoerceInteger, maybeCoerceFloat, maybeCoerceBoolean, pop */
 /* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5064);
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -26927,6 +27474,43 @@ class ToolError extends Error {
 
 /***/ }),
 
+/***/ 8264:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   _3: () => (/* binding */ MIN_MEMORY_SYNC_INTERVAL_MS),
+/* harmony export */   hL: () => (/* binding */ DEFAULT_MEMORY_SYNC_INTERVAL_MS),
+/* harmony export */   iT: () => (/* binding */ checkMemorySyncInterval)
+/* harmony export */ });
+/* harmony import */ var _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(5064);
+/**
+ * The memory sync cadence, split out of `memories.ts` so runtime-agnostic
+ * callers (the environment worker) can validate an interval up front without
+ * reaching into the Node-only toolset module.
+ */
+
+/**
+ * How often (milliseconds) the worker syncs the session's memory stores back
+ * while the session runs. Checked after each dispatched tool call.
+ */
+const DEFAULT_MEMORY_SYNC_INTERVAL_MS = 15000;
+/**
+ * The shortest sync interval accepted. Each sync lists every attached store,
+ * so anything tighter mostly spends requests rediscovering that nothing
+ * changed.
+ */
+const MIN_MEMORY_SYNC_INTERVAL_MS = 5000;
+/** Throw unless `ms` is a usable sync interval. `option` names it in the message. */
+function checkMemorySyncInterval(ms, option) {
+    if (!(ms >= MIN_MEMORY_SYNC_INTERVAL_MS)) {
+        throw new _core_error_mjs__WEBPACK_IMPORTED_MODULE_0__/* .AnthropicError */ .pJ(`${option} must be at least ${MIN_MEMORY_SYNC_INTERVAL_MS}ms (got ${ms}); ` +
+            'to run without memory sync, pass `memorySyncIntervalMs: null` to the worker instead');
+    }
+}
+//# sourceMappingURL=sync-interval.mjs.map
+
+/***/ }),
+
 /***/ 3243:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -26934,11 +27518,20 @@ class ToolError extends Error {
 /* harmony export */   Bh: () => (/* binding */ dump),
 /* harmony export */   Hh: () => (/* binding */ load)
 /* harmony export */ });
-/* unused harmony exports CHOMPING_CLIP, CHOMPING_KEEP, CHOMPING_STRIP, COLLECTION_STYLE_BLOCK, COLLECTION_STYLE_FLOW, CORE_SCHEMA, EVENT_ALIAS, EVENT_DOCUMENT, EVENT_MAPPING, EVENT_POP, EVENT_SCALAR, EVENT_SEQUENCE, FAILSAFE_SCHEMA, JSON_SCHEMA, MERGE_KEY, NOT_RESOLVED, SCALAR_STYLE_DOUBLE_QUOTED, SCALAR_STYLE_FOLDED_BLOCK, SCALAR_STYLE_LITERAL_BLOCK, SCALAR_STYLE_PLAIN, SCALAR_STYLE_SINGLE_QUOTED, Schema, Style, VISIT_BREAK, VISIT_SKIP, YAML11_SCHEMA, YAMLException, binaryTag, boolCoreTag, boolJsonTag, boolYaml11Tag, constructFromEvents, defineMappingTag, defineScalarTag, defineSequenceTag, eventsToAst, floatCoreTag, floatJsonTag, floatYaml11Tag, getScalarValue, intCoreTag, intJsonTag, intYaml11Tag, jsToAst, legacyMapTag, loadAll, mapTag, mergeTag, nullCoreTag, nullJsonTag, nullYaml11Tag, omapTag, pairsTag, parseEvents, present, realMapTag, seqTag, setTag, strTag, timestampTag, visit */
-/*! js-yaml 5.2.3 https://github.com/nodeca/js-yaml @license MIT */
+/* unused harmony exports CHOMPING_CLIP, CHOMPING_KEEP, CHOMPING_MODE, CHOMPING_STRIP, COLLECTION_STYLE, COLLECTION_STYLE_BLOCK, COLLECTION_STYLE_FLOW, CORE_SCHEMA, DUMP_SCHEMA, EVENT_ALIAS, EVENT_DOCUMENT, EVENT_ID, EVENT_MAPPING, EVENT_POP, EVENT_SCALAR, EVENT_SEQUENCE, FAILSAFE_SCHEMA, JSON_SCHEMA, NOT_RESOLVED, SCALAR_STYLE, SCALAR_STYLE_DOUBLE_QUOTED, SCALAR_STYLE_FOLDED_BLOCK, SCALAR_STYLE_LITERAL_BLOCK, SCALAR_STYLE_PLAIN, SCALAR_STYLE_SINGLE_QUOTED, Schema, Style, VISIT_BREAK, VISIT_SKIP, YAML11_SCHEMA, YAMLException, binaryTag, boolCoreTag, boolJsonTag, boolYaml11Tag, constructFromEvents, defineMappingTag, defineScalarTag, defineSequenceTag, eventsToAst, floatCoreTag, floatJsonTag, floatYaml11Tag, getScalarValue, intCoreTag, intJsonTag, intYaml11Tag, jsToAst, legacyMapTag, loadAll, mapTag, mergeTag, nullCoreTag, nullJsonTag, nullYaml11Tag, omapTag, pairsTag, parseEvents, present, realMapTag, seqTag, setTag, strTag, timestampTag, visit */
+/*! js-yaml 5.3.0 https://github.com/nodeca/js-yaml @license MIT */
 //#region src/tag.ts
+/**
+* Returned by a scalar resolver when the source does not match its tag.
+*
+* @category Tags
+*/
 var NOT_RESOLVED = Symbol("NOT_RESOLVED");
-var MERGE_KEY = Symbol("MERGE_KEY");
+/**
+* Create a normalized scalar tag definition.
+*
+* @category Tags
+*/
 function defineScalarTag(tagName, options) {
 	return {
 		tagName,
@@ -26947,11 +27540,16 @@ function defineScalarTag(tagName, options) {
 		matchByTagPrefix: options.matchByTagPrefix ?? false,
 		implicitFirstChars: options.implicitFirstChars ?? null,
 		resolve: options.resolve,
-		identify: options.identify ?? null,
+		identify: options.identify,
 		represent: options.represent ?? ((data) => String(data)),
-		representTagName: options.representTagName ?? null
+		representTagName: options.representTagName ?? (() => tagName)
 	};
 }
+/**
+* Create a normalized sequence tag definition.
+*
+* @category Tags
+*/
 function defineSequenceTag(tagName, options) {
 	const carrierIsResult = options.finalize === void 0;
 	return {
@@ -26963,11 +27561,16 @@ function defineSequenceTag(tagName, options) {
 		addItem: options.addItem,
 		finalize: options.finalize ?? ((carrier) => carrier),
 		carrierIsResult,
-		identify: options.identify ?? null,
+		identify: options.identify,
 		represent: options.represent ?? ((data) => data),
-		representTagName: options.representTagName ?? null
+		representTagName: options.representTagName ?? (() => tagName)
 	};
 }
+/**
+* Create a normalized mapping tag definition.
+*
+* @category Tags
+*/
 function defineMappingTag(tagName, options) {
 	const carrierIsResult = options.finalize === void 0;
 	return {
@@ -26982,13 +27585,14 @@ function defineMappingTag(tagName, options) {
 		get: options.get,
 		finalize: options.finalize ?? ((carrier) => carrier),
 		carrierIsResult,
-		identify: options.identify ?? null,
+		identify: options.identify,
 		represent: options.represent ?? ((data) => data),
-		representTagName: options.representTagName ?? null
+		representTagName: options.representTagName ?? (() => tagName)
 	};
 }
 //#endregion
 //#region src/tag/scalar/str.ts
+/** @category Tags */
 var strTag = defineScalarTag("tag:yaml.org,2002:str", {
 	resolve: (source) => source,
 	identify: (data) => typeof data === "string"
@@ -27002,6 +27606,7 @@ var NULL_VALUES$1 = [
 	"Null",
 	"NULL"
 ];
+/** @category Tags */
 var nullCoreTag = defineScalarTag("tag:yaml.org,2002:null", {
 	implicit: true,
 	implicitFirstChars: [
@@ -27019,6 +27624,7 @@ var nullCoreTag = defineScalarTag("tag:yaml.org,2002:null", {
 });
 //#endregion
 //#region src/tag/scalar/null_json.ts
+/** @category Tags */
 var nullJsonTag = defineScalarTag("tag:yaml.org,2002:null", {
 	implicit: true,
 	implicitFirstChars: ["n"],
@@ -27038,6 +27644,7 @@ var NULL_VALUES = [
 	"Null",
 	"NULL"
 ];
+/** @category Tags */
 var nullYaml11Tag = defineScalarTag("tag:yaml.org,2002:null", {
 	implicit: true,
 	implicitFirstChars: [
@@ -27065,6 +27672,7 @@ var FALSE_VALUES$2 = [
 	"False",
 	"FALSE"
 ];
+/** @category Tags */
 var boolCoreTag = defineScalarTag("tag:yaml.org,2002:bool", {
 	implicit: true,
 	implicitFirstChars: [
@@ -27085,6 +27693,7 @@ var boolCoreTag = defineScalarTag("tag:yaml.org,2002:bool", {
 //#region src/tag/scalar/bool_json.ts
 var TRUE_VALUES$1 = ["true"];
 var FALSE_VALUES$1 = ["false"];
+/** @category Tags */
 var boolJsonTag = defineScalarTag("tag:yaml.org,2002:bool", {
 	implicit: true,
 	implicitFirstChars: ["t", "f"],
@@ -27124,6 +27733,7 @@ var FALSE_VALUES = [
 	"Off",
 	"OFF"
 ];
+/** @category Tags */
 var boolYaml11Tag = defineScalarTag("tag:yaml.org,2002:bool", {
 	implicit: true,
 	implicitFirstChars: [
@@ -27169,6 +27779,7 @@ function resolveYamlInteger$2(source, isExplicit) {
 	const result = parseYamlInteger$2(source);
 	return Number.isFinite(result) ? result : NOT_RESOLVED;
 }
+/** @category Tags */
 var intCoreTag = defineScalarTag("tag:yaml.org,2002:int", {
 	implicit: true,
 	implicitFirstChars: [
@@ -27203,6 +27814,7 @@ function resolveYamlInteger$1(source, isExplicit) {
 	const result = parseYamlInteger$1(source);
 	return Number.isFinite(result) ? result : NOT_RESOLVED;
 }
+/** @category Tags */
 var intJsonTag = defineScalarTag("tag:yaml.org,2002:int", {
 	implicit: true,
 	implicitFirstChars: ["-", ..."0123456789"],
@@ -27235,6 +27847,7 @@ function resolveYamlInteger(source) {
 	const result = parseYamlInteger(source);
 	return Number.isFinite(result) ? result : NOT_RESOLVED;
 }
+/** @category Tags */
 var intYaml11Tag = defineScalarTag("tag:yaml.org,2002:int", {
 	implicit: true,
 	implicitFirstChars: [
@@ -27269,6 +27882,7 @@ function representYamlFloat$2(object) {
 	const result = object.toString(10);
 	return /^[-+]?[0-9]+e/.test(result) ? result.replace("e", ".e") : result;
 }
+/** @category Tags */
 var floatCoreTag = defineScalarTag("tag:yaml.org,2002:float", {
 	implicit: true,
 	implicitFirstChars: [
@@ -27309,6 +27923,7 @@ function representYamlFloat$1(object) {
 	const result = object.toString(10);
 	return /^[-+]?[0-9]+e/.test(result) ? result.replace("e", ".e") : result;
 }
+/** @category Tags */
 var floatJsonTag = defineScalarTag("tag:yaml.org,2002:float", {
 	implicit: true,
 	implicitFirstChars: ["-", ..."0123456789"],
@@ -27343,6 +27958,7 @@ function representYamlFloat(object) {
 	const result = object.toString(10);
 	return /^[-+]?[0-9]+e/.test(result) ? result.replace("e", ".e") : result;
 }
+/** @category Tags */
 var floatYaml11Tag = defineScalarTag("tag:yaml.org,2002:float", {
 	implicit: true,
 	implicitFirstChars: [
@@ -27357,13 +27973,20 @@ var floatYaml11Tag = defineScalarTag("tag:yaml.org,2002:float", {
 });
 //#endregion
 //#region src/tag/scalar/merge.ts
+/**
+* Enables merge keys in {@link CORE_SCHEMA} when added with
+* {@link Schema.withTags}.
+*
+* @category Tags
+*/
 var mergeTag = defineScalarTag("tag:yaml.org,2002:merge", {
 	implicit: true,
 	implicitFirstChars: ["<"],
 	resolve: (source, isExplicit) => {
-		if (source === "<<" || isExplicit && source === "") return MERGE_KEY;
+		if (source === "<<" || isExplicit && source === "") return "<<";
 		return NOT_RESOLVED;
-	}
+	},
+	identify: () => false
 });
 //#endregion
 //#region src/tag/scalar/binary.ts
@@ -27381,6 +28004,11 @@ function representYamlBinary(object) {
 	for (let index = 0; index < object.length; index++) binary += String.fromCharCode(object[index]);
 	return btoa(binary);
 }
+/**
+* The `!!binary` tag, represented as a `Uint8Array`.
+*
+* @category Tags
+*/
 var binaryTag = defineScalarTag("tag:yaml.org,2002:binary", {
 	resolve: resolveYamlBinary,
 	identify: (object) => Object.prototype.toString.call(object) === "[object Uint8Array]",
@@ -27428,6 +28056,11 @@ function resolveYamlTimestamp(source) {
 	}
 	return date;
 }
+/**
+* The YAML 1.1 `!!timestamp` tag, represented as a JavaScript `Date`.
+*
+* @category Tags
+*/
 var timestampTag = defineScalarTag("tag:yaml.org,2002:timestamp", {
 	implicit: true,
 	implicitFirstChars: [..."0123456789"],
@@ -27437,6 +28070,7 @@ var timestampTag = defineScalarTag("tag:yaml.org,2002:timestamp", {
 });
 //#endregion
 //#region src/tag/sequence/seq.ts
+/** @category Tags */
 var seqTag = defineSequenceTag("tag:yaml.org,2002:seq", {
 	create: () => [],
 	addItem: (container, item) => {
@@ -27458,6 +28092,28 @@ function pick(object, keys) {
 }
 //#endregion
 //#region src/tag/sequence/omap.ts
+/**
+* Provided only for YAML 1.1 compatibility and supported by the loader only.
+* JavaScript has no dedicated class to represent this type, so it cannot be
+* identified and dumped.
+*
+* ```yaml
+* !!omap
+*   - one: 1
+*   - two: 2
+* ```
+*
+* is loaded as
+*
+* ```javascript
+* [
+*   { one: 1 },
+*   { two: 2 }
+* ]
+* ```
+*
+* @category Tags
+*/
 var omapTag = defineSequenceTag("tag:yaml.org,2002:omap", {
 	create: () => ({
 		list: [],
@@ -27478,10 +28134,33 @@ var omapTag = defineSequenceTag("tag:yaml.org,2002:omap", {
 		carrier.list.push(item);
 		return "";
 	},
-	finalize: (carrier) => carrier.list
+	finalize: (carrier) => carrier.list,
+	identify: () => false
 });
 //#endregion
 //#region src/tag/sequence/pairs.ts
+/**
+* Provided only for YAML 1.1 compatibility and supported by the loader only.
+* JavaScript has no dedicated class to represent this type, so it cannot be
+* identified and dumped.
+*
+* ```yaml
+* !!pairs
+*   - one: 1
+*   - two: 2
+* ```
+*
+* is loaded as
+*
+* ```javascript
+* [
+*   ['one', 1],
+*   ['two', 2]
+* ]
+* ```
+*
+* @category Tags
+*/
 var pairsTag = defineSequenceTag("tag:yaml.org,2002:pairs", {
 	create: () => [],
 	addItem: (container, item) => {
@@ -27496,10 +28175,32 @@ var pairsTag = defineSequenceTag("tag:yaml.org,2002:pairs", {
 		if (keys.length !== 1) return "cannot resolve a pairs item";
 		container.push([keys[0], object[keys[0]]]);
 		return "";
-	}
+	},
+	identify: () => false
 });
 //#endregion
 //#region src/tag/mapping/map.ts
+/**
+* This is the default mapping implementation. It uses `{}` objects and has only
+* partial functionality due to language limitations. This choice was made
+* because users expect to get JavaScript objects, and it was left unchanged to
+* avoid too many breaking changes in the v5 release.
+*
+* Side effects:
+*
+* - `Object.hasOwn()` checks or `for...of` loops are required for safe use (to
+*   avoid falling through to prototypes).
+* - Only scalar string keys are supported properly.
+* - Other scalar keys, such as `null` and numbers, are converted to strings.
+*   This is historical behaviour, and it can cause side effects such as
+*   problems with `!!merge`.
+*
+* Note that non-string scalar keys may be deprecated in future versions.
+*
+* Ideally, use {@link realMapTag} instead.
+*
+* @category Tags
+*/
 var mapTag = defineMappingTag("tag:yaml.org,2002:map", {
 	create: () => ({}),
 	identify: isPlainObject,
@@ -27533,6 +28234,11 @@ var mapTag = defineMappingTag("tag:yaml.org,2002:map", {
 });
 //#endregion
 //#region src/tag/mapping/set.ts
+/**
+* The YAML 1.1 `!!set` tag, represented as a JavaScript `Set`.
+*
+* @category Tags
+*/
 var setTag = defineMappingTag("tag:yaml.org,2002:set", {
 	create: () => /* @__PURE__ */ new Set(),
 	identify: (data) => data instanceof Set,
@@ -27581,13 +28287,42 @@ function compileTags(tags) {
 	}
 	return result;
 }
+/**
+* Controls tag resolution when loading and type selection when dumping.
+*
+* @category Schemas
+*/
 var Schema = class Schema {
 	tags;
+	/** @internal */
 	implicitScalarTags;
+	/**
+	* Dispatch implicit scalar resolvers by `source.charAt(0)`. Each bucket holds
+	* the resolvers that may match that key, in schema order; a key absent from
+	* the map uses
+	* {@link Schema.implicitScalarAnyFirstChar}
+	* (resolvers that declared no first-char constraint, so they apply to any
+	* first character).
+	*/
 	implicitScalarByFirstChar;
 	implicitScalarAnyFirstChar;
+	/**
+	* The default scalar tag (`!!str`), resolved once so the composer's fallback
+	* for unresolved plain scalars avoids a keyed lookup per scalar.
+	*
+	* @internal
+	*/
 	defaultScalarTag;
+	/**
+	* The default container tags (`!!seq` / `!!map`), used by the dumper: when a
+	* value is identified by its default tag, the tag is implicit and not
+	* printed. Undefined if the schema does not define them (then such values
+	* can't be dumped).
+	*
+	* @internal
+	*/
 	defaultSequenceTag;
+	/** @internal */
 	defaultMappingTag;
 	exact;
 	prefix;
@@ -27633,17 +28368,74 @@ var Schema = class Schema {
 		this.exact = exact;
 		this.prefix = prefix;
 	}
+	/** @internal */
+	lookupScalarTag(tagName) {
+		const exactTag = this.exact.scalar[tagName];
+		if (exactTag) return exactTag;
+		for (const tag of this.prefix.scalar) if (tagName.startsWith(tag.tagName)) return tag;
+	}
+	/** @internal */
+	lookupSequenceTag(tagName) {
+		const exactTag = this.exact.sequence[tagName];
+		if (exactTag) return exactTag;
+		for (const tag of this.prefix.sequence) if (tagName.startsWith(tag.tagName)) return tag;
+	}
+	/** @internal */
+	lookupMappingTag(tagName) {
+		const exactTag = this.exact.mapping[tagName];
+		if (exactTag) return exactTag;
+		for (const tag of this.prefix.mapping) if (tagName.startsWith(tag.tagName)) return tag;
+	}
+	/** @internal */
+	resolveImplicitScalarTag(source) {
+		const candidates = this.implicitScalarByFirstChar.get(source.charAt(0)) ?? this.implicitScalarAnyFirstChar;
+		for (const tag of candidates) {
+			const value = tag.resolve(source, false, tag.tagName);
+			if (value !== NOT_RESOLVED) return {
+				value,
+				tag
+			};
+		}
+		const tag = this.defaultScalarTag;
+		return {
+			value: tag.resolve(source, false, tag.tagName),
+			tag
+		};
+	}
+	/**
+	* Creates a new schema with the specified tags added. If a tag already
+	* exists, it is replaced by the specified tag.
+	*
+	* @example
+	*
+	* ```javascript
+	* import { CORE_SCHEMA, mergeTag, realMapTag } from 'js-yaml'
+	*
+	* const schema = CORE_SCHEMA.withTags(mergeTag, realMapTag)
+	* ```
+	*/
 	withTags(...tags) {
 		let flatTags = [];
 		for (const tag of tags) flatTags = flatTags.concat(tag);
 		return new Schema([...this.tags, ...flatTags]);
 	}
 };
+/**
+* The YAML 1.2 Failsafe Schema: strings, sequences, and mappings.
+*
+* @category Schemas
+*/
 var FAILSAFE_SCHEMA = new Schema([
 	strTag,
 	seqTag,
 	mapTag
 ]);
+/**
+* The YAML 1.2 JSON Schema. It uses JSON scalar forms while retaining YAML
+* collection syntax.
+*
+* @category Schemas
+*/
 var JSON_SCHEMA = new Schema([
 	...FAILSAFE_SCHEMA.tags,
 	nullJsonTag,
@@ -27651,6 +28443,25 @@ var JSON_SCHEMA = new Schema([
 	intJsonTag,
 	floatJsonTag
 ]);
+/**
+* The default schema for the loaders. Note, {@link CORE_SCHEMA} comes
+* without the `!!merge` tag. You can easily enable it if needed.
+*
+* @example
+* Enable {@link mergeTag}:
+*
+* ```javascript
+* import { load, CORE_SCHEMA, mergeTag } from 'js-yaml'
+*
+* try {
+*   load(data, { schema: CORE_SCHEMA.withTags(mergeTag) })
+* } catch (e) {
+*   console.error(e)
+* }
+* ```
+*
+* @category Schemas
+*/
 var CORE_SCHEMA = new Schema([
 	...FAILSAFE_SCHEMA.tags,
 	nullCoreTag,
@@ -27658,6 +28469,11 @@ var CORE_SCHEMA = new Schema([
 	intCoreTag,
 	floatCoreTag
 ]);
+/**
+* YAML 1.1-compatible schema.
+*
+* @category Schemas
+*/
 var YAML11_SCHEMA = new Schema([
 	...FAILSAFE_SCHEMA.tags,
 	nullYaml11Tag,
@@ -27671,8 +28487,60 @@ var YAML11_SCHEMA = new Schema([
 	pairsTag,
 	setTag
 ]);
+/**
+* The dumper schema for maximum compatibility. It combines all supported type
+* variants from YAML 1.1 and YAML 1.2 so strings matching any of them are
+* quoted. This makes the generated YAML more compatible with other parsers.
+*
+* The schema is based on YAML 1.1, but extends `!!int` and `!!float` to accept
+* both YAML 1.1 and Core Schema forms, since Core Schema supports some forms
+* that YAML 1.1 does not.
+*
+* @category Schemas
+*/
+var DUMP_SCHEMA = YAML11_SCHEMA.withTags({
+	...intYaml11Tag,
+	resolve: (source, isExplicit, tagName) => {
+		const result = intYaml11Tag.resolve(source, isExplicit, tagName);
+		return result === NOT_RESOLVED ? intCoreTag.resolve(source, isExplicit, tagName) : result;
+	}
+}, {
+	...floatYaml11Tag,
+	resolve: (source, isExplicit, tagName) => {
+		const result = floatYaml11Tag.resolve(source, isExplicit, tagName);
+		return result === NOT_RESOLVED ? floatCoreTag.resolve(source, isExplicit, tagName) : result;
+	}
+});
 //#endregion
 //#region src/tag/mapping/real_map.ts
+/**
+* Recommended when non-string keys are actually needed. It uses native
+* JavaScript `Map` objects, so keys keep their constructed types instead of
+* being converted to strings.
+*
+* It is not the default to avoid widespread breaking changes in existing
+* projects. `Map` has a different access API and does not pass deep equality
+* checks against `{}`-based fixtures. Alongside the other changes in v5,
+* making it the default was considered too disruptive.
+*
+* If these differences are acceptable for your project, we recommend using
+* {@link realMapTag} to guarantee the absence of problems and side effects.
+*
+* @example
+* Enable {@link realMapTag}:
+*
+* ```javascript
+* import { load, CORE_SCHEMA, realMapTag } from 'js-yaml'
+*
+* try {
+*   load(data, { schema: CORE_SCHEMA.withTags(realMapTag) })
+* } catch (e) {
+*   console.error(e)
+* }
+* ```
+*
+* @category Tags
+*/
 var realMapTag = defineMappingTag("tag:yaml.org,2002:map", {
 	create: () => /* @__PURE__ */ new Map(),
 	addPair: (container, key, value) => {
@@ -27705,6 +28573,13 @@ function normalizeKey(key) {
 	if (typeof key === "object" && Object.prototype.toString.call(key) === "[object Object]") return "[object Object]";
 	return String(key);
 }
+/**
+* This implementation exists solely to reproduce v4 behavior exactly. Its use
+* is strongly discouraged. If complex or non-string keys are needed, use
+* {@link realMapTag} instead.
+*
+* @category Tags
+*/
 var legacyMapTag = defineMappingTag("tag:yaml.org,2002:map", {
 	create: () => ({}),
 	identify: isPlainObject,
@@ -27809,9 +28684,19 @@ function formatError(exception, compact) {
 	if (!compact && exception.mark.snippet) where += `\n\n${exception.mark.snippet}`;
 	return `${exception.reason} ${where}`;
 }
-var YAMLException = class extends Error {
+/**
+* A YAML error. Unlike an ordinary `Error`, it adds a source snippet showing
+* the location of the problem to the error message, when available.
+*
+* @category Main
+*/
+var YAMLException = class YAMLException extends Error {
 	reason;
 	mark;
+	/**
+	* Optional `mark` contains source snippet data. Usually, use
+	* {@link YAMLException.throwAt} instead of passing it directly.
+	*/
 	constructor(reason, mark) {
 		super();
 		this.name = "YAMLException";
@@ -27820,52 +28705,71 @@ var YAMLException = class extends Error {
 		this.message = formatError(this, false);
 		if (Error.captureStackTrace) Error.captureStackTrace(this, this.constructor);
 	}
+	/**
+	* Returns the formatted error, omitting the source snippet in compact mode.
+	*/
 	toString(compact) {
 		return `${this.name}: ${formatError(this, compact)}`;
 	}
-};
-function throwErrorAt(source, position, message, filename = "") {
-	let line = 0;
-	let lineStart = 0;
-	for (let index = 0; index < position; index++) {
-		const ch = source.charCodeAt(index);
-		if (ch === 10) {
-			line++;
-			lineStart = index + 1;
-		} else if (ch === 13) {
-			line++;
-			if (source.charCodeAt(index + 1) === 10) index++;
-			lineStart = index + 1;
+	/**
+	* Builds a YAMLException with a source snippet and throws it. `source` is
+	* the raw input text; `position` is an offset into it.
+	*/
+	static throwAt(source, position, message, filename = "") {
+		let line = 0;
+		let lineStart = 0;
+		for (let index = 0; index < position; index++) {
+			const ch = source.charCodeAt(index);
+			if (ch === 10) {
+				line++;
+				lineStart = index + 1;
+			} else if (ch === 13) {
+				line++;
+				if (source.charCodeAt(index + 1) === 10) index++;
+				lineStart = index + 1;
+			}
 		}
+		const mark = {
+			name: filename,
+			buffer: source,
+			position,
+			line,
+			column: position - lineStart
+		};
+		mark.snippet = makeSnippet(mark);
+		throw new YAMLException(message, mark);
 	}
-	const mark = {
-		name: filename,
-		buffer: source,
-		position,
-		line,
-		column: position - lineStart
-	};
-	mark.snippet = makeSnippet(mark);
-	throw new YAMLException(message, mark);
-}
+};
 //#endregion
 //#region src/parser/events.ts
-var EVENT_DOCUMENT = 1;
-var EVENT_SEQUENCE = 2;
-var EVENT_MAPPING = 3;
-var EVENT_SCALAR = 4;
-var EVENT_ALIAS = 5;
-var EVENT_POP = 6;
-var SCALAR_STYLE_PLAIN = 1;
-var SCALAR_STYLE_SINGLE_QUOTED = 2;
-var SCALAR_STYLE_DOUBLE_QUOTED = 3;
-var SCALAR_STYLE_LITERAL_BLOCK = 4;
-var SCALAR_STYLE_FOLDED_BLOCK = 5;
-var COLLECTION_STYLE_BLOCK = 1;
-var COLLECTION_STYLE_FLOW = 2;
-var CHOMPING_CLIP = 1;
-var CHOMPING_STRIP = 2;
-var CHOMPING_KEEP = 3;
+/** @category Events */
+var EVENT_ID = {
+	DOCUMENT: 1,
+	SEQUENCE: 2,
+	MAPPING: 3,
+	SCALAR: 4,
+	ALIAS: 5,
+	POP: 6
+};
+/** @category Nodes */
+var SCALAR_STYLE = {
+	PLAIN: 1,
+	SINGLE_QUOTED: 2,
+	DOUBLE_QUOTED: 3,
+	LITERAL_BLOCK: 4,
+	FOLDED_BLOCK: 5
+};
+/** @category Nodes */
+var COLLECTION_STYLE = {
+	BLOCK: 1,
+	FLOW: 2
+};
+/** @category Nodes */
+var CHOMPING_MODE = {
+	CLIP: 1,
+	STRIP: 2,
+	KEEP: 3
+};
 //#endregion
 //#region src/parser/parser_scalar.ts
 var NO_RANGE$3 = -1;
@@ -28046,21 +28950,26 @@ function getBlockValue(input, start, end, indent, chomping, folded) {
 		didReadContent = true;
 		emptyLines = 0;
 	}
-	if (chomping === 3) result += "\n".repeat(didReadContent ? 1 + emptyLines : emptyLines);
-	else if (chomping !== 2) {
+	if (chomping === CHOMPING_MODE.KEEP) result += "\n".repeat(didReadContent ? 1 + emptyLines : emptyLines);
+	else if (chomping !== CHOMPING_MODE.STRIP) {
 		if (didReadContent) result += "\n";
 	}
 	return result;
 }
+/**
+* Decodes the scalar referenced by event offsets in `input`.
+*
+* @category Events
+*/
 function getScalarValue(input, scalar) {
 	if (scalar.valueStart === NO_RANGE$3) return "";
 	const { valueStart, valueEnd } = scalar;
 	if (scalar.fast) return input.slice(valueStart, valueEnd);
 	switch (scalar.style) {
-		case 2: return getSingleQuotedValue(input, valueStart, valueEnd);
-		case 3: return getDoubleQuotedValue(input, valueStart, valueEnd);
-		case 4: return getBlockValue(input, valueStart, valueEnd, scalar.indent, scalar.chomping, false);
-		case 5: return getBlockValue(input, valueStart, valueEnd, scalar.indent, scalar.chomping, true);
+		case SCALAR_STYLE.SINGLE_QUOTED: return getSingleQuotedValue(input, valueStart, valueEnd);
+		case SCALAR_STYLE.DOUBLE_QUOTED: return getDoubleQuotedValue(input, valueStart, valueEnd);
+		case SCALAR_STYLE.LITERAL_BLOCK: return getBlockValue(input, valueStart, valueEnd, scalar.indent, scalar.chomping, false);
+		case SCALAR_STYLE.FOLDED_BLOCK: return getBlockValue(input, valueStart, valueEnd, scalar.indent, scalar.chomping, true);
 		default: return getPlainValue(input, valueStart, valueEnd);
 	}
 }
@@ -28092,6 +29001,7 @@ function tagNameShort(fullTag) {
 //#endregion
 //#region src/parser/constructor.ts
 var NO_RANGE$2 = -1;
+var MERGE_TAG_NAME = "tag:yaml.org,2002:merge";
 var DEFAULT_CONSTRUCTOR_OPTIONS = {
 	filename: "",
 	schema: CORE_SCHEMA,
@@ -28107,25 +29017,15 @@ function eventPosition$1(event) {
 	return 0;
 }
 function throwError$1(state, message) {
-	throwErrorAt(state.source, state.position, message, state.filename);
+	YAMLException.throwAt(state.source, state.position, message, state.filename);
 }
 function finalizeCollection(state, position, tag, carrier) {
 	try {
 		return tag.finalize(carrier);
 	} catch (error) {
 		if (error instanceof YAMLException) throw error;
-		throwErrorAt(state.source, position, error instanceof Error ? error.message : String(error), state.filename);
+		YAMLException.throwAt(state.source, position, error instanceof Error ? error.message : String(error), state.filename);
 	}
-}
-function lookupTag(exact, prefix, tagName) {
-	const exactTag = exact[tagName];
-	if (exactTag) return exactTag;
-	for (const tag of prefix) if (tagName.startsWith(tag.tagName)) return tag;
-}
-function findExplicitTag(state, exact, prefix, tagName, nodeKind) {
-	const tag = lookupTag(exact, prefix, tagName);
-	if (tag) return tag;
-	throwError$1(state, `unknown ${nodeKind} tag !<${tagName}>`);
 }
 function constructScalar(state, event) {
 	const source = getScalarValue(state.source, event);
@@ -28137,7 +29037,7 @@ function constructScalar(state, event) {
 			tag: strTag
 		};
 		const tagName = tagNameFull(rawTag, state.tagHandlers);
-		const scalarTag = lookupTag(state.schema.exact.scalar, state.schema.prefix.scalar, tagName);
+		const scalarTag = state.schema.lookupScalarTag(tagName);
 		if (scalarTag) {
 			const result = scalarTag.resolve(source, true, tagName);
 			if (result === NOT_RESOLVED) throwError$1(state, `cannot resolve a node with !<${tagName}> explicit tag`);
@@ -28146,7 +29046,7 @@ function constructScalar(state, event) {
 				tag: scalarTag
 			};
 		}
-		const collectionTagDef = lookupTag(state.schema.exact.mapping, state.schema.prefix.mapping, tagName) ?? lookupTag(state.schema.exact.sequence, state.schema.prefix.sequence, tagName);
+		const collectionTagDef = state.schema.lookupMappingTag(tagName) ?? state.schema.lookupSequenceTag(tagName);
 		if (collectionTagDef) {
 			if (source !== "") throwError$1(state, `cannot resolve a node with !<${tagName}> explicit tag`);
 			const carrier = collectionTagDef.create(tagName);
@@ -28157,28 +29057,15 @@ function constructScalar(state, event) {
 		}
 		throwError$1(state, `unknown scalar tag !<${tagName}>`);
 	}
-	if (event.style === 1) {
-		const candidates = state.schema.implicitScalarByFirstChar.get(source.charAt(0)) ?? state.schema.implicitScalarAnyFirstChar;
-		for (const tag of candidates) {
-			const result = tag.resolve(source, false, tag.tagName);
-			if (result !== NOT_RESOLVED) return {
-				value: result,
-				tag
-			};
-		}
-	}
+	if (event.style === SCALAR_STYLE.PLAIN) return state.schema.resolveImplicitScalarTag(source);
 	return {
 		value: strTag.resolve(source, false, strTag.tagName),
 		tag: strTag
 	};
 }
-function collectionTag(state, event, exact, prefix, defaultTagName, nodeKind) {
+function collectionTagName(state, event, defaultTagName) {
 	const rawTag = event.tagStart === NO_RANGE$2 ? "" : state.source.slice(event.tagStart, event.tagEnd);
-	const tagName = rawTag === "" || rawTag === "!" ? defaultTagName : tagNameFull(rawTag, state.tagHandlers);
-	return {
-		tagName,
-		tag: findExplicitTag(state, exact, prefix, tagName, nodeKind)
-	};
+	return rawTag === "" || rawTag === "!" ? defaultTagName : tagNameFull(rawTag, state.tagHandlers);
 }
 function isMappingTag(tag) {
 	return tag.nodeKind === "mapping";
@@ -28195,12 +29082,16 @@ function mergeKeys(state, frame, source, sourceTag) {
 function mergeSource(state, frame, source, sourceTag) {
 	state.position = frame.keyPosition;
 	if (isMappingTag(sourceTag)) mergeKeys(state, frame, source, sourceTag);
-	else if (sourceTag.nodeKind === "sequence" && Array.isArray(source)) for (const element of source) mergeKeys(state, frame, element, frame.tag);
+	else if (sourceTag.nodeKind === "sequence" && Array.isArray(source)) for (const element of source) {
+		const elementTag = state.nodeTags.get(element);
+		if (!elementTag) throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
+		mergeKeys(state, frame, element, elementTag);
+	}
 	else throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
 }
 function addMappingValue(state, frame, key, value, tag) {
 	state.position = frame.keyPosition;
-	if (key === MERGE_KEY) {
+	if (frame.keyIsMerge) {
 		mergeSource(state, frame, value, tag);
 		return;
 	}
@@ -28215,9 +29106,7 @@ function addValue(state, value, tag) {
 		frame.value = value;
 		frame.hasValue = true;
 	} else if (frame.kind === "sequence") {
-		if (frame.merge) {
-			if (!isMappingTag(tag)) throwError$1(state, "cannot merge mappings; the provided source object is unacceptable");
-		}
+		if (isMappingTag(tag)) state.nodeTags.set(value, tag);
 		const err = frame.tag.addItem(frame.value, value, frame.index++);
 		if (err) throwError$1(state, err);
 	} else if (frame.hasKey) {
@@ -28229,6 +29118,7 @@ function addValue(state, value, tag) {
 		frame.key = value;
 		frame.keyPosition = state.position;
 		frame.hasKey = true;
+		frame.keyIsMerge = tag.tagName === MERGE_TAG_NAME;
 	}
 }
 function storeAnchor(state, event, value, tag, isValueFinal) {
@@ -28243,6 +29133,12 @@ function storeAnchor(state, event, value, tag, isValueFinal) {
 	}
 	return null;
 }
+/**
+* Constructs JavaScript documents directly from parser events, without an
+* intermediate AST.
+*
+* @category Events
+*/
 function constructFromEvents(events, options) {
 	const state = {
 		...DEFAULT_CONSTRUCTOR_OPTIONS,
@@ -28253,6 +29149,7 @@ function constructFromEvents(events, options) {
 		position: 0,
 		frames: [],
 		anchors: /* @__PURE__ */ new Map(),
+		nodeTags: /* @__PURE__ */ new Map(),
 		tagHandlers: Object.create(null),
 		totalMergeKeys: 0,
 		aliasCount: 0
@@ -28261,8 +29158,9 @@ function constructFromEvents(events, options) {
 		const event = state.events[state.eventIndex++];
 		state.position = eventPosition$1(event);
 		switch (event.type) {
-			case 1:
+			case EVENT_ID.DOCUMENT:
 				state.anchors = /* @__PURE__ */ new Map();
+				state.nodeTags = /* @__PURE__ */ new Map();
 				state.aliasCount = 0;
 				state.tagHandlers = Object.create(null);
 				for (const directive of event.directives) if (directive.kind === "tag") state.tagHandlers[directive.handle] = directive.prefix;
@@ -28273,47 +29171,49 @@ function constructFromEvents(events, options) {
 					hasValue: false
 				});
 				break;
-			case 4: {
+			case EVENT_ID.SCALAR: {
 				const { value, tag } = constructScalar(state, event);
 				storeAnchor(state, event, value, tag, true);
 				addValue(state, value, tag);
 				break;
 			}
-			case 2: {
-				const definition = collectionTag(state, event, state.schema.exact.sequence, state.schema.prefix.sequence, "tag:yaml.org,2002:seq", "sequence");
-				const value = definition.tag.create(definition.tagName);
-				const anchor = storeAnchor(state, event, value, definition.tag, definition.tag.carrierIsResult);
-				const parent = state.frames[state.frames.length - 1];
-				const merge = parent !== void 0 && parent.kind === "mapping" && parent.hasKey && parent.key === MERGE_KEY;
+			case EVENT_ID.SEQUENCE: {
+				const tagName = collectionTagName(state, event, "tag:yaml.org,2002:seq");
+				const tag = state.schema.lookupSequenceTag(tagName);
+				if (!tag) throwError$1(state, `unknown sequence tag !<${tagName}>`);
+				const value = tag.create(tagName);
+				const anchor = storeAnchor(state, event, value, tag, tag.carrierIsResult);
 				state.frames.push({
 					kind: "sequence",
 					position: state.position,
 					value,
-					tag: definition.tag,
+					tag,
 					anchor,
-					index: 0,
-					merge
+					index: 0
 				});
 				break;
 			}
-			case 3: {
-				const definition = collectionTag(state, event, state.schema.exact.mapping, state.schema.prefix.mapping, "tag:yaml.org,2002:map", "mapping");
-				const value = definition.tag.create(definition.tagName);
-				const anchor = storeAnchor(state, event, value, definition.tag, definition.tag.carrierIsResult);
+			case EVENT_ID.MAPPING: {
+				const tagName = collectionTagName(state, event, "tag:yaml.org,2002:map");
+				const tag = state.schema.lookupMappingTag(tagName);
+				if (!tag) throwError$1(state, `unknown mapping tag !<${tagName}>`);
+				const value = tag.create(tagName);
+				const anchor = storeAnchor(state, event, value, tag, tag.carrierIsResult);
 				state.frames.push({
 					kind: "mapping",
 					position: state.position,
 					value,
-					tag: definition.tag,
+					tag,
 					anchor,
 					key: void 0,
 					keyPosition: state.position,
 					hasKey: false,
+					keyIsMerge: false,
 					overridable: null
 				});
 				break;
 			}
-			case 5: {
+			case EVENT_ID.ALIAS: {
 				if (state.maxAliases !== -1 && ++state.aliasCount > state.maxAliases) throwError$1(state, `aliases exceeded maxAliases (${state.maxAliases})`);
 				const name = state.source.slice(event.anchorStart, event.anchorEnd);
 				const anchor = state.anchors.get(name);
@@ -28322,7 +29222,7 @@ function constructFromEvents(events, options) {
 				addValue(state, anchor.value, anchor.tag);
 				break;
 			}
-			case 6: {
+			case EVENT_ID.POP: {
 				const frame = state.frames.pop();
 				if (frame.kind === "mapping" && frame.hasKey) {
 					state.position = frame.keyPosition;
@@ -28365,7 +29265,7 @@ var DEFAULT_PARSER_OPTIONS = {
 };
 function addDocumentEvent(state, explicitStart, explicitEnd) {
 	state.events.push({
-		type: 1,
+		type: EVENT_ID.DOCUMENT,
 		explicitStart,
 		explicitEnd,
 		directives: state.directives
@@ -28373,7 +29273,7 @@ function addDocumentEvent(state, explicitStart, explicitEnd) {
 }
 function addSequenceEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd, style) {
 	state.events.push({
-		type: 2,
+		type: EVENT_ID.SEQUENCE,
 		start,
 		anchorStart,
 		anchorEnd,
@@ -28384,7 +29284,7 @@ function addSequenceEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd
 }
 function addMappingEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd, style) {
 	state.events.push({
-		type: 3,
+		type: EVENT_ID.MAPPING,
 		start,
 		anchorStart,
 		anchorEnd,
@@ -28395,18 +29295,18 @@ function addMappingEvent(state, start, anchorStart, anchorEnd, tagStart, tagEnd,
 }
 function insertFlowPairMappingEvent(state, snapshot) {
 	state.events.splice(snapshot.eventsLength, 0, {
-		type: 3,
+		type: EVENT_ID.MAPPING,
 		start: snapshot.position,
 		anchorStart: NO_RANGE$1,
 		anchorEnd: NO_RANGE$1,
 		tagStart: NO_RANGE$1,
 		tagEnd: NO_RANGE$1,
-		style: 2
+		style: COLLECTION_STYLE.FLOW
 	});
 }
-function addScalarEvent(state, valueStart, valueEnd, anchorStart, anchorEnd, tagStart, tagEnd, style, chomping = 1, indent = -1, fast = false) {
+function addScalarEvent(state, valueStart, valueEnd, anchorStart, anchorEnd, tagStart, tagEnd, style, chomping = CHOMPING_MODE.CLIP, indent = -1, fast = false) {
 	state.events.push({
-		type: 4,
+		type: EVENT_ID.SCALAR,
 		valueStart,
 		valueEnd,
 		anchorStart,
@@ -28421,16 +29321,16 @@ function addScalarEvent(state, valueStart, valueEnd, anchorStart, anchorEnd, tag
 }
 function addAliasEvent(state, anchorStart, anchorEnd) {
 	state.events.push({
-		type: 5,
+		type: EVENT_ID.ALIAS,
 		anchorStart,
 		anchorEnd
 	});
 }
 function addPopEvent(state) {
-	state.events.push({ type: 6 });
+	state.events.push({ type: EVENT_ID.POP });
 }
 function addEmptyScalarEvent(state) {
-	addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, 1);
+	addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, NO_RANGE$1, SCALAR_STYLE.PLAIN);
 }
 function emptyProperties() {
 	return {
@@ -28459,7 +29359,7 @@ function restoreState(state, snapshot) {
 	state.events.length = snapshot.eventsLength;
 }
 function throwError(state, message) {
-	throwErrorAt(state.input.slice(0, state.length), state.position, message, state.filename);
+	YAMLException.throwAt(state.input.slice(0, state.length), state.position, message, state.filename);
 }
 function isEol(c) {
 	return c === 10 || c === 13;
@@ -28627,7 +29527,7 @@ function readSingleQuotedScalar(state, nodeIndent, props) {
 			}
 			const end = state.position;
 			state.position++;
-			addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 2, 1, -1, simple);
+			addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.SINGLE_QUOTED, CHOMPING_MODE.CLIP, -1, simple);
 			return true;
 		}
 		if (isEol(ch)) {
@@ -28649,7 +29549,7 @@ function readDoubleQuotedScalar(state, nodeIndent, props) {
 		if (ch === 34) {
 			const end = state.position;
 			state.position++;
-			addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 3, 1, -1, simple);
+			addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.DOUBLE_QUOTED, CHOMPING_MODE.CLIP, -1, simple);
 			return true;
 		}
 		if (ch === 92) {
@@ -28677,18 +29577,18 @@ function readDoubleQuotedScalar(state, nodeIndent, props) {
 }
 function readBlockScalar(state, parentIndent, props) {
 	const ch = state.input.charCodeAt(state.position);
-	let chomping = 1;
+	let chomping = CHOMPING_MODE.CLIP;
 	let indent = -1;
 	let detectedIndent = false;
 	if (ch !== 124 && ch !== 62) return false;
-	const style = ch === 124 ? 4 : 5;
+	const style = ch === 124 ? SCALAR_STYLE.LITERAL_BLOCK : SCALAR_STYLE.FOLDED_BLOCK;
 	state.position++;
 	while (state.input.charCodeAt(state.position) !== 0) {
 		const current = state.input.charCodeAt(state.position);
 		const digit = fromDecimalCode(current);
 		if (current === 43 || current === 45) {
-			if (chomping !== 1) throwError(state, "repeat of a chomping mode identifier");
-			chomping = current === 43 ? 3 : 2;
+			if (chomping !== CHOMPING_MODE.CLIP) throwError(state, "repeat of a chomping mode identifier");
+			chomping = current === 43 ? CHOMPING_MODE.KEEP : CHOMPING_MODE.STRIP;
 			state.position++;
 		} else if (digit >= 0) {
 			if (digit === 0) throwError(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
@@ -28803,7 +29703,7 @@ function readPlainScalar(state, nodeIndent, nodeContext, props) {
 	}
 	if (end === start) return false;
 	checkPrintable(state, start, end);
-	addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1, 1, -1, !multiline);
+	addScalarEvent(state, start, end, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.PLAIN, CHOMPING_MODE.CLIP, -1, !multiline);
 	return true;
 }
 function skipFlowSeparationSpace(state, nodeIndent) {
@@ -28818,8 +29718,8 @@ function readFlowCollection(state, nodeIndent, props) {
 	let readNext = true;
 	if (ch !== 91 && ch !== 123) return false;
 	const terminator = isMapping ? 125 : 93;
-	if (isMapping) addMappingEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 2);
-	else addSequenceEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 2);
+	if (isMapping) addMappingEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.FLOW);
+	else addSequenceEvent(state, start, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.FLOW);
 	state.position++;
 	while (state.input.charCodeAt(state.position) !== 0) {
 		skipFlowSeparationSpace(state, nodeIndent);
@@ -28873,7 +29773,7 @@ function readFlowCollection(state, nodeIndent, props) {
 }
 function readBlockSequence(state, nodeIndent, props) {
 	if (state.firstTabInLine !== -1 || state.input.charCodeAt(state.position) !== 45 || !isWsOrEolOrEnd(state.input.charCodeAt(state.position + 1))) return false;
-	addSequenceEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1);
+	addSequenceEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.BLOCK);
 	while (state.input.charCodeAt(state.position) === 45 && isWsOrEolOrEnd(state.input.charCodeAt(state.position + 1))) {
 		if (state.firstTabInLine !== -1) {
 			state.position = state.firstTabInLine;
@@ -28909,7 +29809,7 @@ function readBlockMapping(state, nodeIndent, flowIndent, props) {
 		const entryLine = state.line;
 		if ((ch === 63 || ch === 58) && isWsOrEolOrEnd(following)) {
 			if (!mappingOpened) {
-				addMappingEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1);
+				addMappingEvent(state, state.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.BLOCK);
 				mappingOpened = true;
 			}
 			if (ch === 63) {
@@ -28939,7 +29839,7 @@ function readBlockMapping(state, nodeIndent, flowIndent, props) {
 					if (!isWsOrEolOrEnd(ch)) throwError(state, "a whitespace character is expected after the key-value separator within a block mapping");
 					if (!mappingOpened) {
 						restoreState(state, beforeKey);
-						addMappingEvent(state, beforeKey.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1);
+						addMappingEvent(state, beforeKey.position, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, COLLECTION_STYLE.BLOCK);
 						mappingOpened = true;
 						parseNode(state, flowIndent, CONTEXT_FLOW_OUT, false, true);
 						ch = state.input.charCodeAt(state.position);
@@ -29007,7 +29907,7 @@ function parseNode(state, parentIndent, nodeContext, allowToSeek, allowCompact, 
 		if (atNewLine && allowBlockStyles && (props.tagStart !== NO_RANGE$1 || props.anchorStart !== NO_RANGE$1) && (ch === 33 || ch === 38)) {
 			const fallbackState = snapshotState(state);
 			const flowIndent = parentIndent + 1;
-			if (readBlockMapping(state, state.position - state.lineStart, flowIndent, props) && state.events[fallbackState.eventsLength]?.type === 3) {
+			if (readBlockMapping(state, state.position - state.lineStart, flowIndent, props) && state.events[fallbackState.eventsLength]?.type === EVENT_ID.MAPPING) {
 				state.depth--;
 				return true;
 			}
@@ -29035,7 +29935,7 @@ function parseNode(state, parentIndent, nodeContext, allowToSeek, allowCompact, 
 				const fallbackState = snapshotState(state);
 				const propertyIndent = propertyStart.position - propertyStart.lineStart;
 				restoreState(state, propertyStart);
-				if (readBlockMapping(state, propertyIndent, flowIndent, emptyProperties()) && state.events[fallbackState.eventsLength]?.type === 3) hasContent = true;
+				if (readBlockMapping(state, propertyIndent, flowIndent, emptyProperties()) && state.events[fallbackState.eventsLength]?.type === EVENT_ID.MAPPING) hasContent = true;
 				else restoreState(state, fallbackState);
 			}
 			if (!hasContent && (allowBlockScalars && readBlockScalar(state, flowIndent, props) || readSingleQuotedScalar(state, flowIndent, props) || readDoubleQuotedScalar(state, flowIndent, props) || readAlias(state, props) || readPlainScalar(state, flowIndent, nodeContext, props))) hasContent = true;
@@ -29044,7 +29944,7 @@ function parseNode(state, parentIndent, nodeContext, allowToSeek, allowCompact, 
 	}
 	allowBlockScalars = allowBlockScalars && !hasContent;
 	if (!hasContent && (props.anchorStart !== NO_RANGE$1 || props.tagStart !== NO_RANGE$1 || allowBlockScalars)) {
-		addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, 1);
+		addScalarEvent(state, NO_RANGE$1, NO_RANGE$1, props.anchorStart, props.anchorEnd, props.tagStart, props.tagEnd, SCALAR_STYLE.PLAIN);
 		hasContent = true;
 	}
 	state.depth--;
@@ -29129,10 +30029,15 @@ function readDocument(state) {
 		}
 	}
 	const documentEvent = state.events[documentEventIndex];
-	if (documentEvent?.type === 1) documentEvent.explicitEnd = explicitEnd;
+	if (documentEvent?.type === EVENT_ID.DOCUMENT) documentEvent.explicitEnd = explicitEnd;
 	addPopEvent(state);
 	if (!explicitEnd && state.position < state.length && !(state.position === state.lineStart && testDocumentSeparator(state))) throwError(state, "end of the stream or a document separator is expected");
 }
+/**
+* Parses YAML into a flat event stream referencing source text by offsets.
+*
+* @category Events
+*/
 function parseEvents(input, options) {
 	const length = input.length;
 	const state = {
@@ -29151,7 +30056,7 @@ function parseEvents(input, options) {
 		events: []
 	};
 	const nullpos = input.indexOf("\0");
-	if (nullpos !== -1) throwErrorAt(input, nullpos, "null byte is not allowed in input", state.filename);
+	if (nullpos !== -1) YAMLException.throwAt(input, nullpos, "null byte is not allowed in input", state.filename);
 	if (state.input.charCodeAt(state.position) === 65279) state.position++;
 	while (state.position < state.length) {
 		skipSeparationSpace(state, true);
@@ -29191,6 +30096,36 @@ function loadAll(input, iteratorOrOptions, options) {
 	if (iterator === null) return documents;
 	for (const document of documents) iterator(document);
 }
+/**
+* Parses `string` as a single YAML document. Throws {@link YAMLException} on
+* error. This function does not understand multi-document or empty sources; it
+* throws an exception on those.
+*
+* > [!NOTE]
+* > 1. When processing untrusted input, see the
+* >    [security considerations](../docs/safety.md).
+* > 2. All exceptions MUST be caught, not just {@link YAMLException}.
+* > 3. The default {@link CORE_SCHEMA} comes without the `!!merge` tag. You can
+* >    easily enable it if needed.
+* > 4. The default {@link mapTag} is `{}`-object based, with known limitations
+* >    (see description). For full compatibility use {@link realMapTag}
+* >    instead (it uses native JS `Map`).
+*
+* @example
+* Enable {@link mergeTag} and {@link realMapTag}:
+*
+* ```javascript
+* import { load, CORE_SCHEMA, mergeTag, realMapTag } from 'js-yaml'
+*
+* try {
+*   load(data, { schema: CORE_SCHEMA.withTags(mergeTag, realMapTag) })
+* } catch (e) {
+*   console.error(e)
+* }
+* ```
+*
+* @category Main
+*/
 function load(input, options) {
 	const documents = loadDocuments(input, options);
 	if (documents.length === 0) throw new YAMLException("expected a document, but the input is empty");
@@ -29199,7 +30134,16 @@ function load(input, options) {
 }
 //#endregion
 //#region src/ast/nodes.ts
+/**
+* Style bitfields, defined as a class only to initialize their defaults.
+*
+* Manually assigned styles are hints; the presenter may use a fallback when
+* needed to produce valid YAML.
+*
+* @category Nodes
+*/
 var Style = class {
+	/** Whether to print the node's tag explicitly. */
 	tagged = false;
 	flow = false;
 	singleQuoted = false;
@@ -29237,9 +30181,9 @@ function buildRepresentTypes(schema) {
 function matchTag(state, object) {
 	for (let index = 0, length = state.representTypes.length; index < length; index += 1) {
 		const { tag, implicitTag } = state.representTypes[index];
-		if (tag.identify && tag.identify(object)) {
+		if (tag.identify(object)) {
 			let tagName;
-			if (tag.matchByTagPrefix && tag.representTagName) tagName = tag.representTagName(object);
+			if (tag.matchByTagPrefix) tagName = tag.representTagName(object);
 			else tagName = tag.tagName;
 			return {
 				tag,
@@ -29322,6 +30266,13 @@ function build(state, object) {
 	}
 	return node;
 }
+/**
+* Convert JS object to AST. A JS value is one YAML document. An unrepresentable
+* root becomes an empty document, which the presenter renders as an empty
+* string.
+*
+* @category AST
+*/
 function jsToAst(input, schema, options = {}) {
 	const root = build({
 		representTypes: buildRepresentTypes(schema),
@@ -29337,7 +30288,17 @@ function jsToAst(input, schema, options = {}) {
 }
 //#endregion
 //#region src/ast/visit.ts
+/**
+* Return from a visitor to stop the whole traversal.
+*
+* @category AST
+*/
 var VISIT_BREAK = Symbol("visit:break");
+/**
+* Return from a visitor to skip the current node's children.
+*
+* @category AST
+*/
 var VISIT_SKIP = Symbol("visit:skip");
 function visitNode(node, visitor, ctx) {
 	const control = visitor(node, ctx);
@@ -29369,6 +30330,12 @@ function visitNode(node, visitor, ctx) {
 	}
 	return false;
 }
+/**
+* Walk every node in the documents, calling {@link Visitor} once per
+* node (pre-order).
+*
+* @category AST
+*/
 function visit(documents, visitor) {
 	for (const doc of documents) if (doc.contents && visitNode(doc.contents, visitor, {
 		depth: 0,
@@ -29443,8 +30410,7 @@ function createPresenterState(options) {
 	};
 	return {
 		...opts,
-		defaultScalarTagName: opts.schema.defaultScalarTag.tagName,
-		implicitResolvers: opts.schema.implicitScalarTags
+		defaultScalarTagName: opts.schema.defaultScalarTag.tagName
 	};
 }
 function encodeNonPrintable(character) {
@@ -29483,13 +30449,6 @@ function scalarLayout(state, level) {
 		blockIndent: level === 0 ? state.indent + 1 : state.indent,
 		lineWidth: state.lineWidth === -1 ? -1 : Math.max(Math.min(state.lineWidth, 40), state.lineWidth - indent)
 	};
-}
-function resolveImplicitTag(state, str) {
-	for (let index = 0, length = state.implicitResolvers.length; index < length; index += 1) {
-		const tagDefinition = state.implicitResolvers[index];
-		if (tagDefinition.resolve(str, false, tagDefinition.tagName) !== NOT_RESOLVED) return tagDefinition.tagName;
-	}
-	return state.defaultScalarTagName;
 }
 function isWhitespace(c) {
 	return c === CHAR_SPACE || c === CHAR_TAB;
@@ -29602,11 +30561,11 @@ function resolveScalarStyle(state, node, layout, iskey, inblock) {
 	}
 	const string = node.value;
 	if (string.length === 0) {
-		if (node.style.tagged || resolveImplicitTag(state, string) === node.tag) return STYLE_PLAIN;
+		if (node.style.tagged || state.schema.resolveImplicitScalarTag(string).tag.tagName === node.tag) return STYLE_PLAIN;
 		return state.quoteStyle === "double" ? STYLE_DOUBLE : STYLE_SINGLE;
 	}
 	const style = chooseScalarStyle(state, string, layout, singleLineOnly, state.forceQuotes && !iskey, inblock);
-	if (style === STYLE_PLAIN && !node.style.tagged && resolveImplicitTag(state, string) !== node.tag) return state.quoteStyle === "double" ? STYLE_DOUBLE : STYLE_SINGLE;
+	if (style === STYLE_PLAIN && !node.style.tagged && state.schema.resolveImplicitScalarTag(string).tag.tagName !== node.tag) return state.quoteStyle === "double" ? STYLE_DOUBLE : STYLE_SINGLE;
 	return style;
 }
 function blockHeader(string, indentPerLevel) {
@@ -29856,6 +30815,11 @@ function writeDocumentDirectives(doc) {
 	}
 	return result;
 }
+/**
+* Build YAML from AST.
+*
+* @category AST
+*/
 function present(documents, options) {
 	const state = createPresenterState(options);
 	let result = "";
@@ -29886,27 +30850,22 @@ function present(documents, options) {
 }
 //#endregion
 //#region src/dump.ts
-var DEFAULT_DUMP_SCHEMA = YAML11_SCHEMA.withTags({
-	...intYaml11Tag,
-	resolve: (source, isExplicit, tagName) => {
-		const result = intYaml11Tag.resolve(source, isExplicit, tagName);
-		return result === NOT_RESOLVED ? intCoreTag.resolve(source, isExplicit, tagName) : result;
-	}
-}, {
-	...floatYaml11Tag,
-	resolve: (source, isExplicit, tagName) => {
-		const result = floatYaml11Tag.resolve(source, isExplicit, tagName);
-		return result === NOT_RESOLVED ? floatCoreTag.resolve(source, isExplicit, tagName) : result;
-	}
-});
 var DEFAULT_DUMP_OPTIONS = {
 	...DEFAULT_PRESENTER_OPTIONS,
-	schema: DEFAULT_DUMP_SCHEMA,
+	schema: DUMP_SCHEMA,
 	skipInvalid: false,
 	noRefs: false,
 	flowLevel: -1,
 	transform: () => {}
 };
+/**
+* Serializes JS object as a YAML document. By default it can dump every
+* supported YAML type, so it throws an exception if you try to dump regexps or
+* functions. However, you can disable exceptions by setting the
+* {@link DumpOptions.skipInvalid} option to `true`.
+*
+* @category Main
+*/
 function dump(input, options = {}) {
 	const opts = {
 		...DEFAULT_DUMP_OPTIONS,
@@ -29943,27 +30902,21 @@ function rawTag(state, event) {
 function anchorName(state, event) {
 	return event.anchorStart === NO_RANGE ? void 0 : state.source.slice(event.anchorStart, event.anchorEnd);
 }
-function implicitScalarTagName(state, source) {
-	const { schema } = state;
-	const candidates = schema.implicitScalarByFirstChar.get(source.charAt(0)) ?? schema.implicitScalarAnyFirstChar;
-	for (const tag of candidates) if (tag.resolve(source, false, tag.tagName) !== NOT_RESOLVED) return tag.tagName;
-	return schema.defaultScalarTag.tagName;
-}
 function buildScalar(state, event) {
 	const value = getScalarValue(state.source, event);
 	const raw = rawTag(state, event);
 	const style = new Style();
 	switch (event.style) {
-		case 2:
+		case SCALAR_STYLE.SINGLE_QUOTED:
 			style.singleQuoted = true;
 			break;
-		case 3:
+		case SCALAR_STYLE.DOUBLE_QUOTED:
 			style.doubleQuoted = true;
 			break;
-		case 4:
+		case SCALAR_STYLE.LITERAL_BLOCK:
 			style.literal = true;
 			break;
-		case 5:
+		case SCALAR_STYLE.FOLDED_BLOCK:
 			style.folded = true;
 			break;
 	}
@@ -29971,7 +30924,7 @@ function buildScalar(state, event) {
 	if (raw !== "") {
 		style.tagged = true;
 		tag = raw;
-	} else if (event.style === 1) tag = implicitScalarTagName(state, value);
+	} else if (event.style === SCALAR_STYLE.PLAIN) tag = state.schema.resolveImplicitScalarTag(value).tag.tagName;
 	else tag = state.schema.defaultScalarTag.tagName;
 	return {
 		kind: "scalar",
@@ -29984,7 +30937,7 @@ function buildScalar(state, event) {
 function buildCollection(state, event, defaultTagName) {
 	const raw = rawTag(state, event);
 	const style = new Style();
-	if (event.style === 2) style.flow = true;
+	if (event.style === COLLECTION_STYLE.FLOW) style.flow = true;
 	let tag;
 	if (raw === "") tag = defaultTagName;
 	else {
@@ -30009,6 +30962,11 @@ function addNode(state, node) {
 		frame.key = null;
 	} else frame.key = node;
 }
+/**
+* Builds an AST from parser events
+*
+* @category AST
+*/
 function eventsToAst(events, options) {
 	const state = {
 		source: options.source,
@@ -30022,7 +30980,7 @@ function eventsToAst(events, options) {
 		const event = events[state.eventIndex++];
 		state.position = eventPosition(event);
 		switch (event.type) {
-			case 1: {
+			case EVENT_ID.DOCUMENT: {
 				const doc = {
 					contents: null,
 					explicitStart: event.explicitStart,
@@ -30035,10 +30993,10 @@ function eventsToAst(events, options) {
 				});
 				break;
 			}
-			case 4:
+			case EVENT_ID.SCALAR:
 				addNode(state, buildScalar(state, event));
 				break;
-			case 2: {
+			case EVENT_ID.SEQUENCE: {
 				const { tag, style, anchor } = buildCollection(state, event, "tag:yaml.org,2002:seq");
 				const node = {
 					kind: "sequence",
@@ -30053,7 +31011,7 @@ function eventsToAst(events, options) {
 				});
 				break;
 			}
-			case 3: {
+			case EVENT_ID.MAPPING: {
 				const { tag, style, anchor } = buildCollection(state, event, "tag:yaml.org,2002:map");
 				const node = {
 					kind: "mapping",
@@ -30069,7 +31027,7 @@ function eventsToAst(events, options) {
 				});
 				break;
 			}
-			case 5: {
+			case EVENT_ID.ALIAS: {
 				const name = state.source.slice(event.anchorStart, event.anchorEnd);
 				addNode(state, {
 					kind: "alias",
@@ -30079,7 +31037,7 @@ function eventsToAst(events, options) {
 				});
 				break;
 			}
-			case 6: {
+			case EVENT_ID.POP: {
 				const frame = state.frames.pop();
 				if (frame.kind === "mapping" && frame.key) throw new Error("incomplete mapping pair in event stream");
 				if (frame.kind === "document") state.documents.push(frame.doc);
@@ -30090,6 +31048,40 @@ function eventsToAst(events, options) {
 	}
 	return state.documents;
 }
+//#endregion
+//#region src/index.ts
+/** @deprecated Use `EVENT_ID.DOCUMENT` instead. @internal */
+var EVENT_DOCUMENT = EVENT_ID.DOCUMENT;
+/** @deprecated Use `EVENT_ID.SEQUENCE` instead. @internal */
+var EVENT_SEQUENCE = EVENT_ID.SEQUENCE;
+/** @deprecated Use `EVENT_ID.MAPPING` instead. @internal */
+var EVENT_MAPPING = EVENT_ID.MAPPING;
+/** @deprecated Use `EVENT_ID.SCALAR` instead. @internal */
+var EVENT_SCALAR = EVENT_ID.SCALAR;
+/** @deprecated Use `EVENT_ID.ALIAS` instead. @internal */
+var EVENT_ALIAS = EVENT_ID.ALIAS;
+/** @deprecated Use `EVENT_ID.POP` instead. @internal */
+var EVENT_POP = EVENT_ID.POP;
+/** @deprecated Use `SCALAR_STYLE.PLAIN` instead. @internal */
+var SCALAR_STYLE_PLAIN = SCALAR_STYLE.PLAIN;
+/** @deprecated Use `SCALAR_STYLE.SINGLE_QUOTED` instead. @internal */
+var SCALAR_STYLE_SINGLE_QUOTED = SCALAR_STYLE.SINGLE_QUOTED;
+/** @deprecated Use `SCALAR_STYLE.DOUBLE_QUOTED` instead. @internal */
+var SCALAR_STYLE_DOUBLE_QUOTED = SCALAR_STYLE.DOUBLE_QUOTED;
+/** @deprecated Use `SCALAR_STYLE.LITERAL_BLOCK` instead. @internal */
+var SCALAR_STYLE_LITERAL_BLOCK = SCALAR_STYLE.LITERAL_BLOCK;
+/** @deprecated Use `SCALAR_STYLE.FOLDED_BLOCK` instead. @internal */
+var SCALAR_STYLE_FOLDED_BLOCK = SCALAR_STYLE.FOLDED_BLOCK;
+/** @deprecated Use `COLLECTION_STYLE.BLOCK` instead. @internal */
+var COLLECTION_STYLE_BLOCK = COLLECTION_STYLE.BLOCK;
+/** @deprecated Use `COLLECTION_STYLE.FLOW` instead. @internal */
+var COLLECTION_STYLE_FLOW = COLLECTION_STYLE.FLOW;
+/** @deprecated Use `CHOMPING_MODE.CLIP` instead. @internal */
+var CHOMPING_CLIP = CHOMPING_MODE.CLIP;
+/** @deprecated Use `CHOMPING_MODE.STRIP` instead. @internal */
+var CHOMPING_STRIP = CHOMPING_MODE.STRIP;
+/** @deprecated Use `CHOMPING_MODE.KEEP` instead. @internal */
+var CHOMPING_KEEP = CHOMPING_MODE.KEEP;
 //#endregion
 
 
@@ -52684,8 +53676,8 @@ var esm = __nccwpck_require__(9519);
 var loader = __nccwpck_require__(3833);
 // EXTERNAL MODULE: ./runners/core/skill-cache.mjs
 var skill_cache = __nccwpck_require__(7328);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 84 modules
-var sdk = __nccwpck_require__(5176);
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 85 modules
+var sdk = __nccwpck_require__(3545);
 ;// CONCATENATED MODULE: ./node_modules/@google/generative-ai/dist/index.mjs
 /**
  * Contains the list of OpenAPI data types
@@ -54228,7 +55220,6 @@ function __classPrivateFieldGet(receiver, state, kind, f) {
 
 
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/uuid.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 /**
  * https://stackoverflow.com/a/2117523
  */
@@ -54244,7 +55235,6 @@ let uuid4 = function () {
 };
 //# sourceMappingURL=uuid.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/errors.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 function src_isAbortError(err) {
     return (typeof err === 'object' &&
         err !== null &&
@@ -54281,7 +55271,6 @@ const castToError = (err) => {
 };
 //# sourceMappingURL=errors.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/core/error.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 class error_OpenAIError extends Error {
 }
@@ -54298,11 +55287,12 @@ class APIError extends error_OpenAIError {
         this.type = data?.['type'];
     }
     static makeMessage(status, error, message) {
-        const msg = error?.message ?
-            typeof error.message === 'string' ?
-                error.message
+        const msg = error?.message
+            ? typeof error.message === 'string'
+                ? error.message
                 : JSON.stringify(error.message)
-            : error ? JSON.stringify(error)
+            : error
+                ? JSON.stringify(error)
                 : message;
         if (status && msg) {
             return `${status} ${msg}`;
@@ -54430,7 +55420,6 @@ class SubjectTokenProviderError extends error_OpenAIError {
 }
 //# sourceMappingURL=error.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/values.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 // https://url.spec.whatwg.org/#url-scheme-string
 const startsWithSchemeRegexp = /^[a-z][a-z0-9+.-]*:/i;
@@ -54525,14 +55514,871 @@ const src_safeJSON = (text) => {
 };
 //# sourceMappingURL=values.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/sleep.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //# sourceMappingURL=sleep.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/shims.mjs
+/**
+ * This module provides internal shims and utility functions for environments where certain Node.js or global types may not be available.
+ *
+ * These are used to ensure we can provide a consistent behaviour between different JavaScript environments and good error
+ * messages in cases where an environment isn't fully supported.
+ */
+function getDefaultFetch() {
+    if (typeof fetch !== 'undefined') {
+        return fetch;
+    }
+    throw new Error('`fetch` is not defined as a global; Either pass `fetch` to the client, `new OpenAI({ fetch })` or polyfill the global, `globalThis.fetch = fetch`');
+}
+function makeReadableStream(...args) {
+    const ReadableStream = globalThis.ReadableStream;
+    if (typeof ReadableStream === 'undefined') {
+        // Note: All of the platforms / runtimes we officially support already define
+        // `ReadableStream` as a global, so this should only ever be hit on unsupported runtimes.
+        throw new Error('`ReadableStream` is not defined as a global; You will need to polyfill it, `globalThis.ReadableStream = ReadableStream`');
+    }
+    return new ReadableStream(...args);
+}
+function ReadableStreamFrom(iterable) {
+    let iter = Symbol.asyncIterator in iterable ? iterable[Symbol.asyncIterator]() : iterable[Symbol.iterator]();
+    return makeReadableStream({
+        start() { },
+        async pull(controller) {
+            const { done, value } = await iter.next();
+            if (done) {
+                controller.close();
+            }
+            else {
+                controller.enqueue(value);
+            }
+        },
+        async cancel() {
+            await iter.return?.();
+        },
+    });
+}
+/**
+ * Most browsers don't yet have async iterable support for ReadableStream,
+ * and Node has a very different way of reading bytes from its "ReadableStream".
+ *
+ * This polyfill was pulled from https://github.com/MattiasBuelens/web-streams-polyfill/pull/122#issuecomment-1627354490
+ */
+function ReadableStreamToAsyncIterable(stream) {
+    if (stream[Symbol.asyncIterator])
+        return stream;
+    const reader = stream.getReader();
+    return {
+        async next() {
+            try {
+                const result = await reader.read();
+                if (result?.done)
+                    reader.releaseLock(); // release lock when stream becomes closed
+                return result;
+            }
+            catch (e) {
+                reader.releaseLock(); // release lock when stream becomes errored
+                throw e;
+            }
+        },
+        async return() {
+            const cancelPromise = reader.cancel();
+            reader.releaseLock();
+            await cancelPromise;
+            return { done: true, value: undefined };
+        },
+        [Symbol.asyncIterator]() {
+            return this;
+        },
+    };
+}
+/**
+ * Cancels a ReadableStream we don't need to consume.
+ * See https://undici.nodejs.org/#/?id=garbage-collection
+ */
+async function CancelReadableStream(stream) {
+    if (stream === null || typeof stream !== 'object')
+        return;
+    if (stream[Symbol.asyncIterator]) {
+        await stream[Symbol.asyncIterator]().return?.();
+        return;
+    }
+    const reader = stream.getReader();
+    const cancelPromise = reader.cancel();
+    reader.releaseLock();
+    await cancelPromise;
+}
+//# sourceMappingURL=shims.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/bytes.mjs
+/** Copies byte arrays into one contiguous `Uint8Array` while preserving their order. */
+function concatBytes(buffers) {
+    let length = 0;
+    for (const buffer of buffers) {
+        length += buffer.length;
+    }
+    const output = new Uint8Array(length);
+    let index = 0;
+    for (const buffer of buffers) {
+        output.set(buffer, index);
+        index += buffer.length;
+    }
+    return output;
+}
+let encodeUTF8_;
+/** Encodes text as UTF-8 bytes, reusing the platform encoder after its first call. */
+function bytes_encodeUTF8(str) {
+    let encoder;
+    return (encodeUTF8_ ??
+        ((encoder = new globalThis.TextEncoder()), (encodeUTF8_ = encoder.encode.bind(encoder))))(str);
+}
+let decodeUTF8_;
+/** Decodes UTF-8 bytes as text, reusing the platform decoder after its first call. */
+function decodeUTF8(bytes) {
+    let decoder;
+    return (decodeUTF8_ ??
+        ((decoder = new globalThis.TextDecoder()), (decodeUTF8_ = decoder.decode.bind(decoder))))(bytes);
+}
+//# sourceMappingURL=bytes.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/decoders/line.mjs
+var _LineDecoder_instances, _LineDecoder_buffer, _LineDecoder_start, _LineDecoder_end, _LineDecoder_searchIndex, _LineDecoder_skipLeadingLF, _LineDecoder_append;
+
+
+/** Maximum backing-buffer capacity retained when completed lines leave little active data. */
+const MAX_RETAINED_BUFFER_BYTES = 64 * 1024;
+/**
+ * Incrementally decodes UTF-8 text into lines without losing partial characters
+ * or newline sequences that span multiple chunks.
+ *
+ * Supports `\n`, `\r`, and `\r\n` line endings. Call {@link flush} after the
+ * final chunk to emit a trailing line that does not end with a newline.
+ *
+ * Based on the line decoder used by the Python `httpx` project:
+ * https://github.com/encode/httpx/blob/920333ea98118e9cf617f246905d7b202510941c/httpx/_decoders.py#L258
+ */
+class LineDecoder {
+    /** Creates a decoder with no buffered bytes or pending newline continuation. */
+    constructor() {
+        _LineDecoder_instances.add(this);
+        _LineDecoder_buffer.set(this, void 0);
+        _LineDecoder_start.set(this, void 0);
+        _LineDecoder_end.set(this, void 0);
+        _LineDecoder_searchIndex.set(this, void 0);
+        _LineDecoder_skipLeadingLF.set(this, void 0);
+        __classPrivateFieldSet(this, _LineDecoder_buffer, new Uint8Array(), "f");
+        __classPrivateFieldSet(this, _LineDecoder_start, 0, "f");
+        __classPrivateFieldSet(this, _LineDecoder_end, 0, "f");
+        __classPrivateFieldSet(this, _LineDecoder_searchIndex, 0, "f");
+        __classPrivateFieldSet(this, _LineDecoder_skipLeadingLF, false, "f");
+    }
+    /**
+     * Appends a text or UTF-8 byte chunk and returns every newly completed line.
+     *
+     * Incomplete lines remain buffered for the next call. A trailing `\r`
+     * completes its line immediately, and a following `\n` is consumed as its
+     * continuation. `null` and `undefined` are ignored and do not flush buffered
+     * content.
+     */
+    decode(chunk) {
+        if (chunk == null) {
+            return [];
+        }
+        let binaryChunk;
+        if (chunk instanceof ArrayBuffer) {
+            binaryChunk = new Uint8Array(chunk);
+        }
+        else if (typeof chunk === 'string') {
+            binaryChunk = bytes_encodeUTF8(chunk);
+        }
+        else {
+            binaryChunk = chunk;
+        }
+        if (binaryChunk.length === 0) {
+            return [];
+        }
+        if (__classPrivateFieldGet(this, _LineDecoder_skipLeadingLF, "f")) {
+            __classPrivateFieldSet(this, _LineDecoder_skipLeadingLF, false, "f");
+            if (binaryChunk[0] === 0x0a) {
+                binaryChunk = binaryChunk.subarray(1);
+            }
+            if (binaryChunk.length === 0) {
+                return [];
+            }
+        }
+        __classPrivateFieldGet(this, _LineDecoder_instances, "m", _LineDecoder_append).call(this, binaryChunk);
+        const lines = [];
+        let patternIndex;
+        while ((patternIndex = findNewlineIndex(__classPrivateFieldGet(this, _LineDecoder_buffer, "f"), __classPrivateFieldGet(this, _LineDecoder_searchIndex, "f"), __classPrivateFieldGet(this, _LineDecoder_end, "f"))) != null) {
+            const line = decodeUTF8(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(__classPrivateFieldGet(this, _LineDecoder_start, "f"), patternIndex.preceding));
+            lines.push(line);
+            __classPrivateFieldSet(this, _LineDecoder_start, patternIndex.index, "f");
+            if (patternIndex.carriage) {
+                if (__classPrivateFieldGet(this, _LineDecoder_start, "f") < __classPrivateFieldGet(this, _LineDecoder_end, "f") && __classPrivateFieldGet(this, _LineDecoder_buffer, "f")[__classPrivateFieldGet(this, _LineDecoder_start, "f")] === 0x0a) {
+                    __classPrivateFieldSet(this, _LineDecoder_start, __classPrivateFieldGet(this, _LineDecoder_start, "f") + 1, "f");
+                }
+                else if (__classPrivateFieldGet(this, _LineDecoder_start, "f") === __classPrivateFieldGet(this, _LineDecoder_end, "f")) {
+                    __classPrivateFieldSet(this, _LineDecoder_skipLeadingLF, true, "f");
+                }
+            }
+            __classPrivateFieldSet(this, _LineDecoder_searchIndex, __classPrivateFieldGet(this, _LineDecoder_start, "f"), "f");
+        }
+        __classPrivateFieldSet(this, _LineDecoder_searchIndex, __classPrivateFieldGet(this, _LineDecoder_end, "f"), "f");
+        if (__classPrivateFieldGet(this, _LineDecoder_start, "f") === __classPrivateFieldGet(this, _LineDecoder_end, "f")) {
+            __classPrivateFieldSet(this, _LineDecoder_start, 0, "f");
+            __classPrivateFieldSet(this, _LineDecoder_end, 0, "f");
+            __classPrivateFieldSet(this, _LineDecoder_searchIndex, 0, "f");
+            if (__classPrivateFieldGet(this, _LineDecoder_buffer, "f").length > MAX_RETAINED_BUFFER_BYTES) {
+                __classPrivateFieldSet(this, _LineDecoder_buffer, new Uint8Array(), "f");
+            }
+        }
+        else if (lines.length > 0 && __classPrivateFieldGet(this, _LineDecoder_buffer, "f").length > MAX_RETAINED_BUFFER_BYTES) {
+            const length = __classPrivateFieldGet(this, _LineDecoder_end, "f") - __classPrivateFieldGet(this, _LineDecoder_start, "f");
+            if (length <= MAX_RETAINED_BUFFER_BYTES || __classPrivateFieldGet(this, _LineDecoder_buffer, "f").length > length * 4) {
+                const capacity = length <= MAX_RETAINED_BUFFER_BYTES
+                    ? Math.min(Math.max(length * 2, 256), MAX_RETAINED_BUFFER_BYTES)
+                    : length * 2;
+                const buffer = new Uint8Array(capacity);
+                buffer.set(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(__classPrivateFieldGet(this, _LineDecoder_start, "f"), __classPrivateFieldGet(this, _LineDecoder_end, "f")));
+                __classPrivateFieldSet(this, _LineDecoder_buffer, buffer, "f");
+                __classPrivateFieldSet(this, _LineDecoder_start, 0, "f");
+                __classPrivateFieldSet(this, _LineDecoder_end, length, "f");
+                __classPrivateFieldSet(this, _LineDecoder_searchIndex, length, "f");
+            }
+        }
+        return lines;
+    }
+    /** Emits the remaining unterminated line, or returns an empty array when idle. */
+    flush() {
+        __classPrivateFieldSet(this, _LineDecoder_skipLeadingLF, false, "f");
+        if (__classPrivateFieldGet(this, _LineDecoder_start, "f") === __classPrivateFieldGet(this, _LineDecoder_end, "f")) {
+            return [];
+        }
+        return this.decode('\n');
+    }
+}
+_LineDecoder_buffer = new WeakMap(), _LineDecoder_start = new WeakMap(), _LineDecoder_end = new WeakMap(), _LineDecoder_searchIndex = new WeakMap(), _LineDecoder_skipLeadingLF = new WeakMap(), _LineDecoder_instances = new WeakSet(), _LineDecoder_append = function _LineDecoder_append(chunk) {
+    if (__classPrivateFieldGet(this, _LineDecoder_end, "f") + chunk.length > __classPrivateFieldGet(this, _LineDecoder_buffer, "f").length) {
+        const length = __classPrivateFieldGet(this, _LineDecoder_end, "f") - __classPrivateFieldGet(this, _LineDecoder_start, "f");
+        if (__classPrivateFieldGet(this, _LineDecoder_start, "f") >= __classPrivateFieldGet(this, _LineDecoder_buffer, "f").length / 2 && length + chunk.length <= __classPrivateFieldGet(this, _LineDecoder_buffer, "f").length) {
+            __classPrivateFieldGet(this, _LineDecoder_buffer, "f").copyWithin(0, __classPrivateFieldGet(this, _LineDecoder_start, "f"), __classPrivateFieldGet(this, _LineDecoder_end, "f"));
+        }
+        else {
+            const capacity = Math.max(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").length * 2, length + chunk.length, 256);
+            const buffer = new Uint8Array(capacity);
+            buffer.set(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(__classPrivateFieldGet(this, _LineDecoder_start, "f"), __classPrivateFieldGet(this, _LineDecoder_end, "f")));
+            __classPrivateFieldSet(this, _LineDecoder_buffer, buffer, "f");
+        }
+        __classPrivateFieldSet(this, _LineDecoder_searchIndex, __classPrivateFieldGet(this, _LineDecoder_searchIndex, "f") - __classPrivateFieldGet(this, _LineDecoder_start, "f"), "f");
+        __classPrivateFieldSet(this, _LineDecoder_end, length, "f");
+        __classPrivateFieldSet(this, _LineDecoder_start, 0, "f");
+    }
+    __classPrivateFieldGet(this, _LineDecoder_buffer, "f").set(chunk, __classPrivateFieldGet(this, _LineDecoder_end, "f"));
+    __classPrivateFieldSet(this, _LineDecoder_end, __classPrivateFieldGet(this, _LineDecoder_end, "f") + chunk.length, "f");
+};
+// prettier-ignore
+/** Individual characters recognized as possible line terminators. */
+LineDecoder.NEWLINE_CHARS = new Set(['\n', '\r']);
+/** Matches complete CRLF terminators as well as standalone CR and LF characters. */
+LineDecoder.NEWLINE_REGEXP = /\r\n|[\n\r]/g;
+/**
+ * Searches the active buffer range for the next CR or LF byte and returns its
+ * zero-based position, the position immediately after it, and whether the byte
+ * was a carriage return. Returns `null` when the range contains no newline byte.
+ *
+ * ```ts
+ * findNewlineIndex(new TextEncoder().encode('abc\ndef'), 0, 7)
+ * // => { preceding: 3, index: 4, carriage: false }
+ * ```
+ */
+function findNewlineIndex(buffer, start, end) {
+    const newline = 0x0a; // \n
+    const carriage = 0x0d; // \r
+    for (let i = start; i < end; i++) {
+        if (buffer[i] === newline) {
+            return { preceding: i, index: i + 1, carriage: false };
+        }
+        if (buffer[i] === carriage) {
+            return { preceding: i, index: i + 1, carriage: true };
+        }
+    }
+    return null;
+}
+/**
+ * Finds the first blank-line separator used to delimit streamed event records.
+ *
+ * @returns The byte offset immediately after the first pair of consecutive
+ * line endings, or `-1` when the buffer contains no complete separator.
+ */
+function findDoubleNewlineIndex(buffer) {
+    for (let i = 0; i < buffer.length - 1; i++) {
+        const firstEndingLength = lineEndingLength(buffer, i);
+        if (firstEndingLength > 0) {
+            const secondEndingIndex = i + firstEndingLength;
+            const secondEndingLength = lineEndingLength(buffer, secondEndingIndex);
+            if (secondEndingLength > 0) {
+                return secondEndingIndex + secondEndingLength;
+            }
+        }
+    }
+    return -1;
+}
+function lineEndingLength(buffer, index) {
+    const newline = 0x0a; // \n
+    const carriage = 0x0d; // \r
+    if (buffer[index] === newline) {
+        return 1;
+    }
+    if (buffer[index] === carriage) {
+        return buffer[index + 1] === newline ? 2 : 1;
+    }
+    return 0;
+}
+//# sourceMappingURL=line.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/log.mjs
+
+const levelNumbers = {
+    off: 0,
+    error: 200,
+    warn: 300,
+    info: 400,
+    debug: 500,
+};
+const parseLogLevel = (maybeLevel, sourceName, client) => {
+    if (!maybeLevel) {
+        return undefined;
+    }
+    if (hasOwn(levelNumbers, maybeLevel)) {
+        return maybeLevel;
+    }
+    loggerFor(client).warn(`${sourceName} was set to ${JSON.stringify(maybeLevel)}, expected one of ${JSON.stringify(Object.keys(levelNumbers))}`);
+    return undefined;
+};
+function noop() { }
+function makeLogFn(fnLevel, logger, logLevel) {
+    if (!logger || levelNumbers[fnLevel] > levelNumbers[logLevel]) {
+        return noop;
+    }
+    else {
+        // Don't wrap logger functions, we want the stacktrace intact!
+        return logger[fnLevel].bind(logger);
+    }
+}
+const noopLogger = {
+    error: noop,
+    warn: noop,
+    info: noop,
+    debug: noop,
+};
+let cachedLoggers = /* @__PURE__ */ new WeakMap();
+function loggerFor(client) {
+    const logger = client.logger;
+    const logLevel = client.logLevel ?? 'off';
+    if (!logger) {
+        return noopLogger;
+    }
+    const cachedLogger = cachedLoggers.get(logger);
+    if (cachedLogger && cachedLogger[0] === logLevel) {
+        return cachedLogger[1];
+    }
+    const levelLogger = {
+        error: makeLogFn('error', logger, logLevel),
+        warn: makeLogFn('warn', logger, logLevel),
+        info: makeLogFn('info', logger, logLevel),
+        debug: makeLogFn('debug', logger, logLevel),
+    };
+    cachedLoggers.set(logger, [logLevel, levelLogger]);
+    return levelLogger;
+}
+const formatRequestDetails = (details) => {
+    if (details.options) {
+        details.options = { ...details.options };
+        delete details.options['headers']; // redundant + leaks internals
+    }
+    if (details.headers) {
+        details.headers = Object.fromEntries((details.headers instanceof Headers ? [...details.headers] : Object.entries(details.headers)).map(([name, value]) => [
+            name,
+            name.toLowerCase() === 'authorization' ||
+                name.toLowerCase() === 'api-key' ||
+                name.toLowerCase() === 'x-api-key' ||
+                name.toLowerCase() === 'x-amz-security-token' ||
+                name.toLowerCase() === 'cookie' ||
+                name.toLowerCase() === 'set-cookie'
+                ? '***'
+                : value,
+        ]));
+    }
+    if ('retryOfRequestLogID' in details) {
+        if (details.retryOfRequestLogID) {
+            details.retryOf = details.retryOfRequestLogID;
+        }
+        delete details.retryOfRequestLogID;
+    }
+    return details;
+};
+//# sourceMappingURL=log.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/core/streaming.mjs
+var _Stream_client;
+
+
+
+
+
+
+
+/**
+ * A single-consumption asynchronous API response stream.
+ *
+ * Use {@link Stream.tee} when two consumers need the same events. Breaking out of
+ * a response-backed stream early aborts its request; branches created by `tee()`
+ * instead share {@link Stream.controller} for explicit cancellation.
+ */
+class src_Stream {
+    /** Wraps an asynchronous event iterator and the controller that owns its request. */
+    constructor(iterator, controller, client) {
+        _Stream_client.set(this, void 0);
+        this.iterator = iterator;
+        this.controller = controller;
+        __classPrivateFieldSet(this, _Stream_client, client, "f");
+    }
+    /**
+     * Decodes an SSE response into parsed JSON events.
+     *
+     * The resulting stream can be consumed only once, ignores events after `[DONE]`, and
+     * surfaces API error payloads as `APIError` instances. When
+     * `synthesizeEventData` is enabled, each item also includes its SSE event name.
+     */
+    static fromSSEResponse(response, controller, client, synthesizeEventData) {
+        let consumed = false;
+        const logger = client ? loggerFor(client) : console;
+        async function* iterator() {
+            if (consumed) {
+                throw new error_OpenAIError('Cannot iterate over a consumed stream, use `.tee()` to split the stream.');
+            }
+            consumed = true;
+            let done = false;
+            let receivedCompletionSentinel = false;
+            try {
+                for await (const sse of _iterSSEMessages(response, controller)) {
+                    if (sse.data.startsWith('[DONE]')) {
+                        receivedCompletionSentinel = true;
+                        break;
+                    }
+                    if (sse.event === null || !sse.event.startsWith('thread.')) {
+                        let data;
+                        try {
+                            data = JSON.parse(sse.data);
+                        }
+                        catch (e) {
+                            logger.error(`Could not parse message into JSON:`, sse.data);
+                            logger.error(`From chunk:`, sse.raw);
+                            throw e;
+                        }
+                        if (data && data.error) {
+                            throw new APIError(undefined, data.error, undefined, response.headers);
+                        }
+                        yield synthesizeEventData ? { event: sse.event, data } : data;
+                    }
+                    else {
+                        let data;
+                        try {
+                            data = JSON.parse(sse.data);
+                        }
+                        catch (e) {
+                            console.error(`Could not parse message into JSON:`, sse.data);
+                            console.error(`From chunk:`, sse.raw);
+                            throw e;
+                        }
+                        // SSE error events surface as APIError instances.
+                        if (sse.event === 'error') {
+                            throw new APIError(undefined, data.error, data.message, undefined);
+                        }
+                        yield { event: sse.event, data };
+                    }
+                }
+                done = true;
+            }
+            catch (e) {
+                // Abort errors and cleanup failures after the completion sentinel are non-fatal.
+                if (receivedCompletionSentinel ||
+                    src_isAbortError(e) ||
+                    (controller.signal.aborted && e === controller.signal.reason)) {
+                    return;
+                }
+                throw e;
+            }
+            finally {
+                // If the user `break`s, abort the ongoing request.
+                if (!done) {
+                    controller.abort();
+                }
+            }
+        }
+        return new src_Stream(iterator, controller, client);
+    }
+    /**
+     * Generates a Stream from a newline-separated ReadableStream
+     * where each item is a JSON value.
+     */
+    static fromReadableStream(readableStream, controller, client) {
+        let consumed = false;
+        async function* iterLines() {
+            const lineDecoder = new LineDecoder();
+            const reader = readableStream.getReader();
+            let closed = false;
+            let cancelPromise;
+            const cancel = () => {
+                cancelPromise ?? (cancelPromise = reader.cancel());
+                cancelPromise.catch(() => undefined);
+            };
+            controller.signal.addEventListener('abort', cancel, { once: true });
+            try {
+                if (controller.signal.aborted) {
+                    cancel();
+                    return;
+                }
+                while (true) {
+                    const { value: chunk, done } = await reader.read();
+                    if (done) {
+                        closed = true;
+                        break;
+                    }
+                    if (controller.signal.aborted) {
+                        return;
+                    }
+                    for (const line of lineDecoder.decode(chunk)) {
+                        if (controller.signal.aborted) {
+                            return;
+                        }
+                        yield line;
+                    }
+                }
+                if (controller.signal.aborted) {
+                    return;
+                }
+                for (const line of lineDecoder.flush()) {
+                    if (controller.signal.aborted) {
+                        return;
+                    }
+                    yield line;
+                }
+            }
+            finally {
+                controller.signal.removeEventListener('abort', cancel);
+                if (!closed) {
+                    cancel();
+                }
+                reader.releaseLock();
+            }
+        }
+        async function* iterator() {
+            if (consumed) {
+                throw new error_OpenAIError('Cannot iterate over a consumed stream, use `.tee()` to split the stream.');
+            }
+            consumed = true;
+            let done = false;
+            try {
+                for await (const line of iterLines()) {
+                    if (done) {
+                        continue;
+                    }
+                    if (line) {
+                        yield JSON.parse(line);
+                    }
+                }
+                done = true;
+            }
+            catch (e) {
+                // If the user calls `stream.controller.abort()`, we should exit without throwing.
+                if (controller.signal.aborted || src_isAbortError(e)) {
+                    return;
+                }
+                throw e;
+            }
+            finally {
+                // If the user `break`s, abort the ongoing request.
+                if (!done) {
+                    controller.abort();
+                }
+            }
+        }
+        return new src_Stream(iterator, controller, client);
+    }
+    /** Starts consuming this stream; attempting to consume it again throws. */
+    [(_Stream_client = new WeakMap(), Symbol.asyncIterator)]() {
+        return this.iterator();
+    }
+    /**
+     * Splits the stream into two streams which can be
+     * independently read from at different speeds.
+     */
+    tee() {
+        const left = [];
+        const right = [];
+        const iterator = this.iterator();
+        const teeIterator = (queue) => ({
+            next: () => {
+                if (queue.length === 0) {
+                    const result = iterator.next();
+                    left.push(result);
+                    right.push(result);
+                }
+                return queue.shift();
+            },
+        });
+        return [
+            new src_Stream(() => teeIterator(left), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
+            new src_Stream(() => teeIterator(right), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
+        ];
+    }
+    /**
+     * Converts this stream to a newline-separated ReadableStream of
+     * JSON stringified values in the stream
+     * which can be turned back into a Stream with `Stream.fromReadableStream()`.
+     */
+    toReadableStream() {
+        let iter;
+        return makeReadableStream({
+            start: async () => {
+                iter = this[Symbol.asyncIterator]();
+            },
+            async pull(ctrl) {
+                try {
+                    const { value, done } = await iter.next();
+                    if (done) {
+                        return ctrl.close();
+                    }
+                    const bytes = bytes_encodeUTF8(JSON.stringify(value) + '\n');
+                    ctrl.enqueue(bytes);
+                }
+                catch (err) {
+                    ctrl.error(err);
+                }
+            },
+            async cancel() {
+                await iter.return?.();
+            },
+        });
+    }
+}
+/**
+ * Decodes complete SSE records from a response and aborts when its body is absent.
+ *
+ * @yields {ServerSentEvent} Each decoded server-sent event in wire order.
+ */
+async function* _iterSSEMessages(response, controller) {
+    if (!response.body) {
+        controller.abort();
+        if (globalThis.navigator !== undefined &&
+            globalThis.navigator.product === 'ReactNative') {
+            throw new error_OpenAIError(`The default react-native fetch implementation does not support streaming. Please use expo/fetch: https://docs.expo.dev/versions/latest/sdk/expo/#expofetch-api`);
+        }
+        throw new error_OpenAIError(`Attempted to iterate over a response with no body`);
+    }
+    const sseDecoder = new SSEDecoder();
+    const lineDecoder = new LineDecoder();
+    const iter = ReadableStreamToAsyncIterable(response.body);
+    for await (const sseChunk of iterSSEChunks(iter)) {
+        for (const line of lineDecoder.decode(sseChunk)) {
+            const sse = sseDecoder.decode(line);
+            if (sse) {
+                yield sse;
+            }
+        }
+    }
+    for (const line of lineDecoder.flush()) {
+        const sse = sseDecoder.decode(line);
+        if (sse) {
+            yield sse;
+        }
+    }
+}
+// A `\r\n\r\n` separator may retain up to three bytes from the previous chunk.
+const DOUBLE_NEWLINE_DELIMITER_MAX_OVERLAP_BYTES = 3;
+/**
+ * Given an async iterable iterator, iterates over it and yields full
+ * SSE chunks, i.e. yields when a double new-line is encountered.
+ *
+ * @yields {Uint8Array} A complete SSE chunk.
+ */
+async function* iterSSEChunks(iterator) {
+    let data = new Uint8Array();
+    let dataStart = 0;
+    let dataEnd = 0;
+    let searchStartIndex = 0;
+    for await (const chunk of iterator) {
+        if (chunk == null) {
+            continue;
+        }
+        let binaryChunk;
+        if (chunk instanceof ArrayBuffer) {
+            binaryChunk = new Uint8Array(chunk);
+        }
+        else if (typeof chunk === 'string') {
+            binaryChunk = bytes_encodeUTF8(chunk);
+        }
+        else {
+            binaryChunk = chunk;
+        }
+        if (dataEnd + binaryChunk.length > data.length) {
+            const bufferedLength = dataEnd - dataStart;
+            // Compact only when it reclaims substantial space without moving a large live tail repeatedly.
+            if (dataStart >= data.length / 2 && bufferedLength + binaryChunk.length <= data.length) {
+                data.copyWithin(0, dataStart, dataEnd);
+            }
+            else {
+                const newData = new Uint8Array(Math.max(data.length * 2, bufferedLength + binaryChunk.length));
+                newData.set(data.subarray(dataStart, dataEnd));
+                data = newData;
+            }
+            searchStartIndex -= dataStart;
+            dataStart = 0;
+            dataEnd = bufferedLength;
+        }
+        data.set(binaryChunk, dataEnd);
+        dataEnd += binaryChunk.length;
+        let patternIndex;
+        while ((patternIndex = findDoubleNewlineIndex(data.subarray(searchStartIndex, dataEnd))) !== -1) {
+            patternIndex += searchStartIndex;
+            yield data.slice(dataStart, patternIndex);
+            dataStart = patternIndex;
+            searchStartIndex = dataStart;
+        }
+        searchStartIndex = Math.max(dataStart, dataEnd - DOUBLE_NEWLINE_DELIMITER_MAX_OVERLAP_BYTES);
+    }
+    if (dataEnd > dataStart) {
+        yield data.slice(dataStart, dataEnd);
+    }
+}
+class SSEDecoder {
+    constructor() {
+        this.event = null;
+        this.data = [];
+        this.chunks = [];
+    }
+    decode(line) {
+        if (line.endsWith('\r')) {
+            line = line.slice(0, -1);
+        }
+        if (!line) {
+            // empty line and we didn't previously encounter any messages
+            if (!this.event && !this.data.length) {
+                return null;
+            }
+            const sse = {
+                event: this.event,
+                data: this.data.join('\n'),
+                raw: this.chunks,
+            };
+            this.event = null;
+            this.data = [];
+            this.chunks = [];
+            return sse;
+        }
+        this.chunks.push(line);
+        if (line.startsWith(':')) {
+            return null;
+        }
+        const [fieldname, , initialValue] = partition(line, ':');
+        let value = initialValue;
+        if (value.startsWith(' ')) {
+            value = value.slice(1);
+        }
+        if (fieldname === 'event') {
+            this.event = value;
+        }
+        else if (fieldname === 'data') {
+            this.data.push(value);
+        }
+        return null;
+    }
+}
+function partition(str, delimiter) {
+    const index = str.indexOf(delimiter);
+    if (index !== -1) {
+        return [str.slice(0, index), delimiter, str.slice(index + delimiter.length)];
+    }
+    return [str, '', ''];
+}
+//# sourceMappingURL=streaming.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/parse.mjs
+
+
+
+async function defaultParseResponse(client, props) {
+    const { response, requestLogID, retryOfRequestLogID, startTime } = props;
+    const body = await (async () => {
+        if (props.options.stream) {
+            loggerFor(client).debug('response', response.status, response.url, response.headers, response.body);
+            // Note: there is an invariant here that isn't represented in the type system
+            // that if you set `stream: true` the response type must also be `Stream<T>`
+            if (props.options.__streamClass) {
+                return props.options.__streamClass.fromSSEResponse(response, props.controller, client, props.options.__synthesizeEventData);
+            }
+            return src_Stream.fromSSEResponse(response, props.controller, client, props.options.__synthesizeEventData);
+        }
+        // fetch refuses to read the body when the status code is 204.
+        if (response.status === 204) {
+            return null;
+        }
+        if (props.options.__binaryResponse) {
+            return response;
+        }
+        const contentType = response.headers.get('content-type');
+        const mediaType = contentType?.split(';')[0]?.trim();
+        const isJSON = mediaType?.includes('application/json') || mediaType?.endsWith('+json');
+        if (isJSON) {
+            const contentLength = response.headers.get('content-length');
+            if (contentLength === '0') {
+                // if there is no content we can't do anything
+                return undefined;
+            }
+            const bodyText = await response.text();
+            if (!bodyText) {
+                // Some servers respond with an empty body and a JSON content-type but
+                // without a `content-length: 0` header (e.g. over HTTP/2 or with chunked
+                // transfer encoding). Treat this the same as an explicit `content-length: 0`
+                // instead of letting `JSON.parse` throw an opaque `SyntaxError`.
+                return undefined;
+            }
+            const json = JSON.parse(bodyText);
+            return addRequestID(json, response);
+        }
+        const text = await response.text();
+        return text;
+    })().catch((error) => {
+        throw asAbortError(error, props.controller.signal);
+    });
+    loggerFor(client).debug(`[${requestLogID}] response parsed`, formatRequestDetails({
+        retryOfRequestLogID,
+        url: response.url,
+        status: response.status,
+        body,
+        durationMs: Date.now() - startTime,
+    }));
+    return body;
+}
+function asAbortError(error, signal) {
+    if (!signal.aborted || error !== signal.reason || src_isAbortError(error)) {
+        return error;
+    }
+    const message = 'This operation was aborted';
+    const DOMExceptionConstructor = globalThis.DOMException;
+    return typeof DOMExceptionConstructor === 'function'
+        ? new DOMExceptionConstructor(message, 'AbortError')
+        : Object.assign(new Error(message), { name: 'AbortError' });
+}
+function addRequestID(value, response) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return value;
+    }
+    return Object.defineProperty(value, '_request_id', {
+        value: response.headers.get('x-request-id'),
+        enumerable: false,
+    });
+}
+//# sourceMappingURL=parse.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/version.mjs
-const VERSION = '7.4.0'; // x-release-please-version
+/** Version of the installed OpenAI SDK package. */
+const VERSION = '7.5.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/detect-platform.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 const isRunningInBrowser = () => {
     return (
@@ -54567,7 +56413,7 @@ const getPlatformProperties = () => {
             'X-Stainless-OS': normalizePlatform(Deno.build.os),
             'X-Stainless-Arch': normalizeArch(Deno.build.arch),
             'X-Stainless-Runtime': 'deno',
-            'X-Stainless-Runtime-Version': typeof Deno.version === 'string' ? Deno.version : Deno.version?.deno ?? 'unknown',
+            'X-Stainless-Runtime-Version': typeof Deno.version === 'string' ? Deno.version : (Deno.version?.deno ?? 'unknown'),
         };
     }
     if (typeof EdgeRuntime !== 'undefined') {
@@ -54689,94 +56535,7 @@ const getPlatformHeaders = () => {
     return (_platformHeaders ?? (_platformHeaders = getPlatformProperties()));
 };
 //# sourceMappingURL=detect-platform.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/shims.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-function getDefaultFetch() {
-    if (typeof fetch !== 'undefined') {
-        return fetch;
-    }
-    throw new Error('`fetch` is not defined as a global; Either pass `fetch` to the client, `new OpenAI({ fetch })` or polyfill the global, `globalThis.fetch = fetch`');
-}
-function makeReadableStream(...args) {
-    const ReadableStream = globalThis.ReadableStream;
-    if (typeof ReadableStream === 'undefined') {
-        // Note: All of the platforms / runtimes we officially support already define
-        // `ReadableStream` as a global, so this should only ever be hit on unsupported runtimes.
-        throw new Error('`ReadableStream` is not defined as a global; You will need to polyfill it, `globalThis.ReadableStream = ReadableStream`');
-    }
-    return new ReadableStream(...args);
-}
-function ReadableStreamFrom(iterable) {
-    let iter = Symbol.asyncIterator in iterable ? iterable[Symbol.asyncIterator]() : iterable[Symbol.iterator]();
-    return makeReadableStream({
-        start() { },
-        async pull(controller) {
-            const { done, value } = await iter.next();
-            if (done) {
-                controller.close();
-            }
-            else {
-                controller.enqueue(value);
-            }
-        },
-        async cancel() {
-            await iter.return?.();
-        },
-    });
-}
-/**
- * Most browsers don't yet have async iterable support for ReadableStream,
- * and Node has a very different way of reading bytes from its "ReadableStream".
- *
- * This polyfill was pulled from https://github.com/MattiasBuelens/web-streams-polyfill/pull/122#issuecomment-1627354490
- */
-function ReadableStreamToAsyncIterable(stream) {
-    if (stream[Symbol.asyncIterator])
-        return stream;
-    const reader = stream.getReader();
-    return {
-        async next() {
-            try {
-                const result = await reader.read();
-                if (result?.done)
-                    reader.releaseLock(); // release lock when stream becomes closed
-                return result;
-            }
-            catch (e) {
-                reader.releaseLock(); // release lock when stream becomes errored
-                throw e;
-            }
-        },
-        async return() {
-            const cancelPromise = reader.cancel();
-            reader.releaseLock();
-            await cancelPromise;
-            return { done: true, value: undefined };
-        },
-        [Symbol.asyncIterator]() {
-            return this;
-        },
-    };
-}
-/**
- * Cancels a ReadableStream we don't need to consume.
- * See https://undici.nodejs.org/#/?id=garbage-collection
- */
-async function CancelReadableStream(stream) {
-    if (stream === null || typeof stream !== 'object')
-        return;
-    if (stream[Symbol.asyncIterator]) {
-        await stream[Symbol.asyncIterator]().return?.();
-        return;
-    }
-    const reader = stream.getReader();
-    const cancelPromise = reader.cancel();
-    reader.releaseLock();
-    await cancelPromise;
-}
-//# sourceMappingURL=shims.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/request-options.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 const FallbackEncoder = ({ headers, body }) => {
     return {
         bodyHeaders: {
@@ -54788,7 +56547,7 @@ const FallbackEncoder = ({ headers, body }) => {
 //# sourceMappingURL=request-options.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/qs/formats.mjs
 const default_format = 'RFC3986';
-const default_formatter = (v) => String(v);
+const default_formatter = String;
 const formatters = {
     RFC1738: (v) => String(v).replace(/%20/g, '+'),
     RFC3986: default_formatter,
@@ -54799,8 +56558,12 @@ const RFC3986 = 'RFC3986';
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/qs/utils.mjs
 
 
-let has = (obj, key) => ((has = Object.hasOwn ?? Function.prototype.call.bind(Object.prototype.hasOwnProperty)),
-    has(obj, key));
+let cachedHas;
+const has = (obj, key) => {
+    const resolvedHas = cachedHas ?? Object.hasOwn ?? Function.prototype.call.bind(Object.prototype.hasOwnProperty);
+    cachedHas = resolvedHas;
+    return resolvedHas(obj, key);
+};
 const hex_table = /* @__PURE__ */ (() => {
     const array = [];
     for (let i = 0; i < 256; ++i) {
@@ -54811,14 +56574,15 @@ const hex_table = /* @__PURE__ */ (() => {
 function compact_queue(queue) {
     while (queue.length > 1) {
         const item = queue.pop();
-        if (!item)
+        if (!item) {
             continue;
+        }
         const obj = item.obj[item.prop];
         if (isArray(obj)) {
             const compacted = [];
-            for (let j = 0; j < obj.length; ++j) {
-                if (typeof obj[j] !== 'undefined') {
-                    compacted.push(obj[j]);
+            for (const value of obj) {
+                if (value !== undefined) {
+                    compacted.push(value);
                 }
             }
             // @ts-ignore
@@ -54829,7 +56593,7 @@ function compact_queue(queue) {
 function array_to_object(source, options) {
     const obj = options && options.plainObjects ? Object.create(null) : {};
     for (let i = 0; i < source.length; ++i) {
-        if (typeof source[i] !== 'undefined') {
+        if (source[i] !== undefined) {
             obj[i] = source[i];
         }
     }
@@ -54854,6 +56618,7 @@ function merge(target, source, options = {}) {
         return target;
     }
     if (!target || typeof target !== 'object') {
+        // oxlint-disable-next-line unicorn/prefer-spread -- concat intentionally preserves one-level flattening and sparse-array behavior.
         return [target].concat(source);
     }
     let mergeTarget = target;
@@ -54862,38 +56627,37 @@ function merge(target, source, options = {}) {
         mergeTarget = array_to_object(target, options);
     }
     if (isArray(target) && isArray(source)) {
-        source.forEach(function (item, i) {
-            if (has(target, i)) {
-                const targetItem = target[i];
-                if (targetItem && typeof targetItem === 'object' && item && typeof item === 'object') {
-                    target[i] = merge(targetItem, item, options);
+        const sourceLength = source.length;
+        for (let i = 0; i < sourceLength; i += 1) {
+            if (i in source) {
+                const item = source[i];
+                if (has(target, i)) {
+                    const targetItem = target[i];
+                    if (targetItem && typeof targetItem === 'object' && item && typeof item === 'object') {
+                        target[i] = merge(targetItem, item, options);
+                    }
+                    else {
+                        target.push(item);
+                    }
                 }
                 else {
-                    target.push(item);
+                    target[i] = item;
                 }
             }
-            else {
-                target[i] = item;
-            }
-        });
+        }
         return target;
     }
-    return Object.keys(source).reduce(function (acc, key) {
+    for (const key of Object.keys(source)) {
         const value = source[key];
-        if (has(acc, key)) {
-            acc[key] = merge(acc[key], value, options);
-        }
-        else {
-            acc[key] = value;
-        }
-        return acc;
-    }, mergeTarget);
+        mergeTarget[key] = has(mergeTarget, key) ? merge(mergeTarget[key], value, options) : value;
+    }
+    return mergeTarget;
 }
 function assign_single_source(target, source) {
-    return Object.keys(source).reduce(function (acc, key) {
-        acc[key] = source[key];
-        return acc;
-    }, target);
+    for (const key of Object.keys(source)) {
+        target[key] = source[key];
+    }
+    return target;
 }
 function decode(str, _, charset) {
     const strWithoutPlus = str.replace(/\+/g, ' ');
@@ -54905,7 +56669,7 @@ function decode(str, _, charset) {
     try {
         return decodeURIComponent(strWithoutPlus);
     }
-    catch (e) {
+    catch {
         return strWithoutPlus;
     }
 }
@@ -54924,15 +56688,18 @@ const encode = (str, _defaultEncoder, charset, _kind, format) => {
         string = String(str);
     }
     if (charset === 'iso-8859-1') {
-        return escape(string).replace(/%u[0-9a-f]{4}/gi, function ($0) {
-            return '%26%23' + parseInt($0.slice(2), 16) + '%3B';
-        });
+        return escape(string).replace(/%u[0-9a-f]{4}/gi, ($0) => '%26%23' + Number.parseInt($0.slice(2), 16) + '%3B');
     }
     let out = '';
-    for (let j = 0; j < string.length; j += limit) {
-        const segment = string.length >= limit ? string.slice(j, j + limit) : string;
+    for (let j = 0; j < string.length;) {
+        let segmentEnd = Math.min((Math.floor(j / limit) + 1) * limit, string.length);
+        if (segmentEnd < string.length && string.codePointAt(segmentEnd - 1) > 65535) {
+            segmentEnd += 1;
+        }
+        const segment = string.length >= limit ? string.slice(j, segmentEnd) : string;
         const arr = [];
         for (let i = 0; i < segment.length; ++i) {
+            // oxlint-disable-next-line unicorn/prefer-code-point -- combine UTF-16 surrogate code units below
             let c = segment.charCodeAt(i);
             if (c === 0x2d || // -
                 c === 0x2e || // .
@@ -54950,17 +56717,18 @@ const encode = (str, _defaultEncoder, charset, _kind, format) => {
                 arr[arr.length] = hex_table[c];
                 continue;
             }
-            if (c < 0x800) {
+            if (c < 2048) {
                 arr[arr.length] = hex_table[0xc0 | (c >> 6)] + hex_table[0x80 | (c & 0x3f)];
                 continue;
             }
-            if (c < 0xd800 || c >= 0xe000) {
+            if (c < 55296 || c >= 57344) {
                 arr[arr.length] =
                     hex_table[0xe0 | (c >> 12)] + hex_table[0x80 | ((c >> 6) & 0x3f)] + hex_table[0x80 | (c & 0x3f)];
                 continue;
             }
             i += 1;
-            c = 0x10000 + (((c & 0x3ff) << 10) | (segment.charCodeAt(i) & 0x3ff));
+            // oxlint-disable-next-line unicorn/prefer-code-point -- combine UTF-16 surrogate code units manually
+            c = 65536 + (((c & 1023) << 10) | (segment.charCodeAt(i) & 1023));
             arr[arr.length] =
                 hex_table[0xf0 | (c >> 18)] +
                     hex_table[0x80 | ((c >> 12) & 0x3f)] +
@@ -54968,22 +56736,21 @@ const encode = (str, _defaultEncoder, charset, _kind, format) => {
                     hex_table[0x80 | (c & 0x3f)];
         }
         out += arr.join('');
+        j = segmentEnd;
     }
     return out;
 };
 function compact(value) {
     const queue = [{ obj: { o: value }, prop: 'o' }];
     const refs = [];
-    for (let i = 0; i < queue.length; ++i) {
-        const item = queue[i];
+    for (const item of queue) {
         // @ts-ignore
         const obj = item.obj[item.prop];
         const keys = Object.keys(obj);
-        for (let j = 0; j < keys.length; ++j) {
-            const key = keys[j];
+        for (const key of keys) {
             const val = obj[key];
-            if (typeof val === 'object' && val !== null && refs.indexOf(val) === -1) {
-                queue.push({ obj: obj, prop: key });
+            if (typeof val === 'object' && val !== null && !refs.includes(val)) {
+                queue.push({ obj, prop: key });
                 refs.push(val);
             }
         }
@@ -55001,13 +56768,14 @@ function is_buffer(obj) {
     return !!(obj.constructor && obj.constructor.isBuffer && obj.constructor.isBuffer(obj));
 }
 function combine(a, b) {
+    // oxlint-disable-next-line unicorn/prefer-spread -- concat intentionally preserves one-level flattening and sparse-array behavior.
     return [].concat(a, b);
 }
 function maybe_map(val, fn) {
     if (values_isArray(val)) {
         const mapped = [];
-        for (let i = 0; i < val.length; i += 1) {
-            mapped.push(fn(val[i]));
+        for (const item of val) {
+            mapped.push(fn(item));
         }
         return mapped;
     }
@@ -55030,7 +56798,7 @@ const array_prefix_generators = {
         return String(prefix);
     },
 };
-const push_to_array = function (arr, value_or_array) {
+const push_to_array = function push_to_array(arr, value_or_array) {
     Array.prototype.push.apply(arr, values_isArray(value_or_array) ? value_or_array : [value_or_array]);
 };
 let toISOString;
@@ -55069,11 +56837,11 @@ function inner_stringify(object, prefix, generateArrayPrefix, commaRoundTrip, al
     let tmp_sc = sideChannel;
     let step = 0;
     let find_flag = false;
-    while ((tmp_sc = tmp_sc.get(sentinel)) !== void undefined && !find_flag) {
+    while ((tmp_sc = tmp_sc.get(sentinel)) !== undefined && !find_flag) {
         // Where object last appeared in the ref tree
         const pos = tmp_sc.get(object);
         step += 1;
-        if (typeof pos !== 'undefined') {
+        if (pos !== undefined) {
             if (pos === step) {
                 throw new RangeError('Cyclic object value');
             }
@@ -55081,7 +56849,7 @@ function inner_stringify(object, prefix, generateArrayPrefix, commaRoundTrip, al
                 find_flag = true; // Break while
             }
         }
-        if (typeof tmp_sc.get(sentinel) === 'undefined') {
+        if (tmp_sc.get(sentinel) === undefined) {
             step = 0;
         }
     }
@@ -55092,7 +56860,7 @@ function inner_stringify(object, prefix, generateArrayPrefix, commaRoundTrip, al
         obj = serializeDate?.(obj);
     }
     else if (generateArrayPrefix === 'comma' && values_isArray(obj)) {
-        obj = maybe_map(obj, function (value) {
+        obj = maybe_map(obj, (value) => {
             if (value instanceof Date) {
                 return serializeDate?.(value);
             }
@@ -55101,18 +56869,19 @@ function inner_stringify(object, prefix, generateArrayPrefix, commaRoundTrip, al
     }
     if (obj === null) {
         if (strictNullHandling) {
-            return encoder && !encodeValuesOnly ?
-                // @ts-expect-error
-                encoder(prefix, defaults.encoder, charset, 'key', format)
+            return encoder && !encodeValuesOnly
+                ? // @ts-expect-error
+                    encoder(prefix, defaults.encoder, charset, 'key', format)
                 : prefix;
         }
         obj = '';
     }
     if (is_non_nullish_primitive(obj) || is_buffer(obj)) {
         if (encoder) {
-            const key_value = encodeValuesOnly ? prefix
-                // @ts-expect-error
-                : encoder(prefix, defaults.encoder, charset, 'key', format);
+            const key_value = encodeValuesOnly
+                ? prefix
+                : // @ts-expect-error
+                    encoder(prefix, defaults.encoder, charset, 'key', format);
             return [
                 formatter?.(key_value) +
                     '=' +
@@ -55123,7 +56892,7 @@ function inner_stringify(object, prefix, generateArrayPrefix, commaRoundTrip, al
         return [formatter?.(prefix) + '=' + formatter?.(String(obj))];
     }
     const values = [];
-    if (typeof obj === 'undefined') {
+    if (obj === undefined) {
         return values;
     }
     let obj_keys;
@@ -55133,38 +56902,44 @@ function inner_stringify(object, prefix, generateArrayPrefix, commaRoundTrip, al
             // @ts-expect-error values only
             obj = maybe_map(obj, encoder);
         }
-        obj_keys = [{ value: obj.length > 0 ? obj.join(',') || null : void undefined }];
+        obj_keys = [{ value: obj.length > 0 ? obj.join(',') || null : undefined }];
     }
     else if (values_isArray(filter)) {
         obj_keys = filter;
     }
     else {
         const keys = Object.keys(obj);
-        obj_keys = sort ? keys.sort(sort) : keys;
+        if (sort) {
+            keys.sort(sort);
+        }
+        obj_keys = keys;
     }
     const encoded_prefix = encodeDotInKeys ? String(prefix).replace(/\./g, '%2E') : String(prefix);
     const adjusted_prefix = commaRoundTrip && values_isArray(obj) && obj.length === 1 ? encoded_prefix + '[]' : encoded_prefix;
     if (allowEmptyArrays && values_isArray(obj) && obj.length === 0) {
         return adjusted_prefix + '[]';
     }
-    for (let j = 0; j < obj_keys.length; ++j) {
-        const key = obj_keys[j];
+    for (const key of obj_keys) {
         const value = 
         // @ts-ignore
-        typeof key === 'object' && typeof key.value !== 'undefined' ? key.value : obj[key];
+        typeof key === 'object' && key.value !== undefined ? key.value : obj[key];
         if (skipNulls && value === null) {
             continue;
         }
         // @ts-ignore
         const encoded_key = allowDots && encodeDotInKeys ? key.replace(/\./g, '%2E') : key;
-        const key_prefix = values_isArray(obj) ?
-            typeof generateArrayPrefix === 'function' ?
-                generateArrayPrefix(adjusted_prefix, encoded_key)
-                : adjusted_prefix
-            : adjusted_prefix + (allowDots ? '.' + encoded_key : '[' + encoded_key + ']');
+        let key_prefix;
+        if (values_isArray(obj)) {
+            key_prefix =
+                typeof generateArrayPrefix === 'function'
+                    ? generateArrayPrefix(adjusted_prefix, encoded_key)
+                    : adjusted_prefix;
+        }
+        else {
+            key_prefix = adjusted_prefix + (allowDots ? '.' + encoded_key : '[' + encoded_key + ']');
+        }
         sideChannel.set(object, step);
-        const valueSideChannel = new WeakMap();
-        valueSideChannel.set(sentinel, sideChannel);
+        const valueSideChannel = new WeakMap([[sentinel, sideChannel]]);
         push_to_array(values, inner_stringify(value, key_prefix, generateArrayPrefix, commaRoundTrip, allowEmptyArrays, strictNullHandling, skipNulls, encodeDotInKeys, 
         // @ts-ignore
         generateArrayPrefix === 'comma' && encodeValuesOnly && values_isArray(obj) ? null : encoder, filter, sort, allowDots, serializeDate, format, formatter, encodeValuesOnly, charset, valueSideChannel));
@@ -55172,21 +56947,21 @@ function inner_stringify(object, prefix, generateArrayPrefix, commaRoundTrip, al
     return values;
 }
 function normalize_stringify_options(opts = defaults) {
-    if (typeof opts.allowEmptyArrays !== 'undefined' && typeof opts.allowEmptyArrays !== 'boolean') {
+    if (opts.allowEmptyArrays !== undefined && typeof opts.allowEmptyArrays !== 'boolean') {
         throw new TypeError('`allowEmptyArrays` option can only be `true` or `false`, when provided');
     }
-    if (typeof opts.encodeDotInKeys !== 'undefined' && typeof opts.encodeDotInKeys !== 'boolean') {
+    if (opts.encodeDotInKeys !== undefined && typeof opts.encodeDotInKeys !== 'boolean') {
         throw new TypeError('`encodeDotInKeys` option can only be `true` or `false`, when provided');
     }
-    if (opts.encoder !== null && typeof opts.encoder !== 'undefined' && typeof opts.encoder !== 'function') {
+    if (opts.encoder !== null && opts.encoder !== undefined && typeof opts.encoder !== 'function') {
         throw new TypeError('Encoder has to be a function.');
     }
     const charset = opts.charset || defaults.charset;
-    if (typeof opts.charset !== 'undefined' && opts.charset !== 'utf-8' && opts.charset !== 'iso-8859-1') {
+    if (opts.charset !== undefined && opts.charset !== 'utf-8' && opts.charset !== 'iso-8859-1') {
         throw new TypeError('The charset option must be either utf-8, iso-8859-1, or undefined');
     }
     let format = default_format;
-    if (typeof opts.format !== 'undefined') {
+    if (opts.format !== undefined) {
         if (!has(formatters, opts.format)) {
             throw new TypeError('Unknown format option provided.');
         }
@@ -55210,28 +56985,30 @@ function normalize_stringify_options(opts = defaults) {
     if ('commaRoundTrip' in opts && typeof opts.commaRoundTrip !== 'boolean') {
         throw new TypeError('`commaRoundTrip` must be a boolean, or absent');
     }
-    const allowDots = typeof opts.allowDots === 'undefined' ?
-        !!opts.encodeDotInKeys === true ?
-            true
-            : defaults.allowDots
-        : !!opts.allowDots;
+    let allowDots;
+    if (opts.allowDots === undefined) {
+        allowDots = !!opts.encodeDotInKeys === true ? true : defaults.allowDots;
+    }
+    else {
+        allowDots = !!opts.allowDots;
+    }
     return {
         addQueryPrefix: typeof opts.addQueryPrefix === 'boolean' ? opts.addQueryPrefix : defaults.addQueryPrefix,
         // @ts-ignore
-        allowDots: allowDots,
+        allowDots,
         allowEmptyArrays: typeof opts.allowEmptyArrays === 'boolean' ? !!opts.allowEmptyArrays : defaults.allowEmptyArrays,
-        arrayFormat: arrayFormat,
-        charset: charset,
+        arrayFormat,
+        charset,
         charsetSentinel: typeof opts.charsetSentinel === 'boolean' ? opts.charsetSentinel : defaults.charsetSentinel,
         commaRoundTrip: !!opts.commaRoundTrip,
-        delimiter: typeof opts.delimiter === 'undefined' ? defaults.delimiter : opts.delimiter,
+        delimiter: opts.delimiter === undefined ? defaults.delimiter : opts.delimiter,
         encode: typeof opts.encode === 'boolean' ? opts.encode : defaults.encode,
         encodeDotInKeys: typeof opts.encodeDotInKeys === 'boolean' ? opts.encodeDotInKeys : defaults.encodeDotInKeys,
         encoder: typeof opts.encoder === 'function' ? opts.encoder : defaults.encoder,
         encodeValuesOnly: typeof opts.encodeValuesOnly === 'boolean' ? opts.encodeValuesOnly : defaults.encodeValuesOnly,
-        filter: filter,
-        format: format,
-        formatter: formatter,
+        filter,
+        format,
+        formatter,
         serializeDate: typeof opts.serializeDate === 'function' ? opts.serializeDate : defaults.serializeDate,
         skipNulls: typeof opts.skipNulls === 'boolean' ? opts.skipNulls : defaults.skipNulls,
         // @ts-ignore
@@ -55265,8 +57042,7 @@ function stringify(object, opts = {}) {
         obj_keys.sort(options.sort);
     }
     const sideChannel = new WeakMap();
-    for (let i = 0; i < obj_keys.length; ++i) {
-        const key = obj_keys[i];
+    for (const key of obj_keys) {
         if (options.skipNulls && obj[key] === null) {
             continue;
         }
@@ -55277,624 +57053,23 @@ function stringify(object, opts = {}) {
     const joined = keys.join(options.delimiter);
     let prefix = options.addQueryPrefix === true ? '?' : '';
     if (options.charsetSentinel) {
-        if (options.charset === 'iso-8859-1') {
-            // encodeURIComponent('&#10003;'), the "numeric entity" representation of a checkmark
-            prefix += 'utf8=%26%2310003%3B&';
-        }
-        else {
-            // encodeURIComponent('✓')
-            prefix += 'utf8=%E2%9C%93&';
-        }
+        prefix +=
+            options.charset === 'iso-8859-1'
+                ? // encodeURIComponent('&#10003;'), the "numeric entity" representation of a checkmark
+                    'utf8=%26%2310003%3B&'
+                : // encodeURIComponent('✓')
+                    'utf8=%E2%9C%93&';
     }
     return joined.length > 0 ? prefix + joined : '';
 }
 //# sourceMappingURL=stringify.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/query.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 function stringifyQuery(query) {
     return stringify(query, { arrayFormat: 'brackets' });
 }
 //# sourceMappingURL=query.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/bytes.mjs
-function concatBytes(buffers) {
-    let length = 0;
-    for (const buffer of buffers) {
-        length += buffer.length;
-    }
-    const output = new Uint8Array(length);
-    let index = 0;
-    for (const buffer of buffers) {
-        output.set(buffer, index);
-        index += buffer.length;
-    }
-    return output;
-}
-let encodeUTF8_;
-function bytes_encodeUTF8(str) {
-    let encoder;
-    return (encodeUTF8_ ??
-        ((encoder = new globalThis.TextEncoder()), (encodeUTF8_ = encoder.encode.bind(encoder))))(str);
-}
-let decodeUTF8_;
-function decodeUTF8(bytes) {
-    let decoder;
-    return (decodeUTF8_ ??
-        ((decoder = new globalThis.TextDecoder()), (decodeUTF8_ = decoder.decode.bind(decoder))))(bytes);
-}
-//# sourceMappingURL=bytes.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/decoders/line.mjs
-var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex;
-
-
-/**
- * A re-implementation of httpx's `LineDecoder` in Python that handles incrementally
- * reading lines from text.
- *
- * https://github.com/encode/httpx/blob/920333ea98118e9cf617f246905d7b202510941c/httpx/_decoders.py#L258
- */
-class LineDecoder {
-    constructor() {
-        _LineDecoder_buffer.set(this, void 0);
-        _LineDecoder_carriageReturnIndex.set(this, void 0);
-        __classPrivateFieldSet(this, _LineDecoder_buffer, new Uint8Array(), "f");
-        __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, null, "f");
-    }
-    decode(chunk) {
-        if (chunk == null) {
-            return [];
-        }
-        const binaryChunk = chunk instanceof ArrayBuffer ? new Uint8Array(chunk)
-            : typeof chunk === 'string' ? bytes_encodeUTF8(chunk)
-                : chunk;
-        __classPrivateFieldSet(this, _LineDecoder_buffer, concatBytes([__classPrivateFieldGet(this, _LineDecoder_buffer, "f"), binaryChunk]), "f");
-        const lines = [];
-        let patternIndex;
-        while ((patternIndex = findNewlineIndex(__classPrivateFieldGet(this, _LineDecoder_buffer, "f"), __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f"))) != null) {
-            if (patternIndex.carriage && __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") == null) {
-                // skip until we either get a corresponding `\n`, a new `\r` or nothing
-                __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, patternIndex.index, "f");
-                continue;
-            }
-            // we got double \r or \rtext\n
-            if (__classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") != null &&
-                (patternIndex.index !== __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") + 1 || patternIndex.carriage)) {
-                lines.push(decodeUTF8(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(0, __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") - 1)));
-                __classPrivateFieldSet(this, _LineDecoder_buffer, __classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(__classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f")), "f");
-                __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, null, "f");
-                continue;
-            }
-            const endIndex = __classPrivateFieldGet(this, _LineDecoder_carriageReturnIndex, "f") !== null ? patternIndex.preceding - 1 : patternIndex.preceding;
-            const line = decodeUTF8(__classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(0, endIndex));
-            lines.push(line);
-            __classPrivateFieldSet(this, _LineDecoder_buffer, __classPrivateFieldGet(this, _LineDecoder_buffer, "f").subarray(patternIndex.index), "f");
-            __classPrivateFieldSet(this, _LineDecoder_carriageReturnIndex, null, "f");
-        }
-        return lines;
-    }
-    flush() {
-        if (!__classPrivateFieldGet(this, _LineDecoder_buffer, "f").length) {
-            return [];
-        }
-        return this.decode('\n');
-    }
-}
-_LineDecoder_buffer = new WeakMap(), _LineDecoder_carriageReturnIndex = new WeakMap();
-// prettier-ignore
-LineDecoder.NEWLINE_CHARS = new Set(['\n', '\r']);
-LineDecoder.NEWLINE_REGEXP = /\r\n|[\n\r]/g;
-/**
- * This function searches the buffer for the end patterns, (\r or \n)
- * and returns an object with the index preceding the matched newline and the
- * index after the newline char. `null` is returned if no new line is found.
- *
- * ```ts
- * findNewLineIndex('abc\ndef') -> { preceding: 2, index: 3 }
- * ```
- */
-function findNewlineIndex(buffer, startIndex) {
-    const newline = 0x0a; // \n
-    const carriage = 0x0d; // \r
-    for (let i = startIndex ?? 0; i < buffer.length; i++) {
-        if (buffer[i] === newline) {
-            return { preceding: i, index: i + 1, carriage: false };
-        }
-        if (buffer[i] === carriage) {
-            return { preceding: i, index: i + 1, carriage: true };
-        }
-    }
-    return null;
-}
-function findDoubleNewlineIndex(buffer) {
-    // This function searches the buffer for the end patterns (\r\r, \n\n, \r\n\r\n)
-    // and returns the index right after the first occurrence of any pattern,
-    // or -1 if none of the patterns are found.
-    const newline = 0x0a; // \n
-    const carriage = 0x0d; // \r
-    for (let i = 0; i < buffer.length - 1; i++) {
-        if (buffer[i] === newline && buffer[i + 1] === newline) {
-            // \n\n
-            return i + 2;
-        }
-        if (buffer[i] === carriage && buffer[i + 1] === carriage) {
-            // \r\r
-            return i + 2;
-        }
-        if (buffer[i] === carriage &&
-            buffer[i + 1] === newline &&
-            i + 3 < buffer.length &&
-            buffer[i + 2] === carriage &&
-            buffer[i + 3] === newline) {
-            // \r\n\r\n
-            return i + 4;
-        }
-    }
-    return -1;
-}
-//# sourceMappingURL=line.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/log.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-
-const levelNumbers = {
-    off: 0,
-    error: 200,
-    warn: 300,
-    info: 400,
-    debug: 500,
-};
-const parseLogLevel = (maybeLevel, sourceName, client) => {
-    if (!maybeLevel) {
-        return undefined;
-    }
-    if (hasOwn(levelNumbers, maybeLevel)) {
-        return maybeLevel;
-    }
-    loggerFor(client).warn(`${sourceName} was set to ${JSON.stringify(maybeLevel)}, expected one of ${JSON.stringify(Object.keys(levelNumbers))}`);
-    return undefined;
-};
-function noop() { }
-function makeLogFn(fnLevel, logger, logLevel) {
-    if (!logger || levelNumbers[fnLevel] > levelNumbers[logLevel]) {
-        return noop;
-    }
-    else {
-        // Don't wrap logger functions, we want the stacktrace intact!
-        return logger[fnLevel].bind(logger);
-    }
-}
-const noopLogger = {
-    error: noop,
-    warn: noop,
-    info: noop,
-    debug: noop,
-};
-let cachedLoggers = /* @__PURE__ */ new WeakMap();
-function loggerFor(client) {
-    const logger = client.logger;
-    const logLevel = client.logLevel ?? 'off';
-    if (!logger) {
-        return noopLogger;
-    }
-    const cachedLogger = cachedLoggers.get(logger);
-    if (cachedLogger && cachedLogger[0] === logLevel) {
-        return cachedLogger[1];
-    }
-    const levelLogger = {
-        error: makeLogFn('error', logger, logLevel),
-        warn: makeLogFn('warn', logger, logLevel),
-        info: makeLogFn('info', logger, logLevel),
-        debug: makeLogFn('debug', logger, logLevel),
-    };
-    cachedLoggers.set(logger, [logLevel, levelLogger]);
-    return levelLogger;
-}
-const formatRequestDetails = (details) => {
-    if (details.options) {
-        details.options = { ...details.options };
-        delete details.options['headers']; // redundant + leaks internals
-    }
-    if (details.headers) {
-        details.headers = Object.fromEntries((details.headers instanceof Headers ? [...details.headers] : Object.entries(details.headers)).map(([name, value]) => [
-            name,
-            (name.toLowerCase() === 'authorization' ||
-                name.toLowerCase() === 'api-key' ||
-                name.toLowerCase() === 'x-api-key' ||
-                name.toLowerCase() === 'x-amz-security-token' ||
-                name.toLowerCase() === 'cookie' ||
-                name.toLowerCase() === 'set-cookie') ?
-                '***'
-                : value,
-        ]));
-    }
-    if ('retryOfRequestLogID' in details) {
-        if (details.retryOfRequestLogID) {
-            details.retryOf = details.retryOfRequestLogID;
-        }
-        delete details.retryOfRequestLogID;
-    }
-    return details;
-};
-//# sourceMappingURL=log.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/core/streaming.mjs
-var _Stream_client;
-
-
-
-
-
-
-
-
-
-class src_Stream {
-    constructor(iterator, controller, client) {
-        this.iterator = iterator;
-        _Stream_client.set(this, void 0);
-        this.controller = controller;
-        __classPrivateFieldSet(this, _Stream_client, client, "f");
-    }
-    static fromSSEResponse(response, controller, client, synthesizeEventData) {
-        let consumed = false;
-        const logger = client ? loggerFor(client) : console;
-        async function* iterator() {
-            if (consumed) {
-                throw new error_OpenAIError('Cannot iterate over a consumed stream, use `.tee()` to split the stream.');
-            }
-            consumed = true;
-            let done = false;
-            try {
-                for await (const sse of _iterSSEMessages(response, controller)) {
-                    if (done)
-                        continue;
-                    if (sse.data.startsWith('[DONE]')) {
-                        done = true;
-                        continue;
-                    }
-                    if (sse.event === null || !sse.event.startsWith('thread.')) {
-                        let data;
-                        try {
-                            data = JSON.parse(sse.data);
-                        }
-                        catch (e) {
-                            logger.error(`Could not parse message into JSON:`, sse.data);
-                            logger.error(`From chunk:`, sse.raw);
-                            throw e;
-                        }
-                        if (data && data.error) {
-                            throw new APIError(undefined, data.error, undefined, response.headers);
-                        }
-                        yield synthesizeEventData ? { event: sse.event, data } : data;
-                    }
-                    else {
-                        let data;
-                        try {
-                            data = JSON.parse(sse.data);
-                        }
-                        catch (e) {
-                            console.error(`Could not parse message into JSON:`, sse.data);
-                            console.error(`From chunk:`, sse.raw);
-                            throw e;
-                        }
-                        // TODO: Is this where the error should be thrown?
-                        if (sse.event == 'error') {
-                            throw new APIError(undefined, data.error, data.message, undefined);
-                        }
-                        yield { event: sse.event, data: data };
-                    }
-                }
-                done = true;
-            }
-            catch (e) {
-                // If the user calls `stream.controller.abort()`, we should exit without throwing.
-                if (src_isAbortError(e))
-                    return;
-                throw e;
-            }
-            finally {
-                // If the user `break`s, abort the ongoing request.
-                if (!done)
-                    controller.abort();
-            }
-        }
-        return new src_Stream(iterator, controller, client);
-    }
-    /**
-     * Generates a Stream from a newline-separated ReadableStream
-     * where each item is a JSON value.
-     */
-    static fromReadableStream(readableStream, controller, client) {
-        let consumed = false;
-        async function* iterLines() {
-            const lineDecoder = new LineDecoder();
-            const reader = readableStream.getReader();
-            let closed = false;
-            let cancelPromise;
-            const cancel = () => {
-                cancelPromise ?? (cancelPromise = reader.cancel());
-                cancelPromise.catch(() => { });
-            };
-            controller.signal.addEventListener('abort', cancel, { once: true });
-            try {
-                if (controller.signal.aborted) {
-                    cancel();
-                    return;
-                }
-                while (true) {
-                    const { value: chunk, done } = await reader.read();
-                    if (done) {
-                        closed = true;
-                        break;
-                    }
-                    if (controller.signal.aborted)
-                        return;
-                    for (const line of lineDecoder.decode(chunk)) {
-                        if (controller.signal.aborted)
-                            return;
-                        yield line;
-                    }
-                }
-                if (controller.signal.aborted)
-                    return;
-                for (const line of lineDecoder.flush()) {
-                    if (controller.signal.aborted)
-                        return;
-                    yield line;
-                }
-            }
-            finally {
-                controller.signal.removeEventListener('abort', cancel);
-                if (!closed)
-                    cancel();
-                reader.releaseLock();
-            }
-        }
-        async function* iterator() {
-            if (consumed) {
-                throw new error_OpenAIError('Cannot iterate over a consumed stream, use `.tee()` to split the stream.');
-            }
-            consumed = true;
-            let done = false;
-            try {
-                for await (const line of iterLines()) {
-                    if (done)
-                        continue;
-                    if (line)
-                        yield JSON.parse(line);
-                }
-                done = true;
-            }
-            catch (e) {
-                // If the user calls `stream.controller.abort()`, we should exit without throwing.
-                if (controller.signal.aborted || src_isAbortError(e))
-                    return;
-                throw e;
-            }
-            finally {
-                // If the user `break`s, abort the ongoing request.
-                if (!done)
-                    controller.abort();
-            }
-        }
-        return new src_Stream(iterator, controller, client);
-    }
-    [(_Stream_client = new WeakMap(), Symbol.asyncIterator)]() {
-        return this.iterator();
-    }
-    /**
-     * Splits the stream into two streams which can be
-     * independently read from at different speeds.
-     */
-    tee() {
-        const left = [];
-        const right = [];
-        const iterator = this.iterator();
-        const teeIterator = (queue) => {
-            return {
-                next: () => {
-                    if (queue.length === 0) {
-                        const result = iterator.next();
-                        left.push(result);
-                        right.push(result);
-                    }
-                    return queue.shift();
-                },
-            };
-        };
-        return [
-            new src_Stream(() => teeIterator(left), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
-            new src_Stream(() => teeIterator(right), this.controller, __classPrivateFieldGet(this, _Stream_client, "f")),
-        ];
-    }
-    /**
-     * Converts this stream to a newline-separated ReadableStream of
-     * JSON stringified values in the stream
-     * which can be turned back into a Stream with `Stream.fromReadableStream()`.
-     */
-    toReadableStream() {
-        const self = this;
-        let iter;
-        return makeReadableStream({
-            async start() {
-                iter = self[Symbol.asyncIterator]();
-            },
-            async pull(ctrl) {
-                try {
-                    const { value, done } = await iter.next();
-                    if (done)
-                        return ctrl.close();
-                    const bytes = bytes_encodeUTF8(JSON.stringify(value) + '\n');
-                    ctrl.enqueue(bytes);
-                }
-                catch (err) {
-                    ctrl.error(err);
-                }
-            },
-            async cancel() {
-                await iter.return?.();
-            },
-        });
-    }
-}
-async function* _iterSSEMessages(response, controller) {
-    if (!response.body) {
-        controller.abort();
-        if (typeof globalThis.navigator !== 'undefined' &&
-            globalThis.navigator.product === 'ReactNative') {
-            throw new error_OpenAIError(`The default react-native fetch implementation does not support streaming. Please use expo/fetch: https://docs.expo.dev/versions/latest/sdk/expo/#expofetch-api`);
-        }
-        throw new error_OpenAIError(`Attempted to iterate over a response with no body`);
-    }
-    const sseDecoder = new SSEDecoder();
-    const lineDecoder = new LineDecoder();
-    const iter = ReadableStreamToAsyncIterable(response.body);
-    for await (const sseChunk of iterSSEChunks(iter)) {
-        for (const line of lineDecoder.decode(sseChunk)) {
-            const sse = sseDecoder.decode(line);
-            if (sse)
-                yield sse;
-        }
-    }
-    for (const line of lineDecoder.flush()) {
-        const sse = sseDecoder.decode(line);
-        if (sse)
-            yield sse;
-    }
-}
-/**
- * Given an async iterable iterator, iterates over it and yields full
- * SSE chunks, i.e. yields when a double new-line is encountered.
- */
-async function* iterSSEChunks(iterator) {
-    let data = new Uint8Array();
-    for await (const chunk of iterator) {
-        if (chunk == null) {
-            continue;
-        }
-        const binaryChunk = chunk instanceof ArrayBuffer ? new Uint8Array(chunk)
-            : typeof chunk === 'string' ? bytes_encodeUTF8(chunk)
-                : chunk;
-        let newData = new Uint8Array(data.length + binaryChunk.length);
-        newData.set(data);
-        newData.set(binaryChunk, data.length);
-        data = newData;
-        let patternIndex;
-        while ((patternIndex = findDoubleNewlineIndex(data)) !== -1) {
-            yield data.slice(0, patternIndex);
-            data = data.slice(patternIndex);
-        }
-    }
-    if (data.length > 0) {
-        yield data;
-    }
-}
-class SSEDecoder {
-    constructor() {
-        this.event = null;
-        this.data = [];
-        this.chunks = [];
-    }
-    decode(line) {
-        if (line.endsWith('\r')) {
-            line = line.substring(0, line.length - 1);
-        }
-        if (!line) {
-            // empty line and we didn't previously encounter any messages
-            if (!this.event && !this.data.length)
-                return null;
-            const sse = {
-                event: this.event,
-                data: this.data.join('\n'),
-                raw: this.chunks,
-            };
-            this.event = null;
-            this.data = [];
-            this.chunks = [];
-            return sse;
-        }
-        this.chunks.push(line);
-        if (line.startsWith(':')) {
-            return null;
-        }
-        let [fieldname, _, value] = partition(line, ':');
-        if (value.startsWith(' ')) {
-            value = value.substring(1);
-        }
-        if (fieldname === 'event') {
-            this.event = value;
-        }
-        else if (fieldname === 'data') {
-            this.data.push(value);
-        }
-        return null;
-    }
-}
-function partition(str, delimiter) {
-    const index = str.indexOf(delimiter);
-    if (index !== -1) {
-        return [str.substring(0, index), delimiter, str.substring(index + delimiter.length)];
-    }
-    return [str, '', ''];
-}
-//# sourceMappingURL=streaming.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/internal/parse.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-
-
-async function defaultParseResponse(client, props) {
-    const { response, requestLogID, retryOfRequestLogID, startTime } = props;
-    const body = await (async () => {
-        if (props.options.stream) {
-            loggerFor(client).debug('response', response.status, response.url, response.headers, response.body);
-            // Note: there is an invariant here that isn't represented in the type system
-            // that if you set `stream: true` the response type must also be `Stream<T>`
-            if (props.options.__streamClass) {
-                return props.options.__streamClass.fromSSEResponse(response, props.controller, client, props.options.__synthesizeEventData);
-            }
-            return src_Stream.fromSSEResponse(response, props.controller, client, props.options.__synthesizeEventData);
-        }
-        // fetch refuses to read the body when the status code is 204.
-        if (response.status === 204) {
-            return null;
-        }
-        if (props.options.__binaryResponse) {
-            return response;
-        }
-        const contentType = response.headers.get('content-type');
-        const mediaType = contentType?.split(';')[0]?.trim();
-        const isJSON = mediaType?.includes('application/json') || mediaType?.endsWith('+json');
-        if (isJSON) {
-            const contentLength = response.headers.get('content-length');
-            if (contentLength === '0') {
-                // if there is no content we can't do anything
-                return undefined;
-            }
-            const json = await response.json();
-            return addRequestID(json, response);
-        }
-        const text = await response.text();
-        return text;
-    })();
-    loggerFor(client).debug(`[${requestLogID}] response parsed`, formatRequestDetails({
-        retryOfRequestLogID,
-        url: response.url,
-        status: response.status,
-        body,
-        durationMs: Date.now() - startTime,
-    }));
-    return body;
-}
-function addRequestID(value, response) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        return value;
-    }
-    return Object.defineProperty(value, '_request_id', {
-        value: response.headers.get('x-request-id'),
-        enumerable: false,
-    });
-}
-//# sourceMappingURL=parse.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/core/api-promise.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _APIPromise_client;
 
 
@@ -55967,7 +57142,6 @@ class APIPromise extends Promise {
 _APIPromise_client = new WeakMap();
 //# sourceMappingURL=api-promise.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/core/pagination.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 var _AbstractPage_client;
 
 
@@ -56153,36 +57327,66 @@ const SUBJECT_TOKEN_TYPES = {
     id: 'urn:ietf:params:oauth:token-type:id_token',
 };
 const TOKEN_EXCHANGE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:token-exchange';
+/**
+ * Exchanges external workload-identity tokens for cached OpenAI access tokens.
+ *
+ * Concurrent token exchanges are shared. Valid cached tokens are returned while
+ * a proactive refresh runs in the background; expired or missing tokens wait
+ * for a successful exchange before they are returned.
+ */
 class WorkloadIdentityAuth {
+    /**
+     * Creates a workload-identity token cache and OAuth token-exchange client.
+     *
+     * @param config External identity provider, OpenAI service account, and refresh settings.
+     * @param fetch Optional fetch implementation for calls to the OpenAI token endpoint.
+     */
     constructor(config, fetch) {
         this.cachedToken = null;
         this.refreshPromise = null;
+        this.tokenGeneration = 0;
         this.tokenExchangeUrl = 'https://auth.openai.com/oauth/token';
         this.config = config;
         this.fetch = fetch ?? getDefaultFetch();
     }
+    /**
+     * Returns a valid OpenAI access token, exchanging or refreshing credentials as needed.
+     *
+     * Cached tokens nearing expiration are returned immediately while a background
+     * refresh runs. Concurrent callers share the same in-flight token exchange.
+     *
+     * @throws {OAuthError} When the token endpoint rejects the subject token or identity.
+     * @throws {APIError} When another unsuccessful HTTP response prevents token exchange.
+     * @throws {OpenAIError} When a successful exchange has an invalid access token or expiration.
+     */
     async getToken() {
-        if (!this.cachedToken || this.isTokenExpired(this.cachedToken)) {
+        if (!this.cachedToken || WorkloadIdentityAuth.isTokenExpired(this.cachedToken)) {
             if (this.refreshPromise) {
                 return await this.refreshPromise;
             }
-            this.refreshPromise = this.refreshToken();
+            const refreshPromise = this.refreshToken(this.tokenGeneration);
+            this.refreshPromise = refreshPromise;
             try {
-                const token = await this.refreshPromise;
-                return token;
+                return await refreshPromise;
             }
             finally {
-                this.refreshPromise = null;
+                if (this.refreshPromise === refreshPromise) {
+                    this.refreshPromise = null;
+                }
             }
         }
         if (this.needsRefresh(this.cachedToken) && !this.refreshPromise) {
-            this.refreshPromise = this.refreshToken().finally(() => {
-                this.refreshPromise = null;
+            const refreshPromise = this.refreshToken(this.tokenGeneration).finally(() => {
+                if (this.refreshPromise === refreshPromise) {
+                    this.refreshPromise = null;
+                }
             });
+            this.refreshPromise = refreshPromise;
+            void refreshPromise.catch(() => null);
         }
         return this.cachedToken.token;
     }
-    async refreshToken() {
+    async refreshToken(generation) {
         const subjectToken = await this.config.provider.getToken();
         const body = {
             grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
@@ -56200,6 +57404,7 @@ class WorkloadIdentityAuth {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(body),
+            redirect: 'manual',
         });
         if (!response.ok) {
             const errorText = await response.text();
@@ -56207,7 +57412,9 @@ class WorkloadIdentityAuth {
             try {
                 body = JSON.parse(errorText);
             }
-            catch { }
+            catch {
+                // Ignore non-JSON error bodies.
+            }
             if (response.status === 400 || response.status === 401 || response.status === 403) {
                 throw new OAuthError(response.status, body, response.headers);
             }
@@ -56223,14 +57430,23 @@ class WorkloadIdentityAuth {
         }
         const accessToken = tokenResponse.access_token;
         const expiresIn = tokenResponse.expires_in ?? 3600;
-        const expiresAt = Date.now() + expiresIn * 1000;
-        this.cachedToken = {
-            token: accessToken,
-            expiresAt,
-        };
+        if (typeof expiresIn !== 'number' || !Number.isFinite(expiresIn) || expiresIn <= 0) {
+            throw new error_OpenAIError("Token exchange response has invalid 'expires_in' field");
+        }
+        const now = Date.now();
+        const expiresAt = now + expiresIn * 1000;
+        if (!Number.isSafeInteger(expiresAt) || expiresAt <= now) {
+            throw new error_OpenAIError("Token exchange response has invalid 'expires_in' field");
+        }
+        if (this.tokenGeneration === generation) {
+            this.cachedToken = {
+                token: accessToken,
+                expiresAt,
+            };
+        }
         return accessToken;
     }
-    isTokenExpired(cachedToken) {
+    static isTokenExpired(cachedToken) {
         return Date.now() >= cachedToken.expiresAt;
     }
     needsRefresh(cachedToken) {
@@ -56238,14 +57454,15 @@ class WorkloadIdentityAuth {
         const bufferMs = bufferSeconds * 1000;
         return Date.now() >= cachedToken.expiresAt - bufferMs;
     }
+    /** Discards the cached access token so the next request performs a fresh exchange. */
     invalidateToken() {
+        this.tokenGeneration += 1;
         this.cachedToken = null;
         this.refreshPromise = null;
     }
 }
 //# sourceMappingURL=workload-identity-auth.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/headers.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 const brand_privateNullableHeaders = /* @__PURE__ */ Symbol('brand.privateNullableHeaders');
 const httpTokenHeaderName = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
@@ -56334,65 +57551,119 @@ const brand_privateStreamingFile = /* @__PURE__ */ Symbol('brand.privateStreamin
  * Unlike {@link toFile}, this helper does not create a web `File`, because the `File` constructor
  * must consume all of its contents up front. The stream is instead encoded lazily as multipart
  * form data when the request is sent.
+ *
+ * @param data Async-iterable or readable-stream chunks containing text, binary data, or blobs.
+ * @param name Non-empty filename sent in the multipart request.
+ * @param options Optional MIME type for the streaming file.
+ * @throws {TypeError} If `name` is empty or the content type contains control characters.
  */
 function toStreamingFile(data, name, options) {
-    if (!name) {
+    if (typeof name !== 'string' || !name) {
         throw new TypeError('toStreamingFile requires a non-empty file name');
+    }
+    const type = options?.type;
+    if (type) {
+        validateStreamingFileType(type);
     }
     return {
         [brand_privateStreamingFile]: true,
         data,
         name,
-        ...(options?.type ? { type: options.type } : {}),
+        ...(type ? { type } : {}),
     };
 }
+/**
+ * Verifies that the current runtime exposes the global `File` constructor.
+ *
+ * @throws {Error} If `File` is unavailable; older Node.js runtimes receive an
+ * additional upgrade or `node:buffer` compatibility suggestion.
+ */
 const checkFileSupport = () => {
     if (typeof File === 'undefined') {
         const { process } = globalThis;
-        const isOldNode = typeof process?.versions?.node === 'string' && parseInt(process.versions.node.split('.')) < 20;
+        const isOldNode = typeof process?.versions?.node === 'string' &&
+            Number.parseInt(process.versions.node.split('.'), 10) < 20;
         throw new Error('`File` is not defined as a global, which is required for file uploads.' +
-            (isOldNode ?
-                " Update to a supported Node.js LTS release, or set `globalThis.File` to `import('node:buffer').File`."
+            (isOldNode
+                ? " Update to a supported Node.js LTS release, or set `globalThis.File` to `import('node:buffer').File`."
                 : ''));
     }
 };
 /**
  * Construct a `File` instance. This is used to ensure a helpful error is thrown
  * for environments that don't define a global `File` yet.
+ *
+ * A missing filename becomes `unknown_file`.
  */
 function makeFile(fileBits, fileName, options) {
     checkFileSupport();
     return new File(fileBits, fileName ?? 'unknown_file', options);
 }
-function getName(value) {
-    return (((typeof value === 'object' &&
-        value !== null &&
-        (('name' in value && value.name && String(value.name)) ||
-            ('url' in value && value.url && String(value.url)) ||
-            ('filename' in value && value.filename && String(value.filename)) ||
-            ('path' in value && value.path && String(value.path)))) ||
-        '')
-        .split(/[\\/]/)
-        .pop() || undefined);
+/**
+ * Infers a filename from an object's `name`, `url`, `filename`, or `path` value.
+ *
+ * Directory components separated by either `/` or `\\` are discarded unless an
+ * explicitly supplied `name` or `filename` opts into preserving its path. Preserved
+ * paths use forward slashes. Paths inferred from URLs and filesystem streams always
+ * discard their directories.
+ */
+function getName(value, options) {
+    if (typeof value !== 'object' || value === null) {
+        return undefined;
+    }
+    const explicitName = ('name' in value && value.name && String(value.name)) ||
+        ('filename' in value && value.filename && String(value.filename));
+    if (explicitName) {
+        return options?.stripFilename === false ? normalizeFilenamePath(explicitName) : basename(explicitName);
+    }
+    const url = 'url' in value && value.url && String(value.url);
+    if (url) {
+        try {
+            return basename(new URL(url).pathname);
+        }
+        catch {
+            return basename(url);
+        }
+    }
+    const path = 'path' in value && value.path && String(value.path);
+    return path ? basename(path) : undefined;
 }
+function basename(value) {
+    return value.split(/[\\/]/).pop() || undefined;
+}
+function normalizeFilenamePath(value) {
+    return value.replace(/\\/g, '/');
+}
+/** Identifies objects that expose a callable `Symbol.asyncIterator` method. */
 const isAsyncIterable = (value) => value != null && typeof value === 'object' && typeof value[Symbol.asyncIterator] === 'function';
 /**
- * Returns a multipart/form-data request if any part of the given request body contains a File / Blob value.
- * Otherwise returns the request as is.
+ * Converts a request to multipart form data when its body contains an upload.
+ *
+ * Uploads include files, named blobs, responses, async iterables, readable
+ * streams, and {@link StreamingFile} values anywhere in a nested body. Bodies
+ * containing streaming values are encoded lazily; other uploads use `FormData`.
+ * Requests without uploads are returned unchanged.
  */
-const maybeMultipartFormRequestOptions = async (opts, fetch) => {
-    if (!hasUploadableValue(opts.body))
+const maybeMultipartFormRequestOptions = async (opts, fetch, formOptions) => {
+    if (!hasUploadableValue(opts.body)) {
         return opts;
-    if (hasStreamingUploadableValue(opts.body)) {
-        return createStreamingFormRequestOptions(opts);
     }
-    return { ...opts, body: await createForm(opts.body, fetch) };
+    if (hasStreamingUploadableValue(opts.body)) {
+        return createStreamingFormRequestOptions(opts, formOptions);
+    }
+    return { ...opts, body: await createForm(opts.body, fetch, formOptions) };
 };
-const multipartFormRequestOptions = async (opts, fetch) => {
+/**
+ * Encodes a request body as multipart form data even when no file is present.
+ *
+ * Streaming uploads produce a lazy multipart `ReadableStream` and an explicit
+ * boundary header; other values are materialized into platform `FormData`.
+ */
+const multipartFormRequestOptions = async (opts, fetch, formOptions) => {
     if (hasStreamingUploadableValue(opts.body)) {
-        return createStreamingFormRequestOptions(opts);
+        return createStreamingFormRequestOptions(opts, formOptions);
     }
-    return { ...opts, body: await createForm(opts.body, fetch) };
+    return { ...opts, body: await createForm(opts.body, fetch, formOptions) };
 };
 const supportsFormDataMap = /* @__PURE__ */ new WeakMap();
 /**
@@ -56404,8 +57675,9 @@ const supportsFormDataMap = /* @__PURE__ */ new WeakMap();
 function supportsFormData(fetchObject) {
     const fetch = typeof fetchObject === 'function' ? fetchObject : fetchObject.fetch;
     const cached = supportsFormDataMap.get(fetch);
-    if (cached)
+    if (cached) {
         return cached;
+    }
     const promise = (async () => {
         try {
             let FetchResponse;
@@ -56431,12 +57703,22 @@ function supportsFormData(fetchObject) {
     supportsFormDataMap.set(fetch, promise);
     return promise;
 }
-const createForm = async (body, fetch) => {
+/**
+ * Materializes an object into platform `FormData` after verifying fetch support.
+ *
+ * Strings, numbers, and booleans become text fields; responses, named blobs,
+ * and async byte sources become file fields. Arrays and nested objects use
+ * bracketed field names, while `undefined` values are omitted.
+ *
+ * @throws {TypeError} If the fetch implementation cannot encode global
+ * `FormData`, a field is `null`, or a field has an unsupported value.
+ */
+const createForm = async (body, fetch, options = {}) => {
     if (!(await supportsFormData(fetch))) {
         throw new TypeError('The provided fetch function does not support file uploads with the current global FormData class.');
     }
     const form = new FormData();
-    await Promise.all(Object.entries(body || {}).map(([key, value]) => addFormValue(form, key, value)));
+    await Promise.all(Object.entries(body || {}).map(([key, value]) => addFormValue(form, key, value, options)));
     return form;
 };
 // We check for Blob not File because Bun.File doesn't inherit from File,
@@ -56455,50 +57737,57 @@ const isUploadable = (value) => typeof value === 'object' &&
         isStreamingFile(value) ||
         isNamedBlob(value));
 const hasStreamingUploadableValue = (value) => {
-    if (isStreamingFile(value) || isAsyncIterable(value) || isReadableStream(value))
+    if (isStreamingFile(value) || isAsyncIterable(value) || isReadableStream(value)) {
         return true;
-    if (Array.isArray(value))
+    }
+    if (Array.isArray(value)) {
         return value.some(hasStreamingUploadableValue);
+    }
     if (value && typeof value === 'object' && !isNamedBlob(value) && !(value instanceof Response)) {
         for (const k in value) {
-            if (hasStreamingUploadableValue(value[k]))
+            if (hasStreamingUploadableValue(value[k])) {
                 return true;
+            }
         }
     }
     return false;
 };
 const hasUploadableValue = (value) => {
-    if (isUploadable(value))
+    if (isUploadable(value)) {
         return true;
-    if (Array.isArray(value))
+    }
+    if (Array.isArray(value)) {
         return value.some(hasUploadableValue);
+    }
     if (value && typeof value === 'object') {
         for (const k in value) {
-            if (hasUploadableValue(value[k]))
+            if (hasUploadableValue(value[k])) {
                 return true;
+            }
         }
     }
     return false;
 };
-const createStreamingFormRequestOptions = (opts) => {
+const createStreamingFormRequestOptions = (opts, options = {}) => {
     const boundary = `openai-${Math.random().toString(36).slice(2)}`;
-    const body = ReadableStreamFrom(iterateMultipartBody(opts.body, boundary));
+    const body = ReadableStreamFrom(iterateMultipartBody(opts.body, boundary, options));
     return {
         ...opts,
         body,
         headers: buildHeaders([{ 'content-type': `multipart/form-data; boundary=${boundary}` }, opts.headers]),
     };
 };
-async function* iterateMultipartBody(body, boundary) {
+async function* iterateMultipartBody(body, boundary, options) {
     for await (const { key, value } of iterateFormEntries(body)) {
-        yield bytes_encodeUTF8(`--${boundary}\r\n`);
         if (isUploadable(value)) {
-            const filename = getStreamingFileName(value);
+            const filename = getStreamingFileName(value, options);
             const type = getStreamingFileType(value);
-            yield bytes_encodeUTF8(`Content-Disposition: form-data; name="${escapeHeaderValue(key)}"; filename="${escapeHeaderValue(filename)}"\r\n` + `Content-Type: ${type}\r\n\r\n`);
+            yield bytes_encodeUTF8(`--${boundary}\r\n`);
+            yield bytes_encodeUTF8(`Content-Disposition: form-data; name="${escapeHeaderValue(key)}"; filename="${escapeHeaderValue(filename)}"\r\nContent-Type: ${type}\r\n\r\n`);
             yield* iterateBytes(getStreamingFileData(value));
         }
         else {
+            yield bytes_encodeUTF8(`--${boundary}\r\n`);
             yield bytes_encodeUTF8(`Content-Disposition: form-data; name="${escapeHeaderValue(key)}"\r\n\r\n${String(value)}`);
         }
         yield bytes_encodeUTF8('\r\n');
@@ -56506,15 +57795,17 @@ async function* iterateMultipartBody(body, boundary) {
     yield bytes_encodeUTF8(`--${boundary}--\r\n`);
 }
 async function* iterateFormEntries(body) {
-    if (!body || typeof body !== 'object')
+    if (!body || typeof body !== 'object') {
         return;
+    }
     for (const [key, value] of Object.entries(body)) {
         yield* iterateFormValue(key, value);
     }
 }
 async function* iterateFormValue(key, value) {
-    if (value === undefined)
+    if (value === undefined) {
         return;
+    }
     if (value == null) {
         throw new TypeError(`Received null for "${key}"; to pass null in FormData, you must use the string 'null'`);
     }
@@ -56538,21 +57829,42 @@ async function* iterateFormValue(key, value) {
         throw new TypeError(`Invalid value given to form, expected a string, number, boolean, object, Array, File or Blob but got ${value} instead`);
     }
 }
-function getStreamingFileName(value) {
-    return isStreamingFile(value) ? value.name : getName(value) ?? 'unknown_file';
+function getStreamingFileName(value, options) {
+    if (isStreamingFile(value)) {
+        const { name } = value;
+        if (typeof name !== 'string' || !name) {
+            throw new TypeError('Streaming upload file name must be a non-empty string');
+        }
+        return options.stripFilenames === false ? normalizeFilenamePath(name) : name;
+    }
+    return getName(value, { stripFilename: options.stripFilenames }) ?? 'unknown_file';
 }
 function getStreamingFileType(value) {
-    if (isStreamingFile(value))
-        return value.type || 'application/octet-stream';
-    if (isNamedBlob(value) && value.type)
-        return value.type;
-    if (value instanceof Response)
-        return value.headers.get('content-type') || 'application/octet-stream';
-    return 'application/octet-stream';
+    let type;
+    if (isStreamingFile(value) || isNamedBlob(value)) {
+        ({ type } = value);
+    }
+    else if (value instanceof Response) {
+        type = value.headers.get('content-type') ?? undefined;
+    }
+    return validateStreamingFileType(type || 'application/octet-stream');
+}
+function validateStreamingFileType(type) {
+    if (typeof type !== 'string') {
+        throw new TypeError('Streaming upload content type must be a string');
+    }
+    for (let index = 0; index < type.length; index += 1) {
+        const character = type.codePointAt(index) ?? 0;
+        if (character <= 0x1f || character === 0x7f) {
+            throw new TypeError('Streaming upload content type must not contain control characters');
+        }
+    }
+    return type;
 }
 function getStreamingFileData(value) {
-    if (isStreamingFile(value))
+    if (isStreamingFile(value)) {
         return value.data;
+    }
     return value;
 }
 async function* iterateBytes(value) {
@@ -56566,12 +57878,7 @@ async function* iterateBytes(value) {
         yield new Uint8Array(value);
     }
     else if (value instanceof Response) {
-        if (value.body) {
-            yield* iterateBytes(value.body);
-        }
-        else {
-            yield* iterateBytes(await value.blob());
-        }
+        yield* iterateBytes(value.body || (await value.blob()));
     }
     else if (value instanceof Blob) {
         if (typeof value.stream === 'function') {
@@ -56596,32 +57903,38 @@ async function* iterateBytes(value) {
     }
 }
 function escapeHeaderValue(value) {
-    return value.replace(/["\\\r\n]/g, (character) => encodeURIComponent(character));
+    return Array.from(value, (character) => {
+        const codePoint = character.codePointAt(0) ?? 0;
+        return codePoint <= 0x1f || codePoint === 0x7f || character === '"' || character === '\\'
+            ? encodeURIComponent(character)
+            : character;
+    }).join('');
 }
-const addFormValue = async (form, key, value) => {
-    if (value === undefined)
+const addFormValue = async (form, key, value, options) => {
+    if (value === undefined) {
         return;
+    }
     if (value == null) {
         throw new TypeError(`Received null for "${key}"; to pass null in FormData, you must use the string 'null'`);
     }
-    // TODO: make nested formats configurable
+    // Nested form keys use the current bracketed encoding.
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
         form.append(key, String(value));
     }
     else if (value instanceof Response) {
-        form.append(key, makeFile([await value.blob()], getName(value)));
+        form.append(key, makeFile([await value.blob()], getName(value, { stripFilename: options.stripFilenames })));
     }
     else if (isAsyncIterable(value)) {
-        form.append(key, makeFile([await new Response(ReadableStreamFrom(value)).blob()], getName(value)));
+        form.append(key, makeFile([await new Response(ReadableStreamFrom(value)).blob()], getName(value, { stripFilename: options.stripFilenames })));
     }
     else if (isNamedBlob(value)) {
-        form.append(key, value, getName(value));
+        form.append(key, value, getName(value, { stripFilename: options.stripFilenames }));
     }
     else if (Array.isArray(value)) {
-        await Promise.all(value.map((entry) => addFormValue(form, key + '[]', entry)));
+        await Promise.all(value.map((entry) => addFormValue(form, key + '[]', entry, options)));
     }
     else if (typeof value === 'object') {
-        await Promise.all(Object.entries(value).map(([name, prop]) => addFormValue(form, `${key}[${name}]`, prop)));
+        await Promise.all(Object.entries(value).map(([name, prop]) => addFormValue(form, `${key}[${name}]`, prop, options)));
     }
     else {
         throw new TypeError(`Invalid value given to form, expected a string, number, boolean, object, Array, File or Blob but got ${value} instead`);
@@ -56629,7 +57942,6 @@ const addFormValue = async (form, key, value) => {
 };
 //# sourceMappingURL=uploads.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/to-file.mjs
-
 
 /**
  * This check adds the arrayBuffer() method type because it is available and used at runtime
@@ -56653,55 +57965,77 @@ const isResponseLike = (value) => value != null &&
     typeof value === 'object' &&
     typeof value.url === 'string' &&
     typeof value.blob === 'function';
+const hasFilePropertyOverrides = (value, options) => (options?.type != null && options.type !== value.type) ||
+    (options?.lastModified != null && options.lastModified !== value.lastModified) ||
+    options?.endings != null;
+const canReuseNativeFile = (value, name, options) => (name == null || name === value.name) && !hasFilePropertyOverrides(value, options);
 /**
- * Helper for creating a {@link File} to pass to an SDK upload method from a variety of different data formats
- * @param value the raw content of the file. Can be an {@link Uploadable}, BlobLikePart, or AsyncIterable of BlobLikeParts
- * @param {string=} name the name of the file. If omitted, toFile will try to determine a file name from bits if possible
- * @param {Object=} options additional properties
- * @param {string=} options.type the MIME type of the content
- * @param {number=} options.lastModified the last modified timestamp
- * @returns a {@link File} with the given properties
+ * Buffers compatible content into a native {@link File} for an SDK upload.
+ *
+ * Existing native `File` objects are returned unchanged when their effective
+ * filename and metadata are unchanged. Renamed native files reuse the original
+ * file contents without buffering and retain their MIME type and modification
+ * time unless explicitly overridden. Other filenames are inferred from response
+ * URLs or input metadata when omitted, falling back to `unknown_file`. Responses,
+ * native or compatible `Blob` values, and compatible non-native files supply
+ * their MIME type unless `options.type` provides an explicit override.
+ *
+ * @param value An existing file, response, binary buffer, Blob-like object, async
+ * stream of file parts, or a promise resolving to one of those values.
+ * @param name Optional filename overriding inferred metadata or an existing filename.
+ * @param options Optional file metadata, including MIME type and modification time.
+ * @returns A native `File` containing the complete buffered input.
+ * @throws {Error} If the runtime lacks a global `File` constructor or the input
+ * cannot be converted into file contents.
  */
 async function toFile(value, name, options) {
     checkFileSupport();
     // If it's a promise, resolve it.
     value = await value;
-    // If we've been given a `File` we don't need to do anything
     if (isFileLike(value)) {
+        const fileOptions = {
+            ...options,
+            type: options?.type ?? value.type,
+            lastModified: options?.lastModified ?? value.lastModified,
+        };
         if (value instanceof File) {
-            return value;
+            if (canReuseNativeFile(value, name, options)) {
+                return value;
+            }
+            return makeFile([value], name ?? value.name, fileOptions);
         }
-        return makeFile([await value.arrayBuffer()], value.name);
+        return makeFile([await value.arrayBuffer()], name ?? value.name, fileOptions);
     }
     if (isResponseLike(value)) {
         const blob = await value.blob();
-        name || (name = new URL(value.url).pathname.split(/[\\/]/).pop());
-        return makeFile(await getBytes(blob), name, options);
+        name || (name = getName(value));
+        const responseOptions = options?.type === undefined && blob.type ? { ...options, type: blob.type } : options;
+        return makeFile(await getBytes(blob), name, responseOptions);
     }
     const parts = await getBytes(value);
     name || (name = getName(value));
-    if (!options?.type) {
-        const type = parts.find((part) => typeof part === 'object' && 'type' in part && part.type);
-        if (typeof type === 'string') {
-            options = { ...options, type };
+    if (options?.type === undefined) {
+        const typedPart = parts.find((part) => typeof part === 'object' && 'type' in part && !!part.type);
+        if (typedPart) {
+            options = { ...options, type: typedPart.type };
         }
     }
     return makeFile(parts, name, options);
 }
 async function getBytes(value) {
-    let parts = [];
+    const parts = [];
     if (typeof value === 'string' ||
         ArrayBuffer.isView(value) || // includes Uint8Array, Buffer, etc.
         value instanceof ArrayBuffer) {
         parts.push(value);
     }
     else if (isBlobLike(value)) {
-        parts.push(value instanceof Blob ? value : await value.arrayBuffer());
+        parts.push(value instanceof Blob ? value : new Blob([await value.arrayBuffer()], { type: value.type }));
     }
     else if (isAsyncIterable(value) // includes Readable, ReadableStream, etc.
     ) {
         for await (const chunk of value) {
-            parts.push(...(await getBytes(chunk))); // TODO, consider validating?
+            parts.push(...(await getBytes(chunk)));
         }
     }
     else {
@@ -56711,8 +58045,9 @@ async function getBytes(value) {
     return parts;
 }
 function propsForError(value) {
-    if (typeof value !== 'object' || value === null)
+    if (typeof value !== 'object' || value === null) {
         return '';
+    }
     const props = Object.getOwnPropertyNames(value);
     return `; props: [${props.map((p) => `"${p}"`).join(', ')}]`;
 }
@@ -56722,7 +58057,6 @@ function propsForError(value) {
 
 //# sourceMappingURL=uploads.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/core/resource.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 class APIResource {
     constructor(client) {
         this._client = client;
@@ -56732,7 +58066,10 @@ class APIResource {
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/path.mjs
 
 /**
- * Percent-encode everything that isn't safe to have in a path without encoding safe chars.
+ * Percent-encodes a single URI path parameter while preserving RFC 3986 path characters.
+ *
+ * Slash, question-mark, and hash characters are encoded so an interpolated value
+ * cannot create another path segment, query string, or fragment.
  *
  * Taken from https://datatracker.ietf.org/doc/html/rfc3986#section-3.3:
  * > unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
@@ -56743,36 +58080,48 @@ function encodeURIPath(str) {
     return str.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
 const EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
+/**
+ * Creates a template tag that safely interpolates SDK resource paths.
+ *
+ * Path values use the supplied encoder; values after a literal `?` or `#` use
+ * `encodeURIComponent`. Nullish values, ordinary objects, and literal or
+ * percent-encoded `.`/`..` path segments are rejected with an SDK error.
+ */
 const createPathTagFunction = (pathEncoder = encodeURIPath) => function path(statics, ...params) {
     // If there are no params, no processing is needed.
-    if (statics.length === 1)
+    if (statics.length === 1) {
         return statics[0];
+    }
     let postPath = false;
     const invalidSegments = [];
-    const path = statics.reduce((previousValue, currentValue, index) => {
-        if (/[?#]/.test(currentValue)) {
-            postPath = true;
+    let path = '';
+    for (let index = 0; index < statics.length; index += 1) {
+        if (index in statics) {
+            const currentValue = statics[index];
+            if (/[?#]/.test(currentValue)) {
+                postPath = true;
+            }
+            const value = params[index];
+            let encoded = (postPath ? encodeURIComponent : pathEncoder)('' + value);
+            if (index !== params.length &&
+                (value == null ||
+                    (typeof value === 'object' &&
+                        // handle values from other realms
+                        value.toString ===
+                            Object.getPrototypeOf(Object.getPrototypeOf(value.hasOwnProperty ?? EMPTY) ?? EMPTY)
+                                ?.toString))) {
+                encoded = value + '';
+                invalidSegments.push({
+                    start: path.length + currentValue.length,
+                    length: encoded.length,
+                    error: `Value of type ${Object.prototype.toString
+                        .call(value)
+                        .slice(8, -1)} is not a valid path parameter`,
+                });
+            }
+            path += currentValue + (index === params.length ? '' : encoded);
         }
-        const value = params[index];
-        let encoded = (postPath ? encodeURIComponent : pathEncoder)('' + value);
-        if (index !== params.length &&
-            (value == null ||
-                (typeof value === 'object' &&
-                    // handle values from other realms
-                    value.toString ===
-                        Object.getPrototypeOf(Object.getPrototypeOf(value.hasOwnProperty ?? EMPTY) ?? EMPTY)
-                            ?.toString))) {
-            encoded = value + '';
-            invalidSegments.push({
-                start: previousValue.length + currentValue.length,
-                length: encoded.length,
-                error: `Value of type ${Object.prototype.toString
-                    .call(value)
-                    .slice(8, -1)} is not a valid path parameter`,
-            });
-        }
-        return previousValue + currentValue + (index === params.length ? '' : encoded);
-    }, '');
+    }
     const pathOnly = path.split(/[?#]/, 1)[0];
     const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
     let match;
@@ -56781,18 +58130,19 @@ const createPathTagFunction = (pathEncoder = encodeURIPath) => function path(sta
         invalidSegments.push({
             start: match.index,
             length: match[0].length,
-            error: `Value "${match[0]}" can\'t be safely passed as a path parameter`,
+            error: `Value "${match[0]}" can't be safely passed as a path parameter`,
         });
     }
     invalidSegments.sort((a, b) => a.start - b.start);
     if (invalidSegments.length > 0) {
         let lastEnd = 0;
-        const underline = invalidSegments.reduce((acc, segment) => {
+        let underline = '';
+        for (const segment of invalidSegments) {
             const spaces = ' '.repeat(segment.start - lastEnd);
             const arrows = '^'.repeat(segment.length);
             lastEnd = segment.start + segment.length;
-            return acc + spaces + arrows;
-        }, '');
+            underline += spaces + arrows;
+        }
         throw new error_OpenAIError(`Path parameters result in path with invalid segments:\n${invalidSegments
             .map((e) => e.error)
             .join('\n')}\n${path}\n${underline}`);
@@ -56800,12 +58150,14 @@ const createPathTagFunction = (pathEncoder = encodeURIPath) => function path(sta
     return path;
 };
 /**
- * URI-encodes path params and ensures no unsafe /./ or /../ path segments are introduced.
+ * Template tag that encodes resource-path parameters and rejects traversal segments.
+ *
+ * Values inside query strings and fragments are encoded as URI components.
  */
 const src_path = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
 //# sourceMappingURL=path.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/completions/messages.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -56838,9 +58190,11 @@ class Messages extends APIResource {
 //# sourceMappingURL=error.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/parser.mjs
 
+/** Returns whether an optional chat completion tool contains a function-tool definition. */
 function isChatCompletionFunctionTool(tool) {
     return tool !== undefined && 'function' in tool && tool.function !== undefined;
 }
+/** Copies a JSON Schema response format and attaches a non-enumerable structured-output parser. */
 function makeParseableResponseFormat(response_format, parser) {
     const obj = { ...response_format };
     Object.defineProperties(obj, {
@@ -56855,6 +58209,7 @@ function makeParseableResponseFormat(response_format, parser) {
     });
     return obj;
 }
+/** Copies a Responses API text format and attaches a non-enumerable structured-output parser. */
 function makeParseableTextFormat(response_format, parser) {
     const obj = { ...response_format };
     Object.defineProperties(obj, {
@@ -56869,9 +58224,47 @@ function makeParseableTextFormat(response_format, parser) {
     });
     return obj;
 }
+/**
+ * Whether the given format was built by an SDK helper (e.g. `zodResponseFormat()`)
+ * and therefore carries its own `$parseRaw` callback.
+ *
+ * Prefer {@link isParseableResponseFormat} when deciding whether output should be
+ * parsed at all; raw `{ type: 'json_schema' }` formats are parsed too, but are not
+ * branded.
+ */
 function isAutoParsableResponseFormat(response_format) {
     return response_format?.['$brand'] === 'auto-parseable-response-format';
 }
+/**
+ * The canonical definition of an auto-parseable response format, covering both the
+ * Chat Completions `response_format` and the Responses `text.format` shapes.
+ *
+ * Every gate that decides whether output should be parsed must go through this
+ * predicate so the runtime, the streaming events and
+ * {@link ExtractParsedContentFromParams} cannot drift apart.
+ */
+function isParseableResponseFormat(format) {
+    return isAutoParsableResponseFormat(format) || format?.type === 'json_schema';
+}
+/**
+ * The canonical parser for auto-parseable response formats. This is the only place
+ * that chooses between an existing `$parseRaw` callback and generic `JSON.parse()`.
+ *
+ * Returns `null` for formats that are not auto-parseable.
+ */
+function parseResponseFormatContent(format, content) {
+    if (!isParseableResponseFormat(format)) {
+        return null;
+    }
+    if (typeof format === 'object' &&
+        format !== null &&
+        '$parseRaw' in format &&
+        typeof format.$parseRaw === 'function') {
+        return format.$parseRaw(content);
+    }
+    return JSON.parse(content);
+}
+/** Copies a function tool and attaches non-enumerable parsing and callback metadata. */
 function makeParseableTool(tool, { parser, callback, }) {
     const obj = { ...tool };
     Object.defineProperties(obj, {
@@ -56890,32 +58283,41 @@ function makeParseableTool(tool, { parser, callback, }) {
     });
     return obj;
 }
+/** Returns whether a Chat Completions tool carries the SDK's argument-parser marker. */
 function isAutoParsableTool(tool) {
     return tool?.['$brand'] === 'auto-parseable-tool';
 }
+/**
+ * Adds parsed-content fields to a chat completion, invoking parsers only when the
+ * request includes an auto-parseable response format or a strict function tool.
+ */
 function maybeParseChatCompletion(completion, params) {
     if (!params || !hasAutoParseableInput(params)) {
         return {
             ...completion,
-            choices: completion.choices.map((choice) => {
-                assertToolCallsAreChatCompletionFunctionToolCalls(choice.message.tool_calls);
-                return {
-                    ...choice,
-                    message: {
-                        ...choice.message,
-                        parsed: null,
-                        ...(choice.message.tool_calls ?
-                            {
-                                tool_calls: choice.message.tool_calls,
-                            }
-                            : undefined),
-                    },
-                };
-            }),
+            choices: completion.choices.map((choice) => ({
+                ...choice,
+                message: {
+                    ...choice.message,
+                    parsed: null,
+                    ...(choice.message.tool_calls
+                        ? {
+                            tool_calls: choice.message.tool_calls,
+                        }
+                        : undefined),
+                },
+            })),
         };
     }
     return parseChatCompletion(completion, params);
 }
+/**
+ * Parses structured assistant content and strict function-tool arguments.
+ *
+ * @throws {LengthFinishReasonError} If generation stopped at its token limit.
+ * @throws {ContentFilterFinishReasonError} If generation stopped because of content filtering.
+ * @throws {OpenAIError} If the completion contains an unsupported tool-call type.
+ */
 function parseChatCompletion(completion, params) {
     const choices = completion.choices.map((choice) => {
         if (choice.finish_reason === 'length') {
@@ -56924,18 +58326,21 @@ function parseChatCompletion(completion, params) {
         if (choice.finish_reason === 'content_filter') {
             throw new ContentFilterFinishReasonError();
         }
-        assertToolCallsAreChatCompletionFunctionToolCalls(choice.message.tool_calls);
         return {
             ...choice,
             message: {
                 ...choice.message,
-                ...(choice.message.tool_calls ?
-                    {
+                ...(choice.message.tool_calls
+                    ? {
                         tool_calls: choice.message.tool_calls?.map((toolCall) => parseToolCall(params, toolCall)) ?? undefined,
                     }
                     : undefined),
-                parsed: choice.message.content && !choice.message.refusal ?
-                    parseResponseFormat(params, choice.message.content)
+                parsed: choice.message.content !== null &&
+                    choice.message.content !== undefined &&
+                    !choice.message.refusal &&
+                    (choice.message.content !== '' ||
+                        (!choice.message.tool_calls?.length && !choice.message.function_call))
+                    ? parseResponseFormat(params, choice.message.content)
                     : null,
             },
         };
@@ -56943,55 +58348,75 @@ function parseChatCompletion(completion, params) {
     return { ...completion, choices };
 }
 function parseResponseFormat(params, content) {
-    if (params.response_format?.type !== 'json_schema') {
-        return null;
-    }
-    if (params.response_format?.type === 'json_schema') {
-        if ('$parseRaw' in params.response_format) {
-            const response_format = params.response_format;
-            return response_format.$parseRaw(content);
-        }
-        return JSON.parse(content);
-    }
-    return null;
+    return parseResponseFormatContent(params.response_format, content);
 }
 function parseToolCall(params, toolCall) {
+    if (toolCall.type === 'custom') {
+        return toolCall;
+    }
+    if (toolCall.type !== 'function') {
+        const unsupportedType = toolCall.type;
+        throw new error_OpenAIError(`Currently only \`function\` and \`custom\` tool calls are supported; Received \`${unsupportedType}\``);
+    }
     const inputTool = params.tools?.find((inputTool) => isChatCompletionFunctionTool(inputTool) && inputTool.function?.name === toolCall.function.name); // TS doesn't narrow based on isChatCompletionTool
+    let parsedArguments = null;
+    if (isAutoParsableTool(inputTool)) {
+        parsedArguments = inputTool.$parseRaw(toolCall.function.arguments);
+    }
+    else if (inputTool?.function.strict) {
+        parsedArguments = JSON.parse(toolCall.function.arguments);
+    }
     return {
         ...toolCall,
         function: {
             ...toolCall.function,
-            parsed_arguments: isAutoParsableTool(inputTool) ? inputTool.$parseRaw(toolCall.function.arguments)
-                : inputTool?.function.strict ? JSON.parse(toolCall.function.arguments)
-                    : null,
+            parsed_arguments: parsedArguments,
         },
     };
 }
-function shouldParseToolCall(params, toolCall) {
-    if (!params || !('tools' in params) || !params.tools) {
+/** Returns whether a tool call matches a strict or auto-parseable function in the request. */
+function shouldParseToolCall(params, 
+// accepts partially accumulated tool calls so streaming snapshots can be checked as they build up
+toolCall) {
+    if (!params || !('tools' in params) || !params.tools || toolCall.type !== 'function') {
         return false;
     }
-    const inputTool = params.tools?.find((inputTool) => isChatCompletionFunctionTool(inputTool) && inputTool.function?.name === toolCall.function.name);
+    const inputTool = params.tools?.find((inputTool) => isChatCompletionFunctionTool(inputTool) && inputTool.function?.name === toolCall.function?.name);
     return (isChatCompletionFunctionTool(inputTool) &&
         (isAutoParsableTool(inputTool) || inputTool?.function.strict || false));
 }
+/** Returns whether the request contains an auto-parseable response format or strict function tool. */
 function hasAutoParseableInput(params) {
-    if (isAutoParsableResponseFormat(params.response_format)) {
+    if (isParseableResponseFormat(params.response_format)) {
         return true;
     }
     return (params.tools?.some((t) => isAutoParsableTool(t) || (t.type === 'function' && t.function.strict === true)) ?? false);
 }
+/**
+ * Narrows completion tool calls to function calls supported by parsing helpers.
+ *
+ * @throws {OpenAIError} If any tool call has a non-function type.
+ */
 function assertToolCallsAreChatCompletionFunctionToolCalls(toolCalls) {
     for (const toolCall of toolCalls || []) {
         if (toolCall.type !== 'function') {
-            throw new error_OpenAIError(`Currently only \`function\` tool calls are supported; Received \`${toolCall.type}\``);
+            throw new OpenAIError(`Currently only \`function\` tool calls are supported; Received \`${toolCall.type}\``);
         }
     }
 }
+/**
+ * Validates strict function tools while preserving supported custom tools.
+ *
+ * @throws {OpenAIError} If a tool is unsupported or a function is missing `strict: true`.
+ */
 function validateInputTools(tools) {
     for (const tool of tools ?? []) {
+        if (tool.type === 'custom') {
+            continue;
+        }
         if (tool.type !== 'function') {
-            throw new error_OpenAIError(`Currently only \`function\` tool types support auto-parsing; Received \`${tool.type}\``);
+            const unsupportedType = tool.type;
+            throw new error_OpenAIError(`Currently only \`function\` and \`custom\` tool types are supported; Received \`${unsupportedType}\``);
         }
         if (tool.function.strict !== true) {
             throw new error_OpenAIError(`The \`${tool.function.name}\` tool is not marked with \`strict: true\`. Only strict function tools can be auto-parsed`);
@@ -57000,12 +58425,11 @@ function validateInputTools(tools) {
 }
 //# sourceMappingURL=parser.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/chatCompletionUtils.mjs
-const isAssistantMessage = (message) => {
-    return message?.role === 'assistant';
-};
-const isToolMessage = (message) => {
-    return message?.role === 'tool';
-};
+/** Returns whether a conversation message was produced by the assistant. */
+const isAssistantMessage = (message) => message?.role === 'assistant';
+/** Returns whether a conversation message contains the result of a tool call. */
+const isToolMessage = (message) => message?.role === 'tool';
+/** Narrows a value by excluding both `null` and `undefined`. */
 function isPresent(obj) {
     return obj != null;
 }
@@ -57014,17 +58438,55 @@ function isPresent(obj) {
 var _EventStream_instances, _EventStream_connectedPromise, _EventStream_resolveConnectedPromise, _EventStream_rejectConnectedPromise, _EventStream_endPromise, _EventStream_resolveEndPromise, _EventStream_rejectEndPromise, _EventStream_listeners, _EventStream_abortListeners, _EventStream_ended, _EventStream_errored, _EventStream_aborted, _EventStream_catchingPromiseCreated, _EventStream_removeAbortListeners, _EventStream_handleError;
 
 
+function createEventQueue() {
+    let entries = [];
+    let head = 0;
+    return {
+        get length() {
+            return entries.length - head;
+        },
+        enqueue(value) {
+            entries.push(value);
+        },
+        dequeue() {
+            if (head === entries.length) {
+                return undefined;
+            }
+            const value = entries[head];
+            entries[head] = undefined;
+            head += 1;
+            if (head === entries.length) {
+                entries = [];
+                head = 0;
+            }
+            else if (head >= 1024 && head * 2 >= entries.length) {
+                entries = entries.slice(head);
+                head = 0;
+            }
+            return value;
+        },
+        clear() {
+            entries = [];
+            head = 0;
+        },
+    };
+}
+/** An abortable event stream with typed listeners, asynchronous iteration, and lifecycle state. */
 class EventStream {
+    /** Creates an unstarted stream with independent connection and completion lifecycle promises. */
     constructor() {
         _EventStream_instances.add(this);
+        /** Controls the underlying request; aborting this controller cancels the stream. */
         this.controller = new AbortController();
         _EventStream_connectedPromise.set(this, void 0);
-        _EventStream_resolveConnectedPromise.set(this, () => { });
-        _EventStream_rejectConnectedPromise.set(this, () => { });
+        // oxlint-disable class-methods-use-this -- Deferred promise resolvers are intentionally per-instance mutable callbacks.
+        _EventStream_resolveConnectedPromise.set(this, () => undefined);
+        _EventStream_rejectConnectedPromise.set(this, () => undefined);
         _EventStream_endPromise.set(this, void 0);
-        _EventStream_resolveEndPromise.set(this, () => { });
-        _EventStream_rejectEndPromise.set(this, () => { });
-        _EventStream_listeners.set(this, {});
+        _EventStream_resolveEndPromise.set(this, () => undefined);
+        _EventStream_rejectEndPromise.set(this, () => undefined);
+        // oxlint-enable class-methods-use-this
+        _EventStream_listeners.set(this, Object.create(null));
         _EventStream_abortListeners.set(this, []);
         _EventStream_ended.set(this, false);
         _EventStream_errored.set(this, false);
@@ -57042,16 +58504,24 @@ class EventStream {
         // we will manually cause an unhandled rejection error later
         // if the user hasn't registered any error listener or called
         // any promise-returning method.
-        __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => { });
-        __classPrivateFieldGet(this, _EventStream_endPromise, "f").catch(() => { });
+        __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => undefined);
+        __classPrivateFieldGet(this, _EventStream_endPromise, "f").catch(() => undefined);
     }
     _run(executor) {
         // Unfortunately if we call `executor()` immediately we get runtime errors about
         // references to `this` before the `super()` constructor call returns.
         setTimeout(() => {
+            let failed = false;
             Promise.resolve()
                 .then(executor)
+                .catch((error) => {
+                failed = true;
+                __classPrivateFieldGet(this, _EventStream_instances, "m", _EventStream_handleError).call(this, error);
+            })
                 .then(() => {
+                if (failed) {
+                    return;
+                }
                 try {
                     this._emitFinal();
                 }
@@ -57060,30 +58530,39 @@ class EventStream {
                     return;
                 }
                 this._emit('end');
-            }, __classPrivateFieldGet(this, _EventStream_instances, "m", _EventStream_handleError).bind(this));
+            });
         }, 0);
     }
     _connected() {
-        if (this.ended)
+        if (this.ended) {
             return;
+        }
         __classPrivateFieldGet(this, _EventStream_resolveConnectedPromise, "f").call(this);
         this._emit('connect');
     }
+    /** Whether the stream has finished successfully, failed, or been aborted. */
     get ended() {
         return __classPrivateFieldGet(this, _EventStream_ended, "f");
     }
+    /** Whether an error or user cancellation has been observed. */
     get errored() {
         return __classPrivateFieldGet(this, _EventStream_errored, "f");
     }
+    /** Whether the stream ended because its request was cancelled. */
     get aborted() {
         return __classPrivateFieldGet(this, _EventStream_aborted, "f");
     }
+    /**
+     * Cancels the underlying request; {@link done} and {@link events} observe cancellation.
+     * Promises returned by {@link emitted} for other events may remain pending.
+     */
     abort() {
         this.controller.abort();
     }
     _listenForAbort(signal) {
-        if (!signal || this.ended)
+        if (!signal || this.ended) {
             return;
+        }
         if (signal.aborted) {
             this.controller.abort();
             return;
@@ -57097,10 +58576,11 @@ class EventStream {
      * No checks are made to see if the listener has already been added. Multiple calls passing
      * the same combination of event and listener will result in the listener being added, and
      * called, multiple times.
-     * @returns this ChatCompletionStream, so that calls can be chained
+     * @returns This stream, so that listener registration calls can be chained.
      */
     on(event, listener) {
-        const listeners = __classPrivateFieldGet(this, _EventStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _EventStream_listeners, "f")[event] = []);
+        var _a;
+        const listeners = ((_a = __classPrivateFieldGet(this, _EventStream_listeners, "f"))[event] || (_a[event] = []));
         listeners.push({ listener });
         return this;
     }
@@ -57109,33 +58589,38 @@ class EventStream {
      * off() will remove, at most, one instance of a listener from the listener array. If any single
      * listener has been added multiple times to the listener array for the specified event, then
      * off() must be called multiple times to remove each instance.
-     * @returns this ChatCompletionStream, so that calls can be chained
+     * @returns This stream, so that listener registration calls can be chained.
      */
     off(event, listener) {
         const listeners = __classPrivateFieldGet(this, _EventStream_listeners, "f")[event];
-        if (!listeners)
+        if (!listeners) {
             return this;
+        }
         const index = listeners.findIndex((l) => l.listener === listener);
-        if (index >= 0)
+        if (index !== -1) {
             listeners.splice(index, 1);
+        }
         return this;
     }
     /**
      * Adds a one-time listener function for the event. The next time the event is triggered,
      * this listener is removed and then invoked.
-     * @returns this ChatCompletionStream, so that calls can be chained
+     * @returns This stream, so that listener registration calls can be chained.
      */
     once(event, listener) {
-        const listeners = __classPrivateFieldGet(this, _EventStream_listeners, "f")[event] || (__classPrivateFieldGet(this, _EventStream_listeners, "f")[event] = []);
+        var _a;
+        const listeners = ((_a = __classPrivateFieldGet(this, _EventStream_listeners, "f"))[event] || (_a[event] = []));
         listeners.push({ listener, once: true });
         return this;
     }
     /**
      * This is similar to `.once()`, but returns a Promise that resolves the next time
      * the event is triggered, instead of calling a listener callback.
-     * @returns a Promise that resolves the next time given event is triggered,
-     * or rejects if an error is emitted.  (If you request the 'error' event,
-     * returns a promise that resolves with the error).
+     * Events without arguments resolve to `undefined`, single-argument events resolve
+     * to that argument, and events with multiple arguments resolve to an argument tuple.
+     *
+     * @returns A promise for the next event, or a rejection if an error occurs first.
+     * Requesting the `error` event resolves with the emitted error instead.
      *
      * Example:
      *
@@ -57144,9 +58629,20 @@ class EventStream {
     emitted(event) {
         return new Promise((resolve, reject) => {
             __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
-            if (event !== 'error')
-                this.once('error', reject);
-            this.once(event, resolve);
+            const onError = (error) => {
+                this.off(event, onEvent);
+                reject(error);
+            };
+            const onEvent = (...values) => {
+                if (event !== 'error') {
+                    this.off('error', onError);
+                }
+                resolve((values.length > 1 ? values : values[0]));
+            };
+            if (event !== 'error') {
+                this.once('error', onError);
+            }
+            this.once(event, onEvent);
         });
     }
     /**
@@ -57162,46 +58658,73 @@ class EventStream {
      *   }
      */
     events(event) {
-        const pushQueue = [];
-        const readQueue = [];
+        return this._createIterator((push) => {
+            const onEvent = (...args) => push(args);
+            this.on(event, onEvent);
+            return () => this.off(event, onEvent);
+        }, {
+            // When iterating the 'error' or 'abort' event itself, yield it as a
+            // value instead of rejecting the iterator.
+            rejectOnError: event !== 'error',
+            rejectOnAbort: event !== 'abort',
+        });
+    }
+    /**
+     * Shared buffered async-iterator adapter over this stream's events.
+     *
+     * `attach` registers the producer listener(s) with the given `push` and
+     * returns a cleanup function that removes them. Termination is handled
+     * here: the iterator ends when the stream ends, listeners are removed on
+     * end/return, and a terminal error is retained until buffered values have
+     * drained so it is surfaced even when no reader was waiting when it fired.
+     */
+    _createIterator(attach, { rejectOnError = true, rejectOnAbort = true, onReturn, } = {}) {
+        const pushQueue = createEventQueue();
+        const readQueue = createEventQueue();
         let ended = this.ended;
         let failure;
         let failureDelivered = false;
+        let detach = () => undefined;
         const doneResult = () => ({ value: undefined, done: true });
         const finishReaders = () => {
             while (readQueue.length) {
-                readQueue.shift().resolve(doneResult());
+                readQueue.dequeue().resolve(doneResult());
             }
         };
         const rejectReader = () => {
-            if (!failure || failureDelivered || !readQueue.length)
+            if (!failure || failureDelivered || !readQueue.length) {
                 return;
+            }
             failureDelivered = true;
-            readQueue.shift().reject(failure);
+            readQueue.dequeue().reject(failure);
         };
         const cleanup = () => {
-            this.off(event, onEvent);
+            detach();
             this.off('end', onEnd);
-            if (event !== 'error')
+            if (rejectOnError) {
                 this.off('error', onFailure);
-            if (event !== 'abort')
+            }
+            if (rejectOnAbort) {
                 this.off('abort', onFailure);
+            }
         };
-        const onEvent = (...args) => {
-            if (ended)
+        const push = (value) => {
+            if (ended) {
                 return;
-            const reader = readQueue.shift();
+            }
+            const reader = readQueue.dequeue();
             if (reader) {
-                reader.resolve({ value: args, done: false });
+                reader.resolve({ value, done: false });
             }
             else {
-                pushQueue.push(args);
+                pushQueue.enqueue(value);
             }
         };
         const onFailure = (error) => {
             failure = error;
-            if (!pushQueue.length)
+            if (!pushQueue.length) {
                 rejectReader();
+            }
         };
         const onEnd = () => {
             ended = true;
@@ -57212,33 +58735,44 @@ class EventStream {
             }
         };
         if (!ended) {
-            this.on(event, onEvent);
+            detach = attach(push);
             this.on('end', onEnd);
-            if (event !== 'error')
+            if (rejectOnError) {
                 this.on('error', onFailure);
-            if (event !== 'abort')
+            }
+            if (rejectOnAbort) {
                 this.on('abort', onFailure);
+            }
         }
         return {
             next: () => {
-                const value = pushQueue.shift();
-                if (value)
-                    return Promise.resolve({ value, done: false });
+                if (pushQueue.length) {
+                    return Promise.resolve({ value: pushQueue.dequeue(), done: false });
+                }
                 if (failure && !failureDelivered) {
                     failureDelivered = true;
                     return Promise.reject(failure);
                 }
-                if (ended)
+                if (ended) {
                     return Promise.resolve(doneResult());
+                }
                 return new Promise((resolve, reject) => {
-                    readQueue.push({ resolve, reject });
+                    readQueue.enqueue({ resolve, reject });
                 });
             },
             return: () => {
                 ended = true;
-                pushQueue.length = 0;
+                pushQueue.clear();
                 cleanup();
                 finishReaders();
+                if (onReturn) {
+                    // The consumer explicitly ended iteration, so any failure the
+                    // onReturn callback triggers (e.g. aborting the stream) is
+                    // self-inflicted; mark the stream's terminal promise as handled so
+                    // it does not surface as an unhandled rejection.
+                    void this.done().catch(() => undefined);
+                    onReturn();
+                }
                 return Promise.resolve(doneResult());
             },
             [Symbol.asyncIterator]() {
@@ -57246,10 +58780,16 @@ class EventStream {
             },
         };
     }
+    /** Resolves when the stream ends successfully or rejects when it fails or is aborted. */
     async done() {
         __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
         await __classPrivateFieldGet(this, _EventStream_endPromise, "f");
     }
+    /** Returns whether an event currently has one or more registered listeners. */
+    _hasListeners(event) {
+        return Boolean(__classPrivateFieldGet(this, _EventStream_listeners, "f")[event]?.length);
+    }
+    /** Dispatches a stream event and performs the associated lifecycle transitions. */
     _emit(event, ...args) {
         // make sure we don't emit any events after end
         if (__classPrivateFieldGet(this, _EventStream_ended, "f")) {
@@ -57263,7 +58803,9 @@ class EventStream {
         const listeners = __classPrivateFieldGet(this, _EventStream_listeners, "f")[event];
         if (listeners) {
             __classPrivateFieldGet(this, _EventStream_listeners, "f")[event] = listeners.filter((l) => !l.once);
-            listeners.forEach(({ listener }) => listener(...args));
+            for (const { listener } of listeners) {
+                listener(...args);
+            }
         }
         if (event === 'abort') {
             const error = args[0];
@@ -57292,7 +58834,10 @@ class EventStream {
             this._emit('end');
         }
     }
-    _emitFinal() { }
+    // oxlint-disable-next-line class-methods-use-this -- Subclasses override this instance hook.
+    _emitFinal() {
+        // Hook for subclasses.
+    }
 }
 _EventStream_connectedPromise = new WeakMap(), _EventStream_resolveConnectedPromise = new WeakMap(), _EventStream_rejectConnectedPromise = new WeakMap(), _EventStream_endPromise = new WeakMap(), _EventStream_resolveEndPromise = new WeakMap(), _EventStream_rejectEndPromise = new WeakMap(), _EventStream_listeners = new WeakMap(), _EventStream_abortListeners = new WeakMap(), _EventStream_ended = new WeakMap(), _EventStream_errored = new WeakMap(), _EventStream_aborted = new WeakMap(), _EventStream_catchingPromiseCreated = new WeakMap(), _EventStream_instances = new WeakSet(), _EventStream_removeAbortListeners = function _EventStream_removeAbortListeners() {
     for (const { signal, listener } of __classPrivateFieldGet(this, _EventStream_abortListeners, "f").splice(0)) {
@@ -57320,6 +58865,7 @@ _EventStream_connectedPromise = new WeakMap(), _EventStream_resolveConnectedProm
 };
 //# sourceMappingURL=EventStream.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/RunnableFunction.mjs
+/** Returns whether a runnable function provides a parser for its raw argument string. */
 function isRunnableFunctionWithParse(fn) {
     return typeof fn.parse === 'function';
 }
@@ -57328,14 +58874,16 @@ function isRunnableFunctionWithParse(fn) {
  * argument type matches the `parse` return type.
  */
 class ParsingToolFunction {
+    /** Wraps a parsed-argument function definition in the function-tool shape. */
     constructor(input) {
+        /** Identifies the wrapped tool as a callable function. */
         this.type = 'function';
         this.function = input;
     }
 }
 //# sourceMappingURL=RunnableFunction.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/AbstractChatCompletionRunner.mjs
-var _AbstractChatCompletionRunner_instances, _AbstractChatCompletionRunner_getFinalContent, _AbstractChatCompletionRunner_getFinalMessage, _AbstractChatCompletionRunner_getFinalFunctionToolCall, _AbstractChatCompletionRunner_getFinalFunctionToolCallResult, _AbstractChatCompletionRunner_calculateTotalUsage, _AbstractChatCompletionRunner_validateParams, _AbstractChatCompletionRunner_stringifyFunctionCallResult;
+var _AbstractChatCompletionRunner_instances, _a, _AbstractChatCompletionRunner_getFinalContent, _AbstractChatCompletionRunner_getFinalMessage, _AbstractChatCompletionRunner_getFinalFunctionToolCall, _AbstractChatCompletionRunner_getFinalFunctionToolCallResult, _AbstractChatCompletionRunner_calculateTotalUsage, _AbstractChatCompletionRunner_validateParams, _AbstractChatCompletionRunner_stringifyFunctionCallResult;
 
 
 
@@ -57361,19 +58909,25 @@ function normalizeToolCallIds(chatCompletion) {
  * on runner.messages for callers, but only replay valid request fields.
  */
 function toRequestMessage(message) {
-    if (!isAssistantMessage(message))
+    if (!isAssistantMessage(message)) {
         return message;
+    }
     const requestMessage = { role: 'assistant' };
-    if (message.audio != null)
+    if (message.audio != null) {
         requestMessage.audio = { id: message.audio.id };
-    if (message.content !== undefined)
+    }
+    if (message.content !== undefined) {
         requestMessage.content = message.content;
-    if (message.function_call != null)
+    }
+    if (message.function_call != null) {
         requestMessage.function_call = message.function_call;
-    if (message.name !== undefined)
+    }
+    if (message.name !== undefined) {
         requestMessage.name = message.name;
-    if (message.refusal != null)
+    }
+    if (message.refusal != null) {
         requestMessage.refusal = message.refusal;
+    }
     if (message.tool_calls !== undefined) {
         requestMessage.tool_calls = message.tool_calls.map((toolCall) => {
             if (toolCall.type === 'custom') {
@@ -57398,11 +58952,13 @@ function toRequestMessage(message) {
     }
     return requestMessage;
 }
+/** Shared conversation, event, cancellation, and final-result behavior for chat completion runners. */
 class AbstractChatCompletionRunner extends EventStream {
     constructor() {
         super(...arguments);
         _AbstractChatCompletionRunner_instances.add(this);
         this._chatCompletions = [];
+        /** Mutable conversation history, including initial input, assistant replies, and tool results. */
         this.messages = [];
     }
     _addChatCompletion(chatCompletion) {
@@ -57410,13 +58966,15 @@ class AbstractChatCompletionRunner extends EventStream {
         this._chatCompletions.push(chatCompletion);
         this._emit('chatCompletion', chatCompletion);
         const message = chatCompletion.choices[0]?.message;
-        if (message)
+        if (message) {
             this._addMessage(message);
+        }
         return chatCompletion;
     }
     _addMessage(message, emit = true) {
-        if (!('content' in message))
+        if (!('content' in message)) {
             message.content = null;
+        }
         this.messages.push(message);
         if (emit) {
             this._emit('message', message);
@@ -57440,8 +58998,9 @@ class AbstractChatCompletionRunner extends EventStream {
     async finalChatCompletion() {
         await this.done();
         const completion = this._chatCompletions[this._chatCompletions.length - 1];
-        if (!completion)
+        if (!completion) {
             throw new error_OpenAIError('stream ended without producing a ChatCompletion');
+        }
         return completion;
     }
     /**
@@ -57461,47 +59020,55 @@ class AbstractChatCompletionRunner extends EventStream {
         return __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_getFinalMessage).call(this);
     }
     /**
-     * @returns a promise that resolves with the content of the final FunctionCall, or rejects
-     * if an error occurred or the stream ended prematurely without producing a ChatCompletionMessage.
+     * Waits for completion and returns the last function-tool call, or `undefined`
+     * when no assistant message contains a function-tool call.
      */
     async finalFunctionToolCall() {
         await this.done();
         return __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_getFinalFunctionToolCall).call(this);
     }
+    /** Waits for completion and returns the last matching function-tool result, if any. */
     async finalFunctionToolCallResult() {
         await this.done();
         return __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_getFinalFunctionToolCallResult).call(this);
     }
+    /** Waits for completion and sums token usage across every chat completion in the run. */
     async totalUsage() {
         await this.done();
         return __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_calculateTotalUsage).call(this);
     }
+    /** Returns a copy of the chat completions received so far, in request order. */
     allChatCompletions() {
         return [...this._chatCompletions];
     }
     _emitFinal() {
         const completion = this._chatCompletions[this._chatCompletions.length - 1];
-        if (completion)
+        if (completion) {
             this._emit('finalChatCompletion', completion);
+        }
         const finalMessage = __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_getFinalMessage).call(this);
-        if (finalMessage)
+        if (finalMessage) {
             this._emit('finalMessage', finalMessage);
+        }
         const finalContent = __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_getFinalContent).call(this);
-        if (finalContent)
+        if (finalContent) {
             this._emit('finalContent', finalContent);
+        }
         const finalFunctionCall = __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_getFinalFunctionToolCall).call(this);
-        if (finalFunctionCall)
+        if (finalFunctionCall) {
             this._emit('finalFunctionToolCall', finalFunctionCall);
+        }
         const finalFunctionCallResult = __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_getFinalFunctionToolCallResult).call(this);
-        if (finalFunctionCallResult != null)
+        if (finalFunctionCallResult != null) {
             this._emit('finalFunctionToolCallResult', finalFunctionCallResult);
+        }
         if (this._chatCompletions.some((c) => c.usage)) {
             this._emit('totalUsage', __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_calculateTotalUsage).call(this));
         }
     }
     async _createChatCompletion(client, params, options) {
         this._listenForAbort(options?.signal);
-        __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_validateParams).call(this, params);
+        __classPrivateFieldGet(_a, _a, "m", _AbstractChatCompletionRunner_validateParams).call(_a, params);
         const chatCompletion = await client.chat.completions.create({ ...params, stream: false }, { ...options, signal: this.controller.signal });
         this._connected();
         return this._addChatCompletion(parseChatCompletion(chatCompletion, params));
@@ -57518,7 +59085,7 @@ class AbstractChatCompletionRunner extends EventStream {
         const toolContext = inputToolContext;
         const singleFunctionToCall = typeof tool_choice !== 'string' && tool_choice.type === 'function' && tool_choice?.function?.name;
         const { maxChatCompletions = DEFAULT_MAX_CHAT_COMPLETIONS, afterCompletion } = options || {};
-        // TODO(someday): clean this logic up
+        // Normalize tool definitions before invoking callbacks.
         const inputTools = params.tools.map((tool) => {
             if (isAutoParsableTool(tool)) {
                 if (!tool.$callback) {
@@ -57538,15 +59105,15 @@ class AbstractChatCompletionRunner extends EventStream {
             }
             return tool;
         });
-        const functionsByName = {};
+        const functionsByName = Object.create(null);
         for (const f of inputTools) {
             if (f.type === 'function') {
                 functionsByName[f.function.name || f.function.function.name] = f.function;
             }
         }
-        const tools = 'tools' in params ?
-            inputTools.map((t) => t.type === 'function' ?
-                {
+        const tools = 'tools' in params
+            ? inputTools.map((t) => t.type === 'function'
+                ? {
                     type: 'function',
                     function: {
                         name: t.function.name || t.function.function.name,
@@ -57561,8 +59128,9 @@ class AbstractChatCompletionRunner extends EventStream {
             this._addMessage(message, false);
         }
         const runToolCall = async (toolCall) => {
-            if (toolCall.type !== 'function')
+            if (toolCall.type !== 'function') {
                 return { message: undefined, functionCalled: false };
+            }
             const tool_call_id = toolCall.id;
             const { name, arguments: args } = toolCall.function;
             const fn = functionsByName[name];
@@ -57591,7 +59159,7 @@ class AbstractChatCompletionRunner extends EventStream {
             else {
                 rawContent = await fn.function(args, runner, toolContext);
             }
-            const content = __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_stringifyFunctionCallResult).call(this, rawContent);
+            const content = __classPrivateFieldGet(_a, _a, "m", _AbstractChatCompletionRunner_stringifyFunctionCallResult).call(_a, rawContent);
             return { message: { role, tool_call_id, content }, functionCalled: true };
         };
         for (let i = 0; i < maxChatCompletions; ++i) {
@@ -57612,8 +59180,9 @@ class AbstractChatCompletionRunner extends EventStream {
             if (singleFunctionToCall || params.parallel_tool_calls === false) {
                 for (const toolCall of message.tool_calls) {
                     const result = await runToolCall(toolCall);
-                    if (result.message)
+                    if (result.message) {
                         this._addMessage(result.message);
+                    }
                     if (singleFunctionToCall && result.functionCalled) {
                         await afterCompletion?.(chatCompletion, runner);
                         return;
@@ -57625,8 +59194,9 @@ class AbstractChatCompletionRunner extends EventStream {
                 // Wait for every concurrently running tool to settle before surfacing an
                 // error so tool side effects cannot continue after the runner has ended.
                 for (const result of results) {
-                    if (result.status === 'rejected')
+                    if (result.status === 'rejected') {
                         throw result.reason;
+                    }
                 }
                 // Promise.allSettled preserves input order, so the next request receives
                 // tool result messages in the same order as the assistant's tool calls.
@@ -57638,17 +59208,16 @@ class AbstractChatCompletionRunner extends EventStream {
             }
             await afterCompletion?.(chatCompletion, runner);
         }
-        return;
     }
 }
-_AbstractChatCompletionRunner_instances = new WeakSet(), _AbstractChatCompletionRunner_getFinalContent = function _AbstractChatCompletionRunner_getFinalContent() {
+_a = AbstractChatCompletionRunner, _AbstractChatCompletionRunner_instances = new WeakSet(), _AbstractChatCompletionRunner_getFinalContent = function _AbstractChatCompletionRunner_getFinalContent() {
     return __classPrivateFieldGet(this, _AbstractChatCompletionRunner_instances, "m", _AbstractChatCompletionRunner_getFinalMessage).call(this).content ?? null;
 }, _AbstractChatCompletionRunner_getFinalMessage = function _AbstractChatCompletionRunner_getFinalMessage() {
     let i = this.messages.length;
     while (i-- > 0) {
         const message = this.messages[i];
         if (isAssistantMessage(message)) {
-            // TODO: support audio here
+            // Audio is intentionally omitted from the final message snapshot.
             const ret = {
                 ...message,
                 content: message.content ?? null,
@@ -57670,7 +59239,7 @@ _AbstractChatCompletionRunner_instances = new WeakSet(), _AbstractChatCompletion
             }
         }
     }
-    return;
+    return undefined;
 }, _AbstractChatCompletionRunner_getFinalFunctionToolCallResult = function _AbstractChatCompletionRunner_getFinalFunctionToolCallResult() {
     for (let i = this.messages.length - 1; i >= 0; i--) {
         const message = this.messages[i];
@@ -57682,7 +59251,7 @@ _AbstractChatCompletionRunner_instances = new WeakSet(), _AbstractChatCompletion
             return message.content;
         }
     }
-    return;
+    return undefined;
 }, _AbstractChatCompletionRunner_calculateTotalUsage = function _AbstractChatCompletionRunner_calculateTotalUsage() {
     const total = {
         completion_tokens: 0,
@@ -57702,24 +59271,31 @@ _AbstractChatCompletionRunner_instances = new WeakSet(), _AbstractChatCompletion
         throw new error_OpenAIError('ChatCompletion convenience helpers only support n=1 at this time. To use n>1, please use chat.completions.create() directly.');
     }
 }, _AbstractChatCompletionRunner_stringifyFunctionCallResult = function _AbstractChatCompletionRunner_stringifyFunctionCallResult(rawContent) {
-    return (typeof rawContent === 'string' ? rawContent
-        : rawContent === undefined ? 'undefined'
-            : JSON.stringify(rawContent));
+    if (typeof rawContent === 'string') {
+        return rawContent;
+    }
+    if (rawContent === undefined) {
+        return 'undefined';
+    }
+    return JSON.stringify(rawContent);
 };
 //# sourceMappingURL=AbstractChatCompletionRunner.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/ChatCompletionRunner.mjs
 
 
+/** Executes function tools and follows up with non-streaming chat completion requests. */
 class ChatCompletionRunner extends AbstractChatCompletionRunner {
+    /** Starts a non-streaming tool loop and returns its event-driven conversation runner. */
     static runTools(client, params, options) {
         const runner = new ChatCompletionRunner();
         const opts = {
             ...options,
-            headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'runTools' },
+            __metadata: { ...options?.__metadata, helperMethod: 'runTools' },
         };
         runner._run(() => runner._runTools(client, params, runner, opts));
         return runner;
     }
+    /** Appends a conversation message and emits text content for assistant replies. */
     _addMessage(message, emit = true) {
         super._addMessage(message, emit);
         if (isAssistantMessage(message) && message.content) {
@@ -57729,15 +59305,15 @@ class ChatCompletionRunner extends AbstractChatCompletionRunner {
 }
 //# sourceMappingURL=ChatCompletionRunner.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/_vendor/partial-json-parser/parser.mjs
-const STR = 0b000000001;
-const NUM = 0b000000010;
-const ARR = 0b000000100;
-const OBJ = 0b000001000;
-const NULL = 0b000010000;
-const BOOL = 0b000100000;
-const NAN = 0b001000000;
-const INFINITY = 0b010000000;
-const MINUS_INFINITY = 0b100000000;
+const STR = 1;
+const NUM = 2;
+const ARR = 4;
+const OBJ = 8;
+const NULL = 16;
+const BOOL = 32;
+const NAN = 64;
+const INFINITY = 128;
+const MINUS_INFINITY = 256;
 const INF = INFINITY | MINUS_INFINITY;
 const SPECIAL = NULL | BOOL | INF | NAN;
 const ATOM = STR | NUM | SPECIAL;
@@ -57760,8 +59336,10 @@ const Allow = {
     ALL,
 };
 // The JSON string segment was unable to be parsed completely
+// oxlint-disable-next-line unicorn/custom-error-definition -- preserve the vendored exported class name
 class PartialJSON extends Error {
 }
+// oxlint-disable-next-line unicorn/custom-error-definition -- preserve the vendored exported class name
 class MalformedJSON extends Error {
 }
 /**
@@ -57792,14 +59370,18 @@ const _parseJSON = (jsonString, allow) => {
     };
     const parseAny = () => {
         skipBlank();
-        if (index >= length)
+        if (index >= length) {
             markPartialJSON('Unexpected end of input');
-        if (jsonString[index] === '"')
+        }
+        if (jsonString[index] === '"') {
             return parseStr();
-        if (jsonString[index] === '{')
+        }
+        if (jsonString[index] === '{') {
             return parseObj();
-        if (jsonString[index] === '[')
+        }
+        if (jsonString[index] === '[') {
             return parseArr();
+        }
         if (jsonString.substring(index, index + 4) === 'null' ||
             (Allow.NULL & allow && length - index < 4 && 'null'.startsWith(jsonString.substring(index)))) {
             index += 4;
@@ -57822,7 +59404,7 @@ const _parseJSON = (jsonString, allow) => {
         }
         if (jsonString.substring(index, index + 9) === '-Infinity' ||
             (Allow.MINUS_INFINITY & allow &&
-                1 < length - index &&
+                length - index > 1 &&
                 length - index < 9 &&
                 '-Infinity'.startsWith(jsonString.substring(index)))) {
             index += 9;
@@ -57831,7 +59413,7 @@ const _parseJSON = (jsonString, allow) => {
         if (jsonString.substring(index, index + 3) === 'NaN' ||
             (Allow.NAN & allow && length - index < 3 && 'NaN'.startsWith(jsonString.substring(index)))) {
             index += 3;
-            return NaN;
+            return Number.NaN;
         }
         return parseNum();
     };
@@ -57843,7 +59425,7 @@ const _parseJSON = (jsonString, allow) => {
             escape = jsonString[index] === '\\' ? !escape : false;
             index++;
         }
-        if (jsonString.charAt(index) == '"') {
+        if (jsonString.charAt(index) === '"') {
             try {
                 return JSON.parse(jsonString.substring(start, ++index - Number(escape)));
             }
@@ -57855,7 +59437,7 @@ const _parseJSON = (jsonString, allow) => {
             try {
                 return JSON.parse(jsonString.substring(start, index - Number(escape)) + '"');
             }
-            catch (e) {
+            catch {
                 // SyntaxError: Invalid escape sequence
                 return JSON.parse(jsonString.substring(start, jsonString.lastIndexOf('\\')) + '"');
             }
@@ -57869,8 +59451,9 @@ const _parseJSON = (jsonString, allow) => {
         try {
             while (jsonString[index] !== '}') {
                 skipBlank();
-                if (index >= length && Allow.OBJ & allow)
+                if (index >= length && Allow.OBJ & allow) {
                     return obj;
+                }
                 const key = parseStr();
                 skipBlank();
                 index++; // skip colon
@@ -57879,21 +59462,22 @@ const _parseJSON = (jsonString, allow) => {
                     Object.defineProperty(obj, key, { value, writable: true, enumerable: true, configurable: true });
                 }
                 catch (e) {
-                    if (Allow.OBJ & allow)
+                    if (Allow.OBJ & allow) {
                         return obj;
-                    else
-                        throw e;
+                    }
+                    throw e;
                 }
                 skipBlank();
-                if (jsonString[index] === ',')
-                    index++; // skip comma
+                if (jsonString[index] === ',') {
+                    index++;
+                } // skip comma
             }
         }
-        catch (e) {
-            if (Allow.OBJ & allow)
+        catch {
+            if (Allow.OBJ & allow) {
                 return obj;
-            else
-                markPartialJSON("Expected '}' at end of object");
+            }
+            markPartialJSON("Expected '}' at end of object");
         }
         index++; // skip final brace
         return obj;
@@ -57910,7 +59494,7 @@ const _parseJSON = (jsonString, allow) => {
                 }
             }
         }
-        catch (e) {
+        catch {
             if (Allow.ARR & allow) {
                 return arr;
             }
@@ -57921,36 +59505,44 @@ const _parseJSON = (jsonString, allow) => {
     };
     const parseNum = () => {
         if (index === 0) {
-            if (jsonString === '-' && Allow.NUM & allow)
+            if (jsonString === '-' && Allow.NUM & allow) {
                 markPartialJSON("Not sure what '-' is");
+            }
             try {
                 return JSON.parse(jsonString);
             }
             catch (e) {
                 if (Allow.NUM & allow) {
                     try {
-                        if ('.' === jsonString[jsonString.length - 1])
+                        if (jsonString[jsonString.length - 1] === '.') {
                             return JSON.parse(jsonString.substring(0, jsonString.lastIndexOf('.')));
+                        }
                         return JSON.parse(jsonString.substring(0, jsonString.lastIndexOf('e')));
                     }
-                    catch (e) { }
+                    catch {
+                        // Fall through to report malformed input below.
+                    }
                 }
                 throwMalformedError(String(e));
             }
         }
         const start = index;
-        if (jsonString[index] === '-')
+        if (jsonString[index] === '-') {
             index++;
-        while (jsonString[index] && !',]}'.includes(jsonString[index]))
+        }
+        while (jsonString[index] && !',]}'.includes(jsonString[index])) {
             index++;
-        if (index == length && !(Allow.NUM & allow))
+        }
+        if (index === length && !(Allow.NUM & allow)) {
             markPartialJSON('Unterminated number literal');
+        }
         try {
             return JSON.parse(jsonString.substring(start, index));
         }
-        catch (e) {
-            if (jsonString.substring(start, index) === '-' && Allow.NUM & allow)
+        catch {
+            if (jsonString.substring(start, index) === '-' && Allow.NUM & allow) {
                 markPartialJSON("Not sure what '-' is");
+            }
             try {
                 return JSON.parse(jsonString.substring(start, jsonString.lastIndexOf('e')));
             }
@@ -57975,7 +59567,8 @@ const partialParse = (input) => parseJSON(input, Allow.ALL ^ Allow.NUM);
 
 //# sourceMappingURL=streaming.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/ChatCompletionStream.mjs
-var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_audioDoneChoiceIndexes, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_endRequest, _ChatCompletionStream_getAutoParseableResponseFormat, _ChatCompletionStream_accumulateChatCompletion;
+var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_audioDoneChoiceIndexes, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_endRequest, _ChatCompletionStream_accumulateChatCompletion;
+
 
 
 
@@ -57986,6 +59579,7 @@ var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompleti
 // Keep message records readable as empty chunks by older SDKs. Their finalizer
 // overwrites `object`, so the encoded payload does not leak into completions.
 const CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX = 'chat.completion.chunk.message:';
+/** Encodes a tool-result message as a backwards-compatible, empty completion chunk. */
 function makeChatCompletionReadableStreamMessageChunk(chunk, message, toolCallIds) {
     const payload = {
         type: 'message',
@@ -58012,7 +59606,25 @@ function getChatCompletionReadableStreamMessage(item) {
     }
     return JSON.parse(item.object.slice(CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX.length));
 }
+// The Chat Completions schema limits n to 128. Replayed streams do not retain
+// request parameters, so apply that choice limit independently and use the same
+// conservative ceiling to prevent sparse tool-call arrays from growing unbounded.
+const MAX_STREAM_CHOICES = 128;
+const MAX_STREAM_TOOL_CALLS = 128;
+function assignOwnProperties(target, source) {
+    if (Object.prototype.propertyIsEnumerable.call(source, '__proto__') && !hasOwn(target, '__proto__')) {
+        Object.defineProperty(target, '__proto__', {
+            value: undefined,
+            writable: true,
+            enumerable: true,
+            configurable: true,
+        });
+    }
+    return Object.assign(target, source);
+}
+/** Streams chat completion chunks while accumulating snapshots, parsed output, and events. */
 class ChatCompletionStream extends AbstractChatCompletionRunner {
+    /** Creates an unstarted stream, retaining request parameters for structured-output parsing. */
     constructor(params) {
         super();
         _ChatCompletionStream_instances.add(this);
@@ -58024,6 +59636,7 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         __classPrivateFieldSet(this, _ChatCompletionStream_audioDoneChoiceIndexes, new Set(), "f");
         __classPrivateFieldSet(this, _ChatCompletionStream_choiceEventStates, [], "f");
     }
+    /** The latest accumulated completion, or `undefined` before a chunk arrives or after finalization. */
     get currentChatCompletionSnapshot() {
         return __classPrivateFieldGet(this, _ChatCompletionStream_currentChatCompletionSnapshot, "f");
     }
@@ -58031,21 +59644,21 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
      * Intended for use on the frontend, consuming a stream produced with
      * `.toReadableStream()` on the backend.
      *
-     * Note that messages sent to the model do not appear in `.on('message')`
-     * in this context.
+     * Original input messages are not included in the serialized stream. Tool-result
+     * messages explicitly serialized by a streaming tool runner are replayed.
      */
     static fromReadableStream(stream) {
         const runner = new ChatCompletionStream(null);
         runner._run(() => runner._fromReadableStream(stream));
         return runner;
     }
+    /** Starts a streaming chat completion request and returns its event-driven helper. */
     static createChatCompletion(client, params, options) {
         const runner = new ChatCompletionStream(params);
-        runner._run(() => runner._runChatCompletion(client, { ...params, stream: true }, { ...options, headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'stream' } }));
+        runner._run(() => runner._runChatCompletion(client, { ...params, stream: true }, { ...options, __metadata: { ...options?.__metadata, helperMethod: 'stream' } }));
         return runner;
     }
     async _createChatCompletion(client, params, options) {
-        super._createChatCompletion;
         this._listenForAbort(options?.signal);
         __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_beginRequest).call(this);
         const stream = await client.chat.completions.create({ ...params, stream: true }, { ...options, signal: this.controller.signal });
@@ -58087,8 +59700,9 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
                 this._addChatCompletion(__classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_endRequest).call(this));
             }
             __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_addChunk).call(this, chunk);
-            if (chunk.id)
+            if (chunk.id) {
                 chatId = chunk.id;
+            }
         }
         if (stream.controller.signal?.aborted) {
             throw new APIUserAbortError();
@@ -58102,9 +59716,11 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         }
         throw new error_OpenAIError(`request ended without sending any chunks`);
     }
+    /** Iterates over raw API chunks; stopping iteration early aborts the underlying request. */
     [(_ChatCompletionStream_params = new WeakMap(), _ChatCompletionStream_audioDoneChoiceIndexes = new WeakMap(), _ChatCompletionStream_choiceEventStates = new WeakMap(), _ChatCompletionStream_currentChatCompletionSnapshot = new WeakMap(), _ChatCompletionStream_instances = new WeakSet(), _ChatCompletionStream_beginRequest = function _ChatCompletionStream_beginRequest() {
-        if (this.ended)
+        if (this.ended) {
             return;
+        }
         __classPrivateFieldSet(this, _ChatCompletionStream_audioDoneChoiceIndexes, new Set(), "f");
         __classPrivateFieldSet(this, _ChatCompletionStream_currentChatCompletionSnapshot, undefined, "f");
     }, _ChatCompletionStream_getChoiceEventState = function _ChatCompletionStream_getChoiceEventState(choice) {
@@ -58123,8 +59739,9 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         __classPrivateFieldGet(this, _ChatCompletionStream_choiceEventStates, "f")[choice.index] = state;
         return state;
     }, _ChatCompletionStream_addChunk = function _ChatCompletionStream_addChunk(chunk) {
-        if (this.ended)
+        if (this.ended) {
             return;
+        }
         const completion = __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_accumulateChatCompletion).call(this, chunk);
         this._emit('chunk', chunk, completion);
         for (const choice of chunk.choices) {
@@ -58182,17 +59799,17 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
                 if (!toolCallSnapshot?.type) {
                     continue;
                 }
-                if (toolCallSnapshot?.type === 'function') {
+                if (toolCallSnapshot.type === 'function') {
                     this._emit('tool_calls.function.arguments.delta', {
-                        name: toolCallSnapshot.function?.name,
+                        name: toolCallSnapshot.function.name,
                         index: toolCallDelta.index,
                         arguments: toolCallSnapshot.function.arguments,
                         parsed_arguments: toolCallSnapshot.function.parsed_arguments,
                         arguments_delta: toolCallDelta.function?.arguments ?? '',
                     });
                 }
-                else {
-                    assertNever(toolCallSnapshot?.type);
+                else if (toolCallSnapshot.type !== 'custom') {
+                    assertNever(toolCallSnapshot);
                 }
             }
         }
@@ -58211,26 +59828,37 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         }
         if (toolCallSnapshot.type === 'function') {
             const inputTool = __classPrivateFieldGet(this, _ChatCompletionStream_params, "f")?.tools?.find((tool) => isChatCompletionFunctionTool(tool) && tool.function.name === toolCallSnapshot.function.name); // TS doesn't narrow based on isChatCompletionTool
+            let parsedArguments = null;
+            if (isAutoParsableTool(inputTool)) {
+                parsedArguments = inputTool.$parseRaw(toolCallSnapshot.function.arguments);
+            }
+            else if (inputTool?.function.strict) {
+                parsedArguments = JSON.parse(toolCallSnapshot.function.arguments);
+            }
             this._emit('tool_calls.function.arguments.done', {
                 name: toolCallSnapshot.function.name,
                 index: toolCallIndex,
                 arguments: toolCallSnapshot.function.arguments,
-                parsed_arguments: isAutoParsableTool(inputTool) ? inputTool.$parseRaw(toolCallSnapshot.function.arguments)
-                    : inputTool?.function.strict ? JSON.parse(toolCallSnapshot.function.arguments)
-                        : null,
+                parsed_arguments: parsedArguments,
             });
         }
-        else {
-            assertNever(toolCallSnapshot.type);
+        else if (toolCallSnapshot.type !== 'custom') {
+            assertNever(toolCallSnapshot);
         }
     }, _ChatCompletionStream_emitContentDoneEvents = function _ChatCompletionStream_emitContentDoneEvents(choiceSnapshot) {
         const state = __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_getChoiceEventState).call(this, choiceSnapshot);
-        if (choiceSnapshot.message.content && !state.content_done) {
+        if (choiceSnapshot.message.content != null &&
+            (choiceSnapshot.message.content !== '' ||
+                (!choiceSnapshot.message.refusal &&
+                    !choiceSnapshot.message.tool_calls?.length &&
+                    !choiceSnapshot.message.function_call)) &&
+            !state.content_done) {
             state.content_done = true;
-            const responseFormat = __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_getAutoParseableResponseFormat).call(this);
             this._emit('content.done', {
                 content: choiceSnapshot.message.content,
-                parsed: responseFormat ? responseFormat.$parseRaw(choiceSnapshot.message.content) : null,
+                parsed: choiceSnapshot.message.refusal
+                    ? null
+                    : parseResponseFormatContent(__classPrivateFieldGet(this, _ChatCompletionStream_params, "f")?.response_format, choiceSnapshot.message.content),
             });
         }
         if (choiceSnapshot.message.refusal && !state.refusal_done) {
@@ -58258,38 +59886,42 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         __classPrivateFieldSet(this, _ChatCompletionStream_currentChatCompletionSnapshot, undefined, "f");
         __classPrivateFieldSet(this, _ChatCompletionStream_choiceEventStates, [], "f");
         return finalizeChatCompletion(snapshot, __classPrivateFieldGet(this, _ChatCompletionStream_params, "f"), audioDoneChoiceIndexes);
-    }, _ChatCompletionStream_getAutoParseableResponseFormat = function _ChatCompletionStream_getAutoParseableResponseFormat() {
-        const responseFormat = __classPrivateFieldGet(this, _ChatCompletionStream_params, "f")?.response_format;
-        if (isAutoParsableResponseFormat(responseFormat)) {
-            return responseFormat;
-        }
-        return null;
     }, _ChatCompletionStream_accumulateChatCompletion = function _ChatCompletionStream_accumulateChatCompletion(chunk) {
         var _a, _b, _c, _d, _e;
         let snapshot = __classPrivateFieldGet(this, _ChatCompletionStream_currentChatCompletionSnapshot, "f");
         const { choices, ...rest } = chunk;
         if (!snapshot) {
-            snapshot = __classPrivateFieldSet(this, _ChatCompletionStream_currentChatCompletionSnapshot, {
+            const newSnapshot = {
                 ...rest,
                 choices: [],
-            }, "f");
+            };
+            __classPrivateFieldSet(this, _ChatCompletionStream_currentChatCompletionSnapshot, newSnapshot, "f");
+            snapshot = newSnapshot;
         }
         else if (chunk.id) {
-            Object.assign(snapshot, rest);
+            assignOwnProperties(snapshot, rest);
         }
+        const requestedChoiceCount = __classPrivateFieldGet(this, _ChatCompletionStream_params, "f")?.n;
+        const maxChoices = typeof requestedChoiceCount === 'number' &&
+            Number.isSafeInteger(requestedChoiceCount) &&
+            requestedChoiceCount > 0
+            ? Math.min(requestedChoiceCount, MAX_STREAM_CHOICES)
+            : MAX_STREAM_CHOICES;
         for (const { delta, finish_reason, index, logprobs = null, ...other } of chunk.choices) {
+            if (!Number.isSafeInteger(index) || index < 0 || index >= maxChoices) {
+                throw new error_OpenAIError(`Chat completion stream contains an invalid choice index: ${index}`);
+            }
             let choice = snapshot.choices[index];
             if (!choice) {
-                choice = snapshot.choices[index] = { finish_reason, index, message: {}, logprobs, ...other };
+                const newChoice = { finish_reason, index, message: {}, logprobs, ...other };
+                snapshot.choices[index] = newChoice;
+                choice = newChoice;
             }
             if (logprobs) {
-                if (!choice.logprobs) {
-                    choice.logprobs = Object.assign({}, logprobs);
-                }
-                else {
+                if (choice.logprobs) {
                     const { content, refusal, ...rest } = logprobs;
                     assertIsEmpty(rest);
-                    Object.assign(choice.logprobs, rest);
+                    assignOwnProperties(choice.logprobs, rest);
                     if (content) {
                         (_a = choice.logprobs).content ?? (_a.content = []);
                         choice.logprobs.content.push(...content);
@@ -58298,6 +59930,9 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
                         (_b = choice.logprobs).refusal ?? (_b.refusal = []);
                         choice.logprobs.refusal.push(...refusal);
                     }
+                }
+                else {
+                    choice.logprobs = { ...logprobs };
                 }
             }
             if (finish_reason) {
@@ -58311,13 +59946,14 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
                     }
                 }
             }
-            Object.assign(choice, other);
-            if (!delta)
-                continue; // Shouldn't happen; just in case.
+            assignOwnProperties(choice, other);
+            if (!delta) {
+                continue;
+            } // Shouldn't happen; just in case.
             __classPrivateFieldGet(this, _ChatCompletionStream_audioDoneChoiceIndexes, "f").delete(index);
             const { audio, content, refusal, function_call, role, tool_calls, ...rest } = delta;
             assertIsEmpty(rest);
-            Object.assign(choice.message, rest);
+            assignOwnProperties(choice.message, rest);
             if (audio?.expires_at != null &&
                 audio.id == null &&
                 audio.data == null &&
@@ -58333,58 +59969,81 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
             if (refusal) {
                 choice.message.refusal = (choice.message.refusal || '') + refusal;
             }
-            if (role)
+            if (role) {
                 choice.message.role = role;
+            }
             if (audio) {
                 const audioSnapshot = ((_c = choice.message).audio ?? (_c.audio = {}));
-                if (audio.id != null)
+                if (audio.id != null) {
                     audioSnapshot.id = audio.id;
-                if (audio.data != null)
+                }
+                if (audio.data != null) {
                     audioSnapshot.data = (audioSnapshot.data ?? '') + audio.data;
+                }
                 if (audio.transcript != null) {
                     audioSnapshot.transcript = (audioSnapshot.transcript ?? '') + audio.transcript;
                 }
-                if (audio.expires_at != null)
+                if (audio.expires_at != null) {
                     audioSnapshot.expires_at = audio.expires_at;
+                }
             }
             if (function_call) {
-                if (!choice.message.function_call) {
-                    choice.message.function_call = function_call;
-                }
-                else {
-                    if (function_call.name)
+                if (choice.message.function_call) {
+                    if (function_call.name) {
                         choice.message.function_call.name = function_call.name;
+                    }
                     if (function_call.arguments) {
                         (_d = choice.message.function_call).arguments ?? (_d.arguments = '');
                         choice.message.function_call.arguments += function_call.arguments;
                     }
                 }
+                else {
+                    choice.message.function_call = function_call;
+                }
             }
-            if (content) {
+            if (content != null) {
                 choice.message.content = (choice.message.content || '') + content;
-                if (!choice.message.refusal && __classPrivateFieldGet(this, _ChatCompletionStream_instances, "m", _ChatCompletionStream_getAutoParseableResponseFormat).call(this)) {
+                if (!choice.message.refusal && isParseableResponseFormat(__classPrivateFieldGet(this, _ChatCompletionStream_params, "f")?.response_format)) {
                     // The partial parser does not accept whitespace-only input.
                     choice.message.parsed = choice.message.content.trim() ? partialParse(choice.message.content) : null;
                 }
             }
             if (tool_calls) {
-                if (!choice.message.tool_calls)
-                    choice.message.tool_calls = [];
-                for (const { index, id, type, function: fn, ...rest } of tool_calls) {
-                    const tool_call = ((_e = choice.message.tool_calls)[index] ?? (_e[index] = {}));
-                    Object.assign(tool_call, rest);
-                    if (id)
+                // Tool calls are built up across chunks, so while the stream is in progress the
+                // entries are only partially filled in; they match `ChatCompletionSnapshot.Choice.Message.ToolCall`
+                // once every delta for them has been accumulated.
+                const toolCallSnapshots = ((_e = choice.message).tool_calls ?? (_e.tool_calls = []));
+                for (const { index, id, type, function: fn, custom, ...rest } of tool_calls) {
+                    if (!Number.isSafeInteger(index) || index < 0 || index >= MAX_STREAM_TOOL_CALLS) {
+                        throw new error_OpenAIError(`Chat completion stream contains an invalid tool call index: ${index}`);
+                    }
+                    const tool_call = (toolCallSnapshots[index] ?? (toolCallSnapshots[index] = {}));
+                    assignOwnProperties(tool_call, rest);
+                    if (id) {
                         tool_call.id = id;
-                    if (type)
+                    }
+                    if (type) {
                         tool_call.type = type;
-                    if (fn)
-                        tool_call.function ?? (tool_call.function = { name: fn.name ?? '', arguments: '' });
-                    if (fn?.name)
-                        tool_call.function.name = fn.name;
-                    if (fn?.arguments) {
-                        tool_call.function.arguments += fn.arguments;
-                        if (shouldParseToolCall(__classPrivateFieldGet(this, _ChatCompletionStream_params, "f"), tool_call)) {
-                            tool_call.function.parsed_arguments = partialParse(tool_call.function.arguments);
+                    }
+                    if (custom) {
+                        const customSnapshot = (tool_call.custom ?? (tool_call.custom = { name: custom.name ?? '', input: '' }));
+                        if (custom.name) {
+                            customSnapshot.name = custom.name;
+                        }
+                        if (custom.input) {
+                            customSnapshot.input += custom.input;
+                        }
+                    }
+                    if (fn) {
+                        const functionSnapshot = (tool_call.function ?? (tool_call.function = { name: fn.name ?? '', arguments: '' }));
+                        if (fn.name) {
+                            functionSnapshot.name = fn.name;
+                        }
+                        if (fn.arguments) {
+                            functionSnapshot.arguments += fn.arguments;
+                            if (shouldParseToolCall(__classPrivateFieldGet(this, _ChatCompletionStream_params, "f"), tool_call)) {
+                                functionSnapshot.parsed_arguments = partialParse(functionSnapshot.arguments);
+                            }
                         }
                     }
                 }
@@ -58392,56 +60051,13 @@ class ChatCompletionStream extends AbstractChatCompletionRunner {
         }
         return snapshot;
     }, Symbol.asyncIterator)]() {
-        const pushQueue = [];
-        const readQueue = [];
-        let done = false;
-        this.on('chunk', (chunk) => {
-            const reader = readQueue.shift();
-            if (reader) {
-                reader.resolve(chunk);
-            }
-            else {
-                pushQueue.push(chunk);
-            }
-        });
-        this.on('end', () => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.resolve(undefined);
-            }
-            readQueue.length = 0;
-        });
-        this.on('abort', (err) => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.reject(err);
-            }
-            readQueue.length = 0;
-        });
-        this.on('error', (err) => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.reject(err);
-            }
-            readQueue.length = 0;
-        });
-        return {
-            next: async () => {
-                if (!pushQueue.length) {
-                    if (done) {
-                        return { value: undefined, done: true };
-                    }
-                    return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((chunk) => (chunk ? { value: chunk, done: false } : { value: undefined, done: true }));
-                }
-                const chunk = pushQueue.shift();
-                return { value: chunk, done: false };
-            },
-            return: async () => {
-                this.abort();
-                return { value: undefined, done: true };
-            },
-        };
+        return this._createIterator((push) => {
+            const onChunk = (chunk) => push(chunk);
+            this.on('chunk', onChunk);
+            return () => this.off('chunk', onChunk);
+        }, { onReturn: () => this.abort() });
     }
+    /** Serializes raw completion chunks into a readable stream for transfer to another runtime. */
     toReadableStream() {
         const stream = new src_Stream(this[Symbol.asyncIterator].bind(this), this.controller);
         return stream.toReadableStream();
@@ -58500,11 +60116,24 @@ function finalizeChatCompletion(snapshot, params, audioDoneChoiceIndexes) {
                         content,
                         refusal: message.refusal ?? null,
                         tool_calls: tool_calls.map((tool_call, i) => {
-                            const { function: fn, type, id, ...toolRest } = tool_call;
-                            const { arguments: args, name, ...fnRest } = fn || {};
-                            if (type == null) {
+                            if (tool_call.type == null) {
                                 throw new error_OpenAIError(`missing choices[${index}].tool_calls[${i}].type\n${str(snapshot)}`);
                             }
+                            if (tool_call.type === 'custom') {
+                                const { custom, type, id, ...toolRest } = tool_call;
+                                const { input = '', name, ...customRest } = custom || {};
+                                if (name == null) {
+                                    throw new error_OpenAIError(`missing choices[${index}].tool_calls[${i}].custom.name\n${str(snapshot)}`);
+                                }
+                                return {
+                                    ...toolRest,
+                                    id: id || `call_${uuid4()}`,
+                                    type,
+                                    custom: { ...customRest, name, input },
+                                };
+                            }
+                            const { function: fn, type, id, ...toolRest } = tool_call;
+                            const { arguments: args, name, ...fnRest } = fn || {};
                             if (name == null) {
                                 throw new error_OpenAIError(`missing choices[${index}].tool_calls[${i}].function.name\n${str(snapshot)}`);
                             }
@@ -58548,102 +60177,64 @@ function str(x) {
  * destructured.
  */
 function assertIsEmpty(obj) {
-    return;
+    void obj;
 }
-function assertNever(_x) { }
+function assertNever(_x) {
+    return _x;
+}
 //# sourceMappingURL=ChatCompletionStream.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
 
 
 
 
+/** Executes function tools while streaming every intermediate chat completion. */
 class ChatCompletionStreamingRunner extends ChatCompletionStream {
+    /** Restores a serialized tool run, including intermediate completions and tool-result messages. */
     static fromReadableStream(stream) {
         const runner = new ChatCompletionStreamingRunner(null);
         runner._run(() => runner._fromReadableStream(stream));
         return runner;
     }
+    /** Serializes completion chunks and tool-result messages for replay in another runtime. */
     toReadableStream() {
-        const pushQueue = [];
-        const readQueue = [];
-        let done = false;
         let lastChunk;
         let toolCallIds;
-        const pushEvent = (event) => {
-            const reader = readQueue.shift();
-            if (reader) {
-                reader.resolve(event);
-            }
-            else {
-                pushQueue.push(event);
-            }
-        };
-        this.on('chunk', (chunk) => {
-            lastChunk = chunk;
-            pushEvent(chunk);
-        });
-        this.on('message', (message) => {
-            if (isAssistantMessage(message)) {
-                toolCallIds = message.tool_calls?.map((toolCall) => toolCall.id);
-                return;
-            }
-            if (isToolMessage(message)) {
-                if (!lastChunk) {
-                    throw new error_OpenAIError('cannot serialize a tool message before receiving any chunks');
+        const iterator = this._createIterator((push) => {
+            const onChunk = (chunk) => {
+                lastChunk = chunk;
+                push(chunk);
+            };
+            const onMessage = (message) => {
+                if (isAssistantMessage(message)) {
+                    toolCallIds = message.tool_calls?.map((toolCall) => toolCall.id);
+                    return;
                 }
-                pushEvent(makeChatCompletionReadableStreamMessageChunk(lastChunk, message, toolCallIds));
-            }
-        });
-        this.on('end', () => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.resolve(undefined);
-            }
-            readQueue.length = 0;
-        });
-        this.on('abort', (err) => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.reject(err);
-            }
-            readQueue.length = 0;
-        });
-        this.on('error', (err) => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.reject(err);
-            }
-            readQueue.length = 0;
-        });
-        const iterator = () => ({
-            next: async () => {
-                if (!pushQueue.length) {
-                    if (done) {
-                        return { value: undefined, done: true };
+                if (isToolMessage(message)) {
+                    if (!lastChunk) {
+                        throw new error_OpenAIError('cannot serialize a tool message before receiving any chunks');
                     }
-                    return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((event) => (event ? { value: event, done: false } : { value: undefined, done: true }));
+                    push(makeChatCompletionReadableStreamMessageChunk(lastChunk, message, toolCallIds));
                 }
-                const event = pushQueue.shift();
-                if (!event) {
-                    return { value: undefined, done: true };
-                }
-                return { value: event, done: false };
-            },
-            return: async () => {
-                this.abort();
-                return { value: undefined, done: true };
-            },
-        });
-        const stream = new src_Stream(iterator, this.controller);
+            };
+            this.on('chunk', onChunk);
+            this.on('message', onMessage);
+            return () => {
+                this.off('chunk', onChunk);
+                this.off('message', onMessage);
+            };
+        }, { onReturn: () => this.abort() });
+        const stream = new src_Stream(() => iterator, this.controller);
         return stream.toReadableStream();
     }
+    /** Starts a streaming tool loop and returns its event-driven conversation runner. */
     static runTools(client, params, options) {
         const runner = new ChatCompletionStreamingRunner(
         // @ts-expect-error TODO these types are incompatible
         params);
         const opts = {
             ...options,
-            headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'runTools' },
+            __metadata: { ...options?.__metadata, helperMethod: 'runTools' },
         };
         runner._run(() => runner._runTools(client, params, runner, opts));
         return runner;
@@ -58651,7 +60242,7 @@ class ChatCompletionStreamingRunner extends ChatCompletionStream {
 }
 //# sourceMappingURL=ChatCompletionStreamingRunner.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/completions/completions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -58753,10 +60344,7 @@ class Completions extends APIResource {
         return this._client.chat.completions
             .create(body, {
             ...options,
-            headers: {
-                ...options?.headers,
-                'X-Stainless-Helper-Method': 'chat.completions.parse',
-            },
+            __metadata: { ...options?.__metadata, helperMethod: 'chat.completions.parse' },
         })
             ._thenUnwrap((completion) => parseChatCompletion(completion, body));
     }
@@ -58780,7 +60368,7 @@ class Completions extends APIResource {
 Completions.Messages = Messages;
 //# sourceMappingURL=completions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/chat.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -58793,18 +60381,18 @@ class Chat extends APIResource {
 Chat.Completions = Completions;
 //# sourceMappingURL=chat.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/completions/index.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
 //# sourceMappingURL=index.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/chat/index.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 //# sourceMappingURL=index.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/admin-api-keys.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -58882,7 +60470,7 @@ class AdminAPIKeys extends APIResource {
 }
 //# sourceMappingURL=admin-api-keys.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/audit-logs.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 /**
@@ -58910,7 +60498,7 @@ class AuditLogs extends APIResource {
 }
 //# sourceMappingURL=audit-logs.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/certificates.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -59051,7 +60639,7 @@ class Certificates extends APIResource {
 }
 //# sourceMappingURL=certificates.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/data-retention.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class DataRetention extends APIResource {
     /**
@@ -59090,7 +60678,7 @@ class DataRetention extends APIResource {
 }
 //# sourceMappingURL=data-retention.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/invites.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -59170,7 +60758,7 @@ class Invites extends APIResource {
 }
 //# sourceMappingURL=invites.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/roles.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -59263,7 +60851,7 @@ class Roles extends APIResource {
 }
 //# sourceMappingURL=roles.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/spend-alerts.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -59370,7 +60958,7 @@ class SpendAlerts extends APIResource {
 }
 //# sourceMappingURL=spend-alerts.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/spend-limit.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class SpendLimit extends APIResource {
     /**
@@ -59426,7 +61014,7 @@ class SpendLimit extends APIResource {
 }
 //# sourceMappingURL=spend-limit.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/usage.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class Usage extends APIResource {
     /**
@@ -59630,7 +61218,7 @@ class Usage extends APIResource {
 }
 //# sourceMappingURL=usage.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/groups/roles.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -59711,7 +61299,7 @@ class roles_Roles extends APIResource {
 }
 //# sourceMappingURL=roles.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/groups/users.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -59792,7 +61380,7 @@ class Users extends APIResource {
 }
 //# sourceMappingURL=users.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/groups/groups.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -59897,7 +61485,7 @@ Groups.Users = Users;
 Groups.Roles = roles_Roles;
 //# sourceMappingURL=groups.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/api-keys.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -59962,7 +61550,7 @@ class APIKeys extends APIResource {
 }
 //# sourceMappingURL=api-keys.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/certificates.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -60023,7 +61611,7 @@ class certificates_Certificates extends APIResource {
 }
 //# sourceMappingURL=certificates.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/data-retention.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 class data_retention_DataRetention extends APIResource {
@@ -60066,7 +61654,7 @@ class data_retention_DataRetention extends APIResource {
 }
 //# sourceMappingURL=data-retention.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 class HostedToolPermissions extends APIResource {
@@ -60108,7 +61696,7 @@ class HostedToolPermissions extends APIResource {
 }
 //# sourceMappingURL=hosted-tool-permissions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 class ModelPermissions extends APIResource {
@@ -60168,7 +61756,7 @@ class ModelPermissions extends APIResource {
 }
 //# sourceMappingURL=model-permissions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -60212,7 +61800,7 @@ class RateLimits extends APIResource {
 }
 //# sourceMappingURL=rate-limits.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/roles.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -60317,7 +61905,7 @@ class projects_roles_Roles extends APIResource {
 }
 //# sourceMappingURL=roles.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -60435,7 +62023,7 @@ class spend_alerts_SpendAlerts extends APIResource {
 }
 //# sourceMappingURL=spend-alerts.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 class spend_limit_SpendLimit extends APIResource {
@@ -60499,7 +62087,7 @@ class spend_limit_SpendLimit extends APIResource {
 }
 //# sourceMappingURL=spend-limit.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -60583,7 +62171,7 @@ class groups_roles_Roles extends APIResource {
 }
 //# sourceMappingURL=roles.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -60672,7 +62260,7 @@ class groups_Groups extends APIResource {
 groups_Groups.Roles = groups_roles_Roles;
 //# sourceMappingURL=groups.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 class api_keys_APIKeys extends APIResource {
@@ -60695,7 +62283,7 @@ class api_keys_APIKeys extends APIResource {
 }
 //# sourceMappingURL=api-keys.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -60800,7 +62388,7 @@ class ServiceAccounts extends APIResource {
 ServiceAccounts.APIKeys = api_keys_APIKeys;
 //# sourceMappingURL=service-accounts.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/users/roles.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -60884,7 +62472,7 @@ class users_roles_Roles extends APIResource {
 }
 //# sourceMappingURL=roles.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/users/users.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -60996,7 +62584,7 @@ class users_Users extends APIResource {
 users_Users.Roles = users_roles_Roles;
 //# sourceMappingURL=users.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/projects/projects.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61145,7 +62733,7 @@ Projects.SpendAlerts = spend_alerts_SpendAlerts;
 Projects.Certificates = certificates_Certificates;
 //# sourceMappingURL=projects.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/users/roles.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61226,7 +62814,7 @@ class organization_users_roles_Roles extends APIResource {
 }
 //# sourceMappingURL=roles.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/users/users.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61306,7 +62894,7 @@ class users_users_Users extends APIResource {
 users_users_Users.Roles = organization_users_roles_Roles;
 //# sourceMappingURL=users.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/organization/organization.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61363,7 +62951,7 @@ Organization.Certificates = Certificates;
 Organization.Projects = Projects;
 //# sourceMappingURL=organization.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/admin/admin.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61376,7 +62964,7 @@ class Admin extends APIResource {
 Admin.Organization = Organization;
 //# sourceMappingURL=admin.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/audio/speech.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 /**
@@ -61412,7 +63000,7 @@ class Speech extends APIResource {
 }
 //# sourceMappingURL=speech.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/audio/transcriptions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 /**
@@ -61431,7 +63019,7 @@ class Transcriptions extends APIResource {
 }
 //# sourceMappingURL=transcriptions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/audio/translations.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 /**
@@ -61444,7 +63032,7 @@ class Translations extends APIResource {
 }
 //# sourceMappingURL=translations.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/audio/audio.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61465,7 +63053,7 @@ Audio.Translations = Translations;
 Audio.Speech = Speech;
 //# sourceMappingURL=audio.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/batches.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61509,7 +63097,7 @@ class Batches extends APIResource {
 }
 //# sourceMappingURL=batches.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/assistants.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61584,7 +63172,6 @@ class Assistants extends APIResource {
 }
 //# sourceMappingURL=assistants.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/realtime/sessions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
 class Sessions extends APIResource {
@@ -61614,7 +63201,6 @@ class Sessions extends APIResource {
 }
 //# sourceMappingURL=sessions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
 class TranscriptionSessions extends APIResource {
@@ -61644,7 +63230,6 @@ class TranscriptionSessions extends APIResource {
 }
 //# sourceMappingURL=transcription-sessions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/realtime/realtime.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
 
@@ -61664,7 +63249,7 @@ Realtime.Sessions = Sessions;
 Realtime.TranscriptionSessions = TranscriptionSessions;
 //# sourceMappingURL=realtime.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/chatkit/sessions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61710,7 +63295,7 @@ class sessions_Sessions extends APIResource {
 }
 //# sourceMappingURL=sessions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/chatkit/threads.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61792,7 +63377,7 @@ class Threads extends APIResource {
 }
 //# sourceMappingURL=threads.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/chatkit/chatkit.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61809,7 +63394,7 @@ ChatKit.Sessions = sessions_Sessions;
 ChatKit.Threads = Threads;
 //# sourceMappingURL=chatkit.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/responses/input-items.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61843,7 +63428,7 @@ class InputItems extends APIResource {
 }
 //# sourceMappingURL=input-items.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/responses/input-tokens.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 class InputTokens extends APIResource {
@@ -61874,7 +63459,7 @@ class InputTokens extends APIResource {
 }
 //# sourceMappingURL=input-tokens.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/responses/responses.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -61991,7 +63576,7 @@ Responses.InputItems = InputItems;
 Responses.InputTokens = InputTokens;
 //# sourceMappingURL=responses.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/threads/messages.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -62071,7 +63656,7 @@ class messages_Messages extends APIResource {
 }
 //# sourceMappingURL=messages.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/threads/runs/steps.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -62113,7 +63698,6 @@ class Steps extends APIResource {
 }
 //# sourceMappingURL=steps.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/base64.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
 const toBase64 = (data) => {
@@ -62143,7 +63727,7 @@ const fromBase64 = (str) => {
         }
         return buf;
     }
-    throw new OpenAIError('Cannot decode base64 string; Expected `Buffer` or `atob` to be defined');
+    throw new error_OpenAIError('Cannot decode base64 string; Expected `Buffer` or `atob` to be defined');
 };
 /**
  * Converts a Base64 encoded string to a Float32Array.
@@ -62169,7 +63753,6 @@ const toFloat32Array = (base64Str) => {
 };
 //# sourceMappingURL=base64.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/utils/env.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 /**
  * Read an environment variable.
  *
@@ -62177,7 +63760,7 @@ const toFloat32Array = (base64Str) => {
  *
  * Will return undefined if the environment variable doesn't exist or cannot be accessed.
  */
-const readEnv = (env) => {
+const env_readEnv = (env) => {
     if (typeof globalThis.process !== 'undefined') {
         return globalThis.process.env?.[env]?.trim() || undefined;
     }
@@ -62188,7 +63771,6 @@ const readEnv = (env) => {
 };
 //# sourceMappingURL=env.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/internal/utils.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
 
@@ -62197,13 +63779,297 @@ const readEnv = (env) => {
 
 
 //# sourceMappingURL=utils.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/assistant-stream-delta.mjs
+
+
+const MAX_ASSISTANT_STREAM_ARRAY_GROWTH = 1024;
+const MAX_EXTERNALLY_MUTABLE_ASSISTANT_STREAM_ARRAY_LENGTH = 65536;
+const assistantStreamArrayStates = new WeakMap();
+const externallyMutableAssistantStreamValues = new WeakSet();
+function createAssistantStreamDeltaProjection(cacheArrays) {
+    return { arrays: new Map(), cacheArrays, records: new WeakMap() };
+}
+function commitAssistantStreamArrayProjection(projection) {
+    for (const [array, projected] of projection.arrays) {
+        if (projected.cacheable && !externallyMutableAssistantStreamValues.has(array)) {
+            assistantStreamArrayStates.set(array, {
+                length: projected.length,
+                ownEntryCount: projected.ownEntryCount,
+            });
+        }
+        else {
+            assistantStreamArrayStates.delete(array);
+        }
+    }
+}
+function isPrimitiveAssistantStreamValue(value) {
+    return typeof value === 'string' || typeof value === 'number';
+}
+function isPrimitiveAssistantStreamArrayDelta(accumulator, delta) {
+    return delta.every(isPrimitiveAssistantStreamValue) && accumulator.every(isPrimitiveAssistantStreamValue);
+}
+function countOwnAssistantStreamArrayEntries(accumulator) {
+    let count = 0;
+    for (const key of Object.keys(accumulator)) {
+        const index = Number(key);
+        if (Number.isSafeInteger(index) && index >= 0 && index < accumulator.length && String(index) === key) {
+            count += 1;
+        }
+    }
+    return count;
+}
+function getAssistantStreamArrayOwnEntryCount(accumulator, enforceSparseHoleBudget, cachedState) {
+    if (!enforceSparseHoleBudget) {
+        return 0;
+    }
+    if (cachedState?.length === accumulator.length) {
+        return cachedState.ownEntryCount;
+    }
+    return countOwnAssistantStreamArrayEntries(accumulator);
+}
+function getAssistantStreamDeltaIndex(deltaEntry, kind, baselineLength) {
+    const { index } = deltaEntry;
+    if (kind === 'array' && (index === null || index === undefined)) {
+        console.error(deltaEntry);
+        throw new Error('Expected array delta entry to have an `index` property');
+    }
+    if (kind === 'array' && typeof index !== 'number') {
+        throw new TypeError(`Expected array delta entry \`index\` property to be a number but got ${index}`);
+    }
+    if (!Number.isSafeInteger(index) ||
+        index < 0 ||
+        index >= baselineLength + MAX_ASSISTANT_STREAM_ARRAY_GROWTH ||
+        index >= MAX_EXTERNALLY_MUTABLE_ASSISTANT_STREAM_ARRAY_LENGTH) {
+        throw new error_OpenAIError(`Assistant stream delta contains an invalid ${kind} index: ${index}`);
+    }
+    return index;
+}
+function assertValidAssistantStreamArrayDelta(accumulator, delta, kind, projection, validateRecord) {
+    let projectedArray = projection.arrays.get(accumulator);
+    if (!projectedArray) {
+        const enforceSparseHoleBudget = projection.cacheArrays && !externallyMutableAssistantStreamValues.has(accumulator);
+        const cachedState = enforceSparseHoleBudget ? assistantStreamArrayStates.get(accumulator) : undefined;
+        projectedArray = {
+            baselineLength: accumulator.length,
+            cacheable: enforceSparseHoleBudget,
+            enforceSparseHoleBudget,
+            entries: new Map(),
+            length: accumulator.length,
+            ownEntryCount: getAssistantStreamArrayOwnEntryCount(accumulator, enforceSparseHoleBudget, cachedState),
+        };
+        projection.arrays.set(accumulator, projectedArray);
+    }
+    for (const deltaEntry of delta) {
+        if (!isObj(deltaEntry)) {
+            throw new Error(`Expected array delta entry to be an object but got: ${deltaEntry}`);
+        }
+        const validatedIndex = getAssistantStreamDeltaIndex(deltaEntry, kind, projectedArray.baselineLength);
+        let accumulatedEntry;
+        if (projectedArray.entries.has(validatedIndex)) {
+            accumulatedEntry = projectedArray.entries.get(validatedIndex);
+        }
+        else if (hasOwn(accumulator, validatedIndex)) {
+            accumulatedEntry = accumulator[validatedIndex];
+            if (accumulatedEntry === null || accumulatedEntry === undefined) {
+                projectedArray.entries.set(validatedIndex, deltaEntry);
+            }
+        }
+        else {
+            projectedArray.entries.set(validatedIndex, deltaEntry);
+            projectedArray.ownEntryCount += 1;
+        }
+        const projectedLength = Math.max(projectedArray.length, validatedIndex + 1);
+        if (projectedArray.enforceSparseHoleBudget &&
+            projectedLength - projectedArray.ownEntryCount > MAX_ASSISTANT_STREAM_ARRAY_GROWTH) {
+            throw new error_OpenAIError(`Assistant stream delta contains an invalid ${kind} index: ${validatedIndex}`);
+        }
+        if (isObj(accumulatedEntry)) {
+            validateRecord(accumulatedEntry, deltaEntry, projection);
+        }
+        projectedArray.length = projectedLength;
+    }
+}
+function assertValidAssistantStreamDeltaIndices(accumulator, delta, projection) {
+    let projectedValues = projection.records.get(accumulator);
+    for (const [key, deltaValue] of Object.entries(delta)) {
+        if (key === 'index' || key === 'type') {
+            continue;
+        }
+        let accumulatedValue;
+        if (projectedValues?.has(key)) {
+            accumulatedValue = projectedValues.get(key);
+        }
+        else if (hasOwn(accumulator, key)) {
+            accumulatedValue = accumulator[key];
+        }
+        if (accumulatedValue === null || accumulatedValue === undefined) {
+            if (!projectedValues) {
+                projectedValues = new Map();
+                projection.records.set(accumulator, projectedValues);
+            }
+            projectedValues.set(key, deltaValue);
+            continue;
+        }
+        if (isObj(accumulatedValue) && isObj(deltaValue)) {
+            assertValidAssistantStreamDeltaIndices(accumulatedValue, deltaValue, projection);
+        }
+        else if (Array.isArray(accumulatedValue) &&
+            Array.isArray(deltaValue) &&
+            !isPrimitiveAssistantStreamArrayDelta(accumulatedValue, deltaValue)) {
+            assertValidAssistantStreamArrayDelta(accumulatedValue, deltaValue, 'array', projection, assertValidAssistantStreamDeltaIndices);
+        }
+    }
+}
+function isAssistantStreamValueExternallyMutable(value) {
+    return (isObj(value) || Array.isArray(value)) && externallyMutableAssistantStreamValues.has(value);
+}
+function markAssistantStreamValueExternallyMutable(value) {
+    if ((!isObj(value) && !Array.isArray(value)) || externallyMutableAssistantStreamValues.has(value)) {
+        return;
+    }
+    externallyMutableAssistantStreamValues.add(value);
+    if (Array.isArray(value)) {
+        assistantStreamArrayStates.delete(value);
+    }
+    for (const key of Reflect.ownKeys(value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (descriptor && 'value' in descriptor) {
+            markAssistantStreamValueExternallyMutable(descriptor.value);
+        }
+    }
+}
+function defineAssistantStreamArrayEntry(accumulator, index, value) {
+    if (externallyMutableAssistantStreamValues.has(accumulator)) {
+        markAssistantStreamValueExternallyMutable(value);
+    }
+    Object.defineProperty(accumulator, index, {
+        configurable: true,
+        enumerable: true,
+        value,
+        writable: true,
+    });
+}
+function getRequiredAssistantStreamArrayIndex(deltaEntry) {
+    const { index } = deltaEntry;
+    if (index === null || index === undefined) {
+        console.error(deltaEntry);
+        throw new Error('Expected array delta entry to have an `index` property');
+    }
+    if (typeof index !== 'number') {
+        throw new TypeError(`Expected array delta entry \`index\` property to be a number but got ${index}`);
+    }
+    return index;
+}
+function applyAssistantStreamArrayDelta(accumulator, delta, applyRecord) {
+    if (isPrimitiveAssistantStreamArrayDelta(accumulator, delta)) {
+        accumulator.push(...delta);
+        assistantStreamArrayStates.delete(accumulator);
+        return;
+    }
+    for (const deltaEntry of delta) {
+        if (!isObj(deltaEntry)) {
+            throw new Error(`Expected array delta entry to be an object but got: ${deltaEntry}`);
+        }
+        const index = getRequiredAssistantStreamArrayIndex(deltaEntry);
+        if (hasOwn(accumulator, index)) {
+            const accumulatedEntry = accumulator[index];
+            if (accumulatedEntry === null || accumulatedEntry === undefined) {
+                if (externallyMutableAssistantStreamValues.has(accumulator)) {
+                    markAssistantStreamValueExternallyMutable(deltaEntry);
+                }
+                accumulator[index] = deltaEntry;
+            }
+            else {
+                accumulator[index] = applyRecord(accumulatedEntry, deltaEntry);
+            }
+        }
+        else {
+            defineAssistantStreamArrayEntry(accumulator, index, deltaEntry);
+        }
+    }
+}
+function applyAssistantStreamDelta(accumulator, delta) {
+    const externallyMutable = externallyMutableAssistantStreamValues.has(accumulator);
+    for (const [key, deltaValue] of Object.entries(delta)) {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+            throw new error_OpenAIError(`Assistant stream delta contains an unsafe property: ${key}`);
+        }
+        if (!hasOwn(accumulator, key)) {
+            if (externallyMutable) {
+                markAssistantStreamValueExternallyMutable(deltaValue);
+            }
+            accumulator[key] = deltaValue;
+            continue;
+        }
+        let accumulatedValue = accumulator[key];
+        if (accumulatedValue === null || accumulatedValue === undefined) {
+            if (externallyMutable) {
+                markAssistantStreamValueExternallyMutable(deltaValue);
+            }
+            accumulator[key] = deltaValue;
+            continue;
+        }
+        if (key === 'index' || key === 'type') {
+            accumulator[key] = deltaValue;
+            continue;
+        }
+        if (typeof accumulatedValue === 'string' && typeof deltaValue === 'string') {
+            accumulatedValue += deltaValue;
+        }
+        else if (typeof accumulatedValue === 'number' && typeof deltaValue === 'number') {
+            accumulatedValue += deltaValue;
+        }
+        else if (isObj(accumulatedValue) && isObj(deltaValue)) {
+            accumulatedValue = applyAssistantStreamDelta(accumulatedValue, deltaValue);
+        }
+        else if (Array.isArray(accumulatedValue) && Array.isArray(deltaValue)) {
+            applyAssistantStreamArrayDelta(accumulatedValue, deltaValue, applyAssistantStreamDelta);
+            continue;
+        }
+        else {
+            throw new TypeError(`Unhandled record type: ${key}, deltaValue: ${deltaValue}, accValue: ${accumulatedValue}`);
+        }
+        accumulator[key] = accumulatedValue;
+    }
+    return accumulator;
+}
+function assertSafeAssistantStreamDelta(value) {
+    if (!isObj(value) && !Array.isArray(value)) {
+        return;
+    }
+    for (const [key, nestedValue] of Object.entries(value)) {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+            throw new error_OpenAIError(`Assistant stream delta contains an unsafe property: ${key}`);
+        }
+        assertSafeAssistantStreamDelta(nestedValue);
+    }
+}
+function accumulateAssistantStreamDelta(accumulator, delta, cacheArrays = false) {
+    assertSafeAssistantStreamDelta(delta);
+    const accumulatorRecord = accumulator;
+    const deltaRecord = delta;
+    const projection = createAssistantStreamDeltaProjection(cacheArrays && !isAssistantStreamValueExternallyMutable(accumulator));
+    assertValidAssistantStreamDeltaIndices(accumulatorRecord, deltaRecord, projection);
+    applyAssistantStreamDelta(accumulatorRecord, deltaRecord);
+    commitAssistantStreamArrayProjection(projection);
+    return accumulator;
+}
+function createAssistantStreamArrayDeltaCommit(accumulator, delta, kind, cacheArrays = true) {
+    assertSafeAssistantStreamDelta(delta);
+    const projection = createAssistantStreamDeltaProjection(cacheArrays && !isAssistantStreamValueExternallyMutable(accumulator));
+    assertValidAssistantStreamArrayDelta(accumulator, delta, kind, projection, assertValidAssistantStreamDeltaIndices);
+    return () => commitAssistantStreamArrayProjection(projection);
+}
+//# sourceMappingURL=assistant-stream-delta.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/AssistantStream.mjs
-var _AssistantStream_instances, _a, _AssistantStream_events, _AssistantStream_runStepSnapshots, _AssistantStream_messageSnapshots, _AssistantStream_messageSnapshot, _AssistantStream_finalRun, _AssistantStream_currentContentIndex, _AssistantStream_currentContent, _AssistantStream_currentToolCallIndex, _AssistantStream_currentToolCall, _AssistantStream_currentEvent, _AssistantStream_currentRunSnapshot, _AssistantStream_currentRunStepSnapshot, _AssistantStream_addEvent, _AssistantStream_endRequest, _AssistantStream_handleMessage, _AssistantStream_handleRunStep, _AssistantStream_handleEvent, _AssistantStream_accumulateRunStep, _AssistantStream_accumulateMessage, _AssistantStream_accumulateContent, _AssistantStream_handleRun;
+var _AssistantStream_instances, _AssistantStream_events, _AssistantStream_runStepSnapshots, _AssistantStream_messageSnapshots, _AssistantStream_messageSnapshot, _AssistantStream_finalRun, _AssistantStream_currentContentIndex, _AssistantStream_currentContent, _AssistantStream_currentToolCallIndex, _AssistantStream_currentToolCall, _AssistantStream_currentEvent, _AssistantStream_currentRunSnapshot, _AssistantStream_currentRunStepSnapshot, _AssistantStream_addEvent, _AssistantStream_endRequest, _AssistantStream_handleMessage, _AssistantStream_handleRunStep, _AssistantStream_emitExposed, _AssistantStream_handleEvent, _AssistantStream_accumulateRunStep, _AssistantStream_accumulateMessage, _AssistantStream_accumulateContent, _AssistantStream_handleRun;
 
 
 
 
 
+
+/** Streams assistant-run events while accumulating messages, run steps, and tool-call snapshots. */
 class AssistantStream extends EventStream {
     constructor() {
         super(...arguments);
@@ -62212,8 +64078,8 @@ class AssistantStream extends EventStream {
         _AssistantStream_events.set(this, []);
         //Used to accumulate deltas
         //We are accumulating many types so the value here is not strict
-        _AssistantStream_runStepSnapshots.set(this, {});
-        _AssistantStream_messageSnapshots.set(this, {});
+        _AssistantStream_runStepSnapshots.set(this, Object.create(null));
+        _AssistantStream_messageSnapshots.set(this, Object.create(null));
         _AssistantStream_messageSnapshot.set(this, void 0);
         _AssistantStream_finalRun.set(this, void 0);
         _AssistantStream_currentContentIndex.set(this, void 0);
@@ -62225,61 +64091,18 @@ class AssistantStream extends EventStream {
         _AssistantStream_currentRunSnapshot.set(this, void 0);
         _AssistantStream_currentRunStepSnapshot.set(this, void 0);
     }
+    /** Iterates over cloned raw assistant events; stopping early aborts the underlying request. */
     [(_AssistantStream_events = new WeakMap(), _AssistantStream_runStepSnapshots = new WeakMap(), _AssistantStream_messageSnapshots = new WeakMap(), _AssistantStream_messageSnapshot = new WeakMap(), _AssistantStream_finalRun = new WeakMap(), _AssistantStream_currentContentIndex = new WeakMap(), _AssistantStream_currentContent = new WeakMap(), _AssistantStream_currentToolCallIndex = new WeakMap(), _AssistantStream_currentToolCall = new WeakMap(), _AssistantStream_currentEvent = new WeakMap(), _AssistantStream_currentRunSnapshot = new WeakMap(), _AssistantStream_currentRunStepSnapshot = new WeakMap(), _AssistantStream_instances = new WeakSet(), Symbol.asyncIterator)]() {
-        const pushQueue = [];
-        const readQueue = [];
-        let done = false;
-        //Catch all for passing along all events
-        this.on('event', (event) => {
-            const eventCopy = structuredClone(event);
-            const reader = readQueue.shift();
-            if (reader) {
-                reader.resolve(eventCopy);
-            }
-            else {
-                pushQueue.push(eventCopy);
-            }
-        });
-        this.on('end', () => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.resolve(undefined);
-            }
-            readQueue.length = 0;
-        });
-        this.on('abort', (err) => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.reject(err);
-            }
-            readQueue.length = 0;
-        });
-        this.on('error', (err) => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.reject(err);
-            }
-            readQueue.length = 0;
-        });
-        return {
-            next: async () => {
-                if (!pushQueue.length) {
-                    if (done) {
-                        return { value: undefined, done: true };
-                    }
-                    return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((chunk) => (chunk ? { value: chunk, done: false } : { value: undefined, done: true }));
-                }
-                const chunk = pushQueue.shift();
-                return { value: chunk, done: false };
-            },
-            return: async () => {
-                this.abort();
-                return { value: undefined, done: true };
-            },
-        };
+        return this._createIterator((push) => {
+            //Catch all for passing along all events
+            const onEvent = (event) => push(structuredClone(event));
+            this.on('event', onEvent);
+            return () => this.off('event', onEvent);
+        }, { onReturn: () => this.abort() });
     }
+    /** Restores an assistant stream from events serialized by `toReadableStream()`. */
     static fromReadableStream(stream) {
-        const runner = new _a();
+        const runner = new AssistantStream();
         runner._run(() => runner._fromReadableStream(stream));
         return runner;
     }
@@ -62295,15 +64118,17 @@ class AssistantStream extends EventStream {
         }
         return this._addRun(__classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_endRequest).call(this));
     }
+    /** Serializes assistant events into a readable stream for transfer to another runtime. */
     toReadableStream() {
         const stream = new src_Stream(this[Symbol.asyncIterator].bind(this), this.controller);
         return stream.toReadableStream();
     }
+    /** Submits tool outputs and starts streaming the continuation of an existing assistant run. */
     static createToolAssistantStream(runId, runs, params, options) {
-        const runner = new _a();
+        const runner = new AssistantStream();
         runner._run(() => runner._runToolAssistantStream(runId, runs, params, {
             ...options,
-            headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'stream' },
+            __metadata: { ...options?.__metadata, helperMethod: 'stream' },
         }));
         return runner;
     }
@@ -62323,46 +64148,60 @@ class AssistantStream extends EventStream {
         }
         return this._addRun(__classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_endRequest).call(this));
     }
+    /** Creates an assistant thread and starts streaming its newly created run. */
     static createThreadAssistantStream(params, thread, options) {
-        const runner = new _a();
+        const runner = new AssistantStream();
         runner._run(() => runner._threadAssistantStream(params, thread, {
             ...options,
-            headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'stream' },
+            __metadata: { ...options?.__metadata, helperMethod: 'stream' },
         }));
         return runner;
     }
+    /** Creates a run on an existing assistant thread and starts streaming its events. */
     static createAssistantStream(threadId, runs, params, options) {
-        const runner = new _a();
+        const runner = new AssistantStream();
         runner._run(() => runner._runAssistantStream(threadId, runs, params, {
             ...options,
-            headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'stream' },
+            __metadata: { ...options?.__metadata, helperMethod: 'stream' },
         }));
         return runner;
     }
+    /** Returns the most recent raw event, or `undefined` before any event arrives. */
     currentEvent() {
+        markAssistantStreamValueExternallyMutable(__classPrivateFieldGet(this, _AssistantStream_currentEvent, "f"));
         return __classPrivateFieldGet(this, _AssistantStream_currentEvent, "f");
     }
+    /** Returns the latest run snapshot, or `undefined` before a run event arrives. */
     currentRun() {
+        markAssistantStreamValueExternallyMutable(__classPrivateFieldGet(this, _AssistantStream_currentRunSnapshot, "f"));
         return __classPrivateFieldGet(this, _AssistantStream_currentRunSnapshot, "f");
     }
+    /** Returns the message currently being accumulated, or `undefined` before message creation. */
     currentMessageSnapshot() {
+        markAssistantStreamValueExternallyMutable(__classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
         return __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f");
     }
+    /** Returns the run step currently being accumulated, or `undefined` before a step begins. */
     currentRunStepSnapshot() {
+        markAssistantStreamValueExternallyMutable(__classPrivateFieldGet(this, _AssistantStream_currentRunStepSnapshot, "f"));
         return __classPrivateFieldGet(this, _AssistantStream_currentRunStepSnapshot, "f");
     }
+    /** Waits for successful completion and returns the final snapshot of every observed run step. */
     async finalRunSteps() {
         await this.done();
         return Object.values(__classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f"));
     }
+    /** Waits for successful completion and returns the final snapshot of every observed message. */
     async finalMessages() {
         await this.done();
         return Object.values(__classPrivateFieldGet(this, _AssistantStream_messageSnapshots, "f"));
     }
+    /** Waits for completion and returns the final run, or rejects if no terminal run was received. */
     async finalRun() {
         await this.done();
-        if (!__classPrivateFieldGet(this, _AssistantStream_finalRun, "f"))
-            throw Error('Final run was not received.');
+        if (!__classPrivateFieldGet(this, _AssistantStream_finalRun, "f")) {
+            throw new Error('Final run was not received.');
+        }
         return __classPrivateFieldGet(this, _AssistantStream_finalRun, "f");
     }
     async _createThreadAssistantStream(thread, params, options) {
@@ -62391,67 +64230,15 @@ class AssistantStream extends EventStream {
         }
         return this._addRun(__classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_endRequest).call(this));
     }
+    /**
+     * Applies an assistant delta to its mutable snapshot, concatenating text and
+     * merging nested objects and indexed array entries.
+     */
     static accumulateDelta(acc, delta) {
-        for (const [key, deltaValue] of Object.entries(delta)) {
-            if (!acc.hasOwnProperty(key)) {
-                acc[key] = deltaValue;
-                continue;
-            }
-            let accValue = acc[key];
-            if (accValue === null || accValue === undefined) {
-                acc[key] = deltaValue;
-                continue;
-            }
-            // We don't accumulate these special properties
-            if (key === 'index' || key === 'type') {
-                acc[key] = deltaValue;
-                continue;
-            }
-            // Type-specific accumulation logic
-            if (typeof accValue === 'string' && typeof deltaValue === 'string') {
-                accValue += deltaValue;
-            }
-            else if (typeof accValue === 'number' && typeof deltaValue === 'number') {
-                accValue += deltaValue;
-            }
-            else if (isObj(accValue) && isObj(deltaValue)) {
-                accValue = this.accumulateDelta(accValue, deltaValue);
-            }
-            else if (Array.isArray(accValue) && Array.isArray(deltaValue)) {
-                if (accValue.every((x) => typeof x === 'string' || typeof x === 'number')) {
-                    accValue.push(...deltaValue); // Use spread syntax for efficient addition
-                    continue;
-                }
-                for (const deltaEntry of deltaValue) {
-                    if (!isObj(deltaEntry)) {
-                        throw new Error(`Expected array delta entry to be an object but got: ${deltaEntry}`);
-                    }
-                    const index = deltaEntry['index'];
-                    if (index == null) {
-                        console.error(deltaEntry);
-                        throw new Error('Expected array delta entry to have an `index` property');
-                    }
-                    if (typeof index !== 'number') {
-                        throw new Error(`Expected array delta entry \`index\` property to be a number but got ${index}`);
-                    }
-                    const accEntry = accValue[index];
-                    if (accEntry == null) {
-                        accValue[index] = deltaEntry;
-                    }
-                    else {
-                        accValue[index] = this.accumulateDelta(accEntry, deltaEntry);
-                    }
-                }
-                continue;
-            }
-            else {
-                throw Error(`Unhandled record type: ${key}, deltaValue: ${deltaValue}, accValue: ${accValue}`);
-            }
-            acc[key] = accValue;
-        }
-        return acc;
+        return accumulateAssistantStreamDelta(acc, delta);
     }
     _addRun(run) {
+        __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'run', run);
         return run;
     }
     async _threadAssistantStream(params, thread, options) {
@@ -62464,15 +64251,17 @@ class AssistantStream extends EventStream {
         return await this._createToolAssistantStream(runs, runId, params, options);
     }
 }
-_a = AssistantStream, _AssistantStream_addEvent = function _AssistantStream_addEvent(event) {
-    if (this.ended)
+_AssistantStream_addEvent = function _AssistantStream_addEvent(event) {
+    if (this.ended) {
         return;
+    }
     __classPrivateFieldSet(this, _AssistantStream_currentEvent, event, "f");
     __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_handleEvent).call(this, event);
     switch (event.event) {
-        case 'thread.created':
+        case 'thread.created': {
             //No action on this event.
             break;
+        }
         case 'thread.run.created':
         case 'thread.run.queued':
         case 'thread.run.in_progress':
@@ -62482,37 +64271,43 @@ _a = AssistantStream, _AssistantStream_addEvent = function _AssistantStream_addE
         case 'thread.run.failed':
         case 'thread.run.cancelling':
         case 'thread.run.cancelled':
-        case 'thread.run.expired':
+        case 'thread.run.expired': {
             __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_handleRun).call(this, event);
             break;
+        }
         case 'thread.run.step.created':
         case 'thread.run.step.in_progress':
         case 'thread.run.step.delta':
         case 'thread.run.step.completed':
         case 'thread.run.step.failed':
         case 'thread.run.step.cancelled':
-        case 'thread.run.step.expired':
+        case 'thread.run.step.expired': {
             __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_handleRunStep).call(this, event);
             break;
+        }
         case 'thread.message.created':
         case 'thread.message.in_progress':
         case 'thread.message.delta':
         case 'thread.message.completed':
-        case 'thread.message.incomplete':
+        case 'thread.message.incomplete': {
             __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_handleMessage).call(this, event);
             break;
-        case 'error':
+        }
+        case 'error': {
             //This is included for completeness, but errors are processed in the SSE event processing so this should not occur
             throw new Error('Encountered an error event in event processing - errors should be processed earlier');
-        default:
+        }
+        default: {
             AssistantStream_assertNever(event);
+        }
     }
 }, _AssistantStream_endRequest = function _AssistantStream_endRequest() {
     if (this.ended) {
         throw new error_OpenAIError(`stream has ended, this shouldn't happen`);
     }
-    if (!__classPrivateFieldGet(this, _AssistantStream_finalRun, "f"))
-        throw Error('Final run has not been received');
+    if (!__classPrivateFieldGet(this, _AssistantStream_finalRun, "f")) {
+        throw new Error('Final run has not been received');
+    }
     return __classPrivateFieldGet(this, _AssistantStream_finalRun, "f");
 }, _AssistantStream_handleMessage = function _AssistantStream_handleMessage(event) {
     const [accumulatedMessage, newContent] = __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_accumulateMessage).call(this, event, __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
@@ -62520,41 +64315,47 @@ _a = AssistantStream, _AssistantStream_addEvent = function _AssistantStream_addE
     __classPrivateFieldGet(this, _AssistantStream_messageSnapshots, "f")[accumulatedMessage.id] = accumulatedMessage;
     for (const content of newContent) {
         const snapshotContent = accumulatedMessage.content[content.index];
-        if (snapshotContent?.type == 'text') {
-            this._emit('textCreated', snapshotContent.text);
+        if (snapshotContent?.type === 'text') {
+            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'textCreated', snapshotContent.text);
         }
     }
     switch (event.event) {
-        case 'thread.message.created':
-            this._emit('messageCreated', event.data);
+        case 'thread.message.created': {
+            __classPrivateFieldSet(this, _AssistantStream_currentContentIndex, undefined, "f");
+            __classPrivateFieldSet(this, _AssistantStream_currentContent, undefined, "f");
+            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'messageCreated', event.data);
             break;
-        case 'thread.message.in_progress':
+        }
+        case 'thread.message.in_progress': {
             break;
-        case 'thread.message.delta':
-            this._emit('messageDelta', event.data.delta, accumulatedMessage);
+        }
+        case 'thread.message.delta': {
+            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'messageDelta', event.data.delta, accumulatedMessage);
             if (event.data.delta.content) {
                 for (const content of event.data.delta.content) {
                     //If it is text delta, emit a text delta event
-                    if (content.type == 'text' && content.text) {
-                        let textDelta = content.text;
-                        let snapshot = accumulatedMessage.content[content.index];
-                        if (snapshot && snapshot.type == 'text') {
-                            this._emit('textDelta', textDelta, snapshot.text);
+                    if (content.type === 'text' && content.text) {
+                        const textDelta = content.text;
+                        const snapshot = accumulatedMessage.content[content.index];
+                        if (snapshot && snapshot.type === 'text') {
+                            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'textDelta', textDelta, snapshot.text);
                         }
                         else {
-                            throw Error('The snapshot associated with this text delta is not text or missing');
+                            throw new Error('The snapshot associated with this text delta is not text or missing');
                         }
                     }
-                    if (content.index != __classPrivateFieldGet(this, _AssistantStream_currentContentIndex, "f")) {
+                    if (content.index !== __classPrivateFieldGet(this, _AssistantStream_currentContentIndex, "f")) {
                         //See if we have in progress content
                         if (__classPrivateFieldGet(this, _AssistantStream_currentContent, "f")) {
                             switch (__classPrivateFieldGet(this, _AssistantStream_currentContent, "f").type) {
-                                case 'text':
-                                    this._emit('textDone', __classPrivateFieldGet(this, _AssistantStream_currentContent, "f").text, __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
+                                case 'text': {
+                                    __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'textDone', __classPrivateFieldGet(this, _AssistantStream_currentContent, "f").text, __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
                                     break;
-                                case 'image_file':
-                                    this._emit('imageFileDone', __classPrivateFieldGet(this, _AssistantStream_currentContent, "f").image_file, __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
+                                }
+                                case 'image_file': {
+                                    __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'imageFileDone', __classPrivateFieldGet(this, _AssistantStream_currentContent, "f").image_file, __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
                                     break;
+                                }
                             }
                         }
                         __classPrivateFieldSet(this, _AssistantStream_currentContentIndex, content.index, "f");
@@ -62563,173 +64364,209 @@ _a = AssistantStream, _AssistantStream_addEvent = function _AssistantStream_addE
                 }
             }
             break;
+        }
         case 'thread.message.completed':
-        case 'thread.message.incomplete':
+        case 'thread.message.incomplete': {
             //We emit the latest content we were working on on completion (including incomplete)
             if (__classPrivateFieldGet(this, _AssistantStream_currentContentIndex, "f") !== undefined) {
                 const currentContent = event.data.content[__classPrivateFieldGet(this, _AssistantStream_currentContentIndex, "f")];
                 if (currentContent) {
                     switch (currentContent.type) {
-                        case 'image_file':
-                            this._emit('imageFileDone', currentContent.image_file, __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
+                        case 'image_file': {
+                            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'imageFileDone', currentContent.image_file, __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
                             break;
-                        case 'text':
-                            this._emit('textDone', currentContent.text, __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
+                        }
+                        case 'text': {
+                            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'textDone', currentContent.text, __classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f"));
                             break;
+                        }
                     }
                 }
             }
             if (__classPrivateFieldGet(this, _AssistantStream_messageSnapshot, "f")) {
-                this._emit('messageDone', event.data);
+                __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'messageDone', event.data);
             }
+            __classPrivateFieldSet(this, _AssistantStream_currentContentIndex, undefined, "f");
+            __classPrivateFieldSet(this, _AssistantStream_currentContent, undefined, "f");
             __classPrivateFieldSet(this, _AssistantStream_messageSnapshot, undefined, "f");
+        }
     }
 }, _AssistantStream_handleRunStep = function _AssistantStream_handleRunStep(event) {
     const accumulatedRunStep = __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_accumulateRunStep).call(this, event);
     __classPrivateFieldSet(this, _AssistantStream_currentRunStepSnapshot, accumulatedRunStep, "f");
     switch (event.event) {
-        case 'thread.run.step.created':
-            this._emit('runStepCreated', event.data);
+        case 'thread.run.step.created': {
+            __classPrivateFieldSet(this, _AssistantStream_currentToolCallIndex, undefined, "f");
+            __classPrivateFieldSet(this, _AssistantStream_currentToolCall, undefined, "f");
+            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'runStepCreated', event.data);
             break;
-        case 'thread.run.step.delta':
+        }
+        case 'thread.run.step.delta': {
             const delta = event.data.delta;
             if (delta.step_details &&
-                delta.step_details.type == 'tool_calls' &&
+                delta.step_details.type === 'tool_calls' &&
                 delta.step_details.tool_calls &&
-                accumulatedRunStep.step_details.type == 'tool_calls') {
+                accumulatedRunStep.step_details.type === 'tool_calls') {
                 for (const toolCall of delta.step_details.tool_calls) {
-                    if (toolCall.index == __classPrivateFieldGet(this, _AssistantStream_currentToolCallIndex, "f")) {
-                        this._emit('toolCallDelta', toolCall, accumulatedRunStep.step_details.tool_calls[toolCall.index]);
+                    if (toolCall.index === __classPrivateFieldGet(this, _AssistantStream_currentToolCallIndex, "f")) {
+                        __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'toolCallDelta', toolCall, accumulatedRunStep.step_details.tool_calls[toolCall.index]);
                     }
                     else {
                         if (__classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f")) {
-                            this._emit('toolCallDone', __classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f"));
+                            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'toolCallDone', __classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f"));
                         }
                         __classPrivateFieldSet(this, _AssistantStream_currentToolCallIndex, toolCall.index, "f");
                         __classPrivateFieldSet(this, _AssistantStream_currentToolCall, accumulatedRunStep.step_details.tool_calls[toolCall.index], "f");
-                        if (__classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f"))
-                            this._emit('toolCallCreated', __classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f"));
+                        if (__classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f")) {
+                            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'toolCallCreated', __classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f"));
+                        }
                     }
                 }
             }
-            this._emit('runStepDelta', event.data.delta, accumulatedRunStep);
+            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'runStepDelta', event.data.delta, accumulatedRunStep);
             break;
+        }
         case 'thread.run.step.completed':
         case 'thread.run.step.failed':
         case 'thread.run.step.cancelled':
-        case 'thread.run.step.expired':
+        case 'thread.run.step.expired': {
             __classPrivateFieldSet(this, _AssistantStream_currentRunStepSnapshot, undefined, "f");
             const details = event.data.step_details;
-            if (details.type == 'tool_calls') {
-                if (__classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f")) {
-                    this._emit('toolCallDone', __classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f"));
-                    __classPrivateFieldSet(this, _AssistantStream_currentToolCall, undefined, "f");
-                }
+            if (details.type === 'tool_calls' && __classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f")) {
+                __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'toolCallDone', __classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f"));
             }
-            this._emit('runStepDone', event.data, accumulatedRunStep);
+            __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'runStepDone', event.data, accumulatedRunStep);
+            __classPrivateFieldSet(this, _AssistantStream_currentToolCallIndex, undefined, "f");
+            __classPrivateFieldSet(this, _AssistantStream_currentToolCall, undefined, "f");
             break;
-        case 'thread.run.step.in_progress':
+        }
+        case 'thread.run.step.in_progress': {
             break;
+        }
     }
+}, _AssistantStream_emitExposed = function _AssistantStream_emitExposed(event, ...args) {
+    if (this._hasListeners(event)) {
+        for (const value of args) {
+            markAssistantStreamValueExternallyMutable(value);
+        }
+    }
+    this._emit(event, ...args);
 }, _AssistantStream_handleEvent = function _AssistantStream_handleEvent(event) {
     __classPrivateFieldGet(this, _AssistantStream_events, "f").push(event);
-    this._emit('event', event);
+    __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'event', event);
 }, _AssistantStream_accumulateRunStep = function _AssistantStream_accumulateRunStep(event) {
     switch (event.event) {
-        case 'thread.run.step.created':
+        case 'thread.run.step.created': {
             __classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f")[event.data.id] = event.data;
             return event.data;
-        case 'thread.run.step.delta':
-            let snapshot = __classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f")[event.data.id];
+        }
+        case 'thread.run.step.delta': {
+            const snapshot = __classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f")[event.data.id];
             if (!snapshot) {
-                throw Error('Received a RunStepDelta before creation of a snapshot');
+                throw new Error('Received a RunStepDelta before creation of a snapshot');
             }
-            let data = event.data;
+            const data = event.data;
             if (data.delta) {
-                const accumulated = _a.accumulateDelta(snapshot, data.delta);
+                const accumulated = accumulateAssistantStreamDelta(snapshot, data.delta, true);
                 __classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f")[event.data.id] = accumulated;
             }
             return __classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f")[event.data.id];
+        }
         case 'thread.run.step.completed':
         case 'thread.run.step.failed':
         case 'thread.run.step.cancelled':
         case 'thread.run.step.expired':
-        case 'thread.run.step.in_progress':
+        case 'thread.run.step.in_progress': {
             __classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f")[event.data.id] = event.data;
             break;
+        }
     }
-    if (__classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f")[event.data.id])
+    if (__classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f")[event.data.id]) {
         return __classPrivateFieldGet(this, _AssistantStream_runStepSnapshots, "f")[event.data.id];
+    }
     throw new Error('No snapshot available');
 }, _AssistantStream_accumulateMessage = function _AssistantStream_accumulateMessage(event, snapshot) {
-    let newContent = [];
+    const newContent = [];
     switch (event.event) {
-        case 'thread.message.created':
+        case 'thread.message.created': {
             //On creation the snapshot is just the initial message
             return [event.data, newContent];
-        case 'thread.message.delta':
+        }
+        case 'thread.message.delta': {
             if (!snapshot) {
-                throw Error('Received a delta with no existing snapshot (there should be one from message creation)');
+                throw new Error('Received a delta with no existing snapshot (there should be one from message creation)');
             }
-            let data = event.data;
+            const data = event.data;
             //If this delta does not have content, nothing to process
             if (data.delta.content) {
+                assertSafeAssistantStreamDelta(data.delta);
+                const cacheArrays = !isAssistantStreamValueExternallyMutable(snapshot);
+                const commitProjection = createAssistantStreamArrayDeltaCommit(snapshot.content, data.delta.content, 'content', cacheArrays);
                 for (const contentElement of data.delta.content) {
-                    if (contentElement.index in snapshot.content) {
-                        let currentContent = snapshot.content[contentElement.index];
-                        snapshot.content[contentElement.index] = __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_accumulateContent).call(this, contentElement, currentContent);
+                    if (hasOwn(snapshot.content, contentElement.index)) {
+                        const currentContent = snapshot.content[contentElement.index];
+                        snapshot.content[contentElement.index] = __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_accumulateContent).call(this, contentElement, currentContent, cacheArrays);
                     }
                     else {
-                        snapshot.content[contentElement.index] = contentElement;
+                        defineAssistantStreamArrayEntry(snapshot.content, contentElement.index, contentElement);
                         // This is a new element
                         newContent.push(contentElement);
                     }
                 }
+                commitProjection();
             }
             return [snapshot, newContent];
+        }
         case 'thread.message.in_progress':
         case 'thread.message.completed':
-        case 'thread.message.incomplete':
+        case 'thread.message.incomplete': {
             //No changes on other thread events
             if (snapshot) {
                 return [snapshot, newContent];
             }
-            else {
-                throw Error('Received thread message event with no existing snapshot');
-            }
+            throw new Error('Received thread message event with no existing snapshot');
+        }
     }
-    throw Error('Tried to accumulate a non-message event');
-}, _AssistantStream_accumulateContent = function _AssistantStream_accumulateContent(contentElement, currentContent) {
-    return _a.accumulateDelta(currentContent, contentElement);
+    throw new Error('Tried to accumulate a non-message event');
+}, _AssistantStream_accumulateContent = function _AssistantStream_accumulateContent(contentElement, currentContent, cacheArrays) {
+    return accumulateAssistantStreamDelta(currentContent, contentElement, cacheArrays);
 }, _AssistantStream_handleRun = function _AssistantStream_handleRun(event) {
     __classPrivateFieldSet(this, _AssistantStream_currentRunSnapshot, event.data, "f");
     switch (event.event) {
-        case 'thread.run.created':
+        case 'thread.run.created': {
             break;
-        case 'thread.run.queued':
+        }
+        case 'thread.run.queued': {
             break;
-        case 'thread.run.in_progress':
+        }
+        case 'thread.run.in_progress': {
             break;
+        }
         case 'thread.run.requires_action':
         case 'thread.run.cancelled':
         case 'thread.run.failed':
         case 'thread.run.completed':
         case 'thread.run.expired':
-        case 'thread.run.incomplete':
+        case 'thread.run.incomplete': {
             __classPrivateFieldSet(this, _AssistantStream_finalRun, event.data, "f");
             if (__classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f")) {
-                this._emit('toolCallDone', __classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f"));
-                __classPrivateFieldSet(this, _AssistantStream_currentToolCall, undefined, "f");
+                __classPrivateFieldGet(this, _AssistantStream_instances, "m", _AssistantStream_emitExposed).call(this, 'toolCallDone', __classPrivateFieldGet(this, _AssistantStream_currentToolCall, "f"));
             }
+            __classPrivateFieldSet(this, _AssistantStream_currentToolCallIndex, undefined, "f");
+            __classPrivateFieldSet(this, _AssistantStream_currentToolCall, undefined, "f");
             break;
-        case 'thread.run.cancelling':
+        }
+        case 'thread.run.cancelling': {
             break;
+        }
     }
 };
-function AssistantStream_assertNever(_x) { }
+function AssistantStream_assertNever(_x) {
+    return _x;
+}
 //# sourceMappingURL=AssistantStream.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/threads/runs/runs.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -62917,7 +64754,7 @@ class Runs extends APIResource {
 Runs.Steps = Steps;
 //# sourceMappingURL=runs.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/threads/threads.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63017,7 +64854,7 @@ threads_Threads.Runs = Runs;
 threads_Threads.Messages = messages_Messages;
 //# sourceMappingURL=threads.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/beta/beta.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63046,7 +64883,7 @@ Beta.Assistants = Assistants;
 Beta.Threads = threads_Threads;
 //# sourceMappingURL=beta.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/completions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 /**
  * Given a prompt, the model will return one or more predicted completions, and can also return the probabilities of alternative tokens at each position.
@@ -63063,7 +64900,7 @@ class completions_Completions extends APIResource {
 }
 //# sourceMappingURL=completions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/containers/files/content.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63083,7 +64920,7 @@ class Content extends APIResource {
 }
 //# sourceMappingURL=content.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/containers/files/files.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63140,7 +64977,7 @@ class Files extends APIResource {
 Files.Content = Content;
 //# sourceMappingURL=files.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/containers/containers.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63191,7 +65028,7 @@ class Containers extends APIResource {
 Containers.Files = Files;
 //# sourceMappingURL=containers.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/content-provenance-checks.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 class ContentProvenanceChecks extends APIResource {
@@ -63212,7 +65049,7 @@ class ContentProvenanceChecks extends APIResource {
 }
 //# sourceMappingURL=content-provenance-checks.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/conversations/items.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63262,7 +65099,7 @@ class Items extends APIResource {
 }
 //# sourceMappingURL=items.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/conversations/conversations.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63313,30 +65150,20 @@ class Conversations extends APIResource {
 Conversations.Items = Items;
 //# sourceMappingURL=conversations.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/embeddings.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 /**
  * Get a vector representation of a given input that can be easily consumed by machine learning models and algorithms.
  */
 class Embeddings extends APIResource {
-    /**
-     * Creates an embedding vector representing the input text.
-     *
-     * @example
-     * ```ts
-     * const createEmbeddingResponse =
-     *   await client.embeddings.create({
-     *     input: 'The quick brown fox jumped over the lazy dog',
-     *     model: 'text-embedding-3-small',
-     *   });
-     * ```
-     */
     create(body, options) {
         const hasUserProvidedEncodingFormat = !!body.encoding_format;
         // No encoding_format specified, defaulting to base64 for performance reasons
         // See https://github.com/openai/openai-node/pull/1312
-        let encoding_format = hasUserProvidedEncodingFormat ? body.encoding_format : 'base64';
+        let encoding_format = hasUserProvidedEncodingFormat
+            ? body.encoding_format
+            : 'base64';
         if (hasUserProvidedEncodingFormat) {
             loggerFor(this._client).debug('embeddings/user defined encoding_format:', body.encoding_format);
         }
@@ -63370,7 +65197,7 @@ class Embeddings extends APIResource {
 }
 //# sourceMappingURL=embeddings.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/evals/runs/output-items.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63398,7 +65225,7 @@ class OutputItems extends APIResource {
 }
 //# sourceMappingURL=output-items.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/evals/runs/runs.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63468,7 +65295,7 @@ class runs_Runs extends APIResource {
 runs_Runs.OutputItems = OutputItems;
 //# sourceMappingURL=runs.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/evals/evals.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63525,7 +65352,7 @@ class Evals extends APIResource {
 Evals.Runs = runs_Runs;
 //# sourceMappingURL=evals.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/files.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63592,7 +65419,7 @@ class files_Files extends APIResource {
         return this._client.delete(src_path `/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
-     * Returns the contents of the specified file.
+     * Returns a response containing the contents of the specified file.
      */
     content(fileID, options) {
         return this._client.get(src_path `/files/${fileID}/content`, {
@@ -63623,13 +65450,13 @@ class files_Files extends APIResource {
 }
 //# sourceMappingURL=files.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/methods.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class Methods extends APIResource {
 }
 //# sourceMappingURL=methods.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/alpha/graders.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 /**
  * Manage fine-tuning jobs to tailor a model to your specific training data.
@@ -63686,7 +65513,7 @@ class Graders extends APIResource {
 }
 //# sourceMappingURL=graders.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63699,7 +65526,7 @@ class Alpha extends APIResource {
 Alpha.Graders = Graders;
 //# sourceMappingURL=alpha.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63786,7 +65613,7 @@ class Permissions extends APIResource {
 }
 //# sourceMappingURL=permissions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63799,7 +65626,7 @@ class Checkpoints extends APIResource {
 Checkpoints.Permissions = Permissions;
 //# sourceMappingURL=checkpoints.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63826,7 +65653,7 @@ class checkpoints_Checkpoints extends APIResource {
 }
 //# sourceMappingURL=checkpoints.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63964,7 +65791,7 @@ class Jobs extends APIResource {
 Jobs.Checkpoints = checkpoints_Checkpoints;
 //# sourceMappingURL=jobs.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/fine-tuning/fine-tuning.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -63989,13 +65816,13 @@ FineTuning.Checkpoints = Checkpoints;
 FineTuning.Alpha = Alpha;
 //# sourceMappingURL=fine-tuning.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/graders/grader-models.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class GraderModels extends APIResource {
 }
 //# sourceMappingURL=grader-models.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/graders/graders.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -64008,7 +65835,7 @@ class graders_Graders extends APIResource {
 graders_Graders.GraderModels = GraderModels;
 //# sourceMappingURL=graders.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/images.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 /**
@@ -64029,7 +65856,13 @@ class Images extends APIResource {
         return this._client.post('/images/variations', multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
     }
     edit(body, options) {
-        return this._client.post('/images/edits', multipartFormRequestOptions({ body, ...options, stream: body.stream ?? false, __security: { bearerAuth: true } }, this._client));
+        return this._client.post('/images/edits', multipartFormRequestOptions({
+            body,
+            ...options,
+            stream: body.stream ?? false,
+            __metadata: { ...options?.__metadata, ...(body.model == null ? {} : { model: body.model }) },
+            __security: { bearerAuth: true },
+        }, this._client));
     }
     generate(body, options) {
         return this._client.post('/images/generations', {
@@ -64042,7 +65875,7 @@ class Images extends APIResource {
 }
 //# sourceMappingURL=images.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/models.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -64074,7 +65907,7 @@ class Models extends APIResource {
 }
 //# sourceMappingURL=models.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/moderations.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 /**
  * Given text and/or image inputs, classifies if those inputs are potentially harmful.
@@ -64090,7 +65923,7 @@ class Moderations extends APIResource {
 }
 //# sourceMappingURL=moderations.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/realtime/calls.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -64166,7 +65999,7 @@ class Calls extends APIResource {
 }
 //# sourceMappingURL=calls.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/realtime/client-secrets.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class ClientSecrets extends APIResource {
     /**
@@ -64202,7 +66035,7 @@ class ClientSecrets extends APIResource {
 }
 //# sourceMappingURL=client-secrets.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/realtime/realtime.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -64221,6 +66054,10 @@ realtime_Realtime.Calls = Calls;
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/ResponsesParser.mjs
 
 
+/**
+ * Adds parsed-output fields to a response, invoking parsers only when its request
+ * includes an auto-parseable text format or strict function tool.
+ */
 function maybeParseResponse(response, params) {
     if (!params || !ResponsesParser_hasAutoParseableInput(params)) {
         const parsed = {
@@ -64242,9 +66079,7 @@ function maybeParseResponse(response, params) {
                         })),
                     };
                 }
-                else {
-                    return item;
-                }
+                return item;
             }),
         };
         if (needsOutputText(response, parsed)) {
@@ -64254,6 +66089,12 @@ function maybeParseResponse(response, params) {
     }
     return parseResponse(response, params);
 }
+/**
+ * Parses completed response text and strict function-tool arguments.
+ *
+ * Incomplete or nonterminal responses keep their parsed values as `null`, and
+ * `output_parsed` returns the first successfully parsed output-text item.
+ */
 function parseResponse(response, params) {
     const shouldParse = !response.status || response.status === 'completed';
     const output = response.output.map((item) => {
@@ -64277,7 +66118,7 @@ function parseResponse(response, params) {
         }
         return item;
     });
-    const parsed = Object.assign({}, response, { output });
+    const parsed = { ...response, output };
     if (needsOutputText(response, parsed)) {
         addOutputText(parsed);
     }
@@ -64300,22 +66141,17 @@ function parseResponse(response, params) {
     return parsed;
 }
 function parseTextFormat(params, content) {
-    if (params.text?.format?.type !== 'json_schema') {
-        return null;
-    }
-    if ('$parseRaw' in params.text?.format) {
-        const text_format = params.text?.format;
-        return text_format.$parseRaw(content);
-    }
-    return JSON.parse(content);
+    return parseResponseFormatContent(params.text?.format, content);
 }
+/** Returns whether the request includes an auto-parseable text format or strict function tool. */
 function ResponsesParser_hasAutoParseableInput(params) {
-    if (isAutoParsableResponseFormat(params.text?.format)) {
+    if (isParseableResponseFormat(params.text?.format)) {
         return true;
     }
     return (Array.isArray(params.tools) &&
         params.tools.some((tool) => ResponsesParser_isAutoParsableTool(tool) || (tool.type === 'function' && tool.strict === true)));
 }
+/** Copies a Responses API function tool and attaches non-enumerable parser and callback metadata. */
 function makeParseableResponseTool(tool, { parser, callback, }) {
     const obj = { ...tool };
     Object.defineProperties(obj, {
@@ -64334,6 +66170,7 @@ function makeParseableResponseTool(tool, { parser, callback, }) {
     });
     return obj;
 }
+/** Returns whether a Responses API tool carries the SDK's argument-parser marker. */
 function ResponsesParser_isAutoParsableTool(tool) {
     return tool?.['$brand'] === 'auto-parseable-tool';
 }
@@ -64342,14 +66179,19 @@ function getInputToolByName(input_tools, name) {
 }
 function ResponsesParser_parseToolCall(params, toolCall) {
     const inputTool = getInputToolByName(params.tools ?? [], toolCall.name);
+    let parsedArguments = null;
+    if (ResponsesParser_isAutoParsableTool(inputTool)) {
+        parsedArguments = inputTool.$parseRaw(toolCall.arguments);
+    }
+    else if (inputTool?.strict) {
+        parsedArguments = JSON.parse(toolCall.arguments);
+    }
     return {
         ...toolCall,
-        ...toolCall,
-        parsed_arguments: ResponsesParser_isAutoParsableTool(inputTool) ? inputTool.$parseRaw(toolCall.arguments)
-            : inputTool?.strict ? JSON.parse(toolCall.arguments)
-                : null,
+        parsed_arguments: parsedArguments,
     };
 }
+/** Returns whether a response function call matches a strict or auto-parseable request tool. */
 function ResponsesParser_shouldParseToolCall(params, toolCall) {
     if (!params) {
         return false;
@@ -64357,6 +66199,11 @@ function ResponsesParser_shouldParseToolCall(params, toolCall) {
     const inputTool = getInputToolByName(params.tools ?? [], toolCall.name);
     return ResponsesParser_isAutoParsableTool(inputTool) || inputTool?.strict || false;
 }
+/**
+ * Validates that compatible chat completion tools can be automatically parsed.
+ *
+ * @throws {OpenAIError} If a tool is not a function or is missing `strict: true`.
+ */
 function ResponsesParser_validateInputTools(tools) {
     for (const tool of tools ?? []) {
         if (tool.type !== 'function') {
@@ -64370,6 +66217,7 @@ function ResponsesParser_validateInputTools(tools) {
 function needsOutputText(response, target) {
     return !Object.getOwnPropertyDescriptor(response, 'output_text') || target.output_text == null;
 }
+/** Replaces `output_text` with the concatenated text from every response output message. */
 function addOutputText(rsp) {
     const texts = [];
     for (const output of rsp.output) {
@@ -64385,77 +66233,355 @@ function addOutputText(rsp) {
     rsp.output_text = texts.join('');
 }
 //# sourceMappingURL=ResponsesParser.mjs.map
-;// CONCATENATED MODULE: ./node_modules/openai/lib/responses/ResponseAccumulator.mjs
-
-
+;// CONCATENATED MODULE: ./node_modules/openai/internal/responses/output-text-index.mjs
 /**
- * Applies a streaming event to a response snapshot.
+ * Stores output text lengths in a complete binary segment tree.
  *
- * Always use the returned snapshot. Incremental events update the supplied snapshot
- * in place, while response lifecycle events return a detached replacement. Event
- * payloads are cloned, so retaining or replaying the raw events is safe.
+ * Leaves begin at `capacity`; each parent contains the sum of its children.
+ * Rebuilding when capacity doubles preserves every existing contribution and
+ * makes growth linear in the total number of appended outputs.
  */
-function accumulateResponse(event, snapshot) {
-    if (!snapshot) {
-        if (event.type !== 'response.created') {
-            throw new error_OpenAIError(`When snapshot hasn't been set yet, expected 'response.created' event, got ${event.type}`);
-        }
-        return cloneResponse(event.response);
+class OutputTextIndex {
+    constructor() {
+        this.capacity = 1;
+        this.values = [0, 0];
+        this.size = 0;
     }
+    get length() {
+        return this.size;
+    }
+    append(value) {
+        if (this.size === this.capacity) {
+            this.grow();
+        }
+        const index = this.size;
+        this.size += 1;
+        this.update(index, value);
+    }
+    update(index, value) {
+        if (!Number.isSafeInteger(index) || index < 0 || index >= this.size) {
+            throw new RangeError(`missing output at index ${index}`);
+        }
+        let node = this.capacity + index;
+        const difference = value - (this.values[node] ?? 0);
+        if (difference === 0) {
+            return;
+        }
+        while (node >= 1) {
+            this.values[node] = (this.values[node] ?? 0) + difference;
+            node = Math.floor(node / 2);
+        }
+    }
+    prefixSum(end) {
+        if (!Number.isSafeInteger(end) || end < 0 || end > this.size) {
+            throw new RangeError(`missing output at index ${end}`);
+        }
+        let start = this.capacity;
+        let stop = this.capacity + end;
+        let sum = 0;
+        while (start < stop) {
+            if (start % 2 === 1) {
+                sum += this.values[start] ?? 0;
+                start += 1;
+            }
+            if (stop % 2 === 1) {
+                stop -= 1;
+                sum += this.values[stop] ?? 0;
+            }
+            start = Math.floor(start / 2);
+            stop = Math.floor(stop / 2);
+        }
+        return sum;
+    }
+    grow() {
+        const previousCapacity = this.capacity;
+        this.capacity *= 2;
+        const values = Array.from({ length: this.capacity * 2 }, () => 0);
+        for (let index = 0; index < this.size; index += 1) {
+            values[this.capacity + index] = this.values[previousCapacity + index] ?? 0;
+        }
+        for (let index = this.capacity - 1; index > 0; index -= 1) {
+            values[index] = (values[index * 2] ?? 0) + (values[index * 2 + 1] ?? 0);
+        }
+        this.values = values;
+    }
+}
+//# sourceMappingURL=output-text-index.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/responses/canonical-output-text.mjs
+
+function createCanonicalResponseContext() {
+    return {
+        canonicalSnapshot: undefined,
+        outputTextLengths: new WeakMap(),
+        outputTextIndex: new OutputTextIndex(),
+    };
+}
+function getOutputText(context, output) {
+    if (output.type !== 'message') {
+        return '';
+    }
+    let text = '';
+    for (const content of output.content) {
+        if (content.type === 'output_text') {
+            text += content.text;
+        }
+    }
+    context.outputTextLengths.set(output, text.length);
+    return text;
+}
+function ensureCanonicalOutputText(context, snapshot) {
+    if (context.canonicalSnapshot === snapshot) {
+        return;
+    }
+    const outputTextIndex = new OutputTextIndex();
+    let text = '';
+    for (const output of snapshot.output) {
+        const outputText = getOutputText(context, output);
+        text += outputText;
+        outputTextIndex.append(outputText.length);
+    }
+    if (snapshot.output_text !== text) {
+        snapshot.output_text = text;
+    }
+    context.outputTextIndex = outputTextIndex;
+    context.canonicalSnapshot = snapshot;
+}
+function cloneResponse(context, response) {
+    context.canonicalSnapshot = undefined;
+    context.outputTextLengths = new WeakMap();
+    context.outputTextIndex = new OutputTextIndex();
+    const snapshot = structuredClone(response);
+    if (!Object.getOwnPropertyDescriptor(snapshot, 'output_text') ||
+        snapshot.output_text === null ||
+        snapshot.output_text === undefined) {
+        ensureCanonicalOutputText(context, snapshot);
+    }
+    else if (snapshot.output.length === 0 && snapshot.output_text === '') {
+        context.canonicalSnapshot = snapshot;
+    }
+    return snapshot;
+}
+function updateCachedOutputTextLength(context, output, outputIndex, previousText, nextText) {
+    const length = context.outputTextLengths.get(output);
+    if (length !== undefined) {
+        const nextLength = length - previousText.length + nextText.length;
+        context.outputTextLengths.set(output, nextLength);
+        context.outputTextIndex.update(outputIndex, nextLength);
+    }
+}
+function replaceOutputTextSuffix(snapshot, previousText, nextText) {
+    if (previousText.length === 0) {
+        snapshot.output_text += nextText;
+        return;
+    }
+    snapshot.output_text =
+        snapshot.output_text.slice(0, snapshot.output_text.length - previousText.length) + nextText;
+}
+function getPrecedingContentTextLength(context, output, contentIndex, nextText) {
+    if (contentIndex === undefined || output?.type !== 'message') {
+        return 0;
+    }
+    if (contentIndex < output.content.length - contentIndex - 1) {
+        let precedingContentLength = 0;
+        for (let index = 0; index < contentIndex; index += 1) {
+            const precedingContent = output.content[index];
+            if (precedingContent?.type === 'output_text') {
+                precedingContentLength += precedingContent.text.length;
+            }
+        }
+        return precedingContentLength;
+    }
+    let followingContentLength = 0;
+    for (let index = contentIndex + 1; index < output.content.length; index += 1) {
+        const followingContent = output.content[index];
+        if (followingContent?.type === 'output_text') {
+            followingContentLength += followingContent.text.length;
+        }
+    }
+    const outputTextLength = context.outputTextLengths.get(output) ?? getOutputText(context, output).length;
+    return outputTextLength - followingContentLength - nextText.length;
+}
+function updateOutputText(context, snapshot, outputIndex, previousText, nextText, contentIndex) {
+    if (previousText === nextText) {
+        return;
+    }
+    const output = snapshot.output[outputIndex];
+    if (outputIndex === snapshot.output.length - 1 &&
+        (contentIndex === undefined || (output?.type === 'message' && contentIndex === output.content.length - 1))) {
+        replaceOutputTextSuffix(snapshot, previousText, nextText);
+        return;
+    }
+    const precedingContentLength = getPrecedingContentTextLength(context, output, contentIndex, nextText);
+    const offset = context.outputTextIndex.prefixSum(outputIndex) + precedingContentLength;
+    if (offset + previousText.length === snapshot.output_text.length) {
+        replaceOutputTextSuffix(snapshot, previousText, nextText);
+        return;
+    }
+    snapshot.output_text =
+        snapshot.output_text.slice(0, offset) +
+            nextText +
+            snapshot.output_text.slice(offset + previousText.length);
+}
+//# sourceMappingURL=canonical-output-text.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/responses/response-accumulator.mjs
+
+
+
+function validateArrayIndex(collection, index, kind, allowAppend = false) {
+    if (!Number.isSafeInteger(index) ||
+        index < 0 ||
+        index > collection.length ||
+        (index === collection.length ? !allowAppend || index in collection : !hasOwn(collection, index))) {
+        throw new error_OpenAIError(`missing ${kind} at index ${index}`);
+    }
+}
+function validateArrayAppend(collection, index, kind) {
+    if (index !== collection.length) {
+        throw new error_OpenAIError(`missing ${kind} at index ${index}`);
+    }
+    validateArrayIndex(collection, index, kind, true);
+}
+function getOutput(snapshot, outputIndex) {
+    validateArrayIndex(snapshot.output, outputIndex, 'output');
+    const output = snapshot.output[outputIndex];
+    if (!output) {
+        throw new error_OpenAIError(`missing output at index ${outputIndex}`);
+    }
+    return output;
+}
+function getContent(content, contentIndex) {
+    validateArrayIndex(content, contentIndex, 'content');
+    const part = content[contentIndex];
+    if (!part) {
+        throw new error_OpenAIError(`missing content at index ${contentIndex}`);
+    }
+    return part;
+}
+function getShellOutputContent(snapshot, output, commandIndex) {
+    const shellCall = snapshot.output.find((item) => item.type === 'shell_call' && item.call_id === output.call_id);
+    if (shellCall) {
+        validateArrayIndex(shellCall.action.commands, commandIndex, 'command');
+    }
+    else {
+        validateArrayIndex(output.output, commandIndex, 'content', true);
+    }
+    while (output.output.length <= commandIndex) {
+        output.output.push({
+            stdout: '',
+            stderr: '',
+            outcome: { type: 'exit', exit_code: 0 },
+        });
+    }
+    return getContent(output.output, commandIndex);
+}
+function response_accumulator_assertNever(value) {
+    throw new error_OpenAIError(`Unhandled response stream event: ${JSON.stringify(value)}`);
+}
+function accumulateOutputItemEvent(event, snapshot, context) {
     switch (event.type) {
         case 'response.output_item.added': {
-            snapshot.output.push(structuredClone(event.item));
-            if (event.item.type === 'message') {
-                addOutputText(snapshot);
+            validateArrayAppend(snapshot.output, event.output_index, 'output');
+            const output = structuredClone(event.item);
+            if (output.type === 'message') {
+                ensureCanonicalOutputText(context, snapshot);
             }
-            break;
+            snapshot.output.push(output);
+            const text = getOutputText(context, output);
+            if (context.canonicalSnapshot === snapshot) {
+                context.outputTextIndex.append(text.length);
+            }
+            if (text) {
+                snapshot.output_text += text;
+            }
+            return true;
         }
         case 'response.output_item.done': {
-            getOutput(snapshot, event.output_index);
-            snapshot.output[event.output_index] = structuredClone(event.item);
-            if (event.item.type === 'message') {
-                addOutputText(snapshot);
+            const output = getOutput(snapshot, event.output_index);
+            const previousText = getOutputText(context, output);
+            const replacement = structuredClone(event.item);
+            if (output.type === 'message' || replacement.type === 'message') {
+                ensureCanonicalOutputText(context, snapshot);
             }
-            break;
+            snapshot.output[event.output_index] = replacement;
+            const nextText = getOutputText(context, replacement);
+            if (context.canonicalSnapshot === snapshot) {
+                context.outputTextIndex.update(event.output_index, nextText.length);
+            }
+            updateOutputText(context, snapshot, event.output_index, previousText, nextText);
+            return true;
         }
+        default: {
+            return false;
+        }
+    }
+}
+function accumulateContentPartAddedEvent(event, snapshot, context) {
+    switch (event.type) {
         case 'response.content_part.added': {
             const output = getOutput(snapshot, event.output_index);
-            const type = output.type;
-            const part = event.part;
+            const { type } = output;
+            const { part } = event;
             if (type === 'message' && part.type !== 'reasoning_text') {
-                output.content.push(structuredClone(part));
-                if (part.type === 'output_text') {
-                    addOutputText(snapshot);
+                validateArrayAppend(output.content, event.content_index, 'content');
+                const content = structuredClone(part);
+                if (content.type === 'output_text') {
+                    ensureCanonicalOutputText(context, snapshot);
+                }
+                output.content.push(content);
+                if (content.type === 'output_text') {
+                    updateCachedOutputTextLength(context, output, event.output_index, '', content.text);
+                    updateOutputText(context, snapshot, event.output_index, '', content.text, event.content_index);
                 }
             }
             else if (type === 'reasoning' && part.type === 'reasoning_text') {
+                const content = output.content ?? [];
+                validateArrayAppend(content, event.content_index, 'content');
                 if (!output.content) {
-                    output.content = [];
+                    output.content = content;
                 }
-                output.content.push(structuredClone(part));
+                content.push(structuredClone(part));
             }
-            break;
+            return true;
         }
+        default: {
+            return false;
+        }
+    }
+}
+function accumulateContentPartDoneEvent(event, snapshot, context) {
+    switch (event.type) {
         case 'response.content_part.done': {
             const output = getOutput(snapshot, event.output_index);
-            const part = event.part;
+            const { part } = event;
             if (output.type === 'message' && part.type !== 'reasoning_text') {
-                getContent(output.content, event.content_index);
-                output.content[event.content_index] = structuredClone(part);
-                if (part.type === 'output_text') {
-                    addOutputText(snapshot);
+                const content = getContent(output.content, event.content_index);
+                const previousText = content.type === 'output_text' ? content.text : '';
+                const replacement = structuredClone(part);
+                if (content.type === 'output_text' || replacement.type === 'output_text') {
+                    ensureCanonicalOutputText(context, snapshot);
                 }
+                output.content[event.content_index] = replacement;
+                const nextText = replacement.type === 'output_text' ? replacement.text : '';
+                updateCachedOutputTextLength(context, output, event.output_index, previousText, nextText);
+                updateOutputText(context, snapshot, event.output_index, previousText, nextText, event.content_index);
             }
             else if (output.type === 'reasoning' && part.type === 'reasoning_text') {
-                const content = output.content;
+                const { content } = output;
                 if (!content) {
                     throw new error_OpenAIError(`missing content at index ${event.content_index}`);
                 }
                 getContent(content, event.content_index);
                 content[event.content_index] = structuredClone(part);
             }
-            break;
+            return true;
         }
+        default: {
+            return false;
+        }
+    }
+}
+function accumulateOutputTextEvent(event, snapshot, context) {
+    switch (event.type) {
         case 'response.output_text.delta': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'message') {
@@ -64463,10 +66589,19 @@ function accumulateResponse(event, snapshot) {
                 if (content.type !== 'output_text') {
                     throw new error_OpenAIError(`expected content to be 'output_text', got ${content.type}`);
                 }
-                content.text += event.delta;
-                snapshot.output_text += event.delta;
+                const previousText = content.text;
+                ensureCanonicalOutputText(context, snapshot);
+                content.text = previousText + event.delta;
+                updateCachedOutputTextLength(context, output, event.output_index, previousText, content.text);
+                if (event.output_index === snapshot.output.length - 1 &&
+                    event.content_index === output.content.length - 1) {
+                    snapshot.output_text += event.delta;
+                }
+                else {
+                    updateOutputText(context, snapshot, event.output_index, previousText, content.text, event.content_index);
+                }
             }
-            break;
+            return true;
         }
         case 'response.output_text.done': {
             const output = getOutput(snapshot, event.output_index);
@@ -64475,10 +66610,13 @@ function accumulateResponse(event, snapshot) {
                 if (content.type !== 'output_text') {
                     throw new error_OpenAIError(`expected content to be 'output_text', got ${content.type}`);
                 }
+                const previousText = content.text;
+                ensureCanonicalOutputText(context, snapshot);
                 content.text = event.text;
-                addOutputText(snapshot);
+                updateCachedOutputTextLength(context, output, event.output_index, previousText, event.text);
+                updateOutputText(context, snapshot, event.output_index, previousText, event.text, event.content_index);
             }
-            break;
+            return true;
         }
         case 'response.output_text.annotation.added': {
             const output = getOutput(snapshot, event.output_index);
@@ -64487,10 +66625,18 @@ function accumulateResponse(event, snapshot) {
                 if (content.type !== 'output_text') {
                     throw new error_OpenAIError(`expected content to be 'output_text', got ${content.type}`);
                 }
+                validateArrayIndex(content.annotations, event.annotation_index, 'annotation', true);
                 content.annotations[event.annotation_index] = structuredClone(event.annotation);
             }
-            break;
+            return true;
         }
+        default: {
+            return false;
+        }
+    }
+}
+function accumulateRefusalAndArgumentsEvent(event, snapshot) {
+    switch (event.type) {
         case 'response.refusal.delta': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'message') {
@@ -64500,7 +66646,7 @@ function accumulateResponse(event, snapshot) {
                 }
                 content.refusal += event.delta;
             }
-            break;
+            return true;
         }
         case 'response.refusal.done': {
             const output = getOutput(snapshot, event.output_index);
@@ -64511,22 +66657,100 @@ function accumulateResponse(event, snapshot) {
                 }
                 content.refusal = event.refusal;
             }
-            break;
+            return true;
         }
         case 'response.function_call_arguments.delta': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'function_call') {
                 output.arguments += event.delta;
             }
-            break;
+            return true;
         }
         case 'response.function_call_arguments.done': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'function_call') {
                 output.arguments = event.arguments;
             }
-            break;
+            return true;
         }
+        case 'response.custom_tool_call_input.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'custom_tool_call') {
+                output.input += event.delta;
+            }
+            return true;
+        }
+        case 'response.custom_tool_call_input.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'custom_tool_call') {
+                output.input = event.input;
+            }
+            return true;
+        }
+        case 'response.mcp_call_arguments.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'mcp_call') {
+                output.arguments += event.delta;
+            }
+            return true;
+        }
+        case 'response.mcp_call_arguments.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'mcp_call') {
+                output.arguments = event.arguments;
+            }
+            return true;
+        }
+        default: {
+            return false;
+        }
+    }
+}
+function accumulateShellEvent(event, snapshot) {
+    switch (event.type) {
+        case 'response.shell_call_command.added':
+        case 'response.shell_call_command.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'shell_call') {
+                const allowAppend = event.type === 'response.shell_call_command.added';
+                validateArrayIndex(output.action.commands, event.command_index, 'command', allowAppend);
+                output.action.commands[event.command_index] = event.command;
+            }
+            return true;
+        }
+        case 'response.shell_call_command.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'shell_call') {
+                validateArrayIndex(output.action.commands, event.command_index, 'command');
+                output.action.commands[event.command_index] += event.delta;
+            }
+            return true;
+        }
+        case 'response.shell_call_output_content.delta': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'shell_call_output') {
+                const content = getShellOutputContent(snapshot, output, event.command_index);
+                content.stdout += event.delta.stdout ?? '';
+                content.stderr += event.delta.stderr ?? '';
+            }
+            return true;
+        }
+        case 'response.shell_call_output_content.done': {
+            const output = getOutput(snapshot, event.output_index);
+            if (output.type === 'shell_call_output') {
+                const content = getContent(event.output, 0);
+                getShellOutputContent(snapshot, output, event.command_index);
+                output.output[event.command_index] = structuredClone(content);
+            }
+            return true;
+        }
+        default: {
+            return false;
+        }
+    }
+}
+function accumulateReasoningEvent(event, snapshot) {
+    switch (event.type) {
         case 'response.reasoning_text.delta': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'reasoning') {
@@ -64539,7 +66763,7 @@ function accumulateResponse(event, snapshot) {
                 }
                 content.text += event.delta;
             }
-            break;
+            return true;
         }
         case 'response.reasoning_text.done': {
             const output = getOutput(snapshot, event.output_index);
@@ -64553,14 +66777,15 @@ function accumulateResponse(event, snapshot) {
                 }
                 content.text = event.text;
             }
-            break;
+            return true;
         }
         case 'response.reasoning_summary_part.added': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'reasoning') {
+                validateArrayAppend(output.summary, event.summary_index, 'content');
                 output.summary.push(structuredClone(event.part));
             }
-            break;
+            return true;
         }
         case 'response.reasoning_summary_part.done': {
             const output = getOutput(snapshot, event.output_index);
@@ -64568,7 +66793,7 @@ function accumulateResponse(event, snapshot) {
                 getContent(output.summary, event.summary_index);
                 output.summary[event.summary_index] = structuredClone(event.part);
             }
-            break;
+            return true;
         }
         case 'response.reasoning_summary_text.delta': {
             const output = getOutput(snapshot, event.output_index);
@@ -64576,7 +66801,7 @@ function accumulateResponse(event, snapshot) {
                 const part = getContent(output.summary, event.summary_index);
                 part.text += event.delta;
             }
-            break;
+            return true;
         }
         case 'response.reasoning_summary_text.done': {
             const output = getOutput(snapshot, event.output_index);
@@ -64584,164 +66809,170 @@ function accumulateResponse(event, snapshot) {
                 const part = getContent(output.summary, event.summary_index);
                 part.text = event.text;
             }
-            break;
+            return true;
         }
-        case 'response.custom_tool_call_input.delta': {
-            const output = getOutput(snapshot, event.output_index);
-            if (output.type === 'custom_tool_call') {
-                output.input += event.delta;
-            }
-            break;
+        default: {
+            return false;
         }
-        case 'response.custom_tool_call_input.done': {
-            const output = getOutput(snapshot, event.output_index);
-            if (output.type === 'custom_tool_call') {
-                output.input = event.input;
-            }
-            break;
-        }
-        case 'response.mcp_call_arguments.delta': {
-            const output = getOutput(snapshot, event.output_index);
-            if (output.type === 'mcp_call') {
-                output.arguments += event.delta;
-            }
-            break;
-        }
-        case 'response.mcp_call_arguments.done': {
-            const output = getOutput(snapshot, event.output_index);
-            if (output.type === 'mcp_call') {
-                output.arguments = event.arguments;
-            }
-            break;
-        }
+    }
+}
+function accumulateCodeInterpreterEvent(event, snapshot) {
+    switch (event.type) {
         case 'response.code_interpreter_call_code.delta': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'code_interpreter_call') {
                 output.code = (output.code ?? '') + event.delta;
             }
-            break;
+            return true;
         }
         case 'response.code_interpreter_call_code.done': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'code_interpreter_call') {
                 output.code = event.code;
             }
-            break;
+            return true;
         }
         case 'response.code_interpreter_call.in_progress': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'code_interpreter_call') {
                 output.status = 'in_progress';
             }
-            break;
+            return true;
         }
         case 'response.code_interpreter_call.interpreting': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'code_interpreter_call') {
                 output.status = 'interpreting';
             }
-            break;
+            return true;
         }
         case 'response.code_interpreter_call.completed': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'code_interpreter_call') {
                 output.status = 'completed';
             }
-            break;
+            return true;
         }
+        default: {
+            return false;
+        }
+    }
+}
+function accumulateSearchStatusEvent(event, snapshot) {
+    switch (event.type) {
         case 'response.file_search_call.in_progress': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'file_search_call') {
                 output.status = 'in_progress';
             }
-            break;
+            return true;
         }
         case 'response.file_search_call.searching': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'file_search_call') {
                 output.status = 'searching';
             }
-            break;
+            return true;
         }
         case 'response.file_search_call.completed': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'file_search_call') {
                 output.status = 'completed';
             }
-            break;
+            return true;
         }
         case 'response.web_search_call.in_progress': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'web_search_call') {
                 output.status = 'in_progress';
             }
-            break;
+            return true;
         }
         case 'response.web_search_call.searching': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'web_search_call') {
                 output.status = 'searching';
             }
-            break;
+            return true;
         }
         case 'response.web_search_call.completed': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'web_search_call') {
                 output.status = 'completed';
             }
-            break;
+            return true;
         }
+        default: {
+            return false;
+        }
+    }
+}
+function accumulateImageAndMcpStatusEvent(event, snapshot) {
+    switch (event.type) {
         case 'response.image_generation_call.in_progress': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'image_generation_call') {
                 output.status = 'in_progress';
             }
-            break;
+            return true;
         }
         case 'response.image_generation_call.generating': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'image_generation_call') {
                 output.status = 'generating';
             }
-            break;
+            return true;
         }
         case 'response.image_generation_call.completed': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'image_generation_call') {
                 output.status = 'completed';
             }
-            break;
+            return true;
         }
         case 'response.mcp_call.in_progress': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'mcp_call') {
                 output.status = 'in_progress';
             }
-            break;
+            return true;
         }
         case 'response.mcp_call.completed': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'mcp_call') {
                 output.status = 'completed';
             }
-            break;
+            return true;
         }
         case 'response.mcp_call.failed': {
             const output = getOutput(snapshot, event.output_index);
             if (output.type === 'mcp_call') {
                 output.status = 'failed';
             }
-            break;
+            return true;
         }
+        default: {
+            return false;
+        }
+    }
+}
+function isResponseLifecycleEvent(event) {
+    switch (event.type) {
         case 'response.created':
         case 'response.queued':
         case 'response.in_progress':
         case 'response.completed':
         case 'response.failed':
         case 'response.incomplete': {
-            snapshot = cloneResponse(event.response);
-            break;
+            return true;
         }
+        default: {
+            return false;
+        }
+    }
+}
+function isIgnoredResponseEvent(event) {
+    switch (event.type) {
         case 'response.audio.delta':
         case 'response.audio.done':
         case 'response.audio.transcript.delta':
@@ -64752,65 +66983,92 @@ function accumulateResponse(event, snapshot) {
         case 'response.mcp_list_tools.failed':
         case 'keepalive':
         case 'error': {
-            // These events do not contain state represented by the Response object.
-            break;
+            return true;
         }
         default: {
-            ResponseAccumulator_assertNever(event);
+            return false;
         }
     }
-    return snapshot;
 }
-function cloneResponse(response) {
-    const snapshot = structuredClone(response);
-    if (!Object.getOwnPropertyDescriptor(snapshot, 'output_text') || snapshot.output_text == null) {
-        addOutputText(snapshot);
+function createResponseContext() {
+    return createCanonicalResponseContext();
+}
+function accumulateResponseWithContext(event, snapshot, context) {
+    if (!snapshot) {
+        if (event.type !== 'response.created') {
+            throw new error_OpenAIError(`When snapshot hasn't been set yet, expected 'response.created' event, got ${event.type}`);
+        }
+        return cloneResponse(context, event.response);
     }
-    return snapshot;
-}
-function getOutput(snapshot, outputIndex) {
-    const output = snapshot.output[outputIndex];
-    if (!output) {
-        throw new error_OpenAIError(`missing output at index ${outputIndex}`);
+    if (accumulateOutputItemEvent(event, snapshot, context)) {
+        return snapshot;
     }
-    return output;
-}
-function getContent(content, contentIndex) {
-    const part = content[contentIndex];
-    if (!part) {
-        throw new error_OpenAIError(`missing content at index ${contentIndex}`);
+    if (accumulateContentPartAddedEvent(event, snapshot, context)) {
+        return snapshot;
     }
-    return part;
+    if (accumulateContentPartDoneEvent(event, snapshot, context)) {
+        return snapshot;
+    }
+    if (accumulateOutputTextEvent(event, snapshot, context)) {
+        return snapshot;
+    }
+    if (accumulateRefusalAndArgumentsEvent(event, snapshot)) {
+        return snapshot;
+    }
+    if (accumulateShellEvent(event, snapshot)) {
+        return snapshot;
+    }
+    if (accumulateReasoningEvent(event, snapshot)) {
+        return snapshot;
+    }
+    if (accumulateCodeInterpreterEvent(event, snapshot)) {
+        return snapshot;
+    }
+    if (accumulateSearchStatusEvent(event, snapshot)) {
+        return snapshot;
+    }
+    if (accumulateImageAndMcpStatusEvent(event, snapshot)) {
+        return snapshot;
+    }
+    if (isResponseLifecycleEvent(event)) {
+        return cloneResponse(context, event.response);
+    }
+    if (isIgnoredResponseEvent(event)) {
+        return snapshot;
+    }
+    return response_accumulator_assertNever(event);
 }
-function ResponseAccumulator_assertNever(value) {
-    throw new error_OpenAIError(`Unhandled response stream event: ${JSON.stringify(value)}`);
-}
-//# sourceMappingURL=ResponseAccumulator.mjs.map
+//# sourceMappingURL=response-accumulator.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/lib/responses/ResponseStream.mjs
-var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest;
+var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_accumulatorContext, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest;
 
 
 
 
 
 
+/** Streams Responses API events while accumulating the latest response and parsed output. */
 class ResponseStream extends EventStream {
+    /** Creates an unstarted stream, retaining request parameters for structured-output parsing. */
     constructor(params) {
         super();
         _ResponseStream_instances.add(this);
         _ResponseStream_params.set(this, void 0);
         _ResponseStream_currentResponseSnapshot.set(this, void 0);
         _ResponseStream_finalResponse.set(this, void 0);
+        _ResponseStream_accumulatorContext.set(this, createResponseContext());
         __classPrivateFieldSet(this, _ResponseStream_params, params, "f");
     }
+    /** Starts a new response stream or replays an existing response by its identifier. */
     static createResponse(client, params, options) {
         const runner = new ResponseStream(params);
         runner._run(() => runner._createOrRetrieveResponse(client, params, {
             ...options,
-            headers: { ...options?.headers, 'X-Stainless-Helper-Method': 'stream' },
+            __metadata: { ...options?.__metadata, helperMethod: 'stream' },
         }));
         return runner;
     }
+    /** Consumes serialized response events from a readable stream in another runtime. */
     static fromReadableStream(stream) {
         const runner = new ResponseStream(null);
         runner._run(() => runner._fromReadableStream(stream));
@@ -64852,19 +67110,29 @@ class ResponseStream extends EventStream {
         }
         return __classPrivateFieldGet(this, _ResponseStream_instances, "m", _ResponseStream_endRequest).call(this);
     }
-    [(_ResponseStream_params = new WeakMap(), _ResponseStream_currentResponseSnapshot = new WeakMap(), _ResponseStream_finalResponse = new WeakMap(), _ResponseStream_instances = new WeakSet(), _ResponseStream_beginRequest = function _ResponseStream_beginRequest() {
-        if (this.ended)
+    /** Iterates over response events; stopping iteration early aborts the underlying request. */
+    [(_ResponseStream_params = new WeakMap(), _ResponseStream_currentResponseSnapshot = new WeakMap(), _ResponseStream_finalResponse = new WeakMap(), _ResponseStream_accumulatorContext = new WeakMap(), _ResponseStream_instances = new WeakSet(), _ResponseStream_beginRequest = function _ResponseStream_beginRequest() {
+        if (this.ended) {
             return;
+        }
         __classPrivateFieldSet(this, _ResponseStream_currentResponseSnapshot, undefined, "f");
+        __classPrivateFieldSet(this, _ResponseStream_accumulatorContext, createResponseContext(), "f");
     }, _ResponseStream_addEvent = function _ResponseStream_addEvent(event, starting_after) {
-        if (this.ended)
+        if (this.ended) {
             return;
+        }
         const maybeEmit = (name, event) => {
             if (starting_after == null || event.sequence_number > starting_after) {
                 this._emit(name, event);
             }
         };
-        const response = accumulateResponse(event, __classPrivateFieldGet(this, _ResponseStream_currentResponseSnapshot, "f"));
+        if (event.type === 'error') {
+            // First-party providers nest their error payload; retain flat compatibility for
+            // serialized events matching the currently published event schema.
+            const error = 'error' in event && typeof event.error === 'object' && event.error !== null ? event.error : event;
+            throw new APIError(undefined, error, event.message, undefined);
+        }
+        const response = accumulateResponseWithContext(event, __classPrivateFieldGet(this, _ResponseStream_currentResponseSnapshot, "f"), __classPrivateFieldGet(this, _ResponseStream_accumulatorContext, "f"));
         __classPrivateFieldSet(this, _ResponseStream_currentResponseSnapshot, response, "f");
         maybeEmit('event', event);
         switch (event.type) {
@@ -64901,9 +67169,10 @@ class ResponseStream extends EventStream {
                 }
                 break;
             }
-            default:
+            default: {
                 maybeEmit(event.type, event);
                 break;
+            }
         }
     }, _ResponseStream_endRequest = function _ResponseStream_endRequest() {
         if (this.ended) {
@@ -64914,69 +67183,29 @@ class ResponseStream extends EventStream {
             throw new error_OpenAIError(`request ended without sending any events`);
         }
         __classPrivateFieldSet(this, _ResponseStream_currentResponseSnapshot, undefined, "f");
+        __classPrivateFieldSet(this, _ResponseStream_accumulatorContext, createResponseContext(), "f");
         const parsedResponse = finalizeResponse(snapshot, __classPrivateFieldGet(this, _ResponseStream_params, "f"));
         __classPrivateFieldSet(this, _ResponseStream_finalResponse, parsedResponse, "f");
         return parsedResponse;
     }, Symbol.asyncIterator)]() {
-        const pushQueue = [];
-        const readQueue = [];
-        let done = false;
-        this.on('event', (event) => {
-            const reader = readQueue.shift();
-            if (reader) {
-                reader.resolve(event);
-            }
-            else {
-                pushQueue.push(event);
-            }
-        });
-        this.on('end', () => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.resolve(undefined);
-            }
-            readQueue.length = 0;
-        });
-        this.on('abort', (err) => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.reject(err);
-            }
-            readQueue.length = 0;
-        });
-        this.on('error', (err) => {
-            done = true;
-            for (const reader of readQueue) {
-                reader.reject(err);
-            }
-            readQueue.length = 0;
-        });
-        return {
-            next: async () => {
-                if (!pushQueue.length) {
-                    if (done) {
-                        return { value: undefined, done: true };
-                    }
-                    return new Promise((resolve, reject) => readQueue.push({ resolve, reject })).then((event) => (event ? { value: event, done: false } : { value: undefined, done: true }));
-                }
-                const event = pushQueue.shift();
-                return { value: event, done: false };
-            },
-            return: async () => {
-                this.abort();
-                return { value: undefined, done: true };
-            },
-        };
+        return this._createIterator((push) => {
+            const onEvent = (event) => push(event);
+            this.on('event', onEvent);
+            return () => this.off('event', onEvent);
+        }, { onReturn: () => this.abort() });
     }
     /**
-     * @returns a promise that resolves with the final Response, or rejects
-     * if an error occurred or the stream ended prematurely without producing a REsponse.
+     * Waits for the stream to end and returns its latest accumulated response.
+     *
+     * A clean end after at least one response event resolves even when the response is
+     * incomplete. Network errors, cancellation, and streams without a response reject.
      */
     async finalResponse() {
         await this.done();
         const response = __classPrivateFieldGet(this, _ResponseStream_finalResponse, "f");
-        if (!response)
-            throw new error_OpenAIError('stream ended without producing a ChatCompletion');
+        if (!response) {
+            throw new error_OpenAIError('stream ended without producing a Response');
+        }
         return response;
     }
 }
@@ -64985,7 +67214,7 @@ function finalizeResponse(snapshot, params) {
 }
 //# sourceMappingURL=ResponseStream.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/responses/input-items.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65009,7 +67238,7 @@ class input_items_InputItems extends APIResource {
 }
 //# sourceMappingURL=input-items.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/responses/input-tokens.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 class input_tokens_InputTokens extends APIResource {
     /**
@@ -65033,7 +67262,7 @@ class input_tokens_InputTokens extends APIResource {
 }
 //# sourceMappingURL=input-tokens.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/responses/responses.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65144,7 +67373,7 @@ responses_Responses.InputItems = input_items_InputItems;
 responses_Responses.InputTokens = input_tokens_InputTokens;
 //# sourceMappingURL=responses.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/skills/content.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65163,7 +67392,7 @@ class content_Content extends APIResource {
 }
 //# sourceMappingURL=content.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/skills/versions/content.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65183,7 +67412,7 @@ class versions_content_Content extends APIResource {
 }
 //# sourceMappingURL=content.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/skills/versions/versions.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65199,7 +67428,9 @@ class Versions extends APIResource {
      * Create a new immutable skill version.
      */
     create(skillID, body = {}, options) {
-        return this._client.post(src_path `/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(src_path `/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client, {
+            stripFilenames: false,
+        }));
     }
     /**
      * Get a specific skill version.
@@ -65235,7 +67466,7 @@ class Versions extends APIResource {
 Versions.Content = versions_content_Content;
 //# sourceMappingURL=versions.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/skills/skills.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65254,7 +67485,9 @@ class Skills extends APIResource {
      * Create a new skill.
      */
     create(body = {}, options) {
-        return this._client.post('/skills', maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post('/skills', maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client, {
+            stripFilenames: false,
+        }));
     }
     /**
      * Get a skill by its ID.
@@ -65293,7 +67526,7 @@ Skills.Content = content_Content;
 Skills.Versions = Versions;
 //# sourceMappingURL=skills.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/uploads/parts.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65320,7 +67553,7 @@ class Parts extends APIResource {
 }
 //# sourceMappingURL=parts.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/uploads/uploads.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65421,7 +67654,7 @@ const allSettledWithThrow = async (promises) => {
 };
 //# sourceMappingURL=Util.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/vector-stores/file-batches.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65467,7 +67700,7 @@ class FileBatches extends APIResource {
      * Create a vector store batch and poll until all files have been processed.
      */
     async createAndPoll(vectorStoreId, body, options) {
-        const batch = await this.create(vectorStoreId, body);
+        const batch = await this.create(vectorStoreId, body, options);
         return await this.poll(vectorStoreId, batch.id, options);
     }
     /**
@@ -65554,12 +67787,12 @@ class FileBatches extends APIResource {
         await allSettledWithThrow(workers);
         return await this.createAndPoll(vectorStoreId, {
             file_ids: allFileIds,
-        });
+        }, options);
     }
 }
 //# sourceMappingURL=file-batches.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/vector-stores/files.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65707,7 +67940,7 @@ class vector_stores_files_Files extends APIResource {
 }
 //# sourceMappingURL=files.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/vector-stores/vector-stores.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -65793,27 +68026,36 @@ VectorStores.Files = vector_stores_files_Files;
 VectorStores.FileBatches = FileBatches;
 //# sourceMappingURL=vector-stores.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/videos.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
 
 
+/**
+ * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
+ */
 class Videos extends APIResource {
     /**
      * Create a new video generation job from a prompt and optional reference assets.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     create(body, options) {
         return this._client.post('/videos', multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
     }
     /**
      * Fetch the latest metadata for a generated video.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     retrieve(videoID, options) {
         return this._client.get(src_path `/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * List recently generated videos for the current project.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     list(query = {}, options) {
         return this._client.getAPIList('/videos', (ConversationCursorPage), {
@@ -65824,12 +68066,16 @@ class Videos extends APIResource {
     }
     /**
      * Permanently delete a completed or failed video and its stored assets.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     delete(videoID, options) {
         return this._client.delete(src_path `/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
     }
     /**
      * Create a character from an uploaded video.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     createCharacter(body, options) {
         return this._client.post('/videos/characters', multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
@@ -65838,6 +68084,8 @@ class Videos extends APIResource {
      * Download the generated video bytes or a derived preview asset.
      *
      * Streams the rendered video content for the specified video job.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     downloadContent(videoID, query = {}, options) {
         return this._client.get(src_path `/videos/${videoID}/content`, {
@@ -65851,18 +68099,24 @@ class Videos extends APIResource {
     /**
      * Create a new video generation job by editing a source video or existing
      * generated video.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     edit(body, options) {
         return this._client.post('/videos/edits', multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
     }
     /**
      * Create an extension of a completed video.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     extend(body, options) {
         return this._client.post('/videos/extensions', multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
     }
     /**
      * Fetch a character.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     getCharacter(characterID, options) {
         return this._client.get(src_path `/videos/characters/${characterID}`, {
@@ -65872,6 +68126,8 @@ class Videos extends APIResource {
     }
     /**
      * Create a remix of a completed video using a refreshed prompt.
+     *
+     * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
      */
     remix(videoID, body, options) {
         return this._client.post(src_path `/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
@@ -65879,8 +68135,10 @@ class Videos extends APIResource {
 }
 //# sourceMappingURL=videos.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/webhooks/webhooks.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 var _Webhooks_instances, _Webhooks_validateSecret, _Webhooks_getRequiredHeader;
+
+
 
 
 
@@ -65937,18 +68195,17 @@ class Webhooks extends APIResource {
             .split(' ')
             .map((part) => (part.startsWith('v1,') ? part.substring(3) : part));
         // Decode the secret if it starts with whsec_
-        const decodedSecret = secret.startsWith('whsec_') ?
-            Buffer.from(secret.replace('whsec_', ''), 'base64')
-            : Buffer.from(secret, 'utf-8');
+        const decodedSecret = Uint8Array.from(secret.startsWith('whsec_') ? fromBase64(secret.slice('whsec_'.length)) : bytes_encodeUTF8(secret));
         // Create the signed payload: {webhook_id}.{timestamp}.{payload}
         const signedPayload = webhookId ? `${webhookId}.${timestamp}.${payload}` : `${timestamp}.${payload}`;
+        const signedPayloadBytes = Uint8Array.from(bytes_encodeUTF8(signedPayload));
         // Import the secret as a cryptographic key for HMAC
         const key = await crypto.subtle.importKey('raw', decodedSecret, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
         // Check if any signature matches using timing-safe WebCrypto verify
         for (const signature of signatures) {
             try {
-                const signatureBytes = Buffer.from(signature, 'base64');
-                const isValid = await crypto.subtle.verify('HMAC', key, signatureBytes, new TextEncoder().encode(signedPayload));
+                const signatureBytes = Uint8Array.from(fromBase64(signature));
+                const isValid = await crypto.subtle.verify('HMAC', key, signatureBytes, signedPayloadBytes);
                 if (isValid) {
                     return; // Valid signature found
                 }
@@ -65977,15 +68234,15 @@ _Webhooks_instances = new WeakSet(), _Webhooks_validateSecret = function _Webhoo
 };
 //# sourceMappingURL=webhooks.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/webhooks/index.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 //# sourceMappingURL=index.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/webhooks.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 //# sourceMappingURL=webhooks.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/resources/index.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
 
 
 
@@ -66032,11 +68289,22 @@ const providerDefinitions = existingProviderDefinitions ?? new WeakMap();
 if (!existingProviderDefinitions) {
     Object.defineProperty(providerGlobal, providerDefinitionsKey, { value: providerDefinitions });
 }
+/**
+ * Creates an opaque, immutable provider handle for a runtime definition.
+ *
+ * The definition is registered out of band and can be resolved by another
+ * installed copy of the SDK in the same JavaScript realm.
+ */
 function createProvider(definition) {
     const provider = Object.freeze({});
     providerDefinitions.set(provider, definition);
     return provider;
 }
+/**
+ * Creates a new client-specific runtime from a previously registered provider.
+ *
+ * @throws {Error} If the value was not created with {@link createProvider}.
+ */
 function configureProvider(provider) {
     const definition = providerDefinitions.get(provider);
     if (!definition) {
@@ -66046,8 +68314,8 @@ function configureProvider(provider) {
 }
 //# sourceMappingURL=provider.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/client.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-var _OpenAI_instances, client_a, _OpenAI_encoder, _OpenAI_baseURLOverridden;
+// File generated from our OpenAPI spec by Castiron. See CONTRIBUTING.md for details.
+var _OpenAI_instances, client_a, _OpenAI_encoder, _OpenAI_responseAttempts, _OpenAI_baseURLOverridden;
 
 
 
@@ -66095,6 +68363,23 @@ var _OpenAI_instances, client_a, _OpenAI_encoder, _OpenAI_baseURLOverridden;
 
 
 
+
+function isRunningInBrowserOrBrowserWorker() {
+    if (isRunningInBrowser())
+        return true;
+    const scope = globalThis;
+    return (typeof scope.WorkerGlobalScope === 'function' &&
+        scope instanceof scope.WorkerGlobalScope &&
+        typeof scope.WorkerNavigator === 'function' &&
+        scope.navigator instanceof scope.WorkerNavigator &&
+        typeof scope.navigator?.userAgent === 'string' &&
+        scope.navigator.userAgent !== 'Cloudflare-Workers' &&
+        scope.process?.versions?.node === undefined &&
+        scope.Deno === undefined &&
+        scope.Bun === undefined &&
+        scope.EdgeRuntime === undefined &&
+        scope.WebSocketPair === undefined);
+}
 const WORKLOAD_IDENTITY_API_KEY_PLACEHOLDER = 'workload-identity-auth';
 /**
  * API Client for interfacing with the OpenAI API.
@@ -66121,6 +68406,7 @@ class OpenAI {
     constructor(clientOptions = {}) {
         _OpenAI_instances.add(this);
         _OpenAI_encoder.set(this, void 0);
+        _OpenAI_responseAttempts.set(this, new WeakMap());
         /**
          * Given a prompt, the model will return one or more predicted completions, and can also return the probabilities of alternative tokens at each position.
          */
@@ -66174,6 +68460,9 @@ class OpenAI {
         this.evals = new Evals(this);
         this.containers = new Containers(this);
         this.skills = new Skills(this);
+        /**
+         * @deprecated The Sora API is scheduled to permanently shut down on September 24, 2026.
+         */
         this.videos = new Videos(this);
         const provider = clientOptions.provider;
         if (provider) {
@@ -66184,7 +68473,7 @@ class OpenAI {
                     .join(', ')}. Configure authentication and the base URL through the provider instead.`);
             }
         }
-        const { baseURL = provider ? null : readEnv('OPENAI_BASE_URL'), apiKey = provider ? null : readEnv('OPENAI_API_KEY') ?? null, adminAPIKey = provider ? null : readEnv('OPENAI_ADMIN_KEY') ?? null, organization = provider ? null : readEnv('OPENAI_ORG_ID') ?? null, project = provider ? null : readEnv('OPENAI_PROJECT_ID') ?? null, webhookSecret = readEnv('OPENAI_WEBHOOK_SECRET') ?? null, workloadIdentity, ...opts } = clientOptions;
+        const { baseURL = provider ? null : env_readEnv('OPENAI_BASE_URL'), apiKey = provider ? null : (env_readEnv('OPENAI_API_KEY') ?? null), adminAPIKey = provider ? null : (env_readEnv('OPENAI_ADMIN_KEY') ?? null), organization = provider ? null : (env_readEnv('OPENAI_ORG_ID') ?? null), project = provider ? null : (env_readEnv('OPENAI_PROJECT_ID') ?? null), webhookSecret = env_readEnv('OPENAI_WEBHOOK_SECRET') ?? null, workloadIdentity, ...opts } = clientOptions;
         const providerRuntime = provider ? configureProvider(provider) : undefined;
         const options = {
             apiKey,
@@ -66203,24 +68492,24 @@ class OpenAI {
         if (!providerRuntime && !apiKey && !adminAPIKey && !workloadIdentity) {
             throw new error_OpenAIError('Missing credentials. Please pass an `apiKey`, `workloadIdentity`, `adminAPIKey`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable.');
         }
-        if (!options.dangerouslyAllowBrowser && isRunningInBrowser()) {
+        if (!options.dangerouslyAllowBrowser && isRunningInBrowserOrBrowserWorker()) {
             throw new error_OpenAIError("It looks like you're running in a browser-like environment.\n\nThis is disabled by default, as it risks exposing your secret API credentials to attackers.\nIf you understand the risks and have appropriate mitigations in place,\nyou can set the `dangerouslyAllowBrowser` option to `true`, e.g.,\n\nnew OpenAI({ apiKey, dangerouslyAllowBrowser: true });\n\nhttps://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety\n");
         }
         this.baseURL = options.baseURL;
-        this.timeout = options.timeout ?? client_a.DEFAULT_TIMEOUT /* 10 minutes */;
+        this.timeout = options.timeout ?? client_a.DEFAULT_TIMEOUT; /* 10 minutes */
         this.logger = options.logger ?? console;
         const defaultLogLevel = 'warn';
         // Set default logLevel early so that we can log a warning in parseLogLevel.
         this.logLevel = defaultLogLevel;
         this.logLevel =
             parseLogLevel(options.logLevel, 'ClientOptions.logLevel', this) ??
-                parseLogLevel(readEnv('OPENAI_LOG'), "process.env['OPENAI_LOG']", this) ??
+                parseLogLevel(env_readEnv('OPENAI_LOG'), "process.env['OPENAI_LOG']", this) ??
                 defaultLogLevel;
         this.fetchOptions = options.fetchOptions;
         this.maxRetries = options.maxRetries ?? 2;
         this.fetch = options.fetch ?? getDefaultFetch();
         __classPrivateFieldSet(this, _OpenAI_encoder, FallbackEncoder, "f");
-        const customHeadersEnv = provider ? undefined : readEnv('OPENAI_CUSTOM_HEADERS');
+        const customHeadersEnv = provider ? undefined : env_readEnv('OPENAI_CUSTOM_HEADERS');
         if (customHeadersEnv) {
             const parsed = {};
             for (const line of customHeadersEnv.split('\n')) {
@@ -66334,7 +68623,8 @@ class OpenAI {
         return `stainless-node-retry-${uuid4()}`;
     }
     makeStatusError(status, error, message, headers) {
-        return APIError.generate(status, error, message, headers);
+        const normalizedError = error && typeof error === 'object' && error.error == null ? { error } : error;
+        return APIError.generate(status, normalizedError, message, headers);
     }
     async _callApiKey() {
         if (this._provider)
@@ -66361,8 +68651,8 @@ class OpenAI {
     }
     buildURL(path, query, defaultBaseURL) {
         const baseURL = (!__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL) || this.baseURL;
-        const url = isAbsoluteURL(path) ?
-            new URL(path)
+        const url = isAbsoluteURL(path)
+            ? new URL(path)
             : new URL(baseURL + (baseURL.endsWith('/') && path.startsWith('/') ? path.slice(1) : path));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
@@ -66413,7 +68703,88 @@ class OpenAI {
         }));
     }
     request(options, remainingRetries = null) {
-        return new APIPromise(this, this.makeRequest(options, remainingRetries, undefined));
+        return this.responsePromise(this.makeRequest(options, remainingRetries, undefined));
+    }
+    responsePromise(request, parse = (client, props) => this.parseResponseWithTimeout(client, props)) {
+        const promise = new APIPromise(this, request, parse);
+        // A body timeout can retry after the original raw response has arrived. Wait for
+        // parsing before selecting the response so withResponse() reports the retry.
+        promise.withResponse = async () => {
+            const data = await promise;
+            const { response } = await request;
+            return { data, response, request_id: response.headers.get('x-request-id') };
+        };
+        promise._thenUnwrap = (transform) => this.responsePromise(request, async (client, props) => addRequestID(transform(await parse(client, props), props), props.response));
+        return promise;
+    }
+    async parseResponseWithTimeout(client, props) {
+        if (props.options.stream ||
+            props.options.__binaryResponse ||
+            props.response.status === 204 ||
+            props.response.headers.get('content-length') === '0') {
+            return defaultParseResponse(client, props);
+        }
+        while (true) {
+            const attempt = __classPrivateFieldGet(this, _OpenAI_responseAttempts, "f").get(props.controller);
+            const timeout = attempt?.timeout ?? props.options.timeout ?? this.timeout;
+            const remaining = Math.max(0, props.startTime + timeout - Date.now());
+            const callerSignal = props.options.signal;
+            let timer;
+            let abortListener;
+            let timedOut = false;
+            try {
+                // Tool runners preserve a completed buffered turn before cancellation stops the next request.
+                if (callerSignal?.aborted && props.options.__metadata?.['helperMethod'] !== 'runTools') {
+                    throw new APIUserAbortError();
+                }
+                const timeoutPromise = new Promise((_, reject) => {
+                    timer = setTimeout(() => {
+                        timedOut = true;
+                        props.controller.abort();
+                        reject(new APIConnectionTimeoutError());
+                    }, remaining);
+                    if (callerSignal) {
+                        abortListener = () => reject(new APIUserAbortError());
+                        callerSignal.addEventListener('abort', abortListener, { once: true });
+                    }
+                });
+                return await Promise.race([defaultParseResponse(client, props), timeoutPromise]);
+            }
+            catch (error) {
+                if (callerSignal?.aborted) {
+                    throw new APIUserAbortError();
+                }
+                if (!timedOut) {
+                    throw error;
+                }
+                const retriesRemaining = attempt?.retriesRemaining ?? 0;
+                if (!retriesRemaining ||
+                    props.options.__metadata?.['hasStreamingBody'] ||
+                    (globalThis.ReadableStream &&
+                        props.options.body instanceof globalThis.ReadableStream) ||
+                    (typeof props.options.body === 'object' &&
+                        props.options.body !== null &&
+                        (Symbol.asyncIterator in props.options.body ||
+                            (Symbol.iterator in props.options.body &&
+                                'next' in props.options.body &&
+                                typeof props.options.body.next === 'function')))) {
+                    throw new APIConnectionTimeoutError();
+                }
+                if (timer !== undefined)
+                    clearTimeout(timer);
+                if (abortListener)
+                    callerSignal?.removeEventListener('abort', abortListener);
+                abortListener = undefined;
+                const next = await this.retryRequest(props.options, retriesRemaining, props.retryOfRequestLogID ?? props.requestLogID);
+                Object.assign(props, next);
+            }
+            finally {
+                if (timer !== undefined)
+                    clearTimeout(timer);
+                if (abortListener)
+                    callerSignal?.removeEventListener('abort', abortListener);
+            }
+        }
     }
     async makeRequest(optionsInput, retriesRemaining, retryOfRequestLogID) {
         const options = await optionsInput;
@@ -66439,17 +68810,20 @@ class OpenAI {
             options,
             headers: req.headers,
         }));
-        if (options.signal?.aborted) {
-            throw new APIUserAbortError();
+        if (options.signal?.aborted || req.signal?.aborted) {
+            throw this._makeUserAbortError(options.signal?.aborted ? options.signal : req.signal);
         }
         const security = options.__security ?? { bearerAuth: true };
-        const controller = new AbortController();
+        // Request hooks may replace the caller signal before it reaches fetch.
+        const controller = this.fetchWithTimeout === client_a.prototype.fetchWithTimeout
+            ? createRequestController(req.signal)
+            : new AbortController();
         const response = await this.fetchWithAuth(url, req, timeout, controller, security).catch(castToError);
         const headersTime = Date.now();
         if (response instanceof globalThis.Error) {
             const retryMessage = `retrying, ${retriesRemaining} attempts remaining`;
-            if (options.signal?.aborted) {
-                throw new APIUserAbortError();
+            if (options.signal?.aborted || req.signal?.aborted) {
+                throw this._makeUserAbortError(options.signal?.aborted ? options.signal : req.signal);
             }
             // detect native connection timeout errors
             // deno throws "TypeError: error sending request for url (https://example/): client error (Connect): tcp connect error: Operation timed out (os error 60): Operation timed out (os error 60)"
@@ -66467,7 +68841,9 @@ class OpenAI {
                 }));
                 return this.retryRequest(options, retriesRemaining, retryOfRequestLogID ?? requestLogID);
             }
-            const terminalMessage = hasStreamingBody ? 'error; streaming body cannot be retried' : 'error; no more retries left';
+            const terminalMessage = hasStreamingBody
+                ? 'error; streaming body cannot be retried'
+                : 'error; no more retries left';
             loggerFor(this).info(`[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} - ${terminalMessage}`);
             loggerFor(this).debug(`[${requestLogID}] connection ${isTimeout ? 'timed out' : 'failed'} (${terminalMessage})`, formatRequestDetails({
                 retryOfRequestLogID,
@@ -66479,7 +68855,18 @@ class OpenAI {
                 throw response;
             }
             if (isTimeout) {
-                throw new APIConnectionTimeoutError();
+                const transportCause = 'cause' in response ? response.cause : undefined;
+                const isHeadersTimeout = typeof transportCause === 'object' &&
+                    transportCause !== null &&
+                    'code' in transportCause &&
+                    transportCause.code === 'UND_ERR_HEADERS_TIMEOUT';
+                const timeoutError = isHeadersTimeout
+                    ? new APIConnectionTimeoutError({
+                        message: 'Request timed out. Node.js fetch timed out waiting for response headers; ' +
+                            'configure a matching undici fetch and fetchOptions.dispatcher with an Agent whose headersTimeout is at least the SDK timeout.',
+                    })
+                    : new APIConnectionTimeoutError();
+                throw Object.assign(timeoutError, { cause: response });
             }
             throw new APIConnectionError({
                 message: getConnectionErrorMessage(response),
@@ -66522,8 +68909,9 @@ class OpenAI {
                 }));
                 return this.retryRequest(options, retriesRemaining, retryOfRequestLogID ?? requestLogID, response.headers);
             }
-            const retryMessage = shouldRetry ?
-                hasStreamingBody ? `error; streaming body cannot be retried`
+            const retryMessage = shouldRetry
+                ? hasStreamingBody
+                    ? `error; streaming body cannot be retried`
                     : `error; no more retries left`
                 : `error; not retryable`;
             loggerFor(this).info(`${responseInfo} - ${retryMessage}`);
@@ -66549,16 +68937,27 @@ class OpenAI {
             headers: response.headers,
             durationMs: headersTime - startTime,
         }));
+        __classPrivateFieldGet(this, _OpenAI_responseAttempts, "f").set(controller, { timeout, retriesRemaining });
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
     }
     getAPIList(path, Page, opts) {
-        return this.requestAPIList(Page, opts && 'then' in opts ?
-            opts.then((opts) => ({ method: 'get', path, ...opts }))
+        return this.requestAPIList(Page, opts && 'then' in opts
+            ? opts.then((opts) => ({ method: 'get', path, ...opts }))
             : { method: 'get', path, ...opts });
     }
     requestAPIList(Page, options) {
         const request = this.makeRequest(options, null, undefined);
-        return new PagePromise(this, request, Page);
+        const page = new PagePromise(this, request, Page);
+        const guarded = this.responsePromise(request, async (client, props) => {
+            const body = await this.parseResponseWithTimeout(client, props);
+            return new Page(client, props.response, body, props.options);
+        });
+        page.then = guarded.then.bind(guarded);
+        page.catch = guarded.catch.bind(guarded);
+        page.finally = guarded.finally.bind(guarded);
+        page.withResponse = guarded.withResponse.bind(guarded);
+        page._thenUnwrap = guarded._thenUnwrap.bind(guarded);
+        return page;
     }
     async fetchWithAuth(url, init, timeout, controller, schemes = {
         bearerAuth: true,
@@ -66578,7 +68977,8 @@ class OpenAI {
     async fetchWithTimeout(url, init, ms, controller) {
         const { signal, method, ...options } = init || {};
         const abort = this._makeAbort(controller);
-        if (signal)
+        const composed = !!signal && composedCallerSignals.get(controller) === signal;
+        if (signal && !composed)
             signal.addEventListener('abort', abort, { once: true });
         const timeout = setTimeout(abort, ms);
         const isReadableBody = (globalThis.ReadableStream && options.body instanceof globalThis.ReadableStream) ||
@@ -66597,6 +68997,11 @@ class OpenAI {
         try {
             // use undefined this binding; fetch errors if bound to something else in browser/cloudflare
             return await this.fetch.call(undefined, url, fetchOptions);
+        }
+        catch (err) {
+            if (signal && !composed)
+                signal.removeEventListener('abort', abort);
+            throw err;
         }
         finally {
             clearTimeout(timeout);
@@ -66636,7 +69041,7 @@ class OpenAI {
         }
         // About the Retry-After header: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After
         const retryAfterHeader = responseHeaders?.get('retry-after');
-        if (retryAfterHeader && !timeoutMillis) {
+        if (retryAfterHeader && timeoutMillis === undefined) {
             const timeoutSeconds = parseFloat(retryAfterHeader);
             if (!Number.isNaN(timeoutSeconds)) {
                 timeoutMillis = timeoutSeconds * 1000;
@@ -66647,7 +69052,10 @@ class OpenAI {
         }
         // If the API asks us to wait a certain amount of time, just do what it
         // says, but otherwise calculate a default
-        if (timeoutMillis === undefined) {
+        if (timeoutMillis === undefined ||
+            !Number.isFinite(timeoutMillis) ||
+            timeoutMillis < 0 ||
+            timeoutMillis > 60 * 1000) {
             const maxRetries = options.maxRetries ?? this.maxRetries;
             timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
         }
@@ -66698,18 +69106,22 @@ class OpenAI {
                 options.idempotencyKey = this.defaultIdempotencyKey();
             idempotencyHeaders[this.idempotencyHeader] = options.idempotencyKey;
         }
+        const helperMethod = options.__metadata?.['helperMethod'];
         const headers = buildHeaders([
             idempotencyHeaders,
             {
                 Accept: 'application/json',
-                'User-Agent': this.getUserAgent(),
+                ...(!isRunningInBrowserOrBrowserWorker() ? { 'User-Agent': this.getUserAgent() } : undefined),
                 'X-Stainless-Retry-Count': String(retryCount),
                 ...(options.timeout ? { 'X-Stainless-Timeout': String(Math.trunc(options.timeout / 1000)) } : {}),
                 ...getPlatformHeaders(),
+                ...(typeof helperMethod === 'string' ? { 'X-Stainless-Helper-Method': helperMethod } : {}),
                 'OpenAI-Organization': this.organization,
                 'OpenAI-Project': this.project,
             },
-            this._provider ? undefined : (await this.authHeaders(options, options.__security ?? { bearerAuth: true })),
+            this._provider
+                ? undefined
+                : await this.authHeaders(options, options.__security ?? { bearerAuth: true }),
             this._options.defaultHeaders,
             bodyHeaders,
             options.headers,
@@ -66723,6 +69135,11 @@ class OpenAI {
         // note: we can't just inline this method inside `fetchWithTimeout()` because then the closure
         //       would capture all request options, and cause a memory leak.
         return () => controller.abort();
+    }
+    _makeUserAbortError(signal) {
+        const error = new APIUserAbortError();
+        Object.defineProperty(error, 'cause', { value: signal.reason, writable: true, configurable: true });
+        return error;
     }
     buildBody({ options }) {
         const { body, headers: rawHeaders } = options;
@@ -66786,7 +69203,7 @@ class OpenAI {
         }
     }
 }
-client_a = OpenAI, _OpenAI_encoder = new WeakMap(), _OpenAI_instances = new WeakSet(), _OpenAI_baseURLOverridden = function _OpenAI_baseURLOverridden() {
+client_a = OpenAI, _OpenAI_encoder = new WeakMap(), _OpenAI_responseAttempts = new WeakMap(), _OpenAI_instances = new WeakSet(), _OpenAI_baseURLOverridden = function _OpenAI_baseURLOverridden() {
     return this._provider !== undefined || this.baseURL !== 'https://api.openai.com/v1';
 };
 OpenAI.OpenAI = client_a;
@@ -66831,6 +69248,27 @@ OpenAI.Evals = Evals;
 OpenAI.Containers = Containers;
 OpenAI.Skills = Skills;
 OpenAI.Videos = Videos;
+const composedCallerSignals = new WeakMap();
+function createRequestController(callerSignal) {
+    const controller = new AbortController();
+    if (!callerSignal)
+        return controller;
+    const nativeAbortSignal = globalThis.AbortSignal;
+    if (typeof nativeAbortSignal?.any !== 'function' || !(callerSignal instanceof nativeAbortSignal)) {
+        return controller;
+    }
+    try {
+        // Native composition keeps cancellation active after response headers without
+        // retaining an abort listener on the caller's signal or changing its reason.
+        const composed = nativeAbortSignal.any([controller.signal, callerSignal]);
+        Object.defineProperty(controller, 'signal', { value: composed, configurable: true });
+        composedCallerSignals.set(controller, callerSignal);
+    }
+    catch {
+        // Older or incompatible runtimes retain the existing listener-based fallback.
+    }
+    return controller;
+}
 function getConnectionErrorMessage(error) {
     if (isUndiciDispatcherVersionMismatchError(error)) {
         return `Connection error. This may be caused by passing an undici dispatcher, such as ProxyAgent, that is incompatible with the fetch implementation. If you are using undici's ProxyAgent, pass the fetch implementation from the same undici package: import { fetch, ProxyAgent } from 'undici'; new OpenAI({ fetch, fetchOptions: { dispatcher: new ProxyAgent(...) } });`;
@@ -66856,31 +69294,32 @@ function isUndiciDispatcherVersionMismatchError(error) {
 
 
 
+
 /** API Client for interfacing with the Azure OpenAI API. */
 class AzureOpenAI extends OpenAI {
     /**
      * API Client for interfacing with the Azure OpenAI API.
      *
-     * @param {string | undefined} [opts.apiVersion=process.env['OPENAI_API_VERSION'] ?? undefined]
-     * @param {string | undefined} [opts.endpoint=process.env['AZURE_OPENAI_ENDPOINT'] ?? undefined] - Your Azure endpoint, including the resource, e.g. `https://example-resource.azure.openai.com/`
-     * @param {string | undefined} [opts.apiKey=process.env['AZURE_OPENAI_API_KEY'] ?? undefined]
-     * @param {string | undefined} opts.deployment - A model deployment, if given, sets the base client URL to include `/deployments/{deployment}`.
-     * @param {string | null | undefined} [opts.organization=process.env['OPENAI_ORG_ID'] ?? null]
-     * @param {string} [opts.baseURL=process.env['OPENAI_BASE_URL']] - Sets the base URL for the API, e.g. `https://example-resource.azure.openai.com/openai/`.
-     * @param {number} [opts.timeout=10 minutes] - The maximum amount of time (in milliseconds) the client will wait for a response before timing out.
-     * @param {number} [opts.httpAgent] - An HTTP agent used to manage HTTP(s) connections.
+     * @param {string | undefined} [opts.apiVersion] - Defaults to `process.env['OPENAI_API_VERSION'] ?? undefined`.
+     * @param {string | undefined} [opts.endpoint] - Your Azure endpoint, including the resource, e.g. `https://example-resource.azure.openai.com/`. Defaults to `process.env['AZURE_OPENAI_ENDPOINT'] ?? undefined`.
+     * @param {string | undefined} [opts.apiKey] - Defaults to `process.env['AZURE_OPENAI_API_KEY'] ?? undefined`.
+     * @param {string | undefined} opts.deployment - Azure model deployment inserted into supported deployment-scoped request paths.
+     * @param {string | null | undefined} [opts.organization] - Defaults to `process.env['OPENAI_ORG_ID'] ?? null`.
+     * @param {string} [opts.baseURL] - Sets the base URL for the API, e.g. `https://example-resource.azure.openai.com/openai/`. Defaults to `process.env['OPENAI_BASE_URL']`.
+     * @param {number} [opts.timeout] - The maximum amount of time (in milliseconds) the client will wait for a response before timing out. Defaults to 10 minutes.
+     * @param {() => Promise<string>} [opts.azureADTokenProvider] - Returns a fresh Microsoft Entra access token for each request; cannot be combined with `apiKey`.
      * @param {Fetch} [opts.fetch] - Specify a custom `fetch` function implementation.
-     * @param {number} [opts.maxRetries=2] - The maximum number of times the client will retry a request.
+     * @param {number} [opts.maxRetries] - The maximum number of times the client will retry a request. Defaults to `2`.
      * @param {Headers} opts.defaultHeaders - Default headers to include with every request to the API.
      * @param {DefaultQuery} opts.defaultQuery - Default query parameters to include with every request to the API.
-     * @param {boolean} [opts.dangerouslyAllowBrowser=false] - By default, client-side use of this library is not allowed, as it risks exposing your secret API credentials to attackers.
+     * @param {boolean} [opts.dangerouslyAllowBrowser] - By default, client-side use of this library is not allowed, as it risks exposing your secret API credentials to attackers. Defaults to `false`.
      */
-    constructor({ baseURL = readEnv('OPENAI_BASE_URL'), apiKey = readEnv('AZURE_OPENAI_API_KEY'), apiVersion = readEnv('OPENAI_API_VERSION'), endpoint, deployment, azureADTokenProvider, dangerouslyAllowBrowser, ...opts } = {}) {
+    constructor({ baseURL = env_readEnv('OPENAI_BASE_URL'), apiKey = env_readEnv('AZURE_OPENAI_API_KEY'), apiVersion = env_readEnv('OPENAI_API_VERSION'), endpoint, deployment, azureADTokenProvider, dangerouslyAllowBrowser, ...opts } = {}) {
         if (!apiVersion) {
             throw new error_OpenAIError("The OPENAI_API_VERSION environment variable is missing or empty; either provide it, or instantiate the AzureOpenAI client with an apiVersion option, like new AzureOpenAI({ apiVersion: 'My API Version' }).");
         }
         if (typeof azureADTokenProvider === 'function') {
-            dangerouslyAllowBrowser = true;
+            dangerouslyAllowBrowser ?? (dangerouslyAllowBrowser = true);
         }
         if (!azureADTokenProvider && !apiKey) {
             throw new error_OpenAIError('Missing credentials. Please pass one of `apiKey` and `azureADTokenProvider`, or set the `AZURE_OPENAI_API_KEY` environment variable.');
@@ -66902,21 +69341,21 @@ class AzureOpenAI extends OpenAI {
             }
             baseURL = `${endpoint.slice(0, endpointEnd)}/openai`;
         }
-        else {
-            if (endpoint) {
-                throw new error_OpenAIError('baseURL and endpoint are mutually exclusive');
-            }
+        else if (endpoint) {
+            throw new error_OpenAIError('baseURL and endpoint are mutually exclusive');
         }
         super({
             apiKey: azureADTokenProvider ?? apiKey,
             baseURL,
             ...opts,
-            ...(dangerouslyAllowBrowser !== undefined ? { dangerouslyAllowBrowser } : {}),
+            ...(dangerouslyAllowBrowser === undefined ? {} : { dangerouslyAllowBrowser }),
         });
+        /** Azure OpenAI API version included in requests made by this client. */
         this.apiVersion = '';
         this.apiVersion = apiVersion;
         this.deploymentName = deployment;
     }
+    /** Builds an Azure request and inserts its deployment into model-scoped endpoint paths. */
     async buildRequest(options, props = {}) {
         if (_deployments_endpoints.has(options.path) && options.method === 'post' && options.body !== undefined) {
             if (!isObj(options.body)) {
@@ -66924,10 +69363,20 @@ class AzureOpenAI extends OpenAI {
             }
             const model = this.deploymentName || options.body['model'] || options.__metadata?.['model'];
             if (model !== undefined && !this.baseURL.includes('/deployments')) {
-                options.path = `/deployments/${model}${options.path}`;
+                options.path = src_path `/deployments/${model}` + options.path;
             }
         }
-        return super.buildRequest(options, props);
+        const built = await super.buildRequest(options, props);
+        if (built.req.headers.has('api-key')) {
+            built.req.redirect = 'manual';
+        }
+        return built;
+    }
+    async fetchWithAuth(url, init, timeout, controller, schemes) {
+        if (new Headers(init.headers).has('api-key')) {
+            init.redirect = 'manual';
+        }
+        return super.fetchWithAuth(url, init, timeout, controller, schemes);
     }
     async authHeaders(opts, schemes) {
         const security = schemes ?? { bearerAuth: true, adminAPIKeyAuth: true };
@@ -66949,7 +69398,240 @@ const _deployments_endpoints = new Set([
     '/images/edits',
 ]);
 //# sourceMappingURL=azure.mjs.map
+;// CONCATENATED MODULE: ./node_modules/openai/internal/bedrock.mjs
+
+
+/** Identifies legacy Bedrock clients without importing the client class into WebSocket modules. */
+const brand_privateBedrockClient = Symbol.for('openai.privateBedrockClient');
+/** Wraps a provider failure in an SDK error while preserving its original cause. */
+function errorWithCause(message, cause) {
+    const error = new Errors.OpenAIError(message);
+    error.cause = cause;
+    return error;
+}
+/** Trims a configuration string, treating missing and whitespace-only values as absent. */
+function normalizeOptionalString(value) {
+    const normalized = typeof value === 'string' ? value.trim() : undefined;
+    return normalized || undefined;
+}
+function normalizeBaseURL(baseURL) {
+    const url = new URL(baseURL);
+    const responsesMatch = url.pathname.match(/\/responses(?:\/.*)?$/);
+    if (responsesMatch?.index !== undefined) {
+        url.pathname = url.pathname.slice(0, responsesMatch.index) || '/';
+    }
+    return url.toString().replace(/\/$/, '');
+}
+function resolveRuntimeDnsSuffixes(region) {
+    if (region.startsWith('cn-')) {
+        return ['amazonaws.com.cn', 'api.amazonwebservices.com.cn'];
+    }
+    if (region.startsWith('eusc-')) {
+        return ['amazonaws.eu', 'api.amazonwebservices.eu'];
+    }
+    if (region.startsWith('us-iso-')) {
+        return ['c2s.ic.gov', 'api.aws.ic.gov'];
+    }
+    if (region.startsWith('us-isob-')) {
+        return ['sc2s.sgov.gov', 'api.aws.scloud'];
+    }
+    if (region.startsWith('eu-isoe-')) {
+        return ['cloud.adc-e.uk', 'api.cloud-aws.adc-e.uk'];
+    }
+    if (region.startsWith('us-isof-')) {
+        return ['csp.hci.ic.gov', 'api.aws.hci.ic.gov'];
+    }
+    return ['amazonaws.com', 'api.aws'];
+}
+/** Identifies a canonical Amazon Bedrock hostname and its embedded AWS region. */
+function parseBedrockEndpointHostname(hostname) {
+    const canonicalHostname = hostname.endsWith('.') ? hostname.slice(0, -1) : hostname;
+    const [service, region, ...suffixParts] = canonicalHostname.toLowerCase().split('.');
+    const suffix = suffixParts.join('.');
+    if (service === 'bedrock-mantle' && region && /^[a-z0-9-]+$/.test(region) && suffix === 'api.aws') {
+        return { endpoint: 'mantle', region };
+    }
+    if ((service === 'bedrock-runtime' || service === 'bedrock-runtime-fips') && region) {
+        const [standardSuffix, dualStackSuffix] = resolveRuntimeDnsSuffixes(region);
+        if (suffix === standardSuffix || suffix === dualStackSuffix) {
+            return { endpoint: 'runtime', region };
+        }
+    }
+    return undefined;
+}
+/** Rejects insecure or mismatched canonical Amazon Bedrock endpoint overrides. */
+function validateCanonicalBedrockEndpoint(baseURL, endpoint, region) {
+    const parsedBaseURL = new URL(baseURL);
+    const canonicalEndpoint = parseBedrockEndpointHostname(parsedBaseURL.hostname);
+    if (canonicalEndpoint && parsedBaseURL.protocol !== 'https:') {
+        throw new Errors.OpenAIError('Canonical Amazon Bedrock endpoints require HTTPS.');
+    }
+    if (canonicalEndpoint && canonicalEndpoint.endpoint !== endpoint) {
+        throw new Errors.OpenAIError(`The Bedrock ${canonicalEndpoint.endpoint} hostname does not match the selected \`${endpoint}\` endpoint. Set \`endpoint: '${canonicalEndpoint.endpoint}'\` to use this hostname.`);
+    }
+    if (canonicalEndpoint && region && canonicalEndpoint.region !== region) {
+        throw new Errors.OpenAIError(`The Bedrock endpoint region \`${canonicalEndpoint.region}\` does not match the configured AWS region \`${region}\`.`);
+    }
+}
+function validateBedrockEndpointSelection(endpoint) {
+    if (endpoint !== undefined && endpoint !== 'mantle' && endpoint !== 'runtime') {
+        throw new Errors.OpenAIError('The Bedrock `endpoint` must be either `mantle` or `runtime`.');
+    }
+}
+/**
+ * Resolves the Bedrock endpoint family, region, and API root from configuration.
+ *
+ * Region precedence is `region`, `AWS_REGION`, then `AWS_DEFAULT_REGION`.
+ * Endpoint precedence is `baseURL`, `AWS_BEDROCK_BASE_URL`, then the regional
+ * selected endpoint; an explicit `null` base URL skips the environment override.
+ * Existing `/responses` suffixes and trailing slashes are removed. Canonical
+ * AWS hostnames infer the endpoint family when none is selected explicitly.
+ * Other configured URLs and derived endpoints default to Mantle.
+ *
+ * @throws {Errors.OpenAIError} If an option is invalid, a canonical hostname
+ * conflicts with the endpoint family, or the default endpoint needs a region.
+ */
+function resolveBedrockEndpoint(options) {
+    validateBedrockEndpointSelection(options.endpoint);
+    if (options.region !== undefined && !normalizeOptionalString(options.region)) {
+        throw new Errors.OpenAIError('The Bedrock AWS `region` must not be empty.');
+    }
+    if (options.baseURL !== undefined &&
+        options.baseURL !== null &&
+        !normalizeOptionalString(options.baseURL)) {
+        throw new Errors.OpenAIError('The Bedrock `baseURL` must not be empty.');
+    }
+    const region = normalizeOptionalString(options.region) ??
+        normalizeOptionalString(readEnv('AWS_REGION')) ??
+        normalizeOptionalString(readEnv('AWS_DEFAULT_REGION'));
+    if (region && !/^[a-z]{2,8}(?:-[a-z0-9]+)+-\d+$/.test(region)) {
+        throw new Errors.OpenAIError('The Bedrock AWS `region` is invalid. Use a standard AWS region such as `us-east-1`.');
+    }
+    const configuredBaseURL = options.baseURL === undefined
+        ? normalizeOptionalString(readEnv('AWS_BEDROCK_BASE_URL'))
+        : normalizeOptionalString(options.baseURL);
+    if (configuredBaseURL) {
+        const baseURL = normalizeBaseURL(configuredBaseURL);
+        const endpoint = options.endpoint ?? parseBedrockEndpointHostname(new URL(baseURL).hostname)?.endpoint ?? 'mantle';
+        validateCanonicalBedrockEndpoint(baseURL, endpoint, region);
+        return { endpoint, region, baseURL };
+    }
+    const endpoint = options.endpoint ?? 'mantle';
+    if (!region) {
+        throw new Errors.OpenAIError('Bedrock requires an AWS region. Pass `region` to `bedrock(...)`, or set `AWS_REGION` or `AWS_DEFAULT_REGION`.');
+    }
+    const hostname = endpoint === 'runtime'
+        ? `bedrock-runtime.${region}.${resolveRuntimeDnsSuffixes(region)[0]}`
+        : `bedrock-mantle.${region}.api.aws`;
+    return { endpoint, region, baseURL: `https://${hostname}/openai/v1` };
+}
+/**
+ * Ensures Bedrock credentials are only attached to the configured endpoint origin.
+ *
+ * @throws {Errors.OpenAIError} If either URL is not HTTP(S) or the request targets a different origin.
+ */
+function assertBedrockRequestOrigin(baseURL, requestURL) {
+    const expectedURL = new URL(baseURL);
+    const request = new URL(requestURL);
+    const expectedOrigin = expectedURL.origin;
+    const requestOrigin = request.origin;
+    if ((expectedURL.protocol !== 'http:' && expectedURL.protocol !== 'https:') ||
+        (request.protocol !== 'http:' && request.protocol !== 'https:') ||
+        requestOrigin !== expectedOrigin) {
+        throw new error_OpenAIError(`Bedrock request origin \`${requestOrigin}\` does not match the configured base URL origin \`${expectedOrigin}\`.`);
+    }
+}
+/** Validates a final WebSocket URL before a legacy Bedrock client resolves or attaches credentials. */
+function assertBedrockWebSocketOrigin(client, requestURL) {
+    if (typeof client !== 'object' || client === null || !(brand_privateBedrockClient in client)) {
+        return;
+    }
+    const normalizedRequestURL = new URL(requestURL);
+    if (normalizedRequestURL.protocol === 'wss:') {
+        normalizedRequestURL.protocol = 'https:';
+    }
+    else if (normalizedRequestURL.protocol === 'ws:') {
+        normalizedRequestURL.protocol = 'http:';
+    }
+    assertBedrockRequestOrigin(client.baseURL, normalizedRequestURL.toString());
+}
+/**
+ * Rejects caller-provided authorization headers that conflict with provider authentication.
+ *
+ * @throws {Errors.OpenAIError} If an `Authorization` header is already present.
+ */
+function assertProviderOwnsAuthorization(headers) {
+    if (headers.has('authorization')) {
+        throw new Errors.OpenAIError('Bedrock provider authentication cannot be combined with a custom `Authorization` header.');
+    }
+}
+class BedrockBearerAuth {
+    constructor(tokenProvider) {
+        this.tokenProvider = tokenProvider;
+    }
+    async prepareRequest(request, _context) {
+        const headers = new Headers(request.headers);
+        assertProviderOwnsAuthorization(headers);
+        let token;
+        try {
+            token = await this.tokenProvider();
+        }
+        catch (cause) {
+            throw errorWithCause('Failed to resolve a bearer credential for Bedrock.', cause);
+        }
+        if (typeof token !== 'string' || !token.trim()) {
+            throw new Errors.OpenAIError('The Bedrock bearer credential provider must return a non-empty string.');
+        }
+        headers.set('authorization', `Bearer ${token}`);
+        request.redirect = 'manual';
+        request.headers = headers;
+    }
+}
+/**
+ * Resolves a bearer-authentication factory without calling token providers eagerly.
+ *
+ * Explicit `tokenProvider` and `apiKey` options are mutually exclusive. When
+ * neither is set, `AWS_BEARER_TOKEN_BEDROCK` is used unless environment
+ * credentials are disabled or `apiKey` is explicitly `null`.
+ *
+ * @throws {Errors.OpenAIError} If an explicit key is empty or multiple bearer
+ * credential sources are configured.
+ */
+function resolveBedrockBearerAuth(options, { allowEnvironment = true, } = {}) {
+    if (options.apiKey !== undefined &&
+        options.apiKey !== null &&
+        (typeof options.apiKey !== 'string' || !options.apiKey.trim())) {
+        throw new Errors.OpenAIError('The Bedrock bearer credential must not be empty.');
+    }
+    if (options.apiKey != null && options.tokenProvider) {
+        throw new Errors.OpenAIError('The `apiKey` and `tokenProvider` options are mutually exclusive. Configure only one.');
+    }
+    if (options.tokenProvider) {
+        const tokenProvider = options.tokenProvider;
+        return { factory: () => new BedrockBearerAuth(tokenProvider), explicit: true };
+    }
+    if (options.apiKey != null) {
+        const apiKey = options.apiKey;
+        return { factory: () => new BedrockBearerAuth(async () => apiKey), explicit: true };
+    }
+    if (allowEnvironment && options.apiKey !== null && readEnv('AWS_BEARER_TOKEN_BEDROCK')) {
+        return {
+            explicit: false,
+            factory: () => new BedrockBearerAuth(async () => {
+                const token = readEnv('AWS_BEARER_TOKEN_BEDROCK');
+                if (!token) {
+                    throw new Errors.OpenAIError('Could not find credentials for Bedrock. Set `AWS_BEARER_TOKEN_BEDROCK` or configure AWS credential authentication.');
+                }
+                return token;
+            }),
+        };
+    }
+    return { factory: undefined, explicit: false };
+}
+//# sourceMappingURL=bedrock.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/bedrock.mjs
+var bedrock_a;
+
 
 
 
@@ -66996,17 +69678,17 @@ class BedrockOpenAI extends OpenAI {
     /**
      * API Client for interfacing with Amazon Bedrock's OpenAI-compatible endpoint.
      *
-     * @param {string | null | undefined} [opts.apiKey=process.env['AWS_BEARER_TOKEN_BEDROCK'] ?? null]
-     * @param {string | null | undefined} [opts.baseURL=process.env['AWS_BEDROCK_BASE_URL'] ?? derived from opts.awsRegion or AWS_REGION/AWS_DEFAULT_REGION]
-     * @param {string | undefined} [opts.awsRegion=process.env['AWS_REGION'] ?? process.env['AWS_DEFAULT_REGION'] ?? undefined]
+     * @param {string | null | undefined} [opts.apiKey] - Defaults to `process.env['AWS_BEARER_TOKEN_BEDROCK'] ?? null`.
+     * @param {string | null | undefined} [opts.baseURL] - Defaults to `process.env['AWS_BEDROCK_BASE_URL']`, or is derived from `opts.awsRegion`, `AWS_REGION`, or `AWS_DEFAULT_REGION`.
+     * @param {string | undefined} [opts.awsRegion] - Defaults to `process.env['AWS_REGION'] ?? process.env['AWS_DEFAULT_REGION'] ?? undefined`.
      * @param {ApiKeySetter | undefined} opts.bedrockTokenProvider - A function that returns a Bedrock bearer token and is invoked before each request.
      */
-    constructor({ baseURL = readEnv('AWS_BEDROCK_BASE_URL'), apiKey, awsRegion = readEnv('AWS_REGION') ?? readEnv('AWS_DEFAULT_REGION'), bedrockTokenProvider, adminAPIKey, workloadIdentity, ...opts } = {}) {
+    constructor({ baseURL = env_readEnv('AWS_BEDROCK_BASE_URL'), apiKey, awsRegion = env_readEnv('AWS_REGION') ?? env_readEnv('AWS_DEFAULT_REGION'), bedrockTokenProvider, adminAPIKey, workloadIdentity, ...opts } = {}) {
         if (adminAPIKey || workloadIdentity) {
             throw new error_OpenAIError('BedrockOpenAI only supports Bedrock bearer token authentication.');
         }
         if (apiKey === undefined && !bedrockTokenProvider) {
-            apiKey = readEnv('AWS_BEARER_TOKEN_BEDROCK') ?? null;
+            apiKey = env_readEnv('AWS_BEARER_TOKEN_BEDROCK') ?? null;
         }
         if (typeof apiKey === 'function') {
             throw new error_OpenAIError('Pass refreshable Bedrock credentials via `bedrockTokenProvider`, not `apiKey`.');
@@ -67024,15 +69706,42 @@ class BedrockOpenAI extends OpenAI {
             baseURL: normalizeBedrockBaseURL(configuredBaseURL),
             ...opts,
         });
+        /**
+         * Identifies this client to credential-bearing WebSocket helpers.
+         *
+         * @internal
+         */
+        this[bedrock_a] = true;
+        const trustedBaseURL = this.baseURL;
+        let currentBaseURL = trustedBaseURL;
+        Object.defineProperty(this, 'baseURL', {
+            enumerable: true,
+            configurable: false,
+            get() {
+                return currentBaseURL;
+            },
+            set(nextBaseURL) {
+                assertBedrockRequestOrigin(trustedBaseURL, nextBaseURL);
+                currentBaseURL = nextBaseURL;
+            },
+        });
         this.bedrockTokenProvider = bedrockTokenProvider;
         this.responses = restoreBedrockStreamOutputText(new responses_Responses(this));
     }
     async prepareOptions(options) {
+        const configuredBaseURL = this._options.baseURL ?? this.baseURL;
+        assertBedrockRequestOrigin(configuredBaseURL, this.buildURL(options.path, null, options.defaultBaseURL));
         const security = options.__security ?? { bearerAuth: true };
         if (security.adminAPIKeyAuth && !security.bearerAuth) {
             await this._callApiKey();
         }
         await super.prepareOptions(options);
+        assertBedrockRequestOrigin(configuredBaseURL, this.buildURL(options.path, null, options.defaultBaseURL));
+    }
+    async prepareRequest(request, context) {
+        assertBedrockRequestOrigin(this._options.baseURL ?? this.baseURL, context.url);
+        await super.prepareRequest(request, context);
+        request.redirect = 'manual';
     }
     async authHeaders(opts, schemes) {
         const security = schemes ?? { bearerAuth: true, adminAPIKeyAuth: true };
@@ -67041,17 +69750,18 @@ class BedrockOpenAI extends OpenAI {
         }
         return super.authHeaders(opts, security);
     }
+    /** Clones this client while preserving its refreshable Bedrock token provider when appropriate. */
     withOptions(options) {
-        const bedrockTokenProvider = options.apiKey !== undefined ? undefined : options.bedrockTokenProvider ?? this.bedrockTokenProvider;
+        const bedrockTokenProvider = options.apiKey === undefined ? (options.bedrockTokenProvider ?? this.bedrockTokenProvider) : undefined;
         return super.withOptions({
             ...options,
             ...(bedrockTokenProvider ? { apiKey: undefined, bedrockTokenProvider } : {}),
         });
     }
 }
+bedrock_a = brand_privateBedrockClient;
 //# sourceMappingURL=bedrock.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/openai/index.mjs
-// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
 
 
