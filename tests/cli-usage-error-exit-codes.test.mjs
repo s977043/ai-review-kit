@@ -150,6 +150,9 @@ const CONTRACTS = {
 // #1759 C4（issue 側の C4 番号。本ファイルの contract C4 とは無関係）で
 // `evolve aggregate --month` の月として不正な値（2026-13 / 2026-00）を
 // invalid-value 2 件として追加し、C3 が 105 -> 107 になった。
+// #1759 C3（未知の `--context` 語彙を stderr で警告する）は exit code を 1 つも
+// 動かさないので CASES は不変であり、この件数も変わらない。追加したのは
+// VALID_CASES の 1 行（88 -> 89）だけである。
 const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 107, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
@@ -1108,11 +1111,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // 「フラグ先行形を拒否」も v1.72.1 の「`--phase Upstream` を誤拒否」も
   // 壊したのは**成功側**であり、守りが薄いのは逆だった。行を消すだけで
   // 黙って保護が減るのを防ぐ。
-  test('the success-side table pins 88 legitimate argv forms', () => {
+  test('the success-side table pins 89 legitimate argv forms', () => {
     assert.equal(
       VALID_CASES.length,
-      88,
-      'コマンド面ごとの正常形: run 12 / doctor 5 / skills 13 / runs 7 (#1759 B2 で1行追加) / review 19 / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 13 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加) / help 2 / コマンド無し 1'
+      89,
+      'コマンド面ごとの正常形: run 13 (#1759 C3 で --context 未知語彙 1行追加) / doctor 5 / skills 13 / runs 7 (#1759 B2 で1行追加) / review 19 / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 13 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加) / help 2 / コマンド無し 1'
     );
   });
 
@@ -1265,6 +1268,11 @@ const VALID_CASES = [
     command: 'run',
   },
   { argv: ['run', '.', '--rules-only', '--advisory-only'], command: 'run' },
+  // #1759 C3: 未知の `--context` 語彙は stderr へ警告を出すだけで、exit code は
+  // 動かない（usage error にはしない）。警告の文言は本ファイルの対象外なので
+  // tests/cli-unknown-context-warning.test.mjs で pin し、ここでは「exit 0 側に
+  // 居続けること」だけを固定する。
+  { argv: ['run', '.', '--context', 'BOGUS_CONTEXT'], command: 'run' },
   { argv: ['run', '.', '--gate', '--fail-on', 'major'], command: 'run' },
   { argv: ['doctor', '.', '--output', 'json'], command: 'doctor' },
   { argv: ['skills', '.', '--phase', 'upstream'], command: 'skills' },

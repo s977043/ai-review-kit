@@ -493,6 +493,88 @@ const KNOWN_OPTION_TOKENS = new Set([
 ]);
 
 /**
+ * Cache for {@link knownInputContexts}. `undefined` = not read yet,
+ * `null` = read failed (stay quiet), array = the vocabulary.
+ * @type {string[] | null | undefined}
+ */
+let knownInputContextsCache;
+
+/**
+ * The `inputContext` vocabulary, read from its SSoT
+ * `schemas/skill.schema.json` `$defs.inputContext.enum` — the very file
+ * `runners/core/skill-loader.mjs` validates every skill against (its
+ * `defaultSchemaPath`). Because that schema is a closed enum, a value outside
+ * it cannot appear in any skill's `inputContext`, and the match in
+ * `runners/core/review-runner.mjs` `missingInputContexts()` is an exact
+ * `Set.has()` — so such a value can never make a skill eligible.
+ *
+ * Read lazily (only when `--context` is actually passed) so the common path
+ * pays nothing, and fail-safe: if the schema cannot be read or parsed we
+ * return `null` and warn about nothing rather than guess at the vocabulary.
+ *
+ * @returns {string[] | null}
+ */
+function knownInputContexts() {
+  if (knownInputContextsCache !== undefined) return knownInputContextsCache;
+  try {
+    // NOTE: pass the URL object straight to readFileSync — do NOT wrap it in
+    // `fileURLToPath()`. ncc rewrites `new URL(<asset>, import.meta.url)` into
+    // `__nccwpck_require__.ab + "skill.schema.json"`, a BARE absolute path
+    // rather than a file URL, so `fileURLToPath()` throws `ERR_INVALID_URL` in
+    // `runners/github-action/dist/**` and the fail-safe below swallows it —
+    // the warning would then never fire on the bundled surface (#1958 review).
+    const schema = JSON.parse(
+      readFileSync(new URL('../schemas/skill.schema.json', import.meta.url), 'utf8')
+    );
+    const values = schema?.$defs?.inputContext?.enum;
+    knownInputContextsCache = Array.isArray(values) && values.length > 0 ? values : null;
+  } catch {
+    knownInputContextsCache = null;
+  }
+  return knownInputContextsCache;
+}
+
+/**
+ * Warn (stderr only, exit code untouched) when `--context` carries a value
+ * that is outside the `inputContext` vocabulary. Without this, a typo makes
+ * every skill skip with `missing inputContext: diff` and the review comes back
+ * empty, which reads as "nothing applied" rather than "you mistyped a flag".
+ *
+ * All unknown values go into ONE line so a multi-typo list stays scannable and
+ * matches the single-line `Warning:` shape used elsewhere in this file.
+ * Legitimate values produce no output at all.
+ *
+ * Scope: this CLI flag only. `RIVER_AVAILABLE_CONTEXTS` merges in later inside
+ * `resolveAvailableContexts()` (src/lib/utils.mjs), which is bundled into
+ * `runners/github-action/dist/**` — warning there would mean a dist rebuild
+ * and would fire from library call sites too, so it is left out of this change.
+ * The other `river` CLI (`runners/cli/src/index.mjs:29`, whose `--context` is
+ * split in `runners/cli/src/commands/review.mjs:33`) is likewise out of scope.
+ *
+ * Wording: the claim is deliberately NOT "no effect". An unknown value cannot
+ * make any skill eligible — that part is closed by the enum — but it is not
+ * inert everywhere: `src/lib/local-runner.mjs:359` forwards `availableContexts`
+ * to `buildExecutionPlan`, `runners/core/review-runner.mjs:352-358` passes it
+ * into `planSkills`, and `src/lib/openai-planner.mjs:39-40,54` interpolates it
+ * verbatim into the LLM planner prompt (`- availableContexts: ...`). With
+ * `--planner order|prune` and an API key, the typo therefore still reaches the
+ * model and can move ordering / pruning of the ALREADY selected skills.
+ *
+ * @param {string[]} contexts
+ */
+function warnUnknownInputContexts(contexts) {
+  const known = knownInputContexts();
+  if (!known) return;
+  const unknown = [...new Set(contexts.filter((ctx) => !known.includes(ctx)))];
+  if (unknown.length === 0) return;
+  console.warn(
+    `Warning: --context value(s) outside the skill inputContext vocabulary: ` +
+      `${unknown.join(', ')}. No skill can be made eligible by them. ` +
+      `Accepted values: ${known.join(', ')}.`
+  );
+}
+
+/**
  * Value reader for options whose value is FREE TEXT a human writes
  * (`--rationale`, `--evidence`, `--reason`).
  *
@@ -1638,6 +1720,11 @@ function parseArgs(argv) {
         usageError(parsed);
         break;
       }
+      // Deliberately NOT warned here: `--context` is last-wins (this is a plain
+      // assignment, not a merge), so warning per occurrence reports values that
+      // the run never uses — `--context BOGUS --context diff` warned about
+      // BOGUS even though `diff` is what survives. The warning is emitted once
+      // after the loop, against the surviving list (#1958 review, nit 5).
       parsed.availableContexts = parseList(value);
       continue;
     }
@@ -1782,6 +1869,15 @@ function parseArgs(argv) {
     }
     usageError(parsed);
     break;
+  }
+
+  // #1759 C3: warn once, against the list that actually survives the loop.
+  // Not guarded by `parsed.usageError` on purpose — today a `--context` typo
+  // followed by a bad option prints both the advisory and the error, and this
+  // change is about de-duplicating the advisory, not about suppressing it on
+  // the error path.
+  if (parsed.availableContexts) {
+    warnUnknownInputContexts(parsed.availableContexts);
   }
 
   // `review` needs one of plan | exec | verify | route. The handler reported

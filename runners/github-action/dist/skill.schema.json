@@ -1,0 +1,375 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "River Review Skill Schema",
+  "type": "object",
+  "required": ["id", "name", "description", "category"],
+  "allOf": [
+    {
+      "anyOf": [
+        {
+          "required": ["phase"]
+        },
+        {
+          "required": ["category"]
+        },
+        {
+          "required": ["trigger"],
+          "properties": {
+            "trigger": {
+              "$ref": "#/properties/trigger"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "anyOf": [
+        {
+          "required": ["applyTo"]
+        },
+        {
+          "required": ["files"]
+        },
+        {
+          "required": ["path_patterns"]
+        },
+        {
+          "required": ["trigger"],
+          "properties": {
+            "trigger": {
+              "$ref": "#/properties/trigger"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "phase": {
+      "type": "string",
+      "enum": ["upstream", "midstream", "downstream"]
+    },
+    "streamCategory": {
+      "type": "string",
+      "enum": ["core", "upstream", "midstream", "downstream"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "minor", "major", "critical"]
+    },
+    "inputContext": {
+      "type": "string",
+      "enum": [
+        "diff",
+        "fullFile",
+        "tests",
+        "adr",
+        "commitMessage",
+        "repoConfig",
+        "reviewSelf",
+        "reviewExternal",
+        "findingsPool",
+        "prDescription"
+      ]
+    },
+    "outputKind": {
+      "type": "string",
+      "enum": ["findings", "summary", "actions", "tests", "metrics", "questions", "review-audit"]
+    },
+    "modelHint": {
+      "type": "string",
+      "enum": ["cheap", "balanced", "high-accuracy"]
+    },
+    "dependency": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "code_search",
+            "test_runner",
+            "adr_lookup",
+            "repo_metadata",
+            "coverage_report",
+            "tracing"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^custom:.+"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the skill (recommended: rr-xxxx)",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable skill name",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of what the skill checks",
+      "minLength": 1
+    },
+    "category": {
+      "$ref": "#/$defs/streamCategory",
+      "description": "Stream category (core/upstream/midstream/downstream)"
+    },
+    "phase": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/phase"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/phase"
+          },
+          "minItems": 1
+        }
+      ],
+      "description": "Which SDLC phase(s) this skill applies to"
+    },
+    "applyTo": {
+      "type": "array",
+      "description": "Glob patterns defining which files to check",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "files": {
+      "type": "array",
+      "description": "Alias for applyTo",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "path_patterns": {
+      "type": "array",
+      "description": "Alias for applyTo",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "applyToExemptions": {
+      "type": "array",
+      "description": "Intentional exclusions from the entry applyTo containment check (#1508). Each entry declares a routing-target skill that is deliberately NOT covered by this entry's applyTo, with the reason next to the applyTo block. Parsed by scripts/validate-agent-skills.mjs parseExemptions(): every item must be an object with non-empty `skill` (routing-target skill ID) and non-empty `reason` strings.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["skill", "reason"],
+        "properties": {
+          "skill": {
+            "type": "string",
+            "description": "Routing-target skill ID exempted from applyTo coverage",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why the exclusion is intentional",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "exclude": {
+      "type": "array",
+      "description": "Glob patterns for files to exclude from this skill even when applyTo matches (honored by the midstream skill-dispatcher; snapshot/planner selection ignores it)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional metadata for classification",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "severity": {
+      "$ref": "#/$defs/severity",
+      "description": "Optional severity rating"
+    },
+    "inputContext": {
+      "type": "array",
+      "description": "Input sources required for the skill to run",
+      "items": {
+        "$ref": "#/$defs/inputContext"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "outputKind": {
+      "type": "array",
+      "description": "Output categories produced by this skill",
+      "items": {
+        "$ref": "#/$defs/outputKind"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "default": ["findings"]
+    },
+    "modelHint": {
+      "$ref": "#/$defs/modelHint",
+      "description": "Hint for model selection (cost/accuracy balance)"
+    },
+    "evaluationType": {
+      "type": "string",
+      "enum": ["deterministic", "heuristic", "agentic"],
+      "description": "Which evaluation layer runs this skill (Epic #1347 S2 / #1349, adopted from the L1/L2/L3 review). deterministic: an external command decides pass/fail with no LLM; heuristic: pure-code detectors (see SKILL_HEURISTIC_MAP); agentic: LLM-backed. Optional and additive — skills without it keep current behavior; the executionOrder plan field is derived from these declarations."
+    },
+    "deterministicGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command"],
+      "description": "Declaration for evaluationType 'deterministic' skills. TRUST BOUNDARY: `command` is an arbitrary command specified by a repo-owned file — the agent under review can edit it (e.g. `command: \"true\"` makes L1 always green). Execution (S4 strict_block routing) must happen only inside the trust boundary (host-approved configuration); S2 defines the schema only; the cross-field constraint (evaluationType \"deterministic\" requiring deterministicGate) is introduced together with S4 enforcement.",
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "argv (shell 非経由 execFile)。command は実行ファイル名、args がその引数。#1401 §4。"
+        },
+        "selfContained": {
+          "type": "boolean",
+          "description": "PR head の設定・スクリプト・node_modules を一切読まない自己完結 command 宣言。#1401 §10.1.2 (A)。Phase 1 は true のみ実行可能。"
+        },
+        "failSeverity": {
+          "type": "string",
+          "enum": ["strict_block", "bypass_warning"],
+          "default": "strict_block"
+        }
+      }
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier (e.g. MIT). Optional. Aligns with the Agent Skills standard frontmatter (agentskills.io / Warp / Oz / Claude Code) so river-review skill files can be discovered by external tooling."
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "Tools or resources this skill depends on",
+      "items": {
+        "$ref": "#/$defs/dependency"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "trigger": {
+      "type": "object",
+      "description": "Optional trigger container for activation criteria",
+      "additionalProperties": false,
+      "properties": {
+        "phase": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/phase"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/phase"
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "applyTo": {
+          "type": "array",
+          "description": "Glob patterns defining which files to check",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "path_patterns": {
+          "type": "array",
+          "description": "Alias for applyTo",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "files": {
+          "type": "array",
+          "description": "Alias for applyTo",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "instruction": {
+      "type": "string",
+      "description": "The prompt/instruction for the skill"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional nested metadata container",
+      "additionalProperties": true
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (x.y.z)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "prompt": {
+      "type": "object",
+      "description": "Prompt file references",
+      "additionalProperties": false,
+      "properties": {
+        "system": {
+          "type": "string",
+          "description": "Path to system prompt file",
+          "minLength": 1
+        },
+        "user": {
+          "type": "string",
+          "description": "Path to user prompt file",
+          "minLength": 1
+        }
+      }
+    },
+    "eval": {
+      "type": "object",
+      "description": "Evaluation configuration",
+      "additionalProperties": false,
+      "properties": {
+        "promptfoo": {
+          "type": "string",
+          "description": "Path to promptfoo configuration"
+        }
+      }
+    },
+    "fixturesDir": {
+      "type": "string",
+      "description": "Fixtures directory path",
+      "default": "fixtures"
+    },
+    "goldenDir": {
+      "type": "string",
+      "description": "Golden directory path",
+      "default": "golden"
+    },
+    "priority": {
+      "type": "number",
+      "description": "Optional ordering hint (lower runs earlier)"
+    }
+  }
+}
