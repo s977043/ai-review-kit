@@ -31,16 +31,18 @@ Upgrade to `v0.51.0` or later. The plan layer now defaults `availableContexts` t
 
 ### CI environments with additional artifact contexts
 
+A context name is only useful if some skill can declare it. The vocabulary is a closed enum defined in `schemas/skill.schema.json` (`$defs.inputContext`): `diff`, `fullFile`, `tests`, `adr`, `commitMessage`, `repoConfig`, `reviewSelf`, `reviewExternal`, `findingsPool`, `prDescription`. Matching is exact and case-sensitive, so a name outside that list can never make a skill eligible. Since [#1759](https://github.com/s977043/river-review/issues/1759) C3, `--context` prints a warning to stderr for such a value; the exit code is unchanged.
+
 Set `RIVER_AVAILABLE_CONTEXTS` before invoking the CLI:
 
 ```bash
-RIVER_AVAILABLE_CONTEXTS=diff,junit,coverage river review exec --phase midstream
+RIVER_AVAILABLE_CONTEXTS=diff,tests,fullFile river review exec --phase midstream
 ```
 
 Or pass `--context` directly:
 
 ```bash
-river review exec --phase midstream --context diff,junit,coverage
+river review exec --phase midstream --context diff,tests,fullFile
 ```
 
 The `'diff'` context is always retained when a diff artifact is resolved, so `--context tests` does not strip it.

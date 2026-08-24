@@ -493,6 +493,69 @@ const KNOWN_OPTION_TOKENS = new Set([
 ]);
 
 /**
+ * Cache for {@link knownInputContexts}. `undefined` = not read yet,
+ * `null` = read failed (stay quiet), array = the vocabulary.
+ * @type {string[] | null | undefined}
+ */
+let knownInputContextsCache;
+
+/**
+ * The `inputContext` vocabulary, read from its SSoT
+ * `schemas/skill.schema.json` `$defs.inputContext.enum` — the very file
+ * `runners/core/skill-loader.mjs` validates every skill against (its
+ * `defaultSchemaPath`). Because that schema is a closed enum, a value outside
+ * it cannot appear in any skill's `inputContext`, and the match in
+ * `runners/core/review-runner.mjs` `missingInputContexts()` is an exact
+ * `Set.has()` — so such a value can never make a skill eligible.
+ *
+ * Read lazily (only when `--context` is actually passed) so the common path
+ * pays nothing, and fail-safe: if the schema cannot be read or parsed we
+ * return `null` and warn about nothing rather than guess at the vocabulary.
+ *
+ * @returns {string[] | null}
+ */
+function knownInputContexts() {
+  if (knownInputContextsCache !== undefined) return knownInputContextsCache;
+  try {
+    const schemaPath = fileURLToPath(new URL('../schemas/skill.schema.json', import.meta.url));
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
+    const values = schema?.$defs?.inputContext?.enum;
+    knownInputContextsCache = Array.isArray(values) && values.length > 0 ? values : null;
+  } catch {
+    knownInputContextsCache = null;
+  }
+  return knownInputContextsCache;
+}
+
+/**
+ * Warn (stderr only, exit code untouched) when `--context` carries a value
+ * that is outside the `inputContext` vocabulary. Without this, a typo makes
+ * every skill skip with `missing inputContext: diff` and the review comes back
+ * empty, which reads as "nothing applied" rather than "you mistyped a flag".
+ *
+ * All unknown values go into ONE line so a multi-typo list stays scannable and
+ * matches the single-line `Warning:` shape used elsewhere in this file.
+ * Legitimate values produce no output at all.
+ *
+ * Scope: this CLI flag only. `RIVER_AVAILABLE_CONTEXTS` merges in later inside
+ * `resolveAvailableContexts()` (src/lib/utils.mjs), which is bundled into
+ * `runners/github-action/dist/**` — warning there would mean a dist rebuild
+ * and would fire from library call sites too, so it is left out of this change.
+ *
+ * @param {string[]} contexts
+ */
+function warnUnknownInputContexts(contexts) {
+  const known = knownInputContexts();
+  if (!known) return;
+  const unknown = [...new Set(contexts.filter((ctx) => !known.includes(ctx)))];
+  if (unknown.length === 0) return;
+  console.warn(
+    `Warning: --context has no effect for unknown value(s): ${unknown.join(', ')}. ` +
+      `Skill inputContext accepts only: ${known.join(', ')}.`
+  );
+}
+
+/**
  * Value reader for options whose value is FREE TEXT a human writes
  * (`--rationale`, `--evidence`, `--reason`).
  *
@@ -1639,6 +1702,7 @@ function parseArgs(argv) {
         break;
       }
       parsed.availableContexts = parseList(value);
+      warnUnknownInputContexts(parsed.availableContexts);
       continue;
     }
     if (arg === '--dependency') {
