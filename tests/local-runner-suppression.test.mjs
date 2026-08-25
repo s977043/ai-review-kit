@@ -25,6 +25,7 @@ import test from 'node:test';
 import { applySuppressions } from '../src/lib/suppression-apply.mjs';
 import { computeFingerprint, annotateFingerprints } from '../src/lib/finding-factory.mjs';
 import { filterSuppressedComments } from '../src/lib/local-runner.mjs';
+import { mergeFindings } from '../src/lib/reviewer-orchestrator.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const localRunnerSource = readFileSync(
@@ -214,4 +215,130 @@ test('#1797: v1 と v2 の抑制が混在しても互いの粒度を壊さない
     kept.map((c) => [c.skillId, c.line]),
     [['rule-x', 200]]
   );
+});
+
+// ---------------------------------------------------------------------------
+// #1823 残件1: reviewer orchestration のクラスタ統合で消えた行のコメント
+// ---------------------------------------------------------------------------
+// `--reviewers` 経路では mergeFindings が「同一ファイル・lineStart 差 ±2・
+// message 編集距離 10 以内」の finding を 1 件へ畳む。畳まれた側の comment は
+// 自分の行に残るため、代表 finding の行から導いた v2 hex とは一致せず、v2 抑制
+// をすり抜けていた（再現: 代表 100 行に対しコメント 101 行が残存）。
+//
+// 対策は代表 finding へ統合元の行（mergedLineStarts）を持たせ、抑制時にその各行
+// の v2 hex を computeFingerprintV2（SSoT）で導いて掃くこと。行の窓を広げる案
+// （±2 で掃く）ではないため、統合されなかった近接 finding のコメントは残る。
+//
+// 検証は production 経路そのもの（mergeFindings → annotateFingerprints →
+// applySuppressions → filterSuppressedComments）を通す。片側だけを見た自己整合な
+// テストにしないため。
+
+/** orchestration が作る finding の最小再現（reviewerRole 付き）。 */
+const orchestratedFinding = ({ line, role, message = 'duplicated logic here' }) => ({
+  ruleId: 'rule-m',
+  file: 'src/m.ts',
+  message,
+  lineStart: line,
+  lineEnd: line,
+  severity: 'minor',
+  reviewerRole: role,
+});
+
+/** finding と 1:1 で並ぶ comment 側の形。 */
+const orchestratedComment = ({ line, message = 'duplicated logic here' }) => ({
+  skillId: 'rule-m',
+  file: 'src/m.ts',
+  message,
+  line,
+});
+
+/**
+ * production 経路を通して「残ったコメントの行」を返す。
+ *
+ * @param {object[]} rawFindings mergeFindings への入力
+ * @param {object[]} comments review.comments 相当
+ * @param {'v1'|'v2'} algo 代表 finding へ効かせる抑制アルゴリズム
+ * @returns {Array<number>} 残ったコメントの line
+ */
+function keptCommentLines(rawFindings, comments, algo) {
+  const annotated = annotateFingerprints(mergeFindings(rawFindings));
+  const suppression = {
+    id: 's-1823',
+    context: {
+      fingerprint: algo === 'v2' ? annotated[0].fingerprintV2 : annotated[0].fingerprint,
+      fingerprintAlgo: algo,
+      feedbackType: 'false_positive',
+    },
+  };
+  const { suppressedFindings } = applySuppressions(annotated, { suppressions: [suppression] });
+  assert.equal(suppressedFindings.length, 1, '前提: 代表 finding が 1 件だけ抑制されること');
+  return filterSuppressedComments(comments, suppressedFindings).map((c) => c.line);
+}
+
+test('#1823: 統合された隣接行の comment も v2 抑制で消える', () => {
+  const raw = [
+    orchestratedFinding({ line: 100, role: 'security' }),
+    orchestratedFinding({ line: 101, role: 'performance' }),
+  ];
+  const merged = mergeFindings(raw);
+  assert.equal(merged.length, 1, '前提: 行差 1 は 1 クラスタへ統合される');
+  assert.deepEqual(merged[0].mergedLineStarts, [100, 101]);
+  const comments = [100, 101].map((line) => orchestratedComment({ line }));
+  assert.deepEqual(keptCommentLines(raw, comments, 'v2'), []);
+});
+
+test('#1823: 統合されない行差（±2 超）の comment は v2 抑制でも残る', () => {
+  const raw = [
+    orchestratedFinding({ line: 100, role: 'security' }),
+    orchestratedFinding({ line: 103, role: 'performance' }),
+  ];
+  const merged = mergeFindings(raw);
+  assert.equal(merged.length, 2, '前提: 行差 3 は統合されない');
+  assert.equal(merged[0].mergedLineStarts, undefined);
+  const comments = [100, 103].map((line) => orchestratedComment({ line }));
+  assert.deepEqual(keptCommentLines(raw, comments, 'v2'), [103]);
+});
+
+test('#1823: 統合されない message 差（編集距離 10 超）の comment は v2 抑制でも残る', () => {
+  const far = 'completely different observation about naming';
+  const raw = [
+    orchestratedFinding({ line: 100, role: 'security' }),
+    orchestratedFinding({ line: 101, role: 'performance', message: far }),
+  ];
+  const merged = mergeFindings(raw);
+  assert.equal(merged.length, 2, '前提: message が遠いので統合されない');
+  const comments = [
+    orchestratedComment({ line: 100 }),
+    orchestratedComment({ line: 101, message: far }),
+  ];
+  assert.deepEqual(keptCommentLines(raw, comments, 'v2'), [101]);
+});
+
+test('#1823: v1 抑制はクラスタ統合の有無に関わらず同ファイル・同 kind を全部落とす', () => {
+  const raw = [
+    orchestratedFinding({ line: 100, role: 'security' }),
+    orchestratedFinding({ line: 101, role: 'performance' }),
+  ];
+  // 400 行目は統合対象外だが、v1 はファイル全体を畳む既存挙動のまま。
+  const comments = [100, 101, 400].map((line) => orchestratedComment({ line }));
+  assert.deepEqual(keptCommentLines(raw, comments, 'v1'), []);
+});
+
+test('#1823: mergedLineStarts は情報を足すときだけ生える（単独 / 同一行では付かない）', () => {
+  const [single] = mergeFindings([orchestratedFinding({ line: 100, role: 'security' })]);
+  assert.equal(single.mergedLineStarts, undefined, '単一メンバーには付けない');
+  const [sameLine] = mergeFindings([
+    orchestratedFinding({ line: 100, role: 'security' }),
+    orchestratedFinding({ line: 100, role: 'performance' }),
+  ]);
+  assert.equal(sameLine.mergedLineStarts, undefined, '行が 1 種類なら lineStart と重複するだけ');
+});
+
+test('#1823: 2 パス目の mergeFindings でも mergedLineStarts が失われない', () => {
+  const pass1 = mergeFindings([
+    orchestratedFinding({ line: 100, role: 'security' }),
+    orchestratedFinding({ line: 101, role: 'performance' }),
+  ]);
+  const pass2 = mergeFindings(pass1);
+  assert.deepEqual(pass2[0].mergedLineStarts, [100, 101]);
 });
