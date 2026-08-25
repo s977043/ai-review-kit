@@ -137,6 +137,7 @@ function makeResult({
   findings = [],
   comments,
   suppressed = [],
+  overflow = [],
   plan,
   teamLeadReport = null,
 } = {}) {
@@ -145,7 +146,7 @@ function makeResult({
     // `comments` を明示指定できるのは F1 の再現用。実行時は findings と
     // comments が別集合になりうる（--reviewers の dedup / 抑制の fingerprint 照合）。
     comments: comments ?? findings.map(commentFor),
-    classified: suppressed.length ? { suppressed } : undefined,
+    classified: suppressed.length || overflow.length ? { suppressed, overflow } : undefined,
     plan: plan ?? { selected: [], skipped: [] },
     changedFiles: ['src/app.js'],
     tokenEstimate: 42,
@@ -275,6 +276,34 @@ describe('#1713 Slice 1: markdown headline and progressive disclosure', () => {
     assert.strictEqual(countOccurrences(markdown, '抑制済み: 2 件'), 1);
     // 旧実装の重複表示（末尾の blockquote）は消えている。
     assert.doesNotMatch(markdown, /件の指摘を抑制しました/);
+  });
+
+  // #1857 / ADR-007: the report does NOT apply the overview cap — its sections
+  // come from `result.comments`, the full emitted set. So the overflow must not
+  // be announced as hidden: the reader would go looking for findings that are
+  // printed, with their bodies, further up the same report.
+  it('never claims the overview-cap overflow is hidden (#1857)', () => {
+    const findings = Array.from({ length: 8 }, (_, i) =>
+      makeFinding({ id: `rr-${i + 1}`, ruleId: `rule-${i}`, title: `overflow-title-${i}` })
+    );
+    const markdown = renderMarkdown(
+      makeResult({
+        findings,
+        suppressed: [{ suppressReason: 'insufficient_evidence' }],
+        // 表示枠から溢れた 3 件。render はこれを読まない。
+        overflow: findings.slice(5),
+      })
+    );
+    assert.doesNotMatch(markdown, /表示上限/);
+    assert.doesNotMatch(markdown, /非表示/);
+    // The overflow findings are in the report body, which is why no line may
+    // say otherwise.
+    for (const f of findings.slice(5)) {
+      assert.ok(markdown.includes(f.title), `${f.title} should be rendered`);
+    }
+    // The suppression breakdown itself is unaffected.
+    assert.strictEqual(countOccurrences(markdown, '抑制済み: 1 件'), 1);
+    assert.doesNotMatch(markdown, /undefined\(\d+\)/);
   });
 
   it('cannot be restructured by <details> markup in a finding message', () => {

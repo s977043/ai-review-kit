@@ -46,7 +46,10 @@ Run saved: 2026-06-06T08-30-00-000Z-a1b2c3 → /path/to/repo/.river/runs/2026-06
 - `runId` / `timestamp` / `phase` / `reviewMode`
 - `mergeBase` / `defaultBranch` / `changedFiles`
 - `findings`（指摘）/ `suppressedFindings`（抑制された指摘）
-- `finalSummary`: `findingsCount` / `suppressedCount` / `overviewCount` / `changedFilesCount` / `tokenEstimate`
+- `overflowFindings`（表示枠の上限を超えた指摘。溢れが 0 件の run ではキー自体が存在しません）
+- `finalSummary`: `findingsCount` / `suppressedCount` / `overflowCount` / `overviewCount` / `changedFilesCount` / `tokenEstimate`
+
+`overflowFindings` は「抑制された指摘」ではありません。抑制は「どう扱うか」の判断であるのに対し、表示枠の超過は並び替えの結果にすぎないので、理由コードを持たず `suppressedFindings` とは別に保存されます。Markdown レポート自体はこの上限で本文を打ち切らないため、溢れた指摘もレポートには全文が載ります。
 
 ## 2. 保存済み実行の一覧（`river runs list`）
 
@@ -59,9 +62,11 @@ river runs list
 ```text
 Stored runs (/path/to/repo/.river/runs):
 
-  2026-06-06T08-30-00-000Z-a1b2c3  phase=midstream  findings=4  suppressed=1  files=7  2026-06-06T08:30:00.000Z
-  2026-06-05T17-10-00-000Z-d4e5f6  phase=midstream  findings=6  suppressed=0  files=5  2026-06-05T17:10:00.000Z
+  2026-06-06T08-30-00-000Z-a1b2c3  phase=midstream  findings=4  suppressed=1  overflow=2  files=7  2026-06-06T08:30:00.000Z
+  2026-06-05T17-10-00-000Z-d4e5f6  phase=midstream  findings=6  suppressed=0  overflow=0  files=5  2026-06-05T17:10:00.000Z
 ```
+
+`overflow=` を追加する前に保存した run record は `overflowCount` を持たないため、`overflow=0` と表示されます。
 
 保存済み実行がない場合は `No stored runs found in ...` と表示されます。
 
@@ -115,11 +120,14 @@ river runs summary
 | Total runs | 12 |
 | Total findings | 48 |
 | Total suppressed | 6 |
+| Total overflow (overview cap) | 2 |
 | Suppress rate | 11.1% |
 | Avg findings/run | 4.0 |
 ```
 
 加えて、Severity / Confidence の分布表が出力されます。複数実行を横断した品質トレンドの把握に使います。
+
+`Suppress rate` は各 run record が保存した `suppressedFindings` をそのまま数えた値です。表示枠の超過を `suppressedFindings` に含めていた古い run record が Run store に残っている場合、その分だけ古い側の値が大きくなります。古い記録が混ざっているときは `Legacy pre-#1857 suppressions` の行が出るので、トレンドの断絶と実際の変化はその行で見分けてください。
 
 ## 5. 任意の baseline と比較する（`--baseline`）
 

@@ -44776,6 +44776,7 @@ function isApp(file) {
 /* harmony export */   UB: () => (/* binding */ parseFindingMessage),
 /* harmony export */   Yo: () => (/* binding */ computeFingerprint),
 /* harmony export */   ZY: () => (/* binding */ classifyFindings),
+/* harmony export */   _0: () => (/* binding */ SUPPRESS_REASONS),
 /* harmony export */   _2: () => (/* binding */ stripSelfReportedScope),
 /* harmony export */   classifyFingerprintAlgo: () => (/* binding */ classifyFingerprintAlgo),
 /* harmony export */   f3: () => (/* binding */ SEVERITY_RANK),
@@ -44790,7 +44791,7 @@ function isApp(file) {
 /* harmony export */   xv: () => (/* binding */ validateFindingMessage),
 /* harmony export */   yv: () => (/* binding */ formatFindingMessage)
 /* harmony export */ });
-/* unused harmony exports FINDING_SCOPES, SUPPRESS_REASONS, REF_LABEL_NAMES, prefilterFindings, adjudicateFindings, rankFindingsForOutput */
+/* unused harmony exports FINDING_SCOPES, REF_LABEL_NAMES, prefilterFindings, adjudicateFindings, rankFindingsForOutput */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
 /* harmony import */ var _scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(9946);
 
@@ -44831,6 +44832,14 @@ const SUPPRESS_REASONS = {
   DUPLICATE: 'duplicate',
   STYLE_ONLY: 'style_only',
   INSUFFICIENT_EVIDENCE: 'insufficient_evidence',
+  /**
+   * RETIRED as a producible disposition (#1857 / ADR-007 `observe` 条件 3).
+   * It used to mean two different things at once — "same ruleId already shown"
+   * and "did not fit the overview cap". The first is now `DUPLICATE`; the
+   * second is a ranking outcome with no reason code at all
+   * (`rankFindingsForOutput().overflow`). The key is kept because run records
+   * written before the split still carry this value and must stay readable.
+   */
   COVERED_BY_HIGHER_LEVEL: 'covered_by_higher_level_finding',
 };
 
@@ -45351,19 +45360,44 @@ function adjudicateFindings(findings, _options = {}) {
 
 /**
  * Stage 3 of the classification pipeline (#1857 Phase 1): scoring, output
- * ordering and the overview cap. Per ADR-007 the cap is a RANKING outcome, not
- * a disposition — it is only reported through `suppressReason` here because
- * Phase 1 keeps the emitted values byte-identical to the pre-refactor ones.
+ * ordering and the overview cap.
  *
- * The `overviewRuleIds` guard collapses a second finding that carries an
- * already-shown non-`unknown` ruleId. Reached through `classifyFindings` that
- * branch is unreachable, because `prefilterFindings` has already collapsed
- * every duplicate ruleId; it is kept so the function is also correct when
- * called on a set that was not prefiltered.
+ * Phase 1 (#1912) split the two branches that both pushed
+ * `COVERED_BY_HIGHER_LEVEL` but left the emitted value identical. This function
+ * now carries the value split that ADR-007 asks for ("`COVERED_BY_HIGHER_LEVEL`
+ * は Phase 1 で 2 つに割り、重複側だけを `duplicate` へ寄せ、上限側は
+ * `rankFindingsForOutput` の出力として表現する"), which is the `observe`
+ * entry condition 3:
+ *
+ * - **duplicate** — a second finding carrying an already-shown non-`unknown`
+ *   ruleId. That IS a disposition, so it goes to `suppressed` under the same
+ *   `SUPPRESS_REASONS.DUPLICATE` that {@link prefilterFindings} uses. Reached
+ *   through {@link classifyFindings} this branch is unreachable, because
+ *   `prefilterFindings` has already collapsed every duplicate ruleId; it is kept
+ *   so the function is also correct when called on a non-prefiltered set.
+ * - **overview cap overflow** — a finding that did not fit within
+ *   `maxOverview`. Per ADR-007 this is NOT a disposition but a ranking outcome,
+ *   so it carries no `suppressReason` and is returned in its own `overflow`
+ *   list. Keeping it out of `suppressed` is what lets a suppression breakdown be
+ *   counted without mixing two different events.
+ *
+ * `overflow` holds the ORIGINAL objects, like `overview` — the finding was not
+ * judged, only ranked below the cut.
+ *
+ * NO FINGERPRINT (#1857 / #1823). Neither `overflow` nor `suppressed` carries
+ * `fingerprint` / `fingerprintV2`. The pipeline builds `findings` without them
+ * (`src/lib/review-engine.mjs:701`), and `annotateFingerprints` returns COPIES
+ * (`:721`), so the annotated set local-runner puts in `result.findings`
+ * (`src/lib/local-runner.mjs:570,634`) shares no objects with
+ * `result.classified`. A consumer must therefore join these lists by `id`
+ * (`rr-N`, unique within one run record) and not by fingerprint. Running the
+ * ranking output through `annotateFingerprints` would change what every
+ * `classified.*` list contains, which is a wider change than the split this
+ * function implements.
  *
  * @param {object[]} findings
  * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
- * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
+ * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[], overflow: object[] }}
  * @see docs/adr/007-semantic-precision-pass.md
  */
 function rankFindingsForOutput(findings, options = {}) {
@@ -45371,6 +45405,7 @@ function rankFindingsForOutput(findings, options = {}) {
   const maxOverview = reviewMode === 'tiny' ? 3 : reviewMode === 'large' ? 8 : 5;
 
   const suppressed = [];
+  const overflow = [];
   const sorted = [...findings].sort(
     (a, b) => (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(b).composite - (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(a).composite
   );
@@ -45381,28 +45416,32 @@ function rankFindingsForOutput(findings, options = {}) {
     const rid = String(f.ruleId ?? '');
     const isUnknown = rid === 'unknown';
     if (!isUnknown && overviewRuleIds.has(rid)) {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
+      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.DUPLICATE });
     } else if (overview.length < maxOverview) {
       overview.push(f);
       if (!isUnknown) overviewRuleIds.add(rid);
     } else {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
+      overflow.push(f);
     }
   }
 
-  return { overview, inlineCandidates: [], suppressed };
+  return { overview, inlineCandidates: [], suppressed, overflow };
 }
 
 /**
  * Compatibility facade over the three stages above (#1857 Phase 1). With
- * adjudication disabled — the only state Phase 1 ships — the return value is
- * identical to the pre-split implementation, including the ORDER of
- * `suppressed`: prefilter dispositions first (in input order, duplicates
- * last), then adjudication, then the ranking overflow.
+ * adjudication disabled — the only state shipped so far — `overview` and the
+ * ORDER of `suppressed` are identical to the pre-split implementation:
+ * prefilter dispositions first (in input order, duplicates last), then
+ * adjudication, then any ranking-stage duplicate.
+ *
+ * `suppressed` now holds dispositions ONLY. The findings that fell off the
+ * overview cap are returned separately in `overflow` and carry no
+ * `suppressReason`, per ADR-007 — see {@link rankFindingsForOutput}.
  *
  * @param {object[]} findings
  * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
- * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
+ * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[], overflow: object[] }}
  */
 function classifyFindings(findings, options = {}) {
   const prefiltered = prefilterFindings(findings);
@@ -45413,6 +45452,7 @@ function classifyFindings(findings, options = {}) {
     overview: ranked.overview,
     inlineCandidates: ranked.inlineCandidates,
     suppressed: [...prefiltered.suppressed, ...adjudicated.suppressed, ...ranked.suppressed],
+    overflow: ranked.overflow,
   };
 }
 
@@ -51041,6 +51081,15 @@ async function generateReview({
   });
 
   const classified = (0,finding_factory/* classifyFindings */.ZY)(findings, { reviewMode: reviewMode ?? 'medium' });
+  // #1857 / ADR-007 `observe` 条件 3: the overview-cap overflow is a ranking
+  // outcome, so it carries no reason code and is NOT displayed (the report
+  // prints every comment — see formatPrioritySummaryMarkdown). Recording the
+  // count here is what makes the cap observable without claiming that anything
+  // was hidden. Conditional like the other counters above, so a run with no
+  // overflow keeps the debug key set it had before.
+  if (classified.overflow.length > 0) {
+    debug.overviewCapOverflow = classified.overflow.length;
+  }
 
   return {
     comments,
@@ -70656,7 +70705,10 @@ async function runRunsCommand(parsed, targetPath) {
     console.log(`Stored runs (${storeDir}):\n`);
     for (const r of runs) {
       console.log(
-        `  ${r.runId}  phase=${r.phase}  findings=${r.findingsCount}  suppressed=${r.suppressedCount}  files=${r.changedFilesCount}  ${r.timestamp}`
+        // #1857 / ADR-007: `overflow=` is printed next to `suppressed=` so the
+        // two events the pre-split records summed into one number stay
+        // distinguishable on screen.
+        `  ${r.runId}  phase=${r.phase}  findings=${r.findingsCount}  suppressed=${r.suppressedCount}  overflow=${r.overflowCount}  files=${r.changedFilesCount}  ${r.timestamp}`
       );
     }
     return 0;
@@ -74113,6 +74165,20 @@ function formatConsensusBadge(consensusLevel) {
  * F5: the suppression count is reported ONCE — here, next to its per-reason
  * breakdown, and not in the headline. Suppressed findings are not displayed, so
  * their count does not belong beside the counts of what is.
+ *
+ * #1857 / ADR-007: `classified.overflow` (the overview-cap overflow) is
+ * deliberately NOT reported here. The Markdown report does not apply the
+ * overview cap at all: `buildRenderedFindingSet` builds its entries from
+ * `result.comments` (`:350-355`), which review-engine keeps as the full emitted
+ * set — `findings` and `classified` are both derived from it 1:1
+ * (`src/lib/review-engine.mjs:701`). So every overflow finding is already
+ * printed in full, with its body, in the sections above. A line claiming those
+ * findings are hidden would send the reader looking for something that is on
+ * screen. The overflow stays observable through the run record
+ * (`overflowFindings` / `finalSummary.overflowCount`) and
+ * `debug.overviewCapOverflow`, which is where ADR-007's `observe` condition 3
+ * needs it. Truncating the display to the cap instead would be a behaviour
+ * change, and is out of scope here.
  *
  * @param {ReturnType<typeof buildRenderedFindingSet>} rendered
  * @param {{suppressed?: object[]}|undefined} classified

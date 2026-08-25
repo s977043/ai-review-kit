@@ -103,13 +103,12 @@ describe('classifyFindings', () => {
     const findings = Array.from({ length: 8 }, (_, i) =>
       makeFinding({ ruleId: `rule-${i}`, id: `rr-${i}` })
     );
-    const { overview, suppressed } = classifyFindings(findings, { reviewMode: 'medium' });
+    const { overview, suppressed, overflow } = classifyFindings(findings, { reviewMode: 'medium' });
     assert.equal(overview.length, 5);
-    assert.equal(
-      suppressed.filter((f) => f.suppressReason === SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL)
-        .length,
-      3
-    );
+    // #1857 / ADR-007: the cap overflow is a ranking outcome, not a disposition.
+    assert.equal(overflow.length, 3);
+    assert.deepEqual(suppressed, []);
+    for (const f of overflow) assert.ok(!('suppressReason' in f));
   });
 
   it('caps overview by maxOverview (tiny=3)', () => {
@@ -313,12 +312,41 @@ describe('rankFindingsForOutput', () => {
     const findings = Array.from({ length: 8 }, (_, i) =>
       makeFinding({ id: `r-${i}`, ruleId: `rule-${i}` })
     );
-    const { overview, suppressed } = rankFindingsForOutput(findings, { reviewMode: 'medium' });
+    const { overview, suppressed, overflow } = rankFindingsForOutput(findings, {
+      reviewMode: 'medium',
+    });
     assert.equal(overview.length, 5);
-    assert.equal(suppressed.length, 3);
-    for (const s of suppressed) {
-      assert.equal(s.suppressReason, SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL);
-    }
+    assert.equal(overflow.length, 3);
+    // #1857 / ADR-007: the cap is a ranking outcome, so nothing is suppressed
+    // and no reason code is minted for it.
+    assert.deepEqual(suppressed, []);
+    for (const f of overflow) assert.ok(!('suppressReason' in f));
+  });
+
+  it('returns the ORIGINAL finding objects in overflow, like overview', () => {
+    const findings = Array.from({ length: 6 }, (_, i) =>
+      makeFinding({ id: `r-orig-${i}`, ruleId: `rule-orig-${i}`, severity: 'major' })
+    );
+    const { overview, overflow } = rankFindingsForOutput(findings, { reviewMode: 'medium' });
+    const returned = new Set([...overview, ...overflow]);
+    assert.equal(overflow.length, 1);
+    for (const f of findings) assert.ok(returned.has(f));
+  });
+
+  it('accounts for every input finding across overview / suppressed / overflow', () => {
+    const findings = [
+      ...Array.from({ length: 7 }, (_, i) =>
+        makeFinding({ id: `r-acc-${i}`, ruleId: `rule-${i}` })
+      ),
+      makeFinding({ id: 'r-acc-dup', ruleId: 'rule-0' }),
+    ];
+    const { overview, suppressed, overflow } = rankFindingsForOutput(findings, {
+      reviewMode: 'medium',
+    });
+    assert.deepEqual(
+      [...overview, ...suppressed, ...overflow].map((f) => f.id).sort(),
+      findings.map((f) => f.id).sort()
+    );
   });
 
   it('caps at 3 in tiny mode, 8 in large mode, and 5 with no mode given', () => {
@@ -347,18 +375,54 @@ describe('rankFindingsForOutput', () => {
       ruleId: 'other-rule',
       evidence: ['short'],
     });
-    const { overview, suppressed } = rankFindingsForOutput([lowConfidence, shortEvidence]);
+    const { overview, suppressed, overflow } = rankFindingsForOutput([
+      lowConfidence,
+      shortEvidence,
+    ]);
     assert.equal(overview.length, 2);
     assert.deepEqual(suppressed, []);
+    assert.deepEqual(overflow, []);
   });
 
-  it('collapses a repeated ruleId when handed a set that was not prefiltered', () => {
+  it('collapses a repeated ruleId as a DUPLICATE disposition, not as overflow', () => {
     const f1 = makeFinding({ id: 'r-d1', ruleId: 'null-check' });
     const f2 = makeFinding({ id: 'r-d2', ruleId: 'null-check' });
-    const { overview, suppressed } = rankFindingsForOutput([f1, f2]);
+    const { overview, suppressed, overflow } = rankFindingsForOutput([f1, f2]);
     assert.equal(overview.length, 1);
     assert.equal(suppressed.length, 1);
-    assert.equal(suppressed[0].suppressReason, SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL);
+    assert.equal(suppressed[0].id, 'r-d2');
+    assert.equal(suppressed[0].suppressReason, SUPPRESS_REASONS.DUPLICATE);
+    assert.deepEqual(overflow, []);
+    // Cross-check against the production path that already owns this concept:
+    // the reason string must be the SAME one prefilterFindings mints for the
+    // same duplicate pair, not a parallel value that merely looks equivalent.
+    const viaPrefilter = prefilterFindings([f1, f2]).suppressed;
+    assert.equal(viaPrefilter.length, 1);
+    assert.equal(suppressed[0].suppressReason, viaPrefilter[0].suppressReason);
+  });
+
+  // #1857 nit 2: the cross-check above compares two call sites that BOTH read
+  // `SUPPRESS_REASONS.DUPLICATE`, so editing the constant moves both sides and
+  // stays green. The value is persisted into `.river/runs/*.json` and is read
+  // back by later tooling, so the literal itself is a compatibility contract and
+  // is pinned here as a golden string.
+  it('writes the literal string "duplicate", which run records persist', () => {
+    const f1 = makeFinding({ id: 'r-g1', ruleId: 'null-check' });
+    const f2 = makeFinding({ id: 'r-g2', ruleId: 'null-check' });
+    const { suppressed } = rankFindingsForOutput([f1, f2]);
+    assert.equal(suppressed[0].suppressReason, 'duplicate');
+    assert.equal(SUPPRESS_REASONS.DUPLICATE, 'duplicate');
+    // The retired code keeps its exact stored spelling too: records written
+    // before the split still carry it and must stay readable.
+    assert.equal(SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL, 'covered_by_higher_level_finding');
+  });
+
+  it('does not mutate the input when collapsing a duplicate', () => {
+    const f1 = makeFinding({ id: 'r-d3', ruleId: 'type-safety' });
+    const f2 = makeFinding({ id: 'r-d4', ruleId: 'type-safety' });
+    rankFindingsForOutput([f1, f2]);
+    assert.ok(!('suppressReason' in f1));
+    assert.ok(!('suppressReason' in f2));
   });
 
   it('always returns inlineCandidates as an empty array', () => {
@@ -372,33 +436,57 @@ describe('classifyFindings facade composition (#1857 Phase 1)', () => {
       makeFinding({ id: 'f-low', ruleId: 'low-rule', confidence: 'low', severity: 'major' }),
       ...Array.from({ length: 8 }, (_, i) => makeFinding({ id: `f-${i}`, ruleId: `rule-${i}` })),
     ];
-    const { overview, suppressed } = classifyFindings(findings, { reviewMode: 'medium' });
+    const { overview, suppressed, overflow } = classifyFindings(findings, { reviewMode: 'medium' });
     assert.equal(overview.length, 5);
     assert.deepEqual(
       suppressed.map((f) => f.suppressReason),
-      [
-        SUPPRESS_REASONS.LOW_CONFIDENCE,
-        SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL,
-        SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL,
-        SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL,
-      ]
+      [SUPPRESS_REASONS.LOW_CONFIDENCE]
     );
+    assert.equal(overflow.length, 3);
   });
 
-  it('lists duplicate dispositions before the ranking overflow in suppressed', () => {
+  it('separates the duplicate disposition from the ranking overflow', () => {
     const findings = [
       ...Array.from({ length: 7 }, (_, i) => makeFinding({ id: `g-${i}`, ruleId: `rule-${i}` })),
       makeFinding({ id: 'g-dup', ruleId: 'rule-0' }),
     ];
-    const { suppressed } = classifyFindings(findings, { reviewMode: 'medium' });
+    const { suppressed, overflow } = classifyFindings(findings, { reviewMode: 'medium' });
     assert.deepEqual(
       suppressed.map((f) => f.suppressReason),
-      [
-        SUPPRESS_REASONS.DUPLICATE,
-        SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL,
-        SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL,
-      ]
+      [SUPPRESS_REASONS.DUPLICATE]
     );
     assert.equal(suppressed[0].id, 'g-dup');
+    assert.equal(overflow.length, 2);
+    for (const f of overflow) assert.ok(!('suppressReason' in f));
+  });
+
+  it('never mints covered_by_higher_level_finding any more (#1857 / ADR-007)', () => {
+    const findings = [
+      ...Array.from({ length: 9 }, (_, i) => makeFinding({ id: `h-${i}`, ruleId: `rule-${i}` })),
+      makeFinding({ id: 'h-dup', ruleId: 'rule-1' }),
+      makeFinding({ id: 'h-low', ruleId: 'low-rule', confidence: 'low', severity: 'major' }),
+    ];
+    for (const reviewMode of ['tiny', 'medium', 'large']) {
+      const { suppressed } = classifyFindings(findings, { reviewMode });
+      assert.equal(
+        suppressed.filter((f) => f.suppressReason === SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL)
+          .length,
+        0,
+        `reviewMode=${reviewMode}`
+      );
+    }
+  });
+
+  it('accounts for every input finding across overview / suppressed / overflow', () => {
+    const findings = [
+      ...Array.from({ length: 9 }, (_, i) => makeFinding({ id: `k-${i}`, ruleId: `rule-${i}` })),
+      makeFinding({ id: 'k-dup', ruleId: 'rule-2' }),
+      makeFinding({ id: 'k-low', ruleId: 'low-rule', confidence: 'low', severity: 'major' }),
+    ];
+    const { overview, suppressed, overflow } = classifyFindings(findings, { reviewMode: 'medium' });
+    assert.deepEqual(
+      [...overview, ...suppressed, ...overflow].map((f) => f.id).sort(),
+      findings.map((f) => f.id).sort()
+    );
   });
 });

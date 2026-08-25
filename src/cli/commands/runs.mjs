@@ -27,7 +27,10 @@ export async function runRunsCommand(parsed, targetPath) {
     console.log(`Stored runs (${storeDir}):\n`);
     for (const r of runs) {
       console.log(
-        `  ${r.runId}  phase=${r.phase}  findings=${r.findingsCount}  suppressed=${r.suppressedCount}  files=${r.changedFilesCount}  ${r.timestamp}`
+        // #1857 / ADR-007: `overflow=` is printed next to `suppressed=` so the
+        // two events the pre-split records summed into one number stay
+        // distinguishable on screen.
+        `  ${r.runId}  phase=${r.phase}  findings=${r.findingsCount}  suppressed=${r.suppressedCount}  overflow=${r.overflowCount}  files=${r.changedFilesCount}  ${r.timestamp}`
       );
     }
     return 0;

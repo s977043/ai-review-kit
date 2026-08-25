@@ -46,7 +46,10 @@ Each run record (JSON) contains:
 - `runId` / `timestamp` / `phase` / `reviewMode`
 - `mergeBase` / `defaultBranch` / `changedFiles`
 - `findings` and `suppressedFindings`
-- `finalSummary`: `findingsCount` / `suppressedCount` / `overviewCount` / `changedFilesCount` / `tokenEstimate`
+- `overflowFindings` (findings that fell past the overview display cap; the key is absent when nothing overflowed)
+- `finalSummary`: `findingsCount` / `suppressedCount` / `overflowCount` / `overviewCount` / `changedFilesCount` / `tokenEstimate`
+
+`overflowFindings` are not suppressions. A suppression is a decision about how to treat a finding, whereas exceeding the display cap is only a ranking outcome, so it carries no reason code and is stored apart from `suppressedFindings`. The Markdown report itself does not truncate at that cap, so overflowed findings still appear there in full.
 
 ## 2. List saved runs (`river runs list`)
 
@@ -59,9 +62,11 @@ river runs list
 ```text
 Stored runs (/path/to/repo/.river/runs):
 
-  2026-06-06T08-30-00-000Z-a1b2c3  phase=midstream  findings=4  suppressed=1  files=7  2026-06-06T08:30:00.000Z
-  2026-06-05T17-10-00-000Z-d4e5f6  phase=midstream  findings=6  suppressed=0  files=5  2026-06-05T17:10:00.000Z
+  2026-06-06T08-30-00-000Z-a1b2c3  phase=midstream  findings=4  suppressed=1  overflow=2  files=7  2026-06-06T08:30:00.000Z
+  2026-06-05T17-10-00-000Z-d4e5f6  phase=midstream  findings=6  suppressed=0  overflow=0  files=5  2026-06-05T17:10:00.000Z
 ```
+
+Run records saved before `overflow=` existed carry no `overflowCount`, so they print as `overflow=0`.
 
 If there are no saved runs, `No stored runs found in ...` is printed.
 
@@ -113,11 +118,14 @@ river runs summary
 | Total runs | 12 |
 | Total findings | 48 |
 | Total suppressed | 6 |
+| Total overflow (overview cap) | 2 |
 | Suppress rate | 11.1% |
 | Avg findings/run | 4.0 |
 ```
 
 It also prints Severity / Confidence distribution tables. Use it to grasp quality trends across many runs.
+
+`Suppress rate` counts `suppressedFindings` exactly as each run record stored them. Older run records folded the display-cap overflow into `suppressedFindings`, so while such records remain in the Run store their side of the metric reads higher. When they are present a `Legacy pre-#1857 suppressions` row appears; use that row to tell the discontinuity apart from a real change.
 
 ## 5. Compare against an arbitrary baseline (`--baseline`)
 

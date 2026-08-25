@@ -807,3 +807,71 @@ test('generateReview does NOT suppress findings on .md or lock files (#1597 boun
     'nothing was on a dist/ path, so no generated-path suppression occurred'
   );
 });
+
+// #1857 / ADR-007 `observe` 条件 3: the overview cap is a RANKING outcome, and
+// the report does not truncate to it (every comment is printed). The only place
+// the cap is observable is therefore debug — without this counter, "how often
+// does the cap bite" is unmeasurable, which is what the `observe` stage needs to
+// know. The expected count is one the reader can compute by hand (6 findings,
+// medium cap 5 -> 1), not read back off the implementation.
+test('generateReview records the overview-cap overflow in debug (#1857)', async () => {
+  const validLine = (n) =>
+    `src/app.ts:11: ${formatFindingMessage({
+      finding: `Overflow finding number ${n}`,
+      // 30+ chars, otherwise prefilterFindings suppresses every finding as
+      // insufficient_evidence and nothing ever reaches the ranking stage.
+      evidence: 'const value = 1; // the added line under review',
+      impact: 'Potential issue in added code',
+      fix: 'Review the added line and adjust as needed',
+      severity: 'warning',
+      confidence: 'medium',
+    })}`;
+  const rawLlmText = Array.from({ length: 6 }, (_, i) => validLine(i + 1)).join('\n');
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: rawLlmText } }] }),
+  });
+  try {
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: 'midstream',
+      dryRun: false,
+      includeFallback: false,
+      apiKey: 'test-key',
+    });
+    assert.equal(result.findings.length, 6);
+    assert.equal(result.classified.overview.length, 5);
+    assert.equal(result.debug.overviewCapOverflow, 1);
+    // The overflow finding is NOT a suppression and carries no reason code.
+    assert.deepEqual(result.classified.suppressed, []);
+    // ...and it is still in the emitted set, which is why the Markdown report
+    // may not announce it as hidden.
+    assert.equal(result.comments.length, 6);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('generateReview leaves debug.overviewCapOverflow unset when nothing overflowed (#1857)', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: 'NO_ISSUES' } }] }),
+  });
+  try {
+    const result = await generateReview({
+      diff,
+      plan,
+      phase: 'midstream',
+      dryRun: false,
+      includeFallback: false,
+      apiKey: 'test-key',
+    });
+    assert.equal(result.debug.overviewCapOverflow, undefined);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

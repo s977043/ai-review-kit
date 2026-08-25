@@ -700,6 +700,20 @@ function formatConsensusBadge(consensusLevel) {
  * breakdown, and not in the headline. Suppressed findings are not displayed, so
  * their count does not belong beside the counts of what is.
  *
+ * #1857 / ADR-007: `classified.overflow` (the overview-cap overflow) is
+ * deliberately NOT reported here. The Markdown report does not apply the
+ * overview cap at all: `buildRenderedFindingSet` builds its entries from
+ * `result.comments` (`:350-355`), which review-engine keeps as the full emitted
+ * set — `findings` and `classified` are both derived from it 1:1
+ * (`src/lib/review-engine.mjs:701`). So every overflow finding is already
+ * printed in full, with its body, in the sections above. A line claiming those
+ * findings are hidden would send the reader looking for something that is on
+ * screen. The overflow stays observable through the run record
+ * (`overflowFindings` / `finalSummary.overflowCount`) and
+ * `debug.overviewCapOverflow`, which is where ADR-007's `observe` condition 3
+ * needs it. Truncating the display to the cap instead would be a behaviour
+ * change, and is out of scope here.
+ *
  * @param {ReturnType<typeof buildRenderedFindingSet>} rendered
  * @param {{suppressed?: object[]}|undefined} classified
  */

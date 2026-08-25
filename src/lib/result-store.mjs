@@ -8,6 +8,9 @@ import { createHash } from 'node:crypto';
 // implementation the aggregate and the candidate hashes already share.
 import { EVIDENCE_SOURCES } from './shadow-aggregate.mjs';
 import { nonEmptyNfcString } from './promotion-candidates.mjs';
+// #1857: the retired reason code is imported, never re-typed here, so the
+// legacy-record counter below cannot drift from the constant it looks for.
+import { SUPPRESS_REASONS } from './finding-factory.mjs';
 
 const STORE_DIR_NAME = '.river/runs';
 const GLOBAL_STORE_DIR = path.join(os.homedir(), '.river', 'runs');
@@ -149,6 +152,11 @@ export function buildRunRecord(result, { phase, runId, gate, decision, provenanc
   const id = runId ?? generateRunId();
   const findings = result.findings ?? [];
   const suppressed = result.classified?.suppressed ?? [];
+  // #1857 / ADR-007: findings that fell off the overview cap used to arrive
+  // inside `suppressed` carrying `covered_by_higher_level_finding`. They are now
+  // a separate ranking outcome, so they are persisted separately — the record
+  // keeps the same total, with the two events no longer summed into one count.
+  const overflow = result.classified?.overflow ?? [];
   const overview = result.classified?.overview ?? [];
   const commitSha = nonEmptyNfcString(result.commitSha);
   const provenanceBlock = normalizeProvenance(provenance);
@@ -185,9 +193,15 @@ export function buildRunRecord(result, { phase, runId, gate, decision, provenanc
     ...(result.reviewDebug ? { debug: result.reviewDebug } : {}),
     findings,
     suppressedFindings: suppressed,
+    // Same conditional spread as commitSha / provenance above: a record with no
+    // overflow keeps the exact key set it had before this field existed.
+    // Like `suppressedFindings`, these entries carry NO `fingerprint` — join
+    // them to `findings` by `id` within this record (see rankFindingsForOutput).
+    ...(overflow.length > 0 ? { overflowFindings: overflow } : {}),
     finalSummary: {
       findingsCount: findings.length,
       suppressedCount: suppressed.length,
+      overflowCount: overflow.length,
       overviewCount: overview.length,
       changedFilesCount: (result.changedFiles ?? []).length,
       tokenEstimate: result.tokenEstimate ?? null,
@@ -228,7 +242,8 @@ export async function saveRunRecord(runRecord, { storeDir } = {}) {
  * Sorting is lexicographic by filename — relies on runId having a timestamp prefix
  * (e.g. `2026-01-01T12-00-00-abc123`) so that lexicographic order equals chronological order.
  * Custom runIds without a timestamp prefix will sort unpredictably.
- * @returns {object[]} array of { runId, timestamp, phase, reviewedTarget, findingsCount }
+ * @returns {object[]} array of { runId, timestamp, phase, reviewedTarget, findingsCount,
+ *   suppressedCount, overflowCount, overviewCount, changedFilesCount }
  */
 export async function listRunRecords(storeDir) {
   try {
@@ -248,6 +263,11 @@ export async function listRunRecords(storeDir) {
           reviewedTarget: rec.reviewedTarget,
           findingsCount: rec.finalSummary?.findingsCount ?? 0,
           suppressedCount: rec.finalSummary?.suppressedCount ?? 0,
+          // #1857: without this, `river runs list` prints a `suppressed=` that
+          // silently means one thing for pre-split records (dispositions plus
+          // cap overflow) and another for post-split ones (dispositions only),
+          // with nothing on screen to tell the two apart.
+          overflowCount: rec.finalSummary?.overflowCount ?? 0,
           overviewCount: rec.finalSummary?.overviewCount ?? 0,
           changedFilesCount: rec.finalSummary?.changedFilesCount ?? 0,
         };
@@ -290,6 +310,27 @@ export async function loadRunRecord(storeDir, runId) {
 
 /**
  * Compute aggregate dashboard metrics across a list of run records.
+ *
+ * #1857 / ADR-007 — reading a store that spans the split. `.river/runs/` is
+ * append-only, so records written before `overflowFindings` existed sit next to
+ * records written after it, and this function sums both into one dashboard.
+ * Pre-split records folded the overview-cap overflow INTO `suppressedFindings`
+ * under `covered_by_higher_level_finding`; post-split records keep it out. Three
+ * separate counters make that visible instead of hiding it:
+ *
+ * - `totalSuppressed` / `suppressRate` count `suppressedFindings` exactly as
+ *   each record stored them. They are not retro-corrected.
+ * - `totalOverflow` counts `overflowFindings`, which only post-split records
+ *   have.
+ * - `legacyCoveredByHigherLevel` counts the suppressions still carrying the
+ *   retired reason code, i.e. the rows whose two events cannot be told apart.
+ *
+ * Reinterpreting the legacy code as overflow was considered and rejected: the
+ * pre-split value ALSO covered genuine duplicate dispositions
+ * (`rankFindingsForOutput`'s repeated-ruleId branch wrote the same string), so
+ * moving all of it would trade a known discontinuity for an unmeasurable
+ * misattribution in the other direction. Making the mixed population countable
+ * is what lets a reader tell a real trend from the split.
  */
 export function computeDashboard(runRecords) {
   if (!runRecords.length) {
@@ -297,6 +338,8 @@ export function computeDashboard(runRecords) {
       totalRuns: 0,
       totalFindings: 0,
       totalSuppressed: 0,
+      totalOverflow: 0,
+      legacyCoveredByHigherLevel: 0,
       suppressRate: null,
       severityDistribution: {},
       confidenceDistribution: {},
@@ -307,6 +350,10 @@ export function computeDashboard(runRecords) {
 
   const allFindings = runRecords.flatMap((r) => r.findings ?? []);
   const allSuppressed = runRecords.flatMap((r) => r.suppressedFindings ?? []);
+  const allOverflow = runRecords.flatMap((r) => r.overflowFindings ?? []);
+  const legacyCovered = allSuppressed.filter(
+    (f) => f?.suppressReason === SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL
+  ).length;
 
   const severityDist = {};
   const confidenceDist = {};
@@ -329,6 +376,8 @@ export function computeDashboard(runRecords) {
     totalRuns: runRecords.length,
     totalFindings: total,
     totalSuppressed: suppTotal,
+    totalOverflow: allOverflow.length,
+    legacyCoveredByHigherLevel: legacyCovered,
     suppressRate: total + suppTotal > 0 ? suppTotal / (total + suppTotal) : null,
     severityDistribution: severityDist,
     confidenceDistribution: confidenceDist,
@@ -348,6 +397,17 @@ export function formatDashboard(dashboard) {
   lines.push(`| Total runs | ${dashboard.totalRuns} |`);
   lines.push(`| Total findings | ${dashboard.totalFindings} |`);
   lines.push(`| Total suppressed | ${dashboard.totalSuppressed} |`);
+  // #1857 / ADR-007: a separate row, because the overview-cap overflow is a
+  // ranking outcome and must not be read as a suppression.
+  lines.push(`| Total overflow (overview cap) | ${dashboard.totalOverflow ?? 0} |`);
+  // Only shown when the store still holds pre-split records. Their suppression
+  // count mixes duplicates with the cap overflow, so a Suppress rate compared
+  // across that boundary is not comparing like with like.
+  if (dashboard.legacyCoveredByHigherLevel > 0) {
+    lines.push(
+      `| Legacy pre-#1857 suppressions (${SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL}) | ${dashboard.legacyCoveredByHigherLevel} |`
+    );
+  }
   const suppPct =
     dashboard.suppressRate !== null ? `${(dashboard.suppressRate * 100).toFixed(1)}%` : 'N/A';
   lines.push(`| Suppress rate | ${suppPct} |`);
