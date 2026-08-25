@@ -700,8 +700,12 @@ function formatConsensusBadge(consensusLevel) {
  * breakdown, and not in the headline. Suppressed findings are not displayed, so
  * their count does not belong beside the counts of what is.
  *
+ * #1857 / ADR-007: the overview-cap overflow is reported on its OWN line and is
+ * not folded into the suppression breakdown. Not being shown because the cap ran
+ * out is a ranking outcome, not a disposition, so it has no reason code to count.
+ *
  * @param {ReturnType<typeof buildRenderedFindingSet>} rendered
- * @param {{suppressed?: object[]}|undefined} classified
+ * @param {{suppressed?: object[], overflow?: object[]}|undefined} classified
  */
 function formatPrioritySummaryMarkdown(rendered, classified) {
   const counts = { P1: 0, P2: 0, P3: 0, P4: 0 };
@@ -734,6 +738,11 @@ function formatPrioritySummaryMarkdown(rendered, classified) {
       .map(([r, n]) => `${r}(${n})`)
       .join(', ');
     lines.push(`- 抑制済み: ${suppressed.length} 件 (主な理由: ${topReasons})`);
+  }
+
+  const overflow = classified?.overflow ?? [];
+  if (overflow.length > 0) {
+    lines.push(`- 表示上限で非表示: ${overflow.length} 件`);
   }
 
   return wrapInDetails(

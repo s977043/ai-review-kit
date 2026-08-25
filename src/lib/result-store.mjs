@@ -149,6 +149,11 @@ export function buildRunRecord(result, { phase, runId, gate, decision, provenanc
   const id = runId ?? generateRunId();
   const findings = result.findings ?? [];
   const suppressed = result.classified?.suppressed ?? [];
+  // #1857 / ADR-007: findings that fell off the overview cap used to arrive
+  // inside `suppressed` carrying `covered_by_higher_level_finding`. They are now
+  // a separate ranking outcome, so they are persisted separately — the record
+  // keeps the same total, with the two events no longer summed into one count.
+  const overflow = result.classified?.overflow ?? [];
   const overview = result.classified?.overview ?? [];
   const commitSha = nonEmptyNfcString(result.commitSha);
   const provenanceBlock = normalizeProvenance(provenance);
@@ -185,9 +190,13 @@ export function buildRunRecord(result, { phase, runId, gate, decision, provenanc
     ...(result.reviewDebug ? { debug: result.reviewDebug } : {}),
     findings,
     suppressedFindings: suppressed,
+    // Same conditional spread as commitSha / provenance above: a record with no
+    // overflow keeps the exact key set it had before this field existed.
+    ...(overflow.length > 0 ? { overflowFindings: overflow } : {}),
     finalSummary: {
       findingsCount: findings.length,
       suppressedCount: suppressed.length,
+      overflowCount: overflow.length,
       overviewCount: overview.length,
       changedFilesCount: (result.changedFiles ?? []).length,
       tokenEstimate: result.tokenEstimate ?? null,

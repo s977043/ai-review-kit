@@ -423,6 +423,33 @@ describe('buildRunRecord — commitSha / provenance (#1715)', () => {
       suppressedFindings: rec.suppressedFindings,
       finalSummary: rec.finalSummary,
     });
+    // #1857 / ADR-007: the overview-cap overflow is persisted separately from
+    // the suppression dispositions. With no overflow the key stays absent and
+    // the count is 0, so pre-#1857 records keep their exact shape.
+    assert.equal('overflowFindings' in rec, false);
+    assert.equal(rec.finalSummary.overflowCount, 0);
+  });
+
+  it('persists the overview-cap overflow apart from the suppressions (#1857)', () => {
+    const rec = buildRunRecord(
+      makeResult({
+        classified: {
+          overview: [{ id: 'rr-1' }],
+          suppressed: [{ id: 'rr-x', suppressReason: 'low_confidence' }],
+          overflow: [{ id: 'rr-y' }, { id: 'rr-z' }],
+          inlineCandidates: [],
+        },
+      }),
+      { runId: 'overflow-run' }
+    );
+    assert.deepEqual(
+      rec.overflowFindings.map((f) => f.id),
+      ['rr-y', 'rr-z']
+    );
+    assert.equal(rec.finalSummary.overflowCount, 2);
+    // The overflow must NOT be counted as a suppression disposition.
+    assert.equal(rec.finalSummary.suppressedCount, 1);
+    for (const f of rec.overflowFindings) assert.equal('suppressReason' in f, false);
   });
 });
 

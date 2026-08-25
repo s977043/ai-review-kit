@@ -137,6 +137,7 @@ function makeResult({
   findings = [],
   comments,
   suppressed = [],
+  overflow = [],
   plan,
   teamLeadReport = null,
 } = {}) {
@@ -145,7 +146,7 @@ function makeResult({
     // `comments` を明示指定できるのは F1 の再現用。実行時は findings と
     // comments が別集合になりうる（--reviewers の dedup / 抑制の fingerprint 照合）。
     comments: comments ?? findings.map(commentFor),
-    classified: suppressed.length ? { suppressed } : undefined,
+    classified: suppressed.length || overflow.length ? { suppressed, overflow } : undefined,
     plan: plan ?? { selected: [], skipped: [] },
     changedFiles: ['src/app.js'],
     tokenEstimate: 42,
@@ -275,6 +276,30 @@ describe('#1713 Slice 1: markdown headline and progressive disclosure', () => {
     assert.strictEqual(countOccurrences(markdown, '抑制済み: 2 件'), 1);
     // 旧実装の重複表示（末尾の blockquote）は消えている。
     assert.doesNotMatch(markdown, /件の指摘を抑制しました/);
+  });
+
+  it('reports the overview-cap overflow on its own line, not as a suppression (#1857)', () => {
+    const markdown = renderMarkdown(
+      makeResult({
+        findings: [makeFinding()],
+        suppressed: [{ suppressReason: 'insufficient_evidence' }],
+        overflow: [{ id: 'rr-9' }, { id: 'rr-10' }, { id: 'rr-11' }],
+      })
+    );
+    // ADR-007: 表示上限の超過は disposition ではないので reason 内訳へ混ぜない。
+    assert.strictEqual(countOccurrences(markdown, '抑制済み: 1 件'), 1);
+    assert.strictEqual(countOccurrences(markdown, '表示上限で非表示: 3 件'), 1);
+    assert.doesNotMatch(markdown, /undefined\(\d+\)/);
+  });
+
+  it('omits the overflow line entirely when nothing overflowed', () => {
+    const markdown = renderMarkdown(
+      makeResult({
+        findings: [makeFinding()],
+        suppressed: [{ suppressReason: 'insufficient_evidence' }],
+      })
+    );
+    assert.doesNotMatch(markdown, /表示上限で非表示/);
   });
 
   it('cannot be restructured by <details> markup in a finding message', () => {
