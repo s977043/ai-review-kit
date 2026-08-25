@@ -44831,6 +44831,14 @@ const SUPPRESS_REASONS = {
   DUPLICATE: 'duplicate',
   STYLE_ONLY: 'style_only',
   INSUFFICIENT_EVIDENCE: 'insufficient_evidence',
+  /**
+   * RETIRED as a producible disposition (#1857 / ADR-007 `observe` 条件 3).
+   * It used to mean two different things at once — "same ruleId already shown"
+   * and "did not fit the overview cap". The first is now `DUPLICATE`; the
+   * second is a ranking outcome with no reason code at all
+   * (`rankFindingsForOutput().overflow`). The key is kept because run records
+   * written before the split still carry this value and must stay readable.
+   */
   COVERED_BY_HIGHER_LEVEL: 'covered_by_higher_level_finding',
 };
 
@@ -45351,19 +45359,33 @@ function adjudicateFindings(findings, _options = {}) {
 
 /**
  * Stage 3 of the classification pipeline (#1857 Phase 1): scoring, output
- * ordering and the overview cap. Per ADR-007 the cap is a RANKING outcome, not
- * a disposition — it is only reported through `suppressReason` here because
- * Phase 1 keeps the emitted values byte-identical to the pre-refactor ones.
+ * ordering and the overview cap.
  *
- * The `overviewRuleIds` guard collapses a second finding that carries an
- * already-shown non-`unknown` ruleId. Reached through `classifyFindings` that
- * branch is unreachable, because `prefilterFindings` has already collapsed
- * every duplicate ruleId; it is kept so the function is also correct when
- * called on a set that was not prefiltered.
+ * Phase 1 (#1912) split the two branches that both pushed
+ * `COVERED_BY_HIGHER_LEVEL` but left the emitted value identical. This function
+ * now carries the value split that ADR-007 asks for ("`COVERED_BY_HIGHER_LEVEL`
+ * は Phase 1 で 2 つに割り、重複側だけを `duplicate` へ寄せ、上限側は
+ * `rankFindingsForOutput` の出力として表現する"), which is the `observe`
+ * entry condition 3:
+ *
+ * - **duplicate** — a second finding carrying an already-shown non-`unknown`
+ *   ruleId. That IS a disposition, so it goes to `suppressed` under the same
+ *   `SUPPRESS_REASONS.DUPLICATE` that {@link prefilterFindings} uses. Reached
+ *   through {@link classifyFindings} this branch is unreachable, because
+ *   `prefilterFindings` has already collapsed every duplicate ruleId; it is kept
+ *   so the function is also correct when called on a non-prefiltered set.
+ * - **overview cap overflow** — a finding that did not fit within
+ *   `maxOverview`. Per ADR-007 this is NOT a disposition but a ranking outcome,
+ *   so it carries no `suppressReason` and is returned in its own `overflow`
+ *   list. Keeping it out of `suppressed` is what lets a suppression breakdown be
+ *   counted without mixing two different events.
+ *
+ * `overflow` holds the ORIGINAL objects, like `overview` — the finding was not
+ * judged, only ranked below the cut.
  *
  * @param {object[]} findings
  * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
- * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
+ * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[], overflow: object[] }}
  * @see docs/adr/007-semantic-precision-pass.md
  */
 function rankFindingsForOutput(findings, options = {}) {
@@ -45371,6 +45393,7 @@ function rankFindingsForOutput(findings, options = {}) {
   const maxOverview = reviewMode === 'tiny' ? 3 : reviewMode === 'large' ? 8 : 5;
 
   const suppressed = [];
+  const overflow = [];
   const sorted = [...findings].sort(
     (a, b) => (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(b).composite - (0,_scoring_breakdown_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeFindingBreakdown */ ._)(a).composite
   );
@@ -45381,28 +45404,32 @@ function rankFindingsForOutput(findings, options = {}) {
     const rid = String(f.ruleId ?? '');
     const isUnknown = rid === 'unknown';
     if (!isUnknown && overviewRuleIds.has(rid)) {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
+      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.DUPLICATE });
     } else if (overview.length < maxOverview) {
       overview.push(f);
       if (!isUnknown) overviewRuleIds.add(rid);
     } else {
-      suppressed.push({ ...f, suppressReason: SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL });
+      overflow.push(f);
     }
   }
 
-  return { overview, inlineCandidates: [], suppressed };
+  return { overview, inlineCandidates: [], suppressed, overflow };
 }
 
 /**
  * Compatibility facade over the three stages above (#1857 Phase 1). With
- * adjudication disabled — the only state Phase 1 ships — the return value is
- * identical to the pre-split implementation, including the ORDER of
- * `suppressed`: prefilter dispositions first (in input order, duplicates
- * last), then adjudication, then the ranking overflow.
+ * adjudication disabled — the only state shipped so far — `overview` and the
+ * ORDER of `suppressed` are identical to the pre-split implementation:
+ * prefilter dispositions first (in input order, duplicates last), then
+ * adjudication, then any ranking-stage duplicate.
+ *
+ * `suppressed` now holds dispositions ONLY. The findings that fell off the
+ * overview cap are returned separately in `overflow` and carry no
+ * `suppressReason`, per ADR-007 — see {@link rankFindingsForOutput}.
  *
  * @param {object[]} findings
  * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
- * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[] }}
+ * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[], overflow: object[] }}
  */
 function classifyFindings(findings, options = {}) {
   const prefiltered = prefilterFindings(findings);
@@ -45413,6 +45440,7 @@ function classifyFindings(findings, options = {}) {
     overview: ranked.overview,
     inlineCandidates: ranked.inlineCandidates,
     suppressed: [...prefiltered.suppressed, ...adjudicated.suppressed, ...ranked.suppressed],
+    overflow: ranked.overflow,
   };
 }
 
@@ -74114,8 +74142,12 @@ function formatConsensusBadge(consensusLevel) {
  * breakdown, and not in the headline. Suppressed findings are not displayed, so
  * their count does not belong beside the counts of what is.
  *
+ * #1857 / ADR-007: the overview-cap overflow is reported on its OWN line and is
+ * not folded into the suppression breakdown. Not being shown because the cap ran
+ * out is a ranking outcome, not a disposition, so it has no reason code to count.
+ *
  * @param {ReturnType<typeof buildRenderedFindingSet>} rendered
- * @param {{suppressed?: object[]}|undefined} classified
+ * @param {{suppressed?: object[], overflow?: object[]}|undefined} classified
  */
 function formatPrioritySummaryMarkdown(rendered, classified) {
   const counts = { P1: 0, P2: 0, P3: 0, P4: 0 };
@@ -74148,6 +74180,11 @@ function formatPrioritySummaryMarkdown(rendered, classified) {
       .map(([r, n]) => `${r}(${n})`)
       .join(', ');
     lines.push(`- 抑制済み: ${suppressed.length} 件 (主な理由: ${topReasons})`);
+  }
+
+  const overflow = classified?.overflow ?? [];
+  if (overflow.length > 0) {
+    lines.push(`- 表示上限で非表示: ${overflow.length} 件`);
   }
 
   return wrapInDetails(
