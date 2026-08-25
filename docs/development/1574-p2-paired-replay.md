@@ -244,16 +244,20 @@ paired replay を ledger 比較と区別する要素として、activation を�
 - `observedDifference`: 突合結果に差分があるか
 - `verified`: 上記 2 つがともに真であるか
 - `sourceCommitShaCoverage`: 両側合計で、レビュー対象コミットを名指しできる run が何件あるか（`runCount` / `knownRunCount` / `unknownRunCount`・#1719）
+- `crossSideSourceCommitSha`: baseline と candidate が導出した被レビューコミットが食い違っているか（`baseline` / `candidate` / `comparable` / `differs`・#1724）
 
 構成が同一の replay を「regression なし」と読むと、candidate についての証拠がないのに安全だと誤読します。そのため未発火の場合は理由付きで報告します。
 
-`sourceCommitShaCoverage` は報告専用であり、`verified` の判定式には入れていません。「どのコードをレビューしたのか名指しできる」という性質と、「構成が異なった」という事実は別の問いだからです。証拠の欠落は次の 3 つを `activationCheck.reasons`（および Markdown の Activation 節）へ必ず出力し、沈黙させません。
+`sourceCommitShaCoverage` は報告専用であり、`verified` の判定式には入れていません。「どのコードをレビューしたのか名指しできる」という性質と、「構成が異なった」という事実は別の問いだからです。証拠の欠落は次の 4 つを `activationCheck.reasons`（および Markdown の Activation 節）へ出力し、沈黙させません。
 
 - `source_commit_sha` を持たない run が存在する場合（#1715 以前の記録）
 - dirty な working tree で収集した run が存在する場合（#1718 W1）
 - dirty フラグ自体を持たない run が存在する場合（unknown を clean と同じ扱いにしない）
+- 両側が別のコミットをレビューしていた場合（`crossSideSourceCommitSha.differs === true`・#1724）
 
-per-side の内訳は `manifest.<side>.provenance` にあります。両側合計を持つのは activation 側だけであり、同名フィールドの二重管理は避けています。
+`crossSideSourceCommitSha` も同じく報告専用です。#1719 の検査は (side, case) 単位の内部一貫性しか見ておらず、片側だけを後日 re-collect したデータセットはそこを素通りします。両側の導出値が食い違えば、diff の差は candidate 構成ではなく被レビューコード自体の差に由来しうるため、その可能性を記録します。ただし fail-closed にはしません。後日の re-collect は正当な実験手順であり、拒否すると #1720 が見送った副作用をそのまま招くからです。片側でも導出値が `null`（未取得、または複数コミットにまたがる側）なら `differs` は `false` ではなく `null` とし、「未取得」を「一致」と読み替えません。比較は側内の判定と同じ `resolveObservedSha` を再利用しており、短縮 sha の扱いも側内と同一です。
+
+per-side の内訳は `manifest.<side>.provenance` にあります。両側合計を持つのは activation 側だけであり、同名フィールドの二重管理は避けています。いずれも manifest ではなく result 側に置いています。manifest へ入れると `conditions` に含まれ、既存 manifest の `experimentKey` / `manifestId` が動いて契約3 の不変性を壊すためです。
 
 ## 11. 次フェーズへの申し送り
 
