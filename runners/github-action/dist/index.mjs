@@ -74708,6 +74708,73 @@ function warnBaselineNotCompared(parsed, reason) {
 }
 
 /**
+ * Emit the finished review result in the requested `--output` format.
+ *
+ * Extracted verbatim from `runRunCommand` (#1594 follow-up, step 1): the block
+ * is the presentation stage of the run pipeline — it starts after the optional
+ * `--baseline` comparison and ends before the gate exit-code resolution, and it
+ * neither returns a value nor alters control flow. Both branches it owns key off
+ * the same `parsed.output`, which is why the `--debug` dump travels with it: its
+ * stream routing is the same inverted `!== 'text'` check as the format dispatch
+ * (#1695), so splitting them would put one input's two consumers in two places.
+ *
+ * Kept module-local rather than moved to `src/cli/render.mjs` because the block
+ * is `run`-specific glue (format dispatch + debug routing), not a reusable
+ * renderer, and `src/cli/commands/evolve.mjs` already keeps its per-stage
+ * functions (`runPromptCompare` / `runAggregate` / `runReplay`) module-local.
+ *
+ * @param {Record<string, unknown>} result - runLocalReview() result.
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @returns {Promise<void>}
+ */
+async function renderRunResult(result, parsed) {
+  if (parsed.output === 'json') {
+    console.log(JSON.stringify(formatJsonOutput(result, parsed.phase), null, 2));
+  } else if (parsed.output === 'markdown') {
+    printMarkdownReport(result, parsed.phase);
+  } else if (parsed.output === 'yaml') {
+    const { formatYamlOutput } = await __nccwpck_require__.e(/* import() */ 610).then(__nccwpck_require__.bind(__nccwpck_require__, 4610));
+    const jsonOutput = formatJsonOutput(result, parsed.phase);
+    const artifact = {
+      phase: parsed.phase,
+      timestamp: new Date().toISOString(),
+      findings: jsonOutput.issues,
+      plan: result.plan,
+      // Propagate the canonical verdict so YAML matches JSON (#1170 F3).
+      ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
+    };
+    console.log(formatYamlOutput(artifact));
+  } else if (parsed.output === 'html') {
+    const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+    const jsonOutput = formatJsonOutput(result, parsed.phase);
+    const htmlResult = {
+      findings: result.findings ?? [],
+      plan: result.plan,
+      timestamp: new Date().toISOString(),
+      // Propagate the canonical verdict so HTML matches JSON (#1170 F3).
+      ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
+    };
+    console.log(formatHtmlOutput(htmlResult, parsed.phase));
+  } else {
+    printPlan(result.plan);
+    printComments(result.comments);
+  }
+
+  if (parsed.debug) {
+    // #1695: same inverted check as logRunHeader in runRunCommand. The previous
+    // enumeration already covered every structured format, so this is
+    // behavior-identical — it just removes the second place a newly added
+    // --output value would silently fall through to stdout.
+    if (parsed.output !== 'text') {
+      console.error('\nDebug info (not included in output):');
+      printDebugInfo(result, { log: console.error });
+    } else {
+      printDebugInfo(result);
+    }
+  }
+}
+
+/**
  * Handle the default `run` command (local review against the git repo).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -74922,50 +74989,7 @@ Dependencies: ${
     }
   }
 
-  if (parsed.output === 'json') {
-    console.log(JSON.stringify(formatJsonOutput(result, parsed.phase), null, 2));
-  } else if (parsed.output === 'markdown') {
-    printMarkdownReport(result, parsed.phase);
-  } else if (parsed.output === 'yaml') {
-    const { formatYamlOutput } = await __nccwpck_require__.e(/* import() */ 610).then(__nccwpck_require__.bind(__nccwpck_require__, 4610));
-    const jsonOutput = formatJsonOutput(result, parsed.phase);
-    const artifact = {
-      phase: parsed.phase,
-      timestamp: new Date().toISOString(),
-      findings: jsonOutput.issues,
-      plan: result.plan,
-      // Propagate the canonical verdict so YAML matches JSON (#1170 F3).
-      ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
-    };
-    console.log(formatYamlOutput(artifact));
-  } else if (parsed.output === 'html') {
-    const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
-    const jsonOutput = formatJsonOutput(result, parsed.phase);
-    const htmlResult = {
-      findings: result.findings ?? [],
-      plan: result.plan,
-      timestamp: new Date().toISOString(),
-      // Propagate the canonical verdict so HTML matches JSON (#1170 F3).
-      ...(jsonOutput.decision !== undefined ? { decision: jsonOutput.decision } : {}),
-    };
-    console.log(formatHtmlOutput(htmlResult, parsed.phase));
-  } else {
-    printPlan(result.plan);
-    printComments(result.comments);
-  }
-
-  if (parsed.debug) {
-    // #1695: same inverted check as logRunHeader above. The previous
-    // enumeration already covered every structured format, so this is
-    // behavior-identical — it just removes the second place a newly added
-    // --output value would silently fall through to stdout.
-    if (parsed.output !== 'text') {
-      console.error('\nDebug info (not included in output):');
-      printDebugInfo(result, { log: console.error });
-    } else {
-      printDebugInfo(result);
-    }
-  }
+  await renderRunResult(result, parsed);
 
   // #1066 self-review: honor --fail-on / --warn-on / --advisory-only on
   // `river run` too. Previously these were parsed but silently ignored on
