@@ -53507,81 +53507,11 @@ async function runReviewCommand(parsed) {
   const isExecExecute =
     parsed.reviewSubcommand === 'exec' && !parsed.dryRun && typeof parsed.planFile !== 'string';
 
-  // verify (and any future review subcommand that is not exec): the
-  // CLI/output contract is fixed and validated here (PR-3), but skill
-  // execution and verify-side artifact reading are not implemented
-  // yet. The contract depends only on the Artifact Input Contract IDs
-  // — it does not depend on PlanGate.
   if (parsed.reviewSubcommand === 'verify') {
-    try {
-      const { ReviewPlanError, resolveReviewOutputFormat } =
-        await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
-      try {
-        resolveReviewOutputFormat(parsed);
-      } catch (err) {
-        if (err instanceof ReviewPlanError) {
-          console.error(`Error: ${err.message}`);
-          return 3;
-        }
-        throw err;
-      }
-    } catch (err) {
-      console.error(`Error: ${err?.message ?? err}`);
-      return 1;
-    }
-    console.error(
-      `river review ${parsed.reviewSubcommand}: the argument/output contract is accepted, ` +
-        'but execution is not implemented yet (#802 Phase 3). ' +
-        'See pages/reference/cli-review-' +
-        parsed.reviewSubcommand +
-        '-spec.md.'
-    );
-    return 3;
+    return runReviewVerify(parsed);
   }
-  // route: risk-based review mode recommendation (dry-run, no LLM)
   if (parsed.reviewSubcommand === 'route') {
-    try {
-      const { routeReviewMode, formatRouterResultMarkdown } =
-        await __nccwpck_require__.e(/* import() */ 709).then(__nccwpck_require__.bind(__nccwpck_require__, 1709));
-      const { loadRiskMap } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 572));
-      const routeTargetPath = external_node_path_.resolve(parsed.target);
-      const repoRoot = await (0,git/* ensureGitRepo */.NC)(routeTargetPath);
-      const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
-      const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, parsed.base ?? defaultBranch);
-      const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
-      const riskMap = await loadRiskMap(repoRoot).catch((err) => {
-        console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
-        return null;
-      });
-      const result = routeReviewMode({
-        changedFiles: repoDiff.changedFiles,
-        diffText: repoDiff.rawDiffText,
-        riskMap,
-        targetPath: routeTargetPath,
-      });
-      const outputFormat = parsed.formatExplicit
-        ? parsed.format
-        : parsed.outputExplicit && ['json', 'markdown'].includes(parsed.output)
-          ? parsed.output
-          : 'json';
-      if (outputFormat === 'markdown') {
-        console.log(formatRouterResultMarkdown(result));
-      } else if (outputFormat === 'json') {
-        console.log(JSON.stringify(result, null, 2));
-      } else {
-        console.error(
-          `Error: river review route only supports --format json or --format markdown` +
-            (parsed.outputExplicit
-              ? ` (--output is not supported for this subcommand; use --format instead)`
-              : ` (got "${outputFormat}").`)
-        );
-        return 3;
-      }
-      return 0;
-    } catch (err) {
-      console.error(`Error: ${err?.message ?? err}`);
-      return 1;
-    }
+    return runReviewRoute(parsed);
   }
   // At this point, the verify/route branches above have already returned, so the
   // remaining valid subcommands are `plan` and `exec` (in any of its
@@ -53711,6 +53641,96 @@ async function runReviewCommand(parsed) {
         getGateInput: () => artifact,
         getGateObject: () => artifact.gate,
       });
+    }
+    return 0;
+  } catch (err) {
+    console.error(`Error: ${err?.message ?? err}`);
+    return 1;
+  }
+}
+
+/**
+ * `river review verify` — accept the argument/output contract, defer execution.
+ *
+ * verify (and any future review subcommand that is not exec): the
+ * CLI/output contract is fixed and validated here (PR-3), but skill
+ * execution and verify-side artifact reading are not implemented
+ * yet. The contract depends only on the Artifact Input Contract IDs
+ * — it does not depend on PlanGate.
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @returns {Promise<number>} process exit code.
+ */
+async function runReviewVerify(parsed) {
+  try {
+    const { ReviewPlanError, resolveReviewOutputFormat } =
+      await __nccwpck_require__.e(/* import() */ 916).then(__nccwpck_require__.bind(__nccwpck_require__, 6916));
+    try {
+      resolveReviewOutputFormat(parsed);
+    } catch (err) {
+      if (err instanceof ReviewPlanError) {
+        console.error(`Error: ${err.message}`);
+        return 3;
+      }
+      throw err;
+    }
+  } catch (err) {
+    console.error(`Error: ${err?.message ?? err}`);
+    return 1;
+  }
+  console.error(
+    `river review ${parsed.reviewSubcommand}: the argument/output contract is accepted, ` +
+      'but execution is not implemented yet (#802 Phase 3). ' +
+      'See pages/reference/cli-review-' +
+      parsed.reviewSubcommand +
+      '-spec.md.'
+  );
+  return 3;
+}
+
+/**
+ * `river review route` — risk-based review mode recommendation (dry-run, no LLM).
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @returns {Promise<number>} process exit code.
+ */
+async function runReviewRoute(parsed) {
+  try {
+    const { routeReviewMode, formatRouterResultMarkdown } =
+      await __nccwpck_require__.e(/* import() */ 709).then(__nccwpck_require__.bind(__nccwpck_require__, 1709));
+    const { loadRiskMap } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 572));
+    const routeTargetPath = external_node_path_.resolve(parsed.target);
+    const repoRoot = await (0,git/* ensureGitRepo */.NC)(routeTargetPath);
+    const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
+    const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, parsed.base ?? defaultBranch);
+    const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
+    const riskMap = await loadRiskMap(repoRoot).catch((err) => {
+      console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
+      return null;
+    });
+    const result = routeReviewMode({
+      changedFiles: repoDiff.changedFiles,
+      diffText: repoDiff.rawDiffText,
+      riskMap,
+      targetPath: routeTargetPath,
+    });
+    const outputFormat = parsed.formatExplicit
+      ? parsed.format
+      : parsed.outputExplicit && ['json', 'markdown'].includes(parsed.output)
+        ? parsed.output
+        : 'json';
+    if (outputFormat === 'markdown') {
+      console.log(formatRouterResultMarkdown(result));
+    } else if (outputFormat === 'json') {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.error(
+        `Error: river review route only supports --format json or --format markdown` +
+          (parsed.outputExplicit
+            ? ` (--output is not supported for this subcommand; use --format instead)`
+            : ` (got "${outputFormat}").`)
+      );
+      return 3;
     }
     return 0;
   } catch (err) {
