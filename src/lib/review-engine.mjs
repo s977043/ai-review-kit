@@ -740,6 +740,15 @@ export async function generateReview({
   });
 
   const classified = classifyFindings(findings, { reviewMode: reviewMode ?? 'medium' });
+  // #1857 / ADR-007 `observe` 条件 3: the overview-cap overflow is a ranking
+  // outcome, so it carries no reason code and is NOT displayed (the report
+  // prints every comment — see formatPrioritySummaryMarkdown). Recording the
+  // count here is what makes the cap observable without claiming that anything
+  // was hidden. Conditional like the other counters above, so a run with no
+  // overflow keeps the debug key set it had before.
+  if (classified.overflow.length > 0) {
+    debug.overviewCapOverflow = classified.overflow.length;
+  }
 
   return {
     comments,

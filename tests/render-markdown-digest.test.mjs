@@ -278,28 +278,32 @@ describe('#1713 Slice 1: markdown headline and progressive disclosure', () => {
     assert.doesNotMatch(markdown, /件の指摘を抑制しました/);
   });
 
-  it('reports the overview-cap overflow on its own line, not as a suppression (#1857)', () => {
+  // #1857 / ADR-007: the report does NOT apply the overview cap — its sections
+  // come from `result.comments`, the full emitted set. So the overflow must not
+  // be announced as hidden: the reader would go looking for findings that are
+  // printed, with their bodies, further up the same report.
+  it('never claims the overview-cap overflow is hidden (#1857)', () => {
+    const findings = Array.from({ length: 8 }, (_, i) =>
+      makeFinding({ id: `rr-${i + 1}`, ruleId: `rule-${i}`, title: `overflow-title-${i}` })
+    );
     const markdown = renderMarkdown(
       makeResult({
-        findings: [makeFinding()],
+        findings,
         suppressed: [{ suppressReason: 'insufficient_evidence' }],
-        overflow: [{ id: 'rr-9' }, { id: 'rr-10' }, { id: 'rr-11' }],
+        // 表示枠から溢れた 3 件。render はこれを読まない。
+        overflow: findings.slice(5),
       })
     );
-    // ADR-007: 表示上限の超過は disposition ではないので reason 内訳へ混ぜない。
+    assert.doesNotMatch(markdown, /表示上限/);
+    assert.doesNotMatch(markdown, /非表示/);
+    // The overflow findings are in the report body, which is why no line may
+    // say otherwise.
+    for (const f of findings.slice(5)) {
+      assert.ok(markdown.includes(f.title), `${f.title} should be rendered`);
+    }
+    // The suppression breakdown itself is unaffected.
     assert.strictEqual(countOccurrences(markdown, '抑制済み: 1 件'), 1);
-    assert.strictEqual(countOccurrences(markdown, '表示上限で非表示: 3 件'), 1);
     assert.doesNotMatch(markdown, /undefined\(\d+\)/);
-  });
-
-  it('omits the overflow line entirely when nothing overflowed', () => {
-    const markdown = renderMarkdown(
-      makeResult({
-        findings: [makeFinding()],
-        suppressed: [{ suppressReason: 'insufficient_evidence' }],
-      })
-    );
-    assert.doesNotMatch(markdown, /表示上限で非表示/);
   });
 
   it('cannot be restructured by <details> markup in a finding message', () => {

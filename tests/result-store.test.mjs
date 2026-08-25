@@ -190,6 +190,37 @@ describe('result-store', () => {
       assert.equal(list.length, 2);
       assert.ok(list.every((r) => 'runId' in r && 'findingsCount' in r));
     });
+
+    // #1857: `river runs list` prints `suppressed=` from this metadata. It must
+    // also carry `overflowCount`, otherwise the printed line means one thing for
+    // pre-split records and another for post-split ones with nothing to say so.
+    it('exposes overflowCount so runs list can print it beside suppressed', async () => {
+      const overflowDir = path.join(tmpDir, 'list-overflow');
+      const rec = buildRunRecord(
+        makeResult({
+          classified: {
+            overview: [{ id: 'rr-1' }],
+            suppressed: [{ id: 'rr-x', suppressReason: 'low_confidence' }],
+            overflow: [{ id: 'rr-y' }, { id: 'rr-z' }],
+            inlineCandidates: [],
+          },
+        }),
+        { runId: '2026-01-03-run3' }
+      );
+      await saveRunRecord(rec, { storeDir: overflowDir });
+      const [meta] = await listRunRecords(overflowDir);
+      assert.equal(meta.overflowCount, 2);
+      assert.equal(meta.suppressedCount, 1);
+    });
+
+    it('reports overflowCount 0 for a record saved before the field existed', async () => {
+      const legacyDir = path.join(tmpDir, 'list-legacy');
+      const rec = buildRunRecord(makeResult(), { runId: '2026-01-04-run4' });
+      delete rec.finalSummary.overflowCount;
+      await saveRunRecord(rec, { storeDir: legacyDir });
+      const [meta] = await listRunRecords(legacyDir);
+      assert.equal(meta.overflowCount, 0);
+    });
   });
 
   describe('computeDashboard', () => {
@@ -197,6 +228,8 @@ describe('result-store', () => {
       const db = computeDashboard([]);
       assert.equal(db.totalRuns, 0);
       assert.equal(db.totalFindings, 0);
+      assert.equal(db.totalOverflow, 0);
+      assert.equal(db.legacyCoveredByHigherLevel, 0);
       assert.equal(db.suppressRate, null);
     });
 
@@ -226,6 +259,66 @@ describe('result-store', () => {
       assert.ok('critical' in db.severityDistribution);
       assert.ok('bug-hunter' in db.reviewerRoleDistribution);
       assert.ok('security-scanner' in db.reviewerRoleDistribution);
+    });
+
+    // #1857 / ADR-007: `.river/runs/` is append-only, so a store spans the
+    // split. Without a counter of its own the cap overflow simply vanishes from
+    // the dashboard on the day the split shipped, and Suppress rate shows a
+    // drop that is an artefact of the refactor rather than a real trend.
+    it('counts the overview-cap overflow separately from the suppressions', () => {
+      const rec = buildRunRecord(
+        makeResult({
+          classified: {
+            overview: [{ id: 'rr-1' }],
+            suppressed: [{ id: 'rr-x', suppressReason: 'low_confidence' }],
+            overflow: [{ id: 'rr-y' }, { id: 'rr-z' }],
+            inlineCandidates: [],
+          },
+        })
+      );
+      const db = computeDashboard([rec]);
+      assert.equal(db.totalOverflow, 2);
+      assert.equal(db.totalSuppressed, 1);
+      assert.ok(formatDashboard(db).includes('| Total overflow (overview cap) | 2 |'));
+    });
+
+    it('reports zero overflow for a record written before the field existed', () => {
+      // A pre-#1857 record: no `overflowFindings` key at all.
+      const legacy = buildRunRecord(makeResult());
+      delete legacy.overflowFindings;
+      const db = computeDashboard([legacy]);
+      assert.equal(db.totalOverflow, 0);
+      assert.equal(db.legacyCoveredByHigherLevel, 0);
+      assert.ok(formatDashboard(db).includes('| Total overflow (overview cap) | 0 |'));
+    });
+
+    it('counts legacy covered_by_higher_level suppressions so the split stays visible', () => {
+      // The pre-split shape: the cap overflow arrived inside `suppressedFindings`
+      // under the now-retired reason code, indistinguishable from a duplicate.
+      const legacy = buildRunRecord(
+        makeResult({
+          classified: {
+            overview: [{ id: 'rr-1' }],
+            suppressed: [
+              { id: 'rr-a', suppressReason: 'covered_by_higher_level_finding' },
+              { id: 'rr-b', suppressReason: 'covered_by_higher_level_finding' },
+              { id: 'rr-c', suppressReason: 'low_confidence' },
+            ],
+            inlineCandidates: [],
+          },
+        })
+      );
+      const db = computeDashboard([legacy]);
+      assert.equal(db.legacyCoveredByHigherLevel, 2);
+      // NOT retro-corrected: the recorded suppression count stands as written.
+      assert.equal(db.totalSuppressed, 3);
+      assert.equal(db.totalOverflow, 0);
+      assert.ok(formatDashboard(db).includes('covered_by_higher_level_finding) | 2 |'));
+    });
+
+    it('omits the legacy row when no record carries the retired reason code', () => {
+      const db = computeDashboard([buildRunRecord(makeResult())]);
+      assert.ok(!formatDashboard(db).includes('Legacy pre-#1857'));
     });
 
     it('computes suppress rate', () => {
@@ -421,13 +514,24 @@ describe('buildRunRecord — commitSha / provenance (#1715)', () => {
       changedFiles: ['src/foo.mjs'],
       findings: rec.findings,
       suppressedFindings: rec.suppressedFindings,
-      finalSummary: rec.finalSummary,
+      // #1857: expanded to real values. Written as `finalSummary:
+      // rec.finalSummary` this was self-referential and pinned NOTHING about
+      // the summary — a key added to or removed from it still passed. It is the
+      // only fixed-key metadata listRunRecords reads (result-store.mjs:243-253)
+      // and it reaches the CI job summary, so the key SET is the contract here.
+      finalSummary: {
+        findingsCount: 1,
+        suppressedCount: 1,
+        overflowCount: 0,
+        overviewCount: 1,
+        changedFilesCount: 1,
+        tokenEstimate: 1200,
+      },
     });
     // #1857 / ADR-007: the overview-cap overflow is persisted separately from
-    // the suppression dispositions. With no overflow the key stays absent and
-    // the count is 0, so pre-#1857 records keep their exact shape.
+    // the suppression dispositions. With no overflow the key stays absent, so
+    // pre-#1857 records keep their exact shape.
     assert.equal('overflowFindings' in rec, false);
-    assert.equal(rec.finalSummary.overflowCount, 0);
   });
 
   it('persists the overview-cap overflow apart from the suppressions (#1857)', () => {

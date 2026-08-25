@@ -401,6 +401,22 @@ describe('rankFindingsForOutput', () => {
     assert.equal(suppressed[0].suppressReason, viaPrefilter[0].suppressReason);
   });
 
+  // #1857 nit 2: the cross-check above compares two call sites that BOTH read
+  // `SUPPRESS_REASONS.DUPLICATE`, so editing the constant moves both sides and
+  // stays green. The value is persisted into `.river/runs/*.json` and is read
+  // back by later tooling, so the literal itself is a compatibility contract and
+  // is pinned here as a golden string.
+  it('writes the literal string "duplicate", which run records persist', () => {
+    const f1 = makeFinding({ id: 'r-g1', ruleId: 'null-check' });
+    const f2 = makeFinding({ id: 'r-g2', ruleId: 'null-check' });
+    const { suppressed } = rankFindingsForOutput([f1, f2]);
+    assert.equal(suppressed[0].suppressReason, 'duplicate');
+    assert.equal(SUPPRESS_REASONS.DUPLICATE, 'duplicate');
+    // The retired code keeps its exact stored spelling too: records written
+    // before the split still carry it and must stay readable.
+    assert.equal(SUPPRESS_REASONS.COVERED_BY_HIGHER_LEVEL, 'covered_by_higher_level_finding');
+  });
+
   it('does not mutate the input when collapsing a duplicate', () => {
     const f1 = makeFinding({ id: 'r-d3', ruleId: 'type-safety' });
     const f2 = makeFinding({ id: 'r-d4', ruleId: 'type-safety' });

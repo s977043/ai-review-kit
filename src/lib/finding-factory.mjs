@@ -588,6 +588,17 @@ export function adjudicateFindings(findings, _options = {}) {
  * `overflow` holds the ORIGINAL objects, like `overview` — the finding was not
  * judged, only ranked below the cut.
  *
+ * NO FINGERPRINT (#1857 / #1823). Neither `overflow` nor `suppressed` carries
+ * `fingerprint` / `fingerprintV2`. The pipeline builds `findings` without them
+ * (`src/lib/review-engine.mjs:701`), and `annotateFingerprints` returns COPIES
+ * (`:721`), so the annotated set local-runner puts in `result.findings`
+ * (`src/lib/local-runner.mjs:570,634`) shares no objects with
+ * `result.classified`. A consumer must therefore join these lists by `id`
+ * (`rr-N`, unique within one run record) and not by fingerprint. Running the
+ * ranking output through `annotateFingerprints` would change what every
+ * `classified.*` list contains, which is a wider change than the split this
+ * function implements.
+ *
  * @param {object[]} findings
  * @param {{ reviewMode?: 'tiny'|'medium'|'large' }} [options]
  * @returns {{ overview: object[], inlineCandidates: object[], suppressed: object[], overflow: object[] }}

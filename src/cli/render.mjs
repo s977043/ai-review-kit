@@ -700,12 +700,22 @@ function formatConsensusBadge(consensusLevel) {
  * breakdown, and not in the headline. Suppressed findings are not displayed, so
  * their count does not belong beside the counts of what is.
  *
- * #1857 / ADR-007: the overview-cap overflow is reported on its OWN line and is
- * not folded into the suppression breakdown. Not being shown because the cap ran
- * out is a ranking outcome, not a disposition, so it has no reason code to count.
+ * #1857 / ADR-007: `classified.overflow` (the overview-cap overflow) is
+ * deliberately NOT reported here. The Markdown report does not apply the
+ * overview cap at all: `buildRenderedFindingSet` builds its entries from
+ * `result.comments` (`:350-355`), which review-engine keeps as the full emitted
+ * set — `findings` and `classified` are both derived from it 1:1
+ * (`src/lib/review-engine.mjs:701`). So every overflow finding is already
+ * printed in full, with its body, in the sections above. A line claiming those
+ * findings are hidden would send the reader looking for something that is on
+ * screen. The overflow stays observable through the run record
+ * (`overflowFindings` / `finalSummary.overflowCount`) and
+ * `debug.overviewCapOverflow`, which is where ADR-007's `observe` condition 3
+ * needs it. Truncating the display to the cap instead would be a behaviour
+ * change, and is out of scope here.
  *
  * @param {ReturnType<typeof buildRenderedFindingSet>} rendered
- * @param {{suppressed?: object[], overflow?: object[]}|undefined} classified
+ * @param {{suppressed?: object[]}|undefined} classified
  */
 function formatPrioritySummaryMarkdown(rendered, classified) {
   const counts = { P1: 0, P2: 0, P3: 0, P4: 0 };
@@ -738,11 +748,6 @@ function formatPrioritySummaryMarkdown(rendered, classified) {
       .map(([r, n]) => `${r}(${n})`)
       .join(', ');
     lines.push(`- 抑制済み: ${suppressed.length} 件 (主な理由: ${topReasons})`);
-  }
-
-  const overflow = classified?.overflow ?? [];
-  if (overflow.length > 0) {
-    lines.push(`- 表示上限で非表示: ${overflow.length} 件`);
   }
 
   return wrapInDetails(
