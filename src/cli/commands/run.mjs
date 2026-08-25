@@ -122,6 +122,86 @@ async function renderRunResult(result, parsed) {
 }
 
 /**
+ * Persist the finished run and publish its digest to the CI job summary.
+ *
+ * Extracted verbatim from `runRunCommand` (#1594 follow-up, step 2): the two
+ * blocks are adjacent, share the `isGithubActions` decision, and are both gated
+ * on `result.status === 'ok'` — together they are the one durability stage of
+ * the run pipeline (write the audit record, then surface it where a human is
+ * forced to see it, Epic #1347 S3). Neither returns a value nor alters control
+ * flow, and both are fail-soft: a failure warns on stderr and the review result
+ * is still emitted.
+ *
+ * Kept module-local for the same reason as `renderRunResult` above: this is
+ * `run`-specific glue over `src/lib/result-store.mjs` and
+ * `src/lib/runs-digest.mjs`, not a reusable service, and
+ * `src/cli/commands/evolve.mjs` already keeps its per-stage functions
+ * module-local.
+ *
+ * @param {Record<string, unknown>} result - runLocalReview() result.
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @param {string} targetPath - resolved repo target path.
+ * @returns {Promise<void>}
+ */
+async function persistRunArtifacts(result, parsed, targetPath) {
+  // Persist run to result store when --save is provided. Under GitHub
+  // Actions the save is AUTOMATIC (Epic #1347 S3, adversarial design
+  // review Blocker 1: an opt-in store never accumulates the audit trail),
+  // and the digest is appended to the job summary as the forced display
+  // point — supervision that requires someone to remember a command is
+  // not supervision.
+  // M1 (#1372 review): RIVER_AUTO_SAVE=false opts out of the CI auto-save
+  // (documented in the contract doc; the write target is .river/runs/).
+  const isGithubActions =
+    process.env.GITHUB_ACTIONS === 'true' && process.env.RIVER_AUTO_SAVE !== 'false';
+  if ((parsed.save || isGithubActions) && result.status === 'ok') {
+    try {
+      const { buildRunProvenance, buildRunRecord, saveRunRecord, resolveStoreDir } =
+        await import('../../lib/result-store.mjs');
+      const { decision: runDecision, gate: runGate } = deriveRunGate(result);
+      const record = buildRunRecord(result, {
+        phase: parsed.phase,
+        gate: runGate,
+        decision: runDecision,
+        // #1715 (#1574 producer Slice 2): attach the 契約1 provenance so
+        // `river evolve aggregate` can tie this evidence to a commit. Purely
+        // observational — it raises no trust, see buildRunProvenance. `dirty`
+        // travels with the sha because a local run normally reviews the working
+        // tree, so the sha alone does not identify the reviewed code.
+        provenance: buildRunProvenance({
+          commitSha: result.commitSha,
+          dirty: result.dirty,
+        }),
+      });
+      // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
+      const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });
+      console.error(`Run saved: ${record.runId} → ${savedPath}`);
+    } catch (err) {
+      console.error(`Warning: --save failed: ${err.message}`);
+    }
+  }
+
+  // Forced display point (Epic #1347 S3): under GitHub Actions, append the
+  // runs digest to the job summary. Fail-soft — the review result must
+  // never break on digest generation.
+  if (isGithubActions && process.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
+    try {
+      // C1 (#1372 review): the digest needs FULL records — the light
+      // listRunRecords metadata has no gate/findings and silently produced
+      // an empty digest here.
+      const { loadAllRunRecords, resolveStoreDir } = await import('../../lib/result-store.mjs');
+      const { buildRunsDigest, formatDigestMarkdown } = await import('../../lib/runs-digest.mjs');
+      const records = await loadAllRunRecords(resolveStoreDir(targetPath));
+      const digest = buildRunsDigest(records, { now: () => new Date() });
+      const fs = await import('node:fs/promises');
+      await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
+    } catch (err) {
+      console.error(`Warning: job summary digest failed: ${err.message}`);
+    }
+  }
+}
+
+/**
  * Handle the default `run` command (local review against the git repo).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -253,61 +333,7 @@ Dependencies: ${
     printExplain(result);
   }
 
-  // Persist run to result store when --save is provided. Under GitHub
-  // Actions the save is AUTOMATIC (Epic #1347 S3, adversarial design
-  // review Blocker 1: an opt-in store never accumulates the audit trail),
-  // and the digest is appended to the job summary as the forced display
-  // point — supervision that requires someone to remember a command is
-  // not supervision.
-  // M1 (#1372 review): RIVER_AUTO_SAVE=false opts out of the CI auto-save
-  // (documented in the contract doc; the write target is .river/runs/).
-  const isGithubActions =
-    process.env.GITHUB_ACTIONS === 'true' && process.env.RIVER_AUTO_SAVE !== 'false';
-  if ((parsed.save || isGithubActions) && result.status === 'ok') {
-    try {
-      const { buildRunProvenance, buildRunRecord, saveRunRecord, resolveStoreDir } =
-        await import('../../lib/result-store.mjs');
-      const { decision: runDecision, gate: runGate } = deriveRunGate(result);
-      const record = buildRunRecord(result, {
-        phase: parsed.phase,
-        gate: runGate,
-        decision: runDecision,
-        // #1715 (#1574 producer Slice 2): attach the 契約1 provenance so
-        // `river evolve aggregate` can tie this evidence to a commit. Purely
-        // observational — it raises no trust, see buildRunProvenance. `dirty`
-        // travels with the sha because a local run normally reviews the working
-        // tree, so the sha alone does not identify the reviewed code.
-        provenance: buildRunProvenance({
-          commitSha: result.commitSha,
-          dirty: result.dirty,
-        }),
-      });
-      // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
-      const savedPath = await saveRunRecord(record, { storeDir: resolveStoreDir(targetPath) });
-      console.error(`Run saved: ${record.runId} → ${savedPath}`);
-    } catch (err) {
-      console.error(`Warning: --save failed: ${err.message}`);
-    }
-  }
-
-  // Forced display point (Epic #1347 S3): under GitHub Actions, append the
-  // runs digest to the job summary. Fail-soft — the review result must
-  // never break on digest generation.
-  if (isGithubActions && process.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
-    try {
-      // C1 (#1372 review): the digest needs FULL records — the light
-      // listRunRecords metadata has no gate/findings and silently produced
-      // an empty digest here.
-      const { loadAllRunRecords, resolveStoreDir } = await import('../../lib/result-store.mjs');
-      const { buildRunsDigest, formatDigestMarkdown } = await import('../../lib/runs-digest.mjs');
-      const records = await loadAllRunRecords(resolveStoreDir(targetPath));
-      const digest = buildRunsDigest(records, { now: () => new Date() });
-      const fs = await import('node:fs/promises');
-      await fs.appendFile(process.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
-    } catch (err) {
-      console.error(`Warning: job summary digest failed: ${err.message}`);
-    }
-  }
+  await persistRunArtifacts(result, parsed, targetPath);
 
   // Regression comparison when --baseline is provided
   if (parsed.baseline && result.status === 'ok') {
