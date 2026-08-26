@@ -108,6 +108,13 @@ Commands:
                         (ADR-006 / #1860). Feeds the same Experiment Manifest as
                         evolve replay. Never re-runs a review and never sends
                         the compiled prompt (--output json)
+  evolve prompt-ab <path>
+                        Read-only A/B comparison of TWO run families: the saved
+                        runs that sent the legacy prompt (baseline) vs the ones
+                        that sent the compiled prompt (candidate, mode active)
+                        (ADR-006 / #1880). Unlike prompt-compare, the two sides
+                        are different records, so findings-level comparison is
+                        possible. Never re-runs a review (--output json)
 
 Skills Subcommand Options:
   --from <path>         (import) Source directory to scan for SKILL.md files
@@ -177,7 +184,7 @@ const COMMAND_USAGE = {
     'river suppression add --fingerprint <fp> --feedback <type> --rationale <text> [options]',
   promote:
     'river promote <propose|list|approve|reject|template|retire|review-effectiveness> [options]',
-  evolve: 'river evolve <aggregate|replay|prompt-compare> [options]',
+  evolve: 'river evolve <aggregate|replay|prompt-compare|prompt-ab> [options]',
 };
 
 const GENERIC_USAGE = 'river <command> <path> [options]';
@@ -236,10 +243,10 @@ const SKILLS_SUBCOMMANDS = new Set(['import', 'export', 'list', 'resolve']);
 
 /**
  * `evolve` subcommands (#1574 P1 `aggregate` / P2 `replay`, ADR-006
- * `prompt-compare`). Matching against a known set (rather than "first non-flag
- * token") keeps `river evolve <path>` working.
+ * `prompt-compare` / `prompt-ab`). Matching against a known set (rather than
+ * "first non-flag token") keeps `river evolve <path>` working.
  */
-const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay', 'prompt-compare']);
+const EVOLVE_SUBCOMMANDS = new Set(['aggregate', 'replay', 'prompt-compare', 'prompt-ab']);
 
 /**
  * `promote` subcommands that take an optional positional candidate id.

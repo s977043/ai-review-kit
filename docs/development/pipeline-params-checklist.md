@@ -25,6 +25,7 @@
 - [ ] `tests/prompt-compiler-observe.test.mjs`—`review.promptCompiler.mode` の observe 配線テスト（ADR-006）
 - [ ] `tests/prompt-compiler-active.test.mjs`—`review.promptCompiler.mode` の active 配線テスト（ADR-006 / #1861）
 - [ ] `tests/prompt-compiler-paired.test.mjs`—observe の観測を legacy / compiled の 2 系統として取り出す導線のテスト（ADR-006 / #1860）
+- [ ] `tests/prompt-compiler-ab.test.mjs`—legacy を送った run と compiled を送った run の A/B 比較経路のテスト（ADR-006 / #1880）
 - [ ] `tests/integration/local-review.test.mjs`—統合テスト（関連する場合）
 
 ### 必須: `verifyFinding` に新パラメータを追加した場合

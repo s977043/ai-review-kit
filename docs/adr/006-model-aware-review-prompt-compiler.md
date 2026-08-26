@@ -97,7 +97,7 @@ Review Request IR を挟み、モデル非依存の依頼内容と、モデル�
 
 分けない場合、採否条件の充足が `active` の前提となり、`active` の稼働がその充足の前提にもなります。この循環は #1861 で実際に着手を止めました。
 
-段の振り分けは散文の申し合わせではありません。出典は [`src/lib/prompt-compiler-paired.mjs`](../../src/lib/prompt-compiler-paired.mjs) の `ACCEPTANCE_COVERAGE`（`:66-125`）であり、全 9 行のうち `observable: true` の 1 行を段 1、`observable: false` の 8 行を段 2 とします。指標名も同配列の `metric` をそのまま使います。
+段の振り分けは散文の申し合わせではありません。出典は [`src/lib/prompt-compiler-paired.mjs`](../../src/lib/prompt-compiler-paired.mjs) の `ACCEPTANCE_COVERAGE`（`:106-165`）であり、全 9 行のうち `observable: true` の 1 行を段 1、`observable: false` の 8 行を段 2 とします。指標名も同配列の `metric` をそのまま使います。
 
 #### 段 1—送信前に測れる（`observe` で足りる）
 
@@ -137,9 +137,11 @@ Review Request IR を挟み、モデル非依存の依頼内容と、モデル�
 1. provider の API キーが repo secret へ登録されていることである。これは代行できない人間作業であり、現時点で未完了である
 2. `active` が opt-in で配線され、`sentPrompt` が compiled の run を保存できることである（#1861 で完了。既定は `off` のままである）
 3. 同一 fixture・同一モデル・同一 context で legacy 側の run が並存することである
-4. その 2 系統を受け取る比較経路が存在することである。現行の `river evolve prompt-compare` は `sentPrompt` が legacy でない run を拒否するため、active の run はこの導線では扱わない
+4. その 2 系統を受け取る比較経路が存在することである（#1880 で `river evolve prompt-ab` として実装済み）。ただし 1 が未完了の間は LLM 応答を持つ run が作れないため、同経路は findings 水準を観測不可として報告する。`river evolve prompt-compare` は従来どおり `sentPrompt` が legacy でない run を拒否するため、active の run は `prompt-ab` 側で扱う
 
-1 が未完了である間、段 2 の評価は開始できません。逆に 1 が済めば、残る 3 つは #1861 の実装範囲に収まります。
+1 が未完了である間、段 2 の評価は開始できません。2 と 4 は実装済みであり、残るのは 1 と、3 のデータを揃える運用です。
+
+`prompt-ab` が観測できる範囲は `PROMPT_AB_ACCEPTANCE_COVERAGE`（同ファイル）が 1 行ずつ持ちます。2 系統が揃っても、この経路だけで測れるのは `critical 回帰` と `token（送信前のプロンプト推定長）` の 2 行です。しかも `critical 回帰` を測れるのは、両側に LLM 応答を持つ run（`debug.llmUsed === true`）を揃えた case のある dataset に限られます。残る 7 行には別の条件が要ります。recall / precision には正解ラベル付きの fixture dataset が必要です。parse 成功率・Evidence 充足・invalid ArtifactRefs・duplicate findings には findings 個々の評価器が必要です。latency / cost には run レコードへの記録が必要です。
 
 ## Non-goals
 
