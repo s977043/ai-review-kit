@@ -60,7 +60,15 @@ import { nonEmptyNfcString } from './promotion-candidates.mjs';
 import { buildPairedReplay, deriveCaseKey, formatPairedReplayMarkdown } from './paired-replay.mjs';
 import { deriveReviewRunId } from './shadow-aggregate.mjs';
 
-export const PROMPT_COMPARISON_SCHEMA_VERSION = 1;
+/**
+ * observe 経路の成果物 schema 版。
+ *
+ * #1880 で 2 へ上げた。取り違え防止のための 3 フィールド（`route` /
+ * `sameRecordOnBothSides` / `sides.<side>.sentPrompt`）を足したためである。
+ * これらは「どちらの経路で測ったか」を判別させるための項目なので、版で
+ * 区別できないと下流が古い形と新しい形を見分けられない。
+ */
+export const PROMPT_COMPARISON_SCHEMA_VERSION = 2;
 
 /** 2 系統（legacy 送信 / compiled 送信）を受け取る A/B 経路の schema 版（#1880）。 */
 export const PROMPT_AB_SCHEMA_VERSION = 1;
@@ -81,6 +89,15 @@ export const PROMPT_AB_ROUTE = 'river evolve prompt-ab';
  * かは `PROMPT_AB_ACCEPTANCE_COVERAGE` が 1 行ずつ持つ。
  */
 export const PROMPT_AB_UNBLOCKED_BY = `${PROMPT_AB_ROUTE}（#1880 の 2 系統経路）`;
+
+/**
+ * `latency / cost` だけの解消条件。
+ *
+ * 他の 7 行は candidate 側の findings が存在しないことが理由なので A/B 経路が
+ * 解消先になるが、この行は run レコードが所要時間も課金も持たないことが理由で
+ * あり、2 系統を揃えても解けない。observe 側と A/B 側の両表で同じ値を使う。
+ */
+export const LATENCY_COST_UNBLOCKED_BY = 'run レコードへの latency / cost の記録';
 
 /** baseline 側（既存プロンプト）の構成識別子。 */
 export const LEGACY_CONFIG_ID = 'prompt:legacy';
@@ -159,7 +176,10 @@ export const ACCEPTANCE_COVERAGE = Object.freeze(
       metric: 'latency / cost',
       observable: false,
       reason: 'compiled prompt を送っていないため所要時間も課金も発生しておらず、計測対象が無い',
-      unblockedBy: PROMPT_AB_UNBLOCKED_BY,
+      // この 1 行だけは A/B 経路が解消先ではない。2 系統を揃えても run レコードは
+      // 所要時間も課金も持たないため（`buildRunRecord`、`src/lib/result-store.mjs`）、
+      // `PROMPT_AB_ACCEPTANCE_COVERAGE` の同じ行と同一の解消条件にしてある。
+      unblockedBy: LATENCY_COST_UNBLOCKED_BY,
     },
   ].map((row) => Object.freeze(row))
 );
@@ -232,10 +252,23 @@ function requireSingleValue(values, label, hint) {
  * case key を SSoT から導出し、入力順に依存しない順序へ揃える」ところまでで、
  * case key は `deriveCaseKey`（`./paired-replay.mjs`）をそのまま使う。
  *
+ * `llmUsed` / `llmSkipped` も同時に取り出す（#1880 B1）。`sentPrompt` は
+ * `src/prompt/compiler-stage.mjs:57-62` のコメントが明示するとおり **mode から
+ * 決まる値**であり、実際に送信が起きたかどうかは表さない。dryRun / offline /
+ * provider 非対応 / API キー未設定では `src/lib/review-engine.mjs` の
+ * `skipReason` が LLM 呼び出しを丸ごと飛ばし、`debug.llmUsed = false` と
+ * `debug.llmSkipped = <理由>` だけが残る。応答の有無はこの 2 つが持つ。
+ *
+ * `llmUsed === true` は「findings が LLM 応答に由来する」ことを意味する。
+ * 呼び出したが応答を parse できなかった場合も `llmUsed` は false になり、
+ * findings は heuristics 由来へ落ちる（同ファイルの `llmError` 分岐）。
+ * したがって「応答があったか」の判定はこの 1 値で足りる。
+ *
  * @param {object[]} runRecords 保存済み run レコード
+ * @param {{ emptyDatasetMessage?: string }} [options]
  * @returns {{ observed: object[], withoutObservation: string[] }}
  */
-function collectObservationEntries(runRecords) {
+function collectObservationEntries(runRecords, { emptyDatasetMessage } = {}) {
   const records = Array.isArray(runRecords) ? runRecords : [];
   const observed = [];
   const withoutObservation = [];
@@ -250,6 +283,11 @@ function collectObservationEntries(runRecords) {
       observation,
       runId: deriveReviewRunId(record),
       caseKey: deriveCaseKey(record),
+      // `true` / `false` / `null`（未取得）の 3 値。`llmUsed` を持たない古い
+      // レコードを false と読むと「応答が無かった」と断定することになるので、
+      // 未取得は別に数える（`provenance.dirtyUnknownRunCount` と同じ扱い）。
+      llmUsed: typeof record?.debug?.llmUsed === 'boolean' ? record.debug.llmUsed : null,
+      llmSkipped: nonEmptyNfcString(record?.debug?.llmSkipped),
     });
   }
   // 入力順に依存しない。spec（両側の runs / declaredEvidence）まで含めて
@@ -257,9 +295,11 @@ function collectObservationEntries(runRecords) {
   observed.sort((a, b) => compareStrings(a.runId, b.runId) || compareStrings(a.caseKey, b.caseKey));
   if (observed.length === 0) {
     throw new PromptComparisonError(
-      'Prompt Compiler の観測を持つ run が 1 件も無い。`review.promptCompiler.mode` を `observe` にしてレビューを実行し、run を保存してから再実行すること（既定は off）。'
+      emptyDatasetMessage ??
+        'Prompt Compiler の観測を持つ run が 1 件も無い。`review.promptCompiler.mode` を `observe` にしてレビューを実行し、run を保存してから再実行すること（既定は off）。'
     );
   }
+  // ソートは 1 回だけ行う。呼び出し側で再度ソートしない。
   return { observed, withoutObservation: withoutObservation.sort(compareStrings) };
 }
 
@@ -317,8 +357,9 @@ function collectObservedRuns(runRecords) {
   );
 
   return {
+    // m4: ソートは collectObservationEntries が済ませている。二度目は不要である。
     observed,
-    withoutObservation: withoutObservation.sort(compareStrings),
+    withoutObservation,
     configuration: { profileId, profileVersion, compilerVersion, provider, model },
   };
 }
@@ -547,7 +588,9 @@ export function formatPromptComparisonMarkdown(result) {
  *
  * 観測可否は実装が実際に出す値だけで決める。`buildPairedReplay` は paired diff
  * の件数（追加 / 削除 / 変更 / critical 回帰）を出すため、`critical 回帰` は
- * この経路で本当に観測できる。一方 recall / precision には正解ラベル付きの
+ * **両側に LLM 応答を持つ run が揃っている場合に限り**観測できる。この条件は
+ * 静的には決まらないので、`resolveAbAcceptanceCoverage()` が dataset ごとに
+ * 解決する（#1880 B1）。一方 recall / precision には正解ラベル付きの
  * fixture dataset が要り、parse 成功率・Evidence 充足・invalid ArtifactRefs・
  * duplicate findings には findings 個々を検査する評価器が要る。latency / cost は
  * そもそも run レコードに所要時間も課金も記録されていない
@@ -598,9 +641,10 @@ export const PROMPT_AB_ACCEPTANCE_COVERAGE = Object.freeze(
     },
     {
       metric: 'critical 回帰',
+      // dataset 依存。resolveAbAcceptanceCoverage() が LLM 応答の有無で下げる。
       observable: true,
       reason:
-        '両側の run が別レコードであるため paired diff が成立し、buildPairedReplay の criticalRegressionCount（契約6 の floor）をそのまま観測できる',
+        '両側の run が別レコードであり、かつ両側に LLM 応答を持つ run（debug.llmUsed === true）がある case では paired diff が成立し、buildPairedReplay の criticalRegressionCount（契約6 の floor）をそのまま観測できる',
       unblockedBy: null,
     },
     {
@@ -614,7 +658,7 @@ export const PROMPT_AB_ACCEPTANCE_COVERAGE = Object.freeze(
       observable: false,
       reason:
         'run レコードに所要時間も課金も記録されていない（buildRunRecord が持つのは tokenEstimate まで）',
-      unblockedBy: 'run レコードへの latency / cost の記録',
+      unblockedBy: LATENCY_COST_UNBLOCKED_BY,
     },
   ].map((row) => Object.freeze(row))
 );
@@ -631,6 +675,94 @@ export const PROMPT_AB_UNPINNED_CONDITIONS = Object.freeze([
   '選択された skill の一覧（run レコードに保存されていないため manifest へ pin できない。phase / reviewMode と case key の一致で間接的に担保する）',
 ]);
 
+/** `PROMPT_AB_ACCEPTANCE_COVERAGE` のうち LLM 応答の有無に従属する行。 */
+const LLM_DEPENDENT_AB_METRICS = Object.freeze(['critical 回帰']);
+
+/**
+ * dataset ごとに A/B 経路の受入基準表を解決する（#1880 B1）。
+ *
+ * `token（送信前のプロンプト推定長）` は LLM 応答が無くても測れるため下げない。
+ * 送信前の推定長は `debug.execution.promptCompiler` が記録済みだからである。
+ * findings 水準の行だけが応答の有無に従属する。
+ *
+ * @param {{ findingsObservable: boolean }} input
+ * @returns {ReadonlyArray<object>}
+ */
+export function resolveAbAcceptanceCoverage({ findingsObservable }) {
+  if (findingsObservable) return [...PROMPT_AB_ACCEPTANCE_COVERAGE];
+  return PROMPT_AB_ACCEPTANCE_COVERAGE.map((row) =>
+    LLM_DEPENDENT_AB_METRICS.includes(row.metric)
+      ? Object.freeze({
+          ...row,
+          observable: false,
+          reason:
+            '両側に LLM 応答を持つ run（debug.llmUsed === true）が揃った case が 1 件も無い。paired diff は取れるが、その差は LLM 応答の差ではなく heuristics 由来の findings の差であり、critical 回帰として読めない',
+          unblockedBy:
+            'LLM 応答を持つ run を両側へ揃えること（dryRun / offline / provider 非対応 / API キー未設定では応答が発生しない）',
+        })
+      : row
+  );
+}
+
+/**
+ * 片側の LLM 応答の充足度をまとめる（#1880 B1）。
+ *
+ * `sentPrompt` は `src/prompt/compiler-stage.mjs` のコメントが明示するとおり
+ * mode から決まる値であり、送信が起きたことを表さない。応答の有無を表すのは
+ * `debug.llmUsed` である。実測（保存済みレコードの読み直し）でも、dryRun の run は
+ * `sentPrompt: 'compiled'` と `llmUsed: false` / `llmSkipped: 'dry-run enabled'` を
+ * 同時に持つ。
+ *
+ * 既存の `isLlmlessEmptyReview`（`src/cli/render.mjs`）は再利用しない。あちらは
+ * (a) runner の result 形（`reviewDebug` / `comments`）を取り、(b) `llmSkipped` が
+ * `/not set/i` に一致する「API キー未設定」だけを対象にし、(c) findings 0 件との
+ * 複合判定である。dryRun / offline の run は false になるため、ここで必要な
+ * 「その run の findings が LLM 応答に由来するか」とは意味論が異なる。ここは
+ * 述語を新設するのではなく、review-engine が書いた `llmUsed` をそのまま読む。
+ */
+function summarizeLlmResponse(entries) {
+  const skipReasons = new Map();
+  for (const entry of entries) {
+    if (entry.llmSkipped == null) continue;
+    skipReasons.set(entry.llmSkipped, (skipReasons.get(entry.llmSkipped) ?? 0) + 1);
+  }
+  return {
+    runCount: entries.length,
+    llmUsedRunCount: entries.filter((entry) => entry.llmUsed === true).length,
+    // 応答が無い run。呼び出しを飛ばした run と、呼び出したが応答を使えなかった
+    // run の両方を含む（どちらも findings は heuristics 由来である）。
+    llmUnusedRunCount: entries.filter((entry) => entry.llmUsed === false).length,
+    // `llmUsed` を持たない古いレコード。false（応答が無い）と区別する。
+    llmUnknownRunCount: entries.filter((entry) => entry.llmUsed == null).length,
+    skipReasons: [...skipReasons.entries()]
+      .sort(([a], [b]) => compareStrings(a, b))
+      .map(([reason, runCount]) => ({ reason, runCount })),
+  };
+}
+
+/**
+ * findings 水準が観測できるか（#1880 B1）。
+ *
+ * 条件は「**両側とも** `debug.llmUsed === true` の run を持つ case が 1 件以上
+ * あること」である。片側だけ応答がある case は、差分が構成の違いではなく
+ * 「応答があるか無いか」の違いになるため数えない。
+ */
+function summarizeLlmResponseCoverage({ baseline, candidate, pairedCaseKeys }) {
+  const respondedCaseKeys = pairedCaseKeys.filter(
+    (key) =>
+      baseline.some((entry) => entry.caseKey === key && entry.llmUsed === true) &&
+      candidate.some((entry) => entry.caseKey === key && entry.llmUsed === true)
+  );
+  return {
+    baseline: summarizeLlmResponse(baseline),
+    candidate: summarizeLlmResponse(candidate),
+    respondedCaseKeys,
+    respondedCaseCount: respondedCaseKeys.length,
+    findingsObservable: respondedCaseKeys.length > 0,
+    note: 'sentPrompt は mode から決まる値であり送信の証拠ではない（src/prompt/compiler-stage.mjs）。応答の有無は debug.llmUsed が持つ。',
+  };
+}
+
 /** 側ごとの label。取り違え防止のため sentPrompt を必ず併記する。 */
 function sideLabel(sentPrompt, configuration) {
   return sentPrompt === 'legacy'
@@ -645,7 +777,12 @@ function sideLabel(sentPrompt, configuration) {
  * 1 レコードが両側に入ることは構造上起こらない（`sentPrompt` は 1 値）。
  */
 function collectAbSides(runRecords) {
-  const { observed, withoutObservation } = collectObservationEntries(runRecords);
+  const { observed, withoutObservation } = collectObservationEntries(runRecords, {
+    // m2: observe 専用の文言を出すと、指示どおり observe を走らせた利用者が
+    // 「compiled を送った run が無い」で再度 exit 1 になる。2 段踏ませない。
+    emptyDatasetMessage:
+      'Prompt Compiler の観測を持つ run が 1 件も無い。`river evolve prompt-ab` は 2 系統を必要とするため、`review.promptCompiler.mode` を `observe` にした run と `active` にした run を同じ対象へ用意して保存すること（既定は off）。',
+  });
 
   const known = ['legacy', 'compiled'];
   const unknown = observed.filter((entry) => !known.includes(entry.observation.sentPrompt));
@@ -729,7 +866,15 @@ function collectAbSides(runRecords) {
     );
   }
 
-  return { observed, baseline, candidate, withoutObservation, configuration, pairedCaseKeys };
+  return {
+    observed,
+    baseline,
+    candidate,
+    withoutObservation,
+    configuration,
+    pairedCaseKeys,
+    llmResponseCoverage: summarizeLlmResponseCoverage({ baseline, candidate, pairedCaseKeys }),
+  };
 }
 
 /**
@@ -813,10 +958,20 @@ function sentPromptRowOf(entry) {
   };
 }
 
-function summarizeAbPromptMetrics({ baseline, candidate, withoutObservation, configuration }) {
+function summarizeAbPromptMetrics({
+  baseline,
+  candidate,
+  withoutObservation,
+  configuration,
+  pairedCaseKeys,
+}) {
   const rows = [...baseline, ...candidate]
     .map(sentPromptRowOf)
     .sort((a, b) => compareStrings(a.runId, b.runId));
+  // M1: 合計は **対になった case の run だけ**を足す。observe 経路は両側が同一
+  // レコードなので構造上ズレようがないが、A/B 経路では両側の run 数が違いうる。
+  // 全 run を足すと、差は「プロンプト長の差」ではなく「母集団サイズの差」になる。
+  const paired = (entries) => entries.filter((entry) => pairedCaseKeys.includes(entry.caseKey));
   const total = (entries) =>
     entries.reduce(
       (acc, entry) =>
@@ -826,16 +981,33 @@ function summarizeAbPromptMetrics({ baseline, candidate, withoutObservation, con
           : entry.observation.compiledPromptEstimate),
       0
     );
-  const baselineTotal = total(baseline);
-  const candidateTotal = total(candidate);
+  const baselinePaired = paired(baseline);
+  const candidatePaired = paired(candidate);
+  const baselineTotal = total(baselinePaired);
+  const candidateTotal = total(candidatePaired);
+  // paired に絞っても、1 case あたりの run 数が両側で違えば合計は比較できない。
+  // その場合は差を出さない。null は「観測できなかった」であり 0 ではない。
+  const comparable = baselinePaired.length === candidatePaired.length;
   return {
     ...configuration,
+    // 合計の対象範囲を成果物側で明示する。
+    estimateScope: 'paired-case',
     baselineRunCount: baseline.length,
     candidateRunCount: candidate.length,
+    baselinePairedRunCount: baselinePaired.length,
+    candidatePairedRunCount: candidatePaired.length,
+    unpairedRunCount: {
+      baseline: baseline.length - baselinePaired.length,
+      candidate: candidate.length - candidatePaired.length,
+    },
     runsWithoutObservation: withoutObservation,
     baselineSentEstimateTotal: baselineTotal,
     candidateSentEstimateTotal: candidateTotal,
-    estimateDeltaTotal: candidateTotal - baselineTotal,
+    estimateComparable: comparable,
+    estimateDeltaTotal: comparable ? candidateTotal - baselineTotal : null,
+    estimateDeltaUnavailableReason: comparable
+      ? null
+      : `対になった case の run 数が両側で異なる（baseline ${baselinePaired.length} 件 / candidate ${candidatePaired.length} 件）ため、合計の差はプロンプト長の差ではなく母集団サイズの差になる`,
     runs: rows,
     note: 'プロンプト推定長は送信前の推定であり、品質の代理指標ではない。「prompt token が減ったから採用」という判定は ADR-006 が禁じている。',
   };
@@ -852,9 +1024,13 @@ function summarizeAbPromptMetrics({ baseline, candidate, withoutObservation, con
  */
 export function buildPromptAbComparison({ runRecords, now = new Date(), hypothesis = null } = {}) {
   const collected = collectAbSides(runRecords);
-  const { baseline, candidate, configuration, pairedCaseKeys } = collected;
+  const { baseline, candidate, configuration, pairedCaseKeys, llmResponseCoverage } = collected;
   const spec = buildPromptAbSpec({ runRecords, hypothesis });
   const replay = buildPairedReplay(spec, { now });
+  // #1880 B1: findings 水準が観測できるのは、両側に LLM 応答を持つ run が揃った
+  // case が 1 件以上あるときだけである。`sentPrompt: 'compiled'` は mode から
+  // 決まる値であって送信の証拠ではない（src/prompt/compiler-stage.mjs）。
+  const findingsObservable = llmResponseCoverage.findingsObservable;
   const runIdsOf = (entries) =>
     entries
       .map((entry) => entry.runId)
@@ -887,22 +1063,33 @@ export function buildPromptAbComparison({ runRecords, now = new Date(), hypothes
       },
     },
     pairedCaseKeys,
+    // 読む側が最初に見る位置に置く。findings 水準の数字より前である。
+    llmResponseCoverage,
     promptMetrics: summarizeAbPromptMetrics(collected),
     findingComparison: {
-      // observe 経路と違い、両側の findings が別々の応答に由来する。
-      observable: true,
-      reason:
-        'baseline は legacy prompt を送った run、candidate は compiled prompt を送った run であり、findings は別々の LLM 応答に由来する。paired diff の差分は実際の応答差である。',
+      observable: findingsObservable,
+      reason: findingsObservable
+        ? `baseline は legacy prompt を送った run、candidate は compiled prompt を送った run であり、両側に LLM 応答を持つ run が揃った case が ${llmResponseCoverage.respondedCaseCount} 件ある。その case の paired diff の差分は実際の応答差である。`
+        : '両側に LLM 応答を持つ run（debug.llmUsed === true）が揃った case が 1 件も無い。sentPrompt は mode から決まる値であって送信の証拠ではなく（src/prompt/compiler-stage.mjs）、dryRun / offline / provider 非対応 / API キー未設定では LLM 呼び出し自体が起きない。この dataset の paired diff は **実際の応答差ではない**ため、findings 水準の比較として読んではならない。',
+      // 応答を持つ case のみが findings 水準の材料である。
+      respondedCaseCount: llmResponseCoverage.respondedCaseCount,
       // 既存モジュール側の判定を再実装せず、その結論を指し示す。
       pairedCaseCount: replay.pairing.pairedCaseCount,
       unpairedCases: replay.pairing.unpairedCases,
       counts: replay.metrics.overall,
-      criticalRegressionCount: replay.acceptance.contract6.criticalRegressionCount,
-      criticalRegressionZero: replay.acceptance.contract6.criticalRegressionZero,
+      // null は「観測できなかった」であり 0 でも false でもない。応答が無い
+      // dataset で 0 / false を出すと、測っていない基準が満たされたものとして
+      // 読まれる（`replay.acceptance.contract6` の tri-state と同じ扱い）。
+      criticalRegressionCount: findingsObservable
+        ? replay.acceptance.contract6.criticalRegressionCount
+        : null,
+      criticalRegressionZero: findingsObservable
+        ? replay.acceptance.contract6.criticalRegressionZero
+        : null,
       activationVerified: replay.activationCheck.verified,
       activationReasons: replay.activationCheck.reasons,
     },
-    acceptanceCoverage: [...PROMPT_AB_ACCEPTANCE_COVERAGE],
+    acceptanceCoverage: resolveAbAcceptanceCoverage({ findingsObservable }),
     unpinnedConditions: [...PROMPT_AB_UNPINNED_CONDITIONS],
     spec,
     replay,
@@ -941,6 +1128,34 @@ export function formatPromptAbMarkdown(result) {
   lines.push(`| Manifest | \`${result.replay.manifest.manifestId}\` |`);
   lines.push('');
 
+  // LLM 応答の充足度を最初に出す。findings 水準の数字を先に見せると、応答が
+  // 無い dataset の差分が「応答の差」として読まれる（#1880 B1）。
+  const c = result.llmResponseCoverage;
+  lines.push('### LLM 応答の充足度');
+  lines.push('');
+  lines.push('| Side | run | LLM 応答あり | 応答なし | 未取得 | skip 理由 |');
+  lines.push('|---|---|---|---|---|---|');
+  for (const [label, side] of [
+    ['baseline', c.baseline],
+    ['candidate', c.candidate],
+  ]) {
+    const reasons = side.skipReasons.length
+      ? side.skipReasons.map((r) => `${r.reason} × ${r.runCount}`).join(' / ')
+      : '—';
+    lines.push(
+      `| ${label} | ${side.runCount} | ${side.llmUsedRunCount} | ${side.llmUnusedRunCount} | ${side.llmUnknownRunCount} | ${reasons} |`
+    );
+  }
+  lines.push('');
+  lines.push(
+    `- 両側に応答が揃った case: ${c.respondedCaseCount} 件 / findings 水準の比較: ${result.findingComparison.observable ? '可' : '不可'}`
+  );
+  lines.push(`- ${c.note}`);
+  if (!result.findingComparison.observable) {
+    lines.push(`- ${result.findingComparison.reason}`);
+  }
+  lines.push('');
+
   lines.push('### 受入基準の観測可否（ADR-006）');
   lines.push('');
   lines.push('| Metric | 観測 | 理由 |');
@@ -969,7 +1184,14 @@ export function formatPromptAbMarkdown(result) {
     `- profile: \`${p.profileId}@${p.profileVersion}\` / compiler \`${p.compilerVersion}\``
   );
   lines.push(
-    `- 推定長合計: baseline ${p.baselineSentEstimateTotal} → candidate ${p.candidateSentEstimateTotal}（差 ${p.estimateDeltaTotal}）`
+    `- 対象範囲: ${p.estimateScope}（対になった case の run のみ。baseline ${p.baselinePairedRunCount} 件 / candidate ${p.candidatePairedRunCount} 件、対象外 baseline ${p.unpairedRunCount.baseline} 件 / candidate ${p.unpairedRunCount.candidate} 件）`
+  );
+  lines.push(
+    `- 推定長合計: baseline ${p.baselineSentEstimateTotal} → candidate ${p.candidateSentEstimateTotal}（差 ${
+      p.estimateComparable
+        ? p.estimateDeltaTotal
+        : `—(比較不可: ${p.estimateDeltaUnavailableReason})`
+    }）`
   );
   lines.push(`- ${p.note}`);
   lines.push('');

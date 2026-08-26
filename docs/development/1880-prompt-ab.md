@@ -28,6 +28,31 @@ ADR-006 段 2 の残件のうち、実装で解ける 1 件です。legacy promp
 - `prompt-ab` は `sentPrompt: 'legacy'` の run が 0 件の dataset も受理しません（baseline の無い比較は candidate 単独の観測でしかない）
 - `prompt-compare` は従来どおり compiled を送った run が 1 件でも混ざれば拒否する
 
+## 2.1 LLM 応答の有無（findings 水準が観測できる条件）
+
+`sentPrompt: 'compiled'` は「compiled を送った」を意味しません。[`src/prompt/compiler-stage.mjs`](../../src/prompt/compiler-stage.mjs) のコメントが明示するとおり、この値は mode から決まります。`src/lib/review-engine.mjs` の `skipReason` は dryRun / offline / provider 非対応 / API キー未設定で LLM 呼び出しを丸ごと飛ばします。その結果、`sentPrompt: 'compiled'` かつ応答が 1 バイトも無い run が正規経路から生まれます。
+
+実測（保存済みレコードを読み直したもの）は次のとおりです。
+
+```text
+run-skipped {"llmUsed":false,"llmSkipped":"dry-run enabled","sentPrompt":"compiled"}
+run-used    {"llmUsed":true,"llmSkipped":null,"sentPrompt":"compiled"}
+```
+
+したがって findings 水準の観測可否は `sentPrompt` ではなく `debug.llmUsed` で決めます。条件は「**両側とも** `llmUsed === true` の run を持つ case が 1 件以上あること」です。片側だけ応答がある case は数えません。差分が構成の違いではなく、応答の有無そのものになるためです。
+
+`llmUsed` を持たない古いレコードは `false`（応答が無かった）と区別して `llmUnknownRunCount` に数えます。未取得を「応答があった」とは読みません。
+
+充足度は `llmResponseCoverage` として成果物と Markdown の冒頭に出します。応答が無い場合は次のようになります。
+
+- `findingComparison.observable` が `false`
+- `criticalRegressionCount` / `criticalRegressionZero` が `null`（`0` でも `false` でもない）
+- `PROMPT_AB_ACCEPTANCE_COVERAGE` の `critical 回帰` 行も `observable: false` へ下がる
+
+`token（送信前のプロンプト推定長）` は応答が無くても測れるので下げません。全面拒否にすると測れる部分まで捨てることになります。
+
+なお `isLlmlessEmptyReview`（`src/cli/render.mjs`）は再利用していません。あれは (a) runner の result 形を取り、(b) `llmSkipped` が `/not set/i` に一致する「API キー未設定」だけを対象にし、(c) findings 0 件との複合判定です。dryRun / offline の run では `false` を返すため、ここで必要な判定とは意味論が異なります。新しい述語も足さず、review-engine が書いた `llmUsed` をそのまま読みます。
+
 ## 3. 2 系統の対応付け
 
 `deriveCaseKey`（`src/lib/paired-replay.mjs`）を再利用します。新しい導出は書きません。case key は明示 `caseId`、無ければ `reviewedTarget@mergeBase` です。両側の case key の交差が空なら受理しません。
@@ -46,6 +71,8 @@ ADR-006 段 2 の残件のうち、実装で解ける 1 件です。legacy promp
 
 pin できない条件は成果物の `unpinnedConditions` に出します。選択された skill の一覧は run レコードに保存されていないため、同一性は phase / reviewMode と case key から間接的にしか担保できません。
 
+推定長の合計は `pairedCaseKeys` に属する run だけを足します（`promptMetrics.estimateScope: 'paired-case'`）。両側の run 数が違う集合で全 run を足すと、差はプロンプト長の差ではなく母集団サイズの差になります。対になった run 数が両側で一致しない場合は `estimateDeltaTotal` を `null` にし、`estimateDeltaUnavailableReason` に理由を入れます。
+
 ## 5. 何が測れて何が測れないか
 
 `PROMPT_AB_ACCEPTANCE_COVERAGE` が ADR-006 の 9 指標を 1 行ずつ持ちます。2 系統が揃っても、この経路だけで測れるのは 2 行です。
@@ -63,6 +90,8 @@ pin できない条件は成果物の `unpinnedConditions` に出します。選
 | `latency / cost`                    | 不可 | run レコードへの latency 記録 |
 
 観測 `可` の 2 行を根拠に「段 2 を満たした」とは書けません。測っていない基準を満たしたものとして読ませないために、表を落とさず残しています。
+
+`critical 回帰` の `可` は dataset 依存です。両側に LLM 応答を持つ run が揃った case を欠く dataset では、`resolveAbAcceptanceCoverage()` が `不可` へ下げます。`token` の行は応答の有無に依存しません。
 
 ## 6. CLI
 

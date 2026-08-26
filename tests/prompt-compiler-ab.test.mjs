@@ -28,6 +28,7 @@ import {
 import { deriveReviewRunId } from '../src/lib/shadow-aggregate.mjs';
 import {
   ACCEPTANCE_COVERAGE,
+  LATENCY_COST_UNBLOCKED_BY,
   LEGACY_CONFIG_ID,
   PROMPT_AB_ACCEPTANCE_COVERAGE,
   PROMPT_AB_ROUTE,
@@ -39,6 +40,7 @@ import {
   buildPromptComparison,
   compiledConfigId,
   formatPromptAbMarkdown,
+  resolveAbAcceptanceCoverage,
 } from '../src/lib/prompt-compiler-paired.mjs';
 import { runCliInProcess } from './helpers/cli.mjs';
 
@@ -51,14 +53,44 @@ const plan = {
 };
 
 /**
- * 1 回レビューを走らせ、保存形式の run レコードを返す。dryRun のため LLM は
- * 呼ばれない。`mode` が observe なら sentPrompt=legacy、active なら compiled。
+ * globalThis.fetch を stub に差し替え、後始末まで面倒を見る。
+ *
+ * `tests/prompt-compiler-active.test.mjs` の `withCountedFetch` と同じ形である。
+ * これを使うと `debug.llmUsed === true` の run が作れる。dryRun だけで作った
+ * fixture では `llmUsed` が常に false になり、#1880 B1（LLM 応答が無い run を
+ * 「別々の応答」として報告する欠陥）を原理的に検出できない。
+ */
+async function withStubbedLlm(fn) {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ choices: [{ message: { content: 'NO_ISSUES' } }] }),
+    text: async () => '',
+    headers: { get: () => null },
+  });
+  try {
+    return await fn();
+  } finally {
+    globalThis.fetch = original;
+  }
+}
+
+/**
+ * 1 回レビューを走らせ、保存形式の run レコードを返す。
+ *
+ * `mode` が observe なら sentPrompt=legacy、active なら compiled。
+ * `llm` が `'used'` なら apiKey + fetch stub で LLM 応答のある run になり
+ * （`debug.llmUsed === true`）、`'skipped'` なら dryRun で呼び出し自体が
+ * 起きない run になる（`llmUsed === false` / `llmSkipped: 'dry-run enabled'`）。
+ * `sentPrompt` は **どちらでも mode どおり**である点が #1880 B1 の核心である。
  */
 async function makeRecord({
   n,
   mode,
   runId,
   findings,
+  llm = 'used',
   repoRoot = REPO_ROOT,
   configExtra = {},
   recordExtra = {},
@@ -70,7 +102,7 @@ async function makeRecord({
 +const value = ${n};
 +console.log(value);
 `;
-  const review = await generateReview({
+  const args = {
     diff: {
       diffText,
       files: [{ path: `src/app${n}.ts`, addedLines: [11, 12], hunks: [] }],
@@ -79,13 +111,16 @@ async function makeRecord({
     plan,
     phase: 'midstream',
     includeFallback: false,
-    dryRun: true,
     config: {
       review: { promptCompiler: { mode } },
       model: { provider: 'openai', modelName: 'test-model' },
       ...configExtra,
     },
-  });
+  };
+  const review =
+    llm === 'used'
+      ? await withStubbedLlm(() => generateReview({ ...args, apiKey: 'test-key' }))
+      : await generateReview({ ...args, dryRun: true });
   return buildRunRecord(
     {
       // 実 FS には触れない。case key の材料になる文字列としてだけ使う。
@@ -153,6 +188,137 @@ async function dataset() {
   ];
   return DATASET;
 }
+
+let SKIPPED_DATASET;
+/**
+ * 同じ 2 系統だが、**LLM 呼び出しが起きていない** dataset（#1880 B1）。
+ * dryRun なので `llmUsed: false` / `llmSkipped: 'dry-run enabled'` になる。
+ * `sentPrompt` は mode どおり legacy / compiled が入る。
+ */
+async function skippedDataset() {
+  SKIPPED_DATASET ??= [
+    await makeRecord({
+      n: 1,
+      mode: 'observe',
+      llm: 'skipped',
+      runId: 'run-legacy-skipped-1',
+      findings: baselineFindings(1),
+    }),
+    await makeRecord({
+      n: 1,
+      mode: 'active',
+      llm: 'skipped',
+      runId: 'run-compiled-skipped-1',
+      findings: candidateFindings(1),
+    }),
+  ];
+  return SKIPPED_DATASET;
+}
+
+describe('#1880 B1 LLM 応答が無い run を「応答差」として報告しない', () => {
+  test('前提の実測: sentPrompt は mode から決まり、応答の有無は llmUsed が持つ', async () => {
+    const [skippedLegacy, skippedCompiled] = await skippedDataset();
+    // 送信物の宣言は mode どおり入る。
+    assert.equal(skippedCompiled.debug.execution.promptCompiler.sentPrompt, 'compiled');
+    // しかし LLM 呼び出しは起きていない。
+    assert.equal(skippedCompiled.debug.llmUsed, false);
+    assert.equal(skippedCompiled.debug.llmSkipped, 'dry-run enabled');
+    assert.equal(skippedLegacy.debug.llmUsed, false);
+    // 対照: 応答のある dataset は llmUsed が true で llmSkipped を持たない。
+    const [used] = await dataset();
+    assert.equal(used.debug.llmUsed, true);
+    assert.equal('llmSkipped' in used.debug, false);
+  });
+
+  test('応答が無い dataset は findings 水準を観測不可として報告する', async () => {
+    const result = buildPromptAbComparison({ runRecords: await skippedDataset(), now: NOW });
+    assert.equal(result.findingComparison.observable, false);
+    assert.match(result.findingComparison.reason, /実際の応答差ではない/);
+    assert.match(result.findingComparison.reason, /debug\.llmUsed === true/);
+    // null は「観測できなかった」であり 0 でも false でもない。
+    assert.equal(result.findingComparison.criticalRegressionCount, null);
+    assert.equal(result.findingComparison.criticalRegressionZero, null);
+    assert.equal(result.llmResponseCoverage.respondedCaseCount, 0);
+    assert.equal(result.llmResponseCoverage.baseline.llmUsedRunCount, 0);
+    assert.equal(result.llmResponseCoverage.candidate.llmUsedRunCount, 0);
+    assert.deepEqual(result.llmResponseCoverage.candidate.skipReasons, [
+      { reason: 'dry-run enabled', runCount: 1 },
+    ]);
+  });
+
+  test('応答が無いと critical 回帰の行も観測不可へ下がる（token の行は下がらない）', async () => {
+    const result = buildPromptAbComparison({ runRecords: await skippedDataset(), now: NOW });
+    const byMetric = new Map(result.acceptanceCoverage.map((row) => [row.metric, row]));
+    assert.equal(byMetric.get('critical 回帰').observable, false);
+    assert.match(byMetric.get('critical 回帰').unblockedBy, /LLM 応答を持つ run/);
+    // 送信前の推定長は応答が無くても測れる。全面拒否にしない理由がこれである。
+    assert.equal(byMetric.get('token（送信前のプロンプト推定長）').observable, true);
+    // 解決前の静的表は critical 回帰を可としている（dataset 依存であることの対照）。
+    assert.equal(
+      PROMPT_AB_ACCEPTANCE_COVERAGE.find((row) => row.metric === 'critical 回帰').observable,
+      true
+    );
+    assert.equal(
+      resolveAbAcceptanceCoverage({ findingsObservable: true }).find(
+        (row) => row.metric === 'critical 回帰'
+      ).observable,
+      true
+    );
+  });
+
+  test('応答がある dataset は従来どおり観測可で、応答数が成果物に出る', async () => {
+    const result = buildPromptAbComparison({ runRecords: await dataset(), now: NOW });
+    assert.equal(result.findingComparison.observable, true);
+    assert.equal(result.llmResponseCoverage.findingsObservable, true);
+    assert.equal(result.llmResponseCoverage.respondedCaseCount, 2);
+    assert.deepEqual(result.llmResponseCoverage.respondedCaseKeys, result.pairedCaseKeys);
+    assert.equal(result.llmResponseCoverage.baseline.llmUsedRunCount, 2);
+    assert.equal(result.llmResponseCoverage.candidate.llmUsedRunCount, 2);
+    assert.equal(result.llmResponseCoverage.baseline.llmUnknownRunCount, 0);
+  });
+
+  test('片側だけ応答がある case は観測可にしない', async () => {
+    const [legacyUsed] = await dataset();
+    const [, compiledSkipped] = await skippedDataset();
+    // baseline は応答あり / candidate は応答なし。同じ case（base-1）である。
+    const result = buildPromptAbComparison({
+      runRecords: [legacyUsed, compiledSkipped],
+      now: NOW,
+    });
+    assert.equal(result.llmResponseCoverage.baseline.llmUsedRunCount, 1);
+    assert.equal(result.llmResponseCoverage.candidate.llmUsedRunCount, 0);
+    assert.equal(result.findingComparison.observable, false);
+  });
+
+  test('llmUsed を持たない古いレコードは false と区別して数える', async () => {
+    const [legacy, , compiled] = await dataset();
+    const strip = (record) => {
+      const { llmUsed, ...rest } = record.debug;
+      void llmUsed;
+      return { ...record, debug: rest };
+    };
+    const result = buildPromptAbComparison({
+      runRecords: [strip(legacy), strip(compiled)],
+      now: NOW,
+    });
+    assert.equal(result.llmResponseCoverage.baseline.llmUnknownRunCount, 1);
+    assert.equal(result.llmResponseCoverage.baseline.llmUnusedRunCount, 0);
+    // 未取得は「応答があった」とは読まない。
+    assert.equal(result.findingComparison.observable, false);
+  });
+
+  test('Markdown は LLM 応答の充足度を findings 水準より前に出す', async () => {
+    const text = formatPromptAbMarkdown(
+      buildPromptAbComparison({ runRecords: await skippedDataset(), now: NOW })
+    );
+    const coverageAt = text.indexOf('### LLM 応答の充足度');
+    const findingsAt = text.indexOf('### findings 水準');
+    assert.ok(coverageAt > -1 && findingsAt > -1);
+    assert.ok(coverageAt < findingsAt, 'LLM 応答の充足度が findings 水準より後ろにある');
+    assert.ok(text.includes('dry-run enabled × 1'));
+    assert.ok(text.includes('findings 水準の比較: 不可'));
+  });
+});
 
 describe('#1880 2 系統が sentPrompt で正しく組になる', () => {
   test('baseline は legacy を送った run、candidate は compiled を送った run である', async () => {
@@ -279,6 +445,62 @@ describe('#1880 2 系統が sentPrompt で正しく組になる', () => {
       .slice(0, 2)
       .reduce((acc, r) => acc + r.debug.execution.promptCompiler.legacyPromptEstimate, 0);
     assert.equal(result.promptMetrics.baselineSentEstimateTotal, legacyTotal);
+    // 全 run が対になっているので、この dataset では合計＝全件合計になる。
+    assert.equal(result.promptMetrics.estimateScope, 'paired-case');
+    assert.equal(result.promptMetrics.baselinePairedRunCount, 2);
+    assert.equal(result.promptMetrics.candidatePairedRunCount, 2);
+    assert.equal(result.promptMetrics.estimateComparable, true);
+  });
+});
+
+describe('#1880 M1 推定長合計は対になった run だけを足す', () => {
+  test('片側にだけある case の run は合計へ入らない', async () => {
+    const [legacy1, legacy2, compiled1] = await dataset();
+    // baseline に case 2 があり candidate には無い。対になるのは case 1 だけ。
+    const result = buildPromptAbComparison({
+      runRecords: [legacy1, legacy2, compiled1],
+      now: NOW,
+    });
+    assert.equal(result.pairedCaseKeys.length, 1);
+    assert.equal(result.promptMetrics.baselineRunCount, 2);
+    assert.equal(result.promptMetrics.baselinePairedRunCount, 1);
+    assert.deepEqual(result.promptMetrics.unpairedRunCount, { baseline: 1, candidate: 0 });
+
+    // 合計は case 1 の 1 run 分だけである（case 2 を足し込まない）。
+    const observation = legacy1.debug.execution.promptCompiler;
+    assert.equal(result.promptMetrics.baselineSentEstimateTotal, observation.legacyPromptEstimate);
+    // 対になった run 数が両側で一致するので差は出せる。
+    assert.equal(result.promptMetrics.estimateComparable, true);
+    assert.equal(
+      result.promptMetrics.estimateDeltaTotal,
+      compiled1.debug.execution.promptCompiler.compiledPromptEstimate -
+        observation.legacyPromptEstimate
+    );
+  });
+
+  test('対になった run 数が両側で違うと差を出さず理由を添える', async () => {
+    const [legacy1, , compiled1] = await dataset();
+    // 同じ case を baseline 側だけ 2 run にする（繰り返し計測の形）。
+    const legacy1b = await makeRecord({
+      n: 1,
+      mode: 'observe',
+      runId: 'run-legacy-1b',
+      findings: baselineFindings(1),
+    });
+    const result = buildPromptAbComparison({
+      runRecords: [legacy1, legacy1b, compiled1],
+      now: NOW,
+    });
+    assert.equal(result.promptMetrics.baselinePairedRunCount, 2);
+    assert.equal(result.promptMetrics.candidatePairedRunCount, 1);
+    assert.equal(result.promptMetrics.estimateComparable, false);
+    // null は 0 ではない。母集団サイズの差を「短くなった」と読ませない。
+    assert.equal(result.promptMetrics.estimateDeltaTotal, null);
+    assert.match(result.promptMetrics.estimateDeltaUnavailableReason, /母集団サイズの差/);
+
+    const text = formatPromptAbMarkdown(result);
+    assert.ok(text.includes('比較不可'));
+    assert.ok(text.includes('対象範囲: paired-case'));
   });
 });
 
@@ -426,8 +648,9 @@ describe('#1880 Experiment Manifest の pin が効く', () => {
 });
 
 describe('#1880 受入基準表と非ゴール', () => {
-  test('observe 経路の 8 行の解消条件は本経路を指す', async () => {
+  test('observe 経路の 7 行は本経路を指し、latency / cost だけは指さない', async () => {
     const byMetric = new Map(ACCEPTANCE_COVERAGE.map((row) => [row.metric, row]));
+    // candidate 側の findings が無いことが理由の 7 行。A/B 経路が解消先である。
     for (const metric of [
       'should-detect recall',
       'should-not-detect precision',
@@ -436,10 +659,20 @@ describe('#1880 受入基準表と非ゴール', () => {
       'invalid ArtifactRefs',
       'duplicate findings',
       'critical 回帰',
-      'latency / cost',
     ]) {
       assert.equal(byMetric.get(metric).unblockedBy, PROMPT_AB_UNBLOCKED_BY);
     }
+    // m1: latency / cost は 2 系統を揃えても測れない（run レコードが所要時間も
+    // 課金も持たない）。A/B 経路を解消先と書くのは事実に反する。
+    assert.equal(byMetric.get('latency / cost').unblockedBy, LATENCY_COST_UNBLOCKED_BY);
+    assert.notEqual(byMetric.get('latency / cost').unblockedBy, PROMPT_AB_UNBLOCKED_BY);
+    // 2 表で同じ値であること（片方だけ直すとドリフトする）。
+    assert.equal(
+      PROMPT_AB_ACCEPTANCE_COVERAGE.find((row) => row.metric === 'latency / cost').unblockedBy,
+      byMetric.get('latency / cost').unblockedBy
+    );
+    // m5: 定数同士の比較だけでは値の書き換えを検出できないので、literal も pin する。
+    assert.equal(PROMPT_AB_UNBLOCKED_BY, 'river evolve prompt-ab（#1880 の 2 系統経路）');
     assert.ok(PROMPT_AB_UNBLOCKED_BY.includes(PROMPT_AB_ROUTE));
     // 配線（#1861）は済んでいるので、解消条件としては残さない。
     const stale = ACCEPTANCE_COVERAGE.filter((row) => row.unblockedBy === '#1861 active 配線');
@@ -538,6 +771,42 @@ describe('#1880 CLI 配線（river evolve prompt-ab）', () => {
     }
   });
 
+  test('LLM 応答が無い store は exit 0 だが observable:false で出る（#1880 B1）', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'river-prompt-ab-skipped-'));
+    try {
+      for (const [n, mode, runId, findings] of [
+        [1, 'observe', 'run-legacy-1', baselineFindings(1)],
+        [1, 'active', 'run-compiled-1', candidateFindings(1)],
+      ]) {
+        const record = await makeRecord({
+          n,
+          mode,
+          runId,
+          findings,
+          llm: 'skipped',
+          repoRoot: dir,
+        });
+        await saveRunRecord(record);
+      }
+      const result = await runCliInProcess(['evolve', 'prompt-ab', dir, '--output', 'json'], {
+        cwd: dir,
+      });
+      assert.equal(result.code, 0, result.stderr);
+      const parsed = JSON.parse(result.stdout);
+      // sentPrompt は compiled と宣言されているが、応答は 1 件も無い。
+      assert.equal(parsed.sides.candidate.sentPrompt, 'compiled');
+      assert.equal(parsed.llmResponseCoverage.candidate.llmUsedRunCount, 0);
+      assert.deepEqual(parsed.llmResponseCoverage.candidate.skipReasons, [
+        { reason: 'dry-run enabled', runCount: 1 },
+      ]);
+      assert.equal(parsed.findingComparison.observable, false);
+      assert.equal(parsed.findingComparison.criticalRegressionCount, null);
+      assert.equal(parsed.findingComparison.criticalRegressionZero, null);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   test('存在しないパスは dataset エラーではなくパスの診断を出して exit 1', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'river-prompt-ab-missing-'));
     try {
@@ -547,6 +816,28 @@ describe('#1880 CLI 配線（river evolve prompt-ab）', () => {
       );
       assert.equal(result.code, 1);
       assert.match(result.stderr, /does not exist, so this prompt-ab read an empty store/);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('観測が 0 件のとき prompt-ab 向けの文言を出す（m2）', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'river-prompt-ab-empty-'));
+    try {
+      // mode=off の run（観測を持たない）だけを置く。
+      const record = await makeRecord({
+        n: 1,
+        mode: 'off',
+        llm: 'skipped',
+        runId: 'run-off',
+        findings: [],
+        repoRoot: dir,
+      });
+      await saveRunRecord(record);
+      const result = await runCliInProcess(['evolve', 'prompt-ab', dir], { cwd: dir });
+      assert.equal(result.code, 1);
+      // observe だけを指示すると、そのとおりにしても再度 exit 1 になる。
+      assert.match(result.stderr, /`observe` にした run と `active` にした run/);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

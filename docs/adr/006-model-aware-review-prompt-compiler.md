@@ -137,11 +137,11 @@ Review Request IR を挟み、モデル非依存の依頼内容と、モデル�
 1. provider の API キーが repo secret へ登録されていることである。これは代行できない人間作業であり、現時点で未完了である
 2. `active` が opt-in で配線され、`sentPrompt` が compiled の run を保存できることである（#1861 で完了。既定は `off` のままである）
 3. 同一 fixture・同一モデル・同一 context で legacy 側の run が並存することである
-4. その 2 系統を受け取る比較経路が存在することである（#1880 で `river evolve prompt-ab` として実装済み）。`river evolve prompt-compare` は従来どおり `sentPrompt` が legacy でない run を拒否するため、active の run は `prompt-ab` 側で扱う
+4. その 2 系統を受け取る比較経路が存在することである（#1880 で `river evolve prompt-ab` として実装済み）。ただし 1 が未完了の間は LLM 応答を持つ run が作れないため、同経路は findings 水準を観測不可として報告する。`river evolve prompt-compare` は従来どおり `sentPrompt` が legacy でない run を拒否するため、active の run は `prompt-ab` 側で扱う
 
 1 が未完了である間、段 2 の評価は開始できません。2 と 4 は実装済みであり、残るのは 1 と、3 のデータを揃える運用です。
 
-`prompt-ab` が観測できる範囲は `PROMPT_AB_ACCEPTANCE_COVERAGE`（同ファイル）が 1 行ずつ持ちます。2 系統が揃っても、この経路だけで測れるのは `critical 回帰` と `token（送信前のプロンプト推定長）` の 2 行です。残る 7 行には別の条件が要ります。recall / precision には正解ラベル付きの fixture dataset が必要です。parse 成功率・Evidence 充足・invalid ArtifactRefs・duplicate findings には findings 個々の評価器が必要です。latency / cost には run レコードへの記録が必要です。
+`prompt-ab` が観測できる範囲は `PROMPT_AB_ACCEPTANCE_COVERAGE`（同ファイル）が 1 行ずつ持ちます。2 系統が揃っても、この経路だけで測れるのは `critical 回帰` と `token（送信前のプロンプト推定長）` の 2 行です。しかも `critical 回帰` を測れるのは、両側に LLM 応答を持つ run（`debug.llmUsed === true`）を揃えた case のある dataset に限られます。残る 7 行には別の条件が要ります。recall / precision には正解ラベル付きの fixture dataset が必要です。parse 成功率・Evidence 充足・invalid ArtifactRefs・duplicate findings には findings 個々の評価器が必要です。latency / cost には run レコードへの記録が必要です。
 
 ## Non-goals
 

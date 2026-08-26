@@ -224,16 +224,41 @@ describe('#1860 測れないものを測れたことにしない', () => {
       const row = byMetric.get(metric);
       assert.ok(row, `${metric} の行が無い`);
       assert.equal(row.observable, false, `${metric} が観測可能として報告されている`);
-      // #1880: active は #1861 で配線済みなので、解消条件は 2 系統の比較経路
-      // （`river evolve prompt-ab`）そのものである。
-      assert.equal(row.unblockedBy, PROMPT_AB_UNBLOCKED_BY);
-      assert.ok(row.unblockedBy.includes('river evolve prompt-ab'));
     }
+    // #1880: active は #1861 で配線済みなので、解消条件は 2 系統の比較経路
+    // （`river evolve prompt-ab`）そのものである。ただし latency / cost だけは
+    // 2 系統を揃えても測れない（run レコードが所要時間も課金も持たない）ので、
+    // この 1 行は A/B 経路を解消先にしない。
+    for (const metric of [
+      'should-detect recall',
+      'should-not-detect precision',
+      'parse 成功率',
+      'Evidence / Fix の充足',
+      'invalid ArtifactRefs',
+      'duplicate findings',
+      'critical 回帰',
+    ]) {
+      const row = byMetric.get(metric);
+      // 定数同士の比較だけでは値の書き換えを検出できないため literal も見る。
+      assert.equal(row.unblockedBy, PROMPT_AB_UNBLOCKED_BY);
+      assert.equal(row.unblockedBy, 'river evolve prompt-ab（#1880 の 2 系統経路）');
+    }
+    assert.equal(
+      byMetric.get('latency / cost').unblockedBy,
+      'run レコードへの latency / cost の記録'
+    );
     // 観測できる唯一の行。
     assert.equal(byMetric.get('token（送信前のプロンプト推定長）').observable, true);
 
     const result = buildPromptComparison({ runRecords: await records(), now: NOW });
     assert.deepEqual(result.acceptanceCoverage, [...ACCEPTANCE_COVERAGE]);
+    // #1880 m3: 取り違え防止の 3 フィールドを足したので schema 版を上げてある。
+    // 版で区別できないと、下流が古い形と新しい形を見分けられない。
+    assert.equal(result.schemaVersion, 2);
+    assert.equal(result.route, 'river evolve prompt-compare');
+    assert.equal(result.sameRecordOnBothSides, true);
+    assert.equal(result.sides.baseline.sentPrompt, 'legacy');
+    assert.equal(result.sides.candidate.sentPrompt, 'legacy');
   });
 
   test('非ゴール（自動 canary / 昇格）が成果物側で固定されている', async () => {
