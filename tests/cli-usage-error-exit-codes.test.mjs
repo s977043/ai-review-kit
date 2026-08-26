@@ -118,7 +118,7 @@
 //   契約ではなく環境の欠落を pin してしまうため（実測で 5 セルが動いた）。
 //   この 2 つを用意した状態が、実 repo で観測される契約と一致する。
 //
-// 実装コスト: 116 回（CASES 108 + 対照群 8）の CLI 起動を before フックで
+// 実装コスト: 118 回（CASES 110 + 対照群 8）の CLI 起動を before フックで
 // 1 回だけ掃引し、各 test は
 // その結果を参照するだけにしてある（in-process 実行で全掃引 ~2.5 秒）。
 
@@ -153,7 +153,9 @@ const CONTRACTS = {
 // #1759 C3（未知の `--context` 語彙を stderr で警告する）は exit code を 1 つも
 // 動かさないので CASES は不変であり、この件数も変わらない。追加したのは
 // VALID_CASES の 1 行（88 -> 89）だけである。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 107, C4: 1 };
+// #1880（`evolve prompt-ab` の新設）で、prompt-compare と同じ 2 形
+// （未知オプション / 余剰 positional）を追加し C3 が 107 -> 109 になった。
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 109, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -677,6 +679,20 @@ const CASES = [
     argv: ['evolve', 'prompt-compare', '.', 'extra'],
     contract: 'C3',
   },
+  // #1880 で足した `evolve prompt-ab`。prompt-compare と同じ理由で、この面でも
+  // 未知オプション / 余剰 positional の 2 形を pin する。
+  {
+    surface: 'evolve',
+    kind: 'unknown-option',
+    argv: ['evolve', 'prompt-ab', '--nope'],
+    contract: 'C3',
+  },
+  {
+    surface: 'evolve',
+    kind: 'surplus-positional',
+    argv: ['evolve', 'prompt-ab', '.', 'extra'],
+    contract: 'C3',
+  },
 
   // ---- river suppression ----
   // Slice 1 時点で 5 種別すべてが C3 だった唯一の面。ただし当時は必須オプション
@@ -1080,11 +1096,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 108 usage-error cases and every row is unique', () => {
+  test('the matrix pins 110 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      108,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件'
+      110,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1111,15 +1127,15 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // 「フラグ先行形を拒否」も v1.72.1 の「`--phase Upstream` を誤拒否」も
   // 壊したのは**成功側**であり、守りが薄いのは逆だった。行を消すだけで
   // 黙って保護が減るのを防ぐ。
-  test('the success-side table pins 89 legitimate argv forms', () => {
+  test('the success-side table pins 91 legitimate argv forms', () => {
     assert.equal(
       VALID_CASES.length,
-      89,
-      'コマンド面ごとの正常形: run 13 (#1759 C3 で --context 未知語彙 1行追加) / doctor 5 / skills 13 / runs 7 (#1759 B2 で1行追加) / review 19 / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 13 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加) / help 2 / コマンド無し 1'
+      91,
+      'コマンド面ごとの正常形: run 13 (#1759 C3 で --context 未知語彙 1行追加) / doctor 5 / skills 13 / runs 7 (#1759 B2 で1行追加) / review 19 / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 15 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加、#1880 で prompt-ab の両語順 2行追加) / help 2 / コマンド無し 1'
     );
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:107 / C4:1 (0 of 108 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:109 / C4:1 (0 of 110 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -1476,6 +1492,18 @@ const VALID_CASES = [
   },
   {
     argv: ['evolve', 'prompt-compare', '--output', 'json', '.'],
+    command: 'evolve',
+    target: '.',
+  },
+  // #1880: `prompt-ab` も同じくパスを取る面である。パス先行とフラグ先行の
+  // 両方を pin する。
+  {
+    argv: ['evolve', 'prompt-ab', '.', '--output', 'json'],
+    command: 'evolve',
+    target: '.',
+  },
+  {
+    argv: ['evolve', 'prompt-ab', '--output', 'json', '.'],
     command: 'evolve',
     target: '.',
   },

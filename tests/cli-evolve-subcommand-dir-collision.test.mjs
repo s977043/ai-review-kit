@@ -65,6 +65,7 @@ describe('#1759 B1: evolve subcommand word wins over a same-named directory', ()
     mkdirSync(join(dir, 'aggregate'));
     mkdirSync(join(dir, 'replay'));
     mkdirSync(join(dir, 'prompt-compare'));
+    mkdirSync(join(dir, 'prompt-ab'));
     originalCwd = process.cwd();
     process.chdir(dir);
   });
@@ -115,6 +116,15 @@ describe('#1759 B1: evolve subcommand word wins over a same-named directory', ()
     assert.equal(flagFirst.usageError, false);
     assert.equal(pathFirst.evolveSubcommand, 'prompt-compare');
     assert.equal(flagFirst.evolveSubcommand, 'prompt-compare');
+  });
+
+  test('`evolve prompt-ab .` and `evolve --output json prompt-ab` agree (#1880)', () => {
+    const pathFirst = parseArgs(['evolve', 'prompt-ab', '.']);
+    const flagFirst = parseArgs(['evolve', '--output', 'json', 'prompt-ab']);
+    assert.equal(pathFirst.usageError, false);
+    assert.equal(flagFirst.usageError, false);
+    assert.equal(pathFirst.evolveSubcommand, 'prompt-ab');
+    assert.equal(flagFirst.evolveSubcommand, 'prompt-ab');
   });
 
   test('escape hatch: `./aggregate` still resolves as a path, not a subcommand', () => {

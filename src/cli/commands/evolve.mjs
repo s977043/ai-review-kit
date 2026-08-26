@@ -5,13 +5,19 @@
 //   river evolve aggregate [<path>] [--min <n>] [--month YYYY-MM] [--output json|text]
 //   river evolve replay --spec <file> [--expect-manifest <id|key>] [--output json|text]
 //   river evolve prompt-compare [<path>] [--output json|text]
+//   river evolve prompt-ab [<path>] [--output json|text]
 //
-// All three subcommands only READ. `aggregate` reads `.river/runs/` and
+// All four subcommands only READ. `aggregate` reads `.river/runs/` and
 // `.river/feedback/*.jsonl`; `replay` reads a single experiment spec file that
 // already contains the baseline and candidate runs; `prompt-compare` reads
 // `.river/runs/` and pairs the legacy prompt against the compiled prompt from
 // the observe-mode records those runs already carry (ADR-006 / #1860) — it
-// never sends the compiled prompt anywhere. None has an `--out` / `--promote`
+// never sends the compiled prompt anywhere. `prompt-ab` reads the same store but
+// splits the runs into TWO sides by what each run actually sent — `sentPrompt:
+// 'legacy'` runs become the baseline and `sentPrompt: 'compiled'` runs (mode
+// `active`, #1861) become the candidate — so findings-level comparison becomes
+// possible (#1880). It re-runs nothing either: the two sides must already exist
+// in the store. None has an `--out` / `--promote`
 // style option: writing into Riverbed, Skills, rules, or the gate belongs to
 // #1568's promotion lifecycle, and re-running a review belongs to `river run` —
 // so no code path here can mutate a repository or spend an API call. Redirect
@@ -19,7 +25,7 @@
 
 import { existsSync } from 'node:fs';
 
-const SUBCOMMANDS = ['aggregate', 'replay', 'prompt-compare'];
+const SUBCOMMANDS = ['aggregate', 'replay', 'prompt-compare', 'prompt-ab'];
 
 /**
  * Warn when the positional path handed to `aggregate` does not exist (#1936).
@@ -84,20 +90,48 @@ function warnWhenTargetPathMissing(targetPath, rawTarget) {
  * has run in observe mode, and must stay on the original message. `existsSync`
  * is not narrowed to directories for the same reason as #1945.
  *
+ * `prompt-ab` (#1880) shares this branch: it reads the same store through the
+ * same `resolveStoreDir()` and also exits 1 with a dataset error, so a mistyped
+ * path is indistinguishable there for exactly the same reason. The subcommand
+ * name is a parameter only so the message names the command the user typed.
+ *
  * @param {string} targetPath - resolved positional path.
  * @param {string} rawTarget - the token as the user typed it.
+ * @param {string} subcommand - the subcommand name to name in the message.
  * @returns {string|null} replacement message, or null to keep the original.
  */
-function missingTargetPathError(targetPath, rawTarget) {
+function missingTargetPathError(targetPath, rawTarget, subcommand) {
   if (existsSync(targetPath)) return null;
   return (
-    `Error: "${rawTarget}" does not exist, so this prompt-compare read an empty store ` +
+    `Error: "${rawTarget}" does not exist, so this ${subcommand} read an empty store ` +
     'instead of the runs you meant. Check the path, or omit it to compare the runs in the current directory.'
   );
 }
 
 /**
- * Handle the `evolve` command (aggregate | replay | prompt-compare).
+ * Reject options that belong to another evolve subcommand (#1860 / #1880).
+ *
+ * Shared by `prompt-compare` and `prompt-ab`: both read the saved runs under
+ * `.river/runs`, so `--spec` / `--expect-manifest` (replay) and `--min` /
+ * `--month` (aggregate) would silently look honoured while changing nothing.
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @param {string} subcommand - the subcommand name to name in the message.
+ * @returns {string|null} error message, or null when nothing is misplaced.
+ */
+function misplacedStoreOptionError(parsed, subcommand) {
+  const misplaced = ['--spec', '--expect-manifest', '--min', '--month'].filter((flag) => {
+    if (flag === '--spec') return parsed.evolveSpec != null;
+    if (flag === '--expect-manifest') return parsed.evolveExpectManifest != null;
+    if (flag === '--min') return parsed.evolveMin != null;
+    return parsed.evolveMonth != null;
+  });
+  if (!misplaced.length) return null;
+  return `${misplaced.join(', ')} is not valid for \`river evolve ${subcommand}\` (its dataset is the saved runs under .river/runs).`;
+}
+
+/**
+ * Handle the `evolve` command (aggregate | replay | prompt-compare | prompt-ab).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
  * @param {string} targetPath - resolved repo target path.
@@ -135,6 +169,9 @@ export async function runEvolveCommand(parsed, targetPath) {
   if (subcommand === 'prompt-compare') {
     return runPromptCompare(parsed, targetPath, output);
   }
+  if (subcommand === 'prompt-ab') {
+    return runPromptAb(parsed, targetPath, output);
+  }
   return runAggregate(parsed, targetPath, output);
 }
 
@@ -145,16 +182,9 @@ export async function runEvolveCommand(parsed, targetPath) {
  * レビューの再実行も compiled prompt の送信も行わない。
  */
 async function runPromptCompare(parsed, targetPath, output) {
-  const misplaced = ['--spec', '--expect-manifest', '--min', '--month'].filter((flag) => {
-    if (flag === '--spec') return parsed.evolveSpec != null;
-    if (flag === '--expect-manifest') return parsed.evolveExpectManifest != null;
-    if (flag === '--min') return parsed.evolveMin != null;
-    return parsed.evolveMonth != null;
-  });
-  if (misplaced.length) {
-    console.error(
-      `${misplaced.join(', ')} is not valid for \`river evolve prompt-compare\` (its dataset is the saved runs under .river/runs).`
-    );
+  const misplacedError = misplacedStoreOptionError(parsed, 'prompt-compare');
+  if (misplacedError) {
+    console.error(misplacedError);
     return 1;
   }
 
@@ -175,7 +205,8 @@ async function runPromptCompare(parsed, targetPath, output) {
       // #1947: a non-existent path gets the path diagnosis instead, because the
       // dataset error's remedy does not apply to it. Exit code is unchanged.
       console.error(
-        missingTargetPathError(targetPath, parsed.target ?? targetPath) ?? `Error: ${err.message}`
+        missingTargetPathError(targetPath, parsed.target ?? targetPath, 'prompt-compare') ??
+          `Error: ${err.message}`
       );
       return 1;
     }
@@ -188,6 +219,59 @@ async function runPromptCompare(parsed, targetPath, output) {
     console.log(formatPromptComparisonMarkdown(result));
   }
   // Exit 0: this is an observation, never a gate (自動 canary は保留).
+  return 0;
+}
+
+/**
+ * `river evolve prompt-ab` — legacy を送った run と compiled を送った run の
+ * 2 系統 A/B 比較（#1880）。
+ *
+ * `prompt-compare` との違いは dataset の分け方だけである。あちらは observe の
+ * 1 レコードから両側を導出し、こちらは `sentPrompt` が legacy の run を baseline、
+ * compiled の run（mode `active`、#1861）を candidate に置く。`prompt-compare`
+ * の legacy 限定の拒否（#1860 の安全弁）は緩めていない。混同を避けるため、
+ * compiled 側の run が 1 件も無い dataset はこちらが受理しない。
+ *
+ * 保存済み run を読むだけである。レビューの再実行も provider 呼び出しも行わない。
+ */
+async function runPromptAb(parsed, targetPath, output) {
+  const misplacedError = misplacedStoreOptionError(parsed, 'prompt-ab');
+  if (misplacedError) {
+    console.error(misplacedError);
+    return 1;
+  }
+
+  const { resolveStoreDir, loadAllRunRecords } = await import('../../lib/result-store.mjs');
+  const { buildPromptAbComparison, formatPromptAbMarkdown, PromptComparisonError } =
+    await import('../../lib/prompt-compiler-paired.mjs');
+  const { PairedReplayError } = await import('../../lib/paired-replay.mjs');
+
+  const runRecords = await loadAllRunRecords(resolveStoreDir(targetPath));
+
+  let result;
+  try {
+    result = buildPromptAbComparison({ runRecords, now: new Date() });
+  } catch (err) {
+    // Same treatment as prompt-compare: both error types are usage-level (the
+    // dataset cannot support the comparison), and a non-existent path gets the
+    // path diagnosis instead because the dataset error's remedy does not apply.
+    if (err instanceof PromptComparisonError || err instanceof PairedReplayError) {
+      console.error(
+        missingTargetPathError(targetPath, parsed.target ?? targetPath, 'prompt-ab') ??
+          `Error: ${err.message}`
+      );
+      return 1;
+    }
+    throw err;
+  }
+
+  if (output === 'json') {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log(formatPromptAbMarkdown(result));
+  }
+  // Exit 0 even when a critical regression is observed: this reports material
+  // for a human judgement and is explicitly not a gate (自動 canary は保留).
   return 0;
 }
 

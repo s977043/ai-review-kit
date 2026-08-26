@@ -24,6 +24,7 @@ import { deriveReviewRunId } from '../src/lib/shadow-aggregate.mjs';
 import {
   ACCEPTANCE_COVERAGE,
   LEGACY_CONFIG_ID,
+  PROMPT_AB_UNBLOCKED_BY,
   PromptComparisonError,
   buildPromptComparison,
   buildPromptComparisonSpec,
@@ -223,7 +224,10 @@ describe('#1860 測れないものを測れたことにしない', () => {
       const row = byMetric.get(metric);
       assert.ok(row, `${metric} の行が無い`);
       assert.equal(row.observable, false, `${metric} が観測可能として報告されている`);
-      assert.equal(row.unblockedBy, '#1861 active 配線');
+      // #1880: active は #1861 で配線済みなので、解消条件は 2 系統の比較経路
+      // （`river evolve prompt-ab`）そのものである。
+      assert.equal(row.unblockedBy, PROMPT_AB_UNBLOCKED_BY);
+      assert.ok(row.unblockedBy.includes('river evolve prompt-ab'));
     }
     // 観測できる唯一の行。
     assert.equal(byMetric.get('token（送信前のプロンプト推定長）').observable, true);
