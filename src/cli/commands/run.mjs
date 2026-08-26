@@ -317,6 +317,15 @@ Dependencies: ${
     dryRun: parsed.dryRun,
     debug: parsed.debug,
     context,
+    // #1975: redundant on this path, kept on purpose. `context` is always
+    // passed here (built by the `planLocalReview` call above, which is the
+    // call that actually applies `--context` / `--dependency`), and
+    // `runLocalReview` reads these two top-level arguments ONLY when `context`
+    // is absent — downstream it reads `context.availableContexts` /
+    // `context.availableDependencies`. So these two lines are currently a
+    // no-op. They stay as a safety net for the fallback path: dropping them
+    // would silently disable `--context` / `--dependency` the day this call
+    // stops passing `context`.
     availableContexts: parsed.availableContexts,
     availableDependencies: parsed.availableDependencies,
     plannerMode: parsed.plannerMode,
