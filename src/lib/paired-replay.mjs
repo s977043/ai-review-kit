@@ -1226,6 +1226,28 @@ export function buildPairedReplay(spec, { now = new Date(), manifest: providedMa
     knownRunCount: totalRunCount - unknownShaRunCount,
     unknownRunCount: unknownShaRunCount,
   };
+  // Cross-side comparison of the DERIVED source commits (#1724). #1720 only
+  // checks one side against itself, so a candidate whose runs were re-collected
+  // at a different commit than the baseline passes every existing check while
+  // the two sides reviewed different code.
+  //
+  // REPORTED, never refused: re-collecting one side later is a legitimate way to
+  // run an experiment, and failing closed here would break it (#1720 declined
+  // for exactly this reason). The values are already lowercased and
+  // prefix-resolved by summarizeSideProvenance, and the comparison reuses
+  // resolveObservedSha so an abbreviated sha is judged the same way it is
+  // within a side — no second normalization is written here.
+  //
+  // `differs` is null, not false, when either side has no derived sha: 未取得 is
+  // not agreement, and a side spanning several cases derives null too.
+  const crossSideShas = [baselineProvenance.sourceCommitSha, candidateProvenance.sourceCommitSha];
+  const crossSideComparable = crossSideShas.every((sha) => sha != null);
+  const crossSideSourceCommitSha = {
+    baseline: baselineProvenance.sourceCommitSha,
+    candidate: candidateProvenance.sourceCommitSha,
+    comparable: crossSideComparable,
+    differs: crossSideComparable ? resolveObservedSha(crossSideShas).mixed : null,
+  };
   const activationReasons = [];
   if (!configurationDiffers) {
     activationReasons.push(
@@ -1238,6 +1260,11 @@ export function buildPairedReplay(spec, { now = new Date(), manifest: providedMa
   if (unknownShaRunCount > 0) {
     activationReasons.push(
       `source_commit_sha を持たない run が baseline ${baselineProvenance.sourceCommitShaUnknownRunCount} 件 / candidate ${candidateProvenance.sourceCommitShaUnknownRunCount} 件あり、どのコードをレビューした結果か追跡できない（#1715 以前の記録）`
+    );
+  }
+  if (crossSideSourceCommitSha.differs === true) {
+    activationReasons.push(
+      `baseline と candidate の source_commit_sha が異なる（baseline ${crossSideSourceCommitSha.baseline} / candidate ${crossSideSourceCommitSha.candidate}）。両側が別のコードをレビューしており、diff の差は candidate 構成ではなく被レビューコードの差に由来しうる（#1724）`
     );
   }
   if (baselineProvenance.dirtyRunCount + candidateProvenance.dirtyRunCount > 0) {
@@ -1306,6 +1333,9 @@ export function buildPairedReplay(spec, { now = new Date(), manifest: providedMa
       // reasons so they cannot pass unnoticed.
       verified: configurationDiffers && observedDifference,
       sourceCommitShaCoverage,
+      // Same standing as sourceCommitShaCoverage: reported and surfaced as a
+      // reason, never folded into `verified` (#1724).
+      crossSideSourceCommitSha,
       expectedSignal: built.manifest.activation.expectedSignal,
       declaredEvidence: built.manifest.activation.declaredEvidence,
       reasons: activationReasons,

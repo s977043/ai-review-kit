@@ -1316,6 +1316,150 @@ describe('paired-replay #1719: source_commit_sha internal consistency', () => {
 });
 
 // ---------------------------------------------------------------------------
+// #1724: the two sides may have reviewed DIFFERENT code. #1719 checks each side
+// against itself only, so the cross-side case passes every existing check.
+// Recorded and surfaced, never refused: re-collecting one side later is a
+// legitimate way to run an experiment.
+// ---------------------------------------------------------------------------
+
+/** Give every run of one side the same source_commit_sha. */
+function withSideSha(specObj, side, sha) {
+  specObj[side].runs = specObj[side].runs.map((r) => withProvenance(r, { sourceCommitSha: sha }));
+  return specObj;
+}
+
+describe('paired-replay #1724: cross-side source_commit_sha', () => {
+  test('different commits on the two sides are recorded and surfaced', () => {
+    const s = spec({ dataset: { heldOutCaseKeys: [] } });
+    withSideSha(s, 'baseline', SHA_A);
+    withSideSha(s, 'candidate', SHA_B);
+    const result = buildPairedReplay(s, { now: NOW });
+    assert.deepEqual(result.activationCheck.crossSideSourceCommitSha, {
+      baseline: SHA_A,
+      candidate: SHA_B,
+      comparable: true,
+      differs: true,
+    });
+    assert.ok(
+      result.activationCheck.reasons.some((r) =>
+        r.includes('baseline と candidate の source_commit_sha が異なる')
+      ),
+      JSON.stringify(result.activationCheck.reasons)
+    );
+    // Fail-OPEN by decision: a later re-collect of one side is legitimate, so
+    // the difference must not flip `verified` or refuse the experiment.
+    assert.equal(result.activationCheck.verified, true);
+    // Visible to a human reader, not only to a JSON consumer.
+    assert.match(
+      formatPairedReplayMarkdown(result),
+      /baseline と candidate の source_commit_sha が異なる/
+    );
+    assert.equal(validateReplay(result), true, JSON.stringify(validateReplay.errors, null, 2));
+  });
+
+  test('the same commit on both sides is not a difference', () => {
+    const s = spec({ dataset: { heldOutCaseKeys: [] } });
+    withSideSha(s, 'baseline', SHA_A);
+    withSideSha(s, 'candidate', SHA_A);
+    const result = buildPairedReplay(s, { now: NOW });
+    assert.deepEqual(result.activationCheck.crossSideSourceCommitSha, {
+      baseline: SHA_A,
+      candidate: SHA_A,
+      comparable: true,
+      differs: false,
+    });
+    assert.equal(
+      result.activationCheck.reasons.some((r) => r.includes('source_commit_sha が異なる')),
+      false,
+      JSON.stringify(result.activationCheck.reasons)
+    );
+    assert.equal(validateReplay(result), true, JSON.stringify(validateReplay.errors, null, 2));
+  });
+
+  test('one side without a derived sha is 未取得, not a difference', () => {
+    // The candidate keeps the pre-#1715 records of the default fixture: no
+    // provenance block at all, so nothing can be compared.
+    const s = spec({ dataset: { heldOutCaseKeys: [] } });
+    withSideSha(s, 'baseline', SHA_A);
+    const result = buildPairedReplay(s, { now: NOW });
+    assert.deepEqual(result.activationCheck.crossSideSourceCommitSha, {
+      baseline: SHA_A,
+      candidate: null,
+      comparable: false,
+      // null, NOT false: 未取得 is not agreement (same stance as :316).
+      differs: null,
+    });
+    assert.equal(
+      result.activationCheck.reasons.some((r) =>
+        r.includes('baseline と candidate の source_commit_sha が異なる')
+      ),
+      false,
+      JSON.stringify(result.activationCheck.reasons)
+    );
+    assert.equal(validateReplay(result), true, JSON.stringify(validateReplay.errors, null, 2));
+
+    // Mirrored: a side spanning several cases derives null too, and that is
+    // also 未取得 rather than a difference.
+    const spanning = spec({ dataset: { heldOutCaseKeys: [] } });
+    withSideSha(spanning, 'candidate', SHA_B);
+    spanning.baseline.runs = [
+      withProvenance(spanning.baseline.runs[0], { sourceCommitSha: SHA_A }),
+      withProvenance(spanning.baseline.runs[1], { sourceCommitSha: SHA_B }),
+    ];
+    const spanningResult = buildPairedReplay(spanning, { now: NOW });
+    assert.equal(spanningResult.manifest.baseline.provenance.sourceCommitSha, null);
+    assert.deepEqual(spanningResult.activationCheck.crossSideSourceCommitSha, {
+      baseline: null,
+      candidate: SHA_B,
+      comparable: false,
+      differs: null,
+    });
+  });
+
+  test('an abbreviated sha is judged by the same rule as within a side', () => {
+    // resolveObservedSha is reused rather than a second normalization: a 7-hex
+    // prefix of the other side's sha is the same commit, and an uppercase
+    // record is already lowercased by summarizeSideProvenance.
+    const s = spec({ dataset: { heldOutCaseKeys: [] } });
+    withSideSha(s, 'baseline', SHA_A.slice(0, 7).toUpperCase());
+    withSideSha(s, 'candidate', SHA_A);
+    const result = buildPairedReplay(s, { now: NOW });
+    assert.deepEqual(result.activationCheck.crossSideSourceCommitSha, {
+      baseline: SHA_A.slice(0, 7),
+      candidate: SHA_A,
+      comparable: true,
+      differs: false,
+    });
+  });
+
+  test('the manifest is untouched, so its id does not move (契約3)', () => {
+    const s = spec({ dataset: { heldOutCaseKeys: [] } });
+    withSideSha(s, 'baseline', SHA_A);
+    withSideSha(s, 'candidate', SHA_B);
+    const result = buildPairedReplay(s, { now: NOW });
+    // The cross-side field is a REPORT field. Putting it in the manifest would
+    // enter `conditions` and change experimentKey / manifestId for every
+    // existing manifest.
+    assert.equal('crossSideSourceCommitSha' in result.manifest, false);
+    assert.equal(verifyExperimentManifest(result.manifest).verified, true);
+    // Literal pin: the default fixture's id, measured on the pre-#1724 code.
+    // Any future condition added to the manifest breaks this line on purpose.
+    assert.equal(
+      buildExperimentManifest(spec(), { now: NOW }).manifest.manifestId,
+      'RR-EXP-d729968ecc35'
+    );
+  });
+
+  test('a result without the cross-side field stays schema-valid', () => {
+    // Additive under the same schemaVersion, like sourceCommitShaCoverage (W1).
+    const result = buildPairedReplay(spec(), { now: NOW });
+    delete result.activationCheck.crossSideSourceCommitSha;
+    assert.equal(result.schemaVersion, 1);
+    assert.equal(validateReplay(result), true, JSON.stringify(validateReplay.errors, null, 2));
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Artifact shape
 // ---------------------------------------------------------------------------
 
