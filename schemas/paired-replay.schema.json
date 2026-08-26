@@ -630,6 +630,27 @@
             }
           }
         },
+        "crossSideSourceCommitSha": {
+          "type": "object",
+          "description": "Whether baseline and candidate derived DIFFERENT reviewed commits (#1724). #1719 checks each side against itself only, so a side re-collected at another commit passes it. Reported, never refused: re-collecting one side later is a legitimate way to run an experiment. OPTIONAL so results produced before this field existed stay valid under the same schemaVersion.",
+          "required": ["baseline", "candidate", "comparable", "differs"],
+          "additionalProperties": false,
+          "properties": {
+            "baseline": {
+              "type": ["string", "null"],
+              "description": "manifest.baseline.provenance.sourceCommitSha, already lowercased and prefix-resolved. null when the side reports none or spans several commits."
+            },
+            "candidate": { "type": ["string", "null"] },
+            "comparable": {
+              "type": "boolean",
+              "description": "Both sides derived a sha, so the comparison could be made."
+            },
+            "differs": {
+              "type": ["boolean", "null"],
+              "description": "null (not false) when comparable is false: 未取得 is not agreement. true adds an activation reason, so the gap is never silent."
+            }
+          }
+        },
         "expectedSignal": { "type": ["string", "null"] },
         "declaredEvidence": { "type": "array", "items": { "type": "string" } },
         "reasons": { "type": "array", "items": { "type": "string" } }
