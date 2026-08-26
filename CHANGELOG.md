@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.87.6](https://github.com/s977043/river-review/compare/v1.87.5...v1.87.6) (2026-08-26)
+
+
+### Bug Fixes
+
+* **evolve:** paired replay の cross-side source_commit_sha 差異を報告する ([#1724](https://github.com/s977043/river-review/issues/1724)) ([#1968](https://github.com/s977043/river-review/issues/1968)) ([52143ee](https://github.com/s977043/river-review/commit/52143eeb076f5b21103d95688bd6c55671ef8eec))
+* **suppression:** v2 抑制が統合元の行のコメントを取り逃す問題を直す ([#1823](https://github.com/s977043/river-review/issues/1823)) ([#1967](https://github.com/s977043/river-review/issues/1967)) ([67a6556](https://github.com/s977043/river-review/commit/67a6556fdc5c49d868066acb630043c557a8ebd2))
+
 ## [1.87.5](https://github.com/s977043/river-review/compare/v1.87.4...v1.87.5) (2026-08-24)
 
 
