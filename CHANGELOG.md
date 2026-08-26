@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.89.0](https://github.com/s977043/river-review/compare/v1.88.0...v1.89.0) (2026-08-26)
+
+
+### Features
+
+* **review:** [#1978](https://github.com/s977043/river-review/issues/1978) Phase 1a の決定論スケルトンを追加する ([#1981](https://github.com/s977043/river-review/issues/1981)) ([56e0ae4](https://github.com/s977043/river-review/commit/56e0ae4c4e03efd7f5b254fbe2eabde22edbd7c9))
+
 ## [1.88.0](https://github.com/s977043/river-review/compare/v1.87.6...v1.88.0) (2026-08-26)
 
 
