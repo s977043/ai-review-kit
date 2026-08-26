@@ -423,6 +423,15 @@ export async function planLocalReview({
  * testable without standing up the whole pipeline
  * (tests/local-runner-suppression.test.mjs).
  *
+ * #1823 残件1: on the `--reviewers` path that dependency holds for the cluster
+ * REPRESENTATIVE only. `mergeFindings` collapses findings up to 2 lines apart
+ * into one, while their comments stay at their own lines, so the v2 sweep also
+ * covers every line the representative absorbed (`mergedLineStarts`). Findings
+ * that were never merged carry no such list, so nothing widens for them — an
+ * unmerged neighbour's comment is still kept. The non-orchestrated path never
+ * calls `mergeFindings` and is unaffected, as is the v1 path (already
+ * file-wide).
+ *
  * @param {Array<object>} comments - `review.comments`
  * @param {Array<object>} suppressedFindings - `applySuppressions().suppressedFindings`
  * @returns {Array<object>} the comments to keep
@@ -436,12 +445,23 @@ export function filterSuppressedComments(comments, suppressedFindings) {
       .map((f) => f?.fingerprint)
       .filter(Boolean)
   );
-  const suppressedV2 = new Set(
-    suppressed
-      .filter((f) => f?.suppressionAlgo === 'v2')
-      .map((f) => f?.fingerprintV2)
-      .filter(Boolean)
-  );
+  const suppressedV2 = new Set();
+  for (const f of suppressed) {
+    if (f?.suppressionAlgo !== 'v2') continue;
+    if (f.fingerprintV2) suppressedV2.add(f.fingerprintV2);
+    // #1823 残件1: a finding produced by `--reviewers` can be the representative
+    // of a merge cluster (mergeFindings tolerates a ±2 line gap), and the
+    // comments of the merged-away members are still anchored at THEIR lines. A
+    // v2 hex derived from the representative's line alone therefore misses them
+    // and they survive the suppression. `mergedLineStarts` carries those lines,
+    // so re-derive the v2 hex per line through the SSoT (computeFingerprintV2)
+    // rather than widening the match with a line window: the sweep stays exact
+    // and only reaches lines the merge actually absorbed.
+    for (const line of Array.isArray(f.mergedLineStarts) ? f.mergedLineStarts : []) {
+      if (!Number.isInteger(line) || line < 1) continue;
+      suppressedV2.add(computeFingerprintV2({ ...f, lineStart: line, line }));
+    }
+  }
   if (suppressedV1.size === 0 && suppressedV2.size === 0) return list;
   return list.filter((c) => {
     const key = {

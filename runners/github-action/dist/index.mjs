@@ -71711,6 +71711,42 @@ function mergeScope(members) {
 }
 
 /**
+ * Line positions a merge cluster absorbed (#1823 残件1).
+ *
+ * `findingsOverlap` clusters findings whose `lineStart` differs by up to 2, and
+ * the cluster then keeps ONE representative — so the other members' lines stop
+ * being reachable from the merged finding. That loss is what makes a v2
+ * (line-anchored) suppression leak: `filterSuppressedComments` recomputes the
+ * v2 hex from each comment's OWN line, so the comment anchored at a
+ * merged-away line hashes to a different value than the representative and
+ * survives the suppression (reproduced on #1823: representative at line 100,
+ * comment at 101 kept).
+ *
+ * Recording the member lines on the representative is what lets the comment
+ * filter sweep them. The list is de-duplicated and ascending, and it includes
+ * the representative's own line so a consumer needs no second source.
+ *
+ * A member that already carries `mergedLineStarts` (a second `mergeFindings`
+ * pass over merged output — see the ADV-6 idempotency pin in
+ * tests/reviewer-orchestrator.test.mjs) contributes its whole list, so the
+ * absorbed lines are never dropped by re-merging.
+ *
+ * @param {object[]} members findings of one cluster
+ * @returns {number[]} ascending, de-duplicated line numbers
+ */
+function collectMergedLineStarts(members) {
+  const lines = new Set();
+  for (const m of members) {
+    for (const l of Array.isArray(m?.mergedLineStarts) ? m.mergedLineStarts : []) {
+      if (Number.isInteger(l) && l >= 1) lines.add(l);
+    }
+    const own = m?.lineStart ?? m?.line;
+    if (Number.isInteger(own) && own >= 1) lines.add(own);
+  }
+  return [...lines].sort((a, b) => a - b);
+}
+
+/**
  * Predicate: returns true when two findings are considered duplicates.
  * Criteria: same file, line positions within ±2, and message edit-distance ≤ 10
  * (compared on the first 80 chars, lower-cased).
@@ -71743,6 +71779,11 @@ function findingsOverlap(a, b) {
  *   - agreement = array of all reviewerRole values in the cluster
  *   - scope = `in-diff` when any member is in-diff, else `pre-existing`
  *     (mergeScope; omitted when no member carried a scope)
+ *   - mergedLineStarts = every line the cluster absorbed, ascending and
+ *     de-duplicated (collectMergedLineStarts; omitted when the cluster spans a
+ *     single line). INTERNAL field: `formatJsonOutput` maps findings to
+ *     `issues` through an explicit allowlist (src/cli/render.mjs), so this does
+ *     not reach the `$defs.issue` artifact and needs no schema change.
  * Non-duplicate findings pass through unchanged, with agreement = [their reviewerRole] if set.
  */
 function mergeFindings(findings) {
@@ -71814,6 +71855,7 @@ function mergeFindings(findings) {
 
     const mergedAgreement = [...agreementSet];
     const members = indices.map((idx) => findings[idx]);
+    const mergedLineStarts = collectMergedLineStarts(members);
     return {
       ...canonical,
       severity: mergedSeverity,
@@ -71826,6 +71868,13 @@ function mergeFindings(findings) {
       // (schemas/output.schema.json, issues[].scope), so adding it there would
       // change the payload without changing its meaning.
       ...(members.some((m) => m?.scope !== undefined) ? { scope: mergeScope(members) } : {}),
+      // #1823 残件1: only materialised when the cluster spans MORE THAN ONE
+      // line. A single distinct line is already carried by `lineStart`, so the
+      // field would repeat it without adding a sweep target — same emission
+      // rule as `scope` above. Single-member clusters therefore never gain the
+      // field on the passthrough branch either; a representative that inherited
+      // one from an earlier pass keeps it through the `...canonical` spread.
+      ...(mergedLineStarts.length > 1 ? { mergedLineStarts } : {}),
     };
   });
 }
@@ -73050,6 +73099,15 @@ async function planLocalReview({
  * testable without standing up the whole pipeline
  * (tests/local-runner-suppression.test.mjs).
  *
+ * #1823 残件1: on the `--reviewers` path that dependency holds for the cluster
+ * REPRESENTATIVE only. `mergeFindings` collapses findings up to 2 lines apart
+ * into one, while their comments stay at their own lines, so the v2 sweep also
+ * covers every line the representative absorbed (`mergedLineStarts`). Findings
+ * that were never merged carry no such list, so nothing widens for them — an
+ * unmerged neighbour's comment is still kept. The non-orchestrated path never
+ * calls `mergeFindings` and is unaffected, as is the v1 path (already
+ * file-wide).
+ *
  * @param {Array<object>} comments - `review.comments`
  * @param {Array<object>} suppressedFindings - `applySuppressions().suppressedFindings`
  * @returns {Array<object>} the comments to keep
@@ -73063,12 +73121,23 @@ function filterSuppressedComments(comments, suppressedFindings) {
       .map((f) => f?.fingerprint)
       .filter(Boolean)
   );
-  const suppressedV2 = new Set(
-    suppressed
-      .filter((f) => f?.suppressionAlgo === 'v2')
-      .map((f) => f?.fingerprintV2)
-      .filter(Boolean)
-  );
+  const suppressedV2 = new Set();
+  for (const f of suppressed) {
+    if (f?.suppressionAlgo !== 'v2') continue;
+    if (f.fingerprintV2) suppressedV2.add(f.fingerprintV2);
+    // #1823 残件1: a finding produced by `--reviewers` can be the representative
+    // of a merge cluster (mergeFindings tolerates a ±2 line gap), and the
+    // comments of the merged-away members are still anchored at THEIR lines. A
+    // v2 hex derived from the representative's line alone therefore misses them
+    // and they survive the suppression. `mergedLineStarts` carries those lines,
+    // so re-derive the v2 hex per line through the SSoT (computeFingerprintV2)
+    // rather than widening the match with a line window: the sweep stays exact
+    // and only reaches lines the merge actually absorbed.
+    for (const line of Array.isArray(f.mergedLineStarts) ? f.mergedLineStarts : []) {
+      if (!Number.isInteger(line) || line < 1) continue;
+      suppressedV2.add((0,finding_factory/* computeFingerprintV2 */.ko)({ ...f, lineStart: line, line }));
+    }
+  }
   if (suppressedV1.size === 0 && suppressedV2.size === 0) return list;
   return list.filter((c) => {
     const key = {
