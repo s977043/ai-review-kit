@@ -32,7 +32,9 @@
 
 - [ ] `src/lib/verifier.mjs`—関数シグネチャと checks オブジェクト
 - [ ] `src/lib/review-engine.mjs`—`generateReview` 内の `verifyFinding` 呼び出し（`await import('./verifier.mjs')` 箇所）
+- [ ] `src/lib/finding-critic.mjs`—`preVerifyFinding` と `isCriticEvidenceGrounded` の 2 箇所（#1978 Phase 1a）
 - [ ] `tests/verifier.test.mjs`—新チェックの pass/fail/lenient 3パターン
+- [ ] `tests/finding-critic.test.mjs`—`preVerifyFinding` の `reasons` が `verifyFinding` と一致することの突合
 
 ### 必須: `buildExecutionPlan` に新パラメータを追加した場合
 
