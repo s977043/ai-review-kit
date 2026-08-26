@@ -17,7 +17,7 @@
  *   evidence path absent from the diff, incoherent phase, non-actionable
  *   suggestion, unjustified severity. This module IMPORTS it and consumes its
  *   result; it does not re-derive any of those checks.
- * - `prefilterFindings` (src/lib/finding-factory.mjs) already suppresses
+ * - `prefilterFindings` (src/lib/finding-factory.mjs:513) already suppresses
  *   low_confidence / insufficient_evidence / style_only / duplicate.
  * - `mergeFindings` (src/lib/reviewer-orchestrator.mjs) already owns dedup and
  *   `agreement` provenance.
@@ -75,13 +75,22 @@ export const ASK_RELEVANCE = Object.freeze({
 
 const ASK_RELEVANCE_VALUES = new Set(Object.values(ASK_RELEVANCE));
 
-/** Terminal state of one finding after validation. */
+/**
+ * Terminal state of one finding after validation.
+ *
+ * This vocabulary is written to `validation.finalStatus` — a SEPARATE key from
+ * the schema's `validatedStatus` (`schemas/review-artifact.schema.json:455`).
+ * The two sets only partially overlap, and nothing here is written to
+ * `validatedStatus`. Do not wire one into the other without reconciling both
+ * enums first.
+ */
 export const FINAL_STATUS = Object.freeze({
   CONFIRMED: 'confirmed',
   WITHDRAWN_BY_REVIEWER: 'withdrawn-by-reviewer',
   DISMISSED_BY_EVIDENCE: 'dismissed-by-evidence',
-  // Reuses the existing `validatedStatus` value for deterministic evidence
-  // rejects (schemas/review-artifact.schema.json:455).
+  // Borrows the SPELLING of the existing `validatedStatus` value for
+  // deterministic evidence rejects, so the two vocabularies stay readable
+  // side by side. It is still emitted under `validation.finalStatus`.
   DISMISSED_HALLUCINATION: 'dismissed-hallucination',
   NEEDS_HUMAN_JUDGMENT: 'needs-human-judgment',
   OUT_OF_ASK: 'out-of-ask',
@@ -98,6 +107,8 @@ export const HARD_CAP_INNER_ROUNDS = 5;
 export const FAILSAFE_REASON = Object.freeze({
   CRITIC_TIMEOUT: 'critic-timeout',
   CRITIC_PARSE_FAILURE: 'critic-parse-failure',
+  DETERMINISTIC_MISSING: 'deterministic-missing',
+  EXCHANGES_EXHAUSTED: 'exchanges-exhausted',
   REVIEWER_PARSE_FAILURE: 'reviewer-parse-failure',
   KEEP_WITHOUT_EVIDENCE: 'keep-without-evidence',
   INNER_LOOP_CAP_REACHED: 'inner-loop-cap-reached',
@@ -266,7 +277,19 @@ export function parseCriticResponse(raw) {
     return { ok: false, errors: [`unknown verdict: ${JSON.stringify(verdictRaw)}`] };
   }
 
-  const relRaw = String(pick(obj, 'ask_relevance', 'askRelevance') ?? '').trim();
+  // Same separator/case normalization as `normalizeScope`
+  // (src/lib/finding-factory.mjs:347-364), so `OUT_OF_ASK` and `out of ask`
+  // reach the canonical `out-of-ask`. Without it every uppercase emission
+  // collapsed to `uncertain` and the Scope Gate stopped discriminating.
+  //
+  // Deliberately NOT aliased: the issue's original `IN_SCOPE` / `OUT_OF_SCOPE`
+  // spellings normalize to `in-scope` / `out-of-scope`, which are not in the
+  // vocabulary and therefore land on `uncertain`. Accepting them would revive
+  // the very `scope` ambiguity this axis was renamed to remove.
+  const relRaw = String(pick(obj, 'ask_relevance', 'askRelevance') ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/gu, '-');
   const askRelevance = ASK_RELEVANCE_VALUES.has(relRaw) ? relRaw : ASK_RELEVANCE.UNCERTAIN;
 
   const evidence = normalizeEvidenceList(obj.evidence);
@@ -363,11 +386,28 @@ export function preVerifyFinding({ finding, diff, skill, fileTypes, diffFiles })
 }
 
 /**
+ * Shape of a citable file reference. Mirrors `RE_FILE_REF` in verifier.mjs but
+ * anchored, because here the whole `artifact` field must BE a path — not merely
+ * contain one somewhere in prose.
+ */
+const RE_ARTIFACT_PATH = /^[\w/-]+(?:\.[\w]+)+$/u;
+
+/**
  * Is at least one artifact the Critic cited actually present in the diff?
  *
- * Reuses `verifyFinding`'s `evidenceInDiff` check as the single source of
- * truth for "does this path appear in the diff" rather than writing a second
- * matcher.
+ * Two gates, in this order:
+ *
+ * 1. SHAPE (here). The `artifact` field must itself be a file path. This gate
+ *    exists because `verifyFinding`'s `evidenceInDiff` is deliberately LENIENT:
+ *    `verifier.mjs:100-102` returns true when the evidence cites no file at
+ *    all, and its `RE_EVIDENCE` needs 5+ characters before it matches. Borrowing
+ *    that check alone answers "does this contradict the diff?", which fails
+ *    OPEN — `nowhere`, `a.js`, and `the login handler` all came back grounded.
+ *    Grounding must fail CLOSED, so anything that is not a path is not grounded.
+ * 2. MEMBERSHIP (delegated). Whether the path appears in the diff stays with
+ *    `verifyFinding`; that remains the single source of truth and is not
+ *    re-derived here. The probe message is padded so the citation always clears
+ *    `RE_EVIDENCE`'s minimum length.
  *
  * @param {Array<{ artifact: string }>} evidence
  * @param {string} diff
@@ -376,8 +416,10 @@ export function preVerifyFinding({ finding, diff, skill, fileTypes, diffFiles })
 export function isCriticEvidenceGrounded(evidence, diff) {
   if (!Array.isArray(evidence) || evidence.length === 0) return false;
   return evidence.some((entry) => {
+    const artifact = String(entry?.artifact ?? '').trim();
+    if (!RE_ARTIFACT_PATH.test(artifact)) return false;
     const probe = verifyFinding({
-      finding: { message: `Evidence: ${entry.artifact}` },
+      finding: { message: `Evidence: critic cited ${artifact}` },
       diff,
     });
     return probe.checks.evidenceInDiff === true;
@@ -425,13 +467,32 @@ export function isCleanOutcome(result) {
  * @param {{ kind?: string, payload?: unknown }} input.critic - `{ kind: 'timeout' | 'error' }`
  *   for a degraded call, otherwise `{ payload }` carrying the raw Critic output.
  * @param {unknown} [input.reviewer] - raw Reviewer response, when one exists.
- * @param {{ verified: boolean }} [input.deterministic] - result of `preVerifyFinding`.
+ * @param {{ verified: boolean }} input.deterministic - result of `preVerifyFinding`.
+ *   REQUIRED. Omitting it used to make `verified` false, which disabled the
+ *   contradiction fail-safe and let a Critic dismiss a finding that had never
+ *   been checked deterministically. A missing value now escalates instead.
  * @param {string} [input.diff] - diff text, used to ground Critic evidence.
  * @param {number} [input.round] - 1-based round index.
  * @returns {{ protocol: string, status: string, terminal: boolean, humanReview: boolean, retainFinding: boolean, reasons: string[], rounds: number, askRelevance: string }}
  */
 export function evaluateExchange({ critic, reviewer, deterministic, diff = '', round = 1 }) {
-  const kind = critic?.kind ?? 'response';
+  // Fail-safe 0: the caller skipped deterministic pre-verification. Nothing
+  // downstream can be trusted, so nothing downstream runs.
+  if (!deterministic || typeof deterministic.verified !== 'boolean') {
+    return outcome({
+      status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+      humanReview: true,
+      retainFinding: true,
+      reasons: [FAILSAFE_REASON.DETERMINISTIC_MISSING],
+      rounds: round,
+    });
+  }
+
+  // `kind` is normalized: a Critic runner reporting `TIMEOUT` must not fall
+  // through to the parse-failure branch and mislabel the reason.
+  const kind = String(critic?.kind ?? 'response')
+    .trim()
+    .toLowerCase();
 
   // Fail-safe 1: the Critic never answered. Keep the finding, ask a human.
   if (kind === 'timeout' || kind === 'error') {
@@ -459,6 +520,14 @@ export function evaluateExchange({ critic, reviewer, deterministic, diff = '', r
   const { verdict, askRelevance, evidence } = parsedCritic.response;
 
   // Ask-relevance gate: out-of-ask never reaches revision instructions.
+  //
+  // KNOWN LIMITATION (Phase 1a): this terminates on the Critic's sole judgment.
+  // No evidence is required, the Reviewer gets no chance to object, and no
+  // human is notified — a deterministically verified `critical` finding can be
+  // parked in `followUpNotes`. The finding is retained rather than dropped, so
+  // this is not a silent clean, but it IS a single-actor kill switch. Severity
+  // is not plumbed into this function; escalating high severities is deferred
+  // to Phase 1b, where the Critic's real classification accuracy is measurable.
   if (askRelevance === ASK_RELEVANCE.OUT_OF_ASK) {
     return outcome({
       status: FINAL_STATUS.OUT_OF_ASK,
@@ -622,7 +691,13 @@ export function runValidationLoop({
   maxInnerRounds = DEFAULT_MAX_INNER_ROUNDS,
   hardCap = HARD_CAP_INNER_ROUNDS,
 }) {
-  const cap = Math.max(1, Math.min(Number(maxInnerRounds) || 1, Number(hardCap) || 1));
+  // Double clamp. `hardCap` is a caller-supplied argument, so on its own it can
+  // be raised past the protocol ceiling; `HARD_CAP_INNER_ROUNDS` is the ceiling
+  // #1978 Step 6 fixes at 5 and no caller may exceed it.
+  const cap = Math.max(
+    1,
+    Math.min(Number(maxInnerRounds) || 1, Number(hardCap) || 1, HARD_CAP_INNER_ROUNDS)
+  );
   const list = Array.isArray(exchanges) ? exchanges : [];
   let last = null;
   let round = 0;
@@ -640,12 +715,17 @@ export function runValidationLoop({
     if (last.terminal) return last;
   }
 
-  // Fail-safe 4: the loop ran out of rounds without converging.
+  // Fail-safe 4: the loop ended without converging. The two ways that happens
+  // carry different operational meaning, so they carry different reason codes:
+  // hitting the cap means the exchange kept oscillating, while running out of
+  // exchanges early means the caller stopped feeding the loop.
   return outcome({
     status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
     humanReview: true,
     retainFinding: true,
-    reasons: [FAILSAFE_REASON.INNER_LOOP_CAP_REACHED],
+    reasons: [
+      round >= cap ? FAILSAFE_REASON.INNER_LOOP_CAP_REACHED : FAILSAFE_REASON.EXCHANGES_EXHAUSTED,
+    ],
     rounds: round,
     askRelevance: last?.askRelevance ?? ASK_RELEVANCE.UNCERTAIN,
   });

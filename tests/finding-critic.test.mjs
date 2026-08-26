@@ -35,6 +35,7 @@ import {
   buildValidatedFinding,
   evaluateExchange,
   isCleanOutcome,
+  isCriticEvidenceGrounded,
   parseCriticResponse,
   parseReviewerResponse,
   partitionByAskRelevance,
@@ -140,14 +141,29 @@ describe('fixture 8: multiple reviewers detect the same finding', () => {
     assert.equal(single.validation.finalStatus, many.validation.finalStatus);
   });
 
-  test('the exchange verdict does not depend on agreement count', () => {
+  test('evaluateExchange takes no agreement input at all', () => {
+    // The strongest form of "agreement is not a vote": the state machine has no
+    // parameter through which a vote count could enter. Passing one changes
+    // nothing, and the routed record still carries the agreement as provenance.
     const critic = {
       payload: { verdict: CRITIC_VERDICT.AGREE, ask_relevance: ASK_RELEVANCE.IN_ASK },
     };
-    const one = evaluateExchange({ critic, deterministic: { verified: true }, diff: DIFF });
-    const three = evaluateExchange({ critic, deterministic: { verified: true }, diff: DIFF });
-    assert.equal(one.status, three.status);
-    assert.equal(one.status, FINAL_STATUS.CONFIRMED);
+    const base = evaluateExchange({ critic, deterministic: { verified: true }, diff: DIFF });
+    const withVotes = evaluateExchange({
+      critic,
+      deterministic: { verified: true },
+      diff: DIFF,
+      agreement: ['a', 'b', 'c'],
+      agreementCount: 3,
+    });
+    assert.deepEqual(withVotes, base);
+    assert.equal(base.status, FINAL_STATUS.CONFIRMED);
+
+    const routed = partitionByAskRelevance([
+      { finding: { ...REAL_FINDING, agreement: ['a', 'b', 'c'] }, result: base },
+    ]);
+    assert.equal(routed.revisionInstructions[0].agreementCount, 3);
+    assert.equal(routed.revisionInstructions[0].severity, REAL_FINDING.severity);
   });
 
   test('agreement without deterministic evidence does not confirm', () => {
@@ -252,9 +268,41 @@ describe('fixture 14: critic parse failure', () => {
   });
 
   test('an unreadable ask_relevance falls back to uncertain, never to in-ask', () => {
-    const parsed = parseCriticResponse({ verdict: 'AGREE', ask_relevance: 'IN_SCOPE' });
-    assert.equal(parsed.ok, true);
-    assert.equal(parsed.response.askRelevance, ASK_RELEVANCE.UNCERTAIN);
+    for (const raw of ['IN_SCOPE', 'OUT_OF_SCOPE', 'SCOPE_UNCERTAIN', 'yes', '', 42]) {
+      const parsed = parseCriticResponse({ verdict: 'AGREE', ask_relevance: raw });
+      assert.equal(parsed.ok, true);
+      assert.equal(
+        parsed.response.askRelevance,
+        ASK_RELEVANCE.UNCERTAIN,
+        `${JSON.stringify(raw)} must not be read as a relevance claim`
+      );
+    }
+  });
+
+  test('ask_relevance is normalized for case and separators, like normalizeScope', () => {
+    const cases = [
+      ['in-ask', ASK_RELEVANCE.IN_ASK],
+      ['IN-ASK', ASK_RELEVANCE.IN_ASK],
+      ['in_ask', ASK_RELEVANCE.IN_ASK],
+      ['In Ask', ASK_RELEVANCE.IN_ASK],
+      ['OUT_OF_ASK', ASK_RELEVANCE.OUT_OF_ASK],
+      ['out-of-ask', ASK_RELEVANCE.OUT_OF_ASK],
+      ['Out Of Ask', ASK_RELEVANCE.OUT_OF_ASK],
+      ['UNCERTAIN', ASK_RELEVANCE.UNCERTAIN],
+    ];
+    for (const [raw, expected] of cases) {
+      const parsed = parseCriticResponse({ verdict: 'AGREE', ask_relevance: raw });
+      assert.equal(parsed.response.askRelevance, expected, `input ${JSON.stringify(raw)}`);
+    }
+  });
+
+  test('an uppercase out-of-ask claim actually gates, rather than collapsing to uncertain', () => {
+    const result = evaluateExchange({
+      critic: { payload: { verdict: 'AGREE', ask_relevance: 'OUT_OF_ASK' } },
+      deterministic: { verified: true },
+      diff: DIFF,
+    });
+    assert.equal(result.status, FINAL_STATUS.OUT_OF_ASK);
   });
 
   test('DISAGREE_EVIDENCE without a citation is downgraded, not honoured as a dismissal', () => {
@@ -337,6 +385,23 @@ describe('fixture 15: inner loop cap reached', () => {
     assert.equal(result.humanReview, true);
   });
 
+  test('a caller cannot raise the hard cap past the protocol ceiling', () => {
+    for (const hardCap of [100, Number.MAX_SAFE_INTEGER, Infinity]) {
+      const result = runValidationLoop({
+        exchanges: Array.from({ length: 50 }, () => contested),
+        deterministic: { verified: true },
+        diff: DIFF,
+        maxInnerRounds: 99,
+        hardCap,
+      });
+      assert.ok(
+        result.rounds <= HARD_CAP_INNER_ROUNDS,
+        `hardCap=${hardCap} produced ${result.rounds} rounds`
+      );
+      assert.equal(result.rounds, HARD_CAP_INNER_ROUNDS);
+    }
+  });
+
   test('running out of exchanges before the cap is also an escalation, not a pass', () => {
     const result = runValidationLoop({
       exchanges: [],
@@ -345,6 +410,10 @@ describe('fixture 15: inner loop cap reached', () => {
     });
     assert.equal(result.status, FINAL_STATUS.NEEDS_HUMAN_JUDGMENT);
     assert.equal(isCleanOutcome(result), false);
+    assert.ok(
+      result.reasons.includes(FAILSAFE_REASON.EXCHANGES_EXHAUSTED),
+      'exhausting the exchange list is a distinct cause from hitting the cap'
+    );
   });
 
   test('a converging loop still terminates early', () => {
@@ -489,6 +558,195 @@ describe('fixture 18: no name or routing collision with adversarial-review', () 
     };
     walk(cliDir);
     assert.deepEqual(hits, []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Evidence grounding (B1) — the gate fixture 16's fail-safe depends on
+// ---------------------------------------------------------------------------
+
+describe('isCriticEvidenceGrounded', () => {
+  // Every one of these came back `true` while the check simply borrowed
+  // verifyFinding's deliberately lenient `evidenceInDiff`. They are the shapes
+  // an LLM Critic actually emits.
+  const notGrounded = [
+    'nowhere',
+    'a.js',
+    'made up prose',
+    'the login handler',
+    'src/lib/real', // real file, extension dropped
+    'src/totally-fake.mjs', // well-formed path, absent from the diff
+    '',
+    '   ',
+  ];
+
+  for (const artifact of notGrounded) {
+    test(`${JSON.stringify(artifact)} is not grounded`, () => {
+      assert.equal(isCriticEvidenceGrounded([{ artifact }], DIFF), false);
+    });
+  }
+
+  test('an empty or malformed evidence list is not grounded', () => {
+    assert.equal(isCriticEvidenceGrounded([], DIFF), false);
+    assert.equal(isCriticEvidenceGrounded(null, DIFF), false);
+    assert.equal(isCriticEvidenceGrounded(undefined, DIFF), false);
+    assert.equal(isCriticEvidenceGrounded([{}], DIFF), false);
+  });
+
+  test('a path that really is in the diff is grounded', () => {
+    assert.equal(isCriticEvidenceGrounded([{ artifact: 'src/lib/real.mjs' }], DIFF), true);
+    assert.equal(
+      isCriticEvidenceGrounded([{ artifact: 'nowhere' }, { artifact: 'src/lib/real.mjs' }], DIFF),
+      true,
+      'one grounded citation among several is enough'
+    );
+  });
+
+  // The unit assertions above are not enough on their own: B1 reached
+  // production because nothing checked the outcome the gate feeds.
+  for (const artifact of ['nowhere', 'the login handler', 'a.js', 'src/lib/real']) {
+    test(`a dismissal citing ${JSON.stringify(artifact)} does not go clean`, () => {
+      const result = evaluateExchange({
+        critic: {
+          payload: {
+            verdict: 'DISAGREE_EVIDENCE',
+            ask_relevance: 'in-ask',
+            evidence: [{ artifact }],
+          },
+        },
+        reviewer: { action: 'WITHDRAW' },
+        deterministic: { verified: true },
+        diff: DIFF,
+      });
+      assert.equal(isCleanOutcome(result), false);
+      assert.equal(result.status, FINAL_STATUS.NEEDS_HUMAN_JUDGMENT);
+      assert.ok(result.reasons.includes(FAILSAFE_REASON.DETERMINISTIC_CONTRADICTION));
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Non-terminal branches must also never read as clean (M4)
+// ---------------------------------------------------------------------------
+
+describe('no branch of the state machine produces a clean outcome', () => {
+  test('REVISE keeps the finding and does not terminate', () => {
+    const result = evaluateExchange({
+      critic: {
+        payload: {
+          verdict: 'DISAGREE_EVIDENCE',
+          ask_relevance: 'in-ask',
+          evidence: [{ artifact: 'src/lib/real.mjs' }],
+        },
+      },
+      reviewer: { action: 'REVISE' },
+      deterministic: { verified: true },
+      diff: DIFF,
+    });
+    assert.equal(isCleanOutcome(result), false);
+    assert.equal(result.retainFinding, true);
+    assert.equal(result.terminal, false, 'a revised finding must be re-examined');
+  });
+
+  test('awaiting a reviewer response keeps the finding and does not terminate', () => {
+    const result = evaluateExchange({
+      critic: {
+        payload: {
+          verdict: 'DISAGREE_EVIDENCE',
+          ask_relevance: 'in-ask',
+          evidence: [{ artifact: 'src/lib/real.mjs' }],
+        },
+      },
+      deterministic: { verified: true },
+      diff: DIFF,
+    });
+    assert.equal(isCleanOutcome(result), false);
+    assert.equal(result.retainFinding, true);
+    assert.equal(result.terminal, false);
+  });
+
+  test('a contested but evidence-backed KEEP keeps the finding and does not terminate', () => {
+    const result = evaluateExchange({
+      critic: {
+        payload: {
+          verdict: 'DISAGREE_EVIDENCE',
+          ask_relevance: 'in-ask',
+          evidence: [{ artifact: 'src/lib/real.mjs' }],
+        },
+      },
+      reviewer: { action: 'KEEP', evidence: [{ artifact: 'src/lib/real.mjs' }] },
+      deterministic: { verified: true },
+      diff: DIFF,
+    });
+    assert.equal(isCleanOutcome(result), false);
+    assert.equal(result.terminal, false);
+  });
+
+  test('a deterministic reject never reports the finding as confirmed', () => {
+    // Fails `suggestionActionable` only, so it is not an evidence hallucination
+    // and takes the other arm of preVerifyFinding's status choice.
+    const finding = {
+      id: 'RR-F-003',
+      message: 'Finding: slow loop\nEvidence: src/lib/real.mjs line 2 loops over the whole table',
+    };
+    const pre = preVerifyFinding({ finding, diff: DIFF, skill: SKILL });
+    assert.equal(pre.verified, false);
+    assert.equal(pre.sendToCritic, false);
+    assert.notEqual(pre.status, FINAL_STATUS.CONFIRMED);
+    assert.equal(pre.status, FINAL_STATUS.DISMISSED_BY_EVIDENCE);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Deterministic pre-verification is mandatory (M1)
+// ---------------------------------------------------------------------------
+
+describe('deterministic pre-verification is required', () => {
+  const critic = {
+    payload: {
+      verdict: 'DISAGREE_EVIDENCE',
+      ask_relevance: 'in-ask',
+      evidence: [{ artifact: 'src/lib/real.mjs' }],
+    },
+  };
+
+  for (const [label, deterministic] of [
+    ['omitted', undefined],
+    ['null', null],
+    ['empty object', {}],
+    ['non-boolean verified', { verified: 'yes' }],
+  ]) {
+    test(`${label} escalates instead of letting the Critic dismiss`, () => {
+      const result = evaluateExchange({
+        critic,
+        reviewer: { action: 'WITHDRAW' },
+        deterministic,
+        diff: DIFF,
+      });
+      assert.equal(isCleanOutcome(result), false);
+      assert.equal(result.status, FINAL_STATUS.NEEDS_HUMAN_JUDGMENT);
+      assert.ok(result.reasons.includes(FAILSAFE_REASON.DETERMINISTIC_MISSING));
+    });
+  }
+
+  test('a timeout without deterministic input is still not clean', () => {
+    const result = evaluateExchange({ critic: { kind: 'timeout' } });
+    assert.equal(isCleanOutcome(result), false);
+  });
+
+  test('critic.kind is case-insensitive', () => {
+    const result = evaluateExchange({
+      critic: { kind: 'TIMEOUT' },
+      deterministic: { verified: true },
+      diff: DIFF,
+    });
+    assert.equal(result.status, FINAL_STATUS.CRITIC_TIMEOUT);
+    assert.ok(result.reasons.includes(FAILSAFE_REASON.CRITIC_TIMEOUT));
+    assert.equal(
+      result.reasons.includes(FAILSAFE_REASON.CRITIC_PARSE_FAILURE),
+      false,
+      'an uppercase kind must not be mislabelled as a parse failure'
+    );
   });
 });
 
