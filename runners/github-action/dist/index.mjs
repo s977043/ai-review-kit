@@ -73152,6 +73152,30 @@ function filterSuppressedComments(comments, suppressedFindings) {
   });
 }
 
+/**
+ * Run a local review end to end.
+ *
+ * #1975 — precedence of `context` over `availableContexts` /
+ * `availableDependencies`: when `context` is supplied, those two arguments are
+ * **ignored** and the values carried by `context` are used instead. They are
+ * read only on the fallback path, i.e. when `context` is omitted and this
+ * function has to build one by calling `planLocalReview` itself.
+ *
+ * Everything downstream of the fallback reads `context.availableContexts` /
+ * `context.availableDependencies`, never the top-level arguments. The
+ * production caller (`src/cli/commands/run.mjs`) always passes `context`, so
+ * for the CLI these two arguments are inert; `--context` / `--dependency`
+ * take effect through the `planLocalReview` call in that command instead.
+ * They are kept because callers that omit `context` (currently only tests)
+ * depend on them, and because removing them would silently disable
+ * `--context` / `--dependency` if `run.mjs` ever stopped passing `context`.
+ *
+ * @param {object} [options]
+ * @param {object} [options.context] - a pre-built plan; when present it wins
+ *   over `availableContexts` / `availableDependencies`.
+ * @param {string[]} [options.availableContexts] - fallback only (no `context`).
+ * @param {string[]} [options.availableDependencies] - fallback only (no `context`).
+ */
 async function runLocalReview({
   cwd = process.cwd(),
   phase = 'midstream',
@@ -75125,6 +75149,15 @@ Dependencies: ${
     dryRun: parsed.dryRun,
     debug: parsed.debug,
     context,
+    // #1975: redundant on this path, kept on purpose. `context` is always
+    // passed here (built by the `planLocalReview` call above, which is the
+    // call that actually applies `--context` / `--dependency`), and
+    // `runLocalReview` reads these two top-level arguments ONLY when `context`
+    // is absent — downstream it reads `context.availableContexts` /
+    // `context.availableDependencies`. So these two lines are currently a
+    // no-op. They stay as a safety net for the fallback path: dropping them
+    // would silently disable `--context` / `--dependency` the day this call
+    // stops passing `context`.
     availableContexts: parsed.availableContexts,
     availableDependencies: parsed.availableDependencies,
     plannerMode: parsed.plannerMode,
