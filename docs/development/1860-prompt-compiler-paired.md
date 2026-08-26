@@ -67,7 +67,7 @@ acceptance profile は宣言しません。findings 水準を観測できない�
 | token（送信前の推定長）     | 可   | observe が両側の推定長を 1 run で記録する         |
 | latency / cost              | 不可 | compiled を送っていない                           |
 
-観測不可の行は、`active` の run を突合できる経路が整った時点で解消します。`active` そのものは #1861 で配線済みですが、本導線は `sentPrompt` が legacy でない run を受け取らないため、その突合は別経路が担います。
+観測不可の行は、`active` の run を突合できる経路が整った時点で解消します。`active` そのものは #1861 で配線済みですが、本導線は `sentPrompt` が legacy でない run を受け取らないため、その突合は別経路が担います。その別経路が `river evolve prompt-ab`（#1880）です。詳細は [1880-prompt-ab.md](./1880-prompt-ab.md) を参照してください。
 
 ## 5. ファイル配置
 
@@ -95,7 +95,7 @@ river evolve prompt-compare [<path>] [--output json|text]
 | profile / provider / model が run ごとに異なる | 1         |
 | `sentPrompt` が legacy でない run が混ざる     | 1         |
 
-最後の行は #1861 への安全弁です。compiled を実際に送った run は findings 水準で比較できるため、この導線ではなく active の経路で扱います。黙って混ぜると、送信済みの run と未送信の run が 1 つの実験に畳まれます。
+最後の行は #1861 への安全弁です。compiled を実際に送った run は findings 水準で比較できるため、この導線ではなく `river evolve prompt-ab`（#1880）で扱います。黙って混ぜると、送信済みの run と未送信の run が 1 つの実験に畳まれます。#1880 はこの拒否を緩めず、2 系統を明示的に受け取る別の入口を足す形で解いています。
 
 ## 7. 非ゴール
 
