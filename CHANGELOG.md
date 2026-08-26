@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.88.0](https://github.com/s977043/river-review/compare/v1.87.6...v1.88.0) (2026-08-26)
+
+
+### Features
+
+* **evolve:** active の run を受け取る 2 系統の paired 比較経路を足す ([#1880](https://github.com/s977043/river-review/issues/1880)) ([#1974](https://github.com/s977043/river-review/issues/1974)) ([ba4b258](https://github.com/s977043/river-review/commit/ba4b2582ab52590a60d22e92a43e6484fc2f6d94))
+
 ## [1.87.6](https://github.com/s977043/river-review/compare/v1.87.5...v1.87.6) (2026-08-26)
 
 
