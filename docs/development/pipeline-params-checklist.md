@@ -35,6 +35,7 @@
 - [ ] `src/lib/finding-critic.mjs`—`preVerifyFinding` と `isCriticEvidenceGrounded` の 2 箇所（#1978 Phase 1a）
 - [ ] `tests/verifier.test.mjs`—新チェックの pass/fail/lenient 3パターン
 - [ ] `tests/finding-critic.test.mjs`—`preVerifyFinding` の `reasons` が `verifyFinding` と一致することの突合
+- [ ] `tests/finding-critic-phase1b.test.mjs`—Critic 由来 finding でも同じ突合が成り立つことの確認（#1978 Phase 1b fixture ⑥）
 
 ### 必須: `buildExecutionPlan` に新パラメータを追加した場合
 
