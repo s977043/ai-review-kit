@@ -1,0 +1,1070 @@
+{
+  "schemaVersion": 1,
+  "kind": "finding-critic-fixture-set",
+  "issue": 1978,
+  "phase": "1b",
+  "protocol": "evidence-grounded-adversarial-v1",
+  "vocabularySource": "src/lib/finding-critic.mjs",
+  "note": [
+    "The 11 fixtures of #1978 that need a real LLM response. Phase 1a pinned the",
+    "other 7 (2, 8, 13, 14, 15, 16, 18) in tests/finding-critic.test.mjs.",
+    "Each case carries a `golden` block assigned by a human BEFORE any LLM run.",
+    "Grading compares the pipeline's terminal state to `golden`, never to the",
+    "LLM's own claim about itself. `transcript` is a fixed, hand-written stand-in",
+    "for the LLM turn so the state machine can be replayed with no API key.",
+    "Vocabulary is the one src/lib/finding-critic.mjs actually exports:",
+    "askRelevance in-ask / uncertain / out-of-ask (NOT IN_SCOPE / SCOPE_UNCERTAIN /",
+    "OUT_OF_SCOPE), finalStatus from FINAL_STATUS."
+  ],
+  "diffs": {
+    "D1": [
+      "diff --git a/src/lib/fetch-url.mjs b/src/lib/fetch-url.mjs",
+      "--- a/src/lib/fetch-url.mjs",
+      "+++ b/src/lib/fetch-url.mjs",
+      "@@ -1,4 +1,9 @@",
+      "+import { ALLOWED_HOSTS } from './allowed-hosts.mjs';",
+      "+",
+      " export async function fetchUrl(rawUrl) {",
+      "-  return fetch(rawUrl);",
+      "+  const url = new URL(rawUrl);",
+      "+  if (!ALLOWED_HOSTS.has(url.host)) throw new Error('host not allowed');",
+      "+  return fetch(url);",
+      " }"
+    ],
+    "D2": [
+      "diff --git a/src/api/session.mjs b/src/api/session.mjs",
+      "--- a/src/api/session.mjs",
+      "+++ b/src/api/session.mjs",
+      "@@ -10,3 +10,8 @@ import { decode } from './jwt.mjs';",
+      "+export function createSession(req) {",
+      "+  const token = req.query.token;",
+      "+  const claims = decode(token);",
+      "+  return { userId: claims.sub, role: claims.role };",
+      "+}"
+    ],
+    "D3": [
+      "diff --git a/src/lib/pagination.mjs b/src/lib/pagination.mjs",
+      "--- a/src/lib/pagination.mjs",
+      "+++ b/src/lib/pagination.mjs",
+      "@@ -1,3 +1,8 @@",
+      "+export function pageSlice(rows, page, limit) {",
+      "+  const start = page * limit;",
+      "+  const end = start + limit - 1;",
+      "+  return rows.slice(start, end);",
+      "+}"
+    ],
+    "D4": [
+      "diff --git a/docs/plans/2101-export-plan.md b/docs/plans/2101-export-plan.md",
+      "--- a/docs/plans/2101-export-plan.md",
+      "+++ b/docs/plans/2101-export-plan.md",
+      "@@ -1,3 +1,9 @@",
+      " # CSV export plan",
+      "+",
+      "+## Steps",
+      "+",
+      "+1. Stream rows from the read replica.",
+      "+2. Write the CSV to the response.",
+      "+3. Delete the temporary file after the response is flushed."
+    ]
+  },
+  "defaultSkill": { "metadata": { "phase": "midstream", "severity": "critical" } },
+  "cases": [
+    {
+      "caseId": "RR-1978-F01",
+      "issueFixture": 1,
+      "title": "Reviewer finds a real bug and the Critic agrees",
+      "diff": "D1",
+      "originalAsk": "fetchUrl() must reject hosts outside the allowlist.",
+      "acceptanceCriteria": ["A request to a host outside ALLOWED_HOSTS is rejected."],
+      "candidateFinding": {
+        "id": "RR-F-101",
+        "severity": "major",
+        "message": "Finding: the host allowlist is bypassed on a redirect\nEvidence: src/lib/fetch-url.mjs checks url.host once and then calls fetch(url), which follows 3xx redirects by default, so the final host is never checked\nSeverity: warning\nFix: pass redirect: 'manual' and re-check the Location host before following it"
+      },
+      "golden": {
+        "label": "true-positive",
+        "finalStatus": "confirmed",
+        "routing": "revisionInstructions",
+        "humanReview": false,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "The added code checks the host of the initial URL only. fetch() follows redirects by default, so the acceptance criterion is not met by the diff as written."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "AGREE", "askRelevance": "in-ask" },
+        "reviewer": null,
+        "finalStatus": "confirmed",
+        "humanReview": false,
+        "retainFinding": true,
+        "routing": "revisionInstructions"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-101",
+                "verdict": "AGREE",
+                "reason": "the allowlist check happens before the redirect chain, so it does not constrain the final host",
+                "ask_relevance": "in-ask",
+                "evidence": [
+                  {
+                    "artifact": "src/lib/fetch-url.mjs",
+                    "line_start": 5,
+                    "line_end": 7,
+                    "observation": "host is checked once, then fetch(url) follows redirects"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F01-G1",
+            "check": "the finding passes deterministic pre-verification",
+            "method": "preVerifyFinding({finding, diff, skill}).verified === true",
+            "pass": "true",
+            "fail": "false — the case is void, not a Critic failure"
+          },
+          {
+            "id": "F01-G2",
+            "check": "the terminal state equals the pre-registered golden state",
+            "method": "evaluateExchange(...).status === golden.finalStatus, string equality",
+            "pass": "confirmed",
+            "fail": "any other FINAL_STATUS"
+          },
+          {
+            "id": "F01-G3",
+            "check": "confirmation is not granted on the Critic's word alone",
+            "method": "the same transcript with deterministic.verified === false must NOT reach confirmed",
+            "pass": "needs-human-judgment with reason agreement-without-evidence",
+            "fail": "confirmed"
+          }
+        ],
+        "llmDependent": [
+          "whether a real Critic emits AGREE rather than DISAGREE_CONCERN on a genuine redirect bug"
+        ],
+        "notGradedBy": ["the Critic's own reason prose", "any self-reported confidence"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F03",
+      "issueFixture": 3,
+      "title": "Reviewer false positive, Critic cites refuting code, Reviewer withdraws",
+      "diff": "D1",
+      "originalAsk": "fetchUrl() must reject hosts outside the allowlist.",
+      "acceptanceCriteria": ["A request to a host outside ALLOWED_HOSTS is rejected."],
+      "candidateFinding": {
+        "id": "RR-F-103",
+        "severity": "critical",
+        "message": "Finding: rawUrl reaches fetch with no validation at all\nEvidence: src/lib/fetch-url.mjs passes the caller-supplied value straight into fetch()\nSeverity: blocker\nFix: validate the host against an allowlist before calling fetch"
+      },
+      "golden": {
+        "label": "false-positive",
+        "finalStatus": "dismissed-by-evidence",
+        "routing": "dropped",
+        "humanReview": false,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "The diff adds exactly the allowlist check the finding says is missing. The finding is well formed and cites a real file, so the deterministic verifier accepts it; only reading the added lines refutes it."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": {
+          "verdict": "DISAGREE_EVIDENCE",
+          "askRelevance": "in-ask",
+          "evidenceGrounded": true
+        },
+        "reviewer": { "action": "WITHDRAW" },
+        "finalStatus": "dismissed-by-evidence",
+        "humanReview": false,
+        "retainFinding": false,
+        "routing": "dropped"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-103",
+                "verdict": "DISAGREE_EVIDENCE",
+                "reason": "the added lines perform the very check the finding calls missing",
+                "ask_relevance": "in-ask",
+                "evidence": [
+                  {
+                    "artifact": "src/lib/fetch-url.mjs",
+                    "line_start": 5,
+                    "line_end": 6,
+                    "observation": "ALLOWED_HOSTS.has(url.host) guards the fetch call"
+                  }
+                ]
+              }
+            },
+            "reviewer": {
+              "finding_id": "RR-F-103",
+              "action": "WITHDRAW",
+              "response_to": "DISAGREE_EVIDENCE"
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F03-G1",
+            "check": "the dismissal is grounded in the diff, not in prose",
+            "method": "isCriticEvidenceGrounded(parsed.evidence, diff) === true",
+            "pass": "true",
+            "fail": "false — the run is scored as a FAILED dismissal even if the final status looks right, because an ungrounded DISAGREE_EVIDENCE must land on needs-human-judgment"
+          },
+          {
+            "id": "F03-G2",
+            "check": "the terminal state equals the golden state",
+            "method": "evaluateExchange(...).status === 'dismissed-by-evidence'",
+            "pass": "dismissed-by-evidence",
+            "fail": "confirmed / needs-human-judgment"
+          },
+          {
+            "id": "F03-G3",
+            "check": "a dropped finding never reaches revision instructions",
+            "method": "partitionByAskRelevance([...]).revisionInstructions.length === 0 && .dropped.length === 1",
+            "pass": "0 revision instructions",
+            "fail": "any revision instruction"
+          }
+        ],
+        "llmDependent": [
+          "whether a real Critic locates the refuting lines instead of agreeing with a plausible-sounding security claim",
+          "whether a real Reviewer withdraws when shown them"
+        ],
+        "notGradedBy": ["the Critic's reason prose"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F04",
+      "issueFixture": 4,
+      "title": "Critic raises a concern only, Reviewer answers with evidence and keeps",
+      "diff": "D1",
+      "originalAsk": "fetchUrl() must reject hosts outside the allowlist.",
+      "acceptanceCriteria": ["A request to a host outside ALLOWED_HOSTS is rejected."],
+      "candidateFinding": {
+        "id": "RR-F-104",
+        "severity": "major",
+        "message": "Finding: the host allowlist is bypassed on a redirect\nEvidence: src/lib/fetch-url.mjs calls fetch(url) with default redirect handling after checking the host once\nSeverity: warning\nFix: pass redirect: 'manual' and re-check the Location host before following it"
+      },
+      "golden": {
+        "label": "true-positive",
+        "finalStatus": "confirmed",
+        "routing": "revisionInstructions",
+        "humanReview": false,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "Same defect as F01. Here the Critic doubts it without being able to cite refuting code, so the burden of proof returns to the Reviewer, who can cite the diff."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "DISAGREE_CONCERN", "askRelevance": "in-ask" },
+        "reviewer": { "action": "KEEP", "evidenceRequired": true },
+        "finalStatus": "confirmed",
+        "humanReview": false,
+        "retainFinding": true,
+        "routing": "revisionInstructions"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-104",
+                "verdict": "DISAGREE_CONCERN",
+                "reason": "fetch here might be a wrapper that already disables redirects; I cannot see its definition in this diff",
+                "ask_relevance": "in-ask",
+                "evidence": []
+              }
+            },
+            "reviewer": {
+              "finding_id": "RR-F-104",
+              "action": "KEEP",
+              "response_to": "DISAGREE_CONCERN",
+              "evidence": [
+                {
+                  "artifact": "src/lib/fetch-url.mjs",
+                  "line_start": 7,
+                  "line_end": 7,
+                  "observation": "fetch(url) is the global fetch; no redirect option is passed"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F04-G1",
+            "check": "a concern with no citation never dismisses the finding on its own",
+            "method": "the exchange with the Reviewer turn removed must return terminal === false, not a dismissal",
+            "pass": "terminal false, retainFinding true",
+            "fail": "any dismissed-* status"
+          },
+          {
+            "id": "F04-G2",
+            "check": "KEEP is accepted only with an evidence citation",
+            "method": "parseReviewerResponse(reviewerTurn).ok === true and .response.evidence.length >= 1",
+            "pass": "ok true",
+            "fail": "ok false with 'KEEP requires evidence'"
+          },
+          {
+            "id": "F04-G3",
+            "check": "the terminal state equals the golden state",
+            "method": "evaluateExchange(...).status === 'confirmed' and routing === revisionInstructions",
+            "pass": "confirmed",
+            "fail": "any other status"
+          }
+        ],
+        "llmDependent": [
+          "whether a real Reviewer produces a citation that is actually in the diff rather than restating the finding"
+        ],
+        "notGradedBy": ["how convincing either side's prose reads"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F05a",
+      "issueFixture": 5,
+      "variant": "reviewer withdraws",
+      "title": "Critic raises a concern only, Reviewer cannot answer and withdraws",
+      "diff": "D1",
+      "originalAsk": "fetchUrl() must reject hosts outside the allowlist.",
+      "acceptanceCriteria": ["A request to a host outside ALLOWED_HOSTS is rejected."],
+      "candidateFinding": {
+        "id": "RR-F-105",
+        "severity": "minor",
+        "message": "Finding: ALLOWED_HOSTS may be empty at module load\nEvidence: src/lib/fetch-url.mjs imports ALLOWED_HOSTS and uses it in the same module scope\nSeverity: nit\nFix: assert that ALLOWED_HOSTS is non-empty at startup"
+      },
+      "golden": {
+        "label": "unsupported-claim",
+        "finalStatus": "withdrawn-by-reviewer",
+        "routing": "dropped",
+        "humanReview": false,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "Nothing in the diff shows the initialization order of ALLOWED_HOSTS. The claim is neither confirmed nor refuted by the reviewed change, so the Reviewer cannot discharge the burden of proof."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "DISAGREE_CONCERN", "askRelevance": "in-ask" },
+        "reviewer": { "action": "WITHDRAW" },
+        "finalStatus": "withdrawn-by-reviewer",
+        "humanReview": false,
+        "retainFinding": false,
+        "routing": "dropped"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-105",
+                "verdict": "DISAGREE_CONCERN",
+                "reason": "the diff does not show how ALLOWED_HOSTS is populated, so I cannot cite refuting code",
+                "ask_relevance": "in-ask",
+                "evidence": []
+              }
+            },
+            "reviewer": {
+              "finding_id": "RR-F-105",
+              "action": "WITHDRAW",
+              "response_to": "DISAGREE_CONCERN"
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F05a-G1",
+            "check": "a withdrawal against a concern is labelled as the Reviewer's, not as evidence-based",
+            "method": "evaluateExchange(...).status === 'withdrawn-by-reviewer'",
+            "pass": "withdrawn-by-reviewer",
+            "fail": "dismissed-by-evidence — that spelling would credit a citation the Critic never made"
+          },
+          {
+            "id": "F05a-G2",
+            "check": "the dropped finding never becomes a revision instruction",
+            "method": "partitionByAskRelevance([...]).revisionInstructions.length === 0",
+            "pass": "0",
+            "fail": ">= 1"
+          }
+        ],
+        "llmDependent": [
+          "whether a real Reviewer withdraws rather than inventing a citation to keep the finding"
+        ],
+        "notGradedBy": ["the Reviewer's stated reason for withdrawing"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F05b",
+      "issueFixture": 5,
+      "variant": "reviewer keeps without evidence",
+      "title": "Critic raises a concern only, Reviewer insists with no citation",
+      "diff": "D1",
+      "originalAsk": "fetchUrl() must reject hosts outside the allowlist.",
+      "acceptanceCriteria": ["A request to a host outside ALLOWED_HOSTS is rejected."],
+      "candidateFinding": {
+        "id": "RR-F-106",
+        "severity": "minor",
+        "message": "Finding: ALLOWED_HOSTS may be empty at module load\nEvidence: src/lib/fetch-url.mjs imports ALLOWED_HOSTS and uses it in the same module scope\nSeverity: nit\nFix: assert that ALLOWED_HOSTS is non-empty at startup"
+      },
+      "golden": {
+        "label": "unsupported-claim",
+        "finalStatus": "needs-human-judgment",
+        "routing": "humanReviewCandidates",
+        "humanReview": true,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "An insistence with no citation is not a valid protocol turn. It must reach a human rather than either confirming or silently dropping the finding."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "DISAGREE_CONCERN", "askRelevance": "in-ask" },
+        "reviewer": { "action": "KEEP", "evidenceRequired": true, "evidenceProvided": false },
+        "finalStatus": "needs-human-judgment",
+        "reasonIncludes": "keep-without-evidence",
+        "humanReview": true,
+        "retainFinding": true,
+        "routing": "humanReviewCandidates"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-106",
+                "verdict": "DISAGREE_CONCERN",
+                "reason": "the diff does not show how ALLOWED_HOSTS is populated",
+                "ask_relevance": "in-ask",
+                "evidence": []
+              }
+            },
+            "reviewer": {
+              "finding_id": "RR-F-106",
+              "action": "KEEP",
+              "response_to": "DISAGREE_CONCERN",
+              "evidence": []
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F05b-G1",
+            "check": "an evidence-free KEEP is rejected at parse time",
+            "method": "parseReviewerResponse(reviewerTurn).ok === false with error 'KEEP requires evidence'",
+            "pass": "ok false",
+            "fail": "ok true"
+          },
+          {
+            "id": "F05b-G2",
+            "check": "the exchange escalates rather than confirming or dropping",
+            "method": "status === 'needs-human-judgment' && reasons includes 'keep-without-evidence' && isCleanOutcome === false",
+            "pass": "escalated and retained",
+            "fail": "confirmed, or any clean outcome"
+          }
+        ],
+        "llmDependent": [
+          "how often a real Reviewer produces this shape — the RATE is the measurement, the handling is already pinned"
+        ],
+        "notGradedBy": ["whether the Reviewer's insistence sounds justified"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F06",
+      "issueFixture": 6,
+      "title": "Critic adds a real bug the Reviewer missed; it re-enters the same validation",
+      "diff": "D3",
+      "originalAsk": "Add pageSlice(rows, page, limit) for the list endpoint.",
+      "acceptanceCriteria": [
+        "pageSlice returns exactly `limit` rows when enough rows remain.",
+        "limit is bounded so a caller cannot request the whole table."
+      ],
+      "candidateFinding": {
+        "id": "RR-F-107",
+        "severity": "major",
+        "message": "Finding: pageSlice returns limit-1 rows\nEvidence: src/lib/pagination.mjs computes end = start + limit - 1 and slice() already excludes the end index\nSeverity: warning\nFix: use end = start + limit so the slice returns limit rows"
+      },
+      "criticProposedFinding": {
+        "id": "RR-F-108",
+        "severity": "major",
+        "origin": "critic",
+        "message": "Finding: limit is unbounded\nEvidence: src/lib/pagination.mjs uses limit directly in the slice with no upper bound\nSeverity: warning\nFix: clamp limit to a maximum page size before computing the slice"
+      },
+      "golden": {
+        "label": "true-positive",
+        "finalStatus": "confirmed",
+        "routing": "revisionInstructions",
+        "humanReview": false,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "Both defects are real and both are in the diff. The Critic-proposed finding must be verified by the same deterministic pre-check as a Reviewer finding; it gets no shortcut for having come from the Critic."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "criticProposedFindingDeterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "AGREE", "askRelevance": "in-ask" },
+        "reviewer": null,
+        "finalStatus": "confirmed",
+        "humanReview": false,
+        "retainFinding": true,
+        "routing": "revisionInstructions"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-107",
+                "verdict": "AGREE",
+                "reason": "slice() excludes the end index, so the -1 drops one row",
+                "ask_relevance": "in-ask",
+                "evidence": [
+                  {
+                    "artifact": "src/lib/pagination.mjs",
+                    "line_start": 3,
+                    "line_end": 4,
+                    "observation": "end = start + limit - 1 then rows.slice(start, end)"
+                  }
+                ],
+                "missed_findings": ["RR-F-108"]
+              }
+            }
+          }
+        ]
+      },
+      "knownGap": "parseCriticResponse() does not surface `missed_findings` today. Whoever adds it must route the new finding through preVerifyFinding first; see docs/development/1978-phase1b-fixtures.md.",
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F06-G1",
+            "check": "a Critic-proposed finding is pre-verified exactly like a Reviewer one",
+            "method": "preVerifyFinding({finding: criticProposedFinding, ...}) matches verifyFinding() on the same input; the same finding with a fabricated path is rejected",
+            "pass": "verified true for the grounded form, dismissed-hallucination for the fabricated form",
+            "fail": "any path that skips pre-verification for critic-origin findings"
+          },
+          {
+            "id": "F06-G2",
+            "check": "the state machine has no origin-dependent branch",
+            "method": "evaluateExchange with an extra `origin: 'critic'` field on the finding returns a byte-identical outcome",
+            "pass": "deepEqual",
+            "fail": "any difference"
+          },
+          {
+            "id": "F06-G3",
+            "check": "the Critic actually found the second defect",
+            "method": "the proposed finding's evidence path is in the diff AND a human golden entry marks the second defect as real",
+            "pass": "matched against the golden defect list, not against the Critic's confidence",
+            "fail": "a proposal with no golden counterpart counts as an ADDED false positive in the FP metric"
+          }
+        ],
+        "llmDependent": [
+          "whether a real Critic notices the unbounded limit at all — this is the recall side and needs the golden defect list"
+        ],
+        "notGradedBy": ["the number of missed_findings the Critic reports"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F07",
+      "issueFixture": 7,
+      "title": "Reviewer and Critic agree confidently and are both wrong",
+      "diff": "D1",
+      "originalAsk": "fetchUrl() must reject hosts outside the allowlist.",
+      "acceptanceCriteria": ["A request to a host outside ALLOWED_HOSTS is rejected."],
+      "candidateFinding": {
+        "id": "RR-F-109",
+        "severity": "critical",
+        "message": "Finding: new URL() throws on every relative path, crashing the endpoint\nEvidence: src/lib/fetch-url.mjs constructs new URL(rawUrl) with no base argument\nSeverity: blocker\nFix: pass a base URL to the URL constructor so relative inputs resolve"
+      },
+      "golden": {
+        "label": "false-positive",
+        "finalStatus": "not-confirmed",
+        "routing": "humanReviewCandidates",
+        "humanReview": true,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "fetchUrl is only ever called with absolute URLs, which the diff does not show. Both agents can agree on a claim that is well formed, cites a real line, and is still wrong. This is the case the deterministic layer CANNOT catch."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "AGREE", "askRelevance": "uncertain" },
+        "reviewer": null,
+        "finalStatus": "confirmed",
+        "humanReview": true,
+        "retainFinding": true,
+        "routing": "humanReviewCandidates",
+        "expectationNote": "The protocol reaches `confirmed` here. It is only kept away from revision instructions because the Critic could not tie the claim to the ask. If the Critic instead answers `in-ask`, the protocol confirms a false positive and the ONLY signal is the golden label. That is the FP metric, not a state-machine assertion."
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-109",
+                "verdict": "AGREE",
+                "reason": "the constructor has no base argument",
+                "ask_relevance": "uncertain",
+                "evidence": [
+                  {
+                    "artifact": "src/lib/fetch-url.mjs",
+                    "line_start": 5,
+                    "line_end": 5,
+                    "observation": "new URL(rawUrl)"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": "partial",
+        "pinnedAlreadyBy": "tests/finding-critic.test.mjs — 'agreement without deterministic evidence does not confirm' and 'evaluateExchange takes no agreement input at all'",
+        "rubric": [
+          {
+            "id": "F07-G1",
+            "check": "agreement never substitutes for deterministic verification",
+            "method": "the same transcript with deterministic.verified === false returns needs-human-judgment with reason agreement-without-evidence",
+            "pass": "escalated",
+            "fail": "confirmed"
+          },
+          {
+            "id": "F07-G2",
+            "check": "the number of agreeing actors changes nothing",
+            "method": "adding entries to finding.agreement leaves severity and the terminal state unchanged",
+            "pass": "unchanged",
+            "fail": "any severity or status movement"
+          },
+          {
+            "id": "F07-G3",
+            "check": "the false consensus is counted, not asserted",
+            "method": "the run's finalStatus is compared to golden.finalStatus ('not-confirmed'); every mismatch increments the false-positive count for the arm",
+            "pass": "the arm's FP count is REPORTED; no per-case pass/fail is claimed",
+            "fail": "declaring the arm to have 'handled' this case because the state machine did not crash"
+          }
+        ],
+        "llmDependent": [
+          "the entire case: a well-formed mutual hallucination cannot be manufactured deterministically, and the deterministic layer accepts it by construction"
+        ],
+        "notGradedBy": ["either agent's confidence", "the fact that both agents agreed"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F09",
+      "issueFixture": 9,
+      "title": "Security-critical finding stays alive because it is evidence-backed",
+      "diff": "D2",
+      "originalAsk": "Add createSession(req) that resolves the caller's session from the request.",
+      "acceptanceCriteria": ["A forged token must not produce a session."],
+      "candidateFinding": {
+        "id": "RR-F-110",
+        "severity": "critical",
+        "message": "Finding: the session token is decoded without verifying its signature\nEvidence: src/api/session.mjs calls decode(token) and trusts claims.sub and claims.role\nSeverity: blocker\nFix: verify the token signature and expiry before reading any claim"
+      },
+      "golden": {
+        "label": "true-positive",
+        "finalStatus": "confirmed",
+        "routing": "revisionInstructions",
+        "humanReview": false,
+        "severityMustNotDrop": "critical",
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "decode() reads claims without checking the signature, so any caller can mint a role. The severity must survive the protocol unchanged."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "AGREE", "askRelevance": "in-ask" },
+        "reviewer": null,
+        "finalStatus": "confirmed",
+        "humanReview": false,
+        "retainFinding": true,
+        "routing": "revisionInstructions",
+        "severity": "critical"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-110",
+                "verdict": "AGREE",
+                "reason": "decode() does not verify; a forged token yields a session",
+                "ask_relevance": "in-ask",
+                "evidence": [
+                  {
+                    "artifact": "src/api/session.mjs",
+                    "line_start": 12,
+                    "line_end": 14,
+                    "observation": "decode(token) then claims.role is trusted"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "adversarialVariant": {
+        "id": "RR-1978-F09-outOfAsk",
+        "description": "The same critical finding, but the Critic answers ask_relevance: out-of-ask.",
+        "expected": {
+          "finalStatus": "out-of-ask",
+          "humanReview": false,
+          "retainFinding": true,
+          "routing": "followUpNotes"
+        },
+        "knownLimitation": "Phase 1a §6: `out-of-ask` terminates on the Critic's sole judgment, with no evidence requirement, no Reviewer rebuttal, and no human notification — even at severity critical. Phase 1b measures how often a real Critic reaches for it; the fix, if any, is deferred."
+      },
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F09-G1",
+            "check": "severity is copied through the protocol unchanged",
+            "method": "buildValidatedFinding(finding, result).severity === 'critical'",
+            "pass": "critical",
+            "fail": "any other value"
+          },
+          {
+            "id": "F09-G2",
+            "check": "the terminal state equals the golden state",
+            "method": "evaluateExchange(...).status === 'confirmed' and routing === revisionInstructions",
+            "pass": "confirmed",
+            "fail": "any dismissal — scored as a critical regression, the metric #1978 calls critical/major recall"
+          },
+          {
+            "id": "F09-G3",
+            "check": "the out-of-ask kill switch is visible, not silent",
+            "method": "the adversarial variant lands in followUpNotes with retainFinding true and revisionInstructions empty",
+            "pass": "parked and counted",
+            "fail": "dropped entirely, or routed to revision instructions"
+          }
+        ],
+        "llmDependent": [
+          "whether a real Critic keeps a critical finding rather than parking it as out-of-ask"
+        ],
+        "notGradedBy": ["the severity word the Critic uses in its prose"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F10",
+      "issueFixture": 10,
+      "title": "An improvement outside the ask is parked, not implemented",
+      "diff": "D1",
+      "originalAsk": "fetchUrl() must reject hosts outside the allowlist.",
+      "acceptanceCriteria": ["A request to a host outside ALLOWED_HOSTS is rejected."],
+      "nonGoals": ["Do not change the caching or retry behaviour in this PR."],
+      "candidateFinding": {
+        "id": "RR-F-111",
+        "severity": "minor",
+        "message": "Finding: repeated fetches of the same URL are not cached\nEvidence: src/lib/fetch-url.mjs performs a network call on every invocation\nSeverity: nit\nFix: add an LRU response cache keyed by the resolved URL"
+      },
+      "golden": {
+        "label": "out-of-ask",
+        "finalStatus": "out-of-ask",
+        "routing": "followUpNotes",
+        "humanReview": false,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "Caching is named as a non-goal. The observation may be true and is still not a defect in the requested change."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "AGREE", "askRelevance": "out-of-ask" },
+        "reviewer": null,
+        "finalStatus": "out-of-ask",
+        "humanReview": false,
+        "retainFinding": true,
+        "routing": "followUpNotes"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-111",
+                "verdict": "AGREE",
+                "reason": "true observation, but caching is listed as a non-goal for this change",
+                "ask_relevance": "out-of-ask",
+                "evidence": []
+              }
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": "partial",
+        "pinnedAlreadyBy": "tests/finding-critic.test.mjs — 'out-of-ask is held as a follow-up note, never a revision instruction' and 'an uppercase out-of-ask claim actually gates'",
+        "rubric": [
+          {
+            "id": "F10-G1",
+            "check": "out-of-ask never reaches revision instructions",
+            "method": "partitionByAskRelevance([...]).revisionInstructions.length === 0 && .followUpNotes.length === 1",
+            "pass": "parked",
+            "fail": "any revision instruction — this increments the scope-creep count"
+          },
+          {
+            "id": "F10-G2",
+            "check": "the classification matches the golden label",
+            "method": "parsed.askRelevance === golden classification, string equality against the pre-registered value",
+            "pass": "out-of-ask",
+            "fail": "in-ask (scope creep) or uncertain (an escalation the fixture did not intend)"
+          }
+        ],
+        "llmDependent": [
+          "whether a real Critic classifies a true-but-unrequested observation as out-of-ask when the non-goals are in its prompt"
+        ],
+        "notGradedBy": ["whether the caching suggestion is a good idea"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F11",
+      "issueFixture": 11,
+      "title": "Paper Case 2: a plausible concern grows into an unnecessary refactor",
+      "diff": "D1",
+      "originalAsk": "fetchUrl() must reject hosts outside the allowlist.",
+      "acceptanceCriteria": ["A request to a host outside ALLOWED_HOSTS is rejected."],
+      "nonGoals": ["Do not restructure the allowlist module in this PR."],
+      "candidateFinding": {
+        "id": "RR-F-112",
+        "severity": "major",
+        "message": "Finding: the host allowlist is bypassed on a redirect\nEvidence: src/lib/fetch-url.mjs checks url.host once before calling fetch(url)\nSeverity: warning\nFix: pass redirect: 'manual' and re-check the Location host before following it"
+      },
+      "criticProposedFinding": {
+        "id": "RR-F-113",
+        "severity": "major",
+        "origin": "critic",
+        "message": "Finding: every caller should share one allowlist abstraction\nEvidence: src/lib/fetch-url.mjs imports ALLOWED_HOSTS directly instead of going through a policy object\nSeverity: warning\nFix: extract a UrlPolicy class and migrate all call sites to it"
+      },
+      "golden": {
+        "label": "scope-creep",
+        "finalStatus": "out-of-ask",
+        "routing": "followUpNotes",
+        "humanReview": false,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "The refactor proposal is plausible and unfalsifiable. In the paper's Case 2 exactly this kind of concern reached the implementer and broke hidden tests. Whatever else happens, it must not become a revision instruction."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "DISAGREE_CONCERN", "askRelevance": "out-of-ask" },
+        "reviewer": null,
+        "finalStatus": "out-of-ask",
+        "humanReview": false,
+        "retainFinding": true,
+        "routing": "followUpNotes",
+        "invariant": "For the refactor proposal, revisionInstructions must be empty in EVERY reachable ending: out-of-ask (parked), uncertain (human), and reviewer WITHDRAW (dropped)."
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-113",
+                "verdict": "DISAGREE_CONCERN",
+                "reason": "no code refutes the current shape; this is a structural preference",
+                "ask_relevance": "out-of-ask",
+                "evidence": []
+              }
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F11-G1",
+            "check": "no ending of a plausible-concern chain reaches revision instructions",
+            "method": "for each of the three endings above, partitionByAskRelevance([...]).revisionInstructions.length === 0",
+            "pass": "0 in all three",
+            "fail": "any non-zero — the scope-creep regression counter"
+          },
+          {
+            "id": "F11-G2",
+            "check": "the refactor proposal is not silently deleted either",
+            "method": "the out-of-ask ending keeps retainFinding true and lands in followUpNotes",
+            "pass": "parked and visible",
+            "fail": "dropped with no record"
+          }
+        ],
+        "llmDependent": [
+          "whether the concern is generated at all, and whether a real Critic labels its own proposal out-of-ask"
+        ],
+        "notGradedBy": ["whether the proposed refactor would be an improvement in the abstract"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F12",
+      "issueFixture": 12,
+      "title": "The original ask is missing, so relevance cannot be decided",
+      "diff": "D1",
+      "originalAsk": "",
+      "acceptanceCriteria": [],
+      "candidateFinding": {
+        "id": "RR-F-114",
+        "severity": "major",
+        "message": "Finding: the host allowlist is bypassed on a redirect\nEvidence: src/lib/fetch-url.mjs checks url.host once before calling fetch(url)\nSeverity: warning\nFix: pass redirect: 'manual' and re-check the Location host before following it"
+      },
+      "golden": {
+        "label": "relevance-undecidable",
+        "finalStatus": "confirmed",
+        "routing": "humanReviewCandidates",
+        "humanReview": true,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "With no ask and no acceptance criteria in the prompt, no actor can decide relevance. The protocol must say so out loud rather than guessing in-ask."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "AGREE", "askRelevance": "uncertain" },
+        "reviewer": null,
+        "finalStatus": "confirmed",
+        "humanReview": true,
+        "reasonIncludes": "ask-relevance-uncertain",
+        "retainFinding": true,
+        "routing": "humanReviewCandidates"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-114",
+                "verdict": "AGREE",
+                "reason": "no original ask was supplied, so I cannot decide relevance",
+                "ask_relevance": "uncertain",
+                "evidence": [
+                  {
+                    "artifact": "src/lib/fetch-url.mjs",
+                    "line_start": 6,
+                    "line_end": 7,
+                    "observation": "host checked once, then fetch(url)"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F12-G1",
+            "check": "an undecidable relevance escalates and carries a reason code",
+            "method": "result.humanReview === true && result.reasons includes 'ask-relevance-uncertain'",
+            "pass": "escalated with the code",
+            "fail": "humanReview false, or an escalation with no reason recorded"
+          },
+          {
+            "id": "F12-G2",
+            "check": "an unreadable or missing relevance field falls back to uncertain, never to in-ask",
+            "method": "parseCriticResponse with the field absent / misspelled returns askRelevance === 'uncertain'",
+            "pass": "uncertain",
+            "fail": "in-ask"
+          },
+          {
+            "id": "F12-G3",
+            "check": "the escalation is not routed as an implementable instruction",
+            "method": "partitionByAskRelevance([...]).revisionInstructions.length === 0",
+            "pass": "0",
+            "fail": ">= 1"
+          }
+        ],
+        "llmDependent": [
+          "whether a real Critic admits it cannot decide instead of assuming the finding is in scope"
+        ],
+        "notGradedBy": ["the Critic's explanation of why the ask was missing"]
+      }
+    },
+    {
+      "caseId": "RR-1978-F17",
+      "issueFixture": 17,
+      "title": "The same protocol holds for a plan artifact",
+      "diff": "D4",
+      "artifactKind": "plan",
+      "originalAsk": "Write the plan for the CSV export endpoint.",
+      "acceptanceCriteria": ["The plan states when the temporary file is removed."],
+      "candidateFinding": {
+        "id": "RR-F-115",
+        "severity": "major",
+        "message": "Finding: step 3 deletes the temporary file after the response is flushed, but step 2 streams directly to the response, so no temporary file exists\nEvidence: docs/plans/2101-export-plan.md steps 2 and 3 describe two incompatible write paths\nSeverity: warning\nFix: pick one write path and state it in both steps"
+      },
+      "golden": {
+        "label": "true-positive",
+        "finalStatus": "confirmed",
+        "routing": "revisionInstructions",
+        "humanReview": false,
+        "assignedBy": "fixture author, before any LLM run",
+        "rationale": "The two steps contradict each other inside the reviewed document. The defect is internal to the artifact, so the same protocol applies with no code involved."
+      },
+      "expected": {
+        "deterministic": { "verified": true, "sendToCritic": true },
+        "critic": { "verdict": "AGREE", "askRelevance": "in-ask" },
+        "reviewer": null,
+        "finalStatus": "confirmed",
+        "humanReview": false,
+        "retainFinding": true,
+        "routing": "revisionInstructions"
+      },
+      "transcript": {
+        "exchanges": [
+          {
+            "critic": {
+              "payload": {
+                "finding_id": "RR-F-115",
+                "verdict": "AGREE",
+                "reason": "streaming to the response and deleting a temporary file cannot both be true",
+                "ask_relevance": "in-ask",
+                "evidence": [
+                  {
+                    "artifact": "docs/plans/2101-export-plan.md",
+                    "line_start": 6,
+                    "line_end": 9,
+                    "observation": "step 2 streams, step 3 deletes a file"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "grading": {
+        "deterministicallyPinned": true,
+        "rubric": [
+          {
+            "id": "F17-G1",
+            "check": "the protocol takes no artifact-kind input",
+            "method": "the code case (F01) and this plan case, replayed through the same transcript shape, return the same terminal state; the module exposes no artifactKind parameter",
+            "pass": "same status / humanReview / retainFinding / routing",
+            "fail": "any divergence attributable to the artifact kind"
+          },
+          {
+            "id": "F17-G2",
+            "check": "evidence grounding works on a document path too",
+            "method": "isCriticEvidenceGrounded([{artifact: 'docs/plans/2101-export-plan.md'}], diff) === true, and a fabricated document path is not grounded",
+            "pass": "true / false respectively",
+            "fail": "either direction wrong"
+          },
+          {
+            "id": "F17-G3",
+            "check": "the terminal state equals the golden state",
+            "method": "evaluateExchange(...).status === 'confirmed'",
+            "pass": "confirmed",
+            "fail": "any other status"
+          }
+        ],
+        "llmDependent": [
+          "whether a real Critic reasons about plan-internal contradictions as readily as about code"
+        ],
+        "notGradedBy": ["the prose quality of the plan"]
+      }
+    }
+  ]
+}
