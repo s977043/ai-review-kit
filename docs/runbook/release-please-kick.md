@@ -51,12 +51,57 @@ gh run list --limit 5 --json databaseId,status,conclusion,headBranch,workflowNam
 If the runs sit at `action_required`, the push did not count as a real user push.
 Fall back to the kick below.
 
+### A run count of zero is never the diagnosis
+
+Judge a head by the `conclusion` of its runs, not by how many the query returns.
+Zero is ambiguous, and it misleads at both ends of a PR's life:
+
+- **Right after the PR opens**, the runs may not be registered yet. In the
+  v1.89.1 run, `gh run list --commit <head>` returned 0 about a minute after
+  release-please opened #1986, and that was reported as "no workflow fired".
+  Re-measured roughly 40 minutes later, the same head carried 13 runs. The
+  conclusion (stalled, kick required) held, but the number it was argued from
+  did not.
+- **After the merge**, the head is gone and the record no longer reads the same
+  way. Run this diagnosis while the PR is still open, as the guard in
+  `CLAUDE.md` requires.
+- **An abbreviated SHA silently returns zero.** The `head_sha` filter matches
+  the full 40-character SHA only. Measured on 2026-08-28,
+  `head_sha=fc3d6f7f` returned `total_count: 0` while
+  `head_sha=fc3d6f7f4ccbee2651437835ca54bc2a63ae7f2d` returned 13. Expand the
+  SHA before reading anything into a zero.
+
+Read the conclusions instead of the count:
+
+```bash
+gh api "repos/:owner/:repo/actions/runs?head_sha=<full-40-char-sha>&per_page=100" \
+  --jq '.workflow_runs[] | "\(.name)\t\(.status)\t\(.conclusion)"'
+```
+
+A column of `action_required` means the head is stalled and the kick applies. A
+column of `success` means the push counted as a real user push.
+
+Take a positive control in the same pass: run the identical query against a SHA
+whose CI is known to have executed, and confirm it returns rows. On 2026-08-28,
+`26bc1c7929bc56c80684abe93383d0bb3f214736` (the `main` tip before the v1.89.1
+release PR) returned 7 runs, all `success`. When the control also returns zero,
+the query is wrong rather than the head.
+
 ### Evidence
 
 - **v1.66.1** (PR #1693): BEHIND + BLOCKED. `update-branch` alone fired every
   workflow, so the empty-commit kick was skipped.
 - **v1.67.0** (PR #1699): `ahead_by: 1, behind_by: 0` right after release-please
   opened the PR. `update-branch` did not apply, and the kick was the correct move.
+- **v1.89.1** (PR #1986): `ahead_by: 1, behind_by: 0`, so pure BLOCKED and the
+  same shape as v1.67.0—`update-branch` returns 422 and the kick is the only
+  route. `scripts/release-please-kick.sh` moved the head from `fc3d6f7f` to
+  `72227d02`. That new head carries 13 runs that actually executed (11
+  `success`, 2 `skipped`), all 7 required contexts reported, and the PR merged
+  as `b09af847`. The stalled runs on the old head do not stay readable after the
+  branch is deleted: re-measured post-merge, `fc3d6f7f` reports `completed` /
+  `failure` (updated `2026-08-28T03:55:47Z`) rather than `action_required`,
+  which is one more reason to diagnose while the PR is open.
 
 ## The kick: local script
 
@@ -118,6 +163,26 @@ completes this setup.
 3. Leave `branch` blank—the workflow auto-detects the open release-please PR.
 4. The workflow also verifies a non-Vercel check started within 90s; if not, it fails loudly
    so the silent #906 failure mode cannot recur.
+
+## After the merge: verify the `v1` alias, not just the tag
+
+A release is not verified by the version tag alone. Action consumers pin `@v1`,
+so `v1` is the ref that decides what they actually run.
+
+Measured immediately after the #1986 merge, `v1` still pointed at `23302f06`,
+the v1.89.0 commit. The alias is moved by the **"Update major alias tag"** step
+of the `Release Please` workflow on `main`, and that run has to finish before
+the alias means anything. Wait for it, then re-measure:
+
+```bash
+git fetch origin --tags --force --prune
+git rev-parse v1^{commit}
+git rev-parse v1.89.1^{commit}
+```
+
+Once the workflow completed, both returned
+`b09af8479c4140fe0d9f584794322548bc059c25`. Treat a mismatch as an unfinished
+release rather than a tagging quirk.
 
 ## Background
 
