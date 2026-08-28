@@ -9,11 +9,13 @@
 Phase 1 を 2 つに割ります。
 
 - Phase 1a（本ノート）: 決定論で検証できる部分をコードで実装し、`node:test` で pin する
-- Phase 1b（未着手）: LLM 応答を要する 3 値 verdict の実挙動。仕様記述に留める
+- Phase 1b（着地済み）: LLM 応答を要する 3 値 verdict の実挙動。仕様記述に留め、[`1978-phase1b-fixtures.md`](./1978-phase1b-fixtures.md) が固定する
 
 分割の理由は、Phase 0 ノート § 7 が測定した事実です。本リポジトリは LLM の API キーを repo secret へ登録しない方針であり、Phase 2 の paired evaluation は実行できません。したがって **Phase 2 のゲートは開かず、Phase 3 のオーケストレータ統合へは到達しません**。本モジュールを `src/cli/**` から呼ばないのはこのためです。統合していないことはテストで機械的に確認します。
 
 Phase 1a は Phase 3 への通過点ではなく、それ自体で閉じた成果物として定義します。
+
+Phase 1b の成果物は PR #1984（merge commit `82e752cc`）で main へ入りました。2026-08-28 時点の現況として、Phase 0 / 1a / 1b は着地済みです。Phase 2 以降は、上記の API キー方針により構造的にブロックされたままです。
 
 ## 2. provider-neutral contract
 
@@ -183,7 +185,7 @@ fixture 番号に紐づかない不変条件も、同じファイルで pin し�
 10. original ask 不足 → `uncertain` / human: 情報不足の自己申告が LLM の判断である
 11. plan artifact review でも同じ protocol が成立: 別 artifact 種別に対する実プロンプト実行を要する
 
-いずれも fixture のテキスト自体は API キー無しで作成でき、キーが登録された日にそのまま paired evaluation の入力になります。Phase 1b はその作成と仕様記述を担います。
+いずれも fixture のテキスト自体は API キー無しで作成でき、キーが登録された日にそのまま paired evaluation の入力になります。Phase 1b はその作成と仕様記述を担います。成果物は [`1978-phase1b-fixtures.md`](./1978-phase1b-fixtures.md)、`tests/fixtures/1978-phase1b/fixtures.json`、`tests/finding-critic-phase1b.test.mjs` の 3 点です。
 
 ## 6. 既知の限界—`out-of-ask` は Critic の単独判断で終端する
 
@@ -199,11 +201,12 @@ fixture 番号に紐づかない不変条件も、同じファイルで pin し�
 
 ## 7. 未決事項
 
-Phase 0 ノート § 5.3 が整理した inner-loop state の保存場所は、まだ決めていません。本モジュールは `validation` オブジェクトを戻り値として返すだけです。run record と artifact のどちらへも書き込みません。保存先の決定は schema の変更を伴う可能性があり、公開サーフェスの変更として承認を要します。
+Phase 0 ノート § 5.3 が整理した inner-loop state の保存場所は、まだ決めていません。本モジュールは `validation` オブジェクトを戻り値として返すだけです。run record と artifact のどちらへも書き込みません。保存先の決定は schema の変更を伴う可能性があり、公開サーフェスの変更として承認を要します。[`1978-phase1b-fixtures.md`](./1978-phase1b-fixtures.md) § 7 も、この状態から動いていないと記録しています。
 
 ## 8. 関連
 
 - Issue [#1978](https://github.com/s977043/river-review/issues/1978)
 - [`1978-phase0-gap-analysis.md`](./1978-phase0-gap-analysis.md)
+- [`1978-phase1b-fixtures.md`](./1978-phase1b-fixtures.md)
 - [`docs/adr/007-semantic-precision-pass.md`](../adr/007-semantic-precision-pass.md)
 - [`docs/adr/008-actionability-axis-absorbed-into-disposition.md`](../adr/008-actionability-axis-absorbed-into-disposition.md)

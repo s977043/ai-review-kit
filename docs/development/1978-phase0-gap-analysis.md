@@ -315,10 +315,19 @@ Phase 2 が実行不可であることは、Phase 1 が無意味であること�
 | `independent-review-synthesis` との責務重複を整理                           | 2            | 完了                                                                     |
 | `adversarial-review` Skill との名前・責務境界を文書化                       | 3            | 完了                                                                     |
 | inner-loop state の保存場所を決める                                         | 5            | **未完了。選択肢の整理までで、決定は下していない**（本タスクは調査のみ） |
-| provider-neutral critic contract を決める                                   | —            | **未着手。Phase 1 の対象**                                               |
-| scoring へ渡す Finding 状態を決める                                         | —            | **未着手。決定を要する**                                                 |
+| provider-neutral critic contract を決める                                   | —            | **完了**。Phase 1a ノート § 2 が決定し、Phase 1b ノート § 3 が語彙を固定 |
+| scoring へ渡す Finding 状態を決める                                         | —            | **未決**。`validation` の保存先が未定であり、読み手を確定できない        |
 
-残り 3 項目は設計判断を含むため、人間の承認を要します。本ノートはそこへ入りません。
+状態の欄は 2026-08-28 時点の現況です。本ノート自身の調査で完了したのは上 3 項目までです。下 3 項目のうち、後続の Phase 1a / 1b で決着したものは provider-neutral critic contract だけです。決着の内容は次のとおりです。
+
+- 3 値 verdict と Reviewer response、`askRelevance` の語彙を決めたのは [Phase 1a ノート](./1978-phase1a-deterministic-skeleton.md) § 2 であり、実装は `src/lib/finding-critic.mjs` にある（PR #1981 / `56e0ae4c`）
+- 同じ語彙を [`1978-phase1b-fixtures.md`](./1978-phase1b-fixtures.md) § 3 が fixture 側で固定する（PR #1984、merge commit `82e752cc`）
+
+`scoring へ渡す Finding 状態` を未決とする理由は保存先にあります。`buildValidatedFinding`（`src/lib/finding-critic.mjs:749`）が返す `validation` オブジェクトの置き場所は、まだ決まっていません。この値はどの artifact へも書き込まれません（Phase 1a ノート § 3 と § 7、Phase 1b ノート § 7）。したがって後段の scoring が読む状態そのものを確定できません。保存先の決定は schema の変更を伴い、公開サーフェスの変更として承認を要します。
+
+残り 2 項目（inner-loop state の保存場所、scoring へ渡す Finding 状態）は設計判断を含むため、人間の承認を要します。本ノートはそこへ入りません。
+
+なお Phase 全体としては Phase 0 / 1a / 1b が着地済みであり、Phase 2 以降は § 7 の判定（API キーを repo secret へ登録しない方針）により構造的にブロックされたままです。
 
 ## 11. 関連
 
