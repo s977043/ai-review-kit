@@ -54,22 +54,31 @@ Fall back to the kick below.
 ### A run count of zero is never the diagnosis
 
 Judge a head by the `conclusion` of its runs, not by how many the query returns.
-Zero is ambiguous, and it misleads at both ends of a PR's life:
+Zero is ambiguous, and it has already produced one misdiagnosis here:
 
-- **Right after the PR opens**, the runs may not be registered yet. In the
-  v1.89.1 run, `gh run list --commit <head>` returned 0 about a minute after
-  release-please opened #1986, and that was reported as "no workflow fired".
-  Re-measured roughly 40 minutes later, the same head carried 13 runs. The
-  conclusion (stalled, kick required) held, but the number it was argued from
-  did not.
+- **An abbreviated SHA silently returns zero.** Both `gh run list --commit` and
+  the `head_sha` filter match the full 40-character SHA only; a short SHA
+  returns no rows and no error. This is the demonstrated cause of the v1.89.1
+  incident: the first measurement on #1986 used a short SHA and returned 0,
+  which was reported as "no workflow fired", while the later measurement that
+  found 13 runs happened to use the full SHA. Re-measured on 2026-08-28, long
+  after those runs were registered, the short form still returns 0:
+
+  ```bash
+  gh run list --commit fc3d6f7f                                  # -> 0 rows
+  gh run list --commit fc3d6f7f4ccbee2651437835ca54bc2a63ae7f2d  # -> 13 rows
+  gh api '.../actions/runs?head_sha=fc3d6f7f'                    # -> total_count: 0
+  gh api '.../actions/runs?head_sha=fc3d6f7f4ccb...ae7f2d'       # -> total_count: 13
+  ```
+
+  Expand the SHA before reading anything into a zero. Do not attribute a zero to
+  the runs "not being registered yet"—that story fits a fresh PR, but nothing
+  on this repository has ever demonstrated it, and reaching for it sends the
+  next reader off to wait instead of lengthening the SHA.
+
 - **After the merge**, the head is gone and the record no longer reads the same
   way. Run this diagnosis while the PR is still open, as the guard in
   `CLAUDE.md` requires.
-- **An abbreviated SHA silently returns zero.** The `head_sha` filter matches
-  the full 40-character SHA only. Measured on 2026-08-28,
-  `head_sha=fc3d6f7f` returned `total_count: 0` while
-  `head_sha=fc3d6f7f4ccbee2651437835ca54bc2a63ae7f2d` returned 13. Expand the
-  SHA before reading anything into a zero.
 
 Read the conclusions instead of the count:
 
