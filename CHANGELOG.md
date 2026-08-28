@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.89.1](https://github.com/s977043/river-review/compare/v1.89.0...v1.89.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **scripts:** [#1982](https://github.com/s977043/river-review/issues/1982) draft-07 meta-schema をモジュール解決経由で取得する ([#1985](https://github.com/s977043/river-review/issues/1985)) ([26bc1c7](https://github.com/s977043/river-review/commit/26bc1c7929bc56c80684abe93383d0bb3f214736))
+
 ## [1.89.0](https://github.com/s977043/river-review/compare/v1.88.0...v1.89.0) (2026-08-26)
 
 
