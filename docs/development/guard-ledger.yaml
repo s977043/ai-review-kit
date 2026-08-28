@@ -155,7 +155,7 @@ guards:
       - .claude/settings.json
     addedAt: '2026-06-11'
     reviewAfter: '2026-09-09'
-    notes: PreToolUse hook が gh write 前にアカウントを判定し、切り替えに失敗したら exit 2 でツール呼び出しを止める。残余は Claude Code の Bash ツール以外の経路（端末での直接実行）。
+    notes: PreToolUse hook が gh write 前にアカウントを判定し、切り替えに失敗したら exit 2 でツール呼び出しを止める。残余は 2 つある。1 つは Claude Code の Bash ツール以外の経路（端末での直接実行）。もう 1 つは read 系であり、hook は WRITE_RE に一致する write op だけを検査する設計のため read は無検査で通す（read の失敗は壊さないのでブロック不要という判断）。read 側の 404 / Could not resolve to a Repository をアカウント切り替わりとして疑う診断は CLAUDE.md の散文のみが担う。
 
   - id: merge-time-checks
     title: Merge-time checks
