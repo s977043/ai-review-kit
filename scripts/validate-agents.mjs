@@ -4,10 +4,13 @@ import { SpanStatusCode } from '@opentelemetry/api';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import * as yaml from 'js-yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import { isDirectRun } from './lib/is-direct-run.mjs';
+
+const require = createRequire(import.meta.url);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,32 +52,42 @@ export async function createAgentValidator(schema) {
   // Make sure Ajv recognizes the https draft-07 meta-schema without
   // mutating the user's schema document. This avoids switching the
   // schema $schema property while allowing Ajv to validate properly.
-  // Attempt to register the draft-07 https meta-schema with Ajv without
-  // mutating the schema object. This avoids rewriting the schema's $schema
-  // property to the http variant while still allowing validation to proceed.
-  const draft7Path = path.join(
-    repoRoot,
-    'node_modules',
-    'ajv',
-    'dist',
-    'refs',
-    'json-schema-draft-07.json'
-  );
-  try {
-    const json = await fs.readFile(draft7Path, 'utf8');
-    const draft7 = JSON.parse(json);
-    // The draft7 meta-schema file typically uses 'http://' in `$id`.
-    // Ajv already registers the http variant. To support https in
-    // schema $schema fields, register a clone of the meta-schema with
-    // the https id to avoid conflicts.
-    const draft7Https = { ...draft7, $id: 'https://json-schema.org/draft-07/schema#' };
-    ajv.addMetaSchema(draft7Https, 'https://json-schema.org/draft-07/schema#');
-  } catch (err) {
-    console.warn(
-      '⚠️  Could not register draft-07 meta-schema for https; attempting without addMetaSchema:',
-      err.message
-    );
-  }
+  //
+  // #1982: 取得は **モジュール解決経由**で行う。以前は
+  // `path.join(repoRoot, 'node_modules', 'ajv', ...)` の絶対パスを
+  // `fs.readFile` していたが、`git worktree` で作った作業ツリーには
+  // `node_modules/` が無い。Node のモジュール解決は親ディレクトリを遡るので
+  // `import Ajv from 'ajv'` は通る一方、絶対パスの `fs.readFile` は遡らず
+  // ENOENT になり、worktree でだけ `tests/validate-agents.test.mjs` が落ちた。
+  //
+  // `createRequire(import.meta.url)` を選んだ理由:
+  //   - 本リポジトリの既存慣習にあたる。`scripts/build-social-assets.mjs:10-11`
+  //     が同じ形（`require('@resvg/resvg-js/package.json')`）で npm パッケージ内の
+  //     JSON を読んでおり、新しいパターンを増やさずに済む。
+  //   - `ajv` は `exports` マップを持たない（実測: `require('ajv/package.json').exports`
+  //     が `undefined`）ため、subpath 解決が塞がれていない。
+  //   - 同期で読めるため、成否が `createAgentValidator` の呼び出し 1 点に集約される。
+  //
+  // 採らなかった手段:
+  //   - `import.meta.resolve()` + `fs.readFile`: 解決自体は成功する（実測済み）が、
+  //     URL → パス変換と非同期ファイル読みが残るだけで、絶対パス版と同じ
+  //     「ファイルシステムを直接叩く」形が温存される。本リポジトリに利用実績も無い。
+  //   - `await import(..., { with: { type: 'json' } })`: 同じく成功するが、
+  //     JSON import attributes を使うモジュールは本リポジトリにまだ 1 つも無く、
+  //     このスクリプトだけ構文面を先行させる理由が無い。
+  //
+  // ここで try/catch を張らないのも意図的。解決に失敗した場合、直後の
+  // `ajv.compile(schema)` が必ず `no schema with key or ref ".../draft-07/schema#"`
+  // で落ちる。warn に落とすと本当の原因（meta-schema を取れていない）が隠れ、
+  // 呼び出し側には無関係に見えるエラーだけが残る。fail-safe の向きとして、
+  // 取得できない事実をそのまま投げる。
+  const draft7 = require('ajv/dist/refs/json-schema-draft-07.json');
+  // The draft7 meta-schema file typically uses 'http://' in `$id`.
+  // Ajv already registers the http variant. To support https in
+  // schema $schema fields, register a clone of the meta-schema with
+  // the https id to avoid conflicts.
+  const draft7Https = { ...draft7, $id: 'https://json-schema.org/draft-07/schema#' };
+  ajv.addMetaSchema(draft7Https, 'https://json-schema.org/draft-07/schema#');
 
   return ajv.compile(schema);
 }
