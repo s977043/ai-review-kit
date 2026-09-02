@@ -38,10 +38,16 @@ jobs:
         continue-on-error: true
         run: npm run lint
 
-      - name: Structure test (unit + structure)
+      # #1415: bare `node --test` (= `npm test`) spawns one child process per
+      # test file and fails intermittently with "Unable to deserialize cloned
+      # data" in the child->parent IPC. `--experimental-test-isolation=none`
+      # runs every file in a single process, removing that IPC entirely — the
+      # same root fix already applied to the required `Unit tests` job in
+      # .github/workflows/test.yml. Keep the two invocations in sync.
+      - name: 'Structure test (unit + structure, single-process isolation, #1415)'
         id: structure_test
         continue-on-error: true
-        run: npm test
+        run: node --experimental-test-isolation=none --test
 
       - name: Build (docusaurus)
         id: build
