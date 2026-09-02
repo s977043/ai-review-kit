@@ -13,7 +13,7 @@ Skills are modular, version-controlled review patterns that encapsulate:
 
 Each skill is a **first-class asset** with its own version, tests, and documentation.
 
-External evidence: [「AIレビューに渡すskillについての検証」](https://zenn.dev/team_lab/articles/5091dfeeb9deef) (萩沢 / teamLab, 2026-08-26) ran GPT-5.5 high over the same Kotlin code twice, with and without a skill. A generic unsafe `!!` call was caught either way. The skill-equipped run spent 134,651 tokens against 464,353 without one. Two project-specific rules (an allowed mail-domain check, and a designated time-retrieval helper) were missed without a skill. Both were caught with one, at 128,623 and 130,856 tokens. The author concludes that a skill pays off by stabilizing project-specific rules. Generic bugs are better left to automated checks. Skills here are therefore versioned assets carrying project review logic, not general lint rules.
+External evidence: [「AIレビューに渡すskillについての検証」](https://zenn.dev/team_lab/articles/5091dfeeb9deef) (萩沢 / teamLab, 2026-08-26) ran the same Kotlin code twice, with and without a skill. The model was GPT-5.5 at high reasoning effort. A generic unsafe `!!` call was caught either way. The skill-equipped run spent 134,651 tokens against 464,353 without one. Two project-specific rules (an allowed mail-domain check, and a designated time-retrieval helper) were missed without a skill. Both were caught with one, at 128,623 and 130,856 tokens. The author concludes that a skill pays off by stabilizing project-specific rules. Generic bugs are better left to automated checks. Skills here are therefore versioned assets carrying project review logic, not general lint rules.
 
 ## Directory Structure
 
