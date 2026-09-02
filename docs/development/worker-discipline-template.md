@@ -119,6 +119,7 @@
 
 既定シェルの `node` は v26 系だが、本リポジトリは `.nvmrc` で Node 22（`22.22.2`）に固定されている。lockfile 操作は Node 22 で行うことが安全側。worktree は独立した `node_modules` を持たないため、作業開始時に `npm ci` を実行しないと依存解決が壊れた状態で作業することになる。詳細: `docs/runbook/dev.md`、memory `local-node-version-mismatch`。
 なお `/opt/homebrew/opt/node@22/bin` というパスは、本リポジトリのメンテナ開発機（Apple Silicon + Homebrew）を前提とした値。他環境の場合、各自の Node 22 系の入手先に読み替える（バージョン要件の SSoT は `.nvmrc` / `engines.node`）。
+main の取り込みで競合した場合、手順を選ぶ前に `git merge origin/main` と `git diff --name-only --diff-filter=U` から競合の実体を測る。`runners/github-action/dist/**` が並ぶなら手で解決せず、Node 22 で `npm ci` → `npm run build:action` により再生成する。PR #1994 では `package-lock.json` が auto-merge された。残る競合は先行マージした PR #1992 のランタイム依存 bump に由来する `dist/index.mjs.map` だけだった。
 
 ### `--no-verify` 禁止
 
