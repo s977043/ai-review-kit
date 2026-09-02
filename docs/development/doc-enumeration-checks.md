@@ -158,7 +158,7 @@ scripts/count-in-clean-tree.sh -- bash -c 'set -o pipefail; git ls-files "*.md" 
 3. 上の「何を検証しているか」の表にも同じ spec の行を足す。この表は自己検証の対象外なので、手で揃える必要がある
 4. `npm run check:doc-enum` を実行し、追加した spec が現状で green になることを確認する
 5. `tests/check-doc-enumerations.test.mjs` に「実 doc を 1 箇所だけ壊すと落ちる」テストを足す。偽 spec だけで固めると、`declare` が別の表を掴んでいても集合が一致すれば通ってしまう
-6. 同ファイルの「passes on the current repo state」が通ることを `node --test` で確認する
+6. 同ファイルの「passes on the current repo state」が通ることを `npm test` で確認する
 
 spec の型は次の 2 種類です。
 
