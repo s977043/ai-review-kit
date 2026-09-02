@@ -514,3 +514,150 @@ test('exportSkillToAgentFormat sanitizes directory name', async () => {
     assert.ok(result.path.includes('safewhoami'));
   });
 });
+
+// ---------------------------------------------------------------------------
+// serializeToSkillMd — golden output (js-yaml dump formatting contract)
+// ---------------------------------------------------------------------------
+//
+// The tests above assert structure only (`includes(...)` / re-parse), so a
+// change in how js-yaml renders scalars passes them unnoticed. js-yaml 5.4.0
+// did change `dump` (scalar style selection, whitespace-only strings), which
+// is why these cases pin the exact bytes `serializeToSkillMd` emits under
+// `{ lineWidth: 120, quotingType: "'", noCompatMode: true }`.
+//
+// Measured 5.3.0 -> 5.4.1 differences that these goldens now catch:
+//   - a string longer than lineWidth with no foldable space was emitted as a
+//     folded block scalar (`>-`) by 5.3.0 and as a plain scalar by 5.4.1
+//     (hits Japanese descriptions, which carry no ASCII spaces)
+//   - a whitespace-only string was single-quoted by 5.3.0 and is
+//     double-quoted by 5.4.1
+//
+// If a golden fails after a js-yaml bump, confirm the new bytes still round
+// trip through parseFrontMatter, then update the literal deliberately.
+
+const GOLDEN_SKILL_MD_CASES = [
+  {
+    label: 'typical export: tags, version, and metadata.rr nesting',
+    skill: {
+      metadata: {
+        id: 'example',
+        name: 'Example Skill',
+        description: 'An example skill',
+        category: 'midstream',
+        phase: 'midstream',
+        applyTo: ['src/**/*.ts'],
+        severity: 'minor',
+        tags: ['review'],
+        version: '1.2.0',
+      },
+      body: '# Example\n\nReview instructions here.',
+    },
+    expected: `---
+name: Example Skill
+description: An example skill
+tags:
+  - review
+version: 1.2.0
+metadata:
+  rr:
+    id: example
+    category: midstream
+    phase: midstream
+    applyTo:
+      - src/**/*.ts
+    severity: minor
+---
+
+# Example
+
+Review instructions here.
+`,
+  },
+  {
+    label: 'long Japanese description (no foldable space) stays a plain scalar',
+    skill: {
+      metadata: {
+        id: 'ja-long',
+        name: '日本語スキル',
+        description: 'これはテストです。'.repeat(20),
+        category: 'midstream',
+        phase: 'midstream',
+      },
+      body: '本文',
+    },
+    expected: `---
+name: 日本語スキル
+description: これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。これはテストです。
+metadata:
+  rr:
+    id: ja-long
+    category: midstream
+    phase: midstream
+---
+
+本文
+`,
+  },
+  {
+    label: 'whitespace-only description is double-quoted',
+    skill: {
+      metadata: {
+        id: 'ws',
+        name: 'ws',
+        description: '   ',
+        category: 'core',
+        phase: 'core',
+      },
+      body: 'B',
+    },
+    expected: `---
+name: ws
+description: "   "
+metadata:
+  rr:
+    id: ws
+    category: core
+    phase: core
+---
+
+B
+`,
+  },
+  {
+    label: 'long spaced description still folds at lineWidth 120',
+    skill: {
+      metadata: {
+        id: 'fold',
+        name: 'fold',
+        description: 'lorem ipsum dolor '.repeat(12).trim(),
+        category: 'core',
+        phase: 'core',
+      },
+      body: 'B',
+    },
+    expected: `---
+name: fold
+description: >-
+  lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem
+  ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor lorem ipsum dolor
+metadata:
+  rr:
+    id: fold
+    category: core
+    phase: core
+---
+
+B
+`,
+  },
+];
+
+for (const { label, skill, expected } of GOLDEN_SKILL_MD_CASES) {
+  test(`serializeToSkillMd golden — ${label}`, () => {
+    assert.equal(serializeToSkillMd(skill), expected);
+    // The golden must also stay semantically loadable, not just byte-stable.
+    const { metadata: fm } = parseFrontMatter(expected);
+    assert.equal(fm.name, skill.metadata.name);
+    assert.equal(fm.description, skill.metadata.description);
+  });
+}
