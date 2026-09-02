@@ -26,7 +26,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { FINAL_STATUS } from '../src/lib/finding-critic.mjs';
+import {
+  ASK_RELEVANCE,
+  CRITIC_VERDICT,
+  FINAL_STATUS,
+  REVIEWER_ACTION,
+} from '../src/lib/finding-critic.mjs';
+import { MAX_PROMPT_PREVIEW_CHARS } from '../src/lib/review-engine.mjs';
+import {
+  buildCriticPromptSection,
+  buildReviewerRebuttalPromptSection,
+} from '../src/prompt/sections.mjs';
 import {
   CRITIC_TURN,
   partitionRunnerResults,
@@ -225,5 +235,81 @@ describe('trace and batch routing', () => {
       const expected = SET.cases.filter((c) => c.expected.routing === key).length;
       assert.equal(routed[key].length, expected, `${key} count`);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The output contract the model is asked to copy must itself be valid JSON.
+//
+// The first version of these sections interpolated the allowed values inline
+// (`"verdict": `AGREE` | `DISAGREE_EVIDENCE` | ...`), which made the template a
+// string no parser accepts — an invitation for the model to echo broken JSON
+// straight back. Nothing in the fixture replay caught it, because the stub
+// never reads the prompt. This pins the template itself.
+// ---------------------------------------------------------------------------
+
+/** The output-contract template line of a built prompt. */
+function templateLineOf(prompt) {
+  const line = prompt.split('\n').find((l) => l.trim().startsWith('{"finding_id"'));
+  assert.ok(line, 'the prompt has no output-contract template line');
+  return line.trim();
+}
+
+describe('the output-contract template is valid JSON', () => {
+  const criticPrompt = buildCriticPromptSection({
+    finding: { id: 'RR-F-101', severity: 'major', message: 'Finding: x' },
+    diff: 'diff --git a/a.mjs b/a.mjs',
+    originalAsk: 'ask',
+    acceptanceCriteria: ['ac'],
+  });
+  const reviewerPrompt = buildReviewerRebuttalPromptSection({
+    finding: { id: 'RR-F-101', message: 'Finding: x' },
+    criticResponse: '{"verdict":"AGREE"}',
+    diff: 'diff --git a/a.mjs b/a.mjs',
+  });
+
+  test('the Critic template parses and carries the contract keys', () => {
+    const parsed = JSON.parse(templateLineOf(criticPrompt));
+    assert.deepEqual(Object.keys(parsed).sort(), [
+      'ask_relevance',
+      'evidence',
+      'finding_id',
+      'reason',
+      'verdict',
+    ]);
+    assert.equal(typeof parsed.evidence[0].line_start, 'number');
+  });
+
+  test('the Reviewer template parses and carries the contract keys', () => {
+    const parsed = JSON.parse(templateLineOf(reviewerPrompt));
+    assert.deepEqual(Object.keys(parsed).sort(), [
+      'action',
+      'evidence',
+      'finding_id',
+      'response_to',
+    ]);
+    assert.equal(typeof parsed.evidence[0].line_start, 'number');
+  });
+
+  test('every allowed value is still enumerated, generated from the vocabulary', () => {
+    for (const v of Object.values(CRITIC_VERDICT)) assert.ok(criticPrompt.includes(v), v);
+    for (const v of Object.values(ASK_RELEVANCE)) assert.ok(criticPrompt.includes(v), v);
+    for (const v of Object.values(REVIEWER_ACTION)) assert.ok(reviewerPrompt.includes(v), v);
+  });
+});
+
+describe('the trace preview is capped at the review-engine limit', () => {
+  test('a huge diff does not put the whole prompt in the trace', async () => {
+    const c = SET.cases[0];
+    const run = await runFindingCritic({
+      finding: c.candidateFinding,
+      diff: `${diffOf(c)}\n${'+// filler line\n'.repeat(4000)}`,
+      originalAsk: c.originalAsk,
+      acceptanceCriteria: c.acceptanceCriteria,
+      skill: SET.defaultSkill,
+      callImpl: async () => JSON.stringify(c.transcript.exchanges[0].critic.payload),
+    });
+    const preview = run.trace.find((t) => t.role === CRITIC_TURN.CRITIC).promptPreview;
+    assert.equal(preview.length, MAX_PROMPT_PREVIEW_CHARS);
   });
 });

@@ -30,6 +30,7 @@
 //   Critic を per-reviewer に置くか merge 後に置くか、validation の保存先。
 
 import {
+  ASK_RELEVANCE,
   DEFAULT_MAX_INNER_ROUNDS,
   HARD_CAP_INNER_ROUNDS,
   buildValidatedFinding,
@@ -40,6 +41,7 @@ import {
   runValidationLoop,
 } from './finding-critic.mjs';
 import { callChatCompletion } from './llm-pipeline.mjs';
+import { MAX_PROMPT_PREVIEW_CHARS } from './review-engine.mjs';
 import { redactText } from './secret-redactor.mjs';
 import {
   buildCriticPromptSection,
@@ -61,6 +63,15 @@ export const CRITIC_TURN = Object.freeze({
  * ここでの取り違えが終端状態を変えることはない。reason の可読性のためだけに
  * 2 つを分けている。
  */
+/**
+ * trace へ残すプロンプトの控え。review-engine.mjs の `promptPreview` と同じ
+ * 経路・同じ上限に揃える。redact は「秘密を落とす」ためのもので長さを
+ * 制限しないので、上限は別に掛ける必要がある。
+ */
+function promptPreviewOf(prompt, redactOptions) {
+  return redactText(prompt, redactOptions).text.slice(0, MAX_PROMPT_PREVIEW_CHARS);
+}
+
 function classifyCallFailure(err) {
   const name = String(err?.name ?? '');
   return name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'error';
@@ -130,7 +141,7 @@ export async function runFindingCritic({
       retainFinding: false,
       reasons: deterministic.reasons,
       rounds: 0,
-      askRelevance: 'uncertain',
+      askRelevance: ASK_RELEVANCE.UNCERTAIN,
     };
     return {
       finding,
@@ -186,8 +197,8 @@ export async function runFindingCritic({
       round,
       role: CRITIC_TURN.CRITIC,
       // review-engine.mjs の safePrompt と同じ経路。LLM へ送るのは原文で、
-      // プロセス外へ出る可能性のある控えだけを redact する。
-      promptPreview: redactText(criticPrompt, redactOptions).text,
+      // プロセス外へ出る可能性のある控えだけを redact し、同じ長さで切る。
+      promptPreview: promptPreviewOf(criticPrompt, redactOptions),
       parsed: criticRaw === null ? null : parseCriticResponse(criticRaw),
     });
 
@@ -222,7 +233,7 @@ export async function runFindingCritic({
       trace.push({
         round,
         role: CRITIC_TURN.REVIEWER,
-        promptPreview: redactText(reviewerPrompt, redactOptions).text,
+        promptPreview: promptPreviewOf(reviewerPrompt, redactOptions),
       });
     }
 

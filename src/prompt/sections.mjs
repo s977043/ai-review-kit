@@ -209,6 +209,16 @@ function joinList(values) {
   return values.map((v) => `\`${v}\``).join(' | ');
 }
 
+/**
+ * 出力契約の JSON テンプレへ埋めるプレースホルダ。
+ *
+ * 許容値を `A | B | C` の形でテンプレ内へ直接展開すると、テンプレそのものが
+ * 有効な JSON でなくなり、モデルがそれを写して壊れた JSON を返す誘因になる。
+ * テンプレは常に `JSON.parse` を通る形に保ち、許容値は直後の行で列挙する。
+ * 値の生成元は finding-critic.mjs の語彙定数のままで、ここでは並べ方だけを変える。
+ */
+const CHOICE_PLACEHOLDER = '<one of the values listed below>';
+
 function bulletList(items, empty) {
   const list = (Array.isArray(items) ? items : []).map((v) => String(v).trim()).filter(Boolean);
   if (!list.length) return empty;
@@ -273,7 +283,11 @@ ${String(diff ?? '')}
 
 Reply with ONE JSON object, no code fence, no commentary:
 
-{"finding_id": "<the finding_id above, verbatim>", "verdict": ${joinList(Object.values(CRITIC_VERDICT))}, "reason": "<why>", "ask_relevance": ${joinList(Object.values(ASK_RELEVANCE))}, "evidence": [{"artifact": "<path from the diff>", "line_start": <int>, "line_end": <int>, "observation": "<what is there>"}]}
+{"finding_id": "<the finding_id above, verbatim>", "verdict": "${CHOICE_PLACEHOLDER}", "reason": "<why>", "ask_relevance": "${CHOICE_PLACEHOLDER}", "evidence": [{"artifact": "<path from the diff>", "line_start": 0, "line_end": 0, "observation": "<what is there>"}]}
+
+- \`verdict\` is one of: ${joinList(Object.values(CRITIC_VERDICT))}.
+- \`ask_relevance\` is one of: ${joinList(Object.values(ASK_RELEVANCE))}.
+- \`line_start\` / \`line_end\` are integers; replace the zeros with the real line numbers.
 
 - \`verdict\`: \`${CRITIC_VERDICT.AGREE}\` when the finding holds, \`${CRITIC_VERDICT.DISAGREE_EVIDENCE}\` when the diff itself refutes it, \`${CRITIC_VERDICT.DISAGREE_CONCERN}\` when you doubt it but cannot cite a refutation.
 - \`${CRITIC_VERDICT.DISAGREE_EVIDENCE}\` REQUIRES at least one \`evidence\` entry whose \`artifact\` is a file path that appears in the diff. Without it the verdict is downgraded to \`${CRITIC_VERDICT.DISAGREE_CONCERN}\`.
@@ -319,7 +333,10 @@ ${String(diff ?? '')}
 
 Reply with ONE JSON object, no code fence, no commentary:
 
-{"finding_id": "<the finding_id above, verbatim>", "action": ${joinList(Object.values(REVIEWER_ACTION))}, "response_to": "<the Critic verdict you are answering>", "evidence": [{"artifact": "<path from the diff>", "line_start": <int>, "line_end": <int>, "observation": "<what is there>"}]}
+{"finding_id": "<the finding_id above, verbatim>", "action": "${CHOICE_PLACEHOLDER}", "response_to": "<the Critic verdict you are answering>", "evidence": [{"artifact": "<path from the diff>", "line_start": 0, "line_end": 0, "observation": "<what is there>"}]}
+
+- \`action\` is one of: ${joinList(Object.values(REVIEWER_ACTION))}.
+- \`line_start\` / \`line_end\` are integers; replace the zeros with the real line numbers.
 
 - \`${REVIEWER_ACTION.KEEP}\` REQUIRES at least one \`evidence\` entry; a \`${REVIEWER_ACTION.KEEP}\` without evidence is not a valid answer and escalates to a human.
 - \`${REVIEWER_ACTION.WITHDRAW}\` when the Critic is right. \`${REVIEWER_ACTION.REVISE}\` when the finding survives in a changed shape.
