@@ -14022,7 +14022,7 @@ class InternalServerError extends APIError {
 
 /***/ }),
 
-/***/ 3545:
+/***/ 9240:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -14081,7 +14081,7 @@ const sleep = (ms, signal) => new Promise((resolve) => {
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/errors.mjs
 var errors = __nccwpck_require__(2533);
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/version.mjs
-const VERSION = '0.120.0'; // x-release-please-version
+const VERSION = '0.121.0'; // x-release-please-version
 //# sourceMappingURL=version.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/internal/detect-platform.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -14129,7 +14129,7 @@ const getPlatformProperties = () => {
             'X-Stainless-OS': 'Unknown',
             'X-Stainless-Arch': `other:${EdgeRuntime}`,
             'X-Stainless-Runtime': 'edge',
-            'X-Stainless-Runtime-Version': globalThis.process.version,
+            'X-Stainless-Runtime-Version': globalThis.process?.version ?? 'unknown',
         };
     }
     // Check if Node.js
@@ -20793,6 +20793,7 @@ var _BetaMessageStream_instances, _BetaMessageStream_currentMessageSnapshot, _Be
 
 
 
+
 function tracksToolInput(content) {
     return content.type === 'tool_use' || content.type === 'server_tool_use' || content.type === 'mcp_tool_use';
 }
@@ -21204,7 +21205,7 @@ class BetaMessageStream {
                         break;
                     }
                     default:
-                        checkNever(event.delta);
+                        (0,utils_values/* checkNever */.f2)(event.delta);
                 }
                 break;
             }
@@ -21349,7 +21350,7 @@ class BetaMessageStream {
                         break;
                     }
                     default:
-                        checkNever(event.delta);
+                        (0,utils_values/* checkNever */.f2)(event.delta);
                 }
                 return snapshot;
             }
@@ -21433,8 +21434,6 @@ class BetaMessageStream {
         return stream.toReadableStream();
     }
 }
-// used to ensure exhaustive case matching without throwing a runtime error
-function checkNever(x) { }
 //# sourceMappingURL=BetaMessageStream.mjs.map
 // EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/internal/utils/promise.mjs
 var promise = __nccwpck_require__(7793);
@@ -21466,6 +21465,7 @@ Wrap your summary in <summary></summary> tags.`;
 //# sourceMappingURL=CompactionControl.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/tools/BetaToolRunner.mjs
 var _BetaToolRunner_instances, _BetaToolRunner_consumed, _BetaToolRunner_mutated, _BetaToolRunner_state, _BetaToolRunner_options, _BetaToolRunner_message, _BetaToolRunner_toolResponse, _BetaToolRunner_completion, _BetaToolRunner_iterationCount, _BetaToolRunner_checkAndCompact, _BetaToolRunner_generateToolResponse;
+
 
 
 
@@ -21633,6 +21633,7 @@ class BetaToolRunner {
                     if (!isCompacted) {
                         if (!(0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_mutated, "f")) {
                             const message = await (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_message, "f");
+                            const nextStep = determineNextStepFromStopReason(message.stop_reason);
                             (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.messages.push({ role: message.role, content: message.content });
                             // Container-bound server tools reject a follow-up request that omits the container the
                             // previous turn ran in, so carry its id forward unless the caller pinned one themselves.
@@ -21645,13 +21646,11 @@ class BetaToolRunner {
                                     (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.container = { ...container, id: message.container.id };
                                 }
                             }
-                            // Refusal-terminated turns are terminal: the refusal may have cut a tool_use off
-                            // with partial input, so executing this turn's tools would fire side effects the
-                            // model never confirmed — and once middleware strips the refusal turn, their
-                            // tool_results could never be replayed coherently. Surface the refusal as the
-                            // final message instead.
-                            if (message.stop_reason === 'refusal') {
+                            if (nextStep === 'stop') {
                                 break;
+                            }
+                            if (nextStep === 'resume') {
+                                continue;
                             }
                         }
                         const toolMessage = await (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_instances, "m", _BetaToolRunner_generateToolResponse).call(this, (0,tslib/* __classPrivateFieldGet */.g)(this, _BetaToolRunner_state, "f").params.messages.at(-1));
@@ -21934,6 +21933,35 @@ function referencedToolName(ref) {
             return undefined;
     }
 }
+/**
+ * Sorts every stop reason into one of three buckets: `run_tools` turns run their client tool
+ * calls and continue the loop; `resume` turns are sent back unchanged so the server continues
+ * them; `stop` turns end the loop without running any tool calls.
+ */
+function determineNextStepFromStopReason(stopReason) {
+    if (stopReason === null)
+        return 'stop';
+    switch (stopReason) {
+        case 'tool_use':
+            return 'run_tools';
+        case 'pause_turn':
+        // pause_after_compaction hands the turn back before the model answers; sending it back
+        // unchanged continues it.
+        case 'compaction':
+            return 'resume';
+        case 'end_turn':
+        case 'stop_sequence':
+        case 'max_tokens':
+        case 'model_context_window_exceeded':
+        case 'refusal':
+            return 'stop';
+        default:
+            // The union is forward-compatible, so a stop reason this SDK doesn't know yet ends the
+            // loop rather than throwing; the `never` check makes tsc reject an unclassified member.
+            (0,utils_values/* checkNever */.f2)(stopReason);
+            return 'stop';
+    }
+}
 //# sourceMappingURL=BetaToolRunner.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/messages/messages.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -22086,6 +22114,1600 @@ Messages.Batches = Batches;
 Messages.BetaToolRunner = BetaToolRunner;
 Messages.ToolError = ToolError/* ToolError */.v;
 //# sourceMappingURL=messages.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/api-keys.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+class APIKeys extends APIResource {
+    /**
+     * Get API Key
+     *
+     * @example
+     * ```ts
+     * const betaAPIKey =
+     *   await client.beta.organization.apiKeys.retrieve(
+     *     'api_key_id',
+     *   );
+     * ```
+     */
+    retrieve(apiKeyID, options) {
+        return this._client.get(path `/v1/organizations/api_keys/${apiKeyID}?beta=true`, options);
+    }
+    /**
+     * Update API Key
+     *
+     * @example
+     * ```ts
+     * const betaAPIKey =
+     *   await client.beta.organization.apiKeys.update(
+     *     'api_key_id',
+     *   );
+     * ```
+     */
+    update(apiKeyID, body, options) {
+        return this._client.post(path `/v1/organizations/api_keys/${apiKeyID}?beta=true`, { body, ...options });
+    }
+    /**
+     * List API Keys
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaAPIKey of client.beta.organization.apiKeys.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/organizations/api_keys?beta=true', (Page), {
+            query,
+            ...options,
+        });
+    }
+}
+//# sourceMappingURL=api-keys.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/external-keys.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+class ExternalKeys extends APIResource {
+    /**
+     * Create an external key config owned by the caller's organization.
+     *
+     * @example
+     * ```ts
+     * const betaExternalKey =
+     *   await client.beta.organization.externalKeys.create({
+     *     provider_config: {
+     *       kms_arn:
+     *         'arn:aws:kms:us-east-1:111122223333:key/abcd1234-5678-90ab-cdef-000011112222',
+     *       type: 'aws',
+     *     },
+     *   });
+     * ```
+     */
+    create(body, options) {
+        return this._client.post('/v1/organizations/external_keys?beta=true', { body, ...options });
+    }
+    /**
+     * Retrieve a single external key config in the caller's organization by ID.
+     *
+     * @example
+     * ```ts
+     * const betaExternalKey =
+     *   await client.beta.organization.externalKeys.retrieve(
+     *     'external_key_id',
+     *   );
+     * ```
+     */
+    retrieve(externalKeyID, options) {
+        return this._client.get(path `/v1/organizations/external_keys/${externalKeyID}?beta=true`, options);
+    }
+    /**
+     * Partially update an external key config. Omitted fields are left unchanged.
+     *
+     * `display_name` is always editable. `geo` and `provider_config` cannot be changed
+     * once any workspace references this config, because previously encrypted data
+     * requires the original key identity to decrypt.
+     *
+     * @example
+     * ```ts
+     * const betaExternalKey =
+     *   await client.beta.organization.externalKeys.update(
+     *     'external_key_id',
+     *   );
+     * ```
+     */
+    update(externalKeyID, body, options) {
+        return this._client.post(path `/v1/organizations/external_keys/${externalKeyID}?beta=true`, {
+            body,
+            ...options,
+        });
+    }
+    /**
+     * List external key configs in the caller's organization.
+     *
+     * Results are ordered by creation time (newest first). Use the `next_page` cursor
+     * from the response to fetch subsequent pages.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaExternalKey of client.beta.organization.externalKeys.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/organizations/external_keys?beta=true', (PageCursor), {
+            query,
+            ...options,
+        });
+    }
+    /**
+     * Delete an external key config.
+     *
+     * The request is rejected if any workspace still references this config.
+     *
+     * @example
+     * ```ts
+     * const externalKey =
+     *   await client.beta.organization.externalKeys.delete(
+     *     'external_key_id',
+     *   );
+     * ```
+     */
+    delete(externalKeyID, options) {
+        return this._client.delete(path `/v1/organizations/external_keys/${externalKeyID}?beta=true`, options);
+    }
+    /**
+     * Validate an external key config against the customer's KMS.
+     *
+     * Anthropic performs an encrypt/decrypt roundtrip against the configured KMS key
+     * and waits up to 30 seconds for the result. The response status is `success` if
+     * the roundtrip succeeded, or `failure` with an error message if it failed or
+     * timed out.
+     *
+     * @example
+     * ```ts
+     * const response =
+     *   await client.beta.organization.externalKeys.validate(
+     *     'external_key_id',
+     *   );
+     * ```
+     */
+    validate(externalKeyID, options) {
+        return this._client.post(path `/v1/organizations/external_keys/${externalKeyID}/validate?beta=true`, options);
+    }
+}
+//# sourceMappingURL=external-keys.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/invites.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+class Invites extends APIResource {
+    /**
+     * Invite a user to join the organization by email.
+     *
+     * On plans that draw members from a finite pool of purchased seats, the invite
+     * automatically consumes a seat from the lowest tier with availability; there is
+     * no seat-tier parameter. When no seat is free the request fails with a 400 error
+     * rather than purchasing a seat.
+     *
+     * @example
+     * ```ts
+     * const betaOrganizationInvite =
+     *   await client.beta.organization.invites.create({
+     *     email: 'user@emaildomain.com',
+     *     role: 'user',
+     *   });
+     * ```
+     */
+    create(body, options) {
+        return this._client.post('/v1/organizations/invites?beta=true', { body, ...options });
+    }
+    /**
+     * Retrieve an invite by ID.
+     *
+     * @example
+     * ```ts
+     * const betaOrganizationInvite =
+     *   await client.beta.organization.invites.retrieve(
+     *     'invite_id',
+     *   );
+     * ```
+     */
+    retrieve(inviteID, options) {
+        return this._client.get(path `/v1/organizations/invites/${inviteID}?beta=true`, options);
+    }
+    /**
+     * List the organization's invites.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaOrganizationInvite of client.beta.organization.invites.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/organizations/invites?beta=true', (Page), {
+            query,
+            ...options,
+        });
+    }
+    /**
+     * Delete a pending invite.
+     *
+     * @example
+     * ```ts
+     * const invite =
+     *   await client.beta.organization.invites.delete(
+     *     'invite_id',
+     *   );
+     * ```
+     */
+    delete(inviteID, options) {
+        return this._client.delete(path `/v1/organizations/invites/${inviteID}?beta=true`, options);
+    }
+}
+//# sourceMappingURL=invites.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/rate-limits.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+class RateLimits extends APIResource {
+    /**
+     * List Messages API rate limits for your organization.
+     *
+     * Each entry corresponds to one rate-limit group (either a model family or an
+     * API-surface category such as the Files API or Message Batches) and contains the
+     * set of limiter values that apply to it.
+     *
+     * This endpoint currently returns every matching entry in a single page regardless
+     * of `limit`; follow `next_page` so that clients keep working when pagination is
+     * enabled.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaOrganizationRateLimit of client.beta.organization.rateLimits.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/organizations/rate_limits?beta=true', (PageCursor), { query, ...options });
+    }
+}
+//# sourceMappingURL=rate-limits.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/users.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+class Users extends APIResource {
+    /**
+     * Retrieve a member of the organization by user ID.
+     *
+     * @example
+     * ```ts
+     * const betaOrganizationUser =
+     *   await client.beta.organization.users.retrieve('user_id');
+     * ```
+     */
+    retrieve(userID, options) {
+        return this._client.get(path `/v1/organizations/users/${userID}?beta=true`, options);
+    }
+    /**
+     * Update a member's organization role.
+     *
+     * @example
+     * ```ts
+     * const betaOrganizationUser =
+     *   await client.beta.organization.users.update('user_id', {
+     *     role: 'user',
+     *   });
+     * ```
+     */
+    update(userID, body, options) {
+        return this._client.post(path `/v1/organizations/users/${userID}?beta=true`, { body, ...options });
+    }
+    /**
+     * List the organization's members.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaOrganizationUser of client.beta.organization.users.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/organizations/users?beta=true', (Page), {
+            query,
+            ...options,
+        });
+    }
+    /**
+     * Remove a member from the organization.
+     *
+     * @example
+     * ```ts
+     * const user = await client.beta.organization.users.remove(
+     *   'user_id',
+     * );
+     * ```
+     */
+    remove(userID, options) {
+        return this._client.delete(path `/v1/organizations/users/${userID}?beta=true`, options);
+    }
+}
+//# sourceMappingURL=users.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/federation/issuers.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class Issuers extends APIResource {
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Register an OIDC issuer that Anthropic will trust for workload identity
+     * federation in your organization.
+     *
+     * The `jwks` field controls how the issuer's signing keys are obtained and takes
+     * one of three shapes selected by `type`: `discovery` (resolve keys through OIDC
+     * discovery), `explicit_url` (fetch keys from a fixed JWKS URL), or `inline`
+     * (provide a static key set). When `jwks.type` is `discovery` and no
+     * `discovery_base` is set, the issuer URL must be publicly reachable over HTTPS so
+     * Anthropic can fetch the discovery document; for `explicit_url` and `inline`
+     * modes the issuer URL is only matched as the JWT's `iss` claim and is not
+     * fetched.
+     *
+     * @example
+     * ```ts
+     * const betaFederationIssuer =
+     *   await client.beta.organization.federation.issuers.create({
+     *     issuer_url: 'x',
+     *     name: 'x',
+     *   });
+     * ```
+     */
+    create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post('/v1/organizations/federation_issuers?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Retrieve a federation issuer by its ID (`fdis_...`).
+     *
+     * @example
+     * ```ts
+     * const betaFederationIssuer =
+     *   await client.beta.organization.federation.issuers.retrieve(
+     *     'federation_issuer_id',
+     *   );
+     * ```
+     */
+    retrieve(federationIssuerID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path `/v1/organizations/federation_issuers/${federationIssuerID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Partially update a federation issuer.
+     *
+     * Setting `jwks` replaces the full JWKS shape at once. Archived issuers cannot be
+     * updated; this returns 400. Create a new issuer instead.
+     *
+     * Updating an issuer that backs a rule with a scope outside `workspace:developer`
+     * or `workspace:inference` requires a Console session.
+     *
+     * @example
+     * ```ts
+     * const betaFederationIssuer =
+     *   await client.beta.organization.federation.issuers.update(
+     *     'federation_issuer_id',
+     *   );
+     * ```
+     */
+    update(federationIssuerID, params, options) {
+        const { betas, ...body } = params;
+        return this._client.post(path `/v1/organizations/federation_issuers/${federationIssuerID}?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * List federation issuers in your organization.
+     *
+     * Archived issuers are excluded unless `include_archived=true`.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaFederationIssuer of client.beta.organization.federation.issuers.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList('/v1/organizations/federation_issuers?beta=true', (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Archive a federation issuer.
+     *
+     * Idempotent; re-archiving returns the issuer with its original `archived_at`.
+     * Rejected with 400 if any live (non-archived) federation rule still references
+     * the issuer; archive those rules first (a rule's issuer cannot be changed), or
+     * recreate them against another issuer.
+     *
+     * @example
+     * ```ts
+     * const betaFederationIssuer =
+     *   await client.beta.organization.federation.issuers.archive(
+     *     'federation_issuer_id',
+     *   );
+     * ```
+     */
+    archive(federationIssuerID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/organizations/federation_issuers/${federationIssuerID}/archive?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+}
+//# sourceMappingURL=issuers.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/federation/rules/workspaces.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class Workspaces extends APIResource {
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * List workspaces where this federation rule is enabled.
+     *
+     * Returns all workspace enablements in a single response; the `limit` and `page`
+     * parameters are accepted but have no effect, and `next_page` is always `null`.
+     * Returns explicit per-workspace enablements only; for rules with
+     * `applies_to_all_workspaces` or a legacy single `workspace_id`, check those
+     * fields on the rule itself.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaFederationRuleWorkspace of client.beta.organization.federation.rules.workspaces.list(
+     *   'federation_rule_id',
+     * )) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(federationRuleID, params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList(path `/v1/organizations/federation_rules/${federationRuleID}/workspaces?beta=true`, (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Enable a federation rule for a workspace.
+     *
+     * Idempotent; re-enabling returns the existing enablement. The rule and workspace
+     * must both belong to your organization. Membership of the rule's target service
+     * account in this workspace is not checked at enablement: token exchange into this
+     * workspace is rejected unless the target is a member (it is implicitly a member
+     * of the default workspace). Archived rules are rejected with 400. OAuth callers
+     * may only manage rules whose `oauth_scope` is `workspace:developer` or
+     * `workspace:inference`; other scopes require a Console session.
+     *
+     * @example
+     * ```ts
+     * const betaFederationRuleWorkspace =
+     *   await client.beta.organization.federation.rules.workspaces.add(
+     *     'federation_rule_id',
+     *     { workspace_id: 'workspace_id' },
+     *   );
+     * ```
+     */
+    add(federationRuleID, params, options) {
+        const { betas, ...body } = params;
+        return this._client.post(path `/v1/organizations/federation_rules/${federationRuleID}/workspaces?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Disable a federation rule for a workspace.
+     *
+     * Idempotent; succeeds even if the enablement was already removed. OAuth callers
+     * may only manage rules whose `oauth_scope` is `workspace:developer` or
+     * `workspace:inference`; other scopes require a Console session.
+     *
+     * @example
+     * ```ts
+     * const workspace =
+     *   await client.beta.organization.federation.rules.workspaces.remove(
+     *     'workspace_id',
+     *     { federation_rule_id: 'federation_rule_id' },
+     *   );
+     * ```
+     */
+    remove(workspaceID, params, options) {
+        const { federation_rule_id, betas } = params;
+        return this._client.delete(path `/v1/organizations/federation_rules/${federation_rule_id}/workspaces/${workspaceID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+}
+//# sourceMappingURL=workspaces.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/federation/rules/rules.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+class Rules extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.workspaces = new Workspaces(this._client);
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Create a federation rule owned by your organization.
+     *
+     * The referenced issuer and the target service account must already exist in the
+     * same organization; invalid references are rejected with a 400 error. The
+     * workspace reference is validated. Membership is not checked at rule creation:
+     * token exchange resolves a single enabled workspace per call and is rejected
+     * unless the target service account is a member of that workspace (it is
+     * implicitly a member of the default workspace). Rules on well-known shared
+     * issuers (GitHub Actions, GitLab, Buildkite, Terraform Cloud, Google) must
+     * constrain tenant identity via an identity-bearing claim, a tenant-pinning
+     * subject prefix (such as `repo:YOUR_ORG/...`), or a CEL condition referencing one
+     * of those identity claims (e.g. `claims.repository_owner`). OAuth callers may
+     * only manage rules whose `oauth_scope` is `workspace:developer` or
+     * `workspace:inference`; other scopes require a Console session.
+     *
+     * @example
+     * ```ts
+     * const betaFederationRule =
+     *   await client.beta.organization.federation.rules.create({
+     *     issuer_id: 'issuer_id',
+     *     match: {},
+     *     name: 'x',
+     *     oauth_scope: 'x',
+     *     target: {
+     *       service_account_id: 'svac_01SDCCSbTxrXDpWc1phhtcfK',
+     *       type: 'service_account',
+     *     },
+     *   });
+     * ```
+     */
+    create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post('/v1/organizations/federation_rules?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Retrieve a federation rule by its ID (`fdrl_...`).
+     *
+     * @example
+     * ```ts
+     * const betaFederationRule =
+     *   await client.beta.organization.federation.rules.retrieve(
+     *     'federation_rule_id',
+     *   );
+     * ```
+     */
+    retrieve(federationRuleID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path `/v1/organizations/federation_rules/${federationRuleID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Partially update a federation rule.
+     *
+     * `issuer_id` is immutable. `match` and `target` are replaced as whole objects
+     * when set. Referenced service accounts and workspaces must exist in your
+     * organization; invalid references are rejected with a 400 error. Archived rules
+     * cannot be updated; this returns 400. Create a new rule instead. Rules on
+     * well-known shared issuers (GitHub Actions, GitLab, Buildkite, Terraform Cloud,
+     * Google) must constrain tenant identity via an identity-bearing claim, a
+     * tenant-pinning subject prefix (such as `repo:YOUR_ORG/...`), or a CEL condition
+     * referencing one of those identity claims (e.g. `claims.repository_owner`). On
+     * these issuers the requirement is re-checked on every update; if an existing
+     * rule's stored match does not yet constrain tenant identity, any update (even a
+     * rename or description change) must also supply a conforming `match` in the same
+     * request. OAuth callers may only manage rules whose `oauth_scope` is
+     * `workspace:developer` or `workspace:inference`; other scopes require a Console
+     * session.
+     *
+     * @example
+     * ```ts
+     * const betaFederationRule =
+     *   await client.beta.organization.federation.rules.update(
+     *     'federation_rule_id',
+     *   );
+     * ```
+     */
+    update(federationRuleID, params, options) {
+        const { betas, ...body } = params;
+        return this._client.post(path `/v1/organizations/federation_rules/${federationRuleID}?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * List federation rules in your organization.
+     *
+     * Optionally filter by issuer with `issuer_id`. Archived rules are excluded unless
+     * `include_archived=true`.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaFederationRule of client.beta.organization.federation.rules.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList('/v1/organizations/federation_rules?beta=true', (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Archive a federation rule.
+     *
+     * Token exchange through this rule stops immediately. Idempotent; re-archiving
+     * returns the rule with its original `archived_at`. Archiving clears the rule's
+     * workspace targeting (`workspace_id` and `workspace_ids` are emptied). Tokens
+     * already minted before archive remain valid until they expire. OAuth callers may
+     * only manage rules whose `oauth_scope` is `workspace:developer` or
+     * `workspace:inference`; other scopes require a Console session.
+     *
+     * @example
+     * ```ts
+     * const betaFederationRule =
+     *   await client.beta.organization.federation.rules.archive(
+     *     'federation_rule_id',
+     *   );
+     * ```
+     */
+    archive(federationRuleID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/organizations/federation_rules/${federationRuleID}/archive?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+}
+Rules.Workspaces = Workspaces;
+//# sourceMappingURL=rules.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/federation/federation.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+class Federation extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.issuers = new Issuers(this._client);
+        this.rules = new Rules(this._client);
+    }
+}
+Federation.Issuers = Issuers;
+Federation.Rules = Rules;
+//# sourceMappingURL=federation.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/service-accounts/workspaces.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class workspaces_Workspaces extends APIResource {
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * List the workspaces a service account is a member of.
+     *
+     * Each entry includes the service account's `workspace_role` in that workspace.
+     * Use `limit` and the `next_page` cursor to paginate. When the service account has
+     * no explicit default-workspace membership, the implicit (`implicit: true`)
+     * membership is returned as the first entry on the first page; with `limit=1` the
+     * first page may return up to 2 entries (the implicit entry plus one explicit
+     * membership) so a pagination cursor can be derived. Memberships are returned only
+     * while the service account is active. Without a `page` cursor, an archived
+     * service account returns an empty list. A `page` cursor that does not match an
+     * active membership returns a 400 invalid-request error. A cursor stops matching
+     * when the membership is removed, the workspace is deleted, or the service account
+     * is archived. Restart pagination from the first page to recover.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaServiceAccountWorkspaceMember of client.beta.organization.serviceAccounts.workspaces.list(
+     *   'service_account_id',
+     * )) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(serviceAccountID, params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList(path `/v1/organizations/service_accounts/${serviceAccountID}/workspaces?beta=true`, (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Add a service account to a workspace with the given `workspace_role`.
+     *
+     * Mirror of `POST /workspaces/{workspace_id}/service_accounts`, addressed from the
+     * service-account side; both create the same membership. If the service account is
+     * already an explicit member of the workspace, its `workspace_role` is replaced
+     * with the value supplied here. Archived workspaces return 400. Archived service
+     * accounts cannot be added and are rejected.
+     *
+     * @example
+     * ```ts
+     * const betaServiceAccountWorkspaceMember =
+     *   await client.beta.organization.serviceAccounts.workspaces.add(
+     *     'service_account_id',
+     *     {
+     *       workspace_id: 'workspace_id',
+     *       workspace_role: 'workspace_admin',
+     *     },
+     *   );
+     * ```
+     */
+    add(serviceAccountID, params, options) {
+        const { betas, ...body } = params;
+        return this._client.post(path `/v1/organizations/service_accounts/${serviceAccountID}/workspaces?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Remove a service account from a workspace.
+     *
+     * Mirror of
+     * `DELETE /workspaces/{workspace_id}/service_accounts/{service_account_id}`,
+     * addressed from the service-account side. Removal is idempotent (returns 200 even
+     * if the membership was already removed). A DELETE against the implicit
+     * default-workspace membership returns 200 but is a no-op and the membership
+     * persists; deleting an explicit default-workspace row reverts to the implicit
+     * `workspace_user` membership. Archived workspaces return 400.
+     *
+     * @example
+     * ```ts
+     * const workspace =
+     *   await client.beta.organization.serviceAccounts.workspaces.remove(
+     *     'workspace_id',
+     *     { service_account_id: 'service_account_id' },
+     *   );
+     * ```
+     */
+    remove(workspaceID, params, options) {
+        const { service_account_id, betas } = params;
+        return this._client.delete(path `/v1/organizations/service_accounts/${service_account_id}/workspaces/${workspaceID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+}
+//# sourceMappingURL=workspaces.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/service-accounts/service-accounts.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+class ServiceAccounts extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.workspaces = new workspaces_Workspaces(this._client);
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Create a service account.
+     *
+     * A service account is a named workload identity that federation rules target.
+     * `organization_role` is `developer` (default) or `admin`; a rule may only be
+     * created or retargeted to grant `org:admin` scope when the target's
+     * `organization_role` is `admin`. Creating an `admin`-role service account
+     * requires an interactive credential (a user OAuth token or a Console session) — a
+     * workload may only create `developer`-role service accounts.
+     *
+     * @example
+     * ```ts
+     * const betaServiceAccount =
+     *   await client.beta.organization.serviceAccounts.create({
+     *     name: 'ci-deploy-bot',
+     *   });
+     * ```
+     */
+    create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post('/v1/organizations/service_accounts?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Retrieve a service account by its ID (`svac_...`).
+     *
+     * @example
+     * ```ts
+     * const betaServiceAccount =
+     *   await client.beta.organization.serviceAccounts.retrieve(
+     *     'service_account_id',
+     *   );
+     * ```
+     */
+    retrieve(serviceAccountID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.get(path `/v1/organizations/service_accounts/${serviceAccountID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Update a service account.
+     *
+     * Only `description` and `organization_role` are mutable; `name` cannot be
+     * changed. Archived service accounts cannot be updated; this returns 400. Setting
+     * `organization_role` to `admin` (even when unchanged) requires an interactive
+     * credential (a user OAuth token or a Console session).
+     *
+     * @example
+     * ```ts
+     * const betaServiceAccount =
+     *   await client.beta.organization.serviceAccounts.update(
+     *     'service_account_id',
+     *   );
+     * ```
+     */
+    update(serviceAccountID, params, options) {
+        const { betas, ...body } = params;
+        return this._client.post(path `/v1/organizations/service_accounts/${serviceAccountID}?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * List service accounts in the caller's organization.
+     *
+     * Results are ordered by creation time, newest first. Use `limit` and the
+     * `next_page` cursor to paginate; set `include_archived=true` to include archived
+     * service accounts.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaServiceAccount of client.beta.organization.serviceAccounts.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList('/v1/organizations/service_accounts?beta=true', (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Archive a service account.
+     *
+     * Idempotent; re-archiving returns the service account with its original
+     * `archived_at`. Rejected with 400 if any live (non-archived) federation rule
+     * still targets this service account, same as issuer archival; archive those rules
+     * first or change their target to another service account.
+     *
+     * @example
+     * ```ts
+     * const betaServiceAccount =
+     *   await client.beta.organization.serviceAccounts.archive(
+     *     'service_account_id',
+     *   );
+     * ```
+     */
+    archive(serviceAccountID, params = {}, options) {
+        const { betas } = params ?? {};
+        return this._client.post(path `/v1/organizations/service_accounts/${serviceAccountID}/archive?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+}
+ServiceAccounts.Workspaces = workspaces_Workspaces;
+//# sourceMappingURL=service-accounts.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/workspaces/members.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+class Members extends APIResource {
+    /**
+     * Get Workspace Member
+     *
+     * @example
+     * ```ts
+     * const betaWorkspaceMember =
+     *   await client.beta.organization.workspaces.members.retrieve(
+     *     'user_id',
+     *     { workspace_id: 'workspace_id' },
+     *   );
+     * ```
+     */
+    retrieve(userID, params, options) {
+        const { workspace_id } = params;
+        return this._client.get(path `/v1/organizations/workspaces/${workspace_id}/members/${userID}?beta=true`, options);
+    }
+    /**
+     * Update Workspace Member
+     *
+     * @example
+     * ```ts
+     * const betaWorkspaceMember =
+     *   await client.beta.organization.workspaces.members.update(
+     *     'user_id',
+     *     {
+     *       workspace_id: 'workspace_id',
+     *       workspace_role: 'workspace_admin',
+     *     },
+     *   );
+     * ```
+     */
+    update(userID, params, options) {
+        const { workspace_id, ...body } = params;
+        return this._client.post(path `/v1/organizations/workspaces/${workspace_id}/members/${userID}?beta=true`, {
+            body,
+            ...options,
+        });
+    }
+    /**
+     * List Workspace Members
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaWorkspaceMember of client.beta.organization.workspaces.members.list(
+     *   'workspace_id',
+     * )) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(workspaceID, query = {}, options) {
+        return this._client.getAPIList(path `/v1/organizations/workspaces/${workspaceID}/members?beta=true`, (Page), { query, ...options });
+    }
+    /**
+     * Create Workspace Member
+     *
+     * @example
+     * ```ts
+     * const betaWorkspaceMember =
+     *   await client.beta.organization.workspaces.members.add(
+     *     'workspace_id',
+     *     {
+     *       user_id: 'user_01WCz1FkmYMm4gnmykNKUu3Q',
+     *       workspace_role: 'workspace_admin',
+     *     },
+     *   );
+     * ```
+     */
+    add(workspaceID, body, options) {
+        return this._client.post(path `/v1/organizations/workspaces/${workspaceID}/members?beta=true`, {
+            body,
+            ...options,
+        });
+    }
+    /**
+     * Delete Workspace Member
+     *
+     * @example
+     * ```ts
+     * const member =
+     *   await client.beta.organization.workspaces.members.remove(
+     *     'user_id',
+     *     { workspace_id: 'workspace_id' },
+     *   );
+     * ```
+     */
+    remove(userID, params, options) {
+        const { workspace_id } = params;
+        return this._client.delete(path `/v1/organizations/workspaces/${workspace_id}/members/${userID}?beta=true`, options);
+    }
+}
+//# sourceMappingURL=members.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/workspaces/rate-limits.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+class rate_limits_RateLimits extends APIResource {
+    /**
+     * List rate-limit overrides configured for a workspace.
+     *
+     * Returns only the groups and limiter types that have a workspace-level override.
+     * Groups without overrides inherit the organization limits and are not listed; use
+     * `GET /v1/organizations/rate_limits` to see those.
+     *
+     * This endpoint currently returns every matching entry in a single page regardless
+     * of `limit`; follow `next_page` so that clients keep working when pagination is
+     * enabled.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaWorkspaceRateLimit of client.beta.organization.workspaces.rateLimits.list(
+     *   'workspace_id',
+     * )) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(workspaceID, query = {}, options) {
+        return this._client.getAPIList(path `/v1/organizations/workspaces/${workspaceID}/rate_limits?beta=true`, (PageCursor), { query, ...options });
+    }
+}
+//# sourceMappingURL=rate-limits.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/workspaces/service-accounts.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+class service_accounts_ServiceAccounts extends APIResource {
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Retrieve a service account's membership in a workspace.
+     *
+     * Returns the membership record, including the service account's `workspace_role`
+     * in this workspace. Archived workspaces return 400. For the default workspace,
+     * returns the implicit (`implicit: true`) membership when no explicit membership
+     * exists; an explicitly added membership is returned with its assigned role. An
+     * archived service account returns 404.
+     *
+     * @example
+     * ```ts
+     * const betaServiceAccountWorkspaceMember =
+     *   await client.beta.organization.workspaces.serviceAccounts.retrieve(
+     *     'service_account_id',
+     *     { workspace_id: 'workspace_id' },
+     *   );
+     * ```
+     */
+    retrieve(serviceAccountID, params, options) {
+        const { workspace_id, betas } = params;
+        return this._client.get(path `/v1/organizations/workspaces/${workspace_id}/service_accounts/${serviceAccountID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Change a service account's role in a workspace.
+     *
+     * The new `workspace_role` replaces the current one. Only explicit memberships can
+     * be updated; to set a role on the implicit default-workspace membership, add the
+     * service account explicitly with
+     * `POST /workspaces/{workspace_id}/service_accounts`. Archived workspaces
+     * return 400. Archived service accounts cannot be updated and are rejected.
+     *
+     * @example
+     * ```ts
+     * const betaServiceAccountWorkspaceMember =
+     *   await client.beta.organization.workspaces.serviceAccounts.update(
+     *     'service_account_id',
+     *     {
+     *       workspace_id: 'workspace_id',
+     *       workspace_role: 'workspace_admin',
+     *     },
+     *   );
+     * ```
+     */
+    update(serviceAccountID, params, options) {
+        const { workspace_id, betas, ...body } = params;
+        return this._client.post(path `/v1/organizations/workspaces/${workspace_id}/service_accounts/${serviceAccountID}?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * List the service accounts that are members of a workspace.
+     *
+     * Each entry includes the service account's `workspace_role`. Use `limit` and the
+     * `next_page` cursor to paginate. Archived workspaces return 400; use
+     * `GET /service_accounts/{id}/workspaces` to audit memberships of an archived
+     * workspace. The implicit default-workspace membership is not included in this
+     * list. Memberships of archived service accounts are omitted from the results.
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaServiceAccountWorkspaceMember of client.beta.organization.workspaces.serviceAccounts.list(
+     *   'workspace_id',
+     * )) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(workspaceID, params = {}, options) {
+        const { betas, ...query } = params ?? {};
+        return this._client.getAPIList(path `/v1/organizations/workspaces/${workspaceID}/service_accounts?beta=true`, (PageCursor), {
+            query,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Add a service account to a workspace with the given `workspace_role`.
+     *
+     * The role determines what the service account can do in the workspace and which
+     * workspace-scoped permissions it can be granted when authenticating through
+     * federation. Every service account is already an implicit `workspace_user` member
+     * of the default workspace; adding it explicitly assigns a chosen role. If the
+     * service account is already an explicit member of the workspace, its
+     * `workspace_role` is replaced with the value supplied here. Archived workspaces
+     * return 400. Archived service accounts cannot be added and are rejected.
+     *
+     * @example
+     * ```ts
+     * const betaServiceAccountWorkspaceMember =
+     *   await client.beta.organization.workspaces.serviceAccounts.add(
+     *     'workspace_id',
+     *     {
+     *       service_account_id: 'service_account_id',
+     *       workspace_role: 'workspace_admin',
+     *     },
+     *   );
+     * ```
+     */
+    add(workspaceID, params, options) {
+        const { betas, ...body } = params;
+        return this._client.post(path `/v1/organizations/workspaces/${workspaceID}/service_accounts?beta=true`, {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * **Requires an OAuth access token with the `org:admin` scope**, from
+     * `ant auth login --scope org:admin` or a workload identity federation rule; Admin
+     * API keys are not accepted. See
+     * [Manage WIF with the Admin API](/docs/en/manage-claude/wif-admin-api).
+     *
+     * Remove a service account from a workspace.
+     *
+     * Removal is idempotent (returns 200 even if the membership was already removed).
+     * A DELETE against the implicit default-workspace membership returns 200 but is a
+     * no-op and the membership persists; deleting an explicit default-workspace row
+     * reverts to the implicit `workspace_user` membership. Archived workspaces
+     * return 400.
+     *
+     * @example
+     * ```ts
+     * const serviceAccount =
+     *   await client.beta.organization.workspaces.serviceAccounts.remove(
+     *     'service_account_id',
+     *     { workspace_id: 'workspace_id' },
+     *   );
+     * ```
+     */
+    remove(serviceAccountID, params, options) {
+        const { workspace_id, betas } = params;
+        return this._client.delete(path `/v1/organizations/workspaces/${workspace_id}/service_accounts/${serviceAccountID}?beta=true`, {
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+}
+//# sourceMappingURL=service-accounts.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/workspaces/workspaces.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+
+
+
+
+class workspaces_workspaces_Workspaces extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.rateLimits = new rate_limits_RateLimits(this._client);
+        this.members = new Members(this._client);
+        this.serviceAccounts = new service_accounts_ServiceAccounts(this._client);
+    }
+    /**
+     * Create Workspace
+     *
+     * @example
+     * ```ts
+     * const betaWorkspace =
+     *   await client.beta.organization.workspaces.create({
+     *     name: 'x',
+     *   });
+     * ```
+     */
+    create(params, options) {
+        const { betas, ...body } = params;
+        return this._client.post('/v1/organizations/workspaces?beta=true', {
+            body,
+            ...options,
+            headers: buildHeaders([
+                { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+                options?.headers,
+            ]),
+        });
+    }
+    /**
+     * Get Workspace
+     *
+     * @example
+     * ```ts
+     * const betaWorkspace =
+     *   await client.beta.organization.workspaces.retrieve(
+     *     'workspace_id',
+     *   );
+     * ```
+     */
+    retrieve(workspaceID, options) {
+        return this._client.get(path `/v1/organizations/workspaces/${workspaceID}?beta=true`, options);
+    }
+    /**
+     * Update Workspace
+     *
+     * @example
+     * ```ts
+     * const betaWorkspace =
+     *   await client.beta.organization.workspaces.update(
+     *     'workspace_id',
+     *   );
+     * ```
+     */
+    update(workspaceID, body, options) {
+        return this._client.post(path `/v1/organizations/workspaces/${workspaceID}?beta=true`, {
+            body,
+            ...options,
+        });
+    }
+    /**
+     * List Workspaces
+     *
+     * @example
+     * ```ts
+     * // Automatically fetches more pages as needed.
+     * for await (const betaWorkspace of client.beta.organization.workspaces.list()) {
+     *   // ...
+     * }
+     * ```
+     */
+    list(query = {}, options) {
+        return this._client.getAPIList('/v1/organizations/workspaces?beta=true', (Page), {
+            query,
+            ...options,
+        });
+    }
+    /**
+     * Archive Workspace
+     *
+     * @example
+     * ```ts
+     * const betaWorkspace =
+     *   await client.beta.organization.workspaces.archive(
+     *     'workspace_id',
+     *   );
+     * ```
+     */
+    archive(workspaceID, options) {
+        return this._client.post(path `/v1/organizations/workspaces/${workspaceID}/archive?beta=true`, options);
+    }
+}
+workspaces_workspaces_Workspaces.RateLimits = rate_limits_RateLimits;
+workspaces_workspaces_Workspaces.Members = Members;
+workspaces_workspaces_Workspaces.ServiceAccounts = service_accounts_ServiceAccounts;
+//# sourceMappingURL=workspaces.mjs.map
+;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/organization/organization.mjs
+// File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class Organization extends APIResource {
+    constructor() {
+        super(...arguments);
+        this.apiKeys = new APIKeys(this._client);
+        this.externalKeys = new ExternalKeys(this._client);
+        this.federation = new Federation(this._client);
+        this.invites = new Invites(this._client);
+        this.serviceAccounts = new ServiceAccounts(this._client);
+        this.users = new Users(this._client);
+        this.workspaces = new workspaces_workspaces_Workspaces(this._client);
+        this.rateLimits = new RateLimits(this._client);
+    }
+    /**
+     * Retrieve information about the organization associated with the authenticated
+     * API key.
+     *
+     * @example
+     * ```ts
+     * const betaOrganization =
+     *   await client.beta.organization.retrieve();
+     * ```
+     */
+    retrieve(options) {
+        return this._client.get('/v1/organizations/me?beta=true', options);
+    }
+}
+Organization.APIKeys = APIKeys;
+Organization.ExternalKeys = ExternalKeys;
+Organization.Federation = Federation;
+Organization.Invites = Invites;
+Organization.ServiceAccounts = ServiceAccounts;
+Organization.Users = Users;
+Organization.Workspaces = workspaces_workspaces_Workspaces;
+Organization.RateLimits = RateLimits;
+//# sourceMappingURL=organization.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/beta/sessions/events.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
 
@@ -23504,6 +25126,8 @@ Vaults.Credentials = Credentials;
 
 
 
+
+
 class Beta extends APIResource {
     constructor() {
         super(...arguments);
@@ -23522,6 +25146,7 @@ class Beta extends APIResource {
         this.userProfiles = new UserProfiles(this._client);
         this.dreams = new Dreams(this._client);
         this.tunnels = new Tunnels(this._client);
+        this.organization = new Organization(this._client);
     }
 }
 Beta.Models = Models;
@@ -23539,6 +25164,7 @@ Beta.Webhooks = Webhooks;
 Beta.UserProfiles = UserProfiles;
 Beta.Dreams = Dreams;
 Beta.Tunnels = Tunnels;
+Beta.Organization = Organization;
 //# sourceMappingURL=beta.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/completions.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -23674,6 +25300,7 @@ function parseOutputFormat(params, content) {
 //# sourceMappingURL=parser.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/lib/MessageStream.mjs
 var _MessageStream_instances, _MessageStream_currentMessageSnapshot, _MessageStream_params, _MessageStream_connectedPromise, _MessageStream_resolveConnectedPromise, _MessageStream_rejectConnectedPromise, _MessageStream_endPromise, _MessageStream_resolveEndPromise, _MessageStream_rejectEndPromise, _MessageStream_listeners, _MessageStream_ended, _MessageStream_errored, _MessageStream_aborted, _MessageStream_catchingPromiseCreated, _MessageStream_response, _MessageStream_request_id, _MessageStream_workspace_id, _MessageStream_logger, _MessageStream_getFinalMessage, _MessageStream_getFinalText, _MessageStream_handleError, _MessageStream_beginRequest, _MessageStream_addStreamEvent, _MessageStream_endRequest, _MessageStream_accumulateMessage;
+
 
 
 
@@ -24078,7 +25705,7 @@ class MessageStream {
                         break;
                     }
                     default:
-                        MessageStream_checkNever(event.delta);
+                        (0,utils_values/* checkNever */.f2)(event.delta);
                 }
                 break;
             }
@@ -24199,7 +25826,7 @@ class MessageStream {
                         break;
                     }
                     default:
-                        MessageStream_checkNever(event.delta);
+                        (0,utils_values/* checkNever */.f2)(event.delta);
                 }
                 return snapshot;
             }
@@ -24272,8 +25899,6 @@ class MessageStream {
         return stream.toReadableStream();
     }
 }
-// used to ensure exhaustive case matching without throwing a runtime error
-function MessageStream_checkNever(x) { }
 //# sourceMappingURL=MessageStream.mjs.map
 ;// CONCATENATED MODULE: ./node_modules/@anthropic-ai/sdk/resources/messages/batches.mjs
 // File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
@@ -27315,6 +28940,7 @@ function stringifyQuery(query) {
 /* harmony export */   $3: () => (/* binding */ hasOwn),
 /* harmony export */   MH: () => (/* binding */ isReadonlyArray),
 /* harmony export */   cy: () => (/* binding */ isArray),
+/* harmony export */   f2: () => (/* binding */ checkNever),
 /* harmony export */   i8: () => (/* binding */ maybeObj),
 /* harmony export */   ml: () => (/* binding */ safeJSON),
 /* harmony export */   nt: () => (/* binding */ isAbsoluteURL),
@@ -27423,6 +29049,12 @@ const pop = (obj, key) => {
     delete obj[key];
     return value;
 };
+/**
+ * Compile-time exhaustiveness check: passing a value here only type-checks once every
+ * member of its union has been handled. Does nothing at runtime, so unknown values from a
+ * newer API version fall through instead of throwing.
+ */
+function checkNever(_value) { }
 //# sourceMappingURL=values.mjs.map
 
 /***/ }),
@@ -53745,8 +55377,8 @@ var esm = __nccwpck_require__(9519);
 var loader = __nccwpck_require__(3833);
 // EXTERNAL MODULE: ./runners/core/skill-cache.mjs
 var skill_cache = __nccwpck_require__(7328);
-// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 85 modules
-var sdk = __nccwpck_require__(3545);
+// EXTERNAL MODULE: ./node_modules/@anthropic-ai/sdk/index.mjs + 101 modules
+var sdk = __nccwpck_require__(9240);
 ;// CONCATENATED MODULE: ./node_modules/@google/generative-ai/dist/index.mjs
 /**
  * Contains the list of OpenAPI data types
