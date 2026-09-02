@@ -8,15 +8,15 @@
 
 `main` の branch protection が要求する必須チェックは 7 件です。うち 6 件は `test.yml`（ワークフロー名 `CI`）のジョブで、残る 1 件が `blocked-label-guard.yml` の `Blocked label guard` です。
 
-| 必須チェック名 (context)  | ワークフロー                                       | ジョブキー            | 実行内容                                                                                 |
-| ------------------------- | -------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------- |
-| `Lint`                    | `test.yml`（`CI`）                                 | `lint`                | `npm run lint`                                                                           |
+| 必須チェック名 (context)  | ワークフロー                                       | ジョブキー            | 実行内容                                                                                                                 |
+| ------------------------- | -------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `Lint`                    | `test.yml`（`CI`）                                 | `lint`                | `npm run lint`                                                                                                           |
 | `Unit tests (22.x)`       | `test.yml`（`CI`）                                 | `test`                | `npm test`（`package.json` の `test` が `--experimental-test-isolation=none` を持つ）とカバレッジの Codecov アップロード |
-| `Skill schema validation` | `test.yml`（`CI`）                                 | `skill-validation`    | skill / promptfoo / agent-skill / 参照 / manifest / registry の 6 検証                   |
-| `Meta consistency`        | `test.yml`（`CI`）                                 | `meta-check`          | `npm run meta:validate` と `npm run plugin:validate`                                     |
-| `Action dist freshness`   | `test.yml`（`CI`）                                 | `dist-check`          | `dist/` を触る変更、および鮮度判定で古いと出た変更を再ビルドしてバイト比較               |
-| `Integration (CLI)`       | `test.yml`（`CI`）                                 | `integration-test`    | `tests/integration/local-review.test.mjs`                                                |
-| `Blocked label guard`     | `blocked-label-guard.yml`（`Blocked Label Guard`） | `blocked-label-guard` | `blocked` などマージ阻止ラベルの有無を event payload から判定する                        |
+| `Skill schema validation` | `test.yml`（`CI`）                                 | `skill-validation`    | skill / promptfoo / agent-skill / 参照 / manifest / registry の 6 検証                                                   |
+| `Meta consistency`        | `test.yml`（`CI`）                                 | `meta-check`          | `npm run meta:validate` と `npm run plugin:validate`                                                                     |
+| `Action dist freshness`   | `test.yml`（`CI`）                                 | `dist-check`          | `dist/` を触る変更、および鮮度判定で古いと出た変更を再ビルドしてバイト比較                                               |
+| `Integration (CLI)`       | `test.yml`（`CI`）                                 | `integration-test`    | `tests/integration/local-review.test.mjs`                                                                                |
+| `Blocked label guard`     | `blocked-label-guard.yml`（`Blocked Label Guard`） | `blocked-label-guard` | `blocked` などマージ阻止ラベルの有無を event payload から判定する                                                        |
 
 間違えやすい点が 3 つあります。
 
