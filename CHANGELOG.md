@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.89.2](https://github.com/s977043/river-review/compare/v1.89.1...v1.89.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* **ci:** [#1997](https://github.com/s977043/river-review/issues/1997) Weekly GC のテスト実行を単一プロセス分離にそろえる ([#2002](https://github.com/s977043/river-review/issues/2002)) ([6ea345f](https://github.com/s977043/river-review/commit/6ea345f5b7cdd8fafc63c06fafc2c5640de0d7dd))
+
 ## [1.89.1](https://github.com/s977043/river-review/compare/v1.89.0...v1.89.1) (2026-08-28)
 
 
