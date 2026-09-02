@@ -28,7 +28,7 @@ npm run agent-skills:validate
 
 ### テスト構成
 
-`npm test` は `node --test` で `tests/**/*.test.mjs` を実行する。レイアウトは:
+`npm test` は `node --experimental-test-isolation=none --test` で `tests/**/*.test.mjs` を実行する。isolation フラグは #1415 の `Unable to deserialize cloned data` flake（node:test の子プロセス IPC バグ）を避けるため npm script 側に置いており、`npm test` を経由する呼び出しはすべてこの保護を受ける。レイアウトは:
 
 - `tests/*.test.mjs`—ユニットテスト本体（フラット配置）
 - `tests/core/`—コアロジック単位のユニットテスト

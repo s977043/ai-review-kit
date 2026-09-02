@@ -27,7 +27,7 @@
     "build": "docusaurus build",
     "serve": "docusaurus serve",
     "assets:social": "node scripts/build-social-assets.mjs",
-    "test": "node --test",
+    "test": "node --experimental-test-isolation=none --test",
     "lint:md": "markdownlint '**/*.md' --ignore node_modules",
     "lint:text": "textlint 'pages/**/*.md' 'docs/**/*.md' 'README*.md'",
     "check:dashes": "node scripts/fix-dashes.mjs --check",

@@ -78,7 +78,7 @@ chmod +x .claude/hooks/no-force-push.sh
 
 `tests/no-force-push-hook.test.mjs` spawns the script with real PreToolUse JSON
 payloads on stdin and asserts the exit code for every blocked and allowed
-command: `node --test tests/no-force-push-hook.test.mjs`
+command: `npm test -- tests/no-force-push-hook.test.mjs`
 
 ## gh-account-guard.sh
 
@@ -123,7 +123,7 @@ chmod +x .claude/hooks/gh-account-guard.sh
 ### Tests
 
 `tests/gh-account-guard-hook.test.mjs` runs the script with a stubbed `gh` on
-PATH (never touches the real keyring): `node --test tests/gh-account-guard-hook.test.mjs`
+PATH (never touches the real keyring): `npm test -- tests/gh-account-guard-hook.test.mjs`
 
 ### Hook input contract
 

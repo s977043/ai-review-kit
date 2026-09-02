@@ -49,12 +49,15 @@ jobs:
       # node:test child→parent IPC (structured-clone) bug that is independent of
       # coverage. `--experimental-test-isolation=none` runs every test file in a
       # single process, removing the child→parent IPC entirely — the root cause,
-      # not just the coverage aggravator. This flag does not exist on Node 20.x,
-      # which is EOL (2026-04), so the matrix is pinned to 22.x. The full suite
-      # passes under single-process isolation (verified: no shared-state
-      # pollution). Coverage is safe to collect now (no children to serialize).
+      # not just the coverage aggravator. The flag now lives in the `test` npm
+      # script (package.json), which is the single source of truth so that every
+      # caller — CI jobs, PR templates, and local runs — gets it. This flag does
+      # not exist on Node 20.x, which is EOL (2026-04), so the matrix is pinned
+      # to 22.x. The full suite passes under single-process isolation (verified:
+      # no shared-state pollution). Coverage is safe to collect now (no children
+      # to serialize).
       - name: Run unit tests (single-process isolation, #1415)
-        run: NODE_V8_COVERAGE=coverage node --experimental-test-isolation=none --test
+        run: NODE_V8_COVERAGE=coverage npm test
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
