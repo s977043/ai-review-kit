@@ -35,7 +35,7 @@ import test, { describe } from 'node:test';
 import * as yaml from 'js-yaml';
 
 import { runCliAsSubprocess } from './helpers/cli.mjs';
-import { createTempGitRepo } from './helpers/temp-repo.mjs';
+import { createRepoWithSilentCatchChange } from './helpers/temp-repo.mjs';
 
 /**
  * 既定 phase（midstream）と異なる 2 値。1 値だけだと「別の定数を直書きした」
@@ -43,23 +43,9 @@ import { createTempGitRepo } from './helpers/temp-repo.mjs';
  */
 const NON_DEFAULT_PHASES = ['upstream', 'downstream'];
 
-/** レビュー対象の差分を持つ一時リポジトリ。 */
+/** レビュー対象の差分を持つ一時リポジトリ。fixture の SSoT は helpers/temp-repo.mjs 側。 */
 function createRepoWithChange() {
-  return createTempGitRepo({
-    prefix: 'river-phase-propagation-',
-    initialFiles: { 'src/app.js': 'export const value = 1;\n' },
-    changedFiles: {
-      'src/app.js': `export const value = 2;
-export function run() {
-  try {
-    work();
-  } catch (e) {
-    return;
-  }
-}
-`,
-    },
-  });
+  return createRepoWithSilentCatchChange({ prefix: 'river-phase-propagation-' });
 }
 
 /**
