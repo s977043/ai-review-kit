@@ -51293,7 +51293,7 @@ async function searchSymbolUsages({ symbols, repoRoot, excludeFiles, maxChars })
 
 /***/ }),
 
-/***/ 7988:
+/***/ 9669:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 
@@ -51328,6 +51328,811 @@ var secret_redactor = __nccwpck_require__(12);
 var llm_pipeline = __nccwpck_require__(7303);
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
 var diff_processor = __nccwpck_require__(861);
+// EXTERNAL MODULE: ./src/lib/verifier.mjs
+var verifier = __nccwpck_require__(9341);
+;// CONCATENATED MODULE: ./src/lib/finding-critic.mjs
+/**
+ * Finding Critic — deterministic skeleton of the Evidence-Grounded Adversarial
+ * Review protocol (#1978 Phase 1a).
+ *
+ * SCOPE OF THIS MODULE
+ * --------------------
+ * Deterministic only. This module never calls an LLM. It parses a Critic
+ * response that some caller obtained elsewhere, runs the Reviewer response
+ * state machine over it, and applies the convergence and fail-safe rules.
+ * The LLM boundary lives outside; Phase 1b specifies the real 3-value verdict
+ * behaviour and Phase 3 would wire this into the orchestrator. Nothing here is
+ * reachable from `src/cli/**` by design.
+ *
+ * WHAT THIS MODULE DELIBERATELY DOES NOT REIMPLEMENT
+ * --------------------------------------------------
+ * - `verifyFinding` (src/lib/verifier.mjs) already rejects: missing evidence,
+ *   evidence path absent from the diff, incoherent phase, non-actionable
+ *   suggestion, unjustified severity. This module IMPORTS it and consumes its
+ *   result; it does not re-derive any of those checks.
+ * - `prefilterFindings` (src/lib/finding-factory.mjs:513) already suppresses
+ *   low_confidence / insufficient_evidence / style_only / duplicate.
+ * - `mergeFindings` (src/lib/reviewer-orchestrator.mjs) already owns dedup and
+ *   `agreement` provenance.
+ * - line mismatch and scope mismatch stay METADATA ONLY (#1644 Phase 1,
+ *   verifier.mjs:308-309). This module never promotes them to a rejection.
+ *
+ * VOCABULARY NOTE (#1978 Phase 0 note § 1.2)
+ * ------------------------------------------
+ * The issue proposed `scope: IN_SCOPE / SCOPE_UNCERTAIN / OUT_OF_SCOPE`. The
+ * key `scope` is already shipped with the value vocabulary
+ * `in-diff / pre-existing`, and `normalizeScope` silently coerces an unknown
+ * value to `in-diff` — an undetectable miscast, with the fail-safe pointing the
+ * opposite way. This module therefore uses a distinct axis, `askRelevance`,
+ * with hyphen-lowercase values matching every other finding enum.
+ *
+ * FAIL-SAFE INVARIANT
+ * -------------------
+ * No degraded path may produce a "clean" outcome. Timeout, parse failure,
+ * inner-loop cap, and a Critic dismissal that contradicts the deterministic
+ * verifier all keep the finding (`retainFinding: true`) and raise
+ * `humanReview: true`. A silent Critic must never look like an approval.
+ */
+
+
+
+/** Protocol identifier written into artifacts and prompts. */
+const finding_critic_PROTOCOL_ID = 'evidence-grounded-adversarial-v1';
+
+/** Internal module id. Chosen in Phase 0 note § 3.2; collides with no skill id. */
+const MODULE_ID = 'finding-critic';
+
+/** Critic verdict vocabulary. Wire format is uppercase, as in the paper. */
+const finding_critic_CRITIC_VERDICT = Object.freeze({
+  AGREE: 'AGREE',
+  DISAGREE_EVIDENCE: 'DISAGREE_EVIDENCE',
+  DISAGREE_CONCERN: 'DISAGREE_CONCERN',
+});
+
+/** Reviewer response vocabulary. */
+const finding_critic_REVIEWER_ACTION = Object.freeze({
+  KEEP: 'KEEP',
+  REVISE: 'REVISE',
+  WITHDRAW: 'WITHDRAW',
+});
+
+/**
+ * Relevance of a finding to the original ask. A separate axis from `scope`
+ * (`in-diff` / `pre-existing`); the two are orthogonal.
+ */
+const finding_critic_ASK_RELEVANCE = Object.freeze({
+  IN_ASK: 'in-ask',
+  UNCERTAIN: 'uncertain',
+  OUT_OF_ASK: 'out-of-ask',
+});
+
+const ASK_RELEVANCE_VALUES = new Set(Object.values(finding_critic_ASK_RELEVANCE));
+
+/**
+ * Terminal state of one finding after validation.
+ *
+ * This vocabulary is written to `validation.finalStatus` — a SEPARATE key from
+ * the schema's `validatedStatus` (`schemas/review-artifact.schema.json:455`).
+ * The two sets only partially overlap, and nothing here is written to
+ * `validatedStatus`. Do not wire one into the other without reconciling both
+ * enums first.
+ */
+const FINAL_STATUS = Object.freeze({
+  CONFIRMED: 'confirmed',
+  WITHDRAWN_BY_REVIEWER: 'withdrawn-by-reviewer',
+  DISMISSED_BY_EVIDENCE: 'dismissed-by-evidence',
+  // Borrows the SPELLING of the existing `validatedStatus` value for
+  // deterministic evidence rejects, so the two vocabularies stay readable
+  // side by side. It is still emitted under `validation.finalStatus`.
+  DISMISSED_HALLUCINATION: 'dismissed-hallucination',
+  NEEDS_HUMAN_JUDGMENT: 'needs-human-judgment',
+  OUT_OF_ASK: 'out-of-ask',
+  CRITIC_TIMEOUT: 'critic-timeout',
+});
+
+/** Default number of Reviewer↔Critic rounds. */
+const DEFAULT_MAX_INNER_ROUNDS = 2;
+
+/** Absolute ceiling; `maxInnerRounds` is clamped to it. */
+const HARD_CAP_INNER_ROUNDS = 5;
+
+/** Reason codes attached to fail-safe outcomes. */
+const FAILSAFE_REASON = Object.freeze({
+  CRITIC_TIMEOUT: 'critic-timeout',
+  CRITIC_PARSE_FAILURE: 'critic-parse-failure',
+  DETERMINISTIC_MISSING: 'deterministic-missing',
+  EXCHANGES_EXHAUSTED: 'exchanges-exhausted',
+  REVIEWER_PARSE_FAILURE: 'reviewer-parse-failure',
+  KEEP_WITHOUT_EVIDENCE: 'keep-without-evidence',
+  INNER_LOOP_CAP_REACHED: 'inner-loop-cap-reached',
+  DETERMINISTIC_CONTRADICTION: 'deterministic-contradiction',
+  ASK_RELEVANCE_UNCERTAIN: 'ask-relevance-uncertain',
+  AGREEMENT_WITHOUT_EVIDENCE: 'agreement-without-evidence',
+});
+
+// ---------------------------------------------------------------------------
+// Parsing
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse the minimal `key: value` block the protocol asks a Critic to emit.
+ * Supports scalars plus one `evidence:` list of `- artifact: …` items.
+ * @param {string} text
+ * @returns {Record<string, unknown>}
+ */
+function parseBlock(text) {
+  /** @type {Record<string, unknown>} */
+  const out = {};
+  /** @type {Array<Record<string, string>>} */
+  const evidence = [];
+  let inEvidence = false;
+  /** @type {Record<string, string> | null} */
+  let current = null;
+
+  for (const rawLine of String(text).split('\n')) {
+    const line = rawLine.replace(/\s+$/u, '');
+    if (line.trim() === '') continue;
+    const indented = /^\s/u.test(line);
+    const trimmed = line.trim();
+
+    if (!indented && /^evidence:\s*$/iu.test(trimmed)) {
+      inEvidence = true;
+      current = null;
+      continue;
+    }
+    if (!indented && /^evidence:\s*\[\s*\]$/iu.test(trimmed)) {
+      inEvidence = false;
+      current = null;
+      continue;
+    }
+
+    if (inEvidence && trimmed.startsWith('- ')) {
+      current = {};
+      evidence.push(current);
+      const item = trimmed.slice(2).trim();
+      const m = /^([\w.-]+):\s*(.*)$/u.exec(item);
+      if (m) current[m[1]] = m[2].trim();
+      continue;
+    }
+    if (inEvidence && indented && current) {
+      const m = /^([\w.-]+):\s*(.*)$/u.exec(trimmed);
+      if (m) current[m[1]] = m[2].trim();
+      continue;
+    }
+
+    const m = /^([\w.-]+):\s*(.*)$/u.exec(trimmed);
+    if (!m) continue;
+    inEvidence = false;
+    current = null;
+    out[m[1]] = m[2].trim();
+  }
+
+  if (evidence.length > 0) out.evidence = evidence;
+  return out;
+}
+
+/**
+ * Coerce a raw Critic payload (JSON string, protocol block, or object) into a
+ * plain object. Returns null when nothing usable can be read.
+ * @param {unknown} raw
+ * @returns {Record<string, unknown> | null}
+ */
+function coerceToObject(raw) {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    return /** @type {Record<string, unknown>} */ (raw);
+  }
+  if (typeof raw !== 'string') return null;
+  const text = raw.trim();
+  if (text === '') return null;
+  if (text.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+  const block = parseBlock(text);
+  return Object.keys(block).length === 0 ? null : block;
+}
+
+/**
+ * Read a field under either snake_case or camelCase.
+ * @param {Record<string, unknown>} obj
+ * @param {string} snake
+ * @param {string} camel
+ * @returns {unknown}
+ */
+function pick(obj, snake, camel) {
+  return obj[snake] !== undefined ? obj[snake] : obj[camel];
+}
+
+/**
+ * Normalize a Critic evidence list into `{ artifact, lineStart, lineEnd, observation }`.
+ * Entries without an artifact path are dropped: an evidence citation that
+ * points at nothing cannot ground a disagreement.
+ * @param {unknown} raw
+ * @returns {Array<{ artifact: string, lineStart: number | null, lineEnd: number | null, observation: string }>}
+ */
+function normalizeEvidenceList(raw) {
+  if (!Array.isArray(raw)) return [];
+  const toInt = (/** @type {unknown} */ v) => {
+    const n = Number.parseInt(String(v ?? ''), 10);
+    return Number.isFinite(n) ? n : null;
+  };
+  return raw
+    .map((item) => {
+      if (typeof item === 'string') {
+        return { artifact: item.trim(), lineStart: null, lineEnd: null, observation: '' };
+      }
+      if (!item || typeof item !== 'object') return null;
+      const rec = /** @type {Record<string, unknown>} */ (item);
+      const artifact = String(rec.artifact ?? rec.file ?? rec.path ?? '').trim();
+      return {
+        artifact,
+        lineStart: toInt(pick(rec, 'line_start', 'lineStart')),
+        lineEnd: toInt(pick(rec, 'line_end', 'lineEnd')),
+        observation: String(rec.observation ?? '').trim(),
+      };
+    })
+    .filter((e) => e !== null && e.artifact !== '');
+}
+
+/**
+ * Parse a Critic response.
+ *
+ * Fail-safe: a parse failure NEVER yields a usable verdict. The caller gets
+ * `{ ok: false }` and `evaluateExchange` turns that into
+ * `needs-human-judgment`, never into a clean or dismissed finding.
+ *
+ * `askRelevance` falls back to `uncertain` (human-review candidate) when the
+ * field is missing or unrecognized — never to `in-ask`, so an unreadable
+ * relevance claim cannot smuggle a finding into revision instructions.
+ *
+ * `DISAGREE_EVIDENCE` without a usable evidence citation is downgraded to
+ * `DISAGREE_CONCERN`: an ungrounded disagreement must return the burden of
+ * proof to the Reviewer rather than dismiss the finding (design principle 2).
+ *
+ * @param {unknown} raw
+ * @returns {{ ok: true, response: { findingId: string, verdict: string, reason: string, evidence: Array<object>, askRelevance: string, downgraded: boolean } }
+ *          | { ok: false, errors: string[] }}
+ */
+function parseCriticResponse(raw) {
+  const obj = coerceToObject(raw);
+  if (obj === null) {
+    return { ok: false, errors: ['critic response is not parseable'] };
+  }
+
+  const verdictRaw = String(pick(obj, 'verdict', 'verdict') ?? '').trim();
+  const verdict = verdictRaw.toUpperCase();
+  if (!Object.hasOwn(finding_critic_CRITIC_VERDICT, verdict)) {
+    return { ok: false, errors: [`unknown verdict: ${JSON.stringify(verdictRaw)}`] };
+  }
+
+  // Same separator/case normalization as `normalizeScope`
+  // (src/lib/finding-factory.mjs:347-364), so `OUT_OF_ASK` and `out of ask`
+  // reach the canonical `out-of-ask`. Without it every uppercase emission
+  // collapsed to `uncertain` and the Scope Gate stopped discriminating.
+  //
+  // Deliberately NOT aliased: the issue's original `IN_SCOPE` / `OUT_OF_SCOPE`
+  // spellings normalize to `in-scope` / `out-of-scope`, which are not in the
+  // vocabulary and therefore land on `uncertain`. Accepting them would revive
+  // the very `scope` ambiguity this axis was renamed to remove.
+  const relRaw = String(pick(obj, 'ask_relevance', 'askRelevance') ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/gu, '-');
+  const askRelevance = ASK_RELEVANCE_VALUES.has(relRaw) ? relRaw : finding_critic_ASK_RELEVANCE.UNCERTAIN;
+
+  const evidence = normalizeEvidenceList(obj.evidence);
+  let finalVerdict = verdict;
+  let downgraded = false;
+  if (verdict === finding_critic_CRITIC_VERDICT.DISAGREE_EVIDENCE && evidence.length === 0) {
+    finalVerdict = finding_critic_CRITIC_VERDICT.DISAGREE_CONCERN;
+    downgraded = true;
+  }
+
+  return {
+    ok: true,
+    response: {
+      findingId: String(pick(obj, 'finding_id', 'findingId') ?? '').trim(),
+      verdict: finalVerdict,
+      reason: String(obj.reason ?? '').trim(),
+      evidence,
+      askRelevance,
+      downgraded,
+    },
+  };
+}
+
+/**
+ * Parse a Reviewer response. `KEEP` requires at least one evidence citation;
+ * a `KEEP` without evidence is not a valid response and is reported as such.
+ * @param {unknown} raw
+ * @returns {{ ok: true, response: { findingId: string, action: string, evidence: Array<object>, respondTo: string } }
+ *          | { ok: false, errors: string[] }}
+ */
+function parseReviewerResponse(raw) {
+  const obj = coerceToObject(raw);
+  if (obj === null) return { ok: false, errors: ['reviewer response is not parseable'] };
+
+  const action = String(obj.action ?? '')
+    .trim()
+    .toUpperCase();
+  if (!Object.hasOwn(finding_critic_REVIEWER_ACTION, action)) {
+    return { ok: false, errors: [`unknown action: ${JSON.stringify(obj.action ?? '')}`] };
+  }
+
+  const evidence = normalizeEvidenceList(obj.evidence);
+  if (action === finding_critic_REVIEWER_ACTION.KEEP && evidence.length === 0) {
+    return { ok: false, errors: ['KEEP requires evidence'] };
+  }
+
+  return {
+    ok: true,
+    response: {
+      findingId: String(pick(obj, 'finding_id', 'findingId') ?? '').trim(),
+      action,
+      evidence,
+      respondTo: String(pick(obj, 'response_to', 'responseTo') ?? '').trim(),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Deterministic pre-verification bridge
+// ---------------------------------------------------------------------------
+
+/**
+ * Run the existing deterministic verifier and decide whether the finding is
+ * worth an LLM Critic call at all.
+ *
+ * This is a thin adapter over `verifyFinding`; every check it reports comes
+ * from `src/lib/verifier.mjs`. Nothing is re-derived here.
+ *
+ * @param {{ finding: object, diff?: string, skill?: object, fileTypes?: object, diffFiles?: string[] }} input
+ * @returns {{ verified: boolean, sendToCritic: boolean, status: string | null, reasons: string[], checks: Record<string, boolean> }}
+ */
+function preVerifyFinding({ finding, diff, skill, fileTypes, diffFiles }) {
+  const result = verifyFinding({ finding, diff, skill, fileTypes, diffFiles });
+  if (result.verified) {
+    return {
+      verified: true,
+      sendToCritic: true,
+      status: null,
+      reasons: [],
+      checks: result.checks,
+    };
+  }
+  const hallucinatedEvidence =
+    result.checks.evidenceExists === false || result.checks.evidenceInDiff === false;
+  return {
+    verified: false,
+    sendToCritic: false,
+    status: hallucinatedEvidence
+      ? FINAL_STATUS.DISMISSED_HALLUCINATION
+      : FINAL_STATUS.DISMISSED_BY_EVIDENCE,
+    reasons: result.reasons,
+    checks: result.checks,
+  };
+}
+
+/**
+ * Shape of a citable file reference. Mirrors `RE_FILE_REF` in verifier.mjs but
+ * anchored, because here the whole `artifact` field must BE a path — not merely
+ * contain one somewhere in prose.
+ */
+const RE_ARTIFACT_PATH = /^[\w/-]+(?:\.[\w]+)+$/u;
+
+/**
+ * Is at least one artifact the Critic cited actually present in the diff?
+ *
+ * Two gates, in this order:
+ *
+ * 1. SHAPE (here). The `artifact` field must itself be a file path. This gate
+ *    exists because `verifyFinding`'s `evidenceInDiff` is deliberately LENIENT:
+ *    `verifier.mjs:100-102` returns true when the evidence cites no file at
+ *    all, and its `RE_EVIDENCE` needs 5+ characters before it matches. Borrowing
+ *    that check alone answers "does this contradict the diff?", which fails
+ *    OPEN — `nowhere`, `a.js`, and `the login handler` all came back grounded.
+ *    Grounding must fail CLOSED, so anything that is not a path is not grounded.
+ * 2. MEMBERSHIP (delegated). Whether the path appears in the diff stays with
+ *    `verifyFinding`; that remains the single source of truth and is not
+ *    re-derived here. The probe message is padded so the citation always clears
+ *    `RE_EVIDENCE`'s minimum length.
+ *
+ * @param {Array<{ artifact: string }>} evidence
+ * @param {string} diff
+ * @returns {boolean}
+ */
+function isCriticEvidenceGrounded(evidence, diff) {
+  if (!Array.isArray(evidence) || evidence.length === 0) return false;
+  return evidence.some((entry) => {
+    const artifact = String(entry?.artifact ?? '').trim();
+    if (!RE_ARTIFACT_PATH.test(artifact)) return false;
+    const probe = verifyFinding({
+      finding: { message: `Evidence: critic cited ${artifact}` },
+      diff,
+    });
+    return probe.checks.evidenceInDiff === true;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Outcome helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * @param {{ status: string, terminal?: boolean, humanReview?: boolean, retainFinding?: boolean, reasons?: string[], rounds?: number, askRelevance?: string }} init
+ */
+function outcome(init) {
+  return {
+    protocol: finding_critic_PROTOCOL_ID,
+    status: init.status,
+    terminal: init.terminal !== false,
+    humanReview: init.humanReview === true,
+    retainFinding: init.retainFinding === true,
+    reasons: init.reasons ?? [],
+    rounds: init.rounds ?? 0,
+    askRelevance: init.askRelevance ?? finding_critic_ASK_RELEVANCE.UNCERTAIN,
+  };
+}
+
+/**
+ * A "clean" outcome is one where the finding disappears and no human is
+ * asked to look. Every fail-safe path must be false here.
+ * @param {{ retainFinding: boolean, humanReview: boolean }} result
+ * @returns {boolean}
+ */
+function isCleanOutcome(result) {
+  return result.retainFinding === false && result.humanReview === false;
+}
+
+// ---------------------------------------------------------------------------
+// State machine
+// ---------------------------------------------------------------------------
+
+/**
+ * Evaluate one Reviewer↔Critic exchange.
+ *
+ * @param {object} input
+ * @param {{ kind?: string, payload?: unknown }} input.critic - `{ kind: 'timeout' | 'error' }`
+ *   for a degraded call, otherwise `{ payload }` carrying the raw Critic output.
+ * @param {unknown} [input.reviewer] - raw Reviewer response, when one exists.
+ * @param {{ verified: boolean }} input.deterministic - result of `preVerifyFinding`.
+ *   REQUIRED. Omitting it used to make `verified` false, which disabled the
+ *   contradiction fail-safe and let a Critic dismiss a finding that had never
+ *   been checked deterministically. A missing value now escalates instead.
+ * @param {string} [input.diff] - diff text, used to ground Critic evidence.
+ * @param {number} [input.round] - 1-based round index.
+ * @returns {{ protocol: string, status: string, terminal: boolean, humanReview: boolean, retainFinding: boolean, reasons: string[], rounds: number, askRelevance: string }}
+ */
+function evaluateExchange({ critic, reviewer, deterministic, diff = '', round = 1 }) {
+  // Fail-safe 0: the caller skipped deterministic pre-verification. Nothing
+  // downstream can be trusted, so nothing downstream runs.
+  if (!deterministic || typeof deterministic.verified !== 'boolean') {
+    return outcome({
+      status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+      humanReview: true,
+      retainFinding: true,
+      reasons: [FAILSAFE_REASON.DETERMINISTIC_MISSING],
+      rounds: round,
+    });
+  }
+
+  // `kind` is normalized: a Critic runner reporting `TIMEOUT` must not fall
+  // through to the parse-failure branch and mislabel the reason.
+  const kind = String(critic?.kind ?? 'response')
+    .trim()
+    .toLowerCase();
+
+  // Fail-safe 1: the Critic never answered. Keep the finding, ask a human.
+  if (kind === 'timeout' || kind === 'error') {
+    return outcome({
+      status: FINAL_STATUS.CRITIC_TIMEOUT,
+      humanReview: true,
+      retainFinding: true,
+      reasons: [FAILSAFE_REASON.CRITIC_TIMEOUT],
+      rounds: round,
+    });
+  }
+
+  // Fail-safe 2: the Critic answered something unreadable. Not a clean pass.
+  const parsedCritic = parseCriticResponse(critic?.payload);
+  if (!parsedCritic.ok) {
+    return outcome({
+      status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+      humanReview: true,
+      retainFinding: true,
+      reasons: [FAILSAFE_REASON.CRITIC_PARSE_FAILURE, ...parsedCritic.errors],
+      rounds: round,
+    });
+  }
+
+  const { verdict, askRelevance, evidence } = parsedCritic.response;
+
+  // Ask-relevance gate: out-of-ask never reaches revision instructions.
+  //
+  // KNOWN LIMITATION (Phase 1a): this terminates on the Critic's sole judgment.
+  // No evidence is required, the Reviewer gets no chance to object, and no
+  // human is notified — a deterministically verified `critical` finding can be
+  // parked in `followUpNotes`. The finding is retained rather than dropped, so
+  // this is not a silent clean, but it IS a single-actor kill switch. Severity
+  // is not plumbed into this function; escalating high severities is deferred
+  // to Phase 1b, where the Critic's real classification accuracy is measurable.
+  if (askRelevance === finding_critic_ASK_RELEVANCE.OUT_OF_ASK) {
+    return outcome({
+      status: FINAL_STATUS.OUT_OF_ASK,
+      humanReview: false,
+      retainFinding: true,
+      reasons: ['critic classified the finding as outside the original ask'],
+      rounds: round,
+      askRelevance,
+    });
+  }
+
+  const verified = deterministic?.verified === true;
+
+  // Fail-safe 3: the Critic dismisses on evidence, but the deterministic
+  // verifier confirmed the finding and the Critic's own citation is not in the
+  // diff. Two authorities disagree; a human decides, and the finding stays.
+  if (
+    verdict === finding_critic_CRITIC_VERDICT.DISAGREE_EVIDENCE &&
+    verified &&
+    !isCriticEvidenceGrounded(evidence, diff)
+  ) {
+    return outcome({
+      status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+      humanReview: true,
+      retainFinding: true,
+      reasons: [FAILSAFE_REASON.DETERMINISTIC_CONTRADICTION],
+      rounds: round,
+      askRelevance,
+    });
+  }
+
+  if (verdict === finding_critic_CRITIC_VERDICT.AGREE) {
+    // Consensus is not correctness: agreement without deterministic evidence
+    // does not confirm anything.
+    if (!verified) {
+      return outcome({
+        status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+        humanReview: true,
+        retainFinding: true,
+        reasons: [FAILSAFE_REASON.AGREEMENT_WITHOUT_EVIDENCE],
+        rounds: round,
+        askRelevance,
+      });
+    }
+    return outcome({
+      status: FINAL_STATUS.CONFIRMED,
+      humanReview: askRelevance === finding_critic_ASK_RELEVANCE.UNCERTAIN,
+      retainFinding: true,
+      reasons:
+        askRelevance === finding_critic_ASK_RELEVANCE.UNCERTAIN ? [FAILSAFE_REASON.ASK_RELEVANCE_UNCERTAIN] : [],
+      rounds: round,
+      askRelevance,
+    });
+  }
+
+  // Both DISAGREE_* verdicts need a Reviewer response before anything resolves.
+  if (reviewer === undefined || reviewer === null) {
+    return outcome({
+      status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+      terminal: false,
+      humanReview: false,
+      retainFinding: true,
+      reasons: ['awaiting reviewer response'],
+      rounds: round,
+      askRelevance,
+    });
+  }
+
+  const parsedReviewer = parseReviewerResponse(reviewer);
+  if (!parsedReviewer.ok) {
+    const keepWithoutEvidence = parsedReviewer.errors.includes('KEEP requires evidence');
+    return outcome({
+      status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+      humanReview: true,
+      retainFinding: true,
+      reasons: [
+        keepWithoutEvidence
+          ? FAILSAFE_REASON.KEEP_WITHOUT_EVIDENCE
+          : FAILSAFE_REASON.REVIEWER_PARSE_FAILURE,
+        ...parsedReviewer.errors,
+      ],
+      rounds: round,
+      askRelevance,
+    });
+  }
+
+  const { action } = parsedReviewer.response;
+
+  if (action === finding_critic_REVIEWER_ACTION.WITHDRAW) {
+    return outcome({
+      status:
+        verdict === finding_critic_CRITIC_VERDICT.DISAGREE_EVIDENCE
+          ? FINAL_STATUS.DISMISSED_BY_EVIDENCE
+          : FINAL_STATUS.WITHDRAWN_BY_REVIEWER,
+      humanReview: false,
+      retainFinding: false,
+      reasons: [],
+      rounds: round,
+      askRelevance,
+    });
+  }
+
+  if (action === finding_critic_REVIEWER_ACTION.KEEP) {
+    // KEEP is only reachable with evidence (parseReviewerResponse enforces it).
+    if (verdict === finding_critic_CRITIC_VERDICT.DISAGREE_CONCERN) {
+      return outcome({
+        status: FINAL_STATUS.CONFIRMED,
+        humanReview: askRelevance === finding_critic_ASK_RELEVANCE.UNCERTAIN,
+        retainFinding: true,
+        reasons: [],
+        rounds: round,
+        askRelevance,
+      });
+    }
+    // DISAGREE_EVIDENCE vs an evidence-backed KEEP: unresolved, run another round.
+    return outcome({
+      status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+      terminal: false,
+      humanReview: false,
+      retainFinding: true,
+      reasons: ['evidence contested'],
+      rounds: round,
+      askRelevance,
+    });
+  }
+
+  // REVISE: the finding changed shape; it must be re-examined next round.
+  return outcome({
+    status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+    terminal: false,
+    humanReview: false,
+    retainFinding: true,
+    reasons: ['finding revised'],
+    rounds: round,
+    askRelevance,
+  });
+}
+
+/**
+ * Run the inner loop over a pre-collected list of exchanges.
+ *
+ * The artifact is frozen for the whole loop: this function reads exchanges and
+ * returns a state, and never edits code, diff, or finding text.
+ *
+ * Convergence: at most `maxInnerRounds` rounds, itself clamped to
+ * `HARD_CAP_INNER_ROUNDS`. Reaching the cap without a terminal state is a
+ * fail-safe, not an approval — the finding is retained and escalated.
+ *
+ * @param {object} input
+ * @param {Array<{ critic: object, reviewer?: unknown }>} input.exchanges
+ * @param {{ verified: boolean }} [input.deterministic]
+ * @param {string} [input.diff]
+ * @param {number} [input.maxInnerRounds]
+ * @param {number} [input.hardCap]
+ * @returns {{ protocol: string, status: string, terminal: boolean, humanReview: boolean, retainFinding: boolean, reasons: string[], rounds: number, askRelevance: string }}
+ */
+function runValidationLoop({
+  exchanges,
+  deterministic,
+  diff = '',
+  maxInnerRounds = DEFAULT_MAX_INNER_ROUNDS,
+  hardCap = HARD_CAP_INNER_ROUNDS,
+}) {
+  // Double clamp. `hardCap` is a caller-supplied argument, so on its own it can
+  // be raised past the protocol ceiling; `HARD_CAP_INNER_ROUNDS` is the ceiling
+  // #1978 Step 6 fixes at 5 and no caller may exceed it.
+  const cap = Math.max(
+    1,
+    Math.min(Number(maxInnerRounds) || 1, Number(hardCap) || 1, HARD_CAP_INNER_ROUNDS)
+  );
+  const list = Array.isArray(exchanges) ? exchanges : [];
+  let last = null;
+  let round = 0;
+
+  for (const exchange of list) {
+    if (round >= cap) break;
+    round += 1;
+    last = evaluateExchange({
+      critic: exchange.critic,
+      reviewer: exchange.reviewer,
+      deterministic,
+      diff,
+      round,
+    });
+    if (last.terminal) return last;
+  }
+
+  // Fail-safe 4: the loop ended without converging. The two ways that happens
+  // carry different operational meaning, so they carry different reason codes:
+  // hitting the cap means the exchange kept oscillating, while running out of
+  // exchanges early means the caller stopped feeding the loop.
+  return outcome({
+    status: FINAL_STATUS.NEEDS_HUMAN_JUDGMENT,
+    humanReview: true,
+    retainFinding: true,
+    reasons: [
+      round >= cap ? FAILSAFE_REASON.INNER_LOOP_CAP_REACHED : FAILSAFE_REASON.EXCHANGES_EXHAUSTED,
+    ],
+    rounds: round,
+    askRelevance: last?.askRelevance ?? finding_critic_ASK_RELEVANCE.UNCERTAIN,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Post-validation routing
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the validated finding record.
+ *
+ * Severity is copied through unchanged. `agreement` is carried as provenance
+ * only: this function takes no vote count and exposes no path by which the
+ * number of agreeing reviewers could raise or lower severity.
+ *
+ * @param {{ id?: string, severity?: string, agreement?: unknown[] }} finding
+ * @param {{ status: string, humanReview: boolean, retainFinding: boolean, reasons: string[], rounds: number, askRelevance: string }} result
+ * @returns {object}
+ */
+function buildValidatedFinding(finding, result) {
+  const agreement = Array.isArray(finding?.agreement) ? [...finding.agreement] : [];
+  return {
+    id: finding?.id ?? null,
+    severity: finding?.severity ?? null,
+    agreement,
+    agreementCount: agreement.length,
+    validation: {
+      protocol: finding_critic_PROTOCOL_ID,
+      rounds: result.rounds,
+      finalStatus: result.status,
+      askRelevance: result.askRelevance,
+      humanReview: result.humanReview,
+      reasons: result.reasons,
+    },
+  };
+}
+
+/**
+ * Route validated findings.
+ *
+ * - `out-of-ask` never reaches revision instructions; it becomes a follow-up note.
+ * - `uncertain` never reaches revision instructions; it becomes a human-review candidate.
+ * - Anything flagged `humanReview` becomes a human-review candidate regardless of status.
+ *
+ * @param {Array<{ finding: object, result: object }>} entries
+ * @returns {{ revisionInstructions: object[], humanReviewCandidates: object[], followUpNotes: object[], dropped: object[] }}
+ */
+function partitionByAskRelevance(entries) {
+  const revisionInstructions = [];
+  const humanReviewCandidates = [];
+  const followUpNotes = [];
+  const dropped = [];
+
+  for (const { finding, result } of Array.isArray(entries) ? entries : []) {
+    const record = buildValidatedFinding(finding, result);
+    if (result.status === FINAL_STATUS.OUT_OF_ASK) {
+      followUpNotes.push(record);
+      continue;
+    }
+    if (result.humanReview === true || result.askRelevance === finding_critic_ASK_RELEVANCE.UNCERTAIN) {
+      humanReviewCandidates.push(record);
+      continue;
+    }
+    if (result.retainFinding === false) {
+      dropped.push(record);
+      continue;
+    }
+    revisionInstructions.push(record);
+  }
+
+  return { revisionInstructions, humanReviewCandidates, followUpNotes, dropped };
+}
+
 // EXTERNAL MODULE: ./src/lib/skill-planner.mjs
 var skill_planner = __nccwpck_require__(5433);
 ;// CONCATENATED MODULE: ./src/prompt/sections.mjs
@@ -51351,6 +52156,7 @@ var skill_planner = __nccwpck_require__(5433);
 // 切り出していないもの:
 //   sanitizeSkillName / resolveOpenAIConfig は prompt の節ではなく、それぞれ
 //   fallback コメント生成と provider 設定解決に属するため review-engine に残す。
+
 
 
 /** PR 本文をプロンプトへ載せるときの上限。超過分は truncate する。 */
@@ -51518,6 +52324,140 @@ ${buildLanguageInstruction(language)}
 - ${depthConfig.focusHint}
 ${buildSeverityInstruction(severity, language)}
 ${buildAdditionalSection(additionalInstructions, language)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Evidence-Grounded Adversarial Review — Critic / Reviewer turns (#1978)
+// ---------------------------------------------------------------------------
+//
+// この 2 節は finding-critic の状態機械へ供給する LLM ターンの文面である。
+// 語彙（verdict / askRelevance / action）は src/lib/finding-critic.mjs が
+// export する定数から組み立てる。文字列リテラルで書き写すと、語彙の変更が
+// プロンプト側へ伝播しないためである（CLAUDE.md「Import the SSoT」）。
+//
+// レビュー判断はここに無い。ここにあるのは「決まった契約をどう文字列にするか」
+// だけであり、verdict の意味づけも接地判定も finding-critic.mjs が持つ。
+
+function joinList(values) {
+  return values.map((v) => `\`${v}\``).join(' | ');
+}
+
+function bulletList(items, empty) {
+  const list = (Array.isArray(items) ? items : []).map((v) => String(v).trim()).filter(Boolean);
+  if (!list.length) return empty;
+  return list.map((v) => `- ${v}`).join('\n');
+}
+
+function reasonLanguageInstruction(language) {
+  return language === 'en'
+    ? '- Write `reason` and `observation` in English.'
+    : '- `reason` と `observation` は日本語で記述すること。';
+}
+
+/** Critic / Reviewer ターンの system message。 */
+function buildCriticSystemMessage(role, language) {
+  const who =
+    role === 'reviewer'
+      ? 'the Reviewer who raised the finding, now answering the Critic'
+      : 'an adversarial Critic auditing another reviewer finding';
+  const lang = language === 'en' ? 'English' : 'Japanese';
+  return `You are ${who} in River Review's ${PROTOCOL_ID} protocol. Reply with a single JSON object and nothing else. Prose inside the JSON is written in ${lang}.`;
+}
+
+/**
+ * Critic ターンの user prompt。
+ *
+ * @param {object} params
+ * @param {{ id?: string, severity?: string, message?: string }} params.finding
+ * @param {string} params.diff
+ * @param {string} [params.originalAsk]
+ * @param {string[]} [params.acceptanceCriteria]
+ * @param {string} [params.language] 'ja' | 'en'
+ */
+function buildCriticPromptSection({
+  finding,
+  diff,
+  originalAsk,
+  acceptanceCriteria,
+  language = 'ja',
+}) {
+  return `Audit the candidate finding below against the diff.
+
+### Original ask
+
+${String(originalAsk ?? '').trim() || '(not supplied)'}
+
+### Acceptance criteria
+
+${bulletList(acceptanceCriteria, '(none supplied)')}
+
+### Candidate finding
+
+- finding_id: ${String(finding?.id ?? '')}
+- severity: ${String(finding?.severity ?? '')}
+
+${String(finding?.message ?? '').trim()}
+
+### Diff
+
+${String(diff ?? '')}
+
+### Output contract
+
+Reply with ONE JSON object, no code fence, no commentary:
+
+{"finding_id": "<the finding_id above, verbatim>", "verdict": ${joinList(Object.values(CRITIC_VERDICT))}, "reason": "<why>", "ask_relevance": ${joinList(Object.values(ASK_RELEVANCE))}, "evidence": [{"artifact": "<path from the diff>", "line_start": <int>, "line_end": <int>, "observation": "<what is there>"}]}
+
+- \`verdict\`: \`${CRITIC_VERDICT.AGREE}\` when the finding holds, \`${CRITIC_VERDICT.DISAGREE_EVIDENCE}\` when the diff itself refutes it, \`${CRITIC_VERDICT.DISAGREE_CONCERN}\` when you doubt it but cannot cite a refutation.
+- \`${CRITIC_VERDICT.DISAGREE_EVIDENCE}\` REQUIRES at least one \`evidence\` entry whose \`artifact\` is a file path that appears in the diff. Without it the verdict is downgraded to \`${CRITIC_VERDICT.DISAGREE_CONCERN}\`.
+- \`ask_relevance\` judges the finding against the original ask only, not against the diff: \`${ASK_RELEVANCE.IN_ASK}\` when it bears on the ask, \`${ASK_RELEVANCE.OUT_OF_ASK}\` when it is a separate concern, \`${ASK_RELEVANCE.UNCERTAIN}\` when you cannot tell. An unreadable or missing value is read as \`${ASK_RELEVANCE.UNCERTAIN}\`.
+- Never invent a path, a line number, or a finding_id.
+${reasonLanguageInstruction(language)}`;
+}
+
+/**
+ * Reviewer 反論ターンの user prompt。Critic が DISAGREE_* を返した回のみ使う。
+ *
+ * @param {object} params
+ * @param {{ id?: string, message?: string }} params.finding
+ * @param {unknown} params.criticResponse Critic の生出力（文字列 or オブジェクト）
+ * @param {string} params.diff
+ * @param {string} [params.language] 'ja' | 'en'
+ */
+function buildReviewerRebuttalPromptSection({
+  finding,
+  criticResponse,
+  diff,
+  language = 'ja',
+}) {
+  const critic =
+    typeof criticResponse === 'string' ? criticResponse : JSON.stringify(criticResponse ?? null);
+  return `The Critic challenged your finding. Answer it.
+
+### Your finding
+
+- finding_id: ${String(finding?.id ?? '')}
+
+${String(finding?.message ?? '').trim()}
+
+### Critic response
+
+${critic}
+
+### Diff
+
+${String(diff ?? '')}
+
+### Output contract
+
+Reply with ONE JSON object, no code fence, no commentary:
+
+{"finding_id": "<the finding_id above, verbatim>", "action": ${joinList(Object.values(REVIEWER_ACTION))}, "response_to": "<the Critic verdict you are answering>", "evidence": [{"artifact": "<path from the diff>", "line_start": <int>, "line_end": <int>, "observation": "<what is there>"}]}
+
+- \`${REVIEWER_ACTION.KEEP}\` REQUIRES at least one \`evidence\` entry; a \`${REVIEWER_ACTION.KEEP}\` without evidence is not a valid answer and escalates to a human.
+- \`${REVIEWER_ACTION.WITHDRAW}\` when the Critic is right. \`${REVIEWER_ACTION.REVISE}\` when the finding survives in a changed shape.
+- Cite only paths and lines that appear in the diff above.
+${reasonLanguageInstruction(language)}`;
 }
 
 // EXTERNAL MODULE: external "node:crypto"
@@ -52306,7 +53246,7 @@ async function runVerifierStage({
   llmSkipped,
   llmError,
 }) {
-  const { verifyFinding } = await __nccwpck_require__.e(/* import() */ 341).then(__nccwpck_require__.bind(__nccwpck_require__, 9341));
+  const { verifyFinding } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 9341));
   const skill = plan?.selected?.[0] ?? {};
   const runVerifier = (cmts) =>
     cmts.map((comment) => ({
@@ -54739,6 +55679,331 @@ function resolveAvailableDependencies(inputDependencies) {
   if (envDeps.length) return [...new Set(envDeps)];
   if (stubEnabled) return [...dependencyStubs];
   return null; // null disables dependency-based skipping
+}
+
+
+/***/ }),
+
+/***/ 9341:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   verifyFinding: () => (/* binding */ verifyFinding)
+/* harmony export */ });
+/* unused harmony exports determineScopeFromDiff, resolveFindingScope */
+/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1535);
+/**
+ * Verify individual review findings before emission.
+ *
+ * Rule-based checks only (no LLM calls). Returns verification result
+ * with per-check details. Rejected findings should be logged but not emitted.
+ */
+
+
+
+// Module-scope regexes to avoid re-creation per call
+const RE_EVIDENCE = /Evidence:\s*(\S.{4,})/;
+const RE_SEVERITY = /Severity:\s*(\w+)/;
+// The `Scope:` label grammar lives in finding-factory.mjs
+// (`matchSelfReportedScope`): it is value-constrained so that prose containing
+// the word "Scope:" (OAuth / IAM scopes are common in review text) cannot be
+// mistaken for a self-report, and the strip performed on the output surfaces
+// (`stripSelfReportedScope`) must target exactly the labels read here.
+const RE_ACTIONABLE = /(?:Fix|Suggestion):\s*(.{10,})/;
+const RE_FILE_REF = /[\w/-]+(?:\.[\w]+)+/g;
+// Same shape as RE_FILE_REF but only where an anchor fragment follows
+// (`plan.md#AC-4`). Used to exempt artifact citations from the diff check.
+const RE_ANCHORED_FILE_REF = /[\w/-]+(?:\.[\w]+)+(?=#)/g;
+
+/**
+ * Check that the finding message contains "Evidence:" followed by
+ * at least 5 non-whitespace characters of content.
+ * @param {{ message?: string }} finding
+ * @returns {boolean}
+ */
+function checkEvidenceExists(finding) {
+  const text = String(finding?.message ?? '');
+  const match = RE_EVIDENCE.exec(text);
+  return match !== null;
+}
+
+/**
+ * Check that the finding's phase matches the skill's declared phase.
+ * The skill phase may be a single phase or an array of phases.
+ * Lenient: returns true when either side is missing phase information.
+ * @param {{ phase?: string }} finding
+ * @param {{ metadata?: { phase?: string | string[] } }} skill
+ * @returns {boolean}
+ */
+function checkPhaseCoherent(finding, skill) {
+  const findingPhase = finding?.phase;
+  const skillPhase = skill?.metadata?.phase;
+  if (!findingPhase || !skillPhase) return true;
+  return Array.isArray(skillPhase)
+    ? skillPhase.includes(findingPhase)
+    : findingPhase === skillPhase;
+}
+
+/**
+ * Check that the finding severity does not exceed the skill's declared
+ * severity level. Uses the internal vocabulary mapping from review-core.md.
+ * Lenient: returns true when severity cannot be determined from either side.
+ * @param {{ message?: string }} finding
+ * @param {{ metadata?: { severity?: string } }} skill
+ * @returns {boolean}
+ */
+function checkSeverityJustified(finding, skill) {
+  const text = String(finding?.message ?? '');
+  const sevMatch = RE_SEVERITY.exec(text);
+  if (!sevMatch) return true;
+
+  const skillSeverity = skill?.metadata?.severity;
+  if (!skillSeverity) return true;
+
+  const findingNormalized = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .normalizeSeverity */ .lv)(sevMatch[1]);
+  const skillNormalized = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .normalizeSeverity */ .lv)(skillSeverity);
+
+  const findingRank = _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .SEVERITY_RANK */ .f3[findingNormalized] ?? _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .SEVERITY_RANK */ .f3.major;
+  const skillRank = _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .SEVERITY_RANK */ .f3[skillNormalized] ?? _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .SEVERITY_RANK */ .f3.major;
+
+  return findingRank <= skillRank;
+}
+
+/**
+ * Check that the finding message contains "Fix:" or "Suggestion:" followed
+ * by at least 10 characters of actionable content.
+ * @param {{ message?: string }} finding
+ * @returns {boolean}
+ */
+function checkSuggestionActionable(finding) {
+  const text = String(finding?.message ?? '');
+  const match = RE_ACTIONABLE.exec(text);
+  return match !== null;
+}
+
+/**
+ * Check that file names referenced in the Evidence text actually appear
+ * in the diff. Lenient: returns true when no file references are found
+ * in the evidence (to avoid false negatives on prose-only evidence).
+ * @param {{ message?: string }} finding
+ * @param {string} diffText
+ * @returns {boolean}
+ */
+function checkEvidenceInDiff(finding, diffText) {
+  const text = String(finding?.message ?? '');
+  const evidenceMatch = RE_EVIDENCE.exec(text);
+  if (!evidenceMatch) return true;
+
+  const evidenceText = evidenceMatch[1];
+  const fileRefs = evidenceText.match(RE_FILE_REF);
+  if (!fileRefs || fileRefs.length === 0) return true;
+
+  // #1666: subtract, never delete. Running this check on a ref-stripped message
+  // let a reviewer launder a hallucinated evidence path by labelling it
+  // (`Evidence: the secret is in ArtifactRefs: src/fake.mjs …` deleted the path
+  // and the check then passed). Instead, keep the raw text and exempt only the
+  // file references that are unambiguously artifact citations: those written
+  // WITH an anchor fragment (`plan.md#AC-4`) inside a refs field. Such an
+  // artifact is by design absent from the diff. A BARE path inside a refs field
+  // stays checkable — it is indistinguishable from an evidence claim, so it
+  // fails closed.
+  const exempt = new Set(
+    (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .extractRefFieldSpans */ .OD)(text).flatMap((span) => span.match(RE_ANCHORED_FILE_REF) ?? [])
+  );
+  const checkable = exempt.size === 0 ? fileRefs : fileRefs.filter((ref) => !exempt.has(ref));
+  // Nothing left to verify reads the same as "the evidence cites no file" —
+  // lenient, matching the early return above.
+  if (checkable.length === 0) return true;
+
+  const diff = String(diffText ?? '');
+  return checkable.some((ref) => diff.includes(ref));
+}
+
+/**
+ * Expected phase(s) for each file type category from file-classifier.
+ * Lenient: categories not listed here are not checked.
+ */
+const FILE_TYPE_PHASE_MAP = {
+  test: ['downstream'],
+  docs: ['upstream', 'midstream'],
+  schema: ['upstream', 'midstream'],
+  migration: ['upstream', 'midstream'],
+};
+
+/**
+ * Check that the finding's file category is coherent with the finding's phase.
+ * Uses file-classifier output to map file → category → expected phases.
+ * Lenient: returns true when information is insufficient.
+ * @param {{ file?: string, phase?: string }} finding
+ * @param {Record<string, string[]> | null | undefined} fileTypes
+ * @returns {boolean}
+ */
+function checkFilePhaseCoherent(finding, fileTypes) {
+  if (!fileTypes || !finding?.file || !finding?.phase) return true;
+  const fileCategory = Object.entries(fileTypes).find(([, files]) =>
+    files.includes(finding.file)
+  )?.[0];
+  if (!fileCategory) return true;
+  const expectedPhases = FILE_TYPE_PHASE_MAP[fileCategory];
+  if (!expectedPhases) return true;
+  return expectedPhases.includes(finding.phase);
+}
+
+/**
+ * Tolerance (in lines) when matching a finding line against the diff's added
+ * lines.
+ *
+ * Deliberately 0: `addedLines` is ground truth for "this diff changed this
+ * line", and a unified diff surrounds every hunk with context lines (-U3 by
+ * default). Any non-zero window bleeds into those context lines and reports
+ * unchanged code as `in-diff`, which breaks the adopted contract that context
+ * lines are `pre-existing`. Do not widen this without re-deriving the contract
+ * (a widened window is measurable: see tests/verifier.test.mjs, which asserts
+ * context-line scope against real parseUnifiedDiff output).
+ */
+const SCOPE_LINE_TOLERANCE = 0;
+
+/**
+ * Locate the parsed-diff entry for a finding's file.
+ * Accepts an exact path match first, then an unambiguous suffix match so that
+ * findings reported with a repo-relative path still match a prefixed diff path.
+ * An ambiguous suffix match (2+ candidates) returns null so that the caller
+ * fails safe rather than guessing a file.
+ * @param {string} file
+ * @param {Array<{ path?: string, newPath?: string, addedLines?: number[] }>} diffFiles
+ * @returns {{ path?: string, newPath?: string, addedLines?: number[] } | null}
+ */
+function findDiffFileEntry(file, diffFiles) {
+  const target = String(file ?? '');
+  if (!target) return null;
+  const candidates = (entry) => [entry?.path, entry?.newPath].filter(Boolean).map(String);
+  const exact = diffFiles.find((entry) => candidates(entry).includes(target));
+  if (exact) return exact;
+  const suffixMatches = diffFiles.filter((entry) =>
+    candidates(entry).some((p) => p.endsWith(`/${target}`) || target.endsWith(`/${p}`))
+  );
+  return suffixMatches.length === 1 ? suffixMatches[0] : null;
+}
+
+/**
+ * Machine determination of a finding's scope by matching its line range against
+ * the added lines of the parsed diff (#1644 Phase 1, option B).
+ *
+ * Returns `null` when the diff cannot decide (no parsed diff, file not present
+ * or ambiguous in the diff, or the finding carries no usable line number).
+ * Callers fall back to the LLM self-report and then to the fail-safe default.
+ *
+ * Context lines (unified ±3) are deliberately treated as `pre-existing`: they
+ * are not changed lines. A range finding (`lineEnd`) is `in-diff` when the
+ * range intersects any added line.
+ *
+ * @param {{ file?: string, line?: number|null, lineStart?: number|null, lineEnd?: number|null }} finding
+ * @param {Array<object>|null|undefined} diffFiles parsed diff files (diff-processor parseUnifiedDiff)
+ * @returns {'in-diff'|'pre-existing'|null}
+ */
+function determineScopeFromDiff(finding, diffFiles) {
+  if (!Array.isArray(diffFiles) || diffFiles.length === 0) return null;
+  const entry = findDiffFileEntry(finding?.file, diffFiles);
+  if (!entry) return null;
+
+  const isUsableLine = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 1;
+
+  const start = finding?.line ?? finding?.lineStart ?? null;
+  if (!isUsableLine(start)) return null;
+  const end = isUsableLine(finding?.lineEnd) && finding.lineEnd >= start ? finding.lineEnd : start;
+
+  const addedLines = Array.isArray(entry.addedLines) ? entry.addedLines : [];
+  if (addedLines.length === 0) return null;
+
+  const lower = start - SCOPE_LINE_TOLERANCE;
+  const upper = end + SCOPE_LINE_TOLERANCE;
+  const isAdded = addedLines.some((added) => added >= lower && added <= upper);
+  return isAdded ? 'in-diff' : 'pre-existing';
+}
+
+/**
+ * Resolve the final scope of a finding by combining the machine determination
+ * with the optional LLM self-report (`Scope:` label), per the adopted hybrid
+ * (option C): machine wins, self-report fills the gap, default is fail-safe.
+ *
+ * @param {{ finding: object, diffFiles?: Array<object>|null }} params
+ * @returns {{ scope: 'in-diff'|'pre-existing', source: 'machine'|'self-reported'|'default', selfReported: 'in-diff'|'pre-existing'|null, mismatch: boolean }}
+ */
+function resolveFindingScope({ finding, diffFiles }) {
+  const machineScope = determineScopeFromDiff(finding, diffFiles);
+  // Value-constrained match: only an in-vocabulary token counts as a
+  // self-report. An out-of-vocabulary label (`Scope: unknown`) must NOT be
+  // normalized into `in-diff`, or it would both fabricate a self-report and
+  // produce a spurious scopeMismatch against the machine verdict.
+  const selfReportMatch = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .matchSelfReportedScope */ .vf)(finding?.message);
+  const selfReported = selfReportMatch === null ? null : (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .normalizeScope */ .kn)(selfReportMatch);
+
+  if (machineScope) {
+    return {
+      scope: machineScope,
+      source: 'machine',
+      selfReported,
+      mismatch: selfReported !== null && selfReported !== machineScope,
+    };
+  }
+  if (selfReported) {
+    return { scope: selfReported, source: 'self-reported', selfReported, mismatch: false };
+  }
+  return { scope: _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .DEFAULT_FINDING_SCOPE */ .J9, source: 'default', selfReported: null, mismatch: false };
+}
+
+/**
+ * @param {{ finding: object, diff: string, skill: object, fileTypes?: object, diffFiles?: Array<object>|null }} params
+ * @returns {{ verified: boolean, reasons: string[], checks: object, scope: 'in-diff'|'pre-existing', scopeSource: string, scopeSelfReported: string|null, scopeMismatch: boolean }}
+ */
+function verifyFinding({ finding, diff, skill, fileTypes, diffFiles }) {
+  // #1666: traceability refs are additive metadata and MUST NOT move the
+  // `verified` decision in either direction. RE_EVIDENCE / RE_ACTIONABLE are
+  // deliberately greedy to end-of-line, so appended refs would otherwise satisfy
+  // the minimum-length requirements on Evidence and Fix on their own. The
+  // LENGTH checks therefore run against the ref-stripped message — removal only
+  // makes them stricter. `checkEvidenceInDiff` is deliberately excluded: it
+  // scans for file references, where deleting text is a bypass rather than a
+  // safeguard, so it takes the raw message and subtracts instead.
+  const findingForLengthChecks =
+    typeof finding?.message === 'string'
+      ? { ...finding, message: (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_0__/* .stripTraceabilityRefs */ ["in"])(finding.message) }
+      : finding;
+  const checks = {
+    evidenceExists: checkEvidenceExists(findingForLengthChecks),
+    evidenceInDiff: checkEvidenceInDiff(finding, diff),
+    phaseCoherent: checkPhaseCoherent(finding, skill),
+    filePhaseCoherent: checkFilePhaseCoherent(finding, fileTypes),
+    severityJustified: checkSeverityJustified(findingForLengthChecks, skill),
+    suggestionActionable: checkSuggestionActionable(findingForLengthChecks),
+  };
+
+  const reasons = [];
+  if (!checks.evidenceExists) reasons.push('No evidence provided in finding');
+  if (!checks.evidenceInDiff) reasons.push('Evidence references file not found in diff');
+  if (!checks.filePhaseCoherent) reasons.push('File type does not match finding phase');
+  if (!checks.phaseCoherent) {
+    const skillPhase = skill?.metadata?.phase;
+    const skillPhaseLabel = Array.isArray(skillPhase) ? skillPhase.join('/') : skillPhase;
+    reasons.push(`Phase mismatch: finding phase does not match skill phase "${skillPhaseLabel}"`);
+  }
+  if (!checks.severityJustified)
+    reasons.push('Severity exceeds skill severity without justification');
+  if (!checks.suggestionActionable) reasons.push('Fix/suggestion is missing or too brief');
+
+  // Scope is metadata only (#1644 Phase 1): it never contributes a rejection
+  // reason and never changes `verified`.
+  const scopeResult = resolveFindingScope({ finding, diffFiles });
+
+  return {
+    verified: reasons.length === 0,
+    reasons,
+    checks,
+    scope: scopeResult.scope,
+    scopeSource: scopeResult.source,
+    scopeSelfReported: scopeResult.selfReported,
+    scopeMismatch: scopeResult.mismatch,
+  };
 }
 
 
@@ -72811,8 +74076,8 @@ async function resolveSelectionSkillIds(
   });
 }
 
-// EXTERNAL MODULE: ./src/lib/review-engine.mjs + 10 modules
-var review_engine = __nccwpck_require__(7988);
+// EXTERNAL MODULE: ./src/lib/review-engine.mjs + 11 modules
+var review_engine = __nccwpck_require__(9669);
 ;// CONCATENATED MODULE: ./src/lib/team-lead-synthesizer.mjs
 
 
