@@ -60,7 +60,7 @@
 - [ ] `tests/heuristic-review.test.mjs` に **検出される** ケースを追加する。
 - [ ] **検出されない** ケースを追加する: コメント内の言及 / 行末コメント / 安全な異形（例: `execFile(cmd, [args])` / `setTimeout(() => ...)` / `@ts-expect-error`）/ 条件を満たさない設定（`=1`）。
 - [ ] **不変条件を守るテストは、宣言の対象ではなく実権限の所在を検査する**。「X が Y を変更してはならない」をソース文字列の走査で検査すると、X が持つ間接的な権限（別モジュールへの委譲・動的キー・文字列連結）を素通りする。守りたいのが結果なら結果を測る。対象を全列挙し、同一入力を本番経路へ通して出力が一致することを assert する。ファイル列挙は再帰で行い、列挙結果そのものをパスで pin する（件数ではなくパスで pin すると、走査漏れと新規追加を区別できる）。実例は `tests/prompt-compiler-invariants.test.mjs`。当初は profile のソース文字列だけを非再帰に走査しており、判断側の語を 1 つも含まない profile から `rendererId` 経由で severity を書き換える形が通った（#1867 の `6df05ab7` で振る舞い検査へ移した）。§6 の drift guard canary も、期待値を `SKILL.md` から導出して本番と同じ `minimatch` へ通す点で同じ型にあたる。
-- [ ] `node --test tests/heuristic-review.test.mjs` で確認後、`npm test` で全体を確認する。
+- [ ] `npm test -- tests/heuristic-review.test.mjs` で確認後、`npm test` で全体を確認する。
 
 ## 8. dist 再ビルド（必須）
 
