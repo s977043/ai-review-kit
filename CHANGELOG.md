@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.89.3](https://github.com/s977043/river-review/compare/v1.89.2...v1.89.3) (2026-09-02)
+
+
+### Bug Fixes
+
+* **ci:** [#1415](https://github.com/s977043/river-review/issues/1415) test isolation フラグを npm script へ集約する ([#2005](https://github.com/s977043/river-review/issues/2005)) ([9525956](https://github.com/s977043/river-review/commit/9525956517e111dd48631d11201301a3f2f2fa8d))
+
 ## [1.89.2](https://github.com/s977043/river-review/compare/v1.89.1...v1.89.2) (2026-09-02)
 
 
