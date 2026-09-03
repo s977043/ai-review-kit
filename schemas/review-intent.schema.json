@@ -68,7 +68,7 @@
       ]
     },
     "evidence": {
-      "description": "Artifacts that must (or may) exist for the question to be answerable, and what a runtime does when one is missing. This is the machine-readable half of the #2016 acceptance criterion on missing artifacts.",
+      "description": "Artifacts that must (or may) exist for the question to be answerable, and what a runtime does when one is missing. This is the machine-readable half of the #2016 acceptance criterion on missing artifacts. `uniqueItems` only rejects fully identical entries: two entries naming the SAME `artifact` with different `requirement` / `onMissing` would pass here, which would leave a single artifact carrying contradictory outcomes (`stop` and `skip` at once). JSON Schema draft 2020-12 cannot express uniqueness by one property, so that constraint is enforced by `tests/flow-definitions.test.mjs` rather than by this document.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,

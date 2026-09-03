@@ -427,4 +427,21 @@ describe('observe mode (#2016)', () => {
     walk(resolve(REPO_ROOT, 'runners'));
     assert.deepEqual(offenders, [], `modules referencing flows/: ${offenders.join(', ')}`);
   });
+
+  // `uniqueItems` on `evidence` only rejects fully identical entries. Two
+  // entries naming the same artifact with a different `onMissing` would pass
+  // the schema and leave one artifact carrying contradictory outcomes
+  // (`stop` and `skip` at once). draft 2020-12 cannot express uniqueness by a
+  // single property, so the schema description delegates it here.
+  test('each Intent names every evidence artifact at most once', () => {
+    for (const file of readdirSync(INTENTS_DIR).filter((n) => n.endsWith('.intent.json'))) {
+      const intent = readJson(join(INTENTS_DIR, file));
+      const artifacts = (intent.evidence ?? []).map((entry) => entry.artifact);
+      assert.deepEqual(
+        [...new Set(artifacts)].sort(),
+        [...artifacts].sort(),
+        `${file}: evidence names an artifact more than once (${artifacts.join(', ')})`
+      );
+    }
+  });
 });
