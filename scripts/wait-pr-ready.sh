@@ -30,6 +30,11 @@
 #   1  at least one PR has a failing check or a stalled (`action_required`) run
 #   2  timed out before every PR settled
 #   64 usage error
+#   65 a GitHub API read failed -- the PR state could not be determined
+#
+# Exit 65 exists so that a failed read is never reported as "no failing check".
+# Suppressing an API error into an empty result would let a permission error, a
+# rate limit, or a dropped connection produce a green exit 0.
 
 set -euo pipefail
 
@@ -55,6 +60,23 @@ REPO="${REPO:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 # `blocked` and `unknown` are deliberately absent: `blocked` is the state a
 # bot-pushed head sits in while its workflows stay `action_required`, and
 # `unknown` means the mergeability computation is still running.
+# Run a `gh api` read, or abort. Never let a failed read fall through as an
+# empty result: that is what turns an API error into a false green.
+gh_api_or_die() {
+  local what="$1"
+  shift
+  local out
+  if ! out=$(gh api "$@" 2>&1); then
+    echo "error: GitHub API read failed (${what})." >&2
+    echo "       command: gh api $*" >&2
+    echo "       If this is a 404 or a permission error, check the active gh" >&2
+    echo "       account first: gh api user --jq .login" >&2
+    echo "${out}" >&2
+    exit 65
+  fi
+  printf '%s' "${out}"
+}
+
 is_settled() {
   case "$1" in
     clean | dirty | behind) return 0 ;;
@@ -71,24 +93,20 @@ while :; do
   report=''
 
   for pr in "$@"; do
-    if ! pr_json=$(gh api "repos/${REPO}/pulls/${pr}" 2>&1); then
-      echo "error: cannot read PR #${pr} in ${REPO}." >&2
-      echo "       If this is a 404 or a permission error, check the active gh" >&2
-      echo "       account first: gh api user --jq .login" >&2
-      echo "${pr_json}" >&2
-      exit 64
-    fi
+    pr_json=$(gh_api_or_die "PR #${pr} in ${REPO}" "repos/${REPO}/pulls/${pr}")
 
     head_sha=$(printf '%s' "${pr_json}" | jq -r '.head.sha')
     state=$(printf '%s' "${pr_json}" | jq -r '.mergeable_state // "unknown"')
 
-    failed=$(gh api "repos/${REPO}/commits/${head_sha}/check-runs?per_page=100" \
-      --jq '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled") | "\(.name) (\(.conclusion))"] | join(", ")' 2>/dev/null || echo '')
+    failed=$(gh_api_or_die "check runs of #${pr}" \
+      "repos/${REPO}/commits/${head_sha}/check-runs?per_page=100" \
+      --jq '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled") | "\(.name) (\(.conclusion))"] | join(", ")')
 
     # The full 40-character SHA is mandatory here: an abbreviated SHA matches
     # nothing and returns total_count 0 without an error.
-    stalled=$(gh api "repos/${REPO}/actions/runs?head_sha=${head_sha}&per_page=100" \
-      --jq '[.workflow_runs[] | select(.conclusion == "action_required") | .name] | join(", ")' 2>/dev/null || echo '')
+    stalled=$(gh_api_or_die "workflow runs of #${pr}" \
+      "repos/${REPO}/actions/runs?head_sha=${head_sha}&per_page=100" \
+      --jq '[.workflow_runs[] | select(.conclusion == "action_required") | .name] | join(", ")')
 
     report="${report}#${pr}	${head_sha}	${state}	${failed:--}	${stalled:--}
 "

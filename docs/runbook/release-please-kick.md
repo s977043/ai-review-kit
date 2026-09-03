@@ -31,6 +31,18 @@ that is the kick below, applied twice on one PR.
 Sections below that name `release-please` explicitly apply to the release PR
 only; everything else applies to any bot-pushed head.
 
+## Before you start: confirm the procedure is current
+
+This runbook and `.claude/commands/release-kick.md` are revised often. A local
+`main` that trails `origin` silently hands you a pre-revision copy. Check the
+freshness of the procedure itself before any diagnosis below. Fetch `origin`,
+diff both files against `origin/main`, and re-read them if either differs.
+Step 0 of `.claude/commands/release-kick.md` holds the executable form.
+
+Observed in the v1.67.1 run: the local checkout was 24 commits behind. The
+pre-#1702 revision of the procedure was therefore the one actually read, even
+though #1702 had merged 16 minutes before the kick.
+
 ## Step 1: confirm the symptom
 
 Read the workflow runs of the head SHA. Do not decide from `gh pr view` alone:
@@ -55,18 +67,6 @@ view alone cannot diagnose this. `mergeStateStatus` was `BLOCKED`.
 
 `scripts/wait-pr-ready.sh <N>` performs both reads for one or more PRs and
 prints a `stalled_runs` column, so it can stand in for this step.
-
-## Before you start: confirm the procedure is current
-
-This runbook and `.claude/commands/release-kick.md` are revised often. A local
-`main` that trails `origin` silently hands you a pre-revision copy. Check the
-freshness of the procedure itself before any diagnosis below. Fetch `origin`,
-diff both files against `origin/main`, and re-read them if either differs.
-Step 0 of `.claude/commands/release-kick.md` holds the executable form.
-
-Observed in the v1.67.1 run: the local checkout was 24 commits behind. The
-pre-#1702 revision of the procedure was therefore the one actually read, even
-though #1702 had merged 16 minutes before the kick.
 
 ## Step 2: diagnose BEHIND vs pure BLOCKED
 
@@ -174,20 +174,20 @@ the query is wrong rather than the head.
   Both bot heads report 9 runs today, all `completed` / `failure` -- the
   post-merge rewrite described above, not the state they were in while open.
 
-## Step 4: expect a recurrence on the same PR
-
-A kick fixes one head, not the PR. Any later push by the same bot stalls the new
-head the same way, so re-run Step 1 after every subsequent bot commit. PR #2021
-is the measured case: two bot pushes, two kicks.
-
 ## Step 3: the kick: local script
 
 Run the script **from your own account**, so the new head counts as a real user
 push. Do not reach for `git push --force` -- the fix is to add a commit, never to
 rewrite the bot's.
 
+Confirm which account `gh` is about to write as. The account that has to be
+active is **your own write-capable account on the repository you are kicking**;
+on this repository that is `s977043`, which the `CLAUDE.md` guard "Verify gh
+active account before write ops" names explicitly. Substitute your own login
+elsewhere.
+
 ```bash
-gh api user --jq .login   # must print s977043 before any write
+gh api user --jq .login   # must print your write account (here: s977043)
 scripts/release-please-kick.sh <branch>
 ```
 
@@ -207,6 +207,12 @@ The script uses `gh api` to create an empty commit via the REST API
 `gh` credentials, so the new head counts as a real user push and re-fires
 `pull_request` workflows. It also works without a clean local checkout, which is
 useful during `fs-loss` incidents.
+
+## Step 4: expect a recurrence on the same PR
+
+A kick fixes one head, not the PR. Any later push by the same bot stalls the new
+head the same way, so re-run Step 1 after every subsequent bot commit. PR #2021
+is the measured case: two bot pushes, two kicks.
 
 ## The `Release Please Kick` workflow is not an equivalent alternative
 
