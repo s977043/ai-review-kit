@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.95.0](https://github.com/s977043/river-review/compare/v1.94.0...v1.95.0) (2026-09-03)
+
+
+### Features
+
+* **flows:** [#2017](https://github.com/s977043/river-review/issues/2017) 実装前の上流 4 レビューを Flow として定義する ([#2040](https://github.com/s977043/river-review/issues/2040)) ([f7da9b0](https://github.com/s977043/river-review/commit/f7da9b03dbc2022981c79f6aa4491d2a2decf6b6))
+
 ## [1.94.0](https://github.com/s977043/river-review/compare/v1.93.0...v1.94.0) (2026-09-03)
 
 
