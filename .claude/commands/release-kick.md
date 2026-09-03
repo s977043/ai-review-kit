@@ -6,7 +6,7 @@ allowed-tools: Bash(gh api user:*), Bash(gh auth switch:*), Bash(gh pr view:*), 
 
 release PR #$ARGUMENTS を、BLOCKED 解除からマージ・リリース公開の検証まで一貫して実行する。
 
-release-please が生成するリリース PR の head は `GITHUB_TOKEN` push であるため、通常は `mergeStateStatus: BLOCKED`（"N of N required checks are expected"）になる（CLAUDE.md「`N of N required checks are expected` = bot/GITHUB_TOKEN push」ガード参照）。この BLOCKED の原因・`RELEASE_KICK_PAT` のセットアップ・`workflow_dispatch` 版が deprecated である理由は `docs/runbook/release-please-kick.md` が SSoT。kick の正規手順は `scripts/release-please-kick.sh` であり、workflow 版は使えない。本コマンドはそれを前提に、実際にマージして公開を確認するまでの実行手順を1コマンド化したもの。矛盾があれば runbook を正とし、本コマンドを修正する。
+release-please が生成するリリース PR の head は `GITHUB_TOKEN` push であるため、通常は `mergeStateStatus: BLOCKED`（"N of N required checks are expected"）になる（CLAUDE.md「`N of N required checks are expected` = bot/GITHUB_TOKEN push」ガード参照）。この BLOCKED の原因・`RELEASE_KICK_PAT` のセットアップ・`workflow_dispatch` 版が deprecated である理由は `docs/runbook/bot-pushed-head-kick.md` が SSoT。kick の正規手順は `scripts/release-please-kick.sh` であり、workflow 版は使えない。本コマンドはそれを前提に、実際にマージして公開を確認するまでの実行手順を1コマンド化したもの。矛盾があれば runbook を正とし、本コマンドを修正する。
 
 ## 手順
 
@@ -14,7 +14,7 @@ release-please が生成するリリース PR の head は `GITHUB_TOKEN` push �
 
 ```bash
 git fetch origin
-git diff --quiet HEAD origin/main -- .claude/commands/release-kick.md docs/runbook/release-please-kick.md || echo "手順書が古い: origin/main 版を読み直すこと"
+git diff --quiet HEAD origin/main -- .claude/commands/release-kick.md docs/runbook/bot-pushed-head-kick.md || echo "手順書が古い: origin/main 版を読み直すこと"
 ```
 
 ローカル main が origin より遅れていると、改訂前の手順書を読んだまま実走することになる。上のメッセージが出たら `git pull` で追いついてから、本コマンドと runbook を読み直す。差分がなければ何も出力されない。
@@ -47,7 +47,7 @@ BLOCKED の場合は `behind_by` の値で次に打つ手が変わる。`mergeab
 | `> 0`       | BEHIND + BLOCKED | Step 3（update-branch） | CI が実発火すれば不要 |
 | `0`         | 純 BLOCKED       | Step 4（kick）          | 必要                  |
 
-分岐の根拠と実証ケースは `docs/runbook/release-please-kick.md`（SSoT）を参照。
+分岐の根拠と実証ケースは `docs/runbook/bot-pushed-head-kick.md`（SSoT）を参照。
 
 ### Step 3. BEHIND の場合: update-branch を先に実行
 
@@ -143,5 +143,5 @@ gh pr merge $ARGUMENTS --squash --delete-branch
 ## 参照
 
 - `.claude/commands/merge-check.md` Step 6（SSoT: PR 本文の closing keyword 確認、閉じてよい issue かの判定基準、`closes` → `refs` の書き換え手順）
-- `docs/runbook/release-please-kick.md`（SSoT: BLOCKED の原因、BEHIND と純 BLOCKED の判定、`RELEASE_KICK_PAT` セットアップ、`workflow_dispatch` 版が deprecated である理由）
+- `docs/runbook/bot-pushed-head-kick.md`（SSoT: BLOCKED の原因、BEHIND と純 BLOCKED の判定、`RELEASE_KICK_PAT` セットアップ、`workflow_dispatch` 版が deprecated である理由）
 - CLAUDE.md「`N of N required checks are expected` = bot/GITHUB_TOKEN push」ガード

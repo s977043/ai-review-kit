@@ -18,6 +18,12 @@
 // 切り出していないもの:
 //   sanitizeSkillName / resolveOpenAIConfig は prompt の節ではなく、それぞれ
 //   fallback コメント生成と provider 設定解決に属するため review-engine に残す。
+import {
+  ASK_RELEVANCE,
+  CRITIC_VERDICT,
+  PROTOCOL_ID,
+  REVIEWER_ACTION,
+} from '../lib/finding-critic.mjs';
 import { summarizeSkill } from '../lib/skill-planner.mjs';
 
 /** PR 本文をプロンプトへ載せるときの上限。超過分は truncate する。 */
@@ -185,4 +191,155 @@ ${buildLanguageInstruction(language)}
 - ${depthConfig.focusHint}
 ${buildSeverityInstruction(severity, language)}
 ${buildAdditionalSection(additionalInstructions, language)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Evidence-Grounded Adversarial Review — Critic / Reviewer turns (#1978)
+// ---------------------------------------------------------------------------
+//
+// この 2 節は finding-critic の状態機械へ供給する LLM ターンの文面である。
+// 語彙（verdict / askRelevance / action）は src/lib/finding-critic.mjs が
+// export する定数から組み立てる。文字列リテラルで書き写すと、語彙の変更が
+// プロンプト側へ伝播しないためである（CLAUDE.md「Import the SSoT」）。
+//
+// レビュー判断はここに無い。ここにあるのは「決まった契約をどう文字列にするか」
+// だけであり、verdict の意味づけも接地判定も finding-critic.mjs が持つ。
+
+function joinList(values) {
+  return values.map((v) => `\`${v}\``).join(' | ');
+}
+
+/**
+ * 出力契約の JSON テンプレへ埋めるプレースホルダ。
+ *
+ * 許容値を `A | B | C` の形でテンプレ内へ直接展開すると、テンプレそのものが
+ * 有効な JSON でなくなり、モデルがそれを写して壊れた JSON を返す誘因になる。
+ * テンプレは常に `JSON.parse` を通る形に保ち、許容値は直後の行で列挙する。
+ * 値の生成元は finding-critic.mjs の語彙定数のままで、ここでは並べ方だけを変える。
+ */
+const CHOICE_PLACEHOLDER = '<one of the values listed below>';
+
+function bulletList(items, empty) {
+  const list = (Array.isArray(items) ? items : []).map((v) => String(v).trim()).filter(Boolean);
+  if (!list.length) return empty;
+  return list.map((v) => `- ${v}`).join('\n');
+}
+
+function reasonLanguageInstruction(language) {
+  return language === 'en'
+    ? '- Write `reason` and `observation` in English.'
+    : '- `reason` と `observation` は日本語で記述すること。';
+}
+
+/** Critic / Reviewer ターンの system message。 */
+export function buildCriticSystemMessage(role, language) {
+  const who =
+    role === 'reviewer'
+      ? 'the Reviewer who raised the finding, now answering the Critic'
+      : 'an adversarial Critic auditing another reviewer finding';
+  const lang = language === 'en' ? 'English' : 'Japanese';
+  return `You are ${who} in River Review's ${PROTOCOL_ID} protocol. Reply with a single JSON object and nothing else. Prose inside the JSON is written in ${lang}.`;
+}
+
+/**
+ * Critic ターンの user prompt。
+ *
+ * @param {object} params
+ * @param {{ id?: string, severity?: string, message?: string }} params.finding
+ * @param {string} params.diff
+ * @param {string} [params.originalAsk]
+ * @param {string[]} [params.acceptanceCriteria]
+ * @param {string} [params.language] 'ja' | 'en'
+ */
+export function buildCriticPromptSection({
+  finding,
+  diff,
+  originalAsk,
+  acceptanceCriteria,
+  language = 'ja',
+}) {
+  return `Audit the candidate finding below against the diff.
+
+### Original ask
+
+${String(originalAsk ?? '').trim() || '(not supplied)'}
+
+### Acceptance criteria
+
+${bulletList(acceptanceCriteria, '(none supplied)')}
+
+### Candidate finding
+
+- finding_id: ${String(finding?.id ?? '')}
+- severity: ${String(finding?.severity ?? '')}
+
+${String(finding?.message ?? '').trim()}
+
+### Diff
+
+${String(diff ?? '')}
+
+### Output contract
+
+Reply with ONE JSON object, no code fence, no commentary:
+
+{"finding_id": "<the finding_id above, verbatim>", "verdict": "${CHOICE_PLACEHOLDER}", "reason": "<why>", "ask_relevance": "${CHOICE_PLACEHOLDER}", "evidence": [{"artifact": "<path from the diff>", "line_start": 0, "line_end": 0, "observation": "<what is there>"}]}
+
+- \`verdict\` is one of: ${joinList(Object.values(CRITIC_VERDICT))}.
+- \`ask_relevance\` is one of: ${joinList(Object.values(ASK_RELEVANCE))}.
+- \`line_start\` / \`line_end\` are integers; replace the zeros with the real line numbers.
+
+- \`verdict\`: \`${CRITIC_VERDICT.AGREE}\` when the finding holds, \`${CRITIC_VERDICT.DISAGREE_EVIDENCE}\` when the diff itself refutes it, \`${CRITIC_VERDICT.DISAGREE_CONCERN}\` when you doubt it but cannot cite a refutation.
+- \`${CRITIC_VERDICT.DISAGREE_EVIDENCE}\` REQUIRES at least one \`evidence\` entry whose \`artifact\` is a file path that appears in the diff. Without it the verdict is downgraded to \`${CRITIC_VERDICT.DISAGREE_CONCERN}\`.
+- \`ask_relevance\` judges the finding against the original ask only, not against the diff: \`${ASK_RELEVANCE.IN_ASK}\` when it bears on the ask, \`${ASK_RELEVANCE.OUT_OF_ASK}\` when it is a separate concern, \`${ASK_RELEVANCE.UNCERTAIN}\` when you cannot tell. An unreadable or missing value is read as \`${ASK_RELEVANCE.UNCERTAIN}\`.
+- Never invent a path, a line number, or a finding_id.
+${reasonLanguageInstruction(language)}`;
+}
+
+/**
+ * Reviewer 反論ターンの user prompt。Critic が DISAGREE_* を返した回のみ使う。
+ *
+ * @param {object} params
+ * @param {{ id?: string, message?: string }} params.finding
+ * @param {unknown} params.criticResponse Critic の生出力（文字列 or オブジェクト）
+ * @param {string} params.diff
+ * @param {string} [params.language] 'ja' | 'en'
+ */
+export function buildReviewerRebuttalPromptSection({
+  finding,
+  criticResponse,
+  diff,
+  language = 'ja',
+}) {
+  const critic =
+    typeof criticResponse === 'string' ? criticResponse : JSON.stringify(criticResponse ?? null);
+  return `The Critic challenged your finding. Answer it.
+
+### Your finding
+
+- finding_id: ${String(finding?.id ?? '')}
+
+${String(finding?.message ?? '').trim()}
+
+### Critic response
+
+${critic}
+
+### Diff
+
+${String(diff ?? '')}
+
+### Output contract
+
+Reply with ONE JSON object, no code fence, no commentary:
+
+{"finding_id": "<the finding_id above, verbatim>", "action": "${CHOICE_PLACEHOLDER}", "response_to": "<the Critic verdict you are answering>", "evidence": [{"artifact": "<path from the diff>", "line_start": 0, "line_end": 0, "observation": "<what is there>"}]}
+
+- \`action\` is one of: ${joinList(Object.values(REVIEWER_ACTION))}.
+- \`line_start\` / \`line_end\` are integers; replace the zeros with the real line numbers.
+
+- \`${REVIEWER_ACTION.KEEP}\` REQUIRES at least one \`evidence\` entry; a \`${REVIEWER_ACTION.KEEP}\` without evidence is not a valid answer and escalates to a human.
+- \`${REVIEWER_ACTION.WITHDRAW}\` when the Critic is right. \`${REVIEWER_ACTION.REVISE}\` when the finding survives in a changed shape.
+- Cite only paths and lines that appear in the diff above.
+${reasonLanguageInstruction(language)}`;
 }
