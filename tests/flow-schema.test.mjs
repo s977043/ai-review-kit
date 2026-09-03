@@ -57,10 +57,44 @@ describe('flow.schema.json', () => {
     assert.equal(validate(flow), false);
   });
 
-  test('unknown agent role is rejected', () => {
+  test('unknown reviewer role is rejected', () => {
     const flow = happy();
-    flow.steps[3] = { agent: 'consistency-judge' };
+    flow.steps[3] = { reviewer: 'not-a-reviewer' };
     assert.equal(validate(flow), false);
+  });
+
+  test('a logical Agent name written as a reviewer lens is rejected', () => {
+    // The reviewer lens (REVIEWER_ROLES) and the logical Agent vocabulary that
+    // Epic #2011 / #2014 defines are separate axes. A Flow that confuses the two
+    // must not validate, and `agent:` stays reserved for #2014 rather than being
+    // a second spelling of the lens.
+    for (const logicalAgent of [
+      'review-orchestrator',
+      'specialist-reviewer',
+      'finding-verifier',
+      'consistency-judge',
+      'completion-judge',
+    ]) {
+      const asReviewer = happy();
+      asReviewer.steps[3] = { reviewer: logicalAgent };
+      assert.equal(validate(asReviewer), false, `reviewer: ${logicalAgent} should be rejected`);
+
+      const asAgent = happy();
+      asAgent.steps[3] = { agent: logicalAgent };
+      assert.equal(validate(asAgent), false, `agent: ${logicalAgent} should be rejected`);
+    }
+  });
+
+  test('`agent` is not a step key: it stays reserved for #2014', () => {
+    // Even a valid reviewer lens id must be rejected under the `agent:` key,
+    // so the reservation cannot erode into an alias.
+    const flow = happy();
+    flow.steps[3] = { agent: 'bug-hunter' };
+    assert.equal(validate(flow), false);
+    assert.match(
+      schema.$defs.reviewerRole.description,
+      /`agent:` key is deliberately unused and reserved/
+    );
   });
 
   test('unknown stop condition is rejected', () => {
@@ -89,9 +123,9 @@ describe('flow.schema.json', () => {
     assert.equal(validate(flow), false);
   });
 
-  test('a step declaring both use and agent is rejected', () => {
+  test('a step declaring both use and reviewer is rejected', () => {
     const flow = happy();
-    flow.steps[0] = { use: 'resolve-artifacts', agent: 'bug-hunter' };
+    flow.steps[0] = { use: 'resolve-artifacts', reviewer: 'bug-hunter' };
     assert.equal(validate(flow), false);
   });
 
@@ -141,10 +175,10 @@ describe('flow.schema.json', () => {
     }
   });
 
-  test('every reviewer role validates as an agent step', () => {
+  test('every reviewer role validates as a reviewer step', () => {
     for (const role of Object.keys(REVIEWER_ROLES)) {
       const flow = happy();
-      flow.steps[3] = { agent: role, parallel: true };
+      flow.steps[3] = { reviewer: role, parallel: true };
       assert.equal(validate(flow), true, `${role}: ${errorsOf()}`);
     }
   });

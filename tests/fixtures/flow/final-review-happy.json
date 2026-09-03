@@ -1,7 +1,7 @@
 {
   "id": "final-review",
   "version": "0.1.0",
-  "description": "Final convergence flow sketched in #2013, expressed with the committed step vocabulary.",
+  "description": "Final convergence flow sketched in #2013. The sketch's `agent: consistency-judge` step is a logical Agent (#2014), a different axis from the reviewer lens, so it is expressed here as two `reviewer:` lens steps drawn from REVIEWER_ROLES.",
   "intent": { "purpose": "final-convergence" },
   "inputs": [
     { "name": "diff", "required": true, "description": "Unified diff under review." },
@@ -11,8 +11,8 @@
     { "use": "resolve-artifacts" },
     { "use": "deterministic-check" },
     { "use": "select-skills" },
-    { "agent": "bug-hunter", "parallel": true },
-    { "agent": "security-scanner", "parallel": true },
+    { "reviewer": "bug-hunter", "parallel": true },
+    { "reviewer": "security-scanner", "parallel": true },
     { "use": "verify-findings" },
     {
       "use": "compare-baseline",

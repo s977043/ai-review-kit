@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://river-review.the3396.com/schemas/flow.schema.json",
   "title": "River Review Flow definition",
-  "description": "Runtime-independent definition of WHEN and HOW review judgment is executed (#2013, Epic #2011). Skill = what to judge, Agent = who is responsible, Flow = when/how judgment is executed. A Flow document declares an ordered step list only; it never declares judgment criteria. Per ADR-009 D3/D4 the criteria (which skill is selected, severity vocabulary, gate/completion meaning) stay in `skills/**`, `docs/review/**`, `pages/reference/**` and `src/lib/**`, so every step object here is closed and carries no parameter bag. Unknown vocabulary is rejected at load time: every enum is closed and every object sets `additionalProperties: false`, so an unknown `use:` primitive, an unknown `agent:` role, or an unknown stop condition fails validation instead of being silently skipped. That matches the repository-wide fail-safe direction recorded in `src/lib/gate-decision.mjs` (\"everything unknown or undetermined maps to NO_GO\").",
+  "description": "Runtime-independent definition of WHEN and HOW review judgment is executed (#2013, Epic #2011). Skill = what to judge, Agent = who is responsible, Flow = when/how judgment is executed. A Flow document declares an ordered step list only; it never declares judgment criteria. Per ADR-009 D3/D4 the criteria (which skill is selected, severity vocabulary, gate/completion meaning) stay in `skills/**`, `docs/review/**`, `pages/reference/**` and `src/lib/**`, so every step object here is closed and carries no parameter bag. Unknown vocabulary is rejected at load time: every enum is closed and every object sets `additionalProperties: false`, so an unknown `use:` primitive, an unknown `reviewer:` role, or an unknown stop condition fails validation instead of being silently skipped. That matches the repository-wide fail-safe direction recorded in `src/lib/gate-decision.mjs` (\"everything unknown or undetermined maps to NO_GO\").",
   "type": "object",
   "required": ["id", "version", "intent", "steps", "outputs"],
   "additionalProperties": false,
@@ -79,7 +79,7 @@
       ]
     },
     "reviewerRole": {
-      "description": "Reviewer role id. Values are exactly the keys of `REVIEWER_ROLES` in `src/lib/reviewer-orchestrator.mjs`; `tests/flow-schema.test.mjs` pins the two lists together so a Flow cannot invent a third role ledger.",
+      "description": "Reviewer lens role id, used by the `reviewer:` step key. Values are exactly the keys of `REVIEWER_ROLES` in `src/lib/reviewer-orchestrator.mjs`; `tests/flow-schema.test.mjs` pins the two lists together so a Flow cannot invent a third role ledger. A reviewer lens is a different axis from the logical Agent (\"who is responsible\") that Epic #2011 / #2014 will define as `review-orchestrator` / `specialist-reviewer` / `finding-verifier` / `consistency-judge` / `completion-judge`; writing one of those names here MUST fail validation. The `agent:` key is deliberately unused and reserved for that logical Agent vocabulary, so #2014 can add it without a breaking rename.",
       "enum": [
         "bug-hunter",
         "security-scanner",
@@ -146,7 +146,7 @@
       "enum": ["stop", "skip", "degrade"]
     },
     "step": {
-      "description": "Exactly one of `use` (a Flow primitive) or `agent` (a reviewer role). Both objects are closed and carry no parameter bag, so selection criteria cannot be embedded in a Flow.",
+      "description": "Exactly one of `use` (a Flow primitive) or `reviewer` (a reviewer lens role). Both objects are closed and carry no parameter bag, so selection criteria cannot be embedded in a Flow. `agent:` is NOT a step key here: it is reserved for the logical Agent vocabulary that Epic #2011 / #2014 defines, which is a separate axis from the reviewer lens (see `$defs/reviewerRole`).",
       "oneOf": [
         {
           "type": "object",
@@ -165,10 +165,10 @@
         },
         {
           "type": "object",
-          "required": ["agent"],
+          "required": ["reviewer"],
           "additionalProperties": false,
           "properties": {
-            "agent": { "$ref": "#/$defs/reviewerRole" },
+            "reviewer": { "$ref": "#/$defs/reviewerRole" },
             "description": { "type": "string", "minLength": 1 },
             "when": { "$ref": "#/$defs/when" },
             "parallel": {
