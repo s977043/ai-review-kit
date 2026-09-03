@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.91.0](https://github.com/s977043/river-review/compare/v1.90.0...v1.91.0) (2026-09-03)
+
+
+### Features
+
+* **scripts:** 語彙定数の直書きリテラルを検出する検査を追加する ([#2025](https://github.com/s977043/river-review/issues/2025)) ([3c98b0a](https://github.com/s977043/river-review/commit/3c98b0a2581a08b0967c6c5906800f0d7c23c5a6))
+
 ## [1.90.0](https://github.com/s977043/river-review/compare/v1.89.3...v1.90.0) (2026-09-03)
 
 
