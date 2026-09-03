@@ -298,9 +298,11 @@ guards:
     mechanized: partial
     verifiedBy:
       - tests/shadow-aggregate.test.mjs
+      - scripts/check-vocabulary-literals.mjs
+      - tests/check-vocabulary-literals.test.mjs
     addedAt: '2026-07-30'
     reviewAfter: '2026-10-28'
-    notes: 既存の production 経路（buildProposedCandidate）との突合テストが候補 ID について存在する。新規モジュールが再実装したことを一般に検出する仕組みは無い。
+    notes: 既存の production 経路（buildProposedCandidate）との突合テストが候補 ID について存在する。加えて #2021 の再発を受け、語彙定数モジュールを import しているのに値を文字列リテラルで直書きする形の再実装は check-vocabulary-literals.mjs が決定論で検出し、必須チェック Meta consistency（npm run meta:validate 経由）に接続した。ID 導出や正規化ロジックそのものの再実装を一般に検出する仕組みは依然として無いため partial のまま。
 
   - id: fact-check-what-you-author
     title: Fact-check what you author
