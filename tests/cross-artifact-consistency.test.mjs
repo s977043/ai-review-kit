@@ -276,4 +276,25 @@ describe('cross-artifact consistency schema — Flow wiring', () => {
     assert.ok(uses.includes('cross-artifact-review'));
     assert.ok(uses.includes('detect-semantic-drift'));
   });
+
+  // `unknown` is defined as "the artifacts this edge needs never reached the
+  // review". The schema already forces `inputsPresent: false` => `unknown`;
+  // without the reverse a report could claim it HAD the inputs and still refuse
+  // to evaluate the edge, which reads as "we looked and found nothing" while
+  // nothing was looked at. That is the false claim this contract exists to stop.
+  it('rejects an unknown edge that claims its inputs were present', () => {
+    const doc = readJson(resolve(FIXTURES, 'complete.json'));
+    doc.edges[0].status = 'unknown';
+    doc.edges[0].inputsPresent = true;
+    delete doc.edges[0].findingCode;
+    assert.equal(validate(doc), false, 'status=unknown with inputsPresent=true must not validate');
+  });
+
+  it('still accepts an unknown edge whose inputs were absent', () => {
+    const doc = readJson(resolve(FIXTURES, 'complete.json'));
+    doc.edges[0].status = 'unknown';
+    doc.edges[0].inputsPresent = false;
+    delete doc.edges[0].findingCode;
+    assert.ok(validate(doc), JSON.stringify(validate.errors, null, 2));
+  });
 });

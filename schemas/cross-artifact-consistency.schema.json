@@ -64,8 +64,14 @@
     }
   },
   "properties": {
-    "schemaVersion": { "type": "integer", "const": 1 },
-    "kind": { "type": "string", "const": "cross-artifact-consistency" },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "kind": {
+      "type": "string",
+      "const": "cross-artifact-consistency"
+    },
     "edges": {
       "type": "array",
       "description": "One entry per traceability edge actually evaluated in this run. An edge the run did not evaluate is absent — it is never reported as satisfied by default.",
@@ -74,9 +80,15 @@
         "required": ["edge", "status", "judgment", "inputsPresent"],
         "additionalProperties": false,
         "properties": {
-          "edge": { "$ref": "#/$defs/edgeKind" },
-          "status": { "$ref": "#/$defs/edgeStatus" },
-          "judgment": { "$ref": "#/$defs/judgment" },
+          "edge": {
+            "$ref": "#/$defs/edgeKind"
+          },
+          "status": {
+            "$ref": "#/$defs/edgeStatus"
+          },
+          "judgment": {
+            "$ref": "#/$defs/judgment"
+          },
           "inputsPresent": {
             "type": "boolean",
             "description": "Whether every artifact this edge needs reached the review. False is the false-positive guard: an edge whose inputs are absent MUST report `unknown`, enforced below by if/then rather than left to reviewer discipline."
@@ -84,41 +96,97 @@
           "unresolvedRefs": {
             "type": "array",
             "description": "Refs quoted verbatim from the upstream artifact that resolved to no node. Copied, never minted: River Review does not own this ID namespace.",
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "orphans": {
             "type": "array",
             "description": "Nodes on the target side that no source node reaches (orphan task / orphan test).",
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
-          "findingCode": { "$ref": "#/$defs/findingCode" },
+          "findingCode": {
+            "$ref": "#/$defs/findingCode"
+          },
           "evidence": {
             "type": "array",
             "description": "Reproducible pointers for the entry (file:line, artifact id, search term).",
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "allOf": [
           {
             "if": {
-              "properties": { "inputsPresent": { "const": false } },
+              "properties": {
+                "inputsPresent": {
+                  "const": false
+                }
+              },
               "required": ["inputsPresent"]
             },
             "then": {
-              "properties": { "status": { "const": "unknown" } },
-              "not": { "required": ["findingCode"] }
+              "properties": {
+                "status": {
+                  "const": "unknown"
+                }
+              },
+              "not": {
+                "required": ["findingCode"]
+              }
             }
           },
           {
             "if": {
-              "properties": { "status": { "enum": ["satisfied", "unknown", "not_required"] } },
+              "properties": {
+                "status": {
+                  "enum": ["satisfied", "unknown", "not_required"]
+                }
+              },
               "required": ["status"]
             },
-            "then": { "not": { "required": ["findingCode"] } }
+            "then": {
+              "not": {
+                "required": ["findingCode"]
+              }
+            }
           },
           {
-            "if": { "properties": { "status": { "const": "missing" } }, "required": ["status"] },
-            "then": { "required": ["findingCode"] }
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "missing"
+                }
+              },
+              "required": ["status"]
+            },
+            "then": {
+              "required": ["findingCode"]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "unknown"
+                }
+              },
+              "required": ["status"]
+            },
+            "then": {
+              "properties": {
+                "inputsPresent": {
+                  "const": false
+                }
+              },
+              "description": "`unknown` means the artifacts this edge needs never reached the review, so it is only reachable with `inputsPresent: false`. Without this direction a report could claim it had the inputs and still refuse to evaluate the edge, which is exactly the false 'we looked and found nothing' this contract exists to prevent."
+            }
           }
         ]
       }
@@ -135,9 +203,21 @@
           "required": ["filesAdded", "filesRemoved", "summary"],
           "additionalProperties": false,
           "properties": {
-            "filesAdded": { "type": "array", "items": { "type": "string" } },
-            "filesRemoved": { "type": "array", "items": { "type": "string" } },
-            "summary": { "type": "string" }
+            "filesAdded": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "filesRemoved": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "summary": {
+              "type": "string"
+            }
           }
         },
         "axes": {
@@ -148,39 +228,71 @@
             "required": ["axis", "status", "judgment", "baselinePresent"],
             "additionalProperties": false,
             "properties": {
-              "axis": { "$ref": "#/$defs/driftAxis" },
+              "axis": {
+                "$ref": "#/$defs/driftAxis"
+              },
               "status": {
                 "type": "string",
                 "enum": ["changed", "unchanged", "unknown", "not_required"]
               },
-              "judgment": { "$ref": "#/$defs/judgment" },
+              "judgment": {
+                "$ref": "#/$defs/judgment"
+              },
               "baselinePresent": {
                 "type": "boolean",
                 "description": "Whether the baseline plan carried this axis. False forces `unknown` below: a re-plan that merely added a section is not a meaning change."
               },
-              "findingCode": { "$ref": "#/$defs/findingCode" },
-              "summary": { "type": "string" },
-              "evidence": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+              "findingCode": {
+                "$ref": "#/$defs/findingCode"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
             },
             "allOf": [
               {
                 "if": {
-                  "properties": { "baselinePresent": { "const": false } },
+                  "properties": {
+                    "baselinePresent": {
+                      "const": false
+                    }
+                  },
                   "required": ["baselinePresent"]
                 },
                 "then": {
-                  "properties": { "status": { "const": "unknown" } },
-                  "not": { "required": ["findingCode"] }
+                  "properties": {
+                    "status": {
+                      "const": "unknown"
+                    }
+                  },
+                  "not": {
+                    "required": ["findingCode"]
+                  }
                 }
               },
               {
                 "if": {
-                  "properties": { "status": { "const": "changed" } },
+                  "properties": {
+                    "status": {
+                      "const": "changed"
+                    }
+                  },
                   "required": ["status"]
                 },
                 "then": {
                   "required": ["findingCode", "summary"],
-                  "properties": { "judgment": { "const": "agentic" } }
+                  "properties": {
+                    "judgment": {
+                      "const": "agentic"
+                    }
+                  }
                 }
               }
             ]
@@ -196,10 +308,22 @@
         "required": ["step", "missingInput", "effect", "reason"],
         "additionalProperties": false,
         "properties": {
-          "step": { "type": "string", "enum": ["cross-artifact-review", "detect-semantic-drift"] },
-          "missingInput": { "type": "string", "minLength": 1 },
-          "effect": { "type": "string", "enum": ["stop", "degrade", "skip"] },
-          "reason": { "type": "string", "minLength": 1 }
+          "step": {
+            "type": "string",
+            "enum": ["cross-artifact-review", "detect-semantic-drift"]
+          },
+          "missingInput": {
+            "type": "string",
+            "minLength": 1
+          },
+          "effect": {
+            "type": "string",
+            "enum": ["stop", "degrade", "skip"]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -211,23 +335,49 @@
         "required": ["code", "judgment", "severity", "message"],
         "additionalProperties": false,
         "properties": {
-          "code": { "$ref": "#/$defs/findingCode" },
-          "judgment": { "$ref": "#/$defs/judgment" },
-          "severity": { "type": "string", "enum": ["blocker", "warning", "nit"] },
-          "message": { "type": "string", "minLength": 1 },
-          "edge": { "$ref": "#/$defs/edgeKind" },
-          "axis": { "$ref": "#/$defs/driftAxis" },
+          "code": {
+            "$ref": "#/$defs/findingCode"
+          },
+          "judgment": {
+            "$ref": "#/$defs/judgment"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["blocker", "warning", "nit"]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "edge": {
+            "$ref": "#/$defs/edgeKind"
+          },
+          "axis": {
+            "$ref": "#/$defs/driftAxis"
+          },
           "criterionRefs": {
             "type": "array",
             "description": "Same field and same rule as findings[].criterionRefs in schemas/review-artifact.schema.json: copied verbatim from the upstream artifact, never minted or validated here.",
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "artifactRefs": {
             "type": "array",
             "description": "Same field and same rule as findings[].artifactRefs in schemas/review-artifact.schema.json.",
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
-          "evidence": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
       }
     }
