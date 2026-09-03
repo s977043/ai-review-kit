@@ -394,6 +394,13 @@ export function classifyDivergence({ field, layer, claim, evidence }) {
   ) {
     return reject(`${field} is host-independent repository code, so no adapter reason applies`);
   }
+  // The judgment-authority fields are closed to adapter reasons for the same
+  // reason they are closed to model ones: an excuse accepted there is an
+  // adapter allowed to move critical recall, completion state or the human
+  // handoff — which is the invariant itself, not an explanation of it.
+  if (layer === 'agentic' && !MODEL_TOLERANT_AGENTIC_FIELDS.includes(field)) {
+    return reject(`${field} is judgment authority, which an adapter reason may not explain`);
+  }
   if (claimed === 'adapter-mechanism') {
     return evidence.mechanismsDiffer
       ? {
