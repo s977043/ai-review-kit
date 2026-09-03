@@ -22,12 +22,12 @@ Accepted—#2012（親 Epic #2011）で、River Review の第一級配布面を 
 
 ### すでに機械検証されているもの
 
-[`scripts/validate-plugin-manifest.mjs`](../../scripts/validate-plugin-manifest.mjs)（`npm run plugin:validate`、全 541 行）は次を検査します。
+[`scripts/validate-plugin-manifest.mjs`](../../scripts/validate-plugin-manifest.mjs)（`npm run plugin:validate`）は次を検査します。
 
 - 2 つの manifest の `version` が `package.json` と一致すること（`:342` と `:440`）
 - `.claude-plugin` 側の参照パスが実在すること（`:359`）
 - 2 つの manifest 間の parity 6 組。`skills` / `repository` / `displayName` / `composerIcon` / `homepage` / `author.name` が対象である（`checkCrossManifestParity` `:161`）
-- `commands/` と `agents/` に置いた資産が manifest へ登録済みであること（逆方向ドリフト検査 `:191`）
+- `commands/` と `agents/` に置いた資産が manifest へ登録済みであること（逆方向ドリフト検査 `checkAssetRegistration` `:203`）
 
 一方で「host 固有ディレクトリを配布資産として参照しない」および「host 固有ファイルへ Review Judgment を複製しない」を検査する仕組みは、同スクリプトに存在しません。
 
@@ -37,7 +37,7 @@ Accepted—#2012（親 Epic #2011）で、River Review の第一級配布面を 
 - #1446 は 2 つの事実を記録している。npm 未公開ゆえ `npx river-review` が原理的に失敗すること、および CLI 抜きで `review-team` skill の手順をエージェントが直接実行して設計どおりの出力へ到達したことである。[`README.md`](../../README.md) `:86` も配布 2 チャネルと npm 非公開を宣言している
 - ADR-006（[`006-model-aware-review-prompt-compiler.md`](./006-model-aware-review-prompt-compiler.md)）は「Model Profile は Review Judgment を変更してはならない」を不変条件として置いている
 
-この 3 つを重ねると、配布面の優先順位が文書間で一意に読めません。「正規実行面は CLI」と「利用者は CLI 抜きで使う」が別々の文書へ並んでいるためです。
+この 3 つの間に矛盾はありません。ただし、配布面の優先順位を明示した文書がありません。[`docs/CLI-architecture.md`](../CLI-architecture.md) の「Thin adapter 原則」`:67` は plugin を「CLI（または同一の skill 定義）を呼ぶ薄い層」と書いており、CLI 非依存の plugin 実行を排除していません。不足しているのは矛盾の解消ではなく、優先順位の明示です。
 
 ## Decision
 
@@ -73,6 +73,7 @@ npm 公開は前提にしません。この点は `README.md` `:86` の既存宣
 Review Judgment に属し、adapter 側へ複製してはならない対象は次のとおりです。
 
 - skill の判断基準
+- どの skill が選ばれるか（skill 選択）。ADR-006 [`006-model-aware-review-prompt-compiler.md`](./006-model-aware-review-prompt-compiler.md) `:61` が Model Profile の非改変対象として明記している
 - severity の語彙と対応関係
 - gate / decision の意味
 - completion の意味
@@ -97,9 +98,13 @@ invocation mechanics に属し、adapter が変えてよい対象は次のとお
 
 RA-1 と RA-2 を検査へ落とす際の述語は、次の 3 要素で定義します。実装は本 ADR の範囲外です。
 
-1. 対象パス集合—`.claude/**`、`.codex/**`、`.claude-plugin/*.json`、`.codex-plugin/*.json`
+1. 対象パス集合—`.claude/**`、`.codex/**`、`.claude-plugin/*.json`、`.codex-plugin/*.json`。列挙は `git ls-files` 基準で行い、gitignore 済みの worktree コピー（`.claude/worktrees/**`）を含めない
 2. 禁止パターン集合—severity 語彙の対応表、gate / decision の判定条件、completion の判定条件、finding の証跡要件の定義
-3. 除外条件—同一ファイル内に SSoT（[`pages/reference/review-policy.md`](../../pages/reference/review-policy.md) / [`docs/review/output-format.md`](../review/output-format.md) / `skills/**`）への参照を持つ派生記述
+3. 除外条件—同一ファイル内に SSoT（[`pages/reference/review-policy.md`](../../pages/reference/review-policy.md) / [`docs/review/output-format.md`](../review/output-format.md) / `skills/**` / `src/lib/**`）への参照を持ち、かつ複製された定義が参照先へ逐語で存在する派生記述。逐語一致が取れない複製は違反として扱う
+
+項番 1 で `git ls-files` を基準にするのは、worktree のフルコピーが `.claude/` 配下に置かれるためです。`find .claude -name '*.md'` は本体チェックアウトで 4753 件を返しますが、`git ls-files '.claude/**/*.md'` は 37 件を返します（2026-09-03 実測）。
+
+項番 3 が参照の有無だけを見ると、参照先に存在しない判断内容まで除外されます。実例として [`.claude/rules/review-core.md`](../../.claude/rules/review-core.md) `:21`〜`:23` は severity の対応表を持ちます。しかし同ファイルが宣言する SSoT 3 本に `blocker` は 1 件も現れません。実測では `grep -c blocker pages/reference/review-policy.md docs/review/output-format.md docs/review/viewpoints.md` がいずれも 0 を返します。逐語一致まで求めるのはこのためです。
 
 判定不能な場合は違反として扱います。本リポジトリの fail-safe は目立つ側へ倒す方針であり、ADR-008 が severity 不明を major へ倒す既存実装を根拠として記録しています。
 
@@ -108,10 +113,13 @@ RA-1 と RA-2 を検査へ落とす際の述語は、次の 3 要素で定義し
 | 分類                     | 置き場所                                                                                 | 配布対象   | Review Judgment の正本 |
 | ------------------------ | ---------------------------------------------------------------------------------------- | ---------- | ---------------------- |
 | runtime-independent 資産 | `skills/**` `commands/**` `agents/**` `schemas/**` `docs/review/**` `pages/reference/**` | 参照される | 持つ                   |
+| 判断ロジックの実装       | `src/lib/**`                                                                             | 配布しない | 持つ                   |
 | adapter 資産             | `.claude-plugin/*.json` `.codex-plugin/*.json`                                           | 配布される | 持たない               |
 | host-local 開発設定      | `.claude/**` `.codex/**`                                                                 | 配布しない | 持たない               |
 
 adapter 資産が持ってよいのは宣言と表示だけです。host-local 開発設定は派生記述のみを置き、SSoT への参照を伴わせます。
+
+`src/lib/**` を正本の側へ並べているのは、散文ドキュメントだけでは正本が閉じないためです。severity の内部語彙 `blocker` / `warning` / `nit` を列挙した散文ドキュメントは、`docs/review/**` と `pages/reference/**` のどちらにも存在しません。実体は [`src/lib/finding-factory.mjs`](../../src/lib/finding-factory.mjs) `:8` の `FINDING_SEVERITIES` と、同ファイル `:373` `normalizeSeverity` が出力スキーマへ写す対応にあたります。したがって severity 語彙の正本は `src/lib/**` にあります。`docs/review/**` と `pages/reference/**` はその説明を担います。
 
 ### D5—host-specific fallback
 
@@ -125,17 +133,18 @@ fallback が変えるのは起動経路だけです。選ばれる skill、sever
 
 ### D6—version pinning と互換性
 
-- plugin の version は `package.json` の version と同値とし、更新主体は release-please だけとする。[`scripts/sync-plugin-fields.mjs`](../../scripts/sync-plugin-fields.mjs) `:11` は version を同期対象から明示的に外し、一致の検査は `validate-plugin-manifest.mjs` が担う
+- plugin の version は `package.json` の version と同値とし、更新主体は release-please だけとする。[`scripts/sync-plugin-fields.mjs`](../../scripts/sync-plugin-fields.mjs) `:9` は version を同期対象から明示的に外し、一致の検査は `validate-plugin-manifest.mjs` が担う
 - 互換性の単位は skill の id と version であり、adapter の version ではない。adapter だけの変更（表示メタデータ、host 固有の宣言）は Review Judgment の互換性へ影響しない。逆に `skills/**` の判断基準の変更は、adapter を変更しなくても互換性へ影響する
 - host 側の設定によっては配布物の自動更新が働かない。版ズレを疑う場合の診断手順は [`docs/runbook/plugin-cache-purge.md`](../runbook/plugin-cache-purge.md) に従う
 
 ### D7—既存 manifest からの移行方針
 
-現況の 2 つの manifest は本 ADR の規則へすでに適合しており、フィールドの書き換えは不要です。移行として残るのは次の 3 点です。
+本 ADR の規則へすでに適合しているのは 2 つの manifest に限った話であり、RA-1 全体の適合を意味しません。manifest 側のフィールドの書き換えは不要です。移行として残るのは次の 4 点です。
 
 1. RA-1 と RA-2 の検査を `scripts/validate-plugin-manifest.mjs` へ追加する。本 ADR では実装しない
-2. [`.claude/rules/review-core.md`](../../.claude/rules/review-core.md)（40 行）の扱いを派生記述として固定する。同ファイルは severity の対応表を持つが、冒頭で SSoT 3 本を参照しており、manifest からも参照されないため配布対象ではない。RA-1 の除外条件に該当する
+2. [`.claude/rules/review-core.md`](../../.claude/rules/review-core.md)（40 行）の扱いを固定する。同ファイルは severity の対応表を持ち、冒頭で SSoT 3 本を参照しており、manifest からも参照されないため配布対象ではない。ただし D3-3 の逐語一致まで見ると、参照先 3 本に `blocker` が現れないため除外条件を満たさない。対応表の出典へ `src/lib/finding-factory.mjs` を加えるか、対応表そのものを落とすかは、RA-1 実装時に決める
 3. `docs/CLI-architecture.md` の「Thin adapter 原則」節から本 ADR を参照し、「正規実行面」の語が自動化経路を指すことを読者が辿れるようにする
+4. `.claude/commands/**` の棚卸し。RA-1 の対象は `git ls-files '.claude/**/*.md'` 基準で 37 件ある。本 ADR が扱ったのは項番 2 の `review-core.md` 1 件だけである。たとえば [`.claude/commands/merge-check.md`](../../.claude/commands/merge-check.md) は `:156` と `:162` で MERGE_OK / BLOCKED の判定条件を定義している。これは D3 が禁じる「gate / decision の判定条件」に当たる。同ファイルが宣言する SSoT は `docs/governance.md`（`:9`）である。これを D3-3 の除外 SSoT 一覧へ加えるか否かは未決とし、RA-1 実装時に決める。したがって RA-1 の検査を実装した時点で、`.claude/commands/**` から既存違反が出る見込みである
 
 ## Non-goals
 
