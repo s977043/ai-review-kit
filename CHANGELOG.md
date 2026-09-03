@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.97.0](https://github.com/s977043/river-review/compare/v1.96.0...v1.97.0) (2026-09-03)
+
+
+### Features
+
+* [#2020](https://github.com/s977043/river-review/issues/2020) cross-runtime conformance kit を追加する ([#2045](https://github.com/s977043/river-review/issues/2045)) ([612f991](https://github.com/s977043/river-review/commit/612f9912fad6ab13db6d6186fa4301549127f977))
+
 ## [1.96.0](https://github.com/s977043/river-review/compare/v1.95.0...v1.96.0) (2026-09-03)
 
 
