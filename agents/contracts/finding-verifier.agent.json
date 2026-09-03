@@ -1,0 +1,29 @@
+{
+  "id": "finding-verifier",
+  "version": "0.1.0",
+  "description": "Independently checks evidence, scope, refs, severity and unsupported claims on candidate findings. Its judgment is deterministic and rule-based, so it declares no skills.",
+  "responsibilities": ["verify-findings"],
+  "inputs": ["candidate-findings", "diff", "skills"],
+  "outputs": ["verified-findings"],
+  "skills": [],
+  "capabilities": ["read-artifact"],
+  "authority": {
+    "canModifySource": false,
+    "canApproveMerge": false,
+    "canApproveRelease": false,
+    "canRewritePolicy": false
+  },
+  "onUnavailable": "stop",
+  "implementedBy": [
+    {
+      "path": "src/lib/verifier.mjs",
+      "symbol": "verifyFinding",
+      "note": "Rule-based verification; calls no model."
+    },
+    {
+      "path": "src/lib/verifier.mjs",
+      "symbol": "resolveFindingScope",
+      "note": "in-diff / pre-existing scope resolution."
+    }
+  ]
+}

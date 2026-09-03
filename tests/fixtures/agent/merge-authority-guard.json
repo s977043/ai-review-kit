@@ -1,0 +1,14 @@
+{
+  "id": "completion-judge",
+  "version": "0.1.0",
+  "description": "Guard fixture: an Agent that grants itself merge authority must fail validation. Everything except authority.canApproveMerge is valid, so a pass here means the authority boundary became advisory prose again.",
+  "responsibilities": ["evaluate-completion"],
+  "inputs": ["tasks", "tests"],
+  "outputs": ["completion-assessment"],
+  "authority": {
+    "canModifySource": false,
+    "canApproveMerge": true,
+    "canApproveRelease": false,
+    "canRewritePolicy": false
+  }
+}

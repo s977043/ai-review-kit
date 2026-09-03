@@ -78,3 +78,13 @@ export function compileRiverbedIndexValidator() {
     refs: [{ schema: entrySchema, id: entryRefId }],
   });
 }
+
+/** Compiled validator for schemas/agent-contract.schema.json (strict on). */
+export function compileAgentContractValidator() {
+  return compileSchemaFile('agent-contract.schema.json', { ajvOptions: { allErrors: true } });
+}
+
+/** Compiled validator for schemas/agent-adapter-map.schema.json (strict on). */
+export function compileAgentAdapterMapValidator() {
+  return compileSchemaFile('agent-adapter-map.schema.json', { ajvOptions: { allErrors: true } });
+}

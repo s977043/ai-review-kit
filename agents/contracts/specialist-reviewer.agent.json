@@ -1,0 +1,38 @@
+{
+  "id": "specialist-reviewer",
+  "version": "0.1.0",
+  "description": "Produces candidate findings for one reviewer lens. It is one logical Agent instantiated per reviewer role, not one Agent per lens: the lens ledger stays REVIEWER_ROLES in src/lib/reviewer-orchestrator.mjs, and the river-review-* agent skills are skills it may use rather than additional Agents.",
+  "responsibilities": ["generate-candidate-findings"],
+  "inputs": ["diff", "artifacts", "skills", "baseline"],
+  "outputs": ["candidate-findings"],
+  "skills": [
+    "river-review-architecture",
+    "river-review-code",
+    "river-review-docs",
+    "river-review-frontend",
+    "river-review-performance",
+    "river-review-security",
+    "river-review-testing"
+  ],
+  "capabilities": ["read-artifact", "read-source"],
+  "authority": {
+    "canModifySource": false,
+    "canApproveMerge": false,
+    "canApproveRelease": false,
+    "canRewritePolicy": false
+  },
+  "instantiatedPer": "reviewer-role",
+  "onUnavailable": "escalate",
+  "implementedBy": [
+    {
+      "path": "src/lib/reviewer-orchestrator.mjs",
+      "symbol": "REVIEWER_ROLES",
+      "note": "The lens ledger this Agent is instantiated over."
+    },
+    {
+      "path": "src/lib/review-engine.mjs",
+      "symbol": "generateReview",
+      "note": "Produces the candidate findings for one lens."
+    }
+  ]
+}

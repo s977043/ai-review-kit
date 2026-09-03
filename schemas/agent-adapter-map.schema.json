@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://river-review.the3396.com/schemas/agent-adapter-map.schema.json",
+  "title": "River Review Agent adapter map",
+  "description": "How each logical Agent (#2014, Epic #2011) is bound on a concrete runtime. This is deliberately a SECOND document: the Agent Contract (`schemas/agent-contract.schema.json`) carries the judgment-relevant declarations (responsibilities, inputs, outputs, skills, authority) and stays runtime-independent, while this document carries only binding mechanics. The split is what makes \"a Claude/Codex adapter difference must not leak into a judgment difference\" checkable rather than merely asserted: every object here is closed and none of them can hold a judgment field, and `tests/agent-contract.test.mjs` additionally requires that both runtime bindings of an Agent agree on whether their `fallback` hands the judgment to a human, and that every capability a contract requires is provided by every runtime listed here. The runtime capability lists are measurements of the shipped manifests, not aspirations: Claude's from the `tools:` line of `agents/river-review.md`, Codex's from `interface.capabilities` in `.codex-plugin/plugin.json`.",
+  "type": "object",
+  "required": ["version", "runtimes", "agents"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "runtimes": {
+      "description": "The runtimes River Review is distributed to. Adding a runtime means adding a key here and a binding for every Agent; a missing binding fails validation instead of silently disabling an Agent.",
+      "type": "object",
+      "required": ["claude", "codex"],
+      "additionalProperties": false,
+      "properties": {
+        "claude": { "$ref": "#/$defs/runtime" },
+        "codex": { "$ref": "#/$defs/runtime" }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "required": [
+        "review-orchestrator",
+        "specialist-reviewer",
+        "finding-verifier",
+        "consistency-judge",
+        "completion-judge"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "review-orchestrator": { "$ref": "#/$defs/agentBindings" },
+        "specialist-reviewer": { "$ref": "#/$defs/agentBindings" },
+        "finding-verifier": { "$ref": "#/$defs/agentBindings" },
+        "consistency-judge": { "$ref": "#/$defs/agentBindings" },
+        "completion-judge": { "$ref": "#/$defs/agentBindings" }
+      }
+    }
+  },
+  "$defs": {
+    "capability": {
+      "description": "Runtime-neutral capability names, spelled exactly as in `schemas/agent-contract.schema.json`.",
+      "enum": ["read-artifact", "read-source", "search-source", "run-command"]
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["capabilities", "capabilitySource"],
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capability" }
+        },
+        "capabilitySource": {
+          "description": "The shipped file the capability list was read from, so the list stays a measurement.",
+          "type": "string",
+          "minLength": 1
+        },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentBindings": {
+      "type": "object",
+      "required": ["claude", "codex"],
+      "additionalProperties": false,
+      "properties": {
+        "claude": { "$ref": "#/$defs/binding" },
+        "codex": { "$ref": "#/$defs/binding" }
+      }
+    },
+    "binding": {
+      "description": "One runtime's binding for one Agent. `mechanism` records which primitive carries it; `surface` is the shipped path that primitive is declared in; `fallback` records what happens where the runtime lacks the primitive. `skill-only` means the runtime has no agent primitive and the Agent is carried by the shared `skills/agent-skills/` surface, which changes the delivery mechanism and not the judgment. `escalate` hands the judgment to a human. There is no value meaning \"run a reduced judgment\": a reduced judgment is exactly the leak this document exists to prevent.",
+      "type": "object",
+      "required": ["mechanism", "surface", "fallback"],
+      "additionalProperties": false,
+      "properties": {
+        "mechanism": { "enum": ["native-subagent", "skill", "command"] },
+        "surface": { "type": "string", "minLength": 1 },
+        "fallback": { "enum": ["not-needed", "skill-only", "escalate"] },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

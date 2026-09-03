@@ -1,0 +1,14 @@
+{
+  "id": "bug-hunter",
+  "version": "0.1.0",
+  "description": "Guard fixture: a reviewer lens role is a different axis from a logical Agent, so a REVIEWER_ROLES key must not validate as an Agent id. A pass here means the two ledgers merged, which is the confusion #2013 and #2014 keep apart.",
+  "responsibilities": ["generate-candidate-findings"],
+  "inputs": ["diff"],
+  "outputs": ["candidate-findings"],
+  "authority": {
+    "canModifySource": false,
+    "canApproveMerge": false,
+    "canApproveRelease": false,
+    "canRewritePolicy": false
+  }
+}

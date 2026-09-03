@@ -1,0 +1,14 @@
+{
+  "id": "traceability-auditor",
+  "version": "0.1.0",
+  "description": "Guard fixture: a sixth Agent must be rejected at load time rather than accepted as a new file. Everything except the id is valid, so a pass here means the Agent ledger stopped being closed and Agent proliferation is no longer mechanically blocked (#2011 non-goal, #2014 acceptance criterion).",
+  "responsibilities": ["judge-cross-artifact-consistency"],
+  "inputs": ["requirements", "diff"],
+  "outputs": ["consistency-assessment"],
+  "authority": {
+    "canModifySource": false,
+    "canApproveMerge": false,
+    "canApproveRelease": false,
+    "canRewritePolicy": false
+  }
+}

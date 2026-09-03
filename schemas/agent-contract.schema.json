@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://river-review.the3396.com/schemas/agent-contract.schema.json",
+  "title": "River Review logical Agent Contract",
+  "description": "Runtime-independent definition of WHO is responsible for a piece of review judgment (#2014, Epic #2011). Skill = what to judge, Agent = who is responsible, Flow = when/how judgment is executed. A logical Agent is NOT a Claude native subagent: a runtime that has no equivalent primitive still conforms as long as it satisfies this contract, so this document carries no host, model, or prompt vocabulary. Runtime binding lives in a separate document (`schemas/agent-adapter-map.schema.json`) precisely so an adapter difference cannot leak into judgment. Not to be confused with `agents/spec/agent.schema.json`, which describes an \"AI Agent Knowledge Pack\" and is a different field system. Vocabulary is closed: `id`, `responsibilities`, `inputs`, `outputs`, `capabilities` and `onUnavailable` are enums and every object sets `additionalProperties: false`, so an unknown or misspelled agent fails validation at load time instead of being silently skipped. That matches the repository-wide fail-safe direction recorded in `src/lib/gate-decision.mjs` (everything unknown or undetermined maps to the safe side).",
+  "type": "object",
+  "required": ["id", "version", "responsibilities", "inputs", "outputs", "authority"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/agentId"
+    },
+    "version": {
+      "description": "Semantic version of this Agent Contract as a versioned asset, following the `packs:`/`skills:` convention (`schemas/pack.schema.json`). This is an asset version, not an artifact `schemaVersion`. The same `id` + `version` MUST mean the same responsibilities, inputs, outputs and authority on every runtime.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "responsibilities": {
+      "description": "What this Agent is answerable for. Each value is owned by exactly one Agent; the non-overlap requirement (#2014 acceptance criterion) is a cross-document constraint that JSON Schema cannot express, so `tests/agent-contract.test.mjs` enforces it over the contracts in `agents/contracts/`.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/responsibility" }
+    },
+    "inputs": {
+      "description": "Artifact kinds this Agent may consume. Declarative only: an Agent may not consume an artifact kind it does not declare.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/inputKind" }
+    },
+    "outputs": {
+      "description": "Artifact kinds this Agent produces. These are Agent-level products; a Flow's `outputs` (#2013) are the Flow-level artifacts they feed.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/outputKind" }
+    },
+    "skills": {
+      "description": "Allowed review skills, by skill id. Every id MUST already exist as an entry in `skills/registry.yaml` or as a directory under `skills/agent-skills/`; `tests/agent-contract.test.mjs` enforces that, so a contract cannot name a skill the repository does not ship. An empty array is meaningful: it declares that the Agent's judgment is deterministic and needs no skill (the case for `finding-verifier`, implemented rule-based in `src/lib/verifier.mjs`).",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+    },
+    "capabilities": {
+      "description": "Tool capabilities this Agent requires, named in runtime-neutral terms. Every value MUST be provided by every runtime in `agents/contracts/adapter-map.json`; the test pins the required set to the intersection of the runtimes, which is how the acceptance criterion \"a Claude/Codex adapter difference must not leak into a judgment difference\" is mechanized rather than asserted. Absent means the empty set.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/capability" }
+    },
+    "authority": {
+      "description": "What this Agent is NOT allowed to do. Every field is `const: false`, so the acceptance criterion \"no merge / release / policy rewrite authority\" is enforced by validation and cannot be granted by editing a contract. Raising any of these requires a schema change, which is a reviewable event. This formalizes existing repository practice: the review agent declares no write tools (`agents/river-review.md`), the `auto-approve` verdict is documented as not a delegation of merge authority (`pages/reference/output-format-yaml.en.md`), and gate configuration under `.river/**` escalates unconditionally so a gate cannot switch itself off (`src/lib/gate-decision.mjs`, bootstrap cliff rule 0).",
+      "type": "object",
+      "required": ["canModifySource", "canApproveMerge", "canApproveRelease", "canRewritePolicy"],
+      "additionalProperties": false,
+      "properties": {
+        "canModifySource": {
+          "description": "Agents review; they never write the source under review.",
+          "const": false
+        },
+        "canApproveMerge": {
+          "description": "Merge stays with the host. River Review derives a gate decision; executing it is the host's responsibility (`src/lib/gate-decision.mjs`).",
+          "const": false
+        },
+        "canApproveRelease": { "description": "Release stays with the host.", "const": false },
+        "canRewritePolicy": {
+          "description": "An Agent may not edit the policy it is judged by (`.river/**`, `skills/**`, `docs/review/**`).",
+          "const": false
+        }
+      }
+    },
+    "instantiatedPer": {
+      "description": "Declares that one logical Agent is instantiated once per member of an existing ledger, instead of being split into several Agents. `reviewer-role` means the keys of `REVIEWER_ROLES` in `src/lib/reviewer-orchestrator.mjs`; the ledger is deliberately NOT copied into this schema, and `tests/agent-contract.test.mjs` pins it by importing the module. This is how a lens axis stays out of the Agent axis: adding a reviewer lens does not add an Agent (see the proliferation rule in `docs/development/agent-contract.md`).",
+      "enum": ["reviewer-role"]
+    },
+    "onUnavailable": {
+      "description": "What a runtime does when this Agent cannot run (its adapter binding is missing, or the runtime cannot provide a required capability). Both outcomes are safe-side and neither is \"continue silently\": `stop` halts the Flow, `escalate` hands the judgment to a human. Absent means `escalate`. There is deliberately no value that lets a run proceed as if the Agent had produced its output (#2014 unknown/missing agent fail-safe).",
+      "enum": ["stop", "escalate"]
+    },
+    "implementedBy": {
+      "description": "Where the responsibility already lives in this repository, so the contract records a mapping instead of implying new code. Every `path` must exist and every `symbol` must appear in that file; `tests/agent-contract.test.mjs` enforces both, so a stale or invented reference fails.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "symbol": { "type": "string", "minLength": 1 },
+          "note": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "agentId": {
+      "description": "The complete logical Agent ledger. The enum is closed on purpose: Epic #2011 limits the initial set to these five, so adding a sixth is a schema change rather than a new file. A reviewer lens role (`REVIEWER_ROLES`) is a different axis and MUST NOT appear here; #2013's Flow schema reserves the `agent:` step key for exactly this vocabulary.",
+      "enum": [
+        "review-orchestrator",
+        "specialist-reviewer",
+        "finding-verifier",
+        "consistency-judge",
+        "completion-judge"
+      ]
+    },
+    "responsibility": {
+      "description": "Responsibility verbs. Names existing capability rather than new behaviour, and each verb is owned by exactly one Agent.",
+      "enum": [
+        "resolve-intent",
+        "plan-execution",
+        "select-agents",
+        "generate-candidate-findings",
+        "verify-findings",
+        "judge-cross-artifact-consistency",
+        "evaluate-completion"
+      ]
+    },
+    "inputKind": {
+      "enum": [
+        "intent",
+        "flow",
+        "artifacts",
+        "diff",
+        "requirements",
+        "design",
+        "plan",
+        "tasks",
+        "tests",
+        "skills",
+        "findings",
+        "candidate-findings",
+        "verified-findings",
+        "baseline"
+      ]
+    },
+    "outputKind": {
+      "enum": [
+        "execution-plan",
+        "candidate-findings",
+        "verified-findings",
+        "consistency-assessment",
+        "completion-assessment"
+      ]
+    },
+    "capability": {
+      "description": "Runtime-neutral tool capability names. This list alone does NOT make an Agent read-only: `run-command` is bound to Bash on Claude in `agents/contracts/adapter-map.json`, so it can reach a shell that writes source. The read-only property is carried instead by `authority.canModifySource: false` (a schema `const`, so it cannot be granted by editing a contract) together with the capability-intersection check in `tests/agent-contract.test.mjs`, which keeps a capability only one runtime provides out of the judgment path.",
+      "enum": ["read-artifact", "read-source", "search-source", "run-command"]
+    }
+  }
+}
