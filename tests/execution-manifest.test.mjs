@@ -303,6 +303,51 @@ describe('redaction and raw-context refusal (#2015 AC 2)', () => {
     assert.equal(verifyExecutionManifest(manifest).verified, true);
   });
 
+  it('derives skillSetHash from the REDACTED entries, so a reader can recompute it', () => {
+    // The one digest `verifyExecutionManifest` does not cover, so nothing else
+    // in this file would notice it being pinned to pre-redaction values.
+    const leakedId = `skill-sk-ant-api03-${'c'.repeat(48)}`;
+    assert.equal(redactText(leakedId).hits.length, 1, 'fixture id must trip the redactor');
+    const manifest = buildExecutionManifest(
+      completeSpec({ skills: [{ id: leakedId, version: '1', sha256: 'd'.repeat(64) }] }),
+      { now: FIXED_NOW }
+    );
+
+    const storedEntries = manifest.skills.entries;
+    assert.equal(storedEntries[0].id, redactText(leakedId).text);
+    assert.equal(manifest.skills.skillSetHash, sha256Hex(canonicalJson(storedEntries)));
+
+    // Guard the direction of the fix: the pre-redaction derivation is a
+    // DIFFERENT value here, so an implementation that hashed before redacting
+    // cannot satisfy the assertion above by coincidence.
+    const rawEntries = [{ id: leakedId, version: '1', sha256: 'd'.repeat(64) }];
+    assert.notEqual(manifest.skills.skillSetHash, sha256Hex(canonicalJson(rawEntries)));
+    assert.ok(!JSON.stringify(manifest).includes(leakedId));
+  });
+
+  it('folds separators and case before matching a forbidden key name', () => {
+    // Same field, three spellings: a guard that only lowercases lets two of
+    // them through. Each must be refused by NAME, before any value redaction.
+    for (const key of [
+      'authorization',
+      'password',
+      'credentials',
+      'cookie',
+      'accessToken',
+      'access_token',
+      'secret',
+      'api_key',
+      'API-KEY',
+      'Api_Key',
+    ]) {
+      assert.throws(
+        () => assertNoRawContext({ [key]: 'anything' }),
+        ExecutionManifestError,
+        `expected ${key} to be refused`
+      );
+    }
+  });
+
   it('leaves sha256 digests untouched (hex never trips the entropy fallback)', () => {
     assert.deepEqual(COMPLETE.redaction.hits, []);
     assert.equal(COMPLETE.flow.sha256, 'a'.repeat(64));

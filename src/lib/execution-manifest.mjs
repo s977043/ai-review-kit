@@ -145,12 +145,31 @@ const FORBIDDEN_KEYS = Object.freeze([
   'text',
   'env',
   'environment',
+  'secret',
   'secrets',
   'token',
+  'accessToken',
   'apiKey',
+  'authorization',
+  'password',
+  'credentials',
+  'cookie',
 ]);
 
-const FORBIDDEN_KEY_SET = new Set(FORBIDDEN_KEYS.map((k) => k.toLowerCase()));
+/**
+ * Fold a key to the form the forbidden set is compared against.
+ *
+ * Case alone is not enough: the same field arrives as `apiKey`, `api_key` and
+ * `API-KEY` depending on which layer produced it, and a guard that only lowers
+ * the case lets two of those three through. Separators carry no meaning in a
+ * field NAME, so they are dropped before the comparison.
+ *
+ * @param {string} key
+ * @returns {string}
+ */
+const foldKeyName = (key) => key.toLowerCase().replace(/[-_]/g, '');
+
+const FORBIDDEN_KEY_SET = new Set(FORBIDDEN_KEYS.map(foldKeyName));
 
 /** Containers whose own keys are data labels, not field names. */
 const DATA_KEY_PATHS = new Set(['spec.artifacts']);
@@ -181,7 +200,7 @@ export function assertNoRawContext(value, path = 'spec', { dataKeyPaths = DATA_K
   }
   const keysAreData = dataKeyPaths.has(path);
   for (const [key, child] of Object.entries(value)) {
-    if (!keysAreData && FORBIDDEN_KEY_SET.has(key.toLowerCase())) {
+    if (!keysAreData && FORBIDDEN_KEY_SET.has(foldKeyName(key))) {
       throw new ExecutionManifestError(
         `${path}.${key} is not allowed in an execution manifest: the manifest records ids, versions and hashes only (#2015 non-goals — no hidden CoT, no raw tool output, no raw sensitive context).`
       );
@@ -196,9 +215,13 @@ export function assertNoRawContext(value, path = 'spec', { dataKeyPaths = DATA_K
  * Defense in depth behind `assertNoRawContext`: the structural check owns the
  * fields that must not exist, and this owns the values that slipped into a
  * field that may exist (a model name typed as `gpt-4o?key=sk-...`, a profile
- * label carrying a token). Redaction happens BEFORE the digests are computed,
- * so a stored manifest and its recomputed hash agree — redacting afterwards
- * would make every manifest fail `verifyExecutionManifest`.
+ * label carrying a token). Redaction happens BEFORE every digest this module
+ * stores — `manifestKey` / `manifestHash` AND `skills.skillSetHash` — so each
+ * one re-derives from the values actually written. Redacting afterwards would
+ * make every manifest fail `verifyExecutionManifest`; computing one digest
+ * ahead of redaction (as `skillSetHash` did until #2032) is the quieter
+ * version of the same bug, because `verifyExecutionManifest` does not cover
+ * `skillSetHash` and the mismatch surfaces only when a reader recomputes it.
  *
  * @param {unknown} value
  * @param {{ hits: Map<string, number> }} acc
@@ -311,6 +334,21 @@ function normalizeAgents(spec) {
   return block(statusOf(entries.length > 0, { unavailable: agents.length === 0 }), { entries });
 }
 
+/**
+ * One digest over the whole selected skill set, so a consumer can compare two
+ * runs' skill selection without walking the array.
+ *
+ * Always called on the REDACTED entries (see `buildExecutionManifest`): the
+ * digest has to be re-derivable from the entries the manifest stores, and a
+ * skill id that trips `redactText` is stored redacted.
+ *
+ * @param {Array<object>} entries
+ * @returns {string|null}
+ */
+function computeSkillSetHash(entries) {
+  return entries.length ? sha256Hex(canonicalJson(entries)) : null;
+}
+
 function normalizeSkills(spec) {
   const skills = spec?.skills;
   if (skills == null) return block('missing', { entries: [], skillSetHash: null });
@@ -330,9 +368,9 @@ function normalizeSkills(spec) {
   const complete = entries.length > 0 && entries.every((s) => s.sha256 != null);
   return block(statusOf(complete, { unavailable: skills.length === 0 }), {
     entries,
-    // One digest over the whole selected set, so a consumer can compare two
-    // runs' skill selection without walking the array.
-    skillSetHash: entries.length ? sha256Hex(canonicalJson(entries)) : null,
+    // Placeholder only. `buildExecutionManifest` fills this in from the
+    // REDACTED entries; deriving it here would pin the pre-redaction ids.
+    skillSetHash: null,
   });
 }
 
@@ -424,7 +462,7 @@ function computeManifestDigests({ conditions, createdAt }) {
 /**
  * Build the Execution Manifest for one review run.
  *
- * @param {object} spec see docs/development/2015-execution-manifest.md
+ * @param {object} spec see docs/development/execution-manifest.md
  * @param {{ now?: Date }} [options]
  * @returns {object} the manifest document
  */
@@ -459,6 +497,11 @@ export function buildExecutionManifest(spec, { now = new Date() } = {}) {
 
   const acc = { hits: new Map() };
   const redacted = redactDeep(conditions, acc);
+  // Every digest is derived from post-redaction values, so a reader holding
+  // only the stored document can recompute each of them. `skillSetHash` is the
+  // one digest `verifyExecutionManifest` does not cover, which is exactly why
+  // it must not be the one derived early.
+  redacted.skills.skillSetHash = computeSkillSetHash(redacted.skills.entries);
   redacted.redaction = {
     applied: true,
     hits: [...acc.hits.entries()]
