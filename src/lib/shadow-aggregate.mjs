@@ -101,7 +101,19 @@ const OBSERVED_PATTERN_BY_FEEDBACK_TYPE = {
 // Deterministic helpers
 // ---------------------------------------------------------------------------
 
-function sha256Hex(input) {
+/**
+ * Hex sha256 of a string.
+ *
+ * Exported (#2015) so that content-addressed surfaces added later import this
+ * one implementation instead of spelling `createHash('sha256')` again. Two
+ * byte-identical private copies already existed (here and in
+ * `paired-replay.mjs`); a third would have made the hash a convention rather
+ * than a shared function. `paired-replay.mjs` now imports this one.
+ *
+ * @param {string} input
+ * @returns {string} 64 lowercase hex characters
+ */
+export function sha256Hex(input) {
   return createHash('sha256').update(input).digest('hex');
 }
 

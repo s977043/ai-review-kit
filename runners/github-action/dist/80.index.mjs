@@ -12,9 +12,8 @@ export const modules = {
 /* harmony export */   formatPairedReplayMarkdown: () => (/* binding */ formatPairedReplayMarkdown)
 /* harmony export */ });
 /* unused harmony exports PAIRED_REPLAY_SCHEMA_VERSION, PAIRED_REPLAY_COLLECTOR_VERSION, PAIRED_REPLAY_EVALUATOR_VERSION, MANIFEST_ID_PREFIX, TERMINAL_REASONS, SUPPORTED_ACCEPTANCE_METRICS, METRIC_DENOMINATORS, ACCEPTANCE_COMPARATORS, buildExperimentManifest, verifyExperimentManifest, pairFindings, evaluateAcceptance */
-/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(7598);
-/* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(3077);
-/* harmony import */ var _shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(4029);
+/* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(3077);
+/* harmony import */ var _shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(4029);
 // Paired replay (#1574 P2) — immutable Experiment Manifest + paired diffing.
 //
 // Takes ALREADY-PRODUCED review runs for a baseline configuration and a
@@ -39,8 +38,6 @@ export const modules = {
 //   契約3 Experiment Manifest  → buildExperimentManifest / verifyExperimentManifest
 //   契約4 content-addressed ID → computeCandidateId (P1 経由で #1624 の実装を利用)
 //   契約6 profile 別受入基準    → evaluateAcceptance
-
-
 
 
 
@@ -126,10 +123,6 @@ class PairedReplayError extends Error {
 // Deterministic helpers
 // ---------------------------------------------------------------------------
 
-function sha256Hex(input) {
-  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(input).digest('hex');
-}
-
 function compareStrings(a, b) {
   const left = a ?? '';
   const right = b ?? '';
@@ -137,7 +130,7 @@ function compareStrings(a, b) {
 }
 
 function severityOf(finding) {
-  const raw = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.severity);
+  const raw = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(finding?.severity);
   return raw && raw in SEVERITY_RANK ? raw : FALLBACK_SEVERITY;
 }
 
@@ -167,10 +160,10 @@ function severityRank(severity) {
  * @returns {string|null}
  */
 function deriveCaseKey(record) {
-  const explicit = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.caseId);
+  const explicit = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(record?.caseId);
   if (explicit) return explicit;
-  const target = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.reviewedTarget);
-  const mergeBase = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(record?.mergeBase);
+  const target = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(record?.reviewedTarget);
+  const mergeBase = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(record?.mergeBase);
   if (!target && !mergeBase) return null;
   return `${target ?? ''}@${mergeBase ?? ''}`;
 }
@@ -207,10 +200,10 @@ function splitManifest(manifest) {
  *   which an experimentKey-only digest would leave editable unnoticed.
  */
 function computeManifestDigests({ conditions, createdAt }) {
-  const experimentKey = sha256Hex((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(conditions));
+  const experimentKey = (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__/* .sha256Hex */ .fg)((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)(conditions));
   const manifestId = `${MANIFEST_ID_PREFIX}${experimentKey.slice(0, MANIFEST_ID_HASH_LENGTH)}`;
-  const manifestHash = sha256Hex(
-    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)({ conditions, createdAt, experimentKey, manifestId })
+  const manifestHash = (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__/* .sha256Hex */ .fg)(
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)({ conditions, createdAt, experimentKey, manifestId })
   );
   return { experimentKey, manifestId, manifestHash };
 }
@@ -223,7 +216,7 @@ function requireObject(value, label) {
 }
 
 function requireString(value, label) {
-  const str = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(value);
+  const str = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(value);
   if (!str) throw new PairedReplayError(`${label} must be a non-empty string.`);
   return str;
 }
@@ -236,7 +229,7 @@ function requireString(value, label) {
  * believes it declared cases.
  */
 function normalizeDenominator(value) {
-  const denominator = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(value) ?? 'paired-finding';
+  const denominator = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(value) ?? 'paired-finding';
   if (!METRIC_DENOMINATORS.includes(denominator)) {
     throw new PairedReplayError(
       `metrics.denominator "${denominator}" is unknown. Expected one of: ${METRIC_DENOMINATORS.join(', ')}.`
@@ -405,7 +398,7 @@ function normalizeSide(side, label, { collectorVersion }) {
   }
   // Kept in input order for the per-run cross-check below; the manifest gets a
   // sorted copy so the pinned conditions stay independent of input order.
-  const evidenceByRun = runs.map((record) => (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .buildRunEvidence */ .L5)(record, { collectorVersion }));
+  const evidenceByRun = runs.map((record) => (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__/* .buildRunEvidence */ .L5)(record, { collectorVersion }));
   const evidence = [...evidenceByRun].sort(
     (a, b) =>
       compareStrings(a.review_run_id, b.review_run_id) ||
@@ -416,13 +409,13 @@ function normalizeSide(side, label, { collectorVersion }) {
   return {
     manifest: {
       commitSha: requireString(side.commitSha, `${label}.commitSha`),
-      skillRegistryCommit: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.skillRegistryCommit),
-      provider: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.provider),
-      model: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.model),
+      skillRegistryCommit: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(side.skillRegistryCommit),
+      provider: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(side.provider),
+      model: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(side.model),
       temperature: normalizeTemperature(side.temperature, `${label}.temperature`),
-      configId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(side.configId),
+      configId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(side.configId),
       runCount: runs.length,
-      reviewRunIds: [...new Set(runs.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(compareStrings),
+      reviewRunIds: [...new Set(runs.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(compareStrings),
       caseKeys,
       unkeyedRunCount: runs.filter((record) => deriveCaseKey(record) == null).length,
       provenance: summary.provenance,
@@ -436,7 +429,7 @@ function normalizeSide(side, label, { collectorVersion }) {
 function normalizeCriterion(criterion, profileLabel, index) {
   requireObject(criterion, `${profileLabel}.criteria[${index}]`);
   const metric = requireString(criterion.metric, `${profileLabel}.criteria[${index}].metric`);
-  const comparator = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(criterion.comparator) ?? 'lte';
+  const comparator = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(criterion.comparator) ?? 'lte';
   if (!ACCEPTANCE_COMPARATORS.includes(comparator)) {
     throw new PairedReplayError(
       `${profileLabel}.criteria[${index}].comparator "${comparator}" is unknown. Expected one of: ${ACCEPTANCE_COMPARATORS.join(', ')}.`
@@ -540,7 +533,7 @@ function normalizeImprovementCandidate(spec, policyVersion) {
   // at all.
   let cluster;
   try {
-    cluster = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .normalizeClusterKey */ .xG)(candidate.clusterKey, {
+    cluster = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .normalizeClusterKey */ .xG)(candidate.clusterKey, {
       label: 'improvementCandidate.clusterKey',
     });
   } catch (err) {
@@ -559,7 +552,7 @@ function normalizeImprovementCandidate(spec, policyVersion) {
   evidence.forEach((ref, i) => {
     const label = `improvementCandidate.sourceFeedbackRefs[${i}]`;
     requireObject(ref, label);
-    const problem = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .validateFeedbackEntryShape */ .jR)(ref);
+    const problem = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .validateFeedbackEntryShape */ .jR)(ref);
     if (problem) throw new PairedReplayError(`${label} is invalid: ${problem}`);
     if (`${ref.skillId}::${ref.feedbackType}` !== clusterKey) {
       throw new PairedReplayError(
@@ -568,11 +561,11 @@ function normalizeImprovementCandidate(spec, policyVersion) {
     }
   });
   const candidatePolicyVersion = String(candidate.policyVersion ?? policyVersion);
-  if (!_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .KNOWN_POLICY_VERSIONS */ .d.includes(candidatePolicyVersion)) {
+  if (!_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .KNOWN_POLICY_VERSIONS */ .d.includes(candidatePolicyVersion)) {
     // Checked here (not only inside computeCandidateId) so the failure is a
     // PairedReplayError the CLI reports as a usage error rather than a stack.
     throw new PairedReplayError(
-      `improvementCandidate.policyVersion "${candidatePolicyVersion}" is unknown. Expected one of: ${_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .KNOWN_POLICY_VERSIONS */ .d.join(', ')}.`
+      `improvementCandidate.policyVersion "${candidatePolicyVersion}" is unknown. Expected one of: ${_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .KNOWN_POLICY_VERSIONS */ .d.join(', ')}.`
     );
   }
   // The id is NOT re-invented here: it comes from the #1624 derivation via P1's
@@ -580,7 +573,7 @@ function normalizeImprovementCandidate(spec, policyVersion) {
   // aggregate observed and `river promote propose` persists.
   let derived;
   try {
-    derived = (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .computeCandidateId */ .Mc)({
+    derived = (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__/* .computeCandidateId */ .Mc)({
       policyVersion: candidatePolicyVersion,
       clusterKey,
       evidence,
@@ -591,7 +584,7 @@ function normalizeImprovementCandidate(spec, policyVersion) {
     // escape as an unhandled exception.
     throw new PairedReplayError(`improvementCandidate evidence is invalid: ${err.message}`);
   }
-  const claimed = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(candidate.candidateId);
+  const claimed = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(candidate.candidateId);
   if (claimed && claimed !== derived.candidateId) {
     // A manifest that pins a candidate id which its own evidence does not
     // produce would make the whole experiment unattributable.
@@ -605,7 +598,7 @@ function normalizeImprovementCandidate(spec, policyVersion) {
     uniqueEvidenceCount: derived.evidenceCount,
     clusterKey,
     policyVersion: candidatePolicyVersion,
-    hypothesis: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(candidate.hypothesis) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec?.hypothesis),
+    hypothesis: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(candidate.hypothesis) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(spec?.hypothesis),
   };
 }
 
@@ -631,14 +624,14 @@ function normalizeImprovementCandidate(spec, policyVersion) {
  */
 function buildExperimentManifest(spec, { now = new Date() } = {}) {
   requireObject(spec, 'spec');
-  const policyVersion = String(spec.policyVersion ?? _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .CANDIDATE_POLICY_VERSION */ .e1);
-  if (!_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .KNOWN_POLICY_VERSIONS */ .d.includes(policyVersion)) {
+  const policyVersion = String(spec.policyVersion ?? _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .CANDIDATE_POLICY_VERSION */ .e1);
+  if (!_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .KNOWN_POLICY_VERSIONS */ .d.includes(policyVersion)) {
     throw new PairedReplayError(
-      `policyVersion "${policyVersion}" is unknown. Expected one of: ${_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .KNOWN_POLICY_VERSIONS */ .d.join(', ')}.`
+      `policyVersion "${policyVersion}" is unknown. Expected one of: ${_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .KNOWN_POLICY_VERSIONS */ .d.join(', ')}.`
     );
   }
   const collectorVersion =
-    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.evaluator?.collectorVersion) ?? PAIRED_REPLAY_COLLECTOR_VERSION;
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(spec.evaluator?.collectorVersion) ?? PAIRED_REPLAY_COLLECTOR_VERSION;
   const baseline = normalizeSide(spec.baseline, 'baseline', { collectorVersion });
   const candidate = normalizeSide(spec.candidate, 'candidate', { collectorVersion });
   // Both sides are reported in ONE error: fixing a dataset one message at a
@@ -656,7 +649,7 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
     throw new PairedReplayError('dataset.heldOutCaseKeys must be an array of case keys.');
   }
   const heldOutCaseKeys = [
-    ...new Set((heldOutDeclared ?? []).map((k) => (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(k)).filter(Boolean)),
+    ...new Set((heldOutDeclared ?? []).map((k) => (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(k)).filter(Boolean)),
   ].sort(compareStrings);
   // Validated against the INTERSECTION, not the union: a key present on only
   // one side passes a union check but produces zero paired cases, so every
@@ -685,7 +678,7 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
     schemaVersion: PAIRED_REPLAY_SCHEMA_VERSION,
     kind: 'experiment-manifest',
     policyVersion,
-    hypothesis: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.hypothesis),
+    hypothesis: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(spec.hypothesis),
     improvementCandidate: normalizeImprovementCandidate(spec, policyVersion),
     baseline: baseline.manifest,
     candidate: candidate.manifest,
@@ -695,23 +688,23 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
       // Pins the exact artifacts the experiment ran on: a re-run against edited
       // run records produces a different datasetHash and therefore a different
       // experimentKey.
-      datasetHash: sha256Hex(
-        (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)({
+      datasetHash: (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__/* .sha256Hex */ .fg)(
+        (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)({
           caseKeys,
           baseline: baseline.manifest.evidence.map((e) => e.artifact_sha256).sort(compareStrings),
           candidate: candidate.manifest.evidence.map((e) => e.artifact_sha256).sort(compareStrings),
         })
       ),
       heldOutCaseKeys,
-      heldOutHash: heldOutCaseKeys.length ? sha256Hex((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(heldOutCaseKeys)) : null,
+      heldOutHash: heldOutCaseKeys.length ? (0,_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__/* .sha256Hex */ .fg)((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)(heldOutCaseKeys)) : null,
     },
     evaluator: {
       evaluatorVersion:
-        (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.evaluator?.evaluatorVersion) ?? PAIRED_REPLAY_EVALUATOR_VERSION,
+        (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(spec.evaluator?.evaluatorVersion) ?? PAIRED_REPLAY_EVALUATOR_VERSION,
       collectorVersion,
     },
     trials: {
-      trialId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.trials?.trialId),
+      trialId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(spec.trials?.trialId),
       trialCount,
     },
     verifier: {
@@ -719,11 +712,11 @@ function buildExperimentManifest(spec, { now = new Date() } = {}) {
       // claim is recorded and `verified` stays false — see the trust block on
       // the result.
       independent: spec.verifier?.independent === true,
-      verifierId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.verifier?.verifierId),
-      runBy: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.verifier?.runBy),
+      verifierId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(spec.verifier?.verifierId),
+      runBy: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(spec.verifier?.runBy),
     },
     activation: {
-      expectedSignal: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(spec.activation?.expectedSignal),
+      expectedSignal: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(spec.activation?.expectedSignal),
       declaredEvidence: Array.isArray(spec.activation?.declaredEvidence)
         ? [...spec.activation.declaredEvidence].map((e) => String(e)).sort(compareStrings)
         : [],
@@ -794,11 +787,11 @@ function verifyExperimentManifest(manifest) {
 
 function projectFinding(finding) {
   return {
-    fingerprint: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.fingerprint),
+    fingerprint: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(finding?.fingerprint),
     severity: severityOf(finding),
-    file: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.file),
-    ruleId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.ruleId),
-    title: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .nonEmptyNfcString */ .bS)(finding?.title),
+    file: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(finding?.file),
+    ruleId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(finding?.ruleId),
+    title: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .nonEmptyNfcString */ .bS)(finding?.title),
   };
 }
 
@@ -814,7 +807,7 @@ function indexSide(findings) {
   const projected = (findings ?? []).map(projectFinding);
   const unpairable = projected
     .filter((f) => f.fingerprint == null)
-    .sort((a, b) => compareStrings((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(a), (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(b)));
+    .sort((a, b) => compareStrings((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)(a), (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)(b)));
   const byFingerprint = new Map();
   let duplicatesRemoved = 0;
   let severityConflicts = 0;
@@ -822,7 +815,7 @@ function indexSide(findings) {
     .filter((f) => f.fingerprint != null)
     // Sorted before insertion so "first wins" is a property of the DATA, not of
     // the order the findings happened to be listed in.
-    .sort((a, b) => compareStrings((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(a), (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)(b)));
+    .sort((a, b) => compareStrings((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)(a), (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)(b)));
   for (const finding of withFingerprint) {
     const existing = byFingerprint.get(finding.fingerprint);
     if (!existing) {
@@ -1125,10 +1118,10 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
     return {
       caseKey,
       heldOut: heldOut.has(caseKey),
-      baselineRunIds: [...new Set(baseRuns.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(
+      baselineRunIds: [...new Set(baseRuns.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(
         compareStrings
       ),
-      candidateRunIds: [...new Set(candRuns.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_2__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(
+      candidateRunIds: [...new Set(candRuns.map(_shadow_aggregate_mjs__WEBPACK_IMPORTED_MODULE_1__/* .deriveReviewRunId */ .Kh).filter(Boolean))].sort(
         compareStrings
       ),
       counts: diff.counts,
@@ -1195,7 +1188,7 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
   // a replay whose configuration is identical is reported as not activated so a
   // "no regression" result is not misread as evidence about the candidate.
   const configurationDiffers =
-    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)({
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)({
       commitSha: built.manifest.baseline.commitSha,
       configId: built.manifest.baseline.configId,
       model: built.manifest.baseline.model,
@@ -1203,7 +1196,7 @@ function buildPairedReplay(spec, { now = new Date(), manifest: providedManifest 
       skillRegistryCommit: built.manifest.baseline.skillRegistryCommit,
       temperature: built.manifest.baseline.temperature,
     }) !==
-    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_1__/* .canonicalJson */ .dj)({
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_0__/* .canonicalJson */ .dj)({
       commitSha: built.manifest.candidate.commitSha,
       configId: built.manifest.candidate.configId,
       model: built.manifest.candidate.model,

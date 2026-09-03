@@ -305,6 +305,18 @@
         }
       }
     },
+    "executionManifest": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Execution Manifest for this run (#2015, Epic #2011 Phase 4): what River Review used to judge — river-review version, plugin host, flow, agents, skills, input artifacts, policy, runtime and config, each pinned by version and hash and stamped with a resolution status. Additive and optional; artifacts that predate it, and runs whose host does not build one, stay valid with the exact key set they had before. Placed at the TOP LEVEL rather than under `debug` on purpose: `debug` declares that its structure is not guaranteed across versions, which would make a consumer unable to rely on the block that is supposed to tell it whether a run is replayable. The AUTHORITATIVE structure is schemas/execution-manifest.schema.json — it is kept as a separate document (like schemas/paired-replay.schema.json) and validated separately, so this property stays permissive here; no schema in this repository resolves a cross-file $ref at runtime. Read it with src/lib/execution-manifest.mjs: verifyExecutionManifest for integrity and assessReplayability before treating any run as replayable.",
+      "properties": {
+        "kind": { "type": "string", "const": "execution-manifest" },
+        "manifestId": { "type": "string", "pattern": "^RR-EXM-[0-9a-f]{12}$" },
+        "manifestKey": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "manifestHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "required": ["kind", "manifestId", "manifestKey", "manifestHash"]
+    },
     "debug": {
       "type": "object",
       "additionalProperties": true,
