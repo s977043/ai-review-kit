@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.92.0](https://github.com/s977043/river-review/compare/v1.91.0...v1.92.0) (2026-09-03)
+
+
+### Features
+
+* **schemas:** [#2013](https://github.com/s977043/river-review/issues/2013) Review Flow Contract を flow.schema.json として追加する ([#2028](https://github.com/s977043/river-review/issues/2028)) ([681cff4](https://github.com/s977043/river-review/commit/681cff4573b34b30d49358cc1ec75300928bbccb))
+* **schemas:** [#2014](https://github.com/s977043/river-review/issues/2014) Portable Review Agent Contract を追加する ([#2030](https://github.com/s977043/river-review/issues/2030)) ([25624d8](https://github.com/s977043/river-review/commit/25624d8cd90ba61e12bbfba4e53aa61a299124be))
+
 ## [1.91.0](https://github.com/s977043/river-review/compare/v1.90.0...v1.91.0) (2026-09-03)
 
 
