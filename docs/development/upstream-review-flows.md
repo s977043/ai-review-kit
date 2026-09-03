@@ -19,20 +19,27 @@ Skill は「何を判断するか」、Agent は「誰が責任を持つか」�
 | `design-review`       | `design-soundness`       | この設計から実装へ進んでよいか                         | `review-design`       |
 | `technical-review`    | `technical-viability`    | 宣言された技術的前提は Evidence 上成立するか           | `review-technical`    |
 
-## Review Intent を持たない理由
+## Review Intent と stage enum の additive 拡張
 
-core Flow（#2016）の 4 本は `flows/intents/*.intent.json` を伴いますが、上流 4 本は伴いません。省略ではなく制約です。
+上流 4 本も core Flow（#2016）と同じく `flows/intents/*.intent.json` を伴います。
 
-`schemas/review-intent.schema.json` の `stage` は `plan` / `replan` / `task-completion` / `final` に閉じた enum であり、上流の 4 stage を書けません。#2017 は #2016 所有のスキーマを変更しない方針のため、Review Intent 文書を新設せず、同等の保証を Flow 文書だけで表現しました。
+| Flow id               | Review Intent                                      | `stage`        | `phase`    |
+| --------------------- | -------------------------------------------------- | -------------- | ---------- |
+| `research-review`     | `flows/intents/research-adequacy.intent.json`      | `research`     | `upstream` |
+| `requirements-review` | `flows/intents/requirements-soundness.intent.json` | `requirements` | `upstream` |
+| `design-review`       | `flows/intents/design-soundness.intent.json`       | `design`       | `upstream` |
+| `technical-review`    | `flows/intents/technical-viability.intent.json`    | `technical`    | `upstream` |
 
-Review Intent が `evidence[]` で機械化していた内容は、`tests/flow-definitions.test.mjs` が `inputs[]` と `steps[]` から再導出します。
+`schemas/review-intent.schema.json` の `stage` は当初 `plan` / `replan` / `task-completion` / `final` の 4 値でしたが、上流 4 stage を追加して 8 値へ拡張しました。既存値には削除と改名のどちらも加えていないため additive であり、旧 enum で valid だった Review Intent は無改変のまま valid です。`research-review` の subject である汎用 `artifacts` は `schemas/agent-contract.schema.json` の `inputKind` に既存の値であり、`artifactKind` へ追加しても #2014 の語彙の部分集合という関係は保たれます。
+
+`stage` と `phase` は別軸です。`stage` は「どの局面の問いか」を表し、`phase` は skill 選択の語彙（`schemas/skill.schema.json` の `$defs.phase`）です。上流 4 本は 4 つの異なる `stage` を持ちながら `phase` はいずれも `upstream` であり、片方から他方を導出できません。
+
+Review Intent の `evidence[]` が機械化する内容に加えて、`tests/flow-definitions.test.mjs` は `inputs[]` と `steps[]` からも次を検査します。
 
 - required input はちょうど 1 本であり、それが判断対象そのものである
 - required input を持つ Flow は `DETERMINISTIC_UNRUNNABLE` を宣言する
 - optional input は `when.state: present` + `onUnsatisfied: skip` で条件付けるか、Flow が `degrade` step を宣言する
 - どの Flow も `verify-findings` を `derive-gate` より前に置く
-
-`stage` enum の拡張は additive な後続作業として扱い、本 Issue では行いません。
 
 ## artifact 欠損時の stop / degrade / skip
 
@@ -42,6 +49,8 @@ Review Intent が `evidence[]` で機械化していた内容は、`tests/flow-d
 | `requirements-review` | `requirements`     | `tests`             | `design` / `plan`          |
 | `design-review`       | `design`           | `requirements`      | `plan` / `diff`            |
 | `technical-review`    | `design`           | `tests`             | `requirements` / `diff`    |
+
+上表の内容は各 Review Intent の `evidence[].onMissing` と一致します。両者の一致は `tests/flow-definitions.test.mjs` が Flow の `inputs[]` と突き合わせて機械的に検査します。
 
 `requirements-review` において `tests` が skip ではなく degrade を選ぶ理由は次のとおりです。テスト証跡の不在それ自体も testability の答えの一部であり、判断ごと省略してはならないためです。
 

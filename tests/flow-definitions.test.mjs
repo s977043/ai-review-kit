@@ -70,12 +70,12 @@ const CORE_FLOW_IDS = ['final-review', 'plan-review', 'replan-review', 'task-com
 /**
  * The four upstream Flows #2017 defines.
  *
- * They carry no Review Intent document, and that is a constraint rather than an
- * omission: `stage` in schemas/review-intent.schema.json is a closed enum of the
- * four #2016 stages, so an upstream Intent cannot be written without changing a
- * schema #2016 owns. #2017 therefore expresses the same guarantees on the Flow
- * document alone, and the assertions below re-derive from `inputs[]` + `steps[]`
- * what the Intent's `evidence[]` pins for the core four.
+ * They carry a Review Intent document like the core four. The `stage` enum in
+ * schemas/review-intent.schema.json was extended additively (existing values
+ * untouched, so every Intent valid against the previous enum stays valid), which
+ * is why the Intent-backed assertions below cover all eight Flows. The extra
+ * `inputs[]` + `steps[]` assertions in the "#2017" suite are kept on top of that
+ * rather than replaced: they pin the evidence discipline the Intent cannot state.
  */
 const UPSTREAM_FLOW_IDS = [
   'design-review',
@@ -86,8 +86,8 @@ const UPSTREAM_FLOW_IDS = [
 
 const EXPECTED_FLOW_IDS = [...CORE_FLOW_IDS, ...UPSTREAM_FLOW_IDS].sort();
 
-/** Flows that must be joined to a Review Intent document (the #2016 four). */
-const intentBackedFlows = flows.filter(({ doc }) => CORE_FLOW_IDS.includes(doc.id));
+/** Flows that must be joined to a Review Intent document: every shipped Flow. */
+const intentBackedFlows = flows;
 const upstreamFlows = flows.filter(({ doc }) => UPSTREAM_FLOW_IDS.includes(doc.id));
 
 describe('core review Flow definitions (#2016)', () => {
@@ -122,23 +122,41 @@ describe('core review Flow definitions (#2016)', () => {
     assert.deepEqual(flowPurposes, [...intentByPurpose.keys()].sort());
   });
 
-  test('an upstream Flow carries no Review Intent, because the stage enum is closed', () => {
-    // Not an omission: schemas/review-intent.schema.json (#2016) closes `stage`
-    // to the four core stages, and #2017 does not edit a schema #2016 owns. The
-    // upstream Flows therefore carry the same guarantees on the Flow document
-    // itself, pinned by the "upstream review Flow definitions" suite below.
+  test('every upstream Flow is Intent-backed too', () => {
+    // The upstream four shipped without an Intent while the `stage` enum was
+    // closed to the four core stages. The enum was extended additively, so this
+    // is the assertion that stops the gap from reopening.
     for (const { name, doc } of upstreamFlows) {
-      assert.equal(
+      assert.ok(
         intentByPurpose.has(doc.intent.purpose),
-        false,
-        `${name}: an upstream Flow must not claim a core Review Intent purpose`
+        `${name}: no Review Intent for purpose "${doc.intent.purpose}"`
       );
     }
   });
 
   test('each Review Intent declares a distinct stage', () => {
     const stages = intents.map(({ doc }) => doc.stage).sort();
-    assert.deepEqual(stages, ['final', 'plan', 'replan', 'task-completion']);
+    assert.deepEqual(stages, [
+      'design',
+      'final',
+      'plan',
+      'replan',
+      'requirements',
+      'research',
+      'task-completion',
+      'technical',
+    ]);
+  });
+
+  test('every upstream Review Intent sits in the upstream skill-selection phase', () => {
+    // `stage` and `phase` are different axes: four distinct stages share one
+    // phase value, which is why neither can be derived from the other.
+    const upstreamPurposes = new Set(upstreamFlows.map(({ doc }) => doc.intent.purpose));
+    const phases = new Set(
+      intents.filter(({ doc }) => upstreamPurposes.has(doc.purpose)).map(({ doc }) => doc.phase)
+    );
+    assert.deepEqual([...phases], ['upstream']);
+    assert.equal(upstreamPurposes.size, 4);
   });
 
   // The #2016 acceptance criterion "missing artifact は degrade/stop が明示される"
@@ -405,10 +423,11 @@ describe('flow entry map (#2016)', () => {
   });
 });
 
-// #2017 Phase 6. The upstream Flows carry no Review Intent document (the
-// `stage` enum is closed to the four #2016 stages and #2017 does not edit a
-// schema #2016 owns), so every guarantee the Intent mechanizes for the core
-// four is re-derived here from `inputs[]` + `steps[]` instead.
+// #2017 Phase 6. The upstream Flows are Intent-backed like the core four (the
+// `stage` enum was extended additively), so the assertions here are the ones a
+// Review Intent cannot state: the evidence discipline that keeps an
+// unverifiable claim from reaching `derive-gate` as a verdict, re-derived from
+// `inputs[]` + `steps[]`.
 describe('upstream review Flow definitions (#2017)', () => {
   const FLOW_FIXTURES_DIR = resolve(REPO_ROOT, 'tests', 'fixtures', 'flow');
 

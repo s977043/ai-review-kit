@@ -146,9 +146,9 @@ Finding は以下のフィールドを満たすこと。詳細条件は [VERIFIC
 - 入口名と Flow id / version の正本は `flows/entry-map.json` であり、上表はその写しにあたる
 - Flow 定義は `flows/*.flow.json`、Review Intent は `flows/intents/*.intent.json` を読む
 - Claude Code と Codex は入口の表面化だけが異なり、解決先の Flow id と version は同一とする
-- artifact 欠損時の stop / degrade / skip は、#2016 の 4 本では Review Intent の `evidence[].onMissing` に従う
-- #2017 の 4 本では同じ判断を Flow の `inputs[].required` と step の `onUnsatisfied` から読む
-- 上流 4 本は Review Intent 文書を持たない。理由は `docs/development/upstream-review-flows.md` に記録する
+- artifact 欠損時の stop / degrade / skip は、8 本すべてで Review Intent の `evidence[].onMissing` に従う
+- 同じ判断は Flow の `inputs[].required` と step の `onUnsatisfied` にも現れる。両者の一致はテストが検査する
+- `stage` はレビューの局面、`phase` は skill 選択の段階であり別軸とする。上流 4 本は `stage` が 4 種類で `phase` は `upstream` に揃う
 - どの skill を選ぶかは従来どおり本 skill の Routing 節と `selectSkills` が決める。Flow は skill を名指ししない
 - 現時点では observe であり、Flow は既存の gate / decision / finding を変更しない
 
