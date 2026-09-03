@@ -11,6 +11,7 @@ export const modules = {
 /* harmony export */   L5: () => (/* binding */ buildRunEvidence),
 /* harmony export */   Mc: () => (/* binding */ computeCandidateId),
 /* harmony export */   buildShadowAggregate: () => (/* binding */ buildShadowAggregate),
+/* harmony export */   fg: () => (/* binding */ sha256Hex),
 /* harmony export */   formatShadowAggregateMarkdown: () => (/* binding */ formatShadowAggregateMarkdown),
 /* harmony export */   lY: () => (/* binding */ EVIDENCE_SOURCES)
 /* harmony export */ });
@@ -108,6 +109,18 @@ const OBSERVED_PATTERN_BY_FEEDBACK_TYPE = {
 // Deterministic helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Hex sha256 of a string.
+ *
+ * Exported (#2015) so that content-addressed surfaces added later import this
+ * one implementation instead of spelling `createHash('sha256')` again. Two
+ * byte-identical private copies already existed (here and in
+ * `paired-replay.mjs`); a third would have made the hash a convention rather
+ * than a shared function. `paired-replay.mjs` now imports this one.
+ *
+ * @param {string} input
+ * @returns {string} 64 lowercase hex characters
+ */
 function sha256Hex(input) {
   return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(input).digest('hex');
 }
