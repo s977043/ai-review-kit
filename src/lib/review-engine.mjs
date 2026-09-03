@@ -42,7 +42,9 @@ import { runPromptCompilerStage } from '../prompt/compiler-stage.mjs';
 
 const ENV_DEFAULT_MODEL = process.env.RIVER_OPENAI_MODEL || process.env.OPENAI_MODEL || null;
 const MAX_PROMPT_CHARS = 12000;
-const MAX_PROMPT_PREVIEW_CHARS = 2000;
+// プロンプト控えの上限。ここが SSoT で、artifact / debug へ出る控えを持つ
+// 他モジュール（src/lib/finding-critic-runner.mjs）は再定義せずこれを import する。
+export const MAX_PROMPT_PREVIEW_CHARS = 2000;
 const NO_ISSUES_REGEX = /^NO_ISSUES/i;
 const LINE_COMMENT_REGEX = /^(.+?):(\d+):\s*(.+)$/;
 
