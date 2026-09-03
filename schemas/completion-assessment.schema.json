@@ -12,19 +12,25 @@
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
-    "scope": { "$ref": "#/$defs/completionScope" },
+    "scope": {
+      "$ref": "#/$defs/completionScope"
+    },
     "mode": {
       "description": "Only `observe` exists in #2019. An assessment is recorded alongside the existing outputs and MUST NOT change an existing decision, gate or finding. Adding an enforcing mode is therefore a schema change (a reviewable event), not a field flip.",
       "type": "string",
       "enum": ["observe"]
     },
-    "state": { "$ref": "#/$defs/completionState" },
+    "state": {
+      "$ref": "#/$defs/completionState"
+    },
     "reasonCodes": {
       "description": "Why the state is what it is. Disjoint from GATE_REASON_CODES by construction; `tests/completion-assessment.test.mjs` pins that against the imported gate ledger.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": { "$ref": "#/$defs/completionReasonCode" }
+      "items": {
+        "$ref": "#/$defs/completionReasonCode"
+      }
     },
     "verification": {
       "description": "Verification = did the change satisfy the REQUIREMENTS that were defined. Distinct from `validation`, which asks whether the original GOAL was achieved. Splitting the two is a #2019 requirement: a run can satisfy every stated requirement and still fail the goal.",
@@ -37,10 +43,18 @@
           "additionalProperties": false,
           "required": ["total", "satisfied", "violated", "unverified"],
           "properties": {
-            "total": { "$ref": "#/$defs/count" },
-            "satisfied": { "$ref": "#/$defs/count" },
-            "violated": { "$ref": "#/$defs/count" },
-            "unverified": { "$ref": "#/$defs/count" }
+            "total": {
+              "$ref": "#/$defs/count"
+            },
+            "satisfied": {
+              "$ref": "#/$defs/count"
+            },
+            "violated": {
+              "$ref": "#/$defs/count"
+            },
+            "unverified": {
+              "$ref": "#/$defs/count"
+            }
           }
         },
         "acceptanceCriteria": {
@@ -48,9 +62,15 @@
           "additionalProperties": false,
           "required": ["total", "verified", "unverified"],
           "properties": {
-            "total": { "$ref": "#/$defs/count" },
-            "verified": { "$ref": "#/$defs/count" },
-            "unverified": { "$ref": "#/$defs/count" }
+            "total": {
+              "$ref": "#/$defs/count"
+            },
+            "verified": {
+              "$ref": "#/$defs/count"
+            },
+            "unverified": {
+              "$ref": "#/$defs/count"
+            }
           }
         }
       }
@@ -61,12 +81,19 @@
       "additionalProperties": false,
       "required": ["state", "rationale"],
       "properties": {
-        "state": { "$ref": "#/$defs/validationState" },
-        "rationale": { "type": "string", "minLength": 1 },
+        "state": {
+          "$ref": "#/$defs/validationState"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
         "goalRefs": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "$ref": "#/$defs/artifactRef" }
+          "items": {
+            "$ref": "#/$defs/artifactRef"
+          }
         }
       }
     },
@@ -76,7 +103,9 @@
       "additionalProperties": false,
       "required": ["total", "complete", "unsupportedClaims"],
       "properties": {
-        "total": { "$ref": "#/$defs/count" },
+        "total": {
+          "$ref": "#/$defs/count"
+        },
         "complete": {
           "description": "Tasks CLAIMED complete (e.g. a checked todo box). A claim is not a proof: see `unsupportedClaims`.",
           "$ref": "#/$defs/count"
@@ -96,7 +125,9 @@
         "additionalProperties": false,
         "required": ["ref", "claimSource", "missingEvidence"],
         "properties": {
-          "ref": { "$ref": "#/$defs/artifactRef" },
+          "ref": {
+            "$ref": "#/$defs/artifactRef"
+          },
           "claimSource": {
             "type": "array",
             "minItems": 1,
@@ -110,7 +141,9 @@
             "type": "array",
             "minItems": 1,
             "uniqueItems": true,
-            "items": { "$ref": "#/$defs/evidenceKind" }
+            "items": {
+              "$ref": "#/$defs/evidenceKind"
+            }
           }
         }
       }
@@ -119,10 +152,12 @@
       "description": "Requirement / acceptance-criterion identifiers that could not be resolved to evidence. A non-empty list forbids COMPLETE.",
       "type": "array",
       "uniqueItems": true,
-      "items": { "$ref": "#/$defs/artifactRef" }
+      "items": {
+        "$ref": "#/$defs/artifactRef"
+      }
     },
     "evidence": {
-      "description": "What evidence was available for this assessment, one entry per kind. Absence is recorded rather than skipped: a `missing` entry is itself part of the answer and forces the state away from COMPLETE.",
+      "description": "What evidence was available for this assessment, one entry per kind. Absence is recorded rather than skipped: a `missing` entry is itself part of the answer and forces the state away from COMPLETE. JSON Schema draft 2020-12 は「あるプロパティでの一意性」を表現できないため、kind の一意性は tests/completion-assessment.test.mjs が強制する。",
       "type": "array",
       "minItems": 1,
       "items": {
@@ -130,12 +165,17 @@
         "additionalProperties": false,
         "required": ["kind", "state"],
         "properties": {
-          "kind": { "$ref": "#/$defs/evidenceKind" },
+          "kind": {
+            "$ref": "#/$defs/evidenceKind"
+          },
           "state": {
             "type": "string",
             "enum": ["present", "partial", "missing", "unreadable"]
           },
-          "note": { "type": "string", "minLength": 1 }
+          "note": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -149,7 +189,10 @@
           "type": "string",
           "enum": ["business-value", "product-scope", "risk-acceptance", "policy-exception"]
         },
-        "question": { "type": "string", "minLength": 1 }
+        "question": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "blockedBy": {
@@ -157,51 +200,117 @@
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     }
   },
   "allOf": [
     {
       "title": "task scope: no goal validation, task evidence required",
-      "if": { "properties": { "scope": { "const": "task" } }, "required": ["scope"] },
+      "if": {
+        "properties": {
+          "scope": {
+            "const": "task"
+          }
+        },
+        "required": ["scope"]
+      },
       "then": {
         "required": ["tasks"],
-        "properties": { "validation": false }
+        "properties": {
+          "validation": false
+        }
       }
     },
     {
       "title": "final scope: the goal is the subject, so validation and requirements are required",
-      "if": { "properties": { "scope": { "const": "final" } }, "required": ["scope"] },
-      "then": { "required": ["validation", "verification"] }
+      "if": {
+        "properties": {
+          "scope": {
+            "const": "final"
+          }
+        },
+        "required": ["scope"]
+      },
+      "then": {
+        "required": ["validation", "verification"]
+      }
     },
     {
       "title": "COMPLETE requires zero unverified, zero violated, zero unsupported claims and zero unresolved refs",
-      "if": { "properties": { "state": { "const": "COMPLETE" } }, "required": ["state"] },
+      "if": {
+        "properties": {
+          "state": {
+            "const": "COMPLETE"
+          }
+        },
+        "required": ["state"]
+      },
       "then": {
         "required": ["verification"],
         "properties": {
           "verification": {
             "properties": {
               "requirements": {
-                "properties": { "violated": { "const": 0 }, "unverified": { "const": 0 } }
+                "properties": {
+                  "violated": {
+                    "const": 0
+                  },
+                  "unverified": {
+                    "const": 0
+                  }
+                }
               },
-              "acceptanceCriteria": { "properties": { "unverified": { "const": 0 } } }
+              "acceptanceCriteria": {
+                "properties": {
+                  "unverified": {
+                    "const": 0
+                  }
+                }
+              }
             }
           },
-          "tasks": { "properties": { "unsupportedClaims": { "const": 0 } } },
-          "unsupportedClaims": { "maxItems": 0 },
-          "unresolvedRefs": { "maxItems": 0 }
+          "tasks": {
+            "properties": {
+              "unsupportedClaims": {
+                "const": 0
+              }
+            }
+          },
+          "unsupportedClaims": {
+            "maxItems": 0
+          },
+          "unresolvedRefs": {
+            "maxItems": 0
+          }
         }
       }
     },
     {
       "title": "COMPLETE at final scope additionally requires the goal to be validated as met",
       "if": {
-        "properties": { "state": { "const": "COMPLETE" }, "scope": { "const": "final" } },
+        "properties": {
+          "state": {
+            "const": "COMPLETE"
+          },
+          "scope": {
+            "const": "final"
+          }
+        },
         "required": ["state", "scope"]
       },
       "then": {
-        "properties": { "validation": { "properties": { "state": { "const": "GOAL_MET" } } } }
+        "properties": {
+          "validation": {
+            "properties": {
+              "state": {
+                "const": "GOAL_MET"
+              }
+            }
+          }
+        }
       }
     },
     {
@@ -209,29 +318,64 @@
       "if": {
         "properties": {
           "evidence": {
-            "contains": { "properties": { "state": { "enum": ["missing", "unreadable"] } } }
+            "contains": {
+              "properties": {
+                "state": {
+                  "enum": ["missing", "unreadable"]
+                }
+              }
+            }
           }
         },
         "required": ["evidence"]
       },
-      "then": { "properties": { "state": { "not": { "const": "COMPLETE" } } } }
+      "then": {
+        "properties": {
+          "state": {
+            "not": {
+              "const": "COMPLETE"
+            }
+          }
+        }
+      }
     },
     {
       "title": "COMPLETE requires diff and test evidence to be present, never a claim alone",
-      "if": { "properties": { "state": { "const": "COMPLETE" } }, "required": ["state"] },
+      "if": {
+        "properties": {
+          "state": {
+            "const": "COMPLETE"
+          }
+        },
+        "required": ["state"]
+      },
       "then": {
         "properties": {
           "evidence": {
             "allOf": [
               {
                 "contains": {
-                  "properties": { "kind": { "const": "diff" }, "state": { "const": "present" } },
+                  "properties": {
+                    "kind": {
+                      "const": "diff"
+                    },
+                    "state": {
+                      "const": "present"
+                    }
+                  },
                   "required": ["kind", "state"]
                 }
               },
               {
                 "contains": {
-                  "properties": { "kind": { "const": "tests" }, "state": { "const": "present" } },
+                  "properties": {
+                    "kind": {
+                      "const": "tests"
+                    },
+                    "state": {
+                      "const": "present"
+                    }
+                  },
                   "required": ["kind", "state"]
                 }
               }
@@ -243,48 +387,113 @@
     {
       "title": "HUMAN_JUDGMENT_REQUIRED must name the boundary it hands back",
       "if": {
-        "properties": { "state": { "const": "HUMAN_JUDGMENT_REQUIRED" } },
+        "properties": {
+          "state": {
+            "const": "HUMAN_JUDGMENT_REQUIRED"
+          }
+        },
         "required": ["state"]
       },
-      "then": { "required": ["humanJudgment"] }
+      "then": {
+        "required": ["humanJudgment"]
+      }
     },
     {
       "title": "a goal needing human judgment cannot be recorded as anything else",
       "if": {
         "properties": {
           "validation": {
-            "properties": { "state": { "const": "REQUIRES_HUMAN_JUDGMENT" } },
+            "properties": {
+              "state": {
+                "const": "REQUIRES_HUMAN_JUDGMENT"
+              }
+            },
             "required": ["state"]
           }
         },
         "required": ["validation"]
       },
       "then": {
-        "properties": { "state": { "const": "HUMAN_JUDGMENT_REQUIRED" } },
+        "properties": {
+          "state": {
+            "const": "HUMAN_JUDGMENT_REQUIRED"
+          }
+        },
         "required": ["humanJudgment"]
       }
     },
     {
       "title": "BLOCKED must say what blocked it",
-      "if": { "properties": { "state": { "const": "BLOCKED" } }, "required": ["state"] },
-      "then": { "required": ["blockedBy"] }
+      "if": {
+        "properties": {
+          "state": {
+            "const": "BLOCKED"
+          }
+        },
+        "required": ["state"]
+      },
+      "then": {
+        "required": ["blockedBy"]
+      }
     },
     {
       "title": "an unsupported claim must be reflected in the state",
       "if": {
-        "properties": { "unsupportedClaims": { "minItems": 1 } },
+        "properties": {
+          "unsupportedClaims": {
+            "minItems": 1
+          }
+        },
         "required": ["unsupportedClaims"]
       },
       "then": {
         "properties": {
-          "state": { "not": { "const": "COMPLETE" } },
-          "reasonCodes": { "contains": { "const": "UNSUPPORTED_COMPLETION_CLAIM" } }
+          "state": {
+            "not": {
+              "const": "COMPLETE"
+            }
+          },
+          "reasonCodes": {
+            "contains": {
+              "const": "UNSUPPORTED_COMPLETION_CLAIM"
+            }
+          }
         }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evidence": {
+            "type": "array",
+            "contains": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "const": "missing"
+                }
+              },
+              "required": ["state"]
+            }
+          }
+        },
+        "required": ["evidence"]
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "enum": ["UNVERIFIED", "BLOCKED", "HUMAN_JUDGMENT_REQUIRED"]
+          }
+        },
+        "description": "#2019 AC: evidence 欠損は UNVERIFIED へ倒す。`INCOMPLETE` は「調べた結果 満たしていない」であり、`missing` は「調べられなかった」なので別物。両者を同じ状態で表すと、未検証を検証済みの否定として読ませてしまう。BLOCKED と HUMAN_JUDGMENT_REQUIRED は「そもそも判定に到達していない」点で UNVERIFIED と同じ側にあるため許す。"
       }
     }
   ],
   "$defs": {
-    "count": { "type": "integer", "minimum": 0 },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
     "artifactRef": {
       "description": "Identifier of a requirement, acceptance criterion or task as it is written in the source artifact (e.g. `REQ-7`, `AC-12`, `TASK-3`).",
       "type": "string",

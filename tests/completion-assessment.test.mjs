@@ -422,4 +422,34 @@ describe('completion-assessment.schema.json — evidence', () => {
     unknownState.evidence[0].state = 'probably-there';
     assert.equal(validate(unknownState), false);
   });
+
+  test('refuses to call a missing-evidence assessment INCOMPLETE', () => {
+    // #2019 AC「Evidence 欠損は UNVERIFIED」。`INCOMPLETE` は「調べた結果
+    // 満たしていない」で、`missing` は「調べられなかった」なので別物。
+    // 同じ状態で表すと、未検証を検証済みの否定として読ませてしまう。
+    const doc = readFixture('evidence-missing-unverified.json');
+    doc.state = 'INCOMPLETE';
+    assert.equal(validate(doc), false, 'missing evidence must not be reported as INCOMPLETE');
+  });
+
+  test('keeps UNVERIFIED valid for the same missing evidence', () => {
+    const doc = readFixture('evidence-missing-unverified.json');
+    doc.state = 'UNVERIFIED';
+    assert.equal(validate(doc), true, errorsOf());
+  });
+
+  test('every fixture names each evidence kind at most once', () => {
+    // `evidence` の description は "one entry per kind" と宣言しているが、
+    // draft 2020-12 は「あるプロパティでの一意性」を表現できない。宣言だけ
+    // 置いて誰も強制しない状態を避けるため、ここが強制する。
+    for (const name of readdirSync(FIXTURES_DIR).filter((n) => n.endsWith('.json'))) {
+      const doc = readJson(resolve(FIXTURES_DIR, name));
+      const kinds = (doc.evidence ?? []).map((entry) => entry.kind);
+      assert.deepEqual(
+        [...new Set(kinds)].sort(),
+        [...kinds].sort(),
+        `${name}: evidence names a kind more than once (${kinds.join(', ')})`
+      );
+    }
+  });
 });
