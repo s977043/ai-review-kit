@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://river-review.the3396.com/schemas/flow-entry-map.schema.json",
+  "title": "River Review Flow entry map",
+  "description": "Binds a user-facing entry name to a Flow id and version (#2016, Epic #2011). It exists to mechanize one acceptance criterion: Claude Code and Codex expose review entry points differently, and the same entry MUST resolve to the same Flow id and version on both. The runtime axis is therefore deliberately absent from this document — there is no per-runtime branch to diverge — while the surface that carries the entry on each runtime stays in `agents/contracts/adapter-map.json`, the same separation #2014 used to keep an adapter difference out of a judgment difference. This is a naming map, not routing: it selects no skill, reads no path, and applies no condition. Which skills run is decided by the existing selection path (`selectSkills` in `runners/core/review-runner.mjs`), per ADR-009 D3.",
+  "type": "object",
+  "required": ["version", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "description": "Semantic version of this map as a versioned asset.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "entries": {
+      "description": "Keyed by the user-facing entry name. `tests/flow-definitions.test.mjs` pins every target against the Flow documents in `flows/`, so an entry cannot name a Flow the repository does not ship or a version it does not carry.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["flow", "flowVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "flow": {
+          "description": "The `id` of a Flow document in `flows/`.",
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "flowVersion": {
+          "description": "The `version` of that Flow document. Pinned so an entry cannot silently follow a Flow across a breaking change.",
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "description": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

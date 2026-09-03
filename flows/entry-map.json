@@ -1,0 +1,26 @@
+{
+  "version": "0.1.0",
+  "description": "User-facing entry names for the four core review Flows (#2016). The entry name is what a person types or asks for; the Flow id and version are what the judgment is recorded against. This document carries no host vocabulary on purpose: how an entry is surfaced belongs to agents/contracts/adapter-map.json, and which Flow it resolves to belongs here, so the two hosts have nothing to disagree about.",
+  "entries": {
+    "review-plan": {
+      "flow": "plan-review",
+      "flowVersion": "0.1.0",
+      "description": "Can execution safely start from this plan?"
+    },
+    "review-replan": {
+      "flow": "replan-review",
+      "flowVersion": "0.1.0",
+      "description": "Is this plan change justified and does it leave the upstream contract intact?"
+    },
+    "review-task": {
+      "flow": "task-completion-review",
+      "flowVersion": "0.1.0",
+      "description": "Is there evidence to declare this task DONE?"
+    },
+    "review-final": {
+      "flow": "final-review",
+      "flowVersion": "0.1.0",
+      "description": "Are the goal and requirements met, rather than merely every task closed?"
+    }
+  }
+}

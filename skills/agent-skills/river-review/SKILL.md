@@ -127,6 +127,27 @@ Finding は以下のフィールドを満たすこと。詳細条件は [VERIFIC
   Severity: <severity> / Confidence: <confidence> / Skill: <skill-id>
 ```
 
+## Flow Entry / Flow 入口（#2016, observe）
+
+以下 4 つの入口名は **Flow Entry** であり、専門 skill ではない。
+入口名から Flow id を引くだけの薄い配線であり、判断ロジックはここに持たせない。
+
+| 入口名          | Flow id                  | 問い                                                    |
+| --------------- | ------------------------ | ------------------------------------------------------- |
+| `review-plan`   | `plan-review`            | この計画で安全に実行を開始できるか                      |
+| `review-replan` | `replan-review`          | 計画変更は合理的で、上流の契約を壊していないか          |
+| `review-task`   | `task-completion-review` | この Task を DONE と宣言できる Evidence があるか        |
+| `review-final`  | `final-review`           | 全 Task の終了ではなく、Goal / Requirement を満たしたか |
+
+- 入口名と Flow id / version の正本は `flows/entry-map.json` であり、上表はその写しにあたる
+- Flow 定義は `flows/*.flow.json`、Review Intent は `flows/intents/*.intent.json` を読む
+- Claude Code と Codex は入口の表面化だけが異なり、解決先の Flow id と version は同一とする
+- artifact 欠損時の stop / degrade / skip は Review Intent の `evidence[].onMissing` に従う
+- どの skill を選ぶかは従来どおり本 skill の Routing 節と `selectSkills` が決める。Flow は skill を名指ししない
+- 現時点では observe であり、Flow は既存の gate / decision / finding を変更しない
+
+詳細はリポジトリ本体の `docs/development/flow-contract.md` にある（この skill の配布パッケージには同梱されないため、リンクではなくパス名で示す）。
+
 ## How to Invoke / 呼び出し方
 
 ### Claude Code エージェントとして（`agents/river-review.md`）
