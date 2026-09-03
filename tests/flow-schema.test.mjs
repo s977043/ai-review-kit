@@ -223,4 +223,22 @@ describe('flow.schema.json', () => {
     assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
     assert.equal(schema.additionalProperties, false);
   });
+
+  // JSON Schema draft 2020-12 cannot express "this string must equal one of the
+  // names declared elsewhere in the same document", so the `inputs` description
+  // delegates that constraint here. Without this test the description would
+  // promise something nothing enforces.
+  test('every when.input names an input the Flow declares', () => {
+    for (const name of ['final-review-happy.json', 'unknown-primitive-guard.json']) {
+      const flow = readFixture(name);
+      const declared = new Set((flow.inputs ?? []).map((input) => input.name));
+      for (const step of flow.steps ?? []) {
+        if (!step.when) continue;
+        assert.ok(
+          declared.has(step.when.input),
+          `${name}: when.input "${step.when.input}" is not declared in inputs[]`
+        );
+      }
+    }
+  });
 });

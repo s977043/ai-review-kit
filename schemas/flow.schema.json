@@ -34,7 +34,7 @@
       }
     },
     "inputs": {
-      "description": "Named inputs the Flow may branch on. A step's `when` clause may only reference a name declared here, which keeps conditional execution free of an expression language.",
+      "description": "Named inputs the Flow may branch on. A step's `when` clause must reference a name declared here, which keeps conditional execution free of an expression language. JSON Schema cannot express that cross-field reference, so it is enforced by `tests/flow-schema.test.mjs` rather than by this document.",
       "type": "array",
       "items": { "$ref": "#/$defs/input" }
     },
@@ -142,7 +142,7 @@
       }
     },
     "onUnsatisfied": {
-      "description": "What a runtime does when a step cannot run as declared (its input is missing, its underlying capability is unavailable, or it fails). The three outcomes are distinct: `stop` halts the Flow and derives a gate carrying a `stopConditions` reason; `skip` does not execute the step, records a reason (the `{step, reasons[]}` shape already used by `evaluateSkill`) and continues; `degrade` executes a reduced form, records the degradation (the `plannerFallback` / partial-failure shape already used by `runners/core/review-runner.mjs` and `src/lib/reviewer-orchestrator.mjs`) and continues. Omitting the key means `stop`: the default is the safe side, so a Flow can only opt into continuing.",
+      "description": "What a runtime does when a step cannot run as declared (its input is missing, its underlying capability is unavailable, or it fails). The three outcomes are distinct: `stop` halts the Flow and derives a gate carrying a `stopConditions` reason; `skip` does not execute the step, records a reason (the `{skill, reasons}` shape already used by the `skipped` entries that `selectSkills` builds in `runners/core/review-runner.mjs`; `evaluateSkill` itself returns `{ok, reasons}`) and continues; `degrade` executes a reduced form, records the degradation (the `plannerFallback` / partial-failure shape already used by `runners/core/review-runner.mjs` and `src/lib/reviewer-orchestrator.mjs`) and continues. Omitting the key means `stop`: the default is the safe side, so a Flow can only opt into continuing.",
       "enum": ["stop", "skip", "degrade"]
     },
     "step": {
