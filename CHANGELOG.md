@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.93.0](https://github.com/s977043/river-review/compare/v1.92.0...v1.93.0) (2026-09-03)
+
+
+### Features
+
+* **schemas:** [#2015](https://github.com/s977043/river-review/issues/2015) Execution Manifest と replay 可否判定を追加する ([#2032](https://github.com/s977043/river-review/issues/2032)) ([5f35f52](https://github.com/s977043/river-review/commit/5f35f522f64621f9370f4935ae353850e9d30cb6))
+
 ## [1.92.0](https://github.com/s977043/river-review/compare/v1.91.0...v1.92.0) (2026-09-03)
 
 
