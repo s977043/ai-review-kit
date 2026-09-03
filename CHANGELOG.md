@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.94.0](https://github.com/s977043/river-review/compare/v1.93.0...v1.94.0) (2026-09-03)
+
+
+### Features
+
+* **flows:** [#2016](https://github.com/s977043/river-review/issues/2016) 4 つの core review entry flow と Review Intent を定義する ([#2035](https://github.com/s977043/river-review/issues/2035)) ([48cf09f](https://github.com/s977043/river-review/commit/48cf09f7ef8010da2ff3e26064e3b4dea835f83a))
+
 ## [1.93.0](https://github.com/s977043/river-review/compare/v1.92.0...v1.93.0) (2026-09-03)
 
 
