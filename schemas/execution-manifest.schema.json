@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://river-review.the3396.com/schemas/execution-manifest.schema.json",
+  "title": "River Review Execution Manifest",
+  "description": "Content-addressed record of what River Review used to judge ONE review run (#2015, Epic #2011 Phase 4): the River Review version, plugin host, flow, agents, skills, input artifacts, policy, runtime and effective config. Produced by buildExecutionManifest (src/lib/execution-manifest.mjs) and verified by verifyExecutionManifest, which re-derives manifestKey / manifestId / manifestHash so a rewrite is detectable. NOT the Experiment Manifest: that document (schemas/paired-replay.schema.json, contract 3) pins a baseline/candidate EXPERIMENT over a dataset of already-produced runs, while this one pins a SINGLE run's execution configuration. This document records ids, versions and hashes only — hidden chain-of-thought, raw tool output and raw sensitive context are explicit non-goals, mechanically enforced by assertNoRawContext.",
+  "type": "object",
+  "required": [
+    "manifestId",
+    "manifestKey",
+    "manifestHash",
+    "createdAt",
+    "schemaVersion",
+    "kind",
+    "reviewRunId",
+    "riverReview",
+    "plugin",
+    "flow",
+    "agents",
+    "skills",
+    "artifacts",
+    "policy",
+    "runtime",
+    "config",
+    "redaction",
+    "writeEffects"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Bare lowercase hex sha256, or null when the source did not supply one. The `sha256:` prefix used by docs/data/skill-manifest.json is stripped by normalizeSha256 before it lands here."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["resolved", "missing", "unavailable"],
+      "description": "Resolution status of one provenance block (#2015 AC 3). `resolved` means every field the block needs was supplied; `missing` means the source exists in this deployment but this run did not record it; `unavailable` means the caller explicitly declared there was nothing to pin (an empty skill selection, no agents). The distinction exists so that a null block is never read as a present one — that misreading is exactly how a run gets treated as replayable when it is not."
+    },
+    "versionedComponent": {
+      "type": "object",
+      "required": ["id", "version", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": ["string", "null"] },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  },
+  "properties": {
+    "manifestId": {
+      "type": "string",
+      "pattern": "^RR-EXM-[0-9a-f]{12}$",
+      "description": "Human-quotable id, derived from the first 12 hex characters of manifestKey. The RR-EXM- namespace is distinct from RR-PC- (promotion candidate) and RR-EXP- (experiment manifest)."
+    },
+    "manifestKey": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 over the manifest CONDITIONS only (createdAt and the derived ids excluded), so two runs under an identical execution configuration share a key and are directly comparable."
+    },
+    "manifestHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 over the whole stored record including createdAt and the derived ids. This is the tamper check: any edit at all, the timestamp included, breaks it."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of manifest creation. Deliberately outside manifestKey."
+    },
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "kind": { "type": "string", "const": "execution-manifest" },
+    "reviewRunId": {
+      "type": ["string", "null"],
+      "description": "Canonical review_run_id of the run this manifest describes, resolved with deriveReviewRunId (src/lib/shadow-aggregate.mjs) — the contract-2 SSoT, never re-derived here."
+    },
+    "riverReview": {
+      "type": "object",
+      "required": ["status", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "version": { "type": ["string", "null"] }
+      }
+    },
+    "plugin": {
+      "type": "object",
+      "required": ["status", "host", "pluginVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "host": {
+          "type": ["string", "null"],
+          "description": "Host that loaded the capability pack, e.g. \"claude-code\" or \"codex\"."
+        },
+        "pluginVersion": { "type": ["string", "null"] }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "required": ["status", "id", "version", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "id": { "type": ["string", "null"] },
+        "version": { "type": ["string", "null"] },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "description": "The flow definition this run executed (schemas/flow.schema.json, #2013). No flow INSTANCE document exists in this repository yet (no flows/ directory and no *.flow.json file), so this block resolves as `missing` until a producer supplies one. The agent roster, by contrast, does have instance documents: agents/contracts/*.agent.json (#2014)."
+    },
+    "agents": {
+      "type": "object",
+      "required": ["status", "entries"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/versionedComponent" },
+          "description": "Agent roster, sorted by id so the manifest hash does not depend on dispatch order."
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "required": ["status", "entries", "skillSetHash"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/status",
+          "description": "`resolved` requires every selected skill to carry a sha256: an id alone cannot detect that the skill's text changed between run and replay, so an unchecksummed selection is a PARTIAL resolution and reports as `missing`."
+        },
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/versionedComponent" }
+        },
+        "skillSetHash": {
+          "$ref": "#/$defs/sha256",
+          "description": "One digest over the sorted entries, so two runs' skill selections can be compared without walking the array."
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "required": ["status", "entries"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "entries": {
+          "type": "array",
+          "description": "Input artifacts (requirements, diff, …) BY HASH ONLY. The contents are never copied here — that is what keeps a manifest from becoming a context dump.",
+          "items": {
+            "type": "object",
+            "required": ["name", "sha256"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "required": ["status", "ref", "sha256", "riskMapDigest"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "ref": { "type": ["string", "null"] },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "riskMapDigest": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{16}$",
+          "description": "The gate's risk-map digest (gate.inputs.riskMapDigest). It is a 16-hex TRUNCATION produced at src/lib/review-plan.mjs:842, not a sha256, so it keeps its own field — comparing two different lengths of the same hash would read as tampering."
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["status", "provider", "model", "profile"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "provider": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] },
+        "profile": { "type": ["string", "null"] }
+      }
+    },
+    "config": {
+      "type": "object",
+      "required": ["status", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/status" },
+        "sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "Digest of the effective configuration. The config VALUES are never carried — a config can hold provider credentials."
+        }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "required": ["applied", "hits"],
+      "additionalProperties": false,
+      "description": "Redaction applied to every string leaf before the digests were computed (#2015 AC 2). Recording the hit counts rather than the values keeps the manifest auditable without reproducing what was redacted.",
+      "properties": {
+        "applied": { "type": "boolean", "const": true },
+        "hits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["category", "count"],
+            "additionalProperties": false,
+            "properties": {
+              "category": { "type": "string" },
+              "count": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "writeEffects": {
+      "type": "array",
+      "maxItems": 0,
+      "items": false,
+      "description": "Machine-checkable statement that building a manifest writes nothing. Always empty."
+    }
+  }
+}

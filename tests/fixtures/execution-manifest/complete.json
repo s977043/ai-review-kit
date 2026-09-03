@@ -1,0 +1,89 @@
+{
+  "manifestId": "RR-EXM-b3208c770b91",
+  "manifestKey": "b3208c770b916ad459bf76fd021869e8e6e0638a0bb7ac03bed200d6d8b42d17",
+  "manifestHash": "e89d462c9664f2b607b2dae74634918d16ace7980afd01b9a46c9cbe73e1fb73",
+  "createdAt": "2026-09-03T00:00:00.000Z",
+  "schemaVersion": 1,
+  "kind": "execution-manifest",
+  "reviewRunId": "2026-09-03T00-00-00-000Z-abc123",
+  "riverReview": {
+    "status": "resolved",
+    "version": "1.91.0"
+  },
+  "plugin": {
+    "status": "resolved",
+    "host": "claude-code",
+    "pluginVersion": "1.91.0"
+  },
+  "flow": {
+    "status": "resolved",
+    "id": "final-review",
+    "version": "1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "agents": {
+    "status": "resolved",
+    "entries": [
+      {
+        "id": "completion-judge",
+        "version": "1",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      {
+        "id": "finding-verifier",
+        "version": "1",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ]
+  },
+  "skills": {
+    "status": "resolved",
+    "entries": [
+      {
+        "id": "a11y-accessible-name",
+        "version": "2",
+        "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      {
+        "id": "requirements-consistency",
+        "version": "1",
+        "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    ],
+    "skillSetHash": "5e941a48d8e4b956c0df3b2c727842d133950fa55c162954bd4454393335919d"
+  },
+  "artifacts": {
+    "status": "resolved",
+    "entries": [
+      {
+        "name": "diff",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+        "name": "requirements",
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    ]
+  },
+  "policy": {
+    "status": "resolved",
+    "ref": "pages/reference/review-policy.md",
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "riskMapDigest": "0123456789abcdef"
+  },
+  "runtime": {
+    "status": "resolved",
+    "provider": "anthropic",
+    "model": "claude-sonnet-4",
+    "profile": "medium"
+  },
+  "config": {
+    "status": "resolved",
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "writeEffects": [],
+  "redaction": {
+    "applied": true,
+    "hits": []
+  }
+}
