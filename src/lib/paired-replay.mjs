@@ -22,8 +22,6 @@
 //   契約3 Experiment Manifest  → buildExperimentManifest / verifyExperimentManifest
 //   契約4 content-addressed ID → computeCandidateId (P1 経由で #1624 の実装を利用)
 //   契約6 profile 別受入基準    → evaluateAcceptance
-import { createHash } from 'node:crypto';
-
 import {
   CANDIDATE_POLICY_VERSION,
   KNOWN_POLICY_VERSIONS,
@@ -40,6 +38,9 @@ import {
   computeCandidateId,
   deriveReviewRunId,
   evidenceTrustLevel,
+  // #2015: imported, not re-declared. The private copy this module used to
+  // carry was byte-identical to the one in shadow-aggregate.mjs.
+  sha256Hex,
 } from './shadow-aggregate.mjs';
 
 // Re-exported, not re-implemented: P2 keeps P1's trust classification verbatim.
@@ -123,10 +124,6 @@ export class PairedReplayError extends Error {
 // ---------------------------------------------------------------------------
 // Deterministic helpers
 // ---------------------------------------------------------------------------
-
-function sha256Hex(input) {
-  return createHash('sha256').update(input).digest('hex');
-}
 
 function compareStrings(a, b) {
   const left = a ?? '';
