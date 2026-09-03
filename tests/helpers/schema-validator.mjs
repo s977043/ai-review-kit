@@ -98,3 +98,10 @@ export function compileAgentContractValidator() {
 export function compileAgentAdapterMapValidator() {
   return compileSchemaFile('agent-adapter-map.schema.json', { ajvOptions: { allErrors: true } });
 }
+
+/** Compiled validator for schemas/completion-assessment.schema.json (strict on). */
+export function compileCompletionAssessmentValidator() {
+  return compileSchemaFile('completion-assessment.schema.json', {
+    ajvOptions: { allErrors: true },
+  });
+}
