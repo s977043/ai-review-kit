@@ -47,6 +47,22 @@ manifest は 9 ブロックを持ち、各ブロックが `status` を持ちま�
 
 skill は id だけでは `resolved` になりません。checksum が無ければ run と replay の間で SKILL.md 本文が変わったことを検出できないためです。
 
+### `resolved` は「pin 済み」を意味しない
+
+`status` は「この run がそのブロックを記録したか」に答えるだけで、「記録した内容が replay に足りるか」には答えません。`flow` は `id` だけで、`policy` は `ref` と `riskMapDigest` だけで `resolved` に達します。したがって replay 可否を `status` だけで判定すると、hash が全部 `null` の manifest でも `deterministic: true` になり、#2015 の受入基準「manifest 欠損を replay 可能と誤認しない」を破ります。
+
+そこで `REPLAY_PINS` が、必要ブロックごとに「非 `null` でなければならない識別子」を宣言します。`assessReplayability` は `status === 'resolved'` かつ pin がすべて埋まっているブロックだけを充足として数え、足りない場合は `flow.sha256 is null` のように欠けたフィールド名を理由に載せます。
+
+| ブロック    | deterministic replay が要求する pin | 備考                                                                             |
+| ----------- | ----------------------------------- | -------------------------------------------------------------------------------- |
+| `flow`      | `sha256`                            | `id` だけでは flow 定義の書き換えを検出できない                                  |
+| `policy`    | `sha256`                            | `riskMapDigest` は risk map の 16-hex 切り詰めであり policy 本文の hash ではない |
+| `skills`    | （追加 pin なし）                   | `normalizeSkills` が全 entry の `sha256` を `resolved` の条件に畳み込み済み      |
+| `artifacts` | （追加 pin なし）                   | `normalizeArtifacts` が同様に畳み込み済み                                        |
+| `config`    | （追加 pin なし）                   | `normalizeConfig` が `sha256` からしか `resolved` を作らない                     |
+
+`agents` と `runtime` は judgment replay だけが要求します。judgment は意味的同等性で測るため、roster の id と provider / model の組が比較キーであり、追加 pin は置きません。
+
 ## 情報源の実測（本リポジトリ現況）
 
 | ブロック      | 情報源                                                            | 現況      |
@@ -78,7 +94,7 @@ redaction は hash 計算の**前**に走ります。後から redact すると�
 
 ## 後方互換と既存 run record の移行方針（AC 4 / AC 6）
 
-Review Artifact への連結は additive・optional です。`attachExecutionManifest` は manifest が `null` のとき artifact を素通しし、キー集合を変えません。
+Review Artifact への連結は additive・optional です。`attachExecutionManifest` は manifest が `null` のとき artifact を**同一参照のまま**返し、キー集合を変えません。manifest がある場合だけ新しい object を作ります。いずれの場合も入力を破壊的に書き換えません。
 
 配置は `debug` 配下ではなく**トップレベル** `executionManifest` を選びました。`debug` は「構造は版をまたいで保証されない」と自ら宣言しており、「この run は replay 可能か」を answer するブロックの置き場所としては契約が弱すぎます。トップレベルは `additionalProperties: false` のため `schemas/review-artifact.schema.json` の変更が必要です。ただしこれは同スキーマが過去に繰り返してきた optional 追加と同じ形であり、`pages/reference/stable-interfaces.md` の「optional 追加は同一ファイル内」に沿います。
 

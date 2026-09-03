@@ -241,6 +241,53 @@ describe('assessReplayability — a missing manifest is never read as replayable
     assert.equal(assessReplayability(notRecorded).judgment, false);
   });
 
+  it('refuses a manifest whose every required block is resolved but whose pins are null', () => {
+    // The failure #2015 names verbatim: "manifest 欠損を replay 可能と誤認しない".
+    // `resolved` records THAT a block was captured, not that it was pinned —
+    // a flow known only by `id` and a policy backed only by the truncated
+    // `riskMapDigest` both resolve. Judging replay on `status` alone therefore
+    // reported `deterministic: true` for a manifest that pins neither the flow
+    // definition nor the policy text, and a replay run could not detect that
+    // either changed. Guarding this from the OUTSIDE (assert the pins are the
+    // only thing that differ from the fully replayable spec) rather than by
+    // reading REPLAY_PINS back, so re-collapsing the check into `status` fails
+    // here instead of staying self-consistent.
+    const unpinned = buildExecutionManifest(
+      completeSpec({
+        flow: { id: 'final-review', version: '1' },
+        policy: { ref: 'pages/reference/review-policy.md', riskMapDigest: '0123456789abcdef' },
+      }),
+      { now: FIXED_NOW }
+    );
+    // Every required block still reaches `resolved` — that is the whole trap.
+    for (const name of REPLAY_REQUIREMENTS.judgment) {
+      assert.equal(unpinned[name].status, 'resolved', `${name} should still be resolved`);
+    }
+    assert.equal(unpinned.flow.sha256, null);
+    assert.equal(unpinned.policy.sha256, null);
+
+    const replay = assessReplayability(unpinned);
+    assert.equal(replay.deterministic, false);
+    assert.equal(replay.judgment, false);
+    assert.deepEqual(replay.missingBlocks.deterministic, ['flow', 'policy']);
+    assert.deepEqual(replay.missingBlocks.judgment, ['flow', 'policy']);
+    assert.ok(replay.reasons.some((r) => r.includes('flow.sha256')));
+    assert.ok(replay.reasons.some((r) => r.includes('policy.sha256')));
+    // The truncated risk-map digest must not stand in for the policy hash.
+    assert.equal(unpinned.policy.riskMapDigest, '0123456789abcdef');
+  });
+
+  it('accepts the policy once its own sha256 is pinned, not just the risk-map digest', () => {
+    const pinned = buildExecutionManifest(
+      completeSpec({
+        policy: { ref: 'pages/reference/review-policy.md', sha256: '1'.repeat(64) },
+      }),
+      { now: FIXED_NOW }
+    );
+    assert.equal(pinned.policy.riskMapDigest, null);
+    assert.equal(assessReplayability(pinned).deterministic, true);
+  });
+
   it('requires the runtime only for judgment replay, not for deterministic replay', () => {
     const noRuntime = buildExecutionManifest(completeSpec({ runtime: null }), { now: FIXED_NOW });
     const replay = assessReplayability(noRuntime);

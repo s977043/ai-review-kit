@@ -96,6 +96,36 @@ export const REPLAY_REQUIREMENTS = Object.freeze({
   judgment: Object.freeze(['flow', 'skills', 'artifacts', 'policy', 'config', 'agents', 'runtime']),
 });
 
+/**
+ * Identifier fields a required block must actually carry before replay may
+ * treat it as pinned.
+ *
+ * `status: 'resolved'` answers "did this run record the block at all?" — it is
+ * deliberately reachable from a partial recording (a flow with an `id` but no
+ * checksum resolves, because the id IS what was recorded). Replay asks a
+ * second, stricter question: "is what was recorded enough to re-derive the
+ * same route?" Without this map the two questions collapse into one, and a
+ * manifest whose every hash is `null` reports `deterministic: true` — exactly
+ * the "manifest 欠損を replay 可能と誤認しない" failure #2015 forbids.
+ *
+ * Only `flow` and `policy` appear here. The other required blocks already
+ * fold pin-completeness into their own status: `skills` resolves only when
+ * every entry has a `sha256` (`normalizeSkills`), `artifacts` likewise
+ * (`normalizeArtifacts`), and `config` resolves only from a `sha256`
+ * (`normalizeConfig`). `agents` and `runtime` are required by `judgment`
+ * replay alone, which is compared semantically — the roster ids and the
+ * provider/model pair are the comparison keys, so no extra pin applies.
+ *
+ * `policy` demands `sha256` specifically and NOT `riskMapDigest`:
+ * `riskMapDigest` is a 16-hex truncation of the risk map
+ * (src/lib/review-plan.mjs), not a digest of the policy document, so it cannot
+ * detect that the policy text changed between run and replay.
+ */
+export const REPLAY_PINS = Object.freeze({
+  flow: Object.freeze(['sha256']),
+  policy: Object.freeze(['sha256']),
+});
+
 /** Provenance blocks the manifest carries, in document order. */
 export const PROVENANCE_BLOCKS = Object.freeze([
   'riverReview',
@@ -558,6 +588,11 @@ export function verifyExecutionManifest(manifest) {
  * an empty result: the failure mode this AC names is a missing manifest being
  * read as a replayable run, so "no manifest" must be a loud answer.
  *
+ * A required block counts only when it is BOTH `resolved` AND pinned — every
+ * field `REPLAY_PINS` lists for it is non-null. A partially recorded block
+ * (a flow known by id but not by checksum) therefore lands in `missingBlocks`
+ * with a reason that names the null field, instead of silently passing.
+ *
  * @param {object|null|undefined} manifest
  * @returns {{ deterministic: boolean, judgment: boolean, missingBlocks: Record<string, string[]>, reasons: string[] }}
  */
@@ -573,17 +608,31 @@ export function assessReplayability(manifest) {
       reasons: ['No execution manifest is attached, so nothing about this run is replayable.'],
     };
   }
-  const unresolved = (names) =>
-    names.filter((name) => manifest[name]?.status !== 'resolved').sort(compareStrings);
+  // `resolved` is necessary but not sufficient — see REPLAY_PINS.
+  const unpinnedFields = (name) =>
+    (REPLAY_PINS[name] ?? []).filter((field) => manifest[name]?.[field] == null);
+  const unusable = (names) =>
+    names
+      .filter((name) => manifest[name]?.status !== 'resolved' || unpinnedFields(name).length > 0)
+      .sort(compareStrings);
   const missingBlocks = {
-    deterministic: unresolved(REPLAY_REQUIREMENTS.deterministic),
-    judgment: unresolved(REPLAY_REQUIREMENTS.judgment),
+    deterministic: unusable(REPLAY_REQUIREMENTS.deterministic),
+    judgment: unusable(REPLAY_REQUIREMENTS.judgment),
   };
   const reasons = [];
   for (const cls of REPLAY_CLASSES) {
     for (const name of missingBlocks[cls]) {
       const status = manifest[name]?.status ?? 'missing';
-      reasons.push(`${cls} replay needs ${name}, which is ${status}.`);
+      if (status !== 'resolved') {
+        reasons.push(`${cls} replay needs ${name}, which is ${status}.`);
+        continue;
+      }
+      const unpinned = unpinnedFields(name);
+      reasons.push(
+        `${cls} replay needs ${name} pinned, but ${unpinned
+          .map((field) => `${name}.${field}`)
+          .join(', ')} is null even though the block is resolved.`
+      );
     }
   }
   return {
@@ -597,11 +646,17 @@ export function assessReplayability(manifest) {
 /**
  * Attach a manifest to a Review Artifact, additively.
  *
- * Returns a NEW artifact object rather than mutating: the artifact is handed
- * around by other pipeline stages, and an in-place write here would be
- * invisible to a caller that kept its own reference. Attaching nothing when
- * the manifest is absent keeps the exact key set older artifacts have, which
- * is what makes this backward compatible (#2015 AC 4).
+ * Never mutates the input. When there IS a manifest to attach, the return
+ * value is a NEW object: the artifact is handed around by other pipeline
+ * stages, and an in-place write here would be invisible to a caller that kept
+ * its own reference.
+ *
+ * When `manifest` is `null` / `undefined` there is nothing to attach and the
+ * INPUT ARTIFACT ITSELF is returned, not a copy — so `attach(a, null) === a`.
+ * Do not rely on the result being a fresh object you may freely mutate;
+ * copy it yourself if you need one. Returning the input unchanged is what
+ * keeps the exact key set older artifacts have, which is what makes this
+ * backward compatible (#2015 AC 4).
  *
  * @param {object} artifact
  * @param {object|null|undefined} manifest
