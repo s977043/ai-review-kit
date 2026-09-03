@@ -1,0 +1,24 @@
+{
+  "id": "consistency-judge",
+  "version": "0.1.0",
+  "description": "Judges semantic consistency across requirement, design, plan, task, diff and test. This is the one responsibility of the five with no existing implementation, so the contract declares it as a composition of skills the repository already ships rather than pointing at code that does not exist yet.",
+  "responsibilities": ["judge-cross-artifact-consistency"],
+  "inputs": ["requirements", "design", "plan", "tasks", "diff", "tests", "artifacts"],
+  "outputs": ["consistency-assessment"],
+  "skills": [
+    "architecture-traceability",
+    "assumption-resolution-trace",
+    "knowledge-to-code-alignment",
+    "plangate-plan-integrity",
+    "requirements-acceptance",
+    "self-contradiction"
+  ],
+  "capabilities": ["read-artifact", "read-source"],
+  "authority": {
+    "canModifySource": false,
+    "canApproveMerge": false,
+    "canApproveRelease": false,
+    "canRewritePolicy": false
+  },
+  "onUnavailable": "escalate"
+}

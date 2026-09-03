@@ -1,0 +1,82 @@
+{
+  "version": "0.1.0",
+  "description": "Runtime binding for the five logical Agents (#2014). Judgment-relevant declarations live only in agents/contracts/*.agent.json; this document may declare mechanism, surface and fallback and nothing else.",
+  "runtimes": {
+    "claude": {
+      "capabilities": ["read-artifact", "read-source", "search-source", "run-command"],
+      "capabilitySource": "agents/river-review.md",
+      "note": "Measured from the frontmatter line `tools: Read, Grep, Glob, Bash`. Read maps to read-artifact and read-source, Grep/Glob to search-source, Bash to run-command."
+    },
+    "codex": {
+      "capabilities": ["read-artifact", "read-source"],
+      "capabilitySource": ".codex-plugin/plugin.json",
+      "note": "Measured from `interface.capabilities: [\"Read\"]`. The manifest declares neither an `agents` nor a `commands` key, so the only surface shared with Claude is skills/agent-skills/."
+    }
+  },
+  "agents": {
+    "review-orchestrator": {
+      "claude": {
+        "mechanism": "native-subagent",
+        "surface": "agents/river-review.md",
+        "fallback": "not-needed"
+      },
+      "codex": {
+        "mechanism": "skill",
+        "surface": "skills/agent-skills/river-review/SKILL.md",
+        "fallback": "skill-only",
+        "note": "Codex has no agent primitive, so the entry skill carries the Agent. Delivery differs, judgment does not."
+      }
+    },
+    "specialist-reviewer": {
+      "claude": {
+        "mechanism": "native-subagent",
+        "surface": "agents/river-review.md",
+        "fallback": "not-needed"
+      },
+      "codex": {
+        "mechanism": "skill",
+        "surface": "skills/agent-skills/river-review-code/SKILL.md",
+        "fallback": "skill-only",
+        "note": "One instance per reviewer role; the lens skills under skills/agent-skills/river-review-* are the shared surface."
+      }
+    },
+    "finding-verifier": {
+      "claude": {
+        "mechanism": "skill",
+        "surface": "skills/agent-skills/river-review/SKILL.md",
+        "fallback": "not-needed",
+        "note": "Verification is deterministic (src/lib/verifier.mjs), so the binding carries no model-side capability requirement on either runtime."
+      },
+      "codex": {
+        "mechanism": "skill",
+        "surface": "skills/agent-skills/river-review/SKILL.md",
+        "fallback": "not-needed"
+      }
+    },
+    "consistency-judge": {
+      "claude": {
+        "mechanism": "skill",
+        "surface": "skills/agent-skills/river-review/SKILL.md",
+        "fallback": "escalate",
+        "note": "No implementation exists yet on either runtime, so an unsatisfiable binding escalates to a human instead of returning an empty assessment."
+      },
+      "codex": {
+        "mechanism": "skill",
+        "surface": "skills/agent-skills/river-review/SKILL.md",
+        "fallback": "escalate"
+      }
+    },
+    "completion-judge": {
+      "claude": {
+        "mechanism": "skill",
+        "surface": "skills/agent-skills/unknown-coverage-review/SKILL.md",
+        "fallback": "not-needed"
+      },
+      "codex": {
+        "mechanism": "skill",
+        "surface": "skills/agent-skills/unknown-coverage-review/SKILL.md",
+        "fallback": "not-needed"
+      }
+    }
+  }
+}

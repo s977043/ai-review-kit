@@ -1,0 +1,14 @@
+{
+  "id": "consistency-judge",
+  "version": "0.1.0",
+  "description": "Positive fixture: the smallest document that satisfies the Agent Contract. Everything optional is omitted, so a failure here means a required field or a default became stricter.",
+  "responsibilities": ["judge-cross-artifact-consistency"],
+  "inputs": ["requirements", "diff"],
+  "outputs": ["consistency-assessment"],
+  "authority": {
+    "canModifySource": false,
+    "canApproveMerge": false,
+    "canApproveRelease": false,
+    "canRewritePolicy": false
+  }
+}

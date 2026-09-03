@@ -28,14 +28,15 @@ River Review は OSS として成長中であり、内部実装は変更され�
 | **Beta**         | マイナーバージョンで API が変わる可能性がある。非推奨化は事前通知 |
 | **Experimental** | 予告なく変更・削除される可能性がある。評価目的での利用を推奨      |
 
-| サーフェス                                 | ラベル       | 備考                                                                  |
-| ------------------------------------------ | ------------ | --------------------------------------------------------------------- |
-| GitHub Action                              | Beta         | v0.x のため breaking changes の可能性あり                             |
-| CLI (`river` コマンド)                     | Beta         | サーフェス全体は Beta。Stable Contract に列挙した要素のみ Stable 扱い |
-| Skill Schema (`schemas/skill.schema.json`) | Beta         | CI バリデーション済み、フィールド拡張の可能性あり                     |
-| Node API (`runners/node-api/`)             | Experimental | `private: true`、npm 未公開                                           |
-| Agent Skills bridge                        | Experimental | v0.9.0 で追加、成熟途上                                               |
-| Riverbed Memory                            | Experimental | 設計フェーズ — 安定化は未定。利用前に最新の Issue を確認してください  |
+| サーフェス                                            | ラベル       | 備考                                                                  |
+| ----------------------------------------------------- | ------------ | --------------------------------------------------------------------- |
+| GitHub Action                                         | Beta         | v0.x のため breaking changes の可能性あり                             |
+| CLI (`river` コマンド)                                | Beta         | サーフェス全体は Beta。Stable Contract に列挙した要素のみ Stable 扱い |
+| Skill Schema (`schemas/skill.schema.json`)            | Beta         | CI バリデーション済み、フィールド拡張の可能性あり                     |
+| Node API (`runners/node-api/`)                        | Experimental | `private: true`、npm 未公開                                           |
+| Agent Skills bridge                                   | Experimental | v0.9.0 で追加、成熟途上                                               |
+| Riverbed Memory                                       | Experimental | 設計フェーズ — 安定化は未定。利用前に最新の Issue を確認してください  |
+| Agent Contract (`schemas/agent-contract.schema.json`) | Experimental | #2014 で追加した contract。実行エンジンは未実装                       |
 
 ## CLI（`river`）リファレンス（最小）
 

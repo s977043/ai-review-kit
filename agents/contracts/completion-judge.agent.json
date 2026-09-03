@@ -1,0 +1,29 @@
+{
+  "id": "completion-judge",
+  "version": "0.1.0",
+  "description": "Independently evaluates the DONE proof of a task or of a final run. It reuses the existing gate vocabulary rather than minting a second one: GATE_DECISIONS / GATE_REASON_CODES in src/lib/gate-decision.mjs stay the single source of truth, and this Agent produces an assessment that feeds gate derivation instead of deciding a merge.",
+  "responsibilities": ["evaluate-completion"],
+  "inputs": ["requirements", "tasks", "diff", "tests", "findings", "verified-findings"],
+  "outputs": ["completion-assessment"],
+  "skills": ["plangate-tdd-evidence", "plangate-verification-audit", "unknown-coverage-review"],
+  "capabilities": ["read-artifact", "read-source"],
+  "authority": {
+    "canModifySource": false,
+    "canApproveMerge": false,
+    "canApproveRelease": false,
+    "canRewritePolicy": false
+  },
+  "onUnavailable": "escalate",
+  "implementedBy": [
+    {
+      "path": "src/lib/gate-decision.mjs",
+      "symbol": "deriveGateDecision",
+      "note": "Existing decision vocabulary and derivation; the Agent feeds it, it does not replace it."
+    },
+    {
+      "path": "src/lib/team-lead-synthesizer.mjs",
+      "symbol": "synthesizeTeamLeadReport",
+      "note": "Existing aggregation of reviewer results into one report."
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "review-orchestrator",
+  "version": "0.1.0",
+  "description": "Resolves intent, plans the execution and selects which Agents run. It never judges a finding: every judgment verb belongs to another Agent.",
+  "responsibilities": ["resolve-intent", "plan-execution", "select-agents"],
+  "inputs": ["intent", "flow", "artifacts", "diff", "skills"],
+  "outputs": ["execution-plan"],
+  "skills": ["river-review", "review-team"],
+  "capabilities": ["read-artifact", "read-source"],
+  "authority": {
+    "canModifySource": false,
+    "canApproveMerge": false,
+    "canApproveRelease": false,
+    "canRewritePolicy": false
+  },
+  "onUnavailable": "stop",
+  "implementedBy": [
+    {
+      "path": "src/lib/reviewer-orchestrator.mjs",
+      "symbol": "runReviewerOrchestration",
+      "note": "Execution entry point; role resolution is resolveReviewerRoles / selectRolesAuto in the same module."
+    },
+    {
+      "path": "src/lib/review-mode-router.mjs",
+      "symbol": "routeReviewMode",
+      "note": "Intent and mode resolution."
+    },
+    {
+      "path": "skills/agent-skills/river-review/SKILL.md",
+      "note": "Entry skill that carries this responsibility on both runtimes."
+    }
+  ]
+}
