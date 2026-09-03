@@ -9,6 +9,7 @@ River Review でもっとも利用頻度が高い 4 レビューを Flow とし�
 - Review Intent の実体: `flows/intents/*.intent.json`（4 本）
 - entry map の実体: `flows/entry-map.json`
 - 検証: `tests/flow-definitions.test.mjs`
+- 実装前の上流 4 Flow（#2017）: `docs/development/upstream-review-flows.md`。本ドキュメントの表と `flows/entry-map.json` の入口表は、上流 4 入口を加えた 8 件へ拡張されている
 
 Skill は「何を判断するか」、Agent は「誰が責任を持つか」、Flow は「いつ・どう判断を実行するか」を担います。本ドキュメントは Flow 軸だけを説明し、判断基準は `skills/**` と `docs/review/**` に残します。
 

@@ -65,15 +65,33 @@ const validateEntryMap = compileFlowEntryMapValidator();
 const errorsOf = (validate) => JSON.stringify(validate.errors, null, 2);
 
 /** The four Flows #2016 defines. Written out so a silently dropped file fails. */
-const EXPECTED_FLOW_IDS = [
-  'final-review',
-  'plan-review',
-  'replan-review',
-  'task-completion-review',
+const CORE_FLOW_IDS = ['final-review', 'plan-review', 'replan-review', 'task-completion-review'];
+
+/**
+ * The four upstream Flows #2017 defines.
+ *
+ * They carry no Review Intent document, and that is a constraint rather than an
+ * omission: `stage` in schemas/review-intent.schema.json is a closed enum of the
+ * four #2016 stages, so an upstream Intent cannot be written without changing a
+ * schema #2016 owns. #2017 therefore expresses the same guarantees on the Flow
+ * document alone, and the assertions below re-derive from `inputs[]` + `steps[]`
+ * what the Intent's `evidence[]` pins for the core four.
+ */
+const UPSTREAM_FLOW_IDS = [
+  'design-review',
+  'requirements-review',
+  'research-review',
+  'technical-review',
 ];
 
+const EXPECTED_FLOW_IDS = [...CORE_FLOW_IDS, ...UPSTREAM_FLOW_IDS].sort();
+
+/** Flows that must be joined to a Review Intent document (the #2016 four). */
+const intentBackedFlows = flows.filter(({ doc }) => CORE_FLOW_IDS.includes(doc.id));
+const upstreamFlows = flows.filter(({ doc }) => UPSTREAM_FLOW_IDS.includes(doc.id));
+
 describe('core review Flow definitions (#2016)', () => {
-  test('the four expected Flows ship, one file per Flow', () => {
+  test('the expected Flows ship, one file per Flow', () => {
     assert.deepEqual([...flowById.keys()].sort(), EXPECTED_FLOW_IDS);
     assert.equal(flows.length, EXPECTED_FLOW_IDS.length);
     for (const { name, doc } of flows) {
@@ -94,10 +112,28 @@ describe('core review Flow definitions (#2016)', () => {
     }
   });
 
-  test('every Flow purpose resolves to exactly one Review Intent, and vice versa', () => {
-    const flowPurposes = flows.map(({ doc }) => doc.intent.purpose).sort();
-    assert.deepEqual(flowPurposes, [...intentByPurpose.keys()].sort());
+  test('every purpose is unique across all Flows', () => {
+    const flowPurposes = flows.map(({ doc }) => doc.intent.purpose);
     assert.equal(new Set(flowPurposes).size, flowPurposes.length, 'purposes must be unique');
+  });
+
+  test('every intent-backed Flow purpose resolves to one Review Intent, and vice versa', () => {
+    const flowPurposes = intentBackedFlows.map(({ doc }) => doc.intent.purpose).sort();
+    assert.deepEqual(flowPurposes, [...intentByPurpose.keys()].sort());
+  });
+
+  test('an upstream Flow carries no Review Intent, because the stage enum is closed', () => {
+    // Not an omission: schemas/review-intent.schema.json (#2016) closes `stage`
+    // to the four core stages, and #2017 does not edit a schema #2016 owns. The
+    // upstream Flows therefore carry the same guarantees on the Flow document
+    // itself, pinned by the "upstream review Flow definitions" suite below.
+    for (const { name, doc } of upstreamFlows) {
+      assert.equal(
+        intentByPurpose.has(doc.intent.purpose),
+        false,
+        `${name}: an upstream Flow must not claim a core Review Intent purpose`
+      );
+    }
   });
 
   test('each Review Intent declares a distinct stage', () => {
@@ -109,7 +145,7 @@ describe('core review Flow definitions (#2016)', () => {
   // lives in two documents (the Intent declares the requirement, the Flow declares
   // the step outcome). These assertions are what stop them from drifting apart.
   test('Flow inputs and Review Intent evidence name the same artifacts', () => {
-    for (const { name, doc } of flows) {
+    for (const { name, doc } of intentBackedFlows) {
       const intent = intentByPurpose.get(doc.intent.purpose);
       const inputNames = (doc.inputs ?? []).map((input) => input.name).sort();
       const evidenceArtifacts = intent.evidence.map((entry) => entry.artifact).sort();
@@ -118,7 +154,7 @@ describe('core review Flow definitions (#2016)', () => {
   });
 
   test('required evidence is a required Flow input, and optional evidence is not', () => {
-    for (const { name, doc } of flows) {
+    for (const { name, doc } of intentBackedFlows) {
       const intent = intentByPurpose.get(doc.intent.purpose);
       const inputByName = new Map((doc.inputs ?? []).map((input) => [input.name, input]));
       for (const entry of intent.evidence) {
@@ -143,7 +179,7 @@ describe('core review Flow definitions (#2016)', () => {
   });
 
   test('a Flow that can stop on a missing artifact declares the stop condition', () => {
-    for (const { name, doc } of flows) {
+    for (const { name, doc } of intentBackedFlows) {
       const intent = intentByPurpose.get(doc.intent.purpose);
       const canStop = intent.evidence.some((entry) => entry.onMissing === 'stop');
       if (!canStop) continue;
@@ -155,7 +191,7 @@ describe('core review Flow definitions (#2016)', () => {
   });
 
   test('every declared onMissing outcome is realized by a step outcome', () => {
-    for (const { name, doc } of flows) {
+    for (const { name, doc } of intentBackedFlows) {
       const intent = intentByPurpose.get(doc.intent.purpose);
       // `stop` is the schema default for a step with no onUnsatisfied, so only
       // the two opt-in outcomes need a step that spells them out.
@@ -290,12 +326,16 @@ describe('flow entry map (#2016)', () => {
     assert.equal(validateEntryMap(entryMap), true, errorsOf(validateEntryMap));
   });
 
-  test('the four user-facing entry names from #2016 are present', () => {
+  test('the user-facing entry names from #2016 and #2017 are present', () => {
     assert.deepEqual(Object.keys(entryMap.entries).sort(), [
+      'review-design',
       'review-final',
       'review-plan',
       'review-replan',
+      'review-requirements',
+      'review-research',
       'review-task',
+      'review-technical',
     ]);
   });
 
@@ -362,6 +402,139 @@ describe('flow entry map (#2016)', () => {
       Object.entries(entryMap.entries).map(([name, entry]) => [name, entry.flow])
     );
     assert.deepEqual(table, expected);
+  });
+});
+
+// #2017 Phase 6. The upstream Flows carry no Review Intent document (the
+// `stage` enum is closed to the four #2016 stages and #2017 does not edit a
+// schema #2016 owns), so every guarantee the Intent mechanizes for the core
+// four is re-derived here from `inputs[]` + `steps[]` instead.
+describe('upstream review Flow definitions (#2017)', () => {
+  const FLOW_FIXTURES_DIR = resolve(REPO_ROOT, 'tests', 'fixtures', 'flow');
+
+  /**
+   * The #2017 evidence discipline, as a predicate over a Flow document.
+   *
+   * Two of the four upstream Flows judge things the issue forbids asserting as
+   * facts: research freshness / source availability (there is no built-in web
+   * search — a Non-goal of #2017) and technical viability (which is "Evidence
+   * required"). The discipline is that neither may reach `derive-gate` without
+   * passing `verify-findings` first, and that a question the supplied artifacts
+   * cannot settle leaves through `human-escalation` as an open question rather
+   * than as a verdict — which is only meaningful if the Flow can actually stop
+   * on it, hence the two stop conditions.
+   *
+   * @param {object} doc a Flow document
+   * @returns {string[]} the reasons the document fails the discipline, empty when it holds
+   */
+  const evidenceDisciplineViolations = (doc) => {
+    const reasons = [];
+    const indexOf = (primitive) => doc.steps.findIndex((step) => step.use === primitive);
+    const gate = indexOf('derive-gate');
+    if (gate === -1) reasons.push('no derive-gate step');
+    for (const primitive of ['verify-findings', 'human-escalation']) {
+      const at = indexOf(primitive);
+      if (at === -1) reasons.push(`no ${primitive} step`);
+      else if (gate !== -1 && at > gate) reasons.push(`${primitive} runs after derive-gate`);
+    }
+    for (const code of ['HUMAN_APPROVAL_REQUIRED', 'UNDETERMINED']) {
+      if (!(doc.stopConditions ?? []).includes(code)) reasons.push(`no ${code} stop condition`);
+    }
+    return reasons;
+  };
+
+  test('the four upstream Flows ship, one file per Flow', () => {
+    assert.deepEqual(
+      upstreamFlows.map(({ doc }) => doc.id).sort(),
+      UPSTREAM_FLOW_IDS,
+      'a silently dropped or renamed upstream Flow file must fail here'
+    );
+  });
+
+  test('every upstream Flow declares exactly one required input', () => {
+    // The subject of the judgment. Without it the question has nothing to be
+    // about, which is why the absence is a stop rather than a degrade.
+    for (const { name, doc } of upstreamFlows) {
+      const required = (doc.inputs ?? []).filter((input) => input.required === true);
+      assert.equal(required.length, 1, `${name}: required inputs = ${required.length}`);
+    }
+  });
+
+  test('an upstream Flow with a required input declares DETERMINISTIC_UNRUNNABLE', () => {
+    for (const { name, doc } of upstreamFlows) {
+      assert.ok(
+        (doc.stopConditions ?? []).includes('DETERMINISTIC_UNRUNNABLE'),
+        `${name}: a missing required input must be able to stop the run`
+      );
+    }
+  });
+
+  test('every optional input is either gated by a skip step or covered by a degrade step', () => {
+    // The #2016 acceptance criterion "missing artifact は degrade/stop が明示される",
+    // stated on the Flow document alone: an optional input may not be silently
+    // ignored, so it either gates a `skip` step or the Flow declares a `degrade`.
+    for (const { name, doc } of upstreamFlows) {
+      const gatedInputs = new Set(
+        doc.steps.filter((step) => step.when?.state === 'present').map((step) => step.when.input)
+      );
+      const hasDegrade = doc.steps.some((step) => step.onUnsatisfied === 'degrade');
+      for (const input of doc.inputs ?? []) {
+        if (input.required === true) continue;
+        assert.ok(
+          gatedInputs.has(input.name) || hasDegrade,
+          `${name}: optional input "${input.name}" has neither a skip gate nor a degrade step`
+        );
+      }
+    }
+  });
+
+  test('every upstream Flow verifies findings before deriving a gate', () => {
+    for (const { name, doc } of upstreamFlows) {
+      const verify = doc.steps.findIndex((step) => step.use === 'verify-findings');
+      const gate = doc.steps.findIndex((step) => step.use === 'derive-gate');
+      assert.ok(verify !== -1, `${name}: no verify-findings step`);
+      assert.ok(gate !== -1 && verify < gate, `${name}: verify-findings must precede derive-gate`);
+    }
+  });
+
+  test('research-review and technical-review hold the #2017 evidence discipline', () => {
+    for (const id of ['research-review', 'technical-review']) {
+      assert.deepEqual(evidenceDisciplineViolations(flowById.get(id)), [], id);
+    }
+  });
+
+  test('positive fixture: a research Flow that routes freshness through evidence', () => {
+    const fixture = readJson(join(FLOW_FIXTURES_DIR, 'research-review-evidence-happy.json'));
+    assert.equal(validateFlow(fixture), true, errorsOf(validateFlow));
+    assert.deepEqual(evidenceDisciplineViolations(fixture), []);
+  });
+
+  test('negative fixture: a research Flow that asserts freshness straight to the gate', () => {
+    // Schema-valid on purpose: the schema cannot see that an unverifiable
+    // freshness claim reaches `derive-gate` unfiltered. A pass here would mean
+    // the #2017 acceptance criterion stopped being enforced by anything.
+    const fixture = readJson(join(FLOW_FIXTURES_DIR, 'research-review-asserts-freshness.json'));
+    assert.equal(validateFlow(fixture), true, errorsOf(validateFlow));
+    assert.deepEqual(evidenceDisciplineViolations(fixture), [
+      'no verify-findings step',
+      'no human-escalation step',
+      'no UNDETERMINED stop condition',
+    ]);
+  });
+
+  test('no upstream Flow bundles judgment into a single all-in-one step', () => {
+    // Non-goal of #2017: an all-in-one upstream mega-judgment. A Flow that
+    // reached the gate with no cross-artifact or reviewer step would be exactly
+    // that, hiding the whole judgment inside one selection.
+    for (const { name, doc } of upstreamFlows) {
+      const judgmentSteps = doc.steps.filter(
+        (step) =>
+          step.reviewer !== undefined ||
+          step.use === 'cross-artifact-review' ||
+          step.use === 'parallel-review'
+      );
+      assert.ok(judgmentSteps.length >= 2, `${name}: only ${judgmentSteps.length} judgment steps`);
+    }
   });
 });
 
