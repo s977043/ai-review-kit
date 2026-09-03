@@ -79685,7 +79685,9 @@ async function runPromoteCommand(parsed, targetPath) {
       console.error(`Error: river promote ${sub} requires a candidate <id>.`);
       return 1;
     }
-    const decision = sub === 'approve' ? 'approved' : 'rejected';
+    // `decision` は VALID_DECISIONS の語彙（承認/却下の入力）であり、
+    // DECISION_STATUS の値（promotionStatus）とは別軸。綴りが一致するだけ。
+    const decision = sub === 'approve' ? 'approved' : 'rejected'; // vocab-literal-ignore
     const approver =
       parsed.promoteApprover ||
       external_node_process_namespaceObject.env.RIVER_APPROVER ||
@@ -79720,7 +79722,11 @@ async function runPromoteCommand(parsed, targetPath) {
     console.log(`  decidedAt: ${result.entry.context.approval.decidedAt}`);
     // Rejecting a candidate that was previously approved invalidates any PR
     // scaffold already generated from it; make the orphaning explicit.
-    if (decision === 'rejected' && result.previousDecision === 'approved') {
+    // ここも decision 軸（VALID_DECISIONS）の比較。promotionStatus ではない。
+    if (
+      decision === 'rejected' &&
+      result.previousDecision === 'approved' // vocab-literal-ignore
+    ) {
       console.log(
         '  note: any PR scaffold previously generated for this candidate is now invalid (regenerate after a fresh approval).'
       );
@@ -79824,7 +79830,7 @@ async function runPromoteCommand(parsed, targetPath) {
   } else {
     // Only approved candidates get scaffolds; rejected (archived) ones are excluded.
     entries = listPromotionCandidates(index).filter(
-      (e) => getPromotionCandidate(e)?.promotionStatus === 'approved'
+      (e) => getPromotionCandidate(e)?.promotionStatus === DECISION_STATUS.approved
     );
   }
 

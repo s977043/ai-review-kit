@@ -68,3 +68,5 @@ GitHub Action をはじめとする各実行面は、レビュー判断を持た
 - adapter 側に判断を足したくなった場合は、CLI のフラグ / config（`.river-review.json` / `.yaml`）へ昇格させてから adapter で透過させる
 
 この原則により、`river skills resolve` 等での選択結果と実際の実行結果が、どの実行面でも一致することを保証する。
+
+なお本節の「正規実行面はメイン CLI」は、判断ロジックの置き場と自動化経路の実行面を指します。エンドユーザー向けの配布面の順位は [`docs/adr/009-plugin-first-product-and-runtime-contract.md`](./adr/009-plugin-first-product-and-runtime-contract.md) が定めており、そちらでは Claude Code / Codex Plugin を第一級としています。

@@ -4,7 +4,7 @@ name: '[DEPRECATED] Release Please Kick'
 # Actions secret, which is not registered on this repository, so every run
 # fails at the loud-failure verification step (by design — see below).
 # `scripts/release-please-kick.sh` run from a local machine is the canonical
-# kick procedure (see docs/runbook/release-please-kick.md). This workflow is
+# kick procedure (see docs/runbook/bot-pushed-head-kick.md). This workflow is
 # in the first stage of a "deprecate → observe → delete" plan: triggers and
 # logic are intentionally left unchanged during the observation period, and
 # the file will be deleted afterwards unless the secret is registered and the
@@ -20,7 +20,7 @@ name: '[DEPRECATED] Release Please Kick'
 # Without `RELEASE_KICK_PAT`, the commit will land but downstream checks will
 # never run — the workflow detects this and fails loudly.
 #
-# Setup: see docs/runbook/release-please-kick.md.
+# Setup: see docs/runbook/bot-pushed-head-kick.md.
 # Background: docs/development/retrospectives/2026-05-21-25.md (W1+W5),
 # issue #906 (defect discovered during v0.57.0 release).
 
@@ -65,7 +65,7 @@ jobs:
             echo "::warning::RELEASE_KICK_PAT secret is not set. Falling back to GITHUB_TOKEN."
             echo "::warning::GitHub blocks GITHUB_TOKEN pushes from triggering downstream workflows (no-recursion safety)."
             echo "::warning::The kick will succeed but downstream pull_request checks will NOT re-run, leaving the release PR BLOCKED."
-            echo "::warning::See docs/runbook/release-please-kick.md for RELEASE_KICK_PAT setup."
+            echo "::warning::See docs/runbook/bot-pushed-head-kick.md for RELEASE_KICK_PAT setup."
           fi
 
           if [ -z "${BRANCH_INPUT}" ]; then

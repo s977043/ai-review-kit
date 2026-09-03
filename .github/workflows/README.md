@@ -155,7 +155,7 @@ JSON
 - [../../docs/runbook/dev.md](../../docs/runbook/dev.md) — ローカル開発と PR 前チェック
 - [../../docs/governance.md](../../docs/governance.md) — PR レビューとマージ前チェックリスト
 - [../../docs/development/dist-check-rebuild-guide.md](../../docs/development/dist-check-rebuild-guide.md) — `Action dist freshness` が落ちたときの対処
-- [../../docs/runbook/release-please-kick.md](../../docs/runbook/release-please-kick.md) — release-please ブランチの kick 手順（正は `scripts/release-please-kick.sh`、`release-please-kick.yml` は deprecated）
+- [../../docs/runbook/bot-pushed-head-kick.md](../../docs/runbook/bot-pushed-head-kick.md) — release-please ブランチの kick 手順（正は `scripts/release-please-kick.sh`、`release-please-kick.yml` は deprecated）
 - [../../docs/development/link-checking.md](../../docs/development/link-checking.md) — `link-check.yml` と lychee の設定
 - [../../docs/development/skill-eval-kpi.md](../../docs/development/skill-eval-kpi.md) — `skill-eval.yml` / `nightly-eval.yml` が測る KPI
 - [../../docs/runbook/community-skill-eval.md](../../docs/runbook/community-skill-eval.md) — `promptfoo-eval.yml` の運用手順

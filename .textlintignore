@@ -31,7 +31,7 @@ docs/migration/runners-migration-guide.md
 docs/review/troubleshooting.md
 docs/roadmap/oss-discovery-roadmap.md
 docs/runbook/community-skill-eval.md
-docs/runbook/release-please-kick.md
+docs/runbook/bot-pushed-head-kick.md
 docs/runbook/release-smoke.md
 docs/use-cases/github-actions.md
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.90.0](https://github.com/s977043/river-review/compare/v1.89.3...v1.90.0) (2026-09-03)
+
+
+### Features
+
+* **critic:** [#1978](https://github.com/s977043/river-review/issues/1978) 決定論の状態機械へ応答を供給する薄い runner を追加する ([#2021](https://github.com/s977043/river-review/issues/2021)) ([4304142](https://github.com/s977043/river-review/commit/43041420aad6b380d427f7ba3947330c4981a0d0))
+
 ## [1.89.3](https://github.com/s977043/river-review/compare/v1.89.2...v1.89.3) (2026-09-02)
 
 

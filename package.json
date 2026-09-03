@@ -1,6 +1,6 @@
 {
   "name": "river-review",
-  "version": "1.89.3",
+  "version": "1.90.0",
   "private": true,
   "workspaces": [
     "runners/node-api",
@@ -55,9 +55,10 @@
     "eval:convergence": "node scripts/evaluate-convergence-efficiency.mjs",
     "eval:repo-context": "node scripts/evaluate-repo-wide-fixtures.mjs",
     "check:doc-enum": "node scripts/check-doc-enumerations.mjs",
+    "check:vocab-literals": "node scripts/check-vocabulary-literals.mjs",
     "check:comment-disposition": "node scripts/check-comment-disposition.mjs",
     "check:sidebar-reachability": "node scripts/check-sidebar-reachability.mjs",
-    "meta:validate": "node scripts/validate-meta-consistency.mjs && node scripts/check-doc-enumerations.mjs && node scripts/check-sidebar-reachability.mjs && node scripts/generate-skill-catalog.mjs --check",
+    "meta:validate": "node scripts/validate-meta-consistency.mjs && node scripts/check-doc-enumerations.mjs && node scripts/check-sidebar-reachability.mjs && node scripts/check-vocabulary-literals.mjs && node scripts/generate-skill-catalog.mjs --check",
     "plugin:validate": "node scripts/validate-plugin-manifest.mjs",
     "plugin:validate:official": "node scripts/validate-plugin-official.mjs",
     "plugin:sync": "node scripts/sync-plugin-fields.mjs",
