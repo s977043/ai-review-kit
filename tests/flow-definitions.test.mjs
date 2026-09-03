@@ -11,8 +11,12 @@
 //   - the entry map resolves to a Flow id AND version that exists
 //   - the Review Intent artifact vocabulary is a subset of the Agent Contract
 //     `inputKind` vocabulary (#2014), not a parallel ledger
+//   - the SKILL.md entry table stays in sync with the entry map it declares SSoT
 //   - observe mode: no runtime module loads `flows/`, so adding these documents
-//     cannot change an existing gate or decision
+//     cannot change an existing gate or decision. The scan behind that claim
+//     lives in tests/helpers/flows-reference-scan.mjs and is itself pinned here
+//     against both a false positive (a comment) and false negatives (a `flows`
+//     path segment, a template literal).
 //
 // The Ajv setup is NOT re-implemented here: the compiled validators come from
 // tests/helpers/schema-validator.mjs, the same factory the #2013/#2014 suites use.
@@ -24,6 +28,7 @@ import { fileURLToPath } from 'node:url';
 import test, { describe } from 'node:test';
 
 import { GATE_REASON_CODES } from '../src/lib/gate-decision.mjs';
+import { referencesFlowsDirectory } from './helpers/flows-reference-scan.mjs';
 import {
   compileFlowValidator,
   compileFlowEntryMapValidator,
@@ -35,6 +40,7 @@ const REPO_ROOT = resolve(HERE, '..');
 const FLOWS_DIR = resolve(REPO_ROOT, 'flows');
 const INTENTS_DIR = resolve(FLOWS_DIR, 'intents');
 const SCHEMAS_DIR = resolve(REPO_ROOT, 'schemas');
+const SKILL_MD = resolve(REPO_ROOT, 'skills/agent-skills/river-review/SKILL.md');
 
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 
@@ -315,18 +321,89 @@ describe('flow entry map (#2016)', () => {
   test('the entry map carries no runtime discriminator', () => {
     // AC "Claude / Codex で同一 Flow ID が使われる": the map cannot branch on a
     // runtime, so there is nothing for the two hosts to disagree about.
-    const text = readFileSync(join(FLOWS_DIR, 'entry-map.json'), 'utf8');
-    for (const forbidden of ['claude', 'codex', 'runtime', 'model']) {
-      assert.equal(
-        text.toLowerCase().includes(forbidden),
-        false,
-        `entry-map.json mentions "${forbidden}"`
-      );
+    //
+    // Scope: key names, entry names and the resolved `flow` / `flowVersion`
+    // values — i.e. everything a resolver reads. Prose in `description` is NOT
+    // checked: a sentence such as "runtime に依存しない" carries no branch, and
+    // forbidding the word there would fail on documentation alone.
+    const offenders = [];
+    const check = (label, value) => {
+      for (const forbidden of ['claude', 'codex', 'runtime', 'model']) {
+        if (String(value).toLowerCase().includes(forbidden)) {
+          offenders.push(`${label} = ${value} (contains "${forbidden}")`);
+        }
+      }
+    };
+    for (const key of Object.keys(entryMap)) check('top-level key', key);
+    for (const [entryName, entry] of Object.entries(entryMap.entries)) {
+      check('entry name', entryName);
+      for (const key of Object.keys(entry)) check(`entries.${entryName} key`, key);
+      check(`entries.${entryName}.flow`, entry.flow);
+      check(`entries.${entryName}.flowVersion`, entry.flowVersion);
     }
+    assert.deepEqual(offenders, []);
+  });
+
+  test('the SKILL.md entry table matches entry-map.json (SSoT sync)', () => {
+    // skills/agent-skills/river-review/SKILL.md declares entry-map.json as the
+    // SSoT and carries a copy of the table. Without this assertion the copy
+    // silently goes stale whenever the map changes.
+    const skillText = readFileSync(SKILL_MD, 'utf8');
+    const section = skillText.split(/^## /m).find((part) => part.startsWith('Flow Entry'));
+    assert.ok(section, 'SKILL.md has no "## Flow Entry" section');
+
+    const table = {};
+    for (const line of section.split('\n')) {
+      const row = /^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|/.exec(line);
+      if (row) table[row[1]] = row[2];
+    }
+
+    const expected = Object.fromEntries(
+      Object.entries(entryMap.entries).map(([name, entry]) => [name, entry.flow])
+    );
+    assert.deepEqual(table, expected);
   });
 });
 
 describe('observe mode (#2016)', () => {
+  // The scan is pinned in both directions before it is used, because the first
+  // version of this check was a raw-text regexp that reported a JSDoc comment
+  // as an offender and missed `join(ROOT, 'flows', ...)` entirely.
+  const SCAN_CASES = [
+    [
+      'a JSDoc comment that merely writes `flows/`',
+      '/**\n * - flow → no `flows/` directory\n */\n',
+      false,
+    ],
+    [
+      'a line comment that writes flows/',
+      '// reads flows/entry-map.json one day\nconst a = 1;\n',
+      false,
+    ],
+    ['a static import', "import map from '../flows/entry-map.json' with { type: 'json' };\n", true],
+    ['a bare relative path', "readFileSync('flows/entry-map.json', 'utf8');\n", true],
+    [
+      'join() with flows as its own segment',
+      "readFileSync(join(ROOT, 'flows', 'entry-map.json'));\n",
+      true,
+    ],
+    ['resolve() with a bare flows segment', "const dir = resolve(REPO_ROOT, 'flows');\n", true],
+    ['a template literal built from a variable', 'readFileSync(`${dir}/entry-map.json`);\n', true],
+    ['a flow document filename', "readFileSync(join(dir, 'plan-review.flow.json'));\n", true],
+    [
+      'an unrelated skills/ path',
+      "const dir = path.join(REPO_ROOT, 'skills');\nreadFileSync('skills/x.md');\n",
+      false,
+    ],
+    ['a regexp literal containing quotes', 'const re = /[\'"`]flows\\//;\nconst x = 1;\n', false],
+  ];
+
+  for (const [label, source, expected] of SCAN_CASES) {
+    test(`referencesFlowsDirectory: ${label} → ${expected}`, () => {
+      assert.equal(referencesFlowsDirectory(source), expected);
+    });
+  }
+
   test('no runtime module loads flows/, so no gate or decision changes', () => {
     // #2016 defines and wires the Flows; executing them is a follow-up. Until an
     // engine lands, nothing under src/ or runners/ may read these documents, so
@@ -343,8 +420,7 @@ describe('observe mode (#2016)', () => {
           continue;
         }
         if (!/\.(mjs|js|cjs|ts)$/.test(entry.name)) continue;
-        const text = readFileSync(full, 'utf8');
-        if (/['"`][^'"`]*\bflows\//.test(text)) offenders.push(full);
+        if (referencesFlowsDirectory(readFileSync(full, 'utf8'))) offenders.push(full);
       }
     };
     walk(resolve(REPO_ROOT, 'src'));

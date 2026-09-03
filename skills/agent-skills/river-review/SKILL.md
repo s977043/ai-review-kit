@@ -146,7 +146,7 @@ Finding は以下のフィールドを満たすこと。詳細条件は [VERIFIC
 - どの skill を選ぶかは従来どおり本 skill の Routing 節と `selectSkills` が決める。Flow は skill を名指ししない
 - 現時点では observe であり、Flow は既存の gate / decision / finding を変更しない
 
-詳細は [docs/development/flow-contract.md](../../../docs/development/flow-contract.md) を参照する。
+詳細はリポジトリ本体の `docs/development/flow-contract.md` にある（この skill の配布パッケージには同梱されないため、リンクではなくパス名で示す）。
 
 ## How to Invoke / 呼び出し方
 
