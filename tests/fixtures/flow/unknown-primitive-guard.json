@@ -1,0 +1,8 @@
+{
+  "id": "final-review",
+  "version": "0.1.0",
+  "description": "Guard fixture: an unknown step primitive must be rejected at load time rather than skipped at run time (#2013 fail-safe acceptance criterion). Everything except the second step is valid, so a pass here means the closed vocabulary stopped enforcing.",
+  "intent": { "purpose": "final-convergence" },
+  "steps": [{ "use": "resolve-artifacts" }, { "use": "summon-oracle" }, { "use": "derive-gate" }],
+  "outputs": ["findings", "gate"]
+}

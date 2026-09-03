@@ -1,0 +1,28 @@
+{
+  "id": "final-review",
+  "version": "0.1.0",
+  "description": "Final convergence flow sketched in #2013, expressed with the committed step vocabulary.",
+  "intent": { "purpose": "final-convergence" },
+  "inputs": [
+    { "name": "diff", "required": true, "description": "Unified diff under review." },
+    { "name": "baseline", "description": "Previous run record used for regression comparison." }
+  ],
+  "steps": [
+    { "use": "resolve-artifacts" },
+    { "use": "deterministic-check" },
+    { "use": "select-skills" },
+    { "agent": "bug-hunter", "parallel": true },
+    { "agent": "security-scanner", "parallel": true },
+    { "use": "verify-findings" },
+    {
+      "use": "compare-baseline",
+      "when": { "input": "baseline", "state": "present" },
+      "onUnsatisfied": "skip"
+    },
+    { "use": "evaluate-completion", "onUnsatisfied": "degrade" },
+    { "use": "derive-gate" },
+    { "use": "persist-artifact" }
+  ],
+  "outputs": ["findings", "coverage", "completion", "gate"],
+  "stopConditions": ["DETERMINISTIC_UNRUNNABLE", "HUMAN_APPROVAL_REQUIRED"]
+}

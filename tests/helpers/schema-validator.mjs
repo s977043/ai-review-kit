@@ -58,6 +58,11 @@ export function compileSuppressionContextValidator() {
   return compileSchemaFile('suppression-context.schema.json', { ajvOptions: { allErrors: true } });
 }
 
+/** Compiled validator for schemas/flow.schema.json (strict on). */
+export function compileFlowValidator() {
+  return compileSchemaFile('flow.schema.json', { ajvOptions: { allErrors: true } });
+}
+
 /**
  * Compiled validator for schemas/riverbed-index.schema.json (strict on).
  * The index schema references riverbed-entry.schema.json via a relative
