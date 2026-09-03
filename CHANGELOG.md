@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.96.0](https://github.com/s977043/river-review/compare/v1.95.0...v1.96.0) (2026-09-03)
+
+
+### Features
+
+* **schemas:** [#2018](https://github.com/s977043/river-review/issues/2018) Cross-Artifact Consistency の契約と検証を追加する ([#2042](https://github.com/s977043/river-review/issues/2042)) ([84cd204](https://github.com/s977043/river-review/commit/84cd20414eea685abbae769f3e77f01cc32f0c24))
+* **schemas:** [#2019](https://github.com/s977043/river-review/issues/2019) Completion / Convergence の契約と検証を追加する ([#2043](https://github.com/s977043/river-review/issues/2043)) ([c6c9a43](https://github.com/s977043/river-review/commit/c6c9a43439c81afc6bba6bf6651a15b85f2d4f80))
+
 ## [1.95.0](https://github.com/s977043/river-review/compare/v1.94.0...v1.95.0) (2026-09-03)
 
 
