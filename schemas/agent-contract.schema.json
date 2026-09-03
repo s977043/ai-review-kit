@@ -145,7 +145,7 @@
       ]
     },
     "capability": {
-      "description": "Runtime-neutral tool capability names. Read-only by construction: there is no write capability to declare, which keeps `authority.canModifySource: false` consistent with what a runtime can hand the Agent.",
+      "description": "Runtime-neutral tool capability names. This list alone does NOT make an Agent read-only: `run-command` is bound to Bash on Claude in `agents/contracts/adapter-map.json`, so it can reach a shell that writes source. The read-only property is carried instead by `authority.canModifySource: false` (a schema `const`, so it cannot be granted by editing a contract) together with the capability-intersection check in `tests/agent-contract.test.mjs`, which keeps a capability only one runtime provides out of the judgment path.",
       "enum": ["read-artifact", "read-source", "search-source", "run-command"]
     }
   }

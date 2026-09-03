@@ -113,14 +113,48 @@ describe('agent-contract.schema.json', () => {
 
   test('the schema does not copy the gate vocabulary', () => {
     // completion-judge feeds gate derivation; it must not mint a second set of
-    // decisions or reason codes.
-    const enumValues = new Set(
-      Object.values(schema.$defs)
-        .flatMap((def) => def.enum ?? [])
-        .concat(schema.properties.instantiatedPer.enum, schema.properties.onUnavailable.enum)
+    // decisions or reason codes. The gate ledger spells its values UPPER_SNAKE
+    // and this schema spells its enums lower-kebab, so a raw `Set.has` would
+    // only ever catch a copy that also kept the original casing -- i.e. it
+    // would pass a schema that declared `no-go` or `converged-clean`. Compare
+    // on a case- and separator-insensitive key so a re-spelled copy is caught
+    // too.
+    const normalize = (value) => value.toLowerCase().replaceAll(/[-_]/gu, '');
+    // The one deliberate overlap, documented rather than silently tolerated:
+    // `onUnavailable: escalate` names what happens when THIS Agent cannot run,
+    // which is an Agent-contract concern that happens to share an English word
+    // with a gate decision. It is not a gate decision being re-declared.
+    const allowedOverlaps = new Map([['escalate', 'properties.onUnavailable']]);
+
+    const enumEntries = Object.entries(schema.$defs)
+      .flatMap(([name, def]) => (def.enum ?? []).map((value) => [value, `$defs.${name}`]))
+      .concat(
+        schema.properties.instantiatedPer.enum.map((value) => [
+          value,
+          'properties.instantiatedPer',
+        ]),
+        schema.properties.onUnavailable.enum.map((value) => [value, 'properties.onUnavailable'])
+      );
+    const normalizedGateWords = new Set(
+      [...GATE_DECISIONS, ...GATE_REASON_CODES].map((value) => normalize(value))
     );
-    for (const value of [...GATE_DECISIONS, ...GATE_REASON_CODES]) {
-      assert.equal(enumValues.has(value), false, `schema re-declares gate vocabulary ${value}`);
+
+    for (const [value, location] of enumEntries) {
+      if (!normalizedGateWords.has(normalize(value))) continue;
+      assert.equal(
+        allowedOverlaps.get(value),
+        location,
+        `${location} re-declares gate vocabulary as "${value}"`
+      );
+    }
+
+    // The allowlist must not rot into a licence for values that no longer
+    // exist: every documented exception has to still be in the schema.
+    for (const [value, location] of allowedOverlaps) {
+      assert.ok(
+        enumEntries.some(([candidate, where]) => candidate === value && where === location),
+        `allowed overlap ${value} at ${location} is no longer declared`
+      );
     }
   });
 
@@ -331,6 +365,57 @@ describe('agent-adapter-map.json', () => {
         }
       }
     }
+  });
+
+  test('both runtimes agree on whether the fallback reaches a human', () => {
+    // #2014 acceptance criterion, the half the closed-object check cannot see:
+    // `fallback` is allowed to differ in DELIVERY (`not-needed` on a runtime
+    // with an agent primitive vs `skill-only` on one without -- same judgment,
+    // different carrier) but never in VISIBILITY. If one runtime escalates to a
+    // human and the other silently proceeds, the same Agent produces a
+    // different judgment path per runtime, which is exactly the leak this
+    // document exists to prevent.
+    const REACHES_A_HUMAN = new Map([
+      ['not-needed', false],
+      ['skill-only', false],
+      ['escalate', true],
+    ]);
+    const bindingSchema = readJson(resolve(ROOT, 'schemas', 'agent-adapter-map.schema.json')).$defs
+      .binding;
+    assert.deepEqual(
+      [...REACHES_A_HUMAN.keys()].sort(),
+      [...bindingSchema.properties.fallback.enum].sort(),
+      'a new fallback value must be classified here before it can ship'
+    );
+
+    for (const [id, bindings] of Object.entries(adapterMap.agents)) {
+      const escalating = Object.entries(bindings).map(([runtime, binding]) => [
+        runtime,
+        REACHES_A_HUMAN.get(binding.fallback),
+      ]);
+      const [[firstRuntime, firstValue]] = escalating;
+      for (const [runtime, value] of escalating) {
+        assert.equal(
+          value,
+          firstValue,
+          `${id}: ${runtime} fallback "${bindings[runtime].fallback}" and ${firstRuntime} fallback "${bindings[firstRuntime].fallback}" disagree on whether a human is involved`
+        );
+      }
+    }
+  });
+
+  test('the capability vocabulary is not maintained twice', () => {
+    // The contract schema and the adapter map schema both enumerate capability
+    // names, and the adapter map's own description says they are "spelled
+    // exactly as in schemas/agent-contract.schema.json". Pin that, so renaming
+    // one side is a test failure rather than a silent drift that makes the
+    // intersection check compare two different vocabularies.
+    const adapterSchema = readJson(resolve(ROOT, 'schemas', 'agent-adapter-map.schema.json'));
+    assert.deepEqual(
+      [...adapterSchema.$defs.capability.enum].sort(),
+      [...schema.$defs.capability.enum].sort(),
+      'the two schemas must declare the same capability names'
+    );
   });
 
   test('a fallback cannot mean "run a reduced judgment"', () => {
