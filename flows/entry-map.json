@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0",
-  "description": "User-facing entry names for the four core review Flows (#2016). The entry name is what a person types or asks for; the Flow id and version are what the judgment is recorded against. This document carries no host vocabulary on purpose: how an entry is surfaced belongs to agents/contracts/adapter-map.json, and which Flow it resolves to belongs here, so the two hosts have nothing to disagree about.",
+  "version": "0.2.0",
+  "description": "User-facing entry names for the review Flows: the four core stage entries from #2016 and the four upstream review entries from #2017. The entry name is what a person types or asks for; the Flow id and version are what the judgment is recorded against. This document carries no host vocabulary on purpose: how an entry is surfaced belongs to agents/contracts/adapter-map.json, and which Flow it resolves to belongs here, so the two hosts have nothing to disagree about.",
   "entries": {
     "review-plan": {
       "flow": "plan-review",
@@ -21,6 +21,26 @@
       "flow": "final-review",
       "flowVersion": "0.1.0",
       "description": "Are the goal and requirements met, rather than merely every task closed?"
+    },
+    "review-research": {
+      "flow": "research-review",
+      "flowVersion": "0.1.0",
+      "description": "May this research result be used as the ground for requirements, design and plan?"
+    },
+    "review-requirements": {
+      "flow": "requirements-review",
+      "flowVersion": "0.1.0",
+      "description": "May design and implementation proceed from these requirements?"
+    },
+    "review-design": {
+      "flow": "design-review",
+      "flowVersion": "0.1.0",
+      "description": "May implementation proceed from this design?"
+    },
+    "review-technical": {
+      "flow": "technical-review",
+      "flowVersion": "0.1.0",
+      "description": "Do the declared technical premises hold on the evidence supplied?"
     }
   }
 }

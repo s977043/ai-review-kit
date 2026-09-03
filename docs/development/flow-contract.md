@@ -5,10 +5,11 @@ River Review でもっとも利用頻度が高い 4 レビューを Flow とし�
 - Flow スキーマ: `schemas/flow.schema.json`（#2013 が所有。本 Issue では変更しない）
 - Review Intent スキーマ: `schemas/review-intent.schema.json`（本 Issue で追加）
 - entry map スキーマ: `schemas/flow-entry-map.schema.json`（本 Issue で追加）
-- Flow の実体: `flows/*.flow.json`（4 本）
-- Review Intent の実体: `flows/intents/*.intent.json`（4 本）
+- Flow の実体: `flows/*.flow.json`（core 4 本 + #2017 の上流 4 本 = 計 8 本）
+- Review Intent の実体: `flows/intents/*.intent.json`（本 Issue で core 4 本。#2017 の上流 4 本を加えて計 8 本）
 - entry map の実体: `flows/entry-map.json`
 - 検証: `tests/flow-definitions.test.mjs`
+- 上流 4 Flow（#2017）: `docs/development/upstream-review-flows.md`。**本ドキュメントの表は core 4 Flow だけを載せる**。上流 4 入口を含む全 8 入口の正本は `flows/entry-map.json` であり、上流側の表は上記の別ドキュメントにある
 
 Skill は「何を判断するか」、Agent は「誰が責任を持つか」、Flow は「いつ・どう判断を実行するか」を担います。本ドキュメントは Flow 軸だけを説明し、判断基準は `skills/**` と `docs/review/**` に残します。
 
@@ -30,6 +31,8 @@ Flow の instance は `flows/` に置きます。ADR-009 D4 の表は runtime-in
 `schemas/flow.schema.json` の `intent` は `purpose` だけを受理する閉じたオブジェクトです。Review Intent はそのスキーマを変更せず、`purpose` を結合キーにした別文書として `stage` / `phase` / `subject` / `baseline` / `evidence` を宣言します。既存の Flow 文書は 1 文字も変わらないため、additive です。
 
 `phase` は skill 側の語彙（`schemas/skill.schema.json` の `$defs.phase`）をそのまま再利用します。これにより Review Intent は既存の skill 選択経路（`runners/core/review-runner.mjs` の `selectSkills`）へ接続され、新しい routing 機構は増えません。
+
+`stage` と `phase` は別軸であり、片方から他方を導出できません。`stage` はレビューの局面（`review-<stage>` 入口に対応）を、`phase` は skill 選択の段階を表します。実例として #2017 の上流 4 本は `stage` が 4 種類ある一方、`phase` はいずれも `upstream` です。`stage` の enum は #2017 の 4 stage を追加して 8 値へ拡張済みであり、既存値には削除と改名のどちらも加えていないため、旧 enum で valid だった Review Intent はそのまま valid です。
 
 ## missing artifact の degrade / stop
 
