@@ -73,6 +73,27 @@ test('語彙値の直書きを検出して exit 1（#2021 の実例と同形）'
   );
 });
 
+test('複数行 import でも結合を解決して違反を検出する（exit 1）', () => {
+  // IMPORT_RE の `[^'"]*?` は否定文字クラスなので改行にもマッチし、named import が
+  // 改行で折り返された形（実コードの標準形）でも import 元を解決できる。この挙動は
+  // 検出器の要であり、`[^'"\n]*?` のような「読みやすい」書き換えで静かに壊れるため
+  // 回帰テストで固定する。
+  withFixture(
+    {
+      'src/lib/vocab.mjs': VOCAB_MODULE,
+      'src/lib/runner.mjs':
+        'import {\n' +
+        '  ASK_RELEVANCE,\n' +
+        '  noop,\n' +
+        "} from './vocab.mjs';\n" +
+        "export const fallback = { askRelevance: 'uncertain' };\n" +
+        'export const ok = ASK_RELEVANCE.IN_ASK;\n' +
+        'noop();\n',
+    },
+    (dir) => assert.equal(runIn(dir), 1)
+  );
+});
+
 test('canary: 語彙モジュールを import していないファイルの同一文字列は誤検出しない', () => {
   withFixture(
     {

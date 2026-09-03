@@ -70,6 +70,8 @@ const VOCAB_DECL_RE = /^export const ([A-Z][A-Z0-9_]*)\s*=\s*(Object\.freeze\(\s
 // `KEY: 'value',` の並び（値が文字列リテラルのものだけ）
 const ENTRY_RE = /^\s*[A-Za-z_$][\w$]*\s*:\s*(['"])((?:(?!\1).)*)\1\s*,?\s*$/;
 
+// `[^'"]*?` は否定文字クラスなので改行にもマッチする。named import が改行で折り返された
+// 複数行 import も 1 マッチとして解決できる（回帰テスト: tests/check-vocabulary-literals.test.mjs）。
 const IMPORT_RE = /^import\s[^'"]*?from\s*['"]([^'"]+)['"]/gm;
 
 function isExcluded(relPath) {
