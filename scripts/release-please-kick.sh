@@ -13,7 +13,7 @@
 # reach for it as an equivalent alternative.
 #
 # SSoT for when to kick, BEHIND vs pure BLOCKED, and RELEASE_KICK_PAT setup:
-#   docs/runbook/release-please-kick.md
+#   docs/runbook/bot-pushed-head-kick.md
 #
 # Usage:
 #   scripts/release-please-kick.sh [branch]

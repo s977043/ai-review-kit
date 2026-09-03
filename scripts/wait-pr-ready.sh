@@ -11,7 +11,7 @@
 # return zero rows with no error for an abbreviated one.
 #
 # SSoT for the bot-push / `action_required` stall this script surfaces:
-#   docs/runbook/release-please-kick.md
+#   docs/runbook/bot-pushed-head-kick.md
 #
 # Usage:
 #   scripts/wait-pr-ready.sh <pr-number> [pr-number ...]
@@ -142,7 +142,7 @@ case "${exit_code}" in
   0) echo "All PRs settled with no failing check." ;;
   1)
     echo "At least one PR has a failing check or a stalled run." >&2
-    echo "For a non-empty stalled_runs column, follow docs/runbook/release-please-kick.md." >&2
+    echo "For a non-empty stalled_runs column, follow docs/runbook/bot-pushed-head-kick.md." >&2
     ;;
   2) echo "Timed out after ${TIMEOUT_SECONDS}s before every PR settled." >&2 ;;
 esac
