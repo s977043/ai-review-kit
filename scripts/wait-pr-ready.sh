@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# Wait until one or more pull requests settle, then report their state.
+# Use instead of hand-writing a `for i in $(seq ...); do gh pr view ...; sleep`
+# loop: those loops are retyped per session and mis-typing one turns it into an
+# infinite wait or an early bail-out.
+#
+# The PR state is read through `gh api repos/:owner/:repo/pulls/<N>` rather than
+# `gh pr view`, because `gh pr view` has been observed serving a stale head SHA
+# (PR #2021). Check runs are read with the full 40-character head SHA, because
+# `actions/runs?head_sha=` and `gh run list --commit` match the full SHA only and
+# return zero rows with no error for an abbreviated one.
+#
+# SSoT for the bot-push / `action_required` stall this script surfaces:
+#   docs/runbook/release-please-kick.md
+#
+# Usage:
+#   scripts/wait-pr-ready.sh <pr-number> [pr-number ...]
+#   TIMEOUT_SECONDS=1800 INTERVAL_SECONDS=30 scripts/wait-pr-ready.sh 123 124
+#   REPO=owner/repo scripts/wait-pr-ready.sh 123
+#
+# A head whose workflows were stalled by a bot push is reported too. Such a head
+# has no check runs to fail: on PR #2023 the check-runs endpoint listed a single
+# entry (`Vercel Preview Comments`) while `actions/runs?head_sha=` listed 13 runs,
+# all `action_required`. The stall is therefore read from the runs endpoint, and
+# it is reported as a failure rather than waited on, because waiting never clears
+# it -- see the runbook for the escape.
+#
+# Exit codes:
+#   0  every PR settled with no failing check and no stalled run
+#   1  at least one PR has a failing check or a stalled (`action_required`) run
+#   2  timed out before every PR settled
+#   64 usage error
+
+set -euo pipefail
+
+if [ "$#" -eq 0 ]; then
+  echo "usage: scripts/wait-pr-ready.sh <pr-number> [pr-number ...]" >&2
+  exit 64
+fi
+
+for arg in "$@"; do
+  case "${arg}" in
+    '' | *[!0-9]*)
+      echo "error: '${arg}' is not a PR number." >&2
+      exit 64
+      ;;
+  esac
+done
+
+TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-1800}"
+INTERVAL_SECONDS="${INTERVAL_SECONDS:-30}"
+REPO="${REPO:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
+
+# mergeable_state values that mean GitHub has finished computing the PR.
+# `blocked` and `unknown` are deliberately absent: `blocked` is the state a
+# bot-pushed head sits in while its workflows stay `action_required`, and
+# `unknown` means the mergeability computation is still running.
+is_settled() {
+  case "$1" in
+    clean | dirty | behind) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+deadline=$(($(date +%s) + TIMEOUT_SECONDS))
+exit_code=2
+
+while :; do
+  all_settled=1
+  any_failed=0
+  report=''
+
+  for pr in "$@"; do
+    if ! pr_json=$(gh api "repos/${REPO}/pulls/${pr}" 2>&1); then
+      echo "error: cannot read PR #${pr} in ${REPO}." >&2
+      echo "       If this is a 404 or a permission error, check the active gh" >&2
+      echo "       account first: gh api user --jq .login" >&2
+      echo "${pr_json}" >&2
+      exit 64
+    fi
+
+    head_sha=$(printf '%s' "${pr_json}" | jq -r '.head.sha')
+    state=$(printf '%s' "${pr_json}" | jq -r '.mergeable_state // "unknown"')
+
+    failed=$(gh api "repos/${REPO}/commits/${head_sha}/check-runs?per_page=100" \
+      --jq '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled") | "\(.name) (\(.conclusion))"] | join(", ")' 2>/dev/null || echo '')
+
+    # The full 40-character SHA is mandatory here: an abbreviated SHA matches
+    # nothing and returns total_count 0 without an error.
+    stalled=$(gh api "repos/${REPO}/actions/runs?head_sha=${head_sha}&per_page=100" \
+      --jq '[.workflow_runs[] | select(.conclusion == "action_required") | .name] | join(", ")' 2>/dev/null || echo '')
+
+    report="${report}#${pr}	${head_sha}	${state}	${failed:--}	${stalled:--}
+"
+
+    if [ -n "${failed}" ] || [ -n "${stalled}" ]; then
+      any_failed=1
+    fi
+    if ! is_settled "${state}"; then
+      all_settled=0
+    fi
+  done
+
+  if [ "${any_failed}" -eq 1 ]; then
+    exit_code=1
+    break
+  fi
+  if [ "${all_settled}" -eq 1 ]; then
+    exit_code=0
+    break
+  fi
+  if [ "$(date +%s)" -ge "${deadline}" ]; then
+    exit_code=2
+    break
+  fi
+
+  sleep "${INTERVAL_SECONDS}"
+done
+
+printf 'pr\thead_sha\tmergeable_state\tfailed_checks\tstalled_runs\n'
+printf '%s' "${report}"
+
+case "${exit_code}" in
+  0) echo "All PRs settled with no failing check." ;;
+  1)
+    echo "At least one PR has a failing check or a stalled run." >&2
+    echo "For a non-empty stalled_runs column, follow docs/runbook/release-please-kick.md." >&2
+    ;;
+  2) echo "Timed out after ${TIMEOUT_SECONDS}s before every PR settled." >&2 ;;
+esac
+
+exit "${exit_code}"
