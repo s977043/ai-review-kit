@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://river-review.dev/schemas/cross-runtime-conformance.schema.json",
+  "$id": "https://river-review.the3396.com/schemas/cross-runtime-conformance.schema.json",
   "title": "Cross-Runtime Conformance Case",
   "description": "One paired cross-runtime observation (#2020, Epic #2011 Phase 9). A case pins ONE Flow execution condition set and records what each host runtime (Claude Code / Codex Plugin) actually produced for it, so the invariant \"Runtime Adapter MUST NOT redefine Review Judgment\" can be evaluated mechanically. The record is read-only evidence: it carries no promotion decision, and `expected.promotionGate` states only what the comparator must compute, never what a human must approve. Byte-for-byte prose equality is deliberately NOT representable here — the agentic layer records structured judgment fields (taxonomy, severity band, target anchor, escalation state) and never the finding message, so an equality check on this record can never degenerate into an output-text diff.",
   "type": "object",
@@ -53,8 +53,12 @@
           "type": "string",
           "description": "Entry name as typed by a person; resolves through flows/entry-map.json."
         },
-        "flow": { "type": "string" },
-        "flowVersion": { "type": "string" },
+        "flow": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "flowVersion": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "The `version` of the pinned Flow document, in the same semver form `schemas/flow-entry-map.schema.json` pins. An unconstrained string here would let a case pin `latest` and still validate, which is not a pinned condition."
+        },
         "policySha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "artifactSetSha256": {
           "type": "string",
@@ -73,7 +77,27 @@
       "minItems": 2,
       "maxItems": 2,
       "items": { "$ref": "#/$defs/observation" },
-      "description": "Exactly one observation per runtime. Both runtimes named in agents/contracts/adapter-map.json must appear."
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": ["runtime"],
+            "properties": { "runtime": { "const": "claude" } }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["runtime"],
+            "properties": { "runtime": { "const": "codex" } }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ],
+      "description": "Exactly one observation per runtime. `minItems`/`maxItems` alone would admit two observations of the SAME runtime, which is not a pair at all, so each runtime is additionally pinned to exactly one entry by `contains` + `minContains`/`maxContains`. What JSON Schema cannot express here is that this runtime list stays a mirror of `agents/contracts/adapter-map.json`: a cross-document constraint is enforced by `tests/cross-runtime-conformance.test.mjs` rather than by this document."
     },
     "declaredDivergences": {
       "type": "array",
@@ -92,11 +116,23 @@
         "adapter": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mechanism", "surface", "capabilities"],
-          "description": "How this host bound the Agents. Mirrors agents/contracts/adapter-map.json; it is the evidence a divergence claim of `adapter-mechanism` / `adapter-capability` is checked against.",
+          "required": ["mechanisms", "surfaces", "capabilities"],
+          "description": "How this host bound the Agents. Mirrors agents/contracts/adapter-map.json; it is the evidence a divergence claim of `adapter-mechanism` / `adapter-capability` is checked against. A runtime binds FIVE logical Agents and may bind them by different mechanisms — in adapter-map.json `claude` uses `native-subagent` for review-orchestrator / specialist-reviewer and `skill` for the other three — so a single-valued `mechanism` could not record the real binding. Both fields are therefore SETS over the run's Agents. That each set stays within what adapter-map.json records for the runtime is a cross-document constraint enforced by `tests/cross-runtime-conformance.test.mjs`.",
           "properties": {
-            "mechanism": { "type": "string", "enum": ["native-subagent", "skill"] },
-            "surface": { "type": "string", "minLength": 1 },
+            "mechanisms": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "enum": ["native-subagent", "skill"] },
+              "description": "The distinct mechanisms this host used to bind the Agents in this run. Compared as a set, so recording order is not a divergence."
+            },
+            "surfaces": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 },
+              "description": "The distinct surface paths those bindings resolved to."
+            },
             "capabilities": {
               "type": "array",
               "items": {
@@ -105,9 +141,12 @@
               },
               "uniqueItems": true
             },
-            "fallback": {
-              "type": "string",
-              "enum": ["not-needed", "skill-only", "escalate"]
+            "fallbacks": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "enum": ["not-needed", "skill-only", "escalate"] },
+              "description": "The distinct fallback policies those bindings declared. A set for the same reason `mechanisms` is: adapter-map.json records one fallback per Agent, and a runtime mixes them (claude declares `escalate` for consistency-judge and `not-needed` for the rest)."
             }
           }
         },
@@ -133,9 +172,9 @@
           "additionalProperties": false,
           "required": ["entry", "resolvedFlow", "resolvedFlowVersion"],
           "properties": {
-            "entry": { "type": "string" },
-            "resolvedFlow": { "type": "string" },
-            "resolvedFlowVersion": { "type": "string" }
+            "entry": { "type": "string", "minLength": 1 },
+            "resolvedFlow": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+            "resolvedFlowVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" }
           }
         },
         "selectedSkills": {
@@ -145,8 +184,8 @@
             "additionalProperties": false,
             "required": ["id", "version"],
             "properties": {
-              "id": { "type": "string" },
-              "version": { "type": "string" }
+              "id": { "type": "string", "minLength": 1 },
+              "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" }
             }
           }
         },

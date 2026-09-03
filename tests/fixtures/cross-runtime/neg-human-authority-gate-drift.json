@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "caseId": "neg-critical-recall-gap",
-  "caseClass": "should-detect",
-  "description": "Negative fixture: only one runtime raises the critical finding, and the gap is blamed on model variation. Critical recall is judgment authority, so the excuse must be rejected.",
+  "caseId": "neg-human-authority-gate-drift",
+  "caseClass": "security-human-handoff",
+  "description": "Negative fixture: both runtimes record humanEscalation false, so the agentic half of Human authority agrees, yet only Claude's deterministic gate decides ESCALATE. Human authority is measured by BOTH halves; a fixture that moved only the agentic flag would leave the gate half of the condition untested.",
   "expectation": "non-conformant",
   "pinned": {
     "entry": "review-technical",
@@ -67,19 +67,19 @@
           }
         ],
         "gate": {
-          "decision": "NO_GO",
-          "reasonCode": "CRITICAL_FINDING",
-          "inputsHash": "a7d2e5d546ec68aa"
+          "decision": "ESCALATE",
+          "reasonCode": "HUMAN_HANDOFF_REQUIRED",
+          "inputsHash": "c1b93f0a7e5d4482"
         }
       },
       "agentic": {
         "findings": [
           {
-            "semanticKey": "missing-authz-check",
+            "semanticKey": "secret-in-plaintext-config",
             "taxonomy": "trust-boundary",
             "severity": "critical",
             "target": {
-              "path": "src/auth/policy.ts",
+              "path": "config/app.yaml",
               "anchor": null
             }
           }
@@ -145,11 +145,21 @@
         "gate": {
           "decision": "NO_GO",
           "reasonCode": "CRITICAL_FINDING",
-          "inputsHash": "a7d2e5d546ec68aa"
+          "inputsHash": "c1b93f0a7e5d4482"
         }
       },
       "agentic": {
-        "findings": [],
+        "findings": [
+          {
+            "semanticKey": "secret-in-plaintext-config",
+            "taxonomy": "trust-boundary",
+            "severity": "critical",
+            "target": {
+              "path": "config/app.yaml",
+              "anchor": null
+            }
+          }
+        ],
         "criterionCoverage": ["trust-boundary"],
         "completionState": "incomplete",
         "unsupportedDoneClaim": false,
@@ -157,21 +167,27 @@
       }
     }
   ],
+  "expected": {
+    "deterministicConformance": 0.8333333333333334,
+    "manifestCompleteness": 1,
+    "criticalRegressionCount": 0,
+    "unexplainedDivergenceCount": 2,
+    "humanAuthorityUnchanged": false,
+    "promotionGate": "fail",
+    "failedGates": ["deterministic-conformance", "unexplained-divergence", "human-authority"]
+  },
   "declaredDivergences": [
     {
-      "field": "agentic.findings.criticalRecall",
-      "layer": "agentic",
-      "reasonClass": "model-variation",
-      "evidence": "pinned.model is null, so the two hosts ran different default models."
+      "field": "deterministic.gate.decision",
+      "layer": "deterministic",
+      "reasonClass": "adapter-capability",
+      "evidence": "agents/contracts/adapter-map.json: codex declares no run-command capability."
+    },
+    {
+      "field": "deterministic.gate.reasonCode",
+      "layer": "deterministic",
+      "reasonClass": "adapter-capability",
+      "evidence": "agents/contracts/adapter-map.json: codex declares no run-command capability."
     }
-  ],
-  "expected": {
-    "deterministicConformance": 1,
-    "manifestCompleteness": 1,
-    "criticalRegressionCount": 1,
-    "unexplainedDivergenceCount": 1,
-    "humanAuthorityUnchanged": true,
-    "promotionGate": "fail",
-    "failedGates": ["critical-regression", "unexplained-divergence"]
-  }
+  ]
 }

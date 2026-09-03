@@ -17,10 +17,10 @@
     {
       "runtime": "claude",
       "adapter": {
-        "mechanism": "skill",
-        "surface": "skills/agent-skills/river-review/SKILL.md",
+        "mechanisms": ["skill"],
+        "surfaces": ["skills/agent-skills/river-review/SKILL.md"],
         "capabilities": ["read-artifact", "read-source"],
-        "fallback": "skill-only"
+        "fallbacks": ["not-needed"]
       },
       "deterministic": {
         "routing": {
@@ -79,10 +79,14 @@
     {
       "runtime": "codex",
       "adapter": {
-        "mechanism": "skill",
-        "surface": "skills/agent-skills/river-review/SKILL.md",
+        "mechanisms": ["skill"],
+        "surfaces": [
+          "skills/agent-skills/river-review/SKILL.md",
+          "skills/agent-skills/river-review-code/SKILL.md",
+          "skills/agent-skills/unknown-coverage-review/SKILL.md"
+        ],
         "capabilities": ["read-artifact", "read-source"],
-        "fallback": "skill-only"
+        "fallbacks": ["skill-only", "not-needed", "escalate"]
       },
       "deterministic": {
         "routing": {

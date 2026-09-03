@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "caseId": "neg-critical-recall-gap",
+  "caseId": "neg-critical-severity-downgrade",
   "caseClass": "should-detect",
-  "description": "Negative fixture: only one runtime raises the critical finding, and the gap is blamed on model variation. Critical recall is judgment authority, so the excuse must be rejected.",
+  "description": "Negative fixture: both runtimes raise the SAME semanticKey, but Codex records it as major where Claude records critical. Critical regression covers downgrades as well as omissions, so a kit whose only critical fixture is a missing finding would never exercise the downgrade half.",
   "expectation": "non-conformant",
   "pinned": {
     "entry": "review-technical",
@@ -75,11 +75,11 @@
       "agentic": {
         "findings": [
           {
-            "semanticKey": "missing-authz-check",
+            "semanticKey": "unbounded-input-deserialization",
             "taxonomy": "trust-boundary",
             "severity": "critical",
             "target": {
-              "path": "src/auth/policy.ts",
+              "path": "src/api/ingest.ts",
               "anchor": null
             }
           }
@@ -149,20 +149,22 @@
         }
       },
       "agentic": {
-        "findings": [],
+        "findings": [
+          {
+            "semanticKey": "unbounded-input-deserialization",
+            "taxonomy": "trust-boundary",
+            "severity": "major",
+            "target": {
+              "path": "src/api/ingest.ts",
+              "anchor": null
+            }
+          }
+        ],
         "criterionCoverage": ["trust-boundary"],
         "completionState": "incomplete",
         "unsupportedDoneClaim": false,
         "humanEscalation": false
       }
-    }
-  ],
-  "declaredDivergences": [
-    {
-      "field": "agentic.findings.criticalRecall",
-      "layer": "agentic",
-      "reasonClass": "model-variation",
-      "evidence": "pinned.model is null, so the two hosts ran different default models."
     }
   ],
   "expected": {
@@ -173,5 +175,19 @@
     "humanAuthorityUnchanged": true,
     "promotionGate": "fail",
     "failedGates": ["critical-regression", "unexplained-divergence"]
-  }
+  },
+  "declaredDivergences": [
+    {
+      "field": "agentic.findings.criticalRecall",
+      "layer": "agentic",
+      "reasonClass": "model-variation",
+      "evidence": "pinned.model is null, so the two hosts ran different default models."
+    },
+    {
+      "field": "agentic.findings.severity",
+      "layer": "agentic",
+      "reasonClass": "model-variation",
+      "evidence": "pinned.model is null, so the two hosts ran different default models."
+    }
+  ]
 }

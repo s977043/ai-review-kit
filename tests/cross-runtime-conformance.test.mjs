@@ -42,6 +42,19 @@ import {
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.join(HERE, 'fixtures', 'cross-runtime');
 const SCHEMA_FILE = 'cross-runtime-conformance.schema.json';
+const ADAPTER_MAP_FILE = path.join(HERE, '..', 'agents', 'contracts', 'adapter-map.json');
+
+const adapterMap = JSON.parse(fs.readFileSync(ADAPTER_MAP_FILE, 'utf8'));
+
+const sorted = (values) => [...new Set(values)].sort();
+
+/** Collect one binding field over every Agent adapter-map.json binds for a runtime. */
+const bindingValues = (runtime, key) =>
+  sorted(
+    Object.values(adapterMap.agents)
+      .map((bindings) => bindings[runtime]?.[key])
+      .filter((value) => value != null)
+  );
 
 const validate = compileSchemaFile(SCHEMA_FILE, { ajvOptions: { allErrors: true } });
 const schema = JSON.parse(fs.readFileSync(path.join(HERE, '..', 'schemas', SCHEMA_FILE), 'utf8'));
@@ -142,6 +155,68 @@ describe('cross-runtime conformance kit (#2020)', () => {
     // Evidence, never authority: a green suite is not an approval to promote.
     assert.equal(suite.promotionDecision, null);
     assert.equal(suite.requiresHumanApproval, true);
+  });
+
+  // RUNTIMES and the adapter vocabulary in the schema are MIRRORS of
+  // agents/contracts/adapter-map.json (#2014), not independent lists. Nothing
+  // stopped them drifting: adding a runtime or a mechanism there would leave
+  // this kit silently measuring the old world. JSON Schema cannot reach across
+  // documents, so the mirror is pinned here.
+  describe('the kit mirrors agents/contracts/adapter-map.json', () => {
+    test('RUNTIMES and the runtime enum are the runtimes adapter-map.json binds', () => {
+      const declared = sorted(Object.keys(adapterMap.runtimes));
+      assert.deepEqual(sorted(RUNTIMES), declared);
+      assert.deepEqual(sorted(schema.$defs.observation.properties.runtime.enum), declared);
+    });
+
+    test('every agent binding names only runtimes adapter-map.json declares', () => {
+      const declared = new Set(Object.keys(adapterMap.runtimes));
+      for (const [agent, bindings] of Object.entries(adapterMap.agents)) {
+        assert.deepEqual(
+          sorted(Object.keys(bindings)),
+          sorted([...declared]),
+          `${agent} must bind exactly the declared runtimes`
+        );
+      }
+    });
+
+    test('the adapter vocabulary in the schema is the vocabulary adapter-map.json uses', () => {
+      const adapter = schema.$defs.observation.properties.adapter.properties;
+      const across = (key) => sorted(RUNTIMES.flatMap((runtime) => bindingValues(runtime, key)));
+      assert.deepEqual(sorted(adapter.mechanisms.items.enum), across('mechanism'));
+      assert.deepEqual(sorted(adapter.fallbacks.items.enum), across('fallback'));
+      assert.deepEqual(
+        sorted(adapter.capabilities.items.enum),
+        sorted(RUNTIMES.flatMap((runtime) => adapterMap.runtimes[runtime].capabilities))
+      );
+    });
+
+    test('no observation claims a binding adapter-map.json does not record', () => {
+      for (const { file, record } of fixtures) {
+        for (const observation of record.observations) {
+          const runtime = observation.runtime;
+          const allowed = {
+            mechanisms: bindingValues(runtime, 'mechanism'),
+            surfaces: bindingValues(runtime, 'surface'),
+            fallbacks: bindingValues(runtime, 'fallback'),
+            capabilities: sorted(adapterMap.runtimes[runtime].capabilities),
+          };
+          // Subset, not equality: a fixture may deliberately record a
+          // counterfactual binding (neg-unsupported-adapter-claim gives Claude
+          // the Codex-shaped binding so an adapter excuse has nothing to stand
+          // on). What it may never do is invent a binding the runtime does not
+          // have — that would make the evidence the comparator checks fictional.
+          for (const [key, values] of Object.entries(allowed)) {
+            for (const value of observation.adapter[key] ?? []) {
+              assert.ok(
+                values.includes(value),
+                `${file}: ${runtime} adapter.${key} claims "${value}", which adapter-map.json does not record`
+              );
+            }
+          }
+        }
+      }
+    });
   });
 
   test('the schema and the comparator share one divergence vocabulary', () => {

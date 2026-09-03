@@ -17,7 +17,13 @@
 | 比較器        | `tests/helpers/cross-runtime-conformance.mjs`   |
 | 検証スイート  | `tests/cross-runtime-conformance.test.mjs`      |
 
-1 ファイルが 1 ケースです。ケースは 1 組の pinned 実行条件と、runtime ごとの観測 2 件を持ちます。
+1 ファイルが 1 ケースです。ケースは 1 組の pinned 実行条件と、runtime ごとの観測 2 件を持ちます。observations の件数は 2 件に固定したうえで、`contains` と `maxContains` によって claude / codex を各 1 件に固定しています。件数だけを縛ると同じ runtime の観測 2 件でも通ってしまい、それは pair ではないからです。
+
+## Adapter binding の記録形
+
+`observation.adapter` の `mechanisms` / `surfaces` / `fallbacks` は集合です。1 つの runtime は 5 つの論理 Agent を束縛しており、その mechanism は runtime 内で混在します。`agents/contracts/adapter-map.json` では claude が review-orchestrator と specialist-reviewer を `native-subagent`、残り 3 つを `skill` で束縛しています。単一値の `mechanism` ではこの実態を記録できません。
+
+集合が `adapter-map.json` の記録内に収まることは `tests/cross-runtime-conformance.test.mjs` が突き合わせます。等値ではなく部分集合で検査するのは、`neg-unsupported-adapter-claim.json` が反実仮想の束縛（claude を codex と同型にする）を意図的に記録しているからです。禁じたいのは runtime が持たない束縛の捏造であり、実在する束縛の部分集合は正当なシナリオです。`RUNTIMES` と schema の runtime / capabilities / mechanism / fallback の語彙も、同じテストが `adapter-map.json` から導いた集合に固定します。
 
 ## 何を比べるか
 
@@ -53,7 +59,9 @@ model が生む judgment です。文面は記録しません。schema に messa
 - criterionCoverage は集合の一致率で測る
 - completionState / unsupportedDoneClaim / humanEscalation は真偽の一致で測る
 
-critical regression は「片方の runtime だけが critical に到達した」状態です。finding 自体が欠けている場合と、severity が下げられた場合の両方を数えます。どちらもレビューの防御力が host 依存になるからです。
+critical regression は「片方の runtime だけが critical に到達した」状態です。finding 自体が欠けている場合と、severity が下げられた場合の両方を数えます。どちらもレビューの防御力が host 依存になるからです。欠落型は `neg-critical-recall-gap.json`、降格型は `neg-critical-severity-downgrade.json` が守ります。
+
+Human authority は 2 つの半分で測ります。agentic の `humanEscalation` の一致と、deterministic の `gate.decision` が `ESCALATE` かどうかの一致です。片方だけを動かした fixture ではもう片方が無検査で残るため、`neg-human-authority-drift.json` が agentic 側を、`neg-human-authority-gate-drift.json` が gate 側を担当します。`completionState` と `unsupportedDoneClaim` の不一致は `neg-completion-state-divergence.json` が守ります。
 
 ## Divergence の理由分類
 

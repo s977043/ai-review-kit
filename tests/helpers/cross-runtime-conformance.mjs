@@ -336,8 +336,16 @@ function buildEvidence(caseRecord, claude, codex) {
         `${observation.runtime}: flowVersion ${routing.resolvedFlowVersion}`
       );
   }
+  // `mechanisms` is a SET: one runtime binds five Agents and may bind them by
+  // different mechanisms (adapter-map.json has claude on `native-subagent` for
+  // two Agents and `skill` for three). Comparing sets is what lets an
+  // `adapter-mechanism` claim be checked against the real binding instead of
+  // against a single value the record could not have held.
   return {
-    mechanismsDiffer: claude.adapter.mechanism !== codex.adapter.mechanism,
+    mechanismsDiffer: !same(
+      sortedUnique(claude.adapter.mechanisms),
+      sortedUnique(codex.adapter.mechanisms)
+    ),
     capabilitiesDiffer: !same(capsLeft, capsRight),
     pinnedInputMismatch,
   };
