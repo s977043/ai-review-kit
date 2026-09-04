@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   DEFAULT_DENY_GLOBS,
+  REDACTION_PATTERN_IDS,
   redactText,
   shannonEntropy,
   shouldExcludeForContext,
@@ -171,6 +172,135 @@ test('redactText catches short and unprefixed secret-named variables', () => {
   // At least one envAssignment hit, plus one databaseUrl.
   assert.ok((hits.find((h) => h.category === 'envAssignment')?.count ?? 0) >= 3);
   assert.ok(hits.some((h) => h.category === 'databaseUrl'));
+});
+
+// --- #2033: URL userinfo, AWS keys, password assignments ---
+//
+// Each of the three shapes below gets a positive fixture (it IS redacted) and
+// a negative one (a look-alike that must survive untouched). `highEntropy` is
+// disabled in these so a pass proves the NAMED pattern fired rather than the
+// entropy fallback catching the same span by accident.
+
+test('#2033 redactText redacts URL userinfo (scheme://user:pass@host)', () => {
+  const sample = 'policyRef: https://alice:hunter2@internal.corp.net/policy.md';
+  const { text, hits } = redactText(sample, { highEntropy: false });
+  assert.match(text, /<REDACTED:urlUserInfo>/);
+  assert.equal(hits.find((h) => h.category === 'urlUserInfo')?.count, 1);
+  // The credentials are gone but the host stays reviewable.
+  assert.equal(text.includes('hunter2'), false);
+  assert.equal(text.includes('alice'), false);
+  assert.equal(text.includes('internal.corp.net/policy.md'), true);
+});
+
+test('#2033 redactText redacts URL userinfo even when the host says "example"', () => {
+  // The exact string from the issue report. `example` is an ALLOWLIST_TOKENS
+  // entry, but it sits in the HOST, outside the matched credential span, so it
+  // must not suppress the redaction.
+  const { text, hits } = redactText('https://alice:hunter2@internal.example.com/policy.md', {
+    highEntropy: false,
+  });
+  assert.match(text, /<REDACTED:urlUserInfo>/);
+  assert.ok(hits.some((h) => h.category === 'urlUserInfo'));
+});
+
+test('#2033 redactText leaves port-bearing and credential-free URLs alone', () => {
+  const negatives = [
+    'see https://host.corp.net:8443/path/to/doc',
+    'https://hub.corp.net/anthropics/river',
+    'localhost:3000/@vite/client',
+  ];
+  for (const sample of negatives) {
+    const { text, hits } = redactText(sample, { highEntropy: false });
+    assert.equal(text, sample, 'false positive on: ' + sample);
+    assert.equal(hits.length, 0, 'false positive on: ' + sample);
+  }
+});
+
+test('#2033 redactText redacts AWS access key ids without relying on entropy', () => {
+  // The issue reported `AKIAIOSFODNN7EXAMPLE` passing through. That is the
+  // allowlist (`example`) doing its job on a documentation literal, not a hole
+  // in the pattern: a non-documentation key of the same shape IS redacted, and
+  // with highEntropy off so the awsAccessKey pattern is what proves it.
+  for (const key of ['AKIAQ7WZ3TVMNPLKJHGF', 'ASIAZXCVBNMLKJHGFDSA']) {
+    const { text, hits } = redactText('creds: ' + key, { highEntropy: false });
+    assert.equal(text, 'creds: <REDACTED:awsAccessKey>');
+    assert.equal(hits.find((h) => h.category === 'awsAccessKey')?.count, 1);
+  }
+});
+
+test('#2033 redactText redacts AWS secret access keys by assignment without entropy', () => {
+  // Assembled at runtime so no 40-char AWS-secret-shaped literal is committed.
+  const value = ('wJalrXUtnFEMIK' + '7MDENGbPxRfiCY' + 'zGKlmnPqRsAB').slice(0, 40);
+  assert.equal(value.length, 40);
+  const { text, hits } = redactText('AWS_SECRET_ACCESS_KEY=' + value, { highEntropy: false });
+  assert.match(text, /<REDACTED:awsSecretKey>/);
+  assert.ok(hits.some((h) => h.category === 'awsSecretKey'));
+  assert.equal(text.includes(value), false);
+});
+
+test('#2033 redactText leaves AWS-shaped identifiers that are not keys alone', () => {
+  const negatives = [
+    // Wrong prefix / wrong length — must not be swept up.
+    'arn:aws:iam::123456789012:role/ReadOnly',
+    'bucket: AKIA123',
+    'region = us-east-1',
+  ];
+  for (const sample of negatives) {
+    const { text, hits } = redactText(sample, { highEntropy: false });
+    assert.equal(text, sample, 'false positive on: ' + sample);
+    assert.equal(hits.length, 0, 'false positive on: ' + sample);
+  }
+});
+
+test('#2033 redactText redacts password / passwd / pwd assignments', () => {
+  const cases = [
+    ['password=hunter2', 'password='],
+    ['passwd: "hunter2xyz"', 'passwd: '],
+    ["pwd = 's0meThing'", 'pwd = '],
+  ];
+  for (const [sample, keptPrefix] of cases) {
+    const { text, hits } = redactText(sample, { highEntropy: false });
+    assert.equal(
+      text,
+      keptPrefix + '<REDACTED:passwordAssignment>',
+      'not redacted as expected: ' + sample
+    );
+    assert.equal(hits.find((h) => h.category === 'passwordAssignment')?.count, 1);
+  }
+});
+
+test('#2033 redactText does not redact password type annotations, references, or placeholders', () => {
+  // The canary set for passwordAssignment. Each line is ordinary source or
+  // documentation that a naive `password\s*[:=]\s*\S+` rule would mangle.
+  const negatives = [
+    '  password: string;',
+    'password?: string',
+    'const p = req.body.password',
+    'password = process.env.DB_PASSWORD',
+    'password=<your-password>',
+    'password: ${DB_PASSWORD}',
+    'password=example-value',
+    'pwd: null',
+    'passwd = undefined',
+  ];
+  for (const sample of negatives) {
+    const { text, hits } = redactText(sample, { highEntropy: false });
+    assert.equal(text, sample, 'false positive on: ' + sample);
+    assert.equal(hits.length, 0, 'false positive on: ' + sample);
+  }
+});
+
+test('#2033 REDACTION_PATTERN_IDS enumerates every category redactText can emit', () => {
+  // Guards the "applied is not exhaustive" contract: a consumer recording the
+  // pattern set must not drift from what redactText actually runs.
+  for (const id of ['urlUserInfo', 'passwordAssignment', 'awsAccessKey', 'awsSecretKey']) {
+    assert.ok(REDACTION_PATTERN_IDS.includes(id), 'missing pattern id: ' + id);
+  }
+  assert.ok(REDACTION_PATTERN_IDS.includes('envAssignment'));
+  assert.ok(REDACTION_PATTERN_IDS.includes('highEntropy'));
+  // Frozen and duplicate-free.
+  assert.equal(REDACTION_PATTERN_IDS.length, new Set(REDACTION_PATTERN_IDS).size);
+  assert.throws(() => REDACTION_PATTERN_IDS.push('x'), /read[- ]only|object is not extensible/i);
 });
 
 // --- false positives / allowlist ---
