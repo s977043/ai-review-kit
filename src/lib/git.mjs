@@ -62,6 +62,30 @@ export async function detectDefaultBranch(cwd) {
   return 'HEAD';
 }
 
+/**
+ * Resolve `baseRef` to a commit SHA, or null when git cannot resolve it.
+ *
+ * Uses the SAME candidate order as {@link findMergeBase} (`origin/<ref>` then
+ * `<ref>`) so a ref this returns null for is exactly a ref findMergeBase would
+ * silently fall back to HEAD for. That fallback is deterministic but invisible:
+ * a typo'd `--base` produced an empty range and a `no-changes` review with exit
+ * 0 (#2046 review, major 2). Callers use this to reject the ref up front
+ * instead of reviewing nothing.
+ *
+ * @param {string} cwd repository path
+ * @param {string} baseRef branch / ref / SHA as typed by the user
+ * @returns {Promise<string|null>} commit SHA, or null when unresolvable
+ */
+export async function resolveRefToCommit(cwd, baseRef) {
+  for (const ref of [`origin/${baseRef}`, baseRef]) {
+    const sha = await runGit(['rev-parse', '--quiet', '--verify', `${ref}^{commit}`], {
+      cwd,
+    }).catch(() => null);
+    if (sha) return sha;
+  }
+  return null;
+}
+
 export async function findMergeBase(cwd, baseRef) {
   const candidates = [`origin/${baseRef}`, baseRef];
   for (const ref of candidates) {

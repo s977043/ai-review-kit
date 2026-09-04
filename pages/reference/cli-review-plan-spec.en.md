@@ -48,6 +48,21 @@ river review plan --plan-only --output json
 
 Resolution order matches Artifact Input Contract "Input Channels" (CLI args → config file → directory auto-detection).
 
+### Diff resolution
+
+| Option         | Type   | Default                      | Description                                                                                             |
+| -------------- | ------ | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `--base <ref>` | string | auto-detected default branch | Branch / ref to diff against. The review target becomes the diff between that ref and the working tree. |
+
+Precedence between `--base` and the `diff` artifact (#2046):
+
+- An explicitly specified `diff` artifact (`--artifact diff=<path>`, or `artifacts.diff` in the config file) wins over `--base`, per the Artifact Input Contract statement that River Review runs git only when no artifact is specified
+- `--base` wins over the auto-detected `diff.patch` in the working directory
+- Whichever loses, the discarded input is announced as a warning on stderr
+- When `--base` supplies the diff, the resolved range is recorded in the [Review Artifact](./review-artifact.en.md) `context` (`repoRoot` / `defaultBranch` / `mergeBase` / `changedFiles`)
+
+The `--base` value is trimmed and then checked with `git rev-parse`. An unresolvable ref and a whitespace-only value are usage errors that exit `1`, rather than a silently empty range. A target that is not a git repository also exits `1`.
+
 ### Plan control
 
 | Option                 | Type       | Default     | Description                                                                                            |

@@ -48,6 +48,21 @@ river review plan --plan-only --output json
 
 artifact 解決の優先順位は Artifact Input Contract「指定方法（入力チャネル）」に従う（CLI 引数 → 設定ファイル → ディレクトリ自動検出）。
 
+### 差分の解決
+
+| オプション     | 型     | デフォルト                   | 説明                                                                                  |
+| -------------- | ------ | ---------------------------- | ------------------------------------------------------------------------------------- |
+| `--base <ref>` | string | 自動検出のデフォルトブランチ | 差分の基準となるブランチ / ref。指定した ref と作業ツリーの差分をレビュー対象とする。 |
+
+`--base` と `diff` artifact の優先順位は次のとおり（#2046）。
+
+- 明示指定した `diff` artifact（`--artifact diff=<path>` または設定ファイルの `artifacts.diff`）が `--base` に優先する。Artifact Input Contract の「artifact として指定が無い場合に git を実行する」宣言に従う
+- ディレクトリ自動検出の `diff.patch` よりは `--base` が優先する
+- どちらの向きでも、採用しなかった側を stderr の警告で告知する
+- `--base` が採用された回は、解決した範囲を [Review Artifact](./review-artifact.md) の `context`（`repoRoot` / `defaultBranch` / `mergeBase` / `changedFiles`）に記録する
+
+`--base` の値は前後の空白を除去したうえで `git rev-parse` により解決可否を検査する。解決できない ref と空白のみの値は終了コード `1` の usage error となる（黙って空の範囲をレビューしない）。対象が git リポジトリでない場合も終了コード `1` となる。
+
 ### 計画制御
 
 | オプション             | 型     | デフォルト  | 説明                                                                                        |

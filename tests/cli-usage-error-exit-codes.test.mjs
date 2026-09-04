@@ -155,7 +155,9 @@ const CONTRACTS = {
 // VALID_CASES の 1 行（88 -> 89）だけである。
 // #1880（`evolve prompt-ab` の新設）で、prompt-compare と同じ 2 形
 // （未知オプション / 余剰 positional）を追加し C3 が 107 -> 109 になった。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 109, C4: 1 };
+// #2046 で `review plan --base` の解決できない ref / 空白のみの値を
+// invalid-value 2 件として追加し、C3 が 109 -> 111 になった。
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 111, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -226,6 +228,22 @@ const CASES = [
     surface: 'review plan',
     kind: 'unknown-option',
     argv: ['review', 'plan', '--plan-only', '--nope'],
+    contract: 'C3',
+  },
+  {
+    // #2046: `--base` の値は parse を通るが、git が解決できない ref だと
+    // findMergeBase が HEAD へフォールバックし、exit 0 のまま「差分なし」を
+    // 返していた。ハンドラ層で拒否するので help は出さず exit 1（C3）。
+    surface: 'review plan',
+    kind: 'invalid-value',
+    argv: ['review', 'plan', '--plan-only', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    // 同じ根。trim 前は空白のみの値が「非空の ref」として扱われていた。
+    surface: 'review plan',
+    kind: 'invalid-value',
+    argv: ['review', 'plan', '--plan-only', '--base', '   '],
     contract: 'C3',
   },
   {
@@ -1096,11 +1114,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 110 usage-error cases and every row is unique', () => {
+  test('the matrix pins 112 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      110,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件'
+      112,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1135,7 +1153,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     );
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:109 / C4:1 (0 of 110 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:111 / C4:1 (0 of 112 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(

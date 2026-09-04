@@ -190,6 +190,7 @@ Example:
 
 - **Format**: unified diff (`git diff` compatible). Binary diffs are ignored.
 - **Requirement**: A diff must be supplied by **some channel**. When no artifact is specified, River Review internally runs `git diff <mergeBase>..HEAD` and uses the result as the diff.
+- **Precedence against `--base`** (#2046): an explicitly specified artifact (tier 1 CLI argument / tier 2 config file) wins over `review plan|exec --base <ref>`. `--base` wins over tier 3 directory auto-detection (`diff.patch`). Either way, the discarded input is announced as a warning on stderr.
 - **When the resulting diff is empty**: If the supplied diff (explicit or fallback) is empty, `status` is set to `no-changes` and review skills are not executed.
 
 ### `junit`
