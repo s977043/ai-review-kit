@@ -480,6 +480,95 @@ test('checkReviewJudgmentDuplication excuses a derived table present verbatim in
   assert.deepEqual(violations, [], `Expected no violations but got: ${violations.join(', ')}`);
 });
 
+// ---------------------------------------------------------------------------
+// #2058: the D3-3 exclusion checks the DIRECTION of the severity mapping, not
+// only the presence of its vocabulary. Three fixtures share the same six
+// tokens and the same SSoT reference; only the one that agrees with
+// normalizeSeverity is excused.
+// ---------------------------------------------------------------------------
+
+/** The real severity SSoT, so the fixtures are checked against production. */
+const severitySsot = () =>
+  new Map([
+    [
+      'src/lib/finding-factory.mjs',
+      fs.readFileSync(
+        path.join(path.resolve(import.meta.dirname, '..'), 'src/lib/finding-factory.mjs'),
+        'utf8'
+      ),
+    ],
+  ]);
+
+test('RA-1 #2058 fixture (forward): a mapping that agrees with the SSoT is excused', () => {
+  const violations = checkReviewJudgmentDuplication(
+    [{ path: '.claude/rules/x.md', content: readFixture('compliant-severity-map-derived') }],
+    severitySsot()
+  );
+  assert.deepEqual(violations, [], `Expected no violations but got: ${violations.join(', ')}`);
+});
+
+test('RA-1 #2058 fixture (reversed): a reversed mapping is a violation', () => {
+  const content = readFixture('violating-severity-map-reversed');
+  // The detection itself must fire: candidacy is a shape test now, so a
+  // reversed row is no longer invisible to detectReviewJudgmentDefinitions.
+  const hits = detectReviewJudgmentDefinitions(content);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].rule, 'severity-vocabulary-map');
+  assert.match(hits[0].term, /blocker→minor/);
+  const violations = checkReviewJudgmentDuplication(
+    [{ path: '.claude/rules/x.md', content }],
+    severitySsot()
+  );
+  assert.equal(violations.length, 1, `Expected 1 violation but got: ${violations.join(', ')}`);
+  assert.match(violations[0], /disagrees with normalizeSeverity\(\)/);
+  assert.match(violations[0], /blocker→minor \(SSoT: blocker→critical\)/);
+  assert.match(violations[0], /nit→critical \(SSoT: nit→minor\)/);
+});
+
+test('RA-1 #2058 fixture (mis-mapped): the same six tokens, wrong pairing, is a violation', () => {
+  const content = readFixture('violating-severity-map-mismapped');
+  const violations = checkReviewJudgmentDuplication(
+    [{ path: '.claude/rules/x.md', content }],
+    severitySsot()
+  );
+  assert.equal(violations.length, 1, `Expected 1 violation but got: ${violations.join(', ')}`);
+  assert.match(violations[0], /blocker→major \(SSoT: blocker→critical\)/);
+});
+
+test('RA-1 #2058: flipping the real review-core.md table is caught (#2058 root case)', () => {
+  // Cross-check on the production path: the same file that passes today must
+  // fail the moment its table stops agreeing with normalizeSeverity. The file
+  // on disk is not modified — only the string read from it.
+  const root = path.resolve(import.meta.dirname, '..');
+  const rel = '.claude/rules/review-core.md';
+  const content = fs.readFileSync(path.join(root, rel), 'utf8');
+  const drifted = content
+    .replace('| blocker  | critical     |', '| blocker  | minor        |')
+    .replace('| nit      | minor        |', '| nit      | critical     |');
+  assert.notEqual(drifted, content, 'the severity table shape changed; update this mutation');
+  const refs = findSsotReferences(content);
+  const ssot = new Map(refs.map((ref) => [ref, fs.readFileSync(path.join(root, ref), 'utf8')]));
+  const violations = checkReviewJudgmentDuplication([{ path: rel, content: drifted }], ssot);
+  assert.equal(violations.length, 1, `Expected 1 violation but got: ${violations.join(', ')}`);
+  assert.match(violations[0], /disagrees with normalizeSeverity\(\)/);
+});
+
+test('RA-1 #2058: the `(なし) | info` row is not a mapping row', () => {
+  // `(なし)` states that no internal token maps to `info`. It is prose, not a
+  // vocabulary token, so it must not be probed against normalizeSeverity —
+  // doing so would return the fail-safe value and manufacture a mismatch.
+  const content = [
+    '| 内部語彙 | 出力スキーマ |',
+    '| -------- | ------------ |',
+    '| blocker  | critical     |',
+    '| nit      | minor        |',
+    '| (なし)   | info         |',
+  ].join('\n');
+  const hits = detectReviewJudgmentDefinitions(content);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].term, 'blocker→critical, nit→minor');
+});
+
 test('checkManifestHostIndependentRefs passes on the current manifests (RA-2)', () => {
   const root = path.resolve(import.meta.dirname, '..');
   const cc = JSON.parse(fs.readFileSync(path.join(root, '.claude-plugin/plugin.json'), 'utf8'));
