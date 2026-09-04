@@ -101,6 +101,99 @@ export async function findMergeBase(cwd, baseRef) {
 }
 
 /**
+ * A `--base` value that cannot be turned into a usable diff range.
+ *
+ * Thrown by {@link resolveBaseMergeBase} so callers can render it as a usage
+ * error rather than a git failure. Deliberately NOT a {@link GitError}: no git
+ * command failed — the value the user typed is the problem, and src/cli.mjs
+ * maps GitError to a "Git command failed" hint that would misdirect.
+ */
+export class BaseRefError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'BaseRefError';
+  }
+}
+
+/**
+ * Normalize a raw `--base` value into `null` / `''` / a trimmed ref.
+ *
+ * `null` means "not given" (fall back to the auto-detected default branch),
+ * `''` means "given but blank" (a usage error — `--base "   "` used to reach
+ * findMergeBase as whitespace, resolve to nothing, and fall back to HEAD, i.e.
+ * an empty range presented as "no changes", #2046 review).
+ *
+ * @param {unknown} rawBaseRef
+ * @returns {string|null} trimmed ref, `''` when blank, `null` when absent
+ */
+export function normalizeBaseRef(rawBaseRef) {
+  if (typeof rawBaseRef !== 'string') return null;
+  const trimmed = rawBaseRef.trim();
+  return trimmed === '' ? '' : trimmed;
+}
+
+/**
+ * SSoT for how ANY subcommand turns a `--base` value into a merge base.
+ *
+ * Introduced by #2046 / PR #2049 inside `resolveBaseRepoDiff`
+ * (src/cli/commands/review.mjs) and lifted here by #2051 / #2057 so the
+ * `skills` and `run` surfaces share the exact same contract instead of
+ * re-deriving it — `--base` used to mean three different things depending on
+ * the subcommand (`review` validated it, `run` read it without validating,
+ * `skills` ignored it entirely).
+ *
+ * Contract:
+ *   - absent (`null`) → `fallbackRef` is used and NOT validated; it is not
+ *     something the user typed, so its old HEAD fallback stays.
+ *   - blank after trimming → {@link BaseRefError}.
+ *   - unresolvable ref → {@link BaseRefError}. `findMergeBase` falls back to
+ *     HEAD for an unknown ref, so without this a typo reviewed nothing and
+ *     exited 0.
+ *   - resolvable ref with no shared history → `warning` is returned (not
+ *     thrown). The ref itself was valid, but the range is empty; the caller
+ *     decides where to print it.
+ *
+ * @param {string} repoRoot repository path
+ * @param {unknown} rawBaseRef the raw `--base` value as typed (or null/undefined)
+ * @param {string} fallbackRef ref to diff against when `--base` is absent
+ * @returns {Promise<{baseRef: string|null, baseRefSha: string|null, mergeBase: string, warning: string|null}>}
+ * @throws {BaseRefError} when an explicitly typed `--base` is blank or unresolvable
+ */
+export async function resolveBaseMergeBase(repoRoot, rawBaseRef, fallbackRef) {
+  const baseRef = normalizeBaseRef(rawBaseRef);
+  if (baseRef === '') {
+    throw new BaseRefError('--base requires a branch or ref (got a blank value).');
+  }
+  let baseRefSha = null;
+  if (baseRef !== null) {
+    baseRefSha = await resolveRefToCommit(repoRoot, baseRef);
+    if (!baseRefSha) {
+      throw new BaseRefError(
+        `--base "${baseRef}" is not a ref this repository can resolve ` +
+          `(tried "origin/${baseRef}" and "${baseRef}"). ` +
+          'Reviewing an empty range would look like "no changes".'
+      );
+    }
+  }
+  const mergeBase = await findMergeBase(repoRoot, baseRef ?? fallbackRef);
+  // `rev-parse` says the ref exists; `merge-base` says the two share history.
+  // A ref that passes the first and fails the second (unrelated history, a
+  // shallow clone) makes findMergeBase fall back to HEAD, which is an empty
+  // range wearing the same clothes as "no changes" (#2046 review round 3).
+  // Not fatal — the ref itself was valid — but it must not pass unannounced.
+  let warning = null;
+  if (baseRefSha && baseRefSha !== mergeBase) {
+    const headSha = await getHeadSha(repoRoot);
+    if (headSha && mergeBase === headSha) {
+      warning =
+        `Warning: --base "${baseRef}" shares no history with HEAD, so no merge base exists. ` +
+        'The diff falls back to HEAD, which yields an empty range.';
+    }
+  }
+  return { baseRef, baseRefSha, mergeBase, warning };
+}
+
+/**
  * Resolve the HEAD commit sha of a repository.
  *
  * Same `rev-parse HEAD` call `findMergeBase` already falls back to, exported so

@@ -67,7 +67,7 @@ Precedence between `--base` and the `diff` artifact (#2046):
 
 `changedFiles` is derived differently per source. From `--base` it is `git diff --name-only`, so renames and binary changes are included. From a `diff` artifact it is the parsed unified diff, so entries without `---` / `+++` headers (100% renames, binary files) are not.
 
-The `--base` value is trimmed and then checked with `git rev-parse`. An unresolvable ref and a whitespace-only value are usage errors that exit `1`, rather than a silently empty range. A target that is not a git repository also exits `1`.
+The `--base` value is trimmed and then checked with `git rev-parse`. An unresolvable ref and a whitespace-only value are usage errors that exit `1`, rather than a silently empty range. A target that is not a git repository also exits `1`. `river run` and `river skills` share this same resolution path (#2051 / #2057); see the [Runner CLI reference](./runner-cli-reference.en.md).
 
 ### Plan control
 

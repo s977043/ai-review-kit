@@ -108,6 +108,12 @@ Thanks to this unification, an option-name typo, a surplus positional, and a mis
 
 No data write (adding a feedback or suppression entry, for instance) ever happens ahead of a usage error.
 
+`--base <ref>` is the one option validated in the handler layer instead. `river run`, `river skills`, and `river review` (`plan` / `exec` / `route`) share a single resolution path: the value is trimmed first, then checked with `git rev-parse` (#2051 / #2057).
+
+- A blank value and a ref the repository cannot resolve are usage errors, exit 1
+- A ref that shares no history with HEAD is not fatal; it is announced as a warning on stderr
+- When `--base` is omitted, the auto-detected default branch is used and this check does not apply
+
 `--expires` accepts only the RFC 3339 `YYYY-MM-DD` form and the date-time form. A date-only input is read as UTC midnight and normalized to a date-time when stored, because `expiresAt` in `schemas/suppression-context.schema.json` is declared `format: date-time`.
 
 Value validation does not reach every option, though. The following two paths still exit 0, so `$?` alone does not catch them.

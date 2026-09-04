@@ -108,6 +108,12 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 
 usage error のときにデータ書き込み（feedback / suppression のエントリ追加など）が先行することはありません。
 
+`--base <ref>` の値だけはハンドラ層で検証します。`river run` / `river skills` / `river review`（`plan` / `exec` / `route`）の 3 面は同じ解決経路を共有します。いずれも前後の空白は除去され、`git rev-parse` によって解決可否が検査されます（#2051 / #2057）。
+
+- 空白のみの値と、解決できない ref は exit 1 の usage error にあたる
+- HEAD と共有履歴を持たない ref は exit 1 とせず、stderr の警告として告知する
+- `--base` 未指定のときは自動検出したデフォルトブランチが基準となり、この検査の対象外である
+
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 
 ただし値の検証は全オプションには及びません。次の 2 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
