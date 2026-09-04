@@ -157,7 +157,9 @@ const CONTRACTS = {
 // （未知オプション / 余剰 positional）を追加し C3 が 107 -> 109 になった。
 // #2046 で `review plan --base` の解決できない ref / 空白のみの値を
 // invalid-value 2 件として追加し、C3 が 109 -> 111 になった。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 111, C4: 1 };
+// #2051 / #2057 で同じ 2 形を `skills` 面と `run` 面へ広げ（`--base` の意味が
+// subcommand ごとに割れていた問題の解消）、C3 が 111 -> 115 になった。
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 115, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -189,6 +191,22 @@ const CASES = [
     surface: 'run',
     kind: 'invalid-value',
     argv: ['run', '.', '--phase', 'BOGUS'],
+    contract: 'C3',
+  },
+  {
+    // #2057: `run` は `--base` を読むが解決可否を検証せず、findMergeBase が
+    // HEAD へフォールバックしていたため typo が exit 0 のまま通っていた。
+    // review / skills と同じ経路（resolveBaseMergeBase）を通すので exit 1（C3）。
+    surface: 'run',
+    kind: 'invalid-value',
+    argv: ['run', '.', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    // 同じ根。trim 前は空白のみの値がそのまま findMergeBase へ渡っていた。
+    surface: 'run',
+    kind: 'invalid-value',
+    argv: ['run', '.', '--base', '   '],
     contract: 'C3',
   },
   { surface: 'run', kind: 'unknown-option', argv: ['run', '.', '--nope'], contract: 'C3' },
@@ -482,6 +500,22 @@ const CASES = [
     surface: 'skills',
     kind: 'surplus-positional',
     argv: ['skills', 'list', 'extra'],
+    contract: 'C3',
+  },
+  {
+    // #2051: `skills` は `--base` を受理しながら値を読まず、常に自動検出の
+    // デフォルトブランチを基準にしていた。値を読むようにしたので、review 面と
+    // 同じく解決できない ref はハンドラ層で exit 1（C3）。
+    surface: 'skills',
+    kind: 'invalid-value',
+    argv: ['skills', '.', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    // 同じ根（trim 前は空白のみの値が「非空の ref」として通っていた）。
+    surface: 'skills',
+    kind: 'invalid-value',
+    argv: ['skills', '.', '--base', '   '],
     contract: 'C3',
   },
 
@@ -1114,11 +1148,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 112 usage-error cases and every row is unique', () => {
+  test('the matrix pins 116 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      112,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件'
+      116,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1145,15 +1179,15 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // 「フラグ先行形を拒否」も v1.72.1 の「`--phase Upstream` を誤拒否」も
   // 壊したのは**成功側**であり、守りが薄いのは逆だった。行を消すだけで
   // 黙って保護が減るのを防ぐ。
-  test('the success-side table pins 92 legitimate argv forms', () => {
+  test('the success-side table pins 93 legitimate argv forms', () => {
     assert.equal(
       VALID_CASES.length,
-      92,
-      'コマンド面ごとの正常形: run 13 (#1759 C3 で --context 未知語彙 1行追加) / doctor 5 / skills 13 / runs 7 (#1759 B2 で1行追加) / review 20 (#2046 で review plan --base を1行追加) / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 15 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加、#1880 で prompt-ab の両語順 2行追加) / help 2 / コマンド無し 1'
+      93,
+      'コマンド面ごとの正常形: run 13 (#1759 C3 で --context 未知語彙 1行追加) / doctor 5 / skills 14 (#2051 で skills --base main を1行追加) / runs 7 (#1759 B2 で1行追加) / review 20 (#2046 で review plan --base を1行追加) / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 15 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加、#1880 で prompt-ab の両語順 2行追加) / help 2 / コマンド無し 1'
     );
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:111 / C4:1 (0 of 112 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:115 / C4:1 (0 of 116 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -1310,6 +1344,10 @@ const VALID_CASES = [
   { argv: ['run', '.', '--gate', '--fail-on', 'major'], command: 'run' },
   { argv: ['doctor', '.', '--output', 'json'], command: 'doctor' },
   { argv: ['skills', '.', '--phase', 'upstream'], command: 'skills' },
+  // #2051: `skills` が `--base` を読むようになった後も、有効な ref を渡す形が
+  // parse 層で弾かれないことを固定する（受理 -> 無視 だった頃から argv の形は
+  // 変わっていないので、後方互換の対照でもある）。
+  { argv: ['skills', '.', '--base', 'main'], command: 'skills' },
   { argv: ['skills', 'list', '--source', 'all'], command: 'skills' },
   {
     argv: ['skills', 'import', '--from', './some-dir', '--dry-run', '--loose'],

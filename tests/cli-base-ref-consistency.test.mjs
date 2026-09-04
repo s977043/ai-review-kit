@@ -1,0 +1,238 @@
+// tests/cli-base-ref-consistency.test.mjs
+//
+// #2051 / #2057: `--base` の意味が subcommand ごとに割れていた問題の pin。
+//
+//   - `review plan|exec|route`: PR #2049 で trim + 解決可否検査 + 共有履歴なしの
+//     警告まで入った（`resolveBaseRepoDiff`）
+//   - `skills`: `--base` を受理するが**値を読まない**。基準は常に自動検出の
+//     デフォルトブランチだった（#2051）
+//   - `run`: 値は読むが**解決可否を検証しない**。typo が無警告で HEAD へ
+//     フォールバックしていた（#2057）
+//
+// 3 面は同じ `resolveBaseMergeBase`（src/lib/git.mjs）を通す。ここで固定するのは
+// 次の 4 点。
+//   1. 解決できない ref / 空白のみの値は 3 面すべて exit 1（同一メッセージ本文）
+//   2. 前後空白のある有効な ref は 3 面すべて trim され、同じ merge base を指す
+//   3. `skills --base <ref>` が実際にその range のファイルを見る（#2051 本体）。
+//      判定は **既存の production 経路**（`review plan --base <同じ ref>` が
+//      artifact.context.changedFiles に載せる集合）との突合で行う。自前で
+//      merge-base を計算し直して比べると自己整合になり違反を注入しても緑になる。
+//   4. 共有履歴のない ref は 3 面すべて stderr で警告する（fatal ではない）
+//
+// 判定は CLI 面（runCliInProcess）で行う。`resolveBaseMergeBase` を直接呼ぶと
+// 配線層（skills.mjs / local-runner.mjs が実際にその戻り値を使っているか）が
+// 無検査のまま緑になるため。
+
+import assert from 'node:assert/strict';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import test, { after, before, describe } from 'node:test';
+
+import { runCliInProcess } from './helpers/cli.mjs';
+import { createTempGitRepo, runGit, writeFileRelative } from './helpers/temp-repo.mjs';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const SAMPLE_SKILL = join(HERE, 'fixtures', 'sample-skills', 'rr-midstream-sample-001.md');
+
+/** `--base` の値だけを差し替えて 3 面を同じ条件で叩くための引数組み立て。 */
+const outDir = mkdtempSync(join(tmpdir(), 'river-base-consistency-'));
+let planCounter = 0;
+
+after(() => {
+  rmSync(outDir, { recursive: true, force: true });
+});
+
+async function runPlan(dir, baseArgs) {
+  const outFile = join(outDir, `plan-${planCounter++}.json`);
+  const res = await runCliInProcess(
+    ['review', 'plan', '.', ...baseArgs, '--plan-only', '--output-file', outFile],
+    { cwd: dir }
+  );
+  const artifact = res.code === 0 ? JSON.parse(readFileSync(outFile, 'utf8')) : null;
+  return { ...res, artifact };
+}
+
+function runSkills(dir, baseArgs) {
+  return runCliInProcess(['skills', '.', ...baseArgs, '--dry-run', '--output', 'json'], {
+    cwd: dir,
+  });
+}
+
+function runRun(dir, baseArgs) {
+  return runCliInProcess(['run', '.', ...baseArgs, '--dry-run', '--planner', 'off'], { cwd: dir });
+}
+
+async function revParse(dir, ref) {
+  const { stdout } = await runGit(['rev-parse', ref], dir);
+  return stdout.trim();
+}
+
+/** `skills --output json` の結果から、レビュー対象になったファイル集合を取り出す。 */
+function skillsFileSet(stdout) {
+  const results = JSON.parse(stdout);
+  return [...new Set(results.map((r) => r.file))].sort();
+}
+
+/** `run` のテキストヘッダから `Base branch:` / `Merge base:` を読む。 */
+function runHeaderField(stdout, label) {
+  const line = stdout.split('\n').find((l) => l.startsWith(`${label}:`));
+  return line ? line.slice(label.length + 1).trim() : null;
+}
+
+describe('--base contract parity across review / skills / run (#2051 / #2057)', () => {
+  let dir;
+  let cleanup;
+  /** 初期コミット（b.ts / c.ts より前）。 */
+  let base0;
+
+  before(async () => {
+    ({ dir, cleanup } = await createTempGitRepo({
+      prefix: 'river-base-consistency-',
+      initialFiles: { 'a.ts': 'export const a = 1;\n' },
+    }));
+    // skills 面が読むのは <repoRoot>/skills（SkillDispatcher のフォールバック）。
+    // applyTo が `**/*.ts` のサンプルスキルを置いて、.ts の変更が結果に現れる
+    // ようにする。
+    mkdirSync(join(dir, 'skills'), { recursive: true });
+    copyFileSync(SAMPLE_SKILL, join(dir, 'skills', 'rr-midstream-sample-001.md'));
+    await runGit(['add', '.'], dir);
+    await runGit(['commit', '-m', 'add skills'], dir);
+    base0 = await revParse(dir, 'HEAD');
+
+    writeFileRelative(dir, 'b.ts', 'export const b = 2;\n');
+    await runGit(['add', '.'], dir);
+    await runGit(['commit', '-m', 'add b'], dir);
+
+    writeFileRelative(dir, 'c.ts', 'export const c = 3;\n');
+    await runGit(['add', '.'], dir);
+    await runGit(['commit', '-m', 'add c'], dir);
+  });
+
+  after(async () => {
+    if (cleanup) await cleanup();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 1. 解決できない ref / 空白のみの値
+  // ---------------------------------------------------------------------------
+  for (const [label, value] of [
+    ['unresolvable ref', 'no-such-ref-xyz'],
+    ['blank value', '   '],
+  ]) {
+    test(`${label}: review / skills / run が 3 面とも exit 1 になる`, async () => {
+      const plan = await runPlan(dir, ['--base', value]);
+      const skills = await runSkills(dir, ['--base', value]);
+      const run = await runRun(dir, ['--base', value]);
+
+      assert.equal(plan.code, 1, `review plan: ${plan.stderr}`);
+      assert.equal(skills.code, 1, `skills: ${skills.stderr}`);
+      assert.equal(run.code, 1, `run: ${run.stderr}`);
+    });
+
+    test(`${label}: 3 面のエラー本文が一致する`, async () => {
+      // 接頭辞は面ごとに違う（review / skills は `Error: `、run は cli.mjs の
+      // 汎用ハンドラ経由で `CLI error: `）。固定するのは本文であり、そこが
+      // 割れると「同じフラグに別の意味」へ戻る。
+      const body =
+        value === '   '
+          ? '--base requires a branch or ref (got a blank value).'
+          : `--base "${value}" is not a ref this repository can resolve`;
+      const plan = await runPlan(dir, ['--base', value]);
+      const skills = await runSkills(dir, ['--base', value]);
+      const run = await runRun(dir, ['--base', value]);
+      for (const [surface, res] of [
+        ['review plan', plan],
+        ['skills', skills],
+        ['run', run],
+      ]) {
+        assert.ok(res.stderr.includes(body), `${surface} の stderr に本文が無い: ${res.stderr}`);
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // 2. 前後空白のある有効な ref
+  // ---------------------------------------------------------------------------
+  test('前後に空白のある有効な ref は 3 面とも trim されて受理される', async () => {
+    const padded = `  ${base0}  `;
+    const plan = await runPlan(dir, ['--base', padded]);
+    const skills = await runSkills(dir, ['--base', padded]);
+    const run = await runRun(dir, ['--base', padded]);
+
+    assert.equal(plan.code, 0, `review plan: ${plan.stderr}`);
+    assert.equal(skills.code, 0, `skills: ${skills.stderr}`);
+    assert.equal(run.code, 0, `run: ${run.stderr}`);
+
+    // run のヘッダは trim 後の値を表示する（trim 前は空白込みの ref がそのまま
+    // findMergeBase へ渡り、解決できずに HEAD へ落ちていた）。
+    assert.equal(runHeaderField(run.stdout, 'Base branch'), base0);
+    assert.equal(runHeaderField(run.stdout, 'Merge base'), base0);
+    assert.equal(plan.artifact.context.mergeBase, base0);
+  });
+
+  // ---------------------------------------------------------------------------
+  // 3. #2051 本体: skills が --base の range を実際に見る
+  // ---------------------------------------------------------------------------
+  test('skills --base <ref> が review plan --base <同じ ref> と同じ変更ファイルを見る', async () => {
+    const plan = await runPlan(dir, ['--base', base0]);
+    assert.equal(plan.code, 0, plan.stderr);
+    const planFiles = [...plan.artifact.context.changedFiles]
+      .filter((f) => f.endsWith('.ts'))
+      .sort();
+
+    const skills = await runSkills(dir, ['--base', base0]);
+    assert.equal(skills.code, 0, skills.stderr);
+
+    // 既存 production 経路（review plan）の答えとの突合。ここを自前の
+    // merge-base 計算と比べると自己整合になる。
+    assert.deepEqual(skillsFileSet(skills.stdout), planFiles);
+    assert.deepEqual(planFiles, ['b.ts', 'c.ts']);
+  });
+
+  test('skills は --base 無指定ならデフォルトブランチ（= HEAD）基準のままで差分ゼロ', async () => {
+    // #2051 以前は --base の有無にかかわらずこの結果になっていた。この行が
+    // 「--base を読むようになった」ことの対照群にあたる。
+    const skills = await runSkills(dir, []);
+    assert.equal(skills.code, 0, skills.stderr);
+    assert.deepEqual(skillsFileSet(skills.stdout), []);
+  });
+
+  test('run --base <ref> が review plan と同じ merge base を使う', async () => {
+    const plan = await runPlan(dir, ['--base', base0]);
+    const run = await runRun(dir, ['--base', base0]);
+    assert.equal(run.code, 0, run.stderr);
+    assert.equal(runHeaderField(run.stdout, 'Merge base'), plan.artifact.context.mergeBase);
+    assert.equal(runHeaderField(run.stdout, 'Merge base'), base0);
+  });
+
+  // ---------------------------------------------------------------------------
+  // 4. 共有履歴のない ref
+  // ---------------------------------------------------------------------------
+  test('共有履歴のない ref は 3 面とも警告を出し、exit 0 のまま', async () => {
+    // 作業ツリーを触らずに親を持たない commit を作る（`checkout --orphan` は
+    // 作業ツリーを巻き込み、以降のテストの前提を壊すため使わない）。
+    // 親が無い = HEAD と共有履歴が無いので、rev-parse は通るが merge-base は
+    // 無く、findMergeBase が HEAD へ落ちる形になる。
+    const treeSha = await revParse(dir, 'HEAD^{tree}');
+    const { stdout: orphanOut } = await runGit(['commit-tree', treeSha, '-m', 'orphan'], dir);
+    const orphanSha = orphanOut.trim();
+
+    const plan = await runPlan(dir, ['--base', orphanSha]);
+    const skills = await runSkills(dir, ['--base', orphanSha]);
+    const run = await runRun(dir, ['--base', orphanSha]);
+
+    for (const [surface, res] of [
+      ['review plan', plan],
+      ['skills', skills],
+      ['run', run],
+    ]) {
+      assert.equal(res.code, 0, `${surface}: ${res.stderr}`);
+      assert.ok(
+        res.stderr.includes('shares no history with HEAD'),
+        `${surface} が共有履歴なしを警告していない: ${res.stderr}`
+      );
+    }
+  });
+});
