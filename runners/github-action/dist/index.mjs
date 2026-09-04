@@ -48076,17 +48076,18 @@ function deriveGateDecision({
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   AC: () => (/* binding */ listChangedFiles),
-/* harmony export */   Eb: () => (/* binding */ resolveRefToCommit),
 /* harmony export */   JA: () => (/* binding */ getHeadSha),
 /* harmony export */   LL: () => (/* binding */ diffWithContext),
 /* harmony export */   NC: () => (/* binding */ ensureGitRepo),
+/* harmony export */   NI: () => (/* binding */ BaseRefError),
+/* harmony export */   OB: () => (/* binding */ normalizeBaseRef),
 /* harmony export */   Rd: () => (/* binding */ detectDefaultBranch),
 /* harmony export */   XS: () => (/* binding */ GitError),
-/* harmony export */   fe: () => (/* binding */ findMergeBase),
+/* harmony export */   Zb: () => (/* binding */ resolveBaseMergeBase),
 /* harmony export */   kG: () => (/* binding */ GitRepoNotFoundError),
 /* harmony export */   mM: () => (/* binding */ isWorkingTreeDirty)
 /* harmony export */ });
-/* unused harmony export collectAddedLineHints */
+/* unused harmony exports resolveRefToCommit, findMergeBase, collectAddedLineHints */
 /* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1421);
 /* harmony import */ var node_util__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(7975);
 
@@ -48189,6 +48190,99 @@ async function findMergeBase(cwd, baseRef) {
   }
   // fallback to current HEAD to keep diff calculations deterministic
   return runGit(['rev-parse', 'HEAD'], { cwd });
+}
+
+/**
+ * A `--base` value that cannot be turned into a usable diff range.
+ *
+ * Thrown by {@link resolveBaseMergeBase} so callers can render it as a usage
+ * error rather than a git failure. Deliberately NOT a {@link GitError}: no git
+ * command failed — the value the user typed is the problem, and src/cli.mjs
+ * maps GitError to a "Git command failed" hint that would misdirect.
+ */
+class BaseRefError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'BaseRefError';
+  }
+}
+
+/**
+ * Normalize a raw `--base` value into `null` / `''` / a trimmed ref.
+ *
+ * `null` means "not given" (fall back to the auto-detected default branch),
+ * `''` means "given but blank" (a usage error — `--base "   "` used to reach
+ * findMergeBase as whitespace, resolve to nothing, and fall back to HEAD, i.e.
+ * an empty range presented as "no changes", #2046 review).
+ *
+ * @param {unknown} rawBaseRef
+ * @returns {string|null} trimmed ref, `''` when blank, `null` when absent
+ */
+function normalizeBaseRef(rawBaseRef) {
+  if (typeof rawBaseRef !== 'string') return null;
+  const trimmed = rawBaseRef.trim();
+  return trimmed === '' ? '' : trimmed;
+}
+
+/**
+ * SSoT for how ANY subcommand turns a `--base` value into a merge base.
+ *
+ * Introduced by #2046 / PR #2049 inside `resolveBaseRepoDiff`
+ * (src/cli/commands/review.mjs) and lifted here by #2051 / #2057 so the
+ * `skills` and `run` surfaces share the exact same contract instead of
+ * re-deriving it — `--base` used to mean three different things depending on
+ * the subcommand (`review` validated it, `run` read it without validating,
+ * `skills` ignored it entirely).
+ *
+ * Contract:
+ *   - absent (`null`) → `fallbackRef` is used and NOT validated; it is not
+ *     something the user typed, so its old HEAD fallback stays.
+ *   - blank after trimming → {@link BaseRefError}.
+ *   - unresolvable ref → {@link BaseRefError}. `findMergeBase` falls back to
+ *     HEAD for an unknown ref, so without this a typo reviewed nothing and
+ *     exited 0.
+ *   - resolvable ref with no shared history → `warning` is returned (not
+ *     thrown). The ref itself was valid, but the range is empty; the caller
+ *     decides where to print it.
+ *
+ * @param {string} repoRoot repository path
+ * @param {unknown} rawBaseRef the raw `--base` value as typed (or null/undefined)
+ * @param {string} fallbackRef ref to diff against when `--base` is absent
+ * @returns {Promise<{baseRef: string|null, baseRefSha: string|null, mergeBase: string, warning: string|null}>}
+ * @throws {BaseRefError} when an explicitly typed `--base` is blank or unresolvable
+ */
+async function resolveBaseMergeBase(repoRoot, rawBaseRef, fallbackRef) {
+  const baseRef = normalizeBaseRef(rawBaseRef);
+  if (baseRef === '') {
+    throw new BaseRefError('--base requires a branch or ref (got a blank value).');
+  }
+  let baseRefSha = null;
+  if (baseRef !== null) {
+    baseRefSha = await resolveRefToCommit(repoRoot, baseRef);
+    if (!baseRefSha) {
+      throw new BaseRefError(
+        `--base "${baseRef}" is not a ref this repository can resolve ` +
+          `(tried "origin/${baseRef}" and "${baseRef}"). ` +
+          'Reviewing an empty range would look like "no changes".'
+      );
+    }
+  }
+  const mergeBase = await findMergeBase(repoRoot, baseRef ?? fallbackRef);
+  // `rev-parse` says the ref exists; `merge-base` says the two share history.
+  // A ref that passes the first and fails the second (unrelated history, a
+  // shallow clone) makes findMergeBase fall back to HEAD, which is an empty
+  // range wearing the same clothes as "no changes" (#2046 review round 3).
+  // Not fatal — the ref itself was valid — but it must not pass unannounced.
+  let warning = null;
+  if (baseRefSha && baseRefSha !== mergeBase) {
+    const headSha = await getHeadSha(repoRoot);
+    if (headSha && mergeBase === headSha) {
+      warning =
+        `Warning: --base "${baseRef}" shares no history with HEAD, so no merge base exists. ` +
+        'The diff falls back to HEAD, which yields an empty range.';
+    }
+  }
+  return { baseRef, baseRefSha, mergeBase, warning };
 }
 
 /**
@@ -56949,49 +57043,25 @@ var diff_processor = __nccwpck_require__(861);
  *   mergeBase: string, repoDiff: object}>}
  */
 function resolveBaseRef(parsed) {
-  if (typeof parsed?.base !== 'string') return null;
-  // Trim before anything else: `--base "   "` reached findMergeBase as
-  // whitespace, resolved to nothing, and fell back to HEAD — an empty range
-  // presented as "no changes" (#2046 review). Blank after trimming is the same
-  // usage error as an unresolvable ref, not a silent default.
-  const trimmed = parsed.base.trim();
-  return trimmed === '' ? '' : trimmed;
+  // Delegates to the shared normalizer in src/lib/git.mjs — the `skills` and
+  // `run` surfaces trim `--base` through the same function (#2051 / #2057), so
+  // "blank means usage error" cannot drift between them.
+  return (0,git/* normalizeBaseRef */.OB)(parsed?.base);
 }
 
 async function resolveBaseRepoDiff(parsed) {
   const targetPath = external_node_path_.resolve(parsed.target);
   const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
   const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
-  const baseRef = resolveBaseRef(parsed);
-  if (baseRef === '') {
-    throw new Error('--base requires a branch or ref (got a blank value).');
-  }
-  let baseRefSha = null;
-  if (baseRef !== null) {
-    baseRefSha = await (0,git/* resolveRefToCommit */.Eb)(repoRoot, baseRef);
-    if (!baseRefSha) {
-      throw new Error(
-        `--base "${baseRef}" is not a ref this repository can resolve ` +
-          `(tried "origin/${baseRef}" and "${baseRef}"). ` +
-          'Reviewing an empty range would look like "no changes".'
-      );
-    }
-  }
-  const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, baseRef ?? defaultBranch);
-  // `rev-parse` says the ref exists; `merge-base` says the two share history.
-  // A ref that passes the first and fails the second (unrelated history, a
-  // shallow clone) makes findMergeBase fall back to HEAD, which is an empty
-  // range wearing the same clothes as "no changes" (#2046 review round 3).
-  // Not fatal — the ref itself was valid — but it must not pass unannounced.
-  if (baseRefSha && baseRefSha !== mergeBase) {
-    const headSha = await (0,git/* getHeadSha */.JA)(repoRoot);
-    if (headSha && mergeBase === headSha) {
-      console.warn(
-        `Warning: --base "${baseRef}" shares no history with HEAD, so no merge base exists. ` +
-          'The diff falls back to HEAD, which yields an empty range.'
-      );
-    }
-  }
+  // #2051 / #2057: the validation this used to inline now lives in
+  // resolveBaseMergeBase (src/lib/git.mjs) so `skills` and `run` share it
+  // verbatim. Behavior here is unchanged — same messages, same exit path.
+  const { baseRef, mergeBase, warning } = await (0,git/* resolveBaseMergeBase */.Zb)(
+    repoRoot,
+    parsed?.base,
+    defaultBranch
+  );
+  if (warning) console.warn(warning);
   const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
   return { targetPath, repoRoot, defaultBranch, mergeBase, baseRef, repoDiff };
 }
@@ -74188,7 +74258,27 @@ async function runSkillsCommand(parsed, targetPath) {
 
   const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
   const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
-  const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
+  // #2051: `--base` was parsed and accepted here but read by nobody — the diff
+  // was always taken against the auto-detected default branch, so pointing
+  // `skills` at another ref silently reviewed the wrong range. Resolve it
+  // through the SAME helper `review` uses (src/lib/git.mjs resolveBaseMergeBase,
+  // lifted out of resolveBaseRepoDiff in #2049) so the flag cannot mean two
+  // things on two surfaces. A blank / unresolvable ref is a usage error,
+  // rendered as `Error: ...` + exit 1 exactly like the `review` surface.
+  let mergeBase;
+  try {
+    const resolved = await (0,git/* resolveBaseMergeBase */.Zb)(repoRoot, parsed.base, defaultBranch);
+    mergeBase = resolved.mergeBase;
+    // Same stream as `review` (console.warn -> stderr): stdout may be a
+    // machine-consumed JSON/markdown artifact here.
+    if (resolved.warning) console.warn(resolved.warning);
+  } catch (err) {
+    if (err instanceof git/* BaseRefError */.NI) {
+      console.error(`Error: ${err.message}`);
+      return 1;
+    }
+    throw err;
+  }
   const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
 
   const dispatcher = new SkillDispatcher(repoRoot, { log: logProgress });
@@ -76393,8 +76483,26 @@ async function collectLocalContext({
   const riskMap = await (0,risk_map.loadRiskMap)(repoRoot);
   // When --base is provided, compare against the explicit ref instead of the
   // auto-detected default branch. Falls back to detection when unset.
-  const defaultBranch = baseRef ?? (await (0,git/* detectDefaultBranch */.Rd)(repoRoot));
-  const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, defaultBranch);
+  //
+  // #2057: the value used to be handed straight to findMergeBase, which falls
+  // back to `rev-parse HEAD` for a ref it cannot resolve — so `--base <typo>`
+  // exited 0 having reviewed HEAD..working-tree instead of failing, and the
+  // same flag meant something different here than on the `review` surface.
+  // resolveBaseMergeBase (src/lib/git.mjs) is the shared contract lifted out of
+  // review.mjs's resolveBaseRepoDiff in #2049: it trims, rejects a blank or
+  // unresolvable ref with BaseRefError, and reports (does not throw on) a ref
+  // that shares no history with HEAD. `detectDefaultBranch` stays lazy — it is
+  // only consulted when `--base` is absent, exactly as before.
+  const normalizedBaseRef = (0,git/* normalizeBaseRef */.OB)(baseRef);
+  const detectedDefaultBranch =
+    normalizedBaseRef === null ? await (0,git/* detectDefaultBranch */.Rd)(repoRoot) : null;
+  const { mergeBase, warning: baseRefWarning } = await (0,git/* resolveBaseMergeBase */.Zb)(
+    repoRoot,
+    baseRef,
+    detectedDefaultBranch
+  );
+  if (baseRefWarning) console.warn(baseRefWarning);
+  const defaultBranch = normalizedBaseRef ?? detectedDefaultBranch;
   // #1715 (#1574 producer Slice 2): the HEAD the review was taken against, plus
   // whether the working tree had changes HEAD does not carry.
   //
