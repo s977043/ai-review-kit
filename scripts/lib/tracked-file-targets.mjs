@@ -24,11 +24,6 @@
 import { execFileSync } from 'node:child_process';
 import { lstatSync } from 'node:fs';
 
-/**
- * 既定のサイズ上限（1 MiB）。RA-1（`RA1_MAX_TARGET_BYTES`）が使う値。
- */
-export const DEFAULT_MAX_TARGET_BYTES = 1024 * 1024;
-
 /** `git ls-files` の出力を受け取る既定の maxBuffer。 */
 const DEFAULT_LS_FILES_MAX_BUFFER = 32 * 1024 * 1024;
 
@@ -66,11 +61,21 @@ export function listTrackedPaths(root, pathspecs, options = {}) {
  * `lstat` 自体が失敗した場合は例外がそのまま伝播する（呼び出し元が既に
  * 「読めなかった」経路の扱いを持っているため、ここでは握らない）。
  *
+ * `maxBytes` は**必須**で、既定値を置かない。2 つの呼び出し元は対象集合が違うため
+ * 別々の上限を持つ（RA-1 = `RA1_MAX_TARGET_BYTES` の 1 MiB、制御文字チェック =
+ * `MAX_TARGET_BYTES` の 8 MiB）。ここに既定値を置くと「文書化されていない第 3 の値」に
+ * なり、引数を省いた呼び出し元が黙ってそれを踏む。上限は呼び出し元が宣言する。
+ *
  * @param {string} absPath 絶対 path
- * @param {number} [maxBytes]
+ * @param {number} maxBytes 走査を許す最大バイト数（必須）
  * @returns {{ kind: 'file' | 'skip' | 'oversize', size: number }}
  */
-export function classifyTrackedTarget(absPath, maxBytes = DEFAULT_MAX_TARGET_BYTES) {
+export function classifyTrackedTarget(absPath, maxBytes) {
+  if (typeof maxBytes !== 'number' || !Number.isFinite(maxBytes) || maxBytes < 0) {
+    throw new TypeError(
+      `classifyTrackedTarget: maxBytes は必須の非負数（受け取った値: ${String(maxBytes)}）`
+    );
+  }
   const st = lstatSync(absPath);
   if (!st.isFile()) return { kind: 'skip', size: st.size };
   if (st.size > maxBytes) return { kind: 'oversize', size: st.size };
