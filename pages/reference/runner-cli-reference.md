@@ -108,12 +108,21 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 
 usage error のときにデータ書き込み（feedback / suppression のエントリ追加など）が先行することはありません。
 
+`--base <ref>` は parse 層ではなくハンドラ層で検証します。`river run` / `river skills` / `river review`（`plan` / `exec` / `route`）の 3 面は同じ解決経路を共有します。いずれも前後の空白は除去され、`git rev-parse` によって解決可否が検査されます（#2051 / #2057）。
+
+- 空白のみの値と、解決できない ref は exit 1 の usage error にあたる
+- HEAD と共有履歴を持たない ref は exit 1 とせず、stderr の警告として告知する
+- `--base` 未指定のときの基準は面ごとに異なる。`river run` / `river skills` は自動検出したデフォルトブランチを基準とし、この検査の対象外である。`river review plan` は git を実行せず、`diff` artifact だけが差分の供給元となる（[CLI review plan 仕様](./cli-review-plan-spec.md)を参照）
+
+`river skills` は以前 `--base` を受理しながら値を読まず、常に自動検出のデフォルトブランチとの差分をレビューしていました（#2051）。値を読むようになったため、`--base` を渡していた呼び出し側ではレビュー対象ファイルと findings が変わります。従来と同じ範囲を維持したい場合は `--base` を外してください。`river run` は値を読んでいたものの解決可否を検査せず、解決できない ref を無警告で HEAD へ落としていました（#2057）。従来 exit 0 で通っていた typo は exit 1 になります。
+
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 
-ただし値の検証は全オプションには及びません。次の 2 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
+ただし値の検証は全オプションには及びません。次の 3 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
 
 - 存在しないパスを `--baseline` に渡した場合（回帰比較が黙って行われない）
 - 未知の語彙を `--context` / `--dependency` に渡した場合
+- 差分を扱わない面へ `--base` を渡した場合（`doctor` / `runs list` / `eval` は受理するが値を消費しない。2026-09-04 に解決できない ref で実測し、いずれも exit 0）
 
 環境変数 `RIVER_PHASE` は #1759 C2 で `--phase` と同じ語彙・同じ大小文字無視の検証を通るようになりました。不正値は `--phase` と同じ形の `Error: RIVER_PHASE must be one of: ...` を stderr へ出して exit 1 です。未設定・空文字は既定の `midstream` へフォールバックする挙動を維持します。
 

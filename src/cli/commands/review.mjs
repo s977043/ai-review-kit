@@ -9,9 +9,8 @@ import process from 'node:process';
 import {
   ensureGitRepo,
   detectDefaultBranch,
-  findMergeBase,
-  getHeadSha,
-  resolveRefToCommit,
+  normalizeBaseRef,
+  resolveBaseMergeBase,
 } from '../../lib/git.mjs';
 import { collectRepoDiff } from '../../lib/diff-processor.mjs';
 import { SkillLoaderError, resolveSkillSet } from '../../../runners/core/skill-loader.mjs';
@@ -34,49 +33,25 @@ import { SkillLoaderError, resolveSkillSet } from '../../../runners/core/skill-l
  *   mergeBase: string, repoDiff: object}>}
  */
 export function resolveBaseRef(parsed) {
-  if (typeof parsed?.base !== 'string') return null;
-  // Trim before anything else: `--base "   "` reached findMergeBase as
-  // whitespace, resolved to nothing, and fell back to HEAD — an empty range
-  // presented as "no changes" (#2046 review). Blank after trimming is the same
-  // usage error as an unresolvable ref, not a silent default.
-  const trimmed = parsed.base.trim();
-  return trimmed === '' ? '' : trimmed;
+  // Delegates to the shared normalizer in src/lib/git.mjs — the `skills` and
+  // `run` surfaces trim `--base` through the same function (#2051 / #2057), so
+  // "blank means usage error" cannot drift between them.
+  return normalizeBaseRef(parsed?.base);
 }
 
 async function resolveBaseRepoDiff(parsed) {
   const targetPath = path.resolve(parsed.target);
   const repoRoot = await ensureGitRepo(targetPath);
   const defaultBranch = await detectDefaultBranch(repoRoot);
-  const baseRef = resolveBaseRef(parsed);
-  if (baseRef === '') {
-    throw new Error('--base requires a branch or ref (got a blank value).');
-  }
-  let baseRefSha = null;
-  if (baseRef !== null) {
-    baseRefSha = await resolveRefToCommit(repoRoot, baseRef);
-    if (!baseRefSha) {
-      throw new Error(
-        `--base "${baseRef}" is not a ref this repository can resolve ` +
-          `(tried "origin/${baseRef}" and "${baseRef}"). ` +
-          'Reviewing an empty range would look like "no changes".'
-      );
-    }
-  }
-  const mergeBase = await findMergeBase(repoRoot, baseRef ?? defaultBranch);
-  // `rev-parse` says the ref exists; `merge-base` says the two share history.
-  // A ref that passes the first and fails the second (unrelated history, a
-  // shallow clone) makes findMergeBase fall back to HEAD, which is an empty
-  // range wearing the same clothes as "no changes" (#2046 review round 3).
-  // Not fatal — the ref itself was valid — but it must not pass unannounced.
-  if (baseRefSha && baseRefSha !== mergeBase) {
-    const headSha = await getHeadSha(repoRoot);
-    if (headSha && mergeBase === headSha) {
-      console.warn(
-        `Warning: --base "${baseRef}" shares no history with HEAD, so no merge base exists. ` +
-          'The diff falls back to HEAD, which yields an empty range.'
-      );
-    }
-  }
+  // #2051 / #2057: the validation this used to inline now lives in
+  // resolveBaseMergeBase (src/lib/git.mjs) so `skills` and `run` share it
+  // verbatim. Behavior here is unchanged — same messages, same exit path.
+  const { baseRef, mergeBase, warning } = await resolveBaseMergeBase(
+    repoRoot,
+    parsed?.base,
+    defaultBranch
+  );
+  if (warning) console.warn(warning);
   const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
   return { targetPath, repoRoot, defaultBranch, mergeBase, baseRef, repoDiff };
 }

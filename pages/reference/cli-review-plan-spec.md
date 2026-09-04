@@ -67,7 +67,7 @@ artifact 解決の優先順位は Artifact Input Contract「指定方法（入�
 
 `changedFiles` の導出元は供給元によって異なる。`--base` 由来では `git diff --name-only` の結果を使うため、rename と binary 変更も含まれる。`diff` artifact 由来では unified diff の parse 結果を使うため、`---` / `+++` ヘッダを持たないエントリ（100% rename・binary）は含まれない。
 
-`--base` の値は前後の空白を除去したうえで `git rev-parse` により解決可否を検査する。解決できない ref と空白のみの値は終了コード `1` の usage error となる（黙って空の範囲をレビューしない）。対象が git リポジトリでない場合も終了コード `1` となる。
+`--base` の値は前後の空白を除去したうえで `git rev-parse` により解決可否を検査する。解決できない ref と空白のみの値は終了コード `1` の usage error となる（黙って空の範囲をレビューしない）。対象が git リポジトリでない場合も終了コード `1` となる。この解決経路は `river run` / `river skills` とも共有する（#2051 / #2057）。詳細は [Runner CLI リファレンス](./runner-cli-reference.md) を参照。
 
 ### 計画制御
 

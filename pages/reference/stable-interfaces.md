@@ -67,6 +67,7 @@ River Review は OSS として成長中であり、内部実装は変更され�
 - `--output <text|markdown|json|yaml|html>`: 出力形式（GitHub Actions は `markdown` を使用、`yaml` は [YAML 出力](./output-format-yaml.md) を参照、`html` は自己完結型 HTML レポートで [HTML 出力](./output-format-html.md) を参照）
 - `--context <list>`: 利用可能なコンテキスト（例: `diff,fullFile`）
 - `--dependency <list>`: 利用可能な依存（例: `code_search,test_runner`）
+- `--base <ref>`: 差分の基準となるブランチ / ref（`run` / `skills` / `review` が同じ解決経路を共有する。値の検証と usage error の exit code は Stable Contract の対象外であり、SSoT は [Runner CLI リファレンス](./runner-cli-reference.md)）
 - `--baseline <path>`: 過去のレビュー JSON（findings 配列）と比較して回帰を表示する
 - `--save`: レビュー実行をプロジェクトの result store（`.river/runs/`）に保存する
 - `--reviewers <roles|auto>`: レビュアーロールをカンマ区切りで指定、または `auto` でシグナルに基づく自動選択（詳細: [runner-cli-reference.md の `--reviewers` セクション](./runner-cli-reference.md#--reviewers-フラグ)）
