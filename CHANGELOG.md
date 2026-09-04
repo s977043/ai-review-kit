@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.98.0](https://github.com/s977043/river-review/compare/v1.97.1...v1.98.0) (2026-09-04)
+
+
+### Features
+
+* **scripts:** [#2027](https://github.com/s977043/river-review/issues/2027) Runtime Adapter Invariants RA-1 / RA-2 を機械検査へ落とす ([#2050](https://github.com/s977043/river-review/issues/2050)) ([2c53759](https://github.com/s977043/river-review/commit/2c537597e2c6e14ba90e1cee3ecfc60dbb0149fa))
+
+
+### Bug Fixes
+
+* **cli:** [#2046](https://github.com/s977043/river-review/issues/2046) review plan が --base を route と同じ経路で解決する ([#2049](https://github.com/s977043/river-review/issues/2049)) ([1dbe027](https://github.com/s977043/river-review/commit/1dbe0275cbf16d0d940bd1fe5f22406d14f536c5))
+* **scripts:** [#2050](https://github.com/s977043/river-review/issues/2050) RA-1 の SSoT 参照 traversal と証跡規則の ReDoS を塞ぐ ([#2060](https://github.com/s977043/river-review/issues/2060)) ([de6995d](https://github.com/s977043/river-review/commit/de6995d9cf286f19ccef5670b8f1b4c014f53802))
+
 ## [1.97.1](https://github.com/s977043/river-review/compare/v1.97.0...v1.97.1) (2026-09-04)
 
 
