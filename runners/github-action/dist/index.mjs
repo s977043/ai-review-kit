@@ -48076,6 +48076,7 @@ function deriveGateDecision({
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   AC: () => (/* binding */ listChangedFiles),
+/* harmony export */   Eb: () => (/* binding */ resolveRefToCommit),
 /* harmony export */   JA: () => (/* binding */ getHeadSha),
 /* harmony export */   LL: () => (/* binding */ diffWithContext),
 /* harmony export */   NC: () => (/* binding */ ensureGitRepo),
@@ -48150,6 +48151,30 @@ async function detectDefaultBranch(cwd) {
     if (remoteExists) return branch;
   }
   return 'HEAD';
+}
+
+/**
+ * Resolve `baseRef` to a commit SHA, or null when git cannot resolve it.
+ *
+ * Uses the SAME candidate order as {@link findMergeBase} (`origin/<ref>` then
+ * `<ref>`) so a ref this returns null for is exactly a ref findMergeBase would
+ * silently fall back to HEAD for. That fallback is deterministic but invisible:
+ * a typo'd `--base` produced an empty range and a `no-changes` review with exit
+ * 0 (#2046 review, major 2). Callers use this to reject the ref up front
+ * instead of reviewing nothing.
+ *
+ * @param {string} cwd repository path
+ * @param {string} baseRef branch / ref / SHA as typed by the user
+ * @returns {Promise<string|null>} commit SHA, or null when unresolvable
+ */
+async function resolveRefToCommit(cwd, baseRef) {
+  for (const ref of [`origin/${baseRef}`, baseRef]) {
+    const sha = await runGit(['rev-parse', '--quiet', '--verify', `${ref}^{commit}`], {
+      cwd,
+    }).catch(() => null);
+    if (sha) return sha;
+  }
+  return null;
 }
 
 async function findMergeBase(cwd, baseRef) {
@@ -56909,16 +56934,47 @@ var diff_processor = __nccwpck_require__(861);
  * route path (`runReviewRoute`) and the plan/exec path both call this, so the
  * two cannot drift into different ranges for the same `--base` (#2046).
  *
+ * An explicitly typed `--base` that git cannot resolve is a usage error, not a
+ * silent empty range: `findMergeBase` falls back to HEAD for an unknown ref, so
+ * without this check `--base no-such-ref` reviewed nothing and exited 0
+ * (#2046 review, major 2). The auto-detected default branch keeps the old
+ * fallback — it is not something the user typed.
+ *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
- * @returns {Promise<{targetPath: string, repoRoot: string, repoDiff: object}>}
+ * @returns {Promise<{targetPath: string, repoRoot: string, defaultBranch: string,
+ *   mergeBase: string, repoDiff: object}>}
  */
+function resolveBaseRef(parsed) {
+  if (typeof parsed?.base !== 'string') return null;
+  // Trim before anything else: `--base "   "` reached findMergeBase as
+  // whitespace, resolved to nothing, and fell back to HEAD — an empty range
+  // presented as "no changes" (#2046 review). Blank after trimming is the same
+  // usage error as an unresolvable ref, not a silent default.
+  const trimmed = parsed.base.trim();
+  return trimmed === '' ? '' : trimmed;
+}
+
 async function resolveBaseRepoDiff(parsed) {
   const targetPath = external_node_path_.resolve(parsed.target);
   const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
   const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
-  const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, parsed.base ?? defaultBranch);
+  const baseRef = resolveBaseRef(parsed);
+  if (baseRef === '') {
+    throw new Error('--base requires a branch or ref (got a blank value).');
+  }
+  if (baseRef !== null) {
+    const resolved = await (0,git/* resolveRefToCommit */.Eb)(repoRoot, baseRef);
+    if (!resolved) {
+      throw new Error(
+        `--base "${baseRef}" is not a ref this repository can resolve ` +
+          `(tried "origin/${baseRef}" and "${baseRef}"). ` +
+          'Reviewing an empty range would look like "no changes".'
+      );
+    }
+  }
+  const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, baseRef ?? defaultBranch);
   const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
-  return { targetPath, repoRoot, repoDiff };
+  return { targetPath, repoRoot, defaultBranch, mergeBase, baseRef, repoDiff };
 }
 
 /**
@@ -57006,13 +57062,30 @@ async function runReviewCommand(parsed) {
     // path, so `review plan --base <ref>` silently reported `no-changes` while
     // `review route --base <ref>` saw the very diff it was pointed at. Resolve
     // it through the SAME helper the route path uses, and hand the resulting
-    // diff text to the plan/replay layer as an explicit override. Only when
+    // diff (plus the range context) to the plan/replay layer. Only when
     // `--base` is actually given: without it the artifact-resolution path is
     // untouched, so existing callers keep their behavior.
-    let diffTextOverride;
-    if (typeof parsed.base === 'string' && parsed.base !== '') {
-      const { repoDiff } = await resolveBaseRepoDiff(parsed);
-      diffTextOverride = repoDiff.rawDiffText;
+    //
+    // Precedence against the `diff` artifact is decided in review-plan.mjs,
+    // where the artifact's resolution tier (cli / config / cwd-default) is
+    // known — an explicitly specified artifact wins, per
+    // pages/reference/artifact-input-contract.md.
+    let diffOverride;
+    if (resolveBaseRef(parsed) !== null) {
+      const { repoRoot, defaultBranch, mergeBase, repoDiff } = await resolveBaseRepoDiff(parsed);
+      diffOverride = {
+        diffText: repoDiff.rawDiffText,
+        // schemas/review-artifact.schema.json `context` (additionalProperties:
+        // false). Only the four range fields are filled: the token estimates
+        // there describe the OPTIMIZED diff text, which is not the text handed
+        // to the planner below, so claiming them would be wrong.
+        context: {
+          repoRoot,
+          defaultBranch,
+          mergeBase,
+          changedFiles: repoDiff.changedFiles,
+        },
+      };
     }
     let artifact;
     try {
@@ -57027,7 +57100,7 @@ async function runReviewCommand(parsed) {
           cwd: external_node_path_.resolve(parsed.target),
           cliArtifacts: parsed.cliArtifacts,
           artifactsDir: parsed.artifactsDir,
-          diffTextOverride,
+          diffOverride,
         });
       } else {
         artifact = await runReviewPlan({
@@ -57048,7 +57121,7 @@ async function runReviewCommand(parsed) {
           // into selection without env vars.
           availableContexts: parsed.availableContexts ?? undefined,
           availableDependencies: parsed.availableDependencies ?? undefined,
-          diffTextOverride,
+          diffOverride,
         });
       }
     } catch (err) {
@@ -57156,7 +57229,12 @@ async function runReviewRoute(parsed) {
     const { routeReviewMode, formatRouterResultMarkdown } =
       await __nccwpck_require__.e(/* import() */ 709).then(__nccwpck_require__.bind(__nccwpck_require__, 1709));
     const { loadRiskMap } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 572));
-    const { targetPath: routeTargetPath, repoRoot, repoDiff } = await resolveBaseRepoDiff(parsed);
+    const {
+      targetPath: routeTargetPath,
+      repoRoot,
+      repoDiff,
+      baseRef,
+    } = await resolveBaseRepoDiff(parsed);
     const riskMap = await loadRiskMap(repoRoot).catch((err) => {
       console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
       return null;
@@ -57166,6 +57244,10 @@ async function runReviewRoute(parsed) {
       diffText: repoDiff.rawDiffText,
       riskMap,
       targetPath: routeTargetPath,
+      // #2046: the suggested next command must review the range this routing
+      // decision was made against, otherwise following it re-resolves a
+      // different range (the issue's "なぜ問題か").
+      baseRef,
     });
     const outputFormat = parsed.formatExplicit
       ? parsed.format
