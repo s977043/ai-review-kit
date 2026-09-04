@@ -521,22 +521,34 @@ function tableRowCells(line) {
 const FAILSAFE_SEVERITY = normalizeSeverity('__not-a-severity-token__');
 
 /**
- * Does the severity SSoT recognize `token`?
+ * Is `token` an INTERNAL severity token — one the SSoT renames on the way out?
  *
- * `normalizeSeverity` maps every unrecognized input to `FAILSAFE_SEVERITY`, so
- * a token whose image is anything else is one the SSoT knows by name. The test
- * is one-sided: `warning` and `major` map to the fail-safe value themselves and
- * are therefore indistinguishable from an unknown word here. That is why this
- * is used as a per-block anchor (does this table look like the severity map at
- * all?) and never as the per-row filter — a table anchored by `blocker` or
- * `nit` still has its `warning` row direction-checked.
+ * This is what makes a table look like *the* internal→output mapping rather
+ * than some other two-column table of words. Two conditions, both asked of
+ * `normalizeSeverity` so no vocabulary is restated here (CLAUDE.md "Import the
+ * SSoT, never re-derive it"; `FINDING_SEVERITIES` is not exported, and
+ * `src/lib/**` is out of scope for this change):
  *
- * The vocabulary is NOT re-declared here: `normalizeSeverity` in
- * `src/lib/finding-factory.mjs` is the SSoT and is asked directly (CLAUDE.md
- * "Import the SSoT, never re-derive it").
+ *  - its image differs from itself, so an OUTPUT token (`critical`, `major`,
+ *    `minor`, `info` — the fixed points) is not an anchor;
+ *  - its image is not `FAILSAFE_SEVERITY`, so an unknown word is not one either.
+ *
+ * Anchors are therefore exactly `blocker` and `nit`. The test is one-sided:
+ * `warning` maps to the fail-safe value and so cannot anchor a block — that is
+ * fine, because this decides only whether the BLOCK is the severity map. Once
+ * a block is anchored, every candidate row in it (the `warning` row included)
+ * is direction-checked.
+ *
+ * Requiring an internal token is load-bearing (#2063 review, major 3). Without
+ * the fixed-point half, `| minor | info |` + `| major | critical |` (an
+ * incident-grade table) and `| critical | major |` + `| trace | info |` (a log
+ * level table) both anchored, then failed the direction check — a false
+ * positive that would have failed `Meta consistency` for every PR the moment
+ * such a table appeared under `.claude/**`.
  */
-function isKnownSeverityToken(token) {
-  return normalizeSeverity(token) !== FAILSAFE_SEVERITY;
+function isInternalSeverityToken(token) {
+  const image = normalizeSeverity(token);
+  return image !== String(token).toLowerCase().trim() && image !== FAILSAFE_SEVERITY;
 }
 
 /**
@@ -696,11 +708,13 @@ function anchorWindowLines(lines, index, isAnchor) {
  *  - `finding-evidence-requirement`  finding の証跡要件
  *
  * A severity table is only reported when it has at least two candidate mapping
- * rows and at least one row whose *left* token the severity SSoT recognizes
- * (`isKnownSeverityToken`): `normalizeSeverity` maps unknown input to the
+ * rows and at least one row whose *left* token is an INTERNAL severity token
+ * (`isInternalSeverityToken`). `normalizeSeverity` maps unknown input to the
  * fail-safe value, so `| something | major |` rows alone are not evidence of a
- * duplicated mapping. The two-row floor keeps a one-line glossary entry out of
- * the rule (#2050 review, minor 2).
+ * duplicated mapping; and a left cell that is itself an output token means the
+ * table maps something else (incident grades, log levels), not this mapping.
+ * The two-row floor keeps a one-line glossary entry out of the rule (#2050
+ * review, minor 2).
  *
  * Candidacy no longer requires the row to agree with `normalizeSeverity`
  * (#2058); whether it agrees is decided by the D3-3 exclusion.
@@ -723,7 +737,7 @@ export function detectReviewJudgmentDefinitions(content) {
   let block = null;
   const flushBlock = () => {
     if (!block) return;
-    const anchors = block.rows.filter(([a]) => isKnownSeverityToken(a));
+    const anchors = block.rows.filter(([a]) => isInternalSeverityToken(a));
     if (block.rows.length >= 2 && anchors.length >= 1) {
       findings.push({
         rule: 'severity-vocabulary-map',

@@ -577,6 +577,34 @@ test('RA-1 #2059: `.claude/commands/**` is still scanned — only the vocabulary
   );
 });
 
+test('RA-1 canary: tables that share severity vocabulary are not the mapping (#2063 major 3)', () => {
+  // The candidate test was relaxed for #2058. These three tables are the
+  // boundary that relaxation must not cross: an incident-grade table and a log
+  // level table (left cell is an OUTPUT token) and a semver table (right cell
+  // is not an output token). All three anchored + failed the direction check
+  // while the anchor test accepted any token the SSoT knows.
+  assert.deepEqual(
+    detectReviewJudgmentDefinitions(readFixture('compliant-non-severity-tables')),
+    []
+  );
+  const cases = [
+    ['incident grades', ['| minor | info |', '| major | critical |']],
+    ['log levels', ['| critical | major |', '| trace | info |']],
+    ['semver bumps', ['| major | breaking |', '| minor | feature |']],
+  ];
+  for (const [label, rows] of cases) {
+    const hits = detectReviewJudgmentDefinitions(rows.join('\n'));
+    assert.deepEqual(
+      hits,
+      [],
+      `${label} must not be read as the severity map: ${JSON.stringify(hits)}`
+    );
+  }
+  // The real mapping still anchors: `blocker` and `nit` are internal tokens.
+  const real = ['| blocker | critical |', '| nit | minor |'].join('\n');
+  assert.equal(detectReviewJudgmentDefinitions(real).length, 1);
+});
+
 test('RA-1 #2058: the `(なし) | info` row is not a mapping row', () => {
   // `(なし)` states that no internal token maps to `info`. It is prose, not a
   // vocabulary token, so it must not be probed against normalizeSeverity —
