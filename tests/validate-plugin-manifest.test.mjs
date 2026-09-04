@@ -237,8 +237,8 @@ test('RA-1 negative fixture: gate, completion and evidence definitions are detec
   assert.deepEqual(
     hits.map((h) => [h.rule, h.term]),
     [
-      ['gate-decision-condition', 'MERGE_OK'],
-      ['gate-decision-condition', 'BLOCKED'],
+      ['gate-decision-condition', 'GO'],
+      ['gate-decision-condition', 'NO_GO'],
       ['completion-condition', '完了条件'],
       ['finding-evidence-requirement', 'finding evidence'],
     ]
@@ -250,6 +250,148 @@ test('RA-1 severity rule does not fire on a single fail-safe `major` row', () =>
   // not evidence of a duplicated mapping table.
   const content = ['| term | output |', '| ---- | ------ |', '| whatever | major |'].join('\n');
   assert.deepEqual(detectReviewJudgmentDefinitions(content), []);
+});
+
+test('RA-1 severity rule does not fire on a one-row glossary entry (#2050 minor 2)', () => {
+  // A single `| nit | minor |` line is a glossary entry, not a duplicated map.
+  assert.deepEqual(detectReviewJudgmentDefinitions('| nit | minor |'), []);
+  assert.deepEqual(detectReviewJudgmentDefinitions('| blocker | critical |'), []);
+});
+
+test('RA-1 severity rule survives a third column and backticked cells (#2050 major 2)', () => {
+  const content = [
+    '| 内部語彙 | 出力スキーマ | 備考 |',
+    '| -------- | ------------ | ---- |',
+    '| `blocker` | `critical` | 最重要 |',
+    '| `nit` | `minor` | 軽微 |',
+  ].join('\n');
+  const hits = detectReviewJudgmentDefinitions(content);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].rule, 'severity-vocabulary-map');
+  assert.match(hits[0].term, /blocker→critical/);
+});
+
+test('RA-1 severity rule survives full-width pipes (#2050 major 2)', () => {
+  const content = ['｜ warning ｜ major ｜', '｜ nit ｜ minor ｜'].join('\n');
+  const hits = detectReviewJudgmentDefinitions(content);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].rule, 'severity-vocabulary-map');
+});
+
+test('RA-1 gate rule accepts list-marker and alternative condition lead-ins (#2050 major 2)', () => {
+  for (const condition of ['- 条件: すべて pass。', '**成立要件**: すべて pass。']) {
+    const hits = detectReviewJudgmentDefinitions(`### A. NO_GO\n\n${condition}`);
+    assert.equal(hits.length, 1, `no detection for: ${condition}`);
+    assert.equal(hits[0].term, 'NO_GO');
+  }
+});
+
+test('RA-1 gate rule scans bold labels, list items and table rows (#2050 major 2)', () => {
+  const cases = [
+    ['**GO_WITH_OBSERVATION**\n\n- 条件: minor だけが残る。', 'GO_WITH_OBSERVATION'],
+    ['- GO — マージ可\n  条件: blocking が残らない。', 'GO'],
+    ['| 判定 | 条件 |\n| - | - |\n| NO_GO | blocking が残る |', 'NO_GO'],
+  ];
+  for (const [content, term] of cases) {
+    const hits = detectReviewJudgmentDefinitions(content);
+    assert.equal(hits.length, 1, `no detection for: ${content}`);
+    assert.equal(hits[0].rule, 'gate-decision-condition');
+    assert.equal(hits[0].term, term);
+  }
+});
+
+test('RA-1 gate rule does not fire on acronym or identifier headings (#2050 major 3)', () => {
+  const hits = detectReviewJudgmentDefinitions(readFixture('compliant-screaming-headings'));
+  assert.deepEqual(hits, [], `Expected no detections but got: ${JSON.stringify(hits)}`);
+});
+
+test('RA-1 negative fixture: every previously evaded form is detected (#2050 major 2)', () => {
+  const hits = detectReviewJudgmentDefinitions(readFixture('violating-evaded-forms'));
+  assert.deepEqual(
+    hits.map((h) => [h.rule, h.term]),
+    [
+      ['severity-vocabulary-map', 'blocker→critical, nit→minor'],
+      ['severity-vocabulary-map', 'warning→major, nit→minor'],
+      ['gate-decision-condition', 'GO_WITH_OBSERVATION'],
+      ['gate-decision-condition', 'GO'],
+      ['gate-decision-condition', 'NO_GO'],
+    ]
+  );
+});
+
+test('RA-1 exclusion needs the condition text, not the bare verdict word (#2050 major 1)', () => {
+  // Naming any src/lib file that merely contains the verdict word must not
+  // excuse a gate condition. `NO_GO` occurs inside `PROMPT_NO_GOAL_HINT`.
+  const content = [
+    '判定語彙の実装: `src/lib/prompt-compiler-paired.mjs`',
+    '',
+    '### B. NO_GO',
+    '',
+    '条件: blocking な finding が 1 件以上残る。',
+  ].join('\n');
+  const ssot = new Map([
+    ['src/lib/prompt-compiler-paired.mjs', 'export const PROMPT_NO_GOAL_HINT = 1;\n'],
+  ]);
+  const violations = checkReviewJudgmentDuplication(
+    [{ path: '.claude/commands/merge-check.md', content }],
+    ssot
+  );
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /condition text of "NO_GO" is not present verbatim/);
+});
+
+test('RA-1 exclusion excuses a condition sentence present verbatim in the SSoT (#2050 major 1)', () => {
+  const content = [
+    '出典: `skills/upstream/merge-gate/SKILL.md`',
+    '',
+    '### B. NO_GO',
+    '',
+    '条件: blocking な finding が 1 件以上残る。',
+  ].join('\n');
+  const ssot = new Map([
+    [
+      'skills/upstream/merge-gate/SKILL.md',
+      '# gate\n\n条件: blocking な finding が 1 件以上残る。\n',
+    ],
+  ]);
+  const violations = checkReviewJudgmentDuplication(
+    [{ path: '.claude/commands/merge-check.md', content }],
+    ssot
+  );
+  assert.deepEqual(violations, [], `Expected no violations but got: ${violations.join(', ')}`);
+});
+
+test('RA-1 severity exclusion matches whole words only (#2050 major 1)', () => {
+  const content = [
+    '出典: `src/lib/finding-factory.mjs`',
+    '',
+    '| blocker | critical |',
+    '| nit | minor |',
+  ].join('\n');
+  // `blocker` only as a substring of `nonblocker` → not a whole-word match.
+  const substringOnly = new Map([
+    ['src/lib/finding-factory.mjs', 'nonblocker critical nit minor\n'],
+  ]);
+  assert.equal(
+    checkReviewJudgmentDuplication([{ path: '.claude/rules/x.md', content }], substringOnly).length,
+    1
+  );
+  const wholeWords = new Map([
+    ['src/lib/finding-factory.mjs', "['blocker', 'critical', 'nit', 'minor']\n"],
+  ]);
+  assert.deepEqual(
+    checkReviewJudgmentDuplication([{ path: '.claude/rules/x.md', content }], wholeWords),
+    []
+  );
+});
+
+test('checkManifestHostIndependentRefs rejects `..` traversal out of the top level (#2050 minor 4)', () => {
+  const errors = checkManifestHostIndependentRefs(
+    { skills: './skills/../../etc/passwd' },
+    { skills: './skills/agent-skills/' }
+  );
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /escapes the repository root once normalized/);
 });
 
 test('RA-1 severity rule does not fire on a table of only fail-safe `major` rows', () => {
@@ -343,13 +485,17 @@ test('RA-1 runs in observe: repo violations surface as warnings, not errors', as
   const errors = await validatePluginManifest({ warnings });
   assert.equal(RA1_ENFORCEMENT, 'observe');
   assert.deepEqual(errors, [], `Expected no errors but got: ${errors.join(', ')}`);
-  // ADR-009 D7-2 / D7-4 predicted both of these; they must be visible.
-  assert.ok(
-    warnings.some((w) => w.startsWith('RA-1 .claude/rules/review-core.md:')),
-    `review-core.md observation missing from: ${warnings.join(' | ')}`
+  // ADR-009 D7-2 predicted this one; it is the only remaining violation after
+  // the gate vocabulary was narrowed to GATE_DECISIONS (#2050 decision 1).
+  assert.deepEqual(
+    warnings.filter((w) => w.startsWith('RA-1 ')).map((w) => w.split(':')[0]),
+    ['RA-1 .claude/rules/review-core.md']
   );
-  assert.ok(
-    warnings.some((w) => w.startsWith('RA-1 .claude/commands/merge-check.md:')),
-    `merge-check.md observation missing from: ${warnings.join(' | ')}`
+  // Repository work-procedure verdicts are out of scope, so none of the
+  // `.claude/commands/**` files may appear.
+  assert.equal(
+    warnings.filter((w) => w.includes('.claude/commands/')).length,
+    0,
+    `work-procedure verdicts leaked into RA-1: ${warnings.join(' | ')}`
   );
 });

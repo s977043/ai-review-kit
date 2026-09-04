@@ -391,27 +391,65 @@ export function findSsotReferences(content) {
   return [...new Set(kept)];
 }
 
-/** Parse `| a | b |` into its two trimmed cells, or null when it is not one. */
-function twoCellRow(line) {
-  const m = /^\s*\|([^|]*)\|([^|]*)\|\s*$/.exec(line);
-  if (!m) return null;
-  const a = m[1].trim();
-  const b = m[2].trim();
-  if (!a || !b) return null;
-  if (/^:?-+:?$/.test(a) || /^:?-+:?$/.test(b)) return null; // separator row
-  return [a, b];
+/**
+ * Strip inline-emphasis punctuation from a markdown table cell or label so that
+ * `` `blocker` `` and `**MERGE_OK**` normalize to their bare token. Without
+ * this, an author who merely backticks a cell slips past the detector while
+ * changing nothing about the content (#2050 review, major 2).
+ */
+function stripInlineMarkup(value) {
+  let out = String(value ?? '')
+    .replace(/[`*~]/g, '')
+    .trim();
+  // `_` is emphasis only when it wraps the whole span; inside a token it is
+  // part of the token (`MERGE_OK` must not become `MERGEOK`).
+  while (/^_{1,2}[^_].*[^_]_{1,2}$/.test(out) || /^_{1,2}[^_]_{1,2}$/.test(out)) {
+    out = out
+      .replace(/^_{1,2}/, '')
+      .replace(/_{1,2}$/, '')
+      .trim();
+  }
+  return out;
 }
+
+/**
+ * Split a markdown table row into its cells, or null when the line is not a
+ * table row. Accepts any cell count of 2 or more: pinning the row to exactly
+ * two cells let a third "備考" column disable the rule (#2050 review, major 2).
+ * Full-width `｜` is accepted alongside `|`.
+ */
+function tableRowCells(line) {
+  const raw = String(line ?? '');
+  if (!/^\s*[|｜]/.test(raw)) return null;
+  const cells = raw
+    .trim()
+    .replace(/^[|｜]/, '')
+    .replace(/[|｜]\s*$/, '')
+    .split(/[|｜]/)
+    .map((c) => stripInlineMarkup(c));
+  if (cells.length < 2) return null;
+  if (cells.every((c) => c === '' || /^:?-+:?$/.test(c))) return null; // separator row
+  return cells;
+}
+
+/**
+ * Fail-safe output severity. `normalizeSeverity` maps every unrecognized input
+ * to one value; asking it is how that value is obtained, so this module holds
+ * no severity literal of its own (CLAUDE.md "Import the SSoT, never re-derive
+ * it"; #2050 review, minor 3).
+ */
+const FAILSAFE_SEVERITY = normalizeSeverity(' not-a-severity-token');
 
 /**
  * Is `[a, b]` a row of the internal→output severity mapping?
  *
  * The vocabulary is NOT re-declared here: `normalizeSeverity` in
  * `src/lib/finding-factory.mjs` is the SSoT for the mapping and is asked
- * directly (CLAUDE.md "Import the SSoT, never re-derive it").
+ * directly.
  */
 function isSeverityMappingRow(a, b) {
-  const left = a.toLowerCase();
-  const right = b.toLowerCase();
+  const left = String(a).toLowerCase();
+  const right = String(b).toLowerCase();
   if (left === right) return false;
   if (!/^[a-z]+$/.test(left) || !/^[a-z]+$/.test(right)) return false;
   // `right` must be an output-vocabulary token (a fixed point of the mapping).
@@ -419,15 +457,63 @@ function isSeverityMappingRow(a, b) {
   return normalizeSeverity(left) === right;
 }
 
-const GATE_VERDICT_TOKENS = new Set(GATE_DECISIONS);
-/** Verdict-shaped token: SCREAMING_CASE, 4+ chars (GO/NO are too noisy alone). */
-const VERDICT_SHAPED_RE = /\b[A-Z][A-Z0-9]{3,}(?:_[A-Z0-9]+)*\b/;
-const CONDITION_LINE_RE = /^\s*(?:条件|判定条件|Conditions?)\s*[:：]/;
+/**
+ * Verdict tokens the gate rule recognizes: exactly River Review's product gate
+ * vocabulary, imported from `src/lib/gate-decision.mjs` (`GATE_DECISIONS`)
+ * rather than restated.
+ *
+ * The scope is deliberately this narrow. `.claude/commands/**` define their own
+ * verdicts (`MERGE_OK`, `SAFE`, `PASS`, `REGISTERED` …), but those judge a
+ * repository work procedure, not a review: they live in a different namespace
+ * from the product gate and are therefore not Review Judgment under ADR-009 D3
+ * (#2050, user decision 1). Restricting the vocabulary to the product gate also
+ * removes the false positives a SCREAMING_CASE shape rule produced — `CLAUDE`,
+ * `AGENTS`, `JSON` and `HTTP` headings were read as gate verdicts (#2050
+ * review, major 3). One change answers both.
+ *
+ * Note: ADR-009 D7-4 counts `.claude/commands/merge-check.md` as a D3
+ * violation, which contradicts this scope. Correcting the ADR text is a
+ * separate PR; this module follows the decision, not the stale prose.
+ */
+const VERDICT_ALLOWLIST = new Set(GATE_DECISIONS);
+
+/** Leading enumerator of a label: `A.`, `1.`, `B)` … */
+const ENUMERATOR_RE = /^(?:[A-Za-z0-9]{1,3}[.)]\s+)+/;
+/** What may follow a verdict in subject position: nothing, or a separator. */
+const AFTER_VERDICT_RE = /^\s*(?:[-—–:：/|]|$)/;
+
+/**
+ * The verdict token a label carries in **subject position**, or null.
+ *
+ * Subject position means the label — after an optional enumerator — begins with
+ * the token, and the token is followed by end-of-label or a separator. Without
+ * that constraint a heading that merely mentions a verdict in a sentence
+ * (`## ESCALATE 判定の運用`) reads as a definition of it.
+ */
+function verdictOf(label) {
+  const text = stripInlineMarkup(label).replace(ENUMERATOR_RE, '');
+  const match = /^[A-Z][A-Z0-9_]*/.exec(text);
+  if (!match) return null;
+  const token = match[0];
+  if (!AFTER_VERDICT_RE.test(text.slice(token.length))) return null;
+  return VERDICT_ALLOWLIST.has(token) ? token : null;
+}
+
+/**
+ * A "条件:" style line. List markers, emphasis and alternative lead-ins are
+ * accepted: `- 条件:` and `**成立要件**:` are the same statement as `条件:`
+ * (#2050 review, major 2).
+ */
+const CONDITION_LINE_RE =
+  /^\s*(?:[-*+]\s+|\d+[.)]\s+)?[`*_~]*(?:条件|判定条件|成立要件|判定基準|Conditions?)[`*_~]*\s*[:：]/;
 const COMPLETION_HEADING_RE = /完了(?:条件|判定|基準)|[Cc]ompletion criteri/;
 const EVIDENCE_REQUIREMENT_RE =
   /(?=.*\b(?:finding|指摘)s?\b)(?=.*(?:証跡|evidence))(?=.*(?:必須|必ず|MUST|required))/i;
 
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
+/** A list item or a stand-alone emphasized label — both act as verdict anchors. */
+const LIST_ITEM_RE = /^\s*(?:[-*+]\s+|\d+[.)]\s+)(.*)$/;
+const BOLD_LABEL_RE = /^\s*(?:\*\*|__)([^*_]+)(?:\*\*|__)\s*[-—:：]?\s*(.*)$/;
 
 /** Lines of the section a heading at `index` opens (until the next same/higher heading). */
 function sectionLines(lines, index, level) {
@@ -435,6 +521,23 @@ function sectionLines(lines, index, level) {
   for (let i = index + 1; i < lines.length; i += 1) {
     const h = HEADING_RE.exec(lines[i]);
     if (h && h[1].length <= level) break;
+    out.push(lines[i]);
+  }
+  return out;
+}
+
+/**
+ * Lines that belong to a non-heading anchor at `index`: everything up to the
+ * next heading or the next verdict anchor, capped so an anchor cannot claim an
+ * unrelated condition line far below it.
+ */
+const ANCHOR_WINDOW = 8;
+function anchorWindowLines(lines, index, isAnchor) {
+  const out = [];
+  const end = Math.min(lines.length, index + 1 + ANCHOR_WINDOW);
+  for (let i = index + 1; i < end; i += 1) {
+    if (HEADING_RE.test(lines[i])) break;
+    if (isAnchor(i)) break;
     out.push(lines[i]);
   }
   return out;
@@ -450,14 +553,20 @@ function sectionLines(lines, index, level) {
  *  - `finding-evidence-requirement`  finding の証跡要件
  *
  * A severity table is only reported when it has at least two mapping rows and
- * at least one row whose output token is not `major`: `normalizeSeverity`
- * fail-safes unknown input to `major`, so a single `| something | major |` row
- * is not evidence of a duplicated mapping.
+ * at least one row whose output token is not the fail-safe value:
+ * `normalizeSeverity` maps unknown input to that value, so `| something |
+ * major |` rows alone are not evidence of a duplicated mapping. The two-row
+ * floor keeps a one-line glossary entry out of the rule (#2050 review, minor 2).
+ *
+ * Each hit carries `verbatimTarget`, naming which half of it the D3-3 exclusion
+ * must find in the SSoT: `terms` for the severity rule (the vocabulary itself
+ * is what gets duplicated) and `text` for every rule whose duplicated content
+ * is a condition sentence (#2050 review, major 1).
  *
  * Pure function.
  *
  * @param {string} content
- * @returns {{rule: string, line: number, term: string, text: string}[]}
+ * @returns {{rule: string, line: number, term: string, text: string, verbatimTarget: 'terms'|'text'}[]}
  */
 export function detectReviewJudgmentDefinitions(content) {
   const lines = String(content ?? '').split('\n');
@@ -467,58 +576,108 @@ export function detectReviewJudgmentDefinitions(content) {
   let block = null;
   const flushBlock = () => {
     if (!block) return;
-    const nonDefault = block.rows.filter(([, b]) => b.toLowerCase() !== 'major');
-    if (nonDefault.length >= 1) {
+    const nonDefault = block.rows.filter(([, b]) => b.toLowerCase() !== FAILSAFE_SEVERITY);
+    if (block.rows.length >= 2 && nonDefault.length >= 1) {
       findings.push({
         rule: 'severity-vocabulary-map',
         line: block.start,
         term: block.rows.map(([a, b]) => `${a.toLowerCase()}→${b.toLowerCase()}`).join(', '),
         text: block.rows.map(([a, b]) => `| ${a} | ${b} |`).join(' '),
+        verbatimTarget: 'terms',
       });
     }
     block = null;
   };
   lines.forEach((line, i) => {
-    const cells = twoCellRow(line);
+    const cells = tableRowCells(line);
     if (!cells) {
-      if (!/^\s*\|/.test(line)) flushBlock();
+      if (!/^\s*[|｜]/.test(line)) flushBlock();
       return;
     }
-    const [a, b] = cells;
-    if (!isSeverityMappingRow(a, b)) return;
+    // Any adjacent cell pair may carry the mapping, so a third column does not
+    // hide it.
+    let pair = null;
+    for (let c = 0; c + 1 < cells.length && !pair; c += 1) {
+      if (isSeverityMappingRow(cells[c], cells[c + 1])) pair = [cells[c], cells[c + 1]];
+    }
+    if (!pair) return;
     if (!block) block = { start: i + 1, rows: [] };
-    block.rows.push([a, b]);
+    block.rows.push(pair);
   });
   flushBlock();
 
   // --- Rules 2 & 3: gate / decision and completion conditions ---
+  // A verdict may be labelled by a heading, a list item, a bold label or a
+  // table cell; all four are scanned (#2050 review, major 2).
+  const labelsOf = (line) => {
+    const labels = [];
+    const heading = HEADING_RE.exec(line);
+    if (heading) labels.push(heading[2]);
+    const item = LIST_ITEM_RE.exec(line);
+    if (item) labels.push(item[1]);
+    const bold = BOLD_LABEL_RE.exec(line);
+    if (bold) labels.push(bold[1]);
+    const cells = tableRowCells(line);
+    if (cells) labels.push(cells[0]);
+    if (labels.length === 0) labels.push(line);
+    return labels;
+  };
+  const verdictAt = (i) => {
+    for (const label of labelsOf(lines[i])) {
+      const verdict = verdictOf(label);
+      if (verdict) return verdict;
+    }
+    return null;
+  };
+  const isVerdictAnchor = (i) => verdictAt(i) !== null;
+
   lines.forEach((line, i) => {
-    const h = HEADING_RE.exec(line);
-    if (!h) return;
-    const level = h[1].length;
-    const heading = h[2];
-    const body = sectionLines(lines, i, level);
+    const heading = HEADING_RE.exec(line);
+    const verdict = verdictAt(i);
+    const cells = tableRowCells(line);
+
+    // Table form: `| MERGE_OK | すべての必須チェックが pass |` — the row is both
+    // the anchor and the condition.
+    if (verdict && cells && cells.length >= 2 && verdictOf(cells[0]) === verdict) {
+      const condition = cells.slice(1).find((c) => c !== '' && !/^:?-+:?$/.test(c));
+      if (condition) {
+        findings.push({
+          rule: 'gate-decision-condition',
+          line: i + 1,
+          term: verdict,
+          text: condition,
+          verbatimTarget: 'text',
+        });
+        return;
+      }
+    }
+
+    const body = heading
+      ? sectionLines(lines, i, heading[1].length)
+      : verdict
+        ? anchorWindowLines(lines, i, isVerdictAnchor)
+        : null;
+    if (!body) return;
     const conditionLine = body.find((l) => CONDITION_LINE_RE.test(l));
     if (!conditionLine) return;
 
-    const verdictMatch = heading.match(VERDICT_SHAPED_RE);
-    const verdict =
-      verdictMatch?.[0] ?? [...GATE_VERDICT_TOKENS].find((token) => heading.includes(token));
     if (verdict) {
       findings.push({
         rule: 'gate-decision-condition',
         line: i + 1,
         term: verdict,
         text: conditionLine.trim(),
+        verbatimTarget: 'text',
       });
       return;
     }
-    if (COMPLETION_HEADING_RE.test(heading)) {
+    if (heading && COMPLETION_HEADING_RE.test(heading[2])) {
       findings.push({
         rule: 'completion-condition',
         line: i + 1,
-        term: heading.trim(),
+        term: heading[2].trim(),
         text: conditionLine.trim(),
+        verbatimTarget: 'text',
       });
     }
   });
@@ -531,10 +690,63 @@ export function detectReviewJudgmentDefinitions(content) {
       line: i + 1,
       term: 'finding evidence',
       text: line.trim(),
+      verbatimTarget: 'text',
     });
   });
 
   return findings;
+}
+
+/** Whitespace-insensitive verbatim containment. */
+function containsVerbatimText(haystack, needle) {
+  const norm = (s) => String(s).replace(/\s+/g, ' ').trim();
+  const n = norm(needle);
+  return n !== '' && norm(haystack).includes(n);
+}
+
+/** Whole-word containment — `BLOCKED` must not match inside `UNBLOCKED_BY`. */
+function containsWord(haystack, word) {
+  const escaped = String(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (escaped === '') return false;
+  return new RegExp(`(?<![A-Za-z0-9_])${escaped}(?![A-Za-z0-9_])`).test(String(haystack));
+}
+
+/**
+ * The D3-3 項番 3 exclusion, applied to one detection.
+ *
+ * ADR-009 requires that the **duplicated definition** exist verbatim in the
+ * referenced SSoT. Which half of a hit is "the definition" depends on the rule:
+ *
+ *  - `terms` (severity rule) — the vocabulary mapping itself is the duplicated
+ *    definition, so each internal/output token must appear in the SSoT as a
+ *    whole word. Substring matching is not enough: `BLOCKED` occurs inside
+ *    `PROMPT_AB_UNBLOCKED_BY`, which would have excused an unrelated file that
+ *    merely names a `src/lib/**` path (#2050 review, major 1).
+ *  - `text` (gate / completion / evidence rules) — the condition sentence is
+ *    the duplicated definition. Matching the bare verdict token instead let any
+ *    file be excused by naming any `src/lib/**` file that happens to contain
+ *    that word.
+ *
+ * Pure function.
+ *
+ * @param {{term: string, text: string, verbatimTarget?: 'terms'|'text'}} hit
+ * @param {string[]} corpus contents of the SSoT files the file references
+ * @returns {{verbatim: boolean, subject: string}}
+ */
+export function isExcusedByVerbatimSsot(hit, corpus) {
+  if (!Array.isArray(corpus) || corpus.length === 0) {
+    return { verbatim: false, subject: `"${hit.term}"` };
+  }
+  if (hit.verbatimTarget === 'terms') {
+    const terms = String(hit.term)
+      .split(/[,→]/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const verbatim = terms.length > 0 && terms.every((t) => corpus.some((c) => containsWord(c, t)));
+    return { verbatim, subject: `the severity mapping "${hit.term}"` };
+  }
+  const verbatim = corpus.some((c) => containsVerbatimText(c, hit.text));
+  return { verbatim, subject: `the condition text of "${hit.term}"` };
 }
 
 /**
@@ -561,14 +773,12 @@ export function checkReviewJudgmentDuplication(files, ssotContents = new Map()) 
     const refs = findSsotReferences(file.content);
     const corpus = refs.map((ref) => ssotContents.get(ref) ?? '').filter(Boolean);
     for (const hit of hits) {
-      const terms = hit.term.split(/[,→]/).map((t) => t.trim());
-      const verbatim =
-        corpus.length > 0 && terms.every((t) => t !== '' && corpus.some((c) => c.includes(t)));
+      const { verbatim, subject } = isExcusedByVerbatimSsot(hit, corpus);
       if (verbatim) continue;
       const why =
         refs.length === 0
           ? 'the file declares no ADR-009 D3-3 SSoT reference'
-          : `"${hit.term}" is not present verbatim in the referenced SSoT (${refs.join(', ')})`;
+          : `${subject} is not present verbatim in the referenced SSoT (${refs.join(', ')})`;
       violations.push(
         `RA-1 ${file.path}:${hit.line}: ${hit.rule} — ${why}. ` +
           `Move the definition to skills/**, schemas/**, or an SSoT document and keep only a ` +
@@ -616,7 +826,16 @@ function manifestRefs(ccManifest, codexManifest) {
 export function checkManifestHostIndependentRefs(ccManifest, codexManifest) {
   const errors = [];
   for (const [field, ref] of manifestRefs(ccManifest, codexManifest)) {
-    const rel = normalizeRef(ref);
+    // Resolve `..` before judging: `skills/../../etc/passwd` starts with an
+    // allowed prefix but leaves the top-level set (#2050 review, minor 4).
+    const rel = path.posix.normalize(normalizeRef(ref).split(path.win32.sep).join('/'));
+    if (rel.startsWith('../') || rel === '..' || path.posix.isAbsolute(rel)) {
+      errors.push(
+        `RA-2 ${field}: "${ref}" escapes the repository root once normalized ("${rel}") — ` +
+          `ADR-009 D3 RA-2`
+      );
+      continue;
+    }
     if (/(?:^|\/)\.(?:claude|codex)\//.test(rel)) {
       errors.push(
         `RA-2 ${field}: "${ref}" points into a host-local directory. Manifests must reference ` +
