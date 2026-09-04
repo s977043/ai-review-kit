@@ -48157,11 +48157,15 @@ async function detectDefaultBranch(cwd) {
  * Resolve `baseRef` to a commit SHA, or null when git cannot resolve it.
  *
  * Uses the SAME candidate order as {@link findMergeBase} (`origin/<ref>` then
- * `<ref>`) so a ref this returns null for is exactly a ref findMergeBase would
- * silently fall back to HEAD for. That fallback is deterministic but invisible:
- * a typo'd `--base` produced an empty range and a `no-changes` review with exit
- * 0 (#2046 review, major 2). Callers use this to reject the ref up front
- * instead of reviewing nothing.
+ * `<ref>`), but NOT the same predicate: this asks `rev-parse` whether the ref
+ * names a commit, while findMergeBase asks `merge-base HEAD <ref>` whether the
+ * two share history. The implication holds in one direction only — a ref this
+ * rejects is one findMergeBase cannot use either, but a ref this accepts can
+ * still have no merge base (unrelated history, a shallow clone) and fall back
+ * to HEAD. Callers that must not review an empty range therefore check the
+ * resulting merge base as well (see resolveBaseRepoDiff in
+ * src/cli/commands/review.mjs). Verified 2026-09-04: `--base <orphan branch>`
+ * passes this check and still yields mergeBase === HEAD (#2046 review).
  *
  * @param {string} cwd repository path
  * @param {string} baseRef branch / ref / SHA as typed by the user
@@ -56962,9 +56966,10 @@ async function resolveBaseRepoDiff(parsed) {
   if (baseRef === '') {
     throw new Error('--base requires a branch or ref (got a blank value).');
   }
+  let baseRefSha = null;
   if (baseRef !== null) {
-    const resolved = await (0,git/* resolveRefToCommit */.Eb)(repoRoot, baseRef);
-    if (!resolved) {
+    baseRefSha = await (0,git/* resolveRefToCommit */.Eb)(repoRoot, baseRef);
+    if (!baseRefSha) {
       throw new Error(
         `--base "${baseRef}" is not a ref this repository can resolve ` +
           `(tried "origin/${baseRef}" and "${baseRef}"). ` +
@@ -56973,6 +56978,20 @@ async function resolveBaseRepoDiff(parsed) {
     }
   }
   const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, baseRef ?? defaultBranch);
+  // `rev-parse` says the ref exists; `merge-base` says the two share history.
+  // A ref that passes the first and fails the second (unrelated history, a
+  // shallow clone) makes findMergeBase fall back to HEAD, which is an empty
+  // range wearing the same clothes as "no changes" (#2046 review round 3).
+  // Not fatal — the ref itself was valid — but it must not pass unannounced.
+  if (baseRefSha && baseRefSha !== mergeBase) {
+    const headSha = await (0,git/* getHeadSha */.JA)(repoRoot);
+    if (headSha && mergeBase === headSha) {
+      console.warn(
+        `Warning: --base "${baseRef}" shares no history with HEAD, so no merge base exists. ` +
+          'The diff falls back to HEAD, which yields an empty range.'
+      );
+    }
+  }
   const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
   return { targetPath, repoRoot, defaultBranch, mergeBase, baseRef, repoDiff };
 }
