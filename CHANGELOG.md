@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.97.1](https://github.com/s977043/river-review/compare/v1.97.0...v1.97.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **manifest:** [#2037](https://github.com/s977043/river-review/issues/2037) flow ブロックの resolve 経路を決めて deterministic replay を成立させる ([#2048](https://github.com/s977043/river-review/issues/2048)) ([b73d321](https://github.com/s977043/river-review/commit/b73d3213284a51bbd6e9e5ea0302c7646e75952d))
+
 ## [1.97.0](https://github.com/s977043/river-review/compare/v1.96.0...v1.97.0) (2026-09-03)
 
 
