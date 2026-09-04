@@ -707,6 +707,16 @@ export function attachExecutionManifest(artifact, manifest) {
  * REPOSITORY-time check (every entry pins a version the Flow document actually
  * carries) already lives in tests/flow-definitions.test.mjs.
  *
+ * Only an explicit `null` / `undefined` `expectedVersion` skips that check.
+ * Any other unusable value (a number, an empty or blank string) is a caller
+ * bug and throws, because a stated expectation that is quietly discarded is
+ * worse than no expectation at all.
+ *
+ * `document` is expected to be the result of `JSON.parse` on a Flow document.
+ * `canonicalJson` walks own enumerable keys, so a hand-built object carrying
+ * `Date` / `Map` / `Set` values would not be distinguished by the digest;
+ * parsed JSON has no such values.
+ *
  * @param {object} document a parsed Flow definition document
  * @param {object} [options]
  * @param {string|null} [options.expectedVersion] version the caller resolved
@@ -724,11 +734,22 @@ export function deriveFlowPin(document, { expectedVersion = null } = {}) {
   if (version == null) {
     throw new ExecutionManifestError(`flow document "${id}" must carry a non-empty version.`);
   }
-  const expected = nonEmptyString(expectedVersion);
-  if (expected != null && expected !== version) {
-    throw new ExecutionManifestError(
-      `flow document "${id}" is version ${version}, but the caller resolved ${expected}.`
-    );
+  // "Stated no expectation" and "stated a malformed expectation" are different
+  // answers and must not collapse. `nonEmptyString` returns null for a number,
+  // an empty string and a blank string alike, so folding those into the
+  // skip branch would drop the caller's assertion silently — `expectedVersion:
+  // 2` would pin a document of version '3' without complaint. Only an explicit
+  // null / undefined skips the check; anything else must be a usable version.
+  if (expectedVersion != null) {
+    const expected = nonEmptyString(expectedVersion);
+    if (expected == null) {
+      throw new ExecutionManifestError('expectedVersion must be a non-empty string when supplied.');
+    }
+    if (expected !== version) {
+      throw new ExecutionManifestError(
+        `flow document "${id}" is version ${version}, but the caller resolved ${expected}.`
+      );
+    }
   }
   return { id, version, sha256: sha256Hex(canonicalJson(document)) };
 }
@@ -770,7 +791,10 @@ export function deriveFlowPin(document, { expectedVersion = null } = {}) {
  * @param {object|null} [input.flowDocument] a parsed Flow definition document,
  *   pinned here through `deriveFlowPin`. Mutually exclusive with `flow`.
  * @param {string|null} [input.expectedFlowVersion] the version the caller resolved
- *   for `flowDocument`; a document that disagrees is rejected, not pinned
+ *   for `flowDocument`; a document that disagrees is rejected, not pinned. It is
+ *   meaningful only alongside `flowDocument`: supplying it with `flow` (or with
+ *   neither) throws rather than being ignored, for the same reason `flow` and
+ *   `flowDocument` together throw — a discarded expectation reads as an enforced one
  * @param {Array<object>|null} [input.agents]
  * @param {Record<string, {sha256: string}>|null} [input.artifacts]
  * @param {object|null} [input.policy]
@@ -800,6 +824,12 @@ export function resolveExecutionManifestSpec({
   // one silently is how a stale pin outlives the document it was taken from.
   if (flow != null && flowDocument != null) {
     throw new ExecutionManifestError('Pass either flow or flowDocument, not both.');
+  }
+  // Same class of caller mistake: an expectation nothing can check. Dropping it
+  // silently would let a caller believe a version was enforced when the pin it
+  // supplied says something else entirely.
+  if (expectedFlowVersion != null && flowDocument == null) {
+    throw new ExecutionManifestError('expectedFlowVersion requires flowDocument.');
   }
   const flowPin =
     flowDocument != null

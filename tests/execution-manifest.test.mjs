@@ -640,6 +640,36 @@ describe('flow pin derivation (#2037)', () => {
     // An absent expectation is not an assertion that any version will do — it
     // is the caller declining to state one.
     assert.equal(deriveFlowPin(FLOW_DOC, { expectedVersion: null }).sha256, GOLDEN_SHA256);
+    assert.equal(deriveFlowPin(FLOW_DOC, { expectedVersion: undefined }).sha256, GOLDEN_SHA256);
+  });
+
+  it('refuses an expectation it cannot compare instead of dropping it', () => {
+    // The fail-open shape this guards: `nonEmptyString` answers null for a
+    // number, an empty string and a blank string alike, so folding those into
+    // the "no expectation" branch made `expectedVersion: 2` pin a document of
+    // any version without complaint. Each of these states an expectation, so
+    // each must be rejected rather than discarded.
+    for (const bad of [2, '', '   ', true, {}, ['0.1.0']]) {
+      assert.throws(
+        () => deriveFlowPin(FLOW_DOC, { expectedVersion: bad }),
+        /expectedVersion must be a non-empty string/,
+        `expectedVersion: ${JSON.stringify(bad)} was accepted`
+      );
+    }
+    // The equivalent asymmetry one level up: an expectation with nothing to
+    // check it against (a pre-derived pin, or no flow input at all).
+    assert.throws(
+      () =>
+        resolveExecutionManifestSpec({
+          flow: { id: 'p', version: '1', sha256: 'a'.repeat(64) },
+          expectedFlowVersion: '9',
+        }),
+      /expectedFlowVersion requires flowDocument/
+    );
+    assert.throws(
+      () => resolveExecutionManifestSpec({ expectedFlowVersion: '9' }),
+      /expectedFlowVersion requires flowDocument/
+    );
   });
 
   it('refuses a spec that carries both a derived pin and a document', () => {
