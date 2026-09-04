@@ -521,20 +521,64 @@ function tableRowCells(line) {
 const FAILSAFE_SEVERITY = normalizeSeverity('__not-a-severity-token__');
 
 /**
- * Is `[a, b]` a row of the internal→output severity mapping?
+ * Is `token` an INTERNAL severity token — one the SSoT renames on the way out?
  *
- * The vocabulary is NOT re-declared here: `normalizeSeverity` in
- * `src/lib/finding-factory.mjs` is the SSoT for the mapping and is asked
- * directly.
+ * This is what makes a table look like *the* internal→output mapping rather
+ * than some other two-column table of words. Two conditions, both asked of
+ * `normalizeSeverity` so no vocabulary is restated here (CLAUDE.md "Import the
+ * SSoT, never re-derive it"; `FINDING_SEVERITIES` is not exported, and
+ * `src/lib/**` is out of scope for this change):
+ *
+ *  - its image differs from itself, so an OUTPUT token (`critical`, `major`,
+ *    `minor`, `info` — the fixed points) is not an anchor;
+ *  - its image is not `FAILSAFE_SEVERITY`, so an unknown word is not one either.
+ *
+ * Anchors are therefore exactly `blocker` and `nit`. The test is one-sided:
+ * `warning` maps to the fail-safe value and so cannot anchor a block — that is
+ * fine, because this decides only whether the BLOCK is the severity map. Once
+ * a block is anchored, every candidate row in it (the `warning` row included)
+ * is direction-checked.
+ *
+ * Requiring an internal token is load-bearing (#2063 review, major 3). Without
+ * the fixed-point half, `| minor | info |` + `| major | critical |` (an
+ * incident-grade table) and `| critical | major |` + `| trace | info |` (a log
+ * level table) both anchored, then failed the direction check — a false
+ * positive that would have failed `Meta consistency` for every PR the moment
+ * such a table appeared under `.claude/**`.
  */
-function isSeverityMappingRow(a, b) {
+function isInternalSeverityToken(token) {
+  const image = normalizeSeverity(token);
+  return image !== String(token).toLowerCase().trim() && image !== FAILSAFE_SEVERITY;
+}
+
+/**
+ * `[a, b]` read as a candidate row of the internal→output severity mapping, or
+ * `null` when the pair cannot be one.
+ *
+ * Direction is deliberately NOT a condition of candidacy (#2058). It used to
+ * be: a row only counted when `normalizeSeverity(left) === right`, so
+ * reversing the table (`blocker → minor`, `nit → critical`) produced no
+ * detection at all and the drift passed RA-1 silently. Candidacy is now a
+ * shape test, and agreement with the SSoT is checked by the D3-3 exclusion
+ * (`isExcusedByVerbatimSsot`), which is what turns a mis-directed row into a
+ * violation.
+ *
+ * The left cell must be a single ASCII lowercase word. This is what keeps the
+ * `| (なし) | info |` row of `.claude/rules/review-core.md` out of the rule:
+ * `(なし)` is prose meaning "no internal token maps here", not a vocabulary
+ * token, and asking `normalizeSeverity` about it would return the fail-safe
+ * value and manufacture a direction mismatch that does not exist.
+ */
+function severityMappingPair(a, b) {
   const left = String(a).toLowerCase();
   const right = String(b).toLowerCase();
-  if (left === right) return false;
-  if (!/^[a-z]+$/.test(left) || !/^[a-z]+$/.test(right)) return false;
+  if (left === right) return null;
+  if (!/^[a-z]+$/.test(left) || !/^[a-z]+$/.test(right)) return null;
   // `right` must be an output-vocabulary token (a fixed point of the mapping).
-  if (normalizeSeverity(right) !== right) return false;
-  return normalizeSeverity(left) === right;
+  if (normalizeSeverity(right) !== right) return null;
+  // The original cells are returned so the reported `text` stays faithful to
+  // the source line; every consumer lowercases what it compares.
+  return [a, b];
 }
 
 /**
@@ -552,8 +596,13 @@ function isSeverityMappingRow(a, b) {
  * review, major 3). One change answers both.
  *
  * Note: ADR-009 D7-4 counts `.claude/commands/merge-check.md` as a D3
- * violation, which contradicts this scope. Correcting the ADR text is a
- * separate PR; this module follows the decision, not the stale prose.
+ * violation, which is what this scope decided against. That prose is no longer
+ * stale: the postscript at the end of ADR-009 D7 records this scope as the
+ * decision that was taken (#2059).
+ *
+ * This narrows the VOCABULARY only. `.claude/commands/**` stays in
+ * `RA1_TARGET_PATHSPECS`: a file there that defines a product gate verdict
+ * (`GO`, `NO_GO`, …) with no D3-3 SSoT reference is still a violation.
  */
 const VERDICT_ALLOWLIST = new Set(GATE_DECISIONS);
 
@@ -658,11 +707,17 @@ function anchorWindowLines(lines, index, isAnchor) {
  *  - `completion-condition`      completion の判定条件
  *  - `finding-evidence-requirement`  finding の証跡要件
  *
- * A severity table is only reported when it has at least two mapping rows and
- * at least one row whose output token is not the fail-safe value:
- * `normalizeSeverity` maps unknown input to that value, so `| something |
- * major |` rows alone are not evidence of a duplicated mapping. The two-row
- * floor keeps a one-line glossary entry out of the rule (#2050 review, minor 2).
+ * A severity table is only reported when it has at least two candidate mapping
+ * rows and at least one row whose *left* token is an INTERNAL severity token
+ * (`isInternalSeverityToken`). `normalizeSeverity` maps unknown input to the
+ * fail-safe value, so `| something | major |` rows alone are not evidence of a
+ * duplicated mapping; and a left cell that is itself an output token means the
+ * table maps something else (incident grades, log levels), not this mapping.
+ * The two-row floor keeps a one-line glossary entry out of the rule (#2050
+ * review, minor 2).
+ *
+ * Candidacy no longer requires the row to agree with `normalizeSeverity`
+ * (#2058); whether it agrees is decided by the D3-3 exclusion.
  *
  * Each hit carries `verbatimTarget`, naming which half of it the D3-3 exclusion
  * must find in the SSoT: `terms` for the severity rule (the vocabulary itself
@@ -682,8 +737,8 @@ export function detectReviewJudgmentDefinitions(content) {
   let block = null;
   const flushBlock = () => {
     if (!block) return;
-    const nonDefault = block.rows.filter(([, b]) => b.toLowerCase() !== FAILSAFE_SEVERITY);
-    if (block.rows.length >= 2 && nonDefault.length >= 1) {
+    const anchors = block.rows.filter(([a]) => isInternalSeverityToken(a));
+    if (block.rows.length >= 2 && anchors.length >= 1) {
       findings.push({
         rule: 'severity-vocabulary-map',
         line: block.start,
@@ -704,7 +759,7 @@ export function detectReviewJudgmentDefinitions(content) {
     // hide it.
     let pair = null;
     for (let c = 0; c + 1 < cells.length && !pair; c += 1) {
-      if (isSeverityMappingRow(cells[c], cells[c + 1])) pair = [cells[c], cells[c + 1]];
+      pair = severityMappingPair(cells[c], cells[c + 1]);
     }
     if (!pair) return;
     if (!block) block = { start: i + 1, rows: [] };
@@ -835,8 +890,13 @@ function containsWord(haystack, word) {
  * referenced SSoT. Which half of a hit is "the definition" depends on the rule:
  *
  *  - `terms` (severity rule) — the vocabulary mapping itself is the duplicated
- *    definition, so each internal/output token must appear in the SSoT as a
- *    whole word. Substring matching is not enough: `BLOCKED` occurs inside
+ *    definition, so two things must hold. First, the mapping must agree with
+ *    `normalizeSeverity` **row by row**: a table may only restate the SSoT, so
+ *    a row pointing the other way (`blocker → minor`) is not a derived copy of
+ *    anything and can never be excused (#2058). Checking only that the six
+ *    tokens exist left the table's *content* unguarded — reversing it kept
+ *    RA-1 green. Second, each token must appear in the SSoT as a whole word.
+ *    Substring matching is not enough: `BLOCKED` occurs inside
  *    `PROMPT_AB_UNBLOCKED_BY`, which would have excused an unrelated file that
  *    merely names a `src/lib/**` path (#2050 review, major 1).
  *  - `text` (gate / completion / evidence rules) — the condition sentence is
@@ -846,21 +906,44 @@ function containsWord(haystack, word) {
  *
  * Pure function.
  *
+ * `reason`, when present, is the complete `why` clause of the violation and
+ * replaces the caller's default wording: a direction mismatch is not a
+ * "missing from the SSoT" problem and must not be reported as one.
+ *
  * @param {{term: string, text: string, verbatimTarget?: 'terms'|'text'}} hit
  * @param {string[]} corpus contents of the SSoT files the file references
- * @returns {{verbatim: boolean, subject: string}}
+ * @returns {{verbatim: boolean, subject: string, reason?: string}}
  */
 export function isExcusedByVerbatimSsot(hit, corpus) {
+  if (hit.verbatimTarget === 'terms') {
+    const subject = `the severity mapping "${hit.term}"`;
+    // `term` is emitted by detectReviewJudgmentDefinitions as
+    // `left→right, left→right, …` over `[a-z]+` tokens, so it parses back
+    // unambiguously into the rows that were detected.
+    const pairs = String(hit.term)
+      .split(',')
+      .map((row) => row.split('→').map((t) => t.trim()))
+      .filter((p) => p.length === 2 && p[0] && p[1]);
+    const wrong = pairs.filter(([left, right]) => normalizeSeverity(left) !== right);
+    if (pairs.length === 0 || wrong.length > 0) {
+      const detail = wrong
+        .map(([left, right]) => `${left}→${right} (SSoT: ${left}→${normalizeSeverity(left)})`)
+        .join(', ');
+      return {
+        verbatim: false,
+        subject,
+        reason:
+          `${subject} disagrees with normalizeSeverity() in src/lib/finding-factory.mjs` +
+          (detail ? `: ${detail}` : ''),
+      };
+    }
+    if (!Array.isArray(corpus) || corpus.length === 0) return { verbatim: false, subject };
+    const terms = pairs.flat();
+    const verbatim = terms.every((t) => corpus.some((c) => containsWord(c, t)));
+    return { verbatim, subject };
+  }
   if (!Array.isArray(corpus) || corpus.length === 0) {
     return { verbatim: false, subject: `"${hit.term}"` };
-  }
-  if (hit.verbatimTarget === 'terms') {
-    const terms = String(hit.term)
-      .split(/[,→]/)
-      .map((t) => t.trim())
-      .filter(Boolean);
-    const verbatim = terms.length > 0 && terms.every((t) => corpus.some((c) => containsWord(c, t)));
-    return { verbatim, subject: `the severity mapping "${hit.term}"` };
   }
   const verbatim = corpus.some((c) => containsVerbatimText(c, hit.text));
   return { verbatim, subject: `the condition text of "${hit.term}"` };
@@ -890,12 +973,13 @@ export function checkReviewJudgmentDuplication(files, ssotContents = new Map()) 
     const refs = findSsotReferences(file.content);
     const corpus = refs.map((ref) => ssotContents.get(ref) ?? '').filter(Boolean);
     for (const hit of hits) {
-      const { verbatim, subject } = isExcusedByVerbatimSsot(hit, corpus);
+      const { verbatim, subject, reason } = isExcusedByVerbatimSsot(hit, corpus);
       if (verbatim) continue;
       const why =
-        refs.length === 0
+        reason ??
+        (refs.length === 0
           ? 'the file declares no ADR-009 D3-3 SSoT reference'
-          : `${subject} is not present verbatim in the referenced SSoT (${refs.join(', ')})`;
+          : `${subject} is not present verbatim in the referenced SSoT (${refs.join(', ')})`);
       violations.push(
         `RA-1 ${file.path}:${hit.line}: ${hit.rule} — ${why}. ` +
           `Move the definition to skills/**, schemas/**, or an SSoT document and keep only a ` +
