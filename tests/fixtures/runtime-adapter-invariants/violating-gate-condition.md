@@ -29,3 +29,4 @@ different namespace and are out of scope by decision (#2050).
 ## 証跡
 
 - finding には file:line の証跡を必ず添える。
+- 指摘には file:line の証跡を必ず添える。

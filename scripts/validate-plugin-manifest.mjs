@@ -332,16 +332,38 @@ export function checkClaudeMdCommandParity(claudeMd, ccManifest) {
 // ---------------------------------------------------------------------------
 
 /**
- * RA-1 enforcement stage. ADR-009 D7-4 predicted that turning RA-1 on would
- * surface existing violations under `.claude/commands/**`, so the check is
- * introduced in `observe` (report, do not fail) per the off → observe → active
- * rollout. Flipping this single constant to 'active' is the follow-up change;
- * the inventory that must be cleared first is
+ * RA-1 enforcement stage, introduced off → observe → active (#2027).
+ *
+ * `observe` carried the rollout while violations remained. Both were then
+ * dispositioned: the gate vocabulary was narrowed to the product gate, which
+ * put the `.claude/commands/**` work-procedure verdicts out of scope, and
+ * `.claude/rules/review-core.md` gained the `src/lib/finding-factory.mjs`
+ * source line that satisfies the D3-3 exclusion. With the repository at zero
+ * RA-1 findings, the check is `active`: a new violation fails
+ * `npm run plugin:validate`.
+ *
+ * The inventory that records how each violation was dispositioned is
  * docs/development/ra1-runtime-adapter-inventory.md.
  *
  * @type {'off' | 'observe' | 'active'}
  */
-export const RA1_ENFORCEMENT = 'observe';
+export const RA1_ENFORCEMENT = 'active';
+
+/**
+ * Where a RA-1 finding goes for a given enforcement stage: `null` (not run),
+ * `observations` (reported, exit code unchanged) or `errors` (fails the run).
+ *
+ * Exported so the routing is testable on its own — the repository has no RA-1
+ * violation to exercise it with, so a test that only ran the validator could
+ * not tell `observe` from `active`.
+ *
+ * @param {'off' | 'observe' | 'active'} enforcement
+ * @returns {null | 'observations' | 'errors'}
+ */
+export function ra1Sink(enforcement) {
+  if (enforcement === 'off') return null;
+  return enforcement === 'active' ? 'errors' : 'observations';
+}
 
 /**
  * RA-1 target path set (ADR-009 D3-3 項番 1). Enumerated through `git ls-files`
@@ -507,8 +529,16 @@ function verdictOf(label) {
 const CONDITION_LINE_RE =
   /^\s*(?:[-*+]\s+|\d+[.)]\s+)?[`*_~]*(?:条件|判定条件|成立要件|判定基準|Conditions?)[`*_~]*\s*[:：]/;
 const COMPLETION_HEADING_RE = /完了(?:条件|判定|基準)|[Cc]ompletion criteri/;
+/**
+ * finding evidence requirement: the three ideas on one line.
+ *
+ * `\b` creates no boundary between CJK characters, so a `\b指摘\b` branch can
+ * never match Japanese prose — the rule was silently English-only even though
+ * `.claude/**` is mostly Japanese (#2050 re-review, major 1). ASCII words keep
+ * an explicit boundary; `指摘` needs none.
+ */
 const EVIDENCE_REQUIREMENT_RE =
-  /(?=.*\b(?:finding|指摘)s?\b)(?=.*(?:証跡|evidence))(?=.*(?:必須|必ず|MUST|required))/i;
+  /(?=.*(?:(?<![A-Za-z0-9_])findings?(?![A-Za-z0-9_])|指摘))(?=.*(?:証跡|evidence))(?=.*(?:必須|必ず|MUST|required))/i;
 
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
 /** A list item or a stand-alone emphasized label — both act as verdict anchors. */
@@ -916,8 +946,8 @@ async function loadSsotContents(files) {
  *  - manifest references stay host-neutral (RA-2;
  *    checkManifestHostIndependentRefs)
  *  - no runtime adapter file redefines Review Judgment (RA-1;
- *    checkReviewJudgmentDuplication) — reported through `warnings` while
- *    RA1_ENFORCEMENT is 'observe'
+ *    checkReviewJudgmentDuplication) — routed to errors or to `warnings`
+ *    according to `ra1Sink(RA1_ENFORCEMENT)`
  *
  * Returns array of error strings (empty = pass). Pass `{ warnings }` (an array)
  * to also collect non-failing observations.
@@ -1110,9 +1140,10 @@ export async function validatePluginManifest({ warnings } = {}) {
   }
 
   // --- RA-1: no runtime adapter file redefines Review Judgment (ADR-009 D3) ---
-  if (RA1_ENFORCEMENT !== 'off') {
+  const ra1Target = ra1Sink(RA1_ENFORCEMENT);
+  if (ra1Target !== null) {
     const { files, error } = await loadRuntimeAdapterFiles();
-    const sink = RA1_ENFORCEMENT === 'active' ? errors : observations;
+    const sink = ra1Target === 'errors' ? errors : observations;
     if (error) {
       sink.push(error);
     } else {

@@ -12,6 +12,7 @@ import {
   detectReviewJudgmentDefinitions,
   findSsotReferences,
   RA1_ENFORCEMENT,
+  ra1Sink,
 } from '../scripts/validate-plugin-manifest.mjs';
 
 test('validatePluginManifest passes on current repo state', async () => {
@@ -241,7 +242,27 @@ test('RA-1 negative fixture: gate, completion and evidence definitions are detec
       ['gate-decision-condition', 'NO_GO'],
       ['completion-condition', '完了条件'],
       ['finding-evidence-requirement', 'finding evidence'],
+      ['finding-evidence-requirement', 'finding evidence'],
     ]
+  );
+});
+
+test('RA-1 evidence rule matches Japanese 指摘 lines (#2050 re-review major 1)', () => {
+  // `\b` creates no boundary between CJK characters, so a `\b指摘\b` branch
+  // never fired on Japanese prose — the rule was silently English-only.
+  for (const line of [
+    '指摘には必ず証跡を添える。',
+    '指摘には証跡が必須です',
+    'すべての指摘に証跡を必ず添えること',
+  ]) {
+    const hits = detectReviewJudgmentDefinitions(line);
+    assert.equal(hits.length, 1, `no detection for: ${line}`);
+    assert.equal(hits[0].rule, 'finding-evidence-requirement');
+  }
+  // The English branch keeps its word boundary: no match inside a longer word.
+  assert.deepEqual(
+    detectReviewJudgmentDefinitions('The refindings evidence must be required.'),
+    []
   );
 });
 
@@ -480,22 +501,65 @@ test('checkManifestHostIndependentRefs rejects a reference outside the top-level
   assert.match(errors[0], /outside the host-neutral top-level set/);
 });
 
-test('RA-1 runs in observe: repo violations surface as warnings, not errors', async () => {
+test('ra1Sink routes each enforcement stage (#2027 off → observe → active)', () => {
+  assert.equal(ra1Sink('off'), null);
+  assert.equal(ra1Sink('observe'), 'observations');
+  assert.equal(ra1Sink('active'), 'errors');
+});
+
+test('RA-1 stage routing, pinned on an injected violation (#2050 re-review B-1)', () => {
+  // Pinned on an injected file, NOT on how many violations the repository
+  // happens to hold: the previous version asserted "exactly one real
+  // violation" and broke the moment that violation was fixed.
+  const violation = {
+    path: '.claude/rules/injected.md',
+    content: readFixture('violating-severity-map'),
+  };
+  const violations = checkReviewJudgmentDuplication([violation], new Map());
+  assert.equal(violations.length, 1);
+
+  const route = (stage) => {
+    const errors = [];
+    const observations = [];
+    const sink = ra1Sink(stage);
+    if (sink !== null) (sink === 'errors' ? errors : observations).push(...violations);
+    return { errors, observations };
+  };
+
+  assert.deepEqual(route('off'), { errors: [], observations: [] });
+  assert.deepEqual(route('observe'), { errors: [], observations: violations });
+  assert.deepEqual(route('active'), { errors: violations, observations: [] });
+});
+
+test('RA-1 is active and the repository has no RA-1 finding', async () => {
   const warnings = [];
   const errors = await validatePluginManifest({ warnings });
-  assert.equal(RA1_ENFORCEMENT, 'observe');
+  assert.equal(RA1_ENFORCEMENT, 'active');
+  assert.equal(ra1Sink(RA1_ENFORCEMENT), 'errors');
   assert.deepEqual(errors, [], `Expected no errors but got: ${errors.join(', ')}`);
-  // ADR-009 D7-2 predicted this one; it is the only remaining violation after
-  // the gate vocabulary was narrowed to GATE_DECISIONS (#2050 decision 1).
+  // Nothing may be routed to observations while active, and nothing is left to
+  // report anyway: both violations were dispositioned (#2050 decisions 1 / 2).
   assert.deepEqual(
-    warnings.filter((w) => w.startsWith('RA-1 ')).map((w) => w.split(':')[0]),
-    ['RA-1 .claude/rules/review-core.md']
+    warnings.filter((w) => w.startsWith('RA-1 ')),
+    []
   );
-  // Repository work-procedure verdicts are out of scope, so none of the
-  // `.claude/commands/**` files may appear.
-  assert.equal(
-    warnings.filter((w) => w.includes('.claude/commands/')).length,
-    0,
-    `work-procedure verdicts leaked into RA-1: ${warnings.join(' | ')}`
+});
+
+test('RA-1 exclusion holds for .claude/rules/review-core.md via src/lib (#2050 decision 2)', async () => {
+  // Cross-check against the production path: the file still carries the
+  // severity table, so it is the exclusion — not the absence of a detection —
+  // that keeps it out of the violation list.
+  const root = path.resolve(import.meta.dirname, '..');
+  const rel = '.claude/rules/review-core.md';
+  const content = fs.readFileSync(path.join(root, rel), 'utf8');
+  const hits = detectReviewJudgmentDefinitions(content);
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].rule, 'severity-vocabulary-map');
+  const refs = findSsotReferences(content);
+  assert.ok(
+    refs.includes('src/lib/finding-factory.mjs'),
+    `severity SSoT reference missing from ${rel}: ${refs.join(', ')}`
   );
+  const ssot = new Map(refs.map((ref) => [ref, fs.readFileSync(path.join(root, ref), 'utf8')]));
+  assert.deepEqual(checkReviewJudgmentDuplication([{ path: rel, content }], ssot), []);
 });
