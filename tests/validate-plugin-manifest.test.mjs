@@ -553,6 +553,30 @@ test('RA-1 #2058: flipping the real review-core.md table is caught (#2058 root c
   assert.match(violations[0], /disagrees with normalizeSeverity\(\)/);
 });
 
+test('RA-1 #2059: `.claude/commands/**` is still scanned — only the vocabulary narrowed', () => {
+  // The ADR-009 D7 postscript states that #2027 narrowed the verdict
+  // VOCABULARY, not the target path set. Pin both halves.
+  assert.ok(RA1_TARGET_PATHSPECS.includes('.claude/**'));
+  const productGate = ['## 判定', '', '### NO_GO', '', '条件: 重大な違反が 1 件以上ある'].join(
+    '\n'
+  );
+  const violations = checkReviewJudgmentDuplication(
+    [{ path: '.claude/commands/foo.md', content: productGate }],
+    new Map()
+  );
+  assert.equal(violations.length, 1, `Expected 1 violation but got: ${violations.join(', ')}`);
+  assert.match(violations[0], /RA-1 \.claude\/commands\/foo\.md:\d+: gate-decision-condition/);
+  // A repository-procedure verdict in the same position is out of vocabulary.
+  const procedure = ['## 判定', '', '### MERGE_OK', '', '条件: CI が green である'].join('\n');
+  assert.deepEqual(
+    checkReviewJudgmentDuplication(
+      [{ path: '.claude/commands/bar.md', content: procedure }],
+      new Map()
+    ),
+    []
+  );
+});
+
 test('RA-1 #2058: the `(なし) | info` row is not a mapping row', () => {
   // `(なし)` states that no internal token maps to `info`. It is prose, not a
   // vocabulary token, so it must not be probed against normalizeSeverity —

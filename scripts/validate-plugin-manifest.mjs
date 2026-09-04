@@ -584,8 +584,13 @@ function severityMappingPair(a, b) {
  * review, major 3). One change answers both.
  *
  * Note: ADR-009 D7-4 counts `.claude/commands/merge-check.md` as a D3
- * violation, which contradicts this scope. Correcting the ADR text is a
- * separate PR; this module follows the decision, not the stale prose.
+ * violation, which is what this scope decided against. That prose is no longer
+ * stale: the postscript at the end of ADR-009 D7 records this scope as the
+ * decision that was taken (#2059).
+ *
+ * This narrows the VOCABULARY only. `.claude/commands/**` stays in
+ * `RA1_TARGET_PATHSPECS`: a file there that defines a product gate verdict
+ * (`GO`, `NO_GO`, …) with no D3-3 SSoT reference is still a violation.
  */
 const VERDICT_ALLOWLIST = new Set(GATE_DECISIONS);
 

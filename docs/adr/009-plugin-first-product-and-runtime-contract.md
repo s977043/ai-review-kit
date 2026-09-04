@@ -151,7 +151,8 @@ fallback が変えるのは起動経路だけです。選ばれる skill、sever
 上の 4 点は本 ADR の時点の記録であり、項番 2 と項番 4 は未決のまま残していました。RA-1 の検査を実装した #2027 で次のように決まりました。決定時点の記録を保つため、上の本文は書き換えません。
 
 - 項番 2 は「対応表を残し、出典へ `src/lib/finding-factory.mjs` を足す」で決着した。D3-3 の除外条件はこれで成立する
-- 項番 4 の `.claude/commands/**` は RA-1 の対象外とした。`gate-decision-condition` 規則が verdict とみなす語彙を製品の gate 語彙（`src/lib/gate-decision.mjs` の `GATE_DECISIONS`）へ限定したためである
+- 項番 4 の `.claude/commands/**` は、既存違反の発生源としては解消した。変えたのは `gate-decision-condition` 規則が verdict とみなす語彙であり、製品の gate 語彙（`src/lib/gate-decision.mjs` の `GATE_DECISIONS`）へ限定した
+- **対象パス集合は変えていない。** `.claude/**` は `RA1_TARGET_PATHSPECS` に残っており、`.claude/commands/**` のファイルが製品の gate 語彙を D3-3 の出典なしで定義すれば、今も違反になる
 - `merge-check.md` の `MERGE_OK` / `BLOCKED` が判定するのはリポジトリの作業手順であり、レビューではない。製品の gate 語彙とは名前空間が異なるという読みによる
 - したがって項番 4 末尾の「既存違反が出る見込み」は実現しなかった。2026-09-04 の実測で `.claude/commands/**` の違反は 0 件である
 
