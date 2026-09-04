@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
@@ -11,7 +12,11 @@ import {
   checkReviewJudgmentDuplication,
   detectReviewJudgmentDefinitions,
   findSsotReferences,
+  isContainedSsotPath,
   RA1_ENFORCEMENT,
+  RA1_MAX_TARGET_BYTES,
+  RA1_TARGET_PATHSPECS,
+  SSOT_REFERENCE_PATTERN,
   ra1Sink,
 } from '../scripts/validate-plugin-manifest.mjs';
 
@@ -562,4 +567,179 @@ test('RA-1 exclusion holds for .claude/rules/review-core.md via src/lib (#2050 d
   );
   const ssot = new Map(refs.map((ref) => [ref, fs.readFileSync(path.join(root, ref), 'utf8')]));
   assert.deepEqual(checkReviewJudgmentDuplication([{ path: rel, content }], ssot), []);
+});
+
+// ---------------------------------------------------------------------------
+// #2050 review follow-ups: SSoT path traversal (major 1) and the
+// finding-evidence catastrophic backtracking (major 2).
+// ---------------------------------------------------------------------------
+
+test('findSsotReferences drops `..` traversal references (#2050 review major 1)', () => {
+  // The PoC input verbatim: `path.join(ROOT, 'skills/../../../../../../etc/passwd')`
+  // resolves outside the repository, and loadSsotContents used to read it.
+  assert.deepEqual(findSsotReferences('参照: skills/../../../../../../etc/passwd'), []);
+  assert.deepEqual(findSsotReferences('参照: src/lib/../../../../../../etc/passwd'), []);
+  assert.deepEqual(findSsotReferences('参照: skills/../.env'), []);
+
+  // Fixture form: only the two contained references survive.
+  assert.deepEqual(findSsotReferences(readFixture('attack-ssot-path-traversal')), [
+    'skills/upstream/merge-gate/SKILL.md',
+    'src/lib/finding-factory.mjs',
+  ]);
+});
+
+test('the SSoT reference pattern itself refuses `..` segments (#2050 review major 1)', () => {
+  // Pinned separately from isContainedSsotPath: with only the containment
+  // predicate under test, the pattern could regress to `[\w./-]+` unnoticed.
+  const re = new RegExp(SSOT_REFERENCE_PATTERN, 'g');
+  for (const input of [
+    'skills/../../../../../../etc/passwd',
+    'src/lib/../../../etc/passwd',
+    'skills/..',
+    'src/lib/..',
+  ]) {
+    const hits = String(input).match(re) || [];
+    for (const hit of hits) {
+      assert.ok(
+        !hit.split('/').includes('..'),
+        `pattern produced a traversal reference: ${hit} (from ${input})`
+      );
+    }
+  }
+  // A legitimate nested path still matches in full.
+  assert.deepEqual('出典: skills/upstream/merge-gate/SKILL.md'.match(re), [
+    'skills/upstream/merge-gate/SKILL.md',
+  ]);
+});
+
+test('isContainedSsotPath gates every SSoT read (#2050 review major 1)', () => {
+  // Escapes — refused even though they start with an allowed prefix.
+  for (const ref of [
+    'skills/../../../../../../etc/passwd',
+    'src/lib/../../../etc/passwd',
+    'skills/..',
+    '/etc/passwd',
+    '',
+  ]) {
+    assert.equal(isContainedSsotPath(ref), false, `expected refusal for: ${ref}`);
+  }
+  // Contained — still accepted, including a `.` segment and a `./` prefix.
+  for (const ref of [
+    'skills/upstream/merge-gate/SKILL.md',
+    'src/lib/finding-factory.mjs',
+    './src/lib/finding-factory.mjs',
+    'skills/./upstream/merge-gate/SKILL.md',
+    'pages/reference/review-policy.md',
+    'docs/review/output-format.md',
+  ]) {
+    assert.equal(isContainedSsotPath(ref), true, `expected acceptance for: ${ref}`);
+  }
+  // Outside the SSoT set entirely.
+  assert.equal(isContainedSsotPath('docs/governance.md'), false);
+});
+
+test('a traversal reference cannot excuse a detected definition (#2050 major 1)', () => {
+  // End-to-end through the production path: the attacker names the traversal
+  // target as the SSoT and supplies its content; the hit must stay a violation
+  // because the reference is never collected in the first place.
+  const content = [
+    '参照: skills/../../../../../../etc/passwd',
+    '',
+    '### B. NO_GO',
+    '',
+    '条件: blocking な finding が 1 件以上残る。',
+  ].join('\n');
+  const ssot = new Map([
+    ['skills/../../../../../../etc/passwd', '条件: blocking な finding が 1 件以上残る。\n'],
+  ]);
+  const violations = checkReviewJudgmentDuplication(
+    [{ path: '.claude/commands/evil.md', content }],
+    ssot
+  );
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /declares no ADR-009 D3-3 SSoT reference/);
+});
+
+test('finding-evidence detection is linear on the ReDoS input (#2050 review major 2)', () => {
+  const fixture = readFixture('attack-evidence-redos');
+  const unit = fixture.split('<!-- redos-unit -->')[1].split('<!-- /redos-unit -->')[0].trim();
+  assert.equal(unit, 'finding evidence');
+
+  const timings = [];
+  for (const kb of [10, 40, 100]) {
+    const line = `${unit} `.repeat(Math.ceil((kb * 1024) / (unit.length + 1)));
+    const started = process.hrtime.bigint();
+    const hits = detectReviewJudgmentDefinitions(line);
+    timings.push(Number(process.hrtime.bigint() - started) / 1e6);
+    assert.deepEqual(hits, [], `unexpected detection at ${kb}KB`);
+  }
+  // Before the fix these were 137 / 2068 / 12958 ms. A generous ceiling that
+  // still fails hard on a quadratic regression; the assertion is on the shape,
+  // not on machine speed.
+  assert.ok(
+    timings[2] < 1000,
+    `100KB non-matching line took ${timings[2].toFixed(0)}ms — quadratic backtracking is back`
+  );
+
+  // The rule still fires on a line that carries all three ideas.
+  const matching = detectReviewJudgmentDefinitions('finding evidence required');
+  assert.equal(matching.length, 1);
+  assert.equal(matching[0].rule, 'finding-evidence-requirement');
+});
+
+test('the finding-evidence split keeps the ASCII boundary and the CJK non-boundary', () => {
+  // `指摘` must have no `\b` (CJK has no word boundary); ASCII must keep one.
+  assert.deepEqual(
+    detectReviewJudgmentDefinitions('The refindings evidence must be required.'),
+    []
+  );
+  assert.deepEqual(detectReviewJudgmentDefinitions('finding_s evidence required'), []);
+  for (const line of ['指摘には必ず証跡を添える。', 'findings MUST carry evidence']) {
+    const hits = detectReviewJudgmentDefinitions(line);
+    assert.equal(hits.length, 1, `no detection for: ${line}`);
+    assert.equal(hits[0].rule, 'finding-evidence-requirement');
+  }
+});
+
+test('the RA-1 scan size cap is above every current target (#2050 review minor)', () => {
+  // The cap exists to bound attacker-controlled per-line work; it must not be
+  // reachable by any real target, or `Meta consistency` would fail on content
+  // rather than on a violation. Measured against the production target set.
+  const root = path.resolve(import.meta.dirname, '..');
+  const listed = execFileSync('git', ['ls-files', '-z', '--', ...RA1_TARGET_PATHSPECS], {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  const targets = listed.split('\0').filter(Boolean);
+  assert.ok(targets.length > 0, 'RA-1 target enumeration returned nothing');
+  for (const rel of targets) {
+    const st = fs.lstatSync(path.join(root, rel));
+    if (!st.isFile()) continue;
+    assert.ok(
+      st.size <= RA1_MAX_TARGET_BYTES,
+      `${rel} is ${st.size} bytes, over the ${RA1_MAX_TARGET_BYTES}-byte RA-1 scan cap`
+    );
+  }
+});
+
+test('the RA-1 severity exclusion is case-sensitive, and that is load-bearing (#2050 doc 4)', () => {
+  // The inventory's evidence is `grep -c blocker` = 0 on the prose SSoT, but
+  // `grep -ic blocker` returns 1 for two of those files: they spell the
+  // display form `Blocker`. A case-insensitive containsWord would let that
+  // capitalized prose excuse a lowercase mapping table the SSoT never defines.
+  const content = [
+    '出典: `src/lib/finding-factory.mjs`',
+    '',
+    '| blocker | critical |',
+    '| nit | minor |',
+  ].join('\n');
+  const capitalizedOnly = new Map([
+    ['src/lib/finding-factory.mjs', 'Blocker → Critical / Nit → Minor\n'],
+  ]);
+  assert.equal(
+    checkReviewJudgmentDuplication([{ path: '.claude/rules/x.md', content }], capitalizedOnly)
+      .length,
+    1
+  );
 });

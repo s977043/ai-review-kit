@@ -285,7 +285,7 @@
         "changedFiles": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "List of file paths included in the review diff."
+          "description": "File paths changed in the reviewed range. For a `--base` review this is git's own answer (`git diff --name-only`), so it also covers changes the diff text carries no hunk for — pure renames and binary changes included. It is therefore the changed-file set of the range, not the set of paths appearing in the diff text. When the diff came from an artifact instead, there is no git answer and the set is the one parsed out of the diff text."
         },
         "tokenEstimate": {
           "type": "number",
