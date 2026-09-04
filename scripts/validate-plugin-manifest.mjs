@@ -1,7 +1,10 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
+import { normalizeSeverity } from '../src/lib/finding-factory.mjs';
+import { GATE_DECISIONS } from '../src/lib/gate-decision.mjs';
 import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -315,6 +318,369 @@ export function checkClaudeMdCommandParity(claudeMd, ccManifest) {
   return errors;
 }
 
+// ---------------------------------------------------------------------------
+// Runtime Adapter Invariants RA-1 / RA-2 (ADR-009 D3)
+//
+// ADR-009 (docs/adr/009-plugin-first-product-and-runtime-contract.md) defines
+// four invariants. RA-3 (checkCrossManifestParity) and RA-4 (version sync) were
+// already mechanized above; RA-1 and RA-2 are added here (#2027).
+//
+//   RA-1  `.claude/**` / `.codex/**` / the two plugin manifests do not define
+//         the canonical form of Review Judgment.
+//   RA-2  Every entity path a manifest references lives under a host-neutral
+//         top-level directory and never under `.claude/**` or `.codex/**`.
+// ---------------------------------------------------------------------------
+
+/**
+ * RA-1 enforcement stage. ADR-009 D7-4 predicted that turning RA-1 on would
+ * surface existing violations under `.claude/commands/**`, so the check is
+ * introduced in `observe` (report, do not fail) per the off → observe → active
+ * rollout. Flipping this single constant to 'active' is the follow-up change;
+ * the inventory that must be cleared first is
+ * docs/development/ra1-runtime-adapter-inventory.md.
+ *
+ * @type {'off' | 'observe' | 'active'}
+ */
+export const RA1_ENFORCEMENT = 'observe';
+
+/**
+ * RA-1 target path set (ADR-009 D3-3 項番 1). Enumerated through `git ls-files`
+ * — never `find` — because agent worktrees put a full checkout under
+ * `.claude/worktrees/**`; those copies are gitignored and must stay out of the
+ * target set.
+ */
+export const RA1_TARGET_PATHSPECS = [
+  '.claude/**',
+  '.codex/**',
+  '.claude-plugin/*.json',
+  '.codex-plugin/*.json',
+];
+
+/**
+ * SSoT locations a host-local file may derive from (ADR-009 D3-3 項番 3).
+ * Exact paths plus directory prefixes.
+ */
+export const RA1_SSOT_PATHS = ['pages/reference/review-policy.md', 'docs/review/output-format.md'];
+export const RA1_SSOT_PREFIXES = ['skills/', 'src/lib/'];
+
+const SSOT_REFERENCE_RE = new RegExp(
+  [
+    'pages/reference/review-policy(?:\\.en)?\\.md',
+    'docs/review/output-format\\.md',
+    'skills/[\\w./-]+',
+    'src/lib/[\\w./-]+',
+  ].join('|'),
+  'g'
+);
+
+/**
+ * Collect the SSoT paths a host-local file points at. Only paths inside the
+ * D3-3 SSoT set count; a reference to any other document (for example
+ * `docs/governance.md`) is not an SSoT reference for RA-1 purposes.
+ *
+ * Pure function.
+ *
+ * @param {string} content
+ * @returns {string[]} repo-relative paths, de-duplicated
+ */
+export function findSsotReferences(content) {
+  const hits = String(content ?? '').match(SSOT_REFERENCE_RE) || [];
+  const kept = hits.filter(
+    (p) => RA1_SSOT_PATHS.includes(p) || RA1_SSOT_PREFIXES.some((prefix) => p.startsWith(prefix))
+  );
+  return [...new Set(kept)];
+}
+
+/** Parse `| a | b |` into its two trimmed cells, or null when it is not one. */
+function twoCellRow(line) {
+  const m = /^\s*\|([^|]*)\|([^|]*)\|\s*$/.exec(line);
+  if (!m) return null;
+  const a = m[1].trim();
+  const b = m[2].trim();
+  if (!a || !b) return null;
+  if (/^:?-+:?$/.test(a) || /^:?-+:?$/.test(b)) return null; // separator row
+  return [a, b];
+}
+
+/**
+ * Is `[a, b]` a row of the internal→output severity mapping?
+ *
+ * The vocabulary is NOT re-declared here: `normalizeSeverity` in
+ * `src/lib/finding-factory.mjs` is the SSoT for the mapping and is asked
+ * directly (CLAUDE.md "Import the SSoT, never re-derive it").
+ */
+function isSeverityMappingRow(a, b) {
+  const left = a.toLowerCase();
+  const right = b.toLowerCase();
+  if (left === right) return false;
+  if (!/^[a-z]+$/.test(left) || !/^[a-z]+$/.test(right)) return false;
+  // `right` must be an output-vocabulary token (a fixed point of the mapping).
+  if (normalizeSeverity(right) !== right) return false;
+  return normalizeSeverity(left) === right;
+}
+
+const GATE_VERDICT_TOKENS = new Set(GATE_DECISIONS);
+/** Verdict-shaped token: SCREAMING_CASE, 4+ chars (GO/NO are too noisy alone). */
+const VERDICT_SHAPED_RE = /\b[A-Z][A-Z0-9]{3,}(?:_[A-Z0-9]+)*\b/;
+const CONDITION_LINE_RE = /^\s*(?:条件|判定条件|Conditions?)\s*[:：]/;
+const COMPLETION_HEADING_RE = /完了(?:条件|判定|基準)|[Cc]ompletion criteri/;
+const EVIDENCE_REQUIREMENT_RE =
+  /(?=.*\b(?:finding|指摘)s?\b)(?=.*(?:証跡|evidence))(?=.*(?:必須|必ず|MUST|required))/i;
+
+const HEADING_RE = /^(#{1,6})\s+(.*)$/;
+
+/** Lines of the section a heading at `index` opens (until the next same/higher heading). */
+function sectionLines(lines, index, level) {
+  const out = [];
+  for (let i = index + 1; i < lines.length; i += 1) {
+    const h = HEADING_RE.exec(lines[i]);
+    if (h && h[1].length <= level) break;
+    out.push(lines[i]);
+  }
+  return out;
+}
+
+/**
+ * Detect Review Judgment definitions that ADR-009 D3-2 forbids a runtime
+ * adapter file from carrying. Four rules, one per forbidden class:
+ *
+ *  - `severity-vocabulary-map`   severity 語彙の対応表
+ *  - `gate-decision-condition`   gate / decision の判定条件
+ *  - `completion-condition`      completion の判定条件
+ *  - `finding-evidence-requirement`  finding の証跡要件
+ *
+ * A severity table is only reported when it has at least two mapping rows and
+ * at least one row whose output token is not `major`: `normalizeSeverity`
+ * fail-safes unknown input to `major`, so a single `| something | major |` row
+ * is not evidence of a duplicated mapping.
+ *
+ * Pure function.
+ *
+ * @param {string} content
+ * @returns {{rule: string, line: number, term: string, text: string}[]}
+ */
+export function detectReviewJudgmentDefinitions(content) {
+  const lines = String(content ?? '').split('\n');
+  const findings = [];
+
+  // --- Rule 1: severity vocabulary mapping table ---
+  let block = null;
+  const flushBlock = () => {
+    if (!block) return;
+    const nonDefault = block.rows.filter(([, b]) => b.toLowerCase() !== 'major');
+    if (nonDefault.length >= 1) {
+      findings.push({
+        rule: 'severity-vocabulary-map',
+        line: block.start,
+        term: block.rows.map(([a, b]) => `${a.toLowerCase()}→${b.toLowerCase()}`).join(', '),
+        text: block.rows.map(([a, b]) => `| ${a} | ${b} |`).join(' '),
+      });
+    }
+    block = null;
+  };
+  lines.forEach((line, i) => {
+    const cells = twoCellRow(line);
+    if (!cells) {
+      if (!/^\s*\|/.test(line)) flushBlock();
+      return;
+    }
+    const [a, b] = cells;
+    if (!isSeverityMappingRow(a, b)) return;
+    if (!block) block = { start: i + 1, rows: [] };
+    block.rows.push([a, b]);
+  });
+  flushBlock();
+
+  // --- Rules 2 & 3: gate / decision and completion conditions ---
+  lines.forEach((line, i) => {
+    const h = HEADING_RE.exec(line);
+    if (!h) return;
+    const level = h[1].length;
+    const heading = h[2];
+    const body = sectionLines(lines, i, level);
+    const conditionLine = body.find((l) => CONDITION_LINE_RE.test(l));
+    if (!conditionLine) return;
+
+    const verdictMatch = heading.match(VERDICT_SHAPED_RE);
+    const verdict =
+      verdictMatch?.[0] ?? [...GATE_VERDICT_TOKENS].find((token) => heading.includes(token));
+    if (verdict) {
+      findings.push({
+        rule: 'gate-decision-condition',
+        line: i + 1,
+        term: verdict,
+        text: conditionLine.trim(),
+      });
+      return;
+    }
+    if (COMPLETION_HEADING_RE.test(heading)) {
+      findings.push({
+        rule: 'completion-condition',
+        line: i + 1,
+        term: heading.trim(),
+        text: conditionLine.trim(),
+      });
+    }
+  });
+
+  // --- Rule 4: finding evidence requirement ---
+  lines.forEach((line, i) => {
+    if (!EVIDENCE_REQUIREMENT_RE.test(line)) return;
+    findings.push({
+      rule: 'finding-evidence-requirement',
+      line: i + 1,
+      term: 'finding evidence',
+      text: line.trim(),
+    });
+  });
+
+  return findings;
+}
+
+/**
+ * RA-1: no runtime adapter file defines the canonical form of Review Judgment.
+ *
+ * A detected definition is excused only when BOTH halves of the D3-3 exclusion
+ * hold: the same file references a D3-3 SSoT, AND the duplicated wording exists
+ * verbatim in one of the referenced SSoT files. A reference without a verbatim
+ * match is a violation — that is exactly the `.claude/rules/review-core.md`
+ * case ADR-009 D7-2 records.
+ *
+ * Pure function; `files` and `ssotContents` are injected so the caller owns all
+ * I/O.
+ *
+ * @param {{path: string, content: string}[]} files
+ * @param {Map<string, string>} ssotContents repo-relative path → file content
+ * @returns {string[]} violation strings (empty = pass)
+ */
+export function checkReviewJudgmentDuplication(files, ssotContents = new Map()) {
+  const violations = [];
+  for (const file of files) {
+    const hits = detectReviewJudgmentDefinitions(file.content);
+    if (hits.length === 0) continue;
+    const refs = findSsotReferences(file.content);
+    const corpus = refs.map((ref) => ssotContents.get(ref) ?? '').filter(Boolean);
+    for (const hit of hits) {
+      const terms = hit.term.split(/[,→]/).map((t) => t.trim());
+      const verbatim =
+        corpus.length > 0 && terms.every((t) => t !== '' && corpus.some((c) => c.includes(t)));
+      if (verbatim) continue;
+      const why =
+        refs.length === 0
+          ? 'the file declares no ADR-009 D3-3 SSoT reference'
+          : `"${hit.term}" is not present verbatim in the referenced SSoT (${refs.join(', ')})`;
+      violations.push(
+        `RA-1 ${file.path}:${hit.line}: ${hit.rule} — ${why}. ` +
+          `Move the definition to skills/**, schemas/**, or an SSoT document and keep only a ` +
+          `pointer here (ADR-009 D3/D4). Found: ${hit.text.slice(0, 120)}`
+      );
+    }
+  }
+  return violations;
+}
+
+/** Host-neutral top-level directories a manifest reference may point at (RA-2). */
+export const RA2_ALLOWED_REF_PREFIXES = ['commands/', 'agents/', 'skills/', 'assets/'];
+
+/** Collect every entity path the two manifests reference. */
+function manifestRefs(ccManifest, codexManifest) {
+  const refs = [];
+  const push = (field, value) => {
+    if (typeof value === 'string') refs.push([field, value]);
+    else if (Array.isArray(value))
+      for (const v of value) if (typeof v === 'string') refs.push([field, v]);
+  };
+  const cc = ccManifest && typeof ccManifest === 'object' ? ccManifest : {};
+  const codex = codexManifest && typeof codexManifest === 'object' ? codexManifest : {};
+  push('.claude-plugin commands', cc.commands);
+  push('.claude-plugin agents', cc.agents);
+  push('.claude-plugin skills', cc.skills);
+  push('.claude-plugin hooks', cc.hooks);
+  push('.claude-plugin composerIcon', cc.composerIcon);
+  push('.codex-plugin skills', codex.skills);
+  if (codex.interface && typeof codex.interface === 'object') {
+    push('.codex-plugin interface.composerIcon', codex.interface.composerIcon);
+  }
+  return refs;
+}
+
+/**
+ * RA-2: every manifest reference resolves to a host-neutral top-level
+ * directory and never into a host-local development directory.
+ *
+ * Current state is compliant (ADR-009 Context), so this check is active from
+ * the start — it pins the compliance rather than reporting a backlog.
+ *
+ * Pure function; returns array of error strings (empty = pass).
+ */
+export function checkManifestHostIndependentRefs(ccManifest, codexManifest) {
+  const errors = [];
+  for (const [field, ref] of manifestRefs(ccManifest, codexManifest)) {
+    const rel = normalizeRef(ref);
+    if (/(?:^|\/)\.(?:claude|codex)\//.test(rel)) {
+      errors.push(
+        `RA-2 ${field}: "${ref}" points into a host-local directory. Manifests must reference ` +
+          `host-neutral top-level assets only (ADR-009 D3 RA-2 / D4)`
+      );
+      continue;
+    }
+    if (!RA2_ALLOWED_REF_PREFIXES.some((prefix) => rel.startsWith(prefix))) {
+      errors.push(
+        `RA-2 ${field}: "${ref}" is outside the host-neutral top-level set ` +
+          `(${RA2_ALLOWED_REF_PREFIXES.join(' ')}) — ADR-009 D3 RA-2`
+      );
+    }
+  }
+  return errors;
+}
+
+/**
+ * Enumerate the RA-1 target files through `git ls-files` and read them.
+ * Returns `{files, error}`; a git failure yields `error` so the caller can
+ * fail-safe (ADR-009 D3-3: 判定不能な場合は違反として扱う).
+ */
+async function loadRuntimeAdapterFiles() {
+  let listed;
+  try {
+    listed = execFileSync('git', ['ls-files', '-z', '--', ...RA1_TARGET_PATHSPECS], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+    });
+  } catch (err) {
+    return {
+      files: [],
+      error: `RA-1: could not enumerate targets via git ls-files (${err.message})`,
+    };
+  }
+  const paths = listed.split('\0').filter(Boolean);
+  const files = [];
+  for (const rel of paths) {
+    try {
+      files.push({ path: rel, content: await fs.readFile(path.join(ROOT, rel), 'utf8') });
+    } catch (err) {
+      return { files: [], error: `RA-1: could not read target ${rel} (${err.message})` };
+    }
+  }
+  return { files, error: null };
+}
+
+/** Read the D3-3 SSoT files a target set references. */
+async function loadSsotContents(files) {
+  const wanted = new Set();
+  for (const file of files) for (const ref of findSsotReferences(file.content)) wanted.add(ref);
+  const map = new Map();
+  for (const ref of wanted) {
+    try {
+      map.set(ref, await fs.readFile(path.join(ROOT, ref), 'utf8'));
+    } catch {
+      // A reference that does not resolve contributes no verbatim evidence,
+      // which keeps the fail-safe on the violation side.
+    }
+  }
+  return map;
+}
+
 /**
  * Validate the Claude Code + Codex plugin manifests and the marketplace
  * manifest against the repository:
@@ -328,11 +694,18 @@ export function checkClaudeMdCommandParity(claudeMd, ccManifest) {
  *    listing-required fields (checkBundleFieldAllowlist)
  *  - shared fields not owned by plugin:sync match across both canonical
  *    manifests (checkCrossManifestParity)
+ *  - manifest references stay host-neutral (RA-2;
+ *    checkManifestHostIndependentRefs)
+ *  - no runtime adapter file redefines Review Judgment (RA-1;
+ *    checkReviewJudgmentDuplication) — reported through `warnings` while
+ *    RA1_ENFORCEMENT is 'observe'
  *
- * Returns array of error strings (empty = pass).
+ * Returns array of error strings (empty = pass). Pass `{ warnings }` (an array)
+ * to also collect non-failing observations.
  */
-export async function validatePluginManifest() {
+export async function validatePluginManifest({ warnings } = {}) {
   const errors = [];
+  const observations = Array.isArray(warnings) ? warnings : [];
 
   const pkg = await readJson('package.json');
   const ccManifest = await readJson('.claude-plugin/plugin.json');
@@ -493,6 +866,9 @@ export async function validatePluginManifest() {
     errors.push(...checkBundleFieldAllowlist(codexManifest));
     errors.push(...checkCrossManifestParity(ccManifest, codexManifest));
 
+    // --- RA-2: manifest references stay host-neutral (ADR-009 D3) ---
+    errors.push(...checkManifestHostIndependentRefs(ccManifest, codexManifest));
+
     // --- Cross-plugin field parity (synced fields must match package.json) ---
     // repository is excluded: package.json uses {type, url} object; plugins use plain string URL.
     const SYNCED_FIELDS = ['keywords', 'homepage', 'author', 'license'];
@@ -514,13 +890,35 @@ export async function validatePluginManifest() {
     }
   }
 
+  // --- RA-1: no runtime adapter file redefines Review Judgment (ADR-009 D3) ---
+  if (RA1_ENFORCEMENT !== 'off') {
+    const { files, error } = await loadRuntimeAdapterFiles();
+    const sink = RA1_ENFORCEMENT === 'active' ? errors : observations;
+    if (error) {
+      sink.push(error);
+    } else {
+      const ssot = await loadSsotContents(files);
+      sink.push(...checkReviewJudgmentDuplication(files, ssot));
+    }
+  }
+
   return errors;
 }
 
 // CLI entry point
 if (isDirectRun(import.meta.url)) {
-  validatePluginManifest()
+  const warnings = [];
+  validatePluginManifest({ warnings })
     .then((errors) => {
+      if (warnings.length > 0) {
+        console.warn(
+          `Plugin manifest: ${warnings.length} RA-1 observation(s) ` +
+            `(RA1_ENFORCEMENT="${RA1_ENFORCEMENT}", not failing the run)`
+        );
+        for (const warning of warnings) {
+          console.warn(`  ! ${warning}`);
+        }
+      }
       if (errors.length === 0) {
         console.log('Plugin manifest: OK');
         return 0;
