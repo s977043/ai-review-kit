@@ -73,11 +73,27 @@ skill は id だけでは `resolved` になりません。checksum が無けれ�
 | `runtime`     | Review Artifact の `usage.provider` / `usage.model`               | 解決可能  |
 | `policy`      | Review Artifact の `gate.inputs.riskMapDigest`                    | 部分的    |
 | `agents`      | `agents/contracts/*.agent.json`（id と version。checksum は無い） | 部分的    |
-| `flow`        | flow の実体文書が未作成（`flows/` も `*.flow.json` も無い）       | `missing` |
+| `flow`        | caller が渡す flow 実体文書（`flowDocument`）                     | 条件付き  |
 | `artifacts`   | 記録する producer が未実装                                        | `missing` |
 | `config`      | 記録する producer が未実装                                        | `missing` |
 
 resolver は情報源が無いブロックを捏造せず `missing` のまま返します。
+
+### `flow` だけ caller 経由である理由（#2037）
+
+flow の実体文書は #2016 で実在するようになりました。実測（2026-09-04、`ls flows/`）では `flows/*.flow.json` が 8 本、`flows/intents/*.intent.json` が 8 本、加えて `flows/entry-map.json` が 1 本あります。それでも `resolveExecutionManifestSpec` はこのディレクトリを読みません。#2016 が observe mode の保証を `tests/flow-definitions.test.mjs` に固定しているからです。保証の内容は「`src/` と `runners/` のどのモジュールも `flows/` を読まない」であり、これが「Flow 文書の追加は既存の gate / decision / finding を動かしていない」ことの証明にあたります。resolver 側の直読みはこの証明を壊します。
+
+代わりに、呼び出し側が parse 済みの文書を渡します。resolver の入力は次のとおりです。
+
+- `flowDocument`: parse 済みの Flow 定義文書。渡された run だけが `flow` ブロックを `resolved` にできる
+- `expectedFlowVersion`: caller が entry 名から解決した version。文書側の `version` と食い違えば例外であり、誤った version で pin しない。`flowDocument` を伴わない指定も例外とする（検査できない期待を黙って捨てない）。空文字・空白のみ・非文字列も例外であり、`null` / `undefined` だけが「期待を述べない」を意味する
+- `flow`: 既に導出済みの pin（`{id, version, sha256}`）。`flowDocument` との同時指定は例外であり、片方を黙って採らない
+
+`sha256` は **`canonicalJson(document)` の digest であって、ファイルのバイト列の digest ではない**点に注意してください。key 順と空白は内容ではなく整形なので、prettier の再出力で pin が無効化されないほうが正しい振る舞いです。導出は `deriveFlowPin`（`src/lib/execution-manifest.mjs`）1 箇所にあり、`canonicalJson` と `sha256Hex` を import します。
+
+entry-map と文書の version 整合は 2 箇所で見ます。repository 時点は `tests/flow-definitions.test.mjs`（各 entry の `flowVersion` が実文書の `version` と一致するか）、run 時点は上記 `expectedFlowVersion` です。
+
+observe mode を解除できるのは Flow 実行エンジンが着地したときだけであり、そのとき当該テストを明示的に書き換える手続きを踏みます。
 
 ## secret / raw context を複製しない仕組み（AC 2）
 
