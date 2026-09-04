@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   NOTHING_SCANNED_ERROR,
   checkControlCharacters,
+  formatViolationLines,
   isForbiddenByte,
   listTargetFiles,
   scanBuffer,
@@ -148,13 +149,12 @@ test('CLI: TAB / LF / CR 以外の C0 を含む fixture で exit 1', () => {
   });
 });
 
-test('CLI: pathspec 外のファイルに NUL があっても検出しない（scripts/ src/ tests/ に限る）', () => {
+test('CLI: 除外した場所（assets/ と action dist）の NUL は検出しない', () => {
   withFixture(
     {
       'scripts/ok.mjs': CLEAN_SOURCE,
-      'docs/bad.md': NUL_SOURCE,
       'assets/bad.bin': NUL_SOURCE,
-      'runners/github-action/dist/index.js': NUL_SOURCE,
+      'runners/github-action/dist/index.mjs': NUL_SOURCE,
     },
     (dir) => {
       const { status, stdout } = runIn(dir);
@@ -162,6 +162,26 @@ test('CLI: pathspec 外のファイルに NUL があっても検出しない（s
       assert.match(stdout, /1 ファイル走査/);
     }
   );
+});
+
+test('CLI: scripts/ src/ tests/ の外（skills/ docs/ .github/ ルート）も既定で保護される', () => {
+  // 初版は scripts/ src/ tests/ の許可リストで、skills/ 549 件などが無防備だった。
+  // 「全部から除外を引く」形にしたので、これらは追加設定なしで対象に入る。
+  const files = {
+    'skills/upstream/foo/SKILL.md': NUL_SOURCE,
+    'commands/bar.md': NUL_SOURCE,
+    'agents/baz.md': NUL_SOURCE,
+    'runners/github-action/src/main.mjs': NUL_SOURCE,
+    '.github/workflows/ci.yml': NUL_SOURCE,
+    'docusaurus.config.js': NUL_SOURCE,
+  };
+  withFixture(files, (dir) => {
+    const { status, stderr } = runIn(dir);
+    assert.equal(status, 1);
+    for (const rel of Object.keys(files)) {
+      assert.ok(stderr.includes(rel), `${rel} が報告されていない`);
+    }
+  });
 });
 
 test('列挙は git ls-files 基準（未追跡ファイルは走査しない）', () => {
@@ -176,7 +196,8 @@ test('列挙は git ls-files 基準（未追跡ファイルは走査しない）
 });
 
 test('走査対象が 0 件なら OK ではなくエラーにする（すり抜け防止）', () => {
-  withFixture({ 'docs/only.md': CLEAN_SOURCE }, (dir) => {
+  // 除外だけで構成されたリポジトリ ＝ 走査対象ゼロ。
+  withFixture({ 'assets/only.png': CLEAN_SOURCE }, (dir) => {
     const { errors, scanned } = checkControlCharacters({ root: dir });
     assert.equal(scanned, 0);
     assert.deepEqual(errors, [NOTHING_SCANNED_ERROR]);
@@ -186,7 +207,7 @@ test('走査対象が 0 件なら OK ではなくエラーにする（すり抜�
   });
 });
 
-test('ALLOWED_FILES: 理由つきなら除外、理由が空ならエラー', () => {
+test('ALLOWED_FILES: 理由つきなら除外、理由が空・非文字列ならエラー', () => {
   withFixture({ 'scripts/bad.mjs': NUL_SOURCE, 'src/ok.mjs': CLEAN_SOURCE }, (dir) => {
     const excused = checkControlCharacters({
       root: dir,
@@ -196,11 +217,51 @@ test('ALLOWED_FILES: 理由つきなら除外、理由が空ならエラー', ()
     assert.deepEqual(excused.errors, []);
     assert.equal(excused.ignored.length, 1);
 
-    const noReason = checkControlCharacters({
+    for (const reason of ['  ', 0, null, undefined]) {
+      const bad = checkControlCharacters({
+        root: dir,
+        allowedFiles: new Map([['scripts/bad.mjs', reason]]),
+      });
+      const found = bad.errors.filter((e) => /理由が書かれていない/.test(e));
+      assert.equal(found.length, 1, `reason=${JSON.stringify(reason)} を弾けていない`);
+    }
+  });
+});
+
+test('ALLOWED_FILES: 走査対象に存在しない path の除外はエラー（期限切れ検知）', () => {
+  withFixture({ 'scripts/ok.mjs': CLEAN_SOURCE }, (dir) => {
+    const { errors } = checkControlCharacters({
       root: dir,
-      allowedFiles: new Map([['scripts/bad.mjs', '  ']]),
+      allowedFiles: new Map([['scripts/gone.mjs', '昔あったファイル']]),
     });
-    assert.equal(noReason.errors.length, 1);
-    assert.match(noReason.errors[0], /理由が書かれていない/);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /期限切れの除外/);
+  });
+});
+
+test('formatViolationLines: 1 ファイルあたりの出力を上限で切り、残件をサマリにする', () => {
+  const hits = Array.from({ length: 12 }, (_, i) => ({
+    file: 'scripts/many.mjs',
+    line: i + 1,
+    column: 1,
+    offset: i,
+    code: 0x00,
+    name: 'NUL',
+  }));
+  const lines = formatViolationLines(hits, 5);
+  assert.equal(lines.length, 6, '5 行 + 残件サマリ 1 行');
+  assert.match(lines[5], /ほか 7 件/);
+  assert.match(lines[5], /全 12 件/);
+});
+
+test('CLI: エラーと違反が同時に起きても違反を隠さない', () => {
+  withFixture({ 'scripts/bad.mjs': NUL_SOURCE }, (dir) => {
+    // 存在しない path の除外を混ぜてエラーを 1 件作る。
+    const { violations, errors } = checkControlCharacters({
+      root: dir,
+      allowedFiles: new Map([['scripts/gone.mjs', '期限切れ']]),
+    });
+    assert.equal(violations.length, 1, '違反は握り潰されない');
+    assert.equal(errors.length, 1);
   });
 });

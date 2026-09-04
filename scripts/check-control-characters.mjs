@@ -16,25 +16,28 @@
 // 「mechanical に検証できるか」基準に従い、散文でなく script + 必須 CI（Meta consistency）へ倒す。
 //
 // 設計上の決定（PR 本文と同じ内容をここにも残す）:
-//   1. 対象 pathspec: scripts/ src/ tests/ 配下の **git 追跡ファイル全部**（拡張子で絞らない）。
-//      この 3 ディレクトリに現れる拡張子は .mjs / .js / .ts / .tsx / .jsx / .sh / .py /
-//      .md / .json / .yaml / .txt / .diff / .patch / .css で、**すべてテキストであり
-//      バイナリ資産は 1 件も無い**。だから拡張子の許可リストを持つ必要が無く、
-//      持たない方が新拡張子の取りこぼしも起きない。件数はここに書かない（この
-//      コメントは check-doc-enumerations.mjs の検査対象外で、書けばドリフトするため）。
-//      分布を測り直すコマンド:
-//        git ls-files -- 'scripts/**' 'src/**' 'tests/**' | sed 's/.*\///' | grep -o '\.[^.]*$' | sort | uniq -c | sort -rn
-//      走査した実件数は毎回の実行サマリ（"N ファイル走査"）が出す。
-//      tests/ を含めるのは、事故の本質が「grep から消える」ことであり、テストコードも
-//      同じく grep で探される対象だから（実際、本 PR 時点で唯一の既存違反は tests/ にあった）。
+//   1. 対象 pathspec: **git 追跡ファイル全部から、明示した除外だけを引く**（許可リストではない）。
+//      初版は scripts/ src/ tests/ の許可リストだったが、それでは skills/ commands/ agents/
+//      runners/ .github/ とルート直下の設定ファイルがまるごと無防備で、しかも
+//      「新しいディレクトリが増えても誰も気づかない」形だった。とくに skills/ は
+//      Skill Registry 本体でエージェントが最も grep する場所であり、tests/ を含める
+//      根拠（「事故の本質は grep から消えること」）がそのまま、より強く当てはまる。
+//      除外は 2 つだけ:
+//        - assets/          … バイナリ資産の置き場（PNG などが正当に存在する）
+//        - runners/github-action/dist/ … ncc の生成物。人手の編集対象ではなく、
+//          ビルド元の runners/github-action/src/ は走査対象に入っている
+//      件数はここに書かない（このコメントは check-doc-enumerations.mjs の検査対象外で、
+//      書けばドリフトするため）。走査した実件数は毎回の実行サマリ（"N ファイル走査"）が出す。
+//      対象を測り直すコマンド:
+//        git ls-files -- . ':(exclude)assets/' ':(exclude)runners/github-action/dist/' | wc -l
 //   2. 許可する制御文字: TAB(0x09) / LF(0x0A) / CR(0x0D) のみ。
 //      それ以外の C0（0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F）と DEL(0x7F) を違反とする。
 //      これは grep/ripgrep がバイナリ判定へ倒す条件に合わせた最小集合で、
 //      NFC 正規化や全角/半角の統一（#2055 の Non-goals）には踏み込まない。
 //   3. 非 UTF-8 / バイナリの扱い: 本チェックは **生バイト**を見るので UTF-8 デコードをしない。
-//      対象 pathspec の下にバイナリ（画像・フォント等）が置かれれば違反として落ちるが、
-//      それは意図した挙動である（バイナリ資産は assets/ に置くべきで、scripts/ src/ tests/
-//      へ入れるのは配置ミス）。恒久的な例外が要る場合は ALLOWED_FILES に理由付きで宣言する。
+//      除外していない場所にバイナリが置かれれば違反として落ちるが、それは意図した挙動である
+//      （バイナリ資産は assets/ に置くのがこのリポジトリの方針）。どうしても他所に置く必要が
+//      あるなら ALLOWED_FILES に理由付きで宣言する。
 //   4. 列挙基準: `git ls-files`。`find` や再帰 readdir は .claude/worktrees/ の
 //      フルコピーを拾ってしまうため使わない（ADR-009 D3-3 項番 1 / RA-1 実装と同じ理由）。
 //
@@ -48,8 +51,21 @@ import process from 'node:process';
 
 import { isDirectRun } from './lib/is-direct-run.mjs';
 
-/** 走査対象の git pathspec。ディレクトリ指定は再帰的に一致する。 */
-export const SCAN_PATHSPECS = Object.freeze(['scripts/', 'src/', 'tests/']);
+/**
+ * 走査対象の git pathspec。「全部から除外を引く」形にしてあるので、
+ * 新しいトップレベルディレクトリが増えても自動で保護対象に入る。
+ */
+export const SCAN_PATHSPECS = Object.freeze([
+  '.',
+  ':(exclude)assets/',
+  ':(exclude)runners/github-action/dist/',
+]);
+
+/** 実行サマリに出す、人間向けの scope 表記。 */
+const SCOPE_LABEL = '追跡ファイル全部 − assets/ − runners/github-action/dist/';
+
+/** 1 ファイルあたり stderr へ出す違反行の上限（超過分は件数だけ出す）。 */
+export const MAX_VIOLATION_LINES_PER_FILE = 5;
 
 /** 許可する制御文字（TAB / LF / CR）。 */
 export const ALLOWED_CONTROL_BYTES = Object.freeze([0x09, 0x0a, 0x0d]);
@@ -157,7 +173,9 @@ export function checkControlCharacters(options = {}) {
   const errors = [];
   const ignored = [];
   for (const [file, reason] of allowedFiles) {
-    if (String(reason ?? '').trim() === '') {
+    // 理由は「非空の文字列」でなければならない。String(0) は '0' になり trim を
+    // 素通りするので、typeof で先に弾く（数値 0 を理由として通さない）。
+    if (typeof reason !== 'string' || reason.trim() === '') {
       errors.push(`ALLOWED_FILES["${file}"] に理由が書かれていない — 理由なしの除外は許可しない`);
     }
   }
@@ -172,6 +190,18 @@ export function checkControlCharacters(options = {}) {
       scanned: 0,
       ignored,
     };
+  }
+
+  // 期限切れ除外の検知。実体の無い path の除外が残ると、同名ファイルが将来復活したときに
+  // 黙って免除される（check-doc-enumerations.mjs が ignoreKeys に対してしているのと同じ扱い）。
+  const universe = new Set(files);
+  for (const file of allowedFiles.keys()) {
+    if (!universe.has(file)) {
+      errors.push(
+        `ALLOWED_FILES["${file}"] は走査対象に存在しない — ` +
+          '期限切れの除外なので削除する（残すと復活時に検査されない）'
+      );
+    }
   }
 
   const violations = [];
@@ -203,6 +233,37 @@ export function checkControlCharacters(options = {}) {
   return { violations, errors, scanned, ignored };
 }
 
+/**
+ * 違反をファイル単位にまとめ、1 ファイルあたり先頭 N 件だけを行として返す。
+ *
+ * 上限を設けるのは、対象にバイナリが 1 つ混ざるだけで数千行が stderr へ流れ、
+ * CI ログが埋まって他の情報が読めなくなるため（PNG 1 枚で 8000 行超を実測）。
+ *
+ * @param {Array<{file: string, line: number, column: number, offset: number, code: number, name: string}>} violations
+ * @param {number} [limit]
+ * @returns {string[]}
+ */
+export function formatViolationLines(violations, limit = MAX_VIOLATION_LINES_PER_FILE) {
+  const byFile = new Map();
+  for (const v of violations) {
+    if (!byFile.has(v.file)) byFile.set(v.file, []);
+    byFile.get(v.file).push(v);
+  }
+  const lines = [];
+  for (const [file, hits] of byFile) {
+    for (const v of hits.slice(0, limit)) {
+      lines.push(
+        `  ${file}:${v.line}:${v.column}  byte offset ${v.offset}  ` +
+          `0x${v.code.toString(16).padStart(2, '0')} (${v.name})`
+      );
+    }
+    if (hits.length > limit) {
+      lines.push(`  ${file}: ほか ${hits.length - limit} 件（同一ファイル。全 ${hits.length} 件）`);
+    }
+  }
+  return lines;
+}
+
 function main() {
   const { violations, errors, scanned, ignored } = checkControlCharacters();
 
@@ -210,21 +271,12 @@ function main() {
     console.log(`  (ignored) ${note}`);
   }
 
-  if (errors.length > 0) {
-    console.error(`制御文字チェック: ${errors.length} 件のエラー`);
-    for (const err of errors) {
-      console.error(`  - ${err}`);
-    }
-    process.exit(1);
-  }
-
+  // errors があっても violations を先に出す。読めないファイル 1 件と本物の混入が
+  // 同時に起きたときに、後者が見えないまま終わらせないため。
   if (violations.length > 0) {
     console.error(`❌ ソースへの C0 制御文字混入を ${violations.length} 件検出:`);
-    for (const v of violations) {
-      console.error(
-        `  ${v.file}:${v.line}:${v.column}  byte offset ${v.offset}  ` +
-          `0x${v.code.toString(16).padStart(2, '0')} (${v.name})`
-      );
+    for (const line of formatViolationLines(violations)) {
+      console.error(line);
     }
     console.error('');
     console.error(
@@ -237,10 +289,20 @@ function main() {
     console.error(
       '恒久的な例外は scripts/check-control-characters.mjs の ALLOWED_FILES へ理由付きで追記してください。'
     );
+  }
+
+  if (errors.length > 0) {
+    console.error(`制御文字チェック: ${errors.length} 件のエラー`);
+    for (const err of errors) {
+      console.error(`  - ${err}`);
+    }
+  }
+
+  if (violations.length > 0 || errors.length > 0) {
     process.exit(1);
   }
 
-  console.log(`✅ C0 制御文字なし（${scanned} ファイル走査 / ${SCAN_PATHSPECS.join(' ')}）`);
+  console.log(`✅ C0 制御文字なし（${scanned} ファイル走査 / ${SCOPE_LABEL}）`);
 }
 
 if (isDirectRun(import.meta.url)) {
