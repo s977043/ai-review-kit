@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {
@@ -13,6 +14,7 @@ import {
   detectReviewJudgmentDefinitions,
   findSsotReferences,
   isContainedSsotPath,
+  loadSsotContents,
   RA1_ENFORCEMENT,
   RA1_MAX_TARGET_BYTES,
   RA1_TARGET_PATHSPECS,
@@ -883,4 +885,66 @@ test('the RA-1 severity exclusion is case-sensitive, and that is load-bearing (#
       .length,
     1
   );
+});
+
+// ---- loadSsotContents の読み取り前ガード（#2055 追補） ----
+//
+// `isContainedSsotPath` は path traversal を止めるが、`readFile` は symlink を辿る。
+// 参照テキストは `.claude/**`（RA-1 の対象で fork PR から編集できる）に置け、参照先の
+// symlink も同じ PR で commit できるため、両側とも攻撃者が決められる。
+// ガード前の実測では `/dev/zero` への symlink 1 本あたり約 4.4 秒・RSS 250 MB 超を要し、
+// `readFile(…, 'utf8')` の `Invalid string length` は空の catch に飲まれていた。
+// 約 137 本で `Meta consistency` の `timeout-minutes: 10` を超える。
+// 対策は `loadRuntimeAdapterFiles` と同じ `classifyTrackedTarget` を通すこと。
+
+test('loadSsotContents: symlink の SSoT 参照は辿らない（#2055 追補）', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-ssot-'));
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-ssot-outside-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'skills', 'adir'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'skills', 'real.md'), 'REAL_SSOT_BODY\n');
+    fs.writeFileSync(path.join(outside, 'secret.md'), 'OUTSIDE_SECRET_BODY\n');
+    fs.symlinkSync(path.join(outside, 'secret.md'), path.join(dir, 'skills', 'outside.md'));
+    fs.symlinkSync(path.join(dir, 'skills', 'adir'), path.join(dir, 'skills', 'dirlink.md'));
+
+    const content = [
+      '出典: `skills/real.md`',
+      '出典: `skills/outside.md`',
+      '出典: `skills/dirlink.md`',
+    ].join('\n');
+    const files = [{ path: '.claude/rules/x.md', content }];
+
+    // 3 本とも containment は通る。違いは path ではなくファイルの種類にある。
+    assert.deepEqual(findSsotReferences(content), [
+      'skills/real.md',
+      'skills/outside.md',
+      'skills/dirlink.md',
+    ]);
+
+    const map = await loadSsotContents(files, dir);
+    assert.deepEqual([...map.keys()], ['skills/real.md']);
+    assert.match(map.get('skills/real.md'), /REAL_SSOT_BODY/);
+    // repo 外の内容が 1 バイトでも入っていれば symlink を辿っている。
+    for (const body of map.values()) {
+      assert.doesNotMatch(body, /OUTSIDE_SECRET_BODY/);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
+  }
+});
+
+test('loadSsotContents: RA1_MAX_TARGET_BYTES を超える SSoT 参照は読まない', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rr-ssot-big-'));
+  try {
+    fs.mkdirSync(path.join(dir, 'skills'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'skills', 'big.md'), 'x'.repeat(RA1_MAX_TARGET_BYTES + 1));
+    fs.writeFileSync(path.join(dir, 'skills', 'ok.md'), 'OK_BODY\n');
+    const content = ['出典: `skills/big.md`', '出典: `skills/ok.md`'].join('\n');
+    const map = await loadSsotContents([{ path: '.claude/rules/x.md', content }], dir);
+    // 対照群（ok.md）は読まれ、上限超過だけが落ちる。
+    assert.deepEqual([...map.keys()], ['skills/ok.md']);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

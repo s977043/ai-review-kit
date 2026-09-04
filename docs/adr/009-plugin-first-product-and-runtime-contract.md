@@ -24,10 +24,10 @@ Accepted—#2012（親 Epic #2011）で、River Review の第一級配布面を 
 
 [`scripts/validate-plugin-manifest.mjs`](../../scripts/validate-plugin-manifest.mjs)（`npm run plugin:validate`）は次を検査します。
 
-- 2 つの manifest の `version` が `package.json` と一致すること（`:1075` と `:1173`）
-- `.claude-plugin` 側の参照パスが実在すること（`:1092`）
-- 2 つの manifest 間の parity 6 組。`skills` / `repository` / `displayName` / `composerIcon` / `homepage` / `author.name` が対象である（`checkCrossManifestParity` `:164`）
-- `commands/` と `agents/` に置いた資産が manifest へ登録済みであること（逆方向ドリフト検査 `checkAssetRegistration` `:206`）
+- 2 つの manifest の `version` が `package.json` と一致すること（`validatePluginManifest`）
+- `.claude-plugin` 側の参照パスが実在すること（`validatePluginManifest`）
+- 2 つの manifest 間の parity 6 組。`skills` / `repository` / `displayName` / `composerIcon` / `homepage` / `author.name` が対象である（`checkCrossManifestParity`）
+- `commands/` と `agents/` に置いた資産が manifest へ登録済みであること（逆方向ドリフト検査 `checkAssetRegistration`）
 
 一方で「host 固有ディレクトリを配布資産として参照しない」および「host 固有ファイルへ Review Judgment を複製しない」を検査する仕組みは、同スクリプトに存在しません。
 
@@ -89,12 +89,12 @@ invocation mechanics に属し、adapter が変えてよい対象は次のとお
 
 不変条件は 4 つとし、いずれも述語の形で書きます。
 
-| ID   | 述語                                                                                                                                              | 現在の検証手段                                                                                                                                                                 |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| RA-1 | `.claude/**` / `.codex/**` / 2 つの plugin manifest は、Review Judgment の正本を定義しない                                                        | 実装済み（active）。`checkReviewJudgmentDuplication` `:885`。検出範囲と棚卸しは [`ra1-runtime-adapter-inventory.md`](../development/ra1-runtime-adapter-inventory.md)（#2027） |
-| RA-2 | manifest が参照する実体パスは host 非依存のトップレベル（`commands/` `agents/` `skills/` `assets/`）に限り、`.claude/**` / `.codex/**` を含まない | 実装済み（active）。`checkManifestHostIndependentRefs` `:943`（#2027）                                                                                                         |
-| RA-3 | 2 つの manifest の `skills` は同一パスを指す                                                                                                      | 実装済み。`checkCrossManifestParity` `:164`                                                                                                                                    |
-| RA-4 | 2 つの manifest の `version` は `package.json` と一致する                                                                                         | 実装済み。`validate-plugin-manifest.mjs` `:1075` と `:1173`                                                                                                                    |
+| ID   | 述語                                                                                                                                              | 現在の検証手段                                                                                                                                                                                                    |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RA-1 | `.claude/**` / `.codex/**` / 2 つの plugin manifest は、Review Judgment の正本を定義しない                                                        | 実装済み（active）。`checkReviewJudgmentDuplication`（`scripts/validate-plugin-manifest.mjs`）。検出範囲と棚卸しは [`ra1-runtime-adapter-inventory.md`](../development/ra1-runtime-adapter-inventory.md)（#2027） |
+| RA-2 | manifest が参照する実体パスは host 非依存のトップレベル（`commands/` `agents/` `skills/` `assets/`）に限り、`.claude/**` / `.codex/**` を含まない | 実装済み（active）。`checkManifestHostIndependentRefs`（`scripts/validate-plugin-manifest.mjs`）（#2027）                                                                                                         |
+| RA-3 | 2 つの manifest の `skills` は同一パスを指す                                                                                                      | 実装済み。`checkCrossManifestParity`（`scripts/validate-plugin-manifest.mjs`）                                                                                                                                    |
+| RA-4 | 2 つの manifest の `version` は `package.json` と一致する                                                                                         | 実装済み。`validate-plugin-manifest.mjs` の `validatePluginManifest`（2 つの manifest それぞれで `package.json` の `version` と突き合わせる）                                                                     |
 
 RA-1 と RA-2 を検査へ落とす際の述語は、次の 3 要素で定義します。実装は本 ADR の範囲外です。
 

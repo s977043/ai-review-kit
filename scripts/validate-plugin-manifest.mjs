@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -6,6 +5,7 @@ import process from 'node:process';
 import { normalizeSeverity } from '../src/lib/finding-factory.mjs';
 import { GATE_DECISIONS } from '../src/lib/gate-decision.mjs';
 import { isDirectRun } from './lib/is-direct-run.mjs';
+import { classifyTrackedTarget, listTrackedPaths } from './lib/tracked-file-targets.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -1060,20 +1060,15 @@ export function checkManifestHostIndependentRefs(ccManifest, codexManifest) {
  * fail-safe (ADR-009 D3-3: 判定不能な場合は違反として扱う).
  */
 async function loadRuntimeAdapterFiles() {
-  let listed;
+  let paths;
   try {
-    listed = execFileSync('git', ['ls-files', '-z', '--', ...RA1_TARGET_PATHSPECS], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      maxBuffer: 32 * 1024 * 1024,
-    });
+    paths = listTrackedPaths(ROOT, RA1_TARGET_PATHSPECS, { maxBuffer: 32 * 1024 * 1024 });
   } catch (err) {
     return {
       files: [],
       error: `RA-1: could not enumerate targets via git ls-files (${err.message})`,
     };
   }
-  const paths = listed.split('\0').filter(Boolean);
   const files = [];
   for (const rel of paths) {
     const abs = path.join(ROOT, rel);
@@ -1085,13 +1080,17 @@ async function loadRuntimeAdapterFiles() {
       // pathological single-line file is still attacker-controlled input that
       // the `Meta consistency` job has to finish inside its timeout
       // (#2050 review, minor).
-      const st = await fs.lstat(abs);
-      if (!st.isFile()) continue;
-      if (st.size > RA1_MAX_TARGET_BYTES) {
+      //
+      // The enumeration and this classification are shared with
+      // scripts/check-control-characters.mjs via scripts/lib/tracked-file-targets.mjs
+      // (CLAUDE.md "Import the SSoT, never re-derive it").
+      const target = classifyTrackedTarget(abs, RA1_MAX_TARGET_BYTES);
+      if (target.kind === 'skip') continue;
+      if (target.kind === 'oversize') {
         return {
           files: [],
           error:
-            `RA-1: target ${rel} is ${st.size} bytes, over the ${RA1_MAX_TARGET_BYTES}-byte ` +
+            `RA-1: target ${rel} is ${target.size} bytes, over the ${RA1_MAX_TARGET_BYTES}-byte ` +
             `scan limit — split the file or move the content out of the RA-1 target set ` +
             `(ADR-009 D3-3: 判定不能な場合は違反として扱う)`,
         };
@@ -1104,8 +1103,13 @@ async function loadRuntimeAdapterFiles() {
   return { files, error: null };
 }
 
-/** Read the D3-3 SSoT files a target set references. */
-async function loadSsotContents(files) {
+/**
+ * Read the D3-3 SSoT files a target set references.
+ *
+ * `root` is injectable so the guards below can be exercised against a fixture
+ * tree; production always uses the repository ROOT.
+ */
+export async function loadSsotContents(files, root = ROOT) {
   const wanted = new Set();
   for (const file of files) for (const ref of findSsotReferences(file.content)) wanted.add(ref);
   const map = new Map();
@@ -1116,7 +1120,21 @@ async function loadSsotContents(files) {
     // (#2050 review, major 1).
     if (!isContainedSsotPath(ref)) continue;
     try {
-      map.set(ref, await fs.readFile(path.join(ROOT, ref), 'utf8'));
+      const abs = path.join(root, ref);
+      // Containment is about the *path*; this is about the *file*. `readFile`
+      // follows symlinks, so a contained reference such as `skills/x.md` can
+      // still resolve to a character device or a file outside the repo. The
+      // reference text lives in `.claude/**` (an RA-1 target, editable from a
+      // fork PR) and the symlink can be committed in the same PR, so both
+      // halves are attacker-controlled. Measured before this guard: a
+      // reference pointing at a symlink to `/dev/zero` costs ~4.4 s and >250 MB
+      // RSS per reference (`readFile(…, 'utf8')` throws `Invalid string length`
+      // into the catch below), so ~137 of them exceed the `Meta consistency`
+      // job's `timeout-minutes: 10`. Same guard, same helper as
+      // `loadRuntimeAdapterFiles` (#2055 follow-up; the hole predates it).
+      const target = classifyTrackedTarget(abs, RA1_MAX_TARGET_BYTES);
+      if (target.kind !== 'file') continue;
+      map.set(ref, await fs.readFile(abs, 'utf8'));
     } catch {
       // A reference that does not resolve contributes no verbatim evidence,
       // which keeps the fail-safe on the violation side.
