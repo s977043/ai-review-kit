@@ -600,11 +600,21 @@ describe('flow pin derivation (#2037)', () => {
     for (const file of files) {
       const pin = deriveFlowPin(readJson(join(FLOWS_DIR, file)));
       assert.match(pin.sha256, /^[0-9a-f]{64}$/);
+      // Checked BEFORE the insert: `Map.set` overwrites on a repeated key, so
+      // a duplicate id would shrink `byId` and every later count would compare
+      // against the already-deduplicated total — the test would keep passing
+      // while silently covering fewer documents than it claims.
+      assert.ok(
+        !byId.has(pin.id),
+        `${file}: flow id "${pin.id}" is already used by another document`
+      );
       byId.set(pin.id, pin);
     }
+    // Every document this repository ships is now represented, one per id.
+    assert.equal(byId.size, files.length);
     // Two documents must not collide onto one digest, or a pin cannot say
     // which Flow ran.
-    assert.equal(new Set([...byId.values()].map((p) => p.sha256)).size, byId.size);
+    assert.equal(new Set([...byId.values()].map((p) => p.sha256)).size, files.length);
     for (const [entryName, entry] of Object.entries(ENTRY_MAP.entries)) {
       const pin = byId.get(entry.flow);
       assert.ok(pin, `${entryName}: no document for flow ${entry.flow}`);
