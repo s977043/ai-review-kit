@@ -108,18 +108,21 @@ Thanks to this unification, an option-name typo, a surplus positional, and a mis
 
 No data write (adding a feedback or suppression entry, for instance) ever happens ahead of a usage error.
 
-`--base <ref>` is the one option validated in the handler layer instead. `river run`, `river skills`, and `river review` (`plan` / `exec` / `route`) share a single resolution path: the value is trimmed first, then checked with `git rev-parse` (#2051 / #2057).
+`--base <ref>` is validated in the handler layer rather than the parse layer. `river run`, `river skills`, and `river review` (`plan` / `exec` / `route`) share a single resolution path: the value is trimmed first, then checked with `git rev-parse` (#2051 / #2057).
 
 - A blank value and a ref the repository cannot resolve are usage errors, exit 1
 - A ref that shares no history with HEAD is not fatal; it is announced as a warning on stderr
-- When `--base` is omitted, the auto-detected default branch is used and this check does not apply
+- What an omitted `--base` falls back to differs per surface. `river run` and `river skills` use the auto-detected default branch, which this check does not apply to. `river review plan` runs no git at all, and the `diff` artifact is then the only source of the diff (see the [CLI review plan spec](./cli-review-plan-spec.en.md))
+
+`river skills` used to accept `--base` and never read it, always reviewing the diff against the auto-detected default branch (#2051). Now that the value is read, a caller that passes `--base` sees a different set of reviewed files and findings; drop the flag to keep the previous range. `river run` did read the value but never checked that it resolved, silently falling back to HEAD (#2057), so a typo that used to exit 0 now exits 1.
 
 `--expires` accepts only the RFC 3339 `YYYY-MM-DD` form and the date-time form. A date-only input is read as UTC midnight and normalized to a date-time when stored, because `expiresAt` in `schemas/suppression-context.schema.json` is declared `format: date-time`.
 
-Value validation does not reach every option, though. The following two paths still exit 0, so `$?` alone does not catch them.
+Value validation does not reach every option, though. The following three paths still exit 0, so `$?` alone does not catch them.
 
 - Passing a non-existent path to `--baseline` (the regression comparison is silently skipped)
 - Passing unknown vocabulary to `--context` / `--dependency`
+- Passing `--base` to a surface that does not read a diff (`doctor`, `runs list`, and `eval` accept the flag without consuming it; measured 2026-09-04 with an unresolvable ref, all exit 0)
 
 The `RIVER_PHASE` environment variable now goes through the same vocabulary and the same case-insensitive validation as `--phase` (#1759 C2). An invalid value prints the same shape of error, `Error: RIVER_PHASE must be one of: ...`, to stderr and exits 1. Unset or empty still falls back to the default `midstream`.
 

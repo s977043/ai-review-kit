@@ -60,6 +60,7 @@ Current stability level for each surface.
 - `--output <text|markdown|json|yaml|html>`: Output format (GitHub Actions uses `markdown`; see [YAML output](./output-format-yaml.en.md) for `yaml` and [HTML output](./output-format-html.en.md) for the self-contained `html` report)
 - `--context <list>`: Available contexts (e.g., `diff,fullFile`)
 - `--dependency <list>`: Available dependencies (e.g., `code_search,test_runner`)
+- `--base <ref>`: Branch / ref the diff is taken against (`run`, `skills`, and `review` share one resolution path; how the value is validated, and the exit code of the resulting usage error, are outside the Stable Contract — the [Runner CLI reference](./runner-cli-reference.en.md) is the SSoT)
 
 ### Exit Codes
 
