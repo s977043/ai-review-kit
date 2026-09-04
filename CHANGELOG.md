@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.99.0](https://github.com/s977043/river-review/compare/v1.98.0...v1.99.0) (2026-09-04)
+
+
+### Features
+
+* **scripts:** [#2055](https://github.com/s977043/river-review/issues/2055) ソースへの C0 制御文字混入を機械検査する ([#2062](https://github.com/s977043/river-review/issues/2062)) ([2961be8](https://github.com/s977043/river-review/commit/2961be861a4d864d514c860a1340299265ad88c1))
+
+
+### Bug Fixes
+
+* **cli:** [#2051](https://github.com/s977043/river-review/issues/2051) [#2057](https://github.com/s977043/river-review/issues/2057) --base を skills / run でも review と同じ経路で解決する ([#2064](https://github.com/s977043/river-review/issues/2064)) ([22da923](https://github.com/s977043/river-review/commit/22da923ee040974b9d07ce156641f5900c61f731))
+* **scripts:** [#2058](https://github.com/s977043/river-review/issues/2058) [#2059](https://github.com/s977043/river-review/issues/2059) RA-1 の severity 対応表を向きまで照合し ADR-009 D7-4 の矛盾を解消する ([#2063](https://github.com/s977043/river-review/issues/2063)) ([02802a2](https://github.com/s977043/river-review/commit/02802a2a831906892794acacef2fb76fd767eb86))
+
 ## [1.98.0](https://github.com/s977043/river-review/compare/v1.97.1...v1.98.0) (2026-09-04)
 
 
