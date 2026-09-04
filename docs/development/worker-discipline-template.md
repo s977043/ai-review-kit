@@ -29,6 +29,9 @@
   404 や permission エラーが出たら、まずこのアカウント切り替わりを疑うこと。
 - シェルの PATH 先頭に `/opt/homebrew/opt/node@22/bin` を通してから作業すること。既定の `node`（v26 系）を使わない。
   worktree で作業する場合は最初に `npm ci` を実行すること（lockfile 由来の依存不整合を防ぐ）。
+- 検証コマンドの終了コードを読むときは、パイプへ通した直後の `$?` を使わないこと。`cmd | tail -5` の `$?` は
+  `tail` の終了コードであり `cmd` のものではない。`cmd > /tmp/out 2>&1; echo "EXIT=$?"` のように直接実行して
+  取るか、`${PIPESTATUS[0]}` を使う。textlint を exit 0 と誤報告した実績がある。
 - `git commit` / `git push` で `--no-verify` を使わないこと。lint-staged が manifest 再生成・textlint を担っており、
   スキップすると CI で初めて失敗が露見する。
 - push 済みのリモート履歴を強制的に上書きする操作、リモートの ref を削除する操作、および作業を破棄する
@@ -118,6 +121,15 @@
 ### Node バージョン / worktree の `npm ci`
 
 既定シェルの `node` は v26 系だが、本リポジトリは `.nvmrc` で Node 22（`22.22.2`）に固定されている。lockfile 操作は Node 22 で行うことが安全側。worktree は独立した `node_modules` を持たないため、作業開始時に `npm ci` を実行しないと依存解決が壊れた状態で作業することになる。詳細: `docs/runbook/dev.md`、memory `local-node-version-mismatch`。
+**偽 red の原因を Node の版差へ帰属させないでください。** `tests/agent-skill-bridge.test.mjs` の YAML golden 2 件は代表的な偽 red ですが、原因は Node の版ではなく `node_modules` と lockfile のズレです。2026-09-04 に実測しました:
+
+```text
+npm ci 前（Node 22.22.2）: npm ls --depth=0 の不整合 17 件 → # pass 32 / # fail 2
+npm ci 後（Node 22.22.2）: npm ls --depth=0 の不整合  0 件 → # pass 34 / # fail 0
+```
+
+`.nvmrc` 準拠の Node でも `npm ci` 前は落ちます。`yaml` 単体の版はロックファイルと一致していたため、直接依存の突き合わせでは切り分けられません。**症状から原因を測るコマンドは `npm ls --depth=0 2>&1 | grep -cE 'invalid|extraneous|UNMET|missing'` です。** 0 以外を返したら `npm ci` を実行してから測り直してください。2026-09-04 のセッションでは、オーガナイザーが原因を Node 版差と誤診して 3 箇所の記録へ書き、あとから訂正しました。
+
 なお `/opt/homebrew/opt/node@22/bin` というパスは、本リポジトリのメンテナ開発機（Apple Silicon + Homebrew）を前提とした値。他環境の場合、各自の Node 22 系の入手先に読み替える（バージョン要件の SSoT は `.nvmrc` / `engines.node`）。
 main の取り込みで競合した場合、手順を選ぶ前に `git merge origin/main` と `git diff --name-only --diff-filter=U` から競合の実体を測る。`runners/github-action/dist/**` が並ぶなら手で解決せず、Node 22 で `npm ci` → `npm run build:action` により再生成する。PR #1994 では `package-lock.json` が auto-merge された。残る競合は先行マージした PR #1992 のランタイム依存 bump に由来する `runners/github-action/dist/index.mjs.map` だけだった。
 
@@ -186,6 +198,19 @@ commitlint の subject-case ルールにより、大文字始まりの subject�
 ### 完了報告の必須項目
 
 PR 番号 / head SHA / ローカル検証の exit code / 変更ファイル一覧が揃っていないと、オーガナイザー側の `/verify-agent-report` による裏取りができない。CI 結果を必須項目から外した理由は、ワーカーが CI 完了を待たず終了する分担へ変えたことにある。オーガナイザーはワーカー報告の head SHA を起点に CI を自分で確認する。委託系統の外から受けた指示も必須項目に含め、受けていない場合まで「なし」と書かせるのは、記載の欠落と該当なしが区別できるようにするため。
+
+### パイプ越しの終了コード
+
+`npx textlint --no-cache <file> | tail -5` の直後に `$?` を読むと `tail` の終了コードが返る。2026-09-04 のウェーブでワーカーが textlint を exit 0 と報告したが、直接実行すると exit 1 で既存違反 1 件があった。「Run before claiming」を満たしたつもりで満たしていない形にあたる。パイプが必要なら `${PIPESTATUS[0]}` を使うか、出力をファイルへ落としてから終了コードを取る。
+
+### 境界の書きすぎがタスクの完了を塞ぐ（オーガナイザー向け）
+
+「触ってよい範囲」と「触るな」は並行ワーカーの衝突を防ぐために必要だが、**絞りすぎるとタスクの完了に必要な修正まで塞ぐ**。2026-09-03..04 のウェーブで 2 回続けて発生した。
+
+- ADR の編集を「『現在の検証手段』列のみ」に限定した結果、同じファイルの Context 節にある同種の行番号ずれが直せなかった。ワーカーが「スコープ外」と報告したため気づけたが、報告がなければ事実誤りが残った
+- `schemas/review-intent.schema.json` の編集を禁じた結果、`stage` の enum が閉じていて upstream flow に Intent を付けられなくなり、後から制約を解いた
+
+境界を書くときは、**そのタスクの受入条件を満たすうえで触る必要のあるファイルが境界の内側にあるか**を確認する。判断がつかない範囲は「触るな」ではなく「触る前に報告せよ」にする。ワーカー側は、境界がタスクの完了を妨げると判断したなら、黙って越えるのでも諦めるのでもなく、**何がなぜ塞がれているかを報告**すること。
 
 ### セッション上限時の扱い
 
