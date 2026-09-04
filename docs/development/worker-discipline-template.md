@@ -121,6 +121,15 @@
 ### Node バージョン / worktree の `npm ci`
 
 既定シェルの `node` は v26 系だが、本リポジトリは `.nvmrc` で Node 22（`22.22.2`）に固定されている。lockfile 操作は Node 22 で行うことが安全側。worktree は独立した `node_modules` を持たないため、作業開始時に `npm ci` を実行しないと依存解決が壊れた状態で作業することになる。詳細: `docs/runbook/dev.md`、memory `local-node-version-mismatch`。
+**偽 red の原因を Node の版差へ帰属させないでください。** `tests/agent-skill-bridge.test.mjs` の YAML golden 2 件は代表的な偽 red ですが、原因は Node の版ではなく `node_modules` と lockfile のズレです。2026-09-04 に実測しました:
+
+```text
+npm ci 前（Node 22.22.2）: npm ls --depth=0 の不整合 17 件 → # pass 32 / # fail 2
+npm ci 後（Node 22.22.2）: npm ls --depth=0 の不整合  0 件 → # pass 34 / # fail 0
+```
+
+`.nvmrc` 準拠の Node でも `npm ci` 前は落ちます。`yaml` 単体の版はロックファイルと一致していたため、直接依存の突き合わせでは切り分けられません。**症状から原因を測るコマンドは `npm ls --depth=0 2>&1 | grep -cE 'invalid|extraneous|UNMET|missing'` です。** 0 以外を返したら `npm ci` を実行してから測り直してください。2026-09-04 のセッションでは、オーガナイザーが原因を Node 版差と誤診して 3 箇所の記録へ書き、あとから訂正しました。
+
 なお `/opt/homebrew/opt/node@22/bin` というパスは、本リポジトリのメンテナ開発機（Apple Silicon + Homebrew）を前提とした値。他環境の場合、各自の Node 22 系の入手先に読み替える（バージョン要件の SSoT は `.nvmrc` / `engines.node`）。
 main の取り込みで競合した場合、手順を選ぶ前に `git merge origin/main` と `git diff --name-only --diff-filter=U` から競合の実体を測る。`runners/github-action/dist/**` が並ぶなら手で解決せず、Node 22 で `npm ci` → `npm run build:action` により再生成する。PR #1994 では `package-lock.json` が auto-merge された。残る競合は先行マージした PR #1992 のランタイム依存 bump に由来する `runners/github-action/dist/index.mjs.map` だけだった。
 
