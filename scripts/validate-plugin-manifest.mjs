@@ -382,18 +382,79 @@ export const RA1_TARGET_PATHSPECS = [
  * SSoT locations a host-local file may derive from (ADR-009 D3-3 項番 3).
  * Exact paths plus directory prefixes.
  */
+/**
+ * Largest RA-1 target file that is scanned. Anything larger is reported as an
+ * error rather than read (ADR-009 D3-3 fail-safe). The largest current target
+ * is far below this, so the cap only ever fires on a deliberately oversized
+ * file (#2050 review, minor).
+ */
+export const RA1_MAX_TARGET_BYTES = 1024 * 1024;
+
 export const RA1_SSOT_PATHS = ['pages/reference/review-policy.md', 'docs/review/output-format.md'];
 export const RA1_SSOT_PREFIXES = ['skills/', 'src/lib/'];
 
-const SSOT_REFERENCE_RE = new RegExp(
-  [
-    'pages/reference/review-policy(?:\\.en)?\\.md',
-    'docs/review/output-format\\.md',
-    'skills/[\\w./-]+',
-    'src/lib/[\\w./-]+',
-  ].join('|'),
-  'g'
-);
+/**
+ * One path segment of an SSoT directory reference, excluding the `..`
+ * segment. `[\w./-]+` accepted `skills/../../../../etc/passwd`, which
+ * `loadSsotContents` then read through `path.join(ROOT, ref)` — an
+ * arbitrary-file read reachable from a fork PR (#2050 review, major 1).
+ */
+const SSOT_PATH_SEGMENT = '(?!\\.\\.(?:/|$))[\\w.-]+';
+const ssotDirPattern = (prefix) => `${prefix}(?:${SSOT_PATH_SEGMENT}/)*${SSOT_PATH_SEGMENT}`;
+
+/**
+ * Source of {@link SSOT_REFERENCE_RE}. Exported so the two traversal defences
+ * can be pinned separately: with only `isContainedSsotPath` under test, the
+ * regex could silently regress back to `[\w./-]+` and every test would still
+ * pass (verified by mutation, #2050 review major 1).
+ */
+export const SSOT_REFERENCE_PATTERN = [
+  'pages/reference/review-policy(?:\\.en)?\\.md',
+  'docs/review/output-format\\.md',
+  ssotDirPattern('skills/'),
+  ssotDirPattern('src/lib/'),
+].join('|');
+
+const SSOT_REFERENCE_RE = new RegExp(SSOT_REFERENCE_PATTERN, 'g');
+
+/**
+ * Normalize a repo-relative reference to a posix path with `.`/`..` resolved.
+ *
+ * Shared by RA-2's escape check and RA-1's SSoT containment check so the two
+ * cannot drift (CLAUDE.md "Import the SSoT, never re-derive it").
+ */
+function toNormalizedRepoPath(ref) {
+  return path.posix.normalize(
+    normalizeRef(String(ref ?? ''))
+      .split(path.win32.sep)
+      .join('/')
+  );
+}
+
+/** Does an already-normalized posix path leave the repository root? */
+function escapesRepoRoot(rel) {
+  return rel.startsWith('../') || rel === '..' || path.posix.isAbsolute(rel);
+}
+
+/**
+ * Is `ref` a D3-3 SSoT path that stays inside the repository?
+ *
+ * Containment is checked on the **normalized** path, so a reference is only
+ * loadable when what it actually resolves to is still in the SSoT set. This is
+ * the second half of the traversal fix: the regex refuses to produce a `..`
+ * reference, and this predicate refuses to read one even if some other code
+ * path produces it (#2050 review, major 1).
+ *
+ * Pure function.
+ *
+ * @param {string} ref
+ * @returns {boolean}
+ */
+export function isContainedSsotPath(ref) {
+  const rel = toNormalizedRepoPath(ref);
+  if (rel === '' || escapesRepoRoot(rel)) return false;
+  return RA1_SSOT_PATHS.includes(rel) || RA1_SSOT_PREFIXES.some((prefix) => rel.startsWith(prefix));
+}
 
 /**
  * Collect the SSoT paths a host-local file points at. Only paths inside the
@@ -407,10 +468,7 @@ const SSOT_REFERENCE_RE = new RegExp(
  */
 export function findSsotReferences(content) {
   const hits = String(content ?? '').match(SSOT_REFERENCE_RE) || [];
-  const kept = hits.filter(
-    (p) => RA1_SSOT_PATHS.includes(p) || RA1_SSOT_PREFIXES.some((prefix) => p.startsWith(prefix))
-  );
-  return [...new Set(kept)];
+  return [...new Set(hits.filter((p) => isContainedSsotPath(p)))];
 }
 
 /**
@@ -535,10 +593,28 @@ const COMPLETION_HEADING_RE = /完了(?:条件|判定|基準)|[Cc]ompletion crit
  * `\b` creates no boundary between CJK characters, so a `\b指摘\b` branch can
  * never match Japanese prose — the rule was silently English-only even though
  * `.claude/**` is mostly Japanese (#2050 re-review, major 1). ASCII words keep
- * an explicit boundary; `指摘` needs none.
+ * an explicit boundary; `指摘` needs none — do NOT reintroduce `\b` around it.
+ *
+ * The three ideas are three independent `.test()` calls, not three `.*`
+ * lookaheads inside one unanchored pattern. The lookahead form was quadratic on
+ * a line that never satisfies the last idea (measured on Node 22.22.2: 10KB →
+ * 137ms, 40KB → 2068ms, 100KB → 12958ms), so one ~700KB file under
+ * `.claude/**` could time the `Meta consistency` job out
+ * (`timeout-minutes: 10`) from a fork PR (#2050 review, major 2). The meaning
+ * is unchanged: all three must occur somewhere on the same line.
  */
-const EVIDENCE_REQUIREMENT_RE =
-  /(?=.*(?:(?<![A-Za-z0-9_])findings?(?![A-Za-z0-9_])|指摘))(?=.*(?:証跡|evidence))(?=.*(?:必須|必ず|MUST|required))/i;
+const EVIDENCE_FINDING_RE = /(?<![A-Za-z0-9_])findings?(?![A-Za-z0-9_])|指摘/i;
+const EVIDENCE_TRACE_RE = /証跡|evidence/i;
+const EVIDENCE_OBLIGATION_RE = /必須|必ず|MUST|required/i;
+
+/** Do the three finding-evidence ideas all occur on one line? Linear in line length. */
+function hasEvidenceRequirement(line) {
+  return (
+    EVIDENCE_FINDING_RE.test(line) &&
+    EVIDENCE_TRACE_RE.test(line) &&
+    EVIDENCE_OBLIGATION_RE.test(line)
+  );
+}
 
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
 /** A list item or a stand-alone emphasized label — both act as verdict anchors. */
@@ -714,7 +790,7 @@ export function detectReviewJudgmentDefinitions(content) {
 
   // --- Rule 4: finding evidence requirement ---
   lines.forEach((line, i) => {
-    if (!EVIDENCE_REQUIREMENT_RE.test(line)) return;
+    if (!hasEvidenceRequirement(line)) return;
     findings.push({
       rule: 'finding-evidence-requirement',
       line: i + 1,
@@ -734,7 +810,18 @@ function containsVerbatimText(haystack, needle) {
   return n !== '' && norm(haystack).includes(n);
 }
 
-/** Whole-word containment — `BLOCKED` must not match inside `UNBLOCKED_BY`. */
+/**
+ * Whole-word containment — `BLOCKED` must not match inside `UNBLOCKED_BY`.
+ *
+ * **Case-sensitive on purpose, and load-bearing.** The internal severity
+ * vocabulary is lowercase (`blocker` / `warning` / `nit`), and the prose SSoT
+ * documents spell the display form with a capital (`Blocker`). Matching
+ * case-insensitively would let a document that only ever writes `Blocker` in
+ * a prose heading excuse a lowercase mapping table it never defines. The RA-1
+ * inventory's "SSoT 3 本に `blocker` は現れない" evidence rests on this: the
+ * same corpus answers 1 to `grep -ic blocker` for two of those files
+ * (#2050 review, doc 4). `tests/validate-plugin-manifest.test.mjs` pins it.
+ */
 function containsWord(haystack, word) {
   const escaped = String(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   if (escaped === '') return false;
@@ -858,8 +945,8 @@ export function checkManifestHostIndependentRefs(ccManifest, codexManifest) {
   for (const [field, ref] of manifestRefs(ccManifest, codexManifest)) {
     // Resolve `..` before judging: `skills/../../etc/passwd` starts with an
     // allowed prefix but leaves the top-level set (#2050 review, minor 4).
-    const rel = path.posix.normalize(normalizeRef(ref).split(path.win32.sep).join('/'));
-    if (rel.startsWith('../') || rel === '..' || path.posix.isAbsolute(rel)) {
+    const rel = toNormalizedRepoPath(ref);
+    if (escapesRepoRoot(rel)) {
       errors.push(
         `RA-2 ${field}: "${ref}" escapes the repository root once normalized ("${rel}") — ` +
           `ADR-009 D3 RA-2`
@@ -905,8 +992,27 @@ async function loadRuntimeAdapterFiles() {
   const paths = listed.split('\0').filter(Boolean);
   const files = [];
   for (const rel of paths) {
+    const abs = path.join(ROOT, rel);
     try {
-      files.push({ path: rel, content: await fs.readFile(path.join(ROOT, rel), 'utf8') });
+      // `lstat` (not `stat`) so a symlink is judged as a symlink. Only regular
+      // files are scanned: a symlink or a gitlink is not adapter content, and
+      // following one would read outside the target set. The size cap bounds
+      // per-line scanning work — every rule here is linear per line, but a
+      // pathological single-line file is still attacker-controlled input that
+      // the `Meta consistency` job has to finish inside its timeout
+      // (#2050 review, minor).
+      const st = await fs.lstat(abs);
+      if (!st.isFile()) continue;
+      if (st.size > RA1_MAX_TARGET_BYTES) {
+        return {
+          files: [],
+          error:
+            `RA-1: target ${rel} is ${st.size} bytes, over the ${RA1_MAX_TARGET_BYTES}-byte ` +
+            `scan limit — split the file or move the content out of the RA-1 target set ` +
+            `(ADR-009 D3-3: 判定不能な場合は違反として扱う)`,
+        };
+      }
+      files.push({ path: rel, content: await fs.readFile(abs, 'utf8') });
     } catch (err) {
       return { files: [], error: `RA-1: could not read target ${rel} (${err.message})` };
     }
@@ -920,6 +1026,11 @@ async function loadSsotContents(files) {
   for (const file of files) for (const ref of findSsotReferences(file.content)) wanted.add(ref);
   const map = new Map();
   for (const ref of wanted) {
+    // Containment before I/O. `findSsotReferences` already refuses to emit a
+    // `..` reference, but this read is the thing that would leak an arbitrary
+    // file, so the check sits here too rather than only upstream
+    // (#2050 review, major 1).
+    if (!isContainedSsotPath(ref)) continue;
     try {
       map.set(ref, await fs.readFile(path.join(ROOT, ref), 'utf8'));
     } catch {
