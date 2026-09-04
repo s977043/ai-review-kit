@@ -1,7 +1,10 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
+import { normalizeSeverity } from '../src/lib/finding-factory.mjs';
+import { GATE_DECISIONS } from '../src/lib/gate-decision.mjs';
 import { isDirectRun } from './lib/is-direct-run.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -315,6 +318,618 @@ export function checkClaudeMdCommandParity(claudeMd, ccManifest) {
   return errors;
 }
 
+// ---------------------------------------------------------------------------
+// Runtime Adapter Invariants RA-1 / RA-2 (ADR-009 D3)
+//
+// ADR-009 (docs/adr/009-plugin-first-product-and-runtime-contract.md) defines
+// four invariants. RA-3 (checkCrossManifestParity) and RA-4 (version sync) were
+// already mechanized above; RA-1 and RA-2 are added here (#2027).
+//
+//   RA-1  `.claude/**` / `.codex/**` / the two plugin manifests do not define
+//         the canonical form of Review Judgment.
+//   RA-2  Every entity path a manifest references lives under a host-neutral
+//         top-level directory and never under `.claude/**` or `.codex/**`.
+// ---------------------------------------------------------------------------
+
+/**
+ * RA-1 enforcement stage, introduced off → observe → active (#2027).
+ *
+ * `observe` carried the rollout while violations remained. Both were then
+ * dispositioned: the gate vocabulary was narrowed to the product gate, which
+ * put the `.claude/commands/**` work-procedure verdicts out of scope, and
+ * `.claude/rules/review-core.md` gained the `src/lib/finding-factory.mjs`
+ * source line that satisfies the D3-3 exclusion. With the repository at zero
+ * RA-1 findings, the check is `active`: a new violation fails
+ * `npm run plugin:validate`.
+ *
+ * The inventory that records how each violation was dispositioned is
+ * docs/development/ra1-runtime-adapter-inventory.md.
+ *
+ * @type {'off' | 'observe' | 'active'}
+ */
+export const RA1_ENFORCEMENT = 'active';
+
+/**
+ * Where a RA-1 finding goes for a given enforcement stage: `null` (not run),
+ * `observations` (reported, exit code unchanged) or `errors` (fails the run).
+ *
+ * Exported so the routing is testable on its own — the repository has no RA-1
+ * violation to exercise it with, so a test that only ran the validator could
+ * not tell `observe` from `active`.
+ *
+ * @param {'off' | 'observe' | 'active'} enforcement
+ * @returns {null | 'observations' | 'errors'}
+ */
+export function ra1Sink(enforcement) {
+  if (enforcement === 'off') return null;
+  return enforcement === 'active' ? 'errors' : 'observations';
+}
+
+/**
+ * RA-1 target path set (ADR-009 D3-3 項番 1). Enumerated through `git ls-files`
+ * — never `find` — because agent worktrees put a full checkout under
+ * `.claude/worktrees/**`; those copies are gitignored and must stay out of the
+ * target set.
+ */
+export const RA1_TARGET_PATHSPECS = [
+  '.claude/**',
+  '.codex/**',
+  '.claude-plugin/*.json',
+  '.codex-plugin/*.json',
+];
+
+/**
+ * SSoT locations a host-local file may derive from (ADR-009 D3-3 項番 3).
+ * Exact paths plus directory prefixes.
+ */
+export const RA1_SSOT_PATHS = ['pages/reference/review-policy.md', 'docs/review/output-format.md'];
+export const RA1_SSOT_PREFIXES = ['skills/', 'src/lib/'];
+
+const SSOT_REFERENCE_RE = new RegExp(
+  [
+    'pages/reference/review-policy(?:\\.en)?\\.md',
+    'docs/review/output-format\\.md',
+    'skills/[\\w./-]+',
+    'src/lib/[\\w./-]+',
+  ].join('|'),
+  'g'
+);
+
+/**
+ * Collect the SSoT paths a host-local file points at. Only paths inside the
+ * D3-3 SSoT set count; a reference to any other document (for example
+ * `docs/governance.md`) is not an SSoT reference for RA-1 purposes.
+ *
+ * Pure function.
+ *
+ * @param {string} content
+ * @returns {string[]} repo-relative paths, de-duplicated
+ */
+export function findSsotReferences(content) {
+  const hits = String(content ?? '').match(SSOT_REFERENCE_RE) || [];
+  const kept = hits.filter(
+    (p) => RA1_SSOT_PATHS.includes(p) || RA1_SSOT_PREFIXES.some((prefix) => p.startsWith(prefix))
+  );
+  return [...new Set(kept)];
+}
+
+/**
+ * Strip inline-emphasis punctuation from a markdown table cell or label so that
+ * `` `blocker` `` and `**MERGE_OK**` normalize to their bare token. Without
+ * this, an author who merely backticks a cell slips past the detector while
+ * changing nothing about the content (#2050 review, major 2).
+ */
+function stripInlineMarkup(value) {
+  let out = String(value ?? '')
+    .replace(/[`*~]/g, '')
+    .trim();
+  // `_` is emphasis only when it wraps the whole span; inside a token it is
+  // part of the token (`MERGE_OK` must not become `MERGEOK`).
+  while (/^_{1,2}[^_].*[^_]_{1,2}$/.test(out) || /^_{1,2}[^_]_{1,2}$/.test(out)) {
+    out = out
+      .replace(/^_{1,2}/, '')
+      .replace(/_{1,2}$/, '')
+      .trim();
+  }
+  return out;
+}
+
+/**
+ * Split a markdown table row into its cells, or null when the line is not a
+ * table row. Accepts any cell count of 2 or more: pinning the row to exactly
+ * two cells let a third "備考" column disable the rule (#2050 review, major 2).
+ * Full-width `｜` is accepted alongside `|`.
+ */
+function tableRowCells(line) {
+  const raw = String(line ?? '');
+  if (!/^\s*[|｜]/.test(raw)) return null;
+  const cells = raw
+    .trim()
+    .replace(/^[|｜]/, '')
+    .replace(/[|｜]\s*$/, '')
+    .split(/[|｜]/)
+    .map((c) => stripInlineMarkup(c));
+  if (cells.length < 2) return null;
+  if (cells.every((c) => c === '' || /^:?-+:?$/.test(c))) return null; // separator row
+  return cells;
+}
+
+/**
+ * Fail-safe output severity. `normalizeSeverity` maps every unrecognized input
+ * to one value; asking it is how that value is obtained, so this module holds
+ * no severity literal of its own (CLAUDE.md "Import the SSoT, never re-derive
+ * it"; #2050 review, minor 3).
+ */
+const FAILSAFE_SEVERITY = normalizeSeverity('__not-a-severity-token__');
+
+/**
+ * Is `[a, b]` a row of the internal→output severity mapping?
+ *
+ * The vocabulary is NOT re-declared here: `normalizeSeverity` in
+ * `src/lib/finding-factory.mjs` is the SSoT for the mapping and is asked
+ * directly.
+ */
+function isSeverityMappingRow(a, b) {
+  const left = String(a).toLowerCase();
+  const right = String(b).toLowerCase();
+  if (left === right) return false;
+  if (!/^[a-z]+$/.test(left) || !/^[a-z]+$/.test(right)) return false;
+  // `right` must be an output-vocabulary token (a fixed point of the mapping).
+  if (normalizeSeverity(right) !== right) return false;
+  return normalizeSeverity(left) === right;
+}
+
+/**
+ * Verdict tokens the gate rule recognizes: exactly River Review's product gate
+ * vocabulary, imported from `src/lib/gate-decision.mjs` (`GATE_DECISIONS`)
+ * rather than restated.
+ *
+ * The scope is deliberately this narrow. `.claude/commands/**` define their own
+ * verdicts (`MERGE_OK`, `SAFE`, `PASS`, `REGISTERED` …), but those judge a
+ * repository work procedure, not a review: they live in a different namespace
+ * from the product gate and are therefore not Review Judgment under ADR-009 D3
+ * (#2050, user decision 1). Restricting the vocabulary to the product gate also
+ * removes the false positives a SCREAMING_CASE shape rule produced — `CLAUDE`,
+ * `AGENTS`, `JSON` and `HTTP` headings were read as gate verdicts (#2050
+ * review, major 3). One change answers both.
+ *
+ * Note: ADR-009 D7-4 counts `.claude/commands/merge-check.md` as a D3
+ * violation, which contradicts this scope. Correcting the ADR text is a
+ * separate PR; this module follows the decision, not the stale prose.
+ */
+const VERDICT_ALLOWLIST = new Set(GATE_DECISIONS);
+
+/** Leading enumerator of a label: `A.`, `1.`, `B)` … */
+const ENUMERATOR_RE = /^(?:[A-Za-z0-9]{1,3}[.)]\s+)+/;
+/** What may follow a verdict in subject position: nothing, or a separator. */
+const AFTER_VERDICT_RE = /^\s*(?:[-—–:：/|]|$)/;
+
+/**
+ * The verdict token a label carries in **subject position**, or null.
+ *
+ * Subject position means the label — after an optional enumerator — begins with
+ * the token, and the token is followed by end-of-label or a separator. Without
+ * that constraint a heading that merely mentions a verdict in a sentence
+ * (`## ESCALATE 判定の運用`) reads as a definition of it.
+ */
+function verdictOf(label) {
+  const text = stripInlineMarkup(label).replace(ENUMERATOR_RE, '');
+  const match = /^[A-Z][A-Z0-9_]*/.exec(text);
+  if (!match) return null;
+  const token = match[0];
+  if (!AFTER_VERDICT_RE.test(text.slice(token.length))) return null;
+  return VERDICT_ALLOWLIST.has(token) ? token : null;
+}
+
+/**
+ * A "条件:" style line. List markers, emphasis and alternative lead-ins are
+ * accepted: `- 条件:` and `**成立要件**:` are the same statement as `条件:`
+ * (#2050 review, major 2).
+ */
+const CONDITION_LINE_RE =
+  /^\s*(?:[-*+]\s+|\d+[.)]\s+)?[`*_~]*(?:条件|判定条件|成立要件|判定基準|Conditions?)[`*_~]*\s*[:：]/;
+const COMPLETION_HEADING_RE = /完了(?:条件|判定|基準)|[Cc]ompletion criteri/;
+/**
+ * finding evidence requirement: the three ideas on one line.
+ *
+ * `\b` creates no boundary between CJK characters, so a `\b指摘\b` branch can
+ * never match Japanese prose — the rule was silently English-only even though
+ * `.claude/**` is mostly Japanese (#2050 re-review, major 1). ASCII words keep
+ * an explicit boundary; `指摘` needs none.
+ */
+const EVIDENCE_REQUIREMENT_RE =
+  /(?=.*(?:(?<![A-Za-z0-9_])findings?(?![A-Za-z0-9_])|指摘))(?=.*(?:証跡|evidence))(?=.*(?:必須|必ず|MUST|required))/i;
+
+const HEADING_RE = /^(#{1,6})\s+(.*)$/;
+/** A list item or a stand-alone emphasized label — both act as verdict anchors. */
+const LIST_ITEM_RE = /^\s*(?:[-*+]\s+|\d+[.)]\s+)(.*)$/;
+const BOLD_LABEL_RE = /^\s*(?:\*\*|__)([^*_]+)(?:\*\*|__)\s*[-—:：]?\s*(.*)$/;
+
+/** Lines of the section a heading at `index` opens (until the next same/higher heading). */
+function sectionLines(lines, index, level) {
+  const out = [];
+  for (let i = index + 1; i < lines.length; i += 1) {
+    const h = HEADING_RE.exec(lines[i]);
+    if (h && h[1].length <= level) break;
+    out.push(lines[i]);
+  }
+  return out;
+}
+
+/**
+ * Lines that belong to a non-heading anchor at `index`: everything up to the
+ * next heading or the next verdict anchor, capped so an anchor cannot claim an
+ * unrelated condition line far below it.
+ */
+const ANCHOR_WINDOW = 8;
+function anchorWindowLines(lines, index, isAnchor) {
+  const out = [];
+  const end = Math.min(lines.length, index + 1 + ANCHOR_WINDOW);
+  for (let i = index + 1; i < end; i += 1) {
+    if (HEADING_RE.test(lines[i])) break;
+    if (isAnchor(i)) break;
+    out.push(lines[i]);
+  }
+  return out;
+}
+
+/**
+ * Detect Review Judgment definitions that ADR-009 D3-2 forbids a runtime
+ * adapter file from carrying. Four rules, one per forbidden class:
+ *
+ *  - `severity-vocabulary-map`   severity 語彙の対応表
+ *  - `gate-decision-condition`   gate / decision の判定条件
+ *  - `completion-condition`      completion の判定条件
+ *  - `finding-evidence-requirement`  finding の証跡要件
+ *
+ * A severity table is only reported when it has at least two mapping rows and
+ * at least one row whose output token is not the fail-safe value:
+ * `normalizeSeverity` maps unknown input to that value, so `| something |
+ * major |` rows alone are not evidence of a duplicated mapping. The two-row
+ * floor keeps a one-line glossary entry out of the rule (#2050 review, minor 2).
+ *
+ * Each hit carries `verbatimTarget`, naming which half of it the D3-3 exclusion
+ * must find in the SSoT: `terms` for the severity rule (the vocabulary itself
+ * is what gets duplicated) and `text` for every rule whose duplicated content
+ * is a condition sentence (#2050 review, major 1).
+ *
+ * Pure function.
+ *
+ * @param {string} content
+ * @returns {{rule: string, line: number, term: string, text: string, verbatimTarget: 'terms'|'text'}[]}
+ */
+export function detectReviewJudgmentDefinitions(content) {
+  const lines = String(content ?? '').split('\n');
+  const findings = [];
+
+  // --- Rule 1: severity vocabulary mapping table ---
+  let block = null;
+  const flushBlock = () => {
+    if (!block) return;
+    const nonDefault = block.rows.filter(([, b]) => b.toLowerCase() !== FAILSAFE_SEVERITY);
+    if (block.rows.length >= 2 && nonDefault.length >= 1) {
+      findings.push({
+        rule: 'severity-vocabulary-map',
+        line: block.start,
+        term: block.rows.map(([a, b]) => `${a.toLowerCase()}→${b.toLowerCase()}`).join(', '),
+        text: block.rows.map(([a, b]) => `| ${a} | ${b} |`).join(' '),
+        verbatimTarget: 'terms',
+      });
+    }
+    block = null;
+  };
+  lines.forEach((line, i) => {
+    const cells = tableRowCells(line);
+    if (!cells) {
+      if (!/^\s*[|｜]/.test(line)) flushBlock();
+      return;
+    }
+    // Any adjacent cell pair may carry the mapping, so a third column does not
+    // hide it.
+    let pair = null;
+    for (let c = 0; c + 1 < cells.length && !pair; c += 1) {
+      if (isSeverityMappingRow(cells[c], cells[c + 1])) pair = [cells[c], cells[c + 1]];
+    }
+    if (!pair) return;
+    if (!block) block = { start: i + 1, rows: [] };
+    block.rows.push(pair);
+  });
+  flushBlock();
+
+  // --- Rules 2 & 3: gate / decision and completion conditions ---
+  // A verdict may be labelled by a heading, a list item, a bold label or a
+  // table cell; all four are scanned (#2050 review, major 2).
+  const labelsOf = (line) => {
+    const labels = [];
+    const heading = HEADING_RE.exec(line);
+    if (heading) labels.push(heading[2]);
+    const item = LIST_ITEM_RE.exec(line);
+    if (item) labels.push(item[1]);
+    const bold = BOLD_LABEL_RE.exec(line);
+    if (bold) labels.push(bold[1]);
+    const cells = tableRowCells(line);
+    if (cells) labels.push(cells[0]);
+    if (labels.length === 0) labels.push(line);
+    return labels;
+  };
+  const verdictAt = (i) => {
+    for (const label of labelsOf(lines[i])) {
+      const verdict = verdictOf(label);
+      if (verdict) return verdict;
+    }
+    return null;
+  };
+  const isVerdictAnchor = (i) => verdictAt(i) !== null;
+
+  lines.forEach((line, i) => {
+    const heading = HEADING_RE.exec(line);
+    const verdict = verdictAt(i);
+    const cells = tableRowCells(line);
+
+    // Table form: `| MERGE_OK | すべての必須チェックが pass |` — the row is both
+    // the anchor and the condition.
+    if (verdict && cells && cells.length >= 2 && verdictOf(cells[0]) === verdict) {
+      const condition = cells.slice(1).find((c) => c !== '' && !/^:?-+:?$/.test(c));
+      if (condition) {
+        findings.push({
+          rule: 'gate-decision-condition',
+          line: i + 1,
+          term: verdict,
+          text: condition,
+          verbatimTarget: 'text',
+        });
+        return;
+      }
+    }
+
+    const body = heading
+      ? sectionLines(lines, i, heading[1].length)
+      : verdict
+        ? anchorWindowLines(lines, i, isVerdictAnchor)
+        : null;
+    if (!body) return;
+    const conditionLine = body.find((l) => CONDITION_LINE_RE.test(l));
+    if (!conditionLine) return;
+
+    if (verdict) {
+      findings.push({
+        rule: 'gate-decision-condition',
+        line: i + 1,
+        term: verdict,
+        text: conditionLine.trim(),
+        verbatimTarget: 'text',
+      });
+      return;
+    }
+    if (heading && COMPLETION_HEADING_RE.test(heading[2])) {
+      findings.push({
+        rule: 'completion-condition',
+        line: i + 1,
+        term: heading[2].trim(),
+        text: conditionLine.trim(),
+        verbatimTarget: 'text',
+      });
+    }
+  });
+
+  // --- Rule 4: finding evidence requirement ---
+  lines.forEach((line, i) => {
+    if (!EVIDENCE_REQUIREMENT_RE.test(line)) return;
+    findings.push({
+      rule: 'finding-evidence-requirement',
+      line: i + 1,
+      term: 'finding evidence',
+      text: line.trim(),
+      verbatimTarget: 'text',
+    });
+  });
+
+  return findings;
+}
+
+/** Whitespace-insensitive verbatim containment. */
+function containsVerbatimText(haystack, needle) {
+  const norm = (s) => String(s).replace(/\s+/g, ' ').trim();
+  const n = norm(needle);
+  return n !== '' && norm(haystack).includes(n);
+}
+
+/** Whole-word containment — `BLOCKED` must not match inside `UNBLOCKED_BY`. */
+function containsWord(haystack, word) {
+  const escaped = String(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (escaped === '') return false;
+  return new RegExp(`(?<![A-Za-z0-9_])${escaped}(?![A-Za-z0-9_])`).test(String(haystack));
+}
+
+/**
+ * The D3-3 項番 3 exclusion, applied to one detection.
+ *
+ * ADR-009 requires that the **duplicated definition** exist verbatim in the
+ * referenced SSoT. Which half of a hit is "the definition" depends on the rule:
+ *
+ *  - `terms` (severity rule) — the vocabulary mapping itself is the duplicated
+ *    definition, so each internal/output token must appear in the SSoT as a
+ *    whole word. Substring matching is not enough: `BLOCKED` occurs inside
+ *    `PROMPT_AB_UNBLOCKED_BY`, which would have excused an unrelated file that
+ *    merely names a `src/lib/**` path (#2050 review, major 1).
+ *  - `text` (gate / completion / evidence rules) — the condition sentence is
+ *    the duplicated definition. Matching the bare verdict token instead let any
+ *    file be excused by naming any `src/lib/**` file that happens to contain
+ *    that word.
+ *
+ * Pure function.
+ *
+ * @param {{term: string, text: string, verbatimTarget?: 'terms'|'text'}} hit
+ * @param {string[]} corpus contents of the SSoT files the file references
+ * @returns {{verbatim: boolean, subject: string}}
+ */
+export function isExcusedByVerbatimSsot(hit, corpus) {
+  if (!Array.isArray(corpus) || corpus.length === 0) {
+    return { verbatim: false, subject: `"${hit.term}"` };
+  }
+  if (hit.verbatimTarget === 'terms') {
+    const terms = String(hit.term)
+      .split(/[,→]/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const verbatim = terms.length > 0 && terms.every((t) => corpus.some((c) => containsWord(c, t)));
+    return { verbatim, subject: `the severity mapping "${hit.term}"` };
+  }
+  const verbatim = corpus.some((c) => containsVerbatimText(c, hit.text));
+  return { verbatim, subject: `the condition text of "${hit.term}"` };
+}
+
+/**
+ * RA-1: no runtime adapter file defines the canonical form of Review Judgment.
+ *
+ * A detected definition is excused only when BOTH halves of the D3-3 exclusion
+ * hold: the same file references a D3-3 SSoT, AND the duplicated wording exists
+ * verbatim in one of the referenced SSoT files. A reference without a verbatim
+ * match is a violation — that is exactly the `.claude/rules/review-core.md`
+ * case ADR-009 D7-2 records.
+ *
+ * Pure function; `files` and `ssotContents` are injected so the caller owns all
+ * I/O.
+ *
+ * @param {{path: string, content: string}[]} files
+ * @param {Map<string, string>} ssotContents repo-relative path → file content
+ * @returns {string[]} violation strings (empty = pass)
+ */
+export function checkReviewJudgmentDuplication(files, ssotContents = new Map()) {
+  const violations = [];
+  for (const file of files) {
+    const hits = detectReviewJudgmentDefinitions(file.content);
+    if (hits.length === 0) continue;
+    const refs = findSsotReferences(file.content);
+    const corpus = refs.map((ref) => ssotContents.get(ref) ?? '').filter(Boolean);
+    for (const hit of hits) {
+      const { verbatim, subject } = isExcusedByVerbatimSsot(hit, corpus);
+      if (verbatim) continue;
+      const why =
+        refs.length === 0
+          ? 'the file declares no ADR-009 D3-3 SSoT reference'
+          : `${subject} is not present verbatim in the referenced SSoT (${refs.join(', ')})`;
+      violations.push(
+        `RA-1 ${file.path}:${hit.line}: ${hit.rule} — ${why}. ` +
+          `Move the definition to skills/**, schemas/**, or an SSoT document and keep only a ` +
+          `pointer here (ADR-009 D3/D4). Found: ${hit.text.slice(0, 120)}`
+      );
+    }
+  }
+  return violations;
+}
+
+/** Host-neutral top-level directories a manifest reference may point at (RA-2). */
+export const RA2_ALLOWED_REF_PREFIXES = ['commands/', 'agents/', 'skills/', 'assets/'];
+
+/** Collect every entity path the two manifests reference. */
+function manifestRefs(ccManifest, codexManifest) {
+  const refs = [];
+  const push = (field, value) => {
+    if (typeof value === 'string') refs.push([field, value]);
+    else if (Array.isArray(value))
+      for (const v of value) if (typeof v === 'string') refs.push([field, v]);
+  };
+  const cc = ccManifest && typeof ccManifest === 'object' ? ccManifest : {};
+  const codex = codexManifest && typeof codexManifest === 'object' ? codexManifest : {};
+  push('.claude-plugin commands', cc.commands);
+  push('.claude-plugin agents', cc.agents);
+  push('.claude-plugin skills', cc.skills);
+  push('.claude-plugin hooks', cc.hooks);
+  push('.claude-plugin composerIcon', cc.composerIcon);
+  push('.codex-plugin skills', codex.skills);
+  if (codex.interface && typeof codex.interface === 'object') {
+    push('.codex-plugin interface.composerIcon', codex.interface.composerIcon);
+  }
+  return refs;
+}
+
+/**
+ * RA-2: every manifest reference resolves to a host-neutral top-level
+ * directory and never into a host-local development directory.
+ *
+ * Current state is compliant (ADR-009 Context), so this check is active from
+ * the start — it pins the compliance rather than reporting a backlog.
+ *
+ * Pure function; returns array of error strings (empty = pass).
+ */
+export function checkManifestHostIndependentRefs(ccManifest, codexManifest) {
+  const errors = [];
+  for (const [field, ref] of manifestRefs(ccManifest, codexManifest)) {
+    // Resolve `..` before judging: `skills/../../etc/passwd` starts with an
+    // allowed prefix but leaves the top-level set (#2050 review, minor 4).
+    const rel = path.posix.normalize(normalizeRef(ref).split(path.win32.sep).join('/'));
+    if (rel.startsWith('../') || rel === '..' || path.posix.isAbsolute(rel)) {
+      errors.push(
+        `RA-2 ${field}: "${ref}" escapes the repository root once normalized ("${rel}") — ` +
+          `ADR-009 D3 RA-2`
+      );
+      continue;
+    }
+    if (/(?:^|\/)\.(?:claude|codex)\//.test(rel)) {
+      errors.push(
+        `RA-2 ${field}: "${ref}" points into a host-local directory. Manifests must reference ` +
+          `host-neutral top-level assets only (ADR-009 D3 RA-2 / D4)`
+      );
+      continue;
+    }
+    if (!RA2_ALLOWED_REF_PREFIXES.some((prefix) => rel.startsWith(prefix))) {
+      errors.push(
+        `RA-2 ${field}: "${ref}" is outside the host-neutral top-level set ` +
+          `(${RA2_ALLOWED_REF_PREFIXES.join(' ')}) — ADR-009 D3 RA-2`
+      );
+    }
+  }
+  return errors;
+}
+
+/**
+ * Enumerate the RA-1 target files through `git ls-files` and read them.
+ * Returns `{files, error}`; a git failure yields `error` so the caller can
+ * fail-safe (ADR-009 D3-3: 判定不能な場合は違反として扱う).
+ */
+async function loadRuntimeAdapterFiles() {
+  let listed;
+  try {
+    listed = execFileSync('git', ['ls-files', '-z', '--', ...RA1_TARGET_PATHSPECS], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+    });
+  } catch (err) {
+    return {
+      files: [],
+      error: `RA-1: could not enumerate targets via git ls-files (${err.message})`,
+    };
+  }
+  const paths = listed.split('\0').filter(Boolean);
+  const files = [];
+  for (const rel of paths) {
+    try {
+      files.push({ path: rel, content: await fs.readFile(path.join(ROOT, rel), 'utf8') });
+    } catch (err) {
+      return { files: [], error: `RA-1: could not read target ${rel} (${err.message})` };
+    }
+  }
+  return { files, error: null };
+}
+
+/** Read the D3-3 SSoT files a target set references. */
+async function loadSsotContents(files) {
+  const wanted = new Set();
+  for (const file of files) for (const ref of findSsotReferences(file.content)) wanted.add(ref);
+  const map = new Map();
+  for (const ref of wanted) {
+    try {
+      map.set(ref, await fs.readFile(path.join(ROOT, ref), 'utf8'));
+    } catch {
+      // A reference that does not resolve contributes no verbatim evidence,
+      // which keeps the fail-safe on the violation side.
+    }
+  }
+  return map;
+}
+
 /**
  * Validate the Claude Code + Codex plugin manifests and the marketplace
  * manifest against the repository:
@@ -328,11 +943,18 @@ export function checkClaudeMdCommandParity(claudeMd, ccManifest) {
  *    listing-required fields (checkBundleFieldAllowlist)
  *  - shared fields not owned by plugin:sync match across both canonical
  *    manifests (checkCrossManifestParity)
+ *  - manifest references stay host-neutral (RA-2;
+ *    checkManifestHostIndependentRefs)
+ *  - no runtime adapter file redefines Review Judgment (RA-1;
+ *    checkReviewJudgmentDuplication) — routed to errors or to `warnings`
+ *    according to `ra1Sink(RA1_ENFORCEMENT)`
  *
- * Returns array of error strings (empty = pass).
+ * Returns array of error strings (empty = pass). Pass `{ warnings }` (an array)
+ * to also collect non-failing observations.
  */
-export async function validatePluginManifest() {
+export async function validatePluginManifest({ warnings } = {}) {
   const errors = [];
+  const observations = Array.isArray(warnings) ? warnings : [];
 
   const pkg = await readJson('package.json');
   const ccManifest = await readJson('.claude-plugin/plugin.json');
@@ -493,6 +1115,9 @@ export async function validatePluginManifest() {
     errors.push(...checkBundleFieldAllowlist(codexManifest));
     errors.push(...checkCrossManifestParity(ccManifest, codexManifest));
 
+    // --- RA-2: manifest references stay host-neutral (ADR-009 D3) ---
+    errors.push(...checkManifestHostIndependentRefs(ccManifest, codexManifest));
+
     // --- Cross-plugin field parity (synced fields must match package.json) ---
     // repository is excluded: package.json uses {type, url} object; plugins use plain string URL.
     const SYNCED_FIELDS = ['keywords', 'homepage', 'author', 'license'];
@@ -514,13 +1139,36 @@ export async function validatePluginManifest() {
     }
   }
 
+  // --- RA-1: no runtime adapter file redefines Review Judgment (ADR-009 D3) ---
+  const ra1Target = ra1Sink(RA1_ENFORCEMENT);
+  if (ra1Target !== null) {
+    const { files, error } = await loadRuntimeAdapterFiles();
+    const sink = ra1Target === 'errors' ? errors : observations;
+    if (error) {
+      sink.push(error);
+    } else {
+      const ssot = await loadSsotContents(files);
+      sink.push(...checkReviewJudgmentDuplication(files, ssot));
+    }
+  }
+
   return errors;
 }
 
 // CLI entry point
 if (isDirectRun(import.meta.url)) {
-  validatePluginManifest()
+  const warnings = [];
+  validatePluginManifest({ warnings })
     .then((errors) => {
+      if (warnings.length > 0) {
+        console.warn(
+          `Plugin manifest: ${warnings.length} RA-1 observation(s) ` +
+            `(RA1_ENFORCEMENT="${RA1_ENFORCEMENT}", not failing the run)`
+        );
+        for (const warning of warnings) {
+          console.warn(`  ! ${warning}`);
+        }
+      }
       if (errors.length === 0) {
         console.log('Plugin manifest: OK');
         return 0;
