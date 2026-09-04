@@ -62,6 +62,34 @@ export async function detectDefaultBranch(cwd) {
   return 'HEAD';
 }
 
+/**
+ * Resolve `baseRef` to a commit SHA, or null when git cannot resolve it.
+ *
+ * Uses the SAME candidate order as {@link findMergeBase} (`origin/<ref>` then
+ * `<ref>`), but NOT the same predicate: this asks `rev-parse` whether the ref
+ * names a commit, while findMergeBase asks `merge-base HEAD <ref>` whether the
+ * two share history. The implication holds in one direction only — a ref this
+ * rejects is one findMergeBase cannot use either, but a ref this accepts can
+ * still have no merge base (unrelated history, a shallow clone) and fall back
+ * to HEAD. Callers that must not review an empty range therefore check the
+ * resulting merge base as well (see resolveBaseRepoDiff in
+ * src/cli/commands/review.mjs). Verified 2026-09-04: `--base <orphan branch>`
+ * passes this check and still yields mergeBase === HEAD (#2046 review).
+ *
+ * @param {string} cwd repository path
+ * @param {string} baseRef branch / ref / SHA as typed by the user
+ * @returns {Promise<string|null>} commit SHA, or null when unresolvable
+ */
+export async function resolveRefToCommit(cwd, baseRef) {
+  for (const ref of [`origin/${baseRef}`, baseRef]) {
+    const sha = await runGit(['rev-parse', '--quiet', '--verify', `${ref}^{commit}`], {
+      cwd,
+    }).catch(() => null);
+    if (sha) return sha;
+  }
+  return null;
+}
+
 export async function findMergeBase(cwd, baseRef) {
   const candidates = [`origin/${baseRef}`, baseRef];
   for (const ref of candidates) {

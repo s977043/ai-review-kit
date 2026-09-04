@@ -53,7 +53,8 @@ Commands:
   skills resolve        Show which skills apply to the given --path files
   doctor <path>         Check setup and print hints for common issues
   review plan           Resolve upstream artifacts and emit a Review Artifact
-                        (Phase 3 slice: --plan-only only)
+                        (Phase 3 slice: --plan-only only; --base <ref> diffs
+                         against that ref instead of the diff artifact)
   review exec           Run the review and emit a Review Artifact with findings
                         (--dry-run: plan only; --plan <file>: replay an existing plan)
   review route          Recommend a review mode (light|standard|team|human-required)
