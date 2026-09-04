@@ -68,7 +68,8 @@ export const SCAN_PATHSPECS = Object.freeze([
 ]);
 
 /** 実行サマリに出す、人間向けの scope 表記。 */
-const SCOPE_LABEL = '追跡ファイル全部 − assets/ − runners/github-action/dist/';
+const SCOPE_LABEL =
+  '追跡ファイル全部 − assets/ − runners/github-action/dist/ − 通常ファイル以外（symlink / gitlink）';
 
 /** 1 ファイルあたり stderr へ出す違反行の上限（超過分は件数だけ出す）。 */
 export const MAX_VIOLATION_LINES_PER_FILE = 5;
@@ -77,8 +78,11 @@ export const MAX_VIOLATION_LINES_PER_FILE = 5;
  * 走査する 1 ファイルの上限バイト数。超過は読まずにエラーとする（fail-safe）。
  *
  * RA-1 の `RA1_MAX_TARGET_BYTES`（1 MiB）と同じ**扱い**（超過 = エラー）にしつつ、
- * **値だけ** 8 MiB へ上げてある。RA-1 の対象は skills/ 配下の runtime adapter 数ファイルだが、
- * こちらは追跡ファイル全部が対象で、既に package-lock.json が 859,422 バイト（2026-09-04 実測、
+ * **値だけ** 8 MiB へ上げてある。RA-1 の対象は `RA1_TARGET_PATHSPECS`
+ * （`.claude/**` / `.codex/**` / `.claude-plugin/*.json` / `.codex-plugin/*.json`）が示す
+ * host 固有ファイルで、2026-09-04 実測で 46 件・最大 15,234 バイト（`.claude/commands/merge-check.md`）。
+ * `skills/` は RA-1 の対象ではなく `RA1_SSOT_PREFIXES` 側、つまり参照される側にあたる。
+ * 一方こちらは追跡ファイル全部が対象で、既に package-lock.json が 859,422 バイト（2026-09-04 実測、
  * `git ls-files -z -- . ':(exclude)assets/' ':(exclude)runners/github-action/dist/' | xargs -0 stat -f '%z %N' | sort -rn | head -1`）
  * ある。1 MiB では lockfile が自然に育つだけで必須チェック `Meta consistency` が落ちる。
  * 8 MiB は現在の最大に対して約 10 倍の余裕があり、かつ 1 ファイルの線形走査を

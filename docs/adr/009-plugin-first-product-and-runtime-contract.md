@@ -24,10 +24,10 @@ Accepted—#2012（親 Epic #2011）で、River Review の第一級配布面を 
 
 [`scripts/validate-plugin-manifest.mjs`](../../scripts/validate-plugin-manifest.mjs)（`npm run plugin:validate`）は次を検査します。
 
-- 2 つの manifest の `version` が `package.json` と一致すること（`:1075` と `:1173`）
-- `.claude-plugin` 側の参照パスが実在すること（`:1092`）
-- 2 つの manifest 間の parity 6 組。`skills` / `repository` / `displayName` / `composerIcon` / `homepage` / `author.name` が対象である（`checkCrossManifestParity` `:164`）
-- `commands/` と `agents/` に置いた資産が manifest へ登録済みであること（逆方向ドリフト検査 `checkAssetRegistration` `:206`）
+- 2 つの manifest の `version` が `package.json` と一致すること（`validatePluginManifest`）
+- `.claude-plugin` 側の参照パスが実在すること（`validatePluginManifest`）
+- 2 つの manifest 間の parity 6 組。`skills` / `repository` / `displayName` / `composerIcon` / `homepage` / `author.name` が対象である（`checkCrossManifestParity`）
+- `commands/` と `agents/` に置いた資産が manifest へ登録済みであること（逆方向ドリフト検査 `checkAssetRegistration`）
 
 一方で「host 固有ディレクトリを配布資産として参照しない」および「host 固有ファイルへ Review Judgment を複製しない」を検査する仕組みは、同スクリプトに存在しません。
 
