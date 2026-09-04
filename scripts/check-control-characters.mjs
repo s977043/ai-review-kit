@@ -40,16 +40,22 @@
 //      あるなら ALLOWED_FILES に理由付きで宣言する。
 //   4. 列挙基準: `git ls-files`。`find` や再帰 readdir は .claude/worktrees/ の
 //      フルコピーを拾ってしまうため使わない（ADR-009 D3-3 項番 1 / RA-1 実装と同じ理由）。
+//   5. 読み取り前のガード: 列挙とガードは scripts/lib/tracked-file-targets.mjs へ寄せ、
+//      RA-1（scripts/validate-plugin-manifest.mjs）と同じ実装を import する。
+//      初版はこのガードを持っておらず、追跡 symlink 経由で 3 つの事故が起きる状態だった
+//      （2026-09-04 実測。詳細は tracked-file-targets.mjs の冒頭コメント）。
+//      通常ファイル以外（symlink / gitlink / ディレクトリ）は skip し、
+//      サイズ上限超過は fail-safe でエラーにする。
 //
 // 意図的に制御文字を含む文字列をテストしたい場合は、生バイトではなく
 // エスケープ列（'skill\u0000id'）で書く。実行時の文字列は同じで、ファイルはテキストのまま残る。
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 import { isDirectRun } from './lib/is-direct-run.mjs';
+import { classifyTrackedTarget, listTrackedPaths } from './lib/tracked-file-targets.mjs';
 
 /**
  * 走査対象の git pathspec。「全部から除外を引く」形にしてあるので、
@@ -66,6 +72,21 @@ const SCOPE_LABEL = '追跡ファイル全部 − assets/ − runners/github-act
 
 /** 1 ファイルあたり stderr へ出す違反行の上限（超過分は件数だけ出す）。 */
 export const MAX_VIOLATION_LINES_PER_FILE = 5;
+
+/**
+ * 走査する 1 ファイルの上限バイト数。超過は読まずにエラーとする（fail-safe）。
+ *
+ * RA-1 の `RA1_MAX_TARGET_BYTES`（1 MiB）と同じ**扱い**（超過 = エラー）にしつつ、
+ * **値だけ** 8 MiB へ上げてある。RA-1 の対象は skills/ 配下の runtime adapter 数ファイルだが、
+ * こちらは追跡ファイル全部が対象で、既に package-lock.json が 859,422 バイト（2026-09-04 実測、
+ * `git ls-files -z -- . ':(exclude)assets/' ':(exclude)runners/github-action/dist/' | xargs -0 stat -f '%z %N' | sort -rn | head -1`）
+ * ある。1 MiB では lockfile が自然に育つだけで必須チェック `Meta consistency` が落ちる。
+ * 8 MiB は現在の最大に対して約 10 倍の余裕があり、かつ 1 ファイルの線形走査を
+ * job の timeout（10 分）に対して十分小さく抑える。
+ * 超過を skip でなくエラーにするのは、黙って検査対象から外れる穴を作らないため
+ * （どうしても必要なら ALLOWED_FILES へ理由付きで宣言する）。
+ */
+export const MAX_TARGET_BYTES = 8 * 1024 * 1024;
 
 /** 許可する制御文字（TAB / LF / CR）。 */
 export const ALLOWED_CONTROL_BYTES = Object.freeze([0x09, 0x0a, 0x0d]);
@@ -147,31 +168,24 @@ export function scanBuffer(buffer) {
  * @returns {string[]}
  */
 export function listTargetFiles(root, pathspecs = SCAN_PATHSPECS) {
-  const out = execFileSync('git', ['ls-files', '-z', '--', ...pathspecs], {
-    cwd: root,
-    encoding: 'buffer',
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  return out
-    .toString('utf8')
-    .split('\0')
-    .filter((entry) => entry !== '')
-    .sort();
+  return listTrackedPaths(root, pathspecs, { maxBuffer: 64 * 1024 * 1024 }).sort();
 }
 
 /**
  * チェック本体。
  *
- * @param {{ root?: string, pathspecs?: readonly string[], allowedFiles?: Map<string, string> }} [options]
- * @returns {{ violations: Array<object>, errors: string[], scanned: number, ignored: string[] }}
+ * @param {{ root?: string, pathspecs?: readonly string[], allowedFiles?: Map<string, string>, maxBytes?: number }} [options]
+ * @returns {{ violations: Array<object>, errors: string[], scanned: number, ignored: string[], skipped: string[] }}
  */
 export function checkControlCharacters(options = {}) {
   const root = options.root ?? process.cwd();
   const pathspecs = options.pathspecs ?? SCAN_PATHSPECS;
   const allowedFiles = options.allowedFiles ?? ALLOWED_FILES;
+  const maxBytes = options.maxBytes ?? MAX_TARGET_BYTES;
 
   const errors = [];
   const ignored = [];
+  const skipped = [];
   for (const [file, reason] of allowedFiles) {
     // 理由は「非空の文字列」でなければならない。String(0) は '0' になり trim を
     // 素通りするので、typeof で先に弾く（数値 0 を理由として通さない）。
@@ -189,6 +203,7 @@ export function checkControlCharacters(options = {}) {
       errors: [...errors, `対象の列挙に失敗した (${err.message})`],
       scanned: 0,
       ignored,
+      skipped,
     };
   }
 
@@ -211,9 +226,26 @@ export function checkControlCharacters(options = {}) {
       ignored.push(`${file} — ${allowedFiles.get(file)}`);
       continue;
     }
+    const abs = path.join(root, file);
     let buffer;
     try {
-      buffer = readFileSync(path.join(root, file));
+      // 読む前に「読んでよい対象か」を判定する（RA-1 と同じ実装を import）。
+      // lstat なので symlink は辿らない。追跡 symlink を辿ると (a) キャラクタデバイス
+      // （/dev/zero）で readFileSync が返らず、(b) リポジトリ外のファイルを読み、
+      // (c) ディレクトリで EISDIR の誤検出になる。
+      const target = classifyTrackedTarget(abs, maxBytes);
+      if (target.kind === 'skip') {
+        skipped.push(file);
+        continue;
+      }
+      if (target.kind === 'oversize') {
+        errors.push(
+          `${file}: ${target.size} バイトで走査上限 ${maxBytes} バイトを超えている — ` +
+            '分割するか、ALLOWED_FILES へ理由付きで宣言する'
+        );
+        continue;
+      }
+      buffer = readFileSync(abs);
     } catch (err) {
       // 追跡されているのに読めない（sparse-checkout・symlink 切れ等）。
       // 素通しさせず、エラーとして報告する。
@@ -230,7 +262,7 @@ export function checkControlCharacters(options = {}) {
     errors.push(NOTHING_SCANNED_ERROR);
   }
 
-  return { violations, errors, scanned, ignored };
+  return { violations, errors, scanned, ignored, skipped };
 }
 
 /**
@@ -265,10 +297,16 @@ export function formatViolationLines(violations, limit = MAX_VIOLATION_LINES_PER
 }
 
 function main() {
-  const { violations, errors, scanned, ignored } = checkControlCharacters();
+  const { violations, errors, scanned, ignored, skipped } = checkControlCharacters();
 
   for (const note of ignored) {
     console.log(`  (ignored) ${note}`);
+  }
+
+  // skip は黙って行わない。symlink / gitlink が追跡へ入ったこと自体は
+  // 見えるようにしておく（落とさないが、気づけるようにする）。
+  for (const file of skipped) {
+    console.log(`  (skipped) ${file} — 通常ファイルではない（symlink / gitlink / ディレクトリ）`);
   }
 
   // errors があっても violations を先に出す。読めないファイル 1 件と本物の混入が

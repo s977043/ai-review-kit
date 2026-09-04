@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -6,6 +5,7 @@ import process from 'node:process';
 import { normalizeSeverity } from '../src/lib/finding-factory.mjs';
 import { GATE_DECISIONS } from '../src/lib/gate-decision.mjs';
 import { isDirectRun } from './lib/is-direct-run.mjs';
+import { classifyTrackedTarget, listTrackedPaths } from './lib/tracked-file-targets.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 
@@ -1060,20 +1060,15 @@ export function checkManifestHostIndependentRefs(ccManifest, codexManifest) {
  * fail-safe (ADR-009 D3-3: 判定不能な場合は違反として扱う).
  */
 async function loadRuntimeAdapterFiles() {
-  let listed;
+  let paths;
   try {
-    listed = execFileSync('git', ['ls-files', '-z', '--', ...RA1_TARGET_PATHSPECS], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      maxBuffer: 32 * 1024 * 1024,
-    });
+    paths = listTrackedPaths(ROOT, RA1_TARGET_PATHSPECS, { maxBuffer: 32 * 1024 * 1024 });
   } catch (err) {
     return {
       files: [],
       error: `RA-1: could not enumerate targets via git ls-files (${err.message})`,
     };
   }
-  const paths = listed.split('\0').filter(Boolean);
   const files = [];
   for (const rel of paths) {
     const abs = path.join(ROOT, rel);
@@ -1085,13 +1080,17 @@ async function loadRuntimeAdapterFiles() {
       // pathological single-line file is still attacker-controlled input that
       // the `Meta consistency` job has to finish inside its timeout
       // (#2050 review, minor).
-      const st = await fs.lstat(abs);
-      if (!st.isFile()) continue;
-      if (st.size > RA1_MAX_TARGET_BYTES) {
+      //
+      // The enumeration and this classification are shared with
+      // scripts/check-control-characters.mjs via scripts/lib/tracked-file-targets.mjs
+      // (CLAUDE.md "Import the SSoT, never re-derive it").
+      const target = classifyTrackedTarget(abs, RA1_MAX_TARGET_BYTES);
+      if (target.kind === 'skip') continue;
+      if (target.kind === 'oversize') {
         return {
           files: [],
           error:
-            `RA-1: target ${rel} is ${st.size} bytes, over the ${RA1_MAX_TARGET_BYTES}-byte ` +
+            `RA-1: target ${rel} is ${target.size} bytes, over the ${RA1_MAX_TARGET_BYTES}-byte ` +
             `scan limit — split the file or move the content out of the RA-1 target set ` +
             `(ADR-009 D3-3: 判定不能な場合は違反として扱う)`,
         };

@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  MAX_TARGET_BYTES,
   NOTHING_SCANNED_ERROR,
   checkControlCharacters,
   formatViolationLines,
@@ -37,8 +38,13 @@ const UNIT_SEP_SOURCE = "export const bad = 'a\u001Fb';\n";
 const DEL_SOURCE = "export const bad = 'a\u007Fb';\n";
 const CRLF_SOURCE = 'export const ok = 1;\r\n\texport const also = 2;\r\n';
 
-/** 一時 git リポジトリを作り、files を書き出して `git add` する。 */
-function gitFixture(files) {
+/**
+ * 一時 git リポジトリを作り、files を書き出して `git add` する。
+ *
+ * `symlinks` は `<リポジトリ相対 path>` → `<symlink の指す先>` の対応で、追跡された
+ * symlink（git の mode 120000）を作る。読み取り前ガードの回帰テスト用（#2055 追補）。
+ */
+function gitFixture(files, symlinks = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'rr-ctrl-'));
   try {
     execFileSync('git', ['init', '-q'], { cwd: dir, stdio: 'pipe' });
@@ -46,6 +52,11 @@ function gitFixture(files) {
       const abs = join(dir, rel);
       mkdirSync(dirname(abs), { recursive: true });
       writeFileSync(abs, content);
+    }
+    for (const [rel, target] of Object.entries(symlinks)) {
+      const abs = join(dir, rel);
+      mkdirSync(dirname(abs), { recursive: true });
+      symlinkSync(target, abs);
     }
     execFileSync('git', ['add', '-A'], { cwd: dir, stdio: 'pipe' });
   } catch (e) {
@@ -55,10 +66,22 @@ function gitFixture(files) {
   return dir;
 }
 
-function withFixture(files, fn) {
-  const dir = gitFixture(files);
+function withFixture(files, fn, symlinks = {}) {
+  const dir = gitFixture(files, symlinks);
   try {
     fn(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** リポジトリの外に 1 ファイル作る（追跡 symlink の指す先として使う）。 */
+function withOutsideFile(content, fn) {
+  const dir = mkdtempSync(join(tmpdir(), 'rr-outside-'));
+  const abs = join(dir, 'secret.txt');
+  writeFileSync(abs, content);
+  try {
+    fn(abs);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -252,6 +275,135 @@ test('formatViolationLines: 1 ファイルあたりの出力を上限で切り�
   assert.equal(lines.length, 6, '5 行 + 残件サマリ 1 行');
   assert.match(lines[5], /ほか 7 件/);
   assert.match(lines[5], /全 12 件/);
+});
+
+// ---- 読み取り前ガード（追跡 symlink / サイズ上限）: #2055 追補 ----
+//
+// scripts/validate-plugin-manifest.mjs（RA-1）は同じ `git ls-files` 列挙に対して
+// `lstat` + `isFile()` + サイズ上限を既に持っていたが、この script は初版でそれを
+// 持っていなかった。一時 git リポジトリに symlink を 1 本 commit して直接呼んだ実測
+// （2026-09-04、修正前）:
+//   - /dev/zero へのリンク        → readFileSync が返らない（45 秒で強制終了 / exit 124）
+//   - リポジトリ外ファイルへのリンク → 黙って読む（scanned=2 に計上される）
+//   - ディレクトリへのリンク        → EISDIR エラーで exit 1 の誤検出
+// 以下はその 3 経路とサイズ上限の回帰テストで、対照群（通常ファイルは従来どおり検出）を伴う。
+
+test('ガード: 追跡 symlink（リポジトリ内の通常ファイル向け）は走査せず skip する', () => {
+  withFixture(
+    { 'src/real.mjs': NUL_SOURCE },
+    (dir) => {
+      const { violations, errors, scanned, skipped } = checkControlCharacters({ root: dir });
+      // symlink を辿ると同じ実体を 2 回走査し、違反も 2 件になる。
+      assert.deepEqual(
+        violations.map((v) => v.file),
+        ['src/real.mjs']
+      );
+      assert.equal(scanned, 1);
+      assert.deepEqual(skipped, ['src/link.mjs']);
+      assert.deepEqual(errors, []);
+    },
+    { 'src/link.mjs': 'real.mjs' }
+  );
+});
+
+test('ガード: 追跡 symlink（リポジトリ外のファイル向け）は読まない', () => {
+  withOutsideFile(NUL_SOURCE, (outside) => {
+    withFixture(
+      { 'src/ok.mjs': CLEAN_SOURCE },
+      (dir) => {
+        const { violations, errors, scanned, skipped } = checkControlCharacters({ root: dir });
+        // リポジトリ外の内容が 1 バイトでも読まれていたら violation として現れる。
+        assert.deepEqual(violations, [], 'リポジトリ外のファイルが読まれている');
+        assert.equal(scanned, 1, 'リポジトリ外のファイルが走査に計上されている');
+        assert.deepEqual(skipped, ['src/outside-link.mjs']);
+        assert.deepEqual(errors, []);
+      },
+      { 'src/outside-link.mjs': outside }
+    );
+  });
+});
+
+test('ガード: 追跡 symlink（ディレクトリ向け）はエラーにならず skip する', () => {
+  withFixture(
+    { 'sub/ok.mjs': CLEAN_SOURCE },
+    (dir) => {
+      const { errors, scanned, skipped } = checkControlCharacters({ root: dir });
+      // 修正前は EISDIR で errors が 1 件立ち、CLI が exit 1 の誤検出になっていた。
+      assert.deepEqual(errors, []);
+      assert.equal(scanned, 1);
+      assert.deepEqual(skipped, ['dir-link']);
+      const { status } = runIn(dir);
+      assert.equal(status, 0);
+    },
+    { 'dir-link': 'sub' }
+  );
+});
+
+test('ガード: 追跡 symlink（キャラクタデバイス向け）でも有限時間で終了する', (t) => {
+  // /dev/zero が無い環境（Windows など）では検証できないので skip する。
+  if (!existsSync('/dev/zero')) {
+    t.skip('/dev/zero が無い環境');
+    return;
+  }
+  withFixture(
+    { 'src/ok.mjs': CLEAN_SOURCE },
+    (dir) => {
+      // ガードが無いと readFileSync が返らないため、必ず子プロセス + timeout で測る
+      // （インプロセスで呼ぶと、失敗時にテストランナーごとハングする）。
+      let result;
+      try {
+        const stdout = execFileSync('node', [SCRIPT], {
+          cwd: dir,
+          stdio: 'pipe',
+          encoding: 'utf8',
+          timeout: 30_000,
+        });
+        result = { status: 0, stdout };
+      } catch (e) {
+        assert.ok(
+          !e.killed && e.signal !== 'SIGTERM',
+          `30 秒以内に終了しなかった（キャラクタデバイスを読んでいる）: ${e.message}`
+        );
+        assert.equal(typeof e.status, 'number', `想定外の失敗: ${e.message}`);
+        result = { status: e.status, stdout: String(e.stdout ?? '') };
+      }
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /\(skipped\) dev-zero-link/);
+    },
+    { 'dev-zero-link': '/dev/zero' }
+  );
+});
+
+test('ガード: サイズ上限を超えるファイルは読まずにエラーにする（fail-safe）', () => {
+  // 実際に 8 MiB を書かずに済むよう、上限を注入して経路だけを検証する。
+  withFixture({ 'src/ok.mjs': CLEAN_SOURCE, 'src/big.mjs': NUL_SOURCE }, (dir) => {
+    const { violations, errors, scanned } = checkControlCharacters({
+      root: dir,
+      maxBytes: 5,
+    });
+    // 上限超過は skip（黙って検査から外れる）ではなくエラーにする。RA-1 と同じ扱い。
+    assert.equal(scanned, 0);
+    assert.deepEqual(violations, []);
+    assert.equal(errors.length, 2, `errors=${JSON.stringify(errors)}`);
+    for (const err of errors) {
+      assert.match(err, /走査上限 5 バイトを超えている/);
+    }
+  });
+  // 既定値は package-lock.json（2026-09-04 実測で 859,422 バイト）が自然に育っても
+  // 必須チェックを落とさない大きさにしてある。
+  assert.equal(MAX_TARGET_BYTES, 8 * 1024 * 1024);
+});
+
+test('対照群: symlink が混ざっていても通常ファイルの違反は従来どおり検出する', () => {
+  withFixture(
+    { 'scripts/bad.mjs': NUL_SOURCE, 'src/ok.mjs': CLEAN_SOURCE },
+    (dir) => {
+      const { status, stderr } = runIn(dir);
+      assert.equal(status, 1);
+      assert.ok(stderr.includes('scripts/bad.mjs'), 'scripts/bad.mjs が報告されていない');
+    },
+    { 'src/link.mjs': 'ok.mjs' }
+  );
 });
 
 test('CLI: エラーと違反が同時に起きても違反を隠さない', () => {
