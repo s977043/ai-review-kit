@@ -11,6 +11,25 @@ import { collectRepoDiff } from '../../lib/diff-processor.mjs';
 import { SkillLoaderError, resolveSkillSet } from '../../../runners/core/skill-loader.mjs';
 
 /**
+ * Resolve the git diff for `--base` (or the auto-detected default branch).
+ *
+ * SSoT for how every `review` subcommand turns `--base` into a diff: the
+ * route path (`runReviewRoute`) and the plan/exec path both call this, so the
+ * two cannot drift into different ranges for the same `--base` (#2046).
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @returns {Promise<{targetPath: string, repoRoot: string, repoDiff: object}>}
+ */
+async function resolveBaseRepoDiff(parsed) {
+  const targetPath = path.resolve(parsed.target);
+  const repoRoot = await ensureGitRepo(targetPath);
+  const defaultBranch = await detectDefaultBranch(repoRoot);
+  const mergeBase = await findMergeBase(repoRoot, parsed.base ?? defaultBranch);
+  const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
+  return { targetPath, repoRoot, repoDiff };
+}
+
+/**
  * Handle the `review` command (plan | exec | verify | route).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -91,6 +110,18 @@ export async function runReviewCommand(parsed) {
         throw err;
       }
     }
+    // #2046: `--base <ref>` used to be parsed and then read by nobody on this
+    // path, so `review plan --base <ref>` silently reported `no-changes` while
+    // `review route --base <ref>` saw the very diff it was pointed at. Resolve
+    // it through the SAME helper the route path uses, and hand the resulting
+    // diff text to the plan/replay layer as an explicit override. Only when
+    // `--base` is actually given: without it the artifact-resolution path is
+    // untouched, so existing callers keep their behavior.
+    let diffTextOverride;
+    if (typeof parsed.base === 'string' && parsed.base !== '') {
+      const { repoDiff } = await resolveBaseRepoDiff(parsed);
+      diffTextOverride = repoDiff.rawDiffText;
+    }
     let artifact;
     try {
       if (isExecPlanReplay) {
@@ -104,6 +135,7 @@ export async function runReviewCommand(parsed) {
           cwd: path.resolve(parsed.target),
           cliArtifacts: parsed.cliArtifacts,
           artifactsDir: parsed.artifactsDir,
+          diffTextOverride,
         });
       } else {
         artifact = await runReviewPlan({
@@ -124,6 +156,7 @@ export async function runReviewCommand(parsed) {
           // into selection without env vars.
           availableContexts: parsed.availableContexts ?? undefined,
           availableDependencies: parsed.availableDependencies ?? undefined,
+          diffTextOverride,
         });
       }
     } catch (err) {
@@ -231,11 +264,7 @@ async function runReviewRoute(parsed) {
     const { routeReviewMode, formatRouterResultMarkdown } =
       await import('../../lib/review-mode-router.mjs');
     const { loadRiskMap } = await import('../../lib/risk-map.mjs');
-    const routeTargetPath = path.resolve(parsed.target);
-    const repoRoot = await ensureGitRepo(routeTargetPath);
-    const defaultBranch = await detectDefaultBranch(repoRoot);
-    const mergeBase = await findMergeBase(repoRoot, parsed.base ?? defaultBranch);
-    const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
+    const { targetPath: routeTargetPath, repoRoot, repoDiff } = await resolveBaseRepoDiff(parsed);
     const riskMap = await loadRiskMap(repoRoot).catch((err) => {
       console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
       return null;

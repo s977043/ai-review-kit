@@ -146,7 +146,7 @@ adapter-map の記述も一次ソースへ突き合わせました。`agents/riv
 実行できていない範囲は次のとおりです。
 
 - Plan Review から PR Review までの 6 段を両 runtime で通す完全な dogfood は未実施である。API キーを使う意味的レビューが必要になる
-- `node src/cli.mjs review plan . --plan-only --base origin/main` は commit 済みの差分を拾わず `status: "no-changes"` を返した。`review route` は `--base` を反映するため、両者で base の扱いが揃っていない
+- `node src/cli.mjs review plan . --plan-only --base origin/main` は commit 済みの差分を拾わず `status: "no-changes"` を返した。`review route` は `--base` を反映するため、両者で base の扱いが揃っていなかった（#2046 で解消済み。plan / exec も route と同じ経路で `--base` を解決する）
 - したがって現時点の Promotion Gate 判定は fixture 上の評価であり、実運用の 9 ケース採取をもって置き換える必要がある
 
 ## src への持ち越し
