@@ -188,9 +188,9 @@ River Review が認識する入力アーティファクトは以下の通りで�
 
 ### `diff`
 
-- **形式**: unified diff（`git diff` 互換）。バイナリ差分は無視される。
+- **形式**: unified diff（`git diff` 互換）。artifact として供給された差分では、バイナリ差分は無視される（`review plan|exec --base <ref>` で git から取得した場合は `git diff --name-only` を用いるため、binary と 100% rename も変更ファイル集合に含まれる）。
 - **必須性**: レビュー対象差分は **必ずいずれかの手段で供給される必要がある**。artifact として指定が無い場合 River Review は `git diff <mergeBase>..HEAD` を内部で実行し、その結果を差分として扱う。
-- **`--base` との優先順位**（#2046）: 明示指定した artifact（tier 1 CLI 引数 / tier 2 設定ファイル）は `review plan|exec --base <ref>` に優先する。tier 3 のディレクトリ自動検出（`diff.patch`）よりは `--base` が優先する。いずれの場合も、採用しなかった側を stderr の警告で告知する。
+- **`--base` との優先順位**（#2046）: 明示指定した artifact（tier 1 CLI 引数 / tier 2 設定ファイル）は `review plan|exec --base <ref>` に優先する。ただし優先されるのは**そのパスにファイルが実在する場合**であり、実在しなければ `--base` の範囲が使われる（その旨を stderr で告知する）。tier 3 のディレクトリ自動検出（`diff.patch`）よりは `--base` が優先する。いずれの場合も、採用しなかった側を stderr の警告で告知する。
 - **結果が空の場合**: 供給された差分（指定または fallback 実行結果）が空であれば、`status` を `no-changes` とし、レビュー skill は実行されない。
 
 ### `junit`

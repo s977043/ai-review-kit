@@ -173,8 +173,19 @@ export function resolveDiffSource(diffOverride, diffRes, { warn = console.warn }
   if (!hasOverride) return { useOverride: false };
 
   const artifactPresent = Boolean(diffRes?.exists && diffRes.path);
-  const artifactExplicit =
-    artifactPresent && (diffRes.source === 'cli' || diffRes.source === 'config');
+  const artifactSpecified = diffRes?.source === 'cli' || diffRes?.source === 'config';
+  const artifactExplicit = artifactPresent && artifactSpecified;
+
+  // A specified-but-missing artifact loses to `--base` on the `exists` check
+  // alone, which reads as "the artifact took precedence" to nobody: the caller
+  // named a file and got a git range instead. Say so before falling through.
+  if (artifactSpecified && !artifactPresent) {
+    warn(
+      `Warning: the \`diff\` artifact specified via ` +
+        `${diffRes.source === 'cli' ? '--artifact diff=' : 'river.config'} (${diffRes.path}) ` +
+        'does not exist; using the --base range instead.'
+    );
+  }
 
   if (artifactExplicit) {
     warn(
@@ -409,6 +420,9 @@ export async function runReviewExecReplay({
   let replayDrift = null;
   let replayChangedFiles = [];
   let useOverrideForContext = false;
+  // Whether a diff was actually resolved on this run. `[]` must mean "we looked
+  // and the range was empty", never "we never looked" (#2046 review round 3).
+  let replayDiffResolved = false;
   // Captured from config (when loaded for execution) so finalizeArtifact can
   // surface usage.provider / usage.model when an LLM actually runs.
   let modelConfigForUsage = null;
@@ -447,6 +461,7 @@ export async function runReviewExecReplay({
         }
       }
       const parsedDiff = parseUnifiedDiff(diffText);
+      replayDiffResolved = true;
       replayChangedFiles = resolveChangedFiles(diffOverride, useOverride, parsedDiff);
       // #936: report (non-blocking) membership drift between the replay-time
       // diff and the source plan's snapshot. Null when the snapshot predates A2-3.
@@ -489,16 +504,29 @@ export async function runReviewExecReplay({
         replaySnapshotUsed: sourceSnapshot != null,
       };
     }
+  } else if (diffOverride != null) {
+    // `review exec --plan <file> --dry-run` (and a source plan with no selected
+    // skills) never reaches the diff-resolution block above, so `--base` is not
+    // consumed here at all. Announcing it is the same rule the precedence
+    // decision follows: an input the caller typed is never dropped in silence
+    // (#2046 review round 3, major 1).
+    console.warn(
+      'Warning: --base has no effect on this run: `review exec --plan <file>` echoes the ' +
+        'source plan without resolving a diff (--dry-run, or the source plan selected no skills).'
+    );
   }
 
-  // #2046 review (minor): the replay path accepts `--base` too, so it reports
-  // the reviewed range in the same place the plan path does. Without this, a
-  // caller replaying against an explicit range had no way to see which range
-  // ran — the observability asymmetry the review flagged.
-  artifact.context = {
-    ...(useOverrideForContext && diffOverride.context ? diffOverride.context : {}),
-    changedFiles: replayChangedFiles,
-  };
+  // #2046 review: the replay path accepts `--base` too, so it reports the
+  // reviewed range in the same place the plan path does. Emitted ONLY when a
+  // diff was actually resolved — an artifact that declares `changedFiles: []`
+  // for a run that never looked at any diff is worse than one that stays
+  // silent, because a consumer cannot tell the two apart.
+  if (replayDiffResolved) {
+    artifact.context = {
+      ...(useOverrideForContext && diffOverride.context ? diffOverride.context : {}),
+      changedFiles: replayChangedFiles,
+    };
+  }
 
   if (debug || executionTrace) {
     artifact.debug = artifact.debug ?? {};
@@ -770,7 +798,13 @@ export async function runReviewPlan({
   const diffRes = resolved?.diff;
   const { useOverride } = resolveDiffSource(diffOverride, diffRes);
   let executionTrace = null;
+  // Same rule as the replay path: `changedFiles: []` may only be written when a
+  // diff source was actually consulted. `--base` counts as consulted even when
+  // the range came back empty — that empty answer is git's, and knowing which
+  // range produced it is the point of #2046.
+  let diffResolved = useOverride;
   if (useOverride ? diffOverride.diffText.length > 0 : diffRes?.exists && diffRes.path) {
+    diffResolved = true;
     let diffText;
     if (useOverride) {
       diffText = diffOverride.diffText;
@@ -912,10 +946,12 @@ export async function runReviewPlan({
   // defaultBranch / mergeBase) exist only when git resolved the range from
   // `--base`, the empty-range case included: knowing WHICH range came back
   // empty is the whole point of #2046.
-  artifact.context = {
-    ...(useOverride && diffOverride.context ? diffOverride.context : {}),
-    changedFiles: gateChangedFiles,
-  };
+  if (diffResolved) {
+    artifact.context = {
+      ...(useOverride && diffOverride.context ? diffOverride.context : {}),
+      changedFiles: gateChangedFiles,
+    };
+  }
 
   if (debug || executionDeferred || executionTrace) {
     artifact.debug = artifact.debug ?? {};

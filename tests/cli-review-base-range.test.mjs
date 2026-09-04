@@ -308,6 +308,36 @@ describe('river review exec --plan <file> --base <ref> (#2046 review major 2)', 
     );
   });
 
+  test('--dry-run replay announces that --base was not consumed and claims no range', async () => {
+    // このブロックは diff を解決しない（echo 契約）。範囲を見ていないのに
+    // `context.changedFiles: []` を宣言すると、「範囲が空だった」と
+    // 「範囲を見ていない」が consumer から区別できなくなる。
+    const outFile = join(outDir, `replay-dry-${planCounter++}.json`);
+    const res = await runCliInProcess(
+      [
+        'review',
+        'exec',
+        '.',
+        '--plan',
+        planFile,
+        '--base',
+        base0,
+        '--dry-run',
+        '--output-file',
+        outFile,
+      ],
+      { cwd: dir }
+    );
+    assert.equal(res.code, 0, res.stderr);
+    assert.match(res.stderr, /--base has no effect on this run/, '--base を無警告で捨てている');
+    const artifact = JSON.parse(readFileSync(outFile, 'utf8'));
+    assert.equal(
+      artifact.context,
+      undefined,
+      '差分を解決していない回に context.changedFiles を宣言している'
+    );
+  });
+
   test('an unresolvable --base fails the replay path as well', async () => {
     const outFile = join(outDir, `replay-bad-${planCounter++}.json`);
     const res = await runCliInProcess(
@@ -373,6 +403,21 @@ describe('river review plan: --base vs the diff artifact (#2046 review major 1)'
     assert.match(stderr, /explicit\.patch/);
   });
 
+  test('a specified but missing diff artifact is announced before --base is used', async () => {
+    // exists の門番だけで負けると「artifact が優先された」とも読めない。
+    // 契約（artifact-input-contract.md）が無条件に「明示指定が優先」と
+    // 書いている以上、実際には使われなかったことを告知する必要がある。
+    const { artifact, stderr } = await runPlan(dir, [
+      '--artifact',
+      'diff=./missing.patch',
+      '--base',
+      base0,
+    ]);
+    assert.match(stderr, /does not exist; using the --base range instead/);
+    const expected = await gitChangedFiles(dir, base0);
+    assert.deepEqual([...artifact.context.changedFiles].sort(), expected);
+  });
+
   test('--base wins over the auto-detected diff.patch, with a warning', async () => {
     const expected = await gitChangedFiles(dir, base0);
     const { artifact, stderr } = await runPlan(dir, ['--base', base0]);
@@ -407,6 +452,18 @@ describe('river review plan: an empty --base range (#2046)', () => {
     );
     assert.deepEqual(artifact.context.changedFiles, []);
     assert.match(stderr, /--base takes precedence over the auto-detected diff artifact/);
+  });
+
+  test('a ref with no common history is announced instead of passing as no-changes', async () => {
+    // rev-parse では解決できるが merge-base が無い ref。findMergeBase が HEAD へ
+    // フォールバックするため、範囲は空になる（exit code は変えない）。
+    await runGit(['checkout', '--orphan', 'orphanbase'], dir);
+    await runGit(['commit', '--allow-empty', '-m', 'orphan'], dir);
+    await runGit(['checkout', 'main'], dir);
+
+    const { artifact, stderr } = await runPlan(dir, ['--base', 'orphanbase']);
+    assert.match(stderr, /shares no history with HEAD/);
+    assert.equal(artifact.status, 'no-changes');
   });
 
   test('the same repo without --base does review the diff artifact', async () => {

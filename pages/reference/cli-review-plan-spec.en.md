@@ -50,9 +50,11 @@ Resolution order matches Artifact Input Contract "Input Channels" (CLI args → 
 
 ### Diff resolution
 
-| Option         | Type   | Default                      | Description                                                                                             |
-| -------------- | ------ | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `--base <ref>` | string | auto-detected default branch | Branch / ref to diff against. The review target becomes the diff between that ref and the working tree. |
+| Option         | Type   | Default                                   | Description                                                                                             |
+| -------------- | ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `--base <ref>` | string | none (without it, only the diff artifact) | Branch / ref to diff against. The review target becomes the diff between that ref and the working tree. |
+
+Without `--base`, `review plan` does not run git at all: the diff comes from the `diff` artifact only, and `status` is `no-changes` when no artifact resolves either. (This differs from `river run`, which auto-detects the default branch.)
 
 Precedence between `--base` and the `diff` artifact (#2046):
 
@@ -60,6 +62,10 @@ Precedence between `--base` and the `diff` artifact (#2046):
 - `--base` wins over the auto-detected `diff.patch` in the working directory
 - Whichever loses, the discarded input is announced as a warning on stderr
 - When `--base` supplies the diff, the resolved range is recorded in the [Review Artifact](./review-artifact.en.md) `context` (`repoRoot` / `defaultBranch` / `mergeBase` / `changedFiles`)
+- A run that resolved no diff at all (neither `--base` nor a `diff` artifact, and the `review exec --plan <file> --dry-run` echo path) emits no `context`, so that "the range was empty" stays distinguishable from "no range was consulted"
+- `review exec --plan <file> --dry-run` resolves no diff and therefore does not consume `--base`; it says so on stderr
+
+`changedFiles` is derived differently per source. From `--base` it is `git diff --name-only`, so renames and binary changes are included. From a `diff` artifact it is the parsed unified diff, so entries without `---` / `+++` headers (100% renames, binary files) are not.
 
 The `--base` value is trimmed and then checked with `git rev-parse`. An unresolvable ref and a whitespace-only value are usage errors that exit `1`, rather than a silently empty range. A target that is not a git repository also exits `1`.
 

@@ -10,6 +10,7 @@ import {
   ensureGitRepo,
   detectDefaultBranch,
   findMergeBase,
+  getHeadSha,
   resolveRefToCommit,
 } from '../../lib/git.mjs';
 import { collectRepoDiff } from '../../lib/diff-processor.mjs';
@@ -50,9 +51,10 @@ async function resolveBaseRepoDiff(parsed) {
   if (baseRef === '') {
     throw new Error('--base requires a branch or ref (got a blank value).');
   }
+  let baseRefSha = null;
   if (baseRef !== null) {
-    const resolved = await resolveRefToCommit(repoRoot, baseRef);
-    if (!resolved) {
+    baseRefSha = await resolveRefToCommit(repoRoot, baseRef);
+    if (!baseRefSha) {
       throw new Error(
         `--base "${baseRef}" is not a ref this repository can resolve ` +
           `(tried "origin/${baseRef}" and "${baseRef}"). ` +
@@ -61,6 +63,20 @@ async function resolveBaseRepoDiff(parsed) {
     }
   }
   const mergeBase = await findMergeBase(repoRoot, baseRef ?? defaultBranch);
+  // `rev-parse` says the ref exists; `merge-base` says the two share history.
+  // A ref that passes the first and fails the second (unrelated history, a
+  // shallow clone) makes findMergeBase fall back to HEAD, which is an empty
+  // range wearing the same clothes as "no changes" (#2046 review round 3).
+  // Not fatal — the ref itself was valid — but it must not pass unannounced.
+  if (baseRefSha && baseRefSha !== mergeBase) {
+    const headSha = await getHeadSha(repoRoot);
+    if (headSha && mergeBase === headSha) {
+      console.warn(
+        `Warning: --base "${baseRef}" shares no history with HEAD, so no merge base exists. ` +
+          'The diff falls back to HEAD, which yields an empty range.'
+      );
+    }
+  }
   const repoDiff = await collectRepoDiff(repoRoot, mergeBase);
   return { targetPath, repoRoot, defaultBranch, mergeBase, baseRef, repoDiff };
 }
