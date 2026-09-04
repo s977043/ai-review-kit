@@ -460,7 +460,7 @@ function tableRowCells(line) {
  * no severity literal of its own (CLAUDE.md "Import the SSoT, never re-derive
  * it"; #2050 review, minor 3).
  */
-const FAILSAFE_SEVERITY = normalizeSeverity(' not-a-severity-token');
+const FAILSAFE_SEVERITY = normalizeSeverity('__not-a-severity-token__');
 
 /**
  * Is `[a, b]` a row of the internal→output severity mapping?
