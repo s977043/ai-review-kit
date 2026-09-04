@@ -56903,6 +56903,25 @@ var diff_processor = __nccwpck_require__(861);
 
 
 /**
+ * Resolve the git diff for `--base` (or the auto-detected default branch).
+ *
+ * SSoT for how every `review` subcommand turns `--base` into a diff: the
+ * route path (`runReviewRoute`) and the plan/exec path both call this, so the
+ * two cannot drift into different ranges for the same `--base` (#2046).
+ *
+ * @param {Record<string, unknown>} parsed - parseArgs() result.
+ * @returns {Promise<{targetPath: string, repoRoot: string, repoDiff: object}>}
+ */
+async function resolveBaseRepoDiff(parsed) {
+  const targetPath = external_node_path_.resolve(parsed.target);
+  const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
+  const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
+  const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, parsed.base ?? defaultBranch);
+  const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
+  return { targetPath, repoRoot, repoDiff };
+}
+
+/**
  * Handle the `review` command (plan | exec | verify | route).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -56983,6 +57002,18 @@ async function runReviewCommand(parsed) {
         throw err;
       }
     }
+    // #2046: `--base <ref>` used to be parsed and then read by nobody on this
+    // path, so `review plan --base <ref>` silently reported `no-changes` while
+    // `review route --base <ref>` saw the very diff it was pointed at. Resolve
+    // it through the SAME helper the route path uses, and hand the resulting
+    // diff text to the plan/replay layer as an explicit override. Only when
+    // `--base` is actually given: without it the artifact-resolution path is
+    // untouched, so existing callers keep their behavior.
+    let diffTextOverride;
+    if (typeof parsed.base === 'string' && parsed.base !== '') {
+      const { repoDiff } = await resolveBaseRepoDiff(parsed);
+      diffTextOverride = repoDiff.rawDiffText;
+    }
     let artifact;
     try {
       if (isExecPlanReplay) {
@@ -56996,6 +57027,7 @@ async function runReviewCommand(parsed) {
           cwd: external_node_path_.resolve(parsed.target),
           cliArtifacts: parsed.cliArtifacts,
           artifactsDir: parsed.artifactsDir,
+          diffTextOverride,
         });
       } else {
         artifact = await runReviewPlan({
@@ -57016,6 +57048,7 @@ async function runReviewCommand(parsed) {
           // into selection without env vars.
           availableContexts: parsed.availableContexts ?? undefined,
           availableDependencies: parsed.availableDependencies ?? undefined,
+          diffTextOverride,
         });
       }
     } catch (err) {
@@ -57123,11 +57156,7 @@ async function runReviewRoute(parsed) {
     const { routeReviewMode, formatRouterResultMarkdown } =
       await __nccwpck_require__.e(/* import() */ 709).then(__nccwpck_require__.bind(__nccwpck_require__, 1709));
     const { loadRiskMap } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 572));
-    const routeTargetPath = external_node_path_.resolve(parsed.target);
-    const repoRoot = await (0,git/* ensureGitRepo */.NC)(routeTargetPath);
-    const defaultBranch = await (0,git/* detectDefaultBranch */.Rd)(repoRoot);
-    const mergeBase = await (0,git/* findMergeBase */.fe)(repoRoot, parsed.base ?? defaultBranch);
-    const repoDiff = await (0,diff_processor/* collectRepoDiff */.KD)(repoRoot, mergeBase);
+    const { targetPath: routeTargetPath, repoRoot, repoDiff } = await resolveBaseRepoDiff(parsed);
     const riskMap = await loadRiskMap(repoRoot).catch((err) => {
       console.warn(`Warning: could not load risk-map.yaml: ${err?.message ?? err}`);
       return null;
@@ -80309,7 +80338,8 @@ Commands:
   skills resolve        Show which skills apply to the given --path files
   doctor <path>         Check setup and print hints for common issues
   review plan           Resolve upstream artifacts and emit a Review Artifact
-                        (Phase 3 slice: --plan-only only)
+                        (Phase 3 slice: --plan-only only; --base <ref> diffs
+                         against that ref instead of the diff artifact)
   review exec           Run the review and emit a Review Artifact with findings
                         (--dry-run: plan only; --plan <file>: replay an existing plan)
   review route          Recommend a review mode (light|standard|team|human-required)

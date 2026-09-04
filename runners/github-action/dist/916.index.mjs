@@ -1229,6 +1229,11 @@ async function runReviewExecReplay({
   cwd = process.cwd(),
   cliArtifacts = {},
   artifactsDir,
+  // #2046: diff text resolved by the caller from `--base` (see
+  // src/cli/commands/review.mjs resolveBaseRepoDiff). A string wins over
+  // artifact resolution; an empty string means "the base range is empty",
+  // which must NOT fall back to a stale on-disk diff artifact.
+  diffTextOverride,
   loadConfigImpl = loader/* loadConfig */.Z9,
   resolveAllArtifactsImpl = resolveAllArtifacts,
   generateReviewImpl = review_engine/* generateReview */.G1,
@@ -1365,12 +1370,17 @@ async function runReviewExecReplay({
       cwd: detectionRoot,
     });
     const diffRes = resolved?.diff;
-    if (diffRes?.exists && diffRes.path) {
+    const hasDiffOverride = typeof diffTextOverride === 'string';
+    if (hasDiffOverride ? diffTextOverride.length > 0 : diffRes?.exists && diffRes.path) {
       let diffText;
-      try {
-        diffText = await readFileImpl(diffRes.path);
-      } catch (err) {
-        throw new ReviewPlanError(`Failed to read diff artifact: ${err.message}`);
+      if (hasDiffOverride) {
+        diffText = diffTextOverride;
+      } else {
+        try {
+          diffText = await readFileImpl(diffRes.path);
+        } catch (err) {
+          throw new ReviewPlanError(`Failed to read diff artifact: ${err.message}`);
+        }
       }
       const parsedDiff = (0,diff_processor/* parseUnifiedDiff */.rj)(diffText);
       // #936: report (non-blocking) membership drift between the replay-time
@@ -1603,6 +1613,11 @@ async function runReviewPlan({
   skillIds = null,
   availableContexts,
   availableDependencies,
+  // #2046: diff text resolved by the caller from `--base` (see
+  // src/cli/commands/review.mjs resolveBaseRepoDiff). A string wins over
+  // artifact resolution; an empty string means "the base range is empty",
+  // which must NOT fall back to a stale on-disk diff artifact.
+  diffTextOverride,
   humanApprovalAdjudicator,
   now = () => new Date().toISOString(),
   loadConfigImpl = loader/* loadConfig */.Z9,
@@ -1684,13 +1699,18 @@ async function runReviewPlan({
   };
 
   const diffRes = resolved?.diff;
+  const hasDiffOverride = typeof diffTextOverride === 'string';
   let executionTrace = null;
-  if (diffRes?.exists && diffRes.path) {
+  if (hasDiffOverride ? diffTextOverride.length > 0 : diffRes?.exists && diffRes.path) {
     let diffText;
-    try {
-      diffText = await readFileImpl(diffRes.path);
-    } catch (err) {
-      throw new ReviewPlanError(`Failed to read diff artifact: ${err.message}`);
+    if (hasDiffOverride) {
+      diffText = diffTextOverride;
+    } else {
+      try {
+        diffText = await readFileImpl(diffRes.path);
+      } catch (err) {
+        throw new ReviewPlanError(`Failed to read diff artifact: ${err.message}`);
+      }
     }
     // Parse the diff once and reuse the result. The same parser used to
     // power deriveChangedFiles (planning input) also exposes the per-file
@@ -1811,14 +1831,20 @@ async function runReviewPlan({
       };
     }
   } else {
-    // No diff artifact resolved and no git fallback in this slice:
-    // per cli-review-plan-spec.md this is a no-op review, not an error.
+    // No diff resolved — neither a diff artifact nor (since #2046) a non-empty
+    // `--base` range: per cli-review-plan-spec.md this is a no-op review, not
+    // an error.
     artifact.status = 'no-changes';
   }
 
   if (debug || executionDeferred || executionTrace) {
     artifact.debug = artifact.debug ?? {};
     if (debug) artifact.debug.resolvedArtifacts = resolved;
+    // #2046: the file set the plan actually reviewed. Without it, a caller who
+    // passed `--base` had no way to see which range was used — the very
+    // silence that let `--base` be ignored here go unnoticed. Debug-gated, and
+    // `debug` is free-form in schemas/review-artifact.schema.json.
+    if (debug) artifact.debug.changedFiles = gateChangedFiles;
     if (executionDeferred) artifact.debug.executionDeferred = true;
     if (executionTrace) artifact.debug.execution = executionTrace;
   }
