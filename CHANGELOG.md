@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.99.1](https://github.com/s977043/river-review/compare/v1.99.0...v1.99.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **scripts:** [#2055](https://github.com/s977043/river-review/issues/2055) 制御文字チェックの追跡 symlink 経由のリポジトリ外読み取りと無限ループを塞ぐ ([#2068](https://github.com/s977043/river-review/issues/2068)) ([63cb72d](https://github.com/s977043/river-review/commit/63cb72dd9c20c2042a905399604f02ed3fdddc6c))
+
 ## [1.99.0](https://github.com/s977043/river-review/compare/v1.98.0...v1.99.0) (2026-09-04)
 
 
