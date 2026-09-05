@@ -97,7 +97,7 @@ so no verdict; `64` usage. Exit 2 exists so a failed read is never reported as
 
 Measured on 2026-09-05 against open PR #2038 (head `e1cb880e`, 12 runs, one of
 them `Blocked Label Guard` / `failure`): the script printed
-`#2038 is not stalled: at least one run of e1cb880e... executed.` and exited 0.
+`#2038 is not stalled: no action_required run of e1cb880e6c27b8ec61127af899cccfb7fef7cf9a, or a run is still moving.` and exited 0.
 Against merged PR #2086 it printed `#2086 is already merged; nothing to
 unstall.` and exited 0 without reading the runs. The `--execute` paths were
 exercised only against a stubbed `gh` (`tests/scripts-pr-unstall.test.mjs`);
