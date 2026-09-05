@@ -109,6 +109,16 @@
   設計案の形でテストを書いて終わらず、その PR のブランチを `git fetch` して実物で通ることを
   実測してから PR を出すこと。#2092 は設計案の `requiredEvidence` で fixture を書き、#2093 の実物と
   ズレて「両方マージすると main が赤」になった。
+- shell script では `set -e` が `if` / `while` の条件部、`&&` / `||` の左辺、そこから呼ばれる関数の
+  内部で無効になる。`$(...)` 内の `exit` はサブシェルを抜けるだけで本体は続行する。write op
+  （`gh pr merge` / `update-branch` / push）を持つ script は、読み取りに `|| return 2` を付けて
+  呼び出し側で戻り値を分岐し、「読み取り失敗 → write 不到達」を stub の呼び出しログで固定する
+  テストを書くこと。`merge-chain.sh` は `if judge_pr` の条件部で読み取り失敗が握り潰され、
+  verdict merge になる false green が 2 レビューを通過した（#2102）。
+- 出力 artifact / run record の形（キー集合）を変える PR は、対応する `schemas/**` の変更を同じ PR に
+  含めること。schema は Always-ask なので着手前にオーガナイザーへ報告し承認を得る。`--entry` 付き
+  artifact に 2 キーを足した PR-3 は schema を境界外として残し、`additionalProperties: false` に
+  不適合のまま出荷可否レビューまで進んだ（#2103）。
 ```
 
 ## 各項目の詳細・根拠
