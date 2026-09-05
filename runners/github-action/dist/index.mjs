@@ -48338,9 +48338,14 @@ async function resolveBaseMergeBase(repoRoot, rawBaseRef, fallbackRef) {
   if (baseRef !== null) {
     ({ sha: baseRefSha, ref: resolvedRef } = await resolveRefToCommitCandidate(repoRoot, baseRef));
     if (!baseRefSha) {
+      // #2085: enumerate from baseRefCandidates() so the wording cannot drift
+      // from the order the resolvers actually walk.
+      const tried = baseRefCandidates(baseRef)
+        .map((ref) => `"${ref}"`)
+        .join(' and ');
       throw new BaseRefError(
         `--base "${baseRef}" is not a ref this repository can resolve ` +
-          `(tried "origin/${baseRef}" and "${baseRef}"). ` +
+          `(tried ${tried}). ` +
           'Reviewing an empty range would look like "no changes".'
       );
     }
