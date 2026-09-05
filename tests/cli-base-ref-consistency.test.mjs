@@ -18,6 +18,9 @@
 //      artifact.context.changedFiles に載せる集合）との突合で行う。自前で
 //      merge-base を計算し直して比べると自己整合になり違反を注入しても緑になる。
 //   4. 共有履歴のない ref は 3 面すべて stderr で警告する（fatal ではない）
+//   5. #2067: 空 range の警告は 2 分岐する。HEAD の子孫（base が HEAD より先へ
+//      進んでいる）と、共有履歴のない orphan とで文言が違い、通常の祖先 ref では
+//      どちらも出ない。3 面とも同じ文言であることを固定する。
 //
 // 判定は CLI 面（runCliInProcess）で行う。`resolveBaseMergeBase` を直接呼ぶと
 // 配線層（skills.mjs / local-runner.mjs が実際にその戻り値を使っているか）が
@@ -232,6 +235,73 @@ describe('--base contract parity across review / skills / run (#2051 / #2057)', 
       assert.ok(
         res.stderr.includes('shares no history with HEAD'),
         `${surface} が共有履歴なしを警告していない: ${res.stderr}`
+      );
+      // #2067 negative: orphan 側に子孫用の文言が混ざらないこと。
+      assert.ok(
+        !res.stderr.includes('is ahead of HEAD'),
+        `${surface} が orphan を「HEAD より先」と誤診断している: ${res.stderr}`
+      );
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // 5. #2067: HEAD の子孫を --base に渡した場合
+  // ---------------------------------------------------------------------------
+  test('HEAD の子孫を --base に渡すと 3 面とも「HEAD より先」と警告し、共有履歴なしとは断定しない', async () => {
+    // HEAD を親に持つ commit を作る。作業ツリーと現在のブランチは動かさない
+    // （`commit-tree` は ref を更新しない）ので、以降のテストの前提を壊さない。
+    // 履歴は共有している（HEAD がその祖先）が、`merge-base HEAD <ref>` は
+    // 正しく HEAD を返すため range は空になる。
+    const headSha = await revParse(dir, 'HEAD');
+    const treeSha = await revParse(dir, 'HEAD^{tree}');
+    const { stdout: descendantOut } = await runGit(
+      ['commit-tree', treeSha, '-p', headSha, '-m', 'descendant'],
+      dir
+    );
+    const descendantSha = descendantOut.trim();
+
+    const plan = await runPlan(dir, ['--base', descendantSha]);
+    const skills = await runSkills(dir, ['--base', descendantSha]);
+    const run = await runRun(dir, ['--base', descendantSha]);
+
+    for (const [surface, res] of [
+      ['review plan', plan],
+      ['skills', skills],
+      ['run', run],
+    ]) {
+      // 空 range の告知自体は正しいので、非 fatal のまま維持する（Non-goal）。
+      assert.equal(res.code, 0, `${surface}: ${res.stderr}`);
+      assert.ok(
+        res.stderr.includes('is ahead of HEAD (HEAD is an ancestor of it)'),
+        `${surface} が「HEAD より先」と説明していない: ${res.stderr}`
+      );
+      // 本 Issue の本体: 履歴は共有しているので、この断定は誤りである。
+      assert.ok(
+        !res.stderr.includes('shares no history with HEAD'),
+        `${surface} が子孫を「共有履歴なし」と誤って断定した: ${res.stderr}`
+      );
+    }
+  });
+
+  test('HEAD の祖先を --base に渡した通常形では空 range の警告が 3 面とも出ない', async () => {
+    // 対照群。この行が無いと「常に警告を出す」実装でも上の 2 テストが緑になる。
+    const plan = await runPlan(dir, ['--base', base0]);
+    const skills = await runSkills(dir, ['--base', base0]);
+    const run = await runRun(dir, ['--base', base0]);
+
+    for (const [surface, res] of [
+      ['review plan', plan],
+      ['skills', skills],
+      ['run', run],
+    ]) {
+      assert.equal(res.code, 0, `${surface}: ${res.stderr}`);
+      assert.ok(
+        !res.stderr.includes('is ahead of HEAD'),
+        `${surface} が通常の base で子孫警告を出した: ${res.stderr}`
+      );
+      assert.ok(
+        !res.stderr.includes('shares no history with HEAD'),
+        `${surface} が通常の base で共有履歴なし警告を出した: ${res.stderr}`
       );
     }
   });
