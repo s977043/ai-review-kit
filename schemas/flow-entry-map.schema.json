@@ -12,13 +12,19 @@
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
-    "description": { "type": "string", "minLength": 1 },
+    "description": {
+      "$ref": "#/$defs/neutralProse"
+    },
     "entries": {
       "description": "Keyed by the user-facing entry name. `tests/flow-definitions.test.mjs` pins every target against the Flow documents in `flows/`, so an entry cannot name a Flow the repository does not ship or a version it does not carry.",
       "type": "object",
       "minProperties": 1,
-      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
-      "additionalProperties": { "$ref": "#/$defs/entry" }
+      "propertyNames": {
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/entry"
+      }
     },
     "triggers": {
       "description": "Trigger registry (#2054 PR-1, Phase 1 of the Review Placement & Trigger Contract). Keyed by a neutral engineering-event name and resolving to entry names declared under `entries`, never to a Flow id directly, so a Flow is pinned in exactly one place. Optional so that a map without triggers stays valid. The key set is closed: an event a host emits that is not one of the five is an adapter concern and has no row here. Each trigger may say WHEN (the key), WHICH entries, WHAT evidence and budget (`requiredEvidence`, `profile`, `independence`) and the rollout `mode` — and nothing that constitutes a judgment: host names, hook names, shell commands, severities and gate verdicts are rejected structurally (closed key set + enums) and, for the one free-text field, by `$defs/neutralProse`. Nothing under src/ or runners/ reads this key (observe mode, `tests/flow-definitions.test.mjs`).",
@@ -33,16 +39,18 @@
           "before-merge"
         ]
       },
-      "additionalProperties": { "$ref": "#/$defs/trigger" }
+      "additionalProperties": {
+        "$ref": "#/$defs/trigger"
+      }
     }
   },
   "$defs": {
     "neutralProse": {
-      "description": "Free text that must stay free of the vocabulary this registry may not carry: host and hook names, shells, severity labels and gate verdicts. A closed key set cannot police prose, so this pattern does. Matched case-insensitively by spelling out both cases; word-bounded so `bypassed` and `before-merge` remain legal while `pass` / `auto-merge` do not.",
+      "description": "Free text that must stay free of the vocabulary this registry may not carry: host and hook names, shells, severity labels and gate verdicts. A closed key set cannot police prose, so this pattern does. Ajv accepts no case-insensitive flag, so Capitalized, lowercase and ALL-CAPS spellings are listed; the boundary is any non-alphanumeric character, so `Claude-Code` and `GitHub_Actions` are caught while `bypassed` and `before-merge` stay legal. Applied to every description in this document, not only to the triggers.",
       "type": "string",
       "minLength": 1,
       "not": {
-        "pattern": "(?:^|[^A-Za-z0-9_-])(?:[Cc]laude|[Cc]odex|[Gg]it[Hh]ub|[Pp]ost[Tt]ool[Uu]se|[Pp]re[Tt]ool[Uu]se|[Ss]top[Hh]ook|[Bb]ash|[Zz]sh|[Ss]hell|[Bb]locker|[Cc]ritical|[Mm]ajor|[Mm]inor|[Nn]it|[Pp]ass(?:ed|es)?|[Ff]ail(?:ed|s)?|[Aa]pprov(?:e|ed|al)|[Aa]uto-merge)(?:$|[^A-Za-z0-9_-])"
+        "pattern": "(?:^|[^A-Za-z0-9])(?:[Cc]laude|CLAUDE|[Cc]odex|CODEX|[Gg]it[Hh]ub|GITHUB|[Gg]emini|GEMINI|[Cc]opilot|COPILOT|[Pp]ost[Tt]ool[Uu]se|[Pp]re[Tt]ool[Uu]se|[Ss]top[Hh]ook|[Gg]it [Hh]ooks?|[Bb]ash|BASH|[Zz]sh|ZSH|[Ss]hells?|SHELLS?|[Bb]locker|BLOCKER|[Cc]ritical|CRITICAL|[Mm]ajor|MAJOR|[Mm]inor|MINOR|[Nn]it|NIT|[Pp]ass(?:ed|es|ing)?|PASS(?:ED|ES|ING)?|[Ff]ail(?:ed|s|ing|ure|ures)?|FAIL(?:ED|S|ING|URE|URES)?|[Aa]pprov(?:e|ed|es|al|ing)|APPROV(?:E|ED|ES|AL|ING)|[Aa]uto-merge|AUTO-MERGE)(?:$|[^A-Za-z0-9])"
       }
     },
     "trigger": {
@@ -54,7 +62,10 @@
           "description": "Entry names (keys of `entries`) this event resolves to. May be empty: an event that starts no Flow declares so here rather than by being absent. `tests/flow-definitions.test.mjs` pins every item against the declared entries.",
           "type": "array",
           "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
         },
         "requiredEvidence": {
           "description": "Artifacts that must be present for the event to resolve, in the Flow `inputs[].name` vocabulary. Omitted when the selected entry is not fixed (see `selectBy`) or when no Flow starts.",
@@ -90,7 +101,9 @@
           "description": "Verification profile applied when the event starts no Flow. `fast-verification` is the only profile: changed-file-scoped deterministic checks with no network and no model call.",
           "enum": ["fast-verification"]
         },
-        "description": { "$ref": "#/$defs/neutralProse" }
+        "description": {
+          "$ref": "#/$defs/neutralProse"
+        }
       }
     },
     "entry": {
@@ -108,7 +121,9 @@
           "type": "string",
           "pattern": "^\\d+\\.\\d+\\.\\d+$"
         },
-        "description": { "type": "string", "minLength": 1 }
+        "description": {
+          "$ref": "#/$defs/neutralProse"
+        }
       }
     }
   }

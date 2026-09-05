@@ -819,19 +819,34 @@ describe('trigger registry (#2054 PR-1)', () => {
   });
 
   test('schema rejects host, hook, shell, severity and verdict words in trigger prose', () => {
+    // Round-2 review (#2093): hyphen / underscore joins, ALL-CAPS spellings,
+    // further hosts and inflected verdicts all slipped through the first
+    // pattern, so each is pinned here as a literal.
     const words = [
       'Claude',
       'codex',
       'GitHub',
+      'Claude-Code',
+      'GitHub_Actions',
+      'CLAUDE',
+      'GITHUB',
+      'CODEX',
+      'Gemini',
+      'Copilot',
       'PostToolUse',
+      'git hook',
       'bash',
+      'shells',
       'blocker',
       'critical',
       'major',
       'minor',
       'pass',
+      'passing',
       'failed',
+      'failure',
       'approve',
+      'approves',
       'auto-merge',
     ];
     for (const word of words) {
@@ -845,12 +860,32 @@ describe('trigger registry (#2054 PR-1)', () => {
     }
     // Word-bounded: the status vocabulary #2054 keeps and the trigger's own
     // name are not collateral damage.
+    for (const legal of [
+      'Records unrunnable, skipped and bypassed checks before-merge.',
+      'The merge decision stays with the platform; capability gaps are manual-required.',
+    ]) {
+      assert.equal(
+        validateClone((doc) => {
+          doc.triggers['before-merge'].description = legal;
+        }),
+        true,
+        `"${legal}" was rejected`
+      );
+    }
+  });
+
+  test('schema applies the same prose rule to entry and top-level descriptions', () => {
     assert.equal(
       validateClone((doc) => {
-        doc.triggers['before-merge'].description =
-          'Records unrunnable, skipped and bypassed checks before-merge.';
+        doc.entries['review-task'].description = 'Claude host.';
       }),
-      true
+      false
+    );
+    assert.equal(
+      validateClone((doc) => {
+        doc.description = 'Claude host.';
+      }),
+      false
     );
   });
 
