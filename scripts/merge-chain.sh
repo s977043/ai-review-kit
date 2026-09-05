@@ -135,21 +135,28 @@ read_checks() {
   printf '%s' "${out}"
 }
 
-# judge_pr <pr>  -- sets DISPOSITION_* globals and returns 0 (clear) / 3 (stop)
+# judge_pr <pr>  -- sets DISPOSITION_* globals and returns 0 (clear) / 2 (a
+# read failed, nothing judged) / 3 (stop).
+#
+# The caller captures the return value, and any form that does so (`if f`,
+# `f || rc=$?`, `f && a || b`) runs the function with `set -e` suspended. An
+# `exit 2` inside `$(...)` then only leaves that subshell, and the empty
+# result would read as green (#2102). Every read therefore carries an
+# explicit `|| return 2`; the `exit 2` in the helpers stays for direct callers.
 judge_pr() {
   local pr="$1" pr_json line_json issue_json checks_json
-  pr_json=$(gh_api_or_die "PR #${pr} in ${REPO}" "repos/${REPO}/pulls/${pr}")
+  pr_json=$(gh_api_or_die "PR #${pr} in ${REPO}" "repos/${REPO}/pulls/${pr}") || return 2
   DISPOSITION_TITLE=$(printf '%s' "${pr_json}" | jq -r '.title')
   DISPOSITION_STATE=$(printf '%s' "${pr_json}" | jq -r '.state')
   DISPOSITION_BLOCKED=$(has_blocked_label "$(printf '%s' "${pr_json}" | jq -c '.labels // []')")
 
-  line_json=$(gh_api_or_die "line comments of #${pr}" --paginate "repos/${REPO}/pulls/${pr}/comments?per_page=100")
+  line_json=$(gh_api_or_die "line comments of #${pr}" --paginate "repos/${REPO}/pulls/${pr}/comments?per_page=100") || return 2
   DISPOSITION_LINE=$(count_line_comments "${line_json}")
 
-  issue_json=$(gh_api_or_die "issue comments of #${pr}" --paginate "repos/${REPO}/issues/${pr}/comments?per_page=100")
+  issue_json=$(gh_api_or_die "issue comments of #${pr}" --paginate "repos/${REPO}/issues/${pr}/comments?per_page=100") || return 2
   DISPOSITION_HUMAN=$(count_human_comments "${issue_json}")
 
-  checks_json=$(read_checks "${pr}")
+  checks_json=$(read_checks "${pr}") || return 2
   # A jq failure here (a non-object element, a missing field) is a read
   # failure, not "no failing checks": never let it fall through as an empty
   # result, which would read as a green verdict.
@@ -157,7 +164,7 @@ judge_pr() {
   if ! checks_lines=$(failing_required_checks "${checks_json}"); then
     echo "error: could not judge the checks of #${pr}; gh pr checks returned an unexpected shape:" >&2
     printf '%s\n' "${checks_json}" >&2
-    exit 2
+    return 2
   fi
   DISPOSITION_CHECKS=$(printf '%s' "${checks_lines}" | tr '\t' '=' | paste -sd ',' -)
 
@@ -182,7 +189,7 @@ wait_for_new_head() {
   [ "${limit}" -gt 0 ] || return 0
   deadline=$(($(date +%s) + limit))
   while :; do
-    now=$(gh_api_or_die "PR #${pr} in ${REPO}" "repos/${REPO}/pulls/${pr}" --jq '.head.sha')
+    now=$(gh_api_or_die "PR #${pr} in ${REPO}" "repos/${REPO}/pulls/${pr}" --jq '.head.sha') || return 2
     if [ "${now}" != "${before}" ]; then
       echo "  #${pr} head moved ${before:0:8} -> ${now:0:8}"
       return 0
@@ -196,11 +203,12 @@ wait_for_new_head() {
 }
 
 # update_branch <pr>  -- returns 0 (accepted and head moved, or already current),
-# 1 (conflict, or the head never moved)
+# 1 (conflict, or the head never moved), 2 (a read failed). Called as
+# `update_branch || ...`, so `set -e` is suspended inside: see judge_pr.
 update_branch() {
   local pr="$1" out
   local before
-  before=$(gh_api_or_die "PR #${pr} in ${REPO}" "repos/${REPO}/pulls/${pr}" --jq '.head.sha')
+  before=$(gh_api_or_die "PR #${pr} in ${REPO}" "repos/${REPO}/pulls/${pr}" --jq '.head.sha') || return 2
   if out=$(gh api --method PUT "repos/${REPO}/pulls/${pr}/update-branch" 2>&1); then
     echo "  update-branch accepted for #${pr}"
     wait_for_new_head "${pr}" "${before}"
@@ -218,7 +226,7 @@ update_branch() {
   fi
   echo "error: update-branch failed for #${pr}:" >&2
   echo "${out}" >&2
-  exit 2
+  return 2
 }
 
 print_table_header() {
@@ -280,15 +288,21 @@ main() {
     done
     echo "step 2  ${SCRIPT_DIR}/wait-pr-ready.sh ${remaining[*]}"
     echo "step 3  disposition (judged now, against the current heads):"
-    local rc=0 verdict
+    local rc=0 judge_rc verdict
     print_table_header
     for pr in "${remaining[@]}"; do
-      if judge_pr "${pr}"; then
-        verdict="merge"
-      else
-        verdict="STOP:${DISPOSITION_REASONS# }"
-        rc=3
-      fi
+      judge_pr "${pr}" && judge_rc=0 || judge_rc=$?
+      case "${judge_rc}" in
+        0) verdict="merge" ;;
+        3)
+          verdict="STOP:${DISPOSITION_REASONS# }"
+          rc=3
+          ;;
+        *)
+          echo "error: could not judge #${pr} (read failed); nothing decided." >&2
+          return 2
+          ;;
+      esac
       print_table_row "${pr}" "${verdict}"
     done
     echo "step 4  gh pr merge <N> --squash --delete-branch --subject '<title> (#N)'  (per PR, only when its verdict is merge)"
@@ -302,7 +316,7 @@ main() {
   while [ "${#remaining[@]}" -gt 0 ]; do
     echo "step 1  update-branch: ${remaining[*]}"
     for pr in "${remaining[@]}"; do
-      update_branch "${pr}" || return 1
+      update_branch "${pr}" || return $?
     done
 
     echo "step 2  wait-pr-ready: ${remaining[*]}"
@@ -321,15 +335,23 @@ main() {
     pr="${remaining[0]}"
     echo "step 3  disposition of #${pr}"
     print_table_header
-    if judge_pr "${pr}"; then
-      print_table_row "${pr}" "merge"
-    else
-      print_table_row "${pr}" "STOP:${DISPOSITION_REASONS# }"
-      echo "stopped at #${pr}:${DISPOSITION_REASONS} -- a human decision is needed (docs/governance.md マージ前チェックリスト)." >&2
-      echo "merged so far: ${merged_so_far:-(none)}" >&2
-      echo "remaining, not merged: ${remaining[*]}" >&2
-      return 3
-    fi
+    local judge_rc
+    judge_pr "${pr}" && judge_rc=0 || judge_rc=$?
+    case "${judge_rc}" in
+      0) print_table_row "${pr}" "merge" ;;
+      3)
+        print_table_row "${pr}" "STOP:${DISPOSITION_REASONS# }"
+        echo "stopped at #${pr}:${DISPOSITION_REASONS} -- a human decision is needed (docs/governance.md マージ前チェックリスト)." >&2
+        echo "merged so far: ${merged_so_far:-(none)}" >&2
+        echo "remaining, not merged: ${remaining[*]}" >&2
+        return 3
+        ;;
+      *)
+        echo "error: could not judge #${pr} (read failed); nothing merged from: ${remaining[*]}" >&2
+        echo "merged so far: ${merged_so_far:-(none)}" >&2
+        return 2
+        ;;
+    esac
 
     echo "step 4  gh pr merge ${pr} --squash --delete-branch"
     ensure_write_account

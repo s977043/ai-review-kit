@@ -12,6 +12,7 @@ import {
   mutateScript,
   runGh,
   runScriptWithStub,
+  SCRIPTS_DIR,
 } from './helpers/gh-stub.mjs';
 
 const SCRIPT = 'scripts/merge-chain.sh';
@@ -366,23 +367,102 @@ test('gh-stub: --method outside GET/POST/PUT/PATCH/DELETE and -f without key=val
   assert.equal(runGh(stub, ['api', '-F', 'state', 'repos/x']).status, 1);
 });
 
-test('mutation: a --json field typo in read_checks no longer reaches the fixture', () => {
+// #2102: `judge_pr` runs with `set -e` suspended (its return value is
+// captured), so a read failure must be propagated by an explicit return, or
+// the dry-run ends in verdict merge / exit 0.
+
+test('mutation: a --json field typo in read_checks is a read failure: exit 2, never merge', () => {
   const mutant = mutateScript(
     SCRIPT,
     '--json name,bucket,startedAt',
     '--json name,bucket,startedat'
   );
   const r = runScriptWithStub(mutant, ['101'], createGhStub(cleanRoutes(101, 'pull-open.json')));
+  assert.equal(r.status, 2, r.stdout + r.stderr);
   assert.match(r.stderr, /gh-stub: no route for: pr checks 101 .*--json name,bucket,startedat/);
   assert.match(r.stderr, /gh pr checks #101 did not return a JSON array/);
+  assert.doesNotMatch(r.stdout, /\tmerge\t/);
 });
 
-test('mutation: a per_page typo in the comment reads no longer reaches the fixture', () => {
+test('mutation: a per_page typo in the comment reads is a read failure: exit 2, never merge', () => {
   const mutant = mutateScript(SCRIPT, 'per_page=100', 'perpage=100');
   const r = runScriptWithStub(mutant, ['101'], createGhStub(cleanRoutes(101, 'pull-open.json')));
+  assert.equal(r.status, 2, r.stdout + r.stderr);
   assert.match(
     r.stderr,
     /gh-stub: no route for: api --paginate repos\/owner\/repo\/pulls\/101\/comments\?perpage=100/
   );
   assert.match(r.stderr, /GitHub API read failed \(line comments of #101\)/);
+  assert.doesNotMatch(r.stdout, /\tmerge\t/);
+});
+
+// Routes that would carry a clean PR #101 all the way to `gh pr merge`; each
+// read-failure case below breaks exactly one read and asserts that the merge
+// is never reached.
+function executeRoutes() {
+  return [
+    { match: /^api user$/, body: '{"login":"s977043"}\n' },
+    ...cleanRoutes(101, 'pull-open.json'),
+    {
+      match: /^api --method PUT repos\/owner\/repo\/pulls\/101\/update-branch$/,
+      body: 'gh: There are no new commits on the base branch. (HTTP 422)\n',
+      exit: 1,
+    },
+    {
+      match: /^api repos\/owner\/repo\/commits\/e1cb880e[0-9a-f]*\/check-runs\?per_page=100$/,
+      body: '{"check_runs":[{"name":"Lint","conclusion":"success"}]}',
+    },
+    {
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e[0-9a-f]*&per_page=100$/,
+      file: fixture('runs-executed.json'),
+    },
+    { match: /^pr merge 101 /, body: '' },
+  ];
+}
+
+function assertReadFailureStopsBeforeMerge(r, stub) {
+  assert.equal(r.status, 2, r.stdout + r.stderr);
+  assert.doesNotMatch(r.stdout, /\tmerge\t/);
+  assert.ok(
+    !stub.calls().some((c) => c.startsWith('pr merge')),
+    `gh pr merge was reached: ${stub.calls()}`
+  );
+}
+
+test('--execute: a non-object element in gh pr checks output exits 2 before gh pr merge', () => {
+  const routes = executeRoutes();
+  routes[4] = {
+    match: /^pr checks 101 --repo owner\/repo --json name,bucket,startedAt$/,
+    file: fixture('checks-non-object.json'),
+  };
+  const stub = createGhStub(routes);
+  const r = runScriptWithStub(SCRIPT, ['--execute', '101'], stub);
+  assertReadFailureStopsBeforeMerge(r, stub);
+  assert.match(r.stderr, /could not judge the checks of #101/);
+});
+
+test('--execute: a failed gh api read of the issue comments exits 2 before gh pr merge', () => {
+  const routes = executeRoutes();
+  routes[3] = {
+    match: /^api --paginate repos\/owner\/repo\/issues\/101\/comments\?per_page=100$/,
+    body: 'gh: Not Found (HTTP 404)\n',
+    exit: 1,
+  };
+  const stub = createGhStub(routes);
+  const r = runScriptWithStub(SCRIPT, ['--execute', '101'], stub);
+  assertReadFailureStopsBeforeMerge(r, stub);
+  assert.match(r.stderr, /GitHub API read failed \(issue comments of #101\)/);
+});
+
+test('--execute: a --json field typo in read_checks exits 2 before gh pr merge', () => {
+  // The copy has no wait-pr-ready.sh beside it; point SCRIPT_DIR at scripts/.
+  const mutant = mutateScript(
+    mutateScript(SCRIPT, '--json name,bucket,startedAt', '--json name,bucket,startedat'),
+    'SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)',
+    `SCRIPT_DIR='${SCRIPTS_DIR}'`
+  );
+  const stub = createGhStub(executeRoutes());
+  const r = runScriptWithStub(mutant, ['--execute', '101'], stub);
+  assertReadFailureStopsBeforeMerge(r, stub);
+  assert.match(r.stderr, /gh pr checks #101 did not return a JSON array/);
 });
