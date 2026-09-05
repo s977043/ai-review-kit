@@ -48706,8 +48706,10 @@ function formatExecutionManifestMarkdown(manifest) {
 // name goes in; a pin and the evidence the Flow declares as required come
 // out. A missing directory or an invalid document is a loud `FlowLoaderError`,
 // never a silent fall-back to "no Flow" — a runtime that cannot find its
-// Flows must say so (the GitHub Action dist does not bundle `flows/`, which
-// is exactly the case `RIVER_FLOWS_DIR` exists for).
+// Flows must say so. `RIVER_FLOWS_DIR` is for an npm-installed CLI that keeps
+// `flows/` outside the package; it does not rescue the GitHub Action dist,
+// which bundles neither `flows/` nor the schemas this loader validates
+// against (#2105), so `--entry` is unsupported there.
 
 
 
@@ -48865,8 +48867,9 @@ function loadFlowRegistry({ flowsDir = null, env = external_node_process_.env } 
   } catch (error) {
     throw new FlowLoaderError(
       `flows directory not found: ${dir}. ` +
-        `Set ${FLOWS_DIR_ENV} to the directory that holds ${ENTRY_MAP_FILENAME} ` +
-        `(the GitHub Action dist does not bundle it).`,
+        `Run --entry with the npm-installed CLI; ${FLOWS_DIR_ENV} may point it at a ` +
+        `directory that holds ${ENTRY_MAP_FILENAME} when flows/ is kept elsewhere. ` +
+        `The GitHub Action dist does not support --entry (flows/ and its schemas are not bundled).`,
       { cause: error }
     );
   }
