@@ -6,10 +6,17 @@
 // the real `jq`. Every call is appended to `<dir>/calls.log`, so a test can
 // assert that a dry-run never reached a write endpoint.
 //
-// Routes are `{ match: RegExp | string, file?: string, body?: string, exit?: number }`.
+// Routes are `{ match: RegExp | string, file?: string, body?: string, exit?: number, after?: number }`.
 // Anchor every route with `^...$`: an unanchored route lets a typo in the
 // script's query string (`per_page` -> `perpage`) or `--json` field list pass
 // unnoticed (#2095).
+//
+// `after: N` lets the first N matching calls fall through to the routes below
+// it and answers from the (N+1)-th on, so one endpoint can succeed for an
+// early read and fail for a later one (the `|| return 2` pins in
+// merge-chain.sh). Put the `after` route above the healthy route for the
+// same endpoint. The count lives in `<dir>/hits-<route index>` because every
+// `gh` call is a fresh process.
 //
 // The stub also mimics the argument checks the real `gh` performs, so a typo
 // in the script fails here the way it would fail against GitHub:
@@ -78,8 +85,17 @@ while IFS= read -r route; do
   regex="\${route%%	*}"
   rest="\${route#*	}"
   file="\${rest%%	*}"
-  code="\${rest#*	}"
+  rest="\${rest#*	}"
+  code="\${rest%%	*}"
+  after="\${rest#*	}"
   if [[ "\${joined}" =~ \${regex} ]]; then
+    if [ "\${after}" -gt 0 ]; then
+      hits=0
+      [ -f "\${dir}/hits-\${n}" ] && hits=$(cat "\${dir}/hits-\${n}")
+      hits=$((hits + 1))
+      printf '%s' "\${hits}" > "\${dir}/hits-\${n}"
+      [ "\${hits}" -gt "\${after}" ] || continue
+    fi
     # Real gh rejects a --json field it does not know before answering; the
     # fixture's keys stand in for that field list. Only object elements are
     # checked, so a fixture that deliberately carries a non-object element
@@ -110,7 +126,7 @@ exit 99
 
 /**
  * Create a stub directory with a `gh` executable and a routing table.
- * @param {Array<{match: RegExp|string, file?: string, body?: string, exit?: number}>} routes
+ * @param {Array<{match: RegExp|string, file?: string, body?: string, exit?: number, after?: number}>} routes
  * @returns {{ dir: string, calls: () => string[] }}
  */
 export function createGhStub(routes) {
@@ -125,7 +141,7 @@ export function createGhStub(routes) {
       writeFileSync(file, route.body);
     }
     if (!file) throw new Error(`route ${i} needs file or body`);
-    return `${regex}\t${file}\t${route.exit ?? 0}`;
+    return `${regex}\t${file}\t${route.exit ?? 0}\t${route.after ?? 0}`;
   });
   writeFileSync(join(dir, 'routes'), `${lines.join('\n')}\n`);
   writeFileSync(join(dir, 'calls.log'), '');

@@ -30,7 +30,7 @@
 //      still saved, without a manifest, and the failure is a stderr warning.
 
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test, { describe } from 'node:test';
@@ -79,15 +79,18 @@ async function saveRun(dir) {
 }
 
 /**
- * A repo root the producer cannot build a manifest from: skills / schemas are
- * the real ones (symlinked, so skill loading works), but the skill checksum
- * manifest is present and NOT JSON, which readJsonOrNull throws on.
+ * A repo root the producer cannot build a manifest from: `package.json` is the
+ * real one, but the skill checksum manifest is present and NOT JSON, which
+ * readJsonOrNull throws on (a non-ENOENT failure).
+ *
+ * No `skills` / `schemas` here: in-process, `runners/core/skill-loader.mjs`
+ * fixes its root from `RIVER_REPO_ROOT` at module load, so an env override
+ * set by a later test is ignored and skill loading keeps using the real repo.
+ * A subprocess-path test that reuses this root would need those two symlinked.
  */
 export function createBrokenRepoRoot(t) {
   const root = createTempDir({ prefix: 'river-broken-root-' });
   t.after(() => cleanupTempDir(root));
-  symlinkSync(resolve(REPO_ROOT, 'skills'), join(root, 'skills'), 'dir');
-  symlinkSync(resolve(REPO_ROOT, 'schemas'), join(root, 'schemas'), 'dir');
   writeFileSync(join(root, 'package.json'), readFileSync(resolve(REPO_ROOT, 'package.json')));
   mkdirSync(join(root, 'docs', 'data'), { recursive: true });
   writeFileSync(join(root, 'docs', 'data', 'skill-manifest.json'), '{ not json');
