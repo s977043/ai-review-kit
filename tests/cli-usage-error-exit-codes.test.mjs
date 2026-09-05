@@ -225,7 +225,7 @@ const CONTRACTS = {
 // 拒否される、という語順依存の契約が pin 無しだったための明文化である。
 // #2054 PR-3 で `review plan --entry <name>`（Beta）を新設し、値欠落 /
 // 未知の entry 名 / `--entry` を読まない面（`doctor`）の 3 形を追加して
-// C3 が 165 -> 168 になった。BEFORE（v1.100.0 = d250193a）では 3 形とも
+// C3 が 165 -> 168 になった。BEFORE（v1.100.0 = 1a8e8c1c）では 3 形とも
 // `Error: unknown option --entry.` の exit 1 であり、exit code は動いていない。
 // 収録の理由は上の「parse 層で新たに拒否されるようになったか」で、未知の
 // entry 名は許容値の列挙つきで、`doctor` は #2065 の allowlist

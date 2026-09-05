@@ -95,4 +95,4 @@ Flow 文書は skill id を 1 つも持ちません。到達は Flow -> Agent ->
 
 ## observe mode
 
-本 Issue は定義と配線と観測までであり、Flow の実行エンジンは含みません。`src/**` と `runners/**` のどのモジュールも `flows/` を読まないことを `tests/flow-definitions.test.mjs` が検査します。既存の gate / decision / finding は 1 つも変わらず、変えるにはこのテストを明示的に書き換える必要があります。
+本 Issue は定義と配線と観測までであり、Flow の実行エンジンは含みません。`src/**` と `runners/**` のどのモジュールも `flows/` を読まないことを `tests/flow-definitions.test.mjs` が検査します。ただし #2054 PR-3 以降、`flows/` を読む runtime モジュールは `src/lib/flow-loader.mjs` のみであり、同テストは offenders がこの 1 件と一致することを検査します（#2103）。既存の gate / decision / finding は 1 つも変わらず、変えるにはこのテストを明示的に書き換える必要があります。

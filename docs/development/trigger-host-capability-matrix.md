@@ -7,7 +7,7 @@ Review Placement & Trigger Contract（#2054、Epic #2011）の Phase 1 として
 - 検証: `tests/flow-definitions.test.mjs` の `trigger registry (#2054 PR-1)`
 - 前提となる 8 入口: [flow-contract.md](./flow-contract.md)（core 4）と [upstream-review-flows.md](./upstream-review-flows.md)（上流 4）
 
-本 PR は宣言だけです。`src/**` と `runners/**` は `triggers` を読まず、observe mode の不変条件（同テストの `no runtime module loads flows/`）はそのまま緑です。
+本 PR は宣言だけです。`src/**` と `runners/**` は `triggers` を読まず、observe mode の不変条件（同テストの `no runtime module loads flows/`）はそのまま緑です。ただし #2054 PR-3 以降、`flows/` を読む runtime モジュールは `src/lib/flow-loader.mjs` のみであり、同テストは offenders がこの 1 件と一致することを検査します（#2103）。
 
 ## 5 つの中立 trigger
 
