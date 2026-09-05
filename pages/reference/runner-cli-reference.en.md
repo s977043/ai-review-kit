@@ -108,6 +108,8 @@ Thanks to this unification, an option-name typo, a surplus positional, and a mis
 
 No data write (adding a feedback or suppression entry, for instance) ever happens ahead of a usage error.
 
+#### `--base` acceptance scope and migration {#base-acceptance-scope}
+
 `--base <ref>` is accepted only by the five surfaces that actually read a diff (#2065). Passing it anywhere else is a parse-layer usage error and exits 1.
 
 - `river run`
@@ -130,9 +132,11 @@ The surfaces that do not read `--base` used to accept the flag and throw the val
 - From exit 3 to exit 1: `review verify` (its old exit 3 was the unimplemented `#802 Phase 3` path, not a result of processing `--base`)
 - `runs diff` no longer accepts it either. A call whose two runs both exist moves from exit 0 to exit 1; a call that cannot find a run already exited 1, so its exit code does not move
 
-Word order does not matter: `doctor --base main .` is rejected exactly like `doctor . --base main`, and repeating `--base` behaves like passing it once. An **unknown subcommand word skips this check entirely**, though: `river runs nosuch --base main` still answers `Unknown runs subcommand: nosuch`, and `river feedback --base main` still answers ``only `river feedback add` is supported`` — the CLI does not rule on `--base` for a surface that does not exist.
+Word order does not matter on a surface that has no subcommand: `doctor --base main .` is rejected exactly like `doctor . --base main`, and repeating `--base` behaves like passing it once. An **unknown subcommand word skips this check entirely**, though: `river runs nosuch --base main` still answers `Unknown runs subcommand: nosuch`, and `river feedback --base main` still answers ``only `river feedback add` is supported`` — the CLI does not rule on `--base` for a surface that does not exist.
 
-None of these surfaces ever read the value, so **dropping the flag reproduces the previous result exactly**. Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
+On a surface that has subcommands, the check fires only when the subcommand word is written **before** the options, because `review` and `evolve` are the only two surfaces that resolve a trailing subcommand (see "The target path may be written either before or after the options" below). `river skills --base main import` reads `import` as the target path and slips past the check; when an `import/` directory exists the review runs and exits 0. On `runs` / `feedback` / `suppression` the trailing token becomes an `unexpected argument`, so the exit code stays 1.
+
+None of these surfaces ever read the value, so **dropping the flag from the call reproduces the previous result exactly**. Leaving the flag in place means the surface no longer runs at all: the call fails as a usage error. Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
 
 `--expires` accepts only the RFC 3339 `YYYY-MM-DD` form and the date-time form. A date-only input is read as UTC midnight and normalized to a date-time when stored, because `expiresAt` in `schemas/suppression-context.schema.json` is declared `format: date-time`.
 
@@ -156,6 +160,8 @@ The target path may be written either before or after the options on these surfa
 Within that range, `river run . --dry-run` and `river run --dry-run .` mean the same thing. Only one non-option token is read as the target path; a second one is a surplus positional and exits 1.
 
 The `review` subcommands (`plan` / `exec` / `verify` / `route`) may likewise be written before or after the options: `river review plan --plan-only` and `river review --plan-only plan` are equivalent. Forgetting the subcommand, or passing a token outside the vocabulary, exits 1.
+
+The `evolve` subcommands (`aggregate` / `replay`) may likewise be written before or after the options (#1759 B1). Those two surfaces are the only ones whose subcommand word order is free: `skills` / `runs` / `feedback` / `suppression` do not resolve a trailing subcommand, and `river skills --base main import` reads `import` as the target path. Write the subcommand before the options on those surfaces.
 
 Under `review` the subcommand word does not count toward the positional budget above. `river review --plan-only plan ./sub` is accepted as one subcommand plus one path; the surplus positional starts at the third non-option token.
 
