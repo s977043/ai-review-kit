@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.99.3](https://github.com/s977043/river-review/compare/v1.99.2...v1.99.3) (2026-09-05)
+
+
+### Bug Fixes
+
+* **cli:** [#2076](https://github.com/s977043/river-review/issues/2076) --base 拒否メッセージに復旧手順を 1 文加える ([#2080](https://github.com/s977043/river-review/issues/2080)) ([86a20cd](https://github.com/s977043/river-review/commit/86a20cdfd4491cf498fc6918170f8aeaa229801a))
+* **git:** [#2071](https://github.com/s977043/river-review/issues/2071) --base の警告を merge base の出所と一致させる ([#2079](https://github.com/s977043/river-review/issues/2079)) ([4742362](https://github.com/s977043/river-review/commit/4742362012a964b97e503784672d1a3da6b9fe95))
+
 ## [1.99.2](https://github.com/s977043/river-review/compare/v1.99.1...v1.99.2) (2026-09-05)
 
 
