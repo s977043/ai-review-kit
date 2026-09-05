@@ -1006,6 +1006,8 @@ var deterministic_gate = __webpack_require__(5837);
 var deterministic_exec_gate = __webpack_require__(2785);
 // EXTERNAL MODULE: ./src/lib/finding-factory.mjs
 var finding_factory = __webpack_require__(1535);
+// EXTERNAL MODULE: ./src/lib/execution-manifest.mjs
+var execution_manifest = __webpack_require__(3055);
 // EXTERNAL MODULE: external "node:crypto"
 var external_node_crypto_ = __webpack_require__(7598);
 ;// CONCATENATED MODULE: ./src/lib/review-plan.mjs
@@ -1035,6 +1037,7 @@ var external_node_crypto_ = __webpack_require__(7598);
  * Pure-ish module: config loader, resolver, buildExecutionPlan and the
  * diff reader are injectable for tests.
  */
+
 
 
 
@@ -1405,6 +1408,31 @@ async function runReviewExecReplay({
 
   const phase = phaseFromArtifact ?? 'midstream';
 
+  // #2054 PR-4: when the source artifact carries an Execution Manifest, check
+  // its integrity before replaying against it. A mismatch is a WARNING and a
+  // debug note only — the replay still runs and gate / decision / findings
+  // are untouched (ADR-009 RA-1: the manifest records, it never judges). The
+  // point is that a tampered or hand-edited source plan is detectable, not
+  // that it is refused; refusal would be a gate this module has no mandate for.
+  // A source without a manifest is not checked and not warned about: artifacts
+  // that predate the manifest are valid as they are (AC 4).
+  let sourceManifestVerification = null;
+  if (looksLikeFullArtifact && parsed.executionManifest != null) {
+    try {
+      const { verified, mismatches } = (0,execution_manifest/* verifyExecutionManifest */.zy)(parsed.executionManifest);
+      sourceManifestVerification = { verified, mismatches };
+    } catch (err) {
+      sourceManifestVerification = { verified: false, mismatches: [`invalid: ${err.message}`] };
+    }
+    if (!sourceManifestVerification.verified) {
+      console.warn(
+        `Warning: the execution manifest in --plan "${planFile}" does not verify ` +
+          `(${sourceManifestVerification.mismatches.join(', ')}); ` +
+          'the source plan may have been edited since it was produced. Replay continues.'
+      );
+    }
+  }
+
   // #878 A2-3-impl: read the carry-over snapshot the planner wrote (A2-3-runners
   // #933). Contract: replay does NOT re-derive these — it trusts the values
   // captured at plan-creation time, avoiding context-snapshot drift.
@@ -1546,6 +1574,7 @@ async function runReviewExecReplay({
       sourcePhase: phaseFromArtifact,
       sourceTimestamp: typeof parsed.timestamp === 'string' ? parsed.timestamp : null,
       ...(replayDrift ? { drift: replayDrift } : {}),
+      ...(sourceManifestVerification ? { sourceManifest: sourceManifestVerification } : {}),
     };
     if (executionTrace) artifact.debug.execution = executionTrace;
   }
