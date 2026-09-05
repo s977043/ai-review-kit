@@ -35,11 +35,11 @@ CLAUDE.md "AI Misoperation Guards" の運用ガードのうち、PR マージ判
 `gh pr merge` の前に `gh pr checks` を実行し、必須チェックがすべて `pass` バケットに入っていることを確認します。`fail` / `pending` / `cancel` が残るマージは不可です。
 
 ```bash
-gh pr checks <N> --json name,bucket,startedAt --jq 'group_by(.name) | map(max_by(.startedAt)) | .[] | select(.bucket != "skipping")'
+gh pr checks <N> --json name,bucket,startedAt --jq 'group_by(.name) | map(if any(.[]; .bucket == "pending") then (map(select(.bucket == "pending")) | first) else max_by(.startedAt) end) | .[] | select(.bucket != "skipping")'
 ```
 
 - `SKIPPED` チェックは `bucket == "skipping"` で除外できる。
-- `group_by(.name) | map(max_by(.startedAt))` は同名 check の最新 run だけを残す。`gh pr checks` は同じ head の全 run を並べるため、concurrency で `cancel` された古い run と再実行の `pass` が同名で並ぶ。最新だけを見ないと `cancel` を `fail` と誤読する。`scripts/wait-pr-ready.sh` が使う check-runs API は既定 `filter=latest` で同じ絞り込みを行っている。
+- `group_by(.name)` 以降は同名 check のうち `pending` があればそれを、無ければ `startedAt` が最新の run を残す。queued の run は `startedAt` がゼロ時刻（`0001-01-01T00:00:00Z`）で並ぶため、`max_by` だけでは古い `cancel` / `pass` を最新と誤って採り、`pending` を隠す。`gh pr checks` は同じ head の全 run を並べるため、concurrency で `cancel` された古い run と再実行の `pass` が同名で並ぶ。最新だけを見ないと `cancel` を `fail` と誤読する。`scripts/wait-pr-ready.sh` が使う check-runs API は既定 `filter=latest` で同じ絞り込みを行っている。
 - 必須チェック (`Lint`, `Unit tests` など) が pre-existing 失敗の場合も、本 PR を直接マージしてはいけない。`main` 向けの fix PR を先に出して main を green に戻し、その後本 PR をリベースしてマージする。
 
 #### 1.1 Branch protection の概要
