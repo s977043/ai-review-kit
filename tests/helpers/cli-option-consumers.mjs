@@ -32,7 +32,8 @@
 //     （src/lib/diff-processor.mjs の `parsed.files` など）も拾う。フィールド名が
 //     parseArgs のフィールドと一致した場合だけ「消費」に誤って数わる。
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
+import os from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,6 +43,75 @@ import { SURFACES } from './cli-surfaces.mjs';
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const CLI_SOURCE_PATH = join(REPO_ROOT, 'src', 'cli.mjs');
 const COMMANDS_DIR = join(REPO_ROOT, 'src', 'cli', 'commands');
+const PROMOTE_SOURCE_PATH = join(COMMANDS_DIR, 'promote.mjs');
+
+/**
+ * `--ensemble` の parse は src/cli.mjs が `os.tmpdir()/river-ensemble-<pid>-<ts>.md`
+ * を書き、`parsed.cliArtifacts['review-external']` にその path を入れ、回収は
+ * process の exit listener に任せる。導出は面ごとに parse するので、exit まで
+ * 待つと runner 生存中に tmp が積み上がり、同じ tmpdir を走査する
+ * tests/cli-ensemble-flag.test.mjs と同時実行したとき衝突する（#2087 finding 3）。
+ * parse 直後にここで回収する。自プロセスの pid を含む名前だけを対象にし、
+ * 他プロセスの生成物には触れない。
+ * @param {ReturnType<typeof parseArgs>} parsed
+ */
+export function reclaimEnsembleTmp(parsed) {
+  const tmpPath = parsed?.cliArtifacts?.['review-external'];
+  if (typeof tmpPath !== 'string') return;
+  const expectedPrefix = join(os.tmpdir(), `river-ensemble-${process.pid}-`);
+  if (!tmpPath.startsWith(expectedPrefix) || !tmpPath.endsWith('.md')) return;
+  try {
+    unlinkSync(tmpPath);
+  } catch {
+    // 既に exit listener か別経路で消えていれば何もしない
+  }
+}
+
+/**
+ * `parsed` を受け取れない経路（`runCliInProcess` で `main()` を同一プロセスで
+ * 走らせたとき）向けの回収。自プロセスの pid を名前に含む
+ * `river-ensemble-<pid>-*.md` だけを os.tmpdir() から消す。
+ * @returns {number} 消した件数
+ */
+export function reclaimOwnEnsembleTmpFiles() {
+  const prefix = `river-ensemble-${process.pid}-`;
+  let names;
+  try {
+    names = readdirSync(os.tmpdir());
+  } catch {
+    return 0;
+  }
+  let removed = 0;
+  for (const name of names) {
+    if (!name.startsWith(prefix) || !name.endsWith('.md')) continue;
+    try {
+      unlinkSync(join(os.tmpdir(), name));
+      removed += 1;
+    } catch {
+      // 既に消えていれば何もしない
+    }
+  }
+  return removed;
+}
+
+/**
+ * src/cli/commands/promote.mjs `runPromoteCommand` の `includes([...])` に並ぶ
+ * サブコマンド語彙をソースから読む（`readKnownOptionTokens` と同型）。
+ * tests/helpers/cli-surfaces.mjs の `PROMOTE_SUBCOMMANDS` はこの写しなので、
+ * 両方向の増減を tests/cli-option-consumer-check.test.mjs が突き合わせる
+ * （#2087 finding 1: src 側に語を足しても写しが落ちなかった）。
+ * @returns {string[]}
+ */
+export function readPromoteSubcommandsFromSource() {
+  const source = readFileSync(PROMOTE_SOURCE_PATH, 'utf8');
+  const fnStart = source.indexOf('export async function runPromoteCommand');
+  const listStart = source.indexOf('![', fnStart);
+  const listEnd = source.indexOf('].includes(sub)', listStart);
+  if (!(fnStart >= 0 && listStart > fnStart && listEnd > listStart)) {
+    throw new Error('runPromoteCommand の `includes([...])` が promote.mjs に見つからない');
+  }
+  return [...source.slice(listStart, listEnd).matchAll(/'([a-z-]+)'/g)].map((m) => m[1]);
+}
 
 /**
  * `-h` / `--help` は値を消費するオプションではなく、どの面でも `command` を
@@ -276,6 +346,7 @@ export function deriveOptionConsumerMatrix({ ensembleDir, tokens = readKnownOpti
     for (const { surface, argv } of SURFACES) {
       const command = argv[0];
       const after = parseArgs([...argv, ...pre, token, ...value]);
+      reclaimEnsembleTmp(after);
       if (!isAccepted(after)) {
         cells[surface] = { status: 'rejected', writes: [], consumed: false };
         continue;
