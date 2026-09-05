@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.100.0](https://github.com/s977043/river-review/compare/v1.99.3...v1.100.0) (2026-09-05)
+
+
+### Features
+
+* **flows:** [#2054](https://github.com/s977043/river-review/issues/2054) PR-1 trigger registry を entry-map に宣言のみ追加する ([#2093](https://github.com/s977043/river-review/issues/2093)) ([23ccc8a](https://github.com/s977043/river-review/commit/23ccc8abac83b9b5faa9f2876265464d00f750cf))
+* **trigger:** [#2054](https://github.com/s977043/river-review/issues/2054) 工程イベントを Flow entry と pin へ解決する純関数 resolver を追加する ([#2092](https://github.com/s977043/river-review/issues/2092)) ([2b06f96](https://github.com/s977043/river-review/commit/2b06f963be7bdea3363c6ec4227b0d77b1491a40))
+
+
+### Bug Fixes
+
+* **cli:** [#2081](https://github.com/s977043/river-review/issues/2081) skills の後置サブコマンドを対象パスではなくサブコマンドとして解決する ([#2089](https://github.com/s977043/river-review/issues/2089)) ([e2e3eaf](https://github.com/s977043/river-review/commit/e2e3eaf62e88013f9e28cb024c0e76d559850eba))
+
 ## [1.99.3](https://github.com/s977043/river-review/compare/v1.99.2...v1.99.3) (2026-09-05)
 
 
