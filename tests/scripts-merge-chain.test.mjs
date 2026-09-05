@@ -5,7 +5,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-import { callFunction, createGhStub, fixture, runScriptWithStub } from './helpers/gh-stub.mjs';
+import {
+  callFunction,
+  createGhStub,
+  fixture,
+  mutateScript,
+  runGh,
+  runScriptWithStub,
+} from './helpers/gh-stub.mjs';
 
 const SCRIPT = 'scripts/merge-chain.sh';
 const read = (name) => readFileSync(fixture(name), 'utf8');
@@ -66,15 +73,15 @@ function cleanRoutes(pr, pullFile) {
   return [
     { match: new RegExp(`^api repos/owner/repo/pulls/${pr}$`), file: fixture(pullFile) },
     {
-      match: new RegExp(`^api --paginate repos/owner/repo/pulls/${pr}/comments`),
+      match: new RegExp(`^api --paginate repos/owner/repo/pulls/${pr}/comments\\?per_page=100$`),
       file: fixture('empty-array.json'),
     },
     {
-      match: new RegExp(`^api --paginate repos/owner/repo/issues/${pr}/comments`),
+      match: new RegExp(`^api --paginate repos/owner/repo/issues/${pr}/comments\\?per_page=100$`),
       file: fixture('issue-comments-bots-only.json'),
     },
     {
-      match: new RegExp(`^pr checks ${pr} --repo owner/repo`),
+      match: new RegExp(`^pr checks ${pr} --repo owner/repo --json name,bucket,startedAt$`),
       file: fixture('checks-all-pass.json'),
     },
   ];
@@ -102,7 +109,7 @@ test('dry-run: a blocked label stops with exit 3 and names the item', () => {
 test('dry-run: one human issue comment stops with exit 3', () => {
   const routes = cleanRoutes(101, 'pull-open.json');
   routes[2] = {
-    match: /^api --paginate repos\/owner\/repo\/issues\/101\/comments/,
+    match: /^api --paginate repos\/owner\/repo\/issues\/101\/comments\?per_page=100$/,
     file: fixture('issue-comments-one-human.json'),
   };
   const r = runScriptWithStub(SCRIPT, ['101'], createGhStub(routes));
@@ -113,7 +120,7 @@ test('dry-run: one human issue comment stops with exit 3', () => {
 test('dry-run: one line comment stops with exit 3', () => {
   const routes = cleanRoutes(101, 'pull-open.json');
   routes[1] = {
-    match: /^api --paginate repos\/owner\/repo\/pulls\/101\/comments/,
+    match: /^api --paginate repos\/owner\/repo\/pulls\/101\/comments\?per_page=100$/,
     file: fixture('issue-comments-one-human.json'),
   };
   const r = runScriptWithStub(SCRIPT, ['101'], createGhStub(routes));
@@ -124,7 +131,7 @@ test('dry-run: one line comment stops with exit 3', () => {
 test('dry-run: a pending required check stops with exit 3', () => {
   const routes = cleanRoutes(101, 'pull-open.json');
   routes[3] = {
-    match: /^pr checks 101 --repo owner\/repo/,
+    match: /^pr checks 101 --repo owner\/repo --json name,bucket,startedAt$/,
     file: fixture('checks-queued-zero-time.json'),
     exit: 8,
   };
@@ -136,7 +143,7 @@ test('dry-run: a pending required check stops with exit 3', () => {
 test('dry-run: a non-object element in gh pr checks output is a read failure (exit 2), never merge', () => {
   const routes = cleanRoutes(101, 'pull-open.json');
   routes[3] = {
-    match: /^pr checks 101 --repo owner\/repo/,
+    match: /^pr checks 101 --repo owner\/repo --json name,bucket,startedAt$/,
     file: fixture('checks-non-object.json'),
   };
   const r = runScriptWithStub(SCRIPT, ['101'], createGhStub(routes));
@@ -178,11 +185,11 @@ test('--execute: a stalled head reported by wait-pr-ready exits 1 before any mer
       body: '{"message":"Updating pull request branch."}\n',
     },
     {
-      match: /^api repos\/owner\/repo\/commits\/e1cb880e[0-9a-f]*\/check-runs/,
+      match: /^api repos\/owner\/repo\/commits\/e1cb880e[0-9a-f]*\/check-runs\?per_page=100$/,
       body: '{"check_runs":[]}',
     },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e[0-9a-f]*&per_page=100$/,
       file: fixture('runs-all-action-required.json'),
     },
   ]);
@@ -208,11 +215,11 @@ test('--execute: wait-pr-ready timeout exits 4', () => {
       exit: 1,
     },
     {
-      match: /^api repos\/owner\/repo\/commits\/e1cb880e[0-9a-f]*\/check-runs/,
+      match: /^api repos\/owner\/repo\/commits\/e1cb880e[0-9a-f]*\/check-runs\?per_page=100$/,
       body: '{"check_runs":[]}',
     },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e[0-9a-f]*&per_page=100$/,
       file: fixture('runs-executed.json'),
     },
   ]);
@@ -249,7 +256,7 @@ test('--execute: a merge-conflict 422 on update-branch exits 1 and prints the pr
       exit: 1,
     },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e[0-9a-f]*&per_page=100$/,
       file: fixture('runs-all-action-required.json'),
     },
   ]);
@@ -268,11 +275,11 @@ test('--execute: a clean PR is merged with the PR title as the squash subject', 
       exit: 1,
     },
     {
-      match: /^api repos\/owner\/repo\/commits\/e1cb880e[0-9a-f]*\/check-runs/,
+      match: /^api repos\/owner\/repo\/commits\/e1cb880e[0-9a-f]*\/check-runs\?per_page=100$/,
       body: '{"check_runs":[{"name":"Lint","conclusion":"success"}]}',
     },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e[0-9a-f]*&per_page=100$/,
       file: fixture('runs-executed.json'),
     },
     {
@@ -296,11 +303,11 @@ test('--execute: disposition stop exits 3 and merges nothing', () => {
       body: '{"message":"Updating pull request branch."}\n',
     },
     {
-      match: /^api repos\/owner\/repo\/commits\/aaaa[0-9a-f]*\/check-runs/,
+      match: /^api repos\/owner\/repo\/commits\/aaaa[0-9a-f]*\/check-runs\?per_page=100$/,
       body: '{"check_runs":[]}',
     },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=aaaa/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=aaaa[0-9a-f]*&per_page=100$/,
       file: fixture('runs-executed.json'),
     },
   ]);
@@ -318,4 +325,64 @@ test('usage errors exit 64', () => {
   assert.equal(runScriptWithStub(SCRIPT, [], stub).status, 64);
   assert.equal(runScriptWithStub(SCRIPT, ['--execute'], stub).status, 64);
   assert.equal(runScriptWithStub(SCRIPT, ['12x'], stub).status, 64);
+});
+
+// #2095: the stub must reject the argument typos the real `gh` rejects, or a
+// typo in the script passes every test above. Each mutation runs on a temp
+// copy of the script; `scripts/` itself is untouched.
+
+test('gh-stub: a --json field the fixture does not carry is "Unknown JSON field", exit 1', () => {
+  const stub = createGhStub([
+    { match: /^pr checks 101 --repo owner\/repo --json /, file: fixture('checks-all-pass.json') },
+  ]);
+  const ok = runGh(stub, [
+    'pr',
+    'checks',
+    '101',
+    '--repo',
+    'owner/repo',
+    '--json',
+    'name,bucket,startedAt',
+  ]);
+  assert.equal(ok.status, 0, ok.stderr);
+  const typo = runGh(stub, [
+    'pr',
+    'checks',
+    '101',
+    '--repo',
+    'owner/repo',
+    '--json',
+    'name,bucket,startedat',
+  ]);
+  assert.equal(typo.status, 1, typo.stdout + typo.stderr);
+  assert.match(typo.stderr, /Unknown JSON field/);
+});
+
+test('gh-stub: --method outside GET/POST/PUT/PATCH/DELETE and -f without key=value exit 1', () => {
+  const stub = createGhStub([{ match: /^api /, body: '{}' }]);
+  assert.equal(runGh(stub, ['api', '--method', 'PUT', 'repos/x']).status, 0);
+  assert.equal(runGh(stub, ['api', '--method', 'PUSH', 'repos/x']).status, 1);
+  assert.equal(runGh(stub, ['api', '-f', 'state=open', 'repos/x']).status, 0);
+  assert.equal(runGh(stub, ['api', '-F', 'state', 'repos/x']).status, 1);
+});
+
+test('mutation: a --json field typo in read_checks no longer reaches the fixture', () => {
+  const mutant = mutateScript(
+    SCRIPT,
+    '--json name,bucket,startedAt',
+    '--json name,bucket,startedat'
+  );
+  const r = runScriptWithStub(mutant, ['101'], createGhStub(cleanRoutes(101, 'pull-open.json')));
+  assert.match(r.stderr, /gh-stub: no route for: pr checks 101 .*--json name,bucket,startedat/);
+  assert.match(r.stderr, /gh pr checks #101 did not return a JSON array/);
+});
+
+test('mutation: a per_page typo in the comment reads no longer reaches the fixture', () => {
+  const mutant = mutateScript(SCRIPT, 'per_page=100', 'perpage=100');
+  const r = runScriptWithStub(mutant, ['101'], createGhStub(cleanRoutes(101, 'pull-open.json')));
+  assert.match(
+    r.stderr,
+    /gh-stub: no route for: api --paginate repos\/owner\/repo\/pulls\/101\/comments\?perpage=100/
+  );
+  assert.match(r.stderr, /GitHub API read failed \(line comments of #101\)/);
 });
