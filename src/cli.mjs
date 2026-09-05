@@ -616,8 +616,17 @@ function takeTrailingPositional(parsed, token) {
   // matches by vocabulary alone and `river skills bogus` is pinned as "read as
   // a path" (#1709 未決 7), so an `!existsSync` heuristic here would make the
   // two word orders disagree again. A directory literally named `import` is
-  // still reachable as `river skills ./import`.
-  if (parsed.command === 'skills' && !parsed.skillsSubcommand && SKILLS_SUBCOMMANDS.has(token)) {
+  // still reachable as `river skills ./import`. `!parsed.targetConsumed`
+  // mirrors the `evolve` branch: once a path has been taken
+  // (`river skills --dry-run . import`), the trailing word is a surplus
+  // positional, exactly as the leading form `skills import .` reports it —
+  // otherwise the path would be swallowed silently and the subcommand run.
+  if (
+    parsed.command === 'skills' &&
+    !parsed.targetConsumed &&
+    !parsed.skillsSubcommand &&
+    SKILLS_SUBCOMMANDS.has(token)
+  ) {
     parsed.skillsSubcommand = token;
     return true;
   }

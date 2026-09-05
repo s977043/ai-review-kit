@@ -213,7 +213,12 @@ const CONTRACTS = {
 // おり、置くとその行が exit 0 へ動くためである。したがって `list` の
 // 後置形は BEFORE も exit 1 で、この行は exit code では守られず、parse 層で
 // 拒否されること（usage error）の記録として収録している。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 163, C4: 1 };
+// 同 PR のレビュー（round 3）でパス併記形 `skills --dry-run . import` を
+// surplus-positional 1 件として追加し、C3 が 163 -> 164 になった。分岐に
+// `!parsed.targetConsumed` が無いと `.` を target に飲んだ上で `import` を
+// サブコマンドとして受理し、パスを黙って捨てて exit 0 になる（前置形
+// `skills import .` は exit 1 のままなので語順で判定が割れる）。
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 164, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -1440,6 +1445,15 @@ const CASES = [
     argv: ['skills', '--base', 'main', 'resolve'],
     contract: 'C3',
   },
+  {
+    // #2081 round 3: パスを先に取った後の後置語はサブコマンドではなく余剰
+    // positional（前置形 `skills import .` と同じ `unexpected argument`）。
+    // `!parsed.targetConsumed` ガードが無いとパスを黙って捨てて exit 0 になる。
+    surface: 'skills import',
+    kind: 'surplus-positional',
+    argv: ['skills', '--dry-run', '.', 'import'],
+    contract: 'C3',
+  },
 ];
 
 /**
@@ -1609,11 +1623,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 164 usage-error cases and every row is unique', () => {
+  test('the matrix pins 165 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      164,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 44 件（228 形の掃引で exit code が動いたのは 53 件。重複指定は単発形と等価なので代表 1 件のみ収録し、runs diff の 3 件は逆に変化形ではないが契約として収録している）+ #2081 の skills 後置サブコマンド 4 件'
+      165,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 44 件（228 形の掃引で exit code が動いたのは 53 件。重複指定は単発形と等価なので代表 1 件のみ収録し、runs diff の 3 件は逆に変化形ではないが契約として収録している）+ #2081 の skills 後置サブコマンド 4 件 + 同 round 3 のパス併記形 1 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1648,7 +1662,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     );
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:163 / C4:1 (0 of 164 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:164 / C4:1 (0 of 165 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
