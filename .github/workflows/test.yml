@@ -23,8 +23,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: ./.github/actions/setup-node-deps
+      # shellcheck is preinstalled on ubuntu-latest; print the version so a
+      # runner-image bump that changes the rule set is visible in the log.
+      - name: Show shellcheck version
+        run: shellcheck --version
       - name: Run linters
         run: npm run lint
+      - name: Lint shell scripts (shellcheck)
+        run: npm run lint:sh
 
   test:
     name: Unit tests
