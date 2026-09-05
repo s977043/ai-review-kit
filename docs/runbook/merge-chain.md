@@ -34,10 +34,31 @@ The order of the arguments is the merge order. Plan it first with
 | Step | Command                                                                 | Notes                                                                                                                                                                                                                                                                                         |
 | ---- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | `gh api --method PUT repos/:owner/:repo/pulls/<N>/update-branch` per PR | All remaining PRs at once, so that every branch lands on the same `origin/main` before any CI round. `422: no new commits` means the head is current and is not an error. A merge-conflict 422 is handed to `scripts/pr-unstall.sh`, which prints the local procedure, and the chain exits 1. |
-| 2    | `scripts/wait-pr-ready.sh <all remaining>`                              | Exit 1 (failing check or stalled run) and exit 2 (timeout) end the chain with exit 1; exit 65 (read failed) ends it with exit 2.                                                                                                                                                              |
+| 2    | `scripts/wait-pr-ready.sh <all remaining>`                              | Exit 1 (failing check or stalled run) ends the chain with exit 1; exit 2 (timeout) ends it with exit 4; exit 65 (read failed) ends it with exit 2.                                                                                                                                            |
 | 3    | disposition of the first PR (below)                                     | Judged against the head that CI just verified.                                                                                                                                                                                                                                                |
 | 4    | `gh pr merge <N> --squash --delete-branch --subject "<title> (#N)"`     | The PR title as-is, with the `(#N)` suffix GitHub would add by default. The PR body is not read or altered.                                                                                                                                                                                   |
 | 5    | back to step 1 with the remaining PRs                                   |                                                                                                                                                                                                                                                                                               |
+
+`update-branch` answers 202 and pushes its merge commit asynchronously. After
+an accepted call the script polls `repos/:owner/:repo/pulls/<N>` until the
+head SHA moves. The limit is `UPDATE_BRANCH_WAIT_SECONDS` (default 120; `0`
+skips the wait). Without that wait, `wait-pr-ready.sh` would read the old head as
+`behind` and treat it as settled. The later `gh pr merge` would then be
+refused by strict mode. A head that never moves ends the chain with exit 1.
+
+## Mixed heads: `action_required` beside runs that are still moving
+
+A head can carry `action_required` runs from a bot push together with
+`queued` / `in_progress` runs. The moving runs come from a kick or an
+`update-branch` that already landed. The two scripts read that head differently on purpose.
+`wait-pr-ready.sh` reports any `action_required` run and exits 1: something
+on this head is stalled. `pr-unstall.sh` calls a head stalled only when
+`action_required` runs exist **and** nothing is still moving. Such a head
+cannot advance on its own. While runs are still moving, wait; re-run the chain once
+they finish. If only `action_required` remains at that point, run
+`scripts/pr-unstall.sh <N>`. Measured on 2026-09-05 against PR #2089 right
+after a kick, the head showed both kinds of run. The correct reading was
+"not stalled, still moving".
 
 Every `gh` write is preceded by the account guard from `CLAUDE.md`:
 `gh api user --jq .login | grep -q s977043 || gh auth switch -u s977043`.
@@ -65,13 +86,14 @@ The chain is re-run afterwards.
 
 ## Exit codes
 
-| Code | Meaning                                                                             |
-| ---- | ----------------------------------------------------------------------------------- |
-| 0    | every PR merged (dry-run: every PR would merge)                                     |
-| 1    | CI failed, a head is stalled, wait timed out, or update-branch hit a merge conflict |
-| 2    | a GitHub read failed; nothing was judged                                            |
-| 3    | a disposition item stopped the chain; the table names the PR and the item           |
-| 64   | usage                                                                               |
+| Code | Meaning                                                                                                             |
+| ---- | ------------------------------------------------------------------------------------------------------------------- |
+| 0    | every PR merged (dry-run: every PR would merge)                                                                     |
+| 1    | CI failed, a head is stalled, update-branch hit a merge conflict, or an accepted update-branch never moved the head |
+| 2    | a GitHub read failed; nothing was judged                                                                            |
+| 3    | a disposition item stopped the chain; the table names the PR and the item                                           |
+| 4    | `wait-pr-ready.sh` timed out (`TIMEOUT_SECONDS`) before CI settled; nothing merged                                  |
+| 64   | usage                                                                                                               |
 
 Exit 3 is not a failure. It is the point where the guard says a human decides.
 

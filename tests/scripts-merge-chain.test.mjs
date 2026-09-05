@@ -133,6 +133,25 @@ test('dry-run: a pending required check stops with exit 3', () => {
   assert.match(r.stdout, /STOP:checks=Unit tests \(22\.x\)=pending/);
 });
 
+test('dry-run: a non-object element in gh pr checks output is a read failure (exit 2), never merge', () => {
+  const routes = cleanRoutes(101, 'pull-open.json');
+  routes[3] = {
+    match: /^pr checks 101 --repo owner\/repo/,
+    file: fixture('checks-non-object.json'),
+  };
+  const r = runScriptWithStub(SCRIPT, ['101'], createGhStub(routes));
+  assert.equal(r.status, 2, r.stdout + r.stderr);
+  assert.doesNotMatch(r.stdout, /\tmerge\t/);
+});
+
+test('count_human_comments: a ghost user without login does not break the count', () => {
+  const r = callFunction(SCRIPT, 'count_human_comments', [
+    '[{"user":null},{"user":{"login":"s977043"}}]',
+  ]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stdout.trim(), '2');
+});
+
 test('dry-run: an already merged PR is skipped; nothing left means exit 0', () => {
   const stub = createGhStub([
     { match: /^api repos\/owner\/repo\/pulls\/2086$/, file: fixture('pull-merged.json') },
@@ -167,9 +186,57 @@ test('--execute: a stalled head reported by wait-pr-ready exits 1 before any mer
       file: fixture('runs-all-action-required.json'),
     },
   ]);
-  const r = runScriptWithStub(SCRIPT, ['--execute', '101'], stub);
+  const r = runScriptWithStub(SCRIPT, ['--execute', '101'], stub, {
+    UPDATE_BRANCH_WAIT_SECONDS: '0',
+  });
   assert.equal(r.status, 1, r.stdout + r.stderr);
   assert.ok(!stub.calls().some((c) => c.startsWith('pr merge')), 'no merge was attempted');
+});
+
+test('--execute: wait-pr-ready timeout exits 4', () => {
+  const routes = cleanRoutes(101, 'pull-open.json');
+  routes[0] = {
+    match: /^api repos\/owner\/repo\/pulls\/101$/,
+    body: read('pull-open.json').replace('"clean"', '"unknown"'),
+  };
+  const stub = createGhStub([
+    { match: /^api user$/, body: '{"login":"s977043"}\n' },
+    ...routes,
+    {
+      match: /^api --method PUT repos\/owner\/repo\/pulls\/101\/update-branch$/,
+      body: 'gh: There are no new commits on the base branch. (HTTP 422)\n',
+      exit: 1,
+    },
+    {
+      match: /^api repos\/owner\/repo\/commits\/e1cb880e[0-9a-f]*\/check-runs/,
+      body: '{"check_runs":[]}',
+    },
+    {
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e/,
+      file: fixture('runs-executed.json'),
+    },
+  ]);
+  const r = runScriptWithStub(SCRIPT, ['--execute', '101'], stub, { TIMEOUT_SECONDS: '1' });
+  assert.equal(r.status, 4, r.stdout + r.stderr);
+  assert.ok(!stub.calls().some((c) => c.startsWith('pr merge')));
+});
+
+test('--execute: an accepted update-branch whose head never moves exits 1', () => {
+  const stub = createGhStub([
+    { match: /^api user$/, body: '{"login":"s977043"}\n' },
+    ...cleanRoutes(101, 'pull-open.json'),
+    {
+      match: /^api --method PUT repos\/owner\/repo\/pulls\/101\/update-branch$/,
+      body: '{"message":"Updating pull request branch."}\n',
+    },
+  ]);
+  const r = runScriptWithStub(SCRIPT, ['--execute', '101'], stub, {
+    UPDATE_BRANCH_WAIT_SECONDS: '1',
+    INTERVAL_SECONDS: '1',
+  });
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stderr, /head did not move/);
+  assert.ok(!stub.calls().some((c) => c.startsWith('pr merge')));
 });
 
 test('--execute: a merge-conflict 422 on update-branch exits 1 and prints the procedure', () => {
@@ -237,9 +304,12 @@ test('--execute: disposition stop exits 3 and merges nothing', () => {
       file: fixture('runs-executed.json'),
     },
   ]);
-  const r = runScriptWithStub(SCRIPT, ['--execute', '102'], stub);
+  const r = runScriptWithStub(SCRIPT, ['--execute', '102'], stub, {
+    UPDATE_BRANCH_WAIT_SECONDS: '0',
+  });
   assert.equal(r.status, 3, r.stdout + r.stderr);
   assert.match(r.stderr, /stopped at #102: label=blocked/);
+  assert.match(r.stderr, /merged so far: \(none\)/);
   assert.ok(!stub.calls().some((c) => c.startsWith('pr merge')));
 });
 

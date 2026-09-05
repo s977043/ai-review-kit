@@ -7,8 +7,8 @@
 # expected`. This script mechanises the decision that used to be made by hand:
 #
 #   1. read the head SHA (`repos/:owner/:repo/pulls/<N>`, full 40 chars) and its
-#      workflow runs (`actions/runs?head_sha=`); every run `action_required`
-#      means the head is stalled
+#      workflow runs (`actions/runs?head_sha=`); one or more `action_required`
+#      runs with nothing still queued / in progress means the head is stalled
 #   2. a release-please head (`release-please--*`) is kicked with
 #      scripts/release-please-kick.sh (empty commit from your own account)
 #   3. any other head is advanced with
@@ -68,18 +68,24 @@ gh_api_or_die() {
 
 # judge_stall <actions-runs-json>
 # Prints one word:
-#   stalled  every run is `action_required` (bot-pushed head)
-#   clear    at least one run has another conclusion, or is still running
+#   stalled  at least one run is `action_required` AND no run is still moving
+#            (`status` other than `completed`: queued, in_progress, waiting ...)
+#            -- the head cannot advance on its own
+#   clear    no `action_required` run, or something is still running (a kick
+#            or an update-branch already landed; wait for it instead)
 #   no-runs  the endpoint listed nothing -- ambiguous, never "stalled"
-# A run count of zero is never the diagnosis (runbook, "A run count of zero is
-# never the diagnosis"), so no-runs is reported separately rather than folded
-# into either verdict.
+# This is the definition shared with scripts/wait-pr-ready.sh, which reports
+# any `action_required` run: that script says "something is stalled", this one
+# says "and nothing will clear it". A run count of zero is never the diagnosis
+# (runbook, "A run count of zero is never the diagnosis"), so no-runs is
+# reported separately rather than folded into either verdict.
 judge_stall() {
   local runs_json="$1"
   printf '%s' "${runs_json}" | jq -r '
     (.workflow_runs // []) as $runs
     | if ($runs | length) == 0 then "no-runs"
-      elif all($runs[]; .conclusion == "action_required") then "stalled"
+      elif any($runs[]; .conclusion == "action_required")
+           and (any($runs[]; .status != "completed") | not) then "stalled"
       else "clear" end'
 }
 
@@ -182,7 +188,7 @@ main() {
 
   case "${verdict}" in
     clear)
-      echo "#${pr} is not stalled: at least one run of ${head_sha} executed."
+      echo "#${pr} is not stalled: no action_required run of ${head_sha}, or a run is still moving."
       return 0
       ;;
     no-runs)
@@ -195,7 +201,7 @@ main() {
 
   local route
   route=$(choose_route "${head_ref}")
-  echo "#${pr} is STALLED: every run of ${head_sha} is action_required."
+  echo "#${pr} is STALLED: action_required runs of ${head_sha} and nothing still moving."
   echo "route: ${route}"
 
   local guard="gh api user --jq .login | grep -q ${WRITE_ACCOUNT} || gh auth switch -u ${WRITE_ACCOUNT}"

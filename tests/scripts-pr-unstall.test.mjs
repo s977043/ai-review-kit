@@ -21,9 +21,14 @@ test('judge_stall: a skipped / failure / in-progress run means the head executed
   assert.equal(r.stdout.trim(), 'clear');
 });
 
-test('judge_stall: one action_required beside executed runs is clear, not stalled', () => {
+test('judge_stall: action_required beside a queued run is clear (still moving), not stalled', () => {
   const r = callFunction(SCRIPT, 'judge_stall', [read('runs-mixed.json')]);
   assert.equal(r.stdout.trim(), 'clear');
+});
+
+test('judge_stall: action_required beside completed runs only is stalled (partial stall)', () => {
+  const r = callFunction(SCRIPT, 'judge_stall', [read('runs-partial-stalled.json')]);
+  assert.equal(r.stdout.trim(), 'stalled');
 });
 
 test('judge_stall: zero runs is reported as no-runs, never as stalled', () => {

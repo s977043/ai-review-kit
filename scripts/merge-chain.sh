@@ -9,6 +9,8 @@
 #      `PUT repos/:owner/:repo/pulls/<N>/update-branch` (a 422 for a merge
 #      conflict is handed to scripts/pr-unstall.sh, which prints the manual
 #      procedure; a 422 for "no new commits" means the head is current)
+#      (an accepted update-branch is followed by a wait for the head to move,
+#      because the 202 is asynchronous)
 #   2. wait for CI on all of them with scripts/wait-pr-ready.sh
 #   3. judge the DISPOSITION of the first PR:
 #        (a) line comments        `pulls/<N>/comments`   must be 0
@@ -38,10 +40,17 @@
 #
 # Exit codes:
 #   0  every PR merged (dry-run: every PR would merge)
-#   1  CI failed, a head is stalled, or update-branch hit a merge conflict
+#   1  CI failed, a head is stalled, update-branch hit a merge conflict, or
+#      an accepted update-branch never moved the head
 #   2  a GitHub API read failed -- the state could not be determined
 #   3  a disposition item stopped the chain (human decision needed)
+#   4  wait-pr-ready.sh timed out (TIMEOUT_SECONDS) before CI settled
 #   64 usage error
+#
+# A head with `action_required` runs beside `queued` / `in_progress` runs is
+# still moving: wait-pr-ready.sh reports it (exit 1) and pr-unstall.sh judges
+# it "not stalled". Re-run the chain once those runs finish; if only
+# `action_required` remains, pr-unstall.sh takes over.
 #
 # The judging functions (`count_human_comments`, `has_blocked_label`,
 # `failing_required_checks`) take JSON and call no `gh`, so they can be
@@ -81,7 +90,7 @@ gh_api_or_die() {
 # `.[]?` over each top-level value copes with both one and many pages.
 count_human_comments() {
   printf '%s' "$1" | jq -s '
-    [ .[] | .[]? | .user.login
+    [ .[] | .[]? | (.user.login // "")
       | select((endswith("[bot]") | not) and (startswith("vercel") | not)) ]
     | length'
 }
@@ -141,7 +150,16 @@ judge_pr() {
   DISPOSITION_HUMAN=$(count_human_comments "${issue_json}")
 
   checks_json=$(read_checks "${pr}")
-  DISPOSITION_CHECKS=$(failing_required_checks "${checks_json}" | tr '\t' '=' | paste -sd ',' - || true)
+  # A jq failure here (a non-object element, a missing field) is a read
+  # failure, not "no failing checks": never let it fall through as an empty
+  # result, which would read as a green verdict.
+  local checks_lines
+  if ! checks_lines=$(failing_required_checks "${checks_json}"); then
+    echo "error: could not judge the checks of #${pr}; gh pr checks returned an unexpected shape:" >&2
+    printf '%s\n' "${checks_json}" >&2
+    exit 2
+  fi
+  DISPOSITION_CHECKS=$(printf '%s' "${checks_lines}" | tr '\t' '=' | paste -sd ',' -)
 
   DISPOSITION_REASONS=''
   [ "${DISPOSITION_LINE}" -eq 0 ] || DISPOSITION_REASONS="${DISPOSITION_REASONS} line-comments=${DISPOSITION_LINE}"
@@ -152,12 +170,41 @@ judge_pr() {
   return 0
 }
 
-# update_branch <pr>  -- returns 0 (accepted or already current), 1 (conflict)
+# wait_for_new_head <pr> <old-sha>
+# `update-branch` answers 202 and pushes the merge commit asynchronously.
+# `wait-pr-ready.sh` treats `behind` as settled, so calling it against the old
+# head returns 0 at once and the later `gh pr merge` is refused by strict
+# mode. Poll until the head moves, for at most UPDATE_BRANCH_WAIT_SECONDS
+# (default 120; 0 skips the wait). Returns 1 when the head never moved.
+wait_for_new_head() {
+  local pr="$1" before="$2" deadline now
+  local limit="${UPDATE_BRANCH_WAIT_SECONDS:-120}"
+  [ "${limit}" -gt 0 ] || return 0
+  deadline=$(($(date +%s) + limit))
+  while :; do
+    now=$(gh_api_or_die "PR #${pr} in ${REPO}" "repos/${REPO}/pulls/${pr}" --jq '.head.sha')
+    if [ "${now}" != "${before}" ]; then
+      echo "  #${pr} head moved ${before:0:8} -> ${now:0:8}"
+      return 0
+    fi
+    if [ "$(date +%s)" -ge "${deadline}" ]; then
+      echo "error: #${pr} head did not move within ${limit}s after update-branch was accepted." >&2
+      return 1
+    fi
+    sleep "${INTERVAL_SECONDS:-5}"
+  done
+}
+
+# update_branch <pr>  -- returns 0 (accepted and head moved, or already current),
+# 1 (conflict, or the head never moved)
 update_branch() {
   local pr="$1" out
+  local before
+  before=$(gh_api_or_die "PR #${pr} in ${REPO}" "repos/${REPO}/pulls/${pr}" --jq '.head.sha')
   if out=$(gh api --method PUT "repos/${REPO}/pulls/${pr}/update-branch" 2>&1); then
     echo "  update-branch accepted for #${pr}"
-    return 0
+    wait_for_new_head "${pr}" "${before}"
+    return $?
   fi
   if printf '%s' "${out}" | grep -q 'HTTP 422' && printf '%s' "${out}" | grep -qi 'no new commits'; then
     echo "  #${pr} is already at the base tip (422: no new commits)"
@@ -251,6 +298,7 @@ main() {
 
   ensure_write_account
   local -a rest=()
+  local merged_so_far=''
   while [ "${#remaining[@]}" -gt 0 ]; do
     echo "step 1  update-branch: ${remaining[*]}"
     for pr in "${remaining[@]}"; do
@@ -262,6 +310,10 @@ main() {
     REPO="${REPO}" "${SCRIPT_DIR}/wait-pr-ready.sh" "${remaining[@]}" || wait_rc=$?
     case "${wait_rc}" in
       0) ;;
+      2)
+        echo "wait-pr-ready timed out; nothing merged from: ${remaining[*]}" >&2
+        return 4
+        ;;
       65) return 2 ;;
       *) return 1 ;;
     esac
@@ -274,6 +326,7 @@ main() {
     else
       print_table_row "${pr}" "STOP:${DISPOSITION_REASONS# }"
       echo "stopped at #${pr}:${DISPOSITION_REASONS} -- a human decision is needed (docs/governance.md マージ前チェックリスト)." >&2
+      echo "merged so far: ${merged_so_far:-(none)}" >&2
       echo "remaining, not merged: ${remaining[*]}" >&2
       return 3
     fi
@@ -282,6 +335,7 @@ main() {
     ensure_write_account
     gh pr merge "${pr}" --repo "${REPO}" --squash --delete-branch --subject "${DISPOSITION_TITLE} (#${pr})"
     echo "merged #${pr}"
+    merged_so_far="${merged_so_far:+${merged_so_far} }#${pr}"
 
     rest=("${remaining[@]:1}")
     remaining=("${rest[@]}")
