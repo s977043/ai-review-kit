@@ -7,9 +7,22 @@
 // assert that a dry-run never reached a write endpoint.
 //
 // Routes are `{ match: RegExp | string, file?: string, body?: string, exit?: number }`.
+// Anchor every route with `^...$`: an unanchored route lets a typo in the
+// script's query string (`per_page` -> `perpage`) or `--json` field list pass
+// unnoticed (#2095).
+//
+// The stub also mimics the argument checks the real `gh` performs, so a typo
+// in the script fails here the way it would fail against GitHub:
+//   --json <fields>   every field must be a key of the fixture's objects
+//                     (real gh: "Unknown JSON field"), exit 1 otherwise
+//   --method <M>      must be GET / POST / PUT / PATCH / DELETE
+//   -f / -F <k=v>     must carry a `key=value` pair
+//   --paginate        recognised as a flag (takes no value)
+// `--json`, `--method`, `--paginate`, `-f` and `-F` stay in the argv the route
+// regex sees, so a route can (and should) pin them literally.
 
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createTempDir } from './temp-dir.mjs';
@@ -27,10 +40,33 @@ set -u
 dir="\${GH_STUB:?}"
 printf '%s\\n' "$*" >> "\${dir}/calls.log"
 filter=''
+json_fields=''
+method=''
 args=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --jq) filter="$2"; shift ;;
+    --json)
+      json_fields="\${2:-}"
+      if [ -z "\${json_fields}" ]; then
+        echo "gh-stub: --json needs a field list" >&2
+        exit 1
+      fi
+      args+=("$1" "$2"); shift ;;
+    --method)
+      method="\${2:-}"
+      case "\${method}" in
+        GET|POST|PUT|PATCH|DELETE) ;;
+        *) echo "gh-stub: --method needs GET/POST/PUT/PATCH/DELETE, got: \${method}" >&2; exit 1 ;;
+      esac
+      args+=("$1" "$2"); shift ;;
+    --paginate) args+=("$1") ;;
+    -f|-F)
+      case "\${2:-}" in
+        *=*) ;;
+        *) echo "gh-stub: $1 needs key=value, got: \${2:-}" >&2; exit 1 ;;
+      esac
+      args+=("$1" "$2"); shift ;;
     *) args+=("$1") ;;
   esac
   shift
@@ -44,6 +80,22 @@ while IFS= read -r route; do
   file="\${rest%%	*}"
   code="\${rest#*	}"
   if [[ "\${joined}" =~ \${regex} ]]; then
+    # Real gh rejects a --json field it does not know before answering; the
+    # fixture's keys stand in for that field list. Only object elements are
+    # checked, so a fixture that deliberately carries a non-object element
+    # still reaches the script under test.
+    if [ -n "\${json_fields}" ] && [ "\${code}" = 0 ] && jq -e . "\${file}" >/dev/null 2>&1; then
+      if ! jq -e --arg fields "\${json_fields}" '
+        ($fields | split(",")) as $want
+        | (if type == "array" then . else [.] end | map(select(type == "object"))) as $objs
+        | if ($objs | length) == 0 then true
+          else ($objs | map(keys) | add | unique) as $have
+            | all($want[]; . as $f | $have | index($f) != null) end
+      ' "\${file}" >/dev/null; then
+        echo "gh-stub: Unknown JSON field in --json \${json_fields} (fixture keys: $(jq -c 'if type == "array" then map(select(type == "object")) | map(keys) | add | unique else keys end' "\${file}"))" >&2
+        exit 1
+      fi
+    fi
     if [ -n "\${filter}" ]; then
       jq -r "\${filter}" < "\${file}"
     else
@@ -89,14 +141,49 @@ export function createGhStub(routes) {
 }
 
 /**
+ * Invoke the stub `gh` directly, the way a script would.
+ * @param {{ dir: string }} stub
+ * @param {string[]} args
+ */
+export function runGh(stub, args) {
+  const result = spawnSyncGuarded(join(stub.dir, 'gh'), args, {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    env: { ...process.env, GH_STUB: stub.dir },
+  });
+  return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' };
+}
+
+/**
+ * Copy a repo script into a temp dir with one string replaced, for mutation
+ * tests that must not edit `scripts/` itself. Returns an absolute path that
+ * `runScriptWithStub` accepts. Throws when `from` is absent, so a mutation
+ * cannot silently turn into a no-op once the script changes.
+ * @param {string} script path relative to the repo root
+ * @param {string} from
+ * @param {string} to
+ */
+export function mutateScript(script, from, to) {
+  const source = readFileSync(join(REPO_ROOT, script), 'utf8');
+  if (!source.includes(from)) throw new Error(`${script} does not contain: ${from}`);
+  const dir = createTempDir({ prefix: 'gh-stub-mutant-' });
+  const target = join(dir, basename(script));
+  writeFileSync(target, source.replaceAll(from, to));
+  chmodSync(target, 0o755);
+  return target;
+}
+
+/**
  * Run a repo script through bash with the stub `gh` first on PATH.
- * @param {string} script path relative to the repo root, e.g. 'scripts/pr-unstall.sh'
+ * @param {string} script path relative to the repo root, e.g. 'scripts/pr-unstall.sh',
+ *   or an absolute path (a `mutateScript` copy)
  * @param {string[]} args
  * @param {{ dir: string }} stub
  * @param {Record<string,string>} [env]
  */
 export function runScriptWithStub(script, args, stub, env = {}) {
-  const result = spawnSyncGuarded('bash', [join(REPO_ROOT, script), ...args], {
+  const scriptPath = isAbsolute(script) ? script : join(REPO_ROOT, script);
+  const result = spawnSyncGuarded('bash', [scriptPath, ...args], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     env: {

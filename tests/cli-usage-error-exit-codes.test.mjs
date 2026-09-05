@@ -218,16 +218,21 @@ const CONTRACTS = {
 // `!parsed.targetConsumed` が無いと `.` を target に飲んだ上で `import` を
 // サブコマンドとして受理し、パスを黙って捨てて exit 0 になる（前置形
 // `skills import .` は exit 1 のままなので語順で判定が割れる）。
+// 範囲レビュー v1.100.0（3ac089e1..1a8e8c1c）の minor で、後置 `resolve` に固有
+// オプションを付けた形 `skills --path a.txt resolve` を unknown-option 1 件として
+// 追加し、C3 が 164 -> 165 になった。挙動は #2089 以前から exit 1 で変えて
+// いない。前置形 `skills resolve --path a.txt` が exit 0 なのに対し後置形は
+// 拒否される、という語順依存の契約が pin 無しだったための明文化である。
 // #2054 PR-3 で `review plan --entry <name>`（Beta）を新設し、値欠落 /
 // 未知の entry 名 / `--entry` を読まない面（`doctor`）の 3 形を追加して
-// C3 が 164 -> 167 になった。BEFORE（v1.100.0 = d250193a）では 3 形とも
+// C3 が 165 -> 168 になった。BEFORE（v1.100.0 = d250193a）では 3 形とも
 // `Error: unknown option --entry.` の exit 1 であり、exit code は動いていない。
 // 収録の理由は上の「parse 層で新たに拒否されるようになったか」で、未知の
 // entry 名は許容値の列挙つきで、`doctor` は #2065 の allowlist
 // （`COMMAND_SCOPED_OPTIONS`）で拒否される形へ変わったためである。受理形
 // `review plan --plan-only --entry review-plan` は exit 1 -> 0 へ動き、
 // VALID_CASES 側へ pin した（97 -> 98）。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 167, C4: 1 };
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 168, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -1486,6 +1491,17 @@ const CASES = [
     argv: ['skills', '--dry-run', '.', 'import'],
     contract: 'C3',
   },
+  {
+    // 範囲レビュー v1.100.0 minor: 後置 `resolve` はサブコマンド固有オプション
+    // （`--path`）を受け付けない。前置形 `skills resolve --path a.txt` は exit 0
+    // だが、後置形は `takeTrailingPositional` より前の共通 parse で
+    // `unknown option --path` になる（#2089 以前からの挙動）。仕様変更ではなく、
+    // 「後置形は共通オプションのみ」という現行契約の明文化として pin する。
+    surface: 'skills resolve',
+    kind: 'unknown-option',
+    argv: ['skills', '--path', 'a.txt', 'resolve'],
+    contract: 'C3',
+  },
 ];
 
 /**
@@ -1655,11 +1671,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 168 usage-error cases and every row is unique', () => {
+  test('the matrix pins 169 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      168,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 44 件（228 形の掃引で exit code が動いたのは 53 件。重複指定は単発形と等価なので代表 1 件のみ収録し、runs diff の 3 件は逆に変化形ではないが契約として収録している）+ #2081 の skills 後置サブコマンド 4 件 + 同 round 3 のパス併記形 1 件 + #2054 PR-3 の --entry 3 件（値欠落 / 未知 entry / doctor で拒否）'
+      169,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 44 件（228 形の掃引で exit code が動いたのは 53 件。重複指定は単発形と等価なので代表 1 件のみ収録し、runs diff の 3 件は逆に変化形ではないが契約として収録している）+ #2081 の skills 後置サブコマンド 4 件 + 同 round 3 のパス併記形 1 件 + 範囲レビュー v1.100.0 minor の後置 resolve 固有オプション 1 件 + #2054 PR-3 の --entry 3 件（値欠落 / 未知 entry / doctor で拒否）'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1694,7 +1710,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     );
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:167 / C4:1 (0 of 168 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:168 / C4:1 (0 of 169 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
