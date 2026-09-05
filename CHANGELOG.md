@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.103.0](https://github.com/s977043/river-review/compare/v1.102.0...v1.103.0) (2026-09-05)
+
+
+### Features
+
+* **adapter:** [#2054](https://github.com/s977043/river-review/issues/2054) PR-5 entry 名を hook / Action input から渡し dist に flows と schema を同梱する ([#2117](https://github.com/s977043/river-review/issues/2117)) ([7d21f1a](https://github.com/s977043/river-review/commit/7d21f1a4630e22fdbdd22a768b714447b085407d))
+
 ## [1.102.0](https://github.com/s977043/river-review/compare/v1.101.0...v1.102.0) (2026-09-05)
 
 
