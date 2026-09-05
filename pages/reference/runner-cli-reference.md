@@ -116,12 +116,12 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 - `river skills`（サブコマンドを付けない形）
 - `river review plan` / `river review exec` / `river review route`
 
-対象外の面（`doctor` / `runs` / `eval` / `feedback` / `suppression` / `skills` のサブコマンド / `review verify` など）では、値が解決できる ref であっても受理しません。値の解決を試みる前に落ちるため、拒否の理由は「その面が差分をレビューしない」ことであり、ref の妥当性ではありません。サブコマンドはオプションの前後どちらに書いても判定は変わりません。
+対象外の面（`doctor` / `runs` / `eval` / `feedback` / `suppression` / `skills` のサブコマンド / `review verify` など）では、値が解決できる ref であっても受理しません。値の解決を試みる前に落ちるため、拒否の理由は「その面が差分をレビューしない」ことであり、ref の妥当性ではありません。`review` / `evolve` / `skills` ではサブコマンドをオプションの前後どちらに書いても判定は変わりません（#2081）。`runs` / `feedback` / `suppression` は後置のサブコマンドを解決しないため、サブコマンドをオプションより前に書いてください。
 
 値そのものの検証は parse 層ではなくハンドラ層で行い、受理する 5 面が同じ解決経路を共有します。いずれも前後の空白は除去され、`git rev-parse` によって解決可否が検査されます（#2051 / #2057）。
 
 - 空白のみの値と、解決できない ref は exit 1 の usage error にあたる
-- merge base が HEAD になる ref は exit 1 とせず、stderr の警告として告知する。共有履歴が無い場合と、HEAD より先へ進んでいる場合とで文言を分ける（#2067）。ref の解決と merge base の探索は `origin/<ref>` → `<ref>` の同じ候補順を歩くが述語が違うため別候補に着地しうる。その場合の文言は merge base が実際に出た候補について語る（#2071）。ただし base 自身と merge base が同じ commit を指す `--base HEAD` では警告を出さない
+- merge base が HEAD になる ref は exit 1 とせず、stderr の警告として告知する。共有履歴が無い場合と、HEAD より先へ進んでいる場合とで文言を分ける（#2067）。ref の解決と merge base の探索は `origin/<ref>` → `<ref>` の同じ候補順を歩くが述語が違うため別候補に着地しうる。その場合の文言の分岐は merge base が出た候補で判定する（#2071）。ただし base 自身と merge base が同じ commit を指す `--base HEAD` では警告を出さない
 - `--base` 未指定のときの基準は面ごとに異なる。`river run` / `river skills` は自動検出したデフォルトブランチを基準とし、この検査の対象外である。`river review plan` は git を実行せず、`diff` artifact だけが差分の供給元となる（[CLI review plan 仕様](./cli-review-plan-spec.md)を参照）
 
 `river skills` は以前 `--base` を受理しながら値を読まず、常に自動検出のデフォルトブランチとの差分をレビューしていました（#2051）。値を読むようになったため、`--base` を渡していた呼び出し側ではレビュー対象ファイルと findings が変わります。従来と同じ範囲を維持したい場合は `--base` を外してください。`river run` は値を読んでいたものの解決可否を検査せず、解決できない ref を無警告で HEAD へ落としていました（#2057）。従来 exit 0 で通っていた typo は exit 1 になります。
@@ -135,7 +135,7 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 サブコマンドを持たない面では語順を問いません。`doctor --base main .` のようにフラグを先に書いた形も、`doctor . --base main` と同じく拒否されます。`--base` を 2 回以上書いた形も単発と同じ扱いです。
 
-サブコマンドを持つ面では、サブコマンド語をオプションより**前**に書いた場合だけこの検査が働きます。後置のサブコマンドを解決するのは `review` と `evolve` の 2 面に限られるためです（後述の「対象パスの位置」の説明を参照）。`river skills --base main import` では `import` が対象パスとして解釈され、検査を素通りします。`import/` が存在すればレビューが走り exit 0 になります。`runs` / `feedback` / `suppression` では後置のトークンが `unexpected argument` となるため、exit code は 1 のまま変わりません。
+サブコマンドを持つ面のうち `review` / `evolve` / `skills` は後置のサブコマンドを解決します（#2081。後述の「対象パスの位置」の説明を参照）。したがって `river skills --base main import` は `river skills import --base main` と同じ usage error になります。v1.99.3 以前の `skills` は後置の `import` を対象パスとして解釈して検査を素通りし、`import/` が存在すればレビューが走り exit 0 でした。この形は flag を外しても従来の結果に戻りません。`skills import` はサブコマンドとして動くためです。`--base` を伴わない `river skills --output json import` も同じで、以前は `import/` をレビューしていましたが、現在は import サブコマンドとして動きます（exit code はどちらも 0 のため、外す flag はありません）。`import/` のレビューを続けたい場合は `river skills ./import` と書いてください。`runs` / `feedback` / `suppression` では後置のトークンが `unexpected argument` となるため、exit code は 1 のまま変わりません。
 
 一方、**サブコマンド語が未知の場合はこの検査を行いません**。存在しない面について `--base` の可否を論じないためです。次のように従来どおりのメッセージを返します。
 
@@ -167,7 +167,7 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 `review` のサブコマンド（`plan` / `exec` / `verify` / `route`）も、オプションの前後どちらにも書けます。`river review plan --plan-only` と `river review --plan-only plan` は同じ意味です。サブコマンドを打ち忘れた場合と、語彙に無いトークンを渡した場合は exit 1 になります。
 
-`evolve` のサブコマンド（`aggregate` / `replay`）も、同じく前後どちらへも書けます（#1759 B1）。サブコマンドの語順を問わないのはこの 2 面だけです。`skills` / `runs` / `feedback` / `suppression` は後置のサブコマンドを解決しないため、`river skills --base main import` では `import` が対象パスとして解釈されます。これらの面ではサブコマンドをオプションより前に書いてください。
+`evolve` のサブコマンド（`aggregate` / `replay`）も、同じく前後どちらへも書けます（#1759 B1）。`skills` のサブコマンド（`import` / `export` / `list` / `resolve`）も同様です（#2081）。語彙に一致する後置のトークンは常にサブコマンドとして解決されるため、サブコマンド語と同名のディレクトリをレビューしたい場合は `river skills ./import` のように `./` を付けて書いてください。サブコマンドの語順を問わないのはこの 3 面だけです。`runs` / `feedback` / `suppression` は後置のサブコマンドを解決しないため、これらの面ではサブコマンドをオプションより前に書いてください。
 
 `review` ではサブコマンド語が上記の positional 勘定に入りません。`river review --plan-only plan ./sub` は、サブコマンド 1 つとパス 1 つの組として受理されます。3 つ目の非オプションから余剰 positional です。
 
