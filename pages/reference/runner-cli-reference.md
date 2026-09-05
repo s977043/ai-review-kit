@@ -135,7 +135,7 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 サブコマンドを持たない面では語順を問いません。`doctor --base main .` のようにフラグを先に書いた形も、`doctor . --base main` と同じく拒否されます。`--base` を 2 回以上書いた形も単発と同じ扱いです。
 
-サブコマンドを持つ面のうち `review` / `evolve` / `skills` は後置のサブコマンドを解決します（#2081。後述の「対象パスの位置」の説明を参照）。したがって `river skills --base main import` は `river skills import --base main` と同じ usage error になります。v1.99.3 以前の `skills` は後置の `import` を対象パスとして解釈して検査を素通りし、`import/` が存在すればレビューが走り exit 0 でした。この形だけは flag を外しても従来の結果に戻りません。`skills import` はサブコマンドとして動くためです。`import/` のレビューを続けたい場合は `river skills ./import` と書いてください。`runs` / `feedback` / `suppression` では後置のトークンが `unexpected argument` となるため、exit code は 1 のまま変わりません。
+サブコマンドを持つ面のうち `review` / `evolve` / `skills` は後置のサブコマンドを解決します（#2081。後述の「対象パスの位置」の説明を参照）。したがって `river skills --base main import` は `river skills import --base main` と同じ usage error になります。v1.99.3 以前の `skills` は後置の `import` を対象パスとして解釈して検査を素通りし、`import/` が存在すればレビューが走り exit 0 でした。この形は flag を外しても従来の結果に戻りません。`skills import` はサブコマンドとして動くためです。`--base` を伴わない `river skills --output json import` も同じで、以前は `import/` をレビューしていましたが、現在は import サブコマンドとして動きます（exit code はどちらも 0 のため、外す flag はありません）。`import/` のレビューを続けたい場合は `river skills ./import` と書いてください。`runs` / `feedback` / `suppression` では後置のトークンが `unexpected argument` となるため、exit code は 1 のまま変わりません。
 
 一方、**サブコマンド語が未知の場合はこの検査を行いません**。存在しない面について `--base` の可否を論じないためです。次のように従来どおりのメッセージを返します。
 
