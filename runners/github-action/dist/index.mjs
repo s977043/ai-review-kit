@@ -48707,8 +48707,10 @@ function formatUnmatchedFeedbackFingerprintWarning({ fingerprint, likelyAlgo }) 
 // name goes in; a pin and the evidence the Flow declares as required come
 // out. A missing directory or an invalid document is a loud `FlowLoaderError`,
 // never a silent fall-back to "no Flow" — a runtime that cannot find its
-// Flows must say so (the GitHub Action dist does not bundle `flows/`, which
-// is exactly the case `RIVER_FLOWS_DIR` exists for).
+// Flows must say so. `RIVER_FLOWS_DIR` is for an npm-installed CLI that keeps
+// `flows/` outside the package; it does not rescue the GitHub Action dist,
+// which bundles neither `flows/` nor the schemas this loader validates
+// against (#2105), so `--entry` is unsupported there.
 
 
 
@@ -48866,8 +48868,9 @@ function loadFlowRegistry({ flowsDir = null, env = node_process__WEBPACK_IMPORTE
   } catch (error) {
     throw new FlowLoaderError(
       `flows directory not found: ${dir}. ` +
-        `Set ${FLOWS_DIR_ENV} to the directory that holds ${ENTRY_MAP_FILENAME} ` +
-        `(the GitHub Action dist does not bundle it).`,
+        `Run --entry with the npm-installed CLI; ${FLOWS_DIR_ENV} may point it at a ` +
+        `directory that holds ${ENTRY_MAP_FILENAME} when flows/ is kept elsewhere. ` +
+        `The GitHub Action dist does not support --entry (flows/ and its schemas are not bundled).`,
       { cause: error }
     );
   }
@@ -80965,13 +80968,23 @@ async function persistRunArtifacts(result, parsed, targetPath) {
       // against a manifest-less record). The manifest carries no judgment:
       // gate / decision above are computed before it exists and never read it.
       // `river run` accepts no `--entry`, so `flow` stays `missing` here.
-      const { produceExecutionManifest, runRecordArtifactView } =
-        await __nccwpck_require__.e(/* import() */ 866).then(__nccwpck_require__.bind(__nccwpck_require__, 9866));
+      //
+      // Its own try: a producer failure must cost the MANIFEST, never the
+      // record (#2111 review major 2 — nested inside the save's try it lost the
+      // whole record). `attach(record, null)` returns the record itself, so the
+      // fallback is exactly the pre-#2054 write.
+      let manifest = null;
+      try {
+        const { produceExecutionManifest, runRecordArtifactView } =
+          await __nccwpck_require__.e(/* import() */ 866).then(__nccwpck_require__.bind(__nccwpck_require__, 9866));
+        manifest = await produceExecutionManifest({
+          artifact: runRecordArtifactView(result, record),
+          runRecord: record,
+        });
+      } catch (err) {
+        console.error(`Warning: execution manifest not attached: ${err.message}`);
+      }
       const { attachExecutionManifest } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 3055));
-      const manifest = await produceExecutionManifest({
-        artifact: runRecordArtifactView(result, record),
-        runRecord: record,
-      });
       const recordWithManifest = attachExecutionManifest(record, manifest);
       // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
       const savedPath = await saveRunRecord(recordWithManifest, {

@@ -90,12 +90,21 @@ The chain is re-run afterwards.
 | ---- | ------------------------------------------------------------------------------------------------------------------- |
 | 0    | every PR merged (dry-run: every PR would merge)                                                                     |
 | 1    | CI failed, a head is stalled, update-branch hit a merge conflict, or an accepted update-branch never moved the head |
-| 2    | a GitHub read failed; nothing was judged                                                                            |
+| 2    | a GitHub read failed; nothing was judged, nothing merged (also `gh pr checks` output that is not a JSON array)      |
 | 3    | a disposition item stopped the chain; the table names the PR and the item                                           |
 | 4    | `wait-pr-ready.sh` timed out (`TIMEOUT_SECONDS`) before CI settled; nothing merged                                  |
 | 64   | usage                                                                                                               |
 
 Exit 3 is not a failure. It is the point where the guard says a human decides.
+
+Exit 2 stops the chain before `gh pr merge`, in dry-run and in `--execute`
+alike. `judge_pr` runs with `set -e` suspended, because its return value is
+captured. Each read inside it therefore propagates its failure with an
+explicit `return 2`. Without that, a failed read fell through as an empty
+result and the verdict read `merge` (#2102). That was reproduced with a
+`--json` field typo through the stub. `tests/scripts-merge-chain.test.mjs`
+pins exit 2 and the absence of a `pr merge` call for three cases. They are a
+`--json` typo, a non-array `gh pr checks` output, and a failed `gh api` read.
 
 ## Dry-run
 

@@ -38,6 +38,7 @@ import { fileURLToPath } from 'node:url';
 import test, { describe } from 'node:test';
 
 import { FLOWS_DIR_ENV, resolveFlowEntry } from '../src/lib/flow-loader.mjs';
+import { parseArgs } from '../src/cli.mjs';
 import { runCliInProcess } from './helpers/cli.mjs';
 import { compileReviewArtifactValidator } from './helpers/schema-validator.mjs';
 import { createTempDir, cleanupTempDir } from './helpers/temp-dir.mjs';
@@ -154,6 +155,23 @@ describe('river review plan --entry (#2054 PR-3)', () => {
     assert.equal(result.code, 1);
     assert.match(result.stderr, /flows directory not found/);
     assert.ok(result.stderr.includes(FLOWS_DIR_ENV));
+  });
+
+  test('parse layer falls through when the Flow assets cannot be loaded: no usageError, entry kept, exit 1 comes from the handler (#2106)', () => {
+    // `src/cli.mjs` only validates the entry name when `listFlowEntryNames()`
+    // succeeds; a loader failure is swallowed there and reported by the
+    // review handler. Pin the fall-through so a future "validate at parse"
+    // change cannot silently turn this into a usage error (exit 1 either way).
+    const saved = process.env[FLOWS_DIR_ENV];
+    process.env[FLOWS_DIR_ENV] = join(tmpdir(), 'river-no-such-flows-dir');
+    try {
+      const parsed = parseArgs(['review', 'plan', '--plan-only', '--entry', 'review-plan']);
+      assert.notEqual(parsed.usageError, true);
+      assert.equal(parsed.entry, 'review-plan');
+    } finally {
+      if (saved === undefined) delete process.env[FLOWS_DIR_ENV];
+      else process.env[FLOWS_DIR_ENV] = saved;
+    }
   });
 
   test('RIVER_FLOWS_DIR pointing at the shipped flows/ is accepted (the override path works end to end)', async (t) => {

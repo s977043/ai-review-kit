@@ -81,7 +81,7 @@ resolver は情報源が無いブロックを捏造せず `missing` のまま返
 
 ### `flow` だけ caller 経由である理由（#2037）
 
-flow の実体文書は #2016 で実在するようになりました。実測（2026-09-04、`ls flows/`）では `flows/*.flow.json` が 8 本、`flows/intents/*.intent.json` が 8 本、加えて `flows/entry-map.json` が 1 本あります。それでも `resolveExecutionManifestSpec` はこのディレクトリを読みません。#2016 が observe mode の保証を `tests/flow-definitions.test.mjs` に固定しているからです。保証の内容は「`src/` と `runners/` のどのモジュールも `flows/` を読まない」であり、これが「Flow 文書の追加は既存の gate / decision / finding を動かしていない」ことの証明にあたります。resolver 側の直読みはこの証明を壊します。
+flow の実体文書は #2016 で実在するようになりました。実測（2026-09-04、`ls flows/`）では `flows/*.flow.json` が 8 本、`flows/intents/*.intent.json` が 8 本、加えて `flows/entry-map.json` が 1 本あります。それでも `resolveExecutionManifestSpec` はこのディレクトリを読みません。#2016 が observe mode の保証を `tests/flow-definitions.test.mjs` に固定しているからです。保証の内容は「`src/` と `runners/` のどのモジュールも `flows/` を読まない」であり、これが「Flow 文書の追加は既存の gate / decision / finding を動かしていない」ことの証明にあたります。ただし #2054 PR-3 以降、`flows/` を読む runtime モジュールは `src/lib/flow-loader.mjs` のみであり、同テストは offenders がこの 1 件と一致することを検査します（#2103）。resolver 側の直読みはこの証明を壊します。
 
 代わりに、呼び出し側が parse 済みの文書を渡します。resolver の入力は次のとおりです。
 

@@ -12,9 +12,10 @@ export const modules = {
 /* unused harmony exports SKILL_MANIFEST_RELATIVE_PATH, loadExecutionManifestSources */
 /* harmony import */ var node_fs_promises__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(1455);
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(6760);
-/* harmony import */ var node_url__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(3136);
-/* harmony import */ var _execution_manifest_mjs__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(3055);
-/* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(3077);
+/* harmony import */ var node_process__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(1708);
+/* harmony import */ var node_url__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(3136);
+/* harmony import */ var _execution_manifest_mjs__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(3055);
+/* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(3077);
 // Execution Manifest producer — the ONE place the CLI turns a finished run
 // into a manifest (#2054 PR-4, Epic #2011 AC6).
 //
@@ -47,36 +48,73 @@ export const modules = {
 
 
 
-const HERE = (0,node_url__WEBPACK_IMPORTED_MODULE_2__.fileURLToPath)(new URL(/* asset import */ __webpack_require__(3896), __webpack_require__.b));
-const PACKAGE_ROOT = (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(HERE, '..', '..');
+
+// Same resolution as runners/core/skill-loader.mjs:43-45 (its `repoRoot` is
+// module-private, so the three lines are repeated rather than imported):
+// `RIVER_REPO_ROOT` first, else two levels above this file. The env override
+// is what the shipped GitHub Action relies on — inside the ncc bundle
+// `import.meta.url` no longer points into the repository, so a producer that
+// only walked up from itself read `runners/package.json` (absent) and reported
+// `riverReview` / `skills` as `missing` on every Action run (#2111 review).
+// Read at CALL time, not module load: the CLI test harness imports the module
+// once and varies the env per invocation, and a root frozen at first import
+// would silently ignore every later override.
+const HERE = (0,node_url__WEBPACK_IMPORTED_MODULE_3__.fileURLToPath)(new URL(/* asset import */ __webpack_require__(3896), __webpack_require__.b));
+const defaultPackageRoot = () =>
+  node_process__WEBPACK_IMPORTED_MODULE_2__.env.RIVER_REPO_ROOT ? (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(node_process__WEBPACK_IMPORTED_MODULE_2__.env.RIVER_REPO_ROOT) : (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(HERE, '..', '..');
 
 /** Relative location of the skill checksum manifest (`skills[].checksum`). */
 const SKILL_MANIFEST_RELATIVE_PATH = 'docs/data/skill-manifest.json';
 
+// DO NOT turn these back into string literals passed to resolve() / join()
+// (#1900 / #2111). ncc's asset relocator statically evaluates
+// `resolve(x, '<literal ending in a file extension>')` — a `const` holding the
+// literal is folded the same way — rewrites the expression into an asset
+// reference rooted at the bundle's asset directory (a path that does not exist
+// at runtime), and copies every file matching the pattern under the repo into
+// runners/github-action/dist/ (`**/package.json` pulled 2280 files, node_modules
+// included, on the first attempt). Assembling the name at runtime from parts
+// keeps it out of the relocator's static evaluation; same intent as the
+// runtime-bound `fileName` in loadRunRecord (src/lib/result-store.mjs).
+const PACKAGE_JSON_FILE = ['package', 'json'].join('.');
+const SKILL_MANIFEST_FILE = ['docs', 'data', ['skill-manifest', 'json'].join('.')].join('/');
+
+/**
+ * Read a JSON source. An ABSENT file is `null` (the block degrades to
+ * `missing`: a packaged install may legitimately ship without docs/data).
+ * Any other failure — unreadable, or present but not JSON — is thrown: a
+ * source that exists and cannot be trusted must not be silently recorded as
+ * "not recorded". The CLI callers catch that throw and keep the record /
+ * artifact without a manifest, so the review itself never fails on it.
+ */
 async function readJsonOrNull(path) {
+  let raw;
   try {
-    return JSON.parse(await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)(path, 'utf8'));
-  } catch {
-    return null;
+    raw = await (0,node_fs_promises__WEBPACK_IMPORTED_MODULE_0__.readFile)(path, 'utf8');
+  } catch (err) {
+    if (err?.code === 'ENOENT') return null;
+    throw err;
   }
+  return JSON.parse(raw);
 }
 
 /**
  * Read the two repository-level sources a manifest pins.
  *
- * Both reads are fail-soft: a source that cannot be read yields `null`, which
- * the resolver turns into a `missing` block. Nothing is fabricated.
+ * An absent source yields `null`, which the resolver turns into a `missing`
+ * block; a present-but-broken source throws (see readJsonOrNull). Nothing is
+ * fabricated either way.
  *
  * @param {{ packageRoot?: string }} [options]
  * @returns {Promise<{ riverReviewVersion: string|null, skillManifest: object|null }>}
  */
-async function loadExecutionManifestSources({ packageRoot = PACKAGE_ROOT } = {}) {
+async function loadExecutionManifestSources({ packageRoot = defaultPackageRoot() } = {}) {
   const [pkg, skillManifest] = await Promise.all([
-    readJsonOrNull(__webpack_require__.ab + "river-review/" + packageRoot + '/package.json'),
-    readJsonOrNull((0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(packageRoot, SKILL_MANIFEST_RELATIVE_PATH)),
+    readJsonOrNull((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(packageRoot, PACKAGE_JSON_FILE)),
+    readJsonOrNull((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(packageRoot, SKILL_MANIFEST_FILE)),
   ]);
   return {
-    riverReviewVersion: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_4__/* .nonEmptyNfcString */ .bS)(pkg?.version) ?? null,
+    riverReviewVersion: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_5__/* .nonEmptyNfcString */ .bS)(pkg?.version) ?? null,
     skillManifest:
       skillManifest && typeof skillManifest === 'object' && Array.isArray(skillManifest.skills)
         ? skillManifest
@@ -105,8 +143,8 @@ function runRecordArtifactView(result, record) {
   return {
     plan: {
       selectedSkills: selected.map((skill) => ({
-        id: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_4__/* .nonEmptyNfcString */ .bS)(skill?.metadata?.id ?? skill?.id) ?? null,
-        version: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_4__/* .nonEmptyNfcString */ .bS)(skill?.metadata?.version ?? skill?.version) ?? null,
+        id: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_5__/* .nonEmptyNfcString */ .bS)(skill?.metadata?.id ?? skill?.id) ?? null,
+        version: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_5__/* .nonEmptyNfcString */ .bS)(skill?.metadata?.version ?? skill?.version) ?? null,
       })),
       reviewMode: record?.reviewMode ?? result?.reviewMode ?? null,
     },
@@ -143,7 +181,7 @@ async function produceExecutionManifest({
   sources = null,
 } = {}) {
   const { riverReviewVersion, skillManifest } = sources ?? (await loadExecutionManifestSources());
-  const spec = (0,_execution_manifest_mjs__WEBPACK_IMPORTED_MODULE_3__/* .resolveExecutionManifestSpec */ .Vo)({
+  const spec = (0,_execution_manifest_mjs__WEBPACK_IMPORTED_MODULE_4__/* .resolveExecutionManifestSpec */ .Vo)({
     artifact,
     runRecord,
     riverReviewVersion,
@@ -151,7 +189,7 @@ async function produceExecutionManifest({
     flowDocument,
     expectedFlowVersion,
   });
-  return (0,_execution_manifest_mjs__WEBPACK_IMPORTED_MODULE_3__/* .buildExecutionManifest */ .eD)(spec, { now });
+  return (0,_execution_manifest_mjs__WEBPACK_IMPORTED_MODULE_4__/* .buildExecutionManifest */ .eD)(spec, { now });
 }
 
 
