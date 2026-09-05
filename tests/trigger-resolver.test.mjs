@@ -283,6 +283,19 @@ describe('resolveTrigger: riskAction', () => {
       TriggerResolverError
     );
   });
+
+  it('accepts exactly the independence vocabulary the entry-map schema declares', () => {
+    // Range review v1.100.0 minor: the resolver's INDEPENDENCE_TIERS and the
+    // schema's `independence.enum` had no cross-pin. `self` (index 0) is the
+    // default tier a registry entry can never declare — the schema enum starts
+    // one step above it — so the comparison skips it.
+    const schema = JSON.parse(
+      readFileSync(resolve(REPO_ROOT, 'schemas/flow-entry-map.schema.json'), 'utf8')
+    );
+    const schemaTiers = schema.$defs.trigger.properties.independence.enum;
+    assert.equal(INDEPENDENCE_TIERS[0], 'self');
+    assert.deepEqual(INDEPENDENCE_TIERS.slice(1), schemaTiers);
+  });
 });
 
 // ---------------------------------------------------------------------------
