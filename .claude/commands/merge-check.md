@@ -13,10 +13,11 @@ allowed-tools: Bash(gh pr checks:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bas
 ### Step 1. CI green の確認
 
 ```bash
-gh pr checks $ARGUMENTS --json name,bucket --jq '.[] | select(.bucket != "skipping")'
+gh pr checks $ARGUMENTS --json name,bucket,startedAt --jq 'group_by(.name) | map(max_by(.startedAt)) | .[] | select(.bucket != "skipping")'
 ```
 
 - 全チェックが `pass` バケットであることを確認する（`skipping` は除外可）
+- `group_by(.name) | map(max_by(.startedAt))` は同名 check の最新 run だけを残す。`gh pr checks` は同じ head に対する全 run（concurrency で `cancel` された古い run を含む）を並べるため、これが無いと再実行済みの `cancel` を `fail` と読む（2026-09-04..05 に 3 回発生）
 - `pending` が残る場合はマージせず、完了まで待ってから再実行する
 - `fail` がある場合はマージ不可。pre-existing の main 失敗でも本 PR を直接マージせず、先に main を green に戻す（governance.md § 1 参照）
 
