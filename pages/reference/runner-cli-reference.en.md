@@ -111,7 +111,7 @@ No data write (adding a feedback or suppression entry, for instance) ever happen
 `--base <ref>` is validated in the handler layer rather than the parse layer. `river run`, `river skills`, and `river review` (`plan` / `exec` / `route`) share a single resolution path: the value is trimmed first, then checked with `git rev-parse` (#2051 / #2057).
 
 - A blank value and a ref the repository cannot resolve are usage errors, exit 1
-- A ref that yields an empty range is not fatal; it is announced as a warning on stderr. The wording distinguishes a ref that shares no history with HEAD from one that is ahead of HEAD (#2067)
+- A ref whose merge base turns out to be HEAD itself is not fatal; it is announced as a warning on stderr. The wording distinguishes a ref that shares no history with HEAD from one that is ahead of HEAD (#2067). `--base HEAD`, where the ref and the merge base are the same commit, is excluded and warns about nothing
 - What an omitted `--base` falls back to differs per surface. `river run` and `river skills` use the auto-detected default branch, which this check does not apply to. `river review plan` runs no git at all, and the `diff` artifact is then the only source of the diff (see the [CLI review plan spec](./cli-review-plan-spec.en.md))
 
 `river skills` used to accept `--base` and never read it, always reviewing the diff against the auto-detected default branch (#2051). Now that the value is read, a caller that passes `--base` sees a different set of reviewed files and findings; drop the flag to keep the previous range. `river run` did read the value but never checked that it resolved, silently falling back to HEAD (#2057), so a typo that used to exit 0 now exits 1.

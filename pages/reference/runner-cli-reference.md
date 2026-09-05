@@ -111,7 +111,7 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 `--base <ref>` は parse 層ではなくハンドラ層で検証します。`river run` / `river skills` / `river review`（`plan` / `exec` / `route`）の 3 面は同じ解決経路を共有します。いずれも前後の空白は除去され、`git rev-parse` によって解決可否が検査されます（#2051 / #2057）。
 
 - 空白のみの値と、解決できない ref は exit 1 の usage error にあたる
-- 空 range になる ref は exit 1 とせず、stderr の警告として告知する。共有履歴が無い場合と、HEAD より先へ進んでいる場合とで文言を分ける（#2067）
+- merge base が HEAD になる ref は exit 1 とせず、stderr の警告として告知する。共有履歴が無い場合と、HEAD より先へ進んでいる場合とで文言を分ける（#2067）。ただし base 自身と merge base が同じ commit を指す `--base HEAD` では警告を出さない
 - `--base` 未指定のときの基準は面ごとに異なる。`river run` / `river skills` は自動検出したデフォルトブランチを基準とし、この検査の対象外である。`river review plan` は git を実行せず、`diff` artifact だけが差分の供給元となる（[CLI review plan 仕様](./cli-review-plan-spec.md)を参照）
 
 `river skills` は以前 `--base` を受理しながら値を読まず、常に自動検出のデフォルトブランチとの差分をレビューしていました（#2051）。値を読むようになったため、`--base` を渡していた呼び出し側ではレビュー対象ファイルと findings が変わります。従来と同じ範囲を維持したい場合は `--base` を外してください。`river run` は値を読んでいたものの解決可否を検査せず、解決できない ref を無警告で HEAD へ落としていました（#2057）。従来 exit 0 で通っていた typo は exit 1 になります。
