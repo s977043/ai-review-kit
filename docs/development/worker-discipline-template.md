@@ -93,9 +93,19 @@
   `git archive` で展開した旧版でも書き込み先は現在の作業ツリーであり、`skills import` /
   `feedback add` / `suppression add` のように成功時にファイルを作る面がある。使い捨ての
   一時 repo で実行するか、実行前に書き込み先を確認すること。
+- worktree のセットアップは `scripts/worker-bootstrap.sh <branch>` を使うこと。worktree 作成・
+  `.nvmrc` の Node 解決（nvm / fnm / volta / mise / asdf / Homebrew keg / PATH の順に探索し、
+  見つかった経路と版を表示）・`npm ci`・`npm ls` の不整合検査・untracked の基準線保存までを 1 回で行う。
+  表示された Node の版と経路は完了報告へそのまま転記すること（`.nvmrc` と不一致なら警告が出る。
+  停止はしないが、その状態で作った `runners/github-action/dist/**` は CI と差分が出うる）。
+  完了後にオーガナイザーが `scripts/tree-pollution-check.sh <worktree>` で基準線との差分を検査する。
 ```
 
 ## 各項目の詳細・根拠
+
+### セットアップは `scripts/worker-bootstrap.sh` で行う
+
+ワーカー 3 名が「ローカルに Node 22 が無く v26 で検証した」と報告した一方、同じ機材で前セッションは Node 22.22.2 で検証している。実測では Node 22 は `nvm` 等の version manager ではなく Homebrew の keg（`/opt/homebrew/opt/node@22/bin`）にあり、PATH に載っていなかった。探索経路を手順に書いても読み飛ばされるため、探索と表示を script に寄せる。あわせて、`npm ci` 直後の untracked 一覧を worktree の外（`~/.claude/state/worker-bootstrap-<slug>.txt`）へ保存し、完了後に `scripts/tree-pollution-check.sh` が基準線との差分だけを報告する。旧版 CLI の書き込み先は `.river/feedback/*.jsonl` / `.river/memory/index.json` / `.agents/` / `skills/agent-skills/as-*` の 4 種。これらを bootstrap 時の生成物と mtime でしか弁別できなかった事象への対策にあたる（`docs/development/retrospectives/2026-09-04-05.md` 改善 #1）。基準線に載る生成物は環境で変わる。2026-09-05 の実測（Node 22.22.2、origin/main）では 0 件だった。`docs/development/retrospectives/2026-09-03-04.md` にある `skills/agent-skills/as-*` 5 dir は再現せず、由来は未特定。`.nvmrc` の `lts/*` 形式には未対応（nvm 経由でしか解決できず、常に不一致警告が出る）。
 
 ### 委託プロンプトの前提を一次ソースで確認する
 
