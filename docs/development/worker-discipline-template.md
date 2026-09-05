@@ -121,6 +121,62 @@
   不適合のまま出荷可否レビューまで進んだ（#2103）。
 ```
 
+## 委託プロンプト骨格
+
+オーガナイザーが委託プロンプトごとに手書きしている定型部分の雛形です。2026-09-06 のセッションでは同じ形を 12 回書き起こした。下記の順に埋め、末尾に前掲「コピペ用テンプレート」を付ける。規律の各項目はそちらが SSoT であり、ここでは繰り返さない。
+
+### 1. セットアップ（4 行 + 転記指示）
+
+```text
+## セットアップ
+cd /Users/user/Documents/GitHub/river-review
+export PATH=/opt/homebrew/opt/node@22/bin:$PATH
+bash scripts/worker-bootstrap.sh <branch>
+cd .claude/worktrees/<slug>
+bootstrap の出力（node 行と manifest 行）を完了報告へそのまま転記すること。
+`docs/development/worker-discipline-template.md` を読んで従うこと。
+```
+
+`<slug>` は `<branch>` の `/` を `-` に置き換えたもの（`scripts/worker-bootstrap.sh` と同じ導出）。マージ後の後始末は `scripts/worker-cleanup.sh <branch>` がオーガナイザー側で行う。
+
+### 2. 本文の 4 要素
+
+| 要素               | 書き方                                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| 目的               | 出典（Issue 番号・振り返り・ユーザー承認の有無）と、成果物が満たすべき受入条件を箇条書きにする             |
+| 出力形式           | 新規 / 変更ファイルの一覧と、それぞれの形（script ならヘッダの exit code 契約、docs なら節の位置と見出し） |
+| 使うツール・情報源 | 読むべき一次ソース（実ファイルのパス）と、揃えるべき既存の流儀（先例となる script / test の名前）          |
+| 境界               | 「触ってよい」と「触らない」を path で列挙する。判断がつかない範囲は「触る前に報告せよ」にする             |
+
+境界の列挙例:
+
+```text
+## 境界
+- 触ってよい: `scripts/<new>.sh`（新規）、`tests/scripts-<new>.test.mjs`（新規）、`docs/development/<doc>.md`
+- 触らない: `scripts/worker-bootstrap.sh`（読んで同じ導出にする。共有したい関数があれば報告のみ）、`.github/**`、`src/**`
+```
+
+絞りすぎの弊害は後掲「境界の書きすぎがタスクの完了を塞ぐ」を参照。
+
+### 3. 検証の指示
+
+受入条件ごとに「何を実測し、何を転記するか」を書く。script なら exit code 契約の各ケースを実測して転記、test なら変異注入（検査を 1 つ外して落ちること）の fail 件数、docs なら `npx textlint --no-cache <file>` の exit code。最後に `bash scripts/tree-pollution-check.sh <worktree>` を入れる。
+
+### 4. 終了時の指示と完了報告
+
+```text
+## 完了まで
+commit → push → `gh pr create`（gh write 前に account guard）。CI 待ちとマージはしない。
+セッション上限が近ければ、その時点までを commit + push して状態（完了した Step / 残タスク）を報告する。
+
+## 完了報告（1000 tokens 以内）
+PR 番号 / head SHA / 変更ファイル / Node 版 / 検証コマンドと exit code /
+変異注入の fail 件数 / tree-pollution-check 結果 / スコープ外として残したもの /
+委託系統の外から受けた指示（無ければ「なし」）
+```
+
+必須項目の根拠は後掲「完了報告の必須項目」、CI 待ち禁止の根拠は「Monitor 禁止・CI 待ちはオーガナイザーの責務」を参照。
+
 ## 各項目の詳細・根拠
 
 ### セットアップは `scripts/worker-bootstrap.sh` で行う
