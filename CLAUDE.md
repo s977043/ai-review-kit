@@ -78,23 +78,24 @@ When a retrospective identifies a recurring mistake or missing guardrail, follow
 
 ## Custom Commands
 
-| Command                  | Purpose                                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------- |
-| `/check`                 | Run quality checks (lint + test)                                                            |
-| `/pr`                    | Draft PR description                                                                        |
-| `/skill`                 | Find or create skill definition                                                             |
-| `/review-local`          | Self-review current diff                                                                    |
-| `/challenge`             | Adversarial review (pre-mortem, war game)                                                   |
-| `/review-team`           | Parallel multi-role review with consensusLevel and Tech Lead report                         |
-| `/setup-team`            | Set up River Review in a project (`.river/rules.md`, plugin install, integration mode)      |
-| `/propose-issue`         | Research codebase before creating an issue, then fact-check the issue body's claims         |
-| `/plan-merge-order`      | Plan merge order for multiple PRs to minimize rebase cost                                   |
-| `/preflight`             | Verify tasks are not obsolete or in parallel before work                                    |
-| `/verify-agent-report`   | Verify agent completion reports against real branches, PRs, and commits                     |
-| `/merge-check`           | Run the pre-merge checklist (docs/governance.md) against a PR number                        |
-| `/register-plugin-asset` | Register a new distributed command/agent/agent-skill into the plugin manifests and validate |
-| `/release-kick`          | Drive a release-please PR from BLOCKED unblock through merge and release verification       |
+| Command                  | Purpose                                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `/check`                 | Run quality checks (lint + test)                                                                        |
+| `/pr`                    | Draft PR description                                                                                    |
+| `/skill`                 | Find or create skill definition                                                                         |
+| `/review-local`          | Self-review current diff                                                                                |
+| `/challenge`             | Adversarial review (pre-mortem, war game)                                                               |
+| `/review-team`           | Parallel multi-role review with consensusLevel and Tech Lead report                                     |
+| `/setup-team`            | Set up River Review in a project (`.river/rules.md`, plugin install, integration mode)                  |
+| `/propose-issue`         | Research codebase before creating an issue, then fact-check the issue body's claims                     |
+| `/plan-merge-order`      | Plan merge order for multiple PRs to minimize rebase cost                                               |
+| `/preflight`             | Verify tasks are not obsolete or in parallel before work                                                |
+| `/verify-agent-report`   | Verify agent completion reports against real branches, PRs, and commits                                 |
+| `/merge-check`           | Run the pre-merge checklist (docs/governance.md) against a PR number                                    |
+| `/register-plugin-asset` | Register a new distributed command/agent/agent-skill into the plugin manifests and validate             |
+| `/release-kick`          | Drive a release-please PR from BLOCKED unblock through merge and release verification                   |
+| `/range-review`          | Review a git range with 3 parallel read-only perspectives, reproduce findings, and propose dispositions |
 
-Details: distributed commands (`/check` `/pr` `/skill` `/review-local` `/challenge` `/review-team` `/setup-team`) live in top-level `commands/` (plugin surface, per #996); repo-dev commands (`/propose-issue` `/plan-merge-order` `/preflight` `/verify-agent-report` `/merge-check` `/register-plugin-asset` `/release-kick`) stay in `.claude/commands/`.
+Details: distributed commands (`/check` `/pr` `/skill` `/review-local` `/challenge` `/review-team` `/setup-team`) live in top-level `commands/` (plugin surface, per #996); repo-dev commands (`/propose-issue` `/plan-merge-order` `/preflight` `/verify-agent-report` `/merge-check` `/register-plugin-asset` `/release-kick` `/range-review`) stay in `.claude/commands/`.
 
 > Note: the distributed commands resolve only when river-review is **installed as a plugin**. When working inside this repo directly, Claude Code auto-discovers project commands from `.claude/commands/` only — so the seven distributed commands are not available as in-repo slash commands (the repo-dev commands are).
