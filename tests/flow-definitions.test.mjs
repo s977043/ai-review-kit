@@ -637,3 +637,285 @@ describe('observe mode (#2016)', () => {
     }
   });
 });
+
+// #2054 PR-1 (Phase 1 of the Review Placement & Trigger Contract). The
+// registry is a declaration only: it resolves a neutral engineering event to
+// entry names already declared above it, and nothing under src/ or runners/
+// reads it (the observe-mode test above stays the pin for that). What is
+// asserted here is what JSON Schema cannot state on its own — that every
+// resolved entry exists, that the evidence a trigger demands is the selected
+// Flow's own required input set, that the SKILL.md copy of the trigger column
+// stays in sync — plus the schema rejections the registry relies on, each
+// exercised by mutating a clone rather than by trusting the schema text.
+describe('trigger registry (#2054 PR-1)', () => {
+  const TRIGGER_NAMES = [
+    'after-change',
+    'artifact-ready',
+    'before-merge',
+    'before-publish',
+    'task-checkpoint',
+  ];
+  const triggers = entryMap.triggers;
+
+  const validateClone = (mutate) => {
+    const clone = structuredClone(entryMap);
+    mutate(clone);
+    return validateEntryMap(clone);
+  };
+
+  test('the entry map with triggers validates against schemas/flow-entry-map.schema.json', () => {
+    assert.ok(validateEntryMap(entryMap), errorsOf(validateEntryMap));
+  });
+
+  test('exactly the five neutral trigger names ship', () => {
+    assert.deepEqual(Object.keys(triggers).sort(), TRIGGER_NAMES);
+  });
+
+  test('every trigger resolves only to declared entry names', () => {
+    const declared = Object.keys(entryMap.entries);
+    for (const [name, trigger] of Object.entries(triggers)) {
+      for (const entry of trigger.entries) {
+        assert.ok(declared.includes(entry), `${name} resolves to undeclared entry ${entry}`);
+      }
+    }
+  });
+
+  test('the resolution table is the one #2054 declares', () => {
+    const resolved = Object.fromEntries(
+      Object.entries(triggers).map(([name, trigger]) => [name, [...trigger.entries].sort()])
+    );
+    assert.deepEqual(resolved, {
+      'after-change': [],
+      'artifact-ready': [
+        'review-design',
+        'review-plan',
+        'review-replan',
+        'review-requirements',
+        'review-research',
+        'review-technical',
+      ],
+      'before-merge': ['review-final'],
+      'before-publish': ['review-final'],
+      'task-checkpoint': ['review-task'],
+    });
+  });
+
+  test('after-change starts no Flow: empty entries and the fast-verification profile', () => {
+    assert.deepEqual(triggers['after-change'].entries, []);
+    assert.equal(triggers['after-change'].profile, 'fast-verification');
+    assert.equal(triggers['after-change'].requiredEvidence, undefined);
+  });
+
+  test('a multi-entry trigger declares a selector, a single-entry trigger does not', () => {
+    for (const [name, trigger] of Object.entries(triggers)) {
+      if (trigger.entries.length > 1) {
+        assert.equal(
+          trigger.selectBy,
+          'artifactKind',
+          `${name} lists several entries without selectBy`
+        );
+      } else {
+        assert.equal(
+          trigger.selectBy,
+          undefined,
+          `${name} carries selectBy with ${trigger.entries.length} entries`
+        );
+      }
+    }
+  });
+
+  test('requiredEvidence is exactly the required input set of the selected Flow', () => {
+    // The evidence a trigger demands is not a second vocabulary: it must equal
+    // the `inputs[].required` set of the one Flow the entry resolves to.
+    for (const [name, trigger] of Object.entries(triggers)) {
+      if (!trigger.requiredEvidence) continue;
+      assert.equal(trigger.entries.length, 1, `${name} fixes evidence without fixing the entry`);
+      const flow = flowById.get(entryMap.entries[trigger.entries[0]].flow);
+      const required = flow.inputs.filter((input) => input.required).map((input) => input.name);
+      assert.deepEqual([...trigger.requiredEvidence].sort(), required.sort(), name);
+    }
+    assert.deepEqual(triggers['task-checkpoint'].requiredEvidence, ['tasks', 'diff']);
+    assert.deepEqual(triggers['before-publish'].requiredEvidence, ['requirements', 'diff']);
+  });
+
+  test('before-merge demands an execution-isolated run; no other trigger sets a tier', () => {
+    assert.equal(triggers['before-merge'].independence, 'execution-isolated');
+    for (const name of TRIGGER_NAMES.filter((n) => n !== 'before-merge')) {
+      assert.equal(triggers[name].independence, undefined, name);
+    }
+  });
+
+  test('every trigger is in observe mode', () => {
+    for (const name of TRIGGER_NAMES) assert.equal(triggers[name].mode, 'observe', name);
+  });
+
+  test('the trigger registry carries no runtime discriminator', () => {
+    // Same scope as the entry-map test above: keys and resolver-read values,
+    // not the prose in `description` (which the schema polices separately).
+    const offenders = [];
+    const check = (label, value) => {
+      for (const forbidden of ['claude', 'codex', 'github', 'runtime', 'model']) {
+        if (String(value).toLowerCase().includes(forbidden)) {
+          offenders.push(`${label} = ${value} (contains "${forbidden}")`);
+        }
+      }
+    };
+    for (const [name, trigger] of Object.entries(triggers)) {
+      check('trigger name', name);
+      for (const [key, value] of Object.entries(trigger)) {
+        check(`triggers.${name} key`, key);
+        if (key === 'description') continue;
+        for (const item of [].concat(value)) check(`triggers.${name}.${key}`, item);
+      }
+    }
+    assert.deepEqual(offenders, []);
+  });
+
+  test('schema rejects a sixth trigger name', () => {
+    assert.equal(
+      validateClone((doc) => {
+        doc.triggers['on-save'] = { entries: [], mode: 'observe' };
+      }),
+      false
+    );
+  });
+
+  test('schema rejects a host discriminator key on a trigger', () => {
+    assert.equal(
+      validateClone((doc) => {
+        doc.triggers['task-checkpoint'].host = 'claude';
+      }),
+      false
+    );
+    assert.equal(
+      validateClone((doc) => {
+        doc.triggers['after-change'].command = 'bash scripts/plugin-format-hook.sh';
+      }),
+      false
+    );
+  });
+
+  test('schema rejects severity and gate vocabulary in trigger values', () => {
+    const rejected = [
+      (doc) => {
+        doc.triggers['task-checkpoint'].mode = 'blocker';
+      },
+      (doc) => {
+        doc.triggers['before-merge'].independence = 'critical';
+      },
+      (doc) => {
+        doc.triggers['after-change'].profile = 'pass';
+      },
+      (doc) => {
+        doc.triggers['task-checkpoint'].requiredEvidence = ['severity'];
+      },
+      (doc) => {
+        doc.triggers['artifact-ready'].selectBy = 'severity';
+      },
+    ];
+    for (const [index, mutate] of rejected.entries()) {
+      assert.equal(validateClone(mutate), false, `mutation #${index} was accepted`);
+    }
+  });
+
+  test('schema rejects host, hook, shell, severity and verdict words in trigger prose', () => {
+    // Round-2 review (#2093): hyphen / underscore joins, ALL-CAPS spellings,
+    // further hosts and inflected verdicts all slipped through the first
+    // pattern, so each is pinned here as a literal.
+    const words = [
+      'Claude',
+      'codex',
+      'GitHub',
+      'Claude-Code',
+      'GitHub_Actions',
+      'CLAUDE',
+      'GITHUB',
+      'CODEX',
+      'Gemini',
+      'Copilot',
+      'PostToolUse',
+      'git hook',
+      'bash',
+      'shells',
+      'blocker',
+      'critical',
+      'major',
+      'minor',
+      'pass',
+      'passing',
+      'failed',
+      'failure',
+      'approve',
+      'approves',
+      'auto-merge',
+    ];
+    for (const word of words) {
+      assert.equal(
+        validateClone((doc) => {
+          doc.triggers['task-checkpoint'].description = `Fires on ${word} events.`;
+        }),
+        false,
+        `"${word}" was accepted in description`
+      );
+    }
+    // Word-bounded: the status vocabulary #2054 keeps and the trigger's own
+    // name are not collateral damage.
+    for (const legal of [
+      'Records unrunnable, skipped and bypassed checks before-merge.',
+      'The merge decision stays with the platform; capability gaps are manual-required.',
+    ]) {
+      assert.equal(
+        validateClone((doc) => {
+          doc.triggers['before-merge'].description = legal;
+        }),
+        true,
+        `"${legal}" was rejected`
+      );
+    }
+  });
+
+  test('schema applies the same prose rule to entry and top-level descriptions', () => {
+    assert.equal(
+      validateClone((doc) => {
+        doc.entries['review-task'].description = 'Claude host.';
+      }),
+      false
+    );
+    assert.equal(
+      validateClone((doc) => {
+        doc.description = 'Claude host.';
+      }),
+      false
+    );
+  });
+
+  test('schema keeps a map without triggers valid (additive)', () => {
+    assert.equal(
+      validateClone((doc) => {
+        delete doc.triggers;
+      }),
+      true
+    );
+  });
+
+  test('the SKILL.md trigger column matches entry-map.json triggers (SSoT sync)', () => {
+    const skillText = readFileSync(SKILL_MD, 'utf8');
+    const section = skillText.split(/^## /m).find((part) => part.startsWith('Flow Entry'));
+    assert.ok(section, 'SKILL.md has no "## Flow Entry" section');
+
+    const table = {};
+    for (const line of section.split('\n')) {
+      const row = /^\|\s*`([^`]+)`\s*\|\s*`[^`]+`\s*\|[^|]*\|\s*([^|]+?)\s*\|\s*$/.exec(line);
+      if (!row) continue;
+      table[row[1]] = [...row[2].matchAll(/`([^`]+)`/g)].map((m) => m[1]).sort();
+    }
+
+    const expected = {};
+    for (const entryName of Object.keys(entryMap.entries)) expected[entryName] = [];
+    for (const [name, trigger] of Object.entries(triggers)) {
+      for (const entry of trigger.entries) expected[entry].push(name);
+    }
+    for (const entryName of Object.keys(expected)) expected[entryName].sort();
+    assert.deepEqual(table, expected);
+  });
+});
