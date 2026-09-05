@@ -159,12 +159,19 @@ export function runGh(stub, args) {
  * tests that must not edit `scripts/` itself. Returns an absolute path that
  * `runScriptWithStub` accepts. Throws when `from` is absent, so a mutation
  * cannot silently turn into a no-op once the script changes.
- * @param {string} script path relative to the repo root
+ *
+ * The copy lives alone in its temp dir, so a script that calls a sibling
+ * through `SCRIPT_DIR` (merge-chain.sh -> wait-pr-ready.sh) needs a second
+ * mutation that points `SCRIPT_DIR` back at `scripts/`: pass the absolute
+ * path of the first copy as `script` to stack mutations.
+ * @param {string} script path relative to the repo root, or an absolute path
+ *   (an earlier `mutateScript` copy)
  * @param {string} from
  * @param {string} to
  */
 export function mutateScript(script, from, to) {
-  const source = readFileSync(join(REPO_ROOT, script), 'utf8');
+  const sourcePath = isAbsolute(script) ? script : join(REPO_ROOT, script);
+  const source = readFileSync(sourcePath, 'utf8');
   if (!source.includes(from)) throw new Error(`${script} does not contain: ${from}`);
   const dir = createTempDir({ prefix: 'gh-stub-mutant-' });
   const target = join(dir, basename(script));
@@ -172,6 +179,9 @@ export function mutateScript(script, from, to) {
   chmodSync(target, 0o755);
   return target;
 }
+
+/** The `scripts/` dir, for pinning `SCRIPT_DIR` in a `mutateScript` copy. */
+export const SCRIPTS_DIR = join(REPO_ROOT, 'scripts');
 
 /**
  * Run a repo script through bash with the stub `gh` first on PATH.
