@@ -108,6 +108,8 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 
 usage error のときにデータ書き込み（feedback / suppression のエントリ追加など）が先行することはありません。
 
+#### `--base` の受理範囲と移行手順 {#base-acceptance-scope}
+
 `--base <ref>` を受理するのは、実際に差分を読む次の 5 面だけです（#2065）。他の面へ渡すと parse 層の usage error として exit 1 になります。
 
 - `river run`
@@ -131,14 +133,16 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 - exit 3 から exit 1 へ: `review verify`（従来の exit 3 は `#802 Phase 3` の未実装経路であり、`--base` を処理した結果ではない）
 - `runs diff` も受理しなくなる。指定した run が両方とも存在する呼び出しでは exit 0 から exit 1 へ変わる（run が見つからない呼び出しは元から exit 1 のため、終了コードとしては変化しない）
 
-語順は問いません。`doctor --base main .` のようにフラグを先に書いた形も、`doctor . --base main` と同じく拒否されます。`--base` を 2 回以上書いた形も単発と同じ扱いです。
+サブコマンドを持たない面では語順を問いません。`doctor --base main .` のようにフラグを先に書いた形も、`doctor . --base main` と同じく拒否されます。`--base` を 2 回以上書いた形も単発と同じ扱いです。
+
+サブコマンドを持つ面では、サブコマンド語をオプションより**前**に書いた場合だけこの検査が働きます。後置のサブコマンドを解決するのは `review` と `evolve` の 2 面に限られるためです（後述の「対象パスの位置」の説明を参照）。`river skills --base main import` では `import` が対象パスとして解釈され、検査を素通りします。`import/` が存在すればレビューが走り exit 0 になります。`runs` / `feedback` / `suppression` では後置のトークンが `unexpected argument` となるため、exit code は 1 のまま変わりません。
 
 一方、**サブコマンド語が未知の場合はこの検査を行いません**。存在しない面について `--base` の可否を論じないためです。次のように従来どおりのメッセージを返します。
 
 - `river runs nosuch --base main` → `Unknown runs subcommand: nosuch`
 - `river feedback --base main` → ``only `river feedback add` is supported``
 
-いずれの面も値を一度も読んでいないため、**flag を外すだけで従来と同じ結果になります**。usage error の exit code は [Stable Interfaces](./stable-interfaces.md) の Stable Contract の対象外であり、この変更はその方針に従ったものです。
+いずれの面も値を一度も読んでいなかったため、呼び出しから **flag を外せば従来と同じ結果が得られます**。ただし flag を残したままでは、その面の実行自体が行われず usage error になります。usage error の exit code は [Stable Interfaces](./stable-interfaces.md) の Stable Contract の対象外であり、この変更はその方針に従ったものです。
 
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 
@@ -162,6 +166,8 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 この範囲では `river run . --dry-run` と `river run --dry-run .` が同じ意味になります。対象パスとして解釈できる非オプションのトークンは 1 つだけで、2 つ目以降は余剰 positional として exit 1 です。
 
 `review` のサブコマンド（`plan` / `exec` / `verify` / `route`）も、オプションの前後どちらにも書けます。`river review plan --plan-only` と `river review --plan-only plan` は同じ意味です。サブコマンドを打ち忘れた場合と、語彙に無いトークンを渡した場合は exit 1 になります。
+
+`evolve` のサブコマンド（`aggregate` / `replay`）も、同じく前後どちらへも書けます（#1759 B1）。サブコマンドの語順を問わないのはこの 2 面だけです。`skills` / `runs` / `feedback` / `suppression` は後置のサブコマンドを解決しないため、`river skills --base main import` では `import` が対象パスとして解釈されます。これらの面ではサブコマンドをオプションより前に書いてください。
 
 `review` ではサブコマンド語が上記の positional 勘定に入りません。`river review --plan-only plan ./sub` は、サブコマンド 1 つとパス 1 つの組として受理されます。3 つ目の非オプションから余剰 positional です。
 
