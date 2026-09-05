@@ -7,6 +7,7 @@
 - entry map の実体: `flows/entry-map.json`（#2016 の 4 入口へ追記）
 - 検証: `tests/flow-definitions.test.mjs` の `upstream review Flow definitions (#2017)`
 - 前提となる 4 つの core Flow: `docs/development/flow-contract.md`（#2016）
+- 入口を起動する trigger registry と host 別の発火表面: [trigger-host-capability-matrix.md](./trigger-host-capability-matrix.md)（#2054 PR-1）
 
 Skill は「何を判断するか」、Agent は「誰が責任を持つか」、Flow は「いつ・どう判断を実行するか」を担います。本ドキュメントは Flow 軸だけを説明し、判断基準は `skills/**` と `docs/review/**` に残します。
 
