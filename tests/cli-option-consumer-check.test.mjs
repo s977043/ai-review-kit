@@ -66,6 +66,8 @@ import {
   isAccepted,
   mainReadFields,
   readKnownOptionTokens,
+  readPromoteSubcommandsFromSource,
+  reclaimOwnEnsembleTmpFiles,
 } from './helpers/cli-option-consumers.mjs';
 import { PROMOTE_SUBCOMMANDS, SURFACES } from './helpers/cli-surfaces.mjs';
 import { cleanupTempDir, createTempDir } from './helpers/temp-dir.mjs';
@@ -316,6 +318,9 @@ describe('#2074 accepted-but-unconsumed option check', () => {
             cwd: repoDir,
             env: CLI_ENV,
           });
+          // `--ensemble` を main() が同一プロセスで parse すると tmp が exit まで
+          // 残る（#2087 finding 3）。parsed は受け取れないので pid で回収する。
+          if (token === '--ensemble') reclaimOwnEnsembleTmpFiles();
           assert.equal(result.code, control.code, `${surface} ${token}: exit code が対照と違う`);
           assert.equal(result.stdout, control.stdout, `${surface} ${token}: stdout が対照と違う`);
           checked.push(token);
@@ -354,6 +359,19 @@ describe('#2074 accepted-but-unconsumed option check', () => {
       const result = await runCliInProcess(['promote', 'nosuch'], { cwd: repoDir, env: CLI_ENV });
       assert.equal(result.code, 1);
       assert.ok(result.stderr.includes(PROMOTE_USAGE_MARKER), result.stderr.slice(0, 300));
+    });
+
+    // 上の起動 pin は「写しにある語が実在する」方向だけを守る。src 側に語が
+    // 増えても落ちないので（#2087 finding 1）、ハンドラのソースから語彙を読み
+    // 両方向で突き合わせる（`readKnownOptionTokens` と同型）。
+    test('PROMOTE_SUBCOMMANDS equals the includes([...]) list in promote.mjs (both directions)', () => {
+      const fromSource = readPromoteSubcommandsFromSource();
+      assert.ok(fromSource.length > 0, 'promote.mjs から語彙が 1 つも読めない');
+      assert.deepEqual(
+        [...PROMOTE_SUBCOMMANDS].sort(),
+        [...fromSource].sort(),
+        'tests/helpers/cli-surfaces.mjs PROMOTE_SUBCOMMANDS と src/cli/commands/promote.mjs の語彙がずれている'
+      );
     });
 
     for (const subcommand of PROMOTE_SUBCOMMANDS) {

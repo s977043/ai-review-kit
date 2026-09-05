@@ -23,7 +23,8 @@
  * `promote` のサブコマンド語彙。src/cli/commands/promote.mjs `runPromoteCommand`
  * の `includes` 配列を写している（parser 側に定数は無い — src/cli.mjs
  * `SURFACE_SUBCOMMANDS` のコメント参照）。写しの妥当性は
- * tests/cli-option-consumer-check.test.mjs が CLI を起動して pin する。
+ * tests/cli-option-consumer-check.test.mjs が CLI を起動して pin し、src 側の
+ * 増減は同テストが `readPromoteSubcommandsFromSource` でソースを読んで突き合わせる。
  */
 export const PROMOTE_SUBCOMMANDS = [
   'propose',
