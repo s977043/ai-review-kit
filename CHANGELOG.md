@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.101.0](https://github.com/s977043/river-review/compare/v1.100.0...v1.101.0) (2026-09-05)
+
+
+### Features
+
+* **cli:** [#2054](https://github.com/s977043/river-review/issues/2054) PR-3 flow-loader を新設し review plan --entry で Flow pin を載せる ([#2103](https://github.com/s977043/river-review/issues/2103)) ([b4fc00f](https://github.com/s977043/river-review/commit/b4fc00f0914aa48eff8e10531bf7bc8673007901))
+
 ## [1.100.0](https://github.com/s977043/river-review/compare/v1.99.3...v1.100.0) (2026-09-05)
 
 
