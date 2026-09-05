@@ -21,6 +21,9 @@
 //   5. #2067: 空 range の警告は 2 分岐する。HEAD の子孫（base が HEAD より先へ
 //      進んでいる）と、共有履歴のない orphan とで文言が違い、通常の祖先 ref では
 //      どちらも出ない。3 面とも同じ文言であることを固定する。
+//   6. #2071: `origin/<ref>` と `<ref>` が別 commit を指すとき、`rev-parse` と
+//      `merge-base` が別候補を採りうる。警告文は **mergeBase の出所** について
+//      語らなければならない。両向きを固定する。
 //
 // 判定は CLI 面（runCliInProcess）で行う。`resolveBaseMergeBase` を直接呼ぶと
 // 配線層（skills.mjs / local-runner.mjs が実際にその戻り値を使っているか）が
@@ -279,6 +282,107 @@ describe('--base contract parity across review / skills / run (#2051 / #2057)', 
       assert.ok(
         !res.stderr.includes('shares no history with HEAD'),
         `${surface} が子孫を「共有履歴なし」と誤って断定した: ${res.stderr}`
+      );
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // 6. #2071: `origin/<ref>` と `<ref>` が別 commit を指す場合
+  // ---------------------------------------------------------------------------
+  //
+  // `resolveRefToCommit`（rev-parse）と `findMergeBase`（merge-base）は同じ候補
+  // 順（`origin/<ref>` → `<ref>`）を独立に歩くが、述語が違うため別候補を採り
+  // うる。その場合 #2067 の向き判定が **mergeBase の出所とは別の commit** に
+  // ついて答え、子孫を「共有履歴なし」と誤断定していた。
+  //
+  // `update-ref` は作業ツリーも現在のブランチも動かさないので、以降のテストの
+  // 前提を壊さずに「remote 側と local 側が食い違う ref」を作れる。
+  /**
+   * `origin/<name>` と `<name>` に別 commit を割り当てる。
+   *
+   * @param {string} name ref 名
+   * @param {string} originSha `refs/remotes/origin/<name>` に置く commit
+   * @param {string} localSha `refs/heads/<name>` に置く commit
+   */
+  async function makeSplitRef(name, originSha, localSha) {
+    await runGit(['update-ref', `refs/remotes/origin/${name}`, originSha], dir);
+    await runGit(['update-ref', `refs/heads/${name}`, localSha], dir);
+  }
+
+  /** 親を持たない commit（HEAD と共有履歴なし）を message 違いで作る。 */
+  async function makeOrphan(message) {
+    const treeSha = await revParse(dir, 'HEAD^{tree}');
+    const { stdout } = await runGit(['commit-tree', treeSha, '-m', message], dir);
+    return stdout.trim();
+  }
+
+  /** HEAD を親に持つ commit（HEAD の子孫）を作る。 */
+  async function makeDescendant(message) {
+    const headSha = await revParse(dir, 'HEAD');
+    const treeSha = await revParse(dir, 'HEAD^{tree}');
+    const { stdout } = await runGit(['commit-tree', treeSha, '-p', headSha, '-m', message], dir);
+    return stdout.trim();
+  }
+
+  for (const [label, name, originIsOrphan] of [
+    ['origin/<ref> が orphan・<ref> が HEAD の子孫', 'split-origin-orphan', true],
+    ['origin/<ref> が HEAD の子孫・<ref> が orphan', 'split-origin-descendant', false],
+  ]) {
+    test(`#2071: ${label} でも 3 面とも「HEAD より先」と警告する`, async () => {
+      const orphanSha = await makeOrphan(`orphan-${name}`);
+      const descendantSha = await makeDescendant(`descendant-${name}`);
+      await makeSplitRef(
+        name,
+        originIsOrphan ? orphanSha : descendantSha,
+        originIsOrphan ? descendantSha : orphanSha
+      );
+
+      const plan = await runPlan(dir, ['--base', name]);
+      const skills = await runSkills(dir, ['--base', name]);
+      const run = await runRun(dir, ['--base', name]);
+
+      for (const [surface, res] of [
+        ['review plan', plan],
+        ['skills', skills],
+        ['run', run],
+      ]) {
+        assert.equal(res.code, 0, `${surface}: ${res.stderr}`);
+        // mergeBase は「HEAD の子孫」側の候補から来ている。警告文もその出所に
+        // ついて語らなければならない。
+        assert.ok(
+          res.stderr.includes('is ahead of HEAD (HEAD is an ancestor of it)'),
+          `${surface} が mergeBase の出所と整合していない: ${res.stderr}`
+        );
+        assert.ok(
+          !res.stderr.includes('shares no history with HEAD'),
+          `${surface} が別候補について「共有履歴なし」と誤断定した: ${res.stderr}`
+        );
+      }
+    });
+  }
+
+  test('#2071 negative: 両候補とも orphan なら「共有履歴なし」のまま', async () => {
+    // 対照群。上の 2 件だけだと「分岐したら常に子孫扱い」でも緑になる。
+    const name = 'split-both-orphan';
+    await makeSplitRef(name, await makeOrphan('orphan-a'), await makeOrphan('orphan-b'));
+
+    const plan = await runPlan(dir, ['--base', name]);
+    const skills = await runSkills(dir, ['--base', name]);
+    const run = await runRun(dir, ['--base', name]);
+
+    for (const [surface, res] of [
+      ['review plan', plan],
+      ['skills', skills],
+      ['run', run],
+    ]) {
+      assert.equal(res.code, 0, `${surface}: ${res.stderr}`);
+      assert.ok(
+        res.stderr.includes('shares no history with HEAD'),
+        `${surface} が共有履歴なしを警告していない: ${res.stderr}`
+      );
+      assert.ok(
+        !res.stderr.includes('is ahead of HEAD'),
+        `${surface} が orphan を「HEAD より先」と誤診断している: ${res.stderr}`
       );
     }
   });
