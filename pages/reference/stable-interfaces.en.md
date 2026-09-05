@@ -16,6 +16,8 @@ The following elements are treated as "public interfaces":
 - CLI gate-decision exit codes (`0` / `1` / `2` / `3` as returned by `--fail-on` / `--warn-on` / `--gate`)
 - Idempotent update method for PR comments (marker)
 
+The CLI entry above covers command and option names and their meanings. It does not cover which surfaces accept a given option; that acceptance scope follows **Beta**, the label of the CLI surface as a whole (see "Versioning (Handling Breaking Changes)" below).
+
 Exit codes are declared at two granularities by purpose. Only the gate-decision codes above, the ones CI reads as the gate result, belong to the Stable Contract. Usage-error exit codes (failure to interpret arguments) are excluded and follow **Beta**, the label of the CLI surface as a whole. See "Exit Code Stability" below for the reasoning.
 
 ## Component Stability Labels
@@ -127,7 +129,7 @@ Changing the following requires a major version bump as a breaking change:
 The following are not treated as breaking changes and ship in a minor or patch release:
 
 - Changing a usage-error exit code (failure to interpret arguments); it follows the Beta label of the CLI surface as a whole
-- Narrowing which surfaces accept an option, where the dropped surfaces never consumed its value (#2065). "Changing/Removing `river` CLI option names or meanings" above means removing the option itself; a surface that never read the value behaves identically once the flag is dropped, so narrowing acceptance is not breaking
+- Narrowing which surfaces accept an option, where the dropped surfaces never consumed its value (#2065). "Changing/Removing `river` CLI option names or meanings" above means removing the option itself. On a surface that stopped accepting the flag, the call itself now fails as a usage error and exits 1, so that surface no longer runs. Because the value was never read, dropping the flag from the call reproduces the previous result exactly, which makes the migration a one-line edit at the call site — so narrowing acceptance is not breaking. The affected surfaces and the migration steps are listed in the [Runner / CLI reference](./runner-cli-reference.en.md#base-acceptance-scope)
 
 For stable Action behavior, we recommend **pinning to a release tag** (e.g., `@v1.22.0`) instead of `@main`.
 
