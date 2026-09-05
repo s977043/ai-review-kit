@@ -194,6 +194,9 @@ export const OPTION_SAMPLES = {
   // ディレクトリを `ensembleDir` で渡す（deriveOptionConsumerMatrix の引数）。
   '--ensemble': { value: [] },
   '--phase': { value: ['upstream'] },
+  // #2054 PR-3: a real entry name, so parse-layer validation passes and the
+  // matrix measures acceptance rather than the unknown-entry rejection.
+  '--entry': { value: ['review-plan'] },
   '--cases': { value: ['cases.json'] },
   '--planner': { value: ['order'] },
   '--max-cost': { value: ['1'] },

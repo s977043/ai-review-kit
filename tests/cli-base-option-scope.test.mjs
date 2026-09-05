@@ -30,7 +30,12 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test, { after, before, describe } from 'node:test';
 
-import { BASE_CONSUMING_SURFACES, SURFACE_SUBCOMMANDS, parseArgs } from '../src/cli.mjs';
+import {
+  BASE_CONSUMING_SURFACES,
+  ENTRY_CONSUMING_SURFACES,
+  SURFACE_SUBCOMMANDS,
+  parseArgs,
+} from '../src/cli.mjs';
 import { runCliInProcess } from './helpers/cli.mjs';
 import { USAGE_ERROR_SURFACES } from './helpers/cli-surfaces.mjs';
 import { createTempGitRepo } from './helpers/temp-repo.mjs';
@@ -303,5 +308,50 @@ describe('#2065 --base command-scoped allowlist', () => {
     // ここで拒否すると `river run . --base main --help` が usage error になる。
     assert.equal(parseArgs(['doctor', '.', '--base', 'main', '--help']).usageError, false);
     assert.equal(parseArgs(['--base', 'main']).usageError, false);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// #2054 PR-3: `--entry` は同じ機構（COMMAND_SCOPED_OPTIONS）で `review plan`
+// だけが受理する。`--base` と同じ 2 軸で pin する: 宣言の集合と、面ごとの
+// 受理 / 拒否の全走。canary は `doctor` 1 形しか収録していないので、
+// `ENTRY_CONSUMING_SURFACES` に `review exec` を足す変異はここでしか落ちない。
+// -----------------------------------------------------------------------------
+describe('#2054 --entry command-scoped allowlist', () => {
+  test('the declared consuming surface is exactly `review plan`', () => {
+    assert.deepEqual(
+      [...ENTRY_CONSUMING_SURFACES].sort(),
+      ['review plan'],
+      '`--entry` を読む面を増減させたなら、この期待値と pages/reference/runner-cli-reference.md（ja/en）も同じ PR で更新すること'
+    );
+  });
+
+  test('the files that read `parsed.entry` are exactly the pinned set', () => {
+    const readers = listSourceFiles(SRC_DIR)
+      .filter((abs) => /parsed\??\.entry\b/.test(readFileSync(abs, 'utf8')))
+      .map((abs) => relative(REPO_ROOT, abs).split('\\').join('/'))
+      .sort();
+    assert.deepEqual(readers, ['src/cli.mjs', 'src/cli/commands/review.mjs']);
+  });
+
+  for (const { surface, argv } of USAGE_ERROR_SURFACES) {
+    const consumes = ENTRY_CONSUMING_SURFACES.has(surface);
+    test(`\`river ${surface} --entry review-plan\` is ${consumes ? 'accepted' : 'rejected'}`, () => {
+      // 解決できる entry 名で測る。未知の名前だと値検証による拒否と区別がつかない。
+      const parsed = parseArgs([...argv, '--entry', 'review-plan']);
+      assert.equal(
+        parsed.usageError,
+        !consumes,
+        consumes
+          ? `${surface} は --entry を読む面なので受理され続けなければならない`
+          : `${surface} は --entry を読まないので usage error にならなければならない`
+      );
+      if (consumes) assert.equal(parsed.entry, 'review-plan');
+    });
+  }
+
+  test('the option is rejected regardless of where it is written in argv', () => {
+    assert.equal(parseArgs(['review', '--entry', 'review-plan', 'exec']).usageError, true);
+    assert.equal(parseArgs(['review', '--entry', 'review-plan', 'plan']).usageError, false);
   });
 });

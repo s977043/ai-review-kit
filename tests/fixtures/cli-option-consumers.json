@@ -244,6 +244,11 @@
       "suppression add"
     ]
   },
+  "--entry": {
+    "writes": ["entry"],
+    "readBy": ["review"],
+    "acceptedUnconsumedOn": []
+  },
   "--estimate": {
     "writes": ["estimate"],
     "readBy": ["run"],

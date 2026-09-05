@@ -24,6 +24,7 @@ import { DEPTH_TO_REVIEW_MODE } from './lib/review-plan-generator.mjs';
 // It now lives in src/lib/expires-at.mjs so the CLI and the library share one
 // definition; the accepted set of `--expires` values is unchanged.
 import { parseExpiresAt } from './lib/expires-at.mjs';
+import { listFlowEntryNames } from './lib/flow-loader.mjs';
 import { runReviewCommand } from './cli/commands/review.mjs';
 import { runSkillsCommand } from './cli/commands/skills.mjs';
 import { runRunsCommand } from './cli/commands/runs.mjs';
@@ -54,7 +55,8 @@ Commands:
   doctor <path>         Check setup and print hints for common issues
   review plan           Resolve upstream artifacts and emit a Review Artifact
                         (Phase 3 slice: --plan-only only; --base <ref> diffs
-                         against that ref instead of the diff artifact)
+                         against that ref instead of the diff artifact;
+                         --entry <name> pins a review Flow entry, Beta)
   review exec           Run the review and emit a Review Artifact with findings
                         (--dry-run: plan only; --plan <file>: replay an existing plan)
   review route          Recommend a review mode (light|standard|team|human-required)
@@ -147,6 +149,9 @@ Options:
   --base <ref>      Branch or ref to diff against (e.g. main). Default: auto-detected default branch
                     Accepted only by: run, skills (no subcommand), review plan|exec|route.
                     Other surfaces reject it (#2065) — they never read a diff.
+  --entry <name>    (review plan, Beta) Review Flow entry to pin the artifact to
+                    (review-plan|review-task|review-final|... from the entry map).
+                    Adds flow and evidenceRequirements to the artifact; no other output changes.
   --skill-set <name> Restrict review to a named skill set from skills/registry.yaml
                     (e.g. basic, typescript, comprehensive). Default: all applicable skills
   --depth <name>    Force review depth: quick|standard|thorough. Default: auto-detected from diff size
@@ -402,6 +407,22 @@ const BASE_CONSUMING_SURFACES = new Set([
 ]);
 
 /**
+ * The surfaces that READ `parsed.entry` (#2054 PR-3, Beta).
+ *
+ * `--entry <name>` names a review Flow entry (a key of the entry map's
+ * `entries`, read through `src/lib/flow-loader.mjs`) and is consumed by
+ * `src/cli/commands/review.mjs` on the `plan` path only, where it attaches the
+ * resolved Flow pin to the emitted artifact. The `exec --dry-run` path shares
+ * `runReviewPlan` but is a different surface and does not read it, so it is
+ * not listed. Same INVARIANT as `--base` above: every other surface accepted
+ * the token and never read it (before #2054 PR-3 it was an unknown option on
+ * all of them), so dropping it restores the previous behavior exactly.
+ *
+ * @type {Set<string>}
+ */
+const ENTRY_CONSUMING_SURFACES = new Set(['review plan']);
+
+/**
  * Command-scoped option allowlist (#2065).
  *
  * `KNOWN_OPTION_TOKENS` and the per-option `if` chain inside `parseArgs` are
@@ -441,6 +462,12 @@ const COMMAND_SCOPED_OPTIONS = [
     given: (parsed) => parsed.base !== null,
     surfaces: BASE_CONSUMING_SURFACES,
     why: 'that surface does not review a diff',
+  },
+  {
+    token: '--entry',
+    given: (parsed) => parsed.entry !== null,
+    surfaces: ENTRY_CONSUMING_SURFACES,
+    why: 'that surface does not resolve a review Flow entry',
   },
 ];
 
@@ -729,6 +756,7 @@ const KNOWN_OPTION_TOKENS = new Set([
   '--reviewers',
   '--baseline',
   '--base',
+  '--entry',
   '--skill-set',
   '--depth',
   '--save',
@@ -1454,6 +1482,7 @@ function parseArgs(argv) {
     reviewers: null,
     baseline: null,
     base: null,
+    entry: null,
     skillSet: null,
     depth: null,
     save: false,
@@ -2020,6 +2049,34 @@ function parseArgs(argv) {
       parsed.base = value;
       continue;
     }
+    if (arg === '--entry') {
+      const value = args.shift();
+      if (!value || value.startsWith('-') || value.trim() === '') {
+        console.error(
+          'Error: --entry option requires a review Flow entry name (e.g. --entry review-plan).'
+        );
+        usageError(parsed);
+        break;
+      }
+      // #2054 PR-3: an unknown entry name is a usage error here, listing the
+      // accepted names, rather than a handler-level exit 3 — the vocabulary is
+      // data (the entry map), so it is read through the single Flow reader.
+      // If the assets cannot be loaded at all the handler reports that with
+      // its own message; parse only validates when it can.
+      let known = null;
+      try {
+        known = listFlowEntryNames();
+      } catch {
+        known = null;
+      }
+      if (known !== null && !known.includes(value)) {
+        console.error(`Error: unknown --entry "${value}". Accepted entries: ${known.join(', ')}.`);
+        usageError(parsed);
+        break;
+      }
+      parsed.entry = value;
+      continue;
+    }
     if (arg === '--skill-set') {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
@@ -2348,6 +2405,7 @@ export {
   // that actually read `parsed.base`, so a new consumer (or a removed one)
   // cannot drift from the surfaces the parser lets through.
   BASE_CONSUMING_SURFACES,
+  ENTRY_CONSUMING_SURFACES,
   // Also for tests/cli-base-option-scope.test.mjs only (#2065 review, minor 1).
   // These mirror vocabularies that live in the handler modules, so the test
   // runs the CLI for every token to pin the mirror against the real dispatch.

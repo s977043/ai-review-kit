@@ -210,6 +210,27 @@ export async function runReviewCommand(parsed) {
       }
       throw err;
     }
+    // #2054 PR-3 (Beta): `review plan --entry <name>` pins the artifact to a
+    // review Flow entry. Only the pin and the Flow's declared required inputs
+    // are attached, both additive; nothing above (skill selection, decision,
+    // gate) reads them, so the artifact without `--entry` is byte-identical to
+    // the one produced before this flag existed (tests/cli-review-plan-entry
+    // pins that). Reading `flows/` goes through the single Flow loader; an
+    // unreadable flows directory is a loud exit 1, never a silent "no Flow".
+    if (parsed.entry !== null && parsed.entry !== undefined) {
+      const { FlowLoaderError, resolveFlowEntry } = await import('../../lib/flow-loader.mjs');
+      try {
+        const resolved = resolveFlowEntry(parsed.entry);
+        artifact.flow = resolved.flow;
+        artifact.evidenceRequirements = resolved.evidenceRequirements;
+      } catch (err) {
+        if (err instanceof FlowLoaderError) {
+          console.error(`Error: ${err.message}`);
+          return 1;
+        }
+        throw err;
+      }
+    }
     const outputFilePath = parsed.outputFile ? path.resolve(parsed.outputFile) : null;
     const summaryFilePath = parsed.summaryFile ? path.resolve(parsed.summaryFile) : null;
     if (outputFilePath && summaryFilePath && outputFilePath === summaryFilePath) {

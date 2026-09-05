@@ -223,7 +223,16 @@ const CONTRACTS = {
 // 追加し、C3 が 164 -> 165 になった。挙動は #2089 以前から exit 1 で変えて
 // いない。前置形 `skills resolve --path a.txt` が exit 0 なのに対し後置形は
 // 拒否される、という語順依存の契約が pin 無しだったための明文化である。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 165, C4: 1 };
+// #2054 PR-3 で `review plan --entry <name>`（Beta）を新設し、値欠落 /
+// 未知の entry 名 / `--entry` を読まない面（`doctor`）の 3 形を追加して
+// C3 が 165 -> 168 になった。BEFORE（v1.100.0 = d250193a）では 3 形とも
+// `Error: unknown option --entry.` の exit 1 であり、exit code は動いていない。
+// 収録の理由は上の「parse 層で新たに拒否されるようになったか」で、未知の
+// entry 名は許容値の列挙つきで、`doctor` は #2065 の allowlist
+// （`COMMAND_SCOPED_OPTIONS`）で拒否される形へ変わったためである。受理形
+// `review plan --plan-only --entry review-plan` は exit 1 -> 0 へ動き、
+// VALID_CASES 側へ pin した（97 -> 98）。
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 168, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -332,6 +341,29 @@ const CASES = [
     surface: 'review plan',
     kind: 'surplus-positional',
     argv: ['review', 'plan', '.', 'extra', '--plan-only'],
+    contract: 'C3',
+  },
+  {
+    // #2054 PR-3: `--entry` は値を取る。
+    surface: 'review plan',
+    kind: 'value-missing',
+    argv: ['review', 'plan', '--plan-only', '--entry'],
+    contract: 'C3',
+  },
+  {
+    // #2054 PR-3: entry 名は entry map の `entries` キーに限る。parse 層で
+    // 許容値を列挙して拒否する（ハンドラ層の exit 3 ではない）。
+    surface: 'review plan',
+    kind: 'invalid-value',
+    argv: ['review', 'plan', '--plan-only', '--entry', 'nosuch'],
+    contract: 'C3',
+  },
+  {
+    // #2054 PR-3: `--entry` を読むのは `review plan` だけ。他の面は #2065 の
+    // allowlist（`COMMAND_SCOPED_OPTIONS`）で usage error になる。
+    surface: 'doctor',
+    kind: 'unknown-option',
+    argv: ['doctor', '.', '--entry', 'review-plan'],
     contract: 'C3',
   },
 
@@ -1639,11 +1671,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 166 usage-error cases and every row is unique', () => {
+  test('the matrix pins 169 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      166,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 44 件（228 形の掃引で exit code が動いたのは 53 件。重複指定は単発形と等価なので代表 1 件のみ収録し、runs diff の 3 件は逆に変化形ではないが契約として収録している）+ #2081 の skills 後置サブコマンド 4 件 + 同 round 3 のパス併記形 1 件 + 範囲レビュー v1.100.0 minor の後置 resolve 固有オプション 1 件'
+      169,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 44 件（228 形の掃引で exit code が動いたのは 53 件。重複指定は単発形と等価なので代表 1 件のみ収録し、runs diff の 3 件は逆に変化形ではないが契約として収録している）+ #2081 の skills 後置サブコマンド 4 件 + 同 round 3 のパス併記形 1 件 + 範囲レビュー v1.100.0 minor の後置 resolve 固有オプション 1 件 + #2054 PR-3 の --entry 3 件（値欠落 / 未知 entry / doctor で拒否）'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1670,15 +1702,15 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // 「フラグ先行形を拒否」も v1.72.1 の「`--phase Upstream` を誤拒否」も
   // 壊したのは**成功側**であり、守りが薄いのは逆だった。行を消すだけで
   // 黙って保護が減るのを防ぐ。
-  test('the success-side table pins 97 legitimate argv forms', () => {
+  test('the success-side table pins 98 legitimate argv forms', () => {
     assert.equal(
       VALID_CASES.length,
-      97,
-      'コマンド面ごとの正常形: run 14 (#1759 C3 で --context 未知語彙 1行追加、#2065 で run --base main を1行追加) / doctor 5 / skills 16 (#2051 で skills --base main を1行追加、#2081 で後置サブコマンド 1行と ./import 明示パス 1行追加) / runs 7 (#1759 B2 で1行追加) / review 21 (#2046 で review plan --base を1行追加、#2065 で review exec --base を1行追加) / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 15 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加、#1880 で prompt-ab の両語順 2行追加) / help 2 / コマンド無し 1'
+      98,
+      'コマンド面ごとの正常形: run 14 (#1759 C3 で --context 未知語彙 1行追加、#2065 で run --base main を1行追加) / doctor 5 / skills 16 (#2051 で skills --base main を1行追加、#2081 で後置サブコマンド 1行と ./import 明示パス 1行追加) / runs 7 (#1759 B2 で1行追加) / review 22 (#2046 で review plan --base を1行追加、#2065 で review exec --base を1行追加、#2054 PR-3 で review plan --entry を1行追加) / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 15 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加、#1880 で prompt-ab の両語順 2行追加) / help 2 / コマンド無し 1'
     );
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:165 / C4:1 (0 of 166 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:168 / C4:1 (0 of 169 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -1917,6 +1949,13 @@ const VALID_CASES = [
     command: 'review',
     target: '.',
     expect: { base: 'main' },
+  },
+  {
+    // #2054 PR-3: `--entry <name>` は `review plan` で受理される（Beta）。
+    // BEFORE は `unknown option --entry` の exit 1 だった形。
+    argv: ['review', 'plan', '--plan-only', '--entry', 'review-plan'],
+    command: 'review',
+    expect: { entry: 'review-plan' },
   },
   { argv: ['eval', '--cases', './cases.json', '--verbose'], command: 'eval' },
   {
