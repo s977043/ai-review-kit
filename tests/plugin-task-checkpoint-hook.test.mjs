@@ -64,6 +64,91 @@ describe('plugin-task-checkpoint-hook.sh (#2054 PR-5)', () => {
     assert.ok(!fs.existsSync(path.join(dir, '.river')), 'hook wrote into the project tree');
   });
 
+  test('RIVER_TASK_CHECKPOINT_HOOK=0 opts out: exits 0, no output, writes nothing', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      prefix: 'river-hook-optout-',
+      initialFiles: { 'src/app.js': 'export const value = 1;\n' },
+      changedFiles: { 'src/app.js': 'export const value = 2;\n' },
+    });
+    t.after(cleanup);
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'river-hook-tmp-'));
+    t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+    const result = await runHook({
+      cwd: dir,
+      env: {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: dir,
+        CLAUDE_PLUGIN_ROOT: REPO_ROOT,
+        TMPDIR: tmp,
+        RIVER_TASK_CHECKPOINT_HOOK: '0',
+      },
+      stdin: '{}',
+    });
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(result.stdout, '');
+    assert.ok(
+      !fs.existsSync(path.join(tmp, 'river-review-task-checkpoint')),
+      'opt-out created the temp dir'
+    );
+  });
+
+  test('temp dir is bounded: only the newest RIVER_TASK_CHECKPOINT_KEEP artifacts (and their logs) survive', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      prefix: 'river-hook-keep-',
+      initialFiles: { 'src/app.js': 'export const value = 1;\n' },
+      changedFiles: { 'src/app.js': 'export const value = 2;\n' },
+    });
+    t.after(cleanup);
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'river-hook-tmp-'));
+    t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+    const outDir = path.join(tmp, 'river-review-task-checkpoint');
+    fs.mkdirSync(outDir);
+    // Five pre-existing runs, oldest first by timestamp-prefixed name, each with a log.
+    const olds = [
+      '20260101T000000Z-1',
+      '20260102T000000Z-2',
+      '20260103T000000Z-3',
+      '20260104T000000Z-4',
+      '20260105T000000Z-5',
+    ];
+    for (const name of olds) {
+      fs.writeFileSync(path.join(outDir, `${name}.json`), '{}\n');
+      fs.writeFileSync(path.join(outDir, `${name}.json.log`), '');
+    }
+    const result = await runHook({
+      cwd: dir,
+      env: {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: dir,
+        CLAUDE_PLUGIN_ROOT: REPO_ROOT,
+        TMPDIR: tmp,
+        RIVER_TASK_CHECKPOINT_KEEP: '3',
+      },
+      stdin: '{}',
+    });
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /pinned to entry review-task/);
+    const jsons = artifactsIn(tmp).sort();
+    // 5 old - (5 - 3) dropped = 3 old kept, plus the one just written = 4.
+    assert.equal(jsons.length, 4, jsons.join(','));
+    assert.deepEqual(
+      jsons.slice(0, 3),
+      olds.slice(2).map((n) => `${n}.json`)
+    );
+    const logs = fs
+      .readdirSync(outDir)
+      .filter((f) => f.endsWith('.log'))
+      .sort();
+    assert.deepEqual(
+      logs.slice(0, 3),
+      olds.slice(2).map((n) => `${n}.json.log`)
+    );
+    assert.ok(
+      !logs.some((f) => f.startsWith('20260101') || f.startsWith('20260102')),
+      'old logs survived'
+    );
+  });
+
   test('stop_hook_active=true: exits 0 immediately and writes nothing', async (t) => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'river-hook-tmp-'));
     t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));

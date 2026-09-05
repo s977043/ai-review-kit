@@ -87,6 +87,9 @@ inputs:
       artifact carries `flow` and `evidenceRequirements`. The name is passed
       through verbatim — the Action holds no judgment about it (ADR-009 D3).
       Leave empty (default) to keep the `run` command path exactly as before.
+      When set, gate / dry_run / estimate / max_cost / comment / inline_comments
+      do not apply (plan-only runs no review, so there is nothing to gate or
+      to post).
     required: false
     default: ''
 outputs:
@@ -186,8 +189,10 @@ runs:
           cmd+=("--max-cost" "${{ inputs.max_cost }}")
         fi
         # Epic #1347 S4: opt-in gate enforcement. --gate makes NO_GO/ESCALATE a
-        # non-zero exit; default (gate=false) stays advisory.
-        if [ "${{ inputs.gate }}" = "true" ]; then
+        # non-zero exit; default (gate=false) stays advisory. Not forwarded on
+        # the entry path: `review plan --plan-only` runs no review, so its gate
+        # is always NOT_EXECUTED and --gate would fail the job unconditionally.
+        if [ -z "${INPUT_ENTRY}" ] && [ "${{ inputs.gate }}" = "true" ]; then
           cmd+=("--gate")
         fi
         echo "Running: ${cmd[*]}"
@@ -216,8 +221,11 @@ runs:
           exit "${rc}"
         fi
 
+    # Both comment steps are skipped when `entry` is set (#2054 PR-5): the
+    # plan-only artifact is a Review Artifact, not review findings, and belongs
+    # in the job log / an uploaded artifact rather than a PR comment.
     - name: Post PR comment
-      if: ${{ github.event_name == 'pull_request' && inputs.comment == 'true' && inputs.estimate != 'true' && inputs.output_format != 'json' && inputs.inline_comments != 'true' }}
+      if: ${{ github.event_name == 'pull_request' && inputs.entry == '' && inputs.comment == 'true' && inputs.estimate != 'true' && inputs.output_format != 'json' && inputs.inline_comments != 'true' }}
       uses: actions/github-script@v8
       env:
         RIVER_REVIEWER_COMMENT_PATH: ${{ steps.river.outputs.comment_path }}
@@ -227,7 +235,7 @@ runs:
           await postComment({ github, context, core });
 
     - name: Post inline review comments
-      if: ${{ github.event_name == 'pull_request' && inputs.comment == 'true' && inputs.inline_comments == 'true' && inputs.estimate != 'true' }}
+      if: ${{ github.event_name == 'pull_request' && inputs.entry == '' && inputs.comment == 'true' && inputs.inline_comments == 'true' && inputs.estimate != 'true' }}
       uses: actions/github-script@v8
       env:
         RIVER_REVIEWER_JSON_PATH: ${{ steps.river.outputs.json_path }}

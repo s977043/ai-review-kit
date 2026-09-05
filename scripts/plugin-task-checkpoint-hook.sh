@@ -16,6 +16,12 @@
 # runner's temp dir, never into the consumer's working tree.
 set -euo pipefail
 
+# Opt-out: RIVER_TASK_CHECKPOINT_HOOK=0 disables the hook entirely (no CLI
+# run, no file written). Disabling the plugin does the same.
+if [ "${RIVER_TASK_CHECKPOINT_HOOK:-1}" = "0" ]; then
+  exit 0
+fi
+
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 cd "$PROJECT_DIR" || exit 0
 
@@ -59,6 +65,21 @@ fi
 OUT_DIR="${TMPDIR:-/tmp}/river-review-task-checkpoint"
 mkdir -p "$OUT_DIR" 2>/dev/null || exit 0
 OUT_FILE="$OUT_DIR/$(date -u +%Y%m%dT%H%M%SZ)-$$.json"
+
+# Keep the temp dir bounded: one .json (+ .log) per Stop would otherwise
+# accumulate for the life of the machine. Retain the newest KEEP artifacts
+# (by name, which starts with a UTC timestamp) and drop the rest with their
+# logs. This is the only deletion this hook performs, and only inside its own
+# temp dir.
+KEEP="${RIVER_TASK_CHECKPOINT_KEEP:-20}"
+# Portable (BSD head has no `-n -N`): count, then drop the oldest `count - KEEP`.
+total=$(find "$OUT_DIR" -maxdepth 1 -name '*.json' | wc -l | tr -d ' ')
+drop=$((total - KEEP))
+if [ "$drop" -gt 0 ]; then
+  find "$OUT_DIR" -maxdepth 1 -name '*.json' | sort | head -n "$drop" | while IFS= read -r old; do
+    rm -f -- "$old" "$old.log"
+  done
+fi
 
 if "${CLI[@]}" review plan --plan-only --entry "$ENTRY" --output-file "$OUT_FILE" . >/dev/null 2>"$OUT_FILE.log"; then
   echo "[river-review:task-checkpoint] Review Artifact pinned to entry ${ENTRY}: ${OUT_FILE}"

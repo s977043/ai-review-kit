@@ -111,7 +111,7 @@ See `runners/github-action/action.yml` for definition.
 
 ### inputs (Beta)
 
-- `entry`: a review Flow entry name (a key of `entries` in `flows/entry-map.json`). When set, the step runs `review plan --plan-only --entry <value>` and emits the Review Artifact (with `flow` and `evidenceRequirements`); left empty (default) the `run` path is unchanged. The value is forwarded verbatim and the Action holds no judgment about it (ADR-009 D3). #2054 PR-5; the [Runner CLI reference](./runner-cli-reference.en.md#entry-acceptance-scope) is the SSoT
+- `entry`: a review Flow entry name (a key of `entries` in `flows/entry-map.json`). When set, the step runs `review plan --plan-only --entry <value>` and emits the Review Artifact (with `flow` and `evidenceRequirements`); left empty (default) the `run` path is unchanged. The value is forwarded verbatim and the Action holds no judgment about it (ADR-009 D3). When `entry` is set, `gate` / `dry_run` / `estimate` / `max_cost` / `comment` / `inline_comments` do not apply (plan-only runs no review, so there is nothing to gate or to post). #2054 PR-5; the [Runner CLI reference](./runner-cli-reference.en.md#entry-acceptance-scope) is the SSoT
 
 ### outputs (Stable)
 
@@ -121,6 +121,16 @@ See `runners/github-action/action.yml` for definition.
 
 - **Updates** comment containing `<!-- river-review -->` marker; creates new if missing.
 - Truncates tail if comment body is too long (limit exists).
+
+## Claude Code plugin hooks (Beta)
+
+`hooks/hooks.json` ships two lifecycle hooks: `PostToolUse` (runs the consumer project's prettier after Write / Edit) and, since #2054 PR-5, `Stop`. `Stop` runs `scripts/plugin-task-checkpoint-hook.sh`, which emits a Review Artifact through `river review plan --plan-only --entry review-task`. It is the Claude Code adapter for the neutral `task-checkpoint` trigger and carries nothing but the entry name (ADR-009 D3).
+
+- No model call and no cost (plan-only)
+- Takes 1–7 seconds (5.0–5.4 s over 3 runs on the river-review repository itself, 6.7 s on another machine; a large repository may hit the `timeout: 60` cutoff)
+- Writes under `$TMPDIR/river-review-task-checkpoint/`, never into the working tree, keeping the newest 20 artifacts (`RIVER_TASK_CHECKPOINT_KEEP`)
+- Skips with exit 0 when no CLI is available (no npm install and no `node_modules` in the plugin) or when the run fails, so the session is never blocked
+- Opt out with the environment variable `RIVER_TASK_CHECKPOINT_HOOK=0`, or `/plugin disable river-review@river-review-marketplace`
 
 ## Versioning (Handling Breaking Changes)
 

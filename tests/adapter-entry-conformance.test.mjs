@@ -25,6 +25,7 @@
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -129,6 +130,76 @@ describe('paired adapter conformance for --entry (#2054 PR-5)', () => {
           resolveFlowEntry(claudeEntry).evidenceRequirements,
           record.expected.evidenceRequirements
         );
+      });
+
+      test('GitHub Action: with entry set, --gate / --dry-run / --estimate / --max-cost are not assembled; without it the run line is unchanged', () => {
+        // Render the composite step's `run:` block with every input at its
+        // "most forwarding" value (gate=true, dry_run=true, estimate=true,
+        // max_cost set) and execute it up to the `Running:` echo only.
+        const body = /      run: \|\n((?:        .*\n|\n)+?)\n    # Both comment steps/.exec(
+          actionYml
+        )?.[1];
+        assert.ok(body, 'run block not found');
+        const inputs = {
+          phase: 'midstream',
+          planner: 'off',
+          target: '.',
+          inline_comments: 'false',
+          dry_run: 'true',
+          debug: 'false',
+          estimate: 'true',
+          max_cost: '1.00',
+          gate: 'true',
+        };
+        const script = body
+          .split('\n')
+          .map((l) => l.slice(8))
+          .join('\n')
+          .replace(/\$\{\{ inputs\.(\w+) \}\}/g, (_, k) => inputs[k])
+          .replace(/echo "Running: \$\{cmd\[\*\]\}"[\s\S]*$/, 'echo "Running: ${cmd[*]}"\n');
+        const runLine = (entry, outputFormat = 'markdown') => {
+          const out = execFileSync('bash', ['-c', script], {
+            cwd: REPO_ROOT,
+            encoding: 'utf8',
+            env: {
+              ...process.env,
+              RIVER_REPO_ROOT: REPO_ROOT,
+              RIVER_OUTPUT_FORMAT: outputFormat,
+              INPUT_DETERMINISTIC_EXEC: 'false',
+              INPUT_TRUSTED_TREE: '',
+              INPUT_ENTRY: entry,
+              GITHUB_ACTION_PATH: path.join(REPO_ROOT, 'runners', 'github-action'),
+            },
+          });
+          return /^Running: (.*)$/m.exec(out)?.[1] ?? '';
+        };
+        const withEntry = runLine('review-task');
+        assert.match(
+          withEntry,
+          / review plan \S+ --plan-only --entry review-task --phase midstream --output markdown$/
+        );
+        for (const flag of ['--gate', '--dry-run', '--estimate', '--max-cost']) {
+          assert.ok(!withEntry.includes(flag), `${flag} forwarded on the entry path: ${withEntry}`);
+        }
+        // F2: with the default output_format (text) the entry path emits json,
+        // so `comment_path` is never set — the comment steps must therefore be
+        // skipped on `inputs.entry` (pinned in the next test), not on the format.
+        assert.match(runLine('review-task', 'text'), / --output json$/);
+        const withoutEntry = runLine('');
+        assert.match(
+          withoutEntry,
+          / run \S+ --phase midstream --planner off --output markdown --dry-run --estimate --max-cost 1\.00 --gate$/
+        );
+      });
+
+      test('GitHub Action: both comment steps are skipped when entry is set', () => {
+        const conditions = [
+          ...actionYml.matchAll(
+            /^    - name: Post (?:PR comment|inline review comments)\n      if: (.*)$/gm
+          ),
+        ].map((m) => m[1]);
+        assert.equal(conditions.length, 2);
+        for (const condition of conditions) assert.match(condition, /inputs\.entry == ''/);
       });
 
       test('neither adapter surface carries review judgment vocabulary (ADR-009 D3)', () => {
