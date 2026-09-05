@@ -79,7 +79,7 @@ test('(a) 基準線に載った skills/agent-skills/as-* は情報表示のみ�
   touch(repo, 'skills/agent-skills/as-foo/SKILL.md');
   const res = run(repo, makeManifest(t, ['skills/agent-skills/as-foo/SKILL.md']));
   assert.equal(res.status, 0, res.stdout + res.stderr);
-  assert.match(res.stdout, /\(a\) baseline npm ci output still present: 1/);
+  assert.match(res.stdout, /\(a\) baseline generated output still present: 1/);
   assert.match(res.stdout, /\(b\) known CLI write targets, not in baseline: 0/);
 });
 
@@ -107,6 +107,21 @@ for (const rel of [
   });
 }
 
+test('スペースを含むパスも引用されずに分類・mv 案内される', (t) => {
+  const repo = makeRepo(t);
+  // git は既定（core.quotePath=true）でスペース入りパスを "..." で囲む。
+  // 囲まれたままだと case パターンに一致せず mv コマンドも壊れる。
+  touch(repo, '.agents/my skill/x.md');
+  touch(repo, 'scratch/no te.txt');
+  const res = run(repo, makeManifest(t, []));
+  assert.equal(res.status, 1, res.stdout + res.stderr);
+  assert.match(res.stdout, /\(b\) known CLI write targets, not in baseline: 1/);
+  assert.match(res.stdout, /\(c\) other untracked, not in baseline: 1/);
+  assert.ok(res.stdout.includes('    .agents/my skill/x.md'));
+  assert.ok(res.stdout.includes(`mv "${join(realpathSync(repo), 'scratch/no te.txt')}"`));
+  assert.doesNotMatch(res.stdout, /\\"/, '引用エスケープが混入しないこと');
+});
+
 test('(c) その他の untracked は exit 1 で (c) に分類される', (t) => {
   const repo = makeRepo(t);
   touch(repo, 'scratch/notes.txt');
@@ -124,7 +139,7 @@ test('基準線なしでは全 untracked を報告し、(a) は成立しない',
   const res = run(repo, null);
   assert.equal(res.status, 1, res.stdout + res.stderr);
   assert.match(res.stdout, /baseline: none/);
-  assert.match(res.stdout, /\(a\) baseline npm ci output still present: 0/);
+  assert.match(res.stdout, /\(a\) baseline generated output still present: 0/);
   assert.match(res.stdout, /\(b\) known CLI write targets, not in baseline: 1/);
   assert.match(res.stdout, /\(c\) other untracked, not in baseline: 1/);
 });

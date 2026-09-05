@@ -18,6 +18,9 @@
 # not available, verified on v26" on a machine that had Node 22 installed under
 # a Homebrew keg outside PATH (`/opt/homebrew/opt/node@22/bin`).
 #
+# .nvmrc forms: `22.22.2` (exact), `22` / `22.1` (prefix). `lts/*` style
+# aliases are not supported and always produce the mismatch warning.
+#
 # Usage:
 #   scripts/worker-bootstrap.sh <branch> [--base <ref>]
 #   RIVER_WORKER_STATE_DIR=/path scripts/worker-bootstrap.sh <branch>
@@ -77,7 +80,7 @@ STATE_DIR="${RIVER_WORKER_STATE_DIR:-${HOME}/.claude/state}"
 MANIFEST="${STATE_DIR}/worker-bootstrap-${SLUG}.txt"
 
 echo "== 1. worktree"
-if git -C "${MAIN_ROOT}" worktree list --porcelain | grep -qx "worktree ${WORKTREE}"; then
+if git -C "${MAIN_ROOT}" worktree list --porcelain | grep -qxF "worktree ${WORKTREE}"; then
   echo "reuse: ${WORKTREE} (already registered; branch: $(git -C "${WORKTREE}" rev-parse --abbrev-ref HEAD))"
 else
   if git -C "${MAIN_ROOT}" show-ref --verify --quiet "refs/heads/${BRANCH}"; then
@@ -178,7 +181,16 @@ HAVE="$(node --version)"
 HAVE="${HAVE#v}"
 echo "node: v${HAVE} via ${NODE_VIA} ($(command -v node))"
 echo ".nvmrc: ${WANT:-<none>}"
-if [ -n "${WANT}" ] && [ "${HAVE}" != "${WANT}" ]; then
+# A partial pin (`22` / `22.1`) is satisfied by any node whose version starts
+# with it; a full pin (`22.22.2`) needs an exact match. `lts/*` aliases are not
+# supported: they resolve through nvm only and would always warn here.
+version_satisfies() {
+  case "$1" in
+    "$2" | "$2".*) return 0 ;;
+  esac
+  return 1
+}
+if [ -n "${WANT}" ] && ! version_satisfies "${HAVE}" "${WANT}"; then
   echo "WARNING: node v${HAVE} does not match .nvmrc ${WANT}. CI runs ${WANT}; runners/github-action/dist built here may differ from CI."
   echo "         align with: nvm use / fnm use / volta pin / mise use, or export PATH=/opt/homebrew/opt/node@${WANT_MAJOR}/bin:\$PATH"
 fi
@@ -205,7 +217,7 @@ mkdir -p "${STATE_DIR}"
   echo "# branch: ${BRANCH}"
   echo "# node: v${HAVE} via ${NODE_VIA}"
   echo "# created: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  git -C "${WORKTREE}" status --porcelain --untracked-files=all | grep '^??' | cut -c4- | sort || true
+  git -C "${WORKTREE}" ls-files -z --others --exclude-standard | tr '\0' '\n' | grep -v '^$' | sort || true
 } > "${MANIFEST}"
 echo "manifest: ${MANIFEST} ($(grep -cv '^#' "${MANIFEST}" || true) untracked path(s) after npm ci)"
 

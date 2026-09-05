@@ -5,7 +5,11 @@
 #
 # Two write sources have polluted worktrees and were distinguishable only by
 # mtime (docs/development/retrospectives/2026-09-04-05.md, improvement #1):
-#   - `npm ci` generates skills/agent-skills/as-* (5 dirs, known, harmless)
+#   - whatever the bootstrap itself leaves untracked after `npm ci`. Measured on
+#     2026-09-05 (Node 22.22.2, origin/main) this was 0 paths; 5 untracked
+#     skills/agent-skills/as-* dirs were observed in an earlier session
+#     (retrospectives/2026-09-03-04.md) but did not reproduce and their origin
+#     is unidentified.
 #   - an old-version CLI run by a "read-only" review agent wrote 141 files
 #     (skills/agent-skills/as-* 134, .agents/, .river/feedback/2026-09.jsonl,
 #     .river/memory/index.json)
@@ -13,8 +17,8 @@
 # worker's own writing.
 #
 # Classification of untracked paths that are NOT in the baseline:
-#   (a) baseline-known npm ci output  -- skills/agent-skills/as-* listed in the
-#       manifest; reported as information only, never a failure
+#   (a) baseline-known generated output -- skills/agent-skills/as-* listed in
+#       the manifest; reported as information only, never a failure
 #   (b) known CLI write targets       -- .river/feedback/*.jsonl,
 #       .river/memory/index.json, .agents/**, new skills/agent-skills/as-*
 #   (c) anything else
@@ -55,10 +59,13 @@ MANIFEST="${RIVER_BOOTSTRAP_MANIFEST:-${STATE_DIR}/worker-bootstrap-${SLUG}.txt}
 # listed as well as untracked ones.
 CLI_WRITE_DIRS=(.river/feedback .river/memory .agents)
 
+# Paths are read NUL-separated (-z) so that git never applies its C-style
+# `"..."` quoting to names with spaces or non-ASCII bytes; a quoted name would
+# miss the `case` patterns below and break the mv commands.
 collect_paths() {
   {
-    git -C "${TARGET}" status --porcelain --untracked-files=all | grep '^??' | cut -c4- || true
-    git -C "${TARGET}" ls-files --others --ignored --exclude-standard -- "${CLI_WRITE_DIRS[@]}" 2>/dev/null || true
+    git -C "${TARGET}" ls-files -z --others --exclude-standard 2>/dev/null | tr '\0' '\n' || true
+    git -C "${TARGET}" ls-files -z --others --ignored --exclude-standard -- "${CLI_WRITE_DIRS[@]}" 2>/dev/null | tr '\0' '\n' || true
   } | grep -v '^$' | sort -u || true
 }
 
@@ -98,7 +105,7 @@ N_B="$(count_lines "${B_LIST}")"
 N_C="$(count_lines "${C_LIST}")"
 
 echo "worktree: ${TARGET}"
-echo "(a) baseline npm ci output still present: ${N_A}"
+echo "(a) baseline generated output still present: ${N_A}"
 echo "(b) known CLI write targets, not in baseline: ${N_B}"
 [ "${N_B}" -eq 0 ] || printf '%s' "${B_LIST}" | sed 's/^/    /'
 echo "(c) other untracked, not in baseline: ${N_C}"
