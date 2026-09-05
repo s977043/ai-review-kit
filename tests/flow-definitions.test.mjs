@@ -12,8 +12,9 @@
 //   - the Review Intent artifact vocabulary is a subset of the Agent Contract
 //     `inputKind` vocabulary (#2014), not a parallel ledger
 //   - the SKILL.md entry table stays in sync with the entry map it declares SSoT
-//   - observe mode: no runtime module loads `flows/`, so adding these documents
-//     cannot change an existing gate or decision. The scan behind that claim
+//   - observe mode, lifted by one module (#2054 PR-3): `src/lib/flow-loader.mjs`
+//     is the ONLY runtime module that loads `flows/`, so adding these documents
+//     still cannot change an existing gate or decision. The scan behind that claim
 //     lives in tests/helpers/flows-reference-scan.mjs and is itself pinned here
 //     against both a false positive (a comment) and false negatives (a `flows`
 //     path segment, a template literal).
@@ -23,7 +24,7 @@
 
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test, { describe } from 'node:test';
 
@@ -596,12 +597,16 @@ describe('observe mode (#2016)', () => {
     });
   }
 
-  test('no runtime module loads flows/, so no gate or decision changes', () => {
-    // #2016 defines and wires the Flows; executing them is a follow-up. Until an
-    // engine lands, nothing under src/ or runners/ may read these documents, so
-    // adding them provably cannot alter an existing gate, decision or finding.
-    // When the engine does land, this test is the explicit thing that must be
-    // changed — that is the point of pinning it.
+  test('src/lib/flow-loader.mjs is the only runtime module that loads flows/', () => {
+    // #2016 pinned observe mode as "no runtime module reads flows/". #2054 PR-3
+    // lifted it by exactly one module: src/lib/flow-loader.mjs is the single
+    // reader, and every other module that needs a Flow, an entry or an Intent
+    // goes through it. The scan therefore keeps rejecting a second reader
+    // (anything else under src/ or runners/ that names a flows/ path or a
+    // flow asset filename fails here), which is what still makes "the Flow
+    // documents cannot alter an existing gate, decision or finding" provable:
+    // only the loader sees them, and the loader holds no judgment
+    // (tests/flow-loader.test.mjs pins its contract).
     const offenders = [];
     const walk = (dir) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -617,7 +622,12 @@ describe('observe mode (#2016)', () => {
     };
     walk(resolve(REPO_ROOT, 'src'));
     walk(resolve(REPO_ROOT, 'runners'));
-    assert.deepEqual(offenders, [], `modules referencing flows/: ${offenders.join(', ')}`);
+    const relativeOffenders = offenders.map((full) => relative(REPO_ROOT, full)).sort();
+    assert.deepEqual(
+      relativeOffenders,
+      ['src/lib/flow-loader.mjs'],
+      `modules referencing flows/: ${relativeOffenders.join(', ')}`
+    );
   });
 
   // `uniqueItems` on `evidence` only rejects fully identical entries. Two

@@ -70,6 +70,7 @@ CLI の項目はコマンド名とオプション名、およびその意味を�
 - `--context <list>`: 利用可能なコンテキスト（例: `diff,fullFile`）
 - `--dependency <list>`: 利用可能な依存（例: `code_search,test_runner`）
 - `--base <ref>`: 差分の基準となるブランチ / ref。`run` / `skills` / `review plan|exec|route` が同じ解決経路を共有し、差分を読まない面はこの flag を受理しない。どの面が受理するか、値の検証、usage error の exit code はいずれも Stable Contract の対象外であり、SSoT は [Runner CLI リファレンス](./runner-cli-reference.md)
+- `--entry <name>`（Beta）: `review plan` だけが受理し、出力 artifact にレビュー Flow の pin（`flow`）と必須入力（`evidenceRequirements`）を追加する。flag と 2 フィールドは Stable Contract の対象外で、SSoT は [Runner CLI リファレンス](./runner-cli-reference.md#entry-acceptance-scope)
 - `--baseline <path>`: 過去のレビュー JSON（findings 配列）と比較して回帰を表示する
 - `--save`: レビュー実行をプロジェクトの result store（`.river/runs/`）に保存する
 - `--reviewers <roles|auto>`: レビュアーロールをカンマ区切りで指定、または `auto` でシグナルに基づく自動選択（詳細: [runner-cli-reference.md の `--reviewers` セクション](./runner-cli-reference.md#--reviewers-フラグ)）

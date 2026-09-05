@@ -144,6 +144,19 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 いずれの面も値を一度も読んでいなかったため、呼び出しから **flag を外せば従来と同じ結果が得られます**。ただし flag を残したままでは、その面の実行自体が行われず usage error になります。拒否メッセージの末尾でも `Drop --base to get the previous behavior.` として同じ案内を出します（#2076）。usage error の exit code は [Stable Interfaces](./stable-interfaces.md) の Stable Contract の対象外であり、この変更はその方針に従ったものです。
 
+#### `--entry` の受理範囲（Beta） {#entry-acceptance-scope}
+
+`river review plan --entry <name>` は、出力する Review Artifact をレビュー Flow の entry に固定します（#2054 PR-3）。`<name>` は `flows/entry-map.json` の `entries` キーです。現在の 8 件は `review-plan` / `review-task` / `review-final` / `review-replan` / `review-research` / `review-requirements` / `review-design` / `review-technical` です。指定すると artifact の末尾に次の 2 フィールドが**追加**されます。
+
+- `flow`: `{ entry, id, version, sha256 }`。`sha256` は Flow 文書の正規化 JSON のハッシュで、`src/lib/execution-manifest.mjs` の `deriveFlowPin` が算出する
+- `evidenceRequirements`: その Flow が `required: true` で宣言する入力名の一覧（ソート済み）
+
+`--entry` を付けない場合の出力は、この flag が存在しなかったときと同じです。skill 選択・`decision`・`gate` は `--entry` を読まないため、pin の有無で判断は変わりません（ADR-009 D3、RA-1〜RA-4）。この flag と 2 フィールドは **Beta** であり、[Stable Interfaces](./stable-interfaces.md) の Stable Contract に含まれません。
+
+受理するのは `review plan` だけです。`doctor --entry x` や `review exec --entry x` のように他の面へ渡すと、`--base` と同じコマンド別 allowlist（#2065）により parse 層の usage error として exit 1 になります。未知の entry 名は許容値を列挙して exit 1、値欠落も exit 1 です。いずれの拒否形も、この flag の導入前は `unknown option --entry` の exit 1 だったため、exit code は動いていません。
+
+Flow 文書は `src/lib/flow-loader.mjs` だけが読みます。読み込み先は既定でパッケージ同梱の `flows/` で、環境変数 `RIVER_FLOWS_DIR` で上書きできます。GitHub Action の dist には `flows/` が同梱されないため、そこで `--entry` を使うにはこの変数が必要です。見つからない場合は pin なしの artifact を黙って出さず、`Error: flows directory not found` の exit 1 で止まります。
+
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 
 ただし値の検証は全オプションには及びません。次の 3 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。

@@ -138,6 +138,19 @@ Among the surfaces that have subcommands, `review` / `evolve` / `skills` resolve
 
 None of these surfaces ever read the value, so **dropping the flag from the call reproduces the previous result exactly**. Leaving the flag in place means the surface no longer runs at all: the call fails as a usage error. The rejection message says so itself: it ends with `Drop --base to get the previous behavior.` (#2076). Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
 
+#### `--entry` acceptance scope (Beta) {#entry-acceptance-scope}
+
+`river review plan --entry <name>` pins the emitted Review Artifact to a review Flow entry (#2054 PR-3). `<name>` is a key of `entries` in `flows/entry-map.json` (`review-plan` / `review-task` / `review-final` / `review-replan` / `review-research` / `review-requirements` / `review-design` / `review-technical`). When given, two fields are **appended** to the artifact:
+
+- `flow`: `{ entry, id, version, sha256 }`; `sha256` is the hash of the Flow document's canonical JSON, computed by `deriveFlowPin` in `src/lib/execution-manifest.mjs`
+- `evidenceRequirements`: the sorted names of the inputs that Flow declares `required: true`
+
+Without `--entry` the output is exactly what it was before the flag existed. Skill selection, `decision` and `gate` never read `--entry`, so the presence of a pin changes no judgment (ADR-009 D3, RA-1..RA-4). The flag and the two fields are **Beta** and are not part of the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md).
+
+Only `review plan` accepts it. Passing it to any other surface, such as `doctor --entry x` or `review exec --entry x`, is a parse-layer usage error and exits 1 through the same command-scoped allowlist as `--base` (#2065). An unknown entry name exits 1 listing the accepted names; a missing value exits 1 as well. Every one of those rejected forms exited 1 as `unknown option --entry` before the flag was introduced, so no exit code has moved.
+
+The Flow documents are read by `src/lib/flow-loader.mjs` only. The default location is the `flows/` directory shipped with the package, and the `RIVER_FLOWS_DIR` environment variable overrides it. The GitHub Action dist does not bundle `flows/`, so using `--entry` there requires that variable. When the directory cannot be found the command stops with `Error: flows directory not found` and exit 1; it never emits an artifact without the pin silently.
+
 `--expires` accepts only the RFC 3339 `YYYY-MM-DD` form and the date-time form. A date-only input is read as UTC midnight and normalized to a date-time when stored, because `expiresAt` in `schemas/suppression-context.schema.json` is declared `format: date-time`.
 
 Value validation does not reach every option, though. The following three paths still exit 0, so `$?` alone does not catch them.
