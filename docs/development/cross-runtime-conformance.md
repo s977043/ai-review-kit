@@ -155,7 +155,7 @@ adapter-map の記述も一次ソースへ突き合わせました。`agents/riv
 
 - `src/lib/cross-runtime-conformance.mjs` を新設し、`tests/helpers/cross-runtime-conformance.mjs` の比較ロジックを移す
 - `src/cli.mjs` に conformance サブコマンドを足し、観測ファイル群から集計レポートを出せるようにする
-- `flows/` を読むコードを `src/**` と `runners/**` に増やさない。observe mode の制約は `tests/flow-definitions.test.mjs` が検査している
+- `flows/` を読むコードを `src/**` と `runners/**` に増やさない。observe mode の制約は `tests/flow-definitions.test.mjs` が検査している。ただし #2054 PR-3 以降、`flows/` を読む runtime モジュールは `src/lib/flow-loader.mjs` のみであり、同テストは offenders がこの 1 件と一致することを検査します（#2103）。
 
 いずれも本 PR の対象外です。並行セッションの領域と重なるため、実装は行っていません。
 
