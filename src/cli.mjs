@@ -609,6 +609,18 @@ function takeTrailingPositional(parsed, token) {
     parsed.reviewSubcommand = token;
     return true;
   }
+  // #2081: `river skills --base main import` swallowed `import` as the target
+  // path, so the `--base` allowlist check (#2065) never saw the subcommand and
+  // the review ran against `import/` when that directory existed. Vocabulary
+  // match only — the eager branch above (`args[0]` right after `skills`) also
+  // matches by vocabulary alone and `river skills bogus` is pinned as "read as
+  // a path" (#1709 未決 7), so an `!existsSync` heuristic here would make the
+  // two word orders disagree again. A directory literally named `import` is
+  // still reachable as `river skills ./import`.
+  if (parsed.command === 'skills' && !parsed.skillsSubcommand && SKILLS_SUBCOMMANDS.has(token)) {
+    parsed.skillsSubcommand = token;
+    return true;
+  }
   // Mirror the eager branch's priority: a token that matches known
   // `EVOLVE_SUBCOMMANDS` vocabulary is ALWAYS the subcommand, even when a
   // same-named directory exists in cwd (#1759 B1). Before this vocabulary
