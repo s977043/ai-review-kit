@@ -119,6 +119,10 @@ usage error の終了コードはレビュー結果を含みません。表す�
 - `max_cost`: 見積もりが上限を超える場合に中断する
 - `node_version`: Action 実行に用いる Node.js バージョン
 
+### inputs（Beta）
+
+- `entry`: レビュー Flow の entry 名（`flows/entry-map.json` の `entries` キー）。指定時だけ `review plan --plan-only --entry <値>` を実行し、Review Artifact（`flow` と `evidenceRequirements` 付き）を出力する。未指定（既定）なら従来の `run` 経路のまま。値は書き換えず渡すだけで、Action 側に判断を置かない（ADR-009 D3）。`entry` 指定時は `gate` / `dry_run` / `estimate` / `max_cost` / `comment` / `inline_comments` を適用しない（plan-only はレビューを実行しないため、gate 対象と投稿対象のどちらも無い）。#2054 PR-5。SSoT は [Runner CLI リファレンス](./runner-cli-reference.md#entry-acceptance-scope)
+
 ### outputs（安定）
 
 - `comment_path`: Actions runner の一時領域に出力した Markdown のパス（PR コメント投稿で使用）
@@ -127,6 +131,16 @@ usage error の終了コードはレビュー結果を含みません。表す�
 
 - `<!-- river-review -->` marker を含むコメントを **更新** し、なければ新規作成する。
 - コメント本文が長すぎる場合は末尾を切り詰める（上限あり）。
+
+## Claude Code プラグインの hook（Beta）
+
+`hooks/hooks.json` は 2 つの lifecycle hook を配布します。`PostToolUse`（Write / Edit 後に consumer 側の prettier を実行）と、#2054 PR-5 で加わった `Stop` です。`Stop` は `scripts/plugin-task-checkpoint-hook.sh` を呼び、`river review plan --plan-only --entry review-task` で Review Artifact を出力します。中立 trigger `task-checkpoint` の Claude Code adapter で、entry 名以外の判断を持ちません（ADR-009 D3）。
+
+- LLM 呼び出しと課金はない（plan-only）
+- 所要は 1〜7 秒（river-review 本体 repo で 3 回実測 5.0〜5.4 秒、別環境で 6.7 秒。大規模 repo では `timeout: 60` を超えて打ち切られうる）
+- 成果物は `$TMPDIR/river-review-task-checkpoint/` に書き、作業ツリーには書かない。直近 20 件（`RIVER_TASK_CHECKPOINT_KEEP`）だけ残して古いものを消す
+- CLI が無い（npm 未導入かつ plugin に `node_modules` が無い）場合と失敗時は exit 0 で skip し、セッションを止めない
+- 止め方: 環境変数 `RIVER_TASK_CHECKPOINT_HOOK=0`、または `/plugin disable river-review@river-review-marketplace`
 
 ## バージョニング（破壊的変更の扱い）
 

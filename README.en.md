@@ -328,6 +328,8 @@ What you get (namespaced by plugin name):
 
 Manage: `/plugin enable|disable|uninstall river-review@river-review-marketplace`.
 
+> **Stop hook (Beta)**: at session end (`Stop`) the plugin runs `river review plan --plan-only --entry review-task` and writes a Review Artifact under `$TMPDIR/river-review-task-checkpoint/` (newest 20 kept). No model call, no cost; it takes 1–7 seconds (5.0–5.4 s over 3 runs on this repository, 6.7 s on another machine; a large repository may hit the 60 s timeout). It skips when no CLI is available. Opt out with `RIVER_TASK_CHECKPOINT_HOOK=0` or by disabling the plugin. Details: [Stable Interfaces](https://river-review.the3396.com/reference/stable-interfaces).
+
 Local development / testing without installing:
 
 ```text

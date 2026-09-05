@@ -155,7 +155,7 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 受理するのは `review plan` だけです。`doctor --entry x` や `review exec --entry x` のように他の面へ渡すと、`--base` と同じコマンド別 allowlist（#2065）により parse 層の usage error として exit 1 になります。未知の entry 名は許容値を列挙して exit 1、値欠落も exit 1 です。いずれの拒否形も、この flag の導入前は `unknown option --entry` の exit 1 だったため、exit code は動いていません。
 
-Flow 文書は `src/lib/flow-loader.mjs` だけが読みます。読み込み先は既定でパッケージ同梱の `flows/` で、環境変数 `RIVER_FLOWS_DIR` で上書きできます（npm 配布の CLI で `flows/` を別置きする場合の手段です）。GitHub Action の dist では `--entry` は非対応です。`flows/` とその schema が同梱されないため、`RIVER_FLOWS_DIR` を設定しても schema の読み込みで exit 1 になります（#2105）。`--entry` は npm 配布の CLI で使ってください。見つからない場合は pin なしの artifact を黙って出さず、`Error: flows directory not found` の exit 1 で止まります。
+Flow 文書は `src/lib/flow-loader.mjs` だけが読みます。読み込み先は既定でパッケージ同梱の `flows/` で、環境変数 `RIVER_FLOWS_DIR` で上書きできます（npm 配布の CLI で `flows/` を別置きする場合の手段です）。GitHub Action の dist は `flows/` と schema 3 本（`flow-entry-map` / `flow` / `review-intent`）を bundle の隣に同梱し、loader はその同梱コピーを先に読みます（#2054 PR-5、#2105 (b)）。したがって dist でも `--entry` は使え、Action では `entry` input から渡します（[Stable Interfaces](./stable-interfaces.md)）。`RIVER_FLOWS_DIR` が差し替えるのは `flows/` だけです。schema は同梱のものを使い上書きできないため、別置きの `flows/` と同梱 schema の版ズレに注意してください。見つからない場合は pin なしの artifact を黙って出さず、`Error: flows directory not found` の exit 1 で止まります。
 
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 
