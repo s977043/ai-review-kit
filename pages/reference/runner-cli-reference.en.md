@@ -108,7 +108,15 @@ Thanks to this unification, an option-name typo, a surplus positional, and a mis
 
 No data write (adding a feedback or suppression entry, for instance) ever happens ahead of a usage error.
 
-`--base <ref>` is validated in the handler layer rather than the parse layer. `river run`, `river skills`, and `river review` (`plan` / `exec` / `route`) share a single resolution path: the value is trimmed first, then checked with `git rev-parse` (#2051 / #2057).
+`--base <ref>` is accepted only by the five surfaces that actually read a diff (#2065). Passing it anywhere else is a parse-layer usage error and exits 1.
+
+- `river run`
+- `river skills` (the form without a subcommand)
+- `river review plan` / `river review exec` / `river review route`
+
+Every other surface (`doctor`, `runs`, `eval`, `feedback`, `suppression`, the `skills` subcommands, `review verify`, and so on) rejects the flag even when the value is a ref the repository can resolve. The rejection happens before resolution is attempted, so the reason is that the surface does not review a diff — not that the ref is invalid. Writing the subcommand before or after the option makes no difference to the decision.
+
+The value itself is validated in the handler layer rather than the parse layer, and the five accepting surfaces share a single resolution path: the value is trimmed first, then checked with `git rev-parse` (#2051 / #2057).
 
 - A blank value and a ref the repository cannot resolve are usage errors, exit 1
 - A ref whose merge base turns out to be HEAD itself is not fatal; it is announced as a warning on stderr. The wording distinguishes a ref that shares no history with HEAD from one that is ahead of HEAD (#2067). `--base HEAD`, where the ref and the merge base are the same commit, is excluded and warns about nothing
@@ -116,13 +124,23 @@ No data write (adding a feedback or suppression entry, for instance) ever happen
 
 `river skills` used to accept `--base` and never read it, always reviewing the diff against the auto-detected default branch (#2051). Now that the value is read, a caller that passes `--base` sees a different set of reviewed files and findings; drop the flag to keep the previous range. `river run` did read the value but never checked that it resolved, silently falling back to HEAD (#2057), so a typo that used to exit 0 now exits 1.
 
+The surfaces that do not read `--base` used to accept the flag and throw the value away (#2065). Calls that passed it to the following surfaces change their exit code.
+
+- From exit 0 to exit 1: `doctor`, `runs` (no subcommand — the form that runs as `runs list`), `runs list`, `runs summary`, `runs digest`, `eval`, `feedback add`, `suppression add`, `skills list`, `skills resolve`, `skills export`, `skills import`
+- From exit 3 to exit 1: `review verify` (its old exit 3 was the unimplemented `#802 Phase 3` path, not a result of processing `--base`)
+- `runs diff` no longer accepts it either. A call whose two runs both exist moves from exit 0 to exit 1; a call that cannot find a run already exited 1, so its exit code does not move
+
+Word order does not matter: `doctor --base main .` is rejected exactly like `doctor . --base main`, and repeating `--base` behaves like passing it once. An **unknown subcommand word skips this check entirely**, though: `river runs nosuch --base main` still answers `Unknown runs subcommand: nosuch`, and `river feedback --base main` still answers ``only `river feedback add` is supported`` — the CLI does not rule on `--base` for a surface that does not exist.
+
+None of these surfaces ever read the value, so **dropping the flag reproduces the previous result exactly**. Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
+
 `--expires` accepts only the RFC 3339 `YYYY-MM-DD` form and the date-time form. A date-only input is read as UTC midnight and normalized to a date-time when stored, because `expiresAt` in `schemas/suppression-context.schema.json` is declared `format: date-time`.
 
 Value validation does not reach every option, though. The following three paths still exit 0, so `$?` alone does not catch them.
 
 - Passing a non-existent path to `--baseline` (the regression comparison is silently skipped)
 - Passing unknown vocabulary to `--context` / `--dependency`
-- Passing `--base` to a surface that does not read a diff (`doctor`, `runs list`, and `eval` accept the flag without consuming it; measured 2026-09-04 with an unresolvable ref, all exit 0)
+- Running `river --base main` with no command at all, or alongside `-h` / `--help` (both only print help and run no review, so they are deliberately outside the command-scoped allowlist)
 
 The `RIVER_PHASE` environment variable now goes through the same vocabulary and the same case-insensitive validation as `--phase` (#1759 C2). An invalid value prints the same shape of error, `Error: RIVER_PHASE must be one of: ...`, to stderr and exits 1. Unset or empty still falls back to the default `midstream`.
 

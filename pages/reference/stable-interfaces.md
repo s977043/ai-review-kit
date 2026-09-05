@@ -67,7 +67,7 @@ River Review は OSS として成長中であり、内部実装は変更され�
 - `--output <text|markdown|json|yaml|html>`: 出力形式（GitHub Actions は `markdown` を使用、`yaml` は [YAML 出力](./output-format-yaml.md) を参照、`html` は自己完結型 HTML レポートで [HTML 出力](./output-format-html.md) を参照）
 - `--context <list>`: 利用可能なコンテキスト（例: `diff,fullFile`）
 - `--dependency <list>`: 利用可能な依存（例: `code_search,test_runner`）
-- `--base <ref>`: 差分の基準となるブランチ / ref（`run` / `skills` / `review` が同じ解決経路を共有する。値の検証と usage error の exit code は Stable Contract の対象外であり、SSoT は [Runner CLI リファレンス](./runner-cli-reference.md)）
+- `--base <ref>`: 差分の基準となるブランチ / ref。`run` / `skills` / `review plan|exec|route` が同じ解決経路を共有し、差分を読まない面はこの flag を受理しない。どの面が受理するか、値の検証、usage error の exit code はいずれも Stable Contract の対象外であり、SSoT は [Runner CLI リファレンス](./runner-cli-reference.md)
 - `--baseline <path>`: 過去のレビュー JSON（findings 配列）と比較して回帰を表示する
 - `--save`: レビュー実行をプロジェクトの result store（`.river/runs/`）に保存する
 - `--reviewers <roles|auto>`: レビュアーロールをカンマ区切りで指定、または `auto` でシグナルに基づく自動選択（詳細: [runner-cli-reference.md の `--reviewers` セクション](./runner-cli-reference.md#--reviewers-フラグ)）
@@ -137,6 +137,7 @@ usage error の終了コードはレビュー結果を含みません。表す�
 次は破壊的変更として扱いません。minor もしくは patch のリリースで入ります。
 
 - usage error（引数の解釈失敗）の終了コードの変更（CLI サーフェス全体の Beta ラベルに従う）
+- 値を消費しない面からのオプション受理範囲の縮小（#2065）。上の「オプション名/意味の変更・削除」はオプションそのものの削除を指す。値を一度も読まない面が受理をやめても、その面での動作は変わらず flag を外すだけで従来と同じ結果になるため、こちらは破壊的変更として扱わない
 
 Action は安定動作のため、`@main` ではなく **リリースタグへピン留め**することを推奨します（例: `@v1.22.0`）。
 
