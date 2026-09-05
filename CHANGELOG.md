@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.102.0](https://github.com/s977043/river-review/compare/v1.101.0...v1.102.0) (2026-09-05)
+
+
+### Features
+
+* **cli:** [#2054](https://github.com/s977043/river-review/issues/2054) PR-4 run record と review artifact に Execution Manifest を配線する ([#2111](https://github.com/s977043/river-review/issues/2111)) ([9056304](https://github.com/s977043/river-review/commit/9056304a08341eb5065d8c4853a4ef39c1b73cdd))
+
+
+### Bug Fixes
+
+* **scripts:** [#2102](https://github.com/s977043/river-review/issues/2102) merge-chain.sh の読み取り失敗を exit 2 で止め false green を防ぐ ([#2109](https://github.com/s977043/river-review/issues/2109)) ([b838128](https://github.com/s977043/river-review/commit/b838128daee54c4cfc445a02493a4c36e6a44461))
+
 ## [1.101.0](https://github.com/s977043/river-review/compare/v1.100.0...v1.101.0) (2026-09-05)
 
 
