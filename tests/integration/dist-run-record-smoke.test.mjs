@@ -109,3 +109,35 @@ test(
     assert.match(result.stdout, /NO_GO: 1/);
   }
 );
+
+test(
+  'built github-action dist bundle attaches an execution manifest with resolved riverReview / skills (#2111)',
+  { skip: !existsSync(DIST_ENTRY) ? 'runners/github-action/dist/index.mjs not built' : false },
+  async (t) => {
+    // ncc rewrote the producer's `resolve(root, 'package.json')` into an asset
+    // reference and its `import.meta.url`-derived root into `runners/`, so the
+    // shipped bundle recorded `riverReview` / `skills` as `missing` on every
+    // run while the src path recorded `resolved`. Measured against the
+    // COMMITTED dist, with the same RIVER_REPO_ROOT the Action passes.
+    const { dir, cleanup } = await createTempGitRepo({
+      prefix: 'river-dist-manifest-smoke-',
+      initialFiles: { 'src/app.js': 'export const value = 1;\n' },
+      changedFiles: { 'src/app.js': 'export const value = eval("2");\n' },
+    });
+    t.after(cleanup);
+
+    const result = await runCliAsSubprocess(['run', '.', '--dry-run', '--save'], {
+      cwd: dir,
+      cliPath: DIST_ENTRY,
+      env: { ...process.env, RIVER_REPO_ROOT: REPO_ROOT, GITHUB_ACTIONS: '' },
+    });
+    assert.strictEqual(result.code, 0, result.stderr);
+    const match = /Run saved: \S+ → (\S+)/.exec(result.stderr);
+    assert.ok(match, `no "Run saved:" line:\n${result.stderr}`);
+    const record = JSON.parse(fs.readFileSync(match[1], 'utf8'));
+    const manifest = record.executionManifest;
+    assert.ok(manifest, `dist bundle saved a record without executionManifest:\n${result.stderr}`);
+    assert.strictEqual(manifest.riverReview.status, 'resolved');
+    assert.strictEqual(manifest.skills.status, 'resolved');
+  }
+);

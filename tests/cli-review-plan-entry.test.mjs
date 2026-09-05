@@ -20,6 +20,12 @@
 //   4. An unreadable flows directory is a loud exit 1, never a silent artifact
 //      without a pin.
 //
+// Since #2054 PR-4 every artifact also carries a trailing `executionManifest`
+// (tests/cli-review-execution-manifest.test.mjs pins it). Its `flow` block is
+// derived FROM the pin, so it legitimately differs between the two runs; the
+// golden below therefore strips it on both sides and checks the pin ↔ manifest
+// agreement in the dedicated test file instead.
+//
 // Output capture: like tests/integration/review-plan-cli.test.mjs, the artifact
 // is read back from --output-file because runCliInProcess does not capture
 // process.stdout.write.
@@ -69,6 +75,9 @@ const neutralize = (artifact) => {
   return copy;
 };
 
+/** Drop the manifest (#2054 PR-4): it pins the flow, so it differs by design. */
+const withoutManifest = ({ executionManifest, ...rest }) => rest;
+
 describe('river review plan --entry (#2054 PR-3)', () => {
   test('without --entry the artifact is unchanged: no flow key, schema-valid, same shape as with --entry minus the additions', async (t) => {
     const dir = setupRepo(t);
@@ -77,14 +86,15 @@ describe('river review plan --entry (#2054 PR-3)', () => {
     assert.equal(without.result.code, 0, without.result.stderr);
     assert.equal(withEntry.result.code, 0, withEntry.result.stderr);
 
-    const base = JSON.parse(without.text);
-    const pinned = JSON.parse(withEntry.text);
+    const full = JSON.parse(without.text);
+    assert.equal(validate(full), true, JSON.stringify(validate.errors));
+    const base = withoutManifest(full);
+    const pinned = withoutManifest(JSON.parse(withEntry.text));
     assert.equal('flow' in base, false);
     assert.equal('evidenceRequirements' in base, false);
-    assert.equal(validate(base), true, JSON.stringify(validate.errors));
 
     // Additive and appended: the existing keys, in their existing order, then
-    // exactly the two new ones.
+    // exactly the two new ones (the manifest, stripped above, trails both).
     const baseKeys = Object.keys(base);
     assert.deepEqual(Object.keys(pinned), [...baseKeys, 'flow', 'evidenceRequirements']);
 
@@ -92,12 +102,16 @@ describe('river review plan --entry (#2054 PR-3)', () => {
     assert.deepEqual(neutralize(rest), neutralize(base));
 
     // Byte-level: serializing the pinned artifact without its two additions
-    // reproduces the base text (after neutralizing timestamp / run_id).
+    // reproduces the base text (after neutralizing timestamp / run_id and
+    // dropping the manifest from the base text the same way).
     const strip = (text) =>
       text
         .replace(/"timestamp": "[^"]*"/, '"timestamp": "<timestamp>"')
         .replace(/"run_id": "[^"]*"/, '"run_id": "<run_id>"');
-    assert.equal(strip(JSON.stringify(neutralize(rest), null, 2) + '\n'), strip(without.text));
+    assert.equal(
+      strip(JSON.stringify(neutralize(rest), null, 2) + '\n'),
+      strip(JSON.stringify(base, null, 2) + '\n')
+    );
     assert.ok(flow && evidenceRequirements);
   });
 
