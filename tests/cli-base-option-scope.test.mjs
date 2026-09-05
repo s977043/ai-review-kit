@@ -32,6 +32,7 @@ import test, { after, before, describe } from 'node:test';
 
 import { BASE_CONSUMING_SURFACES, SURFACE_SUBCOMMANDS, parseArgs } from '../src/cli.mjs';
 import { runCliInProcess } from './helpers/cli.mjs';
+import { USAGE_ERROR_SURFACES } from './helpers/cli-surfaces.mjs';
 import { createTempGitRepo } from './helpers/temp-repo.mjs';
 
 const SRC_DIR = fileURLToPath(new URL('../src', import.meta.url));
@@ -94,53 +95,14 @@ describe('#2065 --base command-scoped allowlist', () => {
     ]);
   });
 
-  // 面ごとの代表 argv。`--base` を付けない状態では usage error にならない形を
-  // 選んである（そうでないと `--base` の可否ではなく別の理由を測ってしまう）。
-  //
-  // 面の列挙は src/cli.mjs の語彙に対応させること: COMMAND_USAGE のキー
-  // （run / doctor / skills / runs / review / eval / feedback / suppression /
-  // promote / evolve）と、SKILLS_SUBCOMMANDS / REVIEW_SUBCOMMANDS および
-  // runs / feedback / suppression のサブコマンド語。`promote` / `evolve` は
-  // 自前の共有オプション集合（PROMOTE_SHARED_OPTIONS / EVOLVE_SHARED_OPTIONS）
-  // で `--base` を先に弾き、parseArgs の `usageError` ではなく専用フィールドへ
-  // 記録するため、この表では扱わない（canary 側の end-to-end で確認済み）。
-  const SURFACES = [
-    { surface: 'run', argv: ['run', '.'] },
-    { surface: 'doctor', argv: ['doctor', '.'] },
-    { surface: 'skills', argv: ['skills', '.'] },
-    { surface: 'skills list', argv: ['skills', 'list'] },
-    { surface: 'skills resolve', argv: ['skills', 'resolve', '--path', 'a.txt'] },
-    { surface: 'skills export', argv: ['skills', 'export', '--to', 'exported'] },
-    { surface: 'skills import', argv: ['skills', 'import', '--from', 'incoming'] },
-    // サブコマンド無しの `river runs` は `runs list` として動く実在の面。
-    { surface: 'runs', argv: ['runs'] },
-    { surface: 'runs list', argv: ['runs', 'list'] },
-    { surface: 'runs diff', argv: ['runs', 'diff', 'r1', 'r2'] },
-    { surface: 'runs summary', argv: ['runs', 'summary'] },
-    { surface: 'runs digest', argv: ['runs', 'digest'] },
-    { surface: 'review plan', argv: ['review', 'plan', '--plan-only'] },
-    { surface: 'review exec', argv: ['review', 'exec', '--dry-run'] },
-    { surface: 'review route', argv: ['review', 'route'] },
-    { surface: 'review verify', argv: ['review', 'verify'] },
-    { surface: 'eval', argv: ['eval'] },
-    {
-      surface: 'feedback add',
-      argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 'demo-skill'],
-    },
-    {
-      surface: 'suppression add',
-      argv: [
-        'suppression',
-        'add',
-        '--fingerprint',
-        '0123456789abcdef',
-        '--feedback',
-        'false_positive',
-        '--rationale',
-        'because',
-      ],
-    },
-  ];
+  // 面ごとの代表 argv は tests/helpers/cli-surfaces.mjs に一本化してある
+  // （#2074）。`promote` / `evolve` は自前の共有オプション集合
+  // （PROMOTE_SHARED_OPTIONS / EVOLVE_SHARED_OPTIONS）で `--base` を先に弾き、
+  // parseArgs の `usageError` ではなく専用フィールドへ記録するため、`usageError`
+  // だけで判定するこの表では扱わない（canary 側の end-to-end で確認済み）。
+  // 一覧が src/cli.mjs の語彙（SURFACE_SUBCOMMANDS）からずれていないことは
+  // tests/cli-option-consumer-check.test.mjs が pin する。
+  const SURFACES = USAGE_ERROR_SURFACES;
 
   test('every listed surface parses cleanly without --base (control)', () => {
     for (const { surface, argv } of SURFACES) {
