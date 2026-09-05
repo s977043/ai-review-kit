@@ -60,6 +60,9 @@
   push 済みコミットが main の上に書き換えられ、次の push が reject されて force push が必要な状態に追い込まれる）。
   それでも履歴の書き換えが必要に見えた場合は、自分で判断せず作業を止めてオーガナイザーに報告すること。
 - 意図的な一時変更（変異テストの注入など）を元へ戻すときは、上記の破棄系コマンドを使わないこと。
+  戻し方は `git show <base sha>:<file> > <file>` で該当ファイルを基準版の内容に上書きする。
+  `git checkout -- <file>` / `git restore <file>` は自分の未コミット編集まで消す（2026-09-05 に
+  worker 3 名が使い、うち 1 名は自分の修正が消えて再適用した）。
   変更前に `cp <path> <path>.bak` でバックアップを取り、`cp <path>.bak <path>` で戻すこと。
   `.bak` は `.gitignore` 済み（`.gitignore:30` の `*.bak`）なので残置してよい。消す場合は
   許可済みの `mv` を使う（`rm` は `.claude/settings.json` の `permissions.deny` に `Bash(rm:*)` があり実行できない）。
