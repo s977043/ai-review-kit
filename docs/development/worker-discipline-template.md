@@ -89,6 +89,10 @@
   commit + push してから状態を報告すること。
 - 日本語ドキュメントを編集した場合は `npx textlint --no-cache <files>` が pass することを確認し、
   同じパスで `npm run fix:dashes` も実行すること。
+- 読み取り専用の検証であっても、旧版の CLI を実行する場合は書き込み副作用を先に確認すること。
+  `git archive` で展開した旧版でも書き込み先は現在の作業ツリーであり、`skills import` /
+  `feedback add` / `suppression add` のように成功時にファイルを作る面がある。使い捨ての
+  一時 repo で実行するか、実行前に書き込み先を確認すること。
 ```
 
 ## 各項目の詳細・根拠
