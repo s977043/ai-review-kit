@@ -141,3 +141,51 @@ test(
     assert.strictEqual(manifest.skills.status, 'resolved');
   }
 );
+
+test(
+  'built github-action dist bundle resolves --entry from its bundled flows/ and schemas (#2054 PR-5, #2105 (b))',
+  { skip: !existsSync(DIST_ENTRY) ? 'runners/github-action/dist/index.mjs not built' : false },
+  async (t) => {
+    // Before PR-5 the dist bundled neither `flows/` nor the three schemas the
+    // loader compiles, so this exact invocation exited 1 with `cannot read
+    // schema flow-entry-map.schema.json from <repo>/runners/github-action/schemas`
+    // (#2105). scripts/normalize-dist.mjs now copies both next to the bundle
+    // and src/lib/flow-loader.mjs reads the sibling copy first. Measured
+    // against the COMMITTED dist: `RIVER_REPO_ROOT` is set as the Action sets
+    // it, but the loader never consults it — two levels above the bundle is
+    // `runners/`, which holds no `flows/`, so a pin here proves the bundled
+    // copy was read.
+    const { dir, cleanup } = await createTempGitRepo({
+      prefix: 'river-dist-entry-smoke-',
+      initialFiles: { 'src/app.js': 'export const value = 1;\n' },
+      changedFiles: { 'src/app.js': 'export const value = 2;\n' },
+    });
+    t.after(cleanup);
+
+    const result = await runCliAsSubprocess(
+      ['review', 'plan', '--plan-only', '--phase', 'upstream', '--entry', 'review-plan', '.'],
+      {
+        cwd: dir,
+        cliPath: DIST_ENTRY,
+        env: {
+          ...process.env,
+          RIVER_REPO_ROOT: REPO_ROOT,
+          RIVER_FLOWS_DIR: '',
+          GITHUB_ACTIONS: '',
+        },
+      }
+    );
+    assert.strictEqual(result.code, 0, `${result.stdout}\n${result.stderr}`);
+    assert.doesNotMatch(result.stderr, /cannot read schema/, result.stderr);
+    const artifact = JSON.parse(result.stdout);
+    assert.strictEqual(artifact.flow?.entry, 'review-plan');
+    assert.strictEqual(artifact.flow?.id, 'plan-review');
+    assert.match(artifact.flow?.sha256 ?? '', /^[0-9a-f]{64}$/);
+    assert.deepStrictEqual(artifact.evidenceRequirements, ['plan']);
+    assert.strictEqual(artifact.executionManifest?.flow?.status, 'resolved');
+    // The pin the dist emits is the pin the source loader emits for the same
+    // entry: the bundled copy is byte-for-byte the repository's flows/.
+    const { resolveFlowEntry } = await import('../../src/lib/flow-loader.mjs');
+    assert.deepStrictEqual(artifact.flow, resolveFlowEntry('review-plan').flow);
+  }
+);

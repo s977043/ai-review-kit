@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Self-contained Stop hook for the river-review plugin (#2054 PR-5, Epic #2011).
+#
+# Adapter for the neutral `task-checkpoint` trigger (flows/entry-map.json
+# `triggers.task-checkpoint`): when the executor stops, i.e. is about to declare
+# its task done, emit a Review Artifact pinned to the `review-task` Flow entry.
+#
+# What this hook does NOT do (ADR-009 D3, RA-1..RA-4): it holds no judgment.
+# It passes ONE entry name to the CLI and nothing else — no verdict vocabulary,
+# no cutoff, no branching on the review result. The Flow, the Intent and the
+# skill selection all live in the repository; this file only names the entry.
+#
+# Fail-soft, like scripts/plugin-format-hook.sh: every missing prerequisite
+# (node, git, the CLI, a readable diff) exits 0 with a one-line notice, so the
+# hook never blocks the host session. The artifact is written under the
+# runner's temp dir, never into the consumer's working tree.
+set -euo pipefail
+
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+cd "$PROJECT_DIR" || exit 0
+
+# Stop hooks receive a JSON payload on stdin. `stop_hook_active` is true when
+# Claude is already continuing because of a Stop hook; never re-enter then.
+if [ ! -t 0 ]; then
+  HOOK_INPUT="$(cat 2>/dev/null || true)"
+  if [ -n "${HOOK_INPUT:-}" ] && command -v jq >/dev/null 2>&1; then
+    if [ "$(printf '%s' "$HOOK_INPUT" | jq -r '.stop_hook_active // false' 2>/dev/null)" = "true" ]; then
+      exit 0
+    fi
+  fi
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "[river-review:task-checkpoint] node not found, skipping"
+  exit 0
+fi
+
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "[river-review:task-checkpoint] not a git repository, skipping"
+  exit 0
+fi
+
+# The entry name is the ONLY review-related value this adapter carries.
+ENTRY="review-task"
+
+# Locate the CLI: the consumer's own installed river-review first (npm), then
+# the plugin's source when its dependencies are installed. A plugin checkout
+# without node_modules cannot run the CLI, so the hook steps aside.
+CLI=()
+if npx --no-install river-review --help >/dev/null 2>&1; then
+  CLI=(npx --no-install river-review)
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/src/cli.mjs" ] && [ -d "${CLAUDE_PLUGIN_ROOT}/node_modules" ]; then
+  CLI=(node "${CLAUDE_PLUGIN_ROOT}/src/cli.mjs")
+else
+  echo "[river-review:task-checkpoint] river-review CLI not available (install the npm package or run npm ci in the plugin), skipping"
+  exit 0
+fi
+
+OUT_DIR="${TMPDIR:-/tmp}/river-review-task-checkpoint"
+mkdir -p "$OUT_DIR" 2>/dev/null || exit 0
+OUT_FILE="$OUT_DIR/$(date -u +%Y%m%dT%H%M%SZ)-$$.json"
+
+if "${CLI[@]}" review plan --plan-only --entry "$ENTRY" --output-file "$OUT_FILE" . >/dev/null 2>"$OUT_FILE.log"; then
+  echo "[river-review:task-checkpoint] Review Artifact pinned to entry ${ENTRY}: ${OUT_FILE}"
+else
+  echo "[river-review:task-checkpoint] review plan --entry ${ENTRY} did not complete (see ${OUT_FILE}.log), continuing"
+fi
+exit 0

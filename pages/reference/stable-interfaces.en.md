@@ -109,6 +109,10 @@ See `runners/github-action/action.yml` for definition.
 - `max_cost`: Abort if estimate exceeds limit
 - `node_version`: Node.js version for Action execution
 
+### inputs (Beta)
+
+- `entry`: a review Flow entry name (a key of `entries` in `flows/entry-map.json`). When set, the step runs `review plan --plan-only --entry <value>` and emits the Review Artifact (with `flow` and `evidenceRequirements`); left empty (default) the `run` path is unchanged. The value is forwarded verbatim and the Action holds no judgment about it (ADR-009 D3). #2054 PR-5; the [Runner CLI reference](./runner-cli-reference.en.md#entry-acceptance-scope) is the SSoT
+
 ### outputs (Stable)
 
 - `comment_path`: Path to Markdown output in Actions runner temp area (used for posting PR comment)

@@ -119,6 +119,10 @@ usage error の終了コードはレビュー結果を含みません。表す�
 - `max_cost`: 見積もりが上限を超える場合に中断する
 - `node_version`: Action 実行に用いる Node.js バージョン
 
+### inputs（Beta）
+
+- `entry`: レビュー Flow の entry 名（`flows/entry-map.json` の `entries` キー）。指定時だけ `review plan --plan-only --entry <値>` を実行し、Review Artifact（`flow` と `evidenceRequirements` 付き）を出力する。未指定（既定）なら従来の `run` 経路のまま。値は書き換えず渡すだけで、Action 側に判断を置かない（ADR-009 D3）。#2054 PR-5。SSoT は [Runner CLI リファレンス](./runner-cli-reference.md#entry-acceptance-scope)
+
 ### outputs（安定）
 
 - `comment_path`: Actions runner の一時領域に出力した Markdown のパス（PR コメント投稿で使用）

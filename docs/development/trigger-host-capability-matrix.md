@@ -25,25 +25,27 @@ trigger 名は host 語彙を持ちません。schema は trigger 名を 5 語�
 
 各セルは「その host に現時点で存在する表面」だけを書いています。表面が無いセルは「なし」であり、将来の adapter で埋める余地を否定するものではありません。
 
-| trigger           | Claude Code                                           | Codex                 | GitHub Action                                                     |
-| ----------------- | ----------------------------------------------------- | --------------------- | ----------------------------------------------------------------- |
-| `artifact-ready`  | 明示呼び出し（skill / native subagent）               | 明示呼び出し（skill） | なし                                                              |
-| `after-change`    | lifecycle hook（Write / Edit 後、現状は format のみ） | なし                  | なし                                                              |
-| `task-checkpoint` | 明示呼び出し（skill / native subagent）               | 明示呼び出し（skill） | なし                                                              |
-| `before-publish`  | 明示呼び出し（skill / native subagent）               | 明示呼び出し（skill） | workflow event（PR の opened / synchronize / reopened / labeled） |
-| `before-merge`    | なし                                                  | なし                  | なし（merge 時点の event は未購読）                               |
+| trigger           | Claude Code                                                              | Codex                 | GitHub Action                                                                                  |
+| ----------------- | ------------------------------------------------------------------------ | --------------------- | ---------------------------------------------------------------------------------------------- |
+| `artifact-ready`  | 明示呼び出し（skill / native subagent）                                  | 明示呼び出し（skill） | `entry` input（Beta、#2054 PR-5。workflow 側が entry 名を書く）                                |
+| `after-change`    | lifecycle hook（Write / Edit 後、現状は format のみ）                    | なし                  | なし                                                                                           |
+| `task-checkpoint` | lifecycle hook（`Stop`、`review-task` を pin、#2054 PR-5）+ 明示呼び出し | 明示呼び出し（skill） | `entry: review-task` input（Beta）                                                             |
+| `before-publish`  | 明示呼び出し（skill / native subagent）                                  | 明示呼び出し（skill） | workflow event（PR の opened / synchronize / reopened / labeled）+ `entry: review-final` input |
+| `before-merge`    | なし                                                                     | なし                  | なし（merge 時点の event は未購読）                                                            |
 
 ### 出典
 
 - Claude Code の capability: `agents/contracts/adapter-map.json` の `runtimes.claude.capabilities` に 4 つある。`read-artifact` / `read-source` / `search-source` / `run-command` で、出典は `agents/river-review.md` の `tools:` 行
-- Claude Code の表面: 同ファイル `agents.review-orchestrator.claude.mechanism` が `native-subagent` である。hook は `hooks/hooks.json` の `PostToolUse` で、matcher は `Write|Edit|MultiEdit`、実行内容は `scripts/plugin-format-hook.sh`
+- Claude Code の表面: 同ファイル `agents.review-orchestrator.claude.mechanism` が `native-subagent` である。hook は `hooks/hooks.json` に 2 つある。1 つは `PostToolUse` で、matcher は `Write|Edit|MultiEdit`、実行内容は `scripts/plugin-format-hook.sh` である。もう 1 つは `Stop` で、実行内容は `scripts/plugin-task-checkpoint-hook.sh` である。後者は `river review plan --plan-only --entry review-task` を呼び、entry 名以外を持たない（#2054 PR-5）
 - Codex の capability: 同 `runtimes.codex.capabilities`（`read-artifact` / `read-source`）である。出典は `.codex-plugin/plugin.json` の `interface.capabilities: ["Read"]`
 - Codex の表面: 同 manifest は `agents` / `commands` / `hooks` のいずれも宣言しないため、`skills/agent-skills/` の skill だけである
-- GitHub Action: `agents/contracts/adapter-map.json` に runtime としての登録はない。表の値は `.github/workflows/river-review.yml` の `on:`（`workflow_dispatch` と `pull_request` の `types: [opened, synchronize, reopened, labeled]`）から読んだ
+- GitHub Action: `agents/contracts/adapter-map.json` に runtime としての登録はない。event 列は `.github/workflows/river-review.yml` の `on:`（`workflow_dispatch` と `pull_request` の `types: [opened, synchronize, reopened, labeled]`）から読んだ。`entry` input は `runners/github-action/action.yml` の Beta input で、指定時だけ `review plan --plan-only --entry <値>` を組み立て、値を書き換えない（#2054 PR-5）。dist は `flows/` と schema 3 本を同梱する（`scripts/normalize-dist.mjs`、#2105 (b)）
+- 2 つの adapter が同じ entry で同じ Flow pin を出すことは `tests/adapter-entry-conformance.test.mjs` が固定する（`tests/fixtures/adapter-entry/`）
 - `workflow_dispatch` は人が起動する明示 checkpoint であり、5 つの trigger のどれか 1 つに固定して対応づけられないため表に載せていない
 
 ### 表から導ける制約
 
 - `after-change` を hook から発火できる host は Claude Code だけである。Codex と GitHub Action では、Phase 4-B の方針どおり capability 不足を `skipped` / `manual-required` として記録する側に回る
+- `task-checkpoint` を lifecycle event から発火できる host も Claude Code だけである。GitHub Action は workflow 作者が `entry` を書いた時点で明示 checkpoint になる。Codex には lifecycle event が無い
 - `before-merge` はどの host にも表面がない。`independence: execution-isolated` を満たす別 run の実行経路そのものが Phase 5 の対象である
 - `run-command` capability を持つのは Claude Code だけである。`after-change` の検査実行は #1401 の trusted allowlist を再利用する Phase 3 の範囲であり、本 registry は command を 1 つも持たない
