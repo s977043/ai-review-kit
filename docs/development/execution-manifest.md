@@ -136,17 +136,19 @@ replay の照合結果は警告にとどめます。不一致は stderr に `War
 
 ### 経路ごとの実測（2026-09-06、`river run --dry-run --save` と `river review plan --plan-only --entry review-task`）
 
-| ブロック      | `run --save` | `review plan --entry` | `review plan`（無指定） | 理由                                                                                        |
-| ------------- | ------------ | --------------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
-| `riverReview` | `resolved`   | `resolved`            | `resolved`              | `package.json` の `version`                                                                 |
-| `skills`      | `resolved`   | `unavailable`         | `unavailable`           | `run` は選択 skill の checksum を manifest から引く。fixture の plan は選択 0 件            |
-| `flow`        | `missing`    | `resolved`            | `missing`               | `--entry` で解決した Flow 文書だけが pin になる                                             |
-| `plugin`      | `missing`    | `missing`             | `missing`               | host を知る経路が CLI に無い。推測で埋めない                                                |
-| `agents`      | `missing`    | `missing`             | `missing`               | CLI 経路は agent roster を持たない                                                          |
-| `artifacts`   | `missing`    | `missing`             | `missing`               | 入力 artifact の hash を記録する producer が未実装                                          |
-| `policy`      | `missing`    | `missing`             | `missing`               | `policy.ref` を記録する producer が未実装（`riskMapDigest` だけでは `resolved` にならない） |
-| `runtime`     | `missing`    | `missing`             | `missing`               | dry-run / no-key では LLM が走らず `usage` が無い。LLM 実行時は `usage` から `resolved`     |
-| `config`      | `missing`    | `missing`             | `missing`               | config の hash を記録する producer が未実装                                                 |
+GitHub Action（`runners/github-action/dist/index.mjs`、`RIVER_REPO_ROOT` 指定）の `run --save` も `run --save` 列と同じ結果です。producer は `RIVER_REPO_ROOT` を優先して `package.json` を探すため、bundle 内でも `riverReview` / `skills` が `resolved` になります。`tests/integration/dist-run-record-smoke.test.mjs` が committed dist に対してこれを固定します。
+
+| ブロック      | `run --save` | `review plan --entry` | `review plan`（無指定） | 理由                                                                                                                                  |
+| ------------- | ------------ | --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `riverReview` | `resolved`   | `resolved`            | `resolved`              | `package.json` の `version`                                                                                                           |
+| `skills`      | `resolved`   | `unavailable`         | `unavailable`           | 選択 skill が 1 件以上なら `resolved`（checksum は `docs/data/skill-manifest.json`）。0 件なら `unavailable`。fixture の plan は 0 件 |
+| `flow`        | `missing`    | `resolved`            | `missing`               | `--entry` で解決した Flow 文書だけが pin になる                                                                                       |
+| `plugin`      | `missing`    | `missing`             | `missing`               | host を知る経路が CLI に無い。推測で埋めない                                                                                          |
+| `agents`      | `missing`    | `missing`             | `missing`               | CLI 経路は agent roster を持たない                                                                                                    |
+| `artifacts`   | `missing`    | `missing`             | `missing`               | 入力 artifact の hash を記録する producer が未実装                                                                                    |
+| `policy`      | `missing`    | `missing`             | `missing`               | `policy.ref` を記録する producer が未実装（`riskMapDigest` だけでは `resolved` にならない）                                           |
+| `runtime`     | `missing`    | `missing`             | `missing`               | dry-run / no-key では LLM が走らず `usage` が無い。LLM 実行時は `usage` から `resolved`                                               |
+| `config`      | `missing`    | `missing`             | `missing`               | config の hash を記録する producer が未実装                                                                                           |
 
 `assessReplayability` は上記いずれの経路でも `deterministic: false` を返します。`flow` が pin されても `artifacts` / `policy` / `config` が欠けているためであり、これは「replay 可能と誤認しない」という AC 3 の要求どおりの答えです。
 

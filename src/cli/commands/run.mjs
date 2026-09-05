@@ -181,13 +181,23 @@ async function persistRunArtifacts(result, parsed, targetPath) {
       // against a manifest-less record). The manifest carries no judgment:
       // gate / decision above are computed before it exists and never read it.
       // `river run` accepts no `--entry`, so `flow` stays `missing` here.
-      const { produceExecutionManifest, runRecordArtifactView } =
-        await import('../../lib/execution-manifest-producer.mjs');
+      //
+      // Its own try: a producer failure must cost the MANIFEST, never the
+      // record (#2111 review major 2 — nested inside the save's try it lost the
+      // whole record). `attach(record, null)` returns the record itself, so the
+      // fallback is exactly the pre-#2054 write.
+      let manifest = null;
+      try {
+        const { produceExecutionManifest, runRecordArtifactView } =
+          await import('../../lib/execution-manifest-producer.mjs');
+        manifest = await produceExecutionManifest({
+          artifact: runRecordArtifactView(result, record),
+          runRecord: record,
+        });
+      } catch (err) {
+        console.error(`Warning: execution manifest not attached: ${err.message}`);
+      }
       const { attachExecutionManifest } = await import('../../lib/execution-manifest.mjs');
-      const manifest = await produceExecutionManifest({
-        artifact: runRecordArtifactView(result, record),
-        runRecord: record,
-      });
       const recordWithManifest = attachExecutionManifest(record, manifest);
       // Use targetPath (not result.repoRoot) so --save and runs list resolve the same storeDir
       const savedPath = await saveRunRecord(recordWithManifest, {

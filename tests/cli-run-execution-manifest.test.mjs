@@ -21,11 +21,17 @@
 //      `assessReplayability` reports the run as not deterministically
 //      replayable — recorded honestly, not guessed.
 //   4. Tampering with one character of the stored `manifestHash` is detected by
-//      `verifyExecutionManifest`.
+//      `verifyExecutionManifest`; an untampered stored manifest verifies (so a
+//      wiring that bypassed `attachExecutionManifest` and spread an arbitrary
+//      object would be caught by the `kind` / digest checks, #2111 minor 3).
+//   5. Fail-soft in the right direction (#2111 major 2): when the producer
+//      THROWS — injected here through a `RIVER_REPO_ROOT` whose
+//      docs/data/skill-manifest.json is present but not JSON — the record is
+//      still saved, without a manifest, and the failure is a stderr warning.
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test, { describe } from 'node:test';
 
@@ -39,6 +45,7 @@ import {
 import { planLocalReview } from '../src/lib/local-runner.mjs';
 import { loadAllRunRecords, resolveStoreDir } from '../src/lib/result-store.mjs';
 import { runCliInProcess } from './helpers/cli.mjs';
+import { createTempDir, cleanupTempDir } from './helpers/temp-dir.mjs';
 import { createTempGitRepo } from './helpers/temp-repo.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -59,15 +66,32 @@ async function createRepo(t) {
   return repo.dir;
 }
 
-async function saveRun(dir) {
-  const result = await runCliInProcess(['run', '.', '--dry-run', '--save'], {
-    cwd: dir,
-    env: NO_CI,
-  });
+async function saveRunRaw(dir, env = NO_CI) {
+  const result = await runCliInProcess(['run', '.', '--dry-run', '--save'], { cwd: dir, env });
   assert.equal(result.code, 0, result.stderr);
   const match = /Run saved: \S+ → (\S+)/.exec(result.stderr);
   assert.ok(match, `no "Run saved:" line in stderr: ${result.stderr}`);
-  return readJson(match[1]);
+  return { result, record: readJson(match[1]) };
+}
+
+async function saveRun(dir) {
+  return (await saveRunRaw(dir)).record;
+}
+
+/**
+ * A repo root the producer cannot build a manifest from: skills / schemas are
+ * the real ones (symlinked, so skill loading works), but the skill checksum
+ * manifest is present and NOT JSON, which readJsonOrNull throws on.
+ */
+export function createBrokenRepoRoot(t) {
+  const root = createTempDir({ prefix: 'river-broken-root-' });
+  t.after(() => cleanupTempDir(root));
+  symlinkSync(resolve(REPO_ROOT, 'skills'), join(root, 'skills'), 'dir');
+  symlinkSync(resolve(REPO_ROOT, 'schemas'), join(root, 'schemas'), 'dir');
+  writeFileSync(join(root, 'package.json'), readFileSync(resolve(REPO_ROOT, 'package.json')));
+  mkdirSync(join(root, 'docs', 'data'), { recursive: true });
+  writeFileSync(join(root, 'docs', 'data', 'skill-manifest.json'), '{ not json');
+  return root;
 }
 
 describe('river run --save - execution manifest on the run record (#2054 PR-4, AC6)', () => {
@@ -131,6 +155,19 @@ describe('river run --save - execution manifest on the run record (#2054 PR-4, A
     const replay = assessReplayability(executionManifest);
     assert.equal(replay.deterministic, false);
     assert.ok(replay.missingBlocks.deterministic.includes('flow'));
+  });
+
+  test('a producer failure costs the manifest, never the record (#2111 major 2)', async (t) => {
+    const dir = await createRepo(t);
+    const brokenRoot = createBrokenRepoRoot(t);
+    const { result, record } = await saveRunRaw(dir, { ...NO_CI, RIVER_REPO_ROOT: brokenRoot });
+    assert.match(result.stderr, /Warning: execution manifest not attached: /);
+    assert.doesNotMatch(result.stderr, /--save failed/);
+    assert.equal('executionManifest' in record, false);
+    assert.ok(typeof record.decision === 'string' && record.gate, 'record body intact');
+    // Same repo root, sane sources: the manifest comes back.
+    const { record: healthy } = await saveRunRaw(dir);
+    assert.equal(healthy.executionManifest.kind, 'execution-manifest');
   });
 
   test('a one-character edit to the stored manifestHash is detected', async (t) => {

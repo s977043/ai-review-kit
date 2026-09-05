@@ -18,6 +18,9 @@
 //      `debug.replay.sourceManifest` records the verdict when debug is on.
 //      An intact source produces no warning. A source without a manifest
 //      (pre-#2054 artifact) is neither warned about nor rejected.
+//   4. Fail-soft (#2111 major 2): a producer that throws (corrupt skill
+//      manifest under `RIVER_REPO_ROOT`) leaves the artifact intact and
+//      manifest-less, exit 0, with a stderr warning.
 
 import assert from 'node:assert/strict';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
@@ -29,6 +32,7 @@ import { assessReplayability, verifyExecutionManifest } from '../src/lib/executi
 import { runCliInProcess } from './helpers/cli.mjs';
 import { compileReviewArtifactValidator } from './helpers/schema-validator.mjs';
 import { createTempDir, cleanupTempDir } from './helpers/temp-dir.mjs';
+import { createBrokenRepoRoot } from './cli-run-execution-manifest.test.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = resolve(__dirname, 'fixtures', 'plangate-review-artifacts');
@@ -45,11 +49,11 @@ function setupRepo(t) {
   return dir;
 }
 
-async function plan(dir, extraArgv, name) {
+async function plan(dir, extraArgv, name, env = ENV) {
   const out = join(dir, `${name}.json`);
   const result = await runCliInProcess(
     ['review', 'plan', '--plan-only', '--phase', 'upstream', ...extraArgv, '--output-file', out],
-    { cwd: dir, env: ENV }
+    { cwd: dir, env }
   );
   assert.equal(result.code, 0, result.stderr);
   return { result, artifact: JSON.parse(readFileSync(out, 'utf8')), path: out };
@@ -98,6 +102,19 @@ describe('river review plan - execution manifest on the artifact (#2054 PR-4)', 
     assert.deepEqual(pinned.plan, base.plan);
     assert.equal(pinned.decision, base.decision);
     assert.deepEqual(pinned.gate, base.gate);
+  });
+
+  test('a producer failure leaves the artifact intact and manifest-less (#2111 major 2)', async (t) => {
+    const dir = setupRepo(t);
+    const brokenRoot = createBrokenRepoRoot(t);
+    const { result, artifact } = await plan(dir, [], 'broken', {
+      ...ENV,
+      RIVER_REPO_ROOT: brokenRoot,
+    });
+    assert.match(result.stderr, /Warning: execution manifest not attached: /);
+    assert.equal('executionManifest' in artifact, false);
+    assert.equal(validate(artifact), true, JSON.stringify(validate.errors));
+    assert.ok(artifact.plan && typeof artifact.decision === 'string');
   });
 });
 
