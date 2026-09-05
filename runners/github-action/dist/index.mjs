@@ -12453,6 +12453,13 @@ module.exports = function(str) {
 
 /***/ }),
 
+/***/ 3896:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+module.exports = __nccwpck_require__.p + "293248747edf5d37944a.js?.";
+
+/***/ }),
+
 /***/ 9896:
 /***/ ((module) => {
 
@@ -12499,6 +12506,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:os");
 /***/ ((module) => {
 
 module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
+
+/***/ }),
+
+/***/ 1708:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:process");
 
 /***/ }),
 
@@ -47727,6 +47741,1248 @@ function formatUnmatchedFeedbackFingerprintWarning({ fingerprint, likelyAlgo }) 
 
 /***/ }),
 
+/***/ 8068:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  FlowLoaderError: () => (/* binding */ FlowLoaderError),
+  d2: () => (/* binding */ listFlowEntryNames),
+  resolveFlowEntry: () => (/* binding */ resolveFlowEntry)
+});
+
+// UNUSED EXPORTS: DEFAULT_FLOWS_DIR, ENTRY_MAP_FILENAME, FLOWS_DIR_ENV, loadFlowRegistry, requiredInputNames, resolveFlowsDir
+
+// EXTERNAL MODULE: external "node:fs"
+var external_node_fs_ = __nccwpck_require__(3024);
+// EXTERNAL MODULE: external "node:path"
+var external_node_path_ = __nccwpck_require__(6760);
+// EXTERNAL MODULE: external "node:process"
+var external_node_process_ = __nccwpck_require__(1708);
+// EXTERNAL MODULE: external "node:url"
+var external_node_url_ = __nccwpck_require__(3136);
+// EXTERNAL MODULE: ./node_modules/ajv/dist/2020.js
+var _2020 = __nccwpck_require__(2210);
+// EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
+var dist = __nccwpck_require__(2815);
+// EXTERNAL MODULE: ./src/lib/promotion-candidates.mjs
+var promotion_candidates = __nccwpck_require__(3077);
+// EXTERNAL MODULE: ./src/lib/shadow-aggregate.mjs
+var shadow_aggregate = __nccwpck_require__(4029);
+// EXTERNAL MODULE: ./src/lib/secret-redactor.mjs
+var secret_redactor = __nccwpck_require__(12);
+;// CONCATENATED MODULE: ./src/lib/execution-manifest.mjs
+// Execution Manifest (#2015, Epic #2011 Phase 4).
+//
+// Pins "what River Review used to judge" for ONE review run into a single
+// content-addressed document: the River Review version, the plugin host, the
+// flow, the agents, the skills, the input artifacts, the policy, the runtime
+// and the effective config. A later reader re-derives the digests with
+// `verifyExecutionManifest` to detect a rewrite, and asks
+// `assessReplayability` whether the manifest is complete enough to replay at
+// all.
+//
+// Scope boundary (fixed by #2015 "Non-goals" and its "やること" list): this
+// module is the MANIFEST CONTRACT and the RESOLVER. It never executes a
+// replay, never invokes a reviewer, an LLM or a provider, and never writes a
+// file. Everything it returns is a plain object built from its arguments.
+//
+// Why this is NOT an extension of `buildExperimentManifest`
+// (src/lib/paired-replay.mjs:614): that manifest pins an EXPERIMENT — two
+// configurations (baseline / candidate), a dataset of already-produced run
+// records, acceptance profiles, trial counts. Its required subject is a pair
+// of run sets, so every block it owns (`baseline`, `candidate`, `dataset`,
+// `acceptance`, `trials`, `verifier`) is meaningless for a single review run,
+// and every block #2015 requires (`plugin`, `flow`, `agents`, `skills`,
+// `policy`, `config`) is absent from it. Generalizing one document to cover
+// both subjects would make roughly a dozen fields conditionally required on a
+// `kind` discriminator, which is a weaker contract than two documents that are
+// each `additionalProperties: false`. What IS shared is the DERIVATION, and
+// that is imported rather than re-typed — see the import block below.
+//
+// Explicit non-goals (#2015): hidden chain-of-thought, raw tool output, raw
+// sensitive context, and byte-for-byte LLM replay. The manifest carries ids,
+// versions and hashes only; `assertNoRawContext` below is the mechanical guard
+// that keeps it that way.
+
+
+
+
+
+/** Schema version of the manifest document. */
+const EXECUTION_MANIFEST_SCHEMA_VERSION = 1;
+
+/**
+ * Prefix of the manifest id. Deliberately distinct from `RR-PC-`
+ * (promotion candidate) and `RR-EXP-` (experiment manifest): three
+ * content-addressed namespaces already exist, and an id whose namespace is
+ * ambiguous cannot be looked up.
+ */
+const EXECUTION_MANIFEST_ID_PREFIX = 'RR-EXM-';
+
+const MANIFEST_ID_HASH_LENGTH = 12;
+
+/**
+ * Resolution status of one provenance block.
+ *
+ * The vocabulary is closed because the whole point of #2015 AC 3 is that a
+ * missing block must not read as a present one. `unavailable` and `missing`
+ * are kept apart on purpose: `unavailable` means this deployment has no such
+ * source at all (there is no flow definition to pin), while `missing` means
+ * the source exists but this run did not record it.
+ */
+const PROVENANCE_STATUS = Object.freeze(['resolved', 'missing', 'unavailable']);
+
+/**
+ * Replay classes #2015 distinguishes.
+ *
+ * `deterministic` covers routing / refs / coverage / hashes / gate derivation
+ * — same inputs must give the same result. `judgment` covers agentic output,
+ * compared semantically (critical-finding recall, taxonomy, severity,
+ * criterion coverage, completion state), never byte-for-byte.
+ */
+const REPLAY_CLASSES = Object.freeze(['deterministic', 'judgment']);
+
+/**
+ * Blocks each replay class requires.
+ *
+ * Deterministic replay reproduces routing and hash derivation, so it needs
+ * whatever decides the route: the flow, the skills, the input artifacts, the
+ * policy and the config. Judgment replay additionally needs the runtime and
+ * the agent roster, because the same flow under a different model is a
+ * different judgment.
+ */
+const REPLAY_REQUIREMENTS = Object.freeze({
+  deterministic: Object.freeze(['flow', 'skills', 'artifacts', 'policy', 'config']),
+  judgment: Object.freeze(['flow', 'skills', 'artifacts', 'policy', 'config', 'agents', 'runtime']),
+});
+
+/**
+ * Identifier fields a required block must actually carry before replay may
+ * treat it as pinned.
+ *
+ * `status: 'resolved'` answers "did this run record the block at all?" — it is
+ * deliberately reachable from a partial recording (a flow with an `id` but no
+ * checksum resolves, because the id IS what was recorded). Replay asks a
+ * second, stricter question: "is what was recorded enough to re-derive the
+ * same route?" Without this map the two questions collapse into one, and a
+ * manifest whose every hash is `null` reports `deterministic: true` — exactly
+ * the "manifest 欠損を replay 可能と誤認しない" failure #2015 forbids.
+ *
+ * Only `flow` and `policy` appear here. The other required blocks already
+ * fold pin-completeness into their own status: `skills` resolves only when
+ * every entry has a `sha256` (`normalizeSkills`), `artifacts` likewise
+ * (`normalizeArtifacts`), and `config` resolves only from a `sha256`
+ * (`normalizeConfig`). `agents` and `runtime` are required by `judgment`
+ * replay alone, which is compared semantically — the roster ids and the
+ * provider/model pair are the comparison keys, so no extra pin applies.
+ *
+ * `policy` demands `sha256` specifically and NOT `riskMapDigest`:
+ * `riskMapDigest` is a 16-hex truncation of the risk map
+ * (src/lib/review-plan.mjs), not a digest of the policy document, so it cannot
+ * detect that the policy text changed between run and replay.
+ */
+const REPLAY_PINS = Object.freeze({
+  flow: Object.freeze(['sha256']),
+  policy: Object.freeze(['sha256']),
+});
+
+/** Provenance blocks the manifest carries, in document order. */
+const PROVENANCE_BLOCKS = Object.freeze([
+  'riverReview',
+  'plugin',
+  'flow',
+  'agents',
+  'skills',
+  'artifacts',
+  'policy',
+  'runtime',
+  'config',
+]);
+
+class ExecutionManifestError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ExecutionManifestError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Redaction (#2015 AC 2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Keys whose VALUE is a free-form string this module refuses to carry.
+ *
+ * Structural rejection comes first because redaction is pattern-based and
+ * therefore incomplete: `redactText` finds tokens that look like secrets, not
+ * a pasted diff or a prompt. The manifest has no field that legitimately holds
+ * either, so the safe rule is that these names never appear at all.
+ */
+const FORBIDDEN_KEYS = Object.freeze([
+  'prompt',
+  'promptPreview',
+  'rawLlmOutput',
+  'reasoning',
+  'thinking',
+  'chainOfThought',
+  'toolOutput',
+  'stdout',
+  'stderr',
+  'diff',
+  'patch',
+  'content',
+  'body',
+  'text',
+  'env',
+  'environment',
+  'secret',
+  'secrets',
+  'token',
+  'accessToken',
+  'apiKey',
+  'authorization',
+  'password',
+  'credentials',
+  'cookie',
+]);
+
+/**
+ * Fold a key to the form the forbidden set is compared against.
+ *
+ * Case alone is not enough: the same field arrives as `apiKey`, `api_key` and
+ * `API-KEY` depending on which layer produced it, and a guard that only lowers
+ * the case lets two of those three through. Separators carry no meaning in a
+ * field NAME, so they are dropped before the comparison.
+ *
+ * @param {string} key
+ * @returns {string}
+ */
+const foldKeyName = (key) => key.toLowerCase().replace(/[-_]/g, '');
+
+const FORBIDDEN_KEY_SET = new Set(FORBIDDEN_KEYS.map(foldKeyName));
+
+/** Containers whose own keys are data labels, not field names. */
+const DATA_KEY_PATHS = new Set(['spec.artifacts']);
+
+/**
+ * Reject any key that would turn the manifest into a context dump.
+ *
+ * This runs on the CALLER-SUPPLIED spec before normalization, so a resolver
+ * that starts handing through a raw field fails loudly here instead of writing
+ * it into a stored artifact. Depth-first with a path so the error names the
+ * offending location rather than the document.
+ *
+ * `dataKeyPaths` names the containers whose OWN keys are data labels rather
+ * than field names. `spec.artifacts` is keyed by artifact name, and `diff` is
+ * one of the names #2015 itself lists — banning it there would reject the
+ * documented manifest. The VALUES under such a container are still checked,
+ * and `normalizeArtifacts` reduces each of them to a sha256 regardless.
+ *
+ * @param {unknown} value
+ * @param {string} [path]
+ * @param {{ dataKeyPaths?: Set<string> }} [options]
+ */
+function assertNoRawContext(value, path = 'spec', { dataKeyPaths = DATA_KEY_PATHS } = {}) {
+  if (value == null || typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    value.forEach((item, i) => assertNoRawContext(item, `${path}[${i}]`, { dataKeyPaths }));
+    return;
+  }
+  const keysAreData = dataKeyPaths.has(path);
+  for (const [key, child] of Object.entries(value)) {
+    if (!keysAreData && FORBIDDEN_KEY_SET.has(foldKeyName(key))) {
+      throw new ExecutionManifestError(
+        `${path}.${key} is not allowed in an execution manifest: the manifest records ids, versions and hashes only (#2015 non-goals — no hidden CoT, no raw tool output, no raw sensitive context).`
+      );
+    }
+    assertNoRawContext(child, `${path}.${key}`, { dataKeyPaths });
+  }
+}
+
+/**
+ * Redact every string leaf, counting the hits.
+ *
+ * Defense in depth behind `assertNoRawContext`: the structural check owns the
+ * fields that must not exist, and this owns the values that slipped into a
+ * field that may exist (a model name typed as `gpt-4o?key=sk-...`, a profile
+ * label carrying a token). Redaction happens BEFORE every digest this module
+ * stores — `manifestKey` / `manifestHash` AND `skills.skillSetHash` — so each
+ * one re-derives from the values actually written. Redacting afterwards would
+ * make every manifest fail `verifyExecutionManifest`; computing one digest
+ * ahead of redaction (as `skillSetHash` did until #2032) is the quieter
+ * version of the same bug, because `verifyExecutionManifest` does not cover
+ * `skillSetHash` and the mismatch surfaces only when a reader recomputes it.
+ *
+ * @param {unknown} value
+ * @param {{ hits: Map<string, number> }} acc
+ * @returns {unknown} the same shape with redacted string leaves
+ */
+function redactDeep(value, acc) {
+  if (typeof value === 'string') {
+    const { text, hits } = redactText(value);
+    for (const hit of hits)
+      acc.hits.set(hit.category, (acc.hits.get(hit.category) ?? 0) + hit.count);
+    return text;
+  }
+  if (Array.isArray(value)) return value.map((item) => redactDeep(item, acc));
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const key of Object.keys(value)) out[key] = redactDeep(value[key], acc);
+    return out;
+  }
+  return value;
+}
+
+// ---------------------------------------------------------------------------
+// Block normalization
+// ---------------------------------------------------------------------------
+
+function compareStrings(a, b) {
+  const left = a ?? '';
+  const right = b ?? '';
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+
+/**
+ * Normalize a sha256 to bare lowercase hex, accepting the `sha256:` prefix
+ * `docs/data/skill-manifest.json` stores its checksums with.
+ *
+ * @param {unknown} value
+ * @returns {string|null}
+ */
+function normalizeSha256(value) {
+  const raw = nonEmptyString(value);
+  if (!raw) return null;
+  const bare = (raw.startsWith('sha256:') ? raw.slice('sha256:'.length) : raw).toLowerCase();
+  return SHA256_PATTERN.test(bare) ? bare : null;
+}
+
+/**
+ * Wrap a resolved block value with its resolution status (#2015 AC 3).
+ *
+ * `null` never stands alone in this document. A block that is simply absent
+ * and a block that resolved to nothing are indistinguishable once both are
+ * `null`, and that ambiguity is precisely how a run gets misread as
+ * replayable.
+ */
+function block(status, value) {
+  if (!PROVENANCE_STATUS.includes(status)) {
+    throw new ExecutionManifestError(
+      `Unknown provenance status "${status}". Expected one of: ${PROVENANCE_STATUS.join(', ')}.`
+    );
+  }
+  return { status, ...value };
+}
+
+function statusOf(present, { unavailable = false } = {}) {
+  if (present) return 'resolved';
+  return unavailable ? 'unavailable' : 'missing';
+}
+
+function normalizeRiverReview(spec) {
+  const version = nonEmptyString(spec?.riverReview?.version);
+  return block(statusOf(version != null), { version: version ?? null });
+}
+
+function normalizePlugin(spec) {
+  const host = nonEmptyString(spec?.plugin?.host);
+  const pluginVersion = nonEmptyString(spec?.plugin?.pluginVersion);
+  return block(statusOf(host != null && pluginVersion != null), {
+    host: host ?? null,
+    pluginVersion: pluginVersion ?? null,
+  });
+}
+
+function normalizeFlow(spec) {
+  const flow = spec?.flow;
+  const id = nonEmptyString(flow?.id);
+  return block(statusOf(id != null), {
+    id: id ?? null,
+    version: nonEmptyString(flow?.version) ?? null,
+    sha256: normalizeSha256(flow?.sha256),
+  });
+}
+
+function normalizeAgents(spec) {
+  const agents = spec?.agents;
+  if (agents == null) return block('missing', { entries: [] });
+  if (!Array.isArray(agents)) {
+    throw new ExecutionManifestError('agents must be an array or null.');
+  }
+  const entries = agents
+    .map((agent) => ({
+      id: nonEmptyString(agent?.id),
+      version: nonEmptyString(agent?.version) ?? null,
+      sha256: normalizeSha256(agent?.sha256),
+    }))
+    .filter((agent) => agent.id != null)
+    .sort((a, b) => compareStrings(a.id, b.id));
+  // An empty roster is `unavailable`, not `resolved`: "no agents ran" and "we
+  // failed to record which agents ran" would otherwise both serialize as [].
+  return block(statusOf(entries.length > 0, { unavailable: agents.length === 0 }), { entries });
+}
+
+/**
+ * One digest over the whole selected skill set, so a consumer can compare two
+ * runs' skill selection without walking the array.
+ *
+ * Always called on the REDACTED entries (see `buildExecutionManifest`): the
+ * digest has to be re-derivable from the entries the manifest stores, and a
+ * skill id that trips `redactText` is stored redacted.
+ *
+ * @param {Array<object>} entries
+ * @returns {string|null}
+ */
+function computeSkillSetHash(entries) {
+  return entries.length ? sha256Hex(canonicalJson(entries)) : null;
+}
+
+function normalizeSkills(spec) {
+  const skills = spec?.skills;
+  if (skills == null) return block('missing', { entries: [], skillSetHash: null });
+  if (!Array.isArray(skills)) {
+    throw new ExecutionManifestError('skills must be an array or null.');
+  }
+  const entries = skills
+    .map((skill) => ({
+      id: nonEmptyString(skill?.id),
+      version: nonEmptyString(skill?.version) ?? null,
+      sha256: normalizeSha256(skill?.sha256),
+    }))
+    .filter((skill) => skill.id != null)
+    .sort((a, b) => compareStrings(a.id, b.id));
+  // A skill selected but not checksummed is a partial resolution: the id alone
+  // cannot detect that the skill's text changed between run and replay.
+  const complete = entries.length > 0 && entries.every((s) => s.sha256 != null);
+  return block(statusOf(complete, { unavailable: skills.length === 0 }), {
+    entries,
+    // Placeholder only. `buildExecutionManifest` fills this in from the
+    // REDACTED entries; deriving it here would pin the pre-redaction ids.
+    skillSetHash: null,
+  });
+}
+
+function normalizeArtifacts(spec) {
+  const artifacts = spec?.artifacts;
+  if (artifacts == null) return block('missing', { entries: [] });
+  if (typeof artifacts !== 'object' || Array.isArray(artifacts)) {
+    throw new ExecutionManifestError(
+      'artifacts must be an object keyed by artifact name, or null.'
+    );
+  }
+  const entries = Object.keys(artifacts)
+    .sort(compareStrings)
+    .map((name) => ({
+      name: nfc(name),
+      sha256: normalizeSha256(artifacts[name]?.sha256 ?? artifacts[name]),
+    }));
+  const complete = entries.length > 0 && entries.every((a) => a.sha256 != null);
+  return block(statusOf(complete, { unavailable: entries.length === 0 }), { entries });
+}
+
+function normalizePolicy(spec) {
+  const policy = spec?.policy;
+  const ref = nonEmptyString(policy?.ref);
+  const sha256 = normalizeSha256(policy?.sha256);
+  // `riskMapDigest` is a 16-hex TRUNCATION (src/lib/review-plan.mjs:842), not a
+  // sha256, so it gets its own field instead of being widened into `sha256` —
+  // a consumer comparing digests must not compare two different lengths of the
+  // same hash and read the mismatch as tampering.
+  const riskMapDigest = nonEmptyString(policy?.riskMapDigest)?.toLowerCase() ?? null;
+  return block(statusOf(ref != null && (sha256 != null || riskMapDigest != null)), {
+    ref: ref ?? null,
+    sha256,
+    riskMapDigest,
+  });
+}
+
+function normalizeRuntime(spec) {
+  const runtime = spec?.runtime;
+  const provider = nonEmptyString(runtime?.provider);
+  const model = nonEmptyString(runtime?.model);
+  return block(statusOf(provider != null && model != null), {
+    provider: provider ?? null,
+    model: model ?? null,
+    profile: nonEmptyString(runtime?.profile) ?? null,
+  });
+}
+
+function normalizeConfig(spec) {
+  const sha256 = normalizeSha256(spec?.config?.sha256);
+  return block(statusOf(sha256 != null), { sha256 });
+}
+
+// ---------------------------------------------------------------------------
+// Digests
+// ---------------------------------------------------------------------------
+
+function splitManifest(manifest) {
+  const {
+    manifestId = null,
+    manifestKey = null,
+    manifestHash = null,
+    createdAt = null,
+    ...conditions
+  } = manifest ?? {};
+  return { manifestId, manifestKey, manifestHash, createdAt, conditions };
+}
+
+/**
+ * Compute the manifest digests.
+ *
+ * Same two-level scheme as `computeManifestDigests` in paired-replay.mjs, for
+ * the same reason: `manifestKey` hashes the CONDITIONS only, so two runs under
+ * an identical execution configuration share a key and are directly
+ * comparable, while `manifestHash` additionally covers `createdAt` and the
+ * derived ids and is therefore the tamper check over the whole stored record.
+ */
+function computeManifestDigests({ conditions, createdAt }) {
+  const manifestKey = sha256Hex(canonicalJson(conditions));
+  const manifestId = `${EXECUTION_MANIFEST_ID_PREFIX}${manifestKey.slice(0, MANIFEST_ID_HASH_LENGTH)}`;
+  const manifestHash = sha256Hex(canonicalJson({ conditions, createdAt, manifestKey, manifestId }));
+  return { manifestKey, manifestId, manifestHash };
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the Execution Manifest for one review run.
+ *
+ * @param {object} spec see docs/development/execution-manifest.md
+ * @param {{ now?: Date }} [options]
+ * @returns {object} the manifest document
+ */
+function buildExecutionManifest(spec, { now = new Date() } = {}) {
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
+    throw new ExecutionManifestError('spec must be an object.');
+  }
+  assertNoRawContext(spec);
+
+  // Resolved by `resolveExecutionManifestSpec` (which calls `deriveReviewRunId`
+  // on the run record) rather than here: passing a whole run record into this
+  // function would drag raw finding text through `assertNoRawContext`, and the
+  // manifest has no business holding it.
+  const reviewRunId = nonEmptyString(spec.reviewRunId) ?? null;
+
+  const conditions = {
+    schemaVersion: EXECUTION_MANIFEST_SCHEMA_VERSION,
+    kind: 'execution-manifest',
+    reviewRunId,
+    riverReview: normalizeRiverReview(spec),
+    plugin: normalizePlugin(spec),
+    flow: normalizeFlow(spec),
+    agents: normalizeAgents(spec),
+    skills: normalizeSkills(spec),
+    artifacts: normalizeArtifacts(spec),
+    policy: normalizePolicy(spec),
+    runtime: normalizeRuntime(spec),
+    config: normalizeConfig(spec),
+    // Machine-checkable statement that building a manifest writes nothing.
+    writeEffects: [],
+  };
+
+  const acc = { hits: new Map() };
+  const redacted = redactDeep(conditions, acc);
+  // Every digest is derived from post-redaction values, so a reader holding
+  // only the stored document can recompute each of them. `skillSetHash` is the
+  // one digest `verifyExecutionManifest` does not cover, which is exactly why
+  // it must not be the one derived early.
+  redacted.skills.skillSetHash = computeSkillSetHash(redacted.skills.entries);
+  redacted.redaction = {
+    applied: true,
+    hits: [...acc.hits.entries()]
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => compareStrings(a.category, b.category)),
+  };
+
+  const createdAt = now.toISOString();
+  const digests = computeManifestDigests({ conditions: redacted, createdAt });
+  return {
+    manifestId: digests.manifestId,
+    manifestKey: digests.manifestKey,
+    manifestHash: digests.manifestHash,
+    createdAt,
+    ...redacted,
+  };
+}
+
+/**
+ * Re-derive a manifest's digests and report whether the stored ones match.
+ *
+ * The immutability check. A manifest is a plain JSON document, so nothing
+ * stops an edit — what the contract guarantees is that the edit is DETECTABLE.
+ *
+ * @param {object} manifest
+ * @returns {{ verified: boolean, mismatches: string[], expected: object, actual: object }}
+ */
+function verifyExecutionManifest(manifest) {
+  const split = splitManifest(manifest);
+  const expected = computeManifestDigests({
+    conditions: split.conditions,
+    createdAt: split.createdAt,
+  });
+  const actual = {
+    manifestKey: split.manifestKey,
+    manifestId: split.manifestId,
+    manifestHash: split.manifestHash,
+  };
+  const mismatches = [];
+  for (const field of ['manifestKey', 'manifestId', 'manifestHash']) {
+    if (actual[field] !== expected[field]) {
+      mismatches.push(
+        `${field}: stored ${actual[field] ?? '(none)'}, recomputed ${expected[field]}`
+      );
+    }
+  }
+  return { verified: mismatches.length === 0, mismatches, expected, actual };
+}
+
+/**
+ * Decide what the manifest actually supports replaying (#2015 AC 3).
+ *
+ * An absent manifest is `not-replayable` with an explicit reason rather than
+ * an empty result: the failure mode this AC names is a missing manifest being
+ * read as a replayable run, so "no manifest" must be a loud answer.
+ *
+ * A required block counts only when it is BOTH `resolved` AND pinned — every
+ * field `REPLAY_PINS` lists for it is non-null. A partially recorded block
+ * (a flow known by id but not by checksum) therefore lands in `missingBlocks`
+ * with a reason that names the null field, instead of silently passing.
+ *
+ * @param {object|null|undefined} manifest
+ * @returns {{ deterministic: boolean, judgment: boolean, missingBlocks: Record<string, string[]>, reasons: string[] }}
+ */
+function assessReplayability(manifest) {
+  if (!manifest || typeof manifest !== 'object' || manifest.kind !== 'execution-manifest') {
+    return {
+      deterministic: false,
+      judgment: false,
+      missingBlocks: {
+        deterministic: [...REPLAY_REQUIREMENTS.deterministic],
+        judgment: [...REPLAY_REQUIREMENTS.judgment],
+      },
+      reasons: ['No execution manifest is attached, so nothing about this run is replayable.'],
+    };
+  }
+  // `resolved` is necessary but not sufficient — see REPLAY_PINS.
+  const unpinnedFields = (name) =>
+    (REPLAY_PINS[name] ?? []).filter((field) => manifest[name]?.[field] == null);
+  const unusable = (names) =>
+    names
+      .filter((name) => manifest[name]?.status !== 'resolved' || unpinnedFields(name).length > 0)
+      .sort(compareStrings);
+  const missingBlocks = {
+    deterministic: unusable(REPLAY_REQUIREMENTS.deterministic),
+    judgment: unusable(REPLAY_REQUIREMENTS.judgment),
+  };
+  const reasons = [];
+  for (const cls of REPLAY_CLASSES) {
+    for (const name of missingBlocks[cls]) {
+      const status = manifest[name]?.status ?? 'missing';
+      if (status !== 'resolved') {
+        reasons.push(`${cls} replay needs ${name}, which is ${status}.`);
+        continue;
+      }
+      const unpinned = unpinnedFields(name);
+      reasons.push(
+        `${cls} replay needs ${name} pinned, but ${unpinned
+          .map((field) => `${name}.${field}`)
+          .join(', ')} is null even though the block is resolved.`
+      );
+    }
+  }
+  return {
+    deterministic: missingBlocks.deterministic.length === 0,
+    judgment: missingBlocks.judgment.length === 0,
+    missingBlocks,
+    reasons: [...new Set(reasons)].sort(compareStrings),
+  };
+}
+
+/**
+ * Attach a manifest to a Review Artifact, additively.
+ *
+ * Never mutates the input. When there IS a manifest to attach, the return
+ * value is a NEW object: the artifact is handed around by other pipeline
+ * stages, and an in-place write here would be invisible to a caller that kept
+ * its own reference.
+ *
+ * When `manifest` is `null` / `undefined` there is nothing to attach and the
+ * INPUT ARTIFACT ITSELF is returned, not a copy — so `attach(a, null) === a`.
+ * Do not rely on the result being a fresh object you may freely mutate;
+ * copy it yourself if you need one. Returning the input unchanged is what
+ * keeps the exact key set older artifacts have, which is what makes this
+ * backward compatible (#2015 AC 4).
+ *
+ * @param {object} artifact
+ * @param {object|null|undefined} manifest
+ * @returns {object}
+ */
+function attachExecutionManifest(artifact, manifest) {
+  if (!artifact || typeof artifact !== 'object' || Array.isArray(artifact)) {
+    throw new ExecutionManifestError('artifact must be an object.');
+  }
+  if (manifest == null) return artifact;
+  if (manifest.kind !== 'execution-manifest') {
+    throw new ExecutionManifestError('manifest must be an execution-manifest document.');
+  }
+  return { ...artifact, executionManifest: manifest };
+}
+
+// ---------------------------------------------------------------------------
+// Resolver (#2015 "3. version/hash resolver")
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive the `flow` pin (`id` / `version` / `sha256`) from a PARSED Flow
+ * definition document (schemas/flow.schema.json, #2013).
+ *
+ * Why the CALLER passes the document instead of this module reading it
+ * (#2037): #2016 landed the Flow instance documents together with an
+ * observe-mode guarantee — pinned in tests/flow-definitions.test.mjs, "no
+ * runtime module loads flows/, so no gate or decision changes" — that nothing
+ * under `src/` or `runners/` loads that directory. A resolver that read the
+ * directory itself would break that guarantee, and with it the proof that
+ * adding those documents cannot alter any existing gate, decision or finding.
+ * Injection keeps the resolver pure (no side effects, per this module's scope
+ * boundary) AND leaves the observe guarantee intact, so it is the route taken.
+ * The guarantee is lifted only when the Flow execution engine lands; that is a
+ * separate change which must edit that test explicitly.
+ *
+ * The digest is taken over `canonicalJson(document)`, not over the raw file
+ * bytes, for the same reason every other content hash in this repository is:
+ * key order and whitespace are formatting, not content, so a re-print by
+ * prettier must not invalidate a pin. `canonicalJson` and `sha256Hex` are
+ * imported, never re-implemented (CLAUDE.md "Import the SSoT, never re-derive
+ * it").
+ *
+ * `expectedVersion` is where the entry-name ↔ document version check belongs
+ * at RUN time: a caller that resolved the Flow through an entry name passes
+ * the version that entry pinned, and a document whose own `version` has moved
+ * on is rejected rather than pinned under the wrong version. The corresponding
+ * REPOSITORY-time check (every entry pins a version the Flow document actually
+ * carries) already lives in tests/flow-definitions.test.mjs.
+ *
+ * Only an explicit `null` / `undefined` `expectedVersion` skips that check.
+ * Any other unusable value (a number, an empty or blank string) is a caller
+ * bug and throws, because a stated expectation that is quietly discarded is
+ * worse than no expectation at all.
+ *
+ * `document` is expected to be the result of `JSON.parse` on a Flow document.
+ * `canonicalJson` walks own enumerable keys, so a hand-built object carrying
+ * `Date` / `Map` / `Set` values would not be distinguished by the digest;
+ * parsed JSON has no such values.
+ *
+ * @param {object} document a parsed Flow definition document
+ * @param {object} [options]
+ * @param {string|null} [options.expectedVersion] version the caller resolved
+ * @returns {{ id: string, version: string, sha256: string }}
+ */
+function deriveFlowPin(document, { expectedVersion = null } = {}) {
+  if (!document || typeof document !== 'object' || Array.isArray(document)) {
+    throw new ExecutionManifestError('flow document must be an object.');
+  }
+  const id = (0,promotion_candidates/* nonEmptyNfcString */.bS)(document.id);
+  const version = (0,promotion_candidates/* nonEmptyNfcString */.bS)(document.version);
+  if (id == null) {
+    throw new ExecutionManifestError('flow document must carry a non-empty id.');
+  }
+  if (version == null) {
+    throw new ExecutionManifestError(`flow document "${id}" must carry a non-empty version.`);
+  }
+  // "Stated no expectation" and "stated a malformed expectation" are different
+  // answers and must not collapse. `nonEmptyString` returns null for a number,
+  // an empty string and a blank string alike, so folding those into the
+  // skip branch would drop the caller's assertion silently — `expectedVersion:
+  // 2` would pin a document of version '3' without complaint. Only an explicit
+  // null / undefined skips the check; anything else must be a usable version.
+  if (expectedVersion != null) {
+    const expected = (0,promotion_candidates/* nonEmptyNfcString */.bS)(expectedVersion);
+    if (expected == null) {
+      throw new ExecutionManifestError('expectedVersion must be a non-empty string when supplied.');
+    }
+    if (expected !== version) {
+      throw new ExecutionManifestError(
+        `flow document "${id}" is version ${version}, but the caller resolved ${expected}.`
+      );
+    }
+  }
+  return { id, version, sha256: (0,shadow_aggregate/* sha256Hex */.fg)((0,promotion_candidates/* canonicalJson */.dj)(document)) };
+}
+
+/**
+ * Map the sources this repository actually has onto an Execution Manifest spec.
+ *
+ * Every argument is injected rather than read from disk, so the resolver stays
+ * pure and testable and this module keeps its "no side effects" property. A
+ * source the caller cannot supply is passed as `null` and lands as a
+ * `missing` / `unavailable` block — never as a fabricated value.
+ *
+ * Measured source coverage in this repository at the time of writing:
+ *   - riverReview.version → package.json `version`
+ *   - plugin.pluginVersion → .claude-plugin/plugin.json `version`
+ *   - skills[].sha256 → docs/data/skill-manifest.json `skills[].checksum`
+ *   - runtime.provider / model → Review Artifact `usage.provider` / `usage.model`
+ *   - policy.riskMapDigest → Review Artifact `gate.inputs.riskMapDigest`
+ *   - agents → `agents/contracts/*.agent.json` (#2014) carry `id` and
+ *     `version`; they carry no checksum, so a caller that wants a `resolved`
+ *     agents block hashes the file bytes itself and passes them in
+ *   - flow → #2016 landed the Flow instance documents, so the source #2015
+ *     recorded as absent now exists (verified 2026-09-04: 8 flow definitions
+ *     plus one entry map, which tests/flow-definitions.test.mjs enumerates).
+ *     This module still does not read them — see `deriveFlowPin` for why — so
+ *     the block resolves as `missing` when the caller supplies neither `flow`
+ *     nor `flowDocument`, and as `resolved` with a non-null `sha256` as soon
+ *     as it supplies `flowDocument`
+ *   - artifacts / policy.sha256 / config.sha256 → no producer records these
+ *     today; they resolve as `missing` until one does
+ *
+ * @param {object} input
+ * @param {object|null} [input.artifact] a Review Artifact
+ * @param {object|null} [input.runRecord] a saved run record
+ * @param {string|null} [input.riverReviewVersion] package.json version
+ * @param {{ host?: string, pluginVersion?: string }|null} [input.plugin]
+ * @param {{ skills?: Array<{id: string, checksum?: string, version?: string}> }|null} [input.skillManifest]
+ * @param {object|null} [input.flow] an already-derived pin ({id, version, sha256})
+ * @param {object|null} [input.flowDocument] a parsed Flow definition document,
+ *   pinned here through `deriveFlowPin`. Mutually exclusive with `flow`.
+ * @param {string|null} [input.expectedFlowVersion] the version the caller resolved
+ *   for `flowDocument`; a document that disagrees is rejected, not pinned. It is
+ *   meaningful only alongside `flowDocument`: supplying it with `flow` (or with
+ *   neither) throws rather than being ignored, for the same reason `flow` and
+ *   `flowDocument` together throw — a discarded expectation reads as an enforced one
+ * @param {Array<object>|null} [input.agents]
+ * @param {Record<string, {sha256: string}>|null} [input.artifacts]
+ * @param {object|null} [input.policy]
+ * @param {string|null} [input.configSha256]
+ * @returns {object} a spec for buildExecutionManifest
+ */
+function resolveExecutionManifestSpec({
+  artifact = null,
+  runRecord = null,
+  riverReviewVersion = null,
+  plugin = null,
+  skillManifest = null,
+  flow = null,
+  flowDocument = null,
+  expectedFlowVersion = null,
+  agents = null,
+  artifacts = null,
+  policy = null,
+  configSha256 = null,
+} = {}) {
+  // Checksums are keyed by skill id so the SELECTED skills (which the artifact
+  // reports by id only) can be joined to the manifest's hashes. A selected
+  // skill absent from the manifest keeps a null sha256 and therefore degrades
+  // the block to `missing` — silently dropping it would leave a shorter list
+  // that still looked complete.
+  // A caller that supplies both forms has two answers for one block; picking
+  // one silently is how a stale pin outlives the document it was taken from.
+  if (flow != null && flowDocument != null) {
+    throw new ExecutionManifestError('Pass either flow or flowDocument, not both.');
+  }
+  // Same class of caller mistake: an expectation nothing can check. Dropping it
+  // silently would let a caller believe a version was enforced when the pin it
+  // supplied says something else entirely.
+  if (expectedFlowVersion != null && flowDocument == null) {
+    throw new ExecutionManifestError('expectedFlowVersion requires flowDocument.');
+  }
+  const flowPin =
+    flowDocument != null
+      ? deriveFlowPin(flowDocument, { expectedVersion: expectedFlowVersion })
+      : flow;
+
+  const checksumById = new Map();
+  for (const entry of skillManifest?.skills ?? []) {
+    const id = nonEmptyString(entry?.id);
+    if (id) checksumById.set(id, entry);
+  }
+
+  const selected = artifact?.plan?.selectedSkills;
+  const resolvedSkills = Array.isArray(selected)
+    ? selected.map((skill) => {
+        const id = nonEmptyString(skill?.id);
+        const known = id ? checksumById.get(id) : null;
+        return {
+          id,
+          version: nonEmptyString(skill?.version) ?? nonEmptyString(known?.version) ?? null,
+          sha256: normalizeSha256(known?.checksum),
+        };
+      })
+    : null;
+
+  return {
+    reviewRunId:
+      nonEmptyString(artifact?.trace?.run_id) ?? deriveReviewRunId(runRecord ?? null) ?? null,
+    riverReview: { version: riverReviewVersion },
+    plugin: {
+      host: plugin?.host ?? null,
+      pluginVersion: plugin?.pluginVersion ?? null,
+    },
+    flow: flowPin,
+    agents,
+    skills: resolvedSkills,
+    artifacts,
+    policy: {
+      ref: policy?.ref ?? null,
+      sha256: policy?.sha256 ?? null,
+      riskMapDigest: policy?.riskMapDigest ?? artifact?.gate?.inputs?.riskMapDigest ?? null,
+    },
+    runtime: {
+      provider: artifact?.usage?.provider ?? null,
+      model: artifact?.usage?.model ?? null,
+      profile: artifact?.plan?.reviewMode ?? null,
+    },
+    config: { sha256: configSha256 },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Debug renderer (#2015 "8. debug renderer")
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a manifest as human-readable Markdown for `--debug` output.
+ *
+ * The renderer states the replayability verdict FIRST, because the reason this
+ * document exists is to stop a reader from assuming a run is replayable.
+ *
+ * @param {object|null|undefined} manifest
+ * @returns {string}
+ */
+function formatExecutionManifestMarkdown(manifest) {
+  const replay = assessReplayability(manifest);
+  const lines = ['## Execution Manifest', ''];
+  if (!manifest || manifest.kind !== 'execution-manifest') {
+    lines.push('- Manifest: **absent** — this run is NOT replayable.');
+    return `${lines.join('\n')}\n`;
+  }
+  const verification = verifyExecutionManifest(manifest);
+  lines.push(`- Manifest id: \`${manifest.manifestId}\``);
+  lines.push(`- Manifest key: \`${manifest.manifestKey}\``);
+  lines.push(`- Review run id: \`${manifest.reviewRunId ?? '(none)'}\``);
+  lines.push(`- Integrity: ${verification.verified ? 'verified' : 'MISMATCH'}`);
+  for (const mismatch of verification.mismatches) lines.push(`  - ${mismatch}`);
+  lines.push(
+    `- Deterministic replay: ${replay.deterministic ? 'possible' : 'NOT possible'}; judgment replay: ${replay.judgment ? 'possible' : 'NOT possible'}`
+  );
+  for (const reason of replay.reasons) lines.push(`  - ${reason}`);
+  lines.push('', '| Block | Status |', '| --- | --- |');
+  for (const name of PROVENANCE_BLOCKS) {
+    lines.push(`| ${name} | ${manifest[name]?.status ?? 'missing'} |`);
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+;// CONCATENATED MODULE: ./src/lib/flow-loader.mjs
+// Flow loader (#2054 PR-3, Epic #2011 Phase 2).
+//
+// The ONLY runtime module that reads `flows/`. #2016 pinned observe mode as
+// "nothing under src/ or runners/ loads the Flow definitions"; this module is
+// the explicit, single exception that tests/flow-definitions.test.mjs now
+// names (`offenders` must equal exactly `['src/lib/flow-loader.mjs']`). Every
+// other module that needs a Flow, an entry or an Intent asks this loader, so
+// the observe-mode scan keeps rejecting a second reader.
+//
+// What this module does:
+//   - resolves where the Flow assets live (`RIVER_FLOWS_DIR`, an explicit
+//     argument, or the repository's `flows/` next to this package);
+//   - reads `entry-map.json`, every `*.flow.json` and every
+//     `intents/*.intent.json`, and validates each against the schema that
+//     already owns it (schemas/flow-entry-map.schema.json, schemas/flow.schema.json,
+//     schemas/review-intent.schema.json) with the same Ajv 2020 setup the
+//     repository's other runtime validators use (src/lib/agent-skill-bridge.mjs);
+//   - resolves one entry name to its Flow pin through `deriveFlowPin`
+//     (src/lib/execution-manifest.mjs), never by hashing on its own.
+//
+// What this module does NOT do (ADR-009 D3, RA-1..RA-4): it holds no
+// judgment. No severity, no gate, no skill selection, no threshold. An entry
+// name goes in; a pin and the evidence the Flow declares as required come
+// out. A missing directory or an invalid document is a loud `FlowLoaderError`,
+// never a silent fall-back to "no Flow" — a runtime that cannot find its
+// Flows must say so (the GitHub Action dist does not bundle `flows/`, which
+// is exactly the case `RIVER_FLOWS_DIR` exists for).
+
+
+
+
+
+
+
+
+
+
+
+
+/** Environment variable that overrides where the Flow assets are read from. */
+const FLOWS_DIR_ENV = 'RIVER_FLOWS_DIR';
+
+/** File name of the entry map inside the flows directory. */
+const ENTRY_MAP_FILENAME = 'entry-map.json';
+
+const FLOW_SUFFIX = '.flow.json';
+const INTENT_SUFFIX = '.intent.json';
+const INTENTS_SUBDIR = 'intents';
+
+const HERE = (0,external_node_url_.fileURLToPath)(new URL(/* asset import */ __nccwpck_require__(3896), __nccwpck_require__.b));
+const PACKAGE_ROOT = (0,external_node_path_.resolve)(HERE, '..', '..');
+
+/** The repository's own `flows/` directory, used when nothing overrides it. */
+const DEFAULT_FLOWS_DIR = (0,external_node_path_.resolve)(PACKAGE_ROOT, 'flows');
+
+const SCHEMAS_DIR = (0,external_node_path_.resolve)(PACKAGE_ROOT, 'schemas');
+
+class FlowLoaderError extends Error {
+  constructor(message, options) {
+    super(message, options);
+    this.name = 'FlowLoaderError';
+  }
+}
+
+const flow_loader_compareStrings = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+
+const isPlainObject = (value) =>
+  value != null && typeof value === 'object' && !Array.isArray(value);
+
+/**
+ * Where the Flow assets are read from, in precedence order: the explicit
+ * argument, then `RIVER_FLOWS_DIR`, then the repository's `flows/`.
+ *
+ * @param {object} [options]
+ * @param {string|null} [options.flowsDir]
+ * @param {NodeJS.ProcessEnv} [options.env]
+ * @returns {string} absolute path
+ */
+function resolveFlowsDir({ flowsDir = null, env = external_node_process_.env } = {}) {
+  const explicit = (0,promotion_candidates/* nonEmptyNfcString */.bS)(flowsDir);
+  if (explicit != null) return (0,external_node_path_.resolve)(explicit);
+  const fromEnv = (0,promotion_candidates/* nonEmptyNfcString */.bS)(env?.[FLOWS_DIR_ENV]);
+  if (fromEnv != null) return (0,external_node_path_.resolve)(fromEnv);
+  return DEFAULT_FLOWS_DIR;
+}
+
+let compiledValidators = null;
+
+/**
+ * Compile the three schemas once per process. Same Ajv 2020 options as the
+ * test-side factory (tests/helpers/schema-validator.mjs): `allErrors` on and
+ * strict mode left at its default, so a typo in a shipped document surfaces.
+ */
+function validators() {
+  if (compiledValidators) return compiledValidators;
+  const ajv = new _2020({ allErrors: true });
+  dist(ajv);
+  const compile = (fileName) => {
+    let schema;
+    try {
+      schema = JSON.parse((0,external_node_fs_.readFileSync)((0,external_node_path_.join)(SCHEMAS_DIR, fileName), 'utf8'));
+    } catch (error) {
+      throw new FlowLoaderError(
+        `cannot read schema ${fileName} from ${SCHEMAS_DIR}: ${error?.message ?? error}`,
+        { cause: error }
+      );
+    }
+    return ajv.compile(schema);
+  };
+  compiledValidators = {
+    entryMap: compile('flow-entry-map.schema.json'),
+    flow: compile('flow.schema.json'),
+    intent: compile('review-intent.schema.json'),
+  };
+  return compiledValidators;
+}
+
+const formatAjvErrors = (errors) =>
+  (errors ?? []).map((e) => `${e.instancePath || '/'} ${e.message}`).join('; ');
+
+function readJsonFile(path, label) {
+  let text;
+  try {
+    text = (0,external_node_fs_.readFileSync)(path, 'utf8');
+  } catch (error) {
+    throw new FlowLoaderError(`cannot read ${label} at ${path}: ${error?.message ?? error}`, {
+      cause: error,
+    });
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new FlowLoaderError(`${label} at ${path} is not valid JSON: ${error?.message ?? error}`, {
+      cause: error,
+    });
+  }
+}
+
+function validateDocument(validate, document, label, path) {
+  if (!validate(document)) {
+    throw new FlowLoaderError(
+      `${label} at ${path} does not satisfy its schema: ${formatAjvErrors(validate.errors)}`
+    );
+  }
+}
+
+function listFiles(dir, suffix, label) {
+  let names;
+  try {
+    names = (0,external_node_fs_.readdirSync)(dir);
+  } catch (error) {
+    throw new FlowLoaderError(`cannot list ${label} in ${dir}: ${error?.message ?? error}`, {
+      cause: error,
+    });
+  }
+  return names.filter((name) => name.endsWith(suffix)).sort(flow_loader_compareStrings);
+}
+
+/**
+ * Read and validate every Flow asset.
+ *
+ * @param {object} [options]
+ * @param {string|null} [options.flowsDir] overrides `RIVER_FLOWS_DIR` and the default
+ * @param {NodeJS.ProcessEnv} [options.env]
+ * @returns {{
+ *   flowsDir: string,
+ *   registry: object,
+ *   flowDocuments: object[],
+ *   intents: object[],
+ * }}
+ *   `registry` is the parsed entry map (`entries` + `triggers`), the shape
+ *   `resolveTrigger` (src/lib/trigger-resolver.mjs) takes as `registry`;
+ *   `flowDocuments` is what it takes as `flowDocuments`, sorted by file name.
+ * @throws {FlowLoaderError} when the directory is missing, a document cannot
+ *   be read, or a document fails its schema. Never returns a partial result.
+ */
+function loadFlowRegistry({ flowsDir = null, env = external_node_process_.env } = {}) {
+  const dir = resolveFlowsDir({ flowsDir, env });
+  let stat;
+  try {
+    stat = (0,external_node_fs_.statSync)(dir);
+  } catch (error) {
+    throw new FlowLoaderError(
+      `flows directory not found: ${dir}. ` +
+        `Set ${FLOWS_DIR_ENV} to the directory that holds ${ENTRY_MAP_FILENAME} ` +
+        `(the GitHub Action dist does not bundle it).`,
+      { cause: error }
+    );
+  }
+  if (!stat.isDirectory()) {
+    throw new FlowLoaderError(`flows path is not a directory: ${dir}`);
+  }
+  const { entryMap, flow, intent } = validators();
+
+  const entryMapPath = (0,external_node_path_.join)(dir, ENTRY_MAP_FILENAME);
+  const registry = readJsonFile(entryMapPath, 'entry map');
+  validateDocument(entryMap, registry, 'entry map', entryMapPath);
+
+  const flowDocuments = listFiles(dir, FLOW_SUFFIX, 'Flow documents').map((name) => {
+    const path = (0,external_node_path_.join)(dir, name);
+    const document = readJsonFile(path, 'Flow document');
+    validateDocument(flow, document, 'Flow document', path);
+    return document;
+  });
+
+  const intentsDir = (0,external_node_path_.join)(dir, INTENTS_SUBDIR);
+  const intents = listFiles(intentsDir, INTENT_SUFFIX, 'Review Intents').map((name) => {
+    const path = (0,external_node_path_.join)(intentsDir, name);
+    const document = readJsonFile(path, 'Review Intent');
+    validateDocument(intent, document, 'Review Intent', path);
+    return document;
+  });
+
+  return { flowsDir: dir, registry, flowDocuments, intents };
+}
+
+/**
+ * The entry names a caller may pass to `--entry`, sorted.
+ *
+ * @param {Parameters<typeof loadFlowRegistry>[0]} [options]
+ * @returns {string[]}
+ */
+function listFlowEntryNames(options) {
+  const { registry } = loadFlowRegistry(options);
+  return Object.keys(registry.entries).sort(flow_loader_compareStrings);
+}
+
+/**
+ * The input names a Flow document declares as `required: true`, sorted and
+ * de-duplicated. The same reading `resolveTrigger` applies to a selected
+ * entry's Flow; tests/flow-loader.test.mjs cross-checks the two.
+ *
+ * @param {object} document
+ * @returns {string[]}
+ */
+function requiredInputNames(document) {
+  const names = new Set();
+  for (const input of Array.isArray(document?.inputs) ? document.inputs : []) {
+    const name = (0,promotion_candidates/* nonEmptyNfcString */.bS)(input?.name);
+    if (input?.required === true && name != null) names.add(name);
+  }
+  return [...names].sort(flow_loader_compareStrings);
+}
+
+/**
+ * Resolve one entry name to its pinned Flow.
+ *
+ * @param {string} entryName a key of the entry map's `entries`
+ * @param {Parameters<typeof loadFlowRegistry>[0]} [options]
+ * @returns {{
+ *   flow: { entry: string, id: string, version: string, sha256: string },
+ *   evidenceRequirements: string[],
+ *   document: object,
+ *   intent: object|null,
+ * }}
+ *   `flow` has the shape of one `flowPins[]` element of `resolveTrigger`;
+ *   `evidenceRequirements` is the Flow's own required inputs (an entry named
+ *   directly has no trigger to add to them).
+ * @throws {FlowLoaderError} for an unknown entry (the message lists the
+ *   accepted names), a Flow the entry points at that is not shipped, or a
+ *   version mismatch between the entry and the document.
+ */
+function resolveFlowEntry(entryName, options) {
+  const { registry, flowDocuments, intents } = loadFlowRegistry(options);
+  const name = (0,promotion_candidates/* nonEmptyNfcString */.bS)(entryName);
+  const known = Object.keys(registry.entries).sort(flow_loader_compareStrings);
+  if (name == null || !Object.hasOwn(registry.entries, name)) {
+    throw new FlowLoaderError(`unknown entry "${entryName ?? ''}" (known: ${known.join(', ')}).`);
+  }
+  const entry = registry.entries[name];
+  const flowId = (0,promotion_candidates/* nonEmptyNfcString */.bS)(entry?.flow);
+  if (!isPlainObject(entry) || flowId == null) {
+    throw new FlowLoaderError(`entry "${name}" names no flow.`);
+  }
+  const document = flowDocuments.find((candidate) => candidate?.id === flowId) ?? null;
+  if (document == null) {
+    throw new FlowLoaderError(
+      `entry "${name}" resolves to flow "${flowId}", which is not among the shipped Flow documents.`
+    );
+  }
+  let pin;
+  try {
+    pin = deriveFlowPin(document, { expectedVersion: entry.flowVersion ?? null });
+  } catch (error) {
+    throw new FlowLoaderError(`entry "${name}" cannot be pinned: ${error?.message ?? error}`, {
+      cause: error,
+    });
+  }
+  const purpose = (0,promotion_candidates/* nonEmptyNfcString */.bS)(document?.intent?.purpose);
+  const intent =
+    purpose == null ? null : (intents.find((candidate) => candidate?.purpose === purpose) ?? null);
+  return {
+    flow: { entry: name, ...pin },
+    evidenceRequirements: requiredInputNames(document),
+    document,
+    intent,
+  };
+}
+
+
+/***/ }),
+
 /***/ 2773:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -55686,6 +56942,858 @@ function shouldExcludeForContext(relPath, opts = {}) {
 
 /***/ }),
 
+/***/ 4029:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+/* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   DEFAULT_MIN_RECURRENCE: () => (/* binding */ DEFAULT_MIN_RECURRENCE),
+/* harmony export */   Kh: () => (/* binding */ deriveReviewRunId),
+/* harmony export */   L5: () => (/* binding */ buildRunEvidence),
+/* harmony export */   Mc: () => (/* binding */ computeCandidateId),
+/* harmony export */   buildShadowAggregate: () => (/* binding */ buildShadowAggregate),
+/* harmony export */   fg: () => (/* binding */ sha256Hex),
+/* harmony export */   formatShadowAggregateMarkdown: () => (/* binding */ formatShadowAggregateMarkdown),
+/* harmony export */   lY: () => (/* binding */ EVIDENCE_SOURCES)
+/* harmony export */ });
+/* unused harmony exports SHADOW_AGGREGATE_SCHEMA_VERSION, SHADOW_AGGREGATE_POLICY_VERSION, COLLECTOR_VERSION, P1_TRUST_LEVEL, deriveFeedbackReviewRunId, evidenceTrustLevel, buildClusters */
+/* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
+/* harmony import */ var _finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(1535);
+/* harmony import */ var _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(3077);
+// Shadow aggregate (#1574 P1) — read-only multi-run aggregation.
+//
+// Aggregates completed review runs (`.river/runs/`) and captured feedback
+// (`.river/feedback/*.jsonl`) into a single observation artifact plus at most
+// ONE ReviewImprovementCandidate, WITHOUT mutating any repository surface.
+//
+// Read-only by construction: this module performs no filesystem, network, or
+// process side effects at all — callers pass already-loaded records in and get
+// plain objects back. The `warn` option added in #1823 does not change that: it
+// defaults to a no-op, so the only sink is one the caller supplies. Canary,
+// rollback, and automatic promotion are explicitly out of scope (P3/P4, and the
+// promotion lifecycle itself stays #1568-C's).
+//
+// Design contract compliance (docs/development/1574-p0-design-contract.md):
+//   契約1 evidence provenance  → buildRunEvidence / evidenceTrustLevel
+//   契約2 canonical run id     → deriveReviewRunId / deriveFeedbackReviewRunId
+//   契約4 content-addressed ID → computeCandidateId (date-independent)
+//   契約5 two-stage clustering → buildClusters (stage 1 / stage 2)
+
+
+
+
+
+// Re-exported so the aggregate's own hashing helpers keep one implementation
+// with the candidate id derivation (#1624).
+
+
+const SHADOW_AGGREGATE_SCHEMA_VERSION = 1;
+
+// The candidate id derivation is NOT owned here: it is the one in
+// src/lib/promotion-candidates.mjs (#1624 / 契約4), so that the shadow
+// observation and `river promote propose` converge on the SAME id for the same
+// evidence. That also fixes the policy version to CANDIDATE_POLICY_VERSION —
+// the shadow aggregate does not get a hash namespace of its own.
+const SHADOW_AGGREGATE_POLICY_VERSION = _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .CANDIDATE_POLICY_VERSION */ .e1;
+
+// Collector identity recorded in every evidence record (契約1).
+const COLLECTOR_VERSION = 'river-shadow-aggregate/1';
+
+/** Evidence sources defined by 契約1. Order is meaningful only for docs. */
+const EVIDENCE_SOURCES = ['local', 'CI', 'protected-branch', 'human'];
+
+/**
+ * The only trust level P1 can emit.
+ *
+ * Every provenance field this module reads comes from `.river/runs/*.json`,
+ * which lives INSIDE the reviewed repository and is writable by the agent
+ * under review (see the trust-boundary note on `buildRunRecord` in
+ * result-store.mjs — referenced by symbol, not by line, because line numbers
+ * here went stale the first time that file grew). A record can
+ * therefore claim `evidence_source: 'CI'` and `trusted_by: 'github-actions'`
+ * with no verification whatsoever, so honouring that claim would let a forged
+ * file mint trusted evidence. P1 closes the promotion path entirely: the
+ * verification mechanism for `trusted_by` (CI attestation / signed record) is
+ * an explicit 契約1 未決事項 and lands in P2.
+ */
+const P1_TRUST_LEVEL = 'untrusted';
+
+/** Recurrence threshold for stage-1 clustering (契約5), same default as #1568-A. */
+const DEFAULT_MIN_RECURRENCE = 2;
+
+/**
+ * Improvement target taxonomy from the #1574 Epic body ("改善対象の分類案").
+ * Deliberately distinct from #1568's `proposedTarget` (fixture/rule/skill/...):
+ * #1574 selects an *investment surface*, #1568 owns the promotion target.
+ */
+const TARGET_SURFACE_BY_FEEDBACK_TYPE = {
+  duplicate: 'routing',
+  out_of_scope: 'context',
+  missed_issue: 'judgment',
+  accepted_risk: 'judgment',
+  false_positive: 'memory',
+  not_actionable: 'reviewer',
+  unclear: 'reviewer',
+};
+
+const OBSERVED_PATTERN_BY_FEEDBACK_TYPE = {
+  duplicate: '同一の指摘が複数 skill から重複して出ている',
+  out_of_scope: '差分スコープ外の指摘が繰り返し出ている',
+  missed_issue: '検出されるべき問題が繰り返し見逃されている',
+  accepted_risk: '同じリスクを繰り返し許容している',
+  false_positive: '同じ誤検出が繰り返し発生している',
+  not_actionable: '指摘が繰り返し実行可能な形になっていない',
+  unclear: '指摘の意味が繰り返し伝わっていない',
+};
+
+// ---------------------------------------------------------------------------
+// Deterministic helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Hex sha256 of a string.
+ *
+ * Exported (#2015) so that content-addressed surfaces added later import this
+ * one implementation instead of spelling `createHash('sha256')` again. Two
+ * byte-identical private copies already existed (here and in
+ * `paired-replay.mjs`); a third would have made the hash a convention rather
+ * than a shared function. `paired-replay.mjs` now imports this one.
+ *
+ * @param {string} input
+ * @returns {string} 64 lowercase hex characters
+ */
+function sha256Hex(input) {
+  return (0,node_crypto__WEBPACK_IMPORTED_MODULE_0__.createHash)('sha256').update(input).digest('hex');
+}
+
+function compareStrings(a, b) {
+  const left = a ?? '';
+  const right = b ?? '';
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+// ---------------------------------------------------------------------------
+// 契約2: canonical review_run_id
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the canonical `review_run_id` of a saved run record.
+ *
+ * The field is additive and optional (契約2): an explicit `review_run_id`
+ * wins, otherwise the existing `runId` is used as the canonical value. No
+ * record is rewritten — this is a read-side resolution only.
+ *
+ * @param {object|null|undefined} record
+ * @returns {string|null}
+ */
+function deriveReviewRunId(record) {
+  return (
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(record?.review_run_id) ??
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(record?.reviewRunId) ??
+    (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(record?.runId)
+  );
+}
+
+/**
+ * Resolve the canonical `review_run_id` a feedback entry points at.
+ *
+ * Unlike run records there is no legacy fallback: historical feedback entries
+ * carry no run reference at all, so they simply stay unjoined (and are
+ * reported as such) until the field is propagated.
+ *
+ * @param {object|null|undefined} entry
+ * @returns {string|null}
+ */
+function deriveFeedbackReviewRunId(entry) {
+  return (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.review_run_id) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.reviewRunId);
+}
+
+// ---------------------------------------------------------------------------
+// 契約1: evidence provenance / trust boundary
+// ---------------------------------------------------------------------------
+
+/**
+ * Trust level of an evidence record — always `untrusted` in P1.
+ *
+ * The argument is accepted (and ignored) so the signature stays stable for P2,
+ * where a verified `trusted_by` may promote a record. Until that verification
+ * exists, no field combination can raise the level: see P1_TRUST_LEVEL.
+ *
+ * @param {object} [_evidence] self-reported provenance (unverified)
+ * @returns {'untrusted'}
+ */
+function evidenceTrustLevel(_evidence) {
+  return P1_TRUST_LEVEL;
+}
+
+/**
+ * Build the 契約1 provenance record for one saved run.
+ *
+ * Every field here is SELF-REPORTED by the reviewed repository: `provenance`
+ * is read from the run record itself, which the agent under review can write.
+ * The record is reproduced as claimed (so a human can inspect it), but it is
+ * never used to raise trust — `provenance_verified` is a constant `false` and
+ * `trust_level` a constant `untrusted` (see P1_TRUST_LEVEL).
+ *
+ * `artifact_sha256` is a SELF-DIGEST: it hashes the canonical JSON of the same
+ * record it is stored on. It detects accidental drift between copies of one
+ * record; it does NOT prove the record is authentic, because whoever can edit
+ * the record can recompute the digest.
+ *
+ * @param {object} record saved run record
+ * @param {{ collectorVersion?: string }} [options]
+ */
+function buildRunEvidence(record, { collectorVersion = COLLECTOR_VERSION } = {}) {
+  const provenance = record?.provenance ?? {};
+  const source = EVIDENCE_SOURCES.includes(provenance.evidenceSource)
+    ? provenance.evidenceSource
+    : 'local';
+  const evidence = {
+    review_run_id: deriveReviewRunId(record),
+    // Claimed source. Recorded for observation only — never a trust input.
+    evidence_source: source,
+    source_commit_sha:
+      (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(provenance.sourceCommitSha) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(record?.commitSha),
+    artifact_sha256: sha256Hex((0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .canonicalJson */ .dj)(record)),
+    collector_version: collectorVersion,
+    trusted_by: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(provenance.trustedBy),
+    generated_by_candidate: provenance.generatedByCandidate === true,
+    provenance_verified: false,
+  };
+  return { ...evidence, trust_level: evidenceTrustLevel(evidence) };
+}
+
+// ---------------------------------------------------------------------------
+// 契約5: two-stage clustering
+// ---------------------------------------------------------------------------
+
+/**
+ * Index findings of all runs by fingerprint so stage-2 clustering can attach
+ * category / filePath to a feedback entry. Later runs win for the same
+ * fingerprint (same convention as diffRunHistory).
+ *
+ * NOTE: `finding.scope` (the in-diff / pre-existing classification added in
+ * #1648) is deliberately NOT read here. The stage-2 axis below is the file the
+ * finding was reported on, which is why it is called `filePath` — reusing the
+ * name `scope` for it made two unrelated meanings collide. Whether the #1648
+ * scope should become an additional clustering axis is left to a later phase.
+ *
+ * @param {object[]} runRecords
+ * @returns {Map<string, { category: string|null, filePath: string|null, review_run_id: string|null }>}
+ */
+function indexFindingsByFingerprint(runRecords) {
+  const index = new Map();
+  // Two-key sort: records sharing a timestamp (or missing one) must still have
+  // a total order, otherwise "last run wins" depends on directory read order.
+  const ordered = [...runRecords].sort(
+    (a, b) =>
+      compareStrings(a?.timestamp ?? '', b?.timestamp ?? '') ||
+      compareStrings(deriveReviewRunId(a), deriveReviewRunId(b))
+  );
+  for (const record of ordered) {
+    const reviewRunId = deriveReviewRunId(record);
+    for (const finding of record?.findings ?? []) {
+      const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(finding?.fingerprint);
+      if (!fingerprint) continue;
+      index.set(fingerprint, {
+        // `category` is not part of the current finding shape; `ruleId` (set to
+        // the emitting skill id by review-engine / local-runner) is what real
+        // findings carry today, so it is the working fallback.
+        category: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(finding?.category) ?? (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(finding?.ruleId),
+        filePath: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(finding?.file),
+        review_run_id: reviewRunId,
+      });
+    }
+  }
+  return index;
+}
+
+/**
+ * Stage-2 sub-cluster key. `failureMode` is intentionally absent (see below).
+ * The third component is the finding's FILE PATH (see indexFindingsByFingerprint),
+ * not the #1648 `finding.scope` classification.
+ */
+function subClusterKeyOf({ fingerprint, category, filePath }) {
+  return [
+    fingerprint ?? 'no-fingerprint',
+    category ?? 'no-category',
+    filePath ?? 'no-file-path',
+  ].join('::');
+}
+
+/**
+ * Two-stage clustering (契約5).
+ *
+ * - Stage 1 detects recurrence on `(skillId, feedbackType)` — byte-identical
+ *   key format to #1568-A's clusterKey, so both loops group the same way.
+ * - Stage 2 splits a recurring class into cause hypotheses by
+ *   fingerprint / category / filePath.
+ *
+ * `failureMode` is emitted as `null` on purpose: 契約5 defers the failure-mode
+ * vocabulary until it has been *observed* in P1, so inventing one here would
+ * pre-empt the contract.
+ *
+ * Eligibility is decided on DISTINCT occurrences, not on row count: several
+ * feedback rows sharing one fingerprint are one re-litigated finding, not
+ * recurrence (the same defence `reviewPromotionEffectiveness` already applies
+ * in src/lib/promotion.mjs). Sub-clusters without a fingerprint, or without
+ * `minRecurrence` distinct (run, PR) occurrences, stay visible but carry
+ * `experimentEligible: false` and must never feed an experiment or promotion.
+ *
+ * What "distinct" means widened once a producer for `review_run_id` existed
+ * (#1673). The occurrence key is `(review_run_id, pr)`, so with `--run-id`
+ * populated two feedback rows on the SAME PR but different saved runs are two
+ * occurrences, not one re-litigation. That is intended: a finding that comes
+ * back after a revise is exactly the recurrence the Judgment Promotion Loop
+ * is looking for. Before the producer existed such rows collapsed onto the PR
+ * alone, so the same data can flip `experimentEligible` false -> true when
+ * `--run-id` starts being passed. P1/P2 stay observation-only, so nothing is
+ * promoted automatically off the back of that.
+ *
+ * @param {object[]} feedbackEntries
+ * @param {{ minRecurrence?: number, findingIndex?: Map<string, object> }} [options]
+ */
+function buildClusters(
+  feedbackEntries,
+  { minRecurrence = DEFAULT_MIN_RECURRENCE, findingIndex = new Map() } = {}
+) {
+  const stage1 = new Map();
+  for (const entry of feedbackEntries ?? []) {
+    // Key components are used RAW (not trimmed) so the stage-1 clusterKey is
+    // byte-identical to #1568-A's (scripts/feedback-rule-candidates.mjs), which
+    // is the SSoT for this key. Blank values are skipped as unusable.
+    const skillId = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.skillId) ? entry.skillId : null;
+    const feedbackType = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.feedbackType) ? entry.feedbackType : null;
+    if (!skillId || !feedbackType) continue;
+    // `accepted` is a positive signal — never an improvement candidate.
+    if (feedbackType === 'accepted') continue;
+    const clusterKey = `${skillId}::${feedbackType}`;
+    if (!stage1.has(clusterKey)) stage1.set(clusterKey, { skillId, feedbackType, entries: [] });
+    stage1.get(clusterKey).entries.push(entry);
+  }
+
+  const clusters = [];
+  for (const [clusterKey, { skillId, feedbackType, entries }] of stage1) {
+    if (entries.length < minRecurrence) continue;
+    const stage2 = new Map();
+    for (const entry of entries) {
+      const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint);
+      const finding = fingerprint ? (findingIndex.get(fingerprint) ?? null) : null;
+      const shape = {
+        fingerprint,
+        category: finding?.category ?? null,
+        filePath: finding?.filePath ?? null,
+      };
+      const key = subClusterKeyOf(shape);
+      if (!stage2.has(key)) {
+        stage2.set(key, {
+          subClusterKey: key,
+          ...shape,
+          // 契約5 未決事項: the failure-mode vocabulary is decided AFTER P1
+          // observation, so P1 records the raw signals and leaves this null.
+          failureMode: null,
+          evidence: [],
+        });
+      }
+      stage2.get(key).evidence.push(buildFeedbackRef(entry));
+    }
+    const subClusters = [...stage2.values()]
+      .map((sub) => {
+        const distinctOccurrenceCount = distinctCount(sub.evidence.map(occurrenceKey));
+        return {
+          ...sub,
+          count: sub.evidence.length,
+          // A fingerprint identifies ONE finding, so this is 1 (or 0 when the
+          // sub-cluster has no fingerprint) by construction — surfaced so the
+          // gap against the raw `count` is visible in the artifact.
+          distinctFindingCount: sub.fingerprint == null ? 0 : 1,
+          distinctPrCount: distinctCount(sub.evidence.map((ref) => ref.pr)),
+          distinctRunCount: distinctCount(sub.evidence.map((ref) => ref.review_run_id)),
+          distinctOccurrenceCount,
+          experimentEligible: sub.fingerprint != null && distinctOccurrenceCount >= minRecurrence,
+          evidence: sortFeedbackRefs(sub.evidence),
+        };
+      })
+      .sort((a, b) => b.count - a.count || compareStrings(a.subClusterKey, b.subClusterKey));
+    clusters.push({
+      clusterKey,
+      skillId,
+      feedbackType,
+      // Raw row count. Compare against the distinct counters before treating it
+      // as recurrence evidence.
+      count: entries.length,
+      distinctFindingCount: distinctCount(entries.map((e) => e.findingFingerprint)),
+      distinctPrCount: distinctCount(entries.map((e) => e.pr)),
+      subClusters,
+    });
+  }
+  return clusters.sort((a, b) => b.count - a.count || compareStrings(a.clusterKey, b.clusterKey));
+}
+
+/** Count distinct non-null / non-empty values. */
+function distinctCount(values) {
+  return new Set(values.filter((v) => v != null && v !== '')).size;
+}
+
+/**
+ * Identify the occurrence a feedback row belongs to. Rows that carry neither a
+ * run nor a PR cannot be attributed and return null, so they never count as
+ * independent recurrence evidence.
+ *
+ * Both halves of the key participate, so once `river feedback add --run-id`
+ * populates `review_run_id` (#1673) a row with a run but no PR IS attributable
+ * and does count, and two rows on one PR from two runs are two occurrences.
+ * Intended — see the recurrence note on `buildClusters`. The behaviour here is
+ * unchanged; only the data reaching it is richer.
+ */
+function occurrenceKey(ref) {
+  if (ref.review_run_id == null && ref.pr == null) return null;
+  return `${ref.review_run_id ?? ''}#${ref.pr ?? ''}`;
+}
+
+/**
+ * Project one feedback row into the reference stored on a sub-cluster.
+ *
+ * `skillId` is included so `candidate.sourceFeedbackRefs` is directly usable as
+ * the `--input` of `river promote propose`: that command validates every input
+ * row with `validateFeedbackEntryShape`, which requires a non-empty skillId,
+ * and rejects rows whose `skillId::feedbackType` does not match `--cluster-key`.
+ * Without it the shadow → propose hand-off had no working path at all.
+ * It is not a hash input (normalizeEvidence ignores it), so the candidate id is
+ * unchanged.
+ */
+function buildFeedbackRef(entry) {
+  return {
+    review_run_id: deriveFeedbackReviewRunId(entry),
+    timestamp: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.timestamp),
+    skillId: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.skillId),
+    feedbackType: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.feedbackType),
+    findingFingerprint: (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint),
+    pr: Number.isInteger(entry?.pr) && entry.pr > 0 ? entry.pr : null,
+  };
+}
+
+function sortFeedbackRefs(refs) {
+  return [...refs].sort(
+    (a, b) =>
+      compareStrings(a.timestamp, b.timestamp) ||
+      compareStrings(a.review_run_id, b.review_run_id) ||
+      compareStrings(a.findingFingerprint, b.findingFingerprint) ||
+      (a.pr ?? 0) - (b.pr ?? 0)
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 契約4: content-addressed candidate ID
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute the content-addressed candidate ID for a sub-cluster.
+ *
+ * This is a thin adapter over the #1624 derivation
+ * (`normalizeEvidence` + `computeCandidateContentHash`), NOT a second
+ * implementation: the shadow observation and `river promote propose` must mint
+ * the SAME `RR-PC-<12 hex>` id from the same evidence, otherwise the loop
+ * cannot tell that it is looking at one candidate.
+ *
+ * Consequences of reusing that contract:
+ * - hash inputs are `{ clusterKey, normalized evidence, policyVersion }` only;
+ * - `subClusterKey`, `review_run_id` and the generation date are NOT hashed
+ *   (two sub-clusters of one cluster already differ by their evidence sets);
+ * - evidence is deduplicated and NFC-normalized upstream.
+ *
+ * @param {{ policyVersion?: string, clusterKey: string, evidence: object[] }} input
+ * @returns {{ candidateId: string, contentHash: string, evidenceCount: number }}
+ */
+function computeCandidateId({
+  policyVersion = _promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .CANDIDATE_POLICY_VERSION */ .e1,
+  clusterKey,
+  evidence,
+}) {
+  if (!_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .KNOWN_POLICY_VERSIONS */ .d.includes(String(policyVersion))) {
+    // An arbitrary policy version would let one evidence set mint unlimited
+    // ids — the same guard buildProposedCandidate applies.
+    throw new Error(
+      `Unknown policyVersion "${policyVersion}". Expected one of: ${_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .KNOWN_POLICY_VERSIONS */ .d.join(', ')}.`
+    );
+  }
+  const { evidence: normalized } = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .normalizeEvidence */ .vf)(evidence ?? []);
+  const { candidateId, contentHash } = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .computeCandidateContentHash */ .yI)({
+    clusterKey,
+    evidence: normalized,
+    policyVersion,
+  });
+  return { candidateId, contentHash, evidenceCount: normalized.length };
+}
+
+// ---------------------------------------------------------------------------
+// Candidate + aggregate assembly
+// ---------------------------------------------------------------------------
+
+/**
+ * Select the single sub-cluster P1 turns into a candidate.
+ *
+ * Preference order: experiment-eligible (fingerprinted) sub-clusters first,
+ * then higher evidence count, then lexicographic key for a stable tie-break.
+ */
+function selectSubCluster(clusters) {
+  let best = null;
+  for (const cluster of clusters) {
+    for (const sub of cluster.subClusters) {
+      const candidate = { cluster, sub };
+      if (!best) {
+        best = candidate;
+        continue;
+      }
+      if (sub.experimentEligible !== best.sub.experimentEligible) {
+        if (sub.experimentEligible) best = candidate;
+        continue;
+      }
+      if (sub.count !== best.sub.count) {
+        if (sub.count > best.sub.count) best = candidate;
+        continue;
+      }
+      if (compareStrings(sub.subClusterKey, best.sub.subClusterKey) < 0) best = candidate;
+    }
+  }
+  return best;
+}
+
+/**
+ * Build the shadow ReviewImprovementCandidate for one selected sub-cluster.
+ *
+ * The candidate is an observation only: `mode: 'shadow'`, `status: 'observed'`,
+ * `writeEffects: []`, and a trust block whose `canaryEligible` is hard-wired
+ * to `false` in P1 (契約1: candidate adoption requires trusted evidence
+ * produced outside the candidate's own write scope — that gate lands in P2+).
+ */
+function buildShadowCandidate({ cluster, sub, evidenceByRunId, now, policyVersion }) {
+  const evidence = sub.evidence;
+  const sourceReviewRunIds = [
+    ...new Set(evidence.map((ref) => ref.review_run_id).filter(Boolean)),
+  ].sort(compareStrings);
+  const runEvidence = sourceReviewRunIds
+    .map((id) => evidenceByRunId.get(id) ?? null)
+    .filter(Boolean);
+  const trustedEvidenceCount = runEvidence.filter((e) => e.trust_level === 'trusted').length;
+  const reasons = [];
+  if (!sub.experimentEligible) {
+    reasons.push(
+      sub.fingerprint == null
+        ? 'finding fingerprint がないため自動実験・昇格の対象にしない（契約5）'
+        : `distinct な occurrence が ${sub.distinctOccurrenceCount} 件しかなく反復証拠として不足（契約5）`
+    );
+  }
+  reasons.push(
+    'saved run の provenance は被レビュー側が書き換え可能で未検証のため、すべて untrusted 扱い（契約1）'
+  );
+  reasons.push('P1 は shadow 観測のみで canary へ進まない（実装順 P3 以降）');
+
+  const { candidateId, contentHash, evidenceCount } = computeCandidateId({
+    policyVersion,
+    clusterKey: cluster.clusterKey,
+    evidence,
+  });
+
+  return {
+    schemaVersion: SHADOW_AGGREGATE_SCHEMA_VERSION,
+    candidateId,
+    // Persisted so a reader can re-derive and verify the 12-hex id instead of
+    // trusting it (same rationale as promotion-candidates.mjs).
+    contentHash,
+    uniqueEvidenceCount: evidenceCount,
+    policyVersion,
+    createdAt: now.toISOString(),
+    mode: 'shadow',
+    status: 'observed',
+    clusterKey: cluster.clusterKey,
+    subClusterKey: sub.subClusterKey,
+    skillId: cluster.skillId,
+    feedbackType: cluster.feedbackType,
+    observedPattern:
+      OBSERVED_PATTERN_BY_FEEDBACK_TYPE[cluster.feedbackType] ??
+      '同種の feedback が繰り返し発生している',
+    // 1 candidate = 1 hypothesis. In P1 the hypothesis is not asserted
+    // automatically — a human writes it from the observed cluster.
+    causeHypothesis: null,
+    targetSurface: TARGET_SURFACE_BY_FEEDBACK_TYPE[cluster.feedbackType] ?? null,
+    candidateType: sub.experimentEligible ? 'experiment_candidate' : 'observation_only',
+    failureMode: sub.failureMode,
+    // Raw row counts. `distinct*` below is what recurrence judgements must use.
+    recurrenceCount: cluster.count,
+    subClusterCount: sub.count,
+    distinctFindingCount: sub.distinctFindingCount,
+    distinctPrCount: sub.distinctPrCount,
+    distinctRunCount: sub.distinctRunCount,
+    distinctOccurrenceCount: sub.distinctOccurrenceCount,
+    sourceReviewRunIds,
+    sourceFeedbackRefs: evidence,
+    evidence: runEvidence,
+    trust: {
+      trustedEvidenceCount,
+      untrustedEvidenceCount: runEvidence.length - trustedEvidenceCount,
+      // "Cannot be traced to a saved run" — which is a missing id OR an id
+      // that resolves to no evidence record. Counting only the missing ones
+      // under-reports the moment a producer exists (#1673): a typo'd or
+      // pruned `--run-id` would be silently counted as joined here while
+      // `join.unjoinedFeedbackCount` counts it as unjoined, so the two
+      // numbers in one artifact contradicted each other.
+      unjoinedEvidenceCount: evidence.filter(
+        (ref) => !ref.review_run_id || !evidenceByRunId.has(ref.review_run_id)
+      ).length,
+      canaryEligible: false,
+      reasons,
+    },
+    experimentEligible: sub.experimentEligible,
+    requiresHumanApproval: true,
+    autoActions: ['observe'],
+    // Explicit, machine-checkable statement that P1 mutates nothing.
+    writeEffects: [],
+  };
+}
+
+/**
+ * Build the read-only shadow aggregate over completed runs and feedback.
+ *
+ * Pure function: no I/O, no `Date.now()` (the clock is injected), and stable
+ * ordering everywhere, so the same inputs always produce a byte-identical
+ * artifact regardless of input order.
+ *
+ * @param {{
+ *   runRecords?: object[],
+ *   feedbackEntries?: object[],
+ *   now?: Date,
+ *   minRecurrence?: number,
+ *   month?: string|null,
+ *   policyVersion?: string,
+ *   collectorVersion?: string,
+ *   warn?: (msg: string) => void,
+ * }} [options]
+ *
+ * `warn` is the sink for feedback fingerprints that join to no saved finding
+ * (#1823 残件2). It defaults to a NO-OP, not `console.warn`, so this module
+ * keeps the "no process side effects at all" property stated at the top of the
+ * file — the same contract as `listFeedbackEntries` (src/lib/feedback.mjs).
+ * The CLI wires it to `console.warn`; the same information is also recorded in
+ * `join.unmatchedFindingFingerprints`, so a caller that leaves the sink unwired
+ * still has it in the artifact.
+ */
+function buildShadowAggregate({
+  runRecords = [],
+  feedbackEntries = [],
+  now = new Date(),
+  minRecurrence = DEFAULT_MIN_RECURRENCE,
+  month = null,
+  policyVersion = SHADOW_AGGREGATE_POLICY_VERSION,
+  collectorVersion = COLLECTOR_VERSION,
+  warn = () => {},
+} = {}) {
+  // `--month` scopes BOTH sides of the aggregate. Filtering only the feedback
+  // would silently mix a whole run history into a one-month report.
+  const scopedRuns = month
+    ? runRecords.filter((record) => String(record?.timestamp ?? '').slice(0, 7) === month)
+    : [...runRecords];
+  const scopedFeedback = month
+    ? (feedbackEntries ?? []).filter(
+        (entry) => String(entry?.timestamp ?? '').slice(0, 7) === month
+      )
+    : [...(feedbackEntries ?? [])];
+
+  const runEvidence = scopedRuns
+    .map((record) => buildRunEvidence(record, { collectorVersion }))
+    .sort(
+      (a, b) =>
+        compareStrings(a.review_run_id, b.review_run_id) ||
+        compareStrings(a.artifact_sha256, b.artifact_sha256)
+    );
+  // Two records can claim the same review_run_id (the id is self-reported and
+  // the store is writable). Resolve deterministically — lowest artifact_sha256
+  // wins — instead of letting directory read order decide, and surface the
+  // collision so a human can investigate.
+  const evidenceByRunId = new Map();
+  const duplicateReviewRunIds = new Set();
+  for (const evidence of runEvidence) {
+    if (!evidence.review_run_id) continue;
+    if (evidenceByRunId.has(evidence.review_run_id)) {
+      duplicateReviewRunIds.add(evidence.review_run_id);
+      continue; // first wins; runEvidence is already sorted by (id, sha256)
+    }
+    evidenceByRunId.set(evidence.review_run_id, evidence);
+  }
+  const trustedRunCount = runEvidence.filter((e) => e.trust_level === 'trusted').length;
+
+  const findingIndex = indexFindingsByFingerprint(scopedRuns);
+  const clusters = buildClusters(scopedFeedback, { minRecurrence, findingIndex });
+
+  // #1823 残件2: a `findingFingerprint` that joins to no saved finding is NOT
+  // dropped — it still forms its own stage-2 sub-cluster, just with
+  // `no-category` / `no-file-path`, and (with enough distinct occurrences) can
+  // still mint a candidate under a DIFFERENT candidateId than the same feedback
+  // recorded with the matching value. Nothing in the pre-#1823 output said so.
+  // The most common cause is a v2 hex copied out of `river review --debug`,
+  // which `classifyFingerprintAlgo` can name exactly because the saved records
+  // carry `fingerprintV2` next to `fingerprint`.
+  const scopedFindings = scopedRuns.flatMap((record) => record?.findings ?? []);
+  const unmatched = new Map(); // fingerprint -> 'v2' | null
+  for (const entry of scopedFeedback) {
+    const fingerprint = (0,_promotion_candidates_mjs__WEBPACK_IMPORTED_MODULE_2__/* .nonEmptyNfcString */ .bS)(entry?.findingFingerprint);
+    if (!fingerprint || findingIndex.has(fingerprint)) continue;
+    if (unmatched.has(fingerprint)) continue;
+    const algo = (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__.classifyFingerprintAlgo)(fingerprint, scopedFindings);
+    unmatched.set(fingerprint, algo === 'v2' ? 'v2' : null);
+  }
+  const unmatchedFindingFingerprints = [...unmatched.keys()].sort(compareStrings);
+  const v2FindingFingerprints = unmatchedFindingFingerprints.filter(
+    (fp) => unmatched.get(fp) === 'v2'
+  );
+  // Sorted first so the sink sees a deterministic order, matching the artifact.
+  for (const fingerprint of unmatchedFindingFingerprints) {
+    warn(
+      (0,_finding_factory_mjs__WEBPACK_IMPORTED_MODULE_1__.formatUnmatchedFeedbackFingerprintWarning)({
+        fingerprint,
+        likelyAlgo: unmatched.get(fingerprint),
+      })
+    );
+  }
+
+  const joinedFeedbackCount = scopedFeedback.filter((entry) => {
+    const id = deriveFeedbackReviewRunId(entry);
+    return id != null && evidenceByRunId.has(id);
+  }).length;
+
+  const selected = selectSubCluster(clusters);
+  const candidate = selected
+    ? buildShadowCandidate({ ...selected, evidenceByRunId, now, policyVersion })
+    : null;
+
+  return {
+    schemaVersion: SHADOW_AGGREGATE_SCHEMA_VERSION,
+    generatedAt: now.toISOString(),
+    mode: 'shadow',
+    readOnly: true,
+    policyVersion,
+    collectorVersion,
+    inputs: {
+      // Counts are POST-`--month` scoping (see scopedRuns / scopedFeedback).
+      runCount: scopedRuns.length,
+      feedbackCount: scopedFeedback.length,
+      minRecurrence,
+      month,
+    },
+    evidence: {
+      runs: runEvidence,
+      trustedRunCount,
+      untrustedRunCount: runEvidence.length - trustedRunCount,
+    },
+    join: {
+      // 契約2 propagation coverage: how much feedback can already be traced
+      // back to a saved run through the canonical review_run_id.
+      joinedFeedbackCount,
+      unjoinedFeedbackCount: scopedFeedback.length - joinedFeedbackCount,
+      runIdsWithEvidence: [...evidenceByRunId.keys()].sort(compareStrings),
+      duplicateReviewRunIds: [...duplicateReviewRunIds].sort(compareStrings),
+      // #1823 残件2. Distinct from `unjoinedFeedbackCount`, which is the
+      // review_run_id join (契約2): a row can join on run id and still name a
+      // fingerprint no finding has.
+      unmatchedFindingFingerprints,
+      v2FindingFingerprints,
+    },
+    clusters,
+    candidate,
+  };
+}
+
+/**
+ * Render the aggregate as Markdown for human review (`--output text`).
+ */
+function formatShadowAggregateMarkdown(aggregate) {
+  const lines = ['## Shadow aggregate (read-only)', ''];
+  lines.push(`| Item | Value |`);
+  lines.push(`|---|---|`);
+  lines.push(`| Generated at | ${aggregate.generatedAt} |`);
+  lines.push(`| Policy version | ${aggregate.policyVersion} |`);
+  lines.push(`| Month scope | ${aggregate.inputs.month ?? '(all)'} |`);
+  lines.push(`| Runs | ${aggregate.inputs.runCount} |`);
+  lines.push(
+    `| Untrusted evidence | ${aggregate.evidence.untrustedRunCount} / ${aggregate.evidence.runs.length}（P1 は全件 untrusted） |`
+  );
+  lines.push(`| Feedback entries | ${aggregate.inputs.feedbackCount} |`);
+  lines.push(
+    `| Feedback joined to a run | ${aggregate.join.joinedFeedbackCount} / ${aggregate.inputs.feedbackCount} |`
+  );
+  lines.push(`| Duplicate review_run_id | ${aggregate.join.duplicateReviewRunIds.length} |`);
+  lines.push(
+    `| Unmatched findingFingerprint | ${aggregate.join.unmatchedFindingFingerprints.length} |`
+  );
+  lines.push(`| Recurring clusters | ${aggregate.clusters.length} |`);
+  lines.push('');
+
+  if (aggregate.join.duplicateReviewRunIds.length) {
+    lines.push(
+      `⚠️ 同一 review_run_id を名乗る run が複数あります: ${aggregate.join.duplicateReviewRunIds
+        .map((id) => `\`${id}\``)
+        .join(', ')}`
+    );
+    lines.push('');
+  }
+
+  // #1823 残件2: an unmatched fingerprint still clusters, so it has to be
+  // called out here — the cluster list below looks perfectly healthy.
+  if (aggregate.join.unmatchedFindingFingerprints.length) {
+    const v2 = new Set(aggregate.join.v2FindingFingerprints);
+    lines.push(
+      '⚠️ どの run の finding にも一致しない findingFingerprint があります（独立した sub-cluster を作ります）:'
+    );
+    for (const fingerprint of aggregate.join.unmatchedFindingFingerprints) {
+      lines.push(
+        `- \`${fingerprint}\`` +
+          (v2.has(fingerprint)
+            ? '（保存済み finding の **v2**（行アンカー）値です。feedback の join は v1 で行うため一致しません）'
+            : '')
+      );
+    }
+    lines.push('');
+  }
+
+  if (aggregate.clusters.length) {
+    lines.push('### Clusters (stage 1 → stage 2)');
+    for (const cluster of aggregate.clusters) {
+      lines.push(
+        `- \`${cluster.clusterKey}\`: ${cluster.count} 件（distinct finding ${cluster.distinctFindingCount} / distinct PR ${cluster.distinctPrCount}）`
+      );
+      for (const sub of cluster.subClusters) {
+        const eligible = sub.experimentEligible ? 'experiment-eligible' : 'observation-only';
+        lines.push(
+          `  - \`${sub.subClusterKey}\`: ${sub.count} 件 / distinct occurrence ${sub.distinctOccurrenceCount} (${eligible})`
+        );
+      }
+    }
+    lines.push('');
+  }
+
+  if (aggregate.candidate) {
+    const c = aggregate.candidate;
+    lines.push('### Candidate (shadow, no side effects)');
+    lines.push(`- id: \`${c.candidateId}\``);
+    lines.push(`- cluster: \`${c.clusterKey}\` → \`${c.subClusterKey}\``);
+    lines.push(`- targetSurface: ${c.targetSurface ?? '(未判定)'}`);
+    lines.push(`- observedPattern: ${c.observedPattern}`);
+    lines.push(`- canaryEligible: ${c.trust.canaryEligible}`);
+    for (const reason of c.trust.reasons) lines.push(`  - ${reason}`);
+    lines.push('');
+  } else {
+    lines.push('No recurring cluster reached the threshold — no candidate generated.');
+    lines.push('');
+  }
+
+  lines.push(
+    'このコマンドは読み取り専用です。Skill / Rule / Riverbed / gate / PR には一切書き込みません。'
+  );
+  return lines.join('\n');
+}
+
+
+/***/ }),
+
 /***/ 5433:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
@@ -56940,9 +59048,20 @@ module.exports = /*#__PURE__*/JSON.parse('{"$schema":"http://json-schema.org/dra
 /******/ 	};
 /******/ })();
 /******/ 
+/******/ /* webpack/runtime/publicPath */
+/******/ (() => {
+/******/ 	var scriptUrl;
+/******/ 	if (typeof import.meta.url === "string") scriptUrl = import.meta.url
+/******/ 	// When supporting browsers where an automatic publicPath is not supported you must specify an output.publicPath manually via configuration
+/******/ 	// or pass an empty string ("") and set the __webpack_public_path__ variable from your code to use your own logic.
+/******/ 	if (!scriptUrl) throw new Error("Automatic publicPath is not supported in this browser");
+/******/ 	scriptUrl = scriptUrl.replace(/#.*$/, "").replace(/\?.*$/, "").replace(/\/[^\/]+$/, "/");
+/******/ 	__nccwpck_require__.p = scriptUrl;
+/******/ })();
+/******/ 
 /******/ /* webpack/runtime/import chunk loading */
 /******/ (() => {
-/******/ 	// no baseURI
+/******/ 	__nccwpck_require__.b = new URL("./", import.meta.url);
 /******/ 	
 /******/ 	// object to store loaded and loading chunks
 /******/ 	// undefined = chunk not loaded, null = chunk preloaded/prefetched
@@ -57012,8 +59131,8 @@ var external_node_fs_ = __nccwpck_require__(3024);
 var external_node_os_ = __nccwpck_require__(8161);
 // EXTERNAL MODULE: external "node:path"
 var external_node_path_ = __nccwpck_require__(6760);
-;// CONCATENATED MODULE: external "node:process"
-const external_node_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:process");
+// EXTERNAL MODULE: external "node:process"
+var external_node_process_ = __nccwpck_require__(1708);
 // EXTERNAL MODULE: external "node:url"
 var external_node_url_ = __nccwpck_require__(3136);
 // EXTERNAL MODULE: ./src/lib/git.mjs
@@ -57133,6 +59252,8 @@ var finding_factory = __nccwpck_require__(1535);
 var review_plan_generator = __nccwpck_require__(8069);
 // EXTERNAL MODULE: ./src/lib/expires-at.mjs
 var expires_at = __nccwpck_require__(5009);
+// EXTERNAL MODULE: ./src/lib/flow-loader.mjs + 1 modules
+var flow_loader = __nccwpck_require__(8068);
 // EXTERNAL MODULE: ./src/lib/diff-processor.mjs
 var diff_processor = __nccwpck_require__(861);
 ;// CONCATENATED MODULE: ./src/cli/commands/review.mjs
@@ -57343,6 +59464,27 @@ async function runReviewCommand(parsed) {
       }
       throw err;
     }
+    // #2054 PR-3 (Beta): `review plan --entry <name>` pins the artifact to a
+    // review Flow entry. Only the pin and the Flow's declared required inputs
+    // are attached, both additive; nothing above (skill selection, decision,
+    // gate) reads them, so the artifact without `--entry` is byte-identical to
+    // the one produced before this flag existed (tests/cli-review-plan-entry
+    // pins that). Reading `flows/` goes through the single Flow loader; an
+    // unreadable flows directory is a loud exit 1, never a silent "no Flow".
+    if (parsed.entry !== null && parsed.entry !== undefined) {
+      const { FlowLoaderError, resolveFlowEntry } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 8068));
+      try {
+        const resolved = resolveFlowEntry(parsed.entry);
+        artifact.flow = resolved.flow;
+        artifact.evidenceRequirements = resolved.evidenceRequirements;
+      } catch (err) {
+        if (err instanceof FlowLoaderError) {
+          console.error(`Error: ${err.message}`);
+          return 1;
+        }
+        throw err;
+      }
+    }
     const outputFilePath = parsed.outputFile ? external_node_path_.resolve(parsed.outputFile) : null;
     const summaryFilePath = parsed.summaryFile ? external_node_path_.resolve(parsed.summaryFile) : null;
     if (outputFilePath && summaryFilePath && outputFilePath === summaryFilePath) {
@@ -57364,7 +59506,7 @@ async function runReviewCommand(parsed) {
     } else {
       // The artifact (JSON or Markdown) is the requested output, not a
       // progress log: --quiet does not suppress it.
-      external_node_process_namespaceObject.stdout.write(serialized + '\n');
+      external_node_process_.stdout.write(serialized + '\n');
     }
     if (summaryFilePath) {
       const { formatReviewPlanSummaryMarkdown } = await __nccwpck_require__.e(/* import() */ 466).then(__nccwpck_require__.bind(__nccwpck_require__, 7466));
@@ -74480,7 +76622,7 @@ var loop_signal = __nccwpck_require__(4702);
  */
 async function runRunsCommand(parsed, targetPath) {
   const { resolveStoreDir, listRunRecords, loadRunRecord, computeDashboard, formatDashboard } =
-    await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+    await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
   const storeDir = resolveStoreDir(targetPath);
 
   if (!parsed.runsSubcommand || parsed.runsSubcommand === 'list') {
@@ -74597,7 +76739,7 @@ async function runRunsCommand(parsed, targetPath) {
   }
 
   if (parsed.runsSubcommand === 'digest') {
-    const { loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+    const { loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
     const fullRuns = await loadAllRunRecords(storeDir);
     if (!fullRuns.length) {
       console.log('No stored runs found in ' + storeDir);
@@ -74673,7 +76815,7 @@ async function runEvalCommand(parsed) {
 async function warnWhenFingerprintMatchesNoFinding(fingerprint, repoRoot) {
   if (!fingerprint) return;
   try {
-    const { resolveStoreDir, loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+    const { resolveStoreDir, loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
     const { classifyFingerprintAlgo, formatUnmatchedFeedbackFingerprintWarning } =
       await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 1535));
     const runRecords = await loadAllRunRecords(resolveStoreDir(repoRoot));
@@ -78770,11 +80912,11 @@ async function persistRunArtifacts(result, parsed, targetPath) {
   // M1 (#1372 review): RIVER_AUTO_SAVE=false opts out of the CI auto-save
   // (documented in the contract doc; the write target is .river/runs/).
   const isGithubActions =
-    external_node_process_namespaceObject.env.GITHUB_ACTIONS === 'true' && external_node_process_namespaceObject.env.RIVER_AUTO_SAVE !== 'false';
+    external_node_process_.env.GITHUB_ACTIONS === 'true' && external_node_process_.env.RIVER_AUTO_SAVE !== 'false';
   if ((parsed.save || isGithubActions) && result.status === 'ok') {
     try {
       const { buildRunProvenance, buildRunRecord, saveRunRecord, resolveStoreDir } =
-        await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+        await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
       const { decision: runDecision, gate: runGate } = deriveRunGate(result);
       const record = buildRunRecord(result, {
         phase: parsed.phase,
@@ -78801,17 +80943,17 @@ async function persistRunArtifacts(result, parsed, targetPath) {
   // Forced display point (Epic #1347 S3): under GitHub Actions, append the
   // runs digest to the job summary. Fail-soft — the review result must
   // never break on digest generation.
-  if (isGithubActions && external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
+  if (isGithubActions && external_node_process_.env.GITHUB_STEP_SUMMARY && result.status === 'ok') {
     try {
       // C1 (#1372 review): the digest needs FULL records — the light
       // listRunRecords metadata has no gate/findings and silently produced
       // an empty digest here.
-      const { loadAllRunRecords, resolveStoreDir } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+      const { loadAllRunRecords, resolveStoreDir } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
       const { buildRunsDigest, formatDigestMarkdown } = await __nccwpck_require__.e(/* import() */ 518).then(__nccwpck_require__.bind(__nccwpck_require__, 9518));
       const records = await loadAllRunRecords(resolveStoreDir(targetPath));
       const digest = buildRunsDigest(records, { now: () => new Date() });
       const fs = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
-      await fs.appendFile(external_node_process_namespaceObject.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
+      await fs.appendFile(external_node_process_.env.GITHUB_STEP_SUMMARY, '\n' + formatDigestMarkdown(digest));
     } catch (err) {
       console.error(`Warning: job summary digest failed: ${err.message}`);
     }
@@ -78857,7 +80999,7 @@ async function runRunCommand(parsed, targetPath) {
   });
 
   const estimator = new cost_estimator(
-    external_node_process_namespaceObject.env.OPENAI_MODEL || external_node_process_namespaceObject.env.RIVER_OPENAI_MODEL || undefined
+    external_node_process_.env.OPENAI_MODEL || external_node_process_.env.RIVER_OPENAI_MODEL || undefined
   );
   const estimatedCost =
     context.status === 'ok'
@@ -79861,7 +82003,7 @@ var promotion_candidates = __nccwpck_require__(3077);
 
 /** Resolve `now` from RIVER_NOW (external injection) or fall back to real time. */
 function resolveNow() {
-  const raw = external_node_process_namespaceObject.env.RIVER_NOW;
+  const raw = external_node_process_.env.RIVER_NOW;
   if (!raw) return new Date();
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) {
@@ -79873,7 +82015,7 @@ function resolveNow() {
 /** Resolve the Riverbed index path: explicit --index, else the repo's .river/memory. */
 async function resolveIndexPath(parsed, targetPath) {
   if (parsed.promoteIndex) {
-    return external_node_path_.resolve(external_node_process_namespaceObject.cwd(), parsed.promoteIndex);
+    return external_node_path_.resolve(external_node_process_.cwd(), parsed.promoteIndex);
   }
   const repoRoot = await (0,git/* ensureGitRepo */.NC)(targetPath);
   return external_node_path_.resolve(repoRoot, '.river', 'memory', 'index.json');
@@ -79962,7 +82104,7 @@ async function runPromoteCommand(parsed, targetPath) {
     }
     let result;
     try {
-      const entries = await (0,promotion_candidates/* readFeedbackJsonl */._I)(external_node_path_.resolve(external_node_process_namespaceObject.cwd(), parsed.promoteInput));
+      const entries = await (0,promotion_candidates/* readFeedbackJsonl */._I)(external_node_path_.resolve(external_node_process_.cwd(), parsed.promoteInput));
       result = (0,promotion_candidates/* proposePromotionCandidate */.J1)({
         entries,
         clusterKey: parsed.promoteClusterKey,
@@ -80051,9 +82193,9 @@ async function runPromoteCommand(parsed, targetPath) {
     const decision = sub === 'approve' ? 'approved' : 'rejected'; // vocab-literal-ignore
     const approver =
       parsed.promoteApprover ||
-      external_node_process_namespaceObject.env.RIVER_APPROVER ||
-      external_node_process_namespaceObject.env.USER ||
-      external_node_process_namespaceObject.env.USERNAME || // Windows
+      external_node_process_.env.RIVER_APPROVER ||
+      external_node_process_.env.USER ||
+      external_node_process_.env.USERNAME || // Windows
       'unknown';
     let result;
     try {
@@ -80131,7 +82273,7 @@ async function runPromoteCommand(parsed, targetPath) {
 
   if (sub === 'review-effectiveness') {
     const feedbackRoot = parsed.promoteFeedbackRoot
-      ? external_node_path_.resolve(external_node_process_namespaceObject.cwd(), parsed.promoteFeedbackRoot)
+      ? external_node_path_.resolve(external_node_process_.cwd(), parsed.promoteFeedbackRoot)
       : await (0,git/* ensureGitRepo */.NC)(targetPath);
     const feedbackEntries = await (0,feedback.listFeedbackEntries)({
       repoRoot: feedbackRoot,
@@ -80399,10 +82541,10 @@ async function runPromptCompare(parsed, targetPath, output) {
     return 1;
   }
 
-  const { resolveStoreDir, loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+  const { resolveStoreDir, loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
   const { buildPromptComparison, formatPromptComparisonMarkdown, PromptComparisonError } =
-    await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(80), __nccwpck_require__.e(90)]).then(__nccwpck_require__.bind(__nccwpck_require__, 6709));
-  const { PairedReplayError } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(80)]).then(__nccwpck_require__.bind(__nccwpck_require__, 3080));
+    await Promise.all(/* import() */[__nccwpck_require__.e(80), __nccwpck_require__.e(90)]).then(__nccwpck_require__.bind(__nccwpck_require__, 6709));
+  const { PairedReplayError } = await __nccwpck_require__.e(/* import() */ 80).then(__nccwpck_require__.bind(__nccwpck_require__, 3080));
 
   const runRecords = await loadAllRunRecords(resolveStoreDir(targetPath));
 
@@ -80452,10 +82594,10 @@ async function runPromptAb(parsed, targetPath, output) {
     return 1;
   }
 
-  const { resolveStoreDir, loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+  const { resolveStoreDir, loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
   const { buildPromptAbComparison, formatPromptAbMarkdown, PromptComparisonError } =
-    await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(80), __nccwpck_require__.e(90)]).then(__nccwpck_require__.bind(__nccwpck_require__, 6709));
-  const { PairedReplayError } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(80)]).then(__nccwpck_require__.bind(__nccwpck_require__, 3080));
+    await Promise.all(/* import() */[__nccwpck_require__.e(80), __nccwpck_require__.e(90)]).then(__nccwpck_require__.bind(__nccwpck_require__, 6709));
+  const { PairedReplayError } = await __nccwpck_require__.e(/* import() */ 80).then(__nccwpck_require__.bind(__nccwpck_require__, 3080));
 
   const runRecords = await loadAllRunRecords(resolveStoreDir(targetPath));
 
@@ -80501,10 +82643,10 @@ async function runAggregate(parsed, targetPath, output) {
 
   warnWhenTargetPathMissing(targetPath, parsed.target ?? targetPath);
 
-  const { resolveStoreDir, loadAllRunRecords } = await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(260)]).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
+  const { resolveStoreDir, loadAllRunRecords } = await __nccwpck_require__.e(/* import() */ 260).then(__nccwpck_require__.bind(__nccwpck_require__, 4260));
   const { listFeedbackEntries } = await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 7638));
   const { buildShadowAggregate, formatShadowAggregateMarkdown, DEFAULT_MIN_RECURRENCE } =
-    await __nccwpck_require__.e(/* import() */ 29).then(__nccwpck_require__.bind(__nccwpck_require__, 4029));
+    await Promise.resolve(/* import() */).then(__nccwpck_require__.bind(__nccwpck_require__, 4029));
 
   const storeDir = resolveStoreDir(targetPath);
   const runRecords = await loadAllRunRecords(storeDir);
@@ -80551,7 +82693,7 @@ async function runReplay(parsed, output) {
 
   const { readFile } = await Promise.resolve(/* import() */).then(__nccwpck_require__.t.bind(__nccwpck_require__, 1455, 19));
   const { buildPairedReplay, formatPairedReplayMarkdown, PairedReplayError } =
-    await Promise.all(/* import() */[__nccwpck_require__.e(29), __nccwpck_require__.e(80)]).then(__nccwpck_require__.bind(__nccwpck_require__, 3080));
+    await __nccwpck_require__.e(/* import() */ 80).then(__nccwpck_require__.bind(__nccwpck_require__, 3080));
 
   let spec;
   try {
@@ -80658,6 +82800,7 @@ async function runReplay(parsed, output) {
 
 
 
+
 function printHelp() {
   console.log(`Usage: river <command> <path> [options]
 
@@ -80671,7 +82814,8 @@ Commands:
   doctor <path>         Check setup and print hints for common issues
   review plan           Resolve upstream artifacts and emit a Review Artifact
                         (Phase 3 slice: --plan-only only; --base <ref> diffs
-                         against that ref instead of the diff artifact)
+                         against that ref instead of the diff artifact;
+                         --entry <name> pins a review Flow entry, Beta)
   review exec           Run the review and emit a Review Artifact with findings
                         (--dry-run: plan only; --plan <file>: replay an existing plan)
   review route          Recommend a review mode (light|standard|team|human-required)
@@ -80764,6 +82908,9 @@ Options:
   --base <ref>      Branch or ref to diff against (e.g. main). Default: auto-detected default branch
                     Accepted only by: run, skills (no subcommand), review plan|exec|route.
                     Other surfaces reject it (#2065) — they never read a diff.
+  --entry <name>    (review plan, Beta) Review Flow entry to pin the artifact to
+                    (review-plan|review-task|review-final|... from the entry map).
+                    Adds flow and evidenceRequirements to the artifact; no other output changes.
   --skill-set <name> Restrict review to a named skill set from skills/registry.yaml
                     (e.g. basic, typescript, comprehensive). Default: all applicable skills
   --depth <name>    Force review depth: quick|standard|thorough. Default: auto-detected from diff size
@@ -81019,6 +83166,22 @@ const BASE_CONSUMING_SURFACES = new Set([
 ]);
 
 /**
+ * The surfaces that READ `parsed.entry` (#2054 PR-3, Beta).
+ *
+ * `--entry <name>` names a review Flow entry (a key of the entry map's
+ * `entries`, read through `src/lib/flow-loader.mjs`) and is consumed by
+ * `src/cli/commands/review.mjs` on the `plan` path only, where it attaches the
+ * resolved Flow pin to the emitted artifact. The `exec --dry-run` path shares
+ * `runReviewPlan` but is a different surface and does not read it, so it is
+ * not listed. Same INVARIANT as `--base` above: every other surface accepted
+ * the token and never read it (before #2054 PR-3 it was an unknown option on
+ * all of them), so dropping it restores the previous behavior exactly.
+ *
+ * @type {Set<string>}
+ */
+const ENTRY_CONSUMING_SURFACES = new Set(['review plan']);
+
+/**
  * Command-scoped option allowlist (#2065).
  *
  * `KNOWN_OPTION_TOKENS` and the per-option `if` chain inside `parseArgs` are
@@ -81058,6 +83221,12 @@ const COMMAND_SCOPED_OPTIONS = [
     given: (parsed) => parsed.base !== null,
     surfaces: BASE_CONSUMING_SURFACES,
     why: 'that surface does not review a diff',
+  },
+  {
+    token: '--entry',
+    given: (parsed) => parsed.entry !== null,
+    surfaces: ENTRY_CONSUMING_SURFACES,
+    why: 'that surface does not resolve a review Flow entry',
   },
 ];
 
@@ -81346,6 +83515,7 @@ const KNOWN_OPTION_TOKENS = new Set([
   '--reviewers',
   '--baseline',
   '--base',
+  '--entry',
   '--skill-set',
   '--depth',
   '--save',
@@ -82051,13 +84221,13 @@ function parseArgs(argv) {
     targetConsumed: false,
     fixturesCasesPath: null,
     verbose: false,
-    phase: external_node_process_namespaceObject.env.RIVER_PHASE || 'midstream',
+    phase: external_node_process_.env.RIVER_PHASE || 'midstream',
     // #1759 C2: set to true only by the --phase branch below, once its value
     // has passed the PHASES check. Lets the post-loop RIVER_PHASE validation
     // tell "an explicit, already-validated --phase" apart from "still the
     // raw (possibly invalid) env-or-default value".
     phaseExplicit: false,
-    plannerMode: external_node_process_namespaceObject.env.RIVER_PLANNER_MODE || 'off',
+    plannerMode: external_node_process_.env.RIVER_PLANNER_MODE || 'off',
     dryRun: false,
     debug: false,
     estimate: false,
@@ -82071,6 +84241,7 @@ function parseArgs(argv) {
     reviewers: null,
     baseline: null,
     base: null,
+    entry: null,
     skillSet: null,
     depth: null,
     save: false,
@@ -82415,7 +84586,7 @@ function parseArgs(argv) {
         );
         continue;
       }
-      const dir = external_node_path_.resolve(external_node_process_namespaceObject.cwd(), value);
+      const dir = external_node_path_.resolve(external_node_process_.cwd(), value);
       let files;
       try {
         files = (0,external_node_fs_.readdirSync)(dir)
@@ -82434,9 +84605,9 @@ function parseArgs(argv) {
       const merged = files
         .map((f) => `\n\n---\nFrom: ${f}\n---\n\n${(0,external_node_fs_.readFileSync)(external_node_path_.join(dir, f), 'utf8')}`)
         .join('');
-      const tmpPath = external_node_path_.join(external_node_os_.tmpdir(), `river-ensemble-${external_node_process_namespaceObject.pid}-${Date.now()}.md`);
+      const tmpPath = external_node_path_.join(external_node_os_.tmpdir(), `river-ensemble-${external_node_process_.pid}-${Date.now()}.md`);
       (0,external_node_fs_.writeFileSync)(tmpPath, merged);
-      external_node_process_namespaceObject.on('exit', () => {
+      external_node_process_.on('exit', () => {
         try {
           (0,external_node_fs_.unlinkSync)(tmpPath);
         } catch {
@@ -82637,6 +84808,34 @@ function parseArgs(argv) {
       parsed.base = value;
       continue;
     }
+    if (arg === '--entry') {
+      const value = args.shift();
+      if (!value || value.startsWith('-') || value.trim() === '') {
+        console.error(
+          'Error: --entry option requires a review Flow entry name (e.g. --entry review-plan).'
+        );
+        usageError(parsed);
+        break;
+      }
+      // #2054 PR-3: an unknown entry name is a usage error here, listing the
+      // accepted names, rather than a handler-level exit 3 — the vocabulary is
+      // data (the entry map), so it is read through the single Flow reader.
+      // If the assets cannot be loaded at all the handler reports that with
+      // its own message; parse only validates when it can.
+      let known = null;
+      try {
+        known = (0,flow_loader/* listFlowEntryNames */.d2)();
+      } catch {
+        known = null;
+      }
+      if (known !== null && !known.includes(value)) {
+        console.error(`Error: unknown --entry "${value}". Accepted entries: ${known.join(', ')}.`);
+        usageError(parsed);
+        break;
+      }
+      parsed.entry = value;
+      continue;
+    }
     if (arg === '--skill-set') {
       const value = args.shift();
       if (!value || value.startsWith('-')) {
@@ -82793,11 +84992,11 @@ function parseArgs(argv) {
   // non-empty string — unset or empty must keep falling back to the default
   // ('midstream'), matching the object-literal default above and --phase's
   // own "not required" contract.
-  if (!parsed.usageError && !parsed.phaseExplicit && external_node_process_namespaceObject.env.RIVER_PHASE) {
-    const envPhase = external_node_process_namespaceObject.env.RIVER_PHASE.toLowerCase();
+  if (!parsed.usageError && !parsed.phaseExplicit && external_node_process_.env.RIVER_PHASE) {
+    const envPhase = external_node_process_.env.RIVER_PHASE.toLowerCase();
     if (!planner_utils/* PHASES */.ZG.includes(envPhase)) {
       console.error(
-        `Error: RIVER_PHASE must be one of: ${planner_utils/* PHASES */.ZG.join(', ')} (got "${external_node_process_namespaceObject.env.RIVER_PHASE}").`
+        `Error: RIVER_PHASE must be one of: ${planner_utils/* PHASES */.ZG.join(', ')} (got "${external_node_process_.env.RIVER_PHASE}").`
       );
       usageError(parsed);
     } else {
@@ -82808,7 +85007,7 @@ function parseArgs(argv) {
   return parsed;
 }
 
-async function main(argv = external_node_process_namespaceObject.argv.slice(2)) {
+async function main(argv = external_node_process_.argv.slice(2)) {
   const parsed = parseArgs(argv);
   // #1709 Slice 2: parseArgs already reported the usage error to stderr
   // (Error line + usage hint). Exit 1 without printing the full help to
@@ -82841,7 +85040,7 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
   // runs on deterministic heuristics only (ADR-002 / #1071). isLlmEnabled()
   // honors RIVER_OFFLINE across all call sites (dispatcher / runner / engine).
   if (parsed.offline) {
-    external_node_process_namespaceObject.env.RIVER_OFFLINE = '1';
+    external_node_process_.env.RIVER_OFFLINE = '1';
   }
   if (!COMMAND_NAMES.includes(parsed.command)) {
     // Reachable since #1709 Slice 2: parseArgs records an unknown leading
@@ -82969,9 +85168,9 @@ async function main(argv = external_node_process_namespaceObject.argv.slice(2)) 
  * シナリオを壊さない）。
  */
 function isDirectInvocation() {
-  if (!external_node_process_namespaceObject.argv[1]) return false;
+  if (!external_node_process_.argv[1]) return false;
   try {
-    const real = (0,external_node_fs_.realpathSync)(external_node_process_namespaceObject.argv[1]);
+    const real = (0,external_node_fs_.realpathSync)(external_node_process_.argv[1]);
     return (0,external_node_url_.fileURLToPath)(import.meta.url) === real || import.meta.url === (0,external_node_url_.pathToFileURL)(real).href;
   } catch {
     return false;
@@ -82981,7 +85180,7 @@ function isDirectInvocation() {
 if (isDirectInvocation()) {
   main().then((code) => {
     if (typeof code === 'number' && code !== 0) {
-      external_node_process_namespaceObject.exitCode = code;
+      external_node_process_.exitCode = code;
     }
   });
 }
