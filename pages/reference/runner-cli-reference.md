@@ -151,7 +151,7 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 - `flow`: `{ entry, id, version, sha256 }`。`sha256` は Flow 文書の正規化 JSON のハッシュで、`src/lib/execution-manifest.mjs` の `deriveFlowPin` が算出する
 - `evidenceRequirements`: その Flow が `required: true` で宣言する入力名の一覧（ソート済み）
 
-`--entry` を付けない場合の出力は、この flag が存在しなかったときと同じです。skill 選択・`decision`・`gate` は `--entry` を読まないため、pin の有無で判断は変わりません（ADR-009 D3、RA-1〜RA-4）。この flag と 2 フィールドは **Beta** であり、[Stable Interfaces](./stable-interfaces.md) の Stable Contract に含まれません。
+2 フィールドが出るのは JSON 出力（`--output json` / `--format json`）だけで、markdown / text の出力には現れません。pin は読み込んだ文書のハッシュであり、同梱 `flows/` の文書との一致は検証しません。`--entry` を付けない場合の出力は、この flag が存在しなかったときと同じです。skill 選択・`decision`・`gate` は `--entry` を読まないため、pin の有無で判断は変わりません（ADR-009 D3、RA-1〜RA-4）。この flag と 2 フィールドは **Beta** であり、[Stable Interfaces](./stable-interfaces.md) の Stable Contract に含まれません。
 
 受理するのは `review plan` だけです。`doctor --entry x` や `review exec --entry x` のように他の面へ渡すと、`--base` と同じコマンド別 allowlist（#2065）により parse 層の usage error として exit 1 になります。未知の entry 名は許容値を列挙して exit 1、値欠落も exit 1 です。いずれの拒否形も、この flag の導入前は `unknown option --entry` の exit 1 だったため、exit code は動いていません。
 

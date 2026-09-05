@@ -317,6 +317,23 @@
       },
       "required": ["kind", "manifestId", "manifestKey", "manifestHash"]
     },
+    "flow": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Review Flow pin the artifact was produced under (#2054 PR-3, Beta). Additive and optional: present only when `river review plan --entry <name>` was given, so artifacts without it keep the exact key set they had before. `entry` is the user-facing entry name from flows/entry-map.json, `id` / `version` identify the Flow document, and `sha256` is the digest of its canonical JSON as derived by deriveFlowPin in src/lib/execution-manifest.mjs — the same pin resolveTrigger (src/lib/trigger-resolver.mjs) mints. Carries no judgment: nothing in the artifact's gate / decision / findings is derived from it.",
+      "required": ["entry", "id", "version", "sha256"],
+      "properties": {
+        "entry": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "evidenceRequirements": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Input names the pinned Flow declares as `required: true` (#2054 PR-3, Beta). Additive and optional; emitted together with `flow`. A declaration of what the Flow needs, not a record of what was supplied."
+    },
     "debug": {
       "type": "object",
       "additionalProperties": true,

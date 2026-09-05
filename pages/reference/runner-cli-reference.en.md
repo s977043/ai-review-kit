@@ -145,7 +145,7 @@ None of these surfaces ever read the value, so **dropping the flag from the call
 - `flow`: `{ entry, id, version, sha256 }`; `sha256` is the hash of the Flow document's canonical JSON, computed by `deriveFlowPin` in `src/lib/execution-manifest.mjs`
 - `evidenceRequirements`: the sorted names of the inputs that Flow declares `required: true`
 
-Without `--entry` the output is exactly what it was before the flag existed. Skill selection, `decision` and `gate` never read `--entry`, so the presence of a pin changes no judgment (ADR-009 D3, RA-1..RA-4). The flag and the two fields are **Beta** and are not part of the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md).
+The two fields appear in JSON output only (`--output json` / `--format json`); markdown and text output do not carry them. The pin is the hash of the document that was read, and no check is made that it matches the document shipped under `flows/`. Without `--entry` the output is exactly what it was before the flag existed. Skill selection, `decision` and `gate` never read `--entry`, so the presence of a pin changes no judgment (ADR-009 D3, RA-1..RA-4). The flag and the two fields are **Beta** and are not part of the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md).
 
 Only `review plan` accepts it. Passing it to any other surface, such as `doctor --entry x` or `review exec --entry x`, is a parse-layer usage error and exits 1 through the same command-scoped allowlist as `--base` (#2065). An unknown entry name exits 1 listing the accepted names; a missing value exits 1 as well. Every one of those rejected forms exited 1 as `unknown option --entry` before the flag was introduced, so no exit code has moved.
 
