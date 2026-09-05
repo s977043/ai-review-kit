@@ -12453,13 +12453,6 @@ module.exports = function(str) {
 
 /***/ }),
 
-/***/ 3896:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-module.exports = __nccwpck_require__.p + "293248747edf5d37944a.js?.";
-
-/***/ }),
-
 /***/ 9896:
 /***/ ((module) => {
 
@@ -48673,7 +48666,7 @@ function formatUnmatchedFeedbackFingerprintWarning({ fingerprint, likelyAlgo }) 
 /* harmony export */   d2: () => (/* binding */ listFlowEntryNames),
 /* harmony export */   resolveFlowEntry: () => (/* binding */ resolveFlowEntry)
 /* harmony export */ });
-/* unused harmony exports FLOWS_DIR_ENV, ENTRY_MAP_FILENAME, DEFAULT_FLOWS_DIR, resolveFlowsDir, loadFlowRegistry, requiredInputNames */
+/* unused harmony exports FLOWS_DIR_ENV, ENTRY_MAP_FILENAME, FLOW_SCHEMA_FILENAMES, DEFAULT_FLOWS_DIR, SCHEMAS_DIR, resolveFlowsDir, loadFlowRegistry, requiredInputNames */
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3024);
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
 /* harmony import */ var node_process__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(1708);
@@ -48707,10 +48700,15 @@ function formatUnmatchedFeedbackFingerprintWarning({ fingerprint, likelyAlgo }) 
 // name goes in; a pin and the evidence the Flow declares as required come
 // out. A missing directory or an invalid document is a loud `FlowLoaderError`,
 // never a silent fall-back to "no Flow" — a runtime that cannot find its
-// Flows must say so. `RIVER_FLOWS_DIR` is for an npm-installed CLI that keeps
-// `flows/` outside the package; it does not rescue the GitHub Action dist,
-// which bundles neither `flows/` nor the schemas this loader validates
-// against (#2105), so `--entry` is unsupported there.
+// Flows must say so.
+//
+// Where the assets come from (#2054 PR-5, #2105 (b)): the explicit argument,
+// then `RIVER_FLOWS_DIR`, then the copy shipped NEXT TO THIS MODULE (the
+// GitHub Action dist bundles `flows/` and the three schemas as sibling
+// directories of the bundle, see scripts/normalize-dist.mjs), then the
+// repository's own `flows/` two levels up (the source / npm layout). The
+// schemas follow the same sibling-first rule. `RIVER_FLOWS_DIR` remains the
+// override for an npm-installed CLI that keeps `flows/` elsewhere.
 
 
 
@@ -48733,13 +48731,56 @@ const FLOW_SUFFIX = '.flow.json';
 const INTENT_SUFFIX = '.intent.json';
 const INTENTS_SUBDIR = 'intents';
 
-const HERE = (0,node_url__WEBPACK_IMPORTED_MODULE_3__.fileURLToPath)(new URL(/* asset import */ __nccwpck_require__(3896), __nccwpck_require__.b));
-const PACKAGE_ROOT = (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(HERE, '..', '..');
+// The directory this module runs from. Deliberately NOT
+// `new URL('.', import.meta.url)`: ncc rewrites that expression into an asset
+// reference (`__nccwpck_require2_(<id>)`) whose path does not exist at runtime
+// in the GitHub Action dist (#1900 / #2111 / #2105). A bare `import.meta.url`
+// is left alone by the bundler and points at the bundle file itself, so in the
+// dist this is `runners/github-action/dist/` and in the source tree `src/lib/`.
+const MODULE_DIR = (0,node_path__WEBPACK_IMPORTED_MODULE_1__.dirname)((0,node_url__WEBPACK_IMPORTED_MODULE_3__.fileURLToPath)(import.meta.url));
+const PACKAGE_ROOT = (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(MODULE_DIR, '..', '..');
 
-/** The repository's own `flows/` directory, used when nothing overrides it. */
-const DEFAULT_FLOWS_DIR = (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(PACKAGE_ROOT, 'flows');
+// Names are assembled at runtime so ncc's asset relocator (which statically
+// evaluates `resolve(x, '<literal>')`) never turns the directory into an asset
+// reference — same reason as PACKAGE_JSON_FILE in execution-manifest-producer.mjs.
+const FLOWS_DIRNAME = ['flo', 'ws'].join('');
+const SCHEMAS_DIRNAME = ['sche', 'mas'].join('');
 
-const SCHEMAS_DIR = (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(PACKAGE_ROOT, 'schemas');
+/** The schema file names this loader validates against, in compile order. */
+const FLOW_SCHEMA_FILENAMES = Object.freeze({
+  entryMap: 'flow-entry-map.schema.json',
+  flow: 'flow.schema.json',
+  intent: 'review-intent.schema.json',
+});
+
+/**
+ * Pick the first candidate directory that holds `marker`, else the last one.
+ * The bundled copy (a sibling of this module) wins over the repository's own
+ * directory, so the GitHub Action dist reads what it ships rather than what
+ * happens to sit two levels above `runners/github-action/dist/`.
+ */
+function firstExisting(candidates, marker) {
+  for (const dir of candidates) {
+    if ((0,node_fs__WEBPACK_IMPORTED_MODULE_0__.existsSync)((0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(dir, marker))) return dir;
+  }
+  return candidates[candidates.length - 1];
+}
+
+/**
+ * The `flows/` directory shipped with this package, used when nothing
+ * overrides it: the sibling copy in the Action dist when present, else the
+ * repository's own `flows/`.
+ */
+const DEFAULT_FLOWS_DIR = firstExisting(
+  [(0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(MODULE_DIR, FLOWS_DIRNAME), (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(PACKAGE_ROOT, FLOWS_DIRNAME)],
+  ENTRY_MAP_FILENAME
+);
+
+/** Same sibling-first rule for the schemas the loader validates against. */
+const SCHEMAS_DIR = firstExisting(
+  [(0,node_path__WEBPACK_IMPORTED_MODULE_1__.join)(MODULE_DIR, SCHEMAS_DIRNAME), (0,node_path__WEBPACK_IMPORTED_MODULE_1__.resolve)(PACKAGE_ROOT, SCHEMAS_DIRNAME)],
+  FLOW_SCHEMA_FILENAMES.entryMap
+);
 
 class FlowLoaderError extends Error {
   constructor(message, options) {
@@ -48794,9 +48835,9 @@ function validators() {
     return ajv.compile(schema);
   };
   compiledValidators = {
-    entryMap: compile('flow-entry-map.schema.json'),
-    flow: compile('flow.schema.json'),
-    intent: compile('review-intent.schema.json'),
+    entryMap: compile(FLOW_SCHEMA_FILENAMES.entryMap),
+    flow: compile(FLOW_SCHEMA_FILENAMES.flow),
+    intent: compile(FLOW_SCHEMA_FILENAMES.intent),
   };
   return compiledValidators;
 }
@@ -48868,9 +48909,9 @@ function loadFlowRegistry({ flowsDir = null, env = node_process__WEBPACK_IMPORTE
   } catch (error) {
     throw new FlowLoaderError(
       `flows directory not found: ${dir}. ` +
-        `Run --entry with the npm-installed CLI; ${FLOWS_DIR_ENV} may point it at a ` +
-        `directory that holds ${ENTRY_MAP_FILENAME} when flows/ is kept elsewhere. ` +
-        `The GitHub Action dist does not support --entry (flows/ and its schemas are not bundled).`,
+        `The package ships flows/ next to its schemas (the GitHub Action dist bundles both); ` +
+        `${FLOWS_DIR_ENV} may point at a directory that holds ${ENTRY_MAP_FILENAME} ` +
+        `when flows/ is kept elsewhere.`,
       { cause: error }
     );
   }
