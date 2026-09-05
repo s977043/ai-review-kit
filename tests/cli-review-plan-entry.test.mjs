@@ -89,6 +89,9 @@ describe('river review plan --entry (#2054 PR-3)', () => {
     const full = JSON.parse(without.text);
     assert.equal(validate(full), true, JSON.stringify(validate.errors));
     const base = withoutManifest(full);
+    // The strip removes exactly one key. Widening `withoutManifest` would strip
+    // the same key from both sides and hide a lost field; pin the set here.
+    assert.deepEqual(Object.keys(full), [...Object.keys(base), 'executionManifest']);
     const pinned = withoutManifest(JSON.parse(withEntry.text));
     assert.equal('flow' in base, false);
     assert.equal('evidenceRequirements' in base, false);
