@@ -262,6 +262,80 @@ describe('#2065 --base command-scoped allowlist', () => {
     }
   });
 
+  // -------------------------------------------------------------------------
+  // #2076: 拒否メッセージに復旧手順が含まれること
+  // -------------------------------------------------------------------------
+  // #2065 のメッセージは「なぜ拒否したか」と「受理する面の一覧」は伝えるが、
+  // 「ではどう打ち直せばよいか」を書いていなかった。`--base` を読まない面は
+  // 値を一度も読んでいないので、flag を外せば従来と同じ結果になる。
+  //
+  // 期待文面は **実装から import せずリテラルで書く**（自己整合で緑になるのを
+  // 避けるため）。canary（tests/cli-usage-error-exit-codes.test.mjs）は exit
+  // code の 2 軸だけを見て文言を固定しない方針なので、文言の pin はここに置く。
+  describe('the rejection tells the caller how to recover (#2076)', () => {
+    const RECOVERY_SENTENCE = 'Drop --base to get the previous behavior.';
+    const REJECTED_SURFACES = SURFACES.filter(
+      ({ surface }) => !BASE_CONSUMING_SURFACES.has(surface)
+    );
+
+    let repoDir;
+    let cleanupRepo;
+
+    before(async () => {
+      const { dir, cleanup } = await createTempGitRepo({
+        prefix: 'river-2076-recovery-',
+        initialFiles: { 'a.txt': 'a\n', 'skills/.gitkeep': '' },
+        changedFiles: { 'a.txt': 'a\nb\n' },
+      });
+      repoDir = dir;
+      cleanupRepo = cleanup;
+    });
+
+    after(async () => {
+      if (cleanupRepo) await cleanupRepo();
+    });
+
+    test('all 14 non-consuming surfaces are covered by this check', () => {
+      assert.equal(
+        REJECTED_SURFACES.length,
+        14,
+        '面の増減があったなら期待件数と pages/reference/runner-cli-reference.md（ja/en）も同じ PR で更新すること'
+      );
+    });
+
+    for (const { surface, argv } of REJECTED_SURFACES) {
+      test(`\`river ${surface} --base main\` states the recovery step`, async () => {
+        const result = await runCliInProcess([...argv, '--base', 'main'], {
+          cwd: repoDir,
+          env: { RIVER_OFFLINE: '1', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', NO_COLOR: '1' },
+        });
+        assert.equal(result.code, 1);
+        assert.ok(
+          result.stderr.includes(RECOVERY_SENTENCE),
+          `復旧手順の文が出ていない。stderr: ${result.stderr.slice(0, 400)}`
+        );
+        // 順序: Error 行（末尾が復旧手順）→ Usage → full help への誘導。
+        const recoveryAt = result.stderr.indexOf(RECOVERY_SENTENCE);
+        const usageAt = result.stderr.indexOf('Usage: river ');
+        assert.ok(usageAt >= 0, `Usage 行が消えている。stderr: ${result.stderr.slice(0, 400)}`);
+        assert.ok(
+          recoveryAt < usageAt,
+          `復旧手順が Usage 行より後ろに出ている。stderr: ${result.stderr.slice(0, 400)}`
+        );
+        assert.ok(
+          result.stderr.includes('Run `river --help` for the full option list.'),
+          `full help への誘導が消えている。stderr: ${result.stderr.slice(0, 400)}`
+        );
+        // 1 回だけ（Error 行と footer で二重に出ていない）。
+        assert.equal(
+          result.stderr.split(RECOVERY_SENTENCE).length - 1,
+          1,
+          `復旧手順が重複して出ている。stderr: ${result.stderr.slice(0, 400)}`
+        );
+      });
+    }
+  });
+
   test('--help and the bare command keep their exit-0 contract', () => {
     // `-h` / `--help` は argv のどこにあっても command を 'help' へ倒すため、
     // ここで拒否すると `river run . --base main --help` が usage error になる。

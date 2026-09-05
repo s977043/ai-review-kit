@@ -81035,6 +81035,14 @@ const BASE_CONSUMING_SURFACES = new Set([
  * this table extends the same contract to the surfaces those two sets do not
  * cover.
  *
+ * INVARIANT: every entry here names an option that the out-of-scope surfaces
+ * ACCEPTED AND NEVER READ. That is the whole reason the table exists, and it is
+ * what makes one shared recovery sentence correct for all of them (#2076):
+ * removing the option cannot change what those surfaces do, because they never
+ * looked at its value. An option whose presence has a side effect on a surface
+ * that does not "read" it does not belong in this table — it needs its own
+ * message, not this one.
+ *
  * @type {Array<{token: string, given: (parsed: object) => boolean,
  *   surfaces: Set<string>, why: string}>}
  */
@@ -81124,12 +81132,17 @@ function checkCommandScopedOptions(parsed) {
   for (const rule of COMMAND_SCOPED_OPTIONS) {
     if (!rule.given(parsed)) continue;
     if (rule.surfaces.has(surface)) continue;
+    // Sentence order: why it was rejected -> where the option IS read -> how to
+    // recover (#2076). The recovery sentence closes the Error line rather than
+    // taking a line of its own, so that the `Usage:` / ``Run `river --help` ``
+    // pair `usageError` prints below stays the last thing on stderr.
     console.error(
       `Error: ${rule.token} is not supported by \`river ${surface}\` — ${rule.why}, ` +
         `so the value would be accepted and never used. ` +
         `Surfaces that read ${rule.token}: ${[...rule.surfaces]
           .map((name) => `river ${name}`)
-          .join(', ')}.`
+          .join(', ')}. ` +
+        `Drop ${rule.token} to get the previous behavior.`
     );
     usageError(parsed);
     return;

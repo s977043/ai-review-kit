@@ -136,7 +136,7 @@ Word order does not matter on a surface that has no subcommand: `doctor --base m
 
 On a surface that has subcommands, the check fires only when the subcommand word is written **before** the options, because `review` and `evolve` are the only two surfaces that resolve a trailing subcommand (see "The target path may be written either before or after the options" below). `river skills --base main import` reads `import` as the target path and slips past the check; when an `import/` directory exists the review runs and exits 0. On `runs` / `feedback` / `suppression` the trailing token becomes an `unexpected argument`, so the exit code stays 1.
 
-None of these surfaces ever read the value, so **dropping the flag from the call reproduces the previous result exactly**. Leaving the flag in place means the surface no longer runs at all: the call fails as a usage error. Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
+None of these surfaces ever read the value, so **dropping the flag from the call reproduces the previous result exactly**. Leaving the flag in place means the surface no longer runs at all: the call fails as a usage error. The rejection message says so itself: it ends with `Drop --base to get the previous behavior.` (#2076). Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
 
 `--expires` accepts only the RFC 3339 `YYYY-MM-DD` form and the date-time form. A date-only input is read as UTC midnight and normalized to a date-time when stored, because `expiresAt` in `schemas/suppression-context.schema.json` is declared `format: date-time`.
 
