@@ -120,10 +120,38 @@ Review Artifact への連結は additive・optional です。`attachExecutionMan
 - **欠損は欠損のまま扱う**: manifest を持たない run は `assessReplayability` が `not replayable` と答える。これが正しい答えであり、埋めるべき穴ではない
 - **段階的に埋める**: producer 側が `flow` / `artifacts` / `config` を記録できるようになった時点から、新しい run だけが `resolved` になる。過去 run との比較は `manifestKey` の有無で分岐する
 
-## 未実装（本 PR のスコープ外）
+## パイプラインへの配線（#2054 PR-4、Epic #2011 AC6）
 
-本 PR は「Manifest 契約と resolver まで」（#2015 のスコープ）を範囲としています。次は含みません。
+Issue #2015 が「範囲外」としていた review パイプラインへの配線は、#2054 PR-4 で入りました。producer は `src/lib/execution-manifest-producer.mjs` の 1 箇所です。読むのは `package.json` と `docs/data/skill-manifest.json` の 2 つです。そのうえで `resolveExecutionManifestSpec` → `buildExecutionManifest` → `attachExecutionManifest` の順に本モジュールを呼びます。hash の導出は 1 つも持ちません。配線先は次の 3 経路です。
+
+| 経路                                        | 載る場所                                            | `flow`                                              | 備考                                                                                     |
+| ------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `river run --save`（CI 自動保存を含む）     | `.river/runs/*.json` の末尾キー `executionManifest` | `missing`（`run` は `--entry` を受け付けない）      | gate / decision の導出後に生成するため、判断は manifest を読まない                       |
+| `river review plan` / `review exec`         | Review Artifact の末尾キー `executionManifest`      | `--entry` 指定時のみ `resolved`、無指定は `missing` | loader が解決した Flow 文書を `flowDocument` として渡す。resolver は `flows/` を読まない |
+| `river review exec --plan <file>`（replay） | replay 結果の Artifact（上と同じ）                  | `missing`                                           | 元 artifact に manifest があれば `verifyExecutionManifest` で照合する                    |
+
+replay の照合結果は警告にとどめます。不一致は stderr に `Warning: the execution manifest in --plan ... does not verify` を出します。`--debug` 時は `debug.replay.sourceManifest` へ `verified` / `mismatches` を残します。replay は続行し、gate / decision / findings を変えません（ADR-009 RA-1）。manifest を持たない元 artifact は照合せず、警告も出しません。
+
+3 経路とも manifest は既存キーの**後ろ**へ additive に付き、既存キーの値と順序は変わりません。`river run --save` は origin/main と本ブランチで同じ repo を回し、`executionManifest` / `timestamp` / `runId` を除いた record の一致を確認しました。`tests/cli-run-execution-manifest.test.mjs` は同じ不変条件を「manifest を外して `attachExecutionManifest` で付け直すと元の record へ戻る」形で固定します。既存 fixture と保存済み run record は書き換えません。
+
+### 経路ごとの実測（2026-09-06、`river run --dry-run --save` と `river review plan --plan-only --entry review-task`）
+
+| ブロック      | `run --save` | `review plan --entry` | `review plan`（無指定） | 理由                                                                                        |
+| ------------- | ------------ | --------------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
+| `riverReview` | `resolved`   | `resolved`            | `resolved`              | `package.json` の `version`                                                                 |
+| `skills`      | `resolved`   | `unavailable`         | `unavailable`           | `run` は選択 skill の checksum を manifest から引く。fixture の plan は選択 0 件            |
+| `flow`        | `missing`    | `resolved`            | `missing`               | `--entry` で解決した Flow 文書だけが pin になる                                             |
+| `plugin`      | `missing`    | `missing`             | `missing`               | host を知る経路が CLI に無い。推測で埋めない                                                |
+| `agents`      | `missing`    | `missing`             | `missing`               | CLI 経路は agent roster を持たない                                                          |
+| `artifacts`   | `missing`    | `missing`             | `missing`               | 入力 artifact の hash を記録する producer が未実装                                          |
+| `policy`      | `missing`    | `missing`             | `missing`               | `policy.ref` を記録する producer が未実装（`riskMapDigest` だけでは `resolved` にならない） |
+| `runtime`     | `missing`    | `missing`             | `missing`               | dry-run / no-key では LLM が走らず `usage` が無い。LLM 実行時は `usage` から `resolved`     |
+| `config`      | `missing`    | `missing`             | `missing`               | config の hash を記録する producer が未実装                                                 |
+
+`assessReplayability` は上記いずれの経路でも `deterministic: false` を返します。`flow` が pin されても `artifacts` / `policy` / `config` が欠けているためであり、これは「replay 可能と誤認しない」という AC 3 の要求どおりの答えです。
+
+## 未実装
 
 - replay の実行エンジン（deterministic replay の再実行、judgment replay の意味的比較）
-- review パイプラインへの配線（`finalizeArtifact` からの自動生成）
+- `artifacts` / `policy.ref` / `config` / `plugin` / `agents` を記録する producer（上表で `missing` のまま残るブロック）
 - judgment replay dataset との連結

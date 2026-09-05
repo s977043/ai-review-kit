@@ -43,6 +43,7 @@ import { deriveGateDecision } from './gate-decision.mjs';
 import { computeStrictBlock } from './deterministic-gate.mjs';
 import { runDeterministicExecGateIfEnabled } from './deterministic-exec-gate.mjs';
 import { SEVERITY_RANK } from './finding-factory.mjs';
+import { verifyExecutionManifest } from './execution-manifest.mjs';
 import { createHash } from 'node:crypto';
 
 const VALID_PHASES = new Set(PHASES);
@@ -394,6 +395,31 @@ export async function runReviewExecReplay({
 
   const phase = phaseFromArtifact ?? 'midstream';
 
+  // #2054 PR-4: when the source artifact carries an Execution Manifest, check
+  // its integrity before replaying against it. A mismatch is a WARNING and a
+  // debug note only — the replay still runs and gate / decision / findings
+  // are untouched (ADR-009 RA-1: the manifest records, it never judges). The
+  // point is that a tampered or hand-edited source plan is detectable, not
+  // that it is refused; refusal would be a gate this module has no mandate for.
+  // A source without a manifest is not checked and not warned about: artifacts
+  // that predate the manifest are valid as they are (AC 4).
+  let sourceManifestVerification = null;
+  if (looksLikeFullArtifact && parsed.executionManifest != null) {
+    try {
+      const { verified, mismatches } = verifyExecutionManifest(parsed.executionManifest);
+      sourceManifestVerification = { verified, mismatches };
+    } catch (err) {
+      sourceManifestVerification = { verified: false, mismatches: [`invalid: ${err.message}`] };
+    }
+    if (!sourceManifestVerification.verified) {
+      console.warn(
+        `Warning: the execution manifest in --plan "${planFile}" does not verify ` +
+          `(${sourceManifestVerification.mismatches.join(', ')}); ` +
+          'the source plan may have been edited since it was produced. Replay continues.'
+      );
+    }
+  }
+
   // #878 A2-3-impl: read the carry-over snapshot the planner wrote (A2-3-runners
   // #933). Contract: replay does NOT re-derive these — it trusts the values
   // captured at plan-creation time, avoiding context-snapshot drift.
@@ -535,6 +561,7 @@ export async function runReviewExecReplay({
       sourcePhase: phaseFromArtifact,
       sourceTimestamp: typeof parsed.timestamp === 'string' ? parsed.timestamp : null,
       ...(replayDrift ? { drift: replayDrift } : {}),
+      ...(sourceManifestVerification ? { sourceManifest: sourceManifestVerification } : {}),
     };
     if (executionTrace) artifact.debug.execution = executionTrace;
   }

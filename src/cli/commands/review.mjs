@@ -217,12 +217,13 @@ export async function runReviewCommand(parsed) {
     // the one produced before this flag existed (tests/cli-review-plan-entry
     // pins that). Reading `flows/` goes through the single Flow loader; an
     // unreadable flows directory is a loud exit 1, never a silent "no Flow".
+    let resolvedFlow = null;
     if (parsed.entry !== null && parsed.entry !== undefined) {
       const { FlowLoaderError, resolveFlowEntry } = await import('../../lib/flow-loader.mjs');
       try {
-        const resolved = resolveFlowEntry(parsed.entry);
-        artifact.flow = resolved.flow;
-        artifact.evidenceRequirements = resolved.evidenceRequirements;
+        resolvedFlow = resolveFlowEntry(parsed.entry);
+        artifact.flow = resolvedFlow.flow;
+        artifact.evidenceRequirements = resolvedFlow.evidenceRequirements;
       } catch (err) {
         if (err instanceof FlowLoaderError) {
           console.error(`Error: ${err.message}`);
@@ -230,6 +231,28 @@ export async function runReviewCommand(parsed) {
         }
         throw err;
       }
+    }
+    // #2054 PR-4 (Epic #2011 AC6): pin what this run used as an Execution
+    // Manifest, additively, as the LAST top-level key. Built after every
+    // judgment above (skill selection, decision, gate, Flow pin) so none of
+    // them can read it; `attachExecutionManifest` copies the artifact rather
+    // than mutating it. The `flow` block is `resolved` only when `--entry`
+    // resolved a Flow document on this very run — the parsed document is handed
+    // to the resolver so the manifest never reads `flows/` itself (#2037).
+    // Fail-soft: a manifest that cannot be built is a loud warning and an
+    // artifact without the key, never a lost review.
+    try {
+      const { produceExecutionManifest } =
+        await import('../../lib/execution-manifest-producer.mjs');
+      const { attachExecutionManifest } = await import('../../lib/execution-manifest.mjs');
+      const manifest = await produceExecutionManifest({
+        artifact,
+        flowDocument: resolvedFlow?.document ?? null,
+        expectedFlowVersion: resolvedFlow?.flow?.version ?? null,
+      });
+      artifact = attachExecutionManifest(artifact, manifest);
+    } catch (err) {
+      console.error(`Warning: execution manifest not attached: ${err.message}`);
     }
     const outputFilePath = parsed.outputFile ? path.resolve(parsed.outputFile) : null;
     const summaryFilePath = parsed.summaryFile ? path.resolve(parsed.summaryFile) : null;
