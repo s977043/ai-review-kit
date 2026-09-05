@@ -5,7 +5,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-import { callFunction, createGhStub, fixture, runScriptWithStub } from './helpers/gh-stub.mjs';
+import {
+  callFunction,
+  createGhStub,
+  fixture,
+  mutateScript,
+  runScriptWithStub,
+} from './helpers/gh-stub.mjs';
 
 const SCRIPT = 'scripts/pr-unstall.sh';
 const read = (name) => readFileSync(fixture(name), 'utf8');
@@ -53,7 +59,7 @@ test('dry-run on a stalled feature PR prints update-branch and writes nothing', 
   const stub = createGhStub([
     { match: /^api repos\/owner\/repo\/pulls\/101$/, file: fixture('pull-open.json') },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=e1cb880e[0-9a-f]*&per_page=100$/,
       file: fixture('runs-all-action-required.json'),
     },
   ]);
@@ -73,7 +79,7 @@ test('dry-run on a stalled release-please PR routes to release-please-kick.sh', 
   const stub = createGhStub([
     { match: /^api repos\/owner\/repo\/pulls\/103$/, file: fixture('pull-open-release.json') },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=bbbb/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=bbbb[0-9a-f]*&per_page=100$/,
       file: fixture('runs-all-action-required.json'),
     },
   ]);
@@ -90,7 +96,7 @@ test('a head whose runs executed exits 0 as not stalled', () => {
   const stub = createGhStub([
     { match: /^api repos\/owner\/repo\/pulls\/101$/, file: fixture('pull-open.json') },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=[0-9a-f]{40}&per_page=100$/,
       file: fixture('runs-executed.json'),
     },
   ]);
@@ -123,7 +129,7 @@ test('--execute: update-branch 422 (conflict) prints the local merge procedure a
     { match: /^api user$/, body: '{"login":"s977043"}\n' },
     { match: /^api repos\/owner\/repo\/pulls\/101$/, file: fixture('pull-open.json') },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=[0-9a-f]{40}&per_page=100$/,
       file: fixture('runs-all-action-required.json'),
     },
     {
@@ -147,7 +153,7 @@ test('--execute: update-branch 422 (no new commits) points at the kick and exits
     { match: /^api user$/, body: '{"login":"s977043"}\n' },
     { match: /^api repos\/owner\/repo\/pulls\/101$/, file: fixture('pull-open.json') },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=[0-9a-f]{40}&per_page=100$/,
       file: fixture('runs-all-action-required.json'),
     },
     {
@@ -166,7 +172,7 @@ test('--execute: accepted update-branch exits 0', () => {
     { match: /^api user$/, body: '{"login":"s977043"}\n' },
     { match: /^api repos\/owner\/repo\/pulls\/101$/, file: fixture('pull-open.json') },
     {
-      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=/,
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=[0-9a-f]{40}&per_page=100$/,
       file: fixture('runs-all-action-required.json'),
     },
     {
@@ -184,4 +190,24 @@ test('usage errors exit 64', () => {
   assert.equal(runScriptWithStub(SCRIPT, [], stub).status, 64);
   assert.equal(runScriptWithStub(SCRIPT, ['abc'], stub).status, 64);
   assert.equal(runScriptWithStub(SCRIPT, ['1', '2'], stub).status, 64);
+});
+
+// #2095: a per_page typo must not slip past an unanchored route. The mutation
+// runs on a temp copy; `scripts/` itself is untouched.
+test('mutation: a per_page typo in the runs read exits 2 instead of a verdict', () => {
+  const mutant = mutateScript(SCRIPT, 'per_page=100', 'perpage=100');
+  const stub = createGhStub([
+    { match: /^api repos\/owner\/repo\/pulls\/101$/, file: fixture('pull-open.json') },
+    {
+      match: /^api repos\/owner\/repo\/actions\/runs\?head_sha=[0-9a-f]{40}&per_page=100$/,
+      file: fixture('runs-all-action-required.json'),
+    },
+  ]);
+  const r = runScriptWithStub(mutant, ['101'], stub);
+  assert.equal(r.status, 2, r.stdout + r.stderr);
+  assert.match(
+    r.stderr,
+    /gh-stub: no route for: api repos\/owner\/repo\/actions\/runs\?head_sha=[0-9a-f]{40}&perpage=100/
+  );
+  assert.doesNotMatch(r.stdout, /STALLED|not stalled/);
 });
