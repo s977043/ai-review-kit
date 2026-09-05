@@ -48087,7 +48087,7 @@ function deriveGateDecision({
 /* harmony export */   kG: () => (/* binding */ GitRepoNotFoundError),
 /* harmony export */   mM: () => (/* binding */ isWorkingTreeDirty)
 /* harmony export */ });
-/* unused harmony exports resolveRefToCommit, findMergeBase, isAncestorRef, collectAddedLineHints */
+/* unused harmony exports resolveRefToCommit, resolveRefToCommitCandidate, findMergeBase, findMergeBaseCandidate, isAncestorRef, collectAddedLineHints */
 /* harmony import */ var node_child_process__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(1421);
 /* harmony import */ var node_util__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(7975);
 
@@ -48168,28 +48168,75 @@ async function detectDefaultBranch(cwd) {
  * src/cli/commands/review.mjs). Verified 2026-09-04: `--base <orphan branch>`
  * passes this check and still yields mergeBase === HEAD (#2046 review).
  *
+ * Because the two predicates can disagree, the candidate ACTUALLY used is part
+ * of the answer, not an implementation detail: see
+ * {@link resolveRefToCommitCandidate} / {@link findMergeBaseCandidate}, which
+ * report it so {@link resolveBaseMergeBase} can keep both sides talking about
+ * the same commit (#2071).
+ *
  * @param {string} cwd repository path
  * @param {string} baseRef branch / ref / SHA as typed by the user
  * @returns {Promise<string|null>} commit SHA, or null when unresolvable
  */
 async function resolveRefToCommit(cwd, baseRef) {
-  for (const ref of [`origin/${baseRef}`, baseRef]) {
+  return (await resolveRefToCommitCandidate(cwd, baseRef)).sha;
+}
+
+/**
+ * The candidate order both `--base` resolvers walk: `origin/<ref>` then `<ref>`.
+ *
+ * SSoT for the order so the two resolvers cannot drift apart. Changing the
+ * order is explicitly a non-goal of #2071 — what that issue fixes is the two
+ * resolvers landing on DIFFERENT entries of this same list.
+ *
+ * @param {string} baseRef
+ * @returns {string[]}
+ */
+function baseRefCandidates(baseRef) {
+  return [`origin/${baseRef}`, baseRef];
+}
+
+/**
+ * {@link resolveRefToCommit}, but also reporting WHICH candidate answered.
+ *
+ * @param {string} cwd repository path
+ * @param {string} baseRef branch / ref / SHA as typed by the user
+ * @returns {Promise<{sha: string|null, ref: string|null}>} `ref` is the
+ *   candidate that resolved, or null when none did (then `sha` is null too).
+ */
+async function resolveRefToCommitCandidate(cwd, baseRef) {
+  for (const ref of baseRefCandidates(baseRef)) {
     const sha = await runGit(['rev-parse', '--quiet', '--verify', `${ref}^{commit}`], {
       cwd,
     }).catch(() => null);
-    if (sha) return sha;
+    if (sha) return { sha, ref };
   }
-  return null;
+  return { sha: null, ref: null };
 }
 
 async function findMergeBase(cwd, baseRef) {
-  const candidates = [`origin/${baseRef}`, baseRef];
-  for (const ref of candidates) {
+  return (await findMergeBaseCandidate(cwd, baseRef)).mergeBase;
+}
+
+/**
+ * {@link findMergeBase}, but also reporting WHICH candidate produced the merge
+ * base.
+ *
+ * `ref` is null when NO candidate had a merge base with HEAD and the result is
+ * the deterministic HEAD fallback — a caller must not read that null as "the
+ * ref the user typed", because no ref answered at all.
+ *
+ * @param {string} cwd repository path
+ * @param {string} baseRef branch / ref / SHA as typed by the user
+ * @returns {Promise<{mergeBase: string, ref: string|null}>}
+ */
+async function findMergeBaseCandidate(cwd, baseRef) {
+  for (const ref of baseRefCandidates(baseRef)) {
     const mergeBase = await runGit(['merge-base', 'HEAD', ref], { cwd }).catch(() => null);
-    if (mergeBase) return mergeBase;
+    if (mergeBase) return { mergeBase, ref };
   }
   // fallback to current HEAD to keep diff calculations deterministic
-  return runGit(['rev-parse', 'HEAD'], { cwd });
+  return { mergeBase: await runGit(['rev-parse', 'HEAD'], { cwd }), ref: null };
 }
 
 /**
@@ -48275,6 +48322,9 @@ function normalizeBaseRef(rawBaseRef) {
  * @param {string} repoRoot repository path
  * @param {unknown} rawBaseRef the raw `--base` value as typed (or null/undefined)
  * @param {string} fallbackRef ref to diff against when `--base` is absent
+ * `baseRefSha` is the commit of the candidate the merge base actually came from
+ * (#2071), which is not always the first candidate `rev-parse` accepts.
+ *
  * @returns {Promise<{baseRef: string|null, baseRefSha: string|null, mergeBase: string, warning: string|null}>}
  * @throws {BaseRefError} when an explicitly typed `--base` is blank or unresolvable
  */
@@ -48284,8 +48334,9 @@ async function resolveBaseMergeBase(repoRoot, rawBaseRef, fallbackRef) {
     throw new BaseRefError('--base requires a branch or ref (got a blank value).');
   }
   let baseRefSha = null;
+  let resolvedRef = null;
   if (baseRef !== null) {
-    baseRefSha = await resolveRefToCommit(repoRoot, baseRef);
+    ({ sha: baseRefSha, ref: resolvedRef } = await resolveRefToCommitCandidate(repoRoot, baseRef));
     if (!baseRefSha) {
       throw new BaseRefError(
         `--base "${baseRef}" is not a ref this repository can resolve ` +
@@ -48294,7 +48345,26 @@ async function resolveBaseMergeBase(repoRoot, rawBaseRef, fallbackRef) {
       );
     }
   }
-  const mergeBase = await findMergeBase(repoRoot, baseRef ?? fallbackRef);
+  const { mergeBase, ref: mergeBaseRef } = await findMergeBaseCandidate(
+    repoRoot,
+    baseRef ?? fallbackRef
+  );
+  // #2071: the two resolvers walk the same candidate list with DIFFERENT
+  // predicates (`rev-parse` vs `merge-base`), so they can land on different
+  // entries — `origin/<ref>` resolving but sharing no history while `<ref>`
+  // does. When that happens the merge base above came from `mergeBaseRef`, so
+  // every downstream statement about "the base" must be about THAT commit;
+  // keeping `baseRefSha` from the other candidate is how the empty-range
+  // warning ended up describing a commit the merge base never came from.
+  // Re-resolve with the same `rev-parse` predicate and adopt it — one extra
+  // git call, and only on the rare disagreement.
+  if (baseRef !== null && mergeBaseRef !== null && mergeBaseRef !== resolvedRef) {
+    const mergeBaseRefSha = await runGit(
+      ['rev-parse', '--quiet', '--verify', `${mergeBaseRef}^{commit}`],
+      { cwd: repoRoot }
+    ).catch(() => null);
+    if (mergeBaseRefSha) baseRefSha = mergeBaseRefSha;
+  }
   // `rev-parse` says the ref exists; `merge-base` says the two share history.
   // A ref that passes the first and fails the second (unrelated history, a
   // shallow clone) makes findMergeBase fall back to HEAD, which is an empty
@@ -48318,7 +48388,9 @@ async function resolveBaseMergeBase(repoRoot, rawBaseRef, fallbackRef) {
     if (headSha && mergeBase === headSha) {
       // Compare against the already-resolved sha, not `baseRef`: resolveRefToCommit
       // may have picked `origin/<baseRef>`, and re-resolving here could pick the
-      // other candidate and answer about a different commit.
+      // other candidate and answer about a different commit. Since #2071 that
+      // sha is also reconciled with the candidate `findMergeBase` actually used,
+      // so this answers about the commit `mergeBase` came from.
       const baseIsAheadOfHead = await isAncestorRef(repoRoot, headSha, baseRefSha);
       warning = baseIsAheadOfHead
         ? `Warning: --base "${baseRef}" is ahead of HEAD (HEAD is an ancestor of it), ` +
