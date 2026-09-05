@@ -17,6 +17,7 @@
 - [ ] **matcher 内で 2 段構えにする**（既存 `matchesDangerousEval` を参照）。① 先頭がコメントの行は早期 return（`trimmed.startsWith('//')` 等）。② 残りは `stripTrailingLineComment(trimmed).trim()` で行末コメントを除去してから判定する。①のみだと行末コメント FP が再発する（gemini が毎 PR 指摘した class）。
 - [ ] **行末コメント除去は quote-aware な共有ヘルパー `stripTrailingLineComment(code)` を使う**。素朴な `code.replace(/\/\/.*$/, '')` は **禁止**—文字列リテラル内の `//`（例 `"http://x"; eval(y)`）でコメント開始を誤判定し、後続の本物（`eval`）を取りこぼす（false negative）。
 - [ ] パターンのキーワードが「コメント内に登場しただけ」で発火しないことを negative テストで確認する。
+- [ ] **位置を報告するときは単位を明示する**。`readFileSync(path, 'utf8')` が返す文字列の index は UTF-16 コード単位で、byte offset とは一致しない。byte offset が必要なら `readFileSync(path)` の Buffer で測る。#2068 の委託指示で utf8 index（16436）を byte と報告し、ワーカー側の実測（16480）と食い違った。
 
 ## 2. メソッド呼び出しと関数呼び出しの衝突
 
