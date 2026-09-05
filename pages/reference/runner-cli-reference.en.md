@@ -126,17 +126,19 @@ The value itself is validated in the handler layer rather than the parse layer, 
 
 The surfaces that do not read `--base` used to accept the flag and throw the value away (#2065). Calls that passed it to the following surfaces change their exit code.
 
-- From exit 0 to exit 1: `doctor`, `runs list`, `runs summary`, `runs digest`, `eval`, `feedback add`, `suppression add`, `skills list`, `skills resolve`, `skills export`
-- From exit 3 to exit 1: `river review verify` (its old exit 3 was the unimplemented `#802 Phase 3` path, not a result of processing `--base`)
+- From exit 0 to exit 1: `doctor`, `runs list`, `runs summary`, `runs digest`, `eval`, `feedback add`, `suppression add`, `skills list`, `skills resolve`, `skills export`, `skills import`
+- From exit 3 to exit 1: `review verify` (its old exit 3 was the unimplemented `#802 Phase 3` path, not a result of processing `--base`)
+- `runs diff` no longer accepts it either. A call whose two runs both exist moves from exit 0 to exit 1; a call that cannot find a run already exited 1, so its exit code does not move
 
 None of these surfaces ever read the value, so **dropping the flag reproduces the previous result exactly**. Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
 
 `--expires` accepts only the RFC 3339 `YYYY-MM-DD` form and the date-time form. A date-only input is read as UTC midnight and normalized to a date-time when stored, because `expiresAt` in `schemas/suppression-context.schema.json` is declared `format: date-time`.
 
-Value validation does not reach every option, though. The following two paths still exit 0, so `$?` alone does not catch them.
+Value validation does not reach every option, though. The following three paths still exit 0, so `$?` alone does not catch them.
 
 - Passing a non-existent path to `--baseline` (the regression comparison is silently skipped)
 - Passing unknown vocabulary to `--context` / `--dependency`
+- Running `river --base main` with no command at all, or alongside `-h` / `--help` (both only print help and run no review, so they are deliberately outside the command-scoped allowlist)
 
 The `RIVER_PHASE` environment variable now goes through the same vocabulary and the same case-insensitive validation as `--phase` (#1759 C2). An invalid value prints the same shape of error, `Error: RIVER_PHASE must be one of: ...`, to stderr and exits 1. Unset or empty still falls back to the default `midstream`.
 

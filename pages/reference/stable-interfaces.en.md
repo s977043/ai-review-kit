@@ -124,9 +124,10 @@ Changing the following requires a major version bump as a breaking change:
 - Changing/Removing Action inputs / outputs
 - Changing required fields in Skill Schema, or changing meanings of existing fields
 
-The following is not treated as a breaking change and ships in a minor or patch release:
+The following are not treated as breaking changes and ship in a minor or patch release:
 
 - Changing a usage-error exit code (failure to interpret arguments); it follows the Beta label of the CLI surface as a whole
+- Narrowing which surfaces accept an option, where the dropped surfaces never consumed its value (#2065). "Changing/Removing `river` CLI option names or meanings" above means removing the option itself; a surface that never read the value behaves identically once the flag is dropped, so narrowing acceptance is not breaking
 
 For stable Action behavior, we recommend **pinning to a release tag** (e.g., `@v1.22.0`) instead of `@main`.
 

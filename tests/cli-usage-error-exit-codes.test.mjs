@@ -84,12 +84,18 @@
 // #2065 の掃引について
 // ---------------------------------------------------------------------------
 // `--base` をコマンド別 allowlist の対象にした変更でも同じ手順を取った。
-// 20 のコマンド面 × 5 変種（`--base` 無し / 解決できる ref / 解決できない ref /
-// 空白のみ / 値欠落）= 100 形を BEFORE と AFTER の両実装で機械掃引し、exit code
-// が変わった 33 形の全量を CASES へ入れてある。**この掃引で本 Issue の中核に
+// 31 のコマンド面 × 5 変種（`--base` 無し / 解決できる ref / 解決できない ref /
+// 空白のみ / 値欠落）= 155 形を BEFORE と AFTER の両実装で機械掃引し、exit code
+// が変わった 36 形の全量を CASES へ入れてある。**この掃引で本 Issue の中核に
 // あたるのは「解決できる ref」の変種である**。解決できない ref だけを見ると
 // #2046 / #2051 / #2057 で塞いだ「値の検証」と区別がつかず、「その面が値を
 // 消費しないこと」を pin したことにならない。
+//
+// **掃引の面リストは src/cli.mjs の語彙から導くこと。** 初回は手で列挙して
+// `skills import` を落とし、全量の主張が 33 形と過小になった（PR #2073 の
+// レビュー指摘 major 2）。面の SSoT は `COMMAND_USAGE` のキーと、
+// `SKILLS_SUBCOMMANDS` / `EVOLVE_SUBCOMMANDS` / `REVIEW_SUBCOMMANDS`、および
+// `runs` / `promote` / `feedback` / `suppression` のサブコマンド語である。
 //
 // canary の役割は「正しさの主張」ではなく「変更の全量可視化」にある。
 // 今後の変更でも *この表の差分 = 挙動変更の全量* という不変条件を保つこと。
@@ -170,12 +176,13 @@ const CONTRACTS = {
 // invalid-value 2 件として追加し、C3 が 109 -> 111 になった。
 // #2051 / #2057 で同じ 2 形を `skills` 面と `run` 面へ広げ（`--base` の意味が
 // subcommand ごとに割れていた問題の解消）、C3 が 111 -> 115 になった。
-// #2065 でコマンド別 allowlist を入れ、`--base` を読まない 11 面 × 3 変種
-// （解決できる ref / 解決できない ref / 空白のみ）を追加し C3 が 115 -> 148 に
-// なった。この 33 件は BEFORE / AFTER の機械掃引（20 面 × 5 変種 = 100 形）で
-// exit code が変わった形の全量であり、うち 3 件（`review verify`）は
-// 3 -> 1、残り 30 件は 0 -> 1 の移動である。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 148, C4: 1 };
+// #2065 でコマンド別 allowlist を入れ、`--base` を読まない 13 面 × 3 変種
+// （解決できる ref / 解決できない ref / 空白のみ）を追加し C3 が 115 -> 154 に
+// なった。BEFORE / AFTER の機械掃引（31 面 × 5 変種 = 155 形）で exit code が
+// 変わったのは 36 件で、うち 3 件（`review verify`）は 3 -> 1、残り 33 件は
+// 0 -> 1 の移動である。追加した 39 行との差 3 行は `runs diff` で、新たに拒否
+// されるが一時 repo では BEFORE も exit 1 だったため差分に現れない。
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 154, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -1005,13 +1012,25 @@ const CASES = [
   { surface: 'eval', kind: 'surplus-positional', argv: ['eval', 'extra'], contract: 'C3' },
 
   // ---------------------------------------------------------------------------
-  // #2065: `--base` はコマンド別 allowlist の対象になった（33 行）
+  // #2065: `--base` はコマンド別 allowlist の対象になった（39 行）
   // ---------------------------------------------------------------------------
   // `--base` を読まない面が受理して値を捨てていた（#2051 対応候補 2）。
-  // BEFORE / AFTER の機械掃引（20 面 × 5 変種 = 100 形）で exit code が変わった
-  // のは下の 33 形であり、その全量をここに収めてある。`--base` を実際に読む
-  // 5 面（run / skills / review plan|exec|route）と、値欠落
+  // BEFORE / AFTER の機械掃引（31 面 × 5 変種 = 155 形）で exit code が変わった
+  // のは 36 形（12 面 × 3 変種）であり、その全量をここに収めてある。`--base` を
+  // 実際に読む 5 面（run / skills / review plan|exec|route）と、値欠落
   // （`--base` の後ろに値が無い形）は 1 形も動いていない。
+  //
+  // 掃引の面リストは src/cli.mjs の語彙から機械的に作ること。初回はここを手で
+  // 列挙して `skills import` を落とし、「全量」の主張が 33 形と過小になった
+  // （レビュー指摘 major 2）。面の SSoT は COMMAND_USAGE のキーと、
+  // SKILLS_SUBCOMMANDS / EVOLVE_SUBCOMMANDS / REVIEW_SUBCOMMANDS および
+  // runs / promote / feedback / suppression のサブコマンド語である。
+  //
+  // 下の行数（39）が変化形の 36 を上回るのは、`runs diff` の 3 行を含むため。
+  // `runs diff` も新たに `--base` を拒否するようになったが、この一時 repo には
+  // 指定した run が存在せず BEFORE も exit 1（ENOENT）だったため、exit code の
+  // 差分としては現れない。実在する run を 2 つ指定した呼び出しでは 0 -> 1 に
+  // なるので、契約としてはここに置いてある。
   //
   // 変種は 3 つ:
   //   base-main  = 解決できる ref。**この形が本 Issue の中核**で、BEFORE は
@@ -1084,6 +1103,24 @@ const CASES = [
     contract: 'C3',
   },
   {
+    surface: 'skills import',
+    kind: 'unknown-option',
+    argv: ['skills', 'import', '--from', 'incoming', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills import',
+    kind: 'unknown-option',
+    argv: ['skills', 'import', '--from', 'incoming', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills import',
+    kind: 'unknown-option',
+    argv: ['skills', 'import', '--from', 'incoming', '--base', '   '],
+    contract: 'C3',
+  },
+  {
     surface: 'skills export',
     kind: 'unknown-option',
     argv: ['skills', 'export', '--to', 'exported', '--base', 'main'],
@@ -1117,6 +1154,28 @@ const CASES = [
     surface: 'runs list',
     kind: 'unknown-option',
     argv: ['runs', 'list', '--base', '   '],
+    contract: 'C3',
+  },
+  {
+    // 上のブロック冒頭の注記を参照。この 3 行だけは exit code が動いていない
+    // （BEFORE も C3）。run が見つからず ENOENT で落ちていた形が、`--base` の
+    // usage error で落ちる形に変わっただけである。実在する run を 2 つ渡した
+    // 呼び出しでは 0 -> 1 になる。
+    surface: 'runs diff',
+    kind: 'unknown-option',
+    argv: ['runs', 'diff', 'r1', 'r2', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs diff',
+    kind: 'unknown-option',
+    argv: ['runs', 'diff', 'r1', 'r2', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs diff',
+    kind: 'unknown-option',
+    argv: ['runs', 'diff', 'r1', 'r2', '--base', '   '],
     contract: 'C3',
   },
   {
@@ -1433,11 +1492,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 149 usage-error cases and every row is unique', () => {
+  test('the matrix pins 155 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      149,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 33 件'
+      155,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 39 件（うち exit code が動いたのは 36 件、runs diff の 3 件は理由だけが変わった）'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1472,7 +1531,7 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
     );
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:148 / C4:1 (0 of 149 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:154 / C4:1 (0 of 155 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(

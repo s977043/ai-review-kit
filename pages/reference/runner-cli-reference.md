@@ -127,17 +127,19 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 `--base` を読まない面は、以前この flag を受理して値を捨てていました（#2065）。次の面へ渡していた呼び出しは exit code が変わります。
 
 - exit 0 から exit 1 へ: `doctor` / `runs list` / `runs summary` / `runs digest` / `eval`
-- 同じく exit 0 から exit 1 へ: `feedback add` / `suppression add` / `skills list` / `skills resolve` / `skills export`
-- exit 3 から exit 1 へ: `river review verify`（従来の exit 3 は `#802 Phase 3` の未実装経路であり、`--base` を処理した結果ではない）
+- 同じく exit 0 から exit 1 へ: `feedback add` / `suppression add` / `skills list` / `skills resolve` / `skills export` / `skills import`
+- exit 3 から exit 1 へ: `review verify`（従来の exit 3 は `#802 Phase 3` の未実装経路であり、`--base` を処理した結果ではない）
+- `runs diff` も受理しなくなる。指定した run が両方とも存在する呼び出しでは exit 0 から exit 1 へ変わる（run が見つからない呼び出しは元から exit 1 のため、終了コードとしては変化しない）
 
 いずれの面も値を一度も読んでいないため、**flag を外すだけで従来と同じ結果になります**。usage error の exit code は [Stable Interfaces](./stable-interfaces.md) の Stable Contract の対象外であり、この変更はその方針に従ったものです。
 
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 
-ただし値の検証は全オプションには及びません。次の 2 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
+ただし値の検証は全オプションには及びません。次の 3 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
 
 - 存在しないパスを `--baseline` に渡した場合（回帰比較が黙って行われない）
 - 未知の語彙を `--context` / `--dependency` に渡した場合
+- コマンドを付けずに `river --base main` と打った場合、および `-h` / `--help` を併記した場合（いずれも help を表示するだけでレビューを実行しないため、コマンド別 allowlist の対象外にしている）
 
 環境変数 `RIVER_PHASE` は #1759 C2 で `--phase` と同じ語彙・同じ大小文字無視の検証を通るようになりました。不正値は `--phase` と同じ形の `Error: RIVER_PHASE must be one of: ...` を stderr へ出して exit 1 です。未設定・空文字は既定の `midstream` へフォールバックする挙動を維持します。
 
