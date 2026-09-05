@@ -294,6 +294,10 @@ test('--execute: a clean PR is merged with the PR title as the squash subject', 
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /merged #101/);
   assert.match(r.stdout, /All PRs merged/);
+  assert.ok(
+    stub.calls().some((c) => c.startsWith('pr merge')),
+    'gh pr merge was called'
+  );
 });
 
 test('--execute: disposition stop exits 3 and merges nothing', () => {
@@ -503,4 +507,62 @@ test('--execute: a --json field typo in read_checks exits 2 before gh pr merge',
   const r = runScriptWithStub(mutant, ['--execute', '101'], stub);
   assertReadFailureStopsBeforeMerge(r, stub);
   assert.match(r.stderr, /gh pr checks #101 did not return a JSON array/);
+});
+
+// #2109: the pull read at the top of `judge_pr` (`pr_json=... || return 2`)
+// and the `before` read in `update_branch` are the second call to
+// `repos/<repo>/pulls/<N>`; the first is main()'s merged check, which has to
+// succeed for the script to get that far. A route that fails from the second
+// call on (`after: 1`) is what reaches these two lines; every other read stays
+// healthy, so dropping the `|| return 2` would carry on to a verdict.
+
+function pullsFailAfterFirst(pr) {
+  return {
+    match: new RegExp(`^api repos/owner/repo/pulls/${pr}$`),
+    body: 'gh: Not Found (HTTP 404)\n',
+    exit: 1,
+    after: 1,
+  };
+}
+
+test('dry-run: a pull read that fails at judge_pr (after the merged check passed) exits 2, never merge', () => {
+  const stub = createGhStub([pullsFailAfterFirst(101), ...cleanRoutes(101, 'pull-open.json')]);
+  const r = runScriptWithStub(SCRIPT, ['101'], stub);
+  assert.equal(r.status, 2, r.stdout + r.stderr);
+  assert.match(r.stderr, /GitHub API read failed \(PR #101 in owner\/repo\)/);
+  assert.match(r.stderr, /could not judge #101 \(read failed\)/);
+  assert.doesNotMatch(r.stdout, /\tmerge\t/);
+  // calls.log keeps the --jq filter, so the merged check reads as a longer line.
+  assert.equal(
+    stub.calls().filter((c) => /^api repos\/owner\/repo\/pulls\/101( |$)/.test(c)).length,
+    2
+  );
+});
+
+test('--execute: a pull read that fails at update_branch (after the merged check passed) exits 2 before any write', () => {
+  const stub = createGhStub([pullsFailAfterFirst(101), ...executeRoutes()]);
+  const r = runScriptWithStub(SCRIPT, ['--execute', '101'], stub);
+  assert.equal(r.status, 2, r.stdout + r.stderr);
+  assert.match(r.stderr, /GitHub API read failed \(PR #101 in owner\/repo\)/);
+  assert.ok(
+    !stub.calls().some((c) => /--method PUT|pr merge/.test(c)),
+    `a write was reached: ${stub.calls()}`
+  );
+});
+
+test('gh-stub: an `after: N` route falls through N times, then answers', () => {
+  const stub = createGhStub([
+    { match: /^api x$/, body: 'late\n', exit: 1, after: 2 },
+    { match: /^api x$/, body: 'early\n' },
+  ]);
+  const seen = [1, 2, 3, 4].map(() => runGh(stub, ['api', 'x']));
+  assert.deepEqual(
+    seen.map((r) => [r.status, r.stdout.trim()]),
+    [
+      [0, 'early'],
+      [0, 'early'],
+      [1, 'late'],
+      [1, 'late'],
+    ]
+  );
 });
