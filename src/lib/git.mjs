@@ -101,6 +101,31 @@ export async function findMergeBase(cwd, baseRef) {
 }
 
 /**
+ * Is `ancestorRef` an ancestor of `descendantRef`?
+ *
+ * `merge-base --is-ancestor` communicates the answer through the exit status
+ * (0 = yes, 1 = no) and prints nothing, so the usual "did stdout come back
+ * non-empty" test of {@link runGit} cannot be used — a successful call returns
+ * the empty string. Resolve the promise state instead.
+ *
+ * Fail-soft on purpose: any other git failure (a bad ref, a broken repo)
+ * resolves to `false`. The only caller is a diagnostic message refinement in
+ * {@link resolveBaseMergeBase}, where `false` keeps the pre-existing wording;
+ * a wrong guess must never be more than a less specific warning.
+ *
+ * @param {string} cwd repository path
+ * @param {string} ancestorRef the ref that may be the ancestor
+ * @param {string} descendantRef the ref that may be the descendant
+ * @returns {Promise<boolean>}
+ */
+export async function isAncestorRef(cwd, ancestorRef, descendantRef) {
+  return runGit(['merge-base', '--is-ancestor', ancestorRef, descendantRef], { cwd }).then(
+    () => true,
+    () => false
+  );
+}
+
+/**
  * A `--base` value that cannot be turned into a usable diff range.
  *
  * Thrown by {@link resolveBaseMergeBase} so callers can render it as a usage
@@ -149,9 +174,11 @@ export function normalizeBaseRef(rawBaseRef) {
  *   - unresolvable ref → {@link BaseRefError}. `findMergeBase` falls back to
  *     HEAD for an unknown ref, so without this a typo reviewed nothing and
  *     exited 0.
- *   - resolvable ref with no shared history → `warning` is returned (not
- *     thrown). The ref itself was valid, but the range is empty; the caller
- *     decides where to print it.
+ *   - resolvable ref that still yields an EMPTY range → `warning` is returned
+ *     (not thrown). The ref itself was valid, so this is not fatal; the caller
+ *     decides where to print it. Two shapes reach here and they get different
+ *     wording (#2067): no shared history (unrelated / shallow), and a base that
+ *     is ahead of HEAD (HEAD is its ancestor, so the merge base IS HEAD).
  *
  * @param {string} repoRoot repository path
  * @param {unknown} rawBaseRef the raw `--base` value as typed (or null/undefined)
@@ -181,13 +208,32 @@ export async function resolveBaseMergeBase(repoRoot, rawBaseRef, fallbackRef) {
   // shallow clone) makes findMergeBase fall back to HEAD, which is an empty
   // range wearing the same clothes as "no changes" (#2046 review round 3).
   // Not fatal — the ref itself was valid — but it must not pass unannounced.
+  //
+  // `mergeBase === headSha` alone does NOT mean "no shared history" (#2067).
+  // Two different situations land on HEAD, and only one of them is unrelated
+  // history:
+  //   - unrelated history / shallow clone → `merge-base` FAILS and
+  //     findMergeBase falls back to HEAD.
+  //   - the base is AHEAD of HEAD (HEAD is its ancestor) → `merge-base`
+  //     SUCCEEDS and correctly answers HEAD.
+  // Both also satisfy `baseRefSha !== mergeBase`, so the two are separated by
+  // asking git the ancestry question directly. This costs one extra git call,
+  // but only inside the already-narrow branch that is about to warn — the
+  // no-warning path (every normal `--base`) makes no additional call.
   let warning = null;
   if (baseRefSha && baseRefSha !== mergeBase) {
     const headSha = await getHeadSha(repoRoot);
     if (headSha && mergeBase === headSha) {
-      warning =
-        `Warning: --base "${baseRef}" shares no history with HEAD, so no merge base exists. ` +
-        'The diff falls back to HEAD, which yields an empty range.';
+      // Compare against the already-resolved sha, not `baseRef`: resolveRefToCommit
+      // may have picked `origin/<baseRef>`, and re-resolving here could pick the
+      // other candidate and answer about a different commit.
+      const baseIsAheadOfHead = await isAncestorRef(repoRoot, headSha, baseRefSha);
+      warning = baseIsAheadOfHead
+        ? `Warning: --base "${baseRef}" is ahead of HEAD (HEAD is an ancestor of it), ` +
+          'so the merge base is HEAD itself and the diff yields an empty range. ' +
+          'Pass a ref HEAD is ahead of to review the change.'
+        : `Warning: --base "${baseRef}" shares no history with HEAD, so no merge base exists. ` +
+          'The diff falls back to HEAD, which yields an empty range.';
     }
   }
   return { baseRef, baseRefSha, mergeBase, warning };
