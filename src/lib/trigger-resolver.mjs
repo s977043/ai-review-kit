@@ -51,6 +51,13 @@ export const RISK_ACTIONS = Object.freeze(['light', 'standard', 'team', 'human-r
  * Independence tiers a trigger may require, weakest first (#2054
  * "Independence Routing"). Order is what `raiseIndependence` relies on.
  */
+/**
+ * Rollout states a trigger may declare (`flows/entry-map.json` via PR-1 of
+ * #2054). Passed through, never interpreted: whether an `off` trigger records
+ * anything is the caller's decision, so `off` still resolves to its entries.
+ */
+export const TRIGGER_MODES = Object.freeze(['off', 'observe', 'active']);
+
 export const INDEPENDENCE_TIERS = Object.freeze([
   'self',
   'context-isolated',
@@ -75,8 +82,8 @@ export const ARTIFACT_KIND_ENTRIES = Object.freeze({
 });
 
 export class TriggerResolverError extends Error {
-  constructor(message) {
-    super(message);
+  constructor(message, options) {
+    super(message, options);
     this.name = 'TriggerResolverError';
   }
 }
@@ -142,7 +149,11 @@ const raiseIndependence = (current, floor) => {
  *   triggers that declare `selectBy: "artifactKind"`
  * @param {string|null} [input.riskAction] a `RISK_ACTIONS` value from the Router, or null
  * @param {string[]|null} [input.hostCapabilities] neutral capability names the host
- *   reports; passed through into the occurrence id only
+ *   reports; passed through into the occurrence id only. Deliberately so: the
+ *   occurrence id is host-DEPENDENT, together with `riskAction`. The same event on
+ *   two hosts with different capabilities (or a re-routed risk) is two
+ *   occurrences, because what gets executed differs; idempotency is per host
+ *   and per routing, not per event alone
  * @param {string|null} [input.subjectRevision] commit SHA / content hash the event is
  *   about; part of the occurrence id so a new revision is a new occurrence
  * @param {object} sources
@@ -155,7 +166,12 @@ const raiseIndependence = (current, floor) => {
  *   flowPins: Array<{ entry: string, id: string, version: string, sha256: string }>,
  *   evidenceRequirements: string[],
  *   independence: string|null,
+ *   mode: string|null,
+ *   profile: string|null,
  * }}
+ *   `mode` and `profile` are the registry's declarations passed through
+ *   unchanged for the caller to act on; interpreting them (recording or not,
+ *   which checks the profile runs) is outside this resolver's responsibility.
  */
 export function resolveTrigger(
   {
@@ -223,6 +239,11 @@ export function resolveTrigger(
       `unknown riskAction "${riskAction}" (known: ${RISK_ACTIONS.join(', ')}).`
     );
   }
+  const mode = nonEmptyString(trigger.mode);
+  if (mode != null && !TRIGGER_MODES.includes(mode)) {
+    throw new TriggerResolverError(`trigger "${triggerId}" declares unknown mode "${mode}".`);
+  }
+  const profile = nonEmptyString(trigger.profile);
   const declaredIndependence = nonEmptyString(trigger.independence);
   if (declaredIndependence != null && !INDEPENDENCE_TIERS.includes(declaredIndependence)) {
     throw new TriggerResolverError(
@@ -266,7 +287,15 @@ export function resolveTrigger(
     }
     // Version mismatch between the entry and the document is rejected inside
     // `deriveFlowPin`; a pin under the wrong version is worse than no pin.
-    const pin = deriveFlowPin(document, { expectedVersion: entry.flowVersion ?? null });
+    let pin;
+    try {
+      pin = deriveFlowPin(document, { expectedVersion: entry.flowVersion ?? null });
+    } catch (error) {
+      throw new TriggerResolverError(
+        `entry "${entryName}" cannot be pinned: ${error?.message ?? error}`,
+        { cause: error }
+      );
+    }
     return { entry: entryName, ...pin };
   });
 
@@ -281,7 +310,16 @@ export function resolveTrigger(
     flowPins,
   });
 
-  return { triggerId, occurrenceId, selectedEntries, flowPins, evidenceRequirements, independence };
+  return {
+    triggerId,
+    occurrenceId,
+    selectedEntries,
+    flowPins,
+    evidenceRequirements,
+    independence,
+    mode,
+    profile,
+  };
 }
 
 /**

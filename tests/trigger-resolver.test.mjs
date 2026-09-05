@@ -23,6 +23,7 @@ import {
   resolveTrigger,
 } from '../src/lib/trigger-resolver.mjs';
 import {
+  ExecutionManifestError,
   buildExecutionManifest,
   resolveExecutionManifestSpec,
 } from '../src/lib/execution-manifest.mjs';
@@ -43,7 +44,7 @@ const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 const FIXTURE_TRIGGERS = {
   'task-checkpoint': {
     entries: ['review-task'],
-    requiredEvidence: ['subjectRevision'],
+    requiredEvidence: ['tasks', 'diff'],
     mode: 'observe',
   },
   'artifact-ready': {
@@ -56,10 +57,20 @@ const FIXTURE_TRIGGERS = {
       'review-replan',
     ],
     selectBy: 'artifactKind',
+    mode: 'observe',
   },
-  'before-publish': { entries: ['review-final'] },
-  'before-merge': { entries: ['review-final'], independence: 'execution-isolated' },
-  'after-change': { entries: [], profile: 'fast-verification' },
+  'before-publish': {
+    entries: ['review-final'],
+    requiredEvidence: ['requirements', 'diff'],
+    mode: 'observe',
+  },
+  'before-merge': {
+    entries: ['review-final'],
+    requiredEvidence: ['requirements', 'diff'],
+    independence: 'execution-isolated',
+    mode: 'observe',
+  },
+  'after-change': { entries: [], profile: 'fast-verification', mode: 'observe' },
 };
 
 const flowDoc = (id, inputs, extra = {}) => ({
@@ -130,8 +141,10 @@ describe('resolveTrigger: one resolution per neutral event', () => {
       [['review-task', 'task-completion-review', '0.1.0']]
     );
     assert.match(result.flowPins[0].sha256, /^[0-9a-f]{64}$/);
-    assert.deepEqual(result.evidenceRequirements, ['diff', 'subjectRevision', 'tasks']);
+    assert.deepEqual(result.evidenceRequirements, ['diff', 'tasks']);
     assert.equal(result.independence, null);
+    assert.equal(result.mode, 'observe');
+    assert.equal(result.profile, null);
     assert.match(result.occurrenceId, new RegExp(`^${OCCURRENCE_ID_PREFIX}[0-9a-f]{16}$`));
   });
 
@@ -172,6 +185,39 @@ describe('resolveTrigger: one resolution per neutral event', () => {
     assert.deepEqual(result.flowPins, []);
     assert.deepEqual(result.evidenceRequirements, []);
     assert.equal(result.independence, null);
+    assert.equal(result.profile, 'fast-verification');
+  });
+
+  it('mode is passed through, never interpreted: off still resolves', () => {
+    const registry = {
+      ...FIXTURE_REGISTRY,
+      triggers: {
+        ...FIXTURE_TRIGGERS,
+        'before-publish': { entries: ['review-final'], mode: 'off' },
+      },
+    };
+    const result = resolveTrigger(
+      { event: 'before-publish' },
+      { registry, flowDocuments: FIXTURE_FLOWS }
+    );
+    assert.equal(result.mode, 'off');
+    assert.deepEqual(result.selectedEntries, ['review-final']);
+    assert.equal(result.flowPins.length, 1);
+    const bad = {
+      ...FIXTURE_REGISTRY,
+      triggers: {
+        ...FIXTURE_TRIGGERS,
+        'before-publish': { entries: ['review-final'], mode: 'on' },
+      },
+    };
+    assert.throws(
+      () =>
+        resolveTrigger(
+          { event: 'before-publish' },
+          { registry: bad, flowDocuments: FIXTURE_FLOWS }
+        ),
+      /unknown mode "on"/
+    );
   });
 
   it('output carries exactly the contract keys', () => {
@@ -179,7 +225,9 @@ describe('resolveTrigger: one resolution per neutral event', () => {
       'evidenceRequirements',
       'flowPins',
       'independence',
+      'mode',
       'occurrenceId',
+      'profile',
       'selectedEntries',
       'triggerId',
     ]);
@@ -309,7 +357,15 @@ describe('resolveTrigger: rejects instead of degrading', () => {
     };
     assert.throws(
       () => resolveTrigger({ event: 'before-publish' }, { registry, flowDocuments: FIXTURE_FLOWS }),
-      /is version 0\.1\.0, but the caller resolved 9\.9\.9/
+      (error) => {
+        assert.ok(error instanceof TriggerResolverError, error.name);
+        assert.match(error.message, /is version 0\.1\.0, but the caller resolved 9\.9\.9/);
+        assert.ok(
+          error.cause instanceof ExecutionManifestError,
+          'cause must be the original error'
+        );
+        return true;
+      }
     );
   });
 
@@ -482,7 +538,7 @@ describe('resolveTrigger: against the real Flow / Intent / entry-map documents',
       }
     }
     const task = resolveTrigger({ event: 'task-checkpoint' }, sources);
-    assert.deepEqual(task.evidenceRequirements, ['diff', 'subjectRevision', 'tasks']);
+    assert.deepEqual(task.evidenceRequirements, ['diff', 'tasks']);
   });
 
   it('ARTIFACT_KIND_ENTRIES matches Intent stage → Flow purpose → entry', () => {
