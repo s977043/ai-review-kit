@@ -126,10 +126,17 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 `--base` を読まない面は、以前この flag を受理して値を捨てていました（#2065）。次の面へ渡していた呼び出しは exit code が変わります。
 
-- exit 0 から exit 1 へ: `doctor` / `runs list` / `runs summary` / `runs digest` / `eval`
+- exit 0 から exit 1 へ: `doctor` / `runs`（サブコマンド無し。`runs list` として動く形）/ `runs list` / `runs summary` / `runs digest` / `eval`
 - 同じく exit 0 から exit 1 へ: `feedback add` / `suppression add` / `skills list` / `skills resolve` / `skills export` / `skills import`
 - exit 3 から exit 1 へ: `review verify`（従来の exit 3 は `#802 Phase 3` の未実装経路であり、`--base` を処理した結果ではない）
 - `runs diff` も受理しなくなる。指定した run が両方とも存在する呼び出しでは exit 0 から exit 1 へ変わる（run が見つからない呼び出しは元から exit 1 のため、終了コードとしては変化しない）
+
+語順は問いません。`doctor --base main .` のようにフラグを先に書いた形も、`doctor . --base main` と同じく拒否されます。`--base` を 2 回以上書いた形も単発と同じ扱いです。
+
+一方、**サブコマンド語が未知の場合はこの検査を行いません**。存在しない面について `--base` の可否を論じないためです。次のように従来どおりのメッセージを返します。
+
+- `river runs nosuch --base main` → `Unknown runs subcommand: nosuch`
+- `river feedback --base main` → ``only `river feedback add` is supported``
 
 いずれの面も値を一度も読んでいないため、**flag を外すだけで従来と同じ結果になります**。usage error の exit code は [Stable Interfaces](./stable-interfaces.md) の Stable Contract の対象外であり、この変更はその方針に従ったものです。
 

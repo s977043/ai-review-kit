@@ -28,9 +28,11 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import test, { describe } from 'node:test';
+import test, { after, before, describe } from 'node:test';
 
-import { BASE_CONSUMING_SURFACES, parseArgs } from '../src/cli.mjs';
+import { BASE_CONSUMING_SURFACES, SURFACE_SUBCOMMANDS, parseArgs } from '../src/cli.mjs';
+import { runCliInProcess } from './helpers/cli.mjs';
+import { createTempGitRepo } from './helpers/temp-repo.mjs';
 
 const SRC_DIR = fileURLToPath(new URL('../src', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -59,6 +61,16 @@ describe('#2065 --base command-scoped allowlist', () => {
     );
   });
 
+  // ★ この検査の限界（false-negative 方向は未実証）:
+  //   下の正規表現はソースの **コメントにも当たる**。変異注入 D
+  //   （doctor.mjs のコメントへ `parsed.base` を書き足す）が落ちるのはその
+  //   ためで、実証できているのは false-positive 方向だけである。逆に
+  //   `const { base } = parsed` のような分解代入、`const ref = parsed[key]`
+  //   のような動的アクセス、別名に束ねてから読む形は **検出できない**。
+  //   新しい消費経路をそういう書き方で足した場合、この検査は黙って通る。
+  //   grep を厳密化しても書き方の抜け道は残るため、実装は変えず限界を明記して
+  //   ある。消費の有無そのものは下の面ごとの受理 / 拒否と canary の
+  //   end-to-end で担保する。
   test('the files that read `parsed.base` are exactly the pinned set', () => {
     // `--base` の値がソース上でどこへ流れるかの実測。ここが増えたのに
     // BASE_CONSUMING_SURFACES が変わっていなければ、新しい面が値を読んでいる
@@ -100,6 +112,8 @@ describe('#2065 --base command-scoped allowlist', () => {
     { surface: 'skills resolve', argv: ['skills', 'resolve', '--path', 'a.txt'] },
     { surface: 'skills export', argv: ['skills', 'export', '--to', 'exported'] },
     { surface: 'skills import', argv: ['skills', 'import', '--from', 'incoming'] },
+    // サブコマンド無しの `river runs` は `runs list` として動く実在の面。
+    { surface: 'runs', argv: ['runs'] },
     { surface: 'runs list', argv: ['runs', 'list'] },
     { surface: 'runs diff', argv: ['runs', 'diff', 'r1', 'r2'] },
     { surface: 'runs summary', argv: ['runs', 'summary'] },
@@ -160,6 +174,92 @@ describe('#2065 --base command-scoped allowlist', () => {
     assert.equal(parseArgs(['review', 'verify', '--base', 'main']).usageError, true);
     assert.equal(parseArgs(['review', '--base', 'main', 'route']).usageError, false);
     assert.equal(parseArgs(['review', 'route', '--base', 'main']).usageError, false);
+  });
+
+  // -------------------------------------------------------------------------
+  // #2065 レビュー minor 1: 未知サブコマンド語のエラーを覆い隠さないこと
+  // -------------------------------------------------------------------------
+  // `runs` / `feedback` / `suppression` のサブコマンド語は eager branch が
+  // 検証せずそのまま取るので、`checkCommandScopedOptions` を無条件に走らせると
+  // `river runs nosuch` という存在しない面を名乗り、ハンドラの有用な
+  // メッセージ（`Unknown runs subcommand: …` / ``only `river feedback add` is
+  // supported``）を潰してしまう。exit code はどちらも 1 なので canary では
+  // 検出できない。そのため `isNamedSurface` で先にガードしている。
+  //
+  // ここは CLI を実際に起動して stderr の文言まで見る。parseArgs の
+  // `usageError` だけでは「新チェックが黙ったこと」しか分からず、
+  // 「ハンドラのメッセージが残ったこと」までは分からないため。
+  describe('unknown or missing subcommand words keep the handler message', () => {
+    let repoDir;
+    let cleanupRepo;
+
+    before(async () => {
+      const { dir, cleanup } = await createTempGitRepo({
+        prefix: 'river-2065-scope-',
+        initialFiles: { 'a.txt': 'a\n', 'skills/.gitkeep': '' },
+        changedFiles: { 'a.txt': 'a\nb\n' },
+      });
+      repoDir = dir;
+      cleanupRepo = cleanup;
+    });
+
+    after(async () => {
+      if (cleanupRepo) await cleanupRepo();
+    });
+
+    const HANDLER_CASES = [
+      { argv: ['runs', 'nosuch'], expect: 'Unknown runs subcommand: nosuch' },
+      { argv: ['feedback'], expect: 'only `river feedback add` is supported' },
+      { argv: ['feedback', 'nosuch'], expect: 'only `river feedback add` is supported' },
+      { argv: ['suppression'], expect: 'only `river suppression add` is supported' },
+      { argv: ['suppression', 'nosuch'], expect: 'only `river suppression add` is supported' },
+    ];
+
+    for (const { argv, expect } of HANDLER_CASES) {
+      test(`\`river ${argv.join(' ')} --base main\` still reports the handler error`, async () => {
+        const result = await runCliInProcess([...argv, '--base', 'main'], {
+          cwd: repoDir,
+          env: { RIVER_OFFLINE: '1', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', NO_COLOR: '1' },
+        });
+        assert.equal(result.code, 1);
+        assert.ok(
+          result.stderr.includes(expect),
+          `ハンドラのメッセージが失われた。stderr: ${result.stderr.slice(0, 300)}`
+        );
+        assert.ok(
+          !result.stderr.includes('is not supported by'),
+          `存在しない面を名乗るコマンド別 allowlist のエラーが出ている。stderr: ${result.stderr.slice(0, 300)}`
+        );
+      });
+    }
+
+    // SURFACE_SUBCOMMANDS は runs / feedback / suppression のサブコマンド語を
+    // ハンドラから写している（src/cli.mjs のコメント参照）。写しが実装から
+    // ずれていないことを、実際に CLI を起動して確かめる。既知の語なら
+    // 「未知サブコマンド」系のメッセージは出ない、が検査内容。
+    const HANDLER_ERROR_MARKERS = [
+      'Unknown runs subcommand',
+      'only `river feedback add` is supported',
+      'only `river suppression add` is supported',
+    ];
+
+    for (const command of ['runs', 'feedback', 'suppression']) {
+      const { known } = SURFACE_SUBCOMMANDS.get(command);
+      for (const subcommand of known) {
+        test(`\`river ${command} ${subcommand}\` is a real subcommand (mirror pin)`, async () => {
+          const result = await runCliInProcess([command, subcommand], {
+            cwd: repoDir,
+            env: { RIVER_OFFLINE: '1', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', NO_COLOR: '1' },
+          });
+          for (const marker of HANDLER_ERROR_MARKERS) {
+            assert.ok(
+              !result.stderr.includes(marker),
+              `SURFACE_SUBCOMMANDS がハンドラの語彙からずれている（${command} ${subcommand} が未知扱い）。stderr: ${result.stderr.slice(0, 300)}`
+            );
+          }
+        });
+      }
+    }
   });
 
   test('--help and the bare command keep their exit-0 contract', () => {

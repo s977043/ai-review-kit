@@ -126,9 +126,11 @@ The value itself is validated in the handler layer rather than the parse layer, 
 
 The surfaces that do not read `--base` used to accept the flag and throw the value away (#2065). Calls that passed it to the following surfaces change their exit code.
 
-- From exit 0 to exit 1: `doctor`, `runs list`, `runs summary`, `runs digest`, `eval`, `feedback add`, `suppression add`, `skills list`, `skills resolve`, `skills export`, `skills import`
+- From exit 0 to exit 1: `doctor`, `runs` (no subcommand — the form that runs as `runs list`), `runs list`, `runs summary`, `runs digest`, `eval`, `feedback add`, `suppression add`, `skills list`, `skills resolve`, `skills export`, `skills import`
 - From exit 3 to exit 1: `review verify` (its old exit 3 was the unimplemented `#802 Phase 3` path, not a result of processing `--base`)
 - `runs diff` no longer accepts it either. A call whose two runs both exist moves from exit 0 to exit 1; a call that cannot find a run already exited 1, so its exit code does not move
+
+Word order does not matter: `doctor --base main .` is rejected exactly like `doctor . --base main`, and repeating `--base` behaves like passing it once. An **unknown subcommand word skips this check entirely**, though: `river runs nosuch --base main` still answers `Unknown runs subcommand: nosuch`, and `river feedback --base main` still answers ``only `river feedback add` is supported`` — the CLI does not rule on `--base` for a surface that does not exist.
 
 None of these surfaces ever read the value, so **dropping the flag reproduces the previous result exactly**. Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
 

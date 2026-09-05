@@ -145,6 +145,8 @@ Options:
                     Use "auto" to select roles automatically based on diff content and risk signals.
   --baseline <path> Path to a previous review JSON (findings array) for regression comparison
   --base <ref>      Branch or ref to diff against (e.g. main). Default: auto-detected default branch
+                    Accepted only by: run, skills (no subcommand), review plan|exec|route.
+                    Other surfaces reject it (#2065) — they never read a diff.
   --skill-set <name> Restrict review to a named skill set from skills/registry.yaml
                     (e.g. basic, typescript, comprehensive). Default: all applicable skills
   --depth <name>    Force review depth: quick|standard|thorough. Default: auto-detected from diff size
@@ -317,6 +319,62 @@ const SUPPRESSION_FINGERPRINT_ALGOS = ['v1', 'v2'];
 const REVIEW_SUBCOMMANDS = new Set(['plan', 'exec', 'verify', 'route']);
 
 /**
+ * `runs` subcommands, as dispatched by `runRunsCommand`
+ * (`src/cli/commands/runs.mjs`): `list` / `diff` / `summary` / `digest`, with a
+ * MISSING subcommand behaving as `list` (`:21` — `!parsed.runsSubcommand ||
+ * parsed.runsSubcommand === 'list'`). Mirrors the vocabulary in that handler's
+ * `Unknown runs subcommand: … Use: list | diff | summary | digest` message,
+ * the same "mirror + pin" arrangement `SUPPRESSION_FINGERPRINT_ALGOS` uses
+ * against its schema; `tests/cli-base-option-scope.test.mjs` pins the two
+ * together by running the CLI, so this list cannot drift from the handler.
+ *
+ * Needed at parse time only so `checkCommandScopedOptions` can tell a real
+ * surface from a typo'd subcommand word (see `isNamedSurface`).
+ */
+const RUNS_SUBCOMMANDS = new Set(['list', 'diff', 'summary', 'digest']);
+
+/**
+ * `feedback` / `suppression` accept exactly one subcommand word each, and a
+ * missing one is NOT a surface — both handlers answer
+ * ``only `river feedback add` is supported`` / ``only `river suppression add`
+ * is supported`` (`src/cli/commands/feedback.mjs:61`,
+ * `src/cli/commands/suppression.mjs:20`). Pinned by the same test.
+ */
+const FEEDBACK_SUBCOMMANDS = new Set(['add']);
+const SUPPRESSION_SUBCOMMANDS = new Set(['add']);
+
+/**
+ * Which subcommand words name a real surface, per command (#2065 review).
+ *
+ * `bare` says whether the command WITHOUT a subcommand is itself a surface:
+ * `river runs` runs as `runs list`, `river skills <path>` is the diff-reviewing
+ * form, and `river evolve <path>` takes a path — but `river feedback` and
+ * `river suppression` are not surfaces, and `river review` without a
+ * subcommand is already rejected earlier in this function.
+ *
+ * `promote` is deliberately ABSENT. Its vocabulary lives only in its handler,
+ * and the parser has no constant for it — but it also never reaches the
+ * command-scoped check, because `parsePromoteOption` consumes `--base` as an
+ * unknown option before `parsed.base` is ever set (measured: `promote list
+ * --base main` exits 1 with ``unknown option for promote: --base`` both before
+ * and after #2065). A command missing from this map is treated as "not a
+ * surface the parser can name", so the check skips it rather than invent one.
+ *
+ * @type {Map<string, {bare: boolean, known: Set<string> | null}>}
+ */
+const SURFACE_SUBCOMMANDS = new Map([
+  ['run', { bare: true, known: null }],
+  ['doctor', { bare: true, known: null }],
+  ['eval', { bare: true, known: null }],
+  ['skills', { bare: true, known: SKILLS_SUBCOMMANDS }],
+  ['runs', { bare: true, known: RUNS_SUBCOMMANDS }],
+  ['review', { bare: false, known: REVIEW_SUBCOMMANDS }],
+  ['feedback', { bare: false, known: FEEDBACK_SUBCOMMANDS }],
+  ['suppression', { bare: false, known: SUPPRESSION_SUBCOMMANDS }],
+  ['evolve', { bare: true, known: EVOLVE_SUBCOMMANDS }],
+]);
+
+/**
  * The surfaces that actually READ `parsed.base` (#2065).
  *
  * Derived by reading every consumer of the value — `src/cli/commands/run.mjs`
@@ -387,8 +445,8 @@ const COMMAND_SCOPED_OPTIONS = [
  * @param {object} parsed
  * @returns {string}
  */
-function currentSurface(parsed) {
-  const subcommand =
+function currentSubcommand(parsed) {
+  return (
     parsed.reviewSubcommand ??
     parsed.skillsSubcommand ??
     parsed.runsSubcommand ??
@@ -396,8 +454,40 @@ function currentSurface(parsed) {
     parsed.promoteSubcommand ??
     parsed.suppressionSubcommand ??
     parsed.feedbackSubcommand ??
-    null;
+    null
+  );
+}
+
+function currentSurface(parsed) {
+  const subcommand = currentSubcommand(parsed);
   return subcommand ? `${parsed.command} ${subcommand}` : `${parsed.command}`;
+}
+
+/**
+ * Whether `currentSurface(parsed)` names a surface that actually exists
+ * (#2065 review, minor 1).
+ *
+ * The subcommand word is taken verbatim by the eager branch for `runs` /
+ * `feedback` / `suppression` / `promote` — it is the HANDLER that validates it.
+ * Without this gate, `river runs nosuch --base main` reported
+ * ``--base is not supported by `river runs nosuch` `` and swallowed the far
+ * more useful ``Unknown runs subcommand: nosuch. Use: list | diff | summary |
+ * digest``, naming a surface that does not exist. Both exit 1, so the canary
+ * cannot see the difference — hence the explicit gate.
+ *
+ * When the surface cannot be named, this returns false and the command-scoped
+ * check stands down, leaving the handler to report the real problem. `--base`
+ * is not consumed on any of those paths either way.
+ *
+ * @param {object} parsed
+ * @returns {boolean}
+ */
+function isNamedSurface(parsed) {
+  const entry = SURFACE_SUBCOMMANDS.get(parsed.command);
+  if (!entry) return false;
+  const subcommand = currentSubcommand(parsed);
+  if (subcommand === null) return entry.bare;
+  return entry.known !== null && entry.known.has(subcommand);
 }
 
 /**
@@ -416,6 +506,8 @@ function currentSurface(parsed) {
 function checkCommandScopedOptions(parsed) {
   if (parsed.usageError) return;
   if (!COMMAND_NAMES.includes(parsed.command)) return;
+  // A typo'd subcommand word is the handler's to report, not this check's.
+  if (!isNamedSurface(parsed)) return;
   const surface = currentSurface(parsed);
   for (const rule of COMMAND_SCOPED_OPTIONS) {
     if (!rule.given(parsed)) continue;
@@ -2222,6 +2314,10 @@ export {
   // that actually read `parsed.base`, so a new consumer (or a removed one)
   // cannot drift from the surfaces the parser lets through.
   BASE_CONSUMING_SURFACES,
+  // Also for tests/cli-base-option-scope.test.mjs only (#2065 review, minor 1).
+  // These mirror vocabularies that live in the handler modules, so the test
+  // runs the CLI for every token to pin the mirror against the real dispatch.
+  SURFACE_SUBCOMMANDS,
 };
 
 /**
