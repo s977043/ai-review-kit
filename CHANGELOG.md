@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.99.2](https://github.com/s977043/river-review/compare/v1.99.1...v1.99.2) (2026-09-05)
+
+
+### Bug Fixes
+
+* **cli:** [#2065](https://github.com/s977043/river-review/issues/2065) --base を読まない 14 面で usage error にする（exit 0/3 → 1）([#2073](https://github.com/s977043/river-review/issues/2073)) ([801760f](https://github.com/s977043/river-review/commit/801760f50893ea13c1452b2308460b2f18f70103))
+* **git:** [#2067](https://github.com/s977043/river-review/issues/2067) --base が HEAD の子孫のときの誤診断を分岐する ([#2070](https://github.com/s977043/river-review/issues/2070)) ([3b9e29c](https://github.com/s977043/river-review/commit/3b9e29c141cdd9ffbeb6adc20cff5686de652e8c))
+
 ## [1.99.1](https://github.com/s977043/river-review/compare/v1.99.0...v1.99.1) (2026-09-04)
 
 
