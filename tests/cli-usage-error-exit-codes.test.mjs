@@ -80,6 +80,17 @@
 // #1746 W1 も #1753 B1 も「その書き方が表に無かった」ことが検出漏れの原因なので、
 // 部分的な pin では同じ入口を開けたままにすることになる。
 //
+// ---------------------------------------------------------------------------
+// #2065 の掃引について
+// ---------------------------------------------------------------------------
+// `--base` をコマンド別 allowlist の対象にした変更でも同じ手順を取った。
+// 20 のコマンド面 × 5 変種（`--base` 無し / 解決できる ref / 解決できない ref /
+// 空白のみ / 値欠落）= 100 形を BEFORE と AFTER の両実装で機械掃引し、exit code
+// が変わった 33 形の全量を CASES へ入れてある。**この掃引で本 Issue の中核に
+// あたるのは「解決できる ref」の変種である**。解決できない ref だけを見ると
+// #2046 / #2051 / #2057 で塞いだ「値の検証」と区別がつかず、「その面が値を
+// 消費しないこと」を pin したことにならない。
+//
 // canary の役割は「正しさの主張」ではなく「変更の全量可視化」にある。
 // 今後の変更でも *この表の差分 = 挙動変更の全量* という不変条件を保つこと。
 // 期待値を書き換えるときは、必ず EXPECTED_CONTRACT_COUNTS も併せて更新する。
@@ -159,7 +170,12 @@ const CONTRACTS = {
 // invalid-value 2 件として追加し、C3 が 109 -> 111 になった。
 // #2051 / #2057 で同じ 2 形を `skills` 面と `run` 面へ広げ（`--base` の意味が
 // subcommand ごとに割れていた問題の解消）、C3 が 111 -> 115 になった。
-const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 115, C4: 1 };
+// #2065 でコマンド別 allowlist を入れ、`--base` を読まない 11 面 × 3 変種
+// （解決できる ref / 解決できない ref / 空白のみ）を追加し C3 が 115 -> 148 に
+// なった。この 33 件は BEFORE / AFTER の機械掃引（20 面 × 5 変種 = 100 形）で
+// exit code が変わった形の全量であり、うち 3 件（`review verify`）は
+// 3 -> 1、残り 30 件は 0 -> 1 の移動である。
+const EXPECTED_CONTRACT_COUNTS = { C1: 0, C2: 0, C3: 148, C4: 1 };
 
 /** 一時 repo 配下の「存在しないパス」に実行時に差し替えるプレースホルダ。 */
 const NONEXISTENT_PATH = '<nonexistent-path>';
@@ -987,6 +1003,275 @@ const CASES = [
   },
   { surface: 'eval', kind: 'unknown-option', argv: ['eval', '--nope'], contract: 'C3' },
   { surface: 'eval', kind: 'surplus-positional', argv: ['eval', 'extra'], contract: 'C3' },
+
+  // ---------------------------------------------------------------------------
+  // #2065: `--base` はコマンド別 allowlist の対象になった（33 行）
+  // ---------------------------------------------------------------------------
+  // `--base` を読まない面が受理して値を捨てていた（#2051 対応候補 2）。
+  // BEFORE / AFTER の機械掃引（20 面 × 5 変種 = 100 形）で exit code が変わった
+  // のは下の 33 形であり、その全量をここに収めてある。`--base` を実際に読む
+  // 5 面（run / skills / review plan|exec|route）と、値欠落
+  // （`--base` の後ろに値が無い形）は 1 形も動いていない。
+  //
+  // 変種は 3 つ:
+  //   base-main  = 解決できる ref。**この形が本 Issue の中核**で、BEFORE は
+  //                どの面でも exit 0（`review verify` だけ exit 3）だった。
+  //   base-bogus = 解決できない ref
+  //   base-blank = 空白のみの値
+  // 対象外の面では 3 変種とも parse 層で落ちるため値の中身を区別しない。
+  // kind は `unknown-option`（その面にとって未知のオプション）とした。
+  // promote / evolve が `PROMOTE_SHARED_OPTIONS` / `EVOLVE_SHARED_OPTIONS` で
+  // 出す `unknown option for promote: --base` と同じ分類である。
+  //
+  // `review verify` の 3 -> 1 について: BEFORE の exit 3 は `#802 Phase 3` の
+  // 未実装経路（`runReviewVerify` が出す "execution is not implemented yet"）
+  // であって `--base` を処理した結果ではない。verify のオプション契約
+  // （pages/reference/cli-review-verify-spec.md）は `--artifact` / `--plan` /
+  // `--target` を挙げており `--base` を含まない。parse 層の usage error は
+  // ハンドラより前に出るので exit 1（C3）へ移る。
+  {
+    surface: 'doctor',
+    kind: 'unknown-option',
+    argv: ['doctor', '.', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'doctor',
+    kind: 'unknown-option',
+    argv: ['doctor', '.', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'doctor',
+    kind: 'unknown-option',
+    argv: ['doctor', '.', '--base', '   '],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills list',
+    kind: 'unknown-option',
+    argv: ['skills', 'list', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills list',
+    kind: 'unknown-option',
+    argv: ['skills', 'list', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills list',
+    kind: 'unknown-option',
+    argv: ['skills', 'list', '--base', '   '],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills resolve',
+    kind: 'unknown-option',
+    argv: ['skills', 'resolve', '--path', 'a.txt', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills resolve',
+    kind: 'unknown-option',
+    argv: ['skills', 'resolve', '--path', 'a.txt', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills resolve',
+    kind: 'unknown-option',
+    argv: ['skills', 'resolve', '--path', 'a.txt', '--base', '   '],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills export',
+    kind: 'unknown-option',
+    argv: ['skills', 'export', '--to', 'exported', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills export',
+    kind: 'unknown-option',
+    argv: ['skills', 'export', '--to', 'exported', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'skills export',
+    kind: 'unknown-option',
+    argv: ['skills', 'export', '--to', 'exported', '--base', '   '],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs list',
+    kind: 'unknown-option',
+    argv: ['runs', 'list', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs list',
+    kind: 'unknown-option',
+    argv: ['runs', 'list', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs list',
+    kind: 'unknown-option',
+    argv: ['runs', 'list', '--base', '   '],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs summary',
+    kind: 'unknown-option',
+    argv: ['runs', 'summary', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs summary',
+    kind: 'unknown-option',
+    argv: ['runs', 'summary', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs summary',
+    kind: 'unknown-option',
+    argv: ['runs', 'summary', '--base', '   '],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs digest',
+    kind: 'unknown-option',
+    argv: ['runs', 'digest', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs digest',
+    kind: 'unknown-option',
+    argv: ['runs', 'digest', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'runs digest',
+    kind: 'unknown-option',
+    argv: ['runs', 'digest', '--base', '   '],
+    contract: 'C3',
+  },
+  {
+    surface: 'review verify',
+    kind: 'unknown-option',
+    argv: ['review', 'verify', '--base', 'main'],
+    contract: 'C3',
+  },
+  {
+    surface: 'review verify',
+    kind: 'unknown-option',
+    argv: ['review', 'verify', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  {
+    surface: 'review verify',
+    kind: 'unknown-option',
+    argv: ['review', 'verify', '--base', '   '],
+    contract: 'C3',
+  },
+  { surface: 'eval', kind: 'unknown-option', argv: ['eval', '--base', 'main'], contract: 'C3' },
+  {
+    surface: 'eval',
+    kind: 'unknown-option',
+    argv: ['eval', '--base', 'no-such-ref-xyz'],
+    contract: 'C3',
+  },
+  { surface: 'eval', kind: 'unknown-option', argv: ['eval', '--base', '   '], contract: 'C3' },
+  {
+    // BEFORE は exit 0 で `.river/memory/index.json` へ書き込みまで完了して
+    // いた。AFTER は parse 層で落ちるので、下の「副作用ゼロ」不変条件の
+    // 対象にもなる。
+    surface: 'feedback add',
+    kind: 'unknown-option',
+    argv: [
+      'feedback',
+      'add',
+      '--type',
+      'false_positive',
+      '--skill',
+      'demo-skill',
+      '--base',
+      'main',
+    ],
+    contract: 'C3',
+  },
+  {
+    surface: 'feedback add',
+    kind: 'unknown-option',
+    argv: [
+      'feedback',
+      'add',
+      '--type',
+      'false_positive',
+      '--skill',
+      'demo-skill',
+      '--base',
+      'no-such-ref-xyz',
+    ],
+    contract: 'C3',
+  },
+  {
+    surface: 'feedback add',
+    kind: 'unknown-option',
+    argv: ['feedback', 'add', '--type', 'false_positive', '--skill', 'demo-skill', '--base', '   '],
+    contract: 'C3',
+  },
+  {
+    // feedback add と同じく BEFORE は書き込みまで完了していた形。
+    surface: 'suppression add',
+    kind: 'unknown-option',
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      '0123456789abcdef',
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'because',
+      '--base',
+      'main',
+    ],
+    contract: 'C3',
+  },
+  {
+    surface: 'suppression add',
+    kind: 'unknown-option',
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      '0123456789abcdef',
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'because',
+      '--base',
+      'no-such-ref-xyz',
+    ],
+    contract: 'C3',
+  },
+  {
+    surface: 'suppression add',
+    kind: 'unknown-option',
+    argv: [
+      'suppression',
+      'add',
+      '--fingerprint',
+      '0123456789abcdef',
+      '--feedback',
+      'false_positive',
+      '--rationale',
+      'because',
+      '--base',
+      '   ',
+    ],
+    contract: 'C3',
+  },
 ];
 
 /**
@@ -1148,11 +1433,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // テーブルそのものの健全性（転記ミス・重複の検出）
   // ---------------------------------------------------------------------------
 
-  test('the matrix pins 116 usage-error cases and every row is unique', () => {
+  test('the matrix pins 149 usage-error cases and every row is unique', () => {
     assert.equal(
       CASES.length,
-      116,
-      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件'
+      149,
+      '#1709 の実測マトリクス 78 ケース + Slice 3 で pin した suppression の穴 2 件 + #1746 W2 の値検証 3 件 + #1753 M2 の --expires 2 件 + #1755 の review サブコマンド 2 件 + #1797 の --fingerprint-algo 2 件 + #1860 の evolve prompt-compare 2 件 + #1759 C4 の --month 不正な月 2 件 + #1880 の evolve prompt-ab 2 件 + #2046 の review plan --base 不正値 2 件 + #2051 の skills --base 不正値 2 件 + #2057 の run --base 不正値 2 件 + #2065 の --base を読まない面での拒否 33 件'
     );
     const keys = new Set(CASES.map(caseKey));
     assert.equal(keys.size, CASES.length, '同一 (surface, kind, argv) の行が重複している');
@@ -1179,15 +1464,15 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // 「フラグ先行形を拒否」も v1.72.1 の「`--phase Upstream` を誤拒否」も
   // 壊したのは**成功側**であり、守りが薄いのは逆だった。行を消すだけで
   // 黙って保護が減るのを防ぐ。
-  test('the success-side table pins 93 legitimate argv forms', () => {
+  test('the success-side table pins 95 legitimate argv forms', () => {
     assert.equal(
       VALID_CASES.length,
-      93,
-      'コマンド面ごとの正常形: run 13 (#1759 C3 で --context 未知語彙 1行追加) / doctor 5 / skills 14 (#2051 で skills --base main を1行追加) / runs 7 (#1759 B2 で1行追加) / review 20 (#2046 で review plan --base を1行追加) / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 15 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加、#1880 で prompt-ab の両語順 2行追加) / help 2 / コマンド無し 1'
+      95,
+      'コマンド面ごとの正常形: run 14 (#1759 C3 で --context 未知語彙 1行追加、#2065 で run --base main を1行追加) / doctor 5 / skills 14 (#2051 で skills --base main を1行追加) / runs 7 (#1759 B2 で1行追加) / review 21 (#2046 で review plan --base を1行追加、#2065 で review exec --base を1行追加) / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 15 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加、#1880 で prompt-ab の両語順 2行追加) / help 2 / コマンド無し 1'
     );
   });
 
-  test('the contract distribution is C1:0 / C2:0 / C3:115 / C4:1 (0 of 116 exit 0)', () => {
+  test('the contract distribution is C1:0 / C2:0 / C3:148 / C4:1 (0 of 149 exit 0)', () => {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0 };
     for (const testCase of CASES) counts[testCase.contract] += 1;
     assert.deepEqual(
@@ -1342,6 +1627,9 @@ const VALID_CASES = [
   // 居続けること」だけを固定する。
   { argv: ['run', '.', '--context', 'BOGUS_CONTEXT'], command: 'run' },
   { argv: ['run', '.', '--gate', '--fail-on', 'major'], command: 'run' },
+  // #2065: コマンド別 allowlist が `--base` を読む面まで巻き込んでいないこと。
+  // `run` は allowlist の対象面なので、解決できる ref はそのまま受理される。
+  { argv: ['run', '.', '--base', 'main'], command: 'run' },
   { argv: ['doctor', '.', '--output', 'json'], command: 'doctor' },
   { argv: ['skills', '.', '--phase', 'upstream'], command: 'skills' },
   // #2051: `skills` が `--base` を読むようになった後も、有効な ref を渡す形が
@@ -1391,6 +1679,10 @@ const VALID_CASES = [
     command: 'review',
   },
   { argv: ['review', 'exec', '--dry-run', '--plan', './plan.json'], command: 'review' },
+  // #2065: `review exec` も `--base` を読む面（resolveBaseRepoDiff 経由）。
+  // 同じ `review` コマンドでも `verify` だけが対象外になるので、サブコマンド
+  // 単位の allowlist が exec 側を巻き込んでいないことを固定する。
+  { argv: ['review', 'exec', '--dry-run', '--base', 'main'], command: 'review' },
   { argv: ['review', 'verify', '--plan', './plan.json'], command: 'review' },
   {
     argv: ['review', 'route', '.', '--format', 'markdown', '--base', 'main'],

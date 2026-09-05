@@ -108,7 +108,15 @@ Reviewers: 1/2 roles succeeded, 0 failed, 120.0s total (timed out: security-scan
 
 usage error のときにデータ書き込み（feedback / suppression のエントリ追加など）が先行することはありません。
 
-`--base <ref>` は parse 層ではなくハンドラ層で検証します。`river run` / `river skills` / `river review`（`plan` / `exec` / `route`）の 3 面は同じ解決経路を共有します。いずれも前後の空白は除去され、`git rev-parse` によって解決可否が検査されます（#2051 / #2057）。
+`--base <ref>` を受理するのは、実際に差分を読む次の 5 面だけです（#2065）。他の面へ渡すと parse 層の usage error として exit 1 になります。
+
+- `river run`
+- `river skills`（サブコマンドを付けない形）
+- `river review plan` / `river review exec` / `river review route`
+
+対象外の面（`doctor` / `runs` / `eval` / `feedback` / `suppression` / `skills` のサブコマンド / `review verify` など）では、値が解決できる ref であっても受理しません。値の解決を試みる前に落ちるため、拒否の理由は「その面が差分をレビューしない」ことであり、ref の妥当性ではありません。サブコマンドはオプションの前後どちらに書いても判定は変わりません。
+
+値そのものの検証は parse 層ではなくハンドラ層で行い、受理する 5 面が同じ解決経路を共有します。いずれも前後の空白は除去され、`git rev-parse` によって解決可否が検査されます（#2051 / #2057）。
 
 - 空白のみの値と、解決できない ref は exit 1 の usage error にあたる
 - merge base が HEAD になる ref は exit 1 とせず、stderr の警告として告知する。共有履歴が無い場合と、HEAD より先へ進んでいる場合とで文言を分ける（#2067）。ただし base 自身と merge base が同じ commit を指す `--base HEAD` では警告を出さない
@@ -116,13 +124,20 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 
 `river skills` は以前 `--base` を受理しながら値を読まず、常に自動検出のデフォルトブランチとの差分をレビューしていました（#2051）。値を読むようになったため、`--base` を渡していた呼び出し側ではレビュー対象ファイルと findings が変わります。従来と同じ範囲を維持したい場合は `--base` を外してください。`river run` は値を読んでいたものの解決可否を検査せず、解決できない ref を無警告で HEAD へ落としていました（#2057）。従来 exit 0 で通っていた typo は exit 1 になります。
 
+`--base` を読まない面は、以前この flag を受理して値を捨てていました（#2065）。次の面へ渡していた呼び出しは exit code が変わります。
+
+- exit 0 から exit 1 へ: `doctor` / `runs list` / `runs summary` / `runs digest` / `eval`
+- 同じく exit 0 から exit 1 へ: `feedback add` / `suppression add` / `skills list` / `skills resolve` / `skills export`
+- exit 3 から exit 1 へ: `river review verify`（従来の exit 3 は `#802 Phase 3` の未実装経路であり、`--base` を処理した結果ではない）
+
+いずれの面も値を一度も読んでいないため、**flag を外すだけで従来と同じ結果になります**。usage error の exit code は [Stable Interfaces](./stable-interfaces.md) の Stable Contract の対象外であり、この変更はその方針に従ったものです。
+
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 
-ただし値の検証は全オプションには及びません。次の 3 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
+ただし値の検証は全オプションには及びません。次の 2 経路は現在も exit 0 のまま通るため、`$?` だけでは検知できません。
 
 - 存在しないパスを `--baseline` に渡した場合（回帰比較が黙って行われない）
 - 未知の語彙を `--context` / `--dependency` に渡した場合
-- 差分を扱わない面へ `--base` を渡した場合（`doctor` / `runs list` / `eval` は受理するが値を消費しない。2026-09-04 に解決できない ref で実測し、いずれも exit 0）
 
 環境変数 `RIVER_PHASE` は #1759 C2 で `--phase` と同じ語彙・同じ大小文字無視の検証を通るようになりました。不正値は `--phase` と同じ形の `Error: RIVER_PHASE must be one of: ...` を stderr へ出して exit 1 です。未設定・空文字は既定の `midstream` へフォールバックする挙動を維持します。
 

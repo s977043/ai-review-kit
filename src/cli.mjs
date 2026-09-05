@@ -317,6 +317,122 @@ const SUPPRESSION_FINGERPRINT_ALGOS = ['v1', 'v2'];
 const REVIEW_SUBCOMMANDS = new Set(['plan', 'exec', 'verify', 'route']);
 
 /**
+ * The surfaces that actually READ `parsed.base` (#2065).
+ *
+ * Derived by reading every consumer of the value — `src/cli/commands/run.mjs`
+ * (`baseRef: parsed.base`), `src/cli/commands/skills.mjs` (only the
+ * subcommand-less `skills <path>` branch reaches `resolveBaseMergeBase`; the
+ * `import` / `export` / `list` / `resolve` branches return before it), and
+ * `src/cli/commands/review.mjs` (`resolveBaseRepoDiff`, reached from `plan`,
+ * `exec` and `route`; `verify` returns from `runReviewVerify` without ever
+ * touching it, and its own option contract in
+ * `pages/reference/cli-review-verify-spec.md` lists `--artifact` / `--plan` /
+ * `--target` rather than `--base`).
+ *
+ * `tests/cli-base-option-scope.test.mjs` pins this set against the files that
+ * mention `parsed.base` / `resolveBaseMergeBase`, so adding a consumer without
+ * widening the set (or the reverse) fails there rather than silently.
+ *
+ * @type {Set<string>}
+ */
+const BASE_CONSUMING_SURFACES = new Set([
+  'run',
+  'skills',
+  'review plan',
+  'review exec',
+  'review route',
+]);
+
+/**
+ * Command-scoped option allowlist (#2065).
+ *
+ * `KNOWN_OPTION_TOKENS` and the per-option `if` chain inside `parseArgs` are
+ * FLAT: every option they know is accepted by every command. That is why
+ * `doctor --base <ref>`, `runs list --base <ref>` and `eval --base <ref>`
+ * exited 0 while consuming nothing — the same "accepted, therefore effective"
+ * misreading that #2046 / #2051 / #2057 closed on the surfaces that do read the
+ * value. Rather than rebuild the parser around per-command option tables, this
+ * table names the few options whose meaning is surface-specific and the parse
+ * loop stays untouched; the check runs once after the loop (see
+ * `checkCommandScopedOptions`), which is also the only point where the
+ * subcommand word is known regardless of where the caller wrote it
+ * (`river review --base X plan` and `river review plan --base X` are both
+ * accepted orders since #1755).
+ *
+ * `promote` and `evolve` already reject out-of-scope options this way through
+ * `PROMOTE_SHARED_OPTIONS` / `EVOLVE_SHARED_OPTIONS`, so `promote list --base
+ * main` and `evolve aggregate --base main` exited 1 before this change too —
+ * this table extends the same contract to the surfaces those two sets do not
+ * cover.
+ *
+ * @type {Array<{token: string, given: (parsed: object) => boolean,
+ *   surfaces: Set<string>, why: string}>}
+ */
+const COMMAND_SCOPED_OPTIONS = [
+  {
+    token: '--base',
+    // `--base` requires a value, so a non-null field means it was passed.
+    given: (parsed) => parsed.base !== null,
+    surfaces: BASE_CONSUMING_SURFACES,
+    why: 'that surface does not review a diff',
+  },
+];
+
+/**
+ * The surface a parse result names: the command word plus its subcommand when
+ * it has one (`review plan`, `skills list`, `runs digest`). Only one of these
+ * fields can be set at a time — each is written by the eager branch of the
+ * command it belongs to.
+ *
+ * @param {object} parsed
+ * @returns {string}
+ */
+function currentSurface(parsed) {
+  const subcommand =
+    parsed.reviewSubcommand ??
+    parsed.skillsSubcommand ??
+    parsed.runsSubcommand ??
+    parsed.evolveSubcommand ??
+    parsed.promoteSubcommand ??
+    parsed.suppressionSubcommand ??
+    parsed.feedbackSubcommand ??
+    null;
+  return subcommand ? `${parsed.command} ${subcommand}` : `${parsed.command}`;
+}
+
+/**
+ * Reject an option the current surface accepts but never reads (#2065).
+ *
+ * Runs post-loop, and only for a real command: `parsed.command` is `null` for
+ * a bare `river --base main` (which prints help and exits 0) and `'help'`
+ * whenever `-h` / `--help` appeared anywhere in argv — including AFTER the
+ * option, as in `river run . --base main --help`. Rejecting either would turn
+ * `--help` into a usage error, so both are left alone; neither can be misread
+ * as "a review ran against that ref" because neither runs a review.
+ *
+ * @param {object} parsed
+ * @returns {void}
+ */
+function checkCommandScopedOptions(parsed) {
+  if (parsed.usageError) return;
+  if (!COMMAND_NAMES.includes(parsed.command)) return;
+  const surface = currentSurface(parsed);
+  for (const rule of COMMAND_SCOPED_OPTIONS) {
+    if (!rule.given(parsed)) continue;
+    if (rule.surfaces.has(surface)) continue;
+    console.error(
+      `Error: ${rule.token} is not supported by \`river ${surface}\` — ${rule.why}, ` +
+        `so the value would be accepted and never used. ` +
+        `Surfaces that read ${rule.token}: ${[...rule.surfaces]
+          .map((name) => `river ${name}`)
+          .join(', ')}.`
+    );
+    usageError(parsed);
+    return;
+  }
+}
+
+/**
  * Whether `parsed.command` still accepts a positional `<path>`.
  *
  * The five path-taking surfaces are `run` / `doctor` / `review` /
@@ -1916,6 +2032,13 @@ function parseArgs(argv) {
     usageError(parsed);
   }
 
+  // #2065: an option the resolved surface accepts but never reads. Placed
+  // after the `review` subcommand check on purpose — that check is what turns
+  // a missing / unknown subcommand into a usage error, and this one must not
+  // report `river review null` on top of it (checkCommandScopedOptions returns
+  // early when parsed.usageError is already set).
+  checkCommandScopedOptions(parsed);
+
   // #1759 C2: RIVER_PHASE used to skip validation entirely and propagate an
   // invalid value straight through to the printed phase with exit 0, unlike
   // --phase which already validates against PHASES above. Reuse that same
@@ -2094,6 +2217,11 @@ export {
   // is DERIVED from COMMAND_USAGE rather than written out, only the runtime
   // value can be checked — reading the source cannot recover it.
   EAGER_COMMANDS,
+  // Exported for tests/cli-base-option-scope.test.mjs only (#2065). That test
+  // is the mechanical half of this guard: it pins this set against the files
+  // that actually read `parsed.base`, so a new consumer (or a removed one)
+  // cannot drift from the surfaces the parser lets through.
+  BASE_CONSUMING_SURFACES,
 };
 
 /**
