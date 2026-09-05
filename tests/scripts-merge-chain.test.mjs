@@ -2,7 +2,8 @@
 // with `gh` stubbed. Fixtures mirror shapes measured on 2026-09-03..05.
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { test } from 'node:test';
 
 import {
@@ -357,6 +358,43 @@ test('gh-stub: a --json field the fixture does not carry is "Unknown JSON field"
   ]);
   assert.equal(typo.status, 1, typo.stdout + typo.stderr);
   assert.match(typo.stderr, /Unknown JSON field/);
+});
+
+// #2106: the stub validates --json against the fixture's keys, so a typo shared
+// by the script and the fixture would pass. This literal is the field list of
+// the real `gh pr checks --json` (gh 2.x, measured 2026-09-06); every object
+// key in the checks fixtures must be a member of it.
+const REAL_GH_PR_CHECKS_JSON_FIELDS = [
+  'bucket',
+  'completedAt',
+  'description',
+  'event',
+  'link',
+  'name',
+  'startedAt',
+  'state',
+  'workflow',
+];
+
+test('gh-stub: every key in the checks-*.json fixtures is a real gh pr checks --json field', () => {
+  const names = readdirSync(dirname(fixture('checks-all-pass.json'))).filter((f) =>
+    /^checks-.*\.json$/.test(f)
+  );
+  assert.ok(names.length >= 3, names.join(','));
+  for (const name of names) {
+    const doc = JSON.parse(read(name));
+    const objs = (Array.isArray(doc) ? doc : [doc]).filter(
+      (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
+    );
+    for (const obj of objs) {
+      for (const key of Object.keys(obj)) {
+        assert.ok(
+          REAL_GH_PR_CHECKS_JSON_FIELDS.includes(key),
+          `${name}: "${key}" is not a gh pr checks --json field`
+        );
+      }
+    }
+  }
 });
 
 test('gh-stub: --method outside GET/POST/PUT/PATCH/DELETE and -f without key=value exit 1', () => {

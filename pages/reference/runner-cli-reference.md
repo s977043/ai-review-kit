@@ -151,11 +151,11 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 - `flow`: `{ entry, id, version, sha256 }`。`sha256` は Flow 文書の正規化 JSON のハッシュで、`src/lib/execution-manifest.mjs` の `deriveFlowPin` が算出する
 - `evidenceRequirements`: その Flow が `required: true` で宣言する入力名の一覧（ソート済み）
 
-2 フィールドが出るのは JSON 出力（`--output json` / `--format json`）だけで、markdown / text の出力には現れません。pin は読み込んだ文書のハッシュであり、同梱 `flows/` の文書との一致は検証しません。`--entry` を付けない場合の出力は、この flag が存在しなかったときと同じです。skill 選択・`decision`・`gate` は `--entry` を読まないため、pin の有無で判断は変わりません（ADR-009 D3、RA-1〜RA-4）。この flag と 2 フィールドは **Beta** であり、[Stable Interfaces](./stable-interfaces.md) の Stable Contract に含まれません。
+2 フィールドが出るのは JSON 出力（`--output json` / `--format json`）だけで、markdown の出力には現れません。pin は読み込んだ文書のハッシュであり、同梱 `flows/` の文書との一致は検証しません。`--entry` を付けない場合の出力は、この flag が存在しなかったときと同じです。skill 選択・`decision`・`gate` は `--entry` を読まないため、pin の有無で判断は変わりません（ADR-009 D3、RA-1〜RA-4）。この flag と 2 フィールドは **Beta** であり、[Stable Interfaces](./stable-interfaces.md) の Stable Contract に含まれません。
 
 受理するのは `review plan` だけです。`doctor --entry x` や `review exec --entry x` のように他の面へ渡すと、`--base` と同じコマンド別 allowlist（#2065）により parse 層の usage error として exit 1 になります。未知の entry 名は許容値を列挙して exit 1、値欠落も exit 1 です。いずれの拒否形も、この flag の導入前は `unknown option --entry` の exit 1 だったため、exit code は動いていません。
 
-Flow 文書は `src/lib/flow-loader.mjs` だけが読みます。読み込み先は既定でパッケージ同梱の `flows/` で、環境変数 `RIVER_FLOWS_DIR` で上書きできます。GitHub Action の dist には `flows/` が同梱されないため、そこで `--entry` を使うにはこの変数が必要です。見つからない場合は pin なしの artifact を黙って出さず、`Error: flows directory not found` の exit 1 で止まります。
+Flow 文書は `src/lib/flow-loader.mjs` だけが読みます。読み込み先は既定でパッケージ同梱の `flows/` で、環境変数 `RIVER_FLOWS_DIR` で上書きできます（npm 配布の CLI で `flows/` を別置きする場合の手段です）。GitHub Action の dist では `--entry` は非対応です。`flows/` とその schema が同梱されないため、`RIVER_FLOWS_DIR` を設定しても schema の読み込みで exit 1 になります（#2105）。`--entry` は npm 配布の CLI で使ってください。見つからない場合は pin なしの artifact を黙って出さず、`Error: flows directory not found` の exit 1 で止まります。
 
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 
