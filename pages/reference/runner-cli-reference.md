@@ -138,7 +138,7 @@ usage error のときにデータ書き込み（feedback / suppression のエン
 - `river runs nosuch --base main` → `Unknown runs subcommand: nosuch`
 - `river feedback --base main` → ``only `river feedback add` is supported``
 
-いずれの面も値を一度も読んでいないため、**flag を外すだけで従来と同じ結果になります**。usage error の exit code は [Stable Interfaces](./stable-interfaces.md) の Stable Contract の対象外であり、この変更はその方針に従ったものです。
+いずれの面も値を一度も読んでいないため、**flag を外すだけで従来と同じ結果になります**。拒否メッセージの末尾でも `Drop --base to get the previous behavior.` として同じ案内を出します（#2076）。usage error の exit code は [Stable Interfaces](./stable-interfaces.md) の Stable Contract の対象外であり、この変更はその方針に従ったものです。
 
 `--expires` が受理するのは RFC 3339 の `YYYY-MM-DD` 形式と date-time 形式だけです。日付のみの入力は UTC の深夜として解釈し、保存時に date-time へ正規化します（`schemas/suppression-context.schema.json` の `expiresAt` が `format: date-time` のため）。
 

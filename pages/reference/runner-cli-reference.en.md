@@ -132,7 +132,7 @@ The surfaces that do not read `--base` used to accept the flag and throw the val
 
 Word order does not matter: `doctor --base main .` is rejected exactly like `doctor . --base main`, and repeating `--base` behaves like passing it once. An **unknown subcommand word skips this check entirely**, though: `river runs nosuch --base main` still answers `Unknown runs subcommand: nosuch`, and `river feedback --base main` still answers ``only `river feedback add` is supported`` — the CLI does not rule on `--base` for a surface that does not exist.
 
-None of these surfaces ever read the value, so **dropping the flag reproduces the previous result exactly**. Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
+None of these surfaces ever read the value, so **dropping the flag reproduces the previous result exactly**. The rejection message says so itself: it ends with `Drop --base to get the previous behavior.` (#2076). Usage-error exit codes are outside the Stable Contract in [Stable Interfaces](./stable-interfaces.en.md), which is the policy this change follows.
 
 `--expires` accepts only the RFC 3339 `YYYY-MM-DD` form and the date-time form. A date-only input is read as UTC midnight and normalized to a date-time when stored, because `expiresAt` in `schemas/suppression-context.schema.json` is declared `format: date-time`.
 
