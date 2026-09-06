@@ -59357,6 +59357,49 @@ async function resolveBaseRepoDiff(parsed) {
 }
 
 /**
+ * Flow inputs the artifact itself proves were supplied, keyed by Flow input
+ * name, for `executeFlow`'s required-input check and `when` clauses (Epic
+ * #2011 AC7 P2). Two sources, both already in the artifact:
+ *
+ *   - `context.changedFiles` exists only when the review diff resolved
+ *     (review-plan.mjs sets `context` under `diffResolved`), so it stands for
+ *     the Flow input `diff`.
+ *   - `debug.resolvedArtifacts` (present under `--debug` only) lists every
+ *     artifact ID with an `exists` flag. Only IDs that ARE a Flow input name
+ *     (`plan`, `diff`) are taken; no ID-to-input mapping is invented here —
+ *     `todo` is not claimed as `tasks`, `pbi-input` not as `requirements`.
+ *
+ * Everything else is absent, so a Flow whose required inputs the artifact
+ * cannot vouch for stops before its first step (`steps: []`); that is the
+ * honest record, not a defect. Wiring the resolver's full input set is the
+ * capability phase's job.
+ *
+ * @param {Record<string, unknown>} artifact
+ * @param {object} document - the resolved Flow document (`inputs[]` names).
+ * @returns {Record<string, unknown>}
+ */
+function resolvedFlowInputs(artifact, document) {
+  const names = new Set(
+    (Array.isArray(document?.inputs) ? document.inputs : [])
+      .map((input) => input?.name)
+      .filter((name) => typeof name === 'string')
+  );
+  const inputs = {};
+  if (names.has('diff') && Array.isArray(artifact?.context?.changedFiles)) {
+    inputs.diff = artifact.context.changedFiles;
+  }
+  const resolved = artifact?.debug?.resolvedArtifacts;
+  if (resolved && typeof resolved === 'object') {
+    for (const id of Object.keys(resolved).sort()) {
+      if (names.has(id) && resolved[id]?.exists === true && resolved[id]?.path) {
+        inputs[id] = resolved[id].path;
+      }
+    }
+  }
+  return inputs;
+}
+
+/**
  * Handle the `review` command (plan | exec | verify | route).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -59531,6 +59574,30 @@ async function runReviewCommand(parsed) {
         }
         throw err;
       }
+    }
+    // Epic #2011 AC7 P2 (Beta, record only): on `review exec --entry <name>`
+    // run the pinned Flow document through the single Flow runner and append
+    // the per-step outcomes as `steps`, additively, right after the pin.
+    // `capabilities` is empty in this slice, so every step lands on
+    // `not-implemented` / `skipped` / `stopped`, and a Flow whose required
+    // inputs the artifact cannot vouch for (see `resolvedFlowInputs`) records
+    // `steps: []`. Nothing here reads the runner's `stopped` / `stopReason`
+    // back into `gate` / `decision` (RA-1) — both were finalized above and
+    // stay byte-identical to the run without `--entry`. `review plan --entry`
+    // and `exec --dry-run` / `exec --plan` keep the pin only: they run no
+    // review, so there is nothing for a step to record.
+    if (resolvedFlow !== null && isExecExecute) {
+      const { executeFlow } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.t.bind(__nccwpck_require__, 2980, 19));
+      const result = await executeFlow({
+        document: resolvedFlow.document,
+        capabilities: {},
+        inputs: resolvedFlowInputs(artifact, resolvedFlow.document),
+        // Record only. P1 round 2 adds `mode` (`observe` continues past a
+        // missing capability as `not-implemented`) and reserves `judgment`
+        // for P4; P2 names the mode explicitly and passes no judgment.
+        mode: 'observe',
+      });
+      artifact.steps = result.steps;
     }
     // #2054 PR-4 (Epic #2011 AC6): pin what this run used as an Execution
     // Manifest, additively, as the LAST top-level key. Built after every
@@ -76740,7 +76807,7 @@ async function runRunsCommand(parsed, targetPath) {
         const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
         console.log(JSON.stringify(diffWithSignal, null, 2));
       } else if (parsed.output === 'html') {
-        const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+        const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 599).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
         console.log(
           formatLoopDashboardHtml(diff, {
             runIds: sortedRecords.map((r) => r.runId),
@@ -76777,7 +76844,7 @@ async function runRunsCommand(parsed, targetPath) {
         const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
         console.log(JSON.stringify(diffWithSignal, null, 2));
       } else if (parsed.output === 'html') {
-        const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+        const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 599).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
         console.log(
           formatLoopDashboardHtml(diff, {
             runIds: [run1.runId, run2.runId].filter(Boolean),
@@ -80920,7 +80987,7 @@ async function renderRunResult(result, parsed) {
     };
     console.log(formatYamlOutput(artifact));
   } else if (parsed.output === 'html') {
-    const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+    const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 599).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
     const jsonOutput = formatJsonOutput(result, parsed.phase);
     const htmlResult = {
       findings: result.findings ?? [],
@@ -82914,7 +82981,8 @@ Commands:
                          against that ref instead of the diff artifact;
                          --entry <name> pins a review Flow entry, Beta)
   review exec           Run the review and emit a Review Artifact with findings
-                        (--dry-run: plan only; --plan <file>: replay an existing plan)
+                        (--dry-run: plan only; --plan <file>: replay an existing plan;
+                         --entry <name> pins a review Flow entry and records steps, Beta)
   review route          Recommend a review mode (light|standard|team|human-required)
                         for the current diff (--format json|markdown; --base <ref>)
   eval                  Run review fixtures evaluation (must_include checks)
@@ -83005,9 +83073,10 @@ Options:
   --base <ref>      Branch or ref to diff against (e.g. main). Default: auto-detected default branch
                     Accepted only by: run, skills (no subcommand), review plan|exec|route.
                     Other surfaces reject it (#2065) — they never read a diff.
-  --entry <name>    (review plan, Beta) Review Flow entry to pin the artifact to
+  --entry <name>    (review plan|exec, Beta) Review Flow entry to pin the artifact to
                     (review-plan|review-task|review-final|... from the entry map).
-                    Adds flow and evidenceRequirements to the artifact; no other output changes.
+                    Adds flow and evidenceRequirements to the artifact; review exec also
+                    records the Flow's per-step outcomes as steps. No other output changes.
   --skill-set <name> Restrict review to a named skill set from skills/registry.yaml
                     (e.g. basic, typescript, comprehensive). Default: all applicable skills
   --depth <name>    Force review depth: quick|standard|thorough. Default: auto-detected from diff size
@@ -83267,16 +83336,20 @@ const BASE_CONSUMING_SURFACES = new Set([
  *
  * `--entry <name>` names a review Flow entry (a key of the entry map's
  * `entries`, read through `src/lib/flow-loader.mjs`) and is consumed by
- * `src/cli/commands/review.mjs` on the `plan` path only, where it attaches the
- * resolved Flow pin to the emitted artifact. The `exec --dry-run` path shares
- * `runReviewPlan` but is a different surface and does not read it, so it is
- * not listed. Same INVARIANT as `--base` above: every other surface accepted
- * the token and never read it (before #2054 PR-3 it was an unknown option on
- * all of them), so dropping it restores the previous behavior exactly.
+ * `src/cli/commands/review.mjs` on the `plan` and `exec` paths, where it
+ * attaches the resolved Flow pin to the emitted artifact; on `review exec`
+ * (Epic #2011 AC7 P2) it additionally runs the pinned Flow through
+ * `src/lib/flow-runner.mjs` and records the per-step outcomes as `steps`.
+ * `exec --dry-run` / `exec --plan` share the `review exec` surface word, so
+ * the parse layer lets the token through for them too; the handler attaches
+ * the pin there and runs no steps. Same INVARIANT as `--base` above: every
+ * other surface accepted the token and never read it (before #2054 PR-3 it was
+ * an unknown option on all of them), so dropping it restores the previous
+ * behavior exactly.
  *
  * @type {Set<string>}
  */
-const ENTRY_CONSUMING_SURFACES = new Set(['review plan']);
+const ENTRY_CONSUMING_SURFACES = new Set(['review plan', 'review exec']);
 
 /**
  * Command-scoped option allowlist (#2065).
