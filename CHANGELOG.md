@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.104.0](https://github.com/s977043/river-review/compare/v1.103.0...v1.104.0) (2026-09-06)
+
+
+### Features
+
+* **cli:** [#2011](https://github.com/s977043/river-review/issues/2011) AC7 P2 review exec --entry で Flow を observe 実行し steps[] を artifact に付ける ([#2124](https://github.com/s977043/river-review/issues/2124)) ([036b0df](https://github.com/s977043/river-review/commit/036b0df7655c1563d95e8039629f0c57bb4939c5))
+* **flow:** [#2011](https://github.com/s977043/river-review/issues/2011) AC7 P1 flow-runner の骨格を追加する（実行なし） ([#2123](https://github.com/s977043/river-review/issues/2123)) ([449435c](https://github.com/s977043/river-review/commit/449435c121246e191edc02d6b5bcfb840663c6d3))
+
+
+### Bug Fixes
+
+* [#2119](https://github.com/s977043/river-review/issues/2119) v1.103.0 範囲レビューの minor 10 件を解消する ([#2120](https://github.com/s977043/river-review/issues/2120)) ([1789de0](https://github.com/s977043/river-review/commit/1789de016b6149209503877c935a56d5ee716fe2))
+* **scripts:** [#2117](https://github.com/s977043/river-review/issues/2117) hooks/hooks.json の script 実在検査を manifest 宣言なしでも走らせる ([#2122](https://github.com/s977043/river-review/issues/2122)) ([d14f84b](https://github.com/s977043/river-review/commit/d14f84bc07ab64f91e02f35ff51f0ede2013579d))
+
 ## [1.103.0](https://github.com/s977043/river-review/compare/v1.102.0...v1.103.0) (2026-09-05)
 
 
