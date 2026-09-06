@@ -57,6 +57,49 @@ async function resolveBaseRepoDiff(parsed) {
 }
 
 /**
+ * Flow inputs the artifact itself proves were supplied, keyed by Flow input
+ * name, for `executeFlow`'s required-input check and `when` clauses (Epic
+ * #2011 AC7 P2). Two sources, both already in the artifact:
+ *
+ *   - `context.changedFiles` exists only when the review diff resolved
+ *     (review-plan.mjs sets `context` under `diffResolved`), so it stands for
+ *     the Flow input `diff`.
+ *   - `debug.resolvedArtifacts` (present under `--debug` only) lists every
+ *     artifact ID with an `exists` flag. Only IDs that ARE a Flow input name
+ *     (`plan`, `diff`) are taken; no ID-to-input mapping is invented here —
+ *     `todo` is not claimed as `tasks`, `pbi-input` not as `requirements`.
+ *
+ * Everything else is absent, so a Flow whose required inputs the artifact
+ * cannot vouch for is recorded (observe mode) as every step `stopped`; that
+ * is the honest record, not a defect. Wiring the resolver's full input set is
+ * the capability phase's job.
+ *
+ * @param {Record<string, unknown>} artifact
+ * @param {object} document - the resolved Flow document (`inputs[]` names).
+ * @returns {Record<string, unknown>}
+ */
+function resolvedFlowInputs(artifact, document) {
+  const names = new Set(
+    (Array.isArray(document?.inputs) ? document.inputs : [])
+      .map((input) => input?.name)
+      .filter((name) => typeof name === 'string')
+  );
+  const inputs = {};
+  if (names.has('diff') && Array.isArray(artifact?.context?.changedFiles)) {
+    inputs.diff = artifact.context.changedFiles;
+  }
+  const resolved = artifact?.debug?.resolvedArtifacts;
+  if (resolved && typeof resolved === 'object') {
+    for (const id of Object.keys(resolved).sort()) {
+      if (names.has(id) && resolved[id]?.exists === true && resolved[id]?.path) {
+        inputs[id] = resolved[id].path;
+      }
+    }
+  }
+  return inputs;
+}
+
+/**
  * Handle the `review` command (plan | exec | verify | route).
  *
  * @param {Record<string, unknown>} parsed - parseArgs() result.
@@ -231,6 +274,30 @@ export async function runReviewCommand(parsed) {
         }
         throw err;
       }
+    }
+    // Epic #2011 AC7 P2 (Beta, record only): on `review exec --entry <name>`
+    // run the pinned Flow document through the single Flow runner and append
+    // the per-step outcomes as `steps`, additively, right after the pin.
+    // `capabilities` is empty in this slice, so every step lands on
+    // `not-implemented` / `skipped` / `stopped`, and a Flow whose required
+    // inputs the artifact cannot vouch for (see `resolvedFlowInputs`) records
+    // every step as `stopped`. Nothing here reads the runner's `stopped` / `stopReason`
+    // back into `gate` / `decision` (RA-1) — both were finalized above and
+    // stay byte-identical to the run without `--entry`. `review plan --entry`
+    // and `exec --dry-run` / `exec --plan` keep the pin only: they run no
+    // review, so there is nothing for a step to record.
+    if (resolvedFlow !== null && isExecExecute) {
+      const { executeFlow } = await import('../../lib/flow-runner.mjs');
+      const result = await executeFlow({
+        document: resolvedFlow.document,
+        capabilities: {},
+        inputs: resolvedFlowInputs(artifact, resolvedFlow.document),
+        // Record only: `observe` continues past a missing capability as
+        // `not-implemented` and lists every step even when a required input
+        // is missing. `judgment` is reserved for P4 and not passed here.
+        mode: 'observe',
+      });
+      artifact.steps = result.steps;
     }
     // #2054 PR-4 (Epic #2011 AC6): pin what this run used as an Execution
     // Manifest, additively, as the LAST top-level key. Built after every

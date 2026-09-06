@@ -1702,11 +1702,11 @@ describe('#1709 canary: CLI usage-error exit codes (pinned to CURRENT behavior)'
   // 「フラグ先行形を拒否」も v1.72.1 の「`--phase Upstream` を誤拒否」も
   // 壊したのは**成功側**であり、守りが薄いのは逆だった。行を消すだけで
   // 黙って保護が減るのを防ぐ。
-  test('the success-side table pins 98 legitimate argv forms', () => {
+  test('the success-side table pins 99 legitimate argv forms', () => {
     assert.equal(
       VALID_CASES.length,
-      98,
-      'コマンド面ごとの正常形: run 14 (#1759 C3 で --context 未知語彙 1行追加、#2065 で run --base main を1行追加) / doctor 5 / skills 16 (#2051 で skills --base main を1行追加、#2081 で後置サブコマンド 1行と ./import 明示パス 1行追加) / runs 7 (#1759 B2 で1行追加) / review 22 (#2046 で review plan --base を1行追加、#2065 で review exec --base を1行追加、#2054 PR-3 で review plan --entry を1行追加) / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 15 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加、#1880 で prompt-ab の両語順 2行追加) / help 2 / コマンド無し 1'
+      99,
+      'コマンド面ごとの正常形: run 14 (#1759 C3 で --context 未知語彙 1行追加、#2065 で run --base main を1行追加) / doctor 5 / skills 16 (#2051 で skills --base main を1行追加、#2081 で後置サブコマンド 1行と ./import 明示パス 1行追加) / runs 7 (#1759 B2 で1行追加) / review 23 (#2046 で review plan --base を1行追加、#2065 で review exec --base を1行追加、#2054 PR-3 で review plan --entry を1行追加、#2011 AC7 P2 で review exec --entry を1行追加) / eval 2 / feedback 2 / suppression 6 / promote 6 / evolve 15 (#1759 C4 で --month 2026-01 / 2026-12 の境界値 2行追加、#1759 B1 で aggregate/--min 2 の両語順 2行追加、#1880 で prompt-ab の両語順 2行追加) / help 2 / コマンド無し 1'
     );
   });
 
@@ -1954,6 +1954,13 @@ const VALID_CASES = [
     // #2054 PR-3: `--entry <name>` は `review plan` で受理される（Beta）。
     // BEFORE は `unknown option --entry` の exit 1 だった形。
     argv: ['review', 'plan', '--plan-only', '--entry', 'review-plan'],
+    command: 'review',
+    expect: { entry: 'review-plan' },
+  },
+  {
+    // Epic #2011 AC7 P2: `review exec --entry <name>` も受理する（Beta）。
+    // #2054 PR-3 〜 本変更の間は #2065 の allowlist で exit 1 だった形。
+    argv: ['review', 'exec', '--entry', 'review-plan'],
     command: 'review',
     expect: { entry: 'review-plan' },
   },

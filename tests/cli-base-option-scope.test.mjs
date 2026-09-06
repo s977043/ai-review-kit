@@ -312,16 +312,16 @@ describe('#2065 --base command-scoped allowlist', () => {
 });
 
 // -----------------------------------------------------------------------------
-// #2054 PR-3: `--entry` は同じ機構（COMMAND_SCOPED_OPTIONS）で `review plan`
-// だけが受理する。`--base` と同じ 2 軸で pin する: 宣言の集合と、面ごとの
-// 受理 / 拒否の全走。canary は `doctor` 1 形しか収録していないので、
-// `ENTRY_CONSUMING_SURFACES` に `review exec` を足す変異はここでしか落ちない。
+// #2054 PR-3: `--entry` は同じ機構（COMMAND_SCOPED_OPTIONS）で `review plan` と
+// `review exec`（Epic #2011 AC7 P2 で追加）が受理する。`--base` と同じ 2 軸で
+// pin する: 宣言の集合と、面ごとの受理 / 拒否の全走。canary は `doctor` 1 形
+// しか収録していないので、`ENTRY_CONSUMING_SURFACES` の増減はここでしか落ちない。
 // -----------------------------------------------------------------------------
 describe('#2054 --entry command-scoped allowlist', () => {
-  test('the declared consuming surface is exactly `review plan`', () => {
+  test('the declared consuming surfaces are exactly `review exec` and `review plan`', () => {
     assert.deepEqual(
       [...ENTRY_CONSUMING_SURFACES].sort(),
-      ['review plan'],
+      ['review exec', 'review plan'],
       '`--entry` を読む面を増減させたなら、この期待値と pages/reference/runner-cli-reference.md（ja/en）も同じ PR で更新すること'
     );
   });
@@ -351,7 +351,8 @@ describe('#2054 --entry command-scoped allowlist', () => {
   }
 
   test('the option is rejected regardless of where it is written in argv', () => {
-    assert.equal(parseArgs(['review', '--entry', 'review-plan', 'exec']).usageError, true);
+    assert.equal(parseArgs(['review', '--entry', 'review-plan', 'route']).usageError, true);
     assert.equal(parseArgs(['review', '--entry', 'review-plan', 'plan']).usageError, false);
+    assert.equal(parseArgs(['review', '--entry', 'review-plan', 'exec']).usageError, false);
   });
 });

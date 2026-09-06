@@ -58,7 +58,8 @@ Commands:
                          against that ref instead of the diff artifact;
                          --entry <name> pins a review Flow entry, Beta)
   review exec           Run the review and emit a Review Artifact with findings
-                        (--dry-run: plan only; --plan <file>: replay an existing plan)
+                        (--dry-run: plan only; --plan <file>: replay an existing plan;
+                         --entry <name> pins a review Flow entry and records steps, Beta)
   review route          Recommend a review mode (light|standard|team|human-required)
                         for the current diff (--format json|markdown; --base <ref>)
   eval                  Run review fixtures evaluation (must_include checks)
@@ -149,9 +150,10 @@ Options:
   --base <ref>      Branch or ref to diff against (e.g. main). Default: auto-detected default branch
                     Accepted only by: run, skills (no subcommand), review plan|exec|route.
                     Other surfaces reject it (#2065) — they never read a diff.
-  --entry <name>    (review plan, Beta) Review Flow entry to pin the artifact to
+  --entry <name>    (review plan|exec, Beta) Review Flow entry to pin the artifact to
                     (review-plan|review-task|review-final|... from the entry map).
-                    Adds flow and evidenceRequirements to the artifact; no other output changes.
+                    Adds flow and evidenceRequirements to the artifact; review exec also
+                    records the Flow's per-step outcomes as steps. No other output changes.
   --skill-set <name> Restrict review to a named skill set from skills/registry.yaml
                     (e.g. basic, typescript, comprehensive). Default: all applicable skills
   --depth <name>    Force review depth: quick|standard|thorough. Default: auto-detected from diff size
@@ -411,16 +413,20 @@ const BASE_CONSUMING_SURFACES = new Set([
  *
  * `--entry <name>` names a review Flow entry (a key of the entry map's
  * `entries`, read through `src/lib/flow-loader.mjs`) and is consumed by
- * `src/cli/commands/review.mjs` on the `plan` path only, where it attaches the
- * resolved Flow pin to the emitted artifact. The `exec --dry-run` path shares
- * `runReviewPlan` but is a different surface and does not read it, so it is
- * not listed. Same INVARIANT as `--base` above: every other surface accepted
- * the token and never read it (before #2054 PR-3 it was an unknown option on
- * all of them), so dropping it restores the previous behavior exactly.
+ * `src/cli/commands/review.mjs` on the `plan` and `exec` paths, where it
+ * attaches the resolved Flow pin to the emitted artifact; on `review exec`
+ * (Epic #2011 AC7 P2) it additionally runs the pinned Flow through
+ * `src/lib/flow-runner.mjs` and records the per-step outcomes as `steps`.
+ * `exec --dry-run` / `exec --plan` share the `review exec` surface word, so
+ * the parse layer lets the token through for them too; the handler attaches
+ * the pin there and runs no steps. Same INVARIANT as `--base` above: every
+ * other surface accepted the token and never read it (before #2054 PR-3 it was
+ * an unknown option on all of them), so dropping it restores the previous
+ * behavior exactly.
  *
  * @type {Set<string>}
  */
-const ENTRY_CONSUMING_SURFACES = new Set(['review plan']);
+const ENTRY_CONSUMING_SURFACES = new Set(['review plan', 'review exec']);
 
 /**
  * Command-scoped option allowlist (#2065).
