@@ -442,7 +442,7 @@ river-review は同一リポジトリ内のマーケットプレイスから Cla
 
 管理: `/plugin enable|disable|uninstall river-review@river-review-marketplace`。
 
-> **Stop hook（Beta）**: プラグインはセッション終了（`Stop`）時に `river review plan --plan-only --entry review-task` を走らせ、Review Artifact を `$TMPDIR/river-review-task-checkpoint/` に書きます（直近 20 件を保持）。LLM 呼び出しと課金はなく、所要は 1〜7 秒です（本 repo で 3 回実測 5.0〜5.4 秒、別環境で 6.7 秒。大規模 repo では 60 秒の timeout で打ち切られえます）。CLI が無ければ skip します。止めるには環境変数 `RIVER_TASK_CHECKPOINT_HOOK=0` を設定するか、プラグインを無効化してください。詳細は [Stable Interfaces](https://river-review.the3396.com/reference/stable-interfaces) を参照してください。
+> **Stop hook（Beta）**: プラグインはセッション終了（`Stop`）時に `river review plan --plan-only --entry review-task` を走らせ、Review Artifact を `$TMPDIR/river-review-task-checkpoint/` に書きます（過去分を 20 件まで残すため、実行後は最大 21 件）。hook は `CLAUDE_PLUGIN_ROOT/node_modules` を要求するため、npm パッケージを導入するか plugin ディレクトリで `npm ci` を実行してください。LLM 呼び出しと課金はなく、所要は 1〜7 秒です（本 repo で 3 回実測 5.0〜5.4 秒、別環境で 6.7 秒。大規模 repo では 60 秒の timeout で打ち切られえます）。CLI が無ければ skip します。止めるには環境変数 `RIVER_TASK_CHECKPOINT_HOOK=0` を設定するか、プラグインを無効化してください。詳細は [Stable Interfaces](https://river-review.the3396.com/reference/stable-interfaces) を参照してください。
 
 インストールせずにローカルで開発・テストする場合:
 

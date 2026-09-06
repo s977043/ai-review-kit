@@ -66,6 +66,37 @@ const JUDGMENT_TOKENS = [
   /\bthreshold\b/i,
 ];
 
+/** The composite step's `run:` block of action.yml, verbatim (with indentation). */
+function runBlockOf(actionYml) {
+  const block = /      run: \|\n((?:        .*\n|\n)+?)\n    # Both comment steps/.exec(
+    actionYml
+  )?.[1];
+  assert.ok(block, 'run block not found');
+  return block;
+}
+
+/**
+ * Known legacy lines of the run block that mention the `gate` input's exit
+ * semantics (Epic #1347 S4, before the entry path existed). Exact text: any
+ * edit to these lines drops them out of the allowlist and back into the scan.
+ */
+const RUN_BLOCK_ALLOWLIST = new Set([
+  '# Epic #1347 S4: opt-in gate enforcement. --gate makes NO_GO/ESCALATE a',
+  '# end, so a --gate NO_GO/ESCALATE still fails the job.',
+]);
+
+/** Lines of a run block that carry judgment vocabulary, minus the allowlist. */
+function judgmentHits(runBlock) {
+  const hits = [];
+  for (const raw of runBlock.split('\n')) {
+    const line = raw.trim();
+    if (RUN_BLOCK_ALLOWLIST.has(line)) continue;
+    const tokens = JUDGMENT_TOKENS.filter((t) => t.test(line)).map(String);
+    if (tokens.length > 0) hits.push({ line, tokens });
+  }
+  return hits;
+}
+
 describe('paired adapter conformance for --entry (#2054 PR-5)', () => {
   test('the paired fixture set is not empty', () => {
     assert.ok(fixtures.length > 0);
@@ -144,6 +175,7 @@ describe('paired adapter conformance for --entry (#2054 PR-5)', () => {
           phase: 'midstream',
           planner: 'off',
           target: '.',
+          comment: 'true',
           inline_comments: 'false',
           dry_run: 'true',
           debug: 'false',
@@ -157,7 +189,7 @@ describe('paired adapter conformance for --entry (#2054 PR-5)', () => {
           .join('\n')
           .replace(/\$\{\{ inputs\.(\w+) \}\}/g, (_, k) => inputs[k])
           .replace(/echo "Running: \$\{cmd\[\*\]\}"[\s\S]*$/, 'echo "Running: ${cmd[*]}"\n');
-        const runLine = (entry, outputFormat = 'markdown') => {
+        const render = (entry, outputFormat = 'markdown') => {
           const out = execFileSync('bash', ['-c', script], {
             cwd: REPO_ROOT,
             encoding: 'utf8',
@@ -171,8 +203,10 @@ describe('paired adapter conformance for --entry (#2054 PR-5)', () => {
               GITHUB_ACTION_PATH: path.join(REPO_ROOT, 'runners', 'github-action'),
             },
           });
-          return /^Running: (.*)$/m.exec(out)?.[1] ?? '';
+          return out;
         };
+        const runLine = (entry, outputFormat) =>
+          /^Running: (.*)$/m.exec(render(entry, outputFormat))?.[1] ?? '';
         const withEntry = runLine('review-task');
         assert.match(
           withEntry,
@@ -190,6 +224,26 @@ describe('paired adapter conformance for --entry (#2054 PR-5)', () => {
           withoutEntry,
           / run \S+ --phase midstream --planner off --output markdown --dry-run --estimate --max-cost 1\.00 --gate$/
         );
+        // #2119: the dropped inputs are named in ONE ::notice line on the entry
+        // path (same shape as the deterministic_exec ::warning), never on the
+        // run path — and the notice itself carries no judgment vocabulary.
+        const noticeLines = (out) => out.split('\n').filter((l) => l.startsWith('::notice::'));
+        const entryNotices = noticeLines(render('review-task'));
+        assert.equal(entryNotices.length, 1, entryNotices.join('\n'));
+        for (const name of ['gate', 'dry_run', 'estimate', 'max_cost', 'comment']) {
+          assert.match(
+            entryNotices[0],
+            new RegExp(`\\b${name}\\b`),
+            `notice does not name ${name}`
+          );
+        }
+        assert.doesNotMatch(
+          entryNotices[0],
+          /\binline_comments\b/,
+          'inline_comments=false must not be listed'
+        );
+        for (const token of JUDGMENT_TOKENS) assert.doesNotMatch(entryNotices[0], token);
+        assert.deepEqual(noticeLines(render('')), [], 'the run path must stay silent');
       });
 
       test('GitHub Action: both comment steps are skipped when entry is set', () => {
@@ -206,18 +260,31 @@ describe('paired adapter conformance for --entry (#2054 PR-5)', () => {
         for (const token of JUDGMENT_TOKENS) {
           assert.doesNotMatch(hookScript, token, `${hookScriptRel} carries ${token}`);
         }
-        // action.yml as a whole predates this PR and documents the gate input;
-        // the scan is scoped to the entry input block and the entry branch.
         const entryInput = /^  entry:\n(?:    .*\n)+/m.exec(actionYml)?.[0] ?? '';
         assert.ok(entryInput.length > 0, 'entry input block not found');
-        const entryBranch =
-          /if \[ -n "\$\{INPUT_ENTRY\}" \]; then\n(?:.*\n)*?        fi\n/.exec(actionYml)?.[0] ??
-          '';
-        assert.ok(entryBranch.length > 0, 'entry branch not found');
         for (const token of JUDGMENT_TOKENS) {
           assert.doesNotMatch(entryInput, token, `entry input description carries ${token}`);
-          assert.doesNotMatch(entryBranch, token, `entry branch carries ${token}`);
         }
+        // #2119: the whole `run:` block is scanned (not only the entry branch),
+        // so a token added to a shared line — exit-code capture, the
+        // comment-step wiring — is caught too. The `gate` input predates the
+        // entry path and is documented in two comment lines; those are the
+        // explicit allowlist, matched by exact text so a rewrite re-enters the scan.
+        assert.deepEqual(judgmentHits(runBlockOf(actionYml)), []);
+      });
+
+      test('the run-block scan itself works: an injected fake line is reported', () => {
+        const injected = runBlockOf(actionYml).replace(
+          'echo "Running: ${cmd[*]}"',
+          'echo "Running: ${cmd[*]}"\n        if [ "${rc}" -eq 1 ]; then echo "NO_GO: blocker above threshold"; fi'
+        );
+        assert.notEqual(injected, runBlockOf(actionYml), 'injection point not found');
+        assert.deepEqual(judgmentHits(injected), [
+          {
+            line: 'if [ "${rc}" -eq 1 ]; then echo "NO_GO: blocker above threshold"; fi',
+            tokens: ['/\\bNO_GO\\b/', '/\\bblocker\\b/i', '/\\bthreshold\\b/i'],
+          },
+        ]);
       });
     });
   }
