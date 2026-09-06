@@ -48664,9 +48664,10 @@ function formatUnmatchedFeedbackFingerprintWarning({ fingerprint, likelyAlgo }) 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   FlowLoaderError: () => (/* binding */ FlowLoaderError),
 /* harmony export */   d2: () => (/* binding */ listFlowEntryNames),
-/* harmony export */   resolveFlowEntry: () => (/* binding */ resolveFlowEntry)
+/* harmony export */   resolveFlowEntry: () => (/* binding */ resolveFlowEntry),
+/* harmony export */   sp: () => (/* binding */ requiredInputNames)
 /* harmony export */ });
-/* unused harmony exports FLOWS_DIR_ENV, ENTRY_MAP_FILENAME, FLOW_SCHEMA_FILENAMES, DEFAULT_FLOWS_DIR, SCHEMAS_DIR, resolveFlowsDir, loadFlowRegistry, requiredInputNames */
+/* unused harmony exports FLOWS_DIR_ENV, ENTRY_MAP_FILENAME, FLOW_SCHEMA_FILENAMES, DEFAULT_FLOWS_DIR, SCHEMAS_DIR, resolveFlowsDir, loadFlowRegistry */
 /* harmony import */ var node_fs__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3024);
 /* harmony import */ var node_path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6760);
 /* harmony import */ var node_process__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(1708);
@@ -49032,9 +49033,10 @@ function resolveFlowEntry(entryName, options) {
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
+/* harmony export */   QS: () => (/* binding */ GATE_REASON_CODES),
 /* harmony export */   RF: () => (/* binding */ deriveGateDecision)
 /* harmony export */ });
-/* unused harmony exports GATE_DECISIONS, GATE_REASON_CODES, gateConfigChanged, computeGateInputsHash */
+/* unused harmony exports GATE_DECISIONS, gateConfigChanged, computeGateInputsHash */
 /* harmony import */ var node_crypto__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(7598);
 /**
  * Gate-decision derivation (Epic #1347 S2 / #1349).
@@ -49110,7 +49112,7 @@ const GATE_DECISIONS = /** @type {const} */ ((/* unused pure expression or super
   'ESCALATE',
 ])));
 
-const GATE_REASON_CODES = /** @type {const} */ ((/* unused pure expression or super */ null && ([
+const GATE_REASON_CODES = /** @type {const} */ ([
   'GATE_CONFIG_CHANGED',
   'HUMAN_APPROVAL_REQUIRED',
   'DECISION_ESCALATED',
@@ -49127,7 +49129,7 @@ const GATE_REASON_CODES = /** @type {const} */ ((/* unused pure expression or su
   'RISK_MAP_OBSERVE',
   'CONVERGED_CLEAN',
   'UNKNOWN_SIGNAL',
-])));
+]);
 
 const KNOWN_RISK_ACTIONS = new Set(['comment_only', 'escalate', 'require_human_review']);
 
@@ -59370,9 +59372,9 @@ async function resolveBaseRepoDiff(parsed) {
  *     `todo` is not claimed as `tasks`, `pbi-input` not as `requirements`.
  *
  * Everything else is absent, so a Flow whose required inputs the artifact
- * cannot vouch for stops before its first step (`steps: []`); that is the
- * honest record, not a defect. Wiring the resolver's full input set is the
- * capability phase's job.
+ * cannot vouch for is recorded (observe mode) as every step `stopped`; that
+ * is the honest record, not a defect. Wiring the resolver's full input set is
+ * the capability phase's job.
  *
  * @param {Record<string, unknown>} artifact
  * @param {object} document - the resolved Flow document (`inputs[]` names).
@@ -59581,20 +59583,20 @@ async function runReviewCommand(parsed) {
     // `capabilities` is empty in this slice, so every step lands on
     // `not-implemented` / `skipped` / `stopped`, and a Flow whose required
     // inputs the artifact cannot vouch for (see `resolvedFlowInputs`) records
-    // `steps: []`. Nothing here reads the runner's `stopped` / `stopReason`
+    // every step as `stopped`. Nothing here reads the runner's `stopped` / `stopReason`
     // back into `gate` / `decision` (RA-1) — both were finalized above and
     // stay byte-identical to the run without `--entry`. `review plan --entry`
     // and `exec --dry-run` / `exec --plan` keep the pin only: they run no
     // review, so there is nothing for a step to record.
     if (resolvedFlow !== null && isExecExecute) {
-      const { executeFlow } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.t.bind(__nccwpck_require__, 2980, 19));
+      const { executeFlow } = await __nccwpck_require__.e(/* import() */ 550).then(__nccwpck_require__.bind(__nccwpck_require__, 5550));
       const result = await executeFlow({
         document: resolvedFlow.document,
         capabilities: {},
         inputs: resolvedFlowInputs(artifact, resolvedFlow.document),
-        // Record only. P1 round 2 adds `mode` (`observe` continues past a
-        // missing capability as `not-implemented`) and reserves `judgment`
-        // for P4; P2 names the mode explicitly and passes no judgment.
+        // Record only: `observe` continues past a missing capability as
+        // `not-implemented` and lists every step even when a required input
+        // is missing. `judgment` is reserved for P4 and not passed here.
         mode: 'observe',
       });
       artifact.steps = result.steps;
@@ -76807,7 +76809,7 @@ async function runRunsCommand(parsed, targetPath) {
         const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
         console.log(JSON.stringify(diffWithSignal, null, 2));
       } else if (parsed.output === 'html') {
-        const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 599).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+        const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
         console.log(
           formatLoopDashboardHtml(diff, {
             runIds: sortedRecords.map((r) => r.runId),
@@ -76844,7 +76846,7 @@ async function runRunsCommand(parsed, targetPath) {
         const diffWithSignal = { ...diff, suggestedLoopSignal: runsSignal };
         console.log(JSON.stringify(diffWithSignal, null, 2));
       } else if (parsed.output === 'html') {
-        const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 599).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+        const { formatLoopDashboardHtml } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
         console.log(
           formatLoopDashboardHtml(diff, {
             runIds: [run1.runId, run2.runId].filter(Boolean),
@@ -80987,7 +80989,7 @@ async function renderRunResult(result, parsed) {
     };
     console.log(formatYamlOutput(artifact));
   } else if (parsed.output === 'html') {
-    const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 599).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
+    const { formatHtmlOutput } = await __nccwpck_require__.e(/* import() */ 980).then(__nccwpck_require__.bind(__nccwpck_require__, 3980));
     const jsonOutput = formatJsonOutput(result, parsed.phase);
     const htmlResult = {
       findings: result.findings ?? [],
