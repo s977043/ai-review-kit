@@ -149,6 +149,63 @@ describe('plugin-task-checkpoint-hook.sh (#2054 PR-5)', () => {
     );
   });
 
+  test('RIVER_TASK_CHECKPOINT_KEEP that is not a non-negative integer falls back to 20 and never exits 1 (#2119)', async (t) => {
+    const { dir, cleanup } = await createTempGitRepo({
+      prefix: 'river-hook-keep-bad-',
+      initialFiles: { 'src/app.js': 'export const value = 1;\n' },
+      changedFiles: { 'src/app.js': 'export const value = 2;\n' },
+    });
+    t.after(cleanup);
+    // `abc` / `1.5` used to abort with `unbound variable` (exit 1) under
+    // `set -u`; `-1` used to drop every artifact; `0` and '' are legal forms
+    // that must keep working. All five are exercised so the fail-soft contract
+    // of the Stop hook holds for any KEEP value.
+    for (const keep of ['abc', '1.5', '-1', '0', '']) {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'river-hook-tmp-'));
+      t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+      const outDir = path.join(tmp, 'river-review-task-checkpoint');
+      fs.mkdirSync(outDir);
+      // 25 pre-existing artifacts: with the default of 20, 5 are dropped and
+      // 20 + the one just written = 21 remain.
+      const olds = Array.from(
+        { length: 25 },
+        (_, i) => `202601${String(i + 1).padStart(2, '0')}T000000Z-${i}`
+      );
+      for (const name of olds) fs.writeFileSync(path.join(outDir, `${name}.json`), '{}\n');
+      const result = await runHook({
+        cwd: dir,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: dir,
+          CLAUDE_PLUGIN_ROOT: REPO_ROOT,
+          TMPDIR: tmp,
+          RIVER_TASK_CHECKPOINT_KEEP: keep,
+        },
+        stdin: '{}',
+      });
+      assert.equal(result.code, 0, `KEEP=${JSON.stringify(keep)}: ${result.stderr}`);
+      assert.match(result.stdout, /pinned to entry review-task/, `KEEP=${JSON.stringify(keep)}`);
+      const jsons = artifactsIn(tmp).sort();
+      if (keep === '0') {
+        assert.equal(
+          jsons.length,
+          1,
+          `KEEP=0 must keep only the new artifact, got ${jsons.length}`
+        );
+      } else {
+        assert.equal(
+          jsons.length,
+          21,
+          `KEEP=${JSON.stringify(keep)}: expected 20 old + 1 new, got ${jsons.length}`
+        );
+        assert.deepEqual(
+          jsons.slice(0, 20),
+          olds.slice(5).map((n) => `${n}.json`)
+        );
+      }
+    }
+  });
+
   test('stop_hook_active=true: exits 0 immediately and writes nothing', async (t) => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'river-hook-tmp-'));
     t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
