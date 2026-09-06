@@ -1143,6 +1143,87 @@ export async function loadSsotContents(files, root = ROOT) {
   return map;
 }
 
+/** Convention path Claude Code loads automatically, with or without a manifest `hooks` field. */
+export const PLUGIN_HOOKS_CONVENTION_PATH = 'hooks/hooks.json';
+
+/**
+ * Verify that every `${CLAUDE_PLUGIN_ROOT}/<path>` command target referenced
+ * from the plugin's hooks files exists under `root`.
+ *
+ * Which hooks files are read follows the Claude Code loader, not only the
+ * manifest: the loader always reads `hooks/hooks.json` when it exists and
+ * treats `manifest.hooks` as *additional* files (a manifest entry that resolves
+ * to the convention file is reported by the loader as a duplicate — "manifest.hooks
+ * should only reference additional hook files", claude 2.1.261). So the check
+ * runs on the convention path whenever it exists, plus each declared string
+ * path, each file at most once. A repository with neither is a no-op.
+ *
+ * `root` is a parameter (default: repository ROOT) so fixtures can exercise the
+ * three shapes without pinning the real repository.
+ */
+export async function checkPluginHooksScripts(ccManifest, { root = ROOT } = {}) {
+  const errors = [];
+  const cc = ccManifest && typeof ccManifest === 'object' ? ccManifest : {};
+  const exists = async (rel) => {
+    try {
+      await fs.access(path.join(root, rel));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // label → repo-relative path; label keeps the manifest spelling for messages.
+  const targets = new Map();
+  if (await exists(PLUGIN_HOOKS_CONVENTION_PATH)) {
+    targets.set(PLUGIN_HOOKS_CONVENTION_PATH, PLUGIN_HOOKS_CONVENTION_PATH);
+  }
+  const declared = Array.isArray(cc.hooks) ? cc.hooks : [cc.hooks];
+  for (const ref of declared) {
+    if (typeof ref !== 'string') continue;
+    const rel = normalizeRef(ref);
+    if (rel === PLUGIN_HOOKS_CONVENTION_PATH || targets.has(ref)) continue;
+    if (await exists(rel)) targets.set(ref, rel);
+  }
+
+  for (const [label, hooksRel] of targets) {
+    let hooksDef;
+    try {
+      hooksDef = JSON.parse(await fs.readFile(path.join(root, hooksRel), 'utf8'));
+    } catch {
+      errors.push(`${label}: not valid JSON`);
+      continue;
+    }
+    if (!hooksDef || !hooksDef.hooks || typeof hooksDef.hooks !== 'object') {
+      errors.push(`${label}: "hooks" field is missing or not an object`);
+      continue;
+    }
+    const commands = [];
+    for (const matchers of Object.values(hooksDef.hooks)) {
+      if (!Array.isArray(matchers)) continue;
+      for (const matcher of matchers) {
+        if (!matcher || !Array.isArray(matcher.hooks)) continue;
+        for (const hook of matcher.hooks) {
+          if (hook && hook.type === 'command' && typeof hook.command === 'string') {
+            commands.push(hook.command);
+          }
+        }
+      }
+    }
+    // Extract ${CLAUDE_PLUGIN_ROOT}/<path> targets and verify they exist.
+    for (const command of commands) {
+      const matches = command.match(/\$\{CLAUDE_PLUGIN_ROOT\}\/([^\s"']+)/g) || [];
+      for (const m of matches) {
+        const scriptRel = m.replace(/\$\{CLAUDE_PLUGIN_ROOT\}\//, '');
+        if (!(await exists(scriptRel))) {
+          errors.push(`${label}: hook command target does not exist: ${scriptRel}`);
+        }
+      }
+    }
+  }
+  return errors;
+}
+
 /**
  * Validate the Claude Code + Codex plugin manifests and the marketplace
  * manifest against the repository:
@@ -1207,44 +1288,7 @@ export async function validatePluginManifest({ warnings } = {}) {
   }
 
   // --- Hooks: parse hooks.json and verify each command's script target exists ---
-  if (typeof ccManifest.hooks === 'string') {
-    const hooksRel = normalizeRef(ccManifest.hooks);
-    if (await pathExists(hooksRel)) {
-      let hooksDef;
-      try {
-        hooksDef = await readJson(hooksRel);
-      } catch {
-        errors.push(`${ccManifest.hooks}: not valid JSON`);
-      }
-      if (hooksDef && (!hooksDef.hooks || typeof hooksDef.hooks !== 'object')) {
-        errors.push(`${ccManifest.hooks}: "hooks" field is missing or not an object`);
-      }
-      if (hooksDef && hooksDef.hooks && typeof hooksDef.hooks === 'object') {
-        const commands = [];
-        for (const matchers of Object.values(hooksDef.hooks)) {
-          if (!Array.isArray(matchers)) continue;
-          for (const matcher of matchers) {
-            if (!matcher || !Array.isArray(matcher.hooks)) continue;
-            for (const hook of matcher.hooks) {
-              if (hook && hook.type === 'command' && typeof hook.command === 'string') {
-                commands.push(hook.command);
-              }
-            }
-          }
-        }
-        // Extract ${CLAUDE_PLUGIN_ROOT}/<path> targets and verify they exist.
-        for (const command of commands) {
-          const matches = command.match(/\$\{CLAUDE_PLUGIN_ROOT\}\/([^\s"']+)/g) || [];
-          for (const m of matches) {
-            const scriptRel = m.replace(/\$\{CLAUDE_PLUGIN_ROOT\}\//, '');
-            if (!(await pathExists(scriptRel))) {
-              errors.push(`${ccManifest.hooks}: hook command target does not exist: ${scriptRel}`);
-            }
-          }
-        }
-      }
-    }
-  }
+  errors.push(...(await checkPluginHooksScripts(ccManifest, { root: ROOT })));
 
   // --- Reverse drift: on-disk command/agent files must be registered ---
   const commandFiles = await listMarkdownFiles('commands');
